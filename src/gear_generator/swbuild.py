@@ -519,7 +519,40 @@ def structural_change(built: Mapping[str, str], wanted: Mapping[str, str]) -> st
     if has_bore(built) != has_bore(wanted):
         return ("A bore cannot be added to or removed from a built part through its values; "
                 "build it again as a new part.")
+    # An arc built for a small pinion still closes the space at more teeth (SolidWorks 2024
+    # rebuilt 6 → 7 → 12 → 6 through the values); a chord does not at fewer. The record
+    # holds the last values, not the build's, so an arc part taken up to 12 and back to 6
+    # is refused too: safe, if stricter than it needs to be.
+    if _caps_with_arc(built) is False and _caps_with_arc(wanted) is True:
+        return ("At these values the tooth space needs an arc on the tip cap, and the part was built with a "
+                "chord; build it again as a new part.")
     return ""
+
+
+def _caps_with_arc(values: Mapping[str, str]) -> Optional[bool]:
+    """Whether the form's tooth space closes with an arc on the tip cap; None when that does not apply.
+
+    A pinion too small for a chord (:func:`spur.caps_with_arc`) gets an arc,
+    which is other entities in the sketch: a part built with a chord and
+    changed to six teeth through its values would keep the chord, inside the
+    tips, and leave material in the mouth of every space. The other way is
+    fine, since the arc clears the tips at any tooth count.
+    """
+    from .gears import kind_for, spur
+    from .spec import GearSpec
+
+    try:
+        spec = GearSpec.from_dict(dict(values))
+        kind = kind_for(spec)
+        if kind is None or spec.is_internal():
+            return None
+        derived = kind.derive(spec)
+        section = getattr(derived, "section", derived)
+        if not isinstance(section, spur.SpurDerived):
+            return None
+        return spur.caps_with_arc(section, kind.recipe_for(spec))
+    except Exception:  # noqa: BLE001 - a record or form that does not work out says nothing here
+        return None
 
 
 def planned_changes(current: Sequence[Tuple[str, float]], variables: Sequence[GlobalVariable],

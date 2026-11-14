@@ -5,16 +5,21 @@ import math
 import pytest
 
 from gear_generator.gears import KINDS, PLANNED_KINDS
+from gear_generator import swbuild
+from gear_generator.gears import spur
 from gear_generator.gears.base import (
     AddGlobal,
+    Arc,
     BuildPlan,
     Dimension,
     GeometryError,
+    Line,
     LinkDimension,
     ManualStep,
     NewPart,
     OpenSketch,
     Rebuild,
+    Relation,
     SaveAs,
 )
 from gear_generator.gears.spur import contact_ratio, flank_deviation, signed_area
@@ -189,9 +194,76 @@ def test_a_flank_start_above_the_form_diameter_is_warned_about():
     assert any("form diameter" in m for m in messages(GearSpec(module="1", teeth="50", bore="", recipe="A")))
 
 
-def test_seven_teeth_cannot_be_closed_by_the_involute_recipe():
-    errors = messages(GearSpec(module="2", teeth="7", bore="", recipe="A"), "error")
-    assert any("cannot close the tooth space" in m for m in errors)
+SUN = GearSpec(module="0.5", teeth="6", pressure_angle="20", face_width="5", bore="", recipe="A")
+
+
+def _cap(plan):
+    return next(op for op in plan.ops if getattr(op, "id", None) == "T")
+
+
+@pytest.mark.parametrize("teeth", ["6", "7"])
+def test_a_pinion_too_small_for_a_chord_builds_with_an_arc_on_the_tip_cap(teeth):
+    spec = SUN.with_values(teeth=teeth)
+    g = SPUR.derive(spec)
+    assert spur.caps_with_arc(g, "A")
+    assert messages(spec, "error") == []
+    plan = _plan("A", spec)
+    assert plan.check() == []
+    cap = _cap(plan)
+    assert isinstance(cap, Arc) and cap.centre == (0.0, 0.0) and cap.direction == 1
+    assert math.hypot(*cap.start) == pytest.approx(g.rc) and math.hypot(*cap.end) == pytest.approx(g.rc)
+    assert cap.end[1] > 0 > cap.start[1]                     # CCW from the lower flank to the upper
+    relations = {op.refs for op in plan.ops if isinstance(op, Relation)}
+    assert {("T.centre", "origin"), ("T.start", "I-.end"), ("T.end", "I+.end")} <= relations
+    # No radius dimension: the fixed curve ends already set it, and SolidWorks 2024 failed
+    # the rebuild when an equation drove it too.
+    sketch_dimensions = [op.name for op in plan.ops if isinstance(op, Dimension)]
+    assert "Cap" not in sketch_dimensions
+    assert not any(isinstance(op, LinkDimension) and op.dimension.startswith("Cap@") for op in plan.ops)
+
+
+def test_no_chord_could_close_a_six_tooth_space_so_the_arc_spans_more_than_a_pitch():
+    g = SPUR.derive(SUN)
+    best = max(spur.involute_point(g.rb, g.phi, k * 0.001)[0] for k in range(3000))
+    assert best < g.ra                                         # the flank never gets far enough out
+    span = 2.0 * spur.involute_polar(g, g.rc)
+    assert 2.0 * math.pi / g.teeth < span < math.pi            # past one pitch, short of half a turn
+
+
+def test_a_gear_that_closed_with_a_chord_still_does():
+    for spec in (PINNED, SUN.with_values(teeth="8"), GearSpec(module="2", teeth="12", bore="", recipe="A")):
+        assert not spur.caps_with_arc(SPUR.derive(spec), "A")
+        plan = _plan("A", spec)
+        assert isinstance(_cap(plan), Line)
+        assert not any(isinstance(op, Relation) and op.refs == ("T.centre", "origin") for op in plan.ops)
+
+
+def test_the_arcs_recipe_still_refuses_a_six_tooth_gear_and_says_why():
+    errors = messages(SUN.with_values(recipe="B"), "error")
+    assert errors and "never reaches the tip cap" in errors[0] and "involute recipe" in errors[0]
+
+
+def test_a_six_tooth_helical_gear_builds_with_the_arc_on_its_section():
+    helical = KINDS["helical"]
+    spec = GearSpec(kind="helical", module="0.5", teeth="6", helix_angle="15", face_width="5", bore="", recipe="A")
+    derived = helical.derive(spec)
+    assert spur.caps_with_arc(derived.section, "A")
+    assert [d.message for d in helical.validate(spec, derived) if d.level == "error"] == []
+    plan = helical.plan(spec, derived, "A", "", r"C:\Gears\Helical 6T.SLDPRT")
+    assert plan.check() == []
+    assert isinstance(_cap(plan), Arc)
+
+
+@pytest.mark.parametrize("built,wanted,refused", [
+    ("12", "6", True),      # a chord would stay inside the tips
+    ("6", "12", False),     # the arc still clears the tips at more teeth
+    ("6", "7", False),
+    ("12", "20", False),
+])
+def test_an_update_across_the_chord_and_arc_is_structural(built, wanted, refused):
+    base = SUN.with_values(bore="1").to_dict()
+    text = swbuild.structural_change({**base, "teeth": built}, {**base, "teeth": wanted})
+    assert bool(text) == refused and (not refused or "build it again" in text)
 
 
 def test_twelve_teeth_cannot_be_built_with_arcs_and_says_to_use_the_involute():
