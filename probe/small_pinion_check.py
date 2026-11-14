@@ -55,6 +55,7 @@ from gear_generator.swcom import call  # noqa: E402
 
 LOG, FAILS = [], []
 VOLUME_TOLERANCE = 1e-3          # relative
+TIP_TOLERANCE = 0.005            # mm, 1 % of the module, on a tip corner's radius against the outer radius
 DRIVE_FROM = 10.0                # degrees, as gear_pairs_check
 MATE_ANGLE, ALIGN_CLOSEST = findings.MATE_ANGLE, 2
 
@@ -140,14 +141,21 @@ def judge_part(label, spec, read, rebuilt=True):
     ra = getattr(derived, "ra", None) or getattr(derived, "section").ra
     top = read["radii"][-1] if read["radii"] else float("nan")
     near = [r for r in read["radii"] if ra - 0.1 * float(spec.module) < r < ra - 1e-6]
+    tips = [r for r in read["radii"] if r >= ra - 1e-6]
     say(f"        {label}: volume {read['volume']:.5f} mm³ (outline's {want:.5f}, off {off * 100:+.4f} %); bodies "
         f"{read['bodies']}; feature errors {read['errors']}; Equation Manager Status {read['equation_status']!r}; "
         f"largest vertex radius {top:.6f} for an outer radius {ra:.6f}; vertices just inside the tips {len(near)}")
     check(rebuilt and not read["errors"], f"{label}: the rebuild is clean, no feature in error: {read['errors']}")
     check(abs(off) <= VOLUME_TOLERANCE, f"{label}: the volume within 0.1 % of the outline's ({off * 100:+.4f} %)")
-    check(read["bodies"] == 1 and abs(top - ra) < 1e-4 and not near,
-          f"{label}: one solid body, the tips intact (largest vertex radius {top:.6f} = outer radius {ra:.6f}, no "
-          f"vertex just inside it: {[round(r, 6) for r in near][:6]})")
+    # A tip corner of an extruded cut sits where the flank meets the outer cylinder at a shallow angle; SolidWorks
+    # places that vertex a few microns out on a 6-tooth spur (2.5 µm on SolidWorks 2026; 0.5 µm on a chord-built
+    # 12, the design before the arc), so the tips are judged by their corners: four per tooth (two per face), all
+    # on the outer radius to within TIP_TOLERANCE, and no vertex just inside it.
+    teeth = int(spec.teeth)
+    check(read["bodies"] == 1 and len(tips) == 4 * teeth and all(r - ra <= TIP_TOLERANCE for r in tips) and not near,
+          f"{label}: one solid body, the tips intact: {len(tips)} tip corners for {teeth} teeth (4 each), the "
+          f"farthest {top - ra:.2e} mm beyond the outer radius {ra:.6f} (within {TIP_TOLERANCE:g}), no vertex just "
+          f"inside it: {[round(r, 6) for r in near][:6]}")
 
 
 def build_part(worker, spec, path, label):
