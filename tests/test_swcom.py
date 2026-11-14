@@ -1914,3 +1914,83 @@ def test_find_component_leaves_a_lightweight_component_to_its_caller_when_asked(
     doc.components[0].GetSuppression2 = swcom.COMPONENT_SUPPRESSED
     with pytest.raises(SolidWorksError, match="is suppressed in R.SLDASM"):
         session.find_component("g", "gear2-1", lightweight_ok=True)
+
+
+# -- which way a gear mate turns (probe ring_mate_sense): Reverse and the two entity directions, read only
+
+
+class SenseData:
+    def __init__(self, log, reverse):
+        self.log, self.Reverse = log, reverse
+
+    def __getattr__(self, name):
+        if name in ("ModifyDefinition", "AccessSelections"):
+            self.log.append((name,))
+        raise AttributeError(name)
+
+
+class MateEntity:
+    def __init__(self, direction):
+        self.EntityParams = (0.01, 0.02, 0.03) + tuple(direction) + (0.0, 0.0)
+
+
+class SpecificMate:
+    def __init__(self, directions):
+        self.entities = [MateEntity(d) for d in directions]
+        self.GetMateEntityCount = len(self.entities)
+
+    def MateEntity(self, index):
+        return self.entities[index]
+
+
+def _sense_world(session, doc, reverse, directions):
+    mate = MateFeature(doc, "G5 meshes G6", "MateGearDim")
+    mate.GetDefinition = SenseData(doc.log, reverse)
+    mate.GetSpecificFeature2 = SpecificMate(directions)
+    doc.mates = [mate]
+    session.find_mate("mesh", "G5 meshes G6")
+
+
+@pytest.mark.parametrize("reverse, directions, internal, right, parallel", [
+    (True, ((0, 0, 1.0), (0, 0, -1.0)), True, False, False),     # the Risky pair on 2026: Reverse True, opposite axes
+    (False, ((0, 0, 1.0), (0, 0, -1.0)), True, True, False),     # the same pair on 2024: Reverse False
+    (True, ((0, 0, 1.0), (0, 0, 1.0)), True, True, True),
+    (False, ((0, 0, 1.0), (0, 0, -1.0)), False, False, False),   # an outside pair: right when they differ
+    (True, ((0, 0, 1.0), (0, 0, -1.0)), False, True, False),
+])
+def test_a_gear_mates_sense_is_read_back_by_reverse_and_its_entity_directions(mated, reverse, directions, internal,
+                                                                              right, parallel):
+    session, doc = mated
+    _sense_world(session, doc, reverse, directions)
+    assert session.gear_mate_sense("mesh", internal) == (right, parallel)
+    assert ("ModifyDefinition",) not in doc.log and ("AccessSelections",) not in doc.log
+
+
+@pytest.mark.parametrize("name, value", [("GEAR_MATE_SENSE_READ_BACK", None), ("GEAR_MATE_SENSE_READ_BACK", "guess"),
+                                         ("GEAR_MATE_READ_BACK_TELLS_SENSE", None)])
+def test_a_gear_mates_sense_is_not_read_by_a_route_this_code_does_not_know(mated, monkeypatch, name, value):
+    session, doc = mated
+    _sense_world(session, doc, True, ((0, 0, 1.0), (0, 0, 1.0)))
+    monkeypatch.setattr(findings, name, value)
+    with pytest.raises(SolidWorksError, match="Reading which way a gear mate turns has not been settled"):
+        session.gear_mate_sense("mesh", True)
+
+
+def test_a_gear_mate_without_two_entities_is_not_judged(mated):
+    session, doc = mated
+    _sense_world(session, doc, True, ((0, 0, 1.0),))
+    with pytest.raises(SolidWorksError, match="did not give its Reverse and two entity directions"):
+        session.gear_mate_sense("mesh", True)
+
+
+def test_a_gear_mate_is_made_again_with_the_flip_asked(mated, monkeypatch):
+    session, doc = mated
+    _ratio_world(session, doc)
+    monkeypatch.setattr(findings, "GEAR_MATE_CHECK_AND_REMAKE_HOLDS", True)
+    session.remake_gear_mate("mesh2", "placed3:Gear Axis", "placed4:Gear Axis", (17.0, 51.0), True)
+    (made,) = [e for e in doc.log if e[0] == "AddMate5"]
+    assert made[1] == findings.MATE_GEAR and made[3] is True and made[7:9] == (17.0, 51.0)
+    assert [m.Name for m in doc.mates] == ["G3 meshes G4"]
+    monkeypatch.setattr(findings, "GEAR_MATE_CHECK_AND_REMAKE_HOLDS", None)
+    with pytest.raises(SolidWorksError, match=r"GEAR_MATE_CHECK_AND_REMAKE_HOLDS is None\), so nothing is changed"):
+        session.remake_gear_mate("mesh2", "placed3:Gear Axis", "placed4:Gear Axis", (17.0, 51.0), False)

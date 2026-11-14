@@ -54,6 +54,18 @@ class FakeMate:
 
 IDENTITY9 = (1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0)
 
+# The Flip each app-built pair needed on each version (probe ring_mate_sense, findings.GEAR_MATE_FLIP_NEEDED_ON_2026
+# and _2024), copied here so the fake does not lean on findings.py: keyed by the gear kind, then the pinion's and the
+# ring's shaft sense; an outside pair needed False everywhere.
+FLIP_NEEDED_2026 = {
+    "spur ring ++": True, "spur ring +-": False, "spur ring -+": False, "spur ring --": True,
+    "helical ring ++": True, "helical ring +-": True, "helical ring -+": True, "helical ring --": True,
+    "plain annulus": False, "external +-": False}
+FLIP_NEEDED_2024 = {
+    "spur ring ++": False, "spur ring +-": True, "spur ring -+": True, "spur ring --": False,
+    "helical ring ++": False, "helical ring +-": False, "helical ring -+": False, "helical ring --": False,
+    "plain annulus": False, "external +-": False}
+
 
 def _rot_z(degrees):
     c, s = math.cos(math.radians(degrees)), math.sin(math.radians(degrees))
@@ -224,6 +236,10 @@ class FakeSolidWorks:
         self.counts_after = {}
         self.lightweight = set()       # Name2s loaded lightweight (component_resolved reads False for them)
         self.held_suppressed = set()   # mate names an unsuppress does not take on (in a suppressed folder, say)
+        self.flip_needed = dict(FLIP_NEEDED_2026)      # this fake's version: the Flip each case needs
+        self.ring_parts = set()        # part paths that are rings (also: a file named "Ring…", as the app names one)
+        self.helical_parts = set()     # part paths that are helical (also: a stem ending "_20L", as the app names one)
+        self.never_right = set()       # gear mate names SolidWorks turns the wrong way whatever the Flip (made up)
 
     def _log(self, name, *args):
         self.calls.append((name, args))
@@ -723,7 +739,88 @@ class FakeSolidWorks:
             raise SolidWorksError(f"findings.GEAR_MATE_RATIO_ROUTE is {route!r}, so the gear mate keeps its ratio.")
         old = self.mate(self.mate_handles[handle])
         self.mates.remove(old)                     # deleted, and made again at the end of the tree, its name kept
-        self._keep_mate(handle, old.name, "gear", a, b, 0.0, tuple(float(n) for n in ratio), old.flip)
+        # As swcom: made again with findings.GEAR_MATE_FLIP, whatever Flip the old one had.
+        self._keep_mate(handle, old.name, "gear", a, b, 0.0, tuple(float(n) for n in ratio),
+                        bool(getattr(findings, "GEAR_MATE_FLIP", False)))
+
+    # -- which way a gear mate turns (probe ring_mate_sense): the Flip each case needs, per version
+
+    def remake_gear_mate(self, handle, a, b, ratio, flip, saved=True):
+        """As swcom.Session.remake_gear_mate: deleted and made again with ``flip``, at the end of the tree."""
+        self._log("remake_gear_mate", handle, a, b, tuple(ratio), flip)
+        old = self.mate(self.mate_handles[handle])
+        self.mates.remove(old)
+        self._keep_mate(handle, old.name, "gear", a, b, 0.0, tuple(float(n) for n in ratio), bool(flip))
+
+    def _sigma(self, name):
+        rotation, _ = self.frames.get(name, (IDENTITY9, (0.0, 0.0, 0.0)))
+        return 1 if rotation[8] > 0 else -1
+
+    def _is_ring(self, name):
+        path = self.component_paths.get(name, "")
+        stem = path.replace("/", "\\").rsplit("\\", 1)[-1]
+        return path in self.ring_parts or stem.lower().startswith("ring")
+
+    def _is_helical(self, name):
+        import re
+        path = self.component_paths.get(name, "")
+        stem = path.replace("/", "\\").rsplit("\\", 1)[-1].rsplit(".", 1)[0]
+        return path in self.helical_parts or bool(re.search(r"_\d+(\.\d+)?[LR]$", stem))
+
+    def mesh_case(self, mate):
+        """(internal, the key of the probe's tables for this pair, the Flip it needs on this fake's version)."""
+        a, b = mate.a[0], mate.b[0]
+        internal = self._is_ring(a) or self._is_ring(b)
+        if internal:
+            pinion, ring = (b, a) if self._is_ring(a) else (a, b)
+            sign = lambda n: "+" if self._sigma(n) > 0 else "-"              # noqa: E731
+            key = f"{'helical' if self._is_helical(ring) else 'spur'} ring {sign(pinion)}{sign(ring)}"
+        else:
+            key = "external +-" if self._sigma(a) != self._sigma(b) else "external ++"
+        return internal, key, bool(self.flip_needed.get(key, False))
+
+    def turns_right(self, name, path=None):
+        """Whether a gear mate, as made, turns its gears as they mesh (its Flip the one its case needs)."""
+        mate = self.mate(name, path)
+        if mate.name in self.never_right:
+            return False
+        return mate.flip == self.mesh_case(mate)[2]
+
+    def gear_mate_sense(self, handle, internal):
+        """As swcom.Session.gear_mate_sense: a Reverse and two entity directions such that the read-back rule tells
+        the mate's TRUE sense for its true case; judged here for the mesh the caller says it is."""
+        self._log("gear_mate_sense", handle, internal)
+        mate = self.mate(self.mate_handles[handle])
+        true_internal = self.mesh_case(mate)[0]
+        parallel = self._sigma(mate.a[0]) == self._sigma(mate.b[0])        # entity directions = the gear axes
+        reverse = parallel if self.turns_right(mate.name) == true_internal else not parallel
+        return (reverse == parallel) == bool(internal), parallel
+
+    def drive(self, name, degrees):
+        """Turn one gear about its own axis and every gear its unsuppressed gear mates and locks carry, as the
+        SOLVER would, a wrong-sense gear mate turning its partner the wrong way (ring_mate_sense: such a pair
+        clashed when driven)."""
+        turns, queue = {name: float(degrees)}, [name]
+        while queue:
+            x = queue.pop(0)
+            for m in (m for m in self.mates if not m.suppressed and m.kind in ("gear", "lock")):
+                ends = (m.a[0], m.b[0])
+                if x not in ends:
+                    continue
+                y = ends[1] if x == ends[0] else ends[0]
+                if y in turns:
+                    continue
+                if m.kind == "lock":
+                    turns[y] = turns[x]
+                else:
+                    zx, zy = (m.ratio[0], m.ratio[1]) if x == ends[0] else (m.ratio[1], m.ratio[0])
+                    internal = self.mesh_case(m)[0]
+                    k = (1 if internal else -1) * self._sigma(x) * self._sigma(y) * zx / zy
+                    turns[y] = (k if self.turns_right(m.name) else -k) * turns[x]
+                queue.append(y)
+        for gear, turn in turns.items():
+            self.turn(gear, turn)
+        return turns
 
 
 @pytest.fixture(autouse=True)
@@ -735,7 +832,10 @@ def _train_routes_agree(monkeypatch):
     monkeypatch.setattr(findings, "MATED_BUILD_REBUILD_ROUTE", "ForceRebuild3(True)", raising=False)
     monkeypatch.setattr(findings, "GEAR_MATE_DEFINITION_READS_NUMERATOR_SECOND", True, raising=False)
     for name, value in (("GEAR_MATE_DEFINITION_READ_MARKS", "nothing"), ("MATES_UNDER_COMMAND_IN_PROGRESS", True),
-                        ("MATE_RENAME_AT_ONCE", True)):
+                        ("MATE_RENAME_AT_ONCE", True),
+                        ("GEAR_MATE_SENSE_READ_BACK", "(Reverse == entities parallel) == internal"),
+                        ("GEAR_MATE_READ_BACK_TELLS_SENSE", True), ("GEAR_MATE_CHECK_AND_REMAKE_HOLDS", True),
+                        ("GEAR_MATE_FLIP", False), ("GEAR_MATE_SENSE_READ_MARKS", None)):
         monkeypatch.setattr(findings, name, value, raising=False)
 
 
@@ -2404,13 +2504,17 @@ def _train_layout_values(s3x="63.75"):
                                              GlobalVariable("S3 Y", "51")), T_LAYOUT_FEATURES)
 
 
-def _train_plan(path=T_ASM, follower_on_axis=False, idler=False):
+P51R = W + "Ring_m1.5_N51.SLDPRT"        # a ring, as the app names one (the fake reads a "Ring…" file as a ring)
+
+
+def _train_plan(path=T_ASM, follower_on_axis=False, idler=False, ring=False):
     frames = _train_frames()
     steps = [ops.NewAssembly(""), ops.AddGlobal("G4 Face Z", "20"),
              ops.AddComponent("layout", T_LAYOUT), ops.Place("layout", IDENTITY, (0.0, 0.0, 0.0)), ops.Fix("layout")]
     for handle, gear in TRAIN_GEARS.items():
         rotation, at = frames[gear]
-        steps += [ops.AddComponent(handle, TRAIN_PARTS[handle], at), ops.Place(handle, rotation, at), ops.Fix(handle)]
+        part = P51R if ring and handle == "gear4" else TRAIN_PARTS[handle]
+        steps += [ops.AddComponent(handle, part, at), ops.Place(handle, rotation, at), ops.Fix(handle)]
     steps += [ops.Unfix("gear1"),
               ops.Mate("axis1", "coincident", "gear1:Gear Axis", "layout:S1 Axis", name="G1 on S1 Axis"),
               ops.Mate("along1", "point", "gear1:origin", "layout:plane1", name="G1 along S1"),
@@ -3696,3 +3800,190 @@ def test_a_recorded_mate_that_stays_suppressed_after_it_is_turned_back_on_stops_
     assert result.unsuppressed == [] and result.placed == [] and fake.locked_puts == []
     assert not fake.mate("G3 locked to G2", T_ASM).suppressed and result.changed == [T_ASM]
     assert "interferences" not in names(fake)
+
+
+
+# -- which way a gear mate turns a ring (probe ring_mate_sense): read back, and made again with the other Flip
+
+RING_MESHES = (MESHES[0], MeshLink("G3", "G4", 17.0 / 51, 360.0 / 51))   # G4 a ring round G3: same sense, both Z+
+
+
+def _build_ring(fake=None, internal=("G3 meshes G4",), **kwargs):
+    fake = fake or FakeSolidWorks()
+    return _build_train(fake, parts=[plan(S17, path=P17), plan(S68, path=P68), plan(S51, path=P51R)],
+                        assembly=_train_plan(ring=True), internal=internal, **kwargs)
+
+
+def _turns_as_it_meshes(fake, meshes=RING_MESHES, frames=None):
+    """Drive the input 10° as the solver would and judge every relation against the built frames."""
+    built = {g: fake.frames[f"gear{g[1]}-1"] for g in TRAIN_ORDER}
+    fake.drive("gear1-1", 10.0)
+    after = {g: fake.frames[f"gear{g[1]}-1"] for g in TRAIN_ORDER}
+    pitch = {g: 360.0 / TEETH[g] for g in TRAIN_ORDER}
+    return swbuild.train_check(after, built, meshes, LOCKS, pitch).in_step
+
+
+def test_a_ring_mate_wrong_first_is_made_again_with_the_other_flip_and_the_train_turns_as_it_meshes():
+    """SolidWorks 2026 (the fake's default table): a spur ring on a same-sense shaft needs Flip True, so the mate made
+    with Flip False reads wrong and is made again turned round, under its name, before any rebuild."""
+    fake, result = _build_ring()
+    assert result.ok and result.kind == "motion", result.log_lines()
+    assert result.assembly.turned_round == ["G3 meshes G4"]
+    called = names(fake)
+    assert called.index("remake_gear_mate") < called.index("rebuild", called.index("new_assembly"))
+    assert fake.turns_right("G3 meshes G4") and fake.mate("G3 meshes G4").flip is True
+    assert "ok      read turning against their mesh, so made again with the other Flip: G3 meshes G4" in \
+        result.assembly.log_lines()
+    assert _turns_as_it_meshes(fake)
+
+
+def test_a_ring_mate_right_first_time_is_left_as_made():
+    fake = FakeSolidWorks()
+    fake.flip_needed = dict(FLIP_NEEDED_2024)                  # SolidWorks 2024: Flip False is right here
+    fake, result = _build_ring(fake)
+    assert result.ok and result.assembly.turned_round == [] and "remake_gear_mate" not in names(fake)
+    assert [a[1] for n, a in fake.calls if n == "gear_mate_sense"] == [False, True]   # both gear mates read
+    assert _turns_as_it_meshes(fake)
+
+
+def test_a_spur_ring_on_opposite_shafts_on_2024_is_turned_round_too():
+    """The 2024 table: a spur ring on opposite shafts needs Flip True (and so does every same-sense one on 2026)."""
+    fake = FakeSolidWorks()
+    fake.flip_needed = dict(FLIP_NEEDED_2024)
+    fake.flip_needed["spur ring ++"] = True                    # as the 2024 table has it for "+-" and "-+"
+    _, result = _build_ring(fake)
+    assert result.ok and result.assembly.turned_round == ["G3 meshes G4"]
+
+
+def test_a_mate_solidworks_turns_wrong_with_either_flip_stops_the_build_as_a_refused_mate():
+    fake = FakeSolidWorks()
+    fake.never_right = {"G3 meshes G4"}
+    fake, result = _build_ring(fake)
+    _refused_ring = result
+    assert not _refused_ring.ok and _refused_ring.kind == "" and not _refused_ring.assembly.saved
+    assert _refused_ring.assembly.mate_problems == ["SolidWorks turns the gears of the mate G3 meshes G4 against the "
+                                                    "way they mesh with either Flip, so the assembly is not saved."]
+    assert [r.saved for r in result.parts.built] == [P17, P68, P51R] and result.layout.saved == T_LAYOUT
+    assert names(fake).count("remake_gear_mate") == 1 and fake.suppressed is False
+
+
+def test_axes_read_otherwise_than_the_plan_placed_them_stop_the_build_without_a_guess():
+    fake = FakeSolidWorks()
+    real = fake.gear_mate_sense
+    fake.gear_mate_sense = lambda handle, internal: (real(handle, internal)[0], not real(handle, internal)[1])
+    _, result = _build_ring(fake)
+    assert not result.ok and result.assembly.mate_problems == [
+        "SolidWorks reads the axes of the gear mate G1 meshes G2 as pointing opposite ways, but G1 and G2 sit on shafts "
+        "pointing the same way, so its entities are not the axes the plan asked for and nothing is guessed."]
+
+
+def test_an_external_train_reads_every_gear_mate_and_turns_none_round():
+    fake, result = _build_train(internal=())
+    assert result.ok and result.assembly.turned_round == []
+    assert [n for n in names(fake) if n == "gear_mate_sense"] == ["gear_mate_sense"] * 2
+
+
+def test_without_saying_which_meshes_are_inside_a_ring_no_sense_is_read_as_before():
+    fake, result = _build_ring(internal=None)
+    assert result.ok and "gear_mate_sense" not in names(fake)
+    assert not fake.turns_right("G3 meshes G4") and not _turns_as_it_meshes(fake)   # what the demonstration met
+
+
+@pytest.mark.parametrize("name", ["GEAR_MATE_SENSE_READ_BACK", "GEAR_MATE_READ_BACK_TELLS_SENSE"])
+def test_without_the_read_back_a_ring_train_is_refused_before_anything_is_made_and_an_external_one_builds(
+        monkeypatch, name):
+    monkeypatch.setattr(findings, name, None)
+    fake = FakeSolidWorks()
+    with pytest.raises(swbuild.BuildError) as raised:
+        _build_ring(fake)
+    assert str(raised.value) == ("The gear mate G3 meshes G4 meshes inside a ring, and which way a gear mate turns a "
+                                 f"ring cannot be told on SolidWorks yet (findings.{name} is None), so nothing is made "
+                                 "or changed; run probe ring_mate_sense first.")
+    assert fake.calls == []
+    fake, result = _build_train(internal=())
+    assert result.ok and "gear_mate_sense" not in names(fake)
+
+
+def test_with_the_read_back_but_not_the_remake_with_the_other_flip_a_train_is_refused_first(monkeypatch):
+    monkeypatch.setattr(findings, "GEAR_MATE_CHECK_AND_REMAKE_HOLDS", None)
+    fake = FakeSolidWorks()
+    with pytest.raises(swbuild.BuildError, match=r"findings.GEAR_MATE_CHECK_AND_REMAKE_HOLDS settled on SolidWorks "
+                                                 r"\(it is None\), so nothing is made or changed"):
+        _build_ring(fake)
+    assert fake.calls == []
+
+
+# The Update's remake, and the check phase's read (behind its placeholder finding)
+
+RING_MESHES_18 = (MESHES[0], MeshLink("G3", "G4", 18.0 / 50, 360.0 / 50))
+
+
+def _built_ring(table=None, internal=("G3 meshes G4",)):
+    fake = FakeSolidWorks()
+    if table is not None:
+        fake.flip_needed = dict(table)
+    fake, result = _build_ring(fake, internal=internal)
+    assert result.ok, result.log_lines()
+    fake.calls.clear()
+    return fake
+
+
+def _ring_motion(**kwargs):
+    kwargs.setdefault("meshes", RING_MESHES)
+    kwargs.setdefault("recorded_meshes", RING_MESHES)
+    return _motion(**kwargs)
+
+
+def test_an_update_remake_on_a_ring_comes_out_turning_as_it_meshes(remake_route):
+    fake = _built_ring()
+    result = _update_train(fake, motion=_ring_motion(meshes=RING_MESHES_18, ratios=(("G3 meshes G4", 18, 50),)))
+    assert result.ok, result.log_lines()
+    assert result.ratios == ["G3 meshes G4"] and result.turned_round == ["G3 meshes G4"]
+    assert fake.mate("G3 meshes G4", T_ASM).ratio == (18.0, 50.0) and fake.turns_right("G3 meshes G4", T_ASM)
+    called = names(fake)
+    assert called.index("set_gear_ratio") < called.index("remake_gear_mate") < called.index("place_component")
+    assert fake.locked_puts == [] and not fake.mate("G3 locked to G2", T_ASM).suppressed
+    assert "ok      made again with the other Flip: G3 meshes G4" in result.log_lines()
+
+
+def test_an_update_remake_on_a_ring_right_first_time_is_not_turned_round(remake_route):
+    fake = _built_ring(FLIP_NEEDED_2024)
+    result = _update_train(fake, motion=_ring_motion(meshes=RING_MESHES_18, ratios=(("G3 meshes G4", 18, 50),)))
+    assert result.ok and result.turned_round == [] and "remake_gear_mate" not in names(fake)
+
+
+def test_an_update_remake_wrong_with_either_flip_stops_with_the_locks_back_on(remake_route):
+    fake = _built_ring()
+    fake.never_right = {"G3 meshes G4"}
+    result = _update_train(fake, motion=_ring_motion(meshes=RING_MESHES_18, ratios=(("G3 meshes G4", 18, 50),)))
+    assert result.failures == [("T.SLDASM", "SolidWorks turns the gears of the mate G3 meshes G4 against the way they "
+                                            "mesh with either Flip, so Update SolidWorks stops; the saved T.SLDASM "
+                                            "still has it as it was: close T.SLDASM in SolidWorks without saving to "
+                                            "bring it back.")]
+    assert not fake.mate("G3 locked to G2", T_ASM).suppressed and result.placed == [] and result.changed == [T_ASM]
+
+
+def test_without_the_read_back_an_update_remake_inside_a_ring_is_refused_before_anything_changes(remake_route,
+                                                                                                 monkeypatch):
+    fake = _built_ring()
+    monkeypatch.setattr(findings, "GEAR_MATE_SENSE_READ_BACK", None)
+    with pytest.raises(swbuild.BuildError, match="^The gear mate G3 meshes G4 meshes inside a ring"):
+        _update_train(fake, motion=_ring_motion(meshes=RING_MESHES_18, ratios=(("G3 meshes G4", 18, 50),)))
+    assert not any(n in CHANGING for n in names(fake))
+
+
+def test_the_check_phase_reads_no_sense_until_its_finding_is_settled():
+    fake = _built_ring(internal=None)                          # built before the check: G3 meshes G4 turns wrong
+    fake.turn("gear4-1", 3.0)
+    result = _update_train(fake, motion=_ring_motion())
+    assert result.ok and result.sense_found_wrong == [] and "gear_mate_sense" not in names(fake)
+
+
+def test_with_its_finding_the_check_phase_finds_a_ring_turning_wrong_and_remakes_it(remake_route, monkeypatch):
+    monkeypatch.setattr(findings, swbuild.SENSE_CHECK_FINDINGS[0][0], swbuild.SENSE_CHECK_FINDINGS[0][1])
+    fake = _built_ring(internal=None)
+    result = _update_train(fake, motion=_ring_motion())
+    assert result.ok, result.log_lines()
+    assert result.sense_found_wrong == ["G3 meshes G4"] and result.turned_round == ["G3 meshes G4"]
+    assert fake.turns_right("G3 meshes G4", T_ASM) and result.placed == list(TRAIN_ORDER)
+    assert fake.locked_puts == []

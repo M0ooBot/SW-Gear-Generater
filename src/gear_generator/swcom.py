@@ -123,6 +123,9 @@ RESOLVED_ROUTE_FINDING = "COMPONENT_RESOLVED_ROUTE"
 RESOLVED_VALUES_FINDING = "COMPONENT_FULLY_RESOLVED_STATES"
 RESOLVED_ROUTES = ("GetSuppression2",)
 
+# How a made gear mate's sense is read back (Session.gear_mate_sense; probe ring_mate_sense).
+SENSE_ROUTES = ("(Reverse == entities parallel) == internal",)
+
 
 class SolidWorksError(Exception):
     """Something about the SolidWorks connection did not work."""
@@ -2247,6 +2250,16 @@ class Session:
                 or findings.GEAR_MATE_NUMERATOR_FIRST is None:
             raise SolidWorksError(f"{what} has not been settled on SolidWorks yet (a gear mate's Flip or its ratio's "
                                   "order is not in findings.py), so nothing is changed; run probe tier 8 first.")
+        self._remake(handle, a, b, ratio, bool(flip), "to give it its new ratio")
+
+    def _remake(self, handle: str, a: str, b: str, ratio: Sequence[float], flip: bool, purpose: str,
+                saved: bool = True) -> None:
+        """Delete a kept gear mate and make it again between ``a`` and ``b`` at ``ratio`` with ``flip``, under its old
+        name: the remake probe gear_mate_ratio and P1b proved (``ClearSelection2``, the mate's ``Select2(False,
+        0)``, ``EditDelete()``, the name read gone, the two components found again by ``GetComponentByName``,
+        :meth:`_gear_mate`). ``purpose`` says why, in the sentences; ``saved`` False (a new assembly in a build) says
+        no saved file holds the old mate. After the delete, whatever stops the remake says the open assembly has lost
+        the gear mate; only SolidWorks' own refusal is a :class:`MateRefused`."""
         name, feature = self._kept_mate(handle)
         doc = self._doc()
         title = call(doc, "GetTitle")
@@ -2263,10 +2276,11 @@ class Session:
         _guarded("EditDelete", lambda: doc.EditDelete())
         call(doc, "ClearSelection2", True)
         if name in self._mate_names():
-            raise SolidWorksError(f"SolidWorks would not delete the gear mate {name} in {title} to give it its new "
-                                  "ratio, so it keeps its old one.")
-        lost = f"The open {title} has lost the gear mate {name}: it was deleted to give it its new ratio"
-        restore = f"The saved {title} still has it: close {title} in SolidWorks without saving to bring it back."
+            raise SolidWorksError(f"SolidWorks would not delete the gear mate {name} in {title} {purpose}, so it keeps "
+                                  "its old one.")
+        lost = f"The open {title} has lost the gear mate {name}: it was deleted {purpose}"
+        restore = (f"The saved {title} still has it: close {title} in SolidWorks without saving to bring it back."
+                   if saved else f"{title} is not saved.")
         try:
             # As the probe's remake (gear_mate_ratio, P1b): the two components found again by GetComponentByName
             # after the delete, then the gear mate made between them.
@@ -2282,8 +2296,70 @@ class Session:
         except Exception as exc:  # noqa: BLE001 - a COM or selection failure: an ordinary failure, still said
             raise SolidWorksError(f"{lost}, and making it again stopped. {restore} {_as_sentence(exc)}") from exc
         if kept != name:
-            raise SolidWorksError(f"The open {title} has lost the gear mate {name} by that name: it was made again with "
-                                  f"its new ratio, and SolidWorks named it {kept}. {restore}")
+            raise SolidWorksError(f"The open {title} has lost the gear mate {name} by that name: it was made again "
+                                  f"{purpose.replace('to give it its new ratio', 'with its new ratio')}, and "
+                                  f"SolidWorks named it {kept}. {restore}")
+
+    def remake_gear_mate(self, handle: str, a: str, b: str, ratio: Sequence[float], flip: bool,
+                         *, saved: bool = True) -> None:
+        """Make a kept gear mate again with ``flip`` (its ratio as it is): the fallback probe ring_mate_sense proved
+        when the read-back says a gear mate turns its gears against their mesh
+        (``findings.GEAR_MATE_CHECK_AND_REMAKE_HOLDS``: the remake with the other Flip leaves the train as one made
+        right the first time). The remake is :meth:`_remake`'s; every finding it needs is read first."""
+        what = "Making a gear mate again with the other Flip"
+        if getattr(findings, "GEAR_MATE_CHECK_AND_REMAKE_HOLDS", None) is not True:
+            raise SolidWorksError(f"{what} has not been settled on SolidWorks yet (findings."
+                                  f"GEAR_MATE_CHECK_AND_REMAKE_HOLDS is "
+                                  f"{getattr(findings, 'GEAR_MATE_CHECK_AND_REMAKE_HOLDS', None)!r}), so nothing is "
+                                  "changed; run probe tier 8 first.")
+        self._settled("MATE_DELETE_ROUTE", what, "Select2 then EditDelete()")
+        self._settled("MATE_RENAME_ROUTE", what, "IFeature.Name put")
+        if findings.GEAR_MATE_ROUTE is None or findings.MATE_GEAR is None or findings.GEAR_MATE_NUMERATOR_FIRST is None:
+            raise SolidWorksError(f"{what} has not been settled on SolidWorks yet (a gear mate's ratio order is not in "
+                                  "findings.py), so nothing is changed; run probe tier 8 first.")
+        self._remake(handle, a, b, ratio, bool(flip), "to make it again with the other Flip", saved=saved)
+
+    def gear_mate_sense(self, handle: str, internal: bool) -> Tuple[bool, bool]:
+        """Which way a kept gear mate turns its gears, read back as probe ring_mate_sense found tells it on both
+        versions (``findings.GEAR_MATE_SENSE_READ_BACK``, one of :data:`SENSE_ROUTES`;
+        ``GEAR_MATE_READ_BACK_TELLS_SENSE``: 52 of 52 cases, and the Risky pair before and after its remake): its
+        ``IGearMateFeatureData.Reverse`` (``IFeature.GetDefinition``, read only, released: no ModifyDefinition, no
+        AccessSelections, as :meth:`gear_mate_ratio`) and the directions of its two entities
+        (``IFeature.GetSpecificFeature2`` → ``IMate2.GetMateEntityCount`` and ``MateEntity(i)`` →
+        ``IMateEntity2.EntityParams`` elements 3..5, in assembly space). The pair turns as it meshes exactly when
+        ``(Reverse == the two directions point the same way) == internal``. Returns ``(right, parallel)``: whether
+        it reads right for the mesh the caller says is ``internal`` or not, and whether the two directions point the
+        same way (the caller compares it with its own shafts' senses). Read it where the probe read it: straight
+        after the mate is made (and renamed), before a rebuild."""
+        route = getattr(findings, "GEAR_MATE_SENSE_READ_BACK", None)
+        if route not in SENSE_ROUTES or getattr(findings, "GEAR_MATE_READ_BACK_TELLS_SENSE", None) is not True:
+            raise SolidWorksError(f"Reading which way a gear mate turns has not been settled on SolidWorks yet "
+                                  f"(findings.GEAR_MATE_SENSE_READ_BACK is {route!r}, findings."
+                                  f"GEAR_MATE_READ_BACK_TELLS_SENSE is "
+                                  f"{getattr(findings, 'GEAR_MATE_READ_BACK_TELLS_SENSE', None)!r}), so nothing is "
+                                  "changed; run probe ring_mate_sense first.")
+        name, feature = self._kept_mate(handle)
+        title = call(self._doc(), "GetTitle")
+        data = _read(feature, "GetDefinition")
+        if data is None:
+            raise SolidWorksError(f"SolidWorks gave no definition for the gear mate {name} in {title}, so which way it "
+                                  "turns cannot be read.")
+        reverse = _read(data, "Reverse")
+        data = None                                # released, as the probe released it
+        mate = _read(feature, "GetSpecificFeature2")
+        count = _read(mate, "GetMateEntityCount") if mate is not None else None
+        directions = []
+        for index in range(int(count) if isinstance(count, (int, float)) else 0):
+            entity = call(mate, "MateEntity", index)
+            params = _read(entity, "EntityParams") if entity is not None else None
+            values = [float(v) for v in params] if params is not None else []
+            if len(values) >= 6:
+                directions.append(values[3:6])
+        if not isinstance(reverse, bool) or len(directions) != 2:
+            raise SolidWorksError(f"The gear mate {name} in {title} did not give its Reverse and two entity directions, "
+                                  "so which way it turns cannot be read.")
+        parallel = sum(x * y for x, y in zip(*directions)) > 0
+        return (reverse == parallel) == bool(internal), parallel
 
     def set_custom_property(self, name: str, value: str) -> None:
         """A text custom property on the build's part, added or replaced, and read back.
