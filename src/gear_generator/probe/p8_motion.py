@@ -2794,13 +2794,13 @@ def _drive_measure(px: Px, doc: Any, comps: Mapping[str, Any], layout: Any, buil
 def _set_teeth(px: Px, swbuild: Any, jobs: Mapping[str, Any], gear: str, teeth: str) -> Dict[str, Any]:
     """A gear's tooth count changed through its part's globals by the app's swbuild.update_variables, in the part's
     own document (opened by path, activated), as Update SolidWorks changes a part."""
-    from ..gears import KINDS  # noqa: PLC0415
+    from ..gears import kind_for  # noqa: PLC0415
     from .p7_workbook import _update_with, activate  # noqa: PLC0415
 
     job = jobs[gear]
     part, _ = open_by_path(px, job.path, prefer="OpenDoc6")
     px.require(activate(px, str(call(part, "GetTitle"))), f"{gear}'s part is active")
-    kind = KINDS[job.spec.kind]
+    kind = kind_for(job.spec)          # a ring's calculation when its teeth are internal
     wanted = job.spec.with_values(teeth=teeth)
     return _update_with(px, swbuild, job.path, kind.variables(wanted, kind.derive(wanted)))
 
@@ -6507,7 +6507,12 @@ def ring_trains_saved(px: Px) -> None:
             f["close"] = _close_checked(px, b["plan"].assembly_path, paths)
         f["reopened_reads"] = reads
         if tag == "risky":
-            f["update"] = _ring_update_shape(px, b, fx, teeth, swbuild)
+            try:
+                f["update"] = _ring_update_shape(px, b, fx, teeth, swbuild)
+            except Exception as exc:  # noqa: BLE001 - one step's fault must not cost the trains after it
+                from .comerr import one_line  # noqa: PLC0415
+                f["update"] = {"raised": one_line(exc)}
+                px.note(f"the Update-shape step raised {one_line(exc)}")
         facts[tag] = f
         manifest["trains"][tag] = {
             "assembly": b["plan"].assembly_path, "paths": paths, "names": b["names"], "layout_name": b["layout_name"],
