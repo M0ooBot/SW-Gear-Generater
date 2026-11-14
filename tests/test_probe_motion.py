@@ -21,7 +21,7 @@ TIER_8 = ["motion_enums", "shaft_axis_mates", "gear_mate_sense", "compound_lock"
           "put_on_twice_meshed_gear", "axial_datum_plane", "mated_rebuild_scope", "mates_under_command_in_progress",
           "mate_folders", "lightweight_remake", "second_assembly_beside_unsaved", "gear_mate_definition_read",
           "origin_noise", "unsaved_update_close",
-          "drag_operator_turns_train", "gear_mate_definition"]
+          "drag_operator_turns_train", "ring_mate_sense", "gear_mate_definition"]
 
 
 @pytest.fixture(scope="module")
@@ -733,3 +733,52 @@ def test_the_first_fully_resolved_stage_and_folders_holding_in_every_case():
     assert p8.folders_hold({"one folder": ok, "reopened": ok})
     assert not p8.folders_hold({"one folder": ok, "reopened": {**ok, "sibling": {"Lock1": False}}})
     assert not p8.folders_hold({})
+
+
+def test_the_ring_case_table_lays_out_every_placement_and_reads_its_frames():
+    pairs = p8.ring_pairs()
+    assert len(pairs) == 13 and sum(p["internal"] for p in pairs) == 12
+    assert [p["kind"] for p in pairs].count("annulus") == 4
+    assert {(p["sigma_p"], p["sigma_r"]) for p in pairs if p["internal"]} == {(1, 1), (1, -1), (-1, 1), (-1, -1)}
+    frames = p8.spec_frames(p8.ring_spec("C:\\X"))
+    for p in pairs:
+        pk, rk = p.get("frame_of", (p["pinion"], p["ring"]))
+        sp, _ = p8.frame_theta(frames[pk][0])
+        sr, _ = p8.frame_theta(frames[rk][0])
+        assert (sp, sr) == (p["sigma_p"], p["sigma_r"]), p["label"]
+        assert frames[pk][1][2] == (0.0 if sp > 0 else 10.0)                 # both faces span z 0..10
+    sigma, theta = p8.frame_theta(p8.w4_rotation(-1, 12.5))
+    assert sigma == -1 and theta == pytest.approx(12.5)
+    assert len(p8.RING_VARIANTS) == 4 and p8.RING_VARIANTS[0] == ("pinion first", False)   # the app's way first
+
+
+def test_a_ring_turns_its_pinion_the_same_way_and_the_flip_table_reads_off_the_turns():
+    fx = p8.risky_fixture()
+    teeth = {"G1": 14, "G2": 20, "G3": 14, "G4": 22, "G5": 14, "G6": 36}
+    turns = p8.world_mesh_turns(["G1", "G2", "G3", "G4", "G5", "G6"], fx.locks, fx.meshes, teeth, fx.internal)
+    assert turns == pytest.approx([1, -14 / 20, -14 / 20, 14 / 20 * 14 / 22, 14 / 20 * 14 / 22,
+                                   14 / 20 * 14 / 22 * 14 / 36])
+    assert p8.sense_right(13.36, 5.197, True) is True and p8.sense_right(13.36, -5.197, True) is False
+    assert p8.sense_right(30.0, -21.0, False) is True and p8.sense_right(0.0, 1.0, False) is None
+    cases = [{"internal": True, "sigma_p": 1, "sigma_r": -1, "order": "pinion first", "flip": False, "right": False},
+             {"internal": True, "sigma_p": 1, "sigma_r": -1, "order": "pinion first", "flip": True, "right": True},
+             {"internal": True, "sigma_p": 1, "sigma_r": 1, "order": "pinion first", "flip": False, "right": True},
+             {"internal": True, "sigma_p": 1, "sigma_r": 1, "order": "pinion first", "flip": False, "right": False}]
+    table = p8.needed_flip_table(cases)
+    assert table["internal +1-1 pinion first"] is True and table["internal +1+1 pinion first"] == "disagree"
+    seen = [{"params": [0, 0, 0, 0, 0, 1]}, {"params": [0, 0, 0, 0, 0, -1]}]
+    assert p8.axes_parallel_as_seen(seen) is False and p8.axes_parallel_as_seen(seen[:1]) is None
+
+
+def test_the_risky_fixture_reads_as_the_demonstration_built_it():
+    from gear_generator.workbook import model, xlsx
+    spec, diagnostics = model.from_book(xlsx.read(p8.RISKY_WORKBOOK))
+    frames = p8.spec_frames(spec)
+    assert p8.frame_theta(frames["G5"][0])[0] == 1 and p8.frame_theta(frames["G6"][0])[0] == -1
+    assert [m for m in p8.risky_fixture().meshes] == [(m.a, m.b) for m in spec.meshes]
+
+
+def test_a_clash_is_counted_only_between_the_two_named_components():
+    found = [{"names": ["G5-1", "G6-1"], "volume_mm3": 3.0}, {"names": ["G1-1", "G2-1"], "volume_mm3": 1.0},
+             {"names": None}]
+    assert p8.clash_between(found, "G6-1", "G5-1") == 1 and p8.clash_between(found, "G5-1", "G1-1") == 0

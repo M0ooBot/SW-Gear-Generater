@@ -454,5 +454,9 @@ def decide(records: Records) -> Dict[str, Any]:
         "lightweight_first_drive_right": _fact(records, "lightweight_remake", "lightweight_first_drive_right"),
         "lightweight_resolved_by": _fact(records, "lightweight_remake", "lightweight_resolved_by"),
         "component_resolved_read": _fact(records, "lightweight_remake", "component_resolved_read"),
+        "ring_sense_needed_flip": _fact(records, "ring_mate_sense", "ring_sense_needed_flip"),
+        "ring_sense_app_way": _fact(records, "ring_mate_sense", "ring_sense_app_way"),
+        "ring_risky_app_way_right": _fact(records, "ring_mate_sense", "ring_risky_app_way_right"),
+        "ring_check_and_remake_holds": _fact(records, "ring_mate_sense", "ring_check_and_remake_holds"),
         "manual_steps": manual_steps(records, recipe),
     }

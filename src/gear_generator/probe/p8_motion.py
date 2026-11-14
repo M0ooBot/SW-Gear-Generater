@@ -2424,9 +2424,9 @@ def set_gear_ratio_by_definition(px: Px, doc: Any, name: str, recipe: str, old: 
 
 
 def remake_gear_mate(px: Px, doc: Any, names: Mapping[str, str], name: str, first: str, second: str,
-                     ratio: Tuple[float, float], new_name: str) -> Dict[str, Any]:
+                     ratio: Tuple[float, float], new_name: str, flip: Optional[bool] = None) -> Dict[str, Any]:
     """Delete a gear mate (MATE_DELETE_ROUTE) and make it again between the two components found by
-    ``GetComponentByName``, at ``ratio`` with GEAR_MATE_FLIP, named ``new_name``; what happened."""
+    ``GetComponentByName``, at ``ratio`` with GEAR_MATE_FLIP (or ``flip``), named ``new_name``; what happened."""
     enums = _enums(px)
     out: Dict[str, Any] = {"deleted_by": delete_mate(px, doc, name)}
     if not out["deleted_by"]:
@@ -2438,7 +2438,7 @@ def remake_gear_mate(px: Px, doc: Any, names: Mapping[str, str], name: str, firs
     if not picked:
         return out
     out["made"] = add_mate(px, doc, f"{first}-{second} gear {ratio[0]:g}:{ratio[1]:g} made again", enums["gear"],
-                           enums["closest"], flip=bool(findings.GEAR_MATE_FLIP), ratio=ratio)
+                           enums["closest"], flip=bool(findings.GEAR_MATE_FLIP if flip is None else flip), ratio=ratio)
     if out["made"]["name"]:
         out["name"] = _rename(px, mate_feature(doc, out["made"]["name"]), new_name)
         out["definition"] = gear_mate_definition(px, doc, out["name"])
@@ -2690,7 +2690,8 @@ def not_made(name: str, result: Mapping[str, Any]) -> str:
 
 
 def mate_w5_train(px: Px, doc: Any, comps: Mapping[str, Any], layout: Any, frames: Mapping[str, Tuple[Matrix, Vec]],
-                  teeth: Mapping[str, int], add: Callable[[str], int], fx: UpdateFixture = REDUCER) -> Dict[str, Any]:
+                  teeth: Mapping[str, int], add: Callable[[str], int], fx: Any = REDUCER,
+                  flips: Optional[Mapping[str, bool]] = None) -> Dict[str, Any]:
     """Unfix and mate a static assembly (the 12 : 1 unless told otherwise) as W5 will: each anchor on its shaft's axis (AXIS_MATE_ROUTE) and
     along it (AXIAL_MATE_ROUTE, the distance on "<Gear> Face Z"), G3 locked to G2, each mesh a gear mate with
     GEAR_MATE_FLIP; every mate named as D12 says. What each AddMate5 answered, by name."""
@@ -2734,7 +2735,8 @@ def mate_w5_train(px: Px, doc: Any, comps: Mapping[str, Any], layout: Any, frame
         picked = select_in(px, doc, comps[a], "Gear Axis", "AXIS", False) and \
             select_in(px, doc, comps[b], "Gear Axis", "AXIS", True)
         px.require(bool(picked), f"{a}'s and {b}'s axes select")
-        named(add_mate(px, doc, f"{a} meshes {b}", enums["gear"], enums["closest"], flip=bool(findings.GEAR_MATE_FLIP),
+        flip = (flips or {}).get(f"{a} meshes {b}", findings.GEAR_MATE_FLIP)
+        named(add_mate(px, doc, f"{a} meshes {b}", enums["gear"], enums["closest"], flip=bool(flip),
                        ratio=(float(teeth[a]), float(teeth[b]))), f"{a} meshes {b}")
     return made
 
@@ -5602,6 +5604,562 @@ def drag_operator_turns_train(px: Px) -> None:
         f"{label}: turns {c['train']['turns']}, residual {max(c['train']['residual_deg'].values()):.3g} deg, "
         f"Drag {c['calls'].get('Drag')}" for label, c in facts["cases"].items()))
     px.fact("drag_operator_turns_train", {"holds": bool(held), "recipes_that_held": held})
+
+
+# -- 14e: which way a gear mate turns an app-built ring (the W5 demonstration's m3 fault) --------------------------
+#
+# In the app-built Risky_Placements train the internal helical ring G6 (shaft Z-), gear-mated to its pinion G5
+# (shaft Z+, selected first, ratio 14 : 36) with Flip False, turned the wrong way on SolidWorks 2026 and the right
+# way on 2024; Flip True the reverse. gear_mate_sense never had that placement: its ring cases on opposite shafts
+# selected the ring first. Here: the app's own parts (build_gearbox, a static plan) on the app's layout and frames,
+# each pinion and ring mounted as W5 mounts a gear, every placement the layout can make (pinion and ring each on
+# Z+ or Z-), spur and helical, the pinion or the ring selected first, Flip False and True; an external pair on
+# opposite shafts as the control; and the Risky pair itself, built from its fixture workbook, mated as the app
+# mates it, then checked by a small temporary drive and any wrong gear mate remade with the other Flip.
+
+RING_TAG = "Probe W8 Ring"
+RING_DRIVE = "Ring Drive"
+RING_STEP = 10.0           # degrees the pinions are driven
+RING_CHECK_STEP = 10.0     # degrees of the check drive on the Risky train: the ring off its phase by ~3.5° if wrong
+RING_BATCH = 3             # pairs to an assembly
+RING_COMBOS = (("+", "+"), ("+", "-"), ("-", "+"), ("-", "-"))
+#: (order, flip): the app's own way first
+RING_VARIANTS = (("pinion first", False), ("pinion first", True), ("ring first", False), ("ring first", True))
+RISKY_WORKBOOK = os.path.join("tests", "fixtures", "excel-windows", "Risky_Placements.xlsx")
+RING_ANNULUS = "Probe W8 Ring Annulus"
+RING_CYLINDER = "Probe W8 Ring Cylinder"
+
+
+def interference_pairs(px: Px, doc: Any, label: str) -> List[Dict[str, Any]]:
+    """Every interference with its volume (mm³) and the Name2s of its components (IInterference.Components, the
+    route INTERFERENCE_NAMES_ROUTE settled)."""
+    from .p4_interference import OPTIONS  # noqa: PLC0415
+    got, manager = px.attempt(f"{label}: IAssemblyDoc.InterferenceDetectionManager",
+                              lambda: call(doc, "InterferenceDetectionManager"))
+    if not got or manager is None:
+        return [{"error": "no interference detection manager"}]
+    for option, value in OPTIONS:
+        px.attempt(f"{label}: set {option} = {value}", lambda o=option, v=value: setattr(manager, o, v))
+    found: List[Dict[str, Any]] = []
+    try:
+        got, listed = px.attempt(f"{label}: GetInterferences", lambda: member(manager, "GetInterferences")[0])
+        for item in list(listed or ()) if got else []:
+            entry: Dict[str, Any] = {"volume_mm3": float(member(item, "Volume")[0]) * 1e9}
+            ok, comps = px.attempt(f"{label}: IInterference.Components", lambda i=item: member(i, "Components")[0])
+            entry["names"] = sorted(str(call(c, "Name2")) for c in list(comps)) if ok and comps else None
+            found.append(entry)
+    finally:
+        px.attempt(f"{label}: Done", lambda: member(manager, "Done"))
+    return found
+
+
+def clash_between(found: Sequence[Mapping[str, Any]], a: str, b: str) -> int:
+    """How many of the interferences found are between components ``a`` and ``b`` (by Name2)."""
+    return sum(1 for f in found if f.get("names") and set(f["names"]) == {a, b})
+
+
+def ring_pairs() -> List[Dict[str, Any]]:
+    """The pairs the case table runs: every pinion/ring shaft-direction combination, spur then helical (20°, both
+    left-handed, as the Risky pair), then the external control on opposite shafts. Each pair on its own two shafts,
+    its pinion's shaft an input, one row of 150 mm per pair."""
+    pairs = []
+    for kind, helix, hand in (("spur", "", ""), ("helical", "20", "left")):
+        for sp, sr in RING_COMBOS:
+            pairs.append({"kind": kind, "helix": helix, "hand": hand, "sigma_p": 1 if sp == "+" else -1,
+                          "sigma_r": 1 if sr == "+" else -1, "internal": True, "teeth": (14, 36)})
+    pairs.append({"kind": "spur", "helix": "", "hand": "", "sigma_p": 1, "sigma_r": -1, "internal": False,
+                  "teeth": (14, 22)})
+    for n, p in enumerate(pairs, start=1):
+        p.update(index=n, pinion=f"G{n}P", ring=f"G{n}R", shaft_p=f"P{n}", shaft_r=f"R{n}",
+                 label=f"{'ring' if p['internal'] else 'external'} {p['kind']} "
+                       f"{'+' if p['sigma_p'] > 0 else '-'}{'+' if p['sigma_r'] > 0 else '-'}")
+    # The plain annulus and cylinder (gear_mate_sense's parts, no teeth) on the spur pairs' own shafts and frames,
+    # so the toothed app-built ring and the annulus differ in nothing else. They overlap; their interference is
+    # not evidence.
+    for k, (sp, sr) in enumerate(RING_COMBOS, start=1):
+        pairs.append({"kind": "annulus", "helix": "", "hand": "", "sigma_p": 1 if sp == "+" else -1,
+                      "sigma_r": 1 if sr == "+" else -1, "internal": True, "teeth": (14, 36), "index": len(pairs) + 1,
+                      "pinion": f"A{k}P", "ring": f"A{k}R", "shaft_p": f"P{k}", "shaft_r": f"R{k}",
+                      "frame_of": (f"G{k}P", f"G{k}R"), "label": f"ring annulus {sp}{sr}"})
+    return pairs
+
+
+def ring_spec(folder: str) -> Any:
+    """The case table's gearbox, written as the app's workbook model: module 2, face 10, both gears of a pair in
+    one plane (z 0..10 whichever way their shafts point)."""
+    from ..workbook.model import Box, Gear, GearboxSpec, Mesh, Shaft  # noqa: PLC0415
+
+    shafts, gears, meshes = [], [], []
+    for p in ring_pairs():
+        if p["kind"] == "annulus":
+            continue
+        n, (zp, zr) = p["index"], p["teeth"]
+        mt = 2.0 / math.cos(math.radians(float(p["helix"]))) if p["helix"] else 2.0
+        centre = mt * ((zr - zp) if p["internal"] else (zr + zp)) / 2.0
+        y = 150.0 * n
+        shafts.append(Shaft(p["shaft_p"], "frame", "0", repr(y), "0", "Z+" if p["sigma_p"] > 0 else "Z-", "input",
+                            speed="1000", torque="5"))
+        shafts.append(Shaft(p["shaft_r"], "frame", repr(centre), repr(y), "0", "Z+" if p["sigma_r"] > 0 else "Z-", ""))
+        hand_r = p["hand"] if p["internal"] else ("right" if p["hand"] == "left" else ("left" if p["hand"] else ""))
+        gears.append(Gear(p["pinion"], p["shaft_p"], "5" if p["sigma_p"] > 0 else "-5", p["kind"], "external",
+                          str(zp), "2", face_width="10", bore="8", helix_angle=p["helix"], hand=p["hand"]))
+        gears.append(Gear(p["ring"], p["shaft_r"], "5" if p["sigma_r"] > 0 else "-5", p["kind"],
+                          "internal" if p["internal"] else "external", str(zr), "2", face_width="10",
+                          bore="" if p["internal"] else "8", helix_angle=p["helix"], hand=hand_r))
+        meshes.append(Mesh(p["pinion"], p["ring"]))
+    return GearboxSpec(box=Box(name=RING_TAG, output_folder=folder.rstrip("\\/") + "\\"), shafts=tuple(shafts),
+                       gears=tuple(gears), meshes=tuple(meshes))
+
+
+def spec_frames(spec: Any) -> Dict[str, Tuple[Matrix, Vec]]:
+    """Each gear's built frame by the app's layout (``workbook.layout.frames``)."""
+    from ..workbook import assess as wb_assess, layout as wb_layout  # noqa: PLC0415
+    from .p7_workbook import rows_matrix  # noqa: PLC0415
+
+    assessed = wb_assess.assess(spec, [], spec.box.output_folder, "")
+    if assessed.lay_out_refusal():
+        raise Require(f"{spec.box.name} does not lay out: {assessed.lay_out_refusal()}")
+    return {g: (rows_matrix(f.rotation), tuple(f.at)) for g, f in wb_layout.frames(assessed.report).items()}
+
+
+def frame_theta(matrix: Matrix) -> Tuple[int, float]:
+    """A W4 frame's shaft sense and phase: σ from its third column, θ from its first."""
+    sigma = 1 if matrix[2][2] > 0 else -1
+    return sigma, math.degrees(math.atan2(sigma * matrix[1][0], matrix[0][0]))
+
+
+def world_mesh_turns(gears: Sequence[str], locks: Sequence[Tuple[str, str]], meshes: Sequence[Tuple[str, str]],
+                     teeth: Mapping[str, int], internal: Sequence[str]) -> List[float]:
+    """Each gear's turn about the assembly's +Z per degree of the first: a lock turns its pair together, an outside
+    mesh turns its second gear ``-z_a/z_b`` of the first, a mesh with a ring in it ``+z_a/z_b`` (every shaft
+    parallel to Z, whichever way it points)."""
+    out: Dict[str, float] = {gears[0]: 1.0}
+    rings = set(internal)
+    for _ in range(len(gears)):
+        for a, f in locks:
+            for x, y in ((a, f), (f, a)):
+                if x in out and y not in out:
+                    out[y] = out[x]
+        for a, b in meshes:
+            k = 1.0 if (a in rings or b in rings) else -1.0
+            if a in out and b not in out:
+                out[b] = k * out[a] * teeth[a] / teeth[b]
+            elif b in out and a not in out:
+                out[a] = k * out[b] * teeth[b] / teeth[a]
+    return [out[g] for g in gears]
+
+
+def sense_right(turn_driver: float, turn_driven: float, internal: bool) -> Optional[bool]:
+    """Whether a pair turned as it meshes (about the same +Z): the same way inside a ring, opposite outside; None
+    when the driver did not turn."""
+    if abs(turn_driver) < 1e-9:
+        return None
+    return (turn_driven / turn_driver > 0) == internal
+
+
+def needed_flip_table(cases: Sequence[Mapping[str, Any]]) -> Dict[str, Any]:
+    """For each static key (inside or outside, both shaft senses, which gear first), the Flip that turned it right,
+    from every case of that key; a key whose cases disagree (spur against helical) maps to "disagree"."""
+    table: Dict[str, Any] = {}
+    for c in cases:
+        if c.get("right") is None:
+            continue
+        key = f"{'internal' if c['internal'] else 'external'} {c['sigma_p']:+d}{c['sigma_r']:+d} {c['order']}"
+        needed = c["flip"] if c["right"] else (not c["flip"])
+        table[key] = needed if table.get(key, needed) == needed else "disagree"
+    return table
+
+
+def entity_params(px: Px, doc: Any, name: str) -> List[Dict[str, Any]]:
+    """Each of a mate's entities as SolidWorks reports it: its component and ``IMateEntity2.EntityParams`` (a point
+    on the axis in metres, then its direction)."""
+    feature = mate_feature(doc, name)
+    got, mate = px.attempt(f"GetSpecificFeature2 of {name}", lambda: call(feature, "GetSpecificFeature2"))
+    out: List[Dict[str, Any]] = []
+    if not got or mate is None:
+        return out
+    ok, count = px.attempt(f"IMate2.GetMateEntityCount of {name}", lambda: member(mate, "GetMateEntityCount")[0])
+    for index in range(int(count) if ok and isinstance(count, int) else 0):
+        ok, item = px.attempt(f"IMate2.MateEntity({index}) of {name}", lambda i=index: call(mate, "MateEntity", i))
+        entry: Dict[str, Any] = {}
+        if ok and item is not None:
+            ok2, owner = px.attempt("IMateEntity2.ReferenceComponent", lambda it=item: call(it, "ReferenceComponent"))
+            entry["component"] = str(call(owner, "Name2")) if ok2 and owner is not None else None
+            ok2, params = px.attempt("IMateEntity2.EntityParams", lambda it=item: member(it, "EntityParams")[0])
+            entry["params"] = [round(float(v), 9) for v in params] if ok2 and params is not None else None
+        out.append(entry)
+    return out
+
+
+def axes_parallel_as_seen(entities: Sequence[Mapping[str, Any]]) -> Optional[bool]:
+    """Whether the two entities' directions (EntityParams 3..5) point the same way."""
+    if len(entities) != 2 or not all(e.get("params") and len(e["params"]) >= 6 for e in entities):
+        return None
+    a, b = entities[0]["params"][3:6], entities[1]["params"][3:6]
+    return _dot(a, b) > 0
+
+
+def mount_w5(px: Px, doc: Any, comp: Any, layout: Any, shaft: str, z: float, label: str) -> List[str]:
+    """Unfix a gear and mount it as W5 does: its Gear Axis coincident with ``"<shaft> Axis"``, its origin at its
+    built distance from the layout's Front (coincident at 0, else a distance, flipped below Front)."""
+    enums = _enums(px)
+    px.require(unfix(px, doc, comp), f"{label} floats")
+    px.require(bool(select_in(px, doc, comp, "Gear Axis", "AXIS", False)) and
+               bool(select_in(px, doc, layout, f"{shaft} Axis", "AXIS", True)), f"{label}'s axis and {shaft} Axis select")
+    made = [add_mate(px, doc, f"{label} on {shaft} Axis", enums["coincident"], enums["closest"])]
+    px.require(bool(_select_origin(px, doc, comp, append=False)) and
+               bool(select_in(px, doc, layout, _plane_names(layout)[0], "PLANE", True)),
+               f"{label}'s origin and the layout's Front select")
+    if abs(z) < 1e-9:
+        made.append(add_mate(px, doc, f"{label} along {shaft}", enums["coincident"], enums["closest"]))
+    else:
+        made.append(add_mate(px, doc, f"{label} along {shaft}", enums["distance"], enums["closest"], flip=z < 0,
+                             distance=abs(z)))
+    for m, what in zip(made, ("on its axis", "along its shaft")):
+        if m.get("name") is None:
+            raise Require(not_made(f"{label} {what}", m))
+    return [m["name"] for m in made]
+
+
+def _ring_round(px: Px, asm: Assembly, pairs: Sequence[Mapping[str, Any]], order: str, flip: bool,
+                eqm: Any) -> List[Dict[str, Any]]:
+    """One variant on every pair of an assembly: each gear mate made (the app's call: both Gear Axes, closest,
+    the ratio in selection order), read back, every pinion driven RING_STEP by the shared global, every turn read,
+    the drive set back, every gear mate deleted."""
+    enums = _enums(px)
+    doc = asm.doc
+    records = []
+    for p in pairs:
+        first, second = (p["pinion"], p["ring"]) if order == "pinion first" else (p["ring"], p["pinion"])
+        zp, zr = p["teeth"]
+        ratio = (float(zp), float(zr)) if order == "pinion first" else (float(zr), float(zp))
+        r: Dict[str, Any] = {"pair": p["label"], "kind": p["kind"], "internal": p["internal"], "sigma_p": p["sigma_p"],
+                             "sigma_r": p["sigma_r"], "order": order, "flip": flip, "ratio": list(ratio)}
+        picked = bool(select_in(px, doc, asm.gears[first], "Gear Axis", "AXIS", False)) and \
+            bool(select_in(px, doc, asm.gears[second], "Gear Axis", "AXIS", True))
+        r["selected"] = picked
+        r["mate"] = add_mate(px, doc, f"{p['label']} {order} flip {flip}", enums["gear"], enums["closest"], flip=flip,
+                             ratio=ratio) if picked else {"name": None}
+        name = r["mate"].get("name")
+        if name:
+            r["definition"] = gear_mate_definition(px, doc, name)
+            held = mate_entities(px, doc, name)
+            r["alignment"], r["flipped"] = held.get("alignment"), held.get("flipped")
+            r["entities"] = entity_params(px, doc, name)
+            r["parallel_as_seen"] = axes_parallel_as_seen(r["entities"])
+        records.append(r)
+    rebuild(px, doc, f"{order}, flip {flip}: mated", top_only=TOP_ONLY)
+    errors = errors_only(mate_errors(px, doc))
+    start = _frames(asm.gears)
+    _set_global(eqm, RING_DRIVE, DEMO_FROM + RING_STEP)
+    rebuild(px, doc, f"{order}, flip {flip}: driven", top_only=TOP_ONLY)
+    after = _frames(asm.gears)
+    clashes = interference_pairs(px, doc, f"{order}, flip {flip}: driven off the built phase")
+    _set_global(eqm, RING_DRIVE, DEMO_FROM)
+    rebuild(px, doc, f"{order}, flip {flip}: set back", top_only=TOP_ONLY)
+    back = worst(_off(asm.gears, start))
+    for p, r in zip(pairs, records):
+        tp, tr = (world_turn(start[k][0], after[k][0]) for k in (p["pinion"], p["ring"]))
+        r["world"] = {"pinion": round(tp, 9), "ring": round(tr, 9)}
+        r["own"] = {"pinion": round(own_turn(start[p["pinion"]][0], after[p["pinion"]][0]), 9),
+                    "ring": round(own_turn(start[p["ring"]][0], after[p["ring"]][0]), 9)}
+        zp, zr = p["teeth"]
+        r["at_ratio"] = abs(abs(tp) - RING_STEP) < 1e-6 and abs(abs(tr / tp) - zp / zr) < TOLERANCE_RATIO \
+            if abs(tp) > 1e-9 else False
+        r["right"] = sense_right(tp, tr, p["internal"]) if r["at_ratio"] else None
+        r["errors"] = {k: v for k, v in errors.items() if r["mate"].get("name") == k}
+        names = (str(call(asm.gears[p["pinion"]], "Name2")), str(call(asm.gears[p["ring"]], "Name2")))
+        r["clashes_driven"] = None if p["kind"] == "annulus" else clash_between(clashes, *names)
+        r["back_mm"] = back
+        if r["mate"].get("name"):
+            r["deleted_by"] = delete_mate(px, doc, r["mate"]["name"])
+    rebuild(px, doc, f"{order}, flip {flip}: gear mates deleted", top_only=TOP_ONLY)
+    return records
+
+
+def risky_fixture() -> Any:
+    """Risky_Placements as the app mates it: each shaft's first gear an anchor, the other gear on a shaft locked
+    to it, each mesh a gear mate in the Meshes sheet's order."""
+    import types  # noqa: PLC0415
+    return types.SimpleNamespace(anchors=(("G1", "S1"), ("G2", "S2"), ("G4", "S3"), ("G6", "S4")),
+                                 locks=(("G2", "G3"), ("G4", "G5")), meshes=(("G1", "G2"), ("G3", "G4"), ("G5", "G6")),
+                                 internal=("G6",))
+
+
+def check_senses(px: Px, doc: Any, comps: Mapping[str, Any], layout: Any, fx: Any, teeth: Mapping[str, int],
+                 label: str) -> Dict[str, Any]:
+    """The fallback's check: the temporary drive (the demonstration's: G1's Top to the layout's Right at 90°, on a
+    global) driven RING_CHECK_STEP, every gear's turn about +Z read, set back and taken away; each mesh judged right
+    or wrong by the sign of its driven gear's turn against its driver's."""
+    start = _frames(comps)
+    out: Dict[str, Any] = {"drive": _temporary_drive(px, doc, comps, layout)}
+    if not out["drive"]:
+        return out
+    rebuild(px, doc, f"{label}: drive added", top_only=TOP_ONLY)
+    out["turns"] = _drive_by(px, doc, comps, RING_CHECK_STEP, f"{label}: driven", global_name=UPDATE_DRIVE)
+    clashes = interference_pairs(px, doc, f"{label}: driven off the built phase")
+    out["clashes_driven"] = {f"{a} meshes {b}": clash_between(clashes, str(call(comps[a], "Name2")),
+                                                               str(call(comps[b], "Name2"))) for a, b in fx.meshes}
+    _set_global(call(doc, "GetEquationMgr"), UPDATE_DRIVE, DEMO_FROM)
+    rebuild(px, doc, f"{label}: drive set back", top_only=TOP_ONLY)
+    out["dropped"] = _drop_drive(px, doc, out["drive"])
+    rebuild(px, doc, f"{label}: drive taken away", top_only=TOP_ONLY)
+    out["back_mm"] = worst(_off(comps, start))
+    turns = out["turns"]
+    out["meshes"] = {f"{a} meshes {b}": sense_right(turns[a], turns[b], a in fx.internal or b in fx.internal)
+                     for a, b in fx.meshes}
+    expected = world_mesh_turns(list(comps), fx.locks, fx.meshes, teeth, fx.internal)
+    out["at_ratio"] = all(abs(abs(turns[g]) - abs(RING_CHECK_STEP * e)) < 1e-6 for g, e in zip(comps, expected))
+    return out
+
+
+def _risky_train(px: Px, folder: str) -> Dict[str, Any]:
+    """Risky_Placements built by the app (a static plan) from its fixture workbook in ``folder``; what the probe needs."""
+    import dataclasses  # noqa: PLC0415
+
+    from .. import swbuild  # noqa: PLC0415
+    from ..workbook import assess as wb_assess, model, xlsx  # noqa: PLC0415
+
+    here = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    spec, diagnostics = model.from_book(xlsx.read(os.path.join(here, RISKY_WORKBOOK)))
+    px.require(not [d for d in diagnostics if getattr(d, "level", "") == "error"], f"the fixture reads: {diagnostics}")
+    spec = dataclasses.replace(spec, box=dataclasses.replace(spec.box, output_folder=folder.rstrip("\\/") + "\\"))
+    return _app_build(px, spec, swbuild, wb_assess)
+
+
+def _app_build(px: Px, spec: Any, swbuild: Any, wb_assess: Any) -> Dict[str, Any]:
+    """``build_gearbox`` of a static plan of ``spec`` (as idler_update builds); the plan, each gear's part path,
+    the components' names and the frames."""
+    assessed = wb_assess.assess(spec, [], spec.box.output_folder, "")
+    px.require(assessed.lay_out_refusal() == "", f"{spec.box.name} lays out: {assessed.lay_out_refusal()!r}")
+    plan = static_plan(px, assessed)
+    part_of = {g: job.path for job in plan.build for g in job.gear_ids}
+    paths = [plan.assembly_path, plan.layout_path] + sorted({j.path for j in plan.build})
+    before = sc.open_titles(px)
+    try:
+        try:
+            result = swbuild.build_gearbox(px.session, **plan.build_kwargs())
+        finally:
+            made = [t for t in sc.open_titles(px) if t not in before]
+            px.shared.setdefault("created", []).extend(t for t in made if t not in px.shared["created"])
+        px.require(result.ok and not result.clashes, f"build_gearbox built {spec.box.name}",
+                   {"failures": plain(result.failures), "clashes": plain(result.clashes)})
+        names = {gear: result.components.get(handle, "") for handle, gear in plan.handles.items()}
+        layout_name = result.components.get("layout", "")
+    finally:
+        _close_quietly(px, paths)
+    return {"spec": spec, "plan": plan, "part_of": part_of, "paths": paths, "names": names,
+            "layout_name": layout_name, "frames": spec_frames(spec)}
+
+
+@probe("ring_mate_sense", needs=("motion_enums", "end_to_end", "layout_assembly_reopen"), tier=8,
+       members=("swbuild.build_gearbox", "IAssemblyDoc.AddMate5 gear", "IFeature.GetDefinition",
+                "IGearMateFeatureData.Reverse", "IMateEntity2.EntityParams", "IMate2.Alignment", "IMate2.Flipped",
+                "IInterference.Components", "IModelDoc2.EditDelete"))
+def ring_mate_sense(px: Px) -> None:
+    """Which way a gear mate turns an app-built ring. First the Risky pair from its fixture, mated as the app mates
+    it (the m3 fault, to show it repeats), checked by a drive with interference off the built phase, any wrong
+    gear mate remade with the other Flip, against the same train mated right the first time. Then every
+    pinion/ring shaft-sense combination: toothed spur and helical rings the app builds and gear_mate_sense's plain
+    annulus on the same shafts, pinion or ring selected first, Flip False and True, an external control."""
+    from .. import swbuild  # noqa: PLC0415
+    from ..workbook import assess as wb_assess  # noqa: PLC0415
+    from .p7_workbook import _doc_at  # noqa: PLC0415
+
+    root = _folder(px)
+
+    # -- 1. the Risky pair from its fixture: the app's way, checked, remade where wrong; and right the first time.
+    risky_folder = os.path.join(root, "risky")
+    px.require(not os.path.exists(risky_folder), f"{risky_folder} does not exist yet")
+    os.makedirs(risky_folder)
+    risky = _risky_train(px, risky_folder)
+    fx = risky_fixture()
+    teeth = {g.id: int(g.teeth) for g in risky["spec"].gears}
+    rplan = risky["plan"]
+    rpaths = list(risky["paths"])
+    copies = {}
+    for tag in ("checked", "right first"):
+        path = os.path.join(risky_folder, f"Risky {tag}.SLDASM")
+        px.require(px.attempt(f"copy the static assembly to {os.path.basename(path)} (no SolidWorks call)",
+                              lambda path=path: shutil.copyfile(rplan.assembly_path, path))[0], f"{tag}: copied")
+        copies[tag] = path
+    out: Dict[str, Any] = {}
+
+    def open_copy(path: str) -> Tuple[Any, Dict[str, Any], Any]:
+        doc, _ = open_by_path(px, path, sc.SW_DOC_ASSEMBLY, prefer="OpenDoc6")
+        title = str(call(doc, "GetTitle"))
+        if title not in px.shared["created"]:
+            px.shared["created"].append(title)
+        comps = {g: call(doc, "GetComponentByName", n) for g, n in risky["names"].items()}
+        layout = call(doc, "GetComponentByName", risky["layout_name"])
+        px.require(all(c is not None for c in comps.values()) and layout is not None, "every component is found")
+        return doc, dict(sorted(comps.items())), layout
+
+    def flags() -> Dict[str, Optional[bool]]:
+        found = {}
+        for p in rpaths[1:]:
+            d = _doc_at(px, p)
+            found[os.path.basename(p)] = None if d is None else bool(call(d, "GetSaveFlag"))
+        return found
+
+    # A: the app's way (GEAR_MATE_FLIP everywhere), checked, every wrong gear mate remade with the other Flip.
+    try:
+        doc, comps, layout = open_copy(copies["checked"])
+        a: Dict[str, Any] = {"flags_open": flags()}
+        add = adder(px, call(doc, "GetEquationMgr"))
+        mate_w5_train(px, doc, comps, layout, risky["frames"], teeth, add, fx, flips={})
+        rebuild(px, doc, "mated the app's way", top_only=TOP_ONLY)
+        a["off_mated_mm"] = worst(_off(comps, risky["frames"]))
+        a["built_clashes"] = interference_pairs(px, doc, "the app's way, at the built phase")
+        a["definition"] = gear_mate_definition(px, doc, "G5 meshes G6")
+        a["entities"] = entity_params(px, doc, "G5 meshes G6")
+        a["held"] = mate_entities(px, doc, "G5 meshes G6")
+        a["first_check"] = check_senses(px, doc, comps, layout, fx, teeth, "the app's way")
+        wrong = [m for m, ok in a["first_check"]["meshes"].items() if ok is False]
+        a["wrong"] = wrong
+        flips = {f"{x} meshes {y}": bool(findings.GEAR_MATE_FLIP) for x, y in fx.meshes}
+        names = {k: str(call(c, "Name2")) for k, c in comps.items()}
+        a["remade"] = {}
+        for m in wrong:
+            x, _w, y = m.split(" ")
+            flips[m] = not flips[m]
+            a["remade"][m] = remake_gear_mate(px, doc, names, m, x, y, (float(teeth[x]), float(teeth[y])), m,
+                                              flip=flips[m])
+            a["remade"][m]["entities"] = entity_params(px, doc, m) if a["remade"][m].get("name") else None
+        rebuild(px, doc, "remade", top_only=TOP_ONLY)
+        a["second_check"] = check_senses(px, doc, comps, layout, fx, teeth, "after the remake")
+        a["frames"] = {k: [list(map(list, v[0])), list(v[1])] for k, v in _frames(comps).items()}
+        a["off_built_mm"] = worst(_off(comps, risky["frames"]))
+        a["mates"] = mate_names(doc)
+        a["errors"] = errors_only(mate_errors(px, doc))
+        a["flags_after"] = flags()
+        a["assembly_modified"] = bool(call(doc, "GetSaveFlag"))
+        a["flips"] = flips
+        out["checked"] = a
+    finally:
+        _close_quietly(px, rpaths + [copies["checked"]])
+    # B: the flips the check found, made right the first time.
+    try:
+        doc, comps, layout = open_copy(copies["right first"])
+        b: Dict[str, Any] = {"flags_open": flags()}
+        add = adder(px, call(doc, "GetEquationMgr"))
+        mate_w5_train(px, doc, comps, layout, risky["frames"], teeth, add, fx, flips=out["checked"]["flips"])
+        rebuild(px, doc, "mated right first time", top_only=TOP_ONLY)
+        b["check"] = check_senses(px, doc, comps, layout, fx, teeth, "right first time")
+        b["frames"] = {k: [list(map(list, v[0])), list(v[1])] for k, v in _frames(comps).items()}
+        b["off_built_mm"] = worst(_off(comps, risky["frames"]))
+        b["mates"] = mate_names(doc)
+        b["errors"] = errors_only(mate_errors(px, doc))
+        b["flags_after"] = flags()
+        out["right first"] = b
+    finally:
+        _close_quietly(px, rpaths + [copies["right first"]])
+    px.fact("ring_risky", out)
+    a, b = out["checked"], out["right first"]
+    remade = list(a["remade"])
+    order_a = [m for m in a["mates"] if m not in remade] + [m for m in a["mates"] if m in remade]
+    order_b = [m for m in b["mates"] if m not in remade] + [m for m in b["mates"] if m in remade]
+    frames_apart = frame_table_diff(a["frames"], b["frames"])
+    only_assembly = not any(v for v in a["flags_after"].values() if v) and \
+        not any(v for v in b["flags_after"].values() if v)
+    held = bool(all(v is True for v in a["second_check"]["meshes"].values()) and a["second_check"]["at_ratio"]
+                and all(v is True for v in b["check"]["meshes"].values()) and order_a == order_b
+                and frames_apart < TOLERANCE_MM and only_assembly and not a["errors"] and not b["errors"]
+                and a["first_check"]["back_mm"] < TOLERANCE_MM and a["second_check"]["back_mm"] < TOLERANCE_MM
+                and a["off_built_mm"] < TOLERANCE_MM and b["off_built_mm"] < TOLERANCE_MM
+                and not any(a["second_check"]["clashes_driven"].values())
+                and not any(b["check"]["clashes_driven"].values()))
+    px.check(True, f"Risky: the app's way judged {a['first_check']['meshes']} with clashes driven "
+                   f"{a['first_check']['clashes_driven']}; remade {remade}; then {a['second_check']['meshes']} "
+                   f"(clashes {a['second_check']['clashes_driven']}); right first time {b['check']['meshes']}; "
+                   f"frames {frames_apart:.1e} apart; mates {a['mates']} / {b['mates']}")
+    px.fact("ring_risky_app_way_right", a["first_check"]["meshes"].get("G5 meshes G6"))
+    px.fact("ring_risky_wrong_sense_clashes", {"app's way": a["first_check"]["clashes_driven"].get("G5 meshes G6"),
+                                               "after the remake": a["second_check"]["clashes_driven"].get("G5 meshes G6")},
+            "interferences between G5 and G6 with the train driven off its built phase")
+    px.fact("ring_check_and_remake_holds", held,
+            "the check drive found every wrong gear mate, the remake with the other Flip put it right, and the "
+            "train is the right-first-time train: frames, mates (the remade one last), only the assembly marked")
+
+    # -- 2. the case table: app-built toothed pairs and the plain annulus on the same shafts.
+    folder = os.path.join(root, "ring")
+    px.require(not os.path.exists(folder), f"{folder} does not exist yet")
+    os.makedirs(folder)
+    built = _app_build(px, ring_spec(folder), swbuild, wb_assess)
+    frames, part_of, plan = dict(built["frames"]), dict(built["part_of"]), built["plan"]
+    _c, cyl_path = _part_with_axis(px, folder, RING_CYLINDER)
+    _r, annulus_path = ring_part(px, folder, RING_ANNULUS)
+    pairs = ring_pairs()
+    for p in pairs:
+        if p["kind"] == "annulus":
+            frames[p["pinion"]], frames[p["ring"]] = frames[p["frame_of"][0]], frames[p["frame_of"][1]]
+            part_of[p["pinion"]], part_of[p["ring"]] = cyl_path, annulus_path
+    paths = list(built["paths"]) + [cyl_path, annulus_path]
+    cases: List[Dict[str, Any]] = []
+    built_clashes: Dict[str, Any] = {}
+    try:
+        for first in range(0, len(pairs), RING_BATCH):
+            batch = pairs[first:first + RING_BATCH]
+            parts = {g: part_of[g] for p in batch for g in (p["pinion"], p["ring"])}
+            asm = Assembly(px, plan.layout_path, parts)
+            try:
+                for part in sorted(set(parts.values())):     # a closed part does not go in (REUSE_ADD_ROUTE)
+                    open_by_path(px, part, prefer="OpenDoc6")
+                asm.open()
+                eqm = call(asm.doc, "GetEquationMgr")
+                add = adder(px, eqm)
+                px.require(add(f'"{RING_DRIVE}"= {DEMO_FROM:g}') >= 0, "the drive global is added")
+                for p in batch:
+                    for g in (p["pinion"], p["ring"]):
+                        sigma, theta = frame_theta(frames[g][0])
+                        asm.add(g, g, sigma, theta, frames[g][1])
+                for p in batch:
+                    for g, shaft in ((p["pinion"], p["shaft_p"]), (p["ring"], p["shaft_r"])):
+                        mount_w5(px, asm.doc, asm.gears[g], asm.layout, shaft, frames[g][1][2], g)
+                    pinion = asm.gears[p["pinion"]]
+                    px.require(bool(drive_mate(px, asm.doc, pinion, _plane_names(pinion)[1], asm.layout,
+                                               _plane_names(asm.layout)[2], p["pinion"], add, _enums(px)["closest"],
+                                               angle=DEMO_FROM, global_name=RING_DRIVE)), f"{p['pinion']} is driven")
+                rebuild(px, asm.doc, "mounted and driven", top_only=TOP_ONLY)
+                off = worst(_off(asm.gears, {g: frames[g] for g in asm.gears}))
+                found = interference_pairs(px, asm.doc, "at the built phase")
+                for p in batch:
+                    names = (str(call(asm.gears[p["pinion"]], "Name2")), str(call(asm.gears[p["ring"]], "Name2")))
+                    built_clashes[p["label"]] = clash_between(found, *names)
+                for order, flip in RING_VARIANTS:
+                    for r in _ring_round(px, asm, batch, order, flip, eqm):
+                        r["mounted_off_built_mm"] = off
+                        cases.append(r)
+            finally:
+                try:
+                    sc.close(px, asm.doc) if asm.doc is not None else None
+                except Exception as exc:  # noqa: BLE001
+                    px.note(f"CLEANUP {exc}")
+    finally:
+        _close_quietly(px, paths)
+    px.fact("ring_sense_cases", cases)
+    px.fact("ring_sense_built_clashes", built_clashes, "interferences of each pair at its built phase, mounted")
+    table = needed_flip_table([c for c in cases if c["kind"] != "annulus"])
+    px.fact("ring_sense_needed_flip", table, "the Flip that turned each static case right on the toothed parts "
+                                             "(internal or external, pinion and ring shaft senses, which gear first)")
+    px.fact("ring_sense_needed_flip_annulus", needed_flip_table([c for c in cases if c["kind"] == "annulus"]),
+            "the same on gear_mate_sense's plain annulus and cylinder, on the spur pairs' shafts")
+    px.check(all(c.get("at_ratio") for c in cases), "every pair turned at its ratio: "
+             f"{[(c['pair'], c['order'], c['flip']) for c in cases if not c.get('at_ratio')]}")
+    px.fact("ring_sense_app_way", {c["pair"]: c["right"] for c in cases
+                                   if c["order"] == "pinion first" and c["flip"] is False},
+            "pinion first, Flip False (the app's way): right?")
+    toothed = [c for c in cases if c["kind"] != "annulus" and c.get("right") is not None]
+    px.fact("ring_sense_clash_tells", all((c["clashes_driven"] == 0) == c["right"] for c in toothed),
+            "on the toothed pairs, driven off the built phase: clear exactly when the sense is right")
+    by_seen = {}
+    for c in cases:
+        if c.get("right") is not None and c.get("parallel_as_seen") is not None:
+            key = f"{'internal' if c['internal'] else 'external'} parallel {c['parallel_as_seen']}"
+            needed = c["flip"] if c["right"] else (not c["flip"])
+            by_seen.setdefault(key, set()).add(needed)
+    px.fact("ring_sense_needed_flip_by_seen_axes", {k: sorted(v) for k, v in by_seen.items()},
+            "the Flip needed, by whether SolidWorks reports the two entities' directions the same way")
 
 
 # -- 15 (last): a gear mate's ratio changed through its definition, recorded and never chosen ------------------
