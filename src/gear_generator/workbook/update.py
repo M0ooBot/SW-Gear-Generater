@@ -1029,6 +1029,11 @@ def _follow_mates(box: GearboxRecord, plan: UpdatePlan, result: GearboxUpdate) -
     # ratio. One found at another ratio and remade though the plan asked no change (``ratios_found``, also in
     # ``ratios``) is not in the plan's ratios: the record already holds the wanted ratio for it.
     set_ratios = set(getattr(result, "ratios", []) or []) | set(getattr(result, "ratios_already", []) or [])
+    if result.failures or result.skipped:
+        # An Update that failed keeps on record the ratios last known true: a mate listed in ``ratios`` may not hold
+        # the new one (a remake read wrong with both Flips is listed before its sense is settled), and the next
+        # Update's live read finds what it does hold.
+        set_ratios = set()
     moved = set(getattr(result, "axial", []) or [])
     given = {name: [int(n), int(d)] for name, n, d in plan.motion.ratios}
     at = {p.gear: p.at for p in plan.placements}

@@ -1315,3 +1315,21 @@ def test_round_trip_risky_placements_ring_is_turned_round_at_build_where_its_ver
                                   read_sidecar=lambda p: None, exists=sw.exists).record
     assert record.gearbox.kind == motion.MOTION
     assert nothing(update.classify(record, assessed(spec), exists=lambda p: True))
+
+
+def test_round_trip_a_failed_remake_keeps_the_ratio_last_known_true_on_record(on_fake, monkeypatch):
+    """A remake that SolidWorks turns wrong with either Flip fails the Update after the mate is listed in ``ratios``:
+    the record keeps 17 : 68, the assembly is marked unsaved as for any stopped Update, and the next press (the
+    mate's sense now right) finds it at its live ratio and finishes."""
+    monkeypatch.setattr(findings, "GEAR_MATE_RATIO_ROUTE", "remake")
+    sw, record = on_fake
+    sw.never_right = {"G1 meshes G2"}
+    _, failed, finished = press(sw, record, TEETH_69)
+    assert failed.failures and "G1 meshes G2" in failed.ratios, failed.failures
+    assert {e.name: e.ratio for e in finished.record.gearbox.mates}["G1 meshes G2"] == [17, 68]
+    assert record.gearbox.assembly in finished.record.unsaved and finished.record.digest == record.digest
+    sw.never_right = set()
+    _, result, again = press(sw, finished.record, TEETH_69, digest="d3")
+    assert result.ok and again.earlier_update == gearbox_.UPDATE_NOT_SAVED
+    assert {e.name: e.ratio for e in again.record.gearbox.mates}["G1 meshes G2"] == [17, 69]
+    assert nothing(update.classify(again.record, assessed(TEETH_69), exists=lambda p: True))
