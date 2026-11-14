@@ -357,7 +357,13 @@ class DialogWatch(threading.Thread):
                             continue
                     say(f"DIALOG  SolidWorks shows {title!r}: {xlhelp.child_texts(hwnd)[:8]}"
                         + (" (a progress box that closes itself; not logged again)" if title in PROGRESS else ""))
-                    if DISMISS.is_set() and title not in PROGRESS:
+                    if "SOLIDWORKS CAM" in title and any(t.startswith("Save changes to") for t in texts):
+                        # Closing a changed 2024-era assembly in 2026 raises this Yes/No box, which ignores WM_CLOSE
+                        # and Escape (it held a probe 50 minutes). Every close of this run saves first or means to
+                        # discard, so No is what a person would press.
+                        pressed = press_dont_save(hwnd)
+                        say(f"DIALOG  SOLIDWORKS CAM's save question answered: pressed {pressed!r}")
+                    elif DISMISS.is_set() and title not in PROGRESS:
                         pressed = press_dont_save(hwnd)
                         say(f"DIALOG  closing a refused, never-saved assembly: pressed {pressed!r}" if pressed else
                             "DIALOG  closing a refused, never-saved assembly: no No / Don't Save button to press")
@@ -821,7 +827,8 @@ class Desk:
             return plan, None
         for line in result.log_lines():
             say("        " + line)
-        say(f"        in {seconds:.1f} s; {memory()}; kind {result.kind!r}")
+        say(f"        in {seconds:.1f} s; {memory()}; kind {result.kind!r}; turned round (made again with the other "
+            f"Flip) {getattr(result.assembly, 'turned_round', None) if result.assembly is not None else None}")
         say(f"        steps {[(x.stage, x.name, x.index, x.count) for x in steps]}")
         say(f"        progress words {[ui_text.progress_text(x) for x in steps[:1] + steps[-1:]]}")
         self.note = self.finish_build(plan, result, again=_had_assembly(before))
@@ -866,7 +873,8 @@ class Desk:
         say(f"        motion: turned {result.turned}; out of step {result.out_of_step}; off axis {result.off_axis}; "
             f"restored {result.restored}; unsuppressed {result.unsuppressed}; axial {result.axial}; ratios "
             f"{result.ratios}; extra mates {result.extra_mates}; ratios found {result.ratios_found}, already "
-            f"{result.ratios_already}, read {result.ratios_read}")
+            f"{result.ratios_already}, read {result.ratios_read}; sense found wrong "
+            f"{getattr(result, 'sense_found_wrong', None)}, turned round {getattr(result, 'turned_round', None)}")
         say(f"        train_check residuals (rad) {[(a, b, f'{r:.2e}') for a, b, r in result.residuals]}")
         record, may_write, notes = self._open_record()
         base_record = record if record is not None else self.record
@@ -874,6 +882,8 @@ class Desk:
                                            workbook=self.path)
         gearbox = self.record.gearbox if self.record is not None else None
         say(f"        finish: dragged {finished.dragged}; earlier update {getattr(finished, 'earlier_update', '')!r}")
+        wrong = list(getattr(result, "sense_found_wrong", []) or [])
+        check(not wrong, f"the Update's check phase found no gear mate turning against its mesh: {wrong}")
         text, ok = ui_text.gearbox_update_status(update, result, finished.dragged,
                                                  meshes=gearbox.meshes if gearbox is not None else None,
                                                  finished=finished)
@@ -1641,7 +1651,13 @@ def fixture_desk(worker, excel, section, fixture):
     return folder, path, book, desk
 
 
-def build_turning(worker, desk, label, parts):
+# The gear mates a fresh build on SolidWorks 2026 makes with Flip False, reads turning against their mesh and makes
+# again with the other Flip (probe ring_mate_sense; 9afe65b): the Risky ring's mesh. Asserted on 2026 (major 34),
+# logged on other versions.
+RING_TURNED_ROUND = ("G5 meshes G6",)
+
+
+def build_turning(worker, desk, label, parts, turned_round=()):
     """Build, and the checks every turning build gets before §4.1: saved, turning, no interference, the marks, the
     footer with the drag instruction."""
     desk.say_footer(f"{label}, read")
@@ -1656,6 +1672,12 @@ def build_turning(worker, desk, label, parts):
           f"{label}: {parts} parts, the layout part and the assembly built and saved, turning: ok {result.ok}, "
           f"parts {len(result.parts.built)}, kind {result.kind!r}")
     check(result.clashes == [] and not result.interference_error, f"{label}: no interference: {result.clashes}")
+    got = list(getattr(result.assembly, "turned_round", []) or [])
+    if TAG["major"] == 34:
+        check(got == list(turned_round), f"{label}: the build's sense read made again with the other Flip exactly "
+              f"{list(turned_round)} on SolidWorks 2026: turned round {got}")
+    else:
+        say(f"fact    {label}: the build's sense read made again with the other Flip: {got}")
     box = desk.record.gearbox
     check(box is not None and box.kind == store.GEARBOX_MOTION and box.assembly and desk.record.digest
           == desk.reading.digest, f"{label}: the record holds a turning gearbox built from this read")
@@ -2068,7 +2090,7 @@ def section_m3(worker, excel):
     say("== m3  Risky_Placements built to turn: Z- shafts, compound shafts, a ring; §4.1, §4.2 with the control on "
         "the ring's mesh")
     folder, path, book, desk = fixture_desk(worker, excel, "m3", FIXTURE_RISKY)
-    build_turning(worker, desk, "m3", 6)
+    build_turning(worker, desk, "m3", 6, RING_TURNED_ROUND)
     measure(worker, desk, "m3 built")
     drive_proof(worker, desk, "m3 built", control=("G5", "G6"))
     save_assembly(worker, desk, "after the drive")
@@ -2086,7 +2108,7 @@ def section_m7(worker, excel):
         "ring's pinion seat) -> an Update that puts the whole train; frames, mates, interference, the drive through the "
         "ring, reopen")
     folder, path, book, desk = fixture_desk(worker, excel, "m7", FIXTURE_RISKY)
-    build_turning(worker, desk, "m7", 6)
+    build_turning(worker, desk, "m7", 6, RING_TURNED_ROUND)
     measure(worker, desk, "m7 built", controls=False, again=False)
     edit(desk, book, ("Gears", "C6", 47))
     u = desk.update
@@ -2807,7 +2829,7 @@ def section_c(worker, excel):
     desk = Desk(path, worker)
     desk.read()
     check(desk.a.lay_out_refusal() == "", "the gate is \"\"")
-    build_turning(worker, desk, "c", 6)
+    build_turning(worker, desk, "c", 6, RING_TURNED_ROUND)
     measure(worker, desk, "c built")
     book.close()
 
@@ -2824,6 +2846,16 @@ def connect_pid():
     return swcom.Session(found[0].app, found[0].revision, found[0].pid)
 
 
+def snapshot():
+    """What the snapshot beside ``src`` was taken from (its SNAPSHOT_COMMIT file, written when it was archived)."""
+    path = os.path.join(os.path.dirname(os.path.abspath(SRC)), "SNAPSHOT_COMMIT")
+    try:
+        with open(path, encoding="utf-8") as handle:
+            return f" (snapshot: {handle.read().strip()})"
+    except OSError:
+        return ""
+
+
 def person_step():
     """W5-PLAN §4.4: the step only a person can do, with the assembly to open."""
     where = next((p for what, p in PERSON if what == "a2"), "") or next((p for _, p in PERSON), "")
@@ -2838,7 +2870,7 @@ def person_step():
 
 def main():
     os.makedirs(OUT, exist_ok=True)
-    say(f"run     {time.strftime('%Y-%m-%d %H:%M:%S')}; app {WRITTEN_BY} from {SRC}; sections {ONLY}")
+    say(f"run     {time.strftime('%Y-%m-%d %H:%M:%S')}; app {WRITTEN_BY} from {SRC}{snapshot()}; sections {ONLY}")
     unknown = [n for n in ONLY if n not in SECTIONS]
     if unknown:
         say(f"STOP    no such section {unknown}; there are {list(SECTIONS)}")

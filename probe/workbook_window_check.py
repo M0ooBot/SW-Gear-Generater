@@ -227,7 +227,7 @@ def close_ours():
 DONT_SAVE = ("&No", "No", "Do&n't Save", "Don't Save", "&Don't Save", "Don't save")
 
 
-def answer_dont_save(stop, pressed):
+def answer_dont_save(stop, pressed, cam_only=False):
     """While the refused assembly is closed: any SolidWorks dialog (#32770) of the PID gets its No / Don't Save
     button pressed (BM_CLICK), as a person closing a never-saved assembly unsaved would; each is logged. No probe
     closed one on 2024 under a watch, so this is what keeps a "save changes?" box from holding the close."""
@@ -253,6 +253,9 @@ def answer_dont_save(stop, pressed):
                 continue
             seen.add(key)
             hit = [c for c in buttons if win32gui.GetWindowText(c) in DONT_SAVE]
+            if cam_only and not ("SOLIDWORKS CAM" in win32gui.GetWindowText(hwnd) and any(
+                    win32gui.GetWindowText(c).startswith("Save changes to") for c in buttons)):
+                continue
             pressed.append((win32gui.GetWindowText(hwnd), win32gui.GetWindowText(hit[0]) if hit else ""))
             if hit:
                 win32gui.PostMessage(hit[0], 0x00F5, 0, 0)
@@ -294,6 +297,11 @@ def _close_refused():
     return in_solidworks(work)
 
 
+try:
+    with open(os.path.join(os.path.dirname(os.path.abspath(SRC)), "SNAPSHOT_COMMIT"), encoding="utf-8") as _handle:
+        log("run", src=SRC, snapshot=_handle.read().strip())
+except OSError:
+    log("run", src=SRC)
 newest = in_solidworks(lambda app: swcom.choose(swcom.find_candidates()).pid)
 log("newest session", pid=newest)
 if newest.get("value") != PID:
@@ -304,6 +312,11 @@ BEFORE_TITLES.update(in_solidworks(lambda app: [str(call(d, "GetTitle")) for d i
 
 XT = threading.Thread(target=excel_thread, daemon=True)
 XT.start()
+# For the whole run, SOLIDWORKS CAM's Yes/No "Save changes to …?" box — raised by closing a changed 2024-era assembly
+# in 2026, deaf to WM_CLOSE and Escape — is answered No, as a person would (every close here saves first or means to
+# discard); each press is logged at the end.
+CAM_STOP, CAM_PRESSED = threading.Event(), []
+threading.Thread(target=answer_dont_save, args=(CAM_STOP, CAM_PRESSED, True), daemon=True).start()
 
 # -- the app --------------------------------------------------------------------------------------------------
 
@@ -653,6 +666,8 @@ def finish():
 root.after(500, step)
 root.mainloop()
 log("closed in SolidWorks", left=close_ours())
+CAM_STOP.set()
+log("SOLIDWORKS CAM save questions answered No", pressed=CAM_PRESSED)
 log("done", fails=FAILS)
 with open(LOG_PATH, "w", encoding="utf-8", newline="\n") as handle:
     handle.write("\n".join(LINES) + "\n")
