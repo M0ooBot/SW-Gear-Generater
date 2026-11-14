@@ -2744,7 +2744,11 @@ def _motion_pieces(update, result) -> List[str]:
     gear mate G1 meshes G2 to 17 : 69* (``result.ratios``), *set the gear mate G1 meshes G2 back to the workbook's
     ratio, which SolidWorks held at another* (``result.ratios_found``: no change was asked, SolidWorks had another),
     or with ``result.ratios_read`` naming both, *set the gear mate G1 meshes G2 back to 17 : 69 (SolidWorks held it
-    at 17 : 68)*; a remake that failed (not in ``result.ratios``) is never said to be set."""
+    at 17 : 68)*; a remake that failed (not in ``result.ratios``) is never said to be set. A gear mate the check
+    phase found turning against its mesh and made again (``result.sense_found_wrong``, also in ``ratios``): *turned
+    the gear mate G5 meshes G6 the right way round (SolidWorks held it turning against its mesh)*. A gear mate the
+    app itself made again the other way round straight after making it (``result.turned_round``) is the app doing
+    its job: nothing is said of it (the coordinator's ruling), and nothing said counts how often a mate was made."""
     pieces = []
     back = [n for n in result.unsuppressed if n]
     if back:
@@ -2755,9 +2759,15 @@ def _motion_pieces(update, result) -> List[str]:
     if axial:
         pieces.append(f"moved {_along(update, axial)}")
     found_all = [n for n in getattr(result, "ratios_found", ()) or () if n]
-    ratios = [n for n in result.ratios if n and n not in found_all]
+    # Found turning against its mesh and made again at the ratio it had: that is a turn round, not a new ratio.
+    wrong = [n for n in getattr(result, "sense_found_wrong", ()) or () if n and n in result.ratios]
+    ratios = [n for n in result.ratios if n and n not in found_all and (n not in wrong or _asked_ratio(update, n))]
     if ratios:
         pieces.append(f"set {_gear_mates(update, ratios)}")
+    if wrong:
+        one = len(wrong) == 1
+        pieces.append(f"turned the gear mate{'' if one else 's'} {_and(wrong)} the right way round (SolidWorks held "
+                      f"{'it turning against its mesh' if one else 'them turning against their meshes'})")
     # Found at another ratio though the plan asked no change (a remake lost with an unsaved close, say): set back —
     # said only of a remake that was made (in ``result.ratios``), with both ratios where ``ratios_read`` has them.
     found = [n for n in found_all if n in result.ratios]

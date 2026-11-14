@@ -2363,3 +2363,70 @@ def test_a_gear_mate_already_right_takes_its_ratio_from_what_the_worker_read():
     assert ui_text.gearbox_update_status(_motion_update(), result) == (
         "SolidWorks already matches the workbook: nothing was changed. The gear mate G9 meshes G10 was already 20 : 60 "
         "in SolidWorks, so it was left as it is.", True)
+
+
+# which way each gear mate turns (packages A and B: a0d5fad, 7dbc10f)
+
+
+def test_a_gear_mate_found_turning_the_wrong_way_is_said_to_be_turned_the_right_way_round():
+    """``sense_found_wrong``: the gearbox turned wrongly before this Update and does not now; that is said, never
+    "nothing was changed", and never as a new ratio (it was remade at the ratio it had)."""
+    unasked = _motion_update()
+    unasked = dataclasses.replace(unasked, motion=dataclasses.replace(unasked.motion, ratios=()))
+    only = _moved(changed=[ASM], ratios=["G1 meshes G2"], sense_found_wrong=["G1 meshes G2"],
+                  placed=["G1", "G2", "G3", "G4"])
+    text, ok = ui_text.gearbox_update_status(unasked, only)
+    assert (_clean(text), ok) == (
+        "Updated SolidWorks: turned the gear mate G1 meshes G2 the right way round (SolidWorks held it turning against "
+        "its mesh), re-placed G1, G2, G3 and G4; no interference between the gears where they stand. Save "
+        "Reducer_12to1 in SolidWorks to keep it.", True)
+    assert "new ratio" not in text and ui_text.ALREADY_MATCHES not in text
+    two = _moved(changed=[ASM], ratios=["G1 meshes G2", "G3 meshes G4"],
+                 sense_found_wrong=["G1 meshes G2", "G3 meshes G4"])
+    assert "turned the gear mates G1 meshes G2 and G3 meshes G4 the right way round (SolidWorks held them turning " \
+           "against their meshes);" in _clean(ui_text.gearbox_update_status(unasked, two)[0])
+    # Turned round and given the ratio the plan asked: both said.
+    asked = _moved(changed=[ASM], ratios=["G1 meshes G2"], sense_found_wrong=["G1 meshes G2"])
+    assert ui_text.gearbox_update_status(_motion_update(), asked)[0].startswith(
+        "Updated SolidWorks: set the gear mate G1 meshes G2 to 17 : 69, turned the gear mate G1 meshes G2 the right "
+        "way round (SolidWorks held it turning against its mesh);")
+    # Read wrong but its remake failed (not in ratios): never said to be put right.
+    failed = _moved(sense_found_wrong=["G1 meshes G2"], failures=[("Reducer_12to1.SLDASM", "It would not remake.")])
+    assert "right way round" not in ui_text.gearbox_update_status(unasked, failed)[0]
+
+
+def test_a_gear_mate_the_app_made_again_the_other_way_round_is_not_said_and_changes_no_sentence():
+    """``turned_round`` (Build and Update): the app doing its job; nothing is said, and nothing counts mates made."""
+    build = _built(assembly=_saved("Reducer_12to1", ".SLDASM", turned_round=["G3 meshes G4"]))
+    assert ui_text.gearbox_status(_turning(), build) == ui_text.gearbox_status(_turning(), _built())
+    remade = _moved(changed=[ASM], ratios=["G1 meshes G2"], turned_round=["G1 meshes G2"], placed=["G1", "G2"])
+    plain = _moved(changed=[ASM], ratios=["G1 meshes G2"], placed=["G1", "G2"])
+    assert ui_text.gearbox_update_status(_motion_update(), remade) == \
+        ui_text.gearbox_update_status(_motion_update(), plain)
+
+
+def test_the_workers_sense_stops_read_whole_in_the_refused_build_and_the_stopped_update():
+    """A's stop sentences reach the user through the refused-mate wording, whole; the same workbook would make the
+    same mates, so "Build is available again once the workbook changes" stays true."""
+    either = ("SolidWorks turns the gears of the mate G3 meshes G4 against the way they mesh, whichever way round the "
+              "mate is made.")
+    text, ok = ui_text.gearbox_status(_turning(), _refused(either))
+    assert (_clean(text), ok) == (
+        "Built 4 parts and Reducer_12to1_Layout; no assembly was saved, because SolidWorks found a problem with its "
+        f"mates. {either} The parts and the layout part are kept. The assembly is left open in SolidWorks as Assem1, "
+        "not saved; its parts are the saved ones. Build is available again once the workbook changes: the same "
+        "workbook would make the same mates.", False)
+    axes = ("SolidWorks reads the axes of the gear mate G3 meshes G4 as pointing the same way, but G3 and G4 sit on "
+            "shafts pointing opposite ways, so the mate does not hold the axes the gears were placed on, and nothing "
+            "is guessed.")
+    assert f"its mates. {axes} The parts" in ui_text.gearbox_status(_turning(), _refused(axes))[0]
+    stopped = _moved(changed=[ASM], failures=[("Reducer_12to1.SLDASM", "SolidWorks turns the gears of the mate G1 "
+                                               "meshes G2 against the way they mesh, whichever way round it is made; "
+                                               "the saved Reducer_12to1.SLDASM still has it as it was: close "
+                                               "Reducer_12to1.SLDASM in SolidWorks without saving to bring it back.")])
+    assert ui_text.gearbox_update_status(_motion_update(), stopped)[0] == (
+        "Update SolidWorks stopped. Reducer_12to1.SLDASM: SolidWorks turns the gears of the mate G1 meshes G2 against "
+        "the way they mesh, whichever way round it is made; the saved Reducer_12to1.SLDASM still has it as it was: "
+        "close Reducer_12to1.SLDASM in SolidWorks without saving to bring it back. It had already changed "
+        "Reducer_12to1, not saved: press Update SolidWorks again once that is put right, or save it in SolidWorks to "
+        "keep what it did.")
