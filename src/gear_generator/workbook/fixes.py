@@ -22,6 +22,7 @@ from dataclasses import dataclass, replace
 from typing import Dict, List, Optional, Set, Tuple
 
 from ..gears import pair as pairs
+from ..gears.spur import undercut_teeth
 from .geometry import Placed, centre_distance
 from .model import GearboxSpec
 from .xlsx import number_text
@@ -171,7 +172,8 @@ def unshift_fix(spec: GearboxSpec, pinion: Placed, ring: Placed, tolerance: floa
     distance a pinion inside an unshifted ring meshes at. Rings are cut unshifted here, and nothing yet works out
     a shifted pinion's limits inside a ring (its tip against the ring's, its tooth thickness there), so the only
     shift offered inside a ring is none. Not offered when the pinion meshes with another gear too (taking its
-    shift off moves that mesh's centre)."""
+    shift off moves that mesh's centre). The detail says when the unshifted pinion would undercut, which the
+    shift may have been there to avoid."""
     if not ring.internal or pinion.internal or not getattr(pinion.derived, "shift", 0.0):
         return None
     if getattr(ring.derived, "shift", 0.0):
@@ -184,6 +186,12 @@ def unshift_fix(spec: GearboxSpec, pinion: Placed, ring: Placed, tolerance: floa
     if abs(actual - plain) > tolerance:
         return None
     detail = f"x {pinion.derived.shift:+g} → 0 · {plain:.3f} exact, as an unshifted pinion inside {ring.gear}"
+    section = getattr(pinion.derived, "section", pinion.derived)
+    table = getattr(section, "n_min", None)
+    if table is not None:
+        limit = undercut_teeth(table, 0.0)
+        if pinion.teeth < limit - 1e-9:
+            detail += f" · {pinion.gear} then undercuts ({pinion.teeth} teeth, below {_text(limit, 3)} unshifted)"
     return Fix(f"Keep your positions: take {pinion.gear}'s profile shift off", detail,
                (Edit("Gears", pinion.gear, "profile_shift", "0"),))
 

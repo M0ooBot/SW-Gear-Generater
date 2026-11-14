@@ -298,6 +298,8 @@ def test_a_shifted_pinion_inside_a_ring_at_the_plain_distance_is_caught_with_its
     assert move.title == "Move P by -0.694 mm"
     assert unshift.title == "Keep your positions: take Pin's profile shift off"
     assert unshift.edits == (fixes.Edit("Gears", "Pin", "profile_shift", "0"),)
+    assert unshift.detail == ("x +0.3 → 0 · 22.000 exact, as an unshifted pinion inside Ring · Pin then undercuts "
+                              "(14 teeth, below 17 unshifted)")
     for fix in (move, unshift):
         assert errors(checks.check(fixes.apply(spec, fix))) == []
 
@@ -365,3 +367,28 @@ def test_a_pinion_too_near_its_rings_size_runs_into_its_teeth(tmp_path):
            "its pinion are too few for plain teeth; give the ring more teeth or the pinion fewer." in said
     _, wide = check(tmp_path, ring_pair(pinion_shift="0", centre="10", pinion_teeth="26"), name="W.xlsx")
     assert not any("run" in d.message for d in wide.diagnostics)
+
+
+def test_a_shifted_pinion_with_few_teeth_between_it_and_its_ring_is_said_to_be_unchecked(tmp_path):
+    """Review of d3f4dcf: the tip-clash model knows plain teeth only, and a shift used to silence it."""
+    working = checks.internal_working_centre(2, 30, 36, 20, 0, 0.1, 0)
+    assert working == pytest.approx(5.7546, abs=1e-4)
+    _, report = check(tmp_path, ring_pair(pinion_shift="0.1", centre=repr(working), pinion_teeth="30"))
+    assert errors(report) == [m for m in errors(report) if "passes over" in m]
+    assert "Meshes!A2: Pin's tips against Ring's could not be checked: the check knows plain teeth only, and Pin is " \
+           "shifted with 6 teeth between them; check the pair in SolidWorks after the build, or use plain teeth or a " \
+           "ring with more teeth." in [d.message for d in report.diagnostics if not d.is_error]
+    _, wide = check(tmp_path, ring_pair(), name="W.xlsx")              # 22 teeth between: nothing to say on tips
+    assert not any("could not be checked" in d.message for d in wide.diagnostics)
+
+
+def test_a_pinion_shift_too_large_to_mesh_inside_its_ring_says_so_and_offers_taking_it_off(tmp_path):
+    spec, report = check(tmp_path, ring_pair(pinion_shift="0.5"))
+    assert errors(report) == ["Meshes!A2: Ring and Pin: a profile shift of +0.5 on Pin is too much for it to mesh "
+                              "inside Ring at all."]
+    (unshift,) = report.fixes["Meshes!A2"]
+    assert unshift.edits == (fixes.Edit("Gears", "Pin", "profile_shift", "0"),)
+    assert errors(checks.check(fixes.apply(spec, unshift))) == []
+    with pytest.raises(ValueError, match="A profile shift of \\+0.5 on a 14-tooth pinion is too much for it to mesh "
+                                         "inside a 36-tooth ring at all."):
+        checks.internal_working_centre(2, 14, 36, 20, 0, 0.5)

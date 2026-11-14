@@ -162,11 +162,26 @@ def _check_mesh(report: Report, spec: GearboxSpec, mesh, a: Placed, b: Placed, w
                 return
             needed, _, epsilon = pairs.describe(a.module, pinion.teeth, other.teeth, pa_a, beta, mesh="internal")
             shifts = (getattr(pinion.derived, "shift", 0.0) or 0.0, getattr(other.derived, "shift", 0.0) or 0.0)
+            few = other.teeth - pinion.teeth < internal_gears.CLASH_CHECK_BELOW
             if any(shifts):
-                # A shifted pinion (a ring is never shifted here) meshes at its own working distance, not the
-                # plain one pairs.describe gives a pinion inside a ring.
-                needed = internal_working_centre(a.module, pinion.teeth, other.teeth, pa_a, beta, *shifts)
-            elif other.teeth - pinion.teeth < internal_gears.CLASH_CHECK_BELOW:
+                # A shifted pinion (a ring refuses a shift today) meshes at its own working distance, not the plain
+                # one pairs.describe gives a pinion inside a ring.
+                try:
+                    needed = internal_working_centre(a.module, pinion.teeth, other.teeth, pa_a, beta, *shifts)
+                except ValueError:
+                    _error(report, where, f"{a.gear} and {b.gear}: a profile shift of {shifts[0]:+g} on "
+                                          f"{pinion.gear} is too much for it to mesh inside {other.gear} at all.")
+                    unshift = fixes_mod.unshift_fix(spec, pinion, other, CENTRE_TOLERANCE)
+                    if unshift is not None:
+                        report.fixes[where] = [unshift]
+                    return
+                if few:
+                    _warning(report, where, f"{pinion.gear}'s tips against {other.gear}'s could not be checked: the "
+                                            f"check knows plain teeth only, and {pinion.gear} is shifted with "
+                                            f"{other.teeth - pinion.teeth} teeth between them; check the pair in "
+                                            "SolidWorks after the build, or use plain teeth or a ring with more "
+                                            "teeth.")
+            elif few:
                 _check_ring_tips(report, where, pinion, other, pa_a, beta)
         else:
             needed, _, epsilon = pairs.describe(a.module, a.teeth, b.teeth, pa_a, beta,
@@ -214,8 +229,8 @@ def internal_working_centre(module: float, pinion_teeth: int, ring_teeth: int, p
     ``inv αw = inv α + 2 tan αn (x_ring − x_pinion) / (z_ring − z_pinion)`` and ``a_w = mt (z_ring − z_pinion) / 2 ·
     cos α / cos αw``, transverse values for a helical pair (``α`` the transverse pressure angle, ``αn`` the normal
     one, ``mt = m / cos β``), as :func:`gears.spur.working_pressure_angle` writes the outside pair's. Unshifted it
-    is the plain ``mt (z_ring − z_pinion) / 2``. A difference of shifts no angle answers is a ValueError with a
-    sentence."""
+    is the plain ``mt (z_ring − z_pinion) / 2``. ``ring_shift`` keeps the formula whole, but a ring refuses a
+    profile shift today, so it is always 0. A pinion shift no angle answers is a ValueError with a sentence."""
     mt = module / math.cos(math.radians(helix_angle))
     alpha = math.radians(helical.transverse_pressure_angle(pressure_angle, helix_angle) if helix_angle
                          else pressure_angle)
@@ -226,8 +241,8 @@ def internal_working_centre(module: float, pinion_teeth: int, ring_teeth: int, p
     tan_normal = math.tan(math.radians(pressure_angle))
     value = spur.inv(alpha) + 2.0 * tan_normal * difference / (ring_teeth - pinion_teeth)
     if value <= 0.0:
-        raise ValueError(f"a pinion shift of {pinion_shift:+g} inside a ring shifted {ring_shift:+g} is too far for "
-                         f"{pinion_teeth} and {ring_teeth} teeth to mesh at all")
+        raise ValueError(f"A profile shift of {pinion_shift:+g} on a {pinion_teeth}-tooth pinion is too much for it to "
+                         f"mesh inside a {ring_teeth}-tooth ring at all.")
     return plain * math.cos(alpha) / math.cos(spur.inv_inverse(value))
 
 
