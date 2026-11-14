@@ -53,8 +53,8 @@ from ..gears import equations, kind_for
 from ..gears.base import GlobalVariable
 from ..spec import GearSpec, InputError
 from ..store import GearboxRecord, LinkRecord, MateEntry, PartEntry, ShaftEntry, Sidecar
-from ..swbuild import (POSE_TOLERANCE, DocumentValues, GearboxUpdate, MotionUpdate, Placement, same_frame,
-                       structural_change)
+from ..swbuild import (POSE_TOLERANCE, DocumentValues, GearboxUpdate, MotionUpdate, Placement, _caps_with_arc,
+                       same_frame, structural_change)
 from . import gearbox, layout, motion, schema
 from .assess import Assessment
 from .build import PartJob
@@ -240,16 +240,27 @@ def _structural(built: Dict[str, Any], wanted: Dict[str, Any]) -> str:
     return structural_change(built, wanted)
 
 
+_BUILD_NOT_ON_RECORD = ("The record does not say how this part was built, so whether its teeth can be cut this "
+                        "few through its values cannot be told; build it again as a new part.")
+
+
 def _part(entry: PartEntry, job: PartJob, exists: Callable[[str], bool]) -> Tuple[PartUpdate, str]:
     """What Update does to one built part, and the sentence if it cannot (``""``)."""
     variables = gearbox._variables_of(job)
     label = f"{gearbox._stem_of(entry.path)} ({_names(entry.gears)})"
     update = PartUpdate(entry.path, tuple(entry.gears), job.spec, job.derived, variables, changed=True)
-    if not entry.spec:
-        return update, ""                  # a v1 record: what it holds is known only live
-    try:
-        built = GearSpec.from_dict(entry.spec)
-    except (TypeError, ValueError):
+    built: Optional[GearSpec] = None
+    if entry.spec:
+        try:
+            built = GearSpec.from_dict(entry.spec)
+        except (TypeError, ValueError, AttributeError):
+            built = None
+    if built is None:
+        # A v1 record (or one whose form will not read): what the part holds is known only live, and that is
+        # enough for its values, but not for teeth so few their spaces close with an arc on the tip cap, which no
+        # global carries: a part built with a chord would keep it, inside the tips.
+        if _caps_with_arc(job.spec.to_dict()) is True:
+            return update, f"{label}: {_BUILD_NOT_ON_RECORD}"
         return update, ""
     template = gearbox._template_of(job.plan)
     if gearbox.name_changed(built, job.spec):

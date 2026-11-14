@@ -1085,8 +1085,8 @@ def structural_change(built: Mapping[str, str], wanted: Mapping[str, str]) -> st
     # holds the last values, not the build's, so an arc part taken up to 12 and back to 6
     # is refused too: safe, if stricter than it needs to be.
     if _caps_with_arc(built) is False and _caps_with_arc(wanted) is True:
-        return ("At these values the tooth space needs an arc on the tip cap, and the part was built with a "
-                "chord; build it again as a new part.")
+        return ("At these values the teeth are too few to be cut by changing this part's values; build it again as "
+                "a new part.")
     return ""
 
 

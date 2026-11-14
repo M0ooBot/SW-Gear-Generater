@@ -1340,3 +1340,53 @@ def test_round_trip_a_failed_remake_keeps_the_ratio_last_known_true_on_record(on
     assert sw.turns_right("G1 meshes G2", asm) and tuple(sw.mate("G1 meshes G2", asm).ratio) == (17, 69)
     assert {e.name: e.ratio for e in again.record.gearbox.mates}["G1 meshes G2"] == [17, 69]
     assert nothing(update.classify(again.record, assessed(TEETH_69), exists=lambda p: True))
+
+
+# -- a v1 record and a pinion whose spaces need the tip-cap arc (review of the small-pinion merge, 0f5a121) --------
+
+
+def v1_record(disk):
+    _, _, record = build(assessed(reducer()), None, disk)
+    record.gearbox, record.assembly = None, ""
+    for part in record.parts:
+        part.spec, part.variables = {}, []
+    return record
+
+
+def test_a_v1_part_taken_to_teeth_its_values_may_not_cut_is_built_again():
+    """The reviewer's input: G1 to 6 teeth (bore 2), S2 and S3 moved in to their new centres. A v1 record does not
+    say whether G1's part was cut with a chord, and the arc six teeth need adds no global the live compare reads."""
+    from gear_generator import ui_text
+    disk = Disk()
+    record = v1_record(disk)
+    spec = gears(shafts(reducer(), S2=dict(x="55.5"), S3=dict(x="123.5")), G1=dict(teeth="6", bore="2"))
+    plan = update.classify(record, assessed(spec), exists=disk.exists)
+    said = ("Gear_m1.5_N17 (G1): The record does not say how this part was built, so whether its teeth can be cut "
+            "this few through its values cannot be told; build it again as a new part.")
+    assert said in plan.structural and plan.needs_new_revision
+    assert ui_text._reason(said) == (
+        "Gear_m1.5_N17 (G1): The record does not say how this part was built, so whether its teeth can be cut this "
+        "few through its values cannot be told, so it needs a new part.")
+    # The same record taken to 20 teeth updates as before, through its values.
+    plan = update.classify(record, assessed(gears(reducer(), G1=dict(teeth="20"))), exists=disk.exists)
+    assert plan.structural == () and [p.changed for p in plan.parts][0] is True
+
+
+def test_a_record_whose_part_form_will_not_read_is_judged_as_a_v1_one():
+    disk = Disk()
+    record = v1_record(disk)
+    record.parts[0].spec = ["not", "a", "form"]
+    spec = gears(shafts(reducer(), S2=dict(x="55.5"), S3=dict(x="123.5")), G1=dict(teeth="6", bore="2"))
+    plan = update.classify(record, assessed(spec), exists=disk.exists)
+    assert any("The record does not say how this part was built" in s for s in plan.structural)
+
+
+def test_a_v3_record_taken_to_six_teeth_says_the_teeth_are_too_few_for_its_values(built):
+    from gear_generator import ui_text
+    spec = gears(shafts(reducer(), S2=dict(x="55.5"), S3=dict(x="123.5")), G1=dict(teeth="6", bore="2"))
+    plan = classify(built, spec)
+    said = ("Gear_m1.5_N17 (G1): At these values the teeth are too few to be cut by changing this part's values; "
+            "build it again as a new part.")
+    assert said in plan.structural
+    assert ui_text._reason(said) == ("Gear_m1.5_N17 (G1): At these values the teeth are too few to be cut by "
+                                     "changing this part's values, so it needs a new part.")

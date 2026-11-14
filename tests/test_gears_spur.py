@@ -263,7 +263,11 @@ def test_a_six_tooth_helical_gear_builds_with_the_arc_on_its_section():
 def test_an_update_across_the_chord_and_arc_is_structural(built, wanted, refused):
     base = SUN.with_values(bore="1").to_dict()
     text = swbuild.structural_change({**base, "teeth": built}, {**base, "teeth": wanted})
-    assert bool(text) == refused and (not refused or "build it again" in text)
+    assert bool(text) == refused
+    if refused:
+        # True however the part's spaces were closed: the record holds its last values, not its build's.
+        assert text == ("At these values the teeth are too few to be cut by changing this part's values; build it "
+                        "again as a new part.")
 
 
 def test_twelve_teeth_cannot_be_built_with_arcs_and_says_to_use_the_involute():
