@@ -1257,18 +1257,24 @@ def drive_job(asm, components, layout_name, input_gear, control=None, turn_by=No
                         session.find_mate("dmesh", mesh)
                         session.set_mate_suppressed("dmesh", True)
                         made["suppressed"] = True
-                        cname, _ = session.add_mate("dctl", "gear", f"{handle[a]}:Gear Axis",
-                                                    f"{handle[b]}:Gear Axis", 0.0, CONTROL + mesh,
-                                                    ratio=(float(ratio[0]), float(ratio[1])),
-                                                    flip=not bool(findings.GEAR_MATE_FLIP))
-                        made["control"] = cname
-                        out["control_mate"] = (cname, session.mate_status(cname))
-                        rebuild("control added")
-                        out["control_added"] = frames()
-                        set_drive(DRIVE_TO)
-                        out["control_driven"] = frames()
-                        set_drive(DRIVE_FROM)          # M12: Drive set back before the control mate is deleted
-                        out["control_back"] = frames()
+                        # Both Flips, one after the other: since the build turns round a gear mate it reads turning
+                        # against its mesh (9afe65b), the recorded mate may hold either, so the control is the Flip
+                        # that turns wrong, whichever that is; the other must turn right.
+                        for flip in (not bool(findings.GEAR_MATE_FLIP), bool(findings.GEAR_MATE_FLIP)):
+                            cname, _ = session.add_mate("dctl", "gear", f"{handle[a]}:Gear Axis",
+                                                        f"{handle[b]}:Gear Axis", 0.0, CONTROL + mesh,
+                                                        ratio=(float(ratio[0]), float(ratio[1])), flip=flip)
+                            made["control"] = cname
+                            out.setdefault("control_mate", []).append((flip, cname, session.mate_status(cname)))
+                            rebuild(f"control added, Flip {flip}")
+                            out[f"control_added {flip}"] = frames()
+                            set_drive(DRIVE_TO)
+                            out[f"control_driven {flip}"] = frames()
+                            set_drive(DRIVE_FROM)      # M12: Drive set back before the control mate is deleted
+                            out[f"control_back {flip}"] = frames()
+                            delete_mate(session, cname)
+                            made["control"] = ""
+                        out["control_back"] = out[f"control_back {bool(findings.GEAR_MATE_FLIP)}"]
             except Exception as exc:  # noqa: BLE001 - said, and the cleanup below still runs
                 out["errors"].append(f"{type(exc).__name__}: {exc}")
                 out["traceback"] = traceback.format_exc()
@@ -1413,22 +1419,33 @@ def drive_proof(worker, desk, label, control=None):
               f"(largest {gap:.1e} at {at or '-'})")
     if mesh_entry is not None:
         a, b = mesh_entry.gears
-        if "control_driven" in out:
-            gap, at = frames_gap(out["control_added"], built)
-            check(gap <= FRAME_TOLERANCE, f"{label}, control: the flipped gear mate moved nothing when made "
-                  f"(largest {gap:.1e})")
-            turns = {g: turn_degrees(built[g][0], out["control_driven"][g][0]) for g in gears}
-            say_turns(f"control, {CONTROL + mesh_entry.name} with Flip {not findings.GEAR_MATE_FLIP}", turns, expected)
-            seen = (turns[b] is not None and not close_turn(turns[b], expected[b])
-                    and close_turn(turns[b], -expected[b]) and abs(expected[b]) > 1e-3)
-            check(seen, f"{label}, control: a wrong sense is seen: {b} turned {turns[b]}° where the kinematics say "
-                        f"{expected[b]:+.9f}° (the comparison reports it wrong, the mirror of the right turn)")
-            check(close_turn(turns[a], expected[a]), f"{label}, control: {a}, before the flipped mesh, still turns "
-                  f"{expected[a]:+.9f}° ({turns[a]})")
+        flips = [f for f in (True, False) if f"control_driven {f}" in out]
+        if len(flips) == 2:
+            wrong, right = [], []
+            for flip in flips:
+                gap, at = frames_gap(out[f"control_added {flip}"], built)
+                check(gap <= FRAME_TOLERANCE, f"{label}, control: the gear mate with Flip {flip} moved nothing when "
+                      f"made (largest {gap:.1e})")
+                turns = {g: turn_degrees(built[g][0], out[f"control_driven {flip}"][g][0]) for g in gears}
+                say_turns(f"control, {CONTROL + mesh_entry.name} with Flip {flip}", turns, expected)
+                if (turns[b] is not None and not close_turn(turns[b], expected[b]) and close_turn(turns[b], -expected[b])
+                        and abs(expected[b]) > 1e-3):
+                    wrong.append(flip)
+                elif close_turn(turns[b], expected[b]):
+                    right.append(flip)
+                check(close_turn(turns[a], expected[a]), f"{label}, control: {a}, before the mesh, still turns "
+                      f"{expected[a]:+.9f}° with Flip {flip} ({turns[a]})")
+                gap, at = frames_gap(out[f"control_back {flip}"], built)
+                check(gap <= FRAME_TOLERANCE, f"{label}, control: {DRIVE} set back with Flip {flip}'s mate on: every "
+                      f"gear at its built frame (largest {gap:.1e} at {at or '-'})")
+            check(len(wrong) == 1 and len(right) == 1,
+                  f"{label}, control: a wrong sense is seen: with Flip {wrong} {b} turns the mirror of the right turn, "
+                  f"with Flip {right} it turns right (the comparison tells one from the other)")
+            say(f"fact    {label}: {mesh_entry.name} turns right with Flip {right} here (findings.GEAR_MATE_FLIP "
+                f"{findings.GEAR_MATE_FLIP})")
         else:
-            check(False, f"{label}, control: never driven: {out['errors']}")
-        for key, what in (("control_back", f"{DRIVE} set back with the control mate on"),
-                          ("control_gone", "the control mate deleted and the recorded one back on")):
+            check(False, f"{label}, control: never driven with both Flips: {out['errors']}")
+        for key, what in (("control_gone", "the control mates deleted and the recorded one back on"),):
             if key in out:
                 gap, at = frames_gap(out[key], built)
                 check(gap <= FRAME_TOLERANCE, f"{label}, control: {what}: every gear at its built frame (largest "
