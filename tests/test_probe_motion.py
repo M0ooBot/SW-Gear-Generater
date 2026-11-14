@@ -21,7 +21,8 @@ TIER_8 = ["motion_enums", "shaft_axis_mates", "gear_mate_sense", "compound_lock"
           "put_on_twice_meshed_gear", "axial_datum_plane", "mated_rebuild_scope", "mates_under_command_in_progress",
           "mate_folders", "lightweight_remake", "second_assembly_beside_unsaved", "gear_mate_definition_read",
           "origin_noise", "unsaved_update_close",
-          "drag_operator_turns_train", "ring_mate_sense", "gear_mate_definition"]
+          "drag_operator_turns_train", "ring_mate_sense", "ring_trains_saved",
+          "ring_trains_from_another_version", "gear_mate_definition"]
 
 
 @pytest.fixture(scope="module")
@@ -782,3 +783,29 @@ def test_a_clash_is_counted_only_between_the_two_named_components():
     found = [{"names": ["G5-1", "G6-1"], "volume_mm3": 3.0}, {"names": ["G1-1", "G2-1"], "volume_mm3": 1.0},
              {"names": None}]
     assert p8.clash_between(found, "G6-1", "G5-1") == 1 and p8.clash_between(found, "G5-1", "G1-1") == 0
+
+
+def test_the_cross_version_pairs_train_is_a_spur_ring_a_helical_ring_and_an_external_control():
+    pairs = p8.cross_pairs()
+    assert [p["label"] for p in pairs] == ["ring spur ++", "ring helical +-", "external spur +-", "external spur ++",
+                                           "external spur --", "external spur -+"]
+    fx = p8.pairs_fixture(pairs)
+    assert len(fx.anchors) == 12 and fx.locks == () and len(fx.meshes) == 6
+    assert fx.internal == tuple(p["ring"] for p in pairs[:2])
+    frames = p8.spec_frames(p8.ring_spec("C:\\X", pairs, "Probe W8 Cross Pairs"))
+    assert set(frames) == {g for p in pairs for g in (p["pinion"], p["ring"])}
+    for p in pairs:
+        assert (p8.frame_theta(frames[p["pinion"]][0])[0], p8.frame_theta(frames[p["ring"]][0])[0]) == \
+            (p["sigma_p"], p["sigma_r"]), p["label"]
+
+
+def test_the_other_rings_the_app_builds_sit_on_riskys_shaft_senses():
+    from gear_generator.workbook import assess
+    pairs = p8.geometry_pairs()
+    spec = p8.ring_spec("C:\\X", pairs, "Probe W8 Cross Geometry")
+    assert assess.assess(spec, [], "C:\\X\\", "").lay_out_refusal() == ""
+    gears = {g.id: g for g in spec.gears}
+    assert gears["G19R"].hand == "left" and gears["G19P"].hand == "right" and gears["G20P"].profile_shift == "0.3"
+    frames = p8.spec_frames(spec)
+    assert all((p8.frame_theta(frames[p["pinion"]][0])[0], p8.frame_theta(frames[p["ring"]][0])[0]) == (1, -1)
+               for p in pairs)

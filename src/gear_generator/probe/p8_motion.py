@@ -5684,13 +5684,13 @@ def ring_pairs() -> List[Dict[str, Any]]:
     return pairs
 
 
-def ring_spec(folder: str) -> Any:
-    """The case table's gearbox, written as the app's workbook model: module 2, face 10, both gears of a pair in
-    one plane (z 0..10 whichever way their shafts point)."""
+def ring_spec(folder: str, pairs: Optional[Sequence[Mapping[str, Any]]] = None, tag: str = RING_TAG) -> Any:
+    """The case table's gearbox (or the given pairs'), written as the app's workbook model: module 2, face 10,
+    both gears of a pair in one plane (z 0..10 whichever way their shafts point)."""
     from ..workbook.model import Box, Gear, GearboxSpec, Mesh, Shaft  # noqa: PLC0415
 
     shafts, gears, meshes = [], [], []
-    for p in ring_pairs():
+    for p in (ring_pairs() if pairs is None else pairs):
         if p["kind"] == "annulus":
             continue
         n, (zp, zr) = p["index"], p["teeth"]
@@ -5701,13 +5701,15 @@ def ring_spec(folder: str) -> Any:
                             speed="1000", torque="5"))
         shafts.append(Shaft(p["shaft_r"], "frame", repr(centre), repr(y), "0", "Z+" if p["sigma_r"] > 0 else "Z-", ""))
         hand_r = p["hand"] if p["internal"] else ("right" if p["hand"] == "left" else ("left" if p["hand"] else ""))
+        hand_r = p.get("hand_r", hand_r)
         gears.append(Gear(p["pinion"], p["shaft_p"], "5" if p["sigma_p"] > 0 else "-5", p["kind"], "external",
-                          str(zp), "2", face_width="10", bore="8", helix_angle=p["helix"], hand=p["hand"]))
+                          str(zp), "2", face_width="10", bore="8", helix_angle=p["helix"], hand=p["hand"],
+                          profile_shift=p.get("shift", "")))
         gears.append(Gear(p["ring"], p["shaft_r"], "5" if p["sigma_r"] > 0 else "-5", p["kind"],
                           "internal" if p["internal"] else "external", str(zr), "2", face_width="10",
                           bore="" if p["internal"] else "8", helix_angle=p["helix"], hand=hand_r))
         meshes.append(Mesh(p["pinion"], p["ring"]))
-    return GearboxSpec(box=Box(name=RING_TAG, output_folder=folder.rstrip("\\/") + "\\"), shafts=tuple(shafts),
+    return GearboxSpec(box=Box(name=tag, output_folder=folder.rstrip("\\/") + "\\"), shafts=tuple(shafts),
                        gears=tuple(gears), meshes=tuple(meshes))
 
 
@@ -6160,6 +6162,414 @@ def ring_mate_sense(px: Px) -> None:
             by_seen.setdefault(key, set()).add(needed)
     px.fact("ring_sense_needed_flip_by_seen_axes", {k: sorted(v) for k, v in by_seen.items()},
             "the Flip needed, by whether SolidWorks reports the two entities' directions the same way")
+
+
+# -- 14f: the read-back on a saved train, and ring trains saved by one version opened in the other ----------------
+#
+# The app reads each gear mate's sense back (Reverse beside its entities' directions, GEAR_MATE_SENSE_READ_BACK)
+# and remakes it with the other Flip when it reads wrong. Two things that leans on: whether reading the
+# entities' directions marks anything (an Update's check phase reads before anything changes), and what a
+# version makes of a ring train another version saved, since 2024 and 2026 store a different Reverse for the
+# same toothed-ring call. ring_trains_saved builds, mates right on this version (read-back, remake), checks and
+# saves its trains in a folder named by the version, then reads them back on reopen with every save flag
+# around each read. ring_trains_from_another_version opens another version's folder, never saving.
+
+CROSS_PREFIX = "cross-version-rings-"
+CROSS_LABELS = ("ring spur ++", "ring helical +-", "external spur +-")
+CROSS_MANIFEST = "manifest.json"
+
+
+def _pair(index: int, label: str, kind: str, sp: int, sr: int, internal: bool, teeth: Tuple[int, int],
+          helix: str = "", hand: str = "", **extra: Any) -> Dict[str, Any]:
+    p = {"kind": kind, "helix": helix, "hand": hand, "sigma_p": sp, "sigma_r": sr, "internal": internal,
+         "teeth": teeth, "index": index, "pinion": f"G{index}P", "ring": f"G{index}R", "shaft_p": f"P{index}",
+         "shaft_r": f"R{index}", "label": label}
+    p.update(extra)
+    return p
+
+
+def cross_pairs() -> List[Dict[str, Any]]:
+    """The pairs train: a spur ring on parallel shafts, a helical ring on opposite shafts (as Risky's), and the
+    external pair on every combination of shaft senses (the case the app builds most)."""
+    pairs = [p for p in ring_pairs() if p["label"] in CROSS_LABELS]
+    for i, (sp, sr) in enumerate(((1, 1), (-1, -1), (-1, 1)), start=14):
+        pairs.append(_pair(i, f"external spur {'+' if sp > 0 else '-'}{'+' if sr > 0 else '-'}", "spur", sp, sr,
+                           False, (14, 22)))
+    return pairs
+
+
+def geometry_pairs() -> List[Dict[str, Any]]:
+    """Other rings the app builds, each on Risky's shaft senses (pinion Z+, ring Z-): a right-hand helical ring, a
+    15° helical ring, a herringbone ring (its pinion right-handed, the ring typed left, as the app asks of a ring
+    turned over), and a spur ring whose pinion has profile shift 0.3 (a ring is cut without shift here; the
+    centre distance stays 22, which the app's check takes)."""
+    return [_pair(17, "ring helical right +-", "helical", 1, -1, True, (14, 36), "20", "right"),
+            _pair(18, "ring helical 15 +-", "helical", 1, -1, True, (14, 36), "15", "left"),
+            _pair(19, "ring herringbone +-", "herringbone", 1, -1, True, (14, 36), "25", "right", hand_r="left"),
+            _pair(20, "ring spur shifted +-", "spur", 1, -1, True, (14, 36), shift="0.3")]
+
+
+def pairs_fixture(pairs: Sequence[Mapping[str, Any]]) -> Any:
+    """The pairs train as the app mates it: every gear an anchor on its own shaft, each pair one gear mate,
+    pinion first."""
+    import types  # noqa: PLC0415
+    return types.SimpleNamespace(
+        anchors=tuple(a for p in pairs for a in ((p["pinion"], p["shaft_p"]), (p["ring"], p["shaft_r"]))),
+        locks=(), meshes=tuple((p["pinion"], p["ring"]) for p in pairs),
+        internal=tuple(p["ring"] for p in pairs if p["internal"]))
+
+
+def _major(px: Px) -> str:
+    return str(call(sc.app(px), "RevisionNumber")).split(".")[0]
+
+
+def read_back(px: Px, doc: Any, name: str, internal: bool) -> Dict[str, Any]:
+    """A gear mate's sense as SolidWorks reports it: Reverse (GetDefinition), both entities' directions
+    (EntityParams), and what decide.read_back_says_right makes of them."""
+    from . import decide  # noqa: PLC0415
+    out: Dict[str, Any] = {"definition": gear_mate_definition(px, doc, name), "entities": entity_params(px, doc, name)}
+    out["parallel"] = axes_parallel_as_seen(out["entities"])
+    out["says_right"] = decide.read_back_says_right(out["definition"].get("Reverse"), out["parallel"], internal)
+    return out
+
+
+def pairs_check(px: Px, doc: Any, comps: Mapping[str, Any], layout: Any, pairs: Sequence[Mapping[str, Any]],
+                label: str) -> Dict[str, Any]:
+    """Each pinion driven RING_STEP by a temporary angle mate on one global, every turn read, interference read
+    while driven off the built phase, the drive set back, its mates and equations taken away; each pair judged."""
+    eqm = call(doc, "GetEquationMgr")
+    add = adder(px, eqm)
+    px.require(add(f'"{RING_DRIVE}"= {DEMO_FROM:g}') >= 0, f"{label}: the drive global is added")
+    drives = []
+    for p in pairs:
+        pinion = comps[p["pinion"]]
+        drives.append(drive_mate(px, doc, pinion, _plane_names(pinion)[1], layout, _plane_names(layout)[2],
+                                 p["pinion"], add, _enums(px)["closest"], angle=DEMO_FROM, global_name=RING_DRIVE))
+    px.require(all(drives), f"{label}: every pinion is driven")
+    rebuild(px, doc, f"{label}: drives added", top_only=TOP_ONLY)
+    start = _frames(comps)
+    _set_global(eqm, RING_DRIVE, DEMO_FROM + RING_STEP)
+    rebuild(px, doc, f"{label}: driven", top_only=TOP_ONLY)
+    after = _frames(comps)
+    clashes = interference_pairs(px, doc, f"{label}: driven off the built phase")
+    _set_global(eqm, RING_DRIVE, DEMO_FROM)
+    rebuild(px, doc, f"{label}: set back", top_only=TOP_ONLY)
+    for d in drives:
+        delete_mate(px, doc, d)
+    for index in range(int(call(eqm, "GetCount")) - 1, -1, -1):
+        if RING_DRIVE in str(call(eqm, "Equation", index)):
+            px.attempt(f"IEquationMgr.Delete({index})", lambda i=index: call(eqm, "Delete", i))
+    rebuild(px, doc, f"{label}: drives taken away", top_only=TOP_ONLY)
+    out: Dict[str, Any] = {"back_mm": worst(_off(comps, start)), "meshes": {}, "turns": {}, "clashes_driven": {}}
+    for p in pairs:
+        m = f"{p['pinion']} meshes {p['ring']}"
+        tp, tr = (world_turn(start[k][0], after[k][0]) for k in (p["pinion"], p["ring"]))
+        out["turns"][m] = [round(tp, 9), round(tr, 9)]
+        out["meshes"][m] = sense_right(tp, tr, p["internal"])
+        out["clashes_driven"][m] = clash_between(clashes, str(call(comps[p["pinion"]], "Name2")),
+                                                 str(call(comps[p["ring"]], "Name2")))
+    return out
+
+
+def _all_flags(px: Px, paths: Sequence[str]) -> Dict[str, Optional[bool]]:
+    from .p7_workbook import _doc_at  # noqa: PLC0415
+    out = {}
+    for p in paths:
+        d = _doc_at(px, p)
+        out[os.path.basename(p)] = None if d is None else bool(call(d, "GetSaveFlag"))
+    return out
+
+
+def _ring_update_shape(px: Px, b: Mapping[str, Any], fx: Any, teeth: Mapping[str, int], swbuild: Any) -> Dict[str, Any]:
+    """The Risky ring mesh remade at a new ratio inside an Update's shape: G5 14 -> 15 and G6 36 -> 37 (the same
+    centre distance) through the parts' globals, every lock suppressed, the gear mate deleted and made again with
+    GEAR_MATE_FLIP, every gear put to its new built frame (_update_pass); then read back, remade with the other
+    Flip if it reads wrong, and driven. The teeth are set back before the close, and the assembly is not saved."""
+    import dataclasses  # noqa: PLC0415
+    from .p7_workbook import activate  # noqa: PLC0415
+
+    change = {"G5": "15", "G6": "37"}
+    spec = b["spec"]
+    new_spec = dataclasses.replace(spec, gears=tuple(dataclasses.replace(g, teeth=change.get(g.id, g.teeth))
+                                                     for g in spec.gears))
+    wanted = spec_frames(new_spec)
+    ufx = UpdateFixture(tag="Risky", folder="", shafts=(), rows=(), teeth=tuple(teeth.items()),
+                        change=tuple(change.items()), anchors=fx.anchors, locks=fx.locks, meshes=fx.meshes)
+    jobs = {job.gear_ids[0]: job for job in b["plan"].build}
+    out: Dict[str, Any] = {}
+    paths = list(b["paths"])
+    try:
+        doc, _ = open_by_path(px, b["plan"].assembly_path, sc.SW_DOC_ASSEMBLY, prefer="OpenDoc6")
+        title = str(call(doc, "GetTitle"))
+        comps = dict(sorted({g: call(doc, "GetComponentByName", n) for g, n in b["names"].items()}.items()))
+        layout = call(doc, "GetComponentByName", b["layout_name"])
+        out["pass"] = _update_pass(px, swbuild, doc, title, comps, layout, jobs, wanted, fx=ufx, change=change)
+        m = "G5 meshes G6"
+        new = ufx.new_teeth(change)
+        r = read_back(px, doc, m, True)
+        out["read_back_says_right"] = r["says_right"]
+        out["read_back"] = r
+        out["remade"] = None
+        if r["says_right"] is False:
+            names = {k: str(call(c, "Name2")) for k, c in comps.items()}
+            out["remade"] = remake_gear_mate(px, doc, names, m, "G5", "G6", (float(new["G5"]), float(new["G6"])), m,
+                                             flip=not bool(findings.GEAR_MATE_FLIP))
+            out["remade"]["read_back"] = read_back(px, doc, m, True)
+            rebuild(px, doc, "the Update's ring mesh remade with the other Flip", top_only=TOP_ONLY)
+        checked = check_senses(px, doc, comps, layout, fx, dict(new), "after the Update")
+        out["check"] = checked["meshes"]
+        out["check_after"] = {"clashes_driven": checked.get("clashes_driven"), "at_ratio": checked.get("at_ratio"),
+                              "back_mm": checked.get("back_mm"), "off_built_mm": worst(_off(comps, wanted))}
+        out["teeth_back"] = {g: _set_teeth(px, swbuild, jobs, g, str(teeth[g])) for g in change}
+        px.require(activate(px, title), "the assembly is active again")
+    finally:
+        out["left_open"] = _close_quietly(px, paths)
+    return out
+
+
+@probe("ring_trains_saved", needs=("motion_enums", "end_to_end", "layout_assembly_reopen"), tier=8,
+       members=("swbuild.build_gearbox", "IAssemblyDoc.AddMate5 gear", "IFeature.GetDefinition",
+                "IMateEntity2.EntityParams", "IModelDoc2.GetSaveFlag", "IModelDocExtension.SaveAs3"))
+def ring_trains_saved(px: Px) -> None:
+    """Ring trains mated right on this version and saved, for another version to open, each built by the app and
+    mated as the app mates them: the Risky train from its fixture; a pairs train (a spur ring on parallel shafts, a
+    helical ring on opposite ones, the external pair on all four shaft-sense combinations); and a geometry train
+    (a right-hand helical ring, a 15° helical ring, a herringbone ring, a spur ring with a shifted pinion, each on
+    Risky's shaft senses). Every gear mate read back straight after AddMate5 and after the top-only rebuild, the
+    train driven as made (turns and interference off the built phase), every mate the read-back calls wrong
+    remade with the other Flip and the train driven again, then saved. Each reopened and every gear mate read
+    back (GetDefinition, then EntityParams) between readings of every save flag. And on the Risky train, its
+    ring mesh remade at a new ratio inside an Update's shape, read back, corrected if wrong, driven."""
+    from .. import swbuild  # noqa: PLC0415
+    from ..workbook import assess as wb_assess  # noqa: PLC0415
+
+    major = _major(px)
+    folder = os.path.join(os.path.dirname(_folder(px)), CROSS_PREFIX + major)
+    px.require(not os.path.exists(folder), f"{folder} does not exist yet")
+    for sub in ("risky", "pairs", "geometry"):
+        os.makedirs(os.path.join(folder, sub))
+    risky = _risky_train(px, os.path.join(folder, "risky"))
+    trains = {"risky": {"built": risky, "fx": risky_fixture(), "pairs": [],
+                        "teeth": {g.id: int(g.teeth) for g in risky["spec"].gears}}}
+    for sub, pairs in (("pairs", cross_pairs()), ("geometry", geometry_pairs())):
+        built = _app_build(px, ring_spec(os.path.join(folder, sub), pairs, f"Probe W8 Cross {sub.title()}"), swbuild,
+                           wb_assess)
+        trains[sub] = {"built": built, "fx": pairs_fixture(pairs), "pairs": pairs,
+                       "teeth": {g: (p["teeth"][0] if g == p["pinion"] else p["teeth"][1]) for p in pairs
+                                 for g in (p["pinion"], p["ring"])}}
+    facts: Dict[str, Any] = {"version": major}
+    manifest: Dict[str, Any] = {"version": major, "trains": {}}
+    for tag, t in trains.items():
+        b, fx, teeth, pairs = t["built"], t["fx"], t["teeth"], t["pairs"]
+        paths = list(b["paths"])
+        f: Dict[str, Any] = {}
+        try:
+            doc, _ = open_by_path(px, b["plan"].assembly_path, sc.SW_DOC_ASSEMBLY, prefer="OpenDoc6")
+            comps = dict(sorted({g: call(doc, "GetComponentByName", n) for g, n in b["names"].items()}.items()))
+            layout = call(doc, "GetComponentByName", b["layout_name"])
+            px.require(all(c is not None for c in comps.values()) and layout is not None, f"{tag}: every component found")
+            mate_w5_train(px, doc, comps, layout, b["frames"], teeth, adder(px, call(doc, "GetEquationMgr")), fx, flips={})
+            # Read straight after the AddMate5 calls (the gear mates are mate_w5_train's last), then after the rebuild.
+            inner = {f"{x} meshes {y}": x in fx.internal or y in fx.internal for x, y in fx.meshes}
+            f["read_after_add"] = {m: read_back(px, doc, m, i) for m, i in inner.items()}
+            rebuild(px, doc, f"{tag}: mated the app's way", top_only=TOP_ONLY)
+            flips = {f"{x} meshes {y}": bool(findings.GEAR_MATE_FLIP) for x, y in fx.meshes}
+            names = {k: str(call(c, "Name2")) for k, c in comps.items()}
+            f["read_after_rebuild"] = {m: read_back(px, doc, m, i) for m, i in inner.items()}
+
+            def drive_check(label: str) -> Dict[str, Any]:
+                return check_senses(px, doc, comps, layout, fx, teeth, label) if tag == "risky" else \
+                    pairs_check(px, doc, comps, layout, pairs, label)
+
+            # Driven as made, so the read-back is judged before anything is remade.
+            f["check_as_made"] = drive_check(f"{tag} as made")
+            f["read_back"], f["remade"] = {}, {}
+            for x, y in fx.meshes:
+                m = f"{x} meshes {y}"
+                f["read_back"][m] = read_back(px, doc, m, inner[m])
+                if f["read_back"][m]["says_right"] is False:
+                    flips[m] = not flips[m]
+                    f["remade"][m] = remake_gear_mate(px, doc, names, m, x, y, (float(teeth[x]), float(teeth[y])), m,
+                                                      flip=flips[m])
+                    f["read_back"][m]["after_remake"] = read_back(px, doc, m, inner[m])
+            if f["remade"]:
+                rebuild(px, doc, f"{tag}: remade where the read-back said wrong", top_only=TOP_ONLY)
+                f["check"] = drive_check(f"{tag} after the remake")
+            else:
+                f["check"] = f["check_as_made"]
+            f["errors"] = errors_only(mate_errors(px, doc))
+            f["off_built_mm"] = worst(_off(comps, b["frames"]))
+            f["flips"] = flips
+            px.require(_save_in_place(px, doc, b["plan"].assembly_path, f"the {tag} train"), f"{tag}: saved")
+        finally:
+            _close_quietly(px, paths)
+        # Reopened: every gear mate read back, each read between two readings of every save flag.
+        reads = []
+        try:
+            doc, _ = open_by_path(px, b["plan"].assembly_path, sc.SW_DOC_ASSEMBLY, prefer="OpenDoc6")
+            title = str(call(doc, "GetTitle"))
+            if title not in px.shared["created"]:
+                px.shared["created"].append(title)
+            f["flags_on_open"] = _all_flags(px, paths)
+            for x, y in fx.meshes:
+                m = f"{x} meshes {y}"
+                r: Dict[str, Any] = {"mate": m, "before": _all_flags(px, paths)}
+                r["definition"] = gear_mate_definition(px, doc, m)
+                r["after_definition"] = _all_flags(px, paths)
+                r["entities"] = entity_params(px, doc, m)
+                r["after_entities"] = _all_flags(px, paths)
+                r["marked_by_definition"] = newly_marked(r["before"], r["after_definition"])
+                r["marked_by_entities"] = newly_marked(r["after_definition"], r["after_entities"])
+                from . import decide  # noqa: PLC0415
+                r["says_right"] = decide.read_back_says_right(r["definition"].get("Reverse"),
+                                                              axes_parallel_as_seen(r["entities"]),
+                                                              x in fx.internal or y in fx.internal)
+                reads.append(r)
+        finally:
+            f["close"] = _close_checked(px, b["plan"].assembly_path, paths)
+        f["reopened_reads"] = reads
+        if tag == "risky":
+            f["update"] = _ring_update_shape(px, b, fx, teeth, swbuild)
+        facts[tag] = f
+        manifest["trains"][tag] = {
+            "assembly": b["plan"].assembly_path, "paths": paths, "names": b["names"], "layout_name": b["layout_name"],
+            "meshes": [list(m) for m in fx.meshes], "locks": [list(m) for m in fx.locks],
+            "internal": list(fx.internal), "teeth": teeth, "flips": f["flips"],
+            "frames": {g: [list(map(list, v[0])), list(v[1])] for g, v in b["frames"].items()},
+            "pairs": [{k: p[k] for k in ("pinion", "ring", "internal", "label")} for p in pairs]}
+    import json  # noqa: PLC0415
+    with open(os.path.join(folder, CROSS_MANIFEST), "w", encoding="utf-8") as stream:
+        json.dump(manifest, stream, indent=1)
+    px.fact("ring_trains_saved", facts)
+    tags = list(trains)
+    rights = all(v is True for t in tags for v in facts[t]["check"]["meshes"].values())
+    px.check(rights, f"saved right on this version: {[(t, facts[t]['check']['meshes'], facts[t]['flips']) for t in tags]}")
+    marked = sorted({d for t in tags for r in facts[t]["reopened_reads"] for d in r["marked_by_entities"]})
+    clean_open = not any(v for t in tags for v in facts[t]["flags_on_open"].values())
+    px.fact("entity_params_read_marks", ("nothing" if not marked else f"{marked}") if clean_open else
+            "undetermined: a document was already modified on open")
+    px.fact("definition_read_marks_on_reopen", sorted({d for t in tags for r in facts[t]["reopened_reads"]
+                                                       for d in r["marked_by_definition"]}))
+    # The sense, read straight after AddMate5, after the top-only rebuild (for a remade mate, straight after its
+    # remake) and after the reopen, against what the drive did; and the Flip each mesh needed here.
+    told, agree, needed = {}, {}, {}
+    for t in tags:
+        f = facts[t]
+        for m, ok in f["check"]["meshes"].items():
+            remade = m in f["remade"]
+            as_made = f["check_as_made"]["meshes"][m]
+            first, rebuilt = f["read_after_add"][m]["says_right"], f["read_after_rebuild"][m]["says_right"]
+            final = f["read_back"][m]["after_remake"]["says_right"] if remade else rebuilt
+            reopened = next(r["says_right"] for r in f["reopened_reads"] if r["mate"] == m)
+            told[f"{t}: {m}"] = bool(first is as_made and rebuilt is as_made and final is ok and reopened is ok)
+            agree[f"{t}: {m}"] = {"driven as made": as_made, "after AddMate5": first, "after the rebuild": rebuilt,
+                                  "after the remake": final if remade else None, "driven at the end": ok,
+                                  "after the reopen": reopened}
+            needed[f"{t}: {m}"] = bool(findings.GEAR_MATE_FLIP) if as_made else (not bool(findings.GEAR_MATE_FLIP))
+    px.fact("ring_trains_read_points", agree, "says_right straight after AddMate5, after the rebuild, after any "
+                                              "remake, after the reopen")
+    px.fact("ring_trains_read_back_tells_sense", all(told.values()))
+    px.fact("ring_trains_needed_flip", needed)
+    u = facts["risky"].get("update") or {}
+    px.fact("ring_update_shape", {k: u.get(k) for k in ("read_back_says_right", "remade", "check", "check_after")},
+            "G5 14 -> 15 and G6 36 -> 37 by Update's shape: the ring mesh remade, read back, corrected if wrong, driven")
+    px.fact("ring_trains_saved_folder", folder)
+
+
+@probe("ring_trains_from_another_version", needs=("motion_enums",), tier=8,
+       members=("ISldWorks.OpenDoc6", "IFeature.GetDefinition", "IMateEntity2.EntityParams", "ISldWorks.CloseDoc"))
+def ring_trains_from_another_version(px: Px) -> None:
+    """Ring trains another version saved (ring_trains_saved's folder for that version), opened here and never
+    saved: every save flag on open; every gear mate's read-back and what the rule says; a drive with every turn
+    and the interference off the built phase; where a mesh turns wrong, the remake with the other Flip and the
+    drive again; then closed unsaved by CloseDoc, every file's time on disk unchanged."""
+    import glob  # noqa: PLC0415
+    import json  # noqa: PLC0415
+
+    major = _major(px)
+    root = os.path.dirname(_folder(px))
+    others = sorted(d for d in glob.glob(os.path.join(root, CROSS_PREFIX + "*")) if not d.endswith(CROSS_PREFIX + major)
+                    and os.path.isfile(os.path.join(d, CROSS_MANIFEST)))
+    px.require(bool(others), f"another version's ring trains are on disk under {root}")
+    folder = others[-1]
+    with open(os.path.join(folder, CROSS_MANIFEST), encoding="utf-8") as stream:
+        manifest = json.load(stream)
+    got, pid = px.attempt("ISldWorks.GetProcessID", lambda: call(sc.app(px), "GetProcessID"))
+    px.require(got and isinstance(pid, int) and pid > 0, "GetProcessID answered the session's process")
+    facts: Dict[str, Any] = {"opened_on": major, "saved_by": manifest["version"]}
+    import types  # noqa: PLC0415
+    for tag, t in manifest["trains"].items():
+        fx = types.SimpleNamespace(meshes=[tuple(m) for m in t["meshes"]], locks=[tuple(m) for m in t["locks"]],
+                                   internal=tuple(t["internal"]))
+        teeth = t["teeth"]
+        paths = t["paths"]
+        before = _disk(paths)
+        f: Dict[str, Any] = {"saved_flips": t["flips"]}
+        try:
+            errors, warnings = sc.out_long(), sc.out_long()
+            with DialogWatch(pid) as watch:
+                ok, result = px.attempt(f"OpenDoc6({os.path.basename(t['assembly'])}), saved by {manifest['version']}",
+                                        lambda: call(sc.app(px), "OpenDoc6", t["assembly"], sc.SW_DOC_ASSEMBLY,
+                                                     int(findings.OPEN_DOC_SILENT or 1), "", errors, warnings))
+            f["open_dialogs"] = watch.report()
+            doc = result[0] if ok and isinstance(result, tuple) else result
+            px.require(ok and doc is not None, f"{tag}: the train opens")
+            f["open_codes"] = [plain(getattr(errors, "value", None)), plain(getattr(warnings, "value", None))]
+            from .p7_workbook import _doc_at  # noqa: PLC0415
+            for p in paths:
+                d = _doc_at(px, p)
+                if d is not None and str(call(d, "GetTitle")) not in px.shared.setdefault("created", []):
+                    px.shared["created"].append(str(call(d, "GetTitle")))
+            f["flags_on_open"] = _all_flags(px, paths)
+            comps = dict(sorted({g: call(doc, "GetComponentByName", n) for g, n in t["names"].items()}.items()))
+            layout = call(doc, "GetComponentByName", t["layout_name"])
+            px.require(all(c is not None for c in comps.values()) and layout is not None, f"{tag}: every component found")
+            f["read_back"] = {f"{x} meshes {y}": read_back(px, doc, f"{x} meshes {y}", x in fx.internal or y in fx.internal)
+                              for x, y in fx.meshes}
+            f["flags_after_read_back"] = _all_flags(px, paths)
+            pairs = [dict(p, shaft_p="", shaft_r="") for p in t["pairs"]]
+            check = (lambda label: check_senses(px, doc, comps, layout, fx, teeth, label)) if tag == "risky" else \
+                (lambda label: pairs_check(px, doc, comps, layout, pairs, label))
+            f["check"] = check(f"{tag} as opened")
+            wrong = [m for m, ok in f["check"]["meshes"].items() if ok is False]
+            names = {k: str(call(c, "Name2")) for k, c in comps.items()}
+            f["remade"] = {}
+            for m in wrong:
+                x, _w, y = m.split(" ")
+                f["remade"][m] = remake_gear_mate(px, doc, names, m, x, y, (float(teeth[x]), float(teeth[y])), m,
+                                                  flip=not t["flips"][m])
+                f["remade"][m]["read_back"] = read_back(px, doc, m, x in fx.internal or y in fx.internal)
+            if wrong:
+                rebuild(px, doc, f"{tag}: remade", top_only=TOP_ONLY)
+                f["check_after_remake"] = check(f"{tag} after the remake")
+            f["errors"] = errors_only(mate_errors(px, doc))
+        finally:
+            # Closed without saving, by CloseDoc on the assembly and then on every document of ours still open.
+            closes = []
+            from .p7_workbook import _doc_at  # noqa: PLC0415
+            for p in paths:
+                d = _doc_at(px, p)
+                if d is not None:
+                    try:
+                        closes.append(watched_close(px, "CloseDoc", str(call(d, "GetTitle")), pid))
+                    except Exception as exc:  # noqa: BLE001 - the evidence
+                        closes.append({"raised": str(exc)})
+            f["closes"] = closes
+            f["left_open"] = [os.path.basename(p) for p in paths if _doc_at(px, p) is not None]
+            f["files_unchanged"] = _disk(paths) == before
+        facts[tag] = f
+    px.fact("ring_trains_from_another_version", facts)
+    turned = {tag: facts[tag]["check"]["meshes"] for tag in manifest["trains"]}
+    told = {tag: {m: facts[tag]["read_back"][m]["says_right"] == ok for m, ok in turned[tag].items()}
+            for tag in manifest["trains"]}
+    px.check(True, f"saved by {manifest['version']}, opened on {major}: turned {turned}; the read-back told it "
+                   f"{told}; flags on open {[facts[t]['flags_on_open'] for t in manifest['trains']]}")
+    px.fact("cross_version_ring_turns_right", turned)
+    px.fact("cross_version_read_back_tells_sense", all(v for d in told.values() for v in d.values()))
+    px.fact("cross_version_remake_puts_right", {tag: (facts[tag].get("check_after_remake") or {}).get("meshes")
+                                                for tag in manifest["trains"] if facts[tag]["remade"]})
+    px.fact("cross_version_closed_unsaved_unchanged", {tag: facts[tag]["files_unchanged"] and not facts[tag]["left_open"]
+                                                       for tag in manifest["trains"]})
 
 
 # -- 15 (last): a gear mate's ratio changed through its definition, recorded and never chosen ------------------
