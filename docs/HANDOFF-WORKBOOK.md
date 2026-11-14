@@ -259,6 +259,14 @@ Questions 1 to 5 of 2026-11-14 are answered (`notes-workbook/W5-DECISIONS.md`; P
    one build button; no static option in the window once W5 is in (a gearbox is built static only when a W5 finding
    is missing, and a W4 one stays static until Build again…).
 
+Answered ahead of its phase (the user, 2026-11-14), for W7's sub-plan:
+
+- **A carrier is built as a skeleton only.** W7 makes a carrier as a part of axes and planes with no solid, as the
+  layout part is, free to turn about its own shaft's axis, with each planet mated to an axis in it. The app makes
+  no solid carrier (a plate, pins): that geometry depends on the gearbox at hand and is left to the user. PLAN-WORKBOOK
+  already has the carrier as a shaft row that planets are `Mounted on`; this settles what stands for it in
+  SolidWorks.
+
 ## Rules carried over
 
 - Commits and PRs carry **no Claude co-author or attribution line**. Commit by explicit path only
