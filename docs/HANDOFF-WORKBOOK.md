@@ -18,13 +18,14 @@ answers of that day and the rulings that follow from them are in `notes-workbook
 | W2 Workbook window, live link, Build parts | done, reviewed, fixes in. The batch build (`swbuild.build_many`) ran on SolidWorks 2024 and 2026 (`208712c`); logs `probe/results/w2-build-20261113-164647.log` and `probe/results/sw2024/w2-build-20261113-165706.log`. |
 | W3 geometry, phases, kinematics, checks, fixes, Export, Results sheet, two-column window | done, reviewed twice, every item fixed. The Excel checks passed on Windows: the Windows-saved fixture (`aa86cc7`) reads, and exported files open in Excel with no repair prompt. |
 | W4 layout part + static assembly, Update SolidWorks, build-again `_r<n>` | **closed 2026-11-14**: the rebuild fault probed and fixed, pass 4 verified, both demonstrations rerun on SolidWorks 2026 and 2024 with every check passing, each step reviewed. Details and what is left open below. |
-| W5 motion | **in progress**: the user's answers recorded, probe package P0 run and reviewed (round P0b/P0c running), the interface commit in and reviewed (`2f82a0e`, `07fd66a`), packages A, B, C and D written; the demonstration on SolidWorks (package E) waits for P0b. Details below. |
-| W6 right-angle, W7 planetary, W8 sleeves and modes | not started; each needs its own sub-plan. |
+| W5 motion | **closed 2026-11-14**: probes P0 to P0d and the two ring rounds run and reviewed, packages A to E written and reviewed, the demonstration run in full on SolidWorks 2026 and confirmed on 2024, the user's hand drag passed on both. Details, and what is left open, below. |
+| W6 right-angle, W7 planetary, W8 sleeves and modes | not started; each needs its own sub-plan. The user chooses which comes next. |
 
 Suite, measured on a clean `git archive` of `2250ceb` (WSL, 2026-11-13): `PYTHONPATH=src .venv/bin/python -m
 pytest -q` → **1559 passed, 10 skipped**. On the 2026-11-14 clone (another Python, fewer skips): 1699 passed, 1
 skipped at `8504856`, where W4 closed; 1759 passed, 1 skipped at the W5 interface commit `07fd66a`; 2096 passed, 1 skipped at `c7770c8`, after D's review and B's
-and C's fixes (2026-11-14).
+and C's fixes (2026-11-14); **2258 passed, 1 skipped** on a clean archive of `4cd8e7f`, where W5 closed (source as
+`d99654a`).
 The window's Tk tests run under Windows Python: `python.exe -m pytest tests/test_workbook_build.py
 tests/test_workbook_window.py -q` → 115 passed, 2 skipped at `c7770c8` (a "no display for Tk" skip is a known flake that moves between tests;
 rerun). The `PYTHONPATH` matters in a copy: the
@@ -176,7 +177,7 @@ running, a document left unsaved in the other session cannot be seen.
 SolidWorks 2026 (75 of 75) and 2024 (31 of 31), every decision the same. Report: `notes-workbook/W5-PROBE-REPORT.md`
 (one misstatement: a mate was deleted by "Select2 then EditDelete()", not `DeleteSelection2`). A gear's axis is mated
 *coincident* with the layout's shaft axis (concentric is refused); one gear per shaft, the anchor, is held that way and
-along the shaft, every other gear on it by a lock mate alone; every gear mate takes Flip False; a 12 : 1 train driven
+along the shaft, every other gear on it by a lock mate alone; every gear mate took Flip False in tier 8 (no longer assumed: see *The ring* below); a 12 : 1 train driven
 30° turned its output 2.5° the right way. No API drag reproduces a mouse drag: "drag the input" is a person's step, and
 the API proof is a temporary driving mate. PLAN-WORKBOOK §4.4 now carries this as a dated note (*Readings changed by
 probe tier 8*), and §6's W5 row says "once probe tier 8 has passed".
@@ -186,14 +187,16 @@ probe tier 8*), and §6's W5 row says "once probe tier 8 has passed".
 chosen (W5)*: a refused mate stops the build (no static fallback); Update returns a turned train to its built turn
 whenever it has to move any gear (the user's words; ruled per train with review M1: only a train it must put is
 put back, whole); no datum plane, so an anchor's Front-plane edits need Build again…; a follower's
-place along its shaft is an Update; a tooth change that alters a gear mate's ratio needs Build again… until the ratio
-route is probed; W4 static gearboxes stay static; a recorded mate found suppressed is turned back on.
+place along its shaft is an Update; a tooth change that alters a gear mate's ratio is an Update, by the remake
+(Build again… only until probe P0b settled the route); W4 static gearboxes stay static; a recorded mate found suppressed is turned back on.
 
-**Probe package P0** (`0d638db` … `8504856`, rulings `0551abc`) ran tier 8 items 7–13 on both versions and was
-reviewed. **Round P0b/P0c is running** (`7c48d84`, `4ced012` and the probe agent's uncommitted results): a train
-*built* under the top-only rebuild, the ratio remake in a fresh 2024 session (P1b), and the tooth change as an Update
-does it. The probe agent is about to commit `GEAR_MATE_RATIO_ROUTE = "remake"`; until it does, a tooth change on a
-turning gearbox is Build again…. Every package's tests pin the findings they depend on, so they pass either way.
+**Probe rounds.** P0 (`0d638db` … `8504856`), P0b (to `4f865d8`), P0c (to `c66d321`) and P0d (to `26cbf9c`) ran on
+both versions and were each reviewed; `W5-DECISIONS.md` has a section of rulings for each. What they settled, in one
+line each: a tooth change the globals carry is an Update, by deleting the gear mate and making it again
+(`GEAR_MATE_RATIO_ROUTE = "remake"`), also on a gear with two gear mates; a train is built and updated under the
+top-only rebuild; mates are found by walking the mate group, may sit in folders, and are made under
+`CommandInProgress`; a turning Update refuses while a gear is lightweight. Two more rounds followed the first
+demonstration's ring fault (`ad08864` … `79e5341`, then `5fcbdc3` … `9afe65b`); see *The ring* below.
 
 **Interface commit** `2f82a0e`, its review's rulings `07fd66a` (`W5-INTERFACES.md` §6). The packages, each reviewed
 independently (D's review of 2026-11-14 asked for the fixes now in, below):
@@ -218,35 +221,60 @@ independently (D's review of 2026-11-14 asked for the fixes now in, below):
   board after a build is redrawn with the gears mated. Their Update boards use an edit Update carries whatever the
   ratio finding says (G3 and G4 to module 2.5 with S3 X 148.75, G4's At 27 → 30) in place of G2 68 → 69.
 
-**What the demonstration (package E) still has to show**, on SolidWorks 2026 and then 2024 in a fresh session, and
-not before P0b is committed and reviewed: W5-PLAN §4 — a turning build of the 12 : 1 (and the Risky_Placements and
-Arc_Move workbooks) with every mate's status and every gear's constrained state read; the driven proof (a temporary
-driving mate: input 30°, every gear's turn against `δ_i = 30°·ω_i/ω_in`, then Drive set back and the control mate
-deleted, every frame back at the built frame to 1e-6, nothing left behind before any save); Update on a train turned
-by hand with nothing to put (left turned) and with a put (put back, locks off around the puts and back on); an
-anchor's Face Z move; a follower's At; a mate suppressed by hand turned back on; an unknown mate refusing the Update;
-a refused mate stopping the build with the parts and layout kept; the tooth change both ways as the committed
-finding says; and the window run through these states. The person's step: drag G1 in SolidWorks and watch the
-output turn at 1/12, the right way (W5-PLAN §4.4); log every gear's origin and axis residuals after it, since
-`POSE_TOLERANCE` against a mouse drag has not been measured (`W5-INTERFACES.md` §7 E).
+**The ring (found by the first demonstration, 2026-11-14).** The first full run passed on SolidWorks 2024 and failed
+seven checks on 2026, all one fault: the ring of Risky_Placements turned the wrong way. No Flip can be chosen from the
+plan: every toothed ring probed needs the opposite Flip on the two versions, and which one depends on the ring. On
+2024 a new ring gear mate made straight after an Update had moved its pinion 2 mm along its shaft needed the other
+Flip from one made after the build and a reopen; whether the move, the Update's puts and rebuild, or the missing
+reopen caused it was not separated. So the app assumes none. Each gear mate is read
+back after it is made (`swcom.gear_mate_sense`: right when `(Reverse == directions parallel) == internal`) and a wrong
+one is deleted and made again with the other Flip; one wrong both ways stops the job as a refused mate. Update's
+check phase reads every recorded gear mate the same way (a suppressed one only after Update has turned it back on)
+and remakes one found wrong. The record holds no Flip. Code: A `a0d5fad`, `6d7172f`, `8ee3c59`, `c2e8489`, `980f10b`,
+`b4d4bdd`, `d99654a`; B `7dbc10f`, `7c0eecc`, `f32e744`; C `1df2384`, `17ff636`; each reviewed, the last must-fix closed
+in `d99654a`.
 
-**Open:**
+**The demonstration (package E), as run.** Scripts `probe/workbook_assembly_check.py` (sections m1 to m8 for W5; a, a2,
+a3, b, c from W4), `probe/workbook_window_check.py`, `probe/cross_version_open_check.py`. Every run started a fresh
+SolidWorks and used a `git archive` snapshot named in its log's run line.
 
-- *Fixed by C in `3b51fa6` and `72ab6ba`, after D's first pass:* the Build again? question for a record whose mate
-  Update cannot read now opens with that refusal; the header after a refused mate reads *· its assembly was refused
-  for this version* (*· changed since its assembly was refused* after a save); a W4 gearbox's offer of a turning
-  revision is said inside Update's one offer; the Update summary names every mated gear of a train it must put.
-- *Closed by B's `4d7fa03` and C's `3d6c28e`, wired by D:* after an Update lost with SolidWorks or stopped part way,
-  the next press laid what that Update left to the user (*had been moved*, *turned out of step*). The finish now
-  says an earlier Update was not saved (`Finished.earlier_update`), the window passes it to `gearbox_update_status`,
-  and the sentences say what happened; the window's tests pin them on both paths, and a real drag still reads *had
-  been moved in SolidWorks*.
+- *SolidWorks 2026, the full run* (from `9afe65b`; logs `probe/results/w5-*-20261114-163249*`): every section passes
+  once m3 and m7 were rerun with a control that drives both Flips (the main log's two FAILs are the old control, which
+  assumed the mate still had the first Flip). Window check 21 of 21.
+- *SolidWorks 2026, after the last code* (src of `d99654a`; `…-171802.log`, `…-174603-m8.log`, `…-180303.log`): m1,
+  m6 with a suppressed mate folder, m8, and m5, a and a3 pass. Those are the sections whose path the commits after
+  the full run changed (`W5-DECISIONS.md`, *Rulings at W5's close*).
+- *SolidWorks 2024, the confirming run* (src of `d99654a`; `probe/results/sw2024/w5-*-20261114-171802*`,
+  `…-174603.log`): m1, m3, m7, m8 and the window check pass. The one FAIL in the `171802` log is an assertion of the
+  script whose premise was wrong (that a fresh ring gear mate needs the Flip the recorded one was made with, after a
+  move); `7e2135f` asserts it only while neither gear has moved, and the `174603` rerun of m7 passes.
+- *m8, on both:* the app itself moves the ring's pinion (G5 At 45 → 47) and then changes the ring mesh's teeth
+  (14/36 → 15/37, an Update). The remade gear mate reads back wrong and is turned round, and a drive at the new ratio
+  turns the ring the right way, again after a save and reopen.
+- *A 2024-built ring gearbox opened in 2026* reads unmodified and no file changes
+  (`w5-cross-version-2024-in-2026-20261114-174215.log`). Closing it there raises the SOLIDWORKS CAM add-in's Yes/No
+  "Save changes?" box, which ignores Escape; the scripts answer No. The app closes nothing itself.
+- *The person's step* (W5-PLAN §4.4): the user dragged G1 by hand in the 12 : 1 on SolidWorks 2026 and on 2024
+  (2026-11-14); the train turned as it should on both, closing asked nothing, and the files on disk were unchanged.
+
+The first demonstration's logs (`…-20261114-112629*`) are kept: 2024 1307 of 1307, 2026 with the seven ring failures.
+What the runs leave out, with the reasons, is in the scripts' headers (a fixed shaft, a loop-closer, Update on a pair,
+an idler's tooth change: no fixture has one; the idler was shown by probe P0c).
+
+**Open, none of it blocking:**
+
 - **The refused `Assem<n>` left open** is named once, in the build's sentence; the window does not track it, so
   neither the footer afterwards nor a close mentions it (UI-DESIGN §9 says so).
-- Whether a train's Build may keep the top-only rebuild (P0b); D7's Update branch (the ratio remake) until P0b is
-  committed; folders in the MateGroup are not mates (A's, done in `3eba2ec`; to be seen on SolidWorks).
+- Caveats the reviews asked to be written down and not run again are at the end of `W5-DECISIONS.md` (for example:
+  section c takes the app's word that it turned the ring's mate round and does not drive the ring; the remake under
+  `CommandInProgress` from wrong to right was a probe step on 2026 only, and m8 is what shows the app doing it on
+  2024).
+- The app took a +0.3 shifted pinion inside an unshifted ring at the unshifted centre distance, and the build then
+  reported a clash (seen by the ring probe; a question for the user below).
 - From W4: whether the assembly still reports needing a rebuild after the top-only route (`PUT_NEEDS_REBUILD` not
   established); a journaled file on a disconnected drive is treated as gone (below).
+- For the next phase's demonstration: build each fixture once and start later sections from a copy (*Rules carried
+  over*).
 
 ## Questions waiting for the user
 
@@ -255,7 +283,9 @@ Questions 1 to 5 of 2026-11-14 are answered (`notes-workbook/W5-DECISIONS.md`; P
 
 1. **A journaled file on a disconnected drive is treated as gone** — keep that, or hold such entries until the drive
    is back?
-2. Readings the user may overrule: Update SolidWorks does not save; a part keeps its file name after a teeth change;
+2. Should the Checks panel say, before a build, that a profile-shifted pinion inside a ring clashes at the unshifted
+   centre distance? Today only the build's interference check reports it.
+3. Readings the user may overrule: Update SolidWorks does not save; a part keeps its file name after a teeth change;
    one build button; no static option in the window once W5 is in (a gearbox is built static only when a W5 finding
    is missing, and a W4 one stays static until Build again…).
 

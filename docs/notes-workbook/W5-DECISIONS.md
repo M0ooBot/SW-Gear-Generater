@@ -222,3 +222,29 @@ asked to be written down, and is not run again (the rule of 2026-11-14):
   unsaved close asked nothing (P0c). It is tied to the file's version and to the add-in, not to `CloseDoc`.
 - The two versions' `ring_trains_saved` runs came from different probe commits (2024 at `498f248`, 2026 at
   `3176557`); the difference between them is how the remake verdict is judged, and the raw readings agree.
+
+## Rulings at W5's close (2026-11-14)
+
+- **The run that closes the phase** is the full run on SolidWorks 2026 from `9afe65b` (`0514c26`), together with a
+  rerun, from the final source (`d99654a`), of every section whose path the later commits changed: m1, m6, m8, and
+  m5, a, a3. The last review asked for the last three, or a ruling; they were run. SolidWorks 2024's confirming run
+  is m1, m3, m7, m8, the window check and the cross-version open, as the user's rule of that day says.
+- **The Flip a new ring gear mate needs is not predicted, on either version, from anything.** On 2024 one made
+  straight after an Update had moved its pinion 2 mm along its shaft and put the train needed Flip True, where one
+  made after the build and a reopen, pinion unmoved, needed False; the mate made at the build still turned the ring
+  right after the move. Whether the move, the Update's puts and rebuild, or the missing reopen changed it was not
+  separated, and is not probed: the app reads back every gear mate it makes or remakes, so nothing depends on the
+  cause. Section m8 is that path run by the app on both versions.
+
+Caveats of the demonstration's two reviews, written down and not run again:
+
+- "Read back wrong, then turned round" for the remade ring mate in m8 is the app's own result; SolidWorks shows the
+  end state (the drive at 15 : 37, the interference control, the both-Flips control).
+- Section c builds the Risky gearbox without driving it, so its `turned_round` there is the app's word; m3, m7 and
+  m8 drive the ring.
+- On SolidWorks 2024, m2, m4, m5, m6, a, a2, a3, b and c were not run on the final source (they passed there on the
+  first demonstration, before the ring fix); m6's suppressed mate folder ran on 2026 only.
+- a3's typed-back quiet Update checks frames and a drive but does not assert the save flags.
+- The 2026 reruns of m3 and m7 with the both-Flips control ran in the same session as the main run, not a fresh one.
+- Not shown through the app on either version: an idler's tooth change (probe P0c showed the steps), the
+  lightweight refusal, a fixed shaft, a loop-closer, Update on a pair's assembly.
