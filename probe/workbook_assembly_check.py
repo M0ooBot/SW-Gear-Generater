@@ -1693,6 +1693,9 @@ def build_turning(worker, desk, label, parts, turned_round=()):
     if TAG["major"] == 34:
         check(got == list(turned_round), f"{label}: the build's sense read made again with the other Flip exactly "
               f"{list(turned_round)} on SolidWorks 2026: turned round {got}")
+    elif TAG["major"] == 32:
+        check(got == [], f"{label}: on SolidWorks 2024 every gear mate reads right as first made (probe "
+              f"ring_mate_sense): turned round {got}")
     else:
         say(f"fact    {label}: the build's sense read made again with the other Flip: {got}")
     box = desk.record.gearbox
@@ -2218,6 +2221,23 @@ def check_folder(walk, names, label, outside=()):
           f"{out} (wanted outside: {list(outside)})")
 
 
+def folder_suppressed(session, folder_name, suppress=None):
+    """The mate folder ``folder_name`` in the build document's mate group: suppressed or turned on by the call that
+    suppresses a mate (``IFeature.SetSuppression2(findings.FEATURE_SUPPRESS or FEATURE_UNSUPPRESS,
+    THIS_CONFIGURATION, None)``, as probe round P0d suppressed a folder) when ``suppress`` is given; returns whether
+    it reads suppressed, and each entry's (name, suppressed)."""
+    folder = next((f for f in session._mate_group() if str(call(f, "Name")) == folder_name  # noqa: SLF001
+                   and swcom._type_name(f) == findings.MATE_FOLDER_TYPE_NAME), None)  # noqa: SLF001
+    if folder is None:
+        raise swcom.SolidWorksError(f"No mate folder called {folder_name!r}.")
+    if suppress is not None:
+        action = findings.FEATURE_SUPPRESS if suppress else findings.FEATURE_UNSUPPRESS
+        call(folder, "SetSuppression2", action, findings.THIS_CONFIGURATION, None)
+        session.rebuild(kind=swcom.ASSEMBLY_TRAIN)
+    return (session._is_suppressed(folder),  # noqa: SLF001
+            [(str(call(f, "Name")), session._is_suppressed(f)) for f in session._mate_group()])  # noqa: SLF001
+
+
 def section_m6(worker, excel):
     say("== m6  the 12 : 1's gear mates in a mate folder, saved and reopened; an Update that puts the whole train; "
         "then a tooth change whose remade gear mate lands outside the folder")
@@ -2252,6 +2272,35 @@ def section_m6(worker, excel):
         measure_mates(worker, desk, "m6 G3 At (every recorded mate found in SolidWorks)")
         measure_clear(worker, desk, "m6 G3 At")
     save_assembly(worker, desk, "after G3 At")
+    desk.plan_solidworks()
+
+    say("-- m6  the folder holding the gear mates suppressed in SolidWorks (which suppresses both), then Update")
+    state = run(worker, in_assembly(box.assembly, lambda s: folder_suppressed(s, FOLDER_NAME, True)))
+    say(f"        folder suppressed: {state[0]}; entries {state[1]}")
+    check(state[0] and all(sup for n, sup in state[1] if n in gear_mates),
+          f"m6: the folder reads suppressed, and so does every gear mate in it: {state}")
+    save_assembly(worker, desk, "with the folder suppressed, so Update's own marks show")
+    desk.plan_solidworks()
+    desk.say_update()
+    guard()
+    _, result, _ = desk.update_solidworks()
+    if result is None:
+        check(False, f"m6, folder suppressed: Update refused: {desk.note[0]!r}")
+    else:
+        check(result.ok and sorted(result.unsuppressed) == sorted(gear_mates) and result.ratios == []
+              and not list(getattr(result, "sense_found_wrong", []) or []),
+              f"m6, folder suppressed: Update turned every gear mate back on, remade none, found none turning the "
+              f"wrong way: unsuppressed {result.unsuppressed}, ratios {result.ratios}, sense found wrong "
+              f"{getattr(result, 'sense_found_wrong', None)}, turned round {getattr(result, 'turned_round', None)}")
+        state = run(worker, in_assembly(box.assembly, lambda s: folder_suppressed(s, FOLDER_NAME)))
+        say(f"fact    m6, after the Update: the folder reads suppressed {state[0]}; entries {state[1]}")
+        update_marks(worker, desk, result, "m6 folder suppressed", folder)
+        measure_frames(worker, desk, "m6 folder back on")
+        measure_mates(worker, desk, "m6 folder back on (every gear mate on, read in SolidWorks)")
+        walk = run(worker, in_assembly(box.assembly, mate_walk))
+        check_folder(walk, gear_mates, "m6, the gear mates turned back on")
+        drive_proof(worker, desk, "m6 folder back on, the gear mates' sense")
+    save_assembly(worker, desk, "after the folder step")
     desk.plan_solidworks()
 
     say("-- m6  Excel: S2 X 64.5, G2 Teeth 69: the remade G1 meshes G2 lands at the end of the mate group, outside "
