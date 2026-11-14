@@ -1,6 +1,6 @@
 r"""Six- and seven-tooth pinions on SolidWorks, through the app's own build path (the small-pinion tip cap, 0.3.2).
 
-python.exe probe/small_pinion_check.py <repo src> <output folder under C:\> --pid PID [--log FILE]
+python.exe probe/small_pinion_check.py <repo src> <output folder under C:\> --pid PID [--log FILE] [--step N ...]
 
 The branch fix/small-pinion-cap (a84523a, merged in 0f5a121) closes a 6- or 7-tooth pinion's tooth space with an
 arc on the tip cap (``spur.caps_with_arc``: centre on the origin, ends on the two fixed involute ends, no radius
@@ -39,6 +39,7 @@ sys.path.insert(0, sys.argv[1])
 OUT = sys.argv[2]
 PID = int(sys.argv[sys.argv.index("--pid") + 1])
 LOG_PATH = sys.argv[sys.argv.index("--log") + 1] if "--log" in sys.argv else os.path.join(OUT, "small-pinion.log")
+STEPS = [sys.argv[i + 1] for i, a in enumerate(sys.argv) if a == "--step"] or ["1", "2", "3", "4"]
 
 for stream in (sys.stdout, sys.stderr):
     try:
@@ -120,11 +121,11 @@ def readings(session):
     bodies = call(doc, "GetBodies2", 0, True) or ()
     radii = []
     for body in bodies:
-        for vertex in call(body, "GetVertices") or ():
-            point = call(vertex, "GetPoint")
+        for vertex in swcom._read(body, "GetVertices") or ():  # noqa: SLF001 - a method late binding hands back
+            point = swcom._read(vertex, "GetPoint")  # noqa: SLF001
             radii.append(math.hypot(float(point[0]), float(point[1])) * 1000.0)
     try:
-        status = call(call(doc, "GetEquationMgr"), "Status")
+        status = swcom._read(call(doc, "GetEquationMgr"), "Status")  # noqa: SLF001
     except Exception as exc:  # noqa: BLE001 - logged only
         status = f"raised {exc}"
     return {"volume": session.volume_mm3(), "bodies": len(bodies), "errors": errors,
@@ -334,6 +335,8 @@ def main():
         steps = [("1", lambda: step1(worker)), ("2", lambda: step2(worker)), ("3", lambda: step3(worker)),
                  ("4", lambda: [pair_case(worker, z, f"pair {z}/24") for z in (6, 7, 17)])]
         for name, fn in steps:
+            if name not in STEPS:
+                continue
             try:
                 fn()
             except Exception as exc:  # noqa: BLE001 - logged, and the next step still runs
