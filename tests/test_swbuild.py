@@ -791,6 +791,9 @@ class FakeSolidWorks:
         the mate's TRUE sense for its true case; judged here for the mesh the caller says it is."""
         self._log("gear_mate_sense", handle, internal)
         mate = self.mate(self.mate_handles[handle])
+        if mate.suppressed:
+            # No probe has read Reverse or a suppressed mate's axes: the fake refuses, so a read made too early fails.
+            raise SolidWorksError(f"The fake will not read which way the suppressed gear mate {mate.name} turns.")
         true_internal = self.mesh_case(mate)[0]
         parallel = self._sigma(mate.a[0]) == self._sigma(mate.b[0])        # entity directions = the gear axes
         reverse = parallel if self.turns_right(mate.name) == true_internal else not parallel
@@ -4109,3 +4112,72 @@ def test_an_update_remake_without_the_read_back_after_a_ratio_remake_is_refused_
                                  "findings.GEAR_MATE_READ_BACK_HOLDS_AFTER_A_RATIO_REMAKE settled on SolidWorks (it is "
                                  "None), so nothing is changed; run probe tier 8 first.")
     assert not any(n in CHANGING for n in names(fake))
+
+
+
+# -- the review of 980f10b: a suppressed gear mate is read only once turned back on; a sense-only remake
+
+def test_a_suppressed_gear_mate_that_turns_right_is_healed_as_before():
+    fake = _built_train()
+    fake.mate("G1 meshes G2", T_ASM).suppressed = True
+    result = _update_train(fake)
+    assert result.ok, result.log_lines()
+    assert result.unsuppressed == ["G1 meshes G2"] and result.sense_found_wrong == [] and result.placed == []
+    reads = [a[0] for n, a in fake.calls if n == "gear_mate_sense"]
+    assert reads.count("mate8") == 1                                  # once, after it was turned back on
+    called = names(fake)
+    assert called.index("set_mate_suppressed") < max(i for i, n in enumerate(called) if n == "gear_mate_sense")
+
+
+def test_a_gear_mate_suppressed_with_its_folder_and_right_is_healed_as_before(monkeypatch):
+    monkeypatch.setattr(findings, "MATE_FOLDER_TYPE_NAME", "FtrFolder")
+    monkeypatch.setattr(findings, "MATE_GROUP_WALK_SEES_MATES_IN_A_FOLDER", True)
+    fake = _built_train()
+    fake.user_folder(T_ASM, "Folder1")
+    fake.mate("G3 meshes G4", T_ASM).suppressed = True          # suppressed with the folder it sits in
+    result = _update_train(fake)
+    assert result.ok and result.unsuppressed == ["G3 meshes G4"] and result.sense_found_wrong == []
+
+
+def test_a_suppressed_gear_mate_that_turns_wrong_is_turned_on_read_remade_and_its_train_put(remake_route):
+    fake = _built_ring(internal=None)                          # built without the read: G3 meshes G4 turns wrong
+    fake.mate("G3 meshes G4", T_ASM).suppressed = True
+    result = _update_train(fake, motion=_ring_motion())
+    assert result.ok, result.log_lines()
+    assert result.unsuppressed == ["G3 meshes G4"] and result.sense_found_wrong == ["G3 meshes G4"]
+    assert result.ratios == [] and result.placed == list(TRAIN_ORDER)       # its ratio did not change
+    assert fake.turns_right("G3 meshes G4", T_ASM) and fake.locked_puts == []
+
+
+def test_a_sense_only_remake_is_not_said_to_be_a_new_ratio(remake_route):
+    fake = _built_ring(internal=None)
+    result = _update_train(fake, motion=_ring_motion())
+    assert result.ok and result.sense_found_wrong == ["G3 meshes G4"] and result.ratios == []
+    assert not any(line.startswith("ok      given their new ratio") for line in result.log_lines())
+    assert "ok      found turning against their mesh, so made again: G3 meshes G4" in result.log_lines()
+
+
+def test_a_wrong_sense_mate_is_refused_before_anything_changes_while_the_remake_route_is_missing(monkeypatch):
+    monkeypatch.setattr(findings, "GEAR_MATE_RATIO_ROUTE", None)
+    fake = _built_ring(internal=None)
+    with pytest.raises(swbuild.BuildError) as raised:
+        _update_train(fake, motion=_ring_motion())
+    assert str(raised.value) == ("The gear mate G3 meshes G4 in T.SLDASM turns its gears against the way they mesh, "
+                                 "and making a gear mate again has not been settled on SolidWorks "
+                                 "(findings.GEAR_MATE_RATIO_ROUTE is None), so nothing is changed; build the gearbox "
+                                 "again.")
+    assert not any(n in CHANGING for n in names(fake))
+
+
+def test_a_fixed_gear_takes_the_unfix_route_when_the_finding_says_so(monkeypatch, remake_route):
+    """A check-phase variable once shadowed REPLACE_FIXED_ROUTE with the ratio route, so the unfix route was lost."""
+    monkeypatch.setattr(findings, "REPLACE_FIXED_ROUTE", "UnfixComponent, Transform2 put, FixComponent")
+    fake = _built_train()
+    fake.mate("G3 meshes G4", T_ASM).suppressed = True
+    motion = _motion(mates=tuple(m for m in MATE_REFS if m.name != "G3 meshes G4"), fixed=("G4",),
+                     meshes=MESHES[:1], recorded_meshes=MESHES[:1])
+    fake.turn("gear4-1", 2.0)
+    result = _update_train(fake, motion=motion)
+    assert result.ok and result.placed == ["G4"], result.log_lines()
+    moves = [n for n, a in fake.calls if n in ("unfix_component", "place_component", "fix_component")]
+    assert moves == ["unfix_component", "place_component", "fix_component"]

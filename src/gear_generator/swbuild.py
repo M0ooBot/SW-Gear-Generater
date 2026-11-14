@@ -2788,6 +2788,8 @@ def _update_motion(sw: SolidWorks, parts: Sequence[DocumentValues], layout: Opti
     sigma = {p.gear: (1 if float(p.rotation[8]) > 0 else -1) for p in placements}
     internal_of = _internal_meshes(motion, sigma)
     remakes: List[Tuple[str, int, int]] = []         # gear mates found live at another ratio than wanted
+    sense_wrong = set()                              # gear mates read turning against their mesh, to be remade
+    deferred: List[str] = []                         # recorded gear mates found suppressed: read once turned on
     suppressed: List[str] = []                       # recorded mates found suppressed: turned back on (D10)
     axial: List[Tuple[str, GlobalVariable]] = []     # Face Z globals the assembly holds otherwise
     sw.begin_build()
@@ -2841,7 +2843,7 @@ def _update_motion(sw: SolidWorks, parts: Sequence[DocumentValues], layout: Opti
         # Every recorded gear mate judged live, as the frames are (a remake lost with an unsaved close leaves the
         # old ratio in SolidWorks whatever the record says).
         asked = {name for name, _, _ in motion.ratios}
-        route = getattr(findings, "GEAR_MATE_RATIO_ROUTE", None)
+        ratio_route = getattr(findings, "GEAR_MATE_RATIO_ROUTE", None)
         for index, mate in enumerate(motion.mates, 1):
             if mate.name not in wanted_teeth:
                 continue
@@ -2853,25 +2855,37 @@ def _update_motion(sw: SolidWorks, parts: Sequence[DocumentValues], layout: Opti
                     result.ratios_already.append(mate.name)
                     result.ratios_read.append(read)
                 continue
-            if route != "remake":
+            if ratio_route != "remake":
                 raise BuildError(f"The gear mate {mate.name} in {_file(assembly)} is at {live[0]:g} : {live[1]:g} "
                                  f"and the workbook wants {want[0]} : {want[1]}, and giving a gear mate a new ratio "
-                                 f"has not been settled on SolidWorks (findings.GEAR_MATE_RATIO_ROUTE is {route!r}), "
-                                 "so nothing is changed; build the gearbox again.")
+                                 "has not been settled on SolidWorks (findings.GEAR_MATE_RATIO_ROUTE is "
+                                 f"{ratio_route!r}), so nothing is changed; build the gearbox again.")
             remakes.append((mate.name, want[0], want[1]))
             result.ratios_read.append(read)
             if mate.name not in asked:
                 result.ratios_found.append(mate.name)
         # Which way each recorded gear mate turns, read before anything changes (SENSE_CHECK_FINDINGS; without
         # them the sense is not read here, as before).
+        # A gear mate found suppressed is never read here (no probe read Reverse or its axes on a suppressed mate):
+        # it is read once D10 has turned it back on and the assembly has rebuilt (``deferred``, in the change
+        # phase; GEAR_MATE_SENSE_READ_POINTS_AGREE covers a read after a rebuild).
         if _sense_settled() and _settled(SENSE_CHECK_FINDINGS) is None:
             for index, mate in enumerate(motion.mates, 1):
                 if mate.name not in wanted_teeth:
                     continue
+                if mate.name in suppressed:
+                    deferred.append(mate.name)
+                    continue
                 ga, gb = mate.gears
                 if not _sense_read(sw, f"mate{index}", mate.name, internal_of.get(mate.name, False), sigma.get(ga),
                                    sigma.get(gb), ga, gb, BuildError):
-                    result.sense_found_wrong.append(mate.name)
+                    if ratio_route != "remake":
+                        raise BuildError(f"The gear mate {mate.name} in {_file(assembly)} turns its gears against the "
+                                         "way they mesh, and making a gear mate again has not been settled on "
+                                         "SolidWorks (findings.GEAR_MATE_RATIO_ROUTE is "
+                                         f"{ratio_route!r}), so nothing is "
+                                         "changed; build the gearbox again.")
+                    sense_wrong.add(mate.name)
                     # At the wanted ratio but turning wrong (an Update stopped after a remake that read wrong either
                     # way round, and the open assembly kept): not "already there" — it is remade.
                     if mate.name in result.ratios_already:
@@ -2923,7 +2937,8 @@ def _update_motion(sw: SolidWorks, parts: Sequence[DocumentValues], layout: Opti
             sw.begin_build()
             try:
                 _motion_assembly(sw, result, assembly, placements, motion, mated, route, suppressed, axial,
-                                 turned_back, say, touched, remakes)
+                                 turned_back, say, touched, remakes, sense_wrong=sense_wrong, deferred=deferred,
+                                 wanted_teeth=wanted_teeth)
             finally:
                 sw.end_build()
     except _LocksLeftOff:
@@ -2947,8 +2962,15 @@ def _motion_assembly(sw: SolidWorks, result: GearboxUpdate, assembly: str, place
                      motion: MotionUpdate, mated: Sequence[str], route: Optional[str], suppressed: Sequence[str],
                      axial: Sequence[Tuple[str, GlobalVariable]], turned_back: Mapping[str, bool],
                      say: Callable[[Step], None], touched: List[bool],
-                     remakes: Sequence[Tuple[str, int, int]] = ()) -> None:
-    """Steps 2-7 of the motion path's change phase, in the build begun by :func:`_update_motion`."""
+                     remakes: Sequence[Tuple[str, int, int]] = (), *, sense_wrong: Optional[set] = None,
+                     deferred: Sequence[str] = (),
+                     wanted_teeth: Optional[Mapping[str, Tuple[int, int]]] = None) -> None:
+    """Steps 2-7 of the motion path's change phase, in the build begun by :func:`_update_motion`. ``sense_wrong``:
+    gear mates read turning against their mesh (remade; listed in ``sense_found_wrong`` once remade, and in
+    ``ratios`` only when the plan asked their ratio changed). ``deferred``: gear mates found suppressed, whose sense
+    is read here once D10 has turned them back on and the assembly has rebuilt."""
+    remakes = list(remakes)
+    sense_wrong = set(sense_wrong or ())
     file, stem = _file(assembly), _stem(assembly)
     sw.open_document(assembly)
     _note_opened(sw, assembly, result)
@@ -2975,7 +2997,8 @@ def _motion_assembly(sw: SolidWorks, result: GearboxUpdate, assembly: str, place
         if _sense_read(sw, mate_handle[name], name, inside, sigma.get(ga), sigma.get(gb), ga, gb, SolidWorksError):
             return
         touched[0] = True
-        sw.remake_gear_mate(mate_handle[name], a_ref, b_ref, ratio, not bool(getattr(findings, "GEAR_MATE_FLIP", False)))
+        first = bool(getattr(findings, "GEAR_MATE_FLIP", False))
+        sw.remake_gear_mate(mate_handle[name], a_ref, b_ref, ratio, not first)
         result.turned_round.append(name)
         if not _sense_read(sw, mate_handle[name], name, inside, sigma.get(ga), sigma.get(gb), ga, gb, SolidWorksError):
             raise SolidWorksError(f"SolidWorks turns the gears of the mate {name} against the way they mesh, whichever "
@@ -3003,6 +3026,26 @@ def _motion_assembly(sw: SolidWorks, result: GearboxUpdate, assembly: str, place
         result.axial.append(gear)
     if result.unsuppressed or result.axial:
         rebuild()
+    # A gear mate found suppressed, now turned back on and rebuilt: its sense read here, where the read-back holds
+    # after a rebuild; one wrong joins the remakes, and its train is put below like any other.
+    for name in deferred:
+        if name not in result.unsuppressed:
+            continue
+        ga, gb = next(m.gears for m in motion.mates if m.name == name)
+        if _sense_read(sw, mate_handle[name], name, internal_of.get(name, False), sigma.get(ga), sigma.get(gb), ga, gb,
+                       SolidWorksError):
+            continue
+        ratio_route = getattr(findings, "GEAR_MATE_RATIO_ROUTE", None)
+        if ratio_route != "remake":
+            raise SolidWorksError(f"The gear mate {name} in {file}, turned back on, turns its gears against the way "
+                                  "they mesh, and making a gear mate again has not been settled on SolidWorks "
+                                  f"(findings.GEAR_MATE_RATIO_ROUTE is {ratio_route!r}); build the gearbox again.")
+        if all(n != name for n, _, _ in remakes):
+            remakes.append((name, *(wanted_teeth or {})[name]))
+        sense_wrong.add(name)
+        _remake_gate()
+        _idler_gate(motion, remakes)
+        _remake_sense_gate(remakes, internal_of)
     # 5. every frame as it now stands; each train that needs a put is put whole, its locks off around the puts
     live = {p.gear: sw.component_frame(handle[p.gear]) for p in placements}
     axial_gears = {gear for gear, _ in axial}
@@ -3024,7 +3067,7 @@ def _motion_assembly(sw: SolidWorks, result: GearboxUpdate, assembly: str, place
         if not needed:
             continue
         _put_train(sw, result, motion, train, locks, ratios, handle, mate_handle, wanted, rebuild, file, touched,
-                   settle)
+                   settle, sense_wrong)
         put_trains.append(train)
         dirty[0] = dirty[0] or not locks
         restored = tuple(g for g in train if turned_back.get(g))
@@ -3083,7 +3126,8 @@ def _put_train(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, trai
                locks: Sequence[LockLink], ratios: Sequence[Tuple[str, int, int]], handle: Mapping[str, str],
                mate_handle: Mapping[str, str], wanted: Mapping[str, Frame9], rebuild: Callable[[], None],
                file: str, touched: List[bool],
-               settle: Optional[Callable[[str, str, str, Tuple[int, int]], None]] = None) -> None:
+               settle: Optional[Callable[[str, str, str, Tuple[int, int]], None]] = None,
+               sense_wrong: Collection[str] = ()) -> None:
     """One train put back whole: every lock of it suppressed (a lock does not hold against a put: W5-DECISIONS),
     a rebuild, its ratios remade, EVERY mated gear of it put (review M1), then — whatever happened — every lock
     turned back on and a rebuild (review M8). A lock that will not come back on is a failure naming the compound
@@ -3107,9 +3151,16 @@ def _put_train(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, trai
             touched[0] = True
             sw.set_gear_ratio(mate_handle[name], f"{handle[a]}:{AXIS_NAME}", f"{handle[b]}:{AXIS_NAME}",
                               (numerator, denominator))
-            result.ratios.append(name)
+            # ``ratios`` is for a ratio that changed (asked by the plan, or found at another); a gear mate remade only
+            # because it turned wrong, at the ratio it already held, is ``sense_found_wrong`` alone.
+            sense_only = name in sense_wrong and all(n != name for n, _, _ in motion.ratios) \
+                and name not in result.ratios_found
+            if not sense_only:
+                result.ratios.append(name)
             if settle is not None:
                 settle(name, f"{handle[a]}:{AXIS_NAME}", f"{handle[b]}:{AXIS_NAME}", (numerator, denominator))
+            if name in sense_wrong:
+                result.sense_found_wrong.append(name)
         for gear in train:
             touched[0] = True
             sw.place_component(handle[gear], wanted[gear][0], wanted[gear][1], kind=ASSEMBLY_TRAIN)
