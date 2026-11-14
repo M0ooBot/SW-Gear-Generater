@@ -943,8 +943,11 @@ DRAG_OPERATOR_TURNS_TRAIN = False
 # False everywhere, and so did the external pair, on both versions (gear_mate_sense's reading).
 # Every toothed ring needed the OPPOSITE Flip on the two versions, below. So no rule from what the
 # app knows before it makes the mate (inside or outside, both shaft senses, which gear first,
-# spur or helical) is right on both versions: GEAR_MATE_FLIP = False is right for outside pairs
-# and for this machine's 2024 helical rings, and wrong for every helical ring on 2026.
+# spur or helical) is right on both versions. GEAR_MATE_FLIP = False is right for outside pairs and
+# the plain annulus on both versions. On 2026 it is wrong for every helical ring and for spur rings
+# on same-sense shafts (++, --). On 2024 it is right for helical rings and spur rings on same-sense
+# shafts, but wrong for spur rings on opposite shafts (+-, -+). So the app's Flip False gives a
+# wrongly turning ring on BOTH versions, only for different rings.
 GEAR_MATE_FLIP_NEEDED_ON_2026 = {
     "spur ring ++": True, "spur ring +-": False, "spur ring -+": False, "spur ring --": True,
     "helical ring ++": True, "helical ring +-": True, "helical ring -+": True, "helical ring --": True,
