@@ -778,7 +778,7 @@ def _sense_read(sw: SolidWorks, handle: str, name: str, internal: bool, sigma_a:
         said = ("the same way", "opposite ways")
         raise refusal(f"SolidWorks reads the axes of the gear mate {name} as pointing {said[0 if parallel else 1]}, "
                       f"but {gear_a} and {gear_b} sit on shafts pointing {said[0 if sigma_a == sigma_b else 1]}, so "
-                      "its entities are not the axes the plan asked for and nothing is guessed.")
+                      "the mate does not hold the axes the gears were placed on, and nothing is guessed.")
     return right
 
 
@@ -796,8 +796,8 @@ def _settle_sense(sw: SolidWorks, op: base.Mate, name: str,
     sw.remake_gear_mate(op.id, op.a, op.b, op.ratio, not op.flip, saved=False)
     result.turned_round.append(name)
     if not _sense_read(sw, op.id, name, inside, sigma.get(ha), sigma.get(hb), ga, gb, _SenseRefused):
-        raise _SenseRefused(f"SolidWorks turns the gears of the mate {name} against the way they mesh with either "
-                            "Flip, so the assembly is not saved.")
+        raise _SenseRefused(f"SolidWorks turns the gears of the mate {name} against the way they mesh, whichever way "
+                            "round the mate is made.")
 
 
 def _mated_handles(plan: BuildPlan) -> List[str]:
@@ -2964,9 +2964,9 @@ def _motion_assembly(sw: SolidWorks, result: GearboxUpdate, assembly: str, place
         sw.remake_gear_mate(mate_handle[name], a_ref, b_ref, ratio, not bool(getattr(findings, "GEAR_MATE_FLIP", False)))
         result.turned_round.append(name)
         if not _sense_read(sw, mate_handle[name], name, inside, sigma.get(ga), sigma.get(gb), ga, gb, SolidWorksError):
-            raise SolidWorksError(f"SolidWorks turns the gears of the mate {name} against the way they mesh with either "
-                                  f"Flip, so Update SolidWorks stops; the saved {file} still has it as it was: close "
-                                  f"{file} in SolidWorks without saving to bring it back.")
+            raise SolidWorksError(f"SolidWorks turns the gears of the mate {name} against the way they mesh, whichever "
+                                  f"way round it is made; the saved {file} still has it as it was: close {file} in "
+                                  "SolidWorks without saving to bring it back.")
     dirty = [False]
 
     def rebuild() -> None:

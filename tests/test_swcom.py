@@ -1979,7 +1979,7 @@ def test_a_gear_mates_sense_is_not_read_by_a_route_this_code_does_not_know(mated
 def test_a_gear_mate_without_two_entities_is_not_judged(mated):
     session, doc = mated
     _sense_world(session, doc, True, ((0, 0, 1.0),))
-    with pytest.raises(SolidWorksError, match="did not give its Reverse and two entity directions"):
+    with pytest.raises(SolidWorksError, match="did not say how it holds its two gear axes"):
         session.gear_mate_sense("mesh", True)
 
 
@@ -1997,9 +1997,10 @@ def test_a_gear_mate_is_made_again_with_the_flip_asked(mated, monkeypatch):
 
 
 @pytest.mark.parametrize("directions, sentence", [
-    (((0, 0, 0.0), (0, 0, 1.0)), "gave an entity direction of no length"),
-    (((0, 0, 1.0), (0, 0.5, 0.5)), "gave entity directions that are not along one line (their cosine is 0.707)"),
-    (((1.0, 0, 0), (0, 0, 1.0)), "gave entity directions that are not along one line (their cosine is 0.000)"),
+    (((0, 0, 0.0), (0, 0, 1.0)), "holds a gear axis with no direction"),
+    (((0, 0, 1.0), (0, 0.5, 0.5)), "holds two gear axes that are not parallel (their cosine is 0.707), so the mate "
+                                   "does not hold the axes the gears were placed on"),
+    (((1.0, 0, 0), (0, 0, 1.0)), "holds two gear axes that are not parallel (their cosine is 0.000)"),
 ])
 def test_a_gear_mates_entity_directions_that_are_not_one_line_are_not_judged(mated, directions, sentence):
     session, doc = mated

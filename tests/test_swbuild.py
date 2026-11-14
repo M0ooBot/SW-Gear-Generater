@@ -3862,7 +3862,7 @@ def test_a_mate_solidworks_turns_wrong_with_either_flip_stops_the_build_as_a_ref
     _refused_ring = result
     assert not _refused_ring.ok and _refused_ring.kind == "" and not _refused_ring.assembly.saved
     assert _refused_ring.assembly.mate_problems == ["SolidWorks turns the gears of the mate G3 meshes G4 against the "
-                                                    "way they mesh with either Flip, so the assembly is not saved."]
+                                                    "way they mesh, whichever way round the mate is made."]
     assert [r.saved for r in result.parts.built] == [P17, P68, P51R] and result.layout.saved == T_LAYOUT
     assert names(fake).count("remake_gear_mate") == 1 and fake.suppressed is False
 
@@ -3874,7 +3874,7 @@ def test_axes_read_otherwise_than_the_plan_placed_them_stop_the_build_without_a_
     _, result = _build_ring(fake)
     assert not result.ok and result.assembly.mate_problems == [
         "SolidWorks reads the axes of the gear mate G1 meshes G2 as pointing opposite ways, but G1 and G2 sit on shafts "
-        "pointing the same way, so its entities are not the axes the plan asked for and nothing is guessed."]
+        "pointing the same way, so the mate does not hold the axes the gears were placed on, and nothing is guessed."]
 
 
 def test_an_external_train_reads_every_gear_mate_and_turns_none_round():
@@ -3957,7 +3957,7 @@ def test_an_update_remake_wrong_with_either_flip_stops_with_the_locks_back_on(re
     fake.never_right = {"G3 meshes G4"}
     result = _update_train(fake, motion=_ring_motion(meshes=RING_MESHES_18, ratios=(("G3 meshes G4", 18, 50),)))
     assert result.failures == [("T.SLDASM", "SolidWorks turns the gears of the mate G3 meshes G4 against the way they "
-                                            "mesh with either Flip, so Update SolidWorks stops; the saved T.SLDASM "
+                                            "mesh, whichever way round it is made; the saved T.SLDASM "
                                             "still has it as it was: close T.SLDASM in SolidWorks without saving to "
                                             "bring it back.")]
     assert not fake.mate("G3 locked to G2", T_ASM).suppressed and result.placed == [] and result.changed == [T_ASM]
