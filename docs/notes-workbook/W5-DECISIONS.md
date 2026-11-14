@@ -165,3 +165,60 @@ ran on SolidWorks 2026 and 2024, each started fresh, and read the same on both.
   entry calls it, turned only the dragged gear on these trains (`DRAG_OPERATOR_TURNS_TRAIN`); what differs from
   that entry's own success (the mate kind holding each gear, an internal mesh, the angle) was not varied. The
   person's drag in SolidWorks remains the check that a mouse turns the train (W5-PLAN §4.4).
+
+## Rulings on the ring probe and its follow-up (2026-11-14)
+
+The first demonstration passed on SolidWorks 2024 and failed seven checks on 2026, all one fault: the ring of
+Risky_Placements turned the wrong way (`w5-workbook-assembly-20261114-112629.log`, section m3). Probe
+`ring_mate_sense` isolated it (`ad08864`, results `566b8b4`, findings `79e5341`); the follow-up round read the
+footing of the fix (`5fcbdc3` to `5a57837`, results `9b382df`, findings `9afe65b`).
+
+- **No Flip is chosen from the plan.** Every toothed ring probed needs the opposite Flip on the two versions,
+  and which one depends on the ring (`GEAR_MATE_FLIP_NEEDED_ON_2026`, `_ON_2024`, and the `_MORE_` tables:
+  helical and herringbone rings one way, spur rings the other). `GEAR_MATE_FLIP_STATIC_RULE` is None and
+  `GEAR_MATE_FLIP` stays False as the first try. An external pair needs False on both versions in every shaft
+  sense probed (++, --, -+).
+- **Every gear mate is read back, and a wrong one is made again with the other Flip.** Right is
+  `(Reverse == the two entities' directions parallel) == internal` (`GEAR_MATE_SENSE_READ_BACK`); the read
+  agrees with what a drive does straight after the mate is made, after the rebuild, after a remake and after a
+  save and reopen (`GEAR_MATE_SENSE_READ_POINTS_AGREE`). A mate that reads wrong both ways round stops the job
+  as a refused mate (answer 1); there is no static fallback and the old mate is not put back.
+- **The record does not carry the Flip.** What is on record is the ratio; the sense is read from SolidWorks each
+  time, so a file saved by the other version needs nothing converted. A train saved by 2024 and opened in 2026
+  keeps its stored Reverse, reads right and turns right with no remake (`CROSS_VERSION_READ_BACK_TELLS_SENSE`,
+  `CROSS_VERSION_RING_TURNS_RIGHT`).
+- **Update's check phase reads every gear mate's sense** now that the read is known to mark no document
+  (`GEAR_MATE_SENSE_READ_MARKS`). This closes the must-fix of package B's review: after an Update stopped on a
+  mate wrong both ways, a second press no longer takes that mate as already right. A mate found wrong is made
+  again and the window says so (`sense_found_wrong`); the remake a build makes itself is not mentioned
+  (`turned_round`). An interim rule that would have remade every gear mate on every Update was refused: it would
+  have ended the "already … left as it is" case.
+- **Build reads and remakes inside `CommandInProgress`**, as the probe did
+  (`GEAR_MATE_SENSE_READ_UNDER_COMMAND_IN_PROGRESS`, `GEAR_MATE_REMAKE_UNDER_COMMAND_IN_PROGRESS`), and Update's
+  remake at a new ratio is read back the same way (`GEAR_MATE_READ_BACK_HOLDS_AFTER_A_RATIO_REMAKE`: on 2026 the
+  ring mesh read wrong after the remake, was made again and then turned right). A train Build or a remake
+  refuses, before anything changes, while one of these findings is missing.
+- **Closing a changed assembly of an older version in 2026 can raise the CAM add-in's "Save changes?" box**
+  (`CROSS_VERSION_CLOSE_ASKS_TO_SAVE`; Yes and No only, on this machine). The app closes nothing itself, so no
+  code follows from it; probes and the demonstration answer No.
+- **Seen on the way, not W5's:** the app took a +0.3 shifted pinion inside an unshifted ring at the unshifted
+  centre distance, and its build then reported a clash of 1.38 mm³. The build's interference check caught it;
+  whether the Checks panel should say so before a build is a question for the user.
+
+The follow-up round's independent review found no must-fix: every finding the app depends on is supported by
+both versions' result files, and "marks nothing" was read on the assembly, the layout and every part. What it
+asked to be written down, and is not run again (the rule of 2026-11-14):
+
+- On 2024 the remake under `CommandInProgress` only ever went from a right gear mate to a wrong one; the app's
+  direction, wrong to right, was shown under it on 2026 only. The first mate made under `CommandInProgress` was
+  deleted before any drive, so its read is right by comparison (the same read with it off, and the opposite of
+  the remade mate's), not by a drive.
+- In the Update-shaped remake at a new ratio, 2026's first "wrong" was the read-back's word alone; the train was
+  driven only after the second remake, when it read right and turned right with no clash.
+- The probe read the ratio and the reference component on top of the app's sense reads; "marks nothing" holds
+  for that larger set.
+- The cross-version evidence is 2024-saved trains opened in 2026. 2024 cannot open a 2026 file.
+- The CAM add-in's box came up on closing a 2024 assembly the probe had changed, on this machine; a same-version
+  unsaved close asked nothing (P0c). It is tied to the file's version and to the add-in, not to `CloseDoc`.
+- The two versions' `ring_trains_saved` runs came from different probe commits (2024 at `498f248`, 2026 at
+  `3176557`); the difference between them is how the remake verdict is judged, and the raw readings agree.

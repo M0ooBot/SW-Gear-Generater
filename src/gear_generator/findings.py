@@ -1012,11 +1012,15 @@ GEAR_MATE_SENSE_READ_MARKS = "nothing"
 # app's Build steps were run with CommandInProgress True and no rebuild between: make the gear mate,
 # rename it, read it back, delete it (Select2 then EditDelete), make it again with the other Flip,
 # rename it, read it back. Then CommandInProgress went off, a top-only rebuild, a read and a drive.
-# On both versions every read under CommandInProgress equalled the read after the rebuild and told
-# the drive's sense. The other Flip read the opposite, and CommandInProgress read True at the
-# reads. The same steps with it off left the same mates by name and order, the same frames
-# (0.0 apart), the same reads and the same drive, with no mate error. The existing reads straight
-# after AddMate5 (below) ran with CommandInProgress off.
+# On both versions the read of the remade mate under CommandInProgress equalled the read after the
+# rebuild and told the drive's sense. The first mate was deleted before any rebuild or drive, so
+# it was never driven: its read is taken as right because it equals the same read with
+# CommandInProgress off and is the opposite of the remade mate's, and CommandInProgress read True
+# at the reads. The same steps with it off left the same mates by name and order, the same frames
+# (0.0 apart), the same reads and the same drive, with no mate error. On 2024 the remake under
+# CommandInProgress only ever went from a right mate to a wrong one; the app's direction, wrong to
+# right, was shown under it on 2026 only (the Risky ring). The existing reads straight after
+# AddMate5 (below) ran with CommandInProgress off.
 GEAR_MATE_SENSE_READ_UNDER_COMMAND_IN_PROGRESS = True
 GEAR_MATE_REMAKE_UNDER_COMMAND_IN_PROGRESS = True
 
