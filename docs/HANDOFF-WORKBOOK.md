@@ -287,6 +287,13 @@ Answered ahead of its phase (the user, 2026-11-14), for W7's sub-plan:
   caveat, not run again. After a fix only the affected demonstration sections are rerun, with one full run at
   the phase's close. Findings are still read from committed `findings.py` only, a missing one still refuses
   with a sentence, and the plan's STOP-and-ask triggers apply.
+  *What the confirming build on 2024 is:* not the whole demonstration again. It is one full turning build
+  with its edits, plus every section in which the two versions have been seen to differ (for W5: `m1`, and the
+  ring sections `m3` and `m7`; about 12 minutes where the whole run takes 36).
+  *Not done yet, for the phase after W5:* the demonstration builds each fixture from scratch in nearly every
+  section (the 12 : 1 seven times). Build each fixture once and start the later sections from a copy of the
+  built folder; the records hold paths, so the script has to carry them over, and that change is reviewed like
+  any other.
 - **SolidWorks runs only on the Windows host.** SolidWorks 2024 there is the user's live session: record
   the open titles before a run, close only documents the run created, never save, close or modify theirs,
   never exit it, stop under 2 GB of free RAM, and prefer a freshly restarted session for long runs (one
