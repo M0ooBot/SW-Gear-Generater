@@ -6393,6 +6393,18 @@ def cip_reads_hold(case: Mapping[str, Any], mesh: str) -> bool:
                 and first.get("says_right") is (not driven))
 
 
+def cip_remake_same(on: Mapping[str, Any], off: Mapping[str, Any]) -> bool:
+    """The delete and remake under CommandInProgress left what the same steps with it off left: the same mates by
+    name and in order, the same frames, no mate error, every read the same, the drive the same. (The remake is to
+    the other Flip on purpose, so the remade mesh turns the opposite way to the first make on both.)"""
+    def reads(c: Mapping[str, Any]) -> List[Any]:
+        return [((c.get(k) or {}).get("says_right"), ((c.get(k) or {}).get("definition") or {}).get("Reverse"))
+                for k in ("read_first", "read_again", "read_after_rebuild")]
+    return bool(on.get("mates") and on["mates"] == off.get("mates")
+                and frame_table_diff(on["frames"], off["frames"]) < TOLERANCE_MM and not on["errors"] and not off["errors"]
+                and on["check"]["meshes"] == off["check"]["meshes"] and reads(on) == reads(off))
+
+
 @probe("ring_trains_saved", needs=("motion_enums", "end_to_end", "layout_assembly_reopen"), tier=8,
        members=("swbuild.build_gearbox", "IAssemblyDoc.AddMate5 gear", "IFeature.GetDefinition",
                 "IMateEntity2.EntityParams", "IModelDoc2.GetSaveFlag", "IModelDocExtension.SaveAs3"))
@@ -6540,16 +6552,13 @@ def ring_trains_saved(px: Px) -> None:
         on, off = cip[tag]["on"], cip[tag]["off"]
         reads_hold[tag] = {"on": cip_reads_hold(on, mesh), "off": cip_reads_hold(off, mesh),
                            "cip_read_true": on.get("cip_reads_again") is True}
-        remake_same[tag] = bool(on["mates"] == off["mates"] and frame_table_diff(on["frames"], off["frames"]) < TOLERANCE_MM
-                                and not on["errors"] and not off["errors"] and on["check"]["meshes"] == off["check"]["meshes"]
-                                and all(v is True for v in on["check"]["meshes"].values()))
+        remake_same[tag] = cip_remake_same(on, off)
     px.fact("cip_read_back", reads_hold, "each read under CommandInProgress (and with it off) equals the read "
                                          "after the rebuild and tells the drive's sense; the other Flip read the opposite")
     px.fact("gear_mate_sense_read_under_command_in_progress",
             all(v["on"] and v["cip_read_true"] for v in reads_hold.values()))
     px.fact("gear_mate_remake_under_command_in_progress", all(remake_same.values()),
-            "the delete and remake under CommandInProgress left the mates, names and frames as with it off, every "
-            "mesh turning right")
+            "the delete and remake under CommandInProgress left the mates, names, frames, reads and drive as with it off")
     px.fact("read_after_add_was_under_command_in_progress",
             {t: facts[t].get("read_after_add_command_in_progress") for t in trains})
     tags = list(trains)

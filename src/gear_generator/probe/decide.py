@@ -356,6 +356,20 @@ def gear_mate_read_back_tells_sense(records: Records) -> Optional[bool]:
     return True
 
 
+def remake_under_command_in_progress(records: Records) -> Optional[bool]:
+    """ring_trains_saved's CommandInProgress cases, judged from what they recorded (the first run's own verdict
+    asked that the remade mesh turn right, though it is remade to the other Flip on purpose): with it on, the same
+    mates, frames, reads and drive as with it off, and no mate error."""
+    if not _passed(records, "ring_trains_saved"):
+        return None
+    from .p8_motion import cip_remake_same  # noqa: PLC0415 - pure; p8_motion imports no COM at module level
+    cases = (((records.get("ring_trains_saved") or {}).get("facts") or {}).get("ring_trains_saved") or {}).get(
+        "command_in_progress") or {}
+    if not cases:
+        return None
+    return all(cip_remake_same(c["on"], c["off"]) for c in cases.values())
+
+
 def decide(records: Records) -> Dict[str, Any]:
     recipe = flank_recipe(records)
     units = _fact(records, "document_units", "default_template_is_mm")
@@ -510,8 +524,7 @@ def decide(records: Records) -> Dict[str, Any]:
         "ring_update_shape": _fact(records, "ring_trains_saved", "ring_update_shape"),
         "gear_mate_sense_read_under_command_in_progress": _fact(records, "ring_trains_saved",
                                                                 "gear_mate_sense_read_under_command_in_progress"),
-        "gear_mate_remake_under_command_in_progress": _fact(records, "ring_trains_saved",
-                                                            "gear_mate_remake_under_command_in_progress"),
+        "gear_mate_remake_under_command_in_progress": remake_under_command_in_progress(records),
         "cross_version_ring_turns_right": _fact(records, "ring_trains_from_another_version",
                                                 "cross_version_ring_turns_right"),
         "cross_version_read_back_tells_sense": _fact(records, "ring_trains_from_another_version",
