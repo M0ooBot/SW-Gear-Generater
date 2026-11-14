@@ -2862,6 +2862,10 @@ def _update_motion(sw: SolidWorks, parts: Sequence[DocumentValues], layout: Opti
                 if not _sense_read(sw, f"mate{index}", mate.name, internal_of.get(mate.name, False), sigma.get(ga),
                                    sigma.get(gb), ga, gb, BuildError):
                     result.sense_found_wrong.append(mate.name)
+                    # At the wanted ratio but turning wrong (an Update stopped after a remake that read wrong either
+                    # way round, and the open assembly kept): not "already there" — it is remade.
+                    if mate.name in result.ratios_already:
+                        result.ratios_already.remove(mate.name)
                     if all(name != mate.name for name, _, _ in remakes):
                         remakes.append((mate.name, *wanted_teeth[mate.name]))
         if remakes:

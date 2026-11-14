@@ -3987,3 +3987,73 @@ def test_with_its_finding_the_check_phase_finds_a_ring_turning_wrong_and_remakes
     assert result.sense_found_wrong == ["G3 meshes G4"] and result.turned_round == ["G3 meshes G4"]
     assert fake.turns_right("G3 meshes G4", T_ASM) and result.placed == list(TRAIN_ORDER)
     assert fake.locked_puts == []
+
+
+
+# -- the review of package B: an Update stopped after a remake that read wrong either way round, then pressed again
+
+@pytest.fixture
+def sense_check(monkeypatch):
+    """The check phase's read of every recorded gear mate, switched on (its findings are still placeholders)."""
+    for name, value in swbuild.SENSE_CHECK_FINDINGS:
+        monkeypatch.setattr(findings, name, value, raising=False)
+
+
+def _stopped_remake(fake, wrong, ratios, meshes):
+    """An Update whose remake of ``wrong`` reads wrong with both Flips stops (the open assembly left holding it at
+    the new ratio, made the second way round); then the user presses Update again without closing."""
+    fake.never_right = {wrong}
+    result = _update_train(fake, motion=_motion(meshes=meshes, ratios=ratios))
+    assert not result.ok and result.failures[-1][1].startswith(f"SolidWorks turns the gears of the mate {wrong} "), \
+        result.log_lines()
+    assert not fake.turns_right(wrong, T_ASM)
+    fake.never_right = set()                       # nothing in the open assembly changes with it
+    assert not fake.turns_right(wrong, T_ASM)
+    fake.calls.clear()
+
+
+def test_a_second_press_after_a_remake_stopped_turning_wrong_finds_it_and_remakes_it(remake_route, sense_check):
+    fake = _built_train()
+    asked = (("G1 meshes G2", 17, 69),)
+    _stopped_remake(fake, "G1 meshes G2", asked, MESHES_69)
+    result = _update_train(fake, motion=_motion(meshes=MESHES_69, ratios=asked))     # the record kept 17 : 68
+    assert result.ok, result.log_lines()
+    assert result.sense_found_wrong == ["G1 meshes G2"] and result.ratios_already == []
+    assert result.ratios == ["G1 meshes G2"] and result.placed == list(TRAIN_ORDER)
+    assert fake.turns_right("G1 meshes G2", T_ASM) and fake.mate("G1 meshes G2", T_ASM).ratio == (17.0, 69.0)
+    assert fake.locked_puts == []
+
+
+def test_a_second_press_with_two_gear_mates_remakes_only_the_one_left_turning_wrong(remake_route, sense_check):
+    fake = _built_train()
+    meshes = (MeshLink("G1", "G2", -17.0 / 69, 360.0 / 69), MeshLink("G3", "G4", -18.0 / 50, 360.0 / 50))
+    asked = (("G1 meshes G2", 17, 69), ("G3 meshes G4", 18, 50))
+    _stopped_remake(fake, "G3 meshes G4", asked, meshes)
+    assert fake.turns_right("G1 meshes G2", T_ASM)               # the first was remade right before the stop
+    result = _update_train(fake, motion=_motion(meshes=meshes, ratios=asked))
+    assert result.ok, result.log_lines()
+    assert result.ratios_already == ["G1 meshes G2"] and result.sense_found_wrong == ["G3 meshes G4"]
+    assert result.ratios == ["G3 meshes G4"]
+    assert fake.turns_right("G1 meshes G2", T_ASM) and fake.turns_right("G3 meshes G4", T_ASM)
+
+
+def test_a_second_press_still_wrong_either_way_round_stops_again_with_the_same_sentence(remake_route, sense_check):
+    fake = _built_train()
+    asked = (("G1 meshes G2", 17, 69),)
+    _stopped_remake(fake, "G1 meshes G2", asked, MESHES_69)
+    fake.never_right = {"G1 meshes G2"}
+    result = _update_train(fake, motion=_motion(meshes=MESHES_69, ratios=asked))
+    assert result.failures == [("T.SLDASM", "SolidWorks turns the gears of the mate G1 meshes G2 against the way they "
+                                            "mesh, whichever way round it is made; the saved T.SLDASM still has it as "
+                                            "it was: close T.SLDASM in SolidWorks without saving to bring it back.")]
+    assert result.ratios_already == [] and not fake.mate("G3 locked to G2", T_ASM).suppressed
+
+
+def test_without_the_check_phase_read_the_second_press_still_trusts_the_live_ratio(remake_route):
+    """What the review found, kept visible while the check phase's read is not settled: nobody reads the mate."""
+    fake = _built_train()
+    asked = (("G1 meshes G2", 17, 69),)
+    _stopped_remake(fake, "G1 meshes G2", asked, MESHES_69)
+    result = _update_train(fake, motion=_motion(meshes=MESHES_69, ratios=asked))
+    assert result.ok and result.ratios_already == ["G1 meshes G2"]
+    assert not fake.turns_right("G1 meshes G2", T_ASM)
