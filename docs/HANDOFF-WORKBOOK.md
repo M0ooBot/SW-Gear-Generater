@@ -19,7 +19,8 @@ answers of that day and the rulings that follow from them are in `notes-workbook
 | W3 geometry, phases, kinematics, checks, fixes, Export, Results sheet, two-column window | done, reviewed twice, every item fixed. The Excel checks passed on Windows: the Windows-saved fixture (`aa86cc7`) reads, and exported files open in Excel with no repair prompt. |
 | W4 layout part + static assembly, Update SolidWorks, build-again `_r<n>` | **closed 2026-11-14**: the rebuild fault probed and fixed, pass 4 verified, both demonstrations rerun on SolidWorks 2026 and 2024 with every check passing, each step reviewed. Details and what is left open below. |
 | W5 motion | **closed 2026-11-14**: probes P0 to P0d and the two ring rounds run and reviewed, packages A to E written and reviewed, the demonstration run in full on SolidWorks 2026 and confirmed on 2024, the user's hand drag passed on both. Details, and what is left open, below. |
-| W6 right-angle, W7 planetary, W8 sleeves and modes | not started; each needs its own sub-plan. The user chooses which comes next. |
+| W6 right-angle, W7 planetary, W8 sleeves and modes | **begun 2026-11-14**: the user said to carry on, in order, until W8 is done. The three sub-plans are being written (`notes-workbook/W6-PLAN.md`, `W7-PLAN.md`, `W8-PLAN.md`), each to be reviewed before its phase starts. Judgement calls are taken at the plan's recommended reading while the user is away and listed for the user as readings to overrule. |
+| The small-pinion tip cap | `fix/small-pinion-cap` merged at `0f5a121` (the user's instruction): 6- and 7-tooth pinions build with an arc on the tip cap, version 0.3.2. Built on SolidWorks 2024 by the branch; the 2026 build and the merge's review are in hand. |
 
 Suite, measured on a clean `git archive` of `2250ceb` (WSL, 2026-11-13): `PYTHONPATH=src .venv/bin/python -m
 pytest -q` → **1559 passed, 10 skipped**. On the 2026-11-14 clone (another Python, fewer skips): 1699 passed, 1
@@ -283,8 +284,8 @@ Questions 1 to 5 of 2026-11-14 are answered (`notes-workbook/W5-DECISIONS.md`; P
 
 1. **A journaled file on a disconnected drive is treated as gone** — keep that, or hold such entries until the drive
    is back?
-2. Should the Checks panel say, before a build, that a profile-shifted pinion inside a ring clashes at the unshifted
-   centre distance? Today only the build's interference check reports it.
+2. ~~Should the Checks panel say, before a build, that a profile-shifted pinion inside a ring clashes at the
+   unshifted centre distance?~~ **Yes** (the user, 2026-11-14); being added to `workbook/checks.py`.
 3. Readings the user may overrule: Update SolidWorks does not save; a part keeps its file name after a teeth change;
    one build button; no static option in the window once W5 is in (a gearbox is built static only when a W5 finding
    is missing, and a W4 one stays static until Build again…).
