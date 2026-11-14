@@ -884,6 +884,10 @@ class Desk:
         say(f"        finish: dragged {finished.dragged}; earlier update {getattr(finished, 'earlier_update', '')!r}")
         wrong = list(getattr(result, "sense_found_wrong", []) or [])
         check(not wrong, f"the Update's check phase found no gear mate turning against its mesh: {wrong}")
+        if self.record is not None and self.record.gearbox is not None and self.record.gearbox.assembly:
+            held = TURNED.setdefault(os.path.normcase(self.record.gearbox.assembly), set())
+            held.difference_update(list(result.ratios) + wrong)
+            held.update(getattr(result, "turned_round", []) or [])
         text, ok = ui_text.gearbox_update_status(update, result, finished.dragged,
                                                  meshes=gearbox.meshes if gearbox is not None else None,
                                                  finished=finished)
@@ -1443,6 +1447,10 @@ def drive_proof(worker, desk, label, control=None):
                   f"with Flip {right} it turns right (the comparison tells one from the other)")
             say(f"fact    {label}: {mesh_entry.name} turns right with Flip {right} here (findings.GEAR_MATE_FLIP "
                 f"{findings.GEAR_MATE_FLIP})")
+            turned = mesh_entry.name in TURNED.get(os.path.normcase(box.assembly), set())
+            left_on = [not bool(findings.GEAR_MATE_FLIP)] if turned else [bool(findings.GEAR_MATE_FLIP)]
+            check(right == left_on, f"{label}, control: the Flip that turns right, {right}, is the one the build left "
+                  f"on {mesh_entry.name} ({left_on}: {'turned round' if turned else 'as first made'})")
         else:
             check(False, f"{label}, control: never driven with both Flips: {out['errors']}")
         for key, what in (("control_gone", "the control mates deleted and the recorded one back on"),):
@@ -1672,6 +1680,10 @@ def fixture_desk(worker, excel, section, fixture):
 # again with the other Flip (probe ring_mate_sense; 9afe65b): the Risky ring's mesh. Asserted on 2026 (major 34),
 # logged on other versions.
 RING_TURNED_ROUND = ("G5 meshes G6",)
+# Per assembly path, the gear mates SolidWorks holds with the Flip other than findings.GEAR_MATE_FLIP: those a build
+# turned round, kept up to date by every Update (a remade mate starts from GEAR_MATE_FLIP again unless that Update
+# turned it round). The both-Flips control asserts that the Flip turning right is the one this says.
+TURNED = {}
 
 
 def build_turning(worker, desk, label, parts, turned_round=()):
@@ -1690,6 +1702,7 @@ def build_turning(worker, desk, label, parts, turned_round=()):
           f"parts {len(result.parts.built)}, kind {result.kind!r}")
     check(result.clashes == [] and not result.interference_error, f"{label}: no interference: {result.clashes}")
     got = list(getattr(result.assembly, "turned_round", []) or [])
+    TURNED[os.path.normcase(desk.record.gearbox.assembly)] = set(got)
     if TAG["major"] == 34:
         check(got == list(turned_round), f"{label}: the build's sense read made again with the other Flip exactly "
               f"{list(turned_round)} on SolidWorks 2026: turned round {got}")
