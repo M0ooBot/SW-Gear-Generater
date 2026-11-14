@@ -966,6 +966,18 @@ GEAR_MATE_FLIP_STATIC_RULE = None   # none is right on both versions for an app-
 # The versions store a different Reverse for the same toothed-ring call (they decide differently
 # whether it is inside a ring), and the read-back follows what they decided.
 GEAR_MATE_SENSE_READ_BACK = "(Reverse == entities parallel) == internal"
+# What it rests on (each against the drive's sense and, for toothed pairs, interference off the built
+# phase):
+# - ring_mate_sense: 52 mates per version, plus the Risky pair before and after its remake;
+# - ring_trains_saved: 13 meshes per version (2024: probe-results-20261114-151013 in sw2024; 2026:
+#   probe-results-20261114-162034), read straight after AddMate5, after the top-only rebuild, after any
+#   remake and after a save and reopen;
+# - the Risky ring remade at 15 : 37 in an Update's shape;
+# - ring_trains_from_another_version: the 13 meshes 2024 saved, opened in 2026.
+# The cases: toothed spur rings on all four shaft-sense combinations; 20° left- and right-hand, 15°
+# and herringbone helical rings; a spur ring with a -0.3 shifted pinion; the external pair on all
+# four combinations; the plain annulus; Risky's train (helical and herringbone outside meshes and its
+# ring). All with axis-to-axis gear mates and CLOSEST alignment, as the app makes them.
 GEAR_MATE_READ_BACK_TELLS_SENSE = True
 
 # Physical evidence: driven 10° off the built phase, every toothed pair stayed clear exactly when
@@ -981,3 +993,71 @@ WRONG_GEAR_MATE_SENSE_CLASHES = True
 #   same mates in the same order once the remade one is counted last, no mate error, and the layout
 #   and every part unmodified (only the assembly marked).
 GEAR_MATE_CHECK_AND_REMAKE_HOLDS = True
+
+# -- the read-back's footing (ring_trains_saved, ring_trains_from_another_version) -------------------
+# Evidence:
+# - 2024: probe/results/sw2024/probe-results-20261114-151013.json;
+# - 2026: probe/results/probe-results-20261114-162034.json (ring_trains_saved);
+# - 2026: probe/results/probe-results-20261114-162546.json (the 2024 trains opened in 2026).
+# Each run was in a fresh session.
+
+# On each saved train, reopened with every document GetSaveFlag False, each gear mate was read as the
+# app reads it, and every save flag was read straight before and after each read. The reads were
+# GetDefinition (Reverse, numerator, denominator), then GetSpecificFeature2, MateEntity(0 and 1) and
+# EntityParams. No flag changed, on 3 trains and 13 gear mates, on both versions. So an Update's
+# check phase may read the sense of every recorded gear mate before anything changes.
+GEAR_MATE_SENSE_READ_MARKS = "nothing"
+
+# On copies of the static Risky and pairs assemblies (G5 meshes G6, and the external ++ pair), the
+# app's Build steps were run with CommandInProgress True and no rebuild between: make the gear mate,
+# rename it, read it back, delete it (Select2 then EditDelete), make it again with the other Flip,
+# rename it, read it back. Then CommandInProgress went off, a top-only rebuild, a read and a drive.
+# On both versions every read under CommandInProgress equalled the read after the rebuild and told
+# the drive's sense. The other Flip read the opposite, and CommandInProgress read True at the
+# reads. The same steps with it off left the same mates by name and order, the same frames
+# (0.0 apart), the same reads and the same drive, with no mate error. The existing reads straight
+# after AddMate5 (below) ran with CommandInProgress off.
+GEAR_MATE_SENSE_READ_UNDER_COMMAND_IN_PROGRESS = True
+GEAR_MATE_REMAKE_UNDER_COMMAND_IN_PROGRESS = True
+
+# The read point. Every gear mate of the three trains was read straight after the AddMate5 calls
+# (before any rebuild, CommandInProgress off), after the top-only rebuild, straight after any remake,
+# and after a save, close and reopen. At each point it told the sense the drive found, as made and
+# at the end, on both versions (13 meshes each). So reading after the rebuild, or on a reopened
+# assembly, gives the same answer as reading straight after AddMate5.
+GEAR_MATE_SENSE_READ_POINTS_AGREE = True
+
+# More static cases, the Flip each needed (selected pinion first, Flip False as made):
+# - the external pair on same-sense and opposite shafts: Flip False on both versions, as +- did;
+# - the other rings, on Risky's shaft senses (pinion Z+, ring Z-): the right-hand 20°, 15° and
+#   herringbone helical rings need Flip True on 2026 and False on 2024, like the 20° left-hand ring;
+# - the spur ring with a shifted pinion needs Flip False on 2026 and True on 2024, like the plain
+#   spur ring +-.
+# The read-back told every one.
+GEAR_MATE_FLIP_NEEDED_MORE_ON_2026 = {
+    "external ++": False, "external --": False, "external -+": False,
+    "helical ring right +-": True, "helical ring 15 +-": True, "herringbone ring +-": True,
+    "spur ring shifted pinion +-": False}
+GEAR_MATE_FLIP_NEEDED_MORE_ON_2024 = {
+    "external ++": False, "external --": False, "external -+": False,
+    "helical ring right +-": False, "helical ring 15 +-": False, "herringbone ring +-": False,
+    "spur ring shifted pinion +-": True}
+
+# A ring mesh remade at a new ratio in an Update's shape: the Risky train's G5 14 -> 15 and G6
+# 36 -> 37 through the parts' globals, every lock suppressed, the gear mate deleted and made again
+# with Flip False, every gear put to its new built frame. On 2026 it read wrong; remade with Flip
+# True it read right. On 2024 it read right. Driven, every mesh turned right with no clash, on both.
+GEAR_MATE_READ_BACK_HOLDS_AFTER_A_RATIO_REMAKE = True
+
+# The 2024-saved trains (Risky, pairs, geometry; each mated right on 2024) opened in 2026.
+# - Every document read GetSaveFlag False on open and after the read-back.
+# - Every gear mate kept the Reverse 2024 stored, the read-back said right, and the drive turned
+#   all 13 meshes right with no clash: the stored mate carries its sense across, and 2026 does not
+#   re-decide on open.
+# - No remake was needed.
+# - Closing a modified 2024 assembly in 2026 by CloseDoc put up the SOLIDWORKS CAM add-in's modal
+#   "Save changes to ...?" box, Yes and No only, which ignores WM_CLOSE and Escape. It was answered
+#   No, and every file on disk was left as it was.
+CROSS_VERSION_RING_TURNS_RIGHT = True
+CROSS_VERSION_READ_BACK_TELLS_SENSE = True
+CROSS_VERSION_CLOSE_ASKS_TO_SAVE = True        # the CAM add-in's Yes/No box, on this machine's 2026

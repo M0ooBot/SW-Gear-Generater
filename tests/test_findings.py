@@ -920,3 +920,67 @@ def test_the_read_back_rule_is_stated_as_decide_applies_it():
     assert decide.read_back_says_right(True, True, True) is True and decide.read_back_says_right(False, True, True) is False
     assert decide.read_back_says_right(True, False, False) is True and decide.read_back_says_right(True, True, False) is False
     assert decide.read_back_says_right(None, True, True) is None
+
+
+TRAINS_SAVED = {"2024": LATEST.parent / "sw2024" / "probe-results-20261114-151013.json",
+                "2026": LATEST.parent / "probe-results-20261114-162034.json"}
+CROSS_OPENED = LATEST.parent / "probe-results-20261114-162546.json"
+CROSS_LABEL = {"G14P meshes G14R": "external ++", "G15P meshes G15R": "external --", "G16P meshes G16R": "external -+",
+               "G17P meshes G17R": "helical ring right +-", "G18P meshes G18R": "helical ring 15 +-",
+               "G19P meshes G19R": "herringbone ring +-", "G20P meshes G20R": "spur ring shifted pinion +-"}
+
+
+def _trains_saved(version):
+    data = json.loads(TRAINS_SAVED[version].read_text(encoding="utf-8"))
+    assert data["meta"]["version"].startswith(f"SolidWorks {version} ")
+    records = {r["name"]: r for r in data["records"]}
+    assert records["ring_trains_saved"]["status"] == "pass"
+    return records
+
+
+@pytest.mark.parametrize("version", ["2026", "2024"])
+def test_the_read_back_marks_nothing_tells_the_sense_everywhere_and_holds_under_command_in_progress(version):
+    """Probe ring_trains_saved: the reads around the save flags, the read points, CommandInProgress, more cases."""
+    records = _trains_saved(version)
+    decided = decide.decide(records)
+    assert decided["entity_params_read_marks"] == findings.GEAR_MATE_SENSE_READ_MARKS == "nothing"
+    assert decided["ring_trains_read_back_tells_sense"] is findings.GEAR_MATE_SENSE_READ_POINTS_AGREE is True
+    assert decided["gear_mate_sense_read_under_command_in_progress"] is \
+        findings.GEAR_MATE_SENSE_READ_UNDER_COMMAND_IN_PROGRESS is True
+    assert decided["gear_mate_remake_under_command_in_progress"] is findings.GEAR_MATE_REMAKE_UNDER_COMMAND_IN_PROGRESS
+    saved = facts(records, "ring_trains_saved")
+    assert set(saved["read_after_add_was_under_command_in_progress"].values()) == {False}
+    points = saved["ring_trains_read_points"]
+    assert len(points) == 13
+    for mesh, p in points.items():
+        assert p["after AddMate5"] is p["after the rebuild"] is p["driven as made"], mesh
+        assert p["after the reopen"] is p["driven at the end"] is True, mesh
+    needed = {CROSS_LABEL[k.split(": ")[1]]: v for k, v in saved["ring_trains_needed_flip"].items()
+              if k.split(": ")[1] in CROSS_LABEL}
+    assert needed == (findings.GEAR_MATE_FLIP_NEEDED_MORE_ON_2026 if version == "2026"
+                      else findings.GEAR_MATE_FLIP_NEEDED_MORE_ON_2024)
+    update = saved["ring_update_shape"]
+    assert update["read_back_says_right"] is (version == "2024") and all(update["check"].values())
+    assert (update["remade"] is None) is (version == "2024")
+    assert not any(update["check_after"]["clashes_driven"].values()) and findings.GEAR_MATE_READ_BACK_HOLDS_AFTER_A_RATIO_REMAKE
+
+
+def test_a_ring_train_2024_saved_turns_right_in_2026_and_the_read_back_says_so():
+    """Probe ring_trains_from_another_version: 2024's three trains opened in 2026, never saved."""
+    data = json.loads(CROSS_OPENED.read_text(encoding="utf-8"))
+    assert data["meta"]["version"].startswith("SolidWorks 2026 ")
+    records = {r["name"]: r for r in data["records"]}
+    decided = decide.decide(records)
+    turned = decided["cross_version_ring_turns_right"]
+    assert sum(len(v) for v in turned.values()) == 13
+    assert all(v for t in turned.values() for v in t.values()) is findings.CROSS_VERSION_RING_TURNS_RIGHT
+    assert decided["cross_version_read_back_tells_sense"] is findings.CROSS_VERSION_READ_BACK_TELLS_SENSE is True
+    assert all(decided["cross_version_closed_unsaved_unchanged"].values())
+    opened = facts(records, "ring_trains_from_another_version")["ring_trains_from_another_version"]
+    assert opened["saved_by"] == "32" and opened["opened_on"] == "34"
+    for tag in ("risky", "pairs", "geometry"):
+        t = opened[tag]
+        assert not any(t["flags_on_open"].values()) and not any(t["flags_after_read_back"].values()), tag
+        assert not t["remade"] and not any(t["check"]["clashes_driven"].values()), tag
+        titles = [w["title"] for c in t["closes"] for w in c["windows"]]
+        assert ("SOLIDWORKS CAM Warning" in titles) is findings.CROSS_VERSION_CLOSE_ASKS_TO_SAVE, tag
