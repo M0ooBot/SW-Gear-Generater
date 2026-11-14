@@ -805,7 +805,7 @@ def test_the_other_rings_the_app_builds_sit_on_riskys_shaft_senses():
     spec = p8.ring_spec("C:\\X", pairs, "Probe W8 Cross Geometry")
     assert assess.assess(spec, [], "C:\\X\\", "").lay_out_refusal() == ""
     gears = {g.id: g for g in spec.gears}
-    assert gears["G19R"].hand == "left" and gears["G19P"].hand == "right" and gears["G20P"].profile_shift == "0.3"
+    assert gears["G19R"].hand == "left" and gears["G19P"].hand == "right" and gears["G20P"].profile_shift == "-0.3"
     frames = p8.spec_frames(spec)
     assert all((p8.frame_theta(frames[p["pinion"]][0])[0], p8.frame_theta(frames[p["ring"]][0])[0]) == (1, -1)
                for p in pairs)
