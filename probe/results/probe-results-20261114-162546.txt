@@ -1,0 +1,791 @@
+attach  SolidWorks 2026 (revision 34.1.1), PID 32716
+scratch C:\Users\M0obo\Documents\GearGeneratorProbe\20261114-162240
+pass    attach  (0.0 s)
+  fact   revision = '34.1.1'
+  fact   version = 'SolidWorks 2026 (revision 34.1.1)'
+  ok     revision 34.1.1 is SolidWorks 2024 or newer
+  fact   open_at_start = []
+pass    templates  (0.0 s)
+  try    GetDocumentTemplate(1, '', 0, 0, 0): returned 'C:\\ProgramData\\SolidWorks\\SOLIDWORKS 2026\\templates\\Part.prtdot'
+  try    GetUserPreferenceStringValue(8): returned 'C:\\ProgramData\\SolidWorks\\SOLIDWORKS 2026\\templates\\Part.prtdot'
+  ok     a part template exists on disk
+  fact   part_template_route = 'GetDocumentTemplate'
+  fact   part_template = 'C:\\ProgramData\\SolidWorks\\SOLIDWORKS 2026\\templates\\Part.prtdot'
+  ok     the part template is a .prtdot file
+  try    GetDocumentTemplate(2, '', 0, 0, 0): returned 'C:\\ProgramData\\SolidWorks\\SOLIDWORKS 2026\\templates\\Assembly.asmdot'
+  try    GetUserPreferenceStringValue(9): returned 'C:\\ProgramData\\SolidWorks\\SOLIDWORKS 2026\\templates\\Assembly.asmdot'
+  ok     a assembly template exists on disk
+  fact   assembly_template_route = 'GetDocumentTemplate'
+  fact   assembly_template = 'C:\\ProgramData\\SolidWorks\\SOLIDWORKS 2026\\templates\\Assembly.asmdot'
+  ok     the assembly template is a .asmdot file
+pass    new_document  (4.6 s)
+  fact   new_part_title = 'Part1'
+  ok     NewDocument from the part template makes a part
+  ok     the new part is the active document
+  fact   plane_names_in_tree_order = ['Front Plane', 'Top Plane', 'Right Plane']
+  ok     the part has exactly three reference planes
+  fact   new_part_features = [('Comments', 'CommentsFolder'), ('Favorites', 'FavoriteFolder'), ('History', 'HistoryFolder'), ('Selection Sets', 'SelectionSetFolder'), ('Sensors', 'SensorFolder'), ('Design Binder', 'DocsFolder'), ('Annotations', 'DetailCabinet'), ('Surface Bodies', 'SurfaceBodyFolder'), ('Solid Bodies', 'SolidBodyFolder'), ('Lights and Cameras', 'EnvFolder'), ('Markups', 'InkMarkupFolder'), ('Equations', 'EqnFolder'), ('Material <not specified>', 'MaterialFolder'), ('Front Plane', 'RefPlane'), ('Top Plane', 'RefPlane'), ('Right Plane', 'RefPlane'), ('Origin', 'OriginProfileFeature')]
+  fact   new_part_path = ''
+pass    equation_add  (1.2 s)
+  ok     GetEquationMgr returns an equation manager
+  try    AngularEquationUnits: returned 1
+  fact   angular_equation_units_property = 1
+  fact   equations_in_new_part = 0
+  try    Add2: returned 0
+  ok     some documented way of adding a global works
+  fact   add3_form = 'Add2'
+  ok     Add2 at index -1 appends, returning 0
+  ok     GetCount goes up by one
+  fact   equation_text_readback = '"Probe A"= 2.5'
+  ok     Equation(i) reads back '"Probe A"= 2.5'
+  ok     Value(i) reads back 2.5
+  ok     GlobalVariable(i) says it is a global
+  fact   delete_returns = 0
+  ok     Delete(i) removes it again
+  try    Add3 on a one-configuration part, all configurations, None: returned -1
+  fact   add3_single_configuration_returns = -1
+pass    equation_set  (1.5 s)
+  ok     two linked globals are added
+  try    indexed put Equation(i): returned None
+  ok     indexed put Equation(i): the dependent global follows to 10.0
+  try    SetEquationAndConfigurationOption: returned -1
+  note   SetEquationAndConfigurationOption: the dependent global reads 10.0 (does not follow)
+  fact   equation_set_routes = ['indexed put Equation(i)']
+  ok     at least one way of changing a global's value works
+pass    document_units  (1.1 s)
+  fact   units_default = {'path': 'C:\\ProgramData\\SolidWorks\\SOLIDWORKS 2026\\templates\\Part.prtdot', 'linear': 0, 'system': 4}
+  fact   mm_templates = ['C:\\ProgramData\\SolidWorks\\SOLIDWORKS 2026\\templates\\Part.prtdot']
+  fact   default_template_is_mm = True
+  fact   set_mmgs_works = False
+  ok     a new part can be had in millimetres
+pass    sketch_open_close  (3.6 s)
+  try    IFeature.Select2(False, 0) on the first RefPlane: returned True
+  fact   select2_plane = {'returned': True, 'selected': 1}
+  try    SelectByID2("Front Plane", "PLANE", ...) with the name read from the tree: returned True
+  fact   select_by_id2_plane_tree_name = {'returned': True, 'selected': 1}
+  ok     the first RefPlane in tree order can be selected by one of the two routes
+  fact   add_to_db_reads_back = True
+  ok     InsertSketch(True) opens a sketch
+  ok     CreateCircleByRadius returns the new segment
+  ok     a second InsertSketch(True) closes it
+  ok     the new sketch feature renames and reads back 'Probe Sketch'
+  fact   rename_onto_taken_name_reads_back = 'Sketch2'
+  ok     renaming onto a taken name does not take it, and read-back shows so
+  fact   select_routes_used = {'Select2': 2}
+pass    sketch_entities  (2.5 s)
+  ok     CreateCircleByRadius makes a circle
+  fact   circle_segment_type = 1
+  try    circle.GetCenterPoint2: returned 'CDispatch'
+  ok     a circle's centre reads back from the segment itself: (10.0, 20.0)
+  try    circle.GetRadius: returned 0.004999999999999999
+  ok     GetRadius reads the radius in metres
+  try    CreateCircle(centre, point).GetRadius: returned 0.005999999999999998
+  ok     CreateCircle takes a centre and a point on it
+  try    CreateArc direction +1.GetLength: returned 0.047123889803846894
+  fact   arc_direction_+1 = {'length_mm': 47.12388980384689, 'start': (30.0, 0.0), 'end': (0.0, 30.0)}
+  ok     CreateArc with direction +1 runs counter-clockwise from its start
+  try    CreateArc direction -1.GetLength: returned 0.1413716694115407
+  fact   arc_direction_-1 = {'length_mm': 141.3716694115407, 'start': (30.0, 0.0), 'end': (0.0, 30.0)}
+  ok     CreateArc with direction -1 runs clockwise from its start
+  try    three-point arc.GetCenterPoint2: returned 'CDispatch'
+  ok     Create3PointArc passes through its three points: centre (90.0, -5.204170427930421e-15)
+  ok     a line's ends read back: (1.0, 2.0), (31.0, 42.0)
+  ok     GetLength is in metres
+  fact   line_segment_type = 0
+  fact   centreline_is_construction = True
+  ok     ConstructionGeometry sets and reads back on a line
+  ok     CreatePoint puts a point where asked
+  fact   segments_after_close = 7
+  ok     all seven segments are still in the sketch once it is closed
+pass    relations  (3.4 s)
+  fact   origin_point_mm = (0.0, 0.0)
+  ok     sgCOINCIDENT pulls a line's start onto the origin: (0.0, 0.0)
+  ok     sgHORIZONTAL2D levels the line: (0.0, 0.0) (26.925824035672523, 0.0)
+  ok     the origin and a line made coincident put the origin on the line's extension: (25.0, 25.0) (45.00000000000001, 45.0)
+  ok     sgCOINCIDENT puts a point on a circle: (89.66234939601246, 2.576626505603322)
+  ok     sgTANGENT makes the line touch the arc: 10.0 vs 10.0
+  ok     sgSYMMETRIC mirrors two points about a centreline: (140.0, 20.0) (159.99999999999997, 20.0)
+  try    sgEQUAL on two circles: returned None
+  fact   after sgEQUAL the radii are (0.0040000000000000036, 0.007000000000000006)
+  fact   equal_radius_constraint = 'sgSAMELENGTH'
+  ok     some constant makes two radii equal: ['sgSAMELENGTH'] (0.0040000000000000036, 0.003999999999999992)
+  ok     an arc's centre point goes onto a circle: (60.0, 60.0)
+  fact   select_routes_so_far = {'Select2': 4, 'Select4': 18}
+pass    dimensions  (2.6 s)
+  ok     AddDimension2 makes the OD dimension
+  ok     the OD dimension renames and reads back
+  fact   a circle's dimension reads 0.02 m: its diameter
+  fact   full_name_while_open = 'OD@Sketch1@Part8.Part'
+  ok     setting SystemValue in metres drives the circle
+  ok     AddDimension2 makes the R dimension
+  ok     the R dimension renames and reads back
+  fact   an arc's dimension reads 0.009999999999999995 m: its radius
+  ok     AddDimension2 makes the HalfSpace dimension
+  ok     the HalfSpace dimension renames and reads back
+  fact   angle_dimension_system_value = 0.34906585039886595
+  ok     an angle dimension's SystemValue is radians: 0.34906585039886595
+  fact   dimension_names_after_close = ['OD', 'R', 'HalfSpace']
+  ok     names set while the sketch was open survive closing it
+  fact   full_name_after_close = 'OD@Probe Dims@Part8.Part'
+pass    extrude  (4.0 s)
+  fact   extrude_type_name = 'Extrusion'
+  ok     the extrusion renames and reads back
+  fact   blank_volume_mm3 = 12566.370614359175
+  ok     the blank's volume is 12566.371 mm³ (expected 12566.371)
+  fact   extrude_dimensions = [('D1', 0.01), ('OD', 0.04)]
+  ok     the depth dimension is found by its value
+  fact   depth_dimension_default_name = 'D1'
+  ok     the depth dimension renames to Width
+  fact   depth_full_name = 'Width@Blank@Part9.Part'
+  ok     a width global is added
+  ok     the link "Width@Blank"= "Probe W" is accepted
+  ok     linked to 12 mm the blank is 15079.645 mm³
+pass    axis  (1.9 s)
+  ok     planes 2 and 3 select together
+  fact   insert_axis2_returns = True
+  fact   axis_new_features = [('Axis1', 'RefAxis')]
+  ok     InsertAxis2 adds exactly one feature
+  ok     the axis renames and reads back
+  fact   axis_type_name = 'RefAxis'
+  ok     the axis can be selected again
+pass    save_as  (2.8 s)
+  ok     the scratch folder is on a drive: 'C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\20261114-162240'
+  ok     C:\Users\M0obo\Documents\GearGeneratorProbe\20261114-162240\Probe Save.SLDPRT does not exist yet
+  try    SaveAs3(path, current version, silent, null, null, out long, out long): returned True
+  fact   save_as3_result = 'True'
+  fact   save_as3_result_is_tuple = False
+  ok     SaveAs3 says it saved
+  ok     the file is on disk
+  fact   title_after_save = 'Probe Save.SLDPRT'
+  fact   path_after_save = 'C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\20261114-162240\\Probe Save.SLDPRT'
+  ok     GetPathName now names the new file
+  try    SaveAs3 onto the same path: returned True
+  fact   save_as3_onto_existing_file = {'flag': True, 'size_before': 34602, 'size_after': 35069}
+  try    IModelDoc2.SaveAs3 on another new part: returned 'dict'
+  fact   imodeldoc2_save_as3 = {'returned': 0, 'on_disk': True}
+pass    assembly_components_and_mates  (13.5 s)
+  ok     there is a scratch folder to save parts in
+  fact   assembly_units_before_setting = 0
+  ok     NewDocument from the assembly template is an assembly
+  try    AddComponent5(part A at the origin): returned 'CDispatch'
+  try    AddComponent5(part B at 60 mm): returned 'CDispatch'
+  ok     both components are inserted
+  fact   component_names = ('Probe Add A-1', 'Probe Add B-1')
+  fact   component_b_translation_mm_as_inserted = (60.0, 0.0, -5.0)
+  try    IsFixed of the first component: returned False
+  fact   first_component_fixed_on_insert = False
+  ok     the first component selects
+  try    FixComponent() on the already fixed first component: returned None
+  ok     the first component is fixed
+  ok     the two front planes select
+  try    AddMate5 coincident fronts: returned 'CDispatch'
+  fact   mate coincident fronts = {'returned': 'CDispatch', 'status': None}
+  ok     coincident fronts: one mate appears under Mates
+  ok     B's axis and A's top plane select
+  try    AddMate5 axis on top plane: returned 'CDispatch'
+  fact   mate axis on top plane = {'returned': 'CDispatch', 'status': None}
+  ok     axis on top plane: one mate appears under Mates
+  ok     B's axis and A's right plane select
+  try    AddMate5 distance axis to right plane: returned 'CDispatch'
+  fact   mate distance axis to right plane = {'returned': 'CDispatch', 'status': None}
+  ok     distance axis to right plane: one mate appears under Mates
+  ok     the two top planes select
+  try    AddMate5 angle between top planes: returned 'CDispatch'
+  fact   mate angle between top planes = {'returned': 'CDispatch', 'status': None}
+  ok     angle between top planes: one mate appears under Mates
+  fact   component_b_translation_mm_mated = (60.0, 0.0, -5.0)
+  ok     B sits 60.0 mm from A's axis: (60.0, 0.0, -5.0)
+  ok     the distance mate is found in the tree
+  ok     the distance mate renames and reads back
+  fact   distance_mate_dimensions = [('D1', 0.06)]
+  fact   mates = [('Coincident1', 'MateCoincident'), ('Coincident2', 'MateCoincident'), ('Centre Distance', 'MateDistanceDim'), ('Angle1', 'MatePlanarAngleDim')]
+  fact   second_component_fixed_before_fix_component = False
+  ok     the second component selects
+  try    FixComponent() on the free second component: returned None
+  fact   second_component_fixed_after_fix_component = True
+  ok     FixComponent() fixes the selected component
+pass    assembly_distance_link  (13.2 s)
+  ok     there is a scratch folder to save parts in
+  fact   assembly_units_before_setting = 0
+  ok     NewDocument from the assembly template is an assembly
+  try    AddComponent5(part A at the origin): returned 'CDispatch'
+  try    AddComponent5(part B at 60 mm): returned 'CDispatch'
+  ok     both components are inserted
+  fact   component_names = ('Probe Link A-1', 'Probe Link B-1')
+  fact   component_b_translation_mm_as_inserted = (60.0, 0.0, -5.0)
+  try    IsFixed of the first component: returned False
+  fact   first_component_fixed_on_insert = False
+  ok     the first component selects
+  try    FixComponent() on the already fixed first component: returned None
+  ok     the first component is fixed
+  ok     the two front planes select
+  try    AddMate5 coincident fronts: returned 'CDispatch'
+  fact   mate coincident fronts = {'returned': 'CDispatch', 'status': None}
+  ok     coincident fronts: one mate appears under Mates
+  ok     B's axis and A's top plane select
+  try    AddMate5 axis on top plane: returned 'CDispatch'
+  fact   mate axis on top plane = {'returned': 'CDispatch', 'status': None}
+  ok     axis on top plane: one mate appears under Mates
+  ok     B's axis and A's right plane select
+  try    AddMate5 distance axis to right plane: returned 'CDispatch'
+  fact   mate distance axis to right plane = {'returned': 'CDispatch', 'status': None}
+  ok     distance axis to right plane: one mate appears under Mates
+  ok     the two top planes select
+  try    AddMate5 angle between top planes: returned 'CDispatch'
+  fact   mate angle between top planes = {'returned': 'CDispatch', 'status': None}
+  ok     angle between top planes: one mate appears under Mates
+  fact   component_b_translation_mm_mated = (60.0, 0.0, -5.0)
+  ok     B sits 60.0 mm from A's axis: (60.0, 0.0, -5.0)
+  ok     the distance mate is found in the tree
+  ok     the distance mate renames and reads back
+  fact   distance_mate_dimensions = [('D1', 0.06)]
+  ok     the distance mate's dimension is found by value
+  ok     an assembly global is added
+  ok     the link "D1@Centre Distance"= "Centre Distance" is accepted
+  fact   component_b_translation_mm_after_global_70 = (70.0, 0.0, -5.0)
+  ok     changing the global moves B to 70 mm: (70.0, 0.0, -5.0)
+  fact   mates = [('Coincident1', 'MateCoincident'), ('Coincident2', 'MateCoincident'), ('Centre Distance', 'MateDistanceDim'), ('Angle1', 'MatePlanarAngleDim')]
+pass    gear_mate  (23.3 s)
+  fact   swconst_path = 'C:\\Program Files\\SOLIDWORKS Corp\\SOLIDWORKS\\swconst.tlb'
+  fact   swconst_reader_positive_control = {'swMateCOINCIDENT': 0, 'swMateDISTANCE': 5, 'swMateANGLE': 6}
+  ok     the swconst reader gives back the three mate types already verified
+  ok     swMateType_e has swMateGEAR
+  fact   mate_gear_type = 10
+  ok     there is a scratch folder to save parts in
+  ok     flip off: both cylinders are inserted
+  fact   first_component_fixed_on_insert_plain = False
+  ok     flip off: the first cylinder selects to fix
+  try    flip off: FixComponent() on the first cylinder: returned None
+  ok     flip off: the first cylinder is fixed before it is unfixed
+  ok     flip off: the first cylinder selects
+  try    flip off: UnfixComponent() on the first cylinder: returned None
+  ok     flip off: the first cylinder floats after UnfixComponent
+  ok     flip off: A's front and the assembly's front select
+  try    AddMate5 flip off: A's front on the assembly's: returned 'CDispatch'
+  fact   mate flip off: A's front on the assembly's = {'returned': 'CDispatch', 'status': None}
+  ok     flip off: A's front on the assembly's: one mate appears under Mates
+  ok     flip off: A's axis and the assembly's top select
+  try    AddMate5 flip off: A's axis in the assembly's top plane: returned 'CDispatch'
+  fact   mate flip off: A's axis in the assembly's top plane = {'returned': 'CDispatch', 'status': None}
+  ok     flip off: A's axis in the assembly's top plane: one mate appears under Mates
+  ok     flip off: A's axis and the assembly's right select
+  try    AddMate5 flip off: A's axis in the assembly's right plane: returned 'CDispatch'
+  fact   mate flip off: A's axis in the assembly's right plane = {'returned': 'CDispatch', 'status': None}
+  ok     flip off: A's axis in the assembly's right plane: one mate appears under Mates
+  ok     flip off: A's top and the assembly's top select
+  try    AddMate5 flip off: the drive angle: returned 'CDispatch'
+  fact   mate flip off: the drive angle = {'returned': 'CDispatch', 'status': None}
+  ok     flip off: the drive angle: one mate appears under Mates
+  ok     flip off: the drive angle mate is made
+  ok     flip off: B's front and the assembly's front select
+  try    AddMate5 flip off: B's front on the assembly's: returned 'CDispatch'
+  fact   mate flip off: B's front on the assembly's = {'returned': 'CDispatch', 'status': None}
+  ok     flip off: B's front on the assembly's: one mate appears under Mates
+  ok     flip off: B's axis and the assembly's top select
+  try    AddMate5 flip off: B's axis in the assembly's top plane: returned 'CDispatch'
+  fact   mate flip off: B's axis in the assembly's top plane = {'returned': 'CDispatch', 'status': None}
+  ok     flip off: B's axis in the assembly's top plane: one mate appears under Mates
+  ok     flip off: B's axis and the assembly's right select
+  try    AddMate5 flip off: B's axis 60.0 mm from the assembly's right plane: returned 'CDispatch'
+  fact   mate flip off: B's axis 60.0 mm from the assembly's right plane = {'returned': 'CDispatch', 'status': None}
+  ok     flip off: B's axis 60.0 mm from the assembly's right plane: one mate appears under Mates
+  ok     flip off: the two axes select
+  try    flip off: AddMate5 gear 20:40: returned 'CDispatch'
+  fact   gear_mate_made_plain = [('GearMate1', 'MateGearDim')]
+  ok     flip off: one gear mate appears under Mates
+  ok     flip off: the Mates folder is found
+  ok     flip off: the drive mate is found
+  ok     flip off: the drive's dimension is found by value
+  ok     flip off: the drive is linked to a global
+  fact   gear_mate_turn_plain = {'a': -30.000000000000114, 'b': 15.000000000000057, 'a_from': -10.0, 'b_from': 0.0}
+  ok     flip on: both cylinders are inserted
+  fact   first_component_fixed_on_insert_flipped = False
+  ok     flip on: the first cylinder selects to fix
+  try    flip on: FixComponent() on the first cylinder: returned None
+  ok     flip on: the first cylinder is fixed before it is unfixed
+  ok     flip on: the first cylinder selects
+  try    flip on: UnfixComponent() on the first cylinder: returned None
+  ok     flip on: the first cylinder floats after UnfixComponent
+  ok     flip on: A's front and the assembly's front select
+  try    AddMate5 flip on: A's front on the assembly's: returned 'CDispatch'
+  fact   mate flip on: A's front on the assembly's = {'returned': 'CDispatch', 'status': None}
+  ok     flip on: A's front on the assembly's: one mate appears under Mates
+  ok     flip on: A's axis and the assembly's top select
+  try    AddMate5 flip on: A's axis in the assembly's top plane: returned 'CDispatch'
+  fact   mate flip on: A's axis in the assembly's top plane = {'returned': 'CDispatch', 'status': None}
+  ok     flip on: A's axis in the assembly's top plane: one mate appears under Mates
+  ok     flip on: A's axis and the assembly's right select
+  try    AddMate5 flip on: A's axis in the assembly's right plane: returned 'CDispatch'
+  fact   mate flip on: A's axis in the assembly's right plane = {'returned': 'CDispatch', 'status': None}
+  ok     flip on: A's axis in the assembly's right plane: one mate appears under Mates
+  ok     flip on: A's top and the assembly's top select
+  try    AddMate5 flip on: the drive angle: returned 'CDispatch'
+  fact   mate flip on: the drive angle = {'returned': 'CDispatch', 'status': None}
+  ok     flip on: the drive angle: one mate appears under Mates
+  ok     flip on: the drive angle mate is made
+  ok     flip on: B's front and the assembly's front select
+  try    AddMate5 flip on: B's front on the assembly's: returned 'CDispatch'
+  fact   mate flip on: B's front on the assembly's = {'returned': 'CDispatch', 'status': None}
+  ok     flip on: B's front on the assembly's: one mate appears under Mates
+  ok     flip on: B's axis and the assembly's top select
+  try    AddMate5 flip on: B's axis in the assembly's top plane: returned 'CDispatch'
+  fact   mate flip on: B's axis in the assembly's top plane = {'returned': 'CDispatch', 'status': None}
+  ok     flip on: B's axis in the assembly's top plane: one mate appears under Mates
+  ok     flip on: B's axis and the assembly's right select
+  try    AddMate5 flip on: B's axis 60.0 mm from the assembly's right plane: returned 'CDispatch'
+  fact   mate flip on: B's axis 60.0 mm from the assembly's right plane = {'returned': 'CDispatch', 'status': None}
+  ok     flip on: B's axis 60.0 mm from the assembly's right plane: one mate appears under Mates
+  ok     flip on: the two axes select
+  try    flip on: AddMate5 gear 20:40: returned 'CDispatch'
+  fact   gear_mate_made_flipped = [('GearMate1', 'MateGearDim')]
+  ok     flip on: one gear mate appears under Mates
+  ok     flip on: the Mates folder is found
+  ok     flip on: the drive mate is found
+  ok     flip on: the drive's dimension is found by value
+  ok     flip on: the drive is linked to a global
+  fact   gear_mate_turn_flipped = {'a': -30.000000000000114, 'b': -15.000000000000085, 'a_from': -10.0, 'b_from': 0.0}
+  ok     both assemblies turned
+  ok     flip False: the drive turned A 30.0°: {'a': -30.000000000000114, 'b': 15.000000000000057, 'a_from': -10.0, 'b_from': 0.0}
+  ok     flip True: the drive turned A 30.0°: {'a': -30.000000000000114, 'b': -15.000000000000085, 'a_from': -10.0, 'b_from': 0.0}
+  ok     the ratio went the same way both times
+  fact   gear_mate_numerator_first = True
+  fact   gear_mate_opposite_by_flip = {'False': True, 'True': False}
+  ok     Flip turns B the other way
+  fact   gear_mate_external_flip = False
+pass    motion_enums  (0.0 s)
+  fact   swconst_path = 'C:\\Program Files\\SOLIDWORKS Corp\\SOLIDWORKS\\swconst.tlb'
+  fact   enum swMateType_e = {'swMateCOINCIDENT': 0, 'swMateCONCENTRIC': 1, 'swMatePERPENDICULAR': 2, 'swMatePARALLEL': 3, 'swMateTANGENT': 4, 'swMateDISTANCE': 5, 'swMateANGLE': 6, 'swMateUNKNOWN': 7, 'swMateSYMMETRIC': 8, 'swMateCAMFOLLOWER': 9, 'swMateGEAR': 10, 'swMateWIDTH': 11, 'swMateLOCKTOSKETCH': 12, 'swMateRACKPINION': 13, 'swMateMAXMATES': 14, 'swMatePATH': 15, 'swMateLOCK': 16, 'swMateSCREW': 17, 'swMateLINEARCOUPLER': 18, 'swMateUNIVERSALJOINT': 19, 'swMateCOORDINATE': 20, 'swMateSLOT': 21, 'swMateHINGE': 22, 'swMateSLIDER': 23, 'swMatePROFILECENTER': 24, 'swMateMAGNETIC': 25}
+  ok     the reader gives back the four mate types already verified: {'swMateCOINCIDENT': 0, 'swMateDISTANCE': 5, 'swMateANGLE': 6, 'swMateGEAR': 10}
+  fact   swconst_path = 'C:\\Program Files\\SOLIDWORKS Corp\\SOLIDWORKS\\swconst.tlb'
+  fact   enum swMateAlign_e = {'swMateAlignALIGNED': 0, 'swMateAlignANTI_ALIGNED': 1, 'swMateAlignCLOSEST': 2, 'swAlignNONE': 0, 'swAlignSAME': 1, 'swAlignAGAINST': 2}
+  fact   swconst_path = 'C:\\Program Files\\SOLIDWORKS Corp\\SOLIDWORKS\\swconst.tlb'
+  fact   enum swAddMateError_e = {'swAddMateError_ErrorUknown': 0, 'swAddMateError_NoError': 1, 'swAddMateError_IncorrectMateType': 2, 'swAddMateError_IncorrectAlignment': 3, 'swAddMateError_IncorrectSelections': 4, 'swAddMateError_OverDefinedAssembly': 5, 'swAddMateError_IncorrectGearRatios': 6}
+  fact   swconst_path = 'C:\\Program Files\\SOLIDWORKS Corp\\SOLIDWORKS\\swconst.tlb'
+  fact   enum swFeatureError_e = {'swFeatureErrorNone': 0, 'swFeatureErrorUnknown': 1, 'swFeatureErrorFilletNoLoop': 10, 'swFeatureErrorFilletNoFace': 11, 'swFeatureErrorFilletInvalidRadius': 12, 'swFeatureErrorFilletNoEdge': 13, 'swFeatureErrorFilletModelGeometry': 14, 'swFeatureErrorFilletRadiusTooSmall': 15, 'swFeatureErrorFilletCannotExtend': 16, 'swFeatureErrorFilletRadiusEliminateElement': 17, 'swFeatureErrorFilletRadiusTooBig': 18, 'swFeatureErrorFilletRadiusTooBig2': 19, 'swFeatureErrorExtrusionDisjoint': 30, 'swFeatureErrorExtrusionNoEndFound': 31, 'swFeatureErrorExtrusionBadGeometricConditions': 32, 'swFeatureErrorExtrusionCutContourOpenAndClosed': 33, 'swFeatureErrorExtrusionCutContourInvalid': 34, 'swFeatureErrorExtrusionOpenCutContourInvalid': 35, 'swFeatureErrorExtrusionBossContourOpenAndClosed': 36, 'swFeatureErrorExtrusionBossContourInvalid': 37, 'swFeatureErrorMateInvalidEdge': 38, 'swFeatureErrorMateInvalidFace': 39, 'swFeatureErrorMateFailedCreatingSurface': 40, 'swFeatureErrorMateInvalidEntity': 41, 'swFeatureErrorMateUnknownTangent': 42, 'swFeatureErrorMateDanglingGeometry': 43, 'swFeatureErrorMateEntityNotLinear': 44, 'swFeatureErrorMateEntityFailed': 45, 'swFeatureErrorMateOverdefined': 46, 'swFeatureErrorMateIlldefined': 47, 'swFeatureErrorMateBroken': 48, 'swFeatureErrorFeatureDeprecated': 49, 'swFeatureErrorFeatureObsolete': 50, 'swSketchErrorExtRefFail': 51, 'swFeatureErrorPartialEdgeFilletNoIntersection': 52, 'swFeatureErrorPartialEdgeFilletUpdateFailed': 53, 'swFeatureErrorPartialEdgeFilletNoPropagateEdges': 54, 'swFeatureErrorPartialEdgeFilletNoStartEdge': 55, 'swFeatureErrorPartialEdgeFilletNoEndEdge': 56, 'swFeatureErrorPartialEdgeFilletNoMainEdge': 57, 'swFeatureErrorPartialEdgeFilletOffsetTooBig': 58, 'swFeatureErrorPartialEdgeFilletNoReferenceEntity': 59, 'swFeatureErrorPartialEdgeFilletTooManyRefEntities': 60, 'swFeatureErrorPartialEdgeFilletInvalidOffsetValue': 61, 'swFeatureErrorPartialEdgeFilletCrossOverEndCondition': 62, 'swFeatureErrorPartialEdgeFilletMissingReferenceEntity': 63, 'swFeatureErrorPartialEdgeFilletInvalidReferenceEntity': 64, 'swFeatureErrorPartialEdgeFilletNotSupported': 65, 'swFeatureErrorPartialEdgeFilletNotSupportedForClosedLoop': 66, 'swFeatureErrorPartialEdgeFilletMultiProjectionPoint': 67, 'swFeatureErrorPartialEdgeFilletFailedToRepair': 68, 'swFeatureErrorSweptFlangeInvalidProfileOrPath': 69, 'swFeatureErrorSweptFlangeSelfIntersectingGeometry': 70, 'swFeatureErrorCutNotIntersectModel': 71, 'swFeatureErrorSketchContainsSelfIntersectingContour': 72, 'swFeatureErrorMissingItemsInFeature': 73}
+  fact   swconst_path = 'C:\\Program Files\\SOLIDWORKS Corp\\SOLIDWORKS\\swconst.tlb'
+  fact   enum swFeatureSuppressionAction_e = {'swSuppressFeature': 0, 'swUnSuppressFeature': 1, 'swUnSuppressDependent': 2}
+  fact   swconst_path = 'C:\\Program Files\\SOLIDWORKS Corp\\SOLIDWORKS\\swconst.tlb'
+  fact   enum swInConfigurationOpts_e = {'swConfigPropertySuppressFeatures': 0, 'swThisConfiguration': 1, 'swAllConfiguration': 2, 'swSpecifyConfiguration': 3, 'swLinkedToParent': 4, 'swSpeedpakConfiguration': 5}
+  fact   swconst_path = 'C:\\Program Files\\SOLIDWORKS Corp\\SOLIDWORKS\\swconst.tlb'
+  fact   enum swMateEntity2ReferenceType_e = {'swMateEntity2ReferenceType_Point': 0, 'swMateEntity2ReferenceType_Line': 1, 'swMateEntity2ReferenceType_Circle': 2, 'swMateEntity2ReferenceType_Plane': 3, 'swMateEntity2ReferenceType_Cylinder': 4, 'swMateEntity2ReferenceType_Sphere': 5, 'swMateEntity2ReferenceType_Set': 6, 'swMateEntity2ReferenceType_Cone': 7, 'swMateEntity2ReferenceType_SweptSurface': 8, 'swMateEntity2ReferenceType_MultipleSurface': 9, 'swMateEntity2ReferenceType_GenSurface': 10, 'swMateEntity2ReferenceType_Ellipse': 11, 'swMateEntity2ReferenceType_GeneralCurve': 12, 'swMateEntity2ReferenceType_UNKNOWN': 13}
+  ok     swMateAlignCLOSEST is 2, as the mates use
+  ok     every value tier 8 uses is in swconst.tlb: missing []
+  fact   motion_enum_values = {'concentric': 1, 'lock': 16, 'parallel': 3, 'coincident': 0, 'distance': 5, 'angle': 6, 'gear': 10, 'aligned': 0, 'anti_aligned': 1, 'closest': 2, 'no_error': 1, 'suppress': 0, 'unsuppress': 1, 'this_configuration': 1}
+pass    ring_trains_from_another_version  (106.7 s)
+  ok     the scratch folder is on a drive: 'C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\20261114-162240'
+  ok     another version's ring trains are on disk under C:\Users\M0obo\Documents\GearGeneratorProbe
+  try    ISldWorks.GetProcessID: returned 32716
+  ok     GetProcessID answered the session's process
+  try    OpenDoc6(Risky_Placements.SLDASM), saved by 32: returned 'CDispatch'
+  ok     risky: the train opens
+  ok     risky: every component found
+  try    GetDefinition of G1 meshes G2: returned 'CDispatch'
+  try    IGearMateFeatureData.Reverse of G1 meshes G2: returned True
+  try    IGearMateFeatureData.GearRatioNumerator of G1 meshes G2: returned 20.0
+  try    IGearMateFeatureData.GearRatioDenominator of G1 meshes G2: returned 14.0
+  try    GetSpecificFeature2 of G1 meshes G2: returned 'CDispatch'
+  try    IMate2.GetMateEntityCount of G1 meshes G2: returned 2
+  try    IMate2.MateEntity(0) of G1 meshes G2: returned 'CDispatch'
+  try    IMateEntity2.ReferenceComponent: returned 'CDispatch'
+  try    IMateEntity2.EntityParams: returned 'tuple'
+  try    IMate2.MateEntity(1) of G1 meshes G2: returned 'CDispatch'
+  try    IMateEntity2.ReferenceComponent: returned 'CDispatch'
+  try    IMateEntity2.EntityParams: returned 'tuple'
+  try    GetDefinition of G3 meshes G4: returned 'CDispatch'
+  try    IGearMateFeatureData.Reverse of G3 meshes G4: returned True
+  try    IGearMateFeatureData.GearRatioNumerator of G3 meshes G4: returned 22.0
+  try    IGearMateFeatureData.GearRatioDenominator of G3 meshes G4: returned 14.0
+  try    GetSpecificFeature2 of G3 meshes G4: returned 'CDispatch'
+  try    IMate2.GetMateEntityCount of G3 meshes G4: returned 2
+  try    IMate2.MateEntity(0) of G3 meshes G4: returned 'CDispatch'
+  try    IMateEntity2.ReferenceComponent: returned 'CDispatch'
+  try    IMateEntity2.EntityParams: returned 'tuple'
+  try    IMate2.MateEntity(1) of G3 meshes G4: returned 'CDispatch'
+  try    IMateEntity2.ReferenceComponent: returned 'CDispatch'
+  try    IMateEntity2.EntityParams: returned 'tuple'
+  try    GetDefinition of G5 meshes G6: returned 'CDispatch'
+  try    IGearMateFeatureData.Reverse of G5 meshes G6: returned False
+  try    IGearMateFeatureData.GearRatioNumerator of G5 meshes G6: returned 36.0
+  try    IGearMateFeatureData.GearRatioDenominator of G5 meshes G6: returned 14.0
+  try    GetSpecificFeature2 of G5 meshes G6: returned 'CDispatch'
+  try    IMate2.GetMateEntityCount of G5 meshes G6: returned 2
+  try    IMate2.MateEntity(0) of G5 meshes G6: returned 'CDispatch'
+  try    IMateEntity2.ReferenceComponent: returned 'CDispatch'
+  try    IMateEntity2.EntityParams: returned 'tuple'
+  try    IMate2.MateEntity(1) of G5 meshes G6: returned 'CDispatch'
+  try    IMateEntity2.ReferenceComponent: returned 'CDispatch'
+  try    IMateEntity2.EntityParams: returned 'tuple'
+  try    AddMate5 G1: drive angle: returned 'CDispatch'
+  ok     renamed 'Update Drive G1', it reads back 'Update Drive G1'
+  try    ForceRebuild3(True) (risky as opened: drive added): returned True
+  try    ForceRebuild3(True) (risky as opened: driven): returned True
+  try    risky as opened: driven off the built phase: IAssemblyDoc.InterferenceDetectionManager: returned 'CDispatch'
+  try    risky as opened: driven off the built phase: set TreatCoincidenceAsInterference = False: returned None
+  try    risky as opened: driven off the built phase: set TreatSubAssembliesAsComponents = True: returned None
+  try    risky as opened: driven off the built phase: set IncludeMultibodyPartInterferences = True: returned None
+  try    risky as opened: driven off the built phase: set MakeInterferingPartsTransparent = False: returned None
+  try    risky as opened: driven off the built phase: set CreateFastenersFolder = False: returned None
+  try    risky as opened: driven off the built phase: set IgnoreHiddenBodies = True: returned None
+  try    risky as opened: driven off the built phase: set ShowIgnoredInterferences = False: returned None
+  try    risky as opened: driven off the built phase: set UseTransform = False: returned None
+  try    risky as opened: driven off the built phase: GetInterferences: returned None
+  try    risky as opened: driven off the built phase: Done: returned 'tuple'
+  try    ForceRebuild3(True) (risky as opened: drive set back): returned True
+  try    IEquationMgr.Delete(7): returned 7
+  try    IEquationMgr.Delete(6): returned 6
+  try    Select2 then EditDelete() on Update Drive G1: returned None
+  try    ForceRebuild3(True) (risky as opened: drive taken away): returned True
+  try    CloseDoc(Risky_Placements.SLDASM) with its parts modified: returned None
+  try    OpenDoc6(Probe W8 Cross Pairs.SLDASM), saved by 32: returned 'CDispatch'
+  ok     pairs: the train opens
+  ok     pairs: every component found
+  try    GetDefinition of G1P meshes G1R: returned 'CDispatch'
+  try    IGearMateFeatureData.Reverse of G1P meshes G1R: returned True
+  try    IGearMateFeatureData.GearRatioNumerator of G1P meshes G1R: returned 36.0
+  try    IGearMateFeatureData.GearRatioDenominator of G1P meshes G1R: returned 14.0
+  try    GetSpecificFeature2 of G1P meshes G1R: returned 'CDispatch'
+  try    IMate2.GetMateEntityCount of G1P meshes G1R: returned 2
+  try    IMate2.MateEntity(0) of G1P meshes G1R: returned 'CDispatch'
+  try    IMateEntity2.ReferenceComponent: returned 'CDispatch'
+  try    IMateEntity2.EntityParams: returned 'tuple'
+  try    IMate2.MateEntity(1) of G1P meshes G1R: returned 'CDispatch'
+  try    IMateEntity2.ReferenceComponent: returned 'CDispatch'
+  try    IMateEntity2.EntityParams: returned 'tuple'
+  try    GetDefinition of G6P meshes G6R: returned 'CDispatch'
+  try    IGearMateFeatureData.Reverse of G6P meshes G6R: returned False
+  try    IGearMateFeatureData.GearRatioNumerator of G6P meshes G6R: returned 36.0
+  try    IGearMateFeatureData.GearRatioDenominator of G6P meshes G6R: returned 14.0
+  try    GetSpecificFeature2 of G6P meshes G6R: returned 'CDispatch'
+  try    IMate2.GetMateEntityCount of G6P meshes G6R: returned 2
+  try    IMate2.MateEntity(0) of G6P meshes G6R: returned 'CDispatch'
+  try    IMateEntity2.ReferenceComponent: returned 'CDispatch'
+  try    IMateEntity2.EntityParams: returned 'tuple'
+  try    IMate2.MateEntity(1) of G6P meshes G6R: returned 'CDispatch'
+  try    IMateEntity2.ReferenceComponent: returned 'CDispatch'
+  try    IMateEntity2.EntityParams: returned 'tuple'
+  try    GetDefinition of G9P meshes G9R: returned 'CDispatch'
+  try    IGearMateFeatureData.Reverse of G9P meshes G9R: returned True
+  try    IGearMateFeatureData.GearRatioNumerator of G9P meshes G9R: returned 22.0
+  try    IGearMateFeatureData.GearRatioDenominator of G9P meshes G9R: returned 14.0
+  try    GetSpecificFeature2 of G9P meshes G9R: returned 'CDispatch'
+  try    IMate2.GetMateEntityCount of G9P meshes G9R: returned 2
+  try    IMate2.MateEntity(0) of G9P meshes G9R: returned 'CDispatch'
+  try    IMateEntity2.ReferenceComponent: returned 'CDispatch'
+  try    IMateEntity2.EntityParams: returned 'tuple'
+  try    IMate2.MateEntity(1) of G9P meshes G9R: returned 'CDispatch'
+  try    IMateEntity2.ReferenceComponent: returned 'CDispatch'
+  try    IMateEntity2.EntityParams: returned 'tuple'
+  try    GetDefinition of G14P meshes G14R: returned 'CDispatch'
+  try    IGearMateFeatureData.Reverse of G14P meshes G14R: returned False
+  try    IGearMateFeatureData.GearRatioNumerator of G14P meshes G14R: returned 22.0
+  try    IGearMateFeatureData.GearRatioDenominator of G14P meshes G14R: returned 14.0
+  try    GetSpecificFeature2 of G14P meshes G14R: returned 'CDispatch'
+  try    IMate2.GetMateEntityCount of G14P meshes G14R: returned 2
+  try    IMate2.MateEntity(0) of G14P meshes G14R: returned 'CDispatch'
+  try    IMateEntity2.ReferenceComponent: returned 'CDispatch'
+  try    IMateEntity2.EntityParams: returned 'tuple'
+  try    IMate2.MateEntity(1) of G14P meshes G14R: returned 'CDispatch'
+  try    IMateEntity2.ReferenceComponent: returned 'CDispatch'
+  try    IMateEntity2.EntityParams: returned 'tuple'
+  try    GetDefinition of G15P meshes G15R: returned 'CDispatch'
+  try    IGearMateFeatureData.Reverse of G15P meshes G15R: returned False
+  try    IGearMateFeatureData.GearRatioNumerator of G15P meshes G15R: returned 22.0
+  try    IGearMateFeatureData.GearRatioDenominator of G15P meshes G15R: returned 14.0
+  try    GetSpecificFeature2 of G15P meshes G15R: returned 'CDispatch'
+  try    IMate2.GetMateEntityCount of G15P meshes G15R: returned 2
+  try    IMate2.MateEntity(0) of G15P meshes G15R: returned 'CDispatch'
+  try    IMateEntity2.ReferenceComponent: returned 'CDispatch'
+  try    IMateEntity2.EntityParams: returned 'tuple'
+  try    IMate2.MateEntity(1) of G15P meshes G15R: returned 'CDispatch'
+  try    IMateEntity2.ReferenceComponent: returned 'CDispatch'
+  try    IMateEntity2.EntityParams: returned 'tuple'
+  try    GetDefinition of G16P meshes G16R: returned 'CDispatch'
+  try    IGearMateFeatureData.Reverse of G16P meshes G16R: returned True
+  try    IGearMateFeatureData.GearRatioNumerator of G16P meshes G16R: returned 22.0
+  try    IGearMateFeatureData.GearRatioDenominator of G16P meshes G16R: returned 14.0
+  try    GetSpecificFeature2 of G16P meshes G16R: returned 'CDispatch'
+  try    IMate2.GetMateEntityCount of G16P meshes G16R: returned 2
+  try    IMate2.MateEntity(0) of G16P meshes G16R: returned 'CDispatch'
+  try    IMateEntity2.ReferenceComponent: returned 'CDispatch'
+  try    IMateEntity2.EntityParams: returned 'tuple'
+  try    IMate2.MateEntity(1) of G16P meshes G16R: returned 'CDispatch'
+  try    IMateEntity2.ReferenceComponent: returned 'CDispatch'
+  try    IMateEntity2.EntityParams: returned 'tuple'
+  ok     pairs as opened: the drive global is added
+  try    AddMate5 G1P: drive angle: returned 'CDispatch'
+  ok     renamed 'Ring Drive G1P', it reads back 'Ring Drive G1P'
+  try    AddMate5 G6P: drive angle: returned 'CDispatch'
+  ok     renamed 'Ring Drive G6P', it reads back 'Ring Drive G6P'
+  try    AddMate5 G9P: drive angle: returned 'CDispatch'
+  ok     renamed 'Ring Drive G9P', it reads back 'Ring Drive G9P'
+  try    AddMate5 G14P: drive angle: returned 'CDispatch'
+  ok     renamed 'Ring Drive G14P', it reads back 'Ring Drive G14P'
+  try    AddMate5 G15P: drive angle: returned 'CDispatch'
+  ok     renamed 'Ring Drive G15P', it reads back 'Ring Drive G15P'
+  try    AddMate5 G16P: drive angle: returned 'CDispatch'
+  ok     renamed 'Ring Drive G16P', it reads back 'Ring Drive G16P'
+  ok     pairs as opened: every pinion is driven
+  try    ForceRebuild3(True) (pairs as opened: drives added): returned True
+  try    ForceRebuild3(True) (pairs as opened: driven): returned True
+  try    pairs as opened: driven off the built phase: IAssemblyDoc.InterferenceDetectionManager: returned 'CDispatch'
+  try    pairs as opened: driven off the built phase: set TreatCoincidenceAsInterference = False: returned None
+  try    pairs as opened: driven off the built phase: set TreatSubAssembliesAsComponents = True: returned None
+  try    pairs as opened: driven off the built phase: set IncludeMultibodyPartInterferences = True: returned None
+  try    pairs as opened: driven off the built phase: set MakeInterferingPartsTransparent = False: returned None
+  try    pairs as opened: driven off the built phase: set CreateFastenersFolder = False: returned None
+  try    pairs as opened: driven off the built phase: set IgnoreHiddenBodies = True: returned None
+  try    pairs as opened: driven off the built phase: set ShowIgnoredInterferences = False: returned None
+  try    pairs as opened: driven off the built phase: set UseTransform = False: returned None
+  try    pairs as opened: driven off the built phase: GetInterferences: returned None
+  try    pairs as opened: driven off the built phase: Done: returned 'tuple'
+  try    ForceRebuild3(True) (pairs as opened: set back): returned True
+  try    Select2 then EditDelete() on Ring Drive G1P: returned None
+  try    Select2 then EditDelete() on Ring Drive G6P: returned None
+  try    Select2 then EditDelete() on Ring Drive G9P: returned None
+  try    Select2 then EditDelete() on Ring Drive G14P: returned None
+  try    Select2 then EditDelete() on Ring Drive G15P: returned None
+  try    Select2 then EditDelete() on Ring Drive G16P: returned None
+  try    IEquationMgr.Delete(16): returned 16
+  try    IEquationMgr.Delete(15): returned 15
+  try    IEquationMgr.Delete(14): returned 14
+  try    IEquationMgr.Delete(13): returned 13
+  try    IEquationMgr.Delete(12): returned 12
+  try    IEquationMgr.Delete(11): returned 11
+  try    IEquationMgr.Delete(10): returned 10
+  try    ForceRebuild3(True) (pairs as opened: drives taken away): returned True
+  try    CloseDoc(Probe W8 Cross Pairs.SLDASM) with its parts modified: returned None
+  try    OpenDoc6(Probe W8 Cross Geometry.SLDASM), saved by 32: returned 'CDispatch'
+  ok     geometry: the train opens
+  ok     geometry: every component found
+  try    GetDefinition of G17P meshes G17R: returned 'CDispatch'
+  try    IGearMateFeatureData.Reverse of G17P meshes G17R: returned False
+  try    IGearMateFeatureData.GearRatioNumerator of G17P meshes G17R: returned 36.0
+  try    IGearMateFeatureData.GearRatioDenominator of G17P meshes G17R: returned 14.0
+  try    GetSpecificFeature2 of G17P meshes G17R: returned 'CDispatch'
+  try    IMate2.GetMateEntityCount of G17P meshes G17R: returned 2
+  try    IMate2.MateEntity(0) of G17P meshes G17R: returned 'CDispatch'
+  try    IMateEntity2.ReferenceComponent: returned 'CDispatch'
+  try    IMateEntity2.EntityParams: returned 'tuple'
+  try    IMate2.MateEntity(1) of G17P meshes G17R: returned 'CDispatch'
+  try    IMateEntity2.ReferenceComponent: returned 'CDispatch'
+  try    IMateEntity2.EntityParams: returned 'tuple'
+  try    GetDefinition of G18P meshes G18R: returned 'CDispatch'
+  try    IGearMateFeatureData.Reverse of G18P meshes G18R: returned False
+  try    IGearMateFeatureData.GearRatioNumerator of G18P meshes G18R: returned 36.0
+  try    IGearMateFeatureData.GearRatioDenominator of G18P meshes G18R: returned 14.0
+  try    GetSpecificFeature2 of G18P meshes G18R: returned 'CDispatch'
+  try    IMate2.GetMateEntityCount of G18P meshes G18R: returned 2
+  try    IMate2.MateEntity(0) of G18P meshes G18R: returned 'CDispatch'
+  try    IMateEntity2.ReferenceComponent: returned 'CDispatch'
+  try    IMateEntity2.EntityParams: returned 'tuple'
+  try    IMate2.MateEntity(1) of G18P meshes G18R: returned 'CDispatch'
+  try    IMateEntity2.ReferenceComponent: returned 'CDispatch'
+  try    IMateEntity2.EntityParams: returned 'tuple'
+  try    GetDefinition of G19P meshes G19R: returned 'CDispatch'
+  try    IGearMateFeatureData.Reverse of G19P meshes G19R: returned False
+  try    IGearMateFeatureData.GearRatioNumerator of G19P meshes G19R: returned 36.0
+  try    IGearMateFeatureData.GearRatioDenominator of G19P meshes G19R: returned 14.0
+  try    GetSpecificFeature2 of G19P meshes G19R: returned 'CDispatch'
+  try    IMate2.GetMateEntityCount of G19P meshes G19R: returned 2
+  try    IMate2.MateEntity(0) of G19P meshes G19R: returned 'CDispatch'
+  try    IMateEntity2.ReferenceComponent: returned 'CDispatch'
+  try    IMateEntity2.EntityParams: returned 'tuple'
+  try    IMate2.MateEntity(1) of G19P meshes G19R: returned 'CDispatch'
+  try    IMateEntity2.ReferenceComponent: returned 'CDispatch'
+  try    IMateEntity2.EntityParams: returned 'tuple'
+  try    GetDefinition of G20P meshes G20R: returned 'CDispatch'
+  try    IGearMateFeatureData.Reverse of G20P meshes G20R: returned False
+  try    IGearMateFeatureData.GearRatioNumerator of G20P meshes G20R: returned 36.0
+  try    IGearMateFeatureData.GearRatioDenominator of G20P meshes G20R: returned 14.0
+  try    GetSpecificFeature2 of G20P meshes G20R: returned 'CDispatch'
+  try    IMate2.GetMateEntityCount of G20P meshes G20R: returned 2
+  try    IMate2.MateEntity(0) of G20P meshes G20R: returned 'CDispatch'
+  try    IMateEntity2.ReferenceComponent: returned 'CDispatch'
+  try    IMateEntity2.EntityParams: returned 'tuple'
+  try    IMate2.MateEntity(1) of G20P meshes G20R: returned 'CDispatch'
+  try    IMateEntity2.ReferenceComponent: returned 'CDispatch'
+  try    IMateEntity2.EntityParams: returned 'tuple'
+  ok     geometry as opened: the drive global is added
+  try    AddMate5 G17P: drive angle: returned 'CDispatch'
+  ok     renamed 'Ring Drive G17P', it reads back 'Ring Drive G17P'
+  try    AddMate5 G18P: drive angle: returned 'CDispatch'
+  ok     renamed 'Ring Drive G18P', it reads back 'Ring Drive G18P'
+  try    AddMate5 G19P: drive angle: returned 'CDispatch'
+  ok     renamed 'Ring Drive G19P', it reads back 'Ring Drive G19P'
+  try    AddMate5 G20P: drive angle: returned 'CDispatch'
+  ok     renamed 'Ring Drive G20P', it reads back 'Ring Drive G20P'
+  ok     geometry as opened: every pinion is driven
+  try    ForceRebuild3(True) (geometry as opened: drives added): returned True
+  try    ForceRebuild3(True) (geometry as opened: driven): returned True
+  try    geometry as opened: driven off the built phase: IAssemblyDoc.InterferenceDetectionManager: returned 'CDispatch'
+  try    geometry as opened: driven off the built phase: set TreatCoincidenceAsInterference = False: returned None
+  try    geometry as opened: driven off the built phase: set TreatSubAssembliesAsComponents = True: returned None
+  try    geometry as opened: driven off the built phase: set IncludeMultibodyPartInterferences = True: returned None
+  try    geometry as opened: driven off the built phase: set MakeInterferingPartsTransparent = False: returned None
+  try    geometry as opened: driven off the built phase: set CreateFastenersFolder = False: returned None
+  try    geometry as opened: driven off the built phase: set IgnoreHiddenBodies = True: returned None
+  try    geometry as opened: driven off the built phase: set ShowIgnoredInterferences = False: returned None
+  try    geometry as opened: driven off the built phase: set UseTransform = False: returned None
+  try    geometry as opened: driven off the built phase: GetInterferences: returned None
+  try    geometry as opened: driven off the built phase: Done: returned 'tuple'
+  try    ForceRebuild3(True) (geometry as opened: set back): returned True
+  try    Select2 then EditDelete() on Ring Drive G17P: returned None
+  try    Select2 then EditDelete() on Ring Drive G18P: returned None
+  try    Select2 then EditDelete() on Ring Drive G19P: returned None
+  try    Select2 then EditDelete() on Ring Drive G20P: returned None
+  try    IEquationMgr.Delete(12): returned 12
+  try    IEquationMgr.Delete(11): returned 11
+  try    IEquationMgr.Delete(10): returned 10
+  try    IEquationMgr.Delete(9): returned 9
+  try    IEquationMgr.Delete(8): returned 8
+  try    ForceRebuild3(True) (geometry as opened: drives taken away): returned True
+  try    CloseDoc(Probe W8 Cross Geometry.SLDASM) with its parts modified: returned None
+  fact   ring_trains_from_another_version = {'opened_on': '34', 'saved_by': '32', 'risky': {'saved_flips': {'G1 meshes G2': False, 'G3 meshes G4': False, 'G5 meshes G6': False}, 'open_dialogs': {'windows': [{'title': '', 'class': '#32770', 'children': [['Button', 'Close'], ['Static', 'Opened 7\nComponents'], ['Static', 'Updating\nAssembly'], ['Static', 'Update\nGraphics'], ['Static', 'Elapsed time: 0s'], ['Static', 'This file was last opened in 1 seconds.'], ['Static', 'For more information, view: '], ['Static', 'Performance Evaluation'], ['Button', 'Do not show again'], ['Button', 'Hide Details']], 'stood_s': 1.05, 'answered': []}], 'watch_error': None}, 'open_codes': [0, 32], 'flags_on_open': {'Risky_Placements.SLDASM': False, 'Risky_Placements_Layout.SLDPRT': False, 'Helical_m2_N14_20L.SLDPRT': False, 'Helical_m2_N14_20R.SLDPRT': False, 'Helical_m2_N20_20L.SLDPRT': False, 'Herringbone_m2_N14_25R.SLDPRT': False, 'Herringbone_m2_N22_25R.SLDPRT': False, 'Ring_m2_N36_20L.SLDPRT': False}, 'read_back': {'G1 meshes G2': {'definition': {'Reverse': True, 'GearRatioNumerator': 20.0, 'GearRatioDenominator': 14.0}, 'entities': [{'component': 'Helical_m2_N14_20R-1', 'params': [0.0, 0.0, -0.0005, 0.0, 0.0, 1.0, 0.0, 0.0]}, {'component': 'Helical_m2_N20_20L-1', 'params': [0.036182044, -0.0, 0.0105, -0.0, 0.0, -1.0, 0.0, 0.0]}], 'parallel': False, 'says_right': True}, 'G3 meshes G4': {'definition': {'Reverse': True, 'GearRatioNumerator': 22.0, 'GearRatioDenominator': 14.0}, 'entities': [{'component': 'Herringbone_m2_N14_25R-1', 'params': [0.036182044, -0.0, 0.0328, -0.0, 0.0, -1.0, 0.0, 0.0]}, {'component': 'Herringbone_m2_N22_25R-1', 'params': [0.036182044, -0.039721605, 0.0174, -0.0, 0.0, 1.0, 0.0, 0.0]}], 'parallel': False, 'says_right': True}, 'G5 meshes G6': {'definition': {'Reverse': False, 'GearRatioNumerator': 36.0, 'GearRatioDenominator': 14.0}, 'entities': [{'component': 'Helical_m2_N14_20L-1', 'params': [0.036182044, -0.039721605, 0.0395, -0.0, 0.0, 1.0, 0.0, 0.0]}, {'component': 'Ring_m2_N36_20L-1', 'params': [0.059593955, -0.039721605, 0.0505, 0.0, 0.0, -1.0, 0.0, 0.0]}], 'parallel': False, 'says_right': True}}, 'flags_after_read_back': {'Risky_Placements.SLDASM': False, 'Risky_Placements_Layout.SLDPRT': False, 'Helical_m2_N14_20L.SLDPRT': False, 'Helical_m2_N14_20R.SLDPRT': False, 'Helical_m2_N20_20L.SLDPRT': False, 'Herringbone_m2_N14_25R.SLDPRT': False, 'Herringbone_m2_N22_25R.SLDPRT': False, 'Ring_m2_N36_20L.SLDPRT': False}, 'check': {'drive': 'Update Drive G1', 'turns': {'G1': 10.0, 'G2': -7.0, 'G3': -7.0, 'G4': 4.454545455, 'G5': 4.454545455, 'G6': 1.732323238}, 'clashes_driven': {'G1 meshes G2': 0, 'G3 meshes G4': 0, 'G5 meshes G6': 0}, 'dropped': {'equations_deleted': [True, True], 'mate_deleted_by': 'Select2 then EditDelete()'}, 'back_mm': 2.3107005416722956e-10, 'meshes': {'G1 meshes G2': True, 'G3 meshes G4': True, 'G5 meshes G6': True}, 'at_ratio': True}, 'remade': {}, 'errors': {}, 'closes': [{'how': 'CloseDoc', 'title': 'Risky_Placements.SLDASM', 'returned': None, 'raised': None, 'seconds': 15.49, 'windows': [{'title': 'SOLIDWORKS CAM Warning', 'class': '#32770', 'children': [['Button', '&Yes'], ['Button', '&No'], ['Static', 'Save changes to Risky_Placements.SLDASM ?']], 'stood_s': 15.06, 'answered': ['WM_CLOSE at 5.0 s', 'Escape at 10.0 s', 'No clicked at 15.1 s']}], 'watch_error': None, 'dialog': True}], 'left_open': [], 'files_unchanged': True}, 'pairs': {'saved_flips': {'G1P meshes G1R': False, 'G6P meshes G6R': False, 'G9P meshes G9R': False, 'G14P meshes G14R': False, 'G15P meshes G15R': False, 'G16P meshes G16R': False}, 'open_dialogs': {'windows': [{'title': '', 'class': '#32770', 'children': [['Button', 'Close'], ['Static', 'Opened 13\nComponents'], ['Static', 'Updating\nAssembly'], ['Static', 'Update\nGraphics'], ['Static', 'Post load updating'], ['Static', 'Elapsed time: 0s'], ['Static', 'This file was last opened in 2 seconds.'], ['Static', 'For more information, view: '], ['Static', 'Performance Evaluation'], ['Button', 'Do not show again'], ['Button', 'Hide Details']], 'stood_s': 0.53, 'answered': []}], 'watch_error': None}, 'open_codes': [0, 0], 'flags_on_open': {'Probe W8 Cross Pairs.SLDASM': False, 'Probe W8 Cross Pairs_Layout.SLDPRT': False, 'Gear_m2_N14.SLDPRT': False, 'Gear_m2_N22.SLDPRT': False, 'Helical_m2_N14_20L.SLDPRT': False, 'Ring_m2_N36.SLDPRT': False, 'Ring_m2_N36_20L.SLDPRT': False}, 'read_back': {'G1P meshes G1R': {'definition': {'Reverse': True, 'GearRatioNumerator': 36.0, 'GearRatioDenominator': 14.0}, 'entities': [{'component': 'Gear_m2_N14-1', 'params': [0.0, 0.15, -0.000500071, 0.0, 0.0, 1.0, 0.0, 0.0]}, {'component': 'Ring_m2_N36-1', 'params': [0.022, 0.15, -0.000500071, 0.0, 0.0, 1.0, 0.0, 0.0]}], 'parallel': True, 'says_right': True}, 'G6P meshes G6R': {'definition': {'Reverse': False, 'GearRatioNumerator': 36.0, 'GearRatioDenominator': 14.0}, 'entities': [{'component': 'Helical_m2_N14_20L-1', 'params': [-0.0, 0.9, -0.0005, 0.0, 0.0, 1.0, 0.0, 0.0]}, {'component': 'Ring_m2_N36_20L-1', 'params': [0.023411911, 0.9, 0.0105, 0.0, 0.0, -1.0, 0.0, 0.0]}], 'parallel': False, 'says_right': True}, 'G9P meshes G9R': {'definition': {'Reverse': True, 'GearRatioNumerator': 22.0, 'GearRatioDenominator': 14.0}, 'entities': [{'component': 'Gear_m2_N14-2', 'params': [-0.0, 1.35, -0.000500071, 0.0, 0.0, 1.0, 0.0, 0.0]}, {'component': 'Gear_m2_N22-1', 'params': [0.036, 1.35, 0.010500071, 0.0, 0.0, -1.0, 0.0, 0.0]}], 'parallel': False, 'says_right': True}, 'G14P meshes G14R': {'definition': {'Reverse': False, 'GearRatioNumerator': 22.0, 'GearRatioDenominator': 14.0}, 'entities': [{'component': 'Gear_m2_N14-3', 'params': [0.0, 2.1, -0.000500071, 0.0, 0.0, 1.0, 0.0, 0.0]}, {'component': 'Gear_m2_N22-2', 'params': [0.036, 2.1, -0.000500071, 0.0, -0.0, 1.0, 0.0, 0.0]}], 'parallel': True, 'says_right': True}, 'G15P meshes G15R': {'definition': {'Reverse': False, 'GearRatioNumerator': 22.0, 'GearRatioDenominator': 14.0}, 'entities': [{'component': 'Gear_m2_N14-4', 'params': [0.0, 2.25, 0.010500071, 0.0, 0.0, -1.0, 0.0, 0.0]}, {'component': 'Gear_m2_N22-3', 'params': [0.036, 2.25, 0.010500071, 0.0, 0.0, -1.0, 0.0, 0.0]}], 'parallel': True, 'says_right': True}, 'G16P meshes G16R': {'definition': {'Reverse': True, 'GearRatioNumerator': 22.0, 'GearRatioDenominator': 14.0}, 'entities': [{'component': 'Gear_m2_N14-5', 'params': [-0.0, 2.4, 0.010500071, 0.0, 0.0, -1.0, 0.0, 0.0]}, {'component': 'Gear_m2_N22-4', 'params': [0.036, 2.4, -0.000500071, 0.0, 0.0, 1.0, 0.0, 0.0]}], 'parallel': False, 'says_right': True}}, 'flags_after_read_back': {'Probe W8 Cross Pairs.SLDASM': False, 'Probe W8 Cross Pairs_Layout.SLDPRT': False, 'Gear_m2_N14.SLDPRT': False, 'Gear_m2_N22.SLDPRT': False, 'Helical_m2_N14_20L.SLDPRT': False, 'Ring_m2_N36.SLDPRT': False, 'Ring_m2_N36_20L.SLDPRT': False}, 'check': {'back_mm': 3.529741319110891e-11, 'meshes': {'G1P meshes G1R': True, 'G6P meshes G6R': True, 'G9P meshes G9R': True, 'G14P meshes G14R': True, 'G15P meshes G15R': True, 'G16P meshes G16R': True}, 'turns': {'G1P meshes G1R': [10.0, 3.888888889], 'G6P meshes G6R': [10.0, 3.888888889], 'G9P meshes G9R': [10.0, -6.363636364], 'G14P meshes G14R': [10.0, -6.363636364], 'G15P meshes G15R': [-10.0, 6.363636364], 'G16P meshes G16R': [-10.0, 6.363636364]}, 'clashes_driven': {'G1P meshes G1R': 0, 'G6P meshes G6R': 0, 'G9P meshes G9R': 0, 'G14P meshes G14R': 0, 'G15P meshes G15R': 0, 'G16P meshes G16R': 0}}, 'remade': {}, 'errors': {}, 'closes': [{'how': 'CloseDoc', 'title': 'Probe W8 Cross Pairs.SLDASM', 'returned': None, 'raised': None, 'seconds': 15.45, 'windows': [{'title': 'SOLIDWORKS CAM Warning', 'class': '#32770', 'children': [['Button', '&Yes'], ['Button', '&No'], ['Static', 'Save changes to Probe W8 Cross Pairs.SLDASM ?']], 'stood_s': 15.04, 'answered': ['WM_CLOSE at 5.0 s', 'Escape at 10.0 s', 'No clicked at 15.0 s']}], 'watch_error': None, 'dialog': True}], 'left_open': [], 'files_unchanged': True}, 'geometry': {'saved_flips': {'G17P meshes G17R': False, 'G18P meshes G18R': False, 'G19P meshes G19R': False, 'G20P meshes G20R': True}, 'open_dialogs': {'windows': [{'title': '', 'class': '#32770', 'children': [['Button', 'Close'], ['Static', 'Opened 9\nComponents'], ['Static', 'Updating\nAssembly'], ['Static', 'Update\nGraphics'], ['Static', 'Post load updating'], ['Static', 'Elapsed time: 1 seconds'], ['Static', 'This file was last opened in 2 seconds.'], ['Static', 'For more information, view: '], ['Static', 'Performance Evaluation'], ['Button', 'Do not show again'], ['Button', 'Hide Details']], 'stood_s': 1.06, 'answered': []}], 'watch_error': None}, 'open_codes': [0, 0], 'flags_on_open': {'Probe W8 Cross Geometry.SLDASM': False, 'Probe W8 Cross Geometry_Layout.SLDPRT': False, 'Gear_m2_N14_x-0.3.SLDPRT': False, 'Helical_m2_N14_15L.SLDPRT': False, 'Helical_m2_N14_20R.SLDPRT': False, 'Herringbone_m2_N14_25R.SLDPRT': False, 'Ring_m2_N36.SLDPRT': False, 'Ring_m2_N36_15L.SLDPRT': False, 'Ring_m2_N36_20R.SLDPRT': False, 'Ring_m2_N36_HB25L.SLDPRT': False}, 'read_back': {'G17P meshes G17R': {'definition': {'Reverse': False, 'GearRatioNumerator': 36.0, 'GearRatioDenominator': 14.0}, 'entities': [{'component': 'Helical_m2_N14_20R-1', 'params': [-0.0, 2.55, -0.0005, 0.0, 0.0, 1.0, 0.0, 0.0]}, {'component': 'Ring_m2_N36_20R-1', 'params': [0.023411911, 2.55, 0.0105, 0.0, 0.0, -1.0, 0.0, 0.0]}], 'parallel': False, 'says_right': True}, 'G18P meshes G18R': {'definition': {'Reverse': False, 'GearRatioNumerator': 36.0, 'GearRatioDenominator': 14.0}, 'entities': [{'component': 'Helical_m2_N14_15L-1', 'params': [-0.0, 2.7, -0.0005, 0.0, 0.0, 1.0, 0.0, 0.0]}, {'component': 'Ring_m2_N36_15L-1', 'params': [0.022776076, 2.7, 0.0105, 0.0, 0.0, -1.0, 0.0, 0.0]}], 'parallel': False, 'says_right': True}, 'G19P meshes G19R': {'definition': {'Reverse': False, 'GearRatioNumerator': 36.0, 'GearRatioDenominator': 14.0}, 'entities': [{'component': 'Herringbone_m2_N14_25R-1', 'params': [-0.0, 2.85, -0.0005, 0.0, 0.0, 1.0, 0.0, 0.0]}, {'component': 'Ring_m2_N36_HB25L-1', 'params': [0.024274314, 2.85, 0.0105, 0.0, 0.0, -1.0, 0.0, 0.0]}], 'parallel': False, 'says_right': True}, 'G20P meshes G20R': {'definition': {'Reverse': False, 'GearRatioNumerator': 36.0, 'GearRatioDenominator': 14.0}, 'entities': [{'component': 'Gear_m2_N14_x-0.3-1', 'params': [0.0, 3.0, -0.000500071, 0.0, 0.0, 1.0, 0.0, 0.0]}, {'component': 'Ring_m2_N36-1', 'params': [0.022, 3.0, 0.010500071, 0.0, 0.0, -1.0, 0.0, 0.0]}], 'parallel': False, 'says_right': True}}, 'flags_after_read_back': {'Probe W8 Cross Geometry.SLDASM': False, 'Probe W8 Cross Geometry_Layout.SLDPRT': False, 'Gear_m2_N14_x-0.3.SLDPRT': False, 'Helical_m2_N14_15L.SLDPRT': False, 'Helical_m2_N14_20R.SLDPRT': False, 'Herringbone_m2_N14_25R.SLDPRT': False, 'Ring_m2_N36.SLDPRT': False, 'Ring_m2_N36_15L.SLDPRT': False, 'Ring_m2_N36_20R.SLDPRT': False, 'Ring_m2_N36_HB25L.SLDPRT': False}, 'check': {'back_mm': 1.452338249663398e-10, 'meshes': {'G17P meshes G17R': True, 'G18P meshes G18R': True, 'G19P meshes G19R': True, 'G20P meshes G20R': True}, 'turns': {'G17P meshes G17R': [10.0, 3.888888889], 'G18P meshes G18R': [10.0, 3.888888889], 'G19P meshes G19R': [10.0, 3.888888889], 'G20P meshes G20R': [10.0, 3.888888889]}, 'clashes_driven': {'G17P meshes G17R': 0, 'G18P meshes G18R': 0, 'G19P meshes G19R': 0, 'G20P meshes G20R': 0}}, 'remade': {}, 'errors': {}, 'closes': [{'how': 'CloseDoc', 'title': 'Probe W8 Cross Geometry.SLDASM', 'returned': None, 'raised': None, 'seconds': 15.49, 'windows': [{'title': 'SOLIDWORKS CAM Warning', 'class': '#32770', 'children': [['Button', '&Yes'], ['Button', '&No'], ['Static', 'Save changes to Probe W8 Cross Geometry.SLDASM ?']], 'stood_s': 15.06, 'answered': ['WM_CLOSE at 5.0 s', 'Escape at 10.0 s', 'No clicked at 15.1 s']}], 'watch_error': None, 'dialog': True}], 'left_open': [], 'files_unchanged': True}}
+  ok     saved by 32, opened on 34: turned {'risky': {'G1 meshes G2': True, 'G3 meshes G4': True, 'G5 meshes G6': True}, 'pairs': {'G1P meshes G1R': True, 'G6P meshes G6R': True, 'G9P meshes G9R': True, 'G14P meshes G14R': True, 'G15P meshes G15R': True, 'G16P meshes G16R': True}, 'geometry': {'G17P meshes G17R': True, 'G18P meshes G18R': True, 'G19P meshes G19R': True, 'G20P meshes G20R': True}}; the read-back told it {'risky': {'G1 meshes G2': True, 'G3 meshes G4': True, 'G5 meshes G6': True}, 'pairs': {'G1P meshes G1R': True, 'G6P meshes G6R': True, 'G9P meshes G9R': True, 'G14P meshes G14R': True, 'G15P meshes G15R': True, 'G16P meshes G16R': True}, 'geometry': {'G17P meshes G17R': True, 'G18P meshes G18R': True, 'G19P meshes G19R': True, 'G20P meshes G20R': True}}; flags on open [{'Risky_Placements.SLDASM': False, 'Risky_Placements_Layout.SLDPRT': False, 'Helical_m2_N14_20L.SLDPRT': False, 'Helical_m2_N14_20R.SLDPRT': False, 'Helical_m2_N20_20L.SLDPRT': False, 'Herringbone_m2_N14_25R.SLDPRT': False, 'Herringbone_m2_N22_25R.SLDPRT': False, 'Ring_m2_N36_20L.SLDPRT': False}, {'Probe W8 Cross Pairs.SLDASM': False, 'Probe W8 Cross Pairs_Layout.SLDPRT': False, 'Gear_m2_N14.SLDPRT': False, 'Gear_m2_N22.SLDPRT': False, 'Helical_m2_N14_20L.SLDPRT': False, 'Ring_m2_N36.SLDPRT': False, 'Ring_m2_N36_20L.SLDPRT': False}, {'Probe W8 Cross Geometry.SLDASM': False, 'Probe W8 Cross Geometry_Layout.SLDPRT': False, 'Gear_m2_N14_x-0.3.SLDPRT': False, 'Helical_m2_N14_15L.SLDPRT': False, 'Helical_m2_N14_20R.SLDPRT': False, 'Herringbone_m2_N14_25R.SLDPRT': False, 'Ring_m2_N36.SLDPRT': False, 'Ring_m2_N36_15L.SLDPRT': False, 'Ring_m2_N36_20R.SLDPRT': False, 'Ring_m2_N36_HB25L.SLDPRT': False}]
+  fact   cross_version_ring_turns_right = {'risky': {'G1 meshes G2': True, 'G3 meshes G4': True, 'G5 meshes G6': True}, 'pairs': {'G1P meshes G1R': True, 'G6P meshes G6R': True, 'G9P meshes G9R': True, 'G14P meshes G14R': True, 'G15P meshes G15R': True, 'G16P meshes G16R': True}, 'geometry': {'G17P meshes G17R': True, 'G18P meshes G18R': True, 'G19P meshes G19R': True, 'G20P meshes G20R': True}}
+  fact   cross_version_read_back_tells_sense = True
+  fact   cross_version_remake_puts_right = {}
+  fact   cross_version_closed_unsaved_unchanged = {'risky': True, 'pairs': True, 'geometry': True}
+decide  flank_recipe = STOP
+decide  trig_default = None
+decide  equation_add_call = Add2
+decide  equation_set_route = indexed put Equation(i)
+decide  set_units_mmgs_after_new = False
+decide  plane_select_route = Select2 checked by count, then SelectByID2 by tree name
+decide  equal_constraint = sgSAMELENGTH
+decide  circle_dimension = diameter
+decide  arc_dimension = radius
+decide  curve_trig = None
+decide  curves_are_fixed = None
+decide  shared_ends_are_one_point = None
+decide  cut_end_condition = None
+decide  pattern_count_dim_index = None
+decide  save_as_overwrites = True
+decide  first_component_fixed = False
+decide  end_to_end = False
+decide  helix_route = STOP
+decide  herringbone_route = STOP
+decide  inverse_tangent = None
+decide  extrude_z_sign = None
+decide  top_sketch_y_is_minus_z = None
+decide  ref_plane_unflipped_is_plus_z = None
+decide  twist_turn = None
+decide  twist_reverse_flips = None
+decide  mirror_body_route = None
+decide  helical_end_to_end = False
+decide  annulus_extrudes = None
+decide  interference_route = None
+decide  internal_end_to_end = False
+decide  revolve_axis_mark = None
+decide  bevel_section_x_sign = None
+decide  bevel_crown_section_x_sign = None
+decide  bevel_internal_section_x_sign = None
+decide  loft_cut_route = None
+decide  loft_cut_type = None
+decide  place_route = None
+decide  transform_array_order = None
+decide  origin_select_route = None
+decide  bevel_mate_route = None
+decide  crossed_route = None
+decide  custom_property_route = None
+decide  custom_info_text = None
+decide  custom_property_replace = None
+decide  property_read_route = None
+decide  property_links_globals = None
+decide  gear_mate_route = mates
+decide  mate_gear_type = 10
+decide  gear_mate_numerator_first = True
+decide  gear_mate_external_flip = False
+decide  bevel_end_to_end = False
+decide  crossed_end_to_end = False
+decide  workbook_layout_route = STOP
+decide  layout_plus_flip = None
+decide  layout_negated_link = None
+decide  axis_plane_select_route = None
+decide  axis_through_base_plane = None
+decide  component_find_route = None
+decide  replace_fixed_route = None
+decide  open_assembly_route = None
+decide  update_open_route = ask
+decide  open_doc_route = None
+decide  open_doc_makes_active = None
+decide  open_part_beside_assembly = None
+decide  offset_global_crosses_zero = None
+decide  components_resolved_after_reopen = None
+decide  reuse_add_route = None
+decide  interference_names_route = None
+decide  same_name_elsewhere_inserted = None
+decide  assembly_rebuild_route = STOP
+decide  assembly_rebuild_keeps_components_unmodified = None
+decide  put_needs_rebuild = None
+decide  full_rebuild_marks_components_modified = None
+decide  opened_reads_unmodified = None
+decide  motion_route = STOP
+decide  axis_mate_route = None
+decide  axis_concentric_refused = None
+decide  axial_mate_route = None
+decide  gear_mate_flip_rule = None
+decide  gear_mate_sense_depends_on_entities = None
+decide  compound_lock_route = None
+decide  layout_move_carries_mates = None
+decide  mesh_phase_route = None
+decide  axial_global_moves_gear = None
+decide  lock_unsuppress_keeps_the_new_angle = None
+decide  feature_suppress = 0
+decide  feature_unsuppress = 1
+decide  this_configuration = 1
+decide  suppression_route = None
+decide  lock_select_route = None
+decide  mate_delete_route = None
+decide  gear_mate_ratio_route = None
+decide  gear_mate_update_holds = None
+decide  gear_mate_definition_recipe = None
+decide  gear_mate_definition_numerator_is_second = None
+decide  modified_gear_mate_closes = None
+decide  remake_on_twice_meshed_gear_holds = None
+decide  lock_retakes_an_offset = None
+decide  mate_rename_route = None
+decide  mate_find_route = None
+decide  demonstration_drive_holds = None
+decide  put_on_twice_meshed_gear_holds = None
+decide  axial_datum_route = None
+decide  axial_datum_flip = None
+decide  mated_assembly_rebuild_route = None
+decide  mated_rebuild_keeps_components_unmodified = None
+decide  mated_build_rebuild_route = None
+decide  mates_under_command_in_progress = None
+decide  mate_rename_at_once = None
+decide  mate_group_walk_sees_mates_in_a_folder = None
+decide  lightweight_remake = None
+decide  second_assembly_beside_unsaved = None
+decide  mated_build_keeps_components_unmodified = None
+decide  idler_update_holds = None
+decide  update_interference_control_discriminates = None
+decide  idler_interference_control_discriminates = None
+decide  unsaved_update_close_asks = None
+decide  unsaved_update_close_discards = None
+decide  drag_operator_turns_train = None
+decide  gear_mate_definition_read_marks = None
+decide  origin_noise_mm = None
+decide  origin_noise_within_moved_tolerance = None
+decide  mate_folders_hold_in_every_case = None
+decide  lightweight_first_drive_right = None
+decide  lightweight_resolved_by = None
+decide  component_resolved_read = None
+decide  ring_sense_needed_flip = None
+decide  ring_sense_app_way = None
+decide  ring_risky_app_way_right = None
+decide  ring_check_and_remake_holds = None
+decide  ring_sense_clash_tells = None
+decide  gear_mate_read_back_tells_sense = None
+decide  entity_params_read_marks = None
+decide  ring_trains_read_back_tells_sense = None
+decide  ring_trains_needed_flip = None
+decide  ring_update_shape = None
+decide  gear_mate_sense_read_under_command_in_progress = None
+decide  gear_mate_remake_under_command_in_progress = None
+decide  cross_version_ring_turns_right = {'risky': {'G1 meshes G2': True, 'G3 meshes G4': True, 'G5 meshes G6': True}, 'pairs': {'G1P meshes G1R': True, 'G6P meshes G6R': True, 'G9P meshes G9R': True, 'G14P meshes G14R': True, 'G15P meshes G15R': True, 'G16P meshes G16R': True}, 'geometry': {'G17P meshes G17R': True, 'G18P meshes G18R': True, 'G19P meshes G19R': True, 'G20P meshes G20R': True}}
+decide  cross_version_read_back_tells_sense = True
+decide  cross_version_closed_unsaved_unchanged = {'risky': True, 'pairs': True, 'geometry': True}
+decide  manual_steps = ['material']
+done    18 pass
