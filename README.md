@@ -72,7 +72,7 @@ patterned round the gear axis:
 |---|---|
 | `Gear Axis` | the axis the teeth are patterned about |
 | `Blank Sketch`, `Blank` | the outer diameter (`OD`) and face width (`Width`) |
-| `Tooth Space Sketch`, `Tooth Space` | one space: root arc, fillets, flanks, and a chord beyond the tip |
+| `Tooth Space Sketch`, `Tooth Space` | one space: root arc, fillets, flanks, and a chord beyond the tip (an arc on a pinion too small for a chord) |
 | `Teeth` | the circular pattern, its count (`Count`) linked to `"No. of Teeth"` |
 | `Bore Sketch`, `Bore` | the bore, when there is one |
 

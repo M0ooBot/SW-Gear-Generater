@@ -19,10 +19,16 @@ The two recipes differ only in the flank:
   by how much.
 
 Both close the space with a chord beyond the outer diameter, so nothing has to
-coincide with the edge of the blank. That closure is not possible for every
-gear — a very small tooth count swings the flank round so far that the chord
-cuts back inside the outer diameter — and :meth:`SpurGear.validate` refuses
-those gears with a sentence rather than building a part with slivers in it.
+coincide with the edge of the blank. A chord is not possible for every gear: a
+very small tooth count swings the flank round so far that the chord would cut
+back inside the outer diameter. A 6-tooth 20° flank never reaches further along
+the space's centreline than 3.59 module, short of the 4.0 module tip radius, so
+no chord closes it at any cap. Recipe A then closes the space with an arc on the
+tip cap, about the gear's axis, which clears the outer diameter whatever the
+flanks do (:func:`caps_with_arc`). Only those gears get the arc, so every gear
+that closed with a chord before still builds the same sketch. Recipe B's flank
+arc and its closure are tied together by relations, and it is refused there
+with a sentence that says to use the involute recipe.
 
 **Profile shift** ``x`` moves the generating rack ``x·m`` away from the gear:
 the tip and root circles grow by ``2xm``, the tooth thickens at the pitch
@@ -596,6 +602,22 @@ def involute_flank(g: SpurDerived) -> InvoluteFlank:
     )
 
 
+def caps_with_arc(g: SpurDerived, recipe: str) -> bool:
+    """Whether Recipe A closes this gear's space with an arc on the tip cap rather than a chord.
+
+    True only when the chord would reach back inside the outer diameter — a
+    spur pinion of six or seven teeth at 20°, eight at 30°, or a helical gear's
+    section of up to nine, whose transverse pressure angle is larger — so a gear
+    that closed with a chord before still does. The choice is fixed when the
+    part is built: :func:`swbuild.structural_change` refuses an update that
+    would cross it. The arc is centred on the axis, at the tip cap's radius,
+    which is ``Tip Cap Diameter`` / 2 and a module beyond the tips. Each space
+    then spans more than one pitch at the cap, so neighbouring spaces overlap,
+    but only beyond the point where the tooth's two flanks cross, in air.
+    """
+    return recipe == RECIPE_INVOLUTE and involute_flank(g).end[0] <= g.ra
+
+
 def _arc_at_radius(centre: Point2, radius: float, r: float) -> Optional[Point2]:
     """Where a flank arc about ``centre`` crosses the circle of radius ``r``, space side."""
     d = _radius(centre)
@@ -834,7 +856,11 @@ def section_diagnostics(g: SpurDerived, recipe: str, undercut_limit: Optional[fl
             f"The two {_num(g.fillet)} mm root fillets do not fit in the root of the tooth space; "
             "make Fillet smaller."), "fillet"))
     end = flank.end
-    if end[0] <= g.ra:
+    # Recipe A closes with an arc on the tip cap where a chord cannot (caps_with_arc); the
+    # arc only fails if the flank ends more than half a turn round, which no gear here does.
+    # The angle is the involute's own, unwrapped: _polar's atan2 would fold past π.
+    closes = involute_polar(g, g.rc) < math.pi if recipe == RECIPE_INVOLUTE else end[0] > g.ra
+    if not closes:
         out.append(Diagnostic(ERROR, (
             f"Recipe {recipe} cannot close the tooth space beyond the outer diameter at {g.teeth} "
             f"teeth and {_num(g.pressure_angle_deg)}°: the flanks swing round too far"
@@ -1147,6 +1173,24 @@ def _space_ops_involute(g: SpurDerived) -> List[Op]:
     x_lo, y_lo = _curve_expressions(lower=True)
     t1, t2 = _q(T1), _q(T2)
     rf = g.rf
+    if caps_with_arc(g, RECIPE_INVOLUTE):
+        # Its ends sit on the two fixed curves and its centre on the origin, which leaves
+        # it fully defined (SolidWorks 2024, 32.5.0). A radius dimension linked to
+        # "Tip Cap Diameter" / 2 in place of the centre relation drew the same sketch but
+        # failed the rebuild: the fixed ends already set the radius, it read back
+        # 2.49999999999644 mm against the equation's 2.5, and Equations took error 51.
+        cap = [Arc("T", (0.0, 0.0), _mirror(f.end), f.end, 1)]
+        cap_relations = [
+            Relation("coincident", ("T.centre", ORIGIN)),
+            Relation("coincident", ("T.start", "I-.end")),
+            Relation("coincident", ("T.end", "I+.end")),
+        ]
+    else:
+        cap = [Line("T", f.end, _mirror(f.end))]
+        cap_relations = [
+            Relation("coincident", ("T.start", "I+.end")),
+            Relation("coincident", ("T.end", "I-.end")),
+        ]
     return [
         OpenSketch("space", 1),
         EquationCurve("I+", x_up, y_up, t1, t2, f.start, f.end),
@@ -1156,7 +1200,7 @@ def _space_ops_involute(g: SpurDerived) -> List[Op]:
         Arc("F+", f.fillet_centre, f.line_inner, f.root_touch, 1),
         Arc("F-", _mirror(f.fillet_centre), _mirror(f.root_touch), _mirror(f.line_inner), 1),
         Arc("R", (0.0, 0.0), _mirror(f.root_touch), f.root_touch, 1),
-        Line("T", f.end, _mirror(f.end)),
+        *cap,
         # A locked Equation Driven Curve still leaves its sketch under-defined on
         # SolidWorks 2026; sgFIXED makes it fully defined and it still follows
         # its globals on a rebuild.
@@ -1176,8 +1220,7 @@ def _space_ops_involute(g: SpurDerived) -> List[Op]:
         Relation("tangent", ("F+", "R")),
         Relation("tangent", ("F-", "R")),
         Relation("equal", ("F+", "F-")),
-        Relation("coincident", ("T.start", "I+.end")),
-        Relation("coincident", ("T.end", "I-.end")),
+        *cap_relations,
         Dimension("Root", ("R",), (rf * 0.5, rf * 0.05), rf),
         Dimension("Fillet", ("F+",), _add(f.fillet_centre, (g.fillet * 2.0, g.fillet)), g.fillet),
         CloseSketch("space", SPACE_SKETCH),
