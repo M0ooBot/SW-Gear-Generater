@@ -299,6 +299,12 @@ def _train_gate(plan: Optional[BuildPlan] = None, *, building: bool = False) -> 
     mates = [op for op in plan.ops if isinstance(op, base.Mate)] if plan is not None else []
     if building and mates:
         needed += BUILD_MATE_FINDINGS
+    if building and any(op.kind == "gear" for op in mates):
+        missing = _settled(BUILD_SENSE_FINDINGS)
+        if missing is not None:
+            raise BuildError(f"A gearbox built to turn checks which way each gear mate turns its gears as it makes "
+                             f"them, and that has not been settled on SolidWorks (findings.{missing[0]} is "
+                             f"{missing[1]!r}), so nothing is made or changed; run probe ring_trains_saved first.")
     if any(op.kind == "lock" for op in mates):
         needed += LOCK_FINDINGS
     if any(op.name for op in mates):
@@ -2152,8 +2158,8 @@ class GearboxUpdate:
     # W5, which way each gear mate turns (probe ring_mate_sense). ``turned_round``: gear mates this Update made again
     # with the other Flip because the read-back found the remade one turning its gears against their mesh (by name,
     # also in ``ratios`` or ``sense_found_wrong``). ``sense_found_wrong``: gear mates the check phase read turning
-    # against their mesh before anything changed, and remade (their trains put): filled only once the read in the
-    # check phase is settled (:data:`SENSE_CHECK_FINDINGS`, not yet).
+    # against their mesh before anything changed, and remade (their trains put): filled when the check phase reads
+    # the sense (:data:`SENSE_CHECK_FINDINGS`).
     turned_round: List[str] = field(default_factory=list)
     sense_found_wrong: List[str] = field(default_factory=list)
     extra_mates: List[str] = field(default_factory=list)
@@ -2567,10 +2573,15 @@ def _idler_gate(motion: MotionUpdate, remakes: Sequence[Tuple[str, int, int]]) -
                          "run probe tier 8 first, or build the gearbox again.")
 
 
-# The check phase's read of every recorded gear mate's sense (Update item 4): placeholder findings until the probes of
-# whether that read marks the assembly, and of a ring train saved by one version opened in another, are committed.
-# Rename here, in one place.
-SENSE_CHECK_FINDINGS = (("GEAR_MATE_SENSE_READ_MARKS", "nothing"),)
+# The check phase's read of every recorded gear mate's sense: it marks nothing, a read after a rebuild, a remake or a
+# save and reopen agrees with the drive as one straight after AddMate5 does, and a train saved by one version reads
+# right in the other (probe ring_trains_saved). Any of them missing: the check phase does not read the sense.
+SENSE_CHECK_FINDINGS = (("GEAR_MATE_SENSE_READ_MARKS", "nothing"), ("GEAR_MATE_SENSE_READ_POINTS_AGREE", True),
+                        ("CROSS_VERSION_READ_BACK_TELLS_SENSE", True))
+# A Build reads each gear mate's sense, and remakes a wrong one, straight after making it, inside the batch it makes
+# its mates in with CommandInProgress on (probe ring_trains_saved: both held there).
+BUILD_SENSE_FINDINGS = (("GEAR_MATE_SENSE_READ_UNDER_COMMAND_IN_PROGRESS", True),
+                        ("GEAR_MATE_REMAKE_UNDER_COMMAND_IN_PROGRESS", True))
 
 
 def _internal_meshes(motion: MotionUpdate, sigma: Mapping[str, int]) -> Dict[str, bool]:
@@ -2600,7 +2611,7 @@ def _remake_sense_gate(remakes: Sequence[Tuple[str, int, int]], internal_of: Map
                              f"cannot be told on SolidWorks yet (findings.{missing[0]} is {missing[1]!r}), so nothing "
                              "is changed; run probe ring_mate_sense first, or build the gearbox again.")
         return
-    missing = _settled(SENSE_REMAKE_FINDINGS)
+    missing = _settled(SENSE_REMAKE_FINDINGS + (("GEAR_MATE_READ_BACK_HOLDS_AFTER_A_RATIO_REMAKE", True),))
     if missing is not None:
         raise BuildError(f"Update SolidWorks on a gearbox built to turn needs findings.{missing[0]} settled on "
                          f"SolidWorks (it is {missing[1]!r}), so nothing is changed; run probe tier 8 first.")
@@ -2851,9 +2862,8 @@ def _update_motion(sw: SolidWorks, parts: Sequence[DocumentValues], layout: Opti
             result.ratios_read.append(read)
             if mate.name not in asked:
                 result.ratios_found.append(mate.name)
-        # Which way each recorded gear mate turns, read before anything changes — only once a read there is settled
-        # (SENSE_CHECK_FINDINGS: whether the read marks the assembly, and whether a ring train saved by one version
-        # turns right in another, are still to be probed).
+        # Which way each recorded gear mate turns, read before anything changes (SENSE_CHECK_FINDINGS; without
+        # them the sense is not read here, as before).
         if _sense_settled() and _settled(SENSE_CHECK_FINDINGS) is None:
             for index, mate in enumerate(motion.mates, 1):
                 if mate.name not in wanted_teeth:

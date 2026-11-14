@@ -835,7 +835,11 @@ def _train_routes_agree(monkeypatch):
                         ("MATE_RENAME_AT_ONCE", True),
                         ("GEAR_MATE_SENSE_READ_BACK", "(Reverse == entities parallel) == internal"),
                         ("GEAR_MATE_READ_BACK_TELLS_SENSE", True), ("GEAR_MATE_CHECK_AND_REMAKE_HOLDS", True),
-                        ("GEAR_MATE_FLIP", False), ("GEAR_MATE_SENSE_READ_MARKS", None)):
+                        ("GEAR_MATE_FLIP", False), ("GEAR_MATE_SENSE_READ_MARKS", "nothing"),
+                        ("GEAR_MATE_SENSE_READ_POINTS_AGREE", True), ("CROSS_VERSION_READ_BACK_TELLS_SENSE", True),
+                        ("GEAR_MATE_SENSE_READ_UNDER_COMMAND_IN_PROGRESS", True),
+                        ("GEAR_MATE_REMAKE_UNDER_COMMAND_IN_PROGRESS", True),
+                        ("GEAR_MATE_READ_BACK_HOLDS_AFTER_A_RATIO_REMAKE", True)):
         monkeypatch.setattr(findings, name, value, raising=False)
 
 
@@ -3972,7 +3976,10 @@ def test_without_the_read_back_an_update_remake_inside_a_ring_is_refused_before_
     assert not any(n in CHANGING for n in names(fake))
 
 
-def test_the_check_phase_reads_no_sense_until_its_finding_is_settled():
+@pytest.mark.parametrize("name", [n for n, _ in swbuild.SENSE_CHECK_FINDINGS])
+def test_the_check_phase_reads_no_sense_while_a_finding_it_rests_on_is_missing(monkeypatch, name):
+    """Not a refusal: without the read's findings the check phase does not read the sense, as before."""
+    monkeypatch.setattr(findings, name, None)
     fake = _built_ring(internal=None)                          # built before the check: G3 meshes G4 turns wrong
     fake.turn("gear4-1", 3.0)
     result = _update_train(fake, motion=_ring_motion())
@@ -4049,11 +4056,56 @@ def test_a_second_press_still_wrong_either_way_round_stops_again_with_the_same_s
     assert result.ratios_already == [] and not fake.mate("G3 locked to G2", T_ASM).suppressed
 
 
-def test_without_the_check_phase_read_the_second_press_still_trusts_the_live_ratio(remake_route):
-    """What the review found, kept visible while the check phase's read is not settled: nobody reads the mate."""
+def test_without_the_check_phase_read_the_second_press_still_trusts_the_live_ratio(remake_route, monkeypatch):
+    """What the review found, kept visible for a SolidWorks whose check-phase read is not settled: nobody reads it."""
+    monkeypatch.setattr(findings, "GEAR_MATE_SENSE_READ_MARKS", None)
     fake = _built_train()
     asked = (("G1 meshes G2", 17, 69),)
     _stopped_remake(fake, "G1 meshes G2", asked, MESHES_69)
     result = _update_train(fake, motion=_motion(meshes=MESHES_69, ratios=asked))
     assert result.ok and result.ratios_already == ["G1 meshes G2"]
     assert not fake.turns_right("G1 meshes G2", T_ASM)
+
+
+
+# -- probe ring_trains_saved's findings in the gates
+
+def test_the_check_phase_read_is_on_with_the_committed_findings_and_closes_the_stopped_remake_case(remake_route):
+    """The must-fix from the review of package B, closed now that the check phase reads every gear mate's sense:
+    an Update stops on a remake wrong either way round; the cause goes; pressed again, the wrong mate is not taken
+    as already there — it is read wrong, remade, and turns right."""
+    for name, value in swbuild.SENSE_CHECK_FINDINGS:
+        assert getattr(findings, name) == value              # the autouse fixture pins them as committed
+    fake = _built_train()
+    asked = (("G1 meshes G2", 17, 69),)
+    _stopped_remake(fake, "G1 meshes G2", asked, MESHES_69)
+    result = _update_train(fake, motion=_motion(meshes=MESHES_69, ratios=asked))
+    assert result.ok, result.log_lines()
+    assert "G1 meshes G2" not in result.ratios_already and result.sense_found_wrong == ["G1 meshes G2"]
+    assert result.ratios == ["G1 meshes G2"] and fake.turns_right("G1 meshes G2", T_ASM)
+
+
+@pytest.mark.parametrize("name", ["GEAR_MATE_SENSE_READ_UNDER_COMMAND_IN_PROGRESS",
+                                  "GEAR_MATE_REMAKE_UNDER_COMMAND_IN_PROGRESS"])
+def test_a_train_with_a_gear_mate_is_refused_before_anything_is_made_without_the_command_in_progress_findings(
+        monkeypatch, name):
+    monkeypatch.setattr(findings, name, None)
+    fake = FakeSolidWorks()
+    with pytest.raises(swbuild.BuildError) as raised:
+        _build_train(fake)
+    assert str(raised.value) == ("A gearbox built to turn checks which way each gear mate turns its gears as it makes "
+                                 f"them, and that has not been settled on SolidWorks (findings.{name} is None), so "
+                                 "nothing is made or changed; run probe ring_trains_saved first.")
+    assert fake.calls == []
+
+
+def test_an_update_remake_without_the_read_back_after_a_ratio_remake_is_refused_before_anything_changes(
+        remake_route, monkeypatch):
+    monkeypatch.setattr(findings, "GEAR_MATE_READ_BACK_HOLDS_AFTER_A_RATIO_REMAKE", None)
+    fake = _built_train()
+    with pytest.raises(swbuild.BuildError) as raised:
+        _update_train(fake, motion=_motion(meshes=MESHES_69, ratios=(("G1 meshes G2", 17, 69),)))
+    assert str(raised.value) == ("Update SolidWorks on a gearbox built to turn needs "
+                                 "findings.GEAR_MATE_READ_BACK_HOLDS_AFTER_A_RATIO_REMAKE settled on SolidWorks (it is "
+                                 "None), so nothing is changed; run probe tier 8 first.")
+    assert not any(n in CHANGING for n in names(fake))
