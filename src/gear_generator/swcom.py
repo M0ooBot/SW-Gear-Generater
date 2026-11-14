@@ -2358,7 +2358,16 @@ class Session:
         if not isinstance(reverse, bool) or len(directions) != 2:
             raise SolidWorksError(f"The gear mate {name} in {title} did not give its Reverse and two entity directions, "
                                   "so which way it turns cannot be read.")
-        parallel = sum(x * y for x, y in zip(*directions)) > 0
+        lengths = [math.sqrt(sum(v * v for v in d)) for d in directions]
+        if min(lengths) < 1e-12:
+            raise SolidWorksError(f"The gear mate {name} in {title} gave an entity direction of no length, so which way "
+                                  "it turns cannot be read.")
+        dot = sum(x * y for x, y in zip(*directions)) / (lengths[0] * lengths[1])
+        if abs(dot) <= 0.99:
+            raise SolidWorksError(f"The gear mate {name} in {title} gave entity directions that are not along one line "
+                                  f"(their cosine is {dot:.3f}), so its entities are not two parallel gear axes and which "
+                                  "way it turns cannot be read.")
+        parallel = dot > 0
         return (reverse == parallel) == bool(internal), parallel
 
     def set_custom_property(self, name: str, value: str) -> None:

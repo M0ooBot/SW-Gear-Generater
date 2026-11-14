@@ -1994,3 +1994,22 @@ def test_a_gear_mate_is_made_again_with_the_flip_asked(mated, monkeypatch):
     monkeypatch.setattr(findings, "GEAR_MATE_CHECK_AND_REMAKE_HOLDS", None)
     with pytest.raises(SolidWorksError, match=r"GEAR_MATE_CHECK_AND_REMAKE_HOLDS is None\), so nothing is changed"):
         session.remake_gear_mate("mesh2", "placed3:Gear Axis", "placed4:Gear Axis", (17.0, 51.0), False)
+
+
+@pytest.mark.parametrize("directions, sentence", [
+    (((0, 0, 0.0), (0, 0, 1.0)), "gave an entity direction of no length"),
+    (((0, 0, 1.0), (0, 0.5, 0.5)), "gave entity directions that are not along one line (their cosine is 0.707)"),
+    (((1.0, 0, 0), (0, 0, 1.0)), "gave entity directions that are not along one line (their cosine is 0.000)"),
+])
+def test_a_gear_mates_entity_directions_that_are_not_one_line_are_not_judged(mated, directions, sentence):
+    session, doc = mated
+    _sense_world(session, doc, True, directions)
+    with pytest.raises(SolidWorksError) as raised:
+        session.gear_mate_sense("mesh", True)
+    assert str(raised.value).startswith(f"The gear mate G5 meshes G6 in R.SLDASM {sentence}")
+
+
+def test_entity_directions_of_any_length_along_one_line_are_judged(mated):
+    session, doc = mated
+    _sense_world(session, doc, False, ((0, 0, 3.0), (0, 0.001, -0.5)))
+    assert session.gear_mate_sense("mesh", True) == (True, False)
