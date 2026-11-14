@@ -277,8 +277,16 @@ Answered ahead of its phase (the user, 2026-11-14), for W7's sub-plan:
   personal data.
 - Each phase's plan and result is reviewed by a separate subagent before moving on. In the 2026-11-13
   session the user asked for Opus subagents only, with no cap on their number.
-- Every SolidWorks call is probed before the app depends on it; findings are read from committed
-  `findings.py` only. The plan's STOP-and-ask triggers apply.
+- ~~Every SolidWorks call is probed before the app depends on it.~~ **Since 2026-11-14 (the user, after W5's
+  six probe rounds): the full build comes first.** A phase is written against the fake and then built end to
+  end on SolidWorks early; what that build gets wrong is what gets probed step by step. Probing before the
+  app depends on a call is kept for one kind only: a call not used before that could hang, raise a dialog, or
+  leave a file or a session damaged. **SolidWorks 2026 is the working version**: probes and the full test run
+  there, and SolidWorks 2024 gets one full build at the phase's end to confirm, with what fails there fixed
+  then. One follow-up probe round per phase; a reviewer's point the app does not depend on is written down as a
+  caveat, not run again. After a fix only the affected demonstration sections are rerun, with one full run at
+  the phase's close. Findings are still read from committed `findings.py` only, a missing one still refuses
+  with a sentence, and the plan's STOP-and-ask triggers apply.
 - **SolidWorks runs only on the Windows host.** SolidWorks 2024 there is the user's live session: record
   the open titles before a run, close only documents the run created, never save, close or modify theirs,
   never exit it, stop under 2 GB of free RAM, and prefer a freshly restarted session for long runs (one
