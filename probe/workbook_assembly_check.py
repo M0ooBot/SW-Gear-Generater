@@ -103,6 +103,12 @@ The sections, each in its own folder under the output folder (default order m1 m
   result's ratios, turned round and sense found wrong logged, the app's read-back of the remade mate (right, its
   axes, its Reverse), and the drive through the ring at 15 : 37 as the judge; the half-pitch controls, every frame,
   the mates, a quiet Update, then a save, reopen and the drive again.
+- ``r1``, ``r2``, ``r3`` (not in the default order): a 14-tooth spur pinion shifted +0.3 (r1) or -0.3 (r2) inside an
+  unshifted 36-tooth spur ring, module 2, the ring's shaft Z- as Risky_Placements', the shafts at the working centre
+  distance ``workbook.checks.internal_working_centre`` gives (d3f4dcf): the workbook checks clean, built to turn,
+  the app's interference as built, the half-pitch controls, the drive through the mesh with the both-Flips control,
+  and interference at a quarter, a half and three quarters of the pinion's pitch. r3: the +0.3 pair at the plain
+  22 mm, which the Checks panel must refuse before any build; its sentence and the fixes offered are logged.
 - ``m7``: the ring train edited: Risky_Placements built to turn; G5 At 45 -> 47 (a follower locked to G4, the ring's
   pinion) -> an Update that puts the whole train; frames, mates, interference, the half-pitch controls, the drive
   through the ring with the control on its mesh, reopen.
@@ -1204,7 +1210,7 @@ def measure(worker, desk, label, controls=True, again=True):
 # -- §4.2: the drive, the user's turn, and what Update found -------------------------------------------------
 
 
-def drive_job(asm, components, layout_name, input_gear, control=None, turn_by=None, fixed=()):
+def drive_job(asm, components, layout_name, input_gear, control=None, turn_by=None, fixed=(), phases=()):
     """One worker job on the assembly. The angle mate DRIVE_MATE from the input's Top plane to the layout's Right at
     90°, its D1 linked to the global DRIVE. ``turn_by`` None: DRIVE 90 -> 120 -> 90; then, given ``control`` (a, b,
     the recorded gear mate's name, its ratio), that mate suppressed and CONTROL + name made in its place with the
@@ -1265,6 +1271,12 @@ def drive_job(asm, components, layout_name, input_gear, control=None, turn_by=No
                     out["states_driven"] = [(s.name, s.code, s.warning, s.suppressed) for s in session.mate_states()]
                     set_drive(DRIVE_FROM)
                     out["back"] = frames()
+                    for step in phases:               # the input turned on by ``step`` degrees: interference read
+                        set_drive(DRIVE_FROM + step)
+                        out.setdefault("phases", []).append((step, frames(), session.interferences()))
+                    if phases:
+                        set_drive(DRIVE_FROM)
+                        out["back"] = frames()
                     if control:
                         a, b, mesh, ratio = control
                         session.find_mate("dmesh", mesh)
@@ -1375,7 +1387,7 @@ def drive_assumptions(desk, input_gear, label):
                 f"DEMONSTRATION_DRIVE_SENSE 1, tolerance {DRIVE_TOLERANCE:g} relative")
 
 
-def drive_proof(worker, desk, label, control=None):
+def drive_proof(worker, desk, label, control=None, phases=()):
     """§4.2 on the current assembly, which must stand at its built turn with the input at θ = 0. ``control``: the
     (a, b) of the recorded gear mate to flip for the wrong-sense control, or None."""
     box, components, gears, input_gear = drive_inputs(desk)
@@ -1387,7 +1399,12 @@ def drive_proof(worker, desk, label, control=None):
     started = time.monotonic()
     out = run(worker, drive_job(box.assembly, components, box.layout_component, input_gear,
                                 control=(tuple(mesh_entry.gears) + (mesh_entry.name, tuple(mesh_entry.ratio)))
-                                if mesh_entry is not None else None, fixed=box.fixed))
+                                if mesh_entry is not None else None, fixed=box.fixed, phases=phases))
+    gear_of = {c.name: c.gear for c in box.components}
+    for step, _frames, found in out.get("phases", []):
+        merged = swbuild._clashes(found, gear_of)  # noqa: SLF001
+        say(f"fact    {label}: the input turned on {step:.4f}°: interference {len(found)} place(s), "
+            f"{[(c.gears, round(c.volume, 6)) for c in merged]}")
     say(f"        in {time.monotonic() - started:.1f} s; rebuilds {out['rebuilds']}; drive mate "
         f"{out.get('drive_mate')}; control mate {out.get('control_mate')}")
     for line in out.get("traceback", "").splitlines():
@@ -1742,7 +1759,9 @@ def build_turning(worker, desk, label, parts, turned_round=()):
     got = list(getattr(result.assembly, "turned_round", []) or [])
     TURNED[os.path.normcase(desk.record.gearbox.assembly)] = set(got)
     note_made(desk, [m.name for m in desk.record.gearbox.mates if m.kind == "mesh"])
-    if TAG["major"] == 34:
+    if turned_round is None:
+        say(f"fact    {label}: the build's sense read made again with the other Flip: {got}")
+    elif TAG["major"] == 34:
         check(got == list(turned_round), f"{label}: the build's sense read made again with the other Flip exactly "
               f"{list(turned_round)} on SolidWorks 2026: turned round {got}")
     elif TAG["major"] == 32:
@@ -2275,6 +2294,69 @@ def section_m8(worker, excel):
     ring_mate_reading(worker, desk, "G5 meshes G6")
     drive_proof(worker, desk, "m8 reopened, at 15 : 37")
     book.close()
+
+
+def spec_ring_shift(name, folder, shift, centre):
+    """A spur pinion (14 teeth, module 2, profile shift ``shift``) on S1 (Z+, input) inside an unshifted spur ring
+    (36 teeth) on S2 (Z-, output, as Risky_Placements' ring), the shafts ``centre`` mm apart; the faces overlap."""
+    return GearboxSpec(
+        box=Box(name=name, output_folder=folder),
+        shafts=(Shaft("S1", "frame", "0", "0", "0", "Z+", "input", speed="1000", torque="5"),
+                Shaft("S2", "frame", _f(centre), "0", "0", "Z-", "output")),
+        gears=(Gear("G1", "S1", "5", "spur", "external", "14", "2", face_width="10", bore="6",
+                    profile_shift=_f(shift)),
+               Gear("G2", "S2", "-5", "spur", "internal", "36", "2", face_width="10")),
+        meshes=(Mesh("G1", "G2"),))
+
+
+def ring_shift(worker, excel, section, name, shift, working):
+    """A shifted pinion in a ring: at its working centre distance (checks.internal_working_centre) built and
+    judged; at the plain 22 mm the Checks panel must refuse it before any build."""
+    from gear_generator.workbook import checks as wb_checks
+    centre = wb_checks.internal_working_centre(2.0, 14, 36, 20.0, pinion_shift=shift) if working else 22.0
+    say(f"== {section}  a 14-tooth spur pinion shifted {shift:+g} inside an unshifted 36-tooth ring, the shafts "
+        f"{centre:.9f} mm apart ({'its working centre distance, from checks.internal_working_centre' if working else 'the plain 22 mm'})")
+    folder = fresh_folder(section)
+    path = os.path.join(folder, f"{name}.xlsx")
+    xlsx.write_new(path, wb_model.to_sheets(spec_ring_shift(name, folder + "\\", shift, centre)))
+    book = Workbook(excel, path, section)
+    book.set("Box", "B4", folder + "\\")
+    book.save()
+    desk = Desk(path, worker)
+    desk.read()
+    errors = [d for d in desk.a.diagnostics if d.level == "error"]
+    fixes = {where: [(f.title, f.detail, [(e.sheet, e.item, e.key, e.value) for e in f.edits]) for f in found]
+             for where, found in desk.a.report.fixes.items()}
+    say(f"        centres on record {dict(desk.a.report.centres)}; errors {[d.message for d in errors]}; fixes {fixes}")
+    if not working:
+        check(bool(desk.a.lay_out_refusal()) and any("apart" in d.message for d in errors),
+              f"{section}: the Checks panel refuses the pair before any build: {[d.message for d in errors]}")
+        say(f"fact    {section}: the fixes offered: {fixes}")
+        desk.say_footer(f"{section}, refused")
+        book.close()
+        return
+    check(desk.a.lay_out_refusal() == "" and not errors, f"{section}: the workbook checks clean (no error): gate "
+          f"{desk.a.lay_out_refusal()!r}")
+    _, result = build_turning(worker, desk, section, 2, None)
+    say(f"fact    {section}: the app's interference result as built: clashes "
+        f"{[(c.gears, round(c.volume, 6)) for c in result.clashes]}, error {result.interference_error!r}")
+    measure(worker, desk, f"{section} built", controls=True, again=False)
+    pitch = 360.0 / 14
+    drive_proof(worker, desk, f"{section}, through the mesh", control=("G1", "G2"),
+                phases=(pitch / 4, pitch / 2, 3 * pitch / 4))
+    book.close()
+
+
+def section_r1(worker, excel):
+    ring_shift(worker, excel, "r1", "Ring_Shift_Plus", 0.3, True)
+
+
+def section_r2(worker, excel):
+    ring_shift(worker, excel, "r2", "Ring_Shift_Minus", -0.3, True)
+
+
+def section_r3(worker, excel):
+    ring_shift(worker, excel, "r3", "Ring_Shift_Plain", 0.3, False)
 
 
 def injected(plan, offset):
@@ -3029,7 +3111,7 @@ def section_c(worker, excel):
 
 
 SECTIONS = {"m1": section_m1, "m2": section_m2, "m3": section_m3, "m4": section_m4, "m5": section_m5, "m6": section_m6,
-            "m7": section_m7, "m8": section_m8,
+            "m7": section_m7, "m8": section_m8, "r1": section_r1, "r2": section_r2, "r3": section_r3,
             "a": section_a, "a2": section_a2, "a3": section_a3, "b": section_b, "c": section_c}
 
 
