@@ -6327,6 +6327,69 @@ def _ring_update_shape(px: Px, b: Mapping[str, Any], fx: Any, teeth: Mapping[str
     return out
 
 
+def _cip_remake(px: Px, path: str, b: Mapping[str, Any], fx: Any, teeth: Mapping[str, int], target: Tuple[str, str],
+                pairs: Sequence[Mapping[str, Any]], cip: bool) -> Dict[str, Any]:
+    """The app's Build steps for one gear mate, on a copy of the static assembly: every other mate made as the app
+    makes it; then, with CommandInProgress ``cip`` and before any rebuild, the gear mate made with GEAR_MATE_FLIP,
+    renamed, read back, deleted, made again with the other Flip, renamed, read back; CommandInProgress off, a
+    top-only rebuild, read back again, and the train driven. Nothing is saved."""
+    x, y = target
+    name = f"{x} meshes {y}"
+    internal = x in fx.internal or y in fx.internal
+    others = type(fx)(**{**vars(fx), "meshes": tuple(m for m in fx.meshes if tuple(m) != (x, y))})
+    paths = list(b["paths"]) + [path]
+    out: Dict[str, Any] = {"command_in_progress": cip}
+    enums = _enums(px)
+    try:
+        doc, _ = open_by_path(px, path, sc.SW_DOC_ASSEMBLY, prefer="OpenDoc6")
+        title = str(call(doc, "GetTitle"))
+        if title not in px.shared["created"]:
+            px.shared["created"].append(title)
+        comps = dict(sorted({g: call(doc, "GetComponentByName", n) for g, n in b["names"].items()}.items()))
+        layout = call(doc, "GetComponentByName", b["layout_name"])
+        px.require(all(c is not None for c in comps.values()) and layout is not None, "every component is found")
+        mate_w5_train(px, doc, comps, layout, b["frames"], teeth, adder(px, call(doc, "GetEquationMgr")), others,
+                      flips={})
+        flip = bool(findings.GEAR_MATE_FLIP)
+        out["cip_on"] = _command_in_progress(px, cip) if cip else None
+        try:
+            for step, f in (("first", flip), ("again", not flip)):
+                if step == "again":
+                    out["deleted_by"] = delete_mate(px, doc, name)
+                picked = bool(select_in(px, doc, comps[x], "Gear Axis", "AXIS", False)) and \
+                    bool(select_in(px, doc, comps[y], "Gear Axis", "AXIS", True))
+                made = add_mate(px, doc, f"{name} flip {f}", enums["gear"], enums["closest"], flip=f,
+                                ratio=(float(teeth[x]), float(teeth[y]))) if picked else {"name": None}
+                out[f"made_{step}"] = made
+                if made.get("name"):
+                    _rename(px, mate_feature(doc, made["name"]), name)
+                    out[f"read_{step}"] = read_back(px, doc, name, internal)
+                out[f"cip_reads_{step}"] = plain(px.attempt("CommandInProgress read", lambda: call(sc.app(px),
+                                                                                              "CommandInProgress"))[1])
+        finally:
+            out["cip_off"] = _command_in_progress(px, False) if cip else None
+        rebuild(px, doc, "after the gear mate's remake", top_only=TOP_ONLY)
+        out["read_after_rebuild"] = read_back(px, doc, name, internal)
+        out["check"] = check_senses(px, doc, comps, layout, fx, teeth, "after the remake") if not pairs else \
+            pairs_check(px, doc, comps, layout, pairs, "after the remake")
+        out["mates"] = mate_names(doc)
+        out["frames"] = {k: [list(map(list, v[0])), list(v[1])] for k, v in _frames(comps).items()}
+        out["errors"] = errors_only(mate_errors(px, doc))
+    finally:
+        _close_quietly(px, paths)
+    return out
+
+
+def cip_reads_hold(case: Mapping[str, Any], mesh: str) -> bool:
+    """Under CommandInProgress (or not) the second read equals the read after the rebuild and tells the drive's
+    sense, and the first (the other Flip) read the opposite."""
+    first, again, after = (case.get(k) or {} for k in ("read_first", "read_again", "read_after_rebuild"))
+    driven = ((case.get("check") or {}).get("meshes") or {}).get(mesh)
+    return bool(again.get("says_right") is not None and again.get("says_right") == after.get("says_right") == driven
+                and (again.get("definition") or {}).get("Reverse") == (after.get("definition") or {}).get("Reverse")
+                and first.get("says_right") is (not driven))
+
+
 @probe("ring_trains_saved", needs=("motion_enums", "end_to_end", "layout_assembly_reopen"), tier=8,
        members=("swbuild.build_gearbox", "IAssemblyDoc.AddMate5 gear", "IFeature.GetDefinition",
                 "IMateEntity2.EntityParams", "IModelDoc2.GetSaveFlag", "IModelDocExtension.SaveAs3"))
@@ -6359,6 +6422,16 @@ def ring_trains_saved(px: Px) -> None:
                                  for g in (p["pinion"], p["ring"])}}
     facts: Dict[str, Any] = {"version": major}
     manifest: Dict[str, Any] = {"version": major, "trains": {}}
+    # Copies of the static assemblies, before anything is mated, for the CommandInProgress cases.
+    cip_copies: Dict[str, Dict[str, str]] = {}
+    for tag in ("risky", "pairs"):
+        src = trains[tag]["built"]["plan"].assembly_path
+        cip_copies[tag] = {}
+        for on in ("on", "off"):
+            dst = os.path.join(os.path.dirname(src), f"CIP {on} {os.path.basename(src)}")
+            px.require(px.attempt(f"copy {os.path.basename(src)} to {os.path.basename(dst)} (no SolidWorks call)",
+                                  lambda s=src, d=dst: shutil.copyfile(s, d))[0], f"{tag}: copied for CIP {on}")
+            cip_copies[tag][on] = dst
     for tag, t in trains.items():
         b, fx, teeth, pairs = t["built"], t["fx"], t["teeth"], t["pairs"]
         paths = list(b["paths"])
@@ -6370,6 +6443,8 @@ def ring_trains_saved(px: Px) -> None:
             px.require(all(c is not None for c in comps.values()) and layout is not None, f"{tag}: every component found")
             mate_w5_train(px, doc, comps, layout, b["frames"], teeth, adder(px, call(doc, "GetEquationMgr")), fx, flips={})
             # Read straight after the AddMate5 calls (the gear mates are mate_w5_train's last), then after the rebuild.
+            f["read_after_add_command_in_progress"] = plain(px.attempt(
+                "CommandInProgress at the reads straight after AddMate5", lambda: call(sc.app(px), "CommandInProgress"))[1])
             inner = {f"{x} meshes {y}": x in fx.internal or y in fx.internal for x, y in fx.meshes}
             f["read_after_add"] = {m: read_back(px, doc, m, i) for m, i in inner.items()}
             rebuild(px, doc, f"{tag}: mated the app's way", top_only=TOP_ONLY)
@@ -6437,10 +6512,38 @@ def ring_trains_saved(px: Px) -> None:
             "internal": list(fx.internal), "teeth": teeth, "flips": f["flips"],
             "frames": {g: [list(map(list, v[0])), list(v[1])] for g, v in b["frames"].items()},
             "pairs": [{k: p[k] for k in ("pinion", "ring", "internal", "label")} for p in pairs]}
+    # The app's Build: the gear mate made, renamed, read back, deleted, made again with the other Flip, renamed and
+    # read back, all with CommandInProgress True and before any rebuild; beside the same steps with it off.
+    targets = {"risky": ("G5", "G6"), "pairs": next((p["pinion"], p["ring"]) for p in trains["pairs"]["pairs"]
+                                                    if p["label"] == "external spur ++")}
+    cip: Dict[str, Any] = {}
+    for tag, target in targets.items():
+        t = trains[tag]
+        cip[tag] = {on: _cip_remake(px, cip_copies[tag][on], t["built"], t["fx"], t["teeth"], target, t["pairs"],
+                                    on == "on") for on in ("on", "off")}
+    facts["command_in_progress"] = cip
     import json  # noqa: PLC0415
     with open(os.path.join(folder, CROSS_MANIFEST), "w", encoding="utf-8") as stream:
         json.dump(manifest, stream, indent=1)
     px.fact("ring_trains_saved", facts)
+    reads_hold, remake_same = {}, {}
+    for tag, target in targets.items():
+        mesh = f"{target[0]} meshes {target[1]}"
+        on, off = cip[tag]["on"], cip[tag]["off"]
+        reads_hold[tag] = {"on": cip_reads_hold(on, mesh), "off": cip_reads_hold(off, mesh),
+                           "cip_read_true": on.get("cip_reads_again") is True}
+        remake_same[tag] = bool(on["mates"] == off["mates"] and frame_table_diff(on["frames"], off["frames"]) < TOLERANCE_MM
+                                and not on["errors"] and not off["errors"] and on["check"]["meshes"] == off["check"]["meshes"]
+                                and all(v is True for v in on["check"]["meshes"].values()))
+    px.fact("cip_read_back", reads_hold, "each read under CommandInProgress (and with it off) equals the read "
+                                         "after the rebuild and tells the drive's sense; the other Flip read the opposite")
+    px.fact("gear_mate_sense_read_under_command_in_progress",
+            all(v["on"] and v["cip_read_true"] for v in reads_hold.values()))
+    px.fact("gear_mate_remake_under_command_in_progress", all(remake_same.values()),
+            "the delete and remake under CommandInProgress left the mates, names and frames as with it off, every "
+            "mesh turning right")
+    px.fact("read_after_add_was_under_command_in_progress",
+            {t: facts[t].get("read_after_add_command_in_progress") for t in trains})
     tags = list(trains)
     rights = all(v is True for t in tags for v in facts[t]["check"]["meshes"].values())
     px.check(rights, f"saved right on this version: {[(t, facts[t]['check']['meshes'], facts[t]['flips']) for t in tags]}")

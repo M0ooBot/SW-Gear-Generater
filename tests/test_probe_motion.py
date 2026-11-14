@@ -809,3 +809,14 @@ def test_the_other_rings_the_app_builds_sit_on_riskys_shaft_senses():
     frames = p8.spec_frames(spec)
     assert all((p8.frame_theta(frames[p["pinion"]][0])[0], p8.frame_theta(frames[p["ring"]][0])[0]) == (1, -1)
                for p in pairs)
+
+
+def test_a_read_under_command_in_progress_holds_only_when_it_matches_the_rebuild_and_the_drive():
+    case = {"read_first": {"says_right": False, "definition": {"Reverse": True}},
+            "read_again": {"says_right": True, "definition": {"Reverse": False}},
+            "read_after_rebuild": {"says_right": True, "definition": {"Reverse": False}},
+            "check": {"meshes": {"G5 meshes G6": True}}}
+    assert p8.cip_reads_hold(case, "G5 meshes G6")
+    assert not p8.cip_reads_hold({**case, "read_after_rebuild": {"says_right": True, "definition": {"Reverse": True}}},
+                                 "G5 meshes G6")
+    assert not p8.cip_reads_hold({**case, "check": {"meshes": {"G5 meshes G6": False}}}, "G5 meshes G6")
