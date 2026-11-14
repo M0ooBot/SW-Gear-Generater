@@ -5699,6 +5699,11 @@ def ring_spec(folder: str, pairs: Optional[Sequence[Mapping[str, Any]]] = None, 
         n, (zp, zr) = p["index"], p["teeth"]
         mt = 2.0 / math.cos(math.radians(float(p["helix"]))) if p["helix"] else 2.0
         centre = mt * ((zr - zp) if p["internal"] else (zr + zp)) / 2.0
+        if p["internal"] and p.get("shift"):
+            # A shifted pinion sits at its working distance inside the (unshifted) ring, as the app's check asks.
+            from ..workbook.checks import internal_working_centre  # noqa: PLC0415
+            centre = internal_working_centre(2.0, zp, zr, float(Box().pressure_angle_text()),
+                                             float(p["helix"] or 0), float(p["shift"]), 0.0)
         y = 150.0 * n
         shafts.append(Shaft(p["shaft_p"], "frame", "0", repr(y), "0", "Z+" if p["sigma_p"] > 0 else "Z-", "input",
                             speed="1000", torque="5"))
@@ -6206,9 +6211,13 @@ def cross_pairs() -> List[Dict[str, Any]]:
 def geometry_pairs() -> List[Dict[str, Any]]:
     """Other rings the app builds, each on Risky's shaft senses (pinion Z+, ring Z-): a right-hand helical ring, a
     15° helical ring, a herringbone ring (its pinion right-handed, the ring typed left, as the app asks of a ring
-    turned over), and a spur ring whose pinion has profile shift -0.3 (a ring is cut without shift here; the
-    centre distance stays 22, which the app's check takes). The first run's +0.3 clashed with its ring when the
-    app built it (1.38 mm³ at the built phase, SolidWorks 2024), so it is -0.3: more room, not less."""
+    turned over), and a spur ring whose pinion has profile shift -0.3 (a ring is cut without shift here). The first
+    run's +0.3 clashed with its ring when the app built it (1.38 mm³ at the built phase, SolidWorks 2024), so it is
+    -0.3. Until 2026-11-14 that pair sat at the plain 22 mm, which the app's check then took: the committed runs of
+    that day (probe/results/sw2024/probe-results-20261114-151013, probe/results/probe-results-20261114-162034) built
+    it there, 0.552 mm inside its working distance (extra backlash, no clash). The check added on 2026-11-14
+    (workbook.checks.internal_working_centre) refuses that, so ring_spec now places it where its teeth mesh,
+    22.552 mm."""
     return [_pair(17, "ring helical right +-", "helical", 1, -1, True, (14, 36), "20", "right"),
             _pair(18, "ring helical 15 +-", "helical", 1, -1, True, (14, 36), "15", "left"),
             _pair(19, "ring herringbone +-", "herringbone", 1, -1, True, (14, 36), "25", "right", hand_r="left"),

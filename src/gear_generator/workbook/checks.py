@@ -11,11 +11,12 @@ not errors: :func:`workbook.build.later_rows` says each one, and Build refuses i
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from itertools import combinations
 from typing import Dict, List, Optional, Tuple
 
-from ..gears import pair as pairs
+from ..gears import helical, internal as internal_gears, pair as pairs, spur
 from ..gears.base import ERROR, WARNING, Diagnostic
 from . import fixes as fixes_mod, geometry, kinematics
 from .fixes import Fix
@@ -160,6 +161,13 @@ def _check_mesh(report: Report, spec: GearboxSpec, mesh, a: Placed, b: Placed, w
                                       f"{pinion.teeth}; a ring needs more teeth than the gear inside it.")
                 return
             needed, _, epsilon = pairs.describe(a.module, pinion.teeth, other.teeth, pa_a, beta, mesh="internal")
+            shifts = (getattr(pinion.derived, "shift", 0.0) or 0.0, getattr(other.derived, "shift", 0.0) or 0.0)
+            if any(shifts):
+                # A shifted pinion (a ring is never shifted here) meshes at its own working distance, not the
+                # plain one pairs.describe gives a pinion inside a ring.
+                needed = internal_working_centre(a.module, pinion.teeth, other.teeth, pa_a, beta, *shifts)
+            elif other.teeth - pinion.teeth < internal_gears.CLASH_CHECK_BELOW:
+                _check_ring_tips(report, where, pinion, other, pa_a, beta)
         else:
             needed, _, epsilon = pairs.describe(a.module, a.teeth, b.teeth, pa_a, beta,
                                                 shift_1=getattr(a.derived, "shift", 0.0),
@@ -185,6 +193,8 @@ def _check_mesh(report: Report, spec: GearboxSpec, mesh, a: Placed, b: Placed, w
         if move is not None:
             offered.append(move)
         shift = fixes_mod.shift_fix(spec, a, b)
+        if shift is None and (a.internal or b.internal):
+            shift = fixes_mod.unshift_fix(spec, pinion, other, CENTRE_TOLERANCE)
         if shift is not None:
             offered.append(shift)
         if offered:
@@ -196,6 +206,46 @@ def _check_mesh(report: Report, spec: GearboxSpec, mesh, a: Placed, b: Placed, w
     elif a.herringbone and abs(a.z - b.z) > CENTRE_TOLERANCE:
         _error(report, where, f"{a.gear} and {b.gear} are herringbones whose middles are {_n(abs(a.z - b.z))} mm "
                               "apart along the axis; a herringbone pair meshes middle to middle.")
+
+
+def internal_working_centre(module: float, pinion_teeth: int, ring_teeth: int, pressure_angle: float,
+                            helix_angle: float = 0.0, pinion_shift: float = 0.0, ring_shift: float = 0.0) -> float:
+    """Where a pinion and the ring round it mesh without play from the flanks, mm, with their profile shifts:
+    ``inv αw = inv α + 2 tan αn (x_ring − x_pinion) / (z_ring − z_pinion)`` and ``a_w = mt (z_ring − z_pinion) / 2 ·
+    cos α / cos αw``, transverse values for a helical pair (``α`` the transverse pressure angle, ``αn`` the normal
+    one, ``mt = m / cos β``), as :func:`gears.spur.working_pressure_angle` writes the outside pair's. Unshifted it
+    is the plain ``mt (z_ring − z_pinion) / 2``. A difference of shifts no angle answers is a ValueError with a
+    sentence."""
+    mt = module / math.cos(math.radians(helix_angle))
+    alpha = math.radians(helical.transverse_pressure_angle(pressure_angle, helix_angle) if helix_angle
+                         else pressure_angle)
+    plain = mt * (ring_teeth - pinion_teeth) / 2.0
+    difference = ring_shift - pinion_shift
+    if not difference:
+        return plain
+    tan_normal = math.tan(math.radians(pressure_angle))
+    value = spur.inv(alpha) + 2.0 * tan_normal * difference / (ring_teeth - pinion_teeth)
+    if value <= 0.0:
+        raise ValueError(f"a pinion shift of {pinion_shift:+g} inside a ring shifted {ring_shift:+g} is too far for "
+                         f"{pinion_teeth} and {ring_teeth} teeth to mesh at all")
+    return plain * math.cos(alpha) / math.cos(spur.inv_inverse(value))
+
+
+def _check_ring_tips(report: Report, where: str, pinion: Placed, ring: Placed, pressure_angle: float,
+                     beta: float) -> None:
+    """A pinion whose tips run into the ring's as they turn (``internal.tip_clash``: standard teeth, a tooth
+    difference under ``internal.CLASH_CHECK_BELOW``), as the pair solver judges a ring: a warning, since the model
+    leaves backlash out."""
+    mt = pinion.module / math.cos(math.radians(beta))
+    alpha = helical.transverse_pressure_angle(pressure_angle, beta) if beta else pressure_angle
+    try:
+        depth = internal_gears.tip_clash(mt, pinion.teeth, ring.teeth, alpha)
+    except ValueError:
+        return
+    if depth > internal_gears.CLASH_TOLERANCE:
+        _warning(report, where, f"{pinion.gear}'s teeth run {_n(depth)} mm into {ring.gear}'s as they turn: "
+                                f"{ring.teeth - pinion.teeth} teeth between a ring and its pinion are too few for "
+                                "plain teeth; give the ring more teeth or the pinion fewer.")
 
 
 def _check_clearances(report: Report, spec: GearboxSpec, placed: Dict[str, Placed], listed) -> None:

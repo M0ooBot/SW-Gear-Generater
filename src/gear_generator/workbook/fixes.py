@@ -10,7 +10,8 @@ again, and Export (W3) can write exactly those cells and nothing else.
   move that mends one mesh breaks another.
 - **Profile shift**: for two outside spur or helical gears, the shifts that
   meet the typed distance (:func:`pair.shift_for_centre`), written at full
-  precision.
+  precision. Inside a ring, only taking a shifted pinion's shift off, when the
+  shafts sit at the plain distance (:func:`unshift_fix`).
 """
 
 from __future__ import annotations
@@ -163,6 +164,28 @@ def shift_fix(spec: GearboxSpec, a: Placed, b: Placed) -> Optional[Fix]:
     detail = (f"x {x1:+.6f} / {x2:+.6f} → {centre:.3f} exact · working angle {working:.2f}° · ε {epsilon:.2f}")
     edits = (Edit("Gears", a.gear, "profile_shift", _text(x1)), Edit("Gears", b.gear, "profile_shift", _text(x2)))
     return Fix(f"Keep your positions: profile-shift {a.gear} and {b.gear}", detail, edits)
+
+
+def unshift_fix(spec: GearboxSpec, pinion: Placed, ring: Placed, tolerance: float) -> Optional[Fix]:
+    """Keep the shafts where they are: take a shifted pinion's profile shift off, when its shafts sit at the plain
+    distance a pinion inside an unshifted ring meshes at. Rings are cut unshifted here, and nothing yet works out
+    a shifted pinion's limits inside a ring (its tip against the ring's, its tooth thickness there), so the only
+    shift offered inside a ring is none. Not offered when the pinion meshes with another gear too (taking its
+    shift off moves that mesh's centre)."""
+    if not ring.internal or pinion.internal or not getattr(pinion.derived, "shift", 0.0):
+        return None
+    if getattr(ring.derived, "shift", 0.0):
+        return None
+    if len([m for m in spec.meshes if pinion.gear in (m.a, m.b)]) > 1:
+        return None
+    beta = getattr(pinion.derived, "helix_angle_deg", 0.0)
+    plain = pinion.module / math.cos(math.radians(beta)) * (ring.teeth - pinion.teeth) / 2.0
+    actual = centre_distance(pinion, ring)
+    if abs(actual - plain) > tolerance:
+        return None
+    detail = f"x {pinion.derived.shift:+g} → 0 · {plain:.3f} exact, as an unshifted pinion inside {ring.gear}"
+    return Fix(f"Keep your positions: take {pinion.gear}'s profile shift off", detail,
+               (Edit("Gears", pinion.gear, "profile_shift", "0"),))
 
 
 def apply(spec: GearboxSpec, fix: Fix) -> GearboxSpec:

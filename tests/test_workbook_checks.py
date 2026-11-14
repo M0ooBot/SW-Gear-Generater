@@ -266,3 +266,102 @@ def test_shift_for_centre_directly():
         pairs.shift_for_centre(1.5, 17, 68, 70.0)
     with pytest.raises(ValueError, match="No profile shift brings"):
         pairs.shift_for_centre(1.5, 17, 68, 50.0)
+
+
+# -- a pinion inside a ring, shifted (the ring probe of 2026-11-14: 14 / 36, +0.3 / 0, at the plain 22 mm) ----------
+
+from gear_generator.gears import internal as internal_gears  # noqa: E402
+from test_workbook_demo_fixtures import assessed as windows  # noqa: E402
+
+
+def ring_pair(pinion_shift="0.3", centre="22", pinion_teeth="14", kind="spur", beta=""):
+    common = dict(module="2", helix_angle=beta) if beta else dict(module="2")
+    hand = "right" if beta else ""
+    return GearboxSpec(
+        box=Box(name="T"),
+        shafts=(Shaft("R", "frame", "0", "0", "0", "Z+", "input", "", "100"),
+                Shaft("P", "frame", centre, "0", "0", "Z+")),
+        gears=(Gear("Ring", "R", "5", kind, side="internal", teeth="36", face_width="10", hand=hand, **common),
+               Gear("Pin", "P", "5", kind, teeth=pinion_teeth, face_width="10", profile_shift=pinion_shift,
+                    hand=hand, **common)),
+        meshes=(Mesh("Ring", "Pin"),))
+
+
+def test_a_shifted_pinion_inside_a_ring_at_the_plain_distance_is_caught_with_its_fixes(tmp_path):
+    """The probe's case: the app took it and the build clashed (1.38 mm³). Its working distance is 21.306 mm."""
+    spec, report = check(tmp_path, ring_pair())
+    assert errors(report) == [
+        "Meshes!A2: Ring and Pin are 22 apart; their teeth make 21.306 (+0.694 mm). Check the X and Y of R and P "
+        "(Shafts rows 2 and 3); a shaft at an angle is best placed by formula."]
+    assert report.centres[("Ring", "Pin")] == (pytest.approx(21.30578, abs=1e-5), pytest.approx(22.0))
+    move, unshift = report.fixes["Meshes!A2"]
+    assert move.title == "Move P by -0.694 mm"
+    assert unshift.title == "Keep your positions: take Pin's profile shift off"
+    assert unshift.edits == (fixes.Edit("Gears", "Pin", "profile_shift", "0"),)
+    for fix in (move, unshift):
+        assert errors(checks.check(fixes.apply(spec, fix))) == []
+
+
+def test_a_shifted_pinion_at_its_working_distance_is_clean(tmp_path):
+    working = checks.internal_working_centre(2, 14, 36, 20, 0, 0.3, 0)
+    assert working == pytest.approx(21.305780, abs=1e-6)
+    _, report = check(tmp_path, ring_pair(centre=repr(working)))
+    assert report.diagnostics == [] and report.fixes == {}           # the Checks panel shows problems only
+
+
+def test_the_internal_working_distance_follows_the_shifts_both_ways_and_on_a_helical_ring():
+    plain = 2 * (36 - 14) / 2
+    assert checks.internal_working_centre(2, 14, 36, 20) == plain
+    assert checks.internal_working_centre(2, 14, 36, 20, 0, -0.3, 0) > plain > checks.internal_working_centre(
+        2, 14, 36, 20, 0, 0.3, 0)
+    # inv αw = inv α + 2 tan α (x_ring − x_pinion) / (z_ring − z_pinion); a_w = a0 cos α / cos αw
+    alpha = math.radians(20)
+    inv_w = math.tan(alpha) - alpha + 2 * math.tan(alpha) * (0 - 0.3) / 22
+    lo, hi = 0.0, alpha
+    for _ in range(200):
+        mid = (lo + hi) / 2
+        lo, hi = (mid, hi) if math.tan(mid) - mid < inv_w else (lo, mid)
+    assert checks.internal_working_centre(2, 14, 36, 20, 0, 0.3, 0) == pytest.approx(
+        plain * math.cos(alpha) / math.cos(lo), abs=1e-9)
+    # Helical: transverse values, the normal pressure angle in the shift term.
+    beta = 15.0
+    mt = 2 / math.cos(math.radians(beta))
+    at = math.atan(math.tan(alpha) / math.cos(math.radians(beta)))
+    inv_t = math.tan(at) - at + 2 * math.tan(alpha) * (0 - 0.3) / 22
+    lo, hi = 0.0, at
+    for _ in range(200):
+        mid = (lo + hi) / 2
+        lo, hi = (mid, hi) if math.tan(mid) - mid < inv_t else (lo, mid)
+    assert checks.internal_working_centre(2, 14, 36, 20, beta, 0.3, 0) == pytest.approx(
+        mt * 11 * math.cos(at) / math.cos(lo), abs=1e-9)
+
+
+def test_a_shifted_helical_pinion_inside_its_ring_is_judged_at_its_working_distance(tmp_path):
+    working = checks.internal_working_centre(2, 14, 36, 20, 15, 0.3, 0)
+    _, clean = check(tmp_path, ring_pair(centre=repr(working), kind="helical", beta="15"))
+    assert errors(clean) == []
+    plain = repr(2 / math.cos(math.radians(15)) * 11)
+    _, report = check(tmp_path, ring_pair(centre=plain, kind="helical", beta="15"), name="H.xlsx")
+    assert len(errors(report)) == 1 and "their teeth make 22.096" in errors(report)[0]
+
+
+def test_an_unshifted_pinion_inside_a_ring_is_clean_as_before_and_risky_placements_too(tmp_path):
+    _, report = check(tmp_path, ring_pair(pinion_shift="0"))
+    assert report.diagnostics == []
+    _, risky = windows("Risky_Placements.xlsx")
+    assert [d.message for d in risky.report.diagnostics if d.is_error] == []
+
+
+def test_a_pinion_too_near_its_rings_size_runs_into_its_teeth(tmp_path):
+    """Plain teeth only: the pair solver's own tip-clash model (internal.tip_clash), under its tooth difference."""
+    spec = model.replace(ring_pair(pinion_shift="0", centre="6", pinion_teeth="30"),
+                         shafts=(Shaft("R", "frame", "0", "0", "0", "Z+", "input", "", "100"),
+                                 Shaft("P", "frame", "6", "0", "0", "Z+")))
+    depth = internal_gears.tip_clash(2, 30, 36, 20)
+    assert depth > internal_gears.CLASH_TOLERANCE
+    _, report = check(tmp_path, spec)
+    said = [d.message for d in report.diagnostics if not d.is_error]
+    assert f"Meshes!A2: Pin's teeth run {checks._n(depth)} mm into Ring's as they turn: 6 teeth between a ring and " \
+           "its pinion are too few for plain teeth; give the ring more teeth or the pinion fewer." in said
+    _, wide = check(tmp_path, ring_pair(pinion_shift="0", centre="10", pinion_teeth="26"), name="W.xlsx")
+    assert not any("run" in d.message for d in wide.diagnostics)

@@ -1036,7 +1036,7 @@ GEAR_MATE_SENSE_READ_POINTS_AGREE = True
 # - the other rings, on Risky's shaft senses (pinion Z+, ring Z-): the right-hand 20°, 15° and
 #   herringbone helical rings need Flip True on 2026 and False on 2024, like the 20° left-hand ring;
 # - the spur ring with a shifted pinion needs Flip False on 2026 and True on 2024, like the plain
-#   spur ring +-.
+#   spur ring +- (that pair was run at 22 mm, 0.552 mm inside its working distance).
 # The read-back told every one.
 GEAR_MATE_FLIP_NEEDED_MORE_ON_2026 = {
     "external ++": False, "external --": False, "external -+": False,
