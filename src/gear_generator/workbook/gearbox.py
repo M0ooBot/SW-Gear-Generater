@@ -217,7 +217,13 @@ class GearboxPlan:
     planned because a W5 finding is missing (``motion.motion_reason()``), it
     is that sentence. There is no static fallback plan: a turning assembly
     SolidWorks refuses is not replaced by a static one (W5-DECISIONS,
-    answer 1), so ``build_kwargs`` is as in W4. ``plan.motion`` is the one
+    answer 1). ``ring_meshes``: the names of the motion plan's gear (MESH)
+    mates whose mesh is inside a ring (either gear internal), in plan order;
+    ``()`` for a train with none and for a static plan. ``build_kwargs``
+    passes them as ``internal`` for a turning plan — an empty tuple when no
+    mesh has a ring, so every gear mate is still read back — and nothing for a
+    static one (probe ring_mate_sense: a wrong gear mate is made again with
+    the other Flip). ``plan.motion`` is the one
     source of the record's ``GearboxRecord.kind``: ``finish_build`` writes
     MOTION when it is set and STATIC when not; a non-empty
     ``GearboxResult.kind`` must agree, a disagreement is a sentence in
@@ -248,6 +254,7 @@ class GearboxPlan:
     foreign_said: bool = False
     motion: Optional[MotionPlan] = None
     static_reason: str = ""
+    ring_meshes: Tuple[str, ...] = ()            # the motion plan's gear mates inside a ring (Agent B, additive)
 
     @property
     def parts_only(self) -> bool:
@@ -268,13 +275,16 @@ class GearboxPlan:
             layout = DocumentValues(self.layout.path, tuple(self.layout.variables), tuple(self.layout.features))
         else:
             layout = self.layout
-        return {
+        kwargs: Dict[str, Any] = {
             "parts": [job.plan for job in self.build],
             "reuse": [DocumentValues(r.path, tuple(r.variables), tuple(r.features)) for r in self.reuse],
             "layout": layout,
             "assembly": self.assembly,
             "gears": dict(self.handles),
         }
+        if self.motion is not None and self.assembly is not None:
+            kwargs["internal"] = tuple(self.ring_meshes)    # a turning build: every gear mate read back (A, a0d5fad)
+        return kwargs
 
 
 @dataclass
@@ -874,6 +884,7 @@ def plan_gearbox(a: Assessment, record: Optional[LinkRecord], *, part_template: 
     # static-by-necessity case, said before Build). A continued revision is planned the same way.
     static_reason = motion.motion_reason()
     turning: Optional[MotionPlan] = None
+    rings: Tuple[str, ...] = ()
     try:
         layout_item: Union[BuildPlan, LayoutReuse] = chosen.layout_reuse or layout.layout_plan(
             shafts, part_tpl, chosen.layout_path)
@@ -881,6 +892,9 @@ def plan_gearbox(a: Assessment, record: Optional[LinkRecord], *, part_template: 
             assembly = layout.assembly_plan(chosen.layout_path, components, asm_tpl, chosen.assembly_path)
         else:
             turning = motion.motion_plan(spec, a.report, frames)
+            placed = a.report.layout.placed
+            rings = tuple(m.name for m in turning.mates if m.kind == motion.MESH
+                          and any(placed[g].internal for g in m.gears if g in placed))
             assembly = motion.motion_assembly_plan(chosen.layout_path, components,
                                                    {gear: handle for handle, gear in handles.items()}, turning,
                                                    asm_tpl, chosen.assembly_path)
@@ -888,7 +902,7 @@ def plan_gearbox(a: Assessment, record: Optional[LinkRecord], *, part_template: 
         return GearboxPlan(revision=n, name=name, refusal=str(exc), **empty)
     fields.update(layout_path=chosen.layout_path, assembly_path=chosen.assembly_path, shafts=shafts,
                   frames=frames, layout=layout_item, assembly=assembly, handles=handles, motion=turning,
-                  static_reason=static_reason)
+                  static_reason=static_reason, ring_meshes=rings if turning is not None else ())
     return GearboxPlan(revision=n, name=name, revision_reason=reason, **fields)
 
 

@@ -149,7 +149,9 @@ W5_FINDINGS = {"GEAR_MATE_RATIO_ROUTE": None, "GEAR_MATE_RATIO_REMAKE_WORKS": Tr
                "MATED_ASSEMBLY_REBUILD_ROUTE": "ForceRebuild3(True)",
                "MATED_BUILD_REBUILD_ROUTE": "ForceRebuild3(True)",
                "GEAR_MATE_DEFINITION_READ_MARKS": "nothing", "MATES_UNDER_COMMAND_IN_PROGRESS": True,
-               "MATE_RENAME_AT_ONCE": True, "IDLER_UPDATE_HOLDS": True}
+               "MATE_RENAME_AT_ONCE": True, "IDLER_UPDATE_HOLDS": True,
+               "GEAR_MATE_SENSE_READ_BACK": "(Reverse == entities parallel) == internal",
+               "GEAR_MATE_READ_BACK_TELLS_SENSE": True, "GEAR_MATE_CHECK_AND_REMAKE_HOLDS": True}
 
 
 @pytest.fixture(autouse=True)

@@ -1283,3 +1283,35 @@ def test_round_trip_a_lost_tooth_change_typed_back_takes_the_ratio_solidworks_al
     assert live_ratio(sw, record) == (17, 68)
     after = update.classify(again.record, assessed(reducer()), exists=lambda p: True)
     assert nothing(after) and after.ratios == ()
+
+
+# -- which way each gear mate turns, read back at Build (package A, a0d5fad; probe ring_mate_sense) ------------------
+
+
+@pytest.mark.parametrize("version, turned_round", [("2026", ["G5 meshes G6"]), ("2024", [])])
+def test_round_trip_risky_placements_ring_is_turned_round_at_build_where_its_version_needs_it(turning, version,
+                                                                                          turned_round):
+    """Risky_Placements' helical pinion in its helical ring on a Z- shaft: on the 2026 table the gear mate made with
+    Flip False turns the ring against its pinion and is made again with the other Flip; on the 2024 table it is right
+    first time. The outside pairs are read and left as made on both."""
+    from test_swbuild import FLIP_NEEDED_2024, FLIP_NEEDED_2026, FakeSolidWorks
+    from test_workbook_demo_fixtures import assessed as windows
+    reading, _ = windows("Risky_Placements.xlsx")
+    spec = reading.spec
+    sw = FakeSolidWorks()
+    sw.flip_needed = dict(FLIP_NEEDED_2026 if version == "2026" else FLIP_NEEDED_2024)
+    from gear_generator.workbook import gearbox
+    plan = gearbox.plan_gearbox(assessed(spec), None, exists=sw.exists, read_sidecar=lambda p: None)
+    sw.ring_parts = {plan.part_of["G6"]}
+    sw.helical_parts = {plan.part_of[g] for g in ("G3", "G4", "G5", "G6")}
+    result = swbuild.build_gearbox(sw, **plan.build_kwargs(), exists=sw.exists)
+    assert result.ok and result.kind == motion.MOTION, result.failures
+    assert result.assembly.turned_round == turned_round
+    read = [a[0] for n, a in sw.calls if n == "gear_mate_sense"]          # each read; a remade one read again
+    assert sorted(set(read)) == ["mesh1", "mesh2", "mesh3"] and len(read) == 3 + len(turned_round)
+    asm = plan.assembly_path
+    assert all(sw.turns_right(m.name, asm) for m in plan.motion.mates if m.kind == motion.MESH)
+    record = gearbox.finish_build(plan, result, None, workbook=WORKBOOK, digest="d1", written_by="test",
+                                  read_sidecar=lambda p: None, exists=sw.exists).record
+    assert record.gearbox.kind == motion.MOTION
+    assert nothing(update.classify(record, assessed(spec), exists=lambda p: True))
