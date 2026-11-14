@@ -5320,11 +5320,14 @@ class DialogWatch:
                         u.PostMessageW(hwnd, WM_KEYUP, VK_ESCAPE, 0)
                         seen["answered"].append(f"Escape at {age:.1f} s")
                     elif age >= 3 * self.dismiss_after and len(seen["answered"]) == 2:
-                        cancel = [h for h, t, _c in self._children(hwnd) if t.replace("&", "").strip() == "Cancel"]
-                        for h in cancel[:1]:
-                            u.PostMessageW(h, BM_CLICK, 0, 0)
-                        seen["answered"].append(f"Cancel clicked at {age:.1f} s" if cancel else
-                                                f"no Cancel button at {age:.1f} s")
+                        # Cancel where there is one; else "No" / "Don't Save" (a Yes/No "Save changes?" box ignores
+                        # WM_CLOSE and Escape: the SOLIDWORKS CAM add-in's, closing another version's assembly).
+                        buttons = {t.replace("&", "").strip(): h for h, t, _c in self._children(hwnd)}
+                        pick = next((n for n in ("Cancel", "No", "Don't Save") if n in buttons), None)
+                        if pick:
+                            u.PostMessageW(buttons[pick], BM_CLICK, 0, 0)
+                        seen["answered"].append(f"{pick} clicked at {age:.1f} s" if pick else
+                                                f"no Cancel or No button at {age:.1f} s")
         except Exception as exc:  # noqa: BLE001 - the watch failing is evidence, never a crash of the probe
             self.error = repr(exc)
 
