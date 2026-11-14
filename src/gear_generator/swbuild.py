@@ -2892,10 +2892,22 @@ def _update_motion(sw: SolidWorks, parts: Sequence[DocumentValues], layout: Opti
                         result.ratios_already.remove(mate.name)
                     if all(name != mate.name for name, _, _ in remakes):
                         remakes.append((mate.name, *wanted_teeth[mate.name]))
-        if remakes:
+        # A gear mate found suppressed may turn wrong once it is turned back on, and then it is remade in the change
+        # phase. So every one of them counts here as a possible remake (conservative): the route and the remake's
+        # gates are read now, before anything changes, and none of them can refuse after a change.
+        if deferred and ratio_route != "remake":
+            name = deferred[0]
+            raise BuildError(f"The gear mate {name} in {_file(assembly)} is suppressed, so which way it turns can be "
+                             "read only once Update SolidWorks has turned it back on, and making it again should it "
+                             "turn against the way its gears mesh has not been settled on SolidWorks "
+                             f"(findings.GEAR_MATE_RATIO_ROUTE is {ratio_route!r}), so nothing is changed; unsuppress "
+                             f"{name} in SolidWorks and press Update SolidWorks again.")
+        possible = list(remakes) + [(name, *wanted_teeth[name]) for name in deferred
+                                    if all(n != name for n, _, _ in remakes)]
+        if possible:
             _remake_gate()
-            _idler_gate(motion, remakes)
-            _remake_sense_gate(remakes, internal_of)
+            _idler_gate(motion, possible)
+            _remake_sense_gate(possible, internal_of)
         held = _held(sw.equations()) if motion.face_globals else {}
         for gear, variable in motion.face_globals:
             if variable.name not in held:
@@ -3027,7 +3039,8 @@ def _motion_assembly(sw: SolidWorks, result: GearboxUpdate, assembly: str, place
     if result.unsuppressed or result.axial:
         rebuild()
     # A gear mate found suppressed, now turned back on and rebuilt: its sense read here, where the read-back holds
-    # after a rebuild; one wrong joins the remakes, and its train is put below like any other.
+    # after a rebuild; one wrong joins the remakes, and its train is put below like any other. The route and the
+    # remake's gates were read in the check phase, with every such mate counted as a possible remake.
     for name in deferred:
         if name not in result.unsuppressed:
             continue
@@ -3035,17 +3048,13 @@ def _motion_assembly(sw: SolidWorks, result: GearboxUpdate, assembly: str, place
         if _sense_read(sw, mate_handle[name], name, internal_of.get(name, False), sigma.get(ga), sigma.get(gb), ga, gb,
                        SolidWorksError):
             continue
-        ratio_route = getattr(findings, "GEAR_MATE_RATIO_ROUTE", None)
-        if ratio_route != "remake":
-            raise SolidWorksError(f"The gear mate {name} in {file}, turned back on, turns its gears against the way "
-                                  "they mesh, and making a gear mate again has not been settled on SolidWorks "
-                                  f"(findings.GEAR_MATE_RATIO_ROUTE is {ratio_route!r}); build the gearbox again.")
+        # At the wanted ratio but turning wrong (an Update stopped on a remake wrong either way round, then the mate
+        # suppressed): not "already there" — it is remade, as the check phase does for one found on.
+        if name in result.ratios_already:
+            result.ratios_already.remove(name)
         if all(n != name for n, _, _ in remakes):
             remakes.append((name, *(wanted_teeth or {})[name]))
         sense_wrong.add(name)
-        _remake_gate()
-        _idler_gate(motion, remakes)
-        _remake_sense_gate(remakes, internal_of)
     # 5. every frame as it now stands; each train that needs a put is put whole, its locks off around the puts
     live = {p.gear: sw.component_frame(handle[p.gear]) for p in placements}
     axial_gears = {gear for gear, _ in axial}
@@ -3152,7 +3161,9 @@ def _put_train(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, trai
             sw.set_gear_ratio(mate_handle[name], f"{handle[a]}:{AXIS_NAME}", f"{handle[b]}:{AXIS_NAME}",
                               (numerator, denominator))
             # ``ratios`` is for a ratio that changed (asked by the plan, or found at another); a gear mate remade only
-            # because it turned wrong, at the ratio it already held, is ``sense_found_wrong`` alone.
+            # because it turned wrong, at the ratio it already held, is ``sense_found_wrong`` alone. One the plan asked
+            # stays in ``ratios`` even if SolidWorks already held the asked ratio (a stopped remake pressed again,
+            # read on or turned back on first): the workbook's record takes the plan's ratio from ``ratios``.
             sense_only = name in sense_wrong and all(n != name for n, _, _ in motion.ratios) \
                 and name not in result.ratios_found
             if not sense_only:

@@ -4117,7 +4117,7 @@ def test_an_update_remake_without_the_read_back_after_a_ratio_remake_is_refused_
 
 # -- the review of 980f10b: a suppressed gear mate is read only once turned back on; a sense-only remake
 
-def test_a_suppressed_gear_mate_that_turns_right_is_healed_as_before():
+def test_a_suppressed_gear_mate_that_turns_right_is_healed_as_before(remake_route):
     fake = _built_train()
     fake.mate("G1 meshes G2", T_ASM).suppressed = True
     result = _update_train(fake)
@@ -4129,7 +4129,7 @@ def test_a_suppressed_gear_mate_that_turns_right_is_healed_as_before():
     assert called.index("set_mate_suppressed") < max(i for i, n in enumerate(called) if n == "gear_mate_sense")
 
 
-def test_a_gear_mate_suppressed_with_its_folder_and_right_is_healed_as_before(monkeypatch):
+def test_a_gear_mate_suppressed_with_its_folder_and_right_is_healed_as_before(monkeypatch, remake_route):
     monkeypatch.setattr(findings, "MATE_FOLDER_TYPE_NAME", "FtrFolder")
     monkeypatch.setattr(findings, "MATE_GROUP_WALK_SEES_MATES_IN_A_FOLDER", True)
     fake = _built_train()
@@ -4181,3 +4181,84 @@ def test_a_fixed_gear_takes_the_unfix_route_when_the_finding_says_so(monkeypatch
     assert result.ok and result.placed == ["G4"], result.log_lines()
     moves = [n for n, a in fake.calls if n in ("unfix_component", "place_component", "fix_component")]
     assert moves == ["unfix_component", "place_component", "fix_component"]
+
+
+
+# -- the review of b4d4bdd: the deferred read of a suppressed gear mate
+
+@pytest.mark.parametrize("in_folder", [False, True])
+def test_a_stopped_remake_then_suppressed_and_pressed_again_is_remade_and_never_said_already_there(
+        remake_route, sense_check, monkeypatch, in_folder):
+    """An Update stops on a remake wrong either way round, leaving the mate at 17 : 69 turning wrong; the user
+    suppresses it (or the folder it sits in) and presses again with the plan still asking 17 : 69. It is turned back
+    on, read wrong, remade and its train put: in ``ratios`` (the plan asked that ratio, and the record takes it from
+    there) and ``sense_found_wrong``, never in ``ratios_already``."""
+    fake = _built_train()
+    asked = (("G1 meshes G2", 17, 69),)
+    _stopped_remake(fake, "G1 meshes G2", asked, MESHES_69)
+    if in_folder:
+        monkeypatch.setattr(findings, "MATE_FOLDER_TYPE_NAME", "FtrFolder")
+        monkeypatch.setattr(findings, "MATE_GROUP_WALK_SEES_MATES_IN_A_FOLDER", True)
+        fake.user_folder(T_ASM, "Folder1")
+    fake.mate("G1 meshes G2", T_ASM).suppressed = True
+    result = _update_train(fake, motion=_motion(meshes=MESHES_69, ratios=asked))
+    assert result.ok, result.log_lines()
+    assert result.unsuppressed == ["G1 meshes G2"]
+    assert result.ratios_already == [] and result.ratios == ["G1 meshes G2"]
+    assert result.sense_found_wrong == ["G1 meshes G2"] and result.placed == list(TRAIN_ORDER)
+    assert result.ratios_read == [("G1 meshes G2", 17, 69, 17, 69)]
+    lines = result.log_lines()
+    assert "ok      given their new ratio: G1 meshes G2" in lines
+    assert "ok      found turning against their mesh, so made again: G1 meshes G2" in lines
+    assert not any(line.startswith("ok      already at the ratio") for line in lines)
+    assert fake.turns_right("G1 meshes G2", T_ASM) and fake.mate("G1 meshes G2", T_ASM).ratio == (17.0, 69.0)
+    assert not fake.mate("G1 meshes G2", T_ASM).suppressed and fake.locked_puts == []
+
+
+@pytest.mark.parametrize("name, said", [
+    ("GEAR_MATE_CHECK_AND_REMAKE_HOLDS",
+     "Update SolidWorks on a gearbox built to turn needs findings.GEAR_MATE_CHECK_AND_REMAKE_HOLDS settled on "
+     "SolidWorks (it is None), so nothing is changed; run probe tier 8 first."),
+    ("GEAR_MATE_RATIO_REMAKE_WORKS",
+     "Update SolidWorks on a gearbox built to turn needs making a gear mate again at a new ratio settled on "
+     "SolidWorks (findings.GEAR_MATE_RATIO_REMAKE_WORKS is None), so nothing is changed; run probe tier 8 first."),
+])
+def test_a_suppressed_gear_mate_counts_as_a_possible_remake_and_its_gates_refuse_before_anything_changes(
+        remake_route, monkeypatch, name, said):
+    """Even one that would turn right once turned back on: which way it turns is read only after a change, so the
+    remake's gates are read before any."""
+    fake = _built_train()
+    fake.mate("G1 meshes G2", T_ASM).suppressed = True
+    monkeypatch.setattr(findings, name, None)
+    with pytest.raises(swbuild.BuildError) as raised:
+        _update_train(fake)
+    assert str(raised.value) == said
+    assert not any(n in CHANGING + ("remake_gear_mate",) for n in names(fake))
+    assert "mate8" not in [a[0] for n, a in fake.calls if n == "gear_mate_sense"]     # never read while suppressed
+    assert fake.mate("G1 meshes G2", T_ASM).suppressed
+
+
+def test_a_suppressed_gear_mate_is_refused_before_anything_changes_while_the_remake_route_is_missing(monkeypatch):
+    monkeypatch.setattr(findings, "GEAR_MATE_RATIO_ROUTE", None)
+    fake = _built_train()
+    fake.mate("G1 meshes G2", T_ASM).suppressed = True
+    with pytest.raises(swbuild.BuildError) as raised:
+        _update_train(fake)
+    assert str(raised.value) == ("The gear mate G1 meshes G2 in T.SLDASM is suppressed, so which way it turns can be "
+                                 "read only once Update SolidWorks has turned it back on, and making it again should "
+                                 "it turn against the way its gears mesh has not been settled on SolidWorks "
+                                 "(findings.GEAR_MATE_RATIO_ROUTE is None), so nothing is changed; unsuppress G1 "
+                                 "meshes G2 in SolidWorks and press Update SolidWorks again.")
+    assert not any(n in CHANGING + ("remake_gear_mate",) for n in names(fake))
+
+
+def test_a_suppressed_idler_gear_mate_needs_the_idler_finding_before_anything_changes(remake_route, monkeypatch):
+    monkeypatch.setattr(findings, "IDLER_UPDATE_HOLDS", None)
+    fake = _built_idler()
+    fake.mate("G3 meshes G4", T_ASM).suppressed = True
+    with pytest.raises(swbuild.BuildError) as raised:
+        _update_train(fake, motion=_idler_motion(51, ()))
+    assert str(raised.value) == ("Giving a new ratio to a gear mate of G4, which carries two gear mates, has not been "
+                                 "settled on SolidWorks (findings.IDLER_UPDATE_HOLDS is None), so nothing is changed; "
+                                 "run probe tier 8 first, or build the gearbox again.")
+    assert not any(n in CHANGING + ("remake_gear_mate",) for n in names(fake))
