@@ -1,7 +1,7 @@
 r"""W5's (and W4's) Windows demonstration: gearbox workbooks through the app's own code, on real SolidWorks and Excel.
 
 python.exe probe/workbook_assembly_check.py <repo src> <output folder under C:\> --pid PID [--log FILE]
-                                            [--only m1|m2|m3|m4|m5|m6|m7|a|a2|a3|b|c|ring ...]
+                                            [--only m1|m2|m3|m4|m5|m6|m7|m8|a|a2|a3|b|c|ring ...]
                                             [--fixtures FOLDER]
                                             [--m4-offset MM]
 
@@ -97,6 +97,12 @@ The sections, each in its own folder under the output folder (default order m1 m
   (``measure_mates``, the SolidWorks-side check), frames and interference clean. Then S2 X 64.5 and G2 69: the
   remade G1 meshes G2 lands as the mate group's last entry, outside the folder, G3 meshes G4 still inside, through
   a drive at 17 : 69 and a reopen.
+- ``m8``: the ring's gear mate made again after a move (2026-11-14: on 2024 a fresh ring gear mate's sense depends
+  on where the gears sit when it is made): Risky_Placements built; G5 At 45 -> 47 by Update; then the ring mesh's
+  teeth 14/36 -> 15/37 (the centre distance kept) by Update, which remakes G5 meshes G6. Judged from SolidWorks: the
+  result's ratios, turned round and sense found wrong logged, the app's read-back of the remade mate (right, its
+  axes, its Reverse), and the drive through the ring at 15 : 37 as the judge; the half-pitch controls, every frame,
+  the mates, a quiet Update, then a save, reopen and the drive again.
 - ``m7``: the ring train edited: Risky_Placements built to turn; G5 At 45 -> 47 (a follower locked to G4, the ring's
   pinion) -> an Update that puts the whole train; frames, mates, interference, the half-pitch controls, the drive
   through the ring with the control on its mesh, reopen.
@@ -148,8 +154,8 @@ import traceback
 sys.path.insert(0, sys.argv[1])
 SRC, OUT = sys.argv[1], sys.argv[2]
 PID = int(sys.argv[sys.argv.index("--pid") + 1])
-DEFAULT_ORDER = ["m1", "m3", "m7", "m2", "m4", "m5", "m6", "a", "a2", "a3", "b", "c"]
-RING = ["m3", "m7"]          # ``--only ring``: the two ring-train sections, rerun after the ring-sense fix
+DEFAULT_ORDER = ["m1", "m3", "m7", "m8", "m2", "m4", "m5", "m6", "a", "a2", "a3", "b", "c"]
+RING = ["m3", "m7", "m8"]         # ``--only ring``: the two ring-train sections, rerun after the ring-sense fix
 ONLY = [n for i, a in enumerate(sys.argv) if a == "--only"
         for n in (RING if sys.argv[i + 1] == "ring" else [sys.argv[i + 1]])] or DEFAULT_ORDER
 LOG_PATH = sys.argv[sys.argv.index("--log") + 1] if "--log" in sys.argv else os.path.join(OUT, "workbook-assembly.log")
@@ -897,6 +903,9 @@ class Desk:
         self.note = (" ".join([text] + notes + faults), ok and not faults)
         say(f"status  [{'green' if self.note[1] else 'red'}] {self.note[0]}")
         self.plan_solidworks()
+        if self.record is not None and self.record.gearbox is not None and self.record.gearbox.assembly:
+            note_made(self, list(result.ratios) + list(getattr(result, "turned_round", []) or [])
+                      + list(getattr(result, "sense_found_wrong", []) or []))
         return update, result, finished
 
     def _open_record(self):
@@ -1449,8 +1458,14 @@ def drive_proof(worker, desk, label, control=None):
                 f"{findings.GEAR_MATE_FLIP})")
             turned = mesh_entry.name in TURNED.get(os.path.normcase(box.assembly), set())
             left_on = [not bool(findings.GEAR_MATE_FLIP)] if turned else [bool(findings.GEAR_MATE_FLIP)]
-            check(right == left_on, f"{label}, control: the Flip that turns right, {right}, is the one the build left "
-                  f"on {mesh_entry.name} ({left_on}: {'turned round' if turned else 'as first made'})")
+            if not moved_since_made(desk, mesh_entry):
+                check(right == left_on, f"{label}, control: the Flip that turns right, {right}, is the one SolidWorks "
+                      f"made {mesh_entry.name} with ({left_on}: {'turned round' if turned else 'as first made'}); "
+                      "neither gear has moved since")
+            else:
+                say(f"fact    {label}, control: a gear of {mesh_entry.name} has moved since the mate was made; a fresh "
+                    f"mate turns right with Flip {right}, the recorded one was made with {left_on} "
+                    f"({'turned round' if turned else 'as first made'}) and its own drive is judged above")
         else:
             check(False, f"{label}, control: never driven with both Flips: {out['errors']}")
         for key, what in (("control_gone", "the control mates deleted and the recorded one back on"),):
@@ -1684,6 +1699,29 @@ RING_TURNED_ROUND = ("G5 meshes G6",)
 # turned round, kept up to date by every Update (a remade mate starts from GEAR_MATE_FLIP again unless that Update
 # turned it round). The both-Flips control asserts that the Flip turning right is the one this says.
 TURNED = {}
+# Per (assembly path, gear mate name), the frames on record of the mate's two gears when SolidWorks last made it: a
+# fresh gear mate's sense on SolidWorks 2024 depends on where its gears sit when it is made (m7, 2026-11-14), so the
+# control's "the Flip that turns right is the one the build left" is asserted only while neither gear has moved since.
+MADE_AT = {}
+
+
+def note_made(desk, names):
+    """Record where the gears of each gear mate in ``names`` stand on record now, as made there."""
+    box = desk.record.gearbox
+    frames = {c.gear: (tuple(c.rotation), tuple(c.at)) for c in box.components}
+    for mate in box.mates:
+        if mate.kind == "mesh" and mate.name in names:
+            MADE_AT[(os.path.normcase(box.assembly), mate.name)] = {g: frames[g] for g in mate.gears}
+
+
+def moved_since_made(desk, mate):
+    """Whether a gear of ``mate`` stands elsewhere on record than when SolidWorks last made the mate (unknown: True)."""
+    box = desk.record.gearbox
+    made = MADE_AT.get((os.path.normcase(box.assembly), mate.name))
+    if made is None:
+        return True
+    frames = {c.gear: (tuple(c.rotation), tuple(c.at)) for c in box.components}
+    return any(frame_gap(frames[g], made[g]) > FRAME_TOLERANCE for g in mate.gears)
 
 
 def build_turning(worker, desk, label, parts, turned_round=()):
@@ -1703,6 +1741,7 @@ def build_turning(worker, desk, label, parts, turned_round=()):
     check(result.clashes == [] and not result.interference_error, f"{label}: no interference: {result.clashes}")
     got = list(getattr(result.assembly, "turned_round", []) or [])
     TURNED[os.path.normcase(desk.record.gearbox.assembly)] = set(got)
+    note_made(desk, [m.name for m in desk.record.gearbox.mates if m.kind == "mesh"])
     if TAG["major"] == 34:
         check(got == list(turned_round), f"{label}: the build's sense read made again with the other Flip exactly "
               f"{list(turned_round)} on SolidWorks 2026: turned round {got}")
@@ -2159,6 +2198,82 @@ def section_m7(worker, excel):
         negative_controls(worker, desk, "m7 G5 At")
         drive_proof(worker, desk, "m7 G5 At, through the ring", control=("G5", "G6"))
         reopen(worker, desk, "m7 G5 At")
+    book.close()
+
+
+def ring_mate_reading(worker, desk, name):
+    """The app's own read-back of a ring's gear mate (``Session.gear_mate_sense``, internal: probe ring_mate_sense's
+    rule, reading only): whether it reads right, whether its two axes point the same way, and its Reverse as that
+    rule gives it."""
+    box = desk.record.gearbox
+
+    def work(s):
+        s.find_mate("ring", name)
+        return s.gear_mate_sense("ring", True)
+    right, parallel = run(worker, in_assembly(box.assembly, work))
+    reverse = parallel if right else not parallel          # internal: right == (Reverse == parallel)
+    say(f"fact    {name} read back: right {right}; its axes {'parallel' if parallel else 'opposed'}; Reverse {reverse}")
+    return right, parallel, reverse
+
+
+def section_m8(worker, excel):
+    say("== m8  the ring's gear mate made again after a move: Risky_Placements built to turn; G5 At 45 -> 47 by Update; "
+        "then the ring mesh's teeth 14/36 -> 15/37 (the same centre distance) by Update: the app remakes G5 meshes G6")
+    folder, path, book, desk = fixture_desk(worker, excel, "m8", FIXTURE_RISKY)
+    build_turning(worker, desk, "m8", 6, RING_TURNED_ROUND)
+    ring_mate_reading(worker, desk, "G5 meshes G6")
+    say("-- m8  Excel: G5 At 45 -> 47 (the ring's pinion moves 2 mm along S3)")
+    edit(desk, book, ("Gears", "C6", 47))
+    guard()
+    _, result, _ = desk.update_solidworks()
+    check(result is not None and result.ok and result.ratios == [], f"m8: G5 moved by Update, no gear mate remade: "
+          f"{result and result.ratios}")
+    save_assembly(worker, desk, "after G5 At")
+    desk.plan_solidworks()
+
+    say("-- m8  Excel: G5 Teeth 14 -> 15, G6 Teeth 36 -> 37 (centre distance kept)")
+    edit(desk, book, ("Gears", "F6", 15), ("Gears", "F7", 37))
+    u = desk.update
+    if u is None or u.needs_new_revision or u.refusal:
+        say(f"fact    m8: the app does not carry the ring tooth change as an Update: structural "
+            f"{u and list(u.structural)}; refusal {u and u.refusal!r}; summary {u and ui_text.update_summary(u)!r}")
+        check(False, "m8: the ring tooth change is an Update the app remakes the ring's gear mate in")
+        book.close()
+        return
+    check(list(u.ratios) == ["G5 meshes G6"], f"classify: an Update remaking G5 meshes G6 at 15 : 37: ratios "
+          f"{list(u.ratios)}")
+    guard()
+    _, result, _ = desk.update_solidworks()
+    if result is None:
+        check(False, f"m8: the Update refused: {desk.note[0]!r}")
+        book.close()
+        return
+    say(f"fact    m8: the remake: ratios {result.ratios}, ratios_read {result.ratios_read}, turned round "
+        f"{getattr(result, 'turned_round', None)}, sense found wrong {getattr(result, 'sense_found_wrong', None)}")
+    check(result.ok and result.ratios == ["G5 meshes G6"], f"m8: the app remade G5 meshes G6 at 15 : 37: ratios "
+          f"{result.ratios}; {desk.note[0]!r}")
+    right, _, _ = ring_mate_reading(worker, desk, "G5 meshes G6")
+    check(right, "m8: the remade ring gear mate reads right by the app's own read-back")
+    update_marks(worker, desk, result, "m8 ring remake", folder)
+    measure_frames(worker, desk, "m8 remade")
+    measure_mates(worker, desk, "m8 remade")
+    measure_clear(worker, desk, "m8 remade")
+    negative_controls(worker, desk, "m8 remade")
+    # The judge: G6 must turn the right way at 15 : 37 (the drive's kinematics come from the read, now 15/37).
+    drive_proof(worker, desk, "m8 at 15 : 37, through the remade ring mate", control=("G5", "G6"))
+    save_assembly(worker, desk, "after the remake and the drive")
+    desk.plan_solidworks()
+    say("-- m8  Update pressed again with nothing changed")
+    frames_before, flags_before = gear_frames(worker, desk), gearbox_flags(worker, desk)
+    guard()
+    _, result, _ = desk.update_solidworks()
+    if result is not None:
+        check(result.ok and result.ratios == [] and not list(getattr(result, "sense_found_wrong", []) or []),
+              f"m8: nothing to do: ratios {result.ratios}, sense found wrong {getattr(result, 'sense_found_wrong', None)}")
+        check_quiet_update(worker, desk, result, "m8 quiet Update", frames_before, flags_before)
+    reopen(worker, desk, "m8 remade")
+    ring_mate_reading(worker, desk, "G5 meshes G6")
+    drive_proof(worker, desk, "m8 reopened, at 15 : 37")
     book.close()
 
 
@@ -2914,7 +3029,7 @@ def section_c(worker, excel):
 
 
 SECTIONS = {"m1": section_m1, "m2": section_m2, "m3": section_m3, "m4": section_m4, "m5": section_m5, "m6": section_m6,
-            "m7": section_m7,
+            "m7": section_m7, "m8": section_m8,
             "a": section_a, "a2": section_a2, "a3": section_a3, "b": section_b, "c": section_c}
 
 
