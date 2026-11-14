@@ -246,11 +246,12 @@ def answer_dont_save(stop, pressed):
         except Exception:  # noqa: BLE001
             pass
         for hwnd in found:
-            if hwnd in seen:
-                continue
-            seen.add(hwnd)
             buttons = []
             win32gui.EnumChildWindows(hwnd, lambda c, _: buttons.append(c) or True, None)
+            key = (hwnd, win32gui.GetWindowText(hwnd), tuple(win32gui.GetWindowText(c) for c in buttons))
+            if key in seen:               # handle, title and texts together: a reused handle is still answered
+                continue
+            seen.add(key)
             hit = [c for c in buttons if win32gui.GetWindowText(c) in DONT_SAVE]
             pressed.append((win32gui.GetWindowText(hwnd), win32gui.GetWindowText(hit[0]) if hit else ""))
             if hit:

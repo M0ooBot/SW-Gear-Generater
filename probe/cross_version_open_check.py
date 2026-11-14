@@ -1,6 +1,6 @@
 r"""A gearbox saved by one SolidWorks, opened in another: does every document read GetSaveFlag False straight after?
 
-python.exe probe/cross_version_open_check.py <repo src> <assembly path> --pid PID [--log FILE]
+python.exe probe/cross_version_open_check.py <repo src> <assembly path> --pid PID [--log FILE] [--answer-no]
 
 The W4 pass-4 review carried this forward: the app clears an unsaved mark on a document it opened from its file
 only when ``GetSaveFlag`` reads False (``swbuild._note_opened``), and a file saved by an older release, opened in
@@ -24,11 +24,20 @@ found the dialog's "&No" button by ``win32gui.EnumChildWindows`` and sent it ``B
 ``win32gui.PostMessage``, once for each assembly; nothing was saved, and the files compared equal afterwards.
 Neither log shows the dialog: this script has no dialog watcher. A 2026-made assembly closed by ``QuitDoc`` in
 workbook_assembly_check's a3 raised none.
+
+``--answer-no`` runs that helper's work inside this script, on a thread of its own, for the whole run: any visible
+dialog (#32770) of the session that offers "&No" or "Don't Save" beside a save question gets that button pressed
+(``BM_CLICK`` by ``win32gui.PostMessage``), as a person closing a document unsaved would, and each press is a line
+in the log ("answered"). Each dialog is told apart by its handle, its title and its texts together, so a handle
+SolidWorks reuses for a later box is still answered and logged. W5's run (2026-11-14,
+w5-cross-version-2024-in-2026-20261114-123638.log, 4 checks) used the stand-alone helper this replaces; its log is
+the "-dialog-watch" file beside it: SOLIDWORKS CAM's "Save changes to Reducer_12to1.SLDASM ?" answered No once.
 """
 
 import hashlib
 import os
 import sys
+import threading
 import time
 
 sys.path.insert(0, sys.argv[1])
@@ -47,6 +56,45 @@ from gear_generator.swcom import call  # noqa: E402
 
 LOG, FAILS = [], []
 FOLDER = os.path.dirname(os.path.abspath(ASM))
+ANSWER_NO = "--answer-no" in sys.argv
+NO_BUTTONS = ("&No", "No", "Don't Save", "Do&n't Save", "&Don't Save")
+
+
+def answer_no(stop):
+    """For the whole run: a SolidWorks save question (a #32770 of the PID with a No / Don't Save button and a text
+    saying "save") gets its No pressed, and the press is logged. Keyed by handle, title and texts together."""
+    import win32con
+    import win32gui
+    import win32process
+    seen = set()
+    while not stop.is_set():
+        found = []
+
+        def each(hwnd, _):
+            if (win32gui.IsWindowVisible(hwnd) and win32gui.GetClassName(hwnd) == "#32770"
+                    and win32process.GetWindowThreadProcessId(hwnd)[1] == PID):
+                found.append(hwnd)
+            return True
+        try:
+            win32gui.EnumWindows(each, None)
+        except Exception:  # noqa: BLE001
+            pass
+        for hwnd in found:
+            kids = []
+            try:
+                win32gui.EnumChildWindows(hwnd, lambda c, _: kids.append(c) or True, None)
+            except Exception:  # noqa: BLE001
+                continue
+            texts = tuple(win32gui.GetWindowText(c) for c in kids if win32gui.GetWindowText(c))
+            key = (hwnd, win32gui.GetWindowText(hwnd), texts)
+            if key in seen:
+                continue
+            seen.add(key)
+            no = [c for c in kids if win32gui.GetWindowText(c) in NO_BUTTONS]
+            if no and any("save" in t.lower() for t in texts):
+                win32gui.PostMessage(no[0], win32con.BM_CLICK, 0, 0)
+                say(f"answered {win32gui.GetWindowText(no[0])!r} on {win32gui.GetWindowText(hwnd)!r}: {list(texts)[:6]}")
+        time.sleep(0.5)
 
 
 def say(line=""):
@@ -139,6 +187,10 @@ def main():
         return swcom.Session(found[0].app, found[0].revision, found[0].pid)
 
     worker = swcom.Worker(connect_pid)
+    stop = threading.Event()
+    if ANSWER_NO:
+        threading.Thread(target=answer_no, args=(stop,), daemon=True).start()
+        say("watch   a save question SolidWorks asks is answered No (--answer-no), and logged")
     try:
         value, error = worker.submit(lambda s: (s.label, s.pid)).wait(timeout=120)
         if error is not None:
@@ -155,6 +207,8 @@ def main():
         check(disk_before == disk_after, f"no file of the gearbox changed on disk ({len(disk_before)} files, sha256 "
                                          "and mtime)")
     finally:
+        time.sleep(2 if ANSWER_NO else 0)          # a box raised by the last close is still answered and logged
+        stop.set()
         worker.shutdown()
     say(f"done    {len(FAILS)} failed: {FAILS}")
     return 0 if not FAILS else 1

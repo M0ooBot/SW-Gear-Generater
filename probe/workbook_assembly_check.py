@@ -1,7 +1,8 @@
 r"""W5's (and W4's) Windows demonstration: gearbox workbooks through the app's own code, on real SolidWorks and Excel.
 
 python.exe probe/workbook_assembly_check.py <repo src> <output folder under C:\> --pid PID [--log FILE]
-                                            [--only m1|m2|m3|m4|m5|m6|a|a2|a3|b|c ...] [--fixtures FOLDER]
+                                            [--only m1|m2|m3|m4|m5|m6|m7|a|a2|a3|b|c|ring ...]
+                                            [--fixtures FOLDER]
                                             [--m4-offset MM]
 
 PLAN-WORKBOOK §6; W4 "Demonstrable" and the W4 decisions' item 10; W5-PLAN §4 with W5-DECISIONS' rulings. Every
@@ -47,7 +48,8 @@ Nothing is taken on the app's word: each assembly is measured.
   that it is a NOTE (logged, listed at the end, not a failure) for the coordinator to rule on; a document expected
   marked and not marked is a FAIL.
 
-The sections, each in its own folder under the output folder (default order m1 m3 m2 m4 m5 m6 a a2 a3 b c):
+The sections, each in its own folder under the output folder (default order m1 m3 m7 m2 m4 m5 m6 a a2 a3 b c;
+``--only ring`` runs m3 and m7 alone, the two ring-train sections to run again after the ring-sense fix):
 
 - ``m1`` (W5-PLAN §4.3): the Windows-saved 12 : 1 fixture (compound S2). Build turning; §4.1; §4.2 with the
   control on G3 meshes G4. M7: an angle mate the record does not know, on G4, unsuppressed -> Update refuses
@@ -61,8 +63,15 @@ The sections, each in its own folder under the output folder (default order m1 m
   new ratio, reopen. Then a structural edit (G1 face width 15 -> 17 moves its front face off the Front plane) ->
   Build again… builds Reducer_12to1_r2 turning; every earlier file's sha256 and mtime unchanged; §4.1; §4.2.
 - ``m2``: the Arc_Move fixture (S2 placed by formulas from an angle cell). Build; §4.1; §4.2; the user's turn
-  (25°) and Update with nothing changed; the angle 30 -> 40 in Excel -> Update moves the layout's shafts and puts
-  the whole train back at its built turn; frames, axes, mates, interference, drive at the new place, reopen.
+  (25°) and Update with nothing changed; the angle 30 -> 40 in Excel; SolidWorks' wrong swing logged (the script
+  makes the layout move itself, reads where the mates carried each gear, and discards it with QuitDoc); then Update
+  moves the layout's shafts and puts the whole train back at its built turn; frames, axes, mates, interference, drive
+  at the new place, reopen.
+
+  Every Update with nothing to do (m1, m2, m3 and M7's suppressed press) is judged from SolidWorks too: every gear's
+  frame read before and after the press must agree to 1e-6, and every document must read GetSaveFlag False before
+  and after it (findings.GEAR_MATE_DEFINITION_READ_MARKS "nothing"). M7's refused press reads the frames, every
+  mate's suppression and the marks before and after it: nothing may change.
 - ``m3``: the Risky_Placements fixture (Z- shafts, two compound shafts, a helical pinion in a helical ring on Z-,
   herringbones of unequal faces). Build; §4.1 (G3–G4's control under suppressed locks); §4.2 through the whole
   train with the control on the ring's mesh G5 meshes G6; the user's turn (20°) and Update with nothing changed.
@@ -82,9 +91,23 @@ The sections, each in its own folder under the output folder (default order m1 m
   sentence "… was not saved before … was closed, so its changes were made again", and the drive at 17 : 69 shows
   whether the gear mate holds the ratio the record says.
 - ``m6``: mates in a folder (W5-DECISIONS on P0c: a turning Update skips the folder's "FtrFolder" entries). The
-  12 : 1 built; its two gear mates put in a mate folder (``findings.MATE_FOLDER_ROUTE``); saved, closed and
-  reopened; Excel G3 At 27 -> 29, an Update that puts the whole train: it must pass, find every recorded mate and
-  report it, the mates still in their folder (no remake moves one out), frames, mates and interference clean.
+  12 : 1 built; its two gear mates put in a mate folder (``findings.MATE_FOLDER_ROUTE``) and found BETWEEN the
+  folder's entry and its end tag in the mate group's walk, made, after a save and reopen, and after an Update; Excel
+  G3 At 27 -> 29, an Update that puts the whole train: it must pass, every recorded mate found sound in SolidWorks
+  (``measure_mates``, the SolidWorks-side check), frames and interference clean. Then S2 X 64.5 and G2 69: the
+  remade G1 meshes G2 lands as the mate group's last entry, outside the folder, G3 meshes G4 still inside, through
+  a drive at 17 : 69 and a reopen.
+- ``m7``: the ring train edited: Risky_Placements built to turn; G5 At 45 -> 47 (a follower locked to G4, the ring's
+  pinion) -> an Update that puts the whole train; frames, mates, interference, the half-pitch controls, the drive
+  through the ring with the control on its mesh, reopen.
+
+  Not shown here, and why: M9 (a gear on a shaft held still stays fixed) and M13 (a loop-closing mesh left
+  unmated) each need a workbook no committed fixture is — a shaft with Role "fixed" or meshing only a fixed one;
+  three shafts meshing in a ring of meshes — so they stay with the fake tests until such a fixture is agreed. An
+  Update on a PAIR assembly is not reachable: Update SolidWorks acts only on the workbook's gearbox, and a pair is
+  built by the pair window's build_pair with no Update (``swcom.rebuild_call``'s pair kind is gear_pairs_check's).
+  M8's failure sentence (a lock that cannot be turned back on) cannot be forced without a call no probe made, so it
+  stays with the fake tests.
 
   No committed fixture has a gear that carries two gear mates (an idler), so the idler tooth change
   (``IDLER_UPDATE_HOLDS``) is not demonstrated through the app here; the 12 : 1 tooth change stays the
@@ -125,8 +148,10 @@ import traceback
 sys.path.insert(0, sys.argv[1])
 SRC, OUT = sys.argv[1], sys.argv[2]
 PID = int(sys.argv[sys.argv.index("--pid") + 1])
-DEFAULT_ORDER = ["m1", "m3", "m2", "m4", "m5", "m6", "a", "a2", "a3", "b", "c"]
-ONLY = [sys.argv[i + 1] for i, a in enumerate(sys.argv) if a == "--only"] or DEFAULT_ORDER
+DEFAULT_ORDER = ["m1", "m3", "m7", "m2", "m4", "m5", "m6", "a", "a2", "a3", "b", "c"]
+RING = ["m3", "m7"]          # ``--only ring``: the two ring-train sections, rerun after the ring-sense fix
+ONLY = [n for i, a in enumerate(sys.argv) if a == "--only"
+        for n in (RING if sys.argv[i + 1] == "ring" else [sys.argv[i + 1]])] or DEFAULT_ORDER
 LOG_PATH = sys.argv[sys.argv.index("--log") + 1] if "--log" in sys.argv else os.path.join(OUT, "workbook-assembly.log")
 FIXTURES = sys.argv[sys.argv.index("--fixtures") + 1] if "--fixtures" in sys.argv else ""
 M4_OFFSET = float(sys.argv[sys.argv.index("--m4-offset") + 1]) if "--m4-offset" in sys.argv else 0.0
@@ -316,11 +341,16 @@ class DialogWatch(threading.Thread):
             except Exception:  # noqa: BLE001
                 pass
             for hwnd in found:
-                if hwnd not in self.seen:
-                    self.seen.add(hwnd)
-                    title = win32gui.GetWindowText(hwnd)
-                    if not title and any(t.startswith("Opening Component") for t in xlhelp.child_texts(hwnd)):
-                        title = "Opening"                # the open-progress box has no title of its own
+                title = win32gui.GetWindowText(hwnd)
+                texts = tuple(xlhelp.child_texts(hwnd)[:8])
+                if not title and any(t.startswith("Opening Component") for t in texts):
+                    title = "Opening"                    # the open-progress box has no title of its own
+                # A box is told apart by its handle, title and texts together (review of the run): a handle SolidWorks
+                # reuses for a later box is still logged. A progress box, whose texts tick, by its handle alone.
+                ticking = title in PROGRESS or any(t.startswith("Elapsed time") for t in texts)
+                key = hwnd if ticking else (hwnd, title, texts)
+                if key not in self.seen:
+                    self.seen.add(key)
                     if title in PROGRESS:              # SolidWorks' own progress box: said once, then counted
                         PROGRESS[title] += 1
                         if PROGRESS[title] > 1:
@@ -1481,33 +1511,52 @@ def gearbox_flags(worker, desk):
     return run(worker, lambda s: save_flags(s, paths))
 
 
-def log_quiet_update_flags(before, after, desk, label):
-    """An Update with nothing to do now reads each gear mate's definition (ba2bc1f); whether that leaves the assembly
-    unmarked is still a probe's to settle, so it is LOGGED, never asserted (ruled on 2026-11-14)."""
-    asm = os.path.basename(desk.record.gearbox.assembly)
-    say(f"fact    {label}: GetSaveFlag before the Update with nothing to do: {before}")
-    say(f"fact    {label}: GetSaveFlag after it: {after}")
-    if after.get(asm):
-        say(f"fact    !!! {label}: {asm} READS MODIFIED after an Update that changed nothing (reading the gear "
-            "mates' definitions?) — logged for the probe, not failed")
-        NOTES.append(f"{label}: {asm} reads GetSaveFlag True after an Update that changed nothing")
+def gear_frames(worker, desk):
+    """Every gear's live frame, by gear id, read from SolidWorks."""
+    box = desk.record.gearbox
+    live = run(worker, lambda s: live_frames(s, box.assembly, [c.name for c in box.components]))
+    return {c.gear: live[c.name] for c in box.components}
+
+
+def check_quiet_update(worker, desk, result, label, frames_before, flags_before):
+    """An Update whose result changed nothing: read from SolidWorks, not from the app's result, every gear stands
+    exactly where it stood before the press, and — findings.GEAR_MATE_DEFINITION_READ_MARKS is "nothing" — every
+    document of the gearbox reads GetSaveFlag False before and after it (asserted, review of the run, 2026-11-14).
+    An Update that did change something is said so and not judged here."""
+    if result.changed or result.placed:
+        say(f"fact    {label}: not an Update with nothing to do (changed "
+            f"{[os.path.basename(p) for p in result.changed]}, placed {result.placed}): its frames and marks are "
+            "judged as a change, not here")
+        return
+    after = gear_frames(worker, desk)
+    gap, at = frames_gap(after, frames_before)
+    check(gap <= FRAME_TOLERANCE, f"{label}: read from SolidWorks, every gear stands where it stood before the press "
+          f"(largest {gap:.1e} at {at or '-'})")
+    flags_after = gearbox_flags(worker, desk)
+    say(f"fact    {label}: GetSaveFlag before the press {flags_before}, after it {flags_after}")
+    check(flags_before and not marked(flags_before) and flags_after and not marked(flags_after),
+          f"{label}: every document reads GetSaveFlag False before and after an Update that changed nothing "
+          f"(GEAR_MATE_DEFINITION_READ_MARKS {getattr(findings, 'GEAR_MATE_DEFINITION_READ_MARKS', None)!r}): "
+          f"marked before {marked(flags_before)}, after {marked(flags_after)}")
 
 
 def update_nothing_turned(worker, desk, label, folder):
-    """Update pressed with nothing changed on a train the user turned: no put, nothing changed, the sentence."""
+    """Update pressed with nothing changed on a train the user turned: no put, nothing changed, the sentence; and,
+    read from SolidWorks, the train left exactly as turned and nothing marked."""
     desk.say_update()
     desk.say_footer(f"{label}, before the press")
     recorded = frames_on_record(desk)
-    before = gearbox_flags(worker, desk)
+    frames_before = gear_frames(worker, desk)
+    flags_before = gearbox_flags(worker, desk)
     guard()
     _, result, _ = desk.update_solidworks()
     if result is None:
         return check(False, f"{label}: Update refused: {desk.note[0]}")
-    log_quiet_update_flags(before, gearbox_flags(worker, desk), desk, label)
     say_found(result, recorded, label)
     check(result.ok and result.placed == [] and result.turned and not result.restored and result.changed == [],
           f"{label}: nothing put, nothing changed, the train found turned: placed {result.placed}, turned "
           f"{result.turned}, restored {result.restored}, changed {[os.path.basename(p) for p in result.changed]}")
+    check_quiet_update(worker, desk, result, label, frames_before, flags_before)
     check(desk.record.unsaved == {}, f"{label}: the record marks nothing unsaved: {list(desk.record.unsaved)}")
     check(TURNED_SENTENCE in desk.note[0], f"{label}: the sentence ends {TURNED_SENTENCE!r}")
     desk.say_footer(f"{label}, after the press")
@@ -1710,12 +1759,29 @@ def m7_unknown_mate(worker, desk, folder):
         return name, s.mate_status(name)
     name, status = run(worker, in_assembly(box.assembly, add))
     say(f"        made {name!r} (SolidWorks' own name), AddMate5 status {status}")
+    save_assembly(worker, desk, f"with {name}, so the marks after the refused press are its own")
     desk.plan_solidworks()
     desk.say_update()
+
+    def mate_suppression(s):
+        return [(m.name, m.suppressed) for m in s.mate_states()]
+    frames_before = gear_frames(worker, desk)
+    mates_before = run(worker, in_assembly(box.assembly, mate_suppression))
+    flags_before = gearbox_flags(worker, desk)
     guard()
     _, result, _ = desk.update_solidworks()
     check(result is None and desk.error is not None and name in desk.note[0],
-          f"M7: Update refuses before changing anything, naming {name}: {desk.note[0]!r}")
+          f"M7: Update refuses, naming {name}: {desk.note[0]!r}")
+    gap, at = frames_gap(gear_frames(worker, desk), frames_before)
+    mates_after = run(worker, in_assembly(box.assembly, mate_suppression))
+    flags_after = gearbox_flags(worker, desk)
+    say(f"        M7: mates before {mates_before}; after {mates_after}; GetSaveFlag before {flags_before}, after "
+        f"{flags_after}")
+    check(gap <= FRAME_TOLERANCE and mates_after == mates_before and not marked(flags_before)
+          and not marked(flags_after),
+          f"M7: read from SolidWorks, the refusal changed nothing: every gear where it stood (largest {gap:.1e} at "
+          f"{at or '-'}), every mate as it was (suppressed or not), nothing marked (before {marked(flags_before)}, "
+          f"after {marked(flags_after)})")
 
     def suppress(s):
         s.find_mate("um", name)
@@ -1725,10 +1791,12 @@ def m7_unknown_mate(worker, desk, folder):
     say(f"        {name} suppressed in SolidWorks, as the sentence asks")
     save_assembly(worker, desk, f"with {name} suppressed, so the flags after the Update are its own")
     desk.plan_solidworks()
-    before = gearbox_flags(worker, desk)
+    frames_before = gear_frames(worker, desk)
+    flags_before = gearbox_flags(worker, desk)
     guard()
     _, result, _ = desk.update_solidworks()
-    log_quiet_update_flags(before, gearbox_flags(worker, desk), desk, "M7, suppressed")
+    if result is not None:
+        check_quiet_update(worker, desk, result, "M7, suppressed", frames_before, flags_before)
     check(result is not None and result.ok and result.extra_mates == [name],
           f"M7: suppressed, Update goes through and lists it: extra mates {result and result.extra_mates}")
     check(result is not None and name in " ".join(result.log_lines()), f"M7: the log names {name} as left alone")
@@ -1916,6 +1984,46 @@ def measure_frames_turned(worker, desk, label):
     return found
 
 
+def wrong_swing(worker, desk, label, folder):
+    """W5-PLAN §4.3 m2: "the mates carry the gears, SolidWorks' wrong swing logged". Update makes the move and its
+    puts in one job, so the swing between them cannot be read from outside it; the script makes the same move
+    itself first — the layout's new globals set (``update.layout.variables``), the layout rebuilt, the assembly
+    rebuilt top-only, as Update's step 2 does — reads where the mates carried each gear (origin against the read's
+    new frame, turn against where it stood), logs it as facts, then closes the section's documents WITHOUT saving
+    (``QuitDoc``), so the Update under test starts from the files: the turned train as saved."""
+    box, u = desk.record.gearbox, desk.update
+    variables = [(v.name, v.expression_for(base.DEGREES)) for v in u.layout.variables] if u and u.layout else []
+    before = gear_frames(worker, desk)
+
+    def work(s):
+        s.begin_build()
+        try:
+            s.open_document(box.layout)
+            for name, expression in variables:
+                s.set_global_variable(name, expression)
+            s.rebuild()
+            s.open_document(box.assembly)
+            s.rebuild(kind=swcom.ASSEMBLY_TRAIN)
+            out = {}
+            for index, c in enumerate(box.components):
+                s.find_component(f"w{index}", c.name)
+                out[c.gear] = s.component_frame(f"w{index}")
+            return out
+        finally:
+            s.end_build()
+    swung = run(worker, work)
+    want = wanted(desk)
+    say(f"        {label}: the layout's {[f'{n} = {e}' for n, e in variables]} set by the script, the assembly rebuilt")
+    for gear, frame in swung.items():
+        origin, _, residue = frame_error(frame, want[gear][:2], 0.0)
+        say(f"fact    {label}, SolidWorks' swing: {gear} carried to its new place off by {origin:.2e} mm, axis off "
+            f"{residue:.2e}; turned {turn_degrees(before[gear][0], frame[0])}° from where it stood, "
+            f"{turn_degrees(want[gear][0], frame[0])}° from the read's new frame")
+    left = run(worker, quit_in(folder))
+    check(not left, f"{label}: the script's own move discarded (the section's documents closed without saving): "
+          f"left {left}")
+
+
 def section_m2(worker, excel):
     say("== m2  Arc_Move built to turn: §4.1, §4.2, the user's turn, then S2 moved along its arc")
     folder, path, book, desk = fixture_desk(worker, excel, "m2", FIXTURE_ARC)
@@ -1934,6 +2042,7 @@ def section_m2(worker, excel):
     u = desk.update
     check(u is not None and not u.needs_new_revision and not u.changed_parts and u.moved_shafts == ("S2", "S3"),
           "classify: no part values, S2 and S3 moved")
+    wrong_swing(worker, desk, "m2 arc move", folder)
     recorded = frames_on_record(desk)
     guard()
     _, result, _ = desk.update_solidworks()
@@ -1969,6 +2078,32 @@ def section_m3(worker, excel):
     save_assembly(worker, desk, "after the turn")
     desk.plan_solidworks()
     update_nothing_turned(worker, desk, "m3 turned 20°", folder)
+    book.close()
+
+
+def section_m7(worker, excel):
+    say("== m7  the ring train edited: Risky_Placements built to turn, G5 At 45 -> 47 (a follower on S3, beside the "
+        "ring's pinion seat) -> an Update that puts the whole train; frames, mates, interference, the drive through the "
+        "ring, reopen")
+    folder, path, book, desk = fixture_desk(worker, excel, "m7", FIXTURE_RISKY)
+    build_turning(worker, desk, "m7", 6)
+    measure(worker, desk, "m7 built", controls=False, again=False)
+    edit(desk, book, ("Gears", "C6", 47))
+    u = desk.update
+    check(u is not None and not u.needs_new_revision and "G5" in u.replaced,
+          f"classify: an Update re-placing G5 (LOCK_RETAKES_AN_OFFSET): structural {u and list(u.structural)}")
+    guard()
+    _, result, _ = desk.update_solidworks()
+    if result is not None:
+        check(result.ok and sorted(result.placed) == all_mated(desk) and result.ratios == [],
+              f"m7: every mated gear put, no gear mate remade: placed {result.placed}, ratios {result.ratios}")
+        update_marks(worker, desk, result, "m7 G5 At", folder)
+        measure_frames(worker, desk, "m7 G5 At")
+        measure_mates(worker, desk, "m7 G5 At")
+        measure_clear(worker, desk, "m7 G5 At")
+        negative_controls(worker, desk, "m7 G5 At")
+        drive_proof(worker, desk, "m7 G5 At, through the ring", control=("G5", "G6"))
+        reopen(worker, desk, "m7 G5 At")
     book.close()
 
 
@@ -2018,36 +2153,89 @@ def mate_walk(session):
     return [(str(call(f, "Name")), swcom._type_name(f)) for f in session._mate_group()]  # noqa: SLF001
 
 
+FOLDER_NAME = "Gear mates"
+
+
+def in_folder(walk, names, folder_name=FOLDER_NAME):
+    """Which of ``names`` the walk lists between the folder's own entry and its end tag (probe mate_folders: a
+    folder reads as its entry, its mates as ordinary following entries, then "<FolderN>___EndTag___", both of type
+    findings.MATE_FOLDER_TYPE_NAME). Returns (inside, outside); everything is outside when there is no folder."""
+    kinds = findings.MATE_FOLDER_TYPE_NAME
+    starts = [i for i, (n, t) in enumerate(walk) if t == kinds and n == folder_name]
+    ends = [i for i, (n, t) in enumerate(walk) if t == kinds and n.endswith("___EndTag___")]
+    if not starts or not [e for e in ends if e > starts[0]]:
+        return [], list(names)
+    first, last = starts[0], min(e for e in ends if e > starts[0])
+    position = {n: i for i, (n, _) in enumerate(walk)}
+    inside = [n for n in names if n in position and first < position[n] < last]
+    return inside, [n for n in names if n not in inside]
+
+
+def check_folder(walk, names, label, outside=()):
+    inside, out = in_folder(walk, names)
+    want_in = [n for n in names if n not in outside]
+    check(inside == want_in and sorted(out) == sorted(outside),
+          f"{label}: inside the folder {FOLDER_NAME!r} (between its entry and its end tag): {inside}; outside it: "
+          f"{out} (wanted outside: {list(outside)})")
+
+
 def section_m6(worker, excel):
-    say("== m6  the 12 : 1's gear mates in a mate folder, saved and reopened; an Update that puts the whole train")
+    say("== m6  the 12 : 1's gear mates in a mate folder, saved and reopened; an Update that puts the whole train; "
+        "then a tooth change whose remade gear mate lands outside the folder")
     folder, path, book, desk = fixture_desk(worker, excel, "m6", FIXTURE_12)
     build_turning(worker, desk, "m6", 4)
     measure(worker, desk, "m6 built", controls=False, again=False)
     box = desk.record.gearbox
     gear_mates = [m.name for m in box.mates if m.kind == "mesh"]
-    walk = run(worker, in_assembly(box.assembly, lambda s: mate_folder(s, gear_mates, "Gear mates")))
+    walk = run(worker, in_assembly(box.assembly, lambda s: mate_folder(s, gear_mates, FOLDER_NAME)))
     say(f"        the mate group with the folder: {walk}")
-    check(any(t == findings.MATE_FOLDER_TYPE_NAME for _, t in walk) and all(n in [w[0] for w in walk]
-                                                                           for n in gear_mates),
-          f"m6: a folder ({findings.MATE_FOLDER_TYPE_NAME}) holds {gear_mates}, still listed in the walk")
+    check_folder(walk, gear_mates, "m6, the folder made")
     measure_mates(worker, desk, "m6 with the folder")
     reopen(worker, desk, "m6 with the folder")
     walk = run(worker, in_assembly(box.assembly, mate_walk))
     say(f"        the mate group reopened: {walk}")
+    check_folder(walk, gear_mates, "m6, reopened")
+
+    say("-- m6  Excel: G3 At 27 -> 29, an Update that puts the whole train with the gear mates in the folder")
     edit(desk, book, ("Gears", "C4", 29))
     guard()
     _, result, _ = desk.update_solidworks()
-    check(result is not None and result.ok and sorted(result.placed) == all_mated(desk)
-          and sorted(m.name for m in result.mates) == sorted(m.name for m in box.mates),
-          f"m6: the Update passed with the mates in a folder, put every gear, and found and reported every recorded "
-          f"mate: {desk.note[0]!r}")
+    check(result is not None and result.ok and sorted(result.placed) == all_mated(desk),
+          f"m6: the Update passed with the mates in a folder and put every gear: {desk.note[0]!r}")
+    say(f"        the app's own report of the mates: {[(m.name, m.code, m.suppressed) for m in result.mates] if result else None}")
     walk = run(worker, in_assembly(box.assembly, mate_walk))
     say(f"        the mate group after the Update: {walk}")
+    check_folder(walk, gear_mates, "m6, after the Update")
     if result is not None:
         update_marks(worker, desk, result, "m6 G3 At", folder)
         measure_frames(worker, desk, "m6 G3 At")
-        measure_mates(worker, desk, "m6 G3 At")
+        # The check that every recorded mate is still there and sound is SolidWorks' side, read by measure_mates.
+        measure_mates(worker, desk, "m6 G3 At (every recorded mate found in SolidWorks)")
         measure_clear(worker, desk, "m6 G3 At")
+    save_assembly(worker, desk, "after G3 At")
+    desk.plan_solidworks()
+
+    say("-- m6  Excel: S2 X 64.5, G2 Teeth 69: the remade G1 meshes G2 lands at the end of the mate group, outside "
+        "the folder (W5-DECISIONS on P0c), and is left there")
+    edit(desk, book, ("Shafts", "C3", 64.5), ("Gears", "F3", 69))
+    guard()
+    _, result, _ = desk.update_solidworks()
+    check(result is not None and result.ok and result.ratios == ["G1 meshes G2"],
+          f"m6: the gear mate in the folder remade at 17 : 69: ratios {result and result.ratios}")
+    walk = run(worker, in_assembly(box.assembly, mate_walk))
+    say(f"        the mate group after the remake: {walk}")
+    check_folder(walk, gear_mates, "m6, after the remake", outside=("G1 meshes G2",))
+    check(bool(walk) and walk[-1][0] == "G1 meshes G2", f"m6: the remade gear mate is the last entry of the mate "
+          f"group: {walk[-1] if walk else None}")
+    if result is not None:
+        measure_frames(worker, desk, "m6 remade")
+        measure_mates(worker, desk, "m6 remade (every recorded mate found in SolidWorks)")
+        measure_clear(worker, desk, "m6 remade")
+        drive_proof(worker, desk, "m6 at 17 : 69, one gear mate in the folder and one outside")
+        reopen(worker, desk, "m6 remade")
+        walk = run(worker, in_assembly(box.assembly, mate_walk))
+        say(f"        the mate group reopened after the remake: {walk}")
+        check_folder(walk, gear_mates, "m6, reopened after the remake", outside=("G1 meshes G2",))
     book.close()
 
 
@@ -2625,6 +2813,7 @@ def section_c(worker, excel):
 
 
 SECTIONS = {"m1": section_m1, "m2": section_m2, "m3": section_m3, "m4": section_m4, "m5": section_m5, "m6": section_m6,
+            "m7": section_m7,
             "a": section_a, "a2": section_a2, "a3": section_a3, "b": section_b, "c": section_c}
 
 
