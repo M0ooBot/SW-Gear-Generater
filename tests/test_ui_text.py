@@ -2369,28 +2369,50 @@ def test_a_gear_mate_already_right_takes_its_ratio_from_what_the_worker_read():
 
 
 def test_a_gear_mate_found_turning_the_wrong_way_is_said_to_be_turned_the_right_way_round():
-    """``sense_found_wrong``: the gearbox turned wrongly before this Update and does not now; that is said, never
-    "nothing was changed", and never as a new ratio (it was remade at the ratio it had)."""
+    """``sense_found_wrong`` (found wrong and remade; package A, b4d4bdd): the gearbox turned wrongly before this
+    Update and does not now. Remade for that alone it is not in ``ratios``, and is said as a turn round, never a new
+    ratio and never "nothing was changed"; one whose ratio changed too is said once, both in one piece."""
     unasked = _motion_update()
     unasked = dataclasses.replace(unasked, motion=dataclasses.replace(unasked.motion, ratios=()))
-    only = _moved(changed=[ASM], ratios=["G1 meshes G2"], sense_found_wrong=["G1 meshes G2"],
-                  placed=["G1", "G2", "G3", "G4"])
+    only = _moved(changed=[ASM], sense_found_wrong=["G1 meshes G2"], placed=["G1", "G2", "G3", "G4"])
     text, ok = ui_text.gearbox_update_status(unasked, only)
     assert (_clean(text), ok) == (
         "Updated SolidWorks: turned the gear mate G1 meshes G2 the right way round (SolidWorks held it turning against "
         "its mesh), re-placed G1, G2, G3 and G4; no interference between the gears where they stand. Save "
         "Reducer_12to1 in SolidWorks to keep it.", True)
-    assert "new ratio" not in text and ui_text.ALREADY_MATCHES not in text
-    two = _moved(changed=[ASM], ratios=["G1 meshes G2", "G3 meshes G4"],
-                 sense_found_wrong=["G1 meshes G2", "G3 meshes G4"])
+    assert "ratio" not in text and ui_text.ALREADY_MATCHES not in text
+    assert ui_text.gearbox_update_status(_motion_update(), only)[0] == text      # a ratio asked elsewhere: the same
+    two = _moved(changed=[ASM], sense_found_wrong=["G1 meshes G2", "G3 meshes G4"])
     assert "turned the gear mates G1 meshes G2 and G3 meshes G4 the right way round (SolidWorks held them turning " \
            "against their meshes);" in _clean(ui_text.gearbox_update_status(unasked, two)[0])
-    # Turned round and given the ratio the plan asked: both said.
+    # Its ratio changed as the plan asked, and it was found wrong: one piece, the mate named once.
     asked = _moved(changed=[ASM], ratios=["G1 meshes G2"], sense_found_wrong=["G1 meshes G2"])
-    assert ui_text.gearbox_update_status(_motion_update(), asked)[0].startswith(
-        "Updated SolidWorks: set the gear mate G1 meshes G2 to 17 : 69, turned the gear mate G1 meshes G2 the right "
-        "way round (SolidWorks held it turning against its mesh);")
-    # Read wrong but its remake failed (not in ratios): never said to be put right.
+    text = _clean(ui_text.gearbox_update_status(_motion_update(), asked)[0])
+    assert text.startswith(
+        "Updated SolidWorks: set the gear mate G1 meshes G2 to 17 : 69 and turned it the right way round (SolidWorks "
+        "held it turning against its mesh); no interference")
+    assert text.count("G1 meshes G2") == 1
+    both = _moved(changed=[ASM], ratios=["G1 meshes G2", "G3 meshes G4"], sense_found_wrong=["G3 meshes G4"])
+    assert ui_text.gearbox_update_status(_motion_update(), both)[0].startswith(
+        "Updated SolidWorks: set the gear mate G1 meshes G2 to 17 : 69, set the gear mate G3 meshes G4 to 17 : 52 and "
+        "turned it the right way round (SolidWorks held it turning against its mesh); no interference")
+    # Found at another ratio though none was asked, and wrong: the set-back piece says both.
+    lost = _moved(changed=[ASM], ratios=["G1 meshes G2"], ratios_found=["G1 meshes G2"],
+                  ratios_read=[("G1 meshes G2", 17, 68, 17, 69)], sense_found_wrong=["G1 meshes G2"])
+    text = _clean(ui_text.gearbox_update_status(unasked, lost)[0])
+    assert text.startswith("Updated SolidWorks: set the gear mate G1 meshes G2 back to 17 : 69 (SolidWorks held it at "
+                           "17 : 68, turning against its mesh); no interference")
+    assert text.count("G1 meshes G2") == 1
+    unread = _moved(changed=[ASM], ratios=["G1 meshes G2"], ratios_found=["G1 meshes G2"],
+                    sense_found_wrong=["G1 meshes G2"])
+    assert ui_text.gearbox_update_status(unasked, unread)[0].startswith(
+        "Updated SolidWorks: set the gear mate G1 meshes G2 back to the workbook's ratio, which SolidWorks held at "
+        "another, turning against its mesh; no interference")
+    # A ratio change alone reads as before.
+    plain = _moved(changed=[ASM], ratios=["G1 meshes G2"])
+    assert ui_text.gearbox_update_status(_motion_update(), plain)[0].startswith(
+        "Updated SolidWorks: set the gear mate G1 meshes G2 to 17 : 69; no interference")
+    # A remake that failed is a failure: the stopped sentence, never put right.
     failed = _moved(sense_found_wrong=["G1 meshes G2"], failures=[("Reducer_12to1.SLDASM", "It would not remake.")])
     assert "right way round" not in ui_text.gearbox_update_status(unasked, failed)[0]
 

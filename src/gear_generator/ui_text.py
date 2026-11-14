@@ -2759,14 +2759,21 @@ def _motion_pieces(update, result) -> List[str]:
     if axial:
         pieces.append(f"moved {_along(update, axial)}")
     found_all = [n for n in getattr(result, "ratios_found", ()) or () if n]
-    # Found turning against its mesh and made again at the ratio it had: that is a turn round, not a new ratio.
-    wrong = [n for n in getattr(result, "sense_found_wrong", ()) or () if n and n in result.ratios]
-    ratios = [n for n in result.ratios if n and n not in found_all and (n not in wrong or _asked_ratio(update, n))]
-    if ratios:
-        pieces.append(f"set {_gear_mates(update, ratios)}")
-    if wrong:
-        one = len(wrong) == 1
-        pieces.append(f"turned the gear mate{'' if one else 's'} {_and(wrong)} the right way round (SolidWorks held "
+    # ``sense_found_wrong``: found turning against its mesh and remade (package A, b4d4bdd). Remade for that alone,
+    # it is not in ``result.ratios`` (that list is only for a ratio that changed): a turn round, never a new ratio.
+    # One whose ratio changed too is said once, its ratio and its turn round in the same piece.
+    wrong = [n for n in getattr(result, "sense_found_wrong", ()) or () if n]
+    against = "SolidWorks held it turning against its mesh"
+    ratios = [n for n in result.ratios if n and n not in found_all]
+    plain = [n for n in ratios if n not in wrong]
+    if plain:
+        pieces.append(f"set {_gear_mates(update, plain)}")
+    for name in [n for n in ratios if n in wrong]:
+        pieces.append(f"set the gear mate {_ratio_of(update, name)} and turned it the right way round ({against})")
+    only = [n for n in wrong if n not in result.ratios]
+    if only:
+        one = len(only) == 1
+        pieces.append(f"turned the gear mate{'' if one else 's'} {_and(only)} the right way round (SolidWorks held "
                       f"{'it turning against its mesh' if one else 'them turning against their meshes'})")
     # Found at another ratio though the plan asked no change (a remake lost with an unsaved close, say): set back —
     # said only of a remake that was made (in ``result.ratios``), with both ratios where ``ratios_read`` has them.
@@ -2777,13 +2784,16 @@ def _motion_pieces(update, result) -> List[str]:
         held = []
         for name in named:
             _, live_a, live_b, want_a, want_b = _ratio_read(result, name)
-            held.append(f"{name} back to {want_a} : {want_b} (SolidWorks held it at {live_a} : {live_b})")
+            turning = ", turning against its mesh" if name in wrong else ""
+            held.append(f"{name} back to {want_a} : {want_b} (SolidWorks held it at {live_a} : {live_b}{turning})")
         pieces.append(f"set the gear mate{'' if one else 's'} {_and(held)}")
     unnamed = [n for n in found if n not in named]
     if unnamed:
         one = len(unnamed) == 1
+        turning = ((", turning against its mesh" if one else ", turning against their meshes")
+                   if all(n in wrong for n in unnamed) else "")
         pieces.append(f"set the gear mate{'' if one else 's'} {_and(unnamed)} back to the workbook's "
-                      f"ratio{'' if one else 's'}, which SolidWorks held at another")
+                      f"ratio{'' if one else 's'}, which SolidWorks held at another{turning}")
     return pieces
 
 
