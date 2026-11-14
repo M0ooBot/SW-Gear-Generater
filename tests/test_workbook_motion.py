@@ -82,15 +82,9 @@ WINDOWS = os.path.join(os.path.dirname(__file__), "fixtures", "excel-windows")
 @pytest.fixture(autouse=True)
 def settled_findings(monkeypatch):
     """The findings a probe round may still change, pinned (none of these tests leans on the committed value)."""
-    for name, value in {"GEAR_MATE_RATIO_ROUTE": None, "LOCK_RETAKES_AN_OFFSET": True,
-                        "MATED_ASSEMBLY_REBUILD_ROUTE": "ForceRebuild3(True)",
-                        "MATED_BUILD_REBUILD_ROUTE": "ForceRebuild3(True)",
-                        "GEAR_MATE_RATIO_REMAKE_WORKS": True,
-                        "GEAR_MATE_DEFINITION_READ_MARKS": "nothing", "MATES_UNDER_COMMAND_IN_PROGRESS": True,
-                        "MATE_RENAME_AT_ONCE": True, "IDLER_UPDATE_HOLDS": True,
-                        "GEAR_MATE_SENSE_READ_BACK": "(Reverse == entities parallel) == internal",
-                        "GEAR_MATE_READ_BACK_TELLS_SENSE": True, "GEAR_MATE_CHECK_AND_REMAKE_HOLDS": True}.items():
-        monkeypatch.setattr(findings, name, value, raising=False)
+    from test_workbook_gearbox import SETTLED
+    for name, value in SETTLED.items():
+        monkeypatch.setattr(findings, name, value)              # raising: each must be committed
 
 
 def windows(name):

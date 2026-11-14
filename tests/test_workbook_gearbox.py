@@ -34,20 +34,25 @@ MOTION_REASON = motion.motion_reason
 
 
 # The findings a probe round may still change, pinned to what these tests were written against, so none of them
-# leans on the committed value; a test of another branch pins its own value over this.
+# leans on the committed value; a test of another branch pins its own value over this. Shared with
+# test_workbook_motion.py (test_workbook_update.py uses this module's fixture).
 SETTLED = {"GEAR_MATE_RATIO_ROUTE": None, "LOCK_RETAKES_AN_OFFSET": True,
            "MATED_ASSEMBLY_REBUILD_ROUTE": "ForceRebuild3(True)", "MATED_BUILD_REBUILD_ROUTE": "ForceRebuild3(True)",
            "GEAR_MATE_RATIO_REMAKE_WORKS": True,
            "GEAR_MATE_DEFINITION_READ_MARKS": "nothing", "MATES_UNDER_COMMAND_IN_PROGRESS": True,
            "MATE_RENAME_AT_ONCE": True, "IDLER_UPDATE_HOLDS": True,
            "GEAR_MATE_SENSE_READ_BACK": "(Reverse == entities parallel) == internal",
-           "GEAR_MATE_READ_BACK_TELLS_SENSE": True, "GEAR_MATE_CHECK_AND_REMAKE_HOLDS": True}
+           "GEAR_MATE_READ_BACK_TELLS_SENSE": True, "GEAR_MATE_CHECK_AND_REMAKE_HOLDS": True,
+           "GEAR_MATE_SENSE_READ_MARKS": "nothing", "GEAR_MATE_SENSE_READ_POINTS_AGREE": True,
+           "CROSS_VERSION_READ_BACK_TELLS_SENSE": True, "GEAR_MATE_SENSE_READ_UNDER_COMMAND_IN_PROGRESS": True,
+           "GEAR_MATE_REMAKE_UNDER_COMMAND_IN_PROGRESS": True, "GEAR_MATE_READ_BACK_HOLDS_AFTER_A_RATIO_REMAKE": True}
 
 
 @pytest.fixture(autouse=True)
 def settled_findings(monkeypatch):
+    # Each finding must be committed (raising): a pin never stands in for one findings.py lost or renamed.
     for name, value in SETTLED.items():
-        monkeypatch.setattr(findings, name, value, raising=False)
+        monkeypatch.setattr(findings, name, value)
 
 
 @pytest.fixture(autouse=True)

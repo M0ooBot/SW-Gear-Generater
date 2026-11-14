@@ -1319,8 +1319,10 @@ def test_round_trip_risky_placements_ring_is_turned_round_at_build_where_its_ver
 
 def test_round_trip_a_failed_remake_keeps_the_ratio_last_known_true_on_record(on_fake, monkeypatch):
     """A remake that SolidWorks turns wrong with either Flip fails the Update after the mate is listed in ``ratios``:
-    the record keeps 17 : 68, the assembly is marked unsaved as for any stopped Update, and the next press (the
-    mate's sense now right) finds it at its live ratio and finishes."""
+    the record keeps 17 : 68, the assembly is marked unsaved as for any stopped Update, and the mate is left at
+    17 : 69 turning against its mesh. The next press (SolidWorks now able to turn it right) must not take that mate
+    for one "already at the wanted ratio" and record it clean: the check phase reads its sense, finds it wrong,
+    and remakes it, and only then does the record take 17 : 69."""
     monkeypatch.setattr(findings, "GEAR_MATE_RATIO_ROUTE", "remake")
     sw, record = on_fake
     sw.never_right = {"G1 meshes G2"}
@@ -1328,8 +1330,13 @@ def test_round_trip_a_failed_remake_keeps_the_ratio_last_known_true_on_record(on
     assert failed.failures and "G1 meshes G2" in failed.ratios, failed.failures
     assert {e.name: e.ratio for e in finished.record.gearbox.mates}["G1 meshes G2"] == [17, 68]
     assert record.gearbox.assembly in finished.record.unsaved and finished.record.digest == record.digest
+    asm = record.gearbox.assembly
+    assert tuple(sw.mate("G1 meshes G2", asm).ratio) == (17, 69) and not sw.turns_right("G1 meshes G2", asm)
     sw.never_right = set()
     _, result, again = press(sw, finished.record, TEETH_69, digest="d3")
     assert result.ok and again.earlier_update == gearbox_.UPDATE_NOT_SAVED
+    assert result.sense_found_wrong == ["G1 meshes G2"] and "G1 meshes G2" in result.ratios
+    assert "G1 meshes G2" not in result.ratios_already
+    assert sw.turns_right("G1 meshes G2", asm) and tuple(sw.mate("G1 meshes G2", asm).ratio) == (17, 69)
     assert {e.name: e.ratio for e in again.record.gearbox.mates}["G1 meshes G2"] == [17, 69]
     assert nothing(update.classify(again.record, assessed(TEETH_69), exists=lambda p: True))
