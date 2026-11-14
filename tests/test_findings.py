@@ -862,3 +862,61 @@ def test_a_lightweight_train_resolves_on_its_first_drive_and_a_plain_open_reads_
     read = decided["component_resolved_read"]
     assert read["call"] == "IComponent2.GetSuppression2" and findings.COMPONENT_RESOLVED_ROUTE == "GetSuppression2"
     assert tuple(read["plain_open_values"]) == findings.COMPONENT_FULLY_RESOLVED_STATES == (read["fully_resolved"],)
+
+
+RING_2026 = LATEST.parent / "probe-results-20261114-133014.json"
+RING_2024 = LATEST.parent / "sw2024" / "probe-results-20261114-135104.json"
+
+
+def _ring_records(version):
+    data = json.loads((RING_2026 if version == "2026" else RING_2024).read_text(encoding="utf-8"))
+    assert data["meta"]["version"].startswith(f"SolidWorks {version} ")
+    records = {r["name"]: r for r in data["records"]}
+    assert all(r["status"] == "pass" for r in records.values())
+    return records
+
+
+def _needed_by_key(records):
+    """The Flip each static key needed, read off the cases (selection order folded in: it never mattered)."""
+    out = {}
+    for c in facts(records, "ring_mate_sense")["ring_sense_cases"]:
+        senses = ("+" if c["sigma_p"] > 0 else "-") + ("+" if c["sigma_r"] > 0 else "-")
+        key = {"spur": f"spur ring {senses}", "helical": f"helical ring {senses}", "annulus": "plain annulus"}[c["kind"]] \
+            if c["internal"] else f"external {senses}"
+        needed = c["flip"] if c["right"] else (not c["flip"])
+        assert out.get(key, needed) == needed, key
+        out[key] = needed
+    return out
+
+
+@pytest.mark.parametrize("version", ["2026", "2024"])
+def test_the_flip_a_ring_needs_is_read_off_each_versions_cases(version):
+    """Probe ring_mate_sense: the Flip every case needed, per version; the Risky pair as the demonstration saw it."""
+    records = _ring_records(version)
+    decided = decide.decide(records)
+    wanted = findings.GEAR_MATE_FLIP_NEEDED_ON_2026 if version == "2026" else findings.GEAR_MATE_FLIP_NEEDED_ON_2024
+    assert _needed_by_key(records) == wanted
+    assert decided["ring_risky_app_way_right"] is (version == "2024")
+    clashes = facts(records, "ring_mate_sense")["ring_risky_wrong_sense_clashes"]
+    assert clashes == ({"app's way": 5, "after the remake": 0} if version == "2026" else {"app's way": 0, "after the remake": 0})
+    assert decided["gear_mate_read_back_tells_sense"] is findings.GEAR_MATE_READ_BACK_TELLS_SENSE is True
+    assert decided["ring_sense_clash_tells"] is findings.WRONG_GEAR_MATE_SENSE_CLASHES is True
+    assert decided["ring_check_and_remake_holds"] is findings.GEAR_MATE_CHECK_AND_REMAKE_HOLDS is True
+    risky = facts(records, "ring_mate_sense")["ring_risky"]
+    assert list(risky["checked"]["remade"]) == (["G5 meshes G6"] if version == "2026" else [])
+    assert not any(risky["checked"]["flags_after"].values()) and not any(risky["right first"]["flags_after"].values())
+
+
+def test_no_flip_from_static_inputs_is_right_on_both_versions():
+    """Every toothed ring needs opposite Flips on 2026 and 2024; only the annulus and the outside pair agree."""
+    a, b = _needed_by_key(_ring_records("2026")), _needed_by_key(_ring_records("2024"))
+    assert set(a) == set(b)
+    agree = {k for k in a if a[k] == b[k]}
+    assert agree == {"plain annulus", "external +-"}
+    assert findings.GEAR_MATE_FLIP_STATIC_RULE is None
+
+
+def test_the_read_back_rule_is_stated_as_decide_applies_it():
+    assert decide.read_back_says_right(True, True, True) is True and decide.read_back_says_right(False, True, True) is False
+    assert decide.read_back_says_right(True, False, False) is True and decide.read_back_says_right(True, True, False) is False
+    assert decide.read_back_says_right(None, True, True) is None

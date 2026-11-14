@@ -927,3 +927,54 @@ SECOND_ASSEMBLY_BESIDE_UNSAVED_HOLDS = True
 # varied: the mate holding a gear to its axis (W5's axis coincident; the entry's held case was
 # concentric to sketch points). So the demonstration keeps its temporary driving mate.
 DRAG_OPERATOR_TURNS_TRAIN = False
+
+# -- ring_mate_sense: which way a gear mate turns an app-built ring (W5 demonstration, m3) --------
+# Evidence: probe/results/probe-results-20261114-133014.json (2026) and
+# probe/results/sw2024/probe-results-20261114-135104.json (2024), each in a fresh session.
+# The Risky_Placements train, built by the app from its fixture workbook and mated as the app mates
+# it (G5 on Z+ selected first, ring G6 on Z-, ratio 14 : 36, Flip False), turned G6 the wrong way
+# on 2026. Driven 10° off the built phase, G5 and G6 clashed 5 times. On 2024 it turned the right
+# way and stayed clear, as in the demonstration.
+# The case table had 52 mates, each a pinion selected first or a ring selected first, with Flip
+# False or True. The pairs were the app's toothed spur and 20° helical ring pairs on every
+# combination of pinion and ring shaft sense; gear_mate_sense's plain annulus and cylinder on the
+# same shafts and frames; and an external pair on opposite shafts. Every pair turned at its ratio.
+# Which gear is selected first never changed the Flip a pair needs. The plain annulus needed
+# False everywhere, and so did the external pair, on both versions (gear_mate_sense's reading).
+# Every toothed ring needed the OPPOSITE Flip on the two versions, below. So no rule from what the
+# app knows before it makes the mate (inside or outside, both shaft senses, which gear first,
+# spur or helical) is right on both versions: GEAR_MATE_FLIP = False is right for outside pairs
+# and for this machine's 2024 helical rings, and wrong for every helical ring on 2026.
+GEAR_MATE_FLIP_NEEDED_ON_2026 = {
+    "spur ring ++": True, "spur ring +-": False, "spur ring -+": False, "spur ring --": True,
+    "helical ring ++": True, "helical ring +-": True, "helical ring -+": True, "helical ring --": True,
+    "plain annulus": False, "external +-": False}
+GEAR_MATE_FLIP_NEEDED_ON_2024 = {
+    "spur ring ++": False, "spur ring +-": True, "spur ring -+": True, "spur ring --": False,
+    "helical ring ++": False, "helical ring +-": False, "helical ring -+": False, "helical ring --": False,
+    "plain annulus": False, "external +-": False}
+GEAR_MATE_FLIP_STATIC_RULE = None   # none is right on both versions for an app-built ring
+
+# What SolidWorks reports once the mate is made does tell which way it turns, on both versions and
+# in every case: the 52, plus the Risky pair before and after its remake. A gear mate turns its
+# gears as they mesh exactly when IGearMateFeatureData.Reverse (read through IFeature.GetDefinition)
+# equals whether its two MateEntity directions (IMateEntity2.EntityParams 3..5) point the same way,
+# for a pair with a ring; for an outside pair, exactly when the two differ (decide.read_back_says_right).
+# The versions store a different Reverse for the same toothed-ring call (they decide differently
+# whether it is inside a ring), and the read-back follows what they decided.
+GEAR_MATE_SENSE_READ_BACK = "(Reverse == entities parallel) == internal"
+GEAR_MATE_READ_BACK_TELLS_SENSE = True
+
+# Physical evidence: driven 10° off the built phase, every toothed pair stayed clear exactly when
+# its sense was right; the wrong sense clashed (3 interferences for a spur ring, 4 for a helical
+# ring, 2 for the external pair). At the built phase every toothed pair was clear.
+WRONG_GEAR_MATE_SENSE_CLASHES = True
+
+# The fallback, on the Risky train:
+# - A temporary drive (the demonstration's, 10°) judges each mesh by the sign of its driven gear's
+#   turn. It is set back and taken away, and every frame comes back to 1.1e-10.
+# - A wrong gear mate is remade with the other Flip (G5 meshes G6 on 2026; nothing on 2024).
+# - The result is the right-first-time train: frames 2.3e-10 apart on 2026 (1.1e-10 on 2024), the
+#   same mates in the same order once the remade one is counted last, no mate error, and the layout
+#   and every part unmodified (only the assembly marked).
+GEAR_MATE_CHECK_AND_REMAKE_HOLDS = True

@@ -312,6 +312,50 @@ def mated_assembly_rebuild_route(records: Records) -> Optional[str]:
     return _fact(records, "mated_rebuild_scope", "mated_assembly_rebuild_route")
 
 
+def read_back_says_right(reverse: Any, parallel: Any, internal: bool) -> Optional[bool]:
+    """Which way a gear mate turns, from what SolidWorks reports once it is made (probe ring_mate_sense): it turns
+    its gears as they mesh exactly when its ``IGearMateFeatureData.Reverse`` equals whether its two entities point
+    the same way (``IMateEntity2.EntityParams``) for a pair with a ring, and differs from it for an outside pair.
+    None when either reading is missing."""
+    if not isinstance(reverse, bool) or not isinstance(parallel, bool):
+        return None
+    return (reverse == parallel) == bool(internal)
+
+
+def gear_mate_read_back_tells_sense(records: Records) -> Optional[bool]:
+    """Whether the read-back said right or wrong for every case ring_mate_sense drove (the Risky pair included,
+    before and after its remake) exactly as the drive did; None unless that probe passed with cases."""
+    if not _passed(records, "ring_mate_sense"):
+        return None
+    facts = (records.get("ring_mate_sense") or {}).get("facts") or {}
+    cases = facts.get("ring_sense_cases") or []
+    if not cases:
+        return None
+    for c in cases:
+        if c.get("right") is None or \
+                read_back_says_right((c.get("definition") or {}).get("Reverse"), c.get("parallel_as_seen"),
+                                     c.get("internal", False)) != c["right"]:
+            return False
+    checked = (facts.get("ring_risky") or {}).get("checked") or {}
+
+    def parallel(entities: Any) -> Optional[bool]:
+        dirs = [e.get("params") for e in entities or []]
+        if len(dirs) != 2 or not all(d and len(d) >= 6 for d in dirs):
+            return None
+        return sum(x * y for x, y in zip(dirs[0][3:6], dirs[1][3:6])) > 0
+
+    if checked:
+        said = read_back_says_right((checked.get("definition") or {}).get("Reverse"), parallel(checked.get("entities")),
+                                    True)
+        if said != (checked.get("first_check") or {}).get("meshes", {}).get("G5 meshes G6"):
+            return False
+        for remade in (checked.get("remade") or {}).values():
+            if read_back_says_right((remade.get("definition") or {}).get("Reverse"), parallel(remade.get("entities")),
+                                    True) is not True:
+                return False
+    return True
+
+
 def decide(records: Records) -> Dict[str, Any]:
     recipe = flank_recipe(records)
     units = _fact(records, "document_units", "default_template_is_mm")
@@ -458,5 +502,7 @@ def decide(records: Records) -> Dict[str, Any]:
         "ring_sense_app_way": _fact(records, "ring_mate_sense", "ring_sense_app_way"),
         "ring_risky_app_way_right": _fact(records, "ring_mate_sense", "ring_risky_app_way_right"),
         "ring_check_and_remake_holds": _fact(records, "ring_mate_sense", "ring_check_and_remake_holds"),
+        "ring_sense_clash_tells": _fact(records, "ring_mate_sense", "ring_sense_clash_tells"),
+        "gear_mate_read_back_tells_sense": gear_mate_read_back_tells_sense(records),
         "manual_steps": manual_steps(records, recipe),
     }
