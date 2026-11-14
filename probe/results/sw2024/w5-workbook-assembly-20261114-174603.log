@@ -1,0 +1,2371 @@
+run     2026-11-14 17:46:23; app gear-generator 0.3.1 from C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\snap\src (snapshot: git archive 7e2135f, whose src equals d99654a's (git diff d99654a 7e2135f -- src is empty); the probe scripts are 7e2135f's); sections ['m7', 'm8']
+attach  SolidWorks 2024 (revision 32.5.0), PID 10852; SolidWorks 0.66 GB private, 11.46 GB free
+open    before: []
+findings LAYOUT_PLUS_FLIP {'right': False, 'top': False}, LAYOUT_NEGATED_LINK 'minus', LAYOUT_AXIS_Z_SIGN -1, REPLACE_FIXED_ROUTE 'Transform2 put'
+findings W5: GEAR_MATE_RATIO_ROUTE 'remake', MATED_ASSEMBLY_REBUILD_ROUTE 'ForceRebuild3(True)', MATED_BUILD_REBUILD_ROUTE 'ForceRebuild3(True)', GEAR_MATE_FLIP False, DEMONSTRATION_DRIVE_SENSE 1, MESH_PHASE_ROUTE 'Transform2 put with the gear mate on', LOCK_RETAKES_AN_OFFSET True; P0c {'GEAR_MATE_REMAKE_UNDER_COMMAND_IN_PROGRESS': True, 'GEAR_MATE_SENSE_READ_UNDER_COMMAND_IN_PROGRESS': True, 'IDLER_UPDATE_HOLDS': True, 'LIGHTWEIGHT_FIRST_DRIVE_RIGHT': False, 'LIGHTWEIGHT_FORCED_BY': 'swOpenDocOptions_LoadLightweight | swOpenDocOptions_OverrideDefaultLoadLightweight', 'LIGHTWEIGHT_OPEN_RAISES_AN_ADDIN_DIALOG': True, 'LIGHTWEIGHT_REMAKE_HOLDS': True, 'LIGHTWEIGHT_RESOLVED_BY': 'the first drive', 'MATES_UNDER_COMMAND_IN_PROGRESS': True, 'MATE_FOLDER_ROUTE': 'IFeatureManager.InsertFeatureTreeFolder2(swFeatureTreeFolder_Containing)', 'MATE_FOLDER_SUPPRESSION_SUPPRESSES_ITS_MATES': True, 'MATE_FOLDER_TYPE_NAME': 'FtrFolder', 'MATE_GROUP_WALK_SEES_MATES_IN_A_FOLDER': True, 'MATE_RENAME_AT_ONCE': True, 'PUT_ON_TWICE_MESHED_GEAR_HOLDS': True, 'REMAKE_ON_TWICE_MESHED_GEAR_HOLDS': True, 'SECOND_ASSEMBLY_BESIDE_UNSAVED_HOLDS': True, 'SUPPRESSED_MATE_ERROR_CODE': 0, 'UNSUPPRESS_ON_LOCK_ALREADY_ON_MARKS_MODIFIED': True}; AXIAL_RESTORES True; m4 offset 0 mm
+excel   started our own Excel, PID 8080, 16.0 build 20527.0
+== m7  the ring train edited: Risky_Placements built to turn, G5 At 45 -> 47 (a follower on S3, beside the ring's pinion seat) -> an Update that puts the whole train; frames, mates, interference, the drive through the ring, reopen
+ok      Excel opened Risky_Placements.xlsx with no dialog or repair: []
+excel   Box!B4 := 'C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w5-m8-20261114-174603\\asm2024\\m7\\'
+excel   saved Risky_Placements.xlsx
+ok      read Risky_Placements.xlsx: ok
+        warning Gears!I2: G1: The teeth overlap 0.54 of a pitch along the face, under one, which loses most of the smoothness helical teeth are for; widen the face or raise the helix angle.
+        warning Gears!I3: G2: The teeth overlap 0.54 of a pitch along the face, under one, which loses most of the smoothness helical teeth are for; widen the face or raise the helix angle.
+        warning Gears!Q5: G4: The involute starts at 45.829 mm, above the form diameter of 45.649 mm, so the bottom of the working flank is a straight line.
+        warning Gears!I6: G5: The teeth overlap 0.54 of a pitch along the face, under one, which loses most of the smoothness helical teeth are for; widen the face or raise the helix angle.
+        warning Gears!I7: G6: The teeth overlap 0.54 of a pitch along the face, under one, which loses most of the smoothness helical teeth are for; widen the face or raise the helix angle.
+        4 shafts · 6 gears · 3 meshes; gate ''
+ok      the gate is ""
+footer  (m7, read) [green] Ready: Build makes 6 parts, Risky_Placements_Layout and Risky_Placements.SLDASM in C:\…\w5-m8-20261114-174603\asm2024\m7\. Its gears are mated to their shafts and to each other, so they turn together in SolidWorks.
+        button 'Build' on primary; Update SolidWorks hidden
+plan    revision 0 Risky_Placements: refusal ''; reason ''; turning True; static reason ''
+        layout C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m7\Risky_Placements_Layout.SLDPRT; assembly C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m7\Risky_Placements.SLDASM
+        build Helical_m2_N14_20R for G1 at C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m7\Helical_m2_N14_20R.SLDPRT (105 ops)
+        build Helical_m2_N20_20L for G2 at C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m7\Helical_m2_N20_20L.SLDPRT (105 ops)
+        build Herringbone_m2_N14_25R for G3 at C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m7\Herringbone_m2_N14_25R.SLDPRT (107 ops)
+        build Herringbone_m2_N22_25R for G4 at C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m7\Herringbone_m2_N22_25R.SLDPRT (107 ops)
+        build Helical_m2_N14_20L for G5 at C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m7\Helical_m2_N14_20L.SLDPRT (105 ops)
+        build Ring_m2_N36_20L for G6 at C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m7\Ring_m2_N36_20L.SLDPRT (115 ops)
+        shaft S1: (0, 0, 0) sigma +1; X base '', Y base ''; S1 Axis
+        shaft S2: (36.182, 0, 0) sigma -1; X plus 'S2 X', Y base ''; S2 Axis
+        shaft S3: (36.182, -39.7216, 0) sigma +1; X plus 'S3 X', Y minus 'S3 Y'; S3 Axis
+        shaft S4: (59.594, -39.7216, 0) sigma -1; X plus 'S4 X', Y minus 'S4 Y'; S4 Axis
+        frame G1: R [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0] at [0.0, 0.0, 0.0]
+        frame G2: R [0.996612432, -0.082241475, 0.0, -0.082241475, -0.996612432, 0.0, 0.0, 0.0, -1.0] at [36.182044264, 0.0, 10.0]
+        frame G3: R [1.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, -1.0] at [36.182044264, 0.0, 32.0]
+        frame G4: R [0.989821442, -0.142314838, 0.0, 0.142314838, 0.989821442, 0.0, 0.0, 0.0, 1.0] at [36.182044264, -39.721605083, 18.0]
+        frame G5: R [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0] at [36.182044264, -39.721605083, 40.0]
+        frame G6: R [0.998954046, -0.045725422, 0.0, -0.045725422, -0.998954046, 0.0, 0.0, 0.0, -1.0] at [59.593955259, -39.721605083, 50.0]
+        motion: trains [('S1', 'S2', 'S3', 'S4')]; drag ['G1']; fixed []; unmated []
+        mate 'G1 on S1 Axis': axis ['G1'] S1 ratio [] face '' z_front 0
+        mate 'G1 along S1': along ['G1'] S1 ratio [] face '' z_front 0
+        mate 'G2 on S2 Axis': axis ['G2'] S2 ratio [] face '' z_front 0
+        mate 'G2 along S2': along ['G2'] S2 ratio [] face 'G2 Face Z' z_front 10
+        mate 'G3 locked to G2': lock ['G2', 'G3']  ratio [] face '' z_front 0
+        mate 'G4 on S3 Axis': axis ['G4'] S3 ratio [] face '' z_front 0
+        mate 'G4 along S3': along ['G4'] S3 ratio [] face 'G4 Face Z' z_front 18
+        mate 'G5 locked to G4': lock ['G4', 'G5']  ratio [] face '' z_front 0
+        mate 'G6 on S4 Axis': axis ['G6'] S4 ratio [] face '' z_front 0
+        mate 'G6 along S4': along ['G6'] S4 ratio [] face 'G6 Face Z' z_front 50
+        mate 'G1 meshes G2': mesh ['G1', 'G2']  ratio [14, 20] face '' z_front 0
+        mate 'G3 meshes G4': mesh ['G3', 'G4']  ratio [14, 22] face '' z_front 0
+        mate 'G5 meshes G6': mesh ['G5', 'G6']  ratio [14, 36] face '' z_front 0
+        ops of Risky_Placements_Layout.SLDPRT:
+          new     NewPart from (default template)
+          global  "S2 X"= 36.182044264
+          global  "S3 X"= 36.182044264
+          global  "S3 Y"= -39.721605083
+          global  "S4 X"= 59.593955259
+          global  "S4 Y"= -39.721605083
+          axis    'S1 Axis' through planes 2 and 3
+          plane   'S2 X Plane' 36.182044 mm from plane 3 (Offset)
+          link    "Offset@S2 X Plane"= "S2 X"
+          axis    'S2 Axis' through plane 2 and x2
+          plane   'S3 X Plane' 36.182044 mm from plane 3 (Offset)
+          link    "Offset@S3 X Plane"= "S3 X"
+          plane   'S3 Y Plane' 39.721605 mm from plane 2, flipped (Offset)
+          link    "Offset@S3 Y Plane"= - "S3 Y"
+          axis    'S3 Axis' through y3 and x3
+          plane   'S4 X Plane' 59.593955 mm from plane 3 (Offset)
+          link    "Offset@S4 X Plane"= "S4 X"
+          plane   'S4 Y Plane' 39.721605 mm from plane 2, flipped (Offset)
+          link    "Offset@S4 Y Plane"= - "S4 Y"
+          axis    'S4 Axis' through y4 and x4
+          rebuild once
+          save    C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m7\Risky_Placements_Layout.SLDPRT
+        ops of Risky_Placements.SLDASM:
+          new     NewAssembly from (default template)
+          global  "G2 Face Z"= 10
+          global  "G4 Face Z"= 18
+          global  "G6 Face Z"= 50
+          insert  layout C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m7\Risky_Placements_Layout.SLDPRT at (0, 0, 0)
+          place   layout at (0, 0, 0) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     layout
+          insert  gear1 C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m7\Helical_m2_N14_20R.SLDPRT at (0, 0, 0)
+          place   gear1 at (0, 0, 0) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     gear1
+          insert  gear2 C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m7\Helical_m2_N20_20L.SLDPRT at (36.182044, 0, 10)
+          place   gear2 at (36.182044, 0, 10) turned (0.996612, -0.082241, 0, -0.082241, -0.996612, 0, 0, 0, -1)
+          fix     gear2
+          insert  gear3 C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m7\Herringbone_m2_N14_25R.SLDPRT at (36.182044, 0, 32)
+          place   gear3 at (36.182044, 0, 32) turned (1, 0, 0, 0, -1, 0, 0, 0, -1)
+          fix     gear3
+          insert  gear4 C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m7\Herringbone_m2_N22_25R.SLDPRT at (36.182044, -39.721605, 18)
+          place   gear4 at (36.182044, -39.721605, 18) turned (0.989821, -0.142315, 0, 0.142315, 0.989821, 0, 0, 0, 1)
+          fix     gear4
+          insert  gear5 C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m7\Helical_m2_N14_20L.SLDPRT at (36.182044, -39.721605, 40)
+          place   gear5 at (36.182044, -39.721605, 40) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     gear5
+          insert  gear6 C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m7\Ring_m2_N36_20L.SLDPRT at (59.593955, -39.721605, 50)
+          place   gear6 at (59.593955, -39.721605, 50) turned (0.998954, -0.045725, 0, -0.045725, -0.998954, 0, 0, 0, -1)
+          fix     gear6
+          unfix   gear1
+          mate    coincident gear1:Gear Axis ~ layout:S1 Axis as 'G1 on S1 Axis'
+          mate    point gear1:origin ~ layout:plane1 as 'G1 along S1'
+          unfix   gear2
+          mate    coincident gear2:Gear Axis ~ layout:S2 Axis as 'G2 on S2 Axis'
+          mate    point distance 10 gear2:origin ~ layout:plane1 as 'G2 along S2'
+          link    "D1@G2 along S2"= "G2 Face Z"
+          unfix   gear3
+          mate    lock gear2 ~ gear3 as 'G3 locked to G2'
+          unfix   gear4
+          mate    coincident gear4:Gear Axis ~ layout:S3 Axis as 'G4 on S3 Axis'
+          mate    point distance 18 gear4:origin ~ layout:plane1 as 'G4 along S3'
+          link    "D1@G4 along S3"= "G4 Face Z"
+          unfix   gear5
+          mate    lock gear4 ~ gear5 as 'G5 locked to G4'
+          unfix   gear6
+          mate    coincident gear6:Gear Axis ~ layout:S4 Axis as 'G6 on S4 Axis'
+          mate    point distance 50 gear6:origin ~ layout:plane1 as 'G6 along S4'
+          link    "D1@G6 along S4"= "G6 Face Z"
+          mate    gear 14:20 gear1:Gear Axis ~ gear2:Gear Axis as 'G1 meshes G2'
+          mate    gear 14:22 gear3:Gear Axis ~ gear4:Gear Axis as 'G3 meshes G4'
+          mate    gear 14:36 gear5:Gear Axis ~ gear6:Gear Axis as 'G5 meshes G6'
+          rebuild once
+          save    C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m7\Risky_Placements.SLDASM
+ok      m7: the plan turns (W5): static reason ''
+journal written: 8 paths
+build   Risky_Placements: SolidWorks 0.66 GB private, 11.27 GB free
+        build   Part1 · helical · recipe A · trig degrees
+        ok      new part Part1
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Helix Angle"
+        ok      global "Transverse Module"
+        ok      global "Transverse Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      global "Lead"
+        ok      global "Overrun"
+        ok      global "Path Length"
+        ok      global "Twist Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      plane Profile Plane
+        ok      link "Offset@Profile Plane"
+        ok      sketch space opened on plane plane
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      sketch path opened on plane 2
+        ok      line lead
+        ok      line P
+        ok      coincident lead.start origin
+        ok      vertical lead
+        ok      vertical P
+        ok      coincident P.start lead.end (already one point)
+        ok      dimension Lead In
+        ok      dimension Length
+        ok      sketch Path Sketch
+        ok      link "Lead In@Path Sketch"
+        ok      link "Length@Path Sketch"
+        ok      sweep Tooth Space, twist 19.5963°
+        ok      link "Twist@Tooth Space"
+        ok      pattern Teeth × 14
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      31 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Path Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Helical_m2_N14_20R; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m7\Helical_m2_N14_20R.SLDPRT
+        build   Part2 · helical · recipe A · trig degrees
+        ok      new part Part2
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Helix Angle"
+        ok      global "Transverse Module"
+        ok      global "Transverse Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      global "Lead"
+        ok      global "Overrun"
+        ok      global "Path Length"
+        ok      global "Twist Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      plane Profile Plane
+        ok      link "Offset@Profile Plane"
+        ok      sketch space opened on plane plane
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      sketch path opened on plane 2
+        ok      line lead
+        ok      line P
+        ok      coincident lead.start origin
+        ok      vertical lead
+        ok      vertical P
+        ok      coincident P.start lead.end (already one point)
+        ok      dimension Lead In
+        ok      dimension Length
+        ok      sketch Path Sketch
+        ok      link "Lead In@Path Sketch"
+        ok      link "Length@Path Sketch"
+        ok      sweep Tooth Space, twist 13.7174° reversed
+        ok      link "Twist@Tooth Space"
+        ok      pattern Teeth × 20
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      31 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Path Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Helical_m2_N20_20L; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m7\Helical_m2_N20_20L.SLDPRT
+        build   Part3 · herringbone · recipe A · trig degrees
+        ok      new part Part3
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Helix Angle"
+        ok      global "Transverse Module"
+        ok      global "Transverse Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      global "Lead"
+        ok      global "Overrun"
+        ok      global "Mid Width"
+        ok      global "Path Length"
+        ok      global "Twist Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      plane Mid Plane
+        ok      link "Offset@Mid Plane"
+        ok      sketch space opened on plane plane
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      sketch path opened on plane 2
+        ok      line lead
+        ok      line P
+        ok      coincident lead.start origin
+        ok      vertical lead
+        ok      vertical P
+        ok      coincident P.start lead.end (already one point)
+        ok      dimension Mid
+        ok      dimension Length
+        ok      sketch Path Sketch
+        ok      link "Mid@Path Sketch"
+        ok      link "Length@Path Sketch"
+        ok      sweep Tooth Space, twist 17.2959°
+        ok      link "Twist@Tooth Space"
+        ok      pattern Teeth × 14
+        ok      link "Count@Teeth"
+        ok      mirror Mirror
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      32 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Path Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Herringbone_m2_N14_25R; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m7\Herringbone_m2_N14_25R.SLDPRT
+        build   Part4 · herringbone · recipe A · trig degrees
+        ok      new part Part4
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Helix Angle"
+        ok      global "Transverse Module"
+        ok      global "Transverse Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      global "Lead"
+        ok      global "Overrun"
+        ok      global "Mid Width"
+        ok      global "Path Length"
+        ok      global "Twist Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      plane Mid Plane
+        ok      link "Offset@Mid Plane"
+        ok      sketch space opened on plane plane
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      sketch path opened on plane 2
+        ok      line lead
+        ok      line P
+        ok      coincident lead.start origin
+        ok      vertical lead
+        ok      vertical P
+        ok      coincident P.start lead.end (already one point)
+        ok      dimension Mid
+        ok      dimension Length
+        ok      sketch Path Sketch
+        ok      link "Mid@Path Sketch"
+        ok      link "Length@Path Sketch"
+        ok      sweep Tooth Space, twist 8.8052°
+        ok      link "Twist@Tooth Space"
+        ok      pattern Teeth × 22
+        ok      link "Count@Teeth"
+        ok      mirror Mirror
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      32 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Path Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Herringbone_m2_N22_25R; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m7\Herringbone_m2_N22_25R.SLDPRT
+        build   Part5 · helical · recipe A · trig degrees
+        ok      new part Part5
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Helix Angle"
+        ok      global "Transverse Module"
+        ok      global "Transverse Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      global "Lead"
+        ok      global "Overrun"
+        ok      global "Path Length"
+        ok      global "Twist Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      plane Profile Plane
+        ok      link "Offset@Profile Plane"
+        ok      sketch space opened on plane plane
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      sketch path opened on plane 2
+        ok      line lead
+        ok      line P
+        ok      coincident lead.start origin
+        ok      vertical lead
+        ok      vertical P
+        ok      coincident P.start lead.end (already one point)
+        ok      dimension Lead In
+        ok      dimension Length
+        ok      sketch Path Sketch
+        ok      link "Lead In@Path Sketch"
+        ok      link "Length@Path Sketch"
+        ok      sweep Tooth Space, twist 19.5963° reversed
+        ok      link "Twist@Tooth Space"
+        ok      pattern Teeth × 14
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      31 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Path Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Helical_m2_N14_20L; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m7\Helical_m2_N14_20L.SLDPRT
+        build   Part6 · internal helical · recipe A · trig degrees
+        ok      new part Part6
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Pressure Angle"
+        ok      global "Helix Angle"
+        ok      global "Transverse Module"
+        ok      global "Transverse Pressure Angle"
+        ok      global "Inner Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Rim Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Flank End Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      global "Lead"
+        ok      global "Overrun"
+        ok      global "Path Length"
+        ok      global "Twist Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle rim
+        ok      circle tip
+        ok      coincident rim.centre origin
+        ok      coincident tip.centre origin
+        ok      dimension Rim
+        ok      dimension Tip
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "Rim@Blank Sketch"
+        ok      link "Tip@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      plane Profile Plane
+        ok      link "Offset@Profile Plane"
+        ok      sketch space opened on plane plane
+        ok      curve I+
+        ok      curve I-
+        ok      circle cap
+        ok      line Li+
+        ok      line Li-
+        ok      line T
+        ok      line Lo+
+        ok      line Lo-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident cap.centre origin
+        ok      coincident Li+.start I+.start (already one point)
+        ok      coincident Li-.start I-.start (already one point)
+        ok      coincident origin Li+
+        ok      coincident origin Li-
+        ok      coincident Li+.end cap
+        ok      coincident Li-.end cap
+        ok      coincident T.start Li+.end (already one point)
+        ok      coincident T.end Li-.end (already one point)
+        ok      coincident Lo+.start I+.end (already one point)
+        ok      coincident Lo-.start I-.end (already one point)
+        ok      coincident origin Lo+
+        ok      coincident origin Lo-
+        ok      coincident F+.end Lo+.end (already one point)
+        ok      coincident F-.start Lo-.end (already one point)
+        ok      coincident F+.start R.end (already one point)
+        ok      coincident F-.end R.start (already one point)
+        ok      tangent F+ Lo+
+        ok      tangent F- Lo-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      dimension Cap
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      link "Cap@Tooth Space Sketch"
+        ok      sketch path opened on plane 2
+        ok      line lead
+        ok      line P
+        ok      coincident lead.start origin
+        ok      vertical lead
+        ok      vertical P
+        ok      coincident P.start lead.end (already one point)
+        ok      dimension Lead In
+        ok      dimension Length
+        ok      sketch Path Sketch
+        ok      link "Lead In@Path Sketch"
+        ok      link "Length@Path Sketch"
+        ok      sweep Tooth Space, twist 7.6208° reversed
+        ok      link "Twist@Tooth Space"
+        ok      pattern Teeth × 36
+        ok      link "Count@Teeth"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      32 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Path Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Ring_m2_N36_20L; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m7\Ring_m2_N36_20L.SLDPRT
+        build   Part7 · layout · recipe  · trig degrees
+        ok      new part Part7
+        ok      trig units measured: degrees
+        ok      global "S2 X"
+        ok      global "S3 X"
+        ok      global "S3 Y"
+        ok      global "S4 X"
+        ok      global "S4 Y"
+        ok      axis S1 Axis
+        ok      plane S2 X Plane
+        ok      link "Offset@S2 X Plane"
+        ok      axis S2 Axis
+        ok      plane S3 X Plane
+        ok      link "Offset@S3 X Plane"
+        ok      plane S3 Y Plane
+        ok      link "Offset@S3 Y Plane"
+        ok      axis S3 Axis
+        ok      plane S4 X Plane
+        ok      link "Offset@S4 X Plane"
+        ok      plane S4 Y Plane
+        ok      link "Offset@S4 Y Plane"
+        ok      axis S4 Axis
+        ok      5 globals read back and match the maths
+        ok      rebuilt once
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m7\Risky_Placements_Layout.SLDPRT
+        build   Assem1 · assembly · recipe  · trig degrees
+        ok      new assembly Assem1
+        ok      trig units measured: degrees
+        ok      global "G2 Face Z"
+        ok      global "G4 Face Z"
+        ok      global "G6 Face Z"
+        ok      component Risky_Placements_Layout-1
+        ok      placed layout
+        ok      fixed layout
+        ok      component Helical_m2_N14_20R-1
+        ok      placed gear1
+        ok      fixed gear1
+        ok      component Helical_m2_N20_20L-1
+        ok      placed gear2
+        ok      fixed gear2
+        ok      component Herringbone_m2_N14_25R-1
+        ok      placed gear3
+        ok      fixed gear3
+        ok      component Herringbone_m2_N22_25R-1
+        ok      placed gear4
+        ok      fixed gear4
+        ok      component Helical_m2_N14_20L-1
+        ok      placed gear5
+        ok      fixed gear5
+        ok      component Ring_m2_N36_20L-1
+        ok      placed gear6
+        ok      fixed gear6
+        ok      unfixed gear1
+        ok      mate coincident gear1:Gear Axis ~ layout:S1 Axis as G1 on S1 Axis
+        ok      mate point gear1:origin ~ layout:plane1 as G1 along S1
+        ok      unfixed gear2
+        ok      mate coincident gear2:Gear Axis ~ layout:S2 Axis as G2 on S2 Axis
+        ok      mate point distance gear2:origin ~ layout:plane1 as G2 along S2
+        ok      link "D1@G2 along S2"
+        ok      unfixed gear3
+        ok      mate lock gear2 ~ gear3 as G3 locked to G2
+        ok      unfixed gear4
+        ok      mate coincident gear4:Gear Axis ~ layout:S3 Axis as G4 on S3 Axis
+        ok      mate point distance gear4:origin ~ layout:plane1 as G4 along S3
+        ok      link "D1@G4 along S3"
+        ok      unfixed gear5
+        ok      mate lock gear4 ~ gear5 as G5 locked to G4
+        ok      unfixed gear6
+        ok      mate coincident gear6:Gear Axis ~ layout:S4 Axis as G6 on S4 Axis
+        ok      mate point distance gear6:origin ~ layout:plane1 as G6 along S4
+        ok      link "D1@G6 along S4"
+        ok      mate gear gear1:Gear Axis ~ gear2:Gear Axis as G1 meshes G2
+        ok      mate gear gear3:Gear Axis ~ gear4:Gear Axis as G3 meshes G4
+        ok      mate gear gear5:Gear Axis ~ gear6:Gear Axis as G5 meshes G6
+        ok      3 globals read back and match the maths
+        ok      every mate sound, every gear free to turn
+        mate    G1 on S1 Axis
+        mate    G1 along S1
+        mate    G2 on S2 Axis
+        mate    G2 along S2
+        mate    G3 locked to G2
+        mate    G4 on S3 Axis
+        mate    G4 along S3
+        mate    G5 locked to G4
+        mate    G6 on S4 Axis
+        mate    G6 along S4
+        mate    G1 meshes G2
+        mate    G3 meshes G4
+        mate    G5 meshes G6
+        ok      rebuilt once
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m7\Risky_Placements.SLDASM
+        ok      no interference between the gears
+        in 150.0 s; SolidWorks 4.18 GB private, 10.64 GB free; kind 'motion'; turned round (made again with the other Flip) []
+        steps [('part', 'Helical_m2_N14_20R', 1, 6), ('part', 'Helical_m2_N20_20L', 2, 6), ('part', 'Herringbone_m2_N14_25R', 3, 6), ('part', 'Herringbone_m2_N22_25R', 4, 6), ('part', 'Helical_m2_N14_20L', 5, 6), ('part', 'Ring_m2_N36_20L', 6, 6), ('layout', 'Risky_Placements_Layout', 0, 0), ('assembly', 'Risky_Placements', 0, 0), ('interference', 'Risky_Placements', 0, 0)]
+        progress words ['Building in SolidWorks: part 1 of 6, Helical_m2_N14_20R…', 'Building in SolidWorks: checking interference…']
+record  6 sidecar(s) written; record written; notes []
+status  [green] Built 6 parts, Risky_Placements_Layout and Risky_Placements.SLDASM; no interference between the gears where they stand. Its gears are mated to turn together, and SolidWorks reports no mate in error: drag G1 in SolidWorks and the rest of its train follow. 1 thing to do by hand: Assign a material to each of the 6 parts; the build leaves it unset.
+ok      m7: 6 parts, the layout part and the assembly built and saved, turning: ok True, parts 6, kind 'motion'
+ok      m7: no interference: []
+ok      m7: on SolidWorks 2024 every gear mate reads right as first made (probe ring_mate_sense): turned round []
+ok      m7: the record holds a turning gearbox built from this read
+ok      m7: the record's mates are the plan's: ['G1 on S1 Axis', 'G1 along S1', 'G2 on S2 Axis', 'G2 along S2', 'G3 locked to G2', 'G4 on S3 Axis', 'G4 along S3', 'G5 locked to G4', 'G6 on S4 Axis', 'G6 along S4', 'G1 meshes G2', 'G3 meshes G4', 'G5 meshes G6']
+ok      m7: the build's sentence says how to turn it: 'drag G1 in SolidWorks and the rest of its train follow'
+footer  (m7, built) [green] Built 6 parts, Risky_Placements_Layout and Risky_Placements.SLDASM; no interference between the gears where they stand. Its gears are mated to turn together, and SolidWorks reports no mate in error: drag G1 in SolidWorks and the rest of its train follow. 1 thing to do by hand: Assign a material to each of the 6 parts; the build leaves it unset.
+        button 'Build again…' on; Update SolidWorks shown on primary
+ok      m7: the footer says how to turn it: 'drag G1 in SolidWorks and the rest of its train follow'
+tag     ' · built from this version'
+ok      m7: 8 files on disk
+        marked modified in SolidWorks right after the build: {'Helical_m2_N14_20R.SLDPRT': False, 'Helical_m2_N20_20L.SLDPRT': False, 'Herringbone_m2_N14_25R.SLDPRT': False, 'Herringbone_m2_N22_25R.SLDPRT': False, 'Helical_m2_N14_20L.SLDPRT': False, 'Ring_m2_N36_20L.SLDPRT': False, 'Risky_Placements_Layout.SLDPRT': False, 'Risky_Placements.SLDASM': True}
+ok      m7: the assembly is marked after the build (a read after its save)
+ok      m7, right after the build and its saves: SolidWorks marks modified exactly ['Risky_Placements.SLDASM']
+measure m7 built: SolidWorks 3.96 GB private, 10.62 GB free; turning True
+ok      m7 built: G1 (Helical_m2_N14_20R-1) at (0.0, 0.0, 0.0), origin off 0.0e+00 mm, turn off 0.0e+00° (exactly), axis off 0.0e+00
+ok      m7 built: G1's frame on record is the one the workbook wants
+ok      m7 built: G2 (Helical_m2_N20_20L-1) at (36.182044261, -4e-09, 10.0), origin off 4.1e-09 mm, turn off 6.0e-09° (exactly), axis off 6.6e-17
+ok      m7 built: G2's frame on record is the one the workbook wants
+ok      m7 built: G3 (Herringbone_m2_N14_25R-1) at (36.182044265, -4e-09, 32.0), origin off 4.1e-09 mm, turn off 6.0e-09° (exactly), axis off 6.1e-17
+ok      m7 built: G3's frame on record is the one the workbook wants
+ok      m7 built: G4 (Herringbone_m2_N22_25R-1) at (36.18204426, -39.72160508, 18.0), origin off 4.2e-09 mm, turn off 6.5e-09° (exactly), axis off 6.9e-17
+ok      m7 built: G4's frame on record is the one the workbook wants
+ok      m7 built: G5 (Helical_m2_N14_20L-1) at (36.182044264, -39.721605083, 40.0), origin off 0.0e+00 mm, turn off 6.5e-09° (exactly), axis off 6.1e-17
+ok      m7 built: G5's frame on record is the one the workbook wants
+ok      m7 built: G6 (Ring_m2_N36_20L-1) at (59.59395526, -39.72160508, 50.0), origin off 2.6e-09 mm, turn off 0.0e+00° (exactly), axis off 0.0e+00
+ok      m7 built: G6's frame on record is the one the workbook wants
+ok      m7 built: the layout (Risky_Placements_Layout-1) is at identity
+        frames read in 0.3 s
+        Risky_Placements_Layout.SLDPRT globals {'S2 X': 36.18204426, 'S3 X': 36.18204426, 'S3 Y': -39.72160508, 'S4 X': 59.59395526, 'S4 Y': -39.72160508, 'Offset@S2 X Plane': 36.18204426, 'Offset@S3 X Plane': 36.18204426, 'Offset@S3 Y Plane': 39.72160508, 'Offset@S4 X Plane': 59.59395526, 'Offset@S4 Y Plane': 39.72160508}
+ok      m7 built: S1 Axis crosses z = 0 at (0.000000000, 0.000000000) for (0, 0), along (0.0, 0.0, 1.0)
+ok      m7 built: S2 Axis crosses z = 0 at (36.182044260, 0.000000000) for (36.182, 0), along (0.0, 0.0, 1.0)
+ok      m7 built: S3 Axis crosses z = 0 at (36.182044260, -39.721605080) for (36.182, -39.7216), along (0.0, 0.0, 1.0)
+ok      m7 built: S4 Axis crosses z = 0 at (59.593955260, -39.721605080) for (59.594, -39.7216), along (0.0, 0.0, 1.0)
+ok      m7 built: no interference in Risky_Placements.SLDASM: []
+        mates [('G1 on S1 Axis', 0, True, False), ('G1 along S1', 0, True, False), ('G2 on S2 Axis', 0, True, False), ('G2 along S2', 0, True, False), ('G3 locked to G2', 0, True, False), ('G4 on S3 Axis', 0, True, False), ('G4 along S3', 0, True, False), ('G5 locked to G4', 0, True, False), ('G6 on S4 Axis', 0, True, False), ('G6 along S4', 0, True, False), ('G1 meshes G2', 0, True, False), ('G3 meshes G4', 0, True, False), ('G5 meshes G6', 0, True, False)]; others []; constrained {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2, 'G5': 2, 'G6': 2}
+ok      m7 built: the mates are exactly the record's 13: extra [], missing []
+ok      m7 built: nothing but mates in the mate group: []
+ok      m7 built: every mate's error code is 0: []
+ok      m7 built: no mate suppressed: []
+ok      m7 built: every mated gear under-defined (2): {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2, 'G5': 2, 'G6': 2}
+excel   Gears!C6 := 47
+excel   saved Risky_Placements.xlsx
+poll    a new read 0.0 s after asking; changes:
+          Gears!C6 G5 At 45 → 47
+ok      read Risky_Placements.xlsx: ok
+        warning Gears!I2: G1: The teeth overlap 0.54 of a pitch along the face, under one, which loses most of the smoothness helical teeth are for; widen the face or raise the helix angle.
+        warning Gears!I3: G2: The teeth overlap 0.54 of a pitch along the face, under one, which loses most of the smoothness helical teeth are for; widen the face or raise the helix angle.
+        warning Gears!Q5: G4: The involute starts at 45.829 mm, above the form diameter of 45.649 mm, so the bottom of the working flank is a straight line.
+        warning Gears!I6: G5: The teeth overlap 0.54 of a pitch along the face, under one, which loses most of the smoothness helical teeth are for; widen the face or raise the helix angle.
+        warning Gears!I7: G6: The teeth overlap 0.54 of a pitch along the face, under one, which loses most of the smoothness helical teeth are for; widen the face or raise the helix angle.
+        4 shafts · 6 gears · 3 meshes; gate ''
+classify parts changed []; moved []; re-place ['G5', 'G6']; structural []; missing []; unsaved []; refusal ''; turning True; axial []; ratios []
+        layout globals wanted ['S2 X = 36.182044264', 'S3 X = 36.182044264', 'S3 Y = -39.721605083', 'S4 X = 59.593955259', 'S4 Y = -39.721605083']
+summary Update SolidWorks will re-place G1, G2, G3, G4, G5 and G6.
+ok      classify: an Update re-placing G5 (LOCK_RETAKES_AN_OFFSET): structural []
+update  SolidWorks 4.45 GB private, 10.62 GB free
+        update  Helical_m2_N14_20R.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Helical_m2_N20_20L.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Herringbone_m2_N14_25R.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Herringbone_m2_N22_25R.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Helical_m2_N14_20L.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Ring_m2_N36_20L.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Risky_Placements_Layout.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        ok      re-placed G1, G2, G3, G4, G5, G6
+        mate    G1 on S1 Axis
+        mate    G1 along S1
+        mate    G2 on S2 Axis
+        mate    G2 along S2
+        mate    G3 locked to G2
+        mate    G4 on S3 Axis
+        mate    G4 along S3
+        mate    G5 locked to G4
+        mate    G6 on S4 Axis
+        mate    G6 along S4
+        mate    G1 meshes G2
+        mate    G3 meshes G4
+        mate    G5 meshes G6
+        ok      assembly rebuilt once
+        ok      no interference between the gears
+        not saved: Risky_Placements.SLDASM changed in SolidWorks; save there to keep it
+        in 19.3 s; SolidWorks 6.02 GB private, 10.59 GB free
+        steps [('check', 'Helical_m2_N14_20R', 1, 8), ('check', 'Helical_m2_N20_20L', 2, 8), ('check', 'Herringbone_m2_N14_25R', 3, 8), ('check', 'Herringbone_m2_N22_25R', 4, 8), ('check', 'Helical_m2_N14_20L', 5, 8), ('check', 'Ring_m2_N36_20L', 6, 8), ('check', 'Risky_Placements_Layout', 7, 8), ('check', 'Risky_Placements', 8, 8), ('place', 'Risky_Placements', 0, 0), ('interference', 'Risky_Placements', 0, 0)]
+        loaded from disk []
+        motion: turned False; out of step []; off axis []; restored []; unsuppressed []; axial []; ratios []; extra mates []; ratios found [], already [], read []; sense found wrong [], turned round []
+        train_check residuals (rad) [('G1', 'G2', '1.05e-10'), ('G3', 'G4', '4.62e-11'), ('G5', 'G6', '4.40e-11'), ('G2', 'G3', '1.47e-17'), ('G4', 'G5', '7.36e-18')]
+        finish: dragged []; earlier update ''
+ok      the Update's check phase found no gear mate turning against its mesh: []
+record  0 sidecar(s) written; record written; notes []
+status  [green] Updated SolidWorks: re-placed G1, G2, G3, G4, G5 and G6; no interference between the gears where they stand. Save Risky_Placements in SolidWorks to keep it.
+ok      m7: every mated gear put, no gear mate remade: placed ['G1', 'G2', 'G3', 'G4', 'G5', 'G6'], ratios []
+        marked modified in SolidWorks right after the update: {'Helical_m2_N14_20R.SLDPRT': False, 'Helical_m2_N20_20L.SLDPRT': False, 'Herringbone_m2_N14_25R.SLDPRT': False, 'Herringbone_m2_N22_25R.SLDPRT': False, 'Helical_m2_N14_20L.SLDPRT': False, 'Ring_m2_N36_20L.SLDPRT': False, 'Risky_Placements_Layout.SLDPRT': False, 'Risky_Placements.SLDASM': True}
+ok      m7 G5 At: SolidWorks marks modified exactly ['Risky_Placements.SLDASM']
+ok      m7 G5 At: G1 (Helical_m2_N14_20R-1) at (0.0, 0.0, 0.0), origin off 0.0e+00 mm, turn off 0.0e+00° (exactly), axis off 0.0e+00
+ok      m7 G5 At: G1's frame on record is the one the workbook wants
+ok      m7 G5 At: G2 (Helical_m2_N20_20L-1) at (36.182044261, -4e-09, 10.0), origin off 4.0e-09 mm, turn off 6.0e-09° (exactly), axis off 6.6e-17
+ok      m7 G5 At: G2's frame on record is the one the workbook wants
+ok      m7 G5 At: G3 (Herringbone_m2_N14_25R-1) at (36.182044261, -8e-09, 32.0), origin off 8.1e-09 mm, turn off 6.0e-09° (exactly), axis off 6.1e-17
+ok      m7 G5 At: G3's frame on record is the one the workbook wants
+ok      m7 G5 At: G4 (Herringbone_m2_N22_25R-1) at (36.18204426, -39.72160508, 18.0), origin off 4.2e-09 mm, turn off 6.5e-09° (exactly), axis off 6.9e-17
+ok      m7 G5 At: G4's frame on record is the one the workbook wants
+ok      m7 G5 At: G5 (Helical_m2_N14_20L-1) at (36.182044264, -39.72160508, 42.0), origin off 2.6e-09 mm, turn off 0.0e+00° (exactly), axis off 0.0e+00
+ok      m7 G5 At: G5's frame on record is the one the workbook wants
+ok      m7 G5 At: G6 (Ring_m2_N36_20L-1) at (59.59395526, -39.72160508, 50.0), origin off 2.6e-09 mm, turn off 2.0e-16° (exactly), axis off 0.0e+00
+ok      m7 G5 At: G6's frame on record is the one the workbook wants
+ok      m7 G5 At: the layout (Risky_Placements_Layout-1) is at identity
+        frames read in 0.2 s
+        mates [('G1 on S1 Axis', 0, True, False), ('G1 along S1', 0, True, False), ('G2 on S2 Axis', 0, True, False), ('G2 along S2', 0, True, False), ('G3 locked to G2', 0, True, False), ('G4 on S3 Axis', 0, True, False), ('G4 along S3', 0, True, False), ('G5 locked to G4', 0, True, False), ('G6 on S4 Axis', 0, True, False), ('G6 along S4', 0, True, False), ('G1 meshes G2', 0, True, False), ('G3 meshes G4', 0, True, False), ('G5 meshes G6', 0, True, False)]; others []; constrained {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2, 'G5': 2, 'G6': 2}
+ok      m7 G5 At: the mates are exactly the record's 13: extra [], missing []
+ok      m7 G5 At: nothing but mates in the mate group: []
+ok      m7 G5 At: every mate's error code is 0: []
+ok      m7 G5 At: no mate suppressed: []
+ok      m7 G5 At: every mated gear under-defined (2): {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2, 'G5': 2, 'G6': 2}
+ok      m7 G5 At: no interference in Risky_Placements.SLDASM: []
+ok      m7 G5 At: G1 turned half a pitch (12.8571°): 3 interference(s), merged [(('G1', 'G2'), 110.59)], all between G1 and G2
+ok      m7 G5 At: G1 put back, no interference (1.5 s)
+ok      m7 G5 At: G4 turned half a pitch (8.1818°) with ['G3 locked to G2', 'G5 locked to G4'] suppressed: 3 interference(s), merged [(('G3', 'G4'), 135.552)], all between G3 and G4
+ok      m7 G5 At: G4 put back, no interference (2.7 s)
+ok      m7 G5 At: G6 turned half a pitch (5.0000°): 5 interference(s), merged [(('G5', 'G6'), 152.283)], all between G5 and G6
+ok      m7 G5 At: G6 put back, no interference (1.6 s)
+ok      m7 G5 At, after the controls: G1 (Helical_m2_N14_20R-1) at (0.0, 0.0, 0.0), origin off 0.0e+00 mm, turn off 0.0e+00° (exactly), axis off 0.0e+00
+ok      m7 G5 At, after the controls: G1's frame on record is the one the workbook wants
+ok      m7 G5 At, after the controls: G2 (Helical_m2_N20_20L-1) at (36.182044262, -8e-09, 10.0), origin off 8.0e-09 mm, turn off 6.0e-09° (exactly), axis off 6.6e-17
+ok      m7 G5 At, after the controls: G2's frame on record is the one the workbook wants
+ok      m7 G5 At, after the controls: G3 (Herringbone_m2_N14_25R-1) at (36.182044262, -1.6e-08, 32.0), origin off 1.6e-08 mm, turn off 6.0e-09° (exactly), axis off 6.1e-17
+ok      m7 G5 At, after the controls: G3's frame on record is the one the workbook wants
+ok      m7 G5 At, after the controls: G4 (Herringbone_m2_N22_25R-1) at (36.18204426, -39.72160508, 18.0), origin off 4.2e-09 mm, turn off 6.5e-09° (exactly), axis off 6.9e-17
+ok      m7 G5 At, after the controls: G4's frame on record is the one the workbook wants
+ok      m7 G5 At, after the controls: G5 (Helical_m2_N14_20L-1) at (36.182044264, -39.72160508, 42.0), origin off 2.6e-09 mm, turn off 0.0e+00° (exactly), axis off 0.0e+00
+ok      m7 G5 At, after the controls: G5's frame on record is the one the workbook wants
+ok      m7 G5 At, after the controls: G6 (Ring_m2_N36_20L-1) at (59.59395526, -39.72160508, 50.0), origin off 2.6e-09 mm, turn off 2.0e-16° (exactly), axis off 0.0e+00
+ok      m7 G5 At, after the controls: G6's frame on record is the one the workbook wants
+ok      m7 G5 At, after the controls: the layout (Risky_Placements_Layout-1) is at identity
+        frames read in 0.1 s
+        mates [('G1 on S1 Axis', 0, True, False), ('G1 along S1', 0, True, False), ('G2 on S2 Axis', 0, True, False), ('G2 along S2', 0, True, False), ('G3 locked to G2', 0, True, False), ('G4 on S3 Axis', 0, True, False), ('G4 along S3', 0, True, False), ('G5 locked to G4', 0, True, False), ('G6 on S4 Axis', 0, True, False), ('G6 along S4', 0, True, False), ('G1 meshes G2', 0, True, False), ('G3 meshes G4', 0, True, False), ('G5 meshes G6', 0, True, False)]; others []; constrained {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2, 'G5': 2, 'G6': 2}
+ok      m7 G5 At, after the controls: the mates are exactly the record's 13: extra [], missing []
+ok      m7 G5 At, after the controls: nothing but mates in the mate group: []
+ok      m7 G5 At, after the controls: every mate's error code is 0: []
+ok      m7 G5 At, after the controls: no mate suppressed: []
+ok      m7 G5 At, after the controls: every mated gear under-defined (2): {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2, 'G5': 2, 'G6': 2}
+drive   m7 G5 At, through the ring: input G1; control ('G5', 'G6'); SolidWorks 6.03 GB private, 10.57 GB free
+ok      m7 G5 At, through the ring: the drive's assumptions hold: G1 on S1 (Z+) at θ = 0, DEMONSTRATION_DRIVE_SENSE 1, tolerance 1e-06 relative
+        in 18.1 s; rebuilds [('drive added', True), ('Drive 120', True), ('Drive 90', True), ('control added, Flip True', True), ('Drive 120', True), ('Drive 90', True), ('control added, Flip False', True), ('Drive 120', True), ('Drive 90', True), ('control gone', True), ('drive gone', True)]; drive mate ('Demonstration drive', 'D1', 1); control mate [(True, 'Control G5 meshes G6', 1), (False, 'Control G5 meshes G6', 1)]
+ok      m7 G5 At, through the ring: the drive ran without a raise: []
+ok      m7 G5 At, through the ring: every cleanup step ran: []
+ok      m7 G5 At, through the ring: before the drive every gear stands at its frame on record (largest 1.6e-08 at G3)
+        states with the drive added: [('G1 on S1 Axis', 0, True, False), ('G1 along S1', 0, True, False), ('G2 on S2 Axis', 0, True, False), ('G2 along S2', 0, True, False), ('G3 locked to G2', 0, True, False), ('G4 on S3 Axis', 0, True, False), ('G4 along S3', 0, True, False), ('G5 locked to G4', 0, True, False), ('G6 on S4 Axis', 0, True, False), ('G6 along S4', 0, True, False), ('G1 meshes G2', 0, True, False), ('G3 meshes G4', 0, True, False), ('G5 meshes G6', 0, True, False), ('Demonstration drive', 0, True, False)]
+ok      m7 G5 At, through the ring: adding the 90° drive moved nothing (largest 8.0e-09)
+        Drive 90 -> 120: G1 +30.000000000° (kinematics +30.000000000°), G2 +21.000000006° (kinematics +21.000000000°), G3 +21.000000006° (kinematics +21.000000000°), G4 +13.363636380° (kinematics +13.363636364°), G5 +13.363636380° (kinematics +13.363636364°), G6 -5.196969697° (kinematics -5.196969697°)
+ok      m7 G5 At, through the ring: G1 turned +30.000000000° for +30.000000000°, sign included (off 2.7e-13)
+ok      m7 G5 At, through the ring: G2 turned +21.000000006° for +21.000000000°, sign included (off 6.0e-09)
+ok      m7 G5 At, through the ring: G3 turned +21.000000006° for +21.000000000°, sign included (off 6.0e-09)
+ok      m7 G5 At, through the ring: G4 turned +13.363636380° for +13.363636364°, sign included (off 1.6e-08)
+ok      m7 G5 At, through the ring: G5 turned +13.363636380° for +13.363636364°, sign included (off 1.6e-08)
+ok      m7 G5 At, through the ring: G6 turned -5.196969697° for -5.196969697°, sign included (off 1.3e-10)
+ok      m7 G5 At, through the ring: driven, every gear stays on its axis and in its place: {'G1': ('0.0e+00', '0.0e+00'), 'G2': ('8.0e-09', '1.3e-16'), 'G3': ('8.5e-09', '1.3e-16'), 'G4': ('3.6e-15', '1.3e-16'), 'G5': ('9.7e-10', '1.2e-16'), 'G6': ('7.1e-15', '0.0e+00')}
+        states driven: [('G1 on S1 Axis', 0, True, False), ('G1 along S1', 0, True, False), ('G2 on S2 Axis', 0, True, False), ('G2 along S2', 0, True, False), ('G3 locked to G2', 0, True, False), ('G4 on S3 Axis', 0, True, False), ('G4 along S3', 0, True, False), ('G5 locked to G4', 0, True, False), ('G6 on S4 Axis', 0, True, False), ('G6 along S4', 0, True, False), ('G1 meshes G2', 0, True, False), ('G3 meshes G4', 0, True, False), ('G5 meshes G6', 0, True, False), ('Demonstration drive', 0, True, False)]
+ok      m7 G5 At, through the ring: no mate in error while driven
+ok      m7 G5 At, through the ring: Drive set back to 90, every gear at its built frame (largest 8.0e-09 at G2)
+ok      m7 G5 At, through the ring, control: the gear mate with Flip True moved nothing when made (largest 8.0e-09)
+        control, Control G5 meshes G6 with Flip True: G1 +30.000000000° (kinematics +30.000000000°), G2 +21.000000006° (kinematics +21.000000000°), G3 +21.000000006° (kinematics +21.000000000°), G4 +13.363636380° (kinematics +13.363636364°), G5 +13.363636380° (kinematics +13.363636364°), G6 -5.196969692° (kinematics -5.196969697°)
+ok      m7 G5 At, through the ring, control: G5, before the mesh, still turns +13.363636364° with Flip True (13.363636379990407)
+ok      m7 G5 At, through the ring, control: Drive set back with Flip True's mate on: every gear at its built frame (largest 8.0e-09 at G2)
+ok      m7 G5 At, through the ring, control: the gear mate with Flip False moved nothing when made (largest 8.0e-09)
+        control, Control G5 meshes G6 with Flip False: G1 +30.000000000° (kinematics +30.000000000°), G2 +21.000000006° (kinematics +21.000000000°), G3 +21.000000006° (kinematics +21.000000000°), G4 +13.363636380° (kinematics +13.363636364°), G5 +13.363636380° (kinematics +13.363636364°), G6 +5.196969705° (kinematics -5.196969697°)
+ok      m7 G5 At, through the ring, control: G5, before the mesh, still turns +13.363636364° with Flip False (13.363636379990407)
+ok      m7 G5 At, through the ring, control: Drive set back with Flip False's mate on: every gear at its built frame (largest 8.0e-09 at G2)
+ok      m7 G5 At, through the ring, control: a wrong sense is seen: with Flip [False] G6 turns the mirror of the right turn, with Flip [True] it turns right (the comparison tells one from the other)
+fact    m7 G5 At, through the ring: G5 meshes G6 turns right with Flip [True] here (findings.GEAR_MATE_FLIP False)
+fact    m7 G5 At, through the ring, control: a gear of G5 meshes G6 has moved since the mate was made; a fresh mate turns right with Flip [True], the recorded one was made with [False] (as first made) and its own drive is judged above
+ok      m7 G5 At, through the ring, control: the control mates deleted and the recorded one back on: every gear at its built frame (largest 8.0e-09 at G2)
+ok      m7 G5 At, through the ring: the drive gone, every frame against the built frames (largest 2.2e-10 at G5)
+ok      m7 G5 At, through the ring: no Drive equation left: []
+ok      m7 G5 At, through the ring: no angle mate or control mate left; the mates as before: ['G1 on S1 Axis', 'G1 along S1', 'G2 on S2 Axis', 'G2 along S2', 'G3 locked to G2', 'G4 on S3 Axis', 'G4 along S3', 'G5 locked to G4', 'G6 on S4 Axis', 'G6 along S4', 'G1 meshes G2', 'G3 meshes G4', 'G5 meshes G6']
+ok      m7 G5 At, through the ring: no mate (no lock) left suppressed
+ok      m7 G5 At, through the ring: no mate in error after the drive
+ok      m7 G5 At, through the ring: every mated gear under-defined again: {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2, 'G5': 2, 'G6': 2}
+        closing: saved this run's modified documents first, as a person would: ['Risky_Placements.SLDASM']
+ok      m7 G5 At: saved and closed this run's documents: left []
+        open now: []
+ok      m7 G5 At, reopened: every document just opened from its file reads GetSaveFlag False (the record clears a mark on that reading): {'Risky_Placements_Layout.SLDPRT': False, 'Helical_m2_N14_20R.SLDPRT': False, 'Helical_m2_N20_20L.SLDPRT': False, 'Herringbone_m2_N14_25R.SLDPRT': False, 'Herringbone_m2_N22_25R.SLDPRT': False, 'Helical_m2_N14_20L.SLDPRT': False, 'Ring_m2_N36_20L.SLDPRT': False, 'Risky_Placements.SLDASM': False}
+ok      m7 G5 At, reopened: G1 (Helical_m2_N14_20R-1) at (0.0, 0.0, 0.0), origin off 0.0e+00 mm, turn off 0.0e+00° (exactly), axis off 0.0e+00
+ok      m7 G5 At, reopened: G1's frame on record is the one the workbook wants
+ok      m7 G5 At, reopened: G2 (Helical_m2_N20_20L-1) at (36.182044262, -8e-09, 10.0), origin off 8.0e-09 mm, turn off 6.0e-09° (exactly), axis off 2.0e-16
+ok      m7 G5 At, reopened: G2's frame on record is the one the workbook wants
+ok      m7 G5 At, reopened: G3 (Herringbone_m2_N14_25R-1) at (36.182044262, -1.6e-08, 32.0), origin off 1.6e-08 mm, turn off 6.0e-09° (exactly), axis off 1.8e-16
+ok      m7 G5 At, reopened: G3's frame on record is the one the workbook wants
+ok      m7 G5 At, reopened: G4 (Herringbone_m2_N22_25R-1) at (36.18204426, -39.72160508, 18.0), origin off 4.2e-09 mm, turn off 6.0e-09° (exactly), axis off 1.4e-16
+ok      m7 G5 At, reopened: G4's frame on record is the one the workbook wants
+ok      m7 G5 At, reopened: G5 (Helical_m2_N14_20L-1) at (36.182044264, -39.72160508, 42.0), origin off 2.6e-09 mm, turn off 1.3e-08° (exactly), axis off 6.1e-17
+ok      m7 G5 At, reopened: G5's frame on record is the one the workbook wants
+ok      m7 G5 At, reopened: G6 (Ring_m2_N36_20L-1) at (59.59395526, -39.72160508, 50.0), origin off 2.6e-09 mm, turn off 6.5e-09° (exactly), axis off 0.0e+00
+ok      m7 G5 At, reopened: G6's frame on record is the one the workbook wants
+ok      m7 G5 At, reopened: the layout (Risky_Placements_Layout-1) is at identity
+        frames read in 0.3 s
+fact    m7 G5 At, reopened: marked modified after the frame reads (component_frame): []
+        mates [('G1 on S1 Axis', 0, True, False), ('G1 along S1', 0, True, False), ('G2 on S2 Axis', 0, True, False), ('G2 along S2', 0, True, False), ('G3 locked to G2', 0, True, False), ('G4 on S3 Axis', 0, True, False), ('G4 along S3', 0, True, False), ('G5 locked to G4', 0, True, False), ('G6 on S4 Axis', 0, True, False), ('G6 along S4', 0, True, False), ('G1 meshes G2', 0, True, False), ('G3 meshes G4', 0, True, False), ('G5 meshes G6', 0, True, False)]; others []; constrained {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2, 'G5': 2, 'G6': 2}
+ok      m7 G5 At, reopened: the mates are exactly the record's 13: extra [], missing []
+ok      m7 G5 At, reopened: nothing but mates in the mate group: []
+ok      m7 G5 At, reopened: every mate's error code is 0: []
+ok      m7 G5 At, reopened: no mate suppressed: []
+ok      m7 G5 At, reopened: every mated gear under-defined (2): {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2, 'G5': 2, 'G6': 2}
+fact    m7 G5 At, reopened: marked modified after the mate reads (mate_states, GetConstrainedStatus): []
+fact    m7 G5 At, reopened: marked modified after interferences() (0 found): ['Risky_Placements.SLDASM']
+        closing: saved this run's modified documents first, as a person would: ['Risky_Placements.SLDASM']
+close   section m7: left of ours []; 206 s; SolidWorks 1.84 GB private, 10.79 GB free
+== m8  the ring's gear mate made again after a move: Risky_Placements built to turn; G5 At 45 -> 47 by Update; then the ring mesh's teeth 14/36 -> 15/37 (the same centre distance) by Update: the app remakes G5 meshes G6
+ok      Excel opened Risky_Placements.xlsx with no dialog or repair: []
+excel   Box!B4 := 'C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w5-m8-20261114-174603\\asm2024\\m8\\'
+excel   saved Risky_Placements.xlsx
+ok      read Risky_Placements.xlsx: ok
+        warning Gears!I2: G1: The teeth overlap 0.54 of a pitch along the face, under one, which loses most of the smoothness helical teeth are for; widen the face or raise the helix angle.
+        warning Gears!I3: G2: The teeth overlap 0.54 of a pitch along the face, under one, which loses most of the smoothness helical teeth are for; widen the face or raise the helix angle.
+        warning Gears!Q5: G4: The involute starts at 45.829 mm, above the form diameter of 45.649 mm, so the bottom of the working flank is a straight line.
+        warning Gears!I6: G5: The teeth overlap 0.54 of a pitch along the face, under one, which loses most of the smoothness helical teeth are for; widen the face or raise the helix angle.
+        warning Gears!I7: G6: The teeth overlap 0.54 of a pitch along the face, under one, which loses most of the smoothness helical teeth are for; widen the face or raise the helix angle.
+        4 shafts · 6 gears · 3 meshes; gate ''
+ok      the gate is ""
+footer  (m8, read) [green] Ready: Build makes 6 parts, Risky_Placements_Layout and Risky_Placements.SLDASM in C:\…\w5-m8-20261114-174603\asm2024\m8\. Its gears are mated to their shafts and to each other, so they turn together in SolidWorks.
+        button 'Build' on primary; Update SolidWorks hidden
+plan    revision 0 Risky_Placements: refusal ''; reason ''; turning True; static reason ''
+        layout C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m8\Risky_Placements_Layout.SLDPRT; assembly C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m8\Risky_Placements.SLDASM
+        build Helical_m2_N14_20R for G1 at C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m8\Helical_m2_N14_20R.SLDPRT (105 ops)
+        build Helical_m2_N20_20L for G2 at C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m8\Helical_m2_N20_20L.SLDPRT (105 ops)
+        build Herringbone_m2_N14_25R for G3 at C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m8\Herringbone_m2_N14_25R.SLDPRT (107 ops)
+        build Herringbone_m2_N22_25R for G4 at C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m8\Herringbone_m2_N22_25R.SLDPRT (107 ops)
+        build Helical_m2_N14_20L for G5 at C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m8\Helical_m2_N14_20L.SLDPRT (105 ops)
+        build Ring_m2_N36_20L for G6 at C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m8\Ring_m2_N36_20L.SLDPRT (115 ops)
+        shaft S1: (0, 0, 0) sigma +1; X base '', Y base ''; S1 Axis
+        shaft S2: (36.182, 0, 0) sigma -1; X plus 'S2 X', Y base ''; S2 Axis
+        shaft S3: (36.182, -39.7216, 0) sigma +1; X plus 'S3 X', Y minus 'S3 Y'; S3 Axis
+        shaft S4: (59.594, -39.7216, 0) sigma -1; X plus 'S4 X', Y minus 'S4 Y'; S4 Axis
+        frame G1: R [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0] at [0.0, 0.0, 0.0]
+        frame G2: R [0.996612432, -0.082241475, 0.0, -0.082241475, -0.996612432, 0.0, 0.0, 0.0, -1.0] at [36.182044264, 0.0, 10.0]
+        frame G3: R [1.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, -1.0] at [36.182044264, 0.0, 32.0]
+        frame G4: R [0.989821442, -0.142314838, 0.0, 0.142314838, 0.989821442, 0.0, 0.0, 0.0, 1.0] at [36.182044264, -39.721605083, 18.0]
+        frame G5: R [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0] at [36.182044264, -39.721605083, 40.0]
+        frame G6: R [0.998954046, -0.045725422, 0.0, -0.045725422, -0.998954046, 0.0, 0.0, 0.0, -1.0] at [59.593955259, -39.721605083, 50.0]
+        motion: trains [('S1', 'S2', 'S3', 'S4')]; drag ['G1']; fixed []; unmated []
+        mate 'G1 on S1 Axis': axis ['G1'] S1 ratio [] face '' z_front 0
+        mate 'G1 along S1': along ['G1'] S1 ratio [] face '' z_front 0
+        mate 'G2 on S2 Axis': axis ['G2'] S2 ratio [] face '' z_front 0
+        mate 'G2 along S2': along ['G2'] S2 ratio [] face 'G2 Face Z' z_front 10
+        mate 'G3 locked to G2': lock ['G2', 'G3']  ratio [] face '' z_front 0
+        mate 'G4 on S3 Axis': axis ['G4'] S3 ratio [] face '' z_front 0
+        mate 'G4 along S3': along ['G4'] S3 ratio [] face 'G4 Face Z' z_front 18
+        mate 'G5 locked to G4': lock ['G4', 'G5']  ratio [] face '' z_front 0
+        mate 'G6 on S4 Axis': axis ['G6'] S4 ratio [] face '' z_front 0
+        mate 'G6 along S4': along ['G6'] S4 ratio [] face 'G6 Face Z' z_front 50
+        mate 'G1 meshes G2': mesh ['G1', 'G2']  ratio [14, 20] face '' z_front 0
+        mate 'G3 meshes G4': mesh ['G3', 'G4']  ratio [14, 22] face '' z_front 0
+        mate 'G5 meshes G6': mesh ['G5', 'G6']  ratio [14, 36] face '' z_front 0
+        ops of Risky_Placements_Layout.SLDPRT:
+          new     NewPart from (default template)
+          global  "S2 X"= 36.182044264
+          global  "S3 X"= 36.182044264
+          global  "S3 Y"= -39.721605083
+          global  "S4 X"= 59.593955259
+          global  "S4 Y"= -39.721605083
+          axis    'S1 Axis' through planes 2 and 3
+          plane   'S2 X Plane' 36.182044 mm from plane 3 (Offset)
+          link    "Offset@S2 X Plane"= "S2 X"
+          axis    'S2 Axis' through plane 2 and x2
+          plane   'S3 X Plane' 36.182044 mm from plane 3 (Offset)
+          link    "Offset@S3 X Plane"= "S3 X"
+          plane   'S3 Y Plane' 39.721605 mm from plane 2, flipped (Offset)
+          link    "Offset@S3 Y Plane"= - "S3 Y"
+          axis    'S3 Axis' through y3 and x3
+          plane   'S4 X Plane' 59.593955 mm from plane 3 (Offset)
+          link    "Offset@S4 X Plane"= "S4 X"
+          plane   'S4 Y Plane' 39.721605 mm from plane 2, flipped (Offset)
+          link    "Offset@S4 Y Plane"= - "S4 Y"
+          axis    'S4 Axis' through y4 and x4
+          rebuild once
+          save    C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m8\Risky_Placements_Layout.SLDPRT
+        ops of Risky_Placements.SLDASM:
+          new     NewAssembly from (default template)
+          global  "G2 Face Z"= 10
+          global  "G4 Face Z"= 18
+          global  "G6 Face Z"= 50
+          insert  layout C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m8\Risky_Placements_Layout.SLDPRT at (0, 0, 0)
+          place   layout at (0, 0, 0) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     layout
+          insert  gear1 C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m8\Helical_m2_N14_20R.SLDPRT at (0, 0, 0)
+          place   gear1 at (0, 0, 0) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     gear1
+          insert  gear2 C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m8\Helical_m2_N20_20L.SLDPRT at (36.182044, 0, 10)
+          place   gear2 at (36.182044, 0, 10) turned (0.996612, -0.082241, 0, -0.082241, -0.996612, 0, 0, 0, -1)
+          fix     gear2
+          insert  gear3 C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m8\Herringbone_m2_N14_25R.SLDPRT at (36.182044, 0, 32)
+          place   gear3 at (36.182044, 0, 32) turned (1, 0, 0, 0, -1, 0, 0, 0, -1)
+          fix     gear3
+          insert  gear4 C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m8\Herringbone_m2_N22_25R.SLDPRT at (36.182044, -39.721605, 18)
+          place   gear4 at (36.182044, -39.721605, 18) turned (0.989821, -0.142315, 0, 0.142315, 0.989821, 0, 0, 0, 1)
+          fix     gear4
+          insert  gear5 C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m8\Helical_m2_N14_20L.SLDPRT at (36.182044, -39.721605, 40)
+          place   gear5 at (36.182044, -39.721605, 40) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     gear5
+          insert  gear6 C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m8\Ring_m2_N36_20L.SLDPRT at (59.593955, -39.721605, 50)
+          place   gear6 at (59.593955, -39.721605, 50) turned (0.998954, -0.045725, 0, -0.045725, -0.998954, 0, 0, 0, -1)
+          fix     gear6
+          unfix   gear1
+          mate    coincident gear1:Gear Axis ~ layout:S1 Axis as 'G1 on S1 Axis'
+          mate    point gear1:origin ~ layout:plane1 as 'G1 along S1'
+          unfix   gear2
+          mate    coincident gear2:Gear Axis ~ layout:S2 Axis as 'G2 on S2 Axis'
+          mate    point distance 10 gear2:origin ~ layout:plane1 as 'G2 along S2'
+          link    "D1@G2 along S2"= "G2 Face Z"
+          unfix   gear3
+          mate    lock gear2 ~ gear3 as 'G3 locked to G2'
+          unfix   gear4
+          mate    coincident gear4:Gear Axis ~ layout:S3 Axis as 'G4 on S3 Axis'
+          mate    point distance 18 gear4:origin ~ layout:plane1 as 'G4 along S3'
+          link    "D1@G4 along S3"= "G4 Face Z"
+          unfix   gear5
+          mate    lock gear4 ~ gear5 as 'G5 locked to G4'
+          unfix   gear6
+          mate    coincident gear6:Gear Axis ~ layout:S4 Axis as 'G6 on S4 Axis'
+          mate    point distance 50 gear6:origin ~ layout:plane1 as 'G6 along S4'
+          link    "D1@G6 along S4"= "G6 Face Z"
+          mate    gear 14:20 gear1:Gear Axis ~ gear2:Gear Axis as 'G1 meshes G2'
+          mate    gear 14:22 gear3:Gear Axis ~ gear4:Gear Axis as 'G3 meshes G4'
+          mate    gear 14:36 gear5:Gear Axis ~ gear6:Gear Axis as 'G5 meshes G6'
+          rebuild once
+          save    C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m8\Risky_Placements.SLDASM
+ok      m8: the plan turns (W5): static reason ''
+journal written: 8 paths
+build   Risky_Placements: SolidWorks 1.61 GB private, 10.86 GB free
+        build   Part8 · helical · recipe A · trig degrees
+        ok      new part Part8
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Helix Angle"
+        ok      global "Transverse Module"
+        ok      global "Transverse Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      global "Lead"
+        ok      global "Overrun"
+        ok      global "Path Length"
+        ok      global "Twist Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      plane Profile Plane
+        ok      link "Offset@Profile Plane"
+        ok      sketch space opened on plane plane
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      sketch path opened on plane 2
+        ok      line lead
+        ok      line P
+        ok      coincident lead.start origin
+        ok      vertical lead
+        ok      vertical P
+        ok      coincident P.start lead.end (already one point)
+        ok      dimension Lead In
+        ok      dimension Length
+        ok      sketch Path Sketch
+        ok      link "Lead In@Path Sketch"
+        ok      link "Length@Path Sketch"
+        ok      sweep Tooth Space, twist 19.5963°
+        ok      link "Twist@Tooth Space"
+        ok      pattern Teeth × 14
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      31 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Path Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Helical_m2_N14_20R; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m8\Helical_m2_N14_20R.SLDPRT
+        build   Part9 · helical · recipe A · trig degrees
+        ok      new part Part9
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Helix Angle"
+        ok      global "Transverse Module"
+        ok      global "Transverse Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      global "Lead"
+        ok      global "Overrun"
+        ok      global "Path Length"
+        ok      global "Twist Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      plane Profile Plane
+        ok      link "Offset@Profile Plane"
+        ok      sketch space opened on plane plane
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      sketch path opened on plane 2
+        ok      line lead
+        ok      line P
+        ok      coincident lead.start origin
+        ok      vertical lead
+        ok      vertical P
+        ok      coincident P.start lead.end (already one point)
+        ok      dimension Lead In
+        ok      dimension Length
+        ok      sketch Path Sketch
+        ok      link "Lead In@Path Sketch"
+        ok      link "Length@Path Sketch"
+        ok      sweep Tooth Space, twist 13.7174° reversed
+        ok      link "Twist@Tooth Space"
+        ok      pattern Teeth × 20
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      31 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Path Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Helical_m2_N20_20L; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m8\Helical_m2_N20_20L.SLDPRT
+        build   Part10 · herringbone · recipe A · trig degrees
+        ok      new part Part10
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Helix Angle"
+        ok      global "Transverse Module"
+        ok      global "Transverse Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      global "Lead"
+        ok      global "Overrun"
+        ok      global "Mid Width"
+        ok      global "Path Length"
+        ok      global "Twist Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      plane Mid Plane
+        ok      link "Offset@Mid Plane"
+        ok      sketch space opened on plane plane
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      sketch path opened on plane 2
+        ok      line lead
+        ok      line P
+        ok      coincident lead.start origin
+        ok      vertical lead
+        ok      vertical P
+        ok      coincident P.start lead.end (already one point)
+        ok      dimension Mid
+        ok      dimension Length
+        ok      sketch Path Sketch
+        ok      link "Mid@Path Sketch"
+        ok      link "Length@Path Sketch"
+        ok      sweep Tooth Space, twist 17.2959°
+        ok      link "Twist@Tooth Space"
+        ok      pattern Teeth × 14
+        ok      link "Count@Teeth"
+        ok      mirror Mirror
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      32 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Path Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Herringbone_m2_N14_25R; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m8\Herringbone_m2_N14_25R.SLDPRT
+        build   Part11 · herringbone · recipe A · trig degrees
+        ok      new part Part11
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Helix Angle"
+        ok      global "Transverse Module"
+        ok      global "Transverse Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      global "Lead"
+        ok      global "Overrun"
+        ok      global "Mid Width"
+        ok      global "Path Length"
+        ok      global "Twist Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      plane Mid Plane
+        ok      link "Offset@Mid Plane"
+        ok      sketch space opened on plane plane
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      sketch path opened on plane 2
+        ok      line lead
+        ok      line P
+        ok      coincident lead.start origin
+        ok      vertical lead
+        ok      vertical P
+        ok      coincident P.start lead.end (already one point)
+        ok      dimension Mid
+        ok      dimension Length
+        ok      sketch Path Sketch
+        ok      link "Mid@Path Sketch"
+        ok      link "Length@Path Sketch"
+        ok      sweep Tooth Space, twist 8.8052°
+        ok      link "Twist@Tooth Space"
+        ok      pattern Teeth × 22
+        ok      link "Count@Teeth"
+        ok      mirror Mirror
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      32 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Path Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Herringbone_m2_N22_25R; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m8\Herringbone_m2_N22_25R.SLDPRT
+        build   Part12 · helical · recipe A · trig degrees
+        ok      new part Part12
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Helix Angle"
+        ok      global "Transverse Module"
+        ok      global "Transverse Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      global "Lead"
+        ok      global "Overrun"
+        ok      global "Path Length"
+        ok      global "Twist Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      plane Profile Plane
+        ok      link "Offset@Profile Plane"
+        ok      sketch space opened on plane plane
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      sketch path opened on plane 2
+        ok      line lead
+        ok      line P
+        ok      coincident lead.start origin
+        ok      vertical lead
+        ok      vertical P
+        ok      coincident P.start lead.end (already one point)
+        ok      dimension Lead In
+        ok      dimension Length
+        ok      sketch Path Sketch
+        ok      link "Lead In@Path Sketch"
+        ok      link "Length@Path Sketch"
+        ok      sweep Tooth Space, twist 19.5963° reversed
+        ok      link "Twist@Tooth Space"
+        ok      pattern Teeth × 14
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      31 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Path Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Helical_m2_N14_20L; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m8\Helical_m2_N14_20L.SLDPRT
+        build   Part13 · internal helical · recipe A · trig degrees
+        ok      new part Part13
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Pressure Angle"
+        ok      global "Helix Angle"
+        ok      global "Transverse Module"
+        ok      global "Transverse Pressure Angle"
+        ok      global "Inner Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Rim Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Flank End Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      global "Lead"
+        ok      global "Overrun"
+        ok      global "Path Length"
+        ok      global "Twist Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle rim
+        ok      circle tip
+        ok      coincident rim.centre origin
+        ok      coincident tip.centre origin
+        ok      dimension Rim
+        ok      dimension Tip
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "Rim@Blank Sketch"
+        ok      link "Tip@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      plane Profile Plane
+        ok      link "Offset@Profile Plane"
+        ok      sketch space opened on plane plane
+        ok      curve I+
+        ok      curve I-
+        ok      circle cap
+        ok      line Li+
+        ok      line Li-
+        ok      line T
+        ok      line Lo+
+        ok      line Lo-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident cap.centre origin
+        ok      coincident Li+.start I+.start (already one point)
+        ok      coincident Li-.start I-.start (already one point)
+        ok      coincident origin Li+
+        ok      coincident origin Li-
+        ok      coincident Li+.end cap
+        ok      coincident Li-.end cap
+        ok      coincident T.start Li+.end (already one point)
+        ok      coincident T.end Li-.end (already one point)
+        ok      coincident Lo+.start I+.end (already one point)
+        ok      coincident Lo-.start I-.end (already one point)
+        ok      coincident origin Lo+
+        ok      coincident origin Lo-
+        ok      coincident F+.end Lo+.end (already one point)
+        ok      coincident F-.start Lo-.end (already one point)
+        ok      coincident F+.start R.end (already one point)
+        ok      coincident F-.end R.start (already one point)
+        ok      tangent F+ Lo+
+        ok      tangent F- Lo-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      dimension Cap
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      link "Cap@Tooth Space Sketch"
+        ok      sketch path opened on plane 2
+        ok      line lead
+        ok      line P
+        ok      coincident lead.start origin
+        ok      vertical lead
+        ok      vertical P
+        ok      coincident P.start lead.end (already one point)
+        ok      dimension Lead In
+        ok      dimension Length
+        ok      sketch Path Sketch
+        ok      link "Lead In@Path Sketch"
+        ok      link "Length@Path Sketch"
+        ok      sweep Tooth Space, twist 7.6208° reversed
+        ok      link "Twist@Tooth Space"
+        ok      pattern Teeth × 36
+        ok      link "Count@Teeth"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      32 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Path Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Ring_m2_N36_20L; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m8\Ring_m2_N36_20L.SLDPRT
+        build   Part14 · layout · recipe  · trig degrees
+        ok      new part Part14
+        ok      trig units measured: degrees
+        ok      global "S2 X"
+        ok      global "S3 X"
+        ok      global "S3 Y"
+        ok      global "S4 X"
+        ok      global "S4 Y"
+        ok      axis S1 Axis
+        ok      plane S2 X Plane
+        ok      link "Offset@S2 X Plane"
+        ok      axis S2 Axis
+        ok      plane S3 X Plane
+        ok      link "Offset@S3 X Plane"
+        ok      plane S3 Y Plane
+        ok      link "Offset@S3 Y Plane"
+        ok      axis S3 Axis
+        ok      plane S4 X Plane
+        ok      link "Offset@S4 X Plane"
+        ok      plane S4 Y Plane
+        ok      link "Offset@S4 Y Plane"
+        ok      axis S4 Axis
+        ok      5 globals read back and match the maths
+        ok      rebuilt once
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m8\Risky_Placements_Layout.SLDPRT
+        build   Assem2 · assembly · recipe  · trig degrees
+        ok      new assembly Assem2
+        ok      trig units measured: degrees
+        ok      global "G2 Face Z"
+        ok      global "G4 Face Z"
+        ok      global "G6 Face Z"
+        ok      component Risky_Placements_Layout-1
+        ok      placed layout
+        ok      fixed layout
+        ok      component Helical_m2_N14_20R-1
+        ok      placed gear1
+        ok      fixed gear1
+        ok      component Helical_m2_N20_20L-1
+        ok      placed gear2
+        ok      fixed gear2
+        ok      component Herringbone_m2_N14_25R-1
+        ok      placed gear3
+        ok      fixed gear3
+        ok      component Herringbone_m2_N22_25R-1
+        ok      placed gear4
+        ok      fixed gear4
+        ok      component Helical_m2_N14_20L-1
+        ok      placed gear5
+        ok      fixed gear5
+        ok      component Ring_m2_N36_20L-1
+        ok      placed gear6
+        ok      fixed gear6
+        ok      unfixed gear1
+        ok      mate coincident gear1:Gear Axis ~ layout:S1 Axis as G1 on S1 Axis
+        ok      mate point gear1:origin ~ layout:plane1 as G1 along S1
+        ok      unfixed gear2
+        ok      mate coincident gear2:Gear Axis ~ layout:S2 Axis as G2 on S2 Axis
+        ok      mate point distance gear2:origin ~ layout:plane1 as G2 along S2
+        ok      link "D1@G2 along S2"
+        ok      unfixed gear3
+        ok      mate lock gear2 ~ gear3 as G3 locked to G2
+        ok      unfixed gear4
+        ok      mate coincident gear4:Gear Axis ~ layout:S3 Axis as G4 on S3 Axis
+        ok      mate point distance gear4:origin ~ layout:plane1 as G4 along S3
+        ok      link "D1@G4 along S3"
+        ok      unfixed gear5
+        ok      mate lock gear4 ~ gear5 as G5 locked to G4
+        ok      unfixed gear6
+        ok      mate coincident gear6:Gear Axis ~ layout:S4 Axis as G6 on S4 Axis
+        ok      mate point distance gear6:origin ~ layout:plane1 as G6 along S4
+        ok      link "D1@G6 along S4"
+        ok      mate gear gear1:Gear Axis ~ gear2:Gear Axis as G1 meshes G2
+        ok      mate gear gear3:Gear Axis ~ gear4:Gear Axis as G3 meshes G4
+        ok      mate gear gear5:Gear Axis ~ gear6:Gear Axis as G5 meshes G6
+        ok      3 globals read back and match the maths
+        ok      every mate sound, every gear free to turn
+        mate    G1 on S1 Axis
+        mate    G1 along S1
+        mate    G2 on S2 Axis
+        mate    G2 along S2
+        mate    G3 locked to G2
+        mate    G4 on S3 Axis
+        mate    G4 along S3
+        mate    G5 locked to G4
+        mate    G6 on S4 Axis
+        mate    G6 along S4
+        mate    G1 meshes G2
+        mate    G3 meshes G4
+        mate    G5 meshes G6
+        ok      rebuilt once
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w5-m8-20261114-174603\asm2024\m8\Risky_Placements.SLDASM
+        ok      no interference between the gears
+        in 149.2 s; SolidWorks 4.43 GB private, 10.40 GB free; kind 'motion'; turned round (made again with the other Flip) []
+        steps [('part', 'Helical_m2_N14_20R', 1, 6), ('part', 'Helical_m2_N20_20L', 2, 6), ('part', 'Herringbone_m2_N14_25R', 3, 6), ('part', 'Herringbone_m2_N22_25R', 4, 6), ('part', 'Helical_m2_N14_20L', 5, 6), ('part', 'Ring_m2_N36_20L', 6, 6), ('layout', 'Risky_Placements_Layout', 0, 0), ('assembly', 'Risky_Placements', 0, 0), ('interference', 'Risky_Placements', 0, 0)]
+        progress words ['Building in SolidWorks: part 1 of 6, Helical_m2_N14_20R…', 'Building in SolidWorks: checking interference…']
+record  6 sidecar(s) written; record written; notes []
+status  [green] Built 6 parts, Risky_Placements_Layout and Risky_Placements.SLDASM; no interference between the gears where they stand. Its gears are mated to turn together, and SolidWorks reports no mate in error: drag G1 in SolidWorks and the rest of its train follow. 1 thing to do by hand: Assign a material to each of the 6 parts; the build leaves it unset.
+ok      m8: 6 parts, the layout part and the assembly built and saved, turning: ok True, parts 6, kind 'motion'
+ok      m8: no interference: []
+ok      m8: on SolidWorks 2024 every gear mate reads right as first made (probe ring_mate_sense): turned round []
+ok      m8: the record holds a turning gearbox built from this read
+ok      m8: the record's mates are the plan's: ['G1 on S1 Axis', 'G1 along S1', 'G2 on S2 Axis', 'G2 along S2', 'G3 locked to G2', 'G4 on S3 Axis', 'G4 along S3', 'G5 locked to G4', 'G6 on S4 Axis', 'G6 along S4', 'G1 meshes G2', 'G3 meshes G4', 'G5 meshes G6']
+ok      m8: the build's sentence says how to turn it: 'drag G1 in SolidWorks and the rest of its train follow'
+footer  (m8, built) [green] Built 6 parts, Risky_Placements_Layout and Risky_Placements.SLDASM; no interference between the gears where they stand. Its gears are mated to turn together, and SolidWorks reports no mate in error: drag G1 in SolidWorks and the rest of its train follow. 1 thing to do by hand: Assign a material to each of the 6 parts; the build leaves it unset.
+        button 'Build again…' on; Update SolidWorks shown on primary
+ok      m8: the footer says how to turn it: 'drag G1 in SolidWorks and the rest of its train follow'
+tag     ' · built from this version'
+ok      m8: 8 files on disk
+        marked modified in SolidWorks right after the build: {'Helical_m2_N14_20R.SLDPRT': False, 'Helical_m2_N20_20L.SLDPRT': False, 'Herringbone_m2_N14_25R.SLDPRT': False, 'Herringbone_m2_N22_25R.SLDPRT': False, 'Helical_m2_N14_20L.SLDPRT': False, 'Ring_m2_N36_20L.SLDPRT': False, 'Risky_Placements_Layout.SLDPRT': False, 'Risky_Placements.SLDASM': True}
+ok      m8: the assembly is marked after the build (a read after its save)
+ok      m8, right after the build and its saves: SolidWorks marks modified exactly ['Risky_Placements.SLDASM']
+fact    G5 meshes G6 read back: right True; its axes opposed; Reverse False
+-- m8  Excel: G5 At 45 -> 47 (the ring's pinion moves 2 mm along S3)
+excel   Gears!C6 := 47
+excel   saved Risky_Placements.xlsx
+poll    a new read 0.0 s after asking; changes:
+          Gears!C6 G5 At 45 → 47
+ok      read Risky_Placements.xlsx: ok
+        warning Gears!I2: G1: The teeth overlap 0.54 of a pitch along the face, under one, which loses most of the smoothness helical teeth are for; widen the face or raise the helix angle.
+        warning Gears!I3: G2: The teeth overlap 0.54 of a pitch along the face, under one, which loses most of the smoothness helical teeth are for; widen the face or raise the helix angle.
+        warning Gears!Q5: G4: The involute starts at 45.829 mm, above the form diameter of 45.649 mm, so the bottom of the working flank is a straight line.
+        warning Gears!I6: G5: The teeth overlap 0.54 of a pitch along the face, under one, which loses most of the smoothness helical teeth are for; widen the face or raise the helix angle.
+        warning Gears!I7: G6: The teeth overlap 0.54 of a pitch along the face, under one, which loses most of the smoothness helical teeth are for; widen the face or raise the helix angle.
+        4 shafts · 6 gears · 3 meshes; gate ''
+classify parts changed []; moved []; re-place ['G5', 'G6']; structural []; missing []; unsaved []; refusal ''; turning True; axial []; ratios []
+        layout globals wanted ['S2 X = 36.182044264', 'S3 X = 36.182044264', 'S3 Y = -39.721605083', 'S4 X = 59.593955259', 'S4 Y = -39.721605083']
+summary Update SolidWorks will re-place G1, G2, G3, G4, G5 and G6.
+update  SolidWorks 4.24 GB private, 10.40 GB free
+        update  Helical_m2_N14_20R.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Helical_m2_N20_20L.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Herringbone_m2_N14_25R.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Herringbone_m2_N22_25R.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Helical_m2_N14_20L.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Ring_m2_N36_20L.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Risky_Placements_Layout.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        ok      re-placed G1, G2, G3, G4, G5, G6
+        mate    G1 on S1 Axis
+        mate    G1 along S1
+        mate    G2 on S2 Axis
+        mate    G2 along S2
+        mate    G3 locked to G2
+        mate    G4 on S3 Axis
+        mate    G4 along S3
+        mate    G5 locked to G4
+        mate    G6 on S4 Axis
+        mate    G6 along S4
+        mate    G1 meshes G2
+        mate    G3 meshes G4
+        mate    G5 meshes G6
+        ok      assembly rebuilt once
+        ok      no interference between the gears
+        not saved: Risky_Placements.SLDASM changed in SolidWorks; save there to keep it
+        in 16.6 s; SolidWorks 6.62 GB private, 10.43 GB free
+        steps [('check', 'Helical_m2_N14_20R', 1, 8), ('check', 'Helical_m2_N20_20L', 2, 8), ('check', 'Herringbone_m2_N14_25R', 3, 8), ('check', 'Herringbone_m2_N22_25R', 4, 8), ('check', 'Helical_m2_N14_20L', 5, 8), ('check', 'Ring_m2_N36_20L', 6, 8), ('check', 'Risky_Placements_Layout', 7, 8), ('check', 'Risky_Placements', 8, 8), ('place', 'Risky_Placements', 0, 0), ('interference', 'Risky_Placements', 0, 0)]
+        loaded from disk []
+        motion: turned False; out of step []; off axis []; restored []; unsuppressed []; axial []; ratios []; extra mates []; ratios found [], already [], read []; sense found wrong [], turned round []
+        train_check residuals (rad) [('G1', 'G2', '1.05e-10'), ('G3', 'G4', '4.62e-11'), ('G5', 'G6', '4.40e-11'), ('G2', 'G3', '1.47e-17'), ('G4', 'G5', '7.36e-18')]
+        finish: dragged []; earlier update ''
+ok      the Update's check phase found no gear mate turning against its mesh: []
+record  0 sidecar(s) written; record written; notes []
+status  [green] Updated SolidWorks: re-placed G1, G2, G3, G4, G5 and G6; no interference between the gears where they stand. Save Risky_Placements in SolidWorks to keep it.
+ok      m8: G5 moved by Update, no gear mate remade: []
+person  saved in SolidWorks (after G5 At): [('Helical_m2_N14_20R.SLDPRT', True), ('Helical_m2_N20_20L.SLDPRT', True), ('Herringbone_m2_N14_25R.SLDPRT', True), ('Herringbone_m2_N22_25R.SLDPRT', True), ('Helical_m2_N14_20L.SLDPRT', True), ('Ring_m2_N36_20L.SLDPRT', True), ('Risky_Placements_Layout.SLDPRT', True), ('Risky_Placements.SLDASM', True)]
+-- m8  Excel: G5 Teeth 14 -> 15, G6 Teeth 36 -> 37 (centre distance kept)
+excel   Gears!F6 := 15
+excel   Gears!F7 := 37
+excel   saved Risky_Placements.xlsx
+poll    a new read 0.0 s after asking; changes:
+          Gears!F6 G5 Teeth 14 → 15
+          Gears!F7 G6 Teeth 36 → 37
+ok      read Risky_Placements.xlsx: ok
+        warning Gears!I2: G1: The teeth overlap 0.54 of a pitch along the face, under one, which loses most of the smoothness helical teeth are for; widen the face or raise the helix angle.
+        warning Gears!I3: G2: The teeth overlap 0.54 of a pitch along the face, under one, which loses most of the smoothness helical teeth are for; widen the face or raise the helix angle.
+        warning Gears!Q5: G4: The involute starts at 45.829 mm, above the form diameter of 45.649 mm, so the bottom of the working flank is a straight line.
+        warning Gears!I6: G5: The teeth overlap 0.54 of a pitch along the face, under one, which loses most of the smoothness helical teeth are for; widen the face or raise the helix angle.
+        warning Gears!I7: G6: The teeth overlap 0.54 of a pitch along the face, under one, which loses most of the smoothness helical teeth are for; widen the face or raise the helix angle.
+        4 shafts · 6 gears · 3 meshes; gate ''
+classify parts changed ['Helical_m2_N14_20L.SLDPRT', 'Ring_m2_N36_20L.SLDPRT']; moved []; re-place ['G6']; structural []; missing []; unsaved []; refusal ''; turning True; axial []; ratios ['G5 meshes G6']
+        layout globals wanted ['S2 X = 36.182044264', 'S3 X = 36.182044264', 'S3 Y = -39.721605083', 'S4 X = 59.593955259', 'S4 Y = -39.721605083']
+summary Update SolidWorks will change the values in Helical_m2_N14_20L (G5) and Ring_m2_N36_20L (G6), set the gear mate G5 meshes G6 to 15 : 37, and re-place G1, G2, G3, G4, G5 and G6.
+ok      classify: an Update remaking G5 meshes G6 at 15 : 37: ratios ['G5 meshes G6']
+update  SolidWorks 6.71 GB private, 10.44 GB free
+        update  Helical_m2_N14_20R.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Helical_m2_N20_20L.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Herringbone_m2_N14_25R.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Herringbone_m2_N22_25R.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Helical_m2_N14_20L.SLDPRT · trig degrees
+        ok      set "No. of Teeth"
+        ok      rebuilt once
+        update  Ring_m2_N36_20L.SLDPRT · trig degrees
+        ok      set "No. of Teeth"
+        ok      rebuilt once
+        update  Risky_Placements_Layout.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        ok      re-placed G1, G2, G3, G4, G5, G6
+        ok      given their new ratio: G5 meshes G6
+        ok      made again with the other Flip: G5 meshes G6
+        mate    G1 on S1 Axis
+        mate    G1 along S1
+        mate    G2 on S2 Axis
+        mate    G2 along S2
+        mate    G3 locked to G2
+        mate    G4 on S3 Axis
+        mate    G4 along S3
+        mate    G5 locked to G4
+        mate    G6 on S4 Axis
+        mate    G6 along S4
+        mate    G1 meshes G2
+        mate    G3 meshes G4
+        mate    G5 meshes G6
+        ok      assembly rebuilt once
+        ok      no interference between the gears
+        not saved: Helical_m2_N14_20L.SLDPRT, Ring_m2_N36_20L.SLDPRT, Risky_Placements.SLDASM changed in SolidWorks; save there to keep it
+        in 33.3 s; SolidWorks 6.76 GB private, 10.42 GB free
+        steps [('check', 'Helical_m2_N14_20R', 1, 8), ('check', 'Helical_m2_N20_20L', 2, 8), ('check', 'Herringbone_m2_N14_25R', 3, 8), ('check', 'Herringbone_m2_N22_25R', 4, 8), ('check', 'Helical_m2_N14_20L', 5, 8), ('check', 'Ring_m2_N36_20L', 6, 8), ('check', 'Risky_Placements_Layout', 7, 8), ('check', 'Risky_Placements', 8, 8), ('values', 'Helical_m2_N14_20L', 0, 0), ('values', 'Ring_m2_N36_20L', 0, 0), ('place', 'Risky_Placements', 0, 0), ('interference', 'Risky_Placements', 0, 0)]
+        loaded from disk []
+        motion: turned False; out of step []; off axis []; restored []; unsuppressed []; axial []; ratios ['G5 meshes G6']; extra mates []; ratios found [], already [], read [('G5 meshes G6', 14, 36, 15, 37)]; sense found wrong [], turned round ['G5 meshes G6']
+        train_check residuals (rad) [('G1', 'G2', '1.05e-10'), ('G3', 'G4', '4.62e-11'), ('G5', 'G6', '0.00e+00'), ('G2', 'G3', '1.47e-17'), ('G4', 'G5', '1.13e-10')]
+        finish: dragged []; earlier update ''
+ok      the Update's check phase found no gear mate turning against its mesh: []
+record  2 sidecar(s) written; record written; notes []
+status  [green] Updated SolidWorks: changed 1 variable in Helical_m2_N14_20L (it now has 15 teeth; its file keeps its name), changed 1 variable in Ring_m2_N36_20L (it now has 37 teeth; its file keeps its name), set the gear mate G5 meshes G6 to 15 : 37, re-placed G1, G2, G3, G4, G5 and G6; no interference between the gears where they stand. Save Helical_m2_N14_20L, Ring_m2_N36_20L and Risky_Placements in SolidWorks to keep them.
+fact    m8: the remake: ratios ['G5 meshes G6'], ratios_read [('G5 meshes G6', 14, 36, 15, 37)], turned round ['G5 meshes G6'], sense found wrong []
+ok      m8: the app remade G5 meshes G6 at 15 : 37: ratios ['G5 meshes G6']; 'Updated SolidWorks: changed 1 variable in Helical_m2_N14_20L (it now has 15 teeth; its file keeps its name), changed 1 variable in Ring_m2_N36_20L (it now has 37 teeth; its file keeps its name), set the gear mate G5 meshes G6 to 15 : 37, re-placed G1, G2, G3, G4, G5 and G6; no interference between the gears where they stand. Save Helical_m2_N14_20L, Ring_m2_N36_20L and Risky_Placements in SolidWorks to keep them.'
+fact    G5 meshes G6 read back: right True; its axes opposed; Reverse False
+ok      m8: the remade ring gear mate reads right by the app's own read-back
+        marked modified in SolidWorks right after the update: {'Helical_m2_N14_20R.SLDPRT': False, 'Helical_m2_N20_20L.SLDPRT': False, 'Herringbone_m2_N14_25R.SLDPRT': False, 'Herringbone_m2_N22_25R.SLDPRT': False, 'Helical_m2_N14_20L.SLDPRT': True, 'Ring_m2_N36_20L.SLDPRT': True, 'Risky_Placements_Layout.SLDPRT': False, 'Risky_Placements.SLDASM': True}
+ok      m8 ring remake: SolidWorks marks modified exactly ['Helical_m2_N14_20L.SLDPRT', 'Ring_m2_N36_20L.SLDPRT', 'Risky_Placements.SLDASM']
+ok      m8 remade: G1 (Helical_m2_N14_20R-1) at (0.0, 0.0, 0.0), origin off 0.0e+00 mm, turn off 6.4e-09° (exactly), axis off 6.1e-17
+ok      m8 remade: G1's frame on record is the one the workbook wants
+ok      m8 remade: G2 (Helical_m2_N20_20L-1) at (36.182044262, -8e-09, 10.0), origin off 8.0e-09 mm, turn off 7.2e-09° (exactly), axis off 1.7e-16
+ok      m8 remade: G2's frame on record is the one the workbook wants
+ok      m8 remade: G3 (Herringbone_m2_N14_25R-1) at (36.182044262, -1.6e-08, 32.0), origin off 1.6e-08 mm, turn off 7.2e-09° (exactly), axis off 1.8e-16
+ok      m8 remade: G3's frame on record is the one the workbook wants
+ok      m8 remade: G4 (Herringbone_m2_N22_25R-1) at (36.18204426, -39.72160508, 18.0), origin off 4.2e-09 mm, turn off 6.5e-09° (exactly), axis off 6.9e-17
+ok      m8 remade: G4's frame on record is the one the workbook wants
+ok      m8 remade: G5 (Helical_m2_N14_20L-1) at (36.182044264, -39.72160508, 42.0), origin off 2.6e-09 mm, turn off 0.0e+00° (exactly), axis off 0.0e+00
+ok      m8 remade: G5's frame on record is the one the workbook wants
+ok      m8 remade: G6 (Ring_m2_N36_20L-1) at (59.59395526, -39.72160508, 50.0), origin off 2.6e-09 mm, turn off 2.0e-16° (exactly), axis off 0.0e+00
+ok      m8 remade: G6's frame on record is the one the workbook wants
+ok      m8 remade: the layout (Risky_Placements_Layout-1) is at identity
+        frames read in 0.1 s
+        mates [('G1 on S1 Axis', 0, True, False), ('G1 along S1', 0, True, False), ('G2 on S2 Axis', 0, True, False), ('G2 along S2', 0, True, False), ('G3 locked to G2', 0, True, False), ('G4 on S3 Axis', 0, True, False), ('G4 along S3', 0, True, False), ('G5 locked to G4', 0, True, False), ('G6 on S4 Axis', 0, True, False), ('G6 along S4', 0, True, False), ('G1 meshes G2', 0, True, False), ('G3 meshes G4', 0, True, False), ('G5 meshes G6', 0, True, False)]; others []; constrained {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2, 'G5': 2, 'G6': 2}
+ok      m8 remade: the mates are exactly the record's 13: extra [], missing []
+ok      m8 remade: nothing but mates in the mate group: []
+ok      m8 remade: every mate's error code is 0: []
+ok      m8 remade: no mate suppressed: []
+ok      m8 remade: every mated gear under-defined (2): {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2, 'G5': 2, 'G6': 2}
+ok      m8 remade: no interference in Risky_Placements.SLDASM: []
+ok      m8 remade: G1 turned half a pitch (12.8571°): 3 interference(s), merged [(('G1', 'G2'), 110.59)], all between G1 and G2
+ok      m8 remade: G1 put back, no interference (1.5 s)
+ok      m8 remade: G4 turned half a pitch (8.1818°) with ['G3 locked to G2', 'G5 locked to G4'] suppressed: 3 interference(s), merged [(('G3', 'G4'), 135.552)], all between G3 and G4
+ok      m8 remade: G4 put back, no interference (2.8 s)
+ok      m8 remade: G6 turned half a pitch (4.8649°): 5 interference(s), merged [(('G5', 'G6'), 162.619)], all between G5 and G6
+ok      m8 remade: G6 put back, no interference (1.7 s)
+ok      m8 remade, after the controls: G1 (Helical_m2_N14_20R-1) at (0.0, 0.0, 0.0), origin off 0.0e+00 mm, turn off 6.4e-09° (exactly), axis off 6.1e-17
+ok      m8 remade, after the controls: G1's frame on record is the one the workbook wants
+ok      m8 remade, after the controls: G2 (Helical_m2_N20_20L-1) at (36.182044263, -1.6e-08, 10.0), origin off 1.6e-08 mm, turn off 7.2e-09° (exactly), axis off 1.7e-16
+ok      m8 remade, after the controls: G2's frame on record is the one the workbook wants
+ok      m8 remade, after the controls: G3 (Herringbone_m2_N14_25R-1) at (36.182044263, -3.2e-08, 32.0), origin off 3.2e-08 mm, turn off 7.2e-09° (exactly), axis off 1.8e-16
+ok      m8 remade, after the controls: G3's frame on record is the one the workbook wants
+ok      m8 remade, after the controls: G4 (Herringbone_m2_N22_25R-1) at (36.18204426, -39.72160508, 18.0), origin off 4.2e-09 mm, turn off 6.5e-09° (exactly), axis off 6.9e-17
+ok      m8 remade, after the controls: G4's frame on record is the one the workbook wants
+ok      m8 remade, after the controls: G5 (Helical_m2_N14_20L-1) at (36.182044264, -39.72160508, 42.0), origin off 2.6e-09 mm, turn off 0.0e+00° (exactly), axis off 0.0e+00
+ok      m8 remade, after the controls: G5's frame on record is the one the workbook wants
+ok      m8 remade, after the controls: G6 (Ring_m2_N36_20L-1) at (59.59395526, -39.72160508, 50.0), origin off 2.6e-09 mm, turn off 0.0e+00° (exactly), axis off 2.2e-16
+ok      m8 remade, after the controls: G6's frame on record is the one the workbook wants
+ok      m8 remade, after the controls: the layout (Risky_Placements_Layout-1) is at identity
+        frames read in 0.1 s
+        mates [('G1 on S1 Axis', 0, True, False), ('G1 along S1', 0, True, False), ('G2 on S2 Axis', 0, True, False), ('G2 along S2', 0, True, False), ('G3 locked to G2', 0, True, False), ('G4 on S3 Axis', 0, True, False), ('G4 along S3', 0, True, False), ('G5 locked to G4', 0, True, False), ('G6 on S4 Axis', 0, True, False), ('G6 along S4', 0, True, False), ('G1 meshes G2', 0, True, False), ('G3 meshes G4', 0, True, False), ('G5 meshes G6', 0, True, False)]; others []; constrained {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2, 'G5': 2, 'G6': 2}
+ok      m8 remade, after the controls: the mates are exactly the record's 13: extra [], missing []
+ok      m8 remade, after the controls: nothing but mates in the mate group: []
+ok      m8 remade, after the controls: every mate's error code is 0: []
+ok      m8 remade, after the controls: no mate suppressed: []
+ok      m8 remade, after the controls: every mated gear under-defined (2): {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2, 'G5': 2, 'G6': 2}
+drive   m8 at 15 : 37, through the remade ring mate: input G1; control ('G5', 'G6'); SolidWorks 6.91 GB private, 10.41 GB free
+ok      m8 at 15 : 37, through the remade ring mate: the drive's assumptions hold: G1 on S1 (Z+) at θ = 0, DEMONSTRATION_DRIVE_SENSE 1, tolerance 1e-06 relative
+        in 18.5 s; rebuilds [('drive added', True), ('Drive 120', True), ('Drive 90', True), ('control added, Flip True', True), ('Drive 120', True), ('Drive 90', True), ('control added, Flip False', True), ('Drive 120', True), ('Drive 90', True), ('control gone', True), ('drive gone', True)]; drive mate ('Demonstration drive', 'D1', 1); control mate [(True, 'Control G5 meshes G6', 1), (False, 'Control G5 meshes G6', 1)]
+ok      m8 at 15 : 37, through the remade ring mate: the drive ran without a raise: []
+ok      m8 at 15 : 37, through the remade ring mate: every cleanup step ran: []
+ok      m8 at 15 : 37, through the remade ring mate: before the drive every gear stands at its frame on record (largest 3.2e-08 at G3)
+        states with the drive added: [('G1 on S1 Axis', 0, True, False), ('G1 along S1', 0, True, False), ('G2 on S2 Axis', 0, True, False), ('G2 along S2', 0, True, False), ('G3 locked to G2', 0, True, False), ('G4 on S3 Axis', 0, True, False), ('G4 along S3', 0, True, False), ('G5 locked to G4', 0, True, False), ('G6 on S4 Axis', 0, True, False), ('G6 along S4', 0, True, False), ('G1 meshes G2', 0, True, False), ('G3 meshes G4', 0, True, False), ('G5 meshes G6', 0, True, False), ('Demonstration drive', 0, True, False)]
+ok      m8 at 15 : 37, through the remade ring mate: adding the 90° drive moved nothing (largest 1.6e-08)
+        Drive 90 -> 120: G1 +29.999999994° (kinematics +30.000000000°), G2 +20.999999995° (kinematics +21.000000000°), G3 +20.999999995° (kinematics +21.000000000°), G4 +13.363636361° (kinematics +13.363636364°), G5 +13.363636361° (kinematics +13.363636364°), G6 -5.417690417° (kinematics -5.417690418°)
+ok      m8 at 15 : 37, through the remade ring mate: G1 turned +29.999999994° for +30.000000000°, sign included (off 6.4e-09)
+ok      m8 at 15 : 37, through the remade ring mate: G2 turned +20.999999995° for +21.000000000°, sign included (off 5.2e-09)
+ok      m8 at 15 : 37, through the remade ring mate: G3 turned +20.999999995° for +21.000000000°, sign included (off 5.2e-09)
+ok      m8 at 15 : 37, through the remade ring mate: G4 turned +13.363636361° for +13.363636364°, sign included (off 2.2e-09)
+ok      m8 at 15 : 37, through the remade ring mate: G5 turned +13.363636361° for +13.363636364°, sign included (off 2.2e-09)
+ok      m8 at 15 : 37, through the remade ring mate: G6 turned -5.417690417° for -5.417690418°, sign included (off 8.8e-10)
+ok      m8 at 15 : 37, through the remade ring mate: driven, every gear stays on its axis and in its place: {'G1': ('0.0e+00', '3.1e-17'), 'G2': ('1.6e-08', '2.5e-16'), 'G3': ('1.7e-08', '2.6e-16'), 'G4': ('7.1e-15', '3.6e-16'), 'G5': ('9.7e-10', '3.8e-16'), 'G6': ('7.1e-15', '4.4e-16')}
+        states driven: [('G1 on S1 Axis', 0, True, False), ('G1 along S1', 0, True, False), ('G2 on S2 Axis', 0, True, False), ('G2 along S2', 0, True, False), ('G3 locked to G2', 0, True, False), ('G4 on S3 Axis', 0, True, False), ('G4 along S3', 0, True, False), ('G5 locked to G4', 0, True, False), ('G6 on S4 Axis', 0, True, False), ('G6 along S4', 0, True, False), ('G1 meshes G2', 0, True, False), ('G3 meshes G4', 0, True, False), ('G5 meshes G6', 0, True, False), ('Demonstration drive', 0, True, False)]
+ok      m8 at 15 : 37, through the remade ring mate: no mate in error while driven
+ok      m8 at 15 : 37, through the remade ring mate: Drive set back to 90, every gear at its built frame (largest 1.6e-08 at G3)
+ok      m8 at 15 : 37, through the remade ring mate, control: the gear mate with Flip True moved nothing when made (largest 1.6e-08)
+        control, Control G5 meshes G6 with Flip True: G1 +29.999999994° (kinematics +30.000000000°), G2 +20.999999995° (kinematics +21.000000000°), G3 +20.999999995° (kinematics +21.000000000°), G4 +13.363636361° (kinematics +13.363636364°), G5 +13.363636361° (kinematics +13.363636364°), G6 -5.417690416° (kinematics -5.417690418°)
+ok      m8 at 15 : 37, through the remade ring mate, control: G5, before the mesh, still turns +13.363636364° with Flip True (13.363636361473997)
+ok      m8 at 15 : 37, through the remade ring mate, control: Drive set back with Flip True's mate on: every gear at its built frame (largest 1.6e-08 at G3)
+ok      m8 at 15 : 37, through the remade ring mate, control: the gear mate with Flip False moved nothing when made (largest 1.6e-08)
+        control, Control G5 meshes G6 with Flip False: G1 +29.999999994° (kinematics +30.000000000°), G2 +20.999999995° (kinematics +21.000000000°), G3 +20.999999995° (kinematics +21.000000000°), G4 +13.363636361° (kinematics +13.363636364°), G5 +13.363636361° (kinematics +13.363636364°), G6 +5.417690416° (kinematics -5.417690418°)
+ok      m8 at 15 : 37, through the remade ring mate, control: G5, before the mesh, still turns +13.363636364° with Flip False (13.363636361473995)
+ok      m8 at 15 : 37, through the remade ring mate, control: Drive set back with Flip False's mate on: every gear at its built frame (largest 1.6e-08 at G3)
+ok      m8 at 15 : 37, through the remade ring mate, control: a wrong sense is seen: with Flip [False] G6 turns the mirror of the right turn, with Flip [True] it turns right (the comparison tells one from the other)
+fact    m8 at 15 : 37, through the remade ring mate: G5 meshes G6 turns right with Flip [True] here (findings.GEAR_MATE_FLIP False)
+ok      m8 at 15 : 37, through the remade ring mate, control: the Flip that turns right, [True], is the one SolidWorks made G5 meshes G6 with ([True]: turned round); neither gear has moved since
+ok      m8 at 15 : 37, through the remade ring mate, control: the control mates deleted and the recorded one back on: every gear at its built frame (largest 1.6e-08 at G3)
+ok      m8 at 15 : 37, through the remade ring mate: the drive gone, every frame against the built frames (largest 2.0e-11 at G5)
+ok      m8 at 15 : 37, through the remade ring mate: no Drive equation left: []
+ok      m8 at 15 : 37, through the remade ring mate: no angle mate or control mate left; the mates as before: ['G1 on S1 Axis', 'G1 along S1', 'G2 on S2 Axis', 'G2 along S2', 'G3 locked to G2', 'G4 on S3 Axis', 'G4 along S3', 'G5 locked to G4', 'G6 on S4 Axis', 'G6 along S4', 'G1 meshes G2', 'G3 meshes G4', 'G5 meshes G6']
+ok      m8 at 15 : 37, through the remade ring mate: no mate (no lock) left suppressed
+ok      m8 at 15 : 37, through the remade ring mate: no mate in error after the drive
+ok      m8 at 15 : 37, through the remade ring mate: every mated gear under-defined again: {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2, 'G5': 2, 'G6': 2}
+person  saved in SolidWorks (after the remake and the drive): [('Helical_m2_N14_20R.SLDPRT', True), ('Helical_m2_N20_20L.SLDPRT', True), ('Herringbone_m2_N14_25R.SLDPRT', True), ('Herringbone_m2_N22_25R.SLDPRT', True), ('Helical_m2_N14_20L.SLDPRT', True), ('Ring_m2_N36_20L.SLDPRT', True), ('Risky_Placements_Layout.SLDPRT', True), ('Risky_Placements.SLDASM', True)]
+-- m8  Update pressed again with nothing changed
+update  SolidWorks 6.52 GB private, 10.46 GB free
+        update  Helical_m2_N14_20R.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Helical_m2_N20_20L.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Herringbone_m2_N14_25R.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Herringbone_m2_N22_25R.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Helical_m2_N14_20L.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Ring_m2_N36_20L.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Risky_Placements_Layout.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        ok      every gear is where the workbook puts it
+        mate    G1 on S1 Axis
+        mate    G1 along S1
+        mate    G2 on S2 Axis
+        mate    G2 along S2
+        mate    G3 locked to G2
+        mate    G4 on S3 Axis
+        mate    G4 along S3
+        mate    G5 locked to G4
+        mate    G6 on S4 Axis
+        mate    G6 along S4
+        mate    G1 meshes G2
+        mate    G3 meshes G4
+        mate    G5 meshes G6
+        nothing changed in SolidWorks
+        in 9.7 s; SolidWorks 7.05 GB private, 10.48 GB free
+        steps [('check', 'Helical_m2_N14_20R', 1, 8), ('check', 'Helical_m2_N20_20L', 2, 8), ('check', 'Herringbone_m2_N14_25R', 3, 8), ('check', 'Herringbone_m2_N22_25R', 4, 8), ('check', 'Helical_m2_N14_20L', 5, 8), ('check', 'Ring_m2_N36_20L', 6, 8), ('check', 'Risky_Placements_Layout', 7, 8), ('check', 'Risky_Placements', 8, 8), ('place', 'Risky_Placements', 0, 0)]
+        loaded from disk []
+        motion: turned False; out of step []; off axis []; restored []; unsuppressed []; axial []; ratios []; extra mates []; ratios found [], already [], read []; sense found wrong [], turned round []
+        train_check residuals (rad) [('G1', 'G2', '2.03e-10'), ('G3', 'G4', '1.32e-11'), ('G5', 'G6', '8.17e-12'), ('G2', 'G3', '1.39e-17'), ('G4', 'G5', '1.13e-10')]
+        finish: dragged []; earlier update ''
+ok      the Update's check phase found no gear mate turning against its mesh: []
+record  0 sidecar(s) written; record written; notes []
+status  [green] SolidWorks already matches the workbook: nothing was changed.
+ok      m8: nothing to do: ratios [], sense found wrong []
+ok      m8 quiet Update: read from SolidWorks, every gear stands where it stood before the press (largest 0.0e+00 at -)
+fact    m8 quiet Update: GetSaveFlag before the press {'Helical_m2_N14_20R.SLDPRT': False, 'Helical_m2_N20_20L.SLDPRT': False, 'Herringbone_m2_N14_25R.SLDPRT': False, 'Herringbone_m2_N22_25R.SLDPRT': False, 'Helical_m2_N14_20L.SLDPRT': False, 'Ring_m2_N36_20L.SLDPRT': False, 'Risky_Placements_Layout.SLDPRT': False, 'Risky_Placements.SLDASM': False}, after it {'Helical_m2_N14_20R.SLDPRT': False, 'Helical_m2_N20_20L.SLDPRT': False, 'Herringbone_m2_N14_25R.SLDPRT': False, 'Herringbone_m2_N22_25R.SLDPRT': False, 'Helical_m2_N14_20L.SLDPRT': False, 'Ring_m2_N36_20L.SLDPRT': False, 'Risky_Placements_Layout.SLDPRT': False, 'Risky_Placements.SLDASM': False}
+ok      m8 quiet Update: every document reads GetSaveFlag False before and after an Update that changed nothing (GEAR_MATE_DEFINITION_READ_MARKS 'nothing'): marked before [], after []
+ok      m8 remade: saved and closed this run's documents: left []
+        open now: []
+DIALOG  SolidWorks shows 'Opening': ['Close', 'Opening Component 2 of 7', 'Update\nAssembly', 'Update\nGraphics', 'Opening File: C:\\Use...4\\m8\\Helical_m2_N14_20L.SLDPRT', 'Elapsed time: 0s', 'This file was last opened in 1 seconds', 'For more information, view: '] (a progress box that closes itself; not logged again)
+ok      m8 remade, reopened: every document just opened from its file reads GetSaveFlag False (the record clears a mark on that reading): {'Risky_Placements_Layout.SLDPRT': False, 'Helical_m2_N14_20R.SLDPRT': False, 'Helical_m2_N20_20L.SLDPRT': False, 'Herringbone_m2_N14_25R.SLDPRT': False, 'Herringbone_m2_N22_25R.SLDPRT': False, 'Helical_m2_N14_20L.SLDPRT': False, 'Ring_m2_N36_20L.SLDPRT': False, 'Risky_Placements.SLDASM': False}
+ok      m8 remade, reopened: G1 (Helical_m2_N14_20R-1) at (0.0, 0.0, 0.0), origin off 0.0e+00 mm, turn off 6.4e-09° (exactly), axis off 6.1e-17
+ok      m8 remade, reopened: G1's frame on record is the one the workbook wants
+ok      m8 remade, reopened: G2 (Helical_m2_N20_20L-1) at (36.182044263, -1.6e-08, 10.0), origin off 1.6e-08 mm, turn off 7.2e-09° (exactly), axis off 4.1e-16
+ok      m8 remade, reopened: G2's frame on record is the one the workbook wants
+ok      m8 remade, reopened: G3 (Herringbone_m2_N14_25R-1) at (36.182044263, -3.2e-08, 32.0), origin off 3.2e-08 mm, turn off 7.2e-09° (exactly), axis off 4.3e-16
+ok      m8 remade, reopened: G3's frame on record is the one the workbook wants
+ok      m8 remade, reopened: G4 (Herringbone_m2_N22_25R-1) at (36.18204426, -39.72160508, 18.0), origin off 4.2e-09 mm, turn off 5.3e-09° (exactly), axis off 2.2e-16
+ok      m8 remade, reopened: G4's frame on record is the one the workbook wants
+ok      m8 remade, reopened: G5 (Helical_m2_N14_20L-1) at (36.182044264, -39.72160508, 42.0), origin off 2.6e-09 mm, turn off 1.2e-09° (exactly), axis off 1.8e-16
+ok      m8 remade, reopened: G5's frame on record is the one the workbook wants
+ok      m8 remade, reopened: G6 (Ring_m2_N36_20L-1) at (59.59395526, -39.72160508, 50.0), origin off 2.6e-09 mm, turn off 1.6e-15° (exactly), axis off 0.0e+00
+ok      m8 remade, reopened: G6's frame on record is the one the workbook wants
+ok      m8 remade, reopened: the layout (Risky_Placements_Layout-1) is at identity
+        frames read in 0.3 s
+fact    m8 remade, reopened: marked modified after the frame reads (component_frame): []
+        mates [('G1 on S1 Axis', 0, True, False), ('G1 along S1', 0, True, False), ('G2 on S2 Axis', 0, True, False), ('G2 along S2', 0, True, False), ('G3 locked to G2', 0, True, False), ('G4 on S3 Axis', 0, True, False), ('G4 along S3', 0, True, False), ('G5 locked to G4', 0, True, False), ('G6 on S4 Axis', 0, True, False), ('G6 along S4', 0, True, False), ('G1 meshes G2', 0, True, False), ('G3 meshes G4', 0, True, False), ('G5 meshes G6', 0, True, False)]; others []; constrained {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2, 'G5': 2, 'G6': 2}
+ok      m8 remade, reopened: the mates are exactly the record's 13: extra [], missing []
+ok      m8 remade, reopened: nothing but mates in the mate group: []
+ok      m8 remade, reopened: every mate's error code is 0: []
+ok      m8 remade, reopened: no mate suppressed: []
+ok      m8 remade, reopened: every mated gear under-defined (2): {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2, 'G5': 2, 'G6': 2}
+fact    m8 remade, reopened: marked modified after the mate reads (mate_states, GetConstrainedStatus): []
+fact    m8 remade, reopened: marked modified after interferences() (0 found): ['Risky_Placements.SLDASM']
+fact    G5 meshes G6 read back: right True; its axes opposed; Reverse False
+drive   m8 reopened, at 15 : 37: input G1; control None; SolidWorks 4.18 GB private, 10.66 GB free
+ok      m8 reopened, at 15 : 37: the drive's assumptions hold: G1 on S1 (Z+) at θ = 0, DEMONSTRATION_DRIVE_SENSE 1, tolerance 1e-06 relative
+        in 7.5 s; rebuilds [('drive added', True), ('Drive 120', True), ('Drive 90', True), ('drive gone', True)]; drive mate ('Demonstration drive', 'D1', 1); control mate None
+ok      m8 reopened, at 15 : 37: the drive ran without a raise: []
+ok      m8 reopened, at 15 : 37: every cleanup step ran: []
+ok      m8 reopened, at 15 : 37: before the drive every gear stands at its frame on record (largest 3.2e-08 at G3)
+        states with the drive added: [('G1 on S1 Axis', 0, True, False), ('G1 along S1', 0, True, False), ('G2 on S2 Axis', 0, True, False), ('G2 along S2', 0, True, False), ('G3 locked to G2', 0, True, False), ('G4 on S3 Axis', 0, True, False), ('G4 along S3', 0, True, False), ('G5 locked to G4', 0, True, False), ('G6 on S4 Axis', 0, True, False), ('G6 along S4', 0, True, False), ('G1 meshes G2', 0, True, False), ('G3 meshes G4', 0, True, False), ('G5 meshes G6', 0, True, False), ('Demonstration drive', 0, True, False)]
+ok      m8 reopened, at 15 : 37: adding the 90° drive moved nothing (largest 1.6e-08)
+        Drive 90 -> 120: G1 +29.999999994° (kinematics +30.000000000°), G2 +20.999999975° (kinematics +21.000000000°), G3 +20.999999975° (kinematics +21.000000000°), G4 +13.363636355° (kinematics +13.363636364°), G5 +13.363636355° (kinematics +13.363636364°), G6 -5.417690414° (kinematics -5.417690418°)
+ok      m8 reopened, at 15 : 37: G1 turned +29.999999994° for +30.000000000°, sign included (off 6.4e-09)
+ok      m8 reopened, at 15 : 37: G2 turned +20.999999975° for +21.000000000°, sign included (off 2.5e-08)
+ok      m8 reopened, at 15 : 37: G3 turned +20.999999975° for +21.000000000°, sign included (off 2.5e-08)
+ok      m8 reopened, at 15 : 37: G4 turned +13.363636355° for +13.363636364°, sign included (off 8.5e-09)
+ok      m8 reopened, at 15 : 37: G5 turned +13.363636355° for +13.363636364°, sign included (off 8.5e-09)
+ok      m8 reopened, at 15 : 37: G6 turned -5.417690414° for -5.417690418°, sign included (off 3.4e-09)
+ok      m8 reopened, at 15 : 37: driven, every gear stays on its axis and in its place: {'G1': ('0.0e+00', '3.1e-17'), 'G2': ('1.6e-08', '1.1e-15'), 'G3': ('1.7e-08', '1.1e-15'), 'G4': ('2.8e-14', '1.1e-15'), 'G5': ('9.7e-10', '1.1e-15'), 'G6': ('2.1e-14', '0.0e+00')}
+        states driven: [('G1 on S1 Axis', 0, True, False), ('G1 along S1', 0, True, False), ('G2 on S2 Axis', 0, True, False), ('G2 along S2', 0, True, False), ('G3 locked to G2', 0, True, False), ('G4 on S3 Axis', 0, True, False), ('G4 along S3', 0, True, False), ('G5 locked to G4', 0, True, False), ('G6 on S4 Axis', 0, True, False), ('G6 along S4', 0, True, False), ('G1 meshes G2', 0, True, False), ('G3 meshes G4', 0, True, False), ('G5 meshes G6', 0, True, False), ('Demonstration drive', 0, True, False)]
+ok      m8 reopened, at 15 : 37: no mate in error while driven
+ok      m8 reopened, at 15 : 37: Drive set back to 90, every gear at its built frame (largest 1.6e-08 at G2)
+ok      m8 reopened, at 15 : 37: the drive gone, every frame against the built frames (largest 4.4e-10 at G1)
+ok      m8 reopened, at 15 : 37: no Drive equation left: []
+ok      m8 reopened, at 15 : 37: no angle mate or control mate left; the mates as before: ['G1 on S1 Axis', 'G1 along S1', 'G2 on S2 Axis', 'G2 along S2', 'G3 locked to G2', 'G4 on S3 Axis', 'G4 along S3', 'G5 locked to G4', 'G6 on S4 Axis', 'G6 along S4', 'G1 meshes G2', 'G3 meshes G4', 'G5 meshes G6']
+ok      m8 reopened, at 15 : 37: no mate (no lock) left suppressed
+ok      m8 reopened, at 15 : 37: no mate in error after the drive
+ok      m8 reopened, at 15 : 37: every mated gear under-defined again: {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2, 'G5': 2, 'G6': 2}
+        closing: saved this run's modified documents first, as a person would: ['Risky_Placements.SLDASM']
+close   section m8: left of ours []; 256 s; SolidWorks 2.92 GB private, 10.78 GB free
+excel   quit our own Excel
+close   left of ours []; stray []; lost []; SolidWorks 2.72 GB private, 10.93 GB free
+dialogs progress boxes seen {'Calculating Interference Detection': 0, 'Updating...': 0, 'Opening': 1, 'Loading...': 0}; other dialogs are logged above as DIALOG
+person  W5-PLAN §4.4, the step only a person can do (for 2026, then 2024):
+person  In SolidWorks, open the Reducer_12to1.SLDASM a section built (a2 or m4). Click gear G1 — the small gear on S1, at the origin — and drag it round its axis by about a quarter turn. Watch G4, the large gear on S3: it turns the same way as G1, much more slowly — a quarter turn of G1 turns G4 about 7.5°. G2 and G3, on S2, turn together the other way. No gear should leave its axis, slide along it, or pass through another. Then, in the Workbook window, press Update SolidWorks with nothing changed: the footer should say the gears stand where they were turned. Tell us what you saw, on each version.
+done    0 failed: []; 0 noted for a ruling
