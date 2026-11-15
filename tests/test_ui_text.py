@@ -3368,3 +3368,16 @@ def test_the_workers_refusal_of_modes_on_a_version_is_shown_whole_as_a_build_ref
     why = ("SolidWorks 2024 has not been shown to hold a slide's value per configuration, so a gearbox with modes is "
            "not built there and nothing is made.")
     assert ui_text.job_failed(swbuild.BuildError(why)) == why
+
+
+def test_the_strip_refuses_a_part_made_from_a_gearbox_workbook_with_its_name_and_kind():
+    assert ui_text.workbook_part_refusal(r"C:\T\Sleeve_m1.5_N30.SLDPRT", "sleeve") == (
+        "Sleeve_m1.5_N30.SLDPRT is a sleeve made from a gearbox workbook; open that workbook to change it.")
+    assert ui_text.workbook_part_refusal(r"C:\T\Dog_m1.5_N30.SLDPRT", "dog") == (
+        "Dog_m1.5_N30.SLDPRT is a dog made from a gearbox workbook; open that workbook to change it.")
+    from gear_generator import gears
+    assert set(gears.WORKBOOK_KINDS) == {"sleeve", "dog"}
+    for kind in [*gears.KINDS, ""]:
+        with pytest.raises(ValueError, match=r"is not made from a gearbox workbook, so the strip does not refuse it "
+                                             r"as one\.$"):
+            ui_text.workbook_part_refusal(r"C:\T\Gear_m1.5_N17.SLDPRT", kind)

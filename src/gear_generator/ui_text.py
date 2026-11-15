@@ -3520,6 +3520,19 @@ def turning_note(positions_per_configuration: Optional[bool]) -> str:
     return ""
 
 
+def workbook_part_refusal(path: str, kind: str) -> str:
+    """The strip's refusal of a part made from a gearbox workbook (W8-PLAN §1.1, the plan review's S9), through Open
+    .gear.json and the live link alike: *Sleeve_m1.5_N30.SLDPRT is a sleeve made from a gearbox workbook; open that
+    workbook to change it.* — the file's name, and the kind in the workbook's own word (its Gears sheet's Kind, so a
+    dog is *a dog*). Only for a kind in ``gears.WORKBOOK_KINDS``, the one home of which kinds those are; any other
+    kind is a ValueError sentence, since a lone gear of it opens as always."""
+    from .gears import WORKBOOK_KINDS
+    if kind not in WORKBOOK_KINDS:
+        raise ValueError(f"A {kind or 'gear'} part is not made from a gearbox workbook, so the strip does not refuse "
+                         "it as one.")
+    return f"{_file(path)} is a {kind} made from a gearbox workbook; open that workbook to change it."
+
+
 SWITCH_IN_STEP = "Switching mode never by itself puts a dog tooth on tooth."
 
 
