@@ -7631,9 +7631,9 @@ class S7Case:
                               f"{out['cleanup']}")
             frame_none_stop(out["errors"] + out["cleanup"], label)
             raise S7Stop(f"{label}: {out['errors']} {out['cleanup']}")
-        wrong = {n: f for n, f in out["flags"].items() if any(f.values())}
+        wrong = {n: f for n, f in out["flags"].items() if any(bool(v) != key_suppressed(n, c) for c, v in f.items())}
         check(swbuild.on_in((mode,), out["active"]) and not wrong, f"{label}: put in {out['active']}; every mate "
-              f"suppressed for the put back on in every configuration: wrong {wrong}")
+              f"suppressed for the put back as §2.3 has it in every configuration: wrong {wrong}")
         put_bodies = list(out["puts"])
         moved = {g: frame_gap(out["before"][g], f) for g, f in out["puts"].items()}
         say(f"step    {label}: put in {mode} by {'the app' if route else 'a plain Transform2'}'s route, mates off "
