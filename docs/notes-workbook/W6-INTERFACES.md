@@ -242,3 +242,15 @@ binding on A, B and C from now; where one names a line number it is the line at 
     (least, greatest) | None` reads `TURNED_GEAR_MATE_SENSE_ANGLES` for lines that meet and
     `TURNED_GEAR_MATE_SENSE_ANGLES_SKEW` for lines that do not. Both gates use these two and nothing else for the
     class and its range.
+14. **`GearboxUpdate.resensed: List[str]`** (A's `128aa8e`) holds the gear mates an Update made again because their
+    mesh's sense changed with a move. A mate is listed there only once it has been read back against the new `k`;
+    it is also in `ratios` only when its ratio changed too, and never in `sense_found_wrong`. `ratios_read` has an
+    entry for it only when the ratio changed. B's `finish_update` writes the new sense for every name in it; C's
+    sentence reads it. Planning goes on listing a resensed mesh in `motion.ratios`, so the motion gate refuses it
+    first while the remake route is missing.
+15. **`lines={axis name: (point, direction)}`** is a keyword of both `build_gearbox` and `update_gearbox`, for the
+    slanted shafts' line axes. On reuse a line found moved comes back in `result.mismatched`, and the next plan
+    makes the layout new. Along mates target `"layout:plane1"`, `"layout:plane2"` or `"layout:plane3"`.
+16. **`line_axis` draws with `CreateLine` given three coordinates** inside the 3D sketch, the member the app already
+    draws every sketch with, not the `CreateLine2` W6-PLAN §4.2 names from the macro database, where it is
+    unverified. It has no finding gate: the plan rules it is not probed ahead, and the first full build shows it.
