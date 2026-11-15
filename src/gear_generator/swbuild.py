@@ -853,6 +853,31 @@ def _given_senses(plan: BuildPlan, senses: Optional[Mapping[str, bool]], interna
     return out
 
 
+def _internal_from_senses(plan: BuildPlan, senses: Optional[Mapping[str, bool]],
+                          internal: Optional[Collection[str]]) -> Optional[Collection[str]]:
+    """The interface commit's bridge the other way, ``senses`` as W5's ring list, kept only while its test in
+    ``tests/test_workbook_axes.py`` does (nothing here calls it: the build reads ``senses`` itself). A turned gear
+    mate has no place in a ring list and is a fault."""
+    if senses is None:
+        return internal
+    if internal is not None:
+        raise BuildError("A build was given both the W6 senses and the W5 ring meshes of its gear mates, so which way "
+                         "each turns is said twice and nothing is made; that is a fault in Gear Generator.")
+    axes = _planned_axes(plan)
+    out = []
+    for op in plan.ops:
+        if not (isinstance(op, base.Mate) and op.kind == "gear") or (op.name or op.id) not in senses:
+            continue
+        name = op.name or op.id
+        ga, gb = _mate_axes(op, name, axes)
+        if not axes_parallel(ga, gb):
+            raise BuildError(f"The gear mate {name} joins gears on shafts at an angle, which a list of ring meshes "
+                             "cannot say, so nothing is made; that is a fault in Gear Generator.")
+        if _inside_ring(senses[name], ga, gb):
+            out.append(name)
+    return tuple(out)
+
+
 def _inside_ring(same: bool, axis_a: Sequence[float], axis_b: Sequence[float]) -> bool:
     """A parallel mesh is inside a ring exactly when its same sense agrees with its two axes pointing alike."""
     return axes_parallel(axis_a, axis_b) and bool(same) == (sum(p * q for p, q in zip(axis_a, axis_b)) > 0)
