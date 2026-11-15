@@ -636,7 +636,7 @@ this paragraph says what has been done of it.
   and has run on 2024 only. The app does not depend on the answer (`W8-REVIEW-LATE-FIXES.md` walked every path:
   the one state where a mode can stand wrong under a green status is the quiet Update that puts nothing, whose
   status says it did not show the other modes).
-- **SolidWorks 2024 (32.5.0), the confirming build, in progress** (results under `probe/results/sw2024/`; run
+- **SolidWorks 2024 (32.5.0), the confirming build, half done and paused** (results under `probe/results/sw2024/`; run
   folders in `C:\Users\M0obo\Documents\GearGeneratorProbe\w8-sw2024-20261115`, a fresh session per section):
   `s1` 0 failed at `48ab0aa` (`bb79b6f`); `s7` at `1560b25` 1 failed, the script's own put order in case 8
   (`8702389`), and case 8 alone 0 failed at `8702389` (`6b16963`). Read on 2024: a turn showed in every
@@ -644,10 +644,24 @@ this paragraph says what has been done of it.
   in one configuration left its meshed neighbour at the same place in every configuration, not moved by the same
   amount; a turn in N overwrote 4H's earlier moving put. `8702389`'s message overstates "the readings match
   2026's" (case 4 as redesigned, case 5's drive and case 8 have no 2026 run yet). `TURN_PER_CONFIGURATION_ON_2024`
-  is being set False from these. Left on 2024: `s0`, `s3`, `s2`, the window stage.
+  is set False from these (`ce775a6`). Left on 2024: `s3`, the window stage, then `s2` (from a snapshot that has `ce775a6`; `…\w8-sw2024-20261115\out` keeps the 2024-built `s1.master`).
 - **Reviews of the day** (all under `notes-workbook/`): `W8-REVIEW-9-18.md`, `W8-REVIEW-FIX-9-18-AND-WINDOW.md`,
   `W8-REVIEW-DEMO-S2-S7.md`, `W8-REVIEW-LATE-FIXES.md` (must-fix: `s7` case 8 holds nothing of the Update it
   presses, and must run on 2026 alone before the closing run).
+- **Paused at the user's word (2026-11-15, about 6:15 pm): the user needed SolidWorks and the app.** The
+  coordinator force-ended the 2024 `s3` run then in progress (its own Python, SolidWorks and Excel; 16 checks in,
+  no FAIL; the run is void, its folder renamed `s3-20261115-180714.stopped-for-the-user`) and built a preview exe
+  of `29e6c34` for the user (`…\GearGeneratorProbe\build-workbook-29e6c34\dist`). **No agent starts SolidWorks
+  on the host again until the user says so.** Also done by then: `s0` on 2024 0 failed (`29e6c34`); the late
+  review's points in (`cbdb7ac` for its must-fix, not yet run; `ce775a6` sets `TURN_PER_CONFIGURATION_ON_2024`
+  False from 2024's s7; `76e4e6e`, `0ff56d3`, `d2b435a`). The review's S6 was not taken: the advice "press Update
+  SolidWorks with that mode showing" stays as it is.
+- **Two things done to the user's SolidWorks 2024 by the runs, both told to the user:** (1) the first `s7` start
+  there was stopped mid-call and its instance then closed; SolidWorks 2024 faulted on that exit (16:13:53, fault
+  module `sldappu`) and left its crash-report window for the user to answer; only a scratch copy was open. Rule
+  since: a run ends by its own path or its own STOP, never by stopping its Python mid-call and then quitting
+  SolidWorks. (2) The next 2024 start showed "Toolbar information is inconsistent, default toolbar setting will be
+  used." and the agent answered OK, so **the user's 2024 toolbars may be back at their defaults**.
 - **Left:** 2024's remaining sections; the late review's points; `s7` case 8 on 2026, then the findings and ruling
   9.18 from it; **one closing run on 2026 from the final source** (`--only modes` with `s5` before `s2`, the W5 to
   W7 sections r1, r2, r3, m5, m8, p1, p3, and the full window check); the person's step `s6`; PLAN-WORKBOOK §4.5
