@@ -291,7 +291,7 @@ def test_shafts_a_later_phase_lays_out_are_said_not_guessed():
     spec = box([Shaft("S", x="0", y="0", axis="X+"), Shaft("C", x="0", y="0"),
                 Shaft("P", "C", x="24", y="0", copies="3")], [], [])
     later = geometry.layout(spec).later
-    assert any("W6" in s for s in later) and any("W7" in s for s in later)
+    assert not any("W6" in s for s in later) and any("W7" in s for s in later)     # W6 lays turned axes out
 
 
 # -- every kind on every pair of facings, the part read from its own plan -----------------------------

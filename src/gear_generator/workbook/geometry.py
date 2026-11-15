@@ -216,20 +216,18 @@ class Layout:
     left_out: Dict[str, str] = field(default_factory=dict)
 
 
-# The kinds no phase before W6 lays out, as a few words for a list of what was left out.
-LATER_KINDS = {"bevel": "a bevel gear, phase W6", "sleeve": "a sleeve, phase W8", "dog": "a dog ring, phase W8"}
+# The kinds no phase before W8 lays out, as a few words for a list of what was left out.
+LATER_KINDS = {"sleeve": "a sleeve, phase W8", "dog": "a dog ring, phase W8"}
 
 
 def layout(spec: GearboxSpec, skip_gears=()) -> Layout:
-    """Every gear placed, when every shaft is on the frame with an axis along Z+ or Z-."""
+    """Every gear placed, when every shaft is on the frame (W6: along any axis; carriers are W7's). A shaft whose
+    Axis cell does not read is the read's error; its gears are left out as "could not be placed"."""
     out = Layout()
     shafts = {s.id: s for s in spec.shafts}
     for shaft in spec.shafts:
         if shaft.mount() != FRAME:
             out.later.append(f"{shaft.id} is mounted on {shaft.mount()}: carriers are laid out in phase W7.")
-        elif (shaft.axis or "Z+") not in AXES:
-            out.later.append(f"{shaft.id}'s axis is {shaft.axis}: axes other than Z+ and Z- are laid out in "
-                             f"phase W6.")
     names = [g.id for g in spec.gears]
 
     def label(gear: Gear) -> str:
@@ -240,6 +238,7 @@ def layout(spec: GearboxSpec, skip_gears=()) -> Layout:
     if out.later:
         out.left_out = {label(g): "not laid out until a later phase" for g in spec.gears}
         return out
+    cuts = bevel_cuts(spec)
     for gear in spec.gears:
         if gear.kind_word() in LATER_KINDS:
             out.left_out[label(gear)] = LATER_KINDS[gear.kind_word()]
@@ -251,27 +250,60 @@ def layout(spec: GearboxSpec, skip_gears=()) -> Layout:
         if shaft is None:
             out.left_out[label(gear)] = "no such shaft"
             continue
+        cut = cuts.get(gear.id)
+        if gear.kind_word() == "bevel" and (cut is None or cut.problem):
+            out.left_out[label(gear)] = "an error of its own"     # its cut's problem is said at its cell
+            continue
         try:
-            out.placed[gear.id] = _place(spec, gear, shaft)
-        except (ValueError, TypeError) as exc:
+            out.placed[gear.id] = _place(spec, gear, shaft, cut)
+        except (ValueError, TypeError, ArithmeticError) as exc:
             out.problems[gear.id] = str(exc)
             out.left_out[label(gear)] = "could not be placed"
     return out
 
 
-def _place(spec: GearboxSpec, gear: Gear, shaft: Shaft) -> Placed:
-    sigma = AXES[shaft.axis or "Z+"]
-    gear_spec = gear.gear_spec(spec.box)
+def _num(text: str, what: str) -> float:
+    value = float(str(text).strip() or "0")
+    if not math.isfinite(value):
+        raise ValueError(f"{what} is {text!r}, which is not a finite number.")
+    return value
+
+
+def cut_overrides(cut: Optional["BevelCut"]) -> Dict[str, str]:
+    """The fields a bevel row's GearSpec takes from its cut (W6-PLAN §2.5.1): its mate's teeth and the shaft angle,
+    to nine decimals (``model.Gear.gear_spec(box, **overrides)``); none without a cut."""
+    if cut is None or cut.problem:
+        return {}
+    from ..gears import equations
+    return {"mate_teeth": str(cut.mate_teeth), "shaft_angle": equations.literal(round(cut.shaft_angle, 9))}
+
+
+def _matmul_t(rows: Tuple[float, ...], v: Vec3) -> Vec3:
+    """``Bᵀ·v`` for a rotation given 9 numbers by rows: a world vector in that frame."""
+    return tuple(rows[j] * v[0] + rows[3 + j] * v[1] + rows[6 + j] * v[2] for j in range(3))   # type: ignore
+
+
+def _matmul(rows: Tuple[float, ...], v: Vec3) -> Vec3:
+    return tuple(rows[3 * i] * v[0] + rows[3 * i + 1] * v[1] + rows[3 * i + 2] * v[2] for i in range(3))  # type: ignore
+
+
+def _place(spec: GearboxSpec, gear: Gear, shaft: Shaft, cut: Optional["BevelCut"] = None) -> Placed:
+    axis = axis_vector(shaft.axis)
+    plus, sigma = family(axis)
+    gear_spec = gear.gear_spec(spec.box, **cut_overrides(cut))
     kind = kind_for(gear_spec)
     derived = kind.derive(gear_spec)
     helical = gear_spec.kind in ("helical", "herringbone")
-    z = float(shaft.z or 0) + sigma * float(gear.at or 0)
-    x, y = float(shaft.x), float(shaft.y)
+    bevel = gear_spec.kind == "bevel"
+    point = (_num(shaft.x, f"{shaft.id}'s X"), _num(shaft.y, f"{shaft.id}'s Y"), _num(shaft.z, f"{shaft.id}'s Z"))
+    at = _num(gear.at, f"{gear.id}'s At")
+    centre = tuple(p + at * a + 0.0 for p, a in zip(point, axis))
+    x, y, z = _matmul_t(base_frame(plus), centre)      # the At point in the family's plus frame (Z family: world)
     return Placed(
-        gear=gear.id, shaft=shaft.id, x=x, y=y, z=z, sigma=sigma,
-        axis=(0.0, 0.0, float(sigma)), centre=(x, y, z), family=(0.0, 0.0, 1.0),
+        gear=gear.id, shaft=shaft.id, x=x + 0.0, y=y + 0.0, z=z + 0.0, sigma=sigma,
+        axis=axis, centre=(centre[0], centre[1], centre[2]), family=plus, bevel=bevel,
         face=float(gear.face_width), teeth=int(float(gear.teeth)), module=float(gear.module),
-        internal=gear_spec.is_internal(), derived=derived,
+        internal=False if bevel else gear_spec.is_internal(), derived=derived,
         hand_sign=getattr(derived, "hand_sign", 0) if helical else 0,
         lead=getattr(derived, "lead", 0.0) if helical else 0.0,
         herringbone=gear_spec.kind == "herringbone",
@@ -305,7 +337,8 @@ def mesh_plane(a: Placed, b: Placed) -> float:
     return (lo + hi) / 2.0
 
 
-def phases(spec: GearboxSpec, placed: Dict[str, Placed], with_conflicts: bool = False):
+def phases(spec: GearboxSpec, placed: Dict[str, Placed], with_conflicts: bool = False,
+           meshes_: Optional[Dict[Tuple[str, str], "MeshGeometry"]] = None):
     """θ for every gear reachable through the meshes, radians; with ``with_conflicts``, also the loops that
     do not close.
 
@@ -333,7 +366,20 @@ def phases(spec: GearboxSpec, placed: Dict[str, Placed], with_conflicts: bool = 
         while queue:
             p = queue.popleft()
             for q in meshes.get(p, []):
-                wanted = place_against(placed[p], theta[p], placed[q])
+                turned = None
+                if not parallel(placed[p], placed[q]):
+                    turned = (meshes_ or {}).get((p, q)) or (meshes_ or {}).get((q, p))
+                    if turned is None or turned.problem:
+                        try:
+                            turned = mesh_geometry(placed[p], placed[q])
+                        except (ValueError, ArithmeticError, AttributeError):
+                            continue
+                    if turned.problem:
+                        continue
+                    # The contact is shared and the sense symmetric (c = ±1), so either orientation serves.
+                    wanted = turned_against(placed[p], theta[p], placed[q], turned)
+                else:
+                    wanted = place_against(placed[p], theta[p], placed[q])
                 if q in theta:
                     pitch = 2.0 * math.pi / placed[q].teeth
                     off = (wanted - theta[q]) % pitch
@@ -382,9 +428,21 @@ def extent(placed: Dict[str, Placed]) -> Optional[Tuple[Tuple[float, float], ...
     if not placed:
         return None
     gears = list(placed.values())
-    return ((min(g.x - g.outer_radius for g in gears), max(g.x + g.outer_radius for g in gears)),
-            (min(g.y - g.outer_radius for g in gears), max(g.y + g.outer_radius for g in gears)),
-            (min(g.z_range[0] for g in gears), max(g.z_range[1] for g in gears)))
+    if all(g.axis[0] == 0.0 and g.axis[1] == 0.0 for g in gears):
+        return ((min(g.x - g.outer_radius for g in gears), max(g.x + g.outer_radius for g in gears)),
+                (min(g.y - g.outer_radius for g in gears), max(g.y + g.outer_radius for g in gears)),
+                (min(g.z_range[0] for g in gears), max(g.z_range[1] for g in gears)))
+    # W6: each gear's bounding cylinder in 3D (its two end circles), so a turned gear counts its true size.
+    lows, highs = [math.inf] * 3, [-math.inf] * 3
+    for g in gears:
+        c = bounding_cylinder(g)
+        u = _unit(_sub(c.end, c.start)) if _norm(_sub(c.end, c.start)) > 1e-12 else g.axis
+        for i in range(3):
+            reach = c.radius * math.sqrt(max(0.0, 1.0 - u[i] * u[i]))
+            for end in (c.start, c.end):
+                lows[i] = min(lows[i], end[i] - reach)
+                highs[i] = max(highs[i], end[i] + reach)
+    return tuple((lows[i], highs[i]) for i in range(3))    # type: ignore[return-value]
 
 
 # -- W6: meshes across turned axes (W6-PLAN §2.3, §2.5, §2.5.1; Agent B writes the bodies) ------------------------
@@ -434,19 +492,306 @@ class BevelCut:
     problem: str = ""
 
 
+APEX_TOLERANCE = 0.005      # mm: two bevel apexes this close are together (checks.CENTRE_TOLERANCE)
+MEET_TOLERANCE = 1e-6       # mm: two lines this close meet, so a crossed pair has no common perpendicular
+
+
+def _dot(u: Vec3, v: Vec3) -> float:
+    return u[0] * v[0] + u[1] * v[1] + u[2] * v[2]
+
+
+def _cross(u: Vec3, v: Vec3) -> Vec3:
+    return (u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0])
+
+
+def _sub(u: Vec3, v: Vec3) -> Vec3:
+    return (u[0] - v[0], u[1] - v[1], u[2] - v[2])
+
+
+def _add(u: Vec3, v: Vec3, k: float = 1.0) -> Vec3:
+    return (u[0] + k * v[0], u[1] + k * v[1], u[2] + k * v[2])
+
+
+def _norm(u: Vec3) -> float:
+    return math.sqrt(_dot(u, u))
+
+
+def _unit(u: Vec3) -> Vec3:
+    n = _norm(u)
+    return (u[0] / n, u[1] / n, u[2] / n)
+
+
+def parallel(a: Placed, b: Placed) -> bool:
+    """Whether two gears' axes are parallel or anti-parallel (one family), to :data:`FAMILY_TOLERANCE`."""
+    return _norm(_cross(a.axis, b.axis)) < FAMILY_TOLERANCE
+
+
+def angle_between_axes(a: Placed, b: Placed) -> float:
+    """Degrees between the two gears' own +Z (their shafts' Axis directions)."""
+    return math.degrees(math.acos(max(-1.0, min(1.0, _dot(a.axis, b.axis)))))
+
+
+def azimuth(p: Placed, point: Vec3) -> float:
+    """A world point's azimuth about gear ``p``'s own +Z in its base frame (``base_frame(p.axis)``), radians."""
+    local = _matmul_t(base_frame(p.axis), _sub(point, p.origin))
+    return math.atan2(local[1], local[0])
+
+
+def local_height(p: Placed, point: Vec3) -> float:
+    """How far along its own +Z from its part origin a world point is, mm."""
+    return _dot(_sub(point, p.origin), p.axis)
+
+
+def pitch_radius(p: Placed) -> float:
+    d = getattr(p.derived, "d", None)
+    return d / 2.0 if d is not None else p.teeth * p.module / 2.0
+
+
+def lines_closest(pa: Vec3, da: Vec3, pb: Vec3, db: Vec3) -> Tuple[Vec3, Vec3]:
+    """The feet of the common perpendicular of two non-parallel lines ``p + t·d``."""
+    w = _sub(pa, pb)
+    a, b, c = _dot(da, da), _dot(da, db), _dot(db, db)
+    d, e = _dot(da, w), _dot(db, w)
+    den = a * c - b * b
+    ta = (b * e - c * d) / den
+    tb = (a * e - b * d) / den
+    return _add(pa, da, ta), _add(pb, db, tb)
+
+
+def signed_crossing(a_dir: Vec3, b_dir: Vec3, e: Vec3) -> float:
+    """The right-hand turn about ``e`` taking line ``a`` to line ``b``, degrees, reduced to (−90°, 90°]."""
+    angle = math.degrees(math.atan2(_dot(_cross(a_dir, b_dir), e), _dot(a_dir, b_dir)))
+    return _reduce_line(angle)
+
+
+def _reduce_line(angle: float) -> float:
+    out = math.fmod(angle, 180.0)
+    if out <= -90.0:
+        out += 180.0
+    elif out > 90.0:
+        out -= 180.0
+    return out + 0.0
+
+
 def mesh_geometry(a: Placed, b: Placed) -> MeshGeometry:
     """The mesh between two placed gears, classified and measured (W6-PLAN §2.3): PARALLEL by W3's formulas in the
     family's plus frame; BEVEL with the apexes within ``checks.CENTRE_TOLERANCE`` and the contact at the heel pitch
     point; CROSSED by the common perpendicular, its signed crossing against the hands and the contact inside both
-    faces. A pair that cannot be laid out as its kind comes back with ``problem`` set, never a raise."""
-    raise NotImplementedError("W6: Agent B, workbook.geometry.mesh_geometry")
+    faces. A pair that cannot be laid out as its kind comes back with ``problem`` set, never a raise.
+
+    PARALLEL's ``needed`` is left 0 here: ``checks`` works the centre distance out with the shifts (and a ring's
+    working distance) as W3 and the ring checks do, and fills it in. Whether the apexes meet, the crossing angle
+    against the hands and the contact inside the faces are measured here and judged in ``checks``."""
+    if parallel(a, b):
+        same = _dot(a.axis, b.axis) > 0
+        ring = a.internal != b.internal
+        sense = (1 if same else -1) * (-1 if ring else 1)
+        placed_at = centre_distance(a, b)
+        phi = math.atan2(b.y - a.y, b.x - a.x)
+        r = pitch_radius(a)
+        sign = -1.0 if (b.internal and not a.internal) else 1.0
+        height = mesh_plane(a, b)
+        local = (a.x + sign * r * math.cos(phi), a.y + sign * r * math.sin(phi), height)
+        contact = _matmul(base_frame(a.family), local)
+        return MeshGeometry(a.gear, b.gear, PARALLEL, sense, 0.0 if same else 180.0, 0.0, placed_at, contact,
+                            azimuth(a, contact), azimuth(b, contact))
+    shaft_angle = angle_between_axes(a, b)
+    if a.bevel and b.bevel:
+        w = _unit(_sub(b.axis, tuple(_dot(b.axis, a.axis) * v for v in a.axis)))
+        delta = math.radians(a.derived.delta)
+        radius = a.derived.cone_distance
+        contact = _add(a.centre, _add(tuple(math.cos(delta) * v for v in a.axis), w, math.sin(delta)), radius)
+        return MeshGeometry(a.gear, b.gear, BEVEL, 1, shaft_angle, 0.0, _norm(_sub(b.centre, a.centre)), contact,
+                            azimuth(a, contact), azimuth(b, contact))
+    helical = a.lead and b.lead and not a.herringbone and not b.herringbone
+    if not helical or a.bevel or b.bevel:
+        return MeshGeometry(a.gear, b.gear, BEVEL if (a.bevel or b.bevel) else CROSSED, 1, shaft_angle, 0.0, 0.0,
+                            a.centre, 0.0, 0.0, problem="kind")
+    n = _cross(a.axis, b.axis)
+    foot_a, foot_b = lines_closest(a.centre, a.axis, b.centre, b.axis)
+    gap = _sub(foot_b, foot_a)
+    distance = _norm(gap)
+    if distance < MEET_TOLERANCE:
+        return MeshGeometry(a.gear, b.gear, CROSSED, 1, shaft_angle, pitch_radius(a) + pitch_radius(b), 0.0,
+                            foot_a, 0.0, 0.0, problem="meet")
+    e = _unit(gap)
+    contact = _add(foot_a, e, pitch_radius(a))
+    psi_a = azimuth(a, contact)
+    t_local = _tooth_direction(a, psi_a)
+    t = _matmul(base_frame(a.axis), t_local)
+    s_b = 1 if _dot(b.axis, t) > 0 else -1
+    del n
+    return MeshGeometry(a.gear, b.gear, CROSSED, s_b, shaft_angle, pitch_radius(a) + pitch_radius(b), distance,
+                        contact, psi_a, azimuth(b, contact))
+
+
+def _tooth_direction(p: Placed, psi: float) -> Vec3:
+    """The tooth line's direction on ``p``'s pitch cylinder at azimuth ``psi`` in its base frame, per mm of its own
+    z (``crossed.tooth_direction``; a turn about the axis does not change it)."""
+    from ..gears import crossed
+    return crossed.tooth_direction(p.derived, math.degrees(psi))
+
+
+def turned_against(p: Placed, theta_p: float, q: Placed, geometry_: MeshGeometry) -> float:
+    """θ for gear q so it meshes with gear p across turned axes (W6-PLAN §2.3): with ``g`` each gear's tooth-space
+    angle at the contact in its own frame (θ plus its helix twist there), ``ψ`` the contact's azimuth in its base
+    frame and ``k = −c·z_p/z_q``, ``g_q = ψ_q + π/z_q + k·(g_p − ψ_p)`` modulo q's pitch."""
+    contact = geometry_.contact
+    psi_p, psi_q = azimuth(p, contact), azimuth(q, contact)
+    g_p = theta_p + _twist_local(p, local_height(p, contact))
+    k = -geometry_.sense * p.teeth / q.teeth
+    g_q = _wrap(psi_q + math.pi / q.teeth + k * (g_p - psi_p), 2.0 * math.pi / q.teeth)
+    return g_q - _twist_local(q, local_height(q, contact))
+
+
+def _twist_local(p: Placed, local_z: float) -> float:
+    if not p.lead:
+        return 0.0
+    return math.radians(p.derived.turn_at(local_z))
 
 
 def bevel_cuts(spec: GearboxSpec) -> Dict[str, BevelCut]:
     """Every bevel gear's mate teeth and shaft angle, from its Meshes rows and the two shafts' Axis cells, keyed by
     gear id (W6-PLAN §2.5.1). Pure and from the read alone, since ``build.plan_parts`` needs it before anything is
-    laid out."""
-    raise NotImplementedError("W6: Agent B, workbook.geometry.bevel_cuts")
+    laid out.
+
+    The partners are the gears it is listed with; the shaft angle is the angle between the two shafts' Axis
+    directions (each gear's own +Z: D1), so a cardinal pair is exactly 90°. A gear listed with nothing, with two
+    partners of different teeth, or across two shaft angles has a ``problem``; a partner whose shaft or teeth do not
+    read is left out (its own error says why)."""
+    gears = {g.id: g for g in spec.gears if g.id}
+    shafts = {s.id: s for s in spec.shafts if s.id}
+
+    def axis_of(gear: Gear) -> Optional[Vec3]:
+        shaft = shafts.get(gear.shaft)
+        if shaft is None:
+            return None
+        try:
+            return axis_vector(shaft.axis)
+        except ValueError:
+            return None
+
+    def teeth_of(gear: Gear) -> Optional[int]:
+        try:
+            value = float(str(gear.teeth).strip())
+        except ValueError:
+            return None
+        return int(value) if value == int(value) and value > 0 else None
+
+    out: Dict[str, BevelCut] = {}
+    for gear in spec.gears:
+        if gear.kind_word() != "bevel" or not gear.id:
+            continue
+        mine = axis_of(gear)
+        partners: List[str] = []
+        found: List[Tuple[str, int, float]] = []
+        for mesh in spec.meshes:
+            if gear.id not in (mesh.a, mesh.b) or mesh.a == mesh.b:
+                continue
+            other = gears.get(mesh.b if mesh.a == gear.id else mesh.a)
+            if other is None:
+                continue
+            partners.append(other.id)
+            theirs, teeth = axis_of(other), teeth_of(other)
+            if mine is None or theirs is None or teeth is None:
+                continue
+            angle = math.degrees(math.acos(max(-1.0, min(1.0, _dot(mine, theirs)))))
+            found.append((other.id, teeth, angle))
+        if not partners:
+            out[gear.id] = BevelCut(0, 0.0, (), problem=(
+                f"{gear.id} is a bevel gear that meshes nothing; its shape depends on the gear it meshes with, so list "
+                "its mesh on the Meshes sheet."))
+            continue
+        if not found:
+            out[gear.id] = BevelCut(0, 0.0, tuple(partners))
+            continue
+        teeth = sorted({t for _, t, _ in found})
+        angles: List[float] = []
+        for _, _, angle in found:
+            if not any(abs(angle - seen) <= 1e-9 for seen in angles):
+                angles.append(angle)
+        problem = ""
+        if len(teeth) > 1:
+            listed = [f"{g} ({t} teeth)" for g, t, _ in found]
+            problem = (f"{gear.id} is a bevel gear listed with {_and(listed)}; a bevel gear is cut for one mate's tooth "
+                       "count.")
+        elif len(angles) > 1:
+            problem = (f"{gear.id} is a bevel gear listed across shafts at {_and([_deg(x) + '°' for x in angles])}; a "
+                       "bevel gear is cut for one shaft angle.")
+        out[gear.id] = BevelCut(found[0][1], found[0][2], tuple(partners), problem)
+    return out
+
+
+def _deg(value: float) -> str:
+    return f"{value:.3f}".rstrip("0").rstrip(".")
+
+
+def _and(items: List[str]) -> str:
+    return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " and " + items[-1]
+
+
+# -- bounding cylinders (W6-PLAN §2.5, D8, review M5) ----------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class Cylinder:
+    """A gear's true solid bounding cylinder: its own axis from ``start`` to ``end`` (world), and ``radius``."""
+
+    start: Vec3
+    end: Vec3
+    radius: float
+
+
+def bounding_cylinder(p: Placed) -> Cylinder:
+    """Radius the outside radius (a ring's rim; a bevel's largest radial extent in ``bevel.blank_points``), span the
+    face, or a bevel's blank from its nearest to its farthest point along the axis, from the apex."""
+    if p.bevel:
+        from ..gears import bevel as bevel_gears
+        points = bevel_gears.blank_points(p.derived).loop()
+        axial = [pt[1] for pt in points]
+        radius = max(abs(pt[0]) for pt in points)
+        return Cylinder(_add(p.centre, p.axis, min(axial)), _add(p.centre, p.axis, max(axial)), radius)
+    return Cylinder(p.origin, _add(p.origin, p.axis, p.face), p.outer_radius)
+
+
+def _project_cylinder(c: Cylinder, point: Vec3) -> Vec3:
+    """The point of the solid cylinder nearest ``point``."""
+    axis = _sub(c.end, c.start)
+    length = _norm(axis)
+    if length < 1e-12:
+        u = (0.0, 0.0, 1.0)
+        t = 0.0
+    else:
+        u = (axis[0] / length, axis[1] / length, axis[2] / length)
+        t = max(0.0, min(length, _dot(_sub(point, c.start), u)))
+    foot = _add(c.start, u, t)
+    radial = _sub(_sub(point, c.start), tuple(_dot(_sub(point, c.start), u) * v for v in u))
+    r = _norm(radial)
+    if r <= c.radius or r < 1e-15:
+        return _add(foot, radial)
+    return _add(foot, radial, c.radius / r)
+
+
+def solid_gap(a: Cylinder, b: Cylinder, iterations: int = 20000) -> float:
+    """The least distance between two solid cylinders (a segment is one of radius 0), mm; 0 when they overlap.
+
+    Alternating projections between the two convex solids (each step the nearest point of one to the other's
+    last point), started from the pair of their axes' closest points: it converges to a pair of nearest points,
+    which the tests hold against dense sampling."""
+    mid_a = _add(a.start, _sub(a.end, a.start), 0.5)
+    mid_b = _add(b.start, _sub(b.end, b.start), 0.5)
+    pb = _project_cylinder(b, mid_a)
+    pa = _project_cylinder(a, pb)
+    last = math.inf
+    for _ in range(iterations):
+        pb = _project_cylinder(b, pa)
+        pa = _project_cylinder(a, pb)
+        gap = _norm(_sub(pa, pb))
+        if gap < 1e-12 or last - gap < 1e-13:
+            break
+        last = gap
+    del mid_b
+    return _norm(_sub(pa, pb))
 
 
 def cylinder_gap(a: Placed, b: Placed) -> float:
@@ -454,5 +799,23 @@ def cylinder_gap(a: Placed, b: Placed) -> float:
     each about its own axis, radius its outside radius (a ring's rim, a bevel's largest radial extent in
     ``bevel.blank_points``), axial span its face (a bevel's blank from its nearest to its farthest point along the
     axis, from the apex). Closed forms for side against side, each end disc against the other cylinder, and the
-    rims; 0 when they overlap. Tested against dense sampling (the fixtures' clearances to 0.1 mm)."""
-    raise NotImplementedError("W6: Agent B, workbook.geometry.cylinder_gap")
+    rims; 0 when they overlap. Tested against dense sampling (the fixtures' clearances to 0.1 mm).
+
+    Worked out here by alternating projections between the two convex solids (:func:`solid_gap`), which reach the
+    same least distance as the closed forms; the tests hold it to dense sampling and to the plan's fixtures."""
+    return solid_gap(bounding_cylinder(a), bounding_cylinder(b))
+
+
+def shaft_span(placed: Dict[str, Placed], shaft: str) -> Optional[Cylinder]:
+    """A shaft as the span of its own gears (W6-PLAN §2.5): the segment of its axis from the nearest to the farthest
+    point of its gears' bounding cylinders, as a cylinder of radius 0; None for a shaft with no placed gear."""
+    gears = [p for p in placed.values() if p.shaft == shaft]
+    if not gears:
+        return None
+    axis, point = gears[0].axis, gears[0].centre
+    ts: List[float] = []
+    for g in gears:
+        c = bounding_cylinder(g)
+        for end in (c.start, c.end):
+            ts.append(_dot(_sub(end, point), axis))
+    return Cylinder(_add(point, axis, min(ts)), _add(point, axis, max(ts)), 0.0)

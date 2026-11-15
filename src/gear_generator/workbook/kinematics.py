@@ -64,6 +64,37 @@ class Motion:
         return "still" if about_plus_z == 0 else ("anticlockwise" if about_plus_z > 0 else "clockwise")
 
 
+def seen_from(plus: Tuple[float, float, float]) -> str:
+    """The word a shaft's family plus direction is seen from (W6-PLAN §2.4, D12): ``"+X"``, ``"+Y"``, ``"+Z"``, or
+    for a slant its components to three decimals in their shortest form, U+2212 for minus: ``"(0.5, −0.866, 0)"``."""
+    words = {(1.0, 0.0, 0.0): "+X", (0.0, 1.0, 0.0): "+Y", (0.0, 0.0, 1.0): "+Z"}
+    key = tuple(float(v) for v in plus)
+    if key in words:
+        return words[key]
+
+    def short(v: float) -> str:
+        text = f"{v:.3f}".rstrip("0").rstrip(".")
+        text = "0" if text in ("-0", "") else text
+        return text.replace("-", "\u2212")
+    return "(" + ", ".join(short(v) for v in key) + ")"
+
+
+def _sense(mesh, a, b, direction, senses) -> Optional[int]:
+    """``c`` for a mesh row: from ``senses`` when given (a missing pair is left out); else W3's — between parallel
+    shafts ``a_a·a_b`` outside and ``−a_a·a_b`` inside a ring, a mesh across an angle left out."""
+    if senses is not None:
+        value = senses.get((mesh.a, mesh.b))
+        return int(value) if value in (1, -1) else None
+    da, db = direction.get(a.shaft), direction.get(b.shaft)
+    if da is None or db is None:
+        return None
+    dot = sum(x * y for x, y in zip(da, db))
+    if abs(abs(dot) - 1.0) > 1e-9:
+        return None
+    internal = (a.side == "internal") != (b.side == "internal")
+    return (1 if dot > 0 else -1) * (-1 if internal else 1)
+
+
 def _fraction(text: str) -> Fraction:
     return Fraction(str(text).strip().replace("−", "-"))
 
@@ -76,26 +107,26 @@ def solve(spec: GearboxSpec, skip_gears=(), senses: Optional[Mapping[Tuple[str, 
     sense``); every caller passes it (``checks.check``). None is W3's behaviour exactly. A mesh with no sense, or
     whose gears are not placed, is left out. Until B rewrites the system in own-axis unknowns, a given ``senses``
     is a stub."""
-    if senses is not None:
-        raise NotImplementedError("W6: Agent B, workbook.kinematics.solve with senses (own-axis speeds)")
     motion = Motion()
     shafts = [s for s in spec.shafts if s.id]
     if any(s.mount() != FRAME for s in shafts):
         motion.later = "Speeds through a carrier (a planetary) are worked out in phase W7."
         return motion
-    if any((s.axis or "Z+") not in AXIS_SIGN for s in shafts):
-        motion.later = "Speeds through a turned axis (a right-angle stage) are worked out in phase W6."
-        return motion
+    from .geometry import axis_vector, family      # geometry imports nothing of this module
+    direction: Dict[str, Tuple[float, float, float]] = {}
+    for s in shafts:
+        try:
+            direction[s.id] = axis_vector(s.axis)
+        except ValueError:
+            pass                                   # the read says so at the cell; its meshes are left out
+    motion.axis_sign = {sid: family(d)[1] for sid, d in direction.items()}
+    motion.seen_from = {sid: seen_from(family(d)[0]) for sid, d in direction.items()}
     inputs = [s for s in shafts if s.role == "input" and s.speed]
     if not inputs:
         motion.free = [s.id for s in shafts]
         return motion
-    reference = inputs[0].axis or "Z+"
-    motion.reference = reference
-    n = AXIS_SIGN[reference]
+    motion.reference = inputs[0].axis or "Z+"
     index = {s.id: i for i, s in enumerate(shafts)}
-    sign = {s.id: AXIS_SIGN[s.axis or "Z+"] * n for s in shafts}
-    motion.axis_sign = {s.id: AXIS_SIGN[s.axis or "Z+"] for s in shafts}
     gears = {g.id: g for g in spec.gears if g.id not in skip_gears}
 
     rows: List[List[Fraction]] = []          # each row: coefficients for every shaft, then the right-hand side
@@ -108,7 +139,7 @@ def solve(spec: GearboxSpec, skip_gears=(), senses: Optional[Mapping[Tuple[str, 
         if shaft.role == "input" and shaft.speed:
             r = row()
             r[index[shaft.id]] = Fraction(1)
-            r[width] = _fraction(shaft.speed) * sign[shaft.id]
+            r[width] = _fraction(shaft.speed)            # about the shaft's own Axis, as typed
             rows.append(r)
         elif shaft.role == "fixed":
             r = row()
@@ -119,11 +150,13 @@ def solve(spec: GearboxSpec, skip_gears=(), senses: Optional[Mapping[Tuple[str, 
         a, b = gears.get(mesh.a), gears.get(mesh.b)
         if a is None or b is None or a.shaft not in index or b.shaft not in index or a.shaft == b.shaft:
             continue
+        c = _sense(mesh, a, b, direction, senses)
+        if c is None:
+            continue
         za, zb = int(_fraction(a.teeth)), int(_fraction(b.teeth))
-        internal = (a.side == "internal") != (b.side == "internal")
         r = row()
         r[index[a.shaft]] += za
-        r[index[b.shaft]] += -zb if internal else zb      # outside: za ωa + zb ωb = 0; in a ring: za ωa − zb ωb = 0
+        r[index[b.shaft]] += c * zb               # z_a·ω_a + c·z_b·ω_b = 0, speeds about each own Axis (§2.4)
         rows.append(r)
         meshes.append((mesh, a, b, za, zb))
 
@@ -137,7 +170,7 @@ def solve(spec: GearboxSpec, skip_gears=(), senses: Optional[Mapping[Tuple[str, 
         if value is None:
             motion.free.append(shaft.id)
         else:
-            motion.speeds[shaft.id] = value * sign[shaft.id]   # back to each shaft's own axis
+            motion.speeds[shaft.id] = value                    # about the shaft's own Axis
     _torques(spec, motion, inputs, meshes)
     return motion
 

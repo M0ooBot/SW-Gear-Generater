@@ -90,15 +90,23 @@ class Gear:
     def kind_word(self) -> str:
         return self.kind or "spur"
 
-    def gear_spec(self, box: Box) -> GearSpec:
+    def gear_spec(self, box: Box, **overrides: str) -> GearSpec:
         """The strip's form for this gear, every field set explicitly.
 
         A blank optional cell takes the workbook's default, never
         ``GearSpec()``'s: a blank Bore is no bore, not ``GearSpec``'s 10 mm.
         :meth:`spec_values` names every field, and a test holds it to
         ``fields(GearSpec)``, so a field added later cannot fall back unseen.
+        ``overrides`` (W6) set fields the row does not hold — a bevel gear's
+        ``mate_teeth`` and ``shaft_angle``, from its Meshes row and the two
+        shafts' axes (``geometry.bevel_cuts``).
         """
-        return GearSpec(**self.spec_values(box))
+        values = self.spec_values(box)
+        unknown = [k for k in overrides if k not in values]
+        if unknown:
+            raise ValueError(f"A gear's form has no field {unknown[0]!r} to set.")
+        values.update(overrides)
+        return GearSpec(**values)
 
     def spec_values(self, box: Box) -> Dict[str, str]:
         return dict(
