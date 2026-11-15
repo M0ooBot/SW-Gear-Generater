@@ -6667,3 +6667,86 @@ def test_with_its_gear_mates_on_a_planetary_put_does_not_hold_in_the_fake(turned
     carrier = "carrier1-1"
     with pytest.raises(SolidWorksError, match="did not take its frame"):
         sw.place_component(carrier, IDENTITY9, sw.frames[carrier][1], kind=swcom.ASSEMBLY_TRAIN)
+
+
+W7_PUT_BACK_LOG = "c0e98c21b97164fb77e9963594dee9ea91eb0b63d8aa4e9b5684a47534676cd1"
+
+
+def test_the_w7_put_back_calls_are_pinned_whole(turned_findings, monkeypatch):
+    """E's case, the call log on the fake exactly as 9f21d99 made it (W7 closes on p3 run against that sequence):
+    any later change to it is seen here."""
+    import hashlib
+    sw, pressed, _ = _planetary_turned_and_pressed(monkeypatch, "gear mates off around the puts")
+    swbuild.update_gearbox(sw, **pressed.update_kwargs(), exists=lambda _p: True, mtime=lambda _p: 5.0)
+    calls = [(n, a) for n, a in sw.calls]
+    assert len(calls) == 142
+    put = [n for n, _ in calls[calls.index(("set_global_variable", calls[[n for n, _ in calls].index(
+        "set_global_variable")][1])):]]
+    assert put[:24] == (["set_global_variable", "rebuild"] + ["component_frame"] * 7 + ["set_mate_suppressed"] * 5
+                        + ["rebuild"] + ["place_component"] * 6 + ["mate_states", "set_mate_suppressed",
+                                                                   "set_mate_suppressed"])
+    assert hashlib.sha256(repr(calls).encode()).hexdigest() == W7_PUT_BACK_LOG
+
+
+def _carrier_train_put(monkeypatch, gear_mates, already_off):
+    """_put_train on the built, turned Planetary_4to1 with ``already_off`` suppressed before the put (as a per-mode
+    gear mate off in the configuration shown would be) and ``gear_mates`` the ones on there (None: W7's call)."""
+    sw, pressed, names = _planetary_turned_and_pressed(monkeypatch, "gear mates off around the puts")
+    kwargs = pressed.update_kwargs()
+    motion, placements = kwargs["motion"], kwargs["placements"]
+    sw.open_document(kwargs["assembly"])
+    handle = {}
+    for index, p in enumerate(placements, 1):
+        sw.find_component(f"placed{index}", p.component)
+        handle[p.gear] = f"placed{index}"
+    mate_handle = {}
+    for index, m in enumerate(motion.mates, 1):
+        sw.find_mate(f"mate{index}", m.name)
+        mate_handle[m.name] = f"mate{index}"
+    sw.mate(already_off).suppressed = True
+    result = swbuild.GearboxUpdate()
+    train = [p.gear for p in placements if p.gear not in motion.fixed]
+    train += [g for g in motion.held if g not in train]          # as the Update judges a train: its held gears too
+    locks = [lock for lock in motion.locks if lock.anchor in train and lock.follower in train]
+    live = {p.gear: sw.component_frame(handle[p.gear]) for p in placements}
+    # back to the frames on record (the Face Z the press would set first is not set here)
+    swbuild._put_train(sw, result, motion, train, locks, [], handle, mate_handle,
+                       {p.gear: (p.rotation, p.at) for p in motion.recorded},
+                       lambda: sw.rebuild(kind=swcom.ASSEMBLY_TRAIN), "Planetary_4to1.SLDASM", [False],
+                       held=list(motion.held), carriers=[link.carrier for link in motion.carriers], live=live,
+                       pitch={p.gear: p.pitch for p in placements}, gear_mates=gear_mates)
+    return sw, motion, result
+
+
+def test_a_gear_mate_off_in_the_mode_shown_stays_off_through_a_carrier_trains_put(turned_findings, monkeypatch):
+    """The review's input (9.1): a per-mode gear mate in a carrier train, off in the configuration shown, is neither
+    suppressed nor turned back on by the put; the gear mates on there are, and the put holds."""
+    off = "Sun meshes Planet copy 1"
+    sw, motion, result = _carrier_train_put(monkeypatch, None, off)
+    assert sw.mate(off).suppressed is False                         # W7's call: every gear mate, all back on
+    on_here = [m.name for m in motion.mates if m.kind == "mesh" and m.name != off]
+    sw, motion, result = _carrier_train_put(monkeypatch, on_here, off)
+    assert sw.mate(off).suppressed is True                          # off in this mode, and still off
+    assert all(not sw.mate(n).suppressed for n in on_here)
+    assert result.placed[0] == "C carrier" and not result.failures
+
+
+def test_a_modes_put_hands_the_carrier_train_only_the_gear_mates_on_in_the_mode_shown(monkeypatch):
+    seen = []
+    monkeypatch.setattr(swbuild, "_put_train", lambda *a, **k: seen.append(k.get("gear_mates")))
+    couple = swbuild.MateRef("RangeSlv engages Sun", "couple", ("RangeSlv", "Sun"), modes=("4L",))
+    mesh = swbuild.MateRef("Sun meshes Planet", "mesh", ("Sun", "Planet"))
+    motion = swbuild.MotionUpdate(mates=(couple, mesh),
+                                  meshes=(swbuild.MeshLink("RangeSlv", "Sun", 1.0, 12.0, modes=("4L",)),
+                                          swbuild.MeshLink("Sun", "Planet", -1.0, 20.0)),
+                                  configurations=("4H", "4L"))
+    placements = [swbuild.Placement(g, f"{g}-1", IDENTITY9, (0.0, 0.0, 0.0), 20.0) for g in ("RangeSlv", "Sun", "Planet")]
+
+    class Frames:
+        def component_frame(self, handle):
+            return (IDENTITY9, (0.0, 0.0, 0.0))
+    for mode in ("4H", "4L"):
+        swbuild._modes_put(Frames(), swbuild.GearboxUpdate(), motion, mode, mode, placements, ["RangeSlv", "Sun",
+                           "Planet"], {p.gear: (p.rotation, p.at) for p in placements}, {p.gear: p.gear for p in placements},
+                           {}, None, lambda: None, "X.SLDASM", [False], moved=True, check=None)
+    assert seen == [["Sun meshes Planet"], ["RangeSlv engages Sun", "Sun meshes Planet"]]

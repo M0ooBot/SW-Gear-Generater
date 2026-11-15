@@ -4245,8 +4245,10 @@ def _modes_put(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, mode
             continue
         lock_mates = _real_locks(motion, [lock for lock in locks_here
                                           if lock.anchor in train and lock.follower in train])
+        on_here = [m.name for m in motion.mates if m.kind in GEAR_MATE_KINDS and on_in(_on_set(motion, m), mode)]
         _put_train(sw, result, motion, train, lock_mates, [], handle, mate_handle, wanted, rebuild, file, touched,
-                   held=held_here, carriers=[link.carrier for link in links], live=live, pitch=pitch, route=route)
+                   held=held_here, carriers=[link.carrier for link in links], live=live, pitch=pitch, route=route,
+                   gear_mates=on_here)
         put_any = True
     unfix = route == REPLACE_ROUTES[1]
     for placement in placements:
@@ -4865,7 +4867,7 @@ def _put_train(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, trai
                sense_wrong: Collection[str] = (), resensed: Collection[str] = (),
                respaced: Collection[str] = (), *, held: Collection[str] = (), carriers: Collection[str] = (),
                live: Optional[Mapping[str, Frame9]] = None, pitch: Optional[Mapping[str, float]] = None,
-               route: Optional[str] = None) -> None:
+               route: Optional[str] = None, gear_mates: Optional[Collection[str]] = None) -> None:
     """One train put back whole: every lock of it suppressed (a lock does not hold against a put: W5-DECISIONS),
     a rebuild, its ratios remade, EVERY mated gear of it put (review M1), then — whatever happened — every lock
     turned back on and a rebuild (review M8).
@@ -4882,7 +4884,9 @@ def _put_train(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, trai
     (``GEAR_MATE_BACK_ON_KEEPS_SENSE_AND_RATIO``) — and here each gear mate's sense read again after (``settle``). A
     ratio remade inside it (a tooth change on a planetary, not covered by the probe) is remade after the
     suppression and its rebuild, read for sense, and suppressed again before the puts. A train with no carrier is
-    put as before, its gear mates on. A lock or gear mate that will not come back on is a failure naming it, and
+    put as before, its gear mates on. ``gear_mates`` (W8): the gear mates on in the configuration shown; only those
+    are suppressed and turned back on, so a per-mode one off there stays off (§9.1). None (W7): every gear mate of
+    the train, which D10 has turned on before any put. A lock or gear mate that will not come back on is a failure naming it, and
     stops the job (:class:`_LocksLeftOff`); what raised inside is raised again once they are tried.
 
     A lock counts as tried the moment its suppression is asked for, so one whose suppression took before the call
@@ -4900,7 +4904,7 @@ def _put_train(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, trai
         if carriers:
             for mate in motion.mates:
                 if mate.kind in GEAR_MATE_KINDS and len(mate.gears) == 2 and all(g in train for g in mate.gears) \
-                        and mate.name in mate_handle:
+                        and mate.name in mate_handle and (gear_mates is None or mate.name in gear_mates):
                     gear_off.append(mate.name)
                     touched[0] = True
                     sw.set_mate_suppressed(mate_handle[mate.name], True)
@@ -5000,7 +5004,9 @@ def _put_train(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, trai
         # the other Flip, read again; wrong again stops the job).
         for name in gear_off:
             if any(n == name for n, _, _ in ratios):
-                continue                              # read when it was remade
+                # A mate remade inside the suppression is read when it is remade and not again once turned back on:
+                # GEAR_MATE_BACK_ON_KEEPS_SENSE_AND_RATIO was measured on built mates, not on remade ones.
+                continue
             a, b = next(m.gears for m in motion.mates if m.name == name)
             live = sw.gear_mate_ratio(mate_handle[name])
             settle(name, f"{handle[a]}:{AXIS_NAME}", f"{handle[b]}:{AXIS_NAME}",
