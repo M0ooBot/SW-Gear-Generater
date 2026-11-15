@@ -3361,3 +3361,10 @@ def test_the_implicit_mode_has_no_name_to_lead_with():
     implicit = checks.ModeReport("", engaged=(("RangeSlv", "InDog"),), out_of_mesh=(("G4", "G5"),))
     assert ui_text._engaged_sentence(implicit) == (
         "With every slider at its position 0, RangeSlv engages InDog; G4 and G5 are out of mesh.")
+
+
+def test_the_workers_refusal_of_modes_on_a_version_is_shown_whole_as_a_build_refusal():
+    """§9.5: the per-version refusal is the worker's, before anything is made; the window shows it as it came."""
+    why = ("SolidWorks 2024 has not been shown to hold a slide's value per configuration, so a gearbox with modes is "
+           "not built there and nothing is made.")
+    assert ui_text.job_failed(swbuild.BuildError(why)) == why
