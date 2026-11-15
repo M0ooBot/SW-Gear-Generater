@@ -776,6 +776,49 @@ def test_each_mutation_of_the_plan_is_caught(mutate, caught, mode_findings):
     assert not result.ok and any(caught in line for line in result.log_lines()), result.log_lines()
 
 
+def _sun_held_to_lodog_in_n(plan):
+    """W8 s5 (ii)'s plan (probe/workbook_assembly_check.py ``s5_coupled``): a 1 : 1 Sun-LoDog coupling made in N's
+    step and on there alone, a copy of 4L's ``RangeSlv engages LoDog`` with the Sun in RangeSlv's place. It passes
+    ``ModesPlan.check``; the planetary holds LoDog at a quarter of the Sun's turn, so it locks N's rear train."""
+    handle_of = {g: h for h, g in plan.handles.items()}
+    template = next(op for s in plan.modes_plan.steps for op in s.ops if op.name == "RangeSlv engages LoDog")
+    extra = replace(template, id="inject1", name="Sun held to LoDog in N", a=f"{handle_of['Sun']}:Gear Axis",
+                    b=f"{handle_of['LoDog']}:Gear Axis")
+    steps = tuple(replace(s, ops=s.ops + (extra,), on=s.on + (extra.name,)) if s.name == "N"
+                  else replace(s, off=s.off + (extra.name,)) for s in plan.modes_plan.steps)
+    return replace(plan, modes_plan=replace(plan.modes_plan, steps=steps,
+                                            same_way=plan.modes_plan.same_way + (extra.name,)))
+
+
+def test_a_coupling_solidworks_accepts_that_locks_a_modes_train_stops_the_build_at_its_mate_check(mode_findings):
+    """W8-REVIEW-DEMO-S2-S7 S3 and ruling 3: the path s5 (ii) took on SolidWorks 2026 (140811-s5.log 894-900). The
+    coupling is made with status 1; in N the rear train reads fully defined, so the build stops at step 6's check in
+    N, a sentence per body named as the status sentences name it (the carrier as *Carrier (the carrier)*, each planet
+    copy by its id), and nothing is saved as an assembly."""
+    from test_swbuild import FakeSolidWorks
+    sw = FakeSolidWorks()
+    plan = gearbox.plan_gearbox(assessed(e4_transfer_case()), None, exists=sw.exists, read_sidecar=lambda p: None)
+    assert plan.refusal == "", plan.refusal
+    plan = _sun_held_to_lodog_in_n(plan)
+    assert plan.modes_plan.check(plan.assembly) == []
+    handle_of = {g: h for h, g in plan.handles.items()}
+    locked = [handle_of[g] for g in ("Sun", "InDog", "LoDog", "Pl copy 1", "Pl copy 2", "Pl copy 3")] + ["carrier1"]
+    sw.locks = {"Sun held to LoDog in N": set(locked)}
+    result = swbuild.build_gearbox(sw, **plan.build_kwargs(), exists=sw.exists)
+    assert sw.mate("Sun held to LoDog in N").status == 1 and sw.mate("Sun held to LoDog in N").code == 0
+    assert not result.ok and not result.assembly.saved
+    assert not [a for n, a in sw.calls if n == "save_as" and str(a[0]).upper().endswith(".SLDASM")]
+    assert result.assembly.mate_problems == [
+        "In mode N, Sun cannot turn: SolidWorks reads it fully defined.",
+        "In mode N, InDog cannot turn: SolidWorks reads it fully defined.",
+        "In mode N, Carrier (the carrier) cannot turn: SolidWorks reads it fully defined.",
+        "In mode N, LoDog cannot turn: SolidWorks reads it fully defined.",
+        "In mode N, Pl copy 1 cannot turn: SolidWorks reads it fully defined.",
+        "In mode N, Pl copy 2 cannot turn: SolidWorks reads it fully defined.",
+        "In mode N, Pl copy 3 cannot turn: SolidWorks reads it fully defined."]
+    assert {stage for stage, _ in result.assembly.failures} == {"the mate check in mode N"}
+
+
 @pytest.mark.parametrize("flip", [False, True])
 def test_a_spline_and_a_coupling_are_made_with_every_gear_mates_flip_and_told_only_which_way_to_turn(flip,
                                                                                                     monkeypatch):

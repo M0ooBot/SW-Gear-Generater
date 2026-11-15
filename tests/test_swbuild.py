@@ -301,6 +301,10 @@ class FakeSolidWorks:
         # nowhere else (tier 11, SolidWorks 2026: two slides on in one configuration each read code 47, warning False,
         # there; every other configuration read 0). Empty: ``mate_codes`` and each mate's own, as before.
         self.mate_codes_in = {}
+        # mate name -> the handles or Name2s it locks while on in the active configuration: they read fully defined
+        # there, the mate itself made with status 1 and no error code (W8 s5 (ii), SolidWorks 2026: a 1 : 1 Sun-LoDog
+        # coupling on in N alone locked N's rear train, seven bodies read fully defined, 140811-s5.log 894-900)
+        self.locks = {}
 
     def _log(self, name, *args):
         self.calls.append((name, args))
@@ -912,6 +916,8 @@ class FakeSolidWorks:
                 return self.constrained[key]
         if any(m.code and not m.suppressed and name in (m.a[0], m.b[0]) for m in self.mates):
             return findings.COMPONENT_OVER_DEFINED
+        if any(not m.suppressed and {name, handle} & set(self.locks.get(m.name, ())) for m in self.mates):
+            return findings.COMPONENT_FULLY_DEFINED
         return findings.COMPONENT_FULLY_DEFINED if name in self.fixed else findings.COMPONENT_UNDER_DEFINED
 
     def find_mate(self, handle, name):

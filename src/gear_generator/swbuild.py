@@ -33,7 +33,7 @@ from .gears import base
 from .gears.base import BuildPlan, GlobalVariable
 from .gears.equations import DEGREES, RADIANS, EquationError, evaluate_all, split_equation
 from .gears.spur import AXIS_NAME
-from .store import GEARBOX_MOTION, GEARBOX_STATIC, same_path
+from .store import CARRIER_ID_SUFFIX, GEARBOX_MOTION, GEARBOX_STATIC, same_path
 from .swcom import (ASSEMBLY_PAIR, ASSEMBLY_STATIC, ASSEMBLY_TRAIN, COMPONENT_FIND_ROUTES, CONFIGURATION_FINDINGS,
                     DOC_ASSEMBLY, MINIMUM_MAJOR, configuration_finding, positions_per_configuration,
                     ENTITY_ALONG, LINE_TOLERANCE, RESOLVED_ROUTE_FINDING, ComponentGone, ConfigurationGone, DocInfo, MateGone, MateRefused, MateState,
@@ -1059,15 +1059,21 @@ def _status_sentence(name: str, status: Optional[int]) -> Optional[str]:
     return f"SolidWorks answered {status} when making the mate {name}."
 
 
+def _body_name(name: str) -> str:
+    """A gear or carrier id as the status sentences name a body alone (``ui_text._bodies``): a carrier ``"C carrier"``
+    as *C (the carrier)*; a planet copy, and any other id, as it is (W8-REVIEW-DEMO-S2-S7 ruling 3)."""
+    return f"{name[:-len(CARRIER_ID_SUFFIX)]} (the carrier)" if name.endswith(CARRIER_ID_SUFFIX) else name
+
+
 def _free_to_turn(sw: SolidWorks, handles: Sequence[str], gear_of: Callable[[str], str]) -> List[str]:
     """Each handle's constrained status must be ``findings.COMPONENT_UNDER_DEFINED``: a sentence per gear that is
-    not, naming it by ``gear_of``."""
+    not, naming it by ``gear_of`` as the status sentences name a body (:func:`_body_name`)."""
     problems: List[str] = []
     for handle in handles:
         status = sw.constrained_status(handle)
         if status == findings.COMPONENT_UNDER_DEFINED:
             continue
-        gear = gear_of(handle)
+        gear = _body_name(gear_of(handle))
         if status == findings.COMPONENT_OVER_DEFINED:
             problems.append(f"{gear} is over-defined in SolidWorks.")
         elif status == findings.COMPONENT_FULLY_DEFINED:
@@ -2169,7 +2175,7 @@ def _set_up_modes(sw: SolidWorks, plan: BuildPlan, modes: ModesPlan, result: Bui
     mated = _mated_handles(plan)
 
     def gear_of(handle: str) -> str:
-        return gears.get(handle) or result.components.get(handle) or handle
+        return _body_name(gears.get(handle) or result.components.get(handle) or handle)
 
     for index, step in enumerate(modes.steps, 1):
         say(Step(STAGE_MODE, step.name, index, count))
