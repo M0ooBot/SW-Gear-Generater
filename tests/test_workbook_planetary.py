@@ -771,3 +771,16 @@ def test_finishing_a_planetary_update_records_the_carriers_new_axes_and_the_shar
                             axial=["Planet"], ratios=list(up.ratios))
     kept = update.finish_update(up, failed_, record, digest="d2", read_sidecar=lambda p: None, mtime=lambda p: 5.0)
     assert [x.x for x in kept.record.gearbox.carriers[0].axes][0] == 18.0           # what was last known true
+
+
+# -- the Results sheet (§2.12) --------------------------------------------------------------------------------------
+
+def test_the_results_sheet_gives_each_planet_its_speed_on_its_carrier_and_the_held_members_torque():
+    from gear_generator.workbook import export
+    a = direct(planetary_4to1())
+    rows = export.results_sheet(a.spec, a.report, when="T").rows
+    assert rows[0] == ["Shaft", "Speed (rpm)", "Turns, seen from +Z", "Torque (N·m)", "On its carrier (rpm)"]
+    assert rows[1:5] == [["S", 1000.0, "anticlockwise", 2.0, ""], ["C", 250.0, "anticlockwise", 7.7624, ""],
+                         ["P", -500.0, "clockwise", 0.0, -750.0], ["R", 0.0, "still", "5.7624 held", ""]]
+    worked = [r for r in rows if r and r[0] == "Worked out as"][0]
+    assert worked[1] == "Planetary, R fixed · 3 planets · 4.000 : 1 · output turns the same way"

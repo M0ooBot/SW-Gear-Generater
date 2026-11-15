@@ -53,15 +53,25 @@ def results_sheet(spec: GearboxSpec, report: Report, when: Optional[str] = None)
     motion = report.motion
     # W6 (D12): every shaft in the Z family keeps W3's column; else each cell says what it is seen from.
     all_z = all(motion.seen_from.get(s.id, "+Z") == "+Z" for s in spec.shafts)
-    rows: List[List] = [["Shaft", "Speed (rpm)", "Turns, seen from +Z" if all_z else "Turns", "Torque (N·m)"]]
+    # W7 (W7-PLAN §2.12): a column "On its carrier (rpm)" for mounted shafts, and a held member's torque "held".
+    carried = bool(motion.relative)
+    rows: List[List] = [["Shaft", "Speed (rpm)", "Turns, seen from +Z" if all_z else "Turns", "Torque (N·m)"]
+                        + (["On its carrier (rpm)"] if carried else [])]
     for shaft in spec.shafts:
         speed = motion.speeds.get(shaft.id)
         torque = motion.torques.get(shaft.id)
         turns = motion.turns(shaft.id)
         if turns and not all_z and turns != "still":
             turns = f"{turns}, seen from {motion.seen_from.get(shaft.id, '+Z')}"
-        rows.append([shaft.id, round(float(speed), 6) if speed is not None else "—", turns or "—",
-                     round(torque, 6) if torque is not None else "—"])
+        if torque is None and shaft.id in motion.held:
+            torque_cell = f"{round(motion.held[shaft.id], 6)} held"
+        else:
+            torque_cell = round(torque, 6) if torque is not None else "—"
+        row = [shaft.id, round(float(speed), 6) if speed is not None else "—", turns or "—", torque_cell]
+        if carried:
+            relative = motion.relative.get(shaft.id)
+            row.append(round(float(relative), 6) if relative is not None else "")
+        rows.append(row)
     rows.append([])
     turned = [m for m in report.meshes.values() if m.kind != geometry.PARALLEL and not m.problem]
     rows.append(["Mesh", "Ratio", "Centres needed (mm)", "Centres placed (mm)", "Off by (mm)", "Contact ratio"]
