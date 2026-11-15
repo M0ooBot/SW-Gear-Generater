@@ -2020,6 +2020,80 @@ def test_long_part_names_keep_their_cells_apart_and_the_window_its_width(desk):
     assert window.winfo_reqwidth() <= px(workbook_gui.WINDOW_WIDTH)
 
 
+def part_cells_drawn(window):
+    """The Gears table's Part cells by gear as drawn, after the window has its size: each (text, drawn whole)."""
+    width_and_height(window)
+    window.update_idletasks()
+    out = {}
+    for cell in window.table.grid_slaves(column=6):
+        row = int(cell.grid_info()["row"])
+        if row:
+            gear = window.table.grid_slaves(row=row, column=0)[0].cget("text")
+            out[gear] = (cell.cget("text"), cell.winfo_width() == cell.winfo_reqwidth())
+    return out
+
+
+def test_a_second_workbooks_r2_parts_beside_long_ids_are_shortened_to_the_room_left(desk, mode_findings):
+    """Review of W8 item 5: a second workbook with the same Box name, built into the same output folder, makes its
+    parts <stem>_r2, since the first's files are not its own. Beside TransferCase_Parallel's 8-character gear and
+    shaft ids, "Sleeve_m1.5_N30_r2" (18 characters, at PART_CHARS) took the window to 1088 px. The Part column now
+    shortens its cells to the room the other columns leave, measured in the table's fonts, by the head-and-tail rule:
+    every cell is drawn whole, different parts read apart, and the window keeps its 1080 px."""
+    from gear_generator import workbook_gui
+    from gear_generator.theme import px
+    from workbook_fixtures import transfer_case_parallel
+    first = desk.open(transfer_case_parallel(), name="TransferCase_Parallel.xlsx")
+    first.press_build()
+    desk.finish(first)
+    window = desk.open(transfer_case_parallel(), name="Second.xlsx")
+    window.press_build()
+    desk.finish(window)
+    assert {os.path.basename(p.path) for p in record_of(window).parts} >= {
+        "Sleeve_m1.5_N30_r2.SLDPRT", "Dog_m1.5_N30_r2.SLDPRT"}
+    cells = part_cells_drawn(window)
+    assert cells == {"InPin": ("Gear_m2_N17_r2", True), "InDog": ("Dog_m1.5_N30_r2", True),
+                     "LayGear": ("Gear_m2_N34_r2", True), "LayPin": ("Gear_m2_N17_r2", True),
+                     "LoGear": ("Gear_m2_N34_r2", True), "LoDog": ("Dog_m1.5_N30_r2", True),
+                     "RangeSlv": ("Slee…m1.5_N30_r2", True), "FrontDog": ("Dog_m1.5_N30_r2", True),
+                     "ModeSlv": ("Slee…m1.5_N30_r2", True), "FDrive": ("Gear_m2_N30_r2", True),
+                     "FIdler": ("Gear_m2_N20_r2", True), "FOut": ("Gear_m2_N30_r2", True)}
+    assert width_and_height(window)[0] == px(workbook_gui.WINDOW_WIDTH)
+    assert window.winfo_reqwidth() <= px(workbook_gui.WINDOW_WIDTH)
+
+
+def test_a_long_part_name_beside_long_ids_shows_whole_where_it_fits_and_the_window_keeps_its_width(desk):
+    """Review of W8 item 5: "Sleeve_m1.25_N100" (17 characters, no revision suffix) beside TransferCase_Parallel's
+    8-character ids fits the room the Part column has, so it shows whole, and the window keeps its 1080 px."""
+    from gear_generator import workbook_gui
+    from gear_generator.theme import px
+    from workbook_fixtures import transfer_case_parallel
+    spec = transfer_case_parallel()
+    spec = model.replace(spec, gears=tuple(model.replace(g, module="1.25", teeth="100")
+                                           if g.kind_word() in ("dog", "sleeve") else g for g in spec.gears))
+    window = desk.open(spec, name="TransferCase_Parallel.xlsx")
+    assert window.footer().ok, window.status.get()
+    cells = part_cells_drawn(window)
+    assert {g: cells[g] for g in ("RangeSlv", "ModeSlv", "InDog", "LoDog", "FrontDog")} == {
+        "RangeSlv": ("Sleeve_m1.25_N100", True), "ModeSlv": ("Sleeve_m1.25_N100", True),
+        "InDog": ("Dog_m1.25_N100", True), "LoDog": ("Dog_m1.25_N100", True), "FrontDog": ("Dog_m1.25_N100", True)}
+    assert all(whole for _, whole in cells.values())
+    assert width_and_height(window)[0] == px(workbook_gui.WINDOW_WIDTH)
+    assert window.winfo_reqwidth() <= px(workbook_gui.WINDOW_WIDTH)
+
+
+def test_short_ids_leave_the_part_cells_as_the_rows_give_them_at_part_chars(desk):
+    """Review of W8 item 5: with the reducer's short ids, read and built, the Part column has room for PART_CHARS,
+    so every cell is exactly what ui_text.workbook_gear_rows gives at its default, drawn whole, at 1080 px."""
+    from gear_generator import workbook_gui
+    from gear_generator.theme import px
+    for window in (desk.open(name="Fresh.xlsx"), built(desk)):
+        rows = ui_text.workbook_gear_rows(window.effective or window.reading.spec, window.parts, window.diagnostics,
+                                          record=window.record, update=window.update_plan, plan=window.plan)
+        assert part_cells_drawn(window) == {r[0]: (r[6] or "—", True) for r in rows}
+        assert width_and_height(window)[0] == px(workbook_gui.WINDOW_WIDTH)
+        assert window.winfo_reqwidth() <= px(workbook_gui.WINDOW_WIDTH)
+
+
 # -- W7: a planetary stage ------------------------------------------------------------------------------------------
 #
 # W7-PLAN §4's fixtures as B's tests write them: the 4 : 1 with the ring held (sun in, carrier out, three planet

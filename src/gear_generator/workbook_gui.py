@@ -126,6 +126,7 @@ STATE_COLOURS = {ui_text.GEAR_STATE_BUILDS: theme.OK, ui_text.GEAR_STATE_SHARES:
 RED_STATES = (ui_text.GEAR_STATE_ERROR, ui_text.GEAR_STATE_NEW_PART)     # the "what" in red, as Checks' errors
 TABLE_HEAD = ("Gear", "Shaft", "Kind", "Teeth", "Module", "Face", "Part", "")
 TABLE_WIDTHS = (40, 44, 56, 44, 52, 40, 0, 128)     # 0: the column that takes the room left
+PART_COLUMN = 6     # the Part column: its cells shortened to the room the others leave (_fit_part_cells)
 PATH_CHARS = 52     # a path longer than this is shortened in the middle, so the window keeps its width
 FOOTER_COLUMNS = {"build_button": 4, "update_button": 5}    # Export, Export as…, then these two
 BODY_PAD = 12               # around the window's body, px
@@ -185,6 +186,14 @@ def _label_width(label: tk.Label, text: str) -> int:
     pad, border and focus ring either side, as Tk lays a label out."""
     chrome = sum(round(label.winfo_fpixels(label.cget(o))) for o in ("padx", "borderwidth", "highlightthickness"))
     return int(label.tk.call("font", "measure", label.cget("font"), "-displayof", label, text)) + 2 * chrome
+
+
+def _grid_pads(widget: tk.Misc) -> Tuple[int, int]:
+    """The px either side ``widget`` is gridded with (its ``padx``)."""
+    value = widget.grid_info().get("padx", 0)
+    pads = [int(round(widget.winfo_fpixels(str(p))))
+            for p in (value if isinstance(value, (tuple, list)) else widget.tk.splitlist(str(value)))]
+    return (pads[0], pads[-1]) if pads else (0, 0)
 
 
 def chosen_mode(report, name: str):
@@ -381,6 +390,7 @@ class WorkbookWindow(tk.Toplevel):
         body.columnconfigure(0, weight=1, minsize=px(LEFT_WIDTH))
         body.columnconfigure(1, weight=0)
         right = tk.Frame(body, bg=theme.WINDOW)
+        self._right = right
         right.grid(row=1, column=1, rowspan=5, sticky="nsew", padx=(px(8), 0))
         view = widgets.Panel(right, "End view, from your origin", self.view_readout)
         view.grid(row=0, column=0, sticky="ew", pady=(0, px(8)))
@@ -422,7 +432,9 @@ class WorkbookWindow(tk.Toplevel):
 
         gears = widgets.Panel(body, "Gears", self.parts_readout)
         gears.grid(row=2, column=0, sticky="ew", pady=(0, px(8)))
+        self._gears = gears
         self.table = gears.body
+        self._part_labels: List[tk.Label] = []          # the Part column's cells, shortened to fit (_fit_part_cells)
         for col, width in enumerate(TABLE_WIDTHS):
             self.table.columnconfigure(col, minsize=px(width), weight=1 if width == 0 else 0)
 
@@ -841,12 +853,15 @@ class WorkbookWindow(tk.Toplevel):
                 row=0, column=col, sticky="w", padx=(0, px(10)))
         rows = ui_text.workbook_gear_rows(spec, self.parts, self.diagnostics, record=self.record,
                                           update=self.update_plan, plan=self.plan)
+        self._part_labels = []
         for r, (gear, shaft, kind, teeth, module, face, part, state, what) in enumerate(rows, start=1):
             for col, text in enumerate((gear, shaft, kind, teeth, module, face, part or "—")):
                 font = f.label if col == 2 else f.mono_tiny
                 colour = theme.LABEL if col == 2 else theme.INK
-                tk.Label(self.table, text=text, bg=theme.WHITE, fg=colour, font=font, anchor="w").grid(
-                    row=r, column=col, sticky="w", padx=(0, px(10)), pady=px(1))
+                label = tk.Label(self.table, text=text, bg=theme.WHITE, fg=colour, font=font, anchor="w")
+                label.grid(row=r, column=col, sticky="w", padx=(0, px(10)), pady=px(1))
+                if col == PART_COLUMN:
+                    self._part_labels.append(label)
             cell = tk.Frame(self.table, bg=theme.WHITE)
             cell.grid(row=r, column=7, sticky="w")
             widgets.Dot(cell, STATE_COLOURS[state], bg=theme.WHITE).pack(side="left", padx=(0, px(6)))
@@ -898,8 +913,39 @@ class WorkbookWindow(tk.Toplevel):
         if not self.changes:
             self._line(self.changes_body, 0, "Nothing changed.", theme.MUTED)
 
+        self._fit_part_cells(spec)
         self._refresh_state()
         self._fit()
+
+    def _fit_part_cells(self, spec) -> None:
+        """Shorten the Gears table's Part cells to the room their column has (review of W8's item 5): the left
+        column's width at :data:`WINDOW_WIDTH` (the window less its pads, the gap and the right column as it asks),
+        less the Gears panel's own frame and pads and every other column as this workbook's cells ask for it, all
+        as Tk measures them. The most characters that fit, :data:`ui_text.PART_CHARS` at most and
+        :data:`ui_text.PART_CHARS_FLOOR` at least, by the head-and-tail rule that keeps two parts apart; past the
+        floor the window widens rather than a cell no longer telling its part. Every sentence still names a part
+        whole."""
+        if not self._part_labels:
+            return
+        self.update_idletasks()
+        left = px(WINDOW_WIDTH) - 2 * px(BODY_PAD) - sum(_grid_pads(self._right)) - self._right.winfo_reqwidth()
+        table = max(left, px(LEFT_WIDTH)) - (self._gears.winfo_reqwidth() - self.table.winfo_reqwidth())
+        others = sum(max(px(TABLE_WIDTHS[c]), max((s.winfo_reqwidth() + sum(_grid_pads(s))
+                                                    for s in self.table.grid_slaves(column=c)), default=0))
+                     for c in range(len(TABLE_WIDTHS)) if c != PART_COLUMN)
+        room = table - others - sum(_grid_pads(self._part_labels[0]))
+        if max(label.winfo_reqwidth() for label in self._part_labels) <= room:
+            return                                          # as painted, at PART_CHARS: they fit
+        args = dict(record=self.record, update=self.update_plan, plan=self.plan)
+        cells: List[str] = []
+        for chars in range(ui_text.PART_CHARS - 1, ui_text.PART_CHARS_FLOOR - 1, -1):
+            cells = [r[6] or "—" for r in ui_text.workbook_gear_rows(spec, self.parts, self.diagnostics,
+                                                                       part_chars=chars, **args)]
+            if max(_label_width(label, cell) for label, cell in zip(self._part_labels, cells)) <= room:
+                break
+        for label, cell in zip(self._part_labels, cells):
+            if label.cget("text") != cell:
+                label.configure(text=cell)
 
     def _draw_end_view(self) -> None:
         c = self.canvas

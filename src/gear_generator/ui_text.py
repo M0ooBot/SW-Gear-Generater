@@ -767,10 +767,14 @@ GEAR_STATE_BUILT, GEAR_STATE_CHANGES, GEAR_STATE_NEW_PART = "built", "changes", 
 
 
 PART_CHARS = 18
-# The characters the Gears table's Part column holds at the window's design width (workbook_gui.LEFT_WIDTH 610 less
-# the fixed columns, TABLE_WIDTHS, in the table's 11.5 px mono): the longest names the boards show whole, fixture
-# B's "Helical_m2_N20_45R", are 18. A longer name is shortened (:func:`part_cell`); Tk never cuts a label, so it
-# would widen the window, and the board's end-cut hid the end that tells a part from its neighbour.
+# The most characters a Gears-table Part cell is shortened to: the longest names the boards show whole, fixture B's
+# "Helical_m2_N20_45R", are 18. It is not a promise that 18 fit: the window shortens further to the room its Part
+# column has left beside this workbook's other columns (workbook_gui.WorkbookWindow._fit_part_cells, as measured in
+# the table's fonts), down to PART_CHARS_FLOOR. A longer name is shortened (:func:`part_cell`); Tk never cuts a
+# label, so it would widen the window, and the board's end-cut hid the end that tells a part from its neighbour.
+PART_CHARS_FLOOR = 10
+# The fewest characters the window shortens a Part cell to (its head, "…" and five of its end, "Slee…N30_r2" less
+# one): below that a cell no longer tells one part from another, so past it the window widens instead.
 PART_HEAD = 4                # the characters of a shortened name's head; its kind word starts it
 GEAR_STATE_CHARS = 20
 # The characters the Gears table's state column holds beside its dot: TABLE_WIDTHS' 128 px, less the 8 px dot and its
@@ -819,12 +823,12 @@ def _part_cells(names: Iterable[str], chars: int = PART_CHARS) -> Dict[str, str]
 
 
 def workbook_gear_rows(spec, parts, diagnostics: Sequence[Diagnostic], *, record=None,
-                       update=None, plan=None) -> List[Tuple[str, ...]]:
+                       update=None, plan=None, part_chars: int = PART_CHARS) -> List[Tuple[str, ...]]:
     """One row per gear for the window's table: gear, shaft, kind, teeth, module, face, part, state, what.
 
     ``part`` is the part file's name without ``.SLDPRT`` (every part is one), so the column stays narrow, and
-    one longer than the column holds is shortened to its head and end (:func:`part_cell`, :data:`PART_CHARS`),
-    two different names never sharing a cell (:func:`_part_cells`).
+    one longer than ``part_chars`` (the room the window measured, :data:`PART_CHARS` at most) is shortened to its
+    head and end (:func:`part_cell`), two different names never sharing a cell (:func:`_part_cells`).
 
     ``parts`` is a :class:`workbook.build.PartsPlan` (it may be empty when the
     workbook has errors); ``diagnostics`` are the per-gear ones, each naming its
@@ -878,7 +882,7 @@ def workbook_gear_rows(spec, parts, diagnostics: Sequence[Diagnostic], *, record
         else:
             state, what = GEAR_STATE_ERROR, "see Checks"
         rows.append((gear.id, gear.shaft, kind, gear.teeth, gear.module, gear.face_width, part, state, what))
-    cells = _part_cells(r[6] for r in rows)                 # shortened over the whole table, different names apart
+    cells = _part_cells((r[6] for r in rows), part_chars)   # shortened over the whole table, different names apart
     named = _part_cells((r[8][1] for r in rows if isinstance(r[8], tuple)), GEAR_STATE_CHARS - len(SHARES_WORDS))
     return [r[:6] + (cells.get(r[6], r[6]), r[7], r[8][0] + named[r[8][1]] if isinstance(r[8], tuple) else r[8])
             for r in rows]
