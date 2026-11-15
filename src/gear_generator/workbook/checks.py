@@ -639,7 +639,8 @@ def _check_shafts(report: Report, spec: GearboxSpec, placed: Dict[str, Placed], 
 def _check_motion(report: Report, spec: GearboxSpec, upset=frozenset()) -> None:
     motion = report.motion
     if motion.jammed:
-        _error(report, "Meshes", motion.jammed)
+        if not planetary.second_inputs(spec):     # W7 §6.15: two inputs on a stage are said once, at the Role cell
+            _error(report, "Meshes", motion.jammed)
         return
     if not spec.meshes:
         return                                  # parts only: nothing turns anything, and that is fine

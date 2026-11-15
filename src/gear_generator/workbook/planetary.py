@@ -250,6 +250,25 @@ def mesh_carrier(spec: GearboxSpec, a: str, b: str) -> Optional[str]:
     return None
 
 
+def second_inputs(spec: GearboxSpec) -> List[Tuple[Stage, str, str]]:
+    """``(stage, the first input member's shaft, a further input member's shaft)`` for every planetary stage with a
+    member held and more than one member given Role input (W7-INTERFACES §6.15): its members are the sun's shaft,
+    the ring's shaft and the carrier (a gear on the carrier's own shaft is on the carrier, so it shares its role).
+    An input elsewhere in the train that reaches the stage through another mesh is not a member, and ordinary. A
+    stage with no member held is a differential, said as one (:func:`refusals`)."""
+    shafts = {x.id: x for x in spec.shafts if x.id}
+    gears = {g.id: g for g in spec.gears if g.id}
+    out = []
+    for stage in stages(spec):
+        if not stage.held:
+            continue
+        members = ([gears[stage.sun].shaft] if stage.sun else []) + [stage.carrier] + (
+            [gears[stage.ring].shaft] if stage.ring else [])
+        inputs = [x.id for x in spec.shafts if x.id in members and x.role == "input"]     # Shafts-sheet order
+        out.extend((stage, inputs[0], extra) for extra in inputs[1:])
+    return out
+
+
 def _warn(spec: GearboxSpec, sheet: str, row: int, key: str, sentence: str) -> Diagnostic:
     where = spec.cell(sheet, row, key)
     return Diagnostic(ERROR, f"{where}: {sentence}", where)
@@ -260,7 +279,7 @@ def refusals(spec: GearboxSpec) -> List[Diagnostic]:
     orchestrator's ruling: a planetary form this version does not build is not waiting for a later phase, so it is
     an error of the workbook, and each sentence says what does build): a carrier riding a carrier; a carrier off
     Z±; a planet facing away from its carrier or across it; a sun or ring facing the other way from its carrier; a
-    stage with no member held; a compound planet; a double planet; a gear on a carrier's own shaft that meshes; a
+    stage with no member held; a second input among a stage's members (§6.15); a compound planet; a double planet; a gear on a carrier's own shaft that meshes; a
     helical or herringbone gear in a stage; a second carrier."""
     from .geometry import axis_vector
     out: List[Diagnostic] = []
@@ -315,6 +334,11 @@ def refusals(spec: GearboxSpec) -> List[Diagnostic]:
                                      f"{shaft_id} faces {_axis_word(shafts[shaft_id].axis)} and {stage.carrier} faces "
                                      f"{_axis_word(carrier.axis)}: a planetary stage whose shafts face different ways "
                                      f"is not built by this version; give {shaft_id} the Axis of {stage.carrier}."))
+        for _stage, first, extra in (x for x in second_inputs(spec) if x[0] == stage):
+            out.append(_warn(spec, "Shafts", shafts[extra].row, "role",
+                             f"{extra} is an input as well as {first}, and both are members of {stage.carrier}'s "
+                             f"planetary stage: one member of a planetary stage is the input; set {extra}'s Role to "
+                             "output, or leave it blank."))
         if not stage.held and stage.sun and stage.ring:
             names = [gears[stage.sun].shaft] if stage.sun else []
             names += [stage.carrier] + ([gears[stage.ring].shaft] if stage.ring else [])

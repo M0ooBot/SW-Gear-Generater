@@ -319,6 +319,16 @@ def shaft_lines(spec: GearboxSpec) -> Dict[str, Tuple[Vec3, Vec3]]:
     return out
 
 
+def carrier_axes(spec: GearboxSpec, report=None) -> Dict[str, Tuple[Vec3, Vec3]]:
+    """Each carrier's axis, ``{carrier shaft: (point, direction)}`` in world, in Shafts-sheet order (a carrier is a
+    frame shaft another shaft is mounted on): the one home of what the end view and the boards draw a carrier's
+    circle round. ``report`` is not needed (the rows say it all); it is taken so a caller holding one need not
+    think about it. A carrier whose cells do not read is left out."""
+    from .planetary import carriers
+    lines = shaft_lines(spec)
+    return {c: lines[c] for c in carriers(spec) if c in lines}
+
+
 def _place_copies(spec: GearboxSpec, gear: Gear, planet: Shaft, carrier: Shaft, copies: int,
                   cut: Optional["BevelCut"] = None) -> List[Placed]:
     """A gear on a planet shaft, once per copy (W7-PLAN §2.2): copy k at ``p_c + F·rot_z(ψ_k)·(x, y, z)`` along

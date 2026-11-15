@@ -954,3 +954,46 @@ def test_a_planet_shifted_alone_is_told_why_no_distance_works():
     assert fixes == {} and said[1].endswith(
         "no fix is offered for a planetary stage, whose three gears and copies must change together. Planet meshes "
         "18.284 mm from Sun's axis and 17.676 mm from Ring's, so no one distance from C's axis meshes both.")
+
+
+# -- W7-INTERFACES §6.15: one input per planetary stage; geometry.carrier_axes --------------------------------------
+
+TWO_INPUTS = ("Shafts row 3: C is an input as well as S, and both are members of C's planetary stage: one member of a "
+              "planetary stage is the input; set C's Role to output, or leave it blank.")
+
+
+@pytest.mark.parametrize("speed", ["250", "300"])
+def test_a_second_input_on_a_stage_is_an_error_at_its_role_whether_or_not_it_agrees(speed):
+    spec = edited(planetary_4to1(), shafts={"C": dict(role="input", speed=speed)})
+    a = direct(spec)
+    assert [d.message for d in a.report.errors] == [TWO_INPUTS]           # never "jammed" beside it
+    assert a.lay_out_refusal() == f"Fix the workbook before building: {TWO_INPUTS}"
+
+
+def test_a_ring_or_sun_input_beside_another_is_refused_and_an_input_off_the_stage_is_ordinary():
+    spec = edited(sun_held(), shafts={"C": dict(role="input", speed="750")})
+    assert any("R is an input as well as C" in d.message for d in direct(spec).report.errors)    # in sheet order
+    feed = replace(planetary_4to1(), shafts=planetary_4to1().shafts + (
+        Shaft("Q", "frame", "50", "0", "0", "Z+", "", row=6),),
+        gears=planetary_4to1().gears + (Gear("G9", "Q", "40", "spur", "external", "32", "1", "", "10", "8", row=6),
+                                        Gear("G8", "S", "40", "spur", "external", "18", "1", "", "10", "6", row=7)),
+        meshes=planetary_4to1().meshes + (Mesh("G8", "G9", row=4),))
+    assert not any("is an input as well as" in d.message for d in direct(feed).report.errors)
+
+
+@pytest.mark.parametrize("make", [planetary_4to1, sun_held, carrier_held])
+def test_one_input_on_any_member_checks_clean(make):
+    assert direct(make()).report.diagnostics == []
+
+
+def test_with_no_member_held_two_inputs_are_still_said_as_a_differential():
+    spec = edited(planetary_4to1(), shafts={"R": dict(role="input", speed="0")})
+    said = [d.message for d in direct(spec).report.errors]
+    assert any("form a planetary stage with no member held: a differential" in m for m in said)
+    assert not any("is an input as well as" in m for m in said)
+
+
+def test_each_carriers_axis_is_given_in_one_place():
+    assert geometry.carrier_axes(planetary_4to1()) == {"C": ((0.0, 0.0, 0.0), (0.0, 0.0, 1.0))}
+    assert geometry.carrier_axes(on_z_minus(), None) == {"C": ((0.0, 0.0, 0.0), (0.0, 0.0, -1.0))}
+    assert geometry.carrier_axes(model.GearboxSpec(box=Box(name="X"))) == {}
