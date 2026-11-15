@@ -205,3 +205,12 @@ written rules. These bind A, B and C from now; a line number is the line at `5d5
     has shown that a put of the carrier holds with its planets' axis mates on, or that a planet put onto its carrier
     axis holds once the carrier stands at its frame; each put is read back and the post-check judges every train
     again, and the demonstration's Update sections are where SolidWorks first shows it.
+14. **Which gear mates are made does not depend on the Meshes sheet's row order** (ruled after B's review, built in
+    B's `6ed3439`). The candidates are ordered by member before the rank: the stage's sun meshes first, then its
+    ring meshes, then every other mesh; within a group, Meshes-sheet order and then copy order. So every sun mesh
+    gets its gear mate, one per copy, and the ring gets exactly one, with copy 1 — the set the spike measured —
+    whichever member is held and however the rows are listed. This supersedes the J5 row of W7-PLAN §3, which shows
+    rank in sheet order as the default; it is a default the user may overrule.
+15. **A planetary stage has one input.** A second member of the stage given Role input is an error at its cell,
+    whether or not its speed agrees with the first (ruled as "two inputs are refused"; B's checks let a consistent
+    second input through until this ruling's fix).
