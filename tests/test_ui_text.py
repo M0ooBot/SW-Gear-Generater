@@ -854,7 +854,7 @@ def test_the_gear_table_says_what_is_built_and_what_update_changes(ready):
     rows = {r[0]: r for r in ui_text.workbook_gear_rows(ready.spec, ready.parts, ready.diagnostics,
                                                          record=_record(), update=_update())}
     assert rows["G1"][6:] == ("Gear_m1.5_N17", ui_text.GEAR_STATE_BUILT, "built")
-    assert rows["G2"][6:] == ("Gear_m1.5_N68", ui_text.GEAR_STATE_CHANGES, "built · changes on Update")
+    assert rows["G2"][6:] == ("Gear_m1.5_N68", ui_text.GEAR_STATE_CHANGES, "changes on Update")
     structural = _update(structural=("G4's bore was added, which its built part cannot take.",),
                          missing=(_path("Gear_m2_N17"),))
     rows = {r[0]: r for r in ui_text.workbook_gear_rows(ready.spec, ready.parts, ready.diagnostics,
@@ -1377,7 +1377,7 @@ def test_a_built_gear_the_next_build_makes_new_is_never_shown_as_simply_built(re
         plan = dataclasses.replace(_again(), made_new=(_made(["G2"], "Gear_m1.5_N68", "Gear_m1.5_N69", why),))
         rows = {r[0]: (r[7], r[8]) for r in ui_text.workbook_gear_rows(ready.spec, ready.parts, [], record=record,
                                                                        plan=plan)}
-        assert rows["G2"] == (ui_text.GEAR_STATE_CHANGES, "built · new part on Build")
+        assert rows["G2"] == (ui_text.GEAR_STATE_CHANGES, "new part on Build")
         assert rows["G1"] == (ui_text.GEAR_STATE_BUILT, "built")
 
 
@@ -3545,3 +3545,34 @@ def test_a_mode_that_jams_is_shown_whole_in_the_footer_with_its_longer_sentence(
     assert ui_text.workbook_checks_readout(a.diagnostics).startswith("1 error")
     f = ui_text.workbook_footer(a, folder=P)
     assert (f.text, f.ok, f.build_enabled) == (f"Fix the workbook before building: {jam}", False, False)
+
+
+def test_every_state_fits_its_column_and_a_long_gear_name_is_shortened_as_a_part_name_is():
+    """GEAR_STATE_CHARS (D: the Gears panel reached 643 px on the W8 fixtures against LEFT_WIDTH 610): every state
+    fits; a gear named in one is shortened head and tail by the Part column's rule, two different gears apart."""
+    for make in ("parallel", "e4"):
+        a = _tc_assessed(make)
+        rows = {r[0]: r for r in ui_text.workbook_gear_rows(a.spec, a.parts, a.diagnostics)}
+        assert rows["ModeSlv"][7:] == (ui_text.GEAR_STATE_SHARES, "same as RangeSlv")
+        assert all(len(r[8]) <= ui_text.GEAR_STATE_CHARS for r in rows.values())
+    spec = reducer()
+    long_a, long_b = "Gear_Twenty_Chars_AB", "Gear_Other_Name_hars_AB"     # alike at 12: Gear…hars_AB
+    gears = [dataclasses.replace(g, id=long_a) if g.id == "G2" else g for g in spec.gears]
+    twins = [dataclasses.replace(g, id=f"{g.id}b", row=g.row + 10) for g in gears if g.id in ("G1", long_a)]
+    spec = dataclasses.replace(spec, gears=tuple(gears) + tuple(twins))
+    jobs = [PartJob("Gear_m1.5_N17", _path("Gear_m1.5_N17"), ("G1", "G1b"), GearSpec(), None,
+                    BuildPlan("spur", "A", (NewPart(""),))),
+            PartJob("Gear_m1.5_N68", _path("Gear_m1.5_N68"), (long_a, f"{long_a}b"), GearSpec(), None,
+                    BuildPlan("spur", "A", (NewPart(""),)))]
+    plan = SimpleNamespace(jobs=jobs, later=[])
+    rows = {r[0]: r[8] for r in ui_text.workbook_gear_rows(spec, plan, [])}
+    assert rows["G1b"] == "same as G1"
+    assert rows[f"{long_a}b"] == "same as Gear…hars_AB" and len(rows[f"{long_a}b"]) <= ui_text.GEAR_STATE_CHARS
+    # A second long gear that would read alike is lengthened apart, as the Part column does.
+    jobs.append(PartJob("Gear_m1.5_N69", _path("Gear_m1.5_N69"), (long_b, "Other"), GearSpec(), None,
+                        BuildPlan("spur", "A", (NewPart(""),))))
+    spec2 = dataclasses.replace(spec, gears=spec.gears + (dataclasses.replace(gears[1], id=long_b, row=40),
+                                                          dataclasses.replace(gears[1], id="Other", row=41)))
+    rows = {r[0]: r[8] for r in ui_text.workbook_gear_rows(spec2, plan, [])}
+    assert rows[f"{long_a}b"] != rows["Other"] and rows["Other"].startswith("same as Gear…")
+    assert ui_text._mode_line(SimpleNamespace(shafts=()), checks.ModeReport("", ratio_why="neutral")) == "Neutral."

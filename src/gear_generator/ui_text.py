@@ -772,6 +772,13 @@ PART_CHARS = 18
 # B's "Helical_m2_N20_45R", are 18. A longer name is shortened (:func:`part_cell`); Tk never cuts a label, so it
 # would widen the window, and the board's end-cut hid the end that tells a part from its neighbour.
 PART_HEAD = 4                # the characters of a shortened name's head; its kind word starts it
+GEAR_STATE_CHARS = 20
+# The characters the Gears table's state column holds beside its dot: TABLE_WIDTHS' 128 px, less the 8 px dot and its
+# 6 px gap, in the 12 px sans of the hint font — about 20. A wider state widens the column and the window (Tk never
+# cuts a label), as "the same part as RangeSlv" took the Gears panel to 643 px against LEFT_WIDTH 610 on the W8
+# fixtures. Every state fits: the fixed ones are written to it, and a gear named in one is shortened head and tail
+# as the Part column shortens a part name (:func:`_part_cells`, two different gears never reading alike).
+SHARES_WORDS = "same as "    # a row whose part another row makes: "same as RangeSlv" (that row's part, by the Part cell)
 
 
 def part_cell(name: str, width: int = PART_CHARS) -> str:
@@ -788,12 +795,13 @@ def part_cell(name: str, width: int = PART_CHARS) -> str:
     return name[:PART_HEAD] + "…" + tail[cut:]
 
 
-def _part_cells(names: Iterable[str]) -> Dict[str, str]:
+def _part_cells(names: Iterable[str], chars: int = PART_CHARS) -> Dict[str, str]:
     """Each distinct part name's cell: :func:`part_cell`, lengthened (up to the whole name) wherever two different
     names would share one, since two rows with the same Part cell read as one shared part file — which the app does
-    make for identical gears, and which identical names keep."""
+    make for identical gears, and which identical names keep. ``chars``: the room (the state column's gear names
+    take :data:`GEAR_STATE_CHARS` less their sentence's words, by the same rule)."""
     names = sorted({n for n in names if n})
-    width = {n: PART_CHARS for n in names}
+    width = {n: chars for n in names}
     while True:
         cells = {n: part_cell(n, width[n]) for n in names}
         by_cell: Dict[str, List[str]] = {}
@@ -824,7 +832,7 @@ def workbook_gear_rows(spec, parts, diagnostics: Sequence[Diagnostic], *, record
 
     With ``record`` (a ``store.LinkRecord``) a gear its current parts serve is
     *built*, its part the recorded file's; with ``update`` too (a
-    ``workbook.update.UpdatePlan``) it is *built · changes on Update* when its
+    ``workbook.update.UpdatePlan``) it is *changes on Update* when its
     part's values change, and *needs a new part* (red) when a reason Update
     cannot carry names it, or its part's file is missing. A gear still to
     build shows the part the build would make — ``plan.part_of`` (a
@@ -832,7 +840,7 @@ def workbook_gear_rows(spec, parts, diagnostics: Sequence[Diagnostic], *, record
     file name is taken — rather than its own stem (second review N6). A built
     gear whose part the next build would make new rather than reuse
     (``plan.made_new``: its Update not saved, or found not as recorded) is
-    *built · new part on Build*, as the footer says it (the W4 rerun on
+    *new part on Build*, as the footer says it (the W4 rerun on
     SolidWorks: the table said *built* beside a footer making G2's part new).
     """
     by_gear = {}
@@ -864,14 +872,16 @@ def workbook_gear_rows(spec, parts, diagnostics: Sequence[Diagnostic], *, record
             planned = (getattr(plan, "part_of", None) or {}).get(gear.id, "") if plan is not None else ""
             part = _stem(planned) if planned else job.stem
             if index:
-                state, what = GEAR_STATE_SHARES, f"the same part as {job.gear_ids[0]}"
+                state, what = GEAR_STATE_SHARES, (SHARES_WORDS, job.gear_ids[0])
             else:
                 state, what = GEAR_STATE_BUILDS, "to build"
         else:
             state, what = GEAR_STATE_ERROR, "see Checks"
         rows.append((gear.id, gear.shaft, kind, gear.teeth, gear.module, gear.face_width, part, state, what))
     cells = _part_cells(r[6] for r in rows)                 # shortened over the whole table, different names apart
-    return [r[:6] + (cells.get(r[6], r[6]),) + r[7:] for r in rows]
+    named = _part_cells((r[8][1] for r in rows if isinstance(r[8], tuple)), GEAR_STATE_CHARS - len(SHARES_WORDS))
+    return [r[:6] + (cells.get(r[6], r[6]), r[7], r[8][0] + named[r[8][1]] if isinstance(r[8], tuple) else r[8])
+            for r in rows]
 
 
 def _built_state(gear_id: str, entry, update, plan=None) -> Tuple[str, str]:
@@ -884,9 +894,9 @@ def _built_state(gear_id: str, entry, update, plan=None) -> Tuple[str, str]:
         if any(same_path(entry.path, m) for m in update.missing) or any(named.search(s) for s in update.structural):
             return GEAR_STATE_NEW_PART, "needs a new part"
     if update is not None and any(gear_id in p.gear_ids for p in update.changed_parts):
-        return GEAR_STATE_CHANGES, "built · changes on Update"
+        return GEAR_STATE_CHANGES, "changes on Update"          # built: the Part cell is the recorded file
     if any(gear_id in m.gear_ids and same_path(m.old, entry.path) for m in (getattr(plan, "made_new", ()) or ())):
-        return GEAR_STATE_CHANGES, "built · new part on Build"
+        return GEAR_STATE_CHANGES, "new part on Build"
     return GEAR_STATE_BUILT, "built"
 
 
@@ -4054,7 +4064,7 @@ def _mode_line(spec, entry) -> str:
         free = [s.id for s in spec.shafts if motion.speeds.get(s.id) is None and s.id not in held]
         one = len(free) == 1
         rest = f" — {_and(free)} turn{'s' if one else ''} freely" if free else ""
-        return f"{name}neutral{rest}."
+        return f"{name}{'neutral' if name else 'Neutral'}{rest}."
     parts = []
     for out, ratio in (entry.driven or {}).items():
         speed = motion.speeds.get(out)
