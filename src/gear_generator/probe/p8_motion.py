@@ -6941,6 +6941,7 @@ def w7_planetary_spike(px: Px) -> None:
         sun_planet = [("sun", "Gear Axis", p, "Gear Axis", (18.0, 18.0), False) for p in planets]
         planet_ring = ("P1", "Gear Axis", "ring", "Gear Axis", (18.0, 54.0), True)
         # 1. The plan's mates (J5), then one planet alone.
+        run(doc, comps, layout, "plan as made, Flip False, nothing remade", sun_planet + [planet_ring], settle=False)
         run(doc, comps, layout, "plan: sun-planet x3, P1-ring", sun_planet + [planet_ring])
         run(doc, comps, layout, "one planet: sun-P1, P1-ring", sun_planet[:1] + [planet_ring])
         # 2. A single sun-planet mate alone, carrier free, no ring mate: the sun held by its drive, the carrier
