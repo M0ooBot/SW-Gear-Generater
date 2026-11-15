@@ -27,6 +27,7 @@ from gear_generator.workbook import model, motion, xlsx
 from gear_generator.workbook.gearbox import LayoutReuse
 from gear_generator.workbook.model import Gear
 from test_swbuild import FakeSolidWorks
+from test_workbook_build import a_later_kind  # noqa: F401 - a fixture: a dog ring made a later phase's (W9)
 from test_workbook_model import reducer, write
 
 tk = pytest.importorskip("tkinter")
@@ -629,21 +630,21 @@ def test_locate_carries_the_record_to_the_workbooks_new_place(desk, monkeypatch)
 # -- Build parts, and the states that hold everything -------------------------------------------------------------
 
 
-def with_sleeve():
-    """The reducer and a sleeve on S2: a row phase W8 builds (bevel gears and turned axes are W6's, built now)."""
+def with_later_row():
+    """The reducer and a dog ring on S3: a later phase's row while ``a_later_kind`` makes the dog ring one. After W8
+    no real kind waits for a later phase; the channel, and Build parts with it, are what these tests keep showing."""
     spec = reducer()
-    return model.replace(spec, gears=spec.gears + (Gear("G6", "S2", "60", "sleeve", "external", "30", "2", "", "30",
+    return model.replace(spec, gears=spec.gears + (Gear("G7", "S3", "60", "dog", "external", "30", "1.5", "", "6",
                                                         ""),))
 
 
-def test_build_parts_falls_back_while_a_later_row_holds_the_layout_back(desk):
-    window = desk.open(with_sleeve())
+def test_build_parts_falls_back_while_a_later_row_holds_the_layout_back(desk, a_later_kind):
+    window = desk.open(with_later_row())
     footer = window.footer()
     assert (footer.build_action, footer.build_label, footer.build_primary) == (ui_text.BUILD_PARTS, "Build parts",
                                                                                True)
-    assert window.status.get().startswith("Ready: Build parts makes 4 parts in ") and \
-        "the layout and assembly wait for a later phase: Gears!A6: G6 is a sleeve: sleeves are built in phase W8, " \
-        "with modes." in window.status.get()
+    assert window.status.get().startswith("Ready: Build parts makes 4 parts in ") and window.status.get().endswith(
+        "; the layout and assembly are not built: Gears!A6: G7 is a dog ring: dog rings are built in phase W9.")
     desk.sw.fail_on = {"save_as": (desk.part("OutputGear"), "The disk is full.")}
     window.press_build()
     desk.finish(window)
@@ -1034,8 +1035,8 @@ def test_a_part_file_that_appears_while_the_question_is_open_builds_nothing(desk
     assert window.status.get().startswith(ui_text.ASKED_TOO_LATE) and len(desk.worker.calls) == calls
 
 
-def test_parts_built_by_build_parts_and_a_change_they_cannot_take_hold_update_with_the_reason(desk):
-    window = desk.open(with_sleeve())
+def test_parts_built_by_build_parts_and_a_change_they_cannot_take_hold_update_with_the_reason(desk, a_later_kind):
+    window = desk.open(with_later_row())
     window.press_build()
     desk.finish(window)
     save_in_excel(window, {"Gears": {"K2": "arcs"}})
