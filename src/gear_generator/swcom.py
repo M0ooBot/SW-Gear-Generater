@@ -136,10 +136,24 @@ Vec3 = Tuple[float, float, float]
 # W6: the turned read-back (W6-PLAN §2.6, rule H), once probe tier 9 settles it.
 TURNED_SENSE_ROUTES = ("entity senses",)     # findings.TURNED_GEAR_MATE_SENSE_READ_BACK
 ENTITY_ALONG = 0.99                          # |cos| at or above which a mate entity lies along a gear's axis
+TURNED_SENSE_FINDING = "TURNED_GEAR_MATE_SENSE_READ_BACK"
 TURNED_ANGLES_FINDING = "TURNED_GEAR_MATE_SENSE_ANGLES"              # axes that meet (a bevel mesh)
 TURNED_SKEW_ANGLES_FINDING = "TURNED_GEAR_MATE_SENSE_ANGLES_SKEW"    # axes that pass each other (a crossed mesh)
 MEET_TOLERANCE = 0.005                       # mm: two axes this close meet (= workbook.checks.CENTRE_TOLERANCE)
+ANGLE_SLACK = 1e-6                           # degrees: an angle this close to the finding's ends is inside it
+LINE_TOLERANCE = 1e-6                        # mm, and per direction component: a line axis read back on its line
 PARALLEL_TOLERANCE = 1e-9                    # |â × b̂| under which two own axes are one family (= geometry's)
+
+
+class SenseUnreadable(SolidWorksError):
+    """A gear mate's entities are not one along each gear's axis as placed (:func:`sense_reading`): the mate does
+    not hold the axes the gears were placed on. A refusal that repeats on every press, unlike a failed COM read;
+    ``directions`` and ``axes`` are what was compared (unit vectors), so a caller can name the gears."""
+
+    def __init__(self, message: str, directions: Sequence[Vec3] = (), axes: Sequence[Vec3] = ()):
+        super().__init__(message)
+        self.directions = tuple(directions)
+        self.axes = tuple(axes)
 
 
 def axes_parallel(a: Sequence[float], b: Sequence[float]) -> bool:
@@ -153,6 +167,20 @@ def axes_parallel(a: Sequence[float], b: Sequence[float]) -> bool:
                               "that is a fault in Gear Generator.")
     cross = (ua[1] * ub[2] - ua[2] * ub[1], ua[2] * ub[0] - ua[0] * ub[2], ua[0] * ub[1] - ua[1] * ub[0])
     return math.sqrt(sum(v * v for v in cross)) < PARALLEL_TOLERANCE
+
+
+def own_axes_angle(a: Sequence[float], b: Sequence[float]) -> float:
+    """The angle between two gears' own +Z, in degrees from 0 to 180 (30° and 150° are different meshes)."""
+    ua, ub = _unit(a), _unit(b)
+    if ua is None or ub is None:
+        raise SolidWorksError("A gear was placed with no axis, so the angle of its gear mate cannot be judged; that "
+                              "is a fault in Gear Generator.")
+    dot = max(-1.0, min(1.0, sum(p * q for p, q in zip(ua, ub))))
+    return math.degrees(math.acos(dot))
+
+
+def _degrees_text(value: float) -> str:
+    return f"{round(float(value), 3) + 0.0:g}"
 
 
 def lines_meet(point_a: Sequence[float], axis_a: Sequence[float], point_b: Sequence[float],
@@ -200,6 +228,37 @@ def turned_angles(meet: bool = True) -> Optional[Tuple[float, float]]:
     if not (math.isfinite(lo) and math.isfinite(hi) and 0.0 <= lo <= hi <= 180.0):
         return None
     return lo, hi
+
+
+def turned_refusal(mate: str, angle: float, tail: str, *, meet: bool) -> Optional[str]:
+    """The sentence refusing a gear mate between gears whose own axes are ``angle`` degrees apart (not parallel), or
+    None when its sense can be read: W5's read-back settled (on which rule H rests), ``findings.
+    TURNED_GEAR_MATE_SENSE_READ_BACK`` one of :data:`TURNED_SENSE_ROUTES`, and ``angle`` inside the angles tier 9
+    showed it on for the mesh's class — ``meet`` (:func:`lines_meet`): axes that meet, ``TURNED_GEAR_MATE_SENSE_
+    ANGLES``; else axes that pass each other, ``TURNED_GEAR_MATE_SENSE_ANGLES_SKEW`` (W6-PLAN §2.6, D16, D18;
+    W6-INTERFACES §7.12). ``mate`` names the gear mate; ``tail`` ends the sentence ("so nothing is made or
+    changed.")."""
+    shafts = "shafts that meet" if meet else "shafts that pass each other"
+    finding = TURNED_ANGLES_FINDING if meet else TURNED_SKEW_ANGLES_FINDING
+    missing = None
+    for name, wanted in (("GEAR_MATE_SENSE_READ_BACK", SENSE_ROUTES), ("GEAR_MATE_READ_BACK_TELLS_SENSE", (True,)),
+                         (TURNED_SENSE_FINDING, TURNED_SENSE_ROUTES)):
+        value = getattr(findings, name, None)
+        if not any(value is w or (not isinstance(w, bool) and value == w) for w in wanted):
+            missing = (name, value)
+            break
+    span = turned_angles(meet)
+    if missing is None and span is None:
+        missing = (finding, getattr(findings, finding, None))
+    if missing is not None:
+        return (f"The gear mate {mate} joins gears on {shafts} at an angle, and which way such a gear mate turns "
+                f"cannot be told on SolidWorks yet (findings.{missing[0]} is {missing[1]!r}), {tail}")
+    lo, hi = span
+    if lo - ANGLE_SLACK <= angle <= hi + ANGLE_SLACK:
+        return None
+    return (f"The gear mate {mate} joins gears on {shafts} at {_degrees_text(angle)}°, outside the "
+            f"{_degrees_text(lo)}°–{_degrees_text(hi)}° the probes showed such a gear mate turning right at "
+            f"(findings.{finding}), {tail}")
 
 
 def _vector_text(vector: Sequence[float]) -> str:
@@ -272,8 +331,8 @@ def sense_reading(reverse: bool, directions: Sequence[Sequence[float]], axes: Se
         else:
             why = (f"as pointing {_vector_text(found[0])} and {_vector_text(found[1])}, both along one gear's axis "
                    f"where it should hold one along each ({_vector_text(wanted[0])} and {_vector_text(wanted[1])})")
-        raise SolidWorksError(f"SolidWorks reads the axes of {called} {why}, so the mate does not hold the axes the "
-                              "gears were placed on, and nothing is guessed.")
+        raise SenseUnreadable(f"SolidWorks reads the axes of {called} {why}, so the mate does not hold the axes the "
+                              "gears were placed on, and nothing is guessed.", found, wanted)
     taus = (1 if along(da, wanted[0]) > 0 else -1, 1 if along(db, wanted[1]) > 0 else -1)
     right = reverse == ((1 if same_sense else -1) * taus[0] * taus[1] > 0)
     return right, taus
@@ -2467,7 +2526,8 @@ class Session:
                                   "findings.py), so nothing is changed; run probe tier 8 first.")
         self._remake(handle, a, b, ratio, bool(flip), "to make it again with the other Flip", saved=saved)
 
-    def gear_mate_sense(self, handle: str, same_sense: bool, axes: Tuple[Vec3, Vec3]) -> Tuple[bool, Tuple[int, int]]:
+    def gear_mate_sense(self, handle: str, same_sense: bool, axes: Tuple[Vec3, Vec3], *,
+                        meet: Optional[bool] = None) -> Tuple[bool, Tuple[int, int]]:
         """Which way a kept gear mate turns its gears (W6's form; W6-INTERFACES.md): its
         ``IGearMateFeatureData.Reverse`` (``IFeature.GetDefinition``, read only, released: no ModifyDefinition, no
         AccessSelections, as :meth:`gear_mate_ratio`) and the directions of its two entities
@@ -2480,15 +2540,17 @@ class Session:
         The gate: axes parallel (``|ĝa·ĝb| > 0.99``) need W5's read-back (``findings.GEAR_MATE_SENSE_READ_BACK``
         one of :data:`SENSE_ROUTES`, ``GEAR_MATE_READ_BACK_TELLS_SENSE`` True), on which H is W5's rule exactly;
         any other pair also needs ``findings.TURNED_GEAR_MATE_SENSE_READ_BACK`` in :data:`TURNED_SENSE_ROUTES`
-        and the angle between the own axes inside ``findings.TURNED_GEAR_MATE_SENSE_ANGLES`` (W6-PLAN §2.6) —
-        that branch is Agent A's (a stub at the interface commit)."""
+        and the angle between the own axes inside ``findings.TURNED_GEAR_MATE_SENSE_ANGLES`` (W6-PLAN §2.6;
+        :func:`turned_refusal`), the angles for the mesh's class: ``meet`` as the caller judged it from the planned
+        lines (:func:`lines_meet`), or, when not given, from the two lines SolidWorks reads for the entities
+        (``EntityParams`` 0..2, a point on each, metres). Turned and refused, nothing is judged (the read itself
+        marks nothing, ``findings.GEAR_MATE_SENSE_READ_MARKS``). Probe tier 9 read a turned gear mate this way,
+        straight after it was made and after a save and reopen, meeting axes at 30–150° and skew axes at 60–120°
+        between the own axes, every facing, both Flips: H told all 40."""
         unit_axes = [_unit(a) for a in axes]
         if len(axes) != 2 or any(a is None for a in unit_axes):
             raise SolidWorksError("A gear mate's sense was asked against axes that are not two directions, so it "
                                   "cannot be judged; that is a fault in Gear Generator.")
-        if abs(sum(p * q for p, q in zip(*unit_axes))) <= ENTITY_ALONG:
-            raise NotImplementedError("W6: Agent A, swcom.Session.gear_mate_sense on axes that are not parallel "
-                                      "(the turned gate, TURNED_GEAR_MATE_SENSE_READ_BACK and its angles)")
         route = getattr(findings, "GEAR_MATE_SENSE_READ_BACK", None)
         if route not in SENSE_ROUTES or getattr(findings, "GEAR_MATE_READ_BACK_TELLS_SENSE", None) is not True:
             raise SolidWorksError(f"Reading which way a gear mate turns has not been settled on SolidWorks yet "
@@ -2506,13 +2568,24 @@ class Session:
         data = None                                # released, as the probe released it
         mate = _read(feature, "GetSpecificFeature2")
         count = _read(mate, "GetMateEntityCount") if mate is not None else None
-        directions = []
+        directions, points = [], []
         for index in range(int(count) if isinstance(count, (int, float)) else 0):
             entity = call(mate, "MateEntity", index)
             params = _read(entity, "EntityParams") if entity is not None else None
             values = [float(v) for v in params] if params is not None else []
             if len(values) >= 6:
                 directions.append(values[3:6])
+                points.append([v * MM_PER_METRE for v in values[0:3]])
+        if not axes_parallel(*unit_axes):
+            if meet is None:
+                if len(points) != 2:
+                    raise SolidWorksError(f"The gear mate {name} in {title} did not say how it holds its two gear "
+                                          "axes, so which way it turns cannot be read.")
+                meet = lines_meet(points[0], directions[0], points[1], directions[1])
+            refusal = turned_refusal(f"{name} in {title}", own_axes_angle(*unit_axes),
+                                     "so which way it turns is not read.", meet=bool(meet))
+            if refusal is not None:
+                raise SolidWorksError(refusal)
         return sense_reading(reverse, directions, axes, same_sense, mate=f"{name} in {title}")
 
     def line_axis(self, handle: str, name: str, point: Vec3, direction: Vec3, length: float) -> str:
@@ -2522,15 +2595,90 @@ class Session:
         (``base.LineAxis.sketch``); the line selected as ``"Line1@<Shaft> Line"`` (``EXTSKETCHSEGMENT``);
         ``InsertAxis2(True)``; the new RefAxis found, renamed ``name`` and read back (``GetRefAxisParams`` on the
         line to 1e-6). Returns the kept name. Neither 3D call is probed ahead (W6-PLAN §7.1): a failure is a
-        sentence, and the build's next op fails with it."""
-        raise NotImplementedError("W6: Agent A, swcom.Session.line_axis")
+        sentence, and the build's next op fails with it.
+
+        The line is drawn with ``ISketchManager.CreateLine`` given three coordinates, the member every 2D sketch of
+        the app draws with (verified), which the API documents for a 2D or a 3D sketch alike; the macro database's
+        3D entry names ``CreateLine2`` (unverified), so the member probed by use wins. The axis is made from the
+        line as probe axis_from_sketch_line and tier 9 made theirs (one line selected at mark 0 by
+        ``LineN@Sketch``, ``InsertAxis2(True)``)."""
+        unit = _unit(direction)
+        if unit is None or not (isinstance(length, (int, float)) and math.isfinite(length) and length > 0):
+            raise SolidWorksError(f"The axis {name} was asked for with no direction or no length, so it is not made; "
+                                  "that is a fault in Gear Generator.")
+        start = tuple(float(v) for v in point)
+        end = tuple(start[i] + float(length) * unit[i] for i in range(3))
+        sketch_name = name[:-len(" Axis")] + " Line" if name.endswith(" Axis") else name + " Line"
+        doc = self._doc()
+        before = self._top_names()
+        manager = call(doc, "SketchManager")
+        _put(manager, "AddToDB", True)
+        _put(manager, "DisplayWhenAdded", False)
+        call(manager, "Insert3DSketch2", True)
+        try:
+            if call(manager, "ActiveSketch") is None:
+                raise SolidWorksError(f"SolidWorks would not open a 3D sketch for the axis {name}.")
+            m = MM_PER_METRE
+            line = call(manager, "CreateLine", start[0] / m, start[1] / m, start[2] / m, end[0] / m, end[1] / m,
+                        end[2] / m)
+            if line is None:
+                raise SolidWorksError(f"SolidWorks would not draw the line of the axis {name} in its 3D sketch.")
+            segment = _segment_name(line)
+        finally:
+            call(manager, "Insert3DSketch2", True)             # the toggle closes it, whatever happened inside
+            _put(manager, "AddToDB", False)
+            _put(manager, "DisplayWhenAdded", True)
+        if not segment:
+            raise SolidWorksError(f"The line of the axis {name} has no name to select it by.")
+        kept_sketch = self._rename(self._made_since(before, "3DProfileFeature", "Closing the 3D sketch"),
+                                   sketch_name)
+        full = f"{segment}@{kept_sketch}"
+        call(doc, "ClearSelection2", True)
+        if not (call(call(doc, "Extension"), "SelectByID2", full, "EXTSKETCHSEGMENT", 0.0, 0.0, 0.0, False, 0,
+                     _null_dispatch(), 0) and self._selected() > 0):
+            raise SolidWorksError(f"{full} could not be selected {self._selection_context()}.")
+        before = self._top_names()
+        made = call(doc, "InsertAxis2", True)
+        call(doc, "ClearSelection2", True)
+        if not made:
+            raise SolidWorksError(f"InsertAxis2 would not make {name} from the line {full}.")
+        kept = self._rename(self._made_since(before, "RefAxis", "InsertAxis2"), name)
+        self._handles[handle] = kept
+        at, along = self._axis_params(kept)
+        off = tuple(at[i] - start[i] for i in range(3))
+        reach = sum(off[i] * unit[i] for i in range(3))
+        miss = math.sqrt(max(0.0, sum(v * v for v in off) - reach * reach))
+        if miss > LINE_TOLERANCE or abs(abs(sum(along[i] * unit[i] for i in range(3))) - 1.0) > LINE_TOLERANCE:
+            raise SolidWorksError(f"SolidWorks made the axis {kept} {miss:.2g} mm off its line, pointing "
+                                  f"{_vector_text(along)} where the line points {_vector_text(unit)}, so the shaft "
+                                  "would not be where the workbook puts it.")
+        return kept
+
+    def _axis_params(self, name: str) -> Tuple[Vec3, Vec3]:
+        """``IRefAxis.GetRefAxisParams`` of the axis ``name`` (two points on it, metres): a point in mm and the
+        unit direction from the first point to the second (macro database, verified on 2026)."""
+        feature = self._by_name(name)
+        if _type_name(feature) != "RefAxis":
+            raise SolidWorksError(f"{name} in {call(self._doc(), 'GetTitle')} is not an axis.")
+        params = _read(call(feature, "GetSpecificFeature2"), "GetRefAxisParams")
+        try:
+            values = [float(v) for v in params]
+        except (TypeError, ValueError):
+            values = []
+        along = _unit(tuple(values[3 + i] - values[i] for i in range(3))) if len(values) >= 6 else None
+        if along is None:
+            raise SolidWorksError(f"SolidWorks did not say where the axis {name} in {call(self._doc(), 'GetTitle')} "
+                                  "lies, so it cannot be checked.")
+        return tuple(v * MM_PER_METRE for v in values[:3]), along
 
     def axis_line(self, handle: str, name: str) -> Tuple[Vec3, Vec3]:
         """W6 (Agent A; W6-PLAN §2.7, review S7): a layout axis read back as ``(point, unit direction)`` in mm, from
         ``IRefAxis.GetRefAxisParams`` of the feature named ``name`` in the build document, kept as ``handle``. A
         read that marks nothing; used in Update's check phase and on reusing a layout part, to refuse a slanted
         line axis moved in SolidWorks."""
-        raise NotImplementedError("W6: Agent A, swcom.Session.axis_line")
+        point, direction = self._axis_params(name)
+        self._handles[handle] = name
+        return point, direction
 
     def set_custom_property(self, name: str, value: str) -> None:
         """A text custom property on the build's part, added or replaced, and read back.

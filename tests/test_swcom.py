@@ -4,6 +4,7 @@ The version gate and the session choice are pure functions over plain data
 precisely so they can be tested here, on a machine with no CAD package at all.
 """
 
+import math
 import threading
 import time
 
@@ -1973,12 +1974,95 @@ def test_a_gear_mates_sense_is_read_back_by_reverse_and_its_entity_directions(ma
     assert ("ModifyDefinition",) not in doc.log and ("AccessSelections",) not in doc.log
 
 
-def test_a_gear_mate_on_axes_at_an_angle_waits_for_package_a(mated):
-    """The turned gate is Agent A's (W6-INTERFACES.md): a stub at the interface commit."""
+X_ON = (1.0, 0.0, 0.0)
+
+
+@pytest.fixture
+def turned_read(monkeypatch):
+    """Tier 9's findings as committed (11ee1e2) and the skew range the probe agent adds, pinned here."""
+    for name, value in (("TURNED_GEAR_MATE_SENSE_READ_BACK", "entity senses"),
+                        ("TURNED_GEAR_MATE_SENSE_ANGLES", (30.0, 150.0)),
+                        ("TURNED_GEAR_MATE_SENSE_ANGLES_SKEW", (60.0, 120.0))):
+        monkeypatch.setattr(findings, name, value, raising=False)
+
+
+def _turned_world(session, doc, reverse, directions, points=((0.0, 0.0, 0.06), (0.0, 0.0, 0.06))):
+    """A gear mate whose two entities are the lines through ``points`` (metres) along ``directions``."""
+    _sense_world(session, doc, reverse, directions)
+    for entity, point in zip(doc.mates[0].GetSpecificFeature2.entities, points):
+        entity.EntityParams = tuple(point) + tuple(entity.EntityParams[3:6]) + (0.0, 0.0)
+
+
+def test_a_gear_mate_on_axes_that_meet_is_read_by_rule_h(mated, turned_read):
     session, doc = mated
-    _sense_world(session, doc, True, (Z_UP, (1.0, 0, 0)))
-    with pytest.raises(NotImplementedError, match="W6: Agent A"):
-        session.gear_mate_sense("mesh", False, (Z_UP, (1.0, 0, 0)))
+    _turned_world(session, doc, True, (Z_UP, X_ON))
+    # Fixture A's bevel mesh turns its gears opposite ways about their own axes (k < 0): Reverse True reads wrong.
+    assert session.gear_mate_sense("mesh", False, (Z_UP, X_ON)) == (False, (1, 1))
+    assert session.gear_mate_sense("mesh", False, (X_ON, Z_UP)) == (False, (1, 1))     # entities in either order
+    _turned_world(session, doc, False, (Z_UP, X_ON))
+    assert session.gear_mate_sense("mesh", False, (Z_UP, X_ON))[0] is True
+
+
+@pytest.mark.parametrize("name, meet, sentence", [
+    ("TURNED_GEAR_MATE_SENSE_READ_BACK", True,
+     "The gear mate G5 meshes G6 in R.SLDASM joins gears on shafts that meet at an angle, and which way such a gear "
+     "mate turns cannot be told on SolidWorks yet (findings.TURNED_GEAR_MATE_SENSE_READ_BACK is None), so which way "
+     "it turns is not read."),
+    ("TURNED_GEAR_MATE_SENSE_ANGLES", True,
+     "The gear mate G5 meshes G6 in R.SLDASM joins gears on shafts that meet at an angle, and which way such a gear "
+     "mate turns cannot be told on SolidWorks yet (findings.TURNED_GEAR_MATE_SENSE_ANGLES is None), so which way it "
+     "turns is not read."),
+    ("TURNED_GEAR_MATE_SENSE_ANGLES_SKEW", False,
+     "The gear mate G5 meshes G6 in R.SLDASM joins gears on shafts that pass each other at an angle, and which way "
+     "such a gear mate turns cannot be told on SolidWorks yet (findings.TURNED_GEAR_MATE_SENSE_ANGLES_SKEW is None), "
+     "so which way it turns is not read."),
+])
+def test_a_turned_gear_mate_is_not_read_while_its_finding_is_missing(mated, turned_read, monkeypatch, name, meet,
+                                                                     sentence):
+    session, doc = mated
+    _turned_world(session, doc, True, (Z_UP, X_ON))
+    monkeypatch.setattr(findings, name, None, raising=False)
+    with pytest.raises(SolidWorksError) as raised:
+        session.gear_mate_sense("mesh", False, (Z_UP, X_ON), meet=meet)
+    assert str(raised.value) == sentence
+
+
+def test_the_angle_a_turned_gear_mate_is_read_at_is_the_range_for_its_class(mated, turned_read):
+    session, doc = mated
+    tipped = (math.sin(math.radians(135.0)), 0.0, math.cos(math.radians(135.0)))       # 135° from +Z
+    _turned_world(session, doc, False, (Z_UP, tipped))
+    assert session.gear_mate_sense("mesh", False, (Z_UP, tipped), meet=True)[0] is True   # 135° meeting: inside
+    with pytest.raises(SolidWorksError) as raised:
+        session.gear_mate_sense("mesh", False, (Z_UP, tipped), meet=False)
+    assert str(raised.value) == ("The gear mate G5 meshes G6 in R.SLDASM joins gears on shafts that pass each other at "
+                                 "135°, outside the 60°–120° the probes showed such a gear mate turning right at "
+                                 "(findings.TURNED_GEAR_MATE_SENSE_ANGLES_SKEW), so which way it turns is not read.")
+    steep = (math.sin(math.radians(165.0)), 0.0, math.cos(math.radians(165.0)))
+    _turned_world(session, doc, False, (Z_UP, steep))
+    with pytest.raises(SolidWorksError, match="at 165°, outside the 30°–150°"):
+        session.gear_mate_sense("mesh", False, (Z_UP, steep), meet=True)
+    slight = (math.sin(math.radians(5.0)), 0.0, math.cos(math.radians(5.0)))        # W5's 0.99 called this parallel
+    _turned_world(session, doc, False, (Z_UP, slight))
+    with pytest.raises(SolidWorksError, match="at 5°, outside the 30°–150°"):
+        session.gear_mate_sense("mesh", False, (Z_UP, slight), meet=True)
+
+
+def test_without_the_callers_word_the_class_is_read_from_the_entities_lines(mated, turned_read):
+    session, doc = mated
+    tipped = (math.sin(math.radians(135.0)), 0.0, math.cos(math.radians(135.0)))
+    _turned_world(session, doc, False, (Z_UP, tipped))                                   # one point: they meet
+    assert session.gear_mate_sense("mesh", False, (Z_UP, tipped))[0] is True
+    _turned_world(session, doc, False, (Z_UP, tipped), points=((0, 0, 0), (0, 0.03, 0)))    # 30 mm apart: skew
+    with pytest.raises(SolidWorksError, match="shafts that pass each other at 135°"):
+        session.gear_mate_sense("mesh", False, (Z_UP, tipped))
+
+
+def test_a_turned_mate_whose_entity_lies_along_neither_gear_is_refused_as_unreadable(mated, turned_read):
+    session, doc = mated
+    _turned_world(session, doc, False, (Z_UP, (0.0, 1.0, 0.0)))
+    with pytest.raises(swcom.SenseUnreadable) as raised:
+        session.gear_mate_sense("mesh", False, (Z_UP, X_ON))
+    assert raised.value.axes == (Z_UP, X_ON) and "nothing is guessed" in str(raised.value)
 
 
 @pytest.mark.parametrize("name, value", [("GEAR_MATE_SENSE_READ_BACK", None), ("GEAR_MATE_SENSE_READ_BACK", "guess"),
@@ -2080,3 +2164,111 @@ def test_the_turned_angles_are_read_per_class(monkeypatch):
     assert swcom.turned_angles(True) == (30.0, 150.0)
     monkeypatch.delattr(swcom.findings, "TURNED_GEAR_MATE_SENSE_ANGLES_SKEW", raising=False)
     assert swcom.turned_angles(False) is None
+
+
+# -- W6: a slanted shaft's axis on a one-line 3D sketch (line_axis), and any axis read back (axis_line)
+
+class AxisParams:
+    def __init__(self, a, b):
+        self.GetRefAxisParams = tuple(v / 1000.0 for v in tuple(a) + tuple(b))       # two points, metres
+
+
+class Line3D:
+    def __init__(self, name):
+        self.GetName = name
+
+
+class Sketch3DManager:
+    def __init__(self, doc):
+        self.doc, self.open, self.line = doc, False, Line3D("Line1")
+
+    def __setattr__(self, name, value):
+        object.__setattr__(self, name, value)
+
+    def Insert3DSketch2(self, rebuild):
+        self.doc.app.log.append(("Insert3DSketch2", rebuild))
+        if self.open:
+            self.doc.features.append(Feature(self.doc, "3DSketch1", "3DProfileFeature"))
+        self.open = not self.open
+
+    @property
+    def ActiveSketch(self):
+        return object() if self.open else None
+
+    def CreateLine(self, *coordinates):
+        self.doc.app.log.append(("CreateLine",) + tuple(round(c, 9) for c in coordinates))
+        self.doc.ends = (tuple(c * 1000.0 for c in coordinates[:3]), tuple(c * 1000.0 for c in coordinates[3:]))
+        return self.line
+
+
+class SegmentExtension(Extension):
+    def SelectByID2(self, name, kind, x, y, z, append, mark, callout, option):
+        self.doc.app.log.append(("SelectByID2", name, kind, append, mark))
+        if kind == "EXTSKETCHSEGMENT" and name == "Line1@S3 Line":
+            self.doc.selected.append(name)
+            return True
+        return False
+
+
+def _line_doc(com, read=None):
+    """A layout part whose 3D sketch and axis behave as the macro database and tier 9 say; ``read`` overrides where
+    the made axis is read back (two points, mm)."""
+    doc = com.opened(W + "Part1.SLDPRT")
+    doc.SketchManager, doc.Extension = Sketch3DManager(doc), SegmentExtension(doc)
+
+    def insert_axis(auto):
+        com.log.append(("InsertAxis2", tuple(doc.selected)))
+        if doc.selected != ["Line1@S3 Line"]:
+            return False
+        doc.features.append(Feature(doc, "Axis1", "RefAxis", specific=AxisParams(*(read or doc.ends))))
+        return True
+
+    doc.InsertAxis2 = insert_axis
+    session = _session(com)
+    session.begin_build()
+    return session, doc
+
+
+SLANT_POINT, SLANT_DIRECTION = (-110.0, 84.852814, 8.0), (-0.5, 0.8660254037844386, 0.0)
+
+
+def test_a_slanted_axis_is_drawn_in_a_3d_sketch_made_on_its_line_named_and_read_back(com):
+    session, doc = _line_doc(com)
+    assert session.line_axis("line3", "S3 Axis", SLANT_POINT, SLANT_DIRECTION, 100.0) == "S3 Axis"
+    assert _calls(com, "Insert3DSketch2") == [("Insert3DSketch2", True), ("Insert3DSketch2", True)]
+    (line,) = _calls(com, "CreateLine")
+    end = tuple(SLANT_POINT[i] + 100.0 * SLANT_DIRECTION[i] for i in range(3))
+    assert line[1:] == tuple(round(v / 1000.0, 9) for v in SLANT_POINT + end)          # metres, three per end
+    assert ("SelectByID2", "Line1@S3 Line", "EXTSKETCHSEGMENT", False, 0) in com.log
+    assert [f.Name for f in doc.features[-2:]] == ["S3 Line", "S3 Axis"] and session._handles["line3"] == "S3 Axis"
+    point, direction = session.axis_line("read3", "S3 Axis")
+    assert point == pytest.approx(SLANT_POINT) and direction == pytest.approx(SLANT_DIRECTION)
+
+
+def test_an_axis_solidworks_made_off_its_line_is_refused(com):
+    session, _ = _line_doc(com, read=((-110.0, 84.852814, 8.5), (-160.0, 171.455354, 8.5)))
+    with pytest.raises(SolidWorksError) as raised:
+        session.line_axis("line3", "S3 Axis", SLANT_POINT, SLANT_DIRECTION, 100.0)
+    assert str(raised.value).startswith("SolidWorks made the axis S3 Axis 0.5 mm off its line") and \
+        str(raised.value).endswith("so the shaft would not be where the workbook puts it.")
+
+
+def test_the_3d_sketch_is_closed_even_when_its_line_is_not_drawn(com):
+    session, doc = _line_doc(com)
+    doc.SketchManager.CreateLine = lambda *coordinates: None
+    with pytest.raises(SolidWorksError, match="would not draw the line of the axis S3 Axis"):
+        session.line_axis("line3", "S3 Axis", SLANT_POINT, SLANT_DIRECTION, 100.0)
+    assert len(_calls(com, "Insert3DSketch2")) == 2 and not doc.SketchManager.open
+
+
+def test_a_line_axis_with_no_direction_is_a_fault_and_nothing_is_drawn(com):
+    session, _ = _line_doc(com)
+    with pytest.raises(SolidWorksError, match="no direction or no length"):
+        session.line_axis("line3", "S3 Axis", SLANT_POINT, (0.0, 0.0, 0.0), 100.0)
+    assert com.log == []
+
+
+def test_axis_line_refuses_a_feature_that_is_not_an_axis(com):
+    session, _ = _line_doc(com)
+    with pytest.raises(SolidWorksError, match="Top Plane in Part1.SLDPRT is not an axis"):
+        session.axis_line("read", "Top Plane")
