@@ -400,14 +400,46 @@ def nothing_to_do(record, spec):
     return (plan.refusal, plan.structural, plan.resensed, plan.ratios, plan.axial, plan.replaced, plan.moved_shafts)
 
 
-@pytest.mark.parametrize("make, senses", [(bevel_reducer, {"G1 meshes G2": 1, "G3 meshes G4": 1}),
-                                          (crossed_slant, {"G1 meshes G2": -1, "G3 meshes G4": 1})])
-def test_a_turned_gearbox_built_on_the_fake_reads_back_with_nothing_to_update(turned_findings, make, senses):
+def driven(sw, record, gear, degrees):
+    """Drive one gear on the fake (its solver: each gear mate as made, judged against the true sense the fake works
+    out from where the gears stand) and give every gear's turn by gear id, rounded to 1e-6."""
+    names = {c.name: c.gear for c in record.gearbox.components}
+    turns = sw.drive(next(n for n, g in names.items() if g == gear), float(degrees))
+    return {names[n]: round(t, 6) for n, t in turns.items() if n in names}
+
+
+# The drives worked by hand in W6-PLAN §5 (never from the code): a sign slip in planning's senses on a turned mesh
+# alone reaches the fake's solver as a mate made with the wrong Flip, and turns a gear the wrong way here.
+DRIVE_A = {"G1": 30.0, "G2": -15.0, "G3": -15.0, "G4": 5.0}           # §5.1: +30° on G1
+DRIVE_B = {"G1": 30.0, "G2": 15.0, "G3": 15.0, "G4": -10.0}           # §5.2: +30° on G1
+
+
+@pytest.mark.parametrize("make, senses, drive", [
+    (bevel_reducer, {"G1 meshes G2": 1, "G3 meshes G4": 1}, DRIVE_A),
+    (crossed_slant, {"G1 meshes G2": -1, "G3 meshes G4": 1}, DRIVE_B)])
+def test_a_turned_gearbox_built_on_the_fake_reads_back_with_nothing_to_update(turned_findings, make, senses, drive):
     sw, record = fake_turned_build(make())
     assert senses_of(record) == senses
     assert nothing_to_do(record, make()) == ("", (), (), (), (), (), ())
     plan, result, after = fake_press(sw, record, make())        # pressed anyway: SolidWorks holds it already
     assert result.placed == [] and result.resensed == [] and senses_of(after) == senses
+    assert driven(sw, after, "G1", 30.0) == drive
+
+
+@pytest.mark.parametrize("make, teeth, mate, drive", [
+    (bevel_reducer, {"G1": dict(teeth="21")}, "G1 meshes G2", {"G1": 30.0, "G2": -15.75, "G3": -15.75, "G4": 5.25}),
+    (crossed_slant, {"G4": dict(teeth="31")}, "G3 meshes G4", {"G1": 30.0, "G2": 15.0, "G3": 15.0,
+                                                                "G4": round(-15 * 20 / 31, 6)}),
+])
+def test_a_tooth_change_on_a_turned_stage_remakes_its_mate_and_the_train_turns_as_worked_by_hand(
+        turned_findings, make, teeth, mate, drive):
+    """W6-PLAN §5.1 (G1 20 → 21: G2 −15.75°, G4 +5.25°) and §5.2 (G4 30 → 31: G4 −9.677419°)."""
+    sw, record = fake_turned_build(make())
+    spec = edited(make(), gears=teeth)
+    plan, result, after = fake_press(sw, record, spec)
+    assert plan.ratios == (mate,) and result.ratios == [mate] and plan.resensed == ()
+    assert driven(sw, after, "G1", 30.0) == drive
+    assert nothing_to_do(after, spec) == ("", (), (), (), (), (), ())
 
 
 def test_a_crossed_shaft_moved_to_the_other_side_remakes_its_gear_mate_for_the_new_sense(turned_findings):
@@ -428,7 +460,7 @@ def test_a_crossed_shaft_moved_to_the_other_side_remakes_its_gear_mate_for_the_n
     # round; and driving G1 turns G2 by the new k, -0.5 (the reviewer's contact-velocity derivation).
     asm = after.gearbox.assembly
     assert sw.turns_right("G1 meshes G2", asm) and result.turned_round == []
-    assert sw.drive(name_of(after, "G1"), 10.0)[name_of(after, "G2")] == pytest.approx(-5.0)
+    assert driven(sw, after, "G1", 10.0) == {"G1": 10.0, "G2": -5.0, "G3": -5.0, "G4": round(5 * 20 / 30, 6)}
 
 
 def name_of(record, gear):
@@ -455,7 +487,7 @@ def test_a_resense_remake_on_a_solidworks_that_wants_the_other_flip_is_turned_ro
     assert (result.resensed, result.turned_round, result.sense_found_wrong) == (
         ["G1 meshes G2"], ["G1 meshes G2"], [])
     assert sw.turns_right("G1 meshes G2", after.gearbox.assembly) and senses_of(after)["G1 meshes G2"] == 1
-    assert sw.drive(name_of(after, "G1"), 10.0)[name_of(after, "G2")] == pytest.approx(-5.0)
+    assert driven(sw, after, "G1", 10.0) == {"G1": 10.0, "G2": -5.0, "G3": -5.0, "G4": round(5 * 20 / 30, 6)}
     assert update.classify(after, direct(moved), exists=lambda p: True).resensed == ()
 
 
@@ -490,6 +522,7 @@ def test_a_failed_update_after_a_resense_remake_keeps_the_sense_on_record_until_
     assert again.resensed == ("G1 meshes G2",) and healed.resensed == ["G1 meshes G2"]
     assert senses_of(after) == {"G1 meshes G2": 1, "G3 meshes G4": 1}
     assert sw.turns_right("G1 meshes G2", after.gearbox.assembly)
+    assert driven(sw, after, "G1", 10.0) == {"G1": 10.0, "G2": -5.0, "G3": -5.0, "G4": round(5 * 20 / 30, 6)}
     assert nothing_to_do(after, moved) == ("", (), (), (), (), (), ())
 
 
