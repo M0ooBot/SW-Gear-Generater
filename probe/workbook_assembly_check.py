@@ -177,10 +177,14 @@ SolidWorks calls traced (``w8_update``: shows, flags, values, rebuilds, puts, ma
 put, and in what order, is read from the calls, and its elapsed time logged. Expectations are §2.3's key as each
 section's own workbook edit changes it (``KEY``), and frames after an Update the built ones moved by the edit.
 
-- ``s2``: the user's turn in 2H (37°); 4H, N and 4L shown, each as built, and 2H at the turn; a quiet Update in 4L
-  (nothing shown, set or put; nothing marked; the sentence); FDrive, FIdler and FOut At 130 -> 132 -> Update: every
-  mode put, 4L last, the carrier first in each, 2H's turn put back; raw flags of every mate straight after; the
-  globals; every mode measured with every control; the drive in 4H and 4L.
+- ``s2`` (as the running version answers ``swcom.positions_per_configuration``): the user's turn in 2H (37°); 4H, N
+  and 4L shown — False: each at 2H's turn from its own frames, 4L's LoDog across RangeSlv; True: each as built — and
+  2H at the turn; Update in 4L — False: 4L's couplings found across, the train put there, then 2H, 4H and N visited,
+  each read from frames after the press, the call trace and the sentences checked; True: quiet — then the train turned
+  in 2H (in step there) and Update in 2H: nothing put or shown, False's sentence on a turn shown in every mode; 4L
+  shown and read; Update in 4L again; FDrive, FIdler and FOut At 130 -> 132 -> Update: every mode put, 4L last, the
+  carrier first in each; raw flags of every mate straight after; the globals; every mode measured with every
+  control; the drive in 4H and 4L.
 - ``s3``: in 4L RangeSlv engages LoDog suppressed and RangeSlv engages InDog on, N's slide at 58 -> Update in 2H puts
   them right before showing anything, then shows every mode; measured; an angle mate the record does not know (on the
   Sun, 2H active): on in every mode, then in N only -> refused naming the modes, nothing shown, set or put before the
@@ -191,6 +195,10 @@ section's own workbook edit changes it (``KEY``), and frames after an Update the
   values 97); 4H's ModeSlv 4WD -> 2WD (J14: the value and FrontDog's coupling off in 4H); each measured, with a drive;
   then a Modes row 4X -> the structural sentence -> Build again… -> ``_r2`` with five configurations, built and judged
   as s1, every earlier file unchanged.
+- ``s5`` (built fresh, W8-REVIEW-TIER11 (3)): the plan doctored with a second distance mate on RangeSlv on in N only, at
+  60 mm against N's 56 -> the build stops at the make in step 5, "In mode N, … over-defines the assembly."; the parts
+  and layout on record, no assembly file, the document open and named; the footer never offering the same build
+  again; closed as m4 closes it. The watch tolerates an "Over Defined" balloon from the make to the close.
 
 The W5 sections, each in its own folder under the output folder (the default order is W8's, W7's, W6's, then m1 m3 m7
 m8 m2 m4 m5 m6 a a2 a3 b c; ``--only ring`` runs m3, m7 and m8, the ring-train sections):
@@ -314,7 +322,7 @@ W6_ORDER = ["r1", "r5", "r2", "r3", "r4", "r6", "r8", "r7"]
 # W7 (W7-PLAN §6): p1 builds the master, the rest start from its copies.
 W7_ORDER = ["p1", "p2", "p3", "p4", "p5", "p6", "p7"]
 # W8 (W8-PLAN §5): s0 the shakedown, s1 the E4 transfer case, kept as s1.master for s2-s4, which copy it.
-W8_ORDER = ["s0", "s1", "s2", "s3", "s4"]
+W8_ORDER = ["s0", "s1", "s2", "s3", "s4", "s5"]
 DEFAULT_ORDER = W8_ORDER + W7_ORDER + W6_ORDER + ["m1", "m3", "m7", "m8", "m2", "m4", "m5", "m6", "a", "a2", "a3", "b", "c"]
 RING = ["m3", "m7", "m8"]         # ``--only ring``: the two ring-train sections, rerun after the ring-sense fix
 # ``--only confirm``: SolidWorks 2024's confirming build (W6-PLAN §6.1, with W6-INTERFACES §7.17 (a) and (c)): both
@@ -611,7 +619,11 @@ class DialogWatch(threading.Thread):
                     said = (f"a SolidWorks balloon tip {list(texts)} came up while {now or 'no SolidWorks call'} was in "
                             "progress (left standing, never answered)")
                     configuring = now in CONFIGURATION_CALLS or (now in DOCUMENT_CALLS and CALLS["configurations"])
-                    if any("Over Defined" in t for t in texts) or configuring:
+                    if S5_WATCH["on"] and any("Over Defined" in t for t in texts):
+                        # s5 makes the assembly over-defined on purpose (W8-REVIEW-TIER11 (3)): tolerated, a fact.
+                        S5_WATCH["balloons"].append((now, list(texts)))
+                        say(f"fact    {said} (s5's over-defined make: tolerated)")
+                    elif any("Over Defined" in t for t in texts) or configuring:
                         note(said)
                     else:                  # the coordinator's ruling 3 (stage 2b): a UI tip, a fact line
                         say(f"fact    {said}")
@@ -651,6 +663,15 @@ class DialogWatch(threading.Thread):
                         WINDOWS["count"] += 1
                         note(f"SolidWorks' notification box came up while {CALLS['now'] or 'no SolidWorks call'} was in "
                              "progress (exempt by the coordinator's ruling; nothing answers it)")
+                    elif not ticking and S5_WATCH["on"]:
+                        # s5, from the make to the close: any window but the balloon and the exempt boxes is a STOP.
+                        WINDOWS["count"] += 1
+                        S5_WATCH["windows"].append((CALLS["now"], title, list(texts)))
+                        check(False, f"s5: a SolidWorks window {title!r} {list(texts)} came up while "
+                                     f"{CALLS['now'] or 'no SolidWorks call'} was in progress, between the make and the "
+                                     "close")
+                        STOPS.append(f"s5: a window {title!r} came up while {CALLS['now']} was in progress")
+                        say("STOP    W8-REVIEW-TIER11 (3): s5's watch allows only the Over Defined balloon")
                     elif not ticking:
                         WINDOWS["count"] += 1
                         now = CALLS["now"]
@@ -957,6 +978,7 @@ class Desk:
         self.note = None
         self.error = None          # the last job's raise (a refusal before anything was made or changed)
         self.positions_per_configuration = None   # the last job's answer, as the window keeps it (W8 §9.12)
+        self.steps = []            # the last build's progress steps
 
     # reading
     def read(self):
@@ -1120,7 +1142,7 @@ class Desk:
         the window's own."""
         plan = plan or self.plan
         before = self.record                    # the record the build is planned from: Build again… if it held one
-        steps = []
+        steps = self.steps = []
         kwargs = plan.build_kwargs()
         journaled = self.write_journal(plan)
         say(f"journal {'written' if journaled else 'NOT written'}: {len(wb_gearbox.journal(plan))} paths")
@@ -6519,6 +6541,25 @@ def w8_shown_turned(worker, desk, label, mode, turns, positions):
     return out
 
 
+def w8_read_all(worker, desk, label, wanted, last):
+    """Every mode shown in turn (``last`` last, so it is left active) and every body's frame read through handles fetched
+    after the show, judged against ``wanted`` (mode -> body -> frame) to 1e-6; each body off logged with its turn and
+    how far its origin stands. The coordinator's correction (stage 2c): where a body stands is read from its frame,
+    never from ``ModeCheck.turned``. Returns the frames by mode."""
+    box = desk.record.gearbox
+    order = [m for m in box.modes if not swbuild.on_in((m,), last)] + [last]
+    out = {}
+    for mode in order:
+        got = run(worker, mode_state_job(box, mode, full=False))
+        stop_check(swbuild.on_in((mode,), got["active"]), f"{label}: {mode} shown: {got['active']}")
+        gap, at = frames_gap(got["frames"], wanted[mode])
+        if not check(gap <= FRAME_TOLERANCE, f"{label}: read through fresh handles, every body in {mode} where it "
+                     f"should stand (largest {gap:.1e} at {at or '-'})"):
+            say_off(label, mode, got["frames"], wanted[mode])
+        out[mode] = got["frames"]
+    return out
+
+
 def w8_press_after_turn(worker, desk, label, mode, positions, turns, folder, presses):
     """Update SolidWorks pressed with ``mode`` showing after the user's turn in 2H, nothing changed in the workbook.
     False (the turn shows here): ``mode``'s coupling(s) found out of step and the train put there, which obliges the
@@ -6595,9 +6636,12 @@ def w8_press_after_turn(worker, desk, label, mode, positions, turns, folder, pre
         check({frozenset(p) for p in here.out_of_step} == {frozenset(p) for p in want},
               f"{label}: the couplings found across are those 2H's turn crosses in {mode}, worked by the script: {want}")
     for c in result.modes[:-1]:
-        check(not c.out_of_step and not c.off_axis and not c.turned and not c.clashes and not c.interference_error,
-              f"{label}: {c.name} read at the built turn when shown (out of step {c.out_of_step}, off axis "
-              f"{c.off_axis}, turned {c.turned}), no interference {[(x.gears, round(x.volume, 3)) for x in c.clashes]}")
+        # ModeCheck.turned is unjudged while any body of the train is off its place (the coordinator's correction):
+        # logged, never asserted; where the bodies stand is read from their frames after the press (w8_read_all).
+        check(not c.out_of_step and not c.off_axis and not c.clashes and not c.interference_error,
+              f"{label}: {c.name} found in step and on its axes when shown, nothing put there (out of step "
+              f"{c.out_of_step}, off axis {c.off_axis}), no interference "
+              f"{[(x.gears, round(x.volume, 3)) for x in c.clashes]}; turned {c.turned} (a fact)")
     check(not here.off_axis and not here.clashes and not here.interference_error and not result.senses_unread,
           f"{label}: {mode} after the put on its axes with no interference, every sense read: senses unread "
           f"{result.senses_unread}")
@@ -6629,6 +6673,8 @@ def w8_press_after_turn(worker, desk, label, mode, positions, turns, folder, pre
     check(any(os.path.basename(str(p)).lower() == os.path.basename(box.assembly).lower() for p in result.changed),
           f"{label}: the assembly is among the documents changed: {result.changed}")
     update_marks(worker, desk, result, label, folder)
+    w8_read_all(worker, desk, f"{label}, every mode read after the press", {m: mode_record_frames(desk, m)
+                                                                             for m in box.modes}, mode)
     return result
 
 
@@ -6741,15 +6787,10 @@ def section_s2(worker, excel):
     check(result.ok and not result.failures, f"s2 changed Update: no failure: {result.failures}")
     check(result.put_in == order + ["4L"] and result.visited == order and [m.name for m in result.modes] == order + ["4L"],
           f"s2 changed Update: every mode shown and put, 4L last: put_in {result.put_in}, visited {result.visited}")
-    found = [m.name for m in result.modes if m.turned]
-    if positions is True:
-        check(found == ["2H"], f"s2 changed Update: 2H alone found turned when shown: "
-              f"{[(m.name, m.turned) for m in result.modes]}")
-    elif positions is False:
-        check(not found, f"s2 changed Update: no mode found turned when shown, the last press in 4L having put the "
-              f"shared turn back: {[(m.name, m.turned) for m in result.modes]}")
-    else:
-        say(f"fact    s2 changed Update: found turned when shown {found}")
+    # Where each mode stood before this press was read from frames after the last press in 4L (w8_read_all);
+    # ModeCheck.turned is unjudged while a body of the train is off its place, so it is logged only.
+    say(f"fact    s2 changed Update: each mode's judgement when shown (turned is unjudged with a body off its place): "
+        f"{[(m.name, m.turned, m.off_axis, m.out_of_step) for m in result.modes]}")
     check(all(not m.clashes and not m.interference_error for m in result.modes) and not result.senses_unread,
           "s2 changed Update: no interference in any mode's post-check, every sense read")
     carrier = next(c.component for c in carriers_of(box))
@@ -7099,6 +7140,113 @@ def section_s4(worker, excel):
     end_copy(worker, folder, "s4")
 
 
+# -- W8 s5: the refused mate in one mode, forced (W8-PLAN §5, corrected by W8-REVIEW-TIER11 (3)) ---------------------
+
+S5_HELD = "RangeSlv held in N"
+S5_VALUE = 60.0          # mm: not N's own slide value (56); a redundant pair with equal values is unmeasured (tier 11)
+S5_WATCH = {"on": False, "balloons": [], "windows": []}
+
+
+def s5_doctored(plan, mode="N", value=S5_VALUE):
+    """The s5 plan: the E4's GearboxPlan with a second distance mate on RangeSlv — a copy of its SLIDE ``RangeSlv along
+    Rear`` at ``value`` mm, named S5_HELD — made in ``mode``'s step and on in ``mode`` only (off in every other step).
+    Returns (plan, the op)."""
+    slide = next(op for op in plan.assembly.ops if isinstance(op, base.Mate) and op.name == "RangeSlv along Rear")
+    extra = dataclasses.replace(slide, id="inject1", value=value, name=S5_HELD)
+    steps = []
+    for step in plan.modes_plan.steps:
+        if swbuild.on_in((mode,), step.name):
+            step = dataclasses.replace(step, ops=step.ops + (extra,), on=step.on + (extra.name,))
+        else:
+            step = dataclasses.replace(step, off=step.off + (extra.name,))
+        steps.append(step)
+    modes = dataclasses.replace(plan.modes_plan, steps=tuple(steps))
+    return dataclasses.replace(plan, modes_plan=modes), extra
+
+
+def section_s5(worker, excel):
+    say("== s5  the refused mate in one mode, forced (W8-PLAN §5 as W8-REVIEW-TIER11 (3) corrects it): the E4 built "
+        f"fresh with a second distance mate on RangeSlv ({S5_HELD!r}, {S5_VALUE:g} mm against N's 56) on in N only -> "
+        "the build stops at the make in step 5 while N is shown, \"In mode N, … over-defines the assembly.\"; the parts "
+        "and layout part on record, no assembly file, the document left open and named; the footer never offering the "
+        "same build again; closed as W5's m4 closes it. The watch: an \"Over Defined\" balloon from the make to the "
+        "close is a fact; any other window a STOP")
+    folder, path, book, desk = write_fixture(worker, excel, "s5", spec_e4, keep="TransferCase_E4.xlsx")
+    desk.say_plan(full=False)
+    if desk.plan is None or desk.plan.refusal or desk.plan.modes_plan is None:
+        check(False, f"s5: the E4 plans a build with modes: {desk.plan and desk.plan.refusal!r}")
+        book.close()
+        return
+    plan, extra = s5_doctored(desk.plan)
+    say(f"        doctored: {base.describe(extra)}, made in N's step, on in N, off in "
+        f"{[s.name for s in plan.modes_plan.steps if extra.name in s.off]}")
+    problems = plan.modes_plan.check(plan.assembly)
+    say(f"fact    s5: the doctored modes plan as ModesPlan.check reads it before the build: {problems or 'sound'}")
+    asm_path = os.path.join(folder, "TransferCase_E4.SLDASM")
+    S5_WATCH.update(on=True, balloons=[], windows=[])
+    windows = WINDOWS["count"]
+    try:
+        guard()
+        started = time.monotonic()
+        _, result = desk.build(plan)
+        say(f"fact    s5: the build answered in {time.monotonic() - started:.1f} s; progress steps {desk.steps}")
+        said = desk.note[0] if desk.note else ""
+        say(f"        the status verbatim: {said!r}")
+        asm = result.assembly if result is not None else None
+        lines = list(asm.mate_problems if asm else []) + [str(f[1]) for f in (asm.failures if asm else [])]
+        if result is None:
+            gate = "The modes plan is not sound" in str(desk.error)
+            where = ("the gate before anything is made (swbuild._modes_gate, ModesPlan.check)" if gate else
+                     "a raise before any result")
+            say(f"fact    s5: the step that refused: {where}: {desk.error}")
+            check(False, f"s5: the build stops at the make in step 5 while N is shown, not before: it refused at {where}")
+            made = sorted(n for n in os.listdir(folder) if n.upper().endswith((".SLDPRT", ".SLDASM")))
+            say(f"fact    s5: SolidWorks files in the folder after the refusal: {made}; record "
+                f"{'none' if desk.record is None else 'present'}")
+            check(False, "s5: the parts and layout part saved and on record (the build never reached them)")
+            return
+        refusal = next((p for p in lines if "over-defines the assembly" in p), "")
+        step = ("step 5, the make in N (AddMate5's status sentence)" if refusal and asm.document and not asm.saved
+                else "not step 5's make" + (f": {lines}" if lines else ""))
+        say(f"fact    s5: the step that refused: {step}; the refusal verbatim: {refusal!r}")
+        say(f"        mate problems {asm.mate_problems if asm else None}; failures {asm.failures if asm else None}; "
+            f"left open as {asm.document if asm else None!r}; saved {asm.saved if asm else None!r}; kind "
+            f"{result.kind!r}")
+        check(refusal.startswith("In mode N,") and S5_HELD in refusal and refusal.endswith("over-defines the assembly."),
+              f"s5: the refusal is in mode N, names {S5_HELD} and says it over-defines the assembly: {refusal!r}")
+        check(bool(refusal) and refusal in said, "s5: the status carries the refusal")
+        if asm is not None and asm.document and not asm.saved:
+            REFUSED.append(asm.document)
+        check(asm is not None and asm.document and not asm.saved and not result.ok,
+              f"s5: the build stopped, the assembly not saved, left open as {asm.document if asm else None!r}")
+        titles = run(worker, open_titles)
+        check(asm is not None and asm.document in titles, f"s5: the document is open and named {asm and asm.document!r}: "
+              f"open {titles}")
+        check(not os.path.exists(asm_path), f"s5: no assembly file ({os.path.basename(asm_path)})")
+        check(result.kind == "", f"s5: nothing saved in its place: kind {result.kind!r}")
+        rec = desk.record
+        box = rec.gearbox if rec is not None else None
+        check(rec is not None and rec.parts and box is not None and box.layout and not box.assembly
+              and all(os.path.isfile(e.path) for e in rec.parts) and os.path.isfile(box.layout),
+              f"s5: the parts and the layout part saved and on record, no assembly on record: parts "
+              f"{[os.path.basename(e.path) for e in rec.parts] if rec else None}, layout "
+              f"{os.path.basename(box.layout) if box and box.layout else None}")
+        say(f"fact    s5: carriers on record {[os.path.basename(c.path) for c in carriers_of(box)] if box else None}, "
+            f"each file present {[os.path.isfile(c.path) for c in carriers_of(box)] if box else None}")
+        f = desk.say_footer("s5 refused")
+        check(not f.build_enabled and "Build is available again once the workbook changes" in f.text,
+              "s5: the footer never offers the same build of the unchanged workbook")
+        say("-- s5  the refused document closed, as W5's m4 closes it (this run's modified documents saved first, the "
+            "refused one by its title)")
+        left = run(worker, close_ours)
+        check(not left, f"s5: closed, the refused one by its title: left {left}")
+    finally:
+        S5_WATCH["on"] = False
+        say(f"fact    s5: from the make to the close, balloons {S5_WATCH['balloons'] or 'none'}; other windows "
+            f"{S5_WATCH['windows'] or 'none'} ({WINDOWS['count'] - windows} counted)")
+        book.close()
+
+
 SECTIONS = {"m1": section_m1, "m2": section_m2, "m3": section_m3, "m4": section_m4, "m5": section_m5, "m6": section_m6,
             "m7": section_m7, "m8": section_m8, "rs1": section_rs1, "rs2": section_rs2, "rs3": section_rs3,
             "a": section_a, "a2": section_a2, "a3": section_a3, "b": section_b, "c": section_c,
@@ -7106,7 +7254,8 @@ SECTIONS = {"m1": section_m1, "m2": section_m2, "m3": section_m3, "m4": section_
             "r6": section_r6, "r7": section_r7, "r8": section_r8,
             "p1": section_p1, "p2": section_p2, "p3": section_p3, "p4": section_p4, "p5": section_p5,
             "p6": section_p6, "p7": section_p7,
-            "s0": section_s0, "s1": section_s1, "s2": section_s2, "s3": section_s3, "s4": section_s4}
+            "s0": section_s0, "s1": section_s1, "s2": section_s2, "s3": section_s3, "s4": section_s4,
+            "s5": section_s5}
 
 
 def connect_pid():
