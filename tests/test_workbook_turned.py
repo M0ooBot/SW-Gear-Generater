@@ -315,3 +315,25 @@ def test_a_crossed_pair_off_its_distance_or_its_crossing_says_so(tmp_path, turne
     said = [d.message for d in assessed(tmp_path, two, "S.xlsx").report.diagnostics if d.is_error]
     assert ("Meshes!A2: G1 and G2 are crossed helical gears with profile shift; crossed gears are built without it: "
             "set both shifts to 0.") in said
+
+
+@pytest.mark.parametrize("make, name", [(bevel_reducer, "A.xlsx"), (crossed_slant, "B.xlsx")])
+def test_a_turned_build_on_the_fake_writes_a_record_that_reads_with_each_meshs_sense(tmp_path, turned_findings,
+                                                                                      make, name):
+    """plan -> swbuild.build_gearbox on the fake -> finish_build -> the record written and read back: it reads, and
+    every gear mate holds the sense planned for it, never 0 (W6-INTERFACES §7.1, §7.3)."""
+    from gear_generator import store, swbuild
+    from gear_generator.workbook import gearbox
+    from test_swbuild import FakeSolidWorks, never_exists
+    plan = gearbox.plan_gearbox(assessed(tmp_path, make(), name), None, exists=lambda p: False,
+                                read_sidecar=lambda p: None)
+    assert plan.refusal == "" and plan.motion is not None
+    result = swbuild.build_gearbox(FakeSolidWorks(), **plan.build_kwargs(), exists=never_exists)
+    assert result.ok, result.log_lines()
+    done = gearbox.finish_build(plan, result, None, workbook=str(tmp_path / name), digest="d1", written_by="test",
+                                read_sidecar=lambda p: None)
+    read = store.link_record_from_json(store.link_record_to_json(done.record))
+    assert read == done.record
+    planned = {m.name: m.sense for m in plan.motion.mates if m.kind == motion.MESH}
+    held = {m.name: m.sense for m in read.gearbox.mates if m.kind == motion.MESH}
+    assert held == planned and set(held) == {"G1 meshes G2", "G3 meshes G4"} and 0 not in held.values()
