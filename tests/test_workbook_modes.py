@@ -121,11 +121,124 @@ def test_the_turning_sentence_is_chosen_by_the_running_versions_finding_and_none
     assert ui_text.turning_note(None) == ""
 
 
-@pytest.mark.parametrize("call", [
-    lambda: ui_text.modes_ready_line(None), lambda: ui_text.modes_done_line(None, None),
-    lambda: ui_text.mode_problem("In mode 4L, …"), lambda: ui_text.modes_record_line(None),
-    lambda: ui_text.mode_update_lines(None, None), lambda: ui_text.mode_speed_lines(None, None, "4L"),
-])
-def test_each_modes_sentence_refuses_with_a_sentence_until_c_writes_it(call):
-    with pytest.raises(ValueError, match=r"^The sentence .+ is not written in this version of Gear Generator yet\.$"):
-        call()
+
+# -- B's planning: the fixtures per mode (W8-PLAN §2.2, §2.3) -------------------------------------------------------
+
+import math  # noqa: E402
+from fractions import Fraction  # noqa: E402
+
+from gear_generator import findings  # noqa: E402
+from gear_generator.workbook import assess, model, xlsx  # noqa: E402
+from workbook_fixtures import e4_transfer_case, transfer_case_parallel  # noqa: E402
+
+BOOK = "C:\\Books\\TransferCase.xlsx"
+
+
+def assessed(spec):
+    return assess.assess(replace(spec, source_path=BOOK), [], "C:\\Out\\")
+
+
+def modes_of(spec):
+    return {m.name: m for m in assessed(spec).report.modes}
+
+
+@pytest.mark.parametrize("make", [transfer_case_parallel, e4_transfer_case])
+def test_each_mode_engages_what_the_answer_key_says_and_turns_as_it_says(make):
+    """§2.3, worked by hand: Rear 1500 / 1500 / free / 375, FrontDrv free / 1500 / free / 375, Idler −FrontDrv·30/20,
+    Front −Idler·20/30; In +1500 always."""
+    modes = modes_of(make())
+    assert list(modes) == ["2H", "4H", "N", "4L"]
+    assert {n: m.engaged for n, m in modes.items()} == {
+        "2H": (("RangeSlv", "InDog"),), "4H": (("RangeSlv", "InDog"), ("ModeSlv", "FrontDog")), "N": (),
+        "4L": (("RangeSlv", "LoDog"), ("ModeSlv", "FrontDog"))}
+    expected = {"2H": {"Rear": 1500}, "4H": {"Rear": 1500, "FrontDrv": 1500, "Idler": -2250, "Front": 1500},
+                "N": {}, "4L": {"Rear": 375, "FrontDrv": 375, "Idler": Fraction(-1125, 2), "Front": 375}}
+    for name, m in modes.items():
+        got = {s: m.motion.speeds[s] for s in ("Rear", "FrontDrv", "Idler", "Front") if s in m.motion.speeds}
+        assert got == expected[name] and m.motion.speeds["In"] == 1500 and not m.motion.jammed
+        assert set(m.motion.free) == {"Rear", "FrontDrv", "Idler", "Front"} - set(expected[name])
+    positions = {n: m.positions for n, m in modes.items()}
+    assert positions["4L"] == {"RangeSlv": ("L", 10.0), "ModeSlv": ("4WD", 10.0)}
+    assert positions["N"] == {"RangeSlv": ("N", 0.0), "ModeSlv": ("2WD", 0.0)}
+    assert modes["4L"].placed["RangeSlv"].z_range == (66.0, 74.0) and modes["2H"].placed["ModeSlv"].z_range == (96, 104)
+
+
+@pytest.mark.parametrize("make", [transfer_case_parallel, e4_transfer_case])
+def test_each_modes_ratio_has_one_home(make):
+    """The Speeds line and Export read ``ModeReport.ratio`` / ``ends`` / ``ratio_why`` / ``driven``: In : Rear
+    1.000, 1.000, neutral, 4.000; In : Front not driven (None), 1.000, None, 4.000."""
+    modes = modes_of(make())
+    assert {n: (m.ratio, m.ends, m.ratio_why) for n, m in modes.items()} == {
+        "2H": (1.0, ("In", "Rear"), ""), "4H": (1.0, ("In", "Rear"), ""), "N": (None, ("", ""), "neutral"),
+        "4L": (4.0, ("In", "Rear"), "")}
+    assert {n: m.driven for n, m in modes.items()} == {
+        "2H": {"Rear": 1.0, "Front": None}, "4H": {"Rear": 1.0, "Front": 1.0}, "N": {"Rear": None, "Front": None},
+        "4L": {"Rear": 4.0, "Front": 4.0}}
+    a = assessed(make())
+    assert checks.overall_ratio(a.spec, a.report) == (1.0, "In to Rear", "")          # the first mode's
+    assert a.report.motion is a.report.modes[0].motion
+
+
+def test_the_torques_per_mode_follow_j17_and_the_answer_key():
+    """§2.3's torque table (η 0.98, 10 N·m in): 2H Rear 10 (the idle layshaft branch pruned); 4H Rear 10, shared
+    with FrontDrv, nothing past it; N nothing past In; 4L Lay 19.6, Lo 38.416, Rear 38.416 shared."""
+    modes = modes_of(transfer_case_parallel())
+    torques = {n: {k: round(v, 6) for k, v in m.motion.torques.items()} for n, m in modes.items()}
+    assert torques == {"2H": {"In": 10.0, "Rear": 10.0}, "4H": {"In": 10.0, "Rear": 10.0}, "N": {"In": 10.0},
+                       "4L": {"In": 10.0, "Lay": 19.6, "Lo": 38.416, "Rear": 38.416}}
+    assert {n: (m.motion.shared, m.motion.past_split) for n, m in modes.items()} == {
+        "2H": ({}, ()), "4H": ({"Rear": ("FrontDrv",)}, ("FrontDrv", "Idler", "Front")), "N": ({}, ()),
+        "4L": ({"Rear": ("FrontDrv",)}, ("FrontDrv", "Idler", "Front"))}
+    e4 = modes_of(e4_transfer_case())
+    assert {k: round(v, 6) for k, v in e4["2H"].motion.torques.items()} == {"In": 10.0, "Rear": 10.0}  # not zeroed
+    assert e4["4L"].motion.torques["Rear"] == pytest.approx(10 * (1 + 0.9604 * 3))       # W7's rule, then shared
+    assert e4["4L"].motion.shared == {"Rear": ("FrontDrv",)}
+
+
+@pytest.mark.parametrize("make", [transfer_case_parallel, e4_transfer_case])
+def test_the_fixtures_check_clean_and_say_their_modes(make):
+    a = assessed(make())
+    assert a.report.diagnostics == []
+    words = {"TransferCase_Parallel": "Parallel train with modes · 4 meshes",
+             "TransferCase_E4": "Planetary and parallel with modes, Ring fixed · 3 planets"}[make().box.name]
+    assert a.report.worked_out_as == f"{words} · 2H 1.000 : 1, 4H 1.000 : 1, N neutral, 4L 4.000 : 1"
+
+
+@pytest.mark.parametrize("make", [transfer_case_parallel, e4_transfer_case])
+def test_the_phases_put_each_dog_in_its_sleeves_spaces(make):
+    """§2.3 (mod 12°): InDog 0, RangeSlv 6°, LoDog 0, FrontDog 0, ModeSlv 6°."""
+    theta = {g: math.degrees(t) % 12.0 for g, t in assessed(make()).report.theta.items()}
+    got = {g: round(min(theta[g], 12.0 - theta[g]) if theta[g] > 6.0 + 1e-9 else theta[g], 9)
+           for g in ("InDog", "RangeSlv", "LoDog", "FrontDog", "ModeSlv")}
+    assert got == {"InDog": 0.0, "RangeSlv": 6.0, "LoDog": 0.0, "FrontDog": 0.0, "ModeSlv": 6.0}
+
+
+# Taken at 120192d (before any of B's W8 planning code), the turned read-back finding set.
+BEFORE_W8 = {
+    "Reducer_12to1.xlsx": "41da0447e37015088d223b107ff53ebe82c983ebb38b5e6a1860b402cfd2c490",
+    "Arc_Move.xlsx": "e6f8658f8d42437042b541d0e5a45fc7157caa5972fe044bc51b24f545d78b1e",
+    "Risky_Placements.xlsx": "c221e0fd722e27e6562ec8e72c53a933d4e2b10ceb5de99a132377004d464c65",
+    "bevel_reducer": "a881d20f11e59002d24c44d9c355646c95236a65a507449711a2055b1a709b92",
+    "crossed_slant": "5401c79bb142cb17e3954ec0689413e779ed05450e3d314891f785ad6ac76d04",
+    "planetary_4to1": "c7e45afa64a298687580bc8f58ba77ba139c2c6253e209bf7b4ebd8cc4a6a0a4",
+    "sun_held": "ae7b987d760f34333c00c333b4ec39dcc480df3be4f98bb916159abc8476a5e7",
+    "on_z_minus": "e318cb99e5480cde17e6391bac59cf0be10c355a13a8b53914a006418b70883c",
+    "carrier_held": "b62225940a331243c462fec38ca68a426cc6b2effaaae611e15dfa1a3834a74c",
+}
+
+
+@pytest.mark.parametrize("name", sorted(BEFORE_W8))
+def test_every_workbook_before_w8_plans_bit_for_bit_as_it_did(name, monkeypatch):
+    import os
+    import test_workbook_planetary as planetary_tests
+    import test_workbook_turned as turned
+    monkeypatch.setattr(findings, "TURNED_GEAR_MATE_SENSE_READ_BACK", "entity senses", raising=False)
+    if name.endswith(".xlsx"):
+        here = os.path.join(os.path.dirname(__file__), "fixtures", "excel-windows")
+        spec, diagnostics = model.from_book(xlsx.read(os.path.join(here, name)))
+        a = assess.assess(spec, diagnostics, "C:\\Out\\")
+    elif hasattr(turned, name):
+        a = assess.assess(replace(getattr(turned, name)(), source_path="C:\\B\\W.xlsx"), [], "C:\\Out\\")
+    else:
+        a = planetary_tests.direct(getattr(planetary_tests, name)())
+    assert planetary_tests._fingerprint(a) == BEFORE_W8[name]

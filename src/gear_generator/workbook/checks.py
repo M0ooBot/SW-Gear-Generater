@@ -18,7 +18,7 @@ from typing import Dict, List, Optional, Tuple
 
 from ..gears import helical, internal as internal_gears, pair as pairs, spur
 from ..gears.base import ERROR, WARNING, Diagnostic
-from . import fixes as fixes_mod, geometry, kinematics, planetary
+from . import fixes as fixes_mod, geometry, kinematics, modes as modes_mod, planetary
 from .fixes import Fix
 from .geometry import Layout, Placed
 from .model import GearboxSpec
@@ -46,6 +46,14 @@ class ModeReport:
     off: Tuple[Tuple[str, str], ...] = ()
     placed: Dict[str, Placed] = field(default_factory=dict)
     motion: kinematics.Motion = field(default_factory=kinematics.Motion)
+    # W8 (B, additive; the one home of a mode's ratio, for the Speeds line and Export): ``ends`` the first input
+    # and the first output joined to it that turns here (``("", "")`` without); ``ratio`` input speed ÷ that
+    # output's, None without; ``ratio_why`` ``""`` with a ratio, else why — ``"neutral"`` when no output turns
+    # here; ``driven`` every output -> input ÷ output here, None when it does not turn here ("not driven").
+    ends: Tuple[str, str] = ("", "")
+    ratio: Optional[float] = None
+    ratio_why: str = ""
+    driven: Dict[str, Optional[float]] = field(default_factory=dict)
 
 
 @dataclass
@@ -112,6 +120,13 @@ def check(spec: GearboxSpec, skip_gears=()) -> Report:
     # (its ``later`` is set only for the layouts returned above).
     gears = {g.id: g for g in spec.gears}
     placed = lay.placed
+    # W8 (W8-PLAN §1.2-§1.3): every slider stands at the first mode's position for the checks of the whole box;
+    # every other mode re-places its sliders below. A sleeve or dog on Meshes, a dog with Slides, a pick with no 0.
+    picks, pick_errors = modes_mod.mode_picks(spec)
+    report.diagnostics.extend(pick_errors)
+    report.diagnostics.extend(modes_mod.row_errors(spec))
+    if picks:
+        placed.update(modes_mod.place_mode(spec, placed, picks[0]))
     for gear_id, why in lay.problems.items():
         _error(report, spec.cell("Gears", gears[gear_id].row, "id"), f"{gear_id} could not be placed: {why}")
 
@@ -124,10 +139,11 @@ def check(spec: GearboxSpec, skip_gears=()) -> Report:
     listed = {frozenset(pair) for pair in expanded} | {frozenset((m.a, m.b)) for m in spec.meshes}
     report.stages = planetary.stages(spec) if any(p.carrier for p in placed.values()) else ()
     unfit: List[Tuple[str, str]] = []              # Meshes rows that fit no carrier: their consequences are not said
+    clutches = {g.id for g in spec.gears if g.kind_word() in (modes_mod.SLEEVE, modes_mod.DOG)}
     for mesh in spec.meshes:
         a, b = first.get(mesh.a), first.get(mesh.b)
-        if a is None or b is None:
-            continue
+        if a is None or b is None or mesh.a in clutches or mesh.b in clutches:
+            continue                               # a sleeve or dog on Meshes is an error of its own (modes)
         where = spec.cell("Meshes", mesh.row, "a")
         if a.carrier or b.carrier:
             a, b = _as_row(a), _as_row(b)
@@ -153,8 +169,11 @@ def check(spec: GearboxSpec, skip_gears=()) -> Report:
                 report.meshes[(mesh.a, mesh.b)] = laid
     assembly_said = _check_stages(report, spec, placed) if report.stages else False
 
-    report.motion = kinematics.solve(spec, skip_gears, senses={key: m.sense for key, m in report.meshes.items()
-                                                               if not m.problem})
+    senses = {key: m.sense for key, m in report.meshes.items() if not m.problem}
+    report.motion = kinematics.solve(spec, skip_gears, senses=senses)
+    if picks:
+        report.modes = tuple(_mode_report(report, spec, skip_gears, senses, placed, p) for p in picks)
+        report.motion = report.modes[0].motion
     # A mesh that fits no carrier is the one true error: the speeds, pass-overs and phase loops it upsets are not
     # said beside it (the shafts of its stage are left out of those).
     shaft_of = {g.id: g.shaft for g in spec.gears}
@@ -164,11 +183,20 @@ def check(spec: GearboxSpec, skip_gears=()) -> Report:
         upset.update(x.carrier for x in placed.values() if x.row in (a_id, b_id) and x.carrier)
     upset.update(x.id for x in spec.shafts if x.mount() in upset)
     _check_clearances(report, spec, placed, listed)
+    for m in report.modes[1:]:                      # W8: each other mode's sliders where that mode puts them
+        here = dict(placed)
+        here.update(m.placed)
+        _check_clearances(report, spec, here, listed, only=set(m.placed), said={d.message for d in report.diagnostics})
     _check_shafts(report, spec, placed, upset)
     _check_turned_clearances(report, spec, placed, listed)
     _check_motion(report, spec, upset)
+    couplings = []
+    for m in report.modes:
+        couplings += [pair for pair in m.engaged if pair not in couplings]
+    order = [g.id for g in spec.gears]
+    couplings.sort(key=lambda pair: order.index(pair[1]))       # the dogs' Gears-sheet order (W8-PLAN §1.6)
     report.theta, conflicts = geometry.phases(spec, placed, with_conflicts=True, meshes_=report.meshes,
-                                              leave_out=unfit)
+                                              leave_out=unfit, couplings=couplings)
     carried = {p.gear for p in placed.values() if p.carrier}
     for gear_id, other in conflicts:
         row = placed[gear_id].row or gear_id
@@ -183,6 +211,54 @@ def check(spec: GearboxSpec, skip_gears=()) -> Report:
         _warning(report, spec.cell("Gears", gears[row].row, "id"), sentence)
     report.worked_out_as = _worked_out_as(spec, report)
     return report
+
+
+def _mode_report(report: Report, spec: GearboxSpec, skip_gears, senses, placed: Dict[str, Placed],
+                 picks: "modes_mod.Picks") -> "ModeReport":
+    """One mode worked out (W8-PLAN §1.3-§1.5): its sliders placed, what it engages, its speeds and torques (J17),
+    its jam said at its cell, and its ratio (the one home: :func:`mode_ratio`)."""
+    here = dict(placed)
+    moved = modes_mod.place_mode(spec, placed, picks)
+    here.update(moved)
+    found = modes_mod.engagement(spec, here, picks)
+    report.diagnostics.extend(d for d in found.diagnostics if d not in report.diagnostics)
+    motion = kinematics.solve(spec, skip_gears, senses=senses, leave_out=found.out_of_mesh, couples=found.engaged)
+    out = ModeReport(picks.name, picks.row, dict(picks.positions), tuple(found.engaged), tuple(found.out_of_mesh),
+                     (), moved, motion)
+    if motion.jammed and spec.meshes:
+        where = spec.cell("Modes", picks.row, "name") if picks.row else "Modes"
+        twice = [s for s in {s for s, _ in found.engaged} if sum(1 for x, _ in found.engaged if x == s) > 1]
+        if twice:
+            dogs = [d for s, d in found.engaged if s == twice[0]]
+            gears = {g.id: g for g in spec.gears}
+            _error(report, where, f"in {picks.name} {twice[0]} engages {' and '.join(dogs)} at once, which joins "
+                                  f"{' to '.join(gears[d].shaft for d in dogs)}: as written the box is jammed in this "
+                                  "mode.")
+        else:
+            _error(report, where, f"in {picks.name or 'its one mode'} the meshes and couplings contradict each "
+                                  "other: as written the box is jammed in this mode.")
+    ratio, ends, why, driven = mode_ratio(spec, motion)
+    out.ratio, out.ends, out.ratio_why, out.driven = ratio, ends, why, driven
+    return out
+
+
+def mode_ratio(spec: GearboxSpec, motion: kinematics.Motion) -> Tuple[Optional[float], Tuple[str, str], str,
+                                                                        Dict[str, Optional[float]]]:
+    """The one home of a mode's ratio (for the Speeds line, Export and :func:`_worked_out_as`): ``(input ÷ output,
+    (input, output), why there is none, every output -> input ÷ output or None)``. The input is the first one that
+    turns; the output the first output that turns in this mode — a free output is "not driven" (None) and with no
+    output turning the mode is ``"neutral"``."""
+    inputs = [s for s in spec.shafts if s.role == "input" and motion.speeds.get(s.id)]
+    outputs = [s for s in spec.shafts if s.role == "output"]
+    if not inputs:
+        return None, ("", ""), NO_ENDS, {s.id: None for s in outputs}
+    first = inputs[0]
+    driven = {s.id: (abs(float(motion.speeds[first.id] / motion.speeds[s.id])) if motion.speeds.get(s.id) else None)
+              for s in outputs}
+    turning = [s.id for s in outputs if driven[s.id] is not None]
+    if not turning:
+        return None, ("", ""), "neutral", driven
+    return driven[turning[0]], (first.id, turning[0]), "", driven
 
 
 def _as_row(p: Placed) -> Placed:
@@ -447,10 +523,20 @@ def _check_ring_tips(report: Report, where: str, pinion: Placed, ring: Placed, p
                                 "plain teeth; give the ring more teeth or the pinion fewer.")
 
 
-def _check_clearances(report: Report, spec: GearboxSpec, placed: Dict[str, Placed], listed) -> None:
-    """Gears on different shafts that do not mesh, and share some height: they must not touch."""
+def _check_clearances(report: Report, spec: GearboxSpec, placed: Dict[str, Placed], listed, *, only=None,
+                      said=frozenset()) -> None:
+    """Gears on different shafts that do not mesh, and share some height: they must not touch. W8: a sleeve and a
+    dog are never judged here (engagement owns them, ``modes.engagement``: a coaxial pair is engaged whole, apart, or
+    an error); ``only`` limits the pairs to those with one of its gears (another mode's sliders), and a sentence in
+    ``said`` is not said twice."""
     gears = {g.id: g for g in spec.gears}
+    clutch = {g.id: g.kind_word() for g in spec.gears if g.kind_word() in (modes_mod.SLEEVE, modes_mod.DOG)}
+    start = len(report.diagnostics)
     for a, b in combinations(placed.values(), 2):
+        if only is not None and a.gear not in only and b.gear not in only:
+            continue
+        if {clutch.get(a.gear), clutch.get(b.gear)} == {modes_mod.SLEEVE, modes_mod.DOG}:
+            continue
         if a.shaft == b.shaft or frozenset((a.gear, b.gear)) in listed or not geometry.parallel(a, b):
             continue                                   # across an angle: _check_turned_clearances
         if a.carrier and a.row == b.row and a.carrier == b.carrier:
@@ -484,6 +570,8 @@ def _check_clearances(report: Report, spec: GearboxSpec, placed: Dict[str, Place
         elif d < a.outer_radius + b.outer_radius + gap:
             _error(report, where, f"{a.gear} and {b.gear} clash: {_n(d)} mm apart, with tips reaching "
                                   f"{_n(a.outer_radius + b.outer_radius)} mm and less than {_n(gap)} mm to spare.")
+    if said:
+        report.diagnostics[start:] = [d for d in report.diagnostics[start:] if d.message not in said]
 
 
 def _hands(a: Placed, b: Placed) -> str:
@@ -630,6 +718,7 @@ def _check_shafts(report: Report, spec: GearboxSpec, placed: Dict[str, Placed], 
         # pass over each other's axes by design, and a carrier needs no gear of its own.
         on_carrier_axis = {x.id for x in spec.shafts if x.mount() == "frame" and x.id
                            and any(planetary.coaxial(spec, x.id, c) for c in carriers)}
+    on_carrier_axis |= _in_line(spec)
     for shaft in spec.shafts:
         if shaft.id and not any(g.shaft == shaft.id for g in spec.gears) and shaft.id not in carriers:
             _warning(report, spec.cell("Shafts", shaft.row, "id"), f"{shaft.id} carries no gear.")
@@ -639,7 +728,7 @@ def _check_shafts(report: Report, spec: GearboxSpec, placed: Dict[str, Placed], 
             if shaft_id == g.shaft or not geometry.parallel(g, on[0]):
                 continue                               # a shaft across an angle: _check_turned_clearances
             if g.shaft in on_carrier_axis and shaft_id in on_carrier_axis:
-                continue
+                continue                           # one line by design: a carrier's axis, or shafts a sleeve joins
             if carriers and (planetary.copy_of(g.shaft)[0] in upset or shaft_id in upset):
                 continue                               # a member off its carrier's axis: said once, at its mesh
             lo = min(p.z_range[0] for p in on)
@@ -658,6 +747,25 @@ def _check_shafts(report: Report, spec: GearboxSpec, placed: Dict[str, Placed], 
                          "would be cut.")
 
 
+def _in_line(spec: GearboxSpec) -> set:
+    """W8 (decided deliberately, after the interface review): frame shafts on one line that a sleeve joins — a
+    sleeve's shaft and the shafts of the dogs on its axis — are coaxial by design, as a carrier's members are, and
+    pass over each other's axes without a warning. Every other coaxial pair keeps W3's warning."""
+    shafts = {s.id: s for s in spec.shafts if s.id and s.mount() == "frame"}
+    point = {}
+    for sid, s in shafts.items():
+        try:
+            point[sid] = (float(s.x or 0), float(s.y or 0))
+        except ValueError:
+            continue
+    out = set()
+    for sleeve in (g for g in spec.gears if g.kind_word() == modes_mod.SLEEVE and g.shaft in point):
+        for dog in (g for g in spec.gears if g.kind_word() == modes_mod.DOG and g.shaft in point):
+            if dog.shaft != sleeve.shaft and point[dog.shaft] == point[sleeve.shaft]:
+                out.update({sleeve.shaft, dog.shaft})
+    return out
+
+
 def _check_motion(report: Report, spec: GearboxSpec, upset=frozenset()) -> None:
     motion = report.motion
     if motion.jammed:
@@ -672,8 +780,11 @@ def _check_motion(report: Report, spec: GearboxSpec, upset=frozenset()) -> None:
         return
     gears_meshed = {g for m in spec.meshes for g in (m.a, m.b)}
     meshed_shafts = {g.shaft for g in spec.gears if g.id in gears_meshed}
+    free_everywhere = set(motion.free)
+    for m in report.modes:                          # W8 (J16): free in some mode is the Speeds panel's to say
+        free_everywhere &= set(m.motion.free)
     for shaft in spec.shafts:
-        if shaft.id not in motion.free or shaft.id in upset:
+        if shaft.id not in free_everywhere or shaft.id in upset:
             continue
         where = spec.cell("Shafts", shaft.row, "id")
         if shaft.id in meshed_shafts:
@@ -748,8 +859,14 @@ def overall_ratio(spec: GearboxSpec, report: Report) -> Tuple[Optional[float], s
     if missing:
         one = len(missing) == 1
         return None, "", f"{', '.join(missing)} {'meshes but is' if one else 'mesh but are'} not laid out"
+    if report.modes:
+        # W8: the ratio is each mode's (``ModeReport.ratio``, :func:`mode_ratio`); the box's is its first mode's.
+        first = report.modes[0]
+        if first.ratio is None:
+            return None, "", first.ratio_why
+        return first.ratio, f"{first.ends[0]} to {first.ends[1]}", ""
     if spec.modes or any(g.kind_word() in MODE_KINDS or g.slides.strip() for g in spec.gears):
-        return None, "", "it changes with the modes, worked out in phase W8"
+        return None, "", "it changes with the modes"
     motion = report.motion
     first, last, why = _ends(spec, motion)
     if first is None:
@@ -776,8 +893,22 @@ def _worked_out_as(spec: GearboxSpec, report: Report) -> str:
         if geometry.PARALLEL in kinds:
             words.append("parallel")
         pieces[0] = " and ".join(words) + " train" if len(words) > 1 else words[0] + " train"
+    elif report.modes:
+        pieces[0] = "Parallel train with modes"
     elif any(p.internal for p in report.layout.placed.values()):
         pieces[0] = "Parallel train with a ring"
+    if report.modes and report.modes[0].name:
+        # W8-PLAN §1.4: each mode's ratio, from the one home (ModeReport.ratio); "neutral" with no output turning.
+        meshes = len([m for m in spec.meshes if not ({m.a, m.b} & {g.id for g in spec.gears
+                                                                    if g.kind_word() in MODE_KINDS})])
+        pieces[1] = f"{meshes} mesh{'es' if meshes != 1 else ''}"
+        if report.stages:
+            head, comma, held = pieces[0].partition(",")
+            pieces[0] = f"{head} with modes{comma}{held}"
+            pieces[1] = f"{report.stages[0].copies} planet{'s' if report.stages[0].copies != 1 else ''}"
+        said = ", ".join(f"{m.name} {m.ratio:.3f} : 1" if m.ratio is not None else f"{m.name} {m.ratio_why}"
+                         for m in report.modes)
+        return " · ".join(pieces + [said])
     motion = report.motion
     ratio, _, why = overall_ratio(spec, report)
     if ratio is None and why != NO_ENDS:

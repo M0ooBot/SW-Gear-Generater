@@ -225,7 +225,7 @@ class Layout:
 
 
 # The kinds no phase before W8 lays out, as a few words for a list of what was left out.
-LATER_KINDS = {"sleeve": "a sleeve, phase W8", "dog": "a dog ring, phase W8"}
+LATER_KINDS: Dict[str, str] = {}      # W8 lays out sleeves and dogs: no kind waits for a later phase now
 
 
 def layout(spec: GearboxSpec, skip_gears=()) -> Layout:
@@ -426,7 +426,7 @@ def mesh_plane(a: Placed, b: Placed) -> float:
 
 
 def phases(spec: GearboxSpec, placed: Dict[str, Placed], with_conflicts: bool = False,
-           meshes_: Optional[Dict[Tuple[str, str], "MeshGeometry"]] = None, leave_out=()):
+           meshes_: Optional[Dict[Tuple[str, str], "MeshGeometry"]] = None, leave_out=(), couplings=()):
     """θ for every gear reachable through the meshes, radians; with ``with_conflicts``, also the loops that
     do not close.
 
@@ -436,6 +436,10 @@ def phases(spec: GearboxSpec, placed: Dict[str, Placed], with_conflicts: bool = 
     since nothing fixes one to the other until W5's lock. A gear reached a
     second way must agree, to a hundredth of its pitch; one that does not is
     a loop that does not close, reported as ``(gear, the gear asking otherwise)``.
+
+    W7: ``leave_out`` names Meshes rows (row ids) not walked — a mesh that fits no carrier. W8 (W8-PLAN §1.6):
+    ``couplings`` (sleeve, dog) pairs engaged in some mode, walked after the meshes: the dog's teeth sit in the
+    sleeve's spaces, ``g_S ≡ g_D + π/z (mod 2π/z)`` in global space angles.
     """
     meshes: Dict[str, List[str]] = {}
     skip = {tuple(pair) for pair in leave_out}   # W7: Meshes rows (by row ids) that fit no carrier are not walked
@@ -444,6 +448,12 @@ def phases(spec: GearboxSpec, placed: Dict[str, Placed], with_conflicts: bool = 
             continue
         meshes.setdefault(a, []).append(b)
         meshes.setdefault(b, []).append(a)
+    coupled = set()
+    for s_, d_ in couplings:
+        if s_ in placed and d_ in placed:
+            meshes.setdefault(s_, []).append(d_)
+            meshes.setdefault(d_, []).append(s_)
+            coupled.update({(s_, d_), (d_, s_)})
     inputs = {s.id for s in spec.shafts if s.role == "input"}
     starts = [g for g in placed if placed[g].shaft in inputs] + list(placed)
     theta: Dict[str, float] = {}
@@ -457,7 +467,11 @@ def phases(spec: GearboxSpec, placed: Dict[str, Placed], with_conflicts: bool = 
             p = queue.popleft()
             for q in meshes.get(p, []):
                 turned = None
-                if not parallel(placed[p], placed[q]):
+                if (p, q) in coupled:
+                    plane = (placed[q].z_range[0] + placed[q].z_range[1]) / 2.0
+                    wanted = placed[q].theta_for(placed[p].space_angle(theta[p], plane) + math.pi / placed[q].teeth,
+                                                 plane)
+                elif not parallel(placed[p], placed[q]):
                     turned = (meshes_ or {}).get((p, q)) or (meshes_ or {}).get((q, p))
                     if turned is None or turned.problem:
                         try:

@@ -123,7 +123,7 @@ class Gear:
             helix_angle=self.helix_angle,
             hand=self.hand or "right",
             groove=self.groove,
-            teeth_side=self.side or "external",
+            teeth_side=self.side or ("internal" if self.kind_word() == "sleeve" else "external"),   # W8: J3
             rim=self.rim,
             shaft_angle="90",
             mate_teeth="",
@@ -425,6 +425,7 @@ def _read_modes(reader: _Reader, sheet: Optional[Sheet]) -> Tuple[List[Mode], Li
             continue
         slider_cols.append((c, t))
     reader.columns["Modes"] = {"name": name_col}
+    reader.columns["Modes"].update({t: c for c, t in slider_cols})     # W8: a pick's cell, by its slider column
     reader.slider_columns = {t: c for c, t in slider_cols}
     modes = []
     for row in range(2, sheet.max_row() + 1):

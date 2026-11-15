@@ -248,17 +248,14 @@ def test_export_as_without_a_good_read_is_disabled_and_says_why(tmp_path):
 
 def test_the_box_size_names_what_it_leaves_out(tmp_path):
     """Review repro r3: a gear not laid out (here a bevel gear that meshes nothing, an error of its own since W6)
-    and a sleeve (W8) cannot be counted in the size — it says so rather than giving 37 mm in Z as the whole box. A
-    sleeve also makes the ratio depend on the modes, so it is withheld."""
+    cannot be counted in the size — it says so rather than giving 37 mm in Z as the whole box. (A sleeve, W8, is laid
+    out and counted.)"""
     spec = reducer()
-    gears = spec.gears + (model.Gear("G5", "S3", "80", "bevel", "external", "40", "3", "", "25", "16"),
-                          model.Gear("G6", "S1", "-60", "sleeve", "external", "30", "2", "", "30", ""))
+    gears = spec.gears + (model.Gear("G5", "S3", "80", "bevel", "external", "40", "3", "", "25", "16"),)
     spec, _ = read(write(tmp_path, model.replace(spec, gears=gears)))
     rows = export.results_sheet(spec, checks.check(spec), when="now").rows
     labels = [r[0] if r else "" for r in rows]
-    assert rows[labels.index(export.RESULTS_LEFT_OUT)] == [export.RESULTS_LEFT_OUT,
-                                                           "G5 (an error of its own), G6 (a sleeve, phase W8)"]
-    assert rows[labels.index(export.RESULTS_RATIO)][1:] == ["—", "it changes with the modes, worked out in phase W8"]
+    assert rows[labels.index(export.RESULTS_LEFT_OUT)] == [export.RESULTS_LEFT_OUT, "G5 (an error of its own)"]
 
 
 def test_a_meshing_gear_with_an_error_withholds_the_ratio_and_is_named(tmp_path):

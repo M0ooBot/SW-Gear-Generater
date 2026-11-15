@@ -34,10 +34,7 @@ from .model import Gear, GearboxSpec
 PART_SUFFIX = ".SLDPRT"
 
 # Kinds a later phase builds: what such a row is, and the phase that builds it (PLAN-WORKBOOK §6).
-LATER = {
-    "sleeve": ("a sleeve", "sleeves are built in phase W8, with modes"),
-    "dog": ("a dog ring", "dog rings are built in phase W8, with modes"),
-}
+LATER: Dict[str, Tuple[str, str]] = {}     # W8 is the last phase: sleeves and dogs are built (gears/clutch.py)
 
 # A GearSpec field's diagnostics belong to a workbook column; most share the name.
 FIELD_COLUMN = {"teeth_side": "side", "recipe": "flank", "name": "part_name"}
@@ -193,16 +190,7 @@ def later_rows(spec: GearboxSpec) -> List[Diagnostic]:
         where = spec.cell("Gears", gear.row, "id")
         if gear.kind_word() in LATER:
             refuse(where, _later_kind(gear))
-        elif gear.slides.strip():
-            refuse(where, f"{gear.id} slides: sliding gears are placed in phase W8, with modes, and it is checked "
-                          "only at its At until then.")
-    if spec.modes:
-        names = [m.name for m in spec.modes]
-        listed = names[0] if len(names) == 1 else ", ".join(names[:-1]) + " and " + names[-1]
-        one = len(names) == 1
-        refuse(spec.cell("Modes", spec.modes[0].row, "name"),
-               f"{listed} {'is a mode: it becomes' if one else 'are modes: they become'} the assembly's "
-               f"configuration{'' if one else 's'} in phase W8.")
+    # W8 builds sliding gears, sleeves, dogs and modes: none waits for a later phase now.
     return out
 
 

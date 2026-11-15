@@ -52,6 +52,12 @@ class Motion:
     relative: Dict[str, Fraction] = field(default_factory=dict)
     held: Dict[str, float] = field(default_factory=dict)
     torque_note: str = ""
+    # W8 (B, additive; W8-PLAN §1.4, J17; the review's M2): ``shared`` each output that also drives onward in this
+    # mode -> the shafts it drives onward (in the order the walk meets them): it is given the torque that arrives at
+    # it, shared with those (the share depends on the loads); ``past_split`` every turning shaft beyond such an
+    # output, in Shafts-sheet order, which is given no torque.
+    shared: Dict[str, Tuple[str, ...]] = field(default_factory=dict)
+    past_split: Tuple[str, ...] = ()
 
     @property
     def settled(self) -> bool:
@@ -105,14 +111,20 @@ def _fraction(text: str) -> Fraction:
     return Fraction(str(text).strip().replace("−", "-"))
 
 
-def solve(spec: GearboxSpec, skip_gears=(), senses: Optional[Mapping[Tuple[str, str], int]] = None) -> Motion:
+def solve(spec: GearboxSpec, skip_gears=(), senses: Optional[Mapping[Tuple[str, str], int]] = None, *,
+          leave_out=(), couples=None) -> Motion:
     """Every shaft's speed and torque, or why they cannot be said.
 
     W6 (Agent B; W6-PLAN §2.4, D7): ``senses`` maps a listed mesh, keyed by the ordered pair ``(a, b)`` as its
     Meshes row lists it, to ``c`` (±1) in the own-axis row ``z_a·ω_a + c·z_b·ω_b = 0`` (``geometry.MeshGeometry.
     sense``); every caller passes it (``checks.check``). None is W3's behaviour exactly. A mesh with no sense, or
-    whose gears are not placed, is left out. Until B rewrites the system in own-axis unknowns, a given ``senses``
-    is a stub."""
+    whose gears are not placed, is left out.
+
+    W8 (W8-PLAN §1.4): one mode's solve — ``leave_out`` the Meshes rows (row ids) a slide takes out of mesh there;
+    ``couples`` the (sleeve, dog) pairs engaged there, each a row ``ω_S − (a_S·a_D)·ω_D = 0`` (the two shafts turn
+    as one about their common line). Given ``couples`` (a list, empty for neutral), the torques follow J17: a
+    coupling is a lossless 1 : 1 link, a branch that reaches no output carries none, and an output shaft that also
+    drives onward is a split, given what arrives at it and marked shared (``Motion.shared``), nothing past it."""
     motion = Motion()
     shafts = [s for s in spec.shafts if s.id]
     from . import planetary
@@ -160,9 +172,12 @@ def solve(spec: GearboxSpec, skip_gears=(), senses: Optional[Mapping[Tuple[str, 
             r[index[shaft.id]] = Fraction(1)
             rows.append(r)
     meshes = []
+    left_out = {tuple(pair) for pair in leave_out}
     for mesh in spec.meshes:
         a, b = gears.get(mesh.a), gears.get(mesh.b)
         if a is None or b is None or a.shaft not in index or b.shaft not in index or a.shaft == b.shaft:
+            continue
+        if (mesh.a, mesh.b) in left_out:
             continue
         c = _sense(mesh, a, b, direction, senses)
         if c is None:
@@ -185,6 +200,19 @@ def solve(spec: GearboxSpec, skip_gears=(), senses: Optional[Mapping[Tuple[str, 
         rows.append(r)
         meshes.append((mesh, a, b, za, zb))
 
+    links: List[Tuple[str, str]] = []
+    for sleeve, dog in (couples or ()):
+        a, b = gears.get(sleeve), gears.get(dog)
+        if a is None or b is None or a.shaft not in index or b.shaft not in index or a.shaft == b.shaft:
+            continue
+        if a.shaft not in direction or b.shaft not in direction:
+            continue
+        r = row()
+        r[index[a.shaft]] += 1
+        r[index[b.shaft]] -= round(sum(x * y for x, y in zip(direction[a.shaft], direction[b.shaft])))
+        rows.append(r)
+        links.append((a.shaft, b.shaft))
+
     solution, free, consistent = _reduce(rows, width)
     if not consistent:
         motion.jammed = ("The meshes and the fixed or input shafts contradict each other: as written the box "
@@ -202,7 +230,10 @@ def solve(spec: GearboxSpec, skip_gears=(), senses: Optional[Mapping[Tuple[str, 
             if carrier != FRAME and shaft.id in motion.speeds and carrier in motion.speeds:
                 s_p = round(sum(x * y for x, y in zip(direction[shaft.id], direction[carrier])))
                 motion.relative[shaft.id] = motion.speeds[shaft.id] - s_p * motion.speeds[carrier]
-    _torques(spec, motion, inputs, meshes, direction if mounted else None)
+    if couples is not None:
+        _mode_torques(spec, motion, inputs, meshes, links, direction if mounted else None)
+    else:
+        _torques(spec, motion, inputs, meshes, direction if mounted else None)
     return motion
 
 
@@ -233,10 +264,19 @@ def _reduce(rows: List[List[Fraction]], width: int) -> Tuple[Dict[int, Fraction]
     return settled, free, consistent
 
 
-_STAGE = "\0stage"        # the planetary stage as one link of the power path (W7-PLAN §2.5, reading J10)
+_STAGE = "\0stage"
+_COUPLE = "\0couple:"      # W8: an engaged coupling as a link of the power path, to the shaft named after it        # the planetary stage as one link of the power path (W7-PLAN §2.5, reading J10)
 
 
-def _torques(spec: GearboxSpec, motion: Motion, inputs, meshes, direction=None) -> None:
+def _mode_torques(spec: GearboxSpec, motion: Motion, inputs, meshes, couples, direction=None) -> None:
+    """One mode's torques (W8-PLAN §1.4, J17): W3's walk (with W7's stage) with every engaged coupling a lossless
+    1 : 1 link, a branch that reaches no output pruned before the walk, and an output that also drives onward a
+    split — given the torque arriving at it, marked in ``motion.shared``, nothing past it."""
+    _torques(spec, motion, inputs, meshes, direction, couples=tuple(couples), modes=True)
+
+
+def _torques(spec: GearboxSpec, motion: Motion, inputs, meshes, direction=None, *, couples=(),
+             modes: bool = False) -> None:
     """Torque along the power path from the first input, gear to gear, through each mesh's efficiency.
 
     A gear passes ``T · z_out / z_in · η`` to the gear it drives. A shaft takes the torque of the gear driven on
@@ -287,21 +327,82 @@ def _torques(spec: GearboxSpec, motion: Motion, inputs, meshes, direction=None) 
             for mesh, _a, _b, _za, _zb in stage_meshes:
                 eta0 *= (float(mesh.efficiency) if mesh.efficiency else box_eta) / 100.0
     used = [False]
+    # W8 (modes only): couplings as shaft-to-shaft links, and which links lead on to an output at all.
+    coupled: Dict[str, List[str]] = {}
+    for p, q in couples:
+        coupled.setdefault(p, []).append(q)
+        coupled.setdefault(q, []).append(p)
+    outputs = {x.id for x in spec.shafts if x.role == "output"}
+
+    def neighbours(shaft: str) -> List[str]:
+        out = [shaft_of[h] for g in on_shaft.get(shaft, []) for h, _ in links.get(g, [])] + coupled.get(shaft, [])
+        if stage is not None and shaft in members and shaft != stage.held:
+            out += [m for m in members if m != shaft and m != stage.held]
+        return out
+
+    def reaches_output(start: str, avoid: str) -> bool:
+        seen, todo = {avoid, start}, [start]
+        while todo:
+            x = todo.pop()
+            if x in outputs:
+                return True
+            for y in neighbours(x):
+                if y not in seen:
+                    seen.add(y)
+                    todo.append(y)
+        return False
 
     def onward_from_shaft(shaft: str, came_in: str) -> List:
         out = [(g, h, eta) for g in on_shaft.get(shaft, []) for h, eta in links.get(g, [])
                if not (g == came_in or h == came_in)]
         if stage is not None and shaft in members and shaft != stage.held and not used[0] and came_in != _STAGE:
             out.append((_STAGE, _STAGE, 1.0))
+        if modes:
+            out += [(_COUPLE + q, q, 1.0) for q in coupled.get(shaft, []) if _COUPLE + shaft != came_in]
+            kept = []
+            for g, h, eta in out:
+                if g == _STAGE:
+                    targets = [m for m in members if m != shaft and m != stage.held]
+                elif g.startswith(_COUPLE):
+                    targets = [h]
+                else:
+                    targets = [shaft_of[h]]
+                if any(reaches_output(t, shaft) for t in targets):
+                    kept.append((g, h, eta))
+            out = kept
         return out
 
     queue = deque()
 
     def go_on(shaft: str, shaft_torque: float, came_in: str) -> None:
         onward = onward_from_shaft(shaft, came_in)
+        if modes and onward and shaft in outputs and shaft != first.id:
+            # J17: an output that also drives onward is a split: given what arrives at it, nothing past it.
+            onto = []
+            for g, h, _eta in onward:
+                for t in ([h] if g.startswith(_COUPLE) else
+                          [m for m in members if m != shaft and m != stage.held] if g == _STAGE else [shaft_of[h]]):
+                    if t not in onto:
+                        onto.append(t)
+            motion.shared[shaft] = tuple(onto)
+            beyond, todo = set(onto), list(onto)
+            while todo:
+                for y in neighbours(todo.pop()):
+                    if y != shaft and y not in beyond:
+                        beyond.add(y)
+                        todo.append(y)
+            order = [x.id for x in spec.shafts]
+            motion.past_split = tuple(x for x in order if x in beyond and x in motion.speeds and x not in torque
+                                      and x not in motion.past_split) + motion.past_split
+            return
         if len(onward) != 1:
             return
         g, h, eta = onward[0]
+        if g.startswith(_COUPLE):
+            if h not in torque:
+                torque[h] = shaft_torque         # a coupling is lossless and 1 : 1
+                go_on(h, shaft_torque, _COUPLE + shaft)
+            return
         if g != _STAGE:
             queue.append((h, shaft_torque * teeth[h] / teeth[g] * eta, g))
             return

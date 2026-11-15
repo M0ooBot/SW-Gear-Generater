@@ -721,11 +721,6 @@ def test_the_turned_refusal_is_asked_of_a_turned_mesh_only_whatever_else_holds_t
     assert carrier.lay_out_refusal().startswith("Fix the workbook before building: Shafts row 0: P2 is mounted on P1, "
                                                 "which is itself mounted on S2: a carrier riding another carrier is "
                                                 "not built by this version")
-    sleeve = direct(replace(spec, gears=spec.gears + (
-        Gear("G5", "S3", "20", "sleeve", "external", "20", "2", "", "10", "8"),)))
-    assert sleeve.turned_refusal() == refused             # refused all the same, said after the later phase
-    assert sleeve.lay_out_refusal() == ("The layout and assembly wait for a later phase: Gears row 0: G5 is a sleeve: "
-                                        "sleeves are built in phase W8, with modes.")
     parallel = direct(_pair_on("Z+", ("60", "0", "0")))
     assert parallel.report.meshes and parallel.turned_refusal() == "" == parallel.lay_out_refusal()
 
