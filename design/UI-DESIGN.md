@@ -454,7 +454,7 @@ left or up rather than off the screen.
   (`ui_text.PART_CHARS_FLOOR`); below 10 a cell would no longer tell one part
   from another, so past the floor the window widens instead. With the reducer's
   short ids every cell has its 18; beside TransferCase_Parallel's 8-character
-  ids the column holds about 16 (`Sleeve_m1.25_N100` whole), and a second
+  ids the column holds about 17 characters plain (`Sleeve_m1.25_N100` whole), or 16 once shortened with the *…*, and a second
   workbook's `Sleeve_m1.5_N30_r2` in the same output folder reads
   `Slee…m1.5_N30_r2`. The boards are drawn at 18, which every board's names fit.
   That is a default the user may overrule.
