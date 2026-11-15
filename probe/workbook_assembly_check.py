@@ -5891,6 +5891,15 @@ def modes_built(worker, desk, label):
     skeleton; the driven proof in every mode, the both-Flips controls in 4H and 4L; reopened and measured again."""
     check_modes_plan(desk, label)
     plan, result = build_turning(worker, desk, label, None, None)
+    asm = result.assembly
+    if not result.ok or desk.record is None or desk.record.gearbox is None or not desk.record.gearbox.assembly:
+        # Refused (W5's answer 1: nothing saved, the document left open): nothing below has an assembly to measure.
+        # The refused, never-saved document is this run's, so close_ours closes it by its title (as m4's).
+        if asm is not None and asm.document and not asm.saved:
+            REFUSED.append(asm.document)
+        say(f"        mate problems {asm.mate_problems if asm else None}; failures {asm.failures if asm else None}; "
+            f"left open as {asm.document if asm else None!r}")
+        raise AssertionError(f"{label}: the build saved no assembly, so the section stops here: {desk.note[0]}")
     check_modes_result(desk, result, label)
     check_modes_record(desk, label)
     box = desk.record.gearbox
