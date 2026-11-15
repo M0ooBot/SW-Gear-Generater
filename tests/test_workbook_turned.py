@@ -703,3 +703,36 @@ def test_the_move_fix_lies_in_the_familys_plane_and_writes_that_familys_cells(ax
     assert (move.title, move.detail) == ("Move S2 by 10 mm", detail)
     assert [(e.key, e.value) for e in move.edits] == list(edits)
     assert [d for d in direct(fixes.apply(a.spec, move)).diagnostics if d.level == "error"] == []
+
+
+# -- the one test of "is there a turned mesh, and is it refused" (assess.Assessment.turned_refusal) ---------------
+
+def test_the_turned_refusal_is_asked_of_a_turned_mesh_only_whatever_else_holds_the_layout_back(monkeypatch):
+    monkeypatch.delattr(findings, "TURNED_GEAR_MATE_SENSE_READ_BACK", raising=False)
+    refused = ("G1 and G2 mesh across shafts at 90°, and which way a gear mate turns gears on shafts at an angle is "
+               "not settled by the probes for this version (findings.TURNED_GEAR_MATE_SENSE_READ_BACK), so the "
+               "gearbox is not built.")
+    a = direct(bevel_reducer())
+    assert a.turned_refusal() == refused == a.lay_out_refusal()
+    spec = bevel_reducer()
+    carrier = direct(replace(spec, shafts=spec.shafts + (Shaft("P1", "S2", "30", "0", "0", "Z+", ""),)))
+    assert carrier.turned_refusal() == ""                 # not checked (W7): no mesh laid out, nothing turned known
+    assert carrier.lay_out_refusal() == ("The gearbox cannot be laid out yet, since it is not checked: P1 is mounted "
+                                         "on S2: carriers are laid out in phase W7.")
+    sleeve = direct(replace(spec, gears=spec.gears + (
+        Gear("G5", "S3", "20", "sleeve", "external", "20", "2", "", "10", "8"),)))
+    assert sleeve.turned_refusal() == refused             # refused all the same, said after the later phase
+    assert sleeve.lay_out_refusal() == ("The layout and assembly wait for a later phase: Gears row 0: G5 is a sleeve: "
+                                        "sleeves are built in phase W8, with modes.")
+    parallel = direct(_pair_on("Z+", ("60", "0", "0")))
+    assert parallel.report.meshes and parallel.turned_refusal() == "" == parallel.lay_out_refusal()
+
+
+def test_only_a_bevel_or_crossed_mesh_counts_as_turned(monkeypatch):
+    """A mesh kind a later phase adds is not silently counted as turned (W7 and W8 extend the guard on purpose)."""
+    from gear_generator.workbook import assess as assess_
+    monkeypatch.delattr(findings, "TURNED_GEAR_MATE_SENSE_READ_BACK", raising=False)
+    a = direct(bevel_reducer())
+    for key, laid in list(a.report.meshes.items()):
+        a.report.meshes[key] = replace(laid, kind="planetary")
+    assert assess_.TURNED_KINDS == (geometry.BEVEL, geometry.CROSSED) and a.turned_refusal() == ""

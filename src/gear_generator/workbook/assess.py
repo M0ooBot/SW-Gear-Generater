@@ -50,6 +50,9 @@ def _more(items: Sequence) -> str:
     return f" ({len(items) - 1} more under Checks)" if len(items) > 1 else ""
 
 
+TURNED_KINDS = (geometry.BEVEL, geometry.CROSSED)     # the mesh kinds Assessment.turned_refusal asks about (W6)
+
+
 @dataclass
 class Assessment:
     read: GearboxSpec                       # the workbook as read
@@ -108,9 +111,20 @@ class Assessment:
             one = len(missing) == 1
             return (f"{', '.join(missing)} {'is' if one else 'are'} not placed, so the assembly would be built "
                     f"without {'it' if one else 'them'}; see Checks.")
-        # W6 (D16): a turned mesh the probes have not shown a gear mate's sense for is refused before Build; a
-        # gearbox of parallel meshes only is W5's, and is not asked.
-        if any(laid.kind != geometry.PARALLEL for laid in self.report.meshes.values()):
+        return self.turned_refusal()
+
+    def turned_refusal(self) -> str:
+        """W6 (D16): the sentence refusing to build a gearbox with a turned mesh the probes have not shown a gear
+        mate's sense for (``motion.turned_refusal``), or ``""`` when nothing is refused. The one test of "is there a
+        turned mesh, and is it refused" — ``lay_out_refusal`` ends with it, and the footer and the window ask it
+        rather than keeping copies.
+
+        A gearbox is asked only when ``report.meshes`` holds a turned mesh — a BEVEL or CROSSED one — so a
+        gearbox of parallel meshes only is W5's and never asked. The guard names what is turned rather than
+        "anything not PARALLEL", so a mesh kind a later phase adds is not silently counted as turned: W7 and W8
+        extend it deliberately if they need to. A gearbox that is not checked (a carrier row, W7) has no meshes
+        laid out and so gives ``""`` here; ``lay_out_refusal`` says why it waits before it asks this."""
+        if any(laid.kind in TURNED_KINDS for laid in self.report.meshes.values()):
             return motion.turned_refusal(self.report)
         return ""
 
