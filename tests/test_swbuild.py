@@ -6548,8 +6548,8 @@ def test_a_turn_in_step_in_the_mode_showing_is_left_and_the_status_warns_of_the_
     assert done.positions_per_configuration is False
     assert _status_sentences(built, done) == [
         "The gears stand where they were turned in SolidWorks.",
-        "This version of SolidWorks shows that turn in every mode, so a dog may stand across its sleeve in another "
-        "mode; to put the gears back there, press Update SolidWorks with that mode showing.",
+        "This version of SolidWorks can show that turn in other modes, so a dog may stand across its sleeve in "
+        "another; to put the gears back there, press Update SolidWorks with that mode showing.",
         "It worked in 2H, the configuration that was active; it did not show the other modes, since nothing in 2H "
         "needed changing."]
     fake.show_configuration("4L")                  # the hazard the sentence names: in 4L, where RangeSlv engages
@@ -6577,7 +6577,8 @@ def test_a_build_with_modes_on_2026_says_a_turn_shows_in_every_mode_from_the_fin
     assert result.ok and result.positions_per_configuration is False, result.log_lines()
     text = ui_text.gearbox_status(plan, result)[0]
     assert ("RangeSlv and ModeSlv slide along Rear, each to its place in each mode. A turn you give the gears in one "
-            "mode shows in every mode, so a dog can stand across its sleeve in another mode") in text
+            "mode can show in other modes, so a dog can stand across its sleeve in another; to put the gears back "
+            "there, press Update SolidWorks with that mode showing.") in text
     assert ui_text.TURN_STAYS not in text and ui_text.SWITCH_IN_STEP not in text
 
 
@@ -6598,7 +6599,7 @@ def test_a_quiet_update_that_puts_on_2026_says_so_from_the_finding_as_committed(
     assert done.put_in == ["4H", "N", "4L", "2H"]
     assert _status_sentences(built, done) == [          # the crossed coupling said once, in the per-mode form
         "In 2H, RangeSlv's teeth stood across InDog's; the gears of 2H are back at the turn they were built at.",
-        "This version of SolidWorks shows a turn given in one mode in every mode, so the turn may have been given "
+        "This version of SolidWorks can show a turn given in one mode in the others, so the turn may have been given "
         "in another.",
         "It worked in 2H, the configuration that was active, then showed and checked 4H, N and 4L and left the "
         "assembly in 2H."]

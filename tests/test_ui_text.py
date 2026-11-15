@@ -3126,7 +3126,7 @@ def test_after_build_each_mode_is_named_once_and_the_switch_is_said_in_the_workb
 def test_the_two_claims_about_positions_are_made_only_where_the_running_version_keeps_them(positions):
     text = ui_text.gearbox_status(_tc_plan(), _tc_built(positions_per_configuration=positions))[0]
     assert ui_text.SWITCH_IN_STEP not in text and ui_text.TURN_STAYS not in text
-    assert (ui_text.TURN_SHOWS_EVERYWHERE in text) == (positions is False)
+    assert (ui_text.TURN_CAN_SHOW_ELSEWHERE in text) == (positions is False)
 
 
 def test_a_clash_in_some_modes_is_said_once_with_the_modes_it_was_found_in():
@@ -3168,7 +3168,7 @@ def test_the_footer_on_a_gearbox_built_with_modes_says_where_it_was_saved_and_ho
     kept = ui_text.motion_record_line(record, positions_per_configuration=True)
     assert kept == f"{line} {ui_text.TURN_STAYS} {ui_text.SWITCH_IN_STEP}"
     shared = ui_text.motion_record_line(record, positions_per_configuration=False)
-    assert shared == f"{line} {ui_text.TURN_SHOWS_EVERYWHERE}"
+    assert shared == f"{line} {ui_text.TURN_CAN_SHOW_ELSEWHERE}"
     assert ui_text.modes_record_line(_turning_record()) == ""
 
 
@@ -3189,7 +3189,7 @@ def test_the_footer_reads_the_modes_rows_from_the_workbook_and_the_positions_fro
     a = dataclasses.replace(ready, spec=spec)
     update = _update(parts=(), moved_shafts=(), replaced=(), layout=None)
     f = _footer(a, record=_tc_record(), plan=_again(), update=update, positions_per_configuration=False)
-    assert "Build again… would save the next revision in N." in f.text and ui_text.TURN_SHOWS_EVERYWHERE in f.text
+    assert "Build again… would save the next revision in N." in f.text and ui_text.TURN_CAN_SHOW_ELSEWHERE in f.text
 
 
 def _tc_update(**changes):
@@ -3289,8 +3289,8 @@ def test_a_flag_a_workbook_edit_changes_is_a_switch_not_a_repair():
 
 @pytest.mark.parametrize("positions, said", [
     (True, "A turn you give the gears in one mode stays in that mode."),
-    (False, "A turn you give the gears in one mode shows in every mode, so a dog can stand across its sleeve in "
-            "another mode; to put the gears back there, press Update SolidWorks with that mode showing."),
+    (False, "A turn you give the gears in one mode can show in other modes, so a dog can stand across its sleeve in "
+            "another; to put the gears back there, press Update SolidWorks with that mode showing."),
     (None, ""),
 ])
 def test_the_turning_note_promises_only_what_an_update_does(positions, said):
@@ -3309,8 +3309,8 @@ def test_a_quiet_update_that_found_the_gears_turned_in_step_warns_of_the_other_m
     turn in every mode the status itself says another mode may stand with a dog across its sleeve."""
     result = _tc_moved(turned=True, configuration="2H", positions_per_configuration=positions)
     text, ok = ui_text.gearbox_update_status(_tc_update(), result)
-    warning = ("This version of SolidWorks shows that turn in every mode, so a dog may stand across its sleeve in "
-               "another mode; to put the gears back there, press Update SolidWorks with that mode showing.")
+    warning = ("This version of SolidWorks can show that turn in other modes, so a dog may stand across its sleeve in "
+               "another; to put the gears back there, press Update SolidWorks with that mode showing.")
     assert ok and text == (
         "SolidWorks already matches the workbook: nothing was changed. The gears stand where they were turned in "
         "SolidWorks. " + (warning + " " if positions is False else "") + "It worked in 2H, the configuration that "
@@ -3338,13 +3338,17 @@ def test_after_an_earlier_unsaved_update_the_warning_needs_no_antecedent(earlier
     warning does not say "that turn"."""
     result = _tc_moved(turned=True, configuration="2H", positions_per_configuration=False)
     text = ui_text.gearbox_update_status(_tc_update(), result, finished=_finished(earlier))[0]
-    found = ("This version of SolidWorks shows the gears at the same turn in every mode, so a dog may stand across its "
-             "sleeve in another mode; to put the gears back there, press Update SolidWorks with that mode showing.")
+    found = ("This version of SolidWorks can show the gears at the same turn in other modes, so a dog may stand across "
+             "its sleeve in another; to put the gears back there, press Update SolidWorks with that mode showing.")
     assert ui_text.GEARS_SHOWN_ELSEWHERE == found
     assert text.count(found) == 1 and "that turn" not in text
     assert "The gears stand as they were found in SolidWorks. " + found in text
     shown_where_turned = ui_text.gearbox_update_status(_tc_update(), result)[0]
     assert "The gears stand where they were turned in SolidWorks. " + ui_text.TURN_SHOWN_ELSEWHERE in shown_where_turned
+    for positions in (True, None):                    # neither wording where a turn stays in its mode or is unknown
+        other = _tc_moved(turned=True, configuration="2H", positions_per_configuration=positions)
+        text = ui_text.gearbox_update_status(_tc_update(), other, finished=_finished(earlier))[0]
+        assert "The gears stand as they were found in SolidWorks." in text and "This version of SolidWorks" not in text
 
 
 def _put_and_visited(positions, **values):
@@ -3363,7 +3367,7 @@ def test_after_a_put_in_the_mode_worked_in_visited_modes_read_at_the_built_turn_
         positions):
     lines = ui_text.mode_update_lines(_tc_update(), _put_and_visited(positions))
     teeth = "In 4H, RangeSlv's teeth stood across InDog's; the gears of 4H are back at the turn they were built at."
-    shared = ("This version of SolidWorks shows a turn given in one mode in every mode, so the turn may have been "
+    shared = ("This version of SolidWorks can show a turn given in one mode in the others, so the turn may have been "
               "given in another.")
     built = "The gears of 2H and N stood at the turn they were built at when Update SolidWorks showed them."
     worked = ("It worked in 4H, the configuration that was active, then showed and checked 2H, N and 4L and left the "
@@ -3394,7 +3398,7 @@ def test_two_crossed_couplings_in_one_mode_are_each_said_and_the_gears_said_back
     assert lines[:2] == ["In 4L, RangeSlv's teeth stood across LoDog's.",
                          "In 4L, ModeSlv's teeth stood across FrontDog's; the gears of 4L are back at the turn they "
                          "were built at."]
-    shared = ("This version of SolidWorks shows a turn given in one mode in every mode, so the turn may have been "
+    shared = ("This version of SolidWorks can show a turn given in one mode in the others, so the turn may have been "
               "given in another.")
     assert lines.count(shared) == (1 if positions is False else 0)
     assert sum("are back at the turn" in line for line in lines) == 1
@@ -3423,7 +3427,7 @@ def test_a_coupling_out_of_step_is_said_only_in_the_mode_it_was_found_and_put_in
                         "built at.")
     assert "another" not in " ".join(lines)
     shared = ui_text.mode_update_lines(_tc_update(), dataclasses.replace(result, positions_per_configuration=False))
-    assert shared[1] == ("This version of SolidWorks shows a turn given in one mode in every mode, so the turn may "
+    assert shared[1] == ("This version of SolidWorks can show a turn given in one mode in the others, so the turn may "
                          "have been given in another.")
     unknown = ui_text.mode_update_lines(_tc_update(), dataclasses.replace(result, positions_per_configuration=None))
     assert "another" not in " ".join(unknown)

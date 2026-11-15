@@ -3307,7 +3307,7 @@ def _motion_after(update, result, earlier: str = "") -> List[str]:
     SolidWorks.* (which train stood turned is not told), then the mates the app did not make, left alone
     (``result.extra_mates``).
 
-    W8 (W8-INTERFACES §9.18): on a gearbox with modes where the running version shows a turn in every mode
+    W8 (W8-INTERFACES §9.18): on a gearbox with modes where the running version can show a turn in other modes
     (``result.positions_per_configuration`` False), nothing put and no other mode shown, the gears left standing
     turned get :data:`TURN_SHOWN_ELSEWHERE` straight after (after an earlier unsaved Update, when they stand "as
     they were found", :data:`GEARS_SHOWN_ELSEWHERE`, which needs no antecedent): the footer then shows this status
@@ -3574,30 +3574,32 @@ def planetary_speed_line(shaft: str, motion, *, copies: int = 1, carrier: str = 
 
 TURN_STAYS = "A turn you give the gears in one mode stays in that mode."
 # After an Update with modes that found the gears turned in the mode showing and put nothing, where the running version
-# shows a turn in every mode (W8-INTERFACES §9.18): said straight after "The gears stand where they were turned in
+# can show a turn in other modes (W8-INTERFACES §9.18): said straight after "The gears stand where they were turned in
 # SolidWorks." (_motion_after), since the footer shows that status alone.
-TURN_SHOWN_ELSEWHERE = ("This version of SolidWorks shows that turn in every mode, so a dog may stand across its sleeve "
-                        "in another mode; to put the gears back there, press Update SolidWorks with that mode showing.")
-GEARS_SHOWN_ELSEWHERE = ("This version of SolidWorks shows the gears at the same turn in every mode, so a dog may stand "
-                         "across its sleeve in another mode; to put the gears back there, press Update SolidWorks with "
+TURN_SHOWN_ELSEWHERE = ("This version of SolidWorks can show that turn in other modes, so a dog may stand across its "
+                        "sleeve in another; to put the gears back there, press Update SolidWorks with that mode showing.")
+GEARS_SHOWN_ELSEWHERE = ("This version of SolidWorks can show the gears at the same turn in other modes, so a dog may "
+                         "stand across its sleeve in another; to put the gears back there, press Update SolidWorks with "
                          "that mode showing.")
-TURN_SHOWS_EVERYWHERE = ("A turn you give the gears in one mode shows in every mode, so a dog can stand across its "
-                         "sleeve in another mode; to put the gears back there, press Update SolidWorks with that mode "
-                         "showing.")
+# "Can show", not "shows": a turn was read in every mode on a copy no Update had moved (W8 s7), but after an Update
+# had put every mode a fresh turn was read in 4L and not in 4H and N (W8 s2, findings.TURN_PER_CONFIGURATION).
+TURN_CAN_SHOW_ELSEWHERE = ("A turn you give the gears in one mode can show in other modes, so a dog can stand across "
+                           "its sleeve in another; to put the gears back there, press Update SolidWorks with that mode "
+                           "showing.")
 # An Update pressed in a mode whose train is in step, with nothing changed in the workbook, puts nothing and judges
-# no other mode (J25), so TURN_SHOWS_EVERYWHERE makes pressing it with that mode showing the condition, and no more.
+# no other mode (J25), so TURN_CAN_SHOW_ELSEWHERE makes pressing it with that mode showing the condition, and no more.
 
 
 def turning_note(positions_per_configuration: Optional[bool]) -> str:
     """The footer's sentence about turning in a gearbox with modes (W8-PLAN §1.9, §1.12), chosen by
     ``swcom.positions_per_configuration`` for the running version — carried on ``GearboxResult`` /
-    ``GearboxUpdate.positions_per_configuration``: True :data:`TURN_STAYS`, False :data:`TURN_SHOWS_EVERYWHERE`,
+    ``GearboxUpdate.positions_per_configuration``: True :data:`TURN_STAYS`, False :data:`TURN_CAN_SHOW_ELSEWHERE`,
     None (the finding unsettled for this version) ``""``: neither claim. The one home of that switch; every
     sentence that says where a turn shows asks it."""
     if positions_per_configuration is True:
         return TURN_STAYS
     if positions_per_configuration is False:
-        return TURN_SHOWS_EVERYWHERE
+        return TURN_CAN_SHOW_ELSEWHERE
     return ""
 
 
@@ -4011,8 +4013,8 @@ def _mode_after(update, result, *, changed: bool) -> List[str]:
                 out.append(f"In {config}, {a}'s teeth stood across {b}'s; the gears of {config} are back at the turn "
                            "they were built at.")
         if crossed and getattr(result, "positions_per_configuration", None) is False:
-            out.append("This version of SolidWorks shows a turn given in one mode in every mode, so the turn may have "
-                       "been given in another.")
+            out.append("This version of SolidWorks can show a turn given in one mode in the others, so the turn may "
+                       "have been given in another.")
     visited = [str(v) for v in getattr(result, "visited", ()) or () if str(v)]
     if put_here and visited and getattr(result, "positions_per_configuration", None) is False:
         # Shared positions: say which visited modes were READ at the built turn when shown, and no more. Their
