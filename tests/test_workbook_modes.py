@@ -843,3 +843,38 @@ def test_each_check_across_modes_is_said_at_its_cell(spec, error, sentence):
 def test_the_fixtures_draw_none_of_the_checks_across_modes(make):
     a = assessed(make())
     assert modes.mode_checks(a.spec, a.report.layout.placed, a.report.modes) == []
+
+
+# -- the Results sheet: one block per mode (J17, J19) ---------------------------------------------------------------
+
+def test_the_results_sheet_holds_a_block_per_mode_with_its_speeds_torques_notes_and_ratio():
+    from gear_generator.workbook import export
+    a = assessed(transfer_case_parallel())
+    rows = export.results_sheet(a.spec, a.report, when="T").rows
+    heads = [i for i, r in enumerate(rows) if r and r[0] == export.RESULTS_MODE]
+    assert [rows[i][1:] for i in heads] == [["2H", "road"], ["4H"], ["N", "towing"], ["4L", "crawl"]]
+    block = {rows[i][1]: {r[0]: r[1:] for r in rows[i + 2:i + 9]} for i in heads}
+    ratio = {rows[i][1]: rows[i + 9][1:] for i in heads}
+    assert block["2H"]["Rear"] == [1500.0, "anticlockwise", 10.0, ""]
+    assert block["2H"]["Lay"] == [-750.0, "clockwise", "—", "idles in this mode: it carries no torque"]
+    assert block["2H"]["Front"] == ["—", "—", "—", "turns freely in this mode"]
+    assert block["4H"]["Rear"][2:] == [10.0, "shared with FrontDrv; the share depends on the loads"]
+    assert block["4H"]["Front"] == [1500.0, "anticlockwise", "—", "past a split"]
+    assert block["4L"]["Lo"] == [375.0, "anticlockwise", 38.416, ""]
+    assert block["4L"]["Rear"] == [375.0, "anticlockwise", 38.416,
+                                   "shared with FrontDrv; the share depends on the loads"]
+    assert ratio == {"2H": [1.0, "In to Rear"], "4H": [1.0, "In to Rear"], "N": ["—", "neutral"],
+                     "4L": [4.0, "In to Rear"]}
+    labels = [r[0] if r else "" for r in rows]
+    assert rows[labels.index(export.RESULTS_RATIO)][1:] == [1.0, "In to Rear"]          # the first mode's
+    assert export.RESULTS_LEFT_OUT not in labels
+    z = next(r for r in rows if r and r[0] == "Z")
+    assert z[2:] == [5.0, 135.0]        # RangeSlv's whole travel counted (46 at H to 74 at L), inside the box
+
+
+def test_a_gearbox_without_modes_keeps_w7s_results_sheet():
+    from gear_generator.workbook import export
+    a = direct(planetary_4to1())
+    rows = export.results_sheet(a.spec, a.report, when="T").rows
+    assert rows[0] == ["Shaft", "Speed (rpm)", "Turns, seen from +Z", "Torque (N·m)", "On its carrier (rpm)"]
+    assert not any(r and r[0] in (export.RESULTS_MODE, export.RESULTS_MODE_RATIO) for r in rows)

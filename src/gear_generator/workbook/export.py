@@ -30,6 +30,8 @@ SHEET_DEFS = {"Shafts": schema.SHAFTS, "Gears": schema.GEARS, "Meshes": schema.M
 RESULTS_RATIO = "Overall ratio (input speed ÷ output speed)"
 RESULTS_BOX = "Box size, over the gears' outside diameters (X, Y) and faces (Z)"
 RESULTS_LEFT_OUT = "Not in the box size"
+RESULTS_MODE = "Mode"                  # W8 (J19): the head of each mode's block
+RESULTS_MODE_RATIO = "Ratio in this mode (input speed ÷ output speed)"
 
 
 @dataclass
@@ -50,29 +52,21 @@ def results_sheet(spec: GearboxSpec, report: Report, when: Optional[str] = None)
     """The Results sheet: speeds, turning, torque per shaft; ratio, centres and contact ratio per mesh; what the
     box was worked out as, its overall ratio, and the room its gears take (:func:`geometry.extent`)."""
     when = when or time.strftime("%Y-%m-%d %H:%M")
-    motion = report.motion
-    # W6 (D12): every shaft in the Z family keeps W3's column; else each cell says what it is seen from.
-    all_z = all(motion.seen_from.get(s.id, "+Z") == "+Z" for s in spec.shafts)
-    # W7 (W7-PLAN §2.12): a column "On its carrier (rpm)" for mounted shafts, and a held member's torque "held".
-    carried = bool(motion.relative)
-    rows: List[List] = [["Shaft", "Speed (rpm)", "Turns, seen from +Z" if all_z else "Turns", "Torque (N·m)"]
-                        + (["On its carrier (rpm)"] if carried else [])]
-    for shaft in spec.shafts:
-        speed = motion.speeds.get(shaft.id)
-        torque = motion.torques.get(shaft.id)
-        turns = motion.turns(shaft.id)
-        if turns and not all_z and turns != "still":
-            turns = f"{turns}, seen from {motion.seen_from.get(shaft.id, '+Z')}"
-        if torque is None and shaft.id in motion.held:
-            torque_cell = f"{round(motion.held[shaft.id], 6)} held"
-        else:
-            torque_cell = round(torque, 6) if torque is not None else "—"
-        row = [shaft.id, round(float(speed), 6) if speed is not None else "—", turns or "—", torque_cell]
-        if carried:
-            relative = motion.relative.get(shaft.id)
-            row.append(round(float(relative), 6) if relative is not None else "")
-        rows.append(row)
-    rows.append([])
+    named = [m for m in report.modes if m.name]
+    rows: List[List] = []
+    if named:
+        # W8 (J19): one block per mode, headed with its name and notes, its speeds, torques (a shared output's
+        # torque marked so in its note, nothing past it: J17) and ratio (``ModeReport.ratio``, the one home).
+        notes = {m.name: m.notes for m in spec.modes}
+        for m in named:
+            rows.append([RESULTS_MODE, m.name] + ([notes[m.name]] if notes.get(m.name) else []))
+            rows.extend(_shaft_rows(spec, m.motion, modal=True))
+            rows.append([RESULTS_MODE_RATIO, round(m.ratio, 6), f"{m.ends[0]} to {m.ends[1]}"]
+                        if m.ratio is not None else [RESULTS_MODE_RATIO, "—", m.ratio_why])
+            rows.append([])
+    else:
+        rows.extend(_shaft_rows(spec, report.motion))
+        rows.append([])
     turned = [m for m in report.meshes.values() if m.kind != geometry.PARALLEL and not m.problem]
     rows.append(["Mesh", "Ratio", "Centres needed (mm)", "Centres placed (mm)", "Off by (mm)", "Contact ratio"]
                 + (["Shaft angle (°)", "Cone distance (mm)", "Apex distance (mm)"] if turned else []))
@@ -94,7 +88,11 @@ def results_sheet(spec: GearboxSpec, report: Report, when: Optional[str] = None)
     rows.append([RESULTS_RATIO, round(ratio, 6), between] if ratio is not None else [RESULTS_RATIO, "—", why])
     rows.append([])
     rows.append([RESULTS_BOX, "Size (mm)", "From (mm)", "To (mm)"])
-    box = geometry.extent(report.layout.placed)
+    # W8: every gear where it stands in every mode, so the box is the room a slide sweeps through its positions.
+    every = dict(report.layout.placed)
+    for m in named:
+        every.update({f"{g} in {m.name}": p for g, p in m.placed.items()})
+    box = geometry.extent(every)
     for axis, span in zip("XYZ", box or ((None, None),) * 3):
         lo, hi = span
         rows.append([axis] + ([round(hi - lo, 6), round(lo, 6), round(hi, 6)] if lo is not None else ["—"] * 3))
@@ -106,6 +104,47 @@ def results_sheet(spec: GearboxSpec, report: Report, when: Optional[str] = None)
         note += (" The efficiency typed for a crossed helical mesh is the workbook's: a crossed pair slides along its "
                  "teeth, and its real efficiency is far lower.")
     return NewSheet(schema.RESULTS, rows, header=False, note=note)
+
+
+def _shaft_rows(spec: GearboxSpec, motion, modal: bool = False) -> List[List]:
+    """The shaft table: its header and a row per shaft. ``modal`` (W8) adds a Note column: a shared output's torque
+    (*"shared with FrontDrv; the share depends on the loads"*), a shaft past such a split (no torque), a free
+    member, and one that turns on a branch reaching no output (J17: pruned, no torque)."""
+    # W6 (D12): every shaft in the Z family keeps W3's column; else each cell says what it is seen from.
+    all_z = all(motion.seen_from.get(s.id, "+Z") == "+Z" for s in spec.shafts)
+    # W7 (W7-PLAN §2.12): a column "On its carrier (rpm)" for mounted shafts, and a held member's torque "held".
+    carried = bool(motion.relative)
+    rows: List[List] = [["Shaft", "Speed (rpm)", "Turns, seen from +Z" if all_z else "Turns", "Torque (N·m)"]
+                        + (["On its carrier (rpm)"] if carried else []) + (["Note"] if modal else [])]
+    past = set(getattr(motion, "past_split", ()) or ())
+    shared = getattr(motion, "shared", {}) or {}
+    for shaft in spec.shafts:
+        speed = motion.speeds.get(shaft.id)
+        torque = motion.torques.get(shaft.id)
+        turns = motion.turns(shaft.id)
+        if turns and not all_z and turns != "still":
+            turns = f"{turns}, seen from {motion.seen_from.get(shaft.id, '+Z')}"
+        if torque is None and shaft.id in motion.held:
+            torque_cell = f"{round(motion.held[shaft.id], 6)} held"
+        else:
+            torque_cell = round(torque, 6) if torque is not None and shaft.id not in past else "—"
+        row = [shaft.id, round(float(speed), 6) if speed is not None else "—", turns or "—", torque_cell]
+        if carried:
+            relative = motion.relative.get(shaft.id)
+            row.append(round(float(relative), 6) if relative is not None else "")
+        if modal:
+            if shaft.id in shared:
+                row.append(f"shared with {', '.join(shared[shaft.id])}; the share depends on the loads")
+            elif shaft.id in past:
+                row.append("past a split")
+            elif speed is None and shaft.id in getattr(motion, "free", ()):
+                row.append("turns freely in this mode")
+            elif speed is not None and torque is None and shaft.id not in motion.held:
+                row.append("idles in this mode: it carries no torque")
+            else:
+                row.append("")
+        rows.append(row)
+    return rows
 
 
 def _turned_row(laid: geometry.MeshGeometry, placed: Dict[str, geometry.Placed]) -> List:
@@ -130,9 +169,7 @@ def box_left_out(spec: GearboxSpec, report: Report) -> str:
     """What the box size does not count, each gear with why: ``G5 (a bevel gear, phase W6), G6 (a sleeve, phase
     W8)``; a sliding gear is counted at its At only. ``""`` when it counts every gear where it will be."""
     pieces = [f"{gear} ({why})" for gear, why in report.layout.left_out.items()]
-    pieces += [f"{g.id} (slides: counted at its At only, phase W8)" for g in spec.gears
-               if g.slides.strip() and g.id in report.layout.placed]
-    return ", ".join(pieces)
+    return ", ".join(pieces)            # W8: a sliding gear is counted at every mode's place (results_sheet)
 
 
 def _value(column: Optional[schema.Column], text: str, percent: bool):
