@@ -3899,6 +3899,10 @@ def copy_opens(worker, copy, section, records):
                 s.find_component(f"copy{index}", name)
                 found[name] = str(s._handles[f"copy{index}"].get("path") or "")  # noqa: SLF001
             return found
+        held = {n.lower() for n in os.listdir(copy)}
+        same = sorted({n for n in run(worker, open_names) if n.lower() in held})
+        if same:               # W7-PLAN §6 (review S13): no open document may share a file name with the copy's
+            raise CopyStop(f"documents open in SolidWorks share the copy's file names: {same}")
         first = not COPY["probed"]
         if first:
             OPEN_DIALOGS.clear()
