@@ -3963,12 +3963,47 @@ def _mode_after(update, result, *, changed: bool) -> List[str]:
         since = ", since nothing needed changing" if not changed else ""
         out.append(f"It worked in {config}, the configuration that was active; it did not show the other "
                    f"modes{since}.")
+    unread = _senses_unread_sentence(update, result)
+    if unread:
+        out.append(unread)
     extra = [str(c) for c in getattr(result, "extra_configurations", ()) or () if str(c)]
     if extra:
         one = len(extra) == 1
         out.append(f"{asm[:1].upper()}{asm[1:]} also has {'a configuration' if one else 'configurations'} the app did "
                    f"not make ({_and(extra)}); Update SolidWorks left {'it as it is' if one else 'them as they are'}.")
     return out
+
+
+UNREAD_PAIRS = 3       # gear pairs named in the unread-senses sentence; more are counted, as CONSEQUENCE_CELLS
+
+
+def _senses_unread_sentence(update, result) -> str:
+    """W8-INTERFACES §9.16: the recorded gear mates whose turning direction no read reached in this Update
+    (``GearboxUpdate.senses_unread``: couplings, splines or sliding meshes off in the mode SolidWorks shows), named by
+    their gears, the first :data:`UNREAD_PAIRS` and the rest counted: *Which way ModeSlv and FrontDog, and RangeSlv
+    and LoDog, turn against each other was not checked this time: their mates are switched off in 2H, the mode
+    SolidWorks is showing, and are checked when an Update works in a mode that has them on.* A fact, not a problem:
+    nothing is asked of the user. ``""`` with none."""
+    names = [str(n) for n in getattr(result, "senses_unread", ()) or () if str(n)]
+    if not names:
+        return ""
+    pairs = []
+    for name in names:
+        mate = _recorded_mate(update, name)
+        gears = [g for g in getattr(mate, "gears", ()) or () if g] if mate is not None else []
+        pairs.append(f"{gears[0]} and {gears[1]}" if len(gears) == 2 else name)
+    shown = pairs[:UNREAD_PAIRS]
+    if len(pairs) > UNREAD_PAIRS:
+        rest = len(pairs) - UNREAD_PAIRS
+        shown.append(f"{rest} more pair{'' if rest == 1 else 's'}")
+    config = getattr(result, "configuration", "")
+    where = f"in {config}, the mode SolidWorks is showing" if config else "in the mode SolidWorks is showing"
+    if len(pairs) == 1:
+        return (f"Which way {shown[0]} turn against each other was not checked this time: its mate is switched off "
+                f"{where}, and is checked when an Update works in a mode that has it on.")
+    who = ", ".join(shown[:-1]) + ", and " + shown[-1]       # each pair holds an "and", so commas set them apart
+    return (f"Which way {who}, turn against each other was not checked this time: their mates are switched off "
+            f"{where}, and are checked when an Update works in a mode that has them on.")
 
 
 def mode_update_lines(update, result) -> List[str]:

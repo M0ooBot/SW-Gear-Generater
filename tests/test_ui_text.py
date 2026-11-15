@@ -3509,3 +3509,39 @@ def test_the_end_view_readout_always_fits_and_lists_up_to_four_heights():
     assert ui_text.end_view_readout(wide) == "5 face heights, z -12.5 to 70 · origin"
     for v in (view, long, wide, _end_view(transfer_case_parallel(), "N")):
         assert len(ui_text.end_view_readout(v)) <= ui_text.VIEW_READOUT_CHARS
+
+
+def test_gear_mates_whose_turning_no_read_reached_are_named_by_their_gears_and_asked_nothing():
+    """§9.16 (A's ccb05ae): a quiet Update of TransferCase_Parallel standing in 2H leaves the two couplings off there
+    unread; said as a fact, by the gears, never as a problem."""
+    result = _tc_moved(configuration="2H", senses_unread=["ModeSlv engages FrontDog", "RangeSlv engages LoDog"])
+    text, ok = ui_text.gearbox_update_status(_tc_update(), result)
+    assert ok and text == (
+        "SolidWorks already matches the workbook: nothing was changed. It worked in 2H, the configuration that was "
+        "active; it did not show the other modes, since nothing needed changing. Which way ModeSlv and FrontDog, and "
+        "RangeSlv and LoDog, turn against each other was not checked this time: their mates are switched off in 2H, "
+        "the mode SolidWorks is showing, and are checked when an Update works in a mode that has them on.")
+    for word in ("engages", "sense", "Reverse", "Flip", "press", "Check:", "error"):
+        assert word not in text.split("needed changing. ")[1]
+    one = ui_text.mode_update_lines(_tc_update(), _tc_moved(senses_unread=["RangeSlv engages LoDog"]))
+    assert one[-1] == ("Which way RangeSlv and LoDog turn against each other was not checked this time: its mate is "
+                       "switched off in 4H, the mode SolidWorks is showing, and is checked when an Update works in a "
+                       "mode that has it on.")
+    many = _tc_moved(senses_unread=["RangeSlv engages InDog", "RangeSlv engages LoDog", "ModeSlv engages FrontDog",
+                                    "ModeSlv splined to RangeSlv", "InPin meshes LayGear"])
+    assert ui_text.mode_update_lines(_tc_update(), many)[-1].startswith(
+        "Which way RangeSlv and InDog, RangeSlv and LoDog, ModeSlv and FrontDog, and 2 more pairs, turn against each "
+        "other was not checked this time: their mates")
+    assert not any("not checked this time" in line for line in ui_text.mode_update_lines(_tc_update(), _tc_moved()))
+
+
+def test_a_mode_that_jams_is_shown_whole_in_the_footer_with_its_longer_sentence():
+    """B's 89f143b: a mode's own jam names what engages what; the footer and the Checks readout carry it whole."""
+    from test_workbook_modes import JAM, assessed, with_mode
+    a = assessed(with_mode(JAM, 0, positions=(("RangeSlv", "H"), ("ModeSlv", "J"))))
+    jam = ("Modes row 2: in 2H RangeSlv engages InDog and ModeSlv engages LoDog, which joins In and Lo through Rear, and "
+           "the meshes turn them at different speeds: as written the box is jammed in this mode.")
+    assert [d.message for d in a.diagnostics if d.is_error] == [jam]
+    assert ui_text.workbook_checks_readout(a.diagnostics).startswith("1 error")
+    f = ui_text.workbook_footer(a, folder=P)
+    assert (f.text, f.ok, f.build_enabled) == (f"Fix the workbook before building: {jam}", False, False)
