@@ -1984,19 +1984,6 @@ def _ready_parts(assessment, plan, folder: str, superseded: Sequence[str] = (), 
     return text, True
 
 
-def _turned_refusal(assessment) -> str:
-    """Planning's refusal of a gearbox whose turned meshes the probes have not settled (W6-PLAN §2.6, D16:
-    ``motion.turned_refusal``), or ``""``. Asked only when the report holds a bevel or crossed mesh, the one case it
-    can refuse; then the footer falls back to Build parts, as for rows a later phase builds, and says why."""
-    report = getattr(assessment, "report", None)
-    meshes = getattr(report, "meshes", None) or {}
-    from .workbook.geometry import BEVEL, CROSSED
-    if not any(getattr(m, "kind", "") in (BEVEL, CROSSED) for m in meshes.values()):
-        return ""
-    from .workbook import motion
-    return motion.turned_refusal(report)
-
-
 def _unsaved_line(paths: Sequence[str], update_puts_back: bool = False) -> str:
     """The save asked for once, naming every document of the current revision Update changed and that is not
     saved: parts first, the assembly last, as Update changed them. Nothing here can know whether SolidWorks has
@@ -2067,7 +2054,9 @@ def workbook_footer(assessment, *, record=None, record_problem: str = "", plan=N
     gearbox = getattr(record, "gearbox", None)
     has_assembly = bool(gearbox is not None and gearbox.assembly)
     on_record = record is not None and bool(record.parts or gearbox is not None)
-    turned = _turned_refusal(a)
+    # W6 (D16): a turned mesh the probes have not settled holds the layout back as rows a later phase builds do,
+    # and Build parts goes ahead (``assess.Assessment.turned_refusal``, the one home of that test).
+    turned = a.turned_refusal() if a is not None else ""
     later = bool(a is not None and (a.parts.refused or turned))
     action = BUILD_AGAIN if has_assembly else (BUILD_PARTS if later else BUILD)
     newer = bool(record_problem) and record_problem.rstrip().endswith(LINK_WAITS)
