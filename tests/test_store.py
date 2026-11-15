@@ -4,6 +4,7 @@ import dataclasses
 import json
 import os
 import pathlib
+import re
 
 import pytest
 
@@ -1423,3 +1424,168 @@ def test_a_record_newer_than_schema_6_is_refused_and_left_byte_identical(tmp_pat
     with pytest.raises(store.UnknownSchema, match=r"schema 7, this one reads 6"):
         store.read_link_record(str(tmp_path / "R.xlsx"))
     assert target.read_text() == text and sorted(p.name for p in tmp_path.iterdir()) == ["R.workbook.json"]
+
+
+# -- schema 6, package C: the rules over the gearbox (W8-PLAN §1.11, W8-INTERFACES §5 and §9) -------------------
+
+
+def _mate(raw, name):
+    return next(m for m in raw["gearbox"]["mates"] if m["name"] == name)
+
+
+@pytest.mark.parametrize("change,match", [
+    (lambda raw: raw["gearbox"].update(modes=["2H", "4H", "N", "2h"]),
+     r"gearbox\.modes\[3\] \('2h'\) is the configuration '2H' again, ignoring case"),
+    (lambda raw: raw["gearbox"].update(modes=["2H", " ", "N", "4L"]),
+     r"gearbox\.modes\[1\] is a blank configuration name"),
+    (lambda raw: _mate(raw, "RangeSlv engages LoDog").update(ratio=[1, 2]),
+     r"gearbox\.mates\[\d+\] \('RangeSlv engages LoDog'\) is a couple mate whose ratio is \[1, 2\], where it turns "
+     r"its two gears 1 : 1"),
+    (lambda raw: _mate(raw, "ModeSlv splined to RangeSlv").update(ratio=[30, 31]),
+     r"\('ModeSlv splined to RangeSlv'\) is a spline mate whose ratio is \[30, 31\]"),
+    (lambda raw: _mate(raw, "RangeSlv along Rear").update(values={"2H": 46.0, "4H": 46.0}),
+     r"\('RangeSlv along Rear'\) is a slide mate with no value for the configurations 'N' and '4L'"),
+    (lambda raw: _mate(raw, "RangeSlv along Rear").update(values={"2H": 46.0, "4H": 46.0, "N": 56.0}),
+     r"is a slide mate with no value for the configuration '4L'\)"),
+    (lambda raw: _mate(raw, "ModeSlv along Rear").update(values={"2H": 96.0, "4H": 0.0, "N": 96.0, "4L": 106.0}),
+     r"\('ModeSlv along Rear'\) is a slide mate whose value in '4H' is 0, which puts the slider on the Front plane "
+     r"it is measured from"),
+    (lambda raw: _mate(raw, "ModeSlv along Rear").update(values={"2H": 96.0, "4H": -6.0, "N": 96.0, "4L": 106.0}),
+     r"\('ModeSlv along Rear'\) is a slide mate with values on both sides of the Front plane"),
+    (lambda raw: _mate(raw, "RangeSlv engages LoDog").update(modes=["4L", "4X"]),
+     r"\('RangeSlv engages LoDog'\) is on in '4X', which is not one of the gearbox's configurations"),
+    (lambda raw: _mate(raw, "RangeSlv engages InDog").update(modes=["2L", "4X"]),
+     r"is on in '2L' and '4X', which are not one of the gearbox's configurations"),
+])
+def test_a_w8_record_that_breaks_a_rule_over_the_gearbox_is_refused_whole(change, match):
+    """Each refusal is a full phrase naming the entry, inside the record's own sentence."""
+    raw = json.loads(store.link_record_to_json(modes_record("R.xlsx")))
+    change(raw)
+    with pytest.raises(StoreError, match=r"its contents are not a link record \(.*") as caught:
+        store.link_record_from_json(json.dumps(raw))
+    assert re.search(match, str(caught.value))
+
+
+def test_a_mate_on_in_a_configuration_of_a_gearbox_with_none_is_refused():
+    raw = json.loads(store.link_record_to_json(turning_record("R.xlsx")))
+    raw["gearbox"]["mates"][0]["modes"] = ["2H"]
+    with pytest.raises(StoreError, match=r"is on in '2H', which is not a configuration of the gearbox, which has "
+                                         r"none"):
+        store.link_record_from_json(json.dumps(raw))
+
+
+def test_a_refused_record_is_left_byte_identical_on_disk(tmp_path):
+    raw = json.loads(store.link_record_to_json(modes_record(str(tmp_path / "R.xlsx"))))
+    _mate(raw, "RangeSlv engages LoDog")["modes"] = ["4X"]
+    target = tmp_path / "R.workbook.json"
+    text = json.dumps(raw)
+    target.write_text(text)
+    with pytest.raises(StoreError):
+        store.read_link_record(str(tmp_path / "R.xlsx"))
+    assert target.read_text() == text
+
+
+def test_mode_names_that_differ_from_the_mates_only_by_case_read_clean_and_keep_their_spelling():
+    """W8-INTERFACES §9.6: compared through ``on_in``'s casefold; ``GearboxRecord.modes`` keeps the workbook's
+    spelling, and so does every entry (a mode may use a template configuration of another case)."""
+    record = modes_record("R.xlsx")
+    box = record.gearbox
+    box.modes = ["2h", "4h", "n", "Default"]
+    for mate in box.mates:
+        mate.modes = [{"2H": "2H", "4H": "4H", "4L": "default"}[m] for m in mate.modes]
+        if mate.values:
+            mate.values = dict(zip(("2H", "4H", "N", "DEFAULT"), mate.values.values()))
+    box.components[-1].frames = dict(zip(("2H", "4h", "N", "default"), box.components[-1].frames.values()))
+    text = store.link_record_to_json(record)
+    again = store.link_record_from_json(text)
+    assert again == record and again.gearbox.modes == ["2h", "4h", "n", "Default"]
+    saved = store.link_record_to_json(again)
+    assert store.link_record_to_json(store.link_record_from_json(saved)) == saved
+    assert _mate(json.loads(saved), "RangeSlv engages LoDog")["modes"] == ["default"]
+
+
+def test_an_empty_on_set_is_every_configuration_and_never_refused():
+    """§9.1: ``modes == []`` is "on in every configuration"; the record cannot say whether it was meant."""
+    record = modes_record("R.xlsx")
+    for mate in record.gearbox.mates:
+        mate.modes = []
+    assert store.link_record_from_json(store.link_record_to_json(record)) == record
+
+
+def test_sliders_with_no_modes_rows_record_no_values_and_read_clean():
+    """§9.8: a slider with no Modes rows has ``values == {}``, legal while ``GearboxRecord.modes`` is ``[]``; so is a
+    slider whose values name a configuration the gearbox does not record, which nothing reads."""
+    record = modes_record("R.xlsx")
+    box = record.gearbox
+    box.modes = []
+    box.mates = [m for m in box.mates if m.kind != "couple"]
+    for mate in box.mates:
+        mate.values = {}
+    box.components[-1].frames = {}
+    assert store.link_record_from_json(store.link_record_to_json(record)) == record
+    extra = modes_record("R.xlsx")
+    _ = [m.values.update(Exploded=46.0) for m in extra.gearbox.mates if m.kind == "slide"]
+    extra.gearbox.components[-1].frames["Exploded"] = dict(extra.gearbox.components[-1].frames["2H"])
+    assert store.link_record_from_json(store.link_record_to_json(extra)) == extra
+
+
+def test_a_continued_build_with_some_modes_made_reads_clean_both_times():
+    """A build refused in its mode phase after 2H, 4H and N were made (the problem names 4L), recorded with no
+    assembly and no mates — whether its finish keeps the configurations it made or none — then continued: every
+    record reads back unchanged."""
+    for kept in ([], ["2H", "4H", "N"]):
+        refused = modes_record("R.xlsx")
+        box = refused.gearbox
+        box.assembly, box.components, box.mates, box.modes = "", [], [], list(kept)
+        box.mate_problems = ["SolidWorks would not make the configuration 4L."]
+        box.mate_problems_digest = "d"
+        assert store.link_record_from_json(store.link_record_to_json(refused)) == refused
+    continued = modes_record("R.xlsx")
+    continued.revision = 1
+    assert store.link_record_from_json(store.link_record_to_json(continued)) == continued
+
+
+def test_a_w7_planetary_record_saved_again_by_w8_reads_the_same(tmp_path):
+    """A schema 5 file of W7's 4 : 1 read by W8, saved (as schema 6) and read again: equal throughout, and equal to
+    what W7 wrote."""
+    workbook = str(tmp_path / "R.xlsx")
+    record = planetary_record(workbook)
+    raw = _before_schema_6(json.loads(store.link_record_to_json(record)), 5)
+    target = tmp_path / "R.workbook.json"
+    target.write_text(json.dumps(raw))
+    first = store.read_link_record(workbook)
+    assert first == record and first.gearbox.modes == [] and first.gearbox.carriers == record.gearbox.carriers
+    store.save_link_record(first)
+    assert json.loads(target.read_text())["link_schema_version"] == 6
+    assert store.read_link_record(workbook) == first
+
+
+def e4_record(workbook):
+    """The E4 transfer case (W8-PLAN §2.1) as a finish writes it: W7's planetary low range (the planets' copies on
+    Carrier's carrier part, the Ring held), LoDog locked to the carrier, and W8's sleeves, slides and couplings."""
+    record = modes_record(workbook)
+    box = record.gearbox
+    base = planetary_record(workbook).gearbox
+    box.carriers = [dataclasses.replace(base.carriers[0], shaft="Carrier",
+                                        path=r"C:\P\TransferCase_Carrier_Carrier.SLDPRT")]
+    box.components.append(store.ComponentEntry(gear="Pl copy 2", part=r"C:\P\Pl.SLDPRT", name="Pl-2",
+                                               rotation=list(_EYE), at=[-12.0, 20.78460969082, 15.0], of="Pl",
+                                               frames={m: {"rotation": list(_EYE),
+                                                           "at": [-12.0, 20.78460969082, 15.0]} for m in _MODES}))
+    box.mates += [
+        store.MateEntry(name="Pl copy 2 on P copy 2 Axis", kind="axis", gears=["Pl copy 2"], shaft="P copy 2",
+                        on="Carrier carrier"),
+        store.MateEntry(name="LoDog locked to Carrier carrier", kind="lock", gears=["Carrier carrier", "LoDog"])]
+    return record
+
+
+def test_the_e4_record_round_trips_byte_for_byte(tmp_path):
+    workbook = str(tmp_path / "TransferCase.xlsx")
+    record = e4_record(workbook)
+    store.save_link_record(record)
+    again = store.read_link_record(workbook)
+    assert again == record
+    text = store.link_record_to_json(again)
+    assert store.link_record_to_json(store.link_record_from_json(text)) == text
+    lock = _mate(json.loads(text), "LoDog locked to Carrier carrier")
+    assert lock["gears"] == ["Carrier carrier", "LoDog"] and lock["modes"] == [] and lock["values"] == {}

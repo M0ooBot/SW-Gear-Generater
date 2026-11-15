@@ -25,7 +25,7 @@ import threading
 import time
 import uuid
 from dataclasses import asdict, dataclass, field, fields
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 SCHEMA_VERSION = 1
 SIDECAR_SUFFIX = ".gear.json"
@@ -1019,6 +1019,70 @@ def _carriers_checked(box: "GearboxRecord") -> None:
             raise ValueError(f"{where} is recorded as a copy of {component.of!r}, which its own name does not say")
 
 
+SLIDE_TOLERANCE = 1e-9
+# mm: a slide value at or below this, in size, puts the slider's front face on the Front plane it is measured from
+# (J27; ``swbuild.SLIDE_TOLERANCE``, ``layout.BASE_TOLERANCE``, which this module cannot import).
+
+
+def _configurations(names: Sequence[str]) -> str:
+    """``'4L'`` / ``'2H' and '4L'`` / ``'2H', 'N' and '4L'``, for a refusal."""
+    quoted = [repr(str(n)) for n in names]
+    return quoted[0] if len(quoted) == 1 else f"{', '.join(quoted[:-1])} and {quoted[-1]}"
+
+
+def _modes_checked(box: "GearboxRecord") -> None:
+    """Schema 6 across the gearbox (W8-PLAN §1.11), as ValueError phrases naming the entry:
+
+    * ``GearboxRecord.modes``: a blank name, or a name given twice ignoring case (J6: they are configuration names,
+      and ``swbuild.on_in`` compares them ignoring case);
+    * a couple or spline whose ratio is not ``[1, 1]``;
+    * a slide with no value for one of ``modes`` (when there are modes), a value of 0, or values on both sides of
+      the Front plane (J27);
+    * a mate on in a configuration that is not one of ``modes`` (W8-INTERFACES §9.1: an empty on-set is "on in
+      every configuration" and is never refused, since the record cannot say whether it was meant).
+
+    Names compare ignoring case everywhere, through ``on_in``'s casefold (§9.6). A slide value or a component frame
+    for a name that is not one of ``modes`` is not refused: nothing reads it; and a slider's ``values`` is ``{}``
+    when there are no modes (sliders with no Modes rows, §9.8). What the app writes always passes: the modes are the
+    Modes sheet's names, which the read keeps unique ignoring case; ``finish_build`` and ``finish_update`` write
+    every slide's value in every configuration they record, never 0 nor of two signs (Build refuses that, J27), a
+    coupling's and a spline's ratio 1 : 1, and on-sets from those same names; and a build refused before its
+    configurations were saved records no mates and no modes."""
+    seen: Dict[str, str] = {}
+    for index, mode in enumerate(box.modes):
+        if not mode.strip():
+            raise ValueError(f"gearbox.modes[{index}] is a blank configuration name")
+        key = mode.casefold()
+        if key in seen:
+            raise ValueError(f"gearbox.modes[{index}] ({mode!r}) is the configuration {seen[key]!r} again, ignoring "
+                             "case")
+        seen[key] = mode
+    for index, mate in enumerate(box.mates):
+        where = f"gearbox.mates[{index}]" + (f" ({mate.name!r})" if mate.name else "")
+        if mate.kind in ("couple", "spline") and [n for n in mate.ratio] != [1, 1]:
+            raise ValueError(f"{where} is a {mate.kind} mate whose ratio is {mate.ratio!r}, where it turns its two "
+                             "gears 1 : 1")
+        if mate.kind == "slide":
+            given = {str(k).casefold() for k in mate.values}
+            missing = [m for m in box.modes if m.casefold() not in given]
+            if missing:
+                one = len(missing) == 1
+                raise ValueError(f"{where} is a slide mate with no value for the configuration{'' if one else 's'} "
+                                 f"{_configurations(missing)}")
+            for name, value in mate.values.items():
+                if abs(value) <= SLIDE_TOLERANCE:
+                    raise ValueError(f"{where} is a slide mate whose value in {name!r} is 0, which puts the slider "
+                                     "on the Front plane it is measured from")
+            if any(v > 0 for v in mate.values.values()) and any(v < 0 for v in mate.values.values()):
+                raise ValueError(f"{where} is a slide mate with values on both sides of the Front plane")
+        stray = [m for m in mate.modes if str(m).casefold() not in seen]
+        if stray:
+            one = len(stray) == 1
+            whose = "one of the gearbox's configurations" if seen else "a configuration of the gearbox, which has none"
+            raise ValueError(f"{where} is on in {_configurations(stray)}, which {'is' if one else 'are'} not "
+                             f"{whose}")
+
+
 def link_record_from_json(text: str) -> LinkRecord:
     """Parse a link record of any schema up to :data:`LINK_SCHEMA_VERSION`; a v1–v5 record is read as v6, and a
     record of any newer schema is refused (:class:`UnknownSchema`) and left alone.
@@ -1064,6 +1128,7 @@ def link_record_from_json(text: str) -> LinkRecord:
                                                      gearbox.get("carriers", []) or []))]
             _turned_senses_checked(record.gearbox)
             _carriers_checked(record.gearbox)
+            _modes_checked(record.gearbox)
             if record.gearbox.kind not in GEARBOX_KINDS:
                 raise ValueError(f"gearbox.kind is {record.gearbox.kind!r}, not one of {', '.join(GEARBOX_KINDS)}")
         record.earlier = [_checked(e) for e in _entries(EarlierRevision, raw.get("earlier", []))]
