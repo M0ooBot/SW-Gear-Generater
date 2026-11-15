@@ -88,66 +88,62 @@ def test_kinds_a_later_phase_builds_are_set_aside(tmp_path):
         "modes.", False, "Build parts", False)
 
 
-def planetary():
-    """A sun on S1 and three planets on a carrier: what the colleague found Build ready for, unchecked."""
-    return model.GearboxSpec(
-        box=model.Box(name="Planetary"),
-        shafts=(model.Shaft("S1", "frame", "0", "0", role="input", speed="1000"),
-                model.Shaft("C", "frame", "0", "0", role="output"),
-                model.Shaft("P1", "C", "30", "0", copies="3")),
-        gears=(Gear("Sun", "S1", "0", "spur", teeth="20", module="1.5", face_width="10"),
-               Gear("Planet", "P1", "0", "spur", teeth="19", module="1.5", face_width="10")),
-        meshes=(model.Mesh("Sun", "Planet"),))
+def later_rows():
+    """The reducer and a sleeve on S2: a row phase W8 builds (W7 builds carriers and their planets)."""
+    spec = reducer()
+    return model.replace(spec, box=model.replace(spec.box, output_folder=""),     # the strip's folder, then
+                         gears=spec.gears + (Gear("G6", "S2", "60", "sleeve", "external", "30", "2", "", "30", ""),))
 
 
-def test_a_carrier_is_refused_with_its_phase_and_its_gears_still_build(tmp_path):
-    read_spec, diagnostics = model.from_book(xlsx.read(write(tmp_path, planetary(), "p.xlsx")))
+def nested_carrier():
+    """W7-PLAN §4.1's 4 : 1 with a shaft mounted on the planet shaft: a carrier riding a carrier, which W7 refuses
+    and does not lay out."""
+    from test_workbook_planetary import planetary_4to1
+    spec = planetary_4to1()
+    return model.replace(spec, shafts=spec.shafts + (model.Shaft("Q", "P", "5", "0"),))
+
+
+def test_a_carrier_is_built_with_its_planets_and_checked_like_any_gearbox(tmp_path):
+    """Until W7 a carrier row was refused for a later phase, its gears built as parts alone and the gearbox not
+    checked. W7 builds it: W7-PLAN §4.1's 4 : 1 has no row left for later, its planet is one part for its three
+    copies, the gearbox is checked and laid out, and Build makes the whole of it."""
+    from test_workbook_planetary import planetary_4to1
+    read_spec, diagnostics = model.from_book(xlsx.read(write(tmp_path, planetary_4to1(), "p.xlsx")))
     parts = build.plan_parts(read_spec, FOLDER)
-    (refused,) = parts.refused
-    assert refused.message == ("Shafts!A4: P1 is mounted on C, with 3 copies round it: carriers and copies are laid "
-                               "out in phase W7, and the gearbox is not checked until then.")
-    # The sun's and the planet's parts are ordinary parts: Build parts makes them...
+    assert parts.refused == []
+    assert [j.gear_ids for j in parts.jobs] == [("Sun",), ("Planet",), ("Ring",), ("CarrierGear",)]
     state = assess.assess(read_spec, diagnostics, FOLDER)
-    assert [j.gear_ids for j in parts.jobs] == [("Sun",), ("Planet",)] and state.build_refusal() == ""
-    # ...but never says a bare "Ready" for a gearbox it has not checked, and nothing lays it out.
-    assert state.lay_out_refusal() == ("The gearbox cannot be laid out yet, since it is not checked: P1 is mounted "
-                                       "on C: carriers are laid out in phase W7.")
+    assert state.build_refusal() == "" and state.lay_out_refusal() == ""
+    assert state.report.checked and state.report.unchecked == "" and state.report.motion.later == ""
     footer = ui_text.workbook_footer(state, folder=FOLDER)
-    assert (footer.ok, footer.build_label, footer.build_enabled) == (True, "Build parts", True)
-    assert footer.text == (f"Ready: Build parts makes 2 parts in {FOLDER}; the layout and assembly wait for a later "
-                           "phase: " + refused.message)
-    # The gearbox checks stop at the layout and leave the saying to the refusal, at its cell — and the report
-    # says it was not checked, so an empty list is never read as a clean gearbox.
-    from gear_generator.workbook import checks
-    report = checks.check(read_spec)
-    assert report.diagnostics == [] and not report.checked
-    assert report.unchecked == "P1 is mounted on C: carriers are laid out in phase W7."
+    assert (footer.ok, footer.build_label, footer.build_enabled) == (True, "Build", True)
+    assert footer.text == f"Ready: Build makes 4 parts, the layout part and the assembly in {FOLDER}."
 
 
 def test_every_row_a_later_phase_builds_is_named_with_its_phase(tmp_path):
-    """W6 builds turned axes and bevel gears; what is left for later is a carrier (W7) and a slide, a sleeve or a
-    dog (W8), each named with its phase at its cell."""
+    """W6 builds turned axes and bevel gears and W7 carriers; what is left for later is a slide, a sleeve or a dog
+    (W8), each named with its phase at its cell."""
     spec = reducer()
-    shafts = spec.shafts + (model.Shaft("P1", "S2", "20", "0"),)
     gears = spec.gears[:3] + (model.replace(spec.gears[3], slides="A=0, B=10"),
-                              Gear("G6", "S2", "60", "sleeve", "external", "30", "2", "", "30", ""))
-    spec = model.replace(spec, shafts=shafts, gears=gears)
+                              Gear("G6", "S2", "60", "sleeve", "external", "30", "2", "", "30", ""),
+                              Gear("G7", "S3", "60", "dog", "external", "30", "1.5", "", "6", ""))
+    spec = model.replace(spec, gears=gears)
     read_spec, diagnostics = model.from_book(xlsx.read(write(tmp_path, spec)))
     parts = build.plan_parts(read_spec, FOLDER)
     assert [d.message for d in parts.refused] == [
-        "Shafts!A5: P1 is mounted on S2: carriers are laid out in phase W7, and the gearbox is not checked until "
-        "then.",
         "Gears!A5: G4 slides: sliding gears are placed in phase W8, with modes, and it is checked only at its At "
         "until then.",
         "Gears!A6: G6 is a sleeve: sleeves are built in phase W8, with modes.",
+        "Gears!A7: G7 is a dog ring: dog rings are built in phase W8, with modes.",
     ]
     assert len(parts.jobs) == 4
-    assert assess.assess(read_spec, diagnostics, FOLDER).lay_out_refusal().startswith(
-        "The gearbox cannot be laid out yet, since it is not checked: P1 is mounted on S2")
+    assert assess.assess(read_spec, diagnostics, FOLDER).lay_out_refusal() == (
+        "The layout and assembly wait for a later phase: Gears!A5: G4 slides: sliding gears are placed in phase W8, "
+        "with modes, and it is checked only at its At until then. (2 more under Checks)")
     footer = ui_text.workbook_footer(assess.assess(read_spec, diagnostics, FOLDER), folder=FOLDER)
     assert footer.ok and footer.text.endswith(
-        "the layout and assembly wait for a later phase: Shafts!A5: P1 is mounted on S2: carriers are laid out in "
-        "phase W7, and the gearbox is not checked until then. (2 more under Checks)")
+        "the layout and assembly wait for a later phase: Gears!A5: G4 slides: sliding gears are placed in phase W8, "
+        "with modes, and it is checked only at its At until then. (2 more under Checks)")
 
 
 def test_a_workbook_with_nothing_for_later_can_be_laid_out(tmp_path):
@@ -432,18 +428,18 @@ def test_the_window_says_what_a_later_phase_builds(tmp_path):
         out_folder = tk.StringVar(root, str(folder))
         part_template = tk.StringVar(root, "")
 
-    window = workbook_gui.WorkbookWindow(root, App(), str(write(tmp_path, planetary(), "p.xlsx")), poll_ms=10 ** 6)
+    window = workbook_gui.WorkbookWindow(root, App(), str(write(tmp_path, later_rows(), "s.xlsx")), poll_ms=10 ** 6)
     try:
         window.withdraw()
         status = window.status.get()
-        # The parts build (W2's batch, now Build parts: the layout and assembly wait for the carrier's phase).
-        assert status.startswith("Ready: Build parts makes 2 parts in ") and "; the layout and assembly wait for " \
-            "a later phase: Shafts!A4: P1 is mounted on C, with 3 copies round it" in status
+        # The parts build (W2's batch, now Build parts: the layout and assembly wait for the sleeve's phase).
+        assert status.startswith("Ready: Build parts makes 4 parts in ") and "; the layout and assembly wait for " \
+            "a later phase: Gears!A6: G6 is a sleeve: sleeves are built in phase W8, with modes." in status
         assert window.footer().build_action == ui_text.BUILD_PARTS
         assert window.build_button.label.cget("text") == "Build parts"
         assert window.build_button._enabled  # noqa: SLF001 - the button's own flag; it is never pressed here
         shown = [w.cget("text") for w in window.checks_body.winfo_children() if isinstance(w, tk.Label)]
-        assert shown == [window.parts.refused[0].message]
+        assert window.parts.refused[0].message in shown and len(window.parts.refused) == 1
     finally:
         window.close()
         root.destroy()
@@ -719,12 +715,14 @@ def test_a_gear_left_out_without_an_error_still_holds_the_layout(tmp_path):
 def test_the_checks_say_when_they_did_not_run(tmp_path):
     """The report says it was not checked, and speeds are withheld for exactly the same layouts, so the dropped
     cell-less "not worked out yet" warning can never be needed. Since W6 a turned shaft is checked and its speeds
-    worked out; a carrier (W7) still is neither."""
-    for name, spec in (("r.xlsx", reducer()), ("p.xlsx", planetary()),
+    worked out, and since W7 a carrier; what W7 refuses and does not lay out (a carrier riding a carrier) is
+    neither."""
+    from test_workbook_planetary import planetary_4to1
+    for name, spec in (("r.xlsx", reducer()), ("p.xlsx", planetary_4to1()), ("n.xlsx", nested_carrier()),
                        ("x.xlsx", model.replace(reducer(), shafts=reducer().shafts[:2]
                                                 + (model.replace(reducer().shafts[2], axis="X+"),)))):
         report = assessed(tmp_path, spec, name).report
-        assert bool(report.unchecked) == bool(report.motion.later) == (name == "p.xlsx")
+        assert bool(report.unchecked) == bool(report.motion.later) == (name == "n.xlsx")
         assert all(d.field != "Shafts" for d in report.diagnostics)
 
 
@@ -757,7 +755,7 @@ def test_a_mesh_the_chosen_fix_puts_right_says_so(tmp_path):
 
 def test_after_a_build_the_footer_still_names_the_rows_left_for_later(tmp_path):
     """Review item 6: the build's own sentence stood alone, and the later-phase rows went unsaid."""
-    read_spec, diagnostics = model.from_book(xlsx.read(write(tmp_path, planetary(), "p.xlsx")))
+    read_spec, diagnostics = model.from_book(xlsx.read(write(tmp_path, later_rows(), "s.xlsx")))
     state = assess.assess(read_spec, diagnostics, FOLDER)
     f = ui_text.workbook_footer(state, folder=FOLDER, note=("Built 2 parts.", True))
     assert (f.ok, f.build_enabled) == (True, True)
