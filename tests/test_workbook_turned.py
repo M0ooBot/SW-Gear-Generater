@@ -423,6 +423,74 @@ def test_a_crossed_shaft_moved_to_the_other_side_remakes_its_gear_mate_for_the_n
     assert result.resensed == ["G1 meshes G2"] and result.ratios == [] and result.sense_found_wrong == []
     assert senses_of(after) == {"G1 meshes G2": 1, "G3 meshes G4": 1}
     assert nothing_to_do(after, moved) == ("", (), (), (), (), (), ())
+    # The outcome, by the fake's own judgement (it works a turned mesh's sense out from where the gears stand, A's
+    # 293fdee): the remade mate turns right, the fake's default Flip being the one it needs, so it was not turned
+    # round; and driving G1 turns G2 by the new k, -0.5 (the reviewer's contact-velocity derivation).
+    asm = after.gearbox.assembly
+    assert sw.turns_right("G1 meshes G2", asm) and result.turned_round == []
+    assert sw.drive(name_of(after, "G1"), 10.0)[name_of(after, "G2")] == pytest.approx(-5.0)
+
+
+def name_of(record, gear):
+    return next(c.name for c in record.gearbox.components if c.gear == gear)
+
+
+def test_a_resense_remake_on_a_solidworks_that_wants_the_other_flip_is_turned_round_and_turns_right(turned_findings):
+    """The fake told (made up, as A's tests do) that a turned mate needs the other Flip: the build turns its mates
+    round, and the Update's remake reads wrong first, is turned round, and then turns G2 by the new k."""
+    from gear_generator import store, swbuild
+    from gear_generator.workbook import gearbox, update
+    from test_swbuild import FakeSolidWorks
+    spec = crossed_off_base()
+    sw = FakeSolidWorks()
+    sw.turned_flip_needed = True
+    plan = gearbox.plan_gearbox(direct(spec), None, exists=sw.exists, read_sidecar=lambda p: None)
+    built = swbuild.build_gearbox(sw, **plan.build_kwargs(), exists=sw.exists)
+    assert built.ok and built.assembly.turned_round == ["G1 meshes G2", "G3 meshes G4"], built.log_lines()
+    record = gearbox.finish_build(plan, built, None, workbook=BOOK, digest="d1", written_by="test",
+                                  read_sidecar=lambda p: None, exists=sw.exists).record
+    record = store.link_record_from_json(store.link_record_to_json(record))
+    moved = edited(spec, shafts={"S1": dict(y="179.705628")})
+    up, result, after = fake_press(sw, record, moved)
+    assert (result.resensed, result.turned_round, result.sense_found_wrong) == (
+        ["G1 meshes G2"], ["G1 meshes G2"], [])
+    assert sw.turns_right("G1 meshes G2", after.gearbox.assembly) and senses_of(after)["G1 meshes G2"] == 1
+    assert sw.drive(name_of(after, "G1"), 10.0)[name_of(after, "G2")] == pytest.approx(-5.0)
+    assert update.classify(after, direct(moved), exists=lambda p: True).resensed == ()
+
+
+def test_a_failed_update_after_a_resense_remake_keeps_the_sense_on_record_until_a_press_heals_it(turned_findings):
+    """As the ratios (7c0eecc): on a failed or skipped Update no mesh's sense on record changes; the next press
+    finds the mate to remake again, and only then is the new sense recorded."""
+    from gear_generator import store, swbuild
+    from gear_generator.workbook import update
+    spec = crossed_off_base()
+    sw, record = fake_turned_build(spec)
+    moved = edited(spec, shafts={"S1": dict(y="179.705628")})
+    real_remake, real_rebuild, state = sw.set_gear_ratio, sw.rebuild, {"remade": False, "failed": False}
+
+    def remake(*args, **kwargs):
+        state["remade"] = True
+        return real_remake(*args, **kwargs)
+
+    def rebuild(kind=None):
+        done = real_rebuild(kind)
+        if state["remade"] and not state["failed"]:
+            state["failed"] = True
+            return False
+        return done
+    sw.set_gear_ratio, sw.rebuild = remake, rebuild
+    plan = update.classify(record, direct(moved), exists=lambda p: True)
+    result = swbuild.update_gearbox(sw, **plan.update_kwargs(), exists=lambda p: True, mtime=lambda p: 5.0)
+    assert state["failed"] and (result.failures or result.skipped), result.log_lines()
+    done = update.finish_update(plan, result, record, digest="d2", read_sidecar=lambda p: None, mtime=lambda p: 5.0)
+    kept = store.link_record_from_json(store.link_record_to_json(done.record))
+    assert senses_of(kept) == {"G1 meshes G2": -1, "G3 meshes G4": 1}
+    again, healed, after = fake_press(sw, kept, moved)
+    assert again.resensed == ("G1 meshes G2",) and healed.resensed == ["G1 meshes G2"]
+    assert senses_of(after) == {"G1 meshes G2": 1, "G3 meshes G4": 1}
+    assert sw.turns_right("G1 meshes G2", after.gearbox.assembly)
+    assert nothing_to_do(after, moved) == ("", (), (), (), (), (), ())
 
 
 def test_a_tooth_change_across_the_parallel_stage_of_fixture_a_remakes_only_that_mate(turned_findings):

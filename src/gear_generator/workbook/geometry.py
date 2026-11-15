@@ -798,11 +798,10 @@ def cylinder_gap(a: Placed, b: Placed) -> float:
     """The least distance, mm, between the two gears' true solid bounding cylinders (W6-PLAN §2.5, D8, review M5):
     each about its own axis, radius its outside radius (a ring's rim, a bevel's largest radial extent in
     ``bevel.blank_points``), axial span its face (a bevel's blank from its nearest to its farthest point along the
-    axis, from the apex). Closed forms for side against side, each end disc against the other cylinder, and the
-    rims; 0 when they overlap. Tested against dense sampling (the fixtures' clearances to 0.1 mm).
+    axis, from the apex). 0 when they overlap.
 
-    Worked out here by alternating projections between the two convex solids (:func:`solid_gap`), which reach the
-    same least distance as the closed forms; the tests hold it to dense sampling and to the plan's fixtures."""
+    Worked out numerically, by alternating projections between the two convex solids (:func:`solid_gap`), not by
+    closed forms; the tests hold it to dense sampling and to the plan's fixture clearances (to 0.1 mm)."""
     return solid_gap(bounding_cylinder(a), bounding_cylinder(b))
 
 

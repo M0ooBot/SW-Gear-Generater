@@ -1202,13 +1202,17 @@ def _follow_mates(box: GearboxRecord, plan: UpdatePlan, result: GearboxUpdate) -
     W6 (W6-PLAN §2.7, §2.8; W6-INTERFACES §7.1): a MESH entry rewritten here takes its real sense (+1 or −1, the
     plan's ``k`` as ``c = −sign k``), never 0; one the worker remade for its sense (``result.resensed``) takes the new
     sense whether or not its ratio changed, and one the plan meant to remake that was not (a failure first) keeps
-    the sense it was made with."""
+    the sense it was made with. As the ratios: on a failed or skipped Update no mesh's sense on record changes (a
+    remade mate may not hold its new sense), and the next Update's classify finds it to remake again."""
     teeth = _teeth_held(plan, result)
     now_c = {(m.a, m.b): (1 if m.k < 0 else -1) for m in plan.motion.meshes if m.k}
     was_c = {(m.a, m.b): (1 if m.k < 0 else -1) for m in plan.motion.recorded_meshes if m.k}
-    remade = set(getattr(result, "resensed", []) or [])
+    failed = bool(result.failures or result.skipped)
+    remade = set() if failed else set(getattr(result, "resensed", []) or [])
 
     def real(entry: MateEntry) -> int:
+        if failed and entry.sense in (-1, 1):
+            return int(entry.sense)
         pair = (entry.gears[0], entry.gears[1])
         if entry.name in plan.resensed and entry.name not in remade:
             return int(was_c.get(pair, entry.sense))
