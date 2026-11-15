@@ -233,3 +233,12 @@ binding on A, B and C from now; where one names a line number it is the line at 
     gates (`swcom.turned_refusal`, A's; `motion.turned_refusal`, B's) take the mesh's class and read the finding
     for it, refusing with a full sentence when that finding is missing or the angle is outside it. A mesh whose
     axes are neither parallel, meeting nor of the CROSSED kind is refused.
+13. **One helper says "meet or skew", in `swcom.py`** (A writes it; B imports it through the path it already has,
+    `motion` → `swbuild` → `swcom`). `swcom.lines_meet(point_a, axis_a, point_b, axis_b, tolerance=MEET_TOLERANCE)
+    -> bool`: pure, no findings read; True when two non-parallel lines come within `tolerance` mm of each other
+    along their common perpendicular. `MEET_TOLERANCE = 0.005` mm, the value of `checks.CENTRE_TOLERANCE`, so a
+    bevel pair the checks pass always meets and a crossed pair the checks pass never does. Each gear's line runs
+    through its origin along its own +Z (for a bevel gear the origin is its apex). `swcom.turned_angles(meet) ->
+    (least, greatest) | None` reads `TURNED_GEAR_MATE_SENSE_ANGLES` for lines that meet and
+    `TURNED_GEAR_MATE_SENSE_ANGLES_SKEW` for lines that do not. Both gates use these two and nothing else for the
+    class and its range.
