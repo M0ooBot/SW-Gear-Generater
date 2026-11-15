@@ -208,8 +208,13 @@ section's own workbook edit changes it (``KEY``), and frames after an Update the
   coordinator's hypothesis H. Cases: 1 the drive's +37° in 2H on an untouched copy; 2 a no-op put by the app's route
   in 4L, then the drive in 2H; 3 the no-op put in every configuration, then the drive in 2H, in 4L, a reopen, in N; 4
   the app's changed Update, then the drive in 2H; 5 FIdler put in N and 4H by a plain Transform2, FDrive moved along
-  its axis by the app's route in 2H; 6 each body put, held or wholly free during the put; 7 a slide's value set in 4L
-  with 2H active, a handle held across a show, IsFixed through fresh handles. The readings go to w8-s7-<ts>.json.
+  its axis by the app's route in 2H, then FrontDog driven in N while FIdler stands differently (same amount or same
+  place?); 6 each body put, held or wholly free during the put; 8 (review M1) the drive in 2H, the app's quiet Update in
+  4L putting every mode, a fresh drive in 2H, a moving put in 2H back to the built frames, each read in every
+  configuration; 7 a slide's value set in 4L with 2H active (a STOP if refused), a handle held across a show, IsFixed
+  through fresh handles, a suppressed gear mate's sense on the copy as opened. Turns on a copy no Update has moved
+  (cases 1-3) and case 5's moving puts are held to the running version's findings where set (a STOP on a
+  difference); unset, they are logged. The readings go to w8-s7-<ts>.json.
 
 The W5 sections, each in its own folder under the output folder (the default order is W8's, W7's, W6's, then m1 m3 m7
 m8 m2 m4 m5 m6 a a2 a3 b c; ``--only ring`` runs m3, m7 and m8, the ring-train sections):
@@ -346,6 +351,10 @@ ALIASES = {"ring": RING, "w6": W6_ORDER, "confirm": CONFIRM, "planetary": W7_ORD
 ONLY = [n for i, a in enumerate(sys.argv) if a == "--only"
         for n in ALIASES.get(sys.argv[i + 1], [sys.argv[i + 1]])] or DEFAULT_ORDER
 LOG_PATH = sys.argv[sys.argv.index("--log") + 1] if "--log" in sys.argv else os.path.join(OUT, "workbook-assembly.log")
+try:
+    open(LOG_PATH, "w", encoding="utf-8").close()       # say() appends each line as it goes
+except OSError:
+    pass
 FIXTURES = sys.argv[sys.argv.index("--fixtures") + 1] if "--fixtures" in sys.argv else ""
 # ``--p3-steps 1``: p3's steps to run (default all three), for a confirming run of the put-back alone.
 P3_STEPS = sys.argv[sys.argv.index("--p3-steps") + 1] if "--p3-steps" in sys.argv else "123"
@@ -440,7 +449,8 @@ _RAW_CALL = swcom.call
 # a configuration's name for a show, the mate's name and the names for a flag call, the value and names for a
 # value set, the component's Name2 for a put.
 TRACE = {"on": False, "calls": [], "count": 0}     # count: every swcom call while on (s5 (i))
-TRACED = ("ShowConfiguration2", "SetSuppression2", "IsSuppressed2", "SetSystemValue3", "DeleteConfiguration2",
+TRACED = ("ShowConfiguration2", "SetSuppression2", "IsSuppressed2", "SetSystemValue3", "GetSystemValue3",
+          "DeleteConfiguration2",
           "AddConfiguration2", "ForceRebuild3", "EditRebuild3", "AddMate5", "OpenDoc6", "SaveAs3")
 
 
@@ -462,6 +472,12 @@ def _traced_entry(obj, name, args):
         return (name, args[0] if args else None)
     if name == "SetSystemValue3":
         return (name, args[0] if args else None, _names_of(args[2]) if len(args) > 2 else None)
+    if name == "GetSystemValue3":
+        try:
+            full = str(_RAW_CALL(obj, "FullName"))
+        except Exception:  # noqa: BLE001 - the trace must never change what the job does
+            full = "?"
+        return (name, full, args[0] if args else None, _names_of(args[1]) if len(args) > 1 else None)
     return (name,)
 
 
@@ -508,6 +524,12 @@ def say(line=""):
     with LOCK:
         print(line, flush=True)
         LOG.append(line)
+        # Review S7: written as it goes, so a run that hangs or is stopped keeps its log (rewritten whole at the end).
+        try:
+            with open(LOG_PATH, "a", encoding="utf-8", newline="\n") as handle:
+                handle.write(line + "\n")
+        except OSError:
+            pass
 
 
 def check(ok, what):
@@ -523,8 +545,26 @@ def note(what):
     NOTES.append(what)
 
 
-def run(worker, fn, timeout=2400):
-    value, error = worker.submit(fn).wait(timeout=timeout)
+class WorkerHung(Exception):
+    """A SolidWorks job did not answer in its time (review S7): the run ends with a failure, nothing more is queued."""
+
+
+HUNG = {"on": False}
+
+
+def wait_job(call_, timeout, what="a SolidWorks job"):
+    """``call_.wait`` with a named timeout: a job that does not answer marks the worker hung and raises WorkerHung."""
+    if HUNG["on"]:
+        raise WorkerHung("the SolidWorks worker is hung from an earlier job, so nothing more is asked of it")
+    try:
+        return call_.wait(timeout=timeout)
+    except queue.Empty:
+        HUNG["on"] = True
+        raise WorkerHung(f"{what} did not answer in {timeout:g} s") from None
+
+
+def run(worker, fn, timeout=1200):
+    value, error = wait_job(worker.submit(fn), timeout)
     if error is not None:
         raise error
     return value
@@ -1162,8 +1202,8 @@ class Desk:
         say(f"journal {'written' if journaled else 'NOT written'}: {len(wb_gearbox.journal(plan))} paths")
         started = time.monotonic()
         say(f"build   {plan.name}: {memory()}")
-        result, self.error = self.worker.submit(
-            lambda s: swbuild.build_gearbox(s, **kwargs, progress=steps.append)).wait(timeout=2400)
+        result, self.error = wait_job(self.worker.submit(
+            lambda s: swbuild.build_gearbox(s, **kwargs, progress=steps.append)), 2400, "the build")
         seconds = time.monotonic() - started
         if self.error is not None:
             say(f"        raised {type(self.error).__name__}: {self.error}")
@@ -1203,8 +1243,8 @@ class Desk:
         kwargs = update.update_kwargs()
         started = time.monotonic()
         say(f"update  {memory()}")
-        result, self.error = self.worker.submit(
-            lambda s: swbuild.update_gearbox(s, **kwargs, progress=steps.append)).wait(timeout=2400)
+        result, self.error = wait_job(self.worker.submit(
+            lambda s: swbuild.update_gearbox(s, **kwargs, progress=steps.append)), 2400, "Update SolidWorks")
         seconds = time.monotonic() - started
         if self.error is not None:
             say(f"        raised {type(self.error).__name__} in {seconds:.1f} s: {self.error}")
@@ -6497,8 +6537,9 @@ def w8_and(items):
 
 
 PUT_IN = {}       # section -> the configurations its Updates have put in, in order (s2's fresh turn says the state)
-SHARED_MAY = ("This version of SolidWorks shows a turn given in one mode in every mode, so the turn may have been given "
-              "in another.")
+# The sentence a press that found a coupling across says where the version's turn finding is False; its first words are
+# being reworded (5989c7d: "can show … in the others"), so only its tail is held and the whole is logged.
+SHARED_MAY = "so the turn may have been given in another."
 
 
 def w8_crossed(desk, mode, turns):
@@ -6575,7 +6616,7 @@ def w8_read_all(worker, desk, label, wanted, last):
     return out
 
 
-def w8_press_after_turn(worker, desk, label, mode, positions, turns, folder, presses, expect="finding"):
+def w8_press_after_turn(worker, desk, label, mode, positions, turns, folder, presses, expect="finding", built=None):
     """Update SolidWorks pressed with ``mode`` showing after the user's turn in 2H, nothing changed in the workbook.
     ``expect`` "finding": what the running version's answer says — False (the turn shows here), ``mode``'s
     couplings found across and, the quiet path having something to put, every mode put whole to the built frames,
@@ -6676,12 +6717,23 @@ def w8_press_after_turn(worker, desk, label, mode, positions, turns, folder, pre
     for text in (back, worked):
         check(text in said, f"{label}: the status says {text!r}")
     check("did not show the other modes" not in said, f"{label}: and not the quiet press's sentence")
-    say(f"fact    {label}: the turn finding's sentence ({SHARED_MAY!r}) is {'said' if SHARED_MAY in said else 'not said'}")
+    if positions is False and crossed:
+        check(SHARED_MAY in said, f"{label}: the turn finding (False) gives the sentence ending {SHARED_MAY!r}")
+    elif positions is True:
+        check(SHARED_MAY not in said, f"{label}: the turn finding (True) gives no sentence ending {SHARED_MAY!r}")
+    else:
+        say(f"fact    {label}: the sentence ending {SHARED_MAY!r} is {'said' if SHARED_MAY in said else 'not said'}")
     check(any(os.path.basename(str(p)).lower() == os.path.basename(box.assembly).lower() for p in result.changed),
           f"{label}: the assembly is among the documents changed: {result.changed}")
     update_marks(worker, desk, result, label, folder)
-    w8_read_all(worker, desk, f"{label}, every mode read after the press", {m: mode_record_frames(desk, m)
-                                                                             for m in box.modes}, mode)
+    # Review S1: held to the frames copied from the master (moved by the section's own edits), not to the record the
+    # app has just rewritten; and the record's frames held to them too.
+    wanted_frames = built if built is not None else {m: mode_record_frames(desk, m) for m in box.modes}
+    if built is not None:
+        gaps = {m: frames_gap(mode_record_frames(desk, m), built[m]) for m in box.modes}
+        check(all(g <= FRAME_TOLERANCE for g, _ in gaps.values()), f"{label}: the record's frames after the press are "
+              f"the built ones in every mode ({({m: f'{g:.1e}' for m, (g, _) in gaps.items()})})")
+    w8_read_all(worker, desk, f"{label}, every mode read after the press", wanted_frames, mode)
     return result
 
 
@@ -6709,18 +6761,31 @@ def w8_press_in_step(worker, desk, label, mode, positions, presses):
           f"visited {result.visited}, placed {result.placed}, out of step {result.out_of_step}, turned {result.turned})")
     check(not nothing_changed_calls(calls), f"{label}: no show, flag, value, rebuild or put: "
           f"{nothing_changed_calls(calls)}")
+    check(not result.senses_unread, f"{label}: every sense read: unread {result.senses_unread}")
+    w8_values_read(box, calls, label)
     check_quiet_update(worker, desk, result, label, frames_before, flags_before)
     stand = "The gears stand where they were turned in SolidWorks."
     quiet = f"It worked in {mode}, the configuration that was active; it did not show the other modes"
     check(stand in said and quiet in said, f"{label}: the status says {stand!r} and {quiet!r}")
+    # The sentence's words are being reworded (5989c7d); it is held as ui_text has it, whatever its words.
     if positions is False:
         check(f"{stand} {ui_text.TURN_SHOWN_ELSEWHERE}" in said, f"{label}: on this version, straight after it, "
-              f"exactly {ui_text.TURN_SHOWN_ELSEWHERE!r}")
+              f"ui_text.TURN_SHOWN_ELSEWHERE ({ui_text.TURN_SHOWN_ELSEWHERE!r})")
     else:
-        check(ui_text.TURN_SHOWN_ELSEWHERE not in said and "shows that turn in every mode" not in said,
-              f"{label}: the version's answer is {positions}, so the status does not carry the sentence on a turn shown "
-              "in every mode")
+        check(ui_text.TURN_SHOWN_ELSEWHERE not in said, f"{label}: the version's answer is {positions}, so the status "
+              "does not carry ui_text.TURN_SHOWN_ELSEWHERE")
     return result
+
+
+def w8_values_read(box, calls, label):
+    """Review S5: a quiet press reads every slide's value in every mode (GetSystemValue3 through the dimension, traced
+    with its full name); the reads logged."""
+    reads = [c for c in calls if c[0] == "GetSystemValue3"]
+    slides = [m.name for m in box.mates if m.kind == "slide"]
+    missing = [(n, mode) for n in slides for mode in box.modes
+               if not any(n in str(c[1]) and mode in (c[3] or ()) for c in reads)]
+    say(f"fact    {label}: slide values read {[(c[1], c[3]) for c in reads]}")
+    check(slides and not missing, f"{label}: every slide's value read in every mode: missing {missing}")
 
 
 def section_s2(worker, excel):
@@ -6751,7 +6816,7 @@ def section_s2(worker, excel):
     stop_check(not merged, f"s2: 2H at the turn, no interference: {[(c.gears, round(c.volume, 3)) for c in merged]}")
     # An Update in 4L, nothing changed in the workbook.
     w8_show(worker, desk, "4L", "s2")
-    w8_press_after_turn(worker, desk, "s2 quiet Update in 4L", "4L", positions, turns, folder, presses)
+    w8_press_after_turn(worker, desk, "s2 quiet Update in 4L", "4L", positions, turns, folder, presses, built=built)
     desk.say_footer("s2, after the quiet press in 4L")
     # Stage 2c's new step: the train turned in 2H, in step there; Update in 2H; 4L shown and read; Update in 4L.
     say("-- s2: the train turned in 2H (in step there) -> Update in 2H; then 4L shown, LoDog read across RangeSlv -> "
@@ -6764,10 +6829,13 @@ def section_s2(worker, excel):
     w8_press_in_step(worker, desk, "s2 Update in 2H, the train turned and in step there", "2H", positions, presses)
     desk.say_footer("s2, after the press in 2H")
     guard()
-    w8_shown_turned(worker, desk, "s2, the fresh turn in 2H, 4L shown (a fact until s7 settles it)", "4L", turns2,
-                    None)
+    # Review M1: every other configuration read after the fresh turn, each a fact line (nothing asserted about which
+    # modes the turn reaches); 4L last, so it is showing for the press.
+    for mode in ("4H", "N", "4L"):
+        guard()
+        w8_shown_turned(worker, desk, f"s2, the fresh turn in 2H, {mode} shown (a fact)", mode, turns2, None)
     w8_press_after_turn(worker, desk, "s2 Update in 4L after the fresh turn in 2H", "4L", positions, turns2, folder,
-                        presses, expect=None)
+                        presses, built=built)
     desk.say_footer("s2, after the second press in 4L")
     # The changed Update.
     expected = moved_frames(built, [(g, None, 2.0) for g in ("FDrive", "FIdler", "FOut")])
@@ -6971,6 +7039,11 @@ def listed_and_left(worker, desk, label, name):
               f"{result.extra_mates}")
     check(not nothing_changed_calls(calls), f"{label}: a quiet press: no show, flag, value, rebuild or put: "
           f"{nothing_changed_calls(calls)}")
+    config = result.configuration
+    quiet = (f"It worked in {config}, the configuration that was active; it did not show the other modes, since nothing "
+             f"in {config} needed changing.")
+    check(quiet in (desk.note[0] if desk.note else ""), f"{label}: the status says {quiet!r}")
+    check(not result.senses_unread, f"{label}: every sense read: unread {result.senses_unread}")
     check_quiet_update(worker, desk, result, label, frames_before, flags_before)
     return result
 
@@ -7017,7 +7090,14 @@ def section_s3(worker, excel):
               f"anything is shown (sets at {sets}, first show at {shows[:1]})")
         check(result.visited == ["4H", "N", "4L"] and [m.name for m in result.modes] == ["4H", "N", "4L", "2H"],
               f"s3 D10 Update: having changed something, it shows and checks every mode: visited {result.visited}")
-        say(f"        the sentence: {desk.note[0]!r}")
+        said = desk.note[0] if desk.note else ""
+        say(f"        the sentence: {said!r}")
+        for piece in ("set RangeSlv's place in N back to 56 mm, where it had been changed in SolidWorks",
+                      "turned the mate RangeSlv engages LoDog back on in 4L",
+                      "suppressed the mate RangeSlv engages InDog again in 4L",
+                      "It worked in 2H, the configuration that was active, then showed and checked 4H, N and 4L and left "
+                      "the assembly in 2H."):
+            check(piece in said, f"s3 D10 Update: the status says so: {piece!r}")
         update_marks(worker, desk, result, "s3 D10 Update", folder)
     else:
         check(False, f"s3 D10 Update: refused: {desk.note[0]!r}")
@@ -7080,7 +7160,18 @@ def section_s4(worker, excel):
             check(sorted(result.suppressed_in) == sorted(flags[0]) and sorted(result.unsuppressed_in) == sorted(flags[1]),
                   f"{label}: the flags J14 changes: suppressed {result.suppressed_in}, on {result.unsuppressed_in}")
         check(result.visited == ["4H", "N", "4L"], f"{label}: every other mode shown and post-checked: {result.visited}")
-        say(f"        the sentence: {desk.note[0]!r}")
+        said = desk.note[0] if desk.note else ""
+        say(f"        the sentence: {said!r}")
+        groups = {}
+        for name, config, value in slid:
+            groups.setdefault((name, value), []).append(config)
+        pieces = [f"moved {n.split(' along ')[0]} in {w8_and(cs)} to {v:g} mm along {n.split(' along ')[1]}"
+                  for (n, v), cs in groups.items()]
+        pieces += [f"switched the mate {m} off in {c}" for m, c in (flags[0] if flags else [])]
+        pieces.append("It worked in 2H, the configuration that was active, then showed and checked 4H, N and 4L and "
+                      "left the assembly in 2H.")
+        for piece in pieces:
+            check(piece in said, f"{label}: the status says {piece!r}")
         update_marks(worker, desk, result, label, folder)
         raw_flag_reads(worker, desk, f"{label}, straight after", names=[m.name for m in box.mates])
         measure_modes(worker, desk, f"{label}, after", controls=True, active="2H", expected=expect)
@@ -7595,6 +7686,38 @@ def s7_note_put(forked, mode, bodies_put):
         forked.setdefault(g, set()).add(mode)
 
 
+def s7_findings():
+    """The running version's two findings s7 is held to (review M2): the turn finding (swcom's switch,
+    TURN_PER_CONFIGURATION_ON_<year>) and the put fact (POSITIONS_PER_CONFIGURATION_ON_<year>); None where unset."""
+    year = swcom.release_year(int(TAG["revision"][0])) if TAG.get("revision") else None
+    put = getattr(findings, f"POSITIONS_PER_CONFIGURATION_ON_{year}", None) if year else None
+    return swcom.positions_per_configuration(TAG.get("revision") or ()), (put if isinstance(put, bool) else None)
+
+
+def s7_hold(case, step, kind, j):
+    """Review M2: a judgement held to the running version's finding where it is set, a STOP on a difference. A turn
+    on a copy no Update has moved (cases 1-3, ``case.hold_turn``): False -> it fits "shared" (read in every
+    configuration); True -> "per_configuration". A moving put of one body on a fresh copy (case 5, ``case.hold_put``):
+    the put fact True -> "per_configuration"; False -> "shared". A None finding: nothing asserted, the judgement logged."""
+    turn, put = s7_findings()
+    if not j["moved_bodies"]:
+        return
+    if kind == "turn" and getattr(case, "hold_turn", False):
+        if turn is None:
+            say(f"fact    s7 {case.key} {step}: the turn finding is unset on this version; fits {j['fits']}")
+        else:
+            want = "per_configuration" if turn else "shared"
+            stop_check(want in j["fits"], f"s7 {case.key} {step}: the turn finding ({turn}) wants the turn read "
+                       f"{'in its configuration alone' if turn else 'in every configuration'}: fits {j['fits']}")
+    if kind == "put" and getattr(case, "hold_put", False):
+        if put is None:
+            say(f"fact    s7 {case.key} {step}: the put fact is unset on this version; fits {j['fits']}")
+        else:
+            want = "per_configuration" if put else "shared"
+            stop_check(want in j["fits"], f"s7 {case.key} {step}: the put fact ({put}) wants the moving put read "
+                       f"{'in its configuration alone' if put else 'in every configuration'}: fits {j['fits']}")
+
+
 class S7Case:
     """One s7 case on its own copy: the readings, tables and judgements kept for the JSON."""
 
@@ -7630,6 +7753,7 @@ class S7Case:
             j = s7_judge(self.box, f"s7 {self.key}", step, kind, made_in, self.last, now, self.forked)
             self.json["steps"][-1]["judgement"] = j
             self.judged.append(j)
+            s7_hold(self, step, kind, j)
         if kind == "put":
             s7_note_put(self.forked, made_in, bodies_put)
         self.last = now
@@ -7650,6 +7774,7 @@ class S7Case:
               f"suppressed for the put back as §2.3 has it in every configuration: wrong {wrong}")
         put_bodies = list(out["puts"])
         moved = {g: frame_gap(out["before"][g], f) for g, f in out["puts"].items()}
+        noop = all(v <= S7_TOL for v in moved.values())
         say(f"step    {label}: put in {mode} by {'the app' if route else 'a plain Transform2'}'s route, mates off "
             f"there {off or 'none'}; each body put and how far from where it stood {({g: round(v, 6) for g, v in moved.items()})}")
         say(f"        during the put: {({g: held[g] for g in put_bodies})}")
@@ -7659,7 +7784,8 @@ class S7Case:
                 f"{gap:.1e} at {at or '-'}; others moved {[g for g in out[when] if g not in out['puts'] and frame_gap(out['before'][g], out[when][g]) > S7_TOL]}")
         frames = self.read(step)
         self.json["steps"][-1].update(put={"mode": mode, "route": "app" if route else "plain", "mates_off": off,
-                                           "bodies": put_bodies, "held": {g: held[g] for g in put_bodies},
+                                           "noop": noop, "bodies": put_bodies,
+                                           "held": {g: ("no-op put: " if noop else "") + held[g] for g in put_bodies},
                                            "moved_mm_or_rad": moved,
                                            "in_mode_mates_off": s7_express(self.desk, {mode: out["mates_off"]})[mode],
                                            "in_mode_mates_on": s7_express(self.desk, {mode: out["mates_on"]})[mode]})
@@ -7686,6 +7812,10 @@ class S7Case:
             raise S7Stop(f"{label}: {out['errors']} {out['cleanup']}")
         gap = max(frame_gap(out["before"][g], out["made"][g]) for g in out["before"])
         turned = turn_degrees(out["before"][sun][0], out["after"][sun][0])
+        if gap > S7_TOL:
+            stop_check(False, f"{label}: making the drive's mate moved nothing ({gap:.1e}); the case ends, since what "
+                              "it would read is a state the make disturbed")
+            raise S7Stop(f"{label}: the drive's mate moved the train on making ({gap:.1e})")
         check(gap <= S7_TOL and turned is not None and abs(turned - degrees) <= DRIVE_TOLERANCE * abs(degrees)
               and "S7 drive" not in out["mates"] and swbuild.on_in((mode,), out["active"]),
               f"{label}: in {out['active']} the drive made at {out['mate'][3]:.6f}° (the input at "
@@ -7775,6 +7905,7 @@ def s7_built_check(case, frames):
 
 def s7_case_1(worker, excel):
     c = S7Case(worker, excel, "1", "virgin: straight from the copy, read; the drive's +37° in 2H; read; reopen")
+    c.hold_turn = True
     try:
         frames = c.read("as copied")
         s7_built_check(c, frames)
@@ -7788,6 +7919,7 @@ def s7_case_1(worker, excel):
 def s7_case_2(worker, excel):
     c = S7Case(worker, excel, "2", "a no-op put forks? 4L (not the configuration the copy opens in): the app's put "
                                    "route to the same frames; then the drive's +37° in 2H")
+    c.hold_turn = True
     try:
         c.last = c.read("as copied")
         c.put("no-op put in 4L", "4L", s7_noop(c.desk))
@@ -7800,6 +7932,7 @@ def s7_case_2(worker, excel):
 def s7_case_3(worker, excel):
     c = S7Case(worker, excel, "3", "every configuration put in: the no-op put in 2H, 4H, N and 4L in turn; the drive's "
                                    "+37° in 2H; +20° in 4L; save and reopen; +11° in N")
+    c.hold_turn = True
     try:
         c.last = c.read("as copied")
         for mode in c.box.modes:
@@ -7814,9 +7947,12 @@ def s7_case_3(worker, excel):
 
 
 def s7_case_4(worker, excel):
-    c = S7Case(worker, excel, "4", "after the app's own Update: At 130 -> 132 (every mode put); the drive's +37° in 2H")
+    c = S7Case(worker, excel, "4", "after the app's own Update: the drive's +37° in 2H, then At 130 -> 132 (every mode "
+                                   "put, the turned train put back by moving puts); the drive's +37° in 2H")
     try:
         c.last = c.read("as copied")
+        # Review S2: the train turned first, so the Update's puts of it are moving puts.
+        c.drive("drive +37 in 2H before the Update", "2H", 37.0)
         say("-- s7 4: Excel FDrive, FIdler and FOut At 130 -> 132 -> Update (through the app)")
         edit(c.desk, c.book, *[("Gears", cell(c.book, "Gears", "At", g), 132) for g in ("FDrive", "FIdler", "FOut")])
         result, calls, seconds = w8_update(worker, c.desk, "s7 4 changed Update")
@@ -7849,6 +7985,7 @@ def desk_note(desk):
 def s7_case_5(worker, excel):
     c = S7Case(worker, excel, "5", "a free component (the plan's case): FIdler +20° in N by a plain Transform2, its "
                                    "mates on; +10° in 4H; FDrive +2 mm along its axis by the app's route in 2H")
+    c.hold_put = True
     try:
         c.last = c.read("as copied")
         c.put("FIdler +20 in N, plain", "N", s7_spin("FIdler", 20.0), route=False)
@@ -7860,6 +7997,37 @@ def s7_case_5(worker, excel):
         frames = c.drive("FrontDog +15 in N, FIdler standing differently", "N", 15.0, body="FrontDog")
         s7_same_amount_or_place(c, prev, frames, "N", "FIdler")
         c.put("FDrive +2 mm in 2H, the app's route", "2H", s7_axial("FDrive", 2.0))
+        c.reopen("saved and reopened")
+    finally:
+        c.end()
+
+
+def s7_case_8(worker, excel):
+    """Review M1's sequence, a measurement (nothing asserted about where a turn or put shows): the drive's +37° in 2H;
+    the app's quiet Update pressed in 4L (which puts every mode); every configuration read; a fresh +37° in 2H; read; a
+    moving put by the app's route with 2H showing, the train back to its built frames (as Update's loop does for the
+    first mode); read BEFORE any other configuration is put; saved, reopened, read."""
+    c = S7Case(worker, excel, "8", "after the app's quiet Update in 4L: a fresh turn in 2H, then a moving put in 2H, every "
+                                   "configuration read after each")
+    try:
+        c.last = c.read("as copied")
+        c.drive("drive +37 in 2H", "2H", 37.0)
+        w8_show(worker, c.desk, "4L", "s7 8")
+        save_assembly(worker, c.desk, "s7 8: 4L active, so the marks after the press are its own")
+        c.desk.plan_solidworks()
+        c.desk.say_update()
+        result, calls, seconds = w8_update(worker, c.desk, "s7 8 quiet Update in 4L")
+        c.json["update"] = {"put_in": list(result.put_in) if result else [], "visited": list(result.visited) if result
+                            else [], "failures": list(result.failures) if result else [], "seconds": seconds,
+                            "status": desk_note(c.desk)}
+        say(f"fact    s7 8: the quiet Update in 4L put in {result and result.put_in}; failures {result and result.failures}")
+        frames = c.read("after the quiet Update in 4L")
+        for mode in (result.put_in if result else ()):
+            s7_note_put(c.forked, mode, [g for g, _ in bodies(c.box) if g not in c.box.fixed])
+        c.last = frames
+        c.drive("fresh drive +37 in 2H", "2H", 37.0)
+        built = {g: f for g, f in mode_record_frames(c.desk, "2H").items() if g not in c.box.fixed}
+        c.put("moving put in 2H, the train back to its built frames", "2H", lambda before: dict(built))
         c.reopen("saved and reopened")
     finally:
         c.end()
@@ -7942,7 +8110,7 @@ def s7_case_7(worker, excel):
         say(f"fact    s7 7: RangeSlv along Rear before {out['values_before']}; 4L set to {out['target']:g} with "
             f"{out['active_after_set']} active -> {out['values_set']}; set back -> {out['values_restored']}")
         others = all(abs(out["values_set"][m] - out["values_before"][m]) <= 1e-6 for m in box.modes if m != "4L")
-        check(abs(out["values_set"]["4L"] - out["target"]) <= 1e-6 and others
+        stop_check(abs(out["values_set"]["4L"] - out["target"]) <= 1e-6 and others
               and swbuild.on_in(("2H",), out["active_after_set"])
               and all(abs(out["values_restored"][m] - out["values_before"][m]) <= 1e-6 for m in box.modes),
               "s7 7: 4L's value set and read back without activating 4L, the others unchanged, set back")
@@ -7969,7 +8137,8 @@ def s7_per_body():
                 continue
             for g in put["bodies"]:
                 state = j["bodies"].get(g, {}).get("state")
-                rows.append({"case": case["case"], "step": step["step"], "body": g, "during": put["held"][g],
+                rows.append({"case": case["case"], "step": step["step"], "body": g, "noop": put.get("noop"),
+                             "during": put["held"][g],
                              "configurations": state or "did not move where it was put"})
     say("table   s7 6: each body put, held or wholly free during the put, and how each configuration read after it")
     for r in rows:
@@ -7986,7 +8155,7 @@ def section_s7(worker, excel):
         TAG["revision"]), cases=[])
     path = os.path.join(os.path.dirname(os.path.abspath(LOG_PATH)), f"w8-s7-{started}.json")
     try:
-        for case in (s7_case_1, s7_case_2, s7_case_3, s7_case_4, s7_case_5, s7_case_7):
+        for case in (s7_case_1, s7_case_2, s7_case_3, s7_case_4, s7_case_5, s7_case_8, s7_case_7):
             guard()
             try:
                 case(worker, excel)
@@ -8137,7 +8306,12 @@ def main():
                 check(False, f"section {name} stopped: {exc}")
                 halted = True
             except Halt as exc:
-                check(False, f"section {name} HALTED, the run stops here (W5-PLAN §4.2): {exc}")
+                # Review N7: a Halt ends this section; later sections that need what it would have made block
+                # themselves (s_blocked, start_w8_copy), and the rest still run.
+                check(False, f"section {name} HALTED, the section ends here (W5-PLAN §4.2): {exc}")
+            except WorkerHung as exc:
+                check(False, f"section {name}: {exc}; the run ends here, nothing more is asked of SolidWorks")
+                STOPS.append(f"section {name}: {exc}")
                 halted = True
             except Exception as exc:  # noqa: BLE001 - logged, and the documents still closed below
                 check(False, f"section {name} raised {type(exc).__name__}: {exc}")
@@ -8148,8 +8322,16 @@ def main():
                 books = close_books()
                 if books:
                     say(f"excel   section {name} left {books} open in Excel: closed without saving")
-                left = run(worker, close_ours, 600)
-                say(f"close   section {name}: left of ours {left}; {time.monotonic() - started:.0f} s; {memory()}")
+                if HUNG["on"]:
+                    say(f"close   section {name}: the SolidWorks worker is hung, so its documents are not closed "
+                        f"by this run; {time.monotonic() - started:.0f} s")
+                else:
+                    try:
+                        left = run(worker, close_ours, 600)
+                    except WorkerHung as exc:
+                        left = f"not closed: {exc}"
+                        halted = True
+                    say(f"close   section {name}: left of ours {left}; {time.monotonic() - started:.0f} s; {memory()}")
             if halted:
                 break
     finally:
@@ -8158,14 +8340,21 @@ def main():
             say("excel   quit our own Excel")
         except Exception as exc:  # noqa: BLE001
             say(f"excel   quit trouble: {exc}")
-        left = run(worker, close_ours, 600)
-        after = run(worker, open_titles, 120)
-        say(f"close   left of ours {left}; stray {[t for t in after if t not in before]}; "
-            f"lost {[t for t in before if t not in after]}; {memory()}")
+        if HUNG["on"]:
+            say("close   the SolidWorks worker is hung: nothing closed or read at the end; SolidWorks is left as it is")
+        else:
+            try:
+                left = run(worker, close_ours, 600)
+                after = run(worker, open_titles, 120)
+                say(f"close   left of ours {left}; stray {[t for t in after if t not in before]}; "
+                    f"lost {[t for t in before if t not in after]}; {memory()}")
+            except WorkerHung as exc:
+                say(f"close   not closed: {exc}")
         watch.stop.set()
         say(f"dialogs progress boxes seen {PROGRESS}; other dialogs are logged above as DIALOG")
         worker.shutdown()
-    give_back_r1()
+    if not HUNG["on"]:
+        give_back_r1()
     for line in NOTES:
         say(f"noted   {line}")
     for line in STOPS:

@@ -649,8 +649,29 @@ def w8_choose(name):
         chooser._choose(name)  # noqa: SLF001 - the click's own handler
 
 
+# Review S6: each mode's head lines held to W8-PLAN §2.3's key (In at 1500 rpm; 2H and 4H 1 : 1, 4L the 4 : 1 low range,
+# N neutral) and the couplings it engages; the rest of the panel logged.
+W8_HEAD = {"2H": ["2H: Rear 1500 rpm · Front not driven · 1.000 : 1", "In 2H, RangeSlv engages InDog."],
+           "4H": ["4H: Rear 1500 rpm · Front 1500 rpm · 1.000 : 1",
+                  "In 4H, RangeSlv engages InDog and ModeSlv engages FrontDog."],
+           "N": ["N: neutral — Rear, FrontDrv, Idler and Front turn freely.", "In N, no sleeve engages a dog."],
+           "4L": ["4L: Rear 375 rpm · Front 375 rpm · 4.000 : 1",
+                  "In 4L, RangeSlv engages LoDog and ModeSlv engages FrontDog."]}
+# The built footer's sentences that do not depend on the turn wording (being reworded, 5989c7d): held exactly.
+W8_BUILT = ["Its turning gears are mated to turn in each of its 4 modes, one configuration each (2H, 4H, N and 4L), and "
+            "SolidWorks reports no mate in error in any of them: it opens in 2H; to switch mode, double-click another "
+            "mode's configuration in SolidWorks' ConfigurationManager.",
+            "Drag Sun in SolidWorks to turn one train and FrontDog to turn the other.",
+            "RangeSlv and ModeSlv slide along Rear, each to its place in each mode.",
+            "The 3 copies of Pl turn on Carrier, and TransferCase_E4_Carrier_Carrier holds Carrier's axes and planes only: "
+            "a plate and pins are yours to add.",
+            "Ring stays fixed where it is placed: its shaft does not turn."]
+
+
 def w8_mode_check(name):
     lines = speeds_lines()
+    head = [line.replace("\u00a0", " ") for line in lines[:2]]
+    check(head == W8_HEAD.get(name), f"W8 {name}: the Speeds panel's head lines are §2.3's: {head}")
     log("W8 mode", chosen=win.mode.get(), header=win.box_values["type"].cget("text"), speeds=lines,
         speeds_readout=win.speeds_readout.get(), end_view=win.view_readout.get(), status=win.status.get(),
         choosers=[getattr(c, "_values", ()) for c in win.mode_choosers])
@@ -668,6 +689,8 @@ def w8_built_check():
     check(box is not None and box.kind == store.GEARBOX_MOTION and box.assembly and tuple(box.modes) ==
           ("2H", "4H", "N", "4L"), f"W8: built to turn with a configuration per mode: {box and box.kind!r} "
           f"{box and box.modes}")
+    for sentence in W8_BUILT:
+        check(sentence in text, f"W8 built: the footer says {sentence!r}")
     w8_footer_whole("built")
     w8_width("built")
 
