@@ -207,7 +207,8 @@ def test_the_phases_put_each_dog_in_its_sleeves_spaces(make):
     assert got == {"InDog": 0.0, "RangeSlv": 6.0, "LoDog": 0.0, "FrontDog": 0.0, "ModeSlv": 6.0}
 
 
-# Taken at 120192d (before any of B's W8 planning code), the turned read-back finding set.
+# Reproduced at e9efab9, the interface commit, before any of B's W8 code (the review re-took all nine there), with
+# the turned read-back finding set.
 BEFORE_W8 = {
     "Reducer_12to1.xlsx": "41da0447e37015088d223b107ff53ebe82c983ebb38b5e6a1860b402cfd2c490",
     "Arc_Move.xlsx": "e6f8658f8d42437042b541d0e5a45fc7157caa5972fe044bc51b24f545d78b1e",
@@ -948,3 +949,114 @@ def test_a_mode_spelt_4l_builds_updates_and_reads_back_clean_on_the_fake(mode_fi
                                                                             "4l": 66.5}
     assert all(set(m.modes) <= set(box.modes) for m in box.mates)
     assert all(set(c.frames) == set(box.modes) for c in box.components)
+
+
+# -- the frames that reach SolidWorks, per mode (W8-PLAN §1.6): engaged outlines clear, and clashing half a pitch off --
+#
+# Worked from the teeth, not from the code's frames: each part's own outline (its kind's ``outline``, the sketch the
+# part is cut from) is read as a radius per direction about its axis — a dog's outermost boundary, a sleeve's
+# innermost — and turned by the rotation the build is handed (the assembly's Place ops for the first mode, each
+# ModeStep's frames for every mode). Engaged, the dog's boundary is inside the sleeve's in every direction (by 0.362
+# mm here: the sleeve's root clears the dog's tip and the flanks); turned half a pitch, its teeth stand 3 mm into the
+# sleeve's. Which pairs are engaged is §2.3's table, by hand.
+
+from gear_generator.gears import kind_for  # noqa: E402
+from gear_generator.gears.base import Place  # noqa: E402
+
+ENGAGED = {"2H": (("RangeSlv", "InDog"),), "4H": (("RangeSlv", "InDog"), ("ModeSlv", "FrontDog")), "N": (),
+           "4L": (("RangeSlv", "LoDog"), ("ModeSlv", "FrontDog"))}
+_STEP = 0.02                                  # degrees between the directions read
+_N = int(round(360 / _STEP))
+
+
+def _radius_table(points, keep):
+    """The outline's boundary radius in each direction ``k·_STEP`` degrees about the part's own axis: ``keep`` (max
+    or min) of every crossing of that ray with the closed outline."""
+    table = [None] * _N
+    for (x1, y1), (x2, y2) in zip(points, points[1:] + points[:1]):
+        a1, a2 = math.degrees(math.atan2(y1, x1)), math.degrees(math.atan2(y2, x2))
+        d = (a2 - a1 + 180.0) % 360.0 - 180.0
+        lo, hi = (a1, a1 + d) if d >= 0 else (a1 + d, a1)
+        k = math.ceil(lo / _STEP - 1e-6)
+        while k * _STEP <= hi + 1e-6 * _STEP:
+            c, s = math.cos(math.radians(k * _STEP)), math.sin(math.radians(k * _STEP))
+            ex, ey = x2 - x1, y2 - y1
+            den = c * ey - s * ex
+            if abs(den) > 1e-15:
+                t = (x1 * ey - y1 * ex) / den
+                i = k % _N
+                if t > 0 and (table[i] is None or keep(t, table[i]) == t):
+                    table[i] = t
+            k += 1
+    assert None not in table
+    return table
+
+
+def _radius(table, degrees):
+    x = (degrees % 360.0) / _STEP
+    i = int(x)
+    f = x - i
+    return table[i % _N] * (1 - f) + table[(i + 1) % _N] * f
+
+
+def _turn(rotation):
+    """(θ in degrees, s): a part direction ψ goes to the assembly direction s·ψ + θ about a ±Z axis."""
+    s = 1.0 if rotation[0] * rotation[4] - rotation[1] * rotation[3] > 0 else -1.0
+    return math.degrees(math.atan2(rotation[3], rotation[0])), s
+
+
+def _deepest(dog_table, dog_frame, sleeve_table, sleeve_frame, extra=0.0):
+    """How far the dog's boundary stands past the sleeve's, at the worst direction (mm; negative is clear)."""
+    (td, sd), (ts, ss) = _turn(dog_frame[0]), _turn(sleeve_frame[0])
+    assert dog_frame[1][:2] == pytest.approx(sleeve_frame[1][:2], abs=1e-9)             # coaxial
+    return max(_radius(dog_table, (k * _STEP - td - extra) * sd) - _radius(sleeve_table, (k * _STEP - ts) * ss)
+               for k in range(0, _N, 5))
+
+
+def _frames_handed_to_the_build(make):
+    a = assessed(make())
+    plan = gearbox.plan_gearbox(a, None, exists=lambda p: False, read_sidecar=lambda p: None)
+    kwargs = plan.build_kwargs()
+    gear_of = plan.handles
+    first = {gear_of[op.component]: (op.rotation, op.at) for op in plan.assembly.ops
+             if isinstance(op, Place) and op.component in gear_of}
+    per_mode = {step.name: {gear_of[h]: f for h, f in step.frames.items() if h in gear_of}
+                for step in kwargs["modes"].steps}
+    tables = {}
+    for g in ("RangeSlv", "ModeSlv", "InDog", "LoDog", "FrontDog"):
+        p = a.report.layout.placed[g]
+        tables[g] = _radius_table(list(kind_for(p.spec).outline(p.spec, p.derived)),
+                                  max if p.spec.kind == "dog" else min)
+    return first, per_mode, tables
+
+
+@pytest.mark.parametrize("make", [transfer_case_parallel, e4_transfer_case])
+def test_each_engaged_dog_sits_in_its_sleeves_spaces_on_the_frames_the_build_is_handed(make):
+    first, per_mode, tables = _frames_handed_to_the_build(make)
+    assert list(per_mode) == ["2H", "4H", "N", "4L"]
+    for g in ("RangeSlv", "ModeSlv", "InDog", "LoDog", "FrontDog"):
+        assert per_mode["2H"][g] == first[g]                  # the assembly's Place ops are the first mode's frames
+    for mode, pairs in ENGAGED.items():
+        frames = per_mode[mode]
+        for sleeve, dog in pairs:
+            clear = _deepest(tables[dog], frames[dog], tables[sleeve], frames[sleeve])
+            clash = _deepest(tables[dog], frames[dog], tables[sleeve], frames[sleeve], extra=6.0)
+            assert clear < -0.3, (mode, sleeve, dog, clear)
+            assert clash > 2.5, (mode, sleeve, dog, clash)
+
+
+@pytest.mark.parametrize("make", [transfer_case_parallel, e4_transfer_case])
+def test_every_sleeves_and_dogs_frame_in_every_mode_is_pinned(make):
+    """§2.3 by hand: every sleeve and dog on a Z+ shaft at the origin, turned about its own axis by its phase (mod
+    its 12° pitch: the sleeves 6°, the dogs 0°), each at its front face's z in that mode."""
+    _, per_mode, _ = _frames_handed_to_the_build(make)
+    z = {"InDog": [47.0] * 4, "LoDog": [67.0] * 4, "FrontDog": [107.0] * 4,
+         "RangeSlv": [46.0, 46.0, 56.0, 66.0], "ModeSlv": [96.0, 106.0, 96.0, 106.0]}
+    phase = {"RangeSlv": 6.0, "ModeSlv": 6.0, "InDog": 0.0, "LoDog": 0.0, "FrontDog": 0.0}
+    for i, mode in enumerate(("2H", "4H", "N", "4L")):
+        for g in phase:
+            rotation, at = per_mode[mode][g]
+            theta, s = _turn(rotation)
+            assert s == 1.0 and tuple(rotation[2::3]) == (0.0, 0.0, 1.0) and rotation[6:8] == (0.0, 0.0)
+            assert round(theta % 12.0, 9) % 12.0 == pytest.approx(phase[g], abs=1e-9), (mode, g, theta)
+            assert tuple(at) == (0.0, 0.0, z[g][i]), (mode, g, at)
