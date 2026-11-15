@@ -203,7 +203,8 @@ def link_record(workbook):
         gearbox=store.GearboxRecord(
             revision=2, name="R_r2", layout=r"C:\P\R_r2_Layout.SLDPRT", assembly=r"C:\P\R_r2.SLDASM",
             shafts=[store.ShaftEntry(shaft="S2", x=63.75, sigma=1, x_side="plus", y_side="base", x_global="S2 X",
-                                     x_plane="S2 X Plane", axis_name="S2 Axis")],
+                                     x_plane="S2 X Plane", axis_name="S2 Axis", direction=[0.0, 0.0, 1.0],
+                                     axis="Z+")],
             meshes=[["G1", "G2"]], layout_component="R_r2_Layout-1",
             components=[store.ComponentEntry(gear="G5", part=r"c:\p\gear_m1.5_n17_r2.SLDPRT",
                                              name="Gear_m1.5_N17_r2-1", rotation=[1, 0, 0, 0, 1, 0, 0, 0, 1],
@@ -681,7 +682,7 @@ def turning_record(workbook):
                  store.MateEntry(name="G5 along S2", kind="along", gears=["G5"], shaft="S2", face_global="G5 Face Z",
                                  z_front=-12.5),
                  store.MateEntry(name="G6 locked to G5", kind="lock", gears=["G5", "G6"]),
-                 store.MateEntry(name="G1 meshes G5", kind="mesh", gears=["G1", "G5"], ratio=[17, 68])]
+                 store.MateEntry(name="G1 meshes G5", kind="mesh", gears=["G1", "G5"], ratio=[17, 68], sense=1)]
     box.unmated, box.fixed, box.drag = [["G7", "G8"]], ["G9"], ["G1"]
     return record
 
@@ -911,3 +912,98 @@ def test_a_shaft_entry_mirrors_the_layouts_shaft_field_for_field():
                            "plus", "S1 Z", "S1 Z Plane", "", "X+")
     entry = store.ShaftEntry(**dataclasses.asdict(s))
     assert entry.direction == [1.0, 0.0, 0.0] and layout.ShaftLayout(**dataclasses.asdict(entry)) == s
+
+
+# -- schema 4's refusals (package C) ---------------------------------------------------------------------------------
+
+
+def _v4_raw(**mate_changes):
+    raw = _gearbox_raw(turning_record("R.xlsx"))
+    raw["gearbox"]["mates"][3].update(mate_changes)
+    return raw
+
+
+@pytest.mark.parametrize("index,changes,match", [
+    (1, {"plane": "back"}, r"gearbox\.mates\[1\] \('G5 along S2'\) measures from the plane 'back', not one of front, "
+                           r"top, right\)"),
+    (1, {"plane": ""}, r"measures from the plane '', not one of"),
+    (1, {"plane": "Front"}, r"measures from the plane 'Front', not one of"),
+    (3, {"sense": 2}, r"gearbox\.mates\[3\] \('G1 meshes G5'\) has sense 2, not -1, 0 or \+1\)"),
+    (3, {"sense": -3}, r"has sense -3, not -1, 0 or \+1"),
+    (3, {"sense": 0}, r"gearbox\.mates\[3\] \('G1 meshes G5'\) is a mesh mate of a schema 4 record with no sense, "
+                      r"where it holds -1 or \+1\)"),
+    (0, {"sense": 5}, r"gearbox\.mates\[0\] \('G5 on S2 Axis'\) has sense 5"),
+])
+def test_a_bad_plane_or_sense_is_refused_with_a_sentence_and_the_file_left_alone(tmp_path, index, changes, match):
+    raw = _gearbox_raw(turning_record("R.xlsx"))
+    raw["gearbox"]["mates"][index].update(changes)
+    with pytest.raises(StoreError, match=match):
+        store.link_record_from_json(json.dumps(raw))
+    target = tmp_path / "R.workbook.json"
+    text = json.dumps(raw)
+    target.write_text(text)
+    with pytest.raises(StoreError, match=r"^The record of what was built, R\.workbook\.json, cannot be read: its "
+                                         r"contents are not a link record \(gearbox\.mates\["):
+        store.read_link_record(str(tmp_path / "R.xlsx"))
+    assert target.read_text() == text and sorted(p.name for p in tmp_path.iterdir()) == ["R.workbook.json"]
+
+
+@pytest.mark.parametrize("field,value", [("sense", "+1"), ("sense", 1.5), ("sense", True), ("plane", 1),
+                                         ("plane", None)])
+def test_a_plane_or_sense_of_the_wrong_type_is_refused(field, value):
+    with pytest.raises(StoreError, match=f"MateEntry.{field} is not"):
+        store.link_record_from_json(json.dumps(_v4_raw(**{field: value})))
+
+
+def test_a_v3_mesh_reads_with_no_sense_and_a_whole_float_sense_reads_as_a_whole_number():
+    raw = _v4_raw(sense=0)
+    raw["link_schema_version"] = 3
+    assert store.link_record_from_json(json.dumps(raw)).gearbox.mates[3].sense == 0
+    assert store.link_record_from_json(json.dumps(_v4_raw(sense=-1.0))).gearbox.mates[3].sense == -1
+    for plane in ("front", "top", "right"):
+        raw = _gearbox_raw(turning_record("R.xlsx"))
+        raw["gearbox"]["mates"][1]["plane"] = plane
+        assert store.link_record_from_json(json.dumps(raw)).gearbox.mates[1].plane == plane
+
+
+def test_the_store_knows_the_planes_the_turning_assembly_measures_from():
+    from gear_generator.workbook import motion
+    assert store._MATE_PLANES == motion.PLANES
+
+
+@pytest.mark.parametrize("direction,match", [
+    ([], r"gearbox\.shafts\[0\] \('S2'\) has direction \[\], not three finite numbers\)"),
+    ([0.0, 1.0], r"has direction \[0\.0, 1\.0\], not three finite numbers"),
+    ([0.0, 0.0, 1.0, 0.0], r"not three finite numbers"),
+    ([0.0, 0.0, float("nan")], r"has direction \[0\.0, 0\.0, nan\], not three finite numbers"),
+    ([float("inf"), 0.0, 0.0], r"not three finite numbers"),
+    ([0.0, 0.0, 0.0], r"has direction \[0\.0, 0\.0, 0\.0\], of length 0, not of unit length\)"),
+    ([1.0, 1.0, 0.0], r"of length 1\.41421356, not of unit length"),
+    ([0.0, 0.0, 1.000001], r"of length 1\.000001, not of unit length"),
+])
+def test_a_shaft_direction_that_is_not_three_finite_numbers_of_unit_length_is_refused(tmp_path, direction, match):
+    raw = _gearbox_raw(turning_record("R.xlsx"))
+    raw["gearbox"]["shafts"][0]["direction"] = direction
+    text = json.dumps(raw)                       # NaN and Infinity as Python's json writes them
+    with pytest.raises(StoreError, match=match):
+        store.link_record_from_json(text)
+    target = tmp_path / "R.workbook.json"
+    target.write_text(text)
+    with pytest.raises(StoreError, match=r"cannot be read: its contents are not a link record \(gearbox\.shafts\[0\]"):
+        store.read_link_record(str(tmp_path / "R.xlsx"))
+    assert target.read_text() == text
+
+
+@pytest.mark.parametrize("direction", [[0.0, 0.0, -1.0], [1.0, 0.0, 0.0], [0.0, -1.0, 0.0],
+                                       [-0.5, 0.8660254037844386, 0.0], [0.5773502691896258] * 3])
+def test_a_unit_direction_on_any_axis_reads_back_as_written(direction):
+    raw = _gearbox_raw(turning_record("R.xlsx"))
+    raw["gearbox"]["shafts"][0]["direction"] = direction
+    assert store.link_record_from_json(json.dumps(raw)).gearbox.shafts[0].direction == direction
+
+
+def test_a_shaft_direction_of_the_wrong_type_is_refused():
+    raw = _gearbox_raw(turning_record("R.xlsx"))
+    raw["gearbox"]["shafts"][0]["direction"] = ["0", 0, 1]
+    with pytest.raises(StoreError, match=r"ShaftEntry\.direction is not"):
+        store.link_record_from_json(json.dumps(raw))

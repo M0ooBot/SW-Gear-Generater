@@ -18,6 +18,7 @@ from __future__ import annotations
 import contextlib
 import functools
 import json
+import math
 import os
 import sys
 import threading
@@ -800,10 +801,21 @@ _MATE_GEARS = {"axis": 1, "along": 1, "lock": 2, "mesh": 2}
 # spelled here too; a test keeps the two the same).
 
 
-def _mate_checked(entry: MateEntry, index: int) -> MateEntry:
+_MATE_PLANES = ("front", "top", "right")
+# The planes an along mate measures from (``workbook.motion.PLANES``; spelled here for the same reason, and kept the
+# same by a test).
+
+_UNIT = 1e-9          # how far from 1 a recorded shaft direction's length may be (``gears.base.LineAxis.check``'s)
+
+
+def _mate_checked(entry: MateEntry, index: int, version: int = LINK_SCHEMA_VERSION) -> MateEntry:
     """``entry`` (already type-checked) as a mate Update can act on, else a ValueError phrase naming it: a kind not
     one of the four, gears not as many as its kind holds, or a mesh whose ratio is not two whole numbers above 0.
-    Read here so a damaged record is refused when it is read, never met as an IndexError while planning."""
+    Read here so a damaged record is refused when it is read, never met as an IndexError while planning.
+
+    Schema 4 (W6): a ``plane`` not one of the three base planes; a ``sense`` other than -1, 0 or +1; and 0 on a
+    mesh of a record written at schema 4 or later (``version``) — a v3 mesh reads with 0, its sense taken from the
+    read as W5 did."""
     where = f"gearbox.mates[{index}]" + (f" ({entry.name!r})" if entry.name else "")
     wanted = _MATE_GEARS.get(entry.kind)
     if wanted is None:
@@ -814,6 +826,25 @@ def _mate_checked(entry: MateEntry, index: int) -> MateEntry:
         raise ValueError(f"{where} is {a_kind} with {count}, where {a_kind} holds {wanted}")
     if entry.kind == "mesh" and (len(entry.ratio) != 2 or any(n <= 0 for n in entry.ratio)):
         raise ValueError(f"{where} is a mesh mate whose ratio is {entry.ratio!r}, not two whole numbers above 0")
+    if entry.plane not in _MATE_PLANES:
+        raise ValueError(f"{where} measures from the plane {entry.plane!r}, not one of {', '.join(_MATE_PLANES)}")
+    if entry.sense not in (-1, 0, 1):
+        raise ValueError(f"{where} has sense {entry.sense!r}, not -1, 0 or +1")
+    if entry.kind == "mesh" and entry.sense == 0 and version >= 4:
+        raise ValueError(f"{where} is a mesh mate of a schema {version} record with no sense, where it holds -1 or +1")
+    return entry
+
+
+def _shaft_checked(entry: ShaftEntry, index: int) -> ShaftEntry:
+    """``entry`` (already type-checked, a v3 one given its direction) with a ``direction`` of three finite numbers of
+    unit length, else a ValueError phrase naming it: every frame Update and the layout make rests on it."""
+    where = f"gearbox.shafts[{index}]" + (f" ({entry.shaft!r})" if entry.shaft else "")
+    direction = entry.direction
+    if len(direction) != 3 or not all(math.isfinite(v) for v in direction):
+        raise ValueError(f"{where} has direction {direction!r}, not three finite numbers")
+    length = math.sqrt(sum(v * v for v in direction))
+    if abs(length - 1.0) > _UNIT:
+        raise ValueError(f"{where} has direction {direction!r}, of length {length:.9g}, not of unit length")
     return entry
 
 
@@ -837,8 +868,8 @@ def link_record_from_json(text: str) -> LinkRecord:
     record has parts with ``path`` and ``gears`` only, and no gearbox; a v2
     record's gearbox has no ``kind``, so it reads as :data:`GEARBOX_STATIC`,
     with no mates. Every
-    field is checked against its type, and every mate against its kind
-    (:func:`_mate_checked`). Raises :class:`UnknownSchema` for a
+    field is checked against its type, every mate against its kind
+    (:func:`_mate_checked`) and every shaft's direction (:func:`_shaft_checked`). Raises :class:`UnknownSchema` for a
     newer schema and :class:`StoreError` for anything else wrong, each a phrase
     to follow "cannot be read: "; never touches a file.
     """
@@ -860,12 +891,12 @@ def link_record_from_json(text: str) -> LinkRecord:
             if not isinstance(gearbox, dict):
                 raise TypeError("gearbox is not an object")
             record.gearbox = _checked(GearboxRecord(**_known(GearboxRecord, gearbox)))
-            record.gearbox.shafts = [_v3_shaft(_checked(s), raw_s)
-                                     for s, raw_s in zip(_entries(ShaftEntry, gearbox.get("shafts", [])),
-                                                         gearbox.get("shafts", []))]
+            record.gearbox.shafts = [_shaft_checked(_v3_shaft(_checked(s), raw_s), i)
+                                     for i, (s, raw_s) in enumerate(zip(_entries(ShaftEntry, gearbox.get("shafts", [])),
+                                                                        gearbox.get("shafts", [])))]
             record.gearbox.components = [_checked(c) for c in _entries(ComponentEntry,
                                                                         gearbox.get("components", []))]
-            record.gearbox.mates = [_mate_checked(_checked(m), i)
+            record.gearbox.mates = [_mate_checked(_checked(m), i, version)
                                     for i, m in enumerate(_entries(MateEntry, gearbox.get("mates", [])))]
             if record.gearbox.kind not in GEARBOX_KINDS:
                 raise ValueError(f"gearbox.kind is {record.gearbox.kind!r}, not one of {', '.join(GEARBOX_KINDS)}")
