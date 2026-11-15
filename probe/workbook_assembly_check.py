@@ -956,6 +956,7 @@ class Desk:
         self.update = None
         self.note = None
         self.error = None          # the last job's raise (a refusal before anything was made or changed)
+        self.positions_per_configuration = None   # the last job's answer, as the window keeps it (W8 §9.12)
 
     # reading
     def read(self):
@@ -1032,7 +1033,8 @@ class Desk:
         return ui_text.workbook_footer(self.a, record=self.record, record_problem=self.record_problem,
                                        plan=self.plan, update=self.update, folder=folder,
                                        folder_exists=bool(folder) and os.path.isdir(folder), note=self.note,
-                                       digest=self.reading.digest if self.reading is not None else "")
+                                       digest=self.reading.digest if self.reading is not None else "",
+                                       positions_per_configuration=self.positions_per_configuration)
 
     def say_footer(self, when):
         f = self.footer()
@@ -1133,6 +1135,7 @@ class Desk:
             say(f"status  [red] {self.note[0]}")
             self.plan_solidworks()
             return plan, None
+        self.positions_per_configuration = getattr(result, "positions_per_configuration", None)
         for line in result.log_lines():
             say("        " + line)
         say(f"        in {seconds:.1f} s; {memory()}; kind {result.kind!r}; turned round (made again with the other "
@@ -1173,6 +1176,7 @@ class Desk:
             say(f"status  [red] {self.note[0]}")
             self.plan_solidworks()
             return update, None, None
+        self.positions_per_configuration = getattr(result, "positions_per_configuration", None)
         for line in result.log_lines():
             say("        " + line)
         say(f"        in {seconds:.1f} s; {memory()}")
@@ -6398,7 +6402,7 @@ def w8_user_turn(worker, desk, label, mode, degrees):
     wrong = [(n, c, f) for n, by in flags.items() for c, f in by.items() if f != key_suppressed(n, c)]
     stop_check(bool(flags) and not wrong, f"{label}: after the turn every mate's flag in every configuration is §2.3's: "
                f"wrong {wrong}")
-    return out["after"], want
+    return out["after"], want, expected
 
 
 def w8_update(worker, desk, label):
@@ -6450,18 +6454,240 @@ def nothing_changed_calls(calls):
                                          "EditRebuild3", "put", "AddMate5", "AddConfiguration2", "DeleteConfiguration2")]
 
 
+def w8_and(items):
+    """``2H``, ``2H and N``, ``2H, 4H and N``: the app's own list, written out here so the sentences are the script's."""
+    items = [str(i) for i in items]
+    return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " and " + items[-1]
+
+
+SHARED_MAY = ("This version of SolidWorks shows a turn given in one mode in every mode, so the turn may have been given "
+              "in another.")
+
+
+def w8_crossed(desk, mode, turns):
+    """The couplings §2.3 engages in ``mode`` whose sleeve and dog stand across each other after ``turns`` (degrees about
+    each body's own +Z from the built turn, where every coupling is in step), worked by the script: their turns, the
+    dog's taken with the sign its axis has against the sleeve's, differ by other than a whole number of tooth pitches."""
+    placed = desk.a.report.layout.placed
+    out = []
+    for sleeve, dog in key_engaged(mode):
+        pitch = 360.0 / float(placed[dog].teeth)
+        sign = 1.0 if sum(float(a) * float(b) for a, b in zip(placed[sleeve].axis, placed[dog].axis)) > 0 else -1.0
+        d = (turns.get(sleeve, 0.0) - sign * turns.get(dog, 0.0)) % pitch
+        if min(d, pitch - d) > 1e-6:
+            out.append((sleeve, dog))
+    return out
+
+
+W8_TURN_CLASH = {"4L": [("LoDog", "RangeSlv")]}   # the stage 2c ruling: on False, 4L's LoDog across RangeSlv, alone
+
+
+def w8_shown_turned(worker, desk, label, mode, turns, positions):
+    """After the user's turn in 2H, ``mode`` shown and read through handles fetched after the show (W8-PLAN §5 s2 as the
+    running version answers, ``swcom.positions_per_configuration``). False: every body turned as in 2H (``turns``, the
+    key's ratio × the turn, to 1e-6; the front train still), standing where those turns put it from the mode's own
+    frames on record (copies carried round), and only W8_TURN_CLASH's pair interfering, its volume logged. True: the
+    plan's reading, the mode as built (``measure_mode``). None: the frames and clashes logged as facts, nothing
+    asserted about a turn."""
+    box = desk.record.gearbox
+    if positions is True:
+        return measure_mode(worker, desk, f"{label}: as built", mode)
+    out = run(worker, mode_state_job(box, mode))
+    stop_check(swbuild.on_in((mode,), out["active"]), f"{label}: {mode} shown, the active configuration reads "
+               f"{out['active']}")
+    check(out["rebuilt"], f"{label}: the train's rebuild in {mode} answered True")
+    record = mode_record_frames(desk, mode)
+    got = {g: turn_degrees(record[g][0], out["frames"][g][0]) for g in turns}
+    say_turns(f"{label}: each body's turn in {mode} from its frame on record there (expected: 2H's)", got, turns)
+    merged = swbuild._clashes(out["clashes"], {n: g for g, n in bodies(box)})  # noqa: SLF001
+    clashes = [(tuple(sorted(c.gears)), round(c.volume, 3)) for c in merged]
+    say(f"fact    {label}: interference in {mode}: {clashes or 'none'}")
+    if positions is None:
+        say_off(label, mode, out["frames"], record)
+        return out
+    for g in turns:
+        stop_check(close_turn(got[g], turns[g]), f"{label}: in {mode}, {g} stands turned {got[g]}° from its frame on "
+                   f"record, the turn given in 2H ({turns[g]:+.9f}°)")
+    want = expected_frames(desk, record, turns)
+    gap, at = frames_gap(out["frames"], want)
+    if not stop_check(gap <= FRAME_TOLERANCE, f"{label}: in {mode} every body stands where 2H's turn puts it from "
+                      f"{mode}'s frames on record, copies carried round (largest {gap:.1e} at {at or '-'})"):
+        say_off(label, mode, out["frames"], want)
+    expected = W8_TURN_CLASH.get(mode, [])
+    check(sorted(p for p, _ in clashes) == expected, f"{label}: the interference in {mode} is "
+          f"{'exactly ' + str(expected) + ', expected there' if expected else 'none'}: {clashes}")
+    return out
+
+
+def w8_press_after_turn(worker, desk, label, mode, positions, turns, folder, presses):
+    """Update SolidWorks pressed with ``mode`` showing after the user's turn in 2H, nothing changed in the workbook.
+    False (the turn shows here): ``mode``'s coupling(s) found out of step and the train put there, which obliges the
+    visit (ruling 9.18): the other modes shown in order, each read at the built turn with nothing put there, ``mode``
+    shown last and left active, every per-mode flag read in every configuration after the last put; the status's
+    sentences for that case exactly; the assembly marked. True: the plan's quiet press, nothing put or shown. None:
+    judged by what it reports (a put, the visit's checks; none, the quiet ones)."""
+    box = desk.record.gearbox
+    save_assembly(worker, desk, f"{label}: {mode} active, so the marks after the press are its own")
+    desk.plan_solidworks()
+    desk.say_update()
+    frames_before, flags_before = gear_frames(worker, desk), gearbox_flags(worker, desk)
+    guard()
+    result, calls, seconds = w8_update(worker, desk, label)
+    presses.append((label, seconds))
+    if result is None:
+        check(False, f"{label}: refused: {desk.note[0]!r}")
+        return None
+    said = desk.note[0] if desk.note else ""
+    say(f"        the status verbatim: {said!r}")
+    others = [m for m in box.modes if not swbuild.on_in((m,), mode)]
+    shows = [c[1] for c in calls if c[0] == "ShowConfiguration2"]
+    by_mode = puts_by_mode(calls, mode)
+    say(f"fact    {label}: shows in order {shows}; puts by the configuration shown {by_mode}")
+    if positions is True:
+        check(not result.put_in, f"{label}: a turn stays in its mode on this version, so {mode} stands as built and "
+              f"nothing is put: put_in {result.put_in}")
+    elif positions is False:
+        check(result.put_in == [mode], f"{label}: this version shows the turn in every mode, so {mode}'s coupling(s) "
+              f"are found out of step and the train put there, once: put_in {result.put_in}")
+    else:
+        say(f"fact    {label}: the version's answer is unsettled; the press is judged by what it reports (put_in "
+            f"{result.put_in})")
+    if not result.put_in:
+        check(result.ok and swbuild.on_in((mode,), result.configuration) and not result.visited and not result.placed
+              and not result.changed and not result.modes and not result.senses_unread and not result.turned
+              and result.positions_per_configuration == positions,
+              f"{label}: nothing put, shown or changed, every sense read, the train in step in {mode}")
+        check(not nothing_changed_calls(calls), f"{label}: no show, flag, value, rebuild or put: "
+              f"{nothing_changed_calls(calls)}")
+        check_quiet_update(worker, desk, result, label, frames_before, flags_before)
+        quiet = f"It worked in {mode}, the configuration that was active; it did not show the other modes"
+        check(quiet in said and ui_text.TURN_SHOWN_ELSEWHERE not in said, f"{label}: the status says {quiet!r} and "
+              "not the sentence on a turn shown in every mode")
+        return result
+    check(result.ok and not result.failures and swbuild.on_in((mode,), result.configuration)
+          and result.positions_per_configuration == positions, f"{label}: no failure, worked in {mode}, the version's "
+          f"answer carried ({result.positions_per_configuration}): {result.failures}")
+    check(result.visited == others and [c.name for c in result.modes] == others + [mode],
+          f"{label}: the put in {mode} obliges the visit: visited {result.visited}, checks {[c.name for c in result.modes]}")
+    check(shows == others + [mode], f"{label}: the shows in order, {mode} last: {shows}")
+    active = run(worker, in_assembly(box.assembly, lambda s: s.active_configuration()))
+    check(swbuild.on_in((mode,), active), f"{label}: {mode} left active: {active}")
+    carrier = next(c.component for c in carriers_of(box))
+    put_at = [i for i, c in enumerate(calls) if c[0] == "put"]
+    show_at = [i for i, c in enumerate(calls) if c[0] == "ShowConfiguration2"]
+    check(len(by_mode) == 1 and swbuild.on_in((mode,), by_mode[0][0]) and by_mode[0][1][0] == carrier
+          and put_at and show_at and put_at[-1] < show_at[0], f"{label}: every put made in {mode} before any show, the "
+          f"carrier ({carrier}) first; nothing put in {w8_and(others)}")
+    per_mode = [m.name for m in box.mates if m.modes]
+    after_put = calls[put_at[-1] + 1:] if put_at else calls
+    missing = [(n, c) for n in per_mode for c in box.modes if ("IsSuppressed2", n, 3, [c]) not in after_put]
+    check(per_mode and not missing, f"{label}: after the last put every per-mode mate's flag read in every "
+          f"configuration, one IsSuppressed2(3, [c]) each ({len(per_mode)} mates): missing {missing}")
+    after_show = calls[show_at[-1] + 1:] if show_at else []
+    late = [(n, c) for n in per_mode for c in box.modes if ("IsSuppressed2", n, 3, [c]) in after_show]
+    say(f"fact    {label}: of those reads, {len(late)} of {len(per_mode) * len(box.modes)} come after the last show")
+    here = result.modes[-1]
+    couplings = {frozenset(p) for p in key_engaged(mode)}
+    check(here.out_of_step and all(frozenset(p) in couplings for p in here.out_of_step),
+          f"{label}: {mode}'s coupling(s) found out of step there and nothing else: {here.out_of_step}")
+    if positions is False:
+        want = w8_crossed(desk, mode, turns)
+        check({frozenset(p) for p in here.out_of_step} == {frozenset(p) for p in want},
+              f"{label}: the couplings found across are those 2H's turn crosses in {mode}, worked by the script: {want}")
+    for c in result.modes[:-1]:
+        check(not c.out_of_step and not c.off_axis and not c.turned and not c.clashes and not c.interference_error,
+              f"{label}: {c.name} read at the built turn when shown (out of step {c.out_of_step}, off axis "
+              f"{c.off_axis}, turned {c.turned}), no interference {[(x.gears, round(x.volume, 3)) for x in c.clashes]}")
+    check(not here.off_axis and not here.clashes and not here.interference_error and not result.senses_unread,
+          f"{label}: {mode} after the put on its axes with no interference, every sense read: senses unread "
+          f"{result.senses_unread}")
+    gap, at = frames_gap(gear_frames(worker, desk), mode_record_frames(desk, mode))
+    check(gap <= FRAME_TOLERANCE, f"{label}: read after the press, every body in {mode} at its frame on record (largest "
+          f"{gap:.1e} at {at or '-'})")
+    couplings_all = {frozenset(k) for m in box.modes for k in key_engaged(m)}
+    check(all(frozenset(p) in couplings_all for p in result.out_of_step), f"{label}: only couplings found out of step "
+          f"before the Update: {result.out_of_step}")
+    motion = " ".join(f"{a} and {b} had been turned out of step with each other in SolidWorks; they are back in mesh."
+                      for a, b in result.out_of_step)
+    crossed = [(a, b) for a, b in result.out_of_step if frozenset((a, b)) in couplings]
+    block = []
+    for index, (a, b) in enumerate(crossed, 1):
+        block.append(f"In {mode}, {a}'s teeth stood across {b}'s." if index < len(crossed) else
+                     f"In {mode}, {a}'s teeth stood across {b}'s; the gears of {mode} are back at the turn they were "
+                     "built at.")
+    if crossed and positions is False:
+        block.append(SHARED_MAY)
+    if positions is False:
+        block.append(f"The gears of {w8_and(others)} stood at the turn they were built at when Update SolidWorks "
+                     f"showed {'it' if len(others) == 1 else 'them'}.")
+    block.append(f"It worked in {mode}, the configuration that was active, then showed and checked {w8_and(others)} and "
+                 f"left the assembly in {mode}.")
+    for text in (motion, " ".join(block)):
+        check(text in said, f"{label}: the status says, in order, {text!r}")
+    check("did not show the other modes" not in said and ui_text.TURN_SHOWN_ELSEWHERE not in said
+          and "although nothing in it changed" not in said, f"{label}: and not the quiet press's sentences")
+    check(any(os.path.basename(str(p)).lower() == os.path.basename(box.assembly).lower() for p in result.changed),
+          f"{label}: the assembly is among the documents changed: {result.changed}")
+    update_marks(worker, desk, result, label, folder)
+    return result
+
+
+def w8_press_in_step(worker, desk, label, mode, positions, presses):
+    """Update SolidWorks pressed with ``mode`` showing, its train turned and in step there, nothing changed in the
+    workbook (stage 2c's new step): nothing put, nothing shown; the status says the gears stand where they were turned
+    and, only where the version shows a turn in every mode (False), ``ui_text.TURN_SHOWN_ELSEWHERE`` exactly."""
+    box = desk.record.gearbox
+    save_assembly(worker, desk, f"{label}: {mode} active, so the marks after the press are its own")
+    desk.plan_solidworks()
+    desk.say_update()
+    frames_before, flags_before = gear_frames(worker, desk), gearbox_flags(worker, desk)
+    guard()
+    result, calls, seconds = w8_update(worker, desk, label)
+    presses.append((label, seconds))
+    if result is None:
+        check(False, f"{label}: refused: {desk.note[0]!r}")
+        return None
+    said = desk.note[0] if desk.note else ""
+    say(f"        the status verbatim: {said!r}")
+    check(result.ok and swbuild.on_in((mode,), result.configuration) and not result.put_in and not result.visited
+          and not result.placed and not result.modes and not result.out_of_step and result.turned
+          and result.positions_per_configuration == positions,
+          f"{label}: the train found turned and in step in {mode}: nothing put, nothing shown (put_in {result.put_in}, "
+          f"visited {result.visited}, placed {result.placed}, out of step {result.out_of_step}, turned {result.turned})")
+    check(not nothing_changed_calls(calls), f"{label}: no show, flag, value, rebuild or put: "
+          f"{nothing_changed_calls(calls)}")
+    check_quiet_update(worker, desk, result, label, frames_before, flags_before)
+    stand = "The gears stand where they were turned in SolidWorks."
+    quiet = f"It worked in {mode}, the configuration that was active; it did not show the other modes"
+    check(stand in said and quiet in said, f"{label}: the status says {stand!r} and {quiet!r}")
+    if positions is False:
+        check(f"{stand} {ui_text.TURN_SHOWN_ELSEWHERE}" in said, f"{label}: on this version, straight after it, "
+              f"exactly {ui_text.TURN_SHOWN_ELSEWHERE!r}")
+    else:
+        check(ui_text.TURN_SHOWN_ELSEWHERE not in said and "shows that turn in every mode" not in said,
+              f"{label}: the version's answer is {positions}, so the status does not carry the sentence on a turn shown "
+              "in every mode")
+    return result
+
+
 def section_s2(worker, excel):
-    say("== s2  turning and switching (W8-PLAN §5), a copy of s1.master: the user's turn in 2H; 4H, N and 4L shown, each "
-        "as built; 2H at the turn; a quiet Update in 4L; FDrive, FIdler, FOut At 130 -> 132 -> Update: every mode put, "
-        "the active one last, 2H's turn put back; raw flags straight after; every mode measured; the drive in 4H and 4L")
+    say("== s2  turning and switching (W8-PLAN §5, as the running version answers swcom.positions_per_configuration), "
+        "a copy of s1.master: the user's turn in 2H; 4H, N and 4L shown (False: each at the same turn, 4L's LoDog "
+        "across RangeSlv; True: each as built); 2H at the turn; Update in 4L (False: puts 4L and visits 2H, 4H and N; "
+        "True: quiet); the train turned in 2H, Update in 2H (nothing put or shown); 4L shown and read; Update in 4L; "
+        "FDrive, FIdler, FOut At 130 -> 132 -> Update: every mode put, the active one last; raw flags straight after; "
+        "every mode measured; the drive in 4H and 4L")
     folder, path, book, desk, built = start_w8_copy(worker, excel, "s2")
     box = desk.record.gearbox
-    _, turned = w8_user_turn(worker, desk, "s2 the user's turn in 2H", "2H", 37.0)
     positions = swcom.positions_per_configuration(TAG["revision"])
-    say(f"fact    s2: positions per configuration on this version (findings): {positions}")
+    reading = {True: "a turn stays in its mode (the plan's reading)", False: "a turn shows in every mode",
+               None: "unsettled: nothing is asserted about a turn in the other modes"}[positions]
+    say(f"fact    s2: swcom.positions_per_configuration({TAG['revision']}) is {positions}: {reading}")
+    presses = []
+    _, turned, turns = w8_user_turn(worker, desk, "s2 the user's turn in 2H", "2H", 37.0)
     for mode in ("4H", "N", "4L"):
         guard()
-        measure_mode(worker, desk, f"s2, 2H turned, {mode} shown: as built", mode)
+        w8_shown_turned(worker, desk, f"s2, 2H turned, {mode} shown", mode, turns, positions)
     out = run(worker, mode_state_job(box, "2H"))
     stop_check(swbuild.on_in(("2H",), out["active"]), f"s2: 2H shown again: {out['active']}")
     gap, at = frames_gap(out["frames"], turned)
@@ -6469,27 +6695,30 @@ def section_s2(worker, excel):
                f"{at or '-'})")
     merged = swbuild._clashes(out["clashes"], {n: g for g, n in bodies(box)})  # noqa: SLF001
     stop_check(not merged, f"s2: 2H at the turn, no interference: {[(c.gears, round(c.volume, 3)) for c in merged]}")
-    # A quiet Update in 4L.
+    # An Update in 4L, nothing changed in the workbook.
     w8_show(worker, desk, "4L", "s2")
-    save_assembly(worker, desk, "s2: 4L active, so the marks after the quiet press are its own")
-    desk.plan_solidworks()
-    desk.say_update()
-    frames_before, flags_before = gear_frames(worker, desk), gearbox_flags(worker, desk)
-    guard()
-    result, calls, _ = w8_update(worker, desk, "s2 quiet Update in 4L")
-    if result is None:
-        check(False, f"s2 quiet Update in 4L: refused: {desk.note[0]!r}")
+    w8_press_after_turn(worker, desk, "s2 quiet Update in 4L", "4L", positions, turns, folder, presses)
+    desk.say_footer("s2, after the quiet press in 4L")
+    # Stage 2c's new step: the train turned in 2H, in step there; Update in 2H; 4L shown and read; Update in 4L.
+    say("-- s2: the train turned in 2H (in step there) -> Update in 2H; then 4L shown, LoDog read across RangeSlv -> "
+        "Update in 4L")
+    w8_show(worker, desk, "2H", "s2")
+    here = run(worker, mode_state_job(box, "2H", full=False))
+    gap, at = frames_gap(here["frames"], mode_record_frames(desk, "2H"))
+    say(f"fact    s2: before the second turn 2H stands {gap:.1e} from its frames on record at most (at {at or '-'})")
+    if gap <= FRAME_TOLERANCE:
+        _, _, turns2 = w8_user_turn(worker, desk, "s2 the second turn in 2H", "2H", 37.0)
     else:
-        check(result.ok and swbuild.on_in(("4L",), result.configuration) and not result.visited and not result.put_in
-              and not result.placed and not result.changed and not result.modes and not result.senses_unread
-              and result.positions_per_configuration is True and not result.turned,
-              "s2 quiet Update in 4L: nothing put, shown or changed, every sense read, the train in step in 4L")
-        check(not nothing_changed_calls(calls), f"s2 quiet Update in 4L: no show, flag, value, rebuild or put: "
-              f"{nothing_changed_calls(calls)}")
-        check_quiet_update(worker, desk, result, "s2 quiet Update in 4L", frames_before, flags_before)
-        said = "It worked in 4L, the configuration that was active; it did not show the other modes"
-        check(said in desk.note[0], f"s2 quiet Update in 4L: the sentence says {said!r}: {desk.note[0]!r}")
-    desk.say_footer("s2, after the quiet press")
+        check(positions is not False, f"s2: the put in 4L shows in 2H on this version, so 2H stands at its frames on "
+              f"record (largest {gap:.1e} at {at or '-'})")
+        say("fact    s2: 2H still stands at the first turn, which is the turn in step there for this step")
+        turns2 = turns
+    w8_press_in_step(worker, desk, "s2 Update in 2H, the train turned and in step there", "2H", positions, presses)
+    desk.say_footer("s2, after the press in 2H")
+    guard()
+    w8_shown_turned(worker, desk, "s2, 2H turned again, 4L shown", "4L", turns2, positions)
+    w8_press_after_turn(worker, desk, "s2 Update in 4L after the turn in 2H", "4L", positions, turns2, folder, presses)
+    desk.say_footer("s2, after the second press in 4L")
     # The changed Update.
     expected = moved_frames(built, [(g, None, 2.0) for g in ("FDrive", "FIdler", "FOut")])
     say("-- s2: Excel FDrive, FIdler and FOut At 130 -> 132, 4L active -> Update")
@@ -6499,19 +6728,28 @@ def section_s2(worker, excel):
           f"{u and list(u.structural)}, refusal {u and u.refusal!r}")
     desk.say_footer("s2, after the edit")
     guard()
-    result, calls, _ = w8_update(worker, desk, "s2 changed Update")
+    result, calls, seconds = w8_update(worker, desk, "s2 changed Update")
+    presses.append(("s2 changed Update", seconds))
     box = desk.record.gearbox
     raw_flag_reads(worker, desk, "s2 straight after the changed Update", names=[m.name for m in box.mates])
     if result is None:
         check(False, f"s2 changed Update: refused: {desk.note[0]!r}")
+        say(f"fact    s2: the presses took {[(n, round(t, 1)) for n, t in presses]} s")
         end_copy(worker, folder, "s2")
         return
     order = ["2H", "4H", "N"]
     check(result.ok and not result.failures, f"s2 changed Update: no failure: {result.failures}")
     check(result.put_in == order + ["4L"] and result.visited == order and [m.name for m in result.modes] == order + ["4L"],
           f"s2 changed Update: every mode shown and put, 4L last: put_in {result.put_in}, visited {result.visited}")
-    check([m.name for m in result.modes if m.turned] == ["2H"], f"s2 changed Update: 2H alone found turned when shown: "
-          f"{[(m.name, m.turned) for m in result.modes]}")
+    found = [m.name for m in result.modes if m.turned]
+    if positions is True:
+        check(found == ["2H"], f"s2 changed Update: 2H alone found turned when shown: "
+              f"{[(m.name, m.turned) for m in result.modes]}")
+    elif positions is False:
+        check(not found, f"s2 changed Update: no mode found turned when shown, the last press in 4L having put the "
+              f"shared turn back: {[(m.name, m.turned) for m in result.modes]}")
+    else:
+        say(f"fact    s2 changed Update: found turned when shown {found}")
     check(all(not m.clashes and not m.interference_error for m in result.modes) and not result.senses_unread,
           "s2 changed Update: no interference in any mode's post-check, every sense read")
     carrier = next(c.component for c in carriers_of(box))
@@ -6528,6 +6766,7 @@ def section_s2(worker, excel):
     say(f"        the sentence: {desk.note[0]!r}")
     check(all(re.search(rf"\b{m}\b", desk.note[0]) for m in order), f"s2 changed Update: the sentence names every "
           f"mode shown ({order})")
+    say(f"fact    s2: the presses took {[(n, round(t, 1)) for n, t in presses]} s")
     measure_modes(worker, desk, "s2 after the changed Update", controls=True, active="4L", expected=expected)
     for mode in ("4H", "4L"):
         guard()
@@ -6971,12 +7210,15 @@ def main():
         f"{getattr(findings, 'AXIAL_MATE_ROUTE', None)!r}")
     say(f"findings W8: CONFIGURATION_SHOW_RAISES_DIALOG {getattr(findings, 'CONFIGURATION_SHOW_RAISES_DIALOG', None)}, "
         f"HANDLES_STALE_AFTER_CONFIGURATION_CHANGE {getattr(findings, 'HANDLES_STALE_AFTER_CONFIGURATION_CHANGE', None)}, "
-        f"SLIDE_VALUE_ROUTE {getattr(findings, 'SLIDE_VALUE_ROUTE', None)!r}, POSITIONS_PER_CONFIGURATION_ON_2026 "
-        f"{getattr(findings, 'POSITIONS_PER_CONFIGURATION_ON_2026', None)}, _ON_2024 "
-        f"{getattr(findings, 'POSITIONS_PER_CONFIGURATION_ON_2024', None)}, SUPPRESSED_GEAR_MATE_SENSE_READ "
+        f"SLIDE_VALUE_ROUTE {getattr(findings, 'SLIDE_VALUE_ROUTE', None)!r}, TURN_PER_CONFIGURATION_ON_2026 "
+        f"{getattr(findings, 'TURN_PER_CONFIGURATION_ON_2026', None)}, _ON_2024 "
+        f"{getattr(findings, 'TURN_PER_CONFIGURATION_ON_2024', None)} (the app's finding), "
+        f"POSITIONS_PER_CONFIGURATION_ON_2026 {getattr(findings, 'POSITIONS_PER_CONFIGURATION_ON_2026', None)}, _ON_2024 "
+        f"{getattr(findings, 'POSITIONS_PER_CONFIGURATION_ON_2024', None)} (the put fact, read by nothing), "
+        f"SUPPRESSED_GEAR_MATE_SENSE_READ "
         f"{getattr(findings, 'SUPPRESSED_GEAR_MATE_SENSE_READ', None)!r}, COLLINEAR_GEAR_MATE_SENSE_READ_BACK "
-        f"{getattr(findings, 'COLLINEAR_GEAR_MATE_SENSE_READ_BACK', None)}; positions per configuration here "
-        f"{swcom.positions_per_configuration(TAG['revision'])}")
+        f"{getattr(findings, 'COLLINEAR_GEAR_MATE_SENSE_READ_BACK', None)}; "
+        f"swcom.positions_per_configuration(revision) here {swcom.positions_per_configuration(TAG['revision'])}")
     watch = DialogWatch()
     watch.start()
     excel = xlhelp.Excel(visible=True)
