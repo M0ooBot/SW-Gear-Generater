@@ -302,15 +302,19 @@ LABEL_SIDES = (("nw", 1, 1), ("ne", -1, 1), ("se", -1, -1), ("sw", 1, -1))
 
 @dataclass
 class EndView:
-    """A workbook's gears seen from +Z, in canvas pixels: each gear's outline at its turn, the shafts, the origin."""
+    """A workbook's gears seen from +Z, in canvas pixels: each gear's outline at its turn, the shafts, the origin.
+
+    W6: a shaft off the Z family is a line (``lines``), not a cross, and its gears are their sections seen side-on.
+    """
 
     scale: float = 1.0
     outlines: List[Tuple[str, int, List[Tuple[float, float]]]] = None   # (gear, plane index, points)
     rims: List[Tuple[str, int, float, float, float]] = None              # a ring's outside: (gear, plane, x, y, r)
-    shafts: List[Tuple[str, float, float]] = None                        # (name, x, y)
+    shafts: List[Tuple[str, float, float]] = None                        # (name, x, y): a shaft along Z, a cross
     origin: Optional[Tuple[float, float]] = None                         # None when it is off the picture
     planes: List[float] = None                                           # the face heights, in drawing order
     labels: List[Tuple[str, float, float, str]] = None                   # (name, x, y, Tk anchor), one per shaft
+    lines: List[Tuple[str, float, float, float, float]] = None           # (name, x0, y0, x1, y1): a turned shaft
 
 
 def _label_box(name: str, x: float, y: float, side, unit: float) -> Tuple[float, float, float, float]:
@@ -343,6 +347,54 @@ def _place_label(name: str, x: float, y: float, origin, unit: float) -> Tuple[st
     return name, x + sx * LABEL_GAP * unit, y + sy * LABEL_GAP * unit, anchor
 
 
+# How far a turned shaft's line runs past the gears on it, mm, either end.
+SHAFT_OVERRUN = 12.0
+ALONG_Z = 1e-9            # a gear whose axis has no more than this across Z is seen end-on
+
+
+def _seen_end_on(p) -> bool:
+    """Whether a placed gear's own axis runs along Z (W3–W5's every gear), so it is seen end-on from +Z."""
+    axis = getattr(p, "axis", (0.0, 0.0, 1.0))
+    return abs(axis[0]) <= ALONG_Z and abs(axis[1]) <= ALONG_Z
+
+
+def _across(axis) -> Tuple[float, float, float]:
+    """A unit vector square to ``axis`` and to Z: the side a gear on a turned shaft is seen from +Z."""
+    ax, ay, _ = axis
+    length = math.hypot(ax, ay)
+    return (-ay / length, ax / length, 0.0)
+
+
+def _side_on(p) -> List[List[Tuple[float, float]]]:
+    """A gear on a turned shaft seen side-on from +Z, world mm (x, y): its section in the plane through its axis
+    and square to Z, projected onto XY — a bevel gear's blank (both halves, :func:`bevel_section`, the apex at its
+    At), any other gear the rectangle of its face and outside diameter."""
+    a, w, c = p.axis, _across(p.axis), p.centre
+    if getattr(p, "bevel", False):
+        loops = bevel_section(p.derived)
+    else:
+        r, half = p.outer_radius, p.face / 2.0
+        loops = [[(-r, -half), (r, -half), (r, half), (-r, half), (-r, -half)]]
+
+    def world(across: float, along: float) -> Tuple[float, float]:
+        return (c[0] + along * a[0] + across * w[0], c[1] + along * a[1] + across * w[1])
+
+    return [[world(x, z) for x, z in loop] for loop in loops]
+
+
+def _circle(cx: float, cy: float, r: float, count: int = 96) -> List[Tuple[float, float]]:
+    return [(cx + r * math.cos(2 * math.pi * i / count), cy + r * math.sin(2 * math.pi * i / count))
+            for i in range(count + 1)]
+
+
+def _bevel_end_on(p) -> List[List[Tuple[float, float]]]:
+    """A bevel gear on a Z shaft seen end-on: the circles of its heel and toe tips (its teeth are on the cone)."""
+    g = p.derived
+    heel = max(x for x, _ in bevel_section(g)[0])
+    toe = heel * (g.cone_distance - g.face_width) / g.cone_distance
+    return [_circle(p.centre[0], p.centre[1], heel), _circle(p.centre[0], p.centre[1], toe)]
+
+
 def layout_gearbox(placed, theta, width: int = 696, height: int = 300, pad: float = 16.0,
                    step: int = 1, unit: float = 1.0) -> EndView:
     """Every placed gear drawn as the strip draws one, turned to its phase, the whole fitted to the canvas.
@@ -355,13 +407,27 @@ def layout_gearbox(placed, theta, width: int = 696, height: int = 300, pad: floa
     goes below right of its cross, or on a side clear of the origin's arrows
     when that would sit on them. ``unit`` is screen pixels per design pixel,
     for those fixed-size marks.
+
+    W6 (W6-PLAN §2.10): a gear whose axis is not along Z is drawn as its
+    section seen side-on (:func:`_side_on`), projected onto XY at its place,
+    and its shaft as a line along the shaft through its gears' extent, a
+    little past them; a bevel gear on a Z shaft is its heel and toe tip
+    circles. Such a gear's plane is the height of its At point (a bevel's
+    apex), so a right-angle stage takes one colour. A gearbox with no turned
+    shaft is drawn exactly as before.
     """
     from .gears import kind_for
-    view = EndView(outlines=[], rims=[], shafts=[], planes=[], labels=[])
+    view = EndView(outlines=[], rims=[], shafts=[], planes=[], labels=[], lines=[])
     if not placed:
         return view
-    shapes = []
+    shapes = []                          # (gear, p, [loop of world points], height for its plane)
     for gear, p in placed.items():
+        if not _seen_end_on(p):
+            shapes.append((gear, p, _side_on(p), p.centre[2]))
+            continue
+        if getattr(p, "bevel", False):
+            shapes.append((gear, p, _bevel_end_on(p), p.z))
+            continue
         kind = kind_for(p.spec)
         points = kind.outline(p.spec, p.derived)[::step]
         angle = p.space_angle(theta.get(gear, 0.0), p.z)
@@ -371,11 +437,35 @@ def layout_gearbox(placed, theta, width: int = 696, height: int = 300, pad: floa
             if p.sigma < 0:
                 y = -y
             world.append((p.x + x * c - y * s_, p.y + x * s_ + y * c))
-        shapes.append((gear, p, world))
-    xs = [x for _, p, w in shapes for x, _ in w] + [p.x + p.outer_radius for _, p, _ in shapes] + \
-         [p.x - p.outer_radius for _, p, _ in shapes]
-    ys = [y for _, p, w in shapes for _, y in w] + [p.y + p.outer_radius for _, p, _ in shapes] + \
-         [p.y - p.outer_radius for _, p, _ in shapes]
+        shapes.append((gear, p, [world], p.z))
+    # A turned shaft's line: along its family's plus direction, through the extent of its gears seen from +Z
+    # (measured from the first gear's At point), SHAFT_OVERRUN past either end.
+    turned = {}
+    for gear, p, loops, _ in shapes:
+        if _seen_end_on(p):
+            continue
+        base, a = turned.get(p.shaft, (p.centre, p.family))[:2]
+        along = [(x - base[0]) * a[0] + (y - base[1]) * a[1] for loop in loops for x, y in loop]
+        lo, hi = min(along), max(along)
+        if p.shaft in turned:
+            lo, hi = min(lo, turned[p.shaft][2]), max(hi, turned[p.shaft][3])
+        turned[p.shaft] = (base, a, lo, hi)
+    lines = []
+    for shaft, (base, a, lo, hi) in turned.items():
+        flat = math.hypot(a[0], a[1])          # a shaft tilted out of XY is foreshortened, and so is its overrun
+        lo, hi = lo - SHAFT_OVERRUN * flat, hi + SHAFT_OVERRUN * flat
+        # along was measured in XY; per unit of along, the line moves (a_x, a_y) / flat² in XY
+        k = 1.0 / (flat * flat)
+        lines.append((shaft, base[0] + lo * a[0] * k, base[1] + lo * a[1] * k,
+                      base[0] + hi * a[0] * k, base[1] + hi * a[1] * k))
+    xs = [x for _, _, loops, _ in shapes for loop in loops for x, _ in loop] + \
+         [x for _, x0, _, x1, _ in lines for x in (x0, x1)]
+    ys = [y for _, _, loops, _ in shapes for loop in loops for _, y in loop] + \
+         [y for _, _, y0, _, y1 in lines for y in (y0, y1)]
+    for _, p, _, _ in shapes:
+        if _seen_end_on(p) and not getattr(p, "bevel", False):
+            xs += [p.x + p.outer_radius, p.x - p.outer_radius]
+            ys += [p.y + p.outer_radius, p.y - p.outer_radius]
     lo_x, hi_x, lo_y, hi_y = min(xs), max(xs), min(ys), max(ys)
     scale = min((width - 2 * pad) / max(hi_x - lo_x, 1e-9), (height - 2 * pad) / max(hi_y - lo_y, 1e-9))
     off_x = (width - (hi_x - lo_x) * scale) / 2.0 - lo_x * scale
@@ -385,21 +475,34 @@ def layout_gearbox(placed, theta, width: int = 696, height: int = 300, pad: floa
         return off_x + x * scale, off_y - y * scale
 
     view.scale = scale
-    view.planes = sorted({round(p.z, 6) for _, p, _ in shapes})
+    view.planes = sorted({round(h, 6) for _, _, _, h in shapes})
     plane_of = {z: i for i, z in enumerate(view.planes)}
-    for gear, p, world in sorted(shapes, key=lambda t: t[1].z):
-        plane = plane_of[round(p.z, 6)]
-        view.outlines.append((gear, plane, [to_canvas(x, y) for x, y in world]))
-        if p.internal:
+    for gear, p, loops, h in sorted(shapes, key=lambda t: t[3]):
+        plane = plane_of[round(h, 6)]
+        for loop in loops:
+            view.outlines.append((gear, plane, [to_canvas(x, y) for x, y in loop]))
+        if p.internal and _seen_end_on(p):
             cx, cy = to_canvas(p.x, p.y)
             view.rims.append((gear, plane, cx, cy, p.outer_radius * scale))
     seen = set()
-    for _, p, _ in shapes:
-        if p.shaft not in seen:
-            seen.add(p.shaft)
-            view.shafts.append((p.shaft,) + to_canvas(p.x, p.y))
+    ends = {}
+    for shaft, x0, y0, x1, y1 in lines:
+        a0, b0 = to_canvas(x0, y0)
+        a1, b1 = to_canvas(x1, y1)
+        view.lines.append((shaft, a0, b0, a1, b1))
+        ends[shaft] = (a1, b1)                   # named at its + end, the way its gears face
+    for _, p, _, _ in shapes:
+        if p.shaft in seen:
+            continue
+        seen.add(p.shaft)
+        if p.shaft in ends:
+            continue
+        view.shafts.append((p.shaft,) + to_canvas(p.x, p.y))
     ox, oy = to_canvas(0.0, 0.0)
     if 0 <= ox <= width and 0 <= oy <= height:
         view.origin = (ox, oy)
-    view.labels = [_place_label(name, x, y, view.origin, unit) for name, x, y in view.shafts]
+    marks = [(name, x, y) for name, x, y in view.shafts] + [(name, x, y) for name, (x, y) in ends.items()]
+    order = {name: i for i, name in enumerate(dict.fromkeys(p.shaft for _, p, _, _ in shapes))}
+    marks.sort(key=lambda m: order.get(m[0], len(order)))
+    view.labels = [_place_label(name, x, y, view.origin, unit) for name, x, y in marks]
     return view

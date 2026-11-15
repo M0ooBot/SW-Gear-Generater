@@ -247,3 +247,75 @@ def test_the_end_view_draws_a_helical_gear_as_its_part_is_built_at_the_middle_of
         back = [(p.x + (x - sx) / view.scale, p.y - (y - sy) / view.scale) for x, y in drawn]
         built = section(p, theta[gear], p.z, p.spec)
         assert max(math.dist(a, b) for a, b in zip(back, built)) < 1e-9, gear
+
+
+# -- W6: turned shafts in the end view (W6-PLAN §2.10) ---------------------------------------------------------------
+
+
+def _turned_view(make, width=392, height=300):
+    from gear_generator.workbook import checks, geometry
+    from test_workbook_turned import bevel_reducer, crossed_slant
+    spec = {"A": bevel_reducer, "B": crossed_slant}[make]()
+    lay = geometry.layout(spec)
+    assert lay.later == [] and lay.problems == {}
+    report = checks.check(spec)
+    return lay, preview.layout_gearbox(lay.placed, report.theta, width, height)
+
+
+def _back(view, x, y):
+    """A canvas point back to world mm, through the origin's own canvas point."""
+    ox, oy = view.origin
+    return (x - ox) / view.scale, -(y - oy) / view.scale
+
+
+def test_a_gear_on_a_turned_shaft_is_its_section_seen_side_on_and_its_shaft_a_line():
+    """Fixture A: S1 runs along X at z 60, so G1 is drawn as its blank seen from +Z, apex at (0, 0) of the view's
+    XY and its body out along +X; S1 is a line along X through it, a little past it; S2 and S3 stay crosses."""
+    lay, view = _turned_view("A")
+    assert {name for name, *_ in view.shafts} == {"S2", "S3"}
+    (name, x0, y0, x1, y1), = view.lines
+    assert name == "S1" and y0 == pytest.approx(y1) and x1 > x0
+    g1 = [pt for gear, _, outline in view.outlines if gear == "G1" for pt in outline]
+    xs = [_back(view, x, y)[0] for x, y in g1]
+    ys = [_back(view, x, y)[1] for x, y in g1]
+    blank = preview.bevel_section(lay.placed["G1"].derived)
+    reach = max(r for loop in blank for r, _ in loop)
+    assert min(xs) == pytest.approx(min(z for loop in blank for _, z in loop), abs=1e-6)
+    assert max(ys) == pytest.approx(reach, abs=1e-6) and min(ys) == pytest.approx(-reach, abs=1e-6)
+    ends = sorted(_back(view, x, y0)[0] for x in (x0, x1))
+    assert ends == pytest.approx([min(xs) - preview.SHAFT_OVERRUN, max(xs) + preview.SHAFT_OVERRUN], abs=1e-6)
+    labels = {label[0]: label for label in view.labels}
+    assert set(labels) == {"S1", "S2", "S3"} and labels["S1"][1] > x1     # S1 named at its + end
+
+
+def test_a_bevel_gear_on_a_z_shaft_is_its_heel_and_toe_seen_end_on_and_the_stage_takes_one_colour():
+    lay, view = _turned_view("A")
+    g2 = lay.placed["G2"].derived
+    rings = [outline for gear, _, outline in view.outlines if gear == "G2"]
+    assert len(rings) == 2
+    radii = sorted(max(math.hypot(*_back(view, x, y)) for x, y in ring) for ring in rings)
+    heel = max(r for loop in preview.bevel_section(g2) for r, _ in loop)
+    assert radii == pytest.approx([heel * (g2.cone_distance - g2.face_width) / g2.cone_distance, heel], abs=1e-6)
+    planes = {gear: plane for gear, plane, _ in view.outlines}
+    assert view.planes == [5.0, 60.0] and planes == {"G1": 1, "G2": 1, "G3": 0, "G4": 0}
+
+
+def test_a_slanted_shaft_is_a_line_along_its_direction_named_at_its_plus_end():
+    """Fixture B: S2 along X and S3 along (−1, 1.732, 0); S3's plus direction is (0.5, −0.866, 0), so its name is
+    at the lower right end of its line on the screen."""
+    lay, view = _turned_view("B")
+    lines = {name: (x0, y0, x1, y1) for name, x0, y0, x1, y1 in view.lines}
+    assert set(lines) == {"S2", "S3"} and {name for name, *_ in view.shafts} == {"S1"}
+    x0, y0, x1, y1 = lines["S3"]
+    dx, dy = x1 - x0, -(y1 - y0)
+    assert dx / math.hypot(dx, dy) == pytest.approx(0.5, abs=1e-9)
+    assert dy / math.hypot(dx, dy) == pytest.approx(-math.sqrt(3) / 2, abs=1e-9)
+    points = [pt for _, _, outline in view.outlines for pt in outline] + [p for l in view.lines for p in
+                                                                          (l[1:3], l[3:5])]
+    assert all(0 <= x <= 392 and 0 <= y <= 300 for x, y in points)
+    assert view.planes == [8.0, 10.0]
+
+
+def test_a_gearbox_with_no_turned_shaft_has_no_lines():
+    _, _, view = _workbook_view()
+    assert view.lines == []

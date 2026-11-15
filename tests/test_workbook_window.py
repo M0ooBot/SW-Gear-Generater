@@ -155,6 +155,11 @@ W5_FINDINGS = {"GEAR_MATE_RATIO_ROUTE": None, "GEAR_MATE_RATIO_REMAKE_WORKS": Tr
                "GEAR_MATE_SENSE_READ_MARKS": "nothing", "GEAR_MATE_SENSE_READ_POINTS_AGREE": True,
                "CROSS_VERSION_READ_BACK_TELLS_SENSE": True, "GEAR_MATE_SENSE_READ_UNDER_COMMAND_IN_PROGRESS": True,
                "GEAR_MATE_REMAKE_UNDER_COMMAND_IN_PROGRESS": True, "GEAR_MATE_READ_BACK_HOLDS_AFTER_A_RATIO_REMAKE": True}
+# W6: the turned gear mate's sense as probe tier 9 found it, and the angles it covers for each class of mesh (axes that
+# meet: bevel; axes that pass each other: crossed). A test of the turned refusal takes the read-back away itself.
+W5_FINDINGS.update({"TURNED_GEAR_MATE_SENSE_READ_BACK": "entity senses",
+                    "TURNED_GEAR_MATE_SENSE_ANGLES": (30.0, 150.0),
+                    "TURNED_GEAR_MATE_SENSE_ANGLES_SKEW": (60.0, 120.0)})
 
 
 @pytest.fixture(autouse=True)
@@ -1756,3 +1761,166 @@ def test_the_structural_step_with_update_unsaved_on_a_turning_gearbox_asks_for_t
     assert footer.ok and footer.build_enabled and footer.update_enabled
     assert gear_states(window) == {"G1": "needs a new part", "G2": "built", "G3": "built · new part on Build",
                                    "G4": "built · new part on Build"}
+
+
+# -- W6: turned axes, bevel and crossed meshes ----------------------------------------------------------------------
+#
+# Fixture A (Bevel_Reducer: a bevel stage from S1 along X+ into S2, then a parallel stage) and the crossed fixture
+# moved off the Top plane (Crossed_Slant 10 mm up, so S1 can pass to S2's other side), as B's tests write them.
+
+
+def speed_lines(window):
+    return [c.cget("text") for c in sorted(window.speeds_body.winfo_children(), key=lambda c: int(c.grid_info()["row"]))]
+
+
+def end_view_lines(window):
+    """The canvas's line items that are not the shafts' crosses nor the origin's arrows: the turned shafts."""
+    c = window.canvas
+    lines = [i for i in c.find_all() if c.type(i) == "line" and not c.itemcget(i, "arrow") in ("last", "first")]
+    return [i for i in lines if abs(c.coords(i)[0] - c.coords(i)[2]) + abs(c.coords(i)[1] - c.coords(i)[3]) > 20]
+
+
+def test_a_right_angle_gearbox_is_ready_to_build_and_says_each_shaft_from_its_own_end(desk):
+    from test_workbook_turned import bevel_reducer
+    window = desk.open(bevel_reducer(), name="Bevel_Reducer.xlsx")
+    footer = window.footer()
+    assert (footer.build_label, footer.build_enabled, footer.update_shown, footer.ok) == ("Build", True, False, True)
+    assert window.status.get() == (
+        "Ready: Build makes 4 parts, Bevel_Reducer_Layout and Bevel_Reducer.SLDASM in "
+        f"{ui_text.short_path(str(desk.folder), 48)}. Its gears are mated to their shafts and to each other, so they "
+        "turn together in SolidWorks.")
+    assert window.box_values["type"].cget("text") == ("Bevel and parallel train · 2 meshes · 6.000 : 1 · output at "
+                                                       "90° to the input")
+    assert speed_lines(window) == ["S1    1500.0 rpm anticlockwise seen from the +X end · 10.00 N·m",
+                                   "S2    750.0 rpm clockwise seen from the +Z end · 19.60 N·m",
+                                   "S3    250.0 rpm anticlockwise seen from the +Z end · 57.62 N·m"]
+    assert window.speeds_readout.get() == "seen from each shaft's + end"
+    # The end view: S1 is a line through G1 seen side-on, S2 and S3 crosses; the bevel stage one colour, at z 60.
+    assert window.view_readout.get() == "z 5 · z 60 · origin" and len(end_view_lines(window)) == 1
+    assert gear_states(window) == {"G1": "to build", "G2": "to build", "G3": "to build", "G4": "to build"}
+
+
+def test_a_right_angle_gearbox_builds_to_turn_and_says_which_gear_to_drag(desk):
+    from test_workbook_turned import bevel_reducer
+    window = desk.open(bevel_reducer(), name="Bevel_Reducer.xlsx")
+    window.press_build()
+    desk.finish(window)
+    assert window.status.get() == (
+        "Built 4 parts, Bevel_Reducer_Layout and Bevel_Reducer.SLDASM; no interference between the gears where they "
+        "stand. Its gears are mated to turn together, and SolidWorks reports no mate in error: drag G1 in SolidWorks "
+        "and the rest of its train follow. 1 thing to do by hand: Assign a material to each of the 4 parts; the build "
+        "leaves it unset.")
+    box = record_of(window).gearbox
+    assert box.kind == store.GEARBOX_MOTION and box.assembly
+    assert {m.name: m.sense for m in box.mates if m.kind == motion.MESH} == {"G1 meshes G2": 1, "G3 meshes G4": 1}
+    window.note = None
+    window._refresh_state()
+    assert window.status.get() == (
+        "SolidWorks already matches the workbook on record; Update SolidWorks checks it live and puts right anything "
+        "changed there; gears turned in SolidWorks stay where they are unless something must move. It was built with "
+        "its gears mated to turn: drag G1 in SolidWorks and the rest of its train follow.")
+    footer = window.footer()
+    assert (footer.build_label, footer.build_enabled, footer.update_enabled, footer.update_primary) == (
+        "Build again…", True, True, True)
+
+
+TURNED_REFUSAL = ("G1 and G2 mesh across shafts at 90°, and which way a gear mate turns gears on shafts at an angle "
+                  "is not settled by the probes for this version (findings.TURNED_GEAR_MATE_SENSE_READ_BACK), so the "
+                  "gearbox is not built.")
+
+
+def test_a_turned_mesh_the_probes_have_not_settled_offers_build_parts_and_nothing_else(desk, monkeypatch):
+    """D16: refused before Build, with no static fallback, Build parts still offered — while the parts are not
+    built, once they are, and on a gearbox built before the finding went away (Build again… greyed with the reason)."""
+    from test_workbook_turned import bevel_reducer
+    monkeypatch.setattr(findings, "TURNED_GEAR_MATE_SENSE_READ_BACK", None)
+    window = desk.open(bevel_reducer(), name="Bevel_Reducer.xlsx")
+    footer = window.footer()
+    assert (footer.build_label, footer.build_enabled, footer.update_shown, footer.ok) == (
+        "Build parts", True, False, True)
+    assert window.status.get() == (f"Ready: Build parts makes 4 parts in {ui_text.short_path(str(desk.folder), 48)}. "
+                                   + TURNED_REFUSAL)
+    window.press_build()                                       # the window plans what the footer offers
+    desk.finish(window)
+    assert [os.path.basename(p) for p in desk.sw.saved_in(0)] == [
+        "Bevel_m3_N20_M40.SLDPRT", "Bevel_m3_N40_M20.SLDPRT", "Gear_m2_N17.SLDPRT", "Gear_m2_N51.SLDPRT"]
+    assert window.status.get() == ("Built 4 parts. 1 thing to do by hand: Assign a material to each of the 4 parts; "
+                                   "the build leaves it unset.")
+    record = record_of(window)
+    assert len(record.parts) == 4 and record.gearbox is None
+    window.note = None
+    window._refresh_state()
+    assert window.status.get() == "The 4 parts are built already, so Build parts has nothing to make. " + TURNED_REFUSAL
+    footer = window.footer()
+    assert (footer.build_label, footer.build_enabled) == ("Build parts", False)
+
+    monkeypatch.setattr(findings, "TURNED_GEAR_MATE_SENSE_READ_BACK", "entity senses")
+    other = desk.open(bevel_reducer(), name="Built.xlsx")    # its own gearbox, built while the finding was set
+    other.press_build()
+    desk.finish(other)
+    assert record_of(other).gearbox.assembly
+    monkeypatch.setattr(findings, "TURNED_GEAR_MATE_SENSE_READ_BACK", None)
+    other.note = None
+    other._plan()
+    other._paint()
+    footer = other.footer()
+    assert other.status.get() == TURNED_REFUSAL and not footer.ok
+    assert (footer.build_label, footer.build_enabled, footer.update_shown, footer.update_enabled) == (
+        "Build again…", False, True, False)
+    calls = len(desk.worker.calls)
+    other.press_build()
+    other.press_update()
+    assert len(desk.worker.calls) == calls
+
+
+def test_a_slanted_shaft_is_seen_from_its_own_plus_end(desk):
+    from test_workbook_turned import crossed_slant
+    window = desk.open(crossed_slant(), name="Crossed_Slant.xlsx")
+    assert speed_lines(window) == [
+        "S1    1000.0 rpm anticlockwise seen from the +Z end · 5.00 N·m",
+        "S2    500.0 rpm anticlockwise seen from the +X end · 9.80 N·m",
+        "S3    333.3 rpm anticlockwise seen from the (0.5, −0.866, 0) end · 14.41 N·m"]
+    assert window.speeds_readout.get() == "seen from each shaft's + end"
+    assert window.box_values["type"].cget("text") == ("Crossed and bevel train · 2 meshes · 3.000 : 1 · output at 90° "
+                                                       "to the input")
+    assert len(end_view_lines(window)) == 2                    # S2 along X and S3 slanted; S1 a cross
+    assert window.footer().build_enabled
+
+
+def test_a_crossed_shaft_moved_to_the_other_side_is_an_update_that_remakes_its_gear_mate(desk, monkeypatch):
+    """D17: a move that turns a crossed mesh's sense round is an Update, which makes its gear mate again (with the
+    remake route; without it the same edit needs Build again…)."""
+    from test_workbook_turned import crossed_off_base
+    monkeypatch.setattr(findings, "GEAR_MATE_RATIO_ROUTE", "remake")
+    window = desk.open(crossed_off_base(), name="Crossed_Slant.xlsx")
+    window.press_build()
+    desk.finish(window)
+    assert {m.name: m.sense for m in record_of(window).gearbox.mates if m.kind == motion.MESH} == {
+        "G1 meshes G2": -1, "G3 meshes G4": 1}
+    save_in_excel(window, {"Shafts": {"D2": 179.705628}})      # S1 to S2's other side
+    assert window.status.get() == (
+        "Update SolidWorks will move S1 in Crossed_Slant_Layout, remake the gear mate G1 meshes G2 (since S1 now passes "
+        "S2 on its other side, so G1 and G2 turn the other way against each other), and re-place G1, G2, G3 and G4. "
+        "It was built with its gears mated to turn: drag G1 in SolidWorks and the rest of its train follow.")
+    window.press_update()
+    desk.finish(window)
+    assert window.status.get() == (
+        "Updated SolidWorks: moved S1 in Crossed_Slant_Layout, remade the gear mate G1 meshes G2 (since S1 now passes "
+        "S2 on its other side, so G1 and G2 turn the other way against each other), re-placed G1, G2, G3 and G4; no "
+        "interference between the gears where they stand. Save Crossed_Slant_Layout and Crossed_Slant in SolidWorks "
+        "to keep them.")
+    assert {m.name: m.sense for m in record_of(window).gearbox.mates if m.kind == motion.MESH} == {
+        "G1 meshes G2": 1, "G3 meshes G4": 1}
+    assert window.update_plan.record_matches
+
+
+def test_the_crossed_move_needs_build_again_while_a_gear_mate_cannot_be_made_again(desk):
+    from test_workbook_turned import crossed_off_base
+    window = desk.open(crossed_off_base(), name="Crossed_Slant.xlsx")
+    window.press_build()
+    desk.finish(window)
+    save_in_excel(window, {"Shafts": {"D2": 179.705628}})
+    assert window.status.get() == (
+        "G2 now turns the other way against G1 about its axis, so the gear mate G1 meshes G2 must be made again, and "
+        "making a gear mate again in a built assembly is not settled by the probes (findings.GEAR_MATE_RATIO_ROUTE), so "
+        "the gearbox needs building again. Update SolidWorks offers to build again as Crossed_Slant_r2. " + TURNS)
