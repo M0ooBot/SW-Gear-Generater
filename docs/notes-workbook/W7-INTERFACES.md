@@ -193,3 +193,15 @@ written rules. These bind A, B and C from now; a line number is the line at `5d5
     (k = −1, outside) and True for the planet–ring mate (k = +1/3, inside) — W6's `mate_senses[name] =
     (plan.sense == -1)` unchanged, since for coaxial parallel axes the sense in the carrier's frame is the sense in
     the world. The spike agrees: the ring mate read wrong with the first Flip.
+11. **`GearboxUpdate.carriers: List[UpdateResult]`** (A's `75d089b`) holds each carrier part's values as the Update
+    set them, after the layout's, as `GearboxUpdate.layout` holds the layout's. C says "moved the planets on C"
+    after an Update from it (a carrier part whose values changed), and there is no separate list for that. The
+    build's result has `GearboxResult.carriers` and `carriers_reused`; a reused carrier part found changed goes to
+    `mismatched` and nothing is built.
+12. **What the fake keys on, which planning must keep:** an axis mate is carrier-held when its target component's
+    handle does not start with `layout`; a ring is read from a part file whose name starts with `Ring`.
+13. **The order of puts in a planetary train** (A's `75d089b`): a held member that is off its place first, then the
+    carrier, then every other gear; every lock of the train off around the puts and back on afterwards. No probe
+    has shown that a put of the carrier holds with its planets' axis mates on, or that a planet put onto its carrier
+    axis holds once the carrier stands at its frame; each put is read back and the post-check judges every train
+    again, and the demonstration's Update sections are where SolidWorks first shows it.
