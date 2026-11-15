@@ -154,3 +154,42 @@ the mates by rank (J5), `MotionPlan.carriers`; `CarrierLink`s for `MotionUpdate`
 `"gears"` covering carrier handles if A asks; the round trips on the fake after A (second pass).
 **C.** Schema 5's refusals, and every §2.12 sentence. **D.** After A–C. **E.** `copy_built` (W6-INTERFACES §4)
 covers `CarrierEntry.path` by rewriting every string field under the original folder.
+
+## 6. Rulings on the interface review (2026-11-14)
+
+The independent review of `5d5d51d` worked the 4 : 1 by hand (Willis; sun +30° → carrier +7.5°, a planet −22.5°
+relative to its carrier and −15° absolute, the ring still), recomputed the carried copy origins, ran 20 000 random
+cases of `train_check` with no carriers against W6's with no difference, and found the shapes right. It asked for
+written rules. These bind A, B and C from now; a line number is the line at `5d5d51d`.
+
+1. **A record W7 writes is never refused on its next read.** Three parts. (a) Every finisher keeps one
+   `CarrierEntry` per carrier of the plan, built or reused, whenever it writes mates: a Build that failed after the
+   carrier part was saved and is carried on with a `CarrierReuse` must not finish with an empty `carriers` beside
+   mates whose `on` names that carrier. (b) `update._bad_mates` (`update.py:585`) and C's checks treat
+   `carrier_id(shaft)` of every `CarrierEntry` as a known body, beside the components: the carrier's own mates
+   (`C carrier on C Axis`, `CarrierGear locked to C carrier`) name it in `gears`. (c) `store` owns
+   `CARRIER_ID_SUFFIX = " carrier"` (it cannot import `layout`), `layout`'s constant equals it, and a test pins the
+   equality. C tests: read a v3, a v4 and a v5 planetary record → write → read; and a continued build's record.
+2. **The `gears` map covers the carrier.** `build_kwargs()["gears"]` is `GearboxPlan.handles` (gears and copies
+   only, as §4 has it) plus `{f"carrier{i}": carrier_id(shaft)}`, with `i` counting carriers in Shafts-sheet order
+   from 1. `CarrierEntry.component` comes from `result.components[f"carrier{i}"]`.
+3. **A planetary Update always carries its carriers.** `UpdatePlan.carriers` lists every carrier part on record for
+   a planetary gearbox, always, as the layout is passed, not only when a carrier part changed. A's update refuses,
+   before anything is read, when `motion.carriers`, `motion.held` or any `MeshLink.carrier` is set and no carrier
+   parts are given, and turns any `ValueError` from `train_check` into a `BuildError` sentence (W6-INTERFACES §7.11).
+4. **The carrier is a `Placement`**: `Placement(gear=carrier_id, component=CarrierEntry.component, rotation, at,
+   pitch=0.0)` in `placements`, with its recorded frame in `MotionUpdate.recorded`.
+5. **`held ⊆ fixed`.** A held member is in `MotionUpdate.fixed` as W5 has it; `held` only adds "judged in
+   `train_check`, and put first". A held carrier is also in `carriers`.
+6. **The unmated ring meshes are `MeshLink`s** in `MotionUpdate.meshes`, so the post-check judges every mesh in
+   step, mated or not. The record's mate entries hold only the mates made.
+7. **The shared `"Planet Face Z"` global** is keyed by the row id (`Placed.row`) in `face_globals` and in
+   `GearboxUpdate.axial`; C's "moved … along …" finds the shaft through the along mates of that row's copies.
+8. **`MatePlan.on` is for AXIS mates only.** A planet's along mate goes to `layout:plane1` with `on = ""` and
+   `z_front` the world Front coordinate. Line 66 of this note, which says "an along mate's axis target", is wrong.
+9. **`gearbox.on_record`** (`gearbox.py:950`) lists `gearbox.carriers[].path`, so a carrier part's journal entry
+   settles.
+10. **The fixture's senses, as an identity:** for the 4 : 1, `mate_senses` is False for each sun–planet mate
+    (k = −1, outside) and True for the planet–ring mate (k = +1/3, inside) — W6's `mate_senses[name] =
+    (plan.sense == -1)` unchanged, since for coaxial parallel axes the sense in the carrier's frame is the sense in
+    the world. The spike agrees: the ring mate read wrong with the first Flip.
