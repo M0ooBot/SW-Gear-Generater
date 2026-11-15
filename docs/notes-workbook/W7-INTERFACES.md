@@ -214,3 +214,7 @@ written rules. These bind A, B and C from now; a line number is the line at `5d5
 15. **A planetary stage has one input.** A second member of the stage given Role input is an error at its cell,
     whether or not its speed agrees with the first (ruled as "two inputs are refused"; B's checks let a consistent
     second input through until this ruling's fix).
+16. **`GearboxUpdate.placed` is the order the puts were made in**, on every path (A's `7a34852` pins it; no code
+    changed). Each name is appended straight after its own `place_component` returns, and a put that raises is not
+    listed. For a planetary train: a held member that is off its place, then the carrier, then the rest in the
+    order of planning's placements. The demonstration's p3 asserts that order from this list.
