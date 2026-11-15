@@ -1065,3 +1065,43 @@ GEAR_MATE_READ_BACK_HOLDS_AFTER_A_RATIO_REMAKE = True
 CROSS_VERSION_RING_TURNS_RIGHT = True
 CROSS_VERSION_READ_BACK_TELLS_SENSE = True
 CROSS_VERSION_CLOSE_ASKS_TO_SAVE = True        # the CAM add-in's Yes/No box, on this machine's 2026
+
+# -- turned_gear_mate_sense: a gear mate's sense between non-parallel axes (W6-PLAN §7.2, probe tier 9) ----------
+# Evidence: probe/results/probe-results-20261114-195608.json, SolidWorks 2026 34.1.1, one round in a fresh session;
+# 2024 is confirmed at W6's end (r1, r3, r5).
+#
+# The rig was two cylinders standing for a 20- and a 40-tooth gear, radius 10 and 20, each 10 long on its own +Z
+# side. Each was held by W5's anchor mates to a frame axis: the A axis along Z, and the B axis from one sketch line.
+#
+# Cases (44 gear mates in 22 assemblies, both Flips each):
+#   meeting axes   30°, 60° and 90°, every facing (own-axis angles 30, 60, 90, 120, 150)
+#   skew axes      60° and 90°, both hands of crossing, facings (+,+) and (+,−) (own-axis angles 60, 90, 120)
+#   controls       parallel and anti-parallel
+#
+# Every gear mate was made under CommandInProgress with ratio 20 : 40 and read straight after: Reverse and both
+# EntityParams, each entity matched to its cylinder by axis. Each was then judged by a 30° drive: the sign of each
+# cylinder's turn about its own +Z.
+#
+# Results:
+# - In all 40 turned mates the mate turned its two cylinders the same way about their entities' own directions
+#   exactly when Reverse was True. This is H: m = (+1 if Reverse else −1)·τA·τB, with τ = sign(entity·own +Z).
+# - In every geometry exactly one Flip turned right, and H called that one right and the other wrong.
+#   - Right for meeting axes means opposite turns about the own axes.
+#   - Right for skew axes means the sense a crossed helical pair of the crossing's hand needs, in gears/crossed.py's
+#     convention. At 90° either hand fits and the right hand was taken; H told the measured sense either way.
+# - The four controls agreed with W5's rule and with H.
+# - Reopened, M90 ++, M60 +−, K90 +Y ++ and K60 −Y ++ read and drove as when first made.
+# - Every AddMate5 returned status 1 and every ratio held at 0.5 to 1e-6.
+# - Neither of the alternatives decide.py would have tried tells the cases: Reverse against the sign of dA·dB, and
+#   Reverse against the crossing.
+#
+# Bounds:
+# - Covered: the own-axis angles 30° to 150°. This is the least and greatest at which every case held: meeting
+#   30–150, skew 60–120. The app refuses a turned mesh outside this.
+# - Not covered: real teeth (E's interference controls confirm it, M2), and a remake at a new ratio on a turned mate.
+TURNED_GEAR_MATE_SENSE_READ_BACK = "entity senses"
+TURNED_GEAR_MATE_SENSE_ANGLES = (30.0, 150.0)
+# Recorded, nothing branching on them: no cylinder moved when a turned gear mate was made (1e-6 mm, 1e-6 per rotation
+# entry), and MateEntity(0) was the first selection in all 40 turned mates. The app matches by axis either way (S1).
+TURNED_GEAR_MATE_MOVES_ON_MAKE = False
+GEAR_MATE_ENTITY_ORDER = "first selection first"

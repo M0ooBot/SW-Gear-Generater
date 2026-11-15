@@ -984,3 +984,31 @@ def test_a_ring_train_2024_saved_turns_right_in_2026_and_the_read_back_says_so()
         assert not t["remade"] and not any(t["check"]["clashes_driven"].values()), tag
         titles = [w["title"] for c in t["closes"] for w in c["windows"]]
         assert ("SOLIDWORKS CAM Warning" in titles) is findings.CROSS_VERSION_CLOSE_ASKS_TO_SAVE, tag
+
+
+TURNED = LATEST.parent / "probe-results-20261114-195608.json"
+
+
+def test_a_turned_gear_mates_reverse_tells_its_sense_about_the_entities_own_directions():
+    """Probe turned_gear_mate_sense (W6-PLAN §7.2, SolidWorks 2026): H on meeting axes at 30°, 60° and 90° (own-axis
+    angles 30–150) and skew axes at 60° and 90° on both hands, every facing, both Flips; W5's controls."""
+    from gear_generator.probe import p9_turned as p9
+    data = json.loads(TURNED.read_text(encoding="utf-8"))
+    assert data["meta"]["version"].startswith("SolidWorks 2026 ")
+    records = {r["name"]: r for r in data["records"]}
+    decided = decide.decide(records)
+    assert decided["turned_sense_read_back"] == findings.TURNED_GEAR_MATE_SENSE_READ_BACK == "entity senses"
+    assert decided["turned_sense_angles"] == findings.TURNED_GEAR_MATE_SENSE_ANGLES == (30.0, 150.0)
+    assert decided["turned_gear_mate_moves_on_make"] is findings.TURNED_GEAR_MATE_MOVES_ON_MAKE is False
+    assert decided["gear_mate_entity_order"] == findings.GEAR_MATE_ENTITY_ORDER
+    cases = facts(records, "turned_gear_mate_sense")["turned_sense_cases"]
+    turned = [c for c in cases if c["cls"] != "P"]
+    assert len(turned) == 40 and len(cases) == 44
+    assert sorted({c["own_angle"] for c in turned if c["cls"] == "M"}) == [30.0, 60.0, 90.0, 120.0, 150.0]
+    assert sorted({c["own_angle"] for c in turned if c["cls"] == "K"}) == [60.0, 90.0, 120.0]
+    assert {c["side"] for c in turned if c["cls"] == "K"} == {"+Y", "-Y"}
+    for c in cases:
+        j = p9.judge(c)
+        assert j["ratio_ok"] and j["h_tells"] and c["status"] == findings.ADD_MATE_NO_ERROR, c["geometry"]
+    reopened = facts(records, "turned_gear_mate_sense")["turned_sense_reopened"]
+    assert len(reopened) == 4 and all(r["m"] == r["m_first"] and r["m_h"] == r["m_h_first"] for r in reopened)
