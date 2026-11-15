@@ -19,7 +19,10 @@ answers of that day and the rulings that follow from them are in `notes-workbook
 | W3 geometry, phases, kinematics, checks, fixes, Export, Results sheet, two-column window | done, reviewed twice, every item fixed. The Excel checks passed on Windows: the Windows-saved fixture (`aa86cc7`) reads, and exported files open in Excel with no repair prompt. |
 | W4 layout part + static assembly, Update SolidWorks, build-again `_r<n>` | **closed 2026-11-14**: the rebuild fault probed and fixed, pass 4 verified, both demonstrations rerun on SolidWorks 2026 and 2024 with every check passing, each step reviewed. Details and what is left open below. |
 | W5 motion | **closed 2026-11-14**: probes P0 to P0d and the two ring rounds run and reviewed, packages A to E written and reviewed, the demonstration run in full on SolidWorks 2026 and confirmed on 2024, the user's hand drag passed on both. Details, and what is left open, below. |
-| W6 right-angle, W7 planetary, W8 sleeves and modes | **begun 2026-11-14**: the user said to carry on, in order, until W8 is done. The three sub-plans are being written (`notes-workbook/W6-PLAN.md`, `W7-PLAN.md`, `W8-PLAN.md`), each to be reviewed before its phase starts. Judgement calls are taken at the plan's recommended reading while the user is away and listed for the user as readings to overrule. |
+| W6 right-angle | **in progress (2026-11-14)**: the plan written, reviewed and revised (`notes-workbook/W6-PLAN.md`, `W6-PLAN-REVIEW.md`); probe tier 9 run on SolidWorks 2026 on cylinders and reviewed (a turned gear mate's sense is read per entity); the interface commit `34bfb85` with its rulings (`W6-INTERFACES.md` §7); packages A, B, C and D written and each reviewed, on the fake. **Left:** the demonstration on SolidWorks 2026 (package E), the confirming run on 2024, and the close. Details below. |
+| W7 planetary | planned: `W7-PLAN.md`, reviewed (`W7-PLAN-REVIEW.md`) and revised; its riskiest point measured on SolidWorks 2026 (`W7-SPIKE.md`: a gear mate on a carrier-borne axis turns in the carrier's frame, and the plan's mates turn the 4 : 1 right). No code yet; it starts when W6 closes. |
+| W8 sleeves and modes | planned: `W8-PLAN.md`, reviewed (`W8-PLAN-REVIEW.md`) and revised; a spike on SolidWorks 2026 (`W8-SPIKE.md`: the collinear 1 : 1 gear mate and per-configuration suppression work; component handles go stale after a configuration is added or shown; the per-mode slide link as planned fails). The plan is to be revised to the spike. No code yet. |
+| How the user's absence is handled | the user said on 2026-11-14 to carry on, in order, until W8 is done. Judgement calls are taken at each plan's recommended reading and listed for the user as readings to overrule. |
 | The small-pinion tip cap | `fix/small-pinion-cap` merged at `0f5a121` (the user's instruction): 6- and 7-tooth pinions build with an arc on the tip cap, version 0.3.2. Built on SolidWorks 2024 by the branch; the 2026 build and the merge's review are in hand. |
 
 Suite, measured on a clean `git archive` of `2250ceb` (WSL, 2026-11-13): `PYTHONPATH=src .venv/bin/python -m
@@ -281,7 +284,7 @@ an idler's tooth change: no fixture has one; the idler was shown by probe P0c).
 
 *Written 2026-11-14, after packages A–D (A on a small second pass, A's and B's reviews running).* The authority order
 is `PLAN-WORKBOOK.md` → `notes-workbook/W6-PLAN.md` (revised after its review `W6-PLAN-REVIEW.md`, at `eb195d0`; its
-*Changes after the review* section says what moved) → `W6-INTERFACES.md`, whose §7 holds the sixteen rulings on the
+*Changes after the review* section says what moved) → `W6-INTERFACES.md`, whose §7 holds the rulings (eighteen so far) on the
 interface review that bind the packages. W5's decisions stay in force.
 
 **What W6 adds.** Shafts along `X±`, `Y±` or any direction; bevel meshes between shafts that meet and crossed
