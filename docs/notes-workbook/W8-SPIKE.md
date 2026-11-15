@@ -265,3 +265,103 @@ and `.json`.
 
 Steps 1–5 read the same in every run that reached them. So did the stale held handles, and so did the first
 `SetSuppression2` calls after `AddConfiguration2` (raised, then False).
+
+## Follow-up, 2026-11-14: a slide per configuration, and what a configuration keeps of a turn
+
+One more run, probe `w8_followup` (same file), on SolidWorks 2026 (34.1.1) in a fresh session. It used a snapshot of
+64f4620 with the probes as of 00b03e5, and passed first time (34 pass, exit 0; the probe took 75 s). The result is
+`probe/results/w8-followup-20261114-205913.{txt,json}`.
+
+The assembly is the spike's, with one change and one addition:
+- **The slide is changed.** S has a single slide: one distance mate from its origin to the layout's Front, typed at
+  10 mm, linked to no global.
+- **F is added.** A third component (the spur part again), on its own `F Axis`, AXIS and ALONG only, with no gear
+  mate anywhere.
+- **The coupling** S–D is on in Default and X and off in Y, as before.
+
+The signatures came from sldworks.tlb and the enum values from swconst.tlb:
+- `IDimension.SetSystemValue3(NewValue, WhichConfigurations, Config_names) -> int`;
+- `IDimension.GetSystemValue3(WhichConfigurations, Config_names) -> VARIANT`;
+- `swSetValue_InSpecificConfigurations` is 3, and `swSetValue_Successful` is 0;
+- `swSpecifyConfiguration` is 3.
+
+### A. One distance mate, its value per configuration: it works (option 1)
+
+| Step | returned | GetSystemValue3(3, [Default, X, Y]) without activating | S's origin z |
+|---|---|---|---|
+| Before any per-configuration set (Y active) | | 0, 0, **10** | 10 |
+| `SetSystemValue3(0.030, 3, ["Y"])`, Y active, then a top-only rebuild | **0** | 10, 10, **30** | 30 |
+| Show X, rebuild | True | 10, 10, 30 | **10** |
+| Show Y, rebuild | True | 10, 10, 30 | **30** |
+| Show X, rebuild | True | 10, 10, 30 | **10** |
+| `SetSystemValue3(0.035, 3, ["Y"])` **while X is active**, rebuild | **0** | 10, 10, **35** | 10 (X untouched) |
+| Show Y, rebuild | True | 10, 10, 35 | **35** |
+| Saved (`SaveAs3`, silent, X active), closed, reopened (`OpenDoc6`) | | 10, 10, 35 | X 10, Y 35, X 10 |
+
+Every step read no mate error and raised no dialog.
+
+- **The value reads back as typed in each configuration, without activating it.** It is a driving dimension; the
+  set returns 0, not "driven".
+- **An Update can change one configuration's value while another is active.** X's sleeve does not move, and the
+  other configuration takes the new place when shown.
+- **It survives save and reopen.** The file reopens in X, every document unmodified, and the reads mark nothing.
+  The only window is the load-progress box, which closes itself.
+- **Two cautions:**
+  - Before a configuration has its own value, `GetSystemValue3` reads **0** for every configuration that is not
+    active. Read it only after setting each configuration's value.
+  - `IDimension.SystemValue` on the handle read **30** in X while S stood at 10. Use `GetSystemValue3` with the
+    configuration name, never `SystemValue`.
+- **What a set marks** could not be told, because the new assembly read modified throughout. The parts read
+  modified too, as they did in the spike from the mounts on.
+
+So options 2 (`Add3`) and 3 (two mates per slide) were not needed, and `Add3` was not tried.
+
+**For the plan: one SLIDE per slider, not one per position.**
+- Make it once, with its first mode's distance. After the configurations are added (and a rebuild), give each mode
+  its value with `SetSystemValue3(z_front_m, 3, [mode])`.
+- Read them all back with `GetSystemValue3(3, modes)`.
+- There are no slide globals and no per-configuration suppression for slides. That removes item 2 above, and makes
+  most of item 3 moot for slides, since SetSuppression2 remains only for couplings and sliding meshes.
+- §1.7's `"<Gear> Face Z at <position>"` globals and §1.8's SLIDE-per-position build go. An Update that moves a
+  position sets that configuration's value directly.
+- The `"point"` coincident case for a position at the Front plane (z_front = 0) was not tried; a distance of 0 may
+  need W5's rule.
+
+### B. What a configuration keeps of a turn: each configuration keeps its own positions
+
+Y was active (coupling off). F was put +20° about its own axis and D +5°, each by a `Transform2` put on handles
+fetched after the last change, then a top-only rebuild. The table gives turns from the positions in Y before the
+puts:
+
+| Then | F (no gear mate) | D (coupling on in X only) | A, S |
+|---|---|---|---|
+| In Y after the puts | 20 | 5 | 0, 0 |
+| X shown | **0** | **0** | 0, 0 |
+| Y shown again | **20** | **5** | 0, 0 |
+| X again, then F put +10° in X | 10 in X | 0 | 0, 0 |
+| Y shown | **20** (the put in X did not reach Y) | 5 | 0, 0 |
+| X shown | **10** | 0 | 0, 0 |
+| Saved, reopened: X, Y, X | 10, 20, 10 | 0, 5, 0 | 0, 0 |
+
+There were no errors and no windows throughout.
+
+- **SolidWorks 2026 keeps a component's place per configuration**, including the turn of a free component with no
+  gear mate, and keeps it through save and reopen.
+- So the spike's §5 result, D back at X's angle, is this, not the gear mate restoring a relation. D behaves exactly
+  like F.
+- This contradicts GOTCHAS §83 and assemblies/07 ("component positions are not stored per configuration"), at least
+  on 2026 for a freedom the mates leave open. Those were recorded on 2024 for a free mechanism; 2024 was not run here.
+
+**What "the user's turn" means across modes.** A turn the user gives the train in one mode stays in that mode.
+Every other mode keeps the positions it last had, and switching back finds each mode as it was left. A coupling
+engaged in another mode therefore meets that mode's own last positions, not the turned ones. §1.9 must be rewritten
+on this footing:
+- No newly engaged coupling inherits an angle from another mode.
+- No tooth-on-tooth from switching alone.
+- Update's out-of-step repair (J11, J26) is needed only where a mode's own positions have gone out of step.
+
+### C. A put's reach
+
+Item B answers it: a `Transform2` put on a fresh handle holds **in the active configuration only**. F put +10° in X
+left Y's F at its own 20°. So the app's per-mode placement (§1.8 step 3, `place_component` with the mode shown) is
+per mode, as the plan needs. And restoring the built turn in every mode means a put in each mode, not one put.
