@@ -365,3 +365,63 @@ on this footing:
 Item B answers it: a `Transform2` put on a fresh handle holds **in the active configuration only**. F put +10° in X
 left Y's F at its own 20°. So the app's per-mode placement (§1.8 step 3, `place_component` with the mode shown) is
 per mode, as the plan needs. And restoring the built turn in every mode means a put in each mode, not one put.
+
+## SolidWorks 2024, 2026-11-14: the spike and the follow-up again
+
+Both probes were rerun on SolidWorks 2024 (32.5.0), each in a session started fresh for it, from the same snapshots
+as on 2026 (64f4620 with the probes as of 00b03e5, and ed81031 for the follow-up's rerun). The results are
+`probe/results/sw2024/w8-spike-20261114-232510.{txt,json}` and `probe/results/sw2024/w8-followup-20261114-233330.{txt,json}`.
+
+**One difference, the collinear spline's Flip.**
+
+| | 2026 | 2024 |
+|---|---|---|
+| Spline S–A, Flip False: Reverse; drive A, S, D | True; +30, +30, 0 | **False; +30, −30, 0** |
+| Spline S–A, Flip True: Reverse; drive A, S, D | False; +30, −30, 0 | **True; +30, +30, 0** |
+| The Flip that turns S with A | False | **True** |
+| The read-back (W5's rule and H) names the right one | yes | yes |
+| Coupling S–D: Flip False reads and drives right | yes | yes |
+
+- On 2024 both entities read the same point, z = 9.4999 mm on each. On 2026 they read 9.4382 and 9.4296 mm.
+- As with the toothed rings in W5, the two versions give the same collinear mate opposite senses, and only the
+  read-back tells which.
+- Nothing moved on make, S stayed under-defined, and every AddMate5 returned 1.
+- For the plan: a SPLINE and a COUPLE must be settled by the read-back (W5's `_settle_sense`), as §1.7 already says.
+  No static Flip is right on both versions.
+
+**Everything else reads the same, number for number:**
+
+- **The slide under the spline:** +10.0 mm, relative turn 0.0°, no error, and the drive 1 : 1.
+- **The coupling's drive:** A, S and D each +30°.
+- **Held handles go stale after `AddConfiguration2` and `ShowConfiguration2`.** They answer `Transform2` None and
+  `IsFixed` False. Fresh `GetComponentByName` handles answer correctly: the layout's `IsFixed` reads True in X and
+  Y, `GetModelDoc2` answers, and `Name2` reads right. Held handles stay good across `DeleteConfiguration2`.
+- **`SetSuppression2` straight after `AddConfiguration2`:** the first call raised 0x80010105 yet took effect; the
+  second returned False and did nothing. After a rebuild, every call returned True.
+- **A mate made while Y was active** came out suppressed in Default and on in X and Y.
+- **The second slide's D1 link by `IEquationMgr.Add2`** returned −1 with several configurations present.
+- **The flags** read back the same in every configuration, unshown and shown, after the delete and after reopening.
+- **`ShowConfiguration2` X → Y → X:** True each time, no dialog; S at 10, 30, 10; D turns with A in X and stands in
+  Y. When already active it returns False.
+- **The coupling turned on at an angle:** D put +5° in Y, and showing X found D back at its angle from before
+  (relative −6.0°), with no error.
+- **The template's configuration deleted:** True, names `["X", "Y"]`.
+- **Save, reopen and close:** the file reopens in X with every document unmodified, and the reads mark nothing. A
+  show marks the assembly and no part. Closing it unsaved after a switch asks nothing (CloseDoc, 0.18 s).
+
+**The follow-up, on 2024:**
+
+- **A: a slide's distance per configuration.** `SetSystemValue3(…, 3, ["Y"])` returned 0. `GetSystemValue3(3,
+  [Default, X, Y])` read 10, 10, 30, and later 10, 10, 35 after Y was set from X. Before any per-configuration set
+  it read 0 for the configurations not active, as on 2026. `SystemValue` read 30 in X here too.
+- S stood at 10 / 30 / 10 on the shows, and at 35 in Y after the change made from X. After save and reopen it stood
+  at 10, 35, 10, with no error and no dialog. The same as 2026.
+- **B and C: positions per configuration.** The same as 2026:
+  - F (no gear mate), put +20° in Y: 0 in X, 20 in Y again.
+  - F put +10° in X: Y's F stayed 20, X's F read 10.
+  - D, put +5° in Y with its coupling off there: 0 in X, 5 in Y again.
+  - All of it held through save and reopen.
+- **So on 2024 too, SolidWorks keeps each component's place per configuration, and a put holds in the active
+  configuration only.** That contradicts GOTCHAS §83 and assemblies/07 for this case, a freedom the mates leave
+  open, on both versions. The macro database's observation was of a free mechanism, whose positions may have been
+  carried by a different solve; this run does not reproduce that case.
