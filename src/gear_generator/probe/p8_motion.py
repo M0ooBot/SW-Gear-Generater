@@ -7612,10 +7612,14 @@ def _w8f_run(px: Px, facts: Dict[str, Any]) -> None:
         _W8.update(gear=_plane_names(comps["A"])[1], layout=_plane_names(layout)[2], front=_plane_names(layout)[0],
                    origin=origin_name(_doc_at(px, sleeve_path)), names=dict(keys), layout_name=layout_name)
         rebuild(px, doc, "mounted", top_only=TOP_ONLY)
-        spline = _w8_gear_mate(px, doc, comps, "S", "A", "S splined to A", False)
-        px.require(spline.get("read", {}).get("w5_says_same_way") is True, f"the spline reads right: {spline}")
-        coupling = _w8_gear_mate(px, doc, comps, "S", "D", "S engages D", False)
-        px.require(coupling.get("read", {}).get("w5_says_same_way") is True, "the coupling reads right")
+        for a, b, name in (("S", "A", "S splined to A"), ("S", "D", "S engages D")):
+            # Settled by the read-back, as the app settles a gear mate: on 2024 the spline needed Flip True.
+            made = _w8_gear_mate(px, doc, comps, a, b, name, False)
+            if made.get("read", {}).get("w5_says_same_way") is False:
+                delete_mate(px, doc, name)
+                made = _w8_gear_mate(px, doc, comps, a, b, name, True)
+            facts[f"{name}: flip"] = made.get("flip")
+            px.require(made.get("read", {}).get("w5_says_same_way") is True, f"{name} reads right: {made}")
         # One slide, a typed distance, no global.
         px.require(_w8_select(px, doc, f"Point1@{_W8['origin']}", keys["S"], "EXTSKETCHPOINT", False) and
                    _w8_select(px, doc, _W8["front"], layout_name, "PLANE", True), "S's origin and Front select")
