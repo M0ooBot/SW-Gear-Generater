@@ -348,9 +348,10 @@ the kind the last two interface reviews found, and asked for written rules. Thes
         since nothing in 4H needed changing."* (before: *"…since nothing needed changing."*; with no
         configuration named, *"…since nothing in it needed changing."*), whatever the switch says;
       - the switch False: *"A turn you give the gears in one mode shows in every mode, so a dog can stand across
-        its sleeve in another mode; to put the gears back there, press Update SolidWorks with that mode showing,
-        since an Update pressed in another mode may leave them as they stand."* (before: *"…in another mode until
-        Update SolidWorks puts the gears back."*);
+        its sleeve in another mode; to put the gears back there, press Update SolidWorks with that mode showing."*
+        (before: *"…in another mode until Update SolidWorks puts the gears back."*; shortened from *"…with that
+        mode showing, since an Update pressed in another mode may leave them as they stand."* after the review of
+        these commits, point 6);
       - the switch False, after a put in the mode worked in and the visit: *"The gears of 2H and N stood at the
         turn they were built at when Update SolidWorks showed them."*, naming only the visited modes whose own
         judgement on showing read them so (not put there, in step, on their axes, not turned).

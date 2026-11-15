@@ -3290,8 +3290,7 @@ def test_a_flag_a_workbook_edit_changes_is_a_switch_not_a_repair():
 @pytest.mark.parametrize("positions, said", [
     (True, "A turn you give the gears in one mode stays in that mode."),
     (False, "A turn you give the gears in one mode shows in every mode, so a dog can stand across its sleeve in "
-            "another mode; to put the gears back there, press Update SolidWorks with that mode showing, since an "
-            "Update pressed in another mode may leave them as they stand."),
+            "another mode; to put the gears back there, press Update SolidWorks with that mode showing."),
     (None, ""),
 ])
 def test_the_turning_note_promises_only_what_an_update_does(positions, said):

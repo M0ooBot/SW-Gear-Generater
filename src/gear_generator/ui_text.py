@@ -3563,9 +3563,9 @@ TURN_SHOWN_ELSEWHERE = ("This version of SolidWorks shows that turn in every mod
                         "in another mode; to put the gears back there, press Update SolidWorks with that mode showing.")
 TURN_SHOWS_EVERYWHERE = ("A turn you give the gears in one mode shows in every mode, so a dog can stand across its "
                          "sleeve in another mode; to put the gears back there, press Update SolidWorks with that mode "
-                         "showing, since an Update pressed in another mode may leave them as they stand.")
+                         "showing.")
 # An Update pressed in a mode whose train is in step, with nothing changed in the workbook, puts nothing and judges
-# no other mode (J25), so TURN_SHOWS_EVERYWHERE promises nothing more than that.
+# no other mode (J25), so TURN_SHOWS_EVERYWHERE makes pressing it with that mode showing the condition, and no more.
 
 
 def turning_note(positions_per_configuration: Optional[bool]) -> str:
