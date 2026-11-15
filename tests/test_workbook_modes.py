@@ -1098,6 +1098,93 @@ def test_e4_a_turn_in_2h_then_an_update_in_4l_puts_every_mode_back_where_a_put_s
         "keep it.", True)
 
 
+def _e4_at_built_frames(sw, up):
+    """Every body of every mode at its built frame, each mode shown in turn."""
+    kwargs = up.update_kwargs()
+    base = {p.component: (p.rotation, p.at) for p in kwargs["placements"]}
+    gear_of = {p.component: p.gear for p in kwargs["placements"]}
+    by_mode = {mode: {p.gear: (p.rotation, p.at) for p in frames} for mode, frames in kwargs["motion"].mode_placements}
+    for mode in ("2H", "4H", "N", "4L"):
+        sw.show_configuration(mode)
+        for component, frame in base.items():
+            want = by_mode.get(mode, {}).get(gear_of[component], frame)
+            got = sw.frames[component]
+            assert swbuild.same_frame(got[0], got[1], want[0], want[1]), (mode, component)
+
+
+def _e4_flags_or_value_changed(sw, change):
+    """A change only to flags (D10: a recorded coupling found suppressed in 4H, where the record has it on) or only
+    to a slide's value (RangeSlv's place in 2H changed in SolidWorks)."""
+    if change == "flag":
+        sw.mate("ModeSlv engages FrontDog").flags["4H"] = True
+        return "turned the mate ModeSlv engages FrontDog back on in 4H"
+    sw.mate("RangeSlv along Rear").own["2H"] = 50.0
+    return "set RangeSlv's place in 2H back to 46 mm, where it had been changed in SolidWorks"
+
+
+@pytest.mark.parametrize("change", ["flag", "value"])
+def test_e4_a_turn_in_2h_then_a_flags_or_values_update_in_4l_puts_every_turned_mode_back(mode_findings, change):
+    """W8-INTERFACES §9.18, after s2's rerun: an Update whose only changes are flags or slide values shows every mode,
+    and a mode found turned in step is put whole, as one found out of step is, so every mode ends at its built
+    frames whatever SolidWorks kept there. On the put_splits fake the turn in 2H, given before any put, shows in every
+    mode; before this every mode found turned in step was left so and failed its post-check against the built
+    frames."""
+    sw, _, record = build_on_fake(e4_transfer_case())
+    sw.put_splits = set()
+    sun = next(c.name for c in record.gearbox.components if c.gear == "Sun")
+    sw.drive(sun, 37.0)
+    sw.show_configuration("4L")
+    piece = _e4_flags_or_value_changed(sw, change)
+    sw.calls.clear()
+    up, result = press_e4(sw, record, e4_transfer_case())
+    assert result.failures == [], result.failures
+    assert [a[0] for n, a in sw.calls if n == "show_configuration"] == ["2H", "4H", "N", "4L"]
+    assert result.put_in == ["2H", "4H", "N", "4L"] and sw.config == "4L"
+    _e4_at_built_frames(sw, up)
+    assert ui_text.gearbox_update_status(up, result) == (
+        f"Updated SolidWorks: {piece}, re-placed Carrier (the carrier), Sun, Pl (3 copies), InDog, LoDog, RangeSlv, "
+        "FrontDog, ModeSlv, FDrive, FIdler and FOut in every mode; no interference between the gears in any mode, "
+        "where they stand. In 4L, RangeSlv's teeth stood across LoDog's. In 4L, ModeSlv's teeth stood across "
+        "FrontDog's; the gears of 4L are back at the turn they were built at. It worked in 4L, the configuration "
+        "that was active, then showed and checked 2H, 4H and N and left the assembly in 4L. Save TransferCase_E4 in "
+        "SolidWorks to keep it.", True)
+
+
+@pytest.mark.parametrize("change", ["flag", "value"])
+def test_e4_a_flags_or_values_update_of_a_gearbox_nobody_turned_puts_nothing(mode_findings, change):
+    sw, _, record = build_on_fake(e4_transfer_case())
+    sw.put_splits = set()
+    sw.show_configuration("4L")
+    _e4_flags_or_value_changed(sw, change)
+    sw.calls.clear()
+    up, result = press_e4(sw, record, e4_transfer_case())
+    assert result.failures == [] and result.put_in == [] and result.visited == ["2H", "4H", "N"]
+    assert not [n for n, _ in sw.calls if n == "place_component"]
+
+
+def test_e4_a_turn_put_back_in_the_mode_worked_in_names_the_modes_read_at_the_built_turn(mode_findings, monkeypatch):
+    """Sentence 3 reached truthfully: positions kept per configuration (the fake's default), the turn given in 4L
+    alone, a flags-only Update in 4L. 4L, turned in step, is put; 2H, 4H and N are read at their built frames and not
+    put, and the status says so where the switch says a turn shows in every mode."""
+    monkeypatch.setattr(findings, "TURN_PER_CONFIGURATION_ON_2026", False)
+    sw, _, record = build_on_fake(e4_transfer_case())
+    sw.show_configuration("4L")
+    sun = next(c.name for c in record.gearbox.components if c.gear == "Sun")
+    sw.drive(sun, 37.0)
+    piece = _e4_flags_or_value_changed(sw, "flag")
+    up, result = press_e4(sw, record, e4_transfer_case())
+    assert result.failures == [] and result.put_in == ["4L"] and result.modes[-1].turned
+    assert [(c.name, c.out_of_step, c.off_axis, c.turned) for c in result.modes[:3]] == [
+        ("2H", [], [], False), ("4H", [], [], False), ("N", [], [], False)]
+    _e4_at_built_frames(sw, up)
+    assert ui_text.gearbox_update_status(up, result) == (
+        f"Updated SolidWorks: {piece}, re-placed Carrier (the carrier), Sun, Pl (3 copies), InDog, LoDog, RangeSlv, "
+        "FrontDog, ModeSlv, FDrive, FIdler and FOut in 4L; no interference between the gears in any mode, where they "
+        "stand. The gears of 2H, 4H and N stood at the turn they were built at when Update SolidWorks showed them. "
+        "It worked in 4L, the configuration that was active, then showed and checked 2H, 4H and N and left the "
+        "assembly in 4L. Save TransferCase_E4 in SolidWorks to keep it.", True)
+
+
 def test_e4_a_flag_a_put_changes_in_a_mode_already_checked_is_a_failure_naming_the_mate_and_the_mode(mode_findings):
     """Point 1 (a): each mode's post-check reads only the configuration shown, so a put that changed a flag in a mode
     checked before it would go unseen; the read of every per-mode mate in every configuration after the last mode

@@ -3353,7 +3353,9 @@ def _motion_after(update, result, earlier: str = "") -> List[str]:
                 # After an earlier unsaved Update the sentence before says the gears stand "as they were found", so
                 # "that turn" would have no antecedent: the wording that needs none.
                 out.append(GEARS_SHOWN_ELSEWHERE if earlier else TURN_SHOWN_ELSEWHERE)
-        elif put != mated:
+        elif put != mated and not getattr(result, "configuration", ""):
+            # W8: an Update with modes that put anything showed every mode and put every train found turned in it
+            # (W8-INTERFACES §9.18), so no gear it left stands turned; a held gear (a ring) is mated but never put.
             how = "as it was found" if earlier else "where it was turned"
             out.append(f"Any gear it did not put back stands {how} in SolidWorks.")
     already = [n for n in getattr(result, "ratios_already", ()) or () if n]

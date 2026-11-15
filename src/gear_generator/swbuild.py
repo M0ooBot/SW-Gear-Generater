@@ -4235,7 +4235,8 @@ def _modes_assembly(sw: SolidWorks, result: GearboxUpdate, assembly: str, placem
             if mode != active_mode:
                 result.visited.append(names[mode])
             _modes_put(sw, result, motion, mode, names[mode], placements, mated, wanted_in(mode), handle,
-                       mate_handle, route, rebuild, file, touched, moved=moved, check=None if judged else check)
+                       mate_handle, route, rebuild, file, touched, moved=moved, check=None if judged else check,
+                       put_turned=True)
             _modes_post_check(sw, result, motion, mode, names[mode], placements, mated, wanted_in(mode), handle,
                               mate_handle, gear_of_handle, check, file, state.read)
             if getattr(findings, "INTERFERENCE_CHECKED", False):
@@ -4302,14 +4303,17 @@ def _modes_put(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, mode
                placements: Sequence[Placement], mated: Sequence[str], wanted: Mapping[str, Frame9],
                handle: Mapping[str, str], mate_handle: Mapping[str, str], route: Optional[str],
                rebuild: Callable[[], None], file: str, touched: List[bool], *, moved: bool,
-               check: Optional[ModeCheck], judge_only: bool = False) -> bool:
+               check: Optional[ModeCheck], judge_only: bool = False, put_turned: bool = False) -> bool:
     """One mode's puts, with it shown (or, on a quiet Update, the active one judged where it stands): every frame
     read through fresh handles; the trains — joined over EVERY mode's relations, so the same set is right if
     positions turn out shared (§1.9, J26) — each judged with this mode's links; one put whole when the workbook
     ``moved`` it or it is out of step here, its lock mates off in this configuration around the puts; fixed gears
     W4's way; a rebuild after. The judgement found on showing is the ``check``'s ``off_axis``, ``out_of_step`` and
     ``turned`` (§9.14). Returns whether anything was put; with ``judge_only``, whether anything would be, and
-    nothing is put or rebuilt."""
+    nothing is put or rebuilt. ``put_turned`` (every mode an Update shows, W8-INTERFACES §9.18): a train found turned
+    in step is put whole too, so the mode ends at its built frames whatever SolidWorks kept there (W5's answer 2:
+    an Update that changes the assembly returns a turned train to its built turn); a quiet Update's judgement of the
+    active mode leaves it out, so a turn in step there stays where it stands."""
     live = {p.gear: sw.component_frame(handle[p.gear]) for p in placements}
     pitch = {p.gear: p.pitch for p in placements}
     held = [g for g in motion.held if g in wanted]
@@ -4333,7 +4337,7 @@ def _modes_put(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, mode
             check.out_of_step.extend(here.out_of_step)
             check.turned = check.turned or here.turned
         lone = not (meshes or locks or links)
-        needed = moved or (bool(here.off_axis) if lone else not here.in_step)
+        needed = moved or (bool(here.off_axis) if lone else (not here.in_step or (put_turned and here.turned)))
         if not needed:
             continue
         if judge_only:
