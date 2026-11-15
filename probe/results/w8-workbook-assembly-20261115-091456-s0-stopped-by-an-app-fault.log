@@ -1,0 +1,990 @@
+run     2026-11-15 09:15:33; app gear-generator 0.3.2 from C:\Users\M0obo\Documents\GearGeneratorProbe\w8-s0-20261115-091456\snap\src (snapshot: 4d9ce4b); sections ['s0']
+attach  SolidWorks 2026 (revision 34.0.0), PID 65132; SolidWorks 0.30 GB private, 7.23 GB free
+open    before: []
+findings LAYOUT_PLUS_FLIP {'right': False, 'top': False}, LAYOUT_NEGATED_LINK 'minus', LAYOUT_AXIS_Z_SIGN -1, REPLACE_FIXED_ROUTE 'Transform2 put'
+findings W5: GEAR_MATE_RATIO_ROUTE 'remake', MATED_ASSEMBLY_REBUILD_ROUTE 'ForceRebuild3(True)', MATED_BUILD_REBUILD_ROUTE 'ForceRebuild3(True)', GEAR_MATE_FLIP False, DEMONSTRATION_DRIVE_SENSE 1, MESH_PHASE_ROUTE 'Transform2 put with the gear mate on', LOCK_RETAKES_AN_OFFSET True; P0c {'GEAR_MATE_REMAKE_UNDER_COMMAND_IN_PROGRESS': True, 'GEAR_MATE_SENSE_READ_UNDER_COMMAND_IN_PROGRESS': True, 'IDLER_UPDATE_HOLDS': True, 'LIGHTWEIGHT_FIRST_DRIVE_RIGHT': False, 'LIGHTWEIGHT_FORCED_BY': 'swOpenDocOptions_LoadLightweight | swOpenDocOptions_OverrideDefaultLoadLightweight', 'LIGHTWEIGHT_OPEN_RAISES_AN_ADDIN_DIALOG': True, 'LIGHTWEIGHT_REMAKE_HOLDS': True, 'LIGHTWEIGHT_RESOLVED_BY': 'the first drive', 'MATES_UNDER_COMMAND_IN_PROGRESS': True, 'MATE_FOLDER_ROUTE': 'IFeatureManager.InsertFeatureTreeFolder2(swFeatureTreeFolder_Containing)', 'MATE_FOLDER_SUPPRESSION_SUPPRESSES_ITS_MATES': True, 'MATE_FOLDER_TYPE_NAME': 'FtrFolder', 'MATE_GROUP_WALK_SEES_MATES_IN_A_FOLDER': True, 'MATE_RENAME_AT_ONCE': True, 'PUT_ON_TWICE_MESHED_GEAR_HOLDS': True, 'REMAKE_ON_TWICE_MESHED_GEAR_HOLDS': True, 'SECOND_ASSEMBLY_BESIDE_UNSAVED_HOLDS': True, 'SUPPRESSED_MATE_ERROR_CODE': 0, 'UNSUPPRESS_ON_LOCK_ALREADY_ON_MARKS_MODIFIED': True}; AXIAL_RESTORES True; m4 offset 0 mm
+findings W6: TURNED_GEAR_MATE_SENSE_READ_BACK 'entity senses', TURNED_GEAR_MATE_SENSE_ANGLES (30.0, 150.0), TURNED_GEAR_MATE_SENSE_ANGLES_SKEW (60.0, 120.0), GEAR_MATE_SENSE_READ_BACK '(Reverse == entities parallel) == internal', LAYOUT_PLUS_FLIP {'right': False, 'top': False}, REF_PLANE_UNFLIPPED_IS_PLUS_Z True, AXIAL_MATE_ROUTE 'origin distance'
+findings W8: CONFIGURATION_SHOW_RAISES_DIALOG False, HANDLES_STALE_AFTER_CONFIGURATION_CHANGE True, SLIDE_VALUE_ROUTE 'SetSystemValue3(m, 3, [configuration]); GetSystemValue3(3, configurations)', POSITIONS_PER_CONFIGURATION_ON_2026 True, _ON_2024 True, SUPPRESSED_GEAR_MATE_SENSE_READ 'answers, marks nothing', COLLINEAR_GEAR_MATE_SENSE_READ_BACK True; positions per configuration here True
+excel   started our own Excel, PID 59244, 16.0 build 20430.0
+== s0  TransferCase_Parallel (W8-PLAN §2.2, §5), the shakedown, W7-free: the sleeve and dog kinds built, a configuration per mode (2H, 4H, N, 4L); every mode measured with its couplings' half-pitch controls; the driven proof in every mode, the both-Flips controls on the spline in 4H and on RangeSlv engages LoDog in 4L; reopen
+write   TransferCase_Parallel.xlsx by the app's own write_new, its Output folder blank (the strip's is C:\Users\M0obo\Documents\GearGeneratorProbe\w8-s0-20261115-091456\out\s0)
+ok      Excel opened TransferCase_Parallel.xlsx with no dialog or repair: []
+excel   saved TransferCase_Parallel.xlsx
+fixture TransferCase_Parallel.xlsx copied as Excel saved it, its Output folder blank
+ok      read TransferCase_Parallel.xlsx: ok
+        warning Gears!Q3: InDog: The involute starts at 42.96 mm, above the form diameter of 42.801 mm, so the bottom of the working flank is a straight line.
+        warning Gears!Q4: LayGear: The involute starts at 65.28 mm, above the form diameter of 64.937 mm, so the bottom of the working flank is a straight line.
+        warning Gears!Q6: LoGear: The involute starts at 65.28 mm, above the form diameter of 64.937 mm, so the bottom of the working flank is a straight line.
+        warning Gears!Q7: LoDog: The involute starts at 42.96 mm, above the form diameter of 42.801 mm, so the bottom of the working flank is a straight line.
+        warning Gears!F8: RangeSlv: The teeth's tips, at 42 mm, are inside the base circle of 42.286 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!Q9: FrontDog: The involute starts at 42.96 mm, above the form diameter of 42.801 mm, so the bottom of the working flank is a straight line.
+        warning Gears!F10: ModeSlv: The teeth's tips, at 42 mm, are inside the base circle of 42.286 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!Q11: FDrive: The involute starts at 57.28 mm, above the form diameter of 57.068 mm, so the bottom of the working flank is a straight line.
+        warning Gears!Q13: FOut: The involute starts at 57.28 mm, above the form diameter of 57.068 mm, so the bottom of the working flank is a straight line.
+        7 shafts · 12 gears · 4 meshes; gate ''
+ok      s0: the workbook checks with no error and the gate is open: errors [], gate '' (9 warning(s), logged above)
+        header 'Parallel train with modes · 4 meshes · 2H\xa01.000\xa0:\xa01, 4H\xa01.000\xa0:\xa01, N\xa0neutral, 4L\xa04.000\xa0:\xa01'
+ok      s0: the modes are §2.3's, in order: ['2H', '4H', 'N', '4L']
+ok      s0: 2H engages [('RangeSlv', 'InDog')]
+ok      s0: 2H places the sliders at {'RangeSlv': ('H', -10.0), 'ModeSlv': ('2WD', 0.0)}
+ok      s0: 2H's slider face spans {'RangeSlv': (46.0, 54.0), 'ModeSlv': (96.0, 104.0)} (§2.3: {'RangeSlv': (46.0, 54.0), 'ModeSlv': (96.0, 104.0)})
+ok      s0: 2H's speeds about each shaft's own axis are §2.3's ({'In': 1500.0, 'Lay': -750.0, 'Lo': 375.0, 'Rear': 1500.0}, free ['Front', 'FrontDrv', 'Idler']): {'In': 1500.0, 'Lay': -750.0, 'Lo': 375.0, 'Rear': 1500.0}
+ok      s0: 2H's ratio 1.0 (''; driven {'Rear': 1.0, 'Front': None}), §2.3's 1.0
+speeds  2H  2H: Rear 1500 rpm · Front not driven · 1.000 : 1
+speeds  2H  In 2H, RangeSlv engages InDog.
+speeds  2H  In    1500.0 rpm anticlockwise · 10.00 N·m
+speeds  2H  Lay   750.0 rpm clockwise
+speeds  2H  Lo    375.0 rpm anticlockwise
+speeds  2H  Rear  1500.0 rpm anticlockwise · 10.00 N·m
+speeds  2H  FrontDrv  turns freely
+speeds  2H  Idler  turns freely
+speeds  2H  Front  turns freely
+speeds  2H  readout 'seen from +Z'
+ok      s0: 4H engages [('RangeSlv', 'InDog'), ('ModeSlv', 'FrontDog')]
+ok      s0: 4H places the sliders at {'RangeSlv': ('H', -10.0), 'ModeSlv': ('4WD', 10.0)}
+ok      s0: 4H's slider face spans {'RangeSlv': (46.0, 54.0), 'ModeSlv': (106.0, 114.0)} (§2.3: {'RangeSlv': (46.0, 54.0), 'ModeSlv': (106.0, 114.0)})
+ok      s0: 4H's speeds about each shaft's own axis are §2.3's ({'In': 1500.0, 'Lay': -750.0, 'Lo': 375.0, 'Rear': 1500.0, 'FrontDrv': 1500.0, 'Idler': -2250.0, 'Front': 1500.0}, free []): {'In': 1500.0, 'Lay': -750.0, 'Lo': 375.0, 'Rear': 1500.0, 'FrontDrv': 1500.0, 'Idler': -2250.0, 'Front': 1500.0}
+ok      s0: 4H's ratio 1.0 (''; driven {'Rear': 1.0, 'Front': 1.0}), §2.3's 1.0
+speeds  4H  4H: Rear 1500 rpm · Front 1500 rpm · 1.000 : 1
+speeds  4H  In 4H, RangeSlv engages InDog and ModeSlv engages FrontDog.
+speeds  4H  In    1500.0 rpm anticlockwise · 10.00 N·m
+speeds  4H  Lay   750.0 rpm clockwise
+speeds  4H  Lo    375.0 rpm anticlockwise
+speeds  4H  Rear  1500.0 rpm anticlockwise · 10.00 N·m, shared with FrontDrv (the share depends on the loads)
+speeds  4H  FrontDrv  1500.0 rpm anticlockwise · — (past a split)
+speeds  4H  Idler  2250.0 rpm clockwise · — (past a split)
+speeds  4H  Front  1500.0 rpm anticlockwise · — (past a split)
+speeds  4H  readout 'seen from +Z'
+ok      s0: N engages []
+ok      s0: N places the sliders at {'RangeSlv': ('N', 0.0), 'ModeSlv': ('2WD', 0.0)}
+ok      s0: N's slider face spans {'RangeSlv': (56.0, 64.0), 'ModeSlv': (96.0, 104.0)} (§2.3: {'RangeSlv': (56.0, 64.0), 'ModeSlv': (96.0, 104.0)})
+ok      s0: N's speeds about each shaft's own axis are §2.3's ({'In': 1500.0, 'Lay': -750.0, 'Lo': 375.0}, free ['Front', 'FrontDrv', 'Idler', 'Rear']): {'In': 1500.0, 'Lay': -750.0, 'Lo': 375.0}
+ok      s0: N's ratio None ('neutral'; driven {'Rear': None, 'Front': None}), §2.3's None
+speeds  N  N: neutral — Rear, FrontDrv, Idler and Front turn freely.
+speeds  N  In N, no sleeve engages a dog.
+speeds  N  In    1500.0 rpm anticlockwise · 10.00 N·m
+speeds  N  Lay   750.0 rpm clockwise
+speeds  N  Lo    375.0 rpm anticlockwise
+speeds  N  Rear  turns freely
+speeds  N  FrontDrv  turns freely
+speeds  N  Idler  turns freely
+speeds  N  Front  turns freely
+speeds  N  readout 'seen from +Z'
+ok      s0: 4L engages [('RangeSlv', 'LoDog'), ('ModeSlv', 'FrontDog')]
+ok      s0: 4L places the sliders at {'RangeSlv': ('L', 10.0), 'ModeSlv': ('4WD', 10.0)}
+ok      s0: 4L's slider face spans {'RangeSlv': (66.0, 74.0), 'ModeSlv': (106.0, 114.0)} (§2.3: {'RangeSlv': (66.0, 74.0), 'ModeSlv': (106.0, 114.0)})
+ok      s0: 4L's speeds about each shaft's own axis are §2.3's ({'In': 1500.0, 'Lay': -750.0, 'Lo': 375.0, 'Rear': 375.0, 'FrontDrv': 375.0, 'Idler': -562.5, 'Front': 375.0}, free []): {'In': 1500.0, 'Lay': -750.0, 'Lo': 375.0, 'Rear': 375.0, 'FrontDrv': 375.0, 'Idler': -562.5, 'Front': 375.0}
+ok      s0: 4L's ratio 4.0 (''; driven {'Rear': 4.0, 'Front': 4.0}), §2.3's 4.0
+speeds  4L  4L: Rear 375 rpm · Front 375 rpm · 4.000 : 1
+speeds  4L  In 4L, RangeSlv engages LoDog and ModeSlv engages FrontDog.
+speeds  4L  In    1500.0 rpm anticlockwise · 10.00 N·m
+speeds  4L  Lay   750.0 rpm clockwise · 19.60 N·m
+speeds  4L  Lo    375.0 rpm anticlockwise · 38.42 N·m
+speeds  4L  Rear  375.0 rpm anticlockwise · 38.42 N·m, shared with FrontDrv (the share depends on the loads)
+speeds  4L  FrontDrv  375.0 rpm anticlockwise · — (past a split)
+speeds  4L  Idler  562.5 rpm clockwise · — (past a split)
+speeds  4L  Front  375.0 rpm anticlockwise · — (past a split)
+speeds  4L  readout 'seen from +Z'
+ok      s0: in 2H the kinematics give §2.3's turns for +30° of InPin, every body (free: ['FDrive', 'FIdler', 'FOut', 'FrontDog']): InPin +30°, InDog +30°, LayGear -15°, LayPin -15°, LoGear +7.5°, LoDog +7.5°, RangeSlv +30°, ModeSlv +30°
+ok      s0: in 4H the kinematics give §2.3's turns for +30° of InPin, every body (free: []): InPin +30°, InDog +30°, LayGear -15°, LayPin -15°, LoGear +7.5°, LoDog +7.5°, RangeSlv +30°, FrontDog +30°, ModeSlv +30°, FDrive +30°, FIdler -45°, FOut +30°
+ok      s0: in N the kinematics give §2.3's turns for +30° of InPin, every body (free: ['FDrive', 'FIdler', 'FOut', 'FrontDog', 'ModeSlv', 'RangeSlv']): InPin +30°, InDog +30°, LayGear -15°, LayPin -15°, LoGear +7.5°, LoDog +7.5°
+ok      s0: in 4L the kinematics give §2.3's turns for +30° of InPin, every body (free: []): InPin +30°, InDog +30°, LayGear -15°, LayPin -15°, LoGear +7.5°, LoDog +7.5°, RangeSlv +7.5°, FrontDog +7.5°, ModeSlv +7.5°, FDrive +7.5°, FIdler -11.25°, FOut +7.5°
+ok      s0: the plan makes a configuration per mode: ('2H', '4H', 'N', '4L')
+        mode 2H: makes ['RangeSlv engages InDog']; off ['RangeSlv engages LoDog', 'ModeSlv engages FrontDog']; values {'RangeSlv along Rear': 46.0, 'ModeSlv along Rear': 96.0}
+        mode 4H: makes ['ModeSlv engages FrontDog']; off ['RangeSlv engages LoDog']; values {'RangeSlv along Rear': 46.0, 'ModeSlv along Rear': 106.0}
+        mode N: makes []; off ['RangeSlv engages InDog', 'RangeSlv engages LoDog', 'ModeSlv engages FrontDog']; values {'RangeSlv along Rear': 56.0, 'ModeSlv along Rear': 96.0}
+        mode 4L: makes ['RangeSlv engages LoDog']; off ['RangeSlv engages InDog']; values {'RangeSlv along Rear': 66.0, 'ModeSlv along Rear': 106.0}
+        same way ['RangeSlv engages InDog', 'RangeSlv engages LoDog', 'ModeSlv engages FrontDog']; check []
+ok      s0: each coupling is made in the first mode it is on in: {'RangeSlv engages InDog': '2H', 'ModeSlv engages FrontDog': '4H', 'RangeSlv engages LoDog': '4L'}
+ok      s0: every slide's value per mode is §2.3's
+footer  (s0, read) [green] Ready: Build makes 6 parts, TransferCase_Parallel_Layout and TransferCase_Parallel.SLDASM in C:\…\w8-s0-20261115-091456\out\s0. Its gears are mated to their shafts and, as each mode engages them, to each other, so they turn together in SolidWorks. It has 4 modes, 2H, 4H, N and 4L: each becomes a configuration of the assembly, and it opens in 2H.
+        button 'Build' on primary; Update SolidWorks hidden
+plan    revision 0 TransferCase_Parallel: refusal ''; reason ''; turning True; static reason ''
+        layout C:\Users\M0obo\Documents\GearGeneratorProbe\w8-s0-20261115-091456\out\s0\TransferCase_Parallel_Layout.SLDPRT; assembly C:\Users\M0obo\Documents\GearGeneratorProbe\w8-s0-20261115-091456\out\s0\TransferCase_Parallel.SLDASM
+        build Gear_m2_N17 for InPin, LayPin at C:\Users\M0obo\Documents\GearGeneratorProbe\w8-s0-20261115-091456\out\s0\Gear_m2_N17.SLDPRT (76 ops)
+        build Dog_m1.5_N30 for InDog, LoDog, FrontDog at C:\Users\M0obo\Documents\GearGeneratorProbe\w8-s0-20261115-091456\out\s0\Dog_m1.5_N30.SLDPRT (76 ops)
+        build Gear_m2_N34 for LayGear, LoGear at C:\Users\M0obo\Documents\GearGeneratorProbe\w8-s0-20261115-091456\out\s0\Gear_m2_N34.SLDPRT (76 ops)
+        build Sleeve_m1.5_N30 for RangeSlv, ModeSlv at C:\Users\M0obo\Documents\GearGeneratorProbe\w8-s0-20261115-091456\out\s0\Sleeve_m1.5_N30.SLDPRT (93 ops)
+        build Gear_m2_N30 for FDrive, FOut at C:\Users\M0obo\Documents\GearGeneratorProbe\w8-s0-20261115-091456\out\s0\Gear_m2_N30.SLDPRT (76 ops)
+        build Gear_m2_N20 for FIdler at C:\Users\M0obo\Documents\GearGeneratorProbe\w8-s0-20261115-091456\out\s0\Gear_m2_N20.SLDPRT (76 ops)
+        shaft In: (0, 0, 0) axis Z+ (0.0, 0.0, 1.0) sigma +1; X base '', Y base '', Z  ''; line ''; In Axis
+        shaft Lay: (0, -51, 0) axis Z+ (0.0, 0.0, 1.0) sigma +1; X base '', Y minus 'Lay Y', Z  ''; line ''; Lay Axis
+        shaft Lo: (0, 0, 0) axis Z+ (0.0, 0.0, 1.0) sigma +1; X base '', Y base '', Z  ''; line ''; Lo Axis
+        shaft Rear: (0, 0, 0) axis Z+ (0.0, 0.0, 1.0) sigma +1; X base '', Y base '', Z  ''; line ''; Rear Axis
+        shaft FrontDrv: (0, 0, 0) axis Z+ (0.0, 0.0, 1.0) sigma +1; X base '', Y base '', Z  ''; line ''; FrontDrv Axis
+        shaft Idler: (50, 0, 0) axis Z+ (0.0, 0.0, 1.0) sigma +1; X plus 'Idler X', Y base '', Z  ''; line ''; Idler Axis
+        shaft Front: (100, 0, 0) axis Z+ (0.0, 0.0, 1.0) sigma +1; X plus 'Front X', Y base '', Z  ''; line ''; Front Axis
+        frame InPin: R [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0] at [0.0, 0.0, 5.0]
+        frame InDog: R [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0] at [0.0, 0.0, 47.0]
+        frame LayGear: R [0.990410431, -0.138156355, 0.0, 0.138156355, 0.990410431, 0.0, 0.0, 0.0, 1.0] at [0.0, -51.0, 5.0]
+        frame LayPin: R [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0] at [0.0, -51.0, 25.0]
+        frame LoGear: R [0.998932975, -0.046183459, 0.0, 0.046183459, 0.998932975, 0.0, 0.0, 0.0, 1.0] at [0.0, 0.0, 25.0]
+        frame LoDog: R [0.978147601, -0.207911691, 0.0, 0.207911691, 0.978147601, 0.0, 0.0, 0.0, 1.0] at [0.0, 0.0, 67.0]
+        frame RangeSlv: R [0.994521895, -0.104528463, 0.0, 0.104528463, 0.994521895, 0.0, 0.0, 0.0, 1.0] at [0.0, 0.0, 46.0]
+        frame FrontDog: R [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0] at [0.0, 0.0, 107.0]
+        frame ModeSlv: R [0.994521895, -0.104528463, 0.0, 0.104528463, 0.994521895, 0.0, 0.0, 0.0, 1.0] at [0.0, 0.0, 96.0]
+        frame FDrive: R [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0] at [0.0, 0.0, 125.0]
+        frame FIdler: R [0.987688341, -0.156434465, 0.0, 0.156434465, 0.987688341, 0.0, 0.0, 0.0, 1.0] at [50.0, 0.0, 125.0]
+        frame FOut: R [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0] at [100.0, 0.0, 125.0]
+        motion: trains [('In', 'Lay', 'Lo'), ('FrontDrv', 'Idler', 'Front')]; drag ['InPin', 'FrontDog']; fixed []; unmated []
+        mate 'InPin on In Axis': axis ['InPin'] In ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'InPin along In': along ['InPin'] In ratio [] face 'InPin Face Z' z_front 5 plane 'front' sense 0
+        mate 'InDog locked to InPin': lock ['InPin', 'InDog']  ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'LayGear on Lay Axis': axis ['LayGear'] Lay ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'LayGear along Lay': along ['LayGear'] Lay ratio [] face 'LayGear Face Z' z_front 5 plane 'front' sense 0
+        mate 'LayPin locked to LayGear': lock ['LayGear', 'LayPin']  ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'LoGear on Lo Axis': axis ['LoGear'] Lo ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'LoGear along Lo': along ['LoGear'] Lo ratio [] face 'LoGear Face Z' z_front 25 plane 'front' sense 0
+        mate 'LoDog locked to LoGear': lock ['LoGear', 'LoDog']  ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'RangeSlv on Rear Axis': axis ['RangeSlv'] Rear ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'RangeSlv along Rear': slide ['RangeSlv'] Rear ratio [] face '' z_front 46 plane 'front' sense 0
+        mate 'ModeSlv on Rear Axis': axis ['ModeSlv'] Rear ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'ModeSlv along Rear': slide ['ModeSlv'] Rear ratio [] face '' z_front 96 plane 'front' sense 0
+        mate 'ModeSlv splined to RangeSlv': spline ['RangeSlv', 'ModeSlv']  ratio [1, 1] face '' z_front 0 plane 'front' sense -1
+        mate 'FrontDog on FrontDrv Axis': axis ['FrontDog'] FrontDrv ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'FrontDog along FrontDrv': along ['FrontDog'] FrontDrv ratio [] face 'FrontDog Face Z' z_front 107 plane 'front' sense 0
+        mate 'FDrive locked to FrontDog': lock ['FrontDog', 'FDrive']  ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'FIdler on Idler Axis': axis ['FIdler'] Idler ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'FIdler along Idler': along ['FIdler'] Idler ratio [] face 'FIdler Face Z' z_front 125 plane 'front' sense 0
+        mate 'FOut on Front Axis': axis ['FOut'] Front ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'FOut along Front': along ['FOut'] Front ratio [] face 'FOut Face Z' z_front 125 plane 'front' sense 0
+        mate 'InPin meshes LayGear': mesh ['InPin', 'LayGear']  ratio [17, 34] face '' z_front 0 plane 'front' sense 1
+        mate 'LayPin meshes LoGear': mesh ['LayPin', 'LoGear']  ratio [17, 34] face '' z_front 0 plane 'front' sense 1
+        mate 'FDrive meshes FIdler': mesh ['FDrive', 'FIdler']  ratio [30, 20] face '' z_front 0 plane 'front' sense 1
+        mate 'FIdler meshes FOut': mesh ['FIdler', 'FOut']  ratio [20, 30] face '' z_front 0 plane 'front' sense 1
+        mate 'RangeSlv engages InDog': couple ['RangeSlv', 'InDog']  ratio [1, 1] face '' z_front 0 plane 'front' sense -1
+        mate 'RangeSlv engages LoDog': couple ['RangeSlv', 'LoDog']  ratio [1, 1] face '' z_front 0 plane 'front' sense -1
+        mate 'ModeSlv engages FrontDog': couple ['ModeSlv', 'FrontDog']  ratio [1, 1] face '' z_front 0 plane 'front' sense -1
+        ops of TransferCase_Parallel_Layout.SLDPRT:
+          new     NewPart from (default template)
+          global  "Lay Y"= -51
+          global  "Idler X"= 50
+          global  "Front X"= 100
+          axis    'In Axis' through planes 2 and 3
+          plane   'Lay Y Plane' 51 mm from plane 2, flipped (Offset)
+          link    "Offset@Lay Y Plane"= - "Lay Y"
+          axis    'Lay Axis' through y2 and plane 3
+          axis    'Lo Axis' through planes 2 and 3
+          axis    'Rear Axis' through planes 2 and 3
+          axis    'FrontDrv Axis' through planes 2 and 3
+          plane   'Idler X Plane' 50 mm from plane 3 (Offset)
+          link    "Offset@Idler X Plane"= "Idler X"
+          axis    'Idler Axis' through plane 2 and x6
+          plane   'Front X Plane' 100 mm from plane 3 (Offset)
+          link    "Offset@Front X Plane"= "Front X"
+          axis    'Front Axis' through plane 2 and x7
+          rebuild once
+          save    C:\Users\M0obo\Documents\GearGeneratorProbe\w8-s0-20261115-091456\out\s0\TransferCase_Parallel_Layout.SLDPRT
+        ops of TransferCase_Parallel.SLDASM:
+          new     NewAssembly from (default template)
+          global  "InPin Face Z"= 5
+          global  "LayGear Face Z"= 5
+          global  "LoGear Face Z"= 25
+          global  "FrontDog Face Z"= 107
+          global  "FIdler Face Z"= 125
+          global  "FOut Face Z"= 125
+          insert  layout C:\Users\M0obo\Documents\GearGeneratorProbe\w8-s0-20261115-091456\out\s0\TransferCase_Parallel_Layout.SLDPRT at (0, 0, 0)
+          place   layout at (0, 0, 0) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     layout
+          insert  gear1 C:\Users\M0obo\Documents\GearGeneratorProbe\w8-s0-20261115-091456\out\s0\Gear_m2_N17.SLDPRT at (0, 0, 5)
+          place   gear1 at (0, 0, 5) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     gear1
+          insert  gear2 C:\Users\M0obo\Documents\GearGeneratorProbe\w8-s0-20261115-091456\out\s0\Dog_m1.5_N30.SLDPRT at (0, 0, 47)
+          place   gear2 at (0, 0, 47) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     gear2
+          insert  gear3 C:\Users\M0obo\Documents\GearGeneratorProbe\w8-s0-20261115-091456\out\s0\Gear_m2_N34.SLDPRT at (0, -51, 5)
+          place   gear3 at (0, -51, 5) turned (0.99041, -0.138156, 0, 0.138156, 0.99041, 0, 0, 0, 1)
+          fix     gear3
+          insert  gear4 C:\Users\M0obo\Documents\GearGeneratorProbe\w8-s0-20261115-091456\out\s0\Gear_m2_N17.SLDPRT at (0, -51, 25)
+          place   gear4 at (0, -51, 25) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     gear4
+          insert  gear5 C:\Users\M0obo\Documents\GearGeneratorProbe\w8-s0-20261115-091456\out\s0\Gear_m2_N34.SLDPRT at (0, 0, 25)
+          place   gear5 at (0, 0, 25) turned (0.998933, -0.046183, 0, 0.046183, 0.998933, 0, 0, 0, 1)
+          fix     gear5
+          insert  gear6 C:\Users\M0obo\Documents\GearGeneratorProbe\w8-s0-20261115-091456\out\s0\Dog_m1.5_N30.SLDPRT at (0, 0, 67)
+          place   gear6 at (0, 0, 67) turned (0.978148, -0.207912, 0, 0.207912, 0.978148, 0, 0, 0, 1)
+          fix     gear6
+          insert  gear7 C:\Users\M0obo\Documents\GearGeneratorProbe\w8-s0-20261115-091456\out\s0\Sleeve_m1.5_N30.SLDPRT at (0, 0, 46)
+          place   gear7 at (0, 0, 46) turned (0.994522, -0.104528, 0, 0.104528, 0.994522, 0, 0, 0, 1)
+          fix     gear7
+          insert  gear8 C:\Users\M0obo\Documents\GearGeneratorProbe\w8-s0-20261115-091456\out\s0\Dog_m1.5_N30.SLDPRT at (0, 0, 107)
+          place   gear8 at (0, 0, 107) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     gear8
+          insert  gear9 C:\Users\M0obo\Documents\GearGeneratorProbe\w8-s0-20261115-091456\out\s0\Sleeve_m1.5_N30.SLDPRT at (0, 0, 96)
+          place   gear9 at (0, 0, 96) turned (0.994522, -0.104528, 0, 0.104528, 0.994522, 0, 0, 0, 1)
+          fix     gear9
+          insert  gear10 C:\Users\M0obo\Documents\GearGeneratorProbe\w8-s0-20261115-091456\out\s0\Gear_m2_N30.SLDPRT at (0, 0, 125)
+          place   gear10 at (0, 0, 125) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     gear10
+          insert  gear11 C:\Users\M0obo\Documents\GearGeneratorProbe\w8-s0-20261115-091456\out\s0\Gear_m2_N20.SLDPRT at (50, 0, 125)
+          place   gear11 at (50, 0, 125) turned (0.987688, -0.156434, 0, 0.156434, 0.987688, 0, 0, 0, 1)
+          fix     gear11
+          insert  gear12 C:\Users\M0obo\Documents\GearGeneratorProbe\w8-s0-20261115-091456\out\s0\Gear_m2_N30.SLDPRT at (100, 0, 125)
+          place   gear12 at (100, 0, 125) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     gear12
+          unfix   gear1
+          mate    coincident gear1:Gear Axis ~ layout:In Axis as 'InPin on In Axis'
+          mate    point distance 5 gear1:origin ~ layout:plane1 as 'InPin along In'
+          link    "D1@InPin along In"= "InPin Face Z"
+          unfix   gear2
+          mate    lock gear1 ~ gear2 as 'InDog locked to InPin'
+          unfix   gear3
+          mate    coincident gear3:Gear Axis ~ layout:Lay Axis as 'LayGear on Lay Axis'
+          mate    point distance 5 gear3:origin ~ layout:plane1 as 'LayGear along Lay'
+          link    "D1@LayGear along Lay"= "LayGear Face Z"
+          unfix   gear4
+          mate    lock gear3 ~ gear4 as 'LayPin locked to LayGear'
+          unfix   gear5
+          mate    coincident gear5:Gear Axis ~ layout:Lo Axis as 'LoGear on Lo Axis'
+          mate    point distance 25 gear5:origin ~ layout:plane1 as 'LoGear along Lo'
+          link    "D1@LoGear along Lo"= "LoGear Face Z"
+          unfix   gear6
+          mate    lock gear5 ~ gear6 as 'LoDog locked to LoGear'
+          unfix   gear7
+          mate    coincident gear7:Gear Axis ~ layout:Rear Axis as 'RangeSlv on Rear Axis'
+          mate    point distance 46 gear7:origin ~ layout:plane1 as 'RangeSlv along Rear'
+          unfix   gear9
+          mate    coincident gear9:Gear Axis ~ layout:Rear Axis as 'ModeSlv on Rear Axis'
+          mate    point distance 96 gear9:origin ~ layout:plane1 as 'ModeSlv along Rear'
+          unfix   gear8
+          mate    coincident gear8:Gear Axis ~ layout:FrontDrv Axis as 'FrontDog on FrontDrv Axis'
+          mate    point distance 107 gear8:origin ~ layout:plane1 as 'FrontDog along FrontDrv'
+          link    "D1@FrontDog along FrontDrv"= "FrontDog Face Z"
+          unfix   gear10
+          mate    lock gear8 ~ gear10 as 'FDrive locked to FrontDog'
+          unfix   gear11
+          mate    coincident gear11:Gear Axis ~ layout:Idler Axis as 'FIdler on Idler Axis'
+          mate    point distance 125 gear11:origin ~ layout:plane1 as 'FIdler along Idler'
+          link    "D1@FIdler along Idler"= "FIdler Face Z"
+          unfix   gear12
+          mate    coincident gear12:Gear Axis ~ layout:Front Axis as 'FOut on Front Axis'
+          mate    point distance 125 gear12:origin ~ layout:plane1 as 'FOut along Front'
+          link    "D1@FOut along Front"= "FOut Face Z"
+          mate    gear 1:1 gear7:Gear Axis ~ gear9:Gear Axis as 'ModeSlv splined to RangeSlv'
+          mate    gear 17:34 gear1:Gear Axis ~ gear3:Gear Axis as 'InPin meshes LayGear'
+          mate    gear 17:34 gear4:Gear Axis ~ gear5:Gear Axis as 'LayPin meshes LoGear'
+          mate    gear 30:20 gear10:Gear Axis ~ gear11:Gear Axis as 'FDrive meshes FIdler'
+          mate    gear 20:30 gear11:Gear Axis ~ gear12:Gear Axis as 'FIdler meshes FOut'
+          rebuild once
+          save    C:\Users\M0obo\Documents\GearGeneratorProbe\w8-s0-20261115-091456\out\s0\TransferCase_Parallel.SLDASM
+ok      s0: the plan turns (W5): static reason ''
+journal written: 8 paths
+build   TransferCase_Parallel: SolidWorks 0.57 GB private, 6.65 GB free
+DIALOG  SolidWorks shows '': ['Title', 'Description', 'Button1', 'Button2', 'Hyperlink Text 1', 'Hyperlink Text 2']
+        build   Part1 · spur · recipe A · trig degrees
+        ok      new part Part1
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 17
+        ok      link "Count@Teeth"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Gear_m2_N17; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w8-s0-20261115-091456\out\s0\Gear_m2_N17.SLDPRT
+        build   Part2 · spur · recipe A · trig degrees
+        ok      new part Part2
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 30
+        ok      link "Count@Teeth"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Dog_m1.5_N30; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w8-s0-20261115-091456\out\s0\Dog_m1.5_N30.SLDPRT
+        build   Part3 · spur · recipe A · trig degrees
+        ok      new part Part3
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 34
+        ok      link "Count@Teeth"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Gear_m2_N34; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w8-s0-20261115-091456\out\s0\Gear_m2_N34.SLDPRT
+        build   Part4 · internal spur · recipe A · trig degrees
+        ok      new part Part4
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Pressure Angle"
+        ok      global "Inner Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Rim Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Flank End Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle rim
+        ok      circle tip
+        ok      coincident rim.centre origin
+        ok      coincident tip.centre origin
+        ok      dimension Rim
+        ok      dimension Tip
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "Rim@Blank Sketch"
+        ok      link "Tip@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      circle cap
+        ok      line Li+
+        ok      line Li-
+        ok      line T
+        ok      line Lo+
+        ok      line Lo-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident cap.centre origin
+        ok      coincident Li+.start I+.start (already one point)
+        ok      coincident Li-.start I-.start (already one point)
+        ok      coincident origin Li+
+        ok      coincident origin Li-
+        ok      coincident Li+.end cap
+        ok      coincident Li-.end cap
+        ok      coincident T.start Li+.end (already one point)
+        ok      coincident T.end Li-.end (already one point)
+        ok      coincident Lo+.start I+.end (already one point)
+        ok      coincident Lo-.start I-.end (already one point)
+        ok      coincident origin Lo+
+        ok      coincident origin Lo-
+        ok      coincident F+.end Lo+.end (already one point)
+        ok      coincident F-.start Lo-.end (already one point)
+        ok      coincident F+.start R.end (already one point)
+        ok      coincident F-.end R.start (already one point)
+        ok      tangent F+ Lo+
+        ok      tangent F- Lo-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      dimension Cap
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      link "Cap@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 30
+        ok      link "Count@Teeth"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      25 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Sleeve_m1.5_N30; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w8-s0-20261115-091456\out\s0\Sleeve_m1.5_N30.SLDPRT
+        build   Part5 · spur · recipe A · trig degrees
+        ok      new part Part5
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 30
+        ok      link "Count@Teeth"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Gear_m2_N30; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w8-s0-20261115-091456\out\s0\Gear_m2_N30.SLDPRT
+        build   Part6 · spur · recipe A · trig degrees
+        ok      new part Part6
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 20
+        ok      link "Count@Teeth"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Gear_m2_N20; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w8-s0-20261115-091456\out\s0\Gear_m2_N20.SLDPRT
+        build   Part7 · layout · recipe  · trig degrees
+        ok      new part Part7
+        ok      trig units measured: degrees
+        ok      global "Lay Y"
+        ok      global "Idler X"
+        ok      global "Front X"
+        ok      axis In Axis
+        ok      plane Lay Y Plane
+        ok      link "Offset@Lay Y Plane"
+        ok      axis Lay Axis
+        ok      axis Lo Axis
+        ok      axis Rear Axis
+        ok      axis FrontDrv Axis
+        ok      plane Idler X Plane
+        ok      link "Offset@Idler X Plane"
+        ok      axis Idler Axis
+        ok      plane Front X Plane
+        ok      link "Offset@Front X Plane"
+        ok      axis Front Axis
+        ok      3 globals read back and match the maths
+        ok      rebuilt once
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w8-s0-20261115-091456\out\s0\TransferCase_Parallel_Layout.SLDPRT
+        build   Assem1 · assembly · recipe  · trig degrees
+        ok      new assembly Assem1
+        ok      trig units measured: degrees
+        ok      global "InPin Face Z"
+        ok      global "LayGear Face Z"
+        ok      global "LoGear Face Z"
+        ok      global "FrontDog Face Z"
+        ok      global "FIdler Face Z"
+        ok      global "FOut Face Z"
+        ok      component TransferCase_Parallel_Layout-1
+        ok      placed layout
+        ok      fixed layout
+        ok      component Gear_m2_N17-1
+        ok      placed gear1
+        ok      fixed gear1
+        ok      component Dog_m1.5_N30-1
+        ok      placed gear2
+        ok      fixed gear2
+        ok      component Gear_m2_N34-1
+        ok      placed gear3
+        ok      fixed gear3
+        ok      component Gear_m2_N17-2
+        ok      placed gear4
+        ok      fixed gear4
+        ok      component Gear_m2_N34-2
+        ok      placed gear5
+        ok      fixed gear5
+        ok      component Dog_m1.5_N30-2
+        ok      placed gear6
+        ok      fixed gear6
+        ok      component Sleeve_m1.5_N30-1
+        ok      placed gear7
+        ok      fixed gear7
+        ok      component Dog_m1.5_N30-3
+        ok      placed gear8
+        ok      fixed gear8
+        ok      component Sleeve_m1.5_N30-2
+        ok      placed gear9
+        ok      fixed gear9
+        ok      component Gear_m2_N30-1
+        ok      placed gear10
+        ok      fixed gear10
+        ok      component Gear_m2_N20-1
+        ok      placed gear11
+        ok      fixed gear11
+        ok      component Gear_m2_N30-2
+        ok      placed gear12
+        ok      fixed gear12
+        ok      unfixed gear1
+        ok      mate coincident gear1:Gear Axis ~ layout:In Axis as InPin on In Axis
+        ok      mate point distance gear1:origin ~ layout:plane1 as InPin along In
+        ok      link "D1@InPin along In"
+        ok      unfixed gear2
+        ok      mate lock gear1 ~ gear2 as InDog locked to InPin
+        ok      unfixed gear3
+        ok      mate coincident gear3:Gear Axis ~ layout:Lay Axis as LayGear on Lay Axis
+        ok      mate point distance gear3:origin ~ layout:plane1 as LayGear along Lay
+        ok      link "D1@LayGear along Lay"
+        ok      unfixed gear4
+        ok      mate lock gear3 ~ gear4 as LayPin locked to LayGear
+        ok      unfixed gear5
+        ok      mate coincident gear5:Gear Axis ~ layout:Lo Axis as LoGear on Lo Axis
+        ok      mate point distance gear5:origin ~ layout:plane1 as LoGear along Lo
+        ok      link "D1@LoGear along Lo"
+        ok      unfixed gear6
+        ok      mate lock gear5 ~ gear6 as LoDog locked to LoGear
+        ok      unfixed gear7
+        ok      mate coincident gear7:Gear Axis ~ layout:Rear Axis as RangeSlv on Rear Axis
+        ok      mate point distance gear7:origin ~ layout:plane1 as RangeSlv along Rear
+        ok      unfixed gear9
+        ok      mate coincident gear9:Gear Axis ~ layout:Rear Axis as ModeSlv on Rear Axis
+        ok      mate point distance gear9:origin ~ layout:plane1 as ModeSlv along Rear
+        ok      unfixed gear8
+        ok      mate coincident gear8:Gear Axis ~ layout:FrontDrv Axis as FrontDog on FrontDrv Axis
+        ok      mate point distance gear8:origin ~ layout:plane1 as FrontDog along FrontDrv
+        ok      link "D1@FrontDog along FrontDrv"
+        ok      unfixed gear10
+        ok      mate lock gear8 ~ gear10 as FDrive locked to FrontDog
+        ok      unfixed gear11
+        ok      mate coincident gear11:Gear Axis ~ layout:Idler Axis as FIdler on Idler Axis
+        ok      mate point distance gear11:origin ~ layout:plane1 as FIdler along Idler
+        ok      link "D1@FIdler along Idler"
+        ok      unfixed gear12
+        ok      mate coincident gear12:Gear Axis ~ layout:Front Axis as FOut on Front Axis
+        ok      mate point distance gear12:origin ~ layout:plane1 as FOut along Front
+        ok      link "D1@FOut along Front"
+        ok      mate gear gear7:Gear Axis ~ gear9:Gear Axis as ModeSlv splined to RangeSlv
+        ok      mate gear gear1:Gear Axis ~ gear3:Gear Axis as InPin meshes LayGear
+        ok      mate gear gear4:Gear Axis ~ gear5:Gear Axis as LayPin meshes LoGear
+        ok      mate gear gear10:Gear Axis ~ gear11:Gear Axis as FDrive meshes FIdler
+        ok      mate gear gear11:Gear Axis ~ gear12:Gear Axis as FIdler meshes FOut
+        ok      6 globals read back and match the maths
+        ok      every mate sound, every gear free to turn
+        ok      configuration 2H made
+        ok      configuration 4H made
+        ok      configuration N made
+        ok      configuration 4L made
+        ok      2 slide value(s) set and read back in 4 configurations
+        ok      mate gear gear7:Gear Axis ~ gear2:Gear Axis as RangeSlv engages InDog
+        mate    InPin on In Axis
+        mate    InPin along In
+        mate    InDog locked to InPin
+        mate    LayGear on Lay Axis
+        mate    LayGear along Lay
+        mate    LayPin locked to LayGear
+        mate    LoGear on Lo Axis
+        mate    LoGear along Lo
+        mate    LoDog locked to LoGear
+        mate    RangeSlv on Rear Axis
+        mate    RangeSlv along Rear
+        mate    ModeSlv on Rear Axis
+        mate    ModeSlv along Rear
+        mate    FrontDog on FrontDrv Axis
+        mate    FrontDog along FrontDrv
+        mate    FDrive locked to FrontDog
+        mate    FIdler on Idler Axis
+        mate    FIdler along Idler
+        mate    FOut on Front Axis
+        mate    FOut along Front
+        mate    ModeSlv splined to RangeSlv
+        mate    InPin meshes LayGear
+        mate    LayPin meshes LoGear
+        mate    FDrive meshes FIdler
+        mate    FIdler meshes FOut
+        ok      read turning against their mesh, so made again with the other Flip: RangeSlv engages InDog
+        FAIL    the mate check in mode 2H: In mode 2H, the mate RangeSlv engages InDog reads on where the mode has it on.
+        FAIL    the mate check in mode N: In mode N, the mate RangeSlv engages InDog reads suppressed where the mode has it off.
+        ok      rebuilt once
+        not saved
+        STOPPED SolidWorks refused or flagged a mate, so Assem1 is left open in SolidWorks, unsaved, and no assembly is built in its place; the parts and the layout part it holds are saved
+        in 171.8 s; SolidWorks 1.76 GB private, 5.97 GB free; kind ''; turned round (made again with the other Flip) ['RangeSlv engages InDog']
+        steps [('part', 'Gear_m2_N17', 1, 6), ('part', 'Dog_m1.5_N30', 2, 6), ('part', 'Gear_m2_N34', 3, 6), ('part', 'Sleeve_m1.5_N30', 4, 6), ('part', 'Gear_m2_N30', 5, 6), ('part', 'Gear_m2_N20', 6, 6), ('layout', 'TransferCase_Parallel_Layout', 0, 0), ('assembly', 'TransferCase_Parallel', 0, 0), ('mode', '2H', 1, 4)]
+        progress words ['Building in SolidWorks: part 1 of 6, Gear_m2_N17…', 'Building in SolidWorks: mode 2H, 1 of 4…']
+record  6 sidecar(s) written; record written; notes []
+status  [red] Built 6 parts and TransferCase_Parallel_Layout; no assembly was saved, because SolidWorks found 2 problems with its mates or its modes. In mode 2H, the mate RangeSlv engages InDog reads on where the mode has it on. In mode N, the mate RangeSlv engages InDog reads suppressed where the mode has it off. The parts and the layout part are kept. The assembly is left open in SolidWorks as Assem1, not saved; its parts are the saved ones. Build is available again once the workbook changes: the same workbook would make the same mates.
+FAIL    s0: every part(s), the layout part and the assembly built and saved, turning: ok False, parts built 6, kind ''
+ok      s0: no interference: []
+fact    s0: the build's sense read made again with the other Flip: ['RangeSlv engages InDog']
+FAIL    s0: the record holds a turning gearbox built from this read
+FAIL    s0: the record's mates are the plan's: []
+ok      s0: the build's sentence says how to turn it: ''
+footer  (s0, built) [red] Built 6 parts and TransferCase_Parallel_Layout; no assembly was saved, because SolidWorks found 2 problems with its mates or its modes. In mode 2H, the mate RangeSlv engages InDog reads on where the mode has it on. In mode N, the mate RangeSlv engages InDog reads suppressed where the mode has it off. The parts and the layout part are kept. The assembly is left open in SolidWorks as Assem1, not saved; its parts are the saved ones. Build is available again once the workbook changes: the same workbook would make the same mates. Update SolidWorks waits until Build has made the assembly.
+        button 'Build' off primary; Update SolidWorks shown off
+ok      s0: the footer says how to turn it: ''
+tag     ' · its assembly was refused for this version'
+FAIL    s0: 2 files on disk
+        marked modified in SolidWorks right after the build: {'TransferCase_Parallel_Layout.SLDPRT': False}
+FAIL    s0: the assembly is marked after the build (a read after its save)
+FAIL    s0, right after the build and its saves: SolidWorks marks modified [], expected [''] (missing [''])
+FAIL    s0: the build checked every mode: []
+ok      s0: the result carries this version's positions finding: True (findings True)
+FAIL    s0: the record holds the modes as built: []
+FAIL    s0: RangeSlv along Rear on record, a slide with §2.3's values {}
+FAIL    s0: ModeSlv along Rear on record, a slide with §2.3's values {}
+FAIL    s0: RangeSlv engages InDog on record, a coupling on in None, ratio None, sense None
+FAIL    s0: RangeSlv engages LoDog on record, a coupling on in None, ratio None, sense None
+FAIL    s0: ModeSlv engages FrontDog on record, a coupling on in None, ratio None, sense None
+FAIL    s0: RangeSlv on Rear Axis on record, a axis mate on in every mode
+FAIL    s0: ModeSlv on Rear Axis on record, a axis mate on in every mode
+FAIL    s0: ModeSlv splined to RangeSlv on record, a spline mate on in every mode
+FAIL    s0: the per-mode mates on record are the couplings: []
+ok      s0: every component's frame on record in every mode is the read's (largest 0.0e+00 at -)
+ok      s0: every component's one frame on record is its frame in , the mode it was saved in
+measure s0 built: every mode (); controls True; SolidWorks 1.76 GB private, 5.97 GB free
+FAIL    section s0 raised IndexError: list index out of range
+        Traceback (most recent call last):
+          File "C:\Users\M0obo\Documents\GearGeneratorProbe\w8-s0-20261115-091456\snap\probe\workbook_assembly_check.py", line 6073, in main
+            SECTIONS[name](worker, excel)
+            ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+          File "C:\Users\M0obo\Documents\GearGeneratorProbe\w8-s0-20261115-091456\snap\probe\workbook_assembly_check.py", line 5924, in section_s0
+            modes_built(worker, desk, "s0")
+            ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+          File "C:\Users\M0obo\Documents\GearGeneratorProbe\w8-s0-20261115-091456\snap\probe\workbook_assembly_check.py", line 5897, in modes_built
+            reads = measure_modes(worker, desk, f"{label} built", controls=True)
+          File "C:\Users\M0obo\Documents\GearGeneratorProbe\w8-s0-20261115-091456\snap\probe\workbook_assembly_check.py", line 5660, in measure_modes
+            modes_unshown(worker, desk, label, box.modes[0])
+                                               ~~~~~~~~~^^^
+        IndexError: list index out of range
+excel   section s0 left ['TransferCase_Parallel.xlsx'] open in Excel: closed without saving
+close   section s0: left of ours ['Gear_m2_N17.SLDPRT', 'Dog_m1.5_N30.SLDPRT', 'Gear_m2_N34.SLDPRT', 'Sleeve_m1.5_N30.SLDPRT', 'Gear_m2_N30.SLDPRT', 'Gear_m2_N20.SLDPRT', 'TransferCase_Parallel_Layout.SLDPRT']; 176 s; SolidWorks 1.36 GB private, 6.22 GB free
+excel   quit our own Excel
+close   left of ours ['Gear_m2_N17.SLDPRT', 'Dog_m1.5_N30.SLDPRT', 'Gear_m2_N34.SLDPRT', 'Sleeve_m1.5_N30.SLDPRT', 'Gear_m2_N30.SLDPRT', 'Gear_m2_N20.SLDPRT', 'TransferCase_Parallel_Layout.SLDPRT']; stray ['Gear_m2_N17.SLDPRT', 'Dog_m1.5_N30.SLDPRT', 'Gear_m2_N34.SLDPRT', 'Sleeve_m1.5_N30.SLDPRT', 'Gear_m2_N30.SLDPRT', 'Gear_m2_N20.SLDPRT', 'TransferCase_Parallel_Layout.SLDPRT', '<user document 1>']; lost []; SolidWorks 1.13 GB private, 6.41 GB free
+dialogs progress boxes seen {'Calculating Interference Detection': 0, 'Updating...': 0, 'Opening': 0, 'Loading...': 0}; other dialogs are logged above as DIALOG
+person  W5-PLAN §4.4, the step only a person can do (for 2026, then 2024):
+person  In SolidWorks, open the Reducer_12to1.SLDASM a section built (a2 or m4). Click gear G1 — the small gear on S1, at the origin — and drag it round its axis by about a quarter turn. Watch G4, the large gear on S3: it turns the same way as G1, much more slowly — a quarter turn of G1 turns G4 about 7.5°. G2 and G3, on S2, turn together the other way. No gear should leave its axis, slide along it, or pass through another. Then, in the Workbook window, press Update SolidWorks with nothing changed: the footer should say the gears stand where they were turned. Tell us what you saw, on each version.
+done    18 failed: ["s0: every part(s), the layout part and the assembly built and saved, turning: ok False, parts built 6, kind ''", 's0: the record holds a turning gearbox built from this read', "s0: the record's mates are the plan's: []", 's0: 2 files on disk', 's0: the assembly is marked after the build (a read after its save)', "s0, right after the build and its saves: SolidWorks marks modified [], expected [''] (missing [''])", 's0: the build checked every mode: []', 's0: the record holds the modes as built: []', "s0: RangeSlv along Rear on record, a slide with §2.3's values {}", "s0: ModeSlv along Rear on record, a slide with §2.3's values {}", 's0: RangeSlv engages InDog on record, a coupling on in None, ratio None, sense None', 's0: RangeSlv engages LoDog on record, a coupling on in None, ratio None, sense None', 's0: ModeSlv engages FrontDog on record, a coupling on in None, ratio None, sense None', 's0: RangeSlv on Rear Axis on record, a axis mate on in every mode', 's0: ModeSlv on Rear Axis on record, a axis mate on in every mode', 's0: ModeSlv splined to RangeSlv on record, a spline mate on in every mode', 's0: the per-mode mates on record are the couplings: []', 'section s0 raised IndexError: list index out of range']; 0 noted for a ruling

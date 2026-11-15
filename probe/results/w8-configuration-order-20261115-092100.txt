@@ -1,0 +1,30 @@
+# W8 s0's first run (probe/results/w8-workbook-assembly-20261115-091456-s0-stopped-by-an-app-fault.log), SolidWorks 2026
+# (34.0.0, PID 65132), straight after the run: read-only calls on the refused, unsaved Assem1 the build left open.
+# IFeature.IsSuppressed2(3, names) on the coupling and the slide with the names in several orders, and
+# IDimension.GetSystemValue3(3, names) on RangeSlv along Rear's D1. GetSaveFlag read before and after.
+# Finding: IsSuppressed2 answers in GetConfigurationNames' order whatever order the names are passed in;
+# GetSystemValue3 answers in the order passed. The flags themselves are as the build set them.
+title Assem1 save flag True
+GetConfigurationNames ['Default', '2H', '4H', 'N', '4L']
+active 2H
+RangeSlv engages InDog IsSuppressed2(3, ['Default', '2H', '4H', 'N', '4L'] ) -> (True, False, False, True, True)
+RangeSlv engages InDog IsSuppressed2(3, ['4L', 'N', '4H', '2H', 'Default'] ) -> (True, False, False, True, True)
+RangeSlv engages InDog IsSuppressed2(3, ['2H', '4H', '4L', 'Default', 'N'] ) -> (True, False, False, True, True)
+RangeSlv engages InDog IsSuppressed2(3, ['N'] ) -> (True,)
+RangeSlv engages InDog IsSuppressed2(3, ['2H'] ) -> (False,)
+RangeSlv engages InDog IsSuppressed2(3, ['N', '2H'] ) -> (False, True)
+RangeSlv engages InDog IsSuppressed2(3, ['2H', 'N'] ) -> (False, True)
+RangeSlv along Rear IsSuppressed2(3, ['Default', '2H', '4H', 'N', '4L'] ) -> (False, False, False, False, False)
+RangeSlv along Rear IsSuppressed2(3, ['4L', 'N', '4H', '2H', 'Default'] ) -> (False, False, False, False, False)
+RangeSlv along Rear IsSuppressed2(3, ['2H', '4H', '4L', 'Default', 'N'] ) -> (False, False, False, False, False)
+RangeSlv along Rear IsSuppressed2(3, ['N'] ) -> (False,)
+RangeSlv along Rear IsSuppressed2(3, ['2H'] ) -> (False,)
+RangeSlv along Rear IsSuppressed2(3, ['N', '2H'] ) -> (False, False)
+RangeSlv along Rear IsSuppressed2(3, ['2H', 'N'] ) -> (False, False)
+RangeSlv along Rear GetSystemValue3(3, ['Default', '2H', '4H', 'N', '4L'] ) -> (0.046, 0.046, 0.046, 0.056, 0.066)
+RangeSlv along Rear GetSystemValue3(3, ['4L', 'N', '4H', '2H', 'Default'] ) -> (0.066, 0.056, 0.046, 0.046, 0.046)
+RangeSlv along Rear GetSystemValue3(3, ['4L'] ) -> (0.066,)
+RangeSlv along Rear GetSystemValue3(3, ['N', '4L'] ) -> (0.056, 0.066)
+RangeSlv along Rear GetSystemValue3(3, ['4L', 'N'] ) -> (0.066, 0.056)
+RangeSlv along Rear GetSystemValue3(3, ['4L', '2H'] ) -> (0.066, 0.046)
+save flag after True
