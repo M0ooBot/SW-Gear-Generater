@@ -1026,7 +1026,7 @@ contact outside a face, a clearance warning across an angle:
 | the same move with no remake route | *G2 now turns the other way against G1 about its axis, so the gear mate G1 meshes G2 must be made again, and making a gear mate again in a built assembly is not settled by the probes (findings.GEAR_MATE_RATIO_ROUTE), so the gearbox needs building again. Update SolidWorks offers to build again as Crossed_Slant_r2.* | **Build again…**, on | on (asks) |
 
 While the footer offers Build parts for a refused turned mesh, the window plans
-exactly that build (`workbook_gui._turned_refusal`, the footer's rule), so the
+exactly that build (both ask `Assessment.turned_refusal`), so the
 press has something to run. Update's structural sentences for a turned
 gearbox (an Axis word changed, a slanted line moved, an anchor's origin off its
 base plane, a bevel gear's form changed) are B's and are shown as classify

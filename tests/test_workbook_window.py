@@ -1819,9 +1819,10 @@ def test_a_right_angle_gearbox_is_ready_to_build_and_says_each_shaft_from_its_ow
         "turn together in SolidWorks.")
     assert window.box_values["type"].cget("text") == ("Bevel and parallel train · 2 meshes · 6.000 : 1 · output at "
                                                        "90° to the input")
-    assert speed_lines(window) == ["S1    1500.0 rpm anticlockwise seen from the +X end · 10.00 N·m",
-                                   "S2    750.0 rpm clockwise seen from the +Z end · 19.60 N·m",
-                                   "S3    250.0 rpm anticlockwise seen from the +Z end · 57.62 N·m"]
+    # Each number held to its unit by a no-break space (C's ui_text.NBSP), so a wrapped line never splits them.
+    assert speed_lines(window) == ["S1    1500.0\u00a0rpm anticlockwise seen from the +X end · 10.00\u00a0N·m",
+                                   "S2    750.0\u00a0rpm clockwise seen from the +Z end · 19.60\u00a0N·m",
+                                   "S3    250.0\u00a0rpm anticlockwise seen from the +Z end · 57.62\u00a0N·m"]
     assert window.speeds_readout.get() == "seen from each shaft's + end"
     # The end view: S1 is a line through G1 seen side-on, along +X and named at that end; S2 and S3 crosses; the bevel
     # stage one colour, at z 60.
@@ -1908,9 +1909,9 @@ def test_a_slanted_shaft_is_seen_from_its_own_plus_end(desk):
     from test_workbook_turned import crossed_slant
     window = desk.open(crossed_slant(), name="Crossed_Slant.xlsx")
     assert speed_lines(window) == [
-        "S1    1000.0 rpm anticlockwise seen from the +Z end · 5.00 N·m",
-        "S2    500.0 rpm anticlockwise seen from the +X end · 9.80 N·m",
-        "S3    333.3 rpm anticlockwise seen from the (0.5, −0.866, 0) end · 14.41 N·m"]
+        "S1    1000.0\u00a0rpm anticlockwise seen from the +Z end · 5.00\u00a0N·m",
+        "S2    500.0\u00a0rpm anticlockwise seen from the +X end · 9.80\u00a0N·m",
+        "S3    333.3\u00a0rpm anticlockwise seen from the (0.5,\u00a0−0.866,\u00a00) end · 14.41\u00a0N·m"]
     assert window.speeds_readout.get() == "seen from each shaft's + end"
     assert window.box_values["type"].cget("text") == ("Crossed and bevel train · 2 meshes · 3.000 : 1 · output at 90° "
                                                        "to the input")
@@ -1959,3 +1960,41 @@ def test_the_crossed_move_needs_build_again_while_a_gear_mate_cannot_be_made_aga
         "G2 now turns the other way against G1 about its axis, so the gear mate G1 meshes G2 must be made again, and "
         "making a gear mate again in a built assembly is not settled by the probes (findings.GEAR_MATE_RATIO_ROUTE), so "
         "the gearbox needs building again. Update SolidWorks offers to build again as Crossed_Slant_r2. " + TURNS)
+
+
+def wrapped_lines(widget, text, width):
+    """``text`` as Tk wraps it at ``width`` px in ``widget``'s font, line by line: laid out as a canvas text item
+    (Tk's one text layout, the one a Label's wraplength uses) and read back a line at a time."""
+    canvas = tk.Canvas(widget.master)
+    item = canvas.create_text(0, 0, text=text, font=widget.cget("font"), width=width, anchor="nw")
+    canvas.update_idletasks()
+    height = canvas.bbox(item)[3]
+    step = tk.font.Font(font=widget.cget("font")).metrics("linespace")
+    starts = sorted({int(canvas.index(item, f"@0,{y + step // 2}")) for y in range(0, height, step)})
+    canvas.destroy()
+    return [text[a:b].strip() for a, b in zip(starts, starts[1:] + [len(text)])]
+
+
+def test_a_wrapped_speeds_line_never_splits_a_number_from_its_unit_nor_a_slants_direction(desk):
+    """The Speeds lines wrap at the end view's width (a shaft seen from an end other than +Z says so, and is longer
+    than that); wrapped at any width down to a third of it, no number is parted from its unit and a slant's
+    direction stays whole."""
+    import tkinter.font  # noqa: F401 - wrapped_lines measures the label's font
+    from gear_generator import workbook_gui
+    from gear_generator.theme import px
+    from test_workbook_turned import crossed_slant
+    window = desk.open(crossed_slant(), name="Crossed_Slant.xlsx")
+    labels = sorted(window.speeds_body.winfo_children(), key=lambda c: int(c.grid_info()["row"]))
+    assert all(int(float(str(label.cget("wraplength")))) == px(workbook_gui.END_VIEW[0]) for label in labels)
+    plain = lambda text: text.replace("\u00a0", " ")          # noqa: E731 - judged by what the eye reads
+    whole = ["1000.0 rpm", "5.00 N·m", "500.0 rpm", "9.80 N·m", "333.3 rpm", "(0.5, −0.866, 0)", "14.41 N·m"]
+    texts = [plain(label.cget("text")) for label in labels]
+    assert all(any(piece in text for text in texts) for piece in whole)
+    wrapped = 0
+    for label, text in zip(labels, texts):
+        for width in range(px(workbook_gui.END_VIEW[0]) // 3, px(workbook_gui.END_VIEW[0]) + 1, 8):
+            lines = [plain(line) for line in wrapped_lines(label, label.cget("text"), width)]
+            wrapped += len(lines) > 1
+            for piece in (w for w in whole if w in text):
+                assert any(piece in line for line in lines), (piece, width, lines)
+    assert wrapped                                         # the widths tried do wrap the lines

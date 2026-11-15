@@ -98,8 +98,7 @@ from .gears.base import Diagnostic
 from .theme import px
 from . import preview
 from .workbook import assess as wb_assess, build as wb_build, checks as wb_checks, export as wb_export
-from .workbook import fixes as wb_fixes, gearbox as wb_gearbox, geometry as wb_geometry, link as wb_link
-from .workbook import model as wb_model, motion as wb_motion
+from .workbook import fixes as wb_fixes, gearbox as wb_gearbox, link as wb_link, model as wb_model
 from .workbook import update as wb_update, xlsx
 
 WINDOW_WIDTH = 1080          # two columns: the workbook and its checks, and the end view and speeds (W3)
@@ -147,15 +146,6 @@ def _update_gate(a: wb_assess.Assessment, record: store.LinkRecord) -> str:
     only keeps ``classify`` from being asked about a read the gate refuses."""
     loose = a if a.folder else dataclasses.replace(a, folder="-")
     return loose.lay_out_refusal() if record.gearbox is not None else loose.build_refusal()
-
-
-def _turned_refusal(a: wb_assess.Assessment) -> str:
-    """Planning's refusal of a gearbox whose turned (bevel or crossed) meshes the probes have not settled
-    (``motion.turned_refusal``, W6-PLAN D16), asked only when the report holds such a mesh — the rule the footer
-    keeps, so the window plans Build parts exactly when the footer offers it."""
-    if not any(m.kind != wb_geometry.PARALLEL for m in a.report.meshes.values()):
-        return ""
-    return wb_motion.turned_refusal(a.report)
 
 
 JOB_BUILD, JOB_UPDATE = "build", "update"
@@ -585,9 +575,9 @@ class WorkbookWindow(tk.Toplevel):
         gearbox = ours.gearbox if ours is not None else None
         has_assembly = gearbox is not None and bool(gearbox.assembly)
         # Build parts (W2's batch, through reuse) while rows a later phase builds hold the layout back, or, since W6
-        # (D16), while the probes have not settled a turned mesh: the footer offers Build parts then
-        # (ui_text.workbook_footer), so the window plans it, or the press would have nothing to run.
-        parts_only = not has_assembly and bool(a.parts.refused or _turned_refusal(a))
+        # (D16), while the probes have not settled a turned mesh: the footer offers Build parts then, asking the same
+        # Assessment.turned_refusal, so the window plans it, or the press would have nothing to run.
+        parts_only = not has_assembly and bool(a.parts.refused or a.turned_refusal())
         try:
             gate = a.build_refusal() if parts_only else a.lay_out_refusal()
             if not gate:
