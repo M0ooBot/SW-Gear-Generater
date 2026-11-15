@@ -75,22 +75,6 @@ FLIP_NEEDED_2024 = {
     "collinear ++": True, "collinear ring ++": False}
 
 
-class StaleHandle(AssertionError):
-    """A component handle the fake gave out, used after a configuration change (an add, a show or an open) without
-    being fetched again: SolidWorks answers ``Transform2`` None and ``IsFixed`` False there, silently (the W8 spike);
-    the fake fails the test."""
-
-
-class _Held(str):
-    """A Name2 as the fake hands one back from ``add_component`` / ``find_component``, stamped with the epoch it was
-    handed out in: passed back into a member after a configuration change, it raises :class:`StaleHandle`."""
-
-    def __new__(cls, name, epoch):
-        held = super().__new__(cls, name)
-        held.epoch = epoch
-        return held
-
-
 def _rot_z(degrees):
     c, s = math.cos(math.radians(degrees)), math.sin(math.radians(degrees))
     return (c, -s, 0.0, s, c, 0.0, 0.0, 0.0, 1.0)
@@ -302,7 +286,7 @@ class FakeSolidWorks:
         self.template_config = "Default"
         self.frames_by = {}            # configuration -> its frames, for every configuration not active
         self.saved_configs = {}        # lower-cased path -> (configs, active, frames_by) as saved
-        self.epoch = 0                 # raised by every add, show and open: handles from before are stale
+        self.epoch = 0                 # raised by every add, show and open, as the Session's
         self.unsettled = 0             # flag calls left misbehaving after an add, until the next rebuild
         self.new_mate_elsewhere = "suppressed"   # or "on": a mate made outside the template's configuration
         self.shared_positions = False  # True: one set of frames for every configuration (GOTCHAS §83, made up here)
@@ -580,7 +564,7 @@ class FakeSolidWorks:
         self.adding.append(path)
         self.component_names[handle] = f"{handle}-1"
         self.component_paths[f"{handle}-1"] = path
-        return _Held(f"{handle}-1", self.epoch)
+        return f"{handle}-1"
 
     def fix_component(self, handle):
         self._log("fix_component", handle)
@@ -653,7 +637,7 @@ class FakeSolidWorks:
             self.open_docs.append(info)
             configs, config, frames_by = self.saved_configs.get(_key(path), (["Default"], "Default", {}))
             self.configs, self.config, self.frames_by = list(configs), config, copy.deepcopy(frames_by)
-        self.epoch += 1                    # an open changes the active configuration: handles from before are stale
+        self.epoch += 1                    # as the Session's: an open may change the active configuration
         self.active = info
         return info
 
@@ -674,7 +658,7 @@ class FakeSolidWorks:
                                   "settled here; set it to Resolved in SolidWorks and try again.")
         self.found[handle] = name
         self.component_names[handle] = name
-        return _Held(name, self.epoch)
+        return name
 
     def is_fixed(self, handle):
         """``Session.is_fixed``: the component's fixed state as fix and unfix left it (the layout and a held member
@@ -726,8 +710,6 @@ class FakeSolidWorks:
     # -- W5: the train's mates (see the class)
 
     def _name2(self, handle):
-        if isinstance(handle, _Held) and handle.epoch != self.epoch:
-            raise StaleHandle(f"{handle} was handed out before a configuration change and used after it")
         if handle in self.component_paths:         # already a Name2
             return handle
         return self.found.get(handle) or self.component_names.get(handle) or f"{handle}-1"
@@ -6125,22 +6107,48 @@ def test_a_flag_set_straight_after_an_add_fails_its_read_back_on_the_second_call
     assert fake.mate_suppression("c1", ["X"]) == {"X": False}
 
 
-def test_a_component_handed_out_before_a_show_fails_loudly_when_used_after_it(mode_findings):
+def test_the_fake_hands_back_plain_names_as_the_session_does(mode_findings):
+    """``Session.add_component`` and ``find_component`` return the Name2 as a plain ``str`` and keep every COM
+    handle to themselves (the handle rule; a held one is caught by test_swcom's COM-level StaleHandle), so the
+    fake returns plain names too: they travel in results, which callers copy and write."""
     fake = FakeSolidWorks()
     fake.new_assembly()
-    held = fake.add_component("gear1", TC_DOG, (0.0, 0.0, 0.0))
-    fake.is_fixed(held)                                  # the same epoch: fine
+    assert type(fake.add_component("gear1", TC_DOG, (0.0, 0.0, 0.0))) is str
     fake.add_configuration("X")
-    with pytest.raises(StaleHandle):
-        fake.is_fixed(held)
-    assert fake.is_fixed("gear1") is False               # a handle by its plan name is fetched again
+    assert type(fake.find_component("gear2", "gear1-1")) is str and fake.is_fixed("gear1") is False
 
 
-def test_nothing_in_a_build_with_modes_carries_a_handed_out_component_across_a_change(mode_findings):
-    """Every member the build calls after a configuration change is given plan handles, never what an earlier
-    call handed back: the fake's StaleHandle would fail the build."""
-    _, result, _, _ = _tc_build()
-    assert result.ok
+def test_a_result_of_a_build_with_modes_survives_a_copy_and_a_deep_copy(mode_findings):
+    fake, result, _ = _tc_gearbox()
+    assert result.ok, result.log_lines()
+    for copied in (copy.copy(result), copy.deepcopy(result)):
+        assert copied.components == result.components and copied.modes == result.modes
+        assert all(type(name) is str for name in copied.components.values())
+        assert copied.log_lines() == result.log_lines()
+
+
+def test_a_build_with_modes_on_the_fake_is_finished_and_its_record_written_and_read_back(mode_findings,
+                                                                                         monkeypatch):
+    """End to end (package D's fault at f9a8cae): TransferCase_Parallel planned, built on the fake with its modes,
+    finished, and the record written and read back with the modes as built."""
+    from gear_generator import store
+    from gear_generator.workbook import assess, gearbox
+    from workbook_fixtures import transfer_case_parallel
+    monkeypatch.setattr(findings, "INTERFERENCE_CHECKED", True, raising=False)
+    book = "C:\\Books\\TransferCase.xlsx"
+    assessed = assess.assess(replace(transfer_case_parallel(), source_path=book), [], "C:\\Out\\")
+    fake = FakeSolidWorks()
+    planned = gearbox.plan_gearbox(assessed, None, exists=fake.exists, read_sidecar=lambda _path: None)
+    assert planned.refusal == "" and planned.modes_plan is not None
+    result = swbuild.build_gearbox(fake, **planned.build_kwargs(), exists=fake.exists, mtime=lambda _path: 0.0)
+    assert result.ok and [c.name for c in result.modes] == ["2H", "4H", "N", "4L"], result.log_lines()
+    done = gearbox.finish_build(planned, result, None, workbook=book, digest="d1", written_by="test",
+                                read_sidecar=lambda _path: None, exists=fake.exists, mtime=lambda _path: 0.0,
+                                stamp="2026-11-14T00:00:00Z")
+    record = store.link_record_from_json(store.link_record_to_json(done.record))
+    assert record.gearbox.modes == ["2H", "4H", "N", "4L"]
+    assert {c.name for c in record.gearbox.components} == set(result.components.values()) - {
+        result.components.get("layout")}
 
 
 @pytest.mark.parametrize("finding, value, sentence", [
