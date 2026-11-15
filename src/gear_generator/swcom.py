@@ -2589,19 +2589,33 @@ class Session:
         return sense_reading(reverse, directions, axes, same_sense, mate=f"{name} in {title}")
 
     def line_axis(self, handle: str, name: str, point: Vec3, direction: Vec3, length: float) -> str:
-        """W6 (Agent A; W6-PLAN §2.2, D4): a slanted shaft's axis in the layout part. ``ISketchManager.
-        Insert3DSketch2(True)``; one ``CreateLine2`` from ``point`` to ``point + length·direction`` (mm, three
-        coordinates per end); ``Insert3DSketch2`` again to close it, the sketch renamed ``"<Shaft> Line"``
-        (``base.LineAxis.sketch``); the line selected as ``"Line1@<Shaft> Line"`` (``EXTSKETCHSEGMENT``);
-        ``InsertAxis2(True)``; the new RefAxis found, renamed ``name`` and read back (``GetRefAxisParams`` on the
-        line to 1e-6). Returns the kept name. Neither 3D call is probed ahead (W6-PLAN §7.1): a failure is a
-        sentence, and the build's next op fails with it.
+        """W6 (W6-PLAN §2.2, D4; W6-INTERFACES §7.16): a slanted shaft's axis in the layout part, made on one line of
+        a 3D sketch. The calls, in order, each with its owner:
 
-        The line is drawn with ``ISketchManager.CreateLine`` given three coordinates, the member every 2D sketch of
-        the app draws with (verified), which the API documents for a 2D or a 3D sketch alike; the macro database's
-        3D entry names ``CreateLine2`` (unverified), so the member probed by use wins. The axis is made from the
-        line as probe axis_from_sketch_line and tier 9 made theirs (one line selected at mark 0 by
-        ``LineN@Sketch``, ``InsertAxis2(True)``)."""
+        1. ``IModelDoc2.SketchManager`` (verified); ``ISketchManager.AddToDB = True``, ``DisplayWhenAdded = False``
+           (verified, as every 2D sketch of the app sets them).
+        2. ``ISketchManager.Insert3DSketch(True)`` opens a 3D sketch: the sketch manager's member is
+           ``Insert3DSketch`` (no 2); ``Insert3DSketch2`` belongs to ``IModelDoc2``, and the macro database's
+           ``SketchManager.Insert3DSketch2`` (unverified) is what SolidWorks 2026 refused with an AttributeError in
+           W6's first full build. The manager's own member, beside its ``InsertSketch`` (verified), is taken: the
+           API's reading, not yet probed. ``ISketchManager.ActiveSketch`` then reads the open sketch (verified).
+        3. ``ISketchManager.CreateLine(x1, y1, z1, x2, y2, z2)``, metres, from ``point`` to ``point +
+           length·direction`` (verified in a 2D sketch; with z in a 3D sketch, the API's reading). It returns the
+           ISketchSegment, named by ``GetName`` (verified for a 2D line): no "Line1" is assumed.
+        4. ``ISketchManager.Insert3DSketch(True)`` again closes it (the toggle, as ``InsertSketch``), only if it
+           was opened, and ``ActiveSketch`` must then read nothing; ``AddToDB``/``DisplayWhenAdded`` restored.
+        5. The new sketch found in the tree (``IModelDoc2.FirstFeature`` walk, verified) by its type, read as
+           ``3DProfileFeature`` (a 2D sketch's ``ProfileFeature`` also taken), renamed ``"<Shaft> Line"`` by
+           ``IFeature.Name`` (verified).
+        6. ``IModelDocExtension.SelectByID2("<segment>@<Shaft> Line", "EXTSKETCHSEGMENT", 0, 0, 0, False, 0, null,
+           0)``: verified for a closed 2D sketch's line; for a 3D sketch's, the reading.
+        7. ``IModelDoc2.InsertAxis2(True)`` (verified from one 2D line at mark 0; from a 3D line, the reading),
+           ``ClearSelection2(True)``, the new ``RefAxis`` found and renamed ``name``.
+        8. ``IFeature.GetSpecificFeature2`` → ``IRefAxis.GetRefAxisParams`` (verified): on the line to 1e-6.
+
+        Returns the kept name. Each failure that can be foreseen is its own sentence: the sketch would not open,
+        the line was not drawn, the sketch would not close, the line could not be selected, the axis was not made,
+        the axis is off its line."""
         unit = _unit(direction)
         if unit is None or not (isinstance(length, (int, float)) and math.isfinite(length) and length > 0):
             raise SolidWorksError(f"The axis {name} was asked for with no direction or no length, so it is not made; "
@@ -2609,40 +2623,59 @@ class Session:
         start = tuple(float(v) for v in point)
         end = tuple(start[i] + float(length) * unit[i] for i in range(3))
         sketch_name = name[:-len(" Axis")] + " Line" if name.endswith(" Axis") else name + " Line"
+        shaft = sketch_name[:-len(" Line")]
         doc = self._doc()
         before = self._top_names()
         manager = call(doc, "SketchManager")
         _put(manager, "AddToDB", True)
         _put(manager, "DisplayWhenAdded", False)
-        call(manager, "Insert3DSketch2", True)
+        opened = False
         try:
-            if call(manager, "ActiveSketch") is None:
-                raise SolidWorksError(f"SolidWorks would not open a 3D sketch for the axis {name}.")
+            try:
+                call(manager, "Insert3DSketch", True)
+                opened = call(manager, "ActiveSketch") is not None
+            except (AttributeError, SolidWorksError):
+                opened = False
+            if not opened:
+                raise SolidWorksError(f"SolidWorks would not open a 3D sketch for the axis of {shaft}, so the slanted "
+                                      f"shaft {shaft} is not laid out.")
             m = MM_PER_METRE
-            line = call(manager, "CreateLine", start[0] / m, start[1] / m, start[2] / m, end[0] / m, end[1] / m,
-                        end[2] / m)
+            try:
+                line = call(manager, "CreateLine", start[0] / m, start[1] / m, start[2] / m, end[0] / m,
+                            end[1] / m, end[2] / m)
+            except (AttributeError, SolidWorksError):
+                line = None
             if line is None:
-                raise SolidWorksError(f"SolidWorks would not draw the line of the axis {name} in its 3D sketch.")
+                raise SolidWorksError(f"SolidWorks would not draw the line of the axis of {shaft} in its 3D sketch, "
+                                      f"so the slanted shaft {shaft} is not laid out.")
             segment = _segment_name(line)
         finally:
-            call(manager, "Insert3DSketch2", True)             # the toggle closes it, whatever happened inside
+            if opened:
+                call(manager, "Insert3DSketch", True)          # the toggle closes the sketch it opened
             _put(manager, "AddToDB", False)
             _put(manager, "DisplayWhenAdded", True)
+        if call(manager, "ActiveSketch") is not None:
+            raise SolidWorksError(f"SolidWorks would not close the 3D sketch of the axis of {shaft}, so the slanted "
+                                  f"shaft {shaft} is not laid out.")
         if not segment:
-            raise SolidWorksError(f"The line of the axis {name} has no name to select it by.")
-        kept_sketch = self._rename(self._made_since(before, "3DProfileFeature", "Closing the 3D sketch"),
-                                   sketch_name)
+            raise SolidWorksError(f"SolidWorks gave the line of the axis of {shaft} no name to find it by, so the "
+                                  f"slanted shaft {shaft} is not laid out.")
+        made_sketch = self._made_sketch(before, shaft)
+        kept_sketch = self._rename(made_sketch, sketch_name)
         full = f"{segment}@{kept_sketch}"
         call(doc, "ClearSelection2", True)
         if not (call(call(doc, "Extension"), "SelectByID2", full, "EXTSKETCHSEGMENT", 0.0, 0.0, 0.0, False, 0,
                      _null_dispatch(), 0) and self._selected() > 0):
-            raise SolidWorksError(f"{full} could not be selected {self._selection_context()}.")
+            raise SolidWorksError(f"SolidWorks would not select the line {full} of the axis of {shaft}, so the "
+                                  f"slanted shaft {shaft} is not laid out.")
         before = self._top_names()
         made = call(doc, "InsertAxis2", True)
         call(doc, "ClearSelection2", True)
-        if not made:
-            raise SolidWorksError(f"InsertAxis2 would not make {name} from the line {full}.")
-        kept = self._rename(self._made_since(before, "RefAxis", "InsertAxis2"), name)
+        new = [n for n in self._top_names() if n not in set(before)]
+        if not made or not new:
+            raise SolidWorksError(f"SolidWorks would not make the axis of {shaft} on its line, so the slanted shaft "
+                                  f"{shaft} is not laid out.")
+        kept = self._rename(self._made_since(before, "RefAxis", "Making the axis"), name)
         self._handles[handle] = kept
         at, along = self._axis_params(kept)
         off = tuple(at[i] - start[i] for i in range(3))
@@ -2653,6 +2686,21 @@ class Session:
                                   f"{_vector_text(along)} where the line points {_vector_text(unit)}, so the shaft "
                                   "would not be where the workbook puts it.")
         return kept
+
+    def _made_sketch(self, before: Sequence[str], shaft: str) -> Any:
+        """The one sketch the 3D sketch's closing added at the top of the tree: type ``3DProfileFeature`` as read
+        (a 2D sketch's ``ProfileFeature`` taken too, since the 3D type name is not yet probed)."""
+        seen = set(before)
+        made = []
+        feature = call(self._doc(), "FirstFeature")
+        while feature is not None:
+            if str(call(feature, "Name")) not in seen and _type_name(feature) in ("3DProfileFeature", "ProfileFeature"):
+                made.append(feature)
+            feature = call(feature, "GetNextFeature")
+        if len(made) != 1:
+            raise SolidWorksError(f"Closing the 3D sketch of the axis of {shaft} left {len(made)} new sketches in the "
+                                  f"tree where it should leave one, so which is the axis's cannot be told.")
+        return made[0]
 
     def _axis_params(self, name: str) -> Tuple[Vec3, Vec3]:
         """``IRefAxis.GetRefAxisParams`` of the axis ``name`` (two points on it, metres): a point in mm and the

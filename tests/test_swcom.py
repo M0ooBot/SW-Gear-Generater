@@ -2179,14 +2179,18 @@ class Line3D:
 
 
 class Sketch3DManager:
+    """An ISketchManager with only the members the real one has that line_axis may use (W6's first full build:
+    SolidWorks 2026 refused ``SketchManager.Insert3DSketch2`` with an AttributeError; the manager's member is
+    ``Insert3DSketch``, the document's ``Insert3DSketch2``). Anything else raises AttributeError, as late binding
+    did, so a call on the wrong owner fails here. The line is named "Line7", so no "Line1" can be assumed."""
+
+    __slots__ = ("doc", "open", "line", "AddToDB", "DisplayWhenAdded")
+
     def __init__(self, doc):
-        self.doc, self.open, self.line = doc, False, Line3D("Line1")
+        self.doc, self.open, self.line = doc, False, Line3D("Line7")
 
-    def __setattr__(self, name, value):
-        object.__setattr__(self, name, value)
-
-    def Insert3DSketch2(self, rebuild):
-        self.doc.app.log.append(("Insert3DSketch2", rebuild))
+    def Insert3DSketch(self, rebuild):
+        self.doc.app.log.append(("Insert3DSketch", rebuild))
         if self.open:
             self.doc.features.append(Feature(self.doc, "3DSketch1", "3DProfileFeature"))
         self.open = not self.open
@@ -2204,7 +2208,7 @@ class Sketch3DManager:
 class SegmentExtension(Extension):
     def SelectByID2(self, name, kind, x, y, z, append, mark, callout, option):
         self.doc.app.log.append(("SelectByID2", name, kind, append, mark))
-        if kind == "EXTSKETCHSEGMENT" and name == "Line1@S3 Line":
+        if kind == "EXTSKETCHSEGMENT" and name == "Line7@S3 Line":
             self.doc.selected.append(name)
             return True
         return False
@@ -2218,7 +2222,7 @@ def _line_doc(com, read=None):
 
     def insert_axis(auto):
         com.log.append(("InsertAxis2", tuple(doc.selected)))
-        if doc.selected != ["Line1@S3 Line"]:
+        if doc.selected != ["Line7@S3 Line"]:
             return False
         doc.features.append(Feature(doc, "Axis1", "RefAxis", specific=AxisParams(*(read or doc.ends))))
         return True
@@ -2235,11 +2239,12 @@ SLANT_POINT, SLANT_DIRECTION = (-110.0, 84.852814, 8.0), (-0.5, 0.86602540378443
 def test_a_slanted_axis_is_drawn_in_a_3d_sketch_made_on_its_line_named_and_read_back(com):
     session, doc = _line_doc(com)
     assert session.line_axis("line3", "S3 Axis", SLANT_POINT, SLANT_DIRECTION, 100.0) == "S3 Axis"
-    assert _calls(com, "Insert3DSketch2") == [("Insert3DSketch2", True), ("Insert3DSketch2", True)]
+    assert _calls(com, "Insert3DSketch") == [("Insert3DSketch", True), ("Insert3DSketch", True)]
+    assert not hasattr(doc, "Insert3DSketch2") and not hasattr(doc.SketchManager, "Insert3DSketch2")
     (line,) = _calls(com, "CreateLine")
     end = tuple(SLANT_POINT[i] + 100.0 * SLANT_DIRECTION[i] for i in range(3))
     assert line[1:] == tuple(round(v / 1000.0, 9) for v in SLANT_POINT + end)          # metres, three per end
-    assert ("SelectByID2", "Line1@S3 Line", "EXTSKETCHSEGMENT", False, 0) in com.log
+    assert ("SelectByID2", "Line7@S3 Line", "EXTSKETCHSEGMENT", False, 0) in com.log
     assert [f.Name for f in doc.features[-2:]] == ["S3 Line", "S3 Axis"] and session._handles["line3"] == "S3 Axis"
     point, direction = session.axis_line("read3", "S3 Axis")
     assert point == pytest.approx(SLANT_POINT) and direction == pytest.approx(SLANT_DIRECTION)
@@ -2253,12 +2258,46 @@ def test_an_axis_solidworks_made_off_its_line_is_refused(com):
         str(raised.value).endswith("so the shaft would not be where the workbook puts it.")
 
 
+class NoLineManager(Sketch3DManager):
+    __slots__ = ()
+
+    def CreateLine(self, *coordinates):
+        return None
+
+
 def test_the_3d_sketch_is_closed_even_when_its_line_is_not_drawn(com):
     session, doc = _line_doc(com)
-    doc.SketchManager.CreateLine = lambda *coordinates: None
-    with pytest.raises(SolidWorksError, match="would not draw the line of the axis S3 Axis"):
+    doc.SketchManager = NoLineManager(doc)
+    with pytest.raises(SolidWorksError) as raised:
         session.line_axis("line3", "S3 Axis", SLANT_POINT, SLANT_DIRECTION, 100.0)
-    assert len(_calls(com, "Insert3DSketch2")) == 2 and not doc.SketchManager.open
+    assert str(raised.value) == ("SolidWorks would not draw the line of the axis of S3 in its 3D sketch, so the "
+                                 "slanted shaft S3 is not laid out.")
+    assert len(_calls(com, "Insert3DSketch")) == 2 and not doc.SketchManager.open
+
+
+class OldManager:
+    """A sketch manager without ``Insert3DSketch``, as the wrong owner was without the member asked of it."""
+
+    def __init__(self, doc):
+        self.doc = doc
+
+
+def test_a_3d_sketch_that_will_not_open_is_a_sentence_and_nothing_is_closed(com):
+    session, doc = _line_doc(com)
+    doc.SketchManager = OldManager(doc)
+    with pytest.raises(SolidWorksError) as raised:
+        session.line_axis("line3", "S3 Axis", SLANT_POINT, SLANT_DIRECTION, 100.0)
+    assert str(raised.value) == ("SolidWorks would not open a 3D sketch for the axis of S3, so the slanted shaft S3 "
+                                 "is not laid out.")
+
+
+def test_an_axis_solidworks_would_not_make_on_the_line_is_a_sentence(com):
+    session, doc = _line_doc(com)
+    doc.InsertAxis2 = lambda auto: False
+    with pytest.raises(SolidWorksError) as raised:
+        session.line_axis("line3", "S3 Axis", SLANT_POINT, SLANT_DIRECTION, 100.0)
+    assert str(raised.value) == ("SolidWorks would not make the axis of S3 on its line, so the slanted shaft S3 is "
+                                 "not laid out.")
 
 
 def test_a_line_axis_with_no_direction_is_a_fault_and_nothing_is_drawn(com):
