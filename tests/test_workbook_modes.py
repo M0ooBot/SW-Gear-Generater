@@ -953,6 +953,71 @@ def test_a_mode_spelt_4l_builds_updates_and_reads_back_clean_on_the_fake(mode_fi
     assert all(set(c.frames) == set(box.modes) for c in box.components)
 
 
+# -- E4's carrier train put in every mode (W8-REVIEW-LATE-A point 2) -------------------------------------------------
+#
+# E4 is the one fixture with a carrier and modes: each mode's put suppresses the train's locks and the gear mates on in
+# that mode around the puts (findings.PLANETARY_PUT_ROUTE), and must leave every flag in every configuration as the
+# record has it, whether the Update ends well or a put is refused part-way.
+
+E4_COUPLINGS = {"RangeSlv engages InDog": {"2H", "4H"}, "RangeSlv engages LoDog": {"4L"},
+                "ModeSlv engages FrontDog": {"4H", "4L"}}
+
+
+def flags_all(sw):
+    """Every mate's flag in every configuration of the fake, the active one's as it reads now."""
+    out = {}
+    for m in sw.mates:
+        f = dict(m.flags)
+        f[sw.config] = m.suppressed
+        out[m.name] = {c: f.get(c) for c in sw.configs}
+    return out
+
+
+def moved_spec():
+    """W8-PLAN §5 s2's edit: FDrive, FIdler and FOut At 130 -> 132, which touches every mode."""
+    spec = e4_transfer_case()
+    for g in ("FDrive", "FIdler", "FOut"):
+        spec = with_gear(spec, g, at="132")
+    return spec
+
+
+def press_e4(sw, record, spec):
+    up = update.classify(record, assessed(spec), exists=lambda p: True)
+    assert up.refusal == "" and not up.needs_new_revision, (up.refusal, up.structural)
+    return up, swbuild.update_gearbox(sw, **up.update_kwargs(), exists=lambda p: True, mtime=lambda p: 5.0)
+
+
+def test_e4_changed_update_keeps_every_flag_in_every_configuration(mode_findings):
+    sw, _, record = build_on_fake(e4_transfer_case())
+    before = flags_all(sw)
+    assert {n: {c for c, off in before[n].items() if not off} for n in E4_COUPLINGS} == E4_COUPLINGS
+    sun = next(c.name for c in record.gearbox.components if c.gear == "Sun")
+    sw.drive(sun, 37.0)                     # the user's turn in 2H
+    up, result = press_e4(sw, record, moved_spec())
+    assert result.failures == []
+    assert result.placed[0] == "Carrier carrier"          # the carrier route ran
+    assert flags_all(sw) == before
+    assert set(result.put_in) == {"2H", "4H", "N", "4L"}
+
+
+def test_e4_put_refused_part_way_leaves_flags_as_recorded(mode_findings):
+    sw, _, record = build_on_fake(e4_transfer_case())
+    before = flags_all(sw)
+    orig, count = sw.place_component, [0]
+
+    def flaky(handle, rotation, at, kind=None):
+        count[0] += 1
+        if count[0] == 3:
+            raise swbuild.SolidWorksError("refused by the test")
+        return orig(handle, rotation, at, kind=kind)
+    sw.place_component = flaky
+    up, result = press_e4(sw, record, moved_spec())
+    assert result.failures
+    assert any("refused by the test" in text for _, text in result.failures)
+    assert flags_all(sw) == before
+    assert sw.config == "2H"
+
+
 # -- the frames that reach SolidWorks, per mode (W8-PLAN §1.6): engaged outlines clear, and clashing half a pitch off --
 #
 # Worked from the teeth, not from the code's frames: each part's own outline (its kind's ``outline``, the sketch the
