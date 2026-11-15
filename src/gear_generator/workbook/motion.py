@@ -562,6 +562,10 @@ def _sliding_shaft(shaft: str, on: Sequence[str], placed, frames: Mapping[str, F
         if gear in moving:
             out.append(MatePlan(mate_name(AXIS, (gear,), shaft), AXIS, (gear,), shaft))
             out.append(slide(gear))
+            # sense −1 says which way the slider must TURN (with its anchor), never which Flip makes it so: the
+            # collinear spline's right Flip was True on 2024 and False on 2026 (W8-SPIKE.md, "SolidWorks 2024"),
+            # and the read-back named it each time. Like every gear mate it is made with findings.GEAR_MATE_FLIP
+            # and read back (mate_senses); a coupling's likewise (False on both versions, assumed by nothing).
             out.append(MatePlan(mate_name(SPLINE, (anchor, gear)), SPLINE, (anchor, gear), ratio=(1, 1), sense=-1))
         else:
             out.append(MatePlan(mate_name(LOCK, (anchor, gear)), LOCK, (anchor, gear)))

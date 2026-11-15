@@ -770,3 +770,22 @@ def test_each_mutation_of_the_plan_is_caught(mutate, caught, mode_findings):
         assert caught in str(exc)
         return
     assert not result.ok and any(caught in line for line in result.log_lines()), result.log_lines()
+
+
+@pytest.mark.parametrize("flip", [False, True])
+def test_a_spline_and_a_coupling_are_made_with_every_gear_mates_flip_and_told_only_which_way_to_turn(flip,
+                                                                                                    monkeypatch):
+    """W8-SPIKE.md, "SolidWorks 2024": the collinear spline's right Flip was True on 2024 and False on 2026 (the
+    coupling's False on both), and the read-back named each correctly. So planning assumes no Flip for either: both
+    are made with findings.GEAR_MATE_FLIP, as every gear mate is, and ``mate_senses`` / ``same_way`` say only which
+    way they must turn — the same on either version."""
+    monkeypatch.setattr(findings, "GEAR_MATE_FLIP", flip)
+    _, plan = plan_of(transfer_case_parallel())
+    made = [op for op in plan.assembly.ops if isinstance(op, Mate) and op.kind == "gear"]
+    made += [op for step in plan.modes_plan.steps for op in step.ops]
+    assert {op.name for op in made} >= {"ModeSlv splined to RangeSlv", "RangeSlv engages InDog",
+                                        "RangeSlv engages LoDog", "ModeSlv engages FrontDog"}
+    assert {op.flip for op in made} == {flip}
+    assert plan.mate_senses["ModeSlv splined to RangeSlv"] is True
+    assert set(plan.modes_plan.same_way) == {"RangeSlv engages InDog", "RangeSlv engages LoDog",
+                                             "ModeSlv engages FrontDog"}
