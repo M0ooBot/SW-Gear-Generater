@@ -1060,3 +1060,37 @@ def test_every_sleeves_and_dogs_frame_in_every_mode_is_pinned(make):
             assert s == 1.0 and tuple(rotation[2::3]) == (0.0, 0.0, 1.0) and rotation[6:8] == (0.0, 0.0)
             assert round(theta % 12.0, 9) % 12.0 == pytest.approx(phase[g], abs=1e-9), (mode, g, theta)
             assert tuple(at) == (0.0, 0.0, z[g][i]), (mode, g, at)
+
+
+# -- a mode that jams, and a sleeve or dog on Meshes (the review of W8) -----------------------------------------------
+
+JAM = with_gear(transfer_case_parallel(), "ModeSlv", slides="2WD=0, 4WD=+10, J=-30")   # J: ModeSlv over LoDog
+
+
+@pytest.mark.parametrize("index, row, mode", [(0, 2, "2H"), (3, 5, "4L")])
+def test_a_mode_that_jams_is_one_error_at_its_own_row_whichever_row_it_is(index, row, mode):
+    """RangeSlv at H (over InDog) with ModeSlv at J (over LoDog) joins In and Lo through Rear, which the meshes turn
+    4 : 1. As the first Modes row or the last, the same single error at its own row; never the whole-box jam, since
+    the other modes turn (checks._check_motion is that sentence's one home)."""
+    spec = with_mode(JAM, index, positions=(("RangeSlv", "H"), ("ModeSlv", "J")))
+    assert said(spec) == [(True, f"Modes row {row}: in {mode} RangeSlv engages InDog and ModeSlv engages LoDog, which "
+                                 "joins In and Lo through Rear, and the meshes turn them at different speeds: as "
+                                 "written the box is jammed in this mode.")]
+
+
+def test_the_box_is_said_jammed_only_when_every_mode_jams():
+    spec = all_modes(JAM, RangeSlv="H", ModeSlv="J")
+    jams = [m for e, m in said(spec) if e and m.startswith("Meshes:") and "jammed" in m]
+    assert len(jams) == 1
+    assert sum(1 for e, m in said(spec) if e and m.startswith("Modes row") and "jammed in this mode" in m) == 4
+
+
+@pytest.mark.parametrize("pair, gear, kind", [(("RangeSlv", "InDog"), "RangeSlv", "sleeve"),
+                                             (("InPin", "InDog"), "InDog", "dog")])
+def test_a_sleeve_or_dog_on_meshes_is_one_error_and_no_ring_check_runs(pair, gear, kind):
+    """The error that keeps the ring checks off a sleeve over a dog: one sentence, and nothing beside it (no "would
+    mesh inside", no centre, no loop through the row)."""
+    s = transfer_case_parallel()
+    spec = replace(s, meshes=s.meshes + (Mesh(*pair, row=6),))
+    assert said(spec) == [(True, f"Meshes row 6: {gear} is a {kind}, which is not listed on Meshes: a sleeve engages "
+                                 "a dog by sliding over it, worked out for each mode.")]

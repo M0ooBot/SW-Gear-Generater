@@ -197,8 +197,11 @@ def check(spec: GearboxSpec, skip_gears=()) -> Report:
         couplings += [pair for pair in m.engaged if pair not in couplings]
     order = [g.id for g in spec.gears]
     couplings.sort(key=lambda pair: order.index(pair[1]))       # the dogs' Gears-sheet order (W8-PLAN §1.6)
+    # A sleeve or dog on Meshes is an error of its own (modes.row_errors): its row is left out of the phase walk too,
+    # so nothing is said beside it (a loop "that does not close" through a row that is not a mesh).
+    on_meshes = [(m.a, m.b) for m in spec.meshes if m.a in clutches or m.b in clutches]
     report.theta, conflicts = geometry.phases(spec, placed, with_conflicts=True, meshes_=report.meshes,
-                                              leave_out=unfit, couplings=couplings)
+                                              leave_out=list(unfit) + on_meshes, couplings=couplings)
     carried = {p.gear for p in placed.values() if p.carrier}
     for gear_id, other in conflicts:
         row = placed[gear_id].row or gear_id
@@ -230,12 +233,21 @@ def _mode_report(report: Report, spec: GearboxSpec, skip_gears, senses, placed: 
     if motion.jammed and spec.meshes:
         where = spec.cell("Modes", picks.row, "name") if picks.row else "Modes"
         twice = [s for s in {s for s, _ in found.engaged} if sum(1 for x, _ in found.engaged if x == s) > 1]
+        gears = {g.id: g for g in spec.gears}
         if twice:
             dogs = [d for s, d in found.engaged if s == twice[0]]
-            gears = {g.id: g for g in spec.gears}
             _error(report, where, f"in {picks.name} {twice[0]} engages {' and '.join(dogs)} at once, which joins "
                                   f"{' to '.join(gears[d].shaft for d in dogs)}: as written the box is jammed in this "
                                   "mode.")
+        elif found.engaged:
+            # §1.5: name what engages what, and the shafts it joins that the meshes already turn at other speeds.
+            said = _and([f"{s} engages {d}" for s, d in found.engaged])
+            dogs = list(dict.fromkeys(gears[d].shaft for _, d in found.engaged))
+            sleeves = list(dict.fromkeys(gears[s].shaft for s, _ in found.engaged))
+            joined = (f"which joins {_and(dogs)} through {_and(sleeves)}" if len(dogs) > 1 else
+                      f"which joins {dogs[0]} to {_and(sleeves)}")
+            _error(report, where, f"in {picks.name or 'its one mode'} {said}, {joined}, and the meshes turn them at "
+                                  "different speeds: as written the box is jammed in this mode.")
         else:
             _error(report, where, f"in {picks.name or 'its one mode'} the meshes and couplings contradict each "
                                   "other: as written the box is jammed in this mode.")
@@ -770,10 +782,17 @@ def _in_line(spec: GearboxSpec) -> set:
 
 def _check_motion(report: Report, spec: GearboxSpec, upset=frozenset()) -> None:
     motion = report.motion
-    if motion.jammed:
+    # W8: the one home of the whole-box jam. With modes, ``report.motion`` is the first mode's, and a mode that jams
+    # is said at its own Modes row (``_mode_report``); the box "cannot turn at all" only when every mode jams, so what
+    # is said never depends on the order of the Modes rows.
+    named = [m for m in report.modes if m.name]
+    jammed = all(m.motion.jammed for m in named) if named else bool(motion.jammed)
+    if jammed:
         if not planetary.second_inputs(spec):     # W7 §6.15: two inputs on a stage are said once, at the Role cell
             _error(report, "Meshes", motion.jammed)
         return
+    if named and motion.jammed:
+        motion = next(m.motion for m in named if not m.motion.jammed)
     if not spec.meshes:
         return                                  # parts only: nothing turns anything, and that is fine
     if not any(s.role == "input" and s.speed for s in spec.shafts):
