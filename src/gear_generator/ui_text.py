@@ -1182,6 +1182,11 @@ def _speed_lines(spec, motion, *, free: str = "not driven") -> Tuple[List[str], 
             continue
         torque = motion.torques.get(shaft.id)
         torque_text = f" · {torque:.2f}{NBSP}N·m" if torque is not None else ""
+        onward = (getattr(motion, "shared", None) or {}).get(shaft.id)
+        if onward and torque is not None:          # W8 (J17): an output that also drives onward
+            torque_text += f", shared with {_and(onward)} (the share depends on the loads)"
+        elif shaft.id in (getattr(motion, "past_split", None) or ()):
+            torque_text = " · — (past a split)"
         turns = motion.turns(shaft.id)
         where = seen.get(shaft.id, "+Z").replace(" ", NBSP)        # a slant's vector held together
         if not every_z and turns and turns != "still":
@@ -1206,14 +1211,14 @@ def speeds_prose_rows(motion, lines: Sequence[str], *, mode: bool = False) -> Se
     """Which of :func:`workbook_speed_lines`' ``lines`` are sentences, shown in prose, not as a shaft's line: every
     line when a later phase drives the gearbox (``Motion.later``), else the last line when the panel ends with the
     torque note (W7). W8: with ``mode`` the lines are :func:`mode_speed_lines`' and ``motion`` that mode's
-    (``ModeReport.motion``), whose first line, what the mode couples, is a sentence too. The one home of that rule;
+    (``ModeReport.motion``), whose first two lines, the mode's speeds and ratio and what it couples, are prose too. The one home of that rule;
     the window and the design board ask it."""
     if not lines:
         return set()
     if motion.later:
         return set(range(len(lines)))
     rows = {len(lines) - 1} if _torque_note_shown(motion) else set()
-    return rows | ({0} if mode else set())
+    return rows | ({0, 1} & set(range(len(lines))) if mode else set())
 
 
 def end_view_readout(view) -> str:
@@ -3927,15 +3932,45 @@ def _engaged_sentence(entry) -> str:
     return f"{where}, {said}."
 
 
+def _mode_line(spec, entry) -> str:
+    """A mode's speeds and ratio, from its ``ModeReport`` (B's one home of a mode's ratio: ``ratio``, ``ratio_why``,
+    ``driven``): *4L: Rear 375 rpm · Front 375 rpm · 4.000 : 1*; an output the mode does not drive, *2H: Rear 1500
+    rpm · Front not driven · 1.000 : 1*; no output turning, *N: neutral — Rear, FrontDrv, Idler and Front turn
+    freely.* (every shaft the mode leaves free, not held, in Shafts-sheet order). The implicit mode of sliders with
+    no Modes rows has no name, so its line starts at the speeds."""
+    name = f"{entry.name}: " if entry.name else ""
+    motion = entry.motion
+    if entry.ratio_why == "neutral":
+        held = _held_members(spec) | set(getattr(motion, "held", None) or {})
+        free = [s.id for s in spec.shafts if motion.speeds.get(s.id) is None and s.id not in held]
+        one = len(free) == 1
+        rest = f" — {_and(free)} turn{'s' if one else ''} freely" if free else ""
+        return f"{name}neutral{rest}."
+    parts = []
+    for out, ratio in (entry.driven or {}).items():
+        speed = motion.speeds.get(out)
+        parts.append(f"{out} {_n(abs(float(speed)), 1)}{NBSP}rpm" if ratio is not None and speed is not None
+                     else f"{out} not driven")
+    if entry.ratio is not None:
+        parts.append(f"{entry.ratio:.3f} : 1")
+    elif entry.ratio_why:
+        parts.append(entry.ratio_why)
+    return name + " · ".join(parts)
+
+
 def mode_speed_lines(spec, report, mode: str) -> Tuple[List[str], str]:
     """The Speeds panel at ``mode`` (a ``checks.ModeReport`` of ``report.modes``, its name compared ignoring case):
-    first what the mode couples (:func:`_engaged_sentence`), then one line per shaft from that mode's
-    ``motion`` as :func:`workbook_speed_lines` gives them, a member the mode leaves free reading *Front  turns
-    freely* (J16), a held member *held still*; and the readout. ``([], "")`` for a mode the report does not have.
-    The mode's speeds-and-ratio line and a shared output's torque wait for the fields B pins (W8-PLAN §1.12)."""
+    the mode's speeds and ratio (:func:`_mode_line`), what it couples (:func:`_engaged_sentence`), then one line per
+    shaft from that mode's ``motion`` as :func:`workbook_speed_lines` gives them — a member the mode leaves free
+    reading *Front  turns freely* (J16), a held member *held still*, an output that also drives onward *Rear  1500.0
+    rpm anticlockwise · 10.00 N·m, shared with FrontDrv (the share depends on the loads)* and each shaft past it
+    *… · — (past a split)* (J17: ``Motion.shared``, ``past_split``) — and the readout, as
+    :func:`workbook_speed_lines`'. ``([], "")`` for a mode the report does not have."""
     entry = _mode_report(report, mode)
     if entry is None:
         return [], ""
     lines, readout = _speed_lines(spec, entry.motion, free=FREE)
-    return [_engaged_sentence(entry)] + lines, readout
+    if entry.motion.later:
+        return lines, readout
+    return [_mode_line(spec, entry), _engaged_sentence(entry)] + lines, readout
 

@@ -3316,31 +3316,48 @@ def test_the_progress_of_a_mode():
         "Updating SolidWorks: checking mode 4L…")
 
 
-def _tc_report():
-    from fractions import Fraction
-    spec = SimpleNamespace(shafts=tuple(Shaft(s, "frame") if False else SimpleNamespace(id=s) for s in
-                                        ("In", "Lay", "Lo", "Rear", "FrontDrv", "Idler", "Front")))
-    speeds = {"2H": {"In": 1500, "Lay": -750, "Lo": 375, "Rear": 1500},
-              "N": {"In": 1500, "Lay": -750, "Lo": 375}}
-    modes = (checks.ModeReport("2H", 2, engaged=(("RangeSlv", "InDog"),),
-                               motion=kinematics.Motion(speeds={k: Fraction(v) for k, v in speeds["2H"].items()})),
-             checks.ModeReport("N", 4, motion=kinematics.Motion(speeds={k: Fraction(v) for k, v in
-                                                                         speeds["N"].items()})))
-    return spec, SimpleNamespace(modes=modes)
+def _tc_assessed(make):
+    from workbook_fixtures import e4_transfer_case, transfer_case_parallel
+    spec = {"parallel": transfer_case_parallel, "e4": e4_transfer_case}[make]()
+    return assess.assess(dataclasses.replace(spec, source_path="C:\\Books\\TransferCase.xlsx"), [], "C:\\Out\\")
 
 
-def test_the_speeds_panel_in_a_mode_says_what_it_couples_and_reads_a_free_member_as_free():
-    spec, report = _tc_report()
-    lines, readout = ui_text.mode_speed_lines(spec, report, "2h")
-    assert lines == ["In 2H, RangeSlv engages InDog.",
-                     "In    1500.0 rpm anticlockwise", "Lay   750.0 rpm clockwise",
-                     "Lo    375.0 rpm anticlockwise", "Rear  1500.0 rpm anticlockwise",
-                     "FrontDrv  turns freely", "Idler  turns freely", "Front  turns freely"]
-    assert readout == "seen from +Z" and not re.search(r"\s0\.0\u00a0rpm", " ".join(lines))
-    neutral, _ = ui_text.mode_speed_lines(spec, report, "N")
-    assert neutral[0] == "In N, no sleeve engages a dog." and "Rear  turns freely" in neutral
-    assert ui_text.speeds_prose_rows(report.modes[0].motion, lines, mode=True) == {0}
-    assert ui_text.mode_speed_lines(spec, report, "4X") == ([], "")
+def test_the_speeds_panel_in_each_mode_through_bs_modes():
+    """§2.3 through B's per-mode solve, ratio home (``ModeReport.ratio``, ``ratio_why``, ``driven``) and J17's
+    split (``Motion.shared``, ``past_split``): a member a mode leaves free reads as free, never 0 rpm."""
+    a = _tc_assessed("parallel")
+    lines = {m.name: ui_text.mode_speed_lines(a.spec, a.report, m.name) for m in a.report.modes}
+    assert lines["4H"] == ([
+        "4H: Rear 1500\u00a0rpm · Front 1500\u00a0rpm · 1.000 : 1",
+        "In 4H, RangeSlv engages InDog and ModeSlv engages FrontDog.",
+        "In    1500.0\u00a0rpm anticlockwise · 10.00\u00a0N·m",
+        "Lay   750.0\u00a0rpm clockwise",
+        "Lo    375.0\u00a0rpm anticlockwise",
+        "Rear  1500.0\u00a0rpm anticlockwise · 10.00\u00a0N·m, shared with FrontDrv (the share depends on the loads)",
+        "FrontDrv  1500.0\u00a0rpm anticlockwise · — (past a split)",
+        "Idler  2250.0\u00a0rpm clockwise · — (past a split)",
+        "Front  1500.0\u00a0rpm anticlockwise · — (past a split)"], "seen from +Z")
+    assert lines["2H"][0][:2] == ["2H: Rear 1500\u00a0rpm · Front not driven · 1.000 : 1",
+                                  "In 2H, RangeSlv engages InDog."]
+    assert lines["2H"][0][-3:] == ["FrontDrv  turns freely", "Idler  turns freely", "Front  turns freely"]
+    assert lines["N"][0][:2] == ["N: neutral — Rear, FrontDrv, Idler and Front turn freely.",
+                                 "In N, no sleeve engages a dog."]
+    assert lines["4L"][0][0] == "4L: Rear 375\u00a0rpm · Front 375\u00a0rpm · 4.000 : 1"
+    assert "Lo    375.0\u00a0rpm anticlockwise · 38.42\u00a0N·m" in lines["4L"][0]
+    for m in a.report.modes:
+        said = lines[m.name][0]
+        assert not re.search(r"\s0\.0\u00a0rpm", " ".join(said)) and "same way" not in " ".join(said)
+        assert ui_text.speeds_prose_rows(m.motion, said, mode=True) == {0, 1}
+    assert ui_text.mode_speed_lines(a.spec, a.report, "4l") == lines["4L"]
+    assert ui_text.mode_speed_lines(a.spec, a.report, "4X") == ([], "")
+    e4 = _tc_assessed("e4")
+    neutral = ui_text.mode_speed_lines(e4.spec, e4.report, "N")[0]
+    assert neutral[0] == "N: neutral — Rear, FrontDrv, Idler and Front turn freely." and "Ring  held still" in neutral
+    assert ("Planet  750.0\u00a0rpm clockwise, 1125.0\u00a0rpm clockwise relative to Carrier · 3 copies"
+            in neutral)
+
+
+def test_the_implicit_mode_has_no_name_to_lead_with():
     implicit = checks.ModeReport("", engaged=(("RangeSlv", "InDog"),), out_of_mesh=(("G4", "G5"),))
     assert ui_text._engaged_sentence(implicit) == (
         "With every slider at its position 0, RangeSlv engages InDog; G4 and G5 are out of mesh.")
