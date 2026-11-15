@@ -2599,8 +2599,7 @@ def test_on_2026_a_built_gearbox_with_modes_says_a_turn_shows_in_every_mode_and_
         "SolidWorks to turn one train and FrontDog to turn the other. RangeSlv and ModeSlv slide along Rear, each to "
         "its place in each mode. A turn you give the gears in one mode shows in every mode, so a dog can stand "
         "across its sleeve in another mode; to put the gears back there, press Update SolidWorks with that mode "
-        "showing, since an Update pressed in another mode may leave them as they stand. 1 thing to do by hand: "
-        "Assign a material to each of the 6 parts; the build leaves it unset.")
+        "showing. 1 thing to do by hand: Assign a material to each of the 6 parts; the build leaves it unset.")
     assert ui_text.turning_note(False) == ui_text.TURN_SHOWS_EVERYWHERE and ui_text.switching_note(False) == ""
     width, height = width_and_height(window)
     assert width == px(workbook_gui.WINDOW_WIDTH) and window.winfo_reqwidth() <= px(workbook_gui.WINDOW_WIDTH)
