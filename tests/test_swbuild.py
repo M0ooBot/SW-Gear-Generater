@@ -4828,10 +4828,13 @@ def test_a_suppressed_idler_gear_mate_needs_the_idler_finding_before_anything_ch
 
 @pytest.fixture
 def turned_findings(monkeypatch):
-    """Tier 9's findings (11ee1e2) and the skew range the probe agent adds (W6-INTERFACES §7.12), pinned here."""
+    """Tier 9's findings (11ee1e2) and the skew range the probe agent adds (W6-INTERFACES §7.12), pinned here, with
+    the planetary put route probe planetary_put_back found on SolidWorks 2026 (the planetary Updates below take their
+    findings here, and one of a train with a carrier refuses without it; a test of the refusal sets it after)."""
     for name, value in (("TURNED_GEAR_MATE_SENSE_READ_BACK", "entity senses"),
                         ("TURNED_GEAR_MATE_SENSE_ANGLES", (30.0, 150.0)),
-                        ("TURNED_GEAR_MATE_SENSE_ANGLES_SKEW", (60.0, 120.0))):
+                        ("TURNED_GEAR_MATE_SENSE_ANGLES_SKEW", (60.0, 120.0)),
+                        ("PLANETARY_PUT_ROUTE", "gear mates off around the puts")):
         monkeypatch.setattr(findings, name, value, raising=False)
 
 
@@ -5964,17 +5967,21 @@ def test_an_update_of_a_gearbox_with_modes_is_refused_before_anything_is_read_wh
     assert fake.calls == []
 
 
-@pytest.mark.parametrize("value", [None, "the document's configuration order"])
-def test_an_update_of_a_gearbox_with_modes_is_refused_before_anything_is_read_unless_values_answer_in_the_order_asked(
-        mode_findings, monkeypatch, value):
-    """swcom.dimension_values pairs GetSystemValue3(3, names)' answers with the names in the order passed: the gate
-    reads findings.VALUE_READ_ORDER (tier 11)."""
-    monkeypatch.setattr(findings, "VALUE_READ_ORDER", value, raising=False)
+@pytest.mark.parametrize("finding, value", [("VALUE_READ_ORDER", None),
+                                            ("VALUE_READ_ORDER", "the document's configuration order"),
+                                            ("CONFIGURATION_SHOW_OVER_DEFINED", None),
+                                            ("CONFIGURATION_SHOW_OVER_DEFINED", "a window asks")])
+def test_an_update_of_a_gearbox_with_modes_is_refused_before_anything_is_read_while_a_tier_11_finding_is_unsettled(
+        mode_findings, monkeypatch, finding, value):
+    """swcom.dimension_values pairs GetSystemValue3(3, names)' answers with the names in the order passed, and a
+    changed Update shows every mode: the gate reads findings.VALUE_READ_ORDER and CONFIGURATION_SHOW_OVER_DEFINED
+    (tier 11)."""
+    monkeypatch.setattr(findings, finding, value, raising=False)
     fake = FakeSolidWorks()
     with pytest.raises(swbuild.BuildError) as raised:
         swbuild.update_gearbox(fake, assembly=r"C:\T\R.SLDASM", motion=replace(_W7, configurations=("2H", "4H")),
                                exists=lambda _p: True)
-    assert str(raised.value) == ("Update SolidWorks on a gearbox with modes needs findings.VALUE_READ_ORDER settled on "
+    assert str(raised.value) == (f"Update SolidWorks on a gearbox with modes needs findings.{finding} settled on "
                                  f"SolidWorks (it is {value!r}), so nothing was read or changed.")
     assert fake.calls == []
 
@@ -6050,8 +6057,10 @@ def mode_findings(monkeypatch):
     committed values), with the read-back's and the remake's, a suppressed gear mate's sense read as probe
     planetary_put_back found it on 2026 (an Update with modes reads every sense; a test of the unread sentence sets
     it to None), the planetary put route that probe found there (an Update of a train with a carrier refuses
-    without it), and the order tier 11 found GetSystemValue3(3, names) answers in, VALUE_READ_ORDER (a build or
-    Update with modes refuses without it, since the slide values are paired with the names in that order)."""
+    without it), and, from tier 11 on 2026, the order GetSystemValue3(3, names) answers in, VALUE_READ_ORDER (the
+    slide values are paired with the names in that order), and what showing an over-defined configuration does,
+    CONFIGURATION_SHOW_OVER_DEFINED (a build or Update with modes shows every mode): a build or Update with modes
+    refuses without either."""
     for name, value in tuple(swcom.CONFIGURATION_FINDINGS) + (
             ("CONFIGURATION_SHOW_RAISES_DIALOG", False), ("MULTI_CONFIGURATION_SAVE_ASKS", False),
             ("COLLINEAR_GEAR_MATE_SENSE_READ_BACK", True), ("SLIDE_VALUE_PER_CONFIGURATION_ON_2026", True),
@@ -6063,7 +6072,8 @@ def mode_findings(monkeypatch):
             ("MATE_DELETE_ROUTE", "Select2 then EditDelete()"), ("MATE_RENAME_ROUTE", "IFeature.Name put"),
             ("POSITIONS_PER_CONFIGURATION_ON_2024", True),
             ("SUPPRESSED_GEAR_MATE_SENSE_READ", "answers, marks nothing"),
-            ("PLANETARY_PUT_ROUTE", "gear mates off around the puts"), ("VALUE_READ_ORDER", "the order passed")):
+            ("PLANETARY_PUT_ROUTE", "gear mates off around the puts"), ("VALUE_READ_ORDER", "the order passed"),
+            ("CONFIGURATION_SHOW_OVER_DEFINED", "shown; no window asks; its mates read in error; others solve after")):
         monkeypatch.setattr(findings, name, value, raising=False)
 
 
@@ -6227,6 +6237,12 @@ def test_a_build_with_modes_on_the_fake_is_finished_and_its_record_written_and_r
                                                                "nothing is made."),
     ("VALUE_READ_ORDER", None, "A gearbox with modes needs findings.VALUE_READ_ORDER settled on SolidWorks (it is "
                                "None), so it is not built and nothing is made."),
+    ("CONFIGURATION_SHOW_OVER_DEFINED", None, "A gearbox with modes needs findings.CONFIGURATION_SHOW_OVER_DEFINED "
+                                              "settled on SolidWorks (it is None), so it is not built and nothing is "
+                                              "made."),
+    ("CONFIGURATION_SHOW_OVER_DEFINED", "a window asks", "A gearbox with modes needs findings."
+                                                         "CONFIGURATION_SHOW_OVER_DEFINED settled on SolidWorks (it is "
+                                                         "'a window asks'), so it is not built and nothing is made."),
     ("SLIDE_VALUE_PER_CONFIGURATION_ON_2026", None, "SolidWorks 2026 has not been shown to hold a slide's value per "
                                                     "configuration, so a gearbox with modes is not built there and "
                                                     "nothing is made."),

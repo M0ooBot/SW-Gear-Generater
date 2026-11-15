@@ -205,7 +205,15 @@ def test_a_check_result_keeps_its_shape():
 # ``set_gear_ratio`` deletes the mate and raises, and ``set_mate_suppressed`` raises ``MateGone`` for a mate that is
 # not there, as ``swcom.Session`` does (``_kept_mate``).
 
-def test_a_remake_that_loses_its_mate_inside_the_planetary_put_is_said_gone_never_left_suppressed():
+@pytest.fixture
+def put_route(monkeypatch):
+    """The planetary put route probe planetary_put_back found on SolidWorks 2026, pinned here (never the committed
+    value): an Update of a train with a carrier refuses without it."""
+    from gear_generator import findings
+    monkeypatch.setattr(findings, "PLANETARY_PUT_ROUTE", "gear mates off around the puts", raising=False)
+
+
+def test_a_remake_that_loses_its_mate_inside_the_planetary_put_is_said_gone_never_left_suppressed(put_route):
     from gear_generator import swbuild, swcom
     from gear_generator.workbook import update
     from test_workbook_planetary import direct, edited, fake_build, planetary_4to1
@@ -246,7 +254,7 @@ def test_a_remake_that_loses_its_mate_inside_the_planetary_put_is_said_gone_neve
 # way out. The restore's MateGone is then the error: every other lock and gear mate is still turned back on, and
 # Update says the mate is gone, never "left suppressed".
 
-def test_a_gear_mate_gone_during_the_puts_with_no_error_pending():
+def test_a_gear_mate_gone_during_the_puts_with_no_error_pending(put_route):
     from gear_generator import swbuild, swcom
     from gear_generator.workbook import update
     from test_workbook_planetary import direct, edited, fake_build, planetary_4to1

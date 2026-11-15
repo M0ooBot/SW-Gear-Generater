@@ -1988,9 +1988,17 @@ class ModeCheck:
 # before anything is made: ``_SET`` for any value but None, else the value it must hold.
 # VALUE_READ_ORDER: swcom.dimension_values pairs GetSystemValue3(3, names)' answers with the names in the order passed,
 # which tier 11 found SolidWorks 2026 answers in (measured on 2026 only; 2024's confirming run should read it).
+# CONFIGURATION_SHOW_OVER_DEFINED: CONFIGURATION_SHOW_RAISES_DIALOG was measured on configurations that solve (the
+# spike); the build's step 6 shows every mode, and would show one whose mates fight if step 5 let it through. Tier 11
+# showed such a configuration on SolidWorks 2026 with no window asking; it applies on 2024 unmeasured until the
+# confirming run, as SUPPRESSED_GEAR_MATE_SENSE_READ does.
+# SUPPRESSION_READ_ORDER is no gate: IsSuppressed2(3, names) answers in the document's configuration order, and the app
+# asks one configuration per call (swcom.Session.mate_suppression), so it depends on no order.
 MODES_FINDINGS = (("FEATURE_SUPPRESS", _SET), ("FEATURE_UNSUPPRESS", _SET), ("MATE_FIND_ROUTE", "mate group"),
                   ("CONFIGURATION_SHOW_RAISES_DIALOG", False), ("MULTI_CONFIGURATION_SAVE_ASKS", False),
-                  ("COLLINEAR_GEAR_MATE_SENSE_READ_BACK", True), ("VALUE_READ_ORDER", "the order passed"))
+                  ("COLLINEAR_GEAR_MATE_SENSE_READ_BACK", True), ("VALUE_READ_ORDER", "the order passed"),
+                  ("CONFIGURATION_SHOW_OVER_DEFINED",
+                   "shown; no window asks; its mates read in error; others solve after"))
 SLIDE_READ_TOLERANCE = 1e-6        # mm: a slide's value read back per configuration
 
 
@@ -3888,10 +3896,15 @@ def _not_whole(turn: float, pitch: float) -> bool:
 
 # -- W8: Update SolidWorks across configurations (W8-PLAN §1.10)
 
-# As MODES_FINDINGS: VALUE_READ_ORDER because the check phase reads every slide's value with dimension_values.
+# As MODES_FINDINGS: VALUE_READ_ORDER because the check phase reads every slide's value with dimension_values;
+# CONFIGURATION_SHOW_OVER_DEFINED because a changed Update shows every mode, one of which may fight (a mate the user
+# made is refused first only when it is on in a mode: _modes_unknown_mates). SUPPRESSION_READ_ORDER is no gate here
+# either (one configuration per call).
 MODES_UPDATE_FINDINGS = (("FEATURE_SUPPRESS", _SET), ("FEATURE_UNSUPPRESS", _SET), ("MATE_FIND_ROUTE", "mate group"),
                          ("CONFIGURATION_SHOW_RAISES_DIALOG", False), ("COLLINEAR_GEAR_MATE_SENSE_READ_BACK", True),
-                         ("VALUE_READ_ORDER", "the order passed"))
+                         ("VALUE_READ_ORDER", "the order passed"),
+                         ("CONFIGURATION_SHOW_OVER_DEFINED",
+                          "shown; no window asks; its mates read in error; others solve after"))
 
 
 @dataclass
