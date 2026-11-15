@@ -7023,6 +7023,418 @@ def w7_planetary_spike(px: Px) -> None:
     px.fact("w7_spike_reopened_right", all((facts.get("reopened") or {}).get("right", {"x": False}).values()))
 
 
+# -- W8 spike: a gear mate between collinear axes, slides, and configurations (W8-PLAN §4.3, and §7's two calls) ----
+#
+# The app's own parts: an anchor gear A and a dog D (one spur part, 30 teeth, module 1.5) and a sleeve S (the internal
+# spur ring of 30 teeth, module 1.5); a body-less layout part with "A Axis" and "D Axis" on one line along +Z. A and D
+# mounted as W5 mounts an anchor; S on A Axis only, free to slide and turn. Then the spline S–A and the coupling S–D
+# as 1 : 1 gear mates, a slide on S, two configurations X and Y set by per-configuration suppression, shows under the
+# dialog watch, a coupling turned on at an angle, and the save and reopen with several configurations.
+
+W8_TAG = "Probe W8 Modes"
+W8_AXIS_XY = (60.0, 60.0)          # probe layout parts take positive coordinates
+W8_A_Z, W8_D_Z = 10.0, 40.0        # origins along +Z (face width 10: A spans 10..20, D 40..50)
+W8_S_PHASE = 6.0                   # half a pitch of 30 teeth
+W8_SLIDE = "S Face Z at P"
+W8_SLIDE_Q = "S Face Z at Q"
+W8_DRIVE = "Drive"
+W8_CONFIGS = ("X", "Y")
+
+
+def w8_parts_spec(folder: str) -> Any:
+    from ..workbook.model import Box, Gear, GearboxSpec, Shaft  # noqa: PLC0415
+    shafts = (Shaft("S1", "frame", "0", "0", "0", "Z+", "input", speed="1000", torque="2"),
+              Shaft("S2", "frame", "0", "100", "0", "Z+", "input", speed="1000", torque="2"))
+    gears = (Gear("Anchor", "S1", "5", "spur", "external", "30", "1.5", face_width="10", bore="8",
+                  part_name="W8 Spike Gear"),
+             Gear("Sleeve", "S2", "5", "spur", "internal", "30", "1.5", face_width="10", part_name="W8 Spike Sleeve"))
+    return GearboxSpec(box=Box(name=f"{W8_TAG} Parts", output_folder=folder.rstrip("\\/") + "\\"), shafts=shafts,
+                       gears=gears, meshes=())
+
+
+def _bstr_array(names: Sequence[str]) -> Any:
+    import pythoncom  # noqa: PLC0415
+    from win32com.client import VARIANT  # noqa: PLC0415
+    return VARIANT(pythoncom.VT_ARRAY | pythoncom.VT_BSTR, list(names))
+
+
+def _cfg_suppress(px: Px, doc: Any, mate: str, on: bool, configs: Sequence[str]) -> Any:
+    """SetSuppression2(action, 3 = in the listed configurations, names): suppress (0) or unsuppress (1)."""
+    feature = mate_feature(doc, mate)
+    action = 0 if on else 1
+    got, value = px.attempt(f"SetSuppression2({action}, 3, {list(configs)}) on {mate}",
+                            lambda: call(feature, "SetSuppression2", action, 3, _bstr_array(configs)))
+    return plain(value) if got else "raised"
+
+
+def _cfg_flags(px: Px, doc: Any, mates: Sequence[str], configs: Sequence[str]) -> Dict[str, Any]:
+    """IsSuppressed2(3, names) of each mate: one flag per configuration, read without activating any."""
+    out: Dict[str, Any] = {}
+    for m in mates:
+        feature = mate_feature(doc, m)
+        got, value = px.attempt(f"IsSuppressed2(3, {list(configs)}) on {m}",
+                                lambda f=feature: call(f, "IsSuppressed2", 3, _bstr_array(configs)))
+        value = value[0] if got and isinstance(value, tuple) and value and isinstance(value[0], (list, tuple)) else value
+        out[m] = dict(zip(configs, [bool(v) for v in value])) if got and isinstance(value, (list, tuple)) else \
+            (plain(value) if got else "raised")
+    return out
+
+
+def _active_config(doc: Any) -> str:
+    return str(call(call(doc, "ConfigurationManager"), "ActiveConfiguration").Name)
+
+
+def _config_names(doc: Any) -> List[str]:
+    return [str(n) for n in (call(doc, "GetConfigurationNames") or ())]
+
+
+def _show(px: Px, doc: Any, name: str, pid: int, paths: Sequence[str]) -> Dict[str, Any]:
+    """ShowConfiguration2 under the dialog watch, CommandInProgress off, then the top-only rebuild; the active name,
+    and every document's save flag before the show, after it and after the rebuild."""
+    out: Dict[str, Any] = {"flags_before": _all_flags(px, paths)}
+    with DialogWatch(pid) as watch:
+        got, value = px.attempt(f"ShowConfiguration2({name})", lambda: call(doc, "ShowConfiguration2", name))
+    out.update(returned=plain(value) if got else "raised", windows=watch.report()["windows"],
+               active=_active_config(doc), flags_after_show=_all_flags(px, paths))
+    rebuild(px, doc, f"{name} shown", top_only=TOP_ONLY)
+    out["flags_after_rebuild"] = _all_flags(px, paths)
+    return out
+
+
+def _w8_drive(px: Px, doc: Any, comps: Mapping[str, Any], layout: Any, label: str) -> Dict[str, Any]:
+    """W5's demonstration drive on A (its Top plane to the layout's Right at 90°, on "Drive"), 90 → 120; every turn
+    about its own axis; S's origin along the axis; set back; the drive taken away."""
+    drive = _spike_drive(px, doc, comps["A"], layout, W8_DRIVE, f"A {label}")
+    rebuild(px, doc, f"{label}: drive added", top_only=TOP_ONLY)
+    start = _frames(comps)
+    _set_global(call(doc, "GetEquationMgr"), W8_DRIVE, DEMO_FROM + 30.0)
+    rebuild(px, doc, f"{label}: driven", top_only=TOP_ONLY)
+    end = _frames(comps)
+    out = {"turns": {k: round(own_turn(start[k][0], end[k][0]), 9) for k in comps},
+           "moved_along_mm": {k: round(end[k][1][2] - start[k][1][2], 9) for k in comps},
+           "errors": errors_only(mate_errors(px, doc))}
+    _set_global(call(doc, "GetEquationMgr"), W8_DRIVE, DEMO_FROM)
+    rebuild(px, doc, f"{label}: set back", top_only=TOP_ONLY)
+    out["back_mm"] = worst(_off(comps, start))
+    _spike_undrive(px, doc, drive, W8_DRIVE)
+    rebuild(px, doc, f"{label}: drive taken away", top_only=TOP_ONLY)
+    return out
+
+
+def _collinear_read(px: Px, doc: Any, name: str, comps: Mapping[str, Any], first: str, second: str) -> Dict[str, Any]:
+    """The gear mate's raw read (Reverse, both EntityParams), W5's rule for a same-way pair and W6's H."""
+    from . import decide  # noqa: PLC0415
+    from .p9_turned import h_says, match_entities  # noqa: PLC0415
+    r = read_back(px, doc, name, True)          # same way: decide.read_back_says_right with internal True
+    axes = [column(_frames(comps)[k][0], 2) for k in (first, second)]
+    dirs = [(e.get("params") or [0] * 6)[3:6] for e in r["entities"]]
+    try:
+        tau = match_entities(dirs, axes)["tau"]
+        r["h_m"] = h_says(bool(r["definition"].get("Reverse")), tau)
+        r["h_says_same_way"] = r["h_m"] == 1
+    except (ValueError, TypeError) as exc:
+        r["h_error"] = str(exc)
+    r["w5_says_same_way"] = decide.read_back_says_right(r["definition"].get("Reverse"), r["parallel"], True)
+    return r
+
+
+def _w8_gear_mate(px: Px, doc: Any, comps: Mapping[str, Any], first: str, second: str, name: str,
+                  flip: bool) -> Dict[str, Any]:
+    """A 1 : 1 gear mate between two Gear Axes under CommandInProgress, renamed at once, read straight after."""
+    out: Dict[str, Any] = {"flip": flip, "cip": _command_in_progress(px, True)}
+    try:
+        made = _mate_axes(px, doc, comps[first], "Gear Axis", comps[second], "Gear Axis", name, "gear", flip=flip,
+                          ratio=(1.0, 1.0))
+        out["made"] = made
+        if made.get("name"):
+            _rename(px, mate_feature(doc, made["name"]), name)
+            out["read"] = _collinear_read(px, doc, name, comps, first, second)
+    finally:
+        _command_in_progress(px, False)
+    return out
+
+
+@probe("w8_modes_spike", needs=("motion_enums", "end_to_end", "layout_planes", "axis_through_named_planes",
+                                "layout_assembly_reopen"), tier=8,
+       members=("IAssemblyDoc.AddMate5 gear collinear", "IConfigurationManager.AddConfiguration2",
+                "IModelDoc2.ShowConfiguration2", "IFeature.SetSuppression2 listed", "IFeature.IsSuppressed2 listed",
+                "IModelDoc2.DeleteConfiguration2", "IModelDocExtension.SaveAs3 configurations"))
+def w8_modes_spike(px: Px) -> None:
+    """W8-PLAN §4.3 and §7's two calls; every reading kept in the fact ``w8_spike`` even when a step fails."""
+    facts: Dict[str, Any] = {"parts": "the app's own: spur 30 teeth module 1.5 (A and D), internal spur ring 30 "
+                                      "teeth module 1.5 (S)"}
+    try:
+        _w8_run(px, facts)
+    finally:
+        px.fact("w8_spike", facts)
+    _w8_summary(px, facts)
+
+
+def _w8_run(px: Px, facts: Dict[str, Any]) -> None:
+    """W8-PLAN §4.3 and §7's two calls on SolidWorks 2026: the spline and coupling as 1 : 1 gear mates between
+    collinear axes (made, read back, driven, both Flips), the slide under the spline, two configurations set by
+    per-configuration suppression and shown under the dialog watch, a coupling turned on at an angle, the reads the
+    app makes in a configuration a mate is off in, the template's configuration deleted, and the save, close and
+    reopen with several configurations (and an unsaved close after a switch)."""
+    from .. import swbuild  # noqa: PLC0415
+    from ..workbook import assess as wb_assess  # noqa: PLC0415
+    from .p1_equations import adder as _adder  # noqa: PLC0415
+
+    root = os.path.join(_folder(px), "w8spike")
+    px.require(not os.path.exists(root), f"{root} does not exist yet")
+    os.makedirs(root)
+    built = _app_build(px, w8_parts_spec(root), swbuild, wb_assess)
+    gear_path, sleeve_path = built["part_of"]["Anchor"], built["part_of"]["Sleeve"]
+    x, y = W8_AXIS_XY
+    layout_path = layout_part(px, root, f"{W8_TAG} Layout", [("A", x, y), ("D", x, y)])
+    asm_path = os.path.join(root, f"{W8_TAG}.SLDASM")
+    paths = [asm_path, layout_path, gear_path, sleeve_path]
+    got, pid = px.attempt("ISldWorks.GetProcessID", lambda: call(sc.app(px), "GetProcessID"))
+    px.require(got and isinstance(pid, int), "GetProcessID answers")
+    names: Optional[Dict[str, str]] = None
+    try:
+        for p in (gear_path, sleeve_path):
+            open_by_path(px, p, prefer="OpenDoc6")
+        asm = Assembly(px, layout_path, {"gear": gear_path, "sleeve": sleeve_path})
+        asm.open()
+        doc, layout = asm.doc, asm.layout
+        asm.add("A", "gear", 1, 0.0, (x, y, W8_A_Z))
+        asm.add("D", "gear", 1, 0.0, (x, y, W8_D_Z))
+        asm.add("S", "sleeve", 1, W8_S_PHASE, (x, y, W8_A_Z))
+        comps = asm.gears
+        facts["config_names_at_start"] = _config_names(doc)
+        _spike_mount(px, doc, comps["A"], layout, "A Axis", layout, W8_A_Z, "A")
+        _spike_mount(px, doc, comps["D"], layout, "D Axis", layout, W8_D_Z, "D")
+        px.require(unfix(px, doc, comps["S"]), "S floats")
+        sa = _mate_axes(px, doc, comps["S"], "Gear Axis", layout, "A Axis", "S on A Axis")
+        px.require(bool(sa.get("name")), f"S is on A Axis: {sa}")
+        rebuild(px, doc, "mounted", top_only=TOP_ONLY)
+        facts["mounted"] = {"off_mm": worst(_off(comps, asm.placed)), "errors": errors_only(mate_errors(px, doc)),
+                            "constrained": {k: constrained(px, c) for k, c in comps.items()}}
+
+        # 1-3: the spline S–A, both Flips, each driven.
+        spline: Dict[str, Any] = {}
+        facts["spline"] = spline
+        for flip in (False, True):
+            before = _frames(comps)
+            m = _w8_gear_mate(px, doc, comps, "S", "A", "S splined to A", flip)
+            spline[str(flip)] = m
+            m["moved_on_make"] = worst(_off(comps, before))
+            m["constrained"] = {k: constrained(px, c) for k, c in comps.items()}
+            m["errors"] = errors_only(mate_errors(px, doc))
+            rebuild(px, doc, f"spline flip {flip}", top_only=TOP_ONLY)
+            m["drive"] = _w8_drive(px, doc, comps, layout, f"spline flip {flip}")
+            t = m["drive"]["turns"]
+            m["same_way"] = abs(t["S"] - t["A"]) < 1e-6 and abs(abs(t["A"]) - 30.0) < 1e-6
+            m["opposite"] = abs(t["S"] + t["A"]) < 1e-6 and abs(abs(t["A"]) - 30.0) < 1e-6
+            delete_mate(px, doc, "S splined to A")
+            rebuild(px, doc, f"spline flip {flip} deleted", top_only=TOP_ONLY)
+        right_flip = next((f == "True" for f, m in spline.items() if m["same_way"]), None)
+        facts["spline_right_flip"] = right_flip
+        px.require(right_flip is not None, f"one Flip turns S with A: {[(f, m['drive']['turns']) for f, m in spline.items()]}")
+        kept = _w8_gear_mate(px, doc, comps, "S", "A", "S splined to A", right_flip)
+        rebuild(px, doc, "spline kept", top_only=TOP_ONLY)
+        facts["spline_kept"] = kept
+
+        # 4: the slide under the spline.
+        add = _adder(px, call(doc, "GetEquationMgr"))
+        px.require(add(f'"{W8_SLIDE}"= {W8_A_Z:g}') >= 0, "the slide global is added")
+        px.require(bool(_select_origin(px, doc, comps["S"], append=False)) and
+                   bool(select_in(px, doc, layout, _plane_names(layout)[0], "PLANE", True)), "S's origin and Front select")
+        slide = add_mate(px, doc, "S along A at P", _enums(px)["distance"], _enums(px)["closest"], distance=W8_A_Z)
+        px.require(bool(slide.get("name")), f"the slide is made: {slide}")
+        _rename(px, mate_feature(doc, slide["name"]), "S along A at P")
+        match = [d for d in sc.dimensions_of(mate_feature(doc, "S along A at P"))]
+        px.require(len(match) == 1 and add(f'"{call(match[0], "Name")}@S along A at P"= "{W8_SLIDE}"') >= 0,
+                   "the slide's distance is linked to its global")
+        rebuild(px, doc, "slide made", top_only=TOP_ONLY)
+        before = _frames(comps)
+        rel_before = own_turn(before["A"][0], before["S"][0])
+        _set_global(call(doc, "GetEquationMgr"), W8_SLIDE, W8_A_Z + 10.0)
+        rebuild(px, doc, "slid +10", top_only=TOP_ONLY)
+        after = _frames(comps)
+        facts["slide"] = {"moved_along_mm": round(after["S"][1][2] - before["S"][1][2], 9),
+                          "off_axis_mm": round(math.hypot(after["S"][1][0] - before["S"][1][0],
+                                                          after["S"][1][1] - before["S"][1][1]), 9),
+                          "relative_turn_change": round(own_turn(after["A"][0], after["S"][0]) - rel_before, 9),
+                          "errors": errors_only(mate_errors(px, doc)),
+                          "read": _collinear_read(px, doc, "S splined to A", comps, "S", "A"),
+                          "drive": _w8_drive(px, doc, comps, layout, "slid")}
+        _set_global(call(doc, "GetEquationMgr"), W8_SLIDE, W8_A_Z)
+        rebuild(px, doc, "slid back", top_only=TOP_ONLY)
+
+        # 5: the coupling S–D, read back and settled.
+        c = _w8_gear_mate(px, doc, comps, "S", "D", "S engages D", False)
+        facts["coupling"] = c
+        if c.get("read", {}).get("w5_says_same_way") is False:
+            delete_mate(px, doc, "S engages D")
+            c2 = _w8_gear_mate(px, doc, comps, "S", "D", "S engages D", True)
+            c["remade"] = c2
+        rebuild(px, doc, "coupling made", top_only=TOP_ONLY)
+        c["constrained"] = {k: constrained(px, cc) for k, cc in comps.items()}
+        c["errors"] = errors_only(mate_errors(px, doc))
+        c["drive"] = _w8_drive(px, doc, comps, layout, "coupled")
+
+        # 6: configurations X and Y.
+        cm = call(doc, "ConfigurationManager")
+        base = _active_config(doc)
+        configs = [base] + list(W8_CONFIGS)
+        cfg: Dict[str, Any] = {"template": base}
+        facts["configurations"] = cfg
+        for name in W8_CONFIGS:
+            with DialogWatch(pid) as watch:
+                got, made = px.attempt(f"AddConfiguration2({name})",
+                                       lambda n=name: call(cm, "AddConfiguration2", n, "", "", 0, "", "", True))
+            cfg[f"add {name}"] = {"returned": type(made).__name__ if got else "raised", "active": _active_config(doc),
+                                  "windows": watch.report()["windows"]}
+            cfg[f"fixed in {name}"] = {"layout": bool(call(layout, "IsFixed"))}
+        # Y is active: its own slide at P + 20, its own global.
+        px.require(add(f'"{W8_SLIDE_Q}"= {W8_A_Z + 20.0:g}') >= 0, "the second slide's global is added")
+        cfg["suppress P in Y first"] = _cfg_suppress(px, doc, "S along A at P", True, ["Y"])
+        cfg["suppress coupling in Y first"] = _cfg_suppress(px, doc, "S engages D", True, ["Y"])
+        cfg["flags before Q"] = _cfg_flags(px, doc, ["S along A at P", "S engages D"], configs)
+        rebuild(px, doc, "Y: P and coupling off", top_only=TOP_ONLY)
+        px.require(bool(_select_origin(px, doc, comps["S"], append=False)) and
+                   bool(select_in(px, doc, layout, _plane_names(layout)[0], "PLANE", True)), "S's origin and Front select")
+        q = add_mate(px, doc, "S along A at Q", _enums(px)["distance"], _enums(px)["closest"], distance=W8_A_Z + 20.0)
+        cfg["slide Q made"] = q
+        if q.get("name"):
+            _rename(px, mate_feature(doc, q["name"]), "S along A at Q")
+            qdim = sc.dimensions_of(mate_feature(doc, "S along A at Q"))
+            cfg["slide Q linked"] = len(qdim) == 1 and add(f'"{call(qdim[0], "Name")}@S along A at Q"= "{W8_SLIDE_Q}"') >= 0
+        cfg["flags right after Q"] = _cfg_flags(px, doc, ["S along A at P", "S along A at Q", "S engages D"], configs)
+        others = [base, "X"]
+        cfg["set"] = {"Q off in X and template": _cfg_suppress(px, doc, "S along A at Q", True, others),
+                      "Q on in Y": _cfg_suppress(px, doc, "S along A at Q", False, ["Y"]),
+                      "P on in X and template": _cfg_suppress(px, doc, "S along A at P", False, others),
+                      "P off in Y": _cfg_suppress(px, doc, "S along A at P", True, ["Y"]),
+                      "coupling on in X and template": _cfg_suppress(px, doc, "S engages D", False, others),
+                      "coupling off in Y": _cfg_suppress(px, doc, "S engages D", True, ["Y"])}
+        mates_cfg = mate_names(doc)
+        cfg["flags unshown"] = _cfg_flags(px, doc, mates_cfg, configs)
+        rebuild(px, doc, "Y set", top_only=TOP_ONLY)
+        shows: List[Dict[str, Any]] = []
+        cfg["shows"] = shows
+        for name in ("X", "Y", "X"):
+            s = _show(px, doc, name, pid, paths)
+            shows.append(s)
+            s["flags_shown"] = _cfg_flags(px, doc, mates_cfg, configs)
+            s["this_configuration"] = {m: is_suppressed(px, mate_feature(doc, m)) for m in mates_cfg}
+            s["walk"] = mate_names(doc)
+            s["S_z"] = round(_frames(comps)["S"][1][2], 9)
+            s["errors"] = errors_only(mate_errors(px, doc))
+            s["constrained"] = {k: constrained(px, cc) for k, cc in comps.items()}
+            s["layout_fixed"] = bool(call(layout, "IsFixed"))
+            s["coupling_read"] = _collinear_read(px, doc, "S engages D", comps, "S", "D")
+            s["flags_after_reads"] = _all_flags(px, paths)
+            s["drive"] = _w8_drive(px, doc, comps, layout, f"in {name}")
+
+        # 7: in Y, D put 5° about its own axis; X shown: does the coupling keep the 5° it finds?
+        s = _show(px, doc, "Y", pid, paths)
+        dm, dat = _frames(comps)["D"]
+        rel_before = own_turn(_frames(comps)["S"][0], dm)
+        put(px, doc, comps["D"], crossed.multiply(dm, crossed.rot_z(5.0)), dat, top_only=TOP_ONLY)
+        rel_y = own_turn(_frames(comps)["S"][0], _frames(comps)["D"][0])
+        s7 = _show(px, doc, "X", pid, paths)
+        fr = _frames(comps)
+        cfg["coupling at an angle"] = {"relative_in_Y_before_put": round(rel_before, 9),
+                                       "relative_in_Y_after_put": round(rel_y, 9),
+                                       "relative_in_X_after_show": round(own_turn(fr["S"][0], fr["D"][0]), 9),
+                                       "D_turn_from_put": round(own_turn(dm, fr["D"][0]), 9),
+                                       "errors": errors_only(mate_errors(px, doc)), "windows": s7["windows"],
+                                       "read": _collinear_read(px, doc, "S engages D", comps, "S", "D"),
+                                       "drive": _w8_drive(px, doc, comps, layout, "X after the angle")}
+
+        # The template's configuration deleted, X active.
+        with DialogWatch(pid) as watch:
+            got, value = px.attempt(f"DeleteConfiguration2({base})", lambda: call(doc, "DeleteConfiguration2", base))
+        cfg["delete template"] = {"returned": plain(value) if got else "raised", "names": _config_names(doc),
+                                  "windows": watch.report()["windows"], "active": _active_config(doc)}
+        rebuild(px, doc, "template deleted", top_only=TOP_ONLY)
+        cfg["flags after delete"] = _cfg_flags(px, doc, mates_cfg, list(W8_CONFIGS))
+
+        # 8: save with several configurations, under the watch.
+        with DialogWatch(pid) as watch:
+            saved = _save_in_place(px, doc, asm_path, "the modes spike")
+        facts["save"] = {"saved": saved, "windows": watch.report()["windows"], "active": _active_config(doc),
+                         "S_z": round(_frames(comps)["S"][1][2], 9), "flags_after": _all_flags(px, paths)}
+        px.require(saved and os.path.isfile(asm_path), "the spike saves")
+        px.shared["created"].append(str(call(doc, "GetTitle")))
+        names = asm.names()
+        layout_name = str(call(layout, "Name2"))
+    finally:
+        _close_quietly(px, paths)
+    if names:
+        reopen: Dict[str, Any] = {}
+        facts["reopen"] = reopen
+
+        def open_saved(label: str) -> Tuple[Any, str, Dict[str, Any], Any]:
+            with DialogWatch(pid) as watch:
+                doc, _ = open_by_path(px, asm_path, sc.SW_DOC_ASSEMBLY, prefer="OpenDoc6")
+            title = str(call(doc, "GetTitle"))
+            if title not in px.shared["created"]:
+                px.shared["created"].append(title)
+            reopen[f"{label}: windows on open"] = watch.report()["windows"]
+            reopen[f"{label}: flags on open"] = _all_flags(px, paths)
+            reopen[f"{label}: active on open"] = _active_config(doc)
+            comps = {k: call(doc, "GetComponentByName", n) for k, n in names.items()}
+            return doc, title, comps, call(doc, "GetComponentByName", layout_name)
+
+        # First open: reads only, then one switch and an unsaved close (does it ask?).
+        try:
+            doc, title, comps, layout = open_saved("first")
+            reopen["names"] = _config_names(doc)
+            mates_cfg = mate_names(doc)
+            reopen["flags"] = _cfg_flags(px, doc, mates_cfg, list(W8_CONFIGS))
+            reopen["this_configuration"] = {m: is_suppressed(px, mate_feature(doc, m)) for m in mates_cfg}
+            reopen["spline_read"] = _collinear_read(px, doc, "S splined to A", comps, "S", "A")
+            reopen["coupling_read"] = _collinear_read(px, doc, "S engages D", comps, "S", "D")
+            reopen["errors"] = errors_only(mate_errors(px, doc))
+            reopen["S_z"] = round(_frames(comps)["S"][1][2], 9)
+            reopen["flags_after_reads"] = _all_flags(px, paths)
+            other = next(n for n in W8_CONFIGS if n != reopen["first: active on open"])
+            s = _show(px, doc, other, pid, paths)
+            reopen["switch"] = {k: s[k] for k in ("returned", "active", "windows", "flags_after_show",
+                                                  "flags_after_rebuild")}
+            reopen["switch"]["S_z"] = round(_frames(comps)["S"][1][2], 9)
+            reopen["close_after_switch"] = watched_close(px, "CloseDoc", title, pid)
+            reopen["open_after_close"] = _open_probe_docs(px, paths)
+        finally:
+            _close_quietly(px, paths)
+        # Second open: the drive in each configuration.
+        try:
+            doc, title, comps, layout = open_saved("second")
+            reopen["drives"] = {}
+            for name in W8_CONFIGS:
+                s = _show(px, doc, name, pid, paths)
+                reopen["drives"][name] = {"show": {k: s[k] for k in ("returned", "active", "windows")},
+                                          "S_z": round(_frames(comps)["S"][1][2], 9),
+                                          "errors": errors_only(mate_errors(px, doc)),
+                                          "drive": _w8_drive(px, doc, comps, layout, f"reopened, {name}")}
+        finally:
+            _close_quietly(px, paths)
+
+
+def _w8_summary(px: Px, facts: Mapping[str, Any]) -> None:
+    sp = facts.get("spline", {})
+    summary = {
+        "spline both Flips": {f: {"same_way": m.get("same_way"), "opposite": m.get("opposite"), "status": m.get("made", {}).get("status"),
+                                  "moved_on_make": m.get("moved_on_make"),
+                                  "w5_says_same_way": m.get("read", {}).get("w5_says_same_way"),
+                                  "h_says_same_way": m.get("read", {}).get("h_says_same_way"),
+                                  "Reverse": m.get("read", {}).get("definition", {}).get("Reverse")}
+                              for f, m in sp.items()},
+        "slide": {k: facts.get("slide", {}).get(k) for k in ("moved_along_mm", "relative_turn_change", "errors")},
+        "coupling drive": facts.get("coupling", {}).get("drive", {}).get("turns"),
+        "shows": [(s.get("active"), s.get("S_z"), s.get("drive", {}).get("turns"), s.get("windows")) for s in
+                  facts.get("configurations", {}).get("shows", [])],
+        "angle": facts.get("configurations", {}).get("coupling at an angle"),
+        "save windows": facts.get("save", {}).get("windows"),
+        "reopen": {k: v for k, v in (facts.get("reopen") or {}).items() if "on open" in k or k == "close_after_switch"}}
+    px.check(True, f"W8 spike: {summary}")
+    px.fact("w8_spike_summary", summary)
+
+
 # -- 15 (last): a gear mate's ratio changed through its definition, recorded and never chosen ------------------
 #
 # Last in the tier on purpose: on SolidWorks 2024 the copy it changes cannot be closed, and it holds the train's

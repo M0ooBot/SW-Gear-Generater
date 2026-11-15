@@ -22,7 +22,8 @@ TIER_8 = ["motion_enums", "shaft_axis_mates", "gear_mate_sense", "compound_lock"
           "mate_folders", "lightweight_remake", "second_assembly_beside_unsaved", "gear_mate_definition_read",
           "origin_noise", "unsaved_update_close",
           "drag_operator_turns_train", "ring_mate_sense", "ring_trains_saved",
-          "ring_trains_from_another_version", "w7_planetary_spike", "gear_mate_definition"]
+          "ring_trains_from_another_version", "w7_planetary_spike", "w8_modes_spike",
+          "gear_mate_definition"]
 
 
 @pytest.fixture(scope="module")
@@ -835,3 +836,14 @@ def test_the_w7_spike_expects_the_plans_planetary_motion():
     from gear_generator.workbook import assess
     spec = p8.spike_parts_spec("C:\\X")
     assert assess.assess(spec, [], "C:\\X\\", "").lay_out_refusal() == ""
+
+
+def test_the_w8_spike_parts_are_the_apps_own_and_pass_assess():
+    """The W8 spike builds its anchor/dog and sleeve through the app's builder: a spur and an internal ring of 30
+    teeth, module 1.5, no meshes, which assess accepts."""
+    from gear_generator.workbook import assess as wb_assess
+    spec = p8.w8_parts_spec("C:\\Probe\\w8spike")
+    assert spec.box.output_folder == "C:\\Probe\\w8spike\\"
+    assert [(g.id, g.kind, g.side, g.teeth, g.module) for g in spec.gears] == [
+        ("Anchor", "spur", "external", "30", "1.5"), ("Sleeve", "spur", "internal", "30", "1.5")]
+    assert wb_assess.assess(spec, [], spec.box.output_folder, "").lay_out_refusal() == ""
