@@ -1083,14 +1083,15 @@ window to 1080 px for both fixtures, four long mode names and six modes.
 Boards: `WorkbookModes` (the E4 transfer case read, the chooser on 4L),
 `WorkbookModesBuilt` (TransferCase_Parallel built on the fake, the chooser on
 2H) and `WorkbookModesUpdated` (the same after a quiet Update: the mode it worked
-in, and the couplings' turning it could not read with their mates off there).
+in; with `findings.SUPPRESSED_GEAR_MATE_SENSE_READ` as committed it reads every
+coupling's turning, so it says nothing of it).
 
 | State | Sentence | Build button | Update SolidWorks |
 |---|---|---|---|
 | ready | *Ready: Build makes 6 parts, TransferCase_Parallel_Layout and TransferCase_Parallel.SLDASM in …. Its gears are mated to their shafts and, as each mode engages them, to each other, so they turn together in SolidWorks. It has 4 modes, 2H, 4H, N and 4L: each becomes a configuration of the assembly, and it opens in 2H.* | **Build**, on | hidden |
 | built | *Built 6 parts, …; no interference between the gears in any mode, where they stand. Its gears are mated to turn in each of its 4 modes, one configuration each (2H, 4H, N and 4L), and SolidWorks reports no mate in error in any of them: it opens in 2H; to switch mode, double-click another mode's configuration in SolidWorks' ConfigurationManager. …* then, by the running version's answer the build carried (`positions_per_configuration`), *A turn you give the gears in one mode stays in that mode.* | **Build again…**, on | on, primary |
 | the same, the window opened afresh | the record's sentence with neither claim about a turn, since no job of this session has said which SolidWorks runs (W8-INTERFACES §9.12) | **Build again…**, on | on, primary |
-| a quiet Update | *SolidWorks already matches the workbook: nothing was changed. It worked in 2H, the configuration that was active; it did not show the other modes, since nothing needed changing.* and what it could not read: *Which way RangeSlv and LoDog, and ModeSlv and FrontDog, turn against each other was not checked this time: their mates are switched off in 2H, …* | **Build again…**, on | on, primary |
+| a quiet Update | *SolidWorks already matches the workbook: nothing was changed. It worked in 2H, the configuration that was active; it did not show the other modes, since nothing needed changing.* With `findings.SUPPRESSED_GEAR_MATE_SENSE_READ` as committed (*answers, marks nothing*) it reads the turning of the mates switched off in 2H too, and says no more; with the finding unset it adds what it could not read: *Which way RangeSlv and LoDog, and ModeSlv and FrontDog, turn against each other was not checked this time: their mates are switched off in 2H, …* | **Build again…**, on | on, primary |
 | a Modes pick changed (4H's ModeSlv 4WD → 2WD) | *Update SolidWorks will move ModeSlv in 4H to 96 mm along Rear, and switch the mate ModeSlv engages FrontDog off in 4H.* and after: *Updated SolidWorks: moved ModeSlv in 4H to 96 mm along Rear, … It worked in 2H, the configuration that was active, then showed and checked 4H, N and 4L and left the assembly in 2H. …* | **Build again…**, on | on, primary |
 | a planetary form, a slider on a fixed or turned shaft, … | *Fix the workbook before building: …* — what W8 does not build is an error naming no phase | **Build**, off | — |
 

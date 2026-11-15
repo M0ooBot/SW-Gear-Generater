@@ -6032,7 +6032,9 @@ TC_GEARS = {h: TC_NAMES[h] for h in TC_AT} | {"layout": "layout"}
 @pytest.fixture
 def mode_findings(monkeypatch):
     """Every finding a build with modes reads, pinned here at what the W8 spike found on SolidWorks 2026 (never the
-    committed values), with the read-back's and the remake's."""
+    committed values), with the read-back's and the remake's, and a suppressed gear mate's sense read as probe
+    planetary_put_back found it on 2026 (an Update with modes reads every sense; a test of the unread sentence sets
+    it to None)."""
     for name, value in tuple(swcom.CONFIGURATION_FINDINGS) + (
             ("CONFIGURATION_SHOW_RAISES_DIALOG", False), ("MULTI_CONFIGURATION_SAVE_ASKS", False),
             ("COLLINEAR_GEAR_MATE_SENSE_READ_BACK", True), ("SLIDE_VALUE_PER_CONFIGURATION_ON_2026", True),
@@ -6041,7 +6043,9 @@ def mode_findings(monkeypatch):
             ("COMPONENT_FIND_ROUTE", "GetComponentByName"),
             ("GEAR_MATE_SENSE_READ_BACK", "(Reverse == entities parallel) == internal"),
             ("GEAR_MATE_READ_BACK_TELLS_SENSE", True), ("GEAR_MATE_CHECK_AND_REMAKE_HOLDS", True),
-            ("MATE_DELETE_ROUTE", "Select2 then EditDelete()"), ("MATE_RENAME_ROUTE", "IFeature.Name put")):
+            ("MATE_DELETE_ROUTE", "Select2 then EditDelete()"), ("MATE_RENAME_ROUTE", "IFeature.Name put"),
+            ("POSITIONS_PER_CONFIGURATION_ON_2024", True),
+            ("SUPPRESSED_GEAR_MATE_SENSE_READ", "answers, marks nothing")):
         monkeypatch.setattr(findings, name, value, raising=False)
 
 

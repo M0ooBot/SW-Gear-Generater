@@ -1211,8 +1211,9 @@ boards["WorkbookModesBuilt"] = ("Workbook · TransferCase_Parallel built: one co
                                 workbook_board(parallel, desk=parallel_desk, note=parallel_note,
                                                positions_per_configuration=parallel_desk.positions),
                                 WINDOW_WIDTH)
-# The same, Update SolidWorks pressed with nothing changed: the quiet Update's sentence, which mode it worked in, and
-# what it could not read with the couplings switched off there (W8-INTERFACES §9.11, §9.16).
+# The same, Update SolidWorks pressed with nothing changed: the quiet Update's sentence, which mode it worked in
+# (W8-INTERFACES §9.11). With findings.SUPPRESSED_GEAR_MATE_SENSE_READ as committed it reads the couplings' turning
+# though they are off in 2H and says nothing of it; unset, it would add the pairs it did not check (§9.16).
 updated_note = press_update(parallel_desk, parallel)
 boards["WorkbookModesUpdated"] = ("Workbook · TransferCase_Parallel after a quiet Update: the mode it worked in",
                                   workbook_board(parallel, desk=parallel_desk, note=updated_note,

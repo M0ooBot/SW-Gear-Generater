@@ -2478,22 +2478,32 @@ def test_a_gearbox_with_modes_builds_one_configuration_per_mode_and_says_where_a
     assert again.status.get() == expected and stays not in expected
 
 
-def test_a_quiet_update_and_a_modes_pick_changed_update_a_gearbox_with_modes(desk, mode_findings):
+QUIET_UPDATE_WITH_MODES = ("SolidWorks already matches the workbook: nothing was changed. It worked in 2H, the "
+                           "configuration that was active; it did not show the other modes, since nothing needed "
+                           "changing.")
+
+
+@pytest.mark.parametrize("suppressed_read, unread", [
+    ("answers, marks nothing", ""),
+    (None, " Which way RangeSlv and LoDog, and ModeSlv and FrontDog, turn against each other was not checked this "
+           "time: their mates are switched off in 2H, the mode SolidWorks is showing, and are checked when an Update "
+           "works in a mode that has them on.")])
+def test_a_quiet_update_and_a_modes_pick_changed_update_a_gearbox_with_modes(desk, mode_findings, monkeypatch,
+                                                                             suppressed_read, unread):
     """W8-PLAN §1.10 and J14 through the window, on the fake: a quiet Update says which mode it worked in and that
     it did not show the others (W8-INTERFACES §9.11); a Modes pick changed between existing positions (4H's ModeSlv
     4WD → 2WD) is an Update that sets that mode's slide value and switches its coupling off, and the Speeds panel
-    reads the new 4H."""
+    reads the new 4H. With a suppressed gear mate's sense readable (findings.SUPPRESSED_GEAR_MATE_SENSE_READ as
+    committed) the quiet Update reads every pair's turning and says nothing of it; with the finding unset it names
+    the pairs whose mates are off in the mode shown as not checked (W8-INTERFACES §9.16)."""
     from workbook_fixtures import transfer_case_parallel
+    monkeypatch.setattr(findings, "SUPPRESSED_GEAR_MATE_SENSE_READ", suppressed_read, raising=False)
     window = desk.open(transfer_case_parallel(), name="TransferCase_Parallel.xlsx")
     window.press_build()
     desk.finish(window)
     window.press_update()
     desk.finish(window)
-    assert window.status.get() == (
-        "SolidWorks already matches the workbook: nothing was changed. It worked in 2H, the configuration that was "
-        "active; it did not show the other modes, since nothing needed changing. Which way RangeSlv and LoDog, and "
-        "ModeSlv and FrontDog, turn against each other was not checked this time: their mates are switched off in 2H, "
-        "the mode SolidWorks is showing, and are checked when an Update works in a mode that has them on.")
+    assert window.status.get() == QUIET_UPDATE_WITH_MODES + unread
     save_in_excel(window, {"Modes": {"C3": "2WD"}})
     footer = window.footer()
     assert (footer.build_label, footer.update_enabled, footer.update_primary) == ("Build again…", True, True)
