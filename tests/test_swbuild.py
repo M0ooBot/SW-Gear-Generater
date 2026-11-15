@@ -5631,3 +5631,23 @@ def test_a_held_ring_joins_a_train_through_its_gear_mate_only(turned_findings):
     result = _update_pl(fake)
     assert ("Sun", "Planet copy 2") in result.out_of_step and ("Planet copy 2", "Ring") in result.out_of_step
     assert result.ok and set(_puts(fake)) == {f"placed{i}" for i in (1, 2, 3, 4, 6, 7)}, result.log_lines()
+
+
+def test_placed_lists_a_planetary_trains_puts_in_the_order_they_were_made(turned_findings, monkeypatch):
+    """W7-INTERFACES §6.13 as the result says it: ``placed`` is appended straight after each put, so it is the order
+    made — a held member off its place first, then the carrier, then every other gear in the train's order."""
+    monkeypatch.setattr(findings, "REPLACE_FIXED_ROUTE", "Transform2 put")
+    fake = _built_pl()
+    frames = dict(_pl_frames(), Ring=(IDENTITY, (0.0, 0.0, 7.0)))           # Ring At 10 → 12
+    result = _update_pl(fake, placements=_pl_placements(frames))
+    assert result.ok, result.log_lines()
+    assert result.placed == ["Ring", C_ID, "Sun"] + list(COPY_IDS) + ["CarrierGear"]
+    assert result.placed == [next(p.gear for p in _pl_placements() if p.component == fake._name2(h))
+                             for h in _puts(fake)]                          # the same order as the calls made
+    fake = _built_pl()
+    frames = dict(_pl_frames(), **{c: (_rot_z(10.0), (x, y, 7.0)) for c, (x, y) in COPY_AT.items()})
+    motion = _pl_motion(face_globals=(("Sun", GlobalVariable("Sun Face Z", "5")),
+                                      ("Planet", GlobalVariable("Planet Face Z", "7"))))
+    result = _update_pl(fake, placements=_pl_placements(frames), motion=motion)    # Planet At 10 → 12
+    assert result.ok, result.log_lines()
+    assert result.placed == [C_ID, "Sun"] + list(COPY_IDS) + ["CarrierGear"]
