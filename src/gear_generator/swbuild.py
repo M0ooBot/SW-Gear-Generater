@@ -35,7 +35,7 @@ from .gears.spur import AXIS_NAME
 from .store import GEARBOX_MOTION, GEARBOX_STATIC, same_path
 from .swcom import (ASSEMBLY_PAIR, ASSEMBLY_STATIC, ASSEMBLY_TRAIN, DOC_ASSEMBLY, MINIMUM_MAJOR,
                     RESOLVED_ROUTE_FINDING, ComponentGone, DocInfo, MateGone, MateRefused, MateState, SolidWorksError,
-                    meets_minimum, rebuild_call, release_year)
+                    Vec3, meets_minimum, rebuild_call, release_year)
 
 VALUE_TOLERANCE = 1e-6
 FULLY_DEFINED = 3
@@ -111,7 +111,13 @@ class SolidWorks(Protocol):
     def set_gear_ratio(self, handle: str, a: str, b: str, ratio: Tuple[int, int]) -> None: ...
     def gear_mate_ratio(self, handle: str) -> Tuple[float, float]: ...
     def component_resolved(self, handle: str) -> bool: ...
-    def gear_mate_sense(self, handle: str, internal: bool) -> Tuple[bool, bool]: ...
+    # W6 (W6-INTERFACES.md): the turned form, which swcom.Session answers from the interface commit on. swbuild's
+    # own calls and the fake still use W5's ``(handle, internal) -> (right, parallel)`` until Agent A moves them
+    # (``_planned_axes``, ``_sense_read`` with axes, ``_mesh_senses``); only the fake is called meanwhile.
+    def gear_mate_sense(self, handle: str, same_sense: bool,
+                        axes: Tuple[Vec3, Vec3]) -> Tuple[bool, Tuple[int, int]]: ...
+    def line_axis(self, handle: str, name: str, point: Vec3, direction: Vec3, length: float) -> str: ...
+    def axis_line(self, handle: str, name: str) -> Tuple[Vec3, Vec3]: ...
     def remake_gear_mate(self, handle: str, a: str, b: str, ratio: Sequence[float], flip: bool,
                          *, saved: bool = True) -> None: ...
 
@@ -367,6 +373,12 @@ def _axis(sw, op: base.Axis, result, trig):
     return f"axis {op.name}"
 
 
+def _line_axis(sw, op: base.LineAxis, result, trig):
+    """W6: a slanted shaft's axis on a one-line 3D sketch (``Session.line_axis``, Agent A)."""
+    _kept(result, "axis", op.name, sw.line_axis(op.id, op.name, op.point, op.direction, op.length))
+    return f"axis {op.name} on {op.sketch}"
+
+
 def _open(sw, op: base.OpenSketch, result, trig):
     sw.open_sketch(op.id, op.plane)
     return f"sketch {op.id} opened on plane {op.plane}"
@@ -524,6 +536,7 @@ _RUNNERS: Mapping[type, Callable] = {
     base.AddGlobal: _add_global,
     base.LinkDimension: _link,
     base.Axis: _axis,
+    base.LineAxis: _line_axis,
     base.OpenSketch: _open,
     base.Circle: _circle,
     base.Arc: _arc,
@@ -556,6 +569,7 @@ _RUNNERS: Mapping[type, Callable] = {
 
 def build(sw: SolidWorks, plan: BuildPlan, exists: Callable[[str], bool] = os.path.exists,
           kind: Optional[str] = None, *, gears: Optional[Mapping[str, str]] = None,
+          senses: Optional[Mapping[str, bool]] = None,
           internal: Optional[Collection[str]] = None) -> BuildResult:
     """Make the plan's document, run every step, rebuild once, check, and save.
 
@@ -595,6 +609,15 @@ def build(sw: SolidWorks, plan: BuildPlan, exists: Callable[[str], bool] = os.pa
     the read-back not settled, a plan with a mesh inside a ring is refused
     before anything is made, since its sense cannot be told.
 
+    ``senses`` (keyword, W6; W6-INTERFACES.md): gear mate name -> whether
+    the mesh turns its two gears the same way about their own axes (``k >
+    0``), the form that replaces ``internal`` for every axis. Until Agent A
+    reads it through ``_mesh_senses``, a mesh between parallel axes is
+    turned into W5's ``internal`` here (:func:`_internal_from_senses`: inside
+    a ring exactly when the same sense agrees with the two planned axes
+    pointing the same way), and a turned one is a stub. ``internal`` goes
+    when A's pass removes it with its tests; giving both is refused.
+
     ``gears`` (keyword, :func:`build_gearbox`'s map of assembly handle to
     workbook gear id) names a gear in a mate problem by its id; without it,
     by the Name2 it kept. The check runs only when every op ran (a build
@@ -605,6 +628,7 @@ def build(sw: SolidWorks, plan: BuildPlan, exists: Callable[[str], bool] = os.pa
     problems = plan.check()
     if problems:
         raise BuildError("The build plan is not sound: " + " ".join(problems))
+    internal = _internal_from_senses(plan, senses, internal)
     first = plan.ops[0]
     if kind is None:
         kind = workbook_assembly_kind(plan)
@@ -763,6 +787,40 @@ def _sense_gate(plan: BuildPlan, internal: Optional[Collection[str]]) -> None:
     if missing is not None:
         raise BuildError(f"A gearbox built to turn needs findings.{missing[0]} settled on SolidWorks (it is "
                          f"{missing[1]!r}), so nothing is made or changed; run probe tier 8 first.")
+
+
+def _internal_from_senses(plan: BuildPlan, senses: Optional[Mapping[str, bool]],
+                          internal: Optional[Collection[str]]) -> Optional[Collection[str]]:
+    """W6's ``senses`` as W5's ``internal``, for meshes between parallel axes only (the interface commit's bridge;
+    Agent A replaces it with ``_mesh_senses``): a gear mate is inside a ring exactly when its same sense agrees with
+    its two gears' planned axes (each handle's last ``Place``'s third column) pointing the same way. A turned gear
+    mate is not this bridge's to judge."""
+    if senses is None:
+        return internal
+    if internal is not None:
+        raise BuildError("A build was given both the W6 senses and the W5 ring meshes of its gear mates, so which way "
+                         "each turns is said twice and nothing is made; that is a fault in Gear Generator.")
+    axes: Dict[str, Tuple[float, float, float]] = {}
+    for op in plan.ops:
+        if isinstance(op, base.Place):
+            axes[op.component] = (float(op.rotation[2]), float(op.rotation[5]), float(op.rotation[8]))
+    out = []
+    for op in plan.ops:
+        if not (isinstance(op, base.Mate) and op.kind == "gear"):
+            continue
+        name = op.name or op.id
+        if name not in senses:
+            continue
+        ga, gb = axes.get(op.a.partition(":")[0]), axes.get(op.b.partition(":")[0])
+        if ga is None or gb is None:
+            raise BuildError(f"The gear mate {name} joins a gear the plan never places, so which way it turns "
+                             "cannot be told and nothing is made; that is a fault in Gear Generator.")
+        dot = sum(p * q for p, q in zip(ga, gb))
+        if abs(dot) <= 0.99:
+            raise NotImplementedError("W6: Agent A, swbuild._mesh_senses for a gear mate between turned axes")
+        if bool(senses[name]) == (dot > 0):
+            out.append(name)
+    return tuple(out)
 
 
 def _planned_sigma(plan: BuildPlan) -> Dict[str, int]:
@@ -1908,6 +1966,7 @@ def build_gearbox(sw: SolidWorks, parts: Sequence[BuildPlan], reuse: Sequence[Do
                   exists: Callable[[str], bool] = os.path.exists,
                   progress: Optional[Callable[[Step], None]] = None,
                   mtime: Callable[[str], float] = os.path.getmtime,
+                  senses: Optional[Mapping[str, bool]] = None,
                   internal: Optional[Collection[str]] = None) -> GearboxResult:
     """A workbook's parts, its layout part and its static assembly, in one worker job (PLAN-WORKBOOK §4.2–§4.3).
 
@@ -1977,9 +2036,17 @@ def build_gearbox(sw: SolidWorks, parts: Sequence[BuildPlan], reuse: Sequence[Do
     :func:`build`, which reads every gear mate's sense once it is given (and
     refuses a ring train before anything is made while the read-back is not
     settled). None, as before: no sense is read.
+
+    ``senses`` (keyword, W6): gear mate name -> same sense (``k > 0``), as
+    :func:`build` takes it; ``GearboxPlan.build_kwargs`` passes it for a
+    turning plan once Agent B moves it there, and ``internal`` goes with
+    A's pass. Until then it is turned into ``internal`` for parallel meshes
+    (:func:`_internal_from_senses`).
     """
     say = progress or _quiet
     _gate(sw)
+    if assembly is not None:
+        internal = _internal_from_senses(assembly, senses, internal)
     gear_of_handle = dict(gears or {})
     layout_plan = layout if isinstance(layout, BuildPlan) else None
     layout_reuse = layout if isinstance(layout, DocumentValues) else None

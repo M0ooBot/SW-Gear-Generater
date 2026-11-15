@@ -2221,15 +2221,19 @@ def section_m7(worker, excel):
 
 
 def ring_mate_reading(worker, desk, name):
-    """The app's own read-back of a ring's gear mate (``Session.gear_mate_sense``, internal: probe ring_mate_sense's
-    rule, reading only): whether it reads right, whether its two axes point the same way, and its Reverse as that
-    rule gives it."""
+    """The app's own read-back of a ring's gear mate (``Session.gear_mate_sense``, W6's form: the two gears' axes as
+    recorded and the mesh's same sense; reading only): whether it reads right, whether its two entity directions
+    point the same way, and its Reverse as the rule gives it."""
     box = desk.record.gearbox
+    rotation = {c.gear: c.rotation for c in box.components}
+    axes = tuple((rotation[g][2], rotation[g][5], rotation[g][8]) for g in name.split(" meshes "))
+    same_sense = sum(p * q for p, q in zip(*axes)) > 0      # inside a ring k = +(a_a·a_b)·za/zb
 
     def work(s):
         s.find_mate("ring", name)
-        return s.gear_mate_sense("ring", True)
-    right, parallel = run(worker, in_assembly(box.assembly, work))
+        return s.gear_mate_sense("ring", same_sense, axes)
+    right, taus = run(worker, in_assembly(box.assembly, work))
+    parallel = taus[0] * taus[1] * (1 if same_sense else -1) > 0   # the entity directions, d = τ·g, point alike
     reverse = parallel if right else not parallel          # internal: right == (Reverse == parallel)
     say(f"fact    {name} read back: right {right}; its axes {'parallel' if parallel else 'opposed'}; Reverse {reverse}")
     return right, parallel, reverse

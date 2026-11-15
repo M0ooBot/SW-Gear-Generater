@@ -18,6 +18,7 @@ place a pointer may live.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field, fields
 from typing import Dict, List, Mapping, Optional, Protocol, Sequence, Tuple, Union
 
@@ -127,6 +128,26 @@ class Axis:
     id: str
     name: str
     planes: Tuple[PlaneRef, PlaneRef] = (2, 3)
+
+
+@dataclass(frozen=True)
+class LineAxis:
+    """A reference axis on a one-line 3D sketch (W6, a slanted shaft in the layout part; W6-PLAN §2.2, D4): the
+    sketch ``"<name without ' Axis'> Line"`` holding one line from ``point`` to ``point + length·direction`` (mm,
+    model space), and the axis named ``name`` made on it. Defines ``id``. ``BuildPlan.check`` refuses a
+    ``direction`` not of unit length to 1e-9, a ``length`` not above 0, a ``name`` not ending in ``" Axis"``, and
+    one made while a sketch is open. No global drives it: the line is fixed."""
+
+    id: str
+    name: str
+    point: Point3
+    direction: Point3
+    length: float = 100.0
+
+    @property
+    def sketch(self) -> str:
+        """The 3D sketch's name: ``"S3 Axis"`` -> ``"S3 Line"``."""
+        return self.name[:-len(" Axis")] + " Line" if self.name.endswith(" Axis") else self.name + " Line"
 
 
 @dataclass(frozen=True)
@@ -413,19 +434,19 @@ class Mate:
 
 
 Op = Union[
-    NewPart, NewAssembly, AddGlobal, LinkDimension, Axis, OpenSketch, Circle, Arc, Line, Point,
+    NewPart, NewAssembly, AddGlobal, LinkDimension, Axis, LineAxis, OpenSketch, Circle, Arc, Line, Point,
     EquationCurve, Relation, Dimension, CloseSketch, Extrude, Cut, CircularPattern, RefPlane, SweepCut,
     MirrorBody, RefPlaneNormal, Revolve, LoftCut, CustomProperty, ManualStep, Rebuild, SaveAs, AddComponent, Fix,
     Unfix, Place, Mate,
 ]
 OPS = (
-    NewPart, NewAssembly, AddGlobal, LinkDimension, Axis, OpenSketch, Circle, Arc, Line, Point,
+    NewPart, NewAssembly, AddGlobal, LinkDimension, Axis, LineAxis, OpenSketch, Circle, Arc, Line, Point,
     EquationCurve, Relation, Dimension, CloseSketch, Extrude, Cut, CircularPattern, RefPlane, SweepCut,
     MirrorBody, RefPlaneNormal, Revolve, LoftCut, CustomProperty, ManualStep, Rebuild, SaveAs, AddComponent, Fix,
     Unfix, Place, Mate,
 )
 SKETCH_ENTITIES = (Circle, Arc, Line, Point, EquationCurve)
-GEOMETRY = SKETCH_ENTITIES + (Axis, OpenSketch, Relation, Dimension, CloseSketch, Extrude, Cut,
+GEOMETRY = SKETCH_ENTITIES + (Axis, LineAxis, OpenSketch, Relation, Dimension, CloseSketch, Extrude, Cut,
                               CircularPattern, RefPlane, SweepCut, MirrorBody, RefPlaneNormal, Revolve, LoftCut,
                               AddComponent, Fix, Unfix, Place, Mate)
 
@@ -636,6 +657,20 @@ class BuildPlan:
                     if isinstance(plane, str) and plane not in planes:
                         problems.append(f"Axis {op.id!r} is through {plane!r}, which is not a plane made earlier.")
                 define(op.id, op)
+            elif isinstance(op, LineAxis):
+                if open_sketch is not None:
+                    problems.append(f"Axis {op.id!r} is made while sketch {open_sketch!r} is open.")
+                length = math.sqrt(sum(float(v) * float(v) for v in op.direction)) if len(op.direction) == 3 else 0.0
+                if len(op.direction) != 3 or abs(length - 1.0) > 1e-9:
+                    problems.append(f"Axis {op.id!r} runs along {tuple(op.direction)!r}, which is not a direction of "
+                                    "unit length.")
+                if not op.length > 0:
+                    problems.append(f"Axis {op.id!r} is drawn on a line {op.length!r} mm long; it must be longer "
+                                    "than 0.")
+                if not op.name.endswith(" Axis"):
+                    problems.append(f"Axis {op.id!r} is named {op.name!r}; a line axis is named \"<Shaft> Axis\".")
+                define(op.id, op)
+                feature_names[op.id] = op.name
             elif isinstance(op, AddComponent):
                 define(op.id, op)
             elif isinstance(op, (Fix, Unfix, Place)):
@@ -722,6 +757,9 @@ def describe(op: Op, trig: str = DEGREES) -> str:
         return f"sketch  {op.id} on plane {op.plane}"
     if isinstance(op, CloseSketch):
         return f"close   {op.id} as {op.name!r}"
+    if isinstance(op, LineAxis):
+        return (f"axis    {op.name!r} on the line of {op.sketch!r} from {_fmt_point(op.point)} along "
+                f"{_fmt_point(op.direction)}, {equations.literal(round(op.length, 6))} mm")
     if isinstance(op, Axis):
         if all(isinstance(p, int) for p in op.planes):
             return f"axis    {op.name!r} through planes {op.planes[0]} and {op.planes[1]}"

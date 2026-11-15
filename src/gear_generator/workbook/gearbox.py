@@ -228,6 +228,14 @@ class GearboxPlan:
     MOTION when it is set and STATIC when not; a non-empty
     ``GearboxResult.kind`` must agree, a disagreement is a sentence in
     ``Finished.notes``, and an empty one is never written.
+
+    W6 (Agent B; W6-INTERFACES.md): ``mate_senses`` maps each gear (MESH)
+    mate of the motion plan, by name, to whether its mesh turns its two gears
+    the same way about their own axes (``k > 0``, from ``MatePlan.sense``),
+    for every kind of mesh; ``{}`` for a static plan. It replaces
+    ``ring_meshes``: ``build_kwargs`` passes it as ``"senses"`` for a turning
+    plan once B moves it there (``swbuild.build_gearbox(senses=…)`` takes it
+    from the interface commit on), and ``ring_meshes``/``"internal"`` go.
     """
 
     revision: int
@@ -255,6 +263,7 @@ class GearboxPlan:
     motion: Optional[MotionPlan] = None
     static_reason: str = ""
     ring_meshes: Tuple[str, ...] = ()            # the motion plan's gear mates inside a ring (Agent B, additive)
+    mate_senses: Mapping[str, bool] = field(default_factory=dict)   # W6: gear mate name -> k > 0 (B)
 
     @property
     def parts_only(self) -> bool:

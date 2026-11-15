@@ -56,6 +56,7 @@ from ..gears.base import (AddComponent, AddGlobal, Axis, BuildPlan, Fix, GlobalV
                           NewPart, Place, Rebuild, RefPlane, SaveAs, Unfix)
 from ..spec import sanitize_stem
 from .checks import Report
+from . import geometry
 from .geometry import AXES, Placed
 from .model import GearboxSpec
 from .schema import FRAME
@@ -94,6 +95,16 @@ class ShaftLayout:
     base coordinate; ``axis_name`` is ``"S2 Axis"``. ``z`` and ``sigma`` are
     not in the layout part (an axis has no end): they are kept for the frames
     and for saying a shaft moved.
+
+    W6 (Agent B fills them for every axis; W6-PLAN §2.2, W6-INTERFACES.md):
+    ``direction`` the shaft's unit Axis direction (``geometry.axis_vector``;
+    a tuple whatever it is given as); ``z_side``, ``z_global``, ``z_plane``
+    the Front-offset plane's pieces, as ``x_*`` and ``y_*`` are (``""`` when
+    unused: a Z shaft has no Z plane); ``line`` the 3D sketch's name for a
+    slanted shaft (``"S3 Line"``), ``""`` otherwise; ``axis`` the Axis as the
+    record keeps it, the canonical word or ``"dx, dy, dz"``, for sentences.
+    ``sigma`` keeps its meaning (+1 Z+, −1 Z−) and is 0 off the Z family:
+    nothing may branch on it without reading ``direction`` first.
     """
 
     shaft: str
@@ -108,6 +119,16 @@ class ShaftLayout:
     x_plane: str
     y_plane: str
     axis_name: str
+    direction: Tuple[float, float, float] = (0.0, 0.0, 1.0)
+    z_side: str = ""
+    z_global: str = ""
+    z_plane: str = ""
+    line: str = ""
+    axis: str = ""
+
+    def __post_init__(self) -> None:
+        # The record keeps a direction as a list (store.ShaftEntry): a layout read back from it is the same layout.
+        object.__setattr__(self, "direction", tuple(float(v) for v in self.direction))
 
 
 @dataclass(frozen=True)
@@ -171,6 +192,7 @@ def shaft_layouts(spec: GearboxSpec) -> Tuple[ShaftLayout, ...]:
         x_side, y_side = side(x), side(y)
         out.append(ShaftLayout(
             shaft=shaft.id, x=x, y=y, z=z, sigma=AXES[axis], x_side=x_side, y_side=y_side,
+            direction=(0.0, 0.0, float(AXES[axis])), axis=axis,
             x_global="" if x_side == BASE else f"{shaft.id} X", y_global="" if y_side == BASE else f"{shaft.id} Y",
             x_plane="" if x_side == BASE else f"{shaft.id} X Plane",
             y_plane="" if y_side == BASE else f"{shaft.id} Y Plane",
@@ -274,18 +296,27 @@ def layout_plan(shafts: Sequence[ShaftLayout], template: str, path: str) -> Buil
 
 
 def _rotation(sigma: int, theta: float) -> Tuple[float, ...]:
-    """``F_σ · rot_z(θ)`` by rows, with F₋ = rot_x(180°) = diag(1, −1, −1) written exactly."""
+    """W4's ``F_σ · rot_z(θ)`` by rows, with F₋ = rot_x(180°) = diag(1, −1, −1) written exactly. :func:`frame` no
+    longer uses it (it turns the base frame of any axis); kept as the W4 formula probe tier 8's test reads."""
     c, s = math.cos(theta), math.sin(theta)
     rows = (c, -s, 0.0, s, c, 0.0, 0.0, 0.0, 1.0) if sigma > 0 else (c, -s, 0.0, -s, -c, 0.0, 0.0, 0.0, -1.0)
     return tuple(v + 0.0 for v in rows)          # no -0.0 in a log or a record
 
 
 def frame(placed: Placed, theta: float) -> Frame:
-    """A gear's frame, by the formula in the module docstring; ``theta`` in radians (``Report.theta``)."""
+    """A gear's frame, ``theta`` in radians (``Report.theta``): rotation ``geometry.base_frame(placed.axis) ·
+    rot_z(θ)`` by rows, with no ``-0.0``, and its origin at ``placed.origin`` (the front face centre, or a bevel
+    gear's apex). For every Z± gear this is W4's ``F_σ · rot_z(θ)`` at ``(x, y, z_front)`` to the last bit (W6-PLAN
+    §2.1; ``tests/test_workbook_axes.py`` holds it to the committed fixtures)."""
     if findings.EXTRUDE_Z_SIGN != 1:
         raise ValueError("findings.EXTRUDE_Z_SIGN is not 1, so a part's blank does not run along its own +Z and "
                          "the frames here would put every gear's face on the wrong side.")
-    return Frame(_rotation(placed.sigma, theta), (placed.x, placed.y, placed.z_front))
+    b = geometry.base_frame(placed.axis)
+    c, s = math.cos(theta), math.sin(theta)
+    rz = (c, -s, 0.0, s, c, 0.0, 0.0, 0.0, 1.0)
+    rows = tuple(b[i * 3] * rz[j] + b[i * 3 + 1] * rz[3 + j] + b[i * 3 + 2] * rz[6 + j]
+                 for i in range(3) for j in range(3))
+    return Frame(tuple(v + 0.0 for v in rows), tuple(placed.origin))
 
 
 def frames(report: Report) -> Dict[str, Frame]:

@@ -403,7 +403,12 @@ def link_record_path(workbook_path: str) -> str:
     return stem + LINK_SUFFIX
 
 
-LINK_SCHEMA_VERSION = 3          # the link record's own schema, apart from the .gear.json's SCHEMA_VERSION
+LINK_SCHEMA_VERSION = 4          # the link record's own schema, apart from the .gear.json's SCHEMA_VERSION
+# Schema 4 (W6, every record, an all-Z gearbox too: W6-PLAN §2.8, D13): a shaft keeps its direction and its Front-plane
+# and line pieces (ShaftEntry), a mate its measuring plane and a mesh its sense (MateEntry). A v1-v3 record reads as
+# v4, a v3 shaft with ``direction`` [0, 0, sigma] and ``axis`` "Z+"/"Z-", a v3 mate with plane "front" and sense 0.
+# A record of any newer schema than this one (W7 sets 5, W8 6) is refused and left byte-identical, as a W5 build
+# refuses a v4 record (D11's mechanism), so no build drops fields it does not know by rewriting the file.
 # Schema 3 (W5): the gearbox block says which kind of assembly it is and, for one built to turn, its mates. A schema 2
 # record reads as 3 with ``kind`` GEARBOX_STATIC (a W4 gearbox: its gears placed and fixed). A W4-era build reading
 # a schema 3 record refuses it and leaves it byte-identical (it reads ``link_schema_version`` 3 > 2), so it never
@@ -440,7 +445,13 @@ class ShaftEntry:
     """One shaft of a built layout part: ``workbook.layout.ShaftLayout`` field for field (``ShaftEntry(**asdict(
     shaft_layout))`` and back). Coordinates in mm from the origin; ``sigma`` +1 for Z+, -1 for Z-; a side is
     ``plus``, ``minus`` or ``base``; ``x_global`` the global's unquoted name (``S2 X``) and ``x_plane`` the plane's
-    feature name (``S2 X Plane``), both ``""`` on a base coordinate; ``axis_name`` the axis feature (``S2 Axis``)."""
+    feature name (``S2 X Plane``), both ``""`` on a base coordinate; ``axis_name`` the axis feature (``S2 Axis``).
+
+    Schema 4 (W6): ``direction`` the shaft's unit Axis direction (a v3 entry reads as ``[0, 0, sigma]``);
+    ``z_side``, ``z_global``, ``z_plane`` the Front-offset plane's pieces (``""`` when unused); ``line`` a slanted
+    shaft's 3D sketch (``"S3 Line"``, else ``""``); ``axis`` the Axis as the workbook gave it, the canonical word or
+    ``"dx, dy, dz"``, for sentences (a v3 entry reads as ``"Z+"`` or ``"Z-"`` from ``sigma``). ``sigma`` is 0 off
+    the Z family. C's parse refuses a ``direction`` that is not three finite numbers of unit length."""
 
     shaft: str = ""
     x: float = 0.0
@@ -454,6 +465,16 @@ class ShaftEntry:
     x_plane: str = ""
     y_plane: str = ""
     axis_name: str = ""
+    direction: List[float] = field(default_factory=list)
+    z_side: str = ""
+    z_global: str = ""
+    z_plane: str = ""
+    line: str = ""
+    axis: str = ""
+
+    def __post_init__(self) -> None:
+        if isinstance(self.direction, tuple):          # ShaftEntry(**asdict(shaft_layout)): the layout's tuple
+            self.direction = list(self.direction)
 
 
 @dataclass
@@ -482,7 +503,12 @@ class MateEntry:
     signed distance from the Front plane in mm, as made or last updated, else 0. The parse (C) refuses, with a
     ``StoreError`` sentence, an entry whose ``kind`` is not one of the four or whose ``gears`` are not as many as
     its kind holds (1 for axis and along, 2 for lock and mesh), and a mesh whose ``ratio`` is not two numbers;
-    ``workbook.update.classify`` (B) guards the same with a refusal sentence, never an IndexError."""
+    ``workbook.update.classify`` (B) guards the same with a refusal sentence, never an IndexError.
+
+    Schema 4 (W6): ``plane`` an along mate's measuring plane, ``"front"``, ``"top"`` or ``"right"`` (a v3 entry reads
+    as ``"front"``), and ``z_front`` its origin's signed distance from that plane; ``sense`` a mesh's ``c`` as made
+    or last remade, +1 or −1, and 0 for every other kind and for a v3 mesh (taken from the read, as W5 did). C's
+    parse refuses a plane outside the three words, a sense outside {−1, 0, +1}, and 0 on a v4 mesh."""
 
     name: str = ""
     kind: str = ""
@@ -491,6 +517,8 @@ class MateEntry:
     ratio: List[int] = field(default_factory=list)
     face_global: str = ""
     z_front: float = 0.0
+    plane: str = "front"
+    sense: int = 0
 
 
 @dataclass
@@ -789,8 +817,19 @@ def _mate_checked(entry: MateEntry, index: int) -> MateEntry:
     return entry
 
 
+def _v3_shaft(entry: ShaftEntry, raw: Dict[str, Any]) -> ShaftEntry:
+    """A shaft written before schema 4 (no ``direction``) as v4 reads it: along Z+ or Z- by its ``sigma``, its
+    ``axis`` that word."""
+    if "direction" not in raw:
+        entry.direction = [0.0, 0.0, 1.0 if entry.sigma >= 0 else -1.0]
+    if "axis" not in raw:
+        entry.axis = "Z+" if entry.sigma >= 0 else "Z-"
+    return entry
+
+
 def link_record_from_json(text: str) -> LinkRecord:
-    """Parse a link record of any schema up to :data:`LINK_SCHEMA_VERSION`; a v1 or v2 record is read as v3.
+    """Parse a link record of any schema up to :data:`LINK_SCHEMA_VERSION`; a v1, v2 or v3 record is read as v4,
+    and a record of any newer schema is refused (:class:`UnknownSchema`) and left alone.
 
     The schema is ``link_schema_version`` when the file has it, else
     ``schema_version`` (a W2 file, or one an old build rewrote; see
@@ -821,7 +860,9 @@ def link_record_from_json(text: str) -> LinkRecord:
             if not isinstance(gearbox, dict):
                 raise TypeError("gearbox is not an object")
             record.gearbox = _checked(GearboxRecord(**_known(GearboxRecord, gearbox)))
-            record.gearbox.shafts = [_checked(s) for s in _entries(ShaftEntry, gearbox.get("shafts", []))]
+            record.gearbox.shafts = [_v3_shaft(_checked(s), raw_s)
+                                     for s, raw_s in zip(_entries(ShaftEntry, gearbox.get("shafts", [])),
+                                                         gearbox.get("shafts", []))]
             record.gearbox.components = [_checked(c) for c in _entries(ComponentEntry,
                                                                         gearbox.get("components", []))]
             record.gearbox.mates = [_mate_checked(_checked(m), i)

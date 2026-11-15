@@ -131,6 +131,90 @@ class SolidWorksError(Exception):
     """Something about the SolidWorks connection did not work."""
 
 
+Vec3 = Tuple[float, float, float]
+
+# W6: the turned read-back (W6-PLAN §2.6, rule H), once probe tier 9 settles it.
+TURNED_SENSE_ROUTES = ("entity senses",)     # findings.TURNED_GEAR_MATE_SENSE_READ_BACK
+ENTITY_ALONG = 0.99                          # |cos| at or above which a mate entity lies along a gear's axis
+
+
+def _vector_text(vector: Sequence[float]) -> str:
+    """``(0, 0.5, -0.866)``: three decimals at most, for a sentence."""
+    return "(" + ", ".join(f"{round(float(v), 3) + 0.0:g}" for v in vector) + ")"
+
+
+def _unit(vector: Sequence[float]) -> Optional[Tuple[float, float, float]]:
+    """``vector`` of length 1, or None when it is not three finite numbers with a length."""
+    try:
+        values = tuple(float(v) for v in vector)
+    except (TypeError, ValueError):
+        return None
+    if len(values) != 3 or not all(math.isfinite(v) for v in values):
+        return None
+    length = math.sqrt(sum(v * v for v in values))
+    if length < 1e-12:
+        return None
+    return (values[0] / length, values[1] / length, values[2] / length)
+
+
+def sense_reading(reverse: bool, directions: Sequence[Sequence[float]], axes: Sequence[Sequence[float]],
+                  same_sense: bool, *, mate: str = "") -> Tuple[bool, Tuple[int, int]]:
+    """Whether a made gear mate turns its gears as they mesh, by rule H (W6-PLAN §2.6; written at W6's interface
+    commit, used by ``Session.gear_mate_sense`` and by the fake), and each entity's sense ``(τa, τb)``.
+
+    H: a gear mate's ``Reverse`` is True exactly when it turns its two gears the same way about its two entities'
+    own directions. ``directions`` are the two ``MateEntity`` directions (``EntityParams[3:6]``, assembly space), in
+    ANY order; ``axes`` are the two gears' own +Z as placed (each frame's third column), gear a first; each
+    direction is matched to the gear whose axis it lies along (``|d·g| >= 0.99``, :data:`ENTITY_ALONG`), never by
+    entity order (review S1); on parallel axes either pairing gives the same ``τa·τb``. ``τ = sign(d·g)``.
+    ``same_sense`` is ``k > 0``: the mesh turns its gears the same way about their own axes (``k = −c·za/zb``).
+    The mate is right exactly when ``Reverse == (sign(k)·τa·τb > 0)``. On parallel axes this is W5's rule
+    ``(Reverse == entities parallel) == internal`` exactly (``tests/test_swcom_sense.py`` proves it on every case
+    of ``findings.GEAR_MATE_FLIP_NEEDED_*`` and ``GEAR_MATE_FLIP_NEEDED_MORE_*``, in either entity order).
+
+    Pure: no finding is read here (the gates are the callers'). Raises :class:`SolidWorksError` with a sentence
+    when ``reverse`` is not a bool, there are not two directions and two axes of three finite numbers with a
+    length, or the directions are not one along each gear's axis (the mate does not hold the axes the gears were
+    placed on, and nothing is guessed). ``mate`` names the mate in those sentences (``"G1 meshes G2 in R.SLDASM"``).
+    """
+    called = f"the gear mate {mate}" if mate else "this gear mate"
+    if not isinstance(reverse, bool):
+        raise SolidWorksError(f"SolidWorks gave {reverse!r} for whether {called} is reversed, which is not yes or no, "
+                              "so which way it turns cannot be read.")
+    if len(directions) != 2 or len(axes) != 2:
+        raise SolidWorksError(f"{called[0].upper() + called[1:]} did not say how it holds its two gear axes, so which "
+                              "way it turns cannot be read.")
+    found = [_unit(d) for d in directions]
+    if any(d is None for d in found):
+        raise SolidWorksError(f"{called[0].upper() + called[1:]} holds a gear axis with no direction, so which way it "
+                              "turns cannot be read.")
+    wanted = [_unit(a) for a in axes]
+    if any(a is None for a in wanted):
+        raise SolidWorksError(f"A gear of {called} was placed with no axis, so which way it turns cannot be judged; "
+                              "that is a fault in Gear Generator.")
+
+    def along(d: Vec3, g: Vec3) -> float:
+        return sum(p * q for p, q in zip(d, g))
+
+    if abs(along(found[0], wanted[0])) >= ENTITY_ALONG and abs(along(found[1], wanted[1])) >= ENTITY_ALONG:
+        da, db = found[0], found[1]
+    elif abs(along(found[0], wanted[1])) >= ENTITY_ALONG and abs(along(found[1], wanted[0])) >= ENTITY_ALONG:
+        da, db = found[1], found[0]
+    else:
+        stray = next((d for d in found if all(abs(along(d, g)) < ENTITY_ALONG for g in wanted)), None)
+        if stray is not None:
+            why = (f"as pointing {_vector_text(stray)}, which is not along either gear's axis "
+                   f"({_vector_text(wanted[0])} or {_vector_text(wanted[1])})")
+        else:
+            why = (f"as pointing {_vector_text(found[0])} and {_vector_text(found[1])}, both along one gear's axis "
+                   f"where it should hold one along each ({_vector_text(wanted[0])} and {_vector_text(wanted[1])})")
+        raise SolidWorksError(f"SolidWorks reads the axes of {called} {why}, so the mate does not hold the axes the "
+                              "gears were placed on, and nothing is guessed.")
+    taus = (1 if along(da, wanted[0]) > 0 else -1, 1 if along(db, wanted[1]) > 0 else -1)
+    right = reverse == ((1 if same_sense else -1) * taus[0] * taus[1] > 0)
+    return right, taus
+
+
 # The kinds of assembly a caller names to rebuild_call; it never infers one.
 ASSEMBLY_STATIC = "static"   # fixed components, no mates: the workbook gearbox as W4 builds it
 ASSEMBLY_TRAIN = "train"     # the workbook gearbox mated to turn (W5): axis, axial, lock and gear mates
@@ -2319,18 +2403,28 @@ class Session:
                                   "findings.py), so nothing is changed; run probe tier 8 first.")
         self._remake(handle, a, b, ratio, bool(flip), "to make it again with the other Flip", saved=saved)
 
-    def gear_mate_sense(self, handle: str, internal: bool) -> Tuple[bool, bool]:
-        """Which way a kept gear mate turns its gears, read back as probe ring_mate_sense found tells it on both
-        versions (``findings.GEAR_MATE_SENSE_READ_BACK``, one of :data:`SENSE_ROUTES`;
-        ``GEAR_MATE_READ_BACK_TELLS_SENSE``: 52 of 52 cases, and the Risky pair before and after its remake): its
+    def gear_mate_sense(self, handle: str, same_sense: bool, axes: Tuple[Vec3, Vec3]) -> Tuple[bool, Tuple[int, int]]:
+        """Which way a kept gear mate turns its gears (W6's form; W6-INTERFACES.md): its
         ``IGearMateFeatureData.Reverse`` (``IFeature.GetDefinition``, read only, released: no ModifyDefinition, no
         AccessSelections, as :meth:`gear_mate_ratio`) and the directions of its two entities
         (``IFeature.GetSpecificFeature2`` → ``IMate2.GetMateEntityCount`` and ``MateEntity(i)`` →
-        ``IMateEntity2.EntityParams`` elements 3..5, in assembly space). The pair turns as it meshes exactly when
-        ``(Reverse == the two directions point the same way) == internal``. Returns ``(right, parallel)``: whether
-        it reads right for the mesh the caller says is ``internal`` or not, and whether the two directions point the
-        same way (the caller compares it with its own shafts' senses). Read it where the probe read it: straight
-        after the mate is made (and renamed), before a rebuild."""
+        ``IMateEntity2.EntityParams`` elements 3..5, in assembly space), judged by :func:`sense_reading` against
+        ``axes`` (the two gears' own +Z as placed, the mate's first gear first) and ``same_sense`` (``k > 0``).
+        Returns ``(right, (τa, τb))``. Read it where probe ring_mate_sense read it: straight after the mate is made
+        (and renamed), before a rebuild — or on a saved assembly (``GEAR_MATE_SENSE_READ_POINTS_AGREE``).
+
+        The gate: axes parallel (``|ĝa·ĝb| > 0.99``) need W5's read-back (``findings.GEAR_MATE_SENSE_READ_BACK``
+        one of :data:`SENSE_ROUTES`, ``GEAR_MATE_READ_BACK_TELLS_SENSE`` True), on which H is W5's rule exactly;
+        any other pair also needs ``findings.TURNED_GEAR_MATE_SENSE_READ_BACK`` in :data:`TURNED_SENSE_ROUTES`
+        and the angle between the own axes inside ``findings.TURNED_GEAR_MATE_SENSE_ANGLES`` (W6-PLAN §2.6) —
+        that branch is Agent A's (a stub at the interface commit)."""
+        unit_axes = [_unit(a) for a in axes]
+        if len(axes) != 2 or any(a is None for a in unit_axes):
+            raise SolidWorksError("A gear mate's sense was asked against axes that are not two directions, so it "
+                                  "cannot be judged; that is a fault in Gear Generator.")
+        if abs(sum(p * q for p, q in zip(*unit_axes))) <= ENTITY_ALONG:
+            raise NotImplementedError("W6: Agent A, swcom.Session.gear_mate_sense on axes that are not parallel "
+                                      "(the turned gate, TURNED_GEAR_MATE_SENSE_READ_BACK and its angles)")
         route = getattr(findings, "GEAR_MATE_SENSE_READ_BACK", None)
         if route not in SENSE_ROUTES or getattr(findings, "GEAR_MATE_READ_BACK_TELLS_SENSE", None) is not True:
             raise SolidWorksError(f"Reading which way a gear mate turns has not been settled on SolidWorks yet "
@@ -2355,20 +2449,24 @@ class Session:
             values = [float(v) for v in params] if params is not None else []
             if len(values) >= 6:
                 directions.append(values[3:6])
-        if not isinstance(reverse, bool) or len(directions) != 2:
-            raise SolidWorksError(f"The gear mate {name} in {title} did not say how it holds its two gear axes, so which "
-                                  "way it turns cannot be read.")
-        lengths = [math.sqrt(sum(v * v for v in d)) for d in directions]
-        if min(lengths) < 1e-12:
-            raise SolidWorksError(f"The gear mate {name} in {title} holds a gear axis with no direction, so which way it "
-                                  "turns cannot be read.")
-        dot = sum(x * y for x, y in zip(*directions)) / (lengths[0] * lengths[1])
-        if abs(dot) <= 0.99:
-            raise SolidWorksError(f"The gear mate {name} in {title} holds two gear axes that are not parallel (their "
-                                  f"cosine is {dot:.3f}), so the mate does not hold the axes the gears were placed on, "
-                                  "and which way it turns cannot be read.")
-        parallel = dot > 0
-        return (reverse == parallel) == bool(internal), parallel
+        return sense_reading(reverse, directions, axes, same_sense, mate=f"{name} in {title}")
+
+    def line_axis(self, handle: str, name: str, point: Vec3, direction: Vec3, length: float) -> str:
+        """W6 (Agent A; W6-PLAN §2.2, D4): a slanted shaft's axis in the layout part. ``ISketchManager.
+        Insert3DSketch2(True)``; one ``CreateLine2`` from ``point`` to ``point + length·direction`` (mm, three
+        coordinates per end); ``Insert3DSketch2`` again to close it, the sketch renamed ``"<Shaft> Line"``
+        (``base.LineAxis.sketch``); the line selected as ``"Line1@<Shaft> Line"`` (``EXTSKETCHSEGMENT``);
+        ``InsertAxis2(True)``; the new RefAxis found, renamed ``name`` and read back (``GetRefAxisParams`` on the
+        line to 1e-6). Returns the kept name. Neither 3D call is probed ahead (W6-PLAN §7.1): a failure is a
+        sentence, and the build's next op fails with it."""
+        raise NotImplementedError("W6: Agent A, swcom.Session.line_axis")
+
+    def axis_line(self, handle: str, name: str) -> Tuple[Vec3, Vec3]:
+        """W6 (Agent A; W6-PLAN §2.7, review S7): a layout axis read back as ``(point, unit direction)`` in mm, from
+        ``IRefAxis.GetRefAxisParams`` of the feature named ``name`` in the build document, kept as ``handle``. A
+        read that marks nothing; used in Update's check phase and on reusing a layout part, to refuse a slanted
+        line axis moved in SolidWorks."""
+        raise NotImplementedError("W6: Agent A, swcom.Session.axis_line")
 
     def set_custom_property(self, name: str, value: str) -> None:
         """A text custom property on the build's part, added or replaced, and read back.

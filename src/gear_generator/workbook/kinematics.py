@@ -25,7 +25,7 @@ from __future__ import annotations
 from collections import deque
 from dataclasses import dataclass, field
 from fractions import Fraction
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Mapping, Optional, Tuple
 
 from .model import GearboxSpec
 from .schema import FRAME
@@ -42,6 +42,10 @@ class Motion:
     later: str = ""                                               # a sentence, when this phase cannot say
     reference: str = "Z+"                                         # n: the first input's axis
     axis_sign: Dict[str, int] = field(default_factory=dict)       # each shaft's own axis: +1 Z+, -1 Z-
+    # W6 (B; W6-PLAN §2.4, D12): shaft -> the end its speed is seen from, its family's plus direction: "+X", "+Y",
+    # "+Z", or for a slant the plus direction's components to three decimals, shortest form, U+2212 for minus
+    # ("(0.5, −0.866, 0)"). Empty until B's solve fills it.
+    seen_from: Dict[str, str] = field(default_factory=dict)
 
     @property
     def settled(self) -> bool:
@@ -64,8 +68,16 @@ def _fraction(text: str) -> Fraction:
     return Fraction(str(text).strip().replace("−", "-"))
 
 
-def solve(spec: GearboxSpec, skip_gears=()) -> Motion:
-    """Every shaft's speed and torque, or why they cannot be said."""
+def solve(spec: GearboxSpec, skip_gears=(), senses: Optional[Mapping[Tuple[str, str], int]] = None) -> Motion:
+    """Every shaft's speed and torque, or why they cannot be said.
+
+    W6 (Agent B; W6-PLAN §2.4, D7): ``senses`` maps a listed mesh, keyed by the ordered pair ``(a, b)`` as its
+    Meshes row lists it, to ``c`` (±1) in the own-axis row ``z_a·ω_a + c·z_b·ω_b = 0`` (``geometry.MeshGeometry.
+    sense``); every caller passes it (``checks.check``). None is W3's behaviour exactly. A mesh with no sense, or
+    whose gears are not placed, is left out. Until B rewrites the system in own-axis unknowns, a given ``senses``
+    is a stub."""
+    if senses is not None:
+        raise NotImplementedError("W6: Agent B, workbook.kinematics.solve with senses (own-axis speeds)")
     motion = Motion()
     shafts = [s for s in spec.shafts if s.id]
     if any(s.mount() != FRAME for s in shafts):

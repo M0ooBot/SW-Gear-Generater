@@ -63,6 +63,16 @@ class MatePlan:
     distance) and for every other kind. ``z_front``: ALONG, the origin's
     signed distance from the Front plane in mm (``layout.frames``'s ``at[2]``),
     else 0.
+
+    W6 (Agent B sets them; W6-PLAN §2.6, §2.8): ``plane``, an ALONG's
+    measuring plane, ``"front"``, ``"top"`` or ``"right"`` (:data:`PLANES`:
+    Right for X±, Top for Y±, Front for Z±, the nearest for a slant, ties
+    Right, Top, Front) — ``"front"`` for every other kind — and ``z_front``
+    keeps its name but is the origin's signed distance from that plane
+    (``frames[anchor].at[i]``, ``i`` its normal's index); the mate names
+    ``"layout:plane1|2|3"`` (``layout.FRONT``, ``TOP``, ``RIGHT``).
+    ``sense``: a MESH's ``c`` (``geometry.MeshGeometry.sense``), +1 or −1,
+    as made or last remade; 0 for every other kind.
     """
 
     name: str
@@ -72,6 +82,8 @@ class MatePlan:
     ratio: Tuple[int, ...] = ()
     face_global: str = ""
     z_front: float = 0.0
+    plane: str = "front"
+    sense: int = 0
 
 
 @dataclass(frozen=True)
@@ -124,12 +136,21 @@ def mate_name(kind: str, gears: Sequence[str], shaft: str = "") -> str:
     return f"{gears[0]} meshes {gears[1]}"
 
 
-def face_global(gear: str) -> str:
-    """The assembly global an anchor's distance along its shaft is linked to: ``"G4 Face Z"`` (unquoted, as
-    ``GlobalVariable.name`` takes it)."""
+FRONT_PLANE, TOP_PLANE, RIGHT_PLANE = "front", "top", "right"     # MatePlan.plane
+PLANES = (FRONT_PLANE, TOP_PLANE, RIGHT_PLANE)
+PLANE_COORDINATE = {FRONT_PLANE: "Z", TOP_PLANE: "Y", RIGHT_PLANE: "X"}     # the coordinate each plane's normal is
+
+
+def face_global(gear: str, plane: str = FRONT_PLANE, bevel: bool = False) -> str:
+    """The assembly global an anchor's distance from its measuring plane is linked to (W6-PLAN §2.6, D5b), unquoted
+    as ``GlobalVariable.name`` takes it: ``"<Gear> Face <X|Y|Z>"``, the coordinate square to ``plane`` (Right X, Top
+    Y, Front Z) — ``"G4 Face Z"`` as in W5 — and for a bevel anchor, whose origin is its cone tip, ``"<Gear> Apex
+    <X|Y|Z>"`` (``"G2 Apex Z"``). A plane not in :data:`PLANES`, or no gear, is a ValueError."""
     if not gear:
-        raise ValueError("A Face Z global needs a gear's name.")
-    return f"{gear}{FACE_GLOBAL_SUFFIX}"
+        raise ValueError("A Face or Apex global needs a gear's name.")
+    if plane not in PLANE_COORDINATE:
+        raise ValueError(f"{plane!r} is not a plane an anchor is measured from ({', '.join(PLANES)}).")
+    return f"{gear} {'Apex' if bevel else 'Face'} {PLANE_COORDINATE[plane]}"
 
 
 def mate_entry(mate: MatePlan) -> store.MateEntry:
@@ -137,7 +158,7 @@ def mate_entry(mate: MatePlan) -> store.MateEntry:
     ``finish_build`` writes for a turning assembly)."""
     return store.MateEntry(name=mate.name, kind=mate.kind, gears=list(mate.gears), shaft=mate.shaft,
                            ratio=[int(n) for n in mate.ratio], face_global=mate.face_global,
-                           z_front=float(mate.z_front))
+                           z_front=float(mate.z_front), plane=mate.plane, sense=int(mate.sense))
 
 
 def mate_ref(entry: store.MateEntry) -> MateRef:
@@ -422,20 +443,34 @@ def motion_assembly_plan(layout_path: str, components: Sequence[Tuple[str, str, 
     return BuildPlan(layout.ASSEMBLY_KIND, "", tuple(ops), path=path)
 
 
-def mesh_links(meshes: Sequence[Tuple[str, str]], teeth: Mapping[str, int], sigma: Mapping[str, int],
-               internal: Mapping[str, bool]) -> Tuple[MeshLink, ...]:
-    """A ``swbuild.MeshLink`` per mesh ``(a, b)``, in the order given: b turns ``k`` times a's turn about each
-    part's own +Z, ``k = -σa·σb·za/zb`` for an outside mesh and ``+σa·σb·za/zb`` when either gear is internal
-    (``σ`` the gear's shaft's +1 for Z+, -1 for Z-), so ``k == ω_b/ω_a`` with ``kinematics.solve``'s speeds
-    (review M2: about each shaft's own axis); ``pitch = 360/zb`` degrees."""
+def mesh_links(meshes: Sequence[Tuple[str, str]], teeth: Mapping[str, int],
+               sense: Mapping[Tuple[str, str], int]) -> Tuple[MeshLink, ...]:
+    """A ``swbuild.MeshLink`` per mesh ``(a, b)``, in the order given, for any kind of mesh (W6-PLAN §2.4; written
+    at W6's interface commit; W7's planets call it too): ``k = −c·za/zb`` and ``pitch = 360/zb`` degrees, where
+    ``c = sense[(a, b)]`` (keyed by the ordered pair as the Meshes row lists it, as ``kinematics.solve``'s
+    ``senses``: ``geometry.MeshGeometry.sense``, or a record's ``MateEntry.sense``) is +1 or −1 in
+    ``z_a·ω_a + c·z_b·ω_b = 0``. So ``k == ω_b/ω_a`` with ``solve``'s own-axis speeds (review M2 of W5). On parallel
+    shafts ``c = σa·σb`` outside and ``−σa·σb`` inside a ring, which is W5's ``k``. A pair with no sense, a sense
+    that is not ±1, or a tooth count not above 0 is a ValueError with a sentence."""
     out = []
     for a, b in meshes:
         za, zb = int(teeth[a]), int(teeth[b])
         if za <= 0 or zb <= 0:
             raise ValueError(f"The mesh {a}–{b} needs a tooth count above 0 on each gear, not {za} and {zb}.")
-        sense = 1 if (internal.get(a, False) or internal.get(b, False)) else -1
-        out.append(MeshLink(a, b, sense * int(sigma[a]) * int(sigma[b]) * za / zb, 360.0 / zb))
+        if (a, b) not in sense:
+            raise ValueError(f"The mesh {a}–{b} has no sense, so which way {b} turns against {a} cannot be said.")
+        c = sense[(a, b)]
+        if c not in (1, -1):
+            raise ValueError(f"The mesh {a}–{b} has the sense {c!r}, which is not +1 or -1.")
+        out.append(MeshLink(a, b, -int(c) * za / zb, 360.0 / zb))
     return tuple(out)
+
+
+def parallel_sense(a: str, b: str, sigma: Mapping[str, int], internal: Mapping[str, bool]) -> int:
+    """W5's mesh between parallel Z± shafts as a sense ``c`` (``σa·σb`` outside, ``−σa·σb`` inside a ring): the
+    interface commit's bridge for the W5 callers of :func:`mesh_links`; Agent B replaces its uses with
+    ``Report.meshes`` and ``MateEntry.sense``."""
+    return (-1 if (internal.get(a, False) or internal.get(b, False)) else 1) * int(sigma[a]) * int(sigma[b])
 
 
 def lock_links(locks: Sequence[Tuple[str, str]], teeth: Mapping[str, int]) -> Tuple[LockLink, ...]:
@@ -448,3 +483,13 @@ def lock_links(locks: Sequence[Tuple[str, str]], teeth: Mapping[str, int]) -> Tu
             raise ValueError(f"{follower} needs a tooth count above 0 to be locked to {anchor}, not {z}.")
         out.append(LockLink(anchor, follower, 360.0 / z))
     return tuple(out)
+
+
+def turned_refusal(report: Report) -> str:
+    """``""``, or the sentence refusing to build a turning gearbox with a turned mesh (W6-PLAN §2.6, §2.9, D16,
+    D18; Agent B): while ``findings.TURNED_GEAR_MATE_SENSE_READ_BACK`` is not ``"entity senses"``, or a BEVEL or
+    CROSSED mesh of ``report.meshes`` has an angle between the own axes outside
+    ``findings.TURNED_GEAR_MATE_SENSE_ANGLES``. Read by ``assess.Assessment.lay_out_refusal`` after its W4 reasons,
+    so the footer says it before Build and Build parts still makes the parts. Findings by ``getattr(findings, NAME,
+    None)``."""
+    raise NotImplementedError("W6: Agent B, workbook.motion.turned_refusal")

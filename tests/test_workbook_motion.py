@@ -143,8 +143,9 @@ def test_each_mesh_turns_its_second_gear_at_the_solved_speeds_ratio_about_its_ow
     for name, ks in expected.items():
         spec, report, _ = windows(name)
         placed = report.layout.placed
+        sigma, internal = {g: p.sigma for g, p in placed.items()}, {g: p.internal for g, p in placed.items()}
         links = motion.mesh_links([(m.a, m.b) for m in spec.meshes], {g: p.teeth for g, p in placed.items()},
-                                  {g: p.sigma for g, p in placed.items()}, {g: p.internal for g, p in placed.items()})
+                                  {(m.a, m.b): motion.parallel_sense(m.a, m.b, sigma, internal) for m in spec.meshes})
         assert [round(link_.k, 6) for link_ in links] == ks, name
         speeds = report.motion.speeds
         for link_ in links:
@@ -165,7 +166,7 @@ def test_mesh_link_signs_agree_with_kinematics_outside_and_in_a_ring_on_every_fa
     internal = {g: p.internal for g, p in placed.items()}
     a, b = spec.meshes[0].a, spec.meshes[0].b
     for x, y in ((a, b), (b, a)):
-        (link_,) = motion.mesh_links([(x, y)], teeth, sigma, internal)
+        (link_,) = motion.mesh_links([(x, y)], teeth, {(x, y): motion.parallel_sense(x, y, sigma, internal)})
         assert link_.k == pytest.approx(float(speeds[placed[y].shaft] / speeds[placed[x].shaft]))
         ring = internal[x] or internal[y]
         assert (link_.k > 0) == (ring == (sigma[x] == sigma[y]))
@@ -183,7 +184,8 @@ def made_up(shafts, gears, meshes, face=10.0):
                        meshes=tuple(Mesh(x, y) for x, y in meshes))
     sigma = {s: (1 if axis == "Z+" else -1) for s, axis, _, _ in shafts}
     placed = {g: Placed(gear=g, shaft=s, x=0.0, y=0.0, z=zf + sigma[s] * face / 2, sigma=sigma[s], face=face,
-                        teeth=z, module=2.0, internal=side == "internal", derived=None)
+                        teeth=z, module=2.0, internal=side == "internal", derived=None,
+                        axis=(0.0, 0.0, float(sigma[s])), centre=(0.0, 0.0, zf + sigma[s] * face / 2))
               for g, s, z, side, zf in gears}
     report = checks.Report(layout=Layout(placed=placed), theta={g: 0.0 for g in placed},
                            motion=kinematics.solve(spec))

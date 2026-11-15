@@ -1951,19 +1951,34 @@ def _sense_world(session, doc, reverse, directions):
     session.find_mate("mesh", "G5 meshes G6")
 
 
-@pytest.mark.parametrize("reverse, directions, internal, right, parallel", [
-    (True, ((0, 0, 1.0), (0, 0, -1.0)), True, False, False),     # the Risky pair on 2026: Reverse True, opposite axes
-    (False, ((0, 0, 1.0), (0, 0, -1.0)), True, True, False),     # the same pair on 2024: Reverse False
-    (True, ((0, 0, 1.0), (0, 0, 1.0)), True, True, True),
-    (False, ((0, 0, 1.0), (0, 0, -1.0)), False, False, False),   # an outside pair: right when they differ
-    (True, ((0, 0, 1.0), (0, 0, -1.0)), False, True, False),
+Z_UP, Z_DOWN = (0, 0, 1.0), (0, 0, -1.0)
+
+
+# W6's form (W6-INTERFACES.md): the two gears' axes as placed and whether the mesh turns them the same way (k > 0)
+# take the place of W5's ``internal``; the answer carries each entity's sense instead of "parallel". The W5 cases,
+# each as W5 read it: a ring mesh on opposite shafts turns its gears opposite ways about their own axes (k < 0).
+@pytest.mark.parametrize("reverse, directions, axes, same_sense, right, taus", [
+    (True, (Z_UP, Z_DOWN), (Z_UP, Z_DOWN), False, False, (1, 1)),    # the Risky ring pair on 2026: Reverse True
+    (False, (Z_UP, Z_DOWN), (Z_UP, Z_DOWN), False, True, (1, 1)),    # the same pair on 2024: Reverse False
+    (True, (Z_UP, Z_UP), (Z_UP, Z_UP), True, True, (1, 1)),          # a ring on same-sense shafts
+    (False, (Z_UP, Z_DOWN), (Z_UP, Z_DOWN), True, False, (1, 1)),    # an outside pair on opposite shafts (k > 0)
+    (True, (Z_UP, Z_DOWN), (Z_UP, Z_DOWN), True, True, (1, 1)),
+    (True, (Z_DOWN, Z_UP), (Z_UP, Z_UP), True, False, (-1, 1)),      # an entity against its gear's axis
 ])
-def test_a_gear_mates_sense_is_read_back_by_reverse_and_its_entity_directions(mated, reverse, directions, internal,
-                                                                              right, parallel):
+def test_a_gear_mates_sense_is_read_back_by_reverse_and_its_entity_directions(mated, reverse, directions, axes,
+                                                                              same_sense, right, taus):
     session, doc = mated
     _sense_world(session, doc, reverse, directions)
-    assert session.gear_mate_sense("mesh", internal) == (right, parallel)
+    assert session.gear_mate_sense("mesh", same_sense, axes) == (right, taus)
     assert ("ModifyDefinition",) not in doc.log and ("AccessSelections",) not in doc.log
+
+
+def test_a_gear_mate_on_axes_at_an_angle_waits_for_package_a(mated):
+    """The turned gate is Agent A's (W6-INTERFACES.md): a stub at the interface commit."""
+    session, doc = mated
+    _sense_world(session, doc, True, (Z_UP, (1.0, 0, 0)))
+    with pytest.raises(NotImplementedError, match="W6: Agent A"):
+        session.gear_mate_sense("mesh", False, (Z_UP, (1.0, 0, 0)))
 
 
 @pytest.mark.parametrize("name, value", [("GEAR_MATE_SENSE_READ_BACK", None), ("GEAR_MATE_SENSE_READ_BACK", "guess"),
@@ -1973,14 +1988,14 @@ def test_a_gear_mates_sense_is_not_read_by_a_route_this_code_does_not_know(mated
     _sense_world(session, doc, True, ((0, 0, 1.0), (0, 0, 1.0)))
     monkeypatch.setattr(findings, name, value)
     with pytest.raises(SolidWorksError, match="Reading which way a gear mate turns has not been settled"):
-        session.gear_mate_sense("mesh", True)
+        session.gear_mate_sense("mesh", True, (Z_UP, Z_UP))
 
 
 def test_a_gear_mate_without_two_entities_is_not_judged(mated):
     session, doc = mated
     _sense_world(session, doc, True, ((0, 0, 1.0),))
     with pytest.raises(SolidWorksError, match="did not say how it holds its two gear axes"):
-        session.gear_mate_sense("mesh", True)
+        session.gear_mate_sense("mesh", True, (Z_UP, Z_UP))
 
 
 def test_a_gear_mate_is_made_again_with_the_flip_asked(mated, monkeypatch):
@@ -1997,20 +2012,22 @@ def test_a_gear_mate_is_made_again_with_the_flip_asked(mated, monkeypatch):
 
 
 @pytest.mark.parametrize("directions, sentence", [
-    (((0, 0, 0.0), (0, 0, 1.0)), "holds a gear axis with no direction"),
-    (((0, 0, 1.0), (0, 0.5, 0.5)), "holds two gear axes that are not parallel (their cosine is 0.707), so the mate "
-                                   "does not hold the axes the gears were placed on"),
-    (((1.0, 0, 0), (0, 0, 1.0)), "holds two gear axes that are not parallel (their cosine is 0.000)"),
+    (((0, 0, 0.0), (0, 0, 1.0)), "The gear mate G5 meshes G6 in R.SLDASM holds a gear axis with no direction"),
+    (((0, 0, 1.0), (0, 0.5, 0.5)), "SolidWorks reads the axes of the gear mate G5 meshes G6 in R.SLDASM as pointing "
+                                   "(0, 0.707, 0.707), which is not along either gear's axis ((0, 0, 1) or (0, 0, "
+                                   "1)), so the mate does not hold the axes the gears were placed on"),
+    (((1.0, 0, 0), (0, 0, 1.0)), "SolidWorks reads the axes of the gear mate G5 meshes G6 in R.SLDASM as pointing "
+                                 "(1, 0, 0), which is not along either gear's axis"),
 ])
-def test_a_gear_mates_entity_directions_that_are_not_one_line_are_not_judged(mated, directions, sentence):
+def test_a_gear_mates_entity_directions_that_are_not_along_the_gears_are_not_judged(mated, directions, sentence):
     session, doc = mated
     _sense_world(session, doc, True, directions)
     with pytest.raises(SolidWorksError) as raised:
-        session.gear_mate_sense("mesh", True)
-    assert str(raised.value).startswith(f"The gear mate G5 meshes G6 in R.SLDASM {sentence}")
+        session.gear_mate_sense("mesh", True, (Z_UP, Z_UP))
+    assert str(raised.value).startswith(sentence)
 
 
 def test_entity_directions_of_any_length_along_one_line_are_judged(mated):
     session, doc = mated
     _sense_world(session, doc, False, ((0, 0, 3.0), (0, 0.001, -0.5)))
-    assert session.gear_mate_sense("mesh", True) == (True, False)
+    assert session.gear_mate_sense("mesh", True, (Z_UP, Z_UP)) == (True, (1, -1))

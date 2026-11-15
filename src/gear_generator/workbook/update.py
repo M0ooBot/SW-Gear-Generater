@@ -125,6 +125,9 @@ class UpdatePlan:
     axial: Tuple[str, ...] = ()
     ratios: Tuple[str, ...] = ()
     drag: Tuple[str, ...] = ()                 # a turning gearbox's drag gear per train, now (Agent B, additive)
+    # W6 (B; W6-PLAN §2.7, D17): gear mates (by name) whose mesh sense the new read changes — a crossed shaft moved
+    # to the other side of its partner — each remade by Update through ``MotionUpdate.ratios``, for the sentence.
+    resensed: Tuple[str, ...] = ()
 
     @property
     def changed_parts(self) -> Tuple[PartUpdate, ...]:
@@ -770,13 +773,14 @@ def _turning(box: GearboxRecord, entries: Sequence[PartEntry], a: Assessment,
             recorded.append(Placement(c.gear, c.name, tuple(float(v) for v in c.rotation),
                                       tuple(float(v) for v in c.at), 360.0 / z if z > 0 else 0.0))
     meshes = [tuple(m.gears) for m in of_kind[motion.MESH]]
+    sense = {(a, b): motion.parallel_sense(a, b, sigma, internal) for a, b in meshes}    # W5's parallel meshes
     out.motion = MotionUpdate(
         mates=tuple(motion.mate_ref(m) for m in mates),
-        meshes=motion.mesh_links(meshes, teeth, sigma, internal),
+        meshes=motion.mesh_links(meshes, teeth, sense),
         locks=motion.lock_links([tuple(m.gears) for m in of_kind[motion.LOCK]], teeth),
         recorded=tuple(recorded),
         recorded_meshes=tuple(motion.mesh_links([tuple(m.gears)], {m.gears[0]: int(m.ratio[0]),
-                                                                    m.gears[1]: int(m.ratio[1])}, sigma, internal)[0]
+                                                                    m.gears[1]: int(m.ratio[1])}, sense)[0]
                               for m in of_kind[motion.MESH]),
         face_globals=tuple(face_globals),
         ratios=tuple(ratios),

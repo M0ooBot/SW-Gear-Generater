@@ -42,6 +42,7 @@ not overlap, and turned half a pitch they do.
 from __future__ import annotations
 
 import math
+import re
 from collections import deque
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
@@ -51,6 +52,82 @@ from .model import Gear, GearboxSpec, Shaft
 from .schema import FRAME
 
 AXES = {"Z+": 1, "Z-": -1}
+
+Vec3 = Tuple[float, float, float]
+
+# -- W6: turned axes (docs/notes-workbook/W6-PLAN.md §2.1; W6-INTERFACES.md) -----------------------------------
+#
+# Written at W6's interface commit, because the layout part, the frames, the mates and the worker all rest on them:
+# a shaft's direction from its Axis cell, its family (parallel and anti-parallel shafts) and the base frame a gear on
+# it is turned from. Pure.
+
+DIRECTIONS: Dict[str, Vec3] = {"X+": (1.0, 0.0, 0.0), "X-": (-1.0, 0.0, 0.0), "Y+": (0.0, 1.0, 0.0),
+                               "Y-": (0.0, -1.0, 0.0), "Z+": (0.0, 0.0, 1.0), "Z-": (0.0, 0.0, -1.0)}
+CARDINAL_SNAP = 1e-12        # a unit vector this close to a cardinal one, component by component, is that axis
+FAMILY_TOLERANCE = 1e-9      # |a × b| below this: two directions are one family (parallel or anti-parallel)
+
+
+def axis_vector(text: str) -> Vec3:
+    """An Axis cell as a unit vector (W6-PLAN §2.1): one of the six words exactly (``Z+ -> (0, 0, 1)``; blank is
+    ``Z+``, the column's blank), or three numbers ``"dx, dy, dz"`` (as ``model`` keeps a vector; commas, spaces or
+    semicolons between, U+2212 read as minus) normalised. A vector within :data:`CARDINAL_SNAP` of a cardinal one is
+    that axis exactly, so ``"0, 0, -2"`` is ``(0, 0, -1)``, ``Z-``'s. Anything else is a ValueError with a sentence."""
+    word = (text or "Z+").strip()
+    if word in DIRECTIONS:
+        return DIRECTIONS[word]
+    parts = [p for p in re.split(r"[,\s;]+", word) if p]
+    try:
+        values = [float(p.replace("\u2212", "-")) for p in parts]
+    except ValueError:
+        values = []
+    if len(values) != 3 or not all(math.isfinite(v) for v in values):
+        raise ValueError(f"An axis must be Z+, Z-, X+, X-, Y+, Y- or three numbers dx, dy, dz, not {text!r}.")
+    length = math.sqrt(sum(v * v for v in values))
+    if length < 1e-9:
+        raise ValueError(f"The axis {text!r} has no length, so it points nowhere.")
+    unit = (values[0] / length, values[1] / length, values[2] / length)
+    for cardinal in DIRECTIONS.values():
+        if all(abs(u - c) <= CARDINAL_SNAP for u, c in zip(unit, cardinal)):
+            return cardinal
+    return unit
+
+
+def family(direction: Vec3) -> Tuple[Vec3, int]:
+    """``(plus direction, ±1)``: the direction of ``direction``'s family (every shaft parallel or anti-parallel to
+    it) that counts as plus — the one whose first component of magnitude above 1e-12 is positive, which is the
+    cardinal word's ``+`` (``+X``, ``+Y``, ``+Z``) — and +1 when ``direction`` is that one, −1 when it is its
+    opposite (W6-PLAN §2.1, D12). ``direction`` is a unit vector (:func:`axis_vector`)."""
+    first = next((v for v in direction if abs(v) > 1e-12), None)
+    if first is None:
+        raise ValueError(f"The direction {tuple(direction)!r} has no length, so it has no family.")
+    sign = 1 if first > 0 else -1
+    plus = tuple(sign * v + 0.0 for v in direction)
+    return (plus[0], plus[1], plus[2]), sign
+
+
+def base_frame(direction: Vec3) -> Tuple[float, ...]:
+    """The rotation, 9 numbers by rows, that carries a gear's part from its own frame to a shaft along
+    ``direction`` before any turn about its axis (W6-PLAN §2.1): columns ``[u₀ | a × u₀ | a]``, ``a`` the unit
+    direction, ``u₀`` world +X projected onto the plane square to ``a`` and normalised — or world +Y when ``|a × X|``
+    is below 1e-9. So ``Z+`` is the identity and ``Z-`` is ``diag(1, −1, −1)`` (W4's ``F₋``) exactly; ``X+`` has
+    ``u₀ = +Y``, ``v₀ = +Z``; ``X-`` ``+Y``, ``−Z``; ``Y+`` ``+X``, ``−Z``; ``Y-`` ``+X``, ``+Z``. No ``-0.0`` comes
+    back. A gear turned θ about its own axis is placed by ``base_frame(a) · rot_z(θ)`` (``layout.frame``)."""
+    a = tuple(float(v) for v in direction)
+    length = math.sqrt(sum(v * v for v in a))
+    if len(a) != 3 or not math.isfinite(length) or length < 1e-12:
+        raise ValueError(f"The direction {tuple(direction)!r} is not three numbers with a length, so no gear can be "
+                         "turned onto it.")
+    if abs(length - 1.0) > 1e-12:
+        a = (a[0] / length, a[1] / length, a[2] / length)
+    cross_x = math.hypot(a[1], a[2])                 # |a × X|
+    seed = (0.0, 1.0, 0.0) if cross_x < 1e-9 else (1.0, 0.0, 0.0)
+    along = sum(s_ * v for s_, v in zip(seed, a))
+    u = tuple(s_ - along * v for s_, v in zip(seed, a))
+    norm = math.sqrt(sum(v * v for v in u))
+    u = tuple(v / norm for v in u)
+    v0 = (a[1] * u[2] - a[2] * u[1], a[2] * u[0] - a[0] * u[2], a[0] * u[1] - a[1] * u[0])
+    rows = (u[0], v0[0], a[0], u[1], v0[1], a[1], u[2], v0[2], a[2])
+    return tuple(r + 0.0 for r in rows)
 
 
 @dataclass(frozen=True)
@@ -72,6 +149,24 @@ class Placed:
     lead: float = 0.0        # mm per turn of the helix; 0 for a spur
     herringbone: bool = False
     spec: object = None      # the strip's GearSpec for this gear, for its outline
+    # W6 (W6-PLAN §2.1; B fills them for every axis): ``axis`` the gear's own +Z in world (its shaft's Axis: D1);
+    # ``centre`` the world point at its At (a bevel gear's pitch apex: D2); ``family`` its shaft family's plus
+    # direction (:func:`family`); ``bevel`` whether it is a bevel gear. ``x, y, z, sigma`` are the At point's
+    # coordinates in the family's plus frame and its sense against the plus direction — for the Z family, world
+    # x, y, z and W3's σ, unchanged. Every constructor must give ``axis`` and ``centre`` (the defaults are the Z+
+    # gear at the origin's).
+    axis: Vec3 = (0.0, 0.0, 1.0)
+    centre: Vec3 = (0.0, 0.0, 0.0)
+    family: Vec3 = (0.0, 0.0, 1.0)
+    bevel: bool = False
+
+    @property
+    def origin(self) -> Vec3:
+        """Where the part's origin sits in world (``layout.frame``'s ``at``): its front face centre, ``centre −
+        axis·face/2``, or for a bevel gear its pitch apex, ``centre``. For a Z± gear exactly ``(x, y, z_front)``."""
+        if self.bevel:
+            return (self.centre[0], self.centre[1], self.centre[2])
+        return tuple(c - a * self.face / 2.0 for c, a in zip(self.centre, self.axis))
 
     @property
     def z_front(self) -> float:
@@ -171,8 +266,10 @@ def _place(spec: GearboxSpec, gear: Gear, shaft: Shaft) -> Placed:
     derived = kind.derive(gear_spec)
     helical = gear_spec.kind in ("helical", "herringbone")
     z = float(shaft.z or 0) + sigma * float(gear.at or 0)
+    x, y = float(shaft.x), float(shaft.y)
     return Placed(
-        gear=gear.id, shaft=shaft.id, x=float(shaft.x), y=float(shaft.y), z=z, sigma=sigma,
+        gear=gear.id, shaft=shaft.id, x=x, y=y, z=z, sigma=sigma,
+        axis=(0.0, 0.0, float(sigma)), centre=(x, y, z), family=(0.0, 0.0, 1.0),
         face=float(gear.face_width), teeth=int(float(gear.teeth)), module=float(gear.module),
         internal=gear_spec.is_internal(), derived=derived,
         hand_sign=getattr(derived, "hand_sign", 0) if helical else 0,
@@ -288,3 +385,74 @@ def extent(placed: Dict[str, Placed]) -> Optional[Tuple[Tuple[float, float], ...
     return ((min(g.x - g.outer_radius for g in gears), max(g.x + g.outer_radius for g in gears)),
             (min(g.y - g.outer_radius for g in gears), max(g.y + g.outer_radius for g in gears)),
             (min(g.z_range[0] for g in gears), max(g.z_range[1] for g in gears)))
+
+
+# -- W6: meshes across turned axes (W6-PLAN §2.3, §2.5, §2.5.1; Agent B writes the bodies) ------------------------
+
+PARALLEL, BEVEL, CROSSED = "parallel", "bevel", "crossed"      # MeshGeometry.kind
+
+
+@dataclass(frozen=True)
+class MeshGeometry:
+    """One listed mesh as laid out (:func:`mesh_geometry`; ``checks.Report.meshes``, keyed by the Meshes row's
+    ordered pair ``(a, b)``).
+
+    ``kind``: :data:`PARALLEL` (the two axes within 1e-9 rad of parallel), :data:`BEVEL` (both bevel gears),
+    :data:`CROSSED` (both helical, on crossed shafts). ``sense``: ``c`` in ``z_a·ω_a + c·z_b·ω_b = 0``, ±1, speeds
+    about each gear's own +Z (§2.4: PARALLEL ``a_a·a_b`` outside and ``−a_a·a_b`` inside a ring; BEVEL +1;
+    CROSSED ``s_p·s_q``). ``shaft_angle``: degrees between the two gears' own +Z (0 or 180 for PARALLEL).
+    ``needed``: PARALLEL / CROSSED the centre distance the teeth make, mm; BEVEL 0 (apexes together). ``placed``:
+    PARALLEL the distance between the lines; CROSSED along the common perpendicular; BEVEL between the two apexes.
+    ``contact``: a world point — PARALLEL the mid-overlap pitch point, BEVEL the heel pitch point on the common
+    generatrix, CROSSED the pitch point on the common perpendicular. ``psi_a``/``psi_b``: the contact's azimuth
+    about each gear's own +Z in its base frame (``base_frame``), radians. ``problem``: ``""``, or a sentence when the
+    pair cannot be laid out as this kind (§2.5, §2.9)."""
+
+    a: str
+    b: str
+    kind: str
+    sense: int
+    shaft_angle: float
+    needed: float
+    placed: float
+    contact: Vec3
+    psi_a: float
+    psi_b: float
+    problem: str = ""
+
+
+@dataclass(frozen=True)
+class BevelCut:
+    """What a bevel gear is cut for, from the read alone (:func:`bevel_cuts`; W6-PLAN §2.5.1, D9): its partner's
+    teeth, the shaft angle in degrees between the two shafts' Axis directions (exactly 90 for a cardinal pair),
+    every bevel gear it is listed with, and ``problem``: ``""`` or the sentence (no mesh, two mates of different
+    teeth, two shaft angles), an error at the gear's cell, which then is not planned."""
+
+    mate_teeth: int
+    shaft_angle: float
+    partners: Tuple[str, ...]
+    problem: str = ""
+
+
+def mesh_geometry(a: Placed, b: Placed) -> MeshGeometry:
+    """The mesh between two placed gears, classified and measured (W6-PLAN §2.3): PARALLEL by W3's formulas in the
+    family's plus frame; BEVEL with the apexes within ``checks.CENTRE_TOLERANCE`` and the contact at the heel pitch
+    point; CROSSED by the common perpendicular, its signed crossing against the hands and the contact inside both
+    faces. A pair that cannot be laid out as its kind comes back with ``problem`` set, never a raise."""
+    raise NotImplementedError("W6: Agent B, workbook.geometry.mesh_geometry")
+
+
+def bevel_cuts(spec: GearboxSpec) -> Dict[str, BevelCut]:
+    """Every bevel gear's mate teeth and shaft angle, from its Meshes rows and the two shafts' Axis cells, keyed by
+    gear id (W6-PLAN §2.5.1). Pure and from the read alone, since ``build.plan_parts`` needs it before anything is
+    laid out."""
+    raise NotImplementedError("W6: Agent B, workbook.geometry.bevel_cuts")
+
+
+def cylinder_gap(a: Placed, b: Placed) -> float:
+    """The least distance, mm, between the two gears' true solid bounding cylinders (W6-PLAN §2.5, D8, review M5):
+    each about its own axis, radius its outside radius (a ring's rim, a bevel's largest radial extent in
+    ``bevel.blank_points``), axial span its face (a bevel's blank from its nearest to its farthest point along the
+    axis, from the apex). Closed forms for side against side, each end disc against the other cylinder, and the
+    rims; 0 when they overlap. Tested against dense sampling (the fixtures' clearances to 0.1 mm)."""
+    raise NotImplementedError("W6: Agent B, workbook.geometry.cylinder_gap")
