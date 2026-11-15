@@ -360,12 +360,12 @@ the kind the last two interface reviews found, and asked for written rules. Thes
       (`test_s2_after_an_update_had_put_every_mode_the_turn_was_read_in_4l_and_not_in_4h_or_n`), and 2024's s7 readings
       beside those (`test_s7_on_2024_…`).
     - *A put on a quiet Update obliges the visit* (J13, W8-PLAN §1.10's post-check, "all of them when anything
-      changed"). An Update with nothing changed in the workbook that finds the active mode out of step and puts it
-      has changed something: every other mode is then shown and handled as a changed Update handles it (put only
-      where its own train needs it, J26 unchanged; post-checked; its `ModeCheck` on `result.modes`), the active
-      mode last and left active, its own `ModeCheck` last, then every per-mode flag read in every configuration.
-      This holds whichever way positions are kept. A quiet Update that puts nothing stays as it was: nothing shown,
-      nothing marked. The test that had pinned the opposite, the shared-positions variant of
+      changed"). What the Update does now is the two amendments below: a quiet Update that has anything to put shows
+      every mode and puts every train whole to its built frames there, out of step, off its axis or turned in step,
+      the active mode last and left active, then reads every per-mode flag in every configuration. *Superseded by
+      them:* this paragraph first had every other mode "handled as a changed Update handles it (put only where its
+      own train needs it, J26 unchanged; post-checked; its `ModeCheck` on `result.modes`)". A quiet Update that puts
+      nothing stays as it was: nothing shown, nothing marked. The test that had pinned the opposite, the shared-positions variant of
       `test_a_train_turned_in_another_mode_is_left_unseen_by_a_quiet_update_which_says_so` ("put back in 2H alone,
       nothing shown"), now pins the visit, renamed `test_a_turn_in_another_mode_is_unseen_by_a_quiet_update_or_if_shared_put_back_with_every_mode_visited`.
       *Amended after s2's rerun* (`probe/results/w8-workbook-assembly-20261115-132348-s2-put-kept-per-configuration.log`,

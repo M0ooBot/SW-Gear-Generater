@@ -3581,8 +3581,10 @@ TURN_SHOWN_ELSEWHERE = ("This version of SolidWorks can show that turn in other 
 GEARS_SHOWN_ELSEWHERE = ("This version of SolidWorks can show the gears at the same turn in other modes, so a dog may "
                          "stand across its sleeve in another; to put the gears back there, press Update SolidWorks with "
                          "that mode showing.")
-# "Can show", not "shows": a turn was read in every mode on a copy no Update had moved (W8 s7), but after an Update
-# had put every mode a fresh turn was read in 4L and not in 4H and N (W8 s2, findings.TURN_PER_CONFIGURATION).
+# "Can show", not "shows": on 2026 a turn was read in every mode on a copy no Update had moved (W8 s7), but after an
+# Update had put every mode a fresh turn was read in 4L, while 4H and N, shown after a put in 2H, stood at the built
+# turn; which it reaches then is not settled on 2026 (W8 s2). On 2024 every turn s7 gave was read in every mode
+# (findings.TURN_PER_CONFIGURATION).
 TURN_CAN_SHOW_ELSEWHERE = ("A turn you give the gears in one mode can show in other modes, so a dog can stand across "
                            "its sleeve in another; to put the gears back there, press Update SolidWorks with that mode "
                            "showing.")

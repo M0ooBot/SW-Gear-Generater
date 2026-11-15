@@ -508,10 +508,11 @@ are skipped: each slider's SLIDE is made at its one value and the assembly keeps
 
 *(2026-11-15: on SolidWorks 2026 34.0.0 a turn of the mated train given in one configuration has been read in others,
 in all four on copies no Update had moved (W8's s2, s7 cases 1-3), so this section's "if SolidWorks shares positions"
-case applies to a turn at least there; after an Update had put every mode it was read in 4L and not in 4H or N, and a
-moving put, kept by the configuration showing in s7, was twice found in 4H and N in s2. Neither is settled in that
-state. What the app says follows `TURN_PER_CONFIGURATION_ON_<year>`, as "can show": W8-INTERFACES §9.18. The text below
-is as approved.)*
+case applies to a turn at least there; after an Update had put every mode it was read in 4L, while 4H and N, shown
+after the app's put in 2H, stood at the built turn: either the turn did not reach them or the put did. Which is not
+settled on 2026; s7 case 8 is to measure it. On SolidWorks 2024 s7 read every turn in all four, in that state too, and
+the put stay in 2H. What the app says follows `TURN_PER_CONFIGURATION_ON_<year>`, False on both, as "can show":
+W8-INTERFACES §9.18. The text below is as approved.)*
 
 A train turns in a configuration exactly as W5's does: one freedom per train in that mode (a free member in neutral
 is a train of its own, as an unmeshed shaft is in W5), the drag gear the input's anchor.

@@ -628,17 +628,21 @@ their rerun on 2024 measured the same (findings committed in `ea7a46f`); no W8 c
 - **J9** — a shaft's anchor is its first non-sliding gear, else its first slider. **J10** (**ruled**) — **one
   configuration per mode**, named as the mode, the first Modes row the one the assembly opens in; every flag set
   explicitly in every configuration and read back.
-- **J11** (**measured**) — **each configuration keeps its own positions**: a turn the user gives in one mode stays in
-  that mode. **J26** (**measured**) — **a put holds in the configuration shown only**, so Update's puts are made mode
-  by mode, each with its configuration shown. What the app *says* about a turn and a switch follows the running
-  version's finding (`POSITIONS_PER_CONFIGURATION_ON_<year>`), and neither claim is made where it is unsettled or
-  after a restart.
-  *(2026-11-15: on SolidWorks 2026 34.0.0 a turn of the mated train given in one configuration has been read in the
-  others on copies no Update had moved (W8's s2 and s7); after an Update had put every mode it was read in 4L and not
-  in 4H or N, and a put that moves a body, kept by the configuration showing in s7, was twice found in 4H and N in s2.
-  Neither is settled in that state; a further s7 case is to measure it. The sentences read
-  `TURN_PER_CONFIGURATION_ON_<year>`, False on 2026, and say a turn "can show" in other modes; every mode an Update
-  shows ends at its built frames: notes-workbook/W8-INTERFACES.md §9.18.)*
+- **J11** (**measured**, corrected 2026-11-15) — **a turn the user gives in one mode can show in the other modes**:
+  W8's s7 read it in every mode on SolidWorks 2024 and, on copies no Update had moved, on 2026. **J26**
+  (**measured**, corrected) — **Update's puts are made mode by mode, each with its configuration shown, and every
+  mode an Update shows ends at its built frames**: since `a87c1c5` and `baa1a56` an Update that puts anything shows
+  every mode and puts every train whole there, out of step, off its axis or turned in step, the active mode last.
+  What the app *says* about a turn and a switch follows the running version's finding
+  (`TURN_PER_CONFIGURATION_ON_<year>`, False on 2026 and 2024), and neither claim is made for a version with no
+  finding of its own or after a restart.
+  *(Approved as "each configuration keeps its own positions: a turn the user gives in one mode stays in that mode"
+  and "a put holds in the configuration shown only", with the sentences on `POSITIONS_PER_CONFIGURATION_ON_<year>`.
+  W8's s2 and s7 read otherwise. On 2026, after an Update had put every mode, a fresh turn was read in 4L, while 4H
+  and N, shown after the app's put in 2H, stood at the built turn: either the turn did not reach them or the put did,
+  and 2026's s7 case 8 is to settle which. On 2024 the turn reached all four and the put stayed in 2H; a moving put
+  was kept by its configuration only until its train was next turned anywhere: notes-workbook/W8-INTERFACES.md
+  §9.18.)*
 - **J12** — D10 per configuration. **J13** — Update works in the configuration active when it opens and returns to
   it. **J14** (**ruled**, the review's S6) — an edit after which every mate the modes need is already on record (a
   Modes pick between existing positions, an offset, an At, a renamed position) is an Update; Modes rows added,
