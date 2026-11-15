@@ -6538,7 +6538,7 @@ def _status_sentences(built, done):
 def test_a_turn_in_step_in_the_mode_showing_is_left_and_the_status_warns_of_the_other_modes(mode_findings,
                                                                                           monkeypatch):
     """W8-INTERFACES §9.18 (the review of its commits, point 1), end to end on the fake's shared variant with the
-    turn finding as committed (2026: a turn shows in every mode). The 2H train turned 37°, in step in 2H; Update in
+    turn finding as committed (2026: a turn can show in other modes). The 2H train turned 37°, in step in 2H; Update in
     2H puts nothing and shows nothing, so the footer shows its status alone; the status says another mode may stand
     with a dog across its sleeve, and on this fake 4L does."""
     monkeypatch.setattr(findings, "INTERFERENCE_CHECKED", True, raising=False)

@@ -1112,7 +1112,7 @@ def test_e4_a_turn_in_2h_then_an_update_in_4l_puts_every_mode_back_where_a_put_s
     sw, _, record = build_on_fake(e4_transfer_case())
     sw.put_splits = set()
     sun = next(c.name for c in record.gearbox.components if c.gear == "Sun")
-    sw.drive(sun, 37.0)                                            # in 2H, before any put: shows in every mode
+    sw.drive(sun, 37.0)                                            # in 2H, before any put: the fake shows it in all
     sw.show_configuration("4L")
     sw.calls.clear()
     up, result = press_e4(sw, record, e4_transfer_case())
@@ -1208,7 +1208,7 @@ def test_e4_a_flags_or_values_update_of_a_gearbox_nobody_turned_puts_nothing(mod
 def test_e4_a_turn_put_back_in_the_mode_worked_in_names_the_modes_read_at_the_built_turn(mode_findings, monkeypatch):
     """Sentence 3 reached truthfully: positions kept per configuration (the fake's default), the turn given in 4L
     alone, a flags-only Update in 4L. 4L, turned in step, is put; 2H, 4H and N are read at their built frames and not
-    put, and the status says so where the switch says a turn shows in every mode."""
+    put, and the status says so where the switch says a turn can show in other modes."""
     monkeypatch.setattr(findings, "TURN_PER_CONFIGURATION_ON_2026", False)
     sw, _, record = build_on_fake(e4_transfer_case())
     sw.show_configuration("4L")
