@@ -734,7 +734,8 @@ def test_a_component_is_found_by_its_recorded_name_by_every_route(com, monkeypat
     wanted = Component("Gear_m1.5_N68-1", model=model)
     session, _ = _assembly(com, Component("Gear_m1.5_N17-1"), wanted)
     assert session.find_component("placed2", "Gear_m1.5_N68-1") == "Gear_m1.5_N68-1"
-    assert session._handles["placed2"] == {"component": wanted, "path": W + "Gear_m1.5_N68.SLDPRT"}
+    assert session._handles["placed2"] == {"component": wanted, "path": W + "Gear_m1.5_N68.SLDPRT",
+                                           "name": "Gear_m1.5_N68-1", "epoch": session._epoch}
 
 
 @pytest.mark.parametrize("route", swcom.COMPONENT_FIND_ROUTES)
@@ -2365,3 +2366,663 @@ def test_the_flags_are_restored_even_when_the_sketch_will_not_close(com):
     with pytest.raises(SolidWorksError):
         session.line_axis("line3", "S3 Axis", SLANT_POINT, SLANT_DIRECTION, 100.0)
     assert doc.SketchManager.AddToDB is False and doc.SketchManager.DisplayWhenAdded is True
+
+
+# -- W8: an assembly's configurations, and the handle rule (W8-PLAN §1.8, §4.2; W8-SPIKE; W8-INTERFACES §9.4) -------
+#
+# A COM-level fake of one assembly with configurations. Each mock is slotted and has only the members the real object
+# has that the Session uses, so a call on the wrong owner (the line-axis lesson) fails as AttributeError. A component
+# handle belongs to the epoch it was handed out in: AddConfiguration2 and ShowConfiguration2 start a new one, and any
+# member read through an older handle raises StaleHandle (SolidWorks answers Transform2 None and IsFixed False there,
+# silently; the fake makes that loud).
+
+CONFIGURATION_FINDING_VALUES = dict(swcom.CONFIGURATION_FINDINGS)
+SERVER_FAULT = com_error(-2147417851, "The server threw an exception.", None, None)     # 0x80010105, the spike's
+EYE16 = (1.0, 0, 0, 0, 1.0, 0, 0, 0, 1.0, 0.0, 0.0, 0.0, 1.0, 0, 0, 0)
+
+
+class StaleHandle(AssertionError):
+    """A component handle used after AddConfiguration2 or ShowConfiguration2 without being fetched again."""
+
+
+class _PartState:
+    """What one component is in every configuration (shared by every handle to it)."""
+
+    def __init__(self, name, path, fixed=False):
+        self.name, self.path = name, path
+        self.fixed = {"Default": fixed}
+        self.frames = {"Default": EYE16}
+
+
+class ConfigComponent:
+    """``IComponent2``, handed out in one epoch of its assembly."""
+    __slots__ = ("_doc", "_born", "_state")
+
+    def __init__(self, doc, state):
+        self._doc, self._born, self._state = doc, doc.epoch, state
+
+    def _live(self):
+        if self._born != self._doc.epoch:
+            raise StaleHandle(f"{self._state.name} was used through a handle held across a configuration change")
+        return self._state
+
+    @property
+    def Name2(self):
+        return self._live().name
+
+    @property
+    def IsFixed(self):
+        return self._live().fixed[self._doc.active]
+
+    @property
+    def Transform2(self):
+        return Transform(self._live().frames[self._doc.active])
+
+    @Transform2.setter
+    def Transform2(self, transform):
+        self._live().frames[self._doc.active] = tuple(transform.ArrayData)
+        self._doc.log.append(("Transform2 put", self._state.name, self._doc.active))
+
+    @property
+    def GetModelDoc2(self):
+        self._live()
+        return None                                  # as a component with no model loaded: its own path is read
+
+    @property
+    def GetPathName(self):
+        return self._live().path
+
+    @property
+    def GetSuppression2(self):
+        self._live()
+        return 2
+
+    @property
+    def GetConstrainedStatus(self):
+        self._live()
+        return 2
+
+    def Select4(self, append, data, mark):
+        self._doc.log.append(("Select4", self._live().name, append))
+        self._doc.selected.append(self._state.name)
+        return True
+
+    def FeatureByName(self, name):
+        self._live()
+        raise AssertionError("a feature of a component is selected by its held names after a configuration change")
+
+
+class ConfigDimension:
+    """``IDimension``: a value per configuration, an unset one reading 0 (the spike)."""
+    __slots__ = ("_doc", "values")
+
+    def __init__(self, doc, values):
+        self._doc, self.values = doc, values
+
+    def SetSystemValue3(self, value_m, which, names):
+        self._doc.log.append(("SetSystemValue3", value_m, which, tuple(names)))
+        if self._doc.set_answer == 0 and not self._doc.set_ignored:
+            for name in names:
+                self.values[name] = value_m
+        return self._doc.set_answer
+
+    def GetSystemValue3(self, which, names):
+        self._doc.log.append(("GetSystemValue3", which, tuple(names)))
+        return tuple(self.values.get(name, 0.0) for name in names)[:-1 if self._doc.short_answers else None]
+
+
+class ConfigDisplayDimension:
+    """``IDisplayDimension``."""
+    __slots__ = ("_dimension",)
+
+    def __init__(self, dimension):
+        self._dimension = dimension
+
+    @property
+    def GetDimension(self):
+        return self._dimension
+
+
+class ConfigMate:
+    """A mate ``IFeature`` in the MateGroup, its flag per configuration, a distance mate with its D1."""
+    __slots__ = ("_doc", "Name", "GetTypeName2", "flags", "_dimension")
+
+    def __init__(self, doc, name, type_name="MateGearDim", values=None):
+        self._doc, self.Name, self.GetTypeName2 = doc, name, type_name
+        self.flags = {c: False for c in doc.configs}
+        self._dimension = None if values is None else ConfigDimension(doc, values)
+
+    @property
+    def GetNextSubFeature(self):
+        mates = self._doc.mates
+        index = mates.index(self)
+        return mates[index + 1] if index + 1 < len(mates) else None
+
+    @property
+    def GetFirstSubFeature(self):
+        return None
+
+    @property
+    def GetFirstDisplayDimension(self):
+        return None if self._dimension is None else ConfigDisplayDimension(self._dimension)
+
+    def IsSuppressed2(self, which, names):
+        self._doc.log.append(("IsSuppressed2", self.Name, which, tuple(names)))
+        flags = tuple(self.flags[name] for name in names)[:-1 if self._doc.short_answers else None]
+        return (flags,) if self._doc.wrapped_flags else flags
+
+    def SetSuppression2(self, action, which, names):
+        self._doc.log.append(("SetSuppression2", self.Name, action, which, tuple(names)))
+        behaviour = self._doc.suppression
+        if behaviour == "ignored":
+            return False
+        for name in names:
+            self.flags[name] = action == findings.FEATURE_SUPPRESS
+        if behaviour == "raises and takes":
+            raise SERVER_FAULT
+        if behaviour == "connection lost":
+            raise RPC_FAILED
+        return True
+
+
+class ConfigMateGroup:
+    __slots__ = ("_doc",)
+    Name, GetTypeName2, GetNextFeature = "Mates", "MateGroup", None
+
+    def __init__(self, doc):
+        self._doc = doc
+
+    @property
+    def GetFirstSubFeature(self):
+        return self._doc.mates[0] if self._doc.mates else None
+
+
+class ConfigOrigin:
+    __slots__ = ("_doc",)
+    Name, GetTypeName2 = "Origin", "OriginProfileFeature"
+
+    def __init__(self, doc):
+        self._doc = doc
+
+    @property
+    def GetNextFeature(self):
+        return ConfigMateGroup(self._doc)
+
+
+class ConfigActive:
+    """``IConfiguration``, only its name."""
+    __slots__ = ("Name",)
+
+    def __init__(self, name):
+        self.Name = name
+
+
+class ConfigManager:
+    """``IConfigurationManager``: AddConfiguration2 and ActiveConfiguration only."""
+    __slots__ = ("_doc",)
+
+    def __init__(self, doc):
+        self._doc = doc
+
+    def AddConfiguration2(self, name, comment, alternate, options, parent, description, rebuild):
+        doc = self._doc
+        doc.log.append(("AddConfiguration2", name, comment, alternate, options, parent, description, rebuild))
+        if doc.refuse_add:
+            return None
+        doc.configs.append(name)
+        for part in doc.parts.values():                      # a new configuration starts as the active one stands
+            part.fixed[name] = part.fixed[doc.active]
+            part.frames[name] = part.frames[doc.active]
+        for mate in doc.mates:
+            mate.flags[name] = mate.flags[doc.active]
+        doc.active = name
+        doc.epoch += 1
+        return ConfigActive(name)
+
+    @property
+    def ActiveConfiguration(self):
+        return ConfigActive(self._doc.active)
+
+
+class ConfigSelection:
+    __slots__ = ("_doc",)
+
+    def __init__(self, doc):
+        self._doc = doc
+
+    def GetSelectedObjectCount2(self, mark):
+        return len(self._doc.selected)
+
+
+class ConfigExtension:
+    __slots__ = ("_doc",)
+
+    def __init__(self, doc):
+        self._doc = doc
+
+    def SelectByID2(self, name, kind, x, y, z, append, mark, callout, option):
+        self._doc.log.append(("SelectByID2", name, kind, append))
+        self._doc.selected.append(name)
+        return True
+
+
+class ConfigDoc:
+    """The assembly (``IModelDoc2`` / ``IAssemblyDoc``) with configurations."""
+    __slots__ = ("log", "configs", "active", "epoch", "parts", "mates", "selected", "refuse_add", "refuse_show",
+                 "refuse_delete", "suppression", "wrapped_flags", "set_answer", "set_ignored", "GetSaveFlag",
+                 "short_answers")
+    GetTitle, GetPathName, GetType = "R.SLDASM", W + "R.SLDASM", swcom.DOC_ASSEMBLY
+
+    def __init__(self):
+        self.log, self.configs, self.active, self.epoch = [], ["Default"], "Default", 0
+        self.parts, self.mates, self.selected = {}, [], []
+        self.refuse_add = self.refuse_show = self.refuse_delete = False
+        self.suppression, self.wrapped_flags, self.set_answer, self.set_ignored = "takes", False, 0, False
+        self.GetSaveFlag, self.short_answers = False, False
+
+    def part(self, name, fixed=False):
+        self.parts[name] = _PartState(name, W + name.rsplit("-", 1)[0] + ".SLDPRT", fixed)
+        return self.parts[name]
+
+    @property
+    def ConfigurationManager(self):
+        return ConfigManager(self)
+
+    @property
+    def GetConfigurationNames(self):
+        return tuple(self.configs)
+
+    def ShowConfiguration2(self, name):
+        self.log.append(("ShowConfiguration2", name))
+        if name == self.active or name not in self.configs or self.refuse_show:
+            return False
+        self.active, self.GetSaveFlag = name, True               # a show marks the assembly (the spike)
+        self.epoch += 1
+        return True
+
+    def DeleteConfiguration2(self, name):
+        self.log.append(("DeleteConfiguration2", name))
+        if name == self.active or self.refuse_delete:
+            return False
+        self.configs.remove(name)
+        return True
+
+    def GetComponentByName(self, name):
+        self.log.append(("GetComponentByName", name))
+        state = self.parts.get(name)
+        return None if state is None else ConfigComponent(self, state)
+
+    @property
+    def FirstFeature(self):
+        return ConfigOrigin(self)
+
+    @property
+    def SelectionManager(self):
+        return ConfigSelection(self)
+
+    @property
+    def Extension(self):
+        return ConfigExtension(self)
+
+    def ClearSelection2(self, everything):
+        self.selected = []
+
+    def FixComponent(self):
+        for name in self.selected:
+            self.parts[name].fixed[self.active] = True
+
+    def UnfixComponent(self):
+        for name in self.selected:
+            self.parts[name].fixed[self.active] = False
+
+    def ForceRebuild3(self, top_only):
+        self.log.append(("ForceRebuild3", top_only))
+        self.GetSaveFlag = True
+        return True
+
+
+class ConfigApp:
+    __slots__ = ("ActiveDoc", "GetMathUtility")
+
+    def __init__(self, doc, log):
+        self.ActiveDoc, self.GetMathUtility = doc, _Utility(log)
+
+    def GetUserPreferenceToggle(self, which):
+        return False
+
+    def SetUserPreferenceToggle(self, which, value):
+        pass
+
+
+@pytest.fixture
+def configured(monkeypatch):
+    """A Session on a two-gear assembly in its Default configuration, both gears found by name, a gear mate and a
+    slide's distance mate kept, every finding the members read pinned here (never the committed values)."""
+    for name, value in swcom.CONFIGURATION_FINDINGS:
+        monkeypatch.setattr(findings, name, value, raising=False)
+    for name, value in (("COMPONENT_FIND_ROUTE", "GetComponentByName"), ("MATE_FIND_ROUTE", "mate group"),
+                        ("FEATURE_SUPPRESS", 0), ("FEATURE_UNSUPPRESS", 1), ("TRANSFORM_ARRAY_ORDER", "columns"),
+                        ("COMPONENT_UNDER_DEFINED", 2), ("ASSEMBLY_REBUILD_ROUTE", "ForceRebuild3(True)"),
+                        ("ASSEMBLY_REBUILD_TOP_ONLY", True), ("COMPONENT_RESOLVED_ROUTE", "GetSuppression2"),
+                        ("COMPONENT_FULLY_RESOLVED_STATES", (2,))):
+        monkeypatch.setattr(findings, name, value, raising=False)
+    monkeypatch.setattr(swcom, "_out_long", Out)
+    monkeypatch.setattr(swcom, "_null_dispatch", lambda: None)
+    monkeypatch.setattr(swcom, "pythoncom", _PyCom)
+    monkeypatch.setattr(_PyCom, "VT_BSTR", 8, raising=False)
+    monkeypatch.setattr(swcom, "VARIANT", lambda kind, value: list(value) if isinstance(value, (list, tuple))
+                        else value)
+    monkeypatch.setattr(swcom.time, "sleep", lambda _seconds: None)
+    doc = ConfigDoc()
+    doc.part("Layout-1", fixed=True)
+    doc.part("Gear_m1.5_N68-1")
+    doc.part("Gear_m1.5_N17-1")
+    doc.mates.append(ConfigMate(doc, "G1 meshes G2"))
+    doc.mates.append(ConfigMate(doc, "RangeSlv along Rear", "MateDistanceDim", values={"Default": 0.010}))
+    session = swcom.Session(ConfigApp(doc, doc.log), (34, 0, 0), 1)
+    session.begin_build()
+    for handle, name in (("layout", "Layout-1"), ("gear1", "Gear_m1.5_N68-1"), ("gear2", "Gear_m1.5_N17-1")):
+        session.find_component(handle, name)
+    session.find_mate("mesh1", "G1 meshes G2")
+    session.find_mate("slide1", "RangeSlv along Rear")
+    doc.log.clear()
+    return session, doc
+
+
+CONFIGURATION_MEMBER_CALLS = [
+    ("CONFIGURATION_ADD_ROUTE", lambda s: s.add_configuration("4L")),
+    ("CONFIGURATION_SHOW_ROUTE", lambda s: s.show_configuration("4L")),
+    ("CONFIGURATION_DELETE_ROUTE", lambda s: s.delete_configuration("Default")),
+    ("MATE_SUPPRESSION_PER_CONFIGURATION_ROUTE", lambda s: s.set_mate_suppressed_in("mesh1", True, ["Default"])),
+    ("SPECIFY_CONFIGURATIONS", lambda s: s.set_mate_suppressed_in("mesh1", True, ["Default"])),
+    ("MATE_SUPPRESSION_PER_CONFIGURATION_ROUTE", lambda s: s.mate_suppression("mesh1", ["Default"])),
+    ("SPECIFY_CONFIGURATIONS", lambda s: s.mate_suppression("mesh1", ["Default"])),
+    ("SLIDE_VALUE_ROUTE", lambda s: s.set_dimension_in("slide1", 66.0, ["Default"])),
+    ("SET_VALUE_IN_SPECIFIC_CONFIGURATIONS", lambda s: s.set_dimension_in("slide1", 66.0, ["Default"])),
+    ("SLIDE_VALUE_ROUTE", lambda s: s.dimension_values("slide1", ["Default"])),
+    ("SET_VALUE_IN_SPECIFIC_CONFIGURATIONS", lambda s: s.dimension_values("slide1", ["Default"])),
+]
+
+
+@pytest.mark.parametrize("finding, member", CONFIGURATION_MEMBER_CALLS)
+@pytest.mark.parametrize("value", [None, "something else"])
+def test_each_configuration_member_refuses_with_a_sentence_before_any_call_when_its_finding_is_unsettled(
+        configured, monkeypatch, finding, member, value):
+    session, doc = configured
+    monkeypatch.setattr(findings, finding, value, raising=False)
+    with pytest.raises(swcom.SolidWorksError) as raised:
+        member(session)
+    assert str(raised.value) == (f"Working with an assembly's configurations has not been settled on this SolidWorks "
+                                 f"(findings.{finding} is {value!r}), so nothing was read or changed.")
+    assert doc.log == []
+
+
+def test_the_configurations_and_the_active_one_are_read_from_the_document_and_its_manager(configured):
+    session, doc = configured
+    doc.configs.append("4L")
+    assert session.configurations() == ["Default", "4L"]
+    assert session.active_configuration() == "Default"
+
+
+def test_a_configuration_is_added_by_the_spikes_call_on_the_manager_and_judged_by_the_active_name(configured):
+    session, doc = configured
+    session.add_configuration("4L")
+    assert doc.log == [("AddConfiguration2", "4L", "", "", 0, "", "", True)]
+    assert doc.active == "4L" and session._epoch == 1
+
+
+def test_a_configuration_solidworks_will_not_add_is_a_sentence_and_still_starts_a_new_epoch(configured):
+    session, doc = configured
+    doc.refuse_add = True
+    with pytest.raises(swcom.SolidWorksError) as raised:
+        session.add_configuration("4L")
+    assert str(raised.value) == "SolidWorks would not make the configuration 4L."
+    assert session._epoch == 1
+
+
+def test_a_show_is_judged_by_the_active_name_never_by_what_it_returns(configured):
+    session, doc = configured
+    session.add_configuration("4L")
+    session.show_configuration("4l")                   # already active: SolidWorks returns False, and that is right
+    assert doc.active == "4L" and not doc.GetSaveFlag
+    session.show_configuration("Default")
+    assert doc.active == "Default" and doc.GetSaveFlag
+    assert [e for e in doc.log if e[0] == "ShowConfiguration2"] == [("ShowConfiguration2", "4l"),
+                                                                    ("ShowConfiguration2", "Default")]
+    doc.refuse_show = True
+    with pytest.raises(swcom.SolidWorksError) as raised:
+        session.show_configuration("4L")
+    assert str(raised.value) == "SolidWorks would not show the configuration 4L."
+    assert session._epoch == 4                          # every show starts one, whatever it answered
+
+
+def test_the_active_configuration_is_never_deleted_and_a_delete_is_read_back(configured):
+    session, doc = configured
+    with pytest.raises(swcom.SolidWorksError) as raised:
+        session.delete_configuration("DEFAULT")
+    assert str(raised.value) == ("The configuration DEFAULT is the active one in R.SLDASM, and the active "
+                                 "configuration is never deleted.")
+    assert not [e for e in doc.log if e[0] == "DeleteConfiguration2"]
+    session.add_configuration("4L")
+    session.delete_configuration("Default")
+    assert doc.configs == ["4L"] and session._epoch == 1            # a delete starts no epoch (the spike)
+    doc.configs.append("N")
+    doc.refuse_delete = True
+    with pytest.raises(swcom.SolidWorksError) as raised:
+        session.delete_configuration("N")
+    assert str(raised.value) == "SolidWorks would not delete the configuration N from R.SLDASM."
+
+
+def test_a_flag_is_set_for_the_named_configurations_as_a_string_array_and_every_one_read_back(configured):
+    session, doc = configured
+    for name in ("4L", "4H"):
+        session.add_configuration(name)
+    session.set_mate_suppressed_in("mesh1", True, ["Default", "4H"])
+    assert ("SetSuppression2", "G1 meshes G2", 0, 3, ("Default", "4H")) in doc.log
+    assert ("IsSuppressed2", "G1 meshes G2", 3, ("Default", "4H")) in doc.log
+    assert doc.mates[0].flags == {"Default": True, "4L": False, "4H": True}
+    assert session.mate_suppression("mesh1", ["Default", "4L", "4H"]) == {"Default": True, "4L": False, "4H": True}
+    session.set_mate_suppressed_in("mesh1", False, ["4H"])
+    assert ("SetSuppression2", "G1 meshes G2", 1, 3, ("4H",)) in doc.log
+    assert doc.mates[0].flags["4H"] is False
+
+
+def test_a_flag_call_that_raises_yet_takes_effect_is_judged_by_the_read_back(configured, com_errors):
+    session, doc = configured
+    doc.suppression = "raises and takes"
+    session.set_mate_suppressed_in("mesh1", True, ["Default"])
+    assert doc.mates[0].flags["Default"] is True and not swcom.CONNECTION.lost
+
+
+def test_a_flag_call_that_does_nothing_is_a_sentence_naming_where_it_did_not_take(configured):
+    session, doc = configured
+    session.add_configuration("4L")
+    doc.suppression = "ignored"
+    with pytest.raises(swcom.SolidWorksError) as raised:
+        session.set_mate_suppressed_in("mesh1", True, ["Default", "4L"])
+    assert str(raised.value) == ("SolidWorks would not suppress the mate G1 meshes G2 in Default, 4L: it still reads "
+                                 "on there.")
+    doc.mates[0].flags["4L"] = True
+    with pytest.raises(swcom.SolidWorksError) as raised:
+        session.set_mate_suppressed_in("mesh1", False, ["4L"])
+    assert str(raised.value) == "SolidWorks would not turn on the mate G1 meshes G2 in 4L: it still reads suppressed there."
+
+
+def test_a_lost_connection_during_a_flag_call_is_not_swallowed(configured, com_errors):
+    session, doc = configured
+    doc.suppression = "connection lost"
+    with pytest.raises(swcom.ComError):
+        session.set_mate_suppressed_in("mesh1", True, ["Default"])
+    assert swcom.CONNECTION.lost
+
+
+def test_flags_read_one_per_name_even_wrapped_once_more_and_a_count_that_disagrees_is_a_sentence(configured):
+    session, doc = configured
+    doc.wrapped_flags = True
+    assert session.mate_suppression("mesh1", ["Default"]) == {"Default": False}
+    doc.mates[0].flags["X"] = True
+    assert session.mate_suppression("mesh1", ["Default", "X"]) == {"Default": False, "X": True}
+    doc.wrapped_flags, doc.short_answers = False, True
+    with pytest.raises(swcom.SolidWorksError) as raised:
+        session.mate_suppression("mesh1", ["Default", "X"])
+    assert str(raised.value) == ("Asked whether the mate G1 meshes G2 is suppressed in 2 configurations, SolidWorks "
+                                 "gave 1 answer, so which is which cannot be told.")
+    with pytest.raises(swcom.SolidWorksError) as raised:
+        session.dimension_values("slide1", ["Default", "X"])
+    assert str(raised.value) == ("Asked for the distance of the mate RangeSlv along Rear in 2 configurations, "
+                                 "SolidWorks gave 1 answer, so which is which cannot be told.")
+
+
+def test_a_slide_is_set_in_the_named_configurations_in_metres_and_read_back_in_millimetres(configured):
+    session, doc = configured
+    for name in ("4L", "4H"):
+        session.add_configuration(name)
+    session.set_dimension_in("slide1", 30.0, ["4L"])
+    assert ("SetSystemValue3", 0.030, 3, ("4L",)) in doc.log
+    assert session.dimension_values("slide1", ["Default", "4L", "4H"]) == pytest.approx(
+        {"Default": 10.0, "4L": 30.0, "4H": 0.0})                    # an unset configuration reads 0 (the spike)
+
+
+def test_a_slide_solidworks_answers_other_than_success_for_or_does_not_hold_is_a_sentence(configured):
+    session, doc = configured
+    doc.set_answer = 2
+    with pytest.raises(swcom.SolidWorksError) as raised:
+        session.set_dimension_in("slide1", 30.0, ["Default"])
+    assert str(raised.value) == ("SolidWorks would not set the mate RangeSlv along Rear to 30 mm in Default (it "
+                                 "answered 2).")
+    doc.set_answer, doc.set_ignored = 0, True
+    with pytest.raises(swcom.SolidWorksError) as raised:
+        session.set_dimension_in("slide1", 30.0, ["Default"])
+    assert str(raised.value) == "SolidWorks set the mate RangeSlv along Rear to 30 mm, but it reads 10 mm in Default."
+
+
+def test_a_mate_with_no_distance_cannot_take_a_slide_value(configured):
+    session, doc = configured
+    with pytest.raises(swcom.SolidWorksError) as raised:
+        session.dimension_values("mesh1", ["Default"])
+    assert str(raised.value) == "The mate G1 meshes G2 has no distance to set, so the slide cannot be placed."
+
+
+def test_the_names_go_to_solidworks_as_a_string_array(monkeypatch):
+    made = []
+    monkeypatch.setattr(swcom, "pythoncom", _PyCom)
+    monkeypatch.setattr(_PyCom, "VT_BSTR", 8, raising=False)
+    monkeypatch.setattr(swcom, "VARIANT", lambda kind, value: made.append((kind, value)) or "array")
+    assert swcom.Session._names(("4L", "4H")) == "array"
+    assert made == [(0x2000 | 8, ["4L", "4H"])]
+
+
+# -- the handle rule: every member that touches a component, after an add and after a show
+
+def _change(session, doc, how):
+    """A configuration added (and left active), or added and Default shown again: either leaves every handle held
+    from before stale."""
+    session.add_configuration("4L")
+    if how == "show":
+        session.show_configuration("Default")
+
+
+def _turned_frame():
+    return (0.0, -1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0)
+
+
+COMPONENT_MEMBERS = {
+    "is_fixed": lambda s: s.is_fixed("layout"),
+    "component_path": lambda s: s.component_path("gear1"),
+    "component_frame": lambda s: s.component_frame("gear1"),
+    "component_translation": lambda s: s.component_translation("gear1"),
+    "constrained_status": lambda s: s.constrained_status("gear1"),
+    "component_resolved": lambda s: s.component_resolved("gear1"),
+    "fix_component": lambda s: s.fix_component("gear1"),
+    "unfix_component": lambda s: s.unfix_component("layout"),
+    "place_component": lambda s: s.place_component("gear1", _turned_frame(), (64.5, 0.0, 0.0),
+                                                   kind=swcom.ASSEMBLY_STATIC),
+    "_component_ref": lambda s: s._component_ref("gear1:Gear Axis", False),
+}
+
+
+@pytest.mark.parametrize("member", sorted(COMPONENT_MEMBERS))
+@pytest.mark.parametrize("how", ["add", "show"])
+def test_every_member_that_touches_a_component_fetches_it_again_after_a_configuration_change(configured, member,
+                                                                                            how):
+    """W8-INTERFACES §9.4: held handles answer wrongly after AddConfiguration2 and ShowConfiguration2; every member
+    goes through ``_component``, which fetches by the held name in the new epoch. The fake's StaleHandle fails the
+    test if any member touches a handle from before."""
+    session, doc = configured
+    _change(session, doc, how)
+    doc.log.clear()
+    COMPONENT_MEMBERS[member](session)
+    fetched = [e[1] for e in doc.log if e[0] == "GetComponentByName"]
+    assert len(fetched) == 1 and fetched[0] in ("Layout-1", "Gear_m1.5_N68-1")
+    COMPONENT_MEMBERS[member](session) if member not in ("fix_component", "unfix_component") else None
+    assert len([e for e in doc.log if e[0] == "GetComponentByName"]) == 1        # once per epoch, then kept
+
+
+def test_the_fixed_layout_reads_fixed_after_a_change_and_a_put_holds_in_the_active_configuration_only(configured):
+    session, doc = configured
+    assert session.is_fixed("layout")
+    session.add_configuration("4L")
+    assert session.is_fixed("layout")                  # a held handle would have read False (the spike)
+    session.place_component("gear1", _turned_frame(), (64.5, 0.0, 0.0), kind=swcom.ASSEMBLY_STATIC)
+    assert session.component_translation("gear1") == pytest.approx((64.5, 0.0, 0.0))
+    session.show_configuration("Default")
+    assert session.component_translation("gear1") == pytest.approx((0.0, 0.0, 0.0))
+
+
+def test_a_component_gone_after_a_change_is_component_gone_with_the_sentence_of_the_open(configured):
+    session, doc = configured
+    session.add_configuration("4L")
+    del doc.parts["Gear_m1.5_N68-1"]
+    with pytest.raises(swcom.ComponentGone) as raised:
+        session.component_frame("gear1")
+    assert str(raised.value) == ("Gear_m1.5_N68-1 is not in R.SLDASM any more: it was renamed or deleted in "
+                                 "SolidWorks.")
+
+
+def test_fetching_again_refuses_with_a_sentence_when_the_find_route_is_unsettled(configured, monkeypatch):
+    session, doc = configured
+    session.add_configuration("4L")
+    monkeypatch.setattr(findings, "COMPONENT_FIND_ROUTE", None, raising=False)
+    doc.log.clear()
+    with pytest.raises(swcom.SolidWorksError) as raised:
+        session.is_fixed("gear1")
+    assert str(raised.value) == ("Finding a component again after a configuration change has not been settled on "
+                                 "SolidWorks yet (findings.COMPONENT_FIND_ROUTE is None), so nothing was read or "
+                                 "changed.")
+    assert doc.log == []
+
+
+def test_a_handle_nothing_was_kept_as_is_a_sentence(configured):
+    session, _ = configured
+    with pytest.raises(swcom.SolidWorksError) as raised:
+        session._component("gear9")
+    assert str(raised.value) == ("No component is kept as 'gear9', so it cannot be read or changed; that is a fault "
+                                 "in Gear Generator, not in SolidWorks.")
+
+
+def test_a_selection_after_a_change_goes_by_the_held_names_never_through_the_fresh_handle(configured):
+    session, doc = configured
+    session.add_configuration("4L")
+    session._component_ref("gear1:Gear Axis", False)
+    assert [e for e in doc.log if e[0] == "SelectByID2"] == [
+        ("SelectByID2", "Gear Axis@Gear_m1.5_N68-1@R", "AXIS", False)]
+
+
+def test_activating_and_opening_start_a_new_epoch(configured, com):
+    session, doc = configured
+    before = session._epoch
+    session._raise_epoch()
+    assert session._epoch == before + 1
+    part = com.saved(W + "Gear_m1.5_N68.SLDPRT")
+    opened = _session(com)
+    opened.begin_build()
+    opened.open_document(W + "Gear_m1.5_N68.SLDPRT")
+    assert opened._epoch >= 1 and part is com.active
+
+
+def test_the_fake_fails_loudly_when_a_handle_from_before_a_change_is_used(configured):
+    session, doc = configured
+    held = session._handles["layout"]["component"]
+    session.add_configuration("4L")
+    with pytest.raises(StaleHandle):
+        held.IsFixed  # noqa: B018 - the read is the test

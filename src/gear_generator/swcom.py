@@ -449,6 +449,45 @@ class ConfigurationGone(ComponentGone):
     *The configuration 4H is not in TransferCase.SLDASM any more: it was renamed or deleted in SolidWorks.*"""
 
 
+# W8: the configuration findings the members read (W8-PLAN §4.2), each with getattr; a missing one refuses with a
+# sentence before anything is called.
+CONFIGURATION_FINDINGS = (("CONFIGURATION_ADD_ROUTE", "AddConfiguration2(name, '', '', 0, '', '', True)"),
+                          ("CONFIGURATION_SHOW_ROUTE", "ShowConfiguration2, active name read back"),
+                          ("CONFIGURATION_DELETE_ROUTE", "DeleteConfiguration2, names read back"),
+                          ("SPECIFY_CONFIGURATIONS", 3),
+                          ("MATE_SUPPRESSION_PER_CONFIGURATION_ROUTE",
+                           "SetSuppression2(action, 3, names) after a rebuild; IsSuppressed2(3, names)"),
+                          ("SLIDE_VALUE_ROUTE",
+                           "SetSystemValue3(m, 3, [configuration]); GetSystemValue3(3, configurations)"),
+                          ("SET_VALUE_IN_SPECIFIC_CONFIGURATIONS", 3))
+SET_VALUE_SUCCESSFUL = 0                    # swSetValue_Successful
+VALUE_TOLERANCE_MM = 1e-6                   # a slide value read back to this
+
+
+def _per_name(value: Any) -> List[Any]:
+    """An answer of one item per configuration name as a list: a bare item as one, and an array SolidWorks wrapped
+    once more (as ``IsSuppressed2`` once came back, ``((flag,),)``) unwrapped."""
+    if isinstance(value, (list, tuple)):
+        if len(value) == 1 and isinstance(value[0], (list, tuple)):
+            value = value[0]
+        return list(value)
+    return [value]
+
+
+def _answers(count: int) -> str:
+    return f"{count} answer" if count == 1 else f"{count} answers"
+
+
+def configuration_finding(name: str) -> Optional[str]:
+    """``None`` when the configuration finding ``name`` (one of :data:`CONFIGURATION_FINDINGS`) holds what the
+    members are written to, else a sentence fragment naming it."""
+    wanted = dict(CONFIGURATION_FINDINGS)[name]
+    value = getattr(findings, name, None)
+    if value == wanted and not isinstance(value, bool):
+        return None
+    return f"findings.{name} is {value!r}"
+
+
 def positions_per_configuration(revision: Sequence[int]) -> Optional[bool]:
     """Whether the running SolidWorks keeps each component's position per configuration (W8-PLAN §1.9; the one home
     of the per-version switch, W8-INTERFACES.md §2): ``findings.POSITIONS_PER_CONFIGURATION_ON_<year>`` for the
@@ -1135,6 +1174,7 @@ class Session:
         """
         call(self._app, "ActivateDoc3", title, False, 0, _out_long())
         self._build_doc = None
+        self._raise_epoch()                         # W8's handle rule: activating may change the configuration
 
     def document_title(self) -> str:
         return str(call(self._doc(), "GetTitle"))
@@ -1928,7 +1968,7 @@ class Session:
             raise SolidWorksError(f"AddComponent5 put {kept} into {call(doc, 'GetTitle')} from "
                                   f"{took or 'a file whose path could not be read'}, not from {path}; a document "
                                   "of the same file name may be open from another folder.")
-        self._handles[handle] = {"component": component, "path": path}
+        self._handles[handle] = {"component": component, "path": path, "name": kept, "epoch": self._epoch}
         return kept
 
     @staticmethod
@@ -1969,17 +2009,17 @@ class Session:
         so it is invoked explicitly: :func:`call` would only fetch it, which is
         how an earlier version never ran it at all.
         """
-        component = self._handles[handle]["component"]
+        component = self._component(handle)
         if bool(call(component, "IsFixed")):
             return
         doc = self._doc()
         call(doc, "ClearSelection2", True)
         if not call(component, "Select4", False, _null_dispatch(), False):
-            raise SolidWorksError(f"{call(component, 'Name2')} could not be selected to fix it.")
+            raise SolidWorksError(f"{self._component_name(handle)} could not be selected to fix it.")
         doc.FixComponent()
         call(doc, "ClearSelection2", True)
         if not bool(call(component, "IsFixed")):
-            raise SolidWorksError(f"{call(component, 'Name2')} is still floating after FixComponent.")
+            raise SolidWorksError(f"{self._component_name(handle)} is still floating after FixComponent.")
 
     def unfix_component(self, handle: str) -> None:
         """Let a component move: select it, ``UnfixComponent``, and read back that it floats.
@@ -1990,17 +2030,17 @@ class Session:
         does, on 2026 with the current MMGS assembly template it does not (probe
         assembly_components_and_mates) — so ``IsFixed`` is read first.
         """
-        component = self._handles[handle]["component"]
+        component = self._component(handle)
         if not bool(call(component, "IsFixed")):
             return
         doc = self._doc()
         call(doc, "ClearSelection2", True)
         if not call(component, "Select4", False, _null_dispatch(), False):
-            raise SolidWorksError(f"{call(component, 'Name2')} could not be selected to unfix it.")
+            raise SolidWorksError(f"{self._component_name(handle)} could not be selected to unfix it.")
         doc.UnfixComponent()
         call(doc, "ClearSelection2", True)
         if bool(call(component, "IsFixed")):
-            raise SolidWorksError(f"{call(component, 'Name2')} is still fixed after UnfixComponent.")
+            raise SolidWorksError(f"{self._component_name(handle)} is still fixed after UnfixComponent.")
 
     def _component_ref(self, ref: str, append: bool) -> None:
         """``gear1:plane2`` or ``gear2:Gear Axis``, selected at mark 1 for a mate; ``asm:plane2`` the assembly's own.
@@ -2014,9 +2054,9 @@ class Session:
                 raise SolidWorksError(f"The assembly's own {target!r} is not a plane this tool can select.")
             self.select_plane_by_order(int(target[5:]), append=append, mark=1)
             return
-        component = self._handles[handle]["component"]
+        component = self._component(handle)
         if target == "origin":
-            self._select_component_origin(component, append)
+            self._select_component_origin(handle, component, append)
             return
         if target.startswith("plane") and target[5:].isdigit():
             planes = self._planes(call(component, "GetModelDoc2"))
@@ -2028,33 +2068,42 @@ class Session:
         if not append:
             call(doc, "ClearSelection2", True)
         before = self._selected()
-        feature = call(component, "FeatureByName", name)
-        if feature is not None and self._retry_select(lambda: call(feature, "Select2", append, 1), before):
-            return
+        # After a configuration change a freshly fetched handle has once answered strangely (the W8 spike), so the
+        # selection then goes by the names held from before, never through the handle.
+        if self._epoch == 0:
+            feature = call(component, "FeatureByName", name)
+            if feature is not None and self._retry_select(lambda: call(feature, "Select2", append, 1), before):
+                return
         asm = os.path.splitext(str(call(doc, "GetTitle")))[0]
-        full = f"{name}@{call(component, 'Name2')}@{asm}"
+        full = f"{name}@{self._component_name(handle)}@{asm}"
         if call(call(doc, "Extension"), "SelectByID2", full, kind, 0.0, 0.0, 0.0, append, 1, _null_dispatch(), 0) \
                 and self._selected() > before:
             return
         raise SolidWorksError(f"{full} could not be selected for a mate.")
 
-    def _select_component_origin(self, component: Any, append: bool) -> None:
-        """A component's origin point, by ``Point1@<origin>@<component>@<assembly>`` (probe nonparallel_mates)."""
-        part = call(component, "GetModelDoc2")
-        feature = call(part, "FirstFeature")
-        origin = ""
-        while feature is not None and not origin:
-            if _type_name(feature) == "OriginProfileFeature":
-                origin = str(call(feature, "Name"))
-            feature = call(feature, "GetNextFeature")
+    def _select_component_origin(self, handle: str, component: Any, append: bool) -> None:
+        """A component's origin point, by ``Point1@<origin>@<component>@<assembly>`` (probe nonparallel_mates). The
+        origin's name is read from the part once and kept, so after a configuration change it is not read through a
+        fresh handle (the W8 spike: one answered ``GetModelDoc2`` None)."""
+        entry = self._handles[handle]
+        origin = entry.get("origin", "") if isinstance(entry, dict) else ""
         if not origin:
-            raise SolidWorksError(f"{call(component, 'Name2')} has no origin to mate to.")
+            part = call(component, "GetModelDoc2")
+            feature = call(part, "FirstFeature") if part is not None else None
+            while feature is not None and not origin:
+                if _type_name(feature) == "OriginProfileFeature":
+                    origin = str(call(feature, "Name"))
+                feature = call(feature, "GetNextFeature")
+            if not origin:
+                raise SolidWorksError(f"{self._component_name(handle)} has no origin to mate to.")
+            if isinstance(entry, dict):
+                entry["origin"] = origin
         doc = self._doc()
         if not append:
             call(doc, "ClearSelection2", True)
         before = self._selected()
         asm = os.path.splitext(str(call(doc, "GetTitle")))[0]
-        full = f"{findings.ORIGIN_POINT}@{origin}@{call(component, 'Name2')}@{asm}"
+        full = f"{findings.ORIGIN_POINT}@{origin}@{self._component_name(handle)}@{asm}"
         if not self._retry_select(lambda: call(call(doc, "Extension"), "SelectByID2", full, "EXTSKETCHPOINT", 0.0, 0.0,
                                                0.0, append, 1, _null_dispatch(), 0), before):
             raise SolidWorksError(f"{full} could not be selected for a mate.")
@@ -2076,7 +2125,7 @@ class Session:
         rebuild this used to make marked every component modified. The frame
         is read back.
         """
-        component = self._handles[handle]["component"]
+        component = self._component(handle)
         doc = self._doc()
         # Settled before the put, so a rebuild that cannot be made refuses with nothing moved.
         member, args = rebuild_call(int(call(doc, "GetType")), kind)
@@ -2097,7 +2146,7 @@ class Session:
         error = max(abs(got[i] - data[i]) for i in range(9))
         moved = max(abs(got[9 + i] - data[9 + i]) for i in range(3)) * m
         if error > 1e-6 or moved > 1e-6:
-            raise SolidWorksError(f"{call(component, 'Name2')} did not take its frame "
+            raise SolidWorksError(f"{self._component_name(handle)} did not take its frame "
                                   f"(rotation off {error:.1e}, origin {moved:.1e} mm).")
 
     def _mate_names(self) -> List[str]:
@@ -2291,22 +2340,21 @@ class Session:
             self._settled("MATE_RENAME_ROUTE", "Renaming a mate", "IFeature.Name put")
         components = []
         for ref in (a, b):
-            kept = self._handles.get(ref, {}).get("component")
-            if kept is None:
+            if not self._is_component(ref):
                 raise SolidWorksError(f"A lock mate takes two components, and {ref!r} is not one this build placed; "
                                       "that is a fault in Gear Generator, not in SolidWorks.")
-            components.append(kept)
+            components.append(self._component(ref))
         doc = self._doc()
         before = self._mate_names()
         call(doc, "ClearSelection2", True)
-        for position, component in enumerate(components):
+        for position, (component, held) in enumerate(zip(components, (a, b))):
             data = call(call(doc, "SelectionManager"), "CreateSelectData")
             _put(data, "Mark", 1)
             count = self._selected()
             if not self._retry_select(lambda c=component, d=data, append=position > 0: call(c, "Select4", append, d,
                                                                                                False), count):
                 call(doc, "ClearSelection2", True)
-                raise SolidWorksError(f"{call(component, 'Name2')} could not be selected for the lock mate "
+                raise SolidWorksError(f"{self._component_name(held)} could not be selected for the lock mate "
                                       f"{name or f'between {a} and {b}'} {self._selection_context()}.")
         mate, status = self._add_mate5(lock, align, False, 0.0, 0.0, 0.0, 1, 1, 0.0, 0.0, 0.0, False, False, 0)
         call(doc, "ClearSelection2", True)
@@ -2360,15 +2408,14 @@ class Session:
         handle), read and, if a method comes back, called: ``findings.COMPONENT_UNDER_DEFINED`` 2 for a gear free to
         turn, ``COMPONENT_FULLY_DEFINED`` 3, ``COMPONENT_OVER_DEFINED`` 4."""
         self._settled("COMPONENT_UNDER_DEFINED", "Reading whether a gear is free to turn")
-        kept = self._handles.get(handle, {}).get("component") if hasattr(self, "_handles") else None
-        if kept is None:
+        if not self._is_component(handle):
             raise SolidWorksError(f"No component is kept as {handle!r}, so whether it is free to turn cannot be read; "
                                   "that is a fault in Gear Generator, not in SolidWorks.")
-        value = _read(kept, "GetConstrainedStatus")
+        value = _read(self._component(handle), "GetConstrainedStatus")
         try:
             return int(value)
         except (TypeError, ValueError):
-            raise SolidWorksError(f"SolidWorks answered {value!r} when asked whether {call(kept, 'Name2')} is free to "
+            raise SolidWorksError(f"SolidWorks answered {value!r} when asked whether {self._component_name(handle)} is free to "
                                   "turn, which is not a constrained status.") from None
 
     def find_mate(self, handle: str, name: str) -> str:
@@ -2497,12 +2544,11 @@ class Session:
         title = call(doc, "GetTitle")
         refs = []                                  # (handle, the Name2 to find it by again after the delete)
         for ref in (a, b):
-            kept = self._handles.get(ref.partition(":")[0], {}).get("component")
-            if kept is None:
+            if not self._is_component(ref.partition(":")[0]):
                 raise SolidWorksError(f"A gear mate is made between two components, and {ref!r} is not one this job "
                                       "found, so nothing is changed; that is a fault in Gear Generator, not in "
                                       "SolidWorks.")
-            refs.append((ref.partition(":")[0], str(call(kept, "Name2"))))
+            refs.append((ref.partition(":")[0], self._component_name(ref.partition(":")[0])))
         call(doc, "ClearSelection2", True)
         call(feature, "Select2", False, 0)
         _guarded("EditDelete", lambda: doc.EditDelete())
@@ -2520,7 +2566,7 @@ class Session:
                 found = call(doc, "GetComponentByName", component_name)
                 if found is None:
                     raise SolidWorksError(f"{component_name} could not be found again in {title} after the delete.")
-                self._handles[ref] = dict(self._handles[ref], component=found)
+                self._handles[ref] = dict(self._handles[ref], component=found, epoch=self._epoch)
             kept, _ = self._gear_mate(handle, a, b, (float(ratio[0]), float(ratio[1])), bool(flip), name)
         except MateRefused as exc:              # SolidWorks' own refusal: the one failure that is a MateRefused
             raise MateRefused(f"{lost}, and SolidWorks would not make it again. {restore} {_as_sentence(exc)}") \
@@ -2772,76 +2818,218 @@ class Session:
         handles survived it in the spike). Every component and mate kept before it is stale from here on."""
         self._epoch = getattr(self, "_epoch", 0) + 1
 
+    def _is_component(self, handle: str) -> bool:
+        entry = self._handles.get(handle) if hasattr(self, "_handles") else None
+        return isinstance(entry, dict) and entry.get("component") is not None
+
+    def _component_name(self, handle: str) -> str:
+        """The Name2 a kept component was kept by (insertion or ``find_component``), never read from a handle fetched
+        after a configuration change. An entry kept without its name (none in this module) has it read once from the
+        handle it was kept with and kept."""
+        entry = self._handles.get(handle) if hasattr(self, "_handles") else None
+        if not isinstance(entry, dict):
+            return str(handle)
+        if not entry.get("name"):
+            if entry.get("component") is None or entry.get("epoch", 0) != self._epoch:
+                return str(handle)
+            entry["name"] = str(call(entry["component"], "Name2"))
+        return str(entry["name"])
+
     def _component(self, handle: str) -> Any:
         """The ``IComponent2`` kept as ``handle``, fetched again by the name it was kept by (``GetComponentByName``,
         ``findings.COMPONENT_FIND_ROUTE``) when the epoch it was fetched in is not the current one, and kept again
         with the current epoch; ``ComponentGone`` with W5's sentence when nothing answers to the name. Every member
         that uses a kept component goes through this (no other code holds one across an epoch); a kept entry holds
         ``{"component", "path", "name", "epoch"}``, the name from insertion or ``find_component``, never a fresh
-        handle's ``Name2``. Agent A writes it with the handle rule."""
-        raise SolidWorksError("Fetching a component again after a configuration change is not in this version of "
-                              "Gear Generator yet, so nothing was read or changed.")
+        handle's ``Name2`` (the W8 spike: a held handle answers ``Transform2`` None and ``IsFixed`` False after any
+        ``AddConfiguration2`` or ``ShowConfiguration2``, silently)."""
+        entry = self._handles.get(handle) if hasattr(self, "_handles") else None
+        if not isinstance(entry, dict) or entry.get("component") is None:
+            raise SolidWorksError(f"No component is kept as {handle!r}, so it cannot be read or changed; that is a "
+                                  "fault in Gear Generator, not in SolidWorks.")
+        if entry.get("epoch", 0) == self._epoch:
+            return entry["component"]
+        route = getattr(findings, "COMPONENT_FIND_ROUTE", None)
+        if route not in COMPONENT_FIND_ROUTES:
+            raise SolidWorksError(f"Finding a component again after a configuration change has not been settled on "
+                                  f"SolidWorks yet (findings.COMPONENT_FIND_ROUTE is {route!r}), so nothing was read "
+                                  "or changed.")
+        doc = self._doc()
+        name = self._component_name(handle)
+        found = self._component_by(route, doc, name)
+        if found is None:
+            raise ComponentGone(f"{name} is not in {call(doc, 'GetTitle')} any more: it was renamed or deleted in "
+                                "SolidWorks.")
+        entry["component"], entry["epoch"] = found, self._epoch
+        return found
+
+    def component_path(self, handle: str) -> str:
+        """The file a kept component stands for, read fresh through :meth:`_component` (a handle fetched in the
+        current epoch) by :meth:`_component_path`'s proven route, so a copied assembly's components are judged by where
+        they resolve now, never by the path recorded when they were kept."""
+        path = self._component_path(self._component(handle))
+        if not path:
+            raise SolidWorksError(f"SolidWorks gave no file for {self._component_name(handle)}, so where it comes from "
+                                  "cannot be read.")
+        return str(path)
+
+    def is_fixed(self, handle: str) -> bool:
+        """Whether a kept component is fixed in the active configuration, ``IComponent2.IsFixed`` through a handle
+        fetched in the current epoch (W8-INTERFACES §9.4: a held one reads False even for the fixed layout)."""
+        return bool(call(self._component(handle), "IsFixed"))
+
+    def _configuration_gate(self, *names: str) -> None:
+        for name in names:
+            problem = configuration_finding(name)
+            if problem is not None:
+                raise SolidWorksError(f"Working with an assembly's configurations has not been settled on this "
+                                      f"SolidWorks ({problem}), so nothing was read or changed.")
+
+    @staticmethod
+    def _names(configurations: Sequence[str]) -> Any:
+        """Configuration names as SolidWorks takes them: a ``VT_ARRAY | VT_BSTR`` (the W8 spike's call)."""
+        names = [str(n) for n in configurations]
+        if VARIANT is None or pythoncom is None:
+            return names
+        return VARIANT(pythoncom.VT_ARRAY | pythoncom.VT_BSTR, names)
 
     def configurations(self) -> List[str]:
-        """The build document's configuration names (``GetConfigurationNames``), in SolidWorks' order. Marks
-        nothing."""
-        raise SolidWorksError("Reading an assembly's configurations is not in this version of Gear Generator yet, "
-                              "so nothing was read.")
+        """The build document's configuration names (``IModelDoc2.GetConfigurationNames``), in SolidWorks' order.
+        Marks nothing."""
+        names = call(self._doc(), "GetConfigurationNames")
+        return [str(n) for n in (names or ())]
 
     def active_configuration(self) -> str:
-        """The active configuration's name (``ConfigurationManager.ActiveConfiguration.Name``). Marks nothing."""
-        raise SolidWorksError("Reading the active configuration is not in this version of Gear Generator yet, so "
-                              "nothing was read.")
+        """The active configuration's name (``IModelDoc2.ConfigurationManager`` →
+        ``IConfigurationManager.ActiveConfiguration`` → ``IConfiguration.Name``). Marks nothing."""
+        active = call(call(self._doc(), "ConfigurationManager"), "ActiveConfiguration")
+        if active is None:
+            raise SolidWorksError(f"SolidWorks did not say which configuration of {call(self._doc(), 'GetTitle')} is "
+                                  "active.")
+        return str(call(active, "Name"))
 
     def add_configuration(self, name: str) -> None:
-        """Add a configuration and make it active: ``AddConfiguration2(name, "", "", 0, "", "", True)``, the active
-        name read back (never the return); otherwise ``SolidWorksError`` *"SolidWorks would not make the
-        configuration 4L."* Raises the epoch. Does not rebuild (W8-PLAN §1.8 step 3: the caller rebuilds before the
-        first ``set_mate_suppressed_in``)."""
-        raise SolidWorksError(f"Making the configuration {name} is not in this version of Gear Generator yet, so "
-                              "nothing was made.")
+        """Add a configuration and make it active: ``IConfigurationManager.AddConfiguration2(name, "", "", 0, "", "",
+        True)``, the active name read back (never the return); otherwise ``SolidWorksError`` *"SolidWorks would not
+        make the configuration 4L."* Raises the epoch (the call changes the active configuration whatever it
+        answers). Does not rebuild (W8-PLAN §1.8 step 3: the caller rebuilds before the first
+        ``set_mate_suppressed_in``)."""
+        self._configuration_gate("CONFIGURATION_ADD_ROUTE")
+        manager = call(self._doc(), "ConfigurationManager")
+        try:
+            call(manager, "AddConfiguration2", name, "", "", 0, "", "", True)
+        finally:
+            self._raise_epoch()
+        if self.active_configuration().casefold() != str(name).casefold():
+            raise SolidWorksError(f"SolidWorks would not make the configuration {name}.")
 
     def show_configuration(self, name: str) -> None:
-        """Make ``name`` the active configuration: ``ShowConfiguration2``, success judged by the active name read
-        back, never the return (GOTCHAS §23: False when already active). Raises the epoch. Marks the assembly
-        modified (the spike). Does not rebuild."""
-        raise SolidWorksError(f"Showing the configuration {name} is not in this version of Gear Generator yet, so "
-                              "nothing was changed.")
+        """Make ``name`` the active configuration: ``IModelDoc2.ShowConfiguration2``, success judged by the active
+        name read back, never the return (GOTCHAS §23: False when already active). Raises the epoch. Marks the
+        assembly modified (the spike). Does not rebuild."""
+        self._configuration_gate("CONFIGURATION_SHOW_ROUTE")
+        try:
+            call(self._doc(), "ShowConfiguration2", name)
+        finally:
+            self._raise_epoch()
+        if self.active_configuration().casefold() != str(name).casefold():
+            raise SolidWorksError(f"SolidWorks would not show the configuration {name}.")
 
     def delete_configuration(self, name: str) -> None:
-        """Delete a configuration that is not active: ``DeleteConfiguration2``, the names read back; refuses the
-        active one with a sentence. Does not raise the epoch (held handles survived it in the spike)."""
-        raise SolidWorksError(f"Deleting the configuration {name} is not in this version of Gear Generator yet, so "
-                              "nothing was changed.")
+        """Delete a configuration that is not active: ``IModelDoc2.DeleteConfiguration2``, the names read back;
+        refuses the active one with a sentence. Does not raise the epoch (held handles survived it in the spike)."""
+        self._configuration_gate("CONFIGURATION_DELETE_ROUTE")
+        title = call(self._doc(), "GetTitle")
+        if self.active_configuration().casefold() == str(name).casefold():
+            raise SolidWorksError(f"The configuration {name} is the active one in {title}, and the active "
+                                  "configuration is never deleted.")
+        call(self._doc(), "DeleteConfiguration2", name)
+        if any(n.casefold() == str(name).casefold() for n in self.configurations()):
+            raise SolidWorksError(f"SolidWorks would not delete the configuration {name} from {title}.")
+
+    def mate_suppression(self, handle: str, configurations: Sequence[str]) -> Dict[str, bool]:
+        """A kept mate's flag in each named configuration, ``IFeature.IsSuppressed2(3, names)``, one per name, no
+        configuration activated. Marks nothing (the spike)."""
+        self._configuration_gate("MATE_SUPPRESSION_PER_CONFIGURATION_ROUTE", "SPECIFY_CONFIGURATIONS")
+        name, feature = self._kept_mate(handle)
+        flags = _per_name(call(feature, "IsSuppressed2", findings.SPECIFY_CONFIGURATIONS,
+                               self._names(configurations)))
+        if len(flags) != len(configurations):
+            raise SolidWorksError(f"Asked whether the mate {name} is suppressed in {len(configurations)} "
+                                  f"configurations, SolidWorks gave {_answers(len(flags))}, so which is which cannot "
+                                  "be told.")
+        return {str(c): bool(f) for c, f in zip(configurations, flags)}
 
     def set_mate_suppressed_in(self, handle: str, suppressed: bool, configurations: Sequence[str]) -> None:
         """Suppress or unsuppress a kept mate in the named configurations, whichever is active:
-        ``SetSuppression2(0 or 1, findings.SPECIFY_CONFIGURATIONS, names)``, the names a ``VT_ARRAY | VT_BSTR``,
-        the return never trusted; every flag read back with ``IsSuppressed2`` and a sentence raised if any
-        configuration disagrees. Does not rebuild."""
-        raise SolidWorksError("Suppressing a mate per configuration is not in this version of Gear Generator yet, "
-                              "so nothing was changed.")
+        ``IFeature.SetSuppression2(0 suppress or 1 unsuppress, findings.SPECIFY_CONFIGURATIONS, names)``, the names a
+        ``VT_ARRAY | VT_BSTR``, the return never trusted and a raise from the call not taken as failure (the spike:
+        one raised and still took effect, one returned False and did nothing); every flag read back with
+        ``IsSuppressed2`` and a sentence raised if any configuration disagrees. Does not rebuild."""
+        self._configuration_gate("MATE_SUPPRESSION_PER_CONFIGURATION_ROUTE", "SPECIFY_CONFIGURATIONS")
+        if not configurations:
+            return
+        action = self._settled("FEATURE_SUPPRESS" if suppressed else "FEATURE_UNSUPPRESS",
+                               "Suppressing a mate per configuration")
+        name, feature = self._kept_mate(handle)
+        try:
+            call(feature, "SetSuppression2", action, findings.SPECIFY_CONFIGURATIONS, self._names(configurations))
+        except ComError as exc:                     # judged by the read-back below, never by the call (the spike:
+            if exc.lost:                            # one raised 0x80010105 and still took effect), unless SolidWorks
+                raise                               # has gone
+        read = self.mate_suppression(handle, configurations)
+        wrong = [c for c, flag in read.items() if flag != bool(suppressed)]
+        if wrong:
+            state = "suppressed" if not suppressed else "on"
+            raise SolidWorksError(f"SolidWorks would not {'suppress' if suppressed else 'turn on'} the mate {name} in "
+                                  f"{', '.join(wrong)}: it still reads {state} there.")
 
-    def mate_suppression(self, handle: str, configurations: Sequence[str]) -> Dict[str, bool]:
-        """A kept mate's flag in each named configuration, ``IsSuppressed2(3, names)``, one per name, no
-        configuration activated. Marks nothing (the spike)."""
-        raise SolidWorksError("Reading a mate's state per configuration is not in this version of Gear Generator "
-                              "yet, so nothing was read.")
-
-    def set_dimension_in(self, mate_handle: str, value_mm: float, configurations: Sequence[str]) -> None:
-        """Set a kept distance mate's ``D1`` in the named configurations only: ``IFeature.GetFirstDisplayDimension``
-        -> ``GetDimension``, ``SetSystemValue3(value_mm / 1000, 3, names)``; a return other than 0
-        (``swSetValue_Successful``) raises with a sentence; read back with ``GetSystemValue3`` for those
-        configurations. Never reads ``IDimension.SystemValue``. Does not rebuild."""
-        raise SolidWorksError("Setting a slide's value per configuration is not in this version of Gear Generator "
-                              "yet, so nothing was changed.")
+    def _slide_dimension(self, handle: str) -> Tuple[str, Any]:
+        """A kept distance mate's D1: ``IFeature.GetFirstDisplayDimension`` → ``IDisplayDimension.GetDimension``."""
+        name, feature = self._kept_mate(handle)
+        shown = _read(feature, "GetFirstDisplayDimension")
+        dimension = _read(shown, "GetDimension") if shown is not None else None
+        if dimension is None:
+            raise SolidWorksError(f"The mate {name} has no distance to set, so the slide cannot be placed.")
+        return name, dimension
 
     def dimension_values(self, mate_handle: str, configurations: Sequence[str]) -> Dict[str, float]:
-        """A kept distance mate's ``D1`` in each named configuration, mm: ``GetSystemValue3(3, names)``, no
-        configuration activated. A 0 means that configuration has no value of its own (J7's caution); the caller
-        decides what that means. Marks nothing."""
-        raise SolidWorksError("Reading a slide's value per configuration is not in this version of Gear Generator "
-                              "yet, so nothing was read.")
+        """A kept distance mate's ``D1`` in each named configuration, mm: ``IDimension.GetSystemValue3(3, names)``,
+        no configuration activated. A 0 means that configuration has no value of its own (J7's caution); the caller
+        decides what that means. Marks nothing. Never ``IDimension.SystemValue`` (it answered another
+        configuration's value)."""
+        self._configuration_gate("SLIDE_VALUE_ROUTE", "SET_VALUE_IN_SPECIFIC_CONFIGURATIONS")
+        name, dimension = self._slide_dimension(mate_handle)
+        values = _per_name(call(dimension, "GetSystemValue3", findings.SET_VALUE_IN_SPECIFIC_CONFIGURATIONS,
+                                self._names(configurations)))
+        if len(values) != len(configurations):
+            raise SolidWorksError(f"Asked for the distance of the mate {name} in {len(configurations)} "
+                                  f"configurations, SolidWorks gave {_answers(len(values))}, so which is which cannot "
+                                  "be told.")
+        try:
+            return {str(c): float(v) * MM_PER_METRE for c, v in zip(configurations, values)}
+        except (TypeError, ValueError):
+            raise SolidWorksError(f"SolidWorks gave values of the mate {name} that are not numbers.") from None
+
+    def set_dimension_in(self, mate_handle: str, value_mm: float, configurations: Sequence[str]) -> None:
+        """Set a kept distance mate's ``D1`` in the named configurations only: ``IDimension.SetSystemValue3(value_mm /
+        1000, 3, names)``; a return other than 0 (``swSetValue_Successful``) raises with a sentence; read back with
+        ``GetSystemValue3`` for those configurations. Never reads ``IDimension.SystemValue``. Does not rebuild."""
+        self._configuration_gate("SLIDE_VALUE_ROUTE", "SET_VALUE_IN_SPECIFIC_CONFIGURATIONS")
+        if not configurations:
+            return
+        name, dimension = self._slide_dimension(mate_handle)
+        answer = call(dimension, "SetSystemValue3", float(value_mm) / MM_PER_METRE,
+                      findings.SET_VALUE_IN_SPECIFIC_CONFIGURATIONS, self._names(configurations))
+        if answer != SET_VALUE_SUCCESSFUL:
+            raise SolidWorksError(f"SolidWorks would not set the mate {name} to {float(value_mm):g} mm in "
+                                  f"{', '.join(configurations)} (it answered {answer!r}).")
+        read = self.dimension_values(mate_handle, configurations)
+        wrong = [c for c, v in read.items() if abs(v - float(value_mm)) > VALUE_TOLERANCE_MM]
+        if wrong:
+            raise SolidWorksError(f"SolidWorks set the mate {name} to {float(value_mm):g} mm, but it reads "
+                                  + ", ".join(f"{read[c]:g} mm in {c}" for c in wrong) + ".")
+
 
     def set_custom_property(self, name: str, value: str) -> None:
         """A text custom property on the build's part, added or replaced, and read back.
@@ -2890,7 +3078,7 @@ class Session:
         return count, volume
 
     def component_translation(self, handle: str) -> Tuple[float, float, float]:
-        data = call(call(self._handles[handle]["component"], "Transform2"), "ArrayData")
+        data = call(call(self._component(handle), "Transform2"), "ArrayData")
         return (float(data[9]) * MM_PER_METRE, float(data[10]) * MM_PER_METRE, float(data[11]) * MM_PER_METRE)
 
     # -- W4: a workbook's layout part and static assembly (docs/PLAN-WORKBOOK.md §4.2–§4.5)
@@ -2971,6 +3159,7 @@ class Session:
             raise SolidWorksError(f"SolidWorks opened {info.title} but left {now} active after ActivateDoc3, so "
                                   "it is not changed.")
         self._build_doc = doc
+        self._raise_epoch()                         # W8's handle rule: an open is a configuration change
         return info
 
     @staticmethod
@@ -3058,7 +3247,8 @@ class Session:
                 state is None and getattr(findings, "COMPONENTS_RESOLVED_AFTER_REOPEN", None) is not True)):
             raise SolidWorksError(f"{name} is loaded lightweight in {title}, and resolving a component is not "
                                   "settled here; set it to Resolved in SolidWorks and try again.")
-        self._handles[handle] = {"component": component, "path": self._component_path(component)}
+        self._handles[handle] = {"component": component, "path": self._component_path(component), "name": kept,
+                                 "epoch": self._epoch}
         return kept
 
     def component_resolved(self, handle: str) -> bool:
@@ -3077,15 +3267,14 @@ class Session:
                                   f"yet (findings.{RESOLVED_ROUTE_FINDING} is {route!r}, findings."
                                   f"{RESOLVED_VALUES_FINDING} is {values!r}), so nothing is changed; run its probe "
                                   "first.")
-        kept = self._handles.get(handle, {}).get("component") if hasattr(self, "_handles") else None
-        if kept is None:
+        if not self._is_component(handle):
             raise SolidWorksError(f"No component is kept as {handle!r}, so whether it is resolved cannot be read; that "
                                   "is a fault in Gear Generator, not in SolidWorks.")
-        value = _read(kept, route)
+        value = _read(self._component(handle), route)
         try:
             return int(value) in tuple(int(v) for v in values)
         except (TypeError, ValueError):
-            raise SolidWorksError(f"SolidWorks answered {value!r} when asked whether {call(kept, 'Name2')} is "
+            raise SolidWorksError(f"SolidWorks answered {value!r} when asked whether {self._component_name(handle)} is "
                                   "resolved, which is not a state this code knows.") from None
 
     @staticmethod
@@ -3121,10 +3310,14 @@ class Session:
         if order not in TRANSFORM_ORDERS:
             raise SolidWorksError(f"How SolidWorks lays out a component's frame has not been settled "
                                   f"(findings.TRANSFORM_ARRAY_ORDER is {order!r}); run the probe first.")
-        component = self._handles[handle]["component"]
-        data = [float(v) for v in call(call(component, "Transform2"), "ArrayData")]
+        component = self._component(handle)
+        transform = call(component, "Transform2")
+        if transform is None:
+            raise SolidWorksError(f"SolidWorks gave no frame for {self._component_name(handle)}, so where it stands "
+                                  "cannot be read.")
+        data = [float(v) for v in call(transform, "ArrayData")]
         if len(data) < 12:
-            raise SolidWorksError(f"The frame of {call(component, 'Name2')} has {len(data)} numbers, not 16.")
+            raise SolidWorksError(f"The frame of {self._component_name(handle)} has {len(data)} numbers, not 16.")
         if order == "columns":
             rotation = tuple(data[j * 3 + i] for i in range(3) for j in range(3))
         else:

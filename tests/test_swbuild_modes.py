@@ -242,20 +242,6 @@ def test_build_gearbox_refuses_modes_before_any_part_is_made():
 
 # -- swcom: the members refuse with a sentence until A writes them; the epoch; the positions switch -------------------
 
-@pytest.mark.parametrize("call", [
-    lambda s: s.configurations(), lambda s: s.active_configuration(), lambda s: s.add_configuration("4L"),
-    lambda s: s.show_configuration("4L"), lambda s: s.delete_configuration("Default"),
-    lambda s: s.set_mate_suppressed_in("mate1", True, ["N"]), lambda s: s.mate_suppression("mate1", ["N"]),
-    lambda s: s.set_dimension_in("mate1", 66.0, ["4L"]), lambda s: s.dimension_values("mate1", ["4L"]),
-    lambda s: s._component("gear7"),
-])
-def test_each_configuration_member_refuses_with_a_whole_sentence_until_it_is_written(call):
-    session = swcom.Session(None, (34, 1, 1), 1)
-    with pytest.raises(swcom.SolidWorksError, match=r"^[A-Z].* is not in this version of Gear Generator yet, so "
-                                                    r"nothing was (read|made|changed|read or changed)\.$"):
-        call(session)
-
-
 def test_the_configuration_epoch_starts_at_0_and_each_raise_starts_a_new_one():
     session = swcom.Session(None, (34, 1, 1), 1)
     assert session._epoch == 0
