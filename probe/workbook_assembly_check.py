@@ -7334,11 +7334,13 @@ def s7_route_mates(box, mode):
                                                                                          for x in m.modes))]
 
 
-def s7_held(box, off):
-    """Each body's state during a put with ``off`` suppressed: "wholly free", or "held by" the mates left on it."""
+def s7_held(box, off, mode):
+    """Each body's state during a put in ``mode`` with ``off`` suppressed there: "wholly free", or "held by" the mates
+    left on it (a coupling §2.3 has off in ``mode`` holds nothing there)."""
     out = {}
     for g, _ in bodies(box):
-        left = [m.name for m in box.mates if g in (m.gears or ()) and m.name not in off]
+        left = [m.name for m in box.mates if g in (m.gears or ()) and m.name not in off
+                and not key_suppressed(m.name, mode)]
         out[g] = "wholly free" if not left else "held by " + ", ".join(left)
     return out
 
@@ -7623,7 +7625,7 @@ class S7Case:
     def put(self, step, mode, targets, route=True):
         """A put in ``mode`` (the app's route when ``route``), then every configuration read and judged."""
         off = s7_route_mates(self.box, mode) if route else []
-        held = s7_held(self.box, off)
+        held = s7_held(self.box, off, mode)
         label = f"s7 {self.key} {step}"
         out = s7_run(self.worker, label, s7_put_job(self.box, mode, targets, off))
         if out["errors"] or out["cleanup"]:
