@@ -889,3 +889,62 @@ def test_finish_update_never_writes_an_empty_on_set():
                    suppressed_in=[("RangeSlv engages LoDog", "4l")]).gearbox
     assert {m.name: m.modes for m in box.mates}["RangeSlv engages LoDog"] == ["4L"]
     assert all(m.modes for m in box.mates if m.kind == COUPLE)
+
+
+def press_on_fake(sw, record, spec):
+    a = assessed(spec)
+    up = update.classify(record, a, exists=lambda p: True)
+    assert up.refusal == "" and not up.needs_new_revision, (up.refusal, up.structural)
+    result = swbuild.update_gearbox(sw, **up.update_kwargs(), exists=lambda p: True, mtime=lambda p: 5.0)
+    assert result.failures == [], result.failures
+    done = update.finish_update(up, result, record, digest="d2", read_sidecar=lambda p: None, mtime=lambda p: 5.0)
+    return up, result, store.link_record_from_json(store.link_record_to_json(done.record))
+
+
+@pytest.mark.parametrize("make", [transfer_case_parallel, e4_transfer_case])
+def test_after_an_update_with_nothing_to_do_each_fixture_still_turns_in_every_mode(make, mode_findings):
+    sw, _, record = build_on_fake(make())
+    up, result, after = press_on_fake(sw, record, make())
+    assert result.ok and after.gearbox.modes == ["2H", "4H", "N", "4L"]
+    assert wrong_on_fake(sw, after, FIRST[make]) == []
+    again = update.classify(after, assessed(make()), exists=lambda p: True)
+    assert (again.structural, again.replaced, again.modes_changed) == ((), (), ())
+
+
+def test_after_j14s_edit_the_fake_holds_the_new_value_and_flags_and_turns_as_worked_by_hand(mode_findings):
+    """J14's example on the fake: 4H's ModeSlv pick 4WD → 2WD. 4H then turns as 2H (Front free), ModeSlv stands at
+    96 in 4H, and FrontDog's coupling is on in 4L only; every other mode as before."""
+    sw, _, record = build_on_fake(transfer_case_parallel())
+    spec = with_mode(transfer_case_parallel(), 1, positions=(("RangeSlv", "H"), ("ModeSlv", "2WD")))
+    up, result, after = press_on_fake(sw, record, spec)
+    assert result.ok
+    assert sw.mate("ModeSlv along Rear").own == {"2H": 96.0, "4H": 96.0, "N": 96.0, "4L": 106.0}
+    assert sw.mate("ModeSlv engages FrontDog").flags == {"2H": True, "4H": True, "N": True, "4L": False}
+    names = {c.name: c.gear for c in after.gearbox.components}
+    driver = next(n for n, g in names.items() if g == "InPin")
+    sw.show_configuration("4H")
+    turns = {names[n]: round(t, 6) for n, t in sw.drive(driver, 30.0).items() if n in names}
+    assert (turns.get("RangeSlv"), turns.get("FOut")) == (30.0, None)
+    box = after.gearbox
+    assert {m.name: m.values for m in box.mates}["ModeSlv along Rear"]["4H"] == 96.0
+    assert {m.name: m.modes for m in box.mates}["ModeSlv engages FrontDog"] == ["4L"]
+    again = update.classify(after, assessed(spec), exists=lambda p: True)
+    assert (again.structural, again.modes_changed) == ((), ())
+
+
+def test_a_mode_spelt_4l_builds_updates_and_reads_back_clean_on_the_fake(mode_findings):
+    """§9.6 end to end on the fake: built from a workbook saying 4l (and the pick l), updated from one saying 4L and
+    a moved L — the configuration keeps the name it was built with, and the record reads back clean."""
+    sw, result, record = build_on_fake(lower_4l(transfer_case_parallel()))
+    assert result.ok and sw.configs == ["2H", "4H", "N", "4l"]
+    spec = with_mode(with_gear(lower_4l(transfer_case_parallel()), "RangeSlv", slides="H=-10, N=0, L=+10.5"), 3,
+                     name="4L")
+    up, result, after = press_on_fake(sw, record, spec)
+    assert result.ok and sw.configs == ["2H", "4H", "N", "4l"]
+    assert sw.mate("RangeSlv along Rear").own["4l"] == 66.5
+    box = after.gearbox
+    assert box.modes == ["2H", "4H", "N", "4l"]
+    assert {m.name: m.values for m in box.mates}["RangeSlv along Rear"] == {"2H": 46.0, "4H": 46.0, "N": 56.0,
+                                                                            "4l": 66.5}
+    assert all(set(m.modes) <= set(box.modes) for m in box.mates)
+    assert all(set(c.frames) == set(box.modes) for c in box.components)
