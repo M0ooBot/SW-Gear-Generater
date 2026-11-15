@@ -666,3 +666,107 @@ def test_a_static_record_meeting_modes_is_built_again():
     record.gearbox.kind = motion.STATIC
     up = update.classify(record, a, exists=lambda p: True)
     assert update._STATIC_MODES in up.structural
+
+
+# -- the drives on package A's fake, in every mode (B's lessons: drive each fixture in every mode after each build;
+# run the mutations; pin what reaches SolidWorks). Every turn below is worked by hand from §2.3, never the code's:
+# In +30° → Rear 30° in 2H and 4H (the sleeves turn with In), free in N, 7.5° in 4L (4 : 1); Front 30° in 4H, 7.5° in
+# 4L, free in 2H and N; FIdler −45° for FDrive +30° (30 : 20); the low range always turns with In (LoDog 7.5°).
+
+from test_swbuild import mode_findings  # noqa: E402,F401 - the fixture, pinned at the W8 spike's findings
+
+ON_FAKE = {   # mode -> the gears checked: their turn, or None for free (left out of the drive)
+    "2H": {"RangeSlv": 30.0, "ModeSlv": 30.0, "FrontDog": None, "FOut": None, "LoDog": 7.5},
+    "4H": {"RangeSlv": 30.0, "ModeSlv": 30.0, "FrontDog": 30.0, "FOut": 30.0, "LoDog": 7.5},
+    "N": {"RangeSlv": None, "ModeSlv": None, "FrontDog": None, "FOut": None, "LoDog": 7.5},
+    "4L": {"RangeSlv": 7.5, "ModeSlv": 7.5, "FrontDog": 7.5, "FOut": 7.5, "LoDog": 7.5},
+}
+FIRST = {transfer_case_parallel: "InPin", e4_transfer_case: "Sun"}
+SLIDES_ON_FAKE = {"RangeSlv along Rear": {"2H": 46.0, "4H": 46.0, "N": 56.0, "4L": 66.0},
+                  "ModeSlv along Rear": {"2H": 96.0, "4H": 106.0, "N": 96.0, "4L": 106.0}}
+
+
+def build_on_fake(spec, mutate=None):
+    from test_swbuild import FakeSolidWorks
+    sw = FakeSolidWorks()
+    a = assessed(spec)
+    plan = gearbox.plan_gearbox(a, None, exists=sw.exists, read_sidecar=lambda p: None)
+    assert plan.refusal == "", plan.refusal
+    if mutate is not None:
+        plan = mutate(plan)
+    result = swbuild.build_gearbox(sw, **plan.build_kwargs(), exists=sw.exists)
+    done = gearbox.finish_build(plan, result, None, workbook=BOOK, digest="d1", written_by="test",
+                                read_sidecar=lambda p: None, exists=sw.exists)
+    return sw, result, store.link_record_from_json(store.link_record_to_json(done.record))
+
+
+def wrong_on_fake(sw, record, first):
+    """Every way the fake disagrees with the hand working: the turns per mode, the slide values each configuration
+    holds, and each coupling's flags."""
+    names = {c.name: c.gear for c in record.gearbox.components}
+    driver = next(n for n, g in names.items() if g == first)
+    wrong = []
+    for mode, wanted in ON_FAKE.items():
+        sw.show_configuration(mode)
+        turns = {names[n]: round(t, 6) for n, t in sw.drive(driver, 30.0).items() if n in names}
+        got = {g: turns.get(g) for g in wanted}
+        if got != wanted:
+            wrong.append(f"{mode}: {got}")
+        sw.drive(driver, -30.0)
+    for name, values in SLIDES_ON_FAKE.items():
+        if sw.mate(name).own != values:
+            wrong.append(f"{name}: {sw.mate(name).own}")
+    for name, on in (("RangeSlv engages InDog", {"2H", "4H"}), ("RangeSlv engages LoDog", {"4L"}),
+                     ("ModeSlv engages FrontDog", {"4H", "4L"})):
+        flags = sw.mate(name).flags
+        if flags != {m: m not in on for m in ON_FAKE}:
+            wrong.append(f"{name}: {flags}")
+    return wrong
+
+
+@pytest.mark.parametrize("make", [transfer_case_parallel, e4_transfer_case])
+def test_each_fixture_builds_on_the_fake_and_turns_in_every_mode_as_worked_by_hand(make, mode_findings):
+    sw, result, record = build_on_fake(make())
+    assert result.ok, result.log_lines()
+    assert wrong_on_fake(sw, record, FIRST[make]) == []
+    assert sw.configs == ["2H", "4H", "N", "4L"] and record.gearbox.modes == sw.configs
+    assert {c.gear: c.frames["4L"]["at"][2] for c in record.gearbox.components}["RangeSlv"] == 66.0
+
+
+def _invert_a_coupling(plan):
+    """The coupling's sense the other way: out of ``same_way``, so its gear mate is made turning the dog against
+    the sleeve."""
+    mp = plan.modes_plan
+    return replace(plan, modes_plan=replace(mp, same_way=tuple(n for n in mp.same_way
+                                                               if n != "RangeSlv engages InDog")))
+
+
+def _wrong_dog_in_2h(plan):
+    """2H engaging LoDog where it should engage InDog."""
+    steps = list(plan.modes_plan.steps)
+    s = steps[0]
+    steps[0] = replace(s, on=tuple("RangeSlv engages LoDog" if n == "RangeSlv engages InDog" else n for n in s.on),
+                       off=tuple("RangeSlv engages InDog" if n == "RangeSlv engages LoDog" else n for n in s.off))
+    return replace(plan, modes_plan=replace(plan.modes_plan, steps=tuple(steps)))
+
+
+def _4l_value_in_2h(plan):
+    steps = list(plan.modes_plan.steps)
+    steps[0] = replace(steps[0], values=dict(steps[0].values, **{"RangeSlv along Rear": 66.0}))
+    return replace(plan, modes_plan=replace(plan.modes_plan, steps=tuple(steps)))
+
+
+@pytest.mark.parametrize("mutate, caught", [
+    (_invert_a_coupling, "the coupling RangeSlv engages InDog turns its two gears the same way, and it is not listed"),
+    (_wrong_dog_in_2h, "The mate RangeSlv engages LoDog is made in mode 4L, not in 2H"),
+    (_4l_value_in_2h, "stands at (0, 0, 66) where the mode places it at (0, 0, 46)"),
+])
+def test_each_mutation_of_the_plan_is_caught(mutate, caught, mode_findings):
+    """The lessons' mutations: each is refused before anything is made (A's ModesPlan.check) or fails the build's
+    own mate check in the mode it touches — never a clean pass; with a clean build the drives above would differ."""
+    try:
+        sw, result, record = build_on_fake(transfer_case_parallel(), mutate)
+    except swbuild.BuildError as exc:
+        assert caught in str(exc)
+        return
+    assert not result.ok and any(caught in line for line in result.log_lines()), result.log_lines()
