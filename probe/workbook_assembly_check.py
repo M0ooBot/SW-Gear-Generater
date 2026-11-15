@@ -8026,7 +8026,16 @@ def s7_case_8(worker, excel):
                             else [], "failures": list(result.failures) if result else [], "seconds": seconds,
                             "status": desk_note(c.desk)}
         say(f"fact    s7 8: the quiet Update in 4L put in {result and result.put_in}; failures {result and result.failures}")
+        # Review MF1: the app's own Update is held (the measurement is what comes after it): it went through, put
+        # every mode with nothing failing, and every configuration then reads at its built frames.
+        check(result is not None and result.ok and not result.failures
+              and set(result.put_in) >= set(c.box.modes), f"s7 8: the quiet Update in 4L went through and put every "
+              f"mode: put_in {result and result.put_in}, failures {result and result.failures}")
         frames = c.read("after the quiet Update in 4L")
+        for mode in c.box.modes:
+            gap, at = frames_gap(frames[mode], c.built[mode])
+            check(gap <= FRAME_TOLERANCE, f"s7 8: after the Update every body in {mode} at its built frame (largest "
+                  f"{gap:.1e} at {at or '-'})")
         for mode in (result.put_in if result else ()):
             s7_note_put(c.forked, mode, [g for g, _ in bodies(c.box) if g not in c.box.fixed])
         c.last = frames
