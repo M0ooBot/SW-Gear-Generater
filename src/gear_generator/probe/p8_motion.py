@@ -5953,7 +5953,8 @@ def _app_build(px: Px, spec: Any, swbuild: Any, wb_assess: Any, allow_clashes: b
             made = [t for t in sc.open_titles(px) if t not in before]
             px.shared.setdefault("created", []).extend(t for t in made if t not in px.shared["created"])
         px.require(result.ok and (allow_clashes or not result.clashes), f"build_gearbox built {spec.box.name}",
-                   {"failures": plain(result.failures), "clashes": plain(result.clashes)})
+                   {"failures": plain(result.failures), "clashes": plain(result.clashes), "skipped": result.skipped,
+                    "mismatched": plain(result.mismatched), "log": [str(x) for x in result.log_lines()][-25:]})
         if result.clashes:
             px.fact(f"{spec.box.name} built with clashes", plain(result.clashes))
         names = {gear: result.components.get(handle, "") for handle, gear in plan.handles.items()}
