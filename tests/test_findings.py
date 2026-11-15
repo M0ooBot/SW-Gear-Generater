@@ -1125,3 +1125,58 @@ def test_a_suppressed_gear_mate_answers_its_sense_and_marks_nothing():
     first = _w7_records(W7_PUT)
     assert decide.suppressed_gear_mate_sense_read(first, senses_inverted=True) \
         == findings.SUPPRESSED_GEAR_MATE_SENSE_READ == "answers, marks nothing"
+
+
+W8_OVER_DEFINED = LATEST.parent / "w8-over-defined-20261115-100312.json"
+W8_CONFIGURATION_ORDER = LATEST.parent / "w8-configuration-order-20261115-092100.txt"
+
+
+def _w8_over_defined():
+    """Probe w8_over_defined_show's facts (tier 11), from the run on this machine's SolidWorks 2026 (34.0.0)."""
+    data = json.loads(W8_OVER_DEFINED.read_text(encoding="utf-8"))
+    assert data["meta"]["version"] == "SolidWorks 2026 (revision 34.0.0)" and data["meta"]["exit_code"] == 0
+    records = {r["name"]: r for r in data["records"]}
+    return facts(records, "w8_over_defined_show")["w8_over_defined"]
+
+
+def test_an_over_defined_configuration_shows_without_a_window_that_asks_and_reads_in_error():
+    """W8-PLAN §4.2 item 1: two slides on one sleeve in Z, Z shown and rebuilt; Y and X after it; the second slide off."""
+    from gear_generator.probe import p11_modes as p11
+    w = _w8_over_defined()
+    reading = p11.fight_reading(w, "slides")
+    assert p11.show_over_defined(reading) == findings.CONFIGURATION_SHOW_OVER_DEFINED == p11.SHOWN_IN_ERROR
+    assert reading["windows"] == [("into the fight: ForceRebuild3(True) in Z", "swBalloonTip", "")]
+    assert reading["windows_answered"] == []
+    assert reading["mates_in_error"] == ["S slide", "S slide 2"] and reading["over_defined"] == ["S"]
+    into = w["slides"]["into"]
+    assert into["show"]["windows"] == [] and into["active_after_show"] == "Z"
+    assert {m: e["code"] for m, e in into["errors_on"].items()} == {"S slide": 47, "S slide 2": 47}
+    assert reading["app_problems"] == ["The mate S slide is in error in SolidWorks.",
+                                       "The mate S slide 2 is in error in SolidWorks."]
+    assert [w["slides"][k]["S_z"] for k in ("after", "also", "back")] == [30.0, 15.0, 20.0]
+    assert w["saved_nothing"] is True and all(c.get("dialog") is False for c in w["closes"])
+
+
+def test_a_coupling_beside_a_lock_holding_the_sleeve_reads_no_error():
+    """§4.2's other fight, measured: redundant but not in error, so reading the mates does not catch it."""
+    from gear_generator.probe import p11_modes as p11
+    reading = p11.fight_reading(_w8_over_defined(), "coupling_and_lock")
+    assert reading["show_returned"] is True and reading["active_is_target"]
+    assert reading["mates_in_error"] == [] and reading["over_defined"] == [] and reading["app_problems"] == []
+    assert reading["windows"] == [] and reading["other_clean"] and reading["back_clean"]
+    assert p11.show_over_defined(reading) is None
+
+
+def test_a_flag_read_answers_in_the_documents_order_and_a_value_read_in_the_order_passed():
+    """Tier 11's reads at three moments, judged against the single-name reads; W8 s0's ad hoc reads said the same."""
+    from gear_generator.probe import p11_modes as p11
+    w = _w8_over_defined()
+    assert w["document_order"] == ["Default", "X", "Z", "Y"] and p11.truths_agree(w)
+    sup, val = p11.all_reads(w, "suppression"), p11.all_reads(w, "value")
+    assert p11.order_of(sup) == p11.DOCUMENT_ORDER and findings.SUPPRESSION_READ_ORDER == "the document's configuration order"
+    assert p11.order_of(val) == p11.ORDER_PASSED and findings.VALUE_READ_ORDER == "the order passed"
+    assert sum(r["verdict"] == p11.DOCUMENT_ORDER for r in sup) >= 10
+    assert sum(r["verdict"] == p11.ORDER_PASSED for r in val) >= 9
+    earlier = W8_CONFIGURATION_ORDER.read_text(encoding="utf-8")
+    assert "RangeSlv engages InDog IsSuppressed2(3, ['N', '2H'] ) -> (False, True)" in earlier
+    assert "RangeSlv along Rear GetSystemValue3(3, ['4L', 'N'] ) -> (0.066, 0.056)" in earlier

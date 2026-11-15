@@ -1168,8 +1168,9 @@ COLLINEAR_GEAR_MATE_HOLDS_SLIDE = True
 # - SetSuppression2(0 or 1, 3, VT_ARRAY|VT_BSTR names) returned True each time after a rebuild. IsSuppressed2(3,
 #   names) gave one flag per name, in order, as set: unshown, after every show, after the delete, after reopening.
 # - No add, show or delete brought up any window, under the dialog watch.
-# Not covered: showing a configuration whose mates over-define it (W8-PLAN's tier 9 item 1); more than three
-# configurations; the template holding a configuration of a mode's name.
+# Not covered here: showing a configuration whose mates over-define it (W8-PLAN's tier 9 item 1, measured since by
+# tier 11: CONFIGURATION_SHOW_OVER_DEFINED below); more than three configurations; the template holding a
+# configuration of a mode's name.
 CONFIGURATION_ADD_ROUTE = "AddConfiguration2(name, '', '', 0, '', '', True)"
 CONFIGURATION_SHOW_ROUTE = "ShowConfiguration2, active name read back"
 CONFIGURATION_DELETE_ROUTE = "DeleteConfiguration2, names read back"
@@ -1318,3 +1319,67 @@ GEAR_MATE_BACK_ON_MARKS = "nothing beyond the puts"
 # a mate left on (GEAR_MATE_DEFINITION_READ_MARKS); 2024's confirming run should read it once before this is relied
 # on there.
 SUPPRESSED_GEAR_MATE_SENSE_READ = "answers, marks nothing"
+
+# -- W8's last call probed ahead: a configuration whose mates fight, shown (W8-PLAN §4.2 item 1); and the order the
+# -- per-configuration reads answer in (probe w8_over_defined_show, tier 11, SolidWorks 2026 34.0.0) ----------------
+#
+# Results:
+#   probe/results/w8-over-defined-20261115-100312.json           the evidence (from 2b530eb)
+#   probe/results/w8-over-defined-attempt-20261115-094752.txt    the first run (from b296c7f), kept: its app mate check
+#                                                                raised outside a build and its lock fought alone
+# Both ran on THIS machine's SolidWorks 2026 SP0 (revision 34.0.0), each in a session started fresh for it. The W8
+# spike, its follow-up and W5-W7's probes ran on another machine at 34.1.1, so what is set here is 34.0.0's.
+# The plan names the probe p9_modes; tiers 9 and 10 were taken, so it is tier 11 (p11_modes.py).
+#
+# The shape is the W8 spike's (the strip's spur as A and D, its internal ring as sleeve S; the spline S-A and the
+# coupling S-D as 1 : 1 gear mates; one slide, S's origin to the layout's Front). X, Z and Y were added in that order,
+# so the document's configuration order is Default, X, Z, Y. The slide read Default 10, X 15, Z 20, Y 30 mm.
+#
+# Two slides on one sleeve in one configuration:
+# - A second distance mate on the same entities, 25 mm, was on in Z only, beside the first (20 mm in Z).
+# - ShowConfiguration2("Z") returned True, and Z read back active. No window opened during the show, under the dialog
+#   watch.
+# - The top-only rebuild (ForceRebuild3(True)) returned True. It put up one window, a non-modal balloon tip (class
+#   swBalloonTip): "Over Defined" / "The assembly is over defined. Click here to view mate errors." It closed itself
+#   after 0.79 s; nothing answered it.
+# - Both slides read GetErrorCode2 47 (swFeatureErrorMateIlldefined), warning False. S read GetConstrainedStatus 4.
+#   What's Wrong listed "Mates" (1), "S slide" (47) and "S slide 2" (47).
+# - The app's own reads: Session.mate_states gave both slides code 47, warning False, not suppressed; the mate check
+#   (swbuild._mate_problems) said "The mate S slide is in error in SolidWorks." and "The mate S slide 2 is in error in
+#   SolidWorks." S stood at 30 mm, neither slide's value.
+# - Y, then X, shown and rebuilt after it: every code 0, nothing over-defined, the mate check silent, S at 30 and 15 mm
+#   (within 1e-6). Z shown again read as the first time. With the second slide suppressed in Z and a rebuild, Z read
+#   clean with S at 20 mm.
+# - Both runs read the same.
+# So showing such a configuration asks nothing and hangs nothing: it is seen only by reading the mates afterwards,
+# which the build's and Update's per-mode checks already do.
+# A coupling beside a lock across the same pair (S-D), on in Y, the lock alone holding S there (S's own slide and axis
+# mate off in Y): no window, every code 0, nothing over-defined, the mate check silent; X after it and Y with the lock
+# off read clean too. So that pair is redundant but not in error, and is NOT caught by reading the mates. In the
+# first run, with S's slide and axis mate still on, the lock itself was made with AddMate5 status 5 (the coupling
+# off): S's axis mate (code 1, warning True), D's along mate and S's slide (code 46, swFeatureErrorMateOverdefined,
+# warning True) read in error, and D and S status 4. With the coupling then on beside it, the mates in error were D's
+# axis mate (code 1) and D's along mate, the spline, the coupling and S's slide (code 46), and A read status 3.
+# Not covered:
+# - Save flags: the assembly was never saved and the parts read modified from the mounts on, so every GetSaveFlag
+#   read True throughout, and what an over-defined show marks is not told.
+# - A fight in a saved, reopened assembly; a fight among gear mates; SolidWorks 2024.
+# - SolidWorks' option to show errors at every rebuild was left as installed; a person who turns it on may see a
+#   What's Wrong window.
+CONFIGURATION_SHOW_OVER_DEFINED = "shown; no window asks; its mates read in error; others solve after"
+#
+# The read order, measured again (W8 s0's first run found it ad hoc: probe/results/w8-configuration-order-20261115-
+# 092100.txt, read on that run's refused assembly). At three moments, each mate whose flags differ between
+# configurations (the coupling, off in Y only; the second slide, on in Z only; the lock, on in Y only; the first slide,
+# off in Y only) was read with IsSuppressed2(3, names), and the slide with GetSystemValue3(3, names). Each read
+# passed the full list in the document's order, reversed and shuffled, two-name lists both ways round, and each name
+# alone; each was judged against the single-name reads, which matched what was set in every case.
+# - IsSuppressed2(3, names) answered in the document's configuration order (GetConfigurationNames: Default, X, Z, Y,
+#   the order of creation, not alphabetical), filtered to the names asked, whatever order they were passed in. For
+#   example, the coupling (on in Default, X and Z, off in Y): [Y, Z, X, Default] -> (False, False, False, True), and
+#   [Y, X] -> (False, True).
+# - GetSystemValue3(3, names) answered in the order passed: [Y, Z, X, Default] -> 30, 20, 15, 10 mm.
+# So a flag is read one configuration per call (swcom.Session.mate_suppression), or its answers are keyed by the
+# document's order; a value read may pair answers with the names passed.
+SUPPRESSION_READ_ORDER = "the document's configuration order"
+VALUE_READ_ORDER = "the order passed"
