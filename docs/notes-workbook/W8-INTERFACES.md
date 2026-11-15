@@ -347,6 +347,12 @@ the kind the last two interface reviews found, and asked for written rules. Thes
       nothing marked. The test that had pinned the opposite, the shared-positions variant of
       `test_a_train_turned_in_another_mode_is_left_unseen_by_a_quiet_update_which_says_so` ("put back in 2H alone,
       nothing shown"), now pins the visit, renamed `test_a_turn_in_another_mode_is_unseen_by_a_quiet_update_or_if_shared_put_back_with_every_mode_visited`.
+      *Amended after s2's rerun* (`probe/results/w8-workbook-assembly-20261115-132348-s2-put-kept-per-configuration.log`,
+      `a87c1c5`): there the 4L put stayed in 4L, so 2H and N, turned in step and not put, failed their post-check
+      against the built frames. So a quiet Update that has anything to put is a changed Update from there (W5's
+      answer 2): the active mode is judged without a put, then every mode is shown and every train put whole to its
+      built frames, the active mode last, then the flags read. No mode is left turned after an Update that put
+      anything. On E4 that is 52 puts, what a changed Update costs.
     - *Three sentences say only what was read*, verbatim:
       - a quiet Update: *"It worked in 4H, the configuration that was active; it did not show the other modes,
         since nothing in 4H needed changing."* (before: *"…since nothing needed changing."*; with no
