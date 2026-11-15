@@ -155,7 +155,7 @@ def test_a_later_phases_row_is_named_with_its_phase_and_build_parts_builds_the_r
     assert [j.gear_ids for j in parts.jobs] == [("G1",), ("G2",), ("G3",), ("G4",)]
     state = assess.assess(read_spec, diagnostics, FOLDER)
     assert state.build_refusal() == "" and state.lay_out_refusal() == (
-        "The layout and assembly wait for a later phase: Gears!A6: G7 is a dog ring: dog rings are built in phase W9.")
+        "The layout and assembly are not built: Gears!A6: G7 is a dog ring: dog rings are built in phase W9.")
     footer = ui_text.workbook_footer(state, folder=FOLDER)
     assert (footer.ok, footer.build_label, footer.build_enabled) == (True, "Build parts", True)
     assert footer.text == (f"Ready: Build parts makes 4 parts in {FOLDER}; the layout and assembly are not built: "
