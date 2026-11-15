@@ -125,30 +125,29 @@ def test_a_carrier_is_refused_with_its_phase_and_its_gears_still_build(tmp_path)
 
 
 def test_every_row_a_later_phase_builds_is_named_with_its_phase(tmp_path):
+    """W6 builds turned axes and bevel gears; what is left for later is a carrier (W7) and a slide, a sleeve or a
+    dog (W8), each named with its phase at its cell."""
     spec = reducer()
-    shafts = (spec.shafts[0], spec.shafts[1], model.replace(spec.shafts[2], axis="X+"),
-              model.Shaft("P1", "S2", "20", "0"))
+    shafts = spec.shafts + (model.Shaft("P1", "S2", "20", "0"),)
     gears = spec.gears[:3] + (model.replace(spec.gears[3], slides="A=0, B=10"),
-                              Gear("G6", "S2", "60", "bevel", "external", "20", "3", "", "14", "10"))
+                              Gear("G6", "S2", "60", "sleeve", "external", "30", "2", "", "30", ""))
     spec = model.replace(spec, shafts=shafts, gears=gears)
     read_spec, diagnostics = model.from_book(xlsx.read(write(tmp_path, spec)))
     parts = build.plan_parts(read_spec, FOLDER)
     assert [d.message for d in parts.refused] == [
-        "Shafts!A4: S3's axis is X+: turned axes are laid out in phase W6, and the gearbox is not checked until "
-        "then.",
         "Shafts!A5: P1 is mounted on S2: carriers are laid out in phase W7, and the gearbox is not checked until "
         "then.",
         "Gears!A5: G4 slides: sliding gears are placed in phase W8, with modes, and it is checked only at its At "
         "until then.",
-        "Gears!A6: G6 is a bevel gear: right-angle stages are built in phase W6.",
+        "Gears!A6: G6 is a sleeve: sleeves are built in phase W8, with modes.",
     ]
     assert len(parts.jobs) == 4
     assert assess.assess(read_spec, diagnostics, FOLDER).lay_out_refusal().startswith(
-        "The gearbox cannot be laid out yet, since it is not checked: S3's axis is X+")
+        "The gearbox cannot be laid out yet, since it is not checked: P1 is mounted on S2")
     footer = ui_text.workbook_footer(assess.assess(read_spec, diagnostics, FOLDER), folder=FOLDER)
     assert footer.ok and footer.text.endswith(
-        "the layout and assembly wait for a later phase: Shafts!A4: S3's axis is X+: turned axes are laid out in "
-        "phase W6, and the gearbox is not checked until then. (3 more under Checks)")
+        "the layout and assembly wait for a later phase: Shafts!A5: P1 is mounted on S2: carriers are laid out in "
+        "phase W7, and the gearbox is not checked until then. (2 more under Checks)")
 
 
 def test_a_workbook_with_nothing_for_later_can_be_laid_out(tmp_path):
@@ -506,14 +505,14 @@ def test_the_gear_tables_states(tmp_path):
     spec = model.replace(spec, gears=(
         spec.gears[0], model.replace(spec.gears[1], teeth="68.5"), spec.gears[2], spec.gears[3],
         Gear("G5", "S3", "47", "spur", "external", "17", "1.5", "", "15", "8"),
-        Gear("G6", "S2", "60", "bevel", "external", "20", "3", "", "14", "10")))
+        Gear("G6", "S2", "60", "sleeve", "external", "30", "2", "", "30", "")))      # a sleeve waits for W8
     read_spec, diagnostics = model.from_book(xlsx.read(write(tmp_path, spec)))
     parts = build.plan_parts(read_spec, FOLDER, skip_rows=build.rows_with_errors(diagnostics))
     rows = {r[0]: r for r in ui_text.workbook_gear_rows(read_spec, parts, diagnostics + parts.diagnostics)}
     assert rows["G1"][6:] == ("Gear_m1.5_N17", ui_text.GEAR_STATE_BUILDS, "to build")
     assert rows["G2"][3] == "68.5" and rows["G2"][7:] == (ui_text.GEAR_STATE_ERROR, "see Checks")
     assert rows["G5"][6:] == ("Gear_m1.5_N17", ui_text.GEAR_STATE_SHARES, "the same part as G1")
-    assert rows["G6"][7:] == (ui_text.GEAR_STATE_LATER, "later · phase W6")
+    assert rows["G6"][7:] == (ui_text.GEAR_STATE_LATER, "later · phase W8")
     footer = ui_text.workbook_footer(assess.assess(read_spec, diagnostics, FOLDER), folder=FOLDER)
     assert not footer.ok and not footer.build_enabled
     assert footer.text.startswith("Fix the workbook before building: Gears!F3: Teeth must be a whole number")
@@ -719,12 +718,13 @@ def test_a_gear_left_out_without_an_error_still_holds_the_layout(tmp_path):
 
 def test_the_checks_say_when_they_did_not_run(tmp_path):
     """The report says it was not checked, and speeds are withheld for exactly the same layouts, so the dropped
-    cell-less "not worked out yet" warning can never be needed."""
+    cell-less "not worked out yet" warning can never be needed. Since W6 a turned shaft is checked and its speeds
+    worked out; a carrier (W7) still is neither."""
     for name, spec in (("r.xlsx", reducer()), ("p.xlsx", planetary()),
                        ("x.xlsx", model.replace(reducer(), shafts=reducer().shafts[:2]
                                                 + (model.replace(reducer().shafts[2], axis="X+"),)))):
         report = assessed(tmp_path, spec, name).report
-        assert bool(report.unchecked) == bool(report.motion.later) == (name != "r.xlsx")
+        assert bool(report.unchecked) == bool(report.motion.later) == (name == "p.xlsx")
         assert all(d.field != "Shafts" for d in report.diagnostics)
 
 

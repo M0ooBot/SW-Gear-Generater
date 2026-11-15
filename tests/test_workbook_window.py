@@ -623,19 +623,21 @@ def test_locate_carries_the_record_to_the_workbooks_new_place(desk, monkeypatch)
 # -- Build parts, and the states that hold everything -------------------------------------------------------------
 
 
-def with_bevel():
+def with_sleeve():
+    """The reducer and a sleeve on S2: a row phase W8 builds (bevel gears and turned axes are W6's, built now)."""
     spec = reducer()
-    return model.replace(spec, gears=spec.gears + (Gear("G6", "S2", "60", "bevel", "external", "20", "3", "", "14",
-                                                        "10"),))
+    return model.replace(spec, gears=spec.gears + (Gear("G6", "S2", "60", "sleeve", "external", "30", "2", "", "30",
+                                                        ""),))
 
 
-def test_build_parts_falls_back_while_a_bevel_row_holds_the_layout_back(desk):
-    window = desk.open(with_bevel())
+def test_build_parts_falls_back_while_a_later_row_holds_the_layout_back(desk):
+    window = desk.open(with_sleeve())
     footer = window.footer()
     assert (footer.build_action, footer.build_label, footer.build_primary) == (ui_text.BUILD_PARTS, "Build parts",
                                                                                True)
     assert window.status.get().startswith("Ready: Build parts makes 4 parts in ") and \
-        "the layout and assembly wait for a later phase: Gears!A6: G6 is a bevel gear" in window.status.get()
+        "the layout and assembly wait for a later phase: Gears!A6: G6 is a sleeve: sleeves are built in phase W8, " \
+        "with modes." in window.status.get()
     desk.sw.fail_on = {"save_as": (desk.part("OutputGear"), "The disk is full.")}
     window.press_build()
     desk.finish(window)
@@ -1027,7 +1029,7 @@ def test_a_part_file_that_appears_while_the_question_is_open_builds_nothing(desk
 
 
 def test_parts_built_by_build_parts_and_a_change_they_cannot_take_hold_update_with_the_reason(desk):
-    window = desk.open(with_bevel())
+    window = desk.open(with_sleeve())
     window.press_build()
     desk.finish(window)
     save_in_excel(window, {"Gears": {"K2": "arcs"}})
