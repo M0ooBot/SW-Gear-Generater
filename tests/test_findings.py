@@ -1300,6 +1300,29 @@ def test_the_2024_s7_pins_fail_on_a_doctored_copy(doctor):
         _s7_2024_holds(data, rerun)
 
 
+def test_s7_on_2024_kept_each_moving_put_in_its_configuration_until_a_turn_wrote_one_place_into_every_one():
+    """W8 s7 case 5 on SolidWorks 2024 32.5.0 (findings.py, POSITIONS_PER_CONFIGURATION): the three moving puts each
+    read in their configuration alone; then FrontDog driven +15° in N left FIdler, standing at 0, +10, +20 and 0, at
+    −2.5° in all four — the same place, not the same amount — so 4H's put was gone. Read on 2024 only."""
+    data = json.loads(W8_S7_2024.read_text(encoding="utf-8"))
+    assert data["revision"] == [32, 5, 0]
+    for step, body, made_in, during in S7_MOVING_PUTS:
+        judgement = _s7_step(data, "5", step)["judgement"]
+        assert judgement["made_in"] == made_in and judgement["moved_bodies"] == [body], step
+        assert judgement["bodies"][body]["state"] == {m: ("moved" if m == made_in else "still") for m in S7_MODES}
+        assert judgement["fits"] == ["per_configuration", "H_private_put"], step
+    drive = _s7_step(data, "5", "FrontDog +15 in N, FIdler standing differently")
+    assert drive["judgement"]["kind"] == "turn" and drive["judgement"]["fits"] == []
+    read = drive["same_amount_or_place"]
+    assert read["body"] == "FIdler" and read["made_in"] == "N"
+    before = {m: round(read["by_configuration"][m]["before"], 6) for m in S7_MODES}
+    after = {m: round(read["by_configuration"][m]["after"], 6) for m in S7_MODES}
+    assert before == {"2H": 0.0, "4H": 10.0, "N": 20.0, "4L": 0.0} and set(after.values()) == {-2.5}
+    assert {m: read["by_configuration"][m]["same_place"] for m in S7_MODES} == {m: True for m in S7_MODES}
+    assert {m: read["by_configuration"][m]["same_amount"] for m in S7_MODES} == {m: m == "N" for m in S7_MODES}
+    assert findings.POSITIONS_PER_CONFIGURATION_ON_2024 is True
+
+
 def test_the_w8_gates_open_on_both_versions_from_these_findings():
     """The worker's per-version refusal reads these findings by the revision; the sentence switch reads the turn
     finding: on 2026 and on 2024 a turn can show in other modes (False); a version with no finding of its own makes

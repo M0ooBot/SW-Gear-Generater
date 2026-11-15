@@ -1247,13 +1247,22 @@ SYSTEM_VALUE_FOLLOWS_CONFIGURATION = False
 #   save and reopen. In the s2 rerun (…-132348-s2-put-kept-per-configuration.log) the app's puts in 4L and 4H, back
 #   from a +37° turn, were kept there while 2H and N kept the turn. The spike's follow-up B and C read the same of a
 #   component no mate holds (2026 34.1.1 on another machine, again on this host,
-#   probe/results/w8-followup-20261115-114828.json; and 2024, which _2024 rests on).
-# - In W8 s2, after an Update had put every mode, a put in 2H was twice found in 4H and N, shown next, and not in 4L
-#   (probe/results/w8-workbook-assembly-20261115-151412-s2.log lines 448-451, the second press, and 569-572 and 709,
-#   the changed Update's FDrive; the same in …-111951-s2-turn-carried-per-body.log lines 297-300). A no-op put
-#   changed nothing (s7 cases 2 and 3).
+#   probe/results/w8-followup-20261115-114828.json; 2024, probe/results/sw2024/w8-followup-20261114-233330.json).
+# - On 2024 (32.5.0, W8 s7, probe/results/sw2024/w8-s7-20261115-162418.json, its log
+#   w8-workbook-assembly-20261115-162357-s7.log): case 5's three moving puts each stayed in their configuration
+#   alone (log 831-859, 909). Then FrontDog driven +15° in N left FIdler, which had stood at 0, +10, +20 and 0 in 2H,
+#   4H, N and 4L, at −2.5° in all four (log 863-884, JSON same_amount_or_place): the same place in every
+#   configuration, not moved by the same amount, and 4H's put of +10° was gone. So on 2024 a moving put is kept by
+#   its configuration only until that train is next turned in any configuration. In case 8's rerun
+#   (…-172046-s7-case8.log, w8-s7-20261115-172104-case8.json) the moving put in 2H, after an Update had put every mode
+#   and a fresh turn, stayed in 2H. 2026's s7 has not given that drive, nor run case 8.
+# - On 2026, in W8 s2, after an Update had put every mode, a put in 2H was twice found in 4H and N, shown next, and
+#   not in 4L (probe/results/w8-workbook-assembly-20261115-151412-s2.log lines 448-451, the second press, and 569-572
+#   and 709, the changed Update's FDrive; the same in …-111951-s2-turn-carried-per-body.log lines 297-300). Not
+#   settled on 2026. 2024's case 8 read neither of the two 2026 possibilities: the fresh turn reached all four, and
+#   the put stayed in 2H. A no-op put changed nothing (s7 cases 2 and 3, on both versions).
 # No behaviour reads these: every mode an Update shows is put to its built frames and post-checked (W8-INTERFACES
-# §9.18). Not covered: a drag in the user interface; a mated body on 34.1.1 and on 2024.
+# §9.18). Not covered: a drag in the user interface; a mated body on 34.1.1.
 POSITIONS_PER_CONFIGURATION_ON_2026 = True
 POSITIONS_PER_CONFIGURATION_ON_2024 = True
 #
@@ -1269,9 +1278,9 @@ POSITIONS_PER_CONFIGURATION_ON_2024 = True
 # Not settled: in that same state the fresh turn was NOT read in 4H and N. Shown after a put in 2H, both read at the
 # built turn, in step and not turned (…-151412-s2.log lines 448-451). So whether a turn reaches every configuration
 # once an Update has put every mode, and whether a moving put can reach another configuration (POSITIONS above), are
-# open. s7 case 4's Update moved only the front train, so a turn "after the app's own Update" rests there on no-op
-# puts of the driven train. A further s7 case (a turn, an Update putting every mode, a turn, a moving put, every
-# configuration read after each) is to measure it. The sentences say "can show in other modes" for that reason.
+# open on 2026. In the 135428 run s7 case 4's Update moved only the front train, so a turn "after the app's own
+# Update" rests there on no-op puts of the driven train. s7 case 8 (a turn, an Update putting every mode, a turn, a
+# moving put, every configuration read after each) is to measure it on 2026; on 2024 it read neither 2026 reading.
 # On 2024 (32.5.0, W8 s7 on that host; probe/results/sw2024/w8-s7-20261115-162418.json and its log
 # w8-workbook-assembly-20261115-162357-s7.log) every turn of the train s7 gave read "moved" in all four
 # configurations, by the same amount, "shared" among the fits and "per_configuration" ruled out: on copies no Update
@@ -1279,7 +1288,9 @@ POSITIONS_PER_CONFIGURATION_ON_2024 = True
 # the app's quiet Update in 4L had put every mode (case 8, and its rerun, …-172046-s7-case8.log and
 # w8-s7-20261115-172104-case8.json, 0 failed).
 # LoDog then stood +9.25° against RangeSlv's +37° in 4L, where they are coupled: the dog across its sleeve the
-# sentences warn of. So TURN_PER_CONFIGURATION_ON_2024 is False too.
+# sentences warn of. So TURN_PER_CONFIGURATION_ON_2024 is False too. A turn given while the configurations stood
+# differently (case 5, read on 2024 only) brought the turned bodies to the same place in every configuration, not
+# by the same amount (POSITIONS above).
 # Read by swcom.positions_per_configuration for the sentences about a turn (ui_text.turning_note, switching_note,
 # TURN_SHOWN_ELSEWHERE, GEARS_SHOWN_ELSEWHERE, and _mode_after's two); no behaviour reads it. A version with no
 # finding of its own (None) makes neither claim.
