@@ -1069,8 +1069,9 @@ def workbook_speed_lines(spec, motion) -> Tuple[List[str], str]:
 
     W6 (W6-PLAN §2.9, D12): each shaft's way round is seen from its own family's + end (``Motion.seen_from``,
     ``"+X"``, or a slant's plus direction ``"(0.5, −0.866, 0)"``). When every shaft is in the Z family the panel
-    reads as W3's, *seen from +Z* in the readout; otherwise each line says where it is seen from, *S1 1500.0 rpm
-    anticlockwise seen from +X · 10.00 N·m*, and the readout is *seen from each shaft's + end*."""
+    reads as W3's, *seen from +Z* in the readout; otherwise each line says which end it is seen from, *S1 1500.0
+    rpm anticlockwise seen from the +X end · 10.00 N·m* (a slant's *seen from the (0.5, −0.866, 0) end*: one form
+    for both, so the slant's components never read as a point), and the readout is *seen from each shaft's + end*."""
     if motion.later:
         return [motion.later], ""
     seen = getattr(motion, "seen_from", None) or {}
@@ -1086,7 +1087,7 @@ def workbook_speed_lines(spec, motion) -> Tuple[List[str], str]:
         turns = motion.turns(shaft.id)
         where = seen.get(shaft.id, "+Z")
         if not every_z and turns and turns != "still":
-            turns = f"{turns} seen from {where}"
+            turns = f"{turns} seen from the {where} end"
         lines.append(f"{shaft.id:<4}  {abs(float(speed)):.1f} rpm {turns}{torque_text}")
     if not motion.speeds:
         return lines, "no input"
@@ -1566,7 +1567,7 @@ def update_summary(update) -> str:
         pieces.append(f"set {_gear_mates(update, plain)}")
     for name in resensed:                      # W6 (M4, D17): a crossed mesh's sense changed with a move
         at = f" at {_asked_ratio(update, name)}" if name in ratios and _asked_ratio(update, name) else ""
-        pieces.append(f"remake the gear mate {name}{at}, {_resense_why(update, name)}")
+        pieces.append(f"remake the gear mate {name}{at} {_resense_why(update, name)}")
     replaced = _to_replace(update)
     if replaced:
         pieces.append(f"re-place {_and(replaced)}")
@@ -2798,14 +2799,26 @@ def _motion_pieces(update, result) -> List[str]:
     # ``sense_found_wrong``: found turning against its mesh and remade (package A, b4d4bdd). Remade for that alone,
     # it is not in ``result.ratios`` (that list is only for a ratio that changed): a turn round, never a new ratio.
     # One whose ratio changed too is said once, its ratio and its turn round in the same piece.
-    resensed = [n for n in getattr(update, "resensed", ()) or () if n and n in result.ratios]
-    # A planned remake for a sense the workbook changed (W6, M4): never the check phase's "found wrong" (§2.7).
+    # A planned remake for a sense the workbook changed (W6, M4): never the check phase's "found wrong" (§2.7). The
+    # worker's own list (``GearboxUpdate.resensed``, A's 128aa8e: sense only there, a changed ratio in ``ratios``
+    # too); a result without it (a hand-made one) falls back to a remake the plan asked that reached ``ratios``.
+    made = getattr(result, "resensed", None)
+    asked = [n for n in getattr(update, "resensed", ()) or () if n]
+    if made is not None:
+        resensed = [n for n in made if n]
+        new_ratio = {n for n in resensed if n in result.ratios}
+    else:
+        resensed = [n for n in asked if n in result.ratios]
+        new_ratio = {n for n in resensed if n in (getattr(update, "ratios", ()) or ())}
     wrong = [n for n in getattr(result, "sense_found_wrong", ()) or () if n and n not in resensed]
     against = "SolidWorks held it turning against its mesh"
     for name in resensed:
         read = _ratio_read(result, name)
-        at = f" at {read[3]} : {read[4]}" if read is not None and (read[1], read[2]) != (read[3], read[4]) else ""
-        pieces.append(f"remade the gear mate {name}{at}, {_resense_why(update, name)}")
+        if read is not None:
+            at = f" at {read[3]} : {read[4]}" if (read[1], read[2]) != (read[3], read[4]) else ""
+        else:
+            at = f" at {_asked_ratio(update, name)}" if name in new_ratio and _asked_ratio(update, name) else ""
+        pieces.append(f"remade the gear mate {name}{at} {_resense_why(update, name)}")
     ratios = [n for n in result.ratios if n and n not in found_all and n not in resensed]
     plain = [n for n in ratios if n not in wrong]
     if plain:
@@ -2853,21 +2866,25 @@ def _gear_shaft(update, gear: str) -> str:
 
 
 def _resense_why(update, name: str) -> str:
-    """Why a gear mate is remade for its sense (W6-PLAN §2.9): *since S2 now meets S1 on its other side and G2
-    turns the other way*, the moved shaft (``update.moved_shafts``) and its gear named, the mesh's second gear when
-    neither or both moved; *since G2 now turns the other way against G1* when the record does not say the shafts."""
+    """Why a gear mate is remade for its sense (W6-PLAN §2.9, as the review corrected it), bracketed so it does not
+    run into the next item of a list: *(since S2 now passes S1 on its other side, so G1 and G2 turn the other way
+    against each other)*. Only a crossed mesh's sense changes with a move, and crossed shafts pass each other; what
+    changes is how the two gears turn against each other — neither is said to reverse, since one may be the input,
+    whose speed the workbook fixes. The shaft named first is the one in ``update.moved_shafts`` (the second gear's
+    when both moved); when neither of the mesh's shafts moved, or the record does not say them, no shaft is named:
+    *(since G1 and G2 now turn the other way against each other)*."""
     mates = getattr(getattr(update, "motion", None), "mates", ()) or ()
     gears = next((tuple(m.gears) for m in mates if m.name == name and len(m.gears) == 2), ())
     if not gears:
-        return "since its gears now turn the other way against each other"
+        return "(since its gears now turn the other way against each other)"
     a, b = gears
     sa, sb = _gear_shaft(update, a), _gear_shaft(update, b)
     moved = set(getattr(update, "moved_shafts", ()) or ())
-    if sa in moved and sb not in moved:
-        a, b, sa, sb = b, a, sb, sa
-    if sa and sb and sa != sb:
-        return f"since {sb} now meets {sa} on its other side and {b} turns the other way"
-    return f"since {b} now turns the other way against {a}"
+    if sa and sb and sa != sb and (sa in moved or sb in moved):
+        mover, other = (sb, sa) if sb in moved else (sa, sb)
+        return (f"(since {mover} now passes {other} on its other side, so {a} and {b} turn the other way against "
+                "each other)")
+    return f"(since {a} and {b} now turn the other way against each other)"
 
 
 def _ratio_read(result, name: str):
