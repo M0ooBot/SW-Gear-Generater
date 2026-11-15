@@ -1065,9 +1065,16 @@ RESULTS_DUE = " Export again to write the Results sheet: it waited for Excel to 
 
 def workbook_speed_lines(spec, motion) -> Tuple[List[str], str]:
     """The Speeds panel: one line per shaft (speed, way round, torque), and its header readout. A gearbox a
-    later phase drives gives the one sentence saying so, and no readout."""
+    later phase drives gives the one sentence saying so, and no readout.
+
+    W6 (W6-PLAN §2.9, D12): each shaft's way round is seen from its own family's + end (``Motion.seen_from``,
+    ``"+X"``, or a slant's plus direction ``"(0.5, −0.866, 0)"``). When every shaft is in the Z family the panel
+    reads as W3's, *seen from +Z* in the readout; otherwise each line says where it is seen from, *S1 1500.0 rpm
+    anticlockwise seen from +X · 10.00 N·m*, and the readout is *seen from each shaft's + end*."""
     if motion.later:
         return [motion.later], ""
+    seen = getattr(motion, "seen_from", None) or {}
+    every_z = all(seen.get(shaft.id, "+Z") == "+Z" for shaft in spec.shafts)
     lines = []
     for shaft in spec.shafts:
         speed = motion.speeds.get(shaft.id)
@@ -1076,8 +1083,14 @@ def workbook_speed_lines(spec, motion) -> Tuple[List[str], str]:
             continue
         torque = motion.torques.get(shaft.id)
         torque_text = f" · {torque:.2f} N·m" if torque is not None else ""
-        lines.append(f"{shaft.id:<4}  {abs(float(speed)):.1f} rpm {motion.turns(shaft.id)}{torque_text}")
-    return lines, ("seen from +Z" if motion.speeds else "no input")
+        turns = motion.turns(shaft.id)
+        where = seen.get(shaft.id, "+Z")
+        if not every_z and turns and turns != "still":
+            turns = f"{turns} seen from {where}"
+        lines.append(f"{shaft.id:<4}  {abs(float(speed)):.1f} rpm {turns}{torque_text}")
+    if not motion.speeds:
+        return lines, "no input"
+    return lines, ("seen from +Z" if every_z else "seen from each shaft's + end")
 
 
 def end_view_readout(view) -> str:
@@ -1445,12 +1458,21 @@ def _missing_sentence(missing: Sequence[str]) -> str:
 _STRIP_AGAIN = "; build it again as a new part."
 
 
+_GEARBOX_AGAIN = ", so the gearbox needs building again."
+
+
 def _reason(text: str) -> str:
     """A reason Update cannot carry, as the workbook says it. ``swbuild.structural_change`` ends its sentence for
     the strip's single part, *…; build it again as a new part.*; folded into the footer's offer that read "build
-    again" twice (W4 review S4.2), so here the part *needs a new part* and the offer says how."""
+    again" twice (W4 review S4.2), so here the part *needs a new part* and the offer says how. W6's structural
+    sentences (``update.classify``) end *…, so the gearbox needs building again.*, folded the same way into W5's
+    *…, so it needs a new revision.*, since the offer that follows says *build again* itself."""
     text = _sentence(text)
-    return text[:-len(_STRIP_AGAIN)] + ", so it needs a new part." if text.endswith(_STRIP_AGAIN) else text
+    if text.endswith(_STRIP_AGAIN):
+        return text[:-len(_STRIP_AGAIN)] + ", so it needs a new part."
+    if text.endswith(_GEARBOX_AGAIN):
+        return text[:-len(_GEARBOX_AGAIN)] + ", so it needs a new revision."
+    return text
 
 
 def _cannot_carry(update) -> str:
@@ -1530,7 +1552,7 @@ def update_summary(update) -> str:
         return _again_sentence(update)
     axial = [g for g in getattr(update, "axial", ()) if g]
     ratios = [n for n in getattr(update, "ratios", ()) if n]
-    if update.record_matches and not (axial or ratios):
+    if update.record_matches and not (axial or ratios or getattr(update, "resensed", ())):
         text = ("SolidWorks already matches the workbook on record; Update SolidWorks checks it live and puts right "
                 "anything changed there")
         if getattr(update, "motion", None) is not None:
@@ -1547,8 +1569,13 @@ def update_summary(update) -> str:
         pieces.append(f"move {_and(update.moved_shafts)}{layout}")
     if axial:                                  # W5: an anchor's distance along its shaft (its Face Z global)
         pieces.append(f"move {_along(update, axial)}")
-    if ratios:                                 # W5: only once a gear mate's ratio can be changed (D7)
-        pieces.append(f"set {_gear_mates(update, ratios)}")
+    resensed = [n for n in getattr(update, "resensed", ()) or () if n]
+    plain = [n for n in ratios if n not in resensed]
+    if plain:                                  # W5: only once a gear mate's ratio can be changed (D7)
+        pieces.append(f"set {_gear_mates(update, plain)}")
+    for name in resensed:                      # W6 (M4, D17): a crossed mesh's sense changed with a move
+        at = f" at {_asked_ratio(update, name)}" if name in ratios and _asked_ratio(update, name) else ""
+        pieces.append(f"remake the gear mate {name}{at}, {_resense_why(update, name)}")
     replaced = _to_replace(update)
     if replaced:
         pieces.append(f"re-place {_and(replaced)}")
@@ -1931,26 +1958,43 @@ def _waiting_rows(parts) -> str:
     return f"the layout and assembly wait for a later phase: {refused[0].message}{more}" if refused else ""
 
 
-def _ready_parts(assessment, plan, folder: str, superseded: Sequence[str] = ()) -> Tuple[str, bool]:
+def _ready_parts(assessment, plan, folder: str, superseded: Sequence[str] = (), *,
+                 turned: str = "") -> Tuple[str, bool]:
     """*Ready: Build parts makes 2 parts in …; the layout and assembly wait for a later phase: Shafts!A4: …* (W2's
-    batch, through the same reuse as Build, decision 9)."""
+    batch, through the same reuse as Build, decision 9). ``turned`` (W6, D16): planning's refusal of a gearbox with
+    a turned mesh while the probes have not settled it (``motion.turned_refusal``), said whole after the line."""
     where = short_path((plan.folder if plan is not None and plan.folder else folder), 48)
     new = len(plan.build) if plan is not None else len(assessment.parts.jobs)
     kept = len(plan.reuse) if plan is not None else 0
     waits = _waiting_rows(assessment.parts)
+    after = f" {_sentence(turned)}" if turned else ""
     if not new:
-        return (f"The {_plural(kept, 'part')} {'is' if kept == 1 else 'are'} built already, so Build parts has "
-                f"nothing to make; {waits}"), True
+        lead = (f"The {_plural(kept, 'part')} {'is' if kept == 1 else 'are'} built already, so Build parts has "
+                "nothing to make")
+        return (f"{lead}; {waits}" if waits else f"{lead}.") + after, True
     text = f"Ready: Build parts makes {_plural(new, 'part')} in {where}"
     if kept:
         text += f", reusing {_already(kept)}"
-    text += f"; {waits}" if waits else "."
+    text += (f"; {waits}" if waits else ".") + after
     occupied = _occupied(plan, superseded=superseded) if plan is not None else ""
     if occupied:
         text += " " + occupied
     if plan is not None and getattr(plan, "foreign_record", ""):
         text += " " + _copy_sentence(plan)
     return text, True
+
+
+def _turned_refusal(assessment) -> str:
+    """Planning's refusal of a gearbox whose turned meshes the probes have not settled (W6-PLAN §2.6, D16:
+    ``motion.turned_refusal``), or ``""``. Asked only when the report holds a bevel or crossed mesh, the one case it
+    can refuse; then the footer falls back to Build parts, as for rows a later phase builds, and says why."""
+    report = getattr(assessment, "report", None)
+    meshes = getattr(report, "meshes", None) or {}
+    from .workbook.geometry import BEVEL, CROSSED
+    if not any(getattr(m, "kind", "") in (BEVEL, CROSSED) for m in meshes.values()):
+        return ""
+    from .workbook import motion
+    return motion.turned_refusal(report)
 
 
 def _unsaved_line(paths: Sequence[str], update_puts_back: bool = False) -> str:
@@ -2023,7 +2067,8 @@ def workbook_footer(assessment, *, record=None, record_problem: str = "", plan=N
     gearbox = getattr(record, "gearbox", None)
     has_assembly = bool(gearbox is not None and gearbox.assembly)
     on_record = record is not None and bool(record.parts or gearbox is not None)
-    later = bool(a is not None and a.parts.refused)
+    turned = _turned_refusal(a)
+    later = bool(a is not None and (a.parts.refused or turned))
     action = BUILD_AGAIN if has_assembly else (BUILD_PARTS if later else BUILD)
     newer = bool(record_problem) and record_problem.rstrip().endswith(LINK_WAITS)
     # W5: SolidWorks refused or flagged a mate of the last assembly, built from this very read: the same press would
@@ -2119,7 +2164,7 @@ def workbook_footer(assessment, *, record=None, record_problem: str = "", plan=N
         elif refused_here and action == BUILD:
             text, ok, build_on, refused_shown = motion_record_line(record, digest), False, False, True
         elif action == BUILD_PARTS:
-            text, ok = _ready_parts(a, plan, where, superseded)
+            text, ok = _ready_parts(a, plan, where, superseded, turned=turned)
             build_on = plan is None or bool(plan.build)
             subject = "Build parts"
         else:
@@ -2762,9 +2807,15 @@ def _motion_pieces(update, result) -> List[str]:
     # ``sense_found_wrong``: found turning against its mesh and remade (package A, b4d4bdd). Remade for that alone,
     # it is not in ``result.ratios`` (that list is only for a ratio that changed): a turn round, never a new ratio.
     # One whose ratio changed too is said once, its ratio and its turn round in the same piece.
-    wrong = [n for n in getattr(result, "sense_found_wrong", ()) or () if n]
+    resensed = [n for n in getattr(update, "resensed", ()) or () if n and n in result.ratios]
+    # A planned remake for a sense the workbook changed (W6, M4): never the check phase's "found wrong" (§2.7).
+    wrong = [n for n in getattr(result, "sense_found_wrong", ()) or () if n and n not in resensed]
     against = "SolidWorks held it turning against its mesh"
-    ratios = [n for n in result.ratios if n and n not in found_all]
+    for name in resensed:
+        read = _ratio_read(result, name)
+        at = f" at {read[3]} : {read[4]}" if read is not None and (read[1], read[2]) != (read[3], read[4]) else ""
+        pieces.append(f"remade the gear mate {name}{at}, {_resense_why(update, name)}")
+    ratios = [n for n in result.ratios if n and n not in found_all and n not in resensed]
     plain = [n for n in ratios if n not in wrong]
     if plain:
         pieces.append(f"set {_gear_mates(update, plain)}")
@@ -2777,7 +2828,7 @@ def _motion_pieces(update, result) -> List[str]:
                       f"{'it turning against its mesh' if one else 'them turning against their meshes'})")
     # Found at another ratio though the plan asked no change (a remake lost with an unsaved close, say): set back —
     # said only of a remake that was made (in ``result.ratios``), with both ratios where ``ratios_read`` has them.
-    found = [n for n in found_all if n in result.ratios]
+    found = [n for n in found_all if n in result.ratios and n not in resensed]
     named = [n for n in found if _ratio_read(result, n) is not None]
     if named:
         one = len(named) == 1
@@ -2795,6 +2846,37 @@ def _motion_pieces(update, result) -> List[str]:
         pieces.append(f"set the gear mate{'' if one else 's'} {_and(unnamed)} back to the workbook's "
                       f"ratio{'' if one else 's'}, which SolidWorks held at another{turning}")
     return pieces
+
+
+def _gear_shaft(update, gear: str) -> str:
+    """The shaft ``gear`` is on, from the recorded mates in ``update.motion``: an anchor's axis or along mate, a
+    follower's lock to its anchor; ``""`` if they do not say."""
+    mates = getattr(getattr(update, "motion", None), "mates", ()) or ()
+    for mate in mates:
+        if mate.kind in ("axis", "along") and tuple(mate.gears)[:1] == (gear,) and mate.shaft:
+            return mate.shaft
+    for mate in mates:
+        if mate.kind == "lock" and len(mate.gears) == 2 and mate.gears[1] == gear:
+            return _gear_shaft(update, mate.gears[0]) if mate.gears[0] != gear else ""
+    return ""
+
+
+def _resense_why(update, name: str) -> str:
+    """Why a gear mate is remade for its sense (W6-PLAN §2.9): *since S2 now meets S1 on its other side and G2
+    turns the other way*, the moved shaft (``update.moved_shafts``) and its gear named, the mesh's second gear when
+    neither or both moved; *since G2 now turns the other way against G1* when the record does not say the shafts."""
+    mates = getattr(getattr(update, "motion", None), "mates", ()) or ()
+    gears = next((tuple(m.gears) for m in mates if m.name == name and len(m.gears) == 2), ())
+    if not gears:
+        return "since its gears now turn the other way against each other"
+    a, b = gears
+    sa, sb = _gear_shaft(update, a), _gear_shaft(update, b)
+    moved = set(getattr(update, "moved_shafts", ()) or ())
+    if sa in moved and sb not in moved:
+        a, b, sa, sb = b, a, sb, sa
+    if sa and sb and sa != sb:
+        return f"since {sb} now meets {sa} on its other side and {b} turns the other way"
+    return f"since {b} now turns the other way against {a}"
 
 
 def _ratio_read(result, name: str):

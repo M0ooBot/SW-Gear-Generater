@@ -2452,3 +2452,160 @@ def test_the_workers_sense_stops_read_whole_in_the_refused_build_and_the_stopped
         "close Reducer_12to1.SLDASM in SolidWorks without saving to bring it back. It had already changed "
         "Reducer_12to1, not saved: press Update SolidWorks again once that is put right, or save it in SolidWorks to "
         "keep what it did.")
+
+
+# -- W6: right-angle (W6-PLAN §2.9, as W6-INTERFACES §7 rules) -------------------------------------------------------
+
+from types import SimpleNamespace  # noqa: E402
+
+from gear_generator.workbook import kinematics  # noqa: E402
+
+
+def _speeds_spec(*ids):
+    return SimpleNamespace(shafts=[SimpleNamespace(id=i) for i in ids])
+
+
+def test_the_speeds_panel_on_z_shafts_reads_as_w3():
+    from fractions import Fraction
+    motion = kinematics.Motion(speeds={"S1": Fraction(1500), "S2": Fraction(-375), "S3": Fraction(125)},
+                               torques={"S1": 10.0, "S2": 39.2, "S3": 115.248}, axis_sign={"S1": 1, "S2": 1, "S3": -1},
+                               seen_from={"S1": "+Z", "S2": "+Z", "S3": "+Z"})
+    lines, readout = ui_text.workbook_speed_lines(_speeds_spec("S1", "S2", "S3"), motion)
+    assert lines == ["S1    1500.0 rpm anticlockwise · 10.00 N·m", "S2    375.0 rpm clockwise · 39.20 N·m",
+                     "S3    125.0 rpm clockwise · 115.25 N·m"]
+    assert readout == "seen from +Z"
+    motion.seen_from = {}                                   # before planning fills it: the same
+    assert ui_text.workbook_speed_lines(_speeds_spec("S1", "S2", "S3"), motion) == (lines, readout)
+
+
+def test_the_speeds_panel_across_turned_axes_says_where_each_is_seen_from():
+    from fractions import Fraction
+    motion = kinematics.Motion(speeds={"S1": Fraction(1500), "S2": Fraction(-500), "S3": Fraction(1000, 3),
+                                       "S4": Fraction(0)},
+                               torques={"S1": 10.0, "S2": 9.8, "S3": 14.406},
+                               seen_from={"S1": "+X", "S2": "+Z", "S3": "(0.5, −0.866, 0)", "S4": "+Y"})
+    lines, readout = ui_text.workbook_speed_lines(_speeds_spec("S1", "S2", "S3", "S4", "S5"), motion)
+    assert lines == ["S1    1500.0 rpm anticlockwise seen from +X · 10.00 N·m",
+                     "S2    500.0 rpm clockwise seen from +Z · 9.80 N·m",
+                     "S3    333.3 rpm anticlockwise seen from (0.5, −0.866, 0) · 14.41 N·m",
+                     "S4    0.0 rpm still",
+                     "S5    not driven"]
+    assert readout == "seen from each shaft's + end"
+    assert not any("None" in line or line.endswith(" ") for line in lines)
+    assert ui_text.workbook_speed_lines(_speeds_spec("S1"), kinematics.Motion(seen_from={"S1": "+X"}))[1] == \
+        "no input"
+
+
+TURNED_REFUSAL = ("G1 and G2 mesh across shafts at 90°, and which way a gear mate turns gears on shafts at an angle is "
+                  "not settled by the probes for this version (findings.TURNED_GEAR_MATE_SENSE_READ_BACK), so the "
+                  "gearbox is not built; Build parts makes its parts.")
+
+
+def _turned_assessment(ready, kind="bevel"):
+    from gear_generator.workbook import geometry
+    mesh = SimpleNamespace(kind={"bevel": geometry.BEVEL, "crossed": geometry.CROSSED,
+                                 "parallel": geometry.PARALLEL}[kind])
+    report = dataclasses.replace(ready.report, meshes={("G1", "G2"): mesh})
+    return dataclasses.replace(ready, report=report)
+
+
+def test_a_turned_mesh_the_probes_have_not_settled_is_refused_before_build_and_build_parts_offered(ready,
+                                                                                                    monkeypatch):
+    """D16 (ruled): no static fallback. Planning's sentence (``motion.turned_refusal``, B's) is shown whole, and the
+    footer offers Build parts, which the sentence promises, rather than greying both buttons."""
+    from gear_generator.workbook import motion
+    monkeypatch.setattr(motion, "turned_refusal", lambda report: TURNED_REFUSAL)
+    for kind in ("bevel", "crossed"):
+        f = _footer(_turned_assessment(ready, kind), plan=_gearbox(layout=None, assembly=False, **FULL))
+        assert (_clean(f.text), f.ok) == (f"Ready: Build parts makes 4 parts in {P}. {TURNED_REFUSAL}", True)
+        assert (f.build_action, f.build_label, f.build_enabled) == (ui_text.BUILD_PARTS, "Build parts", True)
+    built = _footer(_turned_assessment(ready), plan=_gearbox(layout=None, assembly=False,
+                                                             reuse=[_reuse(s, [g]) for s, g in
+                                                                    zip(STEMS, ("G1", "G2", "G3", "G4"))]))
+    assert built.text == f"The 4 parts are built already, so Build parts has nothing to make. {TURNED_REFUSAL}"
+    assert not built.build_enabled
+
+
+def test_a_parallel_mesh_or_a_settled_turned_mesh_leaves_build_as_it_was(ready, monkeypatch):
+    from gear_generator.workbook import motion
+
+    def never(report):
+        raise AssertionError("turned_refusal is asked only for a bevel or crossed mesh")
+    monkeypatch.setattr(motion, "turned_refusal", never)
+    f = _footer(_turned_assessment(ready, "parallel"), plan=_gearbox(**FULL))
+    assert f.build_action == ui_text.BUILD and f.text.startswith("Ready: Build makes 4 parts")
+    monkeypatch.setattr(motion, "turned_refusal", lambda report: "")
+    f = _footer(_turned_assessment(ready), plan=_gearbox(**FULL))
+    assert f.build_action == ui_text.BUILD and f.build_enabled
+
+
+def test_w6_structural_sentences_are_shown_whole_with_build_again_said_once(ready):
+    """B's §2.9 sentences end "…, so the gearbox needs building again."; the footer's offer says build again, so
+    that ending reads as W5's "…, so it needs a new revision." (as W4 folded the strip's)."""
+    axis = ("S1's axis is now X- where it was built X+: the layout's axis and the mates on it keep the direction they "
+            "were made with, so the gearbox needs building again.")
+    tip = ("G1's At (0 → 2) moves its cone tip off the Right plane (x 0 → 2): the mate G1 along S1 holds it on that "
+           "plane and cannot take a distance, so the gearbox needs building again.")
+    form = ("G2's teeth (40 → 41) make it a crown gear where it was built a cone, which its values cannot carry; build "
+            "it again as a new part.")
+    f = _footer(ready, record=_turning_record(), plan=_again(), update=_update(structural=(axis,)))
+    assert _clean(f.text) == (
+        "S1's axis is now X- where it was built X+: the layout's axis and the mates on it keep the direction they were "
+        "made with, so it needs a new revision. Update SolidWorks offers to build again as Reducer_12to1_r2. It was "
+        "built with its gears mated to turn: drag G1 in SolidWorks and the rest of its train follow.")
+    assert f.text.lower().count("build again") == 1 and "building" not in f.text
+    question = ui_text.build_again_question(_update(structural=(tip, form)), _again(), record=_turning_record())
+    assert question.startswith(
+        "G1's At (0 → 2) moves its cone tip off the Right plane (x 0 → 2): the mate G1 along S1 holds it on that plane "
+        "and cannot take a distance, so it needs a new revision. G2's teeth (40 → 41) make it a crown gear where it "
+        "was built a cone, which its values cannot carry, so it needs a new part. Build again as Reducer_12to1_r2? ")
+
+
+def _resensed_update(**changes):
+    """The 12 : 1's turning update with G2's mesh to G1 remade for its sense (a crossed shaft moved round)."""
+    fields = dict(resensed=("G1 meshes G2",), moved_shafts=("S2",),
+                  layout=swbuild.DocumentValues(_path("Reducer_12to1_Layout")))
+    fields.update(changes)
+    return _motion_update(**fields)
+
+
+def test_before_the_press_a_mesh_whose_sense_changed_is_said_to_be_remade_and_why():
+    assert _clean(ui_text.update_summary(_resensed_update())) == (
+        "Update SolidWorks will move S2 in Reducer_12to1_Layout, remake the gear mate G1 meshes G2, since S2 now meets "
+        "S1 on its other side and G2 turns the other way, and re-place G1, G2, G3 and G4.")
+    asked = _resensed_update(ratios=("G1 meshes G2",))
+    assert "remake the gear mate G1 meshes G2 at 17 : 69, since S2 now meets S1" in ui_text.update_summary(asked)
+    assert "set the gear mate" not in ui_text.update_summary(asked)
+    s1 = _resensed_update(moved_shafts=("S1",))
+    assert "since S1 now meets S2 on its other side and G1 turns the other way" in ui_text.update_summary(s1)
+
+
+def test_after_the_press_a_mesh_remade_for_its_sense_is_said_once_and_never_as_found_wrong():
+    result = _moved(changed=[ASM], placed=["G1", "G2", "G3", "G4"], ratios=["G1 meshes G2"],
+                    ratios_read=[("G1 meshes G2", 17, 68, 17, 68)], sense_found_wrong=["G1 meshes G2"],
+                    layout=swbuild.UpdateResult(document="Reducer_12to1_Layout.SLDPRT", changed=["S2 X"], rebuilt=True))
+    text, ok = ui_text.gearbox_update_status(_resensed_update(), result)
+    assert (_clean(text), ok) == (
+        "Updated SolidWorks: moved S2 in Reducer_12to1_Layout, remade the gear mate G1 meshes G2, since S2 now meets "
+        "S1 on its other side and G2 turns the other way, re-placed G1, G2, G3 and G4; no interference between the "
+        "gears where they stand. Save Reducer_12to1 in SolidWorks to keep it.", True)
+    assert text.count("G1 meshes G2") == 1 and "right way round" not in text and "17 : 69" not in text
+    new_ratio = dataclasses.replace(result, ratios_read=[("G1 meshes G2", 17, 68, 17, 69)], sense_found_wrong=[])
+    assert "remade the gear mate G1 meshes G2 at 17 : 69, since S2 now meets S1" in \
+        ui_text.gearbox_update_status(_resensed_update(), new_ratio)[0]
+    failed = dataclasses.replace(result, ratios=[], failures=[("Reducer_12to1.SLDASM", "It would not remake.")])
+    assert "remade" not in ui_text.gearbox_update_status(_resensed_update(), failed)[0]
+
+
+def test_the_workers_turned_gate_and_read_back_refusals_read_whole():
+    """A's §2.9 sentences, with no SolidWorks API word in them (W6-INTERFACES; the W5 rule)."""
+    gate = ("The gear mate G1 meshes G2 joins gears on shafts at an angle, and which way such a gear mate turns cannot "
+            "be told on SolidWorks yet (findings.TURNED_GEAR_MATE_SENSE_READ_BACK is None), so nothing is made or "
+            "changed.")
+    assert ui_text.job_failed(swbuild.BuildError(gate)) == gate
+    read = ("SolidWorks reads an axis of the gear mate G1 meshes G2 as pointing (0.0, 0.0, 1.0), which is not along "
+            "G1's axis (1, 0, 0), so the mate does not hold the axes the gears were placed on, and nothing is guessed.")
+    text, ok = ui_text.gearbox_status(_turning(), _refused(read))
+    assert f"found a problem with its mates. {read} The parts and the layout part are kept." in text and not ok
+    for word in ("Flip", "Reverse", "entit"):
+        assert word not in gate + read
