@@ -340,8 +340,8 @@ between shafts that meet, 60° to 120° between shafts that pass); a mesh outsid
 those, or on a SolidWorks whose findings lack the rule, is refused before Build
 with a sentence, and Build parts still makes its parts. Moving a crossed shaft
 to the other side of its partner turns its mesh the other way round, and
-Update makes that gear mate again. Built and tested against the test suite's
-fake SolidWorks; the demonstration on SolidWorks is still to run.
+Update makes that gear mate again. Shown on SolidWorks 2026 by the
+demonstration, with a confirming build on 2024 (logs in `probe/results/`).
 
 **Planetary stages (phase W7).** A shaft row `Mounted on` another shaft is a
 planet shaft on that carrier, its X, Y, Z and Axis read in the carrier's own
@@ -363,6 +363,33 @@ planetary, a carrier on a carrier, two stages — is an error at its cell, not a
 row waiting for a phase. Built and tested against the test suite's
 fake SolidWorks; on SolidWorks only the gear mates of a 4 : 1 have been
 measured (a spike on 2026), and the demonstration is still to run.
+
+**Sleeves, dog rings and modes (phase W8).** A `sleeve` is a ring of teeth
+inside that turns with its shaft and slides along it; a `dog` is a ring of
+teeth outside fixed to its shaft. A gear with `Slides` (`H=-10, N=0, L=+10`:
+named positions, mm along its shaft from its At) slides, and each row of the
+Modes sheet puts every slider at one of its positions. What each mode engages
+is worked out, never typed: a sleeve whose face covers a dog's whole face locks
+the dog's shaft to its own; a sliding gear meshes its partner where it covers
+the narrower face whole (a partial cover is an error in that mode). Speeds, torques, the ratio and every check are worked out per mode — a
+shaft a mode leaves free *turns freely* there, and an output that also drives
+onward has its torque marked as shared. In the Workbook window the Speeds
+panel's header gets a **mode chooser**, one button per mode: the panel and the
+end view show the chosen mode. It changes only what the window shows, never
+SolidWorks. Build makes one assembly configuration per mode, named as the mode,
+the first Modes row the one it opens in: each slider held at its place in each
+configuration by one distance mate, and each coupling a 1 : 1 gear mate,
+switched on only in the modes that engage it; switch mode in SolidWorks'
+ConfigurationManager. The sleeve and dog parts are the strip's own ring and
+spur teeth at the row's teeth, module and face, at the Box's pressure angle
+(20° unless typed): no fork groove, hub or chamfers, which depend on the
+gearbox at hand and are yours to add. The strip refuses to open a sleeve's or
+dog's `.gear.json`; its workbook is where it changes. A slider on a fixed shaft,
+on a shaft at an angle or on a planet, a bevel gear that slides, and a coupling
+between shafts facing opposite ways are errors at their cells. Built and tested
+against the test suite's fake SolidWorks; on SolidWorks only the probes have
+run (the spike and its follow-up, on 2026 and on 2024), and the demonstration
+is still to run.
 
 **Export** writes the chosen fixes' cells and a Results sheet — each shaft's
 speed and torque, each mesh's ratio, centres and contact ratio, the overall
@@ -514,19 +541,13 @@ The W4 demonstration (`probe/workbook_assembly_check.py`, `probe/workbook_window
 
 What is not built yet:
 
-- **Shafts at an angle (phase W6) on SolidWorks**: the demonstration of the two
-  right-angle fixtures is still to run.
 - **Planetary stages (phase W7) on SolidWorks**: the demonstration is still to
   run.
-- Rows a later phase builds are read, and refused with the phase that builds
-  them: sleeves, dog rings, sliding gears and modes, phase W8. Each is listed
-  under Checks at its cell. While one is there the button reads **Build
-  parts**: a sleeve's or dog ring's part is not built, the other gears' parts
-  are (a sliding gear's included), and the layout part and assembly wait for
-  its phase. Build parts has run on SolidWorks 2024 and 2026: the
-  12 : 1 reducer's four parts built, each part's `.gear.json` variables matched
-  the same gear built from the form, and a second build was refused rather
-  than overwrite them (logs in `probe/results/`).
+- **Sleeves and modes (phase W8) on SolidWorks**: the demonstration is still to
+  run. Sliding gears (as opposed to sleeves) are designed and tested against
+  the fake with made-up workbooks only: neither W8 fixture has one.
+- W8 is the last phase: no row waits for a later one. What this version does
+  not build is an error at its cell that says so.
 
 ## Driving SolidWorks
 

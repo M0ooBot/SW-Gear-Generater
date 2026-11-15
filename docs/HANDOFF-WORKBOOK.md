@@ -441,6 +441,81 @@ turn by hand (held member first, then the carrier); and the window run through t
   across its carrier), and `planetary.refusals` says each of those as an error at its cell under the same
   conditions, so `build_refusal` answers first.
 
+## W8 in detail
+
+*Written 2026-11-15, while packages A, B and C land their passes.* The authority order is `PLAN-WORKBOOK.md` →
+`W5-DECISIONS.md` → `notes-workbook/W8-PLAN.md` (revised after its review `W8-PLAN-REVIEW.md` and after the spike
+`W8-SPIKE.md`, with its follow-up and its SolidWorks 2024 rerun; *Changes after the review* and *Changes after the
+spike* list every change, and where they differ the second wins) → `W8-INTERFACES.md` (interface commit `e9efab9`),
+whose §9 holds the rulings on the interface review that bind the packages.
+
+**What W8 adds.** The `sleeve` and `dog` kinds (the strip's ring and spur teeth, `gears/clutch.py`, never offered by
+the strip), gears that slide (`Slides`) on frame shafts along Z±, and the Modes sheet: each mode places every slider,
+what it engages is worked out (a sleeve covering a dog's whole face couples their shafts), and speeds, torques,
+ratios and checks are per mode. Build makes one configuration per mode, named as the mode, the first Modes row the
+one the assembly opens in; one distance mate per slider with a value per configuration; each coupling and each
+spline a 1 : 1 gear mate between collinear axes, settled by the read-back, a coupling switched on only in the modes
+that engage it. Update works across the configurations (W8-PLAN §1.10). The record's schema 6. W8 is the last phase:
+no row waits for a later one, and what this version does not build is an error naming no phase. The readings J1–J27
+as revised are in PLAN-WORKBOOK §4.5, *Readings chosen (W8)*, with a note under §3.4 and one under §6.
+
+**The orchestrating session's rulings, taken while the user was away; the user may overrule each** (PLAN-WORKBOOK
+§4.5 marks them *ruled*): the sleeve and dog as toothed rings with **no fork groove, hub or chamfers** (J1) and at
+the Box's **20° by default**, not canvas E4's 30° spline, which the strip's full-depth teeth would make a 0.022 mm tip
+(J2); the collinear gear mate (J8); **a slide as one distance mate with a value per mode** (J7, after the spike);
+**one configuration per mode** (J10); a Modes edit that needs no new mate is an Update (J14), but **one that would
+leave a coupling or sliding mesh on in no mode is Build again…** (W8-INTERFACES §9.1); **a coupling between shafts
+facing opposite ways is refused until one has been shown** (§9.3); every quiet Update of a gearbox with modes says
+which mode it worked in and that it did not show the others (§9.11). J16 departs from PLAN-WORKBOOK §3.4's warning
+and is announced as such. W8-PLAN §0.4 puts J1, J2, J16, J14 and J11 at the top of the list for the user.
+
+**Measured by the probes, not yet by the app:** **positions are kept per configuration** (a turn the user gives in
+one mode stays in that mode, J11) and **a put holds in the configuration shown only** (so Update puts mode by mode,
+J26). The W8 spike's follow-up measured both on SolidWorks 2026, and its rerun on 2024 measured the same, against
+what GOTCHAS §83 recorded for a free mechanism (the findings are committed in `ea7a46f`). **No W8 code has run on
+SolidWorks yet**: the spike and its follow-up,
+on both versions, are all W8 has shown there. What the app says about a turn follows the running version's finding
+(`swcom.positions_per_configuration`), and makes neither claim where it is unsettled or after a restart.
+
+**The window (package D).** The **mode chooser** in the Speeds panel's header — the window's first new control since
+W5, drawn on the board first (`WorkbookModes`) — one segment per Modes row, the first chosen, kept across re-reads
+while a mode of that name is there. It chooses which mode's speeds and end view *the window* shows; it does not
+switch SolidWorks' configuration and clicking it sends nothing to SolidWorks, and a grey line at the panel's foot says
+so (`ui_text.mode_chooser_note`). The end view draws each slider at the chosen mode's place: a slide runs along the
+view, so a sleeve over a dog is drawn in that dog's face colour. Every end-view name now stays on the canvas, clear
+of the names placed before it where a side allows, and a name many coaxial shafts share breaks onto lines. The
+footer passes the last job's `positions_per_configuration` to C's sentences (§9.12). The strip refuses a sleeve's or
+dog's `.gear.json` with C's sentence (W8-PLAN §1.1, review S9), at Open .gear.json, the only way a record reaches
+the live link's Update values.
+
+**For the user to look at:** the mode chooser — `design/renders/WorkbookModes.png` (the E4 transfer case, on 4L) and
+`WorkbookModesBuilt.png` (TransferCase_Parallel built, on 2H), and UI-DESIGN §9, *Modes*, which says why it exists
+and what it does not do; and the readings above.
+
+**Packages so far** (`git log e9efab9..`): **P/E — probes and logs** `ed81031`, `eca568d`, `bdc4c50` (the spike and
+follow-up on 2024); **A — SolidWorks** `6a54fb1`, `3ea4d87`, `a6c04cc`, `d872ca5`, `f9a8cae` (the build's mode phase,
+the build gate lifted), `39ecf66`, `db4d4e3` (Update across configurations); **B — planning** `120192d` (the sleeve
+and dog kinds), `bb1a946`, `73e3ebe`, `33b28b3`, `124df33`, `f0417a7`, `7fbc56c`, `a13dd18`, `6669717`, `7124394`,
+`0ea5cc1`, `a25f9be`, `0665c40`, `bdefb90`; **C — record and words** `d005549`, `5bf7825`, `131bcd2`, `0f1defd`,
+`5a49a04`, `4f1e1bd`, `3b1bcc1`, `634f37c`; **D — window, boards, docs** `2b45315` and `e23f41e` (the later-phase tests re-pinned: no real kind waits now, the channel tested with a dog made a made-up W9's), `33c4729` (the chooser, the end view per mode, the footer's claim, the strip's refusal), `527f65e` (boards `WorkbookModes`, `WorkbookModesBuilt`) and these notes.
+
+**The fixtures** (W8-PLAN §2, `tests/workbook_fixtures.py`): **TransferCase_Parallel**, the low range on a reverted
+layshaft (17 : 34 twice at 51 mm), every shaft a frame shaft — W7-free, built first as the shakedown; and the **E4
+transfer case**, E3's 4 : 1 planetary as the low range. Modes 2H, 4H, N, 4L for both: Rear 1500 / 1500 / free / 375
+rpm, Front free / 1500 / free / 375.
+
+**What the demonstration (package E) still has to show** (W8-PLAN §5), on SolidWorks 2026 and then one confirming
+build on 2024: TransferCase_Parallel built through the app as the shakedown (the sleeve and dog kinds' own parts
+first), then the E4 transfer case; each mode's configuration, slides at their values, couplings on where they
+engage, driven per mode with the both-Flips control; interference per mode with a half-pitch control; Update across
+modes (an inactive configuration's value and flag set back, a J14 edit, a turn in one mode left alone by an Update in
+another); and the window through these states. Sliding gears are tested against the fake only: neither fixture has
+one.
+
+**Open:**
+
+- A's, B's and C's passes and reviews; a shape may still move.
+
 ## Questions waiting for the user
 
 Questions 1 to 5 of 2026-11-14 are answered (`notes-workbook/W5-DECISIONS.md`; PLAN-WORKBOOK §4.5, *Readings chosen

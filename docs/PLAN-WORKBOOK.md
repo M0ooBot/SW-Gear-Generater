@@ -275,6 +275,17 @@ refused at Build before W6. Then:
 - **Refused at Build, not errors:** rows a later phase builds (bevel, carriers and copies, turned axes, sleeves,
   dogs, modes) — "*G5 is a bevel gear: right-angle stages are built in phase W6.*"
 
+*Sleeves, dogs, slides and modes (W8, 2026-11-15; `notes-workbook/W8-PLAN.md` §1.1–§1.5, readings J3–J6, J16, J18,
+J22):* W8 is the last phase, so no row is refused for a later one any more (`build.LATER` and
+`geometry.LATER_KINDS` stay, empty). `kind_for` finds `sleeve` and `dog` (`gears.WORKBOOK_KINDS`, never offered by
+the strip). Every check runs per mode, at each slider's position there: an engagement is a sleeve covering a dog's
+whole face (a partial cover is an error at that mode's Modes cell), a jam in a mode is an error at its row, two
+sliders overlapping in a mode an error, a stroke that would hold two dogs at once a warning. What W8 does not build
+(a slider, sleeve or dog on a fixed or held shaft, on a turned axis or on a planet; a bevel gear that slides) is an
+error naming no phase. **The warning above on "a gear on an `output` shaft that nothing drives in some mode" is
+departed from (J16, announced):** W8 warns only on an output that turns in *no* mode, since a member free in a mode
+(neutral; the front not driven in 2H) is what modes are for; the Speeds panel says it (*turns freely*).
+
 ### 3.5 `kinematics.py` — speeds and torques, any layout
 
 One linear system, not a walk along the train. Unknowns: each shaft's speed ω, signed about **its own** Axis
@@ -585,6 +596,61 @@ the user may overrule** each of them. The skeleton carrier above is the user's o
 - **J20** — no finding gates the first planetary build; once the demonstration has measured the planetary turning
   right through the app on SolidWorks, `findings.PLANET_GEAR_MATE_ROUTE` is committed with that evidence.
 
+*Readings chosen (W8, 2026-11-15; `notes-workbook/W8-PLAN.md` §0.3, J1–J27 as revised after its review and after
+the spike — "Changes after the review", "Changes after the spike" — and the rulings in `W8-INTERFACES.md` §9):*
+taken while the user was away, who said to carry on through W8, so each is the user's to overrule. Those marked
+**(ruled)** were **ruled by the orchestrating session; the user may overrule** each of them. The two points marked
+**(measured)** rest on probes, not on the app: the W8 spike and its follow-up measured them on SolidWorks 2026, and
+their rerun on 2024 measured the same (findings committed in `ea7a46f`); no W8 code has run on SolidWorks yet.
+
+- **What W8 builds:** the `sleeve` and `dog` kinds; gears that slide (`Slides`) on frame shafts along Z±; the Modes
+  sheet, each mode one configuration of the assembly; engagement, speeds, torques, ratios and checks worked out per
+  mode. **What it refuses**, as errors naming no phase (J18): a slider, sleeve or dog on a fixed or held shaft, on a
+  turned axis or on a carrier's planet; a bevel gear that slides; and (**ruled**, W8-INTERFACES §9.3) **a coupling
+  between shafts facing opposite ways**, until one has been shown on SolidWorks (the sense of a coupling follows the
+  two shafts' facing, and only the same-facing case was measured).
+- **J1** (**ruled**) — a sleeve is an internal spline ring and a dog an external one, each the strip's proven ring or
+  spur plan at the row's teeth, module and face: **no fork groove, hub, chamfers, back-cut or synchro cone**, since
+  those depend on the gearbox at hand (the user's reason for the skeleton carrier in W7, applied to everything but
+  the teeth, which the workbook specifies). **J2** (**ruled**) — a sleeve and a dog take the row's pressure angle,
+  blank meaning the Box's: **20° by default**, the strip's own. Canvas E4's 30° spline is not built: a real 30°
+  spline has stub teeth the strip does not make, and built full-depth at 30° a 30-tooth dog's tip would be 0.022 mm
+  thick (at 20°: dog 0.626 mm, sleeve 1.153 mm). **J3** — a sleeve's teeth inside, a dog's outside; Side, Helix angle
+  or Profile shift saying otherwise are errors.
+- **J4** — engaged means full overlap. **J5** — a blank Modes cell is the slider's position at 0. **J6** — mode names
+  follow the gear-name rule and are unique ignoring case (they become configuration names).
+- **J7** (**ruled**, after the spike) — **a slide is one distance mate per slider with a value per mode**
+  (per configuration), set and read back in every configuration; no slide globals, no mate per position, nothing
+  suppressed for a slide. **J27** — a slide never reaches the Front plane: every mode's value non-zero and on one
+  side, else refused at Build, and an edit taking it there is structural.
+- **J8** (**ruled**) — a coupling and a spline are 1 : 1 gear mates between collinear axes, settled by the read-back
+  (the spike: one Flip on 2026, the other on 2024, the read-back naming the right one on each).
+- **J9** — a shaft's anchor is its first non-sliding gear, else its first slider. **J10** (**ruled**) — **one
+  configuration per mode**, named as the mode, the first Modes row the one the assembly opens in; every flag set
+  explicitly in every configuration and read back.
+- **J11** (**measured**) — **each configuration keeps its own positions**: a turn the user gives in one mode stays in
+  that mode. **J26** (**measured**) — **a put holds in the configuration shown only**, so Update's puts are made mode
+  by mode, each with its configuration shown. What the app *says* about a turn and a switch follows the running
+  version's finding (`POSITIONS_PER_CONFIGURATION_ON_<year>`), and neither claim is made where it is unsettled or
+  after a restart.
+- **J12** — D10 per configuration. **J13** — Update works in the configuration active when it opens and returns to
+  it. **J14** (**ruled**, the review's S6) — an edit after which every mate the modes need is already on record (a
+  Modes pick between existing positions, an offset, an At, a renamed position) is an Update; Modes rows added,
+  removed or renamed, a slider column added or removed, and anything needing a new coupling or sliding mesh are
+  structural. And (**ruled**, W8-INTERFACES §9.1) **a Modes edit that would leave a coupling or sliding mesh on in no
+  mode is structural (Build again…)**, never an Update: a mate on in no mode would read as on in every one. Modes
+  rows reordered is an Update with nothing to do; the assembly keeps opening in the mode it was built to open in.
+- **J15** — loops per mode, always-on relations first. **J16** — the departure from §3.4 above (announced). **J17** —
+  torque per mode: a coupling is lossless; a branch reaching no output carries none; an output that also drives
+  onward is a split, its torque *shared*, nothing given past it. **J19** — the Results sheet holds one block per
+  mode. **J20** — interference judged in every mode.
+- **J21** — the window's **mode chooser** in the Speeds panel's header (§5's note): it chooses what the window shows,
+  never SolidWorks' configuration. **J22** — two sliders overlapping in a mode an error, a stroke bridging two dogs a
+  warning. **J23** — mate names (`RangeSlv along Rear`, `ModeSlv splined to RangeSlv`, `RangeSlv engages InDog`).
+  **J24** — the demonstration's copied built folder. **J25** — a quiet Update reads only what needs no configuration
+  change, and says after every quiet Update of a gearbox with modes which mode it worked in and that it did not show
+  the others (**ruled**, W8-INTERFACES §9.11).
+
 ## 5. The Workbook window: `workbook_gui.py` (+ `ui_text`)
 
 Opened from **Import workbook…** in the Gear panel header (a file dialog, then the window), or **New workbook…**
@@ -596,7 +662,11 @@ as canvas board E2:
   the box was worked out as (*Parallel reducer, 2 stages*).
 - **Checks:** errors first, each naming its cell; an error with fixes shows them as choices (E2's two radio rows).
   Then the passed checks, one line each.
-- **Speeds:** one line per shaft (W3).
+- **Speeds:** one line per shaft (W3). *With modes (W8, 2026-11-15; W8-PLAN §1.12, J21):* the panel's header gets
+  a mode chooser, one segment per Modes row, the first chosen, and the panel and the end view show the chosen mode;
+  the choice is kept across re-reads while a mode of that name is there. It is the window's first new control since
+  W5. It changes only what the window shows — a grey line at the panel's foot says so — and never SolidWorks'
+  configuration (`design/UI-DESIGN.md` §9, *Modes*).
 - **End view** from the origin, with the origin's X and Y marked: `preview.layout_gearbox`, headless and tested,
   drawing each gear's outline at its phase (W3).
 - **Footer:** Re-read · Export · Export as… · Build (disabled while there is an error) · Update SolidWorks (once
@@ -628,6 +698,11 @@ the pattern: `POLL_MS`).
 | **W6 right-angle** | Turned axes, bevel and crossed meshes | A bevel stage feeding a parallel stage builds; sub-plan and questions at the time. |
 | **W7 planetary** | Carriers, copies, loops in kinematics and phases | A 4 : 1 planetary with the ring fixed builds; own sub-plan. |
 | **W8 sleeves and modes** | Sleeve and dog kinds, Slides, Modes → configurations | The E4 transfer case's four modes; own sub-plan and probes (per-configuration mate suppression). |
+
+*W8 (2026-11-15):* the sub-plan is `notes-workbook/W8-PLAN.md`, revised after its review and after the spike, its
+interfaces `W8-INTERFACES.md` with the rulings of its §9. Its own fixture **TransferCase_Parallel** (the E4 transfer
+case with the low range on a layshaft, no planetary) is built first as the shakedown, then the E4 transfer case. W8
+is the last phase: nothing is left for a later one, and what it does not build is an error naming no phase.
 
 The planner (PLAN-GEARBOX) starts after W5 and reuses W1–W5 whole: its data model becomes `GearboxSpec`
 (superseding PLAN-GEARBOX §1), and its Solve fills one.

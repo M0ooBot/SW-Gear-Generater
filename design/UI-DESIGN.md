@@ -323,7 +323,7 @@ And where the window differs from the artboards, because Tk would not do it:
   gear B turned Σ, dimensioned `R 67.082 mm · Σ 90°`. A crossed pair is drawn as
   a parallel one with `· Σ 90°` after the centre distance.
 
-## 9. The Workbook window (W2–W7, docs/PLAN-WORKBOOK.md §4.2–§4.5, §5)
+## 9. The Workbook window (W2–W8, docs/PLAN-WORKBOOK.md §4.2–§4.5, §5)
 
 A second window for a whole gearbox written in an `.xlsx` workbook, linked to
 the file: it reads it, checks it, re-reads it on every save, and builds it in
@@ -331,7 +331,9 @@ SolidWorks — its parts, a layout part with an axis per shaft and an assembly
 whose gears are mated so the train turns (W5; *The gearbox that turns*
 below), shafts along any axis included, with bevel and crossed helical
 meshes across them (W6; *Turned axes* below), and a planetary stage on a
-carrier (W7; *Planetary stages* below) — then carries later edits of the
+carrier (W7; *Planetary stages* below), and sleeves, dog rings and slides
+whose modes become the assembly's configurations (W8; *Modes* below) — then
+carries later edits of the
 workbook into what it built (**Update SolidWorks**), or builds the next
 revision beside it (**Build again…**). It is a `Toplevel`, `Workbook —
 Reducer_12to1.xlsx`, sharing the strip's theme, widgets and SolidWorks worker;
@@ -432,7 +434,7 @@ left or up rather than off the screen.
   |---|---|---|
   | to build | green | *to build* |
   | the same part as another row | green | *the same part as G1* (identical rows share one file) |
-  | a later phase builds it | grey `#8f8f8f` | *later · phase W8* |
+  | a later phase builds it (since W8 no kind does; the state stays for one that may) | grey `#8f8f8f` | *later · phase W9* |
   | an error of its own | red | *see Checks*, in red |
   | built, and Update leaves it | green | *built* |
   | built, and Update changes its values | near-black `#2b2b2b` | *built · changes on Update* |
@@ -454,16 +456,12 @@ left or up rather than off the screen.
   G2** over `x +0.084550 / +0.084550 → 64.000 exact · working angle 20.61° · ε
   1.62` (`workbook.fixes`, for centres that are off; the move is not offered
   inside a loop of meshes, nor the shift where it does not apply). Each row a
-  later phase builds is a grey line at its cell, naming the row and the phase
-  (`workbook.build.later_rows`): *Gears!A7: G6 is a bevel gear: right-angle
-  stages are built in phase W6.*, *Shafts!A4: P1 is mounted on C, with 3 copies
-  round it: carriers and copies are laid out in phase W7, and the gearbox is not
-  checked until then.*, *Shafts!A4: S3's axis is X+: turned axes are laid out in
-  phase W6, and the gearbox is not checked until then.*, *Gears!A5: G4 slides:
-  sliding gears are placed in phase W8, with modes, and it is checked only at
-  its At until then.*, *Modes!A2: 2H, 4H, N and 4L are modes: they become the
-  assembly's configurations in phase W8.* (sleeves and dog rings as the bevel
-  gear, with W8). Clean: *No problems: every row reads, and every gear works out.*
+  later phase builds would be a grey line at its cell, naming the row and the
+  phase (`workbook.build.later_rows`); since W8, the last phase, no kind of row
+  waits for one (bevel gears and turned axes are W6's, carriers W7's, sleeves,
+  dog rings, slides and modes W8's), and what this version does not build is an
+  error at its cell, saying so without naming a phase. Clean: *No problems:
+  every row reads, and every gear works out.*
   **While Excel has yet to recalculate an Export** (the footer's recalculation
   wait) the read is provisional: Checks opens with *Provisional: the workbook's
   formulas still hold Excel's old values, so these checks may change once Excel
@@ -534,6 +532,12 @@ left or up rather than off the screen.
   C · 3 copies`, a held member `R     held still · 5.76 N·m`; when a torque
   through a stage is not worked out, a last line says why in prose (grey, the
   same width), as does the panel's one sentence for a gearbox not laid out.
+  With modes (W8) the panel shows one mode at a time, chosen in its header
+  (*Modes* below): two prose lines, the mode's outputs and ratio and what it
+  couples, then that mode's shaft lines, a member it leaves free reading
+  `Front  turns freely`, an output that also drives onward `… · 38.42 N·m,
+  shared with FrontDrv (the share depends on the loads)` and each shaft past it
+  `… · — (past a split)`.
 - **Footer.** A dot and one sentence, green when all is well, wrapped in the
   room the dot and the buttons showing leave (never narrower than 400 px), so
   the window keeps its 1080 px with all four buttons and grows taller instead;
@@ -563,7 +567,7 @@ a job collected). In order, the first that holds:
 | after Export wrote cells into a workbook with formulas | *Export wrote cells that formulas in the workbook may depend on: open and save it in Excel so they recalculate; Build and Export wait for that save.* (with a record: *Build, Update SolidWorks and Export wait*) | off | off |
 | a record from a newer Gear Generator | *The record of what was built, Reducer_12to1.workbook.json, cannot be read: it was written by a newer Gear Generator (schema 3, this one reads 2). It is left alone, so Build and Update SolidWorks wait.*, red | off | hidden |
 | an error, a gearbox not checked, or a gear not placed | *Fix the workbook before building: Gears!F3: … (2 more under Checks)*, or the gate's own sentence, red | off | off |
-| nothing buildable | *Nothing in this workbook can be built yet: InDog is a dog ring: dog rings are built in phase W8, with modes.* | off | — |
+| nothing buildable | *Nothing in this workbook can be built yet:* and the first row a later phase builds (no kind since W8), or *it has no gears.* | off | — |
 | no output folder, or one that does not exist | *Choose an output folder …* / *The output folder C:\Parts\Reducer_12to1 does not exist; make it, or change it on the Box sheet.*, red | off | not held by it |
 | the plan refused | its sentence, red (a file in the way of every revision up to `_r99`; two files of one name; a Part name that is one of the gearbox's own file names, naming its cell) | off | — |
 | ready | *Ready: Build makes 4 parts, Reducer_12to1_Layout and Reducer_12to1.SLDASM in C:\Parts\Reducer_12to1.* | **Build**, on | hidden |
@@ -571,7 +575,7 @@ a job collected). In order, the first that holds:
 | ready at a later revision | the ready sentence and why: *Reducer_12to1.SLDASM is already in C:\Parts\Reducer_12to1, and a build never overwrites a file. So this build is Reducer_12to1_r2, beside it; nothing is overwritten.* | **Build**, on | — |
 | ready, a part's own file name taken | the ready sentence and, one sentence per reason, whose file it is: *Gear_m1.5_N17.SLDPRT is already there, with no record that this workbook built it (a build that was interrupted can leave such a file), so G1's part is made as Gear_m1.5_N17_r2.* · *OutputGear.SLDPRT is already there, built from Box.xlsx, so …* · *… built from this workbook for values G2 no longer has, so …*, the last ending *; nothing is overwritten.* | **Build**, on | — |
 | a copied workbook (its record names another workbook still on disk) | *Ready: Build makes 4 parts, Reducer_12to1_r2_Layout and Reducer_12to1_r2.SLDASM in C:\Parts\Reducer_12to1. This workbook is a copy of C:\Parts\Reducer_12to1.xlsx, which is still there, so the record that came with it is that workbook's, and so are the SolidWorks files it lists: Build makes this workbook's own gearbox beside them, sharing and overwriting nothing.*, green | **Build**, on | hidden |
-| rows a later phase builds | *Ready: Build parts makes 2 parts in …; the layout and assembly wait for a later phase: Shafts!A4: P1 is mounted on C, …* (*The 4 parts are built already, so Build parts has nothing to make; …* when all are) | **Build parts**, on (off when nothing to make) | shown once parts are |
+| rows a later phase builds (none since W8), or a turned mesh the probes have not settled (W6) | *Ready: Build parts makes 4 parts in …; the layout and assembly are not built:* and why (*The 4 parts are built already, so Build parts has nothing to make; …* when all are) | **Build parts**, on (off when nothing to make) | shown once parts are |
 | parts on record, the layout part saved, no assembly | the ready sentence, then Update's reason: *Reducer_12to1_Layout.SLDPRT was saved but its assembly was not made: Build carries on with it, and Update SolidWorks waits until it has.* | **Build**, on | shown, off |
 | parts from Build parts, and a change only a new part takes | the ready sentence, then *Gear_m1.5_N17 (G1): Flank changed from involute to arcs, which its values cannot carry, so it needs a new part. Update SolidWorks waits until Build has made what that needs.* (nothing is assembled yet, so Update never offers a build-again) | **Build** / **Build parts**, on | shown, off |
 | built, the workbook changed since | *Update SolidWorks will change G2's values (Gear_m1.5_N68), move S2 and S3 in Reducer_12to1_Layout, and re-place G2, G3 and G4.* | **Build again…**, on | on, primary |
@@ -645,7 +649,7 @@ The window's own last sentence is a note with a kind (`ui_text.Note`), kept
 until the file next changes. A finished job's sentence — the build's, the
 update's, or what went wrong — takes the state's place, in its own colour (a
 clash is red); while a row a later phase builds is there it is followed by
-*Left for a later phase: …*. If the state has gone wrong since, the two are
+*The layout and assembly are not built: …*. If the state has gone wrong since, the two are
 joined: *Built 4 parts, … Since then: Fix the workbook before building: …*.
 What an Export, a Locate… or a save did marks no moment, so a state gone
 wrong follows it plainly: *Exported 2 cells and the Results sheet. Fix the
@@ -654,12 +658,12 @@ plainly, by the state it answered, which still stands: *Nothing was changed
 in SolidWorks. Gear_m1.5_N17 (G1): The recipe changed …, so it needs a new
 part. Update SolidWorks offers to build again as Reducer_12to1_r2.*
 
-Warnings never hold Build back, and nor do rows a later phase builds (bevel
-gears, shafts on a carrier and their copies, turned axes, sleeves, dog rings,
-sliding gears, modes) for **Build parts**: a bevel, sleeve or dog row's part is
-left out and listed as *later*; a gear on a carrier, on a turned axis or that
-slides is an ordinary part and builds. The layout part and assembly wait for
-every such row's phase: `workbook.assess.Assessment.lay_out_refusal()` refuses,
+Warnings never hold Build back, and nor do rows a later phase builds for
+**Build parts** (until W8 bevel gears, shafts on a carrier, turned axes,
+sleeves, dog rings, sliding gears and modes were such rows; since W8 none is,
+and the channel stays for a kind that may be): such a row's part is left out
+and listed as *later*, the other parts build. The layout part and assembly wait
+for every such row's phase: `workbook.assess.Assessment.lay_out_refusal()` refuses,
 with its sentence, a provisional read, a fix not yet exported, any error, no
 output folder, a gearbox not checked, any row a later phase builds, and any gear
 not placed and planned, and `build_refusal()` is Build parts' gate.
@@ -1023,6 +1027,60 @@ file); otherwise as text, and each path is read once per planning pass, so an
 offline share holds the window up once, not at every comparison. The Gears
 table shows each part to build under the name the build will give it
 (`plan.part_of`).
+
+### Modes: sleeves, dog rings and slides (W8)
+
+**The mode chooser — the first new control since W5, and why it exists.** A
+gearbox with modes has one set of speeds, torques and a ratio per mode, and the
+end view's sliders stand at a different face height in each; one panel cannot
+show them all and stay readable at the end view's width. So the Speeds panel's
+header carries a segmented chooser (`widgets.Segmented`, 16 px high, mono, 44
+px a segment: `workbook_gui.MODE_SEGMENT`), one segment per Modes row in sheet
+order, the first chosen; the Speeds panel and the end view show the chosen
+mode. The choice is kept across re-reads while a mode of that name is there
+(names compared as everywhere, ignoring case: `swbuild.on_in`), else the first
+is chosen again. A workbook with no Modes rows has no chooser (sliders alone
+sit at their position 0, one mode with no name).
+
+**What it does not do.** It chooses what *this window* shows, nothing else: it
+does not switch SolidWorks' configuration, and clicking it sends nothing to
+SolidWorks (a test counts the fake's calls around a click). The footer's way to
+switch mode is SolidWorks' own ConfigurationManager, and Update works in the
+configuration SolidWorks has active, whatever the chooser shows. Nothing else
+in the window is per mode: the Checks list every mode's problems at their
+Modes cells, and the Gears table is the same in every mode.
+
+**The end view at the chosen mode.** A slide runs along the view direction, so
+it does not move a slider on the drawing: what changes is the slider's face
+height and with it its colour — a sleeve over a dog is drawn in that dog's
+colour, a sleeve in neutral in a colour of its own — and the header readout's
+face heights (counted once they would not fit: *7 face heights, z 10 to 130 ·
+origin*). Sleeves draw as rings (their teeth inside, a rim circle), dogs
+as spur gears, through `kind_for` like any gear (`preview.layout_gearbox`,
+given `ModeReport.placed` over the layout). Since W8 every end-view name is
+kept on the canvas and clear of the names placed before it where a side allows,
+and a name shared by many coaxial shafts breaks onto lines at its commas
+(`In, Carrier,` / `Ring, Rear,` / `FrontDrv` for the E4 transfer case).
+
+**The header** counts the modes (`7 shafts · 12 gears · 4 meshes · 4 modes`) and
+*Worked out as* names each mode's ratio: *Parallel train with modes · 4 meshes ·
+2H 1.000 : 1, 4H 1.000 : 1, N neutral, 4L 4.000 : 1*.
+
+Boards: `WorkbookModes` (the E4 transfer case read, the chooser on 4L) and
+`WorkbookModesBuilt` (TransferCase_Parallel built on the fake, the chooser on
+2H).
+
+| State | Sentence | Build button | Update SolidWorks |
+|---|---|---|---|
+| ready | *Ready: Build makes 6 parts, TransferCase_Parallel_Layout and TransferCase_Parallel.SLDASM in …. Its gears are mated to their shafts and, as each mode engages them, to each other, so they turn together in SolidWorks. It has 4 modes, 2H, 4H, N and 4L: each becomes a configuration of the assembly, and it opens in 2H.* | **Build**, on | hidden |
+| built | *Built 6 parts, …; no interference between the gears in any mode, where they stand. Its gears are mated to turn in each of its 4 modes, one configuration each (2H, 4H, N and 4L), and SolidWorks reports no mate in error in any of them: it opens in 2H; to switch mode, double-click another mode's configuration in SolidWorks' ConfigurationManager. …* then, by the running version's answer the build carried (`positions_per_configuration`), *A turn you give the gears in one mode stays in that mode.* | **Build again…**, on | on, primary |
+| the same, the window opened afresh | the record's sentence with neither claim about a turn, since no job of this session has said which SolidWorks runs (W8-INTERFACES §9.12) | **Build again…**, on | on, primary |
+| a planetary form, a slider on a fixed or turned shaft, … | *Fix the workbook before building: …* — what W8 does not build is an error naming no phase | **Build**, off | — |
+
+Update across modes (W8-PLAN §1.10: the configuration active when it opens, the
+others shown and checked only after a change, *It worked in 4H, … it did not
+show the other modes, since nothing needed changing.* after every quiet Update)
+is C's and A's sentences; the window shows them whole and adds nothing.
 
 ### Planetary stages (W7)
 
