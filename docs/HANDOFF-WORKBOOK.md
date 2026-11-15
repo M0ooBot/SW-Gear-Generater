@@ -10,6 +10,11 @@ that was a throwaway repro in a temp folder and was not kept; the fixes' regress
 exited by the agents): W4 was closed and W5 begun. The dated paragraphs below say what changed; the user's
 answers of that day and the rulings that follow from them are in `notes-workbook/W5-DECISIONS.md`.
 
+**Updated 2026-11-15 (later that day), from a second Windows host** (`DESKTOP-QJTI7HF`, a WSL clone; its SolidWorks
+2026 is SP0, revision **34.0.0**, where W5 to W7 and the W8 spike ran on the other machine at 34.1.1): W8 was picked
+up again at the user's word. *W8 picked up* under "W8 in detail" says where it stands. The run folders of W5 to W7
+(`w6-full-…`, `w7-full-…`) are on the other machine, not this one.
+
 ## Where it stands
 
 | Phase | State |
@@ -21,7 +26,7 @@ answers of that day and the rulings that follow from them are in `notes-workbook
 | W5 motion | **closed 2026-11-14**: probes P0 to P0d and the two ring rounds run and reviewed, packages A to E written and reviewed, the demonstration run in full on SolidWorks 2026 and confirmed on 2024, the user's hand drag passed on both. Details, and what is left open, below. |
 | W6 right-angle | **closed 2026-11-15, but for the person's drag**: planned, reviewed and revised; probe tier 9 (a turned gear mate's sense, on cylinders, SolidWorks 2026) run and reviewed; packages A to E written and each reviewed; the full build run on SolidWorks 2026 and the confirming build on 2024, both from one snapshot (`931fe1a`), every check passing, each run reviewed. Left for the user: drag G1 in the built right-angle gearbox. Details below. |
 | W7 planetary | **closed 2026-11-15, but for the person's drag**: planned, reviewed and revised; the spike on SolidWorks 2026 (`W7-SPIKE.md`); packages A to E written and each reviewed; the demonstration run on SolidWorks 2026 — its first run found one app fault (a turned planetary's put did not hold), the probe `planetary_put_back` measured the route that does, the fix `9f21d99` was reviewed, and every section then passed, the planetary sections and the W5/W6 Update sections once more on the final code; the confirming build on 2024 passed; the run's evidence reviewed. Left for the user: drag Sun in the built planetary. Details below. |
-| W8 sleeves and modes | **paused 2026-11-15 before its run on SolidWorks (the user's call)**: planned, reviewed and revised to the spike (`W8-PLAN.md`, `W8-PLAN-REVIEW.md`, `W8-SPIKE.md` with its follow-up and its SolidWorks 2024 section: one slide mate with a value per configuration, mates switched per configuration, positions kept per configuration, handles stale after every add and show, the same on both versions); the interface commit with its rulings (`W8-INTERFACES.md` §9); the findings set and reviewed (`ea7a46f`); packages A, B, C and D written, each reviewed, the reviews' points in, the suite green. **No W8 code has run on SolidWorks:** the demonstration (package E), the full build on 2026, the confirming build on 2024 and the close are left. Details below. |
+| W8 sleeves and modes | **picked up 2026-11-15 and running on SolidWorks 2026 (34.0.0, the second host)**: `s0` and `s1` pass (0 failed, `s1.master` kept); `s2` to `s4` being written and run; `s5`, `s7`, the window check, the closing run and SolidWorks 2024 left. See *W8 picked up* below. Before that: planned, reviewed and revised to the spike (`W8-PLAN.md`, `W8-PLAN-REVIEW.md`, `W8-SPIKE.md` with its follow-up and its SolidWorks 2024 section: one slide mate with a value per configuration, mates switched per configuration, positions kept per configuration, handles stale after every add and show, the same on both versions); the interface commit with its rulings (`W8-INTERFACES.md` §9); the findings set and reviewed (`ea7a46f`); packages A, B, C and D written, each reviewed, the reviews' points in, the suite green. **No W8 code has run on SolidWorks:** the demonstration (package E), the full build on 2026, the confirming build on 2024 and the close are left. Details below. |
 | How the user's absence is handled | the user said on 2026-11-14 to carry on, in order, until W8 is done. Judgement calls are taken at each plan's recommended reading and listed for the user as readings to overrule. |
 | The small-pinion tip cap | `fix/small-pinion-cap` merged at `0f5a121` (the user's instruction): 6- and 7-tooth pinions build with an arc on the tip cap, version 0.3.2. Built on SolidWorks 2024 by the branch; the 2026 build and the merge's review are in hand. |
 
@@ -555,6 +560,69 @@ G1", "changes on Update", "new part on Build"), D (`22d0dce`, `14d1125` the wind
 every mode name whole, `93708d6` the boards redrawn as the window draws). The suite is green. **No W8 code has run
 on SolidWorks**, and the findings are set, so the app WILL build a gearbox with modes there: treat it as unshown.
 
+**W8 picked up (2026-11-15, the second host; the coordinating session with Opus subagents, each step reviewed
+by a separate one, every commit pushed as it lands).** The list under *To pick W8 up* below is kept as it was written;
+this paragraph says what has been done of it.
+
+- **The late passes were reviewed** (item 3 below): C's and D's in `notes-workbook/W8-REVIEW-LATE-CD.md`, A's
+  `5fcaa6a` in `W8-REVIEW-LATE-A.md`. The suite was NOT green at `fa4e508`: one window test failed under Windows
+  Python, because `c29ea2e`'s finding (a suppressed gear mate's sense is read) took a sentence out of a quiet Update
+  that a test, a board and UI-DESIGN still showed. Fixed (`08318d7`), with the chooser's dead trace (`a4ae910`) and
+  the Speeds header's room (`b12838d`: the chooser now gets the room the header leaves beside its readout, 172 px
+  beside "seen from +Z" and 91 px beside a turned shaft's readout at 100 %, at most 200 px — so 2H 4H N 4L goes to
+  rows whenever a shaft is off Z; no board draws that yet). Their review is `W8-REVIEW-FIX-CD.md`, its points in
+  (`34e48b5`, `7e6c09d`, `4c233b2`). The redrawn `WorkbookModesUpdated.png` stands; this host draws text about 1 %
+  wider than the host that drew its neighbours, so the three mode boards should be redrawn together next time.
+- **A's fixes from that review**: a carrier train with modes is put back through the measured per-configuration
+  suppression, and every per-mode mate's flag is read in every configuration after Update's mode loop (`c14e1b2`);
+  E4 through a changed Update on the fake (`ff1c4dd`); a gear mate lost inside a planetary's put is said gone, not
+  "left suppressed" (`c48b6ef`, `963eac4`). Reviewed in `W8-REVIEW-FIX-A.md`. Item 4 below (a gear mate remade inside
+  a planetary's suppressed put is not read again) is **left as a caveat**: W7's p3 showed the case on 2026, W8 never
+  remakes, and the gap is 2024.
+- **The first build on SolidWorks found one app fault**, fixed: `IFeature.IsSuppressed2(3, names)` answers in the
+  document's configuration order whatever order the names are passed in, and the app paired the answers with the
+  order asked, so a build refused itself on flags it had set right
+  (`probe/results/w8-workbook-assembly-20261115-091456-s0-stopped-by-an-app-fault.log`,
+  `w8-configuration-order-20261115-092100.txt`). The app asks one configuration per call since `03a4e51`; an answer
+  that is not a flag is a sentence (`2d8fb47`).
+- **Probe tier 11** (`src/gear_generator/probe/p11_modes.py`; W8-PLAN §4.2 item 1, which the plan called
+  `p9_modes`; results `probe/results/w8-over-defined-20261115-100312.*`, SolidWorks 2026 34.0.0): a configuration
+  whose two slides fight shows with no window that asks; a non-modal "Over Defined" balloon tip came once and stood
+  at least about 2.3 s; both slides read code 47 and the app's mate check names them; the configurations shown after
+  it solve. A coupling beside a lock across the same pair reads **no error at all** (left as a caveat: no path of the
+  app makes that pair). Findings `CONFIGURATION_SHOW_OVER_DEFINED`, `SUPPRESSION_READ_ORDER`, `VALUE_READ_ORDER`
+  (`a75c617`, comments corrected in `6f35d33`). Reviewed in `W8-REVIEW-TIER11.md`, which also found that **Update
+  refused a mate it did not make only when it was on in the active configuration**; since `d2f492e` it reads such a
+  mate in every mode and refuses before showing anything. The two new findings gate a gearbox with modes (`f87ecc3`,
+  `0c49d24`). Tier 9 item 2 of §4.2 (the copied folder) was already W6's `copy_built`.
+- **Package E, `s0` and `s1`** (`probe/workbook_assembly_check.py`, `--only modes`; the script reviewed in
+  `W8-REVIEW-DEMO-S0-S1.md`, every point in before the run): both pass on SolidWorks 2026 34.0.0 from a snapshot of
+  `31f5966` — `probe/results/w8-workbook-assembly-20261115-102101-s0-s1.log`, s0 517 checks, s1 555, 0 failed, no
+  STOP. Each mode's flags (the app's read and a raw read in document order, against §2.3), slides, frames, mates,
+  interference, a clash control on every mesh and every dog in every mode, the driven proof per mode against the
+  key, the both-Flips controls in 4H and 4L (exactly one Flip right, the read naming it), reopen. Facts: every
+  coupling was first made with Flip False, read wrong and remade with True on this host (the spike's host had it
+  right with False); the drive's global link was accepted with four configurations, so the script's value route
+  never ran. Two NOTEs, both the same untitled SolidWorks notification box (texts 'Title', 'Description',
+  'Button1', …) coming up mid-run, unanswered: ruled a notification, exempt whenever it appears.
+  `s1.master` is in `C:\Users\M0obo\Documents\GearGeneratorProbe\w8-s0s1-20261115-095232\out2\s1.master`.
+- **Left:** `s2`, `s3`, `s4` (being written and run); `s5` (W8-REVIEW-TIER11's verdict on ruling 3 says how: the
+  doctored distance at a value other than N's own, the balloon tolerated present or absent); `s7`; the window
+  check; one full run at the close from the final source; SolidWorks 2024's confirming build; the person's step
+  `s6`; PLAN-WORKBOOK §4.5 and UI-DESIGN's last words; the close.
+- **Not yet shown on SolidWorks:** `c14e1b2`'s put route (suppress in the configuration shown, then a top-only
+  rebuild with no show between), `d2f492e`'s refusal, D10 per configuration, any Update of a gearbox with modes.
+- **Small things open:** `tests/test_workbook_planetary.py::test_an_update_on_the_fake_leaves_the_train_turning_as_worked_by_hand`
+  still rides on the committed `PLANETARY_PUT_ROUTE` (a one-line pin); W8-PLAN §2.2's sentence on the Checks
+  panel's warnings does not match the app (Parallel gives 9, E4 gives 7: `W8-REVIEW-DEMO-S0-S1.md` N5); the NOTE at
+  the head of `probe/results/w8-over-defined-attempt-20261115-094752.txt` names the wrong mates for the lock alone
+  (`findings.py` has it right); the three tier 11 result files carry SolidWorks' main window title, which names
+  the licence edition (asked of the user; the probe now leaves such windows out).
+- **On this host the Linux venv has no tkinter** (Python 3.14): two tests fail there for that alone
+  (`tests/test_gears_clutch.py::test_the_strip_never_offers_them`,
+  `tests/test_ui_text.py::test_the_end_view_readout_always_fits_and_lists_up_to_four_heights`) and pass under
+  Windows Python. At `74ac826`: 3112 passed, 10 skipped, those 2 failed.
+
 **To pick W8 up:**
 
 1. Package E writes W8's sections of the demonstration (W8-PLAN §5) — fresh handles after every configuration
@@ -571,7 +639,7 @@ on SolidWorks**, and the findings are set, so the app WILL build a gearbox with 
 **Open, for the user to overrule:** making a gear mate of a gearbox with modes again (a tooth change, a sense found
 wrong) is refused with a sentence that says to build the gearbox again (ruling 9.16); a slider whose place moves in
 a workbook with no Modes rows needs a new revision; the chooser goes to rows above the Speeds lines when its
-segments pass 200 px; the sleeve's and dog's pressure angle is the Box's (20° by default), with no fork groove, hub
+segments pass the room the header leaves beside the readout (at most 200 px; `b12838d`); the sleeve's and dog's pressure angle is the Box's (20° by default), with no fork groove, hub
 or chamfers.
 
 ## Questions waiting for the user
@@ -598,6 +666,7 @@ Questions 1 to 5 of 2026-11-14 are answered (`notes-workbook/W5-DECISIONS.md`; P
 5. **Two hand drags** (a person's step the scripts cannot stand in for): G1 in the right-angle gearbox
    (`…\GearGeneratorProbe\w6-full-20261114-210827\out\r1`), and Sun in the planetary
    (`…\GearGeneratorProbe\w7-full-20261115-000138\out\p1`).
+   *Both folders are on the machine W5 to W7 ran on, not on the second host of 2026-11-15.*
 6. **`tests/fixtures/excel-windows/Planetary_4to1.xlsx`** as Excel saves it was not committed: the session's
    permission check refused the write, and no test or script reads it. Commit it by hand if it is wanted; the file
    is in `…\GearGeneratorProbe\w7-full-20261115-000138\fixtures\`.
