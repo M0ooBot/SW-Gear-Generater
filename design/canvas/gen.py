@@ -782,6 +782,8 @@ def end_view_svg(report):
                     f'stroke="{wb_gui.PLANE_COLOURS[plane % len(wb_gui.PLANE_COLOURS)]}"></circle>')
     for name, x, y in view.shafts:
         body.append(f'<path d="M{x - 5:.1f} {y:.1f}H{x + 5:.1f}M{x:.1f} {y - 5:.1f}V{y + 5:.1f}" stroke="{INK}"></path>')
+    for name, x0, y0, x1, y1 in view.lines or ():         # a turned shaft (W6), as the window draws it
+        body.append(f'<path d="M{x0:.1f} {y0:.1f}L{x1:.1f} {y1:.1f}" stroke="{INK}"></path>')
     for name, x, y, anchor in view.labels:        # the window's Tk anchors: n/s the top or bottom, w/e the start or end
         baseline = y + 10 if anchor[0] == "n" else y - 3
         body.append(f'<text x="{x:.1f}" y="{baseline:.1f}" text-anchor="{"start" if anchor[1] == "w" else "end"}" '
@@ -899,7 +901,8 @@ def workbook_board(spec, *, clock="14:02:31", open_in_excel=True, before=None, c
     view = panel("End view, from your origin", view_readout, [svg])
     lines, speeds_readout = ui_text.workbook_speed_lines(effective, report.motion)
     speeds = panel("Speeds", speeds_readout,
-                   [f'<div style="{mono} white-space: pre; line-height: 1.5;">{line}</div>' for line in lines], gap=0)
+                   [f'<div style="{mono} white-space: pre-wrap; line-height: 1.5; max-width: {wb_gui.END_VIEW[0]}px;">'
+                    f'{line}</div>' for line in lines], gap=0)        # wrapped at the end view's width, as the window
 
     colour = OK if footer.ok else ERR
     exporting = building is None                                        # Export waits while a job runs
@@ -1117,6 +1120,26 @@ finally:
 static_desk.record.gearbox.static_reason = ""            # a W4 record has none: static_reason is W5's own
 boards["WorkbookStatic"] = ("Workbook · a gearbox W4 built static, offered a turning revision",
                             workbook_board(reducer, desk=static_desk), WINDOW_WIDTH)
+
+# W6. The two right-angle fixtures (W6-PLAN §5), as test_workbook_turned writes them, with an output folder for the
+# board's header. Fixture A built: a bevel stage from S1 along X into S2, then a parallel stage; the end view draws
+# S1 as a line through G1 seen side-on, and the footer says which gear to drag. Fixture B read, before Build: a
+# crossed helical stage, then a bevel stage at 120° onto the slanted S3, each turned shaft a line, and the Speeds
+# panel seen from each shaft's + end.
+from test_workbook_turned import bevel_reducer, crossed_slant      # noqa: E402 - the fixtures B's tests pin
+
+
+def with_folder(spec):
+    return wb_model.replace(spec, box=wb_model.replace(spec.box, output_folder=f"C:\\Parts\\{spec.box.name}"))
+
+
+right_angle = with_folder(bevel_reducer())
+right_desk = Desk()
+right_note = press_build(right_desk, right_angle)
+boards["WorkbookRightAngle"] = ("Workbook · a right-angle gearbox built: a bevel stage into a parallel stage",
+                                workbook_board(right_angle, desk=right_desk, note=right_note), WINDOW_WIDTH)
+boards["WorkbookCrossed"] = ("Workbook · a crossed stage and a bevel stage onto a slanted shaft, read",
+                             workbook_board(with_folder(crossed_slant())), WINDOW_WIDTH)
 
 layout = []
 x = 0
