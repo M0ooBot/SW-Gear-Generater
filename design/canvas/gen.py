@@ -1221,8 +1221,8 @@ e4 = with_folder(e4_transfer_case())
 boards["WorkbookModes"] = ("Workbook · the E4 transfer case read: four modes, the Speeds panel on 4L",
                            workbook_board(e4, mode="4L"), WINDOW_WIDTH)
 # W8-PLAN §2.2's TransferCase_Parallel built on the fake (SolidWorks 2026's revision, so the build's answer is what
-# findings.TURN_PER_CONFIGURATION_ON_2026 says, committed False since W8's s2: a turn shows in every mode, the
-# sentence the window passes to the footer; W8-INTERFACES §9.18), the chooser on 2H.
+# findings.TURN_PER_CONFIGURATION_ON_2026 says, committed False since W8's s2 and s7: a turn can show in other
+# modes, the sentence the window passes to the footer; W8-INTERFACES §9.18), the chooser on 2H.
 parallel = with_folder(transfer_case_parallel())
 parallel_desk = Desk()
 parallel_note = press_build(parallel_desk, parallel)
