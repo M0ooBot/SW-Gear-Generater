@@ -408,7 +408,7 @@ def _bevel_end_on(p) -> List[List[Tuple[float, float]]]:
 
 
 def layout_gearbox(placed, theta, width: int = 696, height: int = 300, pad: float = 16.0,
-                   step: int = 1, unit: float = 1.0, carriers=None) -> EndView:
+                   step: int = 1, unit: float = 1.0, carriers=None, shafts=()) -> EndView:
     """Every placed gear drawn as the strip draws one, turned to its phase, the whole fitted to the canvas.
 
     ``placed`` is ``{gear: workbook.geometry.Placed}`` and ``theta`` its turns.
@@ -434,7 +434,8 @@ def layout_gearbox(placed, theta, width: int = 696, height: int = 300, pad: floa
     a cross at its axis. ``carriers`` maps a carrier shaft to its axis's world
     (x, y) (``geometry.shaft_lines``); without it the centre of its copies is
     taken. Shafts on one line (a planetary's sun, carrier and ring) share a
-    cross, named once with every name on it: ``S, R, C``.
+    cross, named once with every name on it in ``shafts``' order (the Shafts
+    sheet's ids, as the Speeds panel lists them): ``S, C, R``.
     """
     from .gears import kind_for
     view = EndView(outlines=[], rims=[], shafts=[], planes=[], labels=[], lines=[], carriers=[])
@@ -547,7 +548,7 @@ def layout_gearbox(placed, theta, width: int = 696, height: int = 300, pad: floa
     order = {name: i for i, name in enumerate(dict.fromkeys([p.shaft for _, p, _, _ in shapes]
                                                             + [c for c, *_ in circles]))}
     marks.sort(key=lambda m: order.get(m[0], len(order)))
-    # Shafts on one line share a cross, and are named there once, every name in order.
+    # Shafts on one line share a cross, and are named there once, every name in the Shafts sheet's order.
     shared: dict = {}
     for name, x, y in marks:
         key = (round(x, 3), round(y, 3))
@@ -555,6 +556,9 @@ def layout_gearbox(placed, theta, width: int = 696, height: int = 300, pad: floa
             shared[key][0].append(name)
         else:
             shared[key] = ([name], x, y)
+    sheet = {name: i for i, name in enumerate(shafts)}
+    for names, _, _ in shared.values():
+        names.sort(key=lambda name: sheet.get(name, len(sheet)))       # stable: the rest keep their order
     view.labels = [_place_label(", ".join(names), x, y, view.origin, unit, (width, height) if lines else None)
                    for names, x, y in shared.values()]
     return view

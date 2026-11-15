@@ -810,12 +810,11 @@ class WorkbookWindow(tk.Toplevel):
                           width=px(END_VIEW[0] - 24))
             self.view_readout.set("")
             return
-        # W7: each carrier's circle about its own axis, where planning puts that axis (geometry.shaft_lines).
-        lines = wb_geometry.shaft_lines(self.effective or self.reading.spec) if report.stages else {}
-        carriers = {stage.carrier: tuple(lines[stage.carrier][0][:2]) for stage in report.stages
-                    if stage.carrier in lines}
+        # W7: each carrier's circle about its own axis, where planning puts it; names on one cross in Shafts order.
+        spec = self.effective or self.reading.spec
+        carriers = {c: point[:2] for c, (point, _) in wb_geometry.carrier_axes(spec, report).items()}
         view = preview.layout_gearbox(report.layout.placed, report.theta, px(END_VIEW[0]), px(END_VIEW[1]), step=2,
-                                      unit=px(100) / 100, carriers=carriers)
+                                      unit=px(100) / 100, carriers=carriers, shafts=[s.id for s in spec.shafts])
         for gear, plane, points in view.outlines:
             colour = PLANE_COLOURS[plane % len(PLANE_COLOURS)]
             c.create_polygon(*[v for xy in points for v in xy], outline=colour, fill="", width=1)
@@ -829,7 +828,9 @@ class WorkbookWindow(tk.Toplevel):
         for name, x, y, r in view.carriers or ():         # a carrier (W7): dashed, through its planets' axes
             c.create_oval(x - r, y - r, x + r, y + r, outline=theme.INK, dash=(4, 3))
         for name, x, y, anchor in view.labels:          # beside each cross, clear of the origin's arrows
-            c.create_text(x, y, text=name, anchor=anchor, fill=theme.INK, font=self.fonts.mono_tiny)
+            text = c.create_text(x, y, text=name, anchor=anchor, fill=theme.INK, font=self.fonts.mono_tiny)
+            x0, y0, x1, y1 = c.bbox(text)               # on a plain backing, so a name reads over teeth (W7)
+            c.tag_lower(c.create_rectangle(x0, y0, x1, y1, fill=theme.WHITE, outline=""), text)
         if view.origin is not None:
             ox, oy = view.origin
             c.create_line(ox, oy, ox + px(preview.ORIGIN_ARROW), oy, fill=theme.ERROR, arrow="last")
@@ -844,11 +845,9 @@ class WorkbookWindow(tk.Toplevel):
             return
         lines, readout = ui_text.workbook_speed_lines(self.effective or self.reading.spec, report.motion)
         colour = theme.MUTED if report.motion.later else theme.INK
-        # A sentence rather than a shaft's line: the whole panel when a later phase drives it, or (W7) the last line
-        # when a torque through a planetary stage is not worked out (Motion.torque_note). In prose, wrapped at the
-        # end view's width like the lines, so the right column keeps its width.
-        prose = range(len(lines)) if report.motion.later else (
-            [len(lines) - 1] if getattr(report.motion, "torque_note", "") and report.motion.speeds else [])
+        # A sentence rather than a shaft's line (ui_text says which): in prose, wrapped at the end view's width like
+        # the lines, so the right column keeps its width.
+        prose = ui_text.speeds_prose_rows(report.motion, lines)
         for r, text in enumerate(lines):
             if r in prose:
                 tk.Label(self.speeds_body, text=text, bg=theme.WHITE, fg=theme.MUTED, font=self.fonts.hint,

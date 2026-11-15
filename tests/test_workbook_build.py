@@ -439,7 +439,12 @@ def test_the_window_says_what_a_later_phase_builds(tmp_path):
         assert window.build_button.label.cget("text") == "Build parts"
         assert window.build_button._enabled  # noqa: SLF001 - the button's own flag; it is never pressed here
         shown = [w.cget("text") for w in window.checks_body.winfo_children() if isinstance(w, tk.Label)]
-        assert window.parts.refused[0].message in shown and len(window.parts.refused) == 1
+        assert shown == [
+            "Gears!Q3: G2: The involute starts at 99.96 mm, above the form diameter of 99.343 mm, so the bottom of the "
+            "working flank is a straight line.",
+            "Gears!Q5: G4: The involute starts at 99.28 mm, above the form diameter of 98.614 mm, so the bottom of the "
+            "working flank is a straight line.",
+            window.parts.refused[0].message] and len(window.parts.refused) == 1
     finally:
         window.close()
         root.destroy()

@@ -329,15 +329,20 @@ def test_a_gearbox_with_no_turned_shaft_has_no_lines():
 # -- W7: a planetary stage in the end view (W7-PLAN §2.12) -----------------------------------------------------------
 
 
-def _planetary_view(given=True, width=392, height=300):
+def _planetary_view(given=True, width=392, height=300, spec=None):
     from gear_generator.workbook import checks, geometry
     from test_workbook_planetary import planetary_4to1
-    spec = planetary_4to1()
+    spec = spec or planetary_4to1()
     report = checks.check(spec)
-    lines = geometry.shaft_lines(spec)
-    carriers = {stage.carrier: tuple(lines[stage.carrier][0][:2]) for stage in report.stages} if given else None
+    carriers = {c: point[:2] for c, (point, _) in geometry.carrier_axes(spec, report).items()} if given else None
     return report.layout.placed, preview.layout_gearbox(report.layout.placed, report.theta, width, height,
-                                                        carriers=carriers)
+                                                        carriers=carriers, shafts=[s.id for s in spec.shafts])
+
+
+def _off_origin():
+    """The 4 : 1 with S, C and R at (50, 20): the carrier's axis is not the origin's."""
+    from test_workbook_planetary import edited, planetary_4to1
+    return edited(planetary_4to1(), shafts={k: dict(x="50", y="20") for k in "SCR"})
 
 
 def test_every_planet_copy_is_drawn_and_the_carrier_is_a_circle_through_their_axes():
@@ -353,10 +358,24 @@ def test_every_planet_copy_is_drawn_and_the_carrier_is_a_circle_through_their_ax
     assert r == pytest.approx(18.0 * view.scale, abs=1e-9)
 
 
-def test_coaxial_shafts_share_one_cross_named_once_and_each_copy_keeps_its_own():
+def test_a_carrier_off_the_origin_has_its_circle_about_its_own_axis_not_the_origins():
+    """S, C and R at (50, 20): the circle's centre is their shared cross, copy 1 stands 18 mm (P's X) to its right,
+    and the radius is the workbook's 18 mm in the drawing's scale."""
+    placed, view = _planetary_view(spec=_off_origin())
+    (name, cx, cy, r), = view.carriers
+    cross = {n: (x, y) for n, x, y in view.shafts}
+    assert (cx, cy) == pytest.approx(cross["S"], abs=1e-9)
+    copy = placed["Planet copy 1"]                                          # world (68, 20): 18 to the right of C
+    assert (copy.x, copy.y) == pytest.approx((68.0, 20.0))
+    assert cross["P copy 1"] == pytest.approx((cx + 18.0 * view.scale, cy), abs=1e-9)
+    assert r == pytest.approx(18.0 * view.scale, abs=1e-9)
+    assert view.origin is None                                  # (0, 0) is off the drawing: nothing is drawn there
+
+
+def test_coaxial_shafts_share_one_cross_named_once_in_the_shafts_sheets_order():
     _, view = _planetary_view()
     names = [label[0] for label in view.labels]
-    assert names == ["S, R, C", "P copy 1", "P copy 2", "P copy 3"]
+    assert names == ["S, C, R", "P copy 1", "P copy 2", "P copy 3"]      # S, C, R: the Speeds panel's order
 
 
 def test_without_the_carriers_axis_the_circle_is_about_its_copies_centre():

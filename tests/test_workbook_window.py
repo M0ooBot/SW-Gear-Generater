@@ -2046,8 +2046,33 @@ def carrier_circle(window):
     return centre, radius, named
 
 
-def test_a_planetary_is_ready_to_build_with_its_carrier_drawn_through_its_planets(desk):
+def ring_rim(window):
+    """The ring's rim as the window drew it (a plain oval, not the carrier's dashed one nor the origin's dot): its
+    centre, and the drawing's scale in px per mm from the ring's outside radius as planning placed it."""
+    c = window.canvas
+    (rim,) = [i for i in c.find_all() if c.type(i) == "oval" and not c.itemcget(i, "dash")
+              and not c.itemcget(i, "fill")]
+    x0, y0, x1, y1 = c.coords(rim)
+    return ((x0 + x1) / 2, (y0 + y1) / 2), (x1 - x0) / 2 / window.report.layout.placed["Ring"].outer_radius
+
+
+def assert_carrier_round_its_axis(window, planet_x=18.0):
+    """The end view's carrier, read off the canvas against the ring's rim (not against the copies it is drawn
+    through): its circle about the cross S, C and R share, which is the ring's centre; its radius the workbook's
+    planet X in the rim's scale; copy 1 that far to the right of it, as P's X, Y = (18, 0) puts it."""
     import math
+    centre, radius, named = carrier_circle(window)
+    (rx, ry), scale = ring_rim(window)
+    assert named["S, C, R"] == pytest.approx(centre, abs=0.5) and centre == pytest.approx((rx, ry), abs=0.5)
+    assert radius == pytest.approx(planet_x * scale, abs=0.5)
+    assert named["P copy 1"] == pytest.approx((centre[0] + planet_x * scale, centre[1]), abs=0.5)
+    for k in (2, 3):
+        x, y = named[f"P copy {k}"]
+        assert math.hypot(x - centre[0], y - centre[1]) == pytest.approx(planet_x * scale, abs=0.5)
+    return centre, scale
+
+
+def test_a_planetary_is_ready_to_build_with_its_carrier_drawn_through_its_planets(desk):
     from test_workbook_planetary import planetary_4to1
     window = desk.open(planetary_4to1(), name="Planetary_4to1.xlsx")
     footer = window.footer()
@@ -2068,14 +2093,18 @@ def test_a_planetary_is_ready_to_build_with_its_carrier_drawn_through_its_planet
     assert gear_states(window) == {"Sun": "to build", "Planet": "to build", "Ring": "to build",
                                    "CarrierGear": "to build"}
     assert window.parts_readout.get() == "4 parts to build"
-    # The end view: the carrier's dashed circle about the shared cross of S, R and C, through every copy's cross.
-    centre, radius, named = carrier_circle(window)
-    assert named["S, R, C"] == pytest.approx(centre, abs=0.5)
-    for k in (1, 2, 3):
-        x, y = named[f"P copy {k}"]
-        assert math.hypot(x - centre[0], y - centre[1]) == pytest.approx(radius, abs=0.5)
-    x1, y1 = named["P copy 1"]
-    assert x1 > centre[0] and y1 == pytest.approx(centre[1], abs=0.5)      # copy 1 at (18, 0): to the right
+    # The end view: the carrier's dashed circle about the shared cross of S, C and R, through every copy's cross.
+    assert_carrier_round_its_axis(window)
+
+
+def test_a_carrier_off_the_origin_is_drawn_round_its_own_axis(desk):
+    """S, C and R at (50, 20): the circle stands about their cross, not the origin, which is off the drawing."""
+    from test_workbook_planetary import edited, planetary_4to1
+    window = desk.open(edited(planetary_4to1(), shafts={k: dict(x="50", y="20") for k in "SCR"}),
+                       name="Planetary_4to1.xlsx")
+    assert window.footer().ok
+    assert_carrier_round_its_axis(window)
+    assert window.view_readout.get().endswith("origin off view")
 
 
 def test_a_planetary_built_says_which_gear_to_drag_and_that_the_carrier_has_none(desk):
@@ -2121,6 +2150,7 @@ def test_a_held_sun_and_a_held_carrier_say_what_is_held_and_what_to_drag(desk, m
     window = desk.open(getattr(test_workbook_planetary, make)(), name="Planetary_4to1.xlsx")
     assert window.status.get().endswith(". Its turning gears are mated to their shafts and to each other, so they "
                                         f"turn together in SolidWorks. {held}")
+    assert_carrier_round_its_axis(window)          # whichever member is held, the carrier is drawn round its axis
     assert speed_lines(window) == lines and window.box_values["type"].cget("text") == worked
     window.press_build()
     desk.finish(window)
@@ -2130,7 +2160,8 @@ def test_a_held_sun_and_a_held_carrier_say_what_is_held_and_what_to_drag(desk, m
 
 def test_what_w7_does_not_build_is_an_error_of_the_workbook_not_a_later_phase(desk):
     """W7-PLAN §1.2, as ruled: a planetary this version does not build is not waiting for a phase. Each arrives as an
-    error at its cell; Build waits, and Build parts is not offered for it."""
+    error at its cell (two inputs on a stage too, agreeing or not: W7-INTERFACES §6.15), and Checks shows exactly
+    what is wrong and nothing for a later phase; Build waits, and Build parts is not offered for it."""
     from test_workbook_planetary import edited, planetary_4to1
     spec = planetary_4to1()
     cases = {
@@ -2141,16 +2172,22 @@ def test_what_w7_does_not_build_is_an_error_of_the_workbook_not_a_later_phase(de
                    "Shafts!A6: Q is mounted on P, which is itself mounted on C: a carrier riding another carrier is "
                    "not built by this version; a planet shaft is built mounted on a frame shaft."),
         "helical": (edited(spec, gears={"Planet": dict(kind="helical", helix_angle="15", hand="left")}),
-                    "Gears!A3: Planet is helical: a planetary stage is built with spur gears only by this version."),
+                    "Gears!A3: Planet is helical: a planetary stage is built with spur gears only by this version.",
+                    "Meshes!A2: Sun is spur and Planet is helical; meshing gears are the same kind.",
+                    "Meshes!A3: Planet is helical and Ring is spur; meshing gears are the same kind.",
+                    "Gears!I3: Planet: The teeth overlap 0.82 of a pitch along the face, under one, which loses most of "
+                    "the smoothness helical teeth are for; widen the face or raise the helix angle."),
+        "two inputs": (edited(spec, shafts={"C": dict(role="input", speed="250")}),     # agreeing with S, still two
+                       "Shafts!G3: C is an input as well as S, and both are members of C's planetary stage: one member "
+                       "of a planetary stage is the input; set C's Role to output, or leave it blank."),
     }
-    for name, (made, error) in cases.items():
+    for name, (made, *shown_then) in cases.items():
         window = desk.open(made, name=f"{name}.xlsx")
         footer = window.footer()
         assert (footer.build_label, footer.build_enabled, footer.ok) == ("Build", False, False), name
-        assert window.status.get().startswith(f"Fix the workbook before building: {error}"), name
+        assert window.status.get().startswith(f"Fix the workbook before building: {shown_then[0]}"), name
         shown = [w.cget("text") for w in window.checks_body.winfo_children() if isinstance(w, tk.Label)]
-        assert error in shown and window.parts.refused == [], name
-        assert all(" phase W" not in text for text in shown), name
+        assert shown == shown_then and window.parts.refused == [], name
 
 
 def test_a_torque_the_stage_does_not_settle_is_said_in_prose_after_the_speeds(desk):
