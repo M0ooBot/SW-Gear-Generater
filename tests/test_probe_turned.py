@@ -110,9 +110,20 @@ def test_decide_reads_the_verdict_off_a_pass_only():
         "gear_mate_entity_order": "first selection first"}}}
     decided = decide.decide(records)
     assert decided["turned_sense_read_back"] == "entity senses" and decided["turned_sense_angles"] == (30.0, 150.0)
+    assert decided["turned_sense_angles_skew"] == (60.0, 120.0)
     records["turned_gear_mate_sense"]["status"] = "fail"
     decided = decide.decide(records)
     assert decided["turned_sense_read_back"] is None and decided["turned_sense_angles"] is None
+    assert decided["turned_sense_angles_skew"] is None
+
+
+def test_the_angle_ranges_are_read_per_class_of_mesh():
+    """W6-INTERFACES §7.12: meeting axes ran at 30–150°, skew axes only at 60–120°; neither range lends the other."""
+    cases = _consistent_cases()
+    assert sorted({round(c["own_angle"], 6) for c in cases if c["cls"] == "K"}) == [60.0, 90.0, 120.0]
+    records = {"turned_gear_mate_sense": {"status": "pass", "facts": {"turned_sense_cases": cases}}}
+    assert decide.turned_sense_angles(records) == (30.0, 150.0)
+    assert decide.turned_sense_angles_skew(records) == (60.0, 120.0)
 
 
 def test_parallel_entities_are_paired_by_order_since_either_pairing_gives_one_product():

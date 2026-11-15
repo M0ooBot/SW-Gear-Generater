@@ -1095,12 +1095,26 @@ CROSS_VERSION_CLOSE_ASKS_TO_SAVE = True        # the CAM add-in's Yes/No box, on
 # - Neither of the alternatives decide.py would have tried tells the cases: Reverse against the sign of dA·dB, and
 #   Reverse against the crossing.
 #
-# Bounds:
-# - Covered: the own-axis angles 30° to 150°. This is the least and greatest at which every case held: meeting
-#   30–150, skew 60–120. The app refuses a turned mesh outside this.
+# Bounds, read per class of mesh (W6-INTERFACES §7.12), each the least and greatest own-axis angle at which every
+# case of the class held:
+# - TURNED_GEAR_MATE_SENSE_ANGLES covers axes that MEET: they ran at 30, 60, 90, 120 and 150°, and the angles between
+#   are taken as covered.
+# - TURNED_GEAR_MATE_SENSE_ANGLES_SKEW covers axes that do not meet: skew cases ran only at 60, 90 and 120°.
+# - The app refuses a turned mesh outside its class's range.
 # - Not covered: real teeth (E's interference controls confirm it, M2), and a remake at a new ratio on a turned mate.
+#
+# Caveats (tier 9's review):
+# - In all 44 cases each mate entity pointed along its own cylinder's +Z (τA = τB = +1), so the per-entity sign τ
+#   in H was never exercised.
+# - The probe's own verdict fact reads None in the result file. The finding comes from decide.py re-judging the raw
+#   readings after c2fbaca, and the reviewer recomputed all 44 cases independently by hand with the same result.
+# - "Right" for a skew case is set by a virtual crossed pair from gears/crossed.py. Tier 9 shows H reads the
+#   measured sense, not that the app's mesh sense k is right for a crossed mesh; the demonstration's interference
+#   controls with real teeth carry that.
+# - Plain cylinders, on SolidWorks 2026 only.
 TURNED_GEAR_MATE_SENSE_READ_BACK = "entity senses"
 TURNED_GEAR_MATE_SENSE_ANGLES = (30.0, 150.0)
+TURNED_GEAR_MATE_SENSE_ANGLES_SKEW = (60.0, 120.0)
 # Recorded, nothing branching on them: no cylinder moved when a turned gear mate was made (1e-6 mm, 1e-6 per rotation
 # entry), and MateEntity(0) was the first selection in all 40 turned mates. The app matches by axis either way (S1).
 TURNED_GEAR_MATE_MOVES_ON_MAKE = False

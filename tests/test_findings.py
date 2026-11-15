@@ -999,6 +999,7 @@ def test_a_turned_gear_mates_reverse_tells_its_sense_about_the_entities_own_dire
     decided = decide.decide(records)
     assert decided["turned_sense_read_back"] == findings.TURNED_GEAR_MATE_SENSE_READ_BACK == "entity senses"
     assert decided["turned_sense_angles"] == findings.TURNED_GEAR_MATE_SENSE_ANGLES == (30.0, 150.0)
+    assert decided["turned_sense_angles_skew"] == findings.TURNED_GEAR_MATE_SENSE_ANGLES_SKEW == (60.0, 120.0)
     assert decided["turned_gear_mate_moves_on_make"] is findings.TURNED_GEAR_MATE_MOVES_ON_MAKE is False
     assert decided["gear_mate_entity_order"] == findings.GEAR_MATE_ENTITY_ORDER
     cases = facts(records, "turned_gear_mate_sense")["turned_sense_cases"]

@@ -390,14 +390,26 @@ def turned_sense_read_back(records: Records) -> Optional[str]:
     return read_back_verdict(facts["turned_sense_cases"], facts.get("turned_sense_reopened") or [])["value"]
 
 
-def turned_sense_angles(records: Records) -> Optional[tuple]:
-    """The least and greatest angle between the own axes over which every turned case held."""
+def _turned_angles(records: Records, cls: str) -> Optional[tuple]:
+    """The least and greatest angle between the own axes over which every turned case of class ``cls`` held ("M"
+    for axes that meet, "K" for skew axes); None when the probe did not pass or no case of the class held."""
     facts = _turned_cases(records)
     if facts is None:
         return None
     from .p9_turned import angles_verdict  # noqa: PLC0415 - pure
-    angles = angles_verdict(facts["turned_sense_cases"], turned_sense_read_back(records))
+    cases = [c for c in facts["turned_sense_cases"] if c["cls"] == cls]
+    angles = angles_verdict(cases, turned_sense_read_back(records)) if cases else None
     return tuple(angles) if angles else None
+
+
+def turned_sense_angles(records: Records) -> Optional[tuple]:
+    """W6-INTERFACES §7.12: the own-axis angle range H was shown on for axes that MEET."""
+    return _turned_angles(records, "M")
+
+
+def turned_sense_angles_skew(records: Records) -> Optional[tuple]:
+    """W6-INTERFACES §7.12: the own-axis angle range H was shown on for axes that do not meet (skew)."""
+    return _turned_angles(records, "K")
 
 
 def decide(records: Records) -> Dict[str, Any]:
@@ -563,6 +575,7 @@ def decide(records: Records) -> Dict[str, Any]:
                                                         "cross_version_closed_unsaved_unchanged"),
         "turned_sense_read_back": turned_sense_read_back(records),
         "turned_sense_angles": turned_sense_angles(records),
+        "turned_sense_angles_skew": turned_sense_angles_skew(records),
         "turned_gear_mate_moves_on_make": _fact(records, "turned_gear_mate_sense", "turned_gear_mate_moves_on_make"),
         "gear_mate_entity_order": _fact(records, "turned_gear_mate_sense", "gear_mate_entity_order"),
         "manual_steps": manual_steps(records, recipe),
