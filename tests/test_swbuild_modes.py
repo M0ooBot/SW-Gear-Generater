@@ -280,3 +280,68 @@ def test_a_flag_read_back_wrong_in_a_build_says_what_was_read_against_what_the_m
                           or "reads suppressed where the mode has it off" in t], reads
     assert result.saved == ""
 
+
+
+# -- W5's M7 in every mode's configuration (W8-PLAN J12, §1.10; W8-REVIEW-TIER11 M2) ---------------------------------
+
+from test_swbuild import CHANGING, TC_ASM, _tc_update, names, tc_built  # noqa: E402,F401
+
+MODE_CHANGES = CHANGING + ("show_configuration", "set_mate_suppressed_in", "set_dimension_in")
+
+
+def _user_mate(fake, flags):
+    """A mate the user made by hand (a second distance mate on a sleeve, say), with its flag in each configuration;
+    the active one's is the flag it reads now."""
+    fake.user_mate(TC_ASM, "Distance3")
+    mate = fake.mate("Distance3", TC_ASM)
+    mate.flags = dict(flags)
+    mate.suppressed = mate.flags[fake.config]
+    return mate
+
+
+@pytest.mark.parametrize("on, said", [
+    (("N",), "In mode N, Distance3 is a mate in TransferCase.SLDASM that Gear Generator did not make, and it may hold "
+             "the gears where Update SolidWorks would put them, so nothing is changed; in SolidWorks, suppress "
+             "Distance3 in N and press Update SolidWorks again."),
+    (("4H", "N"), "In modes 4H and N, Distance3 is a mate in TransferCase.SLDASM that Gear Generator did not make, and "
+                  "it may hold the gears where Update SolidWorks would put them, so nothing is changed; in SolidWorks, "
+                  "suppress Distance3 in 4H and N and press Update SolidWorks again."),
+])
+def test_a_mate_not_on_record_on_in_a_mode_not_active_refuses_before_anything_is_shown(tc_built, on, said):
+    """The review's case: Distance3, a user's mate, suppressed in 2H (active) and on in N; a workbook change that
+    would show every mode. Refused in the check phase, naming the mate and each mode it is on in; nothing shown,
+    nothing changed, no document marked."""
+    fake, built = tc_built
+    _user_mate(fake, {m: m not in on for m in ("2H", "4H", "N", "4L")})
+    marked = {k for k in fake.touched}
+    with pytest.raises(swbuild.BuildError) as raised:
+        _tc_update(fake, built, wanted_turn=6.0)
+    assert not isinstance(raised.value, swbuild.NotAsBuilt)
+    assert str(raised.value) == said
+    assert not [n for n in names(fake) if n in MODE_CHANGES]
+    assert fake.touched == marked and fake.config == "2H"
+    reads = [a for n, a in fake.calls if n == "mate_suppression" and fake.mate_handles[a[0]] == "Distance3"]
+    assert [a[1] for a in reads] == [("2H",), ("4H",), ("N",), ("4L",)]       # one configuration per call
+
+
+def test_a_mate_not_on_record_suppressed_in_every_mode_is_listed_and_left(tc_built):
+    fake, built = tc_built
+    _user_mate(fake, {m: True for m in ("2H", "4H", "N", "4L")})
+    done = _tc_update(fake, built, wanted_turn=6.0)
+    assert done.ok and done.extra_mates == ["Distance3"], done.log_lines()
+    assert fake.mate("Distance3", TC_ASM).flags == {m: True for m in ("2H", "4H", "N", "4L")}
+    assert "CHECK   suppressed mates Gear Generator did not make, left as they are: Distance3" in done.log_lines()
+    reads = [a[1] for n, a in fake.calls if n == "mate_suppression" and fake.mate_handles[a[0]] == "Distance3"]
+    assert reads == [("2H",), ("4H",), ("N",), ("4L",)]
+
+
+def test_a_mate_not_on_record_on_only_in_a_configuration_that_is_no_mode_does_not_refuse(tc_built):
+    """Exploded is the user's configuration, no mode: J12 reads "in any mode's configuration", so a mate on only there
+    is left, and its flag there is never read."""
+    fake, built = tc_built
+    fake.configs.append("Exploded")
+    _user_mate(fake, {"2H": True, "4H": True, "N": True, "4L": True, "Exploded": False})
+    done = _tc_update(fake, built)
+    assert done.ok and done.extra_mates == ["Distance3"], done.log_lines()
+    assert done.extra_configurations == ["Exploded"]
+    assert not [a for n, a in fake.calls if n == "mate_suppression" and "Exploded" in a[1]]

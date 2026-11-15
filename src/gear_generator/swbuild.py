@@ -4045,6 +4045,34 @@ def _modes_check(sw: SolidWorks, assembly: str, motion: MotionUpdate, result: Ge
     return state
 
 
+def _modes_unknown_mates(sw: SolidWorks, assembly: str, motion: MotionUpdate, result: GearboxUpdate,
+                         state: _ModesState, unknown: Sequence[str]) -> None:
+    """W8-PLAN J12 and §1.10, W5's M7 read in every mode's configuration: each mate in the assembly that is not on
+    record found by name and its flag read in each mode's configuration, one configuration per call
+    (``mate_suppression``, ``IsSuppressed2(3, [name])``, which marks nothing; no configuration shown). One on in any
+    mode refuses the Update before anything is shown or changed, naming the mate and every mode it is on in; one
+    suppressed in every mode's configuration is listed in ``extra_mates`` and left as it is. A configuration the
+    record does not know (the template's ``Default``, a user's ``Exploded``) is no mode and is not read: a mate on
+    only there does not refuse (J12: "an unsuppressed mate not on record in any MODE'S configuration refuses")."""
+    file = _file(assembly)
+    for index, name in enumerate(unknown, 1):
+        handle = f"other{index}"
+        sw.find_mate(handle, name)
+        on_in_modes = []
+        for mode in motion.configurations:
+            configuration = state.names[mode]
+            if not sw.mate_suppression(handle, [configuration])[configuration]:
+                on_in_modes.append(mode)
+        if on_in_modes:
+            listed = on_in_modes[0] if len(on_in_modes) == 1 else \
+                ", ".join(on_in_modes[:-1]) + f" and {on_in_modes[-1]}"
+            where = f"In mode {listed}" if len(on_in_modes) == 1 else f"In modes {listed}"
+            raise BuildError(f"{where}, {name} is a mate in {file} that Gear Generator did not make, and it may hold "
+                             "the gears where Update SolidWorks would put them, so nothing is changed; in "
+                             f"SolidWorks, suppress {name} in {listed} and press Update SolidWorks again.")
+        result.extra_mates.append(name)
+
+
 def _modes_senses(sw: SolidWorks, assembly: str, motion: MotionUpdate, state: _ModesState,
                   mate_handle: Mapping[str, str], axes: Mapping[str, Vec3], origins: Mapping[str, Vec3]) -> None:
     """Every coupling's and spline's sense read in the check phase (§1.10; §9.3: a SPLINE the same way, a COUPLE by
@@ -4508,10 +4536,13 @@ def _update_motion(sw: SolidWorks, parts: Sequence[DocumentValues], layout: Opti
                              f"{'it' if one else 'them'} (a folder of mates, say) has not been settled, so nothing is "
                              f"changed; move the mates out of {listed} in SolidWorks (or delete "
                              f"{'it' if one else 'them'} if empty) and press Update SolidWorks again.")
+        unknown: List[str] = []                          # W8: mates not on record, judged in every mode below
         for state in result.mates:
             if state.name in recorded_names:
                 if state.suppressed:
                     suppressed.append(state.name)
+            elif motion.configurations:
+                unknown.append(state.name)
             elif not state.suppressed:
                 raise BuildError(f"{state.name} is a mate in {_file(assembly)} that Gear Generator did not make, and "
                                  "it may hold the gears where Update SolidWorks would put them, so nothing is "
@@ -4524,6 +4555,7 @@ def _update_motion(sw: SolidWorks, parts: Sequence[DocumentValues], layout: Opti
             # there, so W5's this-configuration D10 list is not used (a per-mode mate off here is right off).
             modes_state = _modes_check(sw, assembly, motion, result,
                                        {m.name: f"mate{i}" for i, m in enumerate(motion.mates, 1)})
+            _modes_unknown_mates(sw, assembly, motion, result, modes_state, unknown)
             suppressed.clear()
         # Every recorded gear mate judged live, as the frames are (a remake lost with an unsaved close leaves the
         # old ratio in SolidWorks whatever the record says).
