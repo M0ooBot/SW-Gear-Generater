@@ -507,13 +507,18 @@ def _sliders(spec: GearboxSpec, report: Report) -> Set[str]:
     return {g.id for g in spec.gears if g.slides.strip() and g.id in report.layout.placed}
 
 
+def slide_places(report: Report, slider: str) -> Tuple[Tuple[str, float], ...]:
+    """``(mode, signed z_front)`` of a slider in every mode of ``report.modes`` (the implicit one's name ``""``),
+    unjudged: the one home of where a slide mate puts its gear, for the plan and for Update's classify."""
+    return tuple((m.name, float((m.placed.get(slider) or report.layout.placed[slider]).origin[2]))
+                 for m in report.modes)
+
+
 def _slide_values(report: Report, slider: str) -> Tuple[Tuple[str, float], ...]:
     """A SLIDE's signed z_front per mode, Modes-sheet order (§9.8: () with no Modes rows); J27 refused here: every
     value non-zero and of one sign, else the gearbox is not built, with W5's answer 3's reason."""
     values = []
-    for m in report.modes:
-        p = m.placed.get(slider) or report.layout.placed[slider]
-        z = float(p.origin[2])
+    for m, (_, z) in zip(report.modes, slide_places(report, slider)):
         if abs(z) < SLIDE_TOLERANCE:
             position = m.positions.get(slider, ("", 0.0))[0]
             raise ValueError(f"{slider}'s position {position} puts its front face on the Front plane, from which a "

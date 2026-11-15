@@ -116,17 +116,6 @@ def test_build_kwargs_passes_modes_only_when_the_plan_has_them():
     assert replace(plan, modes_plan=modes).build_kwargs()["modes"] is modes
 
 
-# -- the sentences: the turning switch is written, the rest refuse until C writes them --------------------------------
-
-def test_the_turning_sentence_is_chosen_by_the_running_versions_finding_and_none_says_neither():
-    assert ui_text.turning_note(True) == "A turn you give the gears in one configuration stays in that configuration."
-    assert ui_text.turning_note(False) == (
-        "A turn you give the gears in one configuration shows in every configuration, so a dog can stand across its "
-        "sleeve in another mode until Update SolidWorks puts the gears back.")
-    assert ui_text.turning_note(None) == ""
-
-
-
 # -- B's planning: the fixtures per mode (W8-PLAN §2.2, §2.3) -------------------------------------------------------
 
 import math  # noqa: E402
@@ -494,3 +483,186 @@ def test_a_mode_named_twice_in_another_case_and_a_position_named_twice_are_error
     said = [d.message for d in problems if d.is_error]
     assert "Modes!A6: the mode 2h is also at Modes!A2 (2H), as mode names are compared ignoring case." in said
     assert any("The position 4WD is named twice." in m for m in said)
+
+
+# -- Update SolidWorks with modes: classify and finish (W8-PLAN §1.10, J14; W8-INTERFACES §9.1, §9.6, §9.9) ----------
+
+from gear_generator.swbuild import GearboxUpdate, LockLink, MeshLink, UpdateResult  # noqa: E402
+from gear_generator.workbook import update  # noqa: E402
+from gear_generator.workbook.model import Mode  # noqa: E402
+
+
+def built_record(make=transfer_case_parallel, spec=None):
+    """The record a first Build leaves, read back from its JSON."""
+    disk = Disk()
+    a = assessed(spec or make())
+    plan = gearbox.plan_gearbox(a, None, exists=disk.exists, read_sidecar=disk.read_sidecar)
+    assert plan.refusal == ""
+    done = gearbox.finish_build(plan, run_modes(plan, disk), None, workbook=BOOK, digest="d1", written_by="test",
+                                read_sidecar=disk.read_sidecar, exists=disk.exists, stamp="2026-11-14T00:00:00Z")
+    return store.link_record_from_json(store.link_record_to_json(done.record))
+
+
+def classify(record, spec):
+    a = assessed(spec)
+    assert a.lay_out_refusal() == ""
+    return update.classify(record, a, exists=lambda p: True)
+
+
+def with_mode(spec, index, **changes):
+    modes = list(spec.modes)
+    modes[index] = replace(modes[index], **changes)
+    return replace(spec, modes=tuple(modes))
+
+
+def with_gear(spec, gear, **changes):
+    return replace(spec, gears=tuple(replace(g, **changes) if g.id == gear else g for g in spec.gears))
+
+
+def finished(up, record, **result):
+    """finish_update on a whole Update (every part reached unchanged), read back from its JSON."""
+    base = dict(parts=[UpdateResult(unchanged=["x"]) for _ in up.parts], layout=UpdateResult(unchanged=["x"]),
+                carriers=[UpdateResult(unchanged=["x"]) for _ in up.carriers])
+    base.update(result)
+    done = update.finish_update(up, GearboxUpdate(**base), record, digest="d2", read_sidecar=lambda p: None,
+                                mtime=lambda p: 5.0)
+    return store.link_record_from_json(store.link_record_to_json(done.record))
+
+
+@pytest.mark.parametrize("make", [transfer_case_parallel, e4_transfer_case])
+def test_an_unchanged_gearbox_with_modes_is_an_update_with_nothing_to_do_and_carries_every_mode(make):
+    record = built_record(make)
+    up = classify(record, make())
+    assert (up.refusal, up.structural, up.replaced, up.modes_changed) == ("", (), (), ())
+    assert up.record_matches and up.drag == tuple(record.gearbox.drag)
+    m = up.motion
+    assert m.configurations == ("2H", "4H", "N", "4L")
+    assert m.slide_values == tuple((n, c, v) for n, vals in (
+        ("RangeSlv along Rear", (46.0, 46.0, 56.0, 66.0)), ("ModeSlv along Rear", (96.0, 106.0, 96.0, 106.0)))
+        for c, v in zip(("2H", "4H", "N", "4L"), vals))
+    assert m.on_sets == (("RangeSlv engages InDog", ("2H", "4H")), ("RangeSlv engages LoDog", ("4L",)),
+                         ("ModeSlv engages FrontDog", ("4H", "4L")))
+    couples = {(l.a, l.b): (l.k, l.modes) for l in m.meshes if l.a.endswith("Slv")}
+    assert couples == {("RangeSlv", "InDog"): (1.0, ("2H", "4H")), ("RangeSlv", "LoDog"): (1.0, ("4L",)),
+                       ("ModeSlv", "FrontDog"): (1.0, ("4H", "4L"))}                    # §9.3: k = σ_S·σ_D
+    assert LockLink("RangeSlv", "ModeSlv", 12.0) in m.locks                             # the spline, every mode
+    by_mode = dict(m.mode_placements)
+    assert [next(p.at for p in by_mode[c] if p.gear == "RangeSlv") for c in m.configurations] == [
+        (0.0, 0.0, z) for z in (46.0, 46.0, 56.0, 66.0)]
+    assert dict(m.recorded_by_mode).keys() == by_mode.keys()
+    assert up.update_kwargs()["motion"] is m
+
+
+def test_a_pick_changed_between_positions_on_record_is_an_update_of_one_value_and_two_flags():
+    """J14's example: 4H's ModeSlv pick 4WD → 2WD sets 4H's value to 96 and takes FrontDog's coupling off in 4H."""
+    record = built_record()
+    spec = with_mode(transfer_case_parallel(), 1, positions=(("RangeSlv", "H"), ("ModeSlv", "2WD")))
+    up = classify(record, spec)
+    assert up.structural == () and up.replaced == ()
+    assert up.modes_changed == ("ModeSlv engages FrontDog", "ModeSlv along Rear") and not up.record_matches
+    assert ("ModeSlv along Rear", "4H", 96.0) in up.motion.slide_values
+    assert dict(up.motion.on_sets)["ModeSlv engages FrontDog"] == ("4L",)
+    box = finished(up, record, placed=[p.gear for p in up.placements]).gearbox
+    mates = {m.name: m for m in box.mates}
+    assert mates["ModeSlv along Rear"].values == {"2H": 96.0, "4H": 96.0, "N": 96.0, "4L": 106.0}
+    assert mates["ModeSlv engages FrontDog"].modes == ["4L"]
+    assert {c.gear: c.frames for c in box.components}["ModeSlv"]["4H"]["at"] == [0.0, 0.0, 96.0]
+    again = classify(finished(up, record), spec)
+    assert again.modes_changed == () and again.record_matches
+
+
+def test_a_slide_offset_moves_the_value_in_every_mode_that_picks_it_and_finish_writes_every_mode():
+    record = built_record()
+    spec = with_gear(transfer_case_parallel(), "RangeSlv", slides="H=-10, N=0, L=+10.5")
+    up = classify(record, spec)
+    assert up.structural == () and up.modes_changed == ("RangeSlv along Rear",)
+    assert ("RangeSlv along Rear", "4L", 66.5) in up.motion.slide_values
+    stopped = finished(up, record, failures=[("x", "it would not")], slid=[("RangeSlv along Rear", "4l", 66.5)])
+    values = {m.name: m.values for m in stopped.gearbox.mates if m.kind == SLIDE}
+    assert values["RangeSlv along Rear"] == {"2H": 46.0, "4H": 46.0, "N": 56.0, "4L": 66.5}   # the record's keys
+    for record_ in (stopped, finished(up, record)):         # never partial: a value for every mode (§1.11)
+        box = record_.gearbox
+        assert all(set(m.values) == set(box.modes) for m in box.mates if m.kind == SLIDE)
+
+
+def test_modes_reordered_change_nothing_and_the_record_keeps_its_order():
+    """§9.9."""
+    record = built_record()
+    spec = transfer_case_parallel()
+    turned = replace(spec, modes=tuple(reversed(spec.modes)))
+    up = classify(record, turned)
+    assert (up.structural, up.replaced, up.modes_changed) == ((), (), ()) and up.record_matches
+    assert up.motion.configurations == ("2H", "4H", "N", "4L")
+    assert finished(up, record).gearbox.modes == ["2H", "4H", "N", "4L"]
+
+
+def test_a_mode_renamed_by_case_only_is_the_same_configuration():
+    """§9.6: the record keeps 4L; the workbook's 4l is the same configuration, so nothing changes."""
+    record = built_record()
+    up = classify(record, lower_4l(transfer_case_parallel()))
+    assert (up.structural, up.replaced, up.modes_changed) == ((), (), ())
+    box = finished(up, record).gearbox
+    assert box.modes == ["2H", "4H", "N", "4L"] and {m.name: m.modes for m in box.mates}[
+        "RangeSlv engages LoDog"] == ["4L"]
+
+
+def test_a_record_spelt_in_another_case_than_the_workbook_updates_and_reads_back_clean(tmp_path):
+    """The coordinator's end to end case: the workbook says 4l and l, the record keeps them; an Update after it
+    whose edit moves 4l's place writes under the record's own spelling, and the record reads back clean."""
+    record = built_record(spec=lower_4l(transfer_case_parallel()))
+    spec = with_gear(lower_4l(transfer_case_parallel()), "RangeSlv", slides="H=-10, N=0, L=+10.5")
+    up = classify(record, with_mode(spec, 3, name="4L"))
+    assert up.structural == () and ("RangeSlv along Rear", "4l", 66.5) in up.motion.slide_values
+    box = finished(up, record).gearbox
+    assert box.modes == ["2H", "4H", "N", "4l"]
+    assert {m.name: m.values for m in box.mates}["RangeSlv along Rear"]["4l"] == 66.5
+    assert all(set(m.modes) <= set(box.modes) for m in box.mates)
+
+
+@pytest.mark.parametrize("change, said", [
+    (lambda s: replace(s, modes=s.modes + (Mode("4X", (("RangeSlv", "L"), ("ModeSlv", "2WD")), row=6),)),
+     "The Modes sheet has a new mode, 4X, and each mode's configuration is made when the assembly is built, so it "
+     "needs a new revision."),
+    (lambda s: replace(s, modes=s.modes[:3]),
+     "The mode 4L is no longer on the Modes sheet, and a configuration is not taken out of the assembly that was "
+     "built, so it needs a new revision."),
+    (lambda s: with_mode(s, 3, positions=(("RangeSlv", "N"), ("ModeSlv", "4WD"))),
+     "No mode engages LoDog with RangeSlv now, and the mate RangeSlv engages LoDog, made to be on in some modes, is "
+     "never left on in none, so it needs a new revision."),
+    (lambda s: with_mode(with_gear(s, "ModeSlv", slides="2WD=0, 4WD=+10, X=-30"), 0,
+                         positions=(("RangeSlv", "N"), ("ModeSlv", "X"))),
+     "In 2H ModeSlv would now cover LoDog, which no mode engaged when the assembly was built, so it needs a new "
+     "revision."),
+    (lambda s: with_gear(with_gear(with_gear(s, "InPin", at="-20"), "LayGear", at="-20"), "RangeSlv",
+                         slides="H=-56, N=0, L=+10"),
+     "RangeSlv at its position H (-56 mm) in 2H would stand with its front face onto the Front plane (z 46 → 0), "
+     "from which the slide mate RangeSlv along Rear is measured, so it needs a new revision."),
+])
+def test_what_an_update_cannot_carry_is_said_once_naming_the_edit(change, said):
+    """J14's structural cases, §9.1's exact edit among them (LoDog engaged in no mode: its coupling would be on in
+    none, and finish_update would otherwise write [] — on in every mode, both dogs engaged in 2H)."""
+    record = built_record()
+    up = classify(record, change(transfer_case_parallel()))
+    assert said in up.structural, up.structural
+    assert up.needs_new_revision
+
+
+def test_a_bad_slide_spline_or_coupling_on_record_is_refused_with_a_sentence():
+    record = built_record()
+    for kind, field_, value, part in (("slide", "shaft", "", "with no shaft"),
+                                      ("slide", "values", {"2H": 0.0}, "holds a distance other than 0"),
+                                      ("couple", "gears", ["RangeSlv"], "with 1 gear where a couple mate holds 2"),
+                                      ("spline", "sense", 2, "with the sense 2")):
+        broken = store.link_record_from_json(store.link_record_to_json(record))
+        entry = next(m for m in broken.gearbox.mates if m.kind == kind)
+        setattr(entry, field_, value)
+        assert part in update._bad_mates(broken.gearbox), (kind, field_)
+    assert update._bad_mates(record.gearbox) == ""
+
+
+def test_a_static_record_meeting_modes_is_built_again():
+    a = assessed(transfer_case_parallel())
+    record = built_record()
+    record.gearbox.kind = motion.STATIC
+    up = update.classify(record, a, exists=lambda p: True)
+    assert update._STATIC_MODES in up.structural

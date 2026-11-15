@@ -53,8 +53,8 @@ from ..gears import bevel, equations, kind_for
 from ..gears.base import GlobalVariable
 from ..spec import GearSpec, InputError
 from ..store import GearboxRecord, LinkRecord, MateEntry, PartEntry, ShaftEntry, Sidecar
-from ..swbuild import (POSE_TOLERANCE, DocumentValues, GearboxUpdate, MotionUpdate, Placement, _caps_with_arc,
-                       same_frame, structural_change)
+from ..swbuild import (POSE_TOLERANCE, DocumentValues, GearboxUpdate, LockLink, MeshLink, MotionUpdate, Placement,
+                       _caps_with_arc, on_in, same_frame, structural_change)
 from . import gearbox, geometry, layout, motion, planetary, schema
 from .assess import Assessment
 from .build import PartJob
@@ -134,6 +134,10 @@ class UpdatePlan:
     carriers_moved: Tuple[str, ...] = ()
     # W7 (Agent B, additive, as ``shafts`` is): the carriers as now laid out, for the record a finish writes.
     carrier_layouts: Tuple[Any, ...] = ()
+    # W8 (B, additive): the slide mates whose value in some configuration, and the couplings and sliding meshes whose
+    # on-set, the workbook now changes (J14) — so ``record_matches`` is False; the sentence reads
+    # ``motion.slide_values`` and ``on_sets`` against the record's mates.
+    modes_changed: Tuple[str, ...] = ()
 
     @property
     def changed_parts(self) -> Tuple[PartUpdate, ...]:
@@ -147,7 +151,8 @@ class UpdatePlan:
     @property
     def record_matches(self) -> bool:
         """Nothing on record differs from the workbook (the worker still compares live)."""
-        return not (self.changed_parts or self.moved_shafts or self.replaced or self.needs_new_revision)
+        return not (self.changed_parts or self.moved_shafts or self.replaced or self.needs_new_revision
+                    or self.modes_changed)
 
     def update_kwargs(self) -> Dict[str, Any]:
         """The arguments of ``swbuild.update_gearbox(session, **plan.update_kwargs())``. Never called on a plan
@@ -492,8 +497,12 @@ def classify(record: Optional[LinkRecord], a: Assessment, *,
         assembly = box.assembly
         if not exists(assembly):
             missing.append(assembly)
-        wanted = layout.frames(a.report)
         placed = a.report.layout.placed
+        # W8: with modes, the frames wanted in the configuration the assembly was saved in (the record's first mode,
+        # found ignoring case), which is what ``ComponentEntry.rotation`` / ``at`` hold; else the one layout's.
+        by_mode = _wanted_by_mode(box, a)
+        wanted = by_mode[box.modes[0]] if box.modes and box.modes[0] in by_mode else layout.frames(a.report)
+        sliding = _recorded_sliders(box)
         # W7 (W7-INTERFACES §6.4): each carrier is a placement too, pitch 0, its frame as the carrier part goes now.
         carrier_frames = _carrier_frames(a)
         for entry in box.carriers:
@@ -509,20 +518,31 @@ def classify(record: Optional[LinkRecord], a: Assessment, *,
                 continue
             f, step = wanted[c.gear], layout.pitch(placed[c.gear])
             placements.append(Placement(c.gear, c.name, f.rotation, f.at, step))
-            if not (c.rotation and c.at and same_frame(c.rotation, c.at, f.rotation, f.at, step)):
+            # W8: a slider's place along its shaft is its slide mate's value, set per configuration (J14), never a
+            # put: it is re-placed only when its frame differs otherwise.
+            at = list(c.at)
+            if c.gear in sliding and len(at) == 3:
+                at[2] = f.at[2]
+            if not (c.rotation and c.at and same_frame(c.rotation, at, f.rotation, f.at, step)):
                 replaced.append(c.gear)
 
     turn = _Turning()
+    modal = _Modes()
     if turning:
         turn = _turning(box, entries, a, shafts)
         structural.extend(turn.structural)
+        modal = _modes(box, a, turn, placements)
+        structural.extend(modal.structural)
+    elif box is not None and (spec.modes or _slider_ids(a)):
+        structural.append(_STATIC_MODES)
 
     if box is None:
         carrier_values, carriers_moved = (), ()
     return UpdatePlan(parts=tuple(parts), layout=layout_values, assembly=assembly, placements=tuple(placements),
                       moved_shafts=tuple(moved), replaced=tuple(replaced), structural=tuple(structural),
                       missing=tuple(dict.fromkeys(missing)), unsaved=tuple(record.current_marks(record.unsaved)),
-                      shafts=shafts, motion=turn.motion, axial=turn.axial, ratios=turn.ratios, drag=turn.drag,
+                      shafts=shafts, motion=modal.motion or turn.motion, axial=turn.axial, ratios=turn.ratios,
+                      drag=turn.drag, modes_changed=modal.changed,
                       resensed=turn.resensed, carriers=tuple(carrier_values), carriers_moved=tuple(carriers_moved),
                       carrier_layouts=_carrier_layouts_on_record(box, a))
 
@@ -721,7 +741,10 @@ def _bad_mates(box: GearboxRecord) -> str:
     """A refusal sentence for the first mate on record Update cannot act on — a kind the app does not make, the
     wrong number of gears for its kind, no name, an axis or along mate with no shaft, a mesh whose ratio is not
     two whole tooth counts, an along mate whose distance is not a number, or a gear not in the assembly on record
-    — else ``""``. A hand-edited or damaged record is refused with a sentence, never an IndexError."""
+    — else ``""``. A hand-edited or damaged record is refused with a sentence, never an IndexError.
+
+    W8: a slide mate holds one gear and names its shaft, as an axis mate does, and its places are numbers other than
+    0; a spline or coupling holds two gears and a sense, as a mesh does; an on-set is a list of names."""
     known = {c.gear for c in box.components} | {layout.carrier_id(c.shaft) for c in box.carriers if c.shaft}
     tail = (", so Update SolidWorks cannot act on the gearbox the record describes: Build again… makes a new revision "
             "from the workbook instead.")
@@ -733,15 +756,24 @@ def _bad_mates(box: GearboxRecord) -> str:
         if kind not in motion.MATE_KINDS:
             article = "an" if str(kind)[:1].lower() in "aeiou" else "a"
             return f"{label} as {article} {kind!r} mate, which is not a kind of mate the app makes{tail}"
-        want = 1 if kind in (motion.AXIS, motion.ALONG) else 2
+        one_gear = (motion.AXIS, motion.ALONG, motion.SLIDE)          # W8: a slide holds its slider alone
+        want = 1 if kind in one_gear else 2
         gears = list(entry.gears) if isinstance(entry.gears, (list, tuple)) else []
         if len(gears) != want or not all(isinstance(g, str) and g for g in gears):
             return (f"{label} with {len(gears)} gear{'' if len(gears) == 1 else 's'} where a {kind} mate holds "
                     f"{want}{tail}")
         if not name:
             return f"{label}, and Update SolidWorks finds each mate by its name{tail}"
-        if kind in (motion.AXIS, motion.ALONG) and not (isinstance(entry.shaft, str) and entry.shaft):
+        if kind in one_gear and not (isinstance(entry.shaft, str) and entry.shaft):
             return f"{label} with no shaft, where a {kind} mate names the shaft it holds its gear to{tail}"
+        values = getattr(entry, "values", {}) or {}
+        if kind == motion.SLIDE and not (isinstance(values, dict) and all(
+                isinstance(k, str) and k and _number_or_none(v) for k, v in values.items())):
+            return (f"{label} with the places {values!r}, where a slide mate holds a distance other than 0 for each "
+                    f"mode{tail}")
+        on_set = getattr(entry, "modes", []) or []
+        if not (isinstance(on_set, (list, tuple)) and all(isinstance(m, str) and m for m in on_set)):
+            return f"{label} on in {on_set!r}, where a mate is on in modes named on the Modes sheet{tail}"
         if kind == motion.ALONG and _number_or_none(entry.z_front) is None:
             return f"{label} with the distance {entry.z_front!r}, which is not a number{tail}"
         plane = getattr(entry, "plane", motion.FRONT_PLANE)
@@ -749,7 +781,8 @@ def _bad_mates(box: GearboxRecord) -> str:
             return (f"{label} measured from the plane {plane!r}, where an along mate is measured from the Front, Top "
                     f"or Right plane{tail}")
         sense = getattr(entry, "sense", 0)
-        if kind == motion.MESH and (isinstance(sense, bool) or sense not in (-1, 0, 1)):
+        if kind in (motion.MESH, motion.COUPLE, motion.SPLINE) and (isinstance(sense, bool)
+                                                                      or sense not in (-1, 0, 1)):
             return f"{label} with the sense {sense!r}, where a gear mate's sense is -1 or +1{tail}"
         if kind == motion.MESH:
             ratio = list(entry.ratio) if isinstance(entry.ratio, (list, tuple)) else []
@@ -1184,6 +1217,217 @@ def _turning(box: GearboxRecord, entries: Sequence[PartEntry], a: Assessment,
     return out
 
 
+# -- W8: a gearbox with modes on record (W8-PLAN §1.10, J14; W8-INTERFACES §9.1, §9.6, §9.9) -----------------------
+
+_NEW_REVISION = "so it needs a new revision"
+_STATIC_MODES = ("The workbook has modes or sliding gears now, and the gearbox on record was built static, while a "
+                 "gearbox with modes is built to turn with a configuration per mode, so it needs building again.")
+
+
+def _conf(configurations: Sequence[str], name: str) -> Optional[str]:
+    """The configuration of ``configurations`` (the record's spelling) that the mode ``name`` is, compared as
+    SolidWorks compares configuration names (``swbuild.on_in``, W8-INTERFACES §9.6), else None."""
+    return next((c for c in configurations if on_in((c,), name)), None)
+
+
+def _slider_ids(a: Assessment) -> List[str]:
+    """The gears that slide in the new read, Gears-sheet order."""
+    moving = {g for m in a.report.modes for g in m.positions}
+    return [g.id for g in a.spec.gears if g.id in moving]
+
+
+def _recorded_sliders(box: GearboxRecord) -> List[str]:
+    return [m.gears[0] for m in box.mates if m.kind == motion.SLIDE and m.gears]
+
+
+def _wanted_by_mode(box: GearboxRecord, a: Assessment) -> Dict[str, Dict[str, Any]]:
+    """Each configuration on record (its own spelling) -> every gear's frame wanted there now
+    (``layout.frames_by_mode``), for the modes the new read still has."""
+    if not box.modes:
+        return {}
+    out = {}
+    for name, frames in layout.frames_by_mode(a.report).items():
+        conf = _conf(box.modes, name)
+        if conf is not None:
+            out[conf] = frames
+    return out
+
+
+def _per_mode(mates: Sequence[Any]) -> List[Any]:
+    """The mates on in some modes only: every coupling, and each sliding mesh (a MESH with an on-set)."""
+    return [m for m in mates if m.kind == motion.COUPLE or (m.kind == motion.MESH and m.modes)]
+
+
+@dataclass
+class _Modes:
+    """What :func:`_modes` found: sentences for a new revision, the motion path's W8 fields, and the mates whose
+    values or on-sets change."""
+
+    structural: List[str] = field(default_factory=list)
+    motion: Optional[MotionUpdate] = None
+    changed: Tuple[str, ...] = ()
+
+
+def _modes(box: GearboxRecord, a: Assessment, turn: _Turning, placements: Sequence[Placement]) -> _Modes:
+    """J14 on a gearbox built to turn: are all the mates the new read's modes need already on record? One SLIDE per
+    slider, and each coupling and sliding mesh some mode engages, with the same gears (the new plan's own, from
+    ``motion.motion_plan``: one home for which mate each mode needs, J15's loop-closers included).
+
+    **Structural**: Modes rows added, removed or renamed; a gear that slides now or no longer does; a mode whose
+    slide value would reach or cross the Front plane (J27, naming the position); a coupling or sliding mesh some mode
+    needs that is not on record; one on record that would be on in no mode (§9.1: never written as ``[]``); with no
+    Modes rows, a slider's place moving. **An Update**: a slide value per configuration, an on-set changed between
+    mates on record. The Modes rows reordered change nothing (§9.9): configurations stay in the record's order and
+    spelling, and names compare through ``swbuild.on_in`` (§9.6)."""
+    out = _Modes()
+    spec, report = a.spec, a.report
+    slides = [m for m in box.mates if m.kind == motion.SLIDE and m.gears]
+    per_mode = _per_mode(box.mates)
+    now_sliders = _slider_ids(a)
+    if not (box.modes or slides or per_mode or spec.modes or now_sliders):
+        return out                                 # W7's path, untouched
+    names = [m.name for m in report.modes if m.name]
+    added = [n for n in names if _conf(box.modes, n) is None]
+    gone = [c for c in box.modes if _conf(names, c) is None]
+    if added:
+        out.structural.append(f"The Modes sheet has {'a new mode' if len(added) == 1 else 'new modes'}, "
+                              f"{_names(added)}, and each mode's configuration is made when the assembly is built, "
+                              f"{_NEW_REVISION}.")
+    if gone:
+        out.structural.append(f"The {_plural(gone, 'mode', 'modes')} {_names(gone)} {_is(gone)} no longer on the Modes "
+                              f"sheet, and a configuration is not taken out of the assembly that was built, "
+                              f"{_NEW_REVISION}.")
+    ids = {g.id for g in spec.gears}
+    recorded = _recorded_sliders(box)
+    new_s = [g for g in now_sliders if g not in recorded]
+    gone_s = [g for g in recorded if g not in now_sliders and g in ids]
+    if new_s:
+        out.structural.append(f"{_names(new_s)} {_plural(new_s, 'slides', 'slide')} now, and a slide mate is made when "
+                              f"the assembly is built, {_NEW_REVISION}.")
+    if gone_s:
+        out.structural.append(f"{_names(gone_s)} no longer {_plural(gone_s, 'slides', 'slide')}, and "
+                              f"{_plural(gone_s, 'its slide mate is', 'their slide mates are')} not taken out of the "
+                              f"assembly that was built, {_NEW_REVISION}.")
+    if out.structural or turn.motion is None or any(g not in ids for g in recorded):
+        return out
+    places = {s: motion.slide_places(report, s) for s in recorded}
+    if not box.modes:
+        # §9.8: sliders with no Modes rows, one configuration; their slide mates' distances are not reset by Update.
+        for m in slides:
+            z = places[m.gears[0]][0][1] if places[m.gears[0]] else None
+            if z is not None and abs(z - float(m.z_front)) > MOVE_TOLERANCE:
+                out.structural.append(f"{m.gears[0]}'s front face moves along {m.shaft} (z {_number(float(m.z_front))} "
+                                      f"→ {_number(z)}), and with no Modes rows Update SolidWorks does not set a slide "
+                                      f"mate's distance, {_NEW_REVISION}.")
+        return out
+    for m in slides:                               # J27, naming the position
+        slider = m.gears[0]
+        sign = next((1 if float(v) > 0 else -1 for v in m.values.values() if _number_or_none(v)), 1)
+        for mode, z in places[slider]:
+            if abs(z) >= motion.SLIDE_TOLERANCE and (z > 0) == (sign > 0):
+                continue
+            conf = _conf(box.modes, mode)
+            old = next((float(v) for k, v in m.values.items() if k == conf), None)
+            position, offset = next((x.positions.get(slider, ("", 0.0)) for x in report.modes if x.name == mode))
+            where = "onto" if abs(z) < motion.SLIDE_TOLERANCE else "across"
+            was = f"z {_number(old)} → {_number(z)}" if old is not None else f"z {_number(z)}"
+            out.structural.append(f"{slider} at its position {position} ({_number(offset)} mm) in {mode} would stand "
+                                  f"with its front face {where} the Front plane ({was}), from which the slide mate "
+                                  f"{m.name} is measured, {_NEW_REVISION}.")
+            break
+    if out.structural:
+        return out
+    try:
+        plan = motion.motion_plan(spec, report, layout.frames(report))
+    except ValueError as exc:
+        out.structural.append(str(exc))
+        return out
+
+    def key(m: Any) -> Tuple[str, frozenset]:
+        return m.kind, frozenset(m.gears)
+    wanted = {key(m): m for m in _per_mode(plan.mates)}
+    on_record = {key(m) for m in per_mode}
+    for k, m in wanted.items():
+        if k in on_record:
+            continue
+        first, (x, y) = m.modes[0] if m.modes else "", m.gears
+        if m.kind == motion.COUPLE:
+            out.structural.append(f"In {first} {x} would now cover {y}, which no mode engaged when the assembly was "
+                                  f"built, {_NEW_REVISION}.")
+        else:
+            out.structural.append(f"In {first} {x} would now mesh with {y}, which no mode meshed when the assembly "
+                                  f"was built, {_NEW_REVISION}.")
+    on_sets: List[Tuple[str, Tuple[str, ...]]] = []
+    changed: List[str] = []
+    for m in per_mode:
+        now = wanted.get(key(m))
+        if now is None:                            # §9.1: never on in no mode
+            x, y = m.gears
+            verb = "engages" if m.kind == motion.COUPLE else "meshes"
+            out.structural.append(f"No mode {verb} {y} with {x} now, and the mate {m.name}, made to be on in some "
+                                  f"modes, is never left on in none, {_NEW_REVISION}.")
+            continue
+        want = tuple(c for c in box.modes if any(on_in((c,), n) for n in now.modes))
+        on_sets.append((m.name, want))
+        if set(want) != {c for c in box.modes if on_in(tuple(m.modes), c)}:
+            changed.append(m.name)
+    if out.structural:
+        return out
+    slide_values: List[Tuple[str, str, float]] = []
+    for m in slides:
+        held = {k: abs(float(v)) for k, v in m.values.items()}
+        moved = False
+        for conf in box.modes:
+            z = abs(next(v for mode, v in places[m.gears[0]] if on_in((conf,), mode)))
+            slide_values.append((m.name, conf, z))
+            had = next((v for k, v in held.items() if on_in((conf,), k)), None)
+            moved = moved or had is None or abs(had - z) > MOVE_TOLERANCE
+        if moved:
+            changed.append(m.name)
+
+    # The links: a sliding mesh holds in its wanted on-set; a coupling is a MeshLink with k = σ_S·σ_D (§9.3), turns
+    # relative to nothing, pitch the dog's; a spline is a LockLink, on in every configuration.
+    placed = report.layout.placed
+    want_of = dict(on_sets)
+    had_of = {m.name: tuple(m.modes) for m in per_mode}
+    names_of = {frozenset(m.gears): m.name for m in per_mode if m.kind == motion.MESH}
+
+    def with_modes(links: Sequence[MeshLink], modes_of: Mapping[str, Tuple[str, ...]]) -> Tuple[MeshLink, ...]:
+        return tuple(replace(link, modes=modes_of[names_of[frozenset((link.a, link.b))]])
+                     if frozenset((link.a, link.b)) in names_of else link for link in links)
+    couples = [m for m in per_mode if m.kind == motion.COUPLE]
+
+    def couple_links(modes_of: Mapping[str, Tuple[str, ...]]) -> Tuple[MeshLink, ...]:
+        return tuple(MeshLink(s, d, float(placed[s].sigma * placed[d].sigma), layout.pitch(placed[d]),
+                              modes=modes_of[m.name]) for m in couples for s, d in (m.gears,))
+    splines = tuple(LockLink(m.gears[0], m.gears[1], layout.pitch(placed[m.gears[1]]))
+                    for m in box.mates if m.kind == motion.SPLINE)
+    by_mode = _wanted_by_mode(box, a)
+    components = {c.gear: c for c in box.components}
+
+    def recorded_in(conf: str, p: Placement) -> Placement:
+        c = components.get(p.gear)
+        frame = next((f for k, f in (c.frames.items() if c is not None else ()) if on_in((conf,), k)), None)
+        if not frame:
+            return p
+        return replace(p, rotation=tuple(float(v) for v in frame["rotation"]), at=tuple(float(v) for v in frame["at"]))
+    out.motion = replace(
+        turn.motion,
+        meshes=with_modes(turn.motion.meshes, want_of) + couple_links(want_of),
+        recorded_meshes=with_modes(turn.motion.recorded_meshes, had_of) + couple_links(had_of),
+        locks=turn.motion.locks + splines,
+        configurations=tuple(box.modes),
+        mode_placements=tuple((conf, tuple(replace(p, rotation=by_mode[conf][p.gear].rotation,
+                                                   at=by_mode[conf][p.gear].at) if p.gear in by_mode[conf] else p
+                                           for p in placements)) for conf in box.modes),
+        recorded_by_mode=tuple((conf, tuple(recorded_in(conf, p) for p in turn.motion.recorded))
+                               for conf in box.modes),
+        slide_values=tuple(slide_values),
+        on_sets=tuple(on_sets))
+    out.changed = tuple(changed)
+    return out
+
+
 def finish_update(plan: UpdatePlan, result: GearboxUpdate, record: LinkRecord, *, digest: str,
                   read_sidecar: Callable[[str], Optional[Sidecar]] = store.read_sidecar,
                   mtime: Callable[[str], float] = os.path.getmtime,
@@ -1314,6 +1558,7 @@ def finish_update(plan: UpdatePlan, result: GearboxUpdate, record: LinkRecord, *
         if turning:
             _follow_trains(box, plan, result, held)
             _follow_mates(box, plan, result)
+            _follow_modes(box, plan, result)
             box.drag = list(plan.drag)
         _follow_carriers(box, plan, result)
         out.earlier_update = _earlier_update(record, plan, result, mtime)
@@ -1496,6 +1741,66 @@ def _follow_mates(box: GearboxRecord, plan: UpdatePlan, result: GearboxUpdate) -
                 entry.gears[0] in moved or planetary.copy_of(entry.gears[0])[0] in moved):   # W7: by row (§6.7)
             index = motion._PLANE_INDEX.get(entry.plane or motion.FRONT_PLANE, 2)
             entry.z_front = float(at[entry.gears[0]][index])
+
+
+def _follow_modes(box: GearboxRecord, plan: UpdatePlan, result: GearboxUpdate) -> None:
+    """W8 (W8-PLAN §1.10's ``finish_update``): each SLIDE entry's values follow the values set, each coupling's and
+    sliding mesh's ``modes`` the flags set, and each component's per-mode frames what was put there. An Update that
+    ran whole with no failure takes the plan's own (the worker left a value, a flag or a frame alone only because it
+    already held it); one that stopped takes only what it reports set (``slid``, ``unsuppressed_in`` /
+    ``suppressed_in``, ``put_in`` with ``placed``). Keys keep the record's spelling and ``GearboxRecord.modes`` is
+    never reordered (§9.6, §9.9). A slide keeps a value for every mode, and an on-set is never written ``[]``
+    (§9.1): a flag set that would leave a mate on in no mode keeps the on-set it had."""
+    motion_ = plan.motion
+    if motion_ is None or not motion_.configurations or not box.modes:
+        return
+    whole = not (result.failures or result.skipped)
+    confs = list(box.modes)
+
+    def own(name: str) -> Optional[str]:
+        return _conf(confs, name)
+    slides = {m.name: m for m in box.mates if m.kind == motion.SLIDE}
+    set_values = list(motion_.slide_values) if whole else list(getattr(result, "slid", []) or [])
+    for name, conf, value in set_values:
+        entry, key = slides.get(name), own(conf)
+        if entry is None or key is None:
+            continue
+        sign = next((1.0 if float(v) > 0 else -1.0 for v in entry.values.values() if float(v)), 1.0)
+        values = {own(k) or k: float(v) for k, v in entry.values.items()}
+        values[key] = sign * abs(float(value))
+        entry.values = {c: values[c] for c in confs if c in values}
+        if confs[0] in entry.values:
+            entry.z_front = entry.values[confs[0]]
+    per_mode = {m.name: m for m in _per_mode(box.mates)}
+    if whole:
+        wanted = {name: list(on) for name, on in motion_.on_sets}
+    else:
+        wanted = {name: [c for c in confs if on_in(tuple(m.modes), c)] for name, m in per_mode.items()}
+        for name, conf in getattr(result, "unsuppressed_in", []) or []:
+            key = own(conf)
+            if name in wanted and key is not None and key not in wanted[name]:
+                wanted[name].append(key)
+        for name, conf in getattr(result, "suppressed_in", []) or []:
+            key = own(conf)
+            if name in wanted and key in wanted[name]:
+                wanted[name].remove(key)
+    for name, on in wanted.items():
+        entry = per_mode.get(name)
+        if entry is not None and on:
+            entry.modes = [c for c in confs if c in on]
+    put = {own(c) for c in getattr(result, "put_in", []) or []} - {None}
+    placed = set(result.placed)
+    for conf, placements in motion_.mode_placements:
+        key = own(conf)
+        if key is None:
+            continue
+        for p in placements:
+            component = next((c for c in box.components if c.gear == p.gear), None)
+            if component is None or not (whole or (key in put and p.gear in placed)):
+                continue
+            frames = {own(k) or k: f for k, f in component.frames.items()}
+            frames[key] = {"rotation": [float(v) for v in p.rotation], "at": [float(v) for v in p.at]}
+            component.frames = {c: frames[c] for c in confs if c in frames}
 
 
 def _in(path: str, paths) -> bool:
