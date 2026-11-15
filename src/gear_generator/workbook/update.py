@@ -55,7 +55,7 @@ from ..spec import GearSpec, InputError
 from ..store import GearboxRecord, LinkRecord, MateEntry, PartEntry, ShaftEntry, Sidecar
 from ..swbuild import (POSE_TOLERANCE, DocumentValues, GearboxUpdate, MotionUpdate, Placement, _caps_with_arc,
                        same_frame, structural_change)
-from . import gearbox, geometry, layout, motion, schema
+from . import gearbox, geometry, layout, motion, planetary, schema
 from .assess import Assessment
 from .build import PartJob
 from .gearbox import Finished
@@ -132,6 +132,8 @@ class UpdatePlan:
     # and the carriers whose planet axes move (for the sentence). Empty with no planetary stage.
     carriers: Tuple[DocumentValues, ...] = ()
     carriers_moved: Tuple[str, ...] = ()
+    # W7 (Agent B, additive, as ``shafts`` is): the carriers as now laid out, for the record a finish writes.
+    carrier_layouts: Tuple[Any, ...] = ()
 
     @property
     def changed_parts(self) -> Tuple[PartUpdate, ...]:
@@ -385,10 +387,12 @@ def classify(record: Optional[LinkRecord], a: Assessment, *,
     structural: List[str] = []
     missing: List[str] = []
 
-    # Gears, shafts and meshes added, removed or renamed.
+    # Gears, shafts and meshes added, removed or renamed. W7: a copy is compared through the row it is of
+    # (``ComponentEntry.of``), and a change in the number of copies is said once (W7-PLAN §2.10).
     if box is not None:
-        recorded = [c.gear for c in box.components]
+        recorded = list(dict.fromkeys(c.of or c.gear for c in box.components))
         current = [g.id for g in spec.gears]
+        structural.extend(_planetary_structural(box, a))
     else:
         recorded = [g for p in entries for g in p.gears]
         current = [g.id for g in spec.gears if g.id in job_of]
@@ -448,6 +452,13 @@ def classify(record: Optional[LinkRecord], a: Assessment, *,
             return UpdatePlan(refusal=str(exc))
         if not exists(box.layout):
             missing.append(box.layout)
+        # W7 (W7-INTERFACES §6.3): every carrier part on record, always, with the globals it should hold now.
+        try:
+            carrier_values, carriers_moved, carrier_why = _carrier_parts(box, a)
+        except ValueError as exc:
+            return UpdatePlan(refusal=str(exc))
+        structural.extend(carrier_why)
+        missing.extend(c.path for c in box.carriers if not exists(c.path))
 
     # The parts, each against the part its gears now want.
     parts: List[PartUpdate] = []
@@ -483,6 +494,16 @@ def classify(record: Optional[LinkRecord], a: Assessment, *,
             missing.append(assembly)
         wanted = layout.frames(a.report)
         placed = a.report.layout.placed
+        # W7 (W7-INTERFACES §6.4): each carrier is a placement too, pitch 0, its frame as the carrier part goes now.
+        carrier_frames = _carrier_frames(a)
+        for entry in box.carriers:
+            f = carrier_frames.get(entry.shaft)
+            if f is None:
+                continue
+            cid = layout.carrier_id(entry.shaft)
+            placements.append(Placement(cid, entry.component, f.rotation, f.at, 0.0))
+            if not (entry.rotation and entry.at and same_frame(entry.rotation, entry.at, f.rotation, f.at, 0.0)):
+                replaced.append(cid)
         for c in box.components:
             if c.gear not in wanted:
                 continue
@@ -496,11 +517,130 @@ def classify(record: Optional[LinkRecord], a: Assessment, *,
         turn = _turning(box, entries, a, shafts)
         structural.extend(turn.structural)
 
+    if box is None:
+        carrier_values, carriers_moved = (), ()
     return UpdatePlan(parts=tuple(parts), layout=layout_values, assembly=assembly, placements=tuple(placements),
                       moved_shafts=tuple(moved), replaced=tuple(replaced), structural=tuple(structural),
                       missing=tuple(dict.fromkeys(missing)), unsaved=tuple(record.current_marks(record.unsaved)),
                       shafts=shafts, motion=turn.motion, axial=turn.axial, ratios=turn.ratios, drag=turn.drag,
-                      resensed=turn.resensed)
+                      resensed=turn.resensed, carriers=tuple(carrier_values), carriers_moved=tuple(carriers_moved),
+                      carrier_layouts=_carrier_layouts_on_record(box, a))
+
+
+# -- W7: a planetary stage on record (W7-PLAN §2.10; W7-INTERFACES §6.1, §6.3, §6.4) ------------------------------
+
+def _carrier_layouts_on_record(box: Optional[GearboxRecord], a: Assessment) -> Tuple[Any, ...]:
+    if box is None or not box.carriers:
+        return ()
+    try:
+        current = {c.shaft: c for c in layout.carrier_layouts(a.spec, a.report)}
+    except ValueError:
+        return ()
+    return tuple(current[c.shaft] for c in box.carriers if c.shaft in current)
+
+
+def _carrier_frames(a: Assessment) -> Dict[str, Any]:
+    """Each carrier part's frame as the rows now put it (``layout.carrier_frame``), by carrier shaft."""
+    try:
+        return {c.shaft: layout.carrier_frame(c) for c in layout.carrier_layouts(a.spec, a.report)}
+    except ValueError:
+        return {}
+
+
+def _recorded_carrier_layout(entry: Any) -> Any:
+    from .layout import CarrierLayout
+    return CarrierLayout(entry.shaft, 0.0, 0.0, 0.0, tuple(entry.direction or (0.0, 0.0, 1.0)),
+                         tuple(ShaftLayout(**asdict(axis)) for axis in entry.axes))
+
+
+def _carrier_parts(box: GearboxRecord, a: Assessment) -> Tuple[List[DocumentValues], List[str], List[str]]:
+    """``(every carrier part on record with the globals and features it should hold now, the carriers whose planet
+    axes move, the structural sentences)``: a copy's coordinate changing side of the carrier part's base plane, or
+    reaching or leaving it, is structural as the layout's is (``OFFSET_GLOBAL_CROSSES_ZERO`` False); any other move
+    of a planet on its carrier is a value Update of the carrier part. A carrier no longer one is said by
+    :func:`_planetary_structural`."""
+    if not box.carriers:
+        return [], [], []
+    current = {c.shaft: c for c in layout.carrier_layouts(a.spec, a.report)}
+    values: List[DocumentValues] = []
+    moved: List[str] = []
+    why: List[str] = []
+    for entry in box.carriers:
+        now = current.get(entry.shaft)
+        if now is None:
+            continue
+        drawn = layout.carrier_shafts(now)
+        was = layout.carrier_shafts(_recorded_carrier_layout(entry))
+        values.append(DocumentValues(entry.path, layout.layout_globals(drawn), layout.layout_features(drawn)))
+        if layout.layout_globals(drawn) != layout.layout_globals(was):
+            moved.append(entry.shaft)
+        old = {x.shaft: x for x in was}
+        if len(was) != len(drawn):
+            continue                               # the number of copies changed: said once, as structural
+        for axis in drawn:
+            before = old.get(axis.shaft)
+            if before is None:
+                continue
+            for coordinate, p, q in (("X", before.x, axis.x), ("Y", before.y, axis.y)):
+                text = _side_change(axis.shaft, coordinate, p, q)
+                if text:
+                    why.append(text.replace("a new layout part", f"a new carrier part for {entry.shaft}")
+                               .replace("the layout part has no plane", f"the carrier part of {entry.shaft} has no "
+                                                                         "plane")
+                               .replace("its layout plane", "its carrier plane"))
+    return values, moved, why
+
+
+def _planetary_structural(box: GearboxRecord, a: Assessment) -> List[str]:
+    """What a planetary stage on record cannot take through Update (W7-PLAN §2.10): the number of copies changed;
+    a planet shaft now mounted on another carrier, or on the frame; a shaft becoming or ceasing to be a carrier."""
+    from . import planetary
+    spec = a.spec
+    out: List[str] = []
+    recorded_carriers = [c.shaft for c in box.carriers]
+    if not recorded_carriers and not planetary.carriers(spec):
+        return out
+    built_on: Dict[str, str] = {}
+    for entry in box.carriers:
+        for axis in entry.axes:
+            built_on.setdefault(planetary.copy_of(axis.shaft)[0], entry.shaft)
+    shafts = {x.id: x for x in spec.shafts if x.id}
+    for planet, carrier in built_on.items():
+        shaft = shafts.get(planet)
+        if shaft is None or shaft.mount() == carrier:
+            continue
+        where = "on the frame" if shaft.mount() == "frame" else f"mounted on {shaft.mount()}"
+        out.append(f"{planet} is now {where} where it was built on {carrier}, and its mates hold it to {carrier}'s "
+                   f"axes, {_REBUILD}.")
+    now_carriers = planetary.carriers(spec)
+    for c in now_carriers:
+        if c not in recorded_carriers:
+            out.append(f"{c} now carries planets where it was built carrying none, and the assembly has no carrier "
+                       f"part for it, {_REBUILD}.")
+    for c in recorded_carriers:
+        if c not in now_carriers and c in shafts:
+            out.append(f"{c} carries no planet now where it was built as a carrier, and its carrier part cannot be "
+                       f"taken out of the assembly, {_REBUILD}.")
+    placed = a.report.layout.placed
+    was: Dict[str, int] = {}
+    for c in box.components:
+        if c.of:
+            was[c.of] = was.get(c.of, 0) + 1
+    now: Dict[str, int] = {}
+    for p in placed.values():
+        if p.carrier:
+            now[p.row] = now.get(p.row, 0) + 1
+    for row in sorted(set(was) | set(now), key=lambda r: [g.id for g in spec.gears].index(r)
+                      if r in [g.id for g in spec.gears] else 0):
+        gear = spec.gear(row)
+        before = was.get(row, 1 if any(c.gear == row for c in box.components) else 0)
+        after = now.get(row, 1 if row in placed else 0)
+        if gear is None or not before or not after or before == after:
+            continue
+        shaft = gear.shaft
+        out.append(f"{shaft} now has {after} {'copy' if after == 1 else 'copies'} where it was built with {before}, "
+                   f"and Update SolidWorks cannot add or take out a planet, {_REBUILD}.")
+    return out
 
 
 # -- a gearbox built to turn (W5-PLAN §1.6's classify, as W5-DECISIONS and W5-INTERFACES amend it) ------------------
@@ -582,7 +722,7 @@ def _bad_mates(box: GearboxRecord) -> str:
     wrong number of gears for its kind, no name, an axis or along mate with no shaft, a mesh whose ratio is not
     two whole tooth counts, an along mate whose distance is not a number, or a gear not in the assembly on record
     — else ``""``. A hand-edited or damaged record is refused with a sentence, never an IndexError."""
-    known = {c.gear for c in box.components}
+    known = {c.gear for c in box.components} | {layout.carrier_id(c.shaft) for c in box.carriers if c.shaft}
     tail = (", so Update SolidWorks cannot act on the gearbox the record describes: Build again… makes a new revision "
             "from the workbook instead.")
     for entry in box.mates:
@@ -729,6 +869,9 @@ def _turning(box: GearboxRecord, entries: Sequence[PartEntry], a: Assessment,
     now = {s.shaft: s for s in shafts}
     before = {s.shaft: s for s in box.shafts}
     gear_of = {g.id: g for g in spec.gears}
+
+    def row_of(gear: str) -> str:                  # W7: a copy's Gears row
+        return (placed[gear].row or gear) if gear in placed else gear
     components = {c.gear: c for c in box.components}
     order = {s.id: i for i, s in enumerate(spec.shafts)}
     mates = list(box.mates)
@@ -804,26 +947,27 @@ def _turning(box: GearboxRecord, entries: Sequence[PartEntry], a: Assessment,
         built_face = _number_or_none(_built_part(entries, gear).get("face_width"))
         return _axial_edit(gear, shaft, z_front, direction[index], point(old)[index] if old is not None else None,
                            point(new)[index] if new is not None else placed[gear].centre[index], built_face,
-                           placed[gear].face, _number_or_none(gear_of[gear].at or 0) or 0.0,
+                           placed[gear].face, _number_or_none(gear_of[row_of(gear)].at or 0) or 0.0,
                            coordinate="XYZ"[index], cone=bool(getattr(placed[gear], "bevel", False)))
 
     face_globals: List[Tuple[str, GlobalVariable]] = []
     axial: List[str] = []
     for m in of_kind[motion.ALONG]:
         gear = m.gears[0]
-        if gear not in wanted or gear not in gear_of:
+        if gear not in wanted or row_of(gear) not in gear_of:
             continue
         plane = m.plane or motion.FRONT_PLANE
         index = motion._PLANE_INDEX.get(plane, 2)
         old_z, new_z = float(m.z_front), float(wanted[gear].at[index])
-        if m.face_global:
-            face_globals.append((gear, GlobalVariable(m.face_global, equations.literal(round(abs(new_z), 9)))))
+        row = placed[gear].row or gear                 # W7 (§6.7): a planet's copies share one global, by row
+        if m.face_global and all(g.name != m.face_global for _, g in face_globals):
+            face_globals.append((row, GlobalVariable(m.face_global, equations.literal(round(abs(new_z), 9)))))
         if gear in told:
             continue
         was, is_ = layout.side(old_z), layout.side(new_z)
         if was == is_:
-            if m.face_global and abs(new_z - old_z) > MOVE_TOLERANCE:
-                axial.append(gear)
+            if m.face_global and abs(new_z - old_z) > MOVE_TOLERANCE and row not in axial:
+                axial.append(row)
             continue
         told.add(gear)
         subject, what = edit(gear, m.shaft, old_z, index)
@@ -842,7 +986,7 @@ def _turning(box: GearboxRecord, entries: Sequence[PartEntry], a: Assessment,
     for m in of_kind[motion.LOCK]:
         anchor, follower = m.gears
         c = components.get(follower)
-        if follower in told or follower not in wanted or follower not in gear_of or c is None or len(c.at) < 3:
+        if follower in told or follower not in wanted or row_of(follower) not in gear_of or c is None or len(c.at) < 3:
             continue
         shaft = built_on.get(follower, placed[follower].shaft)
         index = motion._PLANE_INDEX[motion.along_plane(_direction(now[shaft]) if shaft in now
@@ -891,7 +1035,8 @@ def _turning(box: GearboxRecord, entries: Sequence[PartEntry], a: Assessment,
     out.ratios = tuple(name for name, _, _ in ratios)
     out.drag = _drag(spec, of_kind, built_on)
 
-    mated = {g for m in mates for g in m.gears}
+    carrier_ids = {layout.carrier_id(c.shaft) for c in box.carriers if c.shaft}
+    mated = {g for m in mates for g in m.gears} - carrier_ids
     if not all(g in placed for g in mated):
         return out                                 # a mated gear is gone: said above, and there is nothing to give
 
@@ -941,23 +1086,58 @@ def _turning(box: GearboxRecord, entries: Sequence[PartEntry], a: Assessment,
         return int(value) if value else teeth.get(gear, 0)
 
     recorded = []
+    for entry in box.carriers:                     # W7 (§6.4): the carrier's recorded frame, pitch 0
+        if len(entry.rotation) == 9 and len(entry.at) == 3:
+            recorded.append(Placement(layout.carrier_id(entry.shaft), entry.component,
+                                      tuple(float(v) for v in entry.rotation), tuple(float(v) for v in entry.at), 0.0))
     for c in box.components:
         z = built_teeth(c.gear)
         if len(c.rotation) == 9 and len(c.at) == 3:
             recorded.append(Placement(c.gear, c.name, tuple(float(v) for v in c.rotation),
                                       tuple(float(v) for v in c.at), 360.0 / z if z > 0 else 0.0))
     meshes = [tuple(m.gears) for m in of_kind[motion.MESH]]
+    carriers: Tuple[Any, ...] = ()
+    held: Tuple[str, ...] = ()
+    carrier_of: Dict[Tuple[str, str], str] = {}
+    unmated: List[Tuple[str, str]] = []
+    if box.carriers:
+        # W7 (W7-PLAN §2.10; W7-INTERFACES §6.5, §6.6): every carrier linked, the held gears a recorded gear mate
+        # touches judged (a held carrier too), and the unmated meshes judged as links beside the gear mates.
+        carriers = motion.carrier_links(spec, a.report, None)
+        fixed = set(box.fixed)
+        touched = {g for m in of_kind[motion.MESH] for g in m.gears}
+        held = tuple(g for g in box.fixed if g in touched or g in carrier_ids)
+        for pair in box.unmated:
+            x, y = pair
+            if x in placed and y in placed and (x, y) not in sense:
+                unmated.append((x, y))
+                laid = a.report.meshes.get((placed[x].row or x, placed[y].row or y)) or \
+                    a.report.meshes.get((placed[y].row or y, placed[x].row or x))
+                c = int(laid.sense) if laid is not None and laid.sense in (-1, 1) else \
+                    motion._parallel_sense_of(placed[x], placed[y])
+                sense[(x, y)] = c
+                built_sense[(x, y)] = c
+        for x, y in list(meshes) + unmated:
+            carrier = placed[x].carrier or placed[y].carrier
+            if carrier:
+                carrier_of[(x, y)] = layout.carrier_id(carrier)
+        del fixed
+    built_counts = {g: built_teeth(g) for g in placed}
     out.motion = MotionUpdate(
         mates=tuple(motion.mate_ref(m) for m in mates),
-        meshes=motion.mesh_links(meshes, teeth, sense),
+        meshes=motion.mesh_links(list(meshes) + unmated, teeth, sense, carrier_of=carrier_of),
         locks=motion.lock_links([tuple(m.gears) for m in of_kind[motion.LOCK]], teeth),
         recorded=tuple(recorded),
         recorded_meshes=tuple(motion.mesh_links([tuple(m.gears)], {m.gears[0]: int(m.ratio[0]),
-                                                                    m.gears[1]: int(m.ratio[1])}, built_sense)[0]
-                              for m in of_kind[motion.MESH]),
+                                                                    m.gears[1]: int(m.ratio[1])}, built_sense,
+                                                carrier_of=carrier_of)[0]
+                              for m in of_kind[motion.MESH])
+        + tuple(motion.mesh_links([pair], built_counts, built_sense, carrier_of=carrier_of)[0] for pair in unmated),
         face_globals=tuple(face_globals),
         ratios=tuple(ratios),
-        fixed=tuple(box.fixed))
+        fixed=tuple(box.fixed),
+        carriers=carriers,
+        held=held)
     return out
 
 
@@ -1092,6 +1272,7 @@ def finish_update(plan: UpdatePlan, result: GearboxUpdate, record: LinkRecord, *
             _follow_trains(box, plan, result, held)
             _follow_mates(box, plan, result)
             box.drag = list(plan.drag)
+        _follow_carriers(box, plan, result)
         out.earlier_update = _earlier_update(record, plan, result, mtime)
         if out.earlier_update:
             out.off_after_update, out.dragged = out.dragged, []
@@ -1185,6 +1366,24 @@ def _follow_trains(box: GearboxRecord, plan: UpdatePlan, result: GearboxUpdate, 
             component.rotation, component.at = list(p.rotation), list(p.at)
 
 
+def _follow_carriers(box: GearboxRecord, plan: UpdatePlan, result: GearboxUpdate) -> None:
+    """W7: each carrier on record takes its axes as now laid out once an Update ran to its end with no failure
+    (its globals were set), and its wanted frame whenever its train was put or the update ran whole; a failed
+    Update keeps what was last known true, as the ratios and senses do."""
+    if not box.carriers or (result.failures or result.skipped):
+        return
+    laid = {c.shaft: c for c in plan.carrier_layouts}
+    wanted = {p.gear: p for p in plan.placements}
+    for entry in box.carriers:
+        now = laid.get(entry.shaft)
+        if now is not None:
+            entry.axes = [ShaftEntry(**asdict(axis)) for axis in now.axes]
+            entry.direction = list(now.direction)
+        p = wanted.get(layout.carrier_id(entry.shaft))
+        if p is not None:
+            entry.rotation, entry.at = list(p.rotation), list(p.at)
+
+
 def _teeth_held(plan: UpdatePlan, result: GearboxUpdate) -> Dict[str, int]:
     """Each gear's teeth as its part now holds them: the parts the update reached without a failure."""
     out: Dict[str, int] = {}
@@ -1250,7 +1449,8 @@ def _follow_mates(box: GearboxRecord, plan: UpdatePlan, result: GearboxUpdate) -
         if entry.kind == motion.MESH and entry.name in set_ratios and entry.name in given:
             entry.ratio = list(given[entry.name])
             entry.sense = real(entry)
-        elif entry.kind == motion.ALONG and entry.gears and entry.gears[0] in moved and entry.gears[0] in at:
+        elif entry.kind == motion.ALONG and entry.gears and entry.gears[0] in at and (
+                entry.gears[0] in moved or planetary.copy_of(entry.gears[0])[0] in moved):   # W7: by row (§6.7)
             index = motion._PLANE_INDEX.get(entry.plane or motion.FRONT_PLANE, 2)
             entry.z_front = float(at[entry.gears[0]][index])
 

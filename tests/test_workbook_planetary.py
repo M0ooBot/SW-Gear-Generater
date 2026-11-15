@@ -410,7 +410,7 @@ def test_every_workbook_before_w7_plans_bit_for_bit_as_it_did(name, monkeypatch)
 # -- the carrier part, the mates and the build plan (§2.6, §2.7, §4.1) -----------------------------------------------
 
 from gear_generator import store, swbuild  # noqa: E402
-from gear_generator.gears.base import AddComponent, AddGlobal, BuildPlan, Mate  # noqa: E402
+from gear_generator.gears.base import AddComponent, AddGlobal, BuildPlan, GlobalVariable, Mate  # noqa: E402
 from gear_generator.workbook import layout as layout_mod  # noqa: E402
 from gear_generator.workbook import motion as motion_mod  # noqa: E402
 from test_workbook_gearbox import Disk, built, failed, norm, stem  # noqa: E402
@@ -637,3 +637,137 @@ def test_the_gears_below_the_undercut_limit_are_handed_to_the_builds_wording():
     a = direct(planetary_4to1())
     assert a.report.undercut == () and gearbox.plan_gearbox(a, None, exists=lambda p: False,
                                                             read_sidecar=lambda p: None).undercut == ()
+
+
+# -- Update's classification of a planetary stage (§2.10; W7-INTERFACES §6.1, §6.3-§6.7) ---------------------------
+
+from gear_generator.workbook import update  # noqa: E402
+
+REBUILD = "so the gearbox needs building again."
+
+
+def built_record(spec=None):
+    disk = Disk()
+    a = direct(spec or planetary_4to1())
+    plan = gearbox.plan_gearbox(a, None, exists=disk.exists, read_sidecar=disk.read_sidecar)
+    return finish(plan, run_planetary(plan, disk), None, disk)
+
+
+def classify(record, spec):
+    return update.classify(record, direct(spec), exists=lambda p: True)
+
+
+def test_a_planetary_update_always_carries_its_carriers_placements_and_links():
+    record = built_record()
+    up = classify(record, planetary_4to1())
+    assert (up.refusal, up.structural, up.replaced, up.carriers_moved, up.axial, up.ratios) == ("", (), (), (), (), ())
+    carrier, = up.carriers                                             # §6.3: always, as the layout is
+    assert norm(carrier.path).endswith("planetary_4to1_c_carrier.sldprt")
+    assert [g.name for g in carrier.variables][:2] == ["P copy 1 X", "P copy 2 X"] and "C Axis" in carrier.features
+    assert up.update_kwargs()["carriers"] == [carrier]
+    first = up.placements[0]                                           # §6.4
+    assert (first.gear, first.component, first.pitch) == ("C carrier", "Planetary_4to1_C_Carrier-1", 0.0)
+    motion = up.motion
+    assert motion.recorded[0].gear == "C carrier" and motion.recorded[0].pitch == 0.0
+    assert motion.carriers == (swbuild.CarrierLink("C carrier", ("Planet copy 1", "Planet copy 2", "Planet copy 3"),
+                                                   (0.0, 0.0, 0.0), (0.0, 0.0, 1.0)),)
+    assert motion.held == ("Ring",) and set(motion.held) <= set(motion.fixed)                          # §6.5
+    links = {(m.a, m.b): (round(m.k, 9), m.carrier) for m in motion.meshes}                           # §6.6
+    assert links == {("Sun", f"Planet copy {k}"): (-1.0, "C carrier") for k in (1, 2, 3)} | {
+        (f"Planet copy {k}", "Ring"): (round(1 / 3, 9), "C carrier") for k in (1, 2, 3)}
+    assert [m.name for m in record.gearbox.mates if m.kind == "mesh"] == [
+        "Sun meshes Planet copy 1", "Sun meshes Planet copy 2", "Sun meshes Planet copy 3", "Planet copy 1 meshes Ring"]
+    assert motion.face_globals == (("Sun", GlobalVariable("Sun Face Z", "5")),
+                                   ("Planet", GlobalVariable("Planet Face Z", "5")))                   # §6.7, once
+
+
+def test_the_record_s_carrier_is_a_body_its_mates_may_name():
+    """§6.1 (b): ``C carrier on C Axis`` and ``CarrierGear locked to C carrier`` name the carrier in ``gears``."""
+    record = built_record()
+    assert update._bad_mates(record.gearbox) == ""
+    record.gearbox.carriers = []
+    assert "C carrier, which is not in the assembly on record" in update._bad_mates(record.gearbox)
+
+
+def test_new_teeth_that_keep_both_centres_move_the_planets_on_the_carrier_part_and_remake_the_gear_mates():
+    """§6 p3's edit: Sun 21, Ring 57, P's X 19.5 — two parts' values, the carrier part's globals, four remakes."""
+    record = built_record()
+    spec = edited(planetary_4to1(), shafts={"P": dict(x="19.5")}, gears={"Sun": dict(teeth="21"),
+                                                                        "Ring": dict(teeth="57")})
+    assert direct(spec).report.errors == []
+    up = classify(record, spec)
+    assert (up.structural, up.carriers_moved) == ((), ("C",))
+    assert [p.changed for p in up.parts] == [True, False, True, False]
+    values = {g.name: g.expression for g in up.carriers[0].variables}
+    assert values == {"P copy 1 X": "19.5", "P copy 2 X": "-9.75", "P copy 2 Y": "16.887495374", "P copy 3 X": "-9.75",
+                      "P copy 3 Y": "-16.887495374"}
+    assert up.ratios == ("Sun meshes Planet copy 1", "Sun meshes Planet copy 2", "Sun meshes Planet copy 3",
+                         "Planet copy 1 meshes Ring")
+    assert direct(spec).report.motion.torques["C"] == pytest.approx(2 * (1 + 0.9604 * 57 / 21), abs=1e-9)
+    assert float(direct(spec).report.motion.speeds["C"]) == pytest.approx(1000 / (1 + 57 / 21))      # 3.714 : 1
+
+
+def test_a_planets_at_moves_its_one_shared_global_and_a_held_ring_is_re_placed():
+    record = built_record()
+    up = classify(record, edited(planetary_4to1(), gears={"Planet": dict(at="12")}))
+    assert (up.structural, up.axial) == ((), ("Planet",))
+    assert dict(up.motion.face_globals)["Planet"] == GlobalVariable("Planet Face Z", "7")
+    up = classify(record, edited(planetary_4to1(), gears={"Ring": dict(at="12")}))
+    assert (up.structural, up.replaced) == ((), ("Ring",)) and up.motion.held == ("Ring",)
+
+
+@pytest.mark.parametrize("change, said", [
+    (dict(shafts={"P": dict(copies="4")}),
+     ("P now has 4 copies where it was built with 3, and Update SolidWorks cannot add or take out a planet, " + REBUILD,)),
+    (dict(shafts={"P": dict(copies="5")}),
+     ("P now has 5 copies where it was built with 3, and Update SolidWorks cannot add or take out a planet, " + REBUILD,)),
+])
+def test_the_number_of_planets_changing_needs_a_new_revision(change, said):
+    up = classify(built_record(), edited(planetary_4to1(), **change))
+    assert up.structural == said and up.needs_new_revision
+
+
+def test_a_planet_moved_off_its_carrier_or_another_member_held_needs_a_new_revision():
+    record = built_record()
+    up = classify(record, edited(planetary_4to1(), shafts={"P": dict(mounted_on="frame", copies="")}))
+    assert up.structural[:2] == (
+        "P is now on the frame where it was built on C, and its mates hold it to C's axes, " + REBUILD,
+        "C carries no planet now where it was built as a carrier, and its carrier part cannot be taken out of the "
+        "assembly, " + REBUILD)
+    up = classify(record, sun_held())
+    assert up.structural == ("Ring was built fixed, but R now turns (its Role is not fixed and no fixed shaft holds it "
+                             "still), so the gearbox needs building again to mate it to turn.",
+                             "S's Role is now fixed, but Sun was built mated to turn, so the gearbox needs building "
+                             "again to hold it fixed.")
+
+
+def test_a_copy_crossing_the_carrier_parts_base_plane_needs_a_new_revision():
+    record = built_record(edited(planetary_4to1(), shafts={"P": dict(y="2")}))
+    up = classify(record, edited(planetary_4to1(), shafts={"P": dict(y="-2")}))
+    assert "P copy 1's Y crosses 0 (2 → -2): a layout plane cannot follow a global across its base plane, so it needs " \
+           "a new carrier part for C." in up.structural
+
+
+def test_finishing_a_planetary_update_records_the_carriers_new_axes_and_the_shared_global():
+    from gear_generator.swbuild import GearboxUpdate, UpdateResult
+    record = built_record()
+    spec = edited(planetary_4to1(), shafts={"P": dict(x="19.5")}, gears={"Sun": dict(teeth="21"),
+                                                                        "Ring": dict(teeth="57"),
+                                                                        "Planet": dict(at="12")})
+    up = classify(record, spec)
+    result = GearboxUpdate(parts=[UpdateResult(changed=["x"]) if p.changed else UpdateResult(unchanged=["x"])
+                                  for p in up.parts],
+                           layout=UpdateResult(unchanged=["x"]), carriers=[UpdateResult(changed=["P copy 1 X"])],
+                           placed=[p.gear for p in up.placements], axial=["Planet"], ratios=list(up.ratios),
+                           changed=[up.carriers[0].path, up.assembly])
+    done = update.finish_update(up, result, record, digest="d2", read_sidecar=lambda p: None, mtime=lambda p: 5.0)
+    box = store.link_record_from_json(store.link_record_to_json(done.record)).gearbox
+    assert [round(x.x, 6) for x in box.carriers[0].axes] == [19.5, -9.75, -9.75]
+    along = {m.name: m.z_front for m in box.mates if m.kind == "along"}
+    assert along["Planet copy 3 along P copy 3"] == 7.0 and along["Sun along S"] == 5.0
+    ratios = {m.name: (m.ratio, m.sense) for m in box.mates if m.kind == "mesh"}
+    assert ratios["Planet copy 1 meshes Ring"] == ([18, 57], -1) and ratios["Sun meshes Planet copy 2"] == ([21, 18], 1)
+    failed_ = GearboxUpdate(parts=result.parts, failures=[("x", "it would not")], carriers=result.carriers,
+                            axial=["Planet"], ratios=list(up.ratios))
+    kept = update.finish_update(up, failed_, record, digest="d2", read_sidecar=lambda p: None, mtime=lambda p: 5.0)
+    assert [x.x for x in kept.record.gearbox.carriers[0].axes][0] == 18.0           # what was last known true
