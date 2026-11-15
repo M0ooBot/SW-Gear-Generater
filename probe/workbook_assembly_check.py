@@ -2475,9 +2475,11 @@ def build_turning(worker, desk, label, parts, turned_round=()):
     check(len(box.mates) == len(plan.motion.mates) and [m.name for m in box.mates] == [m.name for m in plan.motion.mates],
           f"{label}: the record's mates are the plan's: {[m.name for m in box.mates]}")
     drag = ui_text.drag_phrase(list(box.drag))
-    check(drag in desk.note[0], f"{label}: the build's sentence says how to turn it: {drag!r}")
+    # The phrase may open a sentence, capitalised there (W8's modes sentence: "… in any of them: … Drag InPin …").
+    said = (drag, drag[:1].upper() + drag[1:])
+    check(any(d in desk.note[0] for d in said), f"{label}: the build's sentence says how to turn it: {drag!r}")
     f = desk.say_footer(f"{label}, built")
-    check(drag in f.text, f"{label}: the footer says how to turn it: {drag!r}")
+    check(any(d in f.text for d in said), f"{label}: the footer says how to turn it: {drag!r}")
     say(f"tag     {ui_text.workbook_built_tag(desk.record, desk.reading.digest)!r}")
     paths = [box.layout, box.assembly] + sorted({c.part for c in box.components}) + [c.path for c in carriers_of(box)]
     check(all(os.path.isfile(p) for p in paths), f"{label}: {len(paths)} files on disk")
