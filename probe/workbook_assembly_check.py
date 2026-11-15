@@ -7435,13 +7435,14 @@ def s7_put_job(box, mode, targets, off):
     return in_assembly(box.assembly, work)
 
 
-def s7_drive_job(box, mode, degrees, plane, built_sun):
+def s7_drive_job(box, mode, degrees, plane, built_sun, body=None):
     """The drive's turn in ``mode`` (W5's angle mate, the turn repro's way): ``mode`` shown and rebuilt; the mate made
-    from the input's Top plane to the layout's ``plane`` at 90° plus the input's turn from its built frame where it
-    stands (so making it moves nothing, read), its value set in ``mode`` alone (``set_dimension_in``, the value
-    route), rebuilt; the mate deleted and rebuilt."""
+    from ``body``'s (the input's, by default) Top plane to the layout's ``plane`` at 90° plus its turn from
+    ``built_sun`` (its frame at θ = 0) where it stands (so making it moves nothing, read), its value set in ``mode``
+    alone (``set_dimension_in``, the value route), rebuilt; the mate deleted and rebuilt."""
     pairs = bodies(box)
-    sun = dict(pairs)[box.drag[0]]
+    body = body or box.drag[0]
+    sun = dict(pairs)[body]
 
     def work(s):
         out = {"errors": [], "cleanup": []}
@@ -7458,7 +7459,7 @@ def s7_drive_job(box, mode, degrees, plane, built_sun):
         name = ""
         try:
             out["before"] = frames("s7b")
-            now = turn_degrees(built_sun[0], out["before"][box.drag[0]][0])
+            now = turn_degrees(built_sun[0], out["before"][body][0])
             if now is None:
                 raise swcom.SolidWorksError(f"the input stands off its axis in {mode}, so no drive is made")
             out["input_at"] = now
@@ -7665,15 +7666,24 @@ class S7Case:
         self.judge(step, "put", mode, frames, put_bodies)
         return frames
 
-    def drive(self, step, mode, degrees):
+    def drive(self, step, mode, degrees, body=None):
+        """The drive's turn in ``mode``: the input by default (W5's assumptions asserted), or ``body`` (its θ = 0 frame
+        the base frame of its own axis, the layout plane square to its u₀ there)."""
         label = f"s7 {self.key} {step}"
-        plane, _ = drive_assumptions(self.desk, box_drag(self.box), label)
-        built_sun = wanted(self.desk)[box_drag(self.box)]
-        out = s7_run(self.worker, label, s7_drive_job(self.box, mode, degrees, plane, built_sun))
+        sun = body or box_drag(self.box)
+        if body is None:
+            plane, _ = drive_assumptions(self.desk, sun, label)
+            built_sun = wanted(self.desk)[sun]
+        else:
+            axis = tuple(float(c) for c in self.desk.a.report.layout.placed[body].axis)
+            base_rot = wb_geometry.base_frame(axis)
+            u0 = (float(base_rot[0]), float(base_rot[3]), float(base_rot[6]))
+            plane = BASE_PLANES[max(range(3), key=lambda i: abs(u0[i]))][0]
+            built_sun = (base_rot, (0.0, 0.0, 0.0))
+        out = s7_run(self.worker, label, s7_drive_job(self.box, mode, degrees, plane, built_sun, sun))
         if out["errors"] or out["cleanup"] or "driven" not in out:
             stop_check(False, f"{label}: the drive turned and was deleted: {out['errors']} {out['cleanup']}")
             raise S7Stop(f"{label}: {out['errors']} {out['cleanup']}")
-        sun = box_drag(self.box)
         gap = max(frame_gap(out["before"][g], out["made"][g]) for g in out["before"])
         turned = turn_degrees(out["before"][sun][0], out["after"][sun][0])
         check(gap <= S7_TOL and turned is not None and abs(turned - degrees) <= DRIVE_TOLERANCE * abs(degrees)
@@ -7683,7 +7693,8 @@ class S7Case:
               f"deleted")
         say(f"step    {label}: the drive's {degrees:+g}° in {mode}")
         frames = self.read(step)
-        self.json["steps"][-1].update(drive={"mode": mode, "degrees": degrees, "input_at": out["input_at"]})
+        self.json["steps"][-1].update(drive={"mode": mode, "degrees": degrees, "input_at": out["input_at"],
+                                             "body": sun})
         self.judge(step, "turn", mode, frames)
         return frames
 
@@ -7728,6 +7739,24 @@ def s7_axial(body, dz):
 
 def s7_spin(body, degrees):
     return lambda before: {body: (turn_about_z(before[body][0], degrees), before[body][1])}
+
+
+def s7_same_amount_or_place(case, prev, now, made_in, body):
+    """Per configuration, whether ``body`` moved by the same amount as in ``made_in`` (its change the same) or to the
+    same place (its frame now ``made_in``'s), or neither; logged and kept in the step's JSON."""
+    change = s7_change(prev, now)
+    out = {}
+    for m in case.box.modes:
+        same_amount = s7_same(change[m][body], change[made_in][body])
+        same_place = frame_gap(now[m][body], now[made_in][body]) <= S7_TOL
+        before = turn_degrees(mode_record_frames(case.desk, m)[body][0], prev[m][body][0])
+        after = turn_degrees(mode_record_frames(case.desk, m)[body][0], now[m][body][0])
+        out[m] = {"before": before, "after": after, "same_amount": same_amount, "same_place": same_place}
+    say(f"fact    s7 {case.key}: {body} after the turn in {made_in}, by configuration (turn from its frame on record "
+        f"before -> after; the same amount as {made_in}'s change; the same place as {made_in}'s): "
+        + "; ".join(f"{m} {v['before']:+.3f} -> {v['after']:+.3f}, amount {v['same_amount']}, place {v['same_place']}"
+                    for m, v in out.items()))
+    case.json["steps"][-1]["same_amount_or_place"] = {"body": body, "made_in": made_in, "by_configuration": out}
 
 
 def s7_built_check(case, frames):
@@ -7824,6 +7853,12 @@ def s7_case_5(worker, excel):
         c.last = c.read("as copied")
         c.put("FIdler +20 in N, plain", "N", s7_spin("FIdler", 20.0), route=False)
         c.put("FIdler +10 in 4H, plain", "4H", s7_spin("FIdler", 10.0), route=False)
+        # The coordinator's added reading (stage 3): a turn given while the configurations already stand differently
+        # (FIdler 0 / +10 / +20 / 0): FrontDog driven +15° in N, where the front train is free; FIdler in all four,
+        # each against N's: the same amount (each moved by N's change) or the same place (each where N's stands)?
+        prev = c.last
+        frames = c.drive("FrontDog +15 in N, FIdler standing differently", "N", 15.0, body="FrontDog")
+        s7_same_amount_or_place(c, prev, frames, "N", "FIdler")
         c.put("FDrive +2 mm in 2H, the app's route", "2H", s7_axial("FDrive", 2.0))
         c.reopen("saved and reopened")
     finally:
@@ -7836,6 +7871,23 @@ def s7_case_7(worker, excel):
                                    "configuration")
     box = c.box
     sun = dict(bodies(box))[box_drag(box)]
+    paths = box_paths(box)
+
+    def sense(s):
+        """The handoff's 2024 reading, once: on the copy as opened from its file, unmodified, a gear mate suppressed
+        in the active configuration read for its sense where the Update reads it (gear_mate_sense), and one left on
+        as the control; every document's GetSaveFlag before and after."""
+        out = {"active": s.active_configuration(), "flags_before": save_flags(s, paths), "reads": {}}
+        for i, name in enumerate(("RangeSlv engages LoDog", "RangeSlv engages InDog")):
+            s.find_mate(f"s7s{i}", name)
+            sup = s.mate_suppression(f"s7s{i}", [out["active"]])[out["active"]]
+            try:
+                right, taus = s.gear_mate_sense(f"s7s{i}", True, ((0.0, 0.0, 1.0), (0.0, 0.0, 1.0)))
+                out["reads"][name] = {"suppressed": sup, "right": right, "taus": taus}
+            except Exception as exc:  # noqa: BLE001 - a fact either way
+                out["reads"][name] = {"suppressed": sup, "error": f"{type(exc).__name__}: {exc}"}
+        out["flags_after"] = save_flags(s, paths)
+        return out
 
     def work(s):
         out = {}
@@ -7879,6 +7931,13 @@ def s7_case_7(worker, excel):
         s.rebuild(kind=swcom.ASSEMBLY_TRAIN)
         return out
     try:
+        read = s7_run(worker, "s7 7 sense", in_assembly(box.assembly, sense))
+        say(f"fact    s7 7: a suppressed gear mate's sense on the copy as opened, unmodified, {read['active']} active "
+            f"(SUPPRESSED_GEAR_MATE_SENSE_READ, the handoff's reading): {read['reads']}; GetSaveFlag before "
+            f"{marked(read['flags_before']) or 'none'}, after {marked(read['flags_after']) or 'none'} "
+            f"(raw before {read['flags_before']}, after {read['flags_after']})")
+        c.json["suppressed_sense"] = read
+        raw_flag_reads(worker, c.desk, "s7 7, the copy as opened")
         out = s7_run(worker, "s7 7", in_assembly(box.assembly, work))
         say(f"fact    s7 7: RangeSlv along Rear before {out['values_before']}; 4L set to {out['target']:g} with "
             f"{out['active_after_set']} active -> {out['values_set']}; set back -> {out['values_restored']}")
