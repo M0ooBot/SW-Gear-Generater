@@ -1,0 +1,296 @@
+run     2026-11-15 17:20:59; app gear-generator 0.3.2 from C:\Users\M0obo\Documents\GearGeneratorProbe\w8-sw2024-20261115\s7-20261115-172046\snap\src (snapshot: 8702389); sections ['s7']
+attach  SolidWorks 2024 (revision 32.5.0), PID 35872; SolidWorks 0.66 GB private, 6.86 GB free
+open    before: []
+findings LAYOUT_PLUS_FLIP {'right': False, 'top': False}, LAYOUT_NEGATED_LINK 'minus', LAYOUT_AXIS_Z_SIGN -1, REPLACE_FIXED_ROUTE 'Transform2 put'
+findings W5: GEAR_MATE_RATIO_ROUTE 'remake', MATED_ASSEMBLY_REBUILD_ROUTE 'ForceRebuild3(True)', MATED_BUILD_REBUILD_ROUTE 'ForceRebuild3(True)', GEAR_MATE_FLIP False, DEMONSTRATION_DRIVE_SENSE 1, MESH_PHASE_ROUTE 'Transform2 put with the gear mate on', LOCK_RETAKES_AN_OFFSET True; P0c {'GEAR_MATE_REMAKE_UNDER_COMMAND_IN_PROGRESS': True, 'GEAR_MATE_SENSE_READ_UNDER_COMMAND_IN_PROGRESS': True, 'IDLER_UPDATE_HOLDS': True, 'LIGHTWEIGHT_FIRST_DRIVE_RIGHT': False, 'LIGHTWEIGHT_FORCED_BY': 'swOpenDocOptions_LoadLightweight | swOpenDocOptions_OverrideDefaultLoadLightweight', 'LIGHTWEIGHT_OPEN_RAISES_AN_ADDIN_DIALOG': True, 'LIGHTWEIGHT_REMAKE_HOLDS': True, 'LIGHTWEIGHT_RESOLVED_BY': 'the first drive', 'MATES_UNDER_COMMAND_IN_PROGRESS': True, 'MATE_FOLDER_ROUTE': 'IFeatureManager.InsertFeatureTreeFolder2(swFeatureTreeFolder_Containing)', 'MATE_FOLDER_SUPPRESSION_SUPPRESSES_ITS_MATES': True, 'MATE_FOLDER_TYPE_NAME': 'FtrFolder', 'MATE_GROUP_WALK_SEES_MATES_IN_A_FOLDER': True, 'MATE_RENAME_AT_ONCE': True, 'PUT_ON_TWICE_MESHED_GEAR_HOLDS': True, 'REMAKE_ON_TWICE_MESHED_GEAR_HOLDS': True, 'SECOND_ASSEMBLY_BESIDE_UNSAVED_HOLDS': True, 'SUPPRESSED_MATE_ERROR_CODE': 0, 'UNSUPPRESS_ON_LOCK_ALREADY_ON_MARKS_MODIFIED': True}; AXIAL_RESTORES True; m4 offset 0 mm
+findings W6: TURNED_GEAR_MATE_SENSE_READ_BACK 'entity senses', TURNED_GEAR_MATE_SENSE_ANGLES (30.0, 150.0), TURNED_GEAR_MATE_SENSE_ANGLES_SKEW (60.0, 120.0), GEAR_MATE_SENSE_READ_BACK '(Reverse == entities parallel) == internal', LAYOUT_PLUS_FLIP {'right': False, 'top': False}, REF_PLANE_UNFLIPPED_IS_PLUS_Z True, AXIAL_MATE_ROUTE 'origin distance'
+findings W8: CONFIGURATION_SHOW_RAISES_DIALOG False, HANDLES_STALE_AFTER_CONFIGURATION_CHANGE True, SLIDE_VALUE_ROUTE 'SetSystemValue3(m, 3, [configuration]); GetSystemValue3(3, configurations)', TURN_PER_CONFIGURATION_ON_2026 False, _ON_2024 None (the app's finding), POSITIONS_PER_CONFIGURATION_ON_2026 True, _ON_2024 True (the put fact, read by nothing), SUPPRESSED_GEAR_MATE_SENSE_READ 'answers, marks nothing', COLLINEAR_GEAR_MATE_SENSE_READ_BACK True; swcom.positions_per_configuration(revision) here None
+DIALOG  SolidWorks shows '': ['Title', 'Description', 'Button1', 'Button2', 'Hyperlink Text 1', 'Hyperlink Text 2']
+NOTE    SolidWorks' notification box came up while no SolidWorks call was in progress (exempt by the coordinator's ruling; nothing answers it)
+excel   started our own Excel, PID 71432, 16.0 build 20430.0
+== s7  what a configuration keeps (W8-PLAN §5, the coordinator's stage 2d): each case on its own copy of s1.master; after every step every configuration shown, rebuilt and read through fresh handles; saved, reopened, read again; each reading judged against "shared by all", "kept per configuration" and H
+fact    s7: only the cases ['8'] run (--s7-cases)
+-- s7 case 8: after the app's quiet Update in 4L: a fresh turn in 2H, then a moving put in 2H, every configuration read after each
+copy    s1.master -> s7-8: 17 files, mtimes kept
+        TransferCase_E4.xlsx's record: 24 path(s) put onto the copy: ['record.workbook', 'record.parts[0].path', 'record.parts[1].path', 'record.parts[2].path', 'record.parts[3].path', 'record.parts[4].path', 'record.parts[5].path', 'record.assembly', 'record.gearbox.layout', 'record.gearbox.assembly', 'record.gearbox.components[0].part', 'record.gearbox.components[1].part', 'record.gearbox.components[2].part', 'record.gearbox.components[3].part', 'record.gearbox.components[4].part', 'record.gearbox.components[5].part', 'record.gearbox.components[6].part', 'record.gearbox.components[7].part', 'record.gearbox.components[8].part', 'record.gearbox.components[9].part', 'record.gearbox.components[10].part', 'record.gearbox.components[11].part', 'record.gearbox.components[12].part', 'record.gearbox.carriers[0].path']
+        Dog_m1.5_N30.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1_N24.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m2_N20.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m2_N30.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Ring_m1_N72.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Sleeve_m1.5_N30.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+ok      s7-8: the copy's record is valid: owner ('ours', ''); left on the master []; missing in the copy []; clear_saved dropped nothing (unsaved, mismatched ([], [])); the read's digest equals the record's
+probe   W6-PLAN §7.1: TransferCase_E4.SLDASM of s7-8, whose stored references name a folder that is gone, opened under the dialog watch (120 s at most)
+DIALOG  SolidWorks shows '': ['Close', 'Open\nComponents', 'Update\nAssembly', 'Update\nGraphics', ' ', 'Elapsed time: 0s', 'This file was last opened in 3 seconds', 'For more information, view: ']
+fact    s7-8: the copy's assembly opened in 6.4 s; marked modified straight after the open: {'TransferCase_E4_Layout.SLDPRT': False, 'TransferCase_E4_Carrier_Carrier.SLDPRT': False, 'Gear_m1_N24.SLDPRT': False, 'Ring_m1_N72.SLDPRT': False, 'Dog_m1.5_N30.SLDPRT': False, 'Sleeve_m1.5_N30.SLDPRT': False, 'Gear_m2_N30.SLDPRT': False, 'Gear_m2_N20.SLDPRT': False, 'TransferCase_E4.SLDASM': False}
+fact    W6-PLAN §7.1: dialogs while the copied assembly opened: none
+ok      s7-8: SolidWorks found all 14 components and the layout in the copy, and the copy closed without saving (left []): elsewhere none
+ok      Excel opened TransferCase_E4.xlsx with no dialog or repair: []
+ok      read TransferCase_E4.xlsx: ok
+        warning Gears!Q5: InDog: The involute starts at 42.96 mm, above the form diameter of 42.801 mm, so the bottom of the working flank is a straight line.
+        warning Gears!Q6: LoDog: The involute starts at 42.96 mm, above the form diameter of 42.801 mm, so the bottom of the working flank is a straight line.
+        warning Gears!F7: RangeSlv: The teeth's tips, at 42 mm, are inside the base circle of 42.286 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!Q8: FrontDog: The involute starts at 42.96 mm, above the form diameter of 42.801 mm, so the bottom of the working flank is a straight line.
+        warning Gears!F9: ModeSlv: The teeth's tips, at 42 mm, are inside the base circle of 42.286 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!Q10: FDrive: The involute starts at 57.28 mm, above the form diameter of 57.068 mm, so the bottom of the working flank is a straight line.
+        warning Gears!Q12: FOut: The involute starts at 57.28 mm, above the form diameter of 57.068 mm, so the bottom of the working flank is a straight line.
+        8 shafts · 11 gears · 4 meshes; gate ''
+ok      s7-8: the copy reads as built from this workbook, its gearbox in the copy, with the modes ['2H', '4H', 'N', '4L']
+classify parts changed []; moved []; re-place []; structural []; missing []; unsaved []; refusal ''; turning True; axial []; ratios []
+        layout globals wanted ['Idler X = 50', 'Front X = 100']
+summary SolidWorks already matches the workbook on record; Update SolidWorks checks it live and puts right anything changed there; gears turned in SolidWorks stay where they are unless something must move.
+ok      s7-8: the copy classifies as an Update with nothing structural: [] ''
+footer  (s7-8, the copy read) [green] SolidWorks already matches the workbook on record; Update SolidWorks checks it live and puts right anything changed there; gears turned in SolidWorks stay where they are unless something must move. It was built with a configuration per mode (2H, 4H, N and 4L), each named as its mode, and saved in 2H; to switch mode, double-click another mode's configuration in SolidWorks' ConfigurationManager. Drag Sun in SolidWorks to turn one train and FrontDog to turn the other. Carrier (the carrier) is axes and planes only, so it has nothing to drag.
+        button 'Build again…' on; Update SolidWorks shown on primary
+DIALOG  SolidWorks shows '': ['Close', 'Opened 15\nComponents', 'Updating\nAssembly', 'Update\nGraphics', 'Post load updating', 'Elapsed time: 0s', 'This file was last opened in 3 seconds', 'For more information, view: ']
+ok      s7 8 as copied: every configuration shown and rebuilt; 2H, active, read the same before any show and after its own (largest 0.0e+00 at -); left active again (2H)
+table   s7 8 as copied (active 2H): each body's (turn from its frame on record for the mode °, axial offset mm) [radial offset of the origin mm where not 0]; columns ['2H', '4H', 'N', '4L']
+        Sun                 +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000
+        Pl copy 1           -0.000  +0.000 |    -0.000  +0.000 |    -0.000  -0.000 |    -0.000  +0.000
+        Pl copy 2           -0.000  +0.000 |    -0.000  +0.000 |    -0.000  -0.000 |    -0.000  +0.000
+        Pl copy 3           -0.000  +0.000 |    -0.000  +0.000 |    -0.000  -0.000 |    -0.000  +0.000
+        Ring                -0.000  +0.000 |    -0.000  +0.000 |    -0.000  +0.000 |    -0.000  +0.000
+        InDog               +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000
+        LoDog               +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000
+        RangeSlv            +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000
+        FrontDog            +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000
+        ModeSlv             +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000
+        FDrive              +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000
+        FIdler              +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000
+        FOut                +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000
+        Carrier carrier     +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000
+ok      s7 8 drive +37 in 2H: the drive's assumptions hold: Sun on In (0.0, 0.0, 1.0) at θ = 0, u₀ (1.0, 0.0, 0.0), its Top plane against the layout's Right (plane3); the input's turn ruled by DEMONSTRATION_DRIVE_SENSE 1 and measured; tolerance 1e-06 relative
+ok      s7 8 drive +37 in 2H: in 2H the drive made at 90.000000° (the input at +0.000000°) moved nothing (1.8e-15), turned Sun 37.00000000000003° for +37°, and was deleted
+step    s7 8 drive +37 in 2H: the drive's +37° in 2H
+ok      s7 8 drive +37 in 2H: every configuration shown and rebuilt; 2H, active, read the same before any show and after its own (largest 0.0e+00 at -); left active again (2H)
+table   s7 8 drive +37 in 2H (active 2H): each body's (turn from its frame on record for the mode °, axial offset mm) [radial offset of the origin mm where not 0]; columns ['2H', '4H', 'N', '4L']
+        Sun                +37.000  +0.000 |   +37.000  +0.000 |   +37.000  +0.000 |   +37.000  +0.000
+        Pl copy 1          -18.500  +0.000 [3.870] |   -18.500  +0.000 [3.870] |   -18.500  +0.000 [3.870] |   -18.500  +0.000 [3.870]
+        Pl copy 2          -18.500  +0.000 [3.870] |   -18.500  +0.000 [3.870] |   -18.500  +0.000 [3.870] |   -18.500  +0.000 [3.870]
+        Pl copy 3          -18.500  +0.000 [3.870] |   -18.500  +0.000 [3.870] |   -18.500  +0.000 [3.870] |   -18.500  +0.000 [3.870]
+        Ring                -0.000  +0.000 |    -0.000  +0.000 |    -0.000  +0.000 |    -0.000  +0.000
+        InDog              +37.000  +0.000 |   +37.000  +0.000 |   +37.000  +0.000 |   +37.000  +0.000
+        LoDog               +9.250  +0.000 |    +9.250  +0.000 |    +9.250  +0.000 |    +9.250  +0.000
+        RangeSlv           +37.000  +0.000 |   +37.000  +0.000 |   +37.000  +0.000 |   +37.000  +0.000
+        FrontDog            +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000
+        ModeSlv            +37.000  +0.000 |   +37.000  +0.000 |   +37.000  +0.000 |   +37.000  +0.000
+        FDrive              +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000
+        FIdler              +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000
+        FOut                +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000
+        Carrier carrier     +9.250  +0.000 |    +9.250  +0.000 |    +9.250  +0.000 |    +9.250  +0.000
+judge   s7 8, drive +37 in 2H: bodies moved in 2H: ['Sun', 'Pl copy 1', 'Pl copy 2', 'Pl copy 3', 'InDog', 'LoDog', 'RangeSlv', 'ModeSlv', 'Carrier carrier']
+        Sun              {'2H': 'moved', '4H': 'moved', 'N': 'moved', '4L': 'moved'} (put in before: none)
+        Pl copy 1        {'2H': 'moved', '4H': 'moved', 'N': 'moved', '4L': 'moved'} (put in before: none)
+        Pl copy 2        {'2H': 'moved', '4H': 'moved', 'N': 'moved', '4L': 'moved'} (put in before: none)
+        Pl copy 3        {'2H': 'moved', '4H': 'moved', 'N': 'moved', '4L': 'moved'} (put in before: none)
+        InDog            {'2H': 'moved', '4H': 'moved', 'N': 'moved', '4L': 'moved'} (put in before: none)
+        LoDog            {'2H': 'moved', '4H': 'moved', 'N': 'moved', '4L': 'moved'} (put in before: none)
+        RangeSlv         {'2H': 'moved', '4H': 'moved', 'N': 'moved', '4L': 'moved'} (put in before: none)
+        ModeSlv          {'2H': 'moved', '4H': 'moved', 'N': 'moved', '4L': 'moved'} (put in before: none)
+        Carrier carrier  {'2H': 'moved', '4H': 'moved', 'N': 'moved', '4L': 'moved'} (put in before: none)
+        fits ['shared', 'H', 'H_private_put']; rules out ['per_configuration']
+ok      s7 8: 4L shown and rebuilt: (True, '4L')
+person  saved in SolidWorks (s7 8: 4L active, so the marks after the press are its own): [('TransferCase_E4_Layout.SLDPRT', True), ('TransferCase_E4_Carrier_Carrier.SLDPRT', True), ('Gear_m1_N24.SLDPRT', True), ('Ring_m1_N72.SLDPRT', True), ('Dog_m1.5_N30.SLDPRT', True), ('Sleeve_m1.5_N30.SLDPRT', True), ('Gear_m2_N30.SLDPRT', True), ('Gear_m2_N20.SLDPRT', True), ('TransferCase_E4.SLDASM', True)]
+classify parts changed []; moved []; re-place []; structural []; missing []; unsaved []; refusal ''; turning True; axial []; ratios []
+        layout globals wanted ['Idler X = 50', 'Front X = 100']
+summary SolidWorks already matches the workbook on record; Update SolidWorks checks it live and puts right anything changed there; gears turned in SolidWorks stay where they are unless something must move.
+update  SolidWorks 3.08 GB private, 6.36 GB free
+        update  Gear_m1_N24.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Ring_m1_N72.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Dog_m1.5_N30.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Sleeve_m1.5_N30.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Gear_m2_N30.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Gear_m2_N20.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  TransferCase_E4_Layout.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  TransferCase_E4_Carrier_Carrier.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        ok      re-placed Carrier carrier, Sun, Pl copy 1, Pl copy 2, Pl copy 3, InDog, LoDog, RangeSlv, FrontDog, ModeSlv, FDrive, FIdler, FOut
+        ok      found out of step before the Update: RangeSlv with LoDog, ModeSlv with FrontDog
+        ok      worked in 4L, the configuration that was active, and showed 2H, 4H, N too
+        ok      gears put in 2H, 4H, N, 4L
+        ok      found in mode 4H: ModeSlv with FrontDog out of step
+        ok      found in mode 4L: RangeSlv with LoDog out of step, ModeSlv with FrontDog out of step
+        mate    Sun on In Axis
+        mate    Sun along In
+        mate    InDog locked to Sun
+        mate    Carrier carrier on Carrier Axis
+        mate    Carrier carrier along Carrier
+        mate    LoDog locked to Carrier carrier
+        mate    Pl copy 1 on Planet copy 1 Axis
+        mate    Pl copy 1 along Planet copy 1
+        mate    Pl copy 2 on Planet copy 2 Axis
+        mate    Pl copy 2 along Planet copy 2
+        mate    Pl copy 3 on Planet copy 3 Axis
+        mate    Pl copy 3 along Planet copy 3
+        mate    RangeSlv on Rear Axis
+        mate    RangeSlv along Rear
+        mate    ModeSlv on Rear Axis
+        mate    ModeSlv along Rear
+        mate    FrontDog on FrontDrv Axis
+        mate    FrontDog along FrontDrv
+        mate    FDrive locked to FrontDog
+        mate    FIdler on Idler Axis
+        mate    FIdler along Idler
+        mate    FOut on Front Axis
+        mate    FOut along Front
+        mate    ModeSlv splined to RangeSlv
+        mate    Sun meshes Pl copy 1
+        mate    Sun meshes Pl copy 2
+        mate    Sun meshes Pl copy 3
+        mate    Pl copy 1 meshes Ring
+        mate    FDrive meshes FIdler
+        mate    FIdler meshes FOut
+        mate    RangeSlv engages InDog · suppressed
+        mate    ModeSlv engages FrontDog
+        mate    RangeSlv engages LoDog
+        ok      assembly rebuilt once
+        ok      no interference between the gears
+        not saved: TransferCase_E4.SLDASM changed in SolidWorks; save there to keep it
+        in 761.0 s; SolidWorks 7.78 GB private, 7.05 GB free
+        steps [('check', 'Gear_m1_N24', 1, 9), ('check', 'Ring_m1_N72', 2, 9), ('check', 'Dog_m1.5_N30', 3, 9), ('check', 'Sleeve_m1.5_N30', 4, 9), ('check', 'Gear_m2_N30', 5, 9), ('check', 'Gear_m2_N20', 6, 9), ('check', 'TransferCase_E4_Layout', 7, 9), ('check', 'TransferCase_E4_Carrier_Carrier', 8, 9), ('check', 'TransferCase_E4', 9, 9), ('place', 'TransferCase_E4', 0, 0), ('mode', '2H', 1, 4), ('mode', '4H', 2, 4), ('mode', 'N', 3, 4), ('mode', '4L', 4, 4)]
+        loaded from disk []
+        motion: turned False; out of step [('RangeSlv', 'LoDog'), ('ModeSlv', 'FrontDog')]; off axis []; restored []; unsuppressed []; axial []; ratios []; extra mates []; ratios found [], already [], read []; sense found wrong [], turned round []
+        train_check residuals (rad) [('Sun', 'Pl copy 1', '0.00e+00'), ('Sun', 'Pl copy 2', '7.77e-16'), ('Sun', 'Pl copy 3', '1.72e-15'), ('Pl copy 1', 'Ring', '3.72e-15'), ('FDrive', 'FIdler', '1.39e-16'), ('FIdler', 'FOut', '9.25e-17'), ('Pl copy 2', 'Ring', '3.97e-15'), ('Pl copy 3', 'Ring', '4.27e-15'), ('RangeSlv', 'LoDog', '6.54e-02'), ('ModeSlv', 'FrontDog', '1.75e-02'), ('Sun', 'InDog', '0.00e+00'), ('Carrier carrier', 'LoDog', '5.55e-17'), ('FrontDog', 'FDrive', '0.00e+00'), ('RangeSlv', 'ModeSlv', '0.00e+00')]
+        finish: dragged []; earlier update ''
+ok      the Update's check phase found no gear mate turning against its mesh: []
+record  0 sidecar(s) written; record written; notes []
+status  [green] Updated SolidWorks: re-placed Carrier (the carrier), Sun, Pl (3 copies), InDog, LoDog, RangeSlv, FrontDog, ModeSlv, FDrive, FIdler and FOut in every mode; no interference between the gears in any mode, where they stand. In 4L, RangeSlv's teeth stood across LoDog's. In 4L, ModeSlv's teeth stood across FrontDog's; the gears of 4L are back at the turn they were built at. It worked in 4L, the configuration that was active, then showed and checked 2H, 4H and N and left the assembly in 4L. Save TransferCase_E4 in SolidWorks to keep it.
+fact    s7 8 quiet Update in 4L: the press took 761.0 s; SolidWorks calls by member {'OpenDoc6': 10, 'IsSuppressed2': 444, 'GetSystemValue3': 10, 'ShowConfiguration2': 4, 'ForceRebuild3': 68, 'SetSuppression2': 90, 'put': 52}
+        shows and puts in order: [('ShowConfiguration2', '2H'), ('put', 'TransferCase_E4_Carrier_Carrier-1'), ('put', 'Gear_m1_N24-1'), ('put', 'Gear_m1_N24-2'), ('put', 'Gear_m1_N24-3'), ('put', 'Gear_m1_N24-4'), ('put', 'Dog_m1.5_N30-1'), ('put', 'Dog_m1.5_N30-2'), ('put', 'Sleeve_m1.5_N30-1'), ('put', 'Dog_m1.5_N30-3'), ('put', 'Sleeve_m1.5_N30-2'), ('put', 'Gear_m2_N30-1'), ('put', 'Gear_m2_N20-1'), ('put', 'Gear_m2_N30-2'), ('ShowConfiguration2', '4H'), ('put', 'TransferCase_E4_Carrier_Carrier-1'), ('put', 'Gear_m1_N24-1'), ('put', 'Gear_m1_N24-2'), ('put', 'Gear_m1_N24-3'), ('put', 'Gear_m1_N24-4'), ('put', 'Dog_m1.5_N30-1'), ('put', 'Dog_m1.5_N30-2'), ('put', 'Sleeve_m1.5_N30-1'), ('put', 'Dog_m1.5_N30-3'), ('put', 'Sleeve_m1.5_N30-2'), ('put', 'Gear_m2_N30-1'), ('put', 'Gear_m2_N20-1'), ('put', 'Gear_m2_N30-2'), ('ShowConfiguration2', 'N'), ('put', 'TransferCase_E4_Carrier_Carrier-1'), ('put', 'Gear_m1_N24-1'), ('put', 'Gear_m1_N24-2'), ('put', 'Gear_m1_N24-3'), ('put', 'Gear_m1_N24-4'), ('put', 'Dog_m1.5_N30-1'), ('put', 'Dog_m1.5_N30-2'), ('put', 'Sleeve_m1.5_N30-1'), ('put', 'Dog_m1.5_N30-3'), ('put', 'Sleeve_m1.5_N30-2'), ('put', 'Gear_m2_N30-1'), ('put', 'Gear_m2_N20-1'), ('put', 'Gear_m2_N30-2'), ('ShowConfiguration2', '4L'), ('put', 'TransferCase_E4_Carrier_Carrier-1'), ('put', 'Gear_m1_N24-1'), ('put', 'Gear_m1_N24-2'), ('put', 'Gear_m1_N24-3'), ('put', 'Gear_m1_N24-4'), ('put', 'Dog_m1.5_N30-1'), ('put', 'Dog_m1.5_N30-2'), ('put', 'Sleeve_m1.5_N30-1'), ('put', 'Dog_m1.5_N30-3'), ('put', 'Sleeve_m1.5_N30-2'), ('put', 'Gear_m2_N30-1'), ('put', 'Gear_m2_N20-1'), ('put', 'Gear_m2_N30-2')]
+        configuration '4L'; visited ['2H', '4H', 'N']; put_in ['2H', '4H', 'N', '4L']; placed ['Carrier carrier', 'Sun', 'Pl copy 1', 'Pl copy 2', 'Pl copy 3', 'InDog', 'LoDog', 'RangeSlv', 'FrontDog', 'ModeSlv', 'FDrive', 'FIdler', 'FOut']; unsuppressed_in []; suppressed_in []; slid []; values_restored []; extra configurations []; extra mates []; senses unread []; positions per configuration None; failures []
+        post-check of 2H: turned True; out of step []; off axis []; clashes []; interference error ''
+        post-check of 4H: turned False; out of step [('ModeSlv', 'FrontDog')]; off axis []; clashes []; interference error ''
+        post-check of N: turned True; out of step []; off axis []; clashes []; interference error ''
+        post-check of 4L: turned False; out of step [('RangeSlv', 'LoDog'), ('ModeSlv', 'FrontDog')]; off axis []; clashes []; interference error ''
+fact    s7 8: the quiet Update in 4L put in ['2H', '4H', 'N', '4L']; failures []
+ok      s7 8 after the quiet Update in 4L: every configuration shown and rebuilt; 4L, active, read the same before any show and after its own (largest 0.0e+00 at -); left active again (4L)
+table   s7 8 after the quiet Update in 4L (active 4L): each body's (turn from its frame on record for the mode °, axial offset mm) [radial offset of the origin mm where not 0]; columns ['2H', '4H', 'N', '4L']
+        Sun                 +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000
+        Pl copy 1           +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000
+        Pl copy 2           +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000
+        Pl copy 3           +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000
+        Ring                -0.000  +0.000 |    -0.000  +0.000 |    -0.000  +0.000 |    -0.000  +0.000
+        InDog               +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000
+        LoDog               +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000
+        RangeSlv            -0.000  +0.000 |    -0.000  +0.000 |    -0.000  +0.000 |    -0.000  +0.000
+        FrontDog            +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000
+        ModeSlv             -0.000  +0.000 |    -0.000  +0.000 |    -0.000  +0.000 |    -0.000  +0.000
+        FDrive              +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000
+        FIdler              +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000
+        FOut                +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000
+        Carrier carrier     +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000
+ok      s7 8 fresh drive +37 in 2H: the drive's assumptions hold: Sun on In (0.0, 0.0, 1.0) at θ = 0, u₀ (1.0, 0.0, 0.0), its Top plane against the layout's Right (plane3); the input's turn ruled by DEMONSTRATION_DRIVE_SENSE 1 and measured; tolerance 1e-06 relative
+ok      s7 8 fresh drive +37 in 2H: in 2H the drive made at 90.000000° (the input at +0.000000°) moved nothing (0.0e+00), turned Sun 37.000000000000014° for +37°, and was deleted
+step    s7 8 fresh drive +37 in 2H: the drive's +37° in 2H
+ok      s7 8 fresh drive +37 in 2H: every configuration shown and rebuilt; 2H, active, read the same before any show and after its own (largest 0.0e+00 at -); left active again (2H)
+table   s7 8 fresh drive +37 in 2H (active 2H): each body's (turn from its frame on record for the mode °, axial offset mm) [radial offset of the origin mm where not 0]; columns ['2H', '4H', 'N', '4L']
+        Sun                +37.000  +0.000 |   +37.000  +0.000 |   +37.000  +0.000 |   +37.000  +0.000
+        Pl copy 1          -18.500  +0.000 [3.870] |   -18.500  +0.000 [3.870] |   -18.500  +0.000 [3.870] |   -18.500  +0.000 [3.870]
+        Pl copy 2          -18.500  +0.000 [3.870] |   -18.500  +0.000 [3.870] |   -18.500  +0.000 [3.870] |   -18.500  +0.000 [3.870]
+        Pl copy 3          -18.500  +0.000 [3.870] |   -18.500  +0.000 [3.870] |   -18.500  +0.000 [3.870] |   -18.500  +0.000 [3.870]
+        Ring                -0.000  +0.000 |    -0.000  +0.000 |    -0.000  +0.000 |    -0.000  +0.000
+        InDog              +37.000  +0.000 |   +37.000  +0.000 |   +37.000  +0.000 |   +37.000  +0.000
+        LoDog               +9.250  +0.000 |    +9.250  +0.000 |    +9.250  +0.000 |    +9.250  +0.000
+        RangeSlv           +37.000  +0.000 |   +37.000  +0.000 |   +37.000  +0.000 |   +37.000  +0.000
+        FrontDog            +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000
+        ModeSlv            +37.000  +0.000 |   +37.000  +0.000 |   +37.000  +0.000 |   +37.000  +0.000
+        FDrive              +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000
+        FIdler              +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000
+        FOut                +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000
+        Carrier carrier     +9.250  +0.000 |    +9.250  +0.000 |    +9.250  +0.000 |    +9.250  +0.000
+judge   s7 8, fresh drive +37 in 2H: bodies moved in 2H: ['Sun', 'Pl copy 1', 'Pl copy 2', 'Pl copy 3', 'InDog', 'LoDog', 'RangeSlv', 'ModeSlv', 'Carrier carrier']
+        Sun              {'2H': 'moved', '4H': 'moved', 'N': 'moved', '4L': 'moved'} (put in before: ['2H', '4H', '4L', 'N'])
+        Pl copy 1        {'2H': 'moved', '4H': 'moved', 'N': 'moved', '4L': 'moved'} (put in before: ['2H', '4H', '4L', 'N'])
+        Pl copy 2        {'2H': 'moved', '4H': 'moved', 'N': 'moved', '4L': 'moved'} (put in before: ['2H', '4H', '4L', 'N'])
+        Pl copy 3        {'2H': 'moved', '4H': 'moved', 'N': 'moved', '4L': 'moved'} (put in before: ['2H', '4H', '4L', 'N'])
+        InDog            {'2H': 'moved', '4H': 'moved', 'N': 'moved', '4L': 'moved'} (put in before: ['2H', '4H', '4L', 'N'])
+        LoDog            {'2H': 'moved', '4H': 'moved', 'N': 'moved', '4L': 'moved'} (put in before: ['2H', '4H', '4L', 'N'])
+        RangeSlv         {'2H': 'moved', '4H': 'moved', 'N': 'moved', '4L': 'moved'} (put in before: ['2H', '4H', '4L', 'N'])
+        ModeSlv          {'2H': 'moved', '4H': 'moved', 'N': 'moved', '4L': 'moved'} (put in before: ['2H', '4H', '4L', 'N'])
+        Carrier carrier  {'2H': 'moved', '4H': 'moved', 'N': 'moved', '4L': 'moved'} (put in before: ['2H', '4H', '4L', 'N'])
+        fits ['shared']; rules out ['per_configuration', 'H', 'H_private_put']
+ok      s7 8 moving put in 2H, the train back to its built frames: put in 2H; every mate suppressed for the put back as §2.3 has it in every configuration: wrong {}
+step    s7 8 moving put in 2H, the train back to its built frames: put in 2H by the app's route, mates off there ['InDog locked to Sun', 'LoDog locked to Carrier carrier', 'ModeSlv splined to RangeSlv', 'FDrive locked to FrontDog', 'Sun meshes Pl copy 1', 'Sun meshes Pl copy 2', 'Sun meshes Pl copy 3', 'Pl copy 1 meshes Ring', 'FDrive meshes FIdler', 'FIdler meshes FOut', 'RangeSlv engages InDog']; each body put and how far from where it stood {'Carrier carrier': 0.160743, 'Sun': 0.601815, 'Pl copy 1': 3.857822, 'Pl copy 2': 3.184928, 'Pl copy 3': 3.497015, 'InDog': 0.601815, 'LoDog': 0.154526, 'RangeSlv': 0.57747, 'FrontDog': 0.0, 'ModeSlv': 0.57747, 'FDrive': 0.0, 'FIdler': 0.0, 'FOut': 0.0}
+        during the put: {'Carrier carrier': 'held by Carrier carrier on Carrier Axis, Carrier carrier along Carrier', 'Sun': 'held by Sun on In Axis, Sun along In', 'Pl copy 1': 'held by Pl copy 1 on Planet copy 1 Axis, Pl copy 1 along Planet copy 1', 'Pl copy 2': 'held by Pl copy 2 on Planet copy 2 Axis, Pl copy 2 along Planet copy 2', 'Pl copy 3': 'held by Pl copy 3 on Planet copy 3 Axis, Pl copy 3 along Planet copy 3', 'InDog': 'wholly free', 'LoDog': 'wholly free', 'RangeSlv': 'held by RangeSlv on Rear Axis, RangeSlv along Rear', 'FrontDog': 'held by FrontDog on FrontDrv Axis, FrontDog along FrontDrv', 'ModeSlv': 'held by ModeSlv on Rear Axis, ModeSlv along Rear', 'FDrive': 'wholly free', 'FIdler': 'held by FIdler on Idler Axis, FIdler along Idler', 'FOut': 'held by FOut on Front Axis, FOut along Front'}
+        in 2H, mates off: every body put stands where it was put, largest 8.3e-10 at Pl copy 2; others moved []
+        in 2H, mates on: every body put stands where it was put, largest 8.3e-10 at Pl copy 2; others moved []
+ok      s7 8 moving put in 2H, the train back to its built frames: every configuration shown and rebuilt; 2H, active, read the same before any show and after its own (largest 0.0e+00 at -); left active again (2H)
+table   s7 8 moving put in 2H, the train back to its built frames (active 2H): each body's (turn from its frame on record for the mode °, axial offset mm) [radial offset of the origin mm where not 0]; columns ['2H', '4H', 'N', '4L']
+        Sun                 +0.000  +0.000 |   +37.000  +0.000 |   +37.000  +0.000 |   +37.000  +0.000
+        Pl copy 1           +0.000  +0.000 |   -18.500  +0.000 [3.870] |   -18.500  +0.000 [3.870] |   -18.500  +0.000 [3.870]
+        Pl copy 2           +0.000  +0.000 |   -18.500  +0.000 [3.870] |   -18.500  +0.000 [3.870] |   -18.500  +0.000 [3.870]
+        Pl copy 3           +0.000  +0.000 |   -18.500  +0.000 [3.870] |   -18.500  +0.000 [3.870] |   -18.500  +0.000 [3.870]
+        Ring                -0.000  +0.000 |    -0.000  +0.000 |    -0.000  +0.000 |    -0.000  +0.000
+        InDog               +0.000  +0.000 |   +37.000  +0.000 |   +37.000  +0.000 |   +37.000  +0.000
+        LoDog               +0.000  +0.000 |    +9.250  +0.000 |    +9.250  +0.000 |    +9.250  +0.000
+        RangeSlv            -0.000  +0.000 |   +37.000  +0.000 |   +37.000  +0.000 |   +37.000  +0.000
+        FrontDog            +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000
+        ModeSlv             -0.000  +0.000 |   +37.000  +0.000 |   +37.000  +0.000 |   +37.000  +0.000
+        FDrive              +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000
+        FIdler              +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000
+        FOut                +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000
+        Carrier carrier     +0.000  +0.000 |    +9.250  +0.000 |    +9.250  +0.000 |    +9.250  +0.000
+judge   s7 8, moving put in 2H, the train back to its built frames: bodies moved in 2H: ['Sun', 'Pl copy 1', 'Pl copy 2', 'Pl copy 3', 'InDog', 'LoDog', 'RangeSlv', 'ModeSlv', 'Carrier carrier']
+        Sun              {'2H': 'moved', '4H': 'still', 'N': 'still', '4L': 'still'} (put in before: ['2H', '4H', '4L', 'N'])
+        Pl copy 1        {'2H': 'moved', '4H': 'still', 'N': 'still', '4L': 'still'} (put in before: ['2H', '4H', '4L', 'N'])
+        Pl copy 2        {'2H': 'moved', '4H': 'still', 'N': 'still', '4L': 'still'} (put in before: ['2H', '4H', '4L', 'N'])
+        Pl copy 3        {'2H': 'moved', '4H': 'still', 'N': 'still', '4L': 'still'} (put in before: ['2H', '4H', '4L', 'N'])
+        InDog            {'2H': 'moved', '4H': 'still', 'N': 'still', '4L': 'still'} (put in before: ['2H', '4H', '4L', 'N'])
+        LoDog            {'2H': 'moved', '4H': 'still', 'N': 'still', '4L': 'still'} (put in before: ['2H', '4H', '4L', 'N'])
+        RangeSlv         {'2H': 'moved', '4H': 'still', 'N': 'still', '4L': 'still'} (put in before: ['2H', '4H', '4L', 'N'])
+        ModeSlv          {'2H': 'moved', '4H': 'still', 'N': 'still', '4L': 'still'} (put in before: ['2H', '4H', '4L', 'N'])
+        Carrier carrier  {'2H': 'moved', '4H': 'still', 'N': 'still', '4L': 'still'} (put in before: ['2H', '4H', '4L', 'N'])
+        fits ['per_configuration', 'H', 'H_private_put']; rules out ['shared']
+        closing: saved this run's modified documents first, as a person would: ['TransferCase_E4.SLDASM']
+ok      s7 8 saved and reopened: saved with 2H active and closed: left []
+DIALOG  SolidWorks shows 'Opening': ['Close', 'Opening Component 2 of 15', 'Update\nAssembly', 'Update\nGraphics', 'Opening File: C:\\Use...ut\\s7-8\\Sleeve_m1.5_N30.SLDPRT', 'Elapsed time: 0s', 'This file was last opened in 3 seconds', 'For more information, view: '] (a progress box that closes itself; not logged again)
+step    s7 8 saved and reopened: reopened in 2H (saved with 2H active)
+ok      s7 8 saved and reopened: every configuration shown and rebuilt; 2H, active, read the same before any show and after its own (largest 0.0e+00 at -); left active again (2H)
+table   s7 8 saved and reopened (active 2H): each body's (turn from its frame on record for the mode °, axial offset mm) [radial offset of the origin mm where not 0]; columns ['2H', '4H', 'N', '4L']
+        Sun                 +0.000  +0.000 |   +37.000  +0.000 |   +37.000  +0.000 |   +37.000  +0.000
+        Pl copy 1           +0.000  +0.000 |   -18.500  +0.000 [3.870] |   -18.500  +0.000 [3.870] |   -18.500  +0.000 [3.870]
+        Pl copy 2           +0.000  +0.000 |   -18.500  +0.000 [3.870] |   -18.500  +0.000 [3.870] |   -18.500  +0.000 [3.870]
+        Pl copy 3           +0.000  +0.000 |   -18.500  +0.000 [3.870] |   -18.500  +0.000 [3.870] |   -18.500  +0.000 [3.870]
+        Ring                -0.000  +0.000 |    -0.000  +0.000 |    -0.000  +0.000 |    -0.000  +0.000
+        InDog               +0.000  +0.000 |   +37.000  +0.000 |   +37.000  +0.000 |   +37.000  +0.000
+        LoDog               +0.000  +0.000 |    +9.250  +0.000 |    +9.250  +0.000 |    +9.250  +0.000
+        RangeSlv            -0.000  +0.000 |   +37.000  +0.000 |   +37.000  +0.000 |   +37.000  +0.000
+        FrontDog            +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000
+        ModeSlv             -0.000  +0.000 |   +37.000  +0.000 |   +37.000  +0.000 |   +37.000  +0.000
+        FDrive              +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000
+        FIdler              +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000
+        FOut                +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000 |    +0.000  +0.000
+        Carrier carrier     +0.000  +0.000 |    +9.250  +0.000 |    +9.250  +0.000 |    +9.250  +0.000
+ok      s7 8 saved and reopened: every configuration reads after the reopen as before the save (largest per mode {'2H': '0.0e+00 at -', '4H': '0.0e+00 at -', 'N': '0.0e+00 at -', '4L': '0.0e+00 at -'})
+        s7-8, the copy's end: SolidWorks 2024, this run's modified documents saved before the close: ['TransferCase_E4.SLDASM']
+ok      s7-8, the copy's end: s7-8 ends clean: every document of it closed in SolidWorks (left []), Excel's workbook closed (['TransferCase_E4.xlsx']), no open document by a file name it holds ([])
+table   s7 6: each body put, held or wholly free during the put, and how each configuration read after it
+        8 moving put in 2H, the train back to its built frames: Carrier carrier  held by Carrier carrier on Carrier Axis, Carrier carrier alo {'2H': 'moved', '4H': 'still', 'N': 'still', '4L': 'still'}
+        8 moving put in 2H, the train back to its built frames: Sun              held by Sun on In Axis, Sun along In                         {'2H': 'moved', '4H': 'still', 'N': 'still', '4L': 'still'}
+        8 moving put in 2H, the train back to its built frames: Pl copy 1        held by Pl copy 1 on Planet copy 1 Axis, Pl copy 1 along Pla {'2H': 'moved', '4H': 'still', 'N': 'still', '4L': 'still'}
+        8 moving put in 2H, the train back to its built frames: Pl copy 2        held by Pl copy 2 on Planet copy 2 Axis, Pl copy 2 along Pla {'2H': 'moved', '4H': 'still', 'N': 'still', '4L': 'still'}
+        8 moving put in 2H, the train back to its built frames: Pl copy 3        held by Pl copy 3 on Planet copy 3 Axis, Pl copy 3 along Pla {'2H': 'moved', '4H': 'still', 'N': 'still', '4L': 'still'}
+        8 moving put in 2H, the train back to its built frames: InDog            wholly free                                                  {'2H': 'moved', '4H': 'still', 'N': 'still', '4L': 'still'}
+        8 moving put in 2H, the train back to its built frames: LoDog            wholly free                                                  {'2H': 'moved', '4H': 'still', 'N': 'still', '4L': 'still'}
+        8 moving put in 2H, the train back to its built frames: RangeSlv         held by RangeSlv on Rear Axis, RangeSlv along Rear           {'2H': 'moved', '4H': 'still', 'N': 'still', '4L': 'still'}
+        8 moving put in 2H, the train back to its built frames: FrontDog         held by FrontDog on FrontDrv Axis, FrontDog along FrontDrv   did not move where it was put
+        8 moving put in 2H, the train back to its built frames: ModeSlv          held by ModeSlv on Rear Axis, ModeSlv along Rear             {'2H': 'moved', '4H': 'still', 'N': 'still', '4L': 'still'}
+        8 moving put in 2H, the train back to its built frames: FDrive           wholly free                                                  did not move where it was put
+        8 moving put in 2H, the train back to its built frames: FIdler           held by FIdler on Idler Axis, FIdler along Idler             did not move where it was put
+        8 moving put in 2H, the train back to its built frames: FOut             held by FOut on Front Axis, FOut along Front                 did not move where it was put
+result  s7's readings written to C:\Users\M0obo\Documents\GearGeneratorProbe\w8-sw2024-20261115\s7-20261115-172046\w8-s7-20261115-172104.json
+close   section s7: left of ours []; 945 s; SolidWorks 2.24 GB private, 6.84 GB free
+excel   quit our own Excel
+close   left of ours []; stray []; lost []; SolidWorks 2.20 GB private, 7.05 GB free
+dialogs progress boxes seen {'Calculating Interference Detection': 0, 'Updating...': 0, 'Opening': 1, 'Loading...': 0}; other dialogs are logged above as DIALOG
+noted   SolidWorks' notification box came up while no SolidWorks call was in progress (exempt by the coordinator's ruling; nothing answers it)
+person  W5-PLAN §4.4, the step only a person can do (for 2026, then 2024):
+person  In SolidWorks, open the Reducer_12to1.SLDASM a section built (a2 or m4). Click gear G1 — the small gear on S1, at the origin — and drag it round its axis by about a quarter turn. Watch G4, the large gear on S3: it turns the same way as G1, much more slowly — a quarter turn of G1 turns G4 about 7.5°. G2 and G3, on S2, turn together the other way. No gear should leave its axis, slide along it, or pass through another. Then, in the Workbook window, press Update SolidWorks with nothing changed: the footer should say the gears stand where they were turned. Tell us what you saw, on each version.
+done    0 failed: []; 1 noted for a ruling
