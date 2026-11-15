@@ -9,6 +9,10 @@ numbers are at `8702389`. Under review:
 - **C, the demonstration script:** `48ab0aa`, `7c9634d`, `f765894`, `1560b25`, and the script change in `8702389`.
 - **D, the window:** `d9747af`, `a666a27`, `b70aa40`.
 
+`6b16963` landed while I wrote this: case 8 rerun alone on 2024 at `8702389`, 0 failed
+(`probe/results/sw2024/w8-workbook-assembly-20261115-172046-s7-case8.log`, written ":c8" below). I read it and folded
+it in. It closes MF1's 2024 half, and it sharpens N2.
+
 Logs are cited by file and line. The lines are of the logs read through `iconv -f cp1252`.
 
 ---
@@ -36,9 +40,11 @@ nothing. That status says it did not show the other modes (ruling 11), so it doe
 
 - s7 now holds its turns and its moving puts to the version's findings, with STOP lines, and the 2024 run shows those
   holds working.
-- But case 8, the measurement M1 asked for, has never finished. On 2024 it stopped at its decisive step. On 2026 it
-  has not run.
+- Case 8 is the measurement M1 asked for. It has now finished on 2024 (`6b16963`), but it has not run on 2026, where
+  the question is open.
 - Case 8 also holds nothing about the app's own Update, which it presses (MF1).
+- On 2024, case 8 read neither 2026 possibility. In that state the turn reached all four configurations, and the
+  moving put stayed in 2H. So 2026's s2 reading needs 2026's own case 8 (N2).
 
 **The 2024 s7 log supports its commit message on every reading I checked, with one overstatement:** that the 2024
 readings "match 2026's" (N1). On 2024 it justifies **`TURN_PER_CONFIGURATION_ON_2024 = False`** (S3).
@@ -49,7 +55,7 @@ readings "match 2026's" (N1). On 2024 it justifies **`TURN_PER_CONFIGURATION_ON_
 
 ## Must fix before the closing run
 
-**MF1. s7 case 8 has never finished, and it holds nothing about the Update it presses.** (`probe/workbook_assembly_check.py`
+**MF1. s7 case 8 has not run on 2026, and it holds nothing about the Update it presses.** (`probe/workbook_assembly_check.py`
 8010-8045; `probe/results/sw2024/w8-workbook-assembly-20261115-162357-s7.log` 1136-1140)
 
 - *What it is for.* Ruling 9.18 (`W8-INTERFACES.md` 335-338) and the turn comment in `findings.py` (1271-1274) name
@@ -62,8 +68,7 @@ readings "match 2026's" (N1). On 2024 it justifies **`TURN_PER_CONFIGURATION_ON_
   - 3.9 mm is the planets' radial offset with the carrier turned 9.25° (the table at 1110-1124: `[3.870]`).
   - The error names the first planet, put just after the Sun.
 
-  I infer this from the log. It is not shown: the fix in `8702389` (carrier first, as `_put_train` puts) has not run
-  on either version.
+  The rerun bears this out. With the carrier put first (`8702389`), the same put took on 2024 (:c8 219-224).
 - *On 2026.* The case has never run. The 2026 s7 run (`…-135401-s7.log`) predates it.
 - *What it does not hold.* Case 8 presses the app's quiet Update (8024) and logs `put_in` and `failures` as a fact
   (8028). It checks neither, and it does not hold the read after the Update (`c.read`, 8029) to the built frames. So a
@@ -72,10 +77,10 @@ readings "match 2026's" (N1). On 2024 it justifies **`TURN_PER_CONFIGURATION_ON_
 - *Change.*
   1. In case 8, add a check that the Update went through: `result.ok`, no failures, and `put_in` holding every mode.
   2. Hold the read after the Update to the frames on record in every configuration (`frames_gap`, as `S7Case.read`
-     already computes them). The 2024 table at 1091-1105 reads 0.000 everywhere, so this passes on the evidence.
-  3. Before the closing run, run `--only s7 --s7-cases 8` alone on 2026, and on 2024 when it next runs. A put path that
-     has never succeeded should not first run inside the closing run, and ruling 9.18 is to be written from its
-     result.
+     already computes them). The 2024 tables at 1091-1105 and :c8 174-188 read 0.000 everywhere, so this passes on
+     the evidence. The rerun still only logs the result (:c8 172).
+  3. Before the closing run, run `--only s7 --s7-cases 8` alone on 2026. Its put path has never run on 2026, and ruling
+     9.18 is to be written from its result.
 
 ---
 
@@ -143,7 +148,8 @@ readings "match 2026's" (N1). On 2024 it justifies **`TURN_PER_CONFIGURATION_ON_
   - cases 1-3 (log 81-92, 205-216, 397-493);
   - case 4 after the app's changed Update, whose puts moved the turned train back (tables at 549-745; judgement 730-740,
     fits only "shared");
-  - case 8's fresh turn after the app's quiet Update had put every mode (1110-1135, fits only "shared").
+  - case 8's fresh turn after the app's quiet Update had put every mode (1110-1135; again in the rerun, :c8 193-218),
+    fits only "shared". In the rerun, a moving put in 2H then stayed in 2H (:c8 225-250), the put fact's reading.
 
   The tables give LoDog +9.25° against RangeSlv +37° in 4L, where they are coupled: a dog across its sleeve. That is
   the hazard the False sentences warn of. "Can show in other modes" is therefore true on 2024 in every state measured.
@@ -242,18 +248,28 @@ readings "match 2026's" (N1). On 2024 it justifies **`TURN_PER_CONFIGURATION_ON_
   unsettled one (`…-151412-s2.log` 448-451).
 - *"Its last step failed."* The failure was the moving put, the second-last step. The saved-and-reopened step never
   ran.
-- *The order of the case-8 put.* The reason the message gives, the planets put before the carrier, is my inference
-  from the log too (MF1). It is not shown.
+- *The order of the case-8 put.* The reason the message gives was, when it was written, an inference from the log.
+  The rerun at `8702389` bore it out (:c8 219-224, 0 failed).
 
-**N2. 2024 makes 2026's s2 reading harder to explain, not easier.** (inferred)
+**N2. 2024 makes 2026's s2 reading harder to explain, not easier.** (the readings verified; the conclusion inferred)
 
-- *What 2024 reads.* A turn writes its configuration's place into every configuration (case 5). It reaches all four
-  after an Update has put every mode (cases 4 and 8). A moving put stays where it was made (case 5).
-- *What that predicts for 2026.* If 2026 behaved the same, 2H's put in s2's second press could not have brought 4H and
-  N back to the built turn. Yet they read so (448-451). In the first press, from an unmoved copy, it did not (224-227).
-- *What is left.* Either 2026 differs from 2024 in that state, or something in the app's put sequence carries into
-  other configurations. That sequence is the lock and gear mates suppressed in 2H alone and turned back on, then a
-  rebuild. Case 8 on 2026 can tell these apart, which is the other reason for MF1.
+- *What 2024 reads, in s2's own sequence.* Case 8, rerun at `8702389`, went through four steps:
+  1. a turn in 2H;
+  2. the app's quiet Update in 4L, which put every mode (761 s), after which every configuration read at its built
+     frames (:c8 172-188);
+  3. a fresh +37° turn in 2H, which showed in all four configurations (:c8 193-218, fits only "shared");
+  4. the moving put of the train in 2H, back to its built frames by the app's route, which stayed in 2H. 4H, N and 4L
+     still stood at the fresh turn (:c8 225-250, fits "per_configuration"; it survived a reopen).
+
+  Case 5 adds that a turn writes its configuration's place into every configuration, and case 4 that the turn reaches
+  all four after a changed Update.
+- *What that predicts for 2026.* Had 2026 behaved like this, s2's second press would have found 4H and N still turned
+  after 2H's put. They read at the built turn (`…-151412-s2.log` 448-451).
+- *What is left.* Either 2026 differs from 2024 in that state, or the app's sequence differs from the script's in
+  something that carries into other configurations. The app shows and rebuilds 2H before its put. Around the put it
+  suppresses the lock and gear mates in 2H alone, turns them back on and rebuilds. Only then does it show 4H.
+  Case 8 on 2026 can tell these apart, which is the other reason for MF1. Either way the app ends right: every mode is
+  put and post-checked, and the script read every body of every mode at its frames after that press (464-471).
 
 **N3. Each fix is covered, but `a87c1c5`'s own regression test no longer distinguishes it.** Mutants were run on a
 `git archive` copy of HEAD:
@@ -305,7 +321,7 @@ its docstring's claim that the state is reachable is stale.
 - **M1.** The script now does what M1 asked: s2 reads 4H, N and 4L after the fresh turn (6840-6841), and s7 has case 8.
   - The s2 reads are fact lines, not assertions. M1 asked to "assert them per the finding". With the finding meaning
     "can show", no assertion follows, so the fact lines are right.
-  - The evidence is not in. s2 has not run on 2026 since `7c9634d`. Case 8 has not finished anywhere (MF1).
+  - The evidence is not in on 2026. s2 has not run there since `7c9634d`, and case 8 has run only on 2024 (MF1, N2).
 - **M2.** Closed. `s7_hold` (7702-7723) STOP-checks a turn on an unmoved copy (cases 1-3) and case 5's moving puts
   against the version's finding where it is set. It logs them where the finding is unset. Case 7's value read is a
   `stop_check` (on 2024: 1190).
@@ -435,7 +451,7 @@ reaches other modes.*
 - **Verified, by reading the logs or JSON at the lines cited:**
   - every claim of `8702389` in N1;
   - case 5's same-place reading;
-  - case 8's tables;
+  - case 8's tables, in the 162357 run and in `6b16963`'s rerun (:c8);
   - the 2026 s2 readings at 204-247, 343-358, 430-471, 555-575 and 700-715;
   - s7's hold lines on 2024.
 - **Verified, by running:**
@@ -447,7 +463,7 @@ reaches other modes.*
   - that no path leaves a mode wrong while reporting it right, or reports red when right (question 1);
   - that a leaking put can carry only the built rotation, and that slide mates hold the sliders' places;
   - N4 and N5;
-  - why case 8's put failed;
+  - why case 8's put failed (since borne out by the rerun);
   - N2's argument.
 - **Not checked:**
   - anything on SolidWorks;
