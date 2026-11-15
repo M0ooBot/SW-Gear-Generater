@@ -87,7 +87,7 @@ def test_a_fights_reading_names_what_the_show_into_it_and_after_it_read():
     facts = {"slides": {"configuration": "Z", "other": "Y", "other_at": 30.0, "back_at": 20.0, "into": into,
                         "after": _state("Y", 30.0), "back": dict(_state("Z", 20.0), show=None)}}
     reading = p11.fight_reading(facts, "slides")
-    assert reading == {"show_returned": True, "active_is_target": True, "windows": [""],
+    assert reading == {"show_returned": True, "active_is_target": True, "windows": [("show Z", "#32770", "")],
                        "mates_in_error": ["S slide", "S slide 2"], "over_defined": ["S"],
                        "app_problems": ["The mate S slide is in error in SolidWorks."], "other_clean": True,
                        "back_clean": True}

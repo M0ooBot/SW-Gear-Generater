@@ -26,8 +26,10 @@ alphabetical nor any order the reads pass the names in. The slide reads Default 
 - Y, then X, shown and rebuilt: each must read every code 0 and S at its value to 1e-6 mm.
 - Z shown again, the second slide suppressed in Z, rebuilt: clean again, S at 20?
 - The same for the other fight §4.2 names: a lock S-D made while Y is shown (the coupling is off there), turned on in
-  Y only; then, with X shown, the coupling turned on in Y; Y shown and rebuilt; X shown; Y shown, the lock suppressed
-  in Y, rebuilt.
+  Y only, with S's own slide and axis mate off in Y so the lock alone holds S there (in this shape a lock beside them
+  fights already: the first run, AddMate5 status 5 with the coupling off); then, with X shown, the coupling turned on
+  in Y; Y shown and rebuilt; X shown; Y shown again, the lock suppressed and S's own mates turned back on in Y,
+  rebuilt.
 
 **B. The read order.** At three moments (before the fight is made; after the second slide's flags are set; after
 the lock's), each mate whose flags differ between configurations is read with ``IsSuppressed2(3, names)``: the full
@@ -65,6 +67,7 @@ FIGHT, OTHER, ALSO = "Z", "Y", "X"       # Z holds the two slides; Y the lock an
 SLIDE_VALUES = {"Default": 10.0, "X": 15.0, "Z": 20.0, "Y": 30.0}   # mm, the first slide in each configuration
 SECOND_SLIDE = 25.0                      # mm, the second slide, in every configuration
 SLIDE, SECOND, COUPLING, SPLINE, LOCK = "S slide", "S slide 2", "S engages D", "S splined to A", "S locked to D"
+ON_AXIS = "S on A Axis"
 TOLERANCE_MM = 1e-6
 SPECIFIED = 3                            # swInConfigurationOpts_e.swSpecifyConfiguration (findings.SPECIFY_CONFIGURATIONS)
 DOCUMENT_ORDER, ORDER_PASSED, EITHER, NEITHER = "document order", "order passed", "either", "neither"
@@ -151,7 +154,8 @@ def fight_reading(facts: Mapping[str, Any], key: str) -> Dict[str, Any]:
     return {
         "show_returned": (into.get("show") or {}).get("returned"),
         "active_is_target": into.get("active") == target,
-        "windows": [w.get("title") for s in (into, after, fight.get("again") or {}, back) for w in windows_of(s)],
+        "windows": [(w.get("call"), w.get("class"), w.get("title")) for s in (into, after, fight.get("again") or {}, back)
+                    for w in windows_of(s)],
         "mates_in_error": sorted((into.get("errors_on") or {}).keys()),
         "over_defined": sorted(k for k, v in (into.get("constrained") or {}).items() if v == 4),
         "app_problems": list(into.get("app_problems") or []),
@@ -374,15 +378,25 @@ def _state(c: _Ctx, configuration: str) -> Dict[str, Any]:
     out["errors_suppressed"] = {m: e for m, e in out["codes"].items()
                                 if e.get("code") not in (0, None) and out["this_configuration"].get(m)}
     out["constrained"] = {k: constrained(px, comp) for k, comp in c.comps.items()}
-    got, states = px.attempt("swcom.Session.mate_states", lambda: [
-        {"name": s.name, "code": s.code, "warning": s.warning, "suppressed": s.suppressed}
-        for s in px.session.mate_states()])
-    out["app_mate_states"] = states if got else "raised"
-    on_here = c.on_in(configuration)
-    out["on_here_by_the_run"] = on_here
-    got, checked = px.attempt("swbuild._mate_problems on the mates on here",
-                              lambda: swbuild._mate_problems(px.session, on_here, False)[0])  # noqa: SLF001
-    out["app_problems"] = list(checked) if got else "raised"
+    # The Session reads the build document (Session._doc); outside a build it falls back to ActiveDoc, which in the
+    # first run answered an object with no FirstFeature. So the probe's assembly is made the Session's build document
+    # for these two reads, as the build and Update have it, and put back after.
+    worker = getattr(px.session, "_worker", None)          # the real Session behind the proxy, whose attributes
+    session = getattr(worker, "_session", None) or px.session  # the proxy only forwards reads
+    held = getattr(session, "_build_doc", None)
+    session._build_doc = doc  # noqa: SLF001
+    try:
+        got, states = px.attempt("swcom.Session.mate_states", lambda: [
+            {"name": s.name, "code": s.code, "warning": s.warning, "suppressed": s.suppressed}
+            for s in session.mate_states()])
+        out["app_mate_states"] = states if got else "raised"
+        on_here = c.on_in(configuration)
+        out["on_here_by_the_run"] = on_here
+        got, checked = px.attempt("swbuild._mate_problems on the mates on here",
+                                  lambda: swbuild._mate_problems(session, on_here, False)[0])  # noqa: SLF001
+        out["app_problems"] = list(checked) if got else "raised"
+    finally:
+        session._build_doc = held  # noqa: SLF001
     out["whats_wrong"] = whats_wrong(px, doc)
     out["flags"] = _w8_flags(px, doc, c.paths)
     return out
@@ -465,8 +479,9 @@ def _run(px: Px, facts: Dict[str, Any]) -> None:
         _spike_mount(px, doc, comps["A"], layout, "A Axis", layout, W8_A_Z, "A")
         _spike_mount(px, doc, comps["D"], layout, "D Axis", layout, W8_D_Z, "D")
         px.require(unfix(px, doc, comps["S"]), "S floats")
-        px.require(bool(_mate_axes(px, doc, comps["S"], "Gear Axis", layout, "A Axis", "S on A Axis").get("name")),
-                   "S is on A Axis")
+        on_axis = _mate_axes(px, doc, comps["S"], "Gear Axis", layout, "A Axis", ON_AXIS)
+        px.require(bool(on_axis.get("name")), "S is on A Axis")
+        _rename(px, mate_feature(doc, on_axis["name"]), ON_AXIS)
         keys = asm.names()
         layout_name = str(call(layout, "Name2"))
         _W8.clear()
@@ -563,6 +578,12 @@ def _run(px: Px, facts: Dict[str, Any]) -> None:
                                 "back_at": SLIDE_VALUES[OTHER]}
         facts["coupling_and_lock"] = lock
         lock["to Y"] = _shown(c, OTHER, "Y, for the lock's make")
+        # In this shape S is held along and on its axis by its own mates, and D along its axis by its own, so a lock
+        # S-D beside them fights already (the first run: AddMate5 status 5, D's and S's axial mates in error, with
+        # the coupling off). In Y the lock alone holds S: S's slide and its axis mate are off there while it is on.
+        lock["S's own mates off in Y"] = {m: _set(c, m, True, [OTHER]) for m in (SLIDE, ON_AXIS)}
+        lock["Y with S's own mates off"] = {"rebuild": _rebuild(c, "Y with S's own mates off")}
+        lock["Y with S's own mates off"].update(_state(c, OTHER))
         selected = _select_component(c, "S", False) and _select_component(c, "D", True)
         lock["selected by name"] = selected
         if not selected:
@@ -579,14 +600,16 @@ def _run(px: Px, facts: Dict[str, Any]) -> None:
             lock["Y with the lock alone"].update(_state(c, OTHER))
             lock_flags = {n: n != OTHER for n in order}
             reads["lock set"] = _order_reads(c, {COUPLING: coupling_flags, SECOND: {n: True for n in order},
-                                                 LOCK: lock_flags}, {SLIDE: slide_values})
+                                                 LOCK: lock_flags, SLIDE: {n: n == OTHER for n in order}},
+                                             {SLIDE: slide_values})
             lock["to X"] = _shown(c, ALSO, "X, to turn the coupling on in Y")
             lock["coupling on in Y"] = _set(c, COUPLING, False, [OTHER])
             lock["into"] = _shown(c, OTHER, "into the coupling beside the lock")
             lock["after"] = _shown(c, ALSO, "X after it")
             lock["again"] = _shown(c, OTHER, "into the coupling beside the lock again")
             lock["lock off in Y"] = _set(c, LOCK, True, [OTHER])
-            back = {"rebuild": _rebuild(c, "Y with the lock off")}
+            lock["S's own mates back on in Y"] = {m: _set(c, m, False, [OTHER]) for m in (SLIDE, ON_AXIS)}
+            back = {"rebuild": _rebuild(c, "Y with the lock off and S's own mates on")}
             c.layout, _h = _w8_refresh(px, doc, c.comps, keys, c.layout, layout_name)
             back.update(_state(c, OTHER))
             back["show"] = None
