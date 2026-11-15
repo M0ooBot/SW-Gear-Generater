@@ -309,11 +309,11 @@ def ready(tmp_path):
 
 @pytest.fixture
 def with_carrier(tmp_path):
-    """The 12 : 1 workbook with a gear on a shaft a carrier holds: its parts build, its layout waits for W7 (a
-    bevel row did until W6 laid bevels out)."""
+    """The 12 : 1 workbook with a dog ring: its parts build, its layout waits for W8 (a bevel row did until W6 laid
+    bevels out, then a carrier until W7 laid carriers out)."""
     spec = reducer()
-    spec = model.replace(spec, shafts=spec.shafts + (Shaft("P1", "S2", "20", "0", "0", "Z+", ""),),
-                         gears=spec.gears + (Gear("G6", "P1", "60", "spur", "external", "20", "1.5", "", "10", "10"),))
+    spec = model.replace(spec, gears=spec.gears + (Gear("G6", "S2", "60", "dog", "external", "20", "1.5", "", "10",
+                                                        "10"),))
     read, diagnostics = model.from_book(xlsx.read(write(tmp_path, spec)))
     a = assess.assess(read, diagnostics, P)
     assert a.build_refusal() == "" and a.parts.refused
@@ -680,8 +680,7 @@ def test_a_refused_plan_holds_build_back(ready):
 def test_build_parts_while_a_later_phase_holds_the_layout_back(with_carrier):
     f = _footer(with_carrier, plan=_gearbox(layout=None, assembly=False, **FULL))
     assert f.text == (f"Ready: Build parts makes 4 parts in {P}; the layout and assembly wait for a later "
-                             "phase: Shafts!A5: P1 is mounted on S2: carriers are laid out in phase W7, and the "
-                             "gearbox is not checked until then.")
+                             "phase: Gears!A6: G6 is a dog ring: dog rings are built in phase W8, with modes.")
     assert (f.ok, f.build_action, f.build_label, f.build_enabled, f.build_primary) == (
         True, ui_text.BUILD_PARTS, "Build parts", True, True)
     plan = _gearbox(layout=None, assembly=False, build=[_job(STEMS[3], ["G4"])],
@@ -2930,3 +2929,43 @@ def test_a_planetary_refused_at_build_is_said_whole_with_build_parts_offered_and
     errored = dataclasses.replace(ready, diagnostics=[Diagnostic(ERROR, condition, "Shafts!H4")])
     f = _footer(errored, plan=_gearbox(**FULL))
     assert (f.text, f.build_enabled) == (f"Fix the workbook before building: {condition}", False)
+
+
+def test_after_update_a_carrier_part_whose_values_changed_is_said_as_the_layouts_is():
+    """W7-INTERFACES §6.11: ``GearboxUpdate.carriers`` holds each carrier part's values as set, after the layout's."""
+    changed = swbuild.UpdateResult(document="Planetary_4to1_C_Carrier.SLDPRT", changed=["P copy 2 X", "P copy 2 Y"],
+                                   rebuilt=True)
+    result = _moved(placed=["C carrier", "Sun", *PLANETS], carriers=[changed],
+                    changed=[CARRIER_PATH, _path("Planetary_4to1", ".SLDASM")])
+    text, ok = ui_text.gearbox_update_status(_planetary_update(carriers_moved=("C",)), result)
+    assert (_clean(text), ok) == (
+        "Updated SolidWorks: moved the planets on C in Planetary_4to1_C_Carrier, re-placed C (the carrier), Sun and "
+        "Planet (3 copies); no interference between the gears where they stand. Save Planetary_4to1_C_Carrier and "
+        "Planetary_4to1 in SolidWorks to keep them.", True)
+    still = dataclasses.replace(result, carriers=[swbuild.UpdateResult(document="Planetary_4to1_C_Carrier.SLDPRT",
+                                                                        unchanged=["P copy 2 X"], rebuilt=True)],
+                                changed=[_path("Planetary_4to1", ".SLDASM")])
+    assert "planets on C" not in ui_text.gearbox_update_status(_planetary_update(), still)[0]
+    broken = dataclasses.replace(result, carriers=[dataclasses.replace(changed, rebuilt=False)])
+    text, ok = ui_text.gearbox_update_status(_planetary_update(), broken)
+    assert ("moved the planets on C in Planetary_4to1_C_Carrier (SolidWorks reported an error rebuilding it)" in text
+            and not ok)
+
+
+def test_each_carriers_result_is_matched_to_its_part_by_file_name_never_by_position():
+    """Two carriers given in the other order (made up: the app refuses two stages today, but the matching must not
+    lean on that), and a result that matches no carrier part is not said."""
+    c2_path = _path("Planetary_4to1_C2_Carrier")
+    link2 = swbuild.CarrierLink("C2 carrier", ("Q copy 1",), (50.0, 0.0, 0.0), (0.0, 0.0, 1.0))
+    update = _planetary_update(carriers=(swbuild.DocumentValues(CARRIER_PATH), swbuild.DocumentValues(c2_path)))
+    update = dataclasses.replace(update, motion=dataclasses.replace(update.motion,
+                                                                    carriers=update.motion.carriers + (link2,)))
+    results = [swbuild.UpdateResult(document="Planetary_4to1_C2_Carrier.SLDPRT", changed=["Q copy 1 X"],
+                                    rebuilt=True),
+               swbuild.UpdateResult(document="Planetary_4to1_C_Carrier.SLDPRT", unchanged=["P copy 2 X"],
+                                    rebuilt=True)]
+    text = ui_text.gearbox_update_status(update, _moved(carriers=results, changed=[c2_path]))[0]
+    assert text.startswith("Updated SolidWorks: moved the planets on C2 in Planetary_4to1_C2_Carrier;")
+    assert "planets on C " not in text and "planets on C in" not in text
+    stray = [swbuild.UpdateResult(document="Somewhere_Else.SLDPRT", changed=["X"], rebuilt=True)]
+    assert "planets" not in ui_text.gearbox_update_status(update, _moved(carriers=stray, changed=[]))[0]

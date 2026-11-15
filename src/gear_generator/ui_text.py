@@ -1603,6 +1603,17 @@ def _carrier_part_of(update, shaft: str) -> str:
     return ""
 
 
+def _carrier_shaft_of(update, stem: str) -> str:
+    """The carrier shaft whose part is ``stem`` (``layout.carrier_stem``'s ending), from the carriers the update
+    knows (``update.motion.carriers``, ``update.carriers_moved``); ``""`` if none."""
+    from .store import CARRIER_ID_SUFFIX
+    from .workbook.layout import CARRIER_SUFFIX
+    links = getattr(getattr(update, "motion", None), "carriers", ()) or ()
+    shafts = [c.carrier[:-len(CARRIER_ID_SUFFIX)] for c in links if c.carrier.endswith(CARRIER_ID_SUFFIX)]
+    shafts += list(getattr(update, "carriers_moved", ()) or ())
+    return next((shaft for shaft in shafts if stem.endswith(f"_{shaft}{CARRIER_SUFFIX}")), "")
+
+
 def _to_replace(update) -> List[str]:
     """The gears Update SolidWorks will put: ``update.replaced`` on W4's static path. On a turning gearbox
     (``update.motion``), a mated gear the plan must move — its frame changes, its Face Z is set (``update.axial``),
@@ -1793,6 +1804,19 @@ def gearbox_update_status(update, result, dragged: Sequence[str] = (), *, meshes
         pieces.append(f"moved {_and(shafts)} in {name}" if shafts
                       else f"changed {_plural(len(result.layout.changed), 'variable')} in {name}")
         if not result.layout.rebuilt:
+            pieces[-1] += " (SolidWorks reported an error rebuilding it)"
+            ok = False
+    for carrier in getattr(result, "carriers", ()) or ():                # W7 (§6.11): as the layout's
+        if not carrier.changed:
+            continue
+        # Matched to its carrier part by file name, never by position; one that matches none is not said.
+        doc = next((d for d in getattr(update, "carriers", ()) or ()
+                    if _file(d.path).lower() == _file(carrier.document).lower()), None)
+        shaft = _carrier_shaft_of(update, _stem(doc.path)) if doc is not None else ""
+        if not shaft:
+            continue
+        pieces.append(f"moved the planets on {shaft} in {_stem(doc.path)}")
+        if not carrier.rebuilt:
             pieces[-1] += " (SolidWorks reported an error rebuilding it)"
             ok = False
     if motion:
