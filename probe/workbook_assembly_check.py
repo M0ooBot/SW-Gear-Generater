@@ -708,15 +708,18 @@ class DialogWatch(threading.Thread):
                         pressed = press_dont_save(hwnd)
                         say(f"DIALOG  closing a refused, never-saved assembly: pressed {pressed!r}" if pressed else
                             "DIALOG  closing a refused, never-saved assembly: no No / Don't Save button to press")
+                    elif not title and tuple(texts) == NOTIFICATION_TEXTS:
+                        # Exempt during ANY call (the coordinator's ruling), a copy's open included: on 2024 it came
+                        # late, while s7's first copy opened, and stopped the copy route (161853's run).
+                        WINDOWS["count"] += 1
+                        note(f"SolidWorks' notification box came up while {CALLS['now'] or 'no SolidWorks call'} was in "
+                             f"progress{' (a copied assembly opening)' if OPENING.is_set() else ''} (exempt by the "
+                             "coordinator's ruling; nothing answers it)")
                     elif OPENING.is_set() and not ticking:
                         OPEN_DIALOGS.append((title, texts))
                         pressed = press_dont_save(hwnd, OPEN_BUTTONS)
                         say(f"DIALOG  opening a copied assembly (W6-PLAN §7.1): pressed {pressed!r}; the copy route "
                             "is dropped")
-                    elif not title and tuple(texts) == NOTIFICATION_TEXTS:
-                        WINDOWS["count"] += 1
-                        note(f"SolidWorks' notification box came up while {CALLS['now'] or 'no SolidWorks call'} was in "
-                             "progress (exempt by the coordinator's ruling; nothing answers it)")
                     elif not ticking and S5_WATCH["on"]:
                         # s5, from the make to the close: any window but the balloon and the exempt boxes is a STOP.
                         WINDOWS["count"] += 1
