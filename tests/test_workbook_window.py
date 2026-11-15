@@ -2016,3 +2016,193 @@ def test_long_part_names_keep_their_cells_apart_and_the_window_its_width(desk):
                      "G4": "Beve…_N30_M20_S120"}
     assert width_and_height(window)[0] == px(workbook_gui.WINDOW_WIDTH)
     assert window.winfo_reqwidth() <= px(workbook_gui.WINDOW_WIDTH)
+
+
+# -- W7: a planetary stage ------------------------------------------------------------------------------------------
+#
+# W7-PLAN §4's fixtures as B's tests write them: the 4 : 1 with the ring held (sun in, carrier out, three planet
+# copies, CarrierGear on the carrier), the sun held, the carrier held.
+
+
+def carrier_circle(window):
+    """The end view as the window drew it: the carrier's dashed circle (centre, radius) and the crosses' centres by
+    the name set beside each (a cross shared by coaxial shafts carries every name)."""
+    import math
+    c = window.canvas
+    (circle,) = [i for i in c.find_all() if c.type(i) == "oval" and c.itemcget(i, "dash")]
+    x0, y0, x1, y1 = c.coords(circle)
+    centre, radius = ((x0 + x1) / 2, (y0 + y1) / 2), (x1 - x0) / 2
+    crosses = []
+    for i in c.find_all():
+        if c.type(i) == "line" and not c.itemcget(i, "arrow") in ("last", "first"):
+            a, b, d, e = c.coords(i)
+            if b == e and 0 < abs(d - a) < 20:                   # a cross's horizontal stroke
+                crosses.append(((a + d) / 2, b))
+    named = {}
+    for i in c.find_all():
+        if c.type(i) == "text":
+            lx, ly = c.coords(i)
+            named[c.itemcget(i, "text")] = min(crosses, key=lambda p: math.hypot(p[0] - lx, p[1] - ly))
+    return centre, radius, named
+
+
+def test_a_planetary_is_ready_to_build_with_its_carrier_drawn_through_its_planets(desk):
+    import math
+    from test_workbook_planetary import planetary_4to1
+    window = desk.open(planetary_4to1(), name="Planetary_4to1.xlsx")
+    footer = window.footer()
+    assert (footer.build_label, footer.build_enabled, footer.update_shown, footer.ok) == ("Build", True, False, True)
+    assert window.status.get() == (
+        "Ready: Build makes 4 parts, Planetary_4to1_Layout, Planetary_4to1_C_Carrier and Planetary_4to1.SLDASM in "
+        f"{ui_text.short_path(str(desk.folder), 48)}. Its turning gears are mated to their shafts and to each other, "
+        "so they turn together in SolidWorks. C is built as a carrier of axes and planes only, turning with the 3 "
+        "copies of Planet on it. Ring stays fixed where it is placed: its shaft does not turn.")
+    assert window.box_values["type"].cget("text") == ("Planetary, R fixed · 3 planets · 4.000 : 1 · output turns the "
+                                                       "same way")
+    assert speed_lines(window) == [
+        "S     1000.0 rpm anticlockwise · 2.00 N·m",
+        "C     250.0 rpm anticlockwise · 7.76 N·m",
+        "P     500.0 rpm clockwise, 750.0 rpm clockwise relative to C · 3 copies",
+        "R     held still · 5.76 N·m"]
+    # One row for the planet, its copies one part.
+    assert gear_states(window) == {"Sun": "to build", "Planet": "to build", "Ring": "to build",
+                                   "CarrierGear": "to build"}
+    assert window.parts_readout.get() == "4 parts to build"
+    # The end view: the carrier's dashed circle about the shared cross of S, R and C, through every copy's cross.
+    centre, radius, named = carrier_circle(window)
+    assert named["S, R, C"] == pytest.approx(centre, abs=0.5)
+    for k in (1, 2, 3):
+        x, y = named[f"P copy {k}"]
+        assert math.hypot(x - centre[0], y - centre[1]) == pytest.approx(radius, abs=0.5)
+    x1, y1 = named["P copy 1"]
+    assert x1 > centre[0] and y1 == pytest.approx(centre[1], abs=0.5)      # copy 1 at (18, 0): to the right
+
+
+def test_a_planetary_built_says_which_gear_to_drag_and_that_the_carrier_has_none(desk):
+    from test_workbook_planetary import planetary_4to1
+    window = desk.open(planetary_4to1(), name="Planetary_4to1.xlsx")
+    window.press_build()
+    desk.finish(window)
+    assert [os.path.basename(p) for p in desk.sw.saved_in(0)] == [
+        "Sun.SLDPRT", "Planet.SLDPRT", "Ring_m1_N54.SLDPRT", "CarrierGear.SLDPRT", "Planetary_4to1_Layout.SLDPRT",
+        "Planetary_4to1_C_Carrier.SLDPRT", "Planetary_4to1.SLDASM"]
+    assert window.status.get() == (
+        "Built 4 parts, Planetary_4to1_Layout, Planetary_4to1_C_Carrier and Planetary_4to1.SLDASM; no interference "
+        "between the gears where they stand. Its turning gears are mated to turn together, and SolidWorks reports no "
+        "mate in error: drag Sun in SolidWorks and the rest of its train follow. The 3 copies of Planet turn on C, and "
+        "Planetary_4to1_C_Carrier holds C's axes and planes only: a plate and pins are yours to add. Ring stays fixed "
+        "where it is placed: its shaft does not turn. 1 thing to do by hand: Assign a material to each of the 4 parts; "
+        "the build leaves it unset.")
+    window.note = None
+    window._refresh_state()
+    assert window.status.get() == (
+        "SolidWorks already matches the workbook on record; Update SolidWorks checks it live and puts right anything "
+        "changed there; gears turned in SolidWorks stay where they are unless something must move. It was built with "
+        "its gears mated to turn: drag Sun in SolidWorks and the rest of its train follow. C (the carrier) is axes and "
+        "planes only, so it has nothing to drag.")
+    assert gear_states(window) == {"Sun": "built", "Planet": "built", "Ring": "built", "CarrierGear": "built"}
+
+
+@pytest.mark.parametrize("make, held, drag, lines, worked", [
+    ("sun_held", "C is built as a carrier of axes and planes only, turning with the 3 copies of Planet on it. Sun "
+                 "stays fixed where it is placed: its shaft does not turn.", "Ring",
+     ["S     held still · 0.64 N·m", "C     750.0 rpm anticlockwise · 2.64 N·m",
+      "P     1500.0 rpm anticlockwise, 750.0 rpm anticlockwise relative to C · 3 copies",
+      "R     1000.0 rpm anticlockwise · 2.00 N·m"],
+     "Planetary, S fixed · 3 planets · 1.333 : 1 · output turns the same way"),
+    ("carrier_held", "C is built as axes and planes only, held fixed; the 3 copies of Planet turn on it. CarrierGear "
+                     "stays fixed where it is placed: its shaft does not turn.", "Sun",
+     ["S     1000.0 rpm anticlockwise · 2.00 N·m", "C     held still · 7.76 N·m",
+      "P     1000.0 rpm clockwise, 1000.0 rpm clockwise relative to C · 3 copies",
+      "R     333.3 rpm clockwise · 5.76 N·m"],
+     "Planetary, C fixed · 3 planets · 3.000 : 1 · output turns the other way")])
+def test_a_held_sun_and_a_held_carrier_say_what_is_held_and_what_to_drag(desk, make, held, drag, lines, worked):
+    import test_workbook_planetary
+    window = desk.open(getattr(test_workbook_planetary, make)(), name="Planetary_4to1.xlsx")
+    assert window.status.get().endswith(". Its turning gears are mated to their shafts and to each other, so they "
+                                        f"turn together in SolidWorks. {held}")
+    assert speed_lines(window) == lines and window.box_values["type"].cget("text") == worked
+    window.press_build()
+    desk.finish(window)
+    assert f": drag {drag} in SolidWorks and the rest of its train follow." in window.status.get()
+    assert record_of(window).gearbox.assembly
+
+
+def test_what_w7_does_not_build_is_an_error_of_the_workbook_not_a_later_phase(desk):
+    """W7-PLAN §1.2, as ruled: a planetary this version does not build is not waiting for a phase. Each arrives as an
+    error at its cell; Build waits, and Build parts is not offered for it."""
+    from test_workbook_planetary import edited, planetary_4to1
+    spec = planetary_4to1()
+    cases = {
+        "differential": (edited(spec, shafts={"R": dict(role="input", speed="200", torque="")}),
+                         "Shafts!A3: S, C and R form a planetary stage with no member held: a differential is not "
+                         "built by this version; set one of them to Role fixed."),
+        "nested": (model.replace(spec, shafts=spec.shafts + (model.Shaft("Q", "P", "5", "0", row=6),)),
+                   "Shafts!A6: Q is mounted on P, which is itself mounted on C: a carrier riding another carrier is "
+                   "not built by this version; a planet shaft is built mounted on a frame shaft."),
+        "helical": (edited(spec, gears={"Planet": dict(kind="helical", helix_angle="15", hand="left")}),
+                    "Gears!A3: Planet is helical: a planetary stage is built with spur gears only by this version."),
+    }
+    for name, (made, error) in cases.items():
+        window = desk.open(made, name=f"{name}.xlsx")
+        footer = window.footer()
+        assert (footer.build_label, footer.build_enabled, footer.ok) == ("Build", False, False), name
+        assert window.status.get().startswith(f"Fix the workbook before building: {error}"), name
+        shown = [w.cget("text") for w in window.checks_body.winfo_children() if isinstance(w, tk.Label)]
+        assert error in shown and window.parts.refused == [], name
+        assert all(" phase W" not in text for text in shown), name
+
+
+def test_a_torque_the_stage_does_not_settle_is_said_in_prose_after_the_speeds(desk):
+    """C's Motion.torque_note: the last line of the Speeds panel is a sentence, set in prose and wrapped at the end
+    view's width, so the right column keeps its width."""
+    from gear_generator import workbook_gui
+    from gear_generator.theme import px
+    from test_workbook_planetary import edited, planetary_4to1
+    window = desk.open(edited(planetary_4to1(), shafts={"R": dict(role="input", speed="200", torque="")}),
+                       name="Differential.xlsx")
+    labels = sorted(window.speeds_body.winfo_children(), key=lambda c: int(c.grid_info()["row"]))
+    assert [label.cget("text") for label in labels][-1] == (
+        "The torque through C's planetary stage is not worked out: with no member held, how it splits depends on the "
+        "loads.")
+    last, first = labels[-1], labels[0]
+    assert str(last.cget("font")) != str(first.cget("font"))                 # prose, not the lines' mono
+    assert int(float(str(last.cget("wraplength")))) == px(workbook_gui.END_VIEW[0])
+    assert width_and_height(window)[0] == px(workbook_gui.WINDOW_WIDTH)
+
+
+def test_an_update_of_a_planetary_re_places_the_ring_the_carrier_and_the_planets(desk):
+    from test_workbook_planetary import planetary_4to1
+    window = desk.open(planetary_4to1(), name="Planetary_4to1.xlsx")
+    window.press_build()
+    desk.finish(window)
+    save_in_excel(window, {"Gears": {"C4": 12}})                  # Ring's At 10 -> 12: the held member moves
+    assert window.status.get() == (
+        "Update SolidWorks will re-place Ring, C (the carrier), Sun, Planet (3 copies) and CarrierGear. It was built "
+        "with its gears mated to turn: drag Sun in SolidWorks and the rest of its train follow. C (the carrier) is "
+        "axes and planes only, so it has nothing to drag.")
+    window.press_update()
+    desk.finish(window)
+    assert window.status.get() == (
+        "Updated SolidWorks: re-placed Ring, C (the carrier), Sun, Planet (3 copies) and CarrierGear; no interference "
+        "between the gears where they stand. Save Planetary_4to1 in SolidWorks to keep it.")
+    assert desk.sw.locked_puts == [] and window.update_plan.record_matches
+
+
+def test_moving_the_planets_is_an_update_of_the_carrier_part(desk, monkeypatch):
+    """W7-PLAN §6 p3's edit: Sun 21, Ring 57 and P's X 19.5, which keep both centres; with the remake route the
+    gear mates are set to their new ratios and the carrier part's planet axes move."""
+    from test_workbook_planetary import planetary_4to1
+    monkeypatch.setattr(findings, "GEAR_MATE_RATIO_ROUTE", "remake")
+    window = desk.open(planetary_4to1(), name="Planetary_4to1.xlsx")
+    window.press_build()
+    desk.finish(window)
+    save_in_excel(window, {"Gears": {"F2": 21, "F4": 57}, "Shafts": {"C4": 19.5}})
+    window.press_update()
+    desk.finish(window)
+    text = window.status.get()
+    assert text.startswith("Updated SolidWorks: changed 1 variable in Sun, changed 1 variable in Ring_m1_N54 (it now "
+                           "has 57 teeth; its file keeps its name), moved the planets on C in "
+                           "Planetary_4to1_C_Carrier, set the gear mates Sun meshes Planet copy 1 to 21 : 18, ")
+    assert text.endswith("Save Sun, Ring_m1_N54, Planetary_4to1_C_Carrier and Planetary_4to1 in SolidWorks to keep "
+                         "them.")

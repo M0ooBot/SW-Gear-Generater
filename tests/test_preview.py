@@ -324,3 +324,47 @@ def test_a_slanted_shaft_is_a_line_along_its_direction_named_at_its_plus_end():
 def test_a_gearbox_with_no_turned_shaft_has_no_lines():
     _, _, view = _workbook_view()
     assert view.lines == []
+
+
+# -- W7: a planetary stage in the end view (W7-PLAN §2.12) -----------------------------------------------------------
+
+
+def _planetary_view(given=True, width=392, height=300):
+    from gear_generator.workbook import checks, geometry
+    from test_workbook_planetary import planetary_4to1
+    spec = planetary_4to1()
+    report = checks.check(spec)
+    lines = geometry.shaft_lines(spec)
+    carriers = {stage.carrier: tuple(lines[stage.carrier][0][:2]) for stage in report.stages} if given else None
+    return report.layout.placed, preview.layout_gearbox(report.layout.placed, report.theta, width, height,
+                                                        carriers=carriers)
+
+
+def test_every_planet_copy_is_drawn_and_the_carrier_is_a_circle_through_their_axes():
+    placed, view = _planetary_view()
+    assert {gear for gear, _, _ in view.outlines} == {"Sun", "Planet copy 1", "Planet copy 2", "Planet copy 3", "Ring",
+                                                      "CarrierGear"}
+    (name, cx, cy, r), = view.carriers
+    assert name == "C" and (cx, cy) == pytest.approx(view.origin)          # the carrier's axis is the origin's
+    for k in (1, 2, 3):
+        p = placed[f"Planet copy {k}"]
+        x, y = cx + p.x * view.scale, cy - p.y * view.scale
+        assert math.hypot(x - cx, y - cy) == pytest.approx(r, abs=1e-9)
+    assert r == pytest.approx(18.0 * view.scale, abs=1e-9)
+
+
+def test_coaxial_shafts_share_one_cross_named_once_and_each_copy_keeps_its_own():
+    _, view = _planetary_view()
+    names = [label[0] for label in view.labels]
+    assert names == ["S, R, C", "P copy 1", "P copy 2", "P copy 3"]
+
+
+def test_without_the_carriers_axis_the_circle_is_about_its_copies_centre():
+    _, given = _planetary_view()
+    _, guessed = _planetary_view(given=False)
+    assert guessed.carriers[0][1:] == pytest.approx(given.carriers[0][1:], abs=1e-9)
+
+
+def test_a_gearbox_with_no_carrier_draws_no_circle():
+    _, _, view = _workbook_view()
+    assert view.carriers == []

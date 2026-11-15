@@ -315,6 +315,7 @@ class EndView:
     planes: List[float] = None                                           # the face heights, in drawing order
     labels: List[Tuple[str, float, float, str]] = None                   # (name, x, y, Tk anchor), one per shaft
     lines: List[Tuple[str, float, float, float, float]] = None           # (name, x0, y0, x1, y1): a turned shaft
+    carriers: List[Tuple[str, float, float, float]] = None               # (name, x, y, r): W7, through its planets
 
 
 def _label_box(name: str, x: float, y: float, side, unit: float) -> Tuple[float, float, float, float]:
@@ -407,7 +408,7 @@ def _bevel_end_on(p) -> List[List[Tuple[float, float]]]:
 
 
 def layout_gearbox(placed, theta, width: int = 696, height: int = 300, pad: float = 16.0,
-                   step: int = 1, unit: float = 1.0) -> EndView:
+                   step: int = 1, unit: float = 1.0, carriers=None) -> EndView:
     """Every placed gear drawn as the strip draws one, turned to its phase, the whole fitted to the canvas.
 
     ``placed`` is ``{gear: workbook.geometry.Placed}`` and ``theta`` its turns.
@@ -426,9 +427,17 @@ def layout_gearbox(placed, theta, width: int = 696, height: int = 300, pad: floa
     circles. Such a gear's plane is the height of its At point (a bevel's
     apex), so a right-angle stage takes one colour. A gearbox with no turned
     shaft is drawn exactly as before.
+
+    W7 (W7-PLAN §2.12): every planet copy is drawn as any gear (``placed``
+    holds each copy under its own shaft, ``P copy 2``), and each carrier as a
+    circle through its planets' axes (``carriers``, dashed in the window) with
+    a cross at its axis. ``carriers`` maps a carrier shaft to its axis's world
+    (x, y) (``geometry.shaft_lines``); without it the centre of its copies is
+    taken. Shafts on one line (a planetary's sun, carrier and ring) share a
+    cross, named once with every name on it: ``S, R, C``.
     """
     from .gears import kind_for
-    view = EndView(outlines=[], rims=[], shafts=[], planes=[], labels=[], lines=[])
+    view = EndView(outlines=[], rims=[], shafts=[], planes=[], labels=[], lines=[], carriers=[])
     if not placed:
         return view
     shapes = []                          # (gear, p, [loop of world points], height for its plane)
@@ -469,10 +478,24 @@ def layout_gearbox(placed, theta, width: int = 696, height: int = 300, pad: floa
         k = 1.0 / (flat * flat)
         lines.append((shaft, base[0] + lo * a[0] * k, base[1] + lo * a[1] * k,
                       base[0] + hi * a[0] * k, base[1] + hi * a[1] * k))
+    # A carrier's circle: through its planet copies' axes, about the carrier's own axis.
+    rings = {}
+    for _, p, _, _ in shapes:
+        if getattr(p, "carrier", "") and _seen_end_on(p):
+            rings.setdefault(p.carrier, []).append((p.x, p.y))
+    circles = []
+    for carrier, points in rings.items():
+        given = (carriers or {}).get(carrier)
+        cx, cy = given if given is not None else (sum(x for x, _ in points) / len(points),
+                                                  sum(y for _, y in points) / len(points))
+        r = sum(math.hypot(x - cx, y - cy) for x, y in points) / len(points)
+        circles.append((carrier, cx, cy, r))
     xs = [x for _, _, loops, _ in shapes for loop in loops for x, _ in loop] + \
-         [x for _, x0, _, x1, _ in lines for x in (x0, x1)]
+         [x for _, x0, _, x1, _ in lines for x in (x0, x1)] + \
+         [x for _, cx, _, r in circles for x in (cx - r, cx + r)]
     ys = [y for _, _, loops, _ in shapes for loop in loops for _, y in loop] + \
-         [y for _, _, y0, _, y1 in lines for y in (y0, y1)]
+         [y for _, _, y0, _, y1 in lines for y in (y0, y1)] + \
+         [y for _, _, cy, r in circles for y in (cy - r, cy + r)]
     for _, p, _, _ in shapes:
         if _seen_end_on(p) and not getattr(p, "bevel", False):
             xs += [p.x + p.outer_radius, p.x - p.outer_radius]
@@ -511,12 +534,27 @@ def layout_gearbox(placed, theta, width: int = 696, height: int = 300, pad: floa
         if p.shaft in ends:
             continue
         view.shafts.append((p.shaft,) + to_canvas(p.x, p.y))
+    for carrier, cx, cy, r in circles:
+        x, y = to_canvas(cx, cy)
+        view.carriers.append((carrier, x, y, r * scale))
+        if carrier not in seen:                    # a carrier with no gear of its own still has its cross
+            seen.add(carrier)
+            view.shafts.append((carrier, x, y))
     ox, oy = to_canvas(0.0, 0.0)
     if 0 <= ox <= width and 0 <= oy <= height:
         view.origin = (ox, oy)
     marks = [(name, x, y) for name, x, y in view.shafts] + [(name, x, y) for name, (x, y) in ends.items()]
-    order = {name: i for i, name in enumerate(dict.fromkeys(p.shaft for _, p, _, _ in shapes))}
+    order = {name: i for i, name in enumerate(dict.fromkeys([p.shaft for _, p, _, _ in shapes]
+                                                            + [c for c, *_ in circles]))}
     marks.sort(key=lambda m: order.get(m[0], len(order)))
-    view.labels = [_place_label(name, x, y, view.origin, unit, (width, height) if lines else None)
-                   for name, x, y in marks]
+    # Shafts on one line share a cross, and are named there once, every name in order.
+    shared: dict = {}
+    for name, x, y in marks:
+        key = (round(x, 3), round(y, 3))
+        if key in shared:
+            shared[key][0].append(name)
+        else:
+            shared[key] = ([name], x, y)
+    view.labels = [_place_label(", ".join(names), x, y, view.origin, unit, (width, height) if lines else None)
+                   for names, x, y in shared.values()]
     return view
