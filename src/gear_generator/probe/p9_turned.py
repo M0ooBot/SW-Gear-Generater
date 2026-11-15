@@ -377,7 +377,7 @@ def _frame_part(px: Px, folder: str, cls: str, sigma_f: float, side: str) -> Tup
     b_axis.Name = "B Axis"
     for key, axis, (pt, want) in (("A", a_axis, geo["a"]), ("B", b_axis, geo["b"])):
         params = [float(v) for v in call(call(axis, "GetSpecificFeature2"), "GetRefAxisParams")]
-        p = (params[0] / sc.MM, params[1] / sc.MM, params[2] / sc.MM)
+        p = (params[0] * sc.MM, params[1] * sc.MM, params[2] * sc.MM)      # metres to mm
         d = _unit((params[3] - params[0], params[4] - params[1], params[5] - params[2]))
         off = _add(p, _scale(pt, -1.0))
         distance = math.sqrt(max(0.0, _dot(off, off) - _dot(off, want) ** 2))
@@ -596,8 +596,15 @@ def turned_gear_mate_sense(px: Px) -> None:
                         r.update(m_h_first=per_flip[chosen]["m_h"], m_first=per_flip[chosen]["m"])
                         reopened.append(r)
             finally:
+                if doc is not None and not str(call(doc, "GetPathName") or ""):
+                    try:
+                        sc.close(px, doc)          # the unsaved assembly, which no path finds
+                    except Exception as exc:  # noqa: BLE001
+                        px.note(f"CLEANUP {exc}")
                 _close_quietly(px, paths)
             timing[f"{gname} {facing}"] = round(time.monotonic() - started, 1)
+        _close_quietly(px, [frame_path])
+    _close_quietly(px, [a_path, b_path])
     px.fact("turned_sense_frames", frames_read)
     px.fact("turned_sense_cases", cases)
     px.fact("turned_sense_reopened", reopened)
