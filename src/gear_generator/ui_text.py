@@ -3999,8 +3999,11 @@ def _mode_after(update, result, *, changed: bool) -> List[str]:
                        "been given in another.")
     visited = [str(v) for v in getattr(result, "visited", ()) or () if str(v)]
     if put_here and visited and getattr(result, "positions_per_configuration", None) is False:
-        # Shared positions: a put in one mode moves the others too, so say which visited modes were READ at the
-        # built turn when shown (their ModeCheck: not put there, in step, on their axes, not turned), and no more.
+        # Shared positions: say which visited modes were READ at the built turn when shown, and no more. Their
+        # ModeCheck, taken on showing: nothing off its place (off_axis empty) and nothing out of step, so train_check
+        # judged every mated gear at its frame on record and in step, and only then is "turned" False a judgement
+        # (train_check sets turned = in_step and …); and the mode not put, so every gear no train holds was at its
+        # frame too (_modes_put puts one that is not). A mode with a gear off its place is never named.
         put = {str(c).casefold() for c in getattr(result, "put_in", ()) or ()}
         built = [c.name for c in getattr(result, "modes", ()) or ()
                  if str(c.name).casefold() != config.casefold() and str(c.name).casefold() not in put

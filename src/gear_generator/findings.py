@@ -1250,13 +1250,12 @@ SYSTEM_VALUE_FOLLOWS_CONFIGURATION = False
 # 2026 reading was 34.1.1 on another machine; probe/results/w8-followup-20261115-114828.json and .txt, 34 of 34): B
 # and C read as above, through a save and reopen.
 # So a component no mate holds, turned about its axis by a Transform2 put, keeps its place per configuration, and
-# such a put holds in the active configuration only. That is all these two findings say. A Transform2 put of a MATED
-# train, the app's own put route, showed in every configuration (W8 s2, below), so J26's "a put holds only in the
-# configuration shown" does not hold for the app's puts of a mated train. Behaviour is unaffected: every put is to the
-# built frame, so a shared put is redundant, not wrong (W8-PLAN §1.9).
+# such a put holds in the active configuration only. That is all these two findings say. What the app's put of a
+# MATED train does across configurations is not settled (W8 s2, below: one reached two configurations and not a
+# third), and behaviour does not depend on it: every mode is put and post-checked (W8-PLAN §1.9).
 # GOTCHAS §83 and assemblies/07, recorded on 2024, say component positions are not stored per configuration. Their
 # case was a free mechanism dragged between configurations; this one is a free component put by Transform2. A mated
-# train, turned or put, the case a user's turn is, agrees with GOTCHAS (TURN_PER_CONFIGURATION below).
+# train's turn, the case a user's turn is, agrees with GOTCHAS (TURN_PER_CONFIGURATION below).
 # Since 2026-11-15 nothing reads these: the sentences about a turn read TURN_PER_CONFIGURATION_ON_<year>, measured on
 # a mated train's turn, and no behaviour ever read them (Update's per-mode puts are right either way, W8-PLAN §1.9;
 # W8-INTERFACES §9.18). Section s7 will measure both on the built E4 in a result file of its own; the pins in
@@ -1279,18 +1278,24 @@ POSITIONS_PER_CONFIGURATION_ON_2024 = True
 #   in 2H alone by IDimension.SetSystemValue3(rad, 3, ['2H']), +37°, and (B) a global linked to it, +20°, the mate
 #   deleted each time. Every configuration shown, rebuilt and read: every body of the train turned by the same amount
 #   in all four, 2H, 4H, N and 4L alike. The front train, free in 2H, did not turn.
-# - s2 also read the app's own put of the mated train. Its quiet Update in 4L, the train out of step there, put the
-#   whole train with 4L showing: locks and gear mates suppressed in 4L alone (SetSuppression2(…, 0, ['4L'])), 13
-#   Transform2 puts, the mates turned back on in 4L. The changed Update that followed showed 2H first: 2H read not
-#   turned, as did 4H, N and 4L ("2H alone found turned when shown: [('2H', False), ('4H', False), ('N', False),
-#   ('4L', False)]"; each mode's post-check "turned False; out of step []"). So the put made in 4L showed in 2H, 4H and
-#   N, where those mates were on throughout.
-# So a turn given to a mated train in one configuration, and a put of it, show in every configuration. The evidence
-# divides a FREE component (POSITIONS_PER_CONFIGURATION above, kept per configuration) from a MATED train (shared),
-# not a put from a turn. That is the case a user's turn is (gears held by their mates, turned by a drag or a drive),
-# and it AGREES with the user's macro database (GOTCHAS §83, recorded on 2024), where POSITIONS_PER_CONFIGURATION did
-# not. On this host both cases were read and they differ, so the case, not the host, explains the two readings; the
-# free put reads the same on 34.0.0 and 34.1.1, and the mated turn has not been read on 34.1.1.
+# - Of the app's own puts of the mated train, s2 read one across configurations. Its quiet Update in 4L had put the
+#   whole train there (locks and gear mates suppressed in 4L alone, 13 Transform2 puts). The changed Update that
+#   followed (FDrive, FIdler and FOut At 130 -> 132; 4L active at open, so shown last) showed 2H first and put the
+#   whole train there, its locks and gear mates off in 2H alone. Each mode's judgement on showing, before its own put:
+#   2H found FDrive off its place, as the workbook had moved it; 4H and N, shown next, found FDrive at its new place
+#   and the train in step and not turned, though both had stood +37° after the 2H turn; 4L, shown last, found FDrive
+#   at its old place. So 2H's put reached 4H and N and did not reach 4L. In 4L three things coincide: the quiet
+#   Update's earlier put there, 4L active at open, and FDrive free there during that put (its only mates, the lock to
+#   FrontDog and the mesh with FIdler, were suppressed in 4L alone). The "turned False" read for 2H and 4L judges
+#   nothing: train_check judges a turn only for a train in step, and FDrive stood off its place in the one joined
+#   train. Whether the quiet put in 4L reached 2H was not read.
+# So a turn given to a mated train in one configuration shows in every configuration. What a put of a mated train
+# does across configurations is NOT settled: one reached two configurations and not a third. Section s7 is to
+# measure it; behaviour does not depend on it (every mode is put and post-checked, W8-PLAN §1.9). The turn is the
+# case a user's turn is (gears held by their mates, turned by a drag or a drive), and it AGREES with the user's macro
+# database (GOTCHAS §83, recorded on 2024), where POSITIONS_PER_CONFIGURATION, a free component's put, did not. On this
+# host both were read and they differ, so the case, not the host, explains the two readings; the free put reads the
+# same on 34.0.0 and 34.1.1, and the mated turn has not been read on 34.1.1.
 # Read by swcom.positions_per_configuration for the sentences about a turn and a switch (ui_text.turning_note and
 # switching_note, and _mode_after's shared-turn sentence and its sentence on the modes found at the built turn, and
 # _motion_after's warning after a turn left in the mode showing); no behaviour reads it.

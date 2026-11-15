@@ -160,11 +160,11 @@ Each is argued where it is used; the column says where.
 | J27 | **A slide never reaches the Front plane:** every mode's value of one SLIDE is non-zero and on one side of the plane (|z_front| ≥ `layout.BASE_TOLERANCE`, one sign), else the gearbox is refused at Build, and an edit that would take one there is structural. A distance of 0 and a change of side were not tried on one mate with per-configuration values; W5's answer 3 (no datum plane) already makes an anchor's front face reaching the plane structural, and this is the same rule for a slide. | A coincident mate for a position at 0 (W5's ALONG rule), which a single SLIDE with per-configuration values cannot switch to. | 1.7 |
 
 *(2026-11-15: J11 and J26 — W8's s2 measured, on SolidWorks 2026 34.0.0, that a turn of a mated train given in one
-configuration shows in every configuration, and that the app's own Transform2 put of that train, made with one
-configuration shown, showed in the others too; only a free component's put stays per configuration. So J26's "a put
-holds only in the configuration shown" does not hold for the app's puts of a mated train, and behaviour is unaffected,
-since every put is to the built frame (§1.9). The sentences now read `TURN_PER_CONFIGURATION_ON_<year>`, and a put on
-a quiet Update now leads to the visit of every mode: W8-INTERFACES §9.18. The text above is as approved.)*
+configuration shows in every configuration; a free component's put stays per configuration. Of the app's own
+Transform2 puts of the mated train, one made with 2H shown reached 4H and N and did not reach 4L, so what such a put
+does across configurations, J26's premise, is not settled; section s7 is to measure it, and behaviour does not depend
+on it, since every mode is put and post-checked (§1.9). The sentences now read `TURN_PER_CONFIGURATION_ON_<year>`, and
+a put on a quiet Update now leads to the visit of every mode: W8-INTERFACES §9.18. The text above is as approved.)*
 
 ### 0.4 What needs the user
 

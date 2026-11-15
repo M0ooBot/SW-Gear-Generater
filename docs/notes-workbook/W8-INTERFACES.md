@@ -319,16 +319,20 @@ the kind the last two interface reviews found, and asked for written rules. Thes
       The check after it turned the train by a value set in 2H alone (`SetSystemValue3(rad, 3, ['2H'])`) and by a
       global: every body turned alike in all four configurations
       (`probe/results/w8-workbook-assembly-20261115-111951-s2-turn-carried-per-body.log`,
-      `probe/results/w8-turn-across-configurations-20261115-115500.txt`). s2 also read the app's own put of the
-      mated train: its quiet Update in 4L put the whole train with 4L showing (locks and gear mates off in 4L
-      alone, 13 Transform2 puts), and at the next Update 2H, 4H and N all read not turned (*"2H alone found turned
-      when shown: [('2H', False), ('4H', False), ('N', False), ('4L', False)]"*). The spike's follow-up, rerun
-      unchanged on this host (`e670e7e`), read a free component's Transform2 put per configuration, as on 34.1.1.
-      So the evidence divides a free component, kept per configuration, from a mated train, turned or put, shared
-      between configurations, which is what a user's turn is. That agrees with GOTCHAS §83. J26's "a put holds
-      only in the configuration shown" does not hold for the app's puts of a mated train; behaviour is unaffected,
-      since every put is to the built frame (W8-PLAN §1.9). The mated turn has not been read on 34.1.1; the free
-      put reads the same on 34.0.0 and 34.1.1.
+      `probe/results/w8-turn-across-configurations-20261115-115500.txt`). The spike's follow-up, rerun unchanged
+      on this host (`e670e7e`), read a free component's Transform2 put per configuration, as on 34.1.1. So a mated
+      train's turn, which is what a user's turn is, is shared between configurations, where a free component's put
+      is not. That agrees with GOTCHAS §83. Of the app's puts of the mated train, s2 read one across
+      configurations: the changed Update showed 2H first and put the train there (its locks and gear mates off in
+      2H alone); judged on showing, 4H and N then found FDrive at the place the workbook had just given it and the
+      train in step, while 4L, shown last, found FDrive at its old place. So 2H's put reached 4H and N and did not
+      reach 4L, where three things coincide: the quiet Update's earlier put there, 4L active at open, and FDrive
+      free there during that put. (Corrected after `W8-REVIEW-FIX-9-18-AND-WINDOW.md` point 1: an earlier
+      reading here, that the quiet put in 4L showed in 2H, 4H and N, rested on "turned False", which judges nothing
+      for a train with a gear off its place.) What a put of a mated train does across configurations is therefore
+      not settled; section s7 is to measure it, and behaviour does not depend on it, since every mode is put and
+      post-checked (W8-PLAN §1.9). The mated turn has not been read on 34.1.1; the free put reads the same on
+      34.0.0 and 34.1.1.
     - *The split.* `findings.TURN_PER_CONFIGURATION_ON_<year>` (2026 False, 2024 None until the confirming run's
       s2 and s7) is what the sentences about a turn and a switch read, through `swcom.positions_per_configuration`,
       which keeps its name and its three states. `POSITIONS_PER_CONFIGURATION_ON_<year>` stays as the put fact it
