@@ -1336,21 +1336,31 @@ SUPPRESSED_GEAR_MATE_SENSE_READ = "answers, marks nothing"
 # so the document's configuration order is Default, X, Z, Y. The slide read Default 10, X 15, Z 20, Y 30 mm.
 #
 # Two slides on one sleeve in one configuration:
-# - A second distance mate on the same entities, 25 mm, was on in Z only, beside the first (20 mm in Z).
+# - A second distance mate on the same entities, made at 25 mm and set to 25 mm in every configuration
+#   (SetSystemValue3 answered 0 each time; that value was never read back), was on in Z only, beside the first (20 mm
+#   in Z).
 # - ShowConfiguration2("Z") returned True, and Z read back active. No window opened during the show, under the dialog
 #   watch.
-# - The top-only rebuild (ForceRebuild3(True)) returned True. It put up one window, a non-modal balloon tip (class
-#   swBalloonTip): "Over Defined" / "The assembly is over defined. Click here to view mate errors." It closed itself
-#   after 0.79 s; nothing answered it.
+# - The top-only rebuild (ForceRebuild3(True)) returned True. It put up one window, a balloon tip (class
+#   swBalloonTip): "Over Defined" / "The assembly is over defined. Click here to view mate errors." It is non-modal:
+#   it was first seen 0.26 s into the rebuild, the rebuild's watch saw it for 0.79 s (to the end of that watch, not
+#   to the end of the balloon), and it was still standing after the reads that followed and when Y's show and
+#   rebuild began. It was gone once Y's reads ended: it stood at least about 2.3 s. Nothing answered it, and the
+#   calls went on while it stood. What closed it, by itself or Y's show, the file does not show.
 # - Both slides read GetErrorCode2 47 (swFeatureErrorMateIlldefined), warning False. S read GetConstrainedStatus 4.
 #   What's Wrong listed "Mates" (1), "S slide" (47) and "S slide 2" (47).
 # - The app's own reads: Session.mate_states gave both slides code 47, warning False, not suppressed; the mate check
 #   (swbuild._mate_problems) said "The mate S slide is in error in SolidWorks." and "The mate S slide 2 is in error in
 #   SolidWorks." S stood at 30 mm, neither slide's value.
 # - Y, then X, shown and rebuilt after it: every code 0, nothing over-defined, the mate check silent, S at 30 and 15 mm
-#   (within 1e-6). Z shown again read as the first time. With the second slide suppressed in Z and a rebuild, Z read
-#   clean with S at 20 mm.
-# - Both runs read the same.
+#   (within 1e-6). Z shown again read as the first time, with no balloon tip: the second show and rebuild of Z put up
+#   no window. With the second slide suppressed in Z and a rebuild, Z read clean with S at 20 mm.
+# - The first run read the same, with one difference: its show of Z saw two windows open, swWelcomeScreen (0.78 s
+#   in) and SysShadow (1.05 s), neither answered and neither asking anything (most likely the fresh session's own
+#   Welcome screen coming back late, not the show); the rerun's show saw none. Its balloon tip, too, was still
+#   standing after the rebuild's watch.
+# So a watcher must allow a balloon tip that outlives the call that raised it and stands at the next, and must not
+# require one: it came once per run, on the first rebuild into the fight only.
 # So showing such a configuration asks nothing and hangs nothing: it is seen only by reading the mates afterwards,
 # which the build's and Update's per-mode checks already do.
 # A coupling beside a lock across the same pair (S-D), on in Y, the lock alone holding S there (S's own slide and axis
@@ -1359,7 +1369,8 @@ SUPPRESSED_GEAR_MATE_SENSE_READ = "answers, marks nothing"
 # first run, with S's slide and axis mate still on, the lock itself was made with AddMate5 status 5 (the coupling
 # off): S's axis mate (code 1, warning True), D's along mate and S's slide (code 46, swFeatureErrorMateOverdefined,
 # warning True) read in error, and D and S status 4. With the coupling then on beside it, the mates in error were D's
-# axis mate (code 1) and D's along mate, the spline, the coupling and S's slide (code 46), and A read status 3.
+# axis mate (code 1) and D's along mate, the spline, the coupling and S's slide (code 46), and A read status 3. That
+# over-defining make, and the rebuilds after it, put up no window and no balloon tip.
 # Not covered:
 # - Save flags: the assembly was never saved and the parts read modified from the mounts on, so every GetSaveFlag
 #   read True throughout, and what an over-defined show marks is not told.
@@ -1379,6 +1390,13 @@ CONFIGURATION_SHOW_OVER_DEFINED = "shown; no window asks; its mates read in erro
 #   example, the coupling (on in Default, X and Z, off in Y): [Y, Z, X, Default] -> (False, False, False, True), and
 #   [Y, X] -> (False, True).
 # - GetSystemValue3(3, names) answered in the order passed: [Y, Z, X, Default] -> 30, 20, 15, 10 mm.
+# What these reads tell apart, and what they do not:
+# - At all three tier-11 moments Y was active, and Y is last in the document's order. So tier 11 alone cannot tell
+#   "the document's order" from "the active configuration last". The s0 file settles it: with 2H active and second
+#   in the document's order, it read ['N', '2H'] -> (False, True), 2H's flag first.
+# - Default's and X's flags were equal in every pattern read, so their places in the answer are never told apart.
+# - The order of creation and GetConfigurationNames' order were the same in both files, so which of the two the
+#   answer follows is not told.
 # So a flag is read one configuration per call (swcom.Session.mate_suppression), or its answers are keyed by the
 # document's order; a value read may pair answers with the names passed.
 SUPPRESSION_READ_ORDER = "the document's configuration order"

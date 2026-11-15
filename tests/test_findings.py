@@ -1154,7 +1154,27 @@ def test_an_over_defined_configuration_shows_without_a_window_that_asks_and_read
     assert reading["app_problems"] == ["The mate S slide is in error in SolidWorks.",
                                        "The mate S slide 2 is in error in SolidWorks."]
     assert [w["slides"][k]["S_z"] for k in ("after", "also", "back")] == [30.0, 15.0, 20.0]
+    assert reading["others_clean"] == {"Y": True, "X": True} and reading["named_exactly"]
+    assert w["slides"]["also"]["errors_on"] == {} and w["slides"]["also"]["app_problems"] == []
+    assert reading["watch_errors"] == [] and all(c["watch_error"] is None for c in w["watched_calls"])
+    assert w["slides"]["again"]["show"]["windows"] == [] and w["slides"]["again"]["rebuild"]["windows"] == []
     assert w["saved_nothing"] is True and all(c.get("dialog") is False for c in w["closes"])
+
+
+def test_the_balloon_tip_outlived_the_watch_of_the_rebuild_that_raised_it():
+    """M1 of W8-REVIEW-TIER11: stood_s 0.79 is where the rebuild's watch stopped looking; the balloon still stood
+    after the reads that followed and when Y's show and rebuild began, and was gone once Y's reads ended."""
+    w = _w8_over_defined()
+    balloon = w["slides"]["into"]["rebuild"]["windows"][0]
+    assert balloon["class"] == "swBalloonTip" and balloon["first_s"] == 0.26 and balloon["stood_s"] == 0.79
+    assert balloon["answered"] == []
+    classes = lambda found: [x.get("class") for x in found]  # noqa: E731
+    assert "swBalloonTip" in classes(w["slides"]["into"]["standing_after"])
+    assert "swBalloonTip" in classes(w["slides"]["after"]["standing_before"])
+    for call in ("the other configuration after it: ShowConfiguration2(Y)",
+                 "the other configuration after it: ForceRebuild3(True) in Y"):
+        assert "swBalloonTip" in classes(next(c for c in w["watched_calls"] if c["call"] == call)["standing_at_entry"])
+    assert "swBalloonTip" not in classes(w["slides"]["after"]["standing_after"])
 
 
 def test_a_coupling_beside_a_lock_holding_the_sleeve_reads_no_error():
