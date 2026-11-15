@@ -852,3 +852,10 @@ def test_the_w8_spike_parts_are_the_apps_own_and_pass_assess():
 def test_the_w8_followup_judges_positions_within_a_micron():
     assert p8._w8f_at([10.0, 30.0000001], [10.0, 30.0])
     assert not p8._w8f_at([10.0, 29.9], [10.0, 30.0]) and not p8._w8f_at([10.0], [10.0, 30.0])
+
+
+def test_decide_reads_the_w8_findings_off_a_pass_only():
+    assert all(v is None for v in decide.w8_findings({}).values())
+    failed = {"w8_modes_spike": {"status": "fail", "facts": {"w8_spike": {"spline_right_flip": True}}},
+              "w8_followup": {"status": "fail", "facts": {"w8_followup": {"slide": {"before": {"Default": 0.0}}}}}}
+    assert all(v is None for v in decide.w8_findings(failed).values())

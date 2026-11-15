@@ -1013,3 +1013,83 @@ def test_a_turned_gear_mates_reverse_tells_its_sense_about_the_entities_own_dire
         assert j["ratio_ok"] and j["h_tells"] and c["status"] == findings.ADD_MATE_NO_ERROR, c["geometry"]
     reopened = facts(records, "turned_gear_mate_sense")["turned_sense_reopened"]
     assert len(reopened) == 4 and all(r["m"] == r["m_first"] and r["m_h"] == r["m_h_first"] for r in reopened)
+
+
+W8_RESULTS = {
+    "2026": (LATEST.parent / "w8-spike-20261114-204436.json", LATEST.parent / "w8-followup-20261114-205913.json"),
+    "2024": (LATEST.parent / "sw2024" / "w8-spike-20261114-232510.json",
+             LATEST.parent / "sw2024" / "w8-followup-20261114-233330.json"),
+}
+
+
+def _w8_decided(year):
+    """decide's W8 readings from one version's spike and follow-up files, the spike's first, each from its own."""
+    spike_path, followup_path = W8_RESULTS[year]
+    out = {}
+    for path in (spike_path, followup_path):
+        data = json.loads(path.read_text(encoding="utf-8"))
+        assert data["meta"]["version"].startswith(f"SolidWorks {year} ")
+        records = {r["name"]: r for r in data["records"]}
+        assert records.get("w8_modes_spike" if path == spike_path else "w8_followup", {}).get("status") == "pass"
+        for key, value in decide.w8_findings(records).items():
+            if value is not None and key not in out:
+                out[key] = value
+    return out
+
+
+@pytest.mark.parametrize("year", ["2026", "2024"])
+def test_a_collinear_gear_mate_is_settled_by_its_read_back_on_both_versions(year):
+    """The W8 spike (W8-PLAN J8, §4.3): the spline and coupling as 1 : 1 gear mates between collinear axes."""
+    decided = _w8_decided(year)
+    assert decided["collinear_gear_mate_sense_read_back"] is findings.COLLINEAR_GEAR_MATE_SENSE_READ_BACK is True
+    assert decided["collinear_gear_mate_moves_on_make"] is findings.COLLINEAR_GEAR_MATE_MOVES_ON_MAKE is False
+    assert decided["collinear_gear_mate_holds_slide"] is findings.COLLINEAR_GEAR_MATE_HOLDS_SLIDE is True
+    assert decided["collinear_gear_mate_flip_needed"] is getattr(findings, f"COLLINEAR_GEAR_MATE_FLIP_NEEDED_ON_{year}")
+
+
+def test_the_collinear_spline_needs_opposite_flips_on_the_two_versions():
+    """So no Flip is assumed for a spline or a coupling: each is settled by the read-back."""
+    assert _w8_decided("2026")["collinear_gear_mate_flip_needed"] is False
+    assert _w8_decided("2024")["collinear_gear_mate_flip_needed"] is True
+    assert findings.COLLINEAR_GEAR_MATE_FLIP_NEEDED_ON_2026 != findings.COLLINEAR_GEAR_MATE_FLIP_NEEDED_ON_2024
+
+
+@pytest.mark.parametrize("year", ["2026", "2024"])
+def test_the_configuration_calls_hold_as_the_members_are_written_on_both_versions(year):
+    """The W8 spike's step 6 and its reopen: the calls swcom's configuration members make, each read back."""
+    from gear_generator import swcom
+    decided = _w8_decided(year)
+    assert decided["configuration_routes"] == {"add": True, "show": True, "delete": True, "suppression": True}
+    assert [swcom.configuration_finding(name) for name, _ in swcom.CONFIGURATION_FINDINGS] == [None] * 7
+    assert decided["configuration_show_raises_dialog"] is findings.CONFIGURATION_SHOW_RAISES_DIALOG is False
+    assert decided["multi_configuration_save_asks"] is findings.MULTI_CONFIGURATION_SAVE_ASKS is False
+    assert decided["reopens_in_saved_configuration"] is findings.REOPENS_IN_SAVED_CONFIGURATION is True
+    assert decided["suppression_right_after_add"] == findings.SUPPRESSION_RIGHT_AFTER_ADD == "unreliable"
+    assert decided["new_mate_in_other_configurations"] == findings.NEW_MATE_IN_OTHER_CONFIGURATIONS
+    assert decided["handles_stale_after_configuration_change"] is findings.HANDLES_STALE_AFTER_CONFIGURATION_CHANGE
+    assert findings.HANDLES_STALE_AFTER_CONFIGURATION_CHANGE is True
+    assert decided["fixed_kept_in_new_configuration"] is findings.FIXED_KEPT_IN_NEW_CONFIGURATION is True
+    assert decided["configuration_show_marks"] == findings.CONFIGURATION_SHOW_MARKS == "assembly"
+    assert decided["suppression_read_marks"] == findings.SUPPRESSION_READ_MARKS == "nothing"
+    assert decided["value_read_marks"] == findings.VALUE_READ_MARKS == "nothing"
+
+
+@pytest.mark.parametrize("year", ["2026", "2024"])
+def test_a_slides_distance_is_held_per_configuration_and_positions_are_kept_per_configuration(year):
+    """The W8 follow-up: one distance mate's value per configuration (A), each component's place per configuration
+    and a put reaching the active configuration only (B, C) — against GOTCHAS §83, on both versions."""
+    decided = _w8_decided(year)
+    assert decided["slide_value_per_configuration"] is getattr(findings, f"SLIDE_VALUE_PER_CONFIGURATION_ON_{year}")
+    assert getattr(findings, f"SLIDE_VALUE_PER_CONFIGURATION_ON_{year}") is True
+    assert decided["value_unset_reads_zero"] is findings.VALUE_UNSET_READS_ZERO is True
+    assert decided["system_value_follows_configuration"] is findings.SYSTEM_VALUE_FOLLOWS_CONFIGURATION is False
+    assert decided["positions_per_configuration"] is getattr(findings, f"POSITIONS_PER_CONFIGURATION_ON_{year}")
+    assert getattr(findings, f"POSITIONS_PER_CONFIGURATION_ON_{year}") is True
+
+
+def test_the_w8_gates_open_on_both_versions_from_these_findings():
+    """The worker's per-version refusal and the per-version sentence switch read these findings by the revision."""
+    from gear_generator import swbuild, swcom
+    assert swbuild._modes_version_refusal((34, 1, 1)) is None and swbuild._modes_version_refusal((32, 5, 0)) is None
+    assert swcom.positions_per_configuration((34, 1, 1)) is True and swcom.positions_per_configuration((32, 5, 0))
+    assert swbuild._settled(swbuild.MODES_FINDINGS) is None

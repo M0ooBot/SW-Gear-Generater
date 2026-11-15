@@ -1119,3 +1119,139 @@ TURNED_GEAR_MATE_SENSE_ANGLES_SKEW = (60.0, 120.0)
 # entry), and MateEntity(0) was the first selection in all 40 turned mates. The app matches by axis either way (S1).
 TURNED_GEAR_MATE_MOVES_ON_MAKE = False
 GEAR_MATE_ENTITY_ORDER = "first selection first"
+
+# -- W8: sleeves and modes. The W8 spike (probe w8_modes_spike) and its follow-up (w8_followup), W8-SPIKE.md --------
+#
+# Both probes ran on SolidWorks 2026 (34.1.1) and on SolidWorks 2024 (32.5.0), each in a session started fresh for it:
+#   probe/results/w8-spike-20261114-204436.json            probe/results/sw2024/w8-spike-20261114-232510.json
+#   probe/results/w8-followup-20261114-205913.json         probe/results/sw2024/w8-followup-20261114-233330.json
+# What they built:
+# - Parts: the app's own spur (30 teeth, module 1.5, face 10) as anchor A and dog D, and its internal spur ring of 30
+#   teeth as sleeve S. Not W8's sleeve and dog kinds, which did not exist yet.
+# - The layout: A Axis and D Axis on one line along +Z. A and D held as W5 holds an anchor (AXIS and ALONG), and S
+#   on A Axis only. The follow-up adds F, a third spur on its own axis, AXIS and ALONG, with no gear mate anywhere.
+# - Every gear mate was made at 1 : 1 under CommandInProgress, renamed at once and read straight after. The drive
+#   is W5's temporary angle mate on A, 90 -> 120.
+# Every value below is the same on both versions, except the collinear spline's Flip. decide.py derives each from
+# the four result files (decide.w8_findings), and tests/test_findings.py pins each against them.
+#
+# The collinear 1 : 1 gear mate (the SPLINE S-A and the COUPLE S-D; W8-PLAN J8):
+# - AddMate5 returned 1 for each.
+# - Nothing moved when one was made (0 mm), and S stayed under-defined (2), free to slide.
+# - Driven 90 -> 120, one Flip turned S +30 with A and the other turned it -30.
+# - Both W5's rule ((Reverse == entities parallel) == same way) and H named the right one. The coupling read same
+#   way and drove A, S and D each +30.
+# - THE RIGHT FLIP DIFFERS between the versions for the spline: False on 2026, True on 2024. The coupling's was False
+#   on both. So no Flip is assumed for a spline or a coupling; each is settled by the read-back.
+# Not covered: τ was +1 for both entities in every case (both along +Z), so the per-entity sign was never exercised.
+COLLINEAR_GEAR_MATE_SENSE_READ_BACK = True
+# Recorded, nothing reads them: the Flip the spline needed, and that a collinear gear mate moved nothing on make.
+COLLINEAR_GEAR_MATE_FLIP_NEEDED_ON_2026 = False
+COLLINEAR_GEAR_MATE_FLIP_NEEDED_ON_2024 = True
+COLLINEAR_GEAR_MATE_MOVES_ON_MAKE = False
+# The slide under the spline (spike step 4):
+# - A distance mate from S's origin to the layout's Front, linked to a global, was moved 10 -> 20.
+# - S moved +10.0 mm along the axis and 0.0 off it. Its turn relative to A changed by 0.0°, with no mate error.
+# - The spline still read right, and the drive still turned S with A.
+# The follow-up's single per-configuration slide (below) held too.
+COLLINEAR_GEAR_MATE_HOLDS_SLIDE = True
+#
+# Configurations (spike step 6 and its reopen):
+# - X and Y were added with AddConfiguration2(name, "", "", 0, "", "", True): each returned an IConfiguration and
+#   activated itself, read back by ConfigurationManager.ActiveConfiguration.Name.
+# - ShowConfiguration2 X -> Y -> X returned True each time, and the active name read back as shown. It returns False
+#   when the configuration is already active (seen on the reopened file), so success is judged by the name.
+# - A top-only rebuild (ForceRebuild3(True)) after each show was enough: S stood at its configuration's slide (10,
+#   30, 10 mm), with no mate error, and the drive turned D in X and left it still in Y.
+# - DeleteConfiguration2 of the template's "Default", with X active, returned True, and the names read back
+#   ["X", "Y"].
+# - SetSuppression2(0 or 1, 3, VT_ARRAY|VT_BSTR names) returned True each time after a rebuild. IsSuppressed2(3,
+#   names) gave one flag per name, in order, as set: unshown, after every show, after the delete, after reopening.
+# - No add, show or delete brought up any window, under the dialog watch.
+# Not covered: showing a configuration whose mates over-define it (W8-PLAN's tier 9 item 1); more than three
+# configurations; the template holding a configuration of a mode's name.
+CONFIGURATION_ADD_ROUTE = "AddConfiguration2(name, '', '', 0, '', '', True)"
+CONFIGURATION_SHOW_ROUTE = "ShowConfiguration2, active name read back"
+CONFIGURATION_DELETE_ROUTE = "DeleteConfiguration2, names read back"
+SPECIFY_CONFIGURATIONS = 3                      # swInConfigurationOpts_e.swSpecifyConfiguration (motion_enums' read)
+MATE_SUPPRESSION_PER_CONFIGURATION_ROUTE = "SetSuppression2(action, 3, names) after a rebuild; IsSuppressed2(3, names)"
+CONFIGURATION_SHOW_RAISES_DIALOG = False
+# The first two SetSuppression2 calls made straight after AddConfiguration2, with no rebuild between, failed in all
+# five spike runs that reached them (four on 2026: three attempts and the passing run; one on 2024):
+# - the first raised 0x80010105, yet took effect;
+# - the second returned False and did nothing.
+# The follow-up rebuilt after adding its configurations, and both of its calls returned True on both versions.
+# So: rebuild first, never trust the return value, and read every flag back.
+SUPPRESSION_RIGHT_AFTER_ADD = "unreliable"
+# A mate made while Y was active, with Default, X and Y present, came out suppressed in Default and on in X and Y:
+# neither "on everywhere" nor "only here". Every flag is set explicitly for that reason.
+NEW_MATE_IN_OTHER_CONFIGURATIONS = "suppressed in the template's, on in the others"
+#
+# Component handles:
+# - After every AddConfiguration2 and ShowConfiguration2, every IComponent2 held from before answered Transform2
+#   with None and IsFixed with False, including the fixed layout's: a wrong answer, not an error.
+# - Handles fetched again by GetComponentByName (COMPONENT_FIND_ROUTE) answered correctly: Transform2, IsFixed,
+#   GetModelDoc2 and Name2.
+# - Handles held across DeleteConfiguration2 of a configuration not active stayed good.
+# Not covered: on 2026 a fresh handle once answered GetModelDoc2 with None and once Name2 with "", in two of the
+# spike's attempts (logs kept beside it), and never in any run since. The app selects by held names.
+HANDLES_STALE_AFTER_CONFIGURATION_CHANGE = True
+# The layout read IsFixed True in each new configuration through a fresh handle: AddConfiguration2 carries a
+# component's fixed state over.
+FIXED_KEPT_IN_NEW_CONFIGURATION = True
+#
+# Marks and saving, read on the reopened spike, when every document read unmodified:
+# - The configuration names, every IsSuppressed2(3, names) flag and both gear mates' sense read-backs marked
+#   nothing.
+# - ShowConfiguration2 marked the assembly, before any rebuild, and no part.
+# - The follow-up's GetSystemValue3(3, names) on its reopened file marked nothing.
+# - The save (SaveAs3, silent) of the assembly with several configurations brought up no window.
+# - Closing it unsaved after a switch (CloseDoc) asked nothing and discarded the switch, as W5's unsaved Update
+#   close does.
+# - It reopened in the configuration active at the save, X, twice, every document unmodified.
+# Not covered: whether a suppressed gear mate's sense read marks anything, which was read only on the unsaved
+# assembly, already modified, so W8-PLAN's SUPPRESSED_GEAR_MATE_SENSE_READ is not set; it answered there.
+SUPPRESSION_READ_MARKS = "nothing"
+CONFIGURATION_SHOW_MARKS = "assembly"
+VALUE_READ_MARKS = "nothing"
+MULTI_CONFIGURATION_SAVE_ASKS = False
+REOPENS_IN_SAVED_CONFIGURATION = True
+#
+# A slide's distance per configuration (the follow-up's A):
+# - S had one distance mate from its origin to the layout's Front, typed at 10 mm, with no global. Its D1 took a
+#   value per configuration by IDimension.SetSystemValue3(m, 3, [name]), which returned 0 (swSetValue_Successful).
+# - GetSystemValue3(3, names) read Default 10, X 10, Y 30 as typed, without activating any configuration.
+# - S stood at 10, 30 and 10 mm on the shows X, Y, X.
+# - Y was set to 35 while X was active (returned 0): X's sleeve did not move, and Y then showed 35.
+# - Saved and reopened, the values read 10, 10, 35, and S stood at 10, 35 and 10 mm.
+# - The signatures were read from sldworks.tlb, and swSetValue_InSpecificConfigurations = 3 from swconst.tlb.
+# Not covered: a slide at the Front plane (distance 0); a slide not along +Z; more than one slider. IEquationMgr.Add2
+# linking a second slide's D1 to a global with several configurations present returned -1 on both versions
+# (W8-SPIKE.md), which is why the app sets values per configuration and keeps no slide global.
+SLIDE_VALUE_ROUTE = "SetSystemValue3(m, 3, [configuration]); GetSystemValue3(3, configurations)"
+SET_VALUE_IN_SPECIFIC_CONFIGURATIONS = 3        # swSetValueInConfiguration_e.swSetValue_InSpecificConfigurations
+SLIDE_VALUE_PER_CONFIGURATION_ON_2026 = True
+SLIDE_VALUE_PER_CONFIGURATION_ON_2024 = True
+# Before any configuration had its own value, GetSystemValue3 read 0 for every configuration not active (Default 0,
+# X 0, Y 10 with Y active), so every configuration's value is set explicitly before one is read.
+VALUE_UNSET_READS_ZERO = True
+# Recorded, nothing reads it: IDimension.SystemValue on the handle read 30 in X while S stood at 10. It does not
+# follow the shown configuration; only GetSystemValue3 with the name does.
+SYSTEM_VALUE_FOLLOWS_CONFIGURATION = False
+#
+# Positions per configuration (the follow-up's B and C), with Y active and the coupling S-D off there:
+# - F (no gear mate anywhere) was put +20° about its own axis and D +5°, each by a Transform2 put on a fresh handle,
+#   then a top-only rebuild.
+# - Shown X: F and D at 0. Shown Y again: F at 20 and D at 5.
+# - F put +10° in X: Y's F stayed at 20 and X's read 10.
+# - Saved and reopened: F 10, 20, 10 and D 0, 5, 0 on X, Y, X.
+# So SolidWorks keeps each component's place per configuration, for a freedom the mates leave open, and a put holds
+# in the active configuration only.
+# This CONTRADICTS the user's macro database: GOTCHAS §83 and assemblies/07, recorded on 2024, say component
+# positions are not stored per configuration. Their case was a free mechanism dragged between configurations with no
+# mate holding its place; this one is a component turned about a free axis by a Transform2 put, read through fresh
+# handles, on both versions. The difference may lie in how the place was set (a drag against a put) or in what the
+# mates leave free; neither was tried here.
+# Not covered: a component free to move along an axis as well as turn; a drag in the user interface.
+POSITIONS_PER_CONFIGURATION_ON_2026 = True
+POSITIONS_PER_CONFIGURATION_ON_2024 = True

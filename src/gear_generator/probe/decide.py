@@ -412,6 +412,305 @@ def turned_sense_angles_skew(records: Records) -> Optional[tuple]:
     return _turned_angles(records, "K")
 
 
+# -- W8: the spike (w8_modes_spike) and its follow-up (w8_followup), W8-SPIKE.md --------------------------------------
+
+W8_TOL = 1e-6
+
+
+def _w8(records: Records, probe: str, fact: str) -> Optional[Dict[str, Any]]:
+    return _fact(records, probe, fact) or None
+
+
+def _spike(records: Records) -> Optional[Dict[str, Any]]:
+    return _w8(records, "w8_modes_spike", "w8_spike")
+
+
+def _followup(records: Records) -> Optional[Dict[str, Any]]:
+    return _w8(records, "w8_followup", "w8_followup")
+
+
+def _near(a: Any, b: float) -> bool:
+    return isinstance(a, (int, float)) and abs(float(a) - b) < W8_TOL
+
+
+def collinear_sense_read_back(records: Records) -> Optional[bool]:
+    """True when, on the spike's collinear axes, exactly one Flip turned the sleeve with the anchor (+30, +30), the
+    other turned it opposite, and both W5's rule and H named the right one every time, and the coupling read
+    same-way and drove the dog with the sleeve."""
+    f = _spike(records)
+    if not f or len(f.get("spline") or {}) != 2:
+        return None
+    ok = []
+    for m in f["spline"].values():
+        rd, t = m.get("read") or {}, (m.get("drive") or {}).get("turns") or {}
+        same = _near(t.get("A"), 30.0) and _near(t.get("S"), 30.0) and _near(t.get("D"), 0.0)
+        opposite = _near(t.get("A"), 30.0) and _near(t.get("S"), -30.0)
+        ok.append((same != opposite) and rd.get("w5_says_same_way") is same and rd.get("h_says_same_way") is same)
+    rights = [m.get("same_way") for m in f["spline"].values()]
+    c = f.get("coupling") or {}
+    cread = (c.get("remade") or c).get("read") or {}
+    ct = (c.get("drive") or {}).get("turns") or {}
+    coupled = cread.get("w5_says_same_way") is True and all(_near(ct.get(k), 30.0) for k in ("A", "S", "D"))
+    return all(ok) and rights.count(True) == 1 and coupled
+
+
+def collinear_flip_needed(records: Records) -> Optional[bool]:
+    """The Flip that turned the spike's spline with its anchor (recorded; never assumed)."""
+    f = _spike(records)
+    return f.get("spline_right_flip") if f else None
+
+
+def collinear_moves_on_make(records: Records) -> Optional[bool]:
+    """Whether either collinear spline moved anything when made (1e-6), or left the sleeve other than free (2)."""
+    f = _spike(records)
+    if not f or not f.get("spline"):
+        return None
+    return any(not _near(m.get("moved_on_make"), 0.0) or (m.get("constrained") or {}).get("S") != 2
+               for m in f["spline"].values())
+
+
+def collinear_holds_slide(records: Records) -> Optional[bool]:
+    """The spike's step 4: the slide moved the sleeve +10 mm with the spline on, its turn relative to the anchor
+    unchanged, no mate error, the spline still read right, and the drive still turned it with the anchor."""
+    f = _spike(records)
+    s = (f or {}).get("slide")
+    if not s:
+        return None
+    t = (s.get("drive") or {}).get("turns") or {}
+    return (_near(s.get("moved_along_mm"), 10.0) and _near(s.get("off_axis_mm"), 0.0)
+            and _near(s.get("relative_turn_change"), 0.0) and not s.get("errors")
+            and (s.get("read") or {}).get("w5_says_same_way") is True
+            and _near(t.get("A"), 30.0) and _near(t.get("S"), 30.0))
+
+
+def _shows(f: Mapping[str, Any]) -> List[Mapping[str, Any]]:
+    cfg = f.get("configurations") or {}
+    out = list(cfg.get("shows") or [])
+    ro = f.get("reopen") or {}
+    if ro.get("switch"):
+        out.append(ro["switch"])
+    out += [d.get("show") or {} for d in (ro.get("drives") or {}).values()]
+    return out
+
+
+def configuration_routes(records: Records) -> Optional[Dict[str, bool]]:
+    """Whether each configuration call held in the spike, read back: AddConfiguration2 added and activated each
+    configuration; every ShowConfiguration2 left the named one active; DeleteConfiguration2 of the template's
+    returned True with the names read back; every SetSuppression2 after a rebuild returned True and every flag read
+    back by IsSuppressed2(3, names) as set, unshown and after each show."""
+    f = _spike(records)
+    cfg = (f or {}).get("configurations")
+    if not cfg:
+        return None
+    adds = all((cfg.get(f"add {n}") or {}).get("active") == n and (cfg.get(f"add {n}") or {}).get("returned") ==
+               "CDispatch" for n in ("X", "Y"))
+    shows = all(s.get("returned") in (True, False) and s.get("active") for s in _shows(f)) and \
+        [s.get("active") for s in cfg.get("shows") or []] == ["X", "Y", "X"]
+    gone = cfg.get("delete template") or {}
+    delete = gone.get("returned") is True and gone.get("names") == ["X", "Y"]
+    want = {"S along A at P": [False, False, True], "S along A at Q": [True, True, False],
+            "S engages D": [False, False, True]}
+    unshown = cfg.get("flags unshown") or {}
+    flags = all(list((unshown.get(m) or {}).values()) == v for m, v in want.items()) and all(
+        all(list(((s.get("flags_shown") or {}).get(m) or {}).values()) == v for m, v in want.items())
+        for s in cfg.get("shows") or [])
+    setting = bool(cfg.get("set")) and all(v is True for v in cfg["set"].values())
+    return {"add": adds, "show": shows, "delete": delete, "suppression": flags and setting}
+
+
+def configuration_show_raises_dialog(records: Records) -> Optional[bool]:
+    """Whether any ShowConfiguration2, AddConfiguration2 or DeleteConfiguration2 of the spike (and the follow-up's
+    shows) brought up a window while it ran."""
+    seen, any_data = [], False
+    for f, extra in ((_spike(records), True), (_followup(records), False)):
+        if not f:
+            continue
+        any_data = True
+        shows = _shows(f) if extra else list((f.get("slide") or {}).get("shows") or [])
+        seen += [w for s in shows for w in (s.get("windows") or [])]
+        if extra:
+            cfg = f.get("configurations") or {}
+            seen += [w for k in ("add X", "add Y", "delete template") for w in ((cfg.get(k) or {}).get("windows") or [])]
+            seen += list((cfg.get("coupling at an angle") or {}).get("windows") or [])
+    return bool(seen) if any_data else None
+
+
+def multi_configuration_save_asks(records: Records) -> Optional[bool]:
+    """Whether the save of the spike's assembly with several configurations, or its close unsaved after a switch,
+    brought up a window."""
+    f = _spike(records)
+    if not f or not f.get("save") or not (f.get("reopen") or {}).get("close_after_switch"):
+        return None
+    close = f["reopen"]["close_after_switch"]
+    return bool(f["save"].get("windows")) or bool(close.get("dialog")) or not f["save"].get("saved")
+
+
+def reopens_in_saved_configuration(records: Records) -> Optional[bool]:
+    """Whether the spike's assembly reopened (twice) in the configuration active at its save."""
+    f = _spike(records)
+    ro = (f or {}).get("reopen") or {}
+    if not f or not f.get("save") or "first: active on open" not in ro:
+        return None
+    return ro["first: active on open"] == ro.get("second: active on open") == f["save"].get("active")
+
+
+def handles_stale_after_configuration_change(records: Records) -> Optional[bool]:
+    """True when every component handle held across each AddConfiguration2 and ShowConfiguration2 answered
+    Transform2 with None while a fresh one answered, and the handles held across DeleteConfiguration2 did not."""
+    f = _spike(records)
+    cfg = (f or {}).get("configurations") or {}
+    changes = [cfg.get("handles after adding X"), cfg.get("handles after adding Y")] + \
+        [s.get("handles") for s in cfg.get("shows") or []]
+    if not f or not all(changes) or not cfg.get("handles after delete"):
+        return None
+    stale = all(all(v is True for v in h["old_transform_none"].values()) and
+                not any(h["new_transform_none"].values()) for h in changes)
+    kept = not any(cfg["handles after delete"]["old_transform_none"].values())
+    return stale and kept
+
+
+def fixed_kept_in_new_configuration(records: Records) -> Optional[bool]:
+    """The layout read IsFixed True through a fresh handle after each AddConfiguration2."""
+    cfg = ((_spike(records) or {}).get("configurations")) or {}
+    hs = [cfg.get("handles after adding X"), cfg.get("handles after adding Y")]
+    if not all(hs):
+        return None
+    return all((h.get("new_is_fixed") or {}).get("layout") is True for h in hs)
+
+
+def new_mate_in_other_configurations(records: Records) -> Optional[str]:
+    """Where a mate made while a configuration other than the template's is active comes out (the spike's Q, made
+    in Y with Default, X and Y present)."""
+    cfg = ((_spike(records) or {}).get("configurations")) or {}
+    q = (cfg.get("flags right after Q") or {}).get("S along A at Q")
+    if not q:
+        return None
+    template = cfg.get("template")
+    if q.get(template) is True and all(v is False for k, v in q.items() if k != template):
+        return "suppressed in the template's, on in the others"
+    return f"other: {q}"
+
+
+def suppression_right_after_add(records: Records) -> Optional[str]:
+    """"unreliable" when a SetSuppression2 straight after AddConfiguration2 (no rebuild between) raised or returned
+    other than True; "reliable" when both returned True."""
+    cfg = ((_spike(records) or {}).get("configurations")) or {}
+    first = [cfg.get("suppress P in Y first"), cfg.get("suppress coupling in Y first")]
+    if any(v is None for v in first):
+        return None
+    return "reliable" if all(v is True for v in first) else "unreliable"
+
+
+def configuration_show_marks(records: Records) -> Optional[str]:
+    """What a ShowConfiguration2 marks, read on the reopened (unmodified) spike: "assembly" when only the assembly
+    reads GetSaveFlag True straight after the show."""
+    ro = ((_spike(records) or {}).get("reopen")) or {}
+    before, after = ro.get("first: flags on open"), (ro.get("switch") or {}).get("flags_after_show")
+    if not before or not after or any(v for v in before.values()):
+        return None
+    marked = sorted(k for k, v in after.items() if v and k != "assembly" and not k.endswith(".SLDASM"))
+    return "assembly" if after.get("assembly") is True and not marked else f"other: {marked}"
+
+
+def _reads_mark(ro: Mapping[str, Any], before_key: str) -> Optional[str]:
+    before, after = ro.get(before_key), ro.get("flags_after_reads")
+    if not before or not after or any(v for v in before.values()):
+        return None
+    return "nothing" if not any(v for v in after.values()) else "something"
+
+
+def suppression_read_marks(records: Records) -> Optional[str]:
+    """What IsSuppressed2(3, names) and the gear mates' sense read-backs marked, read on the reopened spike."""
+    return _reads_mark(((_spike(records) or {}).get("reopen")) or {}, "first: flags on open")
+
+
+def value_read_marks(records: Records) -> Optional[str]:
+    """What GetSystemValue3(3, names) marked, read on the reopened follow-up."""
+    return _reads_mark(((_followup(records) or {}).get("reopen")) or {}, "flags_on_open")
+
+
+def slide_value_per_configuration(records: Records) -> Optional[bool]:
+    """The follow-up's A: one distance mate's dimension set per configuration with SetSystemValue3(…, 3, [name])
+    (returned 0), read back as typed by GetSystemValue3(3, names) without activating, put the sleeve where each
+    configuration said on every show, could be changed for one configuration while another was active, and held
+    through save and reopen."""
+    f = _followup(records)
+    s = (f or {}).get("slide")
+    if not f or not s:
+        return None
+    sets = s.get("set Y 30 while Y active") == 0 and s.get("set Y 35 while X active") == 0
+    reads = s.get("after set") == {"Default": 10.0, "X": 10.0, "Y": 30.0} and \
+        (s.get("after the change from X") or {}).get("values") == {"Default": 10.0, "X": 10.0, "Y": 35.0}
+    places = [x.get("S_z") for x in s.get("shows") or []] + [(s.get("Y after the change from X") or {}).get("S_z")]
+    reopened = [x.get("S_z") for x in ((f.get("reopen") or {}).get("shows") or [])]
+    return (sets and reads and len(places) == 4 and all(_near(a, b) for a, b in zip(places, (10, 30, 10, 35)))
+            and len(reopened) == 3 and all(_near(a, b) for a, b in zip(reopened, (10, 35, 10))))
+
+
+def value_unset_reads_zero(records: Records) -> Optional[bool]:
+    """Whether GetSystemValue3 read 0 for every configuration not active before any had its own value."""
+    s = ((_followup(records) or {}).get("slide")) or {}
+    before = s.get("before")
+    if not before:
+        return None
+    return before.get("Default") == 0.0 and before.get("X") == 0.0 and before.get("Y") == 10.0
+
+
+def system_value_follows_configuration(records: Records) -> Optional[bool]:
+    """Whether IDimension.SystemValue read the shown configuration's value on every show of the follow-up."""
+    shows = (((_followup(records) or {}).get("slide")) or {}).get("shows")
+    if not shows:
+        return None
+    return all(_near(x.get("system_value"), x.get("S_z")) for x in shows)
+
+
+def positions_per_configuration(records: Records) -> Optional[bool]:
+    """The follow-up's B and C: True when F (no gear mate) and D (its coupling off where it was turned), each turned
+    by a Transform2 put in one configuration, stood at their own angle in each configuration on every show, a put
+    reached only the active configuration, and the same held after save and reopen; False when every configuration
+    showed the last put; None otherwise."""
+    f = _followup(records)
+    ts = (f or {}).get("turn_summary")
+    if not f or not ts:
+        return None
+    want = {"X shown": (0.0, 0.0), "Y shown again": (20.0, 5.0), "Y after the put in X": (20.0, 5.0),
+            "X last": (10.0, 0.0)}
+    kept = all(_near((ts.get(k) or {}).get("F"), fv) and _near((ts.get(k) or {}).get("D"), dv)
+               for k, (fv, dv) in want.items())
+    ro = [s.get("turn_from_Y_before_puts") or {} for s in ((f.get("reopen") or {}).get("shows") or [])]
+    reopened = len(ro) == 3 and all(_near(r.get("F"), fv) and _near(r.get("D"), dv)
+                                    for r, (fv, dv) in zip(ro, ((10, 0), (20, 5), (10, 0))))
+    if kept and reopened:
+        return True
+    shared = all(_near((ts.get(k) or {}).get("F"), 20.0) for k in ("X shown", "Y shown again"))
+    return False if shared else None
+
+
+def w8_findings(records: Records) -> Dict[str, Any]:
+    """Every W8 reading decide derives, by its decide key."""
+    return {
+        "collinear_gear_mate_sense_read_back": collinear_sense_read_back(records),
+        "collinear_gear_mate_flip_needed": collinear_flip_needed(records),
+        "collinear_gear_mate_moves_on_make": collinear_moves_on_make(records),
+        "collinear_gear_mate_holds_slide": collinear_holds_slide(records),
+        "configuration_routes": configuration_routes(records),
+        "configuration_show_raises_dialog": configuration_show_raises_dialog(records),
+        "multi_configuration_save_asks": multi_configuration_save_asks(records),
+        "reopens_in_saved_configuration": reopens_in_saved_configuration(records),
+        "handles_stale_after_configuration_change": handles_stale_after_configuration_change(records),
+        "fixed_kept_in_new_configuration": fixed_kept_in_new_configuration(records),
+        "new_mate_in_other_configurations": new_mate_in_other_configurations(records),
+        "suppression_right_after_add": suppression_right_after_add(records),
+        "configuration_show_marks": configuration_show_marks(records),
+        "suppression_read_marks": suppression_read_marks(records),
+        "value_read_marks": value_read_marks(records),
+        "slide_value_per_configuration": slide_value_per_configuration(records),
+        "value_unset_reads_zero": value_unset_reads_zero(records),
+        "system_value_follows_configuration": system_value_follows_configuration(records),
+        "positions_per_configuration": positions_per_configuration(records),
+    }
+
+
 def decide(records: Records) -> Dict[str, Any]:
     recipe = flank_recipe(records)
     units = _fact(records, "document_units", "default_template_is_mm")
@@ -576,6 +875,7 @@ def decide(records: Records) -> Dict[str, Any]:
         "turned_sense_read_back": turned_sense_read_back(records),
         "turned_sense_angles": turned_sense_angles(records),
         "turned_sense_angles_skew": turned_sense_angles_skew(records),
+        **w8_findings(records),
         "turned_gear_mate_moves_on_make": _fact(records, "turned_gear_mate_sense", "turned_gear_mate_moves_on_make"),
         "gear_mate_entity_order": _fact(records, "turned_gear_mate_sense", "gear_mate_entity_order"),
         "manual_steps": manual_steps(records, recipe),
