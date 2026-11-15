@@ -3946,10 +3946,16 @@ def test_a_recorded_mate_that_stays_suppressed_after_it_is_turned_back_on_stops_
 RING_MESHES = (MESHES[0], MeshLink("G3", "G4", 17.0 / 51, 360.0 / 51))   # G4 a ring round G3: same sense, both Z+
 
 
-def _build_ring(fake=None, internal=("G3 meshes G4",), **kwargs):
+# Each gear mate's mesh sense as planning gives it (``k > 0``): outside on alike shafts turns the gears opposite
+# ways (False); G4 a ring round G3 on alike shafts turns them the same way (True).
+TRAIN_SENSES = {"G1 meshes G2": False, "G3 meshes G4": False}
+RING_SENSES = {"G1 meshes G2": False, "G3 meshes G4": True}
+
+
+def _build_ring(fake=None, senses=RING_SENSES, **kwargs):
     fake = fake or FakeSolidWorks()
     return _build_train(fake, parts=[plan(S17, path=P17), plan(S68, path=P68), plan(S51, path=P51R)],
-                        assembly=_train_plan(ring=True), internal=internal, **kwargs)
+                        assembly=_train_plan(ring=True), senses=senses, **kwargs)
 
 
 def _turns_as_it_meshes(fake, meshes=RING_MESHES, frames=None):
@@ -4016,13 +4022,13 @@ def test_axes_read_otherwise_than_the_plan_placed_them_stop_the_build_without_a_
 
 
 def test_an_external_train_reads_every_gear_mate_and_turns_none_round():
-    fake, result = _build_train(internal=())
+    fake, result = _build_train(senses=TRAIN_SENSES)
     assert result.ok and result.assembly.turned_round == []
     assert [n for n in names(fake) if n == "gear_mate_sense"] == ["gear_mate_sense"] * 2
 
 
 def test_without_saying_which_meshes_are_inside_a_ring_no_sense_is_read_as_before():
-    fake, result = _build_ring(internal=None)
+    fake, result = _build_ring(senses=None)
     assert result.ok and "gear_mate_sense" not in names(fake)
     assert not fake.turns_right("G3 meshes G4") and not _turns_as_it_meshes(fake)   # what the demonstration met
 
@@ -4038,7 +4044,7 @@ def test_without_the_read_back_a_ring_train_is_refused_before_anything_is_made_a
                                  f"ring cannot be told on SolidWorks yet (findings.{name} is None), so nothing is made "
                                  "or changed; run probe ring_mate_sense first.")
     assert fake.calls == []
-    fake, result = _build_train(internal=())
+    fake, result = _build_train(senses=TRAIN_SENSES)
     assert result.ok and "gear_mate_sense" not in names(fake)
 
 
@@ -4056,11 +4062,11 @@ def test_with_the_read_back_but_not_the_remake_with_the_other_flip_a_train_is_re
 RING_MESHES_18 = (MESHES[0], MeshLink("G3", "G4", 18.0 / 50, 360.0 / 50))
 
 
-def _built_ring(table=None, internal=("G3 meshes G4",)):
+def _built_ring(table=None, senses=RING_SENSES):
     fake = FakeSolidWorks()
     if table is not None:
         fake.flip_needed = dict(table)
-    fake, result = _build_ring(fake, internal=internal)
+    fake, result = _build_ring(fake, senses=senses)
     assert result.ok, result.log_lines()
     fake.calls.clear()
     return fake
@@ -4114,7 +4120,7 @@ def test_without_the_read_back_an_update_remake_inside_a_ring_is_refused_before_
 def test_the_check_phase_reads_no_sense_while_a_finding_it_rests_on_is_missing(monkeypatch, name):
     """Not a refusal: without the read's findings the check phase does not read the sense, as before."""
     monkeypatch.setattr(findings, name, None)
-    fake = _built_ring(internal=None)                          # built before the check: G3 meshes G4 turns wrong
+    fake = _built_ring(senses=None)                          # built before the check: G3 meshes G4 turns wrong
     fake.turn("gear4-1", 3.0)
     result = _update_train(fake, motion=_ring_motion())
     assert result.ok and result.sense_found_wrong == [] and "gear_mate_sense" not in names(fake)
@@ -4122,7 +4128,7 @@ def test_the_check_phase_reads_no_sense_while_a_finding_it_rests_on_is_missing(m
 
 def test_with_its_finding_the_check_phase_finds_a_ring_turning_wrong_and_remakes_it(remake_route, monkeypatch):
     monkeypatch.setattr(findings, swbuild.SENSE_CHECK_FINDINGS[0][0], swbuild.SENSE_CHECK_FINDINGS[0][1])
-    fake = _built_ring(internal=None)
+    fake = _built_ring(senses=None)
     result = _update_train(fake, motion=_ring_motion())
     assert result.ok, result.log_lines()
     assert result.sense_found_wrong == ["G3 meshes G4"] and result.turned_round == ["G3 meshes G4"]
@@ -4271,7 +4277,7 @@ def test_a_gear_mate_suppressed_with_its_folder_and_right_is_healed_as_before(mo
 
 
 def test_a_suppressed_gear_mate_that_turns_wrong_is_turned_on_read_remade_and_its_train_put(remake_route):
-    fake = _built_ring(internal=None)                          # built without the read: G3 meshes G4 turns wrong
+    fake = _built_ring(senses=None)                          # built without the read: G3 meshes G4 turns wrong
     fake.mate("G3 meshes G4", T_ASM).suppressed = True
     result = _update_train(fake, motion=_ring_motion())
     assert result.ok, result.log_lines()
@@ -4281,7 +4287,7 @@ def test_a_suppressed_gear_mate_that_turns_wrong_is_turned_on_read_remade_and_it
 
 
 def test_a_sense_only_remake_is_not_said_to_be_a_new_ratio(remake_route):
-    fake = _built_ring(internal=None)
+    fake = _built_ring(senses=None)
     result = _update_train(fake, motion=_ring_motion())
     assert result.ok and result.sense_found_wrong == ["G3 meshes G4"] and result.ratios == []
     assert not any(line.startswith("ok      given their new ratio") for line in result.log_lines())
@@ -4290,7 +4296,7 @@ def test_a_sense_only_remake_is_not_said_to_be_a_new_ratio(remake_route):
 
 def test_a_wrong_sense_mate_is_refused_before_anything_changes_while_the_remake_route_is_missing(monkeypatch):
     monkeypatch.setattr(findings, "GEAR_MATE_RATIO_ROUTE", None)
-    fake = _built_ring(internal=None)
+    fake = _built_ring(senses=None)
     with pytest.raises(swbuild.BuildError) as raised:
         _update_train(fake, motion=_ring_motion())
     assert str(raised.value) == ("The gear mate G3 meshes G4 in T.SLDASM turns its gears against the way they mesh, "
@@ -4462,8 +4468,7 @@ def _build_a(fake=None, **kwargs):
     kwargs.setdefault("assembly", _a_plan())
     kwargs.setdefault("gears", TRAIN_GEARS)
     kwargs.setdefault("exists", fake.exists)
-    if "internal" not in kwargs:
-        kwargs.setdefault("senses", dict(A_SENSES))
+    kwargs.setdefault("senses", dict(A_SENSES))
     return fake, swbuild.build_gearbox(fake, **kwargs)
 
 
@@ -4494,14 +4499,13 @@ def test_the_fake_layout_puts_a_turned_axis_where_its_planes_cross():
     assert fake.axis_line("a1", "S1 Axis") == ((0.0, 0.0, 64.0), (1.0, 0.0, 0.0))
 
 
-@pytest.mark.parametrize("given", ["senses", "internal", "neither"])
+@pytest.mark.parametrize("given", ["senses", "neither"])
 def test_a_turned_mesh_is_refused_before_anything_is_made_while_the_turned_finding_is_missing(
         turned_findings, monkeypatch, given):
     """W6-INTERFACES §7.3: whatever the caller gives, no turned gear mate reaches AddMate5 unread (D16)."""
     monkeypatch.setattr(findings, "TURNED_GEAR_MATE_SENSE_READ_BACK", None)
     fake = FakeSolidWorks()
-    kwargs = {"senses": dict(A_SENSES)} if given == "senses" else {"internal": ()} if given == "internal" \
-        else {"senses": None}
+    kwargs = {"senses": dict(A_SENSES)} if given == "senses" else {"senses": None}
     with pytest.raises(swbuild.BuildError) as raised:
         _build_a(fake, **kwargs)
     assert str(raised.value) == ("The gear mate G1 meshes G2 joins gears on shafts that meet at an angle, and which way "
@@ -4522,14 +4526,13 @@ def test_a_turned_mesh_outside_the_angles_the_finding_covers_is_refused_before_a
     assert fake.calls == []
 
 
-def test_a_turned_mesh_needs_the_build_told_its_sense_in_the_new_form(turned_findings):
-    for kwargs, said in (({"senses": None}, "the build was not told which way it turns them"),
-                         ({"internal": ()}, "the build was told only which gear mates mesh inside a ring")):
-        fake = FakeSolidWorks()
-        with pytest.raises(swbuild.BuildError) as raised:
-            _build_a(fake, **kwargs)
-        assert said in str(raised.value) and str(raised.value).endswith("a fault in Gear Generator.")
-        assert fake.calls == []
+def test_a_turned_mesh_needs_the_build_told_its_sense(turned_findings):
+    fake = FakeSolidWorks()
+    with pytest.raises(swbuild.BuildError) as raised:
+        _build_a(fake, senses=None)
+    assert str(raised.value) == ("The gear mate G1 meshes G2 joins gears on shafts at an angle, and the build was not "
+                                 "told which way it turns them, so nothing is made; that is a fault in Gear Generator.")
+    assert fake.calls == []
     with pytest.raises(swbuild.BuildError, match="not told which way the gear mate G3 meshes G4"):
         _build_a(senses={"G1 meshes G2": False})
 

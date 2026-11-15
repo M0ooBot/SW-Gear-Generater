@@ -220,22 +220,3 @@ def test_a_line_axis_is_run_through_the_sessions_line_axis():
 
 
 # -- swbuild: W6's senses carried to W5's ring reading for parallel meshes (the interface commit's bridge) -------
-
-
-def test_senses_become_w5s_ring_meshes_for_parallel_gear_mates():
-    from gear_generator.gears.base import BuildPlan, Mate, NewAssembly, Place, Rebuild, SaveAs, AddComponent
-    up, down = layout.IDENTITY, (1.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, -1.0)
-    plan = BuildPlan("assembly", "", (
-        NewAssembly(""), AddComponent("gear1", "a"), Place("gear1", up, (0, 0, 0)),
-        AddComponent("gear2", "b"), Place("gear2", down, (0, 0, 0)), AddComponent("gear3", "c"),
-        Place("gear3", up, (0, 0, 0)),
-        Mate("mesh1", "gear", "gear1:Gear Axis", "gear2:Gear Axis", name="G1 meshes G2"),
-        Mate("mesh2", "gear", "gear1:Gear Axis", "gear3:Gear Axis", name="G1 meshes G3"),
-        Rebuild(), SaveAs("C:\\P\\R.SLDASM")), path="C:\\P\\R.SLDASM")
-    # Opposite shafts, same sense: an outside mesh. Same shafts, same sense: inside a ring.
-    assert swbuild._internal_from_senses(plan, {"G1 meshes G2": True, "G1 meshes G3": True}, None) == ("G1 meshes G3",)
-    assert swbuild._internal_from_senses(plan, {"G1 meshes G2": False, "G1 meshes G3": False}, None) == (
-        "G1 meshes G2",)
-    assert swbuild._internal_from_senses(plan, None, ("x",)) == ("x",)
-    with pytest.raises(swbuild.BuildError, match="said twice"):
-        swbuild._internal_from_senses(plan, {}, ())

@@ -569,8 +569,7 @@ _RUNNERS: Mapping[type, Callable] = {
 
 def build(sw: SolidWorks, plan: BuildPlan, exists: Callable[[str], bool] = os.path.exists,
           kind: Optional[str] = None, *, gears: Optional[Mapping[str, str]] = None,
-          senses: Optional[Mapping[str, bool]] = None,
-          internal: Optional[Collection[str]] = None) -> BuildResult:
+          senses: Optional[Mapping[str, bool]] = None) -> BuildResult:
     """Make the plan's document, run every step, rebuild once, check, and save.
 
     Raises :class:`BuildError` only before anything is made. After that every
@@ -617,11 +616,6 @@ def build(sw: SolidWorks, plan: BuildPlan, exists: Callable[[str], bool] = os.pa
     finding covers) — there is no static fallback (W6-PLAN D16) — and, when
     it can, refused too unless ``senses`` says which way it turns.
 
-    ``internal`` (keyword, W5's form, kept only until ``GearboxPlan.
-    build_kwargs`` passes ``senses``): the names of the gear mates inside a
-    ring, for parallel meshes only; turned into ``senses`` from the planned
-    axes (:func:`_given_senses`). Giving both is refused.
-
     ``gears`` (keyword, :func:`build_gearbox`'s map of assembly handle to
     workbook gear id) names a gear in a mate problem by its id; without it,
     by the Name2 it kept. The check runs only when every op ran (a build
@@ -639,7 +633,7 @@ def build(sw: SolidWorks, plan: BuildPlan, exists: Callable[[str], bool] = os.pa
         _assembly_rebuild_gate(kind)
         if kind == ASSEMBLY_TRAIN:
             _train_gate(plan, building=True)
-            senses = _sense_gate(plan, senses, internal)
+            senses = _sense_gate(plan, senses)
     save = next((op for op in plan.ops if isinstance(op, base.SaveAs)), None)
     if save is not None and save.path and exists(save.path):
         raise BuildError(f"{save.path} already exists, and a build never overwrites a file.")
@@ -770,10 +764,8 @@ def _sense_settled() -> bool:
     return _settled(SENSE_FINDINGS) is None
 
 
-def _sense_gate(plan: BuildPlan, senses: Optional[Mapping[str, bool]],
-                internal: Optional[Collection[str]] = None) -> Optional[Dict[str, bool]]:
-    """Before anything is made; returns each gear mate's same sense (``senses``, or W5's ``internal`` turned into
-    it), or None when neither is given.
+def _sense_gate(plan: BuildPlan, senses: Optional[Mapping[str, bool]]) -> Optional[Dict[str, bool]]:
+    """Before anything is made; returns each gear mate's same sense as given, or None when none is.
 
     First, whatever is given (W6-INTERFACES §7.3), every gear mate's two planned axes (each handle's last ``Place``):
     a gear mate between gears whose axes are not of one family (:func:`swcom.axes_parallel`, planning's rule, §7.5)
@@ -784,8 +776,9 @@ def _sense_gate(plan: BuildPlan, senses: Optional[Mapping[str, bool]],
     other Flip); without it, a train with a mesh inside a ring is refused, since no Flip chosen before the mate is
     made is right on both versions (findings.GEAR_MATE_FLIP_STATIC_RULE None) and its sense cannot be told."""
     gear_mates = [op for op in plan.ops if isinstance(op, base.Mate) and op.kind == "gear"]
+    given = None if senses is None else {str(name): bool(same) for name, same in senses.items()}
     if not gear_mates:
-        return _given_senses(plan, senses, internal, {})
+        return given
     axes, origins = _planned_axes(plan), _planned_origins(plan)
     turned: List[str] = []
     for op in gear_mates:
@@ -798,7 +791,6 @@ def _sense_gate(plan: BuildPlan, senses: Optional[Mapping[str, bool]],
             if refusal is not None:
                 raise BuildError(refusal)
             turned.append(name)
-    given = _given_senses(plan, senses, internal, axes)
     if given is None:
         if turned:
             raise BuildError(f"The gear mate {turned[0]} joins gears on shafts at an angle, and the build was not told "
@@ -822,60 +814,6 @@ def _sense_gate(plan: BuildPlan, senses: Optional[Mapping[str, bool]],
         raise BuildError(f"A gearbox built to turn needs findings.{missing[0]} settled on SolidWorks (it is "
                          f"{missing[1]!r}), so nothing is made or changed; run probe tier 8 first.")
     return given
-
-
-def _given_senses(plan: BuildPlan, senses: Optional[Mapping[str, bool]], internal: Optional[Collection[str]],
-                  axes: Mapping[str, Vec3]) -> Optional[Dict[str, bool]]:
-    """``senses`` as given, or W5's ``internal`` (the gear mates inside a ring; parallel meshes only) turned into
-    them: a parallel mesh turns its gears the same way about their own axes exactly when it is inside a ring and
-    their axes point alike, or outside and they point opposite ways (``k = ∓σaσb·za/zb``, review M2 of W5). The
-    bridge goes once ``GearboxPlan.build_kwargs`` passes ``senses``."""
-    if senses is not None and internal is not None:
-        raise BuildError("A build was given both the W6 senses and the W5 ring meshes of its gear mates, so which way "
-                         "each turns is said twice and nothing is made; that is a fault in Gear Generator.")
-    if senses is not None:
-        return {str(name): bool(same) for name, same in senses.items()}
-    if internal is None:
-        return None
-    inside = set(internal)
-    out: Dict[str, bool] = {}
-    for op in plan.ops:
-        if not (isinstance(op, base.Mate) and op.kind == "gear"):
-            continue
-        name = op.name or op.id
-        ga, gb = _mate_axes(op, name, axes)
-        if not axes_parallel(ga, gb):
-            raise BuildError(f"The gear mate {name} joins gears on shafts at an angle, and the build was told only "
-                             "which gear mates mesh inside a ring, which says nothing of which way it turns, so "
-                             "nothing is made; that is a fault in Gear Generator.")
-        alike = sum(p * q for p, q in zip(ga, gb)) > 0
-        out[name] = (name in inside or op.name in inside or op.id in inside) == alike
-    return out
-
-
-def _internal_from_senses(plan: BuildPlan, senses: Optional[Mapping[str, bool]],
-                          internal: Optional[Collection[str]]) -> Optional[Collection[str]]:
-    """The interface commit's bridge the other way, ``senses`` as W5's ring list, kept only while its test in
-    ``tests/test_workbook_axes.py`` does (nothing here calls it: the build reads ``senses`` itself). A turned gear
-    mate has no place in a ring list and is a fault."""
-    if senses is None:
-        return internal
-    if internal is not None:
-        raise BuildError("A build was given both the W6 senses and the W5 ring meshes of its gear mates, so which way "
-                         "each turns is said twice and nothing is made; that is a fault in Gear Generator.")
-    axes = _planned_axes(plan)
-    out = []
-    for op in plan.ops:
-        if not (isinstance(op, base.Mate) and op.kind == "gear") or (op.name or op.id) not in senses:
-            continue
-        name = op.name or op.id
-        ga, gb = _mate_axes(op, name, axes)
-        if not axes_parallel(ga, gb):
-            raise BuildError(f"The gear mate {name} joins gears on shafts at an angle, which a list of ring meshes "
-                             "cannot say, so nothing is made; that is a fault in Gear Generator.")
-        if _inside_ring(senses[name], ga, gb):
-            out.append(name)
-    return tuple(out)
 
 
 def _inside_ring(same: bool, axis_a: Sequence[float], axis_b: Sequence[float]) -> bool:
@@ -2124,7 +2062,6 @@ def build_gearbox(sw: SolidWorks, parts: Sequence[BuildPlan], reuse: Sequence[Do
                   progress: Optional[Callable[[Step], None]] = None,
                   mtime: Callable[[str], float] = os.path.getmtime,
                   senses: Optional[Mapping[str, bool]] = None,
-                  internal: Optional[Collection[str]] = None,
                   lines: Optional[Mapping[str, Tuple[Vec3, Vec3]]] = None) -> GearboxResult:
     """A workbook's parts, its layout part and its static assembly, in one worker job (PLAN-WORKBOOK §4.2–§4.3).
 
@@ -2192,9 +2129,7 @@ def build_gearbox(sw: SolidWorks, parts: Sequence[BuildPlan], reuse: Sequence[Do
     ``senses`` (keyword, W6): gear mate name -> same sense (``k > 0``), as
     :func:`build` takes it, judged with every gear mate's planned axes before
     anything is made, parts included (:func:`_sense_gate`: a turned gear
-    mate is refused while its sense cannot be read). ``internal`` (W5's
-    form, until ``GearboxPlan.build_kwargs`` passes ``senses``): the gear
-    mates inside a ring, turned into ``senses``.
+    mate is refused while its sense cannot be read).
 
     ``lines`` (keyword, W6; review S7): a reused layout part's slanted
     shafts' line axes as the record has them (axis name -> (point,
@@ -2214,7 +2149,7 @@ def build_gearbox(sw: SolidWorks, parts: Sequence[BuildPlan], reuse: Sequence[Do
         _assembly_rebuild_gate(workbook_assembly_kind(assembly))
         if workbook_assembly_kind(assembly) == ASSEMBLY_TRAIN:
             _train_gate(assembly, building=True)
-            senses = _sense_gate(assembly, senses, internal)
+            senses = _sense_gate(assembly, senses)
     plans = list(parts) + [p for p in (layout_plan, assembly) if p is not None]
     for plan in plans:
         problems = plan.check()
