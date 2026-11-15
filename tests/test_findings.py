@@ -1105,11 +1105,10 @@ W8_TURN_CHECK = LATEST.parent / "w8-turn-across-configurations-20261115-115500.t
 
 
 def test_a_turn_of_the_mated_train_given_in_one_mode_shows_in_every_mode_on_2026():
-    """W8 s2 and the check after it (SolidWorks 2026 34.0.0, this host): the E4 train turned +37° in 2H stood turned
-    in 4H, N and 4L, LoDog in interference with RangeSlv in 4L; the check, by a value set in 2H alone and by a
-    global, turned every body by the same amount in all four. Of the app's puts, 2H's put of the train reached 4H and
-    N and not 4L, so what a put of a mated train does across configurations is not settled. TURN_PER_CONFIGURATION_ON_2026 is False; 2024 is not
-    measured. Section s7 will give this a result file of its own on the built E4, and these pins move to it."""
+    """W8 s2 and the check after it (SolidWorks 2026 34.0.0, this host), the first reading of the turn: the E4 train
+    turned +37° in 2H stood turned in 4H, N and 4L, LoDog in interference with RangeSlv in 4L; the check, by a value
+    set in 2H alone and by a global, turned every body by the same amount in all four. s7 is the finding's primary
+    evidence (test_s7_…, below); these lines say what its file does not: the clash, and the two routes."""
     log = W8_S2_TURN.read_bytes().decode("utf-8", errors="replace")
     assert "attach  SolidWorks 2026 (revision 34.0.0)" in log
     for mode in ("4H", "N", "4L"):
@@ -1120,19 +1119,6 @@ def test_a_turn_of_the_mated_train_given_in_one_mode_shows_in_every_mode_on_2026
                      "'Pl copy 1 turned -18.500000"):
             assert body in line, (mode, body)
     assert "FAIL    s2, 2H turned, 4L shown: as built: no interference in 4L: [(('LoDog', 'RangeSlv'), 531.913)]" in log
-    # Of the app's puts of the mated train: the quiet Update put it in 4L; the changed Update then showed 2H first
-    # and put it there. Judged on showing, before each mode's own put: 2H and 4L found FDrive off its place (so their
-    # "turned False" judges nothing), 4H and N found it at its new place and the train in step. 2H's put reached 4H
-    # and N and not 4L: what a put of a mated train does across configurations is not settled.
-    lines = log.splitlines()
-    assert ("fact    s2 quiet Update in 4L: the press took 102.1 s; SolidWorks calls by member {'OpenDoc6': 10, "
-            "'IsSuppressed2': 234, 'SetSuppression2': 24, 'ForceRebuild3': 16, 'put': 13}") in lines
-    assert lines.index("        ok      found in mode 2H: FDrive off its axis") + 1 == \
-        lines.index("        ok      found in mode 4L: FDrive off its axis")
-    shown = [f"        post-check of {mode}: turned False; out of step []; off axis {off}; clashes []; interference "
-             "error ''" for mode, off in (("2H", "['FDrive']"), ("4H", "[]"), ("N", "[]"), ("4L", "['FDrive']"))]
-    first = lines.index(shown[0])
-    assert lines[first:first + 4] == shown
     check = W8_TURN_CHECK.read_bytes().decode("utf-8", errors="replace")
     assert check.startswith("# W8 s2's finding checked (SolidWorks 2026, 34.0.0,")
     turned = {"A, the value route": "{'Sun': 37.0, 'Pl copy 1': -18.5, 'Pl copy 2': -18.5, 'Pl copy 3': -18.5, "
@@ -1146,6 +1132,96 @@ def test_a_turn_of_the_mated_train_given_in_one_mode_shows_in_every_mode_on_2026
             assert f"{route}: {mode}: turned from the start {turns}" in check, (route, mode)
     assert findings.TURN_PER_CONFIGURATION_ON_2026 is False
     assert getattr(findings, "TURN_PER_CONFIGURATION_ON_2024", "missing") is None
+
+
+W8_S7 = LATEST.parent / "w8-s7-20261115-135428.json"
+S7_MODES = ("2H", "4H", "N", "4L")
+S7_TURNS = (("1", "drive +37 in 2H", 37.0), ("2", "drive +37 in 2H", 37.0), ("3", "drive +37 in 2H", 37.0),
+            ("3", "drive +20 in 4L", 20.0), ("3", "drive +11 in N after the reopen", 11.0),
+            ("4", "drive +37 in 2H", 37.0))
+S7_MOVING_PUTS = (("FIdler +20 in N, plain", "FIdler", "N", "held by FIdler on Idler Axis"),
+                  ("FIdler +10 in 4H, plain", "FIdler", "4H", "held by FIdler on Idler Axis"),
+                  ("FDrive +2 mm in 2H, the app's route", "FDrive", "2H", "wholly free"))
+
+
+def _s7_step(data, case, step):
+    return next(s for c in data["cases"] if c["case"] == case for s in c["steps"] if s["step"] == step)
+
+
+def _s7_holds(data):
+    """Each clause of the two findings comments (POSITIONS_PER_CONFIGURATION, TURN_PER_CONFIGURATION) against the s7
+    file's own judgements and readings. Raises AssertionError on any that the data does not show."""
+    assert data["revision"] == [34, 0, 0] and data["finding_turn"] is False
+    # A turn shows in every configuration: every body the drive moved, moved in all four, by the step's amount where
+    # it was made, in each state tried (as built; after a no-op put in 4L; after it in each; after the app's Update;
+    # given in 4L; given in N after a reopen).
+    for case, step, amount in S7_TURNS:
+        judgement = _s7_step(data, case, step)["judgement"]
+        assert judgement["kind"] == "turn" and judgement["moved_bodies"], (case, step)
+        for body, read in judgement["bodies"].items():
+            assert read["state"] == {m: "moved" for m in S7_MODES}, (case, step, body)
+        assert abs(judgement["bodies"]["Sun"]["change_where_made"][0] - amount) < 1e-6, (case, step)
+        assert "shared" in judgement["fits"] and "per_configuration" in judgement["rules_out"], (case, step)
+    # ... and it shows at every turned body's own amount in each configuration (the 2H drive on the copy as built).
+    first = _s7_step(data, "1", "drive +37 in 2H")["expressed"]
+    for mode in S7_MODES:
+        assert [first[mode][b][0] for b in ("Sun", "InDog", "RangeSlv", "ModeSlv", "LoDog", "Carrier carrier")] == \
+            [37.0, 37.0, 37.0, 37.0, 9.25, 9.25], mode
+        assert all(first[mode][f"Pl copy {i}"][0] == -18.5 for i in (1, 2, 3)), mode
+    # The configuration once put in splits off from the rest (H) is ruled out: after puts in every configuration a
+    # turn still showed in all four.
+    after_puts = _s7_step(data, "3", "drive +37 in 2H")["judgement"]
+    assert after_puts["bodies"]["Sun"]["forked_before"] == ["2H", "4H", "4L", "N"]
+    assert "H" in after_puts["rules_out"] and "H_private_put" in after_puts["rules_out"]
+    # A no-op put changed nothing anywhere.
+    for case, step in (("2", "no-op put in 4L"), ("3", "no-op put in 2H"), ("3", "no-op put in 4H"),
+                       ("3", "no-op put in N"), ("3", "no-op put in 4L")):
+        judgement = _s7_step(data, case, step)["judgement"]
+        assert judgement["kind"] == "put" and judgement["moved_bodies"] == [] and judgement["bodies"] == {}, step
+    # A moving put stays in the configuration showing, held or free: the body moved there and still in the others.
+    for step, body, made_in, during in S7_MOVING_PUTS:
+        here = _s7_step(data, "5", step)
+        judgement = here["judgement"]
+        assert judgement["made_in"] == made_in and judgement["moved_bodies"] == [body], step
+        assert judgement["bodies"][body]["state"] == {m: ("moved" if m == made_in else "still") for m in S7_MODES}
+        assert judgement["fits"] == ["per_configuration", "H_private_put"], step
+        assert here["put"]["held"][body].startswith(during), step
+    fdrive = _s7_step(data, "5", "FDrive +2 mm in 2H, the app's route")["put"]
+    assert fdrive["route"] == "app" and "FDrive locked to FrontDog" in fdrive["mates_off"]
+    assert fdrive["in_mode_mates_off"]["FDrive"] == [0.0, 2.0, 0.0] == fdrive["in_mode_mates_on"]["FDrive"]
+    fidler = _s7_step(data, "5", "FIdler +20 in N, plain")["put"]
+    assert fidler["route"] == "plain" and fidler["mates_off"] == []
+    # Every reading held through a save and reopen.
+    reopens = [s for c in data["cases"] for s in c["steps"] if "same_as_before_save" in s]
+    assert len(reopens) == 6 and all(s["same_as_before_save"] is True for s in reopens)
+
+
+def test_s7_a_turn_shows_in_every_configuration_and_a_moving_put_stays_where_it_was_made():
+    """W8 s7 on SolidWorks 2026 34.0.0 (snapshot 1ecd115), the primary evidence for TURN_PER_CONFIGURATION_ON_2026 =
+    False and POSITIONS_PER_CONFIGURATION_ON_2026 = True. The run's five FAILs are its flag check after a put
+    (corrected in be07ebd); nothing pinned here rests on them."""
+    data = json.loads(W8_S7.read_text(encoding="utf-8"))
+    _s7_holds(data)
+    assert findings.TURN_PER_CONFIGURATION_ON_2026 is False and findings.POSITIONS_PER_CONFIGURATION_ON_2026 is True
+
+
+@pytest.mark.parametrize("doctor", ["a turn not reaching 4L", "a turn reaching 4H by a different amount",
+                                    "a moving put reaching 2H", "a no-op put moving a body", "a reopen changing"])
+def test_s7_pins_fail_on_a_doctored_copy(doctor):
+    import copy
+    data = copy.deepcopy(json.loads(W8_S7.read_text(encoding="utf-8")))
+    if doctor == "a turn not reaching 4L":
+        _s7_step(data, "4", "drive +37 in 2H")["judgement"]["bodies"]["Sun"]["state"]["4L"] = "still"
+    elif doctor == "a turn reaching 4H by a different amount":
+        _s7_step(data, "1", "drive +37 in 2H")["expressed"]["4H"]["RangeSlv"][0] = 30.0
+    elif doctor == "a moving put reaching 2H":
+        _s7_step(data, "5", "FIdler +20 in N, plain")["judgement"]["bodies"]["FIdler"]["state"]["2H"] = "moved"
+    elif doctor == "a no-op put moving a body":
+        _s7_step(data, "3", "no-op put in N")["judgement"]["moved_bodies"] = ["FIdler"]
+    else:
+        next(s for c in data["cases"] for s in c["steps"] if "same_as_before_save" in s)["same_as_before_save"] = False
+    with pytest.raises(AssertionError):
+        _s7_holds(data)
 
 
 def test_the_w8_gates_open_on_both_versions_from_these_findings():

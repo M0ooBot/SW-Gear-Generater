@@ -1240,69 +1240,47 @@ VALUE_UNSET_READS_ZERO = True
 # follow the shown configuration; only GetSystemValue3 with the name does.
 SYSTEM_VALUE_FOLLOWS_CONFIGURATION = False
 #
-# Positions per configuration (the follow-up's B and C), with Y active and the coupling S-D off there:
-# - F (no gear mate anywhere) was put +20° about its own axis and D +5°, each by a Transform2 put on a fresh handle,
-#   then a top-only rebuild.
-# - Shown X: F and D at 0. Shown Y again: F at 20 and D at 5.
-# - F put +10° in X: Y's F stayed at 20 and X's read 10.
-# - Saved and reopened: F 10, 20, 10 and D 0, 5, 0 on X, Y, X.
-# Second reading, 2026-11-15, the follow-up rerun unchanged on this host (SolidWorks 2026 34.0.0, where the first
-# 2026 reading was 34.1.1 on another machine; probe/results/w8-followup-20261115-114828.json and .txt, 34 of 34): B
-# and C read as above, through a save and reopen.
-# So a component no mate holds, turned about its axis by a Transform2 put, keeps its place per configuration, and
-# such a put holds in the active configuration only. That is all these two findings say. What the app's put of a
-# MATED train does across configurations is not settled (W8 s2, below: one reached two configurations and not a
-# third), and behaviour does not depend on it: every mode is put and post-checked (W8-PLAN §1.9).
-# GOTCHAS §83 and assemblies/07, recorded on 2024, say component positions are not stored per configuration. Their
-# case was a free mechanism dragged between configurations; this one is a free component put by Transform2. A mated
-# train's turn, the case a user's turn is, agrees with GOTCHAS (TURN_PER_CONFIGURATION below).
-# Since 2026-11-15 nothing reads these: the sentences about a turn read TURN_PER_CONFIGURATION_ON_<year>, measured on
-# a mated train's turn, and no behaviour ever read them (Update's per-mode puts are right either way, W8-PLAN §1.9;
-# W8-INTERFACES §9.18). Section s7 will measure both on the built E4 in a result file of its own; the pins in
-# tests/test_findings.py move to it then.
-# Not covered: a component free to move along an axis as well as turn; a drag in the user interface.
+# Positions per configuration: a body moved by a Transform2 put keeps that place in the configuration showing, mated
+# or free, and the other configurations keep theirs.
+# - W8 s7 (SolidWorks 2026 34.0.0, this host, copies of the built E4; probe/results/w8-s7-20261115-135428.json, case
+#   5): FIdler turned +20° in N and then +10° in 4H by a plain Transform2, held by its axis and along mates and both
+#   its gear mates: N read +20, 4H +10, 2H and 4L 0. FDrive moved 2 mm along its axis in 2H by the app's put route
+#   (its own and the train's locks and gear mates suppressed in 2H alone): 2H read 2 mm with those mates off and again
+#   once they were back on, the other three 0. A no-op put (every body put where it stands by the app's route, in 4L,
+#   and in each configuration in turn) changed nothing anywhere (cases 2 and 3). Every reading held through a save
+#   and reopen.
+# - The spike's follow-up B and C, a component no mate holds (F put +20° and D +5° in Y: X read 0; F put +10° in X:
+#   Y's 20 stayed; through a save and reopen): 2026 34.1.1 on another machine, again unchanged on this host
+#   (probe/results/w8-followup-20261115-114828.json, 34 of 34), and 2024, which _2024 rests on alone.
+# No behaviour reads these: every mode an Update shows ends at its built frames (W8-INTERFACES §9.18).
+# Not covered: a drag in the user interface; a mated body on 34.1.1; a mated body on 2024 (the confirming run's s7).
 POSITIONS_PER_CONFIGURATION_ON_2026 = True
 POSITIONS_PER_CONFIGURATION_ON_2024 = True
 #
-# A turn of a mated train across configurations (W8 s2 and a check straight after it, 2026-11-15; SolidWorks 2026
-# 34.0.0, this host). Results:
-#   probe/results/w8-workbook-assembly-20261115-111951-s2-turn-carried-per-body.log   s2, a copy of s1.master
-#   probe/results/w8-turn-across-configurations-20261115-115500.txt                    the check, two routes
-# - s2: the built E4 transfer case (TransferCase_E4: modes 2H, 4H, N and 4L), 2H shown, its train turned +37° on the
-#   Sun by W5's demonstration drive (an angle mate driven through a global, then deleted). 4H, N and 4L were then
-#   shown and rebuilt in turn and every body read through fresh handles: in each, every body of the train stood
-#   turned as in 2H (the Sun, InDog, RangeSlv and ModeSlv +37°, each planet copy −18.5°, LoDog and the carrier
-#   +9.25°), off its frame on record. In 4L, where RangeSlv engages LoDog, the two read in interference (531.913
-#   mm³).
-# - The check, on s2's own copy (4L active on open): an angle mate made at the Sun's angle in 2H, then (A) its D1 set
-#   in 2H alone by IDimension.SetSystemValue3(rad, 3, ['2H']), +37°, and (B) a global linked to it, +20°, the mate
-#   deleted each time. Every configuration shown, rebuilt and read: every body of the train turned by the same amount
-#   in all four, 2H, 4H, N and 4L alike. The front train, free in 2H, did not turn.
-# - Of the app's own puts of the mated train, s2 read one across configurations. Its quiet Update in 4L had put the
-#   whole train there (locks and gear mates suppressed in 4L alone, 13 Transform2 puts). The changed Update that
-#   followed (FDrive, FIdler and FOut At 130 -> 132; 4L active at open, so shown last) showed 2H first and put the
-#   whole train there, its locks and gear mates off in 2H alone. Each mode's judgement on showing, before its own put:
-#   2H found FDrive off its place, as the workbook had moved it; 4H and N, shown next, found FDrive at its new place
-#   and the train in step and not turned, though both had stood +37° after the 2H turn; 4L, shown last, found FDrive
-#   at its old place. So 2H's put reached 4H and N and did not reach 4L. In 4L three things coincide: the quiet
-#   Update's earlier put there, 4L active at open, and FDrive free there during that put (its only mates, the lock to
-#   FrontDog and the mesh with FIdler, were suppressed in 4L alone). The "turned False" read for 2H and 4L judges
-#   nothing: train_check judges a turn only for a train in step, and FDrive stood off its place in the one joined
-#   train. Whether the quiet put in 4L reached 2H was not read.
-# So a turn given to a mated train in one configuration shows in every configuration. What a put of a mated train
-# does across configurations is NOT settled: one reached two configurations and not a third. Section s7 is to
-# measure it; behaviour does not depend on it (every mode is put and post-checked, W8-PLAN §1.9). The turn is the
-# case a user's turn is (gears held by their mates, turned by a drag or a drive), and it AGREES with the user's macro
-# database (GOTCHAS §83, recorded on 2024), where POSITIONS_PER_CONFIGURATION, a free component's put, did not. On this
-# host both were read and they differ, so the case, not the host, explains the two readings; the free put reads the
-# same on 34.0.0 and 34.1.1, and the mated turn has not been read on 34.1.1.
-# Read by swcom.positions_per_configuration for the sentences about a turn and a switch (ui_text.turning_note and
-# switching_note, and _mode_after's shared-turn sentence and its sentence on the modes found at the built turn, and
-# _motion_after's warning after a turn left in the mode showing); no behaviour reads it.
-# Not covered: a drag in the user interface (the person's step, s6); SolidWorks 2026 34.1.1; SolidWorks 2024, where
-# the confirming run's s2 and s7 set TURN_PER_CONFIGURATION_ON_2024 and until then neither claim is made. Section s7
-# will measure this and the put on the built E4 in a result file of its own; the pins in tests/test_findings.py move
-# to it then.
+# A turn per configuration: whether a turn given to the gears in one configuration (the solver moving the mated bodies,
+# here W5's drive) stays there. On 2026 it does not: it shows in every configuration.
+# - W8 s7 (as above): the drive's +37° on the Sun in 2H moved every body of the train by the same amount in all four
+#   configurations (the Sun, InDog, RangeSlv and ModeSlv +37°, each planet copy −18.5° about its axis and carried
+#   round, LoDog and the carrier +9.25°): on a copy as built (case 1); after a no-op put by the app's route in 4L
+#   (case 2); after that put in each of the four (case 3); after the app's own changed Update had put every mode
+#   (case 4). So too a turn of +20° given in 4L, and one of +11° given in N after a save and reopen (case 3). Every
+#   reading held through a save and reopen.
+# - W8 s2 read the first of these (probe/results/w8-workbook-assembly-20261115-111951-s2-turn-carried-per-body.log,
+#   with LoDog in interference with RangeSlv in 4L, 531.913 mm³, and the check after it,
+#   probe/results/w8-turn-across-configurations-20261115-115500.txt, by a value set in 2H alone and by a global).
+# With POSITIONS_PER_CONFIGURATION: how a body is moved decides, not whether a mate holds it. A turn is shared by every
+# configuration; a moving put is kept by the configuration it was made in. For a turn that agrees with the user's
+# macro database (GOTCHAS §83, recorded on 2024). The s2 logs had suggested that a configuration once put in splits off
+# from the rest; s7 rules that out (a no-op put splits nothing, and turns after puts in every configuration still
+# showed in all four). What the s2 rerun (…-132348-s2-put-kept-per-configuration.log) read is this: the app's puts in
+# 4L and 4H moved the train from +37° to the built turn there and were kept there, while 2H and N, not put, kept the
+# +37°. The first s2 log's changed Update found 4H and N at the built turn, FDrive at its new place, before their own
+# put and after one in 2H; s7 did not repeat that sequence, and the fixed app puts and post-checks every mode.
+# Read by swcom.positions_per_configuration for the sentences about a turn (ui_text.turning_note, switching_note,
+# TURN_SHOWN_ELSEWHERE, GEARS_SHOWN_ELSEWHERE, and _mode_after's two); no behaviour reads it.
+# Not covered: a turn given while the configurations already stand differently (do the others move by the same amount,
+# or to the same place?); a drag in the user interface (the person's step, s6); 34.1.1; 2024, where the confirming
+# run's s2 and s7 set TURN_PER_CONFIGURATION_ON_2024 and until then neither claim is made.
 TURN_PER_CONFIGURATION_ON_2026 = False
 TURN_PER_CONFIGURATION_ON_2024 = None
 
