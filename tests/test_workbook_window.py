@@ -2651,12 +2651,13 @@ def test_a_gearbox_with_modes_builds_one_configuration_per_mode_and_says_where_a
     assert again.status.get() == expected and stays not in expected
 
 
-def test_on_2026_a_built_gearbox_with_modes_says_a_turn_shows_in_every_mode_and_the_footer_holds_it(
+def test_on_2026_a_built_gearbox_with_modes_says_a_turn_can_show_in_other_modes_and_the_footer_holds_it(
         desk, mode_findings, monkeypatch):
     """W8-INTERFACES §9.18: the twin of the test above with TURN_PER_CONFIGURATION_ON_2026 as committed (False, W8's
-    s2: a turn of the mated train shows in every mode), which ``mode_findings`` pins True. The build's answer is
-    False, so the footer says the shared-turn sentence a user on SolidWorks 2026 sees and not the switching one; the
-    window keeps its 1080 px and grows taller to hold the sentence whole, its label drawn at the size it asks."""
+    s2 and s7: a turn of the mated train can show in other modes), which ``mode_findings`` pins True. The build's
+    answer is False, so the footer says the shared-turn sentence a user on SolidWorks 2026 sees and not the switching
+    one; the window keeps its 1080 px and grows taller to hold the sentence whole, its label drawn at the size it
+    asks."""
     from gear_generator import workbook_gui
     from gear_generator.theme import px
     from workbook_fixtures import transfer_case_parallel
@@ -2671,10 +2672,10 @@ def test_on_2026_a_built_gearbox_with_modes_says_a_turn_shows_in_every_mode_and_
         "each (2H, 4H, N and 4L), and SolidWorks reports no mate in error in any of them: it opens in 2H; to switch "
         "mode, double-click another mode's configuration in SolidWorks' ConfigurationManager. Drag InPin in "
         "SolidWorks to turn one train and FrontDog to turn the other. RangeSlv and ModeSlv slide along Rear, each to "
-        "its place in each mode. A turn you give the gears in one mode shows in every mode, so a dog can stand "
-        "across its sleeve in another mode; to put the gears back there, press Update SolidWorks with that mode "
-        "showing. 1 thing to do by hand: Assign a material to each of the 6 parts; the build leaves it unset.")
-    assert ui_text.turning_note(False) == ui_text.TURN_SHOWS_EVERYWHERE and ui_text.switching_note(False) == ""
+        "its place in each mode. A turn you give the gears in one mode can show in other modes, so a dog can stand "
+        "across its sleeve in another; to put the gears back there, press Update SolidWorks with that mode showing. "
+        "1 thing to do by hand: Assign a material to each of the 6 parts; the build leaves it unset.")
+    assert ui_text.turning_note(False) == ui_text.TURN_CAN_SHOW_ELSEWHERE and ui_text.switching_note(False) == ""
     width, height = width_and_height(window)
     assert width == px(workbook_gui.WINDOW_WIDTH) and window.winfo_reqwidth() <= px(workbook_gui.WINDOW_WIDTH)
     assert height == window.winfo_reqheight()
@@ -2687,7 +2688,7 @@ def test_on_2026_a_built_gearbox_with_modes_says_a_turn_shows_in_every_mode_and_
 def test_on_2026_a_quiet_update_that_finds_the_gears_turned_in_step_warns_of_the_other_modes(desk, mode_findings,
                                                                                             monkeypatch):
     """W8-INTERFACES §9.18 (the review of its commits, point 1) through the window, on the fake's shared variant with
-    the turn finding as committed (2026: a turn shows in every mode): the 2H train turned 37°, in step in 2H, and
+    the turn finding as committed (2026: a turn can show in other modes): the 2H train turned 37°, in step in 2H, and
     Update pressed there puts nothing and shows no other mode. The footer shows its status alone, so the status says
     another mode may stand with a dog across its sleeve; it is shown whole, and the window keeps its 1080 px."""
     from gear_generator import workbook_gui
@@ -2706,9 +2707,9 @@ def test_on_2026_a_quiet_update_that_finds_the_gears_turned_in_step_warns_of_the
     desk.finish(window)
     assert window.status.get() == (
         "SolidWorks already matches the workbook: nothing was changed. The gears stand where they were turned in "
-        "SolidWorks. This version of SolidWorks shows that turn in every mode, so a dog may stand across its sleeve "
-        "in another mode; to put the gears back there, press Update SolidWorks with that mode showing. It worked in "
-        "2H, the configuration that was active; it did not show the other modes, since nothing in 2H needed "
+        "SolidWorks. This version of SolidWorks can show that turn in other modes, so a dog may stand across its "
+        "sleeve in another; to put the gears back there, press Update SolidWorks with that mode showing. It worked "
+        "in 2H, the configuration that was active; it did not show the other modes, since nothing in 2H needed "
         "changing.")
     width, height = width_and_height(window)
     assert width == px(workbook_gui.WINDOW_WIDTH) and window.winfo_reqwidth() <= px(workbook_gui.WINDOW_WIDTH)
