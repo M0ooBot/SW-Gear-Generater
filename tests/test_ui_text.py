@@ -2908,3 +2908,25 @@ def test_the_build_again_question_names_the_carrier_part():
                             carrier_paths={"C": _path("Planetary_4to1_r2_C_Carrier")})
     assert ("makes a new layout part, carrier part and assembly (Planetary_4to1_r2_Layout, Planetary_4to1_r2_C_Carrier "
             "and Planetary_4to1_r2.SLDASM)") in ui_text.build_again_question(_update(), fresh)
+
+
+def test_a_planetary_refused_at_build_is_said_whole_with_build_parts_offered_and_a_checks_error_holds_build(ready):
+    """§1.2's refusals are B's sentences, each at its cell (``later_rows``): shown whole, with Build parts offered
+    as for every row a later pass builds. §2.3's errors (the assembly condition, neighbouring copies) are Checks
+    errors: Build waits for them, the sentence whole after "Fix the workbook before building:"."""
+    from gear_generator.gears.base import ERROR, WARNING
+    refusals = ["Shafts!A4: S, C and R form a planetary stage with no member held: a differential is not built by this "
+                "version; set one of them to Role fixed.",
+                "Gears!A3: Planet is helical: a planetary stage is built with spur gears only by this version.",
+                "Shafts!A6: C2 is a second carrier: one planetary stage per workbook is built by this version."]
+    for message in refusals:
+        parts = dataclasses.replace(ready.parts, refused=[Diagnostic(WARNING, message, message.split(":")[0])])
+        f = _footer(dataclasses.replace(ready, parts=parts), plan=_gearbox(layout=None, assembly=False, **FULL))
+        assert _clean(f.text) == (f"Ready: Build parts makes 4 parts in {P}; the layout and assembly wait for a later "
+                                  f"phase: {message}")
+        assert (f.build_action, f.build_enabled) == (ui_text.BUILD_PARTS, True)
+    condition = ("Shafts!H4: 5 copies of Planet cannot all mesh with Sun and Ring at once: (18 + 54) / 5 = 14.4 is not "
+                 "a whole number. With these teeth the copies can be 1, 2, 3 or 4; more would not fit round C.")
+    errored = dataclasses.replace(ready, diagnostics=[Diagnostic(ERROR, condition, "Shafts!H4")])
+    f = _footer(errored, plan=_gearbox(**FULL))
+    assert (f.text, f.build_enabled) == (f"Fix the workbook before building: {condition}", False)
