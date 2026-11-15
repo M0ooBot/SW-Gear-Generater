@@ -22,7 +22,7 @@ TIER_8 = ["motion_enums", "shaft_axis_mates", "gear_mate_sense", "compound_lock"
           "mate_folders", "lightweight_remake", "second_assembly_beside_unsaved", "gear_mate_definition_read",
           "origin_noise", "unsaved_update_close",
           "drag_operator_turns_train", "ring_mate_sense", "ring_trains_saved",
-          "ring_trains_from_another_version", "gear_mate_definition"]
+          "ring_trains_from_another_version", "w7_planetary_spike", "gear_mate_definition"]
 
 
 @pytest.fixture(scope="module")
@@ -820,3 +820,18 @@ def test_a_read_under_command_in_progress_holds_only_when_it_matches_the_rebuild
     assert not p8.cip_reads_hold({**case, "read_after_rebuild": {"says_right": True, "definition": {"Reverse": True}}},
                                  "G5 meshes G6")
     assert not p8.cip_reads_hold({**case, "check": {"meshes": {"G5 meshes G6": False}}}, "G5 meshes G6")
+
+
+def test_the_w7_spike_expects_the_plans_planetary_motion():
+    want = p8.planetary_turns(30.0)
+    assert want["carrier"] == pytest.approx(7.5) and want["planet"] == pytest.approx(-15.0)
+    assert want["planet_relative"] == pytest.approx(-22.5)
+    centres = p8.planet_centres()
+    assert centres[0] == pytest.approx((118.0, 100.0)) and centres[1] == pytest.approx((91.0, 115.588457268))
+    assert centres[2] == pytest.approx((91.0, 84.411542732))
+    assert p8.spike_right({"sun": 30.0, "carrier": 7.5, "ring": 0.0, "P1": -15.0}, ["P1"]) == \
+        {"sun": True, "carrier": True, "ring": True, "P1": True}
+    assert not p8.spike_right({"sun": 30.0, "carrier": 0.0, "ring": 0.0, "P1": -30.0}, ["P1"])["carrier"]
+    from gear_generator.workbook import assess
+    spec = p8.spike_parts_spec("C:\\X")
+    assert assess.assess(spec, [], "C:\\X\\", "").lay_out_refusal() == ""

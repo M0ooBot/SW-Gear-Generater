@@ -6704,6 +6704,323 @@ def ring_trains_from_another_version(px: Px) -> None:
                                                        for tag in manifest["trains"]})
 
 
+# -- W7 spike: a gear mate when one of its axes rides a carrier (docs/notes-workbook/W7-PLAN.md §2.7, §2.9, §4.1) --
+#
+# The 4 : 1 planetary with the ring held (sun 18, three planets 18, ring 54, module 1, face 10), its parts built by
+# the app's own builder; a body-less layout part with the sun's axis; a body-less carrier part with the carrier's
+# axis and one axis per planet copy, mated to turn about the layout's axis; each planet held to its carrier axis
+# and along its shaft from the layout's Front; the ring fixed. Mate sets driven by a temporary angle mate on the sun.
+
+SPIKE_TAG = "Probe W7 Spike"
+SPIKE_CENTRE = (100.0, 100.0)    # mm: probe layout parts take positive coordinates only
+SPIKE_RADIUS = 18.0
+SPIKE_FACE_Z = 5.0
+SPIKE_PLANET_PHASE = 10.0        # W7-PLAN §4.1: every copy 10°, sun and ring 0
+SPIKE_COPIES = 3
+SPIKE_DRIVE = "Spike Drive"
+SPIKE_CARRIER_DRIVE = "Spike Carrier Drive"
+SPIKE_STEP = 30.0
+SPIKE_TEETH = {"sun": 18, "planet": 18, "ring": 54}
+
+
+def spike_parts_spec(folder: str) -> Any:
+    """Two meshing pairs that give the app's builder the planetary's three parts: Sun (bore 6), Planet (bore 8, one
+    part for both rows), Ring 54 internal; module 1, face 10."""
+    from ..workbook.model import Box, Gear, GearboxSpec, Mesh, Shaft  # noqa: PLC0415
+    shafts = (Shaft("S1", "frame", "0", "0", "0", "Z+", "input", speed="1000", torque="2"),
+              Shaft("P1", "frame", "18", "0", "0", "Z+", ""),
+              Shaft("P2", "frame", "0", "100", "0", "Z+", "input", speed="1000", torque="2"),
+              Shaft("R2", "frame", "-18", "100", "0", "Z+", ""))
+    gears = (Gear("Sun", "S1", "10", "spur", "external", "18", "1", face_width="10", bore="6", part_name="Sun"),
+             Gear("Planet", "P1", "10", "spur", "external", "18", "1", face_width="10", bore="8", part_name="Planet"),
+             Gear("Planet2", "P2", "10", "spur", "external", "18", "1", face_width="10", bore="8", part_name="Planet"),
+             Gear("Ring", "R2", "10", "spur", "internal", "54", "1", face_width="10"))
+    return GearboxSpec(box=Box(name=f"{SPIKE_TAG} Parts", output_folder=folder.rstrip("\\\\/") + "\\\\"), shafts=shafts,
+                       gears=gears, meshes=(Mesh("Sun", "Planet"), Mesh("Planet2", "Ring")))
+
+
+def planet_centres(copies: int = SPIKE_COPIES) -> List[Tuple[float, float]]:
+    """Copy k at the carrier's centre plus the radius turned (k - 1)·360/N anticlockwise from +X (W7-PLAN §2.1)."""
+    cx, cy = SPIKE_CENTRE
+    return [(round(cx + SPIKE_RADIUS * math.cos(math.radians(360.0 * k / copies)), 9),
+             round(cy + SPIKE_RADIUS * math.sin(math.radians(360.0 * k / copies)), 9)) for k in range(copies)]
+
+
+def planetary_turns(sun: float, z_s: int = 18, z_p: int = 18, z_r: int = 54) -> Dict[str, float]:
+    """Ring held: carrier sun·z_s/(z_s + z_r); each planet about its own axis in the fixed frame, and relative to the
+    carrier (Willis: (ω_p − ω_c)·z_p = −(ω_s − ω_c)·z_s)."""
+    carrier = sun * z_s / (z_s + z_r)
+    relative = -(sun - carrier) * z_s / z_p
+    return {"carrier": carrier, "planet": carrier + relative, "planet_relative": relative, "ring": 0.0}
+
+
+def _mate_axes(px: Px, doc: Any, a: Any, a_axis: str, b: Any, b_axis: str, label: str, kind: str = "coincident",
+               flip: bool = False, ratio: Tuple[float, float] = (1.0, 1.0)) -> Dict[str, Any]:
+    enums = _enums(px)
+    picked = bool(select_in(px, doc, a, a_axis, "AXIS", False)) and bool(select_in(px, doc, b, b_axis, "AXIS", True))
+    if not picked:
+        return {"name": None, "selected": False}
+    return add_mate(px, doc, label, enums[kind], enums["closest"], flip=flip, ratio=ratio)
+
+
+def _spike_mount(px: Px, doc: Any, comp: Any, target: Any, axis: str, layout: Any, z: float, label: str) -> List[str]:
+    """A gear held as W7-PLAN §2.7 holds it: its Gear Axis coincident with ``axis`` in ``target`` (the layout or the
+    carrier), its origin ``z`` from the layout's Front."""
+    enums = _enums(px)
+    px.require(unfix(px, doc, comp), f"{label} floats")
+    made = [_mate_axes(px, doc, comp, "Gear Axis", target, axis, f"{label} on {axis}")]
+    px.require(bool(_select_origin(px, doc, comp, append=False)) and
+               bool(select_in(px, doc, layout, _plane_names(layout)[0], "PLANE", True)), f"{label}'s origin and Front select")
+    made.append(add_mate(px, doc, f"{label} along", enums["distance"], enums["closest"], distance=abs(z), flip=z < 0))
+    for m in made:
+        if not m.get("name"):
+            raise Require(not_made(label, m))
+    return [m["name"] for m in made]
+
+
+def _spike_drive(px: Px, doc: Any, comp: Any, layout: Any, global_name: str, label: str) -> str:
+    add = adder(px, call(doc, "GetEquationMgr"))
+    px.require(add(f'"{global_name}"= {DEMO_FROM:g}') >= 0, f"{global_name} is added")
+    drive = drive_mate(px, doc, comp, _plane_names(comp)[1], layout, _plane_names(layout)[2], label, add,
+                       _enums(px)["closest"], angle=DEMO_FROM, global_name=global_name)
+    px.require(bool(drive), f"{label} is driven")
+    return drive
+
+
+def _spike_undrive(px: Px, doc: Any, drive: str, global_name: str) -> None:
+    eqm = call(doc, "GetEquationMgr")
+    delete_mate(px, doc, drive)
+    for index in range(int(call(eqm, "GetCount")) - 1, -1, -1):
+        if global_name in str(call(eqm, "Equation", index)):
+            px.attempt(f"IEquationMgr.Delete({index})", lambda i=index: call(eqm, "Delete", i))
+
+
+def spike_turns(before: Mapping[str, Tuple[Matrix, Vec]], after: Mapping[str, Tuple[Matrix, Vec]]) -> Dict[str, Any]:
+    """Every component's turn about +Z in the fixed frame; each planet's also relative to the carrier; origins moved."""
+    turns = {k: round(world_turn(before[k][0], after[k][0]), 9) for k in before}
+    out: Dict[str, Any] = {"turns": turns}
+    if "carrier" in turns:
+        out["relative"] = {k: round(v - turns["carrier"], 9) for k, v in turns.items() if k.startswith("P")}
+    out["moved_mm"] = {k: round(math.dist(before[k][1], after[k][1]), 6) for k in before}
+    return out
+
+
+def spike_right(turns: Mapping[str, float], planets: Sequence[str], step: float = SPIKE_STEP,
+                tol: float = 1e-6) -> Dict[str, bool]:
+    """Each measured turn against the planetary's kinematics for a sun turn of ``step``."""
+    want = planetary_turns(step)
+    out = {"sun": abs(turns.get("sun", 0.0) - step) < tol, "carrier": abs(turns.get("carrier", 0.0) - want["carrier"]) < tol,
+           "ring": abs(turns.get("ring", 0.0)) < tol}
+    for p in planets:
+        out[p] = abs(turns.get(p, 0.0) - want["planet"]) < tol
+    return out
+
+
+@probe("w7_planetary_spike", needs=("motion_enums", "end_to_end", "layout_planes", "axis_through_named_planes",
+                                     "layout_assembly_reopen"), tier=8,
+       members=("swbuild.build_gearbox", "IAssemblyDoc.AddMate5 gear", "IAssemblyDoc.AddMate5 coincident axes",
+                "IFeature.GetDefinition", "IMateEntity2.EntityParams"))
+def w7_planetary_spike(px: Px) -> None:
+    """How SolidWorks treats a gear mate when one of its two axes moves with a carrier (W7 spike): the 4 : 1
+    planetary, ring held, built and mated in W7-PLAN's shape; the plan's mates (and one planet alone); a single
+    sun-planet mate with the carrier driven and the sun held; the §2.9 fallback; the right set saved and reopened."""
+    from .. import swbuild  # noqa: PLC0415
+    from ..workbook import assess as wb_assess  # noqa: PLC0415
+    from . import decide  # noqa: PLC0415
+
+    root = os.path.join(_folder(px), "w7spike")
+    px.require(not os.path.exists(root), f"{root} does not exist yet")
+    os.makedirs(root)
+    built = _app_build(px, spike_parts_spec(root), swbuild, wb_assess)
+    part_of = built["part_of"]
+    cx, cy = SPIKE_CENTRE
+    centres = planet_centres()
+    layout_path = layout_part(px, root, f"{SPIKE_TAG} Layout", [("S", cx, cy)])
+    carrier_path = layout_part(px, root, f"{SPIKE_TAG} Carrier",
+                               [("C", cx, cy)] + [(f"P{k + 1}", x, y) for k, (x, y) in enumerate(centres)])
+    parts = {"sun": part_of["Sun"], "planet": part_of["Planet"], "ring": part_of["Ring"], "carrier": carrier_path}
+    planets = [f"P{k + 1}" for k in range(SPIKE_COPIES)]
+    asm_path = os.path.join(root, f"{SPIKE_TAG}.SLDASM")
+    paths = [asm_path, layout_path] + sorted(set(parts.values()))
+    facts: Dict[str, Any] = {"expected": planetary_turns(SPIKE_STEP), "centres": centres, "cases": {}}
+
+    def gear_mates(doc: Any, comps: Mapping[str, Any], mates: Sequence[Tuple[str, str, str, str, Tuple[float, float],
+                                                                              bool]], settle: bool) -> Dict[str, Any]:
+        """Make each gear mate (a, a's axis, b, b's axis, ratio, internal), read it back by the app's rule, and with
+        ``settle`` remake one that reads wrong with the other Flip, as the app does."""
+        out: Dict[str, Any] = {}
+        names = {k: str(call(c, "Name2")) for k, c in comps.items()}
+        for a, a_axis, b, b_axis, ratio, internal in mates:
+            name = f"{a} meshes {b}"
+            flip = bool(findings.GEAR_MATE_FLIP)
+            made = _mate_axes(px, doc, comps[a], a_axis, comps[b], b_axis, name, "gear", flip=flip, ratio=ratio)
+            r: Dict[str, Any] = {"made": made, "flip": flip}
+            if made.get("name"):
+                _rename(px, mate_feature(doc, made["name"]), name)
+                r["read"] = read_back(px, doc, name, internal)
+                if settle and r["read"]["says_right"] is False:
+                    delete_mate(px, doc, name)
+                    flip = not flip
+                    made = _mate_axes(px, doc, comps[a], a_axis, comps[b], b_axis, name, "gear", flip=flip, ratio=ratio)
+                    r.update(remade=made, flip=flip)
+                    if made.get("name"):
+                        _rename(px, mate_feature(doc, made["name"]), name)
+                        r["read_after_remake"] = read_back(px, doc, name, internal)
+            out[name] = r
+        return out
+
+    def run(doc: Any, comps: Mapping[str, Any], layout: Any, label: str, mates: Sequence[Any], settle: bool = True,
+            keep: bool = False) -> Dict[str, Any]:
+        case: Dict[str, Any] = {"mates": gear_mates(doc, comps, mates, settle)}
+        started = time.monotonic()
+        case["rebuild"] = rebuild(px, doc, f"{label}: mated", top_only=TOP_ONLY)
+        case["rebuild_s"] = round(time.monotonic() - started, 3)
+        case["errors"] = errors_only(mate_errors(px, doc))
+        case["constrained"] = {k: constrained(px, c) for k, c in comps.items()}
+        case["statuses"] = {n: (m.get("remade") or m["made"]).get("status") for n, m in case["mates"].items()}
+        start = _frames(comps)
+        eqm = call(doc, "GetEquationMgr")
+        _set_global(eqm, SPIKE_DRIVE, DEMO_FROM + SPIKE_STEP)
+        started = time.monotonic()
+        rebuild(px, doc, f"{label}: driven", top_only=TOP_ONLY)
+        case["drive_s"] = round(time.monotonic() - started, 3)
+        case.update(spike_turns(start, _frames(comps)))
+        case["errors_driven"] = errors_only(mate_errors(px, doc))
+        found = interference_pairs(px, doc, f"{label}: driven")
+        nm = {k: str(call(c, "Name2")) for k, c in comps.items()}
+        case["clashes_driven"] = {f"sun-{p}": clash_between(found, nm["sun"], nm[p]) for p in planets}
+        case["clashes_driven"].update({f"{p}-ring": clash_between(found, nm[p], nm["ring"]) for p in planets})
+        case["clashes_all"] = found
+        _set_global(eqm, SPIKE_DRIVE, DEMO_FROM)
+        rebuild(px, doc, f"{label}: set back", top_only=TOP_ONLY)
+        case["back_mm"] = worst(_off(comps, start))
+        case["right"] = spike_right(case["turns"], planets)
+        # The read-back against the drive: on the fixed frame the rule's "right" for a pinion pair is opposite
+        # turns about +Z (same for the ring); here measured relative to nothing, as the rule was shown.
+        if not keep:
+            for n in case["mates"]:
+                delete_mate(px, doc, n)
+            rebuild(px, doc, f"{label}: gear mates deleted", top_only=TOP_ONLY)
+        facts["cases"][label] = case
+        return case
+
+    try:
+        for p in sorted(set(parts.values())):
+            open_by_path(px, p, prefer="OpenDoc6")
+        asm = Assembly(px, layout_path, parts)
+        asm.open()
+        doc, layout = asm.doc, asm.layout
+        asm.add("carrier", "carrier", 1, 0.0, (0.0, 0.0, 0.0))
+        asm.add("sun", "sun", 1, 0.0, (cx, cy, SPIKE_FACE_Z))
+        for p, (x, y) in zip(planets, centres):
+            asm.add(p, "planet", 1, SPIKE_PLANET_PHASE, (x, y, SPIKE_FACE_Z))
+        asm.add("ring", "ring", 1, 0.0, (cx, cy, SPIKE_FACE_Z))
+        comps = asm.gears
+        placed = dict(asm.placed)
+        facts["built_clashes"] = interference_pairs(px, doc, "as placed")
+        # Mounting, W7-PLAN §2.7: the sun on S Axis; the carrier's C Axis on S Axis and its Front on the layout's;
+        # each planet on its carrier axis, along from the layout's Front; the ring stays fixed.
+        mounts = {"sun": _spike_mount(px, doc, comps["sun"], layout, "S Axis", layout, SPIKE_FACE_Z, "Sun")}
+        px.require(unfix(px, doc, comps["carrier"]), "the carrier floats")
+        m = _mate_axes(px, doc, comps["carrier"], "C Axis", layout, "S Axis", "carrier on S Axis")
+        px.require(bool(select_in(px, doc, comps["carrier"], _plane_names(comps["carrier"])[0], "PLANE", False)) and
+                   bool(select_in(px, doc, layout, _plane_names(layout)[0], "PLANE", True)), "the carrier's Front selects")
+        m2 = add_mate(px, doc, "carrier along", _enums(px)["coincident"], _enums(px)["closest"])
+        px.require(bool(m.get("name")) and bool(m2.get("name")), f"the carrier is mounted: {m} {m2}")
+        mounts["carrier"] = [m["name"], m2["name"]]
+        for p in planets:
+            mounts[p] = _spike_mount(px, doc, comps[p], comps["carrier"], f"{p} Axis", layout, SPIKE_FACE_Z, p)
+        mounts["drive"] = _spike_drive(px, doc, comps["sun"], layout, SPIKE_DRIVE, "Sun")
+        rebuild(px, doc, "mounted", top_only=TOP_ONLY)
+        facts["mounts"] = mounts
+        facts["mounted_off_mm"] = worst(_off(comps, placed))
+        facts["mounted_errors"] = errors_only(mate_errors(px, doc))
+        facts["mounted_constrained"] = {k: constrained(px, c) for k, c in comps.items()}
+
+        sun_planet = [("sun", "Gear Axis", p, "Gear Axis", (18.0, 18.0), False) for p in planets]
+        planet_ring = ("P1", "Gear Axis", "ring", "Gear Axis", (18.0, 54.0), True)
+        # 1. The plan's mates (J5), then one planet alone.
+        run(doc, comps, layout, "plan: sun-planet x3, P1-ring", sun_planet + [planet_ring])
+        run(doc, comps, layout, "one planet: sun-P1, P1-ring", sun_planet[:1] + [planet_ring])
+        # 2. A single sun-planet mate alone, carrier free, no ring mate: the sun held by its drive, the carrier
+        # driven 30°. A gear mate on the fixed frame leaves P1 still; one in the carrier's frame turns it +60°.
+        single = gear_mates(doc, comps, sun_planet[:1], settle=False)
+        cdrive = _spike_drive(px, doc, comps["carrier"], layout, SPIKE_CARRIER_DRIVE, "carrier")
+        rebuild(px, doc, "single sun-P1, carrier driven: mated", top_only=TOP_ONLY)
+        start = _frames(comps)
+        _set_global(call(doc, "GetEquationMgr"), SPIKE_CARRIER_DRIVE, DEMO_FROM + SPIKE_STEP)
+        rebuild(px, doc, "single sun-P1: carrier driven", top_only=TOP_ONLY)
+        single_case = {"mates": single, **spike_turns(start, _frames(comps)),
+                       "errors": errors_only(mate_errors(px, doc))}
+        _set_global(call(doc, "GetEquationMgr"), SPIKE_CARRIER_DRIVE, DEMO_FROM)
+        rebuild(px, doc, "single sun-P1: carrier set back", top_only=TOP_ONLY)
+        _spike_undrive(px, doc, cdrive, SPIKE_CARRIER_DRIVE)
+        for n in single:
+            delete_mate(px, doc, n)
+        rebuild(px, doc, "single sun-P1: taken away", top_only=TOP_ONLY)
+        p1 = single_case["turns"].get("P1", 0.0)
+        single_case["frame"] = ("fixed" if abs(p1) < 1e-6 else "carrier" if abs(p1 - 2 * SPIKE_STEP) < 1e-6 else
+                                f"neither: P1 turned {p1}")
+        facts["cases"]["single sun-P1, sun held, carrier driven 30"] = single_case
+        # 3. The §2.9 fallback: every turning body gear-mated to the input body at the solved speed ratio
+        # (carrier 1/4 the same way, each planet 1/2 the other way, in the fixed frame); the ring unmated.
+        fallback = [("sun", "Gear Axis", "carrier", "C Axis", (18.0, 72.0), True)] + \
+            [("sun", "Gear Axis", p, "Gear Axis", (18.0, 36.0), False) for p in planets]
+        run(doc, comps, layout, "fallback: solved ratios to the sun", fallback)
+        # The set that turned right, made again and kept for the save and reopen.
+        chosen = next((label for label in ("plan: sun-planet x3, P1-ring", "fallback: solved ratios to the sun")
+                       if all(facts["cases"][label]["right"].values())), None)
+        facts["chosen"] = chosen
+        if chosen:
+            run(doc, comps, layout, f"{chosen} (kept)",
+                sun_planet + [planet_ring] if chosen.startswith("plan") else fallback, keep=True)
+            facts["kept_mates"] = mate_names(doc)
+            px.require(_save_in_place(px, doc, asm_path, "the spike") and os.path.isfile(asm_path), "the spike saves")
+            px.shared["created"].append(str(call(doc, "GetTitle")))
+            names = asm.names()
+        else:
+            names = None
+    finally:
+        _close_quietly(px, paths)
+    # 4. Saved, closed, reopened, driven again.
+    if names:
+        try:
+            doc, _ = open_by_path(px, asm_path, sc.SW_DOC_ASSEMBLY, prefer="OpenDoc6")
+            title = str(call(doc, "GetTitle"))
+            if title not in px.shared["created"]:
+                px.shared["created"].append(title)
+            comps = {k: call(doc, "GetComponentByName", n) for k, n in names.items()}
+            r: Dict[str, Any] = {"flags_on_open": _all_flags(px, paths), "mates": mate_names(doc),
+                                 "errors": errors_only(mate_errors(px, doc))}
+            start = _frames(comps)
+            eqm = call(doc, "GetEquationMgr")
+            _set_global(eqm, SPIKE_DRIVE, DEMO_FROM + SPIKE_STEP)
+            rebuild(px, doc, "reopened: driven", top_only=TOP_ONLY)
+            r.update(spike_turns(start, _frames(comps)))
+            r["right"] = spike_right(r["turns"], planets)
+            _set_global(eqm, SPIKE_DRIVE, DEMO_FROM)
+            rebuild(px, doc, "reopened: set back", top_only=TOP_ONLY)
+            r["back_mm"] = worst(_off(comps, start))
+            r["flags_after"] = _all_flags(px, paths)
+            facts["reopened"] = r
+        finally:
+            _close_quietly(px, paths)
+    px.fact("w7_spike", facts)
+    summary = {label: {"right": c.get("right"), "turns": c.get("turns"), "relative": c.get("relative"),
+                       "clashes": c.get("clashes_driven"), "rebuild_s": c.get("rebuild_s"), "drive_s": c.get("drive_s"),
+                       "flips": {n: m.get("flip") for n, m in (c.get("mates") or {}).items()},
+                       "read_says": {n: (m.get("read_after_remake") or m.get("read") or {}).get("says_right")
+                                     for n, m in (c.get("mates") or {}).items()}}
+               for label, c in facts["cases"].items()}
+    px.check(True, f"W7 spike: {summary}")
+    px.fact("w7_spike_summary", summary)
+    px.fact("w7_gear_mate_frame", facts["cases"]["single sun-P1, sun held, carrier driven 30"]["frame"],
+            "a gear mate whose axis rides a carrier measures its gears' turns in the fixed frame, or the carrier's")
+    px.fact("w7_plan_mates_turn_right", all(facts["cases"]["plan: sun-planet x3, P1-ring"]["right"].values()))
+    px.fact("w7_spike_chosen", facts.get("chosen"))
+    px.fact("w7_spike_reopened_right", all((facts.get("reopened") or {}).get("right", {"x": False}).values()))
+
+
 # -- 15 (last): a gear mate's ratio changed through its definition, recorded and never chosen ------------------
 #
 # Last in the tier on purpose: on SolidWorks 2024 the copy it changes cannot be closed, and it holds the train's
