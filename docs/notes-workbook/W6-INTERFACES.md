@@ -273,3 +273,25 @@ binding on A, B and C from now; where one names a line number it is the line at 
 20. **`Assessment.turned_refusal()`** (B's `cedf02f`) is the one home of "is a turned mesh refused"; the footer
     (`ui_text.workbook_footer`) and the window's parts-only plan call it and hold no copy. Its guard names what is
     turned (`assess.TURNED_KINDS`: BEVEL, CROSSED); a later phase extends it on purpose or not at all.
+21. **At W6's close (2026-11-15).** The run that closes the phase is, from one `git archive` of `931fe1a`: every W6
+    section on SolidWorks 2026 and the confirming set on SolidWorks 2024 (r1, r5, r3, r6, r8, m3, the window check,
+    the cross-version open). The last review found no must-fix. Its caveats, written down and not run again:
+    - Both Flips after a reopen were driven in r1 and r5 only, on both versions; after a reopen at a new ratio (r3,
+      r6, r8) only the recorded Flip was driven, and it turned right.
+    - r5's slanted axis is measured on its line after the build and not after its reopen; the step-by-step run showed
+      the axis unchanged through a save and reopen.
+    - The sense change of the plan review's M4 ran as classify only; an Update that makes a gear mate again for its
+      sense alone has run on the fake and not on SolidWorks.
+    - `copy_built` does not stamp the master's files before and after; that nothing was saved rests on the copy
+      closing unsaved.
+    - The window check's label-fit figures are logged and not asserted; the screenshot decides. It reads fixture B in
+      the window and does not build it there, on either version.
+    - W5's sections last ran on SolidWorks 2026 from `8e27b7f`; on `931fe1a`, which carries W7's changes, only m3 ran,
+      on 2024. W7's own full run includes the W5 sections on 2026.
+    - The demonstration's 2024 assertion on W5's fixtures says every gear mate reads right as first made; that is
+      true of the parallel and ring meshes it is applied to and not of fixture B's turned mates, and its wording
+      should say so (E's, for the next change to the script).
+    - Tier 9 never saw a mate entity pointing against its gear's own axis, so that branch of the read-back has run on
+      the fake only.
+    - The cross-version check's run line does not print its snapshot; the README row records it.
+    - The person's drag (W6-PLAN §6.1) is left for the user.

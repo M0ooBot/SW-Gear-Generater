@@ -19,7 +19,7 @@ answers of that day and the rulings that follow from them are in `notes-workbook
 | W3 geometry, phases, kinematics, checks, fixes, Export, Results sheet, two-column window | done, reviewed twice, every item fixed. The Excel checks passed on Windows: the Windows-saved fixture (`aa86cc7`) reads, and exported files open in Excel with no repair prompt. |
 | W4 layout part + static assembly, Update SolidWorks, build-again `_r<n>` | **closed 2026-11-14**: the rebuild fault probed and fixed, pass 4 verified, both demonstrations rerun on SolidWorks 2026 and 2024 with every check passing, each step reviewed. Details and what is left open below. |
 | W5 motion | **closed 2026-11-14**: probes P0 to P0d and the two ring rounds run and reviewed, packages A to E written and reviewed, the demonstration run in full on SolidWorks 2026 and confirmed on 2024, the user's hand drag passed on both. Details, and what is left open, below. |
-| W6 right-angle | **in progress (2026-11-14)**: the plan written, reviewed and revised (`notes-workbook/W6-PLAN.md`, `W6-PLAN-REVIEW.md`); probe tier 9 run on SolidWorks 2026 on cylinders and reviewed (a turned gear mate's sense is read per entity); the interface commit `34bfb85` with its rulings (`W6-INTERFACES.md` §7); packages A, B, C and D written and each reviewed, on the fake. **Left:** the demonstration on SolidWorks 2026 (package E), the confirming run on 2024, and the close. Details below. |
+| W6 right-angle | **closed 2026-11-15, but for the person's drag**: planned, reviewed and revised; probe tier 9 (a turned gear mate's sense, on cylinders, SolidWorks 2026) run and reviewed; packages A to E written and each reviewed; the full build run on SolidWorks 2026 and the confirming build on 2024, both from one snapshot (`931fe1a`), every check passing, each run reviewed. Left for the user: drag G1 in the built right-angle gearbox. Details below. |
 | W7 planetary | **in progress (2026-11-14)**: the plan written, reviewed and revised (`W7-PLAN.md`, `W7-PLAN-REVIEW.md`); its riskiest point measured on SolidWorks 2026 before any code (`W7-SPIKE.md`: a gear mate on a carrier-borne axis turns in the carrier's frame, and the plan's mates turn the 4 : 1 right); the interface commit `5d5d51d` with its rulings (`W7-INTERFACES.md` §6); packages A, B, C and D written and each reviewed, on the fake. **Left:** the demonstration on SolidWorks 2026 (package E), which waits for W6's run to free SolidWorks, the confirming run on 2024, and the close. No W7 code has run on SolidWorks. Details below. |
 | W8 sleeves and modes | planned: `W8-PLAN.md`, reviewed (`W8-PLAN-REVIEW.md`) and revised; a spike on SolidWorks 2026 (`W8-SPIKE.md`: the collinear 1 : 1 gear mate and per-configuration suppression work; component handles go stale after a configuration is added or shown; the per-mode slide link as planned fails). The plan is to be revised to the spike. No code yet. |
 | How the user's absence is handled | the user said on 2026-11-14 to carry on, in order, until W8 is done. Judgement calls are taken at each plan's recommended reading and listed for the user as readings to overrule. |
@@ -332,26 +332,34 @@ to the input); B, `Crossed_Slant` (a crossed helical stage, then a bevel stage a
 1). Their Checks panels, header lines and speeds are pinned by B. In the window both build to turn on the fake; a crossed
 shaft moved to its partner's other side is an Update that remakes the gear mate (D17).
 
-**What the demonstration (package E) still has to show**, on SolidWorks 2026 with the committed findings only and
-then one confirming build on 2024 (W6-PLAN §6, the testing rule of 2026-11-14): both fixtures built end to end,
-fixture A first; each turned gear mate read back and driven, with the interference check after every control drive
-(the right Flip clear, the wrong one clashing: M2); the slanted line axis (`line_axis`, never probed ahead: ruling
-§7.16) built and read back; sections r1–r6 (r1 and r5 the full builds of A and B; from copies of them, `copy_built`
-of W6-INTERFACES §4: r2 a turn by hand then a move along S1 with G2's apex, r3 G1 20 → 21 teeth with the remake on
-the bevel mate, r4 S1's Axis X+ → X− as Build again…, r6 on B a Face Z move, G4 30 → 31 on the 120° mate, the slant
-changed as classify only, and the crossed resense as classify only); and the window check rw. Its expected Speeds
-lines in W6-PLAN §6.1 read *"seen from +X"*; C's sentence, as the window shows it, is *"seen from the +X end"*. Then
-the person's drag of fixture A's input (W6-PLAN §6.1's last paragraph).
+**The demonstration (package E), as run.** `probe/workbook_assembly_check.py` sections r1 to r8 (fixture A,
+`Bevel_Reducer`: r1 built, r2 to r4 and r7 from copies or variants; fixture B, `Crossed_Slant`: r5 built, r6 and r8
+from copies), `probe/workbook_window_check.py`, `probe/cross_version_open_check.py`. `copy_built` builds each fixture
+once and starts the later sections from a copy of the built folder.
 
-**Open:**
+- *The first full build on SolidWorks 2026* (2026-11-14; `probe/results/w6-workbook-assembly-20261114-210827.log`)
+  found one fault of the app: `swcom.line_axis` asked the sketch manager for `Insert3DSketch2`, which is a member of
+  the document; the sketch manager's is `Insert3DSketch`. Fixed in `b3a88f6` (and `0c32b17`), checked step by step on
+  SolidWorks (`w6-line-axis-steps-20261114-221843.log`), and the sections that needed fixture B rerun
+  (`…-221901-r5-r6-r8.log`). The log's seven FAIL lines are that fault (six) and one fault of the script.
+- *The run that closes the phase*, both versions from one `git archive` of `931fe1a`: SolidWorks 2026, every W6
+  section (`w6-workbook-assembly-20261114-233518-w6-931fe1a.log`, 1146 checks, none failed); SolidWorks 2024, the
+  confirming set r1, r5, r3, r6, r8 and W5's m3 (`sw2024/w6-workbook-assembly-20261114-224626-confirm.log`, 949
+  checks, none failed), the window check on each, and a 2024-built `Crossed_Slant` opened unmodified in 2026
+  (`w6-cross-version-2024-in-2026-20261114-233432.log`).
+- *What only real teeth could show, and did, on both versions:* on every turned mesh the drive matches the plan's
+  hand-worked turns, exactly one Flip turns right, the right Flip runs clear and the wrong one clashes with its
+  partner alone (142 to 497 mm³), and the app's read-back agrees with the drive on both Flips. Fixture A's bevel mate
+  is right as first made; fixture B's crossed mate and its 120° bevel mate are made wrong, read wrong and made again,
+  the same on 2024 as on 2026.
+- *Also shown on both:* the slanted axis on its line; anchors on the negative side of the Right and Top planes; a
+  turned gear mate made again at a new ratio (r3, r6, r8); a quiet Update on a turned gearbox marking no document.
 
-- A's second pass and A's and B's reviews are running; a shape may still move slightly.
-- If the full build shows the 3D-sketch line failing, D4 falls back to refusing slanted axes in W6, and that goes to
-  the user.
-- The Speeds line of a shaft seen from an end other than +Z is longer than the end view is wide, and wraps there
-  (`cd1c168`); a shorter wording is C's, if wanted.
-- The end view's readout still names the face heights (`z 5 · z 60`); for a gear on a turned shaft that is the height
-  of its At point (a bevel's apex), which is what colours a right-angle stage as one.
+**Left for the user (W6-PLAN §6.1):** drag G1 in `Bevel_Reducer.SLDASM` and watch G4 turn at one sixth, the other
+way round as the Speeds panel says. The 2026 build is kept at
+`C:\Users\M0obo\Documents\GearGeneratorProbe\w6-full-20261114-210827\out\r1`.
+
+**Caveats the reviews asked to be written down and not run again** are in `W6-INTERFACES.md` §7.21.
 
 ## W7 in detail
 
