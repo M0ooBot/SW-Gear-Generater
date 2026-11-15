@@ -806,16 +806,17 @@ _MATE_PLANES = ("front", "top", "right")
 # same by a test).
 
 _UNIT = 1e-9          # how far from 1 a recorded shaft direction's length may be (``gears.base.LineAxis.check``'s)
+_FAMILY = 1e-9        # one family when |a×b| is below this (``workbook.geometry.FAMILY_TOLERANCE``, kept by a test)
 
 
-def _mate_checked(entry: MateEntry, index: int, version: int = LINK_SCHEMA_VERSION) -> MateEntry:
+def _mate_checked(entry: MateEntry, index: int) -> MateEntry:
     """``entry`` (already type-checked) as a mate Update can act on, else a ValueError phrase naming it: a kind not
     one of the four, gears not as many as its kind holds, or a mesh whose ratio is not two whole numbers above 0.
     Read here so a damaged record is refused when it is read, never met as an IndexError while planning.
 
-    Schema 4 (W6): a ``plane`` not one of the three base planes; a ``sense`` other than -1, 0 or +1; and 0 on a
-    mesh of a record written at schema 4 or later (``version``) — a v3 mesh reads with 0, its sense taken from the
-    read as W5 did."""
+    Schema 4 (W6): a ``plane`` not one of the three base planes, and a ``sense`` other than -1, 0 or +1. A mesh's
+    0 is legal (W6-INTERFACES §7.1: "parallel, take it from the read", as W5 had it, and what a v3 record saved
+    again by W6 holds); :func:`_turned_senses_checked` refuses it only across shafts of different families."""
     where = f"gearbox.mates[{index}]" + (f" ({entry.name!r})" if entry.name else "")
     wanted = _MATE_GEARS.get(entry.kind)
     if wanted is None:
@@ -830,9 +831,30 @@ def _mate_checked(entry: MateEntry, index: int, version: int = LINK_SCHEMA_VERSI
         raise ValueError(f"{where} measures from the plane {entry.plane!r}, not one of {', '.join(_MATE_PLANES)}")
     if entry.sense not in (-1, 0, 1):
         raise ValueError(f"{where} has sense {entry.sense!r}, not -1, 0 or +1")
-    if entry.kind == "mesh" and entry.sense == 0 and version >= 4:
-        raise ValueError(f"{where} is a mesh mate of a schema {version} record with no sense, where it holds -1 or +1")
     return entry
+
+
+def _turned_senses_checked(box: "GearboxRecord") -> None:
+    """A mesh with sense 0 between gears whose shafts the record holds as different families (a bevel or crossed
+    mesh, whose sense cannot be taken from the read), as a ValueError phrase naming it; each gear's shaft from its
+    axis or along mate (an anchor) or its lock (a follower), each shaft's direction from ``shafts``. A gear whose
+    shaft the record does not say is not judged (W6-INTERFACES §7.1)."""
+    direction = {s.shaft: s.direction for s in box.shafts}
+    shaft_of = {m.gears[0]: m.shaft for m in box.mates if m.kind in ("axis", "along") and m.gears and m.shaft}
+    for m in box.mates:
+        if m.kind == "lock" and len(m.gears) == 2 and m.gears[0] in shaft_of:
+            shaft_of.setdefault(m.gears[1], shaft_of[m.gears[0]])
+    for index, m in enumerate(box.mates):
+        if m.kind != "mesh" or m.sense != 0:
+            continue
+        a, b = (direction.get(shaft_of.get(g, "")) for g in m.gears)
+        if not a or not b:
+            continue
+        cross = (a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0])
+        if math.sqrt(sum(c * c for c in cross)) >= _FAMILY:
+            where = f"gearbox.mates[{index}]" + (f" ({m.name!r})" if m.name else "")
+            raise ValueError(f"{where} is a mesh mate across shafts at an angle with no sense, where it holds -1 or "
+                             "+1")
 
 
 def _shaft_checked(entry: ShaftEntry, index: int) -> ShaftEntry:
@@ -848,9 +870,12 @@ def _shaft_checked(entry: ShaftEntry, index: int) -> ShaftEntry:
     return entry
 
 
-def _v3_shaft(entry: ShaftEntry, raw: Dict[str, Any]) -> ShaftEntry:
+def _v3_shaft(entry: ShaftEntry, raw: Dict[str, Any], version: int = 3) -> ShaftEntry:
     """A shaft written before schema 4 (no ``direction``) as v4 reads it: along Z+ or Z- by its ``sigma``, its
-    ``axis`` that word."""
+    ``axis`` that word. A shaft of a record written at schema 4 or later (``version``) is left as written, so one
+    with no direction is refused (W6-INTERFACES §7.8)."""
+    if version >= 4:
+        return entry
     if "direction" not in raw:
         entry.direction = [0.0, 0.0, 1.0 if entry.sigma >= 0 else -1.0]
     if "axis" not in raw:
@@ -891,13 +916,14 @@ def link_record_from_json(text: str) -> LinkRecord:
             if not isinstance(gearbox, dict):
                 raise TypeError("gearbox is not an object")
             record.gearbox = _checked(GearboxRecord(**_known(GearboxRecord, gearbox)))
-            record.gearbox.shafts = [_shaft_checked(_v3_shaft(_checked(s), raw_s), i)
+            record.gearbox.shafts = [_shaft_checked(_v3_shaft(_checked(s), raw_s, version), i)
                                      for i, (s, raw_s) in enumerate(zip(_entries(ShaftEntry, gearbox.get("shafts", [])),
                                                                         gearbox.get("shafts", [])))]
             record.gearbox.components = [_checked(c) for c in _entries(ComponentEntry,
                                                                         gearbox.get("components", []))]
-            record.gearbox.mates = [_mate_checked(_checked(m), i, version)
+            record.gearbox.mates = [_mate_checked(_checked(m), i)
                                     for i, m in enumerate(_entries(MateEntry, gearbox.get("mates", [])))]
+            _turned_senses_checked(record.gearbox)
             if record.gearbox.kind not in GEARBOX_KINDS:
                 raise ValueError(f"gearbox.kind is {record.gearbox.kind!r}, not one of {', '.join(GEARBOX_KINDS)}")
         record.earlier = [_checked(e) for e in _entries(EarlierRevision, raw.get("earlier", []))]

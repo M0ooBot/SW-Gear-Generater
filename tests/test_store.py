@@ -1,5 +1,6 @@
 """The gear record beside each part, and the app's own memory."""
 
+import dataclasses
 import json
 import os
 import pathlib
@@ -930,8 +931,6 @@ def _v4_raw(**mate_changes):
     (1, {"plane": "Front"}, r"measures from the plane 'Front', not one of"),
     (3, {"sense": 2}, r"gearbox\.mates\[3\] \('G1 meshes G5'\) has sense 2, not -1, 0 or \+1\)"),
     (3, {"sense": -3}, r"has sense -3, not -1, 0 or \+1"),
-    (3, {"sense": 0}, r"gearbox\.mates\[3\] \('G1 meshes G5'\) is a mesh mate of a schema 4 record with no sense, "
-                      r"where it holds -1 or \+1\)"),
     (0, {"sense": 5}, r"gearbox\.mates\[0\] \('G5 on S2 Axis'\) has sense 5"),
 ])
 def test_a_bad_plane_or_sense_is_refused_with_a_sentence_and_the_file_left_alone(tmp_path, index, changes, match):
@@ -967,8 +966,59 @@ def test_a_v3_mesh_reads_with_no_sense_and_a_whole_float_sense_reads_as_a_whole_
 
 
 def test_the_store_knows_the_planes_the_turning_assembly_measures_from():
-    from gear_generator.workbook import motion
-    assert store._MATE_PLANES == motion.PLANES
+    from gear_generator.workbook import geometry, motion
+    assert store._MATE_PLANES == motion.PLANES and store._FAMILY == geometry.FAMILY_TOLERANCE
+
+
+def test_a_parallel_mesh_with_no_sense_stays_legal_in_a_v4_record_and_a_v3_record_survives_a_w6_write(tmp_path):
+    """W6-INTERFACES §7.1: 0 means "parallel, take it from the read". A v3 record saved again by W6 holds its mesh
+    senses at 0 as v4, and must read again: refusing it would move the user's record aside as .bad."""
+    record = turning_record(str(tmp_path / "R.xlsx"))
+    raw = json.loads(store.link_record_to_json(record))
+    raw["link_schema_version"] = 3
+    for shaft in raw["gearbox"]["shafts"]:
+        for key in ("direction", "z_side", "z_global", "z_plane", "line", "axis"):
+            del shaft[key]
+    for mate in raw["gearbox"]["mates"]:
+        del mate["plane"], mate["sense"]
+    target = tmp_path / "R.workbook.json"
+    target.write_text(json.dumps(raw))
+    first = store.read_link_record(str(tmp_path / "R.xlsx"))
+    assert first.gearbox.mates[3].sense == 0
+    store.save_link_record(first)                                       # a W6 write: v4, the zero kept
+    assert json.loads(target.read_text())["link_schema_version"] == 4
+    second = store.read_link_record(str(tmp_path / "R.xlsx"))
+    assert second == first and second.gearbox.mates[3].sense == 0
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["R.workbook.json"]
+
+
+def _across(direction_b, sense):
+    """The turning record with G1 an anchor on S1 along X+ and G5 on S2 along ``direction_b``."""
+    record = turning_record("R.xlsx")
+    box = record.gearbox
+    box.shafts = [store.ShaftEntry(shaft="S1", sigma=0, direction=[1.0, 0.0, 0.0], axis="X+", axis_name="S1 Axis"),
+                  store.ShaftEntry(shaft="S2", sigma=1, direction=list(direction_b), axis="Z+", axis_name="S2 Axis")]
+    box.mates = ([store.MateEntry(name="G1 on S1 Axis", kind="axis", gears=["G1"], shaft="S1")] + box.mates[:3]
+                 + [dataclasses.replace(box.mates[3], sense=sense)])
+    return store.link_record_to_json(record)
+
+
+def test_a_mesh_across_shafts_at_an_angle_with_no_sense_is_refused():
+    with pytest.raises(StoreError, match=r"gearbox\.mates\[4\] \('G1 meshes G5'\) is a mesh mate across shafts at an "
+                                         r"angle with no sense, where it holds -1 or \+1\)"):
+        store.link_record_from_json(_across([0.0, 0.0, 1.0], 0))
+    assert store.link_record_from_json(_across([0.0, 0.0, 1.0], 1)).gearbox.mates[4].sense == 1
+    assert store.link_record_from_json(_across([-1.0, 0.0, 0.0], 0)).gearbox.mates[4].sense == 0   # one family
+
+
+def test_a_v4_shaft_written_without_a_direction_is_refused(tmp_path):
+    """W6-INTERFACES §7.8: the v3 fill applies only to a v3 record."""
+    raw = _gearbox_raw(turning_record("R.xlsx"))
+    del raw["gearbox"]["shafts"][0]["direction"]
+    with pytest.raises(StoreError, match=r"gearbox\.shafts\[0\] \('S2'\) has direction \[\], not three finite numbers"):
+        store.link_record_from_json(json.dumps(raw))
+    raw["link_schema_version"] = 3
+    assert store.link_record_from_json(json.dumps(raw)).gearbox.shafts[0].direction == [0.0, 0.0, 1.0]
 
 
 @pytest.mark.parametrize("direction,match", [
