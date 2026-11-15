@@ -59,3 +59,7 @@ def test_a_route_holds_only_with_frames_senses_clearance_and_a_right_drive():
     assert not p10.judge(dict(case, frames_off={"Sun": (0.1, 0.0)}))["held"]
     assert not p10.judge(dict(case, errors=["x"]))["held"]
     assert p10.route_held({"C": case}, "C") and not p10.route_held({}, "C")
+
+
+def test_a_recorded_mesh_turns_its_gears_the_same_way_when_its_sense_is_minus_one():
+    assert p10.same_way({"sense": -1}) and not p10.same_way({"sense": 1}) and not p10.same_way({"sense": 0})

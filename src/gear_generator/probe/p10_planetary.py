@@ -112,6 +112,12 @@ def own_turn_deg(before: Sequence[float], after: Sequence[float]) -> Optional[fl
     return None if turn is None else round(math.degrees(turn), 9)
 
 
+def same_way(mate: Mapping[str, Any]) -> bool:
+    """A recorded gear mate's ``same_sense`` for ``gear_mate_sense``: the record writes -1 for a mesh whose gears
+    turn the same way about their own axes (``mate_senses = (sense == -1)``, as the demonstration reads it)."""
+    return int(mate.get("sense") or 0) == -1
+
+
 def own_axis(rotation: Sequence[float]) -> Tuple[float, float, float]:
     return (float(rotation[2]), float(rotation[5]), float(rotation[8]))
 
@@ -290,7 +296,7 @@ class _Copy:
         for m in mates_of(self.record, "mesh"):
             a, b = m["gears"]
             got, value = self.px.attempt(f"gear_mate_sense {m['name']}", lambda m=m, a=a, b=b: self.s.gear_mate_sense(
-                self.mate_handle[m["name"]], m["sense"] > 0, (own_axis(frames[a][0]), own_axis(frames[b][0]))))
+                self.mate_handle[m["name"]], same_way(m), (own_axis(frames[a][0]), own_axis(frames[b][0]))))
             out[m["name"]] = {"right": bool(value[0]), "tau": list(value[1])} if got else {"raised": str(value)}
         return out
 
@@ -429,9 +435,9 @@ def _suppressed_read(px: Px, root: str, master: str) -> Dict[str, Any]:
         c.find()
         frames = c.frames()
         raw = px.attempt(f"gear_mate_sense {name}", lambda: c.s.gear_mate_sense(
-            c.mate_handle[name], m["sense"] > 0, (own_axis(frames[a][0]), own_axis(frames[b][0]))))
+            c.mate_handle[name], same_way(m), (own_axis(frames[a][0]), own_axis(frames[b][0]))))
         app = px.attempt(f"swbuild._sense_read {name}", lambda: swbuild._sense_read(
-            c.s, c.mate_handle[name], name, m["sense"] > 0, own_axis(frames[a][0]), own_axis(frames[b][0]), a, b,
+            c.s, c.mate_handle[name], name, same_way(m), own_axis(frames[a][0]), own_axis(frames[b][0]), a, b,
             RuntimeError, (frames[a][1], frames[b][1])))
         return {"raw": [bool(raw[1][0]), list(raw[1][1])] if raw[0] else f"raised {raw[1]}",
                 "app": bool(app[1]) if app[0] else f"raised {app[1]}"}
@@ -483,7 +489,13 @@ def planetary_put_back(px: Px) -> None:
     master = os.path.join(root, "master")
     shutil.copytree(SOURCE, master)
     facts: Dict[str, Any] = {"source": SOURCE, "cases": {}}
+    only = os.environ.get("GG_W7_PUT_FOLLOW_ONS", "")       # a rerun of one route's follow-ons alone
     try:
+        if only:
+            facts["follow_ons_only"] = only
+            for scenario in ("turned and moved", "not turned"):
+                facts["cases"][f"{only} {scenario}"] = _case(px, root, master, only, scenario)
+            return
         for route in ROUTES:
             facts["cases"][f"{route} turned"] = _case(px, root, master, route, "turned")
         turned = {r: facts["cases"][f"{r} turned"] for r in ROUTES}
