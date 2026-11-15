@@ -1,7 +1,7 @@
 r"""The Workbook window against real SolidWorks and Excel: Build, Update SolidWorks, Build again (W4, and W5's footers).
 
 python.exe probe/workbook_window_check.py <repo src> <scratch folder under C:\> --pid PID [--log FILE]
-                                          [--w4-static FOLDER]
+                                          [--w4-static FOLDER] [--only w8]
 
 The window is opened the way Import workbook… opens it (``workbook_gui.open_workbook`` with the path) under a
 unique title, in a Tk process of its own, with the strip's real SolidWorks worker: nothing is patched but
@@ -50,6 +50,11 @@ and the footer, read line and gear table are logged.
    dashed circle through every copy), then built (shot 15: "drag Sun …", the carrier part's axes-and-planes clause).
 9. Board WorkbookPlanetaryCopies: Copies 5 typed in Excel (shot 16): the assembly-condition error at Shafts!H4,
    Build not offered.
+10. W8 (W8-PLAN §5 window): the E4 transfer case (tests/workbook_fixtures.e4_transfer_case), written by ``write_new``
+   with its Output folder blank and saved once by Excel; read (shot 17); the Speeds panel with the mode chooser on 4L
+   (shot 18) and on N (shot 19), each panel cut out; then built (shot 20): the built footer's sentences logged
+   verbatim (their turn sentence is not asserted: it may change after s7), the footer whole, the window 1080 px wide
+   in every state. ``--only w8`` runs this stage alone.
 
 Afterwards the window is closed, Excel quit, and this run's SolidWorks documents saved and closed.
 
@@ -108,6 +113,8 @@ shutil.copy(FIXTURE, REFUSED_PATH)
 W6A_FOLDER = os.path.join(ROOT, "right-angle")
 W6B_FOLDER = os.path.join(ROOT, "crossed")
 W7_FOLDER = os.path.join(ROOT, "planetary")
+W8_FOLDER = os.path.join(ROOT, "transfer-case")
+ONLY = sys.argv[sys.argv.index("--only") + 1] if "--only" in sys.argv else ""
 LINES = []
 FAILS = []
 
@@ -206,7 +213,7 @@ def _docs(app):
 
 def _ours(path):
     return bool(path) and any(os.path.normcase(path).startswith(os.path.normcase(f) + os.sep)
-                              for f in (FOLDER, REFUSED_FOLDER, W6A_FOLDER, W6B_FOLDER, W7_FOLDER))
+                              for f in (FOLDER, REFUSED_FOLDER, W6A_FOLDER, W6B_FOLDER, W7_FOLDER, W8_FOLDER))
 
 
 BEFORE_TITLES = set()        # the untitled documents open before this run: never ours to close
@@ -456,6 +463,16 @@ for _which, _spec, _folder in (("A", W6A, W6A_FOLDER), ("B", W6B, W6B_FOLDER), (
     W6_PATHS[_which] = os.path.join(_folder, _spec.box.name + ".xlsx")
     xlsx.write_new(W6_PATHS[_which], wb_model.to_sheets(_spec))     # the Output folder blank: the strip's is used
 
+# W8's E4 transfer case, as probe/workbook_assembly_check.py's s1 writes it (W8-PLAN §2.1).
+import importlib.util  # noqa: E402
+_fixtures = importlib.util.spec_from_file_location("workbook_fixtures", os.path.join(REPO, "tests", "workbook_fixtures.py"))
+workbook_fixtures = importlib.util.module_from_spec(_fixtures)
+_fixtures.loader.exec_module(workbook_fixtures)
+W8 = workbook_fixtures.e4_transfer_case()
+os.makedirs(W8_FOLDER)
+W6_PATHS["E4"] = os.path.join(W8_FOLDER, W8.box.name + ".xlsx")
+xlsx.write_new(W6_PATHS["E4"], wb_model.to_sheets(W8))
+
 
 def shoot(name):
     # Tk's own update(): the window's UpdatePlan is update_plan since the W4 review, so nothing hides it now.
@@ -590,6 +607,60 @@ def w7_copies_check():
     text, footer = win.status.get(), win.footer()
     check(text.startswith("Fix the workbook before building:") and W7_EXPECT["copies5"] in text
           and not footer.build_enabled, f"W7: Copies 5 is the assembly-condition error, Build not offered: {text!r}")
+
+
+def w8_width(name):
+    """The window's width against WINDOW_WIDTH (W3: two columns at 1080 px, scaled as the window scales it)."""
+    want = theme.px(workbook_gui.WINDOW_WIDTH)
+    hwnd = int(win.wm_frame(), 16)
+    left, _, right, _ = win32gui.GetWindowRect(hwnd)
+    check(win.winfo_width() == want, f"W8 {name}: the window is {win.winfo_width()} px wide inside "
+          f"(frame {right - left}), WINDOW_WIDTH {workbook_gui.WINDOW_WIDTH} scaled {want}")
+
+
+def w8_footer_whole(name):
+    """The footer whole: a status said, its label drawn at least as tall as it asks (no line cut off), inside the
+    window."""
+    label = win.status_label
+    text = win.status.get()
+    bottom = label.winfo_rooty() + label.winfo_height() - win.winfo_rooty()
+    check(bool(text) and label.winfo_height() >= label.winfo_reqheight() and bottom <= win.winfo_height(),
+          f"W8 {name}: the footer whole, drawn {label.winfo_height()} px for the {label.winfo_reqheight()} it asks, "
+          f"its bottom at {bottom} of {win.winfo_height()}")
+    log("W8 footer sentences", state=name, sentences=[t.strip() + "." for t in text.split(". ") if t.strip()])
+
+
+def w8_choose(name):
+    """The mode chosen as a click on its segment does it (``Segmented._choose``: the variable set, then the window's
+    ``_mode_chosen``)."""
+    chooser = next((c for c in win.mode_choosers if name in getattr(c, "_values", ())), None)
+    check(chooser is not None, f"W8: a segment {name} in the mode chooser: "
+          f"{[getattr(c, '_values', ()) for c in win.mode_choosers]}")
+    if chooser is not None:
+        chooser._choose(name)  # noqa: SLF001 - the click's own handler
+
+
+def w8_mode_check(name):
+    lines = speeds_lines()
+    log("W8 mode", chosen=win.mode.get(), header=win.box_values["type"].cget("text"), speeds=lines,
+        speeds_readout=win.speeds_readout.get(), end_view=win.view_readout.get(), status=win.status.get(),
+        choosers=[getattr(c, "_values", ()) for c in win.mode_choosers])
+    check(win.mode.get() == name and lines, f"W8: the chooser on {name} and the Speeds panel drawn for it "
+          f"({len(lines)} lines)")
+    w8_width(f"chooser on {name}")
+
+
+def w8_built_check():
+    record = store.read_link_record(W6_PATHS["E4"])
+    box = record.gearbox if record is not None else None
+    text = win.status.get()
+    log("W8 built", status=text, kind=box.kind if box else None, modes=list(box.modes) if box else None,
+        positions_per_configuration=win.positions_per_configuration)
+    check(box is not None and box.kind == store.GEARBOX_MOTION and box.assembly and tuple(box.modes) ==
+          ("2H", "4H", "N", "4L"), f"W8: built to turn with a configuration per mode: {box and box.kind!r} "
+          f"{box and box.modes}")
+    w8_footer_whole("built")
+    w8_width("built")
 
 
 def w6_built_check():
@@ -827,6 +898,40 @@ STEPS = [
     ("do", lambda: shoot("16-planetary-copies-5")),
     ("do", w7_copies_check),
 ]
+# 10. W8, the E4 transfer case: read, the chooser on 4L and on N, built.
+W8_STEPS = ([] if ONLY == "w8" else [
+    ("do", lambda: log("closed the planetary's documents in SolidWorks", left=close_ours())),
+    ("do", lambda: excel("close")),
+    ("wait", excel_done("close"))]) + [
+    ("do", lambda: excel("open", W6_PATHS["E4"])),
+    ("wait", excel_done("open")),
+    ("do", lambda: excel("set-save")),
+    ("wait", excel_done("set-save")),
+    ("do", lambda: app.out_folder.set(W8_FOLDER)),
+    ("do", lambda: open_window(W6_PATHS["E4"], UNIQUE + " transfer case")),
+    ("wait", lambda: win.reading is not None and win.reading.ok and idle() and win.footer().build_enabled),
+    ("pause", 1.5),
+    ("do", lambda: shoot("17-transfer-case-read")),
+    ("do", lambda: speeds_panel("17-transfer-case-read")),
+    ("do", lambda: w8_mode_check(win.mode.get() or "2H")),
+    ("do", lambda: w8_footer_whole("read")),
+    ("do", lambda: w8_choose("4L")),
+    ("pause", 1.0),
+    ("do", lambda: shoot("18-transfer-case-4L")),
+    ("do", lambda: speeds_panel("18-transfer-case-4L")),
+    ("do", lambda: w8_mode_check("4L")),
+    ("do", lambda: w8_choose("N")),
+    ("pause", 1.0),
+    ("do", lambda: shoot("19-transfer-case-N")),
+    ("do", lambda: speeds_panel("19-transfer-case-N")),
+    ("do", lambda: w8_mode_check("N")),
+    ("do", lambda: win.build_button.command()),
+    ("wait", status_starts("Built", "Check", "SolidWorks cannot", "No assembly", "The gearbox")),
+    ("pause", 1.5),
+    ("do", lambda: shoot("20-transfer-case-built")),
+    ("do", w8_built_check),
+]
+STEPS = W8_STEPS if ONLY == "w8" else STEPS + W8_STEPS
 T0 = time.time()
 DEADLINE = T0 + 2400
 
