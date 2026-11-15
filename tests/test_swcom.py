@@ -3026,3 +3026,10 @@ def test_the_fake_fails_loudly_when_a_handle_from_before_a_change_is_used(config
     session.add_configuration("4L")
     with pytest.raises(StaleHandle):
         held.IsFixed  # noqa: B018 - the read is the test
+
+
+@pytest.mark.parametrize("how", ["add", "show"])
+def test_the_raw_component_a_probe_touches_is_fetched_in_the_current_epoch(configured, how):
+    session, doc = configured
+    _change(session, doc, how)
+    assert session.raw_component("layout").IsFixed is True       # a held handle would raise StaleHandle here

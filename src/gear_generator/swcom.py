@@ -2873,6 +2873,13 @@ class Session:
                                   "cannot be read.")
         return str(path)
 
+    def raw_component(self, handle: str) -> Any:
+        """The ``IComponent2`` kept as ``handle``, fetched in the current epoch (:meth:`_component`), for a probe
+        that must touch the COM object itself (tier 7's raw ``Transform2`` put and its own frame read). The caller
+        uses it at once and never keeps it across a configuration change, an activate or an open; the app's own code
+        goes through the members that take the handle."""
+        return self._component(handle)
+
     def is_fixed(self, handle: str) -> bool:
         """Whether a kept component is fixed in the active configuration, ``IComponent2.IsFixed`` through a handle
         fetched in the current epoch (W8-INTERFACES §9.4: a held one reads False even for the fixed layout)."""

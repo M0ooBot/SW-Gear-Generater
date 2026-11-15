@@ -1503,7 +1503,7 @@ def _rebuild_case(px: Px, index: int, route: str, folder: str) -> Dict[str, Any]
             px.session.begin_build()
             try:
                 _session_asm(px, paths["assembly"], names)
-                component = px.session._handles["G2"]["component"]  # noqa: SLF001 - the probe puts it raw
+                component = px.session.raw_component("G2")  # the probe puts it raw
                 transform = make_transform(px, array_data(matrix, at, order))
                 px.attempt(f"{route}: Transform2 put on G2 ({step})", lambda: setattr(component, "Transform2", transform))
                 entry["rebuild"] = _apply_route(px, asm, route, step)
@@ -1567,7 +1567,7 @@ def _rebuild_case(px: Px, index: int, route: str, folder: str) -> Dict[str, Any]
             _session_asm(px, paths["assembly"], names)
             entry["rebuild"] = _apply_route(px, asm, route, "part change")
             entry["flags"] = _save_flags(px, paths)
-            rotation, origin = frame_error(px.session._handles["G2"]["component"], *home)  # noqa: SLF001
+            rotation, origin = frame_error(px.session.raw_component("G2"), *home)
             entry["frame_off"] = {"rotation": rotation, "origin_mm": origin}
             found = px.session.interferences()
             entry["interferences"] = [[list(n), round(v, 3)] for n, v in found]
