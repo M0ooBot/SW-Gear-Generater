@@ -878,3 +878,14 @@ def test_a_gearbox_without_modes_keeps_w7s_results_sheet():
     rows = export.results_sheet(a.spec, a.report, when="T").rows
     assert rows[0] == ["Shaft", "Speed (rpm)", "Turns, seen from +Z", "Torque (N·m)", "On its carrier (rpm)"]
     assert not any(r and r[0] in (export.RESULTS_MODE, export.RESULTS_MODE_RATIO) for r in rows)
+
+
+def test_finish_update_never_writes_an_empty_on_set():
+    """§9.1: a stopped Update whose flags would leave LoDog's coupling on in no mode keeps the on-set it had (``[]``
+    reads as every mode: both dogs engaged in 2H)."""
+    record = built_record()
+    up = classify(record, transfer_case_parallel())
+    box = finished(up, record, failures=[("x", "it would not")],
+                   suppressed_in=[("RangeSlv engages LoDog", "4l")]).gearbox
+    assert {m.name: m.modes for m in box.mates}["RangeSlv engages LoDog"] == ["4L"]
+    assert all(m.modes for m in box.mates if m.kind == COUPLE)
