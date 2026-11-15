@@ -6569,8 +6569,7 @@ def test_a_quiet_update_that_puts_on_2026_says_so_from_the_finding_as_committed(
     fake.show_configuration("2H")
     done = _tc_update(fake, built)
     assert done.ok and done.positions_per_configuration is False and done.put_in == ["2H"], done.log_lines()
-    assert _status_sentences(built, done) == [
-        "RangeSlv and InDog had been turned out of step with each other in SolidWorks; they are back in mesh.",
+    assert _status_sentences(built, done) == [          # the crossed coupling said once, in the per-mode form
         "In 2H, RangeSlv's teeth stood across InDog's; the gears of 2H are back at the turn they were built at.",
         "This version of SolidWorks shows a turn given in one mode in every mode, so the turn may have been given "
         "in another.",

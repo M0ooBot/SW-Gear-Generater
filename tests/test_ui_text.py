@@ -3376,6 +3376,19 @@ def test_two_crossed_couplings_in_one_mode_are_each_said_and_the_gears_said_back
     assert sum("are back at the turn" in line for line in lines) == 1
     if positions is False:
         assert lines[2] == shared
+    # The full status says each crossed coupling once, in the per-mode form: never also "… had been turned out of
+    # step with each other in SolidWorks; they are back in mesh." (a coupling is not a mesh).
+    text = _clean(ui_text.gearbox_update_status(_tc_update(), result)[0])
+    assert "out of step with each other" not in text and "back in mesh" not in text
+    assert text.count("RangeSlv's teeth stood across LoDog's") == 1 and text.count("ModeSlv's teeth stood across") == 1
+
+
+def test_a_mesh_out_of_step_on_a_gearbox_with_modes_is_still_said_as_a_mesh():
+    """Only couplings move to the per-mode form; a mesh proper keeps _motion_after's sentence."""
+    result = _tc_moved(configuration="4L", out_of_step=[("InPin", "InGear")], put_in=["4L"], placed=["InPin"],
+                       changed=[TC_ASM])
+    assert ui_text.motion_update_lines(_tc_update(), result)[0] == (
+        "InPin and InGear had been turned out of step with each other in SolidWorks; they are back in mesh.")
 
 
 def test_a_coupling_out_of_step_is_said_only_in_the_mode_it_was_found_and_put_in():

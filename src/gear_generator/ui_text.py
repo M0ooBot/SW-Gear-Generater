@@ -3319,8 +3319,15 @@ def _motion_after(update, result, earlier: str = "") -> List[str]:
     :func:`_earlier_update_sentence` instead, and gears left standing are
     *as they were found in SolidWorks*, not *where they were turned*."""
     out = []
+    # W8: a crossed coupling in the mode worked in and put there is said once, by _mode_after ("In 4L, RangeSlv's
+    # teeth stood across LoDog's …"); a coupling is a dog in a sleeve, not a mesh.
+    config = str(getattr(result, "configuration", "") or "")
+    per_mode = bool(config) and any(str(c).casefold() == config.casefold()
+                                    for c in getattr(result, "put_in", ()) or ())
     if not earlier:
         for a, b in result.out_of_step:
+            if per_mode and _couple_pair(update, (a, b)):
+                continue
             back = "they are back in step" if _pair_kind(update, (a, b)) == "lock" else "they are back in mesh"
             out.append(f"{a} and {b} had been turned out of step with each other in SolidWorks; {back}.")
         for gears in result.restored:
