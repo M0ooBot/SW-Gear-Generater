@@ -1924,6 +1924,22 @@ def drive_proof(worker, desk, label, control=None, phases=()):
                         right.append(flip)
                     elif gap > 1e-3:
                         wrong.append(flip)
+                        # A wrong Flip can land every gear a whole pitch from its right place (p7: the ring at +10°
+                        # where −10° is right, 20° = 3 pitches of 54 teeth): its teeth then stand where the right
+                        # ones would, and there is nothing for interference to see.
+                        pitches = {g: wanted(desk)[g][2] if g in wanted(desk) else 0.0 for g in gears}
+                        whole = True
+                        for g in gears:
+                            off = turns[g] - expected[g] if turns[g] is not None else float("inf")
+                            p_ = pitches[g]
+                            rem = min(off % p_, p_ - off % p_) if p_ else abs(off)
+                            far = max(abs(float(x) - float(y)) for x, y in zip(out[f"control_driven {flip}"][g][1],
+                                                                                 want[g][1]))
+                            whole = whole and rem <= 1e-6 and far <= FRAME_TOLERANCE
+                        if whole:
+                            spec.setdefault("whole", []).append(flip)
+                            say(f"fact    {label}, control: with Flip {flip} every body stands a whole number of its "
+                                f"own pitches from its right place: {({g: round(turns[g] - expected[g], 6) for g in gears})}")
                     say(f"        control with Flip {flip}: largest frame off the kinematics {gap:.1e}")
                 else:
                     if (turns[b] is not None and not close_turn(turns[b], expected[b])
@@ -2020,6 +2036,9 @@ def clash_judge(out, label, spec, right, wrong, gear_of):
             check(ok, f"{label}, control: with the Flip that turns right ({flip}) {mesh} runs clear: {said}")
             if not ok:
                 halt.append(f"the right Flip {flip} clashes: {said}")
+        elif flip in wrong and spec.get("judge") == "any" and flip in spec.get("whole", ()) and not merged:
+            say(f"fact    {label}, control: the wrong Flip ({flip}) puts every gear a whole pitch off, so no clash can "
+                "show it; the drive's frames told it wrong")
         elif flip in wrong and spec.get("judge") == "any":
             ok = bool(merged) and all(c.volume > 0 for c in merged)
             check(ok, f"{label}, control: with the wrong Flip ({flip}) the train clashes: {said}")
