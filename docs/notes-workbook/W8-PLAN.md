@@ -163,8 +163,10 @@ Each is argued where it is used; the column says where.
 configuration shows in every configuration; a free component's put stays per configuration. Of the app's own
 Transform2 puts of the mated train, one made with 2H shown reached 4H and N and did not reach 4L, so what such a put
 does across configurations, J26's premise, is not settled; section s7 is to measure it, and behaviour does not depend
-on it, since every mode is put and post-checked (§1.9). The sentences now read `TURN_PER_CONFIGURATION_ON_<year>`, and
-a put on a quiet Update now leads to the visit of every mode: W8-INTERFACES §9.18. The text above is as approved.)*
+on it, since every mode is put and post-checked (§1.9). So J26's "a mode needs a put when … its own train_check finds
+it off its axis or out of step" now also includes a mode found turned in step: every mode an Update shows ends at its
+built frames, and a quiet Update that has anything to put puts every mode. The sentences now read
+`TURN_PER_CONFIGURATION_ON_<year>`: W8-INTERFACES §9.18. The text above is as approved.)*
 
 ### 0.4 What needs the user
 

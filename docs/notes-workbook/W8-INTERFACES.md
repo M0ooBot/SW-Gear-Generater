@@ -353,6 +353,13 @@ the kind the last two interface reviews found, and asked for written rules. Thes
       answer 2): the active mode is judged without a put, then every mode is shown and every train put whole to its
       built frames, the active mode last, then the flags read. No mode is left turned after an Update that put
       anything. On E4 that is 52 puts, what a changed Update costs.
+      *And* (`baa1a56`): in every mode an Update shows, a train found turned in step is put whole to its built
+      frames, as one found out of step is; J26's "put where that mode needs it" includes "turned". So a changed
+      Update whose only changes are flags or slide values (D10, a slide's place set back), which before left a
+      mode found turned in step as it stood and failed its post-check against the built frames, ends every mode it
+      shows at its built frames whatever SolidWorks kept there (W5's answer 2: an Update that changes the assembly
+      returns a turned train to its built turn). Such an Update of a gearbox nobody turned still puts nothing. A
+      quiet Update that changes nothing leaves a turn in step in the mode showing where it stands and says so.
     - *Three sentences say only what was read*, verbatim:
       - a quiet Update: *"It worked in 4H, the configuration that was active; it did not show the other modes,
         since nothing in 4H needed changing."* (before: *"…since nothing needed changing."*; with no
