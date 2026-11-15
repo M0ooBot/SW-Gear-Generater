@@ -1255,3 +1255,66 @@ SYSTEM_VALUE_FOLLOWS_CONFIGURATION = False
 # Not covered: a component free to move along an axis as well as turn; a drag in the user interface.
 POSITIONS_PER_CONFIGURATION_ON_2026 = True
 POSITIONS_PER_CONFIGURATION_ON_2024 = True
+
+# -- W7's follow-up: putting a turned planetary back (probe planetary_put_back, tier 10, SolidWorks 2026 34.1.1) -----
+#
+# Results:
+#   probe/results/w7-planetary-put-20261115-012409.json             routes A-E on the turned train, and the
+#                                                                   suppressed read
+#   probe/results/w7-planetary-put-follow-ons-20261115-013108.json  C's two follow-ons
+# The first run passed gear_mate_sense the opposite same_sense (sense > 0, where the record writes -1 for "the same
+# way"). Its sense verdicts are re-judged exactly in decide.py (senses_inverted=True), and a note at the top of its
+# .txt says so.
+#
+# What was done:
+# - The gearbox: W7's built, un-driven Planetary_4to1 (E's p1). The sun is the input, the ring is held, there is a
+#   skeleton carrier, and three copies of one planet part. CarrierGear is locked to the carrier.
+# - It was copied afresh for every route, opened, and every component checked to resolve in the copy.
+# - The sun was driven +37° (the carrier then stood 9.25° off, each copy -18.5°) and the drive deleted.
+# - Then each route put every body back to the record's built frames, through the app's swcom.Session members.
+# - Judged through fresh handles after a top-only rebuild: every frame within place_component's 1e-6, every gear mate
+#   read right, no interference. Then the sun was driven +20°: the carrier must turn +5°, CarrierGear +5°, each
+#   copy -10°, the ring 0, with nothing clashing.
+#
+# Route by route:
+# - A (the app today: the lock off, then the carrier put first with the gear mates on) failed:
+#   - the carrier read back 0.1074 off (6.2°, as in p3);
+#   - the copies read back 1.93, 1.62 and 1.73 mm off;
+#   - 24 interferences were found.
+# - B (the sun alone first) failed: the solver did not carry the train back. After the sun's put, the carrier read
+#   0.1607 off; then A's failures followed.
+# - D (every put, then one rebuild) failed: the carrier read 0.1074 off, the copies 0.1048 and 1.6-1.9 mm off, and
+#   the sun 0.2136 off.
+# - C held: every gear mate and the lock suppressed, a top-only rebuild, then the puts in W7-INTERFACES §6.13's
+#   order (the held ring only if off; the carrier; the sun, each copy, CarrierGear), each by place_component and read
+#   back. Then a rebuild, every gear mate and the lock turned back on, and a rebuild.
+#   - Every frame read back within 2e-9 mm, every sense read right, and nothing interfered.
+#   - Driven +20°: sun 20, carrier 5, CarrierGear 5, copies -10, ring 0, nothing interfering.
+#   - It held as well with the copies also moved 2 mm along their axes ("Planet Face Z" 5 -> 7, set before the
+#     puts, the train turned 37°), and on a train not turned at all.
+# - E (C with the copies' axis mates also off) held too; it is not needed.
+#
+# A dispatches on the value. Not covered:
+# - SolidWorks 2024 (the confirming run);
+# - more than one carrier;
+# - a held member that is off;
+# - a planetary with the carrier held;
+# - ratios remade inside the route (p3's step 3).
+PLANETARY_PUT_ROUTE = "gear mates off around the puts"
+# Route C's gear mates turned back on, in all three C cases:
+# - each kept its ratio (18 : 18 and 18 : 54, read before and after);
+# - each read right by gear_mate_sense;
+# - turning them on marked no document beyond what the puts had marked (the assembly; no part).
+GEAR_MATE_BACK_ON_KEEPS_SENSE_AND_RATIO = True
+GEAR_MATE_BACK_ON_MARKS = "nothing beyond the puts"
+#
+# A suppressed gear mate's sense read (W8; read where swbuild's Update reads it, swbuild._sense_read):
+# - "Planet copy 1 meshes Ring" was suppressed, rebuilt, saved (SaveAs3 in place), closed and reopened. The
+#   assembly read GetSaveFlag False on reopening, and the mate read suppressed.
+# - Read twice, the mate answered right both times, as it had before it was suppressed (Reverse and both entities
+#   read; τ +1, +1). The assembly read GetSaveFlag False after each read.
+# - The control, "Sun meshes Planet copy 2" left on, did the same.
+# Not covered: SolidWorks 2024. The read is GetDefinition and EntityParams, which marked nothing on both versions for
+# a mate left on (GEAR_MATE_DEFINITION_READ_MARKS); 2024's confirming run should read it once before this is relied
+# on there.
+SUPPRESSED_GEAR_MATE_SENSE_READ = "answers, marks nothing"

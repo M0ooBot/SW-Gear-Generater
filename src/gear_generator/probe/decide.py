@@ -711,6 +711,89 @@ def w8_findings(records: Records) -> Dict[str, Any]:
     }
 
 
+# -- W7's follow-up: the planetary put-back (probe planetary_put_back, tier 10) ---------------------------------------
+
+PLANETARY_ROUTE_ORDER = ("B", "C", "D", "E", "A")     # preference among routes that held: least change to the app first
+
+
+def _planetary(records: Records) -> Optional[Dict[str, Any]]:
+    return _fact(records, "planetary_put_back", "planetary_put_back") or None
+
+
+def _rejudged(case: Mapping[str, Any], senses_inverted: bool) -> Dict[str, Any]:
+    """A case judged again (p10_planetary.judge), each sense flipped when the run passed the opposite same_sense: the
+    verdict ``Reverse == (sign(k)·τa·τb > 0)`` flips exactly with it. A sense that raised stays not right."""
+    from .p10_planetary import judge  # noqa: PLC0415 - pure
+    if not senses_inverted:
+        return judge(case)
+    senses = {n: ({"right": not s["right"], "tau": s.get("tau")} if "right" in s else s)
+              for n, s in (case.get("senses") or {}).items()}
+    return judge(dict(case, senses=senses))
+
+
+def planetary_route_verdicts(records: Records, senses_inverted: bool = False) -> Optional[Dict[str, bool]]:
+    """Each case of the probe ("C turned", "C not turned", …) -> whether it held."""
+    facts = _planetary(records)
+    if not facts or not facts.get("cases"):
+        return None
+    return {k: _rejudged(c, senses_inverted)["held"] for k, c in facts["cases"].items()}
+
+
+def planetary_put_route(first: Records, follow_ons: Optional[Records] = None, *,
+                        senses_inverted: bool = False) -> Optional[str]:
+    """The route that put the turned planetary back (p10_planetary.ROUTE_NAMES' name): the first in
+    :data:`PLANETARY_ROUTE_ORDER` that held on the turned train, and also held with the copies moved along their axes
+    and on the train not turned (from ``follow_ons`` when given, else from the first file); None when none did."""
+    from .p10_planetary import ROUTE_NAMES  # noqa: PLC0415 - pure
+    turned = planetary_route_verdicts(first, senses_inverted)
+    if not turned:
+        return None
+    later = planetary_route_verdicts(follow_ons) if follow_ons is not None else turned
+    for route in PLANETARY_ROUTE_ORDER:
+        if turned.get(f"{route} turned") and (later or {}).get(f"{route} turned and moved") and \
+                (later or {}).get(f"{route} not turned"):
+            return ROUTE_NAMES[route]
+    return None
+
+
+def gear_mates_back_on(records: Records) -> Optional[Dict[str, Any]]:
+    """Route C's gear mates turned back on, across every C case: whether each kept its ratio, and whether turning them
+    back on marked any document the puts had not already marked."""
+    facts = _planetary(records)
+    steps = [c["steps"] for k, c in (facts or {}).get("cases", {}).items() if k.startswith("C ") and c.get("steps")]
+    steps = [s for s in steps if s.get("ratios_before_back_on") and s.get("flags_before_back_on")]
+    if not steps:
+        return None
+    ratios = all(s["ratios_before_back_on"] == s.get("ratios_after_back_on") for s in steps)
+    marks = all(not any(v and not s["flags_before_back_on"].get(k) for k, v in (s.get("flags_after_back_on") or {}).items())
+                for s in steps)
+    return {"ratio_kept": ratios, "marks_nothing_more": marks}
+
+
+def suppressed_gear_mate_sense_read(records: Records, senses_inverted: bool = False) -> Optional[str]:
+    """On a copy saved with one gear mate suppressed and reopened unmodified: "answers, marks nothing" when that
+    mate's sense, read as Update reads it (swbuild._sense_read), twice, answered as it did before it was suppressed
+    and right, and the document read unmodified after each read — and the mate left on (the control) did the same."""
+    facts = _planetary(records)
+    s = (facts or {}).get("suppressed_read") or {}
+    if not s or s.get("errors") or s.get("modified_on_reopen") is not False or s.get("suppressed_reads_suppressed") is not True:
+        return None
+    verdicts = []
+    for key in ("suppressed", "control"):
+        part = s.get(key) or {}
+        before = (s.get("before_suppressing") or {}).get(part.get("mate")) or {}
+        reads = [part.get("first", {}).get("app"), part.get("second", {}).get("app"), before.get("app")]
+        if any(not isinstance(r, bool) for r in reads):
+            return "refuses"
+        right = [r != senses_inverted for r in reads]
+        if not all(right):
+            return "answers differently"
+        if part.get("modified_after_first") is not False or part.get("modified_after_second") is not False:
+            return "answers, marks the document"
+        verdicts.append(True)
+    return "answers, marks nothing" if all(verdicts) else None
+
+
 def decide(records: Records) -> Dict[str, Any]:
     recipe = flank_recipe(records)
     units = _fact(records, "document_units", "default_template_is_mm")
@@ -876,6 +959,8 @@ def decide(records: Records) -> Dict[str, Any]:
         "turned_sense_angles": turned_sense_angles(records),
         "turned_sense_angles_skew": turned_sense_angles_skew(records),
         **w8_findings(records),
+        "planetary_put_route": planetary_put_route(records),
+        "suppressed_gear_mate_sense_read": suppressed_gear_mate_sense_read(records),
         "turned_gear_mate_moves_on_make": _fact(records, "turned_gear_mate_sense", "turned_gear_mate_moves_on_make"),
         "gear_mate_entity_order": _fact(records, "turned_gear_mate_sense", "gear_mate_entity_order"),
         "manual_steps": manual_steps(records, recipe),

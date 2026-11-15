@@ -1093,3 +1093,35 @@ def test_the_w8_gates_open_on_both_versions_from_these_findings():
     assert swbuild._modes_version_refusal((34, 1, 1)) is None and swbuild._modes_version_refusal((32, 5, 0)) is None
     assert swcom.positions_per_configuration((34, 1, 1)) is True and swcom.positions_per_configuration((32, 5, 0))
     assert swbuild._settled(swbuild.MODES_FINDINGS) is None
+
+
+W7_PUT = LATEST.parent / "w7-planetary-put-20261115-012409.json"
+W7_PUT_FOLLOW_ONS = LATEST.parent / "w7-planetary-put-follow-ons-20261115-013108.json"
+
+
+def _w7_records(path):
+    data = json.loads(path.read_text(encoding="utf-8"))
+    assert data["meta"]["version"].startswith("SolidWorks 2026 ")
+    return {r["name"]: r for r in data["records"]}
+
+
+def test_a_turned_planetary_is_put_back_with_its_gear_mates_off():
+    """Probe planetary_put_back (W7's follow-up): routes A-E on Planetary_4to1 turned 37°, C's follow-ons after; the
+    first run's senses re-judged (it passed the opposite same_sense; the verdict flips exactly)."""
+    first, later = _w7_records(W7_PUT), _w7_records(W7_PUT_FOLLOW_ONS)
+    verdicts = decide.planetary_route_verdicts(first, senses_inverted=True)
+    assert verdicts == {"A turned": False, "B turned": False, "C turned": True, "D turned": False, "E turned": True}
+    assert decide.planetary_route_verdicts(later) == {"C turned and moved": True, "C not turned": True}
+    assert decide.planetary_put_route(first, later, senses_inverted=True) == findings.PLANETARY_PUT_ROUTE \
+        == "gear mates off around the puts"
+    assert decide.planetary_put_route(first, later) is None          # as judged in the run, nothing held
+    back = [decide.gear_mates_back_on(r) for r in (first, later)]
+    assert back == [{"ratio_kept": True, "marks_nothing_more": True}] * 2
+    assert findings.GEAR_MATE_BACK_ON_KEEPS_SENSE_AND_RATIO is True
+    assert findings.GEAR_MATE_BACK_ON_MARKS == "nothing beyond the puts"
+
+
+def test_a_suppressed_gear_mate_answers_its_sense_and_marks_nothing():
+    first = _w7_records(W7_PUT)
+    assert decide.suppressed_gear_mate_sense_read(first, senses_inverted=True) \
+        == findings.SUPPRESSED_GEAR_MATE_SENSE_READ == "answers, marks nothing"
