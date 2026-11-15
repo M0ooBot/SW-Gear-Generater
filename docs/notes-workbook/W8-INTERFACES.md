@@ -346,7 +346,8 @@ the kind the last two interface reviews found, and asked for written rules. Thes
     - *Three sentences say only what was read*, verbatim:
       - a quiet Update: *"It worked in 4H, the configuration that was active; it did not show the other modes,
         since nothing in 4H needed changing."* (before: *"…since nothing needed changing."*; with no
-        configuration named, *"…since nothing in it needed changing."*), whatever the switch says;
+        configuration named, *"…since nothing there needed changing."*, after the review of these commits, point
+        8), whatever the switch says;
       - the switch False: *"A turn you give the gears in one mode shows in every mode, so a dog can stand across
         its sleeve in another mode; to put the gears back there, press Update SolidWorks with that mode showing."*
         (before: *"…in another mode until Update SolidWorks puts the gears back."*; shortened from *"…with that

@@ -3975,7 +3975,7 @@ def _mode_after(update, result, *, changed: bool) -> List[str]:
     if not config:
         if not _configurations_of(update):
             return []
-        since = ", since nothing in it needed changing" if not changed else ""
+        since = ", since nothing there needed changing" if not changed else ""
         return [f"It worked in the configuration that was active; it did not show the other modes{since}."]
     out = []
     asm = _file(update.assembly) if getattr(update, "assembly", "") else "the assembly"

@@ -3243,7 +3243,7 @@ def test_a_quiet_update_says_where_it_worked_and_that_it_did_not_show_the_other_
     # A result on a gearbox with modes that names no configuration still says the others were not shown.
     assert ui_text.gearbox_update_status(_tc_update(), _moved(positions_per_configuration=positions)) == (
         "SolidWorks already matches the workbook: nothing was changed. It worked in the configuration that was "
-        "active; it did not show the other modes, since nothing in it needed changing.", True)
+        "active; it did not show the other modes, since nothing there needed changing.", True)
 
 
 def test_an_update_that_showed_the_other_modes_says_so_and_that_the_assembly_reads_modified():
