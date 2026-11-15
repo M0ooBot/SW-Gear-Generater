@@ -312,3 +312,43 @@ the kind the last two interface reviews found, and asked for written rules. Thes
 17. **A whole-box jam with modes** (package B's review). With Modes rows, "the box cannot turn at all" is said only
     when every mode jams; a mode that jams is an error at its own Modes row naming what engages what, and reads the
     same wherever that row stands. One home: `checks._check_motion`.
+18. **A turn of a mated train shows in every mode; a put on a quiet Update obliges the visit** (W8's s2 and the
+    check after it, SolidWorks 2026 34.0.0 on this host, 2026-11-15; `eff7bad`, `933de81`, `d3c2e97`).
+    - *What s2 measured.* The built E4, 2H shown, its train turned +37° on the Sun by W5's drive: shown in 4H, N
+      and 4L, every body stood turned as in 2H, and in 4L LoDog read in interference with RangeSlv (531.913 mm³).
+      The check after it turned the train by a value set in 2H alone (`SetSystemValue3(rad, 3, ['2H'])`) and by a
+      global: every body turned alike in all four configurations
+      (`probe/results/w8-workbook-assembly-20261115-111951-s2-turn-carried-per-body.log`,
+      `probe/results/w8-turn-across-configurations-20261115-115500.txt`). The spike's follow-up, rerun unchanged
+      on this host (`e670e7e`), read a free component's Transform2 put per configuration, as on 34.1.1. So the
+      two readings differ by case: a free component's put is kept per configuration; a mated train's turn, which
+      is what a user's turn is, is not. That agrees with GOTCHAS §83.
+    - *The split.* `findings.TURN_PER_CONFIGURATION_ON_<year>` (2026 False, 2024 None until the confirming run's
+      s2 and s7) is what the sentences about a turn and a switch read, through `swcom.positions_per_configuration`,
+      which keeps its name and its three states. `POSITIONS_PER_CONFIGURATION_ON_<year>` stays as the put fact it
+      was measured as and is read by nothing. No behaviour reads either: Update's per-mode puts are right either
+      way (W8-PLAN §1.9). Section s7 will measure both on the built E4, and the findings' pins move to its file.
+    - *A put on a quiet Update obliges the visit* (J13, W8-PLAN §1.10's post-check, "all of them when anything
+      changed"). An Update with nothing changed in the workbook that finds the active mode out of step and puts it
+      has changed something: every other mode is then shown and handled as a changed Update handles it (put only
+      where its own train needs it, J26 unchanged; post-checked; its `ModeCheck` on `result.modes`), the active
+      mode last and left active, its own `ModeCheck` last, then every per-mode flag read in every configuration.
+      This holds whichever way positions are kept. A quiet Update that puts nothing stays as it was: nothing shown,
+      nothing marked. The test that had pinned the opposite, the shared-positions variant of
+      `test_a_train_turned_in_another_mode_is_left_unseen_by_a_quiet_update_which_says_so` ("put back in 2H alone,
+      nothing shown"), now pins the visit.
+    - *Three sentences say only what was read*, verbatim:
+      - a quiet Update: *"It worked in 4H, the configuration that was active; it did not show the other modes,
+        since nothing in 4H needed changing."* (before: *"…since nothing needed changing."*; with no
+        configuration named, *"…since nothing in it needed changing."*), whatever the switch says;
+      - the switch False: *"A turn you give the gears in one mode shows in every mode, so a dog can stand across
+        its sleeve in another mode; to put the gears back there, press Update SolidWorks with that mode showing,
+        since an Update pressed in another mode may leave them as they stand."* (before: *"…in another mode until
+        Update SolidWorks puts the gears back."*);
+      - the switch False, after a put in the mode worked in and the visit: *"The gears of 2H and N stood at the
+        turn they were built at when Update SolidWorks showed them."*, naming only the visited modes whose own
+        judgement on showing read them so (not put there, in step, on their axes, not turned).
+    - *Not taken, for the user to overrule:* with a turn shared between modes, a quiet Update could judge every
+      mode's couplings from the rotations it reads in the active mode, without showing anything, and say which mode
+      stands with a dog across its sleeve. Today a quiet Update judges the mode showing alone (J25), and the
+      switch-False sentence above tells the user to press Update with the other mode showing.

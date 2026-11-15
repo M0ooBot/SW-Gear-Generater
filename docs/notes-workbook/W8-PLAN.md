@@ -159,6 +159,11 @@ Each is argued where it is used; the column says where.
 | J26 | **Puts are made mode by mode.** A put holds only in the configuration shown (2026), so restoring a mode takes a put made with that configuration shown. In each mode that needs a put, the set put is the gears connected over **every** mode's relations (for both fixtures, the whole gearbox: review M5). A mode needs a put when a workbook change moves its gears (a shaft moved, a tooth count, an At — these touch every mode, so every mode is visited and put) or when its own `train_check` finds it off its axis or out of step. A mode whose own train is in step and that no change touches keeps the user's turn (W5's answer 2). Right also if 2024 shares positions (§1.9). | W5's single put in the active configuration; the review's M5 set without per-mode puts. | 1.10 |
 | J27 | **A slide never reaches the Front plane:** every mode's value of one SLIDE is non-zero and on one side of the plane (|z_front| ≥ `layout.BASE_TOLERANCE`, one sign), else the gearbox is refused at Build, and an edit that would take one there is structural. A distance of 0 and a change of side were not tried on one mate with per-configuration values; W5's answer 3 (no datum plane) already makes an anchor's front face reaching the plane structural, and this is the same rule for a slide. | A coincident mate for a position at 0 (W5's ALONG rule), which a single SLIDE with per-configuration values cannot switch to. | 1.7 |
 
+*(2026-11-15: J11 and J26 — W8's s2 measured, on SolidWorks 2026 34.0.0, that a turn of a mated train given in one
+configuration shows in every configuration, while a free component's put stays per configuration. The sentences now
+read `TURN_PER_CONFIGURATION_ON_<year>`, and a put on a quiet Update now leads to the visit of every mode:
+W8-INTERFACES §9.18. The text above is as approved.)*
+
 ### 0.4 What needs the user
 
 Nothing blocks W8. These readings are closest to a decision of the user's and go at the top of the list handed to
@@ -494,6 +499,11 @@ answered wrongly once in the spike's earlier runs. The fake makes a stale handle
 are skipped: each slider's SLIDE is made at its one value and the assembly keeps the template's configuration.
 
 ### 1.9 Turning, and a change of configuration
+
+*(2026-11-15: on SolidWorks 2026 34.0.0 a turn of a mated train shows in every configuration (W8's s2), which is
+this section's "if SolidWorks shares positions" case for a turn, while a free component's Transform2 put stays per
+configuration (the follow-up, rerun on that host). What the app says follows `TURN_PER_CONFIGURATION_ON_<year>`:
+W8-INTERFACES §9.18. The text below is as approved.)*
 
 A train turns in a configuration exactly as W5's does: one freedom per train in that mode (a free member in neutral
 is a train of its own, as an unmeshed shaft is in W5), the drag gear the input's anchor.
