@@ -2445,6 +2445,42 @@ def test_the_speeds_readout_is_never_clipped_by_the_mode_chooser(desk, five, tur
     assert chooser(window) == (names, names[-1])
 
 
+def test_a_save_that_turns_a_shaft_moves_the_chooser_to_rows_and_back_keeping_the_chosen_mode(
+        desk, tk_callback_exceptions):
+    """W8 review of the C/D fixes, S2: the chooser is rebuilt when it moves between the header and rows, not only
+    when the names change. A shaft saved along X widens the readout to *seen from each shaft's + end*, so the same
+    four modes no longer fit beside it and go to rows; the shaft removed again brings them back to the header.
+    Each way the chosen mode is kept, the old row's trace goes with it, and the readout is drawn whole."""
+    from workbook_fixtures import transfer_case_parallel
+    window = desk.open(transfer_case_parallel(), name="TransferCase_Parallel.xlsx")
+    names = ["2H", "4H", "N", "4L"]
+    readout = window._speeds.readout_label
+
+    def placed(in_header, chosen, widest):
+        window.update_idletasks()
+        (row,) = window.mode_choosers
+        assert (row.master is window._mode_slot) == in_header
+        assert (row.master is window._mode_rows) != in_header
+        assert chooser(window) == (names, chosen)
+        assert len(window.mode.trace_info()) == len(window.mode_choosers)
+        assert window.speeds_readout.get() == widest + ui_text.provisional_tag(window.recalc)
+        assert readout.winfo_width() == readout.winfo_reqwidth()                 # drawn whole
+
+    placed(True, "2H", "seen from +Z")
+    choose_mode(window, "4L")
+    save_in_excel(window, {"Shafts": {"A9": "Aux", "B9": "frame", "C9": 200, "D9": 0, "E9": 0, "F9": "X+"}})
+    assert window.footer().ok, window.status.get()
+    assert [s.id for s in window.reading.spec.shafts][-1] == "Aux"
+    placed(False, "4L", "seen from each shaft's + end")
+    choose_mode(window, "N")
+    save_in_excel(window, {"Shafts": {"A9": None, "B9": None, "C9": None, "D9": None, "E9": None, "F9": None}},
+                  seconds=4)
+    assert window.footer().ok, window.status.get()
+    assert "Aux" not in [s.id for s in window.reading.spec.shafts]
+    placed(True, "N", "seen from +Z")
+    assert tk_callback_exceptions == []
+
+
 def test_a_mode_renamed_only_in_case_keeps_its_choice(desk):
     """Mode names compare ignoring case (J6, W8-INTERFACES §9.6): 4L saved as 4l is the same mode, still chosen."""
     from workbook_fixtures import transfer_case_parallel
