@@ -769,22 +769,45 @@ GEAR_STATE_BUILT, GEAR_STATE_CHANGES, GEAR_STATE_NEW_PART = "built", "changes", 
 PART_CHARS = 18
 # The characters the Gears table's Part column holds at the window's design width (workbook_gui.LEFT_WIDTH 610 less
 # the fixed columns, TABLE_WIDTHS, in the table's 11.5 px mono): the longest names the boards show whole, fixture
-# B's "Helical_m2_N20_45R", are 18. A longer name is shortened in the middle (:func:`part_cell`); Tk never cuts a
-# label, so it would widen the window, and the board's end-cut hid the suffix that tells a part from its neighbour.
+# B's "Helical_m2_N20_45R", are 18. A longer name is shortened (:func:`part_cell`); Tk never cuts a label, so it
+# would widen the window, and the board's end-cut hid the end that tells a part from its neighbour.
+PART_HEAD = 4                # the characters of a shortened name's head; its kind word starts it
 
 
 def part_cell(name: str, width: int = PART_CHARS) -> str:
-    """``name`` as the Gears table's Part cell shows it: as it is when it fits ``width`` characters, else shortened
-    in the middle with an ellipsis, keeping its head and the whole last ``_`` suffix — ``Bevel_m2.5_N20_M30_S120``
-    becomes ``Bevel_m2.5_N…_S120`` — never at the end. Only the table's cell: every sentence names the part whole."""
+    """``name`` as the Gears table's Part cell shows it: as it is when it fits ``width`` characters, else its first
+    :data:`PART_HEAD` characters, ``…`` and as much of its end as fits — the end is what tells a part from its
+    neighbours (teeth, mate teeth, angle, hand, revision; the module it drops has its own column) — the end begun at
+    a ``_`` when one falls within two characters of the cut: ``Bevel_m2.5_N20_M30_S120`` is ``Beve…_N20_M30_S120``.
+    Only the table's cell (:func:`workbook_gear_rows` keeps different names apart); every sentence names the part
+    whole."""
     if len(name) <= width:
         return name
-    head, sep, tail = name.rpartition("_")
-    suffix = sep + tail if head else ""
-    if not suffix or len(suffix) > width - 4:          # no suffix to keep, or one that leaves no head
-        keep = width - 1
-        return name[:keep - keep // 2] + "…" + name[len(name) - keep // 2:]
-    return name[:width - 1 - len(suffix)] + "…" + suffix
+    tail = name[len(name) - (width - PART_HEAD - 1):]
+    cut = next((i for i in range(1, 3) if tail[i:i + 1] == "_"), 0) if tail[:1] != "_" else 0
+    return name[:PART_HEAD] + "…" + tail[cut:]
+
+
+def _part_cells(names: Iterable[str]) -> Dict[str, str]:
+    """Each distinct part name's cell: :func:`part_cell`, lengthened (up to the whole name) wherever two different
+    names would share one, since two rows with the same Part cell read as one shared part file — which the app does
+    make for identical gears, and which identical names keep."""
+    names = sorted({n for n in names if n})
+    width = {n: PART_CHARS for n in names}
+    while True:
+        cells = {n: part_cell(n, width[n]) for n in names}
+        by_cell: Dict[str, List[str]] = {}
+        for n, cell in cells.items():
+            by_cell.setdefault(cell, []).append(n)
+        clashes = [group for group in by_cell.values() if len(group) > 1]
+        grown = False
+        for group in clashes:
+            for n in group:
+                if width[n] < len(n):
+                    width[n] += 1
+                    grown = True
+        if not grown:
+            return cells
 
 
 def workbook_gear_rows(spec, parts, diagnostics: Sequence[Diagnostic], *, record=None,
@@ -792,7 +815,8 @@ def workbook_gear_rows(spec, parts, diagnostics: Sequence[Diagnostic], *, record
     """One row per gear for the window's table: gear, shaft, kind, teeth, module, face, part, state, what.
 
     ``part`` is the part file's name without ``.SLDPRT`` (every part is one), so the column stays narrow, and
-    one longer than the column holds is shortened in the middle (:func:`part_cell`, :data:`PART_CHARS`).
+    one longer than the column holds is shortened to its head and end (:func:`part_cell`, :data:`PART_CHARS`),
+    two different names never sharing a cell (:func:`_part_cells`).
 
     ``parts`` is a :class:`workbook.build.PartsPlan` (it may be empty when the
     workbook has errors); ``diagnostics`` are the per-gear ones, each naming its
@@ -845,9 +869,9 @@ def workbook_gear_rows(spec, parts, diagnostics: Sequence[Diagnostic], *, record
                 state, what = GEAR_STATE_BUILDS, "to build"
         else:
             state, what = GEAR_STATE_ERROR, "see Checks"
-        rows.append((gear.id, gear.shaft, kind, gear.teeth, gear.module, gear.face_width, part_cell(part), state,
-                     what))
-    return rows
+        rows.append((gear.id, gear.shaft, kind, gear.teeth, gear.module, gear.face_width, part, state, what))
+    cells = _part_cells(r[6] for r in rows)                 # shortened over the whole table, different names apart
+    return [r[:6] + (cells.get(r[6], r[6]),) + r[7:] for r in rows]
 
 
 def _built_state(gear_id: str, entry, update, plan=None) -> Tuple[str, str]:
