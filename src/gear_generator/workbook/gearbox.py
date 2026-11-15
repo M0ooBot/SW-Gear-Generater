@@ -217,13 +217,7 @@ class GearboxPlan:
     planned because a W5 finding is missing (``motion.motion_reason()``), it
     is that sentence. There is no static fallback plan: a turning assembly
     SolidWorks refuses is not replaced by a static one (W5-DECISIONS,
-    answer 1). ``ring_meshes``: the names of the motion plan's gear (MESH)
-    mates whose mesh is inside a ring (either gear internal), in plan order;
-    ``()`` for a train with none and for a static plan. ``build_kwargs``
-    passes them as ``internal`` for a turning plan — an empty tuple when no
-    mesh has a ring, so every gear mate is still read back — and nothing for a
-    static one (probe ring_mate_sense: a wrong gear mate is made again with
-    the other Flip). ``plan.motion`` is the one
+    answer 1). ``plan.motion`` is the one
     source of the record's ``GearboxRecord.kind``: ``finish_build`` writes
     MOTION when it is set and STATIC when not; a non-empty
     ``GearboxResult.kind`` must agree, a disagreement is a sentence in
@@ -232,10 +226,11 @@ class GearboxPlan:
     W6 (Agent B; W6-INTERFACES.md): ``mate_senses`` maps each gear (MESH)
     mate of the motion plan, by name, to whether its mesh turns its two gears
     the same way about their own axes (``k > 0``, from ``MatePlan.sense``),
-    for every kind of mesh; ``{}`` for a static plan. It replaces
-    ``ring_meshes``: ``build_kwargs`` passes it as ``"senses"`` for a turning
-    plan once B moves it there (``swbuild.build_gearbox(senses=…)`` takes it
-    from the interface commit on), and ``ring_meshes``/``"internal"`` go.
+    for every kind of mesh; ``{}`` for a static plan. Written as the identity
+    ``mate_senses[name] = (sense == -1)`` (W6-INTERFACES §7.2: ``k = −c·za/zb``,
+    so ``k > 0`` is ``c == −1``). ``build_kwargs`` passes it as ``"senses"``
+    for a turning plan — every gear mate is read back — and nothing for a
+    static one.
     """
 
     revision: int
@@ -262,7 +257,6 @@ class GearboxPlan:
     foreign_said: bool = False
     motion: Optional[MotionPlan] = None
     static_reason: str = ""
-    ring_meshes: Tuple[str, ...] = ()            # the motion plan's gear mates inside a ring (Agent B, additive)
     mate_senses: Mapping[str, bool] = field(default_factory=dict)   # W6: gear mate name -> k > 0 (B)
 
     @property
@@ -292,7 +286,7 @@ class GearboxPlan:
             "gears": dict(self.handles),
         }
         if self.motion is not None and self.assembly is not None:
-            kwargs["internal"] = tuple(self.ring_meshes)    # a turning build: every gear mate read back (A, a0d5fad)
+            kwargs["senses"] = dict(self.mate_senses)       # a turning build: every gear mate read back
         return kwargs
 
 
@@ -893,7 +887,7 @@ def plan_gearbox(a: Assessment, record: Optional[LinkRecord], *, part_template: 
     # static-by-necessity case, said before Build). A continued revision is planned the same way.
     static_reason = motion.motion_reason()
     turning: Optional[MotionPlan] = None
-    rings: Tuple[str, ...] = ()
+    senses: Dict[str, bool] = {}
     try:
         layout_item: Union[BuildPlan, LayoutReuse] = chosen.layout_reuse or layout.layout_plan(
             shafts, part_tpl, chosen.layout_path)
@@ -901,9 +895,7 @@ def plan_gearbox(a: Assessment, record: Optional[LinkRecord], *, part_template: 
             assembly = layout.assembly_plan(chosen.layout_path, components, asm_tpl, chosen.assembly_path)
         else:
             turning = motion.motion_plan(spec, a.report, frames)
-            placed = a.report.layout.placed
-            rings = tuple(m.name for m in turning.mates if m.kind == motion.MESH
-                          and any(placed[g].internal for g in m.gears if g in placed))
+            senses = mate_senses(turning)
             assembly = motion.motion_assembly_plan(chosen.layout_path, components,
                                                    {gear: handle for handle, gear in handles.items()}, turning,
                                                    asm_tpl, chosen.assembly_path)
@@ -911,8 +903,14 @@ def plan_gearbox(a: Assessment, record: Optional[LinkRecord], *, part_template: 
         return GearboxPlan(revision=n, name=name, refusal=str(exc), **empty)
     fields.update(layout_path=chosen.layout_path, assembly_path=chosen.assembly_path, shafts=shafts,
                   frames=frames, layout=layout_item, assembly=assembly, handles=handles, motion=turning,
-                  static_reason=static_reason, ring_meshes=rings if turning is not None else ())
+                  static_reason=static_reason, mate_senses=senses)
     return GearboxPlan(revision=n, name=name, revision_reason=reason, **fields)
+
+
+def mate_senses(turning: MotionPlan) -> Dict[str, bool]:
+    """Each gear mate's same-sense flag for the worker's read-back: ``k > 0`` for the mesh, which is
+    ``MatePlan.sense == −1`` (W6-INTERFACES §7.2, written as that identity on purpose)."""
+    return {m.name: (m.sense == -1) for m in turning.mates if m.kind == motion.MESH}
 
 
 def _journal_of(record: Optional[LinkRecord], here: str, ours: bool) -> List[PartEntry]:

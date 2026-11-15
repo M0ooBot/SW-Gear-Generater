@@ -200,3 +200,118 @@ def test_without_senses_a_mesh_across_an_angle_is_left_out_and_parallel_speeds_a
     assert kinematics.solve(reducer()).speeds == {"S1": 1500, "S2": -375, "S3": 125}
     motion = kinematics.solve(bevel_reducer())
     assert motion.speeds == {"S1": 1500} and set(motion.free) == {"S2", "S3"}
+
+
+# -- the Checks panel, the header and the turned refusal (W6-PLAN §2.5, §2.6, §2.9, §5; INTERFACES §7.12) -----
+
+from gear_generator import findings  # noqa: E402
+from gear_generator.workbook import assess, checks, model, motion, xlsx  # noqa: E402
+from gear_generator.workbook.model import replace  # noqa: E402
+from test_workbook_model import write  # noqa: E402
+
+
+def assessed(tmp_path, spec, name="W.xlsx"):
+    read, diagnostics = model.from_book(xlsx.read(write(tmp_path, spec, name)))
+    return assess.assess(read, diagnostics, "C:\\Out\\")
+
+
+@pytest.fixture
+def turned_findings(monkeypatch):
+    monkeypatch.setattr(findings, "TURNED_GEAR_MATE_SENSE_READ_BACK", "entity senses", raising=False)
+    monkeypatch.setattr(findings, "TURNED_GEAR_MATE_SENSE_ANGLES", (30.0, 150.0), raising=False)
+    monkeypatch.setattr(findings, "TURNED_GEAR_MATE_SENSE_ANGLES_SKEW", (60.0, 120.0), raising=False)
+
+
+def test_fixture_as_checks_panel_is_the_strips_own_three_warnings(tmp_path, turned_findings):
+    a = assessed(tmp_path, bevel_reducer())
+    assert [d.message for d in a.diagnostics] == [
+        "Gears!F2: G1: The tooth tip is 0.722 mm thick, under 0.3 × module (0.9 mm).",
+        "Gears!Q2: G1: The involute starts at 65.444 mm, above the form diameter of 63.267 mm, so the bottom of the "
+        "working flank is a straight line.",
+        "Gears!Q5: G4: The involute starts at 99.28 mm, above the form diameter of 98.614 mm, so the bottom of the "
+        "working flank is a straight line."]
+    assert a.report.worked_out_as == "Bevel and parallel train · 2 meshes · 6.000 : 1 · output at 90° to the input"
+    assert a.lay_out_refusal() == ""
+
+
+def test_fixture_bs_checks_panel_is_the_strips_own_six_warnings(tmp_path, turned_findings):
+    a = assessed(tmp_path, crossed_slant())
+    flank = "above the form diameter of {} mm, so the bottom of the working flank is a straight line."
+    assert [d.message for d in a.diagnostics] == [
+        "Gears!Q2: G1: The involute starts at 53.849 mm, " + flank.format("53.14"),
+        "Gears!L2: G1: A helix angle of 45° is outside the usual 8–30° for a helical gear.",
+        "Gears!Q3: G2: The involute starts at 110.417 mm, " + flank.format("109.413"),
+        "Gears!L3: G2: A helix angle of 45° is outside the usual 8–30° for a helical gear.",
+        "Gears!F4: G3: The tooth tip is 0.664 mm thick, under 0.3 × module (0.75 mm).",
+        "Gears!Q4: G3: The involute starts at 64.97 mm, " + flank.format("62.668")]
+    assert all(d.level == "warning" for d in a.diagnostics)
+    assert a.report.worked_out_as == "Crossed and bevel train · 2 meshes · 3.000 : 1 · output at 90° to the input"
+    assert a.lay_out_refusal() == ""
+
+
+def test_a_turned_mesh_waits_for_the_read_back_finding_and_its_classs_range(tmp_path, turned_findings, monkeypatch):
+    a, b = assessed(tmp_path, bevel_reducer(), "A.xlsx"), assessed(tmp_path, crossed_slant(), "B.xlsx")
+    monkeypatch.setattr(findings, "TURNED_GEAR_MATE_SENSE_READ_BACK", None)
+    assert motion.turned_refusal(a.report) == (
+        "G1 and G2 mesh across shafts at 90°, and which way a gear mate turns gears on shafts at an angle is not "
+        "settled by the probes for this version (findings.TURNED_GEAR_MATE_SENSE_READ_BACK), so the gearbox is not "
+        "built.")
+    assert a.lay_out_refusal() == motion.turned_refusal(a.report)
+    monkeypatch.setattr(findings, "TURNED_GEAR_MATE_SENSE_READ_BACK", "entity senses")
+    monkeypatch.delattr(findings, "TURNED_GEAR_MATE_SENSE_ANGLES_SKEW")
+    assert motion.turned_refusal(a.report) == ""                       # a bevel pair's axes meet
+    assert motion.turned_refusal(b.report) == (
+        "G1 and G2 mesh across shafts at 90°, and the angles at which a gear mate on crossed shafts turns right are "
+        "not settled by the probes for this version (findings.TURNED_GEAR_MATE_SENSE_ANGLES_SKEW), so the gearbox "
+        "is not built.")
+    monkeypatch.setattr(findings, "TURNED_GEAR_MATE_SENSE_ANGLES_SKEW", (60.0, 120.0), raising=False)
+    monkeypatch.setattr(findings, "TURNED_GEAR_MATE_SENSE_ANGLES", (30.0, 110.0))
+    assert motion.turned_refusal(b.report) == (
+        "G3 and G4 mesh across shafts at 120°, outside the 30°–110° the probes showed a gear mate on shafts that "
+        "meet turning right at (findings.TURNED_GEAR_MATE_SENSE_ANGLES), so the gearbox is not built.")
+
+
+def test_the_build_is_told_each_turned_gear_mates_sense(tmp_path, turned_findings):
+    from gear_generator.workbook import gearbox
+    a = assessed(tmp_path, bevel_reducer())
+    plan = gearbox.plan_gearbox(a, None, exists=lambda p: False, read_sidecar=lambda p: None)
+    assert plan.refusal == "" and plan.build_kwargs()["senses"] == {"G1 meshes G2": False, "G3 meshes G4": False}
+    b = assessed(tmp_path, crossed_slant(), "B.xlsx")
+    plan = gearbox.plan_gearbox(b, None, exists=lambda p: False, read_sidecar=lambda p: None)
+    assert plan.build_kwargs()["senses"] == {"G1 meshes G2": True, "G3 meshes G4": False}   # crossed c = −1
+    along = {m.gears[0]: (m.plane, m.face_global, round(m.z_front, 6)) for m in plan.motion.mates if m.kind == "along"}
+    assert along == {"G1": ("front", "G1 Face Z", 2.0), "G2": ("right", "G2 Face X", -8.0),
+                     "G4": ("top", "G4 Apex Y", 84.852814)}
+    assert plan.assembly.check() == []
+
+
+@pytest.mark.parametrize("change, said", [
+    (lambda s: replace(s, gears=(replace(s.gears[0], at="0.4"),) + s.gears[1:]),
+     "Meshes!A2: G1 and G2 are bevel gears whose cone tips are 0.4 mm apart; they mesh only with their tips "
+     "together. G2's At would be 60 to put its tip on G1's."),
+    (lambda s: replace(s, shafts=(replace(s.shafts[0], y="3.2"),) + s.shafts[1:]),
+     "Meshes!A2: G1 and G2 are bevel gears whose cone tips are 3.2 mm apart; they mesh only with their tips "
+     "together, and their shafts do not meet: they pass 3.2 mm apart."),
+    (lambda s: replace(s, gears=(replace(s.gears[0], kind="spur", bore="8"), replace(s.gears[1], kind="spur",
+                                                                                   bore="8")) + s.gears[2:]),
+     "Meshes!A2: G1 and G2 are spur gears on shafts at 90°; across an angle only bevel gears (on shafts that meet) "
+     "and helical gears (on crossed shafts) mesh."),
+])
+def test_what_a_bevel_stage_cannot_be_is_said_at_its_mesh(tmp_path, turned_findings, change, said):
+    a = assessed(tmp_path, change(bevel_reducer()))
+    assert said in [d.message for d in a.report.diagnostics]
+
+
+def test_a_crossed_pair_off_its_distance_or_its_crossing_says_so(tmp_path, turned_findings):
+    spec = crossed_slant()
+    far = replace(spec, shafts=(spec.shafts[0], replace(spec.shafts[1], y="84.9")) + spec.shafts[2:])
+    said = [d.message for d in assessed(tmp_path, far, "F.xlsx").report.diagnostics if d.is_error]
+    assert ("Meshes!A2: G1 and G2 are 84.9 mm apart where their shafts pass closest; their teeth make 84.853 "
+            "(+0.047 mm). Check the place of S2 (Shafts row 3); a shaft at an angle is best placed by formula.") in said
+    left = replace(spec, gears=(spec.gears[0], replace(spec.gears[1], hand="left")) + spec.gears[2:])
+    said = [d.message for d in assessed(tmp_path, left, "L.xlsx").report.diagnostics if d.is_error]
+    assert any("right- and left-handed at 45° and 45°, so their shafts must cross at 0°" in m for m in said)
+    two = replace(spec, gears=(spec.gears[0], replace(spec.gears[1], profile_shift="0.2")) + spec.gears[2:])
+    said = [d.message for d in assessed(tmp_path, two, "S.xlsx").report.diagnostics if d.is_error]
+    assert ("Meshes!A2: G1 and G2 are crossed helical gears with profile shift; crossed gears are built without it: "
+            "set both shifts to 0.") in said

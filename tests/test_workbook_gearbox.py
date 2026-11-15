@@ -1370,22 +1370,27 @@ def test_a_turning_plan_carries_its_motion_plan_and_the_mated_assembly(turning):
                                                         plan.assembly_template, plan.assembly_path)
     assert plan.assembly.check() == [] and swbuild.is_mated(plan.assembly)
     kwargs = plan.build_kwargs()
-    assert set(kwargs) == {"parts", "reuse", "layout", "assembly", "gears", "internal"}
-    assert kwargs["assembly"] is plan.assembly and kwargs["internal"] == () and plan.ring_meshes == ()
+    assert set(kwargs) == {"parts", "reuse", "layout", "assembly", "gears", "senses"}
+    # W6-INTERFACES §7.2: same sense (k > 0) is sense == -1; the 12 : 1's meshes are all outside, so all False.
+    assert kwargs["assembly"] is plan.assembly and kwargs["senses"] == {"G1 meshes G2": False, "G3 meshes G4": False}
     assert gearbox.journal(plan)[-1].path == plan.assembly_path
 
 
-def test_a_turning_plan_names_its_gear_mates_inside_a_ring_and_a_static_one_passes_nothing(turning, monkeypatch):
-    """Package A's read-back (a0d5fad): the build is told which gear mates mesh inside a ring."""
+def test_a_turning_plan_tells_the_build_each_gear_mates_sense_and_a_static_one_passes_nothing(turning, monkeypatch):
+    """W6 (§7.2): ``senses[name] = (sense == -1)``, k > 0. Risky_Placements: G1–G2 and G3–G4 sit on shafts facing
+    opposite ways (k > 0, same sense), and its ring mesh G5–G6, a pinion on Z+ in a ring on Z-, turns them
+    opposite ways about their own axes (k < 0)."""
     from test_workbook_demo_fixtures import assessed as windows
     _, risky = windows("Risky_Placements.xlsx")
     plan = gearbox.plan_gearbox(risky, None, exists=lambda p: False, read_sidecar=lambda p: None)
-    assert plan.ring_meshes == ("G5 meshes G6",) and plan.build_kwargs()["internal"] == ("G5 meshes G6",)
+    senses = {m.name: m.sense for m in plan.motion.mates if m.kind == "mesh"}
+    assert plan.mate_senses == {name: sense == -1 for name, sense in senses.items()}
+    assert plan.build_kwargs()["senses"] == {"G1 meshes G2": True, "G3 meshes G4": True, "G5 meshes G6": False}
     monkeypatch.setattr(findings, "MOTION_ROUTE", None)
     static = plan_for(assessed(), None, Disk())
-    assert static.motion is None and static.ring_meshes == () and "internal" not in static.build_kwargs()
+    assert static.motion is None and static.mate_senses == {} and "senses" not in static.build_kwargs()
     parts = plan_for(assessed(), None, Disk(), parts_only=True)
-    assert "internal" not in parts.build_kwargs()
+    assert "senses" not in parts.build_kwargs()
 
 
 def test_a_w5_finding_missing_plans_w4s_static_assembly_and_says_why(turning, monkeypatch):

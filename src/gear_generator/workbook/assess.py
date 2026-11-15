@@ -31,7 +31,7 @@ from dataclasses import dataclass, field
 from typing import List, Sequence, Tuple
 
 from ..gears.base import Diagnostic
-from . import build, checks, fixes
+from . import build, checks, fixes, motion
 from .build import PartsPlan
 from .checks import Report
 from .fixes import Fix
@@ -108,7 +108,8 @@ class Assessment:
             one = len(missing) == 1
             return (f"{', '.join(missing)} {'is' if one else 'are'} not placed, so the assembly would be built "
                     f"without {'it' if one else 'them'}; see Checks.")
-        return ""
+        # W6 (D16): a turned mesh the probes have not shown a gear mate's sense for is refused before Build.
+        return motion.turned_refusal(self.report)
 
 
 def build_refusal(parts: PartsPlan, diagnostics: Sequence[Diagnostic], folder: str) -> str:

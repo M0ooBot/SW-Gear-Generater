@@ -12,7 +12,7 @@ not errors: :func:`workbook.build.later_rows` says each one, and Build refuses i
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from itertools import combinations
 from typing import Dict, List, Optional, Tuple
 
@@ -71,12 +71,12 @@ def check(spec: GearboxSpec, skip_gears=()) -> Report:
     """Every gearbox-level check for what this phase lays out. ``skip_gears``: gears with errors of their own."""
     report = Report()
     report.layout = lay = geometry.layout(spec, skip_gears)
-    report.motion = kinematics.solve(spec, skip_gears)
     if lay.later:
         # A carrier or a turned axis: nothing here is checked until its phase. Each such row is said, at its
         # cell, by workbook.build.later_rows, with the rows Build refuses; the report says it was not checked.
         report.unchecked = lay.later[0]
         report.worked_out_as = "Not laid out yet: " + lay.later[0].split(":")[0]
+        report.motion = kinematics.solve(spec, skip_gears)
         return report
     # From here every shaft is on the frame along Z+ or Z-: kinematics.solve has worked out what it can
     # (its ``later`` is set only for the layouts returned above).
@@ -92,12 +92,26 @@ def check(spec: GearboxSpec, skip_gears=()) -> Report:
         if a is None or b is None:
             continue
         where = spec.cell("Meshes", mesh.row, "a")
-        _check_mesh(report, spec, mesh, a, b, where)
+        try:
+            laid = geometry.mesh_geometry(a, b)
+        except (ValueError, ArithmeticError, AttributeError) as exc:
+            _error(report, where, f"{a.gear} and {b.gear}: {exc}")
+            continue
+        if laid.kind == geometry.PARALLEL:
+            _check_mesh(report, spec, mesh, a, b, where)
+            needed = report.centres.get((a.gear, b.gear), (laid.needed, laid.placed))[0]
+            report.meshes[(mesh.a, mesh.b)] = replace(laid, needed=needed)
+        else:
+            if _check_turned(report, spec, a, b, laid, where):
+                report.meshes[(mesh.a, mesh.b)] = laid
 
+    report.motion = kinematics.solve(spec, skip_gears, senses={key: m.sense for key, m in report.meshes.items()
+                                                               if not m.problem})
     _check_clearances(report, spec, placed, listed)
     _check_shafts(report, spec, placed)
+    _check_turned_clearances(report, spec, placed, listed)
     _check_motion(report, spec)
-    report.theta, conflicts = geometry.phases(spec, placed, with_conflicts=True)
+    report.theta, conflicts = geometry.phases(spec, placed, with_conflicts=True, meshes_=report.meshes)
     for gear_id, other in conflicts:
         _warning(report, spec.cell("Gears", gears[gear_id].row, "id"),
                  f"{gear_id}'s teeth cannot sit in the spaces of every gear it meshes with at once (the turn "
@@ -116,6 +130,10 @@ def _check_mesh(report: Report, spec: GearboxSpec, mesh, a: Placed, b: Placed, w
     kind_a, kind_b = ga.kind_word(), gb.kind_word()
     if kind_a != kind_b:
         _error(report, where, f"{a.gear} is {kind_a} and {b.gear} is {kind_b}; meshing gears are the same kind.")
+        return
+    if kind_a == "bevel":
+        _error(report, where, f"{a.gear} and {b.gear} are bevel gears on parallel shafts; bevel gears mesh across "
+                              "shafts at an angle.")
         return
     if abs(a.module - b.module) > 1e-9:
         _error(report, where, f"{a.gear} has module {_n(a.module)} and {b.gear} {_n(b.module)}; meshing gears "
@@ -269,8 +287,8 @@ def _check_clearances(report: Report, spec: GearboxSpec, placed: Dict[str, Place
     """Gears on different shafts that do not mesh, and share some height: they must not touch."""
     gears = {g.id: g for g in spec.gears}
     for a, b in combinations(placed.values(), 2):
-        if a.shaft == b.shaft or frozenset((a.gear, b.gear)) in listed:
-            continue
+        if a.shaft == b.shaft or frozenset((a.gear, b.gear)) in listed or not geometry.parallel(a, b):
+            continue                                   # across an angle: _check_turned_clearances
         if geometry.faces_overlap(a, b) <= 0:
             continue
         d = geometry.centre_distance(a, b)
@@ -302,6 +320,139 @@ def _check_clearances(report: Report, spec: GearboxSpec, placed: Dict[str, Place
                                   f"{_n(a.outer_radius + b.outer_radius)} mm and less than {_n(gap)} mm to spare.")
 
 
+def _hands(a: Placed, b: Placed) -> str:
+    word = {1: "right", -1: "left"}
+    beta_a, beta_b = _n(a.derived.helix_angle_deg), _n(b.derived.helix_angle_deg)
+    if a.hand_sign == b.hand_sign:
+        return f"both {word[a.hand_sign]}-handed at {beta_a}° and {beta_b}°"
+    return f"{word[a.hand_sign]}- and {word[b.hand_sign]}-handed at {beta_a}° and {beta_b}°"
+
+
+def _check_turned(report: Report, spec: GearboxSpec, a: Placed, b: Placed, laid: "geometry.MeshGeometry",
+                  where: str) -> bool:
+    """A mesh across an angle (W6-PLAN §2.5, the sentences of §2.9). Whether it may go into the speeds and phases
+    (no error that leaves its geometry meaningless)."""
+    gears = {g.id: g for g in spec.gears}
+    ga, gb = gears[a.gear], gears[b.gear]
+    kind_a, kind_b = ga.kind_word(), gb.kind_word()
+    angle = _n(laid.shaft_angle)
+    for ring in (a, b):
+        if ring.internal:
+            _error(report, where, f"{ring.gear} is a ring, and a ring meshes only on a parallel shaft.")
+            return False
+    if kind_a != kind_b:
+        _error(report, where, f"{a.gear} is {kind_a} and {b.gear} is {kind_b}; meshing gears are the same kind.")
+        return False
+    if kind_a == "herringbone":
+        _error(report, where, f"{a.gear} and {b.gear} are herringbone gears on crossed shafts; only helical gears mesh "
+                              "on crossed shafts.")
+        return False
+    if kind_a not in ("bevel", "helical"):
+        _error(report, where, f"{a.gear} and {b.gear} are {kind_a} gears on shafts at {angle}°; across an angle only "
+                              "bevel gears (on shafts that meet) and helical gears (on crossed shafts) mesh.")
+        return False
+    if abs(a.module - b.module) > 1e-9:
+        _error(report, where, f"{a.gear} has module {_n(a.module)} and {b.gear} {_n(b.module)}; meshing gears "
+                              "share one module.")
+        return False
+    pa_a = float(ga.pressure_angle or spec.box.pressure_angle_text())
+    pa_b = float(gb.pressure_angle or spec.box.pressure_angle_text())
+    if abs(pa_a - pa_b) > 1e-9:
+        _error(report, where, f"{a.gear}'s pressure angle is {_n(pa_a)}° and {b.gear}'s {_n(pa_b)}°; meshing "
+                              "gears share one.")
+        return False
+    if kind_a == "bevel":
+        if laid.placed > CENTRE_TOLERANCE:
+            shafts = {x.id: x for x in spec.shafts}
+            point = geometry._add(b.centre, b.axis, -float(gb.at or 0))
+            foot_a, foot_b = geometry.lines_closest(a.centre, a.axis, b.centre, b.axis)
+            apart = geometry._norm(geometry._sub(foot_b, foot_a))
+            text = (f"{a.gear} and {b.gear} are bevel gears whose cone tips are {_n(laid.placed)} mm apart; they mesh "
+                    "only with their tips together")
+            if apart > CENTRE_TOLERANCE:
+                text += f", and their shafts do not meet: they pass {_n(apart)} mm apart."
+            else:
+                at = geometry._dot(geometry._sub(a.centre, point), b.axis)
+                text += f". {b.gear}'s At would be {_n(at)} to put its tip on {a.gear}'s."
+            del shafts
+            _error(report, where, text)
+            return False
+        return True
+    # crossed helical gears
+    if laid.problem == "meet":
+        _error(report, where, f"{a.gear} and {b.gear} are helical gears on shafts that meet; across an angle helical "
+                              "gears mesh only on crossed shafts that pass apart, and gears on shafts that meet are "
+                              "bevel gears.")
+        return False
+    if getattr(a.derived, "shift", 0.0) or getattr(b.derived, "shift", 0.0):
+        _error(report, where, f"{a.gear} and {b.gear} are crossed helical gears with profile shift; crossed gears are "
+                              "built without it: set both shifts to 0.")
+        return False
+    tilt = geometry._reduce_line(-(a.hand_sign * a.derived.helix_angle_deg + b.hand_sign * b.derived.helix_angle_deg))
+    lines = min(laid.shaft_angle, 180.0 - laid.shaft_angle)
+    foot_a, foot_b = geometry.lines_closest(a.centre, a.axis, b.centre, b.axis)
+    e = geometry._unit(geometry._sub(foot_b, foot_a))
+    turned = geometry.signed_crossing(a.axis, b.axis, e)
+    if abs(abs(tilt) - lines) > 1e-6:
+        _error(report, where, f"{a.gear} and {b.gear} are {_hands(a, b)}, so their shafts must cross at "
+                              f"{_n(abs(tilt))}°; they cross at {_n(lines)}°.")
+        return False
+    if abs(tilt - turned) > 1e-6:
+        _error(report, where, f"{a.gear} and {b.gear} are {_hands(a, b)}, so, seen along the line from {a.gear} to "
+                              f"{b.gear}, {b.gear}'s shaft must be turned {_n(tilt)}° from {a.gear}'s; it is turned "
+                              f"{_n(turned)}°.".replace("-", "\u2212"))
+        return False
+    ok = True
+    off = laid.placed - laid.needed
+    if abs(off) > CENTRE_TOLERANCE:
+        shafts = {x.id: x for x in spec.shafts}
+        _error(report, where, f"{a.gear} and {b.gear} are {_n(laid.placed)} mm apart where their shafts pass closest; "
+                              f"their teeth make {_n(laid.needed)} ({'+' if off > 0 else '−'}{_n(abs(off))} mm). Check "
+                              f"the place of {b.shaft} (Shafts row {shafts[b.shaft].row}); a shaft at an angle is best "
+                              "placed by formula.")
+        ok = False
+    for gear, other in ((a, b), (b, a)):
+        height = geometry._dot(geometry._sub(laid.contact, gear.centre), gear.axis)
+        if abs(height) > gear.face / 2.0 + 1e-9:
+            _error(report, where, f"{gear.gear}'s face does not reach where {other.gear} touches it: that point is "
+                                  f"{_n(abs(height))} mm along {gear.shaft} from {gear.gear}'s middle, and its face is "
+                                  f"{_n(gear.face)} mm wide.")
+            ok = False
+    return ok
+
+
+def _check_turned_clearances(report: Report, spec: GearboxSpec, placed: Dict[str, Placed], listed) -> None:
+    """Gears, and shafts as the span of their gears, across an angle (W6-PLAN §2.5, D8): their true bounding
+    cylinders within ``CLASH_GAP`` × module are a warning, never an error — the bound over-reaches a toothed
+    blank, and the build's interference check is the judge. A bevel gear's partner shaft is exempt."""
+    gears = {g.id: g for g in spec.gears}
+    partners = {(m.a, m.b) for m in spec.meshes} | {(m.b, m.a) for m in spec.meshes}
+    for a, b in combinations(placed.values(), 2):
+        if a.shaft == b.shaft or geometry.parallel(a, b) or frozenset((a.gear, b.gear)) in listed:
+            continue
+        gap = geometry.cylinder_gap(a, b)
+        if gap < CLASH_GAP * max(a.module, b.module):
+            where = spec.cell("Gears", gears[b.gear].row, "shaft")
+            _warning(report, where, f"{a.gear} and {b.gear} may touch: on shafts at {_n(geometry.angle_between_axes(a, b))}°, "
+                                    f"their blanks come within {_n(gap)} mm of each other; the build's interference "
+                                    "check says for certain.")
+    shafts = sorted({p.shaft for p in placed.values()})
+    for shaft in shafts:
+        span = geometry.shaft_span(placed, shaft)
+        mine = [p for p in placed.values() if p.shaft == shaft]
+        for g in placed.values():
+            if g.shaft == shaft or geometry.parallel(g, mine[0]):
+                continue
+            if g.bevel and any((g.gear, m.gear) in partners and m.bevel for m in mine):
+                continue                               # the partner's axis runs through every bevel blank's apex region
+            gap = geometry.solid_gap(span, geometry.bounding_cylinder(g))
+            if gap < CLASH_GAP * g.module:
+                where = spec.cell("Gears", gears[g.gear].row, "shaft")
+                _warning(report, where, f"{shaft} may touch {g.gear}: on shafts at "
+                                        f"{_n(geometry.angle_between_axes(g, mine[0]))}°, the shaft comes within "
+                                        f"{_n(gap)} mm of its blank; the build's interference check says for certain.")
+
+
 def _check_shafts(report: Report, spec: GearboxSpec, placed: Dict[str, Placed]) -> None:
     gears_on: Dict[str, List[Placed]] = {}
     for p in placed.values():
@@ -312,8 +463,8 @@ def _check_shafts(report: Report, spec: GearboxSpec, placed: Dict[str, Placed]) 
     # A gear whose metal passes over another shaft's line, within the height that shaft's gears span.
     for g in placed.values():
         for shaft_id, on in gears_on.items():
-            if shaft_id == g.shaft:
-                continue
+            if shaft_id == g.shaft or not geometry.parallel(g, on[0]):
+                continue                               # a shaft across an angle: _check_turned_clearances
             lo = min(p.z_range[0] for p in on)
             hi = max(p.z_range[1] for p in on)
             if min(g.z_range[1], hi) - max(g.z_range[0], lo) <= 0:
@@ -423,9 +574,16 @@ def overall_ratio(spec: GearboxSpec, report: Report) -> Tuple[Optional[float], s
 
 def _worked_out_as(spec: GearboxSpec, report: Report) -> str:
     """``Parallel train · 2 meshes · 12.000 : 1`` — what the rows add up to."""
-    meshes = len(report.centres)
+    kinds = [m.kind for m in report.meshes.values()]
+    meshes = len(report.meshes) if report.meshes else len(report.centres)
     pieces = ["Parallel train", f"{meshes} mesh{'es' if meshes != 1 else ''}"]
-    if any(p.internal for p in report.layout.placed.values()):
+    turned = [k for k in (geometry.CROSSED, geometry.BEVEL) if k in kinds]
+    if turned:
+        words = [k.capitalize() if i == 0 else k for i, k in enumerate(turned)]
+        if geometry.PARALLEL in kinds:
+            words.append("parallel")
+        pieces[0] = " and ".join(words) + " train" if len(words) > 1 else words[0] + " train"
+    elif any(p.internal for p in report.layout.placed.values()):
         pieces[0] = "Parallel train with a ring"
     motion = report.motion
     ratio, _, why = overall_ratio(spec, report)
@@ -434,6 +592,12 @@ def _worked_out_as(spec: GearboxSpec, report: Report) -> str:
     if ratio is not None:
         ends = _ends(spec, motion)
         pieces.append(f"{ratio:.3f} : 1")
-        same = motion.turns(ends[0].id) == motion.turns(ends[1].id)   # as seen from +Z, whatever each axis
-        pieces.append("output turns the same way" if same else "output turns the other way")
+        placed = report.layout.placed
+        first = next((p for p in placed.values() if p.shaft == ends[0].id), None)
+        last = next((p for p in placed.values() if p.shaft == ends[1].id), None)
+        if first is not None and last is not None and not geometry.parallel(first, last):
+            pieces.append(f"output at {_n(geometry.angle_between_axes(first, last))}° to the input")
+        else:
+            same = motion.turns(ends[0].id) == motion.turns(ends[1].id)   # seen from the shared family's + end
+            pieces.append("output turns the same way" if same else "output turns the other way")
     return " · ".join(pieces)

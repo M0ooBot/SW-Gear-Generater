@@ -375,7 +375,7 @@ def classify(record: Optional[LinkRecord], a: Assessment, *,
                 if why:
                     structural.append(why)
             if (any(abs(p - q) > MOVE_TOLERANCE for p, q in ((old.x, shaft.x), (old.y, shaft.y), (old.z, shaft.z)))
-                    or old.sigma != shaft.sigma):
+                    or _direction(old) != _direction(shaft)):
                 moved.append(shaft.shaft)
         listed = lambda pairs: {frozenset(p) for p in pairs}           # noqa: E731
         was_meshed, meshed = listed(tuple(m) for m in box.meshes), listed((m.a, m.b) for m in spec.meshes)
@@ -451,6 +451,17 @@ _REBUILD = "so the gearbox needs building again"
 
 def _axis_word(sigma: int) -> str:
     return "Z+" if sigma > 0 else "Z-"
+
+
+def _direction(shaft: Any) -> Tuple[float, ...]:
+    """A shaft's direction (a ``ShaftLayout`` or a recorded ``ShaftEntry``), as compared (W6-INTERFACES §7.7: never
+    ``sigma`` or the ``axis`` text, which are for sentences)."""
+    direction = tuple(float(v) for v in (getattr(shaft, "direction", None) or ()))
+    return direction or (0.0, 0.0, float(getattr(shaft, "sigma", 1) or 1))
+
+
+def _axis_name(shaft: Any) -> str:
+    return getattr(shaft, "axis", "") or _axis_word(int(_direction(shaft)[2] or 1))
 
 
 def _plural(items: Sequence[str], one: str, many: str) -> str:
@@ -619,13 +630,12 @@ def _turning(box: GearboxRecord, entries: Sequence[PartEntry], a: Assessment,
     flipped = set()
     for m in of_kind[motion.AXIS]:
         old, new = before.get(m.shaft), now.get(m.shaft)
-        if old is None or new is None or old.sigma == new.sigma:
+        if old is None or new is None or _direction(old) == _direction(new):
             continue
         flipped.add(m.shaft)
         told.update(g for g, s in built_on.items() if s == m.shaft)
-        out.structural.append(f"{m.shaft}'s axis is now {_axis_word(new.sigma)} where it was built "
-                              f"{_axis_word(old.sigma)}: the mate {m.name} keeps the direction it was made with, "
-                              f"{_REBUILD}.")
+        out.structural.append(f"{m.shaft}'s axis is now {_axis_name(new)} where it was built {_axis_name(old)}: the "
+                              f"layout's axis and the mates on it keep the direction they were made with, {_REBUILD}.")
 
     for gear, shaft in built_on.items():
         row = gear_of.get(gear)

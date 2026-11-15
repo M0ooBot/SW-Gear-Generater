@@ -79,8 +79,6 @@ def test_a_shaft_record_mirrors_a_shaft_layout_field_for_field():
 
 def test_shafts_a_later_phase_lays_out_are_refused_with_a_sentence():
     spec = reducer()
-    with pytest.raises(ValueError, match=r"S3's axis is X\+: .* until phase W6\."):
-        shafts_of(with_shafts(spec.shafts[0], spec.shafts[1], replace(spec.shafts[2], axis="X+")))
     with pytest.raises(ValueError, match="P is mounted on S2: .* phase W7"):
         shafts_of(with_shafts(*spec.shafts, Shaft("P", "S2", "10", "0")))
 
@@ -385,3 +383,33 @@ def test_kind_for_every_case_above_is_built_by_a_plan():
 def test_checks_agree_the_cases_are_clean():
     assert [d for d in checks.check(outside_pair("helical", ("Z+", "Z-"), ("right", "left"), beta="20")).diagnostics
             if d.is_error] == []
+
+
+# -- W6: turned axes in the layout part (W6-PLAN §2.2, D3, D4) ------------------------------------------------
+
+
+def test_an_x_shaft_is_on_planes_from_top_and_front_and_a_slant_is_a_fixed_line():
+    from test_workbook_turned import bevel_reducer, crossed_slant
+    a = {s.shaft: s for s in shafts_of(bevel_reducer())}
+    s1 = a["S1"]
+    assert (s1.direction, s1.axis, s1.sigma) == ((1.0, 0.0, 0.0), "X+", 0)
+    assert (s1.x_side, s1.y_side, s1.z_side, s1.z_global, s1.z_plane) == ("", layout.BASE, layout.PLUS, "S1 Z",
+                                                                         "S1 Z Plane")
+    assert (a["S3"].x_global, a["S3"].x_side, a["S3"].z_side) == ("S3 X", layout.MINUS, "")
+    assert [(g.name, g.expression) for g in layout.layout_globals(list(a.values()))] == [("S1 Z", "60"),
+                                                                                        ("S3 X", "-68")]
+    plan = layout.layout_plan(list(a.values()), "", "C:\\P\\L.SLDPRT")
+    assert plan.check() == []
+    s1_plane = next(op for op in plan.ops if isinstance(op, RefPlane) and op.name == "S1 Z Plane")
+    assert (s1_plane.plane, s1_plane.offset, s1_plane.flip) == (layout.FRONT, 60.0, False)   # unflipped is +Z
+    assert next(op for op in plan.ops if isinstance(op, Axis) and op.name == "S1 Axis").planes == (layout.TOP, "z1")
+    b = {s.shaft: s for s in shafts_of(crossed_slant())}
+    s3 = b["S3"]
+    assert (s3.line, s3.sigma, s3.z_global, s3.x_global) == ("S3 Line", 0, "", "")
+    assert s3.direction == pytest.approx((-0.5, math.sqrt(3) / 2, 0.0))
+    assert s3.axis == "-0.5, 0.866025404, 0"                         # a vector Axis in sentences (§7.7)
+    plan = layout.layout_plan(list(b.values()), "", "C:\\P\\L.SLDPRT")
+    from gear_generator.gears.base import LineAxis
+    line = next(op for op in plan.ops if isinstance(op, LineAxis))
+    assert (line.name, line.point, line.sketch) == ("S3 Axis", (-110.0, 84.852814, 8.0), "S3 Line")
+    assert plan.check() == [] and "S3 Line" in layout.layout_features(list(b.values()))

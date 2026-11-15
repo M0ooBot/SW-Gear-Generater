@@ -52,8 +52,8 @@ from typing import Any, Dict, List, Sequence, Tuple
 
 from .. import findings
 from ..gears import equations
-from ..gears.base import (AddComponent, AddGlobal, Axis, BuildPlan, Fix, GlobalVariable, LinkDimension, NewAssembly,
-                          NewPart, Place, Rebuild, RefPlane, SaveAs, Unfix)
+from ..gears.base import (AddComponent, AddGlobal, Axis, BuildPlan, Fix, GlobalVariable, LineAxis, LinkDimension,
+                          NewAssembly, NewPart, Place, Rebuild, RefPlane, SaveAs, Unfix)
 from ..spec import sanitize_stem
 from .checks import Report
 from . import geometry
@@ -174,30 +174,54 @@ def _number(text: str, what: str) -> float:
     return value
 
 
+# Which coordinates a cardinal shaft's planes hold (W6-PLAN §2.2, D3): the two square to its axis.
+_PLANE_COORDINATES = {0: ("y", "z"), 1: ("x", "z"), 2: ("x", "y")}
+
+
 def shaft_layouts(spec: GearboxSpec) -> Tuple[ShaftLayout, ...]:
-    """Every shaft, in Shafts-sheet order. Called only on a spec that passed ``Assessment.lay_out_refusal()``,
-    so every shaft is on the frame with axis Z+ or Z−; anything else raises ValueError with a sentence."""
+    """Every shaft, in Shafts-sheet order (W6-PLAN §2.2). A cardinal shaft is where two planes cross, each offset
+    from the base plane square to one of the two coordinates square to its axis (Z±: X from Right, Y from Top, as
+    W4; X±: Y from Top, Z from Front; Y±: X from Right, Z from Front), a coordinate at 0 being the base plane itself;
+    a slanted shaft is a fixed line in a 3D sketch (``line``, D4). The coordinate along the axis has no plane.
+    ``sigma`` is ±1 for Z± and 0 for any other axis. A carrier, or an Axis that does not read, raises ValueError
+    with a sentence."""
+    from .geometry import DIRECTIONS, axis_vector
+    words = {v: k for k, v in DIRECTIONS.items()}
     out: List[ShaftLayout] = []
     for shaft in spec.shafts:
         if shaft.mount() != FRAME:
             raise ValueError(f"{shaft.id} is mounted on {shaft.mount()}: the layout part holds only shafts held by "
                              "the frame until phase W7.")
-        axis = shaft.axis or "Z+"
-        if axis not in AXES:
-            raise ValueError(f"{shaft.id}'s axis is {axis}: the layout part holds only axes along Z+ or Z- until "
-                             "phase W6.")
+        direction = axis_vector(shaft.axis)
+        word = words.get(direction, "")
         x = _number(shaft.x, f"{shaft.id}'s X")
         y = _number(shaft.y, f"{shaft.id}'s Y")
         z = _number(shaft.z, f"{shaft.id}'s Z")
-        x_side, y_side = side(x), side(y)
+        values = {"x": x, "y": y, "z": z}
+        fields: Dict[str, str] = {}
+        for c in "xyz":
+            fields.update({f"{c}_side": "", f"{c}_global": "", f"{c}_plane": ""})
+        line = ""
+        if word:
+            for c in _PLANE_COORDINATES[[abs(v) for v in direction].index(1.0)]:
+                where = side(values[c])
+                fields[f"{c}_side"] = where
+                if where != BASE:
+                    fields[f"{c}_global"] = f"{shaft.id} {c.upper()}"
+                    fields[f"{c}_plane"] = f"{shaft.id} {c.upper()} Plane"
+        else:
+            line = f"{shaft.id} Line"
         out.append(ShaftLayout(
-            shaft=shaft.id, x=x, y=y, z=z, sigma=AXES[axis], x_side=x_side, y_side=y_side,
-            direction=(0.0, 0.0, float(AXES[axis])), axis=axis,
-            x_global="" if x_side == BASE else f"{shaft.id} X", y_global="" if y_side == BASE else f"{shaft.id} Y",
-            x_plane="" if x_side == BASE else f"{shaft.id} X Plane",
-            y_plane="" if y_side == BASE else f"{shaft.id} Y Plane",
-            axis_name=f"{shaft.id} Axis"))
+            shaft=shaft.id, x=x, y=y, z=z, sigma=int(direction[2]) if word in ("Z+", "Z-") else 0,
+            direction=direction, axis=word or axis_text(direction), axis_name=f"{shaft.id} Axis", line=line,
+            **fields))
     return tuple(out)
+
+
+def axis_text(direction: Sequence[float]) -> str:
+    """A slanted Axis as the record and the sentences keep it: ``"dx, dy, dz"`` to nine decimals (a cardinal
+    direction is its word, from ``shaft_layouts``)."""
+    return ", ".join(equations.literal(round(float(v), 9)) for v in direction)
 
 
 def _negated_link() -> Any:
@@ -216,7 +240,7 @@ def layout_globals(shafts: Sequence[ShaftLayout]) -> Tuple[GlobalVariable, ...]:
     signed = _negated_link() is not None
     out: List[GlobalVariable] = []
     for s in shafts:
-        for name, value in ((s.x_global, s.x), (s.y_global, s.y)):
+        for name, value in ((s.x_global, s.x), (s.y_global, s.y), (s.z_global, s.z)):
             if name:
                 out.append(GlobalVariable(name, equations.literal(value if signed else abs(value))))
     return tuple(out)
@@ -234,8 +258,16 @@ def link_expression(global_name: str, plus: bool) -> str:
 
 
 def flip_for(base: str, value: float) -> bool:
-    """The ``RefPlane.flip`` that puts a plane offset from ``base`` (``"right"`` or ``"top"``) on ``value``'s side,
-    from ``findings.LAYOUT_PLUS_FLIP``."""
+    """The ``RefPlane.flip`` that puts a plane offset from ``base`` (``"right"``, ``"top"`` or, W6, ``"front"``) on
+    ``value``'s side, from ``findings.LAYOUT_PLUS_FLIP`` (Front: ``findings.REF_PLANE_UNFLIPPED_IS_PLUS_Z``, probe
+    ``ref_plane_offset``: unflipped is the plus side)."""
+    if base == "front":
+        unflipped_plus = _finding("REF_PLANE_UNFLIPPED_IS_PLUS_Z")
+        if unflipped_plus is _MISSING or unflipped_plus is None:
+            raise _not_settled("REF_PLANE_UNFLIPPED_IS_PLUS_Z", "which flip puts a plane offset from Front on the "
+                               "plus side")
+        plus = not bool(unflipped_plus)
+        return plus if value > 0 else not plus
     flips = _finding("LAYOUT_PLUS_FLIP")
     if flips is _MISSING or flips is None:
         raise _not_settled("LAYOUT_PLUS_FLIP", "which flip puts a plane on the plus side")
@@ -263,7 +295,7 @@ def layout_features(shafts: Sequence[ShaftLayout]) -> Tuple[str, ...]:
     (``swbuild.DocumentValues.features``) beside its globals."""
     out: List[str] = []
     for s in shafts:
-        out.extend(name for name in (s.x_plane, s.y_plane) if name)
+        out.extend(name for name in (s.x_plane, s.y_plane, s.z_plane, s.line) if name)
         out.append(s.axis_name)
     return tuple(out)
 
@@ -278,9 +310,17 @@ def layout_plan(shafts: Sequence[ShaftLayout], template: str, path: str) -> Buil
     ops: List[Any] = [NewPart(template)]
     ops.extend(AddGlobal(g.name, g.expression) for g in layout_globals(shafts))
     for i, s in enumerate(shafts, 1):
+        if s.line:
+            # A slanted shaft (D4): a fixed line from its point along its direction, the axis made on it.
+            ops.append(LineAxis(f"axis{i}", s.axis_name, (s.x, s.y, s.z), tuple(float(v) for v in s.direction)))
+            continue
         refs = {}
-        for axis, base, base_plane, value, name, plane in (("x", "right", RIGHT, s.x, s.x_global, s.x_plane),
-                                                           ("y", "top", TOP, s.y, s.y_global, s.y_plane)):
+        for axis, base, base_plane, value, name, plane, used in (
+                ("x", "right", RIGHT, s.x, s.x_global, s.x_plane, s.x_side),
+                ("y", "top", TOP, s.y, s.y_global, s.y_plane, s.y_side),
+                ("z", "front", FRONT, s.z, s.z_global, s.z_plane, s.z_side)):
+            if not used:
+                continue                                # the coordinate along the axis: no plane
             if not plane:
                 refs[axis] = base_plane                 # the base plane itself (AXIS_THROUGH_BASE_PLANE)
                 continue
@@ -288,7 +328,11 @@ def layout_plan(shafts: Sequence[ShaftLayout], template: str, path: str) -> Buil
             ops.append(RefPlane(ident, plane, base_plane, abs(value), flip_for(base, value)))
             ops.append(LinkDimension(f"Offset@{plane}", link_expression(name, value > 0)))
             refs[axis] = ident
-        planes = (refs["y"], refs["x"]) if top_first else (refs["x"], refs["y"])
+        if "z" not in refs:                             # a Z shaft, as W4 makes it
+            planes = (refs["y"], refs["x"]) if top_first else (refs["x"], refs["y"])
+        else:                                           # its direction is not used: the axis mate keeps closest
+            first = refs["y"] if "y" in refs else refs["x"]
+            planes = (first, refs["z"])
         ops.append(Axis(f"axis{i}", s.axis_name, planes))
     ops.append(Rebuild())
     ops.append(SaveAs(path))

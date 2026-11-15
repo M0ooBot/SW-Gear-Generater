@@ -141,6 +141,28 @@ PLANES = (FRONT_PLANE, TOP_PLANE, RIGHT_PLANE)
 PLANE_COORDINATE = {FRONT_PLANE: "Z", TOP_PLANE: "Y", RIGHT_PLANE: "X"}     # the coordinate each plane's normal is
 
 
+_PLANE_INDEX = {RIGHT_PLANE: 0, TOP_PLANE: 1, FRONT_PLANE: 2}       # the plane's normal: +X, +Y, +Z (§7.6)
+_PLANE_REF = {FRONT_PLANE: 1, TOP_PLANE: 2, RIGHT_PLANE: 3}         # "layout:plane1|2|3"
+
+
+def along_plane(axis: Sequence[float]) -> str:
+    """The base plane an anchor on a shaft along ``axis`` is measured from (W6-PLAN §2.6, D5): Right for X±, Top for
+    Y±, Front for Z±, and for a slant the plane whose normal makes the smallest angle with it — a tie (``|a·n|``
+    equal to 1e-9) goes Right, then Top, then Front."""
+    weights = [abs(float(v)) for v in axis]
+    best = max(weights)
+    for plane, index in ((RIGHT_PLANE, 0), (TOP_PLANE, 1), (FRONT_PLANE, 2)):
+        if weights[index] >= best - 1e-9:
+            return plane
+    return FRONT_PLANE
+
+
+def _parallel_sense_of(a: Any, b: Any) -> int:
+    """W5's parallel ``c`` for two placed gears (one family) when ``report.meshes`` does not hold the mesh."""
+    same = sum(x * y for x, y in zip(a.axis, b.axis)) > 0
+    return (1 if same else -1) * (-1 if a.internal != b.internal else 1)
+
+
 def face_global(gear: str, plane: str = FRONT_PLANE, bevel: bool = False) -> str:
     """The assembly global an anchor's distance from its measuring plane is linked to (W6-PLAN §2.6, D5b), unquoted
     as ``GlobalVariable.name`` takes it: ``"<Gear> Face <X|Y|Z>"``, the coordinate square to ``plane`` (Right X, Top
@@ -322,11 +344,14 @@ def motion_plan(spec: GearboxSpec, report: Report, frames: Mapping[str, Frame]) 
         if anchor not in frames:
             raise ValueError(f"{anchor} is placed but has no frame, so it cannot be mated to {shaft.id}.")
         anchors[shaft.id] = anchor
-        z_front = float(frames[anchor].at[2])
+        plane = along_plane(placed[anchor].axis)
+        z_front = float(frames[anchor].at[_PLANE_INDEX[plane]])
+        bevel = bool(getattr(placed[anchor], "bevel", False))
         shaft_mates.append(MatePlan(mate_name(AXIS, (anchor,), shaft.id), AXIS, (anchor,), shaft.id))
         shaft_mates.append(MatePlan(mate_name(ALONG, (anchor,), shaft.id), ALONG, (anchor,), shaft.id,
-                                    face_global=face_global(anchor) if abs(z_front) >= layout.BASE_TOLERANCE else "",
-                                    z_front=z_front))
+                                    face_global=(face_global(anchor, plane, bevel)
+                                                 if abs(z_front) >= layout.BASE_TOLERANCE else ""),
+                                    z_front=z_front, plane=plane))
         for follower in on[shaft.id][1:]:
             shaft_mates.append(MatePlan(mate_name(LOCK, (anchor, follower)), LOCK, (anchor, follower)))
 
@@ -350,8 +375,10 @@ def motion_plan(spec: GearboxSpec, report: Report, frames: Mapping[str, Frame]) 
             continue
         parent[root(a.shaft)] = root(b.shaft)
         joined.update((a.shaft, b.shaft))
+        laid = report.meshes.get((mesh.a, mesh.b))
         meshes.append(MatePlan(mate_name(MESH, (mesh.a, mesh.b)), MESH, (mesh.a, mesh.b),
-                               ratio=(int(a.teeth), int(b.teeth))))
+                               ratio=(int(a.teeth), int(b.teeth)),
+                               sense=laid.sense if laid is not None else _parallel_sense_of(a, b)))
 
     trains: List[Tuple[str, ...]] = []
     seen: Set[str] = set()
@@ -420,13 +447,13 @@ def motion_assembly_plan(layout_path: str, components: Sequence[Tuple[str, str, 
             mates.append(Mate(ident, "coincident", f"{h}:{AXIS_NAME}", f"{lead}:{mate.shaft} Axis", name=mate.name))
         elif mate.kind == ALONG:
             h = handle(mate.gears[0], mate)
+            plane = f"{lead}:plane{_PLANE_REF[mate.plane]}"
             if mate.face_global:
                 globals_.append(AddGlobal(mate.face_global, equations.literal(round(abs(mate.z_front), 9))))
-                mates.append(Mate(ident, "point distance", f"{h}:origin", f"{lead}:plane1", mate.z_front,
-                                  name=mate.name))
+                mates.append(Mate(ident, "point distance", f"{h}:origin", plane, mate.z_front, name=mate.name))
                 mates.append(LinkDimension(f"D1@{mate.name}", equations.quote(mate.face_global)))
             else:
-                mates.append(Mate(ident, "point", f"{h}:origin", f"{lead}:plane1", name=mate.name))
+                mates.append(Mate(ident, "point", f"{h}:origin", plane, name=mate.name))
         elif mate.kind == LOCK:
             a, b = handle(mate.gears[0], mate), handle(mate.gears[1], mate)
             mates.append(Unfix(b))
@@ -491,5 +518,39 @@ def turned_refusal(report: Report) -> str:
     CROSSED mesh of ``report.meshes`` has an angle between the own axes outside
     ``findings.TURNED_GEAR_MATE_SENSE_ANGLES``. Read by ``assess.Assessment.lay_out_refusal`` after its W4 reasons,
     so the footer says it before Build and Build parts still makes the parts. Findings by ``getattr(findings, NAME,
-    None)``."""
-    raise NotImplementedError("W6: Agent B, workbook.motion.turned_refusal")
+    None)``.
+
+    The class and its range are the worker's own (W6-INTERFACES §7.12–§7.13): ``swcom.lines_meet`` on the two
+    gears' lines (each through its part origin along its own +Z, a bevel's being its apex) says whether the axes
+    meet, and ``swcom.turned_angles(meet)`` gives the range the probes showed for that class — axes that meet
+    (``TURNED_GEAR_MATE_SENSE_ANGLES``) or pass each other (``TURNED_GEAR_MATE_SENSE_ANGLES_SKEW``)."""
+    from .. import swcom
+    from . import geometry
+    placed = report.layout.placed
+    for (a, b), laid in report.meshes.items():
+        if laid.kind == geometry.PARALLEL or laid.problem or a not in placed or b not in placed:
+            continue
+        angle = f"{laid.shaft_angle:.3f}".rstrip("0").rstrip(".")
+        lead = f"{a} and {b} mesh across shafts at {angle}°"
+        tail = ", so the gearbox is not built."            # the footer says what Build parts does
+        if getattr(findings, "TURNED_GEAR_MATE_SENSE_READ_BACK", None) != "entity senses":
+            return (f"{lead}, and which way a gear mate turns gears on shafts at an angle is not settled by the probes "
+                    f"for this version (findings.TURNED_GEAR_MATE_SENSE_READ_BACK){tail}")
+        pa, pb = placed[a], placed[b]
+        try:
+            meet = swcom.lines_meet(pa.origin, pa.axis, pb.origin, pb.axis)
+        except swcom.SolidWorksError:
+            continue                                 # one family after all: parallel, W5's rule
+        name = "TURNED_GEAR_MATE_SENSE_ANGLES" if meet else "TURNED_GEAR_MATE_SENSE_ANGLES_SKEW"
+        where = "on shafts that meet" if meet else "on crossed shafts"
+        span = swcom.turned_angles(meet)
+        if span is None:
+            return (f"{lead}, and the angles at which a gear mate {where} turns right are not settled by the probes "
+                    f"for this version (findings.{name}){tail}")
+        low, high = span
+        if not low - 1e-9 <= laid.shaft_angle <= high + 1e-9:
+            def deg(v: float) -> str:
+                return f"{v:.3f}".rstrip("0").rstrip(".")
+            return (f"{lead}, outside the {deg(low)}°–{deg(high)}° the probes showed a gear mate {where} turning right "
+                    f"at (findings.{name}){tail}")
+    return ""

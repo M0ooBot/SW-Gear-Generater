@@ -692,8 +692,8 @@ def test_a_meshes_row_rewritten_the_other_way_round_is_no_change(turned):
 def test_a_flipped_mated_shaft_is_built_again(turned):
     spec = shafts(gears(reducer(), G4=dict(at="-27")), S3=dict(axis="Z-"))
     plan = classify(turned, spec)
-    structural(plan, "S3's axis is now Z- where it was built Z+: the mate G4 on S3 Axis keeps the direction it was "
-                     f"made with, {REBUILD}")
+    structural(plan, "S3's axis is now Z- where it was built Z+: the layout's axis and the mates on it keep the "
+                     f"direction they were made with, {REBUILD}")
     assert len(plan.structural) == 1                       # its anchor's new front face is not said twice
 
 

@@ -28,7 +28,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from ..gears import kind_for, plan_for
 from ..gears.base import ERROR, WARNING, BuildPlan, Diagnostic, GeometryError
 from ..spec import GearSpec, InputError
-from .geometry import AXES
+from .geometry import bevel_cuts, cut_overrides
 from .model import Gear, GearboxSpec
 from .schema import FRAME
 
@@ -36,7 +36,6 @@ PART_SUFFIX = ".SLDPRT"
 
 # Kinds a later phase builds: what such a row is, and the phase that builds it (PLAN-WORKBOOK §6).
 LATER = {
-    "bevel": ("a bevel gear", "right-angle stages are built in phase W6"),
     "sleeve": ("a sleeve", "sleeves are built in phase W8, with modes"),
     "dog": ("a dog ring", "dog rings are built in phase W8, with modes"),
 }
@@ -77,9 +76,20 @@ def _where(spec: GearboxSpec, gear: Gear, field_name: str) -> str:
     return spec.cell("Gears", gear.row, "id")
 
 
-def check_gear(spec: GearboxSpec, gear: Gear) -> Tuple[Optional[GearSpec], Any, List[Diagnostic]]:
-    """The strip's checks on one row: (its GearSpec, what it works out to or None, diagnostics naming cells)."""
-    gear_spec = gear.gear_spec(spec.box)
+def check_gear(spec: GearboxSpec, gear: Gear, cuts: Optional[Dict[str, Any]] = None
+               ) -> Tuple[Optional[GearSpec], Any, List[Diagnostic]]:
+    """The strip's checks on one row: (its GearSpec, what it works out to or None, diagnostics naming cells).
+
+    A bevel row (W6) is checked as cut for its partner and shaft angle (``geometry.bevel_cuts``; ``cuts`` when the
+    caller has them already); a cut with a problem is an error at the gear's cell, and the gear is not planned."""
+    if gear.kind_word() == "bevel":
+        cut = (cuts if cuts is not None else bevel_cuts(spec)).get(gear.id)
+        if cut is not None and cut.problem:
+            where = _where(spec, gear, "")
+            return gear.gear_spec(spec.box), None, [Diagnostic(ERROR, f"{where}: {cut.problem}", where)]
+        gear_spec = gear.gear_spec(spec.box, **cut_overrides(cut))
+    else:
+        gear_spec = gear.gear_spec(spec.box)
     kind = kind_for(gear_spec)
     if kind is None:
         return gear_spec, None, []
@@ -126,13 +136,14 @@ def plan_parts(spec: GearboxSpec, folder: str, part_template: str = "", skip_row
     jobs: Dict[str, PartJob] = {}          # by the file name in lower case
     order: List[str] = []
     out.refused = later_rows(spec)
+    cuts = bevel_cuts(spec)
     for gear in spec.gears:
         if gear.kind_word() in LATER:
             out.later.append((gear.id, _later_kind(gear)))
             continue
         if gear.row in skip_rows:
             continue                       # its own cell is already an error; it is not built
-        gear_spec, derived, diagnostics = check_gear(spec, gear)
+        gear_spec, derived, diagnostics = check_gear(spec, gear, cuts)
         out.diagnostics.extend(diagnostics)
         if derived is None:
             continue
@@ -167,10 +178,11 @@ def _later_kind(gear: Gear) -> str:
 def later_rows(spec: GearboxSpec) -> List[Diagnostic]:
     """Every row a later phase builds, each a warning naming its cell, the row and the phase that builds it.
 
-    Shafts first, as they decide the most: a carrier or a turned axis means no
-    gearbox check runs at all yet (:func:`checks.check` stops at the layout).
-    Then the gears whose own part waits (bevel, sleeve, dog), the gears that
-    slide, and the modes.
+    Shafts first, as they decide the most: a carrier means no gearbox check
+    runs at all yet (:func:`checks.check` stops at the layout). Then the gears
+    whose own part waits (sleeve, dog), the gears that slide, and the modes.
+    Turned axes and bevel gears are W6's, laid out and built (a turned mesh
+    waits only for its probe finding: ``motion.turned_refusal``).
     """
     out: List[Diagnostic] = []
 
@@ -187,9 +199,6 @@ def later_rows(spec: GearboxSpec) -> List[Diagnostic]:
             else:
                 refuse(where, f"{shaft.id} is mounted on {shaft.mount()}: carriers are laid out in phase W7, and "
                               "the gearbox is not checked until then.")
-        elif (shaft.axis or "Z+") not in AXES:
-            refuse(where, f"{shaft.id}'s axis is {shaft.axis}: turned axes are laid out in phase W6, and the "
-                          "gearbox is not checked until then.")
     for gear in spec.gears:
         where = spec.cell("Gears", gear.row, "id")
         if gear.kind_word() in LATER:
@@ -210,8 +219,9 @@ def later_rows(spec: GearboxSpec) -> List[Diagnostic]:
 def gear_diagnostics(spec: GearboxSpec, skip_rows=()) -> List[Diagnostic]:
     """Every row's own checks, for the window to show as the file changes — no plans are made."""
     out: List[Diagnostic] = []
+    cuts = bevel_cuts(spec)
     for gear in spec.gears:
         if gear.kind_word() in LATER or gear.row in skip_rows:
             continue
-        out.extend(check_gear(spec, gear)[2])
+        out.extend(check_gear(spec, gear, cuts)[2])
     return out
