@@ -404,7 +404,12 @@ def link_record_path(workbook_path: str) -> str:
     return stem + LINK_SUFFIX
 
 
-LINK_SCHEMA_VERSION = 4          # the link record's own schema, apart from the .gear.json's SCHEMA_VERSION
+LINK_SCHEMA_VERSION = 5          # the link record's own schema, apart from the .gear.json's SCHEMA_VERSION
+# Schema 5 (W7, every record: W7-PLAN §2.11, J16): the gearbox keeps its carrier parts (CarrierEntry), a component the
+# Gears row it is a copy of (ComponentEntry.of) and a mate the carrier its axis is in (MateEntry.on). Every new field is
+# defaulted, so a v1-v4 record reads as v5 with no carriers, every ``of`` and ``on`` empty — which is what a record
+# with no planetary stage holds — and a v5 written from it reads back the same. A record of any newer schema (W8
+# sets 6) is refused and left byte-identical.
 # Schema 4 (W6, every record, an all-Z gearbox too: W6-PLAN §2.8, D13): a shaft keeps its direction and its Front-plane
 # and line pieces (ShaftEntry), a mate its measuring plane and a mesh its sense (MateEntry). A v1-v3 record reads as
 # v4, a v3 shaft with ``direction`` [0, 0, sigma] and ``axis`` "Z+"/"Z-", a v3 mate with plane "front" and sense 0.
@@ -489,6 +494,9 @@ class ComponentEntry:
     name: str = ""
     rotation: List[float] = field(default_factory=list)
     at: List[float] = field(default_factory=list)
+    # Schema 5 (W7): the Gears row this component is a copy of (``"Planet"`` for ``gear`` ``"Planet copy 2"``),
+    # ``""`` when the gear has no copies (Copies 1, or a frame gear). A v4 entry reads as ``""``.
+    of: str = ""
 
 
 @dataclass
@@ -520,6 +528,10 @@ class MateEntry:
     z_front: float = 0.0
     plane: str = "front"
     sense: int = 0
+    # Schema 5 (W7): the component holding the axis an AXIS mate is made to — ``""`` the layout part, else a carrier
+    # component id (``"C carrier"``, ``layout.carrier_id``) — ``motion.MatePlan.on``; ``shaft`` then holds the axis
+    # stem (``"P copy 2"``). A v4 entry reads as ``""``. A mesh's ``sense`` is its carrier-frame sense, as made.
+    on: str = ""
 
 
 @dataclass
@@ -573,6 +585,29 @@ class GearboxRecord:
     static_reason: str = ""
     mate_problems: List[str] = field(default_factory=list)
     mate_problems_digest: str = ""
+    carriers: List["CarrierEntry"] = field(default_factory=list)   # schema 5 (W7): the carrier parts on record
+
+
+@dataclass
+class CarrierEntry:
+    """One carrier part of the current revision (schema 5, W7-PLAN §2.11). ``shaft`` the carrier shaft's id;
+    ``path`` its part, ``<Name>_<Carrier>_Carrier.SLDPRT``; ``component`` its ``Name2`` in the assembly (``""``
+    until the assembly saved); ``rotation`` (9 by rows) and ``at`` (mm) its frame as placed or last put, as
+    ``ComponentEntry``'s; ``direction`` its axis, as ``ShaftEntry.direction``; ``axes`` the planet axes it holds,
+    ``layout.CarrierLayout.axes`` field for field (``ShaftEntry(**asdict(axis_layout))``). Written as soon as the
+    carrier part saves (a refused train leaves it on record, as the layout part)."""
+
+    shaft: str = ""
+    path: str = ""
+    component: str = ""
+    rotation: List[float] = field(default_factory=list)
+    at: List[float] = field(default_factory=list)
+    direction: List[float] = field(default_factory=list)
+    axes: List[ShaftEntry] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        if isinstance(self.direction, tuple):          # CarrierEntry(direction=carrier_layout.direction)
+            self.direction = list(self.direction)
 
 
 @dataclass
@@ -883,9 +918,17 @@ def _v3_shaft(entry: ShaftEntry, raw: Dict[str, Any], version: int = 3) -> Shaft
     return entry
 
 
+def _carrier_read(entry: CarrierEntry, raw: Dict[str, Any]) -> CarrierEntry:
+    """A carrier entry type-checked, its ``axes`` read as ``ShaftEntry``s (schema 5 only: no v3 fill). C adds the
+    refusals of W7-PLAN §5.3 (no shaft or path; an ``on`` naming no carrier on record)."""
+    entry = _checked(entry)
+    entry.axes = [_checked(a) for a in _entries(ShaftEntry, raw.get("axes", []) or [])]
+    return entry
+
+
 def link_record_from_json(text: str) -> LinkRecord:
-    """Parse a link record of any schema up to :data:`LINK_SCHEMA_VERSION`; a v1, v2 or v3 record is read as v4,
-    and a record of any newer schema is refused (:class:`UnknownSchema`) and left alone.
+    """Parse a link record of any schema up to :data:`LINK_SCHEMA_VERSION`; a v1–v4 record is read as v5, and a
+    record of any newer schema is refused (:class:`UnknownSchema`) and left alone.
 
     The schema is ``link_schema_version`` when the file has it, else
     ``schema_version`` (a W2 file, or one an old build rewrote; see
@@ -923,6 +966,9 @@ def link_record_from_json(text: str) -> LinkRecord:
                                                                         gearbox.get("components", []))]
             record.gearbox.mates = [_mate_checked(_checked(m), i)
                                     for i, m in enumerate(_entries(MateEntry, gearbox.get("mates", [])))]
+            record.gearbox.carriers = [_carrier_read(c, raw_c) for c, raw_c in
+                                       zip(_entries(CarrierEntry, gearbox.get("carriers", []) or []),
+                                           gearbox.get("carriers", []) or [])]
             _turned_senses_checked(record.gearbox)
             if record.gearbox.kind not in GEARBOX_KINDS:
                 raise ValueError(f"gearbox.kind is {record.gearbox.kind!r}, not one of {', '.join(GEARBOX_KINDS)}")

@@ -32,7 +32,7 @@ from .. import findings, store
 from ..gears import equations
 from ..gears.base import AddGlobal, BuildPlan, LinkDimension, Mate, Rebuild, SaveAs, Unfix
 from ..gears.spur import AXIS_NAME
-from ..swbuild import LockLink, MateRef, MeshLink
+from ..swbuild import CarrierLink, LockLink, MateRef, MeshLink
 from . import layout
 from .checks import Report
 from .layout import Frame
@@ -84,6 +84,10 @@ class MatePlan:
     z_front: float = 0.0
     plane: str = "front"
     sense: int = 0
+    # W7 (B; W7-PLAN §2.7): the component holding the axis an AXIS mate is made to — "" the layout, else a carrier
+    # id (``layout.carrier_id``: "C carrier"); ``shaft`` then holds the axis stem ("P copy 2"), so the axis is
+    # always f"{shaft} Axis". "" for every other kind. A MESH's ``sense`` is its carrier-frame sense.
+    on: str = ""
 
 
 @dataclass(frozen=True)
@@ -110,6 +114,9 @@ class MotionPlan:
     unmated: Tuple[Tuple[str, str], ...] = ()
     trains: Tuple[Tuple[str, ...], ...] = ()
     drag: Tuple[str, ...] = ()
+    # W7 (B; W7-PLAN §2.7): the carrier ids (``layout.carrier_id``) mated to turn; a held carrier's id is in
+    # ``fixed`` instead. A train includes its carrier.
+    carriers: Tuple[str, ...] = ()
 
 
 def mate_name(kind: str, gears: Sequence[str], shaft: str = "") -> str:
@@ -180,7 +187,7 @@ def mate_entry(mate: MatePlan) -> store.MateEntry:
     ``finish_build`` writes for a turning assembly)."""
     return store.MateEntry(name=mate.name, kind=mate.kind, gears=list(mate.gears), shaft=mate.shaft,
                            ratio=[int(n) for n in mate.ratio], face_global=mate.face_global,
-                           z_front=float(mate.z_front), plane=mate.plane, sense=int(mate.sense))
+                           z_front=float(mate.z_front), plane=mate.plane, sense=int(mate.sense), on=mate.on)
 
 
 def mate_ref(entry: store.MateEntry) -> MateRef:
@@ -471,14 +478,19 @@ def motion_assembly_plan(layout_path: str, components: Sequence[Tuple[str, str, 
 
 
 def mesh_links(meshes: Sequence[Tuple[str, str]], teeth: Mapping[str, int],
-               sense: Mapping[Tuple[str, str], int]) -> Tuple[MeshLink, ...]:
+               sense: Mapping[Tuple[str, str], int], *,
+               carrier_of: Mapping[Tuple[str, str], str] = {}) -> Tuple[MeshLink, ...]:  # noqa: B006 - never changed
     """A ``swbuild.MeshLink`` per mesh ``(a, b)``, in the order given, for any kind of mesh (W6-PLAN §2.4; written
     at W6's interface commit; W7's planets call it too): ``k = −c·za/zb`` and ``pitch = 360/zb`` degrees, where
     ``c = sense[(a, b)]`` (keyed by the ordered pair as the Meshes row lists it, as ``kinematics.solve``'s
     ``senses``: ``geometry.MeshGeometry.sense``, or a record's ``MateEntry.sense``) is +1 or −1 in
     ``z_a·ω_a + c·z_b·ω_b = 0``. So ``k == ω_b/ω_a`` with ``solve``'s own-axis speeds (review M2 of W5). On parallel
     shafts ``c = σa·σb`` outside and ``−σa·σb`` inside a ring, which is W5's ``k``. A pair with no sense, a sense
-    that is not ±1, or a tooth count not above 0 is a ValueError with a sentence."""
+    that is not ±1, or a tooth count not above 0 is a ValueError with a sentence.
+
+    W7 (written at W7's interface commit): ``carrier_of`` maps a mesh (the same ordered pair) to the carrier id
+    (``layout.carrier_id``) it is measured against, set on its ``MeshLink.carrier``; ``sense`` is then the
+    carrier-frame sense and ``k`` the ratio of turns relative to the carrier. A mesh not in it gets ``""``."""
     out = []
     for a, b in meshes:
         za, zb = int(teeth[a]), int(teeth[b])
@@ -489,7 +501,7 @@ def mesh_links(meshes: Sequence[Tuple[str, str]], teeth: Mapping[str, int],
         c = sense[(a, b)]
         if c not in (1, -1):
             raise ValueError(f"The mesh {a}–{b} has the sense {c!r}, which is not +1 or -1.")
-        out.append(MeshLink(a, b, -int(c) * za / zb, 360.0 / zb))
+        out.append(MeshLink(a, b, -int(c) * za / zb, 360.0 / zb, carrier=carrier_of.get((a, b), "")))
     return tuple(out)
 
 
@@ -554,3 +566,10 @@ def turned_refusal(report: Report) -> str:
             return (f"{lead}, outside the {deg(low)}°–{deg(high)}° the probes showed a gear mate {where} turning right "
                     f"at (findings.{name}){tail}")
     return ""
+
+
+def carrier_links(spec: GearboxSpec, report: Report, plan: MotionPlan) -> Tuple[CarrierLink, ...]:
+    """A ``swbuild.CarrierLink`` per carrier of the plan, turning or held (W7-PLAN §2.9): its id, every gear on its
+    planet shafts in plan order, its origin (on the layout's Front plane) and its axis. Agent B writes it."""
+    raise ValueError("A planetary stage's carrier is not linked for Update by this version of Gear Generator yet, so "
+                     "Update SolidWorks cannot act on it.")

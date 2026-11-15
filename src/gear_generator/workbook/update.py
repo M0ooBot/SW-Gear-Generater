@@ -128,6 +128,10 @@ class UpdatePlan:
     # W6 (B; W6-PLAN §2.7, D17): gear mates (by name) whose mesh sense the new read changes — a crossed shaft moved
     # to the other side of its partner — each remade by Update through ``MotionUpdate.ratios``, for the sentence.
     resensed: Tuple[str, ...] = ()
+    # W7 (B; W7-PLAN §2.10, §5.3): each carrier part and every global it should hold now (``features`` its axes),
+    # and the carriers whose planet axes move (for the sentence). Empty with no planetary stage.
+    carriers: Tuple[DocumentValues, ...] = ()
+    carriers_moved: Tuple[str, ...] = ()
 
     @property
     def changed_parts(self) -> Tuple[PartUpdate, ...]:
@@ -161,6 +165,8 @@ class UpdatePlan:
         lines = layout.layout_lines(self.shafts) if self.layout is not None else ()
         if lines:                                     # W6 (§7.15): each slanted shaft's line axis, read back
             kwargs["lines"] = {name: (point, direction) for name, point, direction in lines}
+        if self.carriers:                             # W7: only with a planetary stage
+            kwargs["carriers"] = list(self.carriers)
         return kwargs
 
 

@@ -159,6 +159,14 @@ class Placed:
     centre: Vec3 = (0.0, 0.0, 0.0)
     family: Vec3 = (0.0, 0.0, 1.0)
     bevel: bool = False
+    # W7 (B fills them; W7-PLAN §2.2): ``row`` the Gears row id this gear is (a copy's row: ``"Planet"``), ``copy``
+    # its k (``0`` when its shaft has Copies 1), ``carrier`` the carrier shaft its shaft is mounted on (``""`` on
+    # the frame). ``gear`` and ``shaft`` are then the COPY's own ids (``"Planet copy 2"``, ``"P copy 2"``:
+    # ``planetary.copy_id``), so every rule that groups by shaft treats each copy as its own shaft; a cell is named
+    # through ``row``. For a frame gear ``row`` is ``gear`` once B fills it (``""`` until then means the same).
+    row: str = ""
+    copy: int = 0
+    carrier: str = ""
 
     @property
     def origin(self) -> Vec3:
@@ -818,3 +826,12 @@ def shaft_span(placed: Dict[str, Placed], shaft: str) -> Optional[Cylinder]:
         for end in (c.start, c.end):
             ts.append(_dot(_sub(end, point), axis))
     return Cylinder(_add(point, axis, min(ts)), _add(point, axis, max(ts)), 0.0)
+
+
+def expand_meshes(spec: GearboxSpec, placed: Dict[str, Placed]) -> Tuple[Tuple[str, str], ...]:
+    """The listed meshes at copy level (W7-PLAN §2.2), in Meshes-sheet order and copy order within a row: ``Sun–
+    Planet`` with three copies becomes ``(Sun, Planet copy 1)``, ``(Sun, Planet copy 2)``, ``(Sun, Planet copy 3)``,
+    each pair in its Meshes row's order. Everything that takes "the listed meshes" takes this list. Agent B writes
+    it."""
+    raise ValueError("Meshes with planet copies are not listed copy by copy by this version of Gear Generator yet, so "
+                     "this workbook is not laid out.")

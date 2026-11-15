@@ -3081,3 +3081,29 @@ def motion_update_lines(update, result) -> List[str]:
     if getattr(update, "motion", None) is None:
         return []
     return [_sentence(p[:1].upper() + p[1:]) for p in _motion_pieces(update, result)] + _motion_after(update, result)
+
+
+# -- W7: planetary stages (W7-PLAN §2.12; Agent C writes them) ----------------------------------------------------
+#
+# Pinned in W7's interface commit (docs/notes-workbook/W7-INTERFACES.md). Until C writes them each raises a sentence;
+# nothing calls them before C does.
+
+
+def carrier_phrase(record_or_plan) -> str:
+    """How the carrier is named in the window's sentences, from a ``store.LinkRecord`` (its ``gearbox.carriers``) or
+    a ``workbook.gearbox.GearboxPlan`` (its ``carrier_layouts``): *"C (the carrier)"*, and with its part *"C, built
+    as Planetary_4to1_C_Carrier (axes and planes only)"* where a sentence names the part; ``""`` with no carrier."""
+    raise ValueError("Planetary stages are not described by this version of Gear Generator yet.")
+
+
+def copies_phrase(row: str, n: int) -> str:
+    """A planet row and its copies in a sentence: *"Planet (3 copies)"*, and the row alone with Copies 1."""
+    raise ValueError("Planetary stages are not described by this version of Gear Generator yet.")
+
+
+def planetary_speed_line(shaft: str, motion, *, copies: int = 1, carrier: str = "") -> str:
+    """The Speeds line of a planet shaft or a held member (W7-PLAN §2.12) from a ``kinematics.Motion``: *"P −500
+    rpm, −750 on C · 3 copies"* with W6's seen-from wording (W6-INTERFACES §7.19) for a mounted shaft (``carrier``
+    its carrier, ``motion.relative`` its speed on it), *"R held · 5.762 N·m"* for a held member
+    (``motion.held``)."""
+    raise ValueError("Planetary stages are not described by this version of Gear Generator yet.")

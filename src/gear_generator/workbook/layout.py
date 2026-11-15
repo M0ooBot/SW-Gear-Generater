@@ -81,6 +81,14 @@ FRONT, TOP, RIGHT = 1, 2, 3
 LAYOUT_HANDLE = "layout"
 GEAR_HANDLE = "gear"
 
+# W7 (W7-PLAN §2.6, §2.7; W7-INTERFACES.md): a carrier part. Its BuildPlan.kind and journal kind, the suffix of its
+# file stem, and the stem of its handle in the assembly plan ("carrier1", "carrier2", … in Shafts-sheet order); a
+# planet copy's handle is "gear<index>c<k>" (index in Gears-sheet order, k its copy), "gear<index>" with Copies 1.
+CARRIER_KIND = "carrier"
+CARRIER_SUFFIX = "_Carrier"
+CARRIER_HANDLE = "carrier"
+CARRIER_ID_SUFFIX = " carrier"     # carrier_id: "C" -> "C carrier"
+
 IDENTITY: Tuple[float, ...] = (1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0)
 
 
@@ -439,3 +447,64 @@ def stems(box_name: str, revision: int) -> Tuple[str, str]:
     if revision:
         name = f"{name}{REVISION_SUFFIX}{revision}"
     return name, name + LAYOUT_SUFFIX
+
+
+# -- W7: the carrier part (W7-PLAN §2.6; Agent B writes the stubs) -------------------------------------------------
+
+
+@dataclass(frozen=True)
+class CarrierLayout:
+    """One carrier part as it is drawn (:func:`carrier_layouts`). ``shaft`` the carrier shaft's id; ``x``, ``y``,
+    ``z`` its point in mm from the origin; ``direction`` its unit Axis direction (Z+ or Z- in W7); ``axes`` the
+    planet axes it holds, one :class:`ShaftLayout` per copy IN THE CARRIER PART'S OWN COORDINATES — ``shaft`` the
+    copy's shaft id (``"P copy 2"``), ``x``/``y`` its ``planetary.copy_offsets`` point, planes and globals named
+    ``"P copy 2 X Plane"`` / ``"P copy 2 X"`` (the base plane at 0), ``axis_name`` ``"P copy 2 Axis"``, ``direction``
+    (0, 0, 1) and ``sigma`` +1 (its own +Z), ``z`` the copy's offset along the carrier's axis — so
+    ``layout_globals`` and ``layout_features`` take them as they take the layout's shafts."""
+
+    shaft: str
+    x: float
+    y: float
+    z: float
+    direction: Tuple[float, float, float]
+    axes: Tuple[ShaftLayout, ...]
+
+
+def carrier_id(shaft: str) -> str:
+    """The id a carrier goes by as a body (W7-PLAN §2.7, §5.3): ``"C carrier"`` for shaft ``C`` — its key in
+    ``train_check``'s frames, ``CarrierLink.carrier``, the gear-id side of its mate names (``"C carrier on C
+    Axis"``, ``"CarrierGear locked to C carrier"``) and ``MateEntry.on``. Written at W7's interface commit."""
+    if not shaft:
+        raise ValueError("A carrier needs its shaft's name.")
+    return f"{shaft}{CARRIER_ID_SUFFIX}"
+
+
+def carrier_stem(box_name: str, revision: int, shaft: str) -> str:
+    """A carrier part's file stem (W7-PLAN §2.6): ``"<Name>_<Carrier>_Carrier"`` at revision 0
+    (``"Planetary_4to1_C_Carrier"``), ``"<Name>_r<n>_<Carrier>_Carrier"`` at a build-again, ``<Name>`` as
+    :func:`stems` makes it. Written at W7's interface commit."""
+    if not shaft:
+        raise ValueError("A carrier part needs its shaft's name.")
+    return f"{stems(box_name, revision)[0]}_{shaft}{CARRIER_SUFFIX}"
+
+
+def carrier_layouts(spec: GearboxSpec, report: Report) -> Tuple[CarrierLayout, ...]:
+    """Every carrier of ``spec``, in Shafts-sheet order, with its planet copies' axes (W7-PLAN §2.6). Agent B writes
+    it."""
+    raise ValueError("Carrier parts are not laid out by this version of Gear Generator yet, so this gearbox is not "
+                     "planned.")
+
+
+def carrier_frame(carrier: CarrierLayout) -> Frame:
+    """The carrier part's frame in the assembly (W7-PLAN §2.6, J2): ``geometry.base_frame(carrier.direction)``,
+    unturned, at ``(x, y, 0)`` — its origin on the layout's Front plane whatever its Z. Agent B writes it."""
+    raise ValueError("A carrier part's place is not worked out by this version of Gear Generator yet, so this "
+                     "gearbox is not planned.")
+
+
+def carrier_plan(carrier: CarrierLayout, template: str, path: str) -> BuildPlan:
+    """The carrier part's ``BuildPlan`` (``kind`` :data:`CARRIER_KIND`), made by :func:`layout_plan` on the
+    carrier's own axes: ``"<C> Axis"`` through the Right and Top base planes, and per copy its two offset planes,
+    literal globals (J1) and axis. Agent B writes it."""
+    raise ValueError("A carrier part is not planned by this version of Gear Generator yet, so this gearbox is not "
+                     "planned.")

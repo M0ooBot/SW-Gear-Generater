@@ -96,7 +96,7 @@ from ..swbuild import BuildResult, DocumentValues, GearboxResult
 from . import layout, motion
 from .assess import Assessment
 from .build import PartJob
-from .layout import REVISION_SUFFIX, Frame, ShaftLayout
+from .layout import REVISION_SUFFIX, CarrierLayout, Frame, ShaftLayout
 from .motion import MotionPlan
 
 
@@ -181,6 +181,18 @@ class LayoutReuse:
 
 
 @dataclass(frozen=True)
+class CarrierReuse:
+    """A carrier part already saved (W7-PLAN §2.6, §2.9), inserted again once it is checked live to hold
+    ``variables`` exactly and every name in ``features`` (``layout.layout_globals`` and ``layout.layout_features``
+    of its axes), as :class:`LayoutReuse` is; ``journaled`` when only the journal knew it."""
+
+    path: str
+    variables: Tuple[GlobalVariable, ...]
+    features: Tuple[str, ...]
+    journaled: bool = False
+
+
+@dataclass(frozen=True)
 class GearboxPlan:
     """One press of Build (or Build parts, or Build again…), planned whole.
 
@@ -260,6 +272,11 @@ class GearboxPlan:
     motion: Optional[MotionPlan] = None
     static_reason: str = ""
     mate_senses: Mapping[str, bool] = field(default_factory=dict)   # W6: gear mate name -> k > 0 (B)
+    # W7 (B; W7-PLAN §2.6, §5.3): each carrier part to make (a plan) or reuse, in Shafts-sheet order; carrier shaft
+    # -> its part's path; the carriers as laid out (their planet axes). All empty with no planetary stage.
+    carriers: Tuple[Union[BuildPlan, CarrierReuse], ...] = ()
+    carrier_paths: Mapping[str, str] = field(default_factory=dict)
+    carrier_layouts: Tuple[CarrierLayout, ...] = ()
 
     @property
     def parts_only(self) -> bool:
@@ -291,6 +308,9 @@ class GearboxPlan:
             kwargs["senses"] = dict(self.mate_senses)       # a turning build: every gear mate read back
         if isinstance(self.layout, LayoutReuse) and self.layout.lines:
             kwargs["lines"] = {name: (point, direction) for name, point, direction in self.layout.lines}
+        if self.carriers:                     # W7: only with a planetary stage, so every other call is W6's
+            kwargs["carriers"] = [DocumentValues(c.path, tuple(c.variables), tuple(c.features))
+                                  if isinstance(c, CarrierReuse) else c for c in self.carriers]
         return kwargs
 
 

@@ -18,7 +18,7 @@ from typing import Dict, List, Optional, Tuple
 
 from ..gears import helical, internal as internal_gears, pair as pairs, spur
 from ..gears.base import ERROR, WARNING, Diagnostic
-from . import fixes as fixes_mod, geometry, kinematics
+from . import fixes as fixes_mod, geometry, kinematics, planetary
 from .fixes import Fix
 from .geometry import Layout, Placed
 from .model import GearboxSpec
@@ -40,6 +40,8 @@ class Report:
     contact: Dict[Tuple[str, str], float] = field(default_factory=dict)                # mesh -> εα at the needed centre
     # W6 (B; W6-PLAN §2.3): every listed mesh mesh_geometry laid out, keyed by the Meshes row's ordered pair (a, b).
     meshes: Dict[Tuple[str, str], geometry.MeshGeometry] = field(default_factory=dict)
+    # W7 (B; W7-PLAN §2.1, §2.3): every planetary stage recognised (planetary.stages); () when there is none.
+    stages: Tuple[planetary.Stage, ...] = ()
     off_centre: List[Diagnostic] = field(default_factory=list)   # the "not where the teeth put them" errors
     worked_out_as: str = ""
     # Why the gearbox was not checked at all ("" when it was): a carrier or a turned axis, laid out in a later

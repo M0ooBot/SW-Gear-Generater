@@ -46,6 +46,12 @@ class Motion:
     # "+Z", or for a slant the plus direction's components to three decimals, shortest form, U+2212 for minus
     # ("(0.5, −0.866, 0)"). Empty until B's solve fills it.
     seen_from: Dict[str, str] = field(default_factory=dict)
+    # W7 (B; W7-PLAN §2.5, J10, J18): ``relative`` each mounted shaft's own-axis speed relative to its carrier,
+    # ``ω_p − s_p·ω_c`` (s_p = a_p·a_c), rpm (fixture: P −750 on C); ``held`` each held member shaft's torque, N·m,
+    # reported as held (fixture: R 5.7624); ``torque_note`` the sentence when a torque cannot be said, else "".
+    relative: Dict[str, Fraction] = field(default_factory=dict)
+    held: Dict[str, float] = field(default_factory=dict)
+    torque_note: str = ""
 
     @property
     def settled(self) -> bool:

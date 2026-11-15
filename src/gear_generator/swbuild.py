@@ -1311,7 +1311,9 @@ STAGE_ASSEMBLY = "assembly"           # building the assembly
 STAGE_INTERFERENCE = "interference"   # checking the assembly for interference
 STAGE_VALUES = "values"               # Update: setting a part's or the layout's globals
 STAGE_PLACE = "place"                 # Update: re-placing components in the assembly
-STAGES = (STAGE_CHECK, STAGE_PART, STAGE_LAYOUT, STAGE_ASSEMBLY, STAGE_INTERFERENCE, STAGE_VALUES, STAGE_PLACE)
+STAGE_CARRIER = "carrier"             # W7: building a carrier part (Step.name: its stem)
+STAGES = (STAGE_CHECK, STAGE_PART, STAGE_LAYOUT, STAGE_ASSEMBLY, STAGE_INTERFERENCE, STAGE_VALUES, STAGE_PLACE,
+          STAGE_CARRIER)
 
 
 @dataclass(frozen=True)
@@ -1438,12 +1440,18 @@ class MeshLink:
     """One listed, gear-mated mesh (a, b) as :func:`train_check` reads it: b turns ``k`` times a's turn, each
     about its OWN part's +Z (review M2: ``k == ω_b/ω_a`` with ``kinematics.solve``'s speeds, which are about each
     shaft's own axis; ``workbook.motion.mesh_links`` makes them), and ``pitch`` is b's angular pitch in degrees
-    (360 / b's teeth): the relation holds modulo it, since a whole tooth of a times k is a whole tooth of b."""
+    (360 / b's teeth): the relation holds modulo it, since a whole tooth of a times k is a whole tooth of b.
+
+    W7: ``carrier`` is a :class:`CarrierLink` ``carrier`` id when the mesh is measured against that carrier (a
+    planetary mesh: a planet copy and a sun or ring), else ``""``. Then ``k`` is the ratio of turns RELATIVE TO
+    THE CARRIER (``k = −c·za/zb`` with ``c`` the carrier-frame sense, W6's parallel rule), and
+    :func:`train_check` takes each gear's turn relative to the carrier (W7-INTERFACES.md §3)."""
 
     a: str
     b: str
     k: float
     pitch: float
+    carrier: str = ""
 
 
 @dataclass(frozen=True)
@@ -1493,9 +1501,44 @@ def _off_whole(angle: float, step: float) -> float:
     return min(off, step - off)
 
 
+@dataclass(frozen=True)
+class CarrierLink:
+    """A turning (or held) carrier as :func:`train_check` reads it (W7-PLAN §2.9, §5.3). ``carrier`` its component
+    id, ``layout.carrier_id(shaft)`` (``"C carrier"``), the key of its frame in ``found``/``wanted``; ``planets``
+    every gear id on its planet shafts (copy ids), in plan order; ``point`` its origin as placed, mm (on the
+    layout's Front plane: z 0); ``axis`` its own +Z in the origin's frame, a unit W6 vector. ``point`` and ``axis``
+    are the carrier's WANTED frame's origin and third column (an identity the caller keeps)."""
+
+    carrier: str
+    planets: Tuple[str, ...]
+    point: Tuple[float, float, float]
+    axis: Tuple[float, float, float]
+
+
+def _about(axis: Sequence[float], angle: float) -> Tuple[Tuple[float, float, float], ...]:
+    """The rotation by ``angle`` radians about the unit vector ``axis``, right-handed, as 3 rows (Rodrigues)."""
+    length = math.sqrt(sum(float(v) * float(v) for v in axis))
+    x, y, z = (float(v) / length for v in axis)
+    c, s_, t = math.cos(angle), math.sin(angle), 1.0 - math.cos(angle)
+    return ((t * x * x + c, t * x * y - s_ * z, t * x * z + s_ * y),
+            (t * x * y + s_ * z, t * y * y + c, t * y * z - s_ * x),
+            (t * x * z - s_ * y, t * y * z + s_ * x, t * z * z + c))
+
+
+def _carried(frame: Frame9, link: CarrierLink, angle: float) -> Frame9:
+    """``frame`` carried round the carrier's axis line (through ``link.point`` along ``link.axis``) by ``angle``."""
+    rows = _about(link.axis, angle)
+    rotation = [float(v) for v in frame[0]]
+    turned = tuple(sum(rows[i][k] * rotation[k * 3 + j] for k in range(3)) for i in range(3) for j in range(3))
+    off = [float(a) - float(p) for a, p in zip(frame[1], link.point)]
+    at = tuple(float(link.point[i]) + sum(rows[i][k] * off[k] for k in range(3)) for i in range(3))
+    return turned, at
+
+
 def train_check(found: Mapping[str, Frame9], wanted: Mapping[str, Frame9], meshes: Sequence[MeshLink],
                 locks: Sequence[LockLink], pitch: Mapping[str, float],
-                tolerance: float = TRAIN_TOLERANCE) -> TrainCheck:
+                tolerance: float = TRAIN_TOLERANCE, *, carriers: Sequence[CarrierLink] = (),
+                held: Sequence[str] = ()) -> TrainCheck:
     """Whether the gears ``found`` stand as ``wanted`` does, up to a turn of each train and whole teeth (pure).
 
     ``found`` and ``wanted`` map a gear id to its frame (rotation 9 numbers
@@ -1510,28 +1553,97 @@ def train_check(found: Mapping[str, Frame9], wanted: Mapping[str, Frame9], meshe
     relation with an off-axis gear is not judged. ``turned``: in step, and
     some gear's δ is not a whole number of its ``pitch`` (degrees; missing or
     0: any turn at all). Gears of ``found`` not in ``wanted`` are ignored.
+
+    W7 (written at W7's interface commit; W7-PLAN §2.9, review M1; the identities in W7-INTERFACES.md §3):
+
+    - ``carriers``: each carrier's frame is in ``found``/``wanted`` under its
+      ``carrier`` id and is judged first like any gear, giving its own turn
+      ``δ_c`` (its pitch is 0, so any carrier turn makes the train
+      ``turned``). Every gear in its ``planets`` has its wanted frame
+      CARRIED by ``δ_c`` about the carrier's axis line before it is judged
+      (origin and axis against the carried frame), and its δ is its turn
+      RELATIVE TO THE CARRIER. A carrier off its axis makes each of its
+      planets off its axis too (where they belong cannot be told).
+    - A mesh whose ``MeshLink.carrier`` is set takes each of its frame
+      gears relative to that carrier, ``δ − s·δ_c``, ``s = ±1`` the sign of
+      the gear's wanted axis (its frame's third column) against the
+      carrier's ``axis``; a planet's δ is already relative.
+    - ``held``: gears to be judged against their wanted frame exactly, but
+      for whole pitches — a held gear whose δ is not a whole number of its
+      ``pitch`` is off its axis (it must be re-placed); a held carrier is
+      given in both ``carriers`` and ``held`` (its δ_c must then be 0).
+    - A lock is judged on the δ's as kept (a carrier's own, a frame gear's
+      own, a planet's relative), so ``LockLink("C carrier", "CarrierGear")``
+      holds exactly when the carrier gear turned as far as the carrier.
+
+    With no ``carriers`` and no ``held`` it is W5's function, result for result. A ``MeshLink.carrier`` that names
+    no given carrier, or a gear among two carriers' planets, is a ValueError with a sentence.
     """
+    links = {link.carrier: link for link in carriers}
+    planet_of: Dict[str, CarrierLink] = {}
+    for link in carriers:
+        for gear in link.planets:
+            if gear in planet_of and planet_of[gear].carrier != link.carrier:
+                raise ValueError(f"{gear} is among the planets of both {planet_of[gear].carrier} and {link.carrier}, "
+                                 "so which carrier it turns on cannot be told.")
+            planet_of[gear] = link
+    for mesh in meshes:
+        if mesh.carrier and mesh.carrier not in links:
+            raise ValueError(f"The mesh {mesh.a}–{mesh.b} is measured against {mesh.carrier}, which the check was "
+                             "not given, so it cannot be judged.")
+    held_set = set(held)
+
+    def judge(frame_w: Frame9, gear: str) -> Optional[float]:
+        frame_f = found.get(gear)
+        if frame_f is None:
+            return None
+        if any(abs(float(a) - float(b)) > POSE_TOLERANCE for a, b in zip(frame_w[1], frame_f[1])):
+            return None
+        return turn_between(frame_w[0], frame_f[0])
+
+    carrier_turn: Dict[str, Optional[float]] = {}
+    for name, link in links.items():
+        turn = judge(wanted[name], name) if name in wanted else None
+        if turn is not None and name in held_set and _off_whole(turn, 0.0) > tolerance:
+            turn = None
+        carrier_turn[name] = turn
+
     off_axis: List[str] = []
     delta: Dict[str, float] = {}
-    for gear, (rotation_w, at_w) in wanted.items():
-        frame = found.get(gear)
-        if frame is None:
-            off_axis.append(gear)
-            continue
-        rotation_f, at_f = frame
-        if any(abs(float(a) - float(b)) > POSE_TOLERANCE for a, b in zip(at_w, at_f)):
-            off_axis.append(gear)
-            continue
-        turn = turn_between(rotation_w, rotation_f)
+    for gear, frame_w in wanted.items():
+        if gear in links:
+            turn = carrier_turn[gear]
+        elif gear in planet_of:
+            angle = carrier_turn.get(planet_of[gear].carrier)
+            turn = None if angle is None else judge(_carried(frame_w, planet_of[gear], angle), gear)
+        else:
+            turn = judge(frame_w, gear)
+        if turn is not None and gear in held_set and gear not in links and \
+                _off_whole(turn, math.radians(pitch.get(gear, 0.0) or 0.0)) > tolerance:
+            turn = None
         if turn is None:
             off_axis.append(gear)
             continue
         delta[gear] = turn
+
+    def relative(gear: str, carrier: str) -> Optional[float]:
+        if gear not in delta:
+            return None
+        if not carrier or gear in planet_of or gear == carrier:
+            return 0.0 if gear == carrier else delta[gear]
+        if carrier not in delta:
+            return None
+        link = links[carrier]
+        axis = [float(wanted[gear][0][i * 3 + 2]) for i in range(3)]
+        sign = 1.0 if sum(a * float(b) for a, b in zip(axis, link.axis)) > 0 else -1.0
+        return delta[gear] - sign * delta[carrier]
+
     out: List[Tuple[str, str]] = []
     residuals: List[Tuple[str, str, float]] = []
     for mesh in meshes:
-        if mesh.a in delta and mesh.b in delta:
-            residual = _off_whole(delta[mesh.b] - mesh.k * delta[mesh.a], math.radians(mesh.pitch))
+        da, db = relative(mesh.a, mesh.carrier), relative(mesh.b, mesh.carrier)
+        if da is not None and db is not None:
+            residual = _off_whole(db - mesh.k * da, math.radians(mesh.pitch))
             residuals.append((mesh.a, mesh.b, residual))
             if residual > tolerance:
                 out.append((mesh.a, mesh.b))
@@ -1595,6 +1707,11 @@ class MotionUpdate:
     face_globals: Tuple[Tuple[str, GlobalVariable], ...] = ()
     ratios: Tuple[Tuple[str, int, int], ...] = ()
     fixed: Tuple[str, ...] = ()
+    # W7 (B fills them, A reads them; W7-PLAN §2.9-§2.10): every turning or held carrier of the gearbox, for
+    # train_check and the puts (a held carrier is also in ``held``); and the held gears a recorded gear mate
+    # touches — judged against their wanted frames, and re-placed FIRST, before the carrier and the train (M1).
+    carriers: Tuple[CarrierLink, ...] = ()
+    held: Tuple[str, ...] = ()
 
 
 def same_named_elsewhere(documents: Sequence[DocInfo], paths: Sequence[str]) -> List[Tuple[str, str]]:
@@ -2016,6 +2133,10 @@ class GearboxResult:
     # saved in its place (W5-DECISIONS, answer 1): ``assembly`` is then that failed BuildResult, its
     # ``mate_problems`` the sentences and its ``document`` the title it is left open under, and ``kind`` is "".
     kind: str = ""
+    # W7 (A fills them; W7-PLAN §2.9): each carrier part built, in the order given (a failure skips the assembly),
+    # and the paths of the carrier parts reused (checked live, as the layout is).
+    carriers: List[BuildResult] = field(default_factory=list)
+    carriers_reused: List[str] = field(default_factory=list)
 
     @property
     def ok(self) -> bool:
@@ -2062,7 +2183,8 @@ def build_gearbox(sw: SolidWorks, parts: Sequence[BuildPlan], reuse: Sequence[Do
                   progress: Optional[Callable[[Step], None]] = None,
                   mtime: Callable[[str], float] = os.path.getmtime,
                   senses: Optional[Mapping[str, bool]] = None,
-                  lines: Optional[Mapping[str, Tuple[Vec3, Vec3]]] = None) -> GearboxResult:
+                  lines: Optional[Mapping[str, Tuple[Vec3, Vec3]]] = None,
+                  carriers: Sequence[Union[BuildPlan, DocumentValues]] = ()) -> GearboxResult:
     """A workbook's parts, its layout part and its static assembly, in one worker job (PLAN-WORKBOOK §4.2–§4.3).
 
     ``parts`` are the new parts' plans; ``reuse`` the parts already built and
@@ -2136,7 +2258,14 @@ def build_gearbox(sw: SolidWorks, parts: Sequence[BuildPlan], reuse: Sequence[Do
     direction), mm), each read back when the layout is checked; one moved in
     SolidWorks makes the layout mismatched (:attr:`GearboxResult.mismatched`),
     as a changed global does, so it is not reused.
+
+    W7 (A writes it; W7-PLAN §2.9, W7-INTERFACES.md): ``carriers`` (keyword): each carrier part, a plan to make
+    or a saved one to reuse (checked live like the layout), built after the layout and before the assembly; a
+    failure skips the assembly. Until A's pass a build given any is refused before anything is made.
     """
+    if carriers:
+        raise BuildError("This gearbox has a planetary stage, and building its carrier part is not in this version "
+                         "of Gear Generator yet, so nothing is made.")
     say = progress or _quiet
     _gate(sw)
     gear_of_handle = dict(gears or {})
@@ -2463,7 +2592,8 @@ def update_gearbox(sw: SolidWorks, parts: Sequence[DocumentValues] = (), layout:
                    exists: Callable[[str], bool] = os.path.exists,
                    progress: Optional[Callable[[Step], None]] = None,
                    mtime: Callable[[str], float] = os.path.getmtime,
-                   lines: Optional[Mapping[str, Tuple[Vec3, Vec3]]] = None) -> GearboxUpdate:
+                   lines: Optional[Mapping[str, Tuple[Vec3, Vec3]]] = None,
+                   carriers: Sequence[DocumentValues] = ()) -> GearboxUpdate:
     """Update SolidWorks from the workbook: part values, the layout's globals, and the static assembly's
     components re-placed (PLAN-WORKBOOK §4.5), in one worker job and in two phases, so a missing piece changes
     nothing.
@@ -2531,7 +2661,14 @@ def update_gearbox(sw: SolidWorks, parts: Sequence[DocumentValues] = (), layout:
     slanted shafts' line axes as the record has them (axis name -> (point,
     direction), mm), read back in the check phase with the layout part; one
     moved in SolidWorks is a :class:`NotAsBuilt` and nothing changes.
+
+    W7 (A writes it; W7-PLAN §2.9): ``carriers`` (keyword): each carrier part's globals as now wanted, read in the
+    check phase and set in the change phase after the layout's, so its axes move before the assembly rebuild. Until
+    A's pass an Update given any is refused before anything is read.
     """
+    if carriers:
+        raise BuildError("This gearbox has a planetary stage, and updating its carrier part is not in this version "
+                         "of Gear Generator yet, so nothing is changed.")
     if lines and layout is None:
         raise BuildError("Update SolidWorks was given line axes to check but no layout part to find them in, so "
                          "nothing is changed; that is a fault in Gear Generator.")
