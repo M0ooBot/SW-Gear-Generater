@@ -3300,7 +3300,11 @@ class GearboxUpdate:
                          + ", ".join(self.resensed))
         if self.turned_round:
             lines.append("ok      made again with the other Flip: " + ", ".join(self.turned_round))
-        if self.extra_mates:
+        if self.extra_mates and self.configuration:
+            # W8 (J12): read in every mode's configuration only; one the record does not know is never read.
+            lines.append("CHECK   mates Gear Generator did not make, suppressed in every mode, left as they are: "
+                         + ", ".join(self.extra_mates))
+        elif self.extra_mates:
             lines.append("CHECK   suppressed mates Gear Generator did not make, left as they are: "
                          + ", ".join(self.extra_mates))
         lines.extend(self._mode_update_lines())

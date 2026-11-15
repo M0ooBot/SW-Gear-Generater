@@ -335,7 +335,9 @@ def test_a_mate_not_on_record_suppressed_in_every_mode_is_listed_and_left(tc_bui
     done = _tc_update(fake, built, wanted_turn=6.0)
     assert done.ok and done.extra_mates == ["Distance3"], done.log_lines()
     assert fake.mate("Distance3", TC_ASM).flags == {m: True for m in ("2H", "4H", "N", "4L")}
-    assert "CHECK   suppressed mates Gear Generator did not make, left as they are: Distance3" in done.log_lines()
+    assert "CHECK   mates Gear Generator did not make, suppressed in every mode, left as they are: Distance3" in \
+        done.log_lines()
+    assert not [line for line in done.log_lines() if line.startswith("CHECK   suppressed mates")]
     reads = [a[1] for n, a in fake.calls if n == "mate_suppression" and fake.mate_handles[a[0]] == "Distance3"]
     assert reads == [("2H",), ("4H",), ("N",), ("4L",)]
 

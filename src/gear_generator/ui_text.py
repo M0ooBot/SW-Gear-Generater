@@ -3351,8 +3351,14 @@ def _motion_after(update, result, earlier: str = "") -> List[str]:
     if extra:
         one = len(extra) == 1
         where = _file(update.assembly) if update.assembly else "The assembly"
-        out.append(f"{where} also has {'a suppressed mate' if one else 'suppressed mates'} the app did not make, "
-                   f"{_and(extra)}; Update SolidWorks left {'it as it is' if one else 'them as they are'}.")
+        left = f"Update SolidWorks left {'it as it is' if one else 'them as they are'}."
+        if _configurations_of(update):
+            # W8 (J12): read in every mode's configuration only; one the record does not know is never read.
+            out.append(f"{where} also has {'a mate' if one else 'mates'} the app did not make, {_and(extra)}, "
+                       f"suppressed in every mode; {left}")
+        else:
+            out.append(f"{where} also has {'a suppressed mate' if one else 'suppressed mates'} the app did not make, "
+                       f"{_and(extra)}; {left}")
     return out
 
 

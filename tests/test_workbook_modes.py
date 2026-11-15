@@ -1277,3 +1277,39 @@ def test_worked_out_as_breaks_only_between_modes_on_screen_and_reads_plainly_in_
 def test_a_gearbox_without_modes_says_worked_out_as_with_ordinary_spaces():
     a = direct(planetary_4to1())
     assert "\u00a0" not in a.report.worked_out_as
+
+
+# -- a mate the app did not make, listed and left on a gearbox with modes (W8-REVIEW-FIX-TIER11 point 3) ---------------
+#
+# On an Update with modes such a mate is read in every mode's configuration and listed only when suppressed in all of
+# them (J12); a configuration the record does not know is never read, so it is said to be suppressed in every mode,
+# not suppressed outright. Without modes the words are W5's, as before.
+
+@pytest.mark.parametrize("extra, said", [
+    (["Distance3"], "TransferCase_Parallel.SLDASM also has a mate the app did not make, Distance3, suppressed in every "
+                    "mode; Update SolidWorks left it as it is."),
+    (["Angle1", "Angle2", "Distance3"], "TransferCase_Parallel.SLDASM also has mates the app did not make, Angle1, "
+                                        "Angle2 and Distance3, suppressed in every mode; Update SolidWorks left them "
+                                        "as they are."),
+])
+def test_a_mate_the_app_did_not_make_is_said_suppressed_in_every_mode_on_a_gearbox_with_modes(extra, said):
+    up = classify(built_record(), transfer_case_parallel())
+    result = GearboxUpdate(extra_mates=list(extra), configuration="2H")
+    assert ui_text.motion_update_lines(up, result) == [said]
+    status, ok = ui_text.gearbox_update_status(up, result)
+    assert ok and status.startswith(f"SolidWorks already matches the workbook: nothing was changed. {said} ")
+    log = result.log_lines()
+    assert f"CHECK   mates Gear Generator did not make, suppressed in every mode, left as they are: {', '.join(extra)}" \
+        in log
+    assert not [line for line in log if line.startswith("CHECK   suppressed mates")]
+
+
+def test_a_mate_the_app_did_not_make_is_said_suppressed_without_modes_as_before():
+    up = classify(built_record(planetary_4to1), planetary_4to1())
+    assert up.motion.configurations == ()
+    result = GearboxUpdate(extra_mates=["Angle1", "Distance3"])
+    assert ui_text.motion_update_lines(up, result) == [
+        "Planetary_4to1.SLDASM also has suppressed mates the app did not make, Angle1 and Distance3; Update "
+        "SolidWorks left them as they are."]
+    assert "CHECK   suppressed mates Gear Generator did not make, left as they are: Angle1, Distance3" in \
+        result.log_lines()
