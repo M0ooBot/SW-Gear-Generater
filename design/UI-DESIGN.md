@@ -433,11 +433,11 @@ left or up rather than off the screen.
   | State | Dot | Words |
   |---|---|---|
   | to build | green | *to build* |
-  | the same part as another row | green | *the same part as G1* (identical rows share one file) |
+  | the same part as another row | green | *same as G1* (identical rows share one file; a long name shortened as the Part column's) |
   | a later phase builds it (since W8 no kind does; the state stays for one that may) | grey `#8f8f8f` | *later · phase W9* |
   | an error of its own | red | *see Checks*, in red |
   | built, and Update leaves it | green | *built* |
-  | built, and Update changes its values | near-black `#2b2b2b` | *built · changes on Update* |
+  | built, and Update changes its values | near-black `#2b2b2b` | *changes on Update* |
   | built, but its change needs a new part, or its file is gone | red | *needs a new part*, in red |
 
   Values are shown as typed, a bad one included (`68.5`); a ring's kind reads
@@ -497,8 +497,10 @@ left or up rather than off the screen.
   rim as a circle. One colour per face height, nearest +Z drawn last: ink
   `#3c3c3c`, then blue `#2f6db5`, orange `#b35c00`, purple `#6a3d9a`, green
   `#1a7f37`. Each shaft a 10 px cross with its name in mono below right, or on
-  the first side clear of the origin's arrows when that would sit on them (a
-  shaft at the origin has it below left); since W7 each name sits on a plain
+  the first side clear of the origin's arrows when that would sit on them, in
+  the order above right, below left, above left (a shaft at the origin has it
+  below left; since W8 a name pushed off below right tries above right first,
+  so it stays on its own shaft's side); since W7 each name sits on a plain
   white backing, so it reads where it falls across teeth. The origin: X a red arrow and Y a
   green one, 26 px, and a dot. All of where is `preview.layout_gearbox`, headless
   and tested; the window only strokes it. A gearbox that cannot be laid out
@@ -1034,10 +1036,17 @@ table shows each part to build under the name the build will give it
 gearbox with modes has one set of speeds, torques and a ratio per mode, and the
 end view's sliders stand at a different face height in each; one panel cannot
 show them all and stay readable at the end view's width. So the Speeds panel's
-header carries a segmented chooser (`widgets.Segmented`, 16 px high, mono, 44
-px a segment: `workbook_gui.MODE_SEGMENT`), one segment per Modes row in sheet
-order, the first chosen; the Speeds panel and the end view show the chosen
-mode. The choice is kept across re-reads while a mode of that name is there
+header carries a segmented chooser (`widgets.Segmented`, 16 px high, mono),
+one segment per Modes row in sheet order, the first chosen; the Speeds panel
+and the end view show the chosen mode. **Every name shows whole, and the
+window keeps its 1080 px** (`workbook_gui.mode_chooser_rows`, a default the
+user may overrule): every segment is as wide as the longest name needs (8 px a
+character of the chosen segment's bold mono and 8 px either side, 32 px at
+least); when they all fit in 200 px they sit in the header, after the readout
+(`2H 4H N 4L`); when they do not (`Road AllWheel Towing CrawlLow`, or six
+modes), they go in rows at the top of the Speeds panel, as many a row as fit
+the end view's 392 px. Rows rather than a drop-down, so every mode stays one
+click away and in sight. The choice is kept across re-reads while a mode of that name is there
 (names compared as everywhere, ignoring case: `swbuild.on_in`), else the first
 is chosen again. A workbook with no Modes rows has no chooser (sliders alone
 sit at their position 0, one mode with no name).
@@ -1066,15 +1075,23 @@ and a name shared by many coaxial shafts breaks onto lines at its commas
 *Worked out as* names each mode's ratio: *Parallel train with modes · 4 meshes ·
 2H 1.000 : 1, 4H 1.000 : 1, N neutral, 4L 4.000 : 1*.
 
-Boards: `WorkbookModes` (the E4 transfer case read, the chooser on 4L) and
+*Worked out as* wraps in its cell, as the footer does, breaking only between
+modes (B holds each mode's ratio together with no-break spaces); the Gears
+table's states fit their column (`ui_text.GEAR_STATE_CHARS`). A test holds the
+window to 1080 px for both fixtures, four long mode names and six modes.
+
+Boards: `WorkbookModes` (the E4 transfer case read, the chooser on 4L),
 `WorkbookModesBuilt` (TransferCase_Parallel built on the fake, the chooser on
-2H).
+2H) and `WorkbookModesUpdated` (the same after a quiet Update: the mode it worked
+in, and the couplings' turning it could not read with their mates off there).
 
 | State | Sentence | Build button | Update SolidWorks |
 |---|---|---|---|
 | ready | *Ready: Build makes 6 parts, TransferCase_Parallel_Layout and TransferCase_Parallel.SLDASM in …. Its gears are mated to their shafts and, as each mode engages them, to each other, so they turn together in SolidWorks. It has 4 modes, 2H, 4H, N and 4L: each becomes a configuration of the assembly, and it opens in 2H.* | **Build**, on | hidden |
 | built | *Built 6 parts, …; no interference between the gears in any mode, where they stand. Its gears are mated to turn in each of its 4 modes, one configuration each (2H, 4H, N and 4L), and SolidWorks reports no mate in error in any of them: it opens in 2H; to switch mode, double-click another mode's configuration in SolidWorks' ConfigurationManager. …* then, by the running version's answer the build carried (`positions_per_configuration`), *A turn you give the gears in one mode stays in that mode.* | **Build again…**, on | on, primary |
 | the same, the window opened afresh | the record's sentence with neither claim about a turn, since no job of this session has said which SolidWorks runs (W8-INTERFACES §9.12) | **Build again…**, on | on, primary |
+| a quiet Update | *SolidWorks already matches the workbook: nothing was changed. It worked in 2H, the configuration that was active; it did not show the other modes, since nothing needed changing.* and what it could not read: *Which way RangeSlv and LoDog, and ModeSlv and FrontDog, turn against each other was not checked this time: their mates are switched off in 2H, …* | **Build again…**, on | on, primary |
+| a Modes pick changed (4H's ModeSlv 4WD → 2WD) | *Update SolidWorks will move ModeSlv in 4H to 96 mm along Rear, and switch the mate ModeSlv engages FrontDog off in 4H.* and after: *Updated SolidWorks: moved ModeSlv in 4H to 96 mm along Rear, … It worked in 2H, the configuration that was active, then showed and checked 4H, N and 4L and left the assembly in 2H. …* | **Build again…**, on | on, primary |
 | a planetary form, a slider on a fixed or turned shaft, … | *Fix the workbook before building: …* — what W8 does not build is an error naming no phase | **Build**, off | — |
 
 Update across modes (W8-PLAN §1.10: the configuration active when it opens, the

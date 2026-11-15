@@ -730,20 +730,24 @@ def press_update(desk, spec):
                                        read_sidecar=desk.disk.read_sidecar, mtime=lambda _path: 0.0, stamp=STAMP)
     desk.disk.write(finished)
     desk.record = finished.record or desk.record
-    text, ok = ui_text.gearbox_update_status(update, result, finished.dragged, meshes=meshes)
+    text, ok = ui_text.gearbox_update_status(update, result, finished.dragged, meshes=meshes,
+                                             finished=finished)               # as WorkbookWindow._finish_update
+    desk.positions = getattr(result, "positions_per_configuration", None)
     return ui_text.Note(" ".join([text] + finished.notes), ok)
 
 
 def gears_table(rows):
-    # Tk's minsize is a floor, not a width: a column grows to what it holds (built · changes on Update), and the
-    # one with no minsize takes what is left.
-    widths = " ".join("minmax(0, 1fr)" if w == 0 else f"minmax({w}px, max-content)" for w in wb_gui.TABLE_WIDTHS)
+    # Tk's minsize is a floor, not a width: a column grows to what it holds (ui_text.GEAR_STATE_CHARS sizes the
+    # states to fit), and the one with no minsize takes what is left.
+    # The Part column takes the room left but never less than its text, as a Tk label never shrinks below its own:
+    # the board shows a window too wide when the window would be (W8 review), never a cell cut short.
+    widths = " ".join("minmax(max-content, 1fr)" if w == 0 else f"minmax({w}px, max-content)" for w in wb_gui.TABLE_WIDTHS)
     cells = [f'<span style="font-size: 11px; color: {READOUT}; line-height: 18px;">{h}</span>' for h in wb_gui.TABLE_HEAD]
     for gear, shaft, kind, teeth, module, face, part, state, what in rows:
         cells += [f'<span style="{MONO_TINY}">{v}</span>' for v in (gear, shaft)]
         cells.append(f'<span style="font-size: 12px; color: {LABEL}; line-height: 20px;">{kind}</span>')
         cells += [f'<span style="{MONO_TINY}">{v}</span>' for v in (teeth, module, face)]
-        cells.append(f'<span style="{MONO_TINY} overflow: hidden; text-overflow: ellipsis;">{part or "—"}</span>')
+        cells.append(f'<span style="{MONO_TINY} white-space: nowrap;">{part or "—"}</span>')
         cells.append(f'<span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; '
                      f'color: {ERR if state in wb_gui.RED_STATES else MUTED}; line-height: 20px; white-space: nowrap;">'
                      f'{dot(wb_gui.STATE_COLOURS[state])}{what}</span>')
@@ -767,13 +771,6 @@ def check_lines(diagnostics, offered, chosen):
     return out
 
 
-def chosen_mode(report, name):
-    """WorkbookWindow._chosen_mode: the mode named (swbuild.on_in's comparison), else the first; None without."""
-    if not report.modes:
-        return None
-    return next((m for m in report.modes if m.name and swbuild.on_in((m.name,), name or "")), report.modes[0])
-
-
 def end_view_svg(report, spec, mode=None):
     w, h = wb_gui.END_VIEW
     if not report.layout.placed:
@@ -781,7 +778,7 @@ def end_view_svg(report, spec, mode=None):
         return (f'<div style="width: {w}px; height: {h}px; background: #ffffff; font-size: 12px; color: {MUTED}; '
                 f'padding: 12px; box-sizing: border-box;">{reason}</div>'), ""
     carriers = {c: point[:2] for c, (point, _) in wb_geometry.carrier_axes(spec, report).items()}   # as the window
-    placed = {**report.layout.placed, **(mode.placed if mode is not None else {})}     # W8: the chosen mode's
+    placed = wb_gui.mode_placed(report, mode)                       # W8: the chosen mode's (the window's home)
     view = layout_of.layout_gearbox(placed, report.theta, w, h, step=2, carriers=carriers,
                                     shafts=[s.id for s in spec.shafts])
     body = []
@@ -922,25 +919,25 @@ def workbook_board(spec, *, clock="14:02:31", open_in_excel=True, before=None, c
                   [f'<div style="{mono} line-height: 1.5;">{c}</div>' for c in ui_text.workbook_change_lines(changes, did, covered)]
                   or [warning("Nothing changed.")],
                   gap=2)
-    shown = chosen_mode(report, mode)
+    shown = wb_gui.chosen_mode(report, mode)
     svg, view_readout = end_view_svg(report, effective, shown)
     view = panel("End view, from your origin", view_readout, [svg])
     names = [m.name for m in report.modes if m.name]
-    if shown is not None:                       # W8: the chosen mode's speeds, and the chooser in the header
-        lines, speeds_readout = ui_text.mode_speed_lines(effective, report, shown.name)
-        if names:                               # with the chooser, the note that it changes only the window
-            lines = lines + [ui_text.mode_chooser_note(record)]
-        prose = ui_text.speeds_prose_rows(shown.motion, lines, mode=True, chooser=bool(names))
-    else:
-        lines, speeds_readout = ui_text.workbook_speed_lines(effective, report.motion)
-        # A sentence in place of a shaft's line in prose, as the window: ui_text says which.
-        prose = ui_text.speeds_prose_rows(report.motion, lines)
-    chooser = ""
-    if names:                                   # Segmented(height=16, mono) in the header slot, after the readout
+    # The chosen mode's lines, the chooser's note and the prose rows: WorkbookWindow's own home (speeds_panel).
+    lines, speeds_readout, _, prose = wb_gui.speeds_panel(effective, report, shown, chooser=bool(names),
+                                                          record=record)
+    in_header, chooser_rows = wb_gui.mode_chooser_rows(names)      # where the chooser goes, as the window puts it
+    width = wb_gui.mode_segment_width(names)
+    chooser, chooser_body = "", []
+    if names and in_header:                     # Segmented(height=16, mono) in the header slot, after the readout
         chooser = (f'<span style="display: flex; align-items: center; gap: 8px;"><span style="font-size: 11.5px; '
                    f'color: #8f8f8f;">{speeds_readout}</span>'
-                   + seg(names, shown.name, w=f"{wb_gui.MODE_SEGMENT * len(names)}px", h=16, mono=True) + '</span>')
-    speeds = panel("Speeds", speeds_readout, extra_header=chooser, body_rows=
+                   + seg(names, shown.name, w=f"{width * len(names)}px", h=16, mono=True) + '</span>')
+    for row_names in chooser_rows if not in_header else ():         # … else in rows at the panel's top
+        chooser_body.append(f'<div style="margin-bottom: 4px;">'
+                            + seg(list(row_names), shown.name, w=f"{width * len(row_names)}px", h=16, mono=True)
+                            + '</div>')
+    speeds = panel("Speeds", speeds_readout, extra_header=chooser, body_rows=chooser_body +
                    [f'<div style="font-size: 12px; color: {MUTED}; line-height: 1.45; max-width: {wb_gui.END_VIEW[0]}px;">'
                     f'{line}</div>' if r in prose else
                     f'<div style="{mono} white-space: pre-wrap; line-height: 1.5; max-width: {wb_gui.END_VIEW[0]}px;">'
@@ -961,7 +958,7 @@ def workbook_board(spec, *, clock="14:02:31", open_in_excel=True, before=None, c
             f'min-width: {8 + 8 + wb_gui.STATUS_MIN_WRAP + 2}px; box-sizing: border-box; padding-right: 2px;">'
             f'<span style="padding-top: 5px; display: flex;">{dot(colour, 8)}</span><span style="line-height: 1.35;">{footer.text}</span></div>'
             f'<div style="display: flex; gap: 8px; flex-shrink: 0;">{"".join(buttons)}</div></div>')
-    left = (f'<div style="width: {wb_gui.LEFT_WIDTH}px; flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px;">'
+    left = (f'<div style="width: {wb_gui.LEFT_WIDTH}px; flex-grow: 1; display: flex; flex-direction: column; gap: 8px;">'
             + "".join([box, gears, checks, since]) + '</div>')
     right = (f'<div style="flex-shrink: 0; display: flex; flex-direction: column; gap: 8px;">' + view + speeds + '</div>')
     body = (header + f'<div style="display: flex; gap: 8px; align-items: flex-start;">{left}{right}</div>' + foot)
@@ -1214,6 +1211,13 @@ boards["WorkbookModesBuilt"] = ("Workbook · TransferCase_Parallel built: one co
                                 workbook_board(parallel, desk=parallel_desk, note=parallel_note,
                                                positions_per_configuration=parallel_desk.positions),
                                 WINDOW_WIDTH)
+# The same, Update SolidWorks pressed with nothing changed: the quiet Update's sentence, which mode it worked in, and
+# what it could not read with the couplings switched off there (W8-INTERFACES §9.11, §9.16).
+updated_note = press_update(parallel_desk, parallel)
+boards["WorkbookModesUpdated"] = ("Workbook · TransferCase_Parallel after a quiet Update: the mode it worked in",
+                                  workbook_board(parallel, desk=parallel_desk, note=updated_note,
+                                                 positions_per_configuration=parallel_desk.positions),
+                                  WINDOW_WIDTH)
 
 layout = []
 x = 0
