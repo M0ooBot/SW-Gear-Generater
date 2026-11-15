@@ -7039,6 +7039,10 @@ W8_SLIDE = "S Face Z at P"
 W8_SLIDE_Q = "S Face Z at Q"
 W8_DRIVE = "Drive"
 W8_CONFIGS = ("X", "Y")
+#: Names read once, before any configuration is added: a component handle fetched again after a configuration
+#: change answered GetModelDoc2 with None (the spike's second run), so nothing after one asks a component for its
+#: document. "gear" is A's Top plane, "layout" the layout's Right and "front" its Front; "sleeve" the sleeve's part.
+_W8: Dict[str, Any] = {}
 
 
 def w8_parts_spec(folder: str) -> Any:
@@ -7122,8 +7126,11 @@ def _w8_refresh(px: Px, doc: Any, comps: Dict[str, Any], names: Mapping[str, str
     for k, n in names.items():
         comps[k] = call(doc, "GetComponentByName", n)
     fresh = call(doc, "GetComponentByName", layout_name)
+    out["new_model_doc_none"] = {}
     for k, c in dict(comps, layout=fresh).items():
         out["new_is_fixed"][k] = bool(call(c, "IsFixed")) if c is not None else None
+        got, md = px.attempt(f"GetModelDoc2 of the fresh {k}", lambda c=c: call(c, "GetModelDoc2"))
+        out["new_model_doc_none"][k] = (md is None) if got else "raised"
     out["new_transform_none"] = {k: call(c, "Transform2") is None for k, c in dict(comps, layout=fresh).items()
                                  if c is not None}
     return fresh, out
@@ -7132,7 +7139,11 @@ def _w8_refresh(px: Px, doc: Any, comps: Dict[str, Any], names: Mapping[str, str
 def _w8_drive(px: Px, doc: Any, comps: Mapping[str, Any], layout: Any, label: str) -> Dict[str, Any]:
     """W5's demonstration drive on A (its Top plane to the layout's Right at 90°, on "Drive"), 90 → 120; every turn
     about its own axis; S's origin along the axis; set back; the drive taken away."""
-    drive = _spike_drive(px, doc, comps["A"], layout, W8_DRIVE, f"A {label}")
+    add = adder(px, call(doc, "GetEquationMgr"))
+    px.require(add(f'"{W8_DRIVE}"= {DEMO_FROM:g}') >= 0, f"{W8_DRIVE} is added")
+    drive = drive_mate(px, doc, comps["A"], _W8["gear"], layout, _W8["layout"], f"A {label}", add,
+                       _enums(px)["closest"], angle=DEMO_FROM, global_name=W8_DRIVE)
+    px.require(bool(drive), f"A {label} is driven")
     rebuild(px, doc, f"{label}: drive added", top_only=TOP_ONLY)
     start = _frames(comps)
     _set_global(call(doc, "GetEquationMgr"), W8_DRIVE, DEMO_FROM + 30.0)
@@ -7244,6 +7255,17 @@ def _w8_run(px: Px, facts: Dict[str, Any]) -> None:
                             "flags": _w8_flags(px, doc, paths)}
         keys = asm.names()
         layout_name = str(call(layout, "Name2"))
+        from .p4_nonparallel import select_origin  # noqa: PLC0415
+        from .p7_workbook import _doc_at  # noqa: PLC0415
+        _W8.clear()
+        _W8.update(gear=_plane_names(comps["A"])[1], layout=_plane_names(layout)[2], front=_plane_names(layout)[0],
+                   sleeve=_doc_at(px, sleeve_path))
+        px.require(_W8["sleeve"] is not None, "the sleeve's part is open")
+
+        def s_origin_and_front() -> bool:
+            return bool(px.attempt("select S's origin", lambda: select_origin(px, doc, comps["S"], _W8["sleeve"],
+                                                                              False))[0]) and \
+                bool(select_in(px, doc, layout, _W8["front"], "PLANE", True))
 
         # 1-3: the spline S–A, both Flips, each driven.
         spline: Dict[str, Any] = {}
@@ -7273,8 +7295,7 @@ def _w8_run(px: Px, facts: Dict[str, Any]) -> None:
         # 4: the slide under the spline.
         add = _adder(px, call(doc, "GetEquationMgr"))
         px.require(add(f'"{W8_SLIDE}"= {W8_A_Z:g}') >= 0, "the slide global is added")
-        px.require(bool(_select_origin(px, doc, comps["S"], append=False)) and
-                   bool(select_in(px, doc, layout, _plane_names(layout)[0], "PLANE", True)), "S's origin and Front select")
+        px.require(s_origin_and_front(), "S's origin and Front select")
         slide = add_mate(px, doc, "S along A at P", _enums(px)["distance"], _enums(px)["closest"], distance=W8_A_Z)
         px.require(bool(slide.get("name")), f"the slide is made: {slide}")
         _rename(px, mate_feature(doc, slide["name"]), "S along A at P")
@@ -7329,8 +7350,7 @@ def _w8_run(px: Px, facts: Dict[str, Any]) -> None:
         cfg["suppress coupling in Y first"] = _cfg_suppress(px, doc, "S engages D", True, ["Y"])
         cfg["flags before Q"] = _cfg_flags(px, doc, ["S along A at P", "S engages D"], configs)
         rebuild(px, doc, "Y: P and coupling off", top_only=TOP_ONLY)
-        px.require(bool(_select_origin(px, doc, comps["S"], append=False)) and
-                   bool(select_in(px, doc, layout, _plane_names(layout)[0], "PLANE", True)), "S's origin and Front select")
+        px.require(s_origin_and_front(), "S's origin and Front select")
         q = add_mate(px, doc, "S along A at Q", _enums(px)["distance"], _enums(px)["closest"], distance=W8_A_Z + 20.0)
         cfg["slide Q made"] = q
         if q.get("name"):
