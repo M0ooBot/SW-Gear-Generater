@@ -192,8 +192,8 @@ class FakeSolidWorks:
     coordinate its along mate holds along that mate's plane's normal (plane1 z, plane2 y, plane3 x), signed as the
     mate was made (W6-INTERFACES §7.6). ``gear_mate_sense`` answers by rule H (``swcom.sense_reading``) from a
     Reverse and two entity directions that tell the mate's TRUE sense: on parallel axes W5's, from the ring tables;
-    on turned axes the mesh's true sense is ``turned_senses[name]`` (``k > 0``), taken from the first caller when a
-    test sets none, and a turned mate turns right when its Flip is ``turned_flip_needed`` (made up: no probe ties a
+    on turned axes the fake works the mesh's true sense out itself from where the gears stand (``_true_same``;
+    ``turned_senses[name]``, ``k > 0``, overrides it), never from the caller, and a turned mate turns right when its Flip is ``turned_flip_needed`` (made up: no probe ties a
     turned Flip to anything). It gates a turned mate as ``Session`` does (the turned finding, the angles for axes
     that meet or pass each other). Overrides: ``turned_reverse={name: bool}`` fixes the Reverse SolidWorks reads,
     whatever the mate does (the rule failing); ``entity_senses={name: (±1, ±1)}`` points an entity against its
@@ -891,14 +891,50 @@ class FakeSolidWorks:
             return False
         return mate.flip == self.mesh_case(mate)[2]
 
-    def _true_same(self, mate, asked=None):
-        """Whether the mesh truly turns its gears the same way about their own axes (k > 0)."""
+    def _helix(self, name):
+        """(β in degrees, +1 right / -1 left) from a helical part's file name as the app names one (``…_45R``)."""
+        import re
+        path = self.component_paths.get(name, "")
+        stem = path.replace("/", "\\").rsplit("\\", 1)[-1].rsplit(".", 1)[0]
+        found = re.search(r"_(\d+(?:\.\d+)?)([LR])$", stem)
+        return None if found is None else (float(found.group(1)), 1 if found.group(2) == "R" else -1)
+
+    def _true_same(self, mate):
+        """Whether the mesh truly turns its gears the same way about their own axes (k > 0), worked out by the fake
+        from where the gears stand, never taken from the caller (W6-INTERFACES §7.18): ``turned_senses`` when a test
+        sets it; else, on axes that meet (a bevel pair, each body on its own +Z side of the apex, D1), always False:
+        at the pitch point both gears' surface speeds are ``ω·a × r``, and with each own axis pointing away from the
+        apex the two cross products point opposite ways for any shaft angle and any cone (worked for fixture A in
+        :func:`test_fixture_a_bevel_stage_turns_its_gears_opposite_ways_by_hand`); on axes that pass each other (a
+        crossed pair), from the first gear's helix (its part's ``…_45R``) at the contact: with ``e`` the common
+        perpendicular from gear a's line to gear b's, gear a's tooth there runs ``t = cos β·a_a + s·sin β·(a_a × e)``;
+        the pitch-point speeds ``ω_a r_a (a_a × e)`` and ``−ω_b r_b (a_b × e)`` agree across the tooth (along
+        ``n = t × e``), so the turns are the same way exactly when ``(a_a × e)·n`` and ``(a_b × e)·n`` differ in
+        sign. Parallel axes: W5's, from the ring tables."""
         if self._turned(mate):
-            if mate.name not in self.turned_senses:
-                if asked is None:
-                    raise AssertionError(f"the fake was never told which way the turned mesh {mate.name} turns")
-                self.turned_senses[mate.name] = bool(asked)
-            return self.turned_senses[mate.name]
+            if mate.name in self.turned_senses:
+                return self.turned_senses[mate.name]
+            a, b = mate.a[0], mate.b[0]
+            pa, ga, pb, gb = self._origin(a), self._axis(a), self._origin(b), self._axis(b)
+            if swcom.lines_meet(pa, ga, pb, gb):
+                return False
+            helix = self._helix(a)
+            if helix is None:
+                raise AssertionError(f"the fake cannot tell which way the crossed mesh {mate.name} turns: set "
+                                     "turned_senses or name the part as the app names a helical one")
+            cross = lambda u, v: (u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2],    # noqa: E731
+                                  u[0] * v[1] - u[1] * v[0])
+            dot = lambda u, v: sum(x * y for x, y in zip(u, v))                              # noqa: E731
+            normal = cross(ga, gb)
+            size = math.sqrt(dot(normal, normal))
+            e = tuple(v / size for v in normal)
+            if dot(tuple(pb[i] - pa[i] for i in range(3)), e) < 0:
+                e = tuple(-v for v in e)
+            beta, hand = math.radians(helix[0]), helix[1]
+            ta = cross(ga, e)
+            t = tuple(math.cos(beta) * ga[i] + hand * math.sin(beta) * ta[i] for i in range(3))
+            n = cross(t, e)
+            return dot(ta, n) * dot(cross(gb, e), n) < 0
         alike = sum(p * q for p, q in zip(self._axis(mate.a[0]), self._axis(mate.b[0]))) > 0
         return self.mesh_case(mate)[0] == alike
 
@@ -922,7 +958,7 @@ class FakeSolidWorks:
                 raise SolidWorksError(refusal)
         taus = self.entity_senses.get(mate.name, (1, 1))
         directions = [tuple(taus[0] * v for v in self._axis(a)), tuple(taus[1] * v for v in self._axis(b))]
-        product = (1 if self._true_same(mate, same_sense) else -1) * taus[0] * taus[1]
+        product = (1 if self._true_same(mate) else -1) * taus[0] * taus[1]
         reverse = (product > 0) if self.turns_right(mate.name) else not (product > 0)
         reverse = self.turned_reverse.get(mate.name, reverse)
         if mate.name in self.entity_stray:
@@ -4418,7 +4454,29 @@ X_FRAME = (0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0)       # geometry.base_fr
 A_LAYOUT, A_ASM = W + "Bevel_Reducer_Layout.SLDPRT", W + "Bevel_Reducer.SLDASM"
 B20, B40 = W + "Bevel_m3_N20.SLDPRT", W + "Bevel_m3_N40.SLDPRT"
 A_PARTS = {"gear1": B20, "gear2": B40, "gear3": P17, "gear4": P51}
-A_SENSES = {"G1 meshes G2": False, "G3 meshes G4": False}     # k < 0 on both: c = +1 (bevel), c = a·a = +1 (spur)
+# Each turned mesh's sense worked out by hand from the contact, not from the planning code (W6-INTERFACES §7.18).
+#
+# Fixture A, G1 meshes G2 (bevel, §5.1). Own axes a1 = +X, a2 = +Z, both pointing away from the shared apex
+# (0, 0, 60), each body on its own +Z side (D1). The pitch point is P = apex + R(cos δ1, 0, sin δ1), on +X and +Z of
+# the apex. G1's speed there is ω1·(+X) × (0, 0, R sin δ1) = −ω1·R sin δ1·Y; G2's is ω2·(+Z) × (R sin δ2, 0, 0) =
+# +ω2·R sin δ2·Y (δ1 + δ2 = 90°, so G2's radius to P is R cos δ1 = R sin δ2). Rolling, they are equal:
+# ω2 = −ω1·sin δ1 / sin δ2 = −ω1·20/40. Opposite turns about the own axes: k < 0, False.
+#
+# Fixture B, G1 meshes G2 (crossed, §5.2). a1 = +Z through the origin, a2 = +X along y 84.852814, z 8: the common
+# perpendicular from G1's line to G2's is e = +Y, the contact (0, 28.284271, 8). G1 is right-handed at 45°: a right
+# helix (r cos θ, r sin θ, pθ) runs (−r sin θ, r cos θ, p) at θ = 90°, so its tooth there is t ∝ (−1, 0, 1). The
+# surface speeds are G1's ω1·Z × (r1·Y) = −ω1 r1·X and G2's ω2·X × (−r2·Y) = −ω2 r2·Z; they agree across the tooth,
+# along n = t × e ∝ (−1, 0, −1): ω1 r1 = ω2 r2, so ω2 = +ω1·r1/r2 = +ω1·20/40. The same way: k > 0, True.
+#
+# Fixture B, G3 meshes G4 (bevel at 120°). a3 = +X, a4 = d̂ = (−0.5, 0.866, 0), apex (−110, 84.852814, 8). The
+# pitch point lies at δ3 from a3 towards a4, at R(cos δ3, sin δ3, 0) from the apex. G3's speed there is
+# ω3·X × (0, R sin δ3, 0) = +ω3·R sin δ3·Z; G4's radius to it points at 30° in the XY plane, (0.866, 0.5, 0), and
+# d̂ × (0.866, 0.5, 0) = −Z, so G4's speed is −ω4·R sin δ4·Z. Equal: ω4 = −ω3·sin δ3 / sin δ4 = −ω3·20/30.
+# Opposite turns: k < 0, False. (The spur G3 meshes G4 of fixture A is parallel: W5's rule, outside, False.)
+A_TRUE = {"G1 meshes G2": False}
+B_TRUE = {"G1 meshes G2": True, "G3 meshes G4": False}
+A_SENSES = {"G1 meshes G2": A_TRUE["G1 meshes G2"], "G3 meshes G4": False}
+B_SENSES = dict(B_TRUE)
 
 
 def _a_layout_plan(path=A_LAYOUT):
@@ -4592,41 +4650,66 @@ C_SHAFT = 84.852814
 H20, H40 = W + "Helical_m2_N20_45R.SLDPRT", W + "Helical_m2_N40_45R.SLDPRT"
 
 
-def _b_layout_plan(path=A_LAYOUT):
-    return BuildPlan("layout", "", (
-        ops.NewPart(""), ops.AddGlobal("S2 Y", repr(C_SHAFT)), ops.AddGlobal("S2 Z", "8"),
-        ops.RefPlane("y2", "S2 Y Plane", 2, C_SHAFT), ops.RefPlane("z2", "S2 Z Plane", 1, 8.0),
-        ops.Axis("axis1", "S1 Axis", (2, 3)), ops.Axis("axis2", "S2 Axis", ("y2", "z2")),
-        ops.Rebuild(), ops.SaveAs(path)), path)
+B_BEVEL20, B_BEVEL30 = W + "Bevel_m2.5_N20.SLDPRT", W + "Bevel_m2.5_N30.SLDPRT"
+SLANT_D = (-0.5, math.sqrt(3) / 2, 0.0)
+# geometry.base_frame(SLANT_D) by rows: u0 = +X projected square to d̂ = (√3/2, 1/2, 0), v0 = d̂ × u0 = (0, 0, −1)
+D_FRAME = (math.sqrt(3) / 2, 0.0, -0.5, 0.5, 0.0, math.sqrt(3) / 2, 0.0, -1.0, 0.0)
+B_APEX = (-110.0, C_SHAFT, 8.0)
 
 
-def _b_plan(path=A_ASM):
-    steps = [ops.NewAssembly(""), ops.AddGlobal("G1 Face Z", "2"), ops.AddGlobal("G2 Face X", "8"),
-             ops.AddComponent("layout", A_LAYOUT), ops.Place("layout", IDENTITY, (0.0, 0.0, 0.0)), ops.Fix("layout"),
-             ops.AddComponent("gear1", H20, (0.0, 0.0, 2.0)), ops.Place("gear1", IDENTITY, (0.0, 0.0, 2.0)),
-             ops.Fix("gear1"),
-             ops.AddComponent("gear2", H40, (-8.0, C_SHAFT, 8.0)), ops.Place("gear2", X_FRAME, (-8.0, C_SHAFT, 8.0)),
-             ops.Fix("gear2"),
-             ops.Unfix("gear1"),
-             ops.Mate("axis1", "coincident", "gear1:Gear Axis", "layout:S1 Axis", name="G1 on S1 Axis"),
-             ops.Mate("along1", "point distance", "gear1:origin", "layout:plane1", 2.0, name="G1 along S1"),
-             ops.LinkDimension("D1@G1 along S1", '"G1 Face Z"'),
-             ops.Unfix("gear2"),
-             ops.Mate("axis2", "coincident", "gear2:Gear Axis", "layout:S2 Axis", name="G2 on S2 Axis"),
-             ops.Mate("along2", "point distance", "gear2:origin", "layout:plane3", -8.0, name="G2 along S2"),
-             ops.LinkDimension("D1@G2 along S2", '"G2 Face X"'),
-             ops.Mate("mesh1", "gear", "gear1:Gear Axis", "gear2:Gear Axis", name="G1 meshes G2", ratio=(20.0, 40.0))]
+def _b_layout_plan(path=A_LAYOUT, slant=True):
+    steps = [ops.NewPart(""), ops.AddGlobal("S2 Y", repr(C_SHAFT)), ops.AddGlobal("S2 Z", "8"),
+             ops.RefPlane("y2", "S2 Y Plane", 2, C_SHAFT), ops.RefPlane("z2", "S2 Z Plane", 1, 8.0),
+             ops.Axis("axis1", "S1 Axis", (2, 3)), ops.Axis("axis2", "S2 Axis", ("y2", "z2"))]
+    if slant:
+        steps.append(ops.LineAxis("line3", "S3 Axis", B_APEX, SLANT_D))
+    return BuildPlan("layout", "", tuple(steps) + (ops.Rebuild(), ops.SaveAs(path)), path)
+
+
+def _b_plan(path=A_ASM, slant=False):
+    """Fixture B (§5.2): the crossed pair G1 (S1, Z+) – G2 (S2, X+); with ``slant``, also G3 (bevel on S2, At −110,
+    locked to G2) meshing G4 (bevel on the slanted S3, its apex held from Top by "G4 Apex Y") at 120°."""
+    steps = [ops.NewAssembly(""), ops.AddGlobal("G1 Face Z", "2"), ops.AddGlobal("G2 Face X", "8")]
+    if slant:
+        steps.append(ops.AddGlobal("G4 Apex Y", repr(C_SHAFT)))
+    steps += [ops.AddComponent("layout", A_LAYOUT), ops.Place("layout", IDENTITY, (0.0, 0.0, 0.0)), ops.Fix("layout"),
+              ops.AddComponent("gear1", H20, (0.0, 0.0, 2.0)), ops.Place("gear1", IDENTITY, (0.0, 0.0, 2.0)),
+              ops.Fix("gear1"),
+              ops.AddComponent("gear2", H40, (-8.0, C_SHAFT, 8.0)), ops.Place("gear2", X_FRAME, (-8.0, C_SHAFT, 8.0)),
+              ops.Fix("gear2")]
+    if slant:
+        steps += [ops.AddComponent("gear3", B_BEVEL20, B_APEX), ops.Place("gear3", X_FRAME, B_APEX), ops.Fix("gear3"),
+                  ops.AddComponent("gear4", B_BEVEL30, B_APEX), ops.Place("gear4", D_FRAME, B_APEX), ops.Fix("gear4")]
+    steps += [ops.Unfix("gear1"),
+              ops.Mate("axis1", "coincident", "gear1:Gear Axis", "layout:S1 Axis", name="G1 on S1 Axis"),
+              ops.Mate("along1", "point distance", "gear1:origin", "layout:plane1", 2.0, name="G1 along S1"),
+              ops.LinkDimension("D1@G1 along S1", '"G1 Face Z"'),
+              ops.Unfix("gear2"),
+              ops.Mate("axis2", "coincident", "gear2:Gear Axis", "layout:S2 Axis", name="G2 on S2 Axis"),
+              ops.Mate("along2", "point distance", "gear2:origin", "layout:plane3", -8.0, name="G2 along S2"),
+              ops.LinkDimension("D1@G2 along S2", '"G2 Face X"')]
+    if slant:
+        steps += [ops.Unfix("gear3"), ops.Mate("lock1", "lock", "gear2", "gear3", name="G3 locked to G2"),
+                  ops.Unfix("gear4"),
+                  ops.Mate("axis4", "coincident", "gear4:Gear Axis", "layout:S3 Axis", name="G4 on S3 Axis"),
+                  ops.Mate("along4", "point distance", "gear4:origin", "layout:plane2", C_SHAFT, name="G4 along S3"),
+                  ops.LinkDimension("D1@G4 along S3", '"G4 Apex Y"')]
+    steps.append(ops.Mate("mesh1", "gear", "gear1:Gear Axis", "gear2:Gear Axis", name="G1 meshes G2",
+                          ratio=(20.0, 40.0)))
+    if slant:
+        steps.append(ops.Mate("mesh2", "gear", "gear3:Gear Axis", "gear4:Gear Axis", name="G3 meshes G4",
+                              ratio=(20.0, 30.0)))
     return BuildPlan("gearbox", "", tuple(steps) + (ops.Rebuild(), ops.SaveAs(path)), path)
 
 
 def _build_b(fake=None, **kwargs):
     fake = fake or FakeSolidWorks()
     kwargs.setdefault("parts", [plan(S17, path=H20), plan(S68, path=H40)])
-    kwargs.setdefault("layout", _b_layout_plan())
+    kwargs.setdefault("layout", _b_layout_plan(slant=False))
     kwargs.setdefault("assembly", _b_plan())
     kwargs.setdefault("gears", {"gear1": "G1", "gear2": "G2"})
     kwargs.setdefault("exists", fake.exists)
-    kwargs.setdefault("senses", {"G1 meshes G2": True})          # c = −1: k = +20/40 > 0
+    kwargs.setdefault("senses", {"G1 meshes G2": B_TRUE["G1 meshes G2"]})
     return fake, swbuild.build_gearbox(fake, **kwargs)
 
 
@@ -4854,3 +4937,51 @@ def test_the_fakes_rebuild_carries_anchors_along_turned_axes_and_planes_as_its_g
     assert g1[1] == pytest.approx((0.0, 0.0, 64.0)) and (g1[0][2], g1[0][5], g1[0][8]) == pytest.approx((1, 0, 0))
     assert g2[1] == pytest.approx((0.0, 0.0, 64.0)) and g3[1] == pytest.approx((0.0, 0.0, 4.0))
     assert _close(g4, _a_frames()["G4"])
+
+
+
+# -- W6: the truth by hand (W6-INTERFACES §7.18): the fake's own sense, a slip in the plan's, and fixture B driven
+
+def test_the_fake_works_each_turned_mesh_out_as_the_hand_derivation_says(turned_findings):
+    fake, result = _build_a()
+    assert result.ok
+    assert {n: fake._true_same(fake.mate(n, A_ASM)) for n in A_TRUE} == A_TRUE
+    fake, result = _build_b(assembly=_b_plan(slant=True), layout=_b_layout_plan(),
+                            parts=[plan(S17, path=p) for p in (H20, H40, B_BEVEL20, B_BEVEL30)],
+                            gears=dict(TRAIN_GEARS), senses=dict(B_SENSES))
+    assert result.ok, result.log_lines()
+    assert {n: fake._true_same(fake.mate(n, A_ASM)) for n in B_TRUE} == B_TRUE
+    assert fake.turned_senses == {}                              # worked out, never taken from the build's call
+
+
+@pytest.mark.parametrize("which, wrong", [("A", "G1 meshes G2"), ("B", "G1 meshes G2"), ("B", "G3 meshes G4")])
+def test_a_slip_in_a_planned_turned_sense_is_built_the_wrong_way_and_only_the_drive_shows_it(
+        turned_findings, which, wrong):
+    """A sense given the wrong way round, as a sign slip in planning would give it (W6-INTERFACES §7.2): the read-back
+    calls the right mate wrong and "corrects" it to the other Flip, and the build reads clean. The fake, working the
+    truth out itself, holds that mate turning its gears the wrong way, so the drive pinned from §5 fails — the check
+    E's interference control makes on SolidWorks (review M2)."""
+    if which == "A":
+        senses = dict(A_SENSES, **{wrong: not A_TRUE[wrong]})
+        fake, result = _build_a(senses=senses)
+    else:
+        senses = dict(B_SENSES, **{wrong: not B_TRUE[wrong]})
+        fake, result = _build_b(assembly=_b_plan(slant=True), layout=_b_layout_plan(),
+                                parts=[plan(S17, path=p) for p in (H20, H40, B_BEVEL20, B_BEVEL30)],
+                                gears=dict(TRAIN_GEARS), senses=senses)
+    assert result.ok and result.assembly.turned_round == [wrong], result.log_lines()
+    assert not fake.turns_right(wrong, A_ASM)
+    turns = fake.drive("gear1-1", 30.0)
+    expected = {"A": {"gear2-1": -15.0, "gear4-1": 5.0}, "B": {"gear2-1": 15.0, "gear4-1": -10.0}}[which]
+    assert any(turns[g] != pytest.approx(v) for g, v in expected.items())
+
+
+def test_fixture_b_built_whole_drives_as_section_five_says(turned_findings):
+    fake, result = _build_b(assembly=_b_plan(slant=True), layout=_b_layout_plan(),
+                            parts=[plan(S17, path=p) for p in (H20, H40, B_BEVEL20, B_BEVEL30)],
+                            gears=dict(TRAIN_GEARS), senses=dict(B_SENSES))
+    assert result.ok and result.assembly.turned_round == [], result.log_lines()
+    assert _close(fake.frames["gear4-1"], (D_FRAME, B_APEX))      # the slanted line holds G4 at its apex
+    turns = fake.drive("gear1-1", 30.0)                          # §5.2: G2 +15, G3 +15, G4 −10
+    assert turns["gear2-1"] == pytest.approx(15.0) and turns["gear3-1"] == pytest.approx(15.0)
+    assert turns["gear4-1"] == pytest.approx(-10.0)

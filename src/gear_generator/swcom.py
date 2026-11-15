@@ -2537,11 +2537,11 @@ class Session:
         Returns ``(right, (τa, τb))``. Read it where probe ring_mate_sense read it: straight after the mate is made
         (and renamed), before a rebuild — or on a saved assembly (``GEAR_MATE_SENSE_READ_POINTS_AGREE``).
 
-        The gate: axes parallel (``|ĝa·ĝb| > 0.99``) need W5's read-back (``findings.GEAR_MATE_SENSE_READ_BACK``
-        one of :data:`SENSE_ROUTES`, ``GEAR_MATE_READ_BACK_TELLS_SENSE`` True), on which H is W5's rule exactly;
-        any other pair also needs ``findings.TURNED_GEAR_MATE_SENSE_READ_BACK`` in :data:`TURNED_SENSE_ROUTES`
-        and the angle between the own axes inside ``findings.TURNED_GEAR_MATE_SENSE_ANGLES`` (W6-PLAN §2.6;
-        :func:`turned_refusal`), the angles for the mesh's class: ``meet`` as the caller judged it from the planned
+        The gate: axes of one family (planning's rule, ``|â × b̂| < 1e-9``, :func:`axes_parallel`; W6-INTERFACES
+        §7.5) need W5's read-back (``findings.GEAR_MATE_SENSE_READ_BACK`` one of :data:`SENSE_ROUTES`,
+        ``GEAR_MATE_READ_BACK_TELLS_SENSE`` True), on which H is W5's rule exactly; any other pair also needs
+        ``findings.TURNED_GEAR_MATE_SENSE_READ_BACK`` in :data:`TURNED_SENSE_ROUTES` and the angle between the own
+        axes inside the range tier 9 showed for its class (W6-PLAN §2.6; :func:`turned_refusal`): ``meet`` as the caller judged it from the planned
         lines (:func:`lines_meet`), or, when not given, from the two lines SolidWorks reads for the entities
         (``EntityParams`` 0..2, a point on each, metres). Turned and refused, nothing is judged (the read itself
         marks nothing, ``findings.GEAR_MATE_SENSE_READ_MARKS``). Probe tier 9 read a turned gear mate this way,
