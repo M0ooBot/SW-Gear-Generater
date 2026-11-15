@@ -2,7 +2,7 @@
 
 import copy
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import pytest
 
@@ -5697,3 +5697,40 @@ def test_placed_lists_a_planetary_trains_puts_in_the_order_they_were_made(turned
     result = _update_pl(fake, placements=_pl_placements(frames), motion=motion)    # Planet At 10 → 12
     assert result.ok, result.log_lines()
     assert result.placed == [C_ID, "Sun"] + list(COPY_IDS) + ["CarrierGear"]
+
+
+# -- W8-INTERFACES §9.2: an Update of a gearbox with modes is refused before anything is read, until Update works
+# across configurations
+
+_MESH = swbuild.MateRef("G1 meshes G2", "mesh", ("G1", "G2"))
+_W7 = swbuild.MotionUpdate(mates=(_MESH,), meshes=(swbuild.MeshLink("G1", "G2", -0.5, 10.0),),
+                           locks=(swbuild.LockLink("G2", "G3", 10.0),))
+
+
+@pytest.mark.parametrize("motion", [
+    replace(_W7, configurations=("2H", "4H")),
+    replace(_W7, slide_values=(("RangeSlv along Rear", "4L", 46.0),)),
+    replace(_W7, on_sets=(("RangeSlv engages LoDog", ("4L",)),)),
+    replace(_W7, mode_placements=(("4L", ()),)),
+    replace(_W7, recorded_by_mode=(("4L", ()),)),
+    replace(_W7, mates=(replace(_MESH, modes=("4L",)),)),
+    replace(_W7, mates=(replace(_MESH, values=(("4L", 46.0),)),)),
+    replace(_W7, mates=(swbuild.MateRef("RangeSlv along Rear", "slide", ("RangeSlv",)),)),
+    replace(_W7, mates=(swbuild.MateRef("ModeSlv splined to RangeSlv", "spline", ("RangeSlv", "ModeSlv")),)),
+    replace(_W7, mates=(swbuild.MateRef("RangeSlv engages InDog", "couple", ("RangeSlv", "InDog")),)),
+    replace(_W7, meshes=(swbuild.MeshLink("G1", "G2", -0.5, 10.0, modes=("4L",)),)),
+    replace(_W7, recorded_meshes=(swbuild.MeshLink("G1", "G2", -0.5, 10.0, modes=("4L",)),)),
+    replace(_W7, locks=(swbuild.LockLink("G2", "G3", 10.0, modes=("4L",)),)),
+])
+def test_an_update_of_a_gearbox_with_modes_is_refused_before_anything_is_read(motion):
+    fake = FakeSolidWorks()
+    with pytest.raises(swbuild.BuildError) as raised:
+        swbuild.update_gearbox(fake, assembly=r"C:\T\R.SLDASM", motion=motion, exists=lambda _p: True)
+    assert str(raised.value) == ("Update SolidWorks does not change a gearbox with modes yet, so nothing was read or "
+                                 "changed; press Build again… to make it afresh.")
+    assert fake.calls == []
+
+
+def test_an_update_of_a_gearbox_without_modes_passes_the_modes_gate():
+    swbuild._update_modes_gate(None)
+    swbuild._update_modes_gate(_W7)

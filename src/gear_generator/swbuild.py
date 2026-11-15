@@ -2905,6 +2905,25 @@ def _update_document(sw: SolidWorks, doc: DocumentValues) -> Tuple[UpdateResult,
     return result, failures
 
 
+MODE_MATE_KINDS = ("slide", "spline", "couple")      # workbook.motion SLIDE, SPLINE, COUPLE: W8's mates
+
+
+def _update_modes_gate(motion: Optional[MotionUpdate]) -> None:
+    """W8-INTERFACES §9.2: refuse, before anything is read, an Update of a gearbox built with modes until Update
+    works across configurations. W7's motion path reads only the active configuration and turns on every recorded
+    mate it finds suppressed — both dogs engaged in one mode, the train jammed in SolidWorks — so a W8 record must
+    never go down it. Lifted only in the change that writes the Update across configurations."""
+    if motion is None:
+        return
+    if (motion.configurations or motion.slide_values or motion.on_sets or motion.mode_placements
+            or motion.recorded_by_mode
+            or any(m.modes or m.values or m.kind in MODE_MATE_KINDS for m in motion.mates)
+            or any(link.modes for link in tuple(motion.meshes) + tuple(motion.recorded_meshes))
+            or any(link.modes for link in motion.locks)):
+        raise BuildError("Update SolidWorks does not change a gearbox with modes yet, so nothing was read or "
+                         "changed; press Build again… to make it afresh.")
+
+
 def update_gearbox(sw: SolidWorks, parts: Sequence[DocumentValues] = (), layout: Optional[DocumentValues] = None,
                    assembly: str = "", placements: Sequence[Placement] = (), *,
                    motion: Optional[MotionUpdate] = None,
@@ -2987,6 +3006,7 @@ def update_gearbox(sw: SolidWorks, parts: Sequence[DocumentValues] = (), layout:
     assembly rebuilds; each result in :attr:`GearboxUpdate.carriers`. A carrier part that fails stops the job before
     the assembly.
     """
+    _update_modes_gate(motion)
     if lines and layout is None:
         raise BuildError("Update SolidWorks was given line axes to check but no layout part to find them in, so "
                          "nothing is changed; that is a fault in Gear Generator.")
