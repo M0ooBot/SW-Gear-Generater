@@ -1088,24 +1088,29 @@ table's states fit their column (`ui_text.GEAR_STATE_CHARS`). A test holds the
 window to 1080 px for both fixtures, four long mode names and six modes.
 
 Boards: `WorkbookModes` (the E4 transfer case read, the chooser on 4L),
-`WorkbookModesBuilt` (TransferCase_Parallel built on the fake, the chooser on
-2H) and `WorkbookModesUpdated` (the same after a quiet Update: the mode it worked
+`WorkbookModesBuilt` (TransferCase_Parallel built on the fake at 2026's
+revision, the chooser on 2H, its footer saying what 2026 says of a turn) and `WorkbookModesUpdated` (the same after a quiet Update: the mode it worked
 in; with `findings.SUPPRESSED_GEAR_MATE_SENSE_READ` as committed it reads every
 coupling's turning, so it says nothing of it).
 
 | State | Sentence | Build button | Update SolidWorks |
 |---|---|---|---|
 | ready | *Ready: Build makes 6 parts, TransferCase_Parallel_Layout and TransferCase_Parallel.SLDASM in …. Its gears are mated to their shafts and, as each mode engages them, to each other, so they turn together in SolidWorks. It has 4 modes, 2H, 4H, N and 4L: each becomes a configuration of the assembly, and it opens in 2H.* | **Build**, on | hidden |
-| built | *Built 6 parts, …; no interference between the gears in any mode, where they stand. Its gears are mated to turn in each of its 4 modes, one configuration each (2H, 4H, N and 4L), and SolidWorks reports no mate in error in any of them: it opens in 2H; to switch mode, double-click another mode's configuration in SolidWorks' ConfigurationManager. …* then, by the running version's answer the build carried (`positions_per_configuration`), *A turn you give the gears in one mode stays in that mode.* | **Build again…**, on | on, primary |
+| built | *Built 6 parts, …; no interference between the gears in any mode, where they stand. Its gears are mated to turn in each of its 4 modes, one configuration each (2H, 4H, N and 4L), and SolidWorks reports no mate in error in any of them: it opens in 2H; to switch mode, double-click another mode's configuration in SolidWorks' ConfigurationManager. …* then what the running version's answer, carried by the build (`positions_per_configuration`, read from `findings.TURN_PER_CONFIGURATION_ON_<year>`, ruling 9.18), says of a turn. On SolidWorks 2026 (False, W8's s2: a turn of the mated train shows in every mode): *A turn you give the gears in one mode shows in every mode, so a dog can stand across its sleeve in another mode; to put the gears back there, press Update SolidWorks with that mode showing, since an Update pressed in another mode may leave them as they stand.* Where the finding is True: *A turn you give the gears in one mode stays in that mode. Switching mode never by itself puts a dog tooth on tooth.* Where it is unset (2024 until its confirming run): neither. | **Build again…**, on | on, primary |
 | the same, the window opened afresh | the record's sentence with neither claim about a turn, since no job of this session has said which SolidWorks runs (W8-INTERFACES §9.12) | **Build again…**, on | on, primary |
-| a quiet Update | *SolidWorks already matches the workbook: nothing was changed. It worked in 2H, the configuration that was active; it did not show the other modes, since nothing needed changing.* With `findings.SUPPRESSED_GEAR_MATE_SENSE_READ` as committed (*answers, marks nothing*) it reads the turning of the mates switched off in 2H too, and says no more; with the finding unset it adds what it could not read: *Which way RangeSlv and LoDog, and ModeSlv and FrontDog, turn against each other was not checked this time: their mates are switched off in 2H, …* | **Build again…**, on | on, primary |
+| a quiet Update | *SolidWorks already matches the workbook: nothing was changed. It worked in 2H, the configuration that was active; it did not show the other modes, since nothing in 2H needed changing.* (the reason is known only for the mode worked in, ruling 9.18), whichever way the turn finding reads. With `findings.SUPPRESSED_GEAR_MATE_SENSE_READ` as committed (*answers, marks nothing*) it reads the turning of the mates switched off in 2H too, and says no more; with the finding unset it adds what it could not read: *Which way RangeSlv and LoDog, and ModeSlv and FrontDog, turn against each other was not checked this time: their mates are switched off in 2H, …* | **Build again…**, on | on, primary |
+| a quiet Update that finds the mode showing turned out of step and puts it back | that it put the gears of 2H back (*In 2H, RangeSlv's teeth stood across InDog's; the gears of 2H are back at the turn they were built at.*), and with the turn finding False *This version of SolidWorks shows a turn given in one mode in every mode, so the turn may have been given in another.*; then, since a put obliges the visit (ruling 9.18), every other mode is shown and checked: with the finding False, the visited modes read at the built turn when shown, *The gears of 4H and N stood at the turn they were built at when Update SolidWorks showed them.* (only those read so; nothing where the finding is True or unset), and *It worked in 2H, the configuration that was active, then showed and checked 4H, N and 4L and left the assembly in 2H.* | **Build again…**, on | on, primary |
 | a Modes pick changed (4H's ModeSlv 4WD → 2WD) | *Update SolidWorks will move ModeSlv in 4H to 96 mm along Rear, and switch the mate ModeSlv engages FrontDog off in 4H.* and after: *Updated SolidWorks: moved ModeSlv in 4H to 96 mm along Rear, … It worked in 2H, the configuration that was active, then showed and checked 4H, N and 4L and left the assembly in 2H. …* | **Build again…**, on | on, primary |
 | a planetary form, a slider on a fixed or turned shaft, … | *Fix the workbook before building: …* — what W8 does not build is an error naming no phase | **Build**, off | — |
 
 Update across modes (W8-PLAN §1.10: the configuration active when it opens, the
-others shown and checked only after a change, *It worked in 4H, … it did not
-show the other modes, since nothing needed changing.* after every quiet Update)
-is C's and A's sentences; the window shows them whole and adds nothing.
+others shown and checked after a change, or after a quiet Update that had to put
+the mode showing (ruling 9.18); *It worked in 4H, … it did not show the other
+modes, since nothing in 4H needed changing.* after a quiet Update that put
+nothing) is C's and A's sentences; the window shows them whole and adds nothing.
+The footer holds the longest of them, 2026's turn sentence after Build, wrapped
+beside the buttons: the window keeps its 1080 px and grows taller (a test pins
+it).
 
 ### Planetary stages (W7)
 
