@@ -3303,6 +3303,11 @@ def _motion_after(update, result, earlier: str = "") -> List[str]:
     SolidWorks.* (which train stood turned is not told), then the mates the app did not make, left alone
     (``result.extra_mates``).
 
+    W8 (W8-INTERFACES §9.18): on a gearbox with modes where the running version shows a turn in every mode
+    (``result.positions_per_configuration`` False), nothing put and no other mode shown, the gears left standing
+    turned get :data:`TURN_SHOWN_ELSEWHERE` straight after: the footer then shows this status alone, not the record
+    line's turning note, and another mode may stand with a dog across its sleeve.
+
     ``earlier`` (``Finished.earlier_update``, set when an earlier Update's
     changes to the assembly were never saved): the frames on record are not
     known to be what SolidWorks held, so nothing is laid to the user — the
@@ -3330,6 +3335,9 @@ def _motion_after(update, result, earlier: str = "") -> List[str]:
         how = "as they were found" if earlier else "where they were turned"
         if not put:
             out.append(f"The gears stand {how} in SolidWorks.")
+            if getattr(result, "configuration", "") and getattr(result, "positions_per_configuration", None) is False \
+                    and not getattr(result, "visited", ()):
+                out.append(TURN_SHOWN_ELSEWHERE)
         elif put != mated:
             how = "as it was found" if earlier else "where it was turned"
             out.append(f"Any gear it did not put back stands {how} in SolidWorks.")
@@ -3548,6 +3556,11 @@ def planetary_speed_line(shaft: str, motion, *, copies: int = 1, carrier: str = 
 # saved in its first mode (§9.9). The existing functions keep their signatures (keyword-only additions) and call these.
 
 TURN_STAYS = "A turn you give the gears in one mode stays in that mode."
+# After an Update with modes that found the gears turned in the mode showing and put nothing, where the running version
+# shows a turn in every mode (W8-INTERFACES §9.18): said straight after "The gears stand where they were turned in
+# SolidWorks." (_motion_after), since the footer shows that status alone.
+TURN_SHOWN_ELSEWHERE = ("This version of SolidWorks shows that turn in every mode, so a dog may stand across its sleeve "
+                        "in another mode; to put the gears back there, press Update SolidWorks with that mode showing.")
 TURN_SHOWS_EVERYWHERE = ("A turn you give the gears in one mode shows in every mode, so a dog can stand across its "
                          "sleeve in another mode; to put the gears back there, press Update SolidWorks with that mode "
                          "showing, since an Update pressed in another mode may leave them as they stand.")

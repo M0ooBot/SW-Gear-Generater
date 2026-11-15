@@ -350,5 +350,13 @@ the kind the last two interface reviews found, and asked for written rules. Thes
         judgement on showing read them so (not put there, in step, on their axes, not turned).
     - *Not taken, for the user to overrule:* with a turn shared between modes, a quiet Update could judge every
       mode's couplings from the rotations it reads in the active mode, without showing anything, and say which mode
-      stands with a dog across its sleeve. Today a quiet Update judges the mode showing alone (J25), and the
-      switch-False sentence above tells the user to press Update with the other mode showing.
+      stands with a dog across its sleeve. Today a quiet Update judges the mode showing alone (J25).
+    - *What is on screen when* (corrected after the review of these commits, `W8-REVIEW-9-18.md` point 1). The
+      record line's turning note (the switch-False sentence above) is in the footer when no job's note is showing:
+      after a read, or once a job's note gives way, when the workbook next changes. Right after a press the footer
+      shows the job's status alone. So when the switch is False and an Update found the gears turned in the mode
+      showing, put nothing and showed no other mode, its status itself adds, straight after *"The gears stand where
+      they were turned in SolidWorks."*: *"This version of SolidWorks shows that turn in every mode, so a dog may
+      stand across its sleeve in another mode; to put the gears back there, press Update SolidWorks with that mode
+      showing."* Nothing is added when the switch is True or None, or after a put, which shows and checks every
+      mode.

@@ -3302,6 +3302,28 @@ def test_the_turning_note_promises_only_what_an_update_does(positions, said):
                                                  if positions is True else "")
 
 
+@pytest.mark.parametrize("positions", [True, False, None])
+def test_a_quiet_update_that_found_the_gears_turned_in_step_warns_of_the_other_modes_only_where_a_turn_is_shared(
+        positions):
+    """W8-INTERFACES §9.18 (the review of its commits, point 1): the train turned in the mode showing, in step there,
+    nothing put and nothing shown. The footer then shows this status alone, so where the running version shows a
+    turn in every mode the status itself says another mode may stand with a dog across its sleeve."""
+    result = _tc_moved(turned=True, configuration="2H", positions_per_configuration=positions)
+    text, ok = ui_text.gearbox_update_status(_tc_update(), result)
+    warning = ("This version of SolidWorks shows that turn in every mode, so a dog may stand across its sleeve in "
+               "another mode; to put the gears back there, press Update SolidWorks with that mode showing.")
+    assert ok and text == (
+        "SolidWorks already matches the workbook: nothing was changed. The gears stand where they were turned in "
+        "SolidWorks. " + (warning + " " if positions is False else "") + "It worked in 2H, the configuration that "
+        "was active; it did not show the other modes, since nothing in 2H needed changing.")
+    assert ui_text.TURN_SHOWN_ELSEWHERE == warning
+    # not after a put, which shows and checks every mode (§9.18, J13), nor on a gearbox without modes
+    put = _tc_moved(turned=True, configuration="2H", positions_per_configuration=False, placed=["RangeSlv"],
+                    put_in=["2H"], visited=["4H", "N", "4L"], changed=[TC_ASM])
+    assert warning not in ui_text.gearbox_update_status(_tc_update(), put)[0]
+    assert warning not in " ".join(ui_text.motion_update_lines(_motion_update(), _moved(turned=True)))
+
+
 def _put_and_visited(positions, **values):
     """A quiet Update that found 4H's coupling out of step, put 4H, then showed and checked the others (J13): 2H and N
     found at the built turn, 4L found with a gear off its axis."""

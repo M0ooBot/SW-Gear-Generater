@@ -6492,6 +6492,47 @@ def test_a_workbook_change_shows_and_puts_every_mode_the_active_one_last_and_end
         assert check.turned is (index == 0 or not fake.shared_positions)
 
 
+COMMITTED_TURN_2026 = findings.TURN_PER_CONFIGURATION_ON_2026      # read at import, before any fixture pins it
+
+
+def _status_sentences(built, done):
+    """An Update's sentences after the pieces, as the status gives them: the motion path's, then the modes'."""
+    from types import SimpleNamespace
+    from gear_generator import ui_text
+    update = SimpleNamespace(motion=_tc_motion(built)[0], assembly=TC_ASM)
+    return ui_text.motion_update_lines(update, done) + ui_text.mode_update_lines(update, done)
+
+
+def test_a_turn_in_step_in_the_mode_showing_is_left_and_the_status_warns_of_the_other_modes(mode_findings,
+                                                                                          monkeypatch):
+    """W8-INTERFACES §9.18 (the review of its commits, point 1), end to end on the fake's shared variant with the
+    turn finding as committed (2026: a turn shows in every mode). The 2H train turned 37°, in step in 2H; Update in
+    2H puts nothing and shows nothing, so the footer shows its status alone; the status says another mode may stand
+    with a dog across its sleeve, and on this fake 4L does."""
+    monkeypatch.setattr(findings, "INTERFERENCE_CHECKED", True, raising=False)
+    fake = FakeSolidWorks()
+    fake.shared_positions = True
+    fake, built, _ = _tc_gearbox(fake)
+    monkeypatch.setattr(findings, "TURN_PER_CONFIGURATION_ON_2026", COMMITTED_TURN_2026)
+    for gear in ("gear7-1", "gear8-1", "gear2-1"):                 # RangeSlv, ModeSlv and InDog: in step in 2H
+        fake.turn(gear, 37.0)
+    fake.calls.clear()
+    done = _tc_update(fake, built)
+    assert done.ok and done.turned and done.put_in == [] and _shown(fake) == [] and done.visited == []
+    assert done.positions_per_configuration is False
+    assert _status_sentences(built, done) == [
+        "The gears stand where they were turned in SolidWorks.",
+        "This version of SolidWorks shows that turn in every mode, so a dog may stand across its sleeve in another "
+        "mode; to put the gears back there, press Update SolidWorks with that mode showing.",
+        "It worked in 2H, the configuration that was active; it did not show the other modes, since nothing in 2H "
+        "needed changing."]
+    fake.show_configuration("4L")                  # the hazard the sentence names: in 4L, where RangeSlv engages
+    placements = _tc_motion(built, active="4L")[1]  # LoDog, the sleeve stands turned 37° and the dog does not
+    turned = {p.gear: math.degrees(swbuild.turn_between(p.rotation, fake.component_frame(f"placed{i}")[0]))
+              for i, p in enumerate(placements, 1) if p.gear in ("RangeSlv", "LoDog")}
+    assert turned == pytest.approx({"RangeSlv": 37.0, "LoDog": 0.0}, abs=1e-6)
+
+
 def _mode_sentences(built, done):
     from types import SimpleNamespace
     from gear_generator import ui_text
