@@ -7091,14 +7091,42 @@ def _config_names(doc: Any) -> List[str]:
 def _show(px: Px, doc: Any, name: str, pid: int, paths: Sequence[str]) -> Dict[str, Any]:
     """ShowConfiguration2 under the dialog watch, CommandInProgress off, then the top-only rebuild; the active name,
     and every document's save flag before the show, after it and after the rebuild."""
-    out: Dict[str, Any] = {"flags_before": _all_flags(px, paths)}
+    out: Dict[str, Any] = {"flags_before": _w8_flags(px, doc, paths)}
     with DialogWatch(pid) as watch:
         got, value = px.attempt(f"ShowConfiguration2({name})", lambda: call(doc, "ShowConfiguration2", name))
     out.update(returned=plain(value) if got else "raised", windows=watch.report()["windows"],
-               active=_active_config(doc), flags_after_show=_all_flags(px, paths))
+               active=_active_config(doc), flags_after_show=_w8_flags(px, doc, paths))
     rebuild(px, doc, f"{name} shown", top_only=TOP_ONLY)
-    out["flags_after_rebuild"] = _all_flags(px, paths)
+    out["flags_after_rebuild"] = _w8_flags(px, doc, paths)
     return out
+
+
+def _w8_flags(px: Px, doc: Any, paths: Sequence[str]) -> Dict[str, Optional[bool]]:
+    """Every document's GetSaveFlag: the parts and layout by path, the assembly through its own document."""
+    out = _all_flags(px, paths)
+    out["assembly"] = bool(call(doc, "GetSaveFlag"))
+    return out
+
+
+def _w8_refresh(px: Px, doc: Any, comps: Dict[str, Any], names: Mapping[str, str], layout: Any,
+                layout_name: str) -> Tuple[Any, Dict[str, Any]]:
+    """After a configuration change: whether each component handle held from before still answers Transform2 and
+    IsFixed, then every handle fetched again by name (GetComponentByName) into ``comps``; the fresh layout."""
+    held = dict(comps, layout=layout)
+    out: Dict[str, Any] = {"old_transform_none": {}, "old_is_fixed": {}, "new_is_fixed": {}}
+    for k, c in held.items():
+        got, t = px.attempt(f"Transform2 of the held {k}", lambda c=c: call(c, "Transform2"))
+        out["old_transform_none"][k] = (t is None) if got else "raised"
+        got, f = px.attempt(f"IsFixed of the held {k}", lambda c=c: call(c, "IsFixed"))
+        out["old_is_fixed"][k] = bool(f) if got else "raised"
+    for k, n in names.items():
+        comps[k] = call(doc, "GetComponentByName", n)
+    fresh = call(doc, "GetComponentByName", layout_name)
+    for k, c in dict(comps, layout=fresh).items():
+        out["new_is_fixed"][k] = bool(call(c, "IsFixed")) if c is not None else None
+    out["new_transform_none"] = {k: call(c, "Transform2") is None for k, c in dict(comps, layout=fresh).items()
+                                 if c is not None}
+    return fresh, out
 
 
 def _w8_drive(px: Px, doc: Any, comps: Mapping[str, Any], layout: Any, label: str) -> Dict[str, Any]:
@@ -7192,12 +7220,14 @@ def _w8_run(px: Px, facts: Dict[str, Any]) -> None:
     got, pid = px.attempt("ISldWorks.GetProcessID", lambda: call(sc.app(px), "GetProcessID"))
     px.require(got and isinstance(pid, int), "GetProcessID answers")
     names: Optional[Dict[str, str]] = None
+    asm_doc: List[Any] = [None]
     try:
         for p in (gear_path, sleeve_path):
             open_by_path(px, p, prefer="OpenDoc6")
         asm = Assembly(px, layout_path, {"gear": gear_path, "sleeve": sleeve_path})
         asm.open()
         doc, layout = asm.doc, asm.layout
+        asm_doc[0] = doc
         asm.add("A", "gear", 1, 0.0, (x, y, W8_A_Z))
         asm.add("D", "gear", 1, 0.0, (x, y, W8_D_Z))
         asm.add("S", "sleeve", 1, W8_S_PHASE, (x, y, W8_A_Z))
@@ -7210,7 +7240,10 @@ def _w8_run(px: Px, facts: Dict[str, Any]) -> None:
         px.require(bool(sa.get("name")), f"S is on A Axis: {sa}")
         rebuild(px, doc, "mounted", top_only=TOP_ONLY)
         facts["mounted"] = {"off_mm": worst(_off(comps, asm.placed)), "errors": errors_only(mate_errors(px, doc)),
-                            "constrained": {k: constrained(px, c) for k, c in comps.items()}}
+                            "constrained": {k: constrained(px, c) for k, c in comps.items()},
+                            "flags": _w8_flags(px, doc, paths)}
+        keys = asm.names()
+        layout_name = str(call(layout, "Name2"))
 
         # 1-3: the spline S–A, both Flips, each driven.
         spline: Dict[str, Any] = {}
@@ -7235,6 +7268,7 @@ def _w8_run(px: Px, facts: Dict[str, Any]) -> None:
         kept = _w8_gear_mate(px, doc, comps, "S", "A", "S splined to A", right_flip)
         rebuild(px, doc, "spline kept", top_only=TOP_ONLY)
         facts["spline_kept"] = kept
+        kept["flags"] = _w8_flags(px, doc, paths)
 
         # 4: the slide under the spline.
         add = _adder(px, call(doc, "GetEquationMgr"))
@@ -7274,6 +7308,7 @@ def _w8_run(px: Px, facts: Dict[str, Any]) -> None:
         c["constrained"] = {k: constrained(px, cc) for k, cc in comps.items()}
         c["errors"] = errors_only(mate_errors(px, doc))
         c["drive"] = _w8_drive(px, doc, comps, layout, "coupled")
+        c["flags"] = _w8_flags(px, doc, paths)
 
         # 6: configurations X and Y.
         cm = call(doc, "ConfigurationManager")
@@ -7287,7 +7322,7 @@ def _w8_run(px: Px, facts: Dict[str, Any]) -> None:
                                        lambda n=name: call(cm, "AddConfiguration2", n, "", "", 0, "", "", True))
             cfg[f"add {name}"] = {"returned": type(made).__name__ if got else "raised", "active": _active_config(doc),
                                   "windows": watch.report()["windows"]}
-            cfg[f"fixed in {name}"] = {"layout": bool(call(layout, "IsFixed"))}
+            layout, cfg[f"handles after adding {name}"] = _w8_refresh(px, doc, comps, keys, layout, layout_name)
         # Y is active: its own slide at P + 20, its own global.
         px.require(add(f'"{W8_SLIDE_Q}"= {W8_A_Z + 20.0:g}') >= 0, "the second slide's global is added")
         cfg["suppress P in Y first"] = _cfg_suppress(px, doc, "S along A at P", True, ["Y"])
@@ -7301,7 +7336,9 @@ def _w8_run(px: Px, facts: Dict[str, Any]) -> None:
         if q.get("name"):
             _rename(px, mate_feature(doc, q["name"]), "S along A at Q")
             qdim = sc.dimensions_of(mate_feature(doc, "S along A at Q"))
-            cfg["slide Q linked"] = len(qdim) == 1 and add(f'"{call(qdim[0], "Name")}@S along A at Q"= "{W8_SLIDE_Q}"') >= 0
+            cfg["slide Q dimensions"] = [str(call(d, "Name")) for d in qdim]
+            cfg["slide Q link added"] = (add(f'"{call(qdim[0], "Name")}@S along A at Q"= "{W8_SLIDE_Q}"')
+                                         if len(qdim) == 1 else None)
         cfg["flags right after Q"] = _cfg_flags(px, doc, ["S along A at P", "S along A at Q", "S engages D"], configs)
         others = [base, "X"]
         cfg["set"] = {"Q off in X and template": _cfg_suppress(px, doc, "S along A at Q", True, others),
@@ -7318,24 +7355,26 @@ def _w8_run(px: Px, facts: Dict[str, Any]) -> None:
         for name in ("X", "Y", "X"):
             s = _show(px, doc, name, pid, paths)
             shows.append(s)
+            layout, s["handles"] = _w8_refresh(px, doc, comps, keys, layout, layout_name)
             s["flags_shown"] = _cfg_flags(px, doc, mates_cfg, configs)
             s["this_configuration"] = {m: is_suppressed(px, mate_feature(doc, m)) for m in mates_cfg}
             s["walk"] = mate_names(doc)
             s["S_z"] = round(_frames(comps)["S"][1][2], 9)
             s["errors"] = errors_only(mate_errors(px, doc))
             s["constrained"] = {k: constrained(px, cc) for k, cc in comps.items()}
-            s["layout_fixed"] = bool(call(layout, "IsFixed"))
             s["coupling_read"] = _collinear_read(px, doc, "S engages D", comps, "S", "D")
-            s["flags_after_reads"] = _all_flags(px, paths)
+            s["flags_after_reads"] = _w8_flags(px, doc, paths)
             s["drive"] = _w8_drive(px, doc, comps, layout, f"in {name}")
 
         # 7: in Y, D put 5° about its own axis; X shown: does the coupling keep the 5° it finds?
         s = _show(px, doc, "Y", pid, paths)
+        layout, _h = _w8_refresh(px, doc, comps, keys, layout, layout_name)
         dm, dat = _frames(comps)["D"]
         rel_before = own_turn(_frames(comps)["S"][0], dm)
         put(px, doc, comps["D"], crossed.multiply(dm, crossed.rot_z(5.0)), dat, top_only=TOP_ONLY)
         rel_y = own_turn(_frames(comps)["S"][0], _frames(comps)["D"][0])
         s7 = _show(px, doc, "X", pid, paths)
+        layout, _h = _w8_refresh(px, doc, comps, keys, layout, layout_name)
         fr = _frames(comps)
         cfg["coupling at an angle"] = {"relative_in_Y_before_put": round(rel_before, 9),
                                        "relative_in_Y_after_put": round(rel_y, 9),
@@ -7351,18 +7390,20 @@ def _w8_run(px: Px, facts: Dict[str, Any]) -> None:
         cfg["delete template"] = {"returned": plain(value) if got else "raised", "names": _config_names(doc),
                                   "windows": watch.report()["windows"], "active": _active_config(doc)}
         rebuild(px, doc, "template deleted", top_only=TOP_ONLY)
+        layout, cfg["handles after delete"] = _w8_refresh(px, doc, comps, keys, layout, layout_name)
         cfg["flags after delete"] = _cfg_flags(px, doc, mates_cfg, list(W8_CONFIGS))
 
         # 8: save with several configurations, under the watch.
         with DialogWatch(pid) as watch:
             saved = _save_in_place(px, doc, asm_path, "the modes spike")
         facts["save"] = {"saved": saved, "windows": watch.report()["windows"], "active": _active_config(doc),
-                         "S_z": round(_frames(comps)["S"][1][2], 9), "flags_after": _all_flags(px, paths)}
+                         "S_z": round(_frames(comps)["S"][1][2], 9), "flags_after": _w8_flags(px, doc, paths)}
         px.require(saved and os.path.isfile(asm_path), "the spike saves")
         px.shared["created"].append(str(call(doc, "GetTitle")))
-        names = asm.names()
-        layout_name = str(call(layout, "Name2"))
+        names = keys
     finally:
+        if names is None and asm_doc[0] is not None:
+            px.attempt("close the unsaved spike assembly", lambda: sc.close(px, asm_doc[0]))
         _close_quietly(px, paths)
     if names:
         reopen: Dict[str, Any] = {}
@@ -7375,7 +7416,7 @@ def _w8_run(px: Px, facts: Dict[str, Any]) -> None:
             if title not in px.shared["created"]:
                 px.shared["created"].append(title)
             reopen[f"{label}: windows on open"] = watch.report()["windows"]
-            reopen[f"{label}: flags on open"] = _all_flags(px, paths)
+            reopen[f"{label}: flags on open"] = _w8_flags(px, doc, paths)
             reopen[f"{label}: active on open"] = _active_config(doc)
             comps = {k: call(doc, "GetComponentByName", n) for k, n in names.items()}
             return doc, title, comps, call(doc, "GetComponentByName", layout_name)
@@ -7391,11 +7432,12 @@ def _w8_run(px: Px, facts: Dict[str, Any]) -> None:
             reopen["coupling_read"] = _collinear_read(px, doc, "S engages D", comps, "S", "D")
             reopen["errors"] = errors_only(mate_errors(px, doc))
             reopen["S_z"] = round(_frames(comps)["S"][1][2], 9)
-            reopen["flags_after_reads"] = _all_flags(px, paths)
+            reopen["flags_after_reads"] = _w8_flags(px, doc, paths)
             other = next(n for n in W8_CONFIGS if n != reopen["first: active on open"])
             s = _show(px, doc, other, pid, paths)
             reopen["switch"] = {k: s[k] for k in ("returned", "active", "windows", "flags_after_show",
                                                   "flags_after_rebuild")}
+            layout, reopen["switch"]["handles"] = _w8_refresh(px, doc, comps, names, layout, layout_name)
             reopen["switch"]["S_z"] = round(_frames(comps)["S"][1][2], 9)
             reopen["close_after_switch"] = watched_close(px, "CloseDoc", title, pid)
             reopen["open_after_close"] = _open_probe_docs(px, paths)
@@ -7407,6 +7449,7 @@ def _w8_run(px: Px, facts: Dict[str, Any]) -> None:
             reopen["drives"] = {}
             for name in W8_CONFIGS:
                 s = _show(px, doc, name, pid, paths)
+                layout, _h = _w8_refresh(px, doc, comps, names, layout, layout_name)
                 reopen["drives"][name] = {"show": {k: s[k] for k in ("returned", "active", "windows")},
                                           "S_z": round(_frames(comps)["S"][1][2], 9),
                                           "errors": errors_only(mate_errors(px, doc)),
