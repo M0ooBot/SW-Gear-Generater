@@ -65,14 +65,17 @@ configuration as W5's does.
 
 1. The `sleeve` and `dog` part kinds (§1.1), registered for the workbook only.
 2. Slides: per-mode placement of every slider (sleeves and sliding spur, helical or herringbone gears) on a frame
-   shaft along Z±, checked at every mode's positions (§1.2).
+   shaft along Z±, checked at every mode's positions (§1.2). **Sliding gears are designed and tested against the
+   fake with made-up workbooks only:** neither fixture has a gear that slides into or out of mesh, so no sliding mesh
+   is built on SolidWorks in W8's demonstration (review S5). They use the same mechanism the couplings do (a gear
+   mate switched per configuration), which the demonstration does show.
 3. Engagement worked out per mode: a sleeve over a dog couples their shafts; a sliding gear meshes its listed partner
    only where their faces overlap (§1.3).
 4. Kinematics, ratios, checks and phases per mode (§1.4–§1.6), and the Results sheet per mode.
 5. The turning assembly with one configuration per mode: per-position distance mates, couplings and splines as 1 : 1
    gear mates, per-configuration suppression (§1.7–§1.9).
 6. Update SolidWorks across configurations: classification, D10 per configuration, post-check per mode (§1.10).
-7. The record at schema 4 (§1.11); the sentences, a mode chooser in the Speeds panel, boards (§1.12).
+7. The record at the schema one past W7's (§1.11); the sentences, a mode chooser in the Speeds panel, boards (§1.12).
 8. The demonstration on the E4 transfer case (§5).
 
 **What stays refused, after W8.** PLAN-WORKBOOK §3.4's *"Refused at Build"* list names sleeves, dogs and modes as rows
@@ -92,29 +95,35 @@ whose Side is `internal`; a Helix angle or Profile shift on either; every per-mo
 
 **The E4 transfer case needs W7 and not W6.** Canvas E4: *"The low range is E3's 4 : 1 planetary (sun on In, ring
 held)."* So E4 has a carrier shaft, three planet copies mounted on it and a fixed ring; every axis is Z+. W8 assumes
-W7, once built, provides:
+W7, once built, provides what `W7-PLAN.md` as committed (`8ebddb0`, reviewed in `W7-PLAN-REVIEW.md`) says it will:
 
 - frame shafts sharing one axis (In, Carrier, Ring, Rear and FrontDrv all at the origin): several `"<Shaft> Axis"`
-  through the same base planes in the layout part, and `checks._check_shafts` not warning that a gear "passes over"
-  a coaxial shaft's axis at 0 mm (it does today, for any two coaxial shafts whose gears' spans overlap). If W7 has not
-  exempted coaxial shafts, package B does (`d` below `layout.BASE_TOLERANCE`).
+  on one line in the layout part (W7-PLAN §2.6: the carrier's `"C Axis"` beside `"S Axis"` and `"R Axis"`), and
+  coaxial shafts exempt from `checks._check_shafts`' "passes over another shaft's axis" warning (W7-PLAN §2.3 item 5;
+  today it warns for any two coaxial shafts whose gears' spans overlap);
 - `kinematics.solve` through a carrier (today it returns `later` for any mounted shaft), on which W8's per-mode
-  solve builds;
-- a gear row on the carrier's own shaft (E4's LoDog) held to the carrier: whatever stands for the carrier in the
-  assembly (W7's skeleton part, the user's answer of 2026-11-14) and the gears on that shaft are one turning body.
-  If W7 does not allow a gear row on a carrier shaft, package B adds it with W5's lock;
-- W7's own mates (planets on carrier axes, its loop rule) are always on: W8 never suppresses them per mode.
+  solve builds, and W7's planetary torque rule (W7-PLAN §2.5, its reading J10);
+- a gear row on the carrier's own shaft (E4's LoDog): W7-PLAN §2.1 allows it ("it may carry gears of its own") and
+  §2.7 locks it to the carrier component (`LoDog locked to Carrier carrier`, W7's reading J8). W8 changes nothing
+  there;
+- W7's motion plan over **bodies** (a frame shaft or one copy of a mounted shaft, still bodies merged into ground:
+  W7-PLAN §2.7), whose mates are W5's four kinds with `MatePlan.on` naming the component an axis is in. W7's mates
+  are always on: W8 never suppresses them per mode, and W8's per-mode union-find (J15) starts from W7's joins;
+- the record at W7's schema, with `MateEntry.on` (W7) and `MateEntry.plane` (W6-PLAN §2.8), on which §1.11 builds.
 
 **W8 stays independent of W7 where it can.** Package A and B are written and tested against a second fixture,
 **TransferCase_Parallel** (§2.2), the same transfer case with its low range on a layshaft instead of a planetary: all
 frame shafts along Z+, no carrier. It exercises every W8 mechanism, and the demonstration builds it first as the
 shakedown (section `s0`, §5), so a fault in W8's machinery is never confused with one in W7's.
 
-**Of W6** W8 assumes only that W5's AXIS and ALONG mates for ±Z shafts keep their meaning. Sliders on turned axes are
-refused (§0.1).
+**Of W6** W8 assumes only that W5's AXIS and ALONG mates for ±Z shafts keep their meaning, with W6's `plane` field
+reading `"front"` for them; a SLIDE carries `plane = "front"` likewise. Sliders on turned axes are refused (§0.1).
 
 **Starting commit.** The interface commit starts on the commit that closes W7 (its demonstration and review), named
-in `W8-INTERFACES.md`, as W5's ruling M3 did for W4.
+in `W8-INTERFACES.md`, as W5's ruling M3 did for W4. Every claim §0.1 makes about the code was read at `0f5a121`;
+W6 and W7 change motion (bodies, the carrier as an anchor), the layout (coaxial axes), checks (the coaxial exemption)
+and the record, so the interface commit reads §0.1 again against W7's close and writes in `W8-INTERFACES.md` what
+moved (review S10).
 
 ### 0.3 Readings the work proceeds with (the user may overrule)
 
@@ -123,35 +132,44 @@ Each is argued where it is used; the column says where.
 | # | Reading | Instead of | § |
 |---|---|---|---|
 | J1 | **A sleeve is an internal spline ring and a dog an external one**, each the strip's own proven ring or spur plan at the row's teeth, module and face; **no fork groove, hub, chamfers, back-cut or synchro cone**. | A skeleton-only sleeve and dog, as the user chose for W7's carrier; or canvas E4's sleeve *"with a groove round it for the shift fork"*. | 1.1 |
-| J2 | A blank Pressure angle on a sleeve or dog is **30°** (canvas E4's spline), not the Box's. | The Box's 20°. | 1.1 |
+| J2 | A sleeve and a dog have **no pressure angle of their own**: a blank takes the Box's, as every row does (20°, the strip's own); a workbook may type another. Canvas E4's 30° stub-tooth spline is **not built**: the strip makes full-depth teeth only, and at 30° a full-depth 30-tooth dog's tip is 0.022 mm thick. | A 30° default (canvas E4). | 1.1 |
 | J3 | A sleeve's teeth are always inside, a dog's outside; Side, Helix angle and Profile shift that say otherwise are errors. | Allowing helical splines or shifted splines. | 1.1 |
 | J4 | **Engaged means full overlap**: a dog is engaged when the sleeve covers the dog's whole face; partial overlap is an error at that mode's cell; no overlap is disengaged. The same for a sliding gear and its listed partner (the narrower face covered). | Any overlap engaging. | 1.3 |
-| J5 | A blank Modes cell is the slider's position whose offset is 0; a slider with none is an error at the cell. | The slider at its At whatever its positions. | 1.2 |
+| J5 | A blank Modes cell is the slider's position whose offset is 0; a slider with none is an error at the cell. With sliders and no Modes rows, a slider with no position at 0 is an error at its Slides cell. | The slider at its At whatever its positions. | 1.2 |
 | J6 | Mode names follow the gear-name rule (letters, digits, `_`, `-`) and are unique ignoring case: they become configuration names. | Any text. | 1.2 |
 | J7 | **Each slide position is held by its own distance mate** with its own assembly global, switched on only in the configurations that use it. | Configuration-specific dimension values or equations (GOTCHAS §26: `Add3` and `SetEquationAndConfigurationOption` refused). | 1.7 |
-| J8 | **A coupling (a sleeve over a dog) and a spline (a slider turning with its shaft) are 1 : 1 gear mates between collinear axes**, read back and turned round as a ring's gear mate is. Canvas E4 says the configurations *"switch off the locks"*; a lock is not used. | A lock per engagement (it also holds the sleeve along the shaft and fights its slide mate: tier 8, a locked gear with an axis mate over-defines); an angle mate (0° degenerate, and with an odd tooth count a 180° flip lands tooth on tooth). | 1.7 |
+| J8 | **A coupling (a sleeve over a dog) and a spline (a slider turning with its shaft) are 1 : 1 gear mates between collinear axes**, read back and turned round as a ring's gear mate is — a read-back untested on collinear axes until the spike of §4.3 and the shakedown build. Canvas E4 says the configurations *"switch off the locks"*; a lock is not used. | A lock per engagement (it also holds the sleeve along the shaft and fights its slide mate: tier 8, a locked gear with an axis mate over-defines); an angle mate (0° degenerate, and with an odd tooth count a 180° flip lands tooth on tooth). | 1.7 |
 | J9 | A shaft's anchor is its **first non-sliding gear**; with none, its first slider (a *sliding anchor*: axis mate and slide mates, no ALONG). Every other slider has an axis mate, slide mates and a spline to the anchor. | — | 1.7 |
 | J10 | **One configuration per mode, named as the mode**, made after the always-on mates; each per-mode mate made while the first configuration using it is active; suppression set explicitly in every configuration and read back; configurations of the template that are not modes deleted before the save; the assembly saved in the first mode. Sliders but no Modes rows: no configuration is added. | Renaming the template's configuration (`IConfiguration.Name` put, unverified). | 1.8 |
 | J11 | **Rotations are shared between configurations** (GOTCHAS §83): a train turned in one mode and then switched to another can show a dog tooth on tooth with its sleeve; Update puts the train back (W5's answer 2), and the footer says so. | — | 1.9 |
 | J12 | **D10 per configuration:** a recorded mate found suppressed in a configuration where the record has it on is turned back on there; one found on where the record has it off is suppressed again there; both said. An unsuppressed mate not on record in any mode's configuration refuses the Update (W5 M7). | Leaving per-configuration differences alone. | 1.10 |
 | J13 | Update works in the **configuration active when it opens** the assembly, refuses before changing anything when that is not one of the gearbox's, and visits the other modes' configurations to post-check only after it changed something, returning to the one that was active. | Switching configurations on every press. | 1.10 |
-| J14 | **Update carries** a slide offset or a slider's At (its slide globals), and W5's edits; **structural** (Build again…): any change to the Modes sheet but its row order, a position added, removed or renamed, a gear gaining or losing Slides or becoming or ceasing to be a sleeve or dog, any edit that changes what engages in any mode, a slide position's front face reaching, leaving or crossing the Front plane. Row order alone changes nothing in SolidWorks and is said. | A Modes pick changed between existing positions as a suppression-only Update. | 1.10 |
+| J14 | **Update carries** a slide offset or a slider's At (its slide globals), W5's edits, and **any edit after which every mate the modes need is already on record** — a Modes pick changed between existing positions, or an offset that moves what engages onto couplings already made — by setting suppression flags, the call D10 per configuration already makes (review S6). **Structural** (Build again…): Modes rows added, removed or renamed, a slider column added or removed, a position added, removed or renamed, a gear gaining or losing Slides or becoming or ceasing to be a sleeve or dog, any edit needing a mate that is not on record, a slide position's front face reaching, leaving or crossing the Front plane. Row order alone changes nothing in SolidWorks and is said. | Every Modes edit structural (the plan's first reading). | 1.10 |
 | J15 | **Loops per mode:** always-on relations first, then the mode's sliding meshes, then its couplings, in sheet order; one that joins two bodies already joined in that mode is left off there (W5's D6), an inconsistent one is a jam. | — | 1.4 |
-| J16 | A member free in a mode (neutral; "front not driven") is not a problem: the Speeds panel says it. A jam in any mode is an error at that mode's row. | Warning about every free member. | 1.5 |
-| J17 | Torque per mode: a coupling is a lossless 1 : 1 link, a branch that reaches no output carries none, and nothing past a split is given (W3's rule). | — | 1.4 |
+| J16 | **A departure from PLAN-WORKBOOK §3.4**, which asks for a warning on *"a gear on an `output` shaft that nothing drives in some mode"*: W8 warns only on an output that turns in **no** mode. A member free in a mode (neutral; "front not driven") is not a problem: the Speeds panel says it. A meshed shaft free in every mode stays W3's error. A jam in any mode is an error at that mode's row. | §3.4 as written, which would warn on both of E4's outputs on every read. | 1.5 |
+| J17 | Torque per mode: a coupling is a lossless 1 : 1 link; a branch that reaches **no output** in that mode carries none (a fixed shaft is a reaction, not a load); **an output shaft that also drives onward is a split**: it is given the torque arriving at it, marked as shared, and nothing past it is given (W3's rule for a split, applied at the output). | Passing an output's whole torque onward, as W3's walk does today. | 1.4 |
 | J18 | What W8 does not build is refused with a sentence naming no phase (§0.1). | — | 0.1 |
 | J19 | The Results sheet holds one block per mode. | Results of the first mode only. | 1.12 |
 | J20 | Interference is judged in every mode, against a half-pitch control on each coupling (demonstration). | First mode only. | 5 |
 | J21 | The window gets a **mode chooser in the Speeds panel** (canvas E4: *"Results get a mode switch in the app"*); the end view is unchanged, since a slide runs along the view direction. | A chooser for the whole window. | 1.12 |
 | J22 | Two sliders on one shaft that overlap in any mode are an error; a sleeve long enough to bridge two dogs on its way between positions is a warning (canvas E4's *"it passes through neutral"*). | — | 1.5 |
 | J23 | Mate and global names: `RangeSlv along Rear at H`, `RangeSlv Face Z at H`, `ModeSlv splined to RangeSlv`, `RangeSlv engages InDog`. | — | 1.7 |
-| J24 | The demonstration builds each fixture once and starts later sections from a copy of the built folder, its references repointed by opening the copy's assembly once with the original folder moved aside and saving it (§5). | Building the fixture again per section. | 5 |
+| J24 | The demonstration builds each fixture once and starts later sections from a copy of the built folder, its references repointed by opening the copy's assembly once with the original folder moved aside and saving it, the scheme rehearsed first on the probe's scratch assembly (§4.2, §5). | Building the fixture again per section; `ReplaceReferencedDocument` (unverified) or Pack and Go. | 5 |
+| J25 | **A quiet Update reads the sense of the gear mates on in the active configuration only**, narrowing W5's ruling that the check phase reads every gear mate's sense: a coupling made wrong in another mode (flipped by hand, or saved by the other version) is seen only when a changed Update visits that mode. No sentence claims a configuration not visited reads right. Lifted if tier 9 shows a suppressed gear mate's `Reverse` and entities read and mark nothing (review S8). | Activating every configuration on every press. | 1.10 |
+| J26 | Update puts, when anything in a gearbox with modes needs a put, the set of gears **connected over every mode's relations** (for both fixtures, the whole gearbox); a train it did not put is judged in the other modes by `train_check`, never by built frames (review M5). | W5's per-train rule within the active mode alone. | 1.10 |
 
 ### 0.4 What needs the user
 
-Nothing blocks W8. Two readings are closest to a decision of the user's and are put first when the readings go to
-them: **J1** (the user chose a skeleton carrier in W7 "because every solid geometry may look different", and canvas
-E4 draws a fork groove), and **J14** (whether a Modes edit should become an Update later).
+Nothing blocks W8. These readings are closest to a decision of the user's and go at the top of the list handed to
+them, in this order:
+
+1. **J1** — toothed rings with no fork groove, hub or chamfers: the user chose a skeleton carrier in W7 "because
+   every solid geometry may look different", and canvas E4 draws a fork groove and names a hub.
+2. **J2** — the 20° full-depth teeth in place of canvas E4's 30° spline: a stub-tooth spline would be new solid
+   geometry, which J1 promises not to make.
+3. **J16** — the departure from PLAN-WORKBOOK §3.4's warning.
+4. **J14** — a Modes pick between existing positions is an Update (flags only); rows added, removed or renamed stay
+   structural.
 
 ### 0.5 STOP and ask (implementers)
 
@@ -161,8 +179,8 @@ E4 draws a fork groove), and **J14** (whether a Modes edit should become an Upda
 - On SolidWorks (package E): any modal dialog from a configuration call; a configuration whose suppression does not
   read back as planned; a slider not at its position to 1e-6 mm in its configuration; a coupling or spline gear mate
   that reads wrong both ways round (the build already stops on it — the stop is for the plan, J8 then needs a
-  probe); a driven member off its mode's kinematics by more than 1e-6 relative or turning the wrong way; the
-  wrong-sense control not caught; interference at the built turn in any mode, or a half-pitch control not caught.
+  probe); a driven gear off its mode's kinematics by more than 1e-6 relative or turning the wrong way; a both-Flips
+  control in which not exactly one Flip turns right (§5); interference at the built turn in any mode, or a half-pitch control not caught.
 - A W7 assumption of §0.2 that does not hold.
 
 ---
@@ -177,18 +195,34 @@ pressure angle and face, with its bore. A sleeve is an internal spline ring: the
 ones the strip builds and `probe/gear_pairs_check.py` has built on both versions; W8 writes no new solid geometry.
 With equal teeth, module and pressure angle, a ring's tooth space is the external gear's tooth turned inside out
 (`gears/internal.py`'s docstring), so the dog's teeth sit in the sleeve's spaces with the backlash and the radial
-clearance both plans already leave: for 30 teeth, module 1.5, 30°, the dog's root is ⌀41.25 and the sleeve's tip
-⌀42; the dog's tip ⌀48 and the sleeve's root ⌀48.75.
+clearance both plans already leave: for 30 teeth and module 1.5 the dog's root is ⌀41.25 and the sleeve's tip ⌀42;
+the dog's tip ⌀48 and the sleeve's root ⌀48.75 (the depths do not depend on the pressure angle). Each part carries
+the strip's backlash (0.3 × module, 0.45 mm), so a sleeve over a dog has 0.45 mm of play per flank at the pitch
+circle, 0.9 mm in all, about ±1.15° of turn.
+
+**Pressure angle (J2).** A sleeve and a dog take the row's Pressure angle, blank meaning the Box's (20°, the strip's
+own), exactly as every other row. At 20°, 30 teeth, module 1.5, the review ran the existing kinds (`SpurGear`,
+`InternalSpurGear`): the dog's tooth tip is **0.626 mm** thick and the sleeve's **1.153 mm**; what is left under
+Checks is the strip's usual warnings (the form diameter, and the ring's tips inside its base circle, since ⌀42 is
+under the base circle ⌀42.29). Canvas E4's *"internal spline ring (30° pressure angle)"* is not built: a real 30°
+involute spline (ANSI B92.1, ISO 4156) has stub teeth, addendum 0.5 × module, and the strip makes full-depth teeth
+only (addendum 1 × module). Built full-depth at 30°, the dog's tip is 0.022 mm thick (0.449 mm even with 0.05 mm of
+backlash typed), a sliver for SolidWorks' interference check and for the part. A workbook may still type 30° on a
+sleeve and dog row; Checks then shows the strip's thin-tip warning on each. Stub teeth would be new solid geometry,
+which J1 promises not to make, so the choice goes to the user beside J1 (§0.4).
 
 **Why teeth and not a skeleton (J1).** The user's reason for a skeleton carrier was that its solid "depends on the
 gearbox at hand". For a sleeve and a dog the workbook specifies exactly what the teeth are — teeth, module, face — as
 it does for a gear, and canvas E4 checks that *"sleeve, hub and dog teeth match"*. The teeth are the specified thing,
 and the interference check in each mode is what proves a mode engages what it says and nothing else (a skeleton
 would leave that to the mates' word). What does depend on the gearbox at hand is left out: the fork groove (its width
-and depth depend on the fork), the hub the sleeve rides on, the way a dog ring joins its gear, tooth-end chamfers and
+and depth depend on the fork), the hub the sleeve rides on (canvas E4 names it: *"sleeve, hub and dog teeth match"*,
+and its half section labels each sleeve *"splined to Rear"*), the way a dog ring joins its gear, tooth-end chamfers and
 back-cut, synchro cones and blocker rings (canvas E4 already leaves out the last three). The same reasoning the user
-gave for the carrier is applied to those, and not to the teeth. The canvas's fork groove is the one departure from
-E4, said to the user with this reading; the existing `Groove (mm)` column (a herringbone's centre groove) is where a
+gave for the carrier is applied to those, and not to the teeth. The review's point stands against this argument and
+goes to the user with it: with J2, what is built is a full-depth 20° tooth, not the stub spline a real sleeve has, so
+the teeth are less exactly "the specified thing" than they would be on a gear. The canvas's fork groove and hub are
+the departures from E4, said to the user with this reading; the existing `Groove (mm)` column (a herringbone's centre groove) is where a
 fork groove's width would go if the user wants one later.
 
 **As kinds.** A new module `gears/clutch.py` holds `SleeveKind` and `DogKind`, each `kind = "sleeve"` / `"dog"`,
@@ -201,8 +235,16 @@ before its internal branch (an internal sleeve spec would otherwise look in `INT
 sleeve `Ring_m1.5_N30` (its `words.get(kind, "Gear")` and its ring rule), the same file names as a 20° spur gear or
 ring of the same module and teeth, which `plan_parts` would refuse as two gears of one file name. The validation
 adds, as errors at their cells: a sleeve with Side `external`, a dog with Side `internal`, a Helix angle or a Profile
-shift on either (J3). `Gear.spec_values` gives a sleeve or dog a blank Pressure angle of `"30"` (J2) and a sleeve
-`teeth_side="internal"`.
+shift on either (J3). `Gear.spec_values` gives a sleeve `teeth_side="internal"`; its pressure angle is the row's or
+the Box's, as for any row (J2). The delegated plans write the custom property for the kind they were made by
+(`property_ops(self.kind…)` would say "spur"); `SleeveKind.plan` and `DogKind.plan` put their own kind word there.
+So a sleeve or dog plan equals the internal spur or spur plan of the same values but for its stem and that one
+property.
+
+**Outside the workbook** (review S9). `kind_for` finds the two kinds for every caller, the strip included, while the
+strip's kind control (`gui.KIND_VALUES`) never offers them. When the strip meets a sleeve's or dog's `.gear.json` (Open
+.gear.json, or the live link to such a part), it refuses with a sentence: *"Sleeve_m1.5_N30.SLDPRT is a sleeve made from
+a gearbox workbook; open that workbook to change it."* (`gui.py`, package D; its sentence in `ui_text`, C).
 
 ### 1.2 Slides and positions
 
@@ -212,7 +254,9 @@ slider at position p has its face centre at `point + (At + offset) × axis` (`ge
 A mode picks one position per slider; a blank pick is the slider's position whose offset is 0, and a slider with no
 such position is an error at the cell: *"Modes!B4: RangeSlv has no position at 0, so a blank here does not say where
 it sits; pick one of H and L."* (J5). With sliders and no Modes rows (PLAN §1), there is one implicit mode, every
-slider at its 0 position, and no configuration is added. A Modes sheet with rows but no slider column is an error
+slider at its 0 position, and no configuration is added; there is no Modes cell to name then, so a slider with no
+position at 0 is an error at its Slides cell: *"Gears!S7: RangeSlv has no position at 0, and with no Modes rows each
+slider sits at its position 0; add one, or add Modes rows."* A Modes sheet with rows but no slider column is an error
 (*"the Modes sheet has modes but no slider column"*). Mode names are checked like gear names and unique ignoring case
 (J6), since they become configuration names. Positions no mode picks are read and checked but get no mate.
 
@@ -226,7 +270,11 @@ For each mode, with every slider at its pick:
   pressure angle that differ while they overlap at all is an error (*"RangeSlv (30 teeth, module 1.5) cannot engage
   LoDog (28 teeth): a sleeve and the dog it engages have the same teeth, module and pressure angle."*); one sleeve
   covering two dogs at once is reported by the kinematics as a jam, and said specifically. A sleeve and a dog on the
-  same shaft engage nothing (a warning). Sleeves engage dogs only.
+  same shaft engage nothing (a warning). Sleeves engage dogs only. The teeth-match check reads each row's pressure
+  angle through `Gear.spec_values` (the row's, else the Box's), not `ga.pressure_angle or box` as `_check_mesh` does.
+  A coupling never goes through `_check_mesh`: with equal teeth at centre distance 0 it would refuse it (a ring needs
+  more teeth than its pinion), as would `internal.tip_clash` (*"A ring of 30 teeth cannot hold a pinion of 30"*);
+  sleeves and dogs on Meshes are errors, so neither is ever called on one.
 - **A sliding mesh** is a listed mesh with a slider among its two gears; it is in mesh in a mode when the narrower
   face is covered, out of mesh with no overlap, an error between (J4). A listed mesh in mesh in no mode is a warning.
 
@@ -238,8 +286,20 @@ couplings, the meshes out of mesh, that mode's `Placed` for each slider, and tha
 `kinematics.solve` gains a mode: the meshes out of mesh in that mode are left out and each engaged coupling adds a
 row `ω̃_p − ω̃_q = 0` (projected speeds, as every row is, so a Z− shaft keeps its sense). The rank tells the rest
 exactly, as now: settled, free (a member nothing drives in this mode), or jammed. Speeds are about each shaft's own
-axis. Torque per mode follows W3's `_torques` with a coupling as a lossless 1 : 1 link, a branch that reaches no
-output and no fixed shaft in that mode pruned (it idles), and nothing given past a split (J17). Loops per mode
+axis.
+
+**Torque per mode (J17)** follows W3's `_torques` with three additions. A coupling is a lossless 1 : 1 link. A branch
+that reaches no output in that mode is pruned before the walk: it idles and carries no torque (a fixed shaft on it is
+a reaction, not a load, so E4's planetary in 2H — Sun, planets, the held Ring, a carrier that drives nothing — is
+pruned). **An output shaft that also drives onward is a split:** W3's walk today passes an output's whole torque on
+when it has one onward link, as if the output took none; W8 stops there. Such a shaft is given the torque that
+arrives at it and nothing past it is given, since how it shares that torque with what it drives depends on the loads,
+which the workbook does not say. The Results sheet and the Speeds panel show that number marked as shared: *"Rear
+10.000 N·m, shared with FrontDrv (the share depends on the loads)"*, and FrontDrv, Idler and Front show none, with
+*"past a split"* in the note. No new theory is needed: it is W3's split, applied at the output. Planetary torques
+are W7's rule (W7-PLAN §2.5), joined to this walk as W7 joins them to W3's.
+
+Loops per mode
 (J15): the always-on relations (W5's meshes, W7's planetary, the splines) are joined first, then the mode's sliding
 meshes, then its couplings, each in sheet order; one that joins two bodies already joined is off in that mode —
 the record says so — and the kinematics has already called an inconsistent one a jam.
@@ -256,14 +316,23 @@ Each is a diagnostic at its cell; W5's answer 4 stands (the Checks panel lists p
   as written the box is jammed in this mode."*); partial engagement; teeth that cannot engage; two sliders on one
   shaft overlapping in a mode (J22); a slider clashing with any gear in a mode (W3's `_check_clearances` run on each
   mode's placements, with every engaged coupling exempt and every coaxial sleeve–dog pair not engaged in that mode
-  required to have no overlap at all); a sleeve or dog on Meshes; a dog with Slides; a blank pick with no 0 position;
+  required to have no overlap at all; the exemption comes **before** `_check_clearances`' ring branch, which would
+  otherwise warn that a coaxial dog of equal teeth *"sits where it would mesh inside"* its sleeve, since its `near`
+  test reads |0 − 0| < 0.1 m); a sleeve or dog on Meshes; a dog with Slides; a blank pick with no 0 position;
   the refusals of §0.1 become errors only at Build, as warnings in Checks.
 - *Warnings:* a dog no mode engages; a listed sliding mesh in mesh in no mode; a sleeve longer than the gap between
   two dogs within its travel (*"RangeSlv is 16 mm long and InDog and LoDog are 14 mm apart: on its way from H to L it
-  would hold both at once."*, J22); an output that turns in no mode (W3's warning, now across modes); two modes that
-  engage the same couplings and meshes (*"4H and 4X engage the same: they are one mode twice"*).
-- *Not a problem* (J16): a member free in a mode. The Speeds panel says *"N: neutral — Rear, FrontDrv, Idler and Front
-  turn freely."* and *"2H: … the front is not driven."*
+  would hold both at once."*, J22); an output that turns in no mode (W3's warning, now across modes — **a departure
+  from PLAN-WORKBOOK §3.4**, which asks for the warning on an output nothing drives in *some* mode and would so warn
+  on both of E4's outputs on every read; announced as reading J16 and put to the user, §0.4); two modes that engage
+  the same couplings and meshes (*"4H and 4X engage the same: they are one mode twice"*).
+- *Not a problem* (J16): a member free in a mode. `checks._check_motion` today makes a meshed shaft no input settles an
+  **error** (*"nothing settles FrontDrv's speed…"*); FrontDrv meshes FIdler and is free in 2H and N, so in a box with
+  modes that check runs across the modes: a meshed shaft free in **every** mode keeps W3's error, one free in some
+  modes is said by the Speeds panel only: *"N: neutral — Rear, FrontDrv, Idler and Front turn freely."* and *"2H: … the
+  front is not driven."*
+- *The top-level motion.* In a box with modes, `Report.motion` is the first mode's, so every reader that does not know
+  modes yet sees a true state; the Speeds panel and Export read `Report.modes` (§1.12).
 - *Unchanged:* W3's checks on everything that does not slide, at its At. A slider is checked at each mode's position,
   never at its At alone, so `later_rows`'s *"checked only at its At"* goes.
 
@@ -315,9 +384,16 @@ made at (a put with the gear mate on holds: `MESH_PHASE_ROUTE`), and everything 
 Flip if wrong, its remake route, its mate check. What is new is two collinear axes. `gear_mate_sense` accepts them
 (it refuses only axes whose cosine is below 0.99, and computes `parallel` from the sign); "the same way" is the
 condition W5 reads for a ring, so couplings and splines are passed as same-sense gear mates (in `build`'s
-`internal`, `GearboxPlan.ring_meshes` widened to "the gear mates whose two gears turn the same way"). Whether
-SolidWorks turns collinear gear mates as the read-back says is what the full build's drive shows first (§5); it is
-not probed ahead (§4: it cannot hang or raise a dialog, and a wrong sense stops the build as a refused mate).
+`internal`, `GearboxPlan.ring_meshes` widened to "the gear mates whose two gears turn the same way").
+
+**The read-back is untested on collinear axes.** Both entities are the parts' `Gear Axis`, pointing along +Z on Z+
+shafts, so `parallel` is always True there and a same-way coupling reads right exactly when `Reverse` is True. Whether
+`Reverse` means for collinear axes what it meant in the 52 offset cases ring_mate_sense read is not known. If it does
+not, every coupling and spline is made wrong the same way, and the driven proof catches it, since it reads every
+gear's turn and its control drives both Flips (§5). The coordinator will have it tried on SolidWorks early, as the
+spike §4.3 sets out; until that spike or the shakedown build has shown it, nothing in this plan treats a collinear
+read-back as proven. It is not probed ahead under the user's rule (§4: it cannot hang or raise a dialog, and a wrong
+sense stops the build as a refused mate); the spike is the coordinator's choice to see it sooner.
 
 **Ratios for the record:** COUPLE and SPLINE `ratio` is `(1, 1)`; `mesh_links` gives a COUPLE `k = σ_S·σ_D` (both
 turn the same way about the world, so about each own axis by the product of senses) and pitch `360/z_D`; a SPLINE
@@ -357,13 +433,22 @@ document, after W5's run, rebuild, verify and mate check, and **before the save*
 4. **The mate check per mode:** for each mode, show it, rebuild, and check as W5's `_check_mates` does with this
    mode's lists: every mate on in it present, unsuppressed, error code 0 (any number logged, never interpreted);
    every per-mode mate off in it reads suppressed (and is not judged by its code: GOTCHAS §103); every mated gear
-   `COMPONENT_UNDER_DEFINED`; every slider's frame at its position (`_verify`'s tolerance). A problem is a sentence
+   `COMPONENT_UNDER_DEFINED`; every slider's frame at its position (`_verify`'s tolerance); the layout part and
+   every gear meant to stay fixed reading `IsFixed` True in this configuration (review S3: SolidWorks keeps a
+   component's fixed state per configuration, and the layout and the fixed gears were fixed while only the template's
+   configuration existed; whether `AddConfiguration2` carries it over is read along in tier 9, and if it does not,
+   step 2 fixes them in each new configuration with W5's `Fix`, which reads `IsFixed` first). A problem is a sentence
    in `BuildResult.mate_problems` beginning *"In mode 4L, …"*, so W5's rule holds unchanged: a refused mate stops the
    build, nothing is saved, the document is left open and named, and Build waits for a changed workbook.
 5. Show the first mode; `delete_configuration` for each of the template's configurations that is not a mode
    (`DeleteConfiguration2`, names read back; verified on 2026 SP1.1 in the macro database's ledger); rebuild; save.
-6. Interference, after the save as W4 does it, **once per mode**: show it, `interferences()`, and finally show the
-   first mode again. A clash in a mode is a CHECK naming the mode and the gears.
+6. Interference, after the save as W4 does it, **once per mode**: show it, the train's rebuild (the macro database's
+   ledger: a rebuild is needed after `ShowConfiguration2` before measuring, and without one the sliders may still
+   stand where the previous mode put them), `interferences()`; finally show the first mode again and rebuild. A clash
+   in a mode is a CHECK naming the mode and the gears.
+
+`CommandInProgress` is off around every show and rebuild, as W5 has it around its rebuilds, and on only while mates
+are made (W5's `MATES_UNDER_COMMAND_IN_PROGRESS`); tier 9 calls `ShowConfiguration2` the same way (§4.2).
 
 **What a configuration holds**, read from GOTCHAS §83 and assemblies/07: suppression, not where free components sit.
 So every position is held by mates (the SLIDEs), and every configuration holds a complete set: in each mode every
@@ -381,23 +466,35 @@ that mode left free stand still while the others turn, so in another mode a newl
 relative angle it finds — a gear mate keeps the relative angle it finds (`MESH_PHASE_ROUTE`) — and SolidWorks can
 show a dog tooth on tooth with its sleeve (J11). That is also what a real dog clutch would meet; the app does not hide
 it. In that configuration `train_check` finds the coupling out of step (a MeshLink, judged modulo the dog's pitch),
-and Update puts the whole train back to its built turn (W5's answer 2, ruled train by train: M1). The footer says so
-when it happens (§1.12).
+and Update puts the gearbox back to its built turn (W5's answer 2) — every gear connected to the one out of step over
+**every** mode's relations, not only that mode's train (J26, §1.10). The footer says so when it happens (§1.12).
 
 ### 1.10 Update SolidWorks with modes
 
-**Classify** (`update.classify`, B; J14). A record with `modes` (schema 4) adds, to W5's rules:
+**Classify** (`update.classify`, B; J14 as the review's cheaper reading, S6). A record with `modes` adds, to W5's
+rules, one test that decides most cases: **are all the mates the new read's modes need already on record?** — each
+mode's SLIDE for the position it picks, each coupling and sliding mesh it engages, with the same gears.
 
 - *Update:* a slide offset or a slider's At or face width (its SLIDE globals, each `|z_front|` at its position);
   W5's edits on everything else (part values, layout moves, a follower's At, a meshed tooth change by the remake),
-  including a sleeve's or dog's teeth, module or face when the pair still matches and nothing engages differently.
-- *Structural* (each with its sentence): any change to the Modes sheet but its row order — a row added, removed or
-  renamed, a pick changed, a slider column added or removed (*"The Modes sheet changed (4H now puts ModeSlv at 2WD),
-  and which mates each configuration holds was set when the assembly was built, so it needs a new revision."*); a
-  position added, removed or renamed; a gear gaining or losing Slides, or becoming or ceasing to be a sleeve or dog;
-  any edit after which some mode engages other couplings or other sliding meshes (*"In 4L RangeSlv would now engage
-  nothing (its position L moved off LoDog), so it needs a new revision."*); a position's front face reaching, leaving
-  or crossing the Front plane (W5's answer 3, naming the edit).
+  including a sleeve's or dog's teeth, module or face when the pair still matches; and **any edit after which only
+  the per-configuration flags differ** — a Modes pick changed to a position whose SLIDE exists, or an offset that
+  takes a mode onto couplings already made. Then the wanted on-sets (from the new read) differ from the recorded ones,
+  and the worker sets the flags with the same call and read-back D10 per configuration uses; `finish_update` writes
+  the new on-sets to each `MateEntry.modes`. The phase condition of every coupling on record already holds at the
+  built turn (§1.6), so a coupling switched on in a new mode needs nothing else. Sentence piece: *"switched the mates of
+  {4H} to {ModeSlv at 2WD}"*.
+- *Structural* (each with its sentence): Modes rows added, removed or renamed, a slider column added or removed
+  (*"The Modes sheet has a new mode, 4X, and each mode's configuration is made when the assembly is built, so it needs
+  a new revision."*); a position added, removed or renamed; a gear gaining or losing Slides, or becoming or ceasing
+  to be a sleeve or dog; any edit after which some mode needs a mate that is not on record (*"In 2H ModeSlv would now
+  cover LoDog, which no mode engaged when the assembly was built, so it needs a new revision."*,
+  *"In 4H ModeSlv would now sit at 3WD, a position with no mate in the assembly, so it needs a new revision."*); a
+  position's front face reaching, leaving or crossing the Front plane (W5's answer 3, naming the edit).
+
+Why this is sound: switching flags is exactly D10 per configuration's call, which Update makes anyway; making a mate
+or a configuration in a reopened assembly would be new and stays a Build again…. The user's W5 answers chose an
+Update wherever the route was proven (a follower's At, a tooth change by the remake); this follows them.
 - *No change in SolidWorks:* the Modes rows reordered. The assembly opens in the configuration it was saved in; the
   footer says the next Build again… would open in the new first mode.
 
@@ -418,20 +515,35 @@ activated — and compared with the record: on where its modes say on, off elsew
 An unsuppressed mate not on record, in any mode's configuration, refuses (M7, read the same way). `train_check` in the
 active mode, with that mode's links and wanted frames. Gear mates' senses are read for the gear mates on in the
 active configuration only: a per-mode gear mate off here is off on purpose, and W5 reads a suppressed mate's sense
-only once it is back on.
+only once it is back on. **This narrows W5's ruling** that the check phase reads every gear mate's sense (which closed
+package B's must-fix in W5): a coupling made wrong in another mode — turned round by hand, or saved by the other
+version — goes unseen until a changed Update visits that mode (J25). No sentence claims that a configuration Update
+did not visit reads right: *"It read the gear mates of {4H}, the configuration that was active; the other modes were
+not visited, since nothing changed."* The limitation is lifted if tier 9 shows that reading a suppressed gear mate's
+`Reverse` and entities answers and marks nothing (§4.2).
 
 *Change — nothing raises out (W4's B1).* As W5: part and layout values; rebuild; then **D10 per configuration (J12)**:
 each recorded mate found off where the record has it on is turned on there, each found on where the record has it
 off is suppressed there, both with `set_mate_suppressed_in` and read back (never a call on a mate already in the
-wanted state: W5's ruling, `UNSUPPRESS_ON_LOCK_ALREADY_ON_MARKS_MODIFIED`); then the Face Z and slide globals; then
-the puts, in the active configuration, every mated gear of a train that needs one with its locks suppressed in this
-configuration around them (W5's M1, M8). A slider is put at its frame in the active mode. Puts set rotations, which
-every configuration shares, and the SLIDEs carry each slider to its own position elsewhere.
+wanted state: W5's ruling, `UNSUPPRESS_ON_LOCK_ALREADY_ON_MARKS_MODIFIED`), and the flags a J14 flags-only edit
+changes, the same way; then the Face Z and slide globals; then the puts, in the active configuration.
+
+**What is put (J26, review M5).** In a gearbox with modes, a "train" for the put is the set of gears **connected over
+every mode's relations** — W5's meshes and locks, W7's, the splines, and every coupling and sliding mesh of any mode —
+not the active mode's train. When anything in such a set needs a put (off its axis, out of step, a ratio to set),
+every mated gear of the set is put, with every lock of it suppressed in this configuration around the puts (W5's M1,
+M8). For both fixtures the set is the whole gearbox. Only a part of a box that no mode joins to the rest keeps W5's
+per-train rule. Without this, a turn made in 4L and an Update pressed in 2H would put the 2H train {In, low range,
+Rear} back and leave FrontDrv's train (a train of its own in 2H, in step with itself) at the 4L turn; the post-check
+in 4H and 4L would then find ModeSlv and FrontDog out of step and report a fault in the modes Update was meant to put
+right. A slider is put at its frame in the active mode. Puts set rotations, which every configuration shares, and the
+SLIDEs carry each slider to its own position elsewhere.
 
 *Post-check.* W5's, in the active configuration. **Then, only if anything changed**, each other mode in turn: show
-it, the train's rebuild, its frames (sliders at their positions, every other gear at its wanted frame), its mates as
-§1.8 step 4 judges them, the senses of the gear mates on in it, its interference; then show the configuration that
-was active (J13). A quiet Update activates nothing. `GearboxUpdate.changed` gains the assembly when D10 per
+it, the train's rebuild, its frames (sliders at their positions; every gear of a set that was put at its wanted frame;
+a set that was not put judged by `train_check` in that mode — in step — never by built frames, since by W5's answer 2
+a train Update did not have to move keeps the user's turn), its mates as §1.8 step 4 judges them, the senses of the
+gear mates on in it, its interference; then show the configuration that was active and rebuild (J13). A quiet Update activates nothing. `GearboxUpdate.changed` gains the assembly when D10 per
 configuration or a slide global changed anything (as W5's rule for step 3–5).
 
 **How D10 lives with mates suppressed on purpose.** W5's D10 reads "a recorded mate found suppressed is turned back
@@ -440,26 +552,34 @@ configuration where the record has it on*, and the mirror (found on where the re
 since such a mate can over-define that configuration the next time it is activated. A mate on in every configuration
 (W5's, the splines, the sliders' axis mates) is exactly W5's D10, read in each configuration.
 
-**`finish_update`** (B): SLIDE entries' `z_front` follow the slide globals set; the per-mode frames on record follow
-what was put (a slider's per-mode frames from its SLIDEs); W5's rules otherwise.
+**`finish_update`** (B): SLIDE entries' `z_front` follow the slide globals set; each `MateEntry.modes` follows the
+flags set (D10 per configuration puts the record's state back, so it changes nothing; a J14 flags-only edit writes
+the new on-sets); the per-mode frames on record follow what was put (a slider's per-mode frames from its SLIDEs);
+W5's rules otherwise.
 
-### 1.11 The record (schema 4)
+### 1.11 The record (the schema one past W7's)
+
+`store.LINK_SCHEMA_VERSION` is **one more than W7 leaves it**. W6-PLAN §2.8 sets it to 4 and W7-PLAN §2.11 to one past
+W6's (W7-PLAN-REVIEW: so 5), which would make W8's 6; this plan names no number, since the phases before it own
+theirs, and the interface commit writes `LINK_SCHEMA_VERSION = <W7's> + 1` from the constant as W7 left it. A record of
+any earlier version reads as W8's, with no modes; a record newer than W8's is refused and left byte-identical; a
+W7-era reader refuses W8's (W5's D11 mechanism). The shapes build on W7's, which build on W6's (`MateEntry.plane`,
+W6-PLAN §2.8) and W5's:
 
 ```python
-LINK_SCHEMA_VERSION = 4
-
 MateEntry += position: str = ""            # SLIDE: the position's name; "" for every other kind
           += modes: List[str] = []         # the configurations it is on in; [] = every configuration
 GearboxRecord += modes: List[str] = []     # the configurations as built, in Modes-sheet order; the first is the one
                                            # the assembly was saved in; [] = no configuration was added
 ```
 
-`MateEntry.kind` gains `"slide"`, `"spline"`, `"couple"`; the parse (C) refuses a kind outside the seven, gears not
-as many as the kind holds (slide 1, spline and couple 2), a SLIDE without a position, a couple or spline whose ratio
-is not `[1, 1]`, and a mate whose `modes` names a configuration not in `GearboxRecord.modes`. A v3 file reads as v4
-with no modes; a v5 file is refused and left byte-identical; a W5-era reader refuses a v4 file (its newer-schema
-sentence: W5's D11). The component frames on record are the first mode's; a slider's frame in another mode follows
-from its SLIDE's `z_front`. `finish_build` (B) writes `modes` and every mate's `modes` and `position` from the plan.
+A SLIDE entry carries W6's `plane = "front"` and W7's `on = ""` (the layout). `MateEntry.kind` gains `"slide"`,
+`"spline"` and `"couple"` on top of W7's set (W5's four, which W7 keeps: W7-PLAN §2.7); the parse (C) refuses a kind
+outside that set, gears not as many as the kind holds (slide 1, spline and couple 2), a SLIDE without a position, a
+couple or spline whose ratio is not `[1, 1]`, and a mate whose `modes` names a configuration not in
+`GearboxRecord.modes`, each with a `StoreError` sentence, beside W6's and W7's own refusals. The component frames on
+record are the first mode's; a slider's frame in another mode follows from its SLIDE's `z_front`. `finish_build` (B)
+writes `modes` and every mate's `modes` and `position` from the plan.
 
 ### 1.12 Sentences and the window
 
@@ -489,14 +609,19 @@ C writes these (exact; `{…}` filled from fields):
   app did not make ({Exploded}); Update SolidWorks left it as it is."*
 - *Progress:* *"Setting up the configuration {4L}…"*, *"Checking mode {4L}…"* (a new `STAGE_MODE`).
 - *Speeds panel:* *"{4L}: Rear 375 rpm · Front 375 rpm · 4.000 : 1"*; *"{N}: neutral — {Rear, FrontDrv, Idler and
-  Front} turn freely."*
+  Front} turn freely."*; a shared output's torque *"{Rear} {38.416} N·m, shared with {FrontDrv} (the share depends on
+  the loads)"*, the members past it *"— (past a split)"* (J17).
+- *Quiet Update with modes* (J25): *"It read the gear mates of {4H}, the configuration that was active; the other
+  modes were not visited, since nothing changed."*
 
 **The window** (D; J21): when the workbook has modes, the Speeds panel's header gets a mode chooser (the theme's
 segmented control, one button per mode, the first chosen), and the speeds, torques and ratio lines are that mode's.
 The choice is kept across re-reads while a mode of that name exists. The end view draws sleeves and dogs through
 `kind_for` (`preview.layout_gearbox`) at the chosen mode's placements; a slide runs along the view direction, so it
 does not show there. The header counts modes (`workbook_counts`: *"8 shafts · 11 gears · 4 meshes · 4 modes"* for E4).
-Export's Results sheet gets one block per mode, each headed with the mode's name (J19; `export.py`, B). Boards
+Export's Results sheet gets one block per mode, each headed with the mode's name, a shared output's torque in its
+Torque column with *"shared with FrontDrv; the share depends on the loads"* in the row's note and nothing in the rows
+past it (J17, J19; `export.py`, B). Boards
 (`design/canvas/gen.py`): `WorkbookModes` (the E4 fixture checked, the chooser on 4L) and `WorkbookModesBuilt` (the
 built footer with the configurations); `UI-DESIGN.md` §9 gains the chooser and every sentence above, and its
 later-row sentences for sleeves, dogs, slides and modes go.
@@ -554,13 +679,15 @@ FIdler–FOut `2·(20+30)/2 = 50` = 100 − 50. E3's assembly conditions hold: `
 
 ### 2.2 TransferCase_Parallel (W7-free; packages A and B, and the shakedown)
 
-The same, with the planetary replaced by a reverted layshaft train: a 15-tooth pinion on In drives a 30-tooth gear on
-the layshaft, whose 15-tooth pinion drives a 30-tooth gear on Lo, a shaft on In's axis carrying LoDog.
+The same, with the planetary replaced by a reverted layshaft train: a 17-tooth pinion on In drives a 34-tooth gear on
+the layshaft, whose 17-tooth pinion drives a 34-tooth gear on Lo, a shaft on In's axis carrying LoDog. (The first
+version had 15 and 30 teeth at 45 mm; at 20° a 15-tooth pinion carries the strip's undercut warning, so the review's
+17 and 34 at 51 mm are used: the same 4 : 1.)
 
 | Shaft | X | Y | Role | Speed | Torque |
 |---|---|---|---|---|---|
 | In | 0 | 0 | input | 1500 | 10 |
-| Lay | 0 | −45 | | | |
+| Lay | 0 | −51 | | | |
 | Lo | 0 | 0 | | | |
 | Rear | 0 | 0 | output | | |
 | FrontDrv | 0 | 0 | | | |
@@ -569,11 +696,11 @@ the layshaft, whose 15-tooth pinion drives a 30-tooth gear on Lo, a shaft on In'
 
 | Gear | Shaft | At | Kind | Teeth | Module | Face | Slides |
 |---|---|---|---|---|---|---|---|
-| InPin | In | 10 | spur | 15 | 2 | 10 | |
+| InPin | In | 10 | spur | 17 | 2 | 10 | |
 | InDog | In | 50 | dog | 30 | 1.5 | 6 | |
-| LayGear | Lay | 10 | spur | 30 | 2 | 10 | |
-| LayPin | Lay | 30 | spur | 15 | 2 | 10 | |
-| LoGear | Lo | 30 | spur | 30 | 2 | 10 | |
+| LayGear | Lay | 10 | spur | 34 | 2 | 10 | |
+| LayPin | Lay | 30 | spur | 17 | 2 | 10 | |
+| LoGear | Lo | 30 | spur | 34 | 2 | 10 | |
 | LoDog | Lo | 70 | dog | 30 | 1.5 | 6 | |
 | RangeSlv | Rear | 60 | sleeve | 30 | 1.5 | 8 | H=-10, N=0, L=+10 |
 | FrontDog | FrontDrv | 110 | dog | 30 | 1.5 | 6 | |
@@ -583,7 +710,11 @@ the layshaft, whose 15-tooth pinion drives a 30-tooth gear on Lo, a shaft on In'
 | FOut | Front | 130 | spur | 30 | 2 | 10 | |
 
 **Meshes:** InPin–LayGear, LayPin–LoGear, FDrive–FIdler, FIdler–FOut. **Modes:** as §2.1. Centres: both layshaft
-meshes `2·(15+30)/2 = 45` = |Y| of Lay.
+meshes `2·(17+34)/2 = 51` = |Y| of Lay. LayGear's tip (⌀72) stays 15 mm clear of the axis at the origin (51 − 36), and
+no gear on the origin's axis reaches Lay's (LoGear's tip radius 36 < 51; the sleeve's rim radius 28.875).
+
+"Checks clean" for both fixtures means **no errors**. Warnings the strip itself gives a part stay: on each sleeve and
+dog at 20°, the form-diameter warning and, on the sleeves, the ring's tips inside its base circle (§1.1).
 
 ### 2.3 The answer key
 
@@ -606,7 +737,7 @@ RangeSlv–LoDog, ModeSlv–FrontDog.
 
 **Speeds**, rpm, each about its own shaft's axis (+Z here), input In at +1500. In every mode: E4 Carrier +375 (ring
 fixed: `1500/(1 + 72/24)`), Ring 0, the planets −750 absolute (−1125 relative to the carrier: W7's convention decides
-which the Speeds panel shows); Parallel Lay −750 (`−1500·15/30`), Lo +375 (`+750·15/30`).
+which the Speeds panel shows); Parallel Lay −750 (`−1500·17/34`), Lo +375 (`+750·17/34`).
 
 | | Rear | FrontDrv | Idler | Front | In : Rear | In : Front |
 |---|---|---|---|---|---|---|
@@ -621,14 +752,23 @@ same way as the input in every mode that drives it; so does the front.
 
 **A 30° drive of the input** (δ = 30° · ω/1500; free members must not turn): 2H Rear +30°, front members 0; 4H Rear
 +30°, FrontDrv +30°, Idler −45°, Front +30°; N Rear and front members 0, E4 Carrier +7.5° / Parallel Lo +7.5°, Lay
-−15°; 4L Rear +7.5°, FrontDrv +7.5°, Idler −11.25°, Front +7.5°.
+−15°; 4L Rear +7.5°, FrontDrv +7.5°, Idler −11.25°, Front +7.5°. Every gear turns with its shaft, and the driven
+proof reads each one: RangeSlv and ModeSlv as Rear, InDog as In, LoDog as Carrier / Lo, FrontDog and FDrive as
+FrontDrv, FIdler as Idler, FOut as Front (E4's planets by W7's convention).
 
-**Torque** (J17; Parallel, η 0.98 per mesh, the input 10 N·m): 2H Rear 10.000 (the coupling is lossless; the idle
-In → Lay → Lo branch carries none); 4H the power splits at Rear, so nothing past In; N nothing past In; 4L Lay 19.600
-(`10·30/15·0.98`), Lo 38.416 (`19.6·30/15·0.98`), then the split at Rear. E4: 2H Rear 10.000 (the planetary idles);
-the rest by W7's planetary rule and the split.
+**Torque** (J17 as revised; η 0.98 per mesh, the input 10 N·m; "shared" marks an output that also drives onward, §1.4):
 
-**Phases** (§1.6's rule, mod 12°): InDog 0, RangeSlv 6°, LoDog 0, ModeSlv 0, FrontDog 6°.
+| | Parallel | E4 |
+|---|---|---|
+| 2H | Rear 10.000 (the coupling is lossless; the idle In → Lay → Lo branch reaches no output and is pruned) | Rear 10.000 (the planetary reaches no output and is pruned, the held Ring included) |
+| 4H | Rear 10.000, shared; nothing past Rear (FrontDrv, Idler, Front none) | the same |
+| N | nothing past In (every branch from In is idle) | the same |
+| 4L | Lay 19.600 (`10·34/17·0.98`), Lo 38.416 (`19.6·34/17·0.98`), Rear 38.416, shared; nothing past Rear | the Carrier's torque by W7's planetary rule (W7-PLAN §2.5), Rear the same, shared; nothing past Rear |
+
+**Phases** (§1.6's rule, mod 12°). No mesh walk reaches a dog (a lock puts no condition on phase), so in Gears-sheet
+order InDog starts a walk at 0, RangeSlv gets 6° from it and LoDog 0 from RangeSlv; then FrontDog, before ModeSlv in
+both Gears tables, starts a walk at 0 and ModeSlv gets 6°. So: **InDog 0, RangeSlv 6°, LoDog 0, FrontDog 0, ModeSlv
+6°** (the first version had FrontDog and ModeSlv the other way round, against its own rule).
 
 **The mates W8 adds** (E4 and Parallel alike), with each configuration's state:
 
@@ -665,7 +805,9 @@ I (interface commit, after W7 closes) ──► A (SolidWorks) ─┐          �
                                           C (record, words)┘
 ```
 
-P and I start together; code reads findings by `getattr` and refuses when one is missing. A, B and C run in parallel
+The collinear gear mate spike (§4.3) may run on SolidWorks before any of this, at the coordinator's call; its result
+is read into J8 and §1.7 before the interface commit if it is in by then. P and I start together; code reads findings
+by `getattr` and refuses when one is missing. A, B and C run in parallel
 after I. D after A–C. E after D, P and W7's close: the shakedown `s0` first, then the E4 full build `s1`; what it gets
 wrong is probed step by step (the one follow-up round), fixed, and only the affected sections rerun; one full run at
 the close; 2024's confirming build last. An independent Opus review after I, after each of A–D, and after E.
@@ -769,7 +911,11 @@ Report += modes: Tuple[ModeReport, ...] = ()
 **`workbook/gearbox.py`** (B): `GearboxPlan += modes_plan: Optional[ModesPlan] = None`; `build_kwargs()` adds
 `"modes"` only when it is set, so every W5 call is unchanged key for key.
 
-**`store.py`** (C owns it after I): §1.11's fields, schema 4 and its parse shapes.
+**`store.py`** (C owns it after I): §1.11's fields on top of W7's shapes, `LINK_SCHEMA_VERSION` one past the value W7
+left (written from W7's constant, never a number of this plan's), and the parse shapes.
+
+**Re-reading §0.1** (review S10): the interface commit checks every claim §0.1 makes about the code against W7's
+closing commit and writes in `W8-INTERFACES.md` what moved.
 
 **`ui_text.py`** (C): stubs `modes_ready_line(plan)`, `modes_done_line(plan, result)`, `mode_problem(problem)`,
 `modes_record_line(record)`, `mode_update_lines(update, result)`, `mode_speed_lines(spec, report, mode) ->
@@ -780,7 +926,10 @@ Tuple[List[str], str]`; existing functions keep their signatures and call these.
 **P — probes ahead** (§4): `findings.py`, `probe/p9_modes.py`, `probe/decide.py`, `probe/__main__.py`'s registry,
 `tests/test_findings.py`, `tests/test_probe_modes.py`, `probe/results/**`. Commits first the findings the macro
 database has verified (§4.1, with its entries cited in the comments), then runs the probe on SolidWorks 2026 and
-commits what it found. **Done:** the findings committed and pinned against the result file; reviewed.
+commits what it found. P starts beside I, before package A's swcom members exist, so the probe makes the **raw COM
+calls itself in the shapes §3.2 pins** (the same arguments, the same read-backs), and A's members then copy the
+probe's calls, as W5's members copied tier 8's. **Done:** the findings committed and pinned against the result file;
+reviewed.
 
 **A — SolidWorks** (`swcom.py`, `swbuild.py`, `tests/test_swbuild.py`, `tests/test_swcom.py`; may add to
 `tests/test_swbuild_train.py`, never change an assertion there): the six swcom members; `build`'s mode phase (§1.8,
@@ -800,13 +949,14 @@ demo_fixtures,modes}.py`, new `tests/test_gears_clutch.py`): §1.1–§1.7, §1.
 refusals instead. **Done:** §3.5's B list.
 
 **C — record and words** (`store.py`, `ui_text.py`, `tests/test_store.py`, `tests/test_ui_text.py`): §1.11, §1.12.
-**Done:** every sentence of §1.12 filled from fields in a test and read as written; v3 → v4 read, v4 round trip
-byte-deterministic, v5 refused and untouched, each new parse refusal.
+**Done:** every sentence of §1.12 filled from fields in a test and read as written; every earlier schema read as
+W8's, W8's round trip byte-deterministic, a newer one refused and untouched, each new parse refusal.
 
 **D — window, boards, docs** (`workbook_gui.py`, `preview.py`, `gui.py` if needed, `tests/test_workbook_{build,
 window}.py`, `tests/test_preview.py`, `design/**`, `docs/**`, `README.md`): the mode chooser, the counts, the end view
-at the chosen mode, the footer's new states; the two boards rendered and looked at; `UI-DESIGN.md` §9;
-PLAN-WORKBOOK §4.5 *Readings chosen (W8)* (J1–J24) and §6's W8 row note; HANDOFF. **Done:** the window launched on
+at the chosen mode, the footer's new states; the strip's refusal of a sleeve's or dog's `.gear.json` (§1.1); the
+two boards rendered and looked at; `UI-DESIGN.md` §9; PLAN-WORKBOOK §4.5 *Readings chosen (W8)* (J1–J26, J16 as an
+announced departure from §3.4) and §6's W8 row note; HANDOFF. **Done:** the window launched on
 the Parallel fixture against the fake, the chooser switched through all four modes, each footer state read.
 
 **E — the demonstration** (`probe/workbook_assembly_check.py`, `probe/workbook_window_check.py`, `probe/results/**`):
@@ -845,18 +995,26 @@ first mode, runs interference per mode, and ends in the first mode; the same wit
 a mode whose step over-defines (a doctored plan) stops the build with *"In mode N, …"*, nothing saved; a build with no
 `modes` is W5's call for call. Update: in a non-mode configuration refuses before anything changes; a missing
 configuration → `NotAsBuilt`; D10 both ways in an inactive configuration, said, never a call on a mate already right;
-a slide global set; a turned train in 2H then switched to 4L → out of step there → every gear put, locks suppressed
-around the puts, the post-check visiting 2H, 4H and N and returning to 4L; a quiet Update activates no configuration and
-changes nothing; an extra configuration listed and left.
+a slide global set; a J14 flags-only edit (4H's ModeSlv pick 4WD → 2WD) sets exactly the changed flags; a turned train
+in 2H then switched to 4L → out of step there → every gear put, locks suppressed around the puts, the post-check
+visiting 2H, 4H and N and returning to 4L; **the reverse (review M5): turned in 4L, Update pressed in 2H → the whole
+gearbox put (the set connected over every mode's relations), FrontDrv's train included, and every mode clean in the
+post-check**; a train not put judged in the other modes by `train_check`, not by built frames; a quiet Update
+activates no configuration and changes nothing; an extra configuration listed and left; a fixed component that
+reads unfixed in a new configuration fixed there (S3).
 
-**B (pure):** both fixtures check clean; §2.3's speeds, ratios, engagements, slider positions, SLIDE globals and
-phases pinned per mode; the torque of J17 for Parallel; each check of §1.5 with a made-up workbook (a partial cover, a
+**B (pure):** both fixtures check with no errors (§2.2); §2.3's speeds, ratios, engagements, slider positions, SLIDE
+globals and phases pinned per mode; the torque table of §2.3 for Parallel, E4's 2H, 4H and N, and the shared marking;
+a meshed shaft free in every mode keeping W3's error and one free in some modes raising nothing (J16); the sleeve's and
+dog's tip thicknesses at 20° (§1.1) pinned from the kinds; each check of §1.5 with a made-up workbook (a partial cover, a
 teeth mismatch, one sleeve over two dogs, two sliders overlapping, a bridging stroke, a dog never engaged, a blank pick
 with no 0, a sleeve on Meshes, a dog with Slides); the outline test of §1.6 in every mode; `motion_plan` and
 `modes_plan` for both fixtures against §2.3's mate table and build order (`ModesPlan.check() == []`); a loop closed by
 a coupling in one mode left off there (J15); every classify case of J14 with its sentence; `finish_build` and
-`finish_update` round trips; every sleeve and dog plan equal to the spur or ring plan of the same values but its stem
-and its 30° default; `kind_for` never returning a workbook kind for a strip spec (`gui.KIND_VALUES` unchanged).
+`finish_update` round trips; every sleeve and dog plan equal to the spur or ring plan of the same values but for its
+stem and its kind custom property; `kind_for` never returning a workbook kind for a strip spec (`gui.KIND_VALUES`
+unchanged); sliding meshes (made-up workbooks only, §0.1): in and out of mesh per mode, a partial one an error, their
+gear mates on only in the modes that mesh them.
 
 **Suite:** `PYTHONPATH=src .venv/bin/python -m pytest -q` on a clean `git archive`, and the Tk tests under Windows
 Python, as W5.
@@ -875,7 +1033,8 @@ the rest is first met in the full build, which the mate checks and read-backs of
 |---|---|---|---|
 | `IConfigurationManager.AddConfiguration2(name, "", "", 0, "", "", True)` | 2024 SP5, the macro database's assemblies/07 (it adds and activates) | none seen; a new document | no — first met in the build; read back |
 | `IModelDoc2.ShowConfiguration2(name)`, `ConfigurationManager.ActiveConfiguration.Name` | 2026 SP1.1 on parts (API-LEDGER; GOTCHAS §23); 2024 SP5 on a slider-crank assembly, followed by `ForceRebuild3(False)` (assemblies/07) | **yes**: in a mated gear train it re-solves the configuration; a configuration whose mates fight, or a rebuild error, could bring up a "What's Wrong" or rebuild dialog; never run by the app, never on 2026 on an assembly, never with the top-only rebuild after it | **yes** |
-| `IFeature.SetSuppression2(0 / 1, 3, names)` on a mate | 2024 SP5, assemblies/07 | none: activates nothing | no |
+| `IFeature.SetSuppression2(0, 3, names)` on a mate (suppress in listed configurations) | 2024 SP5, assemblies/07 | none: activates nothing | no |
+| `IFeature.SetSuppression2(1, 3, names)` on a mate (turn on in listed, inactive configurations) | **not shown** anywhere: assemblies/07 only suppresses (action 0); the first version of this plan cited it for both | none expected: activates nothing | no — read along in tier 9 (§4.2), since D10 per configuration and §1.8 step 3 rest on it |
 | `IFeature.IsSuppressed2(3, names)` | 2024 SP5, assemblies/07 | none: a read | no (read along in the probe, since a quiet Update needs to know it marks nothing) |
 | `IModelDoc2.DeleteConfiguration2(name)` | 2026 SP1.1, on parts | none: a new document, never the active configuration | no (read along) |
 | `IModelDocExtension.SaveAs3(path, 0, 1, …)` of an assembly with several configurations | W4/W5's save, one configuration | **yes**: a save can ask about configurations that need a rebuild or their display data | **yes** |
@@ -890,13 +1049,25 @@ One scratch assembly on SolidWorks 2026 in a fresh session, with a dialog watche
 `press_dont_save` pattern widened: every new top-level window of the SolidWorks process is logged with its title and
 buttons; a Yes/No save box is answered No; any other modal stops the probe and is reported):
 
-1. Through `swcom` as the app will call it: a layout part with two coaxial axes, a gear on one shaft as its anchor, a
-   sleeve on the other with its axis mate, a 1 : 1 gear mate between them (collinear: the app's coupling, made and
-   read back as the app will; its outcome is recorded for J8 but nothing waits on it here), and two configurations
-   `A` and `B` added; in `A` the sleeve's slide mate at 10 mm, in `B` at 20 mm, each made in its own configuration
-   and suppressed in the other by `SetSuppression2(…, 3, names)`, read back by `IsSuppressed2(3, names)`.
-2. `ShowConfiguration2` A → B → A → B under the watcher, each followed by the top-only rebuild; the active name, the
-   sleeve's frame (it must read 10 and 20 mm), every mate's error code; `GetSaveFlag` before and after each show.
+1. With the raw COM calls in the shapes §3.2 pins (package A's members do not exist yet; they will copy these): a
+   layout part with two coaxial axes, a gear on one shaft as its anchor (fixed layout, as the app fixes it), a sleeve
+   on the other with its axis mate, a 1 : 1 gear mate between them (collinear: the app's coupling, made and read back
+   as the app will, and driven once with W5's drive; its outcome feeds J8 beside the spike §4.3, but nothing here
+   waits on it), and two configurations `A` and `B` added; in `A` the sleeve's slide mate at 10 mm, in `B` at 20 mm,
+   **each slide mate's D1 linked to its own assembly global** as §1.7 does (a global driving a dimension of a mate
+   suppressed in the active configuration is new to the app: if it gives rebuild errors, it does so exactly where
+   the configurations are shown), each made in its own configuration and suppressed in the other by
+   `SetSuppression2(0, 3, names)`; then the `B` mate **turned on in `A` and suppressed again** by
+   `SetSuppression2(1, 3, names)` and `SetSuppression2(0, 3, names)` while `B` is active (the unsuppress route in an
+   inactive configuration, which nothing has shown); every flag read back by `IsSuppressed2(3, names)`. In each new
+   configuration, `IsFixed` of the layout and the anchor (review S3: is a component's fixed state carried into a
+   configuration `AddConfiguration2` makes?).
+2. `ShowConfiguration2` A → B → A → B under the watcher, with `CommandInProgress` off as the app will call it (§1.8),
+   each followed by the top-only rebuild; the active name, the sleeve's frame (it must read 10 and 20 mm), every
+   mate's error code, every component's `GetSuppression2` (resolved); `GetSaveFlag` of **every** document (the parts
+   and the layout part as well as the assembly) before and after each show and after each rebuild. The sense of the
+   collinear gear mate read while it is **suppressed** in the active configuration (`Reverse`, `EntityParams`): does
+   it answer, and does the read mark anything (J25)?
 3. A third configuration `C` in which **both** slide mates are on (deliberately over-defined), shown under the
    watcher: what SolidWorks answers, whether any window opens, and whether showing A afterwards solves cleanly.
    This is the case §1.8's order is built never to meet; the probe meets it so the app knows what a user's edit
@@ -905,6 +1076,13 @@ buttons; a Yes/No save box is answered No; any other modal stops the probe and i
    with configuration `""`; the active configuration (the one saved), every flag by `IsSuppressed2(3, …)`, every
    document's `GetSaveFlag` straight after the open and after the reads; then a show and `QuitDoc` unsaved under the
    watcher.
+5. **The copy of a built folder, rehearsed** (J24, review S7), on the saved scratch before E depends on it: every
+   document closed; the folder copied; the original folder renamed aside, the rename itself checked (Windows refuses
+   to rename a folder while a handle in it is open); the copy's assembly opened under the watcher (SolidWorks searches
+   for references it cannot find where they were stored, and may ask); every component's `GetPathName` read back in
+   the copy's folder; the copy saved, closed, the original renamed back; the copy reopened and read again. If any
+   step asks or a reference resolves outside the copy, E uses another route — `ISldWorks.ReplaceReferencedDocument`
+   on the closed copy (GOTCHAS §16; unverified) or Pack and Go — probed the same way first.
 
 Findings (P commits; the first five from the macro database before the run, marked so, the rest from the run):
 
@@ -914,6 +1092,11 @@ CONFIGURATION_SHOW_ROUTE = "ShowConfiguration2, active name read back"          
 CONFIGURATION_DELETE_ROUTE = "DeleteConfiguration2, names read back"            # API-LEDGER, 2026 parts
 SPECIFY_CONFIGURATIONS = 3                                                      # swInConfigurationOpts_e, assemblies/07
 MATE_SUPPRESSION_PER_CONFIGURATION_ROUTE = "SetSuppression2(action, 3, names); IsSuppressed2(3, names)"
+                                              # suppress: assemblies/07, 2024; turn on in a listed configuration: tier 9
+FIXED_KEPT_IN_NEW_CONFIGURATION = …           # item 1: True, or False and step 2 of §1.8 fixes each
+SUPPRESSED_GEAR_MATE_SENSE_READ = "…"         # item 2: "answers, marks nothing" lifts J25; anything else keeps it
+SLIDE_GLOBAL_ON_SUPPRESSED_MATE = "…"         # item 1–2: a global linked to a suppressed mate's D1: clean, or errors
+COPY_REFERENCES_FOUND_BESIDE = …              # item 5: True, or the route E takes instead
 CONFIGURATION_SHOW_RAISES_DIALOG = False      # tier 9 item 2; True is a STOP
 CONFIGURATION_SHOW_OVER_DEFINED = "…"         # item 3: what an over-defined configuration answers
 CONFIGURATION_SHOW_MARKS = "…"                # "nothing" or "assembly"
@@ -927,8 +1110,60 @@ NEW_MATE_IN_OTHER_CONFIGURATIONS = "…"        # "on" or "suppressed": recorded
 `SPECIFY_CONFIGURATIONS` are set as above, `CONFIGURATION_SHOW_RAISES_DIALOG` and `MULTI_CONFIGURATION_SAVE_ASKS` are
 False, `REOPENS_IN_SAVED_CONFIGURATION` is True, and `CONFIGURATION_SHOW_MARKS` and `SUPPRESSION_READ_MARKS` are set
 (`CONFIGURATION_SHOW_OVER_DEFINED` and `NEW_MATE_IN_OTHER_CONFIGURATIONS` are recorded, not gated on); otherwise a gearbox with modes is refused at Build with the sentence naming the finding (never built static: a
-static assembly cannot hold modes). 2024 meets these calls in the confirming build, under the scripts' dialog
-watcher.
+static assembly cannot hold modes). `SLIDE_GLOBAL_ON_SUPPRESSED_MATE` other than clean is a STOP (J7 would need
+another route). 2024 meets these calls in the confirming build, under the scripts' dialog watcher.
+
+### 4.3 The collinear gear mate spike (for the probe agent, as written)
+
+The coordinator will have J8's one untested piece tried on SolidWorks early, before the packages depend on it. This
+is what such a spike must make and measure. It is a scratch assembly on SolidWorks 2026 in a fresh session, with the
+dialog watcher of §4.2; every call is the app's (W5's routes as `findings.py` holds them: axis coincident, origin
+distance, gear mates made under `CommandInProgress` and renamed at once, `gear_mate_sense`'s read).
+
+**The assembly.** A layout part with two named axes on one line through the origin along +Z (`"A Axis"`, `"D Axis"`,
+as W7's coaxial axes are), fixed. An anchor gear **A** (the strip's spur, 30 teeth, module 1.5, 20°) mated to `A Axis`
+and along it (W5's AXIS and ALONG). A dog **D** (the same spur plan) on `D Axis`, AXIS and ALONG, 20 mm further along.
+A sleeve **S** (the strip's internal spur ring, 30 teeth, module 1.5, 20°) with **only** its AXIS mate to `A Axis`:
+free to slide and to turn. Its phase put so a coupling to D would sit tooth in space (§1.6).
+
+**Measure, in order, logging every number:**
+
+1. **The spline made between collinear axes.** A 1 : 1 gear mate between S's `Gear Axis` and A's, Flip False:
+   `AddMate5`'s status, the mate's error code, S's `GetConstrainedStatus` (S must still be free to slide: 2).
+   `gear_mate_sense`'s raw readings: `Reverse`, both entities' `EntityParams` directions, `parallel`, and what the
+   rule `(Reverse == parallel) == same-way` says.
+2. **The drive.** W5's demonstration drive on A (an angle mate from A's Top plane to the layout's Right plane, its D1
+   linked to a global `"Drive"`, 90 → 120, top-only rebuild): A's, S's and D's turns about their own axes
+   (`turn_between`), S's origin along the axis. S must turn +30° with A; D must not turn; S must not move along the
+   axis (1e-6 mm). Then `"Drive"` back to 90 and the drive deleted (W5's M12).
+3. **The both-Flips control.** The spline deleted and made again with Flip True; the same readings and the same
+   drive. **Exactly one Flip must turn S the same way as A**, and it must be the one the read-back calls right; if
+   both or neither turn it right, or the read-back calls the other one right, J8's read-back rule does not hold for
+   collinear axes, and the spike says which. The right one is kept.
+4. **The slide under the gear mate.** A distance mate from S's origin to the layout's Front plane (W5's ALONG route,
+   the app's SLIDE) at S's current place, D1 linked to a global `"S Face Z at P"`; the global changed by +10 mm and
+   the top-only rebuild: S's origin moves 10 mm along the axis, its turn relative to A unchanged (1e-6°), every error
+   code 0; the drive again: still 1 : 1, the right way.
+5. **The coupling.** A second collinear 1 : 1 gear mate, S to D, made and read back as in 1 and its Flip settled by
+   the read-back (remade with the other Flip if it reads wrong); S's and D's constrained status; the drive: D now
+   turns +30° with A and S.
+6. **Per configuration.** Two configurations `X` and `Y` added (`AddConfiguration2`); in `X` the coupling on and the
+   slide at P; in `Y` the coupling suppressed and a second slide mate at P + 20 mm (its own global), each set in its
+   own configuration and suppressed in the other by `SetSuppression2(0, 3, names)`, and turned on where wanted by
+   `SetSuppression2(1, 3, names)`; **every mate's flag read back in each configuration** by `IsSuppressed2(3,
+   ["X", "Y"])`. Then `ShowConfiguration2` X → Y → X under the watcher, each with the top-only rebuild: S's place
+   along the axis (P, P + 20), every on mate's error code, the drive in each: in `X` D turns with A, in `Y` D stands
+   still while A and S turn.
+7. **The coupling turned on at an arbitrary angle.** In `Y`, D put 5° about its own axis (its coupling is off there);
+   `ShowConfiguration2` X and the rebuild: does the coupling hold the 5° relative angle it finds (as a gear mate kept
+   the angle in `MESH_PHASE_ROUTE`), or snap, or error? Its sense read again; the drive in `X`.
+8. **Save and reopen.** `SaveAs3` silent, `QuitDoc`, `OpenDoc6`: the active configuration, every flag, the spline's
+   and the coupling's `Reverse` read again, the drive in each configuration.
+
+**What it feeds.** `COLLINEAR_GEAR_MATE_SENSE_READ_BACK` (True when 1–3 and 5 agree), `COLLINEAR_GEAR_MATE_HOLDS_SLIDE`
+(4), `COUPLING_KEEPS_ANGLE_ON_SWITCH` (7), each pinned against the spike's result file; a failure of 1–5 sends J8 to
+§7's fallbacks before the interface commit. Steps 6 and 8 overlap tier 9; whichever runs first, the other reads its
+result and does not repeat it.
 
 ---
 
@@ -951,32 +1186,51 @@ reopened gearbox (every flag False after the open). This is the change HANDOFF a
 active name read back; every mate's flag in every configuration by `IsSuppressed2(3, …)` against the record's
 modes; in each configuration after a show and the train's rebuild: every gear's frame (each slider at its position to
 1e-6 mm, every other gear at its built frame), every on mate code 0 and every per-mode mate off reading suppressed,
-every mated gear `GetConstrainedStatus` 2, interference none; per mode a **half-pitch control** on each engaged
-coupling (the dog put 6° about its own axis with the coupling on: must interfere with its sleeve only; put back: none)
-and on each sliding mesh; a disengaged dog with no clash. Saved, closed, reopened: opens in the first mode, every
+every mated gear `GetConstrainedStatus` 2, the layout and every fixed gear `IsFixed` (S3), interference none; per mode
+a **half-pitch control** on each engaged coupling: the dog put 6° about its own axis with the coupling on
+(`MESH_PHASE_ROUTE`) and **every lock touching the dog suppressed in this configuration around the put** (a dog is
+locked to its shaft's anchor, and a put with the lock on moves the dog alone, after which the lock takes the new
+angle: P0, P0b), which must interfere with its sleeve only; put back, the locks turned on again, none; then, as W5's
+M12 rules (review S11), **every frame against the built frame to 1e-6 and no lock left suppressed** in any
+configuration. A disengaged dog shows no clash. (No fixture has a sliding mesh, so no control runs on one: §0.1.) Saved, closed, reopened: opens in the first mode, every
 document unmodified straight after the open, the flags and frames the same.
 
 **The driven proof per mode** (the script's, never the app's; W5's angle-mate drive on the input's anchor, a global
-"Drive" 90 → 120): every member's turn against §2.3's 30° row to 1e-6 relative, sign included; members free in that
-mode must not turn (more than 1e-6 is a NOTE, logged and listed, not a FAIL: an unconnected train is SolidWorks'
-solver's to leave). **Wrong-sense control** in 4L on `RangeSlv engages LoDog`: suppressed in 4L, a temporary 1 : 1
-gear mate with the other Flip in its place, driven: the script must see Rear turning against the carrier; then W5's
-M12 hygiene (Drive back, the control deleted, the coupling back on in 4L only, every frame at the built frame, no
-Drive or control left, no lock suppressed, every flag in every configuration as recorded).
+"Drive" 90 → 120): **every gear's** turn about its own axis (`turn_between`), the sleeves and the dogs included, against
+§2.3's 30° row to 1e-6 relative, sign included — not only one per shaft: a wrong spline (ModeSlv against RangeSlv)
+and a wrong `ModeSlv engages FrontDog` would cancel at the Front in 4H and 4L, and only ModeSlv's own turn shows
+them (review M6). Gears free in that mode must not turn (more than 1e-6 is a NOTE, logged and listed, not a FAIL: an
+unconnected train is SolidWorks' solver's to leave).
+
+**The both-Flips control** (review M6; W5-DECISIONS, *Rulings at W5's close*: the Flip a new gear mate needs is not
+predicted, on either version, from anything, and W5's first 2026 run failed twice on a control that assumed it; m3
+and m7 were rerun with a control that drives both Flips). In 4L on `RangeSlv engages LoDog`, and in 4H on the spline
+`ModeSlv splined to RangeSlv`: the recorded mate suppressed in that configuration; a temporary 1 : 1 gear mate in its
+place **with Flip False**, its `gear_mate_sense` read and logged, driven, every gear's turn read; deleted; a temporary
+mate **with Flip True**, read, driven, read; deleted. **Exactly one of the two Flips must turn the gears the right way**
+(in 4L Rear with the carrier, at a quarter of the input; in 4H ModeSlv with RangeSlv), and the one the read-back calls right must be
+that one; both right, both wrong, or the read-back disagreeing is a FAIL and a STOP (§0.5). Then W5's M12 hygiene:
+"Drive" set back before the control mate is deleted, the recorded mate back on in that configuration only, every frame
+at the built frame to 1e-6, no Drive global, angle mate or control mate left, no lock suppressed, every flag in every
+configuration as recorded.
 
 **Sections.**
 
 - **`s0` — TransferCase_Parallel** (the shakedown, W7-free): build; every measurement above in each mode; the driven
-  proof per mode; reopen. Run first on 2026; it isolates W8's machinery from W7's.
+  proof per mode with both both-Flips controls; reopen. Run first on 2026; it isolates W8's machinery from W7's. If
+  the spike (§4.3) has run, this is the second sight of the collinear gear mate, else tier 9's driven coupling is.
 - **`s1` — the E4 transfer case:** build (the one fresh E4 build); every measurement in each mode; the driven proof in
-  each mode, with the wrong-sense control in 4L; reopen. This is PLAN-WORKBOOK's *"The E4 transfer case's four
+  each mode, with the both-Flips controls in 4L and 4H; reopen. This is PLAN-WORKBOOK's *"The E4 transfer case's four
   modes"*.
 - **`s2` — turning and switching** (a copy of s1): in 2H the user's turn simulated (driven 37°, the drive deleted);
   shown 4H, N, 4L: each coupling's relation logged (in 4L `RangeSlv engages LoDog` out of step by 37° · 3/4 = 27.75°,
   i.e. 3.75° modulo the dog's 12°) and SolidWorks' interference in each logged as a fact; in 4L Update with nothing
   in the workbook changed: `restored` for the train, the coupling in step, every frame built, the post-check visiting
   2H, 4H and N, the assembly left in 4L, no interference in any mode; then a quiet Update: no configuration shown,
-  every frame and flag the same, every document reading `GetSaveFlag` False before and after.
+  every frame and flag the same, every document reading `GetSaveFlag` False before and after. **Then the reverse**
+  (review M5): in 4L the user's turn simulated (driven 37°, deleted), the configuration switched to 2H, Update pressed
+  there: the whole gearbox put, FrontDrv's train included (a train of its own in 2H, joined to the rest in 4H and 4L),
+  the post-check in 4H, N and 4L clean, the assembly left in 2H.
 - **`s3` — D10 per configuration and the refusals** (a copy of s1): in 4L `RangeSlv engages LoDog` suppressed and
   `RangeSlv engages InDog` turned on → Update in 2H puts both right in 4L and says so, activating nothing in the check;
   an angle mate the record does not know, on in N only → Update refuses naming it and N; suppressed → listed and left;
@@ -985,8 +1239,11 @@ Drive or control left, no lock suppressed, every flag in every configuration as 
 - **`s4` — the edits Update carries, then a structural one** (a copy of s1): Excel `RangeSlv` Slides `L=+10` → `L=+10.5`
   (still covers LoDog: 66.5–74.5 over 67–73) → Update sets `RangeSlv Face Z at L` 66 → 66.5, frames in 4L, the drive in
   4L; `ModeSlv` At 100 → 101 with Slides `2WD=0, 4WD=+9` (4WD stays at 110; 2WD 97–105 still clear) → Update sets
-  `ModeSlv Face Z at 2WD` 96 → 97 and finds `ModeSlv Face Z at 4WD` already 106, frames in 2H and 4H; then Modes 4H's ModeSlv `4WD` → `2WD` → the structural sentence, Build again… → `_r2` built with
-  its configurations, measured; every earlier file's sha256 and mtime unchanged.
+  `ModeSlv Face Z at 2WD` 96 → 97 and finds `ModeSlv Face Z at 4WD` already 106, frames in 2H and 4H; then Modes 4H's ModeSlv `4WD` → `2WD` → **an Update by flags alone** (J14: `ModeSlv along Rear at
+  2WD` turned on in 4H, `… at 4WD` and `ModeSlv engages FrontDog` suppressed there, read back in every
+  configuration; frames and the drive in 4H, which now drives no front); then a Modes row added, `4X` = (L, 2WD) → the
+  structural sentence, Build again… → `_r2` built with its five configurations, measured; every earlier file's sha256
+  and mtime unchanged.
 - **`s5` — the refused mate in one mode, forced** (a copy of s1's workbook, built fresh: the refusal is the point): the
   plan doctored by the script so that N also has `RangeSlv along Rear at H` on → the build stops with *"In mode N, …
   over-defines the assembly."*; the parts and layout part saved and on record, no assembly file, the document left
@@ -1009,13 +1266,15 @@ collinear gear mate's sense is not), and the window check. Each started fresh, t
 
 ## 6. Definition of done
 
-1. Probe tier 9 run on 2026, its findings committed and pinned, reviewed.
+1. Probe tier 9 run on 2026, its findings committed and pinned, reviewed; the collinear gear mate spike (§4.3) run
+   and its findings read into J8 if the coordinator ran it.
 2. Packages I, A–D committed, each reviewed independently; the suite green on a clean `git archive`; the Tk tests
    green under Windows Python.
-3. Both fixtures check clean with §2.3's numbers, recomputed by an independent subagent from §2's tables alone.
+3. Both fixtures check with no errors, with §2.3's numbers, recomputed by an independent subagent from §2's tables alone.
 4. On SolidWorks 2026: `s0`–`s5` pass, 0 failed; one full run at the close from the final source. On 2024: `s0`,
    `s1`, `s3` and the window check pass. Logs committed.
-5. The person's step handed to the user; the readings J1–J24 handed with it as readings they may overrule.
+5. The person's step handed to the user; the readings J1–J26 handed with it as readings they may overrule, J1, J2,
+   J16 and J14 first (§0.4).
 6. `PLAN-WORKBOOK.md` §4.5 *Readings chosen (W8)*, a dated note under §6's W8 row, `UI-DESIGN.md` §9, the two
    boards, HANDOFF's table and W8 section.
 
@@ -1024,7 +1283,9 @@ collinear gear mate's sense is not), and the window check. Each started fresh, t
 - **Collinear gear mates (J8) are the riskiest point.** Nothing in tier 8 or the macro database made a gear mate
   between two collinear axes. Whether SolidWorks accepts one, turns it the way `gear_mate_sense`'s rule reads, holds its
   relative angle across a configuration change, and solves cleanly when one is turned on at an arbitrary relative
-  angle is first seen in `s0`. If it fails, the follow-up probe tries, in order, an angle mate between Top planes at the
+  angle is first seen in the spike (§4.3) if the coordinator runs it, else in tier 9's driven coupling and `s0`; the
+  read-back is marked untested until then (§1.7), and the both-Flips control with every gear's turn read is what
+  catches a rule that is wrong for collinear axes. If it fails, the follow-up probe tries, in order, an angle mate between Top planes at the
   phase angle (with the odd-teeth flip handled by reading the angle back) and a gear mate between the sleeve and a
   parallel offset reference; until then a gearbox with sleeves is refused at Build with the sentence naming the probe.
 - **Per-configuration distance mates.** The macro database saw plane-distance mates added per configuration fail
@@ -1035,16 +1296,23 @@ collinear gear mate's sense is not), and the window check. Each started fresh, t
   reads back every flag, so it cannot leave a wrong state unseen.
 - **`ShowConfiguration2` on a mated assembly** (dialogs, marks, whether the top-only rebuild after it re-solves
   positions): probed ahead (§4.2).
-- **The splines' fit.** The dog's root fillet (0.38 m by default in the spur recipe) and the sleeve's tip corner sit
-  within a few tenths of a millimetre of each other at 30 teeth, module 1.5, 30°; the interference check in each mode
-  is the judge. If they touch, the fixture's dogs take a Fillet of 0.2 mm and the sentence for a partial fit is
-  reviewed; the parts stay the strip's.
+- **The splines' fit** (corrected after the review, M1). The fillets are not where the fit is tight: the dog's
+  0.57 mm root fillet rises about 0.03 mm off its flank at the sleeve's tip radius (21 mm). What a sleeve over a dog
+  has is **play: 0.45 mm per flank at the pitch circle** (each part carries the strip's 0.3 × module backlash), 0.9 mm
+  in all, about ±1.15° of turn. So at the built turn the teeth stand clear with room, the half-pitch control (6°) is
+  far past the play and must clash, and a drive cannot bring them into contact while the coupling holds them. The
+  thin tip was the other risk, and J2's 20° removes it (dog tip 0.626 mm, sleeve 1.153 mm, against 0.022 mm for a
+  full-depth 30° dog). §1.6's outline test decides the fit, pure, before SolidWorks does; the interference check in
+  each mode confirms it. A workbook that types 30° gets the strip's thin-tip warning on each sleeve and dog row.
 - **W7 dependencies** (§0.2): a gear on a carrier shaft, coaxial frame shafts in checks and the layout part, W7's
   loop of gear mates in every configuration, and W7's carrier skeleton under four configurations. None is W8's to
   change; each, if missing, is a stop.
 - **The copy of a built folder** depends on SolidWorks finding the copy's parts beside its assembly once the original
-  folder is moved aside. The search order for referenced documents is not in the macro database; the script reads
-  every component's path back before it trusts the copy, and stops otherwise.
+  folder is moved aside, and the open could ask when it does not. The search order for referenced documents is not in
+  the macro database; tier 9 rehearses the scheme on its scratch assembly under the dialog watcher (§4.2 item 5), and
+  the script reads every component's path back before it trusts a copy, and stops otherwise.
+- **The record's schema** is owned by W6 and W7 before W8; W8's is one past whatever W7 leaves (§1.11). If W6 or W7
+  change their numbering when they are built, W8 follows at its interface commit; nothing in this plan pins a number.
 - **Free trains under a drive.** Whether SolidWorks' solver leaves a train not joined to the driven one exactly where
   it stood is not recorded anywhere; the demonstration logs it as a NOTE.
 - **Time and memory.** E4 has 11 gear rows, three planet copies and four configurations: four shows and rebuilds, four
@@ -1058,3 +1326,62 @@ collinear gear mate's sense is not), and the window check. Each started fresh, t
   quiet Update's `IsSuppressed2(3, …)` reads mark the assembly is unknown until tier 9 (if they do, the check phase
   reads only the active configuration with W5's `IsSuppressed2(1, …)` and D10 per configuration waits for a changed
   Update's post-check).
+
+---
+
+## Changes after the review
+
+The review is `W8-PLAN-REVIEW.md` (`24347e9`): go with six changes. The orchestrator's rulings on it, of the same day,
+are followed item by item; nothing was declined.
+
+- **M1 (the 30° default).** J2 now gives a sleeve and a dog no pressure angle of their own: a blank takes the Box's
+  (20°, the strip's own), and a workbook may type another. Canvas E4's 30° stub-tooth spline is said not to be built,
+  since the strip makes full-depth teeth only. §1.1 pins the tips at 20° (dog 0.626 mm, sleeve 1.153 mm) and gives the
+  reason against 30° (a 0.022 mm dog tip). §7's fit risk is corrected: not the fillets but the 0.45 mm play per flank.
+  J1 and J2 head the list for the user (§0.4).
+- **M2 (torque).** The "and no fixed shaft" clause is gone: a branch is pruned when it reaches no output in that mode.
+  J17 and §1.4 add that an output shaft that also drives onward is a split: it is given the torque arriving at it,
+  marked as shared, and nothing past it — W3's split applied at the output, no new theory. §1.12 says what the
+  Results sheet and the Speeds panel show for it. §2.3's torques are a table that agrees with the rule.
+- **M3 (phases).** §2.3's key now follows §1.6's walk: InDog 0, RangeSlv 6°, LoDog 0, FrontDog 0, ModeSlv 6°.
+- **M4 (schema).** §1.11 names no number: `LINK_SCHEMA_VERSION` is one past W7's (W6-PLAN sets 4, W7-PLAN one past
+  W6's, so W8's would be 6), every earlier version reads, the shapes build on W6's `plane` and W7's `on`, and the kinds
+  are W7's set plus the three. §0.2 cites what W7-PLAN already provides (a gear on a carrier shaft, the coaxial
+  exemption, bodies, its torque rule).
+- **M5 (Update's puts).** New reading J26: in a gearbox with modes the put set is connected over every mode's
+  relations; a set not put is judged in the other modes by `train_check`, never by built frames (§1.9, §1.10). A fake
+  test and s2's reverse case (turn in 4L, Update in 2H) show it.
+- **M6 (the control).** The wrong-sense control is replaced by W5's both-Flips control (W5-DECISIONS, *Rulings at
+  W5's close*): Flip False and Flip True each made, read and driven, exactly one turning right and the read-back
+  agreeing, in 4L on a coupling and in 4H on the spline. The driven proof reads every gear's turn, sliders included.
+- **S1 (J16).** Announced as a departure from PLAN-WORKBOOK §3.4 and put to the user; `_check_motion`'s free-shaft
+  error is kept for a meshed shaft free in every mode only; `Report.motion` is the first mode's (§1.5).
+- **S2.** A rebuild after every show, interference included (§1.8 step 6).
+- **S3.** `IsFixed` of the layout and fixed gears read in each configuration, in tier 9 and in the per-mode check,
+  with W5's `Fix` in each new configuration if it is not carried over.
+- **S4.** Tier 9 links the slide mates' D1 to globals, turns a mate on in an inactive listed configuration (the
+  citation of assemblies/07 for "0 / 1" corrected to action 0 only), reads every document's save flag around each show,
+  calls `ShowConfiguration2` with `CommandInProgress` off as the app will, makes the raw calls in §3.2's shapes for A to
+  copy, and drives its collinear coupling.
+- **S5.** Sliding gears are said to be shown against the fake only (§0.1, §3.5, §5); no fixture gained one.
+- **S6 (J14).** The cheaper reading is taken as the default: an edit after which every mate the modes need is on
+  record (a Modes pick between existing positions) is an Update by flags alone; rows added, removed or renamed, and
+  anything needing a new mate, stay structural. s4 shows both.
+- **S7.** The copy of a built folder is rehearsed in tier 9 under the dialog watcher, the folder rename checked, with
+  `ReplaceReferencedDocument` and Pack and Go named as the other routes (J24, §4.2 item 5, §7).
+- **S8.** New reading J25: a quiet Update reads only the active configuration's gear mates' senses, a narrowing of
+  W5's ruling, said in the sentences and lifted if tier 9 shows a suppressed gear mate's sense reads cleanly.
+- **S9.** The strip refuses a sleeve's or dog's `.gear.json` with a sentence; the clutch kinds write their own kind
+  custom property (§1.1, §3.3 D).
+- **S10.** The interface commit re-reads §0.1 against W7's close and records what moved (§0.2, §3.2).
+- **S11.** The half-pitch control suppresses the dog's locks around its put and ends with every frame at the built
+  frame and no lock suppressed (§5).
+- **Notes taken.** §1.5's coaxial exemption comes before `_check_clearances`' ring branch; the coupling's teeth check
+  reads `spec_values`; a coupling never reaches `_check_mesh` or `internal.tip_clash` (§1.3). Parallel's pinions are
+  17 and 34 teeth at 51 mm, so no undercut warning; "checks clean" means no errors (§2.2). J5 covers a slider with no
+  position at 0 when there are no Modes rows.
+- **The coordinator's addition.** §4.3, *The collinear gear mate spike (for the probe agent, as written)*: what a
+  spike must make and measure — the mate between collinear axes with the sleeve free to slide, `Reverse` and the
+  directions read back, the drive, the both-Flips control, the slide's distance mate changed with the gear mate on,
+  and per-configuration suppression read back in each configuration. J8 and §1.7 mark the collinear read-back as
+  untested until it or the shakedown has run.
