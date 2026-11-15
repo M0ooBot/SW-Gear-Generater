@@ -4887,7 +4887,9 @@ def _put_train(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, trai
     put as before, its gear mates on. ``gear_mates`` (W8): the gear mates on in the configuration shown; only those
     are suppressed and turned back on, so a per-mode one off there stays off (§9.1). None (W7): every gear mate of
     the train, which D10 has turned on before any put. A lock or gear mate that will not come back on is a failure naming it, and
-    stops the job (:class:`_LocksLeftOff`); what raised inside is raised again once they are tried.
+    stops the job (:class:`_LocksLeftOff`); what raised inside is raised again once they are tried. A gear mate gone
+    from the assembly by then (a remake that lost it after the delete) is not said to be left suppressed: the error on
+    its way out says it is gone, and, with none, its own ``MateGone`` sentence stops the job.
 
     A lock counts as tried the moment its suppression is asked for, so one whose suppression took before the call
     raised (a read-back that failed) is still turned back on. Turning back on, each lock is read first and one that
@@ -4983,6 +4985,11 @@ def _put_train(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, trai
             continue
         try:
             sw.set_mate_suppressed(mate_handle[name], False)
+        except MateGone as exc:
+            # Gone, not left suppressed (a remake inside the route that lost its mate after the delete): pressing
+            # Update again would find it gone, so the error on its way out, which says so, is the sentence.
+            if pending is None:
+                pending = exc
         except Exception as exc:  # noqa: BLE001 - said, never lost
             left_off = True
             result.failures.append((file, f"The gear mate {name} is left suppressed: SolidWorks would not turn it "

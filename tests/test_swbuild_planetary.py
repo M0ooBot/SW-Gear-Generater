@@ -195,3 +195,48 @@ def test_a_mesh_measured_against_a_carrier_not_given_is_refused():
 
 def test_a_check_result_keeps_its_shape():
     assert TrainCheck().in_step
+
+
+# -- a remake inside a planetary's put that loses its mate (W8-REVIEW-LATE-A point 3) -------------------------------
+#
+# W7's path only. ``_remake`` deletes the gear mate and makes it again; if the make then stops, the mate is gone, and
+# the put's restore must not tell the user it is "left suppressed … press Update SolidWorks again", since pressed
+# again Update finds it gone. The fake is taught here, as the review's reproduction did: its second
+# ``set_gear_ratio`` deletes the mate and raises, and ``set_mate_suppressed`` raises ``MateGone`` for a mate that is
+# not there, as ``swcom.Session`` does (``_kept_mate``).
+
+def test_a_remake_that_loses_its_mate_inside_the_planetary_put_is_said_gone_never_left_suppressed():
+    from gear_generator import swbuild, swcom
+    from gear_generator.workbook import update
+    from test_workbook_planetary import direct, edited, fake_build, planetary_4to1
+
+    sw, _, record = fake_build(planetary_4to1())
+    spec = edited(planetary_4to1(), shafts={"P": dict(x="19.5")},
+                  gears={"Sun": dict(teeth="21"), "Ring": dict(teeth="57")})
+    real_ratio, real_supp, count, lost = sw.set_gear_ratio, sw.set_mate_suppressed, [0], []
+
+    def lossy(handle, a, b, ratio):
+        count[0] += 1
+        if count[0] == 2:
+            old = sw.mate(sw.mate_handles[handle])
+            sw.mates.remove(old)
+            lost.append(old.name)
+            raise swbuild.SolidWorksError(f"The open Planetary_4to1.SLDASM has lost the gear mate {old.name}: close "
+                                          "Planetary_4to1.SLDASM in SolidWorks without saving to bring it back.")
+        return real_ratio(handle, a, b, ratio)
+
+    def supp(handle, suppressed):
+        name = sw.mate_handles[handle]
+        if sw.mate(name) is None:
+            raise swcom.MateGone(f'The mate "{name}" is not in Planetary_4to1.SLDASM any more: it was renamed or '
+                                 "deleted in SolidWorks.")
+        return real_supp(handle, suppressed)
+    sw.set_gear_ratio, sw.set_mate_suppressed = lossy, supp
+    up = update.classify(record, direct(spec), exists=lambda p: True)
+    result = swbuild.update_gearbox(sw, **up.update_kwargs(), exists=lambda p: True, mtime=lambda p: 5.0)
+    texts = [text for _, text in result.failures]
+    assert lost and not any("left suppressed" in text for text in texts), texts
+    assert any(f"has lost the gear mate {lost[0]}" in text for text in texts), texts
+    assert not any(text.startswith(f'The mate "{lost[0]}" is not in') for text in texts), texts
+    # every other gear mate and lock the put turned off is back on
+    assert not [m.name for m in sw.mates if m.suppressed], [m.name for m in sw.mates if m.suppressed]
