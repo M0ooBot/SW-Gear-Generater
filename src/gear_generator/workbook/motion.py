@@ -430,9 +430,10 @@ def _planetary_plan(spec: GearboxSpec, report: Report, frames: Mapping[str, Fram
     J2), then every gear on its own shaft locked to it, the carrier first (J8); held: none, its id and its gears in
     ``fixed``; a planet shaft — per copy, ``"Planet copy k on P copy k Axis"`` made to the carrier's axis
     (``on`` the carrier id) and ``"Planet copy k along P copy k"`` to the layout's Front plane, sharing one
-    ``"Planet Face Z"`` global keyed by the row (§6.7, §6.8). Then, in Meshes-sheet order and copy order within a
-    row, a gear mate for each mesh whose row of the system of W7-PLAN §2.5, written per body (a frame shaft or a
-    copy) with the carrier's column and held bodies at 0, is independent of the rows chosen before it; a mesh
+    ``"Planet Face Z"`` global keyed by the row (§6.7, §6.8). Then, the stage's sun meshes first, its ring meshes
+    next and every other mesh last (each group in Meshes-sheet and copy order: reading J5 made independent of the
+    rows' order), a gear mate for each mesh whose row of the system of W7-PLAN §2.5, written per body (a frame shaft
+    or a copy) with the carrier's column and held bodies at 0, is independent of the rows chosen before it; a mesh
     between two held gears is skipped, any other dependent one goes to ``unmated`` (§6.6: the worker still judges
     it). A MESH's ``sense`` is its carrier-frame sense, the parallel rule."""
     from fractions import Fraction as _F
@@ -498,7 +499,18 @@ def _planetary_plan(spec: GearboxSpec, report: Report, frames: Mapping[str, Fram
     meshes: List[MatePlan] = []
     unmated: List[Tuple[str, str]] = []
     held_gears = set(fixed)
-    for a_id, b_id in geometry_expand(spec, placed):
+
+    def group(pair: Tuple[str, str]) -> int:
+        """Reading J5 made order-independent (the orchestrator's ruling): a stage's sun meshes first, one per copy,
+        then its ring meshes, then every other mesh — each group in Meshes-sheet and copy order — so the rank keeps
+        every sun mate and exactly one ring mate, with copy 1, whatever order the rows are in."""
+        x, y = placed[pair[0]], placed[pair[1]]
+        if not (x.carrier or y.carrier) or (x.carrier and y.carrier):
+            return 2
+        member = y if x.carrier else x
+        return 1 if member.internal else 0
+    expanded = list(geometry_expand(spec, placed))
+    for a_id, b_id in sorted(expanded, key=lambda pair: (group(pair), expanded.index(pair))):
         a, b = placed[a_id], placed[b_id]
         if (a_id in held_gears and b_id in held_gears) or a.shaft == b.shaft:
             continue

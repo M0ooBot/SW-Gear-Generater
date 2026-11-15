@@ -101,6 +101,7 @@ def check(spec: GearboxSpec, skip_gears=()) -> Report:
     expanded = geometry.expand_meshes(spec, placed)
     listed = {frozenset(pair) for pair in expanded} | {frozenset((m.a, m.b)) for m in spec.meshes}
     report.stages = planetary.stages(spec) if any(p.carrier for p in placed.values()) else ()
+    unfit: List[Tuple[str, str]] = []              # Meshes rows that fit no carrier: their consequences are not said
     for mesh in spec.meshes:
         a, b = first.get(mesh.a), first.get(mesh.b)
         if a is None or b is None:
@@ -109,6 +110,7 @@ def check(spec: GearboxSpec, skip_gears=()) -> Report:
         if a.carrier or b.carrier:
             a, b = _as_row(a), _as_row(b)
             if planetary.mesh_carrier(spec, mesh.a, mesh.b) is None:
+                unfit.append((mesh.a, mesh.b))
                 carried, other = (a, b) if a.carrier else (b, a)
                 carrier = carried.carrier
                 _error(report, where, f"{carried.gear} rides {carrier} and meshes {other.gear}, whose shaft "
@@ -131,11 +133,20 @@ def check(spec: GearboxSpec, skip_gears=()) -> Report:
 
     report.motion = kinematics.solve(spec, skip_gears, senses={key: m.sense for key, m in report.meshes.items()
                                                                if not m.problem})
+    # A mesh that fits no carrier is the one true error: the speeds, pass-overs and phase loops it upsets are not
+    # said beside it (the shafts of its stage are left out of those).
+    shaft_of = {g.id: g.shaft for g in spec.gears}
+    upset = set()
+    for a_id, b_id in unfit:
+        upset.update(x for x in (shaft_of.get(a_id), shaft_of.get(b_id)) if x)
+        upset.update(x.carrier for x in placed.values() if x.row in (a_id, b_id) and x.carrier)
+    upset.update(x.id for x in spec.shafts if x.mount() in upset)
     _check_clearances(report, spec, placed, listed)
-    _check_shafts(report, spec, placed)
+    _check_shafts(report, spec, placed, upset)
     _check_turned_clearances(report, spec, placed, listed)
-    _check_motion(report, spec)
-    report.theta, conflicts = geometry.phases(spec, placed, with_conflicts=True, meshes_=report.meshes)
+    _check_motion(report, spec, upset)
+    report.theta, conflicts = geometry.phases(spec, placed, with_conflicts=True, meshes_=report.meshes,
+                                              leave_out=unfit)
     carried = {p.gear for p in placed.values() if p.carrier}
     for gear_id, other in conflicts:
         row = placed[gear_id].row or gear_id
@@ -195,6 +206,19 @@ def _check_stages(report: Report, spec: GearboxSpec, placed: Dict[str, Placed]) 
                        f"{stage.ring} has {z_r} teeth, and a ring around {stage.sun} ({z_s}) and {stage.planet} "
                        f"({z_p}) needs {z_s} + 2 × {z_p} = {z_s + 2 * z_p}: with {z_r} the planets cannot mesh with "
                        "both at once.")
+            outer = report.centres.get((stage.sun, stage.planet)) or report.centres.get((stage.planet, stage.sun))
+            inner = report.centres.get((stage.planet, stage.ring)) or report.centres.get((stage.ring, stage.planet))
+            if shifted and outer and inner and abs(outer[0] - inner[0]) > CENTRE_TOLERANCE:
+                # The reviewer's note: with a shift the two working centres can differ, and then no radius works.
+                ring_row = next((spec.cell("Meshes", m.row, "a") for m in spec.meshes
+                                 if {m.a, m.b} == {stage.planet, stage.ring}), "")
+                tail = (f" {stage.planet} meshes {_n(outer[0])} mm from {stage.sun}'s axis and {_n(inner[0])} mm from "
+                        f"{stage.ring}'s, so no one distance from {stage.carrier}'s axis meshes both.")
+                for i, d in enumerate(report.diagnostics):
+                    if d in report.off_centre and d.field == ring_row:
+                        new = replace(d, message=d.message + tail)
+                        report.diagnostics[i] = new
+                        report.off_centre[report.off_centre.index(d)] = new
             a = math.hypot(planet.x - sun.x, planet.y - sun.y)
             fit = planetary.most_that_fit(a, planet.outer_radius * 2.0, planet.module)
             counts = planetary.assembly_counts(z_s, z_r, fit)
@@ -573,7 +597,7 @@ def _check_turned_clearances(report: Report, spec: GearboxSpec, placed: Dict[str
                                         f"{_n(gap)} mm of its blank; the build's interference check says for certain.")
 
 
-def _check_shafts(report: Report, spec: GearboxSpec, placed: Dict[str, Placed]) -> None:
+def _check_shafts(report: Report, spec: GearboxSpec, placed: Dict[str, Placed], upset=frozenset()) -> None:
     gears_on: Dict[str, List[Placed]] = {}
     for p in placed.values():
         gears_on.setdefault(p.shaft, []).append(p)
@@ -594,6 +618,8 @@ def _check_shafts(report: Report, spec: GearboxSpec, placed: Dict[str, Placed]) 
                 continue                               # a shaft across an angle: _check_turned_clearances
             if g.shaft in on_carrier_axis and shaft_id in on_carrier_axis:
                 continue
+            if carriers and (planetary.copy_of(g.shaft)[0] in upset or shaft_id in upset):
+                continue                               # a member off its carrier's axis: said once, at its mesh
             lo = min(p.z_range[0] for p in on)
             hi = max(p.z_range[1] for p in on)
             if min(g.z_range[1], hi) - max(g.z_range[0], lo) <= 0:
@@ -601,6 +627,8 @@ def _check_shafts(report: Report, spec: GearboxSpec, placed: Dict[str, Placed]) 
             other = on[0]
             d = ((other.x - g.x) ** 2 + (other.y - g.y) ** 2) ** 0.5
             inside_metal = (g.tip_radius <= d <= g.outer_radius) if g.internal else d < g.outer_radius
+            if inside_metal and carriers and d < CENTRE_TOLERANCE:
+                continue                               # coaxial shafts of a planetary stage: never "0 mm from its own"
             if inside_metal:
                 row = {x.id: x.row for x in spec.gears}[g.row or g.gear]
                 _warning(report, spec.cell("Gears", row, "id"),
@@ -608,7 +636,7 @@ def _check_shafts(report: Report, spec: GearboxSpec, placed: Dict[str, Placed]) 
                          "would be cut.")
 
 
-def _check_motion(report: Report, spec: GearboxSpec) -> None:
+def _check_motion(report: Report, spec: GearboxSpec, upset=frozenset()) -> None:
     motion = report.motion
     if motion.jammed:
         _error(report, "Meshes", motion.jammed)
@@ -622,7 +650,7 @@ def _check_motion(report: Report, spec: GearboxSpec) -> None:
     gears_meshed = {g for m in spec.meshes for g in (m.a, m.b)}
     meshed_shafts = {g.shaft for g in spec.gears if g.id in gears_meshed}
     for shaft in spec.shafts:
-        if shaft.id not in motion.free:
+        if shaft.id not in motion.free or shaft.id in upset:
             continue
         where = spec.cell("Shafts", shaft.row, "id")
         if shaft.id in meshed_shafts:

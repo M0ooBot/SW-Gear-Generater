@@ -416,7 +416,7 @@ def mesh_plane(a: Placed, b: Placed) -> float:
 
 
 def phases(spec: GearboxSpec, placed: Dict[str, Placed], with_conflicts: bool = False,
-           meshes_: Optional[Dict[Tuple[str, str], "MeshGeometry"]] = None):
+           meshes_: Optional[Dict[Tuple[str, str], "MeshGeometry"]] = None, leave_out=()):
     """θ for every gear reachable through the meshes, radians; with ``with_conflicts``, also the loops that
     do not close.
 
@@ -428,7 +428,10 @@ def phases(spec: GearboxSpec, placed: Dict[str, Placed], with_conflicts: bool = 
     a loop that does not close, reported as ``(gear, the gear asking otherwise)``.
     """
     meshes: Dict[str, List[str]] = {}
+    skip = {tuple(pair) for pair in leave_out}   # W7: Meshes rows (by row ids) that fit no carrier are not walked
     for a, b in expand_meshes(spec, placed):     # W7: copy by copy, so a carrier's loop is walked at every copy
+        if ((placed[a].row or a), (placed[b].row or b)) in skip:
+            continue
         meshes.setdefault(a, []).append(b)
         meshes.setdefault(b, []).append(a)
     inputs = {s.id for s in spec.shafts if s.role == "input"}

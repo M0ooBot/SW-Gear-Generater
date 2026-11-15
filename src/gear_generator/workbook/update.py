@@ -783,7 +783,7 @@ def _built_part(entries: Sequence[PartEntry], gear: str) -> Dict[str, Any]:
 
 def _axial_edit(gear: str, shaft: str, z_front: float, along: float, built_shaft_z: Optional[float],
                 shaft_z: float, built_face: Optional[float], face: float, at: float, *, coordinate: str = "Z",
-                cone: bool = False) -> Tuple[str, str]:
+                cone: bool = False, moves: Optional[List[str]] = None) -> Tuple[str, str]:
     """``(subject and verb, object)`` naming the edit that moves ``gear`` along its shaft (W5-DECISIONS answer 3:
     the sentence names the edit, never only the plane): *G1's face width (15 → 20) moves* / *its front face*;
     *G4's At (27 → 30) and S3's Z (0 → 5) move* / *G4's front face*. The built At is worked back from the
@@ -793,7 +793,10 @@ def _axial_edit(gear: str, shaft: str, z_front: float, along: float, built_shaft
     W6: ``z_front`` and the shaft's coordinates are along the measuring plane's normal (``coordinate``: X for
     Right, Y for Top, Z for Front), and ``along`` the shaft direction's component there (W5's sigma on Z). A bevel
     gear (``cone``) is placed by its cone tip, which its face width does not move: *G1's At (0 → 2) moves* / *its
-    cone tip*."""
+    cone tip*.
+
+    W7: ``moves``, when given, names the shaft edits in place of ``"<shaft>'s Z (a → b)"`` — a planet's, whose
+    place along its axis is its carrier's Z plus its own offset: *C's Z (0 → -5) moves* / *Planet's front face*."""
     gear_edits: List[str] = []
     thing = "cone tip" if cone else "front face"
     if not cone and built_face is not None and abs(built_face - face) > MOVE_TOLERANCE:
@@ -803,11 +806,13 @@ def _axial_edit(gear: str, shaft: str, z_front: float, along: float, built_shaft
         if abs(built_at - at) > MOVE_TOLERANCE:
             gear_edits.append(f"At ({_number(built_at)} → {_number(at)})")
     moved = built_shaft_z is not None and abs(built_shaft_z - shaft_z) > MOVE_TOLERANCE
-    parts = ([f"{gear}'s " + " and ".join(gear_edits)] if gear_edits else []) + (
-        [f"{shaft}'s {coordinate} ({_number(built_shaft_z)} → {_number(shaft_z)})"] if moved else [])
+    shaft_parts = [f"{shaft}'s {coordinate} ({_number(built_shaft_z)} → {_number(shaft_z)})"] if moved else []
+    if moves is not None:
+        shaft_parts, moved = list(moves), bool(moves)
+    parts = ([f"{gear}'s " + " and ".join(gear_edits)] if gear_edits else []) + shaft_parts
     if not parts:
         return f"{gear}'s {thing} moves", ""
-    verb = "moves" if len(gear_edits) + moved == 1 else "move"
+    verb = "moves" if len(gear_edits) + len(shaft_parts) == 1 else "move"
     return f"{' and '.join(parts)} {verb}", (f"its {thing}" if not moved else f"{gear}'s {thing}")
 
 
@@ -950,6 +955,31 @@ def _turning(box: GearboxRecord, entries: Sequence[PartEntry], a: Assessment,
                            placed[gear].face, _number_or_none(gear_of[row_of(gear)].at or 0) or 0.0,
                            coordinate="XYZ"[index], cone=bool(getattr(placed[gear], "bevel", False)))
 
+    recorded_offsets = {axis.shaft: axis for entry in box.carriers for axis in entry.axes}
+
+    def planet_edit(gear: str, z_front: float, index: int) -> Tuple[str, str]:
+        """A planet copy's edit, named through its carrier: its place along its axis is the carrier's coordinate
+        plus its own offset (W7-PLAN §2.1); either may have moved."""
+        p = placed[gear]
+        row, carrier, planet = p.row or gear, p.carrier, planetary.copy_of(p.shaft)[0]
+        old_c, new_c = before.get(carrier), now.get(carrier)
+        along = (_direction(new_c) if new_c is not None else tuple(p.axis))[index]
+        shaft_row = next((x for x in spec.shafts if x.id == planet), None)
+        old_axis = recorded_offsets.get(p.shaft)
+        new_off = _number_or_none(shaft_row.z or 0) if shaft_row is not None else None
+        old_off = float(old_axis.z) if old_axis is not None else new_off
+        moves: List[str] = []
+        letter = "XYZ"[index]
+        if old_c is not None and new_c is not None and abs(point(old_c)[index] - point(new_c)[index]) > MOVE_TOLERANCE:
+            moves.append(f"{carrier}'s {letter} ({_number(point(old_c)[index])} → {_number(point(new_c)[index])})")
+        if old_off is not None and new_off is not None and abs(old_off - new_off) > MOVE_TOLERANCE:
+            moves.append(f"{planet}'s Z on {carrier} ({_number(old_off)} → {_number(new_off)})")
+        built = (point(old_c)[index] + along * (old_off or 0.0)) if old_c is not None else None
+        wanted_point = (point(new_c)[index] if new_c is not None else 0.0) + along * (new_off or 0.0)
+        built_face = _number_or_none(_built_part(entries, row).get("face_width"))
+        return _axial_edit(row, planet, z_front, along, built, wanted_point, built_face, p.face,
+                           _number_or_none(gear_of[row].at or 0) or 0.0, coordinate=letter, moves=moves)
+
     face_globals: List[Tuple[str, GlobalVariable]] = []
     axial: List[str] = []
     for m in of_kind[motion.ALONG]:
@@ -970,15 +1000,28 @@ def _turning(box: GearboxRecord, entries: Sequence[PartEntry], a: Assessment,
                 axial.append(row)
             continue
         told.add(gear)
-        subject, what = edit(gear, m.shaft, old_z, index)
-        named = f"the {plane.capitalize()} plane"
-        if was == layout.BASE:
-            where, why = f"off {named}", f"the mate {m.name} holds it on that plane and cannot take a distance"
-        elif is_ == layout.BASE:
-            where, why = (f"onto {named}", f"the mate {m.name} holds it at a distance from that plane and "
-                          "cannot reach it")
+        names = [m.name]
+        if placed[gear].carrier:
+            # W7: the copies of a planet move together; one sentence for the row, naming the edit through its
+            # carrier (review of a22369f: a carrier's Z edit was said once per copy, without the edit).
+            siblings = [x for x in of_kind[motion.ALONG] if x.gears[0] in placed and x.gears[0] != gear
+                        and placed[x.gears[0]].row == row and placed[x.gears[0]].carrier]
+            told.update(x.gears[0] for x in siblings)
+            names += [x.name for x in siblings]
+            subject, what = planet_edit(gear, old_z, index)
         else:
-            where, why = f"across {named}", f"the mate {m.name} cannot carry its distance across that plane"
+            subject, what = edit(gear, m.shaft, old_z, index)
+        named = f"the {plane.capitalize()} plane"
+        mates_ = (f"the mate {names[0]} holds" if len(names) == 1 else
+                  f"the mates {', '.join(names[:-1])} and {names[-1]} hold")
+        if was == layout.BASE:
+            where, why = f"off {named}", f"{mates_} it on that plane and cannot take a distance"
+        elif is_ == layout.BASE:
+            where, why = (f"onto {named}", f"{mates_} it at a distance from that plane and cannot reach it")
+        else:
+            where, why = (f"across {named}", f"the mate {m.name} cannot carry its distance across that plane"
+                          if len(names) == 1 else f"the mates {', '.join(names[:-1])} and {names[-1]} cannot carry "
+                                                  "its distance across that plane")
         out.structural.append(f"{subject} {what + ' ' if what else ''}{where} ({'xyz'[index]} {_number(old_z)} → "
                               f"{_number(new_z)}): {why}, {_REBUILD}.")
 

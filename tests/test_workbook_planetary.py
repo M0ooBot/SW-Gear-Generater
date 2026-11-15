@@ -867,3 +867,90 @@ def test_an_update_on_the_fake_leaves_the_train_turning_as_worked_by_hand(change
     if up.ratios:
         assert {m.name: (m.ratio, m.sense) for m in after.gearbox.mates if m.kind == "mesh"}[
             "Planet copy 1 meshes Ring"] == ([18, 57], -1)
+
+
+# -- the review of a22369f: the frames that reach SolidWorks, a carrier's Z, a member off the axis, the rows' order --
+
+def _places(spec):
+    a = direct(spec)
+    plan = gearbox.plan_gearbox(a, None, exists=lambda p: False, read_sidecar=lambda p: None)
+    from gear_generator.gears.base import Place
+    return {plan.handles.get(op.component, plan.carrier_handles.get(op.component, op.component)): op
+            for op in plan.assembly.ops if isinstance(op, Place)}
+
+
+def _turn_about_own_axis(rotation, sense):
+    """θ in degrees from a Place rotation ``base_frame(±Z)·rot_z(θ)``: Z+ is rot_z(θ) itself; Z− is diag(1, −1,
+    −1)·rot_z(θ), whose first column is (cos θ, −sin θ, 0)."""
+    return math.degrees(math.atan2(sense * rotation[3], rotation[0]))
+
+
+def _mod(value, pitch):
+    r = value % pitch
+    return min(r, pitch - r)
+
+
+@pytest.mark.parametrize("make, sense, z", [(planetary_4to1, 1, 5.0), (on_z_minus, -1, -5.0)])
+def test_the_place_ops_put_each_copy_with_a_tooth_in_the_suns_space_and_the_ring_at_a_whole_pitch(make, sense, z):
+    """By hand (W7-PLAN §2.4): with the sun at θ 0, a planet at azimuth ψ about the carrier meshes when its own
+    turn is θ = 2ψ + 180° − 360°/(2·18) ≡ 2ψ + 170° (mod 20°): a space of the sun faces it at ψ and a tooth of the
+    planet must face back along −ψ, the 18 : 18 mesh doubling the azimuth — 10° at ψ = 0°, 120°, 240° alike. The
+    ring then sits a whole pitch (360/54°) from 0 from every copy, since (18 + 54)/3 is whole. The Place ops — what
+    reaches SolidWorks — carry exactly that, about each part's own axis, on Z+ and Z−; and each origin is the
+    copy's front face centre, the copies at (18, 0), (−9, ±15.588…) turned by the carrier's frame."""
+    places = _places(make())
+    for k, psi in ((1, 0.0), (2, 120.0), (3, 240.0)):
+        op = places[f"Planet copy {k}"]
+        theta = _turn_about_own_axis(op.rotation, sense)
+        assert _mod(theta - (2 * psi + 170.0), 20.0) == pytest.approx(0.0, abs=1e-9), (k, theta)
+        x, y = 18.0 * math.cos(math.radians(psi)), sense * 18.0 * math.sin(math.radians(psi))
+        assert op.at == pytest.approx((x, y, z), abs=1e-9)
+        assert op.rotation[8] == sense
+    assert _mod(_turn_about_own_axis(places["Ring"].rotation, sense), 360 / 54) == pytest.approx(0.0, abs=1e-9)
+    assert _mod(_turn_about_own_axis(places["Sun"].rotation, sense), 20.0) == pytest.approx(0.0, abs=1e-9)
+    assert places["Ring"].at == places["Sun"].at == (0.0, 0.0, z)
+    assert places["C carrier"].at == (0.0, 0.0, 0.0)
+
+
+def test_a_carriers_z_edit_is_one_sentence_naming_the_edit():
+    record = built_record()
+    up = classify(record, edited(planetary_4to1(), shafts={"C": dict(z="-5")}))
+    assert up.structural == (
+        "C's Z (0 → -5) moves Planet's front face onto the Front plane (z 5 → 0): the mates Planet copy 1 along P "
+        "copy 1, Planet copy 2 along P copy 2 and Planet copy 3 along P copy 3 hold it at a distance from that plane "
+        "and cannot reach it, " + REBUILD,)
+    up = classify(record, edited(planetary_4to1(), gears={"Planet": dict(at="5")}))
+    assert up.structural[0].startswith("Planet's At (10 → 5) moves its front face onto the Front plane (z 5 → 0)")
+    up = classify(record, edited(planetary_4to1(), shafts={"C": dict(z="3")}))
+    assert (up.structural, up.axial) == ((), ("Planet",))               # on one side: a move of the shared global
+
+
+@pytest.mark.parametrize("shaft, said", [
+    ("R", ["Meshes row 3: Planet rides C and meshes Ring, whose shaft R is not on C's axis: a gear on a carrier "
+           "meshes only a gear on a shaft along its carrier's axis."]),
+    ("C", ["Meshes row 2: Planet rides C and meshes Sun, whose shaft S is not on C's axis: a gear on a carrier meshes "
+           "only a gear on a shaft along its carrier's axis.",
+           "Meshes row 3: Planet rides C and meshes Ring, whose shaft R is not on C's axis: a gear on a carrier meshes "
+           "only a gear on a shaft along its carrier's axis."]),
+])
+def test_a_member_off_the_carriers_axis_is_the_one_error_said(shaft, said):
+    """No phase loop, speed, drive or "0 mm" pass-over error beside it: they all follow from it."""
+    assert messages(edited(planetary_4to1(), shafts={shaft: dict(x="1")}))[0] == said
+
+
+@pytest.mark.parametrize("make", [planetary_4to1, sun_held, carrier_held])
+def test_the_gear_mates_made_do_not_depend_on_the_order_of_the_meshes_rows(make):
+    """Reading J5 made order-independent (the orchestrator's ruling): every sun mesh gets its gear mate and the
+    ring exactly one, with copy 1 — the spike's set — with Planet–Ring listed first as with it listed second."""
+    forward = plan_of(make())[1]
+    spec = make()
+    backward = plan_of(replace(spec, meshes=(replace(spec.meshes[1], row=2), replace(spec.meshes[0], row=3))))[1]
+    assert [m.name for m in backward.mates] == [m.name for m in forward.mates]
+    assert backward.unmated == forward.unmated == (("Planet copy 2", "Ring"), ("Planet copy 3", "Ring"))
+
+
+def test_a_planet_shifted_alone_is_told_why_no_distance_works():
+    said, fixes = messages(edited(planetary_4to1(), gears={"Planet": dict(profile_shift="0.3")}))
+    assert fixes == {} and said[1].endswith(
+        "no fix is offered for a planetary stage, whose three gears and copies must change together. Planet meshes "
+        "18.284 mm from Sun's axis and 17.676 mm from Ring's, so no one distance from C's axis meshes both.")
