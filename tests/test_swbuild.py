@@ -6065,17 +6065,22 @@ def mode_findings(monkeypatch):
     without it), and, from tier 11 on 2026, the order GetSystemValue3(3, names) answers in, VALUE_READ_ORDER (the
     slide values are paired with the names in that order), and what showing an over-defined configuration does,
     CONFIGURATION_SHOW_OVER_DEFINED (a build or Update with modes shows every mode): a build or Update with modes
-    refuses without either."""
+    refuses without either.
+
+    The sentences about a turn read TURN_PER_CONFIGURATION_ON_<year> (W8-INTERFACES §9.18). It is pinned True for
+    both years, as POSITIONS_PER_CONFIGURATION_ON_<year> was before the split, so these tests go on exercising the
+    sentences they were written for; the committed 2026 value is False (W8 s2), and the False and unsettled
+    sentences are tested where a test sets the switch itself."""
     for name, value in tuple(swcom.CONFIGURATION_FINDINGS) + (
             ("CONFIGURATION_SHOW_RAISES_DIALOG", False), ("MULTI_CONFIGURATION_SAVE_ASKS", False),
             ("COLLINEAR_GEAR_MATE_SENSE_READ_BACK", True), ("SLIDE_VALUE_PER_CONFIGURATION_ON_2026", True),
-            ("SLIDE_VALUE_PER_CONFIGURATION_ON_2024", True), ("POSITIONS_PER_CONFIGURATION_ON_2026", True),
+            ("SLIDE_VALUE_PER_CONFIGURATION_ON_2024", True), ("TURN_PER_CONFIGURATION_ON_2026", True),
             ("FEATURE_SUPPRESS", 0), ("FEATURE_UNSUPPRESS", 1), ("MATE_FIND_ROUTE", "mate group"),
             ("COMPONENT_FIND_ROUTE", "GetComponentByName"),
             ("GEAR_MATE_SENSE_READ_BACK", "(Reverse == entities parallel) == internal"),
             ("GEAR_MATE_READ_BACK_TELLS_SENSE", True), ("GEAR_MATE_CHECK_AND_REMAKE_HOLDS", True),
             ("MATE_DELETE_ROUTE", "Select2 then EditDelete()"), ("MATE_RENAME_ROUTE", "IFeature.Name put"),
-            ("POSITIONS_PER_CONFIGURATION_ON_2024", True),
+            ("TURN_PER_CONFIGURATION_ON_2024", True),
             ("SUPPRESSED_GEAR_MATE_SENSE_READ", "answers, marks nothing"),
             ("PLANETARY_PUT_ROUTE", "gear mates off around the puts"), ("VALUE_READ_ORDER", "the order passed"),
             ("CONFIGURATION_SHOW_OVER_DEFINED", "shown; no window asks; its mates read in error; others solve after")):

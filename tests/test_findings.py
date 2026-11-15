@@ -1076,8 +1076,9 @@ def test_the_configuration_calls_hold_as_the_members_are_written_on_both_version
 
 @pytest.mark.parametrize("year", ["2026", "2024"])
 def test_a_slides_distance_is_held_per_configuration_and_positions_are_kept_per_configuration(year):
-    """The W8 follow-up: one distance mate's value per configuration (A), each component's place per configuration
-    and a put reaching the active configuration only (B, C) — against GOTCHAS §83, on both versions."""
+    """The W8 follow-up: one distance mate's value per configuration (A), and a free component's place, set by a
+    Transform2 put, kept per configuration, the put reaching the active configuration only (B, C), on both versions.
+    Since 2026-11-15 nothing reads POSITIONS_PER_CONFIGURATION (W8-INTERFACES §9.18)."""
     decided = _w8_decided(year)
     assert decided["slide_value_per_configuration"] is getattr(findings, f"SLIDE_VALUE_PER_CONFIGURATION_ON_{year}")
     assert getattr(findings, f"SLIDE_VALUE_PER_CONFIGURATION_ON_{year}") is True
@@ -1087,11 +1088,59 @@ def test_a_slides_distance_is_held_per_configuration_and_positions_are_kept_per_
     assert getattr(findings, f"POSITIONS_PER_CONFIGURATION_ON_{year}") is True
 
 
+def test_a_free_components_put_reads_per_configuration_again_on_this_host():
+    """The follow-up rerun unchanged on 2026-11-15 on this host (34.0.0; the first 2026 reading was 34.1.1): B and C
+    read as before, so the put fact is not the host's or the revision's."""
+    path = LATEST.parent / "w8-followup-20261115-114828.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    assert data["meta"]["version"] == "SolidWorks 2026 (revision 34.0.0)"
+    records = {r["name"]: r for r in data["records"]}
+    assert records["w8_followup"]["status"] == "pass"
+    assert decide.w8_findings(records)["positions_per_configuration"] is True
+    assert findings.POSITIONS_PER_CONFIGURATION_ON_2026 is True
+
+
+W8_S2_TURN = LATEST.parent / "w8-workbook-assembly-20261115-111951-s2-turn-carried-per-body.log"
+W8_TURN_CHECK = LATEST.parent / "w8-turn-across-configurations-20261115-115500.txt"
+
+
+def test_a_turn_of_the_mated_train_given_in_one_mode_shows_in_every_mode_on_2026():
+    """W8 s2 and the check after it (SolidWorks 2026 34.0.0, this host): the E4 train turned +37° in 2H stood turned
+    in 4H, N and 4L, LoDog in interference with RangeSlv in 4L; the check, by a value set in 2H alone and by a
+    global, turned every body by the same amount in all four. TURN_PER_CONFIGURATION_ON_2026 is False; 2024 is not
+    measured. Section s7 will give this a result file of its own on the built E4, and these pins move to it."""
+    log = W8_S2_TURN.read_bytes().decode("utf-8", errors="replace")
+    assert "attach  SolidWorks 2026 (revision 34.0.0)" in log
+    for mode in ("4H", "N", "4L"):
+        line = next(x for x in log.splitlines() if x.startswith(f"fact    s2, 2H turned, {mode} shown: as built: in "
+                                                                f"{mode}, off the wanted frame: "))
+        for body in ("'Sun turned +37.000000", "'RangeSlv turned +37.000000", "'ModeSlv turned +37.000000",
+                     "'InDog turned +37.000000", "'LoDog turned +9.250000", "'Carrier carrier turned +9.250000",
+                     "'Pl copy 1 turned -18.500000"):
+            assert body in line, (mode, body)
+    assert "FAIL    s2, 2H turned, 4L shown: as built: no interference in 4L: [(('LoDog', 'RangeSlv'), 531.913)]" in log
+    check = W8_TURN_CHECK.read_bytes().decode("utf-8", errors="replace")
+    assert check.startswith("# W8 s2's finding checked (SolidWorks 2026, 34.0.0,")
+    turned = {"A, the value route": "{'Sun': 37.0, 'Pl copy 1': -18.5, 'Pl copy 2': -18.5, 'Pl copy 3': -18.5, "
+                                    "'InDog': 37.0, 'LoDog': 9.25, 'RangeSlv': 37.0, 'ModeSlv': 37.0, "
+                                    "'Carrier carrier': 9.25}",
+              "B, the global route (from A's end)": "{'Sun': 20.0, 'Pl copy 1': -10.0, 'Pl copy 2': -10.0, "
+                                                    "'Pl copy 3': -10.0, 'InDog': 20.0, 'LoDog': 5.0, "
+                                                    "'RangeSlv': 20.0, 'ModeSlv': 20.0, 'Carrier carrier': 5.0}"}
+    for route, turns in turned.items():
+        for mode in ("2H", "4H", "N", "4L"):
+            assert f"{route}: {mode}: turned from the start {turns}" in check, (route, mode)
+    assert findings.TURN_PER_CONFIGURATION_ON_2026 is False
+    assert getattr(findings, "TURN_PER_CONFIGURATION_ON_2024", "missing") is None
+
+
 def test_the_w8_gates_open_on_both_versions_from_these_findings():
-    """The worker's per-version refusal and the per-version sentence switch read these findings by the revision."""
+    """The worker's per-version refusal reads these findings by the revision; the sentence switch reads the turn
+    finding: on 2026 a turn shows in every mode, on 2024 neither claim is made until it is measured."""
     from gear_generator import swbuild, swcom
     assert swbuild._modes_version_refusal((34, 1, 1)) is None and swbuild._modes_version_refusal((32, 5, 0)) is None
-    assert swcom.positions_per_configuration((34, 1, 1)) is True and swcom.positions_per_configuration((32, 5, 0))
+    assert swcom.positions_per_configuration((34, 1, 1)) is False
+    assert swcom.positions_per_configuration((32, 5, 0)) is None
     assert swbuild._settled(swbuild.MODES_FINDINGS) is None
 
 

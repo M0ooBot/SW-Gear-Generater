@@ -1246,16 +1246,48 @@ SYSTEM_VALUE_FOLLOWS_CONFIGURATION = False
 # - Shown X: F and D at 0. Shown Y again: F at 20 and D at 5.
 # - F put +10° in X: Y's F stayed at 20 and X's read 10.
 # - Saved and reopened: F 10, 20, 10 and D 0, 5, 0 on X, Y, X.
-# So SolidWorks keeps each component's place per configuration, for a freedom the mates leave open, and a put holds
-# in the active configuration only.
-# This CONTRADICTS the user's macro database: GOTCHAS §83 and assemblies/07, recorded on 2024, say component
-# positions are not stored per configuration. Their case was a free mechanism dragged between configurations with no
-# mate holding its place; this one is a component turned about a free axis by a Transform2 put, read through fresh
-# handles, on both versions. The difference may lie in how the place was set (a drag against a put) or in what the
-# mates leave free; neither was tried here.
+# Second reading, 2026-11-15, the follow-up rerun unchanged on this host (SolidWorks 2026 34.0.0, where the first
+# 2026 reading was 34.1.1 on another machine; probe/results/w8-followup-20261115-114828.json and .txt, 34 of 34): B
+# and C read as above, through a save and reopen.
+# So a component turned about a free axis by a Transform2 put keeps its place per configuration, and such a put holds
+# in the active configuration only. That is all these two findings say.
+# GOTCHAS §83 and assemblies/07, recorded on 2024, say component positions are not stored per configuration. Their
+# case was a free mechanism dragged between configurations; this one is a free component put by Transform2. A turn
+# of a mated train, the case a user's turn is, agrees with GOTCHAS (TURN_PER_CONFIGURATION below).
+# Since 2026-11-15 nothing reads these: the sentences about a turn read TURN_PER_CONFIGURATION_ON_<year>, measured on
+# a mated train's turn, and no behaviour ever read them (Update's per-mode puts are right either way, W8-PLAN §1.9;
+# W8-INTERFACES §9.18). Section s7 will measure both on the built E4 in a result file of its own; the pins in
+# tests/test_findings.py move to it then.
 # Not covered: a component free to move along an axis as well as turn; a drag in the user interface.
 POSITIONS_PER_CONFIGURATION_ON_2026 = True
 POSITIONS_PER_CONFIGURATION_ON_2024 = True
+#
+# A turn of a mated train across configurations (W8 s2 and a check straight after it, 2026-11-15; SolidWorks 2026
+# 34.0.0, this host). Results:
+#   probe/results/w8-workbook-assembly-20261115-111951-s2-turn-carried-per-body.log   s2, a copy of s1.master
+#   probe/results/w8-turn-across-configurations-20261115-115500.txt                    the check, two routes
+# - s2: the built E4 transfer case (TransferCase_E4: modes 2H, 4H, N and 4L), 2H shown, its train turned +37° on the
+#   Sun by W5's demonstration drive (an angle mate driven through a global, then deleted). 4H, N and 4L were then
+#   shown and rebuilt in turn and every body read through fresh handles: in each, every body of the train stood
+#   turned as in 2H (the Sun, InDog, RangeSlv and ModeSlv +37°, each planet copy −18.5°, LoDog and the carrier
+#   +9.25°), off its frame on record. In 4L, where RangeSlv engages LoDog, the two read in interference (531.913
+#   mm³).
+# - The check, on s2's own copy (4L active on open): an angle mate made at the Sun's angle in 2H, then (A) its D1 set
+#   in 2H alone by IDimension.SetSystemValue3(rad, 3, ['2H']), +37°, and (B) a global linked to it, +20°, the mate
+#   deleted each time. Every configuration shown, rebuilt and read: every body of the train turned by the same amount
+#   in all four, 2H, 4H, N and 4L alike. The front train, free in 2H, did not turn.
+# So a turn given to a mated train in one configuration shows in every configuration. That is the case a user's turn
+# is (gears held by their mates, turned by a drag or a drive), and it AGREES with the user's macro database (GOTCHAS
+# §83, recorded on 2024), where POSITIONS_PER_CONFIGURATION, a Transform2 put of a free component, did not. The
+# difference is the case, not the host or the revision: the follow-up rerun on this host read as on 34.1.1.
+# Read by swcom.positions_per_configuration for the sentences about a turn and a switch (ui_text.turning_note and
+# switching_note); no behaviour reads it.
+# Not covered: a drag in the user interface (the person's step, s6); SolidWorks 2026 34.1.1; SolidWorks 2024, where
+# the confirming run's s2 and s7 set TURN_PER_CONFIGURATION_ON_2024 and until then neither claim is made. Section s7
+# will measure this and the put on the built E4 in a result file of its own; the pins in tests/test_findings.py move
+# to it then.
+TURN_PER_CONFIGURATION_ON_2026 = False
+TURN_PER_CONFIGURATION_ON_2024 = None
 
 # -- W7's follow-up: putting a turned planetary back (probe planetary_put_back, tier 10, SolidWorks 2026 34.1.1) -----
 #

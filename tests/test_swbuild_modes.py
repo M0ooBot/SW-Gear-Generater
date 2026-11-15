@@ -244,12 +244,17 @@ def test_a_configuration_gone_is_a_component_gone_so_update_turns_it_into_not_as
     (True, True, (), None),
 ])
 def test_the_positions_switch_reads_the_running_versions_finding(monkeypatch, on_2026, on_2024, revision, wanted):
+    """The switch answers "does a turn given in one mode stay in that mode?" from TURN_PER_CONFIGURATION_ON_<year>
+    (W8-INTERFACES §9.18); the put fact, POSITIONS_PER_CONFIGURATION_ON_<year>, is set the other way round here and
+    read by nothing."""
     for year, value in ((2026, on_2026), (2024, on_2024)):
-        name = f"POSITIONS_PER_CONFIGURATION_ON_{year}"
+        name = f"TURN_PER_CONFIGURATION_ON_{year}"
         if value is None:
             monkeypatch.delattr(findings, name, raising=False)
         else:
             monkeypatch.setattr(findings, name, value, raising=False)
+        monkeypatch.setattr(findings, f"POSITIONS_PER_CONFIGURATION_ON_{year}",
+                            None if value is True else True, raising=False)
     assert swcom.positions_per_configuration(revision) is wanted
 
 
