@@ -1,0 +1,146 @@
+# W8 s2's finding checked (SolidWorks 2026, 34.0.0, PID 69768), straight after the s2 rerun
+# (probe/results/w8-workbook-assembly-20261115-111951-s2-turn-carried-per-body.log), on that run's own copy of
+# s1.master (out2\s2, just closed; its record points into it), closed without saving at the end.
+# Each route: 2H shown; an angle mate from the Sun's Top plane to the layout's Right plane made at the Sun's current
+# angle (moved 0 on making, read); driven; the mate (and any equation) deleted; then every configuration shown and
+# rebuilt and every body read through fresh handles, its turn about its own axis from the frames read before.
+# (A) the angle mate's D1 set in 2H only, IDimension.SetSystemValue3(rad, 3, ['2H']), +37 degrees;
+# (B) from A's end, a global "Drive" linked to D1 (Add2 accepted it), moved +20 degrees.
+# Finding: both times every body of the train turned by the same amount in all four configurations, 2H, 4H, N
+# and 4L alike; the front train, free in 2H, did not turn. The first attempt (below the second) made the mate at
+# 90 degrees from a Sun standing at +37, so the mate itself snapped it back first; kept for completeness.
+# --- second attempt (the mate made where the Sun stands) ---
+active on open 4L configurations ['2H', '4H', 'N', '4L']
+drive value: the Sun at +37.000000° in 2H; the angle mate made at 127.000000°: moved 0.0e+00 on making
+drive value: Repro drive made, D1 'D1', driven 37.0° in 2H, deleted; equations now ['"Sun Face Z"= 15', '"Pl Face Z"= 15', '"FrontDog Face Z"= 107', '"FIdler Face Z"= 125', '"FOut Face Z"= 125', '"D1@Sun along In"= "Sun Face Z"', '"D1@Pl copy 1 along Planet copy 1"= "Pl Face Z"', '"D1@Pl copy 2 along Planet copy 2"= "Pl Face Z"', '"D1@Pl copy 3 along Planet copy 3"= "Pl Face Z"', '"D1@FrontDog along FrontDrv"= "FrontDog Face Z"', '"D1@FIdler along Idler"= "FIdler Face Z"', '"D1@FOut along Front"= "FOut Face Z"']
+A, the value route: 2H: turned from the start {'Sun': 37.0, 'Pl copy 1': -18.5, 'Pl copy 2': -18.5, 'Pl copy 3': -18.5, 'InDog': 37.0, 'LoDog': 9.25, 'RangeSlv': 37.0, 'ModeSlv': 37.0, 'Carrier carrier': 9.25}
+A, the value route: 4H: turned from the start {'Sun': 37.0, 'Pl copy 1': -18.5, 'Pl copy 2': -18.5, 'Pl copy 3': -18.5, 'InDog': 37.0, 'LoDog': 9.25, 'RangeSlv': 37.0, 'ModeSlv': 37.0, 'Carrier carrier': 9.25}
+A, the value route: N: turned from the start {'Sun': 37.0, 'Pl copy 1': -18.5, 'Pl copy 2': -18.5, 'Pl copy 3': -18.5, 'InDog': 37.0, 'LoDog': 9.25, 'RangeSlv': 37.0, 'ModeSlv': 37.0, 'Carrier carrier': 9.25}
+A, the value route: 4L: turned from the start {'Sun': 37.0, 'Pl copy 1': -18.5, 'Pl copy 2': -18.5, 'Pl copy 3': -18.5, 'InDog': 37.0, 'LoDog': 9.25, 'RangeSlv': 37.0, 'ModeSlv': 37.0, 'Carrier carrier': 9.25}
+drive global: the Sun at +74.000000° in 2H; the angle mate made at 164.000000°: moved 0.0e+00 on making
+drive global: Repro drive made, D1 'D1', driven 20.0° in 2H, deleted; equations now ['"Sun Face Z"= 15', '"Pl Face Z"= 15', '"FrontDog Face Z"= 107', '"FIdler Face Z"= 125', '"FOut Face Z"= 125', '"D1@Sun along In"= "Sun Face Z"', '"D1@Pl copy 1 along Planet copy 1"= "Pl Face Z"', '"D1@Pl copy 2 along Planet copy 2"= "Pl Face Z"', '"D1@Pl copy 3 along Planet copy 3"= "Pl Face Z"', '"D1@FrontDog along FrontDrv"= "FrontDog Face Z"', '"D1@FIdler along Idler"= "FIdler Face Z"', '"D1@FOut along Front"= "FOut Face Z"']
+B, the global route (from A's end): 2H: turned from the start {'Sun': 20.0, 'Pl copy 1': -10.0, 'Pl copy 2': -10.0, 'Pl copy 3': -10.0, 'InDog': 20.0, 'LoDog': 5.0, 'RangeSlv': 20.0, 'ModeSlv': 20.0, 'Carrier carrier': 5.0}
+B, the global route (from A's end): 4H: turned from the start {'Sun': 20.0, 'Pl copy 1': -10.0, 'Pl copy 2': -10.0, 'Pl copy 3': -10.0, 'InDog': 20.0, 'LoDog': 5.0, 'RangeSlv': 20.0, 'ModeSlv': 20.0, 'Carrier carrier': 5.0}
+B, the global route (from A's end): N: turned from the start {'Sun': 20.0, 'Pl copy 1': -10.0, 'Pl copy 2': -10.0, 'Pl copy 3': -10.0, 'InDog': 20.0, 'LoDog': 5.0, 'RangeSlv': 20.0, 'ModeSlv': 20.0, 'Carrier carrier': 5.0}
+B, the global route (from A's end): 4L: turned from the start {'Sun': 20.0, 'Pl copy 1': -10.0, 'Pl copy 2': -10.0, 'Pl copy 3': -10.0, 'InDog': 20.0, 'LoDog': 5.0, 'RangeSlv': 20.0, 'ModeSlv': 20.0, 'Carrier carrier': 5.0}
+closed without saving
+# --- first attempt (the mate made at 90 degrees, snapping the Sun from +37 first) ---
+active on open 4L configurations ['2H', '4H', 'N', '4L']
+drive value: Repro drive made, D1 'D1', driven 37.0° in 2H, deleted; equations now ['"Sun Face Z"= 15', '"Pl Face Z"= 15', '"FrontDog Face Z"= 107', '"FIdler Face Z"= 125', '"FOut Face Z"= 125', '"D1@Sun along In"= "Sun Face Z"', '"D1@Pl copy 1 along Planet copy 1"= "Pl Face Z"', '"D1@Pl copy 2 along Planet copy 2"= "Pl Face Z"', '"D1@Pl copy 3 along Planet copy 3"= "Pl Face Z"', '"D1@FrontDog along FrontDrv"= "FrontDog Face Z"', '"D1@FIdler along Idler"= "FIdler Face Z"', '"D1@FOut along Front"= "FOut Face Z"']
+A, the value route: 2H: turned from the start nothing
+A, the value route: 4H: turned from the start nothing
+A, the value route: N: turned from the start nothing
+A, the value route: 4L: turned from the start nothing
+drive global: Repro drive made, D1 'D1', driven 20.0° in 2H, deleted; equations now ['"Sun Face Z"= 15', '"Pl Face Z"= 15', '"FrontDog Face Z"= 107', '"FIdler Face Z"= 125', '"FOut Face Z"= 125', '"D1@Sun along In"= "Sun Face Z"', '"D1@Pl copy 1 along Planet copy 1"= "Pl Face Z"', '"D1@Pl copy 2 along Planet copy 2"= "Pl Face Z"', '"D1@Pl copy 3 along Planet copy 3"= "Pl Face Z"', '"D1@FrontDog along FrontDrv"= "FrontDog Face Z"', '"D1@FIdler along Idler"= "FIdler Face Z"', '"D1@FOut along Front"= "FOut Face Z"']
+B, the global route (from A's end): 2H: turned from the start {'Sun': -17.0, 'Pl copy 1': 8.5, 'Pl copy 2': 8.5, 'Pl copy 3': 8.5, 'InDog': -17.0, 'LoDog': -4.25, 'RangeSlv': -17.0, 'ModeSlv': -17.0, 'Carrier carrier': -4.25}
+B, the global route (from A's end): 4H: turned from the start {'Sun': -17.0, 'Pl copy 1': 8.5, 'Pl copy 2': 8.5, 'Pl copy 3': 8.5, 'InDog': -17.0, 'LoDog': -4.25, 'RangeSlv': -17.0, 'ModeSlv': -17.0, 'Carrier carrier': -4.25}
+B, the global route (from A's end): N: turned from the start {'Sun': -17.0, 'Pl copy 1': 8.5, 'Pl copy 2': 8.5, 'Pl copy 3': 8.5, 'InDog': -17.0, 'LoDog': -4.25, 'RangeSlv': -17.0, 'ModeSlv': -17.0, 'Carrier carrier': -4.25}
+B, the global route (from A's end): 4L: turned from the start {'Sun': -17.0, 'Pl copy 1': 8.5, 'Pl copy 2': 8.5, 'Pl copy 3': 8.5, 'InDog': -17.0, 'LoDog': -4.25, 'RangeSlv': -17.0, 'ModeSlv': -17.0, 'Carrier carrier': -4.25}
+closed without saving
+# --- the script (a scratch file beside the run; not kept in the repo) ---
+"""Does a turn given in one configuration show in the others? On run 1's copy of s1.master (this run's own folder),
+the turn made two ways, each read in every configuration through fresh handles after a show and a top-only rebuild:
+(A) W5's drive by the angle mate's own value in 2H only (SetSystemValue3(…, 3, ["2H"])), the mate then deleted;
+(B) after putting everything back, W5's drive by a global "Drive" linked to the angle mate's D1, the mate deleted.
+Closed without saving at the end."""
+import sys, os, math, json
+sys.path.insert(0, sys.argv[1])
+from gear_generator import swcom, store, swbuild
+from gear_generator.gears import equations
+pid, folder = int(sys.argv[2]), sys.argv[3]
+c = [x for x in swcom.find_candidates() if x.pid == pid][0]
+s = swcom.Session(c.app, c.revision, c.pid)
+rec = store.read_link_record(os.path.join(folder, "TransferCase_E4.xlsx"))
+box = rec.gearbox
+asm = box.assembly
+bodies = [(x.gear, x.name) for x in box.components] + [("Carrier carrier", cc.component) for cc in box.carriers]
+sun = next(n for g, n in bodies if g == "Sun")
+TRAIN = swcom.ASSEMBLY_TRAIN
+
+def swbuild_gap(a, b):
+    return max([abs(float(x) - float(y)) for x, y in zip(a[1], b[1])] + [abs(float(x) - float(y)) for x, y in zip(a[0], b[0])])
+
+
+def turn(a, b):
+    t = swbuild.turn_between(a, b)
+    return None if t is None else round(math.degrees(t), 6)
+
+def frames(mode):
+    s.show_configuration(mode); s.rebuild(kind=TRAIN)
+    out = {}
+    for i, (g, n) in enumerate(bodies):
+        s.find_component(f"f{i}", n); out[g] = s.component_frame(f"f{i}")
+    return out
+
+def all_frames():
+    return {m: frames(m) for m in box.modes}
+
+def report(label, base, now):
+    for m in box.modes:
+        turns = {g: turn(base[m][g][0], now[m][g][0]) for g, _ in bodies}
+        moved = {g: t for g, t in turns.items() if t is None or abs(t) > 1e-6}
+        print(f"{label}: {m}: turned from the start {moved or 'nothing'}")
+
+BUILT_SUN = next((tuple(x.rotation), tuple(x.at)) for x in box.components if x.gear == "Sun")
+
+
+def drive(route, degrees):
+    s.show_configuration("2H"); s.rebuild(kind=TRAIN)
+    s.find_component("dsun", sun); s.find_component("dlay", box.layout_component)
+    before = {}
+    for i, (g, n) in enumerate(bodies):
+        s.find_component(f"b{i}", n); before[g] = s.component_frame(f"b{i}")
+    now = turn(BUILT_SUN[0], before["Sun"][0])          # the Sun's turn from its built frame (θ 0 there), in 2H
+    at = 90.0 + now
+    if route == "global":
+        s.add_global_variable("Drive", f"{at:.9f}")
+    name, dim = s.add_mate("ddrive", "angle", "dsun:plane2", "dlay:plane3", at, "Repro drive")
+    if route == "global":
+        s.link_dimension(f"{dim}@{name}", equations.quote("Drive"))
+    s.rebuild(kind=TRAIN)
+    made = {}
+    for i, (g, n) in enumerate(bodies):
+        s.find_component(f"m{i}", n); made[g] = s.component_frame(f"m{i}")
+    moved = max(swbuild_gap(before[g], made[g]) for g, _ in bodies)
+    print(f"drive {route}: the Sun at {now:+.6f}° in 2H; the angle mate made at {at:.6f}°: moved {moved:.1e} on making")
+    if route == "global":
+        s.set_global_variable("Drive", f"{at + degrees:.9f}")
+    else:
+        s.set_dimension_in("ddrive", math.radians(at + degrees) * 1000.0, ["2H"])
+    s.rebuild(kind=TRAIN)
+    feature = s._mate_feature(name)
+    doc = s._doc()
+    swcom.call(doc, "ClearSelection2", True); swcom.call(feature, "Select2", False, 0)
+    swcom._guarded("EditDelete", lambda: doc.EditDelete()); swcom.call(doc, "ClearSelection2", True)
+    if route == "global":
+        texts = [t for t, _ in s.equations()]
+        for i in range(len(texts) - 1, -1, -1):
+            if equations.quote("Drive") in texts[i]:
+                s.delete_equation(i)
+    s.rebuild(kind=TRAIN)
+    print(f"drive {route}: {name} made, D1 {dim!r}, driven {degrees}° in 2H, deleted; equations now {[t for t, _ in s.equations()]}")
+
+s.begin_build()
+try:
+    s.open_document(asm)
+    print("active on open", s.active_configuration(), "configurations", s.configurations())
+    base = all_frames()
+    drive("value", 37.0)
+    after_a = all_frames()
+    report("A, the value route", base, after_a)
+    # put every body back in every mode? Read again from here instead: B starts from where A left things.
+    drive("global", 20.0)
+    after_b = all_frames()
+    report("B, the global route (from A's end)", after_a, after_b)
+finally:
+    s.end_build()
+    for kind in (2, 1):
+        d = swcom.call(c.app, "GetFirstDocument")
+        docs = []
+        while d is not None:
+            docs.append(d); d = swcom.call(d, "GetNext")
+        for d in docs:
+            p = str(swcom.call(d, "GetPathName") or "")
+            if p and os.path.normcase(p).startswith(os.path.normcase(folder)) and int(swcom.call(d, "GetType")) == kind:
+                swcom.call(c.app, "QuitDoc", str(swcom.call(d, "GetTitle")))
+    print("closed without saving")
