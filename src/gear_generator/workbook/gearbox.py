@@ -1198,7 +1198,8 @@ def _record_carriers(gearbox: GearboxRecord, plan: GearboxPlan, result: GearboxR
         if not (_in(path, [p for p in saved if p]) or _in(path, reused) or on_record):
             continue
         where = layout.carrier_frame(carrier)
-        component = result.components.get(f"{layout.CARRIER_HANDLE}{i}", "") or (old.component if on_record else "")
+        component = str(result.components.get(f"{layout.CARRIER_HANDLE}{i}", "") or (old.component if on_record
+                                                                                    else ""))
         entries.append(store.CarrierEntry(shaft=carrier.shaft, path=path, component=component,
                                           rotation=list(where.rotation), at=list(where.at),
                                           direction=list(carrier.direction),
@@ -1427,9 +1428,10 @@ def finish_build(plan: GearboxPlan, result: GearboxResult, record: Optional[Link
         _record_carriers(gearbox, plan, result)
         if assembly_path:
             gearbox.assembly = assembly_path
-            gearbox.layout_component = result.components.get(layout.LAYOUT_HANDLE, "")
+            # Plain names, as the record's JSON holds them: a worker's own name object never reaches the record.
+            gearbox.layout_component = str(result.components.get(layout.LAYOUT_HANDLE, ""))
             gearbox.components = [
-                ComponentEntry(gear=gear, part=plan.part_of[gear], name=result.components.get(handle, ""),
+                ComponentEntry(gear=gear, part=plan.part_of[gear], name=str(result.components.get(handle, "")),
                                rotation=list(plan.frames[gear].rotation), at=list(plan.frames[gear].at),
                                of=planetary.copy_of(gear)[0] if planetary.copy_of(gear)[1] else "",
                                frames=_frames_by_mode(plan, handle))
