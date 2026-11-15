@@ -136,6 +136,70 @@ Vec3 = Tuple[float, float, float]
 # W6: the turned read-back (W6-PLAN §2.6, rule H), once probe tier 9 settles it.
 TURNED_SENSE_ROUTES = ("entity senses",)     # findings.TURNED_GEAR_MATE_SENSE_READ_BACK
 ENTITY_ALONG = 0.99                          # |cos| at or above which a mate entity lies along a gear's axis
+TURNED_ANGLES_FINDING = "TURNED_GEAR_MATE_SENSE_ANGLES"              # axes that meet (a bevel mesh)
+TURNED_SKEW_ANGLES_FINDING = "TURNED_GEAR_MATE_SENSE_ANGLES_SKEW"    # axes that pass each other (a crossed mesh)
+MEET_TOLERANCE = 0.005                       # mm: two axes this close meet (= workbook.checks.CENTRE_TOLERANCE)
+PARALLEL_TOLERANCE = 1e-9                    # |â × b̂| under which two own axes are one family (= geometry's)
+
+
+def axes_parallel(a: Sequence[float], b: Sequence[float]) -> bool:
+    """Whether two gears' own axes are of one family, parallel or anti-parallel, as planning counts them
+    (``|â × b̂| < 1e-9``, :data:`PARALLEL_TOLERANCE`, ``workbook.geometry.FAMILY_TOLERANCE``; W6-INTERFACES §7.5):
+    W5's read-back reads those; any other pair is turned, and needs the turned finding and an angle inside the
+    range it covers (W6-PLAN §2.6)."""
+    ua, ub = _unit(a), _unit(b)
+    if ua is None or ub is None:
+        raise SolidWorksError("A gear was placed with no axis, so whether its gear mate is turned cannot be judged; "
+                              "that is a fault in Gear Generator.")
+    cross = (ua[1] * ub[2] - ua[2] * ub[1], ua[2] * ub[0] - ua[0] * ub[2], ua[0] * ub[1] - ua[1] * ub[0])
+    return math.sqrt(sum(v * v for v in cross)) < PARALLEL_TOLERANCE
+
+
+def lines_meet(point_a: Sequence[float], axis_a: Sequence[float], point_b: Sequence[float],
+               axis_b: Sequence[float], tolerance: float = MEET_TOLERANCE) -> bool:
+    """Whether two gears' axes, each the line through a point on it (its origin) along its own +Z, meet: come within
+    ``tolerance`` mm of each other (W6-INTERFACES §7.12: axes that meet are a bevel mesh's, axes that pass each
+    other a crossed mesh's; decided from the lines themselves, never from a label), measured along their common
+    perpendicular. Pure; shared by planning and the worker so the two cannot disagree (§7.13). Parallel axes (one
+    family, :func:`axes_parallel`, which callers test first) are not its business: it refuses them with a
+    :class:`SolidWorksError` rather than answer True or False."""
+    ua, ub = _unit(axis_a), _unit(axis_b)
+    pa, pb = _unit_free(point_a), _unit_free(point_b)
+    if ua is None or ub is None or pa is None or pb is None:
+        raise SolidWorksError("A gear was placed with no axis or no origin, so whether its axis meets another cannot "
+                              "be judged; that is a fault in Gear Generator.")
+    w = tuple(pb[i] - pa[i] for i in range(3))
+    n = (ua[1] * ub[2] - ua[2] * ub[1], ua[2] * ub[0] - ua[0] * ub[2], ua[0] * ub[1] - ua[1] * ub[0])
+    size = math.sqrt(sum(v * v for v in n))
+    if size < PARALLEL_TOLERANCE:
+        raise SolidWorksError("Two gears' axes of one family were asked whether they meet, which only axes at an "
+                              "angle are asked (parallel axes take W5's rule), so nothing is judged; that is a fault "
+                              "in Gear Generator.")
+    return abs(sum(w[i] * n[i] for i in range(3))) / size <= tolerance
+
+
+def _unit_free(point: Sequence[float]) -> Optional[Vec3]:
+    """``point`` as three finite floats, or None."""
+    try:
+        values = tuple(float(v) for v in point)
+    except (TypeError, ValueError):
+        return None
+    return values if len(values) == 3 and all(math.isfinite(v) for v in values) else None
+
+
+def turned_angles(meet: bool = True) -> Optional[Tuple[float, float]]:
+    """The angles between the own axes probe tier 9 showed a turned gear mate's read-back on, ``(least, greatest)``
+    degrees: ``findings.TURNED_GEAR_MATE_SENSE_ANGLES`` for axes that meet, ``TURNED_GEAR_MATE_SENSE_ANGLES_SKEW``
+    for axes that pass each other (W6-INTERFACES §7.12); None when that finding is missing or not two finite numbers
+    in order."""
+    value = getattr(findings, TURNED_ANGLES_FINDING if meet else TURNED_SKEW_ANGLES_FINDING, None)
+    try:
+        lo, hi = (float(v) for v in value)
+    except (TypeError, ValueError):
+        return None
+    if not (math.isfinite(lo) and math.isfinite(hi) and 0.0 <= lo <= hi <= 180.0):
+        return None
+    return lo, hi
 
 
 def _vector_text(vector: Sequence[float]) -> str:

@@ -2031,3 +2031,52 @@ def test_entity_directions_of_any_length_along_one_line_are_judged(mated):
     session, doc = mated
     _sense_world(session, doc, False, ((0, 0, 3.0), (0, 0.001, -0.5)))
     assert session.gear_mate_sense("mesh", True, (Z_UP, Z_UP)) == (True, (1, -1))
+
+
+# -- W6: whether two turned axes meet, and the angles tier 9 covered for each class (W6-INTERFACES §7.12, §7.13)
+
+def test_the_meet_tolerance_is_the_checks_centre_tolerance_and_the_family_rule_is_planning_s():
+    from gear_generator.workbook import checks, geometry
+    assert swcom.MEET_TOLERANCE == checks.CENTRE_TOLERANCE
+    assert swcom.PARALLEL_TOLERANCE == geometry.FAMILY_TOLERANCE
+
+
+def test_axes_that_meet_and_axes_that_pass_each_other_are_told_from_the_lines():
+    # Fixture A's bevel pair: G1 on S1 (X+) with its apex at (0, 0, 60), G2 on S2 (Z+) with its apex there too.
+    assert swcom.lines_meet((0.0, 0.0, 60.0), (1, 0, 0), (0.0, 0.0, 60.0), (0, 0, 1))
+    assert swcom.lines_meet((0.0, 0.0, 60.0), (1, 0, 0), (0.0, 0.0, 0.0), (0, 0, 1))      # any point on each line
+    # Fixture B's crossed pair: S1 the Z axis, S2 along X at y 84.852814, z 8.
+    assert not swcom.lines_meet((0.0, 0.0, 2.0), (0, 0, 1), (-8.0, 84.852814, 8.0), (1, 0, 0))
+    # 0.005 mm apart still meet (the checks pass a bevel pair's apexes that close); 0.006 do not.
+    assert swcom.lines_meet((0, 0, 0), (1, 0, 0), (0, 0.005, 0), (0, 0, 1))
+    assert not swcom.lines_meet((0, 0, 0), (1, 0, 0), (0, 0.006, 0), (0, 0, 1))
+    # A slant: fixture B's bevel pair at 120°, the apexes together at (-110, 84.852814, 8).
+    apex = (-110.0, 84.852814, 8.0)
+    assert swcom.lines_meet(apex, (1, 0, 0), apex, (-0.5, 0.8660254037844386, 0.0))
+
+
+def test_parallel_axes_are_refused_by_the_meet_test_not_answered():
+    for b in ((0, 0, 1), (0, 0, -2)):
+        with pytest.raises(SolidWorksError) as raised:
+            swcom.lines_meet((0, 0, 0), (0, 0, 1), (30, 0, 0), b)
+        assert "of one family" in str(raised.value) and str(raised.value).endswith("a fault in Gear Generator.")
+    with pytest.raises(SolidWorksError):
+        swcom.lines_meet((0, 0, 0), (0, 0, 0), (30, 0, 0), (1, 0, 0))
+
+
+def test_axes_of_one_family_are_parallel_by_planning_s_rule_and_any_other_pair_is_turned():
+    assert swcom.axes_parallel((0, 0, 1), (0, 0, -1)) and swcom.axes_parallel((0, 3, 0), (0, 1, 0))
+    assert not swcom.axes_parallel((0, 0, 1), (0.0, 0.05, 0.99875))       # 2.9°: W5's 0.99 would call it parallel
+    assert not swcom.axes_parallel((1, 0, 0), (0, 0, 1))
+
+
+def test_the_turned_angles_are_read_per_class(monkeypatch):
+    monkeypatch.setattr(swcom.findings, "TURNED_GEAR_MATE_SENSE_ANGLES", (30.0, 150.0), raising=False)
+    monkeypatch.setattr(swcom.findings, "TURNED_GEAR_MATE_SENSE_ANGLES_SKEW", (60.0, 120.0), raising=False)
+    assert swcom.turned_angles(True) == (30.0, 150.0) and swcom.turned_angles(False) == (60.0, 120.0)
+    for bad in (None, (150.0, 30.0), (30.0,), ("x", 2), (10.0, 190.0), (float("nan"), 90.0)):
+        monkeypatch.setattr(swcom.findings, "TURNED_GEAR_MATE_SENSE_ANGLES_SKEW", bad, raising=False)
+        assert swcom.turned_angles(False) is None
+    assert swcom.turned_angles(True) == (30.0, 150.0)
+    monkeypatch.delattr(swcom.findings, "TURNED_GEAR_MATE_SENSE_ANGLES_SKEW", raising=False)
+    assert swcom.turned_angles(False) is None
