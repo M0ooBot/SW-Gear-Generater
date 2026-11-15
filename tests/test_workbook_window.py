@@ -14,6 +14,7 @@ a tooth count among them) build it with :func:`built_w4`, as a gearbox built bef
 """
 
 import hashlib
+import math
 import json
 import os
 import pathlib
@@ -1769,6 +1770,13 @@ def test_the_structural_step_with_update_unsaved_on_a_turning_gearbox_asks_for_t
 # moved off the Top plane (Crossed_Slant 10 mm up, so S1 can pass to S2's other side), as B's tests write them.
 
 
+def preview_gap():
+    """A shaft name's gap off its mark, on this screen."""
+    from gear_generator import preview
+    from gear_generator.theme import px
+    return px(preview.LABEL_GAP) * 1.5
+
+
 def speed_lines(window):
     return [c.cget("text") for c in sorted(window.speeds_body.winfo_children(), key=lambda c: int(c.grid_info()["row"]))]
 
@@ -1778,6 +1786,26 @@ def end_view_lines(window):
     c = window.canvas
     lines = [i for i in c.find_all() if c.type(i) == "line" and not c.itemcget(i, "arrow") in ("last", "first")]
     return [i for i in lines if abs(c.coords(i)[0] - c.coords(i)[2]) + abs(c.coords(i)[1] - c.coords(i)[3]) > 20]
+
+
+def shaft_line(window, name):
+    """A turned shaft as the window drew it: its line's unit direction on screen (y up), from the end farther from
+    its name to the end nearer it, and how far its name is from that nearer end, px. The geometry itself is pinned
+    in tests/test_preview.py; this checks the window strokes what preview gives it."""
+    import math
+    c = window.canvas
+    (label,) = [i for i in c.find_all() if c.type(i) == "text" and c.itemcget(i, "text") == name]
+    lx, ly = c.coords(label)
+    best = None
+    for i in end_view_lines(window):
+        x0, y0, x1, y1 = c.coords(i)
+        for (ax, ay), (bx, by) in (((x0, y0), (x1, y1)), ((x1, y1), (x0, y0))):
+            gap = math.hypot(lx - bx, ly - by)
+            if best is None or gap < best[0]:
+                best = (gap, ax, ay, bx, by)
+    gap, ax, ay, bx, by = best
+    length = math.hypot(bx - ax, by - ay)
+    return ((bx - ax) / length, -(by - ay) / length), gap
 
 
 def test_a_right_angle_gearbox_is_ready_to_build_and_says_each_shaft_from_its_own_end(desk):
@@ -1795,8 +1823,11 @@ def test_a_right_angle_gearbox_is_ready_to_build_and_says_each_shaft_from_its_ow
                                    "S2    750.0 rpm clockwise seen from the +Z end · 19.60 N·m",
                                    "S3    250.0 rpm anticlockwise seen from the +Z end · 57.62 N·m"]
     assert window.speeds_readout.get() == "seen from each shaft's + end"
-    # The end view: S1 is a line through G1 seen side-on, S2 and S3 crosses; the bevel stage one colour, at z 60.
+    # The end view: S1 is a line through G1 seen side-on, along +X and named at that end; S2 and S3 crosses; the bevel
+    # stage one colour, at z 60.
     assert window.view_readout.get() == "z 5 · z 60 · origin" and len(end_view_lines(window)) == 1
+    direction, gap = shaft_line(window, "S1")
+    assert direction == pytest.approx((1.0, 0.0), abs=1e-9) and gap < 2 * preview_gap()
     assert gear_states(window) == {"G1": "to build", "G2": "to build", "G3": "to build", "G4": "to build"}
 
 
@@ -1884,6 +1915,10 @@ def test_a_slanted_shaft_is_seen_from_its_own_plus_end(desk):
     assert window.box_values["type"].cget("text") == ("Crossed and bevel train · 2 meshes · 3.000 : 1 · output at 90° "
                                                        "to the input")
     assert len(end_view_lines(window)) == 2                    # S2 along X and S3 slanted; S1 a cross
+    direction, gap = shaft_line(window, "S3")                  # named at its plus end, (0.5, −0.866, 0)
+    assert direction == pytest.approx((0.5, -math.sqrt(3) / 2), abs=1e-6) and gap < 2 * preview_gap()
+    direction, _ = shaft_line(window, "S2")
+    assert direction == pytest.approx((1.0, 0.0), abs=1e-9)
     assert window.footer().build_enabled
 
 

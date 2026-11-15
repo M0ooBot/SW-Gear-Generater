@@ -501,7 +501,9 @@ def layout_gearbox(placed, theta, width: int = 696, height: int = 300, pad: floa
         a0, b0 = to_canvas(x0, y0)
         a1, b1 = to_canvas(x1, y1)
         view.lines.append((shaft, a0, b0, a1, b1))
-        ends[shaft] = (a1, b1)                   # named at its + end, the way its gears face
+        # Named at its family's + end, not the end its gears face (D1: they face the typed Axis, so an X- shaft, or
+        # fixture B's S3 typed (-1, 1.732, 0), is named at the other end from the one its gears face).
+        ends[shaft] = (a1, b1)
     for _, p, _, _ in shapes:
         if p.shaft in seen:
             continue
