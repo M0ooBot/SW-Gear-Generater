@@ -1,0 +1,18 @@
+run     2026-11-14 23:34:32; app gear-generator 0.3.2; assembly C:\Users\M0obo\Documents\GearGeneratorProbe\w6-2024-20261114-224626\out\r5.master\Crossed_Slant.SLDASM
+watch   a save question SolidWorks asks is answered No (--answer-no), and logged
+attach  SolidWorks 2026 (revision 34.1.1), PID 452
+open    before: []
+ok      none of the gearbox's documents is open before the run
+opened  Crossed_Slant.SLDASM (C:\Users\M0obo\Documents\GearGeneratorProbe\w6-2024-20261114-224626\out\r5.master\Crossed_Slant.SLDASM) by the app's open_document
+flags   GetSaveFlag straight after the open: {'Crossed_Slant_Layout.SLDPRT': False, 'Helical_m2_N20_45R.SLDPRT': False, 'Helical_m2_N40_45R.SLDPRT': False, 'Bevel_m2.5_N20_M30_S120.SLDPRT': False, 'Bevel_m2.5_N30_M20_S120.SLDPRT': False, 'Crossed_Slant.SLDASM': False}
+ok      every document of a gearbox saved by another release reads GetSaveFlag False straight after the open: marked []
+fact    Crossed_Slant_Layout.SLDPRT version history: ['raised <unknown>.GetVersionHistory']
+fact    Helical_m2_N20_45R.SLDPRT version history: ['raised <unknown>.GetVersionHistory']
+fact    Helical_m2_N40_45R.SLDPRT version history: ['raised <unknown>.GetVersionHistory']
+fact    Bevel_m2.5_N20_M30_S120.SLDPRT version history: ['raised <unknown>.GetVersionHistory']
+fact    Bevel_m2.5_N30_M20_S120.SLDPRT version history: ['raised <unknown>.GetVersionHistory']
+fact    Crossed_Slant.SLDASM version history: ['raised <unknown>.GetVersionHistory']
+answered '&No' on 'SOLIDWORKS CAM Warning': ['&Yes', '&No', 'Save changes to Crossed_Slant.SLDASM ?']
+ok      closed without saving (QuitDoc): left []
+ok      no file of the gearbox changed on disk (6 files, sha256 and mtime)
+done    0 failed: []
