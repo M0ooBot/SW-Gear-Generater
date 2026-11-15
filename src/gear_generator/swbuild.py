@@ -4203,22 +4203,26 @@ def _modes_assembly(sw: SolidWorks, result: GearboxUpdate, assembly: str, placem
         moved = bool(result.changed or axial or result.slid) or any(
             not same_frame(w[0], w[1], *recorded_by.get(mode, recorded).get(g, w)) for mode in motion.configurations
             for g, w in wanted_in(mode).items())
+        found_here: Optional[ModeCheck] = None
         if not (moved or fixes):
             # Nothing the workbook or the record changes: only the active mode is judged, where it stands, and
-            # nothing is shown (J25); put back only if out of step there (W5's answer 2), then post-checked.
+            # nothing is shown (J25); put back only if out of step there (W5's answer 2). A put there has changed
+            # something, so from there on this is a changed Update (J13, §1.10: "all of them when anything
+            # changed"): every other mode is shown and handled below as any changed Update handles it (put only
+            # where its own train needs it, J26), the active mode last, its judgement on showing kept in its
+            # ModeCheck, then every per-mode flag read in every configuration.
+            found_here = ModeCheck(active_mode)
             _modes_put(sw, result, motion, active_mode, active, placements, mated, wanted_in(active_mode), handle,
-                       mate_handle, route, rebuild, file, touched, moved=False, check=None)
-            if result.put_in:
-                _modes_post_check(sw, result, motion, active_mode, active, placements, mated, wanted_in(active_mode),
-                                  handle, mate_handle, gear_of_handle, ModeCheck(active_mode), file, state.read)
-            return
+                       mate_handle, route, rebuild, file, touched, moved=False, check=found_here)
+            if not result.put_in:
+                return
         order = [m for m in motion.configurations if m != active_mode] + [active_mode]
         for index, mode in enumerate(order, 1):
             say(Step(STAGE_MODE, mode, index, len(order)))
             sw.show_configuration(names[mode])
             shown[0] = names[mode]
             rebuild()
-            check = ModeCheck(mode)
+            check = found_here if found_here is not None and mode == active_mode else ModeCheck(mode)
             result.modes.append(check)
             if mode != active_mode:
                 result.visited.append(names[mode])

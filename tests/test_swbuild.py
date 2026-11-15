@@ -6487,6 +6487,12 @@ def test_a_workbook_change_shows_and_puts_every_mode_the_active_one_last_and_end
         assert check.turned is (index == 0 or not fake.shared_positions)
 
 
+def _mode_sentences(built, done):
+    from types import SimpleNamespace
+    from gear_generator import ui_text
+    return ui_text.mode_update_lines(SimpleNamespace(motion=_tc_motion(built)[0], assembly=TC_ASM), done)
+
+
 def test_a_train_turned_in_another_mode_is_left_unseen_by_a_quiet_update_which_says_so(tc_built):
     fake, built = tc_built
     fake.show_configuration("4L")
@@ -6495,14 +6501,52 @@ def test_a_train_turned_in_another_mode_is_left_unseen_by_a_quiet_update_which_s
     fake.show_configuration("2H")
     fake.calls.clear()
     done = _tc_update(fake, built)
-    assert done.ok and _shown(fake) == [] and done.modes == [], done.log_lines()
+    assert done.ok, done.log_lines()
     if not fake.shared_positions:
-        # 2H stands as built: the turn stayed in 4L, unseen, nothing put
+        # 2H stands as built: the turn stayed in 4L, unseen, nothing put, nothing shown (J25)
+        assert _shown(fake) == [] and done.modes == [] and done.visited == []
         assert done.put_in == [] and done.turned is False and done.out_of_step == []
+        assert not [n for n, _ in fake.calls if n in ("place_component", "rebuild", "set_mate_suppressed_in")]
     else:
-        # shared positions: the turn is seen in 2H, where InDog (not turned) is coupled to RangeSlv: out of step,
-        # put back in 2H alone, nothing shown
+        # Shared positions: the turn is seen in 2H, where InDog (not turned) is coupled to RangeSlv: out of step,
+        # put back in 2H. That put changed something, so (J13, §1.10, since the review of W8 s2) every other mode is
+        # then shown and checked as a changed Update does, 2H last and left active. The 2H put brought every mode
+        # back to the built turn, so none of the others needs a put.
         assert done.out_of_step == [("RangeSlv", "InDog")] and done.put_in == ["2H"]
+        assert _shown(fake) == ["4H", "N", "4L", "2H"] and done.visited == ["4H", "N", "4L"]
+        assert [(c.name, c.out_of_step, c.off_axis) for c in done.modes] == [
+            ("4H", [], []), ("N", [], []), ("4L", [], []), ("2H", [("RangeSlv", "InDog")], [])]
+        puts = [(n, a[0]) for n, a in fake.calls if n in ("show_configuration", "place_component")]
+        assert puts == [("place_component", f"placed{i}") for i in range(1, 6)] + [
+            ("show_configuration", m) for m in ("4H", "N", "4L", "2H")]
+        assert fake.config == "2H" and done.failures == []
+        assert _mode_sentences(built, done) == [
+            "In 2H, RangeSlv's teeth stood across InDog's; the gears of 2H are back at the turn they were built at.",
+            "It worked in 2H, the configuration that was active, then showed and checked 4H, N and 4L and left the "
+            "assembly in 2H."]
+
+
+def test_a_put_in_the_active_mode_on_a_quiet_update_visits_every_other_mode_and_reads_every_flag_after(tc_built):
+    """J13, §1.10: an Update with nothing changed in the workbook that finds the active mode out of step and puts it
+    has changed something, so it shows and checks every other mode, the active one last, and then reads every
+    per-mode flag in every configuration. On either reading of positions: here the two sleeves are turned in 2H
+    without the gears they engage."""
+    fake, built = tc_built
+    for gear in ("gear7-1", "gear8-1"):                            # RangeSlv and ModeSlv, splined: out of step with
+        fake.turn(gear, 30.0)                                      # InDog in 2H
+    fake.calls.clear()
+    done = _tc_update(fake, built)
+    assert done.ok, done.log_lines()
+    assert done.put_in == ["2H"] and done.out_of_step == [("RangeSlv", "InDog")]
+    assert _shown(fake) == ["4H", "N", "4L", "2H"] and done.visited == ["4H", "N", "4L"] and fake.config == "2H"
+    assert [c.name for c in done.modes] == ["4H", "N", "4L", "2H"]
+    assert done.modes[-1].out_of_step == [("RangeSlv", "InDog")]  # found in 2H before its put
+    last_put = max(i for i, (n, _) in enumerate(fake.calls) if n == "place_component")
+    after = [fake.mate_handles[a[0]] for i, (n, a) in enumerate(fake.calls)
+             if n == "mate_suppression" and i > last_put and a[1] == TC_MODES]
+    assert sorted(after) == sorted(TC_COUPLES)
+    for name, (_, _, on) in TC_COUPLES.items():
+        assert fake.mate(name).flags == {m: m not in on for m in TC_MODES}, name
 
 
 def test_an_update_in_a_configuration_that_is_no_mode_is_refused_before_anything_changes(tc_built):
