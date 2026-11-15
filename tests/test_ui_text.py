@@ -3447,3 +3447,25 @@ def test_a_real_build_with_modes_on_the_fake_is_said_mode_by_mode(mode_findings)
     assert (ui_text.SWITCH_IN_STEP in text) == (result.positions_per_configuration is True)
     for word in ("Flip", "Reverse", "entities", "same way"):
         assert word not in text
+
+
+def test_the_mode_chooser_says_it_changes_only_the_window():
+    """J21: the chooser picks what the window shows, never SolidWorks' configuration; once an assembly with modes is
+    on record (the footer tells the user to switch mode in SolidWorks) it says so."""
+    built = ui_text.mode_chooser_note(_tc_record())
+    assert built == ("The mode chosen here changes only what this window shows; it does not switch the mode "
+                     "SolidWorks shows.")
+    for record in (None, _record(assembly=False), _turning_record()):
+        assert ui_text.mode_chooser_note(record) == "The mode chosen here changes only what this window shows."
+    for word in ("configuration", "Configuration", "Flip", "Show", "Suppress"):
+        assert word not in built
+    a = _tc_assessed("parallel")
+    for entry in a.report.modes:
+        lines = ui_text.mode_speed_lines(a.spec, a.report, entry.name)[0] + [built]
+        assert ui_text.speeds_prose_rows(entry.motion, lines, mode=True, chooser=True) == {0, 1, len(lines) - 1}
+    from fractions import Fraction
+    motion = kinematics.Motion(speeds={"S": Fraction(1000)}, torque_note="The torque through C's planetary stage "
+                                                                          "is not worked out.")
+    lines = ["S     1000.0 rpm anticlockwise", "The torque through C's planetary stage is not worked out.", built]
+    assert ui_text.speeds_prose_rows(motion, lines, chooser=True) == {1, 2}
+    assert ui_text.speeds_prose_rows(motion, lines[:2]) == {1}

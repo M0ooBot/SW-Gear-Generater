@@ -1207,18 +1207,22 @@ def _torque_note_shown(motion) -> str:
     return note if note and motion.speeds and not motion.later else ""
 
 
-def speeds_prose_rows(motion, lines: Sequence[str], *, mode: bool = False) -> Set[int]:
-    """Which of :func:`workbook_speed_lines`' ``lines`` are sentences, shown in prose, not as a shaft's line: every
-    line when a later phase drives the gearbox (``Motion.later``), else the last line when the panel ends with the
-    torque note (W7). W8: with ``mode`` the lines are :func:`mode_speed_lines`' and ``motion`` that mode's
-    (``ModeReport.motion``), whose first two lines, the mode's speeds and ratio and what it couples, are prose too. The one home of that rule;
-    the window and the design board ask it."""
+def speeds_prose_rows(motion, lines: Sequence[str], *, mode: bool = False, chooser: bool = False) -> Set[int]:
+    """Which of the Speeds panel's ``lines`` are sentences, shown in prose, not as a shaft's line: every line when a
+    later phase drives the gearbox (``Motion.later``), else the torque note when the panel shows it (W7). W8: with
+    ``mode`` the lines are :func:`mode_speed_lines`' and ``motion`` that mode's (``ModeReport.motion``), whose first
+    two lines, the mode's speeds and ratio and what it couples, are prose too; with ``chooser`` the window shows its
+    mode chooser and the panel ends with :func:`mode_chooser_note`, prose, after everything else (the torque note
+    then the line before it). The one home of that rule; the window and the design board ask it."""
     if not lines:
         return set()
     if motion.later:
         return set(range(len(lines)))
-    rows = {len(lines) - 1} if _torque_note_shown(motion) else set()
-    return rows | ({0, 1} & set(range(len(lines))) if mode else set())
+    end = len(lines) - 1 if chooser else len(lines)          # past the shafts' lines and the torque note
+    rows = {end} if chooser else set()
+    if end and _torque_note_shown(motion):
+        rows.add(end - 1)
+    return rows | ({0, 1} & set(range(end)) if mode else set())
 
 
 def end_view_readout(view) -> str:
@@ -3536,6 +3540,22 @@ def workbook_part_refusal(path: str, kind: str) -> str:
         raise ValueError(f"A {kind or 'gear'} part is not made from a gearbox workbook, so the strip does not refuse "
                          "it as one.")
     return f"{_file(path)} is a {kind} made from a gearbox workbook; open that workbook to change it."
+
+
+CHOOSER_SHOWS = "The mode chosen here changes only what this window shows"
+
+
+def mode_chooser_note(record=None) -> str:
+    """The grey line at the foot of the Speeds panel whenever the window shows its mode chooser (W8-PLAN J21): the
+    chooser picks which mode's speeds and end view the window shows and never switches SolidWorks. With an assembly
+    on record built with modes (``GearboxRecord.modes``), where the footer tells the user to switch mode in
+    SolidWorks: *The mode chosen here changes only what this window shows; it does not switch the mode SolidWorks
+    shows.* Before that, with nothing in SolidWorks to switch: *The mode chosen here changes only what this window
+    shows.*"""
+    box = getattr(record, "gearbox", None)
+    if box is not None and box.assembly and getattr(box, "modes", None):
+        return f"{CHOOSER_SHOWS}; it does not switch the mode SolidWorks shows."
+    return f"{CHOOSER_SHOWS}."
 
 
 SWITCH_IN_STEP = "Switching mode never by itself puts a dog tooth on tooth."
