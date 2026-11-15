@@ -2406,6 +2406,22 @@ def test_a_mode_renamed_only_in_case_keeps_its_choice(desk):
     save_in_excel(window, {"Modes": {"A5": "4l"}})
     assert chooser(window) == (["2H", "4H", "N", "4l"], "4l")
     assert speed_lines(window)[0] == "4l: Rear 375\u00a0rpm · Front 375\u00a0rpm · 4.000 : 1"
+    assert len(window.mode.trace_info()) == len(window.mode_choosers)   # the old choosers' traces went with them
+
+
+def test_a_segmented_row_destroyed_takes_its_trace_on_the_variable_with_it(desk, tk_callback_exceptions):
+    """W8 review S1: the variable outlives the row (the window's mode chooser is rebuilt over the same ``mode``), so
+    the row removes its trace when destroyed; a trace left behind would paint destroyed cells on the next write,
+    a TclError reported from the Tk callback."""
+    from gear_generator.widgets import Segmented
+    variable = tk.StringVar(desk.root, "a")
+    row = Segmented(desk.root, variable, ("a", "b"))
+    assert len(variable.trace_info()) == 1
+    row.destroy()
+    assert variable.trace_info() == []
+    variable.set("b")
+    desk.root.update_idletasks()
+    assert tk_callback_exceptions == []
 
 
 def test_the_end_view_stands_each_sleeve_on_the_face_of_the_dog_its_mode_engages(desk):

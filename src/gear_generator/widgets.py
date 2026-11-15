@@ -642,8 +642,17 @@ class Segmented(tk.Frame):
                 widget.bind("<Button-1>", lambda _e, v=value: self._choose(v))
             self._cells[value] = (cell, label)
 
-        variable.trace_add("write", lambda *_: self._paint())
+        self._trace: Optional[str] = variable.trace_add("write", lambda *_: self._paint())
         self._paint()
+
+    def destroy(self) -> None:
+        """The trace on the variable goes with the row. The variable can outlive it (the Workbook window rebuilds
+        its mode chooser over the same ``mode``), and a trace left behind would paint destroyed cells on every
+        later write, each a TclError reported from a Tk callback."""
+        trace, self._trace = self._trace, None
+        if trace is not None:
+            self.variable.trace_remove("write", trace)
+        super().destroy()
 
     def _choose(self, value: str) -> None:
         if not self._enabled or value in self._off or self.variable.get() == value:
