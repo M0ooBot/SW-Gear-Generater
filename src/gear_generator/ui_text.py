@@ -3549,7 +3549,10 @@ def planetary_speed_line(shaft: str, motion, *, copies: int = 1, carrier: str = 
 
 TURN_STAYS = "A turn you give the gears in one mode stays in that mode."
 TURN_SHOWS_EVERYWHERE = ("A turn you give the gears in one mode shows in every mode, so a dog can stand across its "
-                         "sleeve in another mode until Update SolidWorks puts the gears back.")
+                         "sleeve in another mode; to put the gears back there, press Update SolidWorks with that mode "
+                         "showing, since an Update pressed in another mode may leave them as they stand.")
+# An Update pressed in a mode whose train is in step, with nothing changed in the workbook, puts nothing and judges
+# no other mode (J25), so TURN_SHOWS_EVERYWHERE promises nothing more than that.
 
 
 def turning_note(positions_per_configuration: Optional[bool]) -> str:
@@ -3947,15 +3950,19 @@ def _mode_after(update, result, *, changed: bool) -> List[str]:
     may have been given in another mode); where it worked and what it showed (W8-INTERFACES §9.11: always, for a
     quiet Update too), *It worked in 4H, the configuration that was active, then showed and checked 2H, N and 4L and
     left the assembly in 4H.* or *It worked in 4H, the configuration that was active; it did not show the other
-    modes, since nothing needed changing.*; after showing others with nothing of the assembly's changed, that
-    SolidWorks marks it modified; and the configurations the app did not make, left alone. A result on a gearbox
-    with modes (``MotionUpdate.configurations``) that names no configuration still says the other modes were not
-    shown: *It worked in the configuration that was active; it did not show the other modes, …*."""
+    modes, since nothing in 4H needed changing.* (the reason is known only for the mode worked in: with shared
+    positions another mode may stand turned, J25); where the running version shares positions and the mode worked in
+    was put, the visited modes found at the built turn when shown (*The gears of 2H, N and 4L stood at the turn they
+    were built at when Update SolidWorks showed them.*: read, never inferred); after showing others with nothing of
+    the assembly's changed, that SolidWorks marks it modified; and the configurations the app did not make, left
+    alone. A result on a gearbox with modes (``MotionUpdate.configurations``) that names no configuration still says
+    the other modes were not shown: *It worked in the configuration that was active; it did not show the other
+    modes, …*."""
     config = getattr(result, "configuration", "")
     if not config:
         if not _configurations_of(update):
             return []
-        since = ", since nothing needed changing" if not changed else ""
+        since = ", since nothing in it needed changing" if not changed else ""
         return [f"It worked in the configuration that was active; it did not show the other modes{since}."]
     out = []
     asm = _file(update.assembly) if getattr(update, "assembly", "") else "the assembly"
@@ -3969,6 +3976,16 @@ def _mode_after(update, result, *, changed: bool) -> List[str]:
                     out.append("This version of SolidWorks shows a turn given in one mode in every mode, so the turn "
                                "may have been given in another.")
     visited = [str(v) for v in getattr(result, "visited", ()) or () if str(v)]
+    if put_here and visited and getattr(result, "positions_per_configuration", None) is False:
+        # Shared positions: a put in one mode moves the others too, so say which visited modes were READ at the
+        # built turn when shown (their ModeCheck: not put there, in step, on their axes, not turned), and no more.
+        put = {str(c).casefold() for c in getattr(result, "put_in", ()) or ()}
+        built = [c.name for c in getattr(result, "modes", ()) or ()
+                 if str(c.name).casefold() != config.casefold() and str(c.name).casefold() not in put
+                 and not c.out_of_step and not c.off_axis and not c.turned]
+        if built:
+            out.append(f"The gears of {_and(built)} stood at the turn they were built at when Update SolidWorks "
+                       f"showed {'it' if len(built) == 1 else 'them'}.")
     if visited:
         out.append(f"It worked in {config}, the configuration that was active, then showed and checked "
                    f"{_and(visited)} and left the assembly in {config}.")
@@ -3976,7 +3993,7 @@ def _mode_after(update, result, *, changed: bool) -> List[str]:
             out.append(f"Showing {'it' if len(visited) == 1 else 'them'} leaves {asm} marked modified in SolidWorks, "
                        "although nothing in it changed.")
     else:
-        since = ", since nothing needed changing" if not changed else ""
+        since = f", since nothing in {config} needed changing" if not changed else ""
         out.append(f"It worked in {config}, the configuration that was active; it did not show the other "
                    f"modes{since}.")
     unread = _senses_unread_sentence(update, result)

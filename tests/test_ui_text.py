@@ -3226,20 +3226,24 @@ def test_the_update_summary_moves_a_slide_in_one_mode_and_switches_a_coupling():
     assert ui_text.update_summary(_tc_update()).startswith("SolidWorks already matches the workbook on record")
 
 
-def test_a_quiet_update_says_where_it_worked_and_that_it_did_not_show_the_other_modes():
-    """§9.11: every quiet Update of a gearbox with modes says it, always."""
-    text, ok = ui_text.gearbox_update_status(_tc_update(), _tc_moved())
+@pytest.mark.parametrize("positions", [True, False, None])
+def test_a_quiet_update_says_where_it_worked_and_that_it_did_not_show_the_other_modes(positions):
+    """§9.11: every quiet Update of a gearbox with modes says it, always. The reason it gives is the one known: the
+    mode it worked in needed nothing (since the review of W8 s2, where a turn showed in every mode, it no longer says
+    "since nothing needed changing" of modes it did not read). The same words whatever the positions switch says."""
+    result = _tc_moved(positions_per_configuration=positions)
+    text, ok = ui_text.gearbox_update_status(_tc_update(), result)
     assert (text, ok) == (
         "SolidWorks already matches the workbook: nothing was changed. It worked in 4H, the configuration that was "
-        "active; it did not show the other modes, since nothing needed changing.", True)
-    assert ui_text.mode_update_lines(_tc_update(), _tc_moved()) == [
-        "It worked in 4H, the configuration that was active; it did not show the other modes, since nothing needed "
-        "changing."]
+        "active; it did not show the other modes, since nothing in 4H needed changing.", True)
+    assert ui_text.mode_update_lines(_tc_update(), result) == [
+        "It worked in 4H, the configuration that was active; it did not show the other modes, since nothing in 4H "
+        "needed changing."]
     assert ui_text.mode_update_lines(_update(), _moved()) == []
     # A result on a gearbox with modes that names no configuration still says the others were not shown.
-    assert ui_text.gearbox_update_status(_tc_update(), _moved()) == (
+    assert ui_text.gearbox_update_status(_tc_update(), _moved(positions_per_configuration=positions)) == (
         "SolidWorks already matches the workbook: nothing was changed. It worked in the configuration that was "
-        "active; it did not show the other modes, since nothing needed changing.", True)
+        "active; it did not show the other modes, since nothing in it needed changing.", True)
 
 
 def test_an_update_that_showed_the_other_modes_says_so_and_that_the_assembly_reads_modified():
@@ -3281,6 +3285,56 @@ def test_a_flag_a_workbook_edit_changes_is_a_switch_not_a_repair():
         ("ModeSlv engages FrontDog", "N")], visited=["2H", "N", "4L"], changed=[TC_ASM])
     lines = ui_text.mode_update_lines(_tc_update(), result)
     assert lines[0] == "Switched the mate ModeSlv engages FrontDog on in N and off in 4H."
+
+
+@pytest.mark.parametrize("positions, said", [
+    (True, "A turn you give the gears in one mode stays in that mode."),
+    (False, "A turn you give the gears in one mode shows in every mode, so a dog can stand across its sleeve in "
+            "another mode; to put the gears back there, press Update SolidWorks with that mode showing, since an "
+            "Update pressed in another mode may leave them as they stand."),
+    (None, ""),
+])
+def test_the_turning_note_promises_only_what_an_update_does(positions, said):
+    """Since the review of W8 s2: an Update pressed in a mode whose train is in step puts nothing and judges no other
+    mode, so the shared-positions note no longer says Update puts the gears back, only where pressing it does."""
+    assert ui_text.turning_note(positions) == said
+    assert ui_text.switching_note(positions) == ("Switching mode never by itself puts a dog tooth on tooth."
+                                                 if positions is True else "")
+
+
+def _put_and_visited(positions, **values):
+    """A quiet Update that found 4H's coupling out of step, put 4H, then showed and checked the others (J13): 2H and N
+    found at the built turn, 4L found with a gear off its axis."""
+    fields = dict(out_of_step=[("RangeSlv", "InDog")], put_in=["4H"], placed=["RangeSlv", "InDog"],
+                  changed=[TC_ASM], visited=["2H", "N", "4L"], positions_per_configuration=positions,
+                  modes=[swbuild.ModeCheck("2H"), swbuild.ModeCheck("N"), swbuild.ModeCheck("4L", off_axis=["FOut"]),
+                         swbuild.ModeCheck("4H", out_of_step=[("RangeSlv", "InDog")])])
+    fields.update(values)
+    return _tc_moved(**fields)
+
+
+@pytest.mark.parametrize("positions", [True, False, None])
+def test_after_a_put_in_the_mode_worked_in_visited_modes_read_at_the_built_turn_are_said_with_shared_positions(
+        positions):
+    lines = ui_text.mode_update_lines(_tc_update(), _put_and_visited(positions))
+    teeth = "In 4H, RangeSlv's teeth stood across InDog's; the gears of 4H are back at the turn they were built at."
+    shared = ("This version of SolidWorks shows a turn given in one mode in every mode, so the turn may have been "
+              "given in another.")
+    built = "The gears of 2H and N stood at the turn they were built at when Update SolidWorks showed them."
+    worked = ("It worked in 4H, the configuration that was active, then showed and checked 2H, N and 4L and left the "
+              "assembly in 4H.")
+    assert lines == ([teeth, shared, built, worked] if positions is False else [teeth, worked])
+
+
+def test_the_visited_modes_at_the_built_turn_are_only_those_read_so():
+    one = ui_text.mode_update_lines(_tc_update(), _put_and_visited(False, modes=[
+        swbuild.ModeCheck("2H"), swbuild.ModeCheck("N", turned=True), swbuild.ModeCheck("4L", out_of_step=[("a", "b")]),
+        swbuild.ModeCheck("4H")]))
+    assert "The gears of 2H stood at the turn they were built at when Update SolidWorks showed it." in one
+    put_too = ui_text.mode_update_lines(_tc_update(), _put_and_visited(False, put_in=["4H", "2H", "N"]))
+    assert not any(line.startswith("The gears of") for line in put_too)        # put there: not a reading of a turn
+    not_put_here = ui_text.mode_update_lines(_tc_update(), _put_and_visited(False, put_in=["2H"]))
+    assert not any(line.startswith("The gears of") for line in not_put_here)   # nothing put in the mode worked in
 
 
 def test_a_coupling_out_of_step_is_said_only_in_the_mode_it_was_found_and_put_in():
@@ -3518,9 +3572,10 @@ def test_gear_mates_whose_turning_no_read_reached_are_named_by_their_gears_and_a
     text, ok = ui_text.gearbox_update_status(_tc_update(), result)
     assert ok and text == (
         "SolidWorks already matches the workbook: nothing was changed. It worked in 2H, the configuration that was "
-        "active; it did not show the other modes, since nothing needed changing. Which way ModeSlv and FrontDog, and "
-        "RangeSlv and LoDog, turn against each other was not checked this time: their mates are switched off in 2H, "
-        "the mode SolidWorks is showing, and are checked when an Update works in a mode that has them on.")
+        "active; it did not show the other modes, since nothing in 2H needed changing. Which way ModeSlv and "
+        "FrontDog, and RangeSlv and LoDog, turn against each other was not checked this time: their mates are "
+        "switched off in 2H, the mode SolidWorks is showing, and are checked when an Update works in a mode that has "
+        "them on.")
     for word in ("engages", "sense", "Reverse", "Flip", "press", "Check:", "error"):
         assert word not in text.split("needed changing. ")[1]
     one = ui_text.mode_update_lines(_tc_update(), _tc_moved(senses_unread=["RangeSlv engages LoDog"]))
