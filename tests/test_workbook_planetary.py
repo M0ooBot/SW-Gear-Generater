@@ -784,3 +784,86 @@ def test_the_results_sheet_gives_each_planet_its_speed_on_its_carrier_and_the_he
                          ["P", -500.0, "clockwise", 0.0, -750.0], ["R", 0.0, "still", "5.7624 held", ""]]
     worked = [r for r in rows if r and r[0] == "Worked out as"][0]
     assert worked[1] == "Planetary, R fixed · 3 planets · 4.000 : 1 · output turns the same way"
+
+
+# -- the round trips on package A's fake: build, drive, update, drive (B's second pass) -----------------------------
+#
+# Every turn pinned below is the plan's hand working (W7-PLAN §4, §6 p3), never the code's: a sign slip in the
+# planned senses reaches the fake's solver as a gear mate made with the wrong Flip and turns the carrier wrong.
+
+def fake_build(spec):
+    from test_swbuild import FakeSolidWorks
+    sw = FakeSolidWorks()
+    plan = gearbox.plan_gearbox(direct(spec), None, exists=sw.exists, read_sidecar=lambda p: None)
+    assert plan.refusal == "", plan.refusal
+    result = swbuild.build_gearbox(sw, **plan.build_kwargs(), exists=sw.exists)
+    assert result.ok, result.log_lines()
+    done = gearbox.finish_build(plan, result, None, workbook=BOOK, digest="d1", written_by="test",
+                                read_sidecar=lambda p: None, exists=sw.exists)
+    return sw, result, store.link_record_from_json(store.link_record_to_json(done.record))
+
+
+def fake_press(sw, record, spec):
+    up = update.classify(record, direct(spec), exists=lambda p: True)
+    assert up.refusal == "" and not up.needs_new_revision, (up.refusal, up.structural)
+    result = swbuild.update_gearbox(sw, **up.update_kwargs(), exists=lambda p: True, mtime=lambda p: 5.0)
+    assert result.failures == [], result.failures
+    done = update.finish_update(up, result, record, digest="d2", read_sidecar=lambda p: None, mtime=lambda p: 5.0)
+    return up, result, store.link_record_from_json(store.link_record_to_json(done.record))
+
+
+def drive(sw, record, gear, degrees):
+    """Drive one gear on the fake and give every body's turn by its id, the carrier by its carrier id, rounded."""
+    names = {c.name: c.gear for c in record.gearbox.components}
+    names.update({c.component: layout_mod.carrier_id(c.shaft) for c in record.gearbox.carriers})
+    turns = sw.drive(next(n for n, g in names.items() if g == gear), float(degrees))
+    out = {names[n]: round(t, 6) for n, t in turns.items() if n in names}
+    return {g: t for g, t in out.items() if t != 0.0}
+
+
+COPIES = ("Planet copy 1", "Planet copy 2", "Planet copy 3")
+
+
+@pytest.mark.parametrize("make, gear, turns", [
+    (planetary_4to1, "Sun", dict({"Sun": 30.0, "C carrier": 7.5, "CarrierGear": 7.5}, **{c: -15.0 for c in COPIES})),
+    (sun_held, "Ring", dict({"Ring": 30.0, "C carrier": 22.5, "CarrierGear": 22.5}, **{c: 45.0 for c in COPIES})),
+    (on_z_minus, "Sun", dict({"Sun": 30.0, "C carrier": 7.5, "CarrierGear": 7.5}, **{c: -15.0 for c in COPIES})),
+    (carrier_held, "Sun", dict({"Sun": 30.0, "Ring": -10.0}, **{c: -30.0 for c in COPIES})),
+])
+def test_each_fixture_builds_on_the_fake_and_turns_as_worked_by_hand(make, gear, turns):
+    """§4.1-§4.4: a 30° drive of the input; the held member and anything held with it stay at 0."""
+    sw, result, record = fake_build(make())
+    assert drive(sw, record, gear, 30.0) == pytest.approx(turns)      # first: the drive alone catches a sign slip
+    assert {m.name: m.sense for m in record.gearbox.mates if m.kind == "mesh"} == {
+        "Sun meshes Planet copy 1": 1, "Sun meshes Planet copy 2": 1, "Sun meshes Planet copy 3": 1,
+        "Planet copy 1 meshes Ring": -1}
+
+
+def test_the_ring_mate_is_read_back_and_turned_round_on_the_fake_as_the_spike_found():
+    sw, result, record = fake_build(planetary_4to1())
+    assert result.assembly.turned_round == ["Planet copy 1 meshes Ring"]
+    assert sw.turns_right("Planet copy 1 meshes Ring", record.gearbox.assembly)
+
+
+@pytest.mark.parametrize("change, turns", [
+    (dict(), dict({"Sun": 30.0, "C carrier": 7.5, "CarrierGear": 7.5}, **{c: -15.0 for c in COPIES})),
+    # §6 p3 (3): Sun 21, Ring 57, P's X 19.5 → 3.714 : 1, carrier +8.0769°, each copy −17.5° for +30° on the sun.
+    (dict(shafts={"P": dict(x="19.5")}, gears={"Sun": dict(teeth="21"), "Ring": dict(teeth="57")}),
+     dict({"Sun": 30.0, "C carrier": 8.076923, "CarrierGear": 8.076923}, **{c: -17.5 for c in COPIES})),
+    (dict(gears={"Planet": dict(at="12")}), dict({"Sun": 30.0, "C carrier": 7.5, "CarrierGear": 7.5},
+                                                 **{c: -15.0 for c in COPIES})),
+    (dict(gears={"Ring": dict(at="12")}), dict({"Sun": 30.0, "C carrier": 7.5, "CarrierGear": 7.5},
+                                               **{c: -15.0 for c in COPIES})),
+])
+def test_an_update_on_the_fake_leaves_the_train_turning_as_worked_by_hand(change, turns):
+    sw, _, record = fake_build(planetary_4to1())
+    spec = edited(planetary_4to1(), **change)
+    up, result, after = fake_press(sw, record, spec)
+    again = update.classify(after, direct(spec), exists=lambda p: True)
+    assert (again.structural, again.ratios, again.axial, again.replaced, again.carriers_moved) == ((), (), (), (), ())
+    assert drive(sw, after, "Sun", 30.0) == pytest.approx(turns)
+    if change.get("gears", {}).get("Ring", {}).get("at"):
+        assert result.placed[0] == "Ring"                      # the held member re-placed first (M1)
+    if up.ratios:
+        assert {m.name: (m.ratio, m.sense) for m in after.gearbox.mates if m.kind == "mesh"}[
+            "Planet copy 1 meshes Ring"] == ([18, 57], -1)
