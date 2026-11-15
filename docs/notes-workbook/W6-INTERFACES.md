@@ -254,3 +254,16 @@ binding on A, B and C from now; where one names a line number it is the line at 
 16. **`line_axis` draws with `CreateLine` given three coordinates** inside the 3D sketch, the member the app already
     draws every sketch with, not the `CreateLine2` W6-PLAN §4.2 names from the macro database, where it is
     unverified. It has no finding gate: the plan rules it is not probed ahead, and the first full build shows it.
+17. **What the review of A's first pass left to the demonstration** (2026-11-14; no must-fix). Three things no probe
+    has shown are not gated on findings of their own; the full build shows them, as the rule of 2026-11-14 has it,
+    and a failure there is fixed then: (a) a turned gear mate made again at a new ratio by Update and read back
+    (tier 9 did not cover it; it rests on W5's parallel `GEAR_MATE_READ_BACK_HOLDS_AFTER_A_RATIO_REMAKE` until E's
+    tooth-change sections run on both fixtures); (b) the sense read of a turned mate marking no document (measured
+    on parallel mates only; E's quiet Update on a turned gearbox reads every save flag); (c) turned gear mates on
+    SolidWorks 2024, where tier 9 did not run and W5 found rings to store their sense differently — the app assumes
+    no Flip on either version, and 2024's confirming run includes both turned fixtures with their both-Flips
+    controls. Nothing gates a turned mesh by version.
+18. **The fake is told the truth by hand in the fixture tests.** On a turned mesh the fake learns the mesh's sense
+    from its first caller unless a test sets `turned_senses`, so a sign slip shared by Build and Update (one coming
+    from planning's `mate_senses`) passes every test of A's. A sets `turned_senses` in the two fixtures' tests from
+    values worked by hand from the contact, and pins a drive for fixture B as fixture A's is pinned.
