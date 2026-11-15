@@ -71,6 +71,8 @@ ON_AXIS = "S on A Axis"
 TOLERANCE_MM = 1e-6
 SPECIFIED = 3                            # swInConfigurationOpts_e.swSpecifyConfiguration (findings.SPECIFY_CONFIGURATIONS)
 DOCUMENT_ORDER, ORDER_PASSED, EITHER, NEITHER = "document order", "order passed", "either", "neither"
+#: What showing a configuration whose mates fight did, when it did what tier 11's second run saw (``show_over_defined``).
+SHOWN_IN_ERROR = "shown; no window asks; its mates read in error; others solve after"
 
 
 # -- pure -----------------------------------------------------------------------------------------------------------
@@ -156,12 +158,28 @@ def fight_reading(facts: Mapping[str, Any], key: str) -> Dict[str, Any]:
         "active_is_target": into.get("active") == target,
         "windows": [(w.get("call"), w.get("class"), w.get("title")) for s in (into, after, fight.get("again") or {}, back)
                     for w in windows_of(s)],
+        "windows_answered": [(w.get("call"), w.get("class"), w.get("answered"))
+                             for s in (into, after, fight.get("again") or {}, back) for w in windows_of(s)
+                             if w.get("answered")],
         "mates_in_error": sorted((into.get("errors_on") or {}).keys()),
         "over_defined": sorted(k for k, v in (into.get("constrained") or {}).items() if v == 4),
         "app_problems": list(into.get("app_problems") or []),
         "other_clean": clean(after, fight.get("other_at", float("nan"))) and after.get("active") == other,
         "back_clean": clean(back, fight.get("back_at", float("nan"))) and back.get("active") == target,
     }
+
+
+def show_over_defined(reading: Mapping[str, Any]) -> Optional[str]:
+    """``SHOWN_IN_ERROR`` when a fight's reading (``fight_reading``) is what tier 11's second run saw for two slides on
+    one sleeve: the show answered True and the configuration read back active; no window the watch had to answer
+    (one that showed and went by itself is allowed); at least one mate in error and the app's mate check saying so;
+    the configuration shown after it clean; the fighting configuration clean once the added mate was suppressed.
+    Else None."""
+    if (reading.get("show_returned") is True and reading.get("active_is_target") and
+            not reading.get("windows_answered") and reading.get("mates_in_error") and reading.get("app_problems") and
+            reading.get("other_clean") and reading.get("back_clean")):
+        return SHOWN_IN_ERROR
+    return None
 
 
 # -- the watch ------------------------------------------------------------------------------------------------------

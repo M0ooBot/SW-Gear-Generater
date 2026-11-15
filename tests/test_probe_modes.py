@@ -90,5 +90,11 @@ def test_a_fights_reading_names_what_the_show_into_it_and_after_it_read():
     assert reading == {"show_returned": True, "active_is_target": True, "windows": [("show Z", "#32770", "")],
                        "mates_in_error": ["S slide", "S slide 2"], "over_defined": ["S"],
                        "app_problems": ["The mate S slide is in error in SolidWorks."], "other_clean": True,
-                       "back_clean": True}
+                       "back_clean": True, "windows_answered": []}
     assert p11.fight_reading({}, "slides")["show_returned"] is None
+    assert p11.show_over_defined(reading) == p11.SHOWN_IN_ERROR
+    into["show"]["windows"][0]["answered"] = ["WM_CLOSE at 5.0 s"]
+    assert p11.fight_reading(facts, "slides")["windows_answered"] == [("show Z", "#32770", ["WM_CLOSE at 5.0 s"])]
+    assert p11.show_over_defined(p11.fight_reading(facts, "slides")) is None
+    assert p11.show_over_defined(dict(reading, mates_in_error=[])) is None
+    assert p11.show_over_defined(dict(reading, other_clean=False)) is None
