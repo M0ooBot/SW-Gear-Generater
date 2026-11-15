@@ -584,8 +584,13 @@ class FakeSolidWorks:
         self._log("place_component", handle)
         if getattr(findings, "PUT_MARKS_ASSEMBLY_MODIFIED", False):
             self._touch()
-        put = (tuple(rotation), tuple(at))
+        put = asked = (tuple(rotation), tuple(at))
         name = self._name2(handle)
+        bodies, geared = self._planetary()
+        if name in bodies and geared:
+            # Probe planetary_put_back (SolidWorks 2026): a put of a member of a train with a carrier, while that
+            # train's gear mates are on, does not hold: the solver pulls it back (the carrier read 6.2° short).
+            put = (_mul(put[0], _rot_z(-6.2)), put[1])
         if any(m.kind == "lock" and not m.suppressed and name in (m.a[0], m.b[0]) for m in self.mates):
             self.locked_puts.append(name)          # held, its partner left where it was, nothing reported
         self.frames[handle] = put
@@ -595,10 +600,27 @@ class FakeSolidWorks:
         self._rebuilt(kind)            # Session.place_component's rebuild of its own, after the put
         if self.mates:
             # Session.place_component reads the frame back after that rebuild.
-            rotation_off, origin_off = _frame_off(self.frames[name], put)
+            rotation_off, origin_off = _frame_off(self.frames[name], asked)
             if rotation_off > 1e-6 or origin_off > 1e-6:
                 raise SolidWorksError(f"{name} did not take its frame (rotation off {rotation_off:.1e}, origin "
                                       f"{origin_off:.1e} mm).")
+
+    def _planetary(self):
+        """(every body of a train with a carrier — the carriers, their riders and all gear- or lock-mated to them,
+        whatever is suppressed — and whether any gear mate among them is on)."""
+        carriers = {self._carrier_target(m) for m in self.mates if m.axis and self._carrier_target(m)}
+        if not carriers:
+            return set(), False
+        bodies = set(carriers) | {m.a[0] for m in self.mates if m.axis and self._carrier_target(m)}
+        grown = True
+        while grown:
+            grown = False
+            for m in self.mates:
+                if m.kind in ("gear", "lock") and (m.a[0] in bodies) != (m.b[0] in bodies):
+                    bodies |= {m.a[0], m.b[0]}
+                    grown = True
+        geared = any(m.kind == "gear" and not m.suppressed and m.a[0] in bodies for m in self.mates)
+        return bodies, geared
 
     def interference_count(self):
         self._log("interference_count")
@@ -6500,7 +6522,8 @@ def test_a_slider_off_its_place_in_a_mode_is_named_as_the_workbook_spells_it(mod
 
 # -- W8-INTERFACES §9.16: every gear mate's sense read in some mode, or said unread
 
-def test_a_quiet_update_lists_the_senses_it_could_not_read_without_a_show(tc_built):
+def test_a_quiet_update_lists_the_senses_it_could_not_read_without_a_show(tc_built, monkeypatch):
+    monkeypatch.setattr(findings, "SUPPRESSED_GEAR_MATE_SENSE_READ", None, raising=False)
     fake, built = tc_built
     done = _tc_update(fake, built)
     assert done.ok, done.log_lines()
@@ -6525,7 +6548,8 @@ def test_an_update_that_shows_every_mode_reads_every_sense_there(tc_built):
     assert done.ok and done.senses_unread == [], done.log_lines()
 
 
-def test_a_sense_read_wrong_in_a_mode_shown_is_a_failure_naming_the_mate_and_the_mode(tc_built):
+def test_a_sense_read_wrong_in_a_mode_shown_is_a_failure_naming_the_mate_and_the_mode(tc_built, monkeypatch):
+    monkeypatch.setattr(findings, "SUPPRESSED_GEAR_MATE_SENSE_READ", None, raising=False)
     fake, built = tc_built
     fake.never_right = {"RangeSlv engages LoDog"}
     fake.mate("ModeSlv engages FrontDog").flags["4H"] = True
@@ -6533,6 +6557,19 @@ def test_a_sense_read_wrong_in_a_mode_shown_is_a_failure_naming_the_mate_and_the
     assert (TC_ASM.rsplit("\\", 1)[-1], "In mode 4L, the gear mate RangeSlv engages LoDog turns its gears against the "
                                        "way they mesh.") in done.failures
     assert "remake_gear_mate" not in names(fake) and fake.config == "2H"
+
+
+def test_with_suppressed_senses_readable_a_sense_read_wrong_off_here_refuses_before_anything_changes(tc_built,
+                                                                                                    monkeypatch):
+    monkeypatch.setattr(findings, "SUPPRESSED_GEAR_MATE_SENSE_READ", "answers, marks nothing", raising=False)
+    fake, built = tc_built
+    fake.never_right = {"RangeSlv engages LoDog"}
+    with pytest.raises(swbuild.BuildError) as raised:
+        _tc_update(fake, built)
+    assert str(raised.value) == ("The gear mate RangeSlv engages LoDog in TransferCase.SLDASM turns its gears against "
+                                 "each other, and making a gear mate of a gearbox with modes again is not in this "
+                                 "version of Gear Generator, so nothing is changed; build the gearbox again.")
+    assert not [n for n, _ in fake.calls if n.startswith("set_") or n == "show_configuration"]
 
 
 def test_a_coupling_on_record_with_no_mesh_is_a_fault_refused_before_anything_changes(tc_built):
@@ -6570,3 +6607,63 @@ def test_an_update_with_modes_needs_the_collinear_read_back_settled(mode_finding
     assert str(raised.value) == ("Update SolidWorks on a gearbox with modes needs findings."
                                  "COLLINEAR_GEAR_MATE_SENSE_READ_BACK settled on SolidWorks (it is None), so nothing "
                                  "was read or changed.")
+
+
+# -- W7: a turned planetary put back with its gear mates off (probe planetary_put_back, PLANETARY_PUT_ROUTE) ----------
+
+def _planetary_turned_and_pressed(monkeypatch, route):
+    """E's failing case: Planetary_4to1 planned, built on the fake and recorded; the sun driven +37°; Update pressed
+    with the Planet's At changed."""
+    from gear_generator import store
+    from gear_generator.workbook import gearbox, update
+    from test_workbook_planetary import BOOK, direct, edited, planetary_4to1
+    monkeypatch.setattr(findings, "PLANETARY_PUT_ROUTE", route, raising=False)
+    sw = FakeSolidWorks()
+    plan = gearbox.plan_gearbox(direct(planetary_4to1()), None, exists=sw.exists, read_sidecar=lambda _p: None)
+    built = swbuild.build_gearbox(sw, **plan.build_kwargs(), exists=sw.exists)
+    assert built.ok, built.log_lines()
+    done = gearbox.finish_build(plan, built, None, workbook=BOOK, digest="d1", written_by="test",
+                                read_sidecar=lambda _p: None, exists=sw.exists)
+    record = store.link_record_from_json(store.link_record_to_json(done.record))
+    names = {c.gear: c.name for c in record.gearbox.components}
+    sw.drive(names["Sun"], 37.0)
+    pressed = update.classify(record, direct(edited(planetary_4to1(), gears={"Planet": dict(at="12")})),
+                              exists=lambda _p: True)
+    assert pressed.refusal == "" and not pressed.needs_new_revision, (pressed.refusal, pressed.structural)
+    sw.calls.clear()
+    return sw, pressed, names
+
+
+def test_a_turned_planetary_is_put_back_with_its_gear_mates_off_and_every_frame_holds(turned_findings, monkeypatch):
+    sw, pressed, names = _planetary_turned_and_pressed(monkeypatch, "gear mates off around the puts")
+    result = swbuild.update_gearbox(sw, **pressed.update_kwargs(), exists=lambda _p: True, mtime=lambda _p: 5.0)
+    assert result.failures == [], result.failures
+    assert result.restored and result.placed[0] == "C carrier", (result.restored, result.placed)
+    kwargs = pressed.update_kwargs()
+    for placement in kwargs["placements"]:
+        rotation, at = sw.frames[placement.component]
+        assert swbuild.same_frame(rotation, at, placement.rotation, placement.at, placement.pitch), placement.gear
+    off = [a[0] for n, a in sw.calls if n == "set_mate_suppressed" and a[1] is True]
+    first_put = [n for n, _ in sw.calls].index("place_component")
+    assert off and all(i < first_put for i, (n, a) in enumerate(sw.calls) if n == "set_mate_suppressed" and a[1])
+    assert all(not m.suppressed for m in sw.mates)                       # every gear mate and lock back on
+
+
+def test_a_turned_planetary_is_refused_before_anything_changes_while_the_put_route_is_unset(turned_findings,
+                                                                                            monkeypatch):
+    sw, pressed, _ = _planetary_turned_and_pressed(monkeypatch, None)
+    with pytest.raises(swbuild.BuildError) as raised:
+        swbuild.update_gearbox(sw, **pressed.update_kwargs(), exists=lambda _p: True, mtime=lambda _p: 5.0)
+    assert str(raised.value) == ("Putting a turned planetary stage back has not been settled on SolidWorks (findings."
+                                 "PLANETARY_PUT_ROUTE is None), so nothing is changed; run probe planetary_put_back "
+                                 "first.")
+    assert not [n for n, _ in sw.calls if n in ("place_component", "set_mate_suppressed", "set_global_variable",
+                                                "open_document")]
+
+
+def test_with_its_gear_mates_on_a_planetary_put_does_not_hold_in_the_fake(turned_findings, monkeypatch):
+    """The fake as SolidWorks was: the app's earlier route (carrier first, gear mates on) reads back short."""
+    sw, pressed, names = _planetary_turned_and_pressed(monkeypatch, "gear mates off around the puts")
+    carrier = "carrier1-1"
+    with pytest.raises(SolidWorksError, match="did not take its frame"):
+        sw.place_component(carrier, IDENTITY9, sw.frames[carrier][1], kind=swcom.ASSEMBLY_TRAIN)

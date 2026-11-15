@@ -3097,6 +3097,7 @@ def _carrier_phrase(plans: Sequence[BuildPlan]) -> str:
 
 
 REPLACE_ROUTES = ("Transform2 put", "UnfixComponent, Transform2 put, FixComponent")   # REPLACE_FIXED_ROUTE
+PLANETARY_PUT_ROUTE = "gear mates off around the puts"      # the one findings.PLANETARY_PUT_ROUTE this code puts by
 
 
 @dataclass
@@ -4382,6 +4383,11 @@ def _update_motion(sw: SolidWorks, parts: Sequence[DocumentValues], layout: Opti
     _assembly_rebuild_gate(ASSEMBLY_TRAIN)
     _train_gate()
     _motion_gate(motion)
+    put_route = getattr(findings, "PLANETARY_PUT_ROUTE", None)
+    if motion.carriers and put_route != PLANETARY_PUT_ROUTE:
+        raise BuildError(f"Putting a turned planetary stage back has not been settled on SolidWorks (findings."
+                         f"PLANETARY_PUT_ROUTE is {put_route!r}), so nothing is changed; run probe planetary_put_back "
+                         "first.")
     for path in paths:
         if not exists(path):
             raise BuildError(f"{path} is no longer there, so Update SolidWorks cannot change it: it was moved, "
@@ -4868,24 +4874,37 @@ def _put_train(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, trai
     is not where it belongs (whole pitches allowed) re-placed FIRST, by ``findings.REPLACE_FIXED_ROUTE`` as a fixed
     gear is; then each carrier; then every other gear, its planets among them. A carrier's lock to the gear on its
     own shaft is one of the train's locks, so it is off around the puts and that gear is put to its own wanted
-    frame. What this relies on, which no probe has shown (the spike drove, it did not put): a put of a carrier holds
-    with its planets' axis mates on, and a planet put to its frame on the carrier's axis, once the carrier stands
-    at its own, holds; ``place_component`` reads each frame back, and the post-check reads every frame again, so a
-    put that does not hold is a sentence. A lock that will not come back on is a failure naming the compound
-    gears, and stops the job (:class:`_LocksLeftOff`); what raised inside is raised again once the locks are tried.
+    frame. A train WITH a carrier is put by ``findings.PLANETARY_PUT_ROUTE`` ("gear mates off around the puts", probe
+    planetary_put_back on SolidWorks 2026): with the gear mates on, a carrier put first read back 6.2° short, as did
+    the sun alone first and every put before one rebuild; what held, to 2e-9 mm, is every gear mate of the train
+    suppressed with its locks, a rebuild, the puts in the order above (each read back by ``place_component``), a
+    rebuild, every gear mate and lock turned back on, a rebuild — the gear mates keeping their ratio and sense
+    (``GEAR_MATE_BACK_ON_KEEPS_SENSE_AND_RATIO``) — and here each gear mate's sense read again after (``settle``). A
+    ratio remade inside it (a tooth change on a planetary, not covered by the probe) is remade after the
+    suppression and its rebuild, read for sense, and suppressed again before the puts. A train with no carrier is
+    put as before, its gear mates on. A lock or gear mate that will not come back on is a failure naming it, and
+    stops the job (:class:`_LocksLeftOff`); what raised inside is raised again once they are tried.
 
     A lock counts as tried the moment its suppression is asked for, so one whose suppression took before the call
     raised (a read-back that failed) is still turned back on. Turning back on, each lock is read first and one that
     reads not suppressed is skipped, never called: unsuppressing a lock that is on marks the assembly modified
     (probe round P0c, ``findings.UNSUPPRESS_ON_LOCK_ALREADY_ON_MARKS_MODIFIED``)."""
     off: List[LockLink] = []
+    gear_off: List[str] = []                 # a train with a carrier: its gear mates, off around the puts
     pending: Optional[BaseException] = None
     try:
         for lock in locks:
             off.append(lock)
             touched[0] = True
             sw.set_mate_suppressed(mate_handle[_lock_mate_name(motion, lock)], True)
-        if off:
+        if carriers:
+            for mate in motion.mates:
+                if mate.kind in GEAR_MATE_KINDS and len(mate.gears) == 2 and all(g in train for g in mate.gears) \
+                        and mate.name in mate_handle:
+                    gear_off.append(mate.name)
+                    touched[0] = True
+                    sw.set_mate_suppressed(mate_handle[mate.name], True)
+        if off or gear_off:
             rebuild()
         for name, numerator, denominator in ratios:
             a, b = next(m.gears for m in motion.mates if m.name == name)
@@ -4911,6 +4930,11 @@ def _put_train(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, trai
                 result.resensed.append(name)
             elif name in sense_wrong:
                 result.sense_found_wrong.append(name)
+        remade_off = [name for name, _, _ in ratios if name in gear_off]
+        for name in remade_off:                       # made again on: off again before the puts
+            sw.set_mate_suppressed(mate_handle[name], True)
+        if remade_off:
+            rebuild()
         unfix = route == REPLACE_ROUTES[1]
         for gear in [g for g in train if g in held]:
             frame = (live or {}).get(gear)
@@ -4933,7 +4957,7 @@ def _put_train(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, trai
         pending = exc
     left_off = False
     states: Optional[Dict[str, MateState]] = None
-    if off:
+    if off or gear_off:
         try:
             states = {state.name: state for state in sw.mate_states()}
         except Exception:  # noqa: BLE001 - unread: each lock is turned back on, as if it read suppressed
@@ -4950,7 +4974,17 @@ def _put_train(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, trai
             result.failures.append((file, f"The compound gears {lock.anchor} and {lock.follower} are not locked: "
                                           f"SolidWorks would not turn {name} back on ({said}); press Update "
                                           "SolidWorks again, which turns it back on."))
-    if off:
+    for name in gear_off:
+        if states is not None and name in states and not states[name].suppressed:
+            continue
+        try:
+            sw.set_mate_suppressed(mate_handle[name], False)
+        except Exception as exc:  # noqa: BLE001 - said, never lost
+            left_off = True
+            result.failures.append((file, f"The gear mate {name} is left suppressed: SolidWorks would not turn it "
+                                          f"back on ({_said(exc).rstrip('.')}); press Update SolidWorks again, which "
+                                          "turns it back on."))
+    if off or gear_off:
         try:
             rebuild()
         except Exception as exc:  # noqa: BLE001 - kept when something else is already on its way out
@@ -4961,3 +4995,13 @@ def _put_train(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, trai
         raise pending
     if left_off:
         raise _LocksLeftOff()
+    if gear_off and settle is not None:
+        # Each gear mate turned back on read for sense, by the same path as a remade one (wrong: made again with
+        # the other Flip, read again; wrong again stops the job).
+        for name in gear_off:
+            if any(n == name for n, _, _ in ratios):
+                continue                              # read when it was remade
+            a, b = next(m.gears for m in motion.mates if m.name == name)
+            live = sw.gear_mate_ratio(mate_handle[name])
+            settle(name, f"{handle[a]}:{AXIS_NAME}", f"{handle[b]}:{AXIS_NAME}",
+                   (int(round(float(live[0]))), int(round(float(live[1])))))
