@@ -353,6 +353,72 @@ the person's drag of fixture A's input (W6-PLAN §6.1's last paragraph).
 - The end view's readout still names the face heights (`z 5 · z 60`); for a gear on a turned shaft that is the height
   of its At point (a bevel's apex), which is what colours a right-angle stage as one.
 
+## W7 in detail
+
+*Written 2026-11-14, while packages A and B land their passes.* The
+authority order is `PLAN-WORKBOOK.md` → `W5-DECISIONS.md` → `notes-workbook/W7-PLAN.md` (revised after its review
+`W7-PLAN-REVIEW.md`, `939b726`, and the spike `W7-SPIKE.md`, `8a798fe`; its §10 lists every change, "After the W8
+check" included) → `W7-INTERFACES.md`, whose §6 holds the rulings on the interface review that bind the packages.
+
+**The user's decision, taken before W7:** a carrier is built as **a skeleton only** — a part of axes and planes with
+no solid, as the layout part is, free to turn about its own shaft's axis, each planet mated to an axis in it. The app
+makes no plate and no pins: that geometry depends on the gearbox at hand and is left to the user.
+
+**What W7 adds.** One simple planetary stage per workbook: a sun, a ring and a spur planet gear on a planet shaft
+`Mounted on` a carrier, with any number of `Copies`, every shaft of the stage along Z+ or Z− facing the carrier's way,
+exactly one member held; beside it, W5's trains, other frame shafts on the carrier's axis, and gears on the
+carrier's own shaft locked to it (J8, which W8's transfer case needs). Copies placed in the carrier's frame (J4) and
+phased so every copy meshes at once; the assembly condition and the room round the carrier as errors; speeds with the
+carrier term and torques with the held member's reaction; the carrier part (`<Name>_<C>_Carrier`); the gear mates by
+rank (J5: a sun mate per copy and one ring mate); Update's puts held member first, carrier next (J15); schema 5. The
+readings J1–J20 as revised are in PLAN-WORKBOOK §4.5, *Readings chosen (W7)*, with notes under §3.3, §3.5 and §4.2.
+Everything else that reads as a planetary is **refused as an error of the workbook** at its cell: a differential, a
+compound or double planet, a gear on the carrier that meshes, a helical planetary, members facing different ways, a
+carrier on a carrier or off Z±, a second carrier — each listed for the user as something a later pass could open.
+
+**The spike** (`w7_planetary_spike` in `probe/p8_motion.py`, results `probe/results/w7-spike-20261114-192709.*`, on
+SolidWorks 2026 only): a gear mate between a carrier-borne axis and another turns its gears relative to the line
+between their axes, so in a planetary relative to the carrier; the plan's mates turned the 4 : 1 right (sun 30°,
+carrier 7.5°, each planet −15°, ring still, no interference); the ring mate read back wrong with Flip False and right
+remade. The first draft's kinematic fallback turned the planets wrong and is gone. **That is all W7 has shown on
+SolidWorks: no W7 code has run there yet.**
+
+**Interface commit** `5d5d51d`, its review's rulings `abca489`, `541585b`. The packages so far:
+
+- **A — SolidWorks** (`swcom.py`, `swbuild.py`, the fake): `75d089b` (the carrier part built and updated; a planetary
+  train put back in order), `f1395ae` (a held gear joined by its gear mates; the stages the drive had not covered).
+  Its review is running.
+- **B — planning** (`workbook/`): `366ff42` (lay out, solve and check a stage), `5146b75` (the carrier part, mates and
+  build; the carrier on record), `42fbe29` (Update's classification of a stage), `4700a3e` (the Results sheet: a
+  planet's speed on its carrier, a held member's torque), `a22369f` (every fixture driven on the fake after its build
+  and each Update). Still landing passes; its review is running.
+- **C — record and sentences** (`store.py`, `ui_text.py`): `efe47a2` (schema 5's refusals), `f81fec5` (the carrier id
+  suffix in the store), `0e8df59` (a stage's words: carrier, copies, speeds), `ff57941` (the refusals whole, with
+  Build parts offered), `60f2fbe` (a carrier part's moved planets after Update), `cc106e5` (the review's points on the
+  record and the Speeds panel).
+- **D — window, boards, docs**: `c37c1e7` (the later-phase tests re-pinned to W8's rows; a carrier builds),
+  `bac9eef` (the end view's carrier circle through its planets, the torque note in prose, the window tests of every
+  fixture), `d650e0f` (boards `WorkbookPlanetary`, `WorkbookPlanetaryCopies`), and these notes.
+
+**The fixtures** (W7-PLAN §4), as B's `tests/test_workbook_planetary.py` writes them: `Planetary_4to1` (the ring
+held, sun in at 1000 rpm, carrier out, three copies, `CarrierGear` on the carrier: 4.000 : 1), the sun held (1.333 :
+1), the stage on Z−, the carrier held (3.000 : 1, the other way). E commits `Planetary_4to1.xlsx`
+as Excel saves it, under `tests/fixtures/excel-windows/`.
+
+**What the demonstration (package E) still has to show** (W7-PLAN §6), on SolidWorks 2026 with the committed findings
+and then one confirming build on 2024: the 4 : 1 built through the app, its mates as J5 makes them read back and
+driven (carrier +7.5° for the sun's +30°, CarrierGear with the carrier, the unmated ring meshes in step); the sun
+held, the carrier held, the stage on Z−, Copies 4; Update's values (Sun 21, Ring 57, P X 19.5), moves and puts after a
+turn by hand (held member first, then the carrier); and the window run through these states. Then J20's finding
+`PLANET_GEAR_MATE_ROUTE` is committed with that evidence. One STOP stands: if 2024 turns the planetary otherwise than
+2026 and no read-back remake puts it right, the user is asked.
+
+**Open:**
+
+- A's and B's reviews, and B's further passes; a shape may still move.
+- In the end view, coaxial shafts share a cross named in the order their gears come on the Gears sheet (`S, R, C`
+  for the 4 : 1), not the Shafts sheet's order.
+
 ## Questions waiting for the user
 
 Questions 1 to 5 of 2026-11-14 are answered (`notes-workbook/W5-DECISIONS.md`; PLAN-WORKBOOK §4.5, *Readings chosen

@@ -246,6 +246,14 @@ Every item keeps its sheet row, so every diagnostic names a cell: *"Gears!F4: Te
   outline as the part's build plan sweeps it, read from the plan's own ops, not from `geometry`. The pair
   assemblies (`pair.assembly_plan`) never used either and are unchanged.
 
+  *Planetary stages (W7, 2026-11-14; `notes-workbook/W7-PLAN.md` §2.1–§2.4, reading J4):* a planet shaft's X, Y, Z
+  and Axis are read in its carrier's own frame at the carrier's starting turn (`p_c + F·(x, y, z)`, `F` the
+  carrier's `base_frame`; a blank Axis is the carrier's own +Z). Copy k of a shaft with Copies N stands at copy 1
+  turned `(k − 1)·360/N` degrees about the carrier's +Z, and copy k of gear `Planet` is `Planet copy k` (one part
+  file, N components). The meshes are expanded copy by copy, and each copy and the ring are phased so their teeth
+  mesh at every copy at once; a loop that does not close is the assembly condition failing, `(z_s + z_r)/N` not a
+  whole number, an error at the planet shaft's Copies cell, as is copies that do not fit round the carrier.
+
 ### 3.4 `checks.py` — `check(spec) -> List[Diagnostic]`
 
 Each gear's own `kind_for(spec).validate` (so every rule the strip enforces holds). `kind_for` returns None for
@@ -285,6 +293,14 @@ gears on shafts `p`, `q` whose axes are carried by shaft `c` (`frame` → 0):
 - **Results.** The column "Turns, seen from +Z" uses ω̃ against +Z.
 - **Torque** is limited to parallel trains in W3, where it is `T · i · η` per stage along the power path. Loops
   wait for W7.
+
+*Planetary stages (W7, 2026-11-14; W7-PLAN §2.5, readings J10 and J18):* the mesh equation above with its carrier
+term is the stage's Willis relation, solved in the same exact system; a planet's speed is given about its own axis
+and, beside it, relative to its carrier. Torque through a stage is the textbook one: one member held, the
+basic-train efficiency (the product of the stage's mesh efficiencies) on the sun–ring path, joined to W3's walk
+along the rest of the train; the held member's reaction is reported as *held* (the 4 : 1: S 2.00, C 7.76, R held
+5.76 N·m). A stage with no member held (a differential) has its torque left unsaid with a sentence, and is not built
+(§4.5, *Readings chosen (W7)*).
 
 Results are pinned for the 12 : 1 example: S1 1500 / 10.00, S2 −375 / 39.20, S3 125 / 115.25. They are
 **checked by an independent subagent from the problem statement alone** before the test is committed.
@@ -350,6 +366,14 @@ stays put, so a coordinate that changes side, or reaches or leaves 0, is structu
 plane is linked to the global as `- "S2 X"`. Components are not renamed: the record maps each gear to the
 `Name2` SolidWorks gave it (`Gear_m1.5_N68-1`), and they are found again by that. A revision's files are
 `<Name>_r<n>_Layout.SLDPRT` beside `<Name>_r<n>.SLDASM`.
+
+*Carriers (W7, 2026-11-14; W7-PLAN §2.6, readings J1 and J2):* a carrier is a frame shaft, so its `"C Axis"` is in the
+layout part as any shaft's; mounted shafts are not. Each carrier also gets a part of its own,
+`<Name>_<Carrier>_Carrier.SLDPRT`, made the way the layout part is: `"C Axis"` through the base planes, and per
+planet copy the planes offset from Right and Top by the copy's offsets in the carrier's own coordinates and
+`"P copy 2 Axis"` through them, driven by literal globals the app works out (`"P copy 2 X"`, `"P copy 2 Y"`), which
+Update sets. No plate and no pins: that is the user's answer (below). Its origin sits on the layout's Front plane,
+on the carrier's axis.
 
 *Turned axes (W6, 2026-11-14; `notes-workbook/W6-PLAN.md` §2.1–§2.2 and §2.6, decisions D3–D5b):* the paragraph
 above left X, Y and slanted axes to W6, and W6 lays them out without an angled plane. A shaft along X± or Y± is
@@ -512,6 +536,48 @@ overrule — D1, D4 and D16 first.
   remake, W5's route), not a new revision.
 - **D18 — the turned finding covers only the angles probed**: 30°–150° between the own axes for axes that meet
   (bevel), 60°–120° for axes that pass each other (crossed); other angles are refused (D16).
+
+*The carrier (the user's decision, 2026-11-14, before W7):* **a carrier is built as a skeleton only** — a part of
+axes and planes with no solid, as the layout part is, free to turn about its own shaft's axis, with each planet
+mated to an axis in it. The app makes no plate and no pins: that geometry depends on the gearbox at hand and is
+left to the user, and the sentence after Build says so (*"Planetary_4to1_C_Carrier holds C's axes and planes only:
+a plate and pins are yours to add."*).
+
+*Readings chosen (W7, 2026-11-14; `notes-workbook/W7-PLAN.md` §3 as revised after its review and the spike, and the
+rulings in `W7-INTERFACES.md` §6):* taken at the plan's default and to be put to the user as readings to overrule.
+
+- **What W7 builds:** one simple planetary stage per workbook — one sun, one ring, one spur planet gear on a planet
+  shaft with any number of copies, every shaft of the stage facing the carrier's way along Z+ or Z−, exactly one
+  member held and one input — with ordinary W5 trains beside it: more gears on the sun's or ring's shaft (locked to
+  that shaft's anchor), other frame shafts on the carrier's axis, and **gears on the carrier's own shaft, locked to
+  the carrier and meshing nothing** (J8; W8's transfer case needs one).
+- **What W7 refuses, as an error of the workbook** (the scope principle: only what the demonstration builds is
+  built; a planetary this version does not build is not waiting for a phase, so it is an error at its cell, Build
+  waits, and its sentence says what does build): a carrier riding a carrier; a carrier off Z±; a planet facing away
+  from its carrier or across it; a sun or ring facing the other way from the carrier; a stage with no member held (a
+  differential, J11); a compound or double planet (J12); a gear on the carrier's shaft that meshes another gear
+  (J8 (c)); a helical or herringbone gear in a stage; a second carrier. Each is listed for the user as something a
+  later pass could open.
+- **J1** — the carrier part's planet axes follow the workbook by literal globals per copy, as the layout part's do.
+  **J2** — its origin is on the layout's Front plane. **J3** — copies are one part file and N components, named
+  `Planet copy k`. **J4** — a planet's X, Y, Z and Axis are composed in the carrier's frame (§3.3's note), so a Z−
+  carrier is built too.
+- **J5** — the gear mates made: by exact rank of the carrier-frame rows, the Meshes sheet expanded copy by copy (the
+  4 : 1: a gear mate from the sun to each copy and one from copy 1 to the ring; the other ring meshes are left
+  unmated, logged and recorded, not said: J17). Measured right on SolidWorks 2026 by the spike: a gear mate turns its
+  gears relative to the line between their axes, so in a planetary relative to the carrier. **The kinematic fallback
+  of the first draft** (a sun–carrier gear mate in place of the ring's) **is gone**: the spike measured it turning the
+  planets wrong.
+- **J6** — a held member is fixed, as W5 holds a gear on a still shaft. **J7** — one shared `"Planet Face Z"` global
+  per planet row. **J9** — the ring and shift checks as they stand; the ring's tooth count, the assembly condition and
+  the neighbours as errors; no fix offered on a planetary mesh. **J10** — torque by the basic-train efficiency, one
+  member held (§3.5's note). **J14** — what to drag: the input's gear; the carrier has nothing to drag (*"C (the
+  carrier) is axes and planes only, so it has nothing to drag."*). **J15** — Update puts a planetary train back
+  held member first, the carrier next, then the rest, with every lock off around the puts. **J16** — the record's
+  schema 5 (carriers, the copy a component is of, the part a mate's axis is in). **J18** — a planet's speed is given
+  about its own axis and on its carrier. **J19** — a small sun's undercut is warned of, not modelled.
+- **J20** — no finding gates the first planetary build; once the demonstration has measured the planetary turning
+  right through the app on SolidWorks, `findings.PLANET_GEAR_MATE_ROUTE` is committed with that evidence.
 
 ## 5. The Workbook window: `workbook_gui.py` (+ `ui_text`)
 

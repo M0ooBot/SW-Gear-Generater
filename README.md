@@ -290,7 +290,7 @@ last few workbooks you opened.
 | Sheet | Holds |
 |---|---|
 | Box | the gearbox's Name, its Output folder (blank: the form's Folder), part and assembly templates, and the pressure angle and efficiency per mesh that blank cells elsewhere take |
-| Shafts | one row per shaft: X, Y and Z of a point on its axis, from the origin; its Axis (`Z+`, `Z-`, `X+`, `Y-` …, or a direction `dx, dy, dz`); its Role (`input`, `output`, `fixed`); and on an input, its speed in rpm and torque in N·m |
+| Shafts | one row per shaft: X, Y and Z of a point on its axis, from the origin; its Axis (`Z+`, `Z-`, `X+`, `Y-` …, or a direction `dx, dy, dz`); its Role (`input`, `output`, `fixed`); on an input, its speed in rpm and torque in N·m; and on a planet shaft, the carrier it is Mounted on and its Copies |
 | Gears | one row per gear: the shaft it is on, how far along the axis its face's middle is (At; a bevel gear's pitch apex), and the values the form takes — Kind, Teeth, Module, Face width, Bore, Helix angle, Hand, Profile shift … — a blank cell taking the form's default; and a Part name if you want one |
 | Meshes | one row per pair of gears in mesh, and its efficiency |
 | Modes | the positions of sliding gears, one row per mode |
@@ -342,6 +342,26 @@ with a sentence, and Build parts still makes its parts. Moving a crossed shaft
 to the other side of its partner turns its mesh the other way round, and
 Update makes that gear mate again. Built and tested against the test suite's
 fake SolidWorks; the demonstration on SolidWorks is still to run.
+
+**Planetary stages (phase W7).** A shaft row `Mounted on` another shaft is a
+planet shaft on that carrier, its X, Y, Z and Axis read in the carrier's own
+frame, and its Copies stand evenly round the carrier's axis (`Planet copy 1`,
+`Planet copy 2` …: one part file, a component each). The stage is one sun, one
+ring and one spur planet gear, every shaft of it facing the carrier's way along
+Z+ or Z-, with exactly one of sun, ring and carrier set to Role `fixed`. The
+checks hold the ring's teeth to the sun's and planets', the copies to the
+assembly condition (sun and ring teeth together divisible by the copies) and to
+the room round the carrier; speeds are worked out with the carrier term, a
+planet's both about its own axis and on its carrier, and the torque through the
+stage with the held member's reaction. The carrier is built as a part of axes and
+planes only, `Planetary_4to1_C_Carrier`: no plate and no pins, which depend on
+the gearbox at hand and are yours to add (the user's decision). A gear on the
+carrier's own shaft is built locked to it. A planetary form this version does
+not build — a differential (no member held), a compound or double planet, a
+helical planetary, a carrier on a carrier, two stages — is an error at its
+cell, not a row waiting for a phase. Built and tested against the test suite's
+fake SolidWorks; on SolidWorks only the gear mates of a 4 : 1 have been
+measured (a spike on 2026), and the demonstration is still to run.
 
 **Export** writes the chosen fixes' cells and a Results sheet — each shaft's
 speed and torque, each mesh's ratio, centres and contact ratio, the overall
@@ -495,13 +515,14 @@ What is not built yet:
 
 - **Shafts at an angle (phase W6) on SolidWorks**: the demonstration of the two
   right-angle fixtures is still to run.
+- **Planetary stages (phase W7) on SolidWorks**: the demonstration is still to
+  run.
 - Rows a later phase builds are read, and refused with the phase that builds
-  them: shafts mounted on a carrier and their copies phase W7, sleeves, dog
-  rings, sliding gears and modes phase W8. Each is listed under Checks at its
-  cell. While one is there the button reads **Build parts**: a sleeve's or dog
-  ring's part is not built, the other gears' parts are (a planet's or a
-  sliding gear's included), and the layout part and assembly wait for its
-  phase — a carrier stops the gearbox checks and speeds altogether. Build parts has run on SolidWorks 2024 and 2026: the
+  them: sleeves, dog rings, sliding gears and modes, phase W8. Each is listed
+  under Checks at its cell. While one is there the button reads **Build
+  parts**: a sleeve's or dog ring's part is not built, the other gears' parts
+  are (a sliding gear's included), and the layout part and assembly wait for
+  its phase. Build parts has run on SolidWorks 2024 and 2026: the
   12 : 1 reducer's four parts built, each part's `.gear.json` variables matched
   the same gear built from the form, and a second build was refused rather
   than overwrite them (logs in `probe/results/`).

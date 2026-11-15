@@ -323,14 +323,15 @@ And where the window differs from the artboards, because Tk would not do it:
   gear B turned Σ, dimensioned `R 67.082 mm · Σ 90°`. A crossed pair is drawn as
   a parallel one with `· Σ 90°` after the centre distance.
 
-## 9. The Workbook window (W2–W6, docs/PLAN-WORKBOOK.md §4.2–§4.5, §5)
+## 9. The Workbook window (W2–W7, docs/PLAN-WORKBOOK.md §4.2–§4.5, §5)
 
 A second window for a whole gearbox written in an `.xlsx` workbook, linked to
 the file: it reads it, checks it, re-reads it on every save, and builds it in
 SolidWorks — its parts, a layout part with an axis per shaft and an assembly
 whose gears are mated so the train turns (W5; *The gearbox that turns*
 below), shafts along any axis included, with bevel and crossed helical
-meshes across them (W6; *Turned axes* below) — then carries later edits of the
+meshes across them (W6; *Turned axes* below), and a planetary stage on a
+carrier (W7; *Planetary stages* below) — then carries later edits of the
 workbook into what it built (**Update SolidWorks**), or builds the next
 revision beside it (**Build again…**). It is a `Toplevel`, `Workbook —
 Reducer_12to1.xlsx`, sharing the strip's theme, widgets and SolidWorks worker;
@@ -372,7 +373,11 @@ static, offered a turning revision); for W6, `WorkbookRightAngle` (fixture
 A built: a bevel stage from S1 along X into a parallel stage, S1 a line in the
 end view, the footer naming the gear to drag) and `WorkbookCrossed` (fixture B
 read: a crossed helical stage and a bevel stage at 120° onto a slanted shaft,
-the Speeds panel seen from each shaft's + end). `gen.py` draws them from a real workbook written, read and worked
+the Speeds panel seen from each shaft's + end); for W7, `WorkbookPlanetary`
+(W7-PLAN §4.1's 4 : 1 built: three planet copies, the carrier a dashed circle
+through them, the footer naming the gear to drag and the carrier part as axes
+and planes only) and `WorkbookPlanetaryCopies` (the same with Copies 5, read:
+the assembly condition fails, an error at the Copies cell). `gen.py` draws them from a real workbook written, read and worked
 through by the app, with the window's own sizes and colours from
 `workbook_gui`, the end view from `preview.layout_gearbox` and every line from
 `ui_text` — the footer is `workbook_footer` whole. The built boards run
@@ -498,7 +503,8 @@ left or up rather than off the screen.
   shaft at the origin has it below left). The origin: X a red arrow and Y a
   green one, 26 px, and a dot. All of where is `preview.layout_gearbox`, headless
   and tested; the window only strokes it. A gearbox this phase does not lay out
-  (a carrier) shows that sentence in grey instead, and no readout. Since W6 a
+  (since W7, only what W7 refuses there: a carrier riding a carrier, a planet
+  across its carrier) shows that sentence in grey instead, and no readout. Since W6 a
   gear on a shaft not along Z is drawn as its section seen side-on — a bevel
   gear's blank in both halves, apex at its At, any other gear the rectangle of
   its face and outside diameter — projected onto XY at its place, and its shaft
@@ -506,7 +512,11 @@ left or up rather than off the screen.
   that keeps the name on the canvas; a bevel gear on a Z shaft is its heel and
   toe tip circles. Such a gear's colour is the height of its At point, so a
   right-angle stage reads as one colour. A gearbox with no turned shaft draws as
-  it did.
+  it did. Since W7 every planet copy is drawn as any gear, each named by its
+  own shaft (`P copy 2`), and each carrier is a dashed circle through its
+  planets' axes about the carrier's own axis (`geometry.shaft_lines`); shafts
+  on one line (a stage's sun, ring and carrier) share one cross, named there
+  once with every name on it (`S, R, C`).
 - **Speeds** (readout *seen from +Z*, or *no input*): one mono line per shaft,
   `S2    375.0 rpm clockwise · 39.20 N·m` (`ui_text.workbook_speed_lines`),
   turning as seen from +Z, torque where the power path gives one; *not driven*
@@ -515,7 +525,11 @@ left or up rather than off the screen.
   *seen from each shaft's + end* and each line says its end: `S1    1500.0 rpm
   anticlockwise seen from the +X end · 10.00 N·m`, a slant's `… seen from the
   (0.5, −0.866, 0) end · 14.41 N·m`; the lines wrap at the end view's width, so
-  the window keeps its own.
+  the window keeps its own, and never part a number from its unit. A planet
+  shaft (W7) reads `P     500.0 rpm clockwise, 750.0 rpm clockwise relative to
+  C · 3 copies`, a held member `R     held still · 5.76 N·m`; when a torque
+  through a stage is not worked out, a last line says why in prose (grey, the
+  same width), as does the panel's one sentence for a gearbox not laid out.
 - **Footer.** A dot and one sentence, green when all is well, wrapped in the
   room the dot and the buttons showing leave (never narrower than 400 px), so
   the window keeps its 1080 px with all four buttons and grows taller instead;
@@ -1005,6 +1019,30 @@ file); otherwise as text, and each path is read once per planning pass, so an
 offline share holds the window up once, not at every comparison. The Gears
 table shows each part to build under the name the build will give it
 (`plan.part_of`).
+
+### Planetary stages (W7)
+
+No new control (checked in `workbook_gui.py`: the only changes for W7 are the
+end view's carrier circle, which planning's `geometry.shaft_lines` places, and
+the Speeds panel's prose line). The Gears table has **one row** per planet
+gear, its copies one part (`4 parts to build` for the 4 : 1); the header's
+*Worked out as* reads *Planetary, R fixed · 3 planets · 4.000 : 1 · output
+turns the same way*. What W7 does not build arrives as an **error of the
+workbook** at its cell (a differential, a carrier riding a carrier, a helical
+planetary, a compound or double planet, a gear on the carrier that meshes, a
+second carrier, members facing different ways), never as a row left for a
+later phase: Build waits and Build parts is not offered for it.
+
+| State | Sentence | Build button | Update SolidWorks |
+|---|---|---|---|
+| the 4 : 1 ready | *Ready: Build makes 4 parts, Planetary_4to1_Layout, Planetary_4to1_C_Carrier and Planetary_4to1.SLDASM in …. Its turning gears are mated to their shafts and to each other, so they turn together in SolidWorks. C is built as a carrier of axes and planes only, turning with the 3 copies of Planet on it. Ring stays fixed where it is placed: its shaft does not turn.* | **Build**, on | hidden |
+| … a held carrier | *… C is built as axes and planes only, held fixed; the 3 copies of Planet turn on it. CarrierGear stays fixed where it is placed: its shaft does not turn.* | **Build**, on | hidden |
+| built | *Built 4 parts, Planetary_4to1_Layout, Planetary_4to1_C_Carrier and Planetary_4to1.SLDASM; no interference between the gears where they stand. Its turning gears are mated to turn together, and SolidWorks reports no mate in error: drag Sun in SolidWorks and the rest of its train follow. The 3 copies of Planet turn on C, and Planetary_4to1_C_Carrier holds C's axes and planes only: a plate and pins are yours to add. Ring stays fixed where it is placed: its shaft does not turn.* (a held sun: *drag Ring*) | **Build again…**, on | on, primary |
+| built, nothing on record differs | W5's sentence, then *It was built with its gears mated to turn: drag Sun in SolidWorks and the rest of its train follow. C (the carrier) is axes and planes only, so it has nothing to drag.* | **Build again…**, on | on, primary |
+| a held ring moved (its At) | *Update SolidWorks will re-place Ring, C (the carrier), Sun, Planet (3 copies) and CarrierGear.* and after: *Updated SolidWorks: re-placed Ring, C (the carrier), Sun, Planet (3 copies) and CarrierGear; …* | **Build again…**, on | on, primary |
+| the planets moved, with teeth that keep both centres (Sun 21, Ring 57, P X 19.5) | *… moved the planets on C in Planetary_4to1_C_Carrier, set the gear mates Sun meshes Planet copy 1 to 21 : 18, …* (with the remake route) | **Build again…**, on | on |
+| a kind W7 refuses | *Fix the workbook before building: Shafts!A3: S, C and R form a planetary stage with no member held: a differential is not built by this version; set one of them to Role fixed.*, red | **Build**, off | — |
+| Copies 5 | *Fix the workbook before building: Shafts!H4: 5 copies of Planet cannot all mesh with Sun and Ring at once: (18 + 54) / 5 = 14.4 is not a whole number. With these teeth the copies can be 1, 2, 3 or 4; more would not fit round C.*, red | **Build**, off | — |
 
 ### Turned axes: bevel and crossed meshes (W6)
 
