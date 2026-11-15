@@ -3981,13 +3981,18 @@ def _mode_after(update, result, *, changed: bool) -> List[str]:
     asm = _file(update.assembly) if getattr(update, "assembly", "") else "the assembly"
     put_here = any(str(c).casefold() == config.casefold() for c in getattr(result, "put_in", ()) or ())
     if put_here:
-        for a, b in result.out_of_step:
-            if _couple_pair(update, (a, b)):
+        # One sentence per crossed coupling, the last carrying "the gears of 4L are back …" once, then the
+        # shared-turn sentence once: two crossed couplings in one mode (W8 s2's 4L) are not said back twice.
+        crossed = [(a, b) for a, b in result.out_of_step if _couple_pair(update, (a, b))]
+        for index, (a, b) in enumerate(crossed, 1):
+            if index < len(crossed):
+                out.append(f"In {config}, {a}'s teeth stood across {b}'s.")
+            else:
                 out.append(f"In {config}, {a}'s teeth stood across {b}'s; the gears of {config} are back at the turn "
                            "they were built at.")
-                if getattr(result, "positions_per_configuration", None) is False:
-                    out.append("This version of SolidWorks shows a turn given in one mode in every mode, so the turn "
-                               "may have been given in another.")
+        if crossed and getattr(result, "positions_per_configuration", None) is False:
+            out.append("This version of SolidWorks shows a turn given in one mode in every mode, so the turn may have "
+                       "been given in another.")
     visited = [str(v) for v in getattr(result, "visited", ()) or () if str(v)]
     if put_here and visited and getattr(result, "positions_per_configuration", None) is False:
         # Shared positions: a put in one mode moves the others too, so say which visited modes were READ at the

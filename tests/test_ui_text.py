@@ -3359,6 +3359,26 @@ def test_the_visited_modes_at_the_built_turn_are_only_those_read_so():
     assert not any(line.startswith("The gears of") for line in not_put_here)   # nothing put in the mode worked in
 
 
+@pytest.mark.parametrize("positions", [True, False, None])
+def test_two_crossed_couplings_in_one_mode_are_each_said_and_the_gears_said_back_once(positions):
+    """W8 s2's quiet Update in 4L found RangeSlv with LoDog and ModeSlv with FrontDog out of step: one sentence per
+    pair, "the gears of 4L are back …" once, on the last, and the shared-turn sentence once (the review of ruling
+    9.18's commits, point 2)."""
+    result = _tc_moved(configuration="4L", out_of_step=[("RangeSlv", "LoDog"), ("ModeSlv", "FrontDog")],
+                       put_in=["4L"], placed=["RangeSlv", "ModeSlv", "LoDog", "FrontDog"], changed=[TC_ASM],
+                       positions_per_configuration=positions)
+    lines = ui_text.mode_update_lines(_tc_update(), result)
+    assert lines[:2] == ["In 4L, RangeSlv's teeth stood across LoDog's.",
+                         "In 4L, ModeSlv's teeth stood across FrontDog's; the gears of 4L are back at the turn they "
+                         "were built at."]
+    shared = ("This version of SolidWorks shows a turn given in one mode in every mode, so the turn may have been "
+              "given in another.")
+    assert lines.count(shared) == (1 if positions is False else 0)
+    assert sum("are back at the turn" in line for line in lines) == 1
+    if positions is False:
+        assert lines[2] == shared
+
+
 def test_a_coupling_out_of_step_is_said_only_in_the_mode_it_was_found_and_put_in():
     result = _tc_moved(out_of_step=[("RangeSlv", "InDog")], put_in=["4H"], placed=["RangeSlv", "InDog"],
                        changed=[TC_ASM], visited=["2H", "N", "4L"])
