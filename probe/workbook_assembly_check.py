@@ -254,6 +254,8 @@ ONLY = [n for i, a in enumerate(sys.argv) if a == "--only"
         for n in ALIASES.get(sys.argv[i + 1], [sys.argv[i + 1]])] or DEFAULT_ORDER
 LOG_PATH = sys.argv[sys.argv.index("--log") + 1] if "--log" in sys.argv else os.path.join(OUT, "workbook-assembly.log")
 FIXTURES = sys.argv[sys.argv.index("--fixtures") + 1] if "--fixtures" in sys.argv else ""
+# ``--p3-steps 1``: p3's steps to run (default all three), for a confirming run of the put-back alone.
+P3_STEPS = sys.argv[sys.argv.index("--p3-steps") + 1] if "--p3-steps" in sys.argv else "123"
 M4_OFFSET = float(sys.argv[sys.argv.index("--m4-offset") + 1]) if "--m4-offset" in sys.argv else 0.0
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
@@ -4847,6 +4849,8 @@ def section_p3(worker, excel):
     for step, cells, first, why in (
             ("(1)", [("Gears", "C3", 12)], [carrier], "Planet At 10 -> 12: \"Planet Face Z\" set once"),
             ("(2)", [("Gears", "C4", 12)], ["Ring", carrier], "Ring At 10 -> 12: the gear-mated held ring")):
+        if step.strip("()") not in P3_STEPS:
+            continue
         label = f"p3 {step}"
         say(f"-- {label}  {why}")
         turned_then(worker, desk, label)
@@ -4873,10 +4877,11 @@ def section_p3(worker, excel):
         drive_proof(worker, desk, f"{label}, driven after")
         save_assembly(worker, desk, f"{label}: after the drive")
         desk.plan_solidworks()
-    label = "p3 (3)"
-    say(f"-- {label}  Sun 18 -> 21, Ring 54 -> 57, P's X 18 -> 19.5 (centres 19.5 / 19.5, (21 + 57)/3 = 26)")
-    turned_then(worker, desk, label)
-    remake_planetary(worker, desk, book, label, folder)
+    if "3" in P3_STEPS:
+        label = "p3 (3)"
+        say(f"-- {label}  Sun 18 -> 21, Ring 54 -> 57, P's X 18 -> 19.5 (centres 19.5 / 19.5, (21 + 57)/3 = 26)")
+        turned_then(worker, desk, label)
+        remake_planetary(worker, desk, book, label, folder)
     end_copy(worker, folder, "p3")
 
 
