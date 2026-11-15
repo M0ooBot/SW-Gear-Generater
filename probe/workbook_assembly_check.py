@@ -607,8 +607,14 @@ class DialogWatch(threading.Thread):
                 texts = tuple(t for t in [win32gui.GetWindowText(hwnd)] + xlhelp.child_texts(hwnd)[:8] if t)
                 if ("balloon", hwnd, texts) not in self.seen:
                     self.seen.add(("balloon", hwnd, texts))
-                    note(f"a SolidWorks balloon tip {list(texts)} came up while {CALLS['now'] or 'no SolidWorks call'} "
-                         "was in progress (left standing, never answered)")
+                    now = CALLS["now"]
+                    said = (f"a SolidWorks balloon tip {list(texts)} came up while {now or 'no SolidWorks call'} was in "
+                            "progress (left standing, never answered)")
+                    configuring = now in CONFIGURATION_CALLS or (now in DOCUMENT_CALLS and CALLS["configurations"])
+                    if any("Over Defined" in t for t in texts) or configuring:
+                        note(said)
+                    else:                  # the coordinator's ruling 3 (stage 2b): a UI tip, a fact line
+                        say(f"fact    {said}")
             for hwnd in found:
                 title = win32gui.GetWindowText(hwnd)
                 texts = tuple(xlhelp.child_texts(hwnd)[:8])
