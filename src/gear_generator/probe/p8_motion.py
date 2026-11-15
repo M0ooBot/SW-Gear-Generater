@@ -6736,7 +6736,7 @@ def spike_parts_spec(folder: str) -> Any:
              Gear("Planet", "P1", "10", "spur", "external", "18", "1", face_width="10", bore="8", part_name="Planet"),
              Gear("Planet2", "P2", "10", "spur", "external", "18", "1", face_width="10", bore="8", part_name="Planet"),
              Gear("Ring", "R2", "10", "spur", "internal", "54", "1", face_width="10"))
-    return GearboxSpec(box=Box(name=f"{SPIKE_TAG} Parts", output_folder=folder.rstrip("\\\\/") + "\\\\"), shafts=shafts,
+    return GearboxSpec(box=Box(name=f"{SPIKE_TAG} Parts", output_folder=folder.rstrip("\\/") + "\\"), shafts=shafts,
                        gears=gears, meshes=(Mesh("Sun", "Planet"), Mesh("Planet2", "Ring")))
 
 
