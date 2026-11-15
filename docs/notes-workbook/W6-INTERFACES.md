@@ -267,3 +267,9 @@ binding on A, B and C from now; where one names a line number it is the line at 
     from its first caller unless a test sets `turned_senses`, so a sign slip shared by Build and Update (one coming
     from planning's `mate_senses`) passes every test of A's. A sets `turned_senses` in the two fixtures' tests from
     values worked by hand from the contact, and pins a drive for fixture B as fixture A's is pinned.
+19. **The Speeds wording is C's**: "seen from the +X end" and "seen from the (0.5, −0.866, 0) end", with a no-break
+    space joining each number to its unit and holding a vector together. W6-PLAN §2.9's "seen from +X" is
+    superseded (C's review: the bare vector read like a point). An all-Z panel stays W3's.
+20. **`Assessment.turned_refusal()`** (B's `cedf02f`) is the one home of "is a turned mesh refused"; the footer
+    (`ui_text.workbook_footer`) and the window's parts-only plan call it and hold no copy. Its guard names what is
+    turned (`assess.TURNED_KINDS`: BEVEL, CROSSED); a later phase extends it on purpose or not at all.
