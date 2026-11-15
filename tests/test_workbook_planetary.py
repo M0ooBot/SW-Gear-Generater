@@ -855,7 +855,8 @@ def test_the_ring_mate_is_read_back_and_turned_round_on_the_fake_as_the_spike_fo
     (dict(gears={"Ring": dict(at="12")}), dict({"Sun": 30.0, "C carrier": 7.5, "CarrierGear": 7.5},
                                                **{c: -15.0 for c in COPIES})),
 ])
-def test_an_update_on_the_fake_leaves_the_train_turning_as_worked_by_hand(change, turns):
+def test_an_update_on_the_fake_leaves_the_train_turning_as_worked_by_hand(change, turns, monkeypatch):
+    monkeypatch.setattr(findings, "PLANETARY_PUT_ROUTE", "gear mates off around the puts", raising=False)
     sw, _, record = fake_build(planetary_4to1())
     spec = edited(planetary_4to1(), **change)
     up, result, after = fake_press(sw, record, spec)
