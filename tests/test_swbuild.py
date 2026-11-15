@@ -6473,3 +6473,26 @@ def test_an_update_that_fails_in_another_mode_shows_the_one_that_was_active_agai
                                   mtime=lambda _p: 0.0)
     assert not done.ok and fake.config == "2H" and _shown(fake)[-1] == "2H"
     assert TC_ASM in done.changed
+
+
+@pytest.mark.parametrize("sentence, said", [
+    ("RangeSlv stands at (0, 0, 66) where the mode places it at (0, 0, 46).",
+     "In mode 2H, RangeSlv stands at (0, 0, 66) where the mode places it at (0, 0, 46)."),
+    ("N reads not fixed in SolidWorks, where it was fixed.", "In mode 2H, N reads not fixed in SolidWorks, where it was fixed."),
+    ("SolidWorks would not make the mate X.", "In mode 2H, SolidWorks would not make the mate X."),
+    ("The mate X is missing from the assembly.", "In mode 2H, the mate X is missing from the assembly."),
+    ("A gear is off.", "In mode 2H, a gear is off."),
+])
+def test_a_sentence_after_its_mode_keeps_every_name_as_written(sentence, said):
+    assert swbuild._in_mode("2H", sentence) == said
+
+
+def test_a_slider_off_its_place_in_a_mode_is_named_as_the_workbook_spells_it(mode_findings):
+    fake = FakeSolidWorks()
+    fake, result, _, _ = _tc_build(fake, modes=_tc_modes())
+    assert result.ok
+    steps = list(_tc_modes().steps)
+    steps[0] = replace(steps[0], frames={"gear7": (IDENTITY9, (0.0, 0.0, 66.0))})
+    fake = FakeSolidWorks()
+    fake, result, _, _ = _tc_build(fake, modes=replace(_tc_modes(), steps=tuple(steps)))
+    assert result.mate_problems == ["In mode 2H, RangeSlv stands at (0, 0, 46) where the mode places it at (0, 0, 66)."]

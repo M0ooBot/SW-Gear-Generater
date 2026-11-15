@@ -2033,9 +2033,20 @@ def _fixed_handles(plan: BuildPlan) -> List[str]:
     return [handle for handle, fixed in last.items() if fixed]
 
 
+_ARTICLES = ("The ", "A ", "An ")
+
+
+def _in_mode(mode: str, sentence: str) -> str:
+    """*"In mode 4L, …"*: a sentence put after its mode. Only a leading article is lowercased; a sentence that starts
+    with a name (a gear id, a part, SolidWorks, a mode) keeps it as written, since a name is the workbook's spelling."""
+    if sentence.startswith(_ARTICLES):
+        sentence = sentence[0].lower() + sentence[1:]
+    return f"In mode {mode}, {sentence}"
+
+
 def _mode_problem(result: BuildResult, mode: str, sentence: str) -> None:
     """A problem of the per-mode check: *"In mode 4L, …"*, a mate problem and a failure (W5's rule: nothing saved)."""
-    text = f"In mode {mode}, {sentence[0].lower()}{sentence[1:]}"
+    text = _in_mode(mode, sentence)
     result.mate_problems.append(text)
     result.failures.append((f"the mate check in mode {mode}", text))
 
@@ -2111,7 +2122,7 @@ def _set_up_modes(sw: SolidWorks, plan: BuildPlan, modes: ModesPlan, result: Bui
                     result.failures.append((label, str(exc)))
                     result.stopped_at = label
                     if isinstance(exc, _SenseRefused):
-                        result.mate_problems.append(f"In mode {step.name}, {str(exc)[0].lower()}{str(exc)[1:]}")
+                        result.mate_problems.append(_in_mode(step.name, str(exc)))
                     elif isinstance(exc, MateRefused):
                         result.mate_problems.append(f"In mode {step.name}, SolidWorks would not make the mate "
                                                     f"{op.name or op.id}.")
@@ -4254,7 +4265,7 @@ def _modes_post_check(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdat
             check.values[mate.name] = sw.dimension_values(mate_handle[mate.name], [configuration])[configuration]
     problems += _free_to_turn(sw, [handle[g] for g in mated], lambda h: gear_of_handle.get(h, h))
     for problem in problems:
-        result.failures.append((file, f"In mode {mode}, {problem[0].lower()}{problem[1:]}"))
+        result.failures.append((file, _in_mode(mode, problem)))
 
 
 def _update_motion(sw: SolidWorks, parts: Sequence[DocumentValues], layout: Optional[DocumentValues], assembly: str,
