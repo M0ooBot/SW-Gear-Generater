@@ -26,7 +26,7 @@ up again at the user's word. *W8 picked up* under "W8 in detail" says where it s
 | W5 motion | **closed 2026-11-14**: probes P0 to P0d and the two ring rounds run and reviewed, packages A to E written and reviewed, the demonstration run in full on SolidWorks 2026 and confirmed on 2024, the user's hand drag passed on both. Details, and what is left open, below. |
 | W6 right-angle | **closed 2026-11-15, but for the person's drag**: planned, reviewed and revised; probe tier 9 (a turned gear mate's sense, on cylinders, SolidWorks 2026) run and reviewed; packages A to E written and each reviewed; the full build run on SolidWorks 2026 and the confirming build on 2024, both from one snapshot (`931fe1a`), every check passing, each run reviewed. Left for the user: drag G1 in the built right-angle gearbox. Details below. |
 | W7 planetary | **closed 2026-11-15, but for the person's drag**: planned, reviewed and revised; the spike on SolidWorks 2026 (`W7-SPIKE.md`); packages A to E written and each reviewed; the demonstration run on SolidWorks 2026 — its first run found one app fault (a turned planetary's put did not hold), the probe `planetary_put_back` measured the route that does, the fix `9f21d99` was reviewed, and every section then passed, the planetary sections and the W5/W6 Update sections once more on the final code; the confirming build on 2024 passed; the run's evidence reviewed. Left for the user: drag Sun in the built planetary. Details below. |
-| W8 sleeves and modes | **picked up 2026-11-15 and running on SolidWorks 2026 (34.0.0, the second host)**: `s0` and `s1` pass (0 failed, `s1.master` kept); `s2` to `s4` being written and run; `s5`, `s7`, the window check, the closing run and SolidWorks 2024 left. See *W8 picked up* below. Before that: planned, reviewed and revised to the spike (`W8-PLAN.md`, `W8-PLAN-REVIEW.md`, `W8-SPIKE.md` with its follow-up and its SolidWorks 2024 section: one slide mate with a value per configuration, mates switched per configuration, positions kept per configuration, handles stale after every add and show, the same on both versions); the interface commit with its rulings (`W8-INTERFACES.md` §9); the findings set and reviewed (`ea7a46f`); packages A, B, C and D written, each reviewed, the reviews' points in, the suite green. **No W8 code has run on SolidWorks:** the demonstration (package E), the full build on 2026, the confirming build on 2024 and the close are left. Details below. |
+| W8 sleeves and modes | **picked up 2026-11-15 on the second host; shown on SolidWorks 2026 (34.0.0) but for the closing run, and SolidWorks 2024's confirming build in progress**: on 2026 `s0` to `s4` and the window stage each have a 0-failed run; `s5` and `s7` ran once and wait for the closing run; on 2024 `s1` and `s7` are in. Left: the rest of 2024, `s7` case 8 on 2026, the closing run from the final source, the person's step `s6`, the close. See *W8 picked up* below. Before that: planned, reviewed and revised to the spike (`W8-PLAN.md`, `W8-PLAN-REVIEW.md`, `W8-SPIKE.md` with its follow-up and its SolidWorks 2024 section: one slide mate with a value per configuration, mates switched per configuration, positions kept per configuration, handles stale after every add and show, the same on both versions); the interface commit with its rulings (`W8-INTERFACES.md` §9); the findings set and reviewed (`ea7a46f`); packages A, B, C and D written, each reviewed, the reviews' points in, the suite green. **No W8 code has run on SolidWorks:** the demonstration (package E), the full build on 2026, the confirming build on 2024 and the close are left. Details below. |
 | How the user's absence is handled | the user said on 2026-11-14 to carry on, in order, until W8 is done. Judgement calls are taken at each plan's recommended reading and listed for the user as readings to overrule. |
 | The small-pinion tip cap | `fix/small-pinion-cap` merged at `0f5a121` (the user's instruction): 6- and 7-tooth pinions build with an arc on the tip cap, version 0.3.2. Built on SolidWorks 2024 by the branch; the 2026 build and the merge's review are in hand. |
 
@@ -606,12 +606,53 @@ this paragraph says what has been done of it.
   never ran. Two NOTEs, both the same untitled SolidWorks notification box (texts 'Title', 'Description',
   'Button1', …) coming up mid-run, unanswered: ruled a notification, exempt whenever it appears.
   `s1.master` is in `C:\Users\M0obo\Documents\GearGeneratorProbe\w8-s0s1-20261115-095232\out2\s1.master`.
-- **Left:** `s2`, `s3`, `s4` (being written and run); `s5` (W8-REVIEW-TIER11's verdict on ruling 3 says how: the
-  doctored distance at a value other than N's own, the balloon tolerated present or absent); `s7`; the window
-  check; one full run at the close from the final source; SolidWorks 2024's confirming build; the person's step
-  `s6`; PLAN-WORKBOOK §4.5 and UI-DESIGN's last words; the close.
-- **Not yet shown on SolidWorks:** `c14e1b2`'s put route (suppress in the configuration shown, then a top-only
-  rebuild with no show between), `d2f492e`'s refusal, D10 per configuration, any Update of a gearbox with modes.
+- **Package E, `s2` to `s5`, `s7` and the window stage, on SolidWorks 2026 34.0.0** (the script reviewed in
+  `W8-REVIEW-DEMO-S2-S7.md`, its points in with `7c9634d`):
+  - `s3` 0 failed (`probe/results/w8-workbook-assembly-20261115-114929-s3.log`): D10 per configuration, the refusal
+    of a mate the app did not make in one mode word for word with the call trace, a listed mate left as it is, an
+    exploded view, a mode deleted in SolidWorks sending the user to Build again….
+  - `s4` 0 failed (`…-120522-s4.log`, `ee4ba90`): three Updates, J14, the `_r2` revision with five configurations.
+  - `s2` 0 failed at `4871a85` (`…-151412-s2.log`, `bdfa870`), after two stopped runs kept beside it
+    (`…-111951-s2-turn-carried-per-body.log`, `…-132348-s2-put-kept-per-configuration.log`). See *Positions across
+    configurations* below.
+  - The window check's W8 stage (`--only w8`) 0 failed (`w8-window-20261115-150900.log`, `4871a85`); the check now
+    ends on any Tk callback failure, writes its log line by line and has a 15-minute watchdog (a run had hung 46
+    minutes on a callback error with nothing written).
+  - `s7` ran once (`…-135401-s7.log`, `w8-s7-20261115-135428.json`, `725566e`) with five failures that were the
+    script's; since fixed, **not rerun on 2026**. `s5` ran once (`…-140811-s5.log`, `148bac1`): the gate refuses the
+    doctored distance mate; SolidWorks accepted the doctored Sun–LoDog coupling, which the build then catches at its
+    step 6 (the plan's `AddMate5` status-5 path is covered on the fake only); one FAIL against an expectation since
+    corrected, **not rerun**.
+- **Positions across configurations (ruling 9.18, `W8-INTERFACES.md` §9; the day's hardest point).** The spike's
+  finding said positions are kept per configuration. `s2` showed that a hand turn of the mated train is not: it
+  showed in other modes, so a dog could stand across its sleeve there. The finding is split
+  (`POSITIONS_PER_CONFIGURATION_ON_<year>`, the put fact, read by nothing; `TURN_PER_CONFIGURATION_ON_<year>`, read
+  by `swcom.positions_per_configuration`, False on 2026). The Update now: a quiet Update that has anything to put
+  puts every train in every mode back to the built frames (`a87c1c5`; 52 puts on the E4, about 15 minutes on 2024),
+  and a mode found turned in step is put as one found out of step (`baa1a56`); every mode shown is post-checked.
+  The sentences say a turn **can** show in other modes (`5989c7d`), not that it does. **Not settled on 2026:** in
+  `s2`'s closing log a fresh turn in 2H, after an Update had put every mode, read in 4L, yet 4H and N were then
+  found at the built turn — either the turn did not reach them or 2H's put did. `s7` case 8 was written to read it
+  and has run on 2024 only. The app does not depend on the answer (`W8-REVIEW-LATE-FIXES.md` walked every path:
+  the one state where a mode can stand wrong under a green status is the quiet Update that puts nothing, whose
+  status says it did not show the other modes).
+- **SolidWorks 2024 (32.5.0), the confirming build, in progress** (results under `probe/results/sw2024/`; run
+  folders in `C:\Users\M0obo\Documents\GearGeneratorProbe\w8-sw2024-20261115`, a fresh session per section):
+  `s1` 0 failed at `48ab0aa` (`bb79b6f`); `s7` at `1560b25` 1 failed, the script's own put order in case 8
+  (`8702389`), and case 8 alone 0 failed at `8702389` (`6b16963`). Read on 2024: a turn showed in every
+  configuration in every state tried, case 8's included; a moving put stayed in its configuration; a body driven
+  in one configuration left its meshed neighbour at the same place in every configuration, not moved by the same
+  amount; a turn in N overwrote 4H's earlier moving put. `8702389`'s message overstates "the readings match
+  2026's" (case 4 as redesigned, case 5's drive and case 8 have no 2026 run yet). `TURN_PER_CONFIGURATION_ON_2024`
+  is being set False from these. Left on 2024: `s0`, `s3`, `s2`, the window stage.
+- **Reviews of the day** (all under `notes-workbook/`): `W8-REVIEW-9-18.md`, `W8-REVIEW-FIX-9-18-AND-WINDOW.md`,
+  `W8-REVIEW-DEMO-S2-S7.md`, `W8-REVIEW-LATE-FIXES.md` (must-fix: `s7` case 8 holds nothing of the Update it
+  presses, and must run on 2026 alone before the closing run).
+- **Left:** 2024's remaining sections; the late review's points; `s7` case 8 on 2026, then the findings and ruling
+  9.18 from it; **one closing run on 2026 from the final source** (`--only modes` with `s5` before `s2`, the W5 to
+  W7 sections r1, r2, r3, m5, m8, p1, p3, and the full window check); the person's step `s6`; PLAN-WORKBOOK §4.5
+  and UI-DESIGN's last words; the close.
+- **Slips on record:** `3579c0c`'s message says the footer is "a line shorter"; it is not.
 - **Small things open:** `tests/test_workbook_planetary.py::test_an_update_on_the_fake_leaves_the_train_turning_as_worked_by_hand`
   still rides on the committed `PLANETARY_PUT_ROUTE` (a one-line pin); W8-PLAN §2.2's sentence on the Checks
   panel's warnings does not match the app (Parallel gives 9, E4 gives 7: `W8-REVIEW-DEMO-S0-S1.md` N5); the NOTE at
