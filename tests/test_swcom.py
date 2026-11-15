@@ -2512,7 +2512,8 @@ class ConfigMate:
         # asked, but in the document's configuration order (GetConfigurationNames), whatever order they are passed in.
         self._doc.log.append(("IsSuppressed2", self.Name, which, tuple(names)))
         asked = set(names)
-        flags = tuple(self.flags[c] for c in self._doc.configs if c in asked)[:-1 if self._doc.short_answers else None]
+        flags = tuple(self._doc.flag_answers.get(c, self.flags[c]) for c in self._doc.configs
+                      if c in asked)[:-1 if self._doc.short_answers else None]
         return (flags,) if self._doc.wrapped_flags else flags
 
     def SetSuppression2(self, action, which, names):
@@ -2614,7 +2615,7 @@ class ConfigDoc:
     """The assembly (``IModelDoc2`` / ``IAssemblyDoc``) with configurations."""
     __slots__ = ("log", "configs", "active", "epoch", "parts", "mates", "selected", "refuse_add", "refuse_show",
                  "refuse_delete", "suppression", "wrapped_flags", "set_answer", "set_ignored", "GetSaveFlag",
-                 "short_answers")
+                 "short_answers", "flag_answers")
     GetTitle, GetPathName, GetType = "R.SLDASM", W + "R.SLDASM", swcom.DOC_ASSEMBLY
 
     def __init__(self):
@@ -2623,6 +2624,7 @@ class ConfigDoc:
         self.refuse_add = self.refuse_show = self.refuse_delete = False
         self.suppression, self.wrapped_flags, self.set_answer, self.set_ignored = "takes", False, 0, False
         self.GetSaveFlag, self.short_answers = False, False
+        self.flag_answers = {}              # configuration -> what IsSuppressed2 answers there in place of its flag
 
     def part(self, name, fixed=False):
         self.parts[name] = _PartState(name, W + name.rsplit("-", 1)[0] + ".SLDPRT", fixed)
@@ -2904,6 +2906,31 @@ def test_flags_read_one_per_name_even_wrapped_once_more_and_a_count_that_disagre
         session.dimension_values("slide1", ["Default", "X"])
     assert str(raised.value) == ("Asked for the distance of the mate RangeSlv along Rear in 2 configurations, "
                                  "SolidWorks gave 1 answer, so which is which cannot be told.")
+
+
+def test_a_flag_answered_as_none_or_not_a_flag_is_a_sentence_never_on(configured):
+    """Every read asks one name, so a None answer is one item and the count cannot catch it; bool(None) would read
+    on. No probe has seen IsSuppressed2 answer None, but a flag never comes from it (W8-REVIEW-FIX-A point 3)."""
+    session, doc = configured
+    doc.configs.append("X")
+    doc.mates[0].flags["X"] = False
+    for answer in (None, (None,), "yes", 1.0):
+        doc.flag_answers = {"X": answer[0] if isinstance(answer, tuple) else answer}
+        doc.wrapped_flags = isinstance(answer, tuple)
+        with pytest.raises(swcom.SolidWorksError) as raised:
+            session.mate_suppression("mesh1", ["Default", "X"])
+        shown = repr(doc.flag_answers["X"])
+        assert str(raised.value) == (f"Asked whether the mate G1 meshes G2 is suppressed in X, SolidWorks gave "
+                                     f"{shown}, not a flag, so its flag there cannot be told."), answer
+    doc.flag_answers, doc.wrapped_flags = {"X": None}, False
+    with pytest.raises(swcom.SolidWorksError) as raised:              # nor does a read-back take it as turned on
+        session.set_mate_suppressed_in("mesh1", False, ["X"])
+    assert str(raised.value) == ("Asked whether the mate G1 meshes G2 is suppressed in X, SolidWorks gave None, not "
+                                 "a flag, so its flag there cannot be told.")
+    # a real flag still reads as it is, as a bool or as an int
+    for answer, want in ((False, False), (True, True), (0, False), (1, True)):
+        doc.flag_answers = {"X": answer}
+        assert session.mate_suppression("mesh1", ["X", "Default"]) == {"X": want, "Default": False}, answer
 
 
 def test_a_slide_is_set_in_the_named_configurations_in_metres_and_read_back_in_millimetres(configured):

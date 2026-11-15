@@ -2960,7 +2960,8 @@ class Session:
         document's configuration order (``GetConfigurationNames``) filtered to the names asked, whatever order they
         are passed in, so pairing the answers with the names passed swaps flags (W8 s0's first run,
         probe/results/w8-configuration-order-20261115-092100.txt); asked one name, it answers that configuration's
-        flag. Marks nothing (the spike)."""
+        flag. An answer that is not one bool or int (``None`` among them) is a sentence, never read as on. Marks
+        nothing (the spike)."""
         self._configuration_gate("MATE_SUPPRESSION_PER_CONFIGURATION_ROUTE", "SPECIFY_CONFIGURATIONS")
         name, feature = self._kept_mate(handle)
         out: Dict[str, bool] = {}
@@ -2970,6 +2971,9 @@ class Session:
             if len(flags) != 1:
                 raise SolidWorksError(f"Asked whether the mate {name} is suppressed in {configuration}, SolidWorks "
                                       f"gave {_answers(len(flags))}, so its flag there cannot be told.")
+            if not isinstance(flags[0], (bool, int)):       # None or anything else is no answer, never "on"
+                raise SolidWorksError(f"Asked whether the mate {name} is suppressed in {configuration}, SolidWorks "
+                                      f"gave {flags[0]!r}, not a flag, so its flag there cannot be told.")
             out[str(configuration)] = bool(flags[0])
         return out
 
