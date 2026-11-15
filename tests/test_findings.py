@@ -1107,7 +1107,8 @@ W8_TURN_CHECK = LATEST.parent / "w8-turn-across-configurations-20261115-115500.t
 def test_a_turn_of_the_mated_train_given_in_one_mode_shows_in_every_mode_on_2026():
     """W8 s2 and the check after it (SolidWorks 2026 34.0.0, this host): the E4 train turned +37° in 2H stood turned
     in 4H, N and 4L, LoDog in interference with RangeSlv in 4L; the check, by a value set in 2H alone and by a
-    global, turned every body by the same amount in all four. TURN_PER_CONFIGURATION_ON_2026 is False; 2024 is not
+    global, turned every body by the same amount in all four; and the app's own put of the train in 4L showed in
+    2H, 4H and N. TURN_PER_CONFIGURATION_ON_2026 is False; 2024 is not
     measured. Section s7 will give this a result file of its own on the built E4, and these pins move to it."""
     log = W8_S2_TURN.read_bytes().decode("utf-8", errors="replace")
     assert "attach  SolidWorks 2026 (revision 34.0.0)" in log
@@ -1119,6 +1120,15 @@ def test_a_turn_of_the_mated_train_given_in_one_mode_shows_in_every_mode_on_2026
                      "'Pl copy 1 turned -18.500000"):
             assert body in line, (mode, body)
     assert "FAIL    s2, 2H turned, 4L shown: as built: no interference in 4L: [(('LoDog', 'RangeSlv'), 531.913)]" in log
+    # The app's own put of the mated train in 4L (locks and gear mates off in 4L alone) showed in 2H, 4H and N.
+    assert ("fact    s2 quiet Update in 4L: the press took 102.1 s; SolidWorks calls by member {'OpenDoc6': 10, "
+            "'IsSuppressed2': 234, 'SetSuppression2': 24, 'ForceRebuild3': 16, 'put': 13}") in log
+    assert ("FAIL    s2 quiet Update in 4L: no show, flag, value, rebuild or put: [('SetSuppression2', 'InDog locked "
+            "to Sun', 0, ['4L'])") in log
+    assert ("FAIL    s2 changed Update: 2H alone found turned when shown: [('2H', False), ('4H', False), ('N', False), "
+            "('4L', False)]") in log
+    for mode in ("2H", "4H", "N", "4L"):
+        assert f"        post-check of {mode}: turned False; out of step []" in log, mode
     check = W8_TURN_CHECK.read_bytes().decode("utf-8", errors="replace")
     assert check.startswith("# W8 s2's finding checked (SolidWorks 2026, 34.0.0,")
     turned = {"A, the value route": "{'Sun': 37.0, 'Pl copy 1': -18.5, 'Pl copy 2': -18.5, 'Pl copy 3': -18.5, "
