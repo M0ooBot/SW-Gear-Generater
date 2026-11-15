@@ -195,7 +195,9 @@ def test_the_fixtures_check_clean_and_say_their_modes(make):
     assert a.report.diagnostics == []
     words = {"TransferCase_Parallel": "Parallel train with modes · 4 meshes",
              "TransferCase_E4": "Planetary and parallel with modes, Ring fixed · 3 planets"}[make().box.name]
-    assert a.report.worked_out_as == f"{words} · 2H 1.000 : 1, 4H 1.000 : 1, N neutral, 4L 4.000 : 1"
+    nb = "\u00a0"
+    assert a.report.worked_out_as == (f"{words} · 2H{nb}1.000{nb}:{nb}1, 4H{nb}1.000{nb}:{nb}1, N{nb}neutral, "
+                                      f"4L{nb}4.000{nb}:{nb}1")
 
 
 @pytest.mark.parametrize("make", [transfer_case_parallel, e4_transfer_case])
@@ -1094,3 +1096,25 @@ def test_a_sleeve_or_dog_on_meshes_is_one_error_and_no_ring_check_runs(pair, gea
     spec = replace(s, meshes=s.meshes + (Mesh(*pair, row=6),))
     assert said(spec) == [(True, f"Meshes row 6: {gear} is a {kind}, which is not listed on Meshes: a sleeve engages "
                                  "a dog by sliding over it, worked out for each mode.")]
+
+
+@pytest.mark.parametrize("make", [transfer_case_parallel, e4_transfer_case])
+def test_worked_out_as_breaks_only_between_modes_on_screen_and_reads_plainly_in_the_results_sheet(make):
+    """D's wrap: no ordinary space inside any "<mode> <ratio> : 1" unit, so "4.000 : 1" never splits across lines;
+    the Results sheet's cell holds the same words with ordinary spaces (export normalises the no-break ones)."""
+    import re
+    from gear_generator.workbook import export
+    a = assessed(make())
+    modes_part = a.report.worked_out_as.split(" · ")[-1]
+    units = modes_part.split(", ")
+    assert [u.split("\u00a0")[0] for u in units] == ["2H", "4H", "N", "4L"]
+    assert all(" " not in u for u in units)
+    assert all(re.fullmatch(r"\S+\u00a0(\d+\.\d{3}\u00a0:\u00a01|neutral)", u) for u in units)
+    cell = next(r[1] for r in export.results_sheet(a.spec, a.report, when="T").rows if r and r[0] == "Worked out as")
+    assert "\u00a0" not in cell and cell == a.report.worked_out_as.replace("\u00a0", " ")
+    assert cell.endswith("2H 1.000 : 1, 4H 1.000 : 1, N neutral, 4L 4.000 : 1")
+
+
+def test_a_gearbox_without_modes_says_worked_out_as_with_ordinary_spaces():
+    a = direct(planetary_4to1())
+    assert "\u00a0" not in a.report.worked_out_as

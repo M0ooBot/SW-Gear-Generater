@@ -846,6 +846,7 @@ def _driven_from(spec: GearboxSpec, start: str) -> set:
 
 
 NO_ENDS = "no input and output that both turn"
+NBSP = "\u00a0"            # a no-break space: what holds one mode's "2H 1.000 : 1" together in Worked out as
 
 
 def _ends(spec: GearboxSpec, motion: kinematics.Motion):
@@ -935,8 +936,10 @@ def _worked_out_as(spec: GearboxSpec, report: Report) -> str:
             head, comma, held = pieces[0].partition(",")
             pieces[0] = f"{head} with modes{comma}{held}"
             pieces[1] = f"{report.stages[0].copies} planet{'s' if report.stages[0].copies != 1 else ''}"
-        said = ", ".join(f"{m.name} {m.ratio:.3f} : 1" if m.ratio is not None else f"{m.name} {m.ratio_why}"
-                         for m in report.modes)
+        # Each mode is one unit, joined inside by no-break spaces ("2H 1.000 : 1"), so a line wrapped at a cell's
+        # width breaks only between modes. Export writes them back as ordinary spaces (export.results_sheet).
+        said = ", ".join(f"{m.name}{NBSP}{m.ratio:.3f}{NBSP}:{NBSP}1" if m.ratio is not None
+                         else f"{m.name}{NBSP}{m.ratio_why}" for m in report.modes)
         return " · ".join(pieces + [said])
     motion = report.motion
     ratio, _, why = overall_ratio(spec, report)
