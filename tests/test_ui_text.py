@@ -2539,9 +2539,9 @@ def test_a_parallel_mesh_or_a_settled_turned_mesh_leaves_build_as_it_was(ready, 
     assert f.build_action == ui_text.BUILD and f.build_enabled
 
 
-def test_w6_structural_sentences_are_shown_whole_with_build_again_said_once(ready):
-    """B's §2.9 sentences end "…, so the gearbox needs building again."; the footer's offer says build again, so
-    that ending reads as W5's "…, so it needs a new revision." (as W4 folded the strip's)."""
+def test_w6_structural_sentences_are_shown_whole(ready):
+    """B's §2.9 sentences are shown as classify writes them, ending "…, so the gearbox needs building again." as the
+    W5 sentences the window already pins do; the strip's "; build it again as a new part." is folded as in W4."""
     axis = ("S1's axis is now X- where it was built X+: the layout's axis and the mates on it keep the direction they "
             "were made with, so the gearbox needs building again.")
     tip = ("G1's At (0 → 2) moves its cone tip off the Right plane (x 0 → 2): the mate G1 along S1 holds it on that "
@@ -2550,15 +2550,12 @@ def test_w6_structural_sentences_are_shown_whole_with_build_again_said_once(read
             "it again as a new part.")
     f = _footer(ready, record=_turning_record(), plan=_again(), update=_update(structural=(axis,)))
     assert _clean(f.text) == (
-        "S1's axis is now X- where it was built X+: the layout's axis and the mates on it keep the direction they were "
-        "made with, so it needs a new revision. Update SolidWorks offers to build again as Reducer_12to1_r2. It was "
-        "built with its gears mated to turn: drag G1 in SolidWorks and the rest of its train follow.")
-    assert f.text.lower().count("build again") == 1 and "building" not in f.text
+        f"{axis} Update SolidWorks offers to build again as Reducer_12to1_r2. It was built with its gears mated to "
+        "turn: drag G1 in SolidWorks and the rest of its train follow.")
     question = ui_text.build_again_question(_update(structural=(tip, form)), _again(), record=_turning_record())
     assert question.startswith(
-        "G1's At (0 → 2) moves its cone tip off the Right plane (x 0 → 2): the mate G1 along S1 holds it on that plane "
-        "and cannot take a distance, so it needs a new revision. G2's teeth (40 → 41) make it a crown gear where it "
-        "was built a cone, which its values cannot carry, so it needs a new part. Build again as Reducer_12to1_r2? ")
+        f"{tip} G2's teeth (40 → 41) make it a crown gear where it was built a cone, which its values cannot carry, so "
+        "it needs a new part. Build again as Reducer_12to1_r2? ")
 
 
 def _resensed_update(**changes):

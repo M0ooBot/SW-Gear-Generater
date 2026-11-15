@@ -1458,21 +1458,12 @@ def _missing_sentence(missing: Sequence[str]) -> str:
 _STRIP_AGAIN = "; build it again as a new part."
 
 
-_GEARBOX_AGAIN = ", so the gearbox needs building again."
-
-
 def _reason(text: str) -> str:
     """A reason Update cannot carry, as the workbook says it. ``swbuild.structural_change`` ends its sentence for
     the strip's single part, *…; build it again as a new part.*; folded into the footer's offer that read "build
-    again" twice (W4 review S4.2), so here the part *needs a new part* and the offer says how. W6's structural
-    sentences (``update.classify``) end *…, so the gearbox needs building again.*, folded the same way into W5's
-    *…, so it needs a new revision.*, since the offer that follows says *build again* itself."""
+    again" twice (W4 review S4.2), so here the part *needs a new part* and the offer says how."""
     text = _sentence(text)
-    if text.endswith(_STRIP_AGAIN):
-        return text[:-len(_STRIP_AGAIN)] + ", so it needs a new part."
-    if text.endswith(_GEARBOX_AGAIN):
-        return text[:-len(_GEARBOX_AGAIN)] + ", so it needs a new revision."
-    return text
+    return text[:-len(_STRIP_AGAIN)] + ", so it needs a new part." if text.endswith(_STRIP_AGAIN) else text
 
 
 def _cannot_carry(update) -> str:
