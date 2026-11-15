@@ -541,7 +541,7 @@ def test_the_gear_tables_states(tmp_path, a_later_kind):
     rows = {r[0]: r for r in ui_text.workbook_gear_rows(read_spec, parts, diagnostics + parts.diagnostics)}
     assert rows["G1"][6:] == ("Gear_m1.5_N17", ui_text.GEAR_STATE_BUILDS, "to build")
     assert rows["G2"][3] == "68.5" and rows["G2"][7:] == (ui_text.GEAR_STATE_ERROR, "see Checks")
-    assert rows["G5"][6:] == ("Gear_m1.5_N17", ui_text.GEAR_STATE_SHARES, "the same part as G1")
+    assert rows["G5"][6:] == ("Gear_m1.5_N17", ui_text.GEAR_STATE_SHARES, "same as G1")
     assert rows["G6"][7:] == (ui_text.GEAR_STATE_LATER, "later · phase W9")
     footer = ui_text.workbook_footer(assess.assess(read_spec, diagnostics, FOLDER), folder=FOLDER)
     assert not footer.ok and not footer.build_enabled
