@@ -1052,8 +1052,9 @@ class FakeSolidWorks:
         self._log("gear_mate_sense", handle, same_sense)
         mate = self.mate(self.mate_handles[handle])
         title = self.active.title if self.active else "the assembly"
-        if mate.suppressed:
-            # No probe has read Reverse or a suppressed mate's axes: the fake refuses, so a read made too early fails.
+        if mate.suppressed and getattr(findings, "SUPPRESSED_GEAR_MATE_SENSE_READ", None) != "answers, marks nothing":
+            # Until the W8 spike read a suppressed coupling's sense cleanly (SUPPRESSED_GEAR_MATE_SENSE_READ), no probe
+            # had read Reverse or a suppressed mate's axes: the fake refuses, so a read made too early fails.
             raise SolidWorksError(f"The fake will not read which way the suppressed gear mate {mate.name} turns.")
         a, b = mate.a[0], mate.b[0]
         if self._turned(mate):
@@ -5897,8 +5898,8 @@ def test_placed_lists_a_planetary_trains_puts_in_the_order_they_were_made(turned
     assert result.placed == [C_ID, "Sun"] + list(COPY_IDS) + ["CarrierGear"]
 
 
-# -- W8-INTERFACES §9.2: an Update of a gearbox with modes is refused before anything is read, until Update works
-# across configurations
+# -- W8-INTERFACES §9.2: a record carrying modes never goes down W7's path. Since the Update across configurations
+# is written, a record with its configurations takes that path; one carrying anything of modes without them is a fault
 
 _MESH = swbuild.MateRef("G1 meshes G2", "mesh", ("G1", "G2"))
 _W7 = swbuild.MotionUpdate(mates=(_MESH,), meshes=(swbuild.MeshLink("G1", "G2", -0.5, 10.0),),
@@ -5906,7 +5907,6 @@ _W7 = swbuild.MotionUpdate(mates=(_MESH,), meshes=(swbuild.MeshLink("G1", "G2", 
 
 
 @pytest.mark.parametrize("motion", [
-    replace(_W7, configurations=("2H", "4H")),
     replace(_W7, slide_values=(("RangeSlv along Rear", "4L", 46.0),)),
     replace(_W7, on_sets=(("RangeSlv engages LoDog", ("4L",)),)),
     replace(_W7, mode_placements=(("4L", ()),)),
@@ -5920,12 +5920,25 @@ _W7 = swbuild.MotionUpdate(mates=(_MESH,), meshes=(swbuild.MeshLink("G1", "G2", 
     replace(_W7, recorded_meshes=(swbuild.MeshLink("G1", "G2", -0.5, 10.0, modes=("4L",)),)),
     replace(_W7, locks=(swbuild.LockLink("G2", "G3", 10.0, modes=("4L",)),)),
 ])
-def test_an_update_of_a_gearbox_with_modes_is_refused_before_anything_is_read(motion):
+def test_a_record_carrying_modes_without_its_configurations_is_refused_before_anything_is_read(motion):
     fake = FakeSolidWorks()
     with pytest.raises(swbuild.BuildError) as raised:
         swbuild.update_gearbox(fake, assembly=r"C:\T\R.SLDASM", motion=motion, exists=lambda _p: True)
-    assert str(raised.value) == ("Update SolidWorks does not change a gearbox with modes yet, so nothing was read or "
-                                 "changed; press Build again… to make it afresh.")
+    assert str(raised.value) == ("Update SolidWorks was given a gearbox with modes but not its configurations, so "
+                                 "nothing was read or changed; that is a fault in Gear Generator.")
+    assert fake.calls == []
+
+
+def test_an_update_of_a_gearbox_with_modes_is_refused_before_anything_is_read_while_a_finding_is_unsettled(
+        mode_findings, monkeypatch):
+    monkeypatch.setattr(findings, "CONFIGURATION_SHOW_ROUTE", None, raising=False)
+    fake = FakeSolidWorks()
+    with pytest.raises(swbuild.BuildError) as raised:
+        swbuild.update_gearbox(fake, assembly=r"C:\T\R.SLDASM", motion=replace(_W7, configurations=("2H", "4H")),
+                               exists=lambda _p: True)
+    assert str(raised.value) == ("Working with an assembly's configurations has not been settled on SolidWorks "
+                                 "(findings.CONFIGURATION_SHOW_ROUTE is None), so a gearbox with modes is not updated "
+                                 "and nothing was read or changed.")
     assert fake.calls == []
 
 
@@ -6253,3 +6266,210 @@ def test_a_gearbox_with_modes_checks_interference_in_every_mode_and_ends_in_the_
     assert any(line.startswith("CHECK   in mode 4L, RangeSlv and LoDog interfere") for line in lines), lines
     assert any(line.startswith("config  4L: ") for line in lines)
     assert [s.name for s in steps if s.stage == swbuild.STAGE_MODE][-4:] == list(TC_MODES)
+
+
+# -- W8: Update SolidWorks across configurations, against the fake (W8-PLAN §1.10, §3.5) ----------------------------
+
+def _tc_place(result, mode, turn=0.0):
+    index = TC_MODES.index(mode)
+    out = []
+    for handle, z in TC_AT.items():
+        if handle == "gear7":
+            z = TC_SLIDES["RangeSlv along Rear"][index]
+        elif handle == "gear8":
+            z = TC_SLIDES["ModeSlv along Rear"][index]
+        out.append(swbuild.Placement(TC_NAMES[handle], result.components[handle], _rot_z(turn), (0.0, 0.0, z), 12.0))
+    return tuple(out)
+
+
+def _tc_motion(result, active="2H", wanted_turn=0.0, **changes):
+    """The TransferCase's record as Update is given it: every mate with its kind, gears and modes, the couplings as
+    MeshLinks (k = +1, both on +Z) and the spline as a LockLink, the frames per mode."""
+    mates = []
+    for op in _tc_plan().ops:
+        if not isinstance(op, ops.Mate):
+            continue
+        handle = op.a.partition(":")[0]
+        gear = TC_NAMES[handle]
+        if op.kind == "gear":
+            mates.append(swbuild.MateRef(op.name, "spline", ("RangeSlv", "ModeSlv")))
+        elif op.kind == "coincident":
+            mates.append(swbuild.MateRef(op.name, "axis", (gear,), "Rear"))
+        elif handle in ("gear7", "gear8"):
+            values = tuple(zip(TC_MODES, TC_SLIDES[op.name]))
+            mates.append(swbuild.MateRef(op.name, "slide", (gear,), "Rear", values=values))
+        else:
+            mates.append(swbuild.MateRef(op.name, "along", (gear,), "Rear"))
+    for name, (sleeve, dog, on) in TC_COUPLES.items():
+        mates.append(swbuild.MateRef(name, "couple", (TC_NAMES[sleeve], TC_NAMES[dog]), modes=on))
+    meshes = tuple(swbuild.MeshLink(TC_NAMES[s], TC_NAMES[d], 1.0, 12.0, modes=on) for s, d, on in TC_COUPLES.values())
+    motion = swbuild.MotionUpdate(
+        mates=tuple(mates), meshes=meshes, locks=(swbuild.LockLink("RangeSlv", "ModeSlv", 12.0),),
+        recorded=_tc_place(result, active), recorded_meshes=meshes, configurations=TC_MODES,
+        mode_placements=tuple((m, _tc_place(result, m, wanted_turn)) for m in TC_MODES),
+        recorded_by_mode=tuple((m, _tc_place(result, m)) for m in TC_MODES))
+    return replace(motion, **changes), _tc_place(result, active, wanted_turn)
+
+
+@pytest.fixture(params=[False, True], ids=["positions per configuration", "shared positions"])
+def tc_built(request, mode_findings, monkeypatch):
+    monkeypatch.setattr(findings, "INTERFERENCE_CHECKED", True, raising=False)
+    fake = FakeSolidWorks()
+    fake.shared_positions = request.param
+    fake, result, _ = _tc_gearbox(fake)
+    assert result.ok, result.log_lines()
+    fake.calls.clear()
+    return fake, result
+
+
+def _tc_update(fake, result, active="2H", **changes):
+    motion, placements = _tc_motion(result, active, **changes)
+    return swbuild.update_gearbox(fake, assembly=TC_ASM, placements=placements, motion=motion, exists=fake.exists,
+                                  mtime=lambda _p: 0.0)
+
+
+def _shown(fake):
+    return [a[0] for n, a in fake.calls if n == "show_configuration"]
+
+
+def test_a_quiet_update_shows_nothing_reads_every_flag_and_value_and_says_where_it_worked(tc_built):
+    fake, built = tc_built
+    done = _tc_update(fake, built)
+    assert done.ok, done.log_lines()
+    assert _shown(fake) == [] and done.changed == [] and done.put_in == [] and done.modes == []
+    assert done.configuration == "2H" and done.visited == [] and done.extra_configurations == []
+    read = {a[0] for n, a in fake.calls if n == "mate_suppression"}
+    assert len(read) == len(_tc_motion(built)[0].mates)
+    assert all(a[1] == TC_MODES for n, a in fake.calls if n == "mate_suppression")
+    assert sorted(a[0] for n, a in fake.calls if n == "dimension_values") == sorted(
+        f"mate{i}" for i, m in enumerate(_tc_motion(built)[0].mates, 1) if m.kind == "slide")
+    assert not [n for n, _ in fake.calls if n in ("set_mate_suppressed_in", "set_dimension_in", "place_component",
+                                                 "set_mate_suppressed")]
+    assert done.positions_per_configuration is True
+    assert "ok      worked in 2H, the configuration that was active; did not show the other modes" in done.log_lines()
+
+
+def test_the_configuration_is_always_set_for_a_gearbox_with_modes_and_in_the_spelling_solidworks_has(tc_built):
+    fake, built = tc_built
+    fake.show_configuration("4L")
+    done = _tc_update(fake, built, active="4L")
+    assert done.ok and done.configuration == "4L", done.log_lines()
+
+
+def test_d10_per_configuration_both_ways_in_a_mode_not_active_never_calls_a_mate_already_right(tc_built):
+    fake, built = tc_built
+    fake.mate("RangeSlv engages LoDog").flags["4L"] = True           # suppressed where the record has it on
+    fake.mate("RangeSlv engages InDog").flags["4L"] = False          # on where the record has it off
+    done = _tc_update(fake, built)
+    assert done.ok, done.log_lines()
+    assert done.unsuppressed_in == [("RangeSlv engages LoDog", "4L")]
+    assert done.suppressed_in == [("RangeSlv engages InDog", "4L")]
+    sets = [a[:3] for n, a in fake.calls if n == "set_mate_suppressed_in"]
+    assert sorted(sets) == sorted([(_handle_of(built, "RangeSlv engages LoDog"), False, ("4L",)),
+                                   (_handle_of(built, "RangeSlv engages InDog"), True, ("4L",))])
+    assert fake.mate("RangeSlv engages LoDog").flags["4L"] is False
+    assert fake.mate("RangeSlv engages InDog").flags["4L"] is True
+    assert fake.config == "2H" and _shown(fake)[-1] == "2H" and TC_ASM in done.changed
+    assert [c.name for c in done.modes] == ["4H", "N", "4L", "2H"] and done.visited == ["4H", "N", "4L"]
+    assert "ok      worked in 2H, the configuration that was active, and showed 4H, N, 4L too" in done.log_lines()
+
+
+def _handle_of(built, name):
+    return next(f"mate{i}" for i, m in enumerate(_tc_motion(built)[0].mates, 1) if m.name == name)
+
+
+def test_a_slide_value_changed_in_a_mode_not_active_is_set_back_without_showing_it_first(tc_built):
+    fake, built = tc_built
+    fake.mate("RangeSlv along Rear").own["4L"] = 60.0
+    done = _tc_update(fake, built)
+    assert done.ok, done.log_lines()
+    assert done.values_restored == [("RangeSlv along Rear", "4L")] and done.slid == []
+    first_set = names(fake).index("set_dimension_in")
+    assert "show_configuration" not in names(fake)[:first_set]
+    assert fake.mate("RangeSlv along Rear").own["4L"] == 66.0
+
+
+def test_a_j14_edit_sets_the_new_value_and_exactly_the_changed_flags(tc_built):
+    fake, built = tc_built
+    edit = dict(slide_values=tuple((n, m, v + (10.0 if (n, m) == ("ModeSlv along Rear", "4H") else 0.0))
+                                   for n, values in TC_SLIDES.items() for m, v in zip(TC_MODES, values)),
+                on_sets=(("ModeSlv engages FrontDog", ("4L",)),))
+    motion, placements = _tc_motion(built, **edit)
+    done = swbuild.update_gearbox(fake, assembly=TC_ASM, placements=placements, motion=motion, exists=fake.exists,
+                                  mtime=lambda _p: 0.0)
+    assert done.slid == [("ModeSlv along Rear", "4H", 116.0)]
+    assert done.suppressed_in == [("ModeSlv engages FrontDog", "4H")] and done.unsuppressed_in == []
+    assert fake.mate("ModeSlv engages FrontDog").flags["4H"] is True
+
+
+def test_a_workbook_change_shows_and_puts_every_mode_the_active_one_last_and_ends_where_it_began(tc_built):
+    fake, built = tc_built
+    motion, placements = _tc_motion(built, wanted_turn=6.0)        # every gear wanted a 6° turn: half a tooth
+    done = swbuild.update_gearbox(fake, assembly=TC_ASM, placements=placements, motion=motion, exists=fake.exists,
+                                  mtime=lambda _p: 0.0)
+    assert done.ok, done.log_lines()
+    assert done.put_in == ["4H", "N", "4L", "2H"] and _shown(fake) == ["4H", "N", "4L", "2H"]
+    assert fake.config == "2H"
+    for index, check in enumerate(done.modes):  # found on showing, before its put: in step, half a tooth off
+        assert check.off_axis == [] and check.out_of_step == []
+        # with shared positions the first mode's put already stands every later mode at the wanted turn
+        assert check.turned is (index == 0 or not fake.shared_positions)
+
+
+def test_a_train_turned_in_another_mode_is_left_unseen_by_a_quiet_update_which_says_so(tc_built):
+    fake, built = tc_built
+    fake.show_configuration("4L")
+    for gear in ("gear7-1", "gear8-1", "gear6-1", "gear9-1"):
+        fake.turn(gear, 30.0)
+    fake.show_configuration("2H")
+    fake.calls.clear()
+    done = _tc_update(fake, built)
+    assert done.ok and _shown(fake) == [] and done.modes == [], done.log_lines()
+    if not fake.shared_positions:
+        # 2H stands as built: the turn stayed in 4L, unseen, nothing put
+        assert done.put_in == [] and done.turned is False and done.out_of_step == []
+    else:
+        # shared positions: the turn is seen in 2H, where InDog (not turned) is coupled to RangeSlv: out of step,
+        # put back in 2H alone, nothing shown
+        assert done.out_of_step == [("RangeSlv", "InDog")] and done.put_in == ["2H"]
+
+
+def test_an_update_in_a_configuration_that_is_no_mode_is_refused_before_anything_changes(tc_built):
+    fake, built = tc_built
+    fake.add_configuration("Exploded")
+    fake.calls.clear()
+    with pytest.raises(swbuild.BuildError) as raised:
+        _tc_update(fake, built)
+    assert str(raised.value) == ("Update SolidWorks works in one of the gearbox's own configurations (2H, 4H, N and "
+                                 "4L), and Exploded is active in SolidWorks: pick one of them and press Update "
+                                 "SolidWorks again.")
+    assert not [n for n, _ in fake.calls if n.startswith("set_") or n in ("place_component", "show_configuration")]
+
+
+def test_a_configuration_gone_is_not_as_built(tc_built):
+    fake, built = tc_built
+    fake.configs.remove("N")
+    with pytest.raises(swbuild.NotAsBuilt) as raised:
+        _tc_update(fake, built)
+    assert str(raised.value) == ("The configuration N is not in TransferCase.SLDASM any more: it was renamed or "
+                                 "deleted in SolidWorks.")
+
+
+def test_an_extra_configuration_is_listed_and_left(tc_built):
+    fake, built = tc_built
+    fake.add_configuration("Exploded")
+    fake.rebuild(kind=swcom.ASSEMBLY_TRAIN)
+    fake.show_configuration("2H")
+    done = _tc_update(fake, built)
+    assert done.ok and done.extra_configurations == ["Exploded"] and "Exploded" in fake.configs
+
+
+def test_an_update_that_fails_in_another_mode_shows_the_one_that_was_active_again(tc_built):
+    fake, built = tc_built
+    fake.raises["place_component"] = (fake.counts["place_component"] + 7,
+                                      SolidWorksError("SolidWorks would not move the gear."))
+    motion, placements = _tc_motion(built, wanted_turn=6.0)
+    done = swbuild.update_gearbox(fake, assembly=TC_ASM, placements=placements, motion=motion, exists=fake.exists,
+                                  mtime=lambda _p: 0.0)
+    assert not done.ok and fake.config == "2H" and _shown(fake)[-1] == "2H"
+    assert TC_ASM in done.changed

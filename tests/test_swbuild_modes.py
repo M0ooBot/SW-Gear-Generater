@@ -192,7 +192,7 @@ def test_every_w8_field_defaults_to_what_a_gearbox_with_no_modes_holds():
             done.values_restored, done.put_in, done.extra_configurations, done.modes,
             done.positions_per_configuration) == ("", [], [], [], [], [], [], [], [], None)
     assert [f.name for f in fields(ModeCheck)] == ["name", "mates", "suppressed", "values", "clashes",
-                                                   "interference_error"]
+                                                   "interference_error", "out_of_step", "off_axis", "turned"]
     assert swbuild.STAGE_MODE == "mode" and swbuild.STAGES[-1] == swbuild.STAGE_MODE
 
 
