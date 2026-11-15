@@ -345,3 +345,31 @@ def test_a_mate_not_on_record_on_only_in_a_configuration_that_is_no_mode_does_no
     assert done.ok and done.extra_mates == ["Distance3"], done.log_lines()
     assert done.extra_configurations == ["Exploded"]
     assert not [a for n, a in fake.calls if n == "mate_suppression" and "Exploded" in a[1]]
+
+
+# -- a mate in error in one mode only (W8-REVIEW-TIER11 S4) -----------------------------------------------------------
+#
+# Tier 11 on SolidWorks 2026: two slides on in one configuration each read code 47, warning False, there, and every
+# other configuration read 0. The fake does not make the fight; it is told those codes for N alone
+# (``mate_codes_in``), on the recorded slide, the mate the user would be told of.
+
+N_IN_ERROR = "In mode N, the mate RangeSlv along Rear is in error in SolidWorks."
+
+
+def test_a_mate_in_error_in_one_mode_stops_the_build_naming_the_mate_and_the_mode_and_nothing_is_saved(mode_findings):
+    fake = FakeSolidWorks()
+    fake.mate_codes_in = {"N": {"RangeSlv along Rear": (47, False)}}
+    fake, result, checks, steps = _tc_build(fake)
+    assert [text for _, text in result.failures] == [N_IN_ERROR], result.log_lines()
+    assert result.saved == "" and "save_as" not in names(fake)
+    assert [c.name for c in checks] == ["2H", "4H", "N", "4L"]
+    assert next(s for s in checks[2].mates if s.name == "RangeSlv along Rear").code == 47
+    assert all(s.code == 0 for c in checks if c.name != "N" for s in c.mates if s.name == "RangeSlv along Rear")
+
+
+def test_a_mate_in_error_in_one_mode_is_a_failure_of_the_update_naming_the_mate_and_the_mode(tc_built):
+    fake, built = tc_built
+    fake.mate_codes_in = {"N": {"RangeSlv along Rear": (47, False)}}
+    done = _tc_update(fake, built, wanted_turn=6.0)
+    assert [text for _, text in done.failures] == [N_IN_ERROR], done.log_lines()
+    assert done.put_in == ["4H", "N", "4L", "2H"] and fake.config == "2H"

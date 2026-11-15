@@ -291,6 +291,10 @@ class FakeSolidWorks:
         self.new_mate_elsewhere = "suppressed"   # or "on": a mate made outside the template's configuration
         self.shared_positions = False  # True: one set of frames for every configuration (GOTCHAS §83, made up here)
         self.clashes_in = {}           # configuration -> what interferences() returns there
+        # configuration -> {mate name: (code, warning)} read by mate_states while that configuration is active, and
+        # nowhere else (tier 11, SolidWorks 2026: two slides on in one configuration each read code 47, warning False,
+        # there; every other configuration read 0). Empty: ``mate_codes`` and each mate's own, as before.
+        self.mate_codes_in = {}
 
     def _log(self, name, *args):
         self.calls.append((name, args))
@@ -869,7 +873,8 @@ class FakeSolidWorks:
                           if not (folder is not None and type_name == folder))
         out = []
         for m in self.mates:
-            code, warning = self.mate_codes.get(m.name, (m.code, m.warning))
+            code, warning = self.mate_codes_in.get(self.config, {}).get(m.name) or \
+                self.mate_codes.get(m.name, (m.code, m.warning))
             out.append(swcom.MateState(m.name, code, warning if code else True, m.suppressed))
         return out
 
