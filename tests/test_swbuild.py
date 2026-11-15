@@ -2,7 +2,7 @@
 
 import copy
 import math
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 
 import pytest
 
@@ -39,6 +39,10 @@ class FakeMate:
     status: int = 1
     code: int = 0
     warning: bool = True
+    # W8: the flag in every configuration (``suppressed`` is always the active one's), and a distance mate's value
+    # set in a configuration of its own (mm, a magnitude; a configuration with none stands at ``value``)
+    flags: dict = field(default_factory=dict)
+    own: dict = field(default_factory=dict)
 
     @property
     def axis(self):
@@ -60,11 +64,31 @@ IDENTITY9 = (1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0)
 FLIP_NEEDED_2026 = {
     "spur ring ++": True, "spur ring +-": False, "spur ring -+": False, "spur ring --": True,
     "helical ring ++": True, "helical ring +-": True, "helical ring -+": True, "helical ring --": True,
-    "plain annulus": False, "external +-": False}
+    "plain annulus": False, "external +-": False,
+    # W8 spike, 2026: a collinear spline (spur to spur) and coupling (to a ring) each right with Flip False
+    "collinear ++": False, "collinear ring ++": False}
 FLIP_NEEDED_2024 = {
     "spur ring ++": False, "spur ring +-": True, "spur ring -+": True, "spur ring --": False,
     "helical ring ++": False, "helical ring +-": False, "helical ring -+": False, "helical ring --": False,
-    "plain annulus": False, "external +-": False}
+    "plain annulus": False, "external +-": False,
+    # W8 spike, 2024: the collinear spline right with Flip True, the coupling to a ring with Flip False
+    "collinear ++": True, "collinear ring ++": False}
+
+
+class StaleHandle(AssertionError):
+    """A component handle the fake gave out, used after a configuration change (an add, a show or an open) without
+    being fetched again: SolidWorks answers ``Transform2`` None and ``IsFixed`` False there, silently (the W8 spike);
+    the fake fails the test."""
+
+
+class _Held(str):
+    """A Name2 as the fake hands one back from ``add_component`` / ``find_component``, stamped with the epoch it was
+    handed out in: passed back into a member after a configuration change, it raises :class:`StaleHandle`."""
+
+    def __new__(cls, name, epoch):
+        held = super().__new__(cls, name)
+        held.epoch = epoch
+        return held
 
 
 def _rot_z(degrees):
@@ -272,6 +296,17 @@ class FakeSolidWorks:
         self.entity_stray = {}         # gear mate name -> a direction its first entity reads along instead
         # W7
         self.judge_rank = True         # a gear mate adding nothing to the turn rows over-defines (W7-PLAN §2.9)
+        # W8 (W8-PLAN §3.5, the W8 spike on SolidWorks 2026)
+        self.configs = ["Default"]     # the current document's configurations, the template's first
+        self.config = "Default"        # the active one
+        self.template_config = "Default"
+        self.frames_by = {}            # configuration -> its frames, for every configuration not active
+        self.saved_configs = {}        # lower-cased path -> (configs, active, frames_by) as saved
+        self.epoch = 0                 # raised by every add, show and open: handles from before are stale
+        self.unsettled = 0             # flag calls left misbehaving after an add, until the next rebuild
+        self.new_mate_elsewhere = "suppressed"   # or "on": a mate made outside the template's configuration
+        self.shared_positions = False  # True: one set of frames for every configuration (GOTCHAS §83, made up here)
+        self.clashes_in = {}           # configuration -> what interferences() returns there
 
     def _log(self, name, *args):
         self.calls.append((name, args))
@@ -296,8 +331,12 @@ class FakeSolidWorks:
         if self.current:
             self.touched.add(_key(self.current))
 
+    def _fresh_configurations(self):
+        self.configs, self.config, self.template_config, self.frames_by = ["Default"], "Default", "Default", {}
+
     def new_part(self, template=""):
         self._log("new_part", template)
+        self._fresh_configurations()
         self.equations_text, self.made, self.current = [], [], ""
         self.plane_defs, self.axis_defs = {}, {}
         self.kind, self.mates = 1, []
@@ -305,6 +344,7 @@ class FakeSolidWorks:
 
     def new_assembly(self, template=""):
         self._log("new_assembly", template)
+        self._fresh_configurations()
         self.equations_text, self.made, self.current = [], [], ""
         self.kind, self.adding, self.mates = 2, [], []
         return DocInfo(title="Assem1", path="", doc_type=2)
@@ -333,6 +373,7 @@ class FakeSolidWorks:
         from gear_generator import swcom
         member, args = swcom.rebuild_call(swcom.DOC_ASSEMBLY if self._is_assembly() else swcom.DOC_PART, kind)
         self.rebuild_members.append((member, args))
+        self.unsettled = 0                 # the W8 spike: after a rebuild every flag call behaved
         if self._is_assembly():
             self.assembly_kinds.append(kind)
         self._touch()
@@ -357,6 +398,7 @@ class FakeSolidWorks:
         self.memory_axes[_key(path)] = self.axis_defs
         if path.lower().endswith(".sldasm"):
             self.saved_frames = dict(self.frames)        # where the components are in the file
+            self.saved_configs[_key(path)] = (list(self.configs), self.config, copy.deepcopy(self.frames_by))
             if not self.current:
                 self.assembly_components[_key(path)] = list(self.adding)
         self.current = path
@@ -538,7 +580,7 @@ class FakeSolidWorks:
         self.adding.append(path)
         self.component_names[handle] = f"{handle}-1"
         self.component_paths[f"{handle}-1"] = path
-        return f"{handle}-1"
+        return _Held(f"{handle}-1", self.epoch)
 
     def fix_component(self, handle):
         self._log("fix_component", handle)
@@ -609,6 +651,9 @@ class FakeSolidWorks:
         self.current = path
         if not is_open:
             self.open_docs.append(info)
+            configs, config, frames_by = self.saved_configs.get(_key(path), (["Default"], "Default", {}))
+            self.configs, self.config, self.frames_by = list(configs), config, copy.deepcopy(frames_by)
+        self.epoch += 1                    # an open changes the active configuration: handles from before are stale
         self.active = info
         return info
 
@@ -629,7 +674,7 @@ class FakeSolidWorks:
                                   "settled here; set it to Resolved in SolidWorks and try again.")
         self.found[handle] = name
         self.component_names[handle] = name
-        return name
+        return _Held(name, self.epoch)
 
     def is_fixed(self, handle):
         """``Session.is_fixed``: the component's fixed state as fix and unfix left it (the layout and a held member
@@ -670,10 +715,10 @@ class FakeSolidWorks:
     def interferences(self):
         """Marks the assembly modified. Probe assembly_rebuild_scope saw the assembly marked after a put by the reads
         that followed it (``flags_after_reads``: the frame reads and interferences() together), without isolating
-        which; the fake pins it here, on the interference check."""
+        which; the fake pins it here, on the interference check. W8: ``clashes_in`` per configuration."""
         self._log("interferences")
         self._touch()
-        return list(self.clashes)
+        return list(self.clashes_in.get(self.config, self.clashes))
 
     def exists(self, path):
         return _key(path) in self.saved
@@ -681,6 +726,8 @@ class FakeSolidWorks:
     # -- W5: the train's mates (see the class)
 
     def _name2(self, handle):
+        if isinstance(handle, _Held) and handle.epoch != self.epoch:
+            raise StaleHandle(f"{handle} was handed out before a configuration change and used after it")
         if handle in self.component_paths:         # already a Name2
             return handle
         return self.found.get(handle) or self.component_names.get(handle) or f"{handle}-1"
@@ -694,6 +741,14 @@ class FakeSolidWorks:
     def _keep_mate(self, handle, kept, kind, a, b, value, ratio, flip):
         mate = FakeMate(kept, kind, self._ref(a, kind == "lock"), self._ref(b, kind == "lock"), value,
                         tuple(ratio), flip)
+        if len(self.configs) > 1 and self.config != self.template_config:
+            # The W8 spike: a mate made while another configuration is shown comes out suppressed in the template's
+            # and on in every other (``new_mate_elsewhere="on"`` for the other plausible default).
+            off = self.new_mate_elsewhere != "on"
+            mate.flags = {c: off and c == self.template_config for c in self.configs}
+        else:
+            mate.flags = {c: False for c in self.configs}
+        mate.suppressed = mate.flags[self.config]
         if kind == "gear" and self.judge_rank and not {mate.a[0], mate.b[0]} <= self.fixed and \
                 self._over_defines(mate):
             # W7-PLAN §2.9 (review S12): a gear mate whose turn row adds nothing to those of the free bodies already
@@ -776,7 +831,12 @@ class FakeSolidWorks:
             for along in (m for m in live if m.along and m.a[0] == gear):
                 index = {"plane1": 2, "plane2": 1, "plane3": 0}.get(along.b[1])
                 sign = -1.0 if along.value < 0 else 1.0
-                value = sign * own[along.link] if along.link in own else along.value
+                if along.link in own:
+                    value = sign * own[along.link]
+                elif self.config in along.own:         # W8: a slide's value in this configuration
+                    value = sign * along.own[self.config]
+                else:
+                    value = along.value
                 if index is not None and abs(direction[index]) > 1e-12:
                     t = (value - point[index]) / direction[index]
             origin = tuple(point[i] + t * direction[i] for i in range(3))
@@ -914,11 +974,30 @@ class FakeSolidWorks:
         stem = path.replace("/", "\\").rsplit("\\", 1)[-1].rsplit(".", 1)[0]
         return path in self.helical_parts or bool(re.search(r"_\d+(\.\d+)?[LR]$", stem))
 
+    def _collinear(self, mate):
+        """W8: a gear mate at 1 : 1 between two gears on one axis line (a spline or a coupling), as they stand; W7's
+        abandoned coaxial fallback (a sun mated to its carrier at the absolute ratio) keeps the external rule."""
+        a, b = mate.a[0], mate.b[0]
+        if self._turned(mate) or abs(mate.ratio[0] - mate.ratio[1]) > 1e-9:
+            return False
+        axis, off = self._axis(a), [q - p for p, q in zip(self._origin(a), self._origin(b))]
+        along = sum(o * w for o, w in zip(off, axis))
+        return sum(o * o for o in off) - along * along <= 1e-12
+
     def mesh_case(self, mate):
         """(internal, the key of the probe's tables for this pair, the Flip it needs on this fake's version)."""
         a, b = mate.a[0], mate.b[0]
         if self._turned(mate):
             return False, "turned", bool(self.turned_flip_needed)
+        if self._collinear(mate):
+            # W8 spike: one Flip right per version for a spline (spur to spur) and for a coupling (to a dog, which
+            # is a ring part); "+-" (the shafts facing opposite ways) was never shown, so it is not in the tables.
+            ring = any(self._is_ring(n) or self.component_paths.get(n, "").replace("/", "\\").rsplit("\\", 1)[-1]
+                       .lower().startswith("dog") for n in (a, b))
+            key = f"collinear {'ring ' if ring else ''}{'++' if self._sigma(a) == self._sigma(b) else '+-'}"
+            if key not in self.flip_needed:
+                raise AssertionError(f"the fake does not know which Flip turns {mate.name} right ({key})")
+            return False, key, bool(self.flip_needed[key])
         internal = self._is_ring(a) or self._is_ring(b)
         if internal:
             pinion, ring = (b, a) if self._is_ring(a) else (a, b)
@@ -980,6 +1059,8 @@ class FakeSolidWorks:
             n = cross(t, e)
             return dot(ta, n) * dot(cross(gb, e), n) < 0
         alike = sum(p * q for p, q in zip(self._axis(mate.a[0]), self._axis(mate.b[0]))) > 0
+        if self._collinear(mate):
+            return alike                   # W8-INTERFACES §9.3: both turn the same way about the world
         return self.mesh_case(mate)[0] == alike
 
     def gear_mate_sense(self, handle, same_sense, axes, meet=None):
@@ -1010,6 +1091,141 @@ class FakeSolidWorks:
         if mate.name in self.entity_swapped:
             directions.reverse()
         return swcom.sense_reading(reverse, directions, axes, same_sense, mate=f"{mate.name} in {title}")
+
+    # -- W8: configurations (W8-PLAN §3.5), as the W8 spike measured SolidWorks 2026
+
+    def _configuration_gate(self, *names):
+        """As ``Session``: a configuration member refuses with its sentence while a finding it rests on is not
+        settled (``swcom.configuration_finding``)."""
+        for name in names:
+            problem = swcom.configuration_finding(name)
+            if problem is not None:
+                raise SolidWorksError(f"Working with an assembly's configurations has not been settled on this "
+                                      f"SolidWorks ({problem}), so nothing was read or changed.")
+
+    def _named(self, name):
+        return next((c for c in self.configs if c.casefold() == str(name).casefold()), None)
+
+    def _leave(self):
+        """The active configuration's flags and frames kept, before another is shown or added."""
+        for mate in self.mates:
+            mate.flags[self.config] = mate.suppressed
+        if not self.shared_positions:
+            self.frames_by[self.config] = self.frames
+
+    def _enter(self, name):
+        self.config = name
+        for mate in self.mates:
+            mate.suppressed = mate.flags.get(name, mate.suppressed)
+        if not self.shared_positions:
+            self.frames = self.frames_by.pop(name, None) or dict(self.frames)
+        self.epoch += 1
+
+    def configurations(self):
+        self._log("configurations")
+        return list(self.configs)
+
+    def active_configuration(self):
+        self._log("active_configuration")
+        return self.config
+
+    def add_configuration(self, name):
+        """Adds and activates a copy of the active configuration: its flags, values and frames (the spike). Until
+        the next rebuild, flag calls misbehave (``unsettled``)."""
+        self._log("add_configuration", name)
+        self._configuration_gate("CONFIGURATION_ADD_ROUTE")
+        self._leave()
+        self.configs.append(str(name))
+        for mate in self.mates:
+            mate.flags[str(name)] = mate.suppressed
+        frames = dict(self.frames)
+        self._enter(str(name))
+        self.frames = frames
+        self.unsettled = 2
+
+    def show_configuration(self, name):
+        """As ``ShowConfiguration2`` through ``Session``: already active, nothing changes (SolidWorks answered False,
+        judged by the name); otherwise it is shown and marks the assembly modified, never a part (the spike). Every
+        handle from before goes stale either way, as the Session raises its epoch."""
+        self._log("show_configuration", name)
+        self._configuration_gate("CONFIGURATION_SHOW_ROUTE")
+        found = self._named(name)
+        if found is None:
+            self.epoch += 1
+            raise SolidWorksError(f"SolidWorks would not show the configuration {name}.")
+        if found == self.config:
+            self.epoch += 1
+            return
+        self._leave()
+        self._enter(found)
+        self._touch()
+
+    def delete_configuration(self, name):
+        self._log("delete_configuration", name)
+        self._configuration_gate("CONFIGURATION_DELETE_ROUTE")
+        found = self._named(name)
+        title = self.active.title if self.active else "the assembly"
+        if found == self.config:
+            raise SolidWorksError(f"The configuration {name} is the active one in {title}, and the active "
+                                  "configuration is never deleted.")
+        if found is not None:
+            self.configs.remove(found)
+            self.frames_by.pop(found, None)
+            for mate in self.mates:
+                mate.flags.pop(found, None)
+                mate.own.pop(found, None)
+
+    def set_mate_suppressed_in(self, handle, suppressed, configurations):
+        """As ``Session.set_mate_suppressed_in``: every named configuration's flag set, read back. Until the first
+        rebuild after an add, the spike's misbehaviour: the first call takes (it raised, and the Session judges by
+        the read-back), the second does nothing, so the Session's read-back raises."""
+        self._log("set_mate_suppressed_in", handle, suppressed, tuple(configurations))
+        self._configuration_gate("MATE_SUPPRESSION_PER_CONFIGURATION_ROUTE", "SPECIFY_CONFIGURATIONS")
+        if not configurations:
+            return
+        name = self.mate_handles[handle]
+        mate = self.mate(name)
+        if self.unsettled == 1:
+            self.unsettled = 0
+            state = "suppressed" if not suppressed else "on"
+            raise SolidWorksError(f"SolidWorks would not {'suppress' if suppressed else 'turn on'} the mate {name} "
+                                  f"in {', '.join(configurations)}: it still reads {state} there.")
+        if self.unsettled == 2:
+            self.unsettled = 1
+        for config in configurations:
+            found = self._named(config)
+            if found is None:
+                raise SolidWorksError(f"There is no configuration {config} to set the mate {name} in.")
+            mate.flags[found] = bool(suppressed)
+            if found == self.config:
+                mate.suppressed = bool(suppressed)
+
+    def mate_suppression(self, handle, configurations):
+        self._log("mate_suppression", handle, tuple(configurations))
+        self._configuration_gate("MATE_SUPPRESSION_PER_CONFIGURATION_ROUTE", "SPECIFY_CONFIGURATIONS")
+        mate = self.mate(self.mate_handles[handle])
+        mate.flags[self.config] = mate.suppressed
+        return {str(c): bool(mate.flags.get(self._named(c), False)) for c in configurations}
+
+    def set_dimension_in(self, mate_handle, value_mm, configurations):
+        """A distance mate's value in the named configurations only, whichever is active (follow-up A)."""
+        self._log("set_dimension_in", mate_handle, float(value_mm), tuple(configurations))
+        self._configuration_gate("SLIDE_VALUE_ROUTE", "SET_VALUE_IN_SPECIFIC_CONFIGURATIONS")
+        mate = self.mate(self.mate_handles[mate_handle])
+        for config in configurations:
+            mate.own[self._named(config) or str(config)] = abs(float(value_mm))
+
+    def dimension_values(self, mate_handle, configurations):
+        """Each named configuration's own value; one with none of its own reads 0, but for the active one, which
+        reads where it stands (follow-up A)."""
+        self._log("dimension_values", mate_handle, tuple(configurations))
+        self._configuration_gate("SLIDE_VALUE_ROUTE", "SET_VALUE_IN_SPECIFIC_CONFIGURATIONS")
+        mate = self.mate(self.mate_handles[mate_handle])
+        out = {}
+        for config in configurations:
+            found = self._named(config)
+            out[str(config)] = mate.own.get(found, abs(mate.value) if found == self.config else 0.0)
+        return out
 
     # -- W7: carriers (W7-PLAN §2.9), as the spike measured SolidWorks 2026 (W7-SPIKE.md)
 
@@ -5734,3 +5950,298 @@ def test_an_update_of_a_gearbox_with_modes_is_refused_before_anything_is_read(mo
 def test_an_update_of_a_gearbox_without_modes_passes_the_modes_gate():
     swbuild._update_modes_gate(None)
     swbuild._update_modes_gate(_W7)
+
+
+# -- W8: a gearbox with modes, built against the fake (W8-PLAN §1.8, §3.5) ------------------------------------------
+#
+# A cut-down TransferCase_Parallel (§2.2): two sleeves on the Rear axis splined together, three dogs on it, the
+# couplings' on/off table and the slides' values per mode the answer key's (§2.3). Planned here by hand.
+
+TC = "C:\\TC\\"
+TC_ASM = TC + "TransferCase.SLDASM"
+TC_LAYOUT = TC + "TransferCase_Layout.SLDPRT"
+TC_SLEEVE, TC_DOG = TC + "Sleeve_m1.5_N30.SLDPRT", TC + "Dog_m1.5_N30.SLDPRT"
+TC_MODES = ("2H", "4H", "N", "4L")
+TC_SLIDES = {"RangeSlv along Rear": (46.0, 46.0, 56.0, 66.0), "ModeSlv along Rear": (96.0, 106.0, 96.0, 106.0)}
+TC_COUPLES = {"RangeSlv engages InDog": ("gear7", "gear2", ("2H", "4H")),
+              "ModeSlv engages FrontDog": ("gear8", "gear9", ("4H", "4L")),
+              "RangeSlv engages LoDog": ("gear7", "gear6", ("4L",))}
+TC_AT = {"gear2": 47.0, "gear6": 67.0, "gear9": 107.0, "gear7": 46.0, "gear8": 96.0}
+TC_NAMES = {"gear2": "InDog", "gear6": "LoDog", "gear9": "FrontDog", "gear7": "RangeSlv", "gear8": "ModeSlv"}
+TC_SENSES = {"ModeSlv splined to RangeSlv": True}
+
+
+def _tc_plan():
+    out = [ops.NewAssembly(""), ops.AddComponent("layout", TC_LAYOUT), ops.Place("layout", IDENTITY9, (0.0, 0.0, 0.0)),
+           ops.Fix("layout")]
+    for handle, z in TC_AT.items():
+        path = TC_SLEEVE if handle in ("gear7", "gear8") else TC_DOG
+        out += [ops.AddComponent(handle, path, (0.0, 0.0, z)), ops.Place(handle, IDENTITY9, (0.0, 0.0, z)),
+                ops.Fix(handle)]
+    for handle, z in TC_AT.items():
+        name = TC_NAMES[handle]
+        out += [ops.Unfix(handle),
+                ops.Mate(f"axis_{handle}", "coincident", f"{handle}:Gear Axis", "layout:Rear Axis",
+                          name=f"{name} on Rear Axis"),
+                ops.Mate(f"along_{handle}", "point distance", f"{handle}:origin", "layout:plane1", z,
+                          name=f"{name} along Rear")]
+    out += [ops.Mate("spline", "gear", "gear7:Gear Axis", "gear8:Gear Axis", name="ModeSlv splined to RangeSlv"),
+            ops.Rebuild(), ops.SaveAs(TC_ASM)]
+    return BuildPlan("workbook-assembly", "", tuple(out), TC_ASM)
+
+
+def _tc_modes(couples=TC_COUPLES):
+    always = tuple(op.name for op in _tc_plan().ops if isinstance(op, ops.Mate))
+    made, steps = set(), []
+    for index, mode in enumerate(TC_MODES):
+        made_ops = []
+        for name, (sleeve, dog, on) in couples.items():
+            if mode in on and name not in made:
+                made.add(name)
+                made_ops.append(ops.Mate(f"c{len(made)}", "gear", f"{sleeve}:Gear Axis", f"{dog}:Gear Axis", name=name))
+        values = {name: v[index] for name, v in TC_SLIDES.items()}
+        frames = {"gear7": (IDENTITY9, (0.0, 0.0, values["RangeSlv along Rear"])),
+                  "gear8": (IDENTITY9, (0.0, 0.0, values["ModeSlv along Rear"]))}
+        steps.append(swbuild.ModeStep(mode, tuple(made_ops), always + tuple(n for n, c in couples.items() if mode in c[2]),
+                                      tuple(n for n, c in couples.items() if mode not in c[2]), values, frames))
+    return swbuild.ModesPlan(tuple(steps), same_way=tuple(couples))
+
+
+# The dogs and sleeves are not geometry here; the plan's slides use the dogs' along mates as distance mates too, so
+# only the two sleeves' along mates are SLIDEs (their values per mode); the dogs' stand where they were made.
+TC_GEARS = {h: TC_NAMES[h] for h in TC_AT} | {"layout": "layout"}
+
+
+@pytest.fixture
+def mode_findings(monkeypatch):
+    """Every finding a build with modes reads, pinned here at what the W8 spike found on SolidWorks 2026 (never the
+    committed values), with the read-back's and the remake's."""
+    for name, value in tuple(swcom.CONFIGURATION_FINDINGS) + (
+            ("CONFIGURATION_SHOW_RAISES_DIALOG", False), ("MULTI_CONFIGURATION_SAVE_ASKS", False),
+            ("COLLINEAR_GEAR_MATE_SENSE_READ_BACK", True), ("SLIDE_VALUE_PER_CONFIGURATION_ON_2026", True),
+            ("SLIDE_VALUE_PER_CONFIGURATION_ON_2024", True), ("POSITIONS_PER_CONFIGURATION_ON_2026", True),
+            ("FEATURE_SUPPRESS", 0), ("FEATURE_UNSUPPRESS", 1), ("MATE_FIND_ROUTE", "mate group"),
+            ("COMPONENT_FIND_ROUTE", "GetComponentByName"),
+            ("GEAR_MATE_SENSE_READ_BACK", "(Reverse == entities parallel) == internal"),
+            ("GEAR_MATE_READ_BACK_TELLS_SENSE", True), ("GEAR_MATE_CHECK_AND_REMAKE_HOLDS", True),
+            ("MATE_DELETE_ROUTE", "Select2 then EditDelete()"), ("MATE_RENAME_ROUTE", "IFeature.Name put")):
+        monkeypatch.setattr(findings, name, value, raising=False)
+
+
+def _tc_build(fake=None, modes=None, **kwargs):
+    fake = fake or FakeSolidWorks()
+    checks = []
+    steps = []
+    result = swbuild.build(fake, _tc_plan(), never_exists, gears=TC_GEARS, senses=TC_SENSES,
+                           modes=modes or _tc_modes(), mode_checks=checks, progress=steps.append, **kwargs)
+    return fake, result, checks, steps
+
+
+def _first(fake, name, *args):
+    return next(i for i, (n, a) in enumerate(fake.calls) if n == name and (not args or a[:len(args)] == args))
+
+
+@pytest.mark.parametrize("elsewhere", ["suppressed", "on"])
+def test_a_build_with_modes_sets_up_every_configuration_in_the_planned_order(mode_findings, elsewhere):
+    fake = FakeSolidWorks()
+    fake.new_mate_elsewhere = elsewhere
+    fake, result, checks, steps = _tc_build(fake)
+    assert result.ok and result.saved == TC_ASM, result.log_lines()
+    calls = names(fake)
+    # the always-on mates and the slides made with only Default; then every configuration added
+    plan_mates = [op for op in _tc_plan().ops if isinstance(op, ops.Mate)]
+    assert calls[:calls.index("add_configuration")].count("add_mate") == len(plan_mates)
+    assert "save_as" not in calls[:calls.index("add_configuration")]
+    adds = [a[0] for n, a in fake.calls if n == "add_configuration"]
+    assert adds == list(TC_MODES)
+    # a rebuild between the last add and the first value or flag
+    last_add = max(i for i, n in enumerate(calls) if n == "add_configuration")
+    first_set = min(i for i, n in enumerate(calls) if n in ("set_dimension_in", "set_mate_suppressed_in"))
+    assert "rebuild" in calls[last_add:first_set]
+    # every slide's value set in every configuration, the first's included, then read back
+    sets = [(a[0], a[1], a[2]) for n, a in fake.calls if n == "set_dimension_in"]
+    assert sets == [(f"along_{h}", v, (m,)) for h, slide in (("gear7", "RangeSlv along Rear"),
+                                                             ("gear8", "ModeSlv along Rear"))
+                    for m, v in zip(TC_MODES, TC_SLIDES[slide])]
+    # each coupling made with the first configuration using it shown
+    for name, (sleeve, dog, on) in TC_COUPLES.items():
+        made = _first(fake, "add_mate", "gear", f"{sleeve}:Gear Axis", f"{dog}:Gear Axis")
+        shown = [a[0] for n, a in fake.calls[:made] if n == "show_configuration"]
+        assert shown[-1] == on[0], name
+    # every flag as the table has it, in every configuration; Default deleted; saved in the first mode
+    assert fake.configs == list(TC_MODES) and fake.config == "2H"
+    for name, (_, _, on) in TC_COUPLES.items():
+        assert fake.mate(name).flags == {m: m not in on for m in TC_MODES}, name
+    for name, values in TC_SLIDES.items():
+        assert fake.mate(name).own == dict(zip(TC_MODES, values))
+    assert calls.index("delete_configuration") < calls.index("save_as")
+    assert [a[0] for n, a in fake.calls if n == "delete_configuration"] == ["Default"]
+    assert [a[0] for n, a in fake.calls if n == "show_configuration"][-1] == "2H"
+    # the per-mode check, each mode through fresh handles, every slider at its value
+    assert [c.name for c in checks] == list(TC_MODES)
+    for check, index in zip(checks, range(4)):
+        assert check.values == {n: v[index] for n, v in TC_SLIDES.items()}
+        assert check.suppressed == {n: TC_MODES[index] not in c[2] for n, c in sorted(TC_COUPLES.items())}
+    assert [(s.stage, s.name, s.index, s.count) for s in steps] == \
+        [(swbuild.STAGE_MODE, m, i, 4) for _ in range(2) for i, m in enumerate(TC_MODES, 1)]
+    assert "configuration 2H made" in result.done and "configuration Default deleted" in result.done
+
+
+def test_each_mode_stands_its_sliders_at_its_own_values(mode_findings):
+    fake, result, _, _ = _tc_build()
+    assert result.ok, result.log_lines()
+    for index, mode in enumerate(TC_MODES):
+        fake.show_configuration(mode)
+        fake.rebuild(kind=swcom.ASSEMBLY_TRAIN)
+        assert fake.frames["gear7-1"][1][2] == pytest.approx(TC_SLIDES["RangeSlv along Rear"][index])
+        assert fake.frames["gear8-1"][1][2] == pytest.approx(TC_SLIDES["ModeSlv along Rear"][index])
+
+
+def test_on_2024_the_spline_is_read_wrong_and_made_again_and_the_couplings_read_right(mode_findings):
+    fake = FakeSolidWorks()
+    fake.flip_needed = dict(FLIP_NEEDED_2024)
+    fake, result, _, _ = _tc_build(fake)
+    assert result.ok and result.turned_round == ["ModeSlv splined to RangeSlv"], result.log_lines()
+
+
+def test_a_mode_whose_coupling_over_defines_stops_the_build_naming_the_mode_and_nothing_is_saved(mode_findings):
+    couples = dict(TC_COUPLES, **{"ModeSlv engages InDog": ("gear8", "gear2", ("N",)),
+                                  "RangeSlv engages InDog": ("gear7", "gear2", ("2H", "4H", "N"))})
+    fake, result, _, _ = _tc_build(modes=_tc_modes(couples))
+    assert not result.ok and not result.saved
+    assert result.mate_problems == ["In mode N, the mate ModeSlv engages InDog over-defines the assembly."]
+    assert "save_as" not in names(fake)
+
+
+def test_a_flag_set_straight_after_an_add_fails_its_read_back_on_the_second_call(mode_findings):
+    """The fake's fault (§3.5): a build that set flags before the rebuild after the adds would fail here."""
+    fake, result, _, _ = _tc_build()
+    fake.add_configuration("X")
+    fake.set_mate_suppressed_in("c1", True, ["X"])
+    with pytest.raises(SolidWorksError, match="would not turn on the mate RangeSlv engages InDog in X"):
+        fake.set_mate_suppressed_in("c1", False, ["X"])
+    fake.rebuild(kind=swcom.ASSEMBLY_TRAIN)
+    fake.set_mate_suppressed_in("c1", False, ["X"])
+    assert fake.mate_suppression("c1", ["X"]) == {"X": False}
+
+
+def test_a_component_handed_out_before_a_show_fails_loudly_when_used_after_it(mode_findings):
+    fake = FakeSolidWorks()
+    fake.new_assembly()
+    held = fake.add_component("gear1", TC_DOG, (0.0, 0.0, 0.0))
+    fake.is_fixed(held)                                  # the same epoch: fine
+    fake.add_configuration("X")
+    with pytest.raises(StaleHandle):
+        fake.is_fixed(held)
+    assert fake.is_fixed("gear1") is False               # a handle by its plan name is fetched again
+
+
+def test_nothing_in_a_build_with_modes_carries_a_handed_out_component_across_a_change(mode_findings):
+    """Every member the build calls after a configuration change is given plan handles, never what an earlier
+    call handed back: the fake's StaleHandle would fail the build."""
+    _, result, _, _ = _tc_build()
+    assert result.ok
+
+
+@pytest.mark.parametrize("finding, value, sentence", [
+    ("CONFIGURATION_ADD_ROUTE", None, "Working with an assembly's configurations has not been settled on SolidWorks "
+                                      "(findings.CONFIGURATION_ADD_ROUTE is None), so a gearbox with modes is not "
+                                      "built and nothing is made."),
+    ("MULTI_CONFIGURATION_SAVE_ASKS", True, "A gearbox with modes needs findings.MULTI_CONFIGURATION_SAVE_ASKS "
+                                            "settled on SolidWorks (it is True), so it is not built and nothing is "
+                                            "made."),
+    ("COLLINEAR_GEAR_MATE_SENSE_READ_BACK", None, "A gearbox with modes needs findings."
+                                                  "COLLINEAR_GEAR_MATE_SENSE_READ_BACK settled on SolidWorks (it is "
+                                                  "None), so it is not built and nothing is made."),
+    ("COMPONENT_FIND_ROUTE", None, "Finding a component again after a configuration change has not been settled on "
+                                   "SolidWorks (findings.COMPONENT_FIND_ROUTE is None), so a gearbox with modes is "
+                                   "not built and nothing is made."),
+    ("SLIDE_VALUE_PER_CONFIGURATION_ON_2026", None, "SolidWorks 2026 has not been shown to hold a slide's value per "
+                                                    "configuration, so a gearbox with modes is not built there and "
+                                                    "nothing is made."),
+])
+def test_a_build_with_modes_is_refused_before_anything_is_made_while_a_finding_is_unsettled(
+        mode_findings, monkeypatch, finding, value, sentence):
+    monkeypatch.setattr(findings, finding, value, raising=False)
+    fake = FakeSolidWorks()
+    with pytest.raises(swbuild.BuildError) as raised:
+        _tc_build(fake)
+    assert str(raised.value) == sentence
+    assert not [n for n, _ in fake.calls if n.startswith("new_")]
+
+
+def test_the_version_refusal_is_read_from_the_running_solidworks(mode_findings, monkeypatch):
+    monkeypatch.setattr(findings, "SLIDE_VALUE_PER_CONFIGURATION_ON_2024", None, raising=False)
+    fake = FakeSolidWorks()
+    fake.revision = (32, 5, 0)
+    with pytest.raises(swbuild.BuildError) as raised:
+        _tc_build(fake)
+    assert str(raised.value) == ("SolidWorks 2024 has not been shown to hold a slide's value per configuration, so a "
+                                 "gearbox with modes is not built there and nothing is made.")
+    assert fake.calls == []
+    assert swbuild._modes_version_refusal(()) == (
+        "The running SolidWorks' version could not be read, so whether it holds a slide's value per configuration "
+        "cannot be told; a gearbox with modes is not built and nothing is made.")
+
+
+def test_modes_never_reach_solidworks_by_a_path_that_ignores_them(mode_findings):
+    """The two paths left once the gate is lifted: modes with no assembly, or with no senses to read back by,
+    or for an assembly that does not turn, are refused before anything is made."""
+    fake = FakeSolidWorks()
+    with pytest.raises(swbuild.BuildError, match="^Modes were given with no assembly"):
+        swbuild.build_gearbox(fake, [plan(path=TC + "Gear.SLDPRT")], modes=_tc_modes(), exists=never_exists)
+    with pytest.raises(swbuild.BuildError, match="^A gearbox with modes was not told which way its gear mates turn"):
+        swbuild.build(fake, _tc_plan(), never_exists, modes=_tc_modes())
+    static = BuildPlan("workbook-assembly", "", tuple(op for op in _tc_plan().ops if not isinstance(op, ops.Mate)),
+                       TC_ASM)
+    with pytest.raises(swbuild.BuildError, match="^Modes were given for an assembly that does not turn"):
+        swbuild.build(fake, static, never_exists, senses={}, modes=_tc_modes())
+    with pytest.raises(swbuild.BuildError, match="^Modes were given for an assembly that is not built to turn"):
+        swbuild.build(fake, _tc_plan(), never_exists, kind=swcom.ASSEMBLY_STATIC, senses=TC_SENSES,
+                      modes=_tc_modes())
+    assert not [n for n, _ in fake.calls if n.startswith("new_")]
+
+
+def test_a_modes_plan_names_a_coupling_that_turns_its_gears_alike_and_joins_plan_components():
+    modes = _tc_modes()
+    assert modes.check(_tc_plan()) == []
+    unlisted = replace(modes, same_way=("RangeSlv engages InDog", "RangeSlv engages LoDog"))
+    assert unlisted.check(_tc_plan()) == ["In mode 4H, the coupling ModeSlv engages FrontDog turns its two gears the "
+                                          "same way, and it is not listed as doing so."]
+    steps = list(modes.steps)
+    steps[3] = replace(steps[3], ops=(ops.Mate("c3", "gear", "gear7:Gear Axis", "gear99:Gear Axis",
+                                                name="RangeSlv engages LoDog"),))
+    assert replace(modes, steps=tuple(steps)).check(_tc_plan()) == [
+        "In mode 4L, the gear mate RangeSlv engages LoDog joins gear99, which is not a component of the assembly."]
+
+
+def _tc_gearbox(fake=None, **kwargs):
+    fake = fake or FakeSolidWorks()
+    steps = []
+    parts = [plan(path=p) for p in (TC_SLEEVE, TC_DOG)]
+    layout = BuildPlan("layout", "", (ops.NewPart(""), ops.Rebuild(), ops.SaveAs(TC_LAYOUT)), TC_LAYOUT)
+    result = swbuild.build_gearbox(fake, parts, layout=layout, assembly=_tc_plan(), gears=TC_GEARS, senses=TC_SENSES,
+                                   modes=_tc_modes(), exists=fake.exists, progress=steps.append, **kwargs)
+    return fake, result, steps
+
+
+def test_a_gearbox_with_modes_checks_interference_in_every_mode_and_ends_in_the_first(mode_findings, monkeypatch):
+    monkeypatch.setattr(findings, "INTERFERENCE_CHECKED", True, raising=False)
+    fake = FakeSolidWorks()
+    clash = (("gear7-1", "gear6-1"), 12.0)
+    fake.clashes_in = {"4L": [clash]}
+    fake, result, steps = _tc_gearbox(fake)
+    assert result.ok, result.log_lines()
+    assert [c.name for c in result.modes] == list(TC_MODES)
+    assert [len(c.clashes) for c in result.modes] == [0, 0, 0, 1] and result.clashes == []
+    assert result.positions_per_configuration is True
+    assert fake.config == "2H"
+    after_save = [a[0] for n, a in fake.calls[names(fake).index("save_as", names(fake).index("add_configuration")):]
+                  if n == "show_configuration"]
+    assert after_save == list(TC_MODES) + ["2H"]
+    lines = result.log_lines()
+    assert "mode    2H: every mate sound, every gear free to turn, no interference" in lines
+    assert "mode    4L: every mate sound, every gear free to turn" in lines
+    assert any(line.startswith("CHECK   in mode 4L, RangeSlv and LoDog interfere") for line in lines), lines
+    assert any(line.startswith("config  4L: ") for line in lines)
+    assert [s.name for s in steps if s.stage == swbuild.STAGE_MODE][-4:] == list(TC_MODES)

@@ -206,14 +206,6 @@ def test_the_protocol_and_the_session_both_have_the_configuration_members():
 
 # -- the modes= gate: refused before anything is made --------------------------------------------------------------
 
-def test_a_build_with_modes_is_refused_before_anything_is_made_until_package_a_writes_it():
-    fake = FakeSolidWorks()
-    with pytest.raises(BuildError, match=r"^This version of Gear Generator does not make an assembly's configurations "
-                                         r"yet, so a gearbox with modes is not built and nothing is made\.$"):
-        swbuild.build(fake, assembly_plan(), never_exists, modes=modes_plan())
-    assert not [name for name, _ in fake.calls if name.startswith("new_")]
-
-
 def test_an_unsound_modes_plan_is_refused_with_every_problem_before_anything_is_made():
     fake = FakeSolidWorks()
     bad = with_step(modes_plan(), 2, name="4h")
@@ -227,17 +219,6 @@ def test_modes_with_no_assembly_are_refused_as_a_fault():
         swbuild._modes_gate(None, modes_plan())
     swbuild._modes_gate(None, None)
     swbuild._modes_gate(assembly_plan(), None)
-
-
-def test_build_gearbox_refuses_modes_before_any_part_is_made():
-    fake = FakeSolidWorks()
-    part = BuildPlan("spur", "A", (base.NewPart(""), base.Rebuild(), base.SaveAs(r"C:\T\InPin.SLDPRT")),
-                     r"C:\T\InPin.SLDPRT")
-    with pytest.raises(BuildError, match="does not make an assembly's configurations yet"):
-        swbuild.build_gearbox(fake, [part], layout=BuildPlan("layout", "", (base.NewPart(""), base.Rebuild(),
-                                                                            base.SaveAs(r"C:\T\L.SLDPRT"))),
-                              assembly=assembly_plan(), modes=modes_plan(), exists=never_exists)
-    assert not [name for name, _ in fake.calls if name.startswith("new_")]
 
 
 # -- swcom: the members refuse with a sentence until A writes them; the epoch; the positions switch -------------------

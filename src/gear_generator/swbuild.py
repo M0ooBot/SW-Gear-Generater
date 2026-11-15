@@ -34,7 +34,8 @@ from .gears.base import BuildPlan, GlobalVariable
 from .gears.equations import DEGREES, RADIANS, EquationError, evaluate_all, split_equation
 from .gears.spur import AXIS_NAME
 from .store import GEARBOX_MOTION, GEARBOX_STATIC, same_path
-from .swcom import (ASSEMBLY_PAIR, ASSEMBLY_STATIC, ASSEMBLY_TRAIN, DOC_ASSEMBLY, MINIMUM_MAJOR,
+from .swcom import (ASSEMBLY_PAIR, ASSEMBLY_STATIC, ASSEMBLY_TRAIN, COMPONENT_FIND_ROUTES, CONFIGURATION_FINDINGS,
+                    DOC_ASSEMBLY, MINIMUM_MAJOR, configuration_finding, positions_per_configuration,
                     ENTITY_ALONG, LINE_TOLERANCE, RESOLVED_ROUTE_FINDING, ComponentGone, DocInfo, MateGone, MateRefused, MateState,
                     SenseUnreadable, SolidWorksError, Vec3, axes_parallel, lines_meet, meets_minimum, own_axes_angle,
                     rebuild_call, release_year, turned_refusal)
@@ -133,6 +134,8 @@ class SolidWorks(Protocol):
     def mate_suppression(self, handle: str, configurations: Sequence[str]) -> Dict[str, bool]: ...
     def set_dimension_in(self, mate_handle: str, value_mm: float, configurations: Sequence[str]) -> None: ...
     def dimension_values(self, mate_handle: str, configurations: Sequence[str]) -> Dict[str, float]: ...
+    def is_fixed(self, handle: str) -> bool: ...
+    def component_path(self, handle: str) -> str: ...
 
 
 class BuildError(SolidWorksError):
@@ -582,7 +585,9 @@ _RUNNERS: Mapping[type, Callable] = {
 
 def build(sw: SolidWorks, plan: BuildPlan, exists: Callable[[str], bool] = os.path.exists,
           kind: Optional[str] = None, *, gears: Optional[Mapping[str, str]] = None,
-          senses: Optional[Mapping[str, bool]] = None, modes: Optional[ModesPlan] = None) -> BuildResult:
+          senses: Optional[Mapping[str, bool]] = None, modes: Optional[ModesPlan] = None,
+          mode_checks: Optional[List[ModeCheck]] = None,
+          progress: Optional[Callable[[Step], None]] = None) -> BuildResult:
     """Make the plan's document, run every step, rebuild once, check, and save.
 
     Raises :class:`BuildError` only before anything is made. After that every
@@ -636,17 +641,24 @@ def build(sw: SolidWorks, plan: BuildPlan, exists: Callable[[str], bool] = os.pa
     anything is made while a finding it reads is missing (:func:`_train_gate`).
 
     ``modes`` (keyword, W8; W8-INTERFACES.md §3): the configurations of a turning assembly, set up after the mate
-    check and before the save (W8-PLAN §1.8, steps 1-8, Agent A). None is W5's build call for call. Given, it is
-    judged before anything is made (:func:`_modes_gate`).
+    check and before the save (W8-PLAN §1.8, steps 1-7: :func:`_set_up_modes`; step 8, interference per mode, is
+    :func:`build_gearbox`'s, after the save). None is W5's build call for call. Given, it is judged before anything
+    is made (:func:`_modes_gate`, with the running version), and the assembly is saved in the first mode.
+    ``mode_checks`` (keyword): a list each mode's :class:`ModeCheck` is appended to as it is checked.
+    ``progress`` (keyword): told ``Step(STAGE_MODE, mode, index, count)`` as each mode is set up, and again as each
+    is checked.
     """
     _gate(sw)
     problems = plan.check()
     if problems:
         raise BuildError("The build plan is not sound: " + " ".join(problems))
-    _modes_gate(plan, modes)
+    _modes_gate(plan, modes, revision=sw.revision, senses=senses)
     first = plan.ops[0]
     if kind is None:
         kind = workbook_assembly_kind(plan)
+    if modes is not None and kind != ASSEMBLY_TRAIN:
+        raise BuildError("Modes were given for an assembly that is not built to turn, so nothing is made; that is a "
+                         "fault in Gear Generator.")
     if isinstance(first, base.NewAssembly):
         _assembly_rebuild_gate(kind)
         if kind == ASSEMBLY_TRAIN:
@@ -677,6 +689,9 @@ def build(sw: SolidWorks, plan: BuildPlan, exists: Callable[[str], bool] = os.pa
             # problem from it, so it never holds Build back.
             if kind == ASSEMBLY_TRAIN and not result.stopped_at and result.rebuilt:
                 _check_mates(sw, plan, result, made, gears or {})
+            if modes is not None and result.ok and result.rebuilt:
+                _set_up_modes(sw, plan, modes, result, made, gears or {}, kind, sense, mode_checks,
+                              progress or _quiet)
         except Exception as exc:  # noqa: BLE001 - the document is made: every problem is now a failure (B1)
             result.failures.append(("the build", _said(exc)))
             result.stopped_at = result.stopped_at or "the build"
@@ -700,27 +715,55 @@ def _said(exc: BaseException) -> str:
     return f"it stopped on an unexpected {type(exc).__name__}" + (f": {text}." if text else ".")
 
 
-def _modes_gate(plan: Optional[BuildPlan], modes: Optional[ModesPlan]) -> None:
-    """Before anything is made: ``modes`` None passes; otherwise a ``ModesPlan`` with no assembly plan to set up in,
-    or one :meth:`ModesPlan.check` finds unsound against it, is a :class:`BuildError` naming every problem. Until
-    package A writes the configuration phase (W8-PLAN §1.8), a sound one is refused too, with a sentence, so a build
-    with modes never saves an assembly without its configurations. (A lifts that last refusal in the same change
-    that passes ``modes`` from :func:`build_gearbox` through :func:`_build_in_job` to the assembly's :func:`build`.)"""
+def _modes_gate(plan: Optional[BuildPlan], modes: Optional[ModesPlan], *, revision: Sequence[int] = (),
+                senses: Optional[Mapping[str, bool]] = None) -> None:
+    """Before anything is made: ``modes`` None passes. Otherwise refused with a :class:`BuildError` naming why:
+    a ``ModesPlan`` with no assembly plan to set up in, or one that does not turn (a static assembly holds no modes);
+    one :meth:`ModesPlan.check` finds unsound against it (every problem named); the build not told which way its gear
+    mates turn (a coupling and a spline are settled by the read-back alone: the two versions give a collinear gear
+    mate opposite senses, the W8 spike); a configuration finding the build calls on unsettled (each with getattr,
+    :data:`swcom.CONFIGURATION_FINDINGS` and :data:`MODES_FINDINGS`), or the read-back's; and the running version not
+    shown to hold a slide's value per configuration (:func:`_modes_version_refusal`, W8-INTERFACES §9.5: the
+    worker's refusal, read from ``revision``)."""
     if modes is None:
         return
     if plan is None or not plan.ops or not isinstance(plan.ops[0], base.NewAssembly):
         raise BuildError("Modes were given with no assembly to make their configurations in, so nothing is made; "
                          "that is a fault in Gear Generator.")
+    if workbook_assembly_kind(plan) != ASSEMBLY_TRAIN:
+        raise BuildError("Modes were given for an assembly that does not turn, and only a gearbox built to turn holds "
+                         "configurations, so nothing is made; that is a fault in Gear Generator.")
     problems = modes.check(plan)
     if problems:
         raise BuildError("The modes plan is not sound, so nothing is made: " + " ".join(problems))
-    raise BuildError("This version of Gear Generator does not make an assembly's configurations yet, so a gearbox "
-                     "with modes is not built and nothing is made.")
+    if senses is None:
+        raise BuildError("A gearbox with modes was not told which way its gear mates turn, and its couplings and "
+                         "splines are known only by reading each back, so nothing is made; that is a fault in Gear "
+                         "Generator.")
+    for name, _ in CONFIGURATION_FINDINGS:
+        problem = configuration_finding(name)
+        if problem is not None:
+            raise BuildError(f"Working with an assembly's configurations has not been settled on SolidWorks "
+                             f"({problem}), so a gearbox with modes is not built and nothing is made.")
+    route = getattr(findings, "COMPONENT_FIND_ROUTE", None)
+    if route not in COMPONENT_FIND_ROUTES:
+        raise BuildError(f"Finding a component again after a configuration change has not been settled on "
+                         f"SolidWorks (findings.COMPONENT_FIND_ROUTE is {route!r}), so a gearbox with modes is not "
+                         "built and nothing is made.")
+    missing = _settled(MODES_FINDINGS + SENSE_FINDINGS + SENSE_REMAKE_FINDINGS)
+    if missing is not None:
+        raise BuildError(f"A gearbox with modes needs findings.{missing[0]} settled on SolidWorks (it is "
+                         f"{missing[1]!r}), so it is not built and nothing is made.")
+    refusal = _modes_version_refusal(revision)
+    if refusal is not None:
+        raise BuildError(refusal)
 
 
 def _build_in_job(sw: SolidWorks, plan: BuildPlan, exists: Callable[[str], bool],
                   kind: Optional[str] = None, gears: Optional[Mapping[str, str]] = None,
-                  senses: Optional[Mapping[str, bool]] = None) -> BuildResult:
+                  senses: Optional[Mapping[str, bool]] = None, *, modes: Optional[ModesPlan] = None,
+                  mode_checks: Optional[List[ModeCheck]] = None,
+                  progress: Optional[Callable[[Step], None]] = None) -> BuildResult:
     """:func:`build`, for one document of a job that has already saved others: what :func:`build` raises (its
     template is not there, SolidWorks would not make the document, the path was taken since the job's own check)
     comes back as a failed :class:`BuildResult` instead, so the job still reports, and the record still keeps,
@@ -733,7 +776,8 @@ def _build_in_job(sw: SolidWorks, plan: BuildPlan, exists: Callable[[str], bool]
     already saved), with its type named.
     """
     try:
-        return build(sw, plan, exists, kind=kind, gears=gears, senses=senses)
+        return build(sw, plan, exists, kind=kind, gears=gears, senses=senses, modes=modes, mode_checks=mode_checks,
+                     progress=progress)
     except Exception as exc:  # noqa: BLE001 - see the docstring
         first = plan.ops[0] if plan.ops else None
         what = ("new part" if isinstance(first, base.NewPart) else "new assembly"
@@ -981,16 +1025,11 @@ def _mate_problems(sw: SolidWorks, names: Sequence[str], statuses: bool) -> Tupl
     told = set()
     if statuses:
         for name in names:
-            status = sw.mate_status(name)
-            if status == findings.ADD_MATE_NO_ERROR:
+            sentence = _status_sentence(name, sw.mate_status(name))
+            if sentence is None:
                 continue
             told.add(name)
-            if status == findings.ADD_MATE_OVER_DEFINED:
-                problems.append(f"The mate {name} over-defines the assembly.")
-            elif status is None:
-                problems.append(f"SolidWorks gave no answer when making the mate {name}.")
-            else:
-                problems.append(f"SolidWorks answered {status} when making the mate {name}.")
+            problems.append(sentence)
     states = list(sw.mate_states())
     by_name = {state.name: state for state in states}
     for name in names:
@@ -1006,6 +1045,18 @@ def _mate_problems(sw: SolidWorks, names: Sequence[str], statuses: bool) -> Tupl
         if state.name not in told:
             problems.append(f"The mate {state.name} is in error in SolidWorks.")
     return problems, states
+
+
+def _status_sentence(name: str, status: Optional[int]) -> Optional[str]:
+    """A mate's AddMate5 status as the mate check says it: None for ``findings.ADD_MATE_NO_ERROR``, else a sentence
+    (over-defines; no answer; any other number given as it came)."""
+    if status == findings.ADD_MATE_NO_ERROR:
+        return None
+    if status == findings.ADD_MATE_OVER_DEFINED:
+        return f"The mate {name} over-defines the assembly."
+    if status is None:
+        return f"SolidWorks gave no answer when making the mate {name}."
+    return f"SolidWorks answered {status} when making the mate {name}."
 
 
 def _free_to_turn(sw: SolidWorks, handles: Sequence[str], gear_of: Callable[[str], str]) -> List[str]:
@@ -1356,7 +1407,8 @@ STAGES = (STAGE_CHECK, STAGE_PART, STAGE_LAYOUT, STAGE_ASSEMBLY, STAGE_INTERFERE
 @dataclass(frozen=True)
 class Step:
     """One thing the worker has started. ``name`` is the document's file stem (``Gear_m1.5_N68``), or ``""``;
-    ``index`` counts from 1 among ``count`` for STAGE_PART and STAGE_CHECK, and is 0 otherwise."""
+    ``index`` counts from 1 among ``count`` for STAGE_PART, STAGE_CHECK and STAGE_MODE (``name`` the mode's), and is
+    0 otherwise."""
 
     stage: str
     name: str = ""
@@ -1770,7 +1822,11 @@ class ModesPlan:
           (J27: never on the Front plane; the one side is the Flip's, so a magnitude is all a step holds);
         * every frame nine and three finite numbers;
         * with ``plan``: ``on`` ∪ ``off`` is exactly the plan's mate names and the step ops' names, each SLIDE is
-          a ``point distance`` mate of the plan, and each frame's handle a component the plan adds.
+          a ``point distance`` mate of the plan, and each frame's handle a component the plan adds;
+        * with ``plan`` (W8-INTERFACES §9.7): each step op's ``a`` and ``b`` a component the plan adds, and a
+          coupling — a step gear mate whose two gears' planned axis lines (each component's last ``Place``) are
+          one line — whose axes point the same way listed in ``same_way`` (it turns both the same way about their
+          own axes: COUPLE ``sense = −σ_S·σ_D``, §9.3).
         """
         problems: List[str] = []
         if not self.steps:
@@ -1860,7 +1916,37 @@ class ModesPlan:
                 for handle in step.frames:
                     if handle not in components:
                         problems.append(f"In mode {step.name}, {handle} is not a component of the assembly.")
+            axes, origins = _planned_axes(plan), _planned_origins(plan)
+            for step in self.steps:
+                for op in step.ops:
+                    if not isinstance(op, base.Mate) or op.kind != "gear" or not op.name:
+                        continue
+                    ends = [op.a.partition(":")[0], op.b.partition(":")[0]]
+                    strangers = [h for h in ends if h not in components]
+                    for handle in strangers:
+                        problems.append(f"In mode {step.name}, the gear mate {op.name} joins {handle}, which is not a "
+                                        "component of the assembly.")
+                    if strangers or any(h not in axes or h not in origins for h in ends):
+                        continue
+                    ga, gb = axes[ends[0]], axes[ends[1]]
+                    if _one_line(origins[ends[0]], ga, origins[ends[1]], gb) and \
+                            sum(p * q for p, q in zip(ga, gb)) > 0 and op.name not in self.same_way:
+                        problems.append(f"In mode {step.name}, the coupling {op.name} turns its two gears the same "
+                                        "way, and it is not listed as doing so.")
         return problems
+
+
+def _one_line(point_a: Sequence[float], axis_a: Sequence[float], point_b: Sequence[float],
+              axis_b: Sequence[float]) -> bool:
+    """Whether two planned axis lines are one line (a coupling's or a spline's, never a mesh's): parallel
+    (:func:`swcom.axes_parallel`) and b's point on a's line to :data:`LINE_TOLERANCE` mm."""
+    if not axes_parallel(axis_a, axis_b):
+        return False
+    off = [float(q) - float(p) for p, q in zip(point_a, point_b)]
+    length = math.sqrt(sum(float(v) * float(v) for v in axis_a)) or 1.0
+    u = [float(v) / length for v in axis_a]
+    along = sum(o * w for o, w in zip(off, u))
+    return math.sqrt(max(0.0, sum(o * o for o in off) - along * along)) <= LINE_TOLERANCE
 
 
 def _frame_sound(frame: object) -> bool:
@@ -1886,6 +1972,264 @@ class ModeCheck:
     values: Dict[str, float] = field(default_factory=dict)
     clashes: list = field(default_factory=list)
     interference_error: str = ""
+
+
+# W8: the configurations of a turning assembly (W8-PLAN §1.8)
+
+# Findings the build of a gearbox with modes reads that do not depend on the version (W8-PLAN §4.2), each with getattr
+# before anything is made: ``_SET`` for any value but None, else the value it must hold.
+MODES_FINDINGS = (("FEATURE_SUPPRESS", _SET), ("FEATURE_UNSUPPRESS", _SET), ("MATE_FIND_ROUTE", "mate group"),
+                  ("CONFIGURATION_SHOW_RAISES_DIALOG", False), ("MULTI_CONFIGURATION_SAVE_ASKS", False),
+                  ("COLLINEAR_GEAR_MATE_SENSE_READ_BACK", True))
+SLIDE_READ_TOLERANCE = 1e-6        # mm: a slide's value read back per configuration
+
+
+def _modes_version_refusal(revision: Sequence[int]) -> Optional[str]:
+    """W8-INTERFACES §9.5: the per-version refusal, read from the running SolidWorks' revision — a gearbox with modes
+    is built only on a version shown to hold a slide's value per configuration
+    (``findings.SLIDE_VALUE_PER_CONFIGURATION_ON_<year>`` True, by getattr; the W8 spike's follow-up A on 2026 and
+    on 2024). ``None`` when it may be built, else the sentence."""
+    try:
+        major = int(revision[0])
+    except (TypeError, ValueError, IndexError):
+        return ("The running SolidWorks' version could not be read, so whether it holds a slide's value per "
+                "configuration cannot be told; a gearbox with modes is not built and nothing is made.")
+    year = release_year(major)
+    if getattr(findings, f"SLIDE_VALUE_PER_CONFIGURATION_ON_{year}", None) is not True:
+        return (f"SolidWorks {year} has not been shown to hold a slide's value per configuration, so a gearbox with "
+                "modes is not built there and nothing is made.")
+    return None
+
+
+def _configuration_names(modes: ModesPlan, template: Sequence[str]) -> Dict[str, str]:
+    """Each mode's configuration name: the template's own configuration of the same name ignoring case (§1.8 step
+    2, :func:`on_in`'s rule), else the mode's name."""
+    out: Dict[str, str] = {}
+    for step in modes.steps:
+        out[step.name] = next((str(t) for t in template if on_in((step.name,), str(t))), step.name)
+    return out
+
+
+def _mate_handles_by_name(plan: BuildPlan, modes: ModesPlan) -> Dict[str, str]:
+    """Every mate's name (as planned) -> the handle it is made under (its op id), the plan's and the steps'."""
+    ops = [op for op in plan.ops if isinstance(op, base.Mate)] + [op for s in modes.steps for op in s.ops]
+    return {op.name or op.id: op.id for op in ops}
+
+
+def _fixed_handles(plan: BuildPlan) -> List[str]:
+    """Each component whose last ``Fix``/``Unfix`` op is ``Fix``: the layout part and the gears held still."""
+    last: Dict[str, bool] = {}
+    for op in plan.ops:
+        if isinstance(op, (base.Fix, base.Unfix)):
+            last[op.component] = isinstance(op, base.Fix)
+    return [handle for handle, fixed in last.items() if fixed]
+
+
+def _mode_problem(result: BuildResult, mode: str, sentence: str) -> None:
+    """A problem of the per-mode check: *"In mode 4L, …"*, a mate problem and a failure (W5's rule: nothing saved)."""
+    text = f"In mode {mode}, {sentence[0].lower()}{sentence[1:]}"
+    result.mate_problems.append(text)
+    result.failures.append((f"the mate check in mode {mode}", text))
+
+
+def _set_up_modes(sw: SolidWorks, plan: BuildPlan, modes: ModesPlan, result: BuildResult, made: Dict[str, str],
+                  gears: Mapping[str, str], kind: str, sense: Optional[tuple],
+                  checks: Optional[List[ModeCheck]], say: Callable[[Step], None]) -> None:
+    """W8-PLAN §1.8 steps 1-7, after W5's run, rebuild, verify and mate check and before the save, in that order
+    exactly: the template's configurations read; a configuration per mode added (or the template's of that name
+    used); one rebuild before any flag; every slide's value set in every configuration and read back; per mode, it
+    shown and rebuilt, its couplings and sliding meshes made (each read for sense and made again with the other Flip
+    if wrong), and every flag of each set in every configuration and read back; the per-mode check through fresh
+    handles; the first mode shown, the template's configurations that are no mode deleted, and a rebuild. Handles are
+    names throughout (the Session fetches again after every add and show). A problem is a sentence beginning *"In
+    mode 4L, …"* in ``mate_problems`` and a failure, so nothing is saved; any raise is an ordinary failure (the
+    caller's)."""
+    template = [str(t) for t in sw.configurations()]
+    names = _configuration_names(modes, template)
+    configs = [names[s.name] for s in modes.steps]
+    extra = [t for t in template if t not in configs]
+    for step in modes.steps:
+        if names[step.name] in template:
+            result.done.append(f"configuration {names[step.name]} kept for the mode {step.name}")
+            continue
+        sw.add_configuration(names[step.name])
+        result.done.append(f"configuration {names[step.name]} made")
+    # Step 3: straight after AddConfiguration2 the spike's first two flag calls misbehaved; after a rebuild none did.
+    if not sw.rebuild(kind=kind):
+        result.failures.append(("the configurations", "The rebuild after the configurations were made reported an "
+                                                      "error."))
+        return
+    handles = _mate_handles_by_name(plan, modes)
+    # Step 4: every slide's value in every configuration, the first's included (J7's caution), then read back.
+    slides = list(modes.steps[0].values)
+    for slide in slides:
+        for step in modes.steps:
+            sw.set_dimension_in(handles[slide], float(step.values[slide]), [names[step.name]])
+        read = sw.dimension_values(handles[slide], configs)
+        for step in modes.steps:
+            got, wanted = float(read.get(names[step.name], 0.0)), float(step.values[slide])
+            if abs(got - wanted) > SLIDE_READ_TOLERANCE:
+                _mode_problem(result, step.name, f"The slide {slide} reads {got:g} mm where the mode puts it "
+                                                 f"{wanted:g} mm from the Front plane.")
+    if result.failures:
+        return
+    result.done.append(f"{len(slides)} slide value(s) set and read back in {len(configs)} configurations")
+    # Step 5: per mode, its own mates made while it is shown, then every flag of each set and read back.
+    step_sense = None
+    if sense is not None:
+        given, axes, gear_ids, origins = sense
+        step_sense = (dict(given, **{op.name: op.name in modes.same_way for s in modes.steps for op in s.ops}),
+                      axes, gear_ids, origins)
+    count = len(modes.steps)
+    for index, step in enumerate(modes.steps, 1):
+        say(Step(STAGE_MODE, step.name, index, count))
+        sw.show_configuration(names[step.name])
+        if not sw.rebuild(kind=kind):
+            result.failures.append((f"the mode {step.name}", f"The rebuild in the configuration {names[step.name]} "
+                                                             "reported an error."))
+            return
+        if not step.ops:
+            continue
+        sw.set_rebuild_suppressed(True)
+        try:
+            for op in step.ops:
+                try:
+                    result.done.append(_mate(sw, op, result, result.trig))
+                    made[op.id] = result.features[-1]
+                    if step_sense is not None:
+                        _settle_sense(sw, op, result.features[-1], step_sense, result)
+                except SolidWorksError as exc:
+                    label = f"{base.describe(op, result.trig)} in mode {step.name}"
+                    result.failures.append((label, str(exc)))
+                    result.stopped_at = label
+                    if isinstance(exc, _SenseRefused):
+                        result.mate_problems.append(f"In mode {step.name}, {str(exc)[0].lower()}{str(exc)[1:]}")
+                    elif isinstance(exc, MateRefused):
+                        result.mate_problems.append(f"In mode {step.name}, SolidWorks would not make the mate "
+                                                    f"{op.name or op.id}.")
+                    return
+        finally:
+            sw.set_rebuild_suppressed(False)
+        for op in step.ops:
+            sentence = _status_sentence(made[op.id], sw.mate_status(made[op.id]))
+            if sentence is not None:
+                _mode_problem(result, step.name, sentence)
+        if result.failures:
+            return
+        for op in step.ops:
+            on = [names[s.name] for s in modes.steps if op.name in s.on]
+            off = [names[s.name] for s in modes.steps if op.name not in s.on] + extra
+            sw.set_mate_suppressed_in(op.id, True, off)
+            sw.set_mate_suppressed_in(op.id, False, on)
+            read = sw.mate_suppression(op.id, configs + extra)
+            for s in modes.steps:
+                wanted = op.name not in s.on
+                if bool(read.get(names[s.name], not wanted)) != wanted:
+                    _mode_problem(result, s.name, f"The mate {op.name} reads {'on' if not wanted else 'suppressed'} "
+                                                  f"where the mode has it {'off' if wanted else 'on'}.")
+            for t in extra:
+                if not read.get(t, False):
+                    result.failures.append(("the configurations", f"The mate {op.name} reads on in {t}, which is "
+                                                                  "no mode and is deleted before the save."))
+        if result.failures:
+            return
+    # Step 6: the mate check per mode, through handles fetched again after each show.
+    per_mode = sorted({op.name for s in modes.steps for op in s.ops} | {n for s in modes.steps for n in s.off})
+    fixed = _fixed_handles(plan)
+    mated = _mated_handles(plan)
+
+    def gear_of(handle: str) -> str:
+        return gears.get(handle) or result.components.get(handle) or handle
+
+    for index, step in enumerate(modes.steps, 1):
+        say(Step(STAGE_MODE, step.name, index, count))
+        sw.show_configuration(names[step.name])
+        if not sw.rebuild(kind=kind):
+            result.failures.append((f"the mode {step.name}", f"The rebuild in the configuration {names[step.name]} "
+                                                             "reported an error."))
+            return
+        check = ModeCheck(step.name)
+        if checks is not None:
+            checks.append(check)
+        check.mates = list(sw.mate_states())
+        for name in per_mode:
+            check.suppressed[name] = sw.mate_suppression(handles[name], [names[step.name]])[names[step.name]]
+        for slide in slides:
+            check.values[slide] = sw.dimension_values(handles[slide], [names[step.name]])[names[step.name]]
+        for sentence in _mode_problems(sw, step, check, mated, fixed, gear_of):
+            _mode_problem(result, step.name, sentence)
+    if result.failures:
+        return
+    result.done.append(f"every mode checked: {', '.join(configs)}")
+    # Step 7: the first mode shown, the template's configurations that are no mode deleted, rebuilt for the save.
+    sw.show_configuration(configs[0])
+    for name in extra:
+        sw.delete_configuration(name)
+        result.done.append(f"configuration {name} deleted")
+    if not sw.rebuild(kind=kind):
+        result.failures.append(("the configurations", f"The rebuild in the configuration {configs[0]} before the save "
+                                                      "reported an error."))
+
+
+def _mode_problems(sw: SolidWorks, step: ModeStep, check: ModeCheck, mated: Sequence[str], fixed: Sequence[str],
+                   gear_of: Callable[[str], str]) -> List[str]:
+    """One mode's check (§1.8 step 6) as W5's ``_check_mates`` with this mode's lists: every mate on in it present,
+    unsuppressed and without error; every per-mode mate off in it reading suppressed, and not judged by its error
+    code (GOTCHAS §103); every mated gear free to turn; every frame the step gives at its place (each slider at its
+    value); every component meant to stay fixed reading fixed through a handle fetched after the show (a held one
+    reads False even for the layout: the spike). A sentence per problem, without the mode."""
+    problems: List[str] = []
+    by_name = {state.name: state for state in check.mates}
+    told = set()
+    for name in step.on:
+        state = by_name.get(name)
+        if state is None:
+            problems.append(f"The mate {name} is missing from the assembly.")
+            told.add(name)
+        elif state.suppressed:
+            problems.append(f"The mate {name} is suppressed in SolidWorks.")
+            told.add(name)
+    for name in step.off:
+        if name in by_name and not check.suppressed.get(name, by_name[name].suppressed):
+            problems.append(f"The mate {name} is on in SolidWorks, where the mode has it off.")
+        told.add(name)
+    flagged = [s for s in check.mates if s.code and not s.suppressed and s.name not in told]
+    for state in [s for s in flagged if not s.warning] or flagged:
+        problems.append(f"The mate {state.name} is in error in SolidWorks.")
+    problems += _free_to_turn(sw, mated, gear_of)
+    for handle, (rotation, at) in step.frames.items():
+        found, where = sw.component_frame(handle)
+        if any(abs(float(a) - float(b)) > POSE_TOLERANCE for a, b in zip(where, at)) or \
+                any(abs(float(found[i]) - float(rotation[i])) > POSE_TOLERANCE for i in (2, 5, 8)):
+            problems.append(f"{gear_of(handle)} stands at {_vector(where)} where the mode places it at "
+                            f"{_vector(at)}.")
+    for handle in fixed:
+        if not sw.is_fixed(handle):
+            problems.append(f"{gear_of(handle)} reads not fixed in SolidWorks, where it was fixed.")
+    return problems
+
+
+def _modes_interference(sw: SolidWorks, result: GearboxResult, checks: Sequence[ModeCheck], kind: str,
+                        gear_of: Mapping[str, str], say: Callable[[Step], None], stem: str) -> None:
+    """§1.8 step 8, after the save: per mode, it shown, the train's rebuild, ``interferences()`` (a raise is that
+    mode's ``interference_error``, a CHECK); then the first mode shown again and rebuilt. The first mode's clashes are
+    also :attr:`GearboxResult.clashes`. A show marks the assembly and no part (the spike), as W4's check already
+    does."""
+    names = _configuration_names(ModesPlan(tuple(ModeStep(c.name) for c in checks)), sw.configurations())
+    for index, check in enumerate(checks, 1):
+        say(Step(STAGE_MODE, check.name, index, len(checks)))
+        sw.show_configuration(names[check.name])
+        sw.rebuild(kind=kind)
+        try:
+            check.clashes = _clashes(sw.interferences(), gear_of)
+        except Exception as exc:  # noqa: BLE001 - a clash check that cannot run is a CHECK, never a failure
+            check.interference_error = _said(exc)
+    if checks:
+        result.clashes = list(checks[0].clashes)
+        result.interference_error = checks[0].interference_error
+        say(Step(STAGE_INTERFERENCE, stem))
+        sw.show_configuration(names[checks[0].name])
+        sw.rebuild(kind=kind)
 
 
 @dataclass(frozen=True)
@@ -2405,6 +2749,29 @@ class GearboxResult:
         return (self.assembly is not None and self.assembly.ok and bool(self.assembly.saved)
                 and bool(getattr(findings, "INTERFERENCE_CHECKED", False)))
 
+    def _mode_lines(self) -> List[str]:
+        """W8: per mode, ``config  4L: 11 mates as planned`` and ``mode    4L: every mate sound, every gear free to
+        turn, no interference`` (or its clashes as CHECKs naming the mode), for a build whose modes all checked
+        clean; a mode with a problem has its sentence among the assembly's failures."""
+        lines: List[str] = []
+        clean = self.assembly is not None and not self.assembly.mate_problems
+        ran = self._interference_ran()
+        for check in self.modes:
+            if not clean:
+                break
+            on = [m for m in check.mates if not m.suppressed]
+            lines.append(f"config  {check.name}: {len(on)} mates as planned"
+                         + (f", {len(check.mates) - len(on)} off" if len(on) != len(check.mates) else ""))
+            said = f"mode    {check.name}: every mate sound, every gear free to turn"
+            if ran and not check.clashes and not check.interference_error:
+                said += ", no interference"
+            lines.append(said)
+            if ran and check.interference_error:
+                lines.append(f"CHECK   in mode {check.name}, interference could not be checked: "
+                             f"{check.interference_error}")
+            lines.extend(f"CHECK   in mode {check.name}, {_clash_line(clash)}" for clash in (check.clashes if ran else ()))
+        return lines
+
     def log_lines(self) -> List[str]:
         """The parts' lines, the checked documents, the layout's, the assembly's, then ``ok      no interference
         between the gears`` or one ``CHECK`` per clash naming the gears, then ``SKIPPED …``."""
@@ -2427,7 +2794,10 @@ class GearboxResult:
                 lines.append(f"STOPPED SolidWorks refused or flagged a mate, so {self.assembly.document} is left open "
                              f"in SolidWorks, unsaved, and no assembly is built in its place; {held} it holds are "
                              "saved")
-        lines.extend(_interference_lines(self.clashes, self.interference_error, self._interference_ran()))
+        if self.modes:
+            lines.extend(self._mode_lines())
+        else:
+            lines.extend(_interference_lines(self.clashes, self.interference_error, self._interference_ran()))
         lines.extend(f"FAIL    {what}: {why}" for what, why in self.failures)
         if self.skipped:
             lines.append(f"SKIPPED {self.skipped}")
@@ -2527,7 +2897,11 @@ def build_gearbox(sw: SolidWorks, parts: Sequence[BuildPlan], reuse: Sequence[Do
     problems name a carrier by its id when ``gears`` maps the carrier's handle to it.
 
     W8 (W8-INTERFACES.md §3): ``modes`` (keyword), passed to :func:`build` for the assembly (its configurations,
-    W8-PLAN §1.8), judged before anything is made, parts included (:func:`_modes_gate`). None is W7's call.
+    W8-PLAN §1.8 steps 1-7), judged before anything is made, parts included (:func:`_modes_gate`, with the running
+    version). Each mode's check is in :attr:`GearboxResult.modes`; after the save, interference runs once per mode
+    (step 8, :func:`_modes_interference`), the first mode's clashes also in ``clashes``, and the assembly is left in
+    the first mode. ``positions_per_configuration`` is the running version's (:func:`swcom.positions_per_configuration`).
+    None is W7's call.
     """
     say = progress or _quiet
     _gate(sw)
@@ -2545,7 +2919,7 @@ def build_gearbox(sw: SolidWorks, parts: Sequence[BuildPlan], reuse: Sequence[Do
     if assembly is not None and layout is None:
         raise BuildError("The assembly is built around its layout part, and this build has neither a layout part "
                          "to make nor one to reuse.")
-    _modes_gate(assembly, modes)
+    _modes_gate(assembly, modes, revision=sw.revision, senses=senses)
     if assembly is not None:
         _assembly_rebuild_gate(workbook_assembly_kind(assembly))
         if workbook_assembly_kind(assembly) == ASSEMBLY_TRAIN:
@@ -2581,6 +2955,8 @@ def build_gearbox(sw: SolidWorks, parts: Sequence[BuildPlan], reuse: Sequence[Do
                          f"{_file(reused_in_assembly[0])}, cannot start; run probe tier 7 first.")
 
     result = GearboxResult(open_before=list(open_before))
+    if modes is not None:
+        result.positions_per_configuration = positions_per_configuration(sw.revision)
     for index, doc in enumerate(reused_docs, 1):
         say(Step(STAGE_CHECK, _stem(doc.path), index, len(reused_docs)))
         try:
@@ -2607,7 +2983,7 @@ def build_gearbox(sw: SolidWorks, parts: Sequence[BuildPlan], reuse: Sequence[Do
              else "the carrier parts" if carrier_plans else "the assembly"]
     try:
         _build_gearbox_body(sw, result, parts, layout_plan, layout_reuse, assembly, gear_of_handle, exists, say,
-                            stage, senses, carrier_plans, carrier_reuse)
+                            stage, senses, carrier_plans, carrier_reuse, modes=modes)
     except Exception as exc:  # noqa: BLE001 - see above
         if stage[0] == "the interference check":
             result.interference_error = _said(exc)        # a clash check that cannot run is a CHECK, not a failure
@@ -2630,7 +3006,7 @@ def _build_gearbox_body(sw: SolidWorks, result: GearboxResult, parts: Sequence[B
                         assembly: Optional[BuildPlan], gear_of_handle: Mapping[str, str],
                         exists: Callable[[str], bool], say: Callable[[Step], None], stage: List[str],
                         senses: Optional[Mapping[str, bool]] = None, carrier_plans: Sequence[BuildPlan] = (),
-                        carrier_reuse: Sequence[DocumentValues] = ()) -> None:
+                        carrier_reuse: Sequence[DocumentValues] = (), *, modes: Optional[ModesPlan] = None) -> None:
     """Steps 2–4 of :func:`build_gearbox`, filling ``result`` as each document finishes; ``stage[0]`` says which
     step is under way, for the failure if something raises. W7: the carrier parts after the layout part."""
     later = [phrase for phrase, planned in (("the layout part", layout_plan is not None),
@@ -2678,14 +3054,19 @@ def _build_gearbox_body(sw: SolidWorks, result: GearboxResult, parts: Sequence[B
     # Its kind said explicitly: today's workbook gearbox is fixed (static, top-only); W5's mated one is a train, by
     # the same predicate the gate above used.
     kind = workbook_assembly_kind(assembly)
-    result.assembly = _build_in_job(sw, assembly, exists, kind=kind, gears=gear_of_handle, senses=senses)
+    result.assembly = _build_in_job(sw, assembly, exists, kind=kind, gears=gear_of_handle, senses=senses,
+                                    modes=modes, mode_checks=result.modes if modes is not None else None,
+                                    progress=say)
     result.components = dict(result.assembly.components)
     if result.assembly.ok and result.assembly.saved:
         result.kind = GEARBOX_MOTION if kind == ASSEMBLY_TRAIN else GEARBOX_STATIC
     if result.assembly.ok and result.assembly.saved and getattr(findings, "INTERFERENCE_CHECKED", False):
         stage[0] = "the interference check"
-        say(Step(STAGE_INTERFERENCE, stem))
         gear_of = {name: gear_of_handle.get(handle, name) for handle, name in result.components.items()}
+        if modes is not None:
+            _modes_interference(sw, result, result.modes, kind, gear_of, say, stem)
+            return
+        say(Step(STAGE_INTERFERENCE, stem))
         try:
             result.clashes = _clashes(sw.interferences(), gear_of)
         except Exception as exc:  # noqa: BLE001 - a clash check that cannot run is a CHECK, never a failure
