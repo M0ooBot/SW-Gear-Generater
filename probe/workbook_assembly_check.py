@@ -1,11 +1,13 @@
-r"""W5's (and W4's) Windows demonstration: gearbox workbooks through the app's own code, on real SolidWorks and Excel.
+r"""W6's, W5's (and W4's) Windows demonstration: gearbox workbooks through the app's own code, on real SolidWorks and Excel.
 
 python.exe probe/workbook_assembly_check.py <repo src> <output folder under C:\> --pid PID [--log FILE]
-                                            [--only m1|m2|m3|m4|m5|m6|m7|m8|a|a2|a3|b|c|ring ...]
+                                            [--only r1|r2|r3|r4|r5|r6|r7|r8|m1|m2|m3|m4|m5|m6|m7|m8|a|a2|a3|b|c
+                                                    |rs1|rs2|rs3|w6|confirm|ring ...]
                                             [--fixtures FOLDER]
                                             [--m4-offset MM]
 
-PLAN-WORKBOOK §6; W4 "Demonstrable" and the W4 decisions' item 10; W5-PLAN §4 with W5-DECISIONS' rulings. Every
+PLAN-WORKBOOK §6; W4 "Demonstrable" and the W4 decisions' item 10; W5-PLAN §4 with W5-DECISIONS' rulings; W6-PLAN §6
+with W6-INTERFACES §4 and §7.17. Every
 step goes the way the Workbook window goes (``workbook_gui.WorkbookWindow``: ``_plan_solidworks_pass``,
 ``_start_build`` with its journal, ``press_update``, ``_build_again``, ``_finish_build``, ``_finish_update``,
 ``_collect_job``), with the window's Tk thread played by this script's main thread and its worker by
@@ -48,8 +50,56 @@ Nothing is taken on the app's word: each assembly is measured.
   that it is a NOTE (logged, listed at the end, not a failure) for the coordinator to rule on; a document expected
   marked and not marked is a FAIL.
 
-The sections, each in its own folder under the output folder (default order m1 m3 m7 m2 m4 m5 m6 a a2 a3 b c;
-``--only ring`` runs m3 and m7 alone, the two ring-train sections to run again after the ring-sense fix):
+W6 (W6-PLAN §6.1; the fixtures of §5 written by ``write_new`` with the Output folder blank, saved once by Excel, read
+with the section's folder as the strip's). On top of §4.1 and §4.2: frames against ``layout.frames`` for any axis;
+each layout axis (``GetRefAxisParams``) on its shaft's line to 1e-6 mm, either way along it, the sign logged; the
+drive mates the input's Top plane to the layout's base plane square to the input's u₀ (Right for a Z or Y input, Top
+for an X input), and the input's turn is MEASURED (|δ_in| = 30° asserted; a Z+ input must also turn as
+findings.DEMONSTRATION_DRIVE_SENSE says), every other gear judged as δ_in · ω_i / ω_in; every gear mate's read
+(Reverse, both entity directions and points, the gear each lies along and its τ — only τa·τb on parallel axes —
+rule H's verdict and the app's own) logged after the build, after each Flip of a control (and held against the
+drive's verdict) and after a reopen; after every control drive the interference read at the driven position, and on
+a turned mesh judged (review M2): the Flip the drive calls right clear, the other clashing with the mesh's partner
+alone — a failure STOPS the run; a quiet Update (W6-INTERFACES §7.17 (b)) on every built turned gearbox, every
+document's GetSaveFlag read before and after and every frame unchanged. Nothing about which Flip is right is assumed
+on SolidWorks 2024 (§7.17 (c)): it is logged, and the app's read and the drive must agree.
+
+- ``r1``: fixture A, Bevel_Reducer, built fresh: the Checks panel, header, speeds and torques of §5.1 and §5's drive
+  turns held against the app before the build; built turning; §4.1 (half-pitch controls on both meshes); the drive
+  with both Flips on G1 meshes G2; a quiet Update; reopen, read, drive with both Flips again. Then the folder ends
+  clean and is renamed ``r1.master`` (copy_built step 1, once).
+- ``r5``: fixture B, Crossed_Slant, likewise (the slanted axis on its line; both Flips on G1 meshes G2, skew at 90°,
+  and on G3 meshes G4, meeting at 120°); kept as ``r5.master``.
+- ``r2`` (a copy of r1.master): the user's turn (37°) and Update with nothing changed; Excel S1 Z 60 -> 64 and G2 At
+  60 -> 64 -> Update: "S1 Z" and "G2 Apex Z" read 64, every gear put, frames, the cone tips together in SolidWorks,
+  the half-pitch controls, the drive, reopen.
+- ``r3`` (a copy of r1.master): G1 Teeth 20 -> 21 -> Update remakes the turned gear mate G1 meshes G2 at 21 : 40, read
+  back (§7.17 (a)): the marks, "Mate Teeth" read from both parts, every read, frames, mates, interference, the
+  controls, the drive at 21 : 40 with both Flips and the interference judge, a quiet Update, reopen, drive.
+- ``r4`` (a copy of r1.master): S1 Axis X+ -> X- -> the structural sentence; Build again… makes Bevel_Reducer_r2
+  beside the earlier files (sha256 and mtime unchanged); §4.1; the drive, both Flips on G1 meshes G2.
+- ``r6`` (a copy of r5.master): G1 At 10 -> 11 by Update ("G1 Face Z" 3); G4 Teeth 30 -> 31 by Update (the 120° gear
+  mate remade, as r3); S3's Axis changed -> classify only, the slanted structural sentence. Then review M4's sense
+  change on the classify path: fixture B's crossed stage alone, 10 mm up (folder r6-sense), built; S1 moved to the
+  other side of S2 -> ``resensed`` names G1 meshes G2, the plan's k the record's negated; nothing pressed.
+- ``r8`` (a copy of r5.master): the crossed stage's teeth 20/40 -> 21/39 (the centre distance kept) by Update: the skew
+  gear mate remade at 21 : 39 and read back, as r3 (§7.17 (a) on fixture B's crossed stage).
+- ``r7``: fixture A turned onto a Y input (Bevel_Reducer_Y): G1's cone tip at -30 along Y, an along mate to the Top
+  plane with a negative coordinate (fixture B's G2 gives the Right plane's: "G2 Face X" -8); frames against the plan,
+  the drive from the Right plane, both Flips on G1 meshes G2.
+
+A copy section starts from ``copy_built(<builder>.master, section)`` (W6-INTERFACES §4, pinned): the master's folder
+copied with its mtimes, every path in its records and sidecars put onto the copy through ``store``'s reader and
+writer (only where the original folder is followed by a separator), the record asserted ours, whole, nothing
+dropped by clear_saved, its digest the read's; then the copy's assembly opened once (the run's first copy under the
+dialog watch with a 120 s timeout, W6-PLAN §7.1: a dialog drops the copy route), every component and the layout found
+in the copy, closed without saving. Any step that fails is said and the section builds its fixture fresh, as it does
+when no master exists in the run (``--only r3`` alone). Each copy section ends clean (step 4).
+``--only w6`` runs r1 r5 r2 r3 r4 r6 r8 r7; ``--only confirm`` runs SolidWorks 2024's confirming set, r1 r5 r3 r6 r8
+m3.
+
+The W5 sections, each in its own folder under the output folder (the default order is W6's, then m1 m3 m7 m8 m2 m4
+m5 m6 a a2 a3 b c; ``--only ring`` runs m3, m7 and m8, the ring-train sections):
 
 - ``m1`` (W5-PLAN §4.3): the Windows-saved 12 : 1 fixture (compound S2). Build turning; §4.1; §4.2 with the
   control on G3 meshes G4. M7: an angle mate the record does not know, on G4, unsuppressed -> Update refuses
@@ -103,11 +153,12 @@ The sections, each in its own folder under the output folder (default order m1 m
   result's ratios, turned round and sense found wrong logged, the app's read-back of the remade mate (right, its
   axes, its Reverse), and the drive through the ring at 15 : 37 as the judge; the half-pitch controls, every frame,
   the mates, a quiet Update, then a save, reopen and the drive again.
-- ``r1``, ``r2``, ``r3`` (not in the default order): a 14-tooth spur pinion shifted +0.3 (r1) or -0.3 (r2) inside an
+- ``rs1``, ``rs2``, ``rs3`` (not in the default order; run as r1–r3 on 2026-11-14, renamed when W6 took the names):
+  a 14-tooth spur pinion shifted +0.3 (rs1) or -0.3 (rs2) inside an
   unshifted 36-tooth spur ring, module 2, the ring's shaft Z- as Risky_Placements', the shafts at the working centre
   distance ``workbook.checks.internal_working_centre`` gives (d3f4dcf): the workbook checks clean, built to turn,
   the app's interference as built, the half-pitch controls, the drive through the mesh with the both-Flips control,
-  and interference at a quarter, a half and three quarters of the pinion's pitch. r3: the +0.3 pair at the plain
+  and interference at a quarter, a half and three quarters of the pinion's pitch. rs3: the +0.3 pair at the plain
   22 mm, which the Checks panel must refuse before any build; its sentence and the fixes offered are logged.
 - ``m7``: the ring train edited: Risky_Placements built to turn; G5 At 45 -> 47 (a follower locked to G4, the ring's
   pinion) -> an Update that puts the whole train; frames, mates, interference, the half-pitch controls, the drive
@@ -137,7 +188,8 @@ The sections, each in its own folder under the output folder (default order m1 m
   Update (G2's bore 8 -> 10).
 - ``c``: the risky placements written by ``write_new``: build; §4.1.
 
-``--fixtures FOLDER`` copies b's and c's workbooks, as Excel saved them with a neutral Output folder, there.
+``--fixtures FOLDER`` copies b's and c's workbooks, as Excel saved them with a neutral Output folder, there; and r1's
+and r5's (Bevel_Reducer.xlsx, Crossed_Slant.xlsx) as Excel saved them, their Output folder blank.
 
 Refuses to run unless the session it attaches to is the PID given. Only documents this run made are saved and
 closed (its modified parts saved before an assembly is closed: SolidWorks 2024 asks about them in a modal dialog
@@ -151,6 +203,7 @@ import dataclasses
 import hashlib
 import math
 import os
+import queue
 import shutil
 import sys
 import threading
@@ -160,10 +213,16 @@ import traceback
 sys.path.insert(0, sys.argv[1])
 SRC, OUT = sys.argv[1], sys.argv[2]
 PID = int(sys.argv[sys.argv.index("--pid") + 1])
-DEFAULT_ORDER = ["m1", "m3", "m7", "m8", "m2", "m4", "m5", "m6", "a", "a2", "a3", "b", "c"]
+# W6 (W6-PLAN §6.1): the builders r1 and r5 first, then the sections that start from their copies, then the variant.
+W6_ORDER = ["r1", "r5", "r2", "r3", "r4", "r6", "r8", "r7"]
+DEFAULT_ORDER = W6_ORDER + ["m1", "m3", "m7", "m8", "m2", "m4", "m5", "m6", "a", "a2", "a3", "b", "c"]
 RING = ["m3", "m7", "m8"]         # ``--only ring``: the two ring-train sections, rerun after the ring-sense fix
+# ``--only confirm``: SolidWorks 2024's confirming build (W6-PLAN §6.1, with W6-INTERFACES §7.17 (a) and (c)): both
+# turned fixtures with their both-Flips controls, every turned gear mate made again at a new ratio, and the ring.
+CONFIRM = ["r1", "r5", "r3", "r6", "r8", "m3"]
+ALIASES = {"ring": RING, "w6": W6_ORDER, "confirm": CONFIRM}
 ONLY = [n for i, a in enumerate(sys.argv) if a == "--only"
-        for n in (RING if sys.argv[i + 1] == "ring" else [sys.argv[i + 1]])] or DEFAULT_ORDER
+        for n in ALIASES.get(sys.argv[i + 1], [sys.argv[i + 1]])] or DEFAULT_ORDER
 LOG_PATH = sys.argv[sys.argv.index("--log") + 1] if "--log" in sys.argv else os.path.join(OUT, "workbook-assembly.log")
 FIXTURES = sys.argv[sys.argv.index("--fixtures") + 1] if "--fixtures" in sys.argv else ""
 M4_OFFSET = float(sys.argv[sys.argv.index("--m4-offset") + 1]) if "--m4-offset" in sys.argv else 0.0
@@ -191,10 +250,10 @@ import xlhelp  # noqa: E402
 
 from gear_generator import __version__, findings, store, swbuild, swcom, ui_text  # noqa: E402
 from gear_generator.gears import base, equations  # noqa: E402
-from gear_generator.probe.p7_workbook import axis_crossing  # noqa: E402
 from gear_generator.swcom import call  # noqa: E402
 from gear_generator.workbook import assess as wb_assess  # noqa: E402
 from gear_generator.workbook import gearbox as wb_gearbox  # noqa: E402
+from gear_generator.workbook import geometry as wb_geometry  # noqa: E402
 from gear_generator.workbook import layout as wb_layout  # noqa: E402
 from gear_generator.workbook import link as wb_link  # noqa: E402
 from gear_generator.workbook import model as wb_model  # noqa: E402
@@ -211,6 +270,7 @@ STOP = threading.Event()
 WRITTEN_BY = f"gear-generator {__version__}"
 TAG = {"version": "", "major": 0}
 PERSON = []               # (what, path) of a plain 12 : 1 assembly built to turn, for W5-PLAN §4.4's step
+PERSON_W6 = []            # r1's kept Bevel_Reducer.SLDASM, for W6-PLAN §6.1's step
 
 # The driven proof (W5-PLAN §4.2).
 DRIVE = "Drive"                      # the assembly global the angle mate's D1 is linked to
@@ -310,14 +370,20 @@ PROGRESS = {"Calculating Interference Detection": 0, "Updating...": 0, "Opening"
 # a watch, so a "save changes?" box there is answered "Don't Save", as a person closing it unsaved would, and logged.
 DISMISS = threading.Event()
 DISMISS_BUTTONS = ("&No", "No", "Do&n't Save", "Don't Save", "&Don't Save", "Don't save")
+# W6-PLAN §7.1: set only while the first copy's assembly is opened (copy_built step 3). Any dialog then (a
+# missing-reference or references-moved prompt) is listed in OPEN_DIALOGS and answered No / Cancel, so the open
+# cannot hang the run; one seen drops the copy route, and every later section builds its fixture fresh.
+OPENING = threading.Event()
+OPEN_DIALOGS = []
+OPEN_BUTTONS = DISMISS_BUTTONS + ("Cancel", "&Cancel")
 
 
-def press_dont_save(hwnd):
+def press_dont_save(hwnd, buttons=DISMISS_BUTTONS):
     """Post BM_CLICK to the dialog's "No"/"Don't Save" button; the button's text, or "" when it has none."""
     found = []
 
     def each(child, _):
-        if win32gui.GetWindowText(child) in DISMISS_BUTTONS:
+        if win32gui.GetWindowText(child) in buttons:
             found.append(child)
         return True
     try:
@@ -379,6 +445,11 @@ class DialogWatch(threading.Thread):
                         pressed = press_dont_save(hwnd)
                         say(f"DIALOG  closing a refused, never-saved assembly: pressed {pressed!r}" if pressed else
                             "DIALOG  closing a refused, never-saved assembly: no No / Don't Save button to press")
+                    elif OPENING.is_set() and not ticking:
+                        OPEN_DIALOGS.append((title, texts))
+                        pressed = press_dont_save(hwnd, OPEN_BUTTONS)
+                        say(f"DIALOG  opening a copied assembly (W6-PLAN §7.1): pressed {pressed!r}; the copy route "
+                            "is dropped")
             if TAG["major"] == 32 and free_gb() < 2.0 and not STOP.is_set():
                 say(f"STOP    {memory()}: under 2 GB free, the run stops at the next step")
                 STOP.set()
@@ -654,10 +725,11 @@ def turn_degrees(rotation_a, rotation_b):
 class Desk:
     """The Workbook window without Tk: the same calls, in the same order, on this thread."""
 
-    def __init__(self, path, worker):
+    def __init__(self, path, worker, strip=""):
         self.path = path
         self.link = wb_link.Link(path)
         self.worker = worker
+        self.strip = strip         # the strip's Output folder (W6: the fixtures leave the Box's blank, W6-PLAN §5)
         self.reading = None
         self.a = None
         self.record = None
@@ -701,12 +773,16 @@ class Desk:
         r = self.reading
         check(r.ok, f"read {os.path.basename(self.path)}: {r.error or 'ok'}")
         spec = r.spec
-        self.a = wb_assess.assess(spec, r.diagnostics, spec.box.output_folder, spec.box.part_template)
+        self.a = wb_assess.assess(spec, r.diagnostics, self.folder(spec), spec.box.part_template)
         for d in self.a.diagnostics:
             say(f"        {d.level:7} {d.message}")
         say(f"        {len(spec.shafts)} shafts · {len(spec.gears)} gears · {len(spec.meshes)} meshes; "
             f"gate {self.a.lay_out_refusal()!r}")
         self.plan_solidworks()
+
+    def folder(self, spec):
+        """``WorkbookWindow._folder``: the Box sheet's Output folder, else the strip's."""
+        return spec.box.output_folder or self.strip
 
     def plan_solidworks(self):
         """``WorkbookWindow._plan_solidworks_pass`` (the record is always this workbook's here)."""
@@ -734,7 +810,7 @@ class Desk:
             self.update = wb_update.classify(record, a)
 
     def footer(self):
-        folder = self.reading.spec.box.output_folder if self.reading is not None else ""
+        folder = self.folder(self.reading.spec) if self.reading is not None else ""
         return ui_text.workbook_footer(self.a, record=self.record, record_problem=self.record_problem,
                                        plan=self.plan, update=self.update, folder=folder,
                                        folder_exists=bool(folder) and os.path.isdir(folder), note=self.note,
@@ -767,8 +843,9 @@ class Desk:
             say(f"        reuse layout {p.layout.path}: {[f'{v.name} = {v.expression}' for v in p.layout.variables]}; "
                 f"features {list(p.layout.features)}")
         for s in p.shafts:
-            say(f"        shaft {s.shaft}: ({s.x:g}, {s.y:g}, {s.z:g}) sigma {s.sigma:+d}; X {s.x_side} "
-                f"{s.x_global!r}, Y {s.y_side} {s.y_global!r}; {s.axis_name}")
+            say(f"        shaft {s.shaft}: ({s.x:g}, {s.y:g}, {s.z:g}) axis {s.axis} {tuple(s.direction)} sigma "
+                f"{s.sigma:+d}; X {s.x_side} {s.x_global!r}, Y {s.y_side} {s.y_global!r}, Z {s.z_side} "
+                f"{s.z_global!r}; line {s.line!r}; {s.axis_name}")
         for gear, f in p.frames.items():
             say(f"        frame {gear}: R {[round(v, 9) for v in f.rotation]} at {[round(v, 9) for v in f.at]}")
         if p.motion is not None:
@@ -777,7 +854,8 @@ class Desk:
                 f"{list(m.unmated)}")
             for mate in m.mates:
                 say(f"        mate {mate.name!r}: {mate.kind} {list(mate.gears)} {mate.shaft} ratio {list(mate.ratio)} "
-                    f"face {mate.face_global!r} z_front {mate.z_front:g}")
+                    f"face {mate.face_global!r} z_front {mate.z_front:g} plane {getattr(mate, 'plane', '')!r} sense "
+                    f"{getattr(mate, 'sense', '')}")
         if full:
             for plan in (p.layout, p.assembly):
                 if isinstance(plan, base.BuildPlan):
@@ -983,11 +1061,12 @@ def live_frames(session, asm, names):
 
 
 def live_axes(session, path, names):
+    """Each layout axis's ``GetRefAxisParams`` (two points on it, metres), and the layout's globals."""
     def work(s):
         out = {}
         for name in names:
             feature = s._by_name(name)  # noqa: SLF001
-            out[name] = axis_crossing(call(call(feature, "GetSpecificFeature2"), "GetRefAxisParams"))
+            out[name] = [float(v) for v in call(call(feature, "GetSpecificFeature2"), "GetRefAxisParams")]
         return out, s.equation_values()
     return in_assembly(path, work)(session)
 
@@ -1085,15 +1164,41 @@ def measure_frames(worker, desk, label, exact=None):
     return live
 
 
+def axis_on_line(params, point, direction):
+    """A layout axis read by ``GetRefAxisParams`` (two points, metres) against its shaft's line: (the farther point's
+    distance from the line in mm, the axis's unit direction, its dot with the shaft's direction)."""
+    p = [float(v) * 1000.0 for v in params[:3]]
+    q = [float(v) * 1000.0 for v in params[3:6]]
+    d = [b - a for a, b in zip(p, q)]
+    n = math.sqrt(sum(c * c for c in d))
+    if n == 0.0:
+        return float("inf"), (0.0, 0.0, 0.0), 0.0
+    u = tuple(c / n for c in d)
+    w = [float(c) for c in direction]
+    off = 0.0
+    for x in (p, q):
+        r = [x[i] - float(point[i]) for i in range(3)]
+        cross = (r[1] * w[2] - r[2] * w[1], r[2] * w[0] - r[0] * w[2], r[0] * w[1] - r[1] * w[0])
+        off = max(off, math.sqrt(sum(c * c for c in cross)))
+    return off, u, sum(a * b for a, b in zip(u, w))
+
+
 def measure_axes(worker, desk, label):
+    """Each layout axis on its shaft's line to 1e-6 mm, along its direction either way (W6-PLAN §6.1), the sign
+    logged; an axis of the Z family must also read +Z, as W4/W5 asserted (findings.LAYOUT_AXIS_Z_SIGN)."""
     box = desk.record.gearbox
     axes, values = run(worker, lambda s: live_axes(s, box.layout, [s_.axis_name for s_ in box.shafts]))
     say(f"        {os.path.basename(box.layout)} globals {values}")
     for shaft in desk.plan_shafts():
-        (x, y), u = axes[shaft.axis_name]
-        check(abs(x - shaft.x) < 1e-6 and abs(y - shaft.y) < 1e-6 and u[2] > 1 - 1e-9,
-              f"{label}: {shaft.axis_name} crosses z = 0 at ({x:.9f}, {y:.9f}) for ({shaft.x:g}, {shaft.y:g}), "
-              f"along {tuple(round(c, 9) for c in u)}")
+        off, u, dot = axis_on_line(axes[shaft.axis_name], (shaft.x, shaft.y, shaft.z), shaft.direction)
+        z_family = abs(abs(float(shaft.direction[2])) - 1.0) < 1e-12
+        check(off <= 1e-6 and abs(abs(dot) - 1.0) <= 1e-9 and (not z_family or u[2] > 1 - 1e-9),
+              f"{label}: {shaft.axis_name} on {shaft.shaft}'s line through ({shaft.x:g}, {shaft.y:g}, {shaft.z:g}) "
+              f"(off {off:.1e} mm), along {tuple(round(c, 9) for c in u)}, {'+' if dot > 0 else '-'} its Axis "
+              f"{shaft.axis}{' (reads +Z)' if z_family else ''}")
+        if not z_family:
+            say(f"fact    {label}: {shaft.axis_name} reads {'along' if dot > 0 else 'against'} {shaft.shaft}'s Axis "
+                f"{shaft.axis}")
     return axes
 
 
@@ -1210,11 +1315,127 @@ def measure(worker, desk, label, controls=True, again=True):
 # -- §4.2: the drive, the user's turn, and what Update found -------------------------------------------------
 
 
-def drive_job(asm, components, layout_name, input_gear, control=None, turn_by=None, fixed=(), phases=()):
-    """One worker job on the assembly. The angle mate DRIVE_MATE from the input's Top plane to the layout's Right at
-    90°, its D1 linked to the global DRIVE. ``turn_by`` None: DRIVE 90 -> 120 -> 90; then, given ``control`` (a, b,
-    the recorded gear mate's name, its ratio), that mate suppressed and CONTROL + name made in its place with the
-    other Flip, driven 90 -> 120 -> 90, deleted, the recorded one turned back on. ``turn_by`` d (the user's turn):
+# -- W6: a gear mate's sense, read raw and judged (W6-PLAN §6.1) ---------------------------------------------
+
+
+def gear_axes(frames, a, b):
+    """The two gears' own +Z as placed (each frame's third column), gear a first."""
+    return tuple((float(frames[g][0][2]), float(frames[g][0][5]), float(frames[g][0][8])) for g in (a, b))
+
+
+def axes_turned(axes):
+    """Whether two own axes are of different families (planning's rule, |â × b̂| ≥ 1e-9): a turned mesh."""
+    a, b = axes
+    cross = (a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0])
+    return math.sqrt(sum(c * c for c in cross)) >= 1e-9
+
+
+def mesh_same_sense(desk, a, b):
+    """k > 0 for the mesh (a, b), from the read's kinematics alone: its two gears turn the same way about their own
+    axes (speeds about each shaft's own axis, W5-DECISIONS M2) — the ``same_sense`` the app reads a gear mate
+    against, worked out here without the app's record."""
+    speeds = desk.a.report.motion.speeds
+    shaft_of = {g.id: g.shaft for g in desk.a.spec.gears}
+    return float(speeds[shaft_of[a]]) * float(speeds[shaft_of[b]]) > 0
+
+
+def mate_read(session, handle, name, axes, same_sense, gears):
+    """One gear mate read the way the app reads it (``Session.gear_mate_sense``; reading only, the definition
+    released): its Reverse, each entity's direction and a point on it (``EntityParams``, assembly space), which gear
+    each lies along (|d·g| >= swcom.ENTITY_ALONG) with its τ, rule H's verdict on those numbers
+    (``swcom.sense_reading``) and the app's own verdict, or the sentence it refused with."""
+    session.find_mate(handle, name)
+    out = {"mate": name, "same": bool(same_sense), "axes": axes, "gears": tuple(gears)}
+    try:
+        _, feature = session._kept_mate(handle)  # noqa: SLF001
+        data = swcom._read(feature, "GetDefinition")  # noqa: SLF001
+        out["reverse"] = swcom._read(data, "Reverse") if data is not None else None  # noqa: SLF001
+        data = None
+        mate = swcom._read(feature, "GetSpecificFeature2")  # noqa: SLF001
+        count = swcom._read(mate, "GetMateEntityCount") if mate is not None else None  # noqa: SLF001
+        directions, entities = [], []
+        for index in range(int(count) if isinstance(count, (int, float)) else 0):
+            entity = call(mate, "MateEntity", index)
+            params = swcom._read(entity, "EntityParams") if entity is not None else None  # noqa: SLF001
+            values = [float(v) for v in params] if params is not None else []
+            if len(values) < 6:
+                continue
+            d = tuple(values[3:6])
+            along = [sum(x * y for x, y in zip(d, g)) for g in axes]
+            which = next((i for i in (0, 1) if abs(along[i]) >= swcom.ENTITY_ALONG), None)
+            directions.append(d)
+            entities.append({"direction": tuple(round(v, 9) for v in d),
+                             "point": tuple(round(v * 1000.0, 6) for v in values[0:3]),
+                             "gear": gears[which] if which is not None else "neither",
+                             "tau": (1 if along[which] > 0 else -1) if which is not None else 0})
+        out["entities"] = entities
+        out["rule"] = swcom.sense_reading(out["reverse"], directions, axes, same_sense, mate=name)
+    except Exception as exc:  # noqa: BLE001 - logged beside the app's own read
+        out["raw_error"] = f"{type(exc).__name__}: {exc}"
+    try:
+        out["app"] = session.gear_mate_sense(handle, bool(same_sense), axes)
+    except Exception as exc:  # noqa: BLE001 - the app's refusal is its sentence
+        out["app_error"] = f"{type(exc).__name__}: {exc}"
+    return out
+
+
+def say_read(label, read):
+    """The read, logged. On parallel axes only the product τa·τb means anything (W6-INTERFACES §7.4): no single τ,
+    and no entity matched to one gear, is named there."""
+    turned = axes_turned(read["axes"])
+
+    def verdict(found):
+        if not isinstance(found, tuple):
+            return found
+        right, taus = found
+        return f"right {right}, τ {tuple(taus)}" if turned else f"right {right}, τa·τb {taus[0] * taus[1]:+d}"
+    entities = "; ".join(
+        (f"entity {i + 1} along {e['gear']} τ {e['tau']:+d}, " if turned else f"entity {i + 1} ")
+        + f"direction {e['direction']} through {e['point']} mm" for i, e in enumerate(read.get("entities", [])))
+    say(f"read    {label}: {read['mate']}: Reverse {read.get('reverse')}; {entities or 'no entities read'}; k > 0 "
+        f"{read['same']}; rule H {verdict(read.get('rule', read.get('raw_error')))}; the app "
+        f"{verdict(read.get('app', read.get('app_error')))}; {'turned' if turned else 'parallel'} axes "
+        f"{read['axes']}")
+
+
+def mate_readings(worker, desk, label):
+    """Every gear mate of the record read (``mate_read``), logged, and the app's verdict asserted right on each:
+    straight after a build (whose sense read turned round any it read wrong), after an Update that made one again,
+    after a reopen. The record's sense must agree with the read's kinematics (``mate_senses = (sense == -1)``)."""
+    box = desk.record.gearbox
+    frames = frames_on_record(desk)
+    meshes = [m for m in box.mates if m.kind == "mesh"]
+    for m in meshes:
+        same = mesh_same_sense(desk, *m.gears)
+        sense = int(getattr(m, "sense", 0) or 0)
+        check(sense in (0, 1, -1) and (sense == 0 or (sense == -1) == same),
+              f"{label}: {m.name}'s sense on record {sense} agrees with the kinematics (k > 0 {same})")
+
+    def work(s):
+        return [mate_read(s, f"r{i}", m.name, gear_axes(frames, *m.gears), mesh_same_sense(desk, *m.gears),
+                          tuple(m.gears)) for i, m in enumerate(meshes)]
+    reads = run(worker, in_assembly(box.assembly, work))
+    for read in reads:
+        say_read(label, read)
+        app = read.get("app")
+        check(app is not None and app[0] is True, f"{label}: the app reads {read['mate']} turning right "
+              f"({'turned' if axes_turned(read['axes']) else 'parallel'} axes): {app or read.get('app_error')}")
+        if app is not None and "rule" in read:
+            same = (tuple(read["rule"][1]) == tuple(app[1]) if axes_turned(read["axes"])
+                    else read["rule"][1][0] * read["rule"][1][1] == app[1][0] * app[1][1])
+            check(read["rule"][0] == app[0] and same, f"{label}: rule H on the raw read agrees with the app's own "
+                  f"read of {read['mate']}")
+    return reads
+
+
+def drive_job(asm, components, layout_name, input_gear, control=None, turn_by=None, fixed=(), phases=(),
+              plane="plane3"):
+    """One worker job on the assembly. The angle mate DRIVE_MATE from the input's Top plane to the layout's base plane
+    ``plane`` (W5: Right; W6: the one square to the input's u₀) at 90°, its D1 linked to the global DRIVE. ``turn_by``
+    None: DRIVE 90 -> 120 -> 90; then, given ``control`` (a dict: ``a``, ``b``, the recorded gear mate's name
+    ``mesh``, its ``ratio``; W6: the gears' ``axes`` and the mesh's ``same`` sense, for the mate's read straight after
+    it is made, and ``clash``, for the interference read at the driven position), that mate suppressed and CONTROL +
+    name made in its place with each Flip in turn, driven 90 -> 120 -> 90, deleted, the recorded one turned back on. ``turn_by`` d (the user's turn):
     DRIVE 90 -> 90 + d and the drive taken away at once, leaving the train turned. Whatever happens, the cleanup
     runs in review M12's order — DRIVE set back (not for a user's turn) before the control mate is deleted; the
     recorded gear mate turned back on; the drive's equations deleted (last first) and the angle mate — each step
@@ -1254,7 +1475,7 @@ def drive_job(asm, components, layout_name, input_gear, control=None, turn_by=No
                 out["built"] = frames()
                 session.add_global_variable(DRIVE, f"{DRIVE_FROM:g}")
                 made["global"] = True
-                name, dim = session.add_mate("ddrive", "angle", f"{handle[input_gear]}:plane2", "dlay:plane3",
+                name, dim = session.add_mate("ddrive", "angle", f"{handle[input_gear]}:plane2", f"dlay:{plane}",
                                              DRIVE_FROM, DRIVE_MATE)
                 made["drive"] = name
                 out["drive_mate"] = (name, dim, session.mate_status(name))
@@ -1278,7 +1499,7 @@ def drive_job(asm, components, layout_name, input_gear, control=None, turn_by=No
                         set_drive(DRIVE_FROM)
                         out["back"] = frames()
                     if control:
-                        a, b, mesh, ratio = control
+                        a, b, mesh, ratio = control["a"], control["b"], control["mesh"], control["ratio"]
                         session.find_mate("dmesh", mesh)
                         session.set_mate_suppressed("dmesh", True)
                         made["suppressed"] = True
@@ -1291,10 +1512,15 @@ def drive_job(asm, components, layout_name, input_gear, control=None, turn_by=No
                                                         ratio=(float(ratio[0]), float(ratio[1])), flip=flip)
                             made["control"] = cname
                             out.setdefault("control_mate", []).append((flip, cname, session.mate_status(cname)))
+                            if control.get("axes"):    # W6-PLAN §6.1: read straight after it is made, before a rebuild
+                                out[f"control_read {flip}"] = mate_read(session, "dread", cname, control["axes"],
+                                                                        control["same"], (a, b))
                             rebuild(f"control added, Flip {flip}")
                             out[f"control_added {flip}"] = frames()
                             set_drive(DRIVE_TO)
                             out[f"control_driven {flip}"] = frames()
+                            if control.get("clash"):   # review M2: at the driven position, 30° off the built phase
+                                out[f"control_clash {flip}"] = session.interferences()
                             set_drive(DRIVE_FROM)      # M12: Drive set back before the control mate is deleted
                             out[f"control_back {flip}"] = frames()
                             delete_mate(session, cname)
@@ -1339,14 +1565,30 @@ def drive_job(asm, components, layout_name, input_gear, control=None, turn_by=No
     return job
 
 
-def expected_turns(desk, gears, input_gear, step):
-    """δ_i = step · ω_i / ω_in (W5-DECISIONS M2: speeds about each shaft's own axis), in degrees about each gear's
-    own +Z, with the input's turn signed as findings.DEMONSTRATION_DRIVE_SENSE says."""
+def expected_turns(desk, gears, input_gear, step, sense=1):
+    """δ_i = sense · step · ω_i / ω_in (W5-DECISIONS M2: speeds about each shaft's own axis), in degrees about each
+    gear's own +Z; ``sense`` the sign the input was measured (or, W5, ruled) to turn by."""
     speeds = desk.a.report.motion.speeds
     shaft_of = {g.id: g.shaft for g in desk.a.spec.gears}
     w_in = speeds[shaft_of[input_gear]]
-    sense = findings.DEMONSTRATION_DRIVE_SENSE
     return {g: sense * step * float(speeds[shaft_of[g]] / w_in) for g in gears}
+
+
+def input_sense(label, turns, input_gear, step, ruled):
+    """W6-PLAN §6.1: the input's turn is MEASURED, |δ_in| = ``step`` asserted (a miss stops the run); its sign is the
+    one every other gear's expectation takes. ``ruled`` (a Z+ input, W5): the sign findings.DEMONSTRATION_DRIVE_SENSE
+    says, which the measured one must equal."""
+    measured = turns.get(input_gear)
+    if measured is None or abs(abs(measured) - abs(step)) > DRIVE_TOLERANCE * abs(step):
+        raise Halt(f"{label}: the drive turned the input {input_gear} {measured}°, not ±{abs(step):g}° (W6-PLAN §6.1: "
+                   "stop and ask)")
+    sign = 1 if measured * step > 0 else -1
+    if ruled is not None and sign != ruled:
+        raise Halt(f"{label}: the drive turned the input {input_gear} {measured:+.9f}° where "
+                   f"DEMONSTRATION_DRIVE_SENSE says {ruled * step:+g}° (W5-PLAN §4.2: stop and ask)")
+    say(f"fact    {label}: the input {input_gear} turned {measured:+.9f}° about its own +Z, measured"
+        f"{' (as DEMONSTRATION_DRIVE_SENSE says for a Z+ input)' if ruled is not None else ''}")
+    return sign
 
 
 def say_turns(label, turns, expected):
@@ -1365,41 +1607,62 @@ def drive_inputs(desk):
     return box, components, gears, box.drag[0] if box.drag else ""
 
 
+BASE_PLANES = (("plane3", "Right"), ("plane2", "Top"), ("plane1", "Front"))     # square to X, Y, Z
+
+
 def drive_assumptions(desk, input_gear, label):
-    """What the drive rests on (W5-PLAN §4.2, ruled on 2026-11-14), asserted before anything is added: a gear to
-    drag; the input built at θ = 0 on a Z+ shaft (its Top plane then at 90° to the layout's Right, the angle the
-    drive is made at); findings.DEMONSTRATION_DRIVE_SENSE 1 (the sense probe demonstration_drive measured for such an
-    input). A gearbox that breaks one stops the run with the sentence, rather than drive from an angle no probe
-    measured."""
+    """What the drive rests on (W5-PLAN §4.2, ruled on 2026-11-14; W6-PLAN §6.1), asserted before anything is added:
+    a gear to drag; the input built at θ = 0 about its own axis (its Top plane, square to its own Y, then at 90° to
+    the base plane square to its u₀ = own X: Right for a Z or Y input, Top for an X input); on a Z+ input
+    findings.DEMONSTRATION_DRIVE_SENSE 1 (the sense probe demonstration_drive measured there, which the measured turn
+    must then equal). Returns (the layout's plane, the ruled sign or None). A gearbox that breaks one stops the run
+    with the sentence, rather than drive from an angle no probe measured."""
     if not input_gear:
         raise Halt(f"{label}: the record names no gear to drag, so the drive has no input")
     rotation = wanted(desk)[input_gear][0]
-    theta = math.degrees(math.atan2(float(rotation[3]), float(rotation[0])))
-    shaft = next(g.shaft for g in desk.a.spec.gears if g.id == input_gear)
-    axis = next(sh.axis for sh in desk.a.spec.shafts if sh.id == shaft)
-    if abs(theta) > 1e-9 or float(rotation[8]) < 1 - 1e-12 or axis != "Z+":
-        raise Halt(f"{label}: the drive is made at 90° from an input built at θ = 0 on a Z+ shaft; {input_gear} is on "
-                   f"{shaft} ({axis}) at {theta:.6f}°, R33 {rotation[8]}, so it is not driven")
-    if findings.DEMONSTRATION_DRIVE_SENSE != 1:
-        raise Halt(f"{label}: findings.DEMONSTRATION_DRIVE_SENSE is {findings.DEMONSTRATION_DRIVE_SENSE!r}, not the 1 "
-                   "this drive's expectations were ruled on")
-    check(True, f"{label}: the drive's assumptions hold: {input_gear} on {shaft} (Z+) at θ = 0, "
-                f"DEMONSTRATION_DRIVE_SENSE 1, tolerance {DRIVE_TOLERANCE:g} relative")
+    placed = desk.a.report.layout.placed[input_gear]
+    axis = tuple(float(c) for c in placed.axis)
+    theta = turn_degrees(wb_geometry.base_frame(axis), rotation)
+    if theta is None or abs(theta) > 1e-9:
+        raise Halt(f"{label}: the drive is made at 90° from an input built at θ = 0; {input_gear} on {placed.shaft} "
+                   f"is at {theta}° about its axis {axis}, so it is not driven")
+    u0 = (float(rotation[0]), float(rotation[3]), float(rotation[6]))
+    k = max(range(3), key=lambda i: abs(u0[i]))
+    if abs(abs(u0[k]) - 1.0) > 1e-12:
+        raise Halt(f"{label}: {input_gear}'s u₀ {u0} is square to no base plane, so no drive is made")
+    plane, word = BASE_PLANES[k]
+    ruled = None
+    if axis == (0.0, 0.0, 1.0):
+        if findings.DEMONSTRATION_DRIVE_SENSE != 1:
+            raise Halt(f"{label}: findings.DEMONSTRATION_DRIVE_SENSE is {findings.DEMONSTRATION_DRIVE_SENSE!r}, not "
+                       "the 1 this drive's expectations were ruled on")
+        ruled = 1
+    check(True, f"{label}: the drive's assumptions hold: {input_gear} on {placed.shaft} {axis} at θ = 0, u₀ {u0}, "
+                f"its Top plane against the layout's {word} ({plane}); the input's turn "
+                f"{'ruled by DEMONSTRATION_DRIVE_SENSE 1 and measured' if ruled else 'measured'}; tolerance "
+                f"{DRIVE_TOLERANCE:g} relative")
+    return plane, ruled
 
 
 def drive_proof(worker, desk, label, control=None, phases=()):
     """§4.2 on the current assembly, which must stand at its built turn with the input at θ = 0. ``control``: the
-    (a, b) of the recorded gear mate to flip for the wrong-sense control, or None."""
+    (a, b) of the recorded gear mate to flip for the wrong-sense control, or None. W6 (W6-PLAN §6.1): the input's
+    turn measured; the control mate read straight after each Flip is made; on a turned mesh (axes not parallel), the
+    interference judge after each control drive (review M2): the Flip the drive calls right clear, the other clashing
+    with the mesh's partner only — a failure STOPS the run."""
     box, components, gears, input_gear = drive_inputs(desk)
     say(f"drive   {label}: input {input_gear}; control {control}; {memory()}")
-    drive_assumptions(desk, input_gear, label)
-    mesh_entry = None
+    plane, ruled = drive_assumptions(desk, input_gear, label)
+    mesh_entry, spec = None, None
     if control is not None:
         mesh_entry = next(m for m in box.mates if m.kind == "mesh" and tuple(m.gears) == tuple(control))
+        a, b = mesh_entry.gears
+        axes = gear_axes(frames_on_record(desk), a, b)
+        spec = {"a": a, "b": b, "mesh": mesh_entry.name, "ratio": tuple(mesh_entry.ratio), "axes": axes,
+                "same": mesh_same_sense(desk, a, b), "clash": True, "turned": axes_turned(axes)}
     started = time.monotonic()
-    out = run(worker, drive_job(box.assembly, components, box.layout_component, input_gear,
-                                control=(tuple(mesh_entry.gears) + (mesh_entry.name, tuple(mesh_entry.ratio)))
-                                if mesh_entry is not None else None, fixed=box.fixed, phases=phases))
+    out = run(worker, drive_job(box.assembly, components, box.layout_component, input_gear, control=spec,
+                                fixed=box.fixed, phases=phases, plane=plane))
     gear_of = {c.name: c.gear for c in box.components}
     for step, _frames, found in out.get("phases", []):
         merged = swbuild._clashes(found, gear_of)  # noqa: SLF001
@@ -1425,13 +1688,13 @@ def drive_proof(worker, desk, label, control=None, phases=()):
     if gap > FRAME_TOLERANCE:
         raise Halt(f"{label}: adding the 90° drive moved {at} by {gap:.1e} (W5-PLAN §4.2: stop and ask)")
     check(True, f"{label}: adding the 90° drive moved nothing (largest {gap:.1e})")
-    expected = expected_turns(desk, gears, input_gear, DRIVE_TO - DRIVE_FROM)
+    step = DRIVE_TO - DRIVE_FROM
+    expected = expected_turns(desk, gears, input_gear, step, 1 if ruled is None else ruled)
     if "driven" in out:
         turns = {g: turn_degrees(built[g][0], out["driven"][g][0]) for g in gears}
+        sense = input_sense(label, turns, input_gear, step, ruled)
+        expected = expected_turns(desk, gears, input_gear, step, sense)
         say_turns(f"{DRIVE} {DRIVE_FROM:g} -> {DRIVE_TO:g}", turns, expected)
-        if not close_turn(turns[input_gear], expected[input_gear]):
-            raise Halt(f"{label}: the drive turned the input {input_gear} {turns[input_gear]}° where "
-                       f"DEMONSTRATION_DRIVE_SENSE says {expected[input_gear]:+g}° (W5-PLAN §4.2: stop and ask)")
         for g in gears:
             check(close_turn(turns[g], expected[g]),
                   f"{label}: {g} turned {turns[g] if turns[g] is None else f'{turns[g]:+.9f}'}° for "
@@ -1447,11 +1710,12 @@ def drive_proof(worker, desk, label, control=None, phases=()):
         gap, at = frames_gap(out["back"], built)
         check(gap <= FRAME_TOLERANCE, f"{label}: {DRIVE} set back to {DRIVE_FROM:g}, every gear at its built frame "
               f"(largest {gap:.1e} at {at or '-'})")
+    halt = ""
     if mesh_entry is not None:
         a, b = mesh_entry.gears
         flips = [f for f in (True, False) if f"control_driven {f}" in out]
+        wrong, right = [], []
         if len(flips) == 2:
-            wrong, right = [], []
             for flip in flips:
                 gap, at = frames_gap(out[f"control_added {flip}"], built)
                 check(gap <= FRAME_TOLERANCE, f"{label}, control: the gear mate with Flip {flip} moved nothing when "
@@ -1471,8 +1735,9 @@ def drive_proof(worker, desk, label, control=None, phases=()):
             check(len(wrong) == 1 and len(right) == 1,
                   f"{label}, control: a wrong sense is seen: with Flip {wrong} {b} turns the mirror of the right turn, "
                   f"with Flip {right} it turns right (the comparison tells one from the other)")
-            say(f"fact    {label}: {mesh_entry.name} turns right with Flip {right} here (findings.GEAR_MATE_FLIP "
-                f"{findings.GEAR_MATE_FLIP})")
+            say(f"fact    {label}: {mesh_entry.name} turns right with Flip {right} here on SolidWorks "
+                f"{TAG['version'] or TAG['major']} (findings.GEAR_MATE_FLIP {findings.GEAR_MATE_FLIP}; "
+                f"{'turned' if spec['turned'] else 'parallel'} axes)")
             turned = mesh_entry.name in TURNED.get(os.path.normcase(box.assembly), set())
             left_on = [not bool(findings.GEAR_MATE_FLIP)] if turned else [bool(findings.GEAR_MATE_FLIP)]
             if not moved_since_made(desk, mesh_entry):
@@ -1483,8 +1748,19 @@ def drive_proof(worker, desk, label, control=None, phases=()):
                 say(f"fact    {label}, control: a gear of {mesh_entry.name} has moved since the mate was made; a fresh "
                     f"mate turns right with Flip {right}, the recorded one was made with {left_on} "
                     f"({'turned round' if turned else 'as first made'}) and its own drive is judged above")
+            for flip in flips:
+                read = out.get(f"control_read {flip}")
+                if read is not None:
+                    say_read(f"{label}, control with Flip {flip}", read)
+                    app = read.get("app")
+                    if app is not None and len(right) == 1 and len(wrong) == 1:
+                        check(bool(app[0]) == (flip in right), f"{label}, control: the app's read of the mate with "
+                              f"Flip {flip} says right {app[0]}; the drive says {flip in right}")
+            halt = clash_judge(out, label, spec, right, wrong, gear_of)
         else:
             check(False, f"{label}, control: never driven with both Flips: {out['errors']}")
+            if spec["turned"]:
+                halt = f"{label}, control: the turned mesh {mesh_entry.name} was never driven with both Flips"
         for key, what in (("control_gone", "the control mates deleted and the recorded one back on"),):
             if key in out:
                 gap, at = frames_gap(out[key], built)
@@ -1508,7 +1784,47 @@ def drive_proof(worker, desk, label, control=None, phases=()):
               f"{label}: every mated gear under-defined again: {out['constrained_after']}")
     else:
         check(False, f"{label}: the state after the drive could not be read: {out['cleanup']}")
+    if halt:
+        raise Halt(halt)
     return out
+
+
+def clash_judge(out, label, spec, right, wrong, gear_of):
+    """Review M2's interference check after each control drive: logged on any mesh; on a turned one, the Flip the
+    drive calls right must show no interference at the driven position and the other must clash with the mesh's
+    partner and nothing else. Returns the sentence that stops the run, or ""."""
+    a, b, mesh = spec["a"], spec["b"], spec["mesh"]
+    halt = []
+    for flip in (True, False):
+        found = out.get(f"control_clash {flip}")
+        if found is None:
+            if spec["turned"]:
+                halt.append(f"no interference read with Flip {flip}")
+            continue
+        merged = swbuild._clashes(found, gear_of)  # noqa: SLF001
+        said = [(c.gears, round(c.volume, 6)) for c in merged]
+        say(f"fact    {label}, control: driven {DRIVE_TO - DRIVE_FROM:g}° with Flip {flip} "
+            f"({'right' if flip in right else 'wrong' if flip in wrong else 'neither'}): interference {said}")
+        if not spec["turned"]:
+            continue
+        if flip in right:
+            ok = merged == []
+            check(ok, f"{label}, control: with the Flip that turns right ({flip}) {mesh} runs clear: {said}")
+            if not ok:
+                halt.append(f"the right Flip {flip} clashes: {said}")
+        elif flip in wrong:
+            ok = bool(merged) and all(set(c.gears) == {a, b} and c.volume > 0 for c in merged)
+            check(ok, f"{label}, control: with the wrong Flip ({flip}) {a} and {b} clash, and nothing else: {said}")
+            if not ok:
+                halt.append(f"the wrong Flip {flip} does not clash {a} with {b} alone: {said}")
+        else:
+            halt.append(f"Flip {flip} turns {b} neither right nor wrong")
+    if spec["turned"] and (len(right) != 1 or len(wrong) != 1):
+        halt.append(f"the drive told no right Flip from a wrong one (right {right}, wrong {wrong})")
+    if halt:
+        return (f"{label}: the interference check on the turned mesh {mesh} failed (review M2: stop): "
+                + "; ".join(halt))
+    return ""
 
 
 def user_turn(worker, desk, label, degrees):
@@ -1516,9 +1832,9 @@ def user_turn(worker, desk, label, degrees):
     the train — every gear turned consistently. Returns the frames it left."""
     box, components, gears, input_gear = drive_inputs(desk)
     say(f"turn    {label}: {input_gear} by {degrees:g}° and the drive deleted")
-    drive_assumptions(desk, input_gear, label)
+    plane, ruled = drive_assumptions(desk, input_gear, label)
     out = run(worker, drive_job(box.assembly, components, box.layout_component, input_gear, turn_by=degrees,
-                                fixed=box.fixed))
+                                fixed=box.fixed, plane=plane))
     say(f"        rebuilds {out['rebuilds']}")
     check(not out["errors"] and not out["cleanup"], f"{label}: turned and the drive deleted: {out['errors']} "
           f"{out['cleanup']}")
@@ -1527,8 +1843,9 @@ def user_turn(worker, desk, label, degrees):
     gap, at = frames_gap(out["added"], out["built"])
     if gap > FRAME_TOLERANCE:
         raise Halt(f"{label}: adding the 90° drive moved {at} by {gap:.1e} (W5-PLAN §4.2: stop and ask)")
-    expected = expected_turns(desk, gears, input_gear, degrees)
     turns = {g: turn_degrees(out["built"][g][0], out["after"][g][0]) for g in gears}
+    sense = input_sense(label, turns, input_gear, degrees, ruled)
+    expected = expected_turns(desk, gears, input_gear, degrees, sense)
     say_turns("left turned", turns, expected)
     check(all(close_turn(turns[g], expected[g]) for g in gears), f"{label}: every gear left turned as the "
           "kinematics say")
@@ -1752,9 +2069,9 @@ def build_turning(worker, desk, label, parts, turned_round=()):
     plan, result = desk.build()
     if result is None:
         raise AssertionError(f"{label}: the build was refused: {desk.note[0]}")
-    check(result.ok and result.kind == store.GEARBOX_MOTION and len(result.parts.built) == parts,
-          f"{label}: {parts} parts, the layout part and the assembly built and saved, turning: ok {result.ok}, "
-          f"parts {len(result.parts.built)}, kind {result.kind!r}")
+    check(result.ok and result.kind == store.GEARBOX_MOTION and (parts is None or len(result.parts.built) == parts),
+          f"{label}: {'every' if parts is None else parts} part(s), the layout part and the assembly built and saved, "
+          f"turning: ok {result.ok}, parts built {len(result.parts.built)}, kind {result.kind!r}")
     check(result.clashes == [] and not result.interference_error, f"{label}: no interference: {result.clashes}")
     got = list(getattr(result.assembly, "turned_round", []) or [])
     TURNED[os.path.normcase(desk.record.gearbox.assembly)] = set(got)
@@ -2351,16 +2668,18 @@ def ring_shift(worker, excel, section, name, shift, working):
     book.close()
 
 
-def section_r1(worker, excel):
-    ring_shift(worker, excel, "r1", "Ring_Shift_Plus", 0.3, True)
+# The ring-shift checks, run as r1–r3 on 2026-11-14 (ring-shift-2026-20261114-185630.log), renamed rs1–rs3 when W6
+# took r1–r6 for its own sections.
+def section_rs1(worker, excel):
+    ring_shift(worker, excel, "rs1", "Ring_Shift_Plus", 0.3, True)
 
 
-def section_r2(worker, excel):
-    ring_shift(worker, excel, "r2", "Ring_Shift_Minus", -0.3, True)
+def section_rs2(worker, excel):
+    ring_shift(worker, excel, "rs2", "Ring_Shift_Minus", -0.3, True)
 
 
-def section_r3(worker, excel):
-    ring_shift(worker, excel, "r3", "Ring_Shift_Plain", 0.3, False)
+def section_rs3(worker, excel):
+    ring_shift(worker, excel, "rs3", "Ring_Shift_Plain", 0.3, False)
 
 
 def injected(plan, offset):
@@ -3114,9 +3433,802 @@ def section_c(worker, excel):
     book.close()
 
 
+# == W6: right-angle and crossed gearboxes (W6-PLAN §5, §6) ===================================================
+#
+# Every W6 section goes through the app's own code as W5's do, on the committed findings only. The checks it adds
+# (W6-PLAN §6.1, W6-INTERFACES §7.17): frames against layout.frames for any axis; each layout axis on its shaft's
+# line; the drive against the base plane square to the input's u₀, the input's turn measured; every gear mate's read
+# logged after the build, after each Flip of a control and after a reopen; review M2's interference judge after every
+# control drive on a turned mesh; a quiet Update on every built turned gearbox; on 2024 nothing about which Flip is
+# right is assumed (it is logged, and the app's read and the drive must agree with each other).
+
+# -- building once, and starting later sections from a copy (W6-PLAN §6.2; W6-INTERFACES §4, pinned) -------------
+
+
+class CopyStop(Exception):
+    """A step of copy_built failed, said in the sentence: the section builds its fixture fresh instead."""
+
+
+COPY = {"ok": True, "probed": False, "why": ""}   # the copy route; dropped for the run if §7.1's open shows a dialog
+CURRENT = {"worker": None}                        # the run's worker, for copy_built's open (its signature is pinned)
+MASTER_SUFFIX = ".master"
+COPY_TIMEOUT = 120.0                              # W6-PLAN §7.1: the first copied assembly's open, at most
+
+
+def under(path, folder):
+    """Whether ``path`` lies in ``folder``: matched with a separator, so ``…\\r1`` never takes ``…\\r10`` (§7.10)."""
+    root = os.path.normcase(os.path.abspath(folder)).rstrip("\\/")
+    return bool(path) and os.path.normcase(os.path.abspath(path)).startswith(root + os.sep)
+
+
+def open_names(session):
+    """The file name of every open document (its path's, or its title): compared, never logged."""
+    out = []
+    for doc in documents(session._app):  # noqa: SLF001
+        path = str(call(doc, "GetPathName") or "")
+        out.append(os.path.basename(path) if path else str(call(doc, "GetTitle")))
+    return out
+
+
+def folder_flags(session, folder):
+    """GetSaveFlag of every open document in ``folder``, by file name."""
+    return {os.path.basename(str(call(d, "GetPathName"))): bool(call(d, "GetSaveFlag"))
+            for d in documents(session._app) if under(str(call(d, "GetPathName") or ""), folder)}  # noqa: SLF001
+
+
+def save_modified_in(folder):
+    """A worker job: every open document in ``folder`` that SolidWorks holds modified saved (W5's close_ours on 2024)."""
+    def work(session):
+        saved = []
+        for doc in documents(session._app):  # noqa: SLF001
+            path = str(call(doc, "GetPathName") or "")
+            if under(path, folder) and call(doc, "GetSaveFlag"):
+                call(call(doc, "Extension"), "SaveAs3", path, 0, 1, swcom._null_dispatch(),  # noqa: SLF001
+                     swcom._null_dispatch(), swcom._out_long(), swcom._out_long())  # noqa: SLF001
+                saved.append(os.path.basename(path))
+        return saved
+    return work
+
+
+def end_clean(worker, folder, label, rename):
+    """copy_built's step 1 (``rename``: the builder section's end, run once, W6-INTERFACES §7.9) or step 4 (a copy
+    section's end, without the rename): every document of the folder closed (``quit_in``; on 2024 this run's modified
+    documents saved first, as W5's close_ours), Excel's workbook closed (``close_books``), no open document by a file
+    name the folder holds; then the folder renamed ``<section>.master``, which it stays for the rest of the run.
+    Returns the folder it leaves (the master's with the rename)."""
+    if TAG["major"] == 32:
+        saved = run(worker, save_modified_in(folder))
+        say(f"        {label}: SolidWorks 2024, this run's modified documents saved before the close: {saved}")
+    left = run(worker, quit_in(folder))
+    books = close_books()
+    held = {n.lower() for n in os.listdir(folder)}
+    same = sorted({n for n in run(worker, open_names) if n.lower() in held})
+    ok = not left and not same
+    check(ok, f"{label}: {os.path.basename(folder)} ends clean: every document of it closed in SolidWorks (left "
+              f"{left}), Excel's workbook closed ({books}), no open document by a file name it holds ({same})")
+    if not ok:
+        raise CopyStop(f"{os.path.basename(folder)} did not end clean: left {left}, open by its file names {same}")
+    if not rename:
+        return folder
+    master, last = folder + MASTER_SUFFIX, None
+    for _ in range(20):                   # a file SolidWorks or Excel let go of a moment ago
+        try:
+            os.rename(folder, master)
+            break
+        except OSError as exc:
+            last = exc
+            time.sleep(0.5)
+    else:
+        raise CopyStop(f"{os.path.basename(folder)} could not be renamed {os.path.basename(master)}: {last}")
+    say(f"master  {os.path.basename(folder)} renamed {os.path.basename(master)}: it stays so for the rest of the run")
+    return master
+
+
+def keep_master(worker, folder, section):
+    """The builder section's end: ``end_clean`` with the rename; a failure said, and the copy route dropped."""
+    try:
+        return end_clean(worker, folder, f"{section}, the builder's end", True)
+    except CopyStop as exc:
+        check(False, f"{section}: the master was not kept ({exc}); every later section builds its fixture fresh")
+        COPY.update(ok=False, why=str(exc))
+        return ""
+
+
+def end_copy(worker, folder, section):
+    """A copy section's end (copy_built step 4): two copies are never open together."""
+    try:
+        end_clean(worker, folder, f"{section}, the copy's end", False)
+    except CopyStop as exc:
+        check(False, f"{section}: {exc}")
+
+
+def rewrite_paths(value, old, new, changed, where):
+    """Every string in a record — fields of dataclasses, items of lists, tuples and dicts, and dict keys — that starts
+    with the folder ``old`` followed by a separator (normcase), put onto ``new`` (W6-INTERFACES §4 step 2, §7.10);
+    ``changed`` collects where each was. Dataclasses are changed in place; the rest is returned."""
+    if isinstance(value, str):
+        n, o = os.path.normcase(value), os.path.normcase(old).rstrip("\\/")
+        if len(n) > len(o) and n.startswith(o) and n[len(o)] in "\\/":
+            changed.append(where)
+            return new.rstrip("\\/") + value[len(o):]
+        return value
+    if dataclasses.is_dataclass(value) and not isinstance(value, type):
+        for f in dataclasses.fields(value):
+            object.__setattr__(value, f.name, rewrite_paths(getattr(value, f.name), old, new, changed,
+                                                            f"{where}.{f.name}"))
+        return value
+    if isinstance(value, list):
+        return [rewrite_paths(v, old, new, changed, f"{where}[{i}]") for i, v in enumerate(value)]
+    if isinstance(value, tuple):
+        return tuple(rewrite_paths(v, old, new, changed, f"{where}[{i}]") for i, v in enumerate(value))
+    if isinstance(value, dict):
+        return {rewrite_paths(k, old, new, changed, f"{where} key"): rewrite_paths(v, old, new, changed,
+                                                                                 f"{where}[{k!r}]")
+                for k, v in value.items()}
+    return value
+
+
+def strings_in(value, where=""):
+    """(where, text) for every string in a record, as ``rewrite_paths`` walks it."""
+    if isinstance(value, str):
+        yield where, value
+    elif dataclasses.is_dataclass(value) and not isinstance(value, type):
+        for f in dataclasses.fields(value):
+            yield from strings_in(getattr(value, f.name), f"{where}.{f.name}")
+    elif isinstance(value, (list, tuple)):
+        for i, v in enumerate(value):
+            yield from strings_in(v, f"{where}[{i}]")
+    elif isinstance(value, dict):
+        for k, v in value.items():
+            yield from strings_in(k, f"{where} key")
+            yield from strings_in(v, f"{where}[{k!r}]")
+
+
+def absolute(text):
+    import ntpath
+    return bool(text) and (ntpath.isabs(text) and (len(text) > 2 and text[1] == ":" or text.startswith("\\\\"))
+                           or (os.sep == "/" and os.path.isabs(text)))
+
+
+def copy_built(master: str, section: str) -> str:
+    """W6-INTERFACES §4, pinned (W7's demonstration reuses it): the kept master folder copied to ``OUT/<section>`` and
+    made valid there; returns the copy's folder. Step 1 (the builder's clean end and the rename) ran once at the
+    builder's end (``keep_master``), step 4 is ``end_copy``. A step that fails raises CopyStop with its sentence."""
+    worker = CURRENT["worker"]
+    if not master.endswith(MASTER_SUFFIX) or not os.path.isdir(master):
+        raise CopyStop(f"{master} is not a kept master folder (one renamed to end {MASTER_SUFFIX})")
+    old, copy = master[:-len(MASTER_SUFFIX)], os.path.join(OUT, section)
+    if os.path.exists(copy):
+        raise SystemExit(f"{copy} exists already; give a fresh output folder")
+    # 2. The copy, its records put onto it through store's own reader and writer.
+    shutil.copytree(master, copy)                 # copy2: the mtimes kept
+    say(f"copy    {os.path.basename(master)} -> {section}: {len(os.listdir(copy))} files, mtimes kept")
+    records = []
+    for name in sorted(os.listdir(copy)):
+        workbook = os.path.join(copy, name)
+        if not name.lower().endswith(".xlsx") or name.startswith("~$") or not os.path.exists(
+                store.link_record_path(workbook)):
+            continue
+        record, changed = store.read_link_record(workbook), []
+        rewrite_paths(record, old, copy, changed, "record")
+        store.save_link_record(record, store.link_record_path(workbook))
+        say(f"        {name}'s record: {len(changed)} path(s) put onto the copy: {changed}")
+        records.append(workbook)
+    for name in sorted(os.listdir(copy)):
+        if name.endswith(store.SIDECAR_SUFFIX):
+            path = os.path.join(copy, name)
+            sidecar, changed = store.read_sidecar(path), []
+            if sidecar is None:
+                raise CopyStop(f"{name} in the copy could not be read by store.read_sidecar")
+            rewrite_paths(sidecar, old, copy, changed, "sidecar")
+            store.save(path, sidecar)
+            say(f"        {name}: {len(changed)} path(s) put onto the copy: {changed}")
+    if not records:
+        raise CopyStop(f"{os.path.basename(master)} holds no workbook with a record")
+    for workbook in records:
+        record = store.read_link_record(workbook)
+        owner = store.record_owner(record, workbook)
+        behind, missing, elsewhere = [], [], []
+        for where, text in strings_in(record, "record"):
+            if not absolute(text):
+                continue
+            if under(text, old) or os.path.normcase(text).rstrip("\\/") == os.path.normcase(old):
+                behind.append(where)
+            elif under(text, copy):
+                if not os.path.exists(text):
+                    missing.append(where)
+            else:
+                elsewhere.append(where)
+        marks = (sorted(record.unsaved), sorted(record.mismatched))
+        dropped = store.clear_saved(record)
+        digest = wb_link.Link(workbook).read().digest
+        ok = owner[0] == store.OURS and not behind and not missing and not dropped and digest == record.digest
+        if elsewhere:
+            say(f"fact    {section}: paths in the record outside the copy (not the folder's): {elsewhere}")
+        check(ok, f"{section}: the copy's record is valid: owner {owner}; left on the master {behind}; missing in "
+                  f"the copy {missing}; clear_saved dropped {'something' if dropped else 'nothing'} (unsaved, "
+                  f"mismatched {marks}); the read's digest {'equals' if digest == record.digest else 'differs from'} "
+                  "the record's")
+        if not ok:
+            raise CopyStop(f"the copy's record of {os.path.basename(workbook)} is not valid in {section}")
+    # 3. SolidWorks finds the copy's files.
+    copy_opens(worker, copy, section, records)
+    return copy
+
+
+def copy_opens(worker, copy, section, records):
+    """copy_built step 3: the copy's assembly opened once (the app's own open: OpenDoc6, silent), every component's
+    and the layout's path read, the flags straight after the open logged as facts, the assembly closed without saving
+    (QuitDoc). The run's first copy opens under the dialog watch with a 120 s timeout (W6-PLAN §7.1): a dialog drops
+    the copy route for the rest of the run; no answer in the time stops the run (the worker is held)."""
+    for workbook in records:
+        box = store.read_link_record(workbook).gearbox
+        if box is None or not box.assembly:
+            continue
+        names = [c.name for c in box.components] + [box.layout_component]
+
+        def work(s):
+            found = {}
+            for index, name in enumerate(names):
+                s.find_component(f"copy{index}", name)
+                found[name] = str(s._handles[f"copy{index}"].get("path") or "")  # noqa: SLF001
+            return found
+        first = not COPY["probed"]
+        if first:
+            OPEN_DIALOGS.clear()
+            OPENING.set()
+            say(f"probe   W6-PLAN §7.1: {os.path.basename(box.assembly)} of {section}, whose stored references name a "
+                f"folder that is gone, opened under the dialog watch ({COPY_TIMEOUT:g} s at most)")
+        started = time.monotonic()
+        try:
+            paths = run(worker, in_assembly(box.assembly, work), timeout=COPY_TIMEOUT if first else 600)
+        except queue.Empty:
+            raise Halt(f"{section}: the copied assembly did not open in {COPY_TIMEOUT:g} s (W6-PLAN §7.1); the "
+                       f"worker is held, so the run stops; dialogs seen {OPEN_DIALOGS}") from None
+        except (Halt, Stopped):
+            raise
+        except Exception as exc:  # noqa: BLE001 - the open's own sentence, and the section builds fresh
+            raise CopyStop(f"the copy's assembly would not open: {type(exc).__name__}: {exc}") from None
+        finally:
+            if first:
+                OPENING.clear()
+                COPY["probed"] = True
+        flags = run(worker, lambda s: folder_flags(s, copy))
+        say(f"fact    {section}: the copy's assembly opened in {time.monotonic() - started:.1f} s; marked modified "
+            f"straight after the open: {flags}")
+        left = run(worker, quit_in(copy))
+        if first:
+            say(f"fact    W6-PLAN §7.1: dialogs while the copied assembly opened: {OPEN_DIALOGS or 'none'}")
+            if OPEN_DIALOGS:
+                COPY.update(ok=False, why=f"a dialog appeared while a copied assembly opened: {OPEN_DIALOGS}")
+                raise CopyStop(COPY["why"])
+        strays = {n: p for n, p in paths.items() if not under(p, copy)}
+        check(not strays and not left, f"{section}: SolidWorks found all {len(paths)} components and the layout in "
+              f"the copy, and the copy closed without saving (left {left}): elsewhere {strays or 'none'}")
+        if strays:
+            raise CopyStop(f"a copy loaded the master's files: {strays}")
+
+
+def start_copy(worker, excel, section, builder, spec):
+    """A copy section's start (W6-PLAN §6.2): ``copy_built`` of ``<builder>.master`` read through the window's own
+    path, or — no master in this run, the copy route dropped, or a step of the copy stopped — the fixture written
+    and built fresh in the section's folder, as W5's sections start."""
+    master = os.path.join(OUT, builder + MASTER_SUFFIX)
+    if COPY["ok"] and os.path.isdir(master):
+        try:
+            folder = copy_built(master, section)
+        except CopyStop as exc:
+            check(False, f"{section}: the copy of {builder}{MASTER_SUFFIX} STOPPED: {exc}; the section builds its "
+                         "fixture fresh")
+            stopped = os.path.join(OUT, section)
+            if os.path.exists(stopped):
+                os.rename(stopped, stopped + ".copy-stopped")
+        else:
+            path = os.path.join(folder, f"{spec('').box.name}.xlsx")
+            book = Workbook(excel, path, section)
+            desk = Desk(path, worker, strip=folder)
+            desk.read()
+            box = desk.record.gearbox if desk.record is not None else None
+            check(turning(desk) and desk.record.digest == desk.reading.digest and under(box.assembly, folder),
+                  f"{section}: the copy reads as built from this workbook, its gearbox in the copy: "
+                  f"{box and os.path.basename(os.path.dirname(box.assembly))}")
+            desk.say_update()
+            desk.say_footer(f"{section}, the copy read")
+            return folder, path, book, desk
+    else:
+        say(f"fresh   {section}: {'no ' + builder + MASTER_SUFFIX + ' in this run' if COPY['ok'] else 'the copy route was dropped: ' + COPY['why']}; "
+            "the fixture is built fresh")
+    folder, path, book, desk = write_fixture(worker, excel, section, spec)
+    build_turning(worker, desk, f"{section}, built fresh", None, None)
+    return folder, path, book, desk
+
+
+# -- the fixtures (W6-PLAN §5): written by write_new, saved once by Excel, Output folder blank ----------------
+
+
+def spec_bevel_reducer(folder=""):
+    """Fixture A, ``Bevel_Reducer`` (§5.1): a bevel stage at 90° (S1 on X+ into S2 on Z+) feeding a parallel stage."""
+    return GearboxSpec(
+        box=Box(name="Bevel_Reducer", output_folder=folder),
+        shafts=(Shaft("S1", "frame", "0", "0", "60", "X+", "input", speed="1500", torque="10"),
+                Shaft("S2", "frame", "0", "0", "0", "Z+"),
+                Shaft("S3", "frame", "-68", "0", "0", "Z+", "output")),
+        gears=(Gear("G1", "S1", "0", "bevel", "external", "20", "3", face_width="20", bore="10"),
+               Gear("G2", "S2", "60", "bevel", "external", "40", "3", face_width="20", bore="10"),
+               Gear("G3", "S2", "5", "spur", "external", "17", "2", face_width="10", bore="8"),
+               Gear("G4", "S3", "5", "spur", "external", "51", "2", face_width="10", bore="8")),
+        meshes=(Mesh("G1", "G2"), Mesh("G3", "G4")))
+
+
+def spec_crossed_slant(folder=""):
+    """Fixture B, ``Crossed_Slant`` (§5.2): a crossed helical stage (S1 Z+, S2 X+, skew at 90°), then a bevel stage at
+    120° onto the slanted S3."""
+    return GearboxSpec(
+        box=Box(name="Crossed_Slant", output_folder=folder),
+        shafts=(Shaft("S1", "frame", "0", "0", "0", "Z+", "input", speed="1000", torque="5"),
+                Shaft("S2", "frame", "0", "84.852814", "8", "X+"),
+                Shaft("S3", "frame", "-110", "84.852814", "8", "-1, 1.732050807569, 0", "output")),
+        gears=(Gear("G1", "S1", "10", "helical", "external", "20", "2", face_width="16", bore="6", helix_angle="45",
+                    hand="right"),
+               Gear("G2", "S2", "0", "helical", "external", "40", "2", face_width="16", bore="8", helix_angle="45",
+                    hand="right"),
+               Gear("G3", "S2", "-110", "bevel", "external", "20", "2.5", face_width="10", bore="8"),
+               Gear("G4", "S3", "0", "bevel", "external", "30", "2.5", face_width="10", bore="8")),
+        meshes=(Mesh("G1", "G2"), Mesh("G3", "G4")))
+
+
+def spec_bevel_reducer_y(folder=""):
+    """Fixture A turned onto a Y input (W6-INTERFACES §7.17's addition): S1 along Y+ through (0, 0, 60), S2 and S3 30
+    mm to −Y, G1 at At −30, so G1's cone tip (−30 along Y) sits on the minus side of the Top plane: its along mate is
+    a point distance to Top with a negative coordinate, which only the fake has shown (W5 probed Front alone)."""
+    return GearboxSpec(
+        box=Box(name="Bevel_Reducer_Y", output_folder=folder),
+        shafts=(Shaft("S1", "frame", "0", "0", "60", "Y+", "input", speed="1500", torque="10"),
+                Shaft("S2", "frame", "0", "-30", "0", "Z+"),
+                Shaft("S3", "frame", "-68", "-30", "0", "Z+", "output")),
+        gears=(Gear("G1", "S1", "-30", "bevel", "external", "20", "3", face_width="20", bore="10"),
+               Gear("G2", "S2", "60", "bevel", "external", "40", "3", face_width="20", bore="10"),
+               Gear("G3", "S2", "5", "spur", "external", "17", "2", face_width="10", bore="8"),
+               Gear("G4", "S3", "5", "spur", "external", "51", "2", face_width="10", bore="8")),
+        meshes=(Mesh("G1", "G2"), Mesh("G3", "G4")))
+
+
+def spec_crossed_stage(folder=""):
+    """Fixture B's crossed stage alone, moved 10 mm up (the review's M4 move, as tests' ``crossed_off_base``), so S1 can
+    pass to the other side of S2 without crossing the Top plane: the crossed mesh's sense flips."""
+    return GearboxSpec(
+        box=Box(name="Crossed_Stage", output_folder=folder),
+        shafts=(Shaft("S1", "frame", "0", "10", "0", "Z+", "input", speed="1000", torque="5"),
+                Shaft("S2", "frame", "0", "94.852814", "8", "X+", "output")),
+        gears=(Gear("G1", "S1", "10", "helical", "external", "20", "2", face_width="16", bore="6", helix_angle="45",
+                    hand="right"),
+               Gear("G2", "S2", "0", "helical", "external", "40", "2", face_width="16", bore="8", helix_angle="45",
+                    hand="right")),
+        meshes=(Mesh("G1", "G2"),))
+
+
+INVOLUTE = "above the form diameter of {}, so the bottom of the working flank is a straight line."
+# The expected Checks panels, speeds and torques (W6-PLAN §5.1, §5.2), each warning with its cell.
+A_EXPECT = {
+    "warnings": ["Gears!F2: G1: The tooth tip is 0.722 mm thick, under 0.3 × module (0.9 mm).",
+                 "Gears!Q2: G1: The involute starts at 65.444 mm, " + INVOLUTE.format("63.267 mm"),
+                 "Gears!Q5: G4: The involute starts at 99.28 mm, " + INVOLUTE.format("98.614 mm")],
+    "header": "Bevel and parallel train · 2 meshes · 6.000 : 1 · output at 90° to the input",
+    "speeds": {"S1": 1500.0, "S2": -750.0, "S3": 250.0},
+    "torques": {"S1": 10.0, "S2": 19.6, "S3": 57.624},
+    "seen": {"S1": "+X", "S2": "+Z", "S3": "+Z"},
+    "kinds": {("G1", "G2"): "bevel", ("G3", "G4"): "parallel"},
+    "speed_texts": ["1500.0 rpm anticlockwise", "750.0 rpm clockwise", "250.0 rpm anticlockwise"]}
+A_Y_EXPECT = dict(A_EXPECT, seen={"S1": "+Y", "S2": "+Z", "S3": "+Z"})
+B_EXPECT = {
+    "warnings": ["Gears!Q2: G1: The involute starts at 53.849 mm, " + INVOLUTE.format("53.14 mm"),
+                 "Gears!L2: G1: A helix angle of 45° is outside the usual 8–30° for a helical gear.",
+                 "Gears!Q3: G2: The involute starts at 110.417 mm, " + INVOLUTE.format("109.413 mm"),
+                 "Gears!L3: G2: A helix angle of 45° is outside the usual 8–30° for a helical gear.",
+                 "Gears!F4: G3: The tooth tip is 0.664 mm thick, under 0.3 × module (0.75 mm).",
+                 "Gears!Q4: G3: The involute starts at 64.97 mm, " + INVOLUTE.format("62.668 mm")],
+    "header": "Crossed and bevel train · 2 meshes · 3.000 : 1 · output at 90° to the input",
+    "speeds": {"S1": 1000.0, "S2": 500.0, "S3": -1000.0 / 3},
+    "torques": {"S1": 5.0, "S2": 9.8, "S3": 14.406},
+    "seen": {"S1": "+Z", "S2": "+X", "S3": "(0.5, −0.866, 0)"},
+    "kinds": {("G1", "G2"): "crossed", ("G3", "G4"): "bevel"},
+    "speed_texts": ["1000.0 rpm anticlockwise", "500.0 rpm anticlockwise", "333.3 rpm anticlockwise",
+                    "(0.5, −0.866, 0)"]}
+# Each gear's turn for +30° of G1 (W6-PLAN §5), the input's own sign: worked by hand there, held against the app's
+# kinematics before every build and Update that changes the ratio.
+A_DRIVE = {"G1": 30.0, "G2": -15.0, "G3": -15.0, "G4": 5.0}
+A_DRIVE_21 = {"G1": 30.0, "G2": -15.75, "G3": -15.75, "G4": 5.25}             # r3: G1 20 -> 21
+B_DRIVE = {"G1": 30.0, "G2": 15.0, "G3": 15.0, "G4": -10.0}
+B_DRIVE_31 = {"G1": 30.0, "G2": 15.0, "G3": 15.0, "G4": -15.0 * 20 / 31}      # r6: G4 30 -> 31
+B_DRIVE_21_39 = {"G1": 30.0, "G2": 30.0 * 21 / 39, "G3": 30.0 * 21 / 39,      # r8: G1 20 -> 21, G2 40 -> 39
+                 "G4": -30.0 * 21 / 39 * 20 / 30}
+
+
+def write_fixture(worker, excel, section, spec, keep=""):
+    """A W6 fixture written by the app's own ``write_new`` with its Output folder blank, saved once by Excel (W6-PLAN
+    §5), read with the section's folder as the strip's (as ``WorkbookWindow._folder``); ``keep``: its name under
+    ``--fixtures``, copied as Excel saved it."""
+    folder = fresh_folder(section)
+    made = spec("")
+    path = os.path.join(folder, f"{made.box.name}.xlsx")
+    xlsx.write_new(path, wb_model.to_sheets(made))
+    say(f"write   {os.path.basename(path)} by the app's own write_new, its Output folder blank (the strip's is {folder})")
+    book = Workbook(excel, path, section)
+    book.save()
+    if keep and FIXTURES:
+        os.makedirs(FIXTURES, exist_ok=True)
+        shutil.copy2(path, os.path.join(FIXTURES, keep))
+        say(f"fixture {keep} copied as Excel saved it, its Output folder blank")
+    desk = Desk(path, worker, strip=folder)
+    desk.read()
+    return folder, path, book, desk
+
+
+def expect_read(desk, label, expect):
+    """The read against W6-PLAN §5: the Checks panel exactly (each warning with its cell, no error, nothing more),
+    the header, every shaft's speed and torque about its own axis, the end each is seen from, each mesh's kind; the
+    Speeds lines logged and their numbers looked for."""
+    a = desk.a
+    got = sorted(d.message for d in a.diagnostics if d.level == "warning")
+    errors = [d.message for d in a.diagnostics if d.level == "error"]
+    check(got == sorted(expect["warnings"]) and not errors and a.lay_out_refusal() == "",
+          f"{label}: the Checks panel is §5's ({len(expect['warnings'])} warnings, no error): extra "
+          f"{sorted(set(got) - set(expect['warnings']))}, missing {sorted(set(expect['warnings']) - set(got))}, "
+          f"errors {errors}, gate {a.lay_out_refusal()!r}")
+    check(a.report.worked_out_as == expect["header"], f"{label}: the header {a.report.worked_out_as!r}")
+    motion = a.report.motion
+    speeds = {k: float(v) for k, v in motion.speeds.items()}
+    check(speeds.keys() == expect["speeds"].keys() and all(
+        abs(speeds[k] - v) <= 1e-9 * max(1.0, abs(v)) for k, v in expect["speeds"].items()),
+          f"{label}: the speeds about each shaft's own axis are §5's: {speeds}")
+    torques = {k: float(v) for k, v in motion.torques.items()}
+    check(all(k in torques and abs(torques[k] - v) <= 1e-9 * max(1.0, abs(v)) for k, v in expect["torques"].items()),
+          f"{label}: the torques are §5's: {torques}")
+    seen = dict(getattr(motion, "seen_from", {}) or {})
+    check(seen == expect["seen"], f"{label}: each shaft seen from its own + end: {seen}")
+    kinds = {tuple(k): v.kind for k, v in a.report.meshes.items()}
+    check(kinds == expect["kinds"], f"{label}: the meshes' kinds {kinds}")
+    lines, readout = ui_text.workbook_speed_lines(a.spec, motion)
+    for line in lines:
+        say(f"speeds  {line}")
+    say(f"speeds  readout {readout!r}")
+    text = "\n".join(lines).replace("\u00a0", " ")      # the unit is held to its number by a no-break space
+    check(all(t in text for t in expect["speed_texts"]), f"{label}: the Speeds lines carry {expect['speed_texts']}")
+
+
+def pin_drive(desk, label, want, input_gear="G1"):
+    """The app's kinematics against the turns W6-PLAN §5 works by hand, for +30° of the input, to 1e-9 relative."""
+    got = expected_turns(desk, list(want), input_gear, 30.0, 1)
+    check(all(abs(got[g] - v) <= 1e-9 * max(1.0, abs(v)) for g, v in want.items()),
+          f"{label}: the kinematics give §5's turns for +30° of {input_gear}: "
+          + ", ".join(f"{g} {got[g]:+.9f}° (§5 {v:+.9f}°)" for g, v in want.items()))
+
+
+def say_along(worker, desk, label):
+    """Each along mate as the record holds it (plane, signed coordinate, its global) and the assembly global's value
+    read from SolidWorks; the frames say whether each gear stands where the plan puts it."""
+    box = desk.record.gearbox
+    values = run(worker, lambda s: live_globals(s, box.assembly))
+    for m in desk.plan.motion.mates if desk.plan is not None and desk.plan.motion is not None else ():
+        if m.kind == "along":
+            say(f"fact    {label}: {m.name}: plane {getattr(m, 'plane', '')!r}, coordinate {m.z_front:g}, global "
+                f"{m.face_global!r} = {values.get(m.face_global) if m.face_global else '(coincident)'}")
+    return values
+
+
+def quiet_update(worker, desk, label):
+    """W6-INTERFACES §7.17 (b): Update pressed with nothing changed on a built turned gearbox, saved first so every
+    document reads GetSaveFlag False. Its check phase reads every gear mate's sense; nothing may be marked: every
+    document's GetSaveFlag read before and after the press, every frame read from SolidWorks unchanged."""
+    save_assembly(worker, desk, f"{label}: before the press, so any mark after it is the press's own")
+    desk.plan_solidworks()
+    desk.say_update()
+    frames_before, flags_before = gear_frames(worker, desk), gearbox_flags(worker, desk)
+    guard()
+    _, result, _ = desk.update_solidworks()
+    if result is None:
+        return check(False, f"{label}: Update refused: {desk.note[0]}")
+    wrong = list(getattr(result, "sense_found_wrong", []) or [])
+    resensed = list(getattr(result, "resensed", []) or [])
+    check(result.ok and result.placed == [] and result.changed == [] and result.ratios == [] and not wrong
+          and not resensed, f"{label}: nothing to do: placed {result.placed}, changed "
+          f"{[os.path.basename(p) for p in result.changed]}, ratios {result.ratios}, resensed {resensed}, sense found "
+          f"wrong {wrong}")
+    check_quiet_update(worker, desk, result, label, frames_before, flags_before)
+    desk.say_footer(f"{label}, after the press")
+    return result
+
+
+def built_and_proved(worker, desk, label, parts, controls):
+    """A W6 fixture built fresh and judged (W6-PLAN §6.1 r1/r5): built to turn (which Flip each gear mate kept is
+    logged on every version); every gear mate's read; §4.1 with the half-pitch controls on every mesh; the drive with
+    the both-Flips control and the interference judge on each mesh in ``controls``; a quiet Update; reopened, read,
+    and driven with each control again."""
+    build_turning(worker, desk, label, parts, None)
+    mate_readings(worker, desk, f"{label} built")
+    measure(worker, desk, f"{label} built", controls=True, again=False)
+    for control in controls:
+        drive_proof(worker, desk, f"{label} built, control on {control[0]} meshes {control[1]}", control=control)
+    quiet_update(worker, desk, f"{label} quiet Update")
+    reopen(worker, desk, f"{label} built")
+    mate_readings(worker, desk, f"{label} reopened")
+    for control in controls:
+        drive_proof(worker, desk, f"{label} reopened, control on {control[0]} meshes {control[1]}", control=control)
+
+
+def remake_update(worker, desk, book, label, cells, mate, want, folder, globals_wanted=()):
+    """W6-INTERFACES §7.17 (a): a tooth change that keeps the mesh valid, by Update: the gear mate ``mate`` made again
+    at its new ratio and read back by the committed rule (turned round or not, logged); every gear put; the marks;
+    ``globals_wanted`` ((gear whose part, global, value)) read from SolidWorks; every gear mate's read; frames, mates,
+    interference, the half-pitch controls; the drive at the new ratio with the both-Flips control and the
+    interference judge on the remade mate; a quiet Update (saved first); reopened, read, driven again."""
+    say(f"-- {label}: Excel {[(c[0] + '!' + c[1], c[2]) for c in cells]} -> Update: {mate} made again at its new ratio")
+    edit(desk, book, *cells)
+    u = desk.update
+    desk.say_footer(f"{label}, after the edit")
+    if u is None or u.needs_new_revision or u.refusal:
+        say(f"fact    {label}: not an Update: structural {u and list(u.structural)}; refusal {u and u.refusal!r}")
+        check(False, f"{label}: the tooth change is an Update that remakes {mate}")
+        return None
+    check(list(u.ratios) == [mate] and not list(getattr(u, "resensed", ()) or ()),
+          f"classify: an Update remaking {mate} alone: ratios {list(u.ratios)}, resensed "
+          f"{list(getattr(u, 'resensed', ()) or ())}")
+    pin_drive(desk, label, want)
+    guard()
+    _, result, _ = desk.update_solidworks()
+    if result is None:
+        check(False, f"{label}: the Update refused: {desk.note[0]!r}")
+        return None
+    say(f"fact    {label}: the remake: ratios {result.ratios}, read {result.ratios_read}, turned round "
+        f"{getattr(result, 'turned_round', None)}, sense found wrong {getattr(result, 'sense_found_wrong', None)}, "
+        f"resensed {getattr(result, 'resensed', None)}, restored {result.restored}")
+    check(result.ok and result.ratios == [mate] and sorted(result.placed) == all_mated(desk),
+          f"{label}: {mate} made again at its new ratio, every gear put: ratios {result.ratios}, placed "
+          f"{result.placed}; {desk.note[0]!r}")
+    update_marks(worker, desk, result, label, folder)
+    box = desk.record.gearbox
+    for gear, name, value in globals_wanted:
+        part = next(c.part for c in box.components if c.gear == gear)
+        values = run(worker, lambda s, p=part: live_globals(s, p))
+        check(abs(float(values.get(name, float("nan"))) - value) < 1e-9, f"{label}: {gear}'s {name!r} reads {value:g} "
+              f"in SolidWorks: {values.get(name)}")
+    mate_readings(worker, desk, f"{label}, remade")
+    measure_frames(worker, desk, label)
+    measure_mates(worker, desk, label)
+    measure_clear(worker, desk, label)
+    negative_controls(worker, desk, label)
+    drive_proof(worker, desk, f"{label}, at the new ratio", control=tuple(mate.split(" meshes ")))
+    quiet_update(worker, desk, f"{label}, quiet Update")
+    reopen(worker, desk, label)
+    mate_readings(worker, desk, f"{label}, reopened")
+    drive_proof(worker, desk, f"{label}, reopened, at the new ratio")
+    return result
+
+
+# -- the W6 sections (W6-PLAN §6.1) ----------------------------------------------------------------------------
+
+
+def section_r1(worker, excel):
+    say("== r1  fixture A, Bevel_Reducer (W6-PLAN §5.1): a bevel stage at 90° feeding a parallel stage, built fresh; "
+        "§4.1, the drive from the Top plane (an X input), both Flips on G1 meshes G2 with the interference judge, a "
+        "quiet Update, reopen; then kept as r1.master")
+    folder, path, book, desk = write_fixture(worker, excel, "r1", spec_bevel_reducer, keep="Bevel_Reducer.xlsx")
+    expect_read(desk, "r1", A_EXPECT)
+    pin_drive(desk, "r1", A_DRIVE)
+    built_and_proved(worker, desk, "r1", 4, [("G1", "G2")])
+    say_along(worker, desk, "r1")
+    master = keep_master(worker, folder, "r1")
+    if master:
+        PERSON_W6.append(os.path.join(master, "Bevel_Reducer.SLDASM"))
+
+
+def section_r5(worker, excel):
+    say("== r5  fixture B, Crossed_Slant (W6-PLAN §5.2): a crossed helical stage (skew, 90°), then a bevel stage at "
+        "120° onto a slanted shaft, built fresh; §4.1 with the slanted axis on its line, the drive from the Right plane, "
+        "both Flips with the interference judge on G1 meshes G2 and on G3 meshes G4, a quiet Update, reopen; then kept "
+        "as r5.master")
+    folder, path, book, desk = write_fixture(worker, excel, "r5", spec_crossed_slant, keep="Crossed_Slant.xlsx")
+    expect_read(desk, "r5", B_EXPECT)
+    pin_drive(desk, "r5", B_DRIVE)
+    built_and_proved(worker, desk, "r5", 4, [("G1", "G2"), ("G3", "G4")])
+    say_along(worker, desk, "r5 (G2's front face on the minus side of Right)")
+    keep_master(worker, folder, "r5")
+
+
+def section_r2(worker, excel):
+    say("== r2  a copy of r1.master: the user's turn (37°) and Update with nothing changed; then S1 Z 60 -> 64 with G2 "
+        "At 60 -> 64 (both cone tips up 4 mm together) by Update")
+    folder, path, book, desk = start_copy(worker, excel, "r2", "r1", spec_bevel_reducer)
+    user_turn(worker, desk, "r2", 37.0)
+    save_assembly(worker, desk, "after the turn")
+    desk.plan_solidworks()
+    update_nothing_turned(worker, desk, "r2 turned 37°", folder)
+    say("-- r2  Excel: S1 Z 60 -> 64, G2 At 60 -> 64")
+    edit(desk, book, ("Shafts", "E2", 64), ("Gears", "C3", 64))
+    u = desk.update
+    desk.say_footer("r2, after the edit")
+    if u is None or u.needs_new_revision or u.refusal:
+        check(False, f"r2: the move is an Update: structural {u and list(u.structural)}; refusal {u and u.refusal!r}")
+        end_copy(worker, folder, "r2")
+        return
+    check("S1" in u.moved_shafts and "G2" in u.replaced, f"classify: S1 moved and G2 re-placed: moved "
+          f"{list(u.moved_shafts)}, re-place {list(u.replaced)}")
+    pin_drive(desk, "r2", A_DRIVE)
+    guard()
+    _, result, _ = desk.update_solidworks()
+    if result is None:
+        check(False, f"r2: the Update refused: {desk.note[0]!r}")
+        end_copy(worker, folder, "r2")
+        return
+    check(result.ok and sorted(result.placed) == all_mated(desk) and bool(result.restored) and result.ratios == [],
+          f"r2: every gear put, the turned train restored, no gear mate remade: placed {result.placed}, restored "
+          f"{result.restored}, ratios {result.ratios}")
+    update_marks(worker, desk, result, "r2 moved", folder)
+    box = desk.record.gearbox
+    layout_values = run(worker, lambda s: live_globals(s, box.layout))
+    assembly_values = run(worker, lambda s: live_globals(s, box.assembly))
+    check(abs(float(layout_values.get("S1 Z", float("nan"))) - 64) < 1e-9, f"r2: the layout's \"S1 Z\" reads 64: "
+          f"{layout_values}")
+    check(abs(float(assembly_values.get("G2 Apex Z", float("nan"))) - 64) < 1e-9, f"r2: the assembly's \"G2 Apex Z\" "
+          f"reads 64: {assembly_values}")
+    live = measure_frames(worker, desk, "r2 moved")
+    name_of = {c.gear: c.name for c in box.components}
+    gap = max(abs(float(p) - float(q)) for p, q in zip(live[name_of["G1"]][1], live[name_of["G2"]][1]))
+    check(gap <= FRAME_TOLERANCE, f"r2: the bevel cone tips together in SolidWorks: G1's and G2's origins {gap:.1e} mm "
+          f"apart, at {tuple(round(float(v), 9) for v in live[name_of['G1']][1])}")
+    measure_axes(worker, desk, "r2 moved")
+    measure_mates(worker, desk, "r2 moved")
+    measure_clear(worker, desk, "r2 moved")
+    negative_controls(worker, desk, "r2 moved")
+    drive_proof(worker, desk, "r2 moved")
+    reopen(worker, desk, "r2 moved")
+    end_copy(worker, folder, "r2")
+
+
+def section_r3(worker, excel):
+    say("== r3  a copy of r1.master: G1 Teeth 20 -> 21 (21 : 40 at 90°, still two cones) by Update: the turned gear mate "
+        "G1 meshes G2 made again and read back (W6-INTERFACES §7.17 (a))")
+    folder, path, book, desk = start_copy(worker, excel, "r3", "r1", spec_bevel_reducer)
+    remake_update(worker, desk, book, "r3 G1 21", [("Gears", "F2", 21)], "G1 meshes G2", A_DRIVE_21, folder,
+                  globals_wanted=[("G2", "Mate Teeth", 21.0), ("G1", "Mate Teeth", 40.0)])
+    end_copy(worker, folder, "r3")
+
+
+def section_r4(worker, excel):
+    say("== r4  a copy of r1.master: S1 Axis X+ -> X- -> the structural sentence; Build again… makes Bevel_Reducer_r2 "
+        "turning beside the earlier files; §4.1, the drive (the input measured about -X), both Flips on G1 meshes G2")
+    folder, path, book, desk = start_copy(worker, excel, "r4", "r1", spec_bevel_reducer)
+    edit(desk, book, ("Shafts", "F2", "X-"))
+    u = desk.update
+    said = " ".join(str(x) for x in (u.structural if u is not None else ()))
+    check(u is not None and u.needs_new_revision and "S1's axis is now X- where it was built X+: the layout's axis "
+          "and the mates on it keep the direction they were made with, so the gearbox needs building again." in said,
+          f"classify: the structural sentence of §2.9: {said!r}")
+    f = desk.say_footer("r4, after the edit")
+    check(f.build_enabled, "r4: Build again… is offered")
+    pin_drive(desk, "r4", A_DRIVE)
+    earlier, sidecars = stamps(folder), sidecar_texts(folder)
+    build_turning(worker, desk, "r4 Build again", None, None)
+    box = desk.record.gearbox
+    check(os.path.basename(box.assembly) == "Bevel_Reducer_r2.SLDASM" and box.revision == 2,
+          f"r4: the new revision is Bevel_Reducer_r2: {os.path.basename(box.assembly)}, revision {box.revision}")
+    check_earlier_unchanged(folder, earlier, "r4", sidecars)
+    mate_readings(worker, desk, "r4 built")
+    measure(worker, desk, "r4 built", controls=True, again=False)
+    drive_proof(worker, desk, "r4 built, control on G1 meshes G2", control=("G1", "G2"))
+    end_copy(worker, folder, "r4")
+
+
+def section_r6(worker, excel):
+    say("== r6  a copy of r5.master: G1 At 10 -> 11 by Update; G4 Teeth 30 -> 31 by Update (the 120° gear mate made "
+        "again and read back); S3's direction changed (classify only); then the sense change of review M4 on the "
+        "classify path, on fixture B's crossed stage alone")
+    folder, path, book, desk = start_copy(worker, excel, "r6", "r5", spec_crossed_slant)
+    say("-- r6  Excel: G1 At 10 -> 11 (\"G1 Face Z\" 2 -> 3; G2's phase follows G1's helix at the contact)")
+    edit(desk, book, ("Gears", "C2", 11))
+    u = desk.update
+    if u is None or u.needs_new_revision or u.refusal:
+        check(False, f"r6: G1 At is an Update: structural {u and list(u.structural)}; refusal {u and u.refusal!r}")
+    else:
+        pin_drive(desk, "r6 G1 At", B_DRIVE)
+        guard()
+        _, result, _ = desk.update_solidworks()
+        if result is None:
+            check(False, f"r6: the Update refused: {desk.note[0]!r}")
+        else:
+            check(result.ok and "G1" in result.axial and sorted(result.placed) == all_mated(desk)
+                  and result.ratios == [], f"r6: \"G1 Face Z\" set and every gear put: axial {result.axial}, placed "
+                  f"{result.placed}, ratios {result.ratios}")
+            update_marks(worker, desk, result, "r6 G1 At", folder)
+            values = run(worker, lambda s: live_globals(s, desk.record.gearbox.assembly))
+            check(abs(float(values.get("G1 Face Z", float("nan"))) - 3) < 1e-9, f"r6: the assembly's \"G1 Face Z\" "
+                  f"reads 3: {values}")
+            measure_frames(worker, desk, "r6 G1 At")
+            measure_mates(worker, desk, "r6 G1 At")
+            measure_clear(worker, desk, "r6 G1 At")
+            negative_controls(worker, desk, "r6 G1 At")
+            drive_proof(worker, desk, "r6 G1 At")
+            save_assembly(worker, desk, "after G1 At")
+            desk.plan_solidworks()
+    remake_update(worker, desk, book, "r6 G4 31", [("Gears", "F5", 31)], "G3 meshes G4", B_DRIVE_31, folder,
+                  globals_wanted=[("G3", "Mate Teeth", 31.0), ("G4", "Mate Teeth", 20.0)])
+    say("-- r6  Excel: S3's Axis -1, 1.732050807569, 0 -> -1, 1.8, 0 (classify only: nothing is built)")
+    edit(desk, book, ("Shafts", "F4", "-1, 1.8, 0"))
+    u = desk.update
+    said = " ".join(str(x) for x in (u.structural if u is not None else ()))
+    check(u is not None and u.needs_new_revision and "S3's axis slants, and the layout holds a slanted axis as a fixed "
+          "line: its direction changed, so the gearbox needs building again." in said,
+          f"classify: the slanted structural sentence of §2.9: {said!r}; gate {desk.a.lay_out_refusal()!r}")
+    desk.say_footer("r6, S3's direction changed: nothing pressed")
+    end_copy(worker, folder, "r6")
+    sense_change(worker, excel)
+
+
+def sense_change(worker, excel):
+    """Review M4 on the classify path only (W6-PLAN §6.1 r6; the fake's round trip covers the worker): fixture B's
+    crossed stage alone, off the Top plane, built to turn; then S1 moved to the other side of S2 in Excel: classify
+    names G1 meshes G2 in ``resensed``, nothing structural, and the plan's remake carries the new sense (k −0.5 where
+    the record holds +0.5). Nothing is pressed."""
+    say("-- r6  the sense change of review M4: Crossed_Stage (fixture B's crossed stage, 10 mm up) built in r6-sense; "
+        "S1 Y 10 -> 179.705628 (the other side of S2); classify only")
+    folder, path, book, desk = write_fixture(worker, excel, "r6-sense", spec_crossed_stage)
+    build_turning(worker, desk, "r6-sense", 2, None)
+    mate_readings(worker, desk, "r6-sense built")
+    edit(desk, book, ("Shafts", "D2", 179.705628))
+    u = desk.update
+    resensed = tuple(getattr(u, "resensed", ()) or ()) if u is not None else ()
+    check(u is not None and not u.needs_new_revision and not u.refusal and resensed == ("G1 meshes G2",)
+          and tuple(u.ratios) == () and tuple(u.moved_shafts) == ("S1",),
+          f"classify: S1 moved, G1 meshes G2 to be made again for its sense alone: resensed {resensed}, ratios "
+          f"{u and list(u.ratios)}, moved {u and list(u.moved_shafts)}, structural {u and list(u.structural)}, refusal "
+          f"{u and u.refusal!r}")
+    motion = u.motion if u is not None else None
+    if motion is not None:
+        now = [(m.a, m.b, m.k) for m in motion.meshes]
+        then = [(m.a, m.b, m.k) for m in motion.recorded_meshes]
+        say(f"fact    r6-sense: the plan's meshes {now}; the record's {then}; motion ratios {list(motion.ratios)}")
+        check(now and then and now[0][:2] == ("G1", "G2") and abs(now[0][2] + then[0][2]) < 1e-12
+              and abs(abs(now[0][2]) - 0.5) < 1e-12, "r6-sense: the plan's remake carries the new sense (k the "
+              "record's, negated)")
+    desk.say_footer("r6-sense, S1 on the other side: nothing pressed")
+    end_copy(worker, folder, "r6-sense")
+
+
+def section_r8(worker, excel):
+    say("== r8  a copy of r5.master: the crossed stage's teeth G1 20 -> 21 and G2 40 -> 39 (the centre distance kept: "
+        "2 · 60 / (2 cos 45°)) by Update: the skew gear mate G1 meshes G2 made again and read back (W6-INTERFACES "
+        "§7.17 (a))")
+    folder, path, book, desk = start_copy(worker, excel, "r8", "r5", spec_crossed_slant)
+    remake_update(worker, desk, book, "r8 21 : 39", [("Gears", "F2", 21), ("Gears", "F3", 39)], "G1 meshes G2",
+                  B_DRIVE_21_39, folder)
+    end_copy(worker, folder, "r8")
+
+
+def section_r7(worker, excel):
+    say("== r7  fixture A on a Y input (Bevel_Reducer_Y): G1's cone tip at -30 along Y, an along mate to the Top plane "
+        "with a negative coordinate; built fresh, frames against the plan, the drive from the Right plane, both Flips "
+        "on G1 meshes G2 with the interference judge")
+    folder, path, book, desk = write_fixture(worker, excel, "r7", spec_bevel_reducer_y)
+    expect_read(desk, "r7", A_Y_EXPECT)
+    pin_drive(desk, "r7", A_DRIVE)
+    along = next((m for m in desk.plan.motion.mates if m.name == "G1 along S1"), None) if desk.plan else None
+    check(along is not None and getattr(along, "plane", "") == "top" and along.z_front < 0,
+          f"r7: G1's along mate is on the Top plane with a negative coordinate: "
+          f"{along and (getattr(along, 'plane', ''), along.z_front, along.face_global)}")
+    build_turning(worker, desk, "r7", 4, None)
+    say_along(worker, desk, "r7")
+    mate_readings(worker, desk, "r7 built")
+    measure(worker, desk, "r7 built", controls=True, again=False)
+    drive_proof(worker, desk, "r7 built, control on G1 meshes G2", control=("G1", "G2"))
+    reopen(worker, desk, "r7 built")
+    drive_proof(worker, desk, "r7 reopened")
+
+
 SECTIONS = {"m1": section_m1, "m2": section_m2, "m3": section_m3, "m4": section_m4, "m5": section_m5, "m6": section_m6,
-            "m7": section_m7, "m8": section_m8, "r1": section_r1, "r2": section_r2, "r3": section_r3,
-            "a": section_a, "a2": section_a2, "a3": section_a3, "b": section_b, "c": section_c}
+            "m7": section_m7, "m8": section_m8, "rs1": section_rs1, "rs2": section_rs2, "rs3": section_rs3,
+            "a": section_a, "a2": section_a2, "a3": section_a3, "b": section_b, "c": section_c,
+            "r1": section_r1, "r2": section_r2, "r3": section_r3, "r4": section_r4, "r5": section_r5,
+            "r6": section_r6, "r7": section_r7, "r8": section_r8}
 
 
 def connect_pid():
@@ -3146,6 +4258,16 @@ def person_step():
         "G2 and G3, on S2, turn together the other way. No gear should leave its axis, slide along it, or pass "
         "through another. Then, in the Workbook window, press Update SolidWorks with nothing changed: the footer "
         "should say the gears stand where they were turned. Tell us what you saw, on each version.")
+    if PERSON_W6:
+        say("person  W6-PLAN §6.1, the step only a person can do (for 2026, then 2024):")
+        say(f"person  After the run, rename {os.path.dirname(PERSON_W6[0])} back to "
+            f"{os.path.basename(os.path.dirname(PERSON_W6[0]))[:-len(MASTER_SUFFIX)]} (its records and the assembly's "
+            f"references name that folder), open Bevel_Reducer.xlsx there in the Workbook window and "
+            f"Bevel_Reducer.SLDASM in SolidWorks. Drag G1 — the small bevel gear on the "
+            "horizontal shaft S1 — round its axis by about a quarter turn. G2, the large bevel gear on the upright "
+            "shaft, turns half as far, and G3 under it with it; G4, the large spur gear on S3, turns a sixth as far as "
+            "G1 and the other way round from G2. Nothing leaves its axis or passes through another gear. Then press "
+            "Update SolidWorks with nothing changed: the footer says the gears stand where they were turned.")
 
 
 def main():
@@ -3156,8 +4278,10 @@ def main():
         say(f"STOP    no such section {unknown}; there are {list(SECTIONS)}")
         return 2
     worker = swcom.Worker(connect_pid)
+    CURRENT["worker"] = worker
     label, pid, revision = run(worker, lambda s: (s.label, s.pid, s.revision), 120)
     TAG["major"] = revision[0]
+    TAG["version"] = ".".join(str(v) for v in revision)
     say(f"attach  {label}, PID {pid}; {memory()}")
     if pid != PID:
         say(f"STOP    attached to PID {pid}, not {PID}")
@@ -3172,6 +4296,13 @@ def main():
         f"GEAR_MATE_FLIP {findings.GEAR_MATE_FLIP}, DEMONSTRATION_DRIVE_SENSE {findings.DEMONSTRATION_DRIVE_SENSE}, "
         f"MESH_PHASE_ROUTE {findings.MESH_PHASE_ROUTE!r}, LOCK_RETAKES_AN_OFFSET {findings.LOCK_RETAKES_AN_OFFSET}; "
         f"P0c {p0c_findings()}; AXIAL_RESTORES {AXIAL_RESTORES}; m4 offset {M4_OFFSET:g} mm")
+    say(f"findings W6: TURNED_GEAR_MATE_SENSE_READ_BACK "
+        f"{getattr(findings, 'TURNED_GEAR_MATE_SENSE_READ_BACK', None)!r}, TURNED_GEAR_MATE_SENSE_ANGLES "
+        f"{getattr(findings, 'TURNED_GEAR_MATE_SENSE_ANGLES', None)}, TURNED_GEAR_MATE_SENSE_ANGLES_SKEW "
+        f"{getattr(findings, 'TURNED_GEAR_MATE_SENSE_ANGLES_SKEW', None)}, GEAR_MATE_SENSE_READ_BACK "
+        f"{getattr(findings, 'GEAR_MATE_SENSE_READ_BACK', None)!r}, LAYOUT_PLUS_FLIP {findings.LAYOUT_PLUS_FLIP}, "
+        f"REF_PLANE_UNFLIPPED_IS_PLUS_Z {getattr(findings, 'REF_PLANE_UNFLIPPED_IS_PLUS_Z', None)}, AXIAL_MATE_ROUTE "
+        f"{getattr(findings, 'AXIAL_MATE_ROUTE', None)!r}")
     watch = DialogWatch()
     watch.start()
     excel = xlhelp.Excel(visible=True)

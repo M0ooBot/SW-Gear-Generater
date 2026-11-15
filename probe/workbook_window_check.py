@@ -37,6 +37,13 @@ and the footer, read line and gear table are logged.
    and their digest, and no assembly file is written. Shot as 10. The refused document is then closed by its
    title (this run's modified documents saved first, as W4's close_ours does on 2024), any dialog it raises answered
    "Don't Save" and logged: no probe closed a never-saved refused assembly on 2024 under a watch.
+6. W6 (W6-PLAN §2.10, §6.1 rw), board WorkbookRightAngle: fixture A, Bevel_Reducer (§5.1), written by the app's own
+   ``write_new`` with its Output folder blank and saved once by Excel; the strip's Output folder set to its folder;
+   read (shot 11: the header "Bevel and parallel train · 2 meshes · 6.000 : 1 · output at 90° to the input" and the
+   Speeds lines of §5.1, S1 seen from +X), then built: the footer says "drag G1" (shot 12).
+7. Board WorkbookCrossed: fixture B, Crossed_Slant (§5.2), read only (shot 13): the end view with the crossed and
+   slanted stages, the Speeds lines "…500.0 rpm anticlockwise seen from … +X …" and "…333.3 rpm anticlockwise seen
+   from … (0.5, −0.866, 0) …"; nothing built.
 
 Afterwards the window is closed, Excel quit, and this run's SolidWorks documents saved and closed.
 
@@ -92,6 +99,8 @@ REFUSED_FOLDER = os.path.join(ROOT, "refused")
 os.makedirs(REFUSED_FOLDER)
 REFUSED_PATH = os.path.join(REFUSED_FOLDER, "Reducer_12to1.xlsx")
 shutil.copy(FIXTURE, REFUSED_PATH)
+W6A_FOLDER = os.path.join(ROOT, "right-angle")
+W6B_FOLDER = os.path.join(ROOT, "crossed")
 LINES = []
 FAILS = []
 
@@ -190,7 +199,7 @@ def _docs(app):
 
 def _ours(path):
     return bool(path) and any(os.path.normcase(path).startswith(os.path.normcase(f) + os.sep)
-                              for f in (FOLDER, REFUSED_FOLDER))
+                              for f in (FOLDER, REFUSED_FOLDER, W6A_FOLDER, W6B_FOLDER))
 
 
 BEFORE_TITLES = set()        # the untitled documents open before this run: never ours to close
@@ -374,6 +383,46 @@ def plan_gearbox(*args, **kwargs):
 
 workbook_gui.wb_gearbox.plan_gearbox = plan_gearbox
 
+# -- W6's two fixtures (W6-PLAN §5), as probe/workbook_assembly_check.py's r1 and r5 write them --------------------
+
+from gear_generator.workbook import model as wb_model, xlsx  # noqa: E402
+from gear_generator.workbook.model import Box, Gear, GearboxSpec, Mesh, Shaft  # noqa: E402
+
+W6A = GearboxSpec(
+    box=Box(name="Bevel_Reducer"),
+    shafts=(Shaft("S1", "frame", "0", "0", "60", "X+", "input", speed="1500", torque="10"),
+            Shaft("S2", "frame", "0", "0", "0", "Z+"),
+            Shaft("S3", "frame", "-68", "0", "0", "Z+", "output")),
+    gears=(Gear("G1", "S1", "0", "bevel", "external", "20", "3", face_width="20", bore="10"),
+           Gear("G2", "S2", "60", "bevel", "external", "40", "3", face_width="20", bore="10"),
+           Gear("G3", "S2", "5", "spur", "external", "17", "2", face_width="10", bore="8"),
+           Gear("G4", "S3", "5", "spur", "external", "51", "2", face_width="10", bore="8")),
+    meshes=(Mesh("G1", "G2"), Mesh("G3", "G4")))
+W6B = GearboxSpec(
+    box=Box(name="Crossed_Slant"),
+    shafts=(Shaft("S1", "frame", "0", "0", "0", "Z+", "input", speed="1000", torque="5"),
+            Shaft("S2", "frame", "0", "84.852814", "8", "X+"),
+            Shaft("S3", "frame", "-110", "84.852814", "8", "-1, 1.732050807569, 0", "output")),
+    gears=(Gear("G1", "S1", "10", "helical", "external", "20", "2", face_width="16", bore="6", helix_angle="45",
+                hand="right"),
+           Gear("G2", "S2", "0", "helical", "external", "40", "2", face_width="16", bore="8", helix_angle="45",
+                hand="right"),
+           Gear("G3", "S2", "-110", "bevel", "external", "20", "2.5", face_width="10", bore="8"),
+           Gear("G4", "S3", "0", "bevel", "external", "30", "2.5", face_width="10", bore="8")),
+    meshes=(Mesh("G1", "G2"), Mesh("G3", "G4")))
+W6_EXPECT = {
+    "A": ("Bevel and parallel train · 2 meshes · 6.000 : 1 · output at 90° to the input",
+          ["1500.0 rpm anticlockwise", "+X", "750.0 rpm clockwise", "250.0 rpm anticlockwise", "10.00 N·m",
+           "19.60 N·m", "57.62 N·m"]),
+    "B": ("Crossed and bevel train · 2 meshes · 3.000 : 1 · output at 90° to the input",
+          ["1000.0 rpm anticlockwise", "500.0 rpm anticlockwise", "333.3 rpm anticlockwise", "+X",
+           "(0.5, −0.866, 0)", "9.80 N·m", "14.41 N·m"])}
+W6_PATHS = {}
+for _which, _spec, _folder in (("A", W6A, W6A_FOLDER), ("B", W6B, W6B_FOLDER)):
+    os.makedirs(_folder)
+    W6_PATHS[_which] = os.path.join(_folder, _spec.box.name + ".xlsx")
+    xlsx.write_new(W6_PATHS[_which], wb_model.to_sheets(_spec))     # the Output folder blank: the strip's is used
+
 
 def shoot(name):
     # Tk's own update(): the window's UpdatePlan is update_plan since the W4 review, so nothing hides it now.
@@ -442,6 +491,33 @@ def idle():
 
 def status_starts(*heads):
     return lambda: idle() and win.status.get().startswith(heads)
+
+
+def speeds_lines():
+    """The Speeds panel's lines as the window shows them (its labels), the no-break space read as a space."""
+    return [str(w.cget("text")).replace("\u00a0", " ") for w in win.speeds_body.winfo_children()
+            if isinstance(w, tk.Label)]
+
+
+def w6_read_check(which):
+    header, wanted = W6_EXPECT[which]
+    lines, shown = speeds_lines(), win.box_values["type"].cget("text")
+    log("W6 read", board=which, header=shown, speeds=lines, speeds_readout=win.speeds_readout.get(),
+        end_view=win.view_readout.get())
+    check(shown == header, f"W6 {which}: the header {shown!r}")
+    text = "\n".join(lines)
+    check(all(w in text for w in wanted), f"W6 {which}: the Speeds lines carry {wanted}: missing "
+          f"{[w for w in wanted if w not in text]}")
+
+
+def w6_built_check():
+    record = store.read_link_record(W6_PATHS["A"])
+    box = record.gearbox
+    drag = ui_text.drag_phrase(list(box.drag))
+    check(box.kind == store.GEARBOX_MOTION and box.assembly, f"W6 A: built to turn: kind {box.kind!r}")
+    check("drag G1" in win.status.get() and drag in win.status.get(), f"W6 A: the built footer says how to turn it: "
+          f"{drag!r}")
+    log("W6 built", speeds=speeds_lines())
 
 
 def save_unsaved():
@@ -605,6 +681,38 @@ STEPS = [
     ("do", lambda: shoot("10-refused")),
     ("do", refused_check),
     ("do", lambda: log("refused document", result=close_refused())),
+    # 6. W6, board WorkbookRightAngle: fixture A read and built.
+    ("do", lambda: excel("close")),
+    ("wait", excel_done("close")),
+    ("do", lambda: excel("open", W6_PATHS["A"])),
+    ("wait", excel_done("open")),
+    ("do", lambda: excel("set-save")),              # saved once by Excel (W6-PLAN §5)
+    ("wait", excel_done("set-save")),
+    ("do", lambda: app.out_folder.set(W6A_FOLDER)),  # the Box's Output folder is blank: the strip's is used
+    ("do", lambda: open_window(W6_PATHS["A"], UNIQUE + " right angle")),
+    ("wait", lambda: win.reading is not None and win.reading.ok and idle() and win.footer().build_enabled),
+    ("pause", 1.0),
+    ("do", lambda: shoot("11-right-angle-read")),
+    ("do", lambda: w6_read_check("A")),
+    ("do", lambda: win.build_button.command()),
+    ("wait", status_starts("Built", "Check", "SolidWorks cannot", "No assembly", "The gearbox")),
+    ("pause", 1.5),
+    ("do", lambda: shoot("12-right-angle-built")),
+    ("do", w6_built_check),
+    # 7. Board WorkbookCrossed: fixture B read; nothing built.
+    ("do", lambda: log("closed the right-angle gearbox's documents in SolidWorks", left=close_ours())),
+    ("do", lambda: excel("close")),
+    ("wait", excel_done("close")),
+    ("do", lambda: excel("open", W6_PATHS["B"])),
+    ("wait", excel_done("open")),
+    ("do", lambda: excel("set-save")),
+    ("wait", excel_done("set-save")),
+    ("do", lambda: app.out_folder.set(W6B_FOLDER)),
+    ("do", lambda: open_window(W6_PATHS["B"], UNIQUE + " crossed")),
+    ("wait", lambda: win.reading is not None and win.reading.ok and idle()),
+    ("pause", 1.5),
+    ("do", lambda: shoot("13-crossed-read")),
+    ("do", lambda: w6_read_check("B")),
 ]
 T0 = time.time()
 DEADLINE = T0 + 2400
