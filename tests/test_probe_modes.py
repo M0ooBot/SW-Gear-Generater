@@ -1,6 +1,10 @@
 """The pure parts of probe tier 11 (W8-PLAN §4.2 item 1, an over-defined configuration shown, and the read order of
 IsSuppressed2(3, names) and GetSystemValue3(3, names)), without SolidWorks."""
 
+import copy
+import json
+from pathlib import Path
+
 import pytest
 
 from gear_generator.probe import __main__ as probe_main
@@ -80,21 +84,95 @@ def test_a_configuration_reads_clean_only_with_no_code_no_sentence_nothing_over_
 
 
 def test_a_fights_reading_names_what_the_show_into_it_and_after_it_read():
-    into = _state("Z", 25.0, errors={"S slide": {"code": 46}, "S slide 2": {"code": 46}},
-                  problems=["The mate S slide is in error in SolidWorks."], constrained={"A": 2, "S": 4})
+    named = ["The mate S slide is in error in SolidWorks.", "The mate S slide 2 is in error in SolidWorks."]
+    into = _state("Z", 25.0, errors={"S slide": {"code": 47}, "S slide 2": {"code": 47}}, problems=named,
+                  constrained={"A": 2, "S": 4})
     into["show"] = {"call": "show Z", "returned": True,
                     "windows": [{"title": "", "class": "#32770", "children": [], "answered": []}]}
     facts = {"slides": {"configuration": "Z", "other": "Y", "other_at": 30.0, "back_at": 20.0, "into": into,
-                        "after": _state("Y", 30.0), "back": dict(_state("Z", 20.0), show=None)}}
+                        "after": _state("Y", 30.0), "also": _state("X", 15.0),
+                        "back": dict(_state("Z", 20.0), show=None)}}
     reading = p11.fight_reading(facts, "slides")
     assert reading == {"show_returned": True, "active_is_target": True, "windows": [("show Z", "#32770", "")],
-                       "mates_in_error": ["S slide", "S slide 2"], "over_defined": ["S"],
-                       "app_problems": ["The mate S slide is in error in SolidWorks."], "other_clean": True,
-                       "back_clean": True, "windows_answered": []}
+                       "windows_answered": [], "watch_errors": [], "mates_in_error": ["S slide", "S slide 2"],
+                       "over_defined": ["S"], "app_problems": named, "app_names": ["S slide", "S slide 2"],
+                       "named_exactly": True, "others_clean": {"Y": True, "X": True}, "other_clean": True,
+                       "back_clean": True}
     assert p11.fight_reading({}, "slides")["show_returned"] is None
     assert p11.show_over_defined(reading) == p11.SHOWN_IN_ERROR
     into["show"]["windows"][0]["answered"] = ["WM_CLOSE at 5.0 s"]
-    assert p11.fight_reading(facts, "slides")["windows_answered"] == [("show Z", "#32770", ["WM_CLOSE at 5.0 s"])]
+    assert p11.fight_reading(facts, "slides")["windows_answered"] == [("show Z", "#32770", ("WM_CLOSE at 5.0 s",))]
     assert p11.show_over_defined(p11.fight_reading(facts, "slides")) is None
-    assert p11.show_over_defined(dict(reading, mates_in_error=[])) is None
+    assert p11.show_over_defined(dict(reading, named_exactly=False)) is None
     assert p11.show_over_defined(dict(reading, other_clean=False)) is None
+    assert p11.show_over_defined(dict(reading, watch_errors=[("show Z", "OSError()")])) is None
+
+
+# -- doctored copies of tier 11's result file (built here, never committed) ---------------------------------------
+
+RESULT = Path(__file__).resolve().parents[1] / "probe" / "results" / "w8-over-defined-20261115-100312.json"
+X_SHOW = "a third configuration: ShowConfiguration2(X)"
+BOX = {"title": "", "class": "#32770", "children": [["Button", "OK"]], "stood_s": 5.0, "first_s": 0.1,
+       "answered": ["WM_CLOSE at 5.0 s"]}
+
+
+@pytest.fixture(scope="module")
+def result_facts():
+    data = json.loads(RESULT.read_text(encoding="utf-8"))
+    return {r["name"]: r for r in data["records"]}["w8_over_defined_show"]["facts"]["w8_over_defined"]
+
+
+def _finding(facts):
+    return p11.show_over_defined(p11.fight_reading(facts, "slides"))
+
+
+def test_the_result_file_as_committed_gives_the_finding(result_facts):
+    reading = p11.fight_reading(result_facts, "slides")
+    assert _finding(result_facts) == p11.SHOWN_IN_ERROR
+    assert reading["others_clean"] == {"Y": True, "X": True} and reading["watch_errors"] == []
+    assert reading["app_names"] == ["S slide", "S slide 2"] and reading["named_exactly"]
+
+
+def test_x_reading_in_error_after_the_fight_gives_no_finding(result_facts):
+    f = copy.deepcopy(result_facts)
+    also = f["slides"]["also"]
+    also["errors_on"] = {"S slide": {"code": 47, "warning": False}}
+    also["app_problems"] = ["The mate S slide is in error in SolidWorks."]
+    also["constrained"]["S"] = 4
+    assert also["S_z"] == 15.0                       # the place alone would have passed
+    assert p11.fight_reading(f, "slides")["others_clean"] == {"Y": True, "X": False}
+    assert _finding(f) is None
+
+
+def test_a_box_answered_during_xs_show_gives_no_finding(result_facts):
+    f = copy.deepcopy(result_facts)
+    f["slides"]["also"]["show"]["windows"].append(dict(BOX))
+    assert _finding(f) is None
+    g = copy.deepcopy(result_facts)                  # the same box, in the run's log of watched calls only
+    next(c for c in g["watched_calls"] if c["call"] == X_SHOW)["windows"].append(dict(BOX))
+    assert p11.fight_reading(g, "slides")["windows_answered"] == [(X_SHOW, "#32770", ("WM_CLOSE at 5.0 s",))]
+    assert _finding(g) is None
+
+
+def test_a_dead_watch_gives_no_finding(result_facts):
+    f = copy.deepcopy(result_facts)
+    call = next(c for c in f["watched_calls"] if c["call"] == X_SHOW)
+    call["watch_error"], call["windows"] = "OSError(22, 'EnumWindows')", []
+    assert p11.fight_reading(f, "slides")["watch_errors"] == [(X_SHOW, "OSError(22, 'EnumWindows')")]
+    assert _finding(f) is None
+    g = copy.deepcopy(result_facts)                  # recorded on the step itself, as runs from now on record it
+    g["slides"]["into"]["rebuild"]["watch_error"] = "OSError()"
+    assert _finding(g) is None
+
+
+def test_the_app_naming_another_mate_gives_no_finding(result_facts):
+    f = copy.deepcopy(result_facts)
+    f["slides"]["into"]["app_problems"][1] = "The mate Distance1 is in error in SolidWorks."
+    assert p11.fight_reading(f, "slides")["app_names"] == ["Distance1", "S slide"]
+    assert _finding(f) is None
+    g = copy.deepcopy(result_facts)
+    g["slides"]["into"]["app_problems"].append("The mate Coincident1 is in error in SolidWorks.")
+    assert _finding(g) is None
+    h = copy.deepcopy(result_facts)
+    h["slides"]["into"]["app_problems"] = "raised"
+    assert _finding(h) is None

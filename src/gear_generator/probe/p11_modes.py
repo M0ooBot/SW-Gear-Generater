@@ -47,6 +47,7 @@ times read before and after.
 from __future__ import annotations
 
 import os
+import re
 import threading
 import time
 from typing import Any, Dict, List, Mapping, Optional, Sequence
@@ -71,6 +72,11 @@ ON_AXIS = "S on A Axis"
 TOLERANCE_MM = 1e-6
 SPECIFIED = 3                            # swInConfigurationOpts_e.swSpecifyConfiguration (findings.SPECIFY_CONFIGURATIONS)
 DOCUMENT_ORDER, ORDER_PASSED, EITHER, NEITHER = "document order", "order passed", "either", "neither"
+#: Each fight's two mates that fight: the ones its show must read in error and the app's mate check must name.
+FIGHTING = {"slides": (SLIDE, SECOND), "coupling_and_lock": (COUPLING, LOCK)}
+#: The app's mate check's sentence for a mate in error (swbuild._mate_problems), the mate's name its group.
+NAMED_IN_ERROR = re.compile(r"^The mate (.+) is in error in SolidWorks\.$")
+STEPS = ("into", "after", "also", "again", "back")
 #: What showing a configuration whose mates fight did, when it did what tier 11's second run saw (``show_over_defined``).
 SHOWN_IN_ERROR = "shown; no window asks; its mates read in error; others solve after"
 
@@ -146,38 +152,67 @@ def windows_of(step: Mapping[str, Any]) -> List[Mapping[str, Any]]:
             for w in c.get("windows", ())]
 
 
+def _calls(step: Mapping[str, Any]) -> List[Mapping[str, Any]]:
+    return [c for c in (step.get("show"), step.get("rebuild")) if c]
+
+
 def fight_reading(facts: Mapping[str, Any], key: str) -> Dict[str, Any]:
-    """One fight's readings, as the finding states them: the show into the fighting configuration (its answer, the
-    active name, the windows, the mates in error, the components over-defined, the app's mate check), the
-    configuration shown after it, and the fighting configuration with the added mate suppressed."""
+    """One fight's readings, as the finding states them, over every step of it: the show into the fighting
+    configuration (its answer, the active name, the mates in error, the components over-defined, the app's mate check
+    and which mates its sentences name); every configuration shown after it (Y, and X where the sleeve has to move),
+    each judged clean in its own configuration at its own value; the fighting configuration with the added mate
+    suppressed; and, over every watched call of those steps (the steps' own records and the run's ``watched_calls``),
+    every window seen, every window the watch answered, and every ``watch_error`` (a watch that died sees nothing,
+    which is not "no window")."""
     fight = (facts.get(key) or {})
-    into, after, back = fight.get("into") or {}, fight.get("after") or {}, fight.get("back") or {}
+    steps = {k: fight.get(k) or {} for k in STEPS}
+    into, after, also, back = steps["into"], steps["after"], steps["also"], steps["back"]
     target, other = fight.get("configuration"), fight.get("other")
+    calls = {c.get("call") for st in steps.values() for c in _calls(st)}
+    logged = [c for c in (facts.get("watched_calls") or ()) if c.get("call") in calls]
+    windows = [dict(w, call=w.get("call")) for st in steps.values() for w in windows_of(st)]
+    windows += [dict(w, call=c.get("call")) for c in logged for w in c.get("windows", ())]
+    answered = sorted({(w.get("call"), w.get("class"), tuple(w.get("answered") or ())) for w in windows
+                       if w.get("answered")})
+    watch_errors = sorted({(c.get("call"), c.get("watch_error")) for c in logged + [c for st in steps.values()
+                                                                                   for c in _calls(st)]
+                           if c.get("watch_error")})
+    problems = into.get("app_problems")
+    problems = list(problems) if isinstance(problems, list) else ([] if problems is None else [problems])
+    matched = [NAMED_IN_ERROR.match(p) if isinstance(p, str) else None for p in problems]
+    named = sorted(m.group(1) for m in matched if m)
+    in_error = sorted((into.get("errors_on") or {}).keys())
+    others = {other: clean(after, fight.get("other_at", float("nan"))) and after.get("active") == other} if after \
+        else {}
+    if also:
+        others[ALSO] = clean(also, SLIDE_VALUES[ALSO]) and also.get("active") == ALSO
     return {
         "show_returned": (into.get("show") or {}).get("returned"),
         "active_is_target": into.get("active") == target,
-        "windows": [(w.get("call"), w.get("class"), w.get("title")) for s in (into, after, fight.get("again") or {}, back)
-                    for w in windows_of(s)],
-        "windows_answered": [(w.get("call"), w.get("class"), w.get("answered"))
-                             for s in (into, after, fight.get("again") or {}, back) for w in windows_of(s)
-                             if w.get("answered")],
-        "mates_in_error": sorted((into.get("errors_on") or {}).keys()),
+        "windows": sorted({(w.get("call"), w.get("class"), w.get("title")) for w in windows}),
+        "windows_answered": answered,
+        "watch_errors": watch_errors,
+        "mates_in_error": in_error,
         "over_defined": sorted(k for k, v in (into.get("constrained") or {}).items() if v == 4),
-        "app_problems": list(into.get("app_problems") or []),
-        "other_clean": clean(after, fight.get("other_at", float("nan"))) and after.get("active") == other,
+        "app_problems": problems,
+        "app_names": named,
+        "named_exactly": (all(matched) and named == in_error == sorted(FIGHTING.get(key, ())) and bool(named)),
+        "others_clean": others,
+        "other_clean": bool(others) and all(others.values()),
         "back_clean": clean(back, fight.get("back_at", float("nan"))) and back.get("active") == target,
     }
 
 
 def show_over_defined(reading: Mapping[str, Any]) -> Optional[str]:
     """``SHOWN_IN_ERROR`` when a fight's reading (``fight_reading``) is what tier 11's second run saw for two slides on
-    one sleeve: the show answered True and the configuration read back active; no window the watch had to answer
-    (one that showed and went by itself is allowed); at least one mate in error and the app's mate check saying so;
-    the configuration shown after it clean; the fighting configuration clean once the added mate was suppressed.
-    Else None."""
+    one sleeve: the show answered True and the configuration read back active; no window the watch had to answer in
+    any watched call of the fight (one that showed and stood unanswered is allowed: the rebuild's balloon tip), and no
+    watch that died; the two fighting mates, and only they, read in error, and the app's mate check names exactly
+    them; every configuration shown after it clean (Y, and X, where the sleeve moved from 30 to 15 mm); the fighting
+    configuration clean once the added mate was suppressed. Else None."""
     if (reading.get("show_returned") is True and reading.get("active_is_target") and
-            not reading.get("windows_answered") and reading.get("mates_in_error") and reading.get("app_problems") and
-            reading.get("other_clean") and reading.get("back_clean")):
+            not reading.get("windows_answered") and not reading.get("watch_errors") and
+            reading.get("named_exactly") and reading.get("other_clean") and reading.get("back_clean")):
         return SHOWN_IN_ERROR
     return None
 
@@ -185,11 +220,14 @@ def show_over_defined(reading: Mapping[str, Any]) -> Optional[str]:
 # -- the watch ------------------------------------------------------------------------------------------------------
 
 class ModesWatch(DialogWatch):
-    """The spike's ``DialogWatch`` for one named call, with four additions: the windows already standing when it
+    """The spike's ``DialogWatch`` for one named call, with these additions: the windows already standing when it
     starts (and not in ``baseline``) recorded with their texts; a short watch after the call returns, so a window
-    that opens as it ends is seen; when each window first showed, in seconds from the call's start; and, for a box
-    the spike's three answers (WM_CLOSE, Escape, Cancel / No / Don't Save) leave standing, a fourth (Close, OK or
-    Continue) and then the first button whose text is not a Yes or a Save. Each watched call is appended to ``log``."""
+    that opens as it ends is seen; when each window first showed, in seconds from the call's start, and whether it was
+    still open when the watch ended (``open_at_exit``: ``stood_s`` is how long the watch saw it, never its lifetime);
+    and, for a box the spike's three answers (WM_CLOSE, Escape, Cancel / No / Don't Save) leave standing, a fourth
+    (Close, OK or Continue) and then the first button whose text is not a Yes or a Save. A window of ``baseline``
+    (open before the probe's first call: SolidWorks' own main window among them, whose title names the licence) is
+    reported by its class alone. Each watched call is appended to ``log``."""
 
     MORE = ("Close", "OK", "Continue")
     NEVER = ("Yes", "Yes to All", "Save", "Save All")
@@ -219,6 +257,12 @@ class ModesWatch(DialogWatch):
     def __exit__(self, *exc: Any) -> None:
         self._seconds = time.monotonic() - self._t0
         time.sleep(self.linger)
+        try:
+            u = self._user32()
+            for hwnd, seen in list(self._seen.items()):
+                seen["open_at_exit"] = bool(u.IsWindow(hwnd) and u.IsWindowVisible(hwnd))
+        except Exception as exc:  # noqa: BLE001
+            self.error = self.error or repr(exc)
         super().__exit__(*exc)
         self._more.join(5.0)
         self.log.append({"call": self.label, "seconds": round(self._seconds, 3), "windows": self.report()["windows"],
@@ -252,10 +296,27 @@ class ModesWatch(DialogWatch):
             self.error = repr(exc)
 
     def report(self) -> Dict[str, Any]:
-        out = super().report()
-        for w, s in zip(out["windows"], self._seen.values()):
-            w["first_s"] = round(s["first"] - self._t0, 2)
-        return out
+        windows = []
+        for hwnd, seen in list(self._seen.items()):
+            w = {"class": seen.get("cls"), "first_s": round(seen["first"] - self._t0, 2),
+                 "stood_s": round(seen.get("last", seen["first"]) - seen["first"], 2), "answered": seen["answered"],
+                 "open_at_exit": seen.get("open_at_exit")}
+            if hwnd in self.baseline:
+                w["baseline"] = True
+            else:
+                w.update(title=seen.get("title"), children=seen.get("children"))
+            windows.append(w)
+        return {"windows": windows, "watch_error": self.error}
+
+
+def standing_classes(pid: int) -> List[str]:
+    """The class of every visible top-level window of the process, and nothing else (the main window's title names
+    the licence edition)."""
+    watch = ModesWatch(pid, "standing", [])
+    try:
+        return [watch._text(h)[1] for h in watch._windows()]  # noqa: SLF001
+    except Exception as exc:  # noqa: BLE001
+        return [f"error: {exc!r}"]
 
 
 def standing(pid: int, baseline: Sequence[int] = ()) -> List[Dict[str, Any]]:
@@ -428,7 +489,7 @@ def _shown(c: _Ctx, name: str, label: str) -> Dict[str, Any]:
     with c.watch(f"{label}: ShowConfiguration2({name})") as w:
         got, value = px.attempt(f"ShowConfiguration2({name})", lambda: call(doc, "ShowConfiguration2", name))
     out["show"] = {"call": w.label, "returned": plain(value) if got else "raised", "windows": w.report()["windows"],
-                   "standing_at_entry": w.standing}
+                   "standing_at_entry": w.standing, "watch_error": w.error}
     out["active_after_show"] = _active_config(doc)
     out["flags_after_show"] = _w8_flags(px, doc, c.paths)
     out["rebuild"] = _rebuild(c, f"{label}: ForceRebuild3({TOP_ONLY}) in {name}")
@@ -443,7 +504,7 @@ def _shown(c: _Ctx, name: str, label: str) -> Dict[str, Any]:
 def _rebuild(c: _Ctx, label: str) -> Dict[str, Any]:
     with c.watch(label) as w:
         r = rebuild(c.px, c.doc, label, top_only=TOP_ONLY)
-    return dict(r, call=w.label, windows=w.report()["windows"], standing_at_entry=w.standing)
+    return dict(r, call=w.label, windows=w.report()["windows"], standing_at_entry=w.standing, watch_error=w.error)
 
 
 def _select_component(c: _Ctx, key: str, append: bool) -> bool:
@@ -473,7 +534,7 @@ def _run(px: Px, facts: Dict[str, Any]) -> None:
     got, pid = px.attempt("ISldWorks.GetProcessID", lambda: call(sc.app(px), "GetProcessID"))
     px.require(got and isinstance(pid, int), "GetProcessID answers")
     baseline_windows = ModesWatch(pid, "baseline", [])._windows()  # noqa: SLF001
-    facts["standing_at_start"] = standing(pid)
+    facts["standing_at_start"] = standing_classes(pid)          # classes only: the probe's baseline
     built = _app_build(px, w8_parts_spec(root), swbuild, wb_assess)
     gear_path, sleeve_path = built["part_of"]["Anchor"], built["part_of"]["Sleeve"]
     x, y = W8_AXIS_XY
