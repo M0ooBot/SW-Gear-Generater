@@ -940,19 +940,23 @@ def _carrier_read(entry: CarrierEntry, raw: Dict[str, Any], index: int = 0) -> C
 
 
 _COPY_WORD = " copy "     # ``workbook.planetary.copy_id``: "Planet copy 2" (a space is never in a workbook name)
+CARRIER_ID_SUFFIX = " carrier"
+# A carrier as a body: ``f"{shaft}{CARRIER_ID_SUFFIX}"`` (W7-INTERFACES §6.1 c). Owned here, since store cannot import
+# ``workbook.layout``, whose ``CARRIER_ID_SUFFIX`` must equal it (a test pins the two).
 
 
 def _carriers_checked(box: "GearboxRecord") -> None:
     """Across the gearbox, as ValueError phrases naming the entry: two carrier parts for one shaft; a mate whose
     ``on`` names no carrier on record (Update looks the axis up in that carrier part); a component whose ``of``
     is not the row its own id is a copy of (Update compares copies through it). What the app writes always passes:
-    a mate's ``on`` is ``f"{shaft} carrier"`` of a carrier written with the carrier part, and ``of`` is the row of
-    the copy's id."""
+    every finisher keeps one ``CarrierEntry`` per carrier of the plan, built or reused, whenever it writes mates
+    (W7-INTERFACES §6.1 a), a mate's ``on`` is that carrier's ``layout.carrier_id``, and ``of`` is the row of the
+    copy's id. A carrier is never required to be a component: its own mates name it in ``gears``."""
     shafts = [c.shaft for c in box.carriers]
     for index, shaft in enumerate(shafts):
         if shaft in shafts[:index]:
             raise ValueError(f"gearbox.carriers[{index}] ({shaft!r}) is a second carrier part for the shaft {shaft!r}")
-    ids = {f"{shaft} carrier" for shaft in shafts}            # ``layout.carrier_id``, kept the same by a test
+    ids = {f"{shaft}{CARRIER_ID_SUFFIX}" for shaft in shafts}    # every carrier on record is a known body
     for index, mate in enumerate(box.mates):
         if mate.on and mate.on not in ids:
             where = f"gearbox.mates[{index}]" + (f" ({mate.name!r})" if mate.name else "")

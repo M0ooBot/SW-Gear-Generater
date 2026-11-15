@@ -1197,3 +1197,64 @@ def test_what_a_planetary_finish_writes_always_reads_and_the_store_names_carrier
     record.gearbox.carriers[0].component = ""            # written as soon as the carrier part saves (a refused train)
     record.gearbox.mates = [m for m in record.gearbox.mates if not m.on]
     assert store.link_record_from_json(store.link_record_to_json(record)) == record
+
+
+def test_the_store_owns_the_carrier_id_suffix_and_layout_names_carriers_with_it():
+    """W7-INTERFACES §6.1 (c)."""
+    from gear_generator.workbook import layout
+    assert store.CARRIER_ID_SUFFIX == layout.CARRIER_ID_SUFFIX == " carrier"
+    assert layout.carrier_id("C") == "C" + store.CARRIER_ID_SUFFIX
+
+
+def _carrier_mates(box):
+    """The carrier's own mates as a turning planetary records them: it is named in ``gears``, and is no component."""
+    box.mates += [store.MateEntry(name="C carrier on C Axis", kind="axis", gears=["C carrier"], shaft="C"),
+                  store.MateEntry(name="C carrier along C", kind="along", gears=["C carrier"], shaft="C"),
+                  store.MateEntry(name="CarrierGear locked to C carrier", kind="lock",
+                                  gears=["C carrier", "CarrierGear"]),
+                  store.MateEntry(name="Planet copy 2 along P copy 2", kind="along", gears=["Planet copy 2"],
+                                  shaft="P copy 2", face_global="Planet Face Z", z_front=5.0)]
+    return box
+
+
+@pytest.mark.parametrize("version", [3, 4, 5])
+def test_a_planetary_record_at_each_schema_reads_writes_and_reads_again(tmp_path, version):
+    """W7-INTERFACES §6.1: what a v3 or v4 file can hold of it (no carriers, no ``of``, no ``on``), and the v5
+    record whole, each read → write → read the same, never refused."""
+    record = planetary_record(str(tmp_path / "R.xlsx"))
+    _carrier_mates(record.gearbox)
+    raw = json.loads(store.link_record_to_json(record))
+    raw["link_schema_version"] = version
+    if version < 5:
+        del raw["gearbox"]["carriers"]
+        for component in raw["gearbox"]["components"]:
+            del component["of"]
+        for mate in raw["gearbox"]["mates"]:
+            del mate["on"]
+    if version < 4:
+        for mate in raw["gearbox"]["mates"]:
+            del mate["plane"], mate["sense"]
+        for shaft in raw["gearbox"]["shafts"]:
+            for key in ("direction", "z_side", "z_global", "z_plane", "line", "axis"):
+                del shaft[key]
+    target = tmp_path / "R.workbook.json"
+    target.write_text(json.dumps(raw))
+    first = store.read_link_record(str(tmp_path / "R.xlsx"))
+    store.save_link_record(first)
+    second = store.read_link_record(str(tmp_path / "R.xlsx"))
+    assert second == first and first.schema_version == store.LINK_SCHEMA_VERSION
+    if version == 5:
+        assert first == record
+
+
+def test_a_continued_builds_record_with_its_carrier_reused_reads_clean():
+    """A build that saved the carrier part, then refused its train, carried on with a CarrierReuse: the finish keeps
+    the carrier entry (§6.1 a), its component filled once the assembly saves; its mates' ``on`` name it."""
+    refused = planetary_record("R.xlsx")
+    box = refused.gearbox
+    box.assembly, box.components, box.mates = "", [], []
+    box.carriers[0].component, box.mate_problems, box.mate_problems_digest = "", ["G2 is over-defined."], "d"
+    assert store.link_record_from_json(store.link_record_to_json(refused)) == refused
+    continued = planetary_record("R.xlsx")
+    _carrier_mates(continued.gearbox)
+    assert store.link_record_from_json(store.link_record_to_json(continued)) == continued
