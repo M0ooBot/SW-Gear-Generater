@@ -2398,6 +2398,53 @@ def test_the_window_keeps_its_width_with_modes_and_every_mode_name_shows_whole(d
     assert chooser(window) == (names, names[0] if names else "")
 
 
+def with_a_turned_shaft(spec):
+    """``spec`` with a shaft along X that carries nothing (Checks warn of it, nothing more): the Speeds readout then
+    reads *seen from each shaft's + end*, the widest it has."""
+    from gear_generator.workbook.model import Shaft
+    return model.replace(spec, shafts=spec.shafts + (Shaft("Aux", "frame", "200", "0", "0", "X+", "", row=9),))
+
+
+@pytest.mark.parametrize("five, turned, in_header", [
+    (False, False, True),       # 2H 4H N 4L: 4 × 32 px beside "seen from +Z · provisional"
+    (True, False, False),       # five 3-letter names, 5 × 40 = 200 px: no room beside "seen from +Z · provisional"
+    (False, True, False),       # 128 px: no room beside "seen from each shaft's + end · provisional"
+    (True, True, False)])
+def test_the_speeds_readout_is_never_clipped_by_the_mode_chooser(desk, five, turned, in_header):
+    """W8 review S2: the Speeds panel's header does not grow, so the chooser takes it only when it fits beside the
+    title and the widest readout the panel can show (any mode's, with the provisional tag), as measured in the
+    header's own fonts; else it goes in rows. Every mode chosen, with Excel's recalculation pending and not, the
+    readout is drawn whole and a chooser in the header ends inside it, and the window keeps its 1080 px."""
+    from gear_generator import workbook_gui
+    from gear_generator.theme import px
+    from workbook_fixtures import transfer_case_parallel
+    spec = transfer_case_parallel()
+    spec = with_modes(spec, ("2Hi", "4Hi", "Neu", "4Lo"), (("L2W", "L", "2WD"),)) if five else spec
+    spec = with_a_turned_shaft(spec) if turned else spec
+    window = desk.open(spec, name="Box.xlsx")
+    assert window.footer().ok, window.status.get()
+    names = [m.name for m in spec.modes]
+    header, slot, readout = window._speeds.header, window._mode_slot, window._speeds.readout_label
+    widest = "seen from each shaft's + end" if turned else "seen from +Z"
+    for recalc in (False, True):
+        window.recalc = recalc
+        for name in names:
+            if name != window.mode.get():
+                choose_mode(window, name)
+            window._paint()
+            window.update_idletasks()
+            assert window.speeds_readout.get() == widest + ui_text.provisional_tag(recalc)
+            assert readout.winfo_width() == readout.winfo_reqwidth(), (recalc, name)        # drawn whole
+            (row,) = window.mode_choosers                                   # one row, in the header or not
+            assert (row.master is slot) == in_header and (row.master is window._mode_rows) != in_header
+            if in_header:
+                assert row.winfo_width() == row.winfo_reqwidth() == px(32 * 4)
+                assert readout.winfo_x() + readout.winfo_width() <= slot.winfo_x()
+                assert slot.winfo_x() + slot.winfo_width() <= header.winfo_width() - px(12)
+    assert width_and_height(window)[0] == px(workbook_gui.WINDOW_WIDTH)
+    assert chooser(window) == (names, names[-1])
+
+
 def test_a_mode_renamed_only_in_case_keeps_its_choice(desk):
     """Mode names compare ignoring case (J6, W8-INTERFACES §9.6): 4L saved as 4l is the same mode, still chosen."""
     from workbook_fixtures import transfer_case_parallel

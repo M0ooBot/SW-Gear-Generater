@@ -428,10 +428,11 @@ class Panel(tk.Frame):
         header.grid(row=0, column=0, sticky="ew")
         header.grid_propagate(False)
         header.columnconfigure(1, weight=1)
-        tk.Label(
+        self.title_label = tk.Label(
             header, text=title.upper(), bg=theme.HEADER_BG,
             fg=theme.HEADER_TEXT, font=f.header,
-        ).grid(row=0, column=0, sticky="w", padx=(px(header_pad), 0), pady=px(5))
+        )
+        self.title_label.grid(row=0, column=0, sticky="w", padx=(px(header_pad), 0), pady=px(5))
         self.header = header
 
         self.readout_label = tk.Label(

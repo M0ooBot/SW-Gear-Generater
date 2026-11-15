@@ -1042,10 +1042,17 @@ and the end view show the chosen mode. **Every name shows whole, and the
 window keeps its 1080 px** (`workbook_gui.mode_chooser_rows`, a default the
 user may overrule): every segment is as wide as the longest name needs (8 px a
 character of the chosen segment's bold mono and 8 px either side, 32 px at
-least); when they all fit in 200 px they sit in the header, after the readout
-(`2H 4H N 4L`); when they do not (`Road AllWheel Towing CrawlLow`, or six
-modes), they go in rows at the top of the Speeds panel, as many a row as fit
-the end view's 392 px. Rows rather than a drop-down, so every mode stays one
+least); when they all fit in the room the header leaves, they sit there, after
+the readout (`2H 4H N 4L`); when they do not (`Road AllWheel Towing CrawlLow`,
+or six modes), they go in rows at the top of the Speeds panel, as many a row as
+fit the end view's 392 px. The room is the header's 416 px less its pads, its
+title and the widest readout the panel can show, measured in the header's own
+font: any mode's, with *· provisional* added (`workbook_gui.mode_header_room`),
+and never more than 200 px; so the readout is never clipped (the header does
+not grow), and the chooser does not move when another mode is chosen or
+Excel's recalculation comes and goes. Beside *seen from +Z · provisional* that
+leaves 172 px; beside *seen from each shaft's + end · provisional*, a gearbox
+with a shaft off Z, 91 px, so even `2H 4H N 4L` goes in rows there. Rows rather than a drop-down, so every mode stays one
 click away and in sight. The choice is kept across re-reads while a mode of that name is there
 (names compared as everywhere, ignoring case: `swbuild.on_in`), else the first
 is chosen again. A workbook with no Modes rows has no chooser (sliders alone

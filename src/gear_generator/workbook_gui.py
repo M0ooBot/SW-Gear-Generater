@@ -104,12 +104,15 @@ from .workbook import update as wb_update, xlsx
 
 # W8: the Speeds panel's mode chooser (design/UI-DESIGN.md §9, *Modes*). Every segment as wide as the longest name
 # needs (MODE_CHAR px a character of the chosen segment's bold mono, MODE_PAD either side, MODE_SEGMENT at least);
-# in the header when they all fit in MODE_HEADER_ROOM px, else in rows at the top of the panel, each no wider than
-# the end view, so every name shows whole and the window keeps its width.
+# in the header when they all fit in the room its title, its readout and its pads leave there (mode_header_room),
+# never more than MODE_HEADER_ROOM px, else in rows at the top of the panel, each no wider than the end view, so
+# every name shows whole, the readout is never clipped, and the window keeps its width.
 MODE_SEGMENT = 32
 MODE_CHAR = 8
 MODE_PAD = 8
 MODE_HEADER_ROOM = 200
+SPEEDS_HEADER_PADS = (12, 8, 12, 8, 12)     # widgets.Panel's header: before the title, either side of the readout
+#                                             and either side of the slot the chooser sits in, px at 100 %
 WINDOW_WIDTH = 1080          # two columns: the workbook and its checks, and the end view and speeds (W3)
 LEFT_WIDTH = 610
 END_VIEW = (392, 300)        # the end view's canvas, px
@@ -153,18 +156,35 @@ def mode_segment_width(names) -> int:
     return max([MODE_SEGMENT] + [MODE_CHAR * len(n) + 2 * MODE_PAD for n in names])
 
 
-def mode_chooser_rows(names) -> Tuple[bool, List[Tuple[str, ...]]]:
+def mode_header_room(title: int, readout: int) -> int:
+    """The px, as drawn, the mode chooser may take in the Speeds panel's header (W8 review S2): the header, as wide
+    as the end view and the panel body's pads either side, less :data:`SPEEDS_HEADER_PADS`, the title's and the
+    readout's labels (``title``, ``readout``: their widths as drawn), and never more than :data:`MODE_HEADER_ROOM`.
+    The header does not grow (``widgets.Panel``), so a chooser wider than this would clip the readout unseen."""
+    header = px(END_VIEW[0]) + 2 * px(12)
+    return min(px(MODE_HEADER_ROOM), header - sum(px(p) for p in SPEEDS_HEADER_PADS) - title - readout)
+
+
+def mode_chooser_rows(names, room: Optional[int] = None) -> Tuple[bool, List[Tuple[str, ...]]]:
     """Where the mode chooser goes and how it breaks: ``(in the header, rows of names)``. In the header, one row,
-    when every segment fits in :data:`MODE_HEADER_ROOM`; else rows at the top of the Speeds panel, as many names a
-    row as fit in the end view's width. ``(False, [])`` with no names."""
+    when every segment fits in ``room`` px as drawn (:func:`mode_header_room`; None, as the boards draw it:
+    :data:`MODE_HEADER_ROOM`); else rows at the top of the Speeds panel, as many names a row as fit in the end
+    view's width. ``(False, [])`` with no names."""
     names = tuple(names)
     if not names:
         return False, []
     seg = mode_segment_width(names)
-    if seg * len(names) <= MODE_HEADER_ROOM:
+    if px(seg * len(names)) <= (px(MODE_HEADER_ROOM) if room is None else room):
         return True, [names]
     per = max(1, END_VIEW[0] // seg)
     return False, [names[i:i + per] for i in range(0, len(names), per)]
+
+
+def _label_width(label: tk.Label, text: str) -> int:
+    """The px, as drawn, ``label`` asks for to show ``text`` on one line: its font's measure of the text, and its
+    pad, border and focus ring either side, as Tk lays a label out."""
+    chrome = sum(round(label.winfo_fpixels(label.cget(o))) for o in ("padx", "borderwidth", "highlightthickness"))
+    return int(label.tk.call("font", "measure", label.cget("font"), "-displayof", label, text)) + 2 * chrome
 
 
 def chosen_mode(report, name: str):
@@ -306,7 +326,7 @@ class WorkbookWindow(tk.Toplevel):
         # positions per configuration as the last job's result carried it (None after a restart: W8-INTERFACES §9.12).
         self.mode = tk.StringVar(value="")
         self.mode_choosers: List[widgets.Segmented] = []     # one in the header, or one per row in the panel
-        self._mode_names: Tuple[str, ...] = ()
+        self._mode_layout: Tuple[Tuple[str, ...], bool] = ((), False)      # the names, and whether in the header
         self.positions_per_configuration: Optional[bool] = None
 
         self.title(f"Workbook — {os.path.basename(path)}")
@@ -369,6 +389,7 @@ class WorkbookWindow(tk.Toplevel):
         self.canvas.grid(row=0, column=0)
         speeds = widgets.Panel(right, "Speeds", self.speeds_readout)
         speeds.grid(row=1, column=0, sticky="ew")
+        self._speeds = speeds
         speeds.body.columnconfigure(0, weight=1)
         self._mode_slot = speeds.header_slot()         # W8: the mode chooser, when the workbook has modes and it fits
         self._mode_rows = tk.Frame(speeds.body, bg=theme.WHITE)     # … or here, in rows, when it does not
@@ -957,13 +978,13 @@ class WorkbookWindow(tk.Toplevel):
         modes = self.report.modes if self.report is not None else ()
         names = tuple(m.name for m in modes if m.name)
         kept = next((n for n in names if swbuild.on_in((n,), self.mode.get())), names[0] if names else "")
-        if names != self._mode_names:
+        in_header, rows = mode_chooser_rows(names, self._mode_header_room(names) if names else None)
+        if (names, in_header) != self._mode_layout:
             for chooser in self.mode_choosers:
                 chooser.destroy()
             self.mode_choosers = []
-            self._mode_names = names
+            self._mode_layout = (names, in_header)
             self.mode.set(kept)
-            in_header, rows = mode_chooser_rows(names)
             seg = mode_segment_width(names)
             for r, row in enumerate(rows):
                 parent = self._mode_slot if in_header else self._mode_rows
@@ -979,6 +1000,17 @@ class WorkbookWindow(tk.Toplevel):
             else:
                 self._mode_rows.grid_remove()
         self.mode.set(kept)
+
+    def _mode_header_room(self, names) -> int:
+        """:func:`mode_header_room` for this workbook, its readout measured at its widest: any mode's (each reads
+        its own shafts' ``seen from …``) with the provisional tag a re-read may add, so the chooser stays where it is
+        when another mode is chosen or Excel's recalculation comes and goes."""
+        spec = self.effective or self.reading.spec
+        readouts = [ui_text.mode_speed_lines(spec, self.report, name)[1] for name in names]
+        widest = max((r + ui_text.provisional_tag(True) for r in readouts if r), key=self.fonts.readout.measure,
+                     default="")
+        return mode_header_room(_label_width(self._speeds.title_label, self._speeds.title_label.cget("text")),
+                                _label_width(self._speeds.readout_label, widest))
 
     def _mode_chosen(self) -> None:
         self._draw_end_view()

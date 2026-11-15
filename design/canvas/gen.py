@@ -926,7 +926,10 @@ def workbook_board(spec, *, clock="14:02:31", open_in_excel=True, before=None, c
     # The chosen mode's lines, the chooser's note and the prose rows: WorkbookWindow's own home (speeds_panel).
     lines, speeds_readout, _, prose = wb_gui.speeds_panel(effective, report, shown, chooser=bool(names),
                                                           record=record)
-    in_header, chooser_rows = wb_gui.mode_chooser_rows(names)      # where the chooser goes, as the window puts it
+    # Where the chooser goes, as the window puts it. The window measures the room its header leaves (mode_header_room,
+    # in Tk's fonts, which this does not have); here it is the 200 px the window never exceeds, the same answer for
+    # every board's names beside a seen-from-+Z readout.
+    in_header, chooser_rows = wb_gui.mode_chooser_rows(names)
     width = wb_gui.mode_segment_width(names)
     chooser, chooser_body = "", []
     if names and in_header:                     # Segmented(height=16, mono) in the header slot, after the readout
