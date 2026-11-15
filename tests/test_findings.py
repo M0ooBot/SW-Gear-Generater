@@ -1104,11 +1104,12 @@ W8_S2_TURN = LATEST.parent / "w8-workbook-assembly-20261115-111951-s2-turn-carri
 W8_TURN_CHECK = LATEST.parent / "w8-turn-across-configurations-20261115-115500.txt"
 
 
-def test_a_turn_of_the_mated_train_given_in_one_mode_shows_in_every_mode_on_2026():
-    """W8 s2 and the check after it (SolidWorks 2026 34.0.0, this host), the first reading of the turn: the E4 train
-    turned +37° in 2H stood turned in 4H, N and 4L, LoDog in interference with RangeSlv in 4L; the check, by a value
-    set in 2H alone and by a global, turned every body by the same amount in all four. s7 is the finding's primary
-    evidence (test_s7_…, below); these lines say what its file does not: the clash, and the two routes."""
+def test_a_turn_of_the_mated_train_given_in_one_mode_was_read_in_every_mode_on_a_copy_no_update_had_moved():
+    """W8 s2 and the check after it (SolidWorks 2026 34.0.0, this host), the first reading of the turn: on the E4 as
+    built, the train turned +37° in 2H stood turned in 4H, N and 4L, LoDog in interference with RangeSlv in 4L; the
+    check, by a value set in 2H alone and by a global, turned every body by the same amount in all four. What these
+    lines read, not a rule: after an Update had put every mode the same run's successor read otherwise
+    (test_s2_after_an_update_had_put_every_mode_…, below)."""
     log = W8_S2_TURN.read_bytes().decode("utf-8", errors="replace")
     assert "attach  SolidWorks 2026 (revision 34.0.0)" in log
     for mode in ("4H", "N", "4L"):
@@ -1149,12 +1150,13 @@ def _s7_step(data, case, step):
 
 
 def _s7_holds(data):
-    """Each clause of the two findings comments (POSITIONS_PER_CONFIGURATION, TURN_PER_CONFIGURATION) against the s7
-    file's own judgements and readings. Raises AssertionError on any that the data does not show."""
+    """What s7 read, as the two findings comments (POSITIONS_PER_CONFIGURATION, TURN_PER_CONFIGURATION) cite it,
+    against the file's own judgements and readings: pins of s7's readings, not rules (s2 read otherwise after an
+    Update had put every mode). Raises AssertionError on any that the data does not show."""
     assert data["revision"] == [34, 0, 0] and data["finding_turn"] is False
-    # A turn shows in every configuration: every body the drive moved, moved in all four, by the step's amount where
-    # it was made, in each state tried (as built; after a no-op put in 4L; after it in each; after the app's Update;
-    # given in 4L; given in N after a reopen).
+    # s7 read each turn in every configuration: every body the drive moved, moved in all four, by the step's amount
+    # where it was made (as built; after a no-op put in 4L; after it in each; given in 4L; given in N after a reopen;
+    # and after case 4's Update, whose puts moved only the front train, so no-op puts for the driven one).
     for case, step, amount in S7_TURNS:
         judgement = _s7_step(data, case, step)["judgement"]
         assert judgement["kind"] == "turn" and judgement["moved_bodies"], (case, step)
@@ -1168,8 +1170,8 @@ def _s7_holds(data):
         assert [first[mode][b][0] for b in ("Sun", "InDog", "RangeSlv", "ModeSlv", "LoDog", "Carrier carrier")] == \
             [37.0, 37.0, 37.0, 37.0, 9.25, 9.25], mode
         assert all(first[mode][f"Pl copy {i}"][0] == -18.5 for i in (1, 2, 3)), mode
-    # The configuration once put in splits off from the rest (H) is ruled out: after puts in every configuration a
-    # turn still showed in all four.
+    # The configuration once put in splits off from the rest (H) is ruled out for no-op puts: after a no-op put in
+    # every configuration a turn still showed in all four.
     after_puts = _s7_step(data, "3", "drive +37 in 2H")["judgement"]
     assert after_puts["bodies"]["Sun"]["forked_before"] == ["2H", "4H", "4L", "N"]
     assert "H" in after_puts["rules_out"] and "H_private_put" in after_puts["rules_out"]
@@ -1178,7 +1180,8 @@ def _s7_holds(data):
                        ("3", "no-op put in N"), ("3", "no-op put in 4L")):
         judgement = _s7_step(data, case, step)["judgement"]
         assert judgement["kind"] == "put" and judgement["moved_bodies"] == [] and judgement["bodies"] == {}, step
-    # A moving put stays in the configuration showing, held or free: the body moved there and still in the others.
+    # s7 read each moving put stay in the configuration showing, held or free: the body moved there and still in the
+    # others.
     for step, body, made_in, during in S7_MOVING_PUTS:
         here = _s7_step(data, "5", step)
         judgement = here["judgement"]
@@ -1196,10 +1199,11 @@ def _s7_holds(data):
     assert len(reopens) == 6 and all(s["same_as_before_save"] is True for s in reopens)
 
 
-def test_s7_a_turn_shows_in_every_configuration_and_a_moving_put_stays_where_it_was_made():
-    """W8 s7 on SolidWorks 2026 34.0.0 (snapshot 1ecd115), the primary evidence for TURN_PER_CONFIGURATION_ON_2026 =
-    False and POSITIONS_PER_CONFIGURATION_ON_2026 = True. The run's five FAILs are its flag check after a put
-    (corrected in be07ebd); nothing pinned here rests on them."""
+def test_s7_read_a_turn_in_every_configuration_and_each_moving_put_only_where_it_was_made():
+    """W8 s7 on SolidWorks 2026 34.0.0 (snapshot 1ecd115), on copies no Update had moved: what it read, cited by
+    TURN_PER_CONFIGURATION_ON_2026 = False and POSITIONS_PER_CONFIGURATION_ON_2026 = True. Not a rule for the state
+    after an Update has put every mode (test_s2_after_an_update_had_put_every_mode_…). The run's five FAILs are its
+    flag check after a put (corrected in be07ebd); nothing pinned here rests on them."""
     data = json.loads(W8_S7.read_text(encoding="utf-8"))
     _s7_holds(data)
     assert findings.TURN_PER_CONFIGURATION_ON_2026 is False and findings.POSITIONS_PER_CONFIGURATION_ON_2026 is True
@@ -1226,12 +1230,50 @@ def test_s7_pins_fail_on_a_doctored_copy(doctor):
 
 def test_the_w8_gates_open_on_both_versions_from_these_findings():
     """The worker's per-version refusal reads these findings by the revision; the sentence switch reads the turn
-    finding: on 2026 a turn shows in every mode, on 2024 neither claim is made until it is measured."""
+    finding: on 2026 a turn can show in other modes, on 2024 neither claim is made until it is measured."""
     from gear_generator import swbuild, swcom
     assert swbuild._modes_version_refusal((34, 1, 1)) is None and swbuild._modes_version_refusal((32, 5, 0)) is None
     assert swcom.positions_per_configuration((34, 1, 1)) is False
     assert swcom.positions_per_configuration((32, 5, 0)) is None
     assert swbuild._settled(swbuild.MODES_FINDINGS) is None
+
+
+W8_S2_AFTER_UPDATE = LATEST.parent / "w8-workbook-assembly-20261115-151412-s2.log"
+
+
+def test_s2_after_an_update_had_put_every_mode_the_turn_was_read_in_4l_and_not_in_4h_or_n():
+    """W8 s2 (SolidWorks 2026 34.0.0, app at 4871a85), the state neither finding settles: after an Update had put every
+    mode, a fresh +37° in 2H was read in 4L (line 356), and the next Update found 4H and N, shown after its put in 2H,
+    at the built turn (lines 448-451); its changed Update found the put of FDrive in 2H in 4H and N and not in 4L
+    (569-572, 709). The first press, from a copy no Update had moved, found 2H's put in neither (224-227). So a turn
+    has been read in another configuration (TURN_PER_CONFIGURATION_ON_2026 = False, what the sentences rest on), and
+    whether a turn reaches every configuration, or a moving put another, in that state is open (findings.py)."""
+    lines = W8_S2_AFTER_UPDATE.read_bytes().decode("utf-8", errors="replace").splitlines()
+    assert lines[1].startswith("attach  SolidWorks 2026 (revision 34.0.0)") and "(snapshot: 4871a85)" in lines[0]
+    assert lines[250].startswith("fact    s2: the state before the fresh turn: modes put in by an Update so far "
+                                 "['2H', '4H', '4L', 'N']")
+    assert lines[355].startswith("        s2, the fresh turn in 2H, 4L shown")
+    for body in ("Sun +37.000000000°", "InDog +37.000000000°", "RangeSlv +37.000000000°", "ModeSlv +37.000000000°",
+                 "LoDog +9.250000000°", "Pl copy 1 -18.500000000°"):
+        assert body in lines[355], body
+    second = "fact    s2 Update in 4L after the fresh turn in 2H: "
+    assert lines[447] == second + "2H when shown: out of step [], off axis [], turned True; after its put: clashes []"
+    for i, mode in ((448, "4H"), (449, "N")):
+        assert lines[i] == second + f"{mode} when shown: out of step [], off axis [], turned False; after its put: " \
+                                    "clashes []"
+    assert lines[450].startswith(second + "4L when shown: out of step [('RangeSlv', 'LoDog'), ('ModeSlv', 'FrontDog')]")
+    for i, (mode, off) in zip(range(568, 572), (("2H", "['FDrive']"), ("4H", "[]"), ("N", "[]"), ("4L", "['FDrive']"))):
+        assert lines[i] == f"        post-check of {mode}: turned False; out of step []; off axis {off}; clashes []; " \
+                           "interference error ''", mode
+    assert lines[708].startswith("fact    s2 changed Update: each mode's judgement when shown") and \
+        lines[708].endswith("[('2H', False, ['FDrive'], []), ('4H', False, [], []), ('N', False, [], []), "
+                            "('4L', False, ['FDrive'], [])]")
+    first = "fact    s2 quiet Update in 4L: "
+    assert lines[223].startswith(first + "2H when shown: out of step [], off axis [], turned True")
+    assert lines[224].startswith(first + "4H when shown: out of step [('ModeSlv', 'FrontDog')], off axis [], "
+                                         "turned False")
+    assert lines[225].startswith(first + "N when shown: out of step [], off axis [], turned True")
+    assert findings.TURN_PER_CONFIGURATION_ON_2026 is False
 
 
 W7_PUT = LATEST.parent / "w7-planetary-put-20261115-012409.json"

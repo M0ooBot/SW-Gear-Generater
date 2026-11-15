@@ -492,9 +492,9 @@ def positions_per_configuration(revision: Sequence[int]) -> Optional[bool]:
     """Does a turn given to the gears in one mode stay in that mode, on the running SolidWorks? (W8-PLAN §1.9; the
     one home of the per-version switch, W8-INTERFACES.md §2 and §9.18.) ``findings.TURN_PER_CONFIGURATION_ON_<year>``
     for the revision's release year (``ON_2026`` for major 34, ``ON_2024`` for 32), read with getattr: measured on a
-    mated train's turn (W8 s2), the case a user's turn is. True: a turn stays in its mode; False: it shows in every
-    mode; None — the finding missing, unsettled (not a bool), or no revision — means neither claim is made. Chooses
-    sentences only, never a SolidWorks call: ``ui_text.turning_note`` and ``switching_note``, ``_mode_after``'s
+    mated train's turn (W8 s2), the case a user's turn is. True: a turn stays in its mode; False: it can show in
+    other modes; None — the finding missing, unsettled (not a bool), or no revision — means neither claim is made.
+    Chooses sentences only, never a SolidWorks call: ``ui_text.turning_note`` and ``switching_note``, ``_mode_after``'s
     shared-turn sentence and its sentence on the modes found at the built turn, and ``_motion_after``'s warning
     after a turn left in the mode showing. The put fact (``POSITIONS_PER_CONFIGURATION_ON_<year>``: a Transform2 put
     of a component no mate holds keeps its place per configuration) is separate and read by nothing."""

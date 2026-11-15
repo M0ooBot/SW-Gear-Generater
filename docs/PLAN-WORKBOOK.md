@@ -633,10 +633,12 @@ their rerun on 2024 measured the same (findings committed in `ea7a46f`); no W8 c
   by mode, each with its configuration shown. What the app *says* about a turn and a switch follows the running
   version's finding (`POSITIONS_PER_CONFIGURATION_ON_<year>`), and neither claim is made where it is unsettled or
   after a restart.
-  *(2026-11-15: W8's s2 and s7 measured, on SolidWorks 2026 34.0.0, that a turn of the mated train shows in every
-  configuration, before and after the app's own Update, while a put that moves a body is kept by the configuration
-  showing, mated or free. The sentences now read `TURN_PER_CONFIGURATION_ON_<year>`, False on 2026, and every mode an
-  Update shows ends at its built frames: notes-workbook/W8-INTERFACES.md §9.18.)*
+  *(2026-11-15: on SolidWorks 2026 34.0.0 a turn of the mated train given in one configuration has been read in the
+  others on copies no Update had moved (W8's s2 and s7); after an Update had put every mode it was read in 4L and not
+  in 4H or N, and a put that moves a body, kept by the configuration showing in s7, was twice found in 4H and N in s2.
+  Neither is settled in that state; a further s7 case is to measure it. The sentences read
+  `TURN_PER_CONFIGURATION_ON_<year>`, False on 2026, and say a turn "can show" in other modes; every mode an Update
+  shows ends at its built frames: notes-workbook/W8-INTERFACES.md §9.18.)*
 - **J12** — D10 per configuration. **J13** — Update works in the configuration active when it opens and returns to
   it. **J14** (**ruled**, the review's S6) — an edit after which every mate the modes need is already on record (a
   Modes pick between existing positions, an offset, an At, a renamed position) is an Update; Modes rows added,
