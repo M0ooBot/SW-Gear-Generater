@@ -666,6 +666,7 @@ class Desk:
         self.disk = Disk()
         self.sw = BoardSolidWorks(self.disk, **doctored)
         self.record = None
+        self.positions = None          # the last job's positions_per_configuration (W8)
 
     def turn_train(self, degrees, speeds):
         """The user drags the input in SolidWorks: each gear turns degrees·ω_i/ω_in about its own axis."""
@@ -708,6 +709,7 @@ def press_build(desk, spec):
     path, read_spec, diagnostics, digest = read_workbook(spec)
     plan, _, _ = planned(assessed(read_spec, diagnostics), desk.record, desk.disk)
     result = swbuild.build_gearbox(desk.sw, **plan.build_kwargs(), exists=desk.disk.exists)
+    desk.positions = getattr(result, "positions_per_configuration", None)     # as WorkbookWindow._collect_job keeps it
     again = desk.record is not None and desk.record.gearbox is not None and bool(desk.record.gearbox.assembly)
     text, ok = ui_text.gearbox_status(plan, result, again=again)
     finished = wb_gearbox.finish_build(plan, result, desk.record, workbook=path, digest=digest,
@@ -765,14 +767,22 @@ def check_lines(diagnostics, offered, chosen):
     return out
 
 
-def end_view_svg(report, spec):
+def chosen_mode(report, name):
+    """WorkbookWindow._chosen_mode: the mode named (swbuild.on_in's comparison), else the first; None without."""
+    if not report.modes:
+        return None
+    return next((m for m in report.modes if m.name and swbuild.on_in((m.name,), name or "")), report.modes[0])
+
+
+def end_view_svg(report, spec, mode=None):
     w, h = wb_gui.END_VIEW
     if not report.layout.placed:
         reason = report.layout.later[0] if report.layout.later else "Nothing to draw yet."
         return (f'<div style="width: {w}px; height: {h}px; background: #ffffff; font-size: 12px; color: {MUTED}; '
                 f'padding: 12px; box-sizing: border-box;">{reason}</div>'), ""
     carriers = {c: point[:2] for c, (point, _) in wb_geometry.carrier_axes(spec, report).items()}   # as the window
-    view = layout_of.layout_gearbox(report.layout.placed, report.theta, w, h, step=2, carriers=carriers,
+    placed = {**report.layout.placed, **(mode.placed if mode is not None else {})}     # W8: the chosen mode's
+    view = layout_of.layout_gearbox(placed, report.theta, w, h, step=2, carriers=carriers,
                                     shafts=[s.id for s in spec.shafts])
     body = []
     for _, plane, points in view.outlines:
@@ -790,13 +800,16 @@ def end_view_svg(report, spec):
     for name, x0, y0, x1, y1 in view.lines or ():         # a turned shaft (W6), as the window draws it
         body.append(f'<path d="M{x0:.1f} {y0:.1f}L{x1:.1f} {y1:.1f}" stroke="{INK}"></path>')
     for name, x, y, anchor in view.labels:        # the window's Tk anchors: n/s the top or bottom, w/e the start or end
-        baseline = y + 10 if anchor[0] == "n" else y - 3
-        wide = len(name) * 6.6                    # 11 px mono; on a plain backing, as the window's bbox rectangle
+        lines = name.split("\n")                 # a shared cross's names on several lines (preview._shared_name)
+        first = y + 10 if anchor[0] == "n" else y - 3 - 13 * (len(lines) - 1)
+        wide = max(len(t) for t in lines) * 6.6   # 11 px mono; on a plain backing, as the window's bbox rectangle
         left = x if anchor[1] == "w" else x - wide
-        body.append(f'<rect x="{left:.1f}" y="{baseline - 10:.1f}" width="{wide:.1f}" height="13" fill="#ffffff">'
-                    f'</rect>')
-        body.append(f'<text x="{x:.1f}" y="{baseline:.1f}" text-anchor="{"start" if anchor[1] == "w" else "end"}" '
-                    f'font-family="{MONO}" font-size="11" fill="{INK}">{name}</text>')
+        body.append(f'<rect x="{left:.1f}" y="{first - 10:.1f}" width="{wide:.1f}" height="{13 * len(lines)}" '
+                    f'fill="#ffffff"></rect>')
+        for k, line in enumerate(lines):
+            body.append(f'<text x="{x:.1f}" y="{first + 13 * k:.1f}" '
+                        f'text-anchor="{"start" if anchor[1] == "w" else "end"}" font-family="{MONO}" font-size="11" '
+                        f'fill="{INK}">{line}</text>')
     if view.origin is not None:
         ox, oy = view.origin
         reach, head = layout_of.ORIGIN_ARROW, layout_of.ARROW_HEAD
@@ -846,13 +859,16 @@ def question_dialog(title, text):
 
 
 def workbook_board(spec, *, clock="14:02:31", open_in_excel=True, before=None, choose=None, desk=None, note=None,
-                   ask=False, copy=False, where="", dialog=None, building=None):
+                   ask=False, copy=False, where="", dialog=None, building=None, mode=None,
+                   positions_per_configuration=None):
     """The window after reading ``spec`` (changes listed against ``before``); ``choose`` picks offered fixes
     (``(field, index)``) as if their buttons were pressed; ``desk`` is what has been built before (its record and
     disk), and ``note`` the last job's sentence; ``ask`` draws the Build again? question the build button asks,
     and ``dialog`` any other ``(title, question)``; ``copy`` reads a copy of the workbook in a folder of its own,
     shown at ``C:\\<where>`` (``Copy`` unless given); ``building`` is a job's last ``swbuild.Step``, with the window
-    closed once (WorkbookWindow.close: it stays, and says it closes once the job is on record)."""
+    closed once (WorkbookWindow.close: it stays, and says it closes once the job is on record). W8: ``mode`` is
+    the mode chosen in the Speeds panel's chooser (the first when None), and ``positions_per_configuration`` the last
+    job's answer, as the window passes it to the footer."""
     path, read_spec, read_diagnostics, digest = read_workbook(spec, copy)
     folder = read_spec.box.output_folder
     desk = desk or Desk()
@@ -876,7 +892,7 @@ def workbook_board(spec, *, clock="14:02:31", open_in_excel=True, before=None, c
     build_plan, update, record = planned(state, desk.record, desk.disk)
     footer = ui_text.workbook_footer(state, record=record, plan=build_plan, update=update, folder=folder,
                                      folder_exists=True, note=note, building=building is not None, progress=building,
-                                     digest=digest)
+                                     digest=digest, positions_per_configuration=positions_per_configuration)
     if building is not None:                                            # WorkbookWindow._refresh_state, closing
         footer = dataclasses.replace(footer, text=f"{footer.text} {ui_text.closes_when_done()}")
     name = os.path.basename(path)
@@ -906,12 +922,25 @@ def workbook_board(spec, *, clock="14:02:31", open_in_excel=True, before=None, c
                   [f'<div style="{mono} line-height: 1.5;">{c}</div>' for c in ui_text.workbook_change_lines(changes, did, covered)]
                   or [warning("Nothing changed.")],
                   gap=2)
-    svg, view_readout = end_view_svg(report, effective)
+    shown = chosen_mode(report, mode)
+    svg, view_readout = end_view_svg(report, effective, shown)
     view = panel("End view, from your origin", view_readout, [svg])
-    lines, speeds_readout = ui_text.workbook_speed_lines(effective, report.motion)
-    # A sentence in place of a shaft's line in prose, as the window: ui_text says which.
-    prose = ui_text.speeds_prose_rows(report.motion, lines)
-    speeds = panel("Speeds", speeds_readout,
+    names = [m.name for m in report.modes if m.name]
+    if shown is not None:                       # W8: the chosen mode's speeds, and the chooser in the header
+        lines, speeds_readout = ui_text.mode_speed_lines(effective, report, shown.name)
+        if names:                               # with the chooser, the note that it changes only the window
+            lines = lines + [ui_text.mode_chooser_note(record)]
+        prose = ui_text.speeds_prose_rows(shown.motion, lines, mode=True, chooser=bool(names))
+    else:
+        lines, speeds_readout = ui_text.workbook_speed_lines(effective, report.motion)
+        # A sentence in place of a shaft's line in prose, as the window: ui_text says which.
+        prose = ui_text.speeds_prose_rows(report.motion, lines)
+    chooser = ""
+    if names:                                   # Segmented(height=16, mono) in the header slot, after the readout
+        chooser = (f'<span style="display: flex; align-items: center; gap: 8px;"><span style="font-size: 11.5px; '
+                   f'color: #8f8f8f;">{speeds_readout}</span>'
+                   + seg(names, shown.name, w=f"{wb_gui.MODE_SEGMENT * len(names)}px", h=16, mono=True) + '</span>')
+    speeds = panel("Speeds", speeds_readout, extra_header=chooser, body_rows=
                    [f'<div style="font-size: 12px; color: {MUTED}; line-height: 1.45; max-width: {wb_gui.END_VIEW[0]}px;">'
                     f'{line}</div>' if r in prose else
                     f'<div style="{mono} white-space: pre-wrap; line-height: 1.5; max-width: {wb_gui.END_VIEW[0]}px;">'
@@ -1168,6 +1197,23 @@ boards["WorkbookPlanetary"] = ("Workbook · a 4 : 1 planetary built: the ring he
 five = with_folder(planetary_edited(planetary_4to1(), shafts={"P": dict(copies="5")}))
 boards["WorkbookPlanetaryCopies"] = ("Workbook · five planets that cannot all mesh: the assembly condition",
                                      workbook_board(five, before=planetary), WINDOW_WIDTH)
+
+# W8. W8-PLAN §2.1's E4 transfer case read, the Speeds panel's chooser on 4L (the low range, both outputs driven,
+# the torque shared at Rear), the end view at 4L's placements (RangeSlv on LoDog's face, ModeSlv on FrontDog's).
+from workbook_fixtures import e4_transfer_case, transfer_case_parallel  # noqa: E402
+
+e4 = with_folder(e4_transfer_case())
+boards["WorkbookModes"] = ("Workbook · the E4 transfer case read: four modes, the Speeds panel on 4L",
+                           workbook_board(e4, mode="4L"), WINDOW_WIDTH)
+# W8-PLAN §2.2's TransferCase_Parallel built on the fake (SolidWorks 2026's revision, so the build's answer is that
+# positions are kept per configuration, which the window passes to the footer), the chooser on 2H.
+parallel = with_folder(transfer_case_parallel())
+parallel_desk = Desk()
+parallel_note = press_build(parallel_desk, parallel)
+boards["WorkbookModesBuilt"] = ("Workbook · TransferCase_Parallel built: one configuration per mode",
+                                workbook_board(parallel, desk=parallel_desk, note=parallel_note,
+                                               positions_per_configuration=parallel_desk.positions),
+                                WINDOW_WIDTH)
 
 layout = []
 x = 0

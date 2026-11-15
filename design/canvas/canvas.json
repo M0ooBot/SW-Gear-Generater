@@ -195,6 +195,20 @@
       "x": 25956,
       "y": 0,
       "w": 1080
+    },
+    {
+      "file": "WorkbookModes.dc.html",
+      "title": "Workbook · the E4 transfer case read: four modes, the Speeds panel on 4L",
+      "x": 27116,
+      "y": 0,
+      "w": 1080
+    },
+    {
+      "file": "WorkbookModesBuilt.dc.html",
+      "title": "Workbook · TransferCase_Parallel built: one configuration per mode",
+      "x": 28276,
+      "y": 0,
+      "w": 1080
     }
   ],
   "annotations": [
