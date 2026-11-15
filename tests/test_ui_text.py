@@ -3323,6 +3323,21 @@ def test_a_quiet_update_that_found_the_gears_turned_in_step_warns_of_the_other_m
     assert warning not in " ".join(ui_text.motion_update_lines(_motion_update(), _moved(turned=True)))
 
 
+@pytest.mark.parametrize("earlier", ["not saved", "lost"])
+def test_after_an_earlier_unsaved_update_the_warning_needs_no_antecedent(earlier):
+    """The review of the fixes, point 3: after an earlier unsaved Update the gears stand "as they were found", so the
+    warning does not say "that turn"."""
+    result = _tc_moved(turned=True, configuration="2H", positions_per_configuration=False)
+    text = ui_text.gearbox_update_status(_tc_update(), result, finished=_finished(earlier))[0]
+    found = ("This version of SolidWorks shows the gears at the same turn in every mode, so a dog may stand across its "
+             "sleeve in another mode; to put the gears back there, press Update SolidWorks with that mode showing.")
+    assert ui_text.GEARS_SHOWN_ELSEWHERE == found
+    assert text.count(found) == 1 and "that turn" not in text
+    assert "The gears stand as they were found in SolidWorks. " + found in text
+    shown_where_turned = ui_text.gearbox_update_status(_tc_update(), result)[0]
+    assert "The gears stand where they were turned in SolidWorks. " + ui_text.TURN_SHOWN_ELSEWHERE in shown_where_turned
+
+
 def _put_and_visited(positions, **values):
     """A quiet Update that found 4H's coupling out of step, put 4H, then showed and checked the others (J13): 2H and N
     found at the built turn, 4L found with a gear off its axis."""

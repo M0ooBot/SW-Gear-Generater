@@ -3309,8 +3309,9 @@ def _motion_after(update, result, earlier: str = "") -> List[str]:
 
     W8 (W8-INTERFACES §9.18): on a gearbox with modes where the running version shows a turn in every mode
     (``result.positions_per_configuration`` False), nothing put and no other mode shown, the gears left standing
-    turned get :data:`TURN_SHOWN_ELSEWHERE` straight after: the footer then shows this status alone, not the record
-    line's turning note, and another mode may stand with a dog across its sleeve.
+    turned get :data:`TURN_SHOWN_ELSEWHERE` straight after (after an earlier unsaved Update, when they stand "as
+    they were found", :data:`GEARS_SHOWN_ELSEWHERE`, which needs no antecedent): the footer then shows this status
+    alone, not the record line's turning note, and another mode may stand with a dog across its sleeve.
 
     ``earlier`` (``Finished.earlier_update``, set when an earlier Update's
     changes to the assembly were never saved): the frames on record are not
@@ -3348,7 +3349,9 @@ def _motion_after(update, result, earlier: str = "") -> List[str]:
             out.append(f"The gears stand {how} in SolidWorks.")
             if getattr(result, "configuration", "") and getattr(result, "positions_per_configuration", None) is False \
                     and not getattr(result, "visited", ()):
-                out.append(TURN_SHOWN_ELSEWHERE)
+                # After an earlier unsaved Update the sentence before says the gears stand "as they were found", so
+                # "that turn" would have no antecedent: the wording that needs none.
+                out.append(GEARS_SHOWN_ELSEWHERE if earlier else TURN_SHOWN_ELSEWHERE)
         elif put != mated:
             how = "as it was found" if earlier else "where it was turned"
             out.append(f"Any gear it did not put back stands {how} in SolidWorks.")
@@ -3572,6 +3575,9 @@ TURN_STAYS = "A turn you give the gears in one mode stays in that mode."
 # SolidWorks." (_motion_after), since the footer shows that status alone.
 TURN_SHOWN_ELSEWHERE = ("This version of SolidWorks shows that turn in every mode, so a dog may stand across its sleeve "
                         "in another mode; to put the gears back there, press Update SolidWorks with that mode showing.")
+GEARS_SHOWN_ELSEWHERE = ("This version of SolidWorks shows the gears at the same turn in every mode, so a dog may stand "
+                         "across its sleeve in another mode; to put the gears back there, press Update SolidWorks with "
+                         "that mode showing.")
 TURN_SHOWS_EVERYWHERE = ("A turn you give the gears in one mode shows in every mode, so a dog can stand across its "
                          "sleeve in another mode; to put the gears back there, press Update SolidWorks with that mode "
                          "showing.")
