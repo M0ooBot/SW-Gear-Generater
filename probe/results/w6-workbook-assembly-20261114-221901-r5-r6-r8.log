@@ -1,0 +1,2253 @@
+run     2026-11-14 22:19:01; app gear-generator 0.3.2 from C:\Users\M0obo\Documents\GearGeneratorProbe\w6-line-20261114-2156\snap\src (snapshot: git archive b3a88f6 (A's line_axis fix); the probe scripts are abd4edf's); sections ['r5', 'r6', 'r8']
+attach  SolidWorks 2026 (revision 34.1.1), PID 29420; SolidWorks 1.89 GB private, 6.17 GB free
+open    before: []
+findings LAYOUT_PLUS_FLIP {'right': False, 'top': False}, LAYOUT_NEGATED_LINK 'minus', LAYOUT_AXIS_Z_SIGN -1, REPLACE_FIXED_ROUTE 'Transform2 put'
+findings W5: GEAR_MATE_RATIO_ROUTE 'remake', MATED_ASSEMBLY_REBUILD_ROUTE 'ForceRebuild3(True)', MATED_BUILD_REBUILD_ROUTE 'ForceRebuild3(True)', GEAR_MATE_FLIP False, DEMONSTRATION_DRIVE_SENSE 1, MESH_PHASE_ROUTE 'Transform2 put with the gear mate on', LOCK_RETAKES_AN_OFFSET True; P0c {'GEAR_MATE_REMAKE_UNDER_COMMAND_IN_PROGRESS': True, 'GEAR_MATE_SENSE_READ_UNDER_COMMAND_IN_PROGRESS': True, 'IDLER_UPDATE_HOLDS': True, 'LIGHTWEIGHT_FIRST_DRIVE_RIGHT': False, 'LIGHTWEIGHT_FORCED_BY': 'swOpenDocOptions_LoadLightweight | swOpenDocOptions_OverrideDefaultLoadLightweight', 'LIGHTWEIGHT_OPEN_RAISES_AN_ADDIN_DIALOG': True, 'LIGHTWEIGHT_REMAKE_HOLDS': True, 'LIGHTWEIGHT_RESOLVED_BY': 'the first drive', 'MATES_UNDER_COMMAND_IN_PROGRESS': True, 'MATE_FOLDER_ROUTE': 'IFeatureManager.InsertFeatureTreeFolder2(swFeatureTreeFolder_Containing)', 'MATE_FOLDER_SUPPRESSION_SUPPRESSES_ITS_MATES': True, 'MATE_FOLDER_TYPE_NAME': 'FtrFolder', 'MATE_GROUP_WALK_SEES_MATES_IN_A_FOLDER': True, 'MATE_RENAME_AT_ONCE': True, 'PUT_ON_TWICE_MESHED_GEAR_HOLDS': True, 'REMAKE_ON_TWICE_MESHED_GEAR_HOLDS': True, 'SECOND_ASSEMBLY_BESIDE_UNSAVED_HOLDS': True, 'SUPPRESSED_MATE_ERROR_CODE': 0, 'UNSUPPRESS_ON_LOCK_ALREADY_ON_MARKS_MODIFIED': True}; AXIAL_RESTORES True; m4 offset 0 mm
+findings W6: TURNED_GEAR_MATE_SENSE_READ_BACK 'entity senses', TURNED_GEAR_MATE_SENSE_ANGLES (30.0, 150.0), TURNED_GEAR_MATE_SENSE_ANGLES_SKEW (60.0, 120.0), GEAR_MATE_SENSE_READ_BACK '(Reverse == entities parallel) == internal', LAYOUT_PLUS_FLIP {'right': False, 'top': False}, REF_PLANE_UNFLIPPED_IS_PLUS_Z True, AXIAL_MATE_ROUTE 'origin distance'
+excel   started our own Excel, PID 25992, 16.0 build 20527.0
+== r5  fixture B, Crossed_Slant (W6-PLAN §5.2): a crossed helical stage (skew, 90°), then a bevel stage at 120° onto a slanted shaft, built fresh; §4.1 with the slanted axis on its line, the drive from the Right plane, both Flips with the interference judge on G1 meshes G2 and on G3 meshes G4, a quiet Update, reopen; then kept as r5.master
+write   Crossed_Slant.xlsx by the app's own write_new, its Output folder blank (the strip's is C:\Users\M0obo\Documents\GearGeneratorProbe\w6-line-20261114-2156\out\r5)
+ok      Excel opened Crossed_Slant.xlsx with no dialog or repair: []
+excel   saved Crossed_Slant.xlsx
+fixture Crossed_Slant.xlsx copied as Excel saved it, its Output folder blank
+ok      read Crossed_Slant.xlsx: ok
+        warning Gears!Q2: G1: The involute starts at 53.849 mm, above the form diameter of 53.14 mm, so the bottom of the working flank is a straight line.
+        warning Gears!L2: G1: A helix angle of 45° is outside the usual 8–30° for a helical gear.
+        warning Gears!Q3: G2: The involute starts at 110.417 mm, above the form diameter of 109.413 mm, so the bottom of the working flank is a straight line.
+        warning Gears!L3: G2: A helix angle of 45° is outside the usual 8–30° for a helical gear.
+        warning Gears!F4: G3: The tooth tip is 0.664 mm thick, under 0.3 × module (0.75 mm).
+        warning Gears!Q4: G3: The involute starts at 64.97 mm, above the form diameter of 62.668 mm, so the bottom of the working flank is a straight line.
+        3 shafts · 4 gears · 2 meshes; gate ''
+ok      r5: the Checks panel is §5's (6 warnings, no error): extra [], missing [], errors [], gate ''
+ok      r5: the header 'Crossed and bevel train · 2 meshes · 3.000 : 1 · output at 90° to the input'
+ok      r5: the speeds about each shaft's own axis are §5's: {'S1': 1000.0, 'S2': 500.0, 'S3': -333.3333333333333}
+ok      r5: the torques are §5's: {'S1': 5.0, 'S2': 9.8, 'S3': 14.405999999999999}
+ok      r5: each shaft seen from its own + end: {'S1': '+Z', 'S2': '+X', 'S3': '(0.5, −0.866, 0)'}
+ok      r5: the meshes' kinds {('G1', 'G2'): 'crossed', ('G3', 'G4'): 'bevel'}
+speeds  S1    1000.0 rpm anticlockwise seen from the +Z end · 5.00 N·m
+speeds  S2    500.0 rpm anticlockwise seen from the +X end · 9.80 N·m
+speeds  S3    333.3 rpm anticlockwise seen from the (0.5, −0.866, 0) end · 14.41 N·m
+speeds  readout "seen from each shaft's + end"
+ok      r5: the Speeds lines carry ['1000.0 rpm anticlockwise', '500.0 rpm anticlockwise', '333.3 rpm anticlockwise', '(0.5, −0.866, 0)']
+ok      r5: the Speeds lines are C's exactly (W6-INTERFACES §7.19)
+ok      r5: the kinematics give §5's turns for +30° of G1: G1 +30.000000000° (§5 +30.000000000°), G2 +15.000000000° (§5 +15.000000000°), G3 +15.000000000° (§5 +15.000000000°), G4 -10.000000000° (§5 -10.000000000°)
+footer  (r5, read) [green] Ready: Build makes 4 parts, Crossed_Slant_Layout and Crossed_Slant.SLDASM in C:\…\w6-line-20261114-2156\out\r5. Its gears are mated to their shafts and to each other, so they turn together in SolidWorks.
+        button 'Build' on primary; Update SolidWorks hidden
+plan    revision 0 Crossed_Slant: refusal ''; reason ''; turning True; static reason ''
+        layout C:\Users\M0obo\Documents\GearGeneratorProbe\w6-line-20261114-2156\out\r5\Crossed_Slant_Layout.SLDPRT; assembly C:\Users\M0obo\Documents\GearGeneratorProbe\w6-line-20261114-2156\out\r5\Crossed_Slant.SLDASM
+        build Helical_m2_N20_45R for G1 at C:\Users\M0obo\Documents\GearGeneratorProbe\w6-line-20261114-2156\out\r5\Helical_m2_N20_45R.SLDPRT (105 ops)
+        build Helical_m2_N40_45R for G2 at C:\Users\M0obo\Documents\GearGeneratorProbe\w6-line-20261114-2156\out\r5\Helical_m2_N40_45R.SLDPRT (105 ops)
+        build Bevel_m2.5_N20_M30_S120 for G3 at C:\Users\M0obo\Documents\GearGeneratorProbe\w6-line-20261114-2156\out\r5\Bevel_m2.5_N20_M30_S120.SLDPRT (212 ops)
+        build Bevel_m2.5_N30_M20_S120 for G4 at C:\Users\M0obo\Documents\GearGeneratorProbe\w6-line-20261114-2156\out\r5\Bevel_m2.5_N30_M20_S120.SLDPRT (212 ops)
+        shaft S1: (0, 0, 0) axis Z+ (0.0, 0.0, 1.0) sigma +1; X base '', Y base '', Z  ''; line ''; S1 Axis
+        shaft S2: (0, 84.8528, 8) axis X+ (1.0, 0.0, 0.0) sigma +0; X  '', Y plus 'S2 Y', Z plus 'S2 Z'; line ''; S2 Axis
+        shaft S3: (-110, 84.8528, 8) axis -0.5, 0.866025404, 0 (-0.49999999999997347, 0.866025403784454, 0.0) sigma +0; X  '', Y  '', Z  ''; line 'S3 Line'; S3 Axis
+        frame G1: R [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0] at [0.0, 0.0, 2.0]
+        frame G2: R [0.0, 0.0, 1.0, 0.993520955, 0.113649072, 0.0, -0.113649072, 0.993520955, 0.0] at [-8.0, 84.852814, 8.0]
+        frame G3: R [0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0] at [-110.0, 84.852814, 8.0]
+        frame G4: R [0.861281226, -0.090524305, -0.5, 0.497260948, -0.052264232, 0.866025404, -0.104528463, -0.994521895, 0.0] at [-110.0, 84.852814, 8.0]
+        motion: trains [('S1', 'S2', 'S3')]; drag ['G1']; fixed []; unmated []
+        mate 'G1 on S1 Axis': axis ['G1'] S1 ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'G1 along S1': along ['G1'] S1 ratio [] face 'G1 Face Z' z_front 2 plane 'front' sense 0
+        mate 'G2 on S2 Axis': axis ['G2'] S2 ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'G2 along S2': along ['G2'] S2 ratio [] face 'G2 Face X' z_front -8 plane 'right' sense 0
+        mate 'G3 locked to G2': lock ['G2', 'G3']  ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'G4 on S3 Axis': axis ['G4'] S3 ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'G4 along S3': along ['G4'] S3 ratio [] face 'G4 Apex Y' z_front 84.8528 plane 'top' sense 0
+        mate 'G1 meshes G2': mesh ['G1', 'G2']  ratio [20, 40] face '' z_front 0 plane 'front' sense -1
+        mate 'G3 meshes G4': mesh ['G3', 'G4']  ratio [20, 30] face '' z_front 0 plane 'front' sense 1
+        ops of Crossed_Slant_Layout.SLDPRT:
+          new     NewPart from (default template)
+          global  "S2 Y"= 84.852814
+          global  "S2 Z"= 8
+          axis    'S1 Axis' through planes 2 and 3
+          plane   'S2 Y Plane' 84.852814 mm from plane 2 (Offset)
+          link    "Offset@S2 Y Plane"= "S2 Y"
+          plane   'S2 Z Plane' 8 mm from plane 1 (Offset)
+          link    "Offset@S2 Z Plane"= "S2 Z"
+          axis    'S2 Axis' through y2 and z2
+          axis    'S3 Axis' on the line of 'S3 Line' from (-110, 84.852814, 8) along (-0.5, 0.866025, 0), 100 mm
+          rebuild once
+          save    C:\Users\M0obo\Documents\GearGeneratorProbe\w6-line-20261114-2156\out\r5\Crossed_Slant_Layout.SLDPRT
+        ops of Crossed_Slant.SLDASM:
+          new     NewAssembly from (default template)
+          global  "G1 Face Z"= 2
+          global  "G2 Face X"= 8
+          global  "G4 Apex Y"= 84.852814
+          insert  layout C:\Users\M0obo\Documents\GearGeneratorProbe\w6-line-20261114-2156\out\r5\Crossed_Slant_Layout.SLDPRT at (0, 0, 0)
+          place   layout at (0, 0, 0) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     layout
+          insert  gear1 C:\Users\M0obo\Documents\GearGeneratorProbe\w6-line-20261114-2156\out\r5\Helical_m2_N20_45R.SLDPRT at (0, 0, 2)
+          place   gear1 at (0, 0, 2) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     gear1
+          insert  gear2 C:\Users\M0obo\Documents\GearGeneratorProbe\w6-line-20261114-2156\out\r5\Helical_m2_N40_45R.SLDPRT at (-8, 84.852814, 8)
+          place   gear2 at (-8, 84.852814, 8) turned (0, 0, 1, 0.993521, 0.113649, 0, -0.113649, 0.993521, 0)
+          fix     gear2
+          insert  gear3 C:\Users\M0obo\Documents\GearGeneratorProbe\w6-line-20261114-2156\out\r5\Bevel_m2.5_N20_M30_S120.SLDPRT at (-110, 84.852814, 8)
+          place   gear3 at (-110, 84.852814, 8) turned (0, 0, 1, 1, 0, 0, 0, 1, 0)
+          fix     gear3
+          insert  gear4 C:\Users\M0obo\Documents\GearGeneratorProbe\w6-line-20261114-2156\out\r5\Bevel_m2.5_N30_M20_S120.SLDPRT at (-110, 84.852814, 8)
+          place   gear4 at (-110, 84.852814, 8) turned (0.861281, -0.090524, -0.5, 0.497261, -0.052264, 0.866025, -0.104528, -0.994522, 0)
+          fix     gear4
+          unfix   gear1
+          mate    coincident gear1:Gear Axis ~ layout:S1 Axis as 'G1 on S1 Axis'
+          mate    point distance 2 gear1:origin ~ layout:plane1 as 'G1 along S1'
+          link    "D1@G1 along S1"= "G1 Face Z"
+          unfix   gear2
+          mate    coincident gear2:Gear Axis ~ layout:S2 Axis as 'G2 on S2 Axis'
+          mate    point distance -8 gear2:origin ~ layout:plane3 as 'G2 along S2'
+          link    "D1@G2 along S2"= "G2 Face X"
+          unfix   gear3
+          mate    lock gear2 ~ gear3 as 'G3 locked to G2'
+          unfix   gear4
+          mate    coincident gear4:Gear Axis ~ layout:S3 Axis as 'G4 on S3 Axis'
+          mate    point distance 84.852814 gear4:origin ~ layout:plane2 as 'G4 along S3'
+          link    "D1@G4 along S3"= "G4 Apex Y"
+          mate    gear 20:40 gear1:Gear Axis ~ gear2:Gear Axis as 'G1 meshes G2'
+          mate    gear 20:30 gear3:Gear Axis ~ gear4:Gear Axis as 'G3 meshes G4'
+          rebuild once
+          save    C:\Users\M0obo\Documents\GearGeneratorProbe\w6-line-20261114-2156\out\r5\Crossed_Slant.SLDASM
+ok      r5: the plan turns (W5): static reason ''
+journal written: 6 paths
+build   Crossed_Slant: SolidWorks 1.89 GB private, 6.01 GB free
+        build   Part113 · helical · recipe A · trig degrees
+        ok      new part Part113
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Helix Angle"
+        ok      global "Transverse Module"
+        ok      global "Transverse Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      global "Lead"
+        ok      global "Overrun"
+        ok      global "Path Length"
+        ok      global "Twist Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      plane Profile Plane
+        ok      link "Offset@Profile Plane"
+        ok      sketch space opened on plane plane
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      sketch path opened on plane 2
+        ok      line lead
+        ok      line P
+        ok      coincident lead.start origin
+        ok      vertical lead
+        ok      vertical P
+        ok      coincident P.start lead.end (already one point)
+        ok      dimension Lead In
+        ok      dimension Length
+        ok      sketch Path Sketch
+        ok      link "Lead In@Path Sketch"
+        ok      link "Length@Path Sketch"
+        ok      sweep Tooth Space, twist 40.5142°
+        ok      link "Twist@Tooth Space"
+        ok      pattern Teeth × 20
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      31 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Path Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Helical_m2_N20_45R; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w6-line-20261114-2156\out\r5\Helical_m2_N20_45R.SLDPRT
+        build   Part114 · helical · recipe A · trig degrees
+        ok      new part Part114
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Helix Angle"
+        ok      global "Transverse Module"
+        ok      global "Transverse Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      global "Lead"
+        ok      global "Overrun"
+        ok      global "Path Length"
+        ok      global "Twist Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      plane Profile Plane
+        ok      link "Offset@Profile Plane"
+        ok      sketch space opened on plane plane
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      sketch path opened on plane 2
+        ok      line lead
+        ok      line P
+        ok      coincident lead.start origin
+        ok      vertical lead
+        ok      vertical P
+        ok      coincident P.start lead.end (already one point)
+        ok      dimension Lead In
+        ok      dimension Length
+        ok      sketch Path Sketch
+        ok      link "Lead In@Path Sketch"
+        ok      link "Length@Path Sketch"
+        ok      sweep Tooth Space, twist 20.2571°
+        ok      link "Twist@Tooth Space"
+        ok      pattern Teeth × 40
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      31 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Path Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Helical_m2_N40_45R; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w6-line-20261114-2156\out\r5\Helical_m2_N40_45R.SLDPRT
+        build   Part115 · bevel · recipe A · trig degrees
+        ok      new part Part115
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Shaft Angle"
+        ok      global "Mate Teeth"
+        ok      global "Pitch Cone Angle"
+        ok      global "Mate Cone Angle"
+        ok      global "Addendum"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Mate Addendum"
+        ok      global "Dedendum"
+        ok      global "Tooth Depth"
+        ok      global "Mate Dedendum"
+        ok      global "Face Width"
+        ok      global "Cone Distance"
+        ok      global "Dedendum Angle"
+        ok      global "Mate Dedendum Angle"
+        ok      global "Face Angle"
+        ok      global "Root Angle"
+        ok      global "Overrun"
+        ok      global "Back Cone Pitch Diameter"
+        ok      global "Back Cone Outer Diameter"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      global "Heel Distance"
+        ok      global "Toe Distance"
+        ok      global "Heel Scale"
+        ok      global "Toe Scale"
+        ok      global "Heel Virtual Radius"
+        ok      global "Toe Virtual Radius"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 2
+        ok      line A
+        ok      line G
+        ok      line G2
+        ok      line L1
+        ok      line L2
+        ok      line L3
+        ok      line L4
+        ok      line L5
+        ok      line L6
+        ok      line Ha
+        ok      line Hc
+        ok      line Hf
+        ok      coincident A.start origin
+        ok      vertical A
+        ok      coincident G.start A.start (already one point)
+        ok      coincident G2.start A.start (already one point)
+        ok      coincident L1.end L2.start (already one point)
+        ok      coincident L2.end L3.start (already one point)
+        ok      coincident L3.end L4.start (already one point)
+        ok      coincident L4.end L5.start (already one point)
+        ok      coincident L5.end L6.start (already one point)
+        ok      coincident L6.end L1.start (already one point)
+        ok      coincident Ha.start G.end (already one point)
+        ok      coincident Hc.start G.end (already one point)
+        ok      coincident Hf.start G2.end (already one point)
+        ok      coincident Ha.end L2.end (already one point)
+        ok      coincident Hc.end L3.end (already one point)
+        ok      coincident Hf.end L1.start (already one point)
+        ok      horizontal L4
+        ok      horizontal L6
+        ok      dimension Axis
+        ok      dimension Cone
+        ok      dimension Heel
+        ok      dimension Toe Cone
+        ok      dimension Toe
+        ok      dimension Heel Square
+        ok      dimension Addendum
+        ok      dimension Root Square
+        ok      dimension Heel Rim
+        ok      dimension Toe Square
+        ok      dimension Toe Rim
+        ok      dimension Front Square
+        ok      dimension Face
+        ok      dimension Back
+        ok      dimension Front
+        ok      sketch Blank Sketch
+        ok      link "Axis@Blank Sketch"
+        ok      link "Cone@Blank Sketch"
+        ok      link "Heel@Blank Sketch"
+        ok      link "Toe Cone@Blank Sketch"
+        ok      link "Toe@Blank Sketch"
+        ok      link "Addendum@Blank Sketch"
+        ok      link "Heel Rim@Blank Sketch"
+        ok      link "Toe Rim@Blank Sketch"
+        ok      link "Face@Blank Sketch"
+        ok      link "Back@Blank Sketch"
+        ok      link "Front@Blank Sketch"
+        ok      revolve Blank
+        ok      sketch cone opened on plane 2
+        ok      line c_V
+        ok      line c_Gh
+        ok      line c_Gt
+        ok      coincident c_V.start origin
+        ok      vertical c_V
+        ok      coincident c_Gh.start c_V.start (already one point)
+        ok      coincident c_Gt.start c_V.start (already one point)
+        ok      dimension Axis
+        ok      dimension Heel Cone
+        ok      dimension Heel
+        ok      dimension Toe Cone
+        ok      dimension Toe
+        ok      sketch Cone Sketch
+        ok      link "Axis@Cone Sketch"
+        ok      link "Heel Cone@Cone Sketch"
+        ok      link "Heel@Cone Sketch"
+        ok      link "Toe Cone@Cone Sketch"
+        ok      link "Toe@Cone Sketch"
+        ok      plane Heel Plane
+        ok      plane Toe Plane
+        ok      sketch heel_space opened on plane heel
+        ok      line h_Centre
+        ok      coincident h_Centre.start origin
+        ok      horizontal h_Centre
+        ok      curve h_I+
+        ok      curve h_I-
+        ok      line h_L+
+        ok      line h_L-
+        ok      arc h_F+
+        ok      arc h_F-
+        ok      arc h_R
+        ok      line h_T
+        ok      fixed h_I+
+        ok      fixed h_I-
+        ok      coincident h_R.centre h_Centre.end (already one point)
+        ok      coincident h_L+.start h_I+.start (already one point)
+        ok      coincident h_L-.start h_I-.start (already one point)
+        ok      coincident h_Centre.end h_L+
+        ok      coincident h_Centre.end h_L-
+        ok      coincident h_F+.start h_L+.end (already one point)
+        ok      coincident h_F-.end h_L-.end (already one point)
+        ok      coincident h_F+.end h_R.end (already one point)
+        ok      coincident h_F-.start h_R.start (already one point)
+        ok      tangent h_F+ h_L+
+        ok      tangent h_F- h_L-
+        ok      tangent h_F+ h_R
+        ok      tangent h_F- h_R
+        ok      equal h_F+ h_F-
+        ok      coincident h_T.start h_I+.end (already one point)
+        ok      coincident h_T.end h_I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      dimension Centre
+        ok      sketch Heel Section Sketch
+        ok      link "Centre@Heel Section Sketch"
+        ok      link "Root@Heel Section Sketch"
+        ok      link "Fillet@Heel Section Sketch"
+        ok      sketch toe_space opened on plane toe
+        ok      line t_Centre
+        ok      coincident t_Centre.start origin
+        ok      horizontal t_Centre
+        ok      curve t_I+
+        ok      curve t_I-
+        ok      line t_L+
+        ok      line t_L-
+        ok      arc t_F+
+        ok      arc t_F-
+        ok      arc t_R
+        ok      line t_T
+        ok      fixed t_I+
+        ok      fixed t_I-
+        ok      coincident t_R.centre t_Centre.end (already one point)
+        ok      coincident t_L+.start t_I+.start (already one point)
+        ok      coincident t_L-.start t_I-.start (already one point)
+        ok      coincident t_Centre.end t_L+
+        ok      coincident t_Centre.end t_L-
+        ok      coincident t_F+.start t_L+.end (already one point)
+        ok      coincident t_F-.end t_L-.end (already one point)
+        ok      coincident t_F+.end t_R.end (already one point)
+        ok      coincident t_F-.start t_R.start (already one point)
+        ok      tangent t_F+ t_L+
+        ok      tangent t_F- t_L-
+        ok      tangent t_F+ t_R
+        ok      tangent t_F- t_R
+        ok      equal t_F+ t_F-
+        ok      coincident t_T.start t_I+.end (already one point)
+        ok      coincident t_T.end t_I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      dimension Centre
+        ok      sketch Toe Section Sketch
+        ok      link "Centre@Toe Section Sketch"
+        ok      link "Root@Toe Section Sketch"
+        ok      link "Fillet@Toe Section Sketch"
+        ok      loft Tooth Space
+        ok      pattern Teeth × 20
+        ok      link "Count@Teeth"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      46 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Cone Sketch is fully defined
+        ok      Heel Section Sketch is fully defined
+        ok      Toe Section Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Bevel_m2.5_N20_M30_S120; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w6-line-20261114-2156\out\r5\Bevel_m2.5_N20_M30_S120.SLDPRT
+        build   Part116 · bevel · recipe A · trig degrees
+        ok      new part Part116
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Shaft Angle"
+        ok      global "Mate Teeth"
+        ok      global "Pitch Cone Angle"
+        ok      global "Mate Cone Angle"
+        ok      global "Addendum"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Mate Addendum"
+        ok      global "Dedendum"
+        ok      global "Tooth Depth"
+        ok      global "Mate Dedendum"
+        ok      global "Face Width"
+        ok      global "Cone Distance"
+        ok      global "Dedendum Angle"
+        ok      global "Mate Dedendum Angle"
+        ok      global "Face Angle"
+        ok      global "Root Angle"
+        ok      global "Overrun"
+        ok      global "Back Cone Pitch Diameter"
+        ok      global "Back Cone Outer Diameter"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      global "Heel Distance"
+        ok      global "Toe Distance"
+        ok      global "Heel Scale"
+        ok      global "Toe Scale"
+        ok      global "Heel Virtual Radius"
+        ok      global "Toe Virtual Radius"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 2
+        ok      line A
+        ok      line G
+        ok      line G2
+        ok      line L1
+        ok      line L2
+        ok      line L3
+        ok      line L4
+        ok      line L5
+        ok      line L6
+        ok      line Ha
+        ok      line Hc
+        ok      line Hf
+        ok      coincident A.start origin
+        ok      vertical A
+        ok      coincident G.start A.start (already one point)
+        ok      coincident G2.start A.start (already one point)
+        ok      coincident L1.end L2.start (already one point)
+        ok      coincident L2.end L3.start (already one point)
+        ok      coincident L3.end L4.start (already one point)
+        ok      coincident L4.end L5.start (already one point)
+        ok      coincident L5.end L6.start (already one point)
+        ok      coincident L6.end L1.start (already one point)
+        ok      coincident Ha.start G.end (already one point)
+        ok      coincident Hc.start G.end (already one point)
+        ok      coincident Hf.start G2.end (already one point)
+        ok      coincident Ha.end L2.end (already one point)
+        ok      coincident Hc.end L3.end (already one point)
+        ok      coincident Hf.end L1.start (already one point)
+        ok      horizontal L4
+        ok      horizontal L6
+        ok      dimension Axis
+        ok      dimension Cone
+        ok      dimension Heel
+        ok      dimension Toe Cone
+        ok      dimension Toe
+        ok      dimension Heel Square
+        ok      dimension Addendum
+        ok      dimension Root Square
+        ok      dimension Heel Rim
+        ok      dimension Toe Square
+        ok      dimension Toe Rim
+        ok      dimension Front Square
+        ok      dimension Face
+        ok      dimension Back
+        ok      dimension Front
+        ok      sketch Blank Sketch
+        ok      link "Axis@Blank Sketch"
+        ok      link "Cone@Blank Sketch"
+        ok      link "Heel@Blank Sketch"
+        ok      link "Toe Cone@Blank Sketch"
+        ok      link "Toe@Blank Sketch"
+        ok      link "Addendum@Blank Sketch"
+        ok      link "Heel Rim@Blank Sketch"
+        ok      link "Toe Rim@Blank Sketch"
+        ok      link "Face@Blank Sketch"
+        ok      link "Back@Blank Sketch"
+        ok      link "Front@Blank Sketch"
+        ok      revolve Blank
+        ok      sketch cone opened on plane 2
+        ok      line c_V
+        ok      line c_Gh
+        ok      line c_Gt
+        ok      coincident c_V.start origin
+        ok      vertical c_V
+        ok      coincident c_Gh.start c_V.start (already one point)
+        ok      coincident c_Gt.start c_V.start (already one point)
+        ok      dimension Axis
+        ok      dimension Heel Cone
+        ok      dimension Heel
+        ok      dimension Toe Cone
+        ok      dimension Toe
+        ok      sketch Cone Sketch
+        ok      link "Axis@Cone Sketch"
+        ok      link "Heel Cone@Cone Sketch"
+        ok      link "Heel@Cone Sketch"
+        ok      link "Toe Cone@Cone Sketch"
+        ok      link "Toe@Cone Sketch"
+        ok      plane Heel Plane
+        ok      plane Toe Plane
+        ok      sketch heel_space opened on plane heel
+        ok      line h_Centre
+        ok      coincident h_Centre.start origin
+        ok      horizontal h_Centre
+        ok      curve h_I+
+        ok      curve h_I-
+        ok      line h_L+
+        ok      line h_L-
+        ok      arc h_F+
+        ok      arc h_F-
+        ok      arc h_R
+        ok      line h_T
+        ok      fixed h_I+
+        ok      fixed h_I-
+        ok      coincident h_R.centre h_Centre.end (already one point)
+        ok      coincident h_L+.start h_I+.start (already one point)
+        ok      coincident h_L-.start h_I-.start (already one point)
+        ok      coincident h_Centre.end h_L+
+        ok      coincident h_Centre.end h_L-
+        ok      coincident h_F+.start h_L+.end (already one point)
+        ok      coincident h_F-.end h_L-.end (already one point)
+        ok      coincident h_F+.end h_R.end (already one point)
+        ok      coincident h_F-.start h_R.start (already one point)
+        ok      tangent h_F+ h_L+
+        ok      tangent h_F- h_L-
+        ok      tangent h_F+ h_R
+        ok      tangent h_F- h_R
+        ok      equal h_F+ h_F-
+        ok      coincident h_T.start h_I+.end (already one point)
+        ok      coincident h_T.end h_I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      dimension Centre
+        ok      sketch Heel Section Sketch
+        ok      link "Centre@Heel Section Sketch"
+        ok      link "Root@Heel Section Sketch"
+        ok      link "Fillet@Heel Section Sketch"
+        ok      sketch toe_space opened on plane toe
+        ok      line t_Centre
+        ok      coincident t_Centre.start origin
+        ok      horizontal t_Centre
+        ok      curve t_I+
+        ok      curve t_I-
+        ok      line t_L+
+        ok      line t_L-
+        ok      arc t_F+
+        ok      arc t_F-
+        ok      arc t_R
+        ok      line t_T
+        ok      fixed t_I+
+        ok      fixed t_I-
+        ok      coincident t_R.centre t_Centre.end (already one point)
+        ok      coincident t_L+.start t_I+.start (already one point)
+        ok      coincident t_L-.start t_I-.start (already one point)
+        ok      coincident t_Centre.end t_L+
+        ok      coincident t_Centre.end t_L-
+        ok      coincident t_F+.start t_L+.end (already one point)
+        ok      coincident t_F-.end t_L-.end (already one point)
+        ok      coincident t_F+.end t_R.end (already one point)
+        ok      coincident t_F-.start t_R.start (already one point)
+        ok      tangent t_F+ t_L+
+        ok      tangent t_F- t_L-
+        ok      tangent t_F+ t_R
+        ok      tangent t_F- t_R
+        ok      equal t_F+ t_F-
+        ok      coincident t_T.start t_I+.end (already one point)
+        ok      coincident t_T.end t_I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      dimension Centre
+        ok      sketch Toe Section Sketch
+        ok      link "Centre@Toe Section Sketch"
+        ok      link "Root@Toe Section Sketch"
+        ok      link "Fillet@Toe Section Sketch"
+        ok      loft Tooth Space
+        ok      pattern Teeth × 30
+        ok      link "Count@Teeth"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      46 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Cone Sketch is fully defined
+        ok      Heel Section Sketch is fully defined
+        ok      Toe Section Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Bevel_m2.5_N30_M20_S120; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w6-line-20261114-2156\out\r5\Bevel_m2.5_N30_M20_S120.SLDPRT
+        build   Part117 · layout · recipe  · trig degrees
+        ok      new part Part117
+        ok      trig units measured: degrees
+        ok      global "S2 Y"
+        ok      global "S2 Z"
+        ok      axis S1 Axis
+        ok      plane S2 Y Plane
+        ok      link "Offset@S2 Y Plane"
+        ok      plane S2 Z Plane
+        ok      link "Offset@S2 Z Plane"
+        ok      axis S2 Axis
+        ok      axis S3 Axis on S3 Line
+        ok      2 globals read back and match the maths
+        ok      rebuilt once
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w6-line-20261114-2156\out\r5\Crossed_Slant_Layout.SLDPRT
+        build   Assem22 · assembly · recipe  · trig degrees
+        ok      new assembly Assem22
+        ok      trig units measured: degrees
+        ok      global "G1 Face Z"
+        ok      global "G2 Face X"
+        ok      global "G4 Apex Y"
+        ok      component Crossed_Slant_Layout-1
+        ok      placed layout
+        ok      fixed layout
+        ok      component Helical_m2_N20_45R-1
+        ok      placed gear1
+        ok      fixed gear1
+        ok      component Helical_m2_N40_45R-1
+        ok      placed gear2
+        ok      fixed gear2
+        ok      component Bevel_m2.5_N20_M30_S120-1
+        ok      placed gear3
+        ok      fixed gear3
+        ok      component Bevel_m2.5_N30_M20_S120-1
+        ok      placed gear4
+        ok      fixed gear4
+        ok      unfixed gear1
+        ok      mate coincident gear1:Gear Axis ~ layout:S1 Axis as G1 on S1 Axis
+        ok      mate point distance gear1:origin ~ layout:plane1 as G1 along S1
+        ok      link "D1@G1 along S1"
+        ok      unfixed gear2
+        ok      mate coincident gear2:Gear Axis ~ layout:S2 Axis as G2 on S2 Axis
+        ok      mate point distance gear2:origin ~ layout:plane3 as G2 along S2
+        ok      link "D1@G2 along S2"
+        ok      unfixed gear3
+        ok      mate lock gear2 ~ gear3 as G3 locked to G2
+        ok      unfixed gear4
+        ok      mate coincident gear4:Gear Axis ~ layout:S3 Axis as G4 on S3 Axis
+        ok      mate point distance gear4:origin ~ layout:plane2 as G4 along S3
+        ok      link "D1@G4 along S3"
+        ok      mate gear gear1:Gear Axis ~ gear2:Gear Axis as G1 meshes G2
+        ok      mate gear gear3:Gear Axis ~ gear4:Gear Axis as G3 meshes G4
+        ok      3 globals read back and match the maths
+        ok      every mate sound, every gear free to turn
+        mate    G1 on S1 Axis
+        mate    G1 along S1
+        mate    G2 on S2 Axis
+        mate    G2 along S2
+        mate    G3 locked to G2
+        mate    G4 on S3 Axis
+        mate    G4 along S3
+        mate    G1 meshes G2
+        mate    G3 meshes G4
+        ok      read turning against their mesh, so made again with the other Flip: G1 meshes G2, G3 meshes G4
+        ok      rebuilt once
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w6-line-20261114-2156\out\r5\Crossed_Slant.SLDASM
+        ok      no interference between the gears
+        in 193.8 s; SolidWorks 2.41 GB private, 5.73 GB free; kind 'motion'; turned round (made again with the other Flip) ['G1 meshes G2', 'G3 meshes G4']
+        steps [('part', 'Helical_m2_N20_45R', 1, 4), ('part', 'Helical_m2_N40_45R', 2, 4), ('part', 'Bevel_m2.5_N20_M30_S120', 3, 4), ('part', 'Bevel_m2.5_N30_M20_S120', 4, 4), ('layout', 'Crossed_Slant_Layout', 0, 0), ('assembly', 'Crossed_Slant', 0, 0), ('interference', 'Crossed_Slant', 0, 0)]
+        progress words ['Building in SolidWorks: part 1 of 4, Helical_m2_N20_45R…', 'Building in SolidWorks: checking interference…']
+record  4 sidecar(s) written; record written; notes []
+status  [green] Built 4 parts, Crossed_Slant_Layout and Crossed_Slant.SLDASM; no interference between the gears where they stand. Its gears are mated to turn together, and SolidWorks reports no mate in error: drag G1 in SolidWorks and the rest of its train follow. 1 thing to do by hand: Assign a material to each of the 4 parts; the build leaves it unset.
+ok      r5: 4 part(s), the layout part and the assembly built and saved, turning: ok True, parts built 4, kind 'motion'
+ok      r5: no interference: []
+fact    r5: the build's sense read made again with the other Flip: ['G1 meshes G2', 'G3 meshes G4']
+ok      r5: the record holds a turning gearbox built from this read
+ok      r5: the record's mates are the plan's: ['G1 on S1 Axis', 'G1 along S1', 'G2 on S2 Axis', 'G2 along S2', 'G3 locked to G2', 'G4 on S3 Axis', 'G4 along S3', 'G1 meshes G2', 'G3 meshes G4']
+ok      r5: the build's sentence says how to turn it: 'drag G1 in SolidWorks and the rest of its train follow'
+footer  (r5, built) [green] Built 4 parts, Crossed_Slant_Layout and Crossed_Slant.SLDASM; no interference between the gears where they stand. Its gears are mated to turn together, and SolidWorks reports no mate in error: drag G1 in SolidWorks and the rest of its train follow. 1 thing to do by hand: Assign a material to each of the 4 parts; the build leaves it unset.
+        button 'Build again…' on; Update SolidWorks shown on primary
+ok      r5: the footer says how to turn it: 'drag G1 in SolidWorks and the rest of its train follow'
+tag     ' · built from this version'
+ok      r5: 6 files on disk
+        marked modified in SolidWorks right after the build: {'Helical_m2_N20_45R.SLDPRT': False, 'Helical_m2_N40_45R.SLDPRT': False, 'Bevel_m2.5_N20_M30_S120.SLDPRT': False, 'Bevel_m2.5_N30_M20_S120.SLDPRT': False, 'Crossed_Slant_Layout.SLDPRT': False, 'Crossed_Slant.SLDASM': True}
+ok      r5: the assembly is marked after the build (a read after its save)
+ok      r5, right after the build and its saves: SolidWorks marks modified exactly ['Crossed_Slant.SLDASM']
+ok      r5 built: G1 meshes G2's sense on record -1 agrees with the kinematics (k > 0 True)
+ok      r5 built: G3 meshes G4's sense on record 1 agrees with the kinematics (k > 0 False)
+read    r5 built: G1 meshes G2: Reverse True; entity 1 along G1 τ +1, direction (0.0, 0.0, 1.0) through (0.0, 0.0, 1.086961) mm; entity 2 along G2 τ +1, direction (1.0, 0.0, 0.0) through (-8.933214, 84.852814, 8.0) mm; k > 0 True; rule H right True, τ (1, 1); the app right True, τ (1, 1); turned axes ((0.0, 0.0, 1.0), (1.0, 0.0, 0.0))
+ok      r5 built: the app reads G1 meshes G2 turning right (turned axes): (True, (1, 1))
+ok      r5 built: rule H on the raw read agrees with the app's own read of G1 meshes G2
+read    r5 built: G3 meshes G4: Reverse False; entity 1 along G3 τ +1, direction (1.0, 0.0, 0.0) through (-111.909407, 84.852814, 8.0) mm; entity 2 along G4 τ +1, direction (-0.5, 0.866025404, 0.0) through (-109.045297, 83.199219, 8.0) mm; k > 0 False; rule H right True, τ (1, 1); the app right True, τ (1, 1); turned axes ((1.0, 0.0, 0.0), (-0.49999999999997347, 0.866025403784454, 0.0))
+ok      r5 built: the app reads G3 meshes G4 turning right (turned axes): (True, (1, 1))
+ok      r5 built: rule H on the raw read agrees with the app's own read of G3 meshes G4
+measure r5 built: SolidWorks 2.40 GB private, 5.72 GB free; turning True
+ok      r5 built: G1 (Helical_m2_N20_45R-1) at (0.0, 0.0, 2.0), origin off 0.0e+00 mm, turn off 0.0e+00° (exactly), axis off 0.0e+00
+ok      r5 built: G1's frame on record is the one the workbook wants
+ok      r5 built: G2 (Helical_m2_N40_45R-1) at (-8.0, 84.852814, 8.0), origin off 0.0e+00 mm, turn off 0.0e+00° (exactly), axis off 0.0e+00
+ok      r5 built: G2's frame on record is the one the workbook wants
+ok      r5 built: G3 (Bevel_m2.5_N20_M30_S120-1) at (-110.0, 84.852814, 8.0), origin off 0.0e+00 mm, turn off 0.0e+00° (exactly), axis off 0.0e+00
+ok      r5 built: G3's frame on record is the one the workbook wants
+ok      r5 built: G4 (Bevel_m2.5_N30_M20_S120-1) at (-110.0, 84.852814, 8.0), origin off 0.0e+00 mm, turn off 9.9e-16° (exactly), axis off 1.1e-16
+ok      r5 built: G4's frame on record is the one the workbook wants
+ok      r5 built: the layout (Crossed_Slant_Layout-1) is at identity
+        frames read in 0.1 s
+        Crossed_Slant_Layout.SLDPRT globals {'S2 Y': 84.852814, 'S2 Z': 8.0, 'Offset@S2 Y Plane': 84.852814, 'Offset@S2 Z Plane': 8.0}
+ok      r5 built: S1 Axis on S1's line through (0, 0, 0) (off 0.0e+00 mm), along (0.0, 0.0, 1.0), + its Axis Z+ (reads +Z)
+ok      r5 built: S2 Axis on S2's line through (0, 84.8528, 8) (off 0.0e+00 mm), along (-1.0, 0.0, 0.0), - its Axis X+
+fact    r5 built: S2 Axis reads against S2's Axis X+
+ok      r5 built: S3 Axis on S3's line through (-110, 84.8528, 8) (off 0.0e+00 mm), along (-0.5, 0.866025404, 0.0), + its Axis -0.5, 0.866025404, 0
+fact    r5 built: S3 Axis reads along S3's Axis -0.5, 0.866025404, 0
+ok      r5 built: no interference in Crossed_Slant.SLDASM: []
+        mates [('G1 on S1 Axis', 0, True, False), ('G1 along S1', 0, True, False), ('G2 on S2 Axis', 0, True, False), ('G2 along S2', 0, True, False), ('G3 locked to G2', 0, True, False), ('G4 on S3 Axis', 0, True, False), ('G4 along S3', 0, True, False), ('G1 meshes G2', 0, True, False), ('G3 meshes G4', 0, True, False)]; others []; constrained {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2}
+ok      r5 built: the mates are exactly the record's 9: extra [], missing []
+ok      r5 built: nothing but mates in the mate group: []
+ok      r5 built: every mate's error code is 0: []
+ok      r5 built: no mate suppressed: []
+ok      r5 built: every mated gear under-defined (2): {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2}
+DIALOG  SolidWorks shows 'Calculating Interference Detection': ['Cancel', 'Calculating Interference Detection'] (a progress box that closes itself; not logged again)
+ok      r5 built: G1 turned half a pitch (9.0000°): 4 interference(s), merged [(('G1', 'G2'), 235.692)], all between G1 and G2
+ok      r5 built: G1 put back, no interference (3.1 s)
+ok      r5 built: G4 turned half a pitch (6.0000°): 4 interference(s), merged [(('G3', 'G4'), 202.721)], all between G3 and G4
+ok      r5 built: G4 put back, no interference (3.1 s)
+ok      r5 built, after the controls: G1 (Helical_m2_N20_45R-1) at (0.0, 0.0, 2.0), origin off 0.0e+00 mm, turn off 0.0e+00° (exactly), axis off 0.0e+00
+ok      r5 built, after the controls: G1's frame on record is the one the workbook wants
+ok      r5 built, after the controls: G2 (Helical_m2_N40_45R-1) at (-8.0, 84.852814, 8.0), origin off 0.0e+00 mm, turn off 0.0e+00° (exactly), axis off 0.0e+00
+ok      r5 built, after the controls: G2's frame on record is the one the workbook wants
+ok      r5 built, after the controls: G3 (Bevel_m2.5_N20_M30_S120-1) at (-110.0, 84.852814, 8.0), origin off 0.0e+00 mm, turn off 0.0e+00° (exactly), axis off 0.0e+00
+ok      r5 built, after the controls: G3's frame on record is the one the workbook wants
+ok      r5 built, after the controls: G4 (Bevel_m2.5_N30_M20_S120-1) at (-110.0, 84.852814, 8.0), origin off 0.0e+00 mm, turn off 1.4e-15° (exactly), axis off 1.1e-16
+ok      r5 built, after the controls: G4's frame on record is the one the workbook wants
+ok      r5 built, after the controls: the layout (Crossed_Slant_Layout-1) is at identity
+        frames read in 0.2 s
+        mates [('G1 on S1 Axis', 0, True, False), ('G1 along S1', 0, True, False), ('G2 on S2 Axis', 0, True, False), ('G2 along S2', 0, True, False), ('G3 locked to G2', 0, True, False), ('G4 on S3 Axis', 0, True, False), ('G4 along S3', 0, True, False), ('G1 meshes G2', 0, True, False), ('G3 meshes G4', 0, True, False)]; others []; constrained {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2}
+ok      r5 built, after the controls: the mates are exactly the record's 9: extra [], missing []
+ok      r5 built, after the controls: nothing but mates in the mate group: []
+ok      r5 built, after the controls: every mate's error code is 0: []
+ok      r5 built, after the controls: no mate suppressed: []
+ok      r5 built, after the controls: every mated gear under-defined (2): {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2}
+drive   r5 built, control on G1 meshes G2: input G1; control ('G1', 'G2'); SolidWorks 2.40 GB private, 5.80 GB free
+ok      r5 built, control on G1 meshes G2: the drive's assumptions hold: G1 on S1 (0.0, 0.0, 1.0) at θ = 0, u₀ (1.0, 0.0, 0.0), its Top plane against the layout's Right (plane3); the input's turn ruled by DEMONSTRATION_DRIVE_SENSE 1 and measured; tolerance 1e-06 relative
+        in 15.7 s; rebuilds [('drive added', True), ('Drive 120', True), ('Drive 90', True), ('control added, Flip True', True), ('Drive 120', True), ('Drive 90', True), ('control added, Flip False', True), ('Drive 120', True), ('Drive 90', True), ('control gone', True), ('drive gone', True)]; drive mate ('Demonstration drive', 'D1', 1); control mate [(True, 'Control G1 meshes G2', 1), (False, 'Control G1 meshes G2', 1)]
+ok      r5 built, control on G1 meshes G2: the drive ran without a raise: []
+ok      r5 built, control on G1 meshes G2: every cleanup step ran: []
+ok      r5 built, control on G1 meshes G2: before the drive every gear stands at its frame on record (largest 1.1e-16 at G4)
+        states with the drive added: [('G1 on S1 Axis', 0, True, False), ('G1 along S1', 0, True, False), ('G2 on S2 Axis', 0, True, False), ('G2 along S2', 0, True, False), ('G3 locked to G2', 0, True, False), ('G4 on S3 Axis', 0, True, False), ('G4 along S3', 0, True, False), ('G1 meshes G2', 0, True, False), ('G3 meshes G4', 0, True, False), ('Demonstration drive', 0, True, False)]
+ok      r5 built, control on G1 meshes G2: adding the 90° drive moved nothing (largest 0.0e+00)
+fact    r5 built, control on G1 meshes G2: the input G1 turned +30.000000000° about its own +Z, measured (as DEMONSTRATION_DRIVE_SENSE says for a Z+ input)
+        Drive 90 -> 120: G1 +30.000000000° (kinematics +30.000000000°), G2 +15.000000000° (kinematics +15.000000000°), G3 +15.000000000° (kinematics +15.000000000°), G4 -10.000000000° (kinematics -10.000000000°)
+ok      r5 built, control on G1 meshes G2: G1 turned +30.000000000° for +30.000000000°, sign included (off 2.7e-13)
+ok      r5 built, control on G1 meshes G2: G2 turned +15.000000000° for +15.000000000°, sign included (off 1.4e-13)
+ok      r5 built, control on G1 meshes G2: G3 turned +15.000000000° for +15.000000000°, sign included (off 1.4e-13)
+ok      r5 built, control on G1 meshes G2: G4 turned -10.000000000° for -10.000000000°, sign included (off 1.0e-13)
+ok      r5 built, control on G1 meshes G2: driven, every gear stays on its axis and in its place: {'G1': ('0.0e+00', '0.0e+00'), 'G2': ('0.0e+00', '7.9e-17'), 'G3': ('7.1e-15', '7.5e-17'), 'G4': ('1.4e-14', '2.2e-16')}
+        states driven: [('G1 on S1 Axis', 0, True, False), ('G1 along S1', 0, True, False), ('G2 on S2 Axis', 0, True, False), ('G2 along S2', 0, True, False), ('G3 locked to G2', 0, True, False), ('G4 on S3 Axis', 0, True, False), ('G4 along S3', 0, True, False), ('G1 meshes G2', 0, True, False), ('G3 meshes G4', 0, True, False), ('Demonstration drive', 0, True, False)]
+ok      r5 built, control on G1 meshes G2: no mate in error while driven
+ok      r5 built, control on G1 meshes G2: Drive set back to 90, every gear at its built frame (largest 1.4e-14 at G2)
+ok      r5 built, control on G1 meshes G2, control: the gear mate with Flip True moved nothing when made (largest 1.4e-14)
+        control, Control G1 meshes G2 with Flip True: G1 +30.000000000° (kinematics +30.000000000°), G2 +15.000000000° (kinematics +15.000000000°), G3 +15.000000000° (kinematics +15.000000000°), G4 -10.000000000° (kinematics -10.000000000°)
+ok      r5 built, control on G1 meshes G2, control: G1, before the mesh, still turns +30.000000000° with Flip True (30.000000000000462)
+ok      r5 built, control on G1 meshes G2, control: Drive set back with Flip True's mate on: every gear at its built frame (largest 4.3e-14 at G4)
+ok      r5 built, control on G1 meshes G2, control: the gear mate with Flip False moved nothing when made (largest 4.3e-14)
+        control, Control G1 meshes G2 with Flip False: G1 +30.000000000° (kinematics +30.000000000°), G2 -15.000000000° (kinematics +15.000000000°), G3 -15.000000000° (kinematics +15.000000000°), G4 +10.000000000° (kinematics -10.000000000°)
+ok      r5 built, control on G1 meshes G2, control: G1, before the mesh, still turns +30.000000000° with Flip False (30.000000000000462)
+ok      r5 built, control on G1 meshes G2, control: Drive set back with Flip False's mate on: every gear at its built frame (largest 5.7e-14 at G4)
+ok      r5 built, control on G1 meshes G2, control: a wrong sense is seen: with Flip [False] G2 turns the mirror of the right turn, with Flip [True] it turns right (the comparison tells one from the other)
+fact    r5 built, control on G1 meshes G2: G1 meshes G2 turns right with Flip [True] here on SolidWorks 34.1.1 (findings.GEAR_MATE_FLIP False; turned axes)
+ok      r5 built, control on G1 meshes G2, control: the Flip that turns right, [True], is the one SolidWorks made G1 meshes G2 with ([True]: turned round); neither gear has moved since
+read    r5 built, control on G1 meshes G2, control with Flip True: Control G1 meshes G2: Reverse True; entity 1 along G1 τ +1, direction (0.0, 0.0, 1.0) through (0.0, 0.0, 1.086961) mm; entity 2 along G2 τ +1, direction (1.0, -0.0, -0.0) through (-8.933214, 84.852814, 8.0) mm; k > 0 True; rule H right True, τ (1, 1); the app right True, τ (1, 1); turned axes ((0.0, 0.0, 1.0), (1.0, 0.0, 0.0))
+ok      r5 built, control on G1 meshes G2, control: the app's read of the mate with Flip True says right True; the drive says True
+read    r5 built, control on G1 meshes G2, control with Flip False: Control G1 meshes G2: Reverse False; entity 1 along G1 τ +1, direction (0.0, 0.0, 1.0) through (0.0, 0.0, 1.086961) mm; entity 2 along G2 τ +1, direction (1.0, -0.0, -0.0) through (-8.933214, 84.852814, 8.0) mm; k > 0 True; rule H right False, τ (1, 1); the app right False, τ (1, 1); turned axes ((0.0, 0.0, 1.0), (1.0, 0.0, 0.0))
+ok      r5 built, control on G1 meshes G2, control: the app's read of the mate with Flip False says right False; the drive says False
+fact    r5 built, control on G1 meshes G2, control: driven 30° with Flip True (right): interference []
+ok      r5 built, control on G1 meshes G2, control: with the Flip that turns right (True) G1 meshes G2 runs clear: []
+fact    r5 built, control on G1 meshes G2, control: driven 30° with Flip False (wrong): interference [(('G1', 'G2'), 169.451131)]
+ok      r5 built, control on G1 meshes G2, control: with the wrong Flip (False) G1 and G2 clash, and nothing else: [(('G1', 'G2'), 169.451131)]
+ok      r5 built, control on G1 meshes G2, control: the control mates deleted and the recorded one back on: every gear at its built frame (largest 5.7e-14 at G4)
+ok      r5 built, control on G1 meshes G2: the drive gone, every frame against the built frames (largest 5.7e-14 at G4)
+ok      r5 built, control on G1 meshes G2: no Drive equation left: []
+ok      r5 built, control on G1 meshes G2: no angle mate or control mate left; the mates as before: ['G1 on S1 Axis', 'G1 along S1', 'G2 on S2 Axis', 'G2 along S2', 'G3 locked to G2', 'G4 on S3 Axis', 'G4 along S3', 'G1 meshes G2', 'G3 meshes G4']
+ok      r5 built, control on G1 meshes G2: no mate (no lock) left suppressed
+ok      r5 built, control on G1 meshes G2: no mate in error after the drive
+ok      r5 built, control on G1 meshes G2: every mated gear under-defined again: {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2}
+drive   r5 built, control on G3 meshes G4: input G1; control ('G3', 'G4'); SolidWorks 2.44 GB private, 5.88 GB free
+ok      r5 built, control on G3 meshes G4: the drive's assumptions hold: G1 on S1 (0.0, 0.0, 1.0) at θ = 0, u₀ (1.0, 0.0, 0.0), its Top plane against the layout's Right (plane3); the input's turn ruled by DEMONSTRATION_DRIVE_SENSE 1 and measured; tolerance 1e-06 relative
+        in 15.4 s; rebuilds [('drive added', True), ('Drive 120', True), ('Drive 90', True), ('control added, Flip True', True), ('Drive 120', True), ('Drive 90', True), ('control added, Flip False', True), ('Drive 120', True), ('Drive 90', True), ('control gone', True), ('drive gone', True)]; drive mate ('Demonstration drive', 'D1', 1); control mate [(True, 'Control G3 meshes G4', 1), (False, 'Control G3 meshes G4', 1)]
+ok      r5 built, control on G3 meshes G4: the drive ran without a raise: []
+ok      r5 built, control on G3 meshes G4: every cleanup step ran: []
+ok      r5 built, control on G3 meshes G4: before the drive every gear stands at its frame on record (largest 5.7e-14 at G4)
+        states with the drive added: [('G1 on S1 Axis', 0, True, False), ('G1 along S1', 0, True, False), ('G2 on S2 Axis', 0, True, False), ('G2 along S2', 0, True, False), ('G3 locked to G2', 0, True, False), ('G4 on S3 Axis', 0, True, False), ('G4 along S3', 0, True, False), ('G1 meshes G2', 0, True, False), ('G3 meshes G4', 0, True, False), ('Demonstration drive', 0, True, False)]
+ok      r5 built, control on G3 meshes G4: adding the 90° drive moved nothing (largest 0.0e+00)
+fact    r5 built, control on G3 meshes G4: the input G1 turned +30.000000000° about its own +Z, measured (as DEMONSTRATION_DRIVE_SENSE says for a Z+ input)
+        Drive 90 -> 120: G1 +30.000000000° (kinematics +30.000000000°), G2 +15.000000000° (kinematics +15.000000000°), G3 +15.000000000° (kinematics +15.000000000°), G4 -10.000000000° (kinematics -10.000000000°)
+ok      r5 built, control on G3 meshes G4: G1 turned +30.000000000° for +30.000000000°, sign included (off 4.6e-13)
+ok      r5 built, control on G3 meshes G4: G2 turned +15.000000000° for +15.000000000°, sign included (off 1.4e-13)
+ok      r5 built, control on G3 meshes G4: G3 turned +15.000000000° for +15.000000000°, sign included (off 1.4e-13)
+ok      r5 built, control on G3 meshes G4: G4 turned -10.000000000° for -10.000000000°, sign included (off 1.0e-13)
+ok      r5 built, control on G3 meshes G4: driven, every gear stays on its axis and in its place: {'G1': ('0.0e+00', '0.0e+00'), 'G2': ('3.6e-15', '7.9e-17'), 'G3': ('7.1e-15', '2.2e-16'), 'G4': ('8.5e-14', '2.2e-16')}
+        states driven: [('G1 on S1 Axis', 0, True, False), ('G1 along S1', 0, True, False), ('G2 on S2 Axis', 0, True, False), ('G2 along S2', 0, True, False), ('G3 locked to G2', 0, True, False), ('G4 on S3 Axis', 0, True, False), ('G4 along S3', 0, True, False), ('G1 meshes G2', 0, True, False), ('G3 meshes G4', 0, True, False), ('Demonstration drive', 0, True, False)]
+ok      r5 built, control on G3 meshes G4: no mate in error while driven
+ok      r5 built, control on G3 meshes G4: Drive set back to 90, every gear at its built frame (largest 2.8e-14 at G4)
+ok      r5 built, control on G3 meshes G4, control: the gear mate with Flip True moved nothing when made (largest 2.8e-14)
+        control, Control G3 meshes G4 with Flip True: G1 +30.000000000° (kinematics +30.000000000°), G2 +15.000000000° (kinematics +15.000000000°), G3 +15.000000000° (kinematics +15.000000000°), G4 -10.000000000° (kinematics -10.000000000°)
+ok      r5 built, control on G3 meshes G4, control: G3, before the mesh, still turns +15.000000000° with Flip True (15.000000000000135)
+ok      r5 built, control on G3 meshes G4, control: Drive set back with Flip True's mate on: every gear at its built frame (largest 4.3e-14 at G4)
+ok      r5 built, control on G3 meshes G4, control: the gear mate with Flip False moved nothing when made (largest 4.3e-14)
+        control, Control G3 meshes G4 with Flip False: G1 +30.000000000° (kinematics +30.000000000°), G2 +15.000000000° (kinematics +15.000000000°), G3 +15.000000000° (kinematics +15.000000000°), G4 +10.000000000° (kinematics -10.000000000°)
+ok      r5 built, control on G3 meshes G4, control: G3, before the mesh, still turns +15.000000000° with Flip False (15.000000000000135)
+ok      r5 built, control on G3 meshes G4, control: Drive set back with Flip False's mate on: every gear at its built frame (largest 7.1e-14 at G4)
+ok      r5 built, control on G3 meshes G4, control: a wrong sense is seen: with Flip [False] G4 turns the mirror of the right turn, with Flip [True] it turns right (the comparison tells one from the other)
+fact    r5 built, control on G3 meshes G4: G3 meshes G4 turns right with Flip [True] here on SolidWorks 34.1.1 (findings.GEAR_MATE_FLIP False; turned axes)
+ok      r5 built, control on G3 meshes G4, control: the Flip that turns right, [True], is the one SolidWorks made G3 meshes G4 with ([True]: turned round); neither gear has moved since
+read    r5 built, control on G3 meshes G4, control with Flip True: Control G3 meshes G4: Reverse False; entity 1 along G3 τ +1, direction (1.0, 0.0, 0.0) through (-111.909407, 84.852814, 8.0) mm; entity 2 along G4 τ +1, direction (-0.5, 0.866025404, 0.0) through (-109.045297, 83.199219, 8.0) mm; k > 0 False; rule H right True, τ (1, 1); the app right True, τ (1, 1); turned axes ((1.0, 0.0, 0.0), (-0.49999999999997347, 0.866025403784454, 0.0))
+ok      r5 built, control on G3 meshes G4, control: the app's read of the mate with Flip True says right True; the drive says True
+read    r5 built, control on G3 meshes G4, control with Flip False: Control G3 meshes G4: Reverse True; entity 1 along G3 τ +1, direction (1.0, 0.0, 0.0) through (-111.909407, 84.852814, 8.0) mm; entity 2 along G4 τ +1, direction (-0.5, 0.866025404, -0.0) through (-109.045297, 83.199219, 8.0) mm; k > 0 False; rule H right False, τ (1, 1); the app right False, τ (1, 1); turned axes ((1.0, 0.0, 0.0), (-0.49999999999997347, 0.866025403784454, 0.0))
+ok      r5 built, control on G3 meshes G4, control: the app's read of the mate with Flip False says right False; the drive says False
+fact    r5 built, control on G3 meshes G4, control: driven 30° with Flip True (right): interference []
+ok      r5 built, control on G3 meshes G4, control: with the Flip that turns right (True) G3 meshes G4 runs clear: []
+fact    r5 built, control on G3 meshes G4, control: driven 30° with Flip False (wrong): interference [(('G3', 'G4'), 141.751732)]
+ok      r5 built, control on G3 meshes G4, control: with the wrong Flip (False) G3 and G4 clash, and nothing else: [(('G3', 'G4'), 141.751732)]
+ok      r5 built, control on G3 meshes G4, control: the control mates deleted and the recorded one back on: every gear at its built frame (largest 7.1e-14 at G4)
+ok      r5 built, control on G3 meshes G4: the drive gone, every frame against the built frames (largest 7.1e-14 at G4)
+ok      r5 built, control on G3 meshes G4: no Drive equation left: []
+ok      r5 built, control on G3 meshes G4: no angle mate or control mate left; the mates as before: ['G1 on S1 Axis', 'G1 along S1', 'G2 on S2 Axis', 'G2 along S2', 'G3 locked to G2', 'G4 on S3 Axis', 'G4 along S3', 'G1 meshes G2', 'G3 meshes G4']
+ok      r5 built, control on G3 meshes G4: no mate (no lock) left suppressed
+ok      r5 built, control on G3 meshes G4: no mate in error after the drive
+ok      r5 built, control on G3 meshes G4: every mated gear under-defined again: {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2}
+person  saved in SolidWorks (r5 quiet Update: before the press, so any mark after it is the press's own): [('Helical_m2_N20_45R.SLDPRT', True), ('Helical_m2_N40_45R.SLDPRT', True), ('Bevel_m2.5_N20_M30_S120.SLDPRT', True), ('Bevel_m2.5_N30_M20_S120.SLDPRT', True), ('Crossed_Slant_Layout.SLDPRT', True), ('Crossed_Slant.SLDASM', True)]
+classify parts changed []; moved []; re-place []; structural []; missing []; unsaved []; refusal ''; turning True; axial []; ratios []
+        layout globals wanted ['S2 Y = 84.852814', 'S2 Z = 8']
+summary SolidWorks already matches the workbook on record; Update SolidWorks checks it live and puts right anything changed there; gears turned in SolidWorks stay where they are unless something must move.
+update  SolidWorks 2.44 GB private, 5.91 GB free
+        update  Helical_m2_N20_45R.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Helical_m2_N40_45R.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Bevel_m2.5_N20_M30_S120.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Bevel_m2.5_N30_M20_S120.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Crossed_Slant_Layout.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        ok      every gear is where the workbook puts it
+        mate    G1 on S1 Axis
+        mate    G1 along S1
+        mate    G2 on S2 Axis
+        mate    G2 along S2
+        mate    G3 locked to G2
+        mate    G4 on S3 Axis
+        mate    G4 along S3
+        mate    G1 meshes G2
+        mate    G3 meshes G4
+        nothing changed in SolidWorks
+        in 7.0 s; SolidWorks 2.42 GB private, 5.92 GB free
+        steps [('check', 'Helical_m2_N20_45R', 1, 6), ('check', 'Helical_m2_N40_45R', 2, 6), ('check', 'Bevel_m2.5_N20_M30_S120', 3, 6), ('check', 'Bevel_m2.5_N30_M20_S120', 4, 6), ('check', 'Crossed_Slant_Layout', 5, 6), ('check', 'Crossed_Slant', 6, 6), ('place', 'Crossed_Slant', 0, 0)]
+        loaded from disk []
+        motion: turned False; out of step []; off axis []; restored []; unsuppressed []; axial []; ratios []; extra mates []; ratios found [], already [], read []; sense found wrong [], turned round []
+        train_check residuals (rad) [('G1', 'G2', '1.94e-16'), ('G3', 'G4', '1.73e-17'), ('G2', 'G3', '1.94e-16')]
+        finish: dragged []; earlier update ''
+ok      the Update's check phase found no gear mate turning against its mesh: []
+record  0 sidecar(s) written; record written; notes []
+status  [green] SolidWorks already matches the workbook: nothing was changed.
+ok      r5 quiet Update: nothing to do: placed [], changed [], ratios [], resensed [], sense found wrong []
+ok      r5 quiet Update: read from SolidWorks, every gear stands where it stood before the press (largest 0.0e+00 at -)
+fact    r5 quiet Update: GetSaveFlag before the press {'Helical_m2_N20_45R.SLDPRT': False, 'Helical_m2_N40_45R.SLDPRT': False, 'Bevel_m2.5_N20_M30_S120.SLDPRT': False, 'Bevel_m2.5_N30_M20_S120.SLDPRT': False, 'Crossed_Slant_Layout.SLDPRT': False, 'Crossed_Slant.SLDASM': False}, after it {'Helical_m2_N20_45R.SLDPRT': False, 'Helical_m2_N40_45R.SLDPRT': False, 'Bevel_m2.5_N20_M30_S120.SLDPRT': False, 'Bevel_m2.5_N30_M20_S120.SLDPRT': False, 'Crossed_Slant_Layout.SLDPRT': False, 'Crossed_Slant.SLDASM': False}
+ok      r5 quiet Update: every document reads GetSaveFlag False before and after an Update that changed nothing (GEAR_MATE_DEFINITION_READ_MARKS 'nothing'): marked before [], after []
+footer  (r5 quiet Update, after the press) [green] SolidWorks already matches the workbook: nothing was changed.
+        button 'Build again…' on; Update SolidWorks shown on primary
+ok      r5 built: saved and closed this run's documents: left []
+        open now: []
+DIALOG  SolidWorks shows 'Opening': ['Close', 'Opening Component 2 of 5', 'Update\nAssembly', 'Update\nGraphics', 'Opening File: C:\\Use...Bevel_m2.5_N20_M30_S120.SLDPRT', 'Elapsed time: 0s', 'This file was last opened in 1 seconds.', 'For more information, view: '] (a progress box that closes itself; not logged again)
+ok      r5 built, reopened: every document just opened from its file reads GetSaveFlag False (the record clears a mark on that reading): {'Crossed_Slant_Layout.SLDPRT': False, 'Helical_m2_N20_45R.SLDPRT': False, 'Helical_m2_N40_45R.SLDPRT': False, 'Bevel_m2.5_N20_M30_S120.SLDPRT': False, 'Bevel_m2.5_N30_M20_S120.SLDPRT': False, 'Crossed_Slant.SLDASM': False}
+ok      r5 built, reopened: G1 (Helical_m2_N20_45R-1) at (0.0, 0.0, 2.0), origin off 0.0e+00 mm, turn off 0.0e+00° (exactly), axis off 0.0e+00
+ok      r5 built, reopened: G1's frame on record is the one the workbook wants
+ok      r5 built, reopened: G2 (Helical_m2_N40_45R-1) at (-8.0, 84.852814, 8.0), origin off 7.1e-14 mm, turn off 1.1e-14° (exactly), axis off 2.8e-32
+ok      r5 built, reopened: G2's frame on record is the one the workbook wants
+ok      r5 built, reopened: G3 (Bevel_m2.5_N20_M30_S120-1) at (-110.0, 84.852814, 8.0), origin off 8.5e-14 mm, turn off 0.0e+00° (exactly), axis off 1.1e-16
+ok      r5 built, reopened: G3's frame on record is the one the workbook wants
+ok      r5 built, reopened: G4 (Bevel_m2.5_N30_M20_S120-1) at (-110.0, 84.852814, 8.0), origin off 1.3e-13 mm, turn off 1.4e-15° (exactly), axis off 1.7e-16
+ok      r5 built, reopened: G4's frame on record is the one the workbook wants
+ok      r5 built, reopened: the layout (Crossed_Slant_Layout-1) is at identity
+        frames read in 0.1 s
+fact    r5 built, reopened: marked modified after the frame reads (component_frame): []
+        mates [('G1 on S1 Axis', 0, True, False), ('G1 along S1', 0, True, False), ('G2 on S2 Axis', 0, True, False), ('G2 along S2', 0, True, False), ('G3 locked to G2', 0, True, False), ('G4 on S3 Axis', 0, True, False), ('G4 along S3', 0, True, False), ('G1 meshes G2', 0, True, False), ('G3 meshes G4', 0, True, False)]; others []; constrained {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2}
+ok      r5 built, reopened: the mates are exactly the record's 9: extra [], missing []
+ok      r5 built, reopened: nothing but mates in the mate group: []
+ok      r5 built, reopened: every mate's error code is 0: []
+ok      r5 built, reopened: no mate suppressed: []
+ok      r5 built, reopened: every mated gear under-defined (2): {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2}
+fact    r5 built, reopened: marked modified after the mate reads (mate_states, GetConstrainedStatus): []
+fact    r5 built, reopened: marked modified after interferences() (0 found): ['Crossed_Slant.SLDASM']
+ok      r5 reopened: G1 meshes G2's sense on record -1 agrees with the kinematics (k > 0 True)
+ok      r5 reopened: G3 meshes G4's sense on record 1 agrees with the kinematics (k > 0 False)
+read    r5 reopened: G1 meshes G2: Reverse True; entity 1 along G1 τ +1, direction (0.0, 0.0, 1.0) through (0.0, 0.0, 1.086961) mm; entity 2 along G2 τ +1, direction (1.0, 0.0, 0.0) through (-8.933214, 84.852814, 8.0) mm; k > 0 True; rule H right True, τ (1, 1); the app right True, τ (1, 1); turned axes ((0.0, 0.0, 1.0), (1.0, 0.0, 0.0))
+ok      r5 reopened: the app reads G1 meshes G2 turning right (turned axes): (True, (1, 1))
+ok      r5 reopened: rule H on the raw read agrees with the app's own read of G1 meshes G2
+read    r5 reopened: G3 meshes G4: Reverse False; entity 1 along G3 τ +1, direction (1.0, 0.0, -0.0) through (-111.909407, 84.852814, 8.0) mm; entity 2 along G4 τ +1, direction (-0.5, 0.866025404, 0.0) through (-109.045297, 83.199219, 8.0) mm; k > 0 False; rule H right True, τ (1, 1); the app right True, τ (1, 1); turned axes ((1.0, 0.0, 0.0), (-0.49999999999997347, 0.866025403784454, 0.0))
+ok      r5 reopened: the app reads G3 meshes G4 turning right (turned axes): (True, (1, 1))
+ok      r5 reopened: rule H on the raw read agrees with the app's own read of G3 meshes G4
+drive   r5 reopened, control on G1 meshes G2: input G1; control ('G1', 'G2'); SolidWorks 2.02 GB private, 5.98 GB free
+ok      r5 reopened, control on G1 meshes G2: the drive's assumptions hold: G1 on S1 (0.0, 0.0, 1.0) at θ = 0, u₀ (1.0, 0.0, 0.0), its Top plane against the layout's Right (plane3); the input's turn ruled by DEMONSTRATION_DRIVE_SENSE 1 and measured; tolerance 1e-06 relative
+        in 14.8 s; rebuilds [('drive added', True), ('Drive 120', True), ('Drive 90', True), ('control added, Flip True', True), ('Drive 120', True), ('Drive 90', True), ('control added, Flip False', True), ('Drive 120', True), ('Drive 90', True), ('control gone', True), ('drive gone', True)]; drive mate ('Demonstration drive', 'D1', 1); control mate [(True, 'Control G1 meshes G2', 1), (False, 'Control G1 meshes G2', 1)]
+ok      r5 reopened, control on G1 meshes G2: the drive ran without a raise: []
+ok      r5 reopened, control on G1 meshes G2: every cleanup step ran: []
+ok      r5 reopened, control on G1 meshes G2: before the drive every gear stands at its frame on record (largest 1.3e-13 at G4)
+        states with the drive added: [('G1 on S1 Axis', 0, True, False), ('G1 along S1', 0, True, False), ('G2 on S2 Axis', 0, True, False), ('G2 along S2', 0, True, False), ('G3 locked to G2', 0, True, False), ('G4 on S3 Axis', 0, True, False), ('G4 along S3', 0, True, False), ('G1 meshes G2', 0, True, False), ('G3 meshes G4', 0, True, False), ('Demonstration drive', 0, True, False)]
+ok      r5 reopened, control on G1 meshes G2: adding the 90° drive moved nothing (largest 0.0e+00)
+fact    r5 reopened, control on G1 meshes G2: the input G1 turned +30.000000000° about its own +Z, measured (as DEMONSTRATION_DRIVE_SENSE says for a Z+ input)
+        Drive 90 -> 120: G1 +30.000000000° (kinematics +30.000000000°), G2 +15.000000000° (kinematics +15.000000000°), G3 +15.000000000° (kinematics +15.000000000°), G4 -10.000000000° (kinematics -10.000000000°)
+ok      r5 reopened, control on G1 meshes G2: G1 turned +30.000000000° for +30.000000000°, sign included (off 2.7e-13)
+ok      r5 reopened, control on G1 meshes G2: G2 turned +15.000000000° for +15.000000000°, sign included (off 1.4e-13)
+ok      r5 reopened, control on G1 meshes G2: G3 turned +15.000000000° for +15.000000000°, sign included (off 1.4e-13)
+ok      r5 reopened, control on G1 meshes G2: G4 turned -10.000000000° for -10.000000000°, sign included (off 9.9e-14)
+ok      r5 reopened, control on G1 meshes G2: driven, every gear stays on its axis and in its place: {'G1': ('0.0e+00', '0.0e+00'), 'G2': ('0.0e+00', '7.9e-17'), 'G3': ('9.8e-15', '2.2e-16'), 'G4': ('1.4e-14', '5.4e-17')}
+        states driven: [('G1 on S1 Axis', 0, True, False), ('G1 along S1', 0, True, False), ('G2 on S2 Axis', 0, True, False), ('G2 along S2', 0, True, False), ('G3 locked to G2', 0, True, False), ('G4 on S3 Axis', 0, True, False), ('G4 along S3', 0, True, False), ('G1 meshes G2', 0, True, False), ('G3 meshes G4', 0, True, False), ('Demonstration drive', 0, True, False)]
+ok      r5 reopened, control on G1 meshes G2: no mate in error while driven
+ok      r5 reopened, control on G1 meshes G2: Drive set back to 90, every gear at its built frame (largest 1.4e-14 at G2)
+ok      r5 reopened, control on G1 meshes G2, control: the gear mate with Flip True moved nothing when made (largest 1.4e-14)
+        control, Control G1 meshes G2 with Flip True: G1 +30.000000000° (kinematics +30.000000000°), G2 +15.000000000° (kinematics +15.000000000°), G3 +15.000000000° (kinematics +15.000000000°), G4 -10.000000000° (kinematics -10.000000000°)
+ok      r5 reopened, control on G1 meshes G2, control: G1, before the mesh, still turns +30.000000000° with Flip True (30.000000000000462)
+ok      r5 reopened, control on G1 meshes G2, control: Drive set back with Flip True's mate on: every gear at its built frame (largest 4.3e-14 at G2)
+ok      r5 reopened, control on G1 meshes G2, control: the gear mate with Flip False moved nothing when made (largest 4.3e-14)
+        control, Control G1 meshes G2 with Flip False: G1 +30.000000000° (kinematics +30.000000000°), G2 -15.000000000° (kinematics +15.000000000°), G3 -15.000000000° (kinematics +15.000000000°), G4 +10.000000000° (kinematics -10.000000000°)
+ok      r5 reopened, control on G1 meshes G2, control: G1, before the mesh, still turns +30.000000000° with Flip False (30.000000000000462)
+ok      r5 reopened, control on G1 meshes G2, control: Drive set back with Flip False's mate on: every gear at its built frame (largest 7.1e-14 at G4)
+ok      r5 reopened, control on G1 meshes G2, control: a wrong sense is seen: with Flip [False] G2 turns the mirror of the right turn, with Flip [True] it turns right (the comparison tells one from the other)
+fact    r5 reopened, control on G1 meshes G2: G1 meshes G2 turns right with Flip [True] here on SolidWorks 34.1.1 (findings.GEAR_MATE_FLIP False; turned axes)
+ok      r5 reopened, control on G1 meshes G2, control: the Flip that turns right, [True], is the one SolidWorks made G1 meshes G2 with ([True]: turned round); neither gear has moved since
+read    r5 reopened, control on G1 meshes G2, control with Flip True: Control G1 meshes G2: Reverse True; entity 1 along G1 τ +1, direction (0.0, 0.0, 1.0) through (0.0, 0.0, 1.086961) mm; entity 2 along G2 τ +1, direction (1.0, 0.0, 0.0) through (-8.933214, 84.852814, 8.0) mm; k > 0 True; rule H right True, τ (1, 1); the app right True, τ (1, 1); turned axes ((0.0, 0.0, 1.0), (1.0, 0.0, 0.0))
+ok      r5 reopened, control on G1 meshes G2, control: the app's read of the mate with Flip True says right True; the drive says True
+read    r5 reopened, control on G1 meshes G2, control with Flip False: Control G1 meshes G2: Reverse False; entity 1 along G1 τ +1, direction (0.0, 0.0, 1.0) through (0.0, 0.0, 1.086961) mm; entity 2 along G2 τ +1, direction (1.0, 0.0, 0.0) through (-8.933214, 84.852814, 8.0) mm; k > 0 True; rule H right False, τ (1, 1); the app right False, τ (1, 1); turned axes ((0.0, 0.0, 1.0), (1.0, 0.0, 0.0))
+ok      r5 reopened, control on G1 meshes G2, control: the app's read of the mate with Flip False says right False; the drive says False
+fact    r5 reopened, control on G1 meshes G2, control: driven 30° with Flip True (right): interference []
+ok      r5 reopened, control on G1 meshes G2, control: with the Flip that turns right (True) G1 meshes G2 runs clear: []
+fact    r5 reopened, control on G1 meshes G2, control: driven 30° with Flip False (wrong): interference [(('G1', 'G2'), 169.451364)]
+ok      r5 reopened, control on G1 meshes G2, control: with the wrong Flip (False) G1 and G2 clash, and nothing else: [(('G1', 'G2'), 169.451364)]
+ok      r5 reopened, control on G1 meshes G2, control: the control mates deleted and the recorded one back on: every gear at its built frame (largest 7.1e-14 at G4)
+ok      r5 reopened, control on G1 meshes G2: the drive gone, every frame against the built frames (largest 7.1e-14 at G4)
+ok      r5 reopened, control on G1 meshes G2: no Drive equation left: []
+ok      r5 reopened, control on G1 meshes G2: no angle mate or control mate left; the mates as before: ['G1 on S1 Axis', 'G1 along S1', 'G2 on S2 Axis', 'G2 along S2', 'G3 locked to G2', 'G4 on S3 Axis', 'G4 along S3', 'G1 meshes G2', 'G3 meshes G4']
+ok      r5 reopened, control on G1 meshes G2: no mate (no lock) left suppressed
+ok      r5 reopened, control on G1 meshes G2: no mate in error after the drive
+ok      r5 reopened, control on G1 meshes G2: every mated gear under-defined again: {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2}
+drive   r5 reopened, control on G3 meshes G4: input G1; control ('G3', 'G4'); SolidWorks 2.06 GB private, 6.07 GB free
+ok      r5 reopened, control on G3 meshes G4: the drive's assumptions hold: G1 on S1 (0.0, 0.0, 1.0) at θ = 0, u₀ (1.0, 0.0, 0.0), its Top plane against the layout's Right (plane3); the input's turn ruled by DEMONSTRATION_DRIVE_SENSE 1 and measured; tolerance 1e-06 relative
+        in 14.8 s; rebuilds [('drive added', True), ('Drive 120', True), ('Drive 90', True), ('control added, Flip True', True), ('Drive 120', True), ('Drive 90', True), ('control added, Flip False', True), ('Drive 120', True), ('Drive 90', True), ('control gone', True), ('drive gone', True)]; drive mate ('Demonstration drive', 'D1', 1); control mate [(True, 'Control G3 meshes G4', 1), (False, 'Control G3 meshes G4', 1)]
+ok      r5 reopened, control on G3 meshes G4: the drive ran without a raise: []
+ok      r5 reopened, control on G3 meshes G4: every cleanup step ran: []
+ok      r5 reopened, control on G3 meshes G4: before the drive every gear stands at its frame on record (largest 2.0e-13 at G4)
+        states with the drive added: [('G1 on S1 Axis', 0, True, False), ('G1 along S1', 0, True, False), ('G2 on S2 Axis', 0, True, False), ('G2 along S2', 0, True, False), ('G3 locked to G2', 0, True, False), ('G4 on S3 Axis', 0, True, False), ('G4 along S3', 0, True, False), ('G1 meshes G2', 0, True, False), ('G3 meshes G4', 0, True, False), ('Demonstration drive', 0, True, False)]
+ok      r5 reopened, control on G3 meshes G4: adding the 90° drive moved nothing (largest 0.0e+00)
+fact    r5 reopened, control on G3 meshes G4: the input G1 turned +30.000000000° about its own +Z, measured (as DEMONSTRATION_DRIVE_SENSE says for a Z+ input)
+        Drive 90 -> 120: G1 +30.000000000° (kinematics +30.000000000°), G2 +15.000000000° (kinematics +15.000000000°), G3 +15.000000000° (kinematics +15.000000000°), G4 -10.000000000° (kinematics -10.000000000°)
+ok      r5 reopened, control on G3 meshes G4: G1 turned +30.000000000° for +30.000000000°, sign included (off 4.6e-13)
+ok      r5 reopened, control on G3 meshes G4: G2 turned +15.000000000° for +15.000000000°, sign included (off 1.4e-13)
+ok      r5 reopened, control on G3 meshes G4: G3 turned +15.000000000° for +15.000000000°, sign included (off 1.4e-13)
+ok      r5 reopened, control on G3 meshes G4: G4 turned -10.000000000° for -10.000000000°, sign included (off 9.9e-14)
+ok      r5 reopened, control on G3 meshes G4: driven, every gear stays on its axis and in its place: {'G1': ('0.0e+00', '0.0e+00'), 'G2': ('3.6e-15', '7.9e-17'), 'G3': ('7.1e-15', '1.1e-16'), 'G4': ('1.1e-13', '2.2e-16')}
+        states driven: [('G1 on S1 Axis', 0, True, False), ('G1 along S1', 0, True, False), ('G2 on S2 Axis', 0, True, False), ('G2 along S2', 0, True, False), ('G3 locked to G2', 0, True, False), ('G4 on S3 Axis', 0, True, False), ('G4 along S3', 0, True, False), ('G1 meshes G2', 0, True, False), ('G3 meshes G4', 0, True, False), ('Demonstration drive', 0, True, False)]
+ok      r5 reopened, control on G3 meshes G4: no mate in error while driven
+ok      r5 reopened, control on G3 meshes G4: Drive set back to 90, every gear at its built frame (largest 4.3e-14 at G4)
+ok      r5 reopened, control on G3 meshes G4, control: the gear mate with Flip True moved nothing when made (largest 4.3e-14)
+        control, Control G3 meshes G4 with Flip True: G1 +30.000000000° (kinematics +30.000000000°), G2 +15.000000000° (kinematics +15.000000000°), G3 +15.000000000° (kinematics +15.000000000°), G4 -10.000000000° (kinematics -10.000000000°)
+ok      r5 reopened, control on G3 meshes G4, control: G3, before the mesh, still turns +15.000000000° with Flip True (15.000000000000135)
+ok      r5 reopened, control on G3 meshes G4, control: Drive set back with Flip True's mate on: every gear at its built frame (largest 7.1e-14 at G4)
+ok      r5 reopened, control on G3 meshes G4, control: the gear mate with Flip False moved nothing when made (largest 7.1e-14)
+        control, Control G3 meshes G4 with Flip False: G1 +30.000000000° (kinematics +30.000000000°), G2 +15.000000000° (kinematics +15.000000000°), G3 +15.000000000° (kinematics +15.000000000°), G4 +10.000000000° (kinematics -10.000000000°)
+ok      r5 reopened, control on G3 meshes G4, control: G3, before the mesh, still turns +15.000000000° with Flip False (15.000000000000135)
+ok      r5 reopened, control on G3 meshes G4, control: Drive set back with Flip False's mate on: every gear at its built frame (largest 8.5e-14 at G2)
+ok      r5 reopened, control on G3 meshes G4, control: a wrong sense is seen: with Flip [False] G4 turns the mirror of the right turn, with Flip [True] it turns right (the comparison tells one from the other)
+fact    r5 reopened, control on G3 meshes G4: G3 meshes G4 turns right with Flip [True] here on SolidWorks 34.1.1 (findings.GEAR_MATE_FLIP False; turned axes)
+ok      r5 reopened, control on G3 meshes G4, control: the Flip that turns right, [True], is the one SolidWorks made G3 meshes G4 with ([True]: turned round); neither gear has moved since
+read    r5 reopened, control on G3 meshes G4, control with Flip True: Control G3 meshes G4: Reverse False; entity 1 along G3 τ +1, direction (1.0, 0.0, 0.0) through (-111.909407, 84.852814, 8.0) mm; entity 2 along G4 τ +1, direction (-0.5, 0.866025404, 0.0) through (-109.045297, 83.199219, 8.0) mm; k > 0 False; rule H right True, τ (1, 1); the app right True, τ (1, 1); turned axes ((1.0, 0.0, 0.0), (-0.49999999999997347, 0.866025403784454, 0.0))
+ok      r5 reopened, control on G3 meshes G4, control: the app's read of the mate with Flip True says right True; the drive says True
+read    r5 reopened, control on G3 meshes G4, control with Flip False: Control G3 meshes G4: Reverse True; entity 1 along G3 τ +1, direction (1.0, 0.0, 0.0) through (-111.909407, 84.852814, 8.0) mm; entity 2 along G4 τ +1, direction (-0.5, 0.866025404, 0.0) through (-109.045297, 83.199219, 8.0) mm; k > 0 False; rule H right False, τ (1, 1); the app right False, τ (1, 1); turned axes ((1.0, 0.0, 0.0), (-0.49999999999997347, 0.866025403784454, 0.0))
+ok      r5 reopened, control on G3 meshes G4, control: the app's read of the mate with Flip False says right False; the drive says False
+fact    r5 reopened, control on G3 meshes G4, control: driven 30° with Flip True (right): interference []
+ok      r5 reopened, control on G3 meshes G4, control: with the Flip that turns right (True) G3 meshes G4 runs clear: []
+fact    r5 reopened, control on G3 meshes G4, control: driven 30° with Flip False (wrong): interference [(('G3', 'G4'), 141.751732)]
+ok      r5 reopened, control on G3 meshes G4, control: with the wrong Flip (False) G3 and G4 clash, and nothing else: [(('G3', 'G4'), 141.751732)]
+ok      r5 reopened, control on G3 meshes G4, control: the control mates deleted and the recorded one back on: every gear at its built frame (largest 8.5e-14 at G2)
+ok      r5 reopened, control on G3 meshes G4: the drive gone, every frame against the built frames (largest 8.5e-14 at G2)
+ok      r5 reopened, control on G3 meshes G4: no Drive equation left: []
+ok      r5 reopened, control on G3 meshes G4: no angle mate or control mate left; the mates as before: ['G1 on S1 Axis', 'G1 along S1', 'G2 on S2 Axis', 'G2 along S2', 'G3 locked to G2', 'G4 on S3 Axis', 'G4 along S3', 'G1 meshes G2', 'G3 meshes G4']
+ok      r5 reopened, control on G3 meshes G4: no mate (no lock) left suppressed
+ok      r5 reopened, control on G3 meshes G4: no mate in error after the drive
+ok      r5 reopened, control on G3 meshes G4: every mated gear under-defined again: {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2}
+fact    r5 (G2's front face on the minus side of Right): G1 along S1: plane 'front', coordinate 2, global 'G1 Face Z' = 2.0
+fact    r5 (G2's front face on the minus side of Right): G2 along S2: plane 'right', coordinate -8, global 'G2 Face X' = 8.0
+fact    r5 (G2's front face on the minus side of Right): G4 along S3: plane 'top', coordinate 84.8528, global 'G4 Apex Y' = 84.852814
+ok      r5, the builder's end: r5 ends clean: every document of it closed in SolidWorks (left []), Excel's workbook closed (['Crossed_Slant.xlsx']), no open document by a file name it holds ([])
+master  r5 renamed r5.master: it stays so for the rest of the run
+close   section r5: left of ours []; 282 s; SolidWorks 2.04 GB private, 6.08 GB free
+== r6  a copy of r5.master: G1 At 10 -> 11 by Update; G4 Teeth 30 -> 31 by Update (the 120° gear mate made again and read back); S3's direction changed (classify only); then the sense change of review M4 on the classify path, on fixture B's crossed stage alone
+copy    r5.master -> r6: 12 files, mtimes kept
+        Crossed_Slant.xlsx's record: 12 path(s) put onto the copy: ['record.workbook', 'record.parts[0].path', 'record.parts[1].path', 'record.parts[2].path', 'record.parts[3].path', 'record.assembly', 'record.gearbox.layout', 'record.gearbox.assembly', 'record.gearbox.components[0].part', 'record.gearbox.components[1].part', 'record.gearbox.components[2].part', 'record.gearbox.components[3].part']
+        Bevel_m2.5_N20_M30_S120.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Bevel_m2.5_N30_M20_S120.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Helical_m2_N20_45R.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Helical_m2_N40_45R.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+ok      r6: the copy's record is valid: owner ('ours', ''); left on the master []; missing in the copy []; clear_saved dropped nothing (unsaved, mismatched ([], [])); the read's digest equals the record's
+probe   W6-PLAN §7.1: Crossed_Slant.SLDASM of r6, whose stored references name a folder that is gone, opened under the dialog watch (120 s at most)
+fact    r6: the copy's assembly opened in 3.7 s; marked modified straight after the open: {'Crossed_Slant_Layout.SLDPRT': False, 'Helical_m2_N20_45R.SLDPRT': False, 'Helical_m2_N40_45R.SLDPRT': False, 'Bevel_m2.5_N20_M30_S120.SLDPRT': False, 'Bevel_m2.5_N30_M20_S120.SLDPRT': False, 'Crossed_Slant.SLDASM': False}
+fact    W6-PLAN §7.1: dialogs while the copied assembly opened: none
+ok      r6: SolidWorks found all 5 components and the layout in the copy, and the copy closed without saving (left []): elsewhere none
+ok      Excel opened Crossed_Slant.xlsx with no dialog or repair: []
+ok      read Crossed_Slant.xlsx: ok
+        warning Gears!Q2: G1: The involute starts at 53.849 mm, above the form diameter of 53.14 mm, so the bottom of the working flank is a straight line.
+        warning Gears!L2: G1: A helix angle of 45° is outside the usual 8–30° for a helical gear.
+        warning Gears!Q3: G2: The involute starts at 110.417 mm, above the form diameter of 109.413 mm, so the bottom of the working flank is a straight line.
+        warning Gears!L3: G2: A helix angle of 45° is outside the usual 8–30° for a helical gear.
+        warning Gears!F4: G3: The tooth tip is 0.664 mm thick, under 0.3 × module (0.75 mm).
+        warning Gears!Q4: G3: The involute starts at 64.97 mm, above the form diameter of 62.668 mm, so the bottom of the working flank is a straight line.
+        3 shafts · 4 gears · 2 meshes; gate ''
+ok      r6: the copy reads as built from this workbook, its gearbox in the copy: r6
+classify parts changed []; moved []; re-place []; structural []; missing []; unsaved []; refusal ''; turning True; axial []; ratios []
+        layout globals wanted ['S2 Y = 84.852814', 'S2 Z = 8']
+summary SolidWorks already matches the workbook on record; Update SolidWorks checks it live and puts right anything changed there; gears turned in SolidWorks stay where they are unless something must move.
+footer  (r6, the copy read) [green] SolidWorks already matches the workbook on record; Update SolidWorks checks it live and puts right anything changed there; gears turned in SolidWorks stay where they are unless something must move. It was built with its gears mated to turn: drag G1 in SolidWorks and the rest of its train follow.
+        button 'Build again…' on; Update SolidWorks shown on primary
+-- r6  Excel: G1 At 10 -> 11 ("G1 Face Z" 2 -> 3; G2's phase follows G1's helix at the contact)
+excel   Gears!C2 := 11
+excel   saved Crossed_Slant.xlsx
+poll    a new read 0.0 s after asking; changes:
+          Gears!C2 G1 At 10 → 11
+ok      read Crossed_Slant.xlsx: ok
+        warning Gears!Q2: G1: The involute starts at 53.849 mm, above the form diameter of 53.14 mm, so the bottom of the working flank is a straight line.
+        warning Gears!L2: G1: A helix angle of 45° is outside the usual 8–30° for a helical gear.
+        warning Gears!Q3: G2: The involute starts at 110.417 mm, above the form diameter of 109.413 mm, so the bottom of the working flank is a straight line.
+        warning Gears!L3: G2: A helix angle of 45° is outside the usual 8–30° for a helical gear.
+        warning Gears!F4: G3: The tooth tip is 0.664 mm thick, under 0.3 × module (0.75 mm).
+        warning Gears!Q4: G3: The involute starts at 64.97 mm, above the form diameter of 62.668 mm, so the bottom of the working flank is a straight line.
+        3 shafts · 4 gears · 2 meshes; gate ''
+classify parts changed []; moved []; re-place ['G1', 'G2']; structural []; missing []; unsaved []; refusal ''; turning True; axial ['G1']; ratios []
+        layout globals wanted ['S2 Y = 84.852814', 'S2 Z = 8']
+summary Update SolidWorks will move G1 along S1, and re-place G1, G2, G3 and G4.
+ok      r6 G1 At: the kinematics give §5's turns for +30° of G1: G1 +30.000000000° (§5 +30.000000000°), G2 +15.000000000° (§5 +15.000000000°), G3 +15.000000000° (§5 +15.000000000°), G4 -10.000000000° (§5 -10.000000000°)
+update  SolidWorks 1.95 GB private, 5.98 GB free
+        update  Helical_m2_N20_45R.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Helical_m2_N40_45R.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Bevel_m2.5_N20_M30_S120.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Bevel_m2.5_N30_M20_S120.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Crossed_Slant_Layout.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        ok      re-placed G1, G2, G3, G4
+        ok      moved along their shafts: G1
+        mate    G1 on S1 Axis
+        mate    G1 along S1
+        mate    G2 on S2 Axis
+        mate    G2 along S2
+        mate    G3 locked to G2
+        mate    G4 on S3 Axis
+        mate    G4 along S3
+        mate    G1 meshes G2
+        mate    G3 meshes G4
+        ok      assembly rebuilt once
+        ok      no interference between the gears
+        not saved: Crossed_Slant.SLDASM changed in SolidWorks; save there to keep it
+        in 20.8 s; SolidWorks 2.41 GB private, 5.75 GB free
+        steps [('check', 'Helical_m2_N20_45R', 1, 6), ('check', 'Helical_m2_N40_45R', 2, 6), ('check', 'Bevel_m2.5_N20_M30_S120', 3, 6), ('check', 'Bevel_m2.5_N30_M20_S120', 4, 6), ('check', 'Crossed_Slant_Layout', 5, 6), ('check', 'Crossed_Slant', 6, 6), ('place', 'Crossed_Slant', 0, 0), ('interference', 'Crossed_Slant', 0, 0)]
+        loaded from disk ['Helical_m2_N20_45R.SLDPRT', 'Helical_m2_N40_45R.SLDPRT', 'Bevel_m2.5_N20_M30_S120.SLDPRT', 'Bevel_m2.5_N30_M20_S120.SLDPRT', 'Crossed_Slant_Layout.SLDPRT', 'Crossed_Slant.SLDASM']
+        motion: turned False; out of step []; off axis []; restored []; unsuppressed []; axial ['G1']; ratios []; extra mates []; ratios found [], already [], read []; sense found wrong [], turned round []
+        train_check residuals (rad) [('G1', 'G2', '1.94e-16'), ('G3', 'G4', '1.73e-17'), ('G2', 'G3', '1.94e-16')]
+        finish: dragged []; earlier update ''
+ok      the Update's check phase found no gear mate turning against its mesh: []
+record  0 sidecar(s) written; record written; notes []
+status  [green] Updated SolidWorks: moved G1 along S1, re-placed G1, G2, G3 and G4; no interference between the gears where they stand. Save Crossed_Slant in SolidWorks to keep it.
+ok      r6: "G1 Face Z" set and every gear put: axial ['G1'], placed ['G1', 'G2', 'G3', 'G4'], ratios []
+        marked modified in SolidWorks right after the update: {'Helical_m2_N20_45R.SLDPRT': False, 'Helical_m2_N40_45R.SLDPRT': False, 'Bevel_m2.5_N20_M30_S120.SLDPRT': False, 'Bevel_m2.5_N30_M20_S120.SLDPRT': False, 'Crossed_Slant_Layout.SLDPRT': False, 'Crossed_Slant.SLDASM': True}
+ok      r6 G1 At: SolidWorks marks modified exactly ['Crossed_Slant.SLDASM']
+ok      r6: the assembly's "G1 Face Z" reads 3: {'G1 Face Z': 3.0, 'G2 Face X': 8.0, 'G4 Apex Y': 84.852814, 'D1@G1 along S1': 3.0, 'D1@G2 along S2': 8.0, 'D1@G4 along S3': 84.852814}
+ok      r6 G1 At: G1 (Helical_m2_N20_45R-1) at (0.0, 0.0, 3.0), origin off 0.0e+00 mm, turn off 0.0e+00° (exactly), axis off 0.0e+00
+ok      r6 G1 At: G1's frame on record is the one the workbook wants
+ok      r6 G1 At: G2 (Helical_m2_N40_45R-1) at (-8.0, 84.852814, 8.0), origin off 7.1e-14 mm, turn off 1.6e-15° (exactly), axis off 1.4e-32
+ok      r6 G1 At: G2's frame on record is the one the workbook wants
+ok      r6 G1 At: G3 (Bevel_m2.5_N20_M30_S120-1) at (-110.0, 84.852814, 8.0), origin off 8.5e-14 mm, turn off 0.0e+00° (exactly), axis off 1.1e-16
+ok      r6 G1 At: G3's frame on record is the one the workbook wants
+ok      r6 G1 At: G4 (Bevel_m2.5_N30_M20_S120-1) at (-110.0, 84.852814, 8.0), origin off 1.3e-13 mm, turn off 1.4e-15° (exactly), axis off 1.7e-16
+ok      r6 G1 At: G4's frame on record is the one the workbook wants
+ok      r6 G1 At: the layout (Crossed_Slant_Layout-1) is at identity
+        frames read in 0.1 s
+        mates [('G1 on S1 Axis', 0, True, False), ('G1 along S1', 0, True, False), ('G2 on S2 Axis', 0, True, False), ('G2 along S2', 0, True, False), ('G3 locked to G2', 0, True, False), ('G4 on S3 Axis', 0, True, False), ('G4 along S3', 0, True, False), ('G1 meshes G2', 0, True, False), ('G3 meshes G4', 0, True, False)]; others []; constrained {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2}
+ok      r6 G1 At: the mates are exactly the record's 9: extra [], missing []
+ok      r6 G1 At: nothing but mates in the mate group: []
+ok      r6 G1 At: every mate's error code is 0: []
+ok      r6 G1 At: no mate suppressed: []
+ok      r6 G1 At: every mated gear under-defined (2): {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2}
+ok      r6 G1 At: no interference in Crossed_Slant.SLDASM: []
+ok      r6 G1 At: G1 turned half a pitch (9.0000°): 4 interference(s), merged [(('G1', 'G2'), 232.085)], all between G1 and G2
+ok      r6 G1 At: G1 put back, no interference (3.1 s)
+ok      r6 G1 At: G4 turned half a pitch (6.0000°): 4 interference(s), merged [(('G3', 'G4'), 202.721)], all between G3 and G4
+ok      r6 G1 At: G4 put back, no interference (3.0 s)
+ok      r6 G1 At, after the controls: G1 (Helical_m2_N20_45R-1) at (0.0, 0.0, 3.0), origin off 0.0e+00 mm, turn off 0.0e+00° (exactly), axis off 0.0e+00
+ok      r6 G1 At, after the controls: G1's frame on record is the one the workbook wants
+ok      r6 G1 At, after the controls: G2 (Helical_m2_N40_45R-1) at (-8.0, 84.852814, 8.0), origin off 7.1e-14 mm, turn off 1.6e-15° (exactly), axis off 1.4e-32
+ok      r6 G1 At, after the controls: G2's frame on record is the one the workbook wants
+ok      r6 G1 At, after the controls: G3 (Bevel_m2.5_N20_M30_S120-1) at (-110.0, 84.852814, 8.0), origin off 8.5e-14 mm, turn off 0.0e+00° (exactly), axis off 1.1e-16
+ok      r6 G1 At, after the controls: G3's frame on record is the one the workbook wants
+ok      r6 G1 At, after the controls: G4 (Bevel_m2.5_N30_M20_S120-1) at (-110.0, 84.852814, 8.0), origin off 1.3e-13 mm, turn off 3.8e-15° (exactly), axis off 2.2e-16
+ok      r6 G1 At, after the controls: G4's frame on record is the one the workbook wants
+ok      r6 G1 At, after the controls: the layout (Crossed_Slant_Layout-1) is at identity
+        frames read in 0.2 s
+        mates [('G1 on S1 Axis', 0, True, False), ('G1 along S1', 0, True, False), ('G2 on S2 Axis', 0, True, False), ('G2 along S2', 0, True, False), ('G3 locked to G2', 0, True, False), ('G4 on S3 Axis', 0, True, False), ('G4 along S3', 0, True, False), ('G1 meshes G2', 0, True, False), ('G3 meshes G4', 0, True, False)]; others []; constrained {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2}
+ok      r6 G1 At, after the controls: the mates are exactly the record's 9: extra [], missing []
+ok      r6 G1 At, after the controls: nothing but mates in the mate group: []
+ok      r6 G1 At, after the controls: every mate's error code is 0: []
+ok      r6 G1 At, after the controls: no mate suppressed: []
+ok      r6 G1 At, after the controls: every mated gear under-defined (2): {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2}
+drive   r6 G1 At: input G1; control None; SolidWorks 2.44 GB private, 5.75 GB free
+ok      r6 G1 At: the drive's assumptions hold: G1 on S1 (0.0, 0.0, 1.0) at θ = 0, u₀ (1.0, 0.0, 0.0), its Top plane against the layout's Right (plane3); the input's turn ruled by DEMONSTRATION_DRIVE_SENSE 1 and measured; tolerance 1e-06 relative
+        in 4.8 s; rebuilds [('drive added', True), ('Drive 120', True), ('Drive 90', True), ('drive gone', True)]; drive mate ('Demonstration drive', 'D1', 1); control mate None
+ok      r6 G1 At: the drive ran without a raise: []
+ok      r6 G1 At: every cleanup step ran: []
+ok      r6 G1 At: before the drive every gear stands at its frame on record (largest 1.3e-13 at G4)
+        states with the drive added: [('G1 on S1 Axis', 0, True, False), ('G1 along S1', 0, True, False), ('G2 on S2 Axis', 0, True, False), ('G2 along S2', 0, True, False), ('G3 locked to G2', 0, True, False), ('G4 on S3 Axis', 0, True, False), ('G4 along S3', 0, True, False), ('G1 meshes G2', 0, True, False), ('G3 meshes G4', 0, True, False), ('Demonstration drive', 0, True, False)]
+ok      r6 G1 At: adding the 90° drive moved nothing (largest 0.0e+00)
+fact    r6 G1 At: the input G1 turned +30.000000000° about its own +Z, measured (as DEMONSTRATION_DRIVE_SENSE says for a Z+ input)
+        Drive 90 -> 120: G1 +30.000000000° (kinematics +30.000000000°), G2 +15.000000000° (kinematics +15.000000000°), G3 +15.000000000° (kinematics +15.000000000°), G4 -10.000000000° (kinematics -10.000000000°)
+ok      r6 G1 At: G1 turned +30.000000000° for +30.000000000°, sign included (off 2.7e-13)
+ok      r6 G1 At: G2 turned +15.000000000° for +15.000000000°, sign included (off 1.4e-13)
+ok      r6 G1 At: G3 turned +15.000000000° for +15.000000000°, sign included (off 1.4e-13)
+ok      r6 G1 At: G4 turned -10.000000000° for -10.000000000°, sign included (off 1.0e-13)
+ok      r6 G1 At: driven, every gear stays on its axis and in its place: {'G1': ('0.0e+00', '0.0e+00'), 'G2': ('0.0e+00', '8.0e-17'), 'G3': ('9.8e-15', '2.2e-16'), 'G4': ('1.4e-14', '1.1e-16')}
+        states driven: [('G1 on S1 Axis', 0, True, False), ('G1 along S1', 0, True, False), ('G2 on S2 Axis', 0, True, False), ('G2 along S2', 0, True, False), ('G3 locked to G2', 0, True, False), ('G4 on S3 Axis', 0, True, False), ('G4 along S3', 0, True, False), ('G1 meshes G2', 0, True, False), ('G3 meshes G4', 0, True, False), ('Demonstration drive', 0, True, False)]
+ok      r6 G1 At: no mate in error while driven
+ok      r6 G1 At: Drive set back to 90, every gear at its built frame (largest 1.4e-14 at G2)
+ok      r6 G1 At: the drive gone, every frame against the built frames (largest 1.4e-14 at G2)
+ok      r6 G1 At: no Drive equation left: []
+ok      r6 G1 At: no angle mate or control mate left; the mates as before: ['G1 on S1 Axis', 'G1 along S1', 'G2 on S2 Axis', 'G2 along S2', 'G3 locked to G2', 'G4 on S3 Axis', 'G4 along S3', 'G1 meshes G2', 'G3 meshes G4']
+ok      r6 G1 At: no mate (no lock) left suppressed
+ok      r6 G1 At: no mate in error after the drive
+ok      r6 G1 At: every mated gear under-defined again: {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2}
+person  saved in SolidWorks (after G1 At): [('Helical_m2_N20_45R.SLDPRT', True), ('Helical_m2_N40_45R.SLDPRT', True), ('Bevel_m2.5_N20_M30_S120.SLDPRT', True), ('Bevel_m2.5_N30_M20_S120.SLDPRT', True), ('Crossed_Slant_Layout.SLDPRT', True), ('Crossed_Slant.SLDASM', True)]
+-- r6 G4 31: Excel [('Gears!F5', 31)] -> Update: G3 meshes G4 made again at its new ratio
+excel   Gears!F5 := 31
+excel   saved Crossed_Slant.xlsx
+poll    a new read 0.0 s after asking; changes:
+          Gears!F5 G4 Teeth 30 → 31
+ok      read Crossed_Slant.xlsx: ok
+        warning Gears!Q2: G1: The involute starts at 53.849 mm, above the form diameter of 53.14 mm, so the bottom of the working flank is a straight line.
+        warning Gears!L2: G1: A helix angle of 45° is outside the usual 8–30° for a helical gear.
+        warning Gears!Q3: G2: The involute starts at 110.417 mm, above the form diameter of 109.413 mm, so the bottom of the working flank is a straight line.
+        warning Gears!L3: G2: A helix angle of 45° is outside the usual 8–30° for a helical gear.
+        warning Gears!F4: G3: The tooth tip is 0.638 mm thick, under 0.3 × module (0.75 mm).
+        warning Gears!Q4: G3: The involute starts at 63.705 mm, above the form diameter of 61.37 mm, so the bottom of the working flank is a straight line.
+        3 shafts · 4 gears · 2 meshes; gate ''
+classify parts changed ['Bevel_m2.5_N20_M30_S120.SLDPRT', 'Bevel_m2.5_N30_M20_S120.SLDPRT']; moved []; re-place ['G4']; structural []; missing []; unsaved []; refusal ''; turning True; axial []; ratios ['G3 meshes G4']
+        layout globals wanted ['S2 Y = 84.852814', 'S2 Z = 8']
+summary Update SolidWorks will change the values in Bevel_m2.5_N20_M30_S120 (G3) and Bevel_m2.5_N30_M20_S120 (G4), set the gear mate G3 meshes G4 to 20 : 31, and re-place G1, G2, G3 and G4.
+footer  (r6 G4 31, after the edit) [green] Update SolidWorks will change the values in Bevel_m2.5_N20_M30_S120 (G3) and Bevel_m2.5_N30_M20_S120 (G4), set the gear mate G3 meshes G4 to 20 : 31, and re-place G1, G2, G3 and G4. It was built with its gears mated to turn: drag G1 in SolidWorks and the rest of its train follow.
+        button 'Build again…' on; Update SolidWorks shown on primary
+ok      classify: an Update remaking G3 meshes G4 alone: ratios ['G3 meshes G4'], resensed []
+ok      r6 G4 31: the kinematics give §5's turns for +30° of G1: G1 +30.000000000° (§5 +30.000000000°), G2 +15.000000000° (§5 +15.000000000°), G3 +15.000000000° (§5 +15.000000000°), G4 -9.677419355° (§5 -9.677419355°)
+update  SolidWorks 2.42 GB private, 5.71 GB free
+        update  Helical_m2_N20_45R.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Helical_m2_N40_45R.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Bevel_m2.5_N20_M30_S120.SLDPRT · trig degrees
+        ok      set "Mate Teeth"
+        ok      rebuilt once
+        update  Bevel_m2.5_N30_M20_S120.SLDPRT · trig degrees
+        ok      set "No. of Teeth"
+        ok      rebuilt once
+        update  Crossed_Slant_Layout.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        ok      re-placed G1, G2, G3, G4
+        ok      given their new ratio: G3 meshes G4
+        ok      made again with the other Flip: G3 meshes G4
+        mate    G1 on S1 Axis
+        mate    G1 along S1
+        mate    G2 on S2 Axis
+        mate    G2 along S2
+        mate    G3 locked to G2
+        mate    G4 on S3 Axis
+        mate    G4 along S3
+        mate    G1 meshes G2
+        mate    G3 meshes G4
+        ok      assembly rebuilt once
+        ok      no interference between the gears
+        not saved: Bevel_m2.5_N20_M30_S120.SLDPRT, Bevel_m2.5_N30_M20_S120.SLDPRT, Crossed_Slant.SLDASM changed in SolidWorks; save there to keep it
+        in 25.3 s; SolidWorks 2.42 GB private, 5.66 GB free
+        steps [('check', 'Helical_m2_N20_45R', 1, 6), ('check', 'Helical_m2_N40_45R', 2, 6), ('check', 'Bevel_m2.5_N20_M30_S120', 3, 6), ('check', 'Bevel_m2.5_N30_M20_S120', 4, 6), ('check', 'Crossed_Slant_Layout', 5, 6), ('check', 'Crossed_Slant', 6, 6), ('values', 'Bevel_m2.5_N20_M30_S120', 0, 0), ('values', 'Bevel_m2.5_N30_M20_S120', 0, 0), ('place', 'Crossed_Slant', 0, 0), ('interference', 'Crossed_Slant', 0, 0)]
+        loaded from disk []
+        motion: turned False; out of step []; off axis []; restored []; unsuppressed []; axial []; ratios ['G3 meshes G4']; extra mates []; ratios found [], already [], read [('G3 meshes G4', 20, 30, 20, 31)]; sense found wrong [], turned round ['G3 meshes G4']
+        train_check residuals (rad) [('G1', 'G2', '0.00e+00'), ('G3', 'G4', '0.00e+00'), ('G2', 'G3', '0.00e+00')]
+        finish: dragged []; earlier update ''
+ok      the Update's check phase found no gear mate turning against its mesh: []
+record  2 sidecar(s) written; record written; notes []
+status  [green] Updated SolidWorks: changed 1 variable in Bevel_m2.5_N20_M30_S120 (its file keeps its name, which no longer says what it holds), changed 1 variable in Bevel_m2.5_N30_M20_S120 (it now has 31 teeth; its file keeps its name), set the gear mate G3 meshes G4 to 20 : 31, re-placed G1, G2, G3 and G4; no interference between the gears where they stand. Save Bevel_m2.5_N20_M30_S120, Bevel_m2.5_N30_M20_S120 and Crossed_Slant in SolidWorks to keep them.
+fact    r6 G4 31: the remake: ratios ['G3 meshes G4'], read [('G3 meshes G4', 20, 30, 20, 31)], turned round ['G3 meshes G4'], sense found wrong [], resensed [], restored []
+ok      r6 G4 31: G3 meshes G4 made again at its new ratio, every gear put: ratios ['G3 meshes G4'], placed ['G1', 'G2', 'G3', 'G4']; 'Updated SolidWorks: changed 1 variable in Bevel_m2.5_N20_M30_S120 (its file keeps its name, which no longer says what it holds), changed 1 variable in Bevel_m2.5_N30_M20_S120 (it now has 31 teeth; its file keeps its name), set the gear mate G3 meshes G4 to 20 : 31, re-placed G1, G2, G3 and G4; no interference between the gears where they stand. Save Bevel_m2.5_N20_M30_S120, Bevel_m2.5_N30_M20_S120 and Crossed_Slant in SolidWorks to keep them.'
+        marked modified in SolidWorks right after the update: {'Helical_m2_N20_45R.SLDPRT': False, 'Helical_m2_N40_45R.SLDPRT': False, 'Bevel_m2.5_N20_M30_S120.SLDPRT': True, 'Bevel_m2.5_N30_M20_S120.SLDPRT': True, 'Crossed_Slant_Layout.SLDPRT': False, 'Crossed_Slant.SLDASM': True}
+ok      r6 G4 31: SolidWorks marks modified exactly ['Bevel_m2.5_N20_M30_S120.SLDPRT', 'Bevel_m2.5_N30_M20_S120.SLDPRT', 'Crossed_Slant.SLDASM']
+ok      r6 G4 31: G3's 'Mate Teeth' reads 31 in SolidWorks: 31.0
+ok      r6 G4 31: G4's 'Mate Teeth' reads 20 in SolidWorks: 20.0
+ok      r6 G4 31, remade: G1 meshes G2's sense on record -1 agrees with the kinematics (k > 0 True)
+ok      r6 G4 31, remade: G3 meshes G4's sense on record 1 agrees with the kinematics (k > 0 False)
+read    r6 G4 31, remade: G1 meshes G2: Reverse True; entity 1 along G1 τ +1, direction (0.0, 0.0, 1.0) through (0.0, 0.0, 2.086961) mm; entity 2 along G2 τ +1, direction (1.0, 0.0, 0.0) through (-8.933214, 84.852814, 8.0) mm; k > 0 True; rule H right True, τ (1, 1); the app right True, τ (1, 1); turned axes ((0.0, 0.0, 1.0), (1.0, 0.0, 0.0))
+ok      r6 G4 31, remade: the app reads G1 meshes G2 turning right (turned axes): (True, (1, 1))
+ok      r6 G4 31, remade: rule H on the raw read agrees with the app's own read of G1 meshes G2
+read    r6 G4 31, remade: G3 meshes G4: Reverse False; entity 1 along G3 τ +1, direction (1.0, 0.0, 0.0) through (-111.909407, 84.852814, 8.0) mm; entity 2 along G4 τ +1, direction (-0.5, 0.866025404, 0.0) through (-109.045297, 83.199219, 8.0) mm; k > 0 False; rule H right True, τ (1, 1); the app right True, τ (1, 1); turned axes ((1.0, 0.0, 0.0), (-0.49999999999997347, 0.866025403784454, 0.0))
+ok      r6 G4 31, remade: the app reads G3 meshes G4 turning right (turned axes): (True, (1, 1))
+ok      r6 G4 31, remade: rule H on the raw read agrees with the app's own read of G3 meshes G4
+ok      r6 G4 31: G1 (Helical_m2_N20_45R-1) at (0.0, 0.0, 3.0), origin off 0.0e+00 mm, turn off 0.0e+00° (exactly), axis off 0.0e+00
+ok      r6 G4 31: G1's frame on record is the one the workbook wants
+ok      r6 G4 31: G2 (Helical_m2_N40_45R-1) at (-8.0, 84.852814, 8.0), origin off 8.5e-14 mm, turn off 0.0e+00° (exactly), axis off 1.8e-32
+ok      r6 G4 31: G2's frame on record is the one the workbook wants
+ok      r6 G4 31: G3 (Bevel_m2.5_N20_M30_S120-1) at (-110.0, 84.852814, 8.0), origin off 9.9e-14 mm, turn off 2.8e-61° (exactly), axis off 8.0e-32
+ok      r6 G4 31: G3's frame on record is the one the workbook wants
+ok      r6 G4 31: G4 (Bevel_m2.5_N30_M20_S120-1) at (-110.0, 84.852814, 8.0), origin off 1.4e-13 mm, turn off 4.8e-15° (exactly), axis off 5.7e-17
+ok      r6 G4 31: G4's frame on record is the one the workbook wants
+ok      r6 G4 31: the layout (Crossed_Slant_Layout-1) is at identity
+        frames read in 0.1 s
+        mates [('G1 on S1 Axis', 0, True, False), ('G1 along S1', 0, True, False), ('G2 on S2 Axis', 0, True, False), ('G2 along S2', 0, True, False), ('G3 locked to G2', 0, True, False), ('G4 on S3 Axis', 0, True, False), ('G4 along S3', 0, True, False), ('G1 meshes G2', 0, True, False), ('G3 meshes G4', 0, True, False)]; others []; constrained {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2}
+ok      r6 G4 31: the mates are exactly the record's 9: extra [], missing []
+ok      r6 G4 31: nothing but mates in the mate group: []
+ok      r6 G4 31: every mate's error code is 0: []
+ok      r6 G4 31: no mate suppressed: []
+ok      r6 G4 31: every mated gear under-defined (2): {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2}
+DIALOG  SolidWorks shows 'Loading...': ['Cancel', 'Job description'] (a progress box that closes itself; not logged again)
+ok      r6 G4 31: no interference in Crossed_Slant.SLDASM: []
+ok      r6 G4 31: G1 turned half a pitch (9.0000°): 4 interference(s), merged [(('G1', 'G2'), 232.085)], all between G1 and G2
+ok      r6 G4 31: G1 put back, no interference (3.2 s)
+ok      r6 G4 31: G4 turned half a pitch (5.8065°): 4 interference(s), merged [(('G3', 'G4'), 203.803)], all between G3 and G4
+ok      r6 G4 31: G4 put back, no interference (3.0 s)
+ok      r6 G4 31, after the controls: G1 (Helical_m2_N20_45R-1) at (0.0, 0.0, 3.0), origin off 0.0e+00 mm, turn off 0.0e+00° (exactly), axis off 0.0e+00
+ok      r6 G4 31, after the controls: G1's frame on record is the one the workbook wants
+ok      r6 G4 31, after the controls: G2 (Helical_m2_N40_45R-1) at (-8.0, 84.852814, 8.0), origin off 8.5e-14 mm, turn off 0.0e+00° (exactly), axis off 1.8e-32
+ok      r6 G4 31, after the controls: G2's frame on record is the one the workbook wants
+ok      r6 G4 31, after the controls: G3 (Bevel_m2.5_N20_M30_S120-1) at (-110.0, 84.852814, 8.0), origin off 9.9e-14 mm, turn off 2.8e-61° (exactly), axis off 8.0e-32
+ok      r6 G4 31, after the controls: G3's frame on record is the one the workbook wants
+ok      r6 G4 31, after the controls: G4 (Bevel_m2.5_N30_M20_S120-1) at (-110.0, 84.852814, 8.0), origin off 1.4e-13 mm, turn off 2.8e-15° (exactly), axis off 2.2e-16
+ok      r6 G4 31, after the controls: G4's frame on record is the one the workbook wants
+ok      r6 G4 31, after the controls: the layout (Crossed_Slant_Layout-1) is at identity
+        frames read in 0.2 s
+        mates [('G1 on S1 Axis', 0, True, False), ('G1 along S1', 0, True, False), ('G2 on S2 Axis', 0, True, False), ('G2 along S2', 0, True, False), ('G3 locked to G2', 0, True, False), ('G4 on S3 Axis', 0, True, False), ('G4 along S3', 0, True, False), ('G1 meshes G2', 0, True, False), ('G3 meshes G4', 0, True, False)]; others []; constrained {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2}
+ok      r6 G4 31, after the controls: the mates are exactly the record's 9: extra [], missing []
+ok      r6 G4 31, after the controls: nothing but mates in the mate group: []
+ok      r6 G4 31, after the controls: every mate's error code is 0: []
+ok      r6 G4 31, after the controls: no mate suppressed: []
+ok      r6 G4 31, after the controls: every mated gear under-defined (2): {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2}
+drive   r6 G4 31, at the new ratio: input G1; control ('G3', 'G4'); SolidWorks 2.46 GB private, 5.69 GB free
+ok      r6 G4 31, at the new ratio: the drive's assumptions hold: G1 on S1 (0.0, 0.0, 1.0) at θ = 0, u₀ (1.0, 0.0, 0.0), its Top plane against the layout's Right (plane3); the input's turn ruled by DEMONSTRATION_DRIVE_SENSE 1 and measured; tolerance 1e-06 relative
+        in 14.4 s; rebuilds [('drive added', True), ('Drive 120', True), ('Drive 90', True), ('control added, Flip True', True), ('Drive 120', True), ('Drive 90', True), ('control added, Flip False', True), ('Drive 120', True), ('Drive 90', True), ('control gone', True), ('drive gone', True)]; drive mate ('Demonstration drive', 'D1', 1); control mate [(True, 'Control G3 meshes G4', 1), (False, 'Control G3 meshes G4', 1)]
+ok      r6 G4 31, at the new ratio: the drive ran without a raise: []
+ok      r6 G4 31, at the new ratio: every cleanup step ran: []
+ok      r6 G4 31, at the new ratio: before the drive every gear stands at its frame on record (largest 1.4e-13 at G4)
+        states with the drive added: [('G1 on S1 Axis', 0, True, False), ('G1 along S1', 0, True, False), ('G2 on S2 Axis', 0, True, False), ('G2 along S2', 0, True, False), ('G3 locked to G2', 0, True, False), ('G4 on S3 Axis', 0, True, False), ('G4 along S3', 0, True, False), ('G1 meshes G2', 0, True, False), ('G3 meshes G4', 0, True, False), ('Demonstration drive', 0, True, False)]
+ok      r6 G4 31, at the new ratio: adding the 90° drive moved nothing (largest 0.0e+00)
+fact    r6 G4 31, at the new ratio: the input G1 turned +30.000000000° about its own +Z, measured (as DEMONSTRATION_DRIVE_SENSE says for a Z+ input)
+        Drive 90 -> 120: G1 +30.000000000° (kinematics +30.000000000°), G2 +15.000000000° (kinematics +15.000000000°), G3 +15.000000000° (kinematics +15.000000000°), G4 -9.677419355° (kinematics -9.677419355°)
+ok      r6 G4 31, at the new ratio: G1 turned +30.000000000° for +30.000000000°, sign included (off 2.7e-13)
+ok      r6 G4 31, at the new ratio: G2 turned +15.000000000° for +15.000000000°, sign included (off 1.4e-13)
+ok      r6 G4 31, at the new ratio: G3 turned +15.000000000° for +15.000000000°, sign included (off 1.4e-13)
+ok      r6 G4 31, at the new ratio: G4 turned -9.677419355° for -9.677419355°, sign included (off 7.5e-14)
+ok      r6 G4 31, at the new ratio: driven, every gear stays on its axis and in its place: {'G1': ('0.0e+00', '0.0e+00'), 'G2': ('3.6e-15', '8.0e-17'), 'G3': ('7.1e-15', '7.5e-17'), 'G4': ('1.4e-14', '4.4e-16')}
+        states driven: [('G1 on S1 Axis', 0, True, False), ('G1 along S1', 0, True, False), ('G2 on S2 Axis', 0, True, False), ('G2 along S2', 0, True, False), ('G3 locked to G2', 0, True, False), ('G4 on S3 Axis', 0, True, False), ('G4 along S3', 0, True, False), ('G1 meshes G2', 0, True, False), ('G3 meshes G4', 0, True, False), ('Demonstration drive', 0, True, False)]
+ok      r6 G4 31, at the new ratio: no mate in error while driven
+ok      r6 G4 31, at the new ratio: Drive set back to 90, every gear at its built frame (largest 2.8e-14 at G2)
+ok      r6 G4 31, at the new ratio, control: the gear mate with Flip True moved nothing when made (largest 2.8e-14)
+        control, Control G3 meshes G4 with Flip True: G1 +30.000000000° (kinematics +30.000000000°), G2 +15.000000000° (kinematics +15.000000000°), G3 +15.000000000° (kinematics +15.000000000°), G4 -9.677419355° (kinematics -9.677419355°)
+ok      r6 G4 31, at the new ratio, control: G3, before the mesh, still turns +15.000000000° with Flip True (15.000000000000133)
+ok      r6 G4 31, at the new ratio, control: Drive set back with Flip True's mate on: every gear at its built frame (largest 4.3e-14 at G2)
+ok      r6 G4 31, at the new ratio, control: the gear mate with Flip False moved nothing when made (largest 4.3e-14)
+        control, Control G3 meshes G4 with Flip False: G1 +30.000000000° (kinematics +30.000000000°), G2 +15.000000000° (kinematics +15.000000000°), G3 +15.000000000° (kinematics +15.000000000°), G4 +9.677419355° (kinematics -9.677419355°)
+ok      r6 G4 31, at the new ratio, control: G3, before the mesh, still turns +15.000000000° with Flip False (15.000000000000133)
+ok      r6 G4 31, at the new ratio, control: Drive set back with Flip False's mate on: every gear at its built frame (largest 7.1e-14 at G4)
+ok      r6 G4 31, at the new ratio, control: a wrong sense is seen: with Flip [False] G4 turns the mirror of the right turn, with Flip [True] it turns right (the comparison tells one from the other)
+fact    r6 G4 31, at the new ratio: G3 meshes G4 turns right with Flip [True] here on SolidWorks 34.1.1 (findings.GEAR_MATE_FLIP False; turned axes)
+ok      r6 G4 31, at the new ratio, control: the Flip that turns right, [True], is the one SolidWorks made G3 meshes G4 with ([True]: turned round); neither gear has moved since
+read    r6 G4 31, at the new ratio, control with Flip True: Control G3 meshes G4: Reverse False; entity 1 along G3 τ +1, direction (1.0, 0.0, 0.0) through (-111.909407, 84.852814, 8.0) mm; entity 2 along G4 τ +1, direction (-0.5, 0.866025404, 0.0) through (-109.045297, 83.199219, 8.0) mm; k > 0 False; rule H right True, τ (1, 1); the app right True, τ (1, 1); turned axes ((1.0, 0.0, 0.0), (-0.49999999999997347, 0.866025403784454, 0.0))
+ok      r6 G4 31, at the new ratio, control: the app's read of the mate with Flip True says right True; the drive says True
+read    r6 G4 31, at the new ratio, control with Flip False: Control G3 meshes G4: Reverse True; entity 1 along G3 τ +1, direction (1.0, 0.0, 0.0) through (-111.909407, 84.852814, 8.0) mm; entity 2 along G4 τ +1, direction (-0.5, 0.866025404, -0.0) through (-109.045297, 83.199219, 8.0) mm; k > 0 False; rule H right False, τ (1, 1); the app right False, τ (1, 1); turned axes ((1.0, 0.0, 0.0), (-0.49999999999997347, 0.866025403784454, 0.0))
+ok      r6 G4 31, at the new ratio, control: the app's read of the mate with Flip False says right False; the drive says False
+fact    r6 G4 31, at the new ratio, control: driven 30° with Flip True (right): interference []
+ok      r6 G4 31, at the new ratio, control: with the Flip that turns right (True) G3 meshes G4 runs clear: []
+fact    r6 G4 31, at the new ratio, control: driven 30° with Flip False (wrong): interference [(('G3', 'G4'), 142.837453)]
+ok      r6 G4 31, at the new ratio, control: with the wrong Flip (False) G3 and G4 clash, and nothing else: [(('G3', 'G4'), 142.837453)]
+ok      r6 G4 31, at the new ratio, control: the control mates deleted and the recorded one back on: every gear at its built frame (largest 7.1e-14 at G4)
+ok      r6 G4 31, at the new ratio: the drive gone, every frame against the built frames (largest 7.1e-14 at G4)
+ok      r6 G4 31, at the new ratio: no Drive equation left: []
+ok      r6 G4 31, at the new ratio: no angle mate or control mate left; the mates as before: ['G1 on S1 Axis', 'G1 along S1', 'G2 on S2 Axis', 'G2 along S2', 'G3 locked to G2', 'G4 on S3 Axis', 'G4 along S3', 'G1 meshes G2', 'G3 meshes G4']
+ok      r6 G4 31, at the new ratio: no mate (no lock) left suppressed
+ok      r6 G4 31, at the new ratio: no mate in error after the drive
+ok      r6 G4 31, at the new ratio: every mated gear under-defined again: {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2}
+person  saved in SolidWorks (r6 G4 31, quiet Update: before the press, so any mark after it is the press's own): [('Helical_m2_N20_45R.SLDPRT', True), ('Helical_m2_N40_45R.SLDPRT', True), ('Bevel_m2.5_N20_M30_S120.SLDPRT', True), ('Bevel_m2.5_N30_M20_S120.SLDPRT', True), ('Crossed_Slant_Layout.SLDPRT', True), ('Crossed_Slant.SLDASM', True)]
+classify parts changed []; moved []; re-place []; structural []; missing []; unsaved []; refusal ''; turning True; axial []; ratios []
+        layout globals wanted ['S2 Y = 84.852814', 'S2 Z = 8']
+summary SolidWorks already matches the workbook on record; Update SolidWorks checks it live and puts right anything changed there; gears turned in SolidWorks stay where they are unless something must move.
+update  SolidWorks 2.46 GB private, 5.54 GB free
+        update  Helical_m2_N20_45R.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Helical_m2_N40_45R.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Bevel_m2.5_N20_M30_S120.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Bevel_m2.5_N30_M20_S120.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Crossed_Slant_Layout.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        ok      every gear is where the workbook puts it
+        mate    G1 on S1 Axis
+        mate    G1 along S1
+        mate    G2 on S2 Axis
+        mate    G2 along S2
+        mate    G3 locked to G2
+        mate    G4 on S3 Axis
+        mate    G4 along S3
+        mate    G1 meshes G2
+        mate    G3 meshes G4
+        nothing changed in SolidWorks
+        in 5.3 s; SolidWorks 2.44 GB private, 5.51 GB free
+        steps [('check', 'Helical_m2_N20_45R', 1, 6), ('check', 'Helical_m2_N40_45R', 2, 6), ('check', 'Bevel_m2.5_N20_M30_S120', 3, 6), ('check', 'Bevel_m2.5_N30_M20_S120', 4, 6), ('check', 'Crossed_Slant_Layout', 5, 6), ('check', 'Crossed_Slant', 6, 6), ('place', 'Crossed_Slant', 0, 0)]
+        loaded from disk []
+        motion: turned False; out of step []; off axis []; restored []; unsuppressed []; axial []; ratios []; extra mates []; ratios found [], already [], read []; sense found wrong [], turned round []
+        train_check residuals (rad) [('G1', 'G2', '2.78e-17'), ('G3', 'G4', '2.78e-17'), ('G2', 'G3', '2.78e-17')]
+        finish: dragged []; earlier update ''
+ok      the Update's check phase found no gear mate turning against its mesh: []
+record  0 sidecar(s) written; record written; notes []
+status  [green] SolidWorks already matches the workbook: nothing was changed.
+ok      r6 G4 31, quiet Update: nothing to do: placed [], changed [], ratios [], resensed [], sense found wrong []
+ok      r6 G4 31, quiet Update: read from SolidWorks, every gear stands where it stood before the press (largest 0.0e+00 at -)
+fact    r6 G4 31, quiet Update: GetSaveFlag before the press {'Helical_m2_N20_45R.SLDPRT': False, 'Helical_m2_N40_45R.SLDPRT': False, 'Bevel_m2.5_N20_M30_S120.SLDPRT': False, 'Bevel_m2.5_N30_M20_S120.SLDPRT': False, 'Crossed_Slant_Layout.SLDPRT': False, 'Crossed_Slant.SLDASM': False}, after it {'Helical_m2_N20_45R.SLDPRT': False, 'Helical_m2_N40_45R.SLDPRT': False, 'Bevel_m2.5_N20_M30_S120.SLDPRT': False, 'Bevel_m2.5_N30_M20_S120.SLDPRT': False, 'Crossed_Slant_Layout.SLDPRT': False, 'Crossed_Slant.SLDASM': False}
+ok      r6 G4 31, quiet Update: every document reads GetSaveFlag False before and after an Update that changed nothing (GEAR_MATE_DEFINITION_READ_MARKS 'nothing'): marked before [], after []
+footer  (r6 G4 31, quiet Update, after the press) [green] SolidWorks already matches the workbook: nothing was changed.
+        button 'Build again…' on; Update SolidWorks shown on primary
+ok      r6 G4 31: saved and closed this run's documents: left []
+        open now: []
+ok      r6 G4 31, reopened: every document just opened from its file reads GetSaveFlag False (the record clears a mark on that reading): {'Crossed_Slant_Layout.SLDPRT': False, 'Helical_m2_N20_45R.SLDPRT': False, 'Helical_m2_N40_45R.SLDPRT': False, 'Bevel_m2.5_N20_M30_S120.SLDPRT': False, 'Bevel_m2.5_N30_M20_S120.SLDPRT': False, 'Crossed_Slant.SLDASM': False}
+ok      r6 G4 31, reopened: G1 (Helical_m2_N20_45R-1) at (0.0, 0.0, 3.0), origin off 0.0e+00 mm, turn off 0.0e+00° (exactly), axis off 0.0e+00
+ok      r6 G4 31, reopened: G1's frame on record is the one the workbook wants
+ok      r6 G4 31, reopened: G2 (Helical_m2_N40_45R-1) at (-8.0, 84.852814, 8.0), origin off 1.4e-13 mm, turn off 1.6e-15° (exactly), axis off 4.9e-32
+ok      r6 G4 31, reopened: G2's frame on record is the one the workbook wants
+ok      r6 G4 31, reopened: G3 (Bevel_m2.5_N20_M30_S120-1) at (-110.0, 84.852814, 8.0), origin off 1.4e-13 mm, turn off 6.1e-61° (exactly), axis off 1.1e-31
+ok      r6 G4 31, reopened: G3's frame on record is the one the workbook wants
+ok      r6 G4 31, reopened: G4 (Bevel_m2.5_N30_M20_S120-1) at (-110.0, 84.852814, 8.0), origin off 1.1e-13 mm, turn off 2.2e-15° (exactly), axis off 4.4e-16
+ok      r6 G4 31, reopened: G4's frame on record is the one the workbook wants
+ok      r6 G4 31, reopened: the layout (Crossed_Slant_Layout-1) is at identity
+        frames read in 0.1 s
+fact    r6 G4 31, reopened: marked modified after the frame reads (component_frame): []
+        mates [('G1 on S1 Axis', 0, True, False), ('G1 along S1', 0, True, False), ('G2 on S2 Axis', 0, True, False), ('G2 along S2', 0, True, False), ('G3 locked to G2', 0, True, False), ('G4 on S3 Axis', 0, True, False), ('G4 along S3', 0, True, False), ('G1 meshes G2', 0, True, False), ('G3 meshes G4', 0, True, False)]; others []; constrained {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2}
+ok      r6 G4 31, reopened: the mates are exactly the record's 9: extra [], missing []
+ok      r6 G4 31, reopened: nothing but mates in the mate group: []
+ok      r6 G4 31, reopened: every mate's error code is 0: []
+ok      r6 G4 31, reopened: no mate suppressed: []
+ok      r6 G4 31, reopened: every mated gear under-defined (2): {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2}
+fact    r6 G4 31, reopened: marked modified after the mate reads (mate_states, GetConstrainedStatus): []
+fact    r6 G4 31, reopened: marked modified after interferences() (0 found): ['Crossed_Slant.SLDASM']
+ok      r6 G4 31, reopened: G1 meshes G2's sense on record -1 agrees with the kinematics (k > 0 True)
+ok      r6 G4 31, reopened: G3 meshes G4's sense on record 1 agrees with the kinematics (k > 0 False)
+read    r6 G4 31, reopened: G1 meshes G2: Reverse True; entity 1 along G1 τ +1, direction (0.0, 0.0, 1.0) through (0.0, 0.0, 2.086961) mm; entity 2 along G2 τ +1, direction (1.0, 0.0, 0.0) through (-8.933214, 84.852814, 8.0) mm; k > 0 True; rule H right True, τ (1, 1); the app right True, τ (1, 1); turned axes ((0.0, 0.0, 1.0), (1.0, 0.0, 0.0))
+ok      r6 G4 31, reopened: the app reads G1 meshes G2 turning right (turned axes): (True, (1, 1))
+ok      r6 G4 31, reopened: rule H on the raw read agrees with the app's own read of G1 meshes G2
+read    r6 G4 31, reopened: G3 meshes G4: Reverse False; entity 1 along G3 τ +1, direction (1.0, 0.0, 0.0) through (-111.909407, 84.852814, 8.0) mm; entity 2 along G4 τ +1, direction (-0.5, 0.866025404, -0.0) through (-109.045297, 83.199219, 8.0) mm; k > 0 False; rule H right True, τ (1, 1); the app right True, τ (1, 1); turned axes ((1.0, 0.0, 0.0), (-0.49999999999997347, 0.866025403784454, 0.0))
+ok      r6 G4 31, reopened: the app reads G3 meshes G4 turning right (turned axes): (True, (1, 1))
+ok      r6 G4 31, reopened: rule H on the raw read agrees with the app's own read of G3 meshes G4
+drive   r6 G4 31, reopened, at the new ratio: input G1; control None; SolidWorks 2.06 GB private, 5.63 GB free
+ok      r6 G4 31, reopened, at the new ratio: the drive's assumptions hold: G1 on S1 (0.0, 0.0, 1.0) at θ = 0, u₀ (1.0, 0.0, 0.0), its Top plane against the layout's Right (plane3); the input's turn ruled by DEMONSTRATION_DRIVE_SENSE 1 and measured; tolerance 1e-06 relative
+        in 4.5 s; rebuilds [('drive added', True), ('Drive 120', True), ('Drive 90', True), ('drive gone', True)]; drive mate ('Demonstration drive', 'D1', 1); control mate None
+ok      r6 G4 31, reopened, at the new ratio: the drive ran without a raise: []
+ok      r6 G4 31, reopened, at the new ratio: every cleanup step ran: []
+ok      r6 G4 31, reopened, at the new ratio: before the drive every gear stands at its frame on record (largest 1.4e-13 at G2)
+        states with the drive added: [('G1 on S1 Axis', 0, True, False), ('G1 along S1', 0, True, False), ('G2 on S2 Axis', 0, True, False), ('G2 along S2', 0, True, False), ('G3 locked to G2', 0, True, False), ('G4 on S3 Axis', 0, True, False), ('G4 along S3', 0, True, False), ('G1 meshes G2', 0, True, False), ('G3 meshes G4', 0, True, False), ('Demonstration drive', 0, True, False)]
+ok      r6 G4 31, reopened, at the new ratio: adding the 90° drive moved nothing (largest 0.0e+00)
+fact    r6 G4 31, reopened, at the new ratio: the input G1 turned +30.000000000° about its own +Z, measured (as DEMONSTRATION_DRIVE_SENSE says for a Z+ input)
+        Drive 90 -> 120: G1 +30.000000000° (kinematics +30.000000000°), G2 +15.000000000° (kinematics +15.000000000°), G3 +15.000000000° (kinematics +15.000000000°), G4 -9.677419355° (kinematics -9.677419355°)
+ok      r6 G4 31, reopened, at the new ratio: G1 turned +30.000000000° for +30.000000000°, sign included (off 2.7e-13)
+ok      r6 G4 31, reopened, at the new ratio: G2 turned +15.000000000° for +15.000000000°, sign included (off 1.4e-13)
+ok      r6 G4 31, reopened, at the new ratio: G3 turned +15.000000000° for +15.000000000°, sign included (off 1.4e-13)
+ok      r6 G4 31, reopened, at the new ratio: G4 turned -9.677419355° for -9.677419355°, sign included (off 1.2e-13)
+ok      r6 G4 31, reopened, at the new ratio: driven, every gear stays on its axis and in its place: {'G1': ('0.0e+00', '0.0e+00'), 'G2': ('3.6e-15', '8.0e-17'), 'G3': ('3.6e-15', '7.5e-17'), 'G4': ('1.8e-15', '4.4e-16')}
+        states driven: [('G1 on S1 Axis', 0, True, False), ('G1 along S1', 0, True, False), ('G2 on S2 Axis', 0, True, False), ('G2 along S2', 0, True, False), ('G3 locked to G2', 0, True, False), ('G4 on S3 Axis', 0, True, False), ('G4 along S3', 0, True, False), ('G1 meshes G2', 0, True, False), ('G3 meshes G4', 0, True, False), ('Demonstration drive', 0, True, False)]
+ok      r6 G4 31, reopened, at the new ratio: no mate in error while driven
+ok      r6 G4 31, reopened, at the new ratio: Drive set back to 90, every gear at its built frame (largest 4.3e-14 at G3)
+ok      r6 G4 31, reopened, at the new ratio: the drive gone, every frame against the built frames (largest 4.3e-14 at G3)
+ok      r6 G4 31, reopened, at the new ratio: no Drive equation left: []
+ok      r6 G4 31, reopened, at the new ratio: no angle mate or control mate left; the mates as before: ['G1 on S1 Axis', 'G1 along S1', 'G2 on S2 Axis', 'G2 along S2', 'G3 locked to G2', 'G4 on S3 Axis', 'G4 along S3', 'G1 meshes G2', 'G3 meshes G4']
+ok      r6 G4 31, reopened, at the new ratio: no mate (no lock) left suppressed
+ok      r6 G4 31, reopened, at the new ratio: no mate in error after the drive
+ok      r6 G4 31, reopened, at the new ratio: every mated gear under-defined again: {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2}
+-- r6  Excel: S3's Axis -1, 1.732050807569, 0 -> -1, 1.8, 0 (classify only: nothing is built)
+excel   Shafts!F4 := '-1, 1.8, 0'
+excel   saved Crossed_Slant.xlsx
+poll    a new read 0.0 s after asking; changes:
+          Shafts!F4 S3 Axis -1, 1.732050807569, 0 → -1, 1.8, 0
+ok      read Crossed_Slant.xlsx: ok
+        warning Gears!Q2: G1: The involute starts at 53.849 mm, above the form diameter of 53.14 mm, so the bottom of the working flank is a straight line.
+        warning Gears!L2: G1: A helix angle of 45° is outside the usual 8–30° for a helical gear.
+        warning Gears!Q3: G2: The involute starts at 110.417 mm, above the form diameter of 109.413 mm, so the bottom of the working flank is a straight line.
+        warning Gears!L3: G2: A helix angle of 45° is outside the usual 8–30° for a helical gear.
+        warning Gears!F4: G3: The tooth tip is 0.642 mm thick, under 0.3 × module (0.75 mm).
+        warning Gears!Q4: G3: The involute starts at 63.567 mm, above the form diameter of 61.262 mm, so the bottom of the working flank is a straight line.
+        3 shafts · 4 gears · 2 meshes; gate ''
+classify parts changed ['Bevel_m2.5_N20_M30_S120.SLDPRT', 'Bevel_m2.5_N30_M20_S120.SLDPRT']; moved ['S3']; re-place ['G4']; structural ["S3's axis slants, and the layout holds a slanted axis as a fixed line: its direction changed, so the gearbox needs building again."]; missing []; unsaved []; refusal ''; turning True; axial []; ratios []
+        layout globals wanted ['S2 Y = 84.852814', 'S2 Z = 8']
+summary S3's axis slants, and the layout holds a slanted axis as a fixed line: its direction changed, so the gearbox needs building again. Update SolidWorks offers to build again as a new revision.
+ok      classify: the slanted structural sentence of §2.9: "S3's axis slants, and the layout holds a slanted axis as a fixed line: its direction changed, so the gearbox needs building again."; gate ''
+footer  (r6, S3's direction changed: nothing pressed) [green] S3's axis slants, and the layout holds a slanted axis as a fixed line: its direction changed, so the gearbox needs building again. Update SolidWorks offers to build again as Crossed_Slant_r2. It was built with its gears mated to turn: drag G1 in SolidWorks and the rest of its train follow.
+        button 'Build again…' on; Update SolidWorks shown on primary
+ok      r6, the copy's end: r6 ends clean: every document of it closed in SolidWorks (left []), Excel's workbook closed (['Crossed_Slant.xlsx']), no open document by a file name it holds ([])
+-- r6  the sense change of review M4: Crossed_Stage (fixture B's crossed stage, 10 mm up) built in r6-sense; S1 Y 10 -> 179.705628 (the other side of S2); classify only
+write   Crossed_Stage.xlsx by the app's own write_new, its Output folder blank (the strip's is C:\Users\M0obo\Documents\GearGeneratorProbe\w6-line-20261114-2156\out\r6-sense)
+ok      Excel opened Crossed_Stage.xlsx with no dialog or repair: []
+excel   saved Crossed_Stage.xlsx
+ok      read Crossed_Stage.xlsx: ok
+        warning Gears!Q2: G1: The involute starts at 53.849 mm, above the form diameter of 53.14 mm, so the bottom of the working flank is a straight line.
+        warning Gears!L2: G1: A helix angle of 45° is outside the usual 8–30° for a helical gear.
+        warning Gears!Q3: G2: The involute starts at 110.417 mm, above the form diameter of 109.413 mm, so the bottom of the working flank is a straight line.
+        warning Gears!L3: G2: A helix angle of 45° is outside the usual 8–30° for a helical gear.
+        2 shafts · 2 gears · 1 meshes; gate ''
+footer  (r6-sense, read) [green] Ready: Build makes 2 parts, Crossed_Stage_Layout and Crossed_Stage.SLDASM in C:\…\w6-line-20261114-2156\out\r6-sense. Its gears are mated to their shafts and to each other, so they turn together in SolidWorks.
+        button 'Build' on primary; Update SolidWorks hidden
+plan    revision 0 Crossed_Stage: refusal ''; reason ''; turning True; static reason ''
+        layout C:\Users\M0obo\Documents\GearGeneratorProbe\w6-line-20261114-2156\out\r6-sense\Crossed_Stage_Layout.SLDPRT; assembly C:\Users\M0obo\Documents\GearGeneratorProbe\w6-line-20261114-2156\out\r6-sense\Crossed_Stage.SLDASM
+        build Helical_m2_N20_45R for G1 at C:\Users\M0obo\Documents\GearGeneratorProbe\w6-line-20261114-2156\out\r6-sense\Helical_m2_N20_45R.SLDPRT (105 ops)
+        build Helical_m2_N40_45R for G2 at C:\Users\M0obo\Documents\GearGeneratorProbe\w6-line-20261114-2156\out\r6-sense\Helical_m2_N40_45R.SLDPRT (105 ops)
+        shaft S1: (0, 10, 0) axis Z+ (0.0, 0.0, 1.0) sigma +1; X base '', Y plus 'S1 Y', Z  ''; line ''; S1 Axis
+        shaft S2: (0, 94.8528, 8) axis X+ (1.0, 0.0, 0.0) sigma +0; X  '', Y plus 'S2 Y', Z plus 'S2 Z'; line ''; S2 Axis
+        frame G1: R [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0] at [0.0, 10.0, 2.0]
+        frame G2: R [0.0, 0.0, 1.0, 0.993520955, 0.113649072, 0.0, -0.113649072, 0.993520955, 0.0] at [-8.0, 94.852814, 8.0]
+        motion: trains [('S1', 'S2')]; drag ['G1']; fixed []; unmated []
+        mate 'G1 on S1 Axis': axis ['G1'] S1 ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'G1 along S1': along ['G1'] S1 ratio [] face 'G1 Face Z' z_front 2 plane 'front' sense 0
+        mate 'G2 on S2 Axis': axis ['G2'] S2 ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'G2 along S2': along ['G2'] S2 ratio [] face 'G2 Face X' z_front -8 plane 'right' sense 0
+        mate 'G1 meshes G2': mesh ['G1', 'G2']  ratio [20, 40] face '' z_front 0 plane 'front' sense -1
+        ops of Crossed_Stage_Layout.SLDPRT:
+          new     NewPart from (default template)
+          global  "S1 Y"= 10
+          global  "S2 Y"= 94.852814
+          global  "S2 Z"= 8
+          plane   'S1 Y Plane' 10 mm from plane 2 (Offset)
+          link    "Offset@S1 Y Plane"= "S1 Y"
+          axis    'S1 Axis' through y1 and plane 3
+          plane   'S2 Y Plane' 94.852814 mm from plane 2 (Offset)
+          link    "Offset@S2 Y Plane"= "S2 Y"
+          plane   'S2 Z Plane' 8 mm from plane 1 (Offset)
+          link    "Offset@S2 Z Plane"= "S2 Z"
+          axis    'S2 Axis' through y2 and z2
+          rebuild once
+          save    C:\Users\M0obo\Documents\GearGeneratorProbe\w6-line-20261114-2156\out\r6-sense\Crossed_Stage_Layout.SLDPRT
+        ops of Crossed_Stage.SLDASM:
+          new     NewAssembly from (default template)
+          global  "G1 Face Z"= 2
+          global  "G2 Face X"= 8
+          insert  layout C:\Users\M0obo\Documents\GearGeneratorProbe\w6-line-20261114-2156\out\r6-sense\Crossed_Stage_Layout.SLDPRT at (0, 0, 0)
+          place   layout at (0, 0, 0) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     layout
+          insert  gear1 C:\Users\M0obo\Documents\GearGeneratorProbe\w6-line-20261114-2156\out\r6-sense\Helical_m2_N20_45R.SLDPRT at (0, 10, 2)
+          place   gear1 at (0, 10, 2) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     gear1
+          insert  gear2 C:\Users\M0obo\Documents\GearGeneratorProbe\w6-line-20261114-2156\out\r6-sense\Helical_m2_N40_45R.SLDPRT at (-8, 94.852814, 8)
+          place   gear2 at (-8, 94.852814, 8) turned (0, 0, 1, 0.993521, 0.113649, 0, -0.113649, 0.993521, 0)
+          fix     gear2
+          unfix   gear1
+          mate    coincident gear1:Gear Axis ~ layout:S1 Axis as 'G1 on S1 Axis'
+          mate    point distance 2 gear1:origin ~ layout:plane1 as 'G1 along S1'
+          link    "D1@G1 along S1"= "G1 Face Z"
+          unfix   gear2
+          mate    coincident gear2:Gear Axis ~ layout:S2 Axis as 'G2 on S2 Axis'
+          mate    point distance -8 gear2:origin ~ layout:plane3 as 'G2 along S2'
+          link    "D1@G2 along S2"= "G2 Face X"
+          mate    gear 20:40 gear1:Gear Axis ~ gear2:Gear Axis as 'G1 meshes G2'
+          rebuild once
+          save    C:\Users\M0obo\Documents\GearGeneratorProbe\w6-line-20261114-2156\out\r6-sense\Crossed_Stage.SLDASM
+ok      r6-sense: the plan turns (W5): static reason ''
+journal written: 4 paths
+build   Crossed_Stage: SolidWorks 1.98 GB private, 5.64 GB free
+        build   Part118 · helical · recipe A · trig degrees
+        ok      new part Part118
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Helix Angle"
+        ok      global "Transverse Module"
+        ok      global "Transverse Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      global "Lead"
+        ok      global "Overrun"
+        ok      global "Path Length"
+        ok      global "Twist Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      plane Profile Plane
+        ok      link "Offset@Profile Plane"
+        ok      sketch space opened on plane plane
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      sketch path opened on plane 2
+        ok      line lead
+        ok      line P
+        ok      coincident lead.start origin
+        ok      vertical lead
+        ok      vertical P
+        ok      coincident P.start lead.end (already one point)
+        ok      dimension Lead In
+        ok      dimension Length
+        ok      sketch Path Sketch
+        ok      link "Lead In@Path Sketch"
+        ok      link "Length@Path Sketch"
+        ok      sweep Tooth Space, twist 40.5142°
+        ok      link "Twist@Tooth Space"
+        ok      pattern Teeth × 20
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      31 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Path Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Helical_m2_N20_45R; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w6-line-20261114-2156\out\r6-sense\Helical_m2_N20_45R.SLDPRT
+        build   Part119 · helical · recipe A · trig degrees
+        ok      new part Part119
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Helix Angle"
+        ok      global "Transverse Module"
+        ok      global "Transverse Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      global "Lead"
+        ok      global "Overrun"
+        ok      global "Path Length"
+        ok      global "Twist Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      plane Profile Plane
+        ok      link "Offset@Profile Plane"
+        ok      sketch space opened on plane plane
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      sketch path opened on plane 2
+        ok      line lead
+        ok      line P
+        ok      coincident lead.start origin
+        ok      vertical lead
+        ok      vertical P
+        ok      coincident P.start lead.end (already one point)
+        ok      dimension Lead In
+        ok      dimension Length
+        ok      sketch Path Sketch
+        ok      link "Lead In@Path Sketch"
+        ok      link "Length@Path Sketch"
+        ok      sweep Tooth Space, twist 20.2571°
+        ok      link "Twist@Tooth Space"
+        ok      pattern Teeth × 40
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      31 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Path Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Helical_m2_N40_45R; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w6-line-20261114-2156\out\r6-sense\Helical_m2_N40_45R.SLDPRT
+        build   Part120 · layout · recipe  · trig degrees
+        ok      new part Part120
+        ok      trig units measured: degrees
+        ok      global "S1 Y"
+        ok      global "S2 Y"
+        ok      global "S2 Z"
+        ok      plane S1 Y Plane
+        ok      link "Offset@S1 Y Plane"
+        ok      axis S1 Axis
+        ok      plane S2 Y Plane
+        ok      link "Offset@S2 Y Plane"
+        ok      plane S2 Z Plane
+        ok      link "Offset@S2 Z Plane"
+        ok      axis S2 Axis
+        ok      3 globals read back and match the maths
+        ok      rebuilt once
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w6-line-20261114-2156\out\r6-sense\Crossed_Stage_Layout.SLDPRT
+        build   Assem23 · assembly · recipe  · trig degrees
+        ok      new assembly Assem23
+        ok      trig units measured: degrees
+        ok      global "G1 Face Z"
+        ok      global "G2 Face X"
+        ok      component Crossed_Stage_Layout-1
+        ok      placed layout
+        ok      fixed layout
+        ok      component Helical_m2_N20_45R-1
+        ok      placed gear1
+        ok      fixed gear1
+        ok      component Helical_m2_N40_45R-1
+        ok      placed gear2
+        ok      fixed gear2
+        ok      unfixed gear1
+        ok      mate coincident gear1:Gear Axis ~ layout:S1 Axis as G1 on S1 Axis
+        ok      mate point distance gear1:origin ~ layout:plane1 as G1 along S1
+        ok      link "D1@G1 along S1"
+        ok      unfixed gear2
+        ok      mate coincident gear2:Gear Axis ~ layout:S2 Axis as G2 on S2 Axis
+        ok      mate point distance gear2:origin ~ layout:plane3 as G2 along S2
+        ok      link "D1@G2 along S2"
+        ok      mate gear gear1:Gear Axis ~ gear2:Gear Axis as G1 meshes G2
+        ok      2 globals read back and match the maths
+        ok      every mate sound, every gear free to turn
+        mate    G1 on S1 Axis
+        mate    G1 along S1
+        mate    G2 on S2 Axis
+        mate    G2 along S2
+        mate    G1 meshes G2
+        ok      read turning against their mesh, so made again with the other Flip: G1 meshes G2
+        ok      rebuilt once
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w6-line-20261114-2156\out\r6-sense\Crossed_Stage.SLDASM
+        ok      no interference between the gears
+        in 58.3 s; SolidWorks 2.32 GB private, 5.32 GB free; kind 'motion'; turned round (made again with the other Flip) ['G1 meshes G2']
+        steps [('part', 'Helical_m2_N20_45R', 1, 2), ('part', 'Helical_m2_N40_45R', 2, 2), ('layout', 'Crossed_Stage_Layout', 0, 0), ('assembly', 'Crossed_Stage', 0, 0), ('interference', 'Crossed_Stage', 0, 0)]
+        progress words ['Building in SolidWorks: part 1 of 2, Helical_m2_N20_45R…', 'Building in SolidWorks: checking interference…']
+record  2 sidecar(s) written; record written; notes []
+status  [green] Built 2 parts, Crossed_Stage_Layout and Crossed_Stage.SLDASM; no interference between the gears where they stand. Its gears are mated to turn together, and SolidWorks reports no mate in error: drag G1 in SolidWorks and the rest of its train follow. 1 thing to do by hand: Assign a material to each of the 2 parts; the build leaves it unset.
+ok      r6-sense: 2 part(s), the layout part and the assembly built and saved, turning: ok True, parts built 2, kind 'motion'
+ok      r6-sense: no interference: []
+fact    r6-sense: the build's sense read made again with the other Flip: ['G1 meshes G2']
+ok      r6-sense: the record holds a turning gearbox built from this read
+ok      r6-sense: the record's mates are the plan's: ['G1 on S1 Axis', 'G1 along S1', 'G2 on S2 Axis', 'G2 along S2', 'G1 meshes G2']
+ok      r6-sense: the build's sentence says how to turn it: 'drag G1 in SolidWorks and the rest of its train follow'
+footer  (r6-sense, built) [green] Built 2 parts, Crossed_Stage_Layout and Crossed_Stage.SLDASM; no interference between the gears where they stand. Its gears are mated to turn together, and SolidWorks reports no mate in error: drag G1 in SolidWorks and the rest of its train follow. 1 thing to do by hand: Assign a material to each of the 2 parts; the build leaves it unset.
+        button 'Build again…' on; Update SolidWorks shown on primary
+ok      r6-sense: the footer says how to turn it: 'drag G1 in SolidWorks and the rest of its train follow'
+tag     ' · built from this version'
+ok      r6-sense: 4 files on disk
+        marked modified in SolidWorks right after the build: {'Helical_m2_N20_45R.SLDPRT': False, 'Helical_m2_N40_45R.SLDPRT': False, 'Crossed_Stage_Layout.SLDPRT': False, 'Crossed_Stage.SLDASM': True}
+ok      r6-sense: the assembly is marked after the build (a read after its save)
+ok      r6-sense, right after the build and its saves: SolidWorks marks modified exactly ['Crossed_Stage.SLDASM']
+ok      r6-sense built: G1 meshes G2's sense on record -1 agrees with the kinematics (k > 0 True)
+read    r6-sense built: G1 meshes G2: Reverse True; entity 1 along G1 τ +1, direction (0.0, 0.0, 1.0) through (0.0, 10.0, 1.086961) mm; entity 2 along G2 τ +1, direction (1.0, 0.0, 0.0) through (-8.933214, 94.852814, 8.0) mm; k > 0 True; rule H right True, τ (1, 1); the app right True, τ (1, 1); turned axes ((0.0, 0.0, 1.0), (1.0, 0.0, 0.0))
+ok      r6-sense built: the app reads G1 meshes G2 turning right (turned axes): (True, (1, 1))
+ok      r6-sense built: rule H on the raw read agrees with the app's own read of G1 meshes G2
+excel   Shafts!D2 := 179.705628
+excel   saved Crossed_Stage.xlsx
+poll    a new read 0.0 s after asking; changes:
+          Shafts!D2 S1 Y 10 → 179.705628
+ok      read Crossed_Stage.xlsx: ok
+        warning Gears!Q2: G1: The involute starts at 53.849 mm, above the form diameter of 53.14 mm, so the bottom of the working flank is a straight line.
+        warning Gears!L2: G1: A helix angle of 45° is outside the usual 8–30° for a helical gear.
+        warning Gears!Q3: G2: The involute starts at 110.417 mm, above the form diameter of 109.413 mm, so the bottom of the working flank is a straight line.
+        warning Gears!L3: G2: A helix angle of 45° is outside the usual 8–30° for a helical gear.
+        2 shafts · 2 gears · 1 meshes; gate ''
+classify parts changed []; moved ['S1']; re-place ['G1', 'G2']; structural []; missing []; unsaved []; refusal ''; turning True; axial []; ratios []
+        layout globals wanted ['S1 Y = 179.705628', 'S2 Y = 94.852814', 'S2 Z = 8']
+summary Update SolidWorks will move S1 in Crossed_Stage_Layout, remake the gear mate G1 meshes G2 (since S1 now passes S2 on its other side, so G1 and G2 turn the other way against each other), and re-place G1 and G2.
+ok      classify: S1 moved, G1 meshes G2 to be made again for its sense alone: resensed ('G1 meshes G2',), ratios [], moved ['S1'], structural [], refusal ''
+fact    r6-sense: the plan's meshes [('G1', 'G2', -0.5)]; the record's [('G1', 'G2', 0.5)]; motion ratios [('G1 meshes G2', 20, 40)]
+ok      r6-sense: the plan's remake carries the new sense (k the record's, negated)
+footer  (r6-sense, S1 on the other side: nothing pressed) [green] Update SolidWorks will move S1 in Crossed_Stage_Layout, remake the gear mate G1 meshes G2 (since S1 now passes S2 on its other side, so G1 and G2 turn the other way against each other), and re-place G1 and G2. It was built with its gears mated to turn: drag G1 in SolidWorks and the rest of its train follow.
+        button 'Build again…' on; Update SolidWorks shown on primary
+ok      r6-sense, the copy's end: r6-sense ends clean: every document of it closed in SolidWorks (left []), Excel's workbook closed (['Crossed_Stage.xlsx']), no open document by a file name it holds ([])
+close   section r6: left of ours []; 172 s; SolidWorks 1.99 GB private, 5.46 GB free
+== r8  a copy of r5.master: the crossed stage's teeth G1 20 -> 21 and G2 40 -> 39 (the centre distance kept: 2 · 60 / (2 cos 45°)) by Update: the skew gear mate G1 meshes G2 made again and read back (W6-INTERFACES §7.17 (a))
+copy    r5.master -> r8: 12 files, mtimes kept
+        Crossed_Slant.xlsx's record: 12 path(s) put onto the copy: ['record.workbook', 'record.parts[0].path', 'record.parts[1].path', 'record.parts[2].path', 'record.parts[3].path', 'record.assembly', 'record.gearbox.layout', 'record.gearbox.assembly', 'record.gearbox.components[0].part', 'record.gearbox.components[1].part', 'record.gearbox.components[2].part', 'record.gearbox.components[3].part']
+        Bevel_m2.5_N20_M30_S120.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Bevel_m2.5_N30_M20_S120.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Helical_m2_N20_45R.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Helical_m2_N40_45R.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+ok      r8: the copy's record is valid: owner ('ours', ''); left on the master []; missing in the copy []; clear_saved dropped nothing (unsaved, mismatched ([], [])); the read's digest equals the record's
+fact    r8: the copy's assembly opened in 3.5 s; marked modified straight after the open: {'Crossed_Slant_Layout.SLDPRT': False, 'Helical_m2_N20_45R.SLDPRT': False, 'Helical_m2_N40_45R.SLDPRT': False, 'Bevel_m2.5_N20_M30_S120.SLDPRT': False, 'Bevel_m2.5_N30_M20_S120.SLDPRT': False, 'Crossed_Slant.SLDASM': False}
+ok      r8: SolidWorks found all 5 components and the layout in the copy, and the copy closed without saving (left []): elsewhere none
+ok      Excel opened Crossed_Slant.xlsx with no dialog or repair: []
+ok      read Crossed_Slant.xlsx: ok
+        warning Gears!Q2: G1: The involute starts at 53.849 mm, above the form diameter of 53.14 mm, so the bottom of the working flank is a straight line.
+        warning Gears!L2: G1: A helix angle of 45° is outside the usual 8–30° for a helical gear.
+        warning Gears!Q3: G2: The involute starts at 110.417 mm, above the form diameter of 109.413 mm, so the bottom of the working flank is a straight line.
+        warning Gears!L3: G2: A helix angle of 45° is outside the usual 8–30° for a helical gear.
+        warning Gears!F4: G3: The tooth tip is 0.664 mm thick, under 0.3 × module (0.75 mm).
+        warning Gears!Q4: G3: The involute starts at 64.97 mm, above the form diameter of 62.668 mm, so the bottom of the working flank is a straight line.
+        3 shafts · 4 gears · 2 meshes; gate ''
+ok      r8: the copy reads as built from this workbook, its gearbox in the copy: r8
+classify parts changed []; moved []; re-place []; structural []; missing []; unsaved []; refusal ''; turning True; axial []; ratios []
+        layout globals wanted ['S2 Y = 84.852814', 'S2 Z = 8']
+summary SolidWorks already matches the workbook on record; Update SolidWorks checks it live and puts right anything changed there; gears turned in SolidWorks stay where they are unless something must move.
+footer  (r8, the copy read) [green] SolidWorks already matches the workbook on record; Update SolidWorks checks it live and puts right anything changed there; gears turned in SolidWorks stay where they are unless something must move. It was built with its gears mated to turn: drag G1 in SolidWorks and the rest of its train follow.
+        button 'Build again…' on; Update SolidWorks shown on primary
+-- r8 21 : 39: Excel [('Gears!F2', 21), ('Gears!F3', 39)] -> Update: G1 meshes G2 made again at its new ratio
+excel   Gears!F2 := 21
+excel   Gears!F3 := 39
+excel   saved Crossed_Slant.xlsx
+poll    a new read 0.0 s after asking; changes:
+          Gears!F2 G1 Teeth 20 → 21
+          Gears!F3 G2 Teeth 40 → 39
+ok      read Crossed_Slant.xlsx: ok
+        warning Gears!Q2: G1: The involute starts at 56.677 mm, above the form diameter of 55.939 mm, so the bottom of the working flank is a straight line.
+        warning Gears!L2: G1: A helix angle of 45° is outside the usual 8–30° for a helical gear.
+        warning Gears!Q3: G2: The involute starts at 107.589 mm, above the form diameter of 106.592 mm, so the bottom of the working flank is a straight line.
+        warning Gears!L3: G2: A helix angle of 45° is outside the usual 8–30° for a helical gear.
+        warning Gears!F4: G3: The tooth tip is 0.664 mm thick, under 0.3 × module (0.75 mm).
+        warning Gears!Q4: G3: The involute starts at 64.97 mm, above the form diameter of 62.668 mm, so the bottom of the working flank is a straight line.
+        3 shafts · 4 gears · 2 meshes; gate ''
+classify parts changed ['Helical_m2_N20_45R.SLDPRT', 'Helical_m2_N40_45R.SLDPRT']; moved []; re-place ['G2']; structural []; missing []; unsaved []; refusal ''; turning True; axial []; ratios ['G1 meshes G2']
+        layout globals wanted ['S2 Y = 84.852814', 'S2 Z = 8']
+summary Update SolidWorks will change the values in Helical_m2_N20_45R (G1) and Helical_m2_N40_45R (G2), set the gear mate G1 meshes G2 to 21 : 39, and re-place G1, G2, G3 and G4.
+footer  (r8 21 : 39, after the edit) [green] Update SolidWorks will change the values in Helical_m2_N20_45R (G1) and Helical_m2_N40_45R (G2), set the gear mate G1 meshes G2 to 21 : 39, and re-place G1, G2, G3 and G4. It was built with its gears mated to turn: drag G1 in SolidWorks and the rest of its train follow.
+        button 'Build again…' on; Update SolidWorks shown on primary
+ok      classify: an Update remaking G1 meshes G2 alone: ratios ['G1 meshes G2'], resensed []
+ok      r8 21 : 39: the kinematics give §5's turns for +30° of G1: G1 +30.000000000° (§5 +30.000000000°), G2 +16.153846154° (§5 +16.153846154°), G3 +16.153846154° (§5 +16.153846154°), G4 -10.769230769° (§5 -10.769230769°)
+update  SolidWorks 1.99 GB private, 5.54 GB free
+DIALOG  SolidWorks shows '': ['Close', 'Open\nComponents', 'Update\nAssembly', 'Update\nGraphics', 'Post load updating', 'Elapsed time: 0s', 'This file was last opened in 1 seconds.', 'For more information, view: ']
+        update  Helical_m2_N20_45R.SLDPRT · trig degrees
+        ok      set "No. of Teeth"
+        ok      rebuilt once
+        update  Helical_m2_N40_45R.SLDPRT · trig degrees
+        ok      set "No. of Teeth"
+        ok      rebuilt once
+        update  Bevel_m2.5_N20_M30_S120.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Bevel_m2.5_N30_M20_S120.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Crossed_Slant_Layout.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        ok      re-placed G1, G2, G3, G4
+        ok      given their new ratio: G1 meshes G2
+        ok      made again with the other Flip: G1 meshes G2
+        mate    G1 on S1 Axis
+        mate    G1 along S1
+        mate    G2 on S2 Axis
+        mate    G2 along S2
+        mate    G3 locked to G2
+        mate    G4 on S3 Axis
+        mate    G4 along S3
+        mate    G3 meshes G4
+        mate    G1 meshes G2
+        ok      assembly rebuilt once
+        ok      no interference between the gears
+        not saved: Helical_m2_N20_45R.SLDPRT, Helical_m2_N40_45R.SLDPRT, Crossed_Slant.SLDASM changed in SolidWorks; save there to keep it
+        in 32.2 s; SolidWorks 2.48 GB private, 5.40 GB free
+        steps [('check', 'Helical_m2_N20_45R', 1, 6), ('check', 'Helical_m2_N40_45R', 2, 6), ('check', 'Bevel_m2.5_N20_M30_S120', 3, 6), ('check', 'Bevel_m2.5_N30_M20_S120', 4, 6), ('check', 'Crossed_Slant_Layout', 5, 6), ('check', 'Crossed_Slant', 6, 6), ('values', 'Helical_m2_N20_45R', 0, 0), ('values', 'Helical_m2_N40_45R', 0, 0), ('place', 'Crossed_Slant', 0, 0), ('interference', 'Crossed_Slant', 0, 0)]
+        loaded from disk ['Helical_m2_N20_45R.SLDPRT', 'Helical_m2_N40_45R.SLDPRT', 'Bevel_m2.5_N20_M30_S120.SLDPRT', 'Bevel_m2.5_N30_M20_S120.SLDPRT', 'Crossed_Slant_Layout.SLDPRT', 'Crossed_Slant.SLDASM']
+        motion: turned False; out of step []; off axis []; restored []; unsuppressed []; axial []; ratios ['G1 meshes G2']; extra mates []; ratios found [], already [], read [('G1 meshes G2', 20, 40, 21, 39)]; sense found wrong [], turned round ['G1 meshes G2']
+        train_check residuals (rad) [('G1', 'G2', '1.94e-16'), ('G3', 'G4', '1.73e-17'), ('G2', 'G3', '1.94e-16')]
+        finish: dragged []; earlier update ''
+ok      the Update's check phase found no gear mate turning against its mesh: []
+record  2 sidecar(s) written; record written; notes []
+status  [green] Updated SolidWorks: changed 1 variable in Helical_m2_N20_45R (it now has 21 teeth; its file keeps its name), changed 1 variable in Helical_m2_N40_45R (it now has 39 teeth; its file keeps its name), set the gear mate G1 meshes G2 to 21 : 39, re-placed G1, G2, G3 and G4; no interference between the gears where they stand. Save Helical_m2_N20_45R, Helical_m2_N40_45R and Crossed_Slant in SolidWorks to keep them.
+fact    r8 21 : 39: the remake: ratios ['G1 meshes G2'], read [('G1 meshes G2', 20, 40, 21, 39)], turned round ['G1 meshes G2'], sense found wrong [], resensed [], restored []
+ok      r8 21 : 39: G1 meshes G2 made again at its new ratio, every gear put: ratios ['G1 meshes G2'], placed ['G1', 'G2', 'G3', 'G4']; 'Updated SolidWorks: changed 1 variable in Helical_m2_N20_45R (it now has 21 teeth; its file keeps its name), changed 1 variable in Helical_m2_N40_45R (it now has 39 teeth; its file keeps its name), set the gear mate G1 meshes G2 to 21 : 39, re-placed G1, G2, G3 and G4; no interference between the gears where they stand. Save Helical_m2_N20_45R, Helical_m2_N40_45R and Crossed_Slant in SolidWorks to keep them.'
+        marked modified in SolidWorks right after the update: {'Helical_m2_N20_45R.SLDPRT': True, 'Helical_m2_N40_45R.SLDPRT': True, 'Bevel_m2.5_N20_M30_S120.SLDPRT': False, 'Bevel_m2.5_N30_M20_S120.SLDPRT': False, 'Crossed_Slant_Layout.SLDPRT': False, 'Crossed_Slant.SLDASM': True}
+ok      r8 21 : 39: SolidWorks marks modified exactly ['Crossed_Slant.SLDASM', 'Helical_m2_N20_45R.SLDPRT', 'Helical_m2_N40_45R.SLDPRT']
+ok      r8 21 : 39, remade: G1 meshes G2's sense on record -1 agrees with the kinematics (k > 0 True)
+ok      r8 21 : 39, remade: G3 meshes G4's sense on record 1 agrees with the kinematics (k > 0 False)
+read    r8 21 : 39, remade: G1 meshes G2: Reverse True; entity 1 along G1 τ +1, direction (0.0, 0.0, 1.0) through (0.0, 0.0, 1.086961) mm; entity 2 along G2 τ +1, direction (1.0, -0.0, 0.0) through (-8.933214, 84.852814, 8.0) mm; k > 0 True; rule H right True, τ (1, 1); the app right True, τ (1, 1); turned axes ((0.0, 0.0, 1.0), (1.0, 0.0, 0.0))
+ok      r8 21 : 39, remade: the app reads G1 meshes G2 turning right (turned axes): (True, (1, 1))
+ok      r8 21 : 39, remade: rule H on the raw read agrees with the app's own read of G1 meshes G2
+read    r8 21 : 39, remade: G3 meshes G4: Reverse False; entity 1 along G3 τ +1, direction (1.0, 0.0, -0.0) through (-111.909407, 84.852814, 8.0) mm; entity 2 along G4 τ +1, direction (-0.5, 0.866025404, 0.0) through (-109.045297, 83.199219, 8.0) mm; k > 0 False; rule H right True, τ (1, 1); the app right True, τ (1, 1); turned axes ((1.0, 0.0, 0.0), (-0.49999999999997347, 0.866025403784454, 0.0))
+ok      r8 21 : 39, remade: the app reads G3 meshes G4 turning right (turned axes): (True, (1, 1))
+ok      r8 21 : 39, remade: rule H on the raw read agrees with the app's own read of G3 meshes G4
+ok      r8 21 : 39: G1 (Helical_m2_N20_45R-1) at (0.0, 0.0, 2.0), origin off 0.0e+00 mm, turn off 0.0e+00° (exactly), axis off 0.0e+00
+ok      r8 21 : 39: G1's frame on record is the one the workbook wants
+ok      r8 21 : 39: G2 (Helical_m2_N40_45R-1) at (-8.0, 84.852814, 8.0), origin off 7.1e-14 mm, turn off 0.0e+00° (exactly), axis off 1.5e-32
+ok      r8 21 : 39: G2's frame on record is the one the workbook wants
+ok      r8 21 : 39: G3 (Bevel_m2.5_N20_M30_S120-1) at (-110.0, 84.852814, 8.0), origin off 8.5e-14 mm, turn off 0.0e+00° (exactly), axis off 1.1e-16
+ok      r8 21 : 39: G3's frame on record is the one the workbook wants
+ok      r8 21 : 39: G4 (Bevel_m2.5_N30_M20_S120-1) at (-110.0, 84.852814, 8.0), origin off 1.3e-13 mm, turn off 1.4e-15° (exactly), axis off 1.7e-16
+ok      r8 21 : 39: G4's frame on record is the one the workbook wants
+ok      r8 21 : 39: the layout (Crossed_Slant_Layout-1) is at identity
+        frames read in 0.1 s
+        mates [('G1 on S1 Axis', 0, True, False), ('G1 along S1', 0, True, False), ('G2 on S2 Axis', 0, True, False), ('G2 along S2', 0, True, False), ('G3 locked to G2', 0, True, False), ('G4 on S3 Axis', 0, True, False), ('G4 along S3', 0, True, False), ('G3 meshes G4', 0, True, False), ('G1 meshes G2', 0, True, False)]; others []; constrained {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2}
+ok      r8 21 : 39: the mates are exactly the record's 9: extra [], missing []
+ok      r8 21 : 39: nothing but mates in the mate group: []
+ok      r8 21 : 39: every mate's error code is 0: []
+ok      r8 21 : 39: no mate suppressed: []
+ok      r8 21 : 39: every mated gear under-defined (2): {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2}
+ok      r8 21 : 39: no interference in Crossed_Slant.SLDASM: []
+ok      r8 21 : 39: G1 turned half a pitch (8.5714°): 4 interference(s), merged [(('G1', 'G2'), 235.644)], all between G1 and G2
+ok      r8 21 : 39: G1 put back, no interference (3.0 s)
+ok      r8 21 : 39: G4 turned half a pitch (6.0000°): 4 interference(s), merged [(('G3', 'G4'), 202.721)], all between G3 and G4
+ok      r8 21 : 39: G4 put back, no interference (3.0 s)
+ok      r8 21 : 39, after the controls: G1 (Helical_m2_N20_45R-1) at (0.0, 0.0, 2.0), origin off 0.0e+00 mm, turn off 0.0e+00° (exactly), axis off 0.0e+00
+ok      r8 21 : 39, after the controls: G1's frame on record is the one the workbook wants
+ok      r8 21 : 39, after the controls: G2 (Helical_m2_N40_45R-1) at (-8.0, 84.852814, 8.0), origin off 7.1e-14 mm, turn off 0.0e+00° (exactly), axis off 1.5e-32
+ok      r8 21 : 39, after the controls: G2's frame on record is the one the workbook wants
+ok      r8 21 : 39, after the controls: G3 (Bevel_m2.5_N20_M30_S120-1) at (-110.0, 84.852814, 8.0), origin off 8.5e-14 mm, turn off 0.0e+00° (exactly), axis off 1.1e-16
+ok      r8 21 : 39, after the controls: G3's frame on record is the one the workbook wants
+ok      r8 21 : 39, after the controls: G4 (Bevel_m2.5_N30_M20_S120-1) at (-110.0, 84.852814, 8.0), origin off 1.3e-13 mm, turn off 3.8e-15° (exactly), axis off 2.2e-16
+ok      r8 21 : 39, after the controls: G4's frame on record is the one the workbook wants
+ok      r8 21 : 39, after the controls: the layout (Crossed_Slant_Layout-1) is at identity
+        frames read in 0.1 s
+        mates [('G1 on S1 Axis', 0, True, False), ('G1 along S1', 0, True, False), ('G2 on S2 Axis', 0, True, False), ('G2 along S2', 0, True, False), ('G3 locked to G2', 0, True, False), ('G4 on S3 Axis', 0, True, False), ('G4 along S3', 0, True, False), ('G3 meshes G4', 0, True, False), ('G1 meshes G2', 0, True, False)]; others []; constrained {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2}
+ok      r8 21 : 39, after the controls: the mates are exactly the record's 9: extra [], missing []
+ok      r8 21 : 39, after the controls: nothing but mates in the mate group: []
+ok      r8 21 : 39, after the controls: every mate's error code is 0: []
+ok      r8 21 : 39, after the controls: no mate suppressed: []
+ok      r8 21 : 39, after the controls: every mated gear under-defined (2): {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2}
+drive   r8 21 : 39, at the new ratio: input G1; control ('G1', 'G2'); SolidWorks 2.49 GB private, 5.35 GB free
+ok      r8 21 : 39, at the new ratio: the drive's assumptions hold: G1 on S1 (0.0, 0.0, 1.0) at θ = 0, u₀ (1.0, 0.0, 0.0), its Top plane against the layout's Right (plane3); the input's turn ruled by DEMONSTRATION_DRIVE_SENSE 1 and measured; tolerance 1e-06 relative
+        in 15.0 s; rebuilds [('drive added', True), ('Drive 120', True), ('Drive 90', True), ('control added, Flip True', True), ('Drive 120', True), ('Drive 90', True), ('control added, Flip False', True), ('Drive 120', True), ('Drive 90', True), ('control gone', True), ('drive gone', True)]; drive mate ('Demonstration drive', 'D1', 1); control mate [(True, 'Control G1 meshes G2', 1), (False, 'Control G1 meshes G2', 1)]
+ok      r8 21 : 39, at the new ratio: the drive ran without a raise: []
+ok      r8 21 : 39, at the new ratio: every cleanup step ran: []
+ok      r8 21 : 39, at the new ratio: before the drive every gear stands at its frame on record (largest 1.3e-13 at G4)
+        states with the drive added: [('G1 on S1 Axis', 0, True, False), ('G1 along S1', 0, True, False), ('G2 on S2 Axis', 0, True, False), ('G2 along S2', 0, True, False), ('G3 locked to G2', 0, True, False), ('G4 on S3 Axis', 0, True, False), ('G4 along S3', 0, True, False), ('G3 meshes G4', 0, True, False), ('G1 meshes G2', 0, True, False), ('Demonstration drive', 0, True, False)]
+ok      r8 21 : 39, at the new ratio: adding the 90° drive moved nothing (largest 0.0e+00)
+fact    r8 21 : 39, at the new ratio: the input G1 turned +30.000000000° about its own +Z, measured (as DEMONSTRATION_DRIVE_SENSE says for a Z+ input)
+        Drive 90 -> 120: G1 +30.000000000° (kinematics +30.000000000°), G2 +16.153846154° (kinematics +16.153846154°), G3 +16.153846154° (kinematics +16.153846154°), G4 -10.769230769° (kinematics -10.769230769°)
+ok      r8 21 : 39, at the new ratio: G1 turned +30.000000000° for +30.000000000°, sign included (off 2.7e-13)
+ok      r8 21 : 39, at the new ratio: G2 turned +16.153846154° for +16.153846154°, sign included (off 1.5e-13)
+ok      r8 21 : 39, at the new ratio: G3 turned +16.153846154° for +16.153846154°, sign included (off 1.5e-13)
+ok      r8 21 : 39, at the new ratio: G4 turned -10.769230769° for -10.769230769°, sign included (off 1.4e-13)
+ok      r8 21 : 39, at the new ratio: driven, every gear stays on its axis and in its place: {'G1': ('0.0e+00', '0.0e+00'), 'G2': ('3.6e-15', '7.9e-17'), 'G3': ('3.6e-15', '2.2e-16'), 'G4': ('1.4e-14', '1.1e-16')}
+        states driven: [('G1 on S1 Axis', 0, True, False), ('G1 along S1', 0, True, False), ('G2 on S2 Axis', 0, True, False), ('G2 along S2', 0, True, False), ('G3 locked to G2', 0, True, False), ('G4 on S3 Axis', 0, True, False), ('G4 along S3', 0, True, False), ('G3 meshes G4', 0, True, False), ('G1 meshes G2', 0, True, False), ('Demonstration drive', 0, True, False)]
+ok      r8 21 : 39, at the new ratio: no mate in error while driven
+ok      r8 21 : 39, at the new ratio: Drive set back to 90, every gear at its built frame (largest 1.4e-14 at G4)
+ok      r8 21 : 39, at the new ratio, control: the gear mate with Flip True moved nothing when made (largest 1.4e-14)
+        control, Control G1 meshes G2 with Flip True: G1 +30.000000000° (kinematics +30.000000000°), G2 +16.153846154° (kinematics +16.153846154°), G3 +16.153846154° (kinematics +16.153846154°), G4 -10.769230769° (kinematics -10.769230769°)
+ok      r8 21 : 39, at the new ratio, control: G1, before the mesh, still turns +30.000000000° with Flip True (30.000000000000462)
+ok      r8 21 : 39, at the new ratio, control: Drive set back with Flip True's mate on: every gear at its built frame (largest 2.8e-14 at G4)
+ok      r8 21 : 39, at the new ratio, control: the gear mate with Flip False moved nothing when made (largest 2.8e-14)
+        control, Control G1 meshes G2 with Flip False: G1 +30.000000000° (kinematics +30.000000000°), G2 -16.153846154° (kinematics +16.153846154°), G3 -16.153846154° (kinematics +16.153846154°), G4 +10.769230769° (kinematics -10.769230769°)
+ok      r8 21 : 39, at the new ratio, control: G1, before the mesh, still turns +30.000000000° with Flip False (30.000000000000462)
+ok      r8 21 : 39, at the new ratio, control: Drive set back with Flip False's mate on: every gear at its built frame (largest 7.1e-14 at G4)
+ok      r8 21 : 39, at the new ratio, control: a wrong sense is seen: with Flip [False] G2 turns the mirror of the right turn, with Flip [True] it turns right (the comparison tells one from the other)
+fact    r8 21 : 39, at the new ratio: G1 meshes G2 turns right with Flip [True] here on SolidWorks 34.1.1 (findings.GEAR_MATE_FLIP False; turned axes)
+ok      r8 21 : 39, at the new ratio, control: the Flip that turns right, [True], is the one SolidWorks made G1 meshes G2 with ([True]: turned round); neither gear has moved since
+read    r8 21 : 39, at the new ratio, control with Flip True: Control G1 meshes G2: Reverse True; entity 1 along G1 τ +1, direction (0.0, 0.0, 1.0) through (0.0, 0.0, 1.086961) mm; entity 2 along G2 τ +1, direction (1.0, -0.0, 0.0) through (-8.933214, 84.852814, 8.0) mm; k > 0 True; rule H right True, τ (1, 1); the app right True, τ (1, 1); turned axes ((0.0, 0.0, 1.0), (1.0, 0.0, 0.0))
+ok      r8 21 : 39, at the new ratio, control: the app's read of the mate with Flip True says right True; the drive says True
+read    r8 21 : 39, at the new ratio, control with Flip False: Control G1 meshes G2: Reverse False; entity 1 along G1 τ +1, direction (0.0, 0.0, 1.0) through (0.0, 0.0, 1.086961) mm; entity 2 along G2 τ +1, direction (1.0, -0.0, 0.0) through (-8.933214, 84.852814, 8.0) mm; k > 0 True; rule H right False, τ (1, 1); the app right False, τ (1, 1); turned axes ((0.0, 0.0, 1.0), (1.0, 0.0, 0.0))
+ok      r8 21 : 39, at the new ratio, control: the app's read of the mate with Flip False says right False; the drive says False
+fact    r8 21 : 39, at the new ratio, control: driven 30° with Flip True (right): interference []
+ok      r8 21 : 39, at the new ratio, control: with the Flip that turns right (True) G1 meshes G2 runs clear: []
+fact    r8 21 : 39, at the new ratio, control: driven 30° with Flip False (wrong): interference [(('G1', 'G2'), 236.871818)]
+ok      r8 21 : 39, at the new ratio, control: with the wrong Flip (False) G1 and G2 clash, and nothing else: [(('G1', 'G2'), 236.871818)]
+ok      r8 21 : 39, at the new ratio, control: the control mates deleted and the recorded one back on: every gear at its built frame (largest 7.1e-14 at G4)
+ok      r8 21 : 39, at the new ratio: the drive gone, every frame against the built frames (largest 7.1e-14 at G4)
+ok      r8 21 : 39, at the new ratio: no Drive equation left: []
+ok      r8 21 : 39, at the new ratio: no angle mate or control mate left; the mates as before: ['G1 on S1 Axis', 'G1 along S1', 'G2 on S2 Axis', 'G2 along S2', 'G3 locked to G2', 'G4 on S3 Axis', 'G4 along S3', 'G3 meshes G4', 'G1 meshes G2']
+ok      r8 21 : 39, at the new ratio: no mate (no lock) left suppressed
+ok      r8 21 : 39, at the new ratio: no mate in error after the drive
+ok      r8 21 : 39, at the new ratio: every mated gear under-defined again: {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2}
+person  saved in SolidWorks (r8 21 : 39, quiet Update: before the press, so any mark after it is the press's own): [('Helical_m2_N20_45R.SLDPRT', True), ('Helical_m2_N40_45R.SLDPRT', True), ('Bevel_m2.5_N20_M30_S120.SLDPRT', True), ('Bevel_m2.5_N30_M20_S120.SLDPRT', True), ('Crossed_Slant_Layout.SLDPRT', True), ('Crossed_Slant.SLDASM', True)]
+classify parts changed []; moved []; re-place []; structural []; missing []; unsaved []; refusal ''; turning True; axial []; ratios []
+        layout globals wanted ['S2 Y = 84.852814', 'S2 Z = 8']
+summary SolidWorks already matches the workbook on record; Update SolidWorks checks it live and puts right anything changed there; gears turned in SolidWorks stay where they are unless something must move.
+update  SolidWorks 2.51 GB private, 5.34 GB free
+        update  Helical_m2_N20_45R.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Helical_m2_N40_45R.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Bevel_m2.5_N20_M30_S120.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Bevel_m2.5_N30_M20_S120.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Crossed_Slant_Layout.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        ok      every gear is where the workbook puts it
+        mate    G1 on S1 Axis
+        mate    G1 along S1
+        mate    G2 on S2 Axis
+        mate    G2 along S2
+        mate    G3 locked to G2
+        mate    G4 on S3 Axis
+        mate    G4 along S3
+        mate    G3 meshes G4
+        mate    G1 meshes G2
+        nothing changed in SolidWorks
+        in 6.7 s; SolidWorks 2.48 GB private, 5.56 GB free
+        steps [('check', 'Helical_m2_N20_45R', 1, 6), ('check', 'Helical_m2_N40_45R', 2, 6), ('check', 'Bevel_m2.5_N20_M30_S120', 3, 6), ('check', 'Bevel_m2.5_N30_M20_S120', 4, 6), ('check', 'Crossed_Slant_Layout', 5, 6), ('check', 'Crossed_Slant', 6, 6), ('place', 'Crossed_Slant', 0, 0)]
+        loaded from disk []
+        motion: turned False; out of step []; off axis []; restored []; unsuppressed []; axial []; ratios []; extra mates []; ratios found [], already [], read []; sense found wrong [], turned round []
+        train_check residuals (rad) [('G1', 'G2', '4.16e-17'), ('G3', 'G4', '0.00e+00'), ('G2', 'G3', '4.16e-17')]
+        finish: dragged []; earlier update ''
+ok      the Update's check phase found no gear mate turning against its mesh: []
+record  0 sidecar(s) written; record written; notes []
+status  [green] SolidWorks already matches the workbook: nothing was changed.
+ok      r8 21 : 39, quiet Update: nothing to do: placed [], changed [], ratios [], resensed [], sense found wrong []
+ok      r8 21 : 39, quiet Update: read from SolidWorks, every gear stands where it stood before the press (largest 0.0e+00 at -)
+fact    r8 21 : 39, quiet Update: GetSaveFlag before the press {'Helical_m2_N20_45R.SLDPRT': False, 'Helical_m2_N40_45R.SLDPRT': False, 'Bevel_m2.5_N20_M30_S120.SLDPRT': False, 'Bevel_m2.5_N30_M20_S120.SLDPRT': False, 'Crossed_Slant_Layout.SLDPRT': False, 'Crossed_Slant.SLDASM': False}, after it {'Helical_m2_N20_45R.SLDPRT': False, 'Helical_m2_N40_45R.SLDPRT': False, 'Bevel_m2.5_N20_M30_S120.SLDPRT': False, 'Bevel_m2.5_N30_M20_S120.SLDPRT': False, 'Crossed_Slant_Layout.SLDPRT': False, 'Crossed_Slant.SLDASM': False}
+ok      r8 21 : 39, quiet Update: every document reads GetSaveFlag False before and after an Update that changed nothing (GEAR_MATE_DEFINITION_READ_MARKS 'nothing'): marked before [], after []
+footer  (r8 21 : 39, quiet Update, after the press) [green] SolidWorks already matches the workbook: nothing was changed.
+        button 'Build again…' on; Update SolidWorks shown on primary
+ok      r8 21 : 39: saved and closed this run's documents: left []
+        open now: []
+DIALOG  SolidWorks shows '': ['Close', 'Open\nComponents', 'Update\nAssembly', 'Update\nGraphics', ' ', 'Elapsed time: 0s', 'This file was last opened in 1 seconds.', 'For more information, view: ']
+ok      r8 21 : 39, reopened: every document just opened from its file reads GetSaveFlag False (the record clears a mark on that reading): {'Crossed_Slant_Layout.SLDPRT': False, 'Helical_m2_N20_45R.SLDPRT': False, 'Helical_m2_N40_45R.SLDPRT': False, 'Bevel_m2.5_N20_M30_S120.SLDPRT': False, 'Bevel_m2.5_N30_M20_S120.SLDPRT': False, 'Crossed_Slant.SLDASM': False}
+ok      r8 21 : 39, reopened: G1 (Helical_m2_N20_45R-1) at (0.0, 0.0, 2.0), origin off 0.0e+00 mm, turn off 0.0e+00° (exactly), axis off 0.0e+00
+ok      r8 21 : 39, reopened: G1's frame on record is the one the workbook wants
+ok      r8 21 : 39, reopened: G2 (Helical_m2_N40_45R-1) at (-8.0, 84.852814, 8.0), origin off 7.1e-14 mm, turn off 2.4e-15° (exactly), axis off 3.5e-32
+ok      r8 21 : 39, reopened: G2's frame on record is the one the workbook wants
+ok      r8 21 : 39, reopened: G3 (Bevel_m2.5_N20_M30_S120-1) at (-110.0, 84.852814, 8.0), origin off 9.9e-14 mm, turn off 3.2e-61° (exactly), axis off 8.9e-32
+ok      r8 21 : 39, reopened: G3's frame on record is the one the workbook wants
+ok      r8 21 : 39, reopened: G4 (Bevel_m2.5_N30_M20_S120-1) at (-110.0, 84.852814, 8.0), origin off 2.0e-13 mm, turn off 8.0e-16° (exactly), axis off 1.7e-16
+ok      r8 21 : 39, reopened: G4's frame on record is the one the workbook wants
+ok      r8 21 : 39, reopened: the layout (Crossed_Slant_Layout-1) is at identity
+        frames read in 0.1 s
+fact    r8 21 : 39, reopened: marked modified after the frame reads (component_frame): []
+        mates [('G1 on S1 Axis', 0, True, False), ('G1 along S1', 0, True, False), ('G2 on S2 Axis', 0, True, False), ('G2 along S2', 0, True, False), ('G3 locked to G2', 0, True, False), ('G4 on S3 Axis', 0, True, False), ('G4 along S3', 0, True, False), ('G3 meshes G4', 0, True, False), ('G1 meshes G2', 0, True, False)]; others []; constrained {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2}
+ok      r8 21 : 39, reopened: the mates are exactly the record's 9: extra [], missing []
+ok      r8 21 : 39, reopened: nothing but mates in the mate group: []
+ok      r8 21 : 39, reopened: every mate's error code is 0: []
+ok      r8 21 : 39, reopened: no mate suppressed: []
+ok      r8 21 : 39, reopened: every mated gear under-defined (2): {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2}
+fact    r8 21 : 39, reopened: marked modified after the mate reads (mate_states, GetConstrainedStatus): []
+fact    r8 21 : 39, reopened: marked modified after interferences() (0 found): ['Crossed_Slant.SLDASM']
+ok      r8 21 : 39, reopened: G1 meshes G2's sense on record -1 agrees with the kinematics (k > 0 True)
+ok      r8 21 : 39, reopened: G3 meshes G4's sense on record 1 agrees with the kinematics (k > 0 False)
+read    r8 21 : 39, reopened: G1 meshes G2: Reverse True; entity 1 along G1 τ +1, direction (0.0, 0.0, 1.0) through (0.0, 0.0, 1.086961) mm; entity 2 along G2 τ +1, direction (1.0, -0.0, 0.0) through (-8.933214, 84.852814, 8.0) mm; k > 0 True; rule H right True, τ (1, 1); the app right True, τ (1, 1); turned axes ((0.0, 0.0, 1.0), (1.0, 0.0, 0.0))
+ok      r8 21 : 39, reopened: the app reads G1 meshes G2 turning right (turned axes): (True, (1, 1))
+ok      r8 21 : 39, reopened: rule H on the raw read agrees with the app's own read of G1 meshes G2
+read    r8 21 : 39, reopened: G3 meshes G4: Reverse False; entity 1 along G3 τ +1, direction (1.0, 0.0, 0.0) through (-111.909407, 84.852814, 8.0) mm; entity 2 along G4 τ +1, direction (-0.5, 0.866025404, -0.0) through (-109.045297, 83.199219, 8.0) mm; k > 0 False; rule H right True, τ (1, 1); the app right True, τ (1, 1); turned axes ((1.0, 0.0, 0.0), (-0.49999999999997347, 0.866025403784454, 0.0))
+ok      r8 21 : 39, reopened: the app reads G3 meshes G4 turning right (turned axes): (True, (1, 1))
+ok      r8 21 : 39, reopened: rule H on the raw read agrees with the app's own read of G3 meshes G4
+drive   r8 21 : 39, reopened, at the new ratio: input G1; control None; SolidWorks 2.10 GB private, 5.70 GB free
+ok      r8 21 : 39, reopened, at the new ratio: the drive's assumptions hold: G1 on S1 (0.0, 0.0, 1.0) at θ = 0, u₀ (1.0, 0.0, 0.0), its Top plane against the layout's Right (plane3); the input's turn ruled by DEMONSTRATION_DRIVE_SENSE 1 and measured; tolerance 1e-06 relative
+        in 4.6 s; rebuilds [('drive added', True), ('Drive 120', True), ('Drive 90', True), ('drive gone', True)]; drive mate ('Demonstration drive', 'D1', 1); control mate None
+ok      r8 21 : 39, reopened, at the new ratio: the drive ran without a raise: []
+ok      r8 21 : 39, reopened, at the new ratio: every cleanup step ran: []
+ok      r8 21 : 39, reopened, at the new ratio: before the drive every gear stands at its frame on record (largest 2.0e-13 at G4)
+        states with the drive added: [('G1 on S1 Axis', 0, True, False), ('G1 along S1', 0, True, False), ('G2 on S2 Axis', 0, True, False), ('G2 along S2', 0, True, False), ('G3 locked to G2', 0, True, False), ('G4 on S3 Axis', 0, True, False), ('G4 along S3', 0, True, False), ('G3 meshes G4', 0, True, False), ('G1 meshes G2', 0, True, False), ('Demonstration drive', 0, True, False)]
+ok      r8 21 : 39, reopened, at the new ratio: adding the 90° drive moved nothing (largest 0.0e+00)
+fact    r8 21 : 39, reopened, at the new ratio: the input G1 turned +30.000000000° about its own +Z, measured (as DEMONSTRATION_DRIVE_SENSE says for a Z+ input)
+        Drive 90 -> 120: G1 +30.000000000° (kinematics +30.000000000°), G2 +16.153846154° (kinematics +16.153846154°), G3 +16.153846154° (kinematics +16.153846154°), G4 -10.769230769° (kinematics -10.769230769°)
+ok      r8 21 : 39, reopened, at the new ratio: G1 turned +30.000000000° for +30.000000000°, sign included (off 2.7e-13)
+ok      r8 21 : 39, reopened, at the new ratio: G2 turned +16.153846154° for +16.153846154°, sign included (off 1.5e-13)
+ok      r8 21 : 39, reopened, at the new ratio: G3 turned +16.153846154° for +16.153846154°, sign included (off 1.5e-13)
+ok      r8 21 : 39, reopened, at the new ratio: G4 turned -10.769230769° for -10.769230769°, sign included (off 1.4e-13)
+ok      r8 21 : 39, reopened, at the new ratio: driven, every gear stays on its axis and in its place: {'G1': ('0.0e+00', '0.0e+00'), 'G2': ('1.4e-14', '7.9e-17'), 'G3': ('1.4e-14', '7.6e-17'), 'G4': ('1.4e-14', '1.1e-16')}
+        states driven: [('G1 on S1 Axis', 0, True, False), ('G1 along S1', 0, True, False), ('G2 on S2 Axis', 0, True, False), ('G2 along S2', 0, True, False), ('G3 locked to G2', 0, True, False), ('G4 on S3 Axis', 0, True, False), ('G4 along S3', 0, True, False), ('G3 meshes G4', 0, True, False), ('G1 meshes G2', 0, True, False), ('Demonstration drive', 0, True, False)]
+ok      r8 21 : 39, reopened, at the new ratio: no mate in error while driven
+ok      r8 21 : 39, reopened, at the new ratio: Drive set back to 90, every gear at its built frame (largest 2.8e-14 at G4)
+ok      r8 21 : 39, reopened, at the new ratio: the drive gone, every frame against the built frames (largest 2.8e-14 at G4)
+ok      r8 21 : 39, reopened, at the new ratio: no Drive equation left: []
+ok      r8 21 : 39, reopened, at the new ratio: no angle mate or control mate left; the mates as before: ['G1 on S1 Axis', 'G1 along S1', 'G2 on S2 Axis', 'G2 along S2', 'G3 locked to G2', 'G4 on S3 Axis', 'G4 along S3', 'G3 meshes G4', 'G1 meshes G2']
+ok      r8 21 : 39, reopened, at the new ratio: no mate (no lock) left suppressed
+ok      r8 21 : 39, reopened, at the new ratio: no mate in error after the drive
+ok      r8 21 : 39, reopened, at the new ratio: every mated gear under-defined again: {'G1': 2, 'G2': 2, 'G3': 2, 'G4': 2}
+ok      r8, the copy's end: r8 ends clean: every document of it closed in SolidWorks (left []), Excel's workbook closed (['Crossed_Slant.xlsx']), no open document by a file name it holds ([])
+close   section r8: left of ours []; 82 s; SolidWorks 2.07 GB private, 5.71 GB free
+excel   quit our own Excel
+close   left of ours []; stray []; lost []; SolidWorks 2.02 GB private, 5.86 GB free
+dialogs progress boxes seen {'Calculating Interference Detection': 16, 'Updating...': 0, 'Opening': 4, 'Loading...': 1}; other dialogs are logged above as DIALOG
+person  W5-PLAN §4.4, the step only a person can do (for 2026, then 2024):
+person  In SolidWorks, open the Reducer_12to1.SLDASM a section built (a2 or m4). Click gear G1 — the small gear on S1, at the origin — and drag it round its axis by about a quarter turn. Watch G4, the large gear on S3: it turns the same way as G1, much more slowly — a quarter turn of G1 turns G4 about 7.5°. G2 and G3, on S2, turn together the other way. No gear should leave its axis, slide along it, or pass through another. Then, in the Workbook window, press Update SolidWorks with nothing changed: the footer should say the gears stand where they were turned. Tell us what you saw, on each version.
+done    0 failed: []; 0 noted for a ruling
