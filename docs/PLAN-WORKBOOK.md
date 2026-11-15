@@ -544,35 +544,41 @@ left to the user, and the sentence after Build says so (*"Planetary_4to1_C_Carri
 a plate and pins are yours to add."*).
 
 *Readings chosen (W7, 2026-11-14; `notes-workbook/W7-PLAN.md` §3 as revised after its review and the spike, and the
-rulings in `W7-INTERFACES.md` §6):* taken at the plan's default and to be put to the user as readings to overrule.
+rulings in `W7-INTERFACES.md` §6):* the readings below are taken at the plan's default, to be put to the user as
+readings to overrule. Those marked **(ruled)** were **ruled by the orchestrating session while the user was away;
+the user may overrule** each of them. The skeleton carrier above is the user's own decision, not one of these.
 
 - **What W7 builds:** one simple planetary stage per workbook — one sun, one ring, one spur planet gear on a planet
   shaft with any number of copies, every shaft of the stage facing the carrier's way along Z+ or Z−, exactly one
-  member held and one input — with ordinary W5 trains beside it: more gears on the sun's or ring's shaft (locked to
-  that shaft's anchor), other frame shafts on the carrier's axis, and **gears on the carrier's own shaft, locked to
-  the carrier and meshing nothing** (J8; W8's transfer case needs one).
-- **What W7 refuses, as an error of the workbook** (the scope principle: only what the demonstration builds is
-  built; a planetary this version does not build is not waiting for a phase, so it is an error at its cell, Build
-  waits, and its sentence says what does build): a carrier riding a carrier; a carrier off Z±; a planet facing away
-  from its carrier or across it; a sun or ring facing the other way from the carrier; a stage with no member held (a
-  differential, J11); a compound or double planet (J12); a gear on the carrier's shaft that meshes another gear
-  (J8 (c)); a helical or herringbone gear in a stage; a second carrier. Each is listed for the user as something a
-  later pass could open.
+  member held and one member the input — with ordinary W5 trains beside it: more gears on the sun's or ring's shaft
+  (locked to that shaft's anchor), other frame shafts on the carrier's axis, and **gears on the carrier's own shaft,
+  locked to the carrier and meshing nothing** (J8, **ruled**: built because W8's transfer case needs one; refused
+  if it meshes).
+- **What W7 refuses, as an error of the workbook** (**ruled**: the scope principle, only what the demonstration
+  builds is built; a planetary this version does not build is not waiting for a phase, so it is an error at its
+  cell, Build waits, and its sentence says what does build): a carrier riding a carrier; a carrier off Z±; a planet
+  facing away from its carrier or across it; a sun or ring facing the other way from the carrier; a stage with no
+  member held (a differential, J11); **two inputs** among a stage's members (a second of sun, carrier and ring given
+  Role input, whether or not its speed agrees with the first: `W7-INTERFACES.md` §6.15); a compound or double planet
+  (J12); a gear on the carrier's shaft that meshes another gear (J8 (c)); a helical or herringbone gear in a stage; a
+  second carrier. Each is listed for the user as something a later pass could open.
 - **J1** — the carrier part's planet axes follow the workbook by literal globals per copy, as the layout part's do.
   **J2** — its origin is on the layout's Front plane. **J3** — copies are one part file and N components, named
   `Planet copy k`. **J4** — a planet's X, Y, Z and Axis are composed in the carrier's frame (§3.3's note), so a Z−
   carrier is built too.
-- **J5** — the gear mates made: by exact rank of the carrier-frame rows, the Meshes sheet expanded copy by copy (the
-  4 : 1: a gear mate from the sun to each copy and one from copy 1 to the ring; the other ring meshes are left
-  unmated, logged and recorded, not said: J17). Measured right on SolidWorks 2026 by the spike: a gear mate turns its
-  gears relative to the line between their axes, so in a planetary relative to the carrier. **The kinematic fallback
-  of the first draft** (a sun–carrier gear mate in place of the ring's) **is gone**: the spike measured it turning the
-  planets wrong.
+- **J5** (**ruled**, `W7-INTERFACES.md` §6.14, superseding W7-PLAN §3's J5 row) — the gear mates made: **one for
+  each sun mesh, so one per copy, and exactly one with the ring, from copy 1**, whichever member is held. They are
+  chosen by member, not by the order of the Meshes sheet's rows: the sun's meshes first, then the ring's, then every
+  other mesh, each group in Meshes-sheet order and then copy order, before the rank. The ring meshes of the other
+  copies are left unmated, logged and recorded, not said (J17). This is the set the spike measured right on
+  SolidWorks 2026: a gear mate turns its gears relative to the line between their axes, so in a planetary relative to
+  the carrier. **The kinematic fallback of the first draft** (a sun–carrier gear mate in place of the ring's) **is
+  gone** (**ruled**): the spike measured it turning the planets wrong.
 - **J6** — a held member is fixed, as W5 holds a gear on a still shaft. **J7** — one shared `"Planet Face Z"` global
   per planet row. **J9** — the ring and shift checks as they stand; the ring's tooth count, the assembly condition and
-  the neighbours as errors; no fix offered on a planetary mesh. **J10** — torque by the basic-train efficiency, one
-  member held (§3.5's note). **J14** — what to drag: the input's gear; the carrier has nothing to drag (*"C (the
-  carrier) is axes and planes only, so it has nothing to drag."*). **J15** — Update puts a planetary train back
+  the neighbours as errors; no fix offered on a planetary mesh (**ruled**). **J10** — torque by the basic-train
+  efficiency, one member held (§3.5's note). **J14** — what to drag: the input's gear; the carrier has nothing to
+  drag (*"C (the carrier) is axes and planes only, so it has nothing to drag."*). **J15** — Update puts a planetary train back
   held member first, the carrier next, then the rest, with every lock off around the puts. **J16** — the record's
   schema 5 (carriers, the copy a component is of, the part a mate's axis is in). **J18** — a planet's speed is given
   about its own axis and on its carrier. **J19** — a small sun's undercut is warned of, not modelled.

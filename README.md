@@ -357,9 +357,10 @@ stage with the held member's reaction. The carrier is built as a part of axes an
 planes only, `Planetary_4to1_C_Carrier`: no plate and no pins, which depend on
 the gearbox at hand and are yours to add (the user's decision). A gear on the
 carrier's own shaft is built locked to it. A planetary form this version does
-not build — a differential (no member held), a compound or double planet, a
-helical planetary, a carrier on a carrier, two stages — is an error at its
-cell, not a row waiting for a phase. Built and tested against the test suite's
+not build — a differential (no member held), two of its members given Role
+`input` (even at speeds that agree), a compound or double planet, a helical
+planetary, a carrier on a carrier, two stages — is an error at its cell, not a
+row waiting for a phase. Built and tested against the test suite's
 fake SolidWorks; on SolidWorks only the gear mates of a 4 : 1 have been
 measured (a spike on 2026), and the demonstration is still to run.
 

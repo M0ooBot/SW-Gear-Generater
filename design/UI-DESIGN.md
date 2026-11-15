@@ -500,11 +500,14 @@ left or up rather than off the screen.
   `#3c3c3c`, then blue `#2f6db5`, orange `#b35c00`, purple `#6a3d9a`, green
   `#1a7f37`. Each shaft a 10 px cross with its name in mono below right, or on
   the first side clear of the origin's arrows when that would sit on them (a
-  shaft at the origin has it below left). The origin: X a red arrow and Y a
+  shaft at the origin has it below left); since W7 each name sits on a plain
+  white backing, so it reads where it falls across teeth. The origin: X a red arrow and Y a
   green one, 26 px, and a dot. All of where is `preview.layout_gearbox`, headless
-  and tested; the window only strokes it. A gearbox this phase does not lay out
-  (since W7, only what W7 refuses there: a carrier riding a carrier, a planet
-  across its carrier) shows that sentence in grey instead, and no readout. Since W6 a
+  and tested; the window only strokes it. A gearbox that cannot be laid out
+  shows why in grey instead, and no readout: since W7 only two rows do that, a
+  carrier riding a carrier and a planet across its carrier, and each is an
+  error of the workbook at its cell (not something a later phase builds), which
+  Checks shows too. Since W6 a
   gear on a shaft not along Z is drawn as its section seen side-on — a bevel
   gear's blank in both halves, apex at its At, any other gear the rectangle of
   its face and outside diameter — projected onto XY at its place, and its shaft
@@ -515,8 +518,9 @@ left or up rather than off the screen.
   it did. Since W7 every planet copy is drawn as any gear, each named by its
   own shaft (`P copy 2`), and each carrier is a dashed circle through its
   planets' axes about the carrier's own axis (`geometry.shaft_lines`); shafts
-  on one line (a stage's sun, ring and carrier) share one cross, named there
-  once with every name on it (`S, R, C`).
+  on one line (a stage's sun, carrier and ring) share one cross, named there
+  once with every name on it in the Shafts sheet's order, as the Speeds panel
+  lists them (`S, C, R`).
 - **Speeds** (readout *seen from +Z*, or *no input*): one mono line per shaft,
   `S2    375.0 rpm clockwise · 39.20 N·m` (`ui_text.workbook_speed_lines`),
   turning as seen from +Z, torque where the power path gives one; *not driven*
@@ -1023,15 +1027,17 @@ table shows each part to build under the name the build will give it
 ### Planetary stages (W7)
 
 No new control (checked in `workbook_gui.py`: the only changes for W7 are the
-end view's carrier circle, which planning's `geometry.shaft_lines` places, and
-the Speeds panel's prose line). The Gears table has **one row** per planet
+end view's carrier circle, about the axis planning's `geometry.carrier_axes`
+gives, the names' backing, and the Speeds panel's prose line, whose rows
+`ui_text.speeds_prose_rows` picks). The Gears table has **one row** per planet
 gear, its copies one part (`4 parts to build` for the 4 : 1); the header's
 *Worked out as* reads *Planetary, R fixed · 3 planets · 4.000 : 1 · output
 turns the same way*. What W7 does not build arrives as an **error of the
 workbook** at its cell (a differential, a carrier riding a carrier, a helical
 planetary, a compound or double planet, a gear on the carrier that meshes, a
-second carrier, members facing different ways), never as a row left for a
-later phase: Build waits and Build parts is not offered for it.
+second carrier, members facing different ways, two inputs on a stage whether
+or not their speeds agree), never as a row left for a later phase: Build
+waits and Build parts is not offered for it.
 
 | State | Sentence | Build button | Update SolidWorks |
 |---|---|---|---|
