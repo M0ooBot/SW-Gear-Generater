@@ -2142,9 +2142,10 @@ def _set_up_modes(sw: SolidWorks, plan: BuildPlan, modes: ModesPlan, result: Bui
             sw.set_mate_suppressed_in(op.id, False, on)
             read = sw.mate_suppression(op.id, configs + extra)
             for s in modes.steps:
-                wanted = op.name not in s.on
-                if bool(read.get(names[s.name], not wanted)) != wanted:
-                    _mode_problem(result, s.name, f"The mate {op.name} reads {'on' if not wanted else 'suppressed'} "
+                wanted = op.name not in s.on                  # suppressed there
+                got = bool(read.get(names[s.name], not wanted))
+                if got != wanted:
+                    _mode_problem(result, s.name, f"The mate {op.name} reads {'suppressed' if got else 'on'} "
                                                   f"where the mode has it {'off' if wanted else 'on'}.")
             for t in extra:
                 if not read.get(t, False):

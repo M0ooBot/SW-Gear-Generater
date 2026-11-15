@@ -2955,17 +2955,23 @@ class Session:
             raise SolidWorksError(f"SolidWorks would not delete the configuration {name} from {title}.")
 
     def mate_suppression(self, handle: str, configurations: Sequence[str]) -> Dict[str, bool]:
-        """A kept mate's flag in each named configuration, ``IFeature.IsSuppressed2(3, names)``, one per name, no
-        configuration activated. Marks nothing (the spike)."""
+        """A kept mate's flag in each named configuration, no configuration activated: ``IFeature.IsSuppressed2(3,
+        [name])``, ONE configuration name per call. Asked several names at once, SolidWorks 2026 answers in the
+        document's configuration order (``GetConfigurationNames``) filtered to the names asked, whatever order they
+        are passed in, so pairing the answers with the names passed swaps flags (W8 s0's first run,
+        probe/results/w8-configuration-order-20261115-092100.txt); asked one name, it answers that configuration's
+        flag. Marks nothing (the spike)."""
         self._configuration_gate("MATE_SUPPRESSION_PER_CONFIGURATION_ROUTE", "SPECIFY_CONFIGURATIONS")
         name, feature = self._kept_mate(handle)
-        flags = _per_name(call(feature, "IsSuppressed2", findings.SPECIFY_CONFIGURATIONS,
-                               self._names(configurations)))
-        if len(flags) != len(configurations):
-            raise SolidWorksError(f"Asked whether the mate {name} is suppressed in {len(configurations)} "
-                                  f"configurations, SolidWorks gave {_answers(len(flags))}, so which is which cannot "
-                                  "be told.")
-        return {str(c): bool(f) for c, f in zip(configurations, flags)}
+        out: Dict[str, bool] = {}
+        for configuration in configurations:
+            flags = _per_name(call(feature, "IsSuppressed2", findings.SPECIFY_CONFIGURATIONS,
+                                   self._names([configuration])))
+            if len(flags) != 1:
+                raise SolidWorksError(f"Asked whether the mate {name} is suppressed in {configuration}, SolidWorks "
+                                      f"gave {_answers(len(flags))}, so its flag there cannot be told.")
+            out[str(configuration)] = bool(flags[0])
+        return out
 
     def set_mate_suppressed_in(self, handle: str, suppressed: bool, configurations: Sequence[str]) -> None:
         """Suppress or unsuppress a kept mate in the named configurations, whichever is active:

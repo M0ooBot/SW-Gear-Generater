@@ -2508,8 +2508,11 @@ class ConfigMate:
         return None if self._dimension is None else ConfigDisplayDimension(self._dimension)
 
     def IsSuppressed2(self, which, names):
+        # As SolidWorks 2026 answered (probe/results/w8-configuration-order-20261115-092100.txt): one flag per name
+        # asked, but in the document's configuration order (GetConfigurationNames), whatever order they are passed in.
         self._doc.log.append(("IsSuppressed2", self.Name, which, tuple(names)))
-        flags = tuple(self.flags[name] for name in names)[:-1 if self._doc.short_answers else None]
+        asked = set(names)
+        flags = tuple(self.flags[c] for c in self._doc.configs if c in asked)[:-1 if self._doc.short_answers else None]
         return (flags,) if self._doc.wrapped_flags else flags
 
     def SetSuppression2(self, action, which, names):
@@ -2820,12 +2823,40 @@ def test_a_flag_is_set_for_the_named_configurations_as_a_string_array_and_every_
         session.add_configuration(name)
     session.set_mate_suppressed_in("mesh1", True, ["Default", "4H"])
     assert ("SetSuppression2", "G1 meshes G2", 0, 3, ("Default", "4H")) in doc.log
-    assert ("IsSuppressed2", "G1 meshes G2", 3, ("Default", "4H")) in doc.log
+    reads = [e for e in doc.log if e[0] == "IsSuppressed2"]
+    assert reads == [("IsSuppressed2", "G1 meshes G2", 3, ("Default",)), ("IsSuppressed2", "G1 meshes G2", 3, ("4H",))]
     assert doc.mates[0].flags == {"Default": True, "4L": False, "4H": True}
     assert session.mate_suppression("mesh1", ["Default", "4L", "4H"]) == {"Default": True, "4L": False, "4H": True}
     session.set_mate_suppressed_in("mesh1", False, ["4H"])
     assert ("SetSuppression2", "G1 meshes G2", 1, 3, ("4H",)) in doc.log
     assert doc.mates[0].flags["4H"] is False
+
+
+def test_flags_are_read_one_configuration_at_a_time_so_any_order_asked_gives_each_its_own_flag(configured):
+    """SolidWorks 2026 answers IsSuppressed2(3, names) in the document's configuration order, whatever order the
+    names are passed in (W8 s0's first run, probe/results/w8-configuration-order-20261115-092100.txt; the fake
+    answers so). Read as there: Default, 2H, 4H, N, 4L on the document, RangeSlv engages InDog on in 2H and 4H."""
+    session, doc = configured
+    for name in ("2H", "4H", "N", "4L"):
+        session.add_configuration(name)
+    assert doc.configs == ["Default", "2H", "4H", "N", "4L"]
+    doc.mates[0].flags = {"Default": True, "2H": False, "4H": False, "N": True, "4L": True}
+    want = dict(doc.mates[0].flags)
+    for order in (["2H", "4H", "N", "4L", "Default"], ["4L", "N", "4H", "2H", "Default"],
+                  ["2H", "4H", "4L", "Default", "N"], ["N", "2H"], ["2H", "N"]):
+        doc.log.clear()
+        assert session.mate_suppression("mesh1", order) == {c: want[c] for c in order}, order
+        assert [e[3] for e in doc.log if e[0] == "IsSuppressed2"] == [(c,) for c in order]
+    # the document's configuration order not the record's mode order: 4L made before 2H
+    doc.configs[:] = ["Default", "4L", "N", "4H", "2H"]
+    assert session.mate_suppression("mesh1", ["2H", "4H", "N", "4L"]) == {"2H": False, "4H": False, "N": True,
+                                                                          "4L": True}
+    # and the read-back of a flag set in several configurations at once judges each by its own flag
+    session.set_mate_suppressed_in("mesh1", False, ["N", "2H", "4L"])
+    assert doc.mates[0].flags == {"Default": True, "2H": False, "4H": False, "N": False, "4L": False}
+    session.set_mate_suppressed_in("mesh1", True, ["4L", "Default"])
+    assert session.mate_suppression("mesh1", ["4L", "N", "Default", "2H"]) == {"4L": True, "N": False,
+                                                                               "Default": True, "2H": False}
 
 
 def test_a_flag_call_that_raises_yet_takes_effect_is_judged_by_the_read_back(configured, com_errors):
@@ -2861,13 +2892,14 @@ def test_flags_read_one_per_name_even_wrapped_once_more_and_a_count_that_disagre
     session, doc = configured
     doc.wrapped_flags = True
     assert session.mate_suppression("mesh1", ["Default"]) == {"Default": False}
+    doc.configs.append("X")
     doc.mates[0].flags["X"] = True
     assert session.mate_suppression("mesh1", ["Default", "X"]) == {"Default": False, "X": True}
     doc.wrapped_flags, doc.short_answers = False, True
     with pytest.raises(swcom.SolidWorksError) as raised:
         session.mate_suppression("mesh1", ["Default", "X"])
-    assert str(raised.value) == ("Asked whether the mate G1 meshes G2 is suppressed in 2 configurations, SolidWorks "
-                                 "gave 1 answer, so which is which cannot be told.")
+    assert str(raised.value) == ("Asked whether the mate G1 meshes G2 is suppressed in Default, SolidWorks gave 0 "
+                                 "answers, so its flag there cannot be told.")
     with pytest.raises(swcom.SolidWorksError) as raised:
         session.dimension_values("slide1", ["Default", "X"])
     assert str(raised.value) == ("Asked for the distance of the mate RangeSlv along Rear in 2 configurations, "

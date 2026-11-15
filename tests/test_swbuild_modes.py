@@ -251,3 +251,32 @@ def test_the_positions_switch_reads_the_running_versions_finding(monkeypatch, on
         else:
             monkeypatch.setattr(findings, name, value, raising=False)
     assert swcom.positions_per_configuration(revision) is wanted
+
+
+# -- a build's per-mode flag read-back says what it read (W8 s0's first run on SolidWorks 2026) ----------------------
+
+from test_swbuild import _tc_build, mode_findings  # noqa: E402,F401
+
+
+def test_a_flag_read_back_wrong_in_a_build_says_what_was_read_against_what_the_mode_wants(mode_findings):
+    """The fake answers each read as the Session did before it read one configuration per call: the flags in the
+    document's configuration order (Default first), paired with the names in the order asked (2H, 4H, N, 4L, then
+    Default). RangeSlv engages InDog, set right (on in 2H and 4H), then reads suppressed in 2H and on in N, as s0's
+    run read it; the sentence says what was read, never "reads on where the mode has it on"."""
+    fake = FakeSolidWorks()
+    real = fake.mate_suppression
+
+    def paired_by_the_order_asked(handle, configurations):
+        right = real(handle, list(fake.configs))
+        in_document_order = [right[c] for c in fake.configs if c in set(configurations)]
+        return dict(zip(configurations, in_document_order))
+    fake.mate_suppression = paired_by_the_order_asked
+    fake, result, checks, steps = _tc_build(fake)
+    texts = [text for _, text in result.failures]
+    assert "In mode 2H, the mate RangeSlv engages InDog reads suppressed where the mode has it on." in texts, texts
+    assert "In mode N, the mate RangeSlv engages InDog reads on where the mode has it off." in texts, texts
+    reads = [t for t in texts if " reads " in t and "where the mode has it" in t]
+    assert reads and not [t for t in reads if "reads on where the mode has it on" in t
+                          or "reads suppressed where the mode has it off" in t], reads
+    assert result.saved == ""
+
