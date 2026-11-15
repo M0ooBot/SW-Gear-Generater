@@ -1,8 +1,8 @@
 r"""W6's, W5's (and W4's) Windows demonstration: gearbox workbooks through the app's own code, on real SolidWorks and Excel.
 
 python.exe probe/workbook_assembly_check.py <repo src> <output folder under C:\> --pid PID [--log FILE]
-                                            [--only r1|r2|r3|r4|r5|r6|r7|r8|m1|m2|m3|m4|m5|m6|m7|m8|a|a2|a3|b|c
-                                                    |rs1|rs2|rs3|w6|confirm|ring ...]
+                                            [--only p1|…|p7|r1|…|r8|m1|…|m8|a|a2|a3|b|c|rs1|rs2|rs3
+                                                    |planetary|confirm7|w6|confirm|ring ...]
                                             [--fixtures FOLDER]
                                             [--m4-offset MM]
 
@@ -98,8 +98,34 @@ when no master exists in the run (``--only r3`` alone). Each copy section ends c
 ``--only w6`` runs r1 r5 r2 r3 r4 r6 r8 r7; ``--only confirm`` runs SolidWorks 2024's confirming set, r1 r5 r3 r6 r8
 m3.
 
-The W5 sections, each in its own folder under the output folder (the default order is W6's, then m1 m3 m7 m8 m2 m4
-m5 m6 a a2 a3 b c; ``--only ring`` runs m3, m7 and m8, the ring-train sections):
+W7 (W7-PLAN §6; ``--only planetary`` runs p1–p7, ``--only confirm7`` SolidWorks 2024's p1 and p5). On a planetary
+everything above holds, with: each carrier measured as a body (its frame, its constrained status 2, IsFixed when
+held); the carrier part read as a skeleton (no solid body, no solid feature) and its axes carried into the assembly
+by the carrier component's frame, each copy's axis through that copy's centre; each copy (and the sun) turned half a
+pitch must clash with exactly its partners; the drive judged body by body against ``expected_frames`` (each copy's
+origin carried round its carrier: the spike's (17.846008, 2.349471) …), every listed mesh at copy level in step by
+its own carrier-frame relation, the unmated ring meshes included, no interference with the Drive at 120 nor at
+phases across the input's pitch; a control's right Flip is the one whose whole train turns as the kinematics say,
+the wrong one must clash; ``same_sense`` and the record's sense in the carrier's frame. A failure there logs FAIL
+and the run goes on (no halt).
+
+- ``p1``: Planetary_4to1 (§4.1) built fresh: the read against §4.1 (no diagnostic, the header, speeds, the planet on
+  its carrier, torques and the held ring's, the Speeds lines), the gear mates (one per sun mesh, one with the ring)
+  and the unmated ring meshes, every read, §4.1's checks, the drive with both Flips on Planet copy 1 meshes Ring and
+  on Sun meshes Planet copy 2 (CarrierGear turning with the carrier), a quiet Update, reopen, drive; kept as
+  ``p1.master``.
+- ``p2`` (copy): the user's turn (37°) and Update with nothing changed; then, never saved, a second planet–ring gear
+  mate made with each Flip and deleted, what SolidWorks answers logged as facts.
+- ``p3`` (copy): before each edit the train driven 37° and left turned; (1) Planet At 12 (the carrier put first),
+  (2) Ring At 12 (the held ring first, then the carrier), (3) Sun 21, Ring 57, P's X 19.5: the carrier part's
+  globals, all four gear mates remade and read back, the drive at 3.714 : 1 with both Flips, a quiet Update, reopen.
+- ``p4`` (copy): Copies 5 and 6 refused; Copies 4 -> Build again… with four copies of one part.
+- ``p5``, ``p6``, ``p7`` (copies): the sun held (the drive from the ring), the stage on Z- (the carrier part's own
+  coordinates p1's), the carrier held (it and CarrierGear fixed and never mated) -> Build again… each, measured,
+  driven with both Flips on the ring mate, reopened, driven.
+
+The W5 sections, each in its own folder under the output folder (the default order is W7's, W6's, then m1 m3 m7 m8
+m2 m4 m5 m6 a a2 a3 b c; ``--only ring`` runs m3, m7 and m8, the ring-train sections):
 
 - ``m1`` (W5-PLAN §4.3): the Windows-saved 12 : 1 fixture (compound S2). Build turning; §4.1; §4.2 with the
   control on G3 meshes G4. M7: an angle mate the record does not know, on G4, unsuppressed -> Update refuses
@@ -215,12 +241,15 @@ SRC, OUT = sys.argv[1], sys.argv[2]
 PID = int(sys.argv[sys.argv.index("--pid") + 1])
 # W6 (W6-PLAN §6.1): the builders r1 and r5 first, then the sections that start from their copies, then the variant.
 W6_ORDER = ["r1", "r5", "r2", "r3", "r4", "r6", "r8", "r7"]
-DEFAULT_ORDER = W6_ORDER + ["m1", "m3", "m7", "m8", "m2", "m4", "m5", "m6", "a", "a2", "a3", "b", "c"]
+# W7 (W7-PLAN §6): p1 builds the master, the rest start from its copies.
+W7_ORDER = ["p1", "p2", "p3", "p4", "p5", "p6", "p7"]
+DEFAULT_ORDER = W7_ORDER + W6_ORDER + ["m1", "m3", "m7", "m8", "m2", "m4", "m5", "m6", "a", "a2", "a3", "b", "c"]
 RING = ["m3", "m7", "m8"]         # ``--only ring``: the two ring-train sections, rerun after the ring-sense fix
 # ``--only confirm``: SolidWorks 2024's confirming build (W6-PLAN §6.1, with W6-INTERFACES §7.17 (a) and (c)): both
 # turned fixtures with their both-Flips controls, every turned gear mate made again at a new ratio, and the ring.
 CONFIRM = ["r1", "r5", "r3", "r6", "r8", "m3"]
-ALIASES = {"ring": RING, "w6": W6_ORDER, "confirm": CONFIRM}
+# ``--only confirm7``: SolidWorks 2024's confirming run of W7 (W7-PLAN §6): p1 and p5, where the ring mates are.
+ALIASES = {"ring": RING, "w6": W6_ORDER, "confirm": CONFIRM, "planetary": W7_ORDER, "confirm7": ["p1", "p5"]}
 ONLY = [n for i, a in enumerate(sys.argv) if a == "--only"
         for n in ALIASES.get(sys.argv[i + 1], [sys.argv[i + 1]])] or DEFAULT_ORDER
 LOG_PATH = sys.argv[sys.argv.index("--log") + 1] if "--log" in sys.argv else os.path.join(OUT, "workbook-assembly.log")
@@ -271,6 +300,7 @@ WRITTEN_BY = f"gear-generator {__version__}"
 TAG = {"version": "", "major": 0}
 PERSON = []               # (what, path) of a plain 12 : 1 assembly built to turn, for W5-PLAN §4.4's step
 PERSON_W6 = []            # r1's kept Bevel_Reducer.SLDASM, for W6-PLAN §6.1's step
+PERSON_W7 = []            # p1's kept Planetary_4to1.SLDASM, for W7-PLAN §6's step
 
 # The driven proof (W5-PLAN §4.2).
 DRIVE = "Drive"                      # the assembly global the angle mate's D1 is linked to
@@ -606,7 +636,7 @@ def save_assembly(worker, desk, why):
     """Save the current assembly (and every document of the gearbox SolidWorks holds modified), as a person would,
     so the marks after the next step are that step's own."""
     box = desk.record.gearbox
-    paths = [box.assembly, box.layout] + sorted({c.part for c in box.components})
+    paths = [box.assembly, box.layout] + sorted({c.part for c in box.components}) + [c.path for c in carriers_of(box)]
     saved = run(worker, lambda s: save_docs(s, paths))
     say(f"person  saved in SolidWorks ({why}): {saved}")
 
@@ -1132,10 +1162,34 @@ def placed_elsewhere(session, asm, name, rotation, at, kind, locks=()):
 
 
 def wanted(desk):
-    """Each gear's wanted frame and pitch, from the current read (what the window would place)."""
+    """Each gear's wanted frame and pitch, from the current read (what the window would place); W7: each carrier's
+    too, by its carrier id (``layout.carrier_frame``, pitch 0)."""
     frames = wb_layout.frames(desk.a.report)
     placed = desk.a.report.layout.placed
-    return {g: (f.rotation, f.at, wb_layout.pitch(placed[g])) for g, f in frames.items()}
+    out = {g: (f.rotation, f.at, wb_layout.pitch(placed[g])) for g, f in frames.items()}
+    for carrier in carrier_layouts(desk):
+        f = wb_layout.carrier_frame(carrier)
+        out[wb_layout.carrier_id(carrier.shaft)] = (f.rotation, f.at, 0.0)
+    return out
+
+
+def carrier_layouts(desk):
+    """The read's carriers (W7), or () for a gearbox with none."""
+    if desk.a is None or not getattr(desk.a.report, "stages", ()):
+        return ()
+    return tuple(wb_layout.carrier_layouts(desk.a.spec, desk.a.report))
+
+
+def carriers_of(box):
+    """The record's carriers (W7; schema 5), or [] for a record with none."""
+    return list(getattr(box, "carriers", []) or [])
+
+
+def bodies(box):
+    """Every turning or held body of the record: (body id, Name2), gears and copies first, then each carrier by its
+    carrier id."""
+    return ([(c.gear, c.name) for c in box.components]
+            + [(wb_layout.carrier_id(c.shaft), c.component) for c in carriers_of(box)])
 
 
 def measure_frames(worker, desk, label, exact=None):
@@ -1143,10 +1197,19 @@ def measure_frames(worker, desk, label, exact=None):
     record's kind says), modulo the gear's pitch for W4's static one."""
     box = desk.record.gearbox
     exact = turning(desk) if exact is None else exact
-    names = [c.name for c in box.components] + [box.layout_component]
+    names = [c.name for c in box.components] + [c.component for c in carriers_of(box)] + [box.layout_component]
     started = time.monotonic()
     live = run(worker, lambda s: live_frames(s, box.assembly, names))
     want = wanted(desk)
+    for c in carriers_of(box):
+        rotation, at, _ = want[wb_layout.carrier_id(c.shaft)]
+        got = live[c.component]
+        origin, off, residue = frame_error(got, (rotation, at), 0.0)
+        check(swbuild.same_frame(got[0], got[1], rotation, at, 0.0),
+              f"{label}: the carrier {c.shaft} ({c.component}) at {tuple(round(v, 9) for v in got[1])}, origin off "
+              f"{origin:.1e} mm, turn off {off:.1e}° (exactly), axis off {residue:.1e}")
+        check(swbuild.same_frame(c.rotation, c.at, rotation, at, 0.0),
+              f"{label}: the carrier {c.shaft}'s frame on record is the one the workbook wants")
     for c in box.components:
         rotation, at, pitch = want[c.gear]
         got = live[c.name]
@@ -1212,8 +1275,7 @@ def measure_mates(worker, desk, label):
     every mated gear under-defined (2); the fixed gears' statuses logged."""
     box = desk.record.gearbox
     want = [m.name for m in box.mates]
-    states, others, status = run(worker, lambda s: live_mates(s, box.assembly,
-                                                              [(c.gear, c.name) for c in box.components]))
+    states, others, status = run(worker, lambda s: live_mates(s, box.assembly, bodies(box)))
     names = [s.name for s in states]
     say(f"        mates {[(s.name, s.code, s.warning, s.suppressed) for s in states]}; others {others}; "
         f"constrained {status}")
@@ -1224,9 +1286,10 @@ def measure_mates(worker, desk, label):
     check(not bad, f"{label}: every mate's error code is 0: {bad}")
     off = [s.name for s in states if s.suppressed]
     check(not off, f"{label}: no mate suppressed: {off}")
-    mated = [c.gear for c in box.components if c.gear not in box.fixed]
+    mated = [g for g, _ in bodies(box) if g not in box.fixed]
     loose = {g: status[g] for g in mated if status[g] != findings.COMPONENT_UNDER_DEFINED}
-    check(not loose, f"{label}: every mated gear under-defined ({findings.COMPONENT_UNDER_DEFINED}): {status}")
+    check(not loose, f"{label}: every mated gear{' and carrier' if carriers_of(box) else ''} under-defined "
+          f"({findings.COMPONENT_UNDER_DEFINED}): {status}")
     return states
 
 
@@ -1279,7 +1342,7 @@ def reopen(worker, desk, label):
     check(not left, f"{label}: saved and closed this run's documents: left {left}")
     say(f"        open now: {run(worker, open_titles)}")
     box = desk.record.gearbox
-    paths = [box.assembly, box.layout] + sorted({c.part for c in box.components})
+    paths = [box.assembly, box.layout] + sorted({c.part for c in box.components}) + [c.path for c in carriers_of(box)]
     # Read straight after the open, before any frame read (which read marks the assembly was never isolated).
     run(worker, lambda s: live_open(s, box.assembly))
     flags = run(worker, lambda s: save_flags(s, paths))
@@ -1299,14 +1362,21 @@ def reopen(worker, desk, label):
 
 
 def measure(worker, desk, label, controls=True, again=True):
-    """§4.1: frames, axes, interference, the mates (built to turn), the negative controls, and the reopen."""
+    """§4.1: frames, axes, interference, the mates (built to turn), the negative controls, and the reopen. W7: the
+    carrier part's skeleton and axes, the held members fixed, and each copy's own half-pitch control."""
     say(f"measure {label}: {memory()}; turning {turning(desk)}")
-    measure_frames(worker, desk, label)
+    planetary = bool(carriers_of(desk.record.gearbox))
+    live = measure_frames(worker, desk, label)
     measure_axes(worker, desk, label)
+    if planetary:
+        carrier_part_check(worker, desk, label, live)
+        held_fixed(worker, desk, label)
     measure_clear(worker, desk, label)
     if turning(desk):
         measure_mates(worker, desk, label)
-    if controls:
+    if controls and planetary:
+        copy_controls(worker, desk, label)
+    elif controls:
         negative_controls(worker, desk, label)
     if again:
         reopen(worker, desk, label)
@@ -1333,10 +1403,10 @@ def axes_turned(axes):
 def mesh_same_sense(desk, a, b):
     """k > 0 for the mesh (a, b), from the read's kinematics alone: its two gears turn the same way about their own
     axes (speeds about each shaft's own axis, W5-DECISIONS M2) — the ``same_sense`` the app reads a gear mate
-    against, worked out here without the app's record."""
-    speeds = desk.a.report.motion.speeds
-    shaft_of = {g.id: g.shaft for g in desk.a.spec.gears}
-    return float(speeds[shaft_of[a]]) * float(speeds[shaft_of[b]]) > 0
+    against, worked out here without the app's record. W7: in the mesh's carrier's frame (relative speeds), which a
+    gear mate on a carrier holds (W7-SPIKE.md)."""
+    carrier = mesh_carrier(desk, a, b) if desk.a.report.layout.placed else ""
+    return relative_speed(desk, a, carrier) * relative_speed(desk, b, carrier) > 0
 
 
 def mate_read(session, handle, name, axes, same_sense, gears):
@@ -1429,7 +1499,7 @@ def mate_readings(worker, desk, label):
 
 
 def drive_job(asm, components, layout_name, input_gear, control=None, turn_by=None, fixed=(), phases=(),
-              plane="plane3"):
+              plane="plane3", clash_driven=False):
     """One worker job on the assembly. The angle mate DRIVE_MATE from the input's Top plane to the layout's base plane
     ``plane`` (W5: Right; W6: the one square to the input's u₀) at 90°, its D1 linked to the global DRIVE. ``turn_by``
     None: DRIVE 90 -> 120 -> 90; then, given ``control`` (a dict: ``a``, ``b``, the recorded gear mate's name
@@ -1490,6 +1560,8 @@ def drive_job(asm, components, layout_name, input_gear, control=None, turn_by=No
                     set_drive(DRIVE_TO)
                     out["driven"] = frames()
                     out["states_driven"] = [(s.name, s.code, s.warning, s.suppressed) for s in session.mate_states()]
+                    if clash_driven:              # W7-PLAN §6 (review S11): the unmated meshes seen clearing
+                        out["driven_clash"] = session.interferences()
                     set_drive(DRIVE_FROM)
                     out["back"] = frames()
                     for step in phases:               # the input turned on by ``step`` degrees: interference read
@@ -1565,13 +1637,111 @@ def drive_job(asm, components, layout_name, input_gear, control=None, turn_by=No
     return job
 
 
+def body_shaft(desk, body):
+    """The Shafts row whose speed a body turns at: a gear's row's shaft (a planet copy's is its row's, ``P``), a
+    carrier's own shaft (W7: its id is ``"<shaft> carrier"``)."""
+    if body.endswith(wb_layout.CARRIER_ID_SUFFIX):
+        return body[:-len(wb_layout.CARRIER_ID_SUFFIX)]
+    placed = desk.a.report.layout.placed.get(body)
+    row = placed.row if placed is not None and getattr(placed, "row", "") else body
+    return next(g.shaft for g in desk.a.spec.gears if g.id == row)
+
+
 def expected_turns(desk, gears, input_gear, step, sense=1):
     """δ_i = sense · step · ω_i / ω_in (W5-DECISIONS M2: speeds about each shaft's own axis), in degrees about each
-    gear's own +Z; ``sense`` the sign the input was measured (or, W5, ruled) to turn by."""
+    gear's own +Z; ``sense`` the sign the input was measured (or, W5, ruled) to turn by. W7: a planet copy turns at
+    its row's shaft's own-axis speed in the origin's frame, a carrier at its shaft's."""
     speeds = desk.a.report.motion.speeds
-    shaft_of = {g.id: g.shaft for g in desk.a.spec.gears}
-    w_in = speeds[shaft_of[input_gear]]
-    return {g: sense * step * float(speeds[shaft_of[g]] / w_in) for g in gears}
+    w_in = speeds[body_shaft(desk, input_gear)]
+    return {g: sense * step * float(speeds[body_shaft(desk, g)] / w_in) for g in gears}
+
+
+def carrier_of_body(desk, body):
+    """The carrier a planet copy rides (its carrier id), or ""."""
+    placed = desk.a.report.layout.placed.get(body)
+    carrier = getattr(placed, "carrier", "") if placed is not None else ""
+    return wb_layout.carrier_id(carrier) if carrier else ""
+
+
+def rotate_about(point, origin, axis, degrees):
+    """``point`` turned ``degrees`` right-handed about the line through ``origin`` along ``axis`` (Rodrigues)."""
+    n = math.sqrt(sum(float(a) * float(a) for a in axis))
+    k = [float(a) / n for a in axis]
+    v = [float(point[i]) - float(origin[i]) for i in range(3)]
+    c, s_ = math.cos(math.radians(degrees)), math.sin(math.radians(degrees))
+    cross = (k[1] * v[2] - k[2] * v[1], k[2] * v[0] - k[0] * v[2], k[0] * v[1] - k[1] * v[0])
+    dot = sum(k[i] * v[i] for i in range(3))
+    return tuple(float(origin[i]) + v[i] * c + cross[i] * s_ + k[i] * dot * (1 - c) for i in range(3))
+
+
+def expected_frames(desk, built, turns):
+    """Where every body should stand after it turned ``turns`` (degrees about its own +Z, by body id) from ``built``:
+    each turned about its own axis; a planet copy's origin also carried round its carrier's axis by the carrier's
+    turn (W7-PLAN §6: "every copy's origin carried to its place"). A gear on a carrier's own shaft and the carrier
+    itself stay where they are, turned."""
+    out = {}
+    for body, (rotation, at) in built.items():
+        new_at = tuple(at)
+        carrier = carrier_of_body(desk, body)
+        if carrier and carrier in built and carrier in turns:
+            c_rot, c_at = built[carrier]
+            axis = (float(c_rot[2]), float(c_rot[5]), float(c_rot[8]))
+            new_at = rotate_about(at, c_at, axis, turns[carrier])
+        out[body] = (turn_about_z(rotation, turns.get(body, 0.0)), new_at)
+    return out
+
+
+def relative_speed(desk, body, carrier_shaft):
+    """A body's speed relative to a carrier, about the body's own axis: ``ω − s·ω_c``, s = ±1 as the body faces the
+    carrier's way or not (W7-PLAN §2.5)."""
+    speeds = desk.a.report.motion.speeds
+    placed = desk.a.report.layout.placed
+    w = float(speeds[body_shaft(desk, body)])
+    if not carrier_shaft:
+        return w
+    axis_c = next(tuple(float(v) for v in c.direction) for c in carrier_layouts(desk) if c.shaft == carrier_shaft)
+    axis_b = tuple(float(v) for v in placed[body].axis) if body in placed else axis_c
+    s_ = 1.0 if sum(a * b for a, b in zip(axis_b, axis_c)) > 0 else -1.0
+    return w - s_ * float(speeds[carrier_shaft])
+
+
+def mesh_carrier(desk, a, b):
+    """The carrier shaft a mesh turns in (W7), or "" on the frame."""
+    placed = desk.a.report.layout.placed
+    return (getattr(placed.get(a), "carrier", "") or getattr(placed.get(b), "carrier", "")) if placed else ""
+
+
+def mesh_residuals(desk, built, after):
+    """Every listed mesh at copy level (``geometry.expand_meshes``), mated or not, judged in step from the frames
+    alone: each gear's turn relative to its mesh's carrier, δ_b − k·δ_a with k = −c·za/zb in that carrier's frame
+    (W7-PLAN §2.5), in radians. Returns [(a, b, residual)]."""
+    placed = desk.a.report.layout.placed
+    out = []
+    for a, b in wb_geometry.expand_meshes(desk.a.spec, placed):
+        carrier = mesh_carrier(desk, a, b)
+        cid = wb_layout.carrier_id(carrier) if carrier else ""
+        dc = turn_degrees(built[cid][0], after[cid][0]) if cid else 0.0
+        axis_c = next((tuple(float(v) for v in c.direction) for c in carrier_layouts(desk) if c.shaft == carrier),
+                      (0.0, 0.0, 1.0))
+
+        def rel(g):
+            # A planet's rotation is its carrier's turn about the shared direction times its own, so for every gear
+            # of the mesh, planet or frame gear alike, its turn relative to the carrier is δ − s·δ_c.
+            turn = turn_degrees(built[g][0], after[g][0])
+            if turn is None:
+                return None
+            s_ = 1.0 if sum(float(x) * y for x, y in zip(placed[g].axis, axis_c)) > 0 else -1.0
+            return turn - s_ * dc
+        ra, rb = rel(a), rel(b)
+        if ra is None or rb is None:
+            out.append((a, b, float("inf")))
+            continue
+        pa, pb = placed[a], placed[b]
+        same = sum(float(x) * float(y) for x, y in zip(pa.axis, pb.axis)) > 0
+        c = (1 if same else -1) * (-1 if (pa.internal != pb.internal) else 1)
+        k = -c * pa.teeth / pb.teeth
+        out.append((a, b, math.radians(rb - k * ra)))
+    return out
 
 
 def input_sense(label, turns, input_gear, step, ruled):
@@ -1602,8 +1772,8 @@ def close_turn(turn, expected):
 
 def drive_inputs(desk):
     box = desk.record.gearbox
-    components = [(c.gear, c.name) for c in box.components]
-    gears = [c.gear for c in box.components]
+    components = bodies(box)                 # W7: each carrier too, by its carrier id
+    gears = [g for g, _ in components]
     return box, components, gears, box.drag[0] if box.drag else ""
 
 
@@ -1661,13 +1831,19 @@ def drive_proof(worker, desk, label, control=None, phases=()):
         spec = {"a": a, "b": b, "mesh": mesh_entry.name, "ratio": tuple(mesh_entry.ratio), "axes": axes,
                 "same": mesh_same_sense(desk, a, b), "clash": True, "turned": axes_turned(axes)}
     started = time.monotonic()
+    planetary = bool(carriers_of(box))
+    if spec is not None and planetary:
+        spec.update(turned=True, judge="any")    # W7: the whole train is the comparison, any clash the wrong Flip's
     out = run(worker, drive_job(box.assembly, components, box.layout_component, input_gear, control=spec,
-                                fixed=box.fixed, phases=phases, plane=plane))
+                                fixed=box.fixed, phases=phases, plane=plane, clash_driven=planetary))
     gear_of = {c.name: c.gear for c in box.components}
     for step, _frames, found in out.get("phases", []):
         merged = swbuild._clashes(found, gear_of)  # noqa: SLF001
         say(f"fact    {label}: the input turned on {step:.4f}°: interference {len(found)} place(s), "
             f"{[(c.gears, round(c.volume, 6)) for c in merged]}")
+        if planetary:
+            check(not merged, f"{label}: the input turned on {step:.4f}°: no interference on any mesh, the unmated "
+                  "ring meshes included")
     say(f"        in {time.monotonic() - started:.1f} s; rebuilds {out['rebuilds']}; drive mate "
         f"{out.get('drive_mate')}; control mate {out.get('control_mate')}")
     for line in out.get("traceback", "").splitlines():
@@ -1677,7 +1853,7 @@ def drive_proof(worker, desk, label, control=None, phases=()):
     built = out.get("built")
     if built is None:
         raise Halt(f"{label}: the drive could not even read the built frames: {out['errors']}")
-    record_frames = {c.gear: (tuple(c.rotation), tuple(c.at)) for c in box.components}
+    record_frames = frames_on_record(desk)
     gap, at = frames_gap(built, record_frames)
     check(gap <= FRAME_TOLERANCE, f"{label}: before the drive every gear stands at its frame on record (largest "
           f"{gap:.1e} at {at or '-'})")
@@ -1700,10 +1876,27 @@ def drive_proof(worker, desk, label, control=None, phases=()):
                   f"{label}: {g} turned {turns[g] if turns[g] is None else f'{turns[g]:+.9f}'}° for "
                   f"{expected[g]:+.9f}°, sign included (off "
                   f"{'-' if turns[g] is None else f'{abs(turns[g] - expected[g]):.1e}'})")
-        moved = {g: frame_error(out["driven"][g], built[g], 0.0) for g in gears}
-        check(all(o <= FRAME_TOLERANCE and r <= FRAME_TOLERANCE for o, _, r in moved.values()),
-              f"{label}: driven, every gear stays on its axis and in its place: "
-              f"{ {g: (f'{o:.1e}', f'{r:.1e}') for g, (o, _, r) in moved.items()} }")
+        if planetary:
+            want = expected_frames(desk, built, expected)
+            gaps = {g: frame_gap(out["driven"][g], want[g]) for g in gears}
+            check(all(v <= FRAME_TOLERANCE for v in gaps.values()),
+                  f"{label}: driven, every body where the kinematics put it — each copy's origin carried round its "
+                  f"carrier, the held member unmoved: { {g: f'{v:.1e}' for g, v in gaps.items()} }")
+            for g in gears:
+                if carrier_of_body(desk, g):
+                    say(f"        {g} carried to {tuple(round(v, 6) for v in out['driven'][g][1])}")
+            residuals = mesh_residuals(desk, built, out["driven"])
+            check(all(abs(r) <= 1e-6 for _, _, r in residuals), f"{label}: every listed mesh in step, the unmated "
+                  f"ones included: {[(a, b, f'{r:.1e} rad') for a, b, r in residuals]}")
+            clash = out.get("driven_clash")
+            merged = swbuild._clashes(clash or [], {n: g for g, n in components})  # noqa: SLF001
+            check(clash is not None and not merged, f"{label}: interferences() with {DRIVE} at {DRIVE_TO:g}: none, "
+                  f"every mesh, mated or not, clear: {[(c.gears, round(c.volume, 6)) for c in merged]}")
+        else:
+            moved = {g: frame_error(out["driven"][g], built[g], 0.0) for g in gears}
+            check(all(o <= FRAME_TOLERANCE and r <= FRAME_TOLERANCE for o, _, r in moved.values()),
+                  f"{label}: driven, every gear stays on its axis and in its place: "
+                  f"{ {g: (f'{o:.1e}', f'{r:.1e}') for g, (o, _, r) in moved.items()} }")
         say(f"        states driven: {out.get('states_driven')}")
         check(not [s for s in out.get("states_driven", []) if s[1]], f"{label}: no mate in error while driven")
     if "back" in out:
@@ -1722,22 +1915,34 @@ def drive_proof(worker, desk, label, control=None, phases=()):
                       f"made (largest {gap:.1e})")
                 turns = {g: turn_degrees(built[g][0], out[f"control_driven {flip}"][g][0]) for g in gears}
                 say_turns(f"control, {CONTROL + mesh_entry.name} with Flip {flip}", turns, expected)
-                if (turns[b] is not None and not close_turn(turns[b], expected[b]) and close_turn(turns[b], -expected[b])
-                        and abs(expected[b]) > 1e-3):
-                    wrong.append(flip)
-                elif close_turn(turns[b], expected[b]):
-                    right.append(flip)
-                check(close_turn(turns[a], expected[a]), f"{label}, control: {a}, before the mesh, still turns "
-                      f"{expected[a]:+.9f}° with Flip {flip} ({turns[a]})")
+                if planetary:
+                    # W7: a planetary's gear mates close a loop, so a wrong Flip turns the whole train wrong (the
+                    # spike: carrier −15° where +7.5° is right): right is every body as the kinematics say.
+                    want = expected_frames(desk, built, expected)
+                    gap = max(frame_gap(out[f"control_driven {flip}"][g], want[g]) for g in gears)
+                    if gap <= FRAME_TOLERANCE:
+                        right.append(flip)
+                    elif gap > 1e-3:
+                        wrong.append(flip)
+                    say(f"        control with Flip {flip}: largest frame off the kinematics {gap:.1e}")
+                else:
+                    if (turns[b] is not None and not close_turn(turns[b], expected[b])
+                            and close_turn(turns[b], -expected[b]) and abs(expected[b]) > 1e-3):
+                        wrong.append(flip)
+                    elif close_turn(turns[b], expected[b]):
+                        right.append(flip)
+                    check(close_turn(turns[a], expected[a]), f"{label}, control: {a}, before the mesh, still turns "
+                          f"{expected[a]:+.9f}° with Flip {flip} ({turns[a]})")
                 gap, at = frames_gap(out[f"control_back {flip}"], built)
                 check(gap <= FRAME_TOLERANCE, f"{label}, control: {DRIVE} set back with Flip {flip}'s mate on: every "
                       f"gear at its built frame (largest {gap:.1e} at {at or '-'})")
             check(len(wrong) == 1 and len(right) == 1,
-                  f"{label}, control: a wrong sense is seen: with Flip {wrong} {b} turns the mirror of the right turn, "
-                  f"with Flip {right} it turns right (the comparison tells one from the other)")
+                  f"{label}, control: a wrong sense is seen: with Flip {wrong} "
+                  + ("the train turns off the kinematics" if planetary else f"{b} turns the mirror of the right turn")
+                  + f", with Flip {right} it turns right (the comparison tells one from the other)")
             say(f"fact    {label}: {mesh_entry.name} turns right with Flip {right} here on SolidWorks "
                 f"{TAG['version'] or TAG['major']} (findings.GEAR_MATE_FLIP {findings.GEAR_MATE_FLIP}; "
-                f"{'turned' if spec['turned'] else 'parallel'} axes)")
+                f"{'a planetary train' if planetary else 'turned axes' if spec['turned'] else 'parallel axes'})")
             turned = mesh_entry.name in TURNED.get(os.path.normcase(box.assembly), set())
             left_on = [not bool(findings.GEAR_MATE_FLIP)] if turned else [bool(findings.GEAR_MATE_FLIP)]
             if not moved_since_made(desk, mesh_entry):
@@ -1785,7 +1990,10 @@ def drive_proof(worker, desk, label, control=None, phases=()):
     else:
         check(False, f"{label}: the state after the drive could not be read: {out['cleanup']}")
     if halt:
-        raise Halt(halt)
+        if planetary:          # W7: a section that fails logs FAIL and the run goes on (the coordinator, W7)
+            check(False, halt)
+        else:
+            raise Halt(halt)
     return out
 
 
@@ -1812,6 +2020,11 @@ def clash_judge(out, label, spec, right, wrong, gear_of):
             check(ok, f"{label}, control: with the Flip that turns right ({flip}) {mesh} runs clear: {said}")
             if not ok:
                 halt.append(f"the right Flip {flip} clashes: {said}")
+        elif flip in wrong and spec.get("judge") == "any":
+            ok = bool(merged) and all(c.volume > 0 for c in merged)
+            check(ok, f"{label}, control: with the wrong Flip ({flip}) the train clashes: {said}")
+            if not ok:
+                halt.append(f"the wrong Flip {flip} clashes nothing: {said}")
         elif flip in wrong:
             ok = bool(merged) and all(set(c.gears) == {a, b} and c.volume > 0 for c in merged)
             check(ok, f"{label}, control: with the wrong Flip ({flip}) {a} and {b} clash, and nothing else: {said}")
@@ -1849,15 +2062,22 @@ def user_turn(worker, desk, label, degrees):
     say_turns("left turned", turns, expected)
     check(all(close_turn(turns[g], expected[g]) for g in gears), f"{label}: every gear left turned as the "
           "kinematics say")
+    if carriers_of(box):
+        want = expected_frames(desk, out["built"], expected)
+        gap, at = frames_gap(out["after"], want)
+        check(gap <= FRAME_TOLERANCE, f"{label}: every copy left carried round its carrier, every frame where the "
+              f"kinematics put it (largest {gap:.1e} at {at or '-'})")
     check(not any(equations.quote(DRIVE) in t for t in out.get("equations_after", [])) and DRIVE_MATE not in
           [s[0] for s in out.get("states_after", [])], f"{label}: no drive left")
     links = desk.update.motion if desk.update is not None else None
     if links is not None:
-        record_frames = {c.gear: (tuple(c.rotation), tuple(c.at)) for c in box.components}
+        record_frames = frames_on_record(desk)
         pitch = {p.gear: p.pitch for p in links.recorded}
-        mated = [g for g in gears if g not in box.fixed]
+        held = list(getattr(links, "held", ()) or ())
+        mated = [g for g in gears if g not in box.fixed or g in held]
         tc = swbuild.train_check({g: out["after"][g] for g in mated}, {g: record_frames[g] for g in mated},
-                                 links.meshes, links.locks, pitch)
+                                 links.meshes, links.locks, pitch, carriers=getattr(links, "carriers", ()),
+                                 held=held)
         say(f"        train_check after the turn: in step {tc.in_step}, turned {tc.turned}, off axis {tc.off_axis}, "
             f"out of step {tc.out_of_step}, residuals {[(a, b, f'{r:.2e}') for a, b, r in tc.residuals]}")
         check(tc.in_step and tc.turned, f"{label}: train_check reads the train in step and turned")
@@ -1891,15 +2111,16 @@ def all_mated(desk):
 
 def gearbox_flags(worker, desk):
     box = desk.record.gearbox
-    paths = [box.assembly, box.layout] + sorted({c.part for c in box.components})
+    paths = [box.assembly, box.layout] + sorted({c.part for c in box.components}) + [c.path for c in carriers_of(box)]
     return run(worker, lambda s: save_flags(s, paths))
 
 
 def gear_frames(worker, desk):
     """Every gear's live frame, by gear id, read from SolidWorks."""
     box = desk.record.gearbox
-    live = run(worker, lambda s: live_frames(s, box.assembly, [c.name for c in box.components]))
-    return {c.gear: live[c.name] for c in box.components}
+    pairs = bodies(box)
+    live = run(worker, lambda s: live_frames(s, box.assembly, [n for _, n in pairs]))
+    return {g: live[n] for g, n in pairs}
 
 
 def check_quiet_update(worker, desk, result, label, frames_before, flags_before):
@@ -2096,14 +2317,17 @@ def build_turning(worker, desk, label, parts, turned_round=()):
     f = desk.say_footer(f"{label}, built")
     check(drag in f.text, f"{label}: the footer says how to turn it: {drag!r}")
     say(f"tag     {ui_text.workbook_built_tag(desk.record, desk.reading.digest)!r}")
-    paths = [box.layout, box.assembly] + sorted({c.part for c in box.components})
+    paths = [box.layout, box.assembly] + sorted({c.part for c in box.components}) + [c.path for c in carriers_of(box)]
     check(all(os.path.isfile(p) for p in paths), f"{label}: {len(paths)} files on disk")
     check_fresh_build_marks(worker, paths, box.assembly, label)
     return plan, result
 
 
 def frames_on_record(desk):
-    return {c.gear: (tuple(c.rotation), tuple(c.at)) for c in desk.record.gearbox.components}
+    box = desk.record.gearbox
+    out = {c.gear: (tuple(c.rotation), tuple(c.at)) for c in box.components}
+    out.update({wb_layout.carrier_id(c.shaft): (tuple(c.rotation), tuple(c.at)) for c in carriers_of(box)})
+    return out
 
 
 # -- the workbooks of b and c ------------------------------------------------------------------------------
@@ -3491,13 +3715,13 @@ def save_modified_in(folder):
     return work
 
 
-def end_clean(worker, folder, label, rename):
+def end_clean(worker, folder, label, rename, save=True):
     """copy_built's step 1 (``rename``: the builder section's end, run once, W6-INTERFACES §7.9) or step 4 (a copy
     section's end, without the rename): every document of the folder closed (``quit_in``; on 2024 this run's modified
     documents saved first, as W5's close_ours), Excel's workbook closed (``close_books``), no open document by a file
     name the folder holds; then the folder renamed ``<section>.master``, which it stays for the rest of the run.
     Returns the folder it leaves (the master's with the rename)."""
-    if TAG["major"] == 32:
+    if TAG["major"] == 32 and save:
         saved = run(worker, save_modified_in(folder))
         say(f"        {label}: SolidWorks 2024, this run's modified documents saved before the close: {saved}")
     left = run(worker, quit_in(folder))
@@ -3535,10 +3759,11 @@ def keep_master(worker, folder, section):
         return ""
 
 
-def end_copy(worker, folder, section):
-    """A copy section's end (copy_built step 4): two copies are never open together."""
+def end_copy(worker, folder, section, save=True):
+    """A copy section's end (copy_built step 4): two copies are never open together. ``save`` False: nothing is saved
+    first on 2024 either (p2's second ring mate is never saved)."""
     try:
-        end_clean(worker, folder, f"{section}, the copy's end", False)
+        end_clean(worker, folder, f"{section}, the copy's end", False, save=save)
     except CopyStop as exc:
         check(False, f"{section}: {exc}")
 
@@ -3909,8 +4134,8 @@ def pin_drive(desk, label, want, input_gear="G1"):
     """The app's kinematics against the turns W6-PLAN §5 works by hand, for +30° of the input, to 1e-9 relative."""
     got = expected_turns(desk, list(want), input_gear, 30.0, 1)
     check(all(abs(got[g] - v) <= 1e-9 * max(1.0, abs(v)) for g, v in want.items()),
-          f"{label}: the kinematics give §5's turns for +30° of {input_gear}: "
-          + ", ".join(f"{g} {got[g]:+.9f}° (§5 {v:+.9f}°)" for g, v in want.items()))
+          f"{label}: the kinematics give the plan's turns for +30° of {input_gear}: "
+          + ", ".join(f"{g} {got[g]:+.9f}° (plan {v:+.9f}°)" for g, v in want.items()))
 
 
 def say_along(worker, desk, label):
@@ -4233,11 +4458,548 @@ def section_r7(worker, excel):
     drive_proof(worker, desk, "r7 reopened")
 
 
+# == W7: a planetary stage — carriers, copies, loops (W7-PLAN §4, §6) ==========================================
+#
+# Through the app's own code as W5's and W6's sections go, on the committed findings only. What only SolidWorks can
+# show is measured here (W7-PLAN §6; the coordinator's list for W7): the app's own build of the 4 : 1 turning right
+# — every body's turn and each copy's origin carried round the carrier under a temporary drive, interference on all
+# six meshes (the two unmated ring meshes included) at the built position, at phases across a pitch and with the
+# drive at 120, and both Flips on the ring mate and on a sun mate; every copy at its right angle (each turned half a
+# pitch must clash with exactly its sun and its ring); the carrier part a skeleton of axes and planes, its axes
+# carried into the assembly through each copy's centre; the puts of W7-INTERFACES §6.13 after a turn; the held
+# sun, the stage on Z- and the held carrier; the carrier part's globals and every gear mate remade by Update;
+# CarrierGear locked to the carrier; what SolidWorks does with a second planet–ring gear mate; quiet Updates.
+
+PLANETARY = {"failed": ""}       # p1's build failing stops the sections that copy it (W7-PLAN §6)
+
+
+def live_part(session, path):
+    """A part's skeleton as SolidWorks holds it: its solid bodies, its top-level features (name, type), each axis's
+    GetRefAxisParams by name, and its globals."""
+    def work(s):
+        doc = s._doc()  # noqa: SLF001
+        found = call(doc, "GetBodies2", 0, True)
+        solids = len(found) if found else 0
+        tree, axes = [], {}
+        feature = call(doc, "FirstFeature")
+        while feature is not None:
+            name, kind = str(call(feature, "Name")), str(call(feature, "GetTypeName2"))
+            tree.append((name, kind))
+            if kind == "RefAxis":
+                axes[name] = [float(v) for v in call(call(feature, "GetSpecificFeature2"), "GetRefAxisParams")]
+            feature = call(feature, "GetNextFeature")
+        return solids, tree, axes, s.equation_values()
+    return in_assembly(path, work)(session)
+
+
+SOLID_FEATURES = ("Extrusion", "Boss", "Cut", "ICE", "Revolution", "Sweep", "Blend", "Fillet", "Chamfer")
+
+
+def to_world(frame, point):
+    """A point in a component's own coordinates carried into the assembly by its frame (rotation by rows, mm)."""
+    rotation, at = frame
+    return tuple(sum(float(rotation[i * 3 + j]) * float(point[j]) for j in range(3)) + float(at[i]) for i in range(3))
+
+
+def carrier_part_check(worker, desk, label, live):
+    """W7-PLAN §2.6, §6: each carrier part a skeleton — no solid body, no solid feature, only planes, axes and the
+    sketch-free reference geometry — its globals the copies' offsets; and its axes, read in the part
+    (GetRefAxisParams) and carried into the assembly by the carrier component's frame as SolidWorks holds it: the
+    carrier's own axis on the carrier's line, each copy's axis through that copy's centre along the carrier's
+    direction, to 1e-6 mm. Returns each carrier's globals."""
+    box = desk.record.gearbox
+    placed = desk.a.report.layout.placed
+    out = {}
+    for c in carriers_of(box):
+        solids, tree, axes, values = run(worker, lambda s, p=c.path: live_part(s, p))
+        made = [(n, t) for n, t in tree if t not in ("CommentsFolder", "FavoriteFolder", "HistoryFolder",
+                                                      "SelectionSetFolder", "SensorFolder", "DocsFolder",
+                                                      "DetailCabinet", "SurfaceBodyFolder", "SolidBodyFolder",
+                                                      "EnvFolder", "InkMarkupFolder", "EqnFolder", "MaterialFolder",
+                                                      "OriginProfileFeature")]
+        say(f"        {os.path.basename(c.path)}: solid bodies {solids}; features {made}; globals {values}")
+        check(solids == 0 and not any(any(k in t for k in SOLID_FEATURES) for _, t in made),
+              f"{label}: {os.path.basename(c.path)} is axes and planes only: {solids} solid bodies, no solid feature")
+        frame = live[c.component]
+        direction = tuple(float(v) for v in c.direction)
+        lines = {f"{c.shaft} Axis": (tuple(float(v) for v in frame[1]), "the carrier's own")}
+        for axis in c.axes:
+            copy = next((g for g, p in placed.items() if p.shaft == axis.shaft), None)
+            if copy is not None:
+                lines[axis.axis_name] = (tuple(placed[copy].centre), copy)
+        for name, (point, what) in lines.items():
+            params = axes.get(name)
+            if params is None:
+                check(False, f"{label}: {os.path.basename(c.path)} holds the axis {name}")
+                continue
+            world = [to_world(frame, [v * 1000.0 for v in params[:3]]),
+                     to_world(frame, [v * 1000.0 for v in params[3:6]])]
+            off, u, dot = axis_on_line([v / 1000.0 for v in world[0] + world[1]], point, direction)
+            check(off <= 1e-6 and abs(abs(dot) - 1.0) <= 1e-9,
+                  f"{label}: {name}, carried into the assembly, through {what} centre {tuple(round(v, 9) for v in point)} "
+                  f"(off {off:.1e} mm) along the carrier's direction ({'+' if dot > 0 else '-'})")
+        out[c.shaft] = values
+    return out
+
+
+def held_fixed(worker, desk, label):
+    """Every held body (``box.fixed``: the held member, a held carrier and what is held with it) reads IsFixed True;
+    no mate names a held carrier (W7-PLAN §2.7: inserted, placed and fixed, never mated)."""
+    box = desk.record.gearbox
+    pairs = [(g, n) for g, n in bodies(box) if g in box.fixed]
+
+    def work(s):
+        out = {}
+        for index, (g, n) in enumerate(pairs):
+            s.find_component(f"h{index}", n)
+            out[g] = bool(call(s._handles[f"h{index}"]["component"], "IsFixed"))  # noqa: SLF001
+        return out
+    got = run(worker, in_assembly(box.assembly, work)) if pairs else {}
+    check(all(got.values()), f"{label}: every held body reads IsFixed: {got}")
+    held_carriers = [wb_layout.carrier_id(c.shaft) for c in carriers_of(box)
+                     if wb_layout.carrier_id(c.shaft) in box.fixed]
+    if held_carriers:
+        named = [m.name for m in box.mates if any(h in m.gears for h in held_carriers)]
+        check(not named, f"{label}: no mate names the held carrier {held_carriers}: {named}")
+
+
+def copy_controls(worker, desk, label):
+    """Every copy built at its right angle (W7-PLAN §6; the coordinator's (2)): each copy turned half its pitch about
+    its own axis (a put with its gear mates on, MESH_PHASE_ROUTE) must clash with exactly its sun and its ring, and
+    nothing else; the sun turned half its pitch with every copy and nothing else; put back, none again."""
+    box = desk.record.gearbox
+    placed = desk.a.report.layout.placed
+    name_of = {g: n for g, n in bodies(box)}
+    gear_of = {n: g for g, n in bodies(box)}
+    want = wanted(desk)
+    meshes = wb_geometry.expand_meshes(desk.a.spec, placed)
+    turned_gears = [g for g in placed if getattr(placed[g], "carrier", "")]
+    stage = desk.a.report.stages[0]
+    if stage.sun not in box.fixed:
+        turned_gears.append(stage.sun)
+    for gear in turned_gears:
+        partners = {b if a == gear else a for a, b in meshes if gear in (a, b)}
+        rotation, at, pitch = want[gear]
+        started = time.monotonic()
+        try:
+            moved, back = run(worker, lambda s: placed_elsewhere(s, box.assembly, name_of[gear],
+                                                                  turn_about_z(rotation, pitch / 2), at,
+                                                                  swcom.ASSEMBLY_TRAIN))
+        except Exception as exc:  # noqa: BLE001 - a put that does not hold is a finding, said
+            check(False, f"{label}: {gear} turned half a pitch: the put raised {type(exc).__name__}: {exc}")
+            continue
+        merged = swbuild._clashes(moved, gear_of)  # noqa: SLF001
+        pairs = {frozenset(c.gears) for c in merged if c.volume > 0}
+        check(pairs == {frozenset((gear, p)) for p in partners},
+              f"{label}: {gear} turned half a pitch ({pitch / 2:.4f}°) clashes with exactly {sorted(partners)}: "
+              f"{[(c.gears, round(c.volume, 3)) for c in merged]}")
+        check(back == [], f"{label}: {gear} put back, no interference ({time.monotonic() - started:.1f} s)")
+    measure_frames(worker, desk, f"{label}, after the controls")
+    measure_mates(worker, desk, f"{label}, after the controls")
+
+
+def second_ring_mate(worker, desk, label):
+    """The coordinator's (8): what SolidWorks really does with a second planet–ring gear mate (the fake calls it
+    over-defined; no probe has seen it). On a copy, at the end of its section, never saved: ``Planet copy 2`` gear-
+    mated to the ring at the tooth ratio with each Flip in turn; AddMate5's status, every mate's code and warning,
+    every body's constrained status and the rebuild's answer logged as facts; deleted; the mates read again equal to
+    the record's, nothing suppressed, codes 0."""
+    box = desk.record.gearbox
+    pairs = bodies(box)
+    teeth = {g: desk.a.report.layout.placed[g].teeth for g, _ in pairs if g in desk.a.report.layout.placed}
+    a, b = "Planet copy 2", desk.a.report.stages[0].ring
+
+    def job(session):
+        out = {}
+        session.begin_build()
+        try:
+            session.open_document(box.assembly)
+            handle = {}
+            for index, (g, n) in enumerate(pairs):
+                session.find_component(f"x{index}", n)
+                handle[g] = f"x{index}"
+            out["before"] = [(s.name, s.code, s.warning, s.suppressed) for s in session.mate_states()]
+            for flip in (bool(findings.GEAR_MATE_FLIP), not bool(findings.GEAR_MATE_FLIP)):
+                try:
+                    name, _ = session.add_mate("x2nd", "gear", f"{handle[a]}:Gear Axis", f"{handle[b]}:Gear Axis",
+                                               0.0, f"{CONTROL}{a} meshes {b}", ratio=(float(teeth[a]), float(teeth[b])),
+                                               flip=flip)
+                    out[f"status {flip}"] = session.mate_status(name)
+                    out[f"rebuild {flip}"] = bool(session.rebuild(kind=swcom.ASSEMBLY_TRAIN))
+                    out[f"states {flip}"] = [(s.name, s.code, s.warning, s.suppressed) for s in session.mate_states()]
+                    out[f"constrained {flip}"] = {g: session.constrained_status(h) for g, h in handle.items()}
+                    delete_mate(session, name)
+                    session.rebuild(kind=swcom.ASSEMBLY_TRAIN)
+                except Exception as exc:  # noqa: BLE001 - what SolidWorks answered is the finding
+                    out[f"raised {flip}"] = f"{type(exc).__name__}: {exc}"
+            out["after"] = [(s.name, s.code, s.warning, s.suppressed) for s in session.mate_states()]
+            return out
+        finally:
+            session.end_build()
+    say(f"control {label}: a second planet–ring gear mate, {a} meshes {b} at {teeth.get(a)} : {teeth.get(b)}, made with "
+        "each Flip on this copy and deleted; never saved")
+    out = run(worker, job)
+    for flip in (bool(findings.GEAR_MATE_FLIP), not bool(findings.GEAR_MATE_FLIP)):
+        say(f"fact    {label}: the second ring mate with Flip {flip}: AddMate5 status {out.get(f'status {flip}')}, "
+            f"rebuild {out.get(f'rebuild {flip}')}, raised {out.get(f'raised {flip}')!r}")
+        say(f"fact    {label}:   mates then {out.get(f'states {flip}')}")
+        say(f"fact    {label}:   constrained then {out.get(f'constrained {flip}')}")
+    check(out.get("after") == out.get("before"), f"{label}: the second ring mate deleted, the mates as before: "
+          f"{out.get('after')}")
+
+
+def spec_planetary(folder=""):
+    """W7-PLAN §4.1, ``Planetary_4to1``: the ring held, the sun in at 1000 rpm and 2 N·m, the carrier out, three
+    planets on P (mounted on C), CarrierGear on C locked to the carrier (as tests/test_workbook_planetary.py has it)."""
+    return GearboxSpec(
+        box=Box(name="Planetary_4to1", output_folder=folder, pressure_angle="20", efficiency="98"),
+        shafts=(Shaft("S", "frame", "0", "0", "0", "Z+", "input", "", "1000", "2"),
+                Shaft("C", "frame", "0", "0", "0", "Z+", "output"),
+                Shaft("P", "C", "18", "0", "0", "", "", "3"),
+                Shaft("R", "frame", "0", "0", "0", "Z+", "fixed")),
+        gears=(Gear("Sun", "S", "10", "spur", "external", "18", "1", "", "10", "6", part_name="Sun"),
+               Gear("Planet", "P", "10", "spur", "external", "18", "1", "", "10", "8", part_name="Planet"),
+               Gear("Ring", "R", "10", "spur", "internal", "54", "1", "", "10", ""),
+               Gear("CarrierGear", "C", "30", "spur", "external", "20", "1", "", "6", "10", part_name="CarrierGear")),
+        meshes=(Mesh("Sun", "Planet"), Mesh("Planet", "Ring")))
+
+
+COPIES3 = ("Planet copy 1", "Planet copy 2", "Planet copy 3")
+P_EXPECT = {
+    "header": "Planetary, R fixed · 3 planets · 4.000 : 1 · output turns the same way",
+    "speeds": {"S": 1000.0, "C": 250.0, "P": -500.0, "R": 0.0}, "relative": {"P": -750.0},
+    "torques": {"S": 2.0, "C": 7.7624}, "held": {"R": 5.7624},
+    "lines": ["S     1000.0 rpm anticlockwise · 2.00 N·m", "C     250.0 rpm anticlockwise · 7.76 N·m",
+              "P     500.0 rpm clockwise, 750.0 rpm clockwise relative to C · 3 copies", "R     held still · 5.76 N·m"]}
+P5_EXPECT = {
+    "header": "Planetary, S fixed · 3 planets · 1.333 : 1 · output turns the same way",
+    "speeds": {"S": 0.0, "C": 750.0, "P": 1500.0, "R": 1000.0}, "relative": {"P": 750.0},
+    "torques": {"R": 2.0, "C": 2.6403}, "held": {"S": 0.6403},
+    "lines": ["S     held still · 0.64 N·m", "C     750.0 rpm anticlockwise · 2.64 N·m",
+              "P     1500.0 rpm anticlockwise, 750.0 rpm anticlockwise relative to C · 3 copies",
+              "R     1000.0 rpm anticlockwise · 2.00 N·m"]}
+P7_EXPECT = {
+    "header": "Planetary, C fixed · 3 planets · 3.000 : 1 · output turns the other way",
+    "speeds": {"S": 1000.0, "C": 0.0, "P": -1000.0, "R": -1000.0 / 3}, "relative": {"P": -1000.0},
+    "torques": {"S": 2.0, "R": 5.7624}, "held": {"C": 7.7624},
+    "lines": ["S     1000.0 rpm anticlockwise · 2.00 N·m", "C     held still · 7.76 N·m",
+              "P     1000.0 rpm clockwise, 1000.0 rpm clockwise relative to C · 3 copies",
+              "R     333.3 rpm clockwise · 5.76 N·m"]}
+# Each body's own turn for +30° of the input (W7-PLAN §4, §6 p3), worked by hand there.
+P_DRIVE = dict({"Sun": 30.0, "C carrier": 7.5, "CarrierGear": 7.5, "Ring": 0.0}, **{c: -15.0 for c in COPIES3})
+P3_DRIVE = dict({"Sun": 30.0, "C carrier": 30.0 * 21 / 78, "CarrierGear": 30.0 * 21 / 78, "Ring": 0.0},
+                **{c: -17.5 for c in COPIES3})                       # Sun 21, Ring 57, P X 19.5: 3.714 : 1
+P5_DRIVE = dict({"Ring": 30.0, "C carrier": 22.5, "CarrierGear": 22.5, "Sun": 0.0}, **{c: 45.0 for c in COPIES3})
+P7_DRIVE = dict({"Sun": 30.0, "C carrier": 0.0, "CarrierGear": 0.0, "Ring": -10.0}, **{c: -30.0 for c in COPIES3})
+P_CARRIER_GLOBALS = {"P copy 1 X": 18.0, "P copy 2 X": -9.0, "P copy 2 Y": 15.588457268, "P copy 3 X": -9.0,
+                     "P copy 3 Y": -15.588457268}
+P3_CARRIER_GLOBALS = {"P copy 1 X": 19.5, "P copy 2 X": -9.75, "P copy 2 Y": 16.887495374, "P copy 3 X": -9.75,
+                      "P copy 3 Y": -16.887495374}
+
+
+def expect_planetary_read(desk, label, expect):
+    """The read against W7-PLAN §4: no diagnostic at all (B's tests: the fixtures check clean), the header, each
+    shaft's own-axis speed, the planet's speed on its carrier, the torques and the held member's, the Speeds lines
+    (D's tests' wording, no-break spaces read as spaces), the stage recognised."""
+    a = desk.a
+    said = [d.message for d in a.diagnostics]
+    check(not said and a.lay_out_refusal() == "", f"{label}: the Checks panel is empty and the gate open: {said}; "
+          f"gate {a.lay_out_refusal()!r}")
+    check(a.report.worked_out_as == expect["header"], f"{label}: the header {a.report.worked_out_as!r}")
+    m = a.report.motion
+    close = lambda got, want: got is not None and abs(float(got) - want) <= 1e-9 * max(1.0, abs(want))  # noqa: E731
+    check(all(close(m.speeds.get(k), v) for k, v in expect["speeds"].items()),
+          f"{label}: own-axis speeds §4's: {({k: float(v) for k, v in m.speeds.items()})}")
+    relative = dict(getattr(m, "relative", {}) or {})
+    check(all(close(relative.get(k), v) for k, v in expect["relative"].items()),
+          f"{label}: the planet's speed on its carrier: {({k: float(v) for k, v in relative.items()})}")
+    torques = {k: float(v) for k, v in m.torques.items()}
+    held = {k: float(v) for k, v in (getattr(m, "held", {}) or {}).items()}
+    check(all(k in torques and abs(torques[k] - v) <= 1e-4 for k, v in expect["torques"].items())
+          and all(k in held and abs(held[k] - v) <= 1e-4 for k, v in expect["held"].items()),
+          f"{label}: torques {torques}, held {held}")
+    lines, readout = ui_text.workbook_speed_lines(a.spec, m)
+    for line in lines:
+        say(f"speeds  {line}")
+    plain = [line.replace("\u00a0", " ") for line in lines]
+    check(plain == expect["lines"], f"{label}: the Speeds lines are D's tests' (no-break spaces as spaces)")
+    stages = getattr(a.report, "stages", ())
+    say(f"        stage {stages}")
+    check(len(stages) == 1, f"{label}: one planetary stage recognised")
+
+
+def planetary_built(worker, desk, label, parts, controls, phases=True):
+    """A planetary built (fresh or Build again…) and judged: built to turn, which Flip each gear mate kept logged;
+    the mates exactly the plan's (one per sun mesh, one with the ring: W7-INTERFACES §6.14), the unmated ring meshes
+    on record; every gear mate's read; §4.1 with the carrier part, the held members and the copies' controls; the
+    drive with the both-Flips control and the interference judge on each mesh in ``controls`` (phases across the
+    input's pitch on the first, the interference read there too); a quiet Update; reopened, read, driven again."""
+    build_turning(worker, desk, label, parts, None)
+    box = desk.record.gearbox
+    gear_mates = [m.name for m in box.mates if m.kind == "mesh"]
+    say(f"fact    {label}: gear mates {gear_mates}; unmated {box.unmated}; fixed {box.fixed}; drag {box.drag}; "
+        f"carriers {[(c.shaft, c.component, os.path.basename(c.path)) for c in carriers_of(box)]}")
+    stage = desk.a.report.stages[0]
+    copies = [g for g, p in desk.a.report.layout.placed.items() if getattr(p, "carrier", "")]
+    check(sorted(gear_mates) == sorted([f"{stage.sun} meshes {c}" for c in copies] + [f"{copies[0]} meshes {stage.ring}"]),
+          f"{label}: one gear mate per sun mesh and exactly one with the ring, with copy 1: {gear_mates}")
+    check(sorted(map(tuple, box.unmated)) == sorted((c, stage.ring) for c in copies[1:]),
+          f"{label}: the other ring meshes left unmated on record: {box.unmated}")
+    mate_readings(worker, desk, f"{label} built")
+    measure(worker, desk, f"{label} built", controls=True, again=False)
+    input_gear = box.drag[0] if box.drag else ""
+    pitch = wb_layout.pitch(desk.a.report.layout.placed[input_gear]) if input_gear else 0.0
+    for index, control in enumerate(controls):
+        drive_proof(worker, desk, f"{label} built, control on {control[0]} meshes {control[1]}", control=control,
+                    phases=(pitch / 4, pitch / 2, 3 * pitch / 4) if phases and index == 0 else ())
+    quiet_update(worker, desk, f"{label} quiet Update")
+    reopen(worker, desk, f"{label} built")
+    mate_readings(worker, desk, f"{label} reopened")
+    drive_proof(worker, desk, f"{label} reopened, control on {controls[0][0]} meshes {controls[0][1]}",
+                control=controls[0])
+
+
+def p_blocked(section):
+    if PLANETARY["failed"]:
+        check(False, f"{section}: not run: p1's build of Planetary_4to1 failed ({PLANETARY['failed']}), and every "
+                     "later planetary section starts from it")
+        return True
+    return False
+
+
+def section_p1(worker, excel):
+    say("== p1  Planetary_4to1 (W7-PLAN §4.1): the ring held, three planets on C, CarrierGear locked to the carrier; "
+        "built fresh; every-build checks, the drive with both Flips on Planet copy 1 meshes Ring and on Sun meshes "
+        "Planet copy 2, phases across the sun's pitch, a quiet Update, reopen; then kept as p1.master")
+    folder, path, book, desk = write_fixture(worker, excel, "p1", spec_planetary, keep="Planetary_4to1.xlsx")
+    expect_planetary_read(desk, "p1", P_EXPECT)
+    pin_drive(desk, "p1", P_DRIVE, input_gear="Sun")
+    try:
+        planetary_built(worker, desk, "p1", 4, [("Planet copy 1", "Ring"), ("Sun", "Planet copy 2")])
+    except (Halt, Stopped):
+        raise
+    except Exception as exc:
+        PLANETARY["failed"] = f"{type(exc).__name__}: {exc}"
+        raise
+    master = keep_master(worker, folder, "p1")
+    if master:
+        PERSON_W7.append(os.path.join(master, "Planetary_4to1.SLDASM"))
+
+
+def turned_then(worker, desk, label):
+    """W7-PLAN §6 p3 (review M5): the train driven 37° and the drive deleted, saved, so the carrier stands at
+    δ_c = 9.25° before the edit."""
+    user_turn(worker, desk, label, 37.0)
+    save_assembly(worker, desk, f"{label}: after the turn")
+    desk.plan_solidworks()
+
+
+def section_p2(worker, excel):
+    say("== p2  a copy of p1.master: the user's turn (37°) and Update with nothing changed; then, at the end, on this "
+        "copy and never saved, a second planet–ring gear mate")
+    if p_blocked("p2"):
+        return
+    folder, path, book, desk = start_copy(worker, excel, "p2", "p1", spec_planetary)
+    turned_then(worker, desk, "p2")
+    update_nothing_turned(worker, desk, "p2 turned 37°", folder)
+    second_ring_mate(worker, desk, "p2")
+    end_copy(worker, folder, "p2", save=False)
+
+
+def put_order(result, label, first):
+    """The order the Update put things in (``GearboxUpdate.placed``), against W7-INTERFACES §6.13: ``first`` the
+    bodies that must come first, in that order."""
+    say(f"fact    {label}: put in the order {result.placed}")
+    check(list(result.placed[:len(first)]) == list(first), f"{label}: put first {list(first)}: {result.placed}")
+
+
+def section_p3(worker, excel):
+    say("== p3  a copy of p1.master: puts, moves and values on a turned carrier — before each edit the train driven "
+        "37° and the drive deleted: (1) Planet At 10 -> 12; (2) Ring At 10 -> 12, the held ring put first; (3) Sun 21, "
+        "Ring 57, P's X 19.5: the carrier part's globals and all four gear mates remade, 3.714 : 1")
+    if p_blocked("p3"):
+        return
+    folder, path, book, desk = start_copy(worker, excel, "p3", "p1", spec_planetary)
+    carrier = wb_layout.carrier_id("C")
+    for step, cells, first, why in (
+            ("(1)", [("Gears", "C3", 12)], [carrier], "Planet At 10 -> 12: \"Planet Face Z\" set once"),
+            ("(2)", [("Gears", "C4", 12)], ["Ring", carrier], "Ring At 10 -> 12: the gear-mated held ring")):
+        label = f"p3 {step}"
+        say(f"-- {label}  {why}")
+        turned_then(worker, desk, label)
+        edit(desk, book, *cells)
+        u = desk.update
+        if u is None or u.needs_new_revision or u.refusal:
+            check(False, f"{label}: an Update: structural {u and list(u.structural)}; refusal {u and u.refusal!r}")
+            continue
+        guard()
+        _, result, _ = desk.update_solidworks()
+        if result is None:
+            check(False, f"{label}: the Update refused: {desk.note[0]!r}")
+            continue
+        say(f"fact    {label}: axial {result.axial}; restored {result.restored}; unsuppressed {result.unsuppressed}")
+        for line in result.log_lines():
+            if "lock" in line.lower() or "suppress" in line.lower() or " put" in line.lower():
+                say(f"fact    {label}: log: {line.strip()}")
+        check(result.ok and bool(result.restored), f"{label}: the turned train put back: restored {result.restored}")
+        put_order(result, label, first)
+        update_marks(worker, desk, result, label, folder)
+        measure_frames(worker, desk, label)
+        measure_mates(worker, desk, label)
+        measure_clear(worker, desk, label)
+        drive_proof(worker, desk, f"{label}, driven after")
+        save_assembly(worker, desk, f"{label}: after the drive")
+        desk.plan_solidworks()
+    label = "p3 (3)"
+    say(f"-- {label}  Sun 18 -> 21, Ring 54 -> 57, P's X 18 -> 19.5 (centres 19.5 / 19.5, (21 + 57)/3 = 26)")
+    turned_then(worker, desk, label)
+    remake_planetary(worker, desk, book, label, folder)
+    end_copy(worker, folder, "p3")
+
+
+def remake_planetary(worker, desk, book, label, folder):
+    """p3's third edit (W7-PLAN §6 p3 (3); the coordinator's (6)): two parts' values, the carrier part's globals,
+    all four gear mates remade (copy 1's planet carries two) and read back, the swing put right; frames, the carrier
+    part, interference and the controls; the drive at 3.714 : 1 with both Flips on the ring mate; a quiet Update;
+    reopen; drive."""
+    edit(desk, book, ("Gears", "F2", 21), ("Gears", "F4", 57), ("Shafts", "C4", 19.5))
+    u = desk.update
+    desk.say_footer(f"{label}, after the edit")
+    if u is None or u.needs_new_revision or u.refusal:
+        check(False, f"{label}: an Update: structural {u and list(u.structural)}; refusal {u and u.refusal!r}")
+        return
+    mates = sorted(m.name for m in desk.record.gearbox.mates if m.kind == "mesh")
+    check(sorted(u.ratios) == mates, f"classify: every gear mate remade: ratios {list(u.ratios)}; carriers moved "
+          f"{list(getattr(u, 'carriers_moved', ()))}")
+    pin_drive(desk, label, P3_DRIVE, input_gear="Sun")
+    guard()
+    _, result, _ = desk.update_solidworks()
+    if result is None:
+        check(False, f"{label}: the Update refused: {desk.note[0]!r}")
+        return
+    say(f"fact    {label}: ratios {result.ratios}, read {result.ratios_read}, turned round "
+        f"{getattr(result, 'turned_round', None)}, sense found wrong {getattr(result, 'sense_found_wrong', None)}, "
+        f"carriers {[(r.document, r.changed) for r in getattr(result, 'carriers', [])]}, placed {result.placed}")
+    check(result.ok and sorted(result.ratios) == mates, f"{label}: all four gear mates remade: {result.ratios}")
+    update_marks(worker, desk, result, label, folder)
+    live = measure_frames(worker, desk, label)
+    values = carrier_part_check(worker, desk, label, live).get("C", {})
+    check(all(abs(abs(float(values.get(k, float("nan")))) - abs(v)) < 1e-6 for k, v in P3_CARRIER_GLOBALS.items()),
+          f"{label}: the carrier part's globals put the copies at (19.5, 0), (-9.75, ±16.887495374): {values}")
+    mate_readings(worker, desk, f"{label}, remade")
+    measure_mates(worker, desk, label)
+    measure_clear(worker, desk, label)
+    copy_controls(worker, desk, label)
+    drive_proof(worker, desk, f"{label}, at 3.714 : 1", control=("Planet copy 1", "Ring"))
+    quiet_update(worker, desk, f"{label}, quiet Update")
+    reopen(worker, desk, label)
+    mate_readings(worker, desk, f"{label}, reopened")
+    drive_proof(worker, desk, f"{label}, reopened, at 3.714 : 1")
+
+
+def build_again(worker, desk, label, folder, sentence):
+    """A structural edit's Build again… (W7-PLAN §6 p4–p7): the classify sentence, then ``_r2`` built turning beside
+    the earlier files, whose sha256 and mtime stay as they were."""
+    u = desk.update
+    said = " ".join(str(x) for x in (u.structural if u is not None else ()))
+    check(u is not None and u.needs_new_revision and (sentence in said if sentence else True),
+          f"{label}: structural: {said!r}")
+    f = desk.say_footer(f"{label}, after the edit")
+    check(f.build_enabled, f"{label}: Build again… offered")
+    earlier, sidecars = stamps(folder), sidecar_texts(folder)
+    build_turning(worker, desk, f"{label} Build again", None, None)
+    box = desk.record.gearbox
+    check(box.revision == 2 and os.path.basename(box.assembly) == "Planetary_4to1_r2.SLDASM",
+          f"{label}: the new revision is Planetary_4to1_r2: {os.path.basename(box.assembly)}")
+    check_earlier_unchanged(folder, earlier, label, sidecars)
+
+
+def section_p4(worker, excel):
+    say("== p4  a copy of p1.master: Copies 5 (the assembly condition), Copies 6 (the neighbours), then Copies 4 -> "
+        "Build again… with four copies of the one Planet part")
+    if p_blocked("p4"):
+        return
+    folder, path, book, desk = start_copy(worker, excel, "p4", "p1", spec_planetary)
+    for copies, wanted_text in ((5, "5 copies of Planet cannot all mesh with Sun and Ring at once"),
+                                (6, "6 copies of Planet stand")):
+        edit(desk, book, ("Shafts", "H4", copies))
+        errors = [d.message for d in desk.a.diagnostics if d.level == "error"]
+        f = desk.say_footer(f"p4, Copies {copies}")
+        check(any(wanted_text in m for m in errors) and not f.build_enabled and not f.update_enabled,
+              f"p4: Copies {copies} is an error, Build and Update not offered: {errors}")
+    edit(desk, book, ("Shafts", "H4", 4))
+    build_again(worker, desk, "p4", folder, "P now has 4 copies where it was built with 3")
+    box = desk.record.gearbox
+    copies = [c for c in box.components if getattr(c, "of", "") == "Planet"]
+    check(len(copies) == 4 and len({c.part for c in copies}) == 1, f"p4: four copies of the one Planet part: "
+          f"{[(c.gear, c.name, os.path.basename(c.part)) for c in copies]}")
+    mate_readings(worker, desk, "p4 built")
+    measure(worker, desk, "p4 built", controls=True, again=False)
+    drive_proof(worker, desk, "p4 built, control on Planet copy 1 meshes Ring", control=("Planet copy 1", "Ring"))
+    end_copy(worker, folder, "p4")
+
+
+def held_variant(worker, excel, section, cells, expect, drive_pin, sentence, input_gear, control):
+    """p5–p7: a copy of p1.master, the Role or Axis edits, the structural sentence, Build again… ``_r2``; then as p1:
+    every-build checks, the drive (with both Flips on ``control``), reopen, the drive again."""
+    if p_blocked(section):
+        return None
+    folder, path, book, desk = start_copy(worker, excel, section, "p1", spec_planetary)
+    edit(desk, book, *cells)
+    expect_planetary_read(desk, section, expect) if expect else None
+    pin_drive(desk, section, drive_pin, input_gear=input_gear)
+    build_again(worker, desk, section, folder, sentence)
+    box = desk.record.gearbox
+    check(box.drag and box.drag[0] == input_gear, f"{section}: the gear to drag is {input_gear}: {box.drag}")
+    mate_readings(worker, desk, f"{section} built")
+    measure(worker, desk, f"{section} built", controls=True, again=False)
+    drive_proof(worker, desk, f"{section} built, control on {control[0]} meshes {control[1]}", control=control)
+    reopen(worker, desk, f"{section} built")
+    mate_readings(worker, desk, f"{section} reopened")
+    drive_proof(worker, desk, f"{section} reopened")
+    return folder, desk
+
+
+def section_p5(worker, excel):
+    say("== p5  a copy of p1.master: the sun held (S fixed, R the input) -> Build again…; the drive from the ring")
+    done = held_variant(worker, excel, "p5", [("Shafts", "G2", "fixed"), ("Shafts", "I2", None), ("Shafts", "J2", None),
+                                              ("Shafts", "G5", "input"), ("Shafts", "I5", 1000), ("Shafts", "J5", 2)],
+                        P5_EXPECT, P5_DRIVE, "", "Ring", ("Planet copy 1", "Ring"))
+    if done:
+        end_copy(worker, done[0], "p5")
+
+
+def section_p6(worker, excel):
+    say("== p6  a copy of p1.master: S, C and R on Z- -> Build again…; the copies where §4.3 puts them, the carrier "
+        "part's own coordinates p1's; the input's turn measured")
+    done = held_variant(worker, excel, "p6", [("Shafts", "F2", "Z-"), ("Shafts", "F3", "Z-"), ("Shafts", "F5", "Z-")],
+                        None, P_DRIVE, "", "Sun", ("Planet copy 1", "Ring"))
+    if done:
+        folder, desk = done
+        live = gear_frames(worker, desk)
+        values = carrier_part_check(worker, desk, "p6", {c.component: live[wb_layout.carrier_id(c.shaft)]
+                                                         for c in carriers_of(desk.record.gearbox)}).get("C", {})
+        check(all(abs(float(values.get(k, float("nan"))) - v) < 1e-6 for k, v in P_CARRIER_GLOBALS.items()),
+              f"p6: the carrier part holds p1's own coordinates: {values}")
+        end_copy(worker, folder, "p6")
+
+
+def section_p7(worker, excel):
+    say("== p7  a copy of p1.master: the carrier held (C fixed, R the output) -> Build again…; the carrier and "
+        "CarrierGear fixed and never mated; copies -30°, Ring -10° for +30° on the sun")
+    done = held_variant(worker, excel, "p7", [("Shafts", "G3", "fixed"), ("Shafts", "G5", "output")],
+                        P7_EXPECT, P7_DRIVE, "", "Sun", ("Planet copy 1", "Ring"))
+    if done:
+        end_copy(worker, done[0], "p7")
+
+
 SECTIONS = {"m1": section_m1, "m2": section_m2, "m3": section_m3, "m4": section_m4, "m5": section_m5, "m6": section_m6,
             "m7": section_m7, "m8": section_m8, "rs1": section_rs1, "rs2": section_rs2, "rs3": section_rs3,
             "a": section_a, "a2": section_a2, "a3": section_a3, "b": section_b, "c": section_c,
             "r1": section_r1, "r2": section_r2, "r3": section_r3, "r4": section_r4, "r5": section_r5,
-            "r6": section_r6, "r7": section_r7, "r8": section_r8}
+            "r6": section_r6, "r7": section_r7, "r8": section_r8,
+            "p1": section_p1, "p2": section_p2, "p3": section_p3, "p4": section_p4, "p5": section_p5,
+            "p6": section_p6, "p7": section_p7}
 
 
 def connect_pid():
@@ -4258,22 +5020,24 @@ def snapshot():
 
 
 def give_back_r1():
-    """At the very end, once nothing copies from it any more: r1.master renamed back to r1, so the person's step opens
-    it where its records and the assembly's references point."""
-    master = os.path.join(OUT, "r1" + MASTER_SUFFIX)
-    target = os.path.join(OUT, "r1")
-    if not os.path.isdir(master):
-        return
-    if os.path.exists(target):
-        say(f"r1      {target} exists; r1.master left as it is")
-        return
-    try:
-        os.rename(master, target)
-    except OSError as exc:
-        say(f"r1      r1.master could not be renamed back to r1: {exc}")
-        return
-    PERSON_W6[:] = [os.path.join(target, "Bevel_Reducer.SLDASM")]
-    say(f"r1      r1.master renamed back to r1 for the person's step: {target}")
+    """At the very end, once nothing copies from them any more: r1.master and p1.master renamed back to r1 and p1, so
+    the person's steps open them where their records and the assemblies' references point."""
+    for section, person, assembly in (("r1", PERSON_W6, "Bevel_Reducer.SLDASM"),
+                                      ("p1", PERSON_W7, "Planetary_4to1.SLDASM")):
+        master = os.path.join(OUT, section + MASTER_SUFFIX)
+        target = os.path.join(OUT, section)
+        if not os.path.isdir(master):
+            continue
+        if os.path.exists(target):
+            say(f"{section:<7} {target} exists; {section}.master left as it is")
+            continue
+        try:
+            os.rename(master, target)
+        except OSError as exc:
+            say(f"{section:<7} {section}.master could not be renamed back to {section}: {exc}")
+            continue
+        person[:] = [os.path.join(target, assembly)]
+        say(f"{section:<7} {section}.master renamed back to {section} for the person's step: {target}")
 
 
 def person_step():
@@ -4294,6 +5058,13 @@ def person_step():
             "shaft, turns half as far, and G3 under it with it; G4, the large spur gear on S3, turns a sixth as far as "
             "G1 and the other way round from G2. Nothing leaves its axis or passes through another gear. Then press "
             "Update SolidWorks with nothing changed: the footer says the gears stand where they were turned.")
+    if PERSON_W7:
+        say("person  W7-PLAN §6, the step only a person can do (for 2026, then 2024):")
+        say(f"person  In {os.path.dirname(PERSON_W7[0])}, open Planetary_4to1.xlsx in the Workbook window and "
+            f"{os.path.basename(PERSON_W7[0])} in SolidWorks. Drag Sun round its axis by about a quarter turn, and "
+            "watch the three planets: they roll round inside the ring the same way as Sun, about a quarter as fast, "
+            "each spinning the other way on its own axis; the ring does not move. Then press Update SolidWorks with "
+            "nothing changed: the footer should say the gears stand where they were turned.")
 
 
 def main():

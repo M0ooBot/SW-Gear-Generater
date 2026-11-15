@@ -44,6 +44,12 @@ and the footer, read line and gear table are logged.
 7. Board WorkbookCrossed: fixture B, Crossed_Slant (§5.2), read only (shot 13): the end view with the crossed and
    slanted stages, the Speeds lines "…500.0 rpm anticlockwise seen from … +X …" and "…333.3 rpm anticlockwise seen
    from … (0.5, −0.866, 0) …"; nothing built.
+8. W7 (W7-PLAN §2.12, §6 window), board WorkbookPlanetary: Planetary_4to1 (§4.1), written by ``write_new`` with its
+   Output folder blank, saved once by Excel; read (shot 14: the ready footer naming the carrier part and what it
+   turns with, the header, the Speeds lines with the planet's speed on its carrier, the end view with the carrier's
+   dashed circle through every copy), then built (shot 15: "drag Sun …", the carrier part's axes-and-planes clause).
+9. Board WorkbookPlanetaryCopies: Copies 5 typed in Excel (shot 16): the assembly-condition error at Shafts!H4,
+   Build not offered.
 
 Afterwards the window is closed, Excel quit, and this run's SolidWorks documents saved and closed.
 
@@ -101,6 +107,7 @@ REFUSED_PATH = os.path.join(REFUSED_FOLDER, "Reducer_12to1.xlsx")
 shutil.copy(FIXTURE, REFUSED_PATH)
 W6A_FOLDER = os.path.join(ROOT, "right-angle")
 W6B_FOLDER = os.path.join(ROOT, "crossed")
+W7_FOLDER = os.path.join(ROOT, "planetary")
 LINES = []
 FAILS = []
 
@@ -199,7 +206,7 @@ def _docs(app):
 
 def _ours(path):
     return bool(path) and any(os.path.normcase(path).startswith(os.path.normcase(f) + os.sep)
-                              for f in (FOLDER, REFUSED_FOLDER, W6A_FOLDER, W6B_FOLDER))
+                              for f in (FOLDER, REFUSED_FOLDER, W6A_FOLDER, W6B_FOLDER, W7_FOLDER))
 
 
 BEFORE_TITLES = set()        # the untitled documents open before this run: never ours to close
@@ -422,8 +429,29 @@ W6_EXPECT = {
           [f"S1    1000.0{NB}rpm anticlockwise seen from the +Z end · 5.00{NB}N·m",
            f"S2    500.0{NB}rpm anticlockwise seen from the +X end · 9.80{NB}N·m",
            f"S3    333.3{NB}rpm anticlockwise seen from the (0.5,{NB}−0.866,{NB}0) end · 14.41{NB}N·m"])}
+# W7's fixture, as probe/workbook_assembly_check.py's p1 writes it (W7-PLAN §4.1), and what D's tests pin for it.
+W7 = GearboxSpec(
+    box=Box(name="Planetary_4to1", pressure_angle="20", efficiency="98"),
+    shafts=(Shaft("S", "frame", "0", "0", "0", "Z+", "input", "", "1000", "2"),
+            Shaft("C", "frame", "0", "0", "0", "Z+", "output"),
+            Shaft("P", "C", "18", "0", "0", "", "", "3"),
+            Shaft("R", "frame", "0", "0", "0", "Z+", "fixed")),
+    gears=(Gear("Sun", "S", "10", "spur", "external", "18", "1", "", "10", "6", part_name="Sun"),
+           Gear("Planet", "P", "10", "spur", "external", "18", "1", "", "10", "8", part_name="Planet"),
+           Gear("Ring", "R", "10", "spur", "internal", "54", "1", "", "10", ""),
+           Gear("CarrierGear", "C", "30", "spur", "external", "20", "1", "", "6", "10", part_name="CarrierGear")),
+    meshes=(Mesh("Sun", "Planet"), Mesh("Planet", "Ring")))
+W7_EXPECT = {
+    "header": "Planetary, R fixed · 3 planets · 4.000 : 1 · output turns the same way",
+    "lines": ["S     1000.0 rpm anticlockwise · 2.00 N·m", "C     250.0 rpm anticlockwise · 7.76 N·m",
+              "P     500.0 rpm clockwise, 750.0 rpm clockwise relative to C · 3 copies", "R     held still · 5.76 N·m"],
+    "ready": "C is built as a carrier of axes and planes only, turning with the 3 copies of Planet on it. Ring stays "
+             "fixed where it is placed: its shaft does not turn.",
+    "built": "drag Sun in SolidWorks and the rest of its train follow. The 3 copies of Planet turn on C, and "
+             "Planetary_4to1_C_Carrier holds C's axes and planes only: a plate and pins are yours to add.",
+    "copies5": "5 copies of Planet cannot all mesh with Sun and Ring at once"}
 W6_PATHS = {}
-for _which, _spec, _folder in (("A", W6A, W6A_FOLDER), ("B", W6B, W6B_FOLDER)):
+for _which, _spec, _folder in (("A", W6A, W6A_FOLDER), ("B", W6B, W6B_FOLDER), ("P", W7, W7_FOLDER)):
     os.makedirs(_folder)
     W6_PATHS[_which] = os.path.join(_folder, _spec.box.name + ".xlsx")
     xlsx.write_new(W6_PATHS[_which], wb_model.to_sheets(_spec))     # the Output folder blank: the strip's is used
@@ -537,6 +565,31 @@ def w6_read_check(which):
     check(shown == header, f"W6 {which}: the header {shown!r}")
     check(lines == wanted, f"W6 {which}: the Speeds lines are C's exactly (no-break spaces included): "
           f"{[(got, want) for got, want in zip(lines, wanted) if got != want] or (lines if len(lines) != len(wanted) else 'equal')}")
+
+
+def w7_read_check():
+    text, shown = win.status.get(), win.box_values["type"].cget("text")
+    lines = [line.replace("\u00a0", " ") for line in speeds_lines()]
+    log("W7 read", header=shown, speeds=lines, status=text, end_view=win.view_readout.get())
+    check(shown == W7_EXPECT["header"], f"W7: the header {shown!r}")
+    check(lines == W7_EXPECT["lines"], f"W7: the Speeds lines are D's tests' (no-break spaces as spaces): {lines}")
+    check(text.endswith(W7_EXPECT["ready"]), "W7: the ready footer says what the carrier is and what stays fixed")
+
+
+def w7_built_check():
+    record = store.read_link_record(W6_PATHS["P"])
+    box = record.gearbox
+    text = win.status.get()
+    check(box.kind == store.GEARBOX_MOTION and box.assembly and [os.path.basename(c.path) for c in box.carriers]
+          == ["Planetary_4to1_C_Carrier.SLDPRT"], f"W7: built to turn with its carrier part: {box.kind!r}, "
+          f"{[os.path.basename(c.path) for c in box.carriers]}")
+    check(W7_EXPECT["built"] in text, "W7: the built footer says to drag Sun and what the carrier part holds")
+
+
+def w7_copies_check():
+    text, footer = win.status.get(), win.footer()
+    check(text.startswith("Fix the workbook before building:") and W7_EXPECT["copies5"] in text
+          and not footer.build_enabled, f"W7: Copies 5 is the assembly-condition error, Build not offered: {text!r}")
 
 
 def w6_built_check():
@@ -746,6 +799,33 @@ STEPS = [
     ("do", lambda: shoot("13-crossed-read")),
     ("do", lambda: speeds_panel("13-crossed-read")),
     ("do", lambda: w6_read_check("B")),
+    # 8. W7, board WorkbookPlanetary: the 4 : 1 read and built.
+    ("do", lambda: log("closed the crossed board's documents in SolidWorks", left=close_ours())),
+    ("do", lambda: excel("close")),
+    ("wait", excel_done("close")),
+    ("do", lambda: excel("open", W6_PATHS["P"])),
+    ("wait", excel_done("open")),
+    ("do", lambda: excel("set-save")),
+    ("wait", excel_done("set-save")),
+    ("do", lambda: app.out_folder.set(W7_FOLDER)),
+    ("do", lambda: open_window(W6_PATHS["P"], UNIQUE + " planetary")),
+    ("wait", lambda: win.reading is not None and win.reading.ok and idle() and win.footer().build_enabled),
+    ("pause", 1.5),
+    ("do", lambda: shoot("14-planetary-read")),
+    ("do", lambda: speeds_panel("14-planetary-read")),
+    ("do", w7_read_check),
+    ("do", lambda: win.build_button.command()),
+    ("wait", status_starts("Built", "Check", "SolidWorks cannot", "No assembly", "The gearbox")),
+    ("pause", 1.5),
+    ("do", lambda: shoot("15-planetary-built")),
+    ("do", w7_built_check),
+    # 9. Board WorkbookPlanetaryCopies: Copies 5 typed in Excel.
+    ("do", lambda: excel("set-save", ("Shafts", "H4", 5))),
+    ("wait", excel_done("set-save")),
+    ("wait", lambda: idle() and win.status.get().startswith("Fix the workbook")),
+    ("pause", 1.5),
+    ("do", lambda: shoot("16-planetary-copies-5")),
+    ("do", w7_copies_check),
 ]
 T0 = time.time()
 DEADLINE = T0 + 2400
