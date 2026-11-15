@@ -926,11 +926,26 @@ def workbook_board(spec, *, clock="14:02:31", open_in_excel=True, before=None, c
     # The chosen mode's lines, the chooser's note and the prose rows: WorkbookWindow's own home (speeds_panel).
     lines, speeds_readout, _, prose = wb_gui.speeds_panel(effective, report, shown, chooser=bool(names),
                                                           record=record)
-    # Where the chooser goes, as the window puts it. The window measures the room its header leaves (mode_header_room,
-    # in Tk's fonts, which this does not have); here it is the 200 px the window never exceeds, the same answer for
-    # every board's names beside a seen-from-+Z readout.
+    # Where the chooser goes. The window gives it the room its header leaves beside the widest readout any mode can
+    # show, with " · provisional" added (mode_header_room, measured in Tk's fonts, which this does not have); the
+    # board draws it with the 200 px the window never exceeds (mode_chooser_rows with no room). The two agree only for
+    # a chooser in the header no wider than the window's room, so a board with a wider one stops here rather than
+    # draw a chooser the window would put in rows. The rooms are the window's at 100 % in Segoe UI, as the W8 review
+    # of the C/D fixes measured them from its widget tree on the host (docs/notes-workbook/W8-REVIEW-FIX-CD.md, S2's
+    # table; UI-DESIGN §9 quotes them); with no readout the room is the 200 px.
     in_header, chooser_rows = wb_gui.mode_chooser_rows(names)
     width = wb_gui.mode_segment_width(names)
+    if names and in_header:
+        rooms = {"seen from +Z": 172, "seen from each shaft's + end": 91}
+        readouts = {ui_text.mode_speed_lines(effective, report, n)[1] for n in names} - {""}
+        assert readouts <= set(rooms), (
+            f"{name}: no measured header room beside the readout {sorted(readouts - set(rooms))}; measure the "
+            "window's room beside it and add it here before a board draws its chooser in the header")
+        room = min((rooms[r] for r in readouts), default=wb_gui.MODE_HEADER_ROOM)
+        assert width * len(names) <= room, (
+            f"{name}: its {width * len(names)} px mode chooser fits the 200 px this board draws in the header, but "
+            f"the window leaves it only {room} px beside {' / '.join(sorted(readouts))} and puts it in rows, so "
+            "the board would not show what the window does")
     chooser, chooser_body = "", []
     if names and in_header:                     # Segmented(height=16, mono) in the header slot, after the readout
         chooser = (f'<span style="display: flex; align-items: center; gap: 8px;"><span style="font-size: 11.5px; '
