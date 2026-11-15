@@ -5667,6 +5667,18 @@ def mode_state_job(box, mode, full=True):
     return in_assembly(box.assembly, work)
 
 
+def say_off(label, mode, live, wanted_frames):
+    """Each body off its wanted frame, logged: its turn about its own axis from the wanted frame (degrees; None when
+    it is not that frame turned about its own Z) and how far its origin stands from the wanted one."""
+    off = []
+    for body, frame in wanted_frames.items():
+        if body in live and frame_gap(live[body], frame) > FRAME_TOLERANCE:
+            turn = turn_degrees(frame[0], live[body][0])
+            origin = max(abs(float(a) - float(b)) for a, b in zip(live[body][1], frame[1]))
+            off.append(f"{body} turned {'off its axis' if turn is None else f'{turn:+.6f}°'}, origin off {origin:.3e} mm")
+    say(f"fact    {label}: in {mode}, off the wanted frame: {off or 'none'}")
+
+
 def judge_mode_frames(desk, label, mode, out, expected=None):
     """A mode's frames as read through fresh handles: the configuration shown reads back; every body at its frame on
     record for the mode to 1e-6, and that frame the read's; each slider's origin at its slide's value in the mode to
@@ -5679,16 +5691,18 @@ def judge_mode_frames(desk, label, mode, out, expected=None):
     record = mode_record_frames(desk, mode)
     want = mode_wanted(desk, mode)
     gap, at = frames_gap(live, record)
-    stop_check(gap <= FRAME_TOLERANCE, f"{label}: every body stands at its frame on record for {mode} (largest "
-               f"{gap:.1e} at {at or '-'})")
+    if not stop_check(gap <= FRAME_TOLERANCE, f"{label}: every body stands at its frame on record for {mode} (largest "
+                      f"{gap:.1e} at {at or '-'})"):
+        say_off(label, mode, live, record)
     gap, at = frames_gap(record, want)
     check(gap <= FRAME_TOLERANCE, f"{label}: the frames on record for {mode} are the workbook's (largest {gap:.1e} at "
           f"{at or '-'})")
     if expected is not None:
         # After an Update: the frames the key and the workbook's edit give, worked by the script (never the app's).
         gap, at = frames_gap(live, expected[mode])
-        stop_check(gap <= FRAME_TOLERANCE, f"{label}: every body stands where §2.3 and the edit put it in {mode} "
-                   f"(largest {gap:.1e} at {at or '-'})")
+        if not stop_check(gap <= FRAME_TOLERANCE, f"{label}: every body stands where §2.3 and the edit put it in {mode} "
+                          f"(largest {gap:.1e} at {at or '-'})"):
+            say_off(label, mode, live, expected[mode])
     for name in KEY["slides"]:
         slider = name.split(" along ")[0]
         value = key_slide(name, mode)
