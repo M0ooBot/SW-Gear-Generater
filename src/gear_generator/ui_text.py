@@ -1225,9 +1225,29 @@ def speeds_prose_rows(motion, lines: Sequence[str], *, mode: bool = False, choos
     return rows | ({0, 1} & set(range(end)) if mode else set())
 
 
+VIEW_READOUT_CHARS = 44
+# The characters the End view panel's header leaves its readout at the window's design width: the panel is the end
+# view's 392 px canvas plus its 12 px body padding each side, and its header holds 12 px, the title END VIEW, FROM
+# YOUR ORIGIN (about 170 px of 11.5 px bold capitals), 8 px, the readout and 12 px — about 216 px of 11.5 px sans,
+# some 44 characters of heights, dots and spaces (workbook_gui.END_VIEW, widgets.Panel; the boards draw it the same).
+# Tk never cuts a label, so a longer readout widens the right column and squeezes the Gears table.
+VIEW_READOUT_HEIGHTS = 4     # face heights listed one by one, at most (W8: a transfer case in 2H has 7)
+
+
 def end_view_readout(view) -> str:
-    """The end view's header: the face heights it colours apart, and whether the origin is in sight."""
-    return " · ".join(f"z {_n(z, 1)}" for z in view.planes) + (" · origin" if view.origin else " · origin off view")
+    """The end view's header: the face heights it colours apart, and whether the origin is in sight — *z 7.5 · z
+    27 · origin* (*· origin off view*). Up to :data:`VIEW_READOUT_HEIGHTS` heights are listed while the line fits
+    :data:`VIEW_READOUT_CHARS`; past that it counts them, *7 face heights, z 10 to 130 · origin* (the colours still
+    one per face height, in UI-DESIGN's order, nearest +Z drawn last), and *7 face heights · origin off view* where
+    even the range would not fit."""
+    origin = " · origin" if view.origin else " · origin off view"
+    planes = list(view.planes or ())
+    listed = " · ".join(f"z {_n(z, 1)}" for z in planes) + origin
+    if len(planes) <= VIEW_READOUT_HEIGHTS and len(listed) <= VIEW_READOUT_CHARS:
+        return listed
+    count = f"{len(planes)} face heights"
+    ranged = f"{count}, z {_n(min(planes), 1)} to {_n(max(planes), 1)}{origin}"
+    return ranged if len(ranged) <= VIEW_READOUT_CHARS else f"{count}{origin}"
 
 
 # -- W4: the footer as one decision, and the sentences of a gearbox build and update ----------------------------

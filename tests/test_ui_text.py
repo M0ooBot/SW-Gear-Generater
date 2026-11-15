@@ -3469,3 +3469,43 @@ def test_the_mode_chooser_says_it_changes_only_the_window():
     lines = ["S     1000.0 rpm anticlockwise", "The torque through C's planetary stage is not worked out.", built]
     assert ui_text.speeds_prose_rows(motion, lines, chooser=True) == {1, 2}
     assert ui_text.speeds_prose_rows(motion, lines[:2]) == {1}
+
+
+def _end_view(spec, mode=None):
+    """The end view as the window lays it out (workbook_gui._draw_end_view; the boards' end_view_svg)."""
+    from gear_generator import preview, workbook_gui
+    from gear_generator.workbook import geometry as wb_geometry
+    a = assess.assess(dataclasses.replace(spec, source_path="C:\\Books\\X.xlsx"), [], "C:\\Out\\")
+    entry = next((m for m in a.report.modes if m.name == mode), None)
+    carriers = {c: p[:2] for c, (p, _) in wb_geometry.carrier_axes(a.spec, a.report).items()}
+    placed = {**a.report.layout.placed, **(entry.placed if entry is not None else {})}
+    w, h = workbook_gui.END_VIEW
+    return preview.layout_gearbox(placed, a.report.theta, w, h, step=2, carriers=carriers,
+                                  shafts=[s.id for s in a.spec.shafts])
+
+
+def test_the_end_view_readout_always_fits_and_lists_up_to_four_heights():
+    """D's 392 px end view: a transfer case in 2H has 7 face heights, so it is counted; every gearbox before W8
+    reads as it did, byte for byte."""
+    from test_workbook_planetary import on_z_minus, planetary_4to1
+    from test_workbook_turned import bevel_reducer, crossed_slant
+    from workbook_fixtures import e4_transfer_case, transfer_case_parallel
+    assert ui_text.end_view_readout(_end_view(reducer())) == "z 7.5 · z 27 · origin"
+    assert ui_text.end_view_readout(_end_view(bevel_reducer())) == "z 5 · z 60 · origin"
+    assert ui_text.end_view_readout(_end_view(crossed_slant())) == "z 8 · z 10 · origin"
+    assert ui_text.end_view_readout(_end_view(planetary_4to1())) == "z 10 · z 30 · origin"
+    assert ui_text.end_view_readout(_end_view(on_z_minus())) == "z -30 · z -10 · origin"
+    parallel = {m: ui_text.end_view_readout(_end_view(transfer_case_parallel(), m)) for m in MODES}
+    assert parallel == {"2H": "7 face heights, z 10 to 130 · origin", "4H": "6 face heights, z 10 to 130 · origin",
+                        "N": "8 face heights, z 10 to 130 · origin", "4L": "6 face heights, z 10 to 130 · origin"}
+    e4 = {m: ui_text.end_view_readout(_end_view(e4_transfer_case(), m)) for m in MODES}
+    assert e4 == {"2H": "6 face heights, z 20 to 130 · origin", "4H": "5 face heights, z 20 to 130 · origin",
+                  "N": "7 face heights, z 20 to 130 · origin", "4L": "5 face heights, z 20 to 130 · origin"}
+    view = SimpleNamespace(planes=[7.5, 27.0, 30.0, 47.0], origin=None)
+    assert ui_text.end_view_readout(view) == "z 7.5 · z 27 · z 30 · z 47 · origin off view"
+    long = SimpleNamespace(planes=[107.5, 127.5, 207.5, 227.5], origin=None)
+    assert ui_text.end_view_readout(long) == "4 face heights · origin off view"
+    wide = SimpleNamespace(planes=[-12.5, 10.0, 30.0, 50.0, 70.0], origin=(1, 1))
+    assert ui_text.end_view_readout(wide) == "5 face heights, z -12.5 to 70 · origin"
+    for v in (view, long, wide, _end_view(transfer_case_parallel(), "N")):
+        assert len(ui_text.end_view_readout(v)) <= ui_text.VIEW_READOUT_CHARS
