@@ -718,9 +718,9 @@ def test_the_turned_refusal_is_asked_of_a_turned_mesh_only_whatever_else_holds_t
     carrier = direct(replace(spec, shafts=spec.shafts + (Shaft("P1", "S2", "30", "0", "0", "Z+", ""),
                                                          Shaft("P2", "P1", "5", "0", "0", "Z+", ""))))
     assert carrier.turned_refusal() == ""                 # not checked (a carrier riding a carrier): nothing laid out
-    assert carrier.lay_out_refusal() == ("The gearbox cannot be laid out yet, since it is not checked: P2 is mounted "
-                                         "on P1, which is itself mounted on S2: a carrier riding another carrier is "
-                                         "not built by this version.")
+    assert carrier.lay_out_refusal().startswith("Fix the workbook before building: Shafts row 0: P2 is mounted on P1, "
+                                                "which is itself mounted on S2: a carrier riding another carrier is "
+                                                "not built by this version")
     sleeve = direct(replace(spec, gears=spec.gears + (
         Gear("G5", "S3", "20", "sleeve", "external", "20", "2", "", "10", "8"),)))
     assert sleeve.turned_refusal() == refused             # refused all the same, said after the later phase

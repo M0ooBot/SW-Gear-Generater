@@ -16,7 +16,7 @@ import math
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
-from ..gears.base import WARNING, Diagnostic
+from ..gears.base import ERROR, Diagnostic
 from .model import GearboxSpec, Shaft
 from .schema import FRAME
 
@@ -133,12 +133,12 @@ def not_laid_out(spec: GearboxSpec) -> str:
 
 def _nested(shaft: Shaft, carrier: Shaft) -> str:
     return (f"{shaft.id} is mounted on {carrier.id}, which is itself mounted on {carrier.mount()}: a carrier riding "
-            "another carrier is not built by this version.")
+            "another carrier is not built by this version; a planet shaft is built mounted on a frame shaft.")
 
 
 def _across(shaft: Shaft) -> str:
     return (f"{shaft.id}'s axis is {_axis_word(shaft.axis)} on {shaft.mount()}: a planet turns about an axis parallel "
-            "to its carrier's, so this is not built by this version.")
+            "to its carrier's, so this is not built by this version; leave its Axis blank to turn on its carrier's.")
 
 
 def _coaxial(line_a, line_b) -> bool:
@@ -252,15 +252,16 @@ def mesh_carrier(spec: GearboxSpec, a: str, b: str) -> Optional[str]:
 
 def _warn(spec: GearboxSpec, sheet: str, row: int, key: str, sentence: str) -> Diagnostic:
     where = spec.cell(sheet, row, key)
-    return Diagnostic(WARNING, f"{where}: {sentence}", where)
+    return Diagnostic(ERROR, f"{where}: {sentence}", where)
 
 
 def refusals(spec: GearboxSpec) -> List[Diagnostic]:
-    """§1.2's rows of what W7 does not build, each a warning at its cell, for ``build.later_rows`` (Build parts still
-    builds every gear's part): a carrier riding a carrier; a carrier off Z±; a planet facing away from its carrier or
-    across it; a sun or ring facing the other way from its carrier; a stage with no member held; a compound planet;
-    a double planet; a gear on a carrier's own shaft that meshes; a helical or herringbone gear in a stage; a second
-    carrier."""
+    """§1.2's rows of what this version does not build, each an ERROR at its cell, said by ``checks.check`` (the
+    orchestrator's ruling: a planetary form this version does not build is not waiting for a later phase, so it is
+    an error of the workbook, and each sentence says what does build): a carrier riding a carrier; a carrier off
+    Z±; a planet facing away from its carrier or across it; a sun or ring facing the other way from its carrier; a
+    stage with no member held; a compound planet; a double planet; a gear on a carrier's own shaft that meshes; a
+    helical or herringbone gear in a stage; a second carrier."""
     from .geometry import axis_vector
     out: List[Diagnostic] = []
     shafts = {s.id: s for s in spec.shafts if s.id}
@@ -283,7 +284,8 @@ def refusals(spec: GearboxSpec) -> List[Diagnostic]:
         elif local[2] < 0:
             out.append(_warn(spec, "Shafts", shaft.row, "id",
                              f"{shaft.id} faces {_axis_word(shaft.axis)} on {mount}, the other way from its carrier: "
-                             "a planet that faces away from its carrier is not built by this version."))
+                             "a planet that faces away from its carrier is not built by this version; leave its Axis "
+                             "blank to face its carrier's way."))
     found = carriers(spec)
     for index, carrier_id in enumerate(found):
         carrier = shafts[carrier_id]
@@ -300,7 +302,7 @@ def refusals(spec: GearboxSpec) -> List[Diagnostic]:
             if len(on) > 1:
                 out.append(_warn(spec, "Shafts", planet_shaft.row, "id",
                                  f"{planet_shaft.id} carries {_and(on)}: a compound planet is not built by this "
-                                 "version."))
+                                 "version; a planet shaft is built with one gear."))
     for stage in stages(spec):
         carrier = shafts[stage.carrier]
         members = [g for g in (stage.sun, stage.ring) if g]
@@ -312,7 +314,7 @@ def refusals(spec: GearboxSpec) -> List[Diagnostic]:
                     out.append(_warn(spec, "Shafts", shafts[shaft_id].row, "id",
                                      f"{shaft_id} faces {_axis_word(shafts[shaft_id].axis)} and {stage.carrier} faces "
                                      f"{_axis_word(carrier.axis)}: a planetary stage whose shafts face different ways "
-                                     "is not built by this version."))
+                                     f"is not built by this version; give {shaft_id} the Axis of {stage.carrier}."))
         if not stage.held and stage.sun and stage.ring:
             names = [gears[stage.sun].shaft] if stage.sun else []
             names += [stage.carrier] + ([gears[stage.ring].shaft] if stage.ring else [])
@@ -332,7 +334,8 @@ def refusals(spec: GearboxSpec) -> List[Diagnostic]:
         ma, mb = shafts[ga.shaft].mount(), shafts[gb.shaft].mount()
         if ma != FRAME and ma == mb:
             out.append(_warn(spec, "Meshes", mesh.row, "a", f"{mesh.a} meshes {mesh.b} on the same carrier: a double "
-                                                            "planet is not built by this version."))
+                                                            "planet is not built by this version; a planet is built "
+                                                            "meshing a sun and a ring on its carrier's axis."))
             continue
         for gear, other in ((ga, gb), (gb, ga)):
             if gear.shaft in found:

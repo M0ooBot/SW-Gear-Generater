@@ -294,7 +294,8 @@ def test_shafts_no_version_lays_out_are_said_not_guessed():
     assert geometry.layout(spec).later == []
     nested = box([Shaft("C", x="0", y="0"), Shaft("P", "C", x="24", y="0"), Shaft("P2", "P", x="5", y="0")], [], [])
     assert geometry.layout(nested).later == ["P2 is mounted on P, which is itself mounted on C: a carrier riding "
-                                             "another carrier is not built by this version."]
+                                             "another carrier is not built by this version; a planet shaft is built "
+                                             "mounted on a frame shaft."]
 
 
 # -- every kind on every pair of facings, the part read from its own plan -----------------------------

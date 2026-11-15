@@ -77,10 +77,11 @@ def test_a_shaft_record_mirrors_a_shaft_layout_field_for_field():
     assert layout.ShaftLayout(**asdict(store.ShaftEntry(**asdict(s2)))) == s2
 
 
-def test_shafts_a_later_phase_lays_out_are_refused_with_a_sentence():
+def test_a_shaft_on_a_carrier_is_left_to_the_carrier_part():
+    """W7-PLAN §2.6: shaft_layouts skips a mounted shaft (its axes are in the carrier part); the carrier keeps its
+    axis in the layout part."""
     spec = reducer()
-    with pytest.raises(ValueError, match="P is mounted on S2: .* phase W7"):
-        shafts_of(with_shafts(*spec.shafts, Shaft("P", "S2", "10", "0")))
+    assert [s.shaft for s in shafts_of(with_shafts(*spec.shafts, Shaft("P", "S2", "10", "0")))] == ["S1", "S2", "S3"]
 
 
 def plane_position(plan, plane_name, globals_):

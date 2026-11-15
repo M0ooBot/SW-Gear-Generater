@@ -93,7 +93,7 @@ from ..gears.base import BuildPlan, GlobalVariable
 from ..spec import GearSpec, InputError, sanitize_stem
 from ..store import (ComponentEntry, EarlierRevision, GearboxRecord, LinkRecord, PartEntry, ShaftEntry, Sidecar)
 from ..swbuild import BuildResult, DocumentValues, GearboxResult
-from . import layout, motion
+from . import layout, motion, planetary
 from .assess import Assessment
 from .build import PartJob
 from .layout import REVISION_SUFFIX, CarrierLayout, Frame, ShaftLayout
@@ -277,6 +277,16 @@ class GearboxPlan:
     carriers: Tuple[Union[BuildPlan, CarrierReuse], ...] = ()
     carrier_paths: Mapping[str, str] = field(default_factory=dict)
     carrier_layouts: Tuple[CarrierLayout, ...] = ()
+    # W7 (B, proposed for pinning; W7-PLAN §2.3 item 7): the gears of a planetary stage below the undercut limit
+    # (``checks.Report.undercut``), for the interference sentence's clause; () when there is none.
+    undercut: Tuple[str, ...] = ()
+
+    @property
+    def carrier_handles(self) -> Dict[str, str]:
+        """Each carrier part's assembly handle and the id it goes by (W7-INTERFACES §6.2): ``{"carrier1": "C
+        carrier"}``, counting carriers in Shafts-sheet order from 1; empty with no planetary stage."""
+        return {f"{layout.CARRIER_HANDLE}{i}": layout.carrier_id(c.shaft)
+                for i, c in enumerate(self.carrier_layouts, 1)}
 
     @property
     def parts_only(self) -> bool:
@@ -302,7 +312,7 @@ class GearboxPlan:
             "reuse": [DocumentValues(r.path, tuple(r.variables), tuple(r.features)) for r in self.reuse],
             "layout": layout,
             "assembly": self.assembly,
-            "gears": dict(self.handles),
+            "gears": dict(self.handles, **self.carrier_handles),
         }
         if self.motion is not None and self.assembly is not None:
             kwargs["senses"] = dict(self.mate_senses)       # a turning build: every gear mate read back
@@ -678,10 +688,31 @@ class _Attempt:
     layout_reuse: Optional[LayoutReuse] = None
     parts: List[Tuple[PartJob, Optional[_Found], str]] = field(default_factory=list)   # job, reuse, new path
     made_new: List[MadeNew] = field(default_factory=list)
+    # W7: each carrier part, as laid out, its path, and the saved part to reuse (None: made new)
+    carriers: List[Tuple[CarrierLayout, str, Optional[CarrierReuse]]] = field(default_factory=list)
+
+
+def _carrier_reuse(carrier: CarrierLayout, path: str, journaled: bool = False) -> CarrierReuse:
+    drawn = layout.carrier_shafts(carrier)
+    return CarrierReuse(path, layout.layout_globals(drawn), layout.layout_features(drawn), journaled=journaled)
+
+
+def _recorded_carrier(gearbox: Optional[GearboxRecord], shaft: str) -> Optional[Any]:
+    return next((c for c in (gearbox.carriers if gearbox is not None else []) if c.shaft == shaft), None)
+
+
+def _same_carrier(entry: Any, carrier: CarrierLayout) -> bool:
+    """The saved carrier part is the one the current rows would build: the same globals, planes and axes."""
+    recorded = (layout.carrier_shafts(CarrierLayout(carrier.shaft, 0.0, 0.0, 0.0, (0.0, 0.0, 1.0),
+                                                    tuple(ShaftLayout(**asdict(a)) for a in entry.axes))))
+    drawn = layout.carrier_shafts(carrier)
+    return (layout.layout_globals(recorded) == layout.layout_globals(drawn)
+            and layout.layout_features(recorded) == layout.layout_features(drawn))
 
 
 def _try(n: int, a: Assessment, jobs: Sequence[PartJob], parts: _Parts, shafts: Sequence[ShaftLayout],
-         continuing: Optional[GearboxRecord], parts_only: bool) -> _Attempt:
+         continuing: Optional[GearboxRecord], parts_only: bool,
+         carriers: Sequence[CarrierLayout] = ()) -> _Attempt:
     exists = parts.exists
     folder = a.folder
     name, layout_stem = layout.stems(a.spec.box.name, n)
@@ -722,6 +753,33 @@ def _try(n: int, a: Assessment, jobs: Sequence[PartJob], parts: _Parts, shafts: 
                 return attempt
         else:
             new_paths.append(attempt.layout_path)
+        # W7 (W7-PLAN §2.6, §2.9): each carrier part, made or reused as the layout part is.
+        for carrier in carriers:
+            path = os.path.join(folder, layout.carrier_stem(a.spec.box.name, n, carrier.shaft) + layout.PART_EXTENSION)
+            if not exists(path):
+                attempt.carriers.append((carrier, path, None))
+                new_paths.append(path)
+                continue
+            entry = _recorded_carrier(continuing, carrier.shaft) if continuing is not None and \
+                continuing.revision == n else None
+            continued = entry is not None and store.same_path(entry.path, path)
+            journaled = not continued and parts.journaled(path) is not None
+            if (continued or journaled) and parts.mismatched(path):
+                attempt.obstacle = (f"{os.path.basename(path)} was saved by a build that did not finish, but the last "
+                                    "build found it no longer holds what was recorded, so it is not reused.")
+                return attempt
+            if continued and _same_carrier(entry, carrier):
+                attempt.carriers.append((carrier, path, _carrier_reuse(carrier, path)))
+            elif journaled:
+                attempt.carriers.append((carrier, path, _carrier_reuse(carrier, path, journaled=True)))
+            elif continued:
+                attempt.obstacle = (f"{os.path.basename(path)} was saved by a build whose assembly was not made, but "
+                                    f"the planets on {carrier.shaft} have moved since, so it is not the carrier part "
+                                    "this workbook needs.")
+                return attempt
+            else:
+                attempt.obstacle = f"{os.path.basename(path)} is already in {folder}, and a build never overwrites a file."
+                return attempt
         if exists(attempt.assembly_path):
             if parts.journaled(attempt.assembly_path) is not None:
                 attempt.obstacle = (f"{os.path.basename(attempt.assembly_path)} was saved by a build that was "
@@ -823,6 +881,7 @@ def plan_gearbox(a: Assessment, record: Optional[LinkRecord], *, part_template: 
 
     shafts: Tuple[ShaftLayout, ...] = ()
     frames: Dict[str, Frame] = {}
+    carriers: Tuple[CarrierLayout, ...] = ()
     if not parts_only:
         refusal = _layout_refusal()
         if not refusal:
@@ -830,6 +889,9 @@ def plan_gearbox(a: Assessment, record: Optional[LinkRecord], *, part_template: 
                 shafts = layout.shaft_layouts(spec)
                 frames = layout.frames(a.report)
                 layout.layout_globals(shafts)
+                carriers = layout.carrier_layouts(spec, a.report)
+                for carrier in carriers:
+                    layout.layout_globals(layout.carrier_shafts(carrier))
             except ValueError as exc:
                 refusal = str(exc)
         if refusal:
@@ -849,7 +911,7 @@ def plan_gearbox(a: Assessment, record: Optional[LinkRecord], *, part_template: 
     first_obstacle = ""
     chosen: Optional[_Attempt] = None
     for n in order:
-        attempt = _try(n, a, jobs, parts, shafts, continuing, parts_only)
+        attempt = _try(n, a, jobs, parts, shafts, continuing, parts_only, carriers)
         if attempt.refusal:
             return GearboxPlan(revision=n, name=layout.stems(spec.box.name, n)[0], refusal=attempt.refusal,
                                **empty)
@@ -903,11 +965,29 @@ def plan_gearbox(a: Assessment, record: Optional[LinkRecord], *, part_template: 
 
     handles: Dict[str, str] = {}
     components = []
+    # W7 (W7-PLAN §2.7, W7-INTERFACES §3): the carrier parts first (carrier<i>), then each gear and each copy of it
+    # (gear<index>, copy k gear<index>c<k>), one part file inserted once per copy.
+    carrier_handles: Dict[str, str] = {}
+    for i, (carrier, path, _reuse) in enumerate(chosen.carriers, 1):
+        handle = f"{layout.CARRIER_HANDLE}{i}"
+        carrier_handles[handle] = layout.carrier_id(carrier.shaft)
+        components.append((handle, path, layout.carrier_frame(carrier)))
+    copies_of: Dict[str, List[str]] = {}
+    for p in a.report.layout.placed.values():
+        if p.carrier:
+            copies_of.setdefault(p.row, []).append(p.gear)
     for index, gear in enumerate(spec.gears, 1):
-        if gear.id in part_of and gear.id in frames:
-            handle = f"{layout.GEAR_HANDLE}{index}"
-            handles[handle] = gear.id
-            components.append((handle, part_of[gear.id], frames[gear.id]))
+        if gear.id not in part_of:
+            continue
+        ids = copies_of.get(gear.id, [gear.id])
+        for gear_id in ids:
+            if gear_id not in frames:
+                continue
+            k = planetary.copy_of(gear_id)[1] if gear.id in copies_of and len(ids) > 1 else 0
+            handle = f"{layout.GEAR_HANDLE}{index}" + (f"c{k}" if k else "")
+            handles[handle] = gear_id
+            part_of[gear_id] = part_of[gear.id]
+            components.append((handle, part_of[gear.id], frames[gear_id]))
     # W5: the turning assembly whenever every finding it needs is settled; else W4's static one, and why (D1's
     # static-by-necessity case, said before Build). A continued revision is planned the same way.
     static_reason = motion.motion_reason()
@@ -921,14 +1001,19 @@ def plan_gearbox(a: Assessment, record: Optional[LinkRecord], *, part_template: 
         else:
             turning = motion.motion_plan(spec, a.report, frames)
             senses = mate_senses(turning)
-            assembly = motion.motion_assembly_plan(chosen.layout_path, components,
-                                                   {gear: handle for handle, gear in handles.items()}, turning,
+            handle_of = {gear: handle for handle, gear in list(handles.items()) + list(carrier_handles.items())}
+            assembly = motion.motion_assembly_plan(chosen.layout_path, components, handle_of, turning,
                                                    asm_tpl, chosen.assembly_path)
+        carrier_items = tuple(reuse or layout.carrier_plan(carrier, part_tpl, path)
+                              for carrier, path, reuse in chosen.carriers)
     except ValueError as exc:
         return GearboxPlan(revision=n, name=name, refusal=str(exc), **empty)
     fields.update(layout_path=chosen.layout_path, assembly_path=chosen.assembly_path, shafts=shafts,
                   frames=frames, layout=layout_item, assembly=assembly, handles=handles, motion=turning,
-                  static_reason=static_reason, mate_senses=senses)
+                  static_reason=static_reason, mate_senses=senses, carriers=carrier_items,
+                  carrier_paths={carrier.shaft: path for carrier, path, _ in chosen.carriers},
+                  carrier_layouts=tuple(carrier for carrier, _, _ in chosen.carriers),
+                  undercut=tuple(a.report.undercut))
     return GearboxPlan(revision=n, name=name, revision_reason=reason, **fields)
 
 
@@ -955,6 +1040,7 @@ def on_record(record: Optional[LinkRecord], path: str) -> bool:
     listed = [p.path for p in record.parts] + [record.assembly]
     if record.gearbox is not None:
         listed += [record.gearbox.layout, record.gearbox.assembly]
+        listed += [c.path for c in record.gearbox.carriers]          # W7-INTERFACES §6.9
     for earlier in record.earlier:
         listed += [earlier.layout, earlier.assembly] + list(earlier.parts)
     return _in(path, [p for p in listed if p])
@@ -1003,6 +1089,10 @@ def journal(plan: GearboxPlan) -> List[PartEntry]:
                       spec=r.spec.to_dict()) for r in plan.reuse if r.journaled]
     if plan.layout is not None and (not isinstance(plan.layout, LayoutReuse) or plan.layout.journaled):
         out.append(PartEntry(path=plan.layout_path, revision=plan.revision, kind=layout.LAYOUT_KIND))
+    for carrier, item in zip(plan.carrier_layouts, plan.carriers):        # W7: as the layout part
+        if not isinstance(item, CarrierReuse) or item.journaled:
+            out.append(PartEntry(path=plan.carrier_paths[carrier.shaft], revision=plan.revision,
+                                 kind=layout.CARRIER_KIND))
     if plan.assembly is not None and plan.assembly_path:
         out.append(PartEntry(path=plan.assembly_path, revision=plan.revision, kind=layout.ASSEMBLY_KIND))
     return out
@@ -1060,6 +1150,30 @@ def _merge(record: LinkRecord, entry: PartEntry) -> None:
 
 
 _KIND_WORDS = {motion.MOTION: "to turn", motion.STATIC: "static"}
+
+
+def _record_carriers(gearbox: GearboxRecord, plan: GearboxPlan, result: GearboxResult) -> None:
+    """One ``CarrierEntry`` per carrier part of the plan that is on disk now — saved by this job, reused by it
+    (checked live), or on record already for this revision — built or reused alike (W7-INTERFACES §6.1 (a)), so
+    no record carries mates on a carrier it does not list. Its component name from ``result.components`` under its
+    handle (§6.2), its frame ``layout.carrier_frame``, its axes the carrier part's."""
+    saved = [_saved(r) for r in getattr(result, "carriers", []) or []]
+    reused = list(getattr(result, "carriers_reused", []) or [])
+    kept = {c.shaft: c for c in gearbox.carriers}
+    entries = []
+    for i, carrier in enumerate(plan.carrier_layouts, 1):
+        path = plan.carrier_paths.get(carrier.shaft, "")
+        old = kept.get(carrier.shaft)
+        on_record = old is not None and store.same_path(old.path, path)
+        if not (_in(path, [p for p in saved if p]) or _in(path, reused) or on_record):
+            continue
+        where = layout.carrier_frame(carrier)
+        component = result.components.get(f"{layout.CARRIER_HANDLE}{i}", "") or (old.component if on_record else "")
+        entries.append(store.CarrierEntry(shaft=carrier.shaft, path=path, component=component,
+                                          rotation=list(where.rotation), at=list(where.at),
+                                          direction=list(carrier.direction),
+                                          axes=[ShaftEntry(**asdict(a)) for a in carrier.axes]))
+    gearbox.carriers = entries
 
 
 def _record_kind(gearbox: GearboxRecord, plan: GearboxPlan, result: GearboxResult, out: Finished) -> None:
@@ -1266,7 +1380,8 @@ def finish_build(plan: GearboxPlan, result: GearboxResult, record: Optional[Link
             in_use = list(plan.part_of.values())
             gone = [p for p in rec.parts if not _in(p.path, in_use)]
             rec.earlier.append(EarlierRevision(revision=old.revision, name=old.name, layout=old.layout,
-                                               assembly=old.assembly, parts=[p.path for p in gone]))
+                                               assembly=old.assembly, parts=[p.path for p in gone]
+                                               + [c.path for c in old.carriers]))     # W7-INTERFACES §4
             rec.parts = [p for p in rec.parts if _in(p.path, in_use)]
             old = None
         gearbox = old or GearboxRecord(revision=plan.revision, name=plan.name)
@@ -1277,12 +1392,14 @@ def finish_build(plan: GearboxPlan, result: GearboxResult, record: Optional[Link
         gearbox.shafts = [ShaftEntry(**asdict(s)) for s in plan.shafts]
         gearbox.meshes = [list(m) for m in plan.meshes]
         gearbox.built = stamp
+        _record_carriers(gearbox, plan, result)
         if assembly_path:
             gearbox.assembly = assembly_path
             gearbox.layout_component = result.components.get(layout.LAYOUT_HANDLE, "")
             gearbox.components = [
                 ComponentEntry(gear=gear, part=plan.part_of[gear], name=result.components.get(handle, ""),
-                               rotation=list(plan.frames[gear].rotation), at=list(plan.frames[gear].at))
+                               rotation=list(plan.frames[gear].rotation), at=list(plan.frames[gear].at),
+                               of=planetary.copy_of(gear)[0] if planetary.copy_of(gear)[1] else "")
                 for handle, gear in plan.handles.items()]
             rec.assembly = assembly_path
             missing = [gear for handle, gear in plan.handles.items() if not result.components.get(handle)]

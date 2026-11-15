@@ -42,6 +42,9 @@ class Report:
     meshes: Dict[Tuple[str, str], geometry.MeshGeometry] = field(default_factory=dict)
     # W7 (B; W7-PLAN §2.1, §2.3): every planetary stage recognised (planetary.stages); () when there is none.
     stages: Tuple[planetary.Stage, ...] = ()
+    # W7 (B; W7-PLAN §2.3 item 7): the gears of a planetary stage below the undercut limit (row ids, Gears-sheet
+    # order), whose undercut is not modelled — for the interference sentence's clause; () when there is none.
+    undercut: Tuple[str, ...] = ()
     off_centre: List[Diagnostic] = field(default_factory=list)   # the "not where the teeth put them" errors
     worked_out_as: str = ""
     # Why the gearbox was not checked at all ("" when it was): a carrier or a turned axis, laid out in a later
@@ -73,6 +76,9 @@ def check(spec: GearboxSpec, skip_gears=()) -> Report:
     """Every gearbox-level check for what this phase lays out. ``skip_gears``: gears with errors of their own."""
     report = Report()
     report.layout = lay = geometry.layout(spec, skip_gears)
+    # W7-PLAN §1.2, with the orchestrator's ruling: a planetary form this version does not build is an error of the
+    # workbook, said at its cell (never "waiting for a later phase"), whether or not the rows can be laid out.
+    report.diagnostics.extend(planetary.refusals(spec))
     if lay.later:
         # A carrier or a turned axis: nothing here is checked until its phase. Each such row is said, at its
         # cell, by workbook.build.later_rows, with the rows Build refuses; the report says it was not checked.
@@ -211,6 +217,7 @@ def _check_stages(report: Report, spec: GearboxSpec, placed: Dict[str, Placed]) 
             if small is None or other is None or not getattr(small.derived, "undercut", False):
                 continue
             row = small.row or small.gear
+            report.undercut = tuple(g.id for g in spec.gears if g.id in set(report.undercut) | {row})
             _warning(report, spec.cell("Gears", gears[row].row, "id"),
                      f"{row} ({small.teeth} teeth) is below the undercut limit, which is not modelled, and meshes "
                      f"{other.row or other.gear} ({other.teeth} teeth): the build checks interference only where the "

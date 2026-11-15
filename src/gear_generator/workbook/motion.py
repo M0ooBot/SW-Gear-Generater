@@ -334,8 +334,13 @@ def motion_plan(spec: GearboxSpec, report: Report, frames: Mapping[str, Frame]) 
     gears is mated through its anchor. A mesh whose two shafts the gear mates
     so far already join (one internal mesh closing a loop, or a second mesh
     between the same two shafts) goes to ``unmated``: its ratio follows from
-    the others (D6). A placed gear with no frame is a ValueError."""
+    the others (D6). A placed gear with no frame is a ValueError.
+
+    W7 (a workbook with a carrier): :func:`_planetary_plan` — bodies per copy, the carrier's own mates, the gear
+    mates chosen by exact rank of the carrier-frame rows (W7-PLAN §2.7, reading J5)."""
     placed = report.layout.placed
+    if any(p.carrier for p in placed.values()):
+        return _planetary_plan(spec, report, frames)
     order = [s for s in spec.shafts if s.id]
     still = still_shafts(spec, report)
     gears = [g.id for g in spec.gears if g.id in placed]
@@ -401,6 +406,172 @@ def motion_plan(spec: GearboxSpec, report: Report, frames: Mapping[str, Frame]) 
                       trains=tuple(trains), drag=drag)
 
 
+def _rank_add(basis: List[Tuple[int, List[Fraction]]], row: List[Fraction]) -> bool:
+    """Reduce ``row`` against the rows chosen so far (each kept with its pivot column, reduced form) and keep it
+    when it is independent of them: exact, in ``Fraction``s (``kinematics._reduce``'s arithmetic)."""
+    row = list(row)
+    for pivot, other in basis:
+        if row[pivot] != 0:
+            factor = row[pivot]
+            row = [x - factor * y for x, y in zip(row, other)]
+    pivot = next((i for i, x in enumerate(row) if x != 0), None)
+    if pivot is None:
+        return False
+    lead = row[pivot]
+    row = [x / lead for x in row]
+    basis[:] = [(p, [x - o[pivot] * y for x, y in zip(o, row)]) for p, o in basis] + [(pivot, row)]
+    return True
+
+
+def _planetary_plan(spec: GearboxSpec, report: Report, frames: Mapping[str, Frame]) -> MotionPlan:
+    """The turning assembly of a workbook with a planetary stage (W7-PLAN §2.7). Per shaft in Shafts-sheet order:
+    a frame shaft as W5 (its anchor on its layout axis and along it, the rest locked to it); a carrier — turning:
+    ``"C carrier on C Axis"`` and ``"C carrier along C"`` (always coincident: its origin is on the Front plane,
+    J2), then every gear on its own shaft locked to it, the carrier first (J8); held: none, its id and its gears in
+    ``fixed``; a planet shaft — per copy, ``"Planet copy k on P copy k Axis"`` made to the carrier's axis
+    (``on`` the carrier id) and ``"Planet copy k along P copy k"`` to the layout's Front plane, sharing one
+    ``"Planet Face Z"`` global keyed by the row (§6.7, §6.8). Then, in Meshes-sheet order and copy order within a
+    row, a gear mate for each mesh whose row of the system of W7-PLAN §2.5, written per body (a frame shaft or a
+    copy) with the carrier's column and held bodies at 0, is independent of the rows chosen before it; a mesh
+    between two held gears is skipped, any other dependent one goes to ``unmated`` (§6.6: the worker still judges
+    it). A MESH's ``sense`` is its carrier-frame sense, the parallel rule."""
+    from fractions import Fraction as _F
+    from . import planetary
+    placed = report.layout.placed
+    order = [s for s in spec.shafts if s.id]
+    still = still_shafts(spec, report)
+    carriers = planetary.carriers(spec)
+    held_carriers = [c for c in carriers if c in still]
+    gears = [p.gear for p in placed.values()]             # gears and copies, Gears-sheet then copy order
+    fixed = tuple(g for g in gears if placed[g].shaft in still) + tuple(layout.carrier_id(c) for c in held_carriers)
+
+    anchors: Dict[str, str] = {}
+    shaft_mates: List[MatePlan] = []
+    shared: Set[str] = set()
+    for shaft in order:
+        if shaft.id in carriers:
+            cid = layout.carrier_id(shaft.id)
+            if shaft.id in still:
+                continue
+            shaft_mates.append(MatePlan(mate_name(AXIS, (cid,), shaft.id), AXIS, (cid,), shaft.id))
+            shaft_mates.append(MatePlan(mate_name(ALONG, (cid,), shaft.id), ALONG, (cid,), shaft.id))
+            for gear in (g for g in gears if placed[g].shaft == shaft.id):
+                shaft_mates.append(MatePlan(mate_name(LOCK, (cid, gear)), LOCK, (cid, gear)))
+            continue
+        if shaft.mount() != "frame":
+            bodies = sorted({placed[g].shaft for g in gears if planetary.copy_of(placed[g].shaft)[0] == shaft.id},
+                            key=lambda b: planetary.copy_of(b)[1])
+            cid = layout.carrier_id(shaft.mount())
+        else:
+            bodies, cid = [shaft.id], ""
+        for body in bodies:
+            on = [g for g in gears if placed[g].shaft == body]
+            if body in still or not on:
+                continue
+            anchor = on[0]
+            if anchor not in frames:
+                raise ValueError(f"{anchor} is placed but has no frame, so it cannot be mated to {body}.")
+            anchors[body] = anchor
+            row = placed[anchor].row or anchor
+            plane = along_plane(placed[anchor].axis)
+            z_front = float(frames[anchor].at[_PLANE_INDEX[plane]])
+            bevel = bool(getattr(placed[anchor], "bevel", False))
+            shaft_mates.append(MatePlan(mate_name(AXIS, (anchor,), body), AXIS, (anchor,), body, on=cid))
+            shaft_mates.append(MatePlan(mate_name(ALONG, (anchor,), body), ALONG, (anchor,), body,
+                                        face_global=(face_global(row, plane, bevel)
+                                                     if abs(z_front) >= layout.BASE_TOLERANCE else ""),
+                                        z_front=z_front, plane=plane))
+            shared.add(row)
+            for follower in on[1:]:
+                shaft_mates.append(MatePlan(mate_name(LOCK, (anchor, follower)), LOCK, (anchor, follower)))
+
+    # The bodies' columns: every frame shaft and copy with a placed gear, and each carrier; held bodies are 0.
+    body_of = {g: placed[g].shaft for g in gears}
+    columns: Dict[str, int] = {}
+    for g in gears:
+        if body_of[g] not in still:
+            columns.setdefault(body_of[g], len(columns))
+    for c in carriers:
+        if c not in still:
+            columns.setdefault(c, len(columns))
+    basis: List[Tuple[int, List[_F]]] = []
+    meshes: List[MatePlan] = []
+    unmated: List[Tuple[str, str]] = []
+    held_gears = set(fixed)
+    for a_id, b_id in geometry_expand(spec, placed):
+        a, b = placed[a_id], placed[b_id]
+        if (a_id in held_gears and b_id in held_gears) or a.shaft == b.shaft:
+            continue
+        laid = report.meshes.get((a.row or a_id, b.row or b_id))
+        sense = laid.sense if laid is not None else _parallel_sense_of(a, b)
+        carrier = a.carrier or b.carrier
+        row = [_F(0)] * len(columns)
+        for gear, factor in ((a, _F(int(a.teeth))), (b, _F(int(sense) * int(b.teeth)))):
+            if gear.shaft in columns:
+                row[columns[gear.shaft]] += factor
+            if carrier and carrier in columns:
+                s_x = round(sum(x * y for x, y in zip(gear.axis, placed_axis(spec, carrier))))
+                row[columns[carrier]] -= factor * s_x
+        if not _rank_add(basis, row):
+            unmated.append((a_id, b_id))
+            continue
+        meshes.append(MatePlan(mate_name(MESH, (a_id, b_id)), MESH, (a_id, b_id), ratio=(int(a.teeth), int(b.teeth)),
+                               sense=int(sense)))
+
+    # Trains: bodies joined by the gear mates, a carrier joined to its copies and the gears locked to it.
+    parent: Dict[str, str] = {}
+
+    def root(x: str) -> str:
+        while parent.setdefault(x, x) != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+    joined: List[str] = []
+    for m in meshes:
+        x, y = body_of[m.gears[0]], body_of[m.gears[1]]
+        parent[root(x)] = root(y)
+        joined += [b for b in (x, y) if b not in joined]
+    for c in carriers:
+        if c in still:
+            continue
+        for g in gears:
+            if placed[g].carrier == c and body_of[g] in joined:
+                parent[root(c)] = root(body_of[g])
+                if c not in joined:
+                    joined.append(c)
+    rank = {s.id: i for i, s in enumerate(order)}
+
+    def key(body: str) -> Tuple[int, int]:
+        name, k = planetary.copy_of(body)
+        return rank.get(name, len(rank)), k
+    joined.sort(key=key)
+    role = {s.id: s.role for s in order}
+    trains: List[Tuple[str, ...]] = []
+    seen: Set[str] = set()
+    for body in joined:
+        if root(body) in seen:
+            continue
+        seen.add(root(body))
+        members = [b for b in joined if root(b) == root(body)]
+        trains.append(tuple(b for b in members if role.get(b) == "input")
+                      + tuple(b for b in members if role.get(b) != "input"))
+    drag = tuple(next((anchors[b] for b in train if b in anchors), "") for train in trains)
+    return MotionPlan(anchors=anchors, mates=tuple(shaft_mates + meshes), fixed=fixed, unmated=tuple(unmated),
+                      trains=tuple(trains), drag=drag,
+                      carriers=tuple(layout.carrier_id(c) for c in carriers if c not in still))
+
+
+def geometry_expand(spec: GearboxSpec, placed) -> Tuple[Tuple[str, str], ...]:
+    from .geometry import expand_meshes
+    return expand_meshes(spec, placed)
+
+
+def placed_axis(spec: GearboxSpec, shaft: str) -> Tuple[float, float, float]:
+    """A frame shaft's own +Z (its Axis), for the carrier's column of a body's row."""
+    from .geometry import axis_vector
+    return axis_vector(spec.shaft(shaft).axis)
+
+
 def motion_assembly_plan(layout_path: str, components: Sequence[Tuple[str, str, Frame]],
                          handle_of: Mapping[str, str], motion: MotionPlan, template: str, path: str) -> BuildPlan:
     """The turning assembly's ``BuildPlan`` (``BuildPlan.kind`` ``layout.ASSEMBLY_KIND``), in W5-PLAN §1.2's op
@@ -418,7 +589,12 @@ def motion_assembly_plan(layout_path: str, components: Sequence[Tuple[str, str, 
     unfixed. ``plan.check()`` is empty.
 
     A mate naming a gear with no handle, or a gear in ``motion.fixed``, or a kind this module does not make,
-    is a ValueError with a sentence: the plan would otherwise fail in SolidWorks half made."""
+    is a ValueError with a sentence: the plan would otherwise fail in SolidWorks half made.
+
+    W7 (W7-PLAN §2.7): ``components`` hold the carrier part (``carrier<i>``) after the layout and before the
+    gears, and ``handle_of`` maps a carrier id to its handle. A carrier's AXIS mate takes its own ``"<C> Axis"``
+    (it has no Gear Axis); an AXIS mate with ``on`` set is made to ``"<carrier handle>:<shaft> Axis"``; a face
+    global shared by a planet's copies is added once (review S5)."""
     static = layout.assembly_plan(layout_path, components, template, path)
     if not (len(static.ops) >= 3 and isinstance(static.ops[-2], Rebuild) and isinstance(static.ops[-1], SaveAs)):
         raise ValueError("The static assembly's plan does not end with its rebuild and save, so the turning "
@@ -429,6 +605,7 @@ def motion_assembly_plan(layout_path: str, components: Sequence[Tuple[str, str, 
         raise ValueError("findings.GEAR_MATE_FLIP, which says the flip every gear mate takes, is not settled, so "
                          "the turning assembly is not planned.")
     held = set(motion.fixed)
+    held_carrier = any(g.endswith(layout.CARRIER_ID_SUFFIX) for g in held)    # W7: a held carrier's stage
 
     def handle(gear: str, mate: MatePlan) -> str:
         if gear in held:
@@ -451,12 +628,17 @@ def motion_assembly_plan(layout_path: str, components: Sequence[Tuple[str, str, 
         if mate.kind == AXIS:
             h = handle(mate.gears[0], mate)
             mates.append(Unfix(h))
-            mates.append(Mate(ident, "coincident", f"{h}:{AXIS_NAME}", f"{lead}:{mate.shaft} Axis", name=mate.name))
+            own = f"{h}:{mate.shaft} Axis" if mate.gears[0] in motion.carriers else f"{h}:{AXIS_NAME}"
+            if mate.on and mate.on not in handle_of:
+                raise ValueError(f"{mate.on} is not in the assembly, so the mate {mate.name} cannot be made to it.")
+            target = f"{handle_of[mate.on] if mate.on else lead}:{mate.shaft} Axis"     # a held carrier too
+            mates.append(Mate(ident, "coincident", own, target, name=mate.name))
         elif mate.kind == ALONG:
             h = handle(mate.gears[0], mate)
             plane = f"{lead}:plane{_PLANE_REF[mate.plane]}"
             if mate.face_global:
-                globals_.append(AddGlobal(mate.face_global, equations.literal(round(abs(mate.z_front), 9))))
+                if all(g.name != mate.face_global for g in globals_):
+                    globals_.append(AddGlobal(mate.face_global, equations.literal(round(abs(mate.z_front), 9))))
                 mates.append(Mate(ident, "point distance", f"{h}:origin", plane, mate.z_front, name=mate.name))
                 mates.append(LinkDimension(f"D1@{mate.name}", equations.quote(mate.face_global)))
             else:
@@ -466,7 +648,11 @@ def motion_assembly_plan(layout_path: str, components: Sequence[Tuple[str, str, 
             mates.append(Unfix(b))
             mates.append(Mate(ident, "lock", a, b, name=mate.name))
         else:
-            a, b = handle(mate.gears[0], mate), handle(mate.gears[1], mate)
+            # W7 (W7-PLAN §2.7): a gear mate may reach a held gear (the sun or ring of a stage); it is never unfixed.
+            planetary_stage = bool(motion.carriers) or held_carrier
+            a, b = (handle_of.get(g) if planetary_stage and g in held else handle(g, mate) for g in mate.gears)
+            if a is None or b is None:
+                raise ValueError(f"A gear of the mate {mate.name} is not in the assembly, so it cannot be made.")
             ratio = tuple(float(n) for n in mate.ratio)
             if len(ratio) != 2 or not all(n > 0 for n in ratio):
                 raise ValueError(f"The gear mate {mate.name} needs two tooth counts for its ratio, not "
@@ -569,7 +755,16 @@ def turned_refusal(report: Report) -> str:
 
 
 def carrier_links(spec: GearboxSpec, report: Report, plan: MotionPlan) -> Tuple[CarrierLink, ...]:
-    """A ``swbuild.CarrierLink`` per carrier of the plan, turning or held (W7-PLAN §2.9): its id, every gear on its
-    planet shafts in plan order, its origin (on the layout's Front plane) and its axis. Agent B writes it."""
-    raise ValueError("A planetary stage's carrier is not linked for Update by this version of Gear Generator yet, so "
-                     "Update SolidWorks cannot act on it.")
+    """A ``swbuild.CarrierLink`` per carrier of the plan, turning or held (W7-PLAN §2.9, W7-INTERFACES §3): its id,
+    every gear on its planet shafts in plan order (copy ids, as ``report.layout.placed`` holds them), its origin as
+    placed (on the layout's Front plane, ``layout.carrier_frame``) and its axis (that frame's third column)."""
+    from . import planetary
+    del plan
+    out = []
+    by_shaft = {c.shaft: c for c in layout.carrier_layouts(spec, report)}
+    for shaft in planetary.carriers(spec):
+        frame = layout.carrier_frame(by_shaft[shaft])
+        rows = frame.rotation
+        planets = tuple(p.gear for p in report.layout.placed.values() if p.carrier == shaft)
+        out.append(CarrierLink(layout.carrier_id(shaft), planets, tuple(frame.at), (rows[2], rows[5], rows[8])))
+    return tuple(out)

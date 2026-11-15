@@ -303,7 +303,10 @@ def test_coaxial_members_and_a_bare_carrier_are_not_warned_of():
 # -- what W7 does not build (§1.2), each a warning at its cell ------------------------------------------------------
 
 def refused(spec):
-    return [d.message for d in build.later_rows(spec)]
+    """W7's refusals are errors of the workbook, said by the checks at their cells (the orchestrator's ruling), never
+    rows waiting for a later phase."""
+    assert not any("not built by this version" in d.message for d in build.later_rows(spec))
+    return [d.message for d in checks.check(spec).errors]
 
 
 def test_the_fixtures_are_not_refused():
@@ -313,29 +316,31 @@ def test_the_fixtures_are_not_refused():
 @pytest.mark.parametrize("change, sentence", [
     (lambda s: replace(s, shafts=s.shafts + (Shaft("P2", "P", "5", "0", "0", "", "", row=6),)),
      "Shafts row 6: P2 is mounted on P, which is itself mounted on C: a carrier riding another carrier is not built by "
-     "this version."),
+     "this version; a planet shaft is built mounted on a frame shaft."),
     (lambda s: edited(s, shafts={x: dict(axis="X+") for x in ("S", "C", "R")}),
      "Shafts row 3: C's axis is X+: a planetary stage is built only on an axis along Z+ or Z- by this version."),
     (lambda s: edited(s, shafts={"P": dict(axis="Z-")}),
      "Shafts row 4: P faces Z- on C, the other way from its carrier: a planet that faces away from its carrier is not "
-     "built by this version."),
+     "built by this version; leave its Axis blank to face its carrier's way."),
     (lambda s: edited(s, shafts={"P": dict(axis="X+")}),
      "Shafts row 4: P's axis is X+ on C: a planet turns about an axis parallel to its carrier's, so this is not built "
-     "by this version."),
+     "by this version; leave its Axis blank to turn on its carrier's."),
     (lambda s: edited(s, shafts={"S": dict(axis="Z-")}, gears={"Sun": dict(at="-10")}),
      "Shafts row 2: S faces Z- and C faces Z+: a planetary stage whose shafts face different ways is not built by "
-     "this version."),
+     "this version; give S the Axis of C."),
     (lambda s: edited(s, shafts={"R": dict(role="")}),
      "Shafts row 3: S, C and R form a planetary stage with no member held: a differential is not built by this "
      "version; set one of them to Role fixed."),
     (lambda s: replace(s, gears=s.gears + (Gear("Planet2", "P", "20", "spur", "external", "12", "1", "", "6", "6",
                                                 row=6),)),
-     "Shafts row 4: P carries Planet and Planet2: a compound planet is not built by this version."),
+     "Shafts row 4: P carries Planet and Planet2: a compound planet is not built by this version; a planet shaft is "
+     "built with one gear."),
     (lambda s: replace(s, shafts=s.shafts + (Shaft("PB", "C", "-18", "0", "0", "", "", row=6),),
                        gears=s.gears + (Gear("PlanetB", "PB", "10", "spur", "external", "18", "1", "", "10", "8",
                                              row=6),),
                        meshes=s.meshes + (Mesh("Planet", "PlanetB", row=4),)),
-     "Meshes row 4: Planet meshes PlanetB on the same carrier: a double planet is not built by this version."),
+     "Meshes row 4: Planet meshes PlanetB on the same carrier: a double planet is not built by this version; a planet "
+     "is built meshing a sun and a ring on its carrier's axis."),
     (lambda s: replace(s, meshes=s.meshes + (Mesh("CarrierGear", "Sun", row=4),)),
      "Meshes row 4: CarrierGear is on C, the carrier, and meshes Sun: a gear on the carrier that meshes another gear "
      "is not built by this version; it is built locked to the carrier when it meshes nothing."),
@@ -400,3 +405,235 @@ def test_every_workbook_before_w7_plans_bit_for_bit_as_it_did(name, monkeypatch)
         import test_workbook_turned as turned
         a = assess.assess(replace(getattr(turned, name)(), source_path="C:\\B\\W.xlsx"), [], OUT)
     assert _fingerprint(a) == BEFORE_W7[name]
+
+
+# -- the carrier part, the mates and the build plan (§2.6, §2.7, §4.1) -----------------------------------------------
+
+from gear_generator import store, swbuild  # noqa: E402
+from gear_generator.gears.base import AddComponent, AddGlobal, BuildPlan, Mate  # noqa: E402
+from gear_generator.workbook import layout as layout_mod  # noqa: E402
+from gear_generator.workbook import motion as motion_mod  # noqa: E402
+from test_workbook_gearbox import Disk, built, failed, norm, stem  # noqa: E402
+
+
+def test_the_carrier_part_holds_each_copys_axis_in_its_own_coordinates():
+    """§4.1: C Axis; copy 1's X plane 18 from Right with Top as its other plane; copies 2 and 3 at (−9, ±15.588…)."""
+    a = direct(planetary_4to1())
+    carrier, = layout_mod.carrier_layouts(a.spec, a.report)
+    drawn = layout_mod.carrier_shafts(carrier)
+    assert [g.name for g in layout_mod.layout_globals(drawn)] == ["P copy 1 X", "P copy 2 X", "P copy 2 Y",
+                                                                  "P copy 3 X", "P copy 3 Y"]
+    assert [g.expression for g in layout_mod.layout_globals(drawn)] == ["18", "-9", "15.588457268", "-9",
+                                                                        "-15.588457268"]
+    assert layout_mod.layout_features(drawn) == ("C Axis", "P copy 1 X Plane", "P copy 1 Axis", "P copy 2 X Plane",
+                                                 "P copy 2 Y Plane", "P copy 2 Axis", "P copy 3 X Plane",
+                                                 "P copy 3 Y Plane", "P copy 3 Axis")
+    plan = layout_mod.carrier_plan(carrier, "", "C:\\Out\\Planetary_4to1_C_Carrier.SLDPRT")
+    assert plan.kind == layout_mod.CARRIER_KIND and plan.check() == []
+    assert layout_mod.carrier_frame(carrier) == layout_mod.Frame((1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0),
+                                                                 (0.0, 0.0, 0.0))
+    z_minus, = layout_mod.carrier_layouts(on_z_minus(), None)
+    assert z_minus.axes == carrier.axes and z_minus.direction == (0.0, 0.0, -1.0)      # review M4: the same axes
+    assert layout_mod.carrier_frame(z_minus).rotation == (1.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, -1.0)
+    assert [s.shaft for s in layout_mod.shaft_layouts(a.spec)] == ["S", "C", "R"]    # P is in the carrier part
+
+
+FIXTURE_MATES = [
+    ("Sun on S Axis", "axis", ("Sun",), "S", ""), ("Sun along S", "along", ("Sun",), "S", ""),
+    ("C carrier on C Axis", "axis", ("C carrier",), "C", ""), ("C carrier along C", "along", ("C carrier",), "C", ""),
+    ("CarrierGear locked to C carrier", "lock", ("C carrier", "CarrierGear"), "", ""),
+    ("Planet copy 1 on P copy 1 Axis", "axis", ("Planet copy 1",), "P copy 1", "C carrier"),
+    ("Planet copy 1 along P copy 1", "along", ("Planet copy 1",), "P copy 1", ""),
+    ("Planet copy 2 on P copy 2 Axis", "axis", ("Planet copy 2",), "P copy 2", "C carrier"),
+    ("Planet copy 2 along P copy 2", "along", ("Planet copy 2",), "P copy 2", ""),
+    ("Planet copy 3 on P copy 3 Axis", "axis", ("Planet copy 3",), "P copy 3", "C carrier"),
+    ("Planet copy 3 along P copy 3", "along", ("Planet copy 3",), "P copy 3", ""),
+    ("Sun meshes Planet copy 1", "mesh", ("Sun", "Planet copy 1"), "", ""),
+    ("Sun meshes Planet copy 2", "mesh", ("Sun", "Planet copy 2"), "", ""),
+    ("Sun meshes Planet copy 3", "mesh", ("Sun", "Planet copy 3"), "", ""),
+    ("Planet copy 1 meshes Ring", "mesh", ("Planet copy 1", "Ring"), "", ""),
+]
+
+
+def plan_of(spec):
+    a = direct(spec)
+    return a, motion_mod.motion_plan(a.spec, a.report, layout_mod.frames(a.report))
+
+
+def test_the_mates_of_the_fixture_are_the_spikes_set_chosen_by_rank():
+    """§4.1 (J5, measured by the spike): fifteen mates; N sun mates and ONE ring mate; the other two ring meshes
+    unmated; the ring fixed; one shared Planet Face Z (§6.7); along mates on the layout's Front plane (§6.8)."""
+    _, plan = plan_of(planetary_4to1())
+    assert [(m.name, m.kind, m.gears, m.shaft, m.on) for m in plan.mates] == FIXTURE_MATES
+    assert plan.unmated == (("Planet copy 2", "Ring"), ("Planet copy 3", "Ring")) and plan.fixed == ("Ring",)
+    assert plan.carriers == ("C carrier",) and plan.drag == ("Sun",)
+    along = {m.name: (m.face_global, m.z_front, m.plane) for m in plan.mates if m.kind == "along"}
+    assert along["Planet copy 2 along P copy 2"] == ("Planet Face Z", 5.0, "front")
+    assert along["C carrier along C"] == ("", 0.0, "front")
+
+
+def test_the_senses_of_the_fixtures_gear_mates_are_their_contacts():
+    """W7-INTERFACES §6.10 / W6's identity ``mate_senses[name] = (sense == −1)``. By hand, at the contact: a sun and a
+    planet touch outside, so in the carrier's frame (both axes +Z) their pitch points move together only if they
+    turn opposite ways — ``z_s·ω_s + z_p·ω_p = 0``, c = +1, k = −18/18 = −1 < 0: False. A planet inside the ring
+    touches it from within, so their pitch points move together when both turn the same way — ``z_p·ω_p − z_r·ω_r =
+    0``, c = −1, k = +18/54 > 0: True (the spike's ring mate read wrong with the first Flip)."""
+    a = direct(planetary_4to1())
+    plan = gearbox.plan_gearbox(a, None, exists=lambda p: False, read_sidecar=lambda p: None)
+    assert plan.mate_senses == {"Sun meshes Planet copy 1": False, "Sun meshes Planet copy 2": False,
+                                "Sun meshes Planet copy 3": False, "Planet copy 1 meshes Ring": True}
+    assert plan.build_kwargs()["senses"] == plan.mate_senses
+
+
+@pytest.mark.parametrize("make, held, fixed, axes", [
+    (sun_held, "S", ("Sun",), ["Ring on R Axis"]),
+    (carrier_held, "C", ("CarrierGear", "C carrier"), ["Sun on S Axis", "Ring on R Axis"]),
+])
+def test_with_another_member_held_the_same_four_gear_mates_are_made(make, held, fixed, axes):
+    _, plan = plan_of(make())
+    meshes = [m.name for m in plan.mates if m.kind == "mesh"]
+    assert meshes == ["Sun meshes Planet copy 1", "Sun meshes Planet copy 2", "Sun meshes Planet copy 3",
+                      "Planet copy 1 meshes Ring"]
+    assert plan.unmated == (("Planet copy 2", "Ring"), ("Planet copy 3", "Ring")) and plan.fixed == fixed
+    names = [m.name for m in plan.mates]
+    assert all(n in names for n in axes)
+    assert ("C carrier on C Axis" in names) == (held != "C")
+    assert ("CarrierGear locked to C carrier" in names) == (held != "C")
+
+
+def test_the_fixtures_build_plan_inserts_the_carrier_and_each_copy_of_one_part():
+    a = direct(planetary_4to1())
+    plan = gearbox.plan_gearbox(a, None, exists=lambda p: False, read_sidecar=lambda p: None)
+    assert plan.refusal == ""
+    assert plan.handles == {"gear1": "Sun", "gear2c1": "Planet copy 1", "gear2c2": "Planet copy 2",
+                            "gear2c3": "Planet copy 3", "gear3": "Ring", "gear4": "CarrierGear"}
+    assert plan.carrier_handles == {"carrier1": "C carrier"}
+    assert stem(plan.carrier_paths["C"]) == "Planetary_4to1_C_Carrier"
+    assert [stem(j.path) for j in plan.build] == ["Sun", "Planet", "Ring_m1_N54", "CarrierGear"]
+    kwargs = plan.build_kwargs()
+    assert kwargs["gears"] == dict(plan.handles, carrier1="C carrier")                # §6.2
+    assert kwargs["carriers"] == list(plan.carriers) and plan.carriers[0].kind == layout_mod.CARRIER_KIND
+    ops = plan.assembly.ops
+    assert plan.assembly.check() == []
+    assert [op.id for op in ops if isinstance(op, AddComponent)] == ["layout", "carrier1", "gear1", "gear2c1",
+                                                                      "gear2c2", "gear2c3", "gear3", "gear4"]
+    assert [stem(op.path) for op in ops if isinstance(op, AddComponent)][3:6] == ["Planet"] * 3
+    assert [op.name for op in ops if isinstance(op, AddGlobal)] == ["Sun Face Z", "Planet Face Z"]   # once: S5
+    mates = {op.name: (op.kind, op.a, op.b) for op in ops if isinstance(op, Mate)}
+    assert list(mates) == [m[0] for m in FIXTURE_MATES]
+    assert mates["C carrier on C Axis"] == ("coincident", "carrier1:C Axis", "layout:C Axis")
+    assert mates["C carrier along C"] == ("point", "carrier1:origin", "layout:plane1")
+    assert mates["CarrierGear locked to C carrier"] == ("lock", "carrier1", "gear4")
+    assert mates["Planet copy 2 on P copy 2 Axis"] == ("coincident", "gear2c2:Gear Axis", "carrier1:P copy 2 Axis")
+    assert mates["Planet copy 2 along P copy 2"] == ("point distance", "gear2c2:origin", "layout:plane1")
+    assert mates["Planet copy 1 meshes Ring"] == ("gear", "gear2c1:Gear Axis", "gear3:Gear Axis")
+    unfixed = [op.component for op in ops if type(op).__name__ == "Unfix"]
+    assert "gear3" not in unfixed and unfixed[:2] == ["gear1", "carrier1"]
+    frames = {h: plan.frames[g] for h, g in plan.handles.items()}
+    assert frames["gear2c2"].at == pytest.approx((-9.0, 15.588457268, 5.0)) and frames["gear4"].at == (0.0, 0.0, 27.0)
+    assert [e.kind for e in gearbox.journal(plan)][-2:] == ["carrier", "assembly"]
+
+
+def test_a_held_carrier_is_inserted_fixed_and_its_planets_are_still_mated_to_its_axes():
+    a = direct(carrier_held())
+    plan = gearbox.plan_gearbox(a, None, exists=lambda p: False, read_sidecar=lambda p: None)
+    ops = plan.assembly.ops
+    assert plan.assembly.check() == []
+    unfixed = [op.component for op in ops if type(op).__name__ == "Unfix"]
+    assert "carrier1" not in unfixed and "gear4" not in unfixed
+    mates = {op.name: (op.a, op.b) for op in ops if isinstance(op, Mate)}
+    assert mates["Planet copy 3 on P copy 3 Axis"] == ("gear2c3:Gear Axis", "carrier1:P copy 3 Axis")
+
+
+# -- finishing a build: the record's carriers, copies and mates (§2.11; W7-INTERFACES §6.1, §6.2) ------------------
+
+def run_planetary(plan, disk, fail_assembly=False):
+    """What build_gearbox will answer for a planetary plan, by its pinned fields (until A's fake builds carriers)."""
+    result = swbuild.GearboxResult()
+    for job in plan.build:
+        result.parts.built.append(built(job.path, job.spec.kind))
+        disk.add(job.path)
+    result.checked = [r.path for r in plan.reuse]
+    if isinstance(plan.layout, gearbox.LayoutReuse):
+        result.layout_reused = plan.layout.path
+        result.checked.append(plan.layout.path)
+    else:
+        result.layout = built(plan.layout_path, "layout")
+        disk.add(plan.layout_path)
+    for item in plan.carriers:
+        if isinstance(item, gearbox.CarrierReuse):
+            result.carriers_reused.append(item.path)
+            result.checked.append(item.path)
+        else:
+            result.carriers.append(built(item.path, "carrier"))
+            disk.add(item.path)
+    if fail_assembly:
+        result.assembly = failed(plan.assembly_path)
+        return result
+    result.assembly = built(plan.assembly_path, "assembly")
+    disk.add(plan.assembly_path)
+    names = {layout_mod.LAYOUT_HANDLE: stem(plan.layout_path) + "-1"}
+    counts = {}
+    for handle, gear in list(plan.handles.items()) + list(plan.carrier_handles.items()):
+        part = stem(plan.part_of[gear]) if gear in plan.part_of else stem(plan.carrier_paths["C"])
+        counts[part] = counts.get(part, 0) + 1
+        names[handle] = f"{part}-{counts[part]}"
+    result.components = names
+    result.assembly.components = dict(names)
+    return result
+
+
+def finish(plan, result, record, disk):
+    done = gearbox.finish_build(plan, result, record, workbook=BOOK, digest="d1", written_by="test",
+                                read_sidecar=disk.read_sidecar, exists=disk.exists, stamp="2026-11-14T00:00:00Z")
+    disk.write(done)
+    return store.link_record_from_json(store.link_record_to_json(done.record or record))
+
+
+def test_a_planetary_build_writes_a_record_that_reads_back_with_its_carrier_copies_and_senses():
+    disk = Disk()
+    a = direct(planetary_4to1())
+    plan = gearbox.plan_gearbox(a, None, exists=disk.exists, read_sidecar=disk.read_sidecar)
+    record = finish(plan, run_planetary(plan, disk), None, disk)
+    box = record.gearbox
+    carrier, = box.carriers
+    assert (carrier.shaft, norm(carrier.path), carrier.component) == ("C", norm(plan.carrier_paths["C"]),
+                                                                      "Planetary_4to1_C_Carrier-1")
+    assert carrier.direction == [0.0, 0.0, 1.0] and [x.shaft for x in carrier.axes] == ["P copy 1", "P copy 2",
+                                                                                         "P copy 3"]
+    assert {c.gear: (c.of, c.name) for c in box.components}["Planet copy 2"] == ("Planet", "Planet-2")
+    assert {c.gear: c.of for c in box.components}["Sun"] == ""
+    mates = {m.name: (m.on, m.sense) for m in box.mates}
+    assert mates["Planet copy 2 on P copy 2 Axis"] == ("C carrier", 0)
+    assert mates["Planet copy 1 meshes Ring"] == ("", -1) and mates["Sun meshes Planet copy 3"] == ("", 1)
+    assert box.unmated == [["Planet copy 2", "Ring"], ["Planet copy 3", "Ring"]] and box.fixed == ["Ring"]
+
+
+def test_a_build_that_fails_after_the_carrier_part_is_continued_and_keeps_its_carrier_on_record():
+    """W7-INTERFACES §6.1 (a): the carrier part saved, the assembly failed; the next press reuses it (checked live)
+    and the finish keeps one CarrierEntry beside mates whose ``on`` names it; the record reads back."""
+    disk = Disk()
+    a = direct(planetary_4to1())
+    plan = gearbox.plan_gearbox(a, None, exists=disk.exists, read_sidecar=disk.read_sidecar)
+    record = finish(plan, run_planetary(plan, disk, fail_assembly=True), None, disk)
+    assert [c.shaft for c in record.gearbox.carriers] == ["C"] and record.gearbox.mates == []
+    again = gearbox.plan_gearbox(a, record, exists=disk.exists, read_sidecar=disk.read_sidecar)
+    assert again.refusal == "" and again.revision == 0
+    assert isinstance(again.carriers[0], gearbox.CarrierReuse) and isinstance(again.layout, gearbox.LayoutReuse)
+    assert "carriers" in again.build_kwargs() and isinstance(again.build_kwargs()["carriers"][0],
+                                                             swbuild.DocumentValues)
+    record = finish(again, run_planetary(again, disk), record, disk)
+    box = record.gearbox
+    assert [c.shaft for c in box.carriers] == ["C"] and box.carriers[0].component == "Planetary_4to1_C_Carrier-1"
+    assert {m.on for m in box.mates} == {"", "C carrier"}
+
+
+def test_the_gears_below_the_undercut_limit_are_handed_to_the_builds_wording():
+    """W7-PLAN §2.3 item 7: ``Report.undercut`` and ``GearboxPlan.undercut`` name them (row ids) for the interference
+    sentence's clause; the fixture has none."""
+    spec = edited(planetary_4to1(), shafts={"P": dict(x="13", copies="2")},
+                  gears={"Sun": dict(teeth="7", bore="2"), "Planet": dict(teeth="19"), "Ring": dict(teeth="45")})
+    assert direct(spec).report.undercut == ("Sun",)
+    a = direct(planetary_4to1())
+    assert a.report.undercut == () and gearbox.plan_gearbox(a, None, exists=lambda p: False,
+                                                            read_sidecar=lambda p: None).undercut == ()

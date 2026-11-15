@@ -191,15 +191,15 @@ def shaft_layouts(spec: GearboxSpec) -> Tuple[ShaftLayout, ...]:
     from the base plane square to one of the two coordinates square to its axis (Z±: X from Right, Y from Top, as
     W4; X±: Y from Top, Z from Front; Y±: X from Right, Z from Front), a coordinate at 0 being the base plane itself;
     a slanted shaft is a fixed line in a 3D sketch (``line``, D4). The coordinate along the axis has no plane.
-    ``sigma`` is ±1 for Z± and 0 for any other axis. A carrier, or an Axis that does not read, raises ValueError
-    with a sentence."""
+    ``sigma`` is ±1 for Z± and 0 for any other axis. An Axis that does not read raises ValueError with a sentence.
+    W7: a shaft mounted on a carrier is skipped — its axes are in the carrier part (:func:`carrier_layouts`); the
+    carrier, a frame shaft, keeps its axis here."""
     from .geometry import DIRECTIONS, axis_vector
     words = {v: k for k, v in DIRECTIONS.items()}
     out: List[ShaftLayout] = []
     for shaft in spec.shafts:
         if shaft.mount() != FRAME:
-            raise ValueError(f"{shaft.id} is mounted on {shaft.mount()}: the layout part holds only shafts held by "
-                             "the frame until phase W7.")
+            continue
         direction = axis_vector(shaft.axis)
         word = words.get(direction, "")
         x = _number(shaft.x, f"{shaft.id}'s X")
@@ -488,23 +488,62 @@ def carrier_stem(box_name: str, revision: int, shaft: str) -> str:
     return f"{stems(box_name, revision)[0]}_{shaft}{CARRIER_SUFFIX}"
 
 
+def _local_axis(shaft: str, x: float, y: float, z: float) -> ShaftLayout:
+    """An axis in a carrier part's own coordinates, along its own +Z, as :func:`shaft_layouts` draws a Z+ shaft."""
+    fields: Dict[str, str] = {}
+    for c, value in (("x", x), ("y", y)):
+        where = side(value)
+        fields[f"{c}_side"] = where
+        fields[f"{c}_global"] = f"{shaft} {c.upper()}" if where != BASE else ""
+        fields[f"{c}_plane"] = f"{shaft} {c.upper()} Plane" if where != BASE else ""
+    return ShaftLayout(shaft=shaft, x=x, y=y, z=z, sigma=1, direction=(0.0, 0.0, 1.0), axis="Z+",
+                       axis_name=f"{shaft} Axis", **fields)
+
+
 def carrier_layouts(spec: GearboxSpec, report: Report) -> Tuple[CarrierLayout, ...]:
-    """Every carrier of ``spec``, in Shafts-sheet order, with its planet copies' axes (W7-PLAN §2.6). Agent B writes
-    it."""
-    raise ValueError("Carrier parts are not laid out by this version of Gear Generator yet, so this gearbox is not "
-                     "planned.")
+    """Every carrier of ``spec``, in Shafts-sheet order, with its planet copies' axes (W7-PLAN §2.6): per shaft
+    mounted on it (Shafts-sheet order), each copy's ``planetary.copy_offsets`` point as an axis in the carrier
+    part's own coordinates (the same on a Z- carrier as on a Z+ one, review M4). ``report`` is not needed: the rows
+    say it all. A cell that does not read raises ValueError with a sentence."""
+    from . import planetary
+    from .geometry import axis_vector
+    del report
+    shafts = {x.id: x for x in spec.shafts if x.id}
+    out: List[CarrierLayout] = []
+    for carrier_shaft in planetary.carriers(spec):
+        c = shafts[carrier_shaft]
+        axes: List[ShaftLayout] = []
+        for planet in (x for x in spec.shafts if x.mount() == carrier_shaft and x.id):
+            copies = planetary.copies_of(planet)
+            if copies is None:
+                raise ValueError(f"{planet.id}'s Copies is {planet.copies!r}, which is not a whole number of at least "
+                                 "1, so its carrier part is not planned.")
+            offsets = planetary.copy_offsets(_number(planet.x, f"{planet.id}'s X"), _number(planet.y, f"{planet.id}'s Y"),
+                                             _number(planet.z, f"{planet.id}'s Z"), copies)
+            for k, (x, y, z) in enumerate(offsets, 1):
+                axes.append(_local_axis(planetary.copy_id(planet.id, k, copies), x, y, z))
+        out.append(CarrierLayout(carrier_shaft, _number(c.x, f"{c.id}'s X"), _number(c.y, f"{c.id}'s Y"),
+                                 _number(c.z, f"{c.id}'s Z"), axis_vector(c.axis), tuple(axes)))
+    return tuple(out)
+
+
+def carrier_shafts(carrier: CarrierLayout) -> Tuple[ShaftLayout, ...]:
+    """What the carrier part draws: its own ``"<C> Axis"`` through the Right and Top base planes, then every copy's
+    axis — so ``layout_globals`` and ``layout_features`` of it are the part's globals and the names it is checked
+    for when reused."""
+    return (_local_axis(carrier.shaft, 0.0, 0.0, 0.0),) + tuple(carrier.axes)
 
 
 def carrier_frame(carrier: CarrierLayout) -> Frame:
     """The carrier part's frame in the assembly (W7-PLAN §2.6, J2): ``geometry.base_frame(carrier.direction)``,
-    unturned, at ``(x, y, 0)`` — its origin on the layout's Front plane whatever its Z. Agent B writes it."""
-    raise ValueError("A carrier part's place is not worked out by this version of Gear Generator yet, so this "
-                     "gearbox is not planned.")
+    unturned, at ``(x, y, 0)`` — its origin on the layout's Front plane whatever its Z."""
+    rotation = geometry.base_frame(tuple(carrier.direction))
+    return Frame(tuple(v + 0.0 for v in rotation), (carrier.x + 0.0, carrier.y + 0.0, 0.0))
 
 
 def carrier_plan(carrier: CarrierLayout, template: str, path: str) -> BuildPlan:
     """The carrier part's ``BuildPlan`` (``kind`` :data:`CARRIER_KIND`), made by :func:`layout_plan` on the
-    carrier's own axes: ``"<C> Axis"`` through the Right and Top base planes, and per copy its two offset planes,
-    literal globals (J1) and axis. Agent B writes it."""
-    raise ValueError("A carrier part is not planned by this version of Gear Generator yet, so this gearbox is not "
-                     "planned.")
+    carrier's own axes (:func:`carrier_shafts`): ``"<C> Axis"`` through the Right and Top base planes, and per copy
+    its two offset planes, literal globals (J1) and axis."""
+    from dataclasses import replace as _replace
+    return _replace(layout_plan(carrier_shafts(carrier), template, path), kind=CARRIER_KIND)
