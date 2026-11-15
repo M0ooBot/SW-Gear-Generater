@@ -1,0 +1,658 @@
+NOTE (added after the run): this run passed gear_mate_sense the same_sense 'sense > 0', but the record writes -1 for a mesh whose gears turn the same way (4adc24d). Every sense reading below is therefore judged against the opposite expectation; the verdict flips exactly with same_sense (Reverse == (sign(k)·τa·τb > 0)), so decide.planetary_put_route re-judges them with senses_inverted=True. The follow-ons of the route that held were run afterwards: w7-planetary-put-follow-ons-20261115-013108.
+attach  SolidWorks 2026 (revision 34.1.1), PID 46728
+scratch C:\Users\M0obo\Documents\GearGeneratorProbe\20261115-012409
+pass    attach  (0.0 s)
+  fact   revision = '34.1.1'
+  fact   version = 'SolidWorks 2026 (revision 34.1.1)'
+  ok     revision 34.1.1 is SolidWorks 2024 or newer
+  fact   open_at_start = []
+pass    templates  (0.0 s)
+  try    GetDocumentTemplate(1, '', 0, 0, 0): returned 'C:\\ProgramData\\SolidWorks\\SOLIDWORKS 2026\\templates\\Part.prtdot'
+  try    GetUserPreferenceStringValue(8): returned 'C:\\ProgramData\\SolidWorks\\SOLIDWORKS 2026\\templates\\Part.prtdot'
+  ok     a part template exists on disk
+  fact   part_template_route = 'GetDocumentTemplate'
+  fact   part_template = 'C:\\ProgramData\\SolidWorks\\SOLIDWORKS 2026\\templates\\Part.prtdot'
+  ok     the part template is a .prtdot file
+  try    GetDocumentTemplate(2, '', 0, 0, 0): returned 'C:\\ProgramData\\SolidWorks\\SOLIDWORKS 2026\\templates\\Assembly.asmdot'
+  try    GetUserPreferenceStringValue(9): returned 'C:\\ProgramData\\SolidWorks\\SOLIDWORKS 2026\\templates\\Assembly.asmdot'
+  ok     a assembly template exists on disk
+  fact   assembly_template_route = 'GetDocumentTemplate'
+  fact   assembly_template = 'C:\\ProgramData\\SolidWorks\\SOLIDWORKS 2026\\templates\\Assembly.asmdot'
+  ok     the assembly template is a .asmdot file
+pass    new_document  (4.9 s)
+  fact   new_part_title = 'Part1'
+  ok     NewDocument from the part template makes a part
+  ok     the new part is the active document
+  fact   plane_names_in_tree_order = ['Front Plane', 'Top Plane', 'Right Plane']
+  ok     the part has exactly three reference planes
+  fact   new_part_features = [('Comments', 'CommentsFolder'), ('Favorites', 'FavoriteFolder'), ('History', 'HistoryFolder'), ('Selection Sets', 'SelectionSetFolder'), ('Sensors', 'SensorFolder'), ('Design Binder', 'DocsFolder'), ('Annotations', 'DetailCabinet'), ('Surface Bodies', 'SurfaceBodyFolder'), ('Solid Bodies', 'SolidBodyFolder'), ('Lights and Cameras', 'EnvFolder'), ('Markups', 'InkMarkupFolder'), ('Equations', 'EqnFolder'), ('Material <not specified>', 'MaterialFolder'), ('Front Plane', 'RefPlane'), ('Top Plane', 'RefPlane'), ('Right Plane', 'RefPlane'), ('Origin', 'OriginProfileFeature')]
+  fact   new_part_path = ''
+pass    equation_add  (1.1 s)
+  ok     GetEquationMgr returns an equation manager
+  try    AngularEquationUnits: returned 1
+  fact   angular_equation_units_property = 1
+  fact   equations_in_new_part = 0
+  try    Add2: returned 0
+  ok     some documented way of adding a global works
+  fact   add3_form = 'Add2'
+  ok     Add2 at index -1 appends, returning 0
+  ok     GetCount goes up by one
+  fact   equation_text_readback = '"Probe A"= 2.5'
+  ok     Equation(i) reads back '"Probe A"= 2.5'
+  ok     Value(i) reads back 2.5
+  ok     GlobalVariable(i) says it is a global
+  fact   delete_returns = 0
+  ok     Delete(i) removes it again
+  try    Add3 on a one-configuration part, all configurations, None: returned -1
+  fact   add3_single_configuration_returns = -1
+pass    equation_set  (1.3 s)
+  ok     two linked globals are added
+  try    indexed put Equation(i): returned None
+  ok     indexed put Equation(i): the dependent global follows to 10.0
+  try    SetEquationAndConfigurationOption: returned -1
+  note   SetEquationAndConfigurationOption: the dependent global reads 10.0 (does not follow)
+  fact   equation_set_routes = ['indexed put Equation(i)']
+  ok     at least one way of changing a global's value works
+pass    document_units  (1.1 s)
+  fact   units_default = {'path': 'C:\\ProgramData\\SolidWorks\\SOLIDWORKS 2026\\templates\\Part.prtdot', 'linear': 0, 'system': 4}
+  fact   mm_templates = ['C:\\ProgramData\\SolidWorks\\SOLIDWORKS 2026\\templates\\Part.prtdot']
+  fact   default_template_is_mm = True
+  fact   set_mmgs_works = False
+  ok     a new part can be had in millimetres
+pass    sketch_open_close  (3.1 s)
+  try    IFeature.Select2(False, 0) on the first RefPlane: returned True
+  fact   select2_plane = {'returned': True, 'selected': 1}
+  try    SelectByID2("Front Plane", "PLANE", ...) with the name read from the tree: returned True
+  fact   select_by_id2_plane_tree_name = {'returned': True, 'selected': 1}
+  ok     the first RefPlane in tree order can be selected by one of the two routes
+  fact   add_to_db_reads_back = True
+  ok     InsertSketch(True) opens a sketch
+  ok     CreateCircleByRadius returns the new segment
+  ok     a second InsertSketch(True) closes it
+  ok     the new sketch feature renames and reads back 'Probe Sketch'
+  fact   rename_onto_taken_name_reads_back = 'Sketch2'
+  ok     renaming onto a taken name does not take it, and read-back shows so
+  fact   select_routes_used = {'Select2': 2}
+pass    sketch_entities  (2.6 s)
+  ok     CreateCircleByRadius makes a circle
+  fact   circle_segment_type = 1
+  try    circle.GetCenterPoint2: returned 'CDispatch'
+  ok     a circle's centre reads back from the segment itself: (10.0, 20.0)
+  try    circle.GetRadius: returned 0.004999999999999999
+  ok     GetRadius reads the radius in metres
+  try    CreateCircle(centre, point).GetRadius: returned 0.005999999999999998
+  ok     CreateCircle takes a centre and a point on it
+  try    CreateArc direction +1.GetLength: returned 0.047123889803846894
+  fact   arc_direction_+1 = {'length_mm': 47.12388980384689, 'start': (30.0, 0.0), 'end': (0.0, 30.0)}
+  ok     CreateArc with direction +1 runs counter-clockwise from its start
+  try    CreateArc direction -1.GetLength: returned 0.1413716694115407
+  fact   arc_direction_-1 = {'length_mm': 141.3716694115407, 'start': (30.0, 0.0), 'end': (0.0, 30.0)}
+  ok     CreateArc with direction -1 runs clockwise from its start
+  try    three-point arc.GetCenterPoint2: returned 'CDispatch'
+  ok     Create3PointArc passes through its three points: centre (90.0, -5.204170427930421e-15)
+  ok     a line's ends read back: (1.0, 2.0), (31.0, 42.0)
+  ok     GetLength is in metres
+  fact   line_segment_type = 0
+  fact   centreline_is_construction = True
+  ok     ConstructionGeometry sets and reads back on a line
+  ok     CreatePoint puts a point where asked
+  fact   segments_after_close = 7
+  ok     all seven segments are still in the sketch once it is closed
+pass    relations  (3.4 s)
+  fact   origin_point_mm = (0.0, 0.0)
+  ok     sgCOINCIDENT pulls a line's start onto the origin: (0.0, 0.0)
+  ok     sgHORIZONTAL2D levels the line: (0.0, 0.0) (26.925824035672523, 0.0)
+  ok     the origin and a line made coincident put the origin on the line's extension: (25.0, 25.0) (45.00000000000001, 45.0)
+  ok     sgCOINCIDENT puts a point on a circle: (89.66234939601246, 2.576626505603322)
+  ok     sgTANGENT makes the line touch the arc: 10.0 vs 10.0
+  ok     sgSYMMETRIC mirrors two points about a centreline: (140.0, 20.0) (159.99999999999997, 20.0)
+  try    sgEQUAL on two circles: returned None
+  fact   after sgEQUAL the radii are (0.0040000000000000036, 0.007000000000000006)
+  fact   equal_radius_constraint = 'sgSAMELENGTH'
+  ok     some constant makes two radii equal: ['sgSAMELENGTH'] (0.0040000000000000036, 0.003999999999999992)
+  ok     an arc's centre point goes onto a circle: (60.0, 60.0)
+  fact   select_routes_so_far = {'Select2': 4, 'Select4': 18}
+pass    dimensions  (2.9 s)
+  ok     AddDimension2 makes the OD dimension
+  ok     the OD dimension renames and reads back
+  fact   a circle's dimension reads 0.02 m: its diameter
+  fact   full_name_while_open = 'OD@Sketch1@Part8.Part'
+  ok     setting SystemValue in metres drives the circle
+  ok     AddDimension2 makes the R dimension
+  ok     the R dimension renames and reads back
+  fact   an arc's dimension reads 0.009999999999999995 m: its radius
+  ok     AddDimension2 makes the HalfSpace dimension
+  ok     the HalfSpace dimension renames and reads back
+  fact   angle_dimension_system_value = 0.34906585039886595
+  ok     an angle dimension's SystemValue is radians: 0.34906585039886595
+  fact   dimension_names_after_close = ['OD', 'R', 'HalfSpace']
+  ok     names set while the sketch was open survive closing it
+  fact   full_name_after_close = 'OD@Probe Dims@Part8.Part'
+pass    extrude  (3.5 s)
+  fact   extrude_type_name = 'Extrusion'
+  ok     the extrusion renames and reads back
+  fact   blank_volume_mm3 = 12566.370614359175
+  ok     the blank's volume is 12566.371 mm³ (expected 12566.371)
+  fact   extrude_dimensions = [('D1', 0.01), ('OD', 0.04)]
+  ok     the depth dimension is found by its value
+  fact   depth_dimension_default_name = 'D1'
+  ok     the depth dimension renames to Width
+  fact   depth_full_name = 'Width@Blank@Part9.Part'
+  ok     a width global is added
+  ok     the link "Width@Blank"= "Probe W" is accepted
+  ok     linked to 12 mm the blank is 15079.645 mm³
+pass    axis  (1.5 s)
+  ok     planes 2 and 3 select together
+  fact   insert_axis2_returns = True
+  fact   axis_new_features = [('Axis1', 'RefAxis')]
+  ok     InsertAxis2 adds exactly one feature
+  ok     the axis renames and reads back
+  fact   axis_type_name = 'RefAxis'
+  ok     the axis can be selected again
+pass    save_as  (2.9 s)
+  ok     the scratch folder is on a drive: 'C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\20261115-012409'
+  ok     C:\Users\M0obo\Documents\GearGeneratorProbe\20261115-012409\Probe Save.SLDPRT does not exist yet
+  try    SaveAs3(path, current version, silent, null, null, out long, out long): returned True
+  fact   save_as3_result = 'True'
+  fact   save_as3_result_is_tuple = False
+  ok     SaveAs3 says it saved
+  ok     the file is on disk
+  fact   title_after_save = 'Probe Save.SLDPRT'
+  fact   path_after_save = 'C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\20261115-012409\\Probe Save.SLDPRT'
+  ok     GetPathName now names the new file
+  try    SaveAs3 onto the same path: returned True
+  fact   save_as3_onto_existing_file = {'flag': True, 'size_before': 33947, 'size_after': 34948}
+  try    IModelDoc2.SaveAs3 on another new part: returned 'dict'
+  fact   imodeldoc2_save_as3 = {'returned': 0, 'on_disk': True}
+pass    assembly_components_and_mates  (12.3 s)
+  ok     there is a scratch folder to save parts in
+  fact   assembly_units_before_setting = 0
+  ok     NewDocument from the assembly template is an assembly
+  try    AddComponent5(part A at the origin): returned 'CDispatch'
+  try    AddComponent5(part B at 60 mm): returned 'CDispatch'
+  ok     both components are inserted
+  fact   component_names = ('Probe Add A-1', 'Probe Add B-1')
+  fact   component_b_translation_mm_as_inserted = (60.0, 0.0, -5.0)
+  try    IsFixed of the first component: returned False
+  fact   first_component_fixed_on_insert = False
+  ok     the first component selects
+  try    FixComponent() on the already fixed first component: returned None
+  ok     the first component is fixed
+  ok     the two front planes select
+  try    AddMate5 coincident fronts: returned 'CDispatch'
+  fact   mate coincident fronts = {'returned': 'CDispatch', 'status': None}
+  ok     coincident fronts: one mate appears under Mates
+  ok     B's axis and A's top plane select
+  try    AddMate5 axis on top plane: returned 'CDispatch'
+  fact   mate axis on top plane = {'returned': 'CDispatch', 'status': None}
+  ok     axis on top plane: one mate appears under Mates
+  ok     B's axis and A's right plane select
+  try    AddMate5 distance axis to right plane: returned 'CDispatch'
+  fact   mate distance axis to right plane = {'returned': 'CDispatch', 'status': None}
+  ok     distance axis to right plane: one mate appears under Mates
+  ok     the two top planes select
+  try    AddMate5 angle between top planes: returned 'CDispatch'
+  fact   mate angle between top planes = {'returned': 'CDispatch', 'status': None}
+  ok     angle between top planes: one mate appears under Mates
+  fact   component_b_translation_mm_mated = (60.0, 0.0, -5.0)
+  ok     B sits 60.0 mm from A's axis: (60.0, 0.0, -5.0)
+  ok     the distance mate is found in the tree
+  ok     the distance mate renames and reads back
+  fact   distance_mate_dimensions = [('D1', 0.06)]
+  fact   mates = [('Coincident1', 'MateCoincident'), ('Coincident2', 'MateCoincident'), ('Centre Distance', 'MateDistanceDim'), ('Angle1', 'MatePlanarAngleDim')]
+  fact   second_component_fixed_before_fix_component = False
+  ok     the second component selects
+  try    FixComponent() on the free second component: returned None
+  fact   second_component_fixed_after_fix_component = True
+  ok     FixComponent() fixes the selected component
+pass    assembly_distance_link  (13.5 s)
+  ok     there is a scratch folder to save parts in
+  fact   assembly_units_before_setting = 0
+  ok     NewDocument from the assembly template is an assembly
+  try    AddComponent5(part A at the origin): returned 'CDispatch'
+  try    AddComponent5(part B at 60 mm): returned 'CDispatch'
+  ok     both components are inserted
+  fact   component_names = ('Probe Link A-1', 'Probe Link B-1')
+  fact   component_b_translation_mm_as_inserted = (60.0, 0.0, -5.0)
+  try    IsFixed of the first component: returned False
+  fact   first_component_fixed_on_insert = False
+  ok     the first component selects
+  try    FixComponent() on the already fixed first component: returned None
+  ok     the first component is fixed
+  ok     the two front planes select
+  try    AddMate5 coincident fronts: returned 'CDispatch'
+  fact   mate coincident fronts = {'returned': 'CDispatch', 'status': None}
+  ok     coincident fronts: one mate appears under Mates
+  ok     B's axis and A's top plane select
+  try    AddMate5 axis on top plane: returned 'CDispatch'
+  fact   mate axis on top plane = {'returned': 'CDispatch', 'status': None}
+  ok     axis on top plane: one mate appears under Mates
+  ok     B's axis and A's right plane select
+  try    AddMate5 distance axis to right plane: returned 'CDispatch'
+  fact   mate distance axis to right plane = {'returned': 'CDispatch', 'status': None}
+  ok     distance axis to right plane: one mate appears under Mates
+  ok     the two top planes select
+  try    AddMate5 angle between top planes: returned 'CDispatch'
+  fact   mate angle between top planes = {'returned': 'CDispatch', 'status': None}
+  ok     angle between top planes: one mate appears under Mates
+  fact   component_b_translation_mm_mated = (60.0, 0.0, -5.0)
+  ok     B sits 60.0 mm from A's axis: (60.0, 0.0, -5.0)
+  ok     the distance mate is found in the tree
+  ok     the distance mate renames and reads back
+  fact   distance_mate_dimensions = [('D1', 0.06)]
+  ok     the distance mate's dimension is found by value
+  ok     an assembly global is added
+  ok     the link "D1@Centre Distance"= "Centre Distance" is accepted
+  fact   component_b_translation_mm_after_global_70 = (70.0, 0.0, -5.0)
+  ok     changing the global moves B to 70 mm: (70.0, 0.0, -5.0)
+  fact   mates = [('Coincident1', 'MateCoincident'), ('Coincident2', 'MateCoincident'), ('Centre Distance', 'MateDistanceDim'), ('Angle1', 'MatePlanarAngleDim')]
+pass    gear_mate  (18.9 s)
+  fact   swconst_path = 'C:\\Program Files\\SOLIDWORKS Corp\\SOLIDWORKS\\swconst.tlb'
+  fact   swconst_reader_positive_control = {'swMateCOINCIDENT': 0, 'swMateDISTANCE': 5, 'swMateANGLE': 6}
+  ok     the swconst reader gives back the three mate types already verified
+  ok     swMateType_e has swMateGEAR
+  fact   mate_gear_type = 10
+  ok     there is a scratch folder to save parts in
+  ok     flip off: both cylinders are inserted
+  fact   first_component_fixed_on_insert_plain = False
+  ok     flip off: the first cylinder selects to fix
+  try    flip off: FixComponent() on the first cylinder: returned None
+  ok     flip off: the first cylinder is fixed before it is unfixed
+  ok     flip off: the first cylinder selects
+  try    flip off: UnfixComponent() on the first cylinder: returned None
+  ok     flip off: the first cylinder floats after UnfixComponent
+  ok     flip off: A's front and the assembly's front select
+  try    AddMate5 flip off: A's front on the assembly's: returned 'CDispatch'
+  fact   mate flip off: A's front on the assembly's = {'returned': 'CDispatch', 'status': None}
+  ok     flip off: A's front on the assembly's: one mate appears under Mates
+  ok     flip off: A's axis and the assembly's top select
+  try    AddMate5 flip off: A's axis in the assembly's top plane: returned 'CDispatch'
+  fact   mate flip off: A's axis in the assembly's top plane = {'returned': 'CDispatch', 'status': None}
+  ok     flip off: A's axis in the assembly's top plane: one mate appears under Mates
+  ok     flip off: A's axis and the assembly's right select
+  try    AddMate5 flip off: A's axis in the assembly's right plane: returned 'CDispatch'
+  fact   mate flip off: A's axis in the assembly's right plane = {'returned': 'CDispatch', 'status': None}
+  ok     flip off: A's axis in the assembly's right plane: one mate appears under Mates
+  ok     flip off: A's top and the assembly's top select
+  try    AddMate5 flip off: the drive angle: returned 'CDispatch'
+  fact   mate flip off: the drive angle = {'returned': 'CDispatch', 'status': None}
+  ok     flip off: the drive angle: one mate appears under Mates
+  ok     flip off: the drive angle mate is made
+  ok     flip off: B's front and the assembly's front select
+  try    AddMate5 flip off: B's front on the assembly's: returned 'CDispatch'
+  fact   mate flip off: B's front on the assembly's = {'returned': 'CDispatch', 'status': None}
+  ok     flip off: B's front on the assembly's: one mate appears under Mates
+  ok     flip off: B's axis and the assembly's top select
+  try    AddMate5 flip off: B's axis in the assembly's top plane: returned 'CDispatch'
+  fact   mate flip off: B's axis in the assembly's top plane = {'returned': 'CDispatch', 'status': None}
+  ok     flip off: B's axis in the assembly's top plane: one mate appears under Mates
+  ok     flip off: B's axis and the assembly's right select
+  try    AddMate5 flip off: B's axis 60.0 mm from the assembly's right plane: returned 'CDispatch'
+  fact   mate flip off: B's axis 60.0 mm from the assembly's right plane = {'returned': 'CDispatch', 'status': None}
+  ok     flip off: B's axis 60.0 mm from the assembly's right plane: one mate appears under Mates
+  ok     flip off: the two axes select
+  try    flip off: AddMate5 gear 20:40: returned 'CDispatch'
+  fact   gear_mate_made_plain = [('GearMate1', 'MateGearDim')]
+  ok     flip off: one gear mate appears under Mates
+  ok     flip off: the Mates folder is found
+  ok     flip off: the drive mate is found
+  ok     flip off: the drive's dimension is found by value
+  ok     flip off: the drive is linked to a global
+  fact   gear_mate_turn_plain = {'a': -30.000000000000114, 'b': 15.000000000000057, 'a_from': -10.0, 'b_from': 0.0}
+  ok     flip on: both cylinders are inserted
+  fact   first_component_fixed_on_insert_flipped = False
+  ok     flip on: the first cylinder selects to fix
+  try    flip on: FixComponent() on the first cylinder: returned None
+  ok     flip on: the first cylinder is fixed before it is unfixed
+  ok     flip on: the first cylinder selects
+  try    flip on: UnfixComponent() on the first cylinder: returned None
+  ok     flip on: the first cylinder floats after UnfixComponent
+  ok     flip on: A's front and the assembly's front select
+  try    AddMate5 flip on: A's front on the assembly's: returned 'CDispatch'
+  fact   mate flip on: A's front on the assembly's = {'returned': 'CDispatch', 'status': None}
+  ok     flip on: A's front on the assembly's: one mate appears under Mates
+  ok     flip on: A's axis and the assembly's top select
+  try    AddMate5 flip on: A's axis in the assembly's top plane: returned 'CDispatch'
+  fact   mate flip on: A's axis in the assembly's top plane = {'returned': 'CDispatch', 'status': None}
+  ok     flip on: A's axis in the assembly's top plane: one mate appears under Mates
+  ok     flip on: A's axis and the assembly's right select
+  try    AddMate5 flip on: A's axis in the assembly's right plane: returned 'CDispatch'
+  fact   mate flip on: A's axis in the assembly's right plane = {'returned': 'CDispatch', 'status': None}
+  ok     flip on: A's axis in the assembly's right plane: one mate appears under Mates
+  ok     flip on: A's top and the assembly's top select
+  try    AddMate5 flip on: the drive angle: returned 'CDispatch'
+  fact   mate flip on: the drive angle = {'returned': 'CDispatch', 'status': None}
+  ok     flip on: the drive angle: one mate appears under Mates
+  ok     flip on: the drive angle mate is made
+  ok     flip on: B's front and the assembly's front select
+  try    AddMate5 flip on: B's front on the assembly's: returned 'CDispatch'
+  fact   mate flip on: B's front on the assembly's = {'returned': 'CDispatch', 'status': None}
+  ok     flip on: B's front on the assembly's: one mate appears under Mates
+  ok     flip on: B's axis and the assembly's top select
+  try    AddMate5 flip on: B's axis in the assembly's top plane: returned 'CDispatch'
+  fact   mate flip on: B's axis in the assembly's top plane = {'returned': 'CDispatch', 'status': None}
+  ok     flip on: B's axis in the assembly's top plane: one mate appears under Mates
+  ok     flip on: B's axis and the assembly's right select
+  try    AddMate5 flip on: B's axis 60.0 mm from the assembly's right plane: returned 'CDispatch'
+  fact   mate flip on: B's axis 60.0 mm from the assembly's right plane = {'returned': 'CDispatch', 'status': None}
+  ok     flip on: B's axis 60.0 mm from the assembly's right plane: one mate appears under Mates
+  ok     flip on: the two axes select
+  try    flip on: AddMate5 gear 20:40: returned 'CDispatch'
+  fact   gear_mate_made_flipped = [('GearMate1', 'MateGearDim')]
+  ok     flip on: one gear mate appears under Mates
+  ok     flip on: the Mates folder is found
+  ok     flip on: the drive mate is found
+  ok     flip on: the drive's dimension is found by value
+  ok     flip on: the drive is linked to a global
+  fact   gear_mate_turn_flipped = {'a': -30.000000000000114, 'b': -15.000000000000085, 'a_from': -10.0, 'b_from': 0.0}
+  ok     both assemblies turned
+  ok     flip False: the drive turned A 30.0°: {'a': -30.000000000000114, 'b': 15.000000000000057, 'a_from': -10.0, 'b_from': 0.0}
+  ok     flip True: the drive turned A 30.0°: {'a': -30.000000000000114, 'b': -15.000000000000085, 'a_from': -10.0, 'b_from': 0.0}
+  ok     the ratio went the same way both times
+  fact   gear_mate_numerator_first = True
+  fact   gear_mate_opposite_by_flip = {'False': True, 'True': False}
+  ok     Flip turns B the other way
+  fact   gear_mate_external_flip = False
+pass    motion_enums  (0.0 s)
+  fact   swconst_path = 'C:\\Program Files\\SOLIDWORKS Corp\\SOLIDWORKS\\swconst.tlb'
+  fact   enum swMateType_e = {'swMateCOINCIDENT': 0, 'swMateCONCENTRIC': 1, 'swMatePERPENDICULAR': 2, 'swMatePARALLEL': 3, 'swMateTANGENT': 4, 'swMateDISTANCE': 5, 'swMateANGLE': 6, 'swMateUNKNOWN': 7, 'swMateSYMMETRIC': 8, 'swMateCAMFOLLOWER': 9, 'swMateGEAR': 10, 'swMateWIDTH': 11, 'swMateLOCKTOSKETCH': 12, 'swMateRACKPINION': 13, 'swMateMAXMATES': 14, 'swMatePATH': 15, 'swMateLOCK': 16, 'swMateSCREW': 17, 'swMateLINEARCOUPLER': 18, 'swMateUNIVERSALJOINT': 19, 'swMateCOORDINATE': 20, 'swMateSLOT': 21, 'swMateHINGE': 22, 'swMateSLIDER': 23, 'swMatePROFILECENTER': 24, 'swMateMAGNETIC': 25}
+  ok     the reader gives back the four mate types already verified: {'swMateCOINCIDENT': 0, 'swMateDISTANCE': 5, 'swMateANGLE': 6, 'swMateGEAR': 10}
+  fact   swconst_path = 'C:\\Program Files\\SOLIDWORKS Corp\\SOLIDWORKS\\swconst.tlb'
+  fact   enum swMateAlign_e = {'swMateAlignALIGNED': 0, 'swMateAlignANTI_ALIGNED': 1, 'swMateAlignCLOSEST': 2, 'swAlignNONE': 0, 'swAlignSAME': 1, 'swAlignAGAINST': 2}
+  fact   swconst_path = 'C:\\Program Files\\SOLIDWORKS Corp\\SOLIDWORKS\\swconst.tlb'
+  fact   enum swAddMateError_e = {'swAddMateError_ErrorUknown': 0, 'swAddMateError_NoError': 1, 'swAddMateError_IncorrectMateType': 2, 'swAddMateError_IncorrectAlignment': 3, 'swAddMateError_IncorrectSelections': 4, 'swAddMateError_OverDefinedAssembly': 5, 'swAddMateError_IncorrectGearRatios': 6}
+  fact   swconst_path = 'C:\\Program Files\\SOLIDWORKS Corp\\SOLIDWORKS\\swconst.tlb'
+  fact   enum swFeatureError_e = {'swFeatureErrorNone': 0, 'swFeatureErrorUnknown': 1, 'swFeatureErrorFilletNoLoop': 10, 'swFeatureErrorFilletNoFace': 11, 'swFeatureErrorFilletInvalidRadius': 12, 'swFeatureErrorFilletNoEdge': 13, 'swFeatureErrorFilletModelGeometry': 14, 'swFeatureErrorFilletRadiusTooSmall': 15, 'swFeatureErrorFilletCannotExtend': 16, 'swFeatureErrorFilletRadiusEliminateElement': 17, 'swFeatureErrorFilletRadiusTooBig': 18, 'swFeatureErrorFilletRadiusTooBig2': 19, 'swFeatureErrorExtrusionDisjoint': 30, 'swFeatureErrorExtrusionNoEndFound': 31, 'swFeatureErrorExtrusionBadGeometricConditions': 32, 'swFeatureErrorExtrusionCutContourOpenAndClosed': 33, 'swFeatureErrorExtrusionCutContourInvalid': 34, 'swFeatureErrorExtrusionOpenCutContourInvalid': 35, 'swFeatureErrorExtrusionBossContourOpenAndClosed': 36, 'swFeatureErrorExtrusionBossContourInvalid': 37, 'swFeatureErrorMateInvalidEdge': 38, 'swFeatureErrorMateInvalidFace': 39, 'swFeatureErrorMateFailedCreatingSurface': 40, 'swFeatureErrorMateInvalidEntity': 41, 'swFeatureErrorMateUnknownTangent': 42, 'swFeatureErrorMateDanglingGeometry': 43, 'swFeatureErrorMateEntityNotLinear': 44, 'swFeatureErrorMateEntityFailed': 45, 'swFeatureErrorMateOverdefined': 46, 'swFeatureErrorMateIlldefined': 47, 'swFeatureErrorMateBroken': 48, 'swFeatureErrorFeatureDeprecated': 49, 'swFeatureErrorFeatureObsolete': 50, 'swSketchErrorExtRefFail': 51, 'swFeatureErrorPartialEdgeFilletNoIntersection': 52, 'swFeatureErrorPartialEdgeFilletUpdateFailed': 53, 'swFeatureErrorPartialEdgeFilletNoPropagateEdges': 54, 'swFeatureErrorPartialEdgeFilletNoStartEdge': 55, 'swFeatureErrorPartialEdgeFilletNoEndEdge': 56, 'swFeatureErrorPartialEdgeFilletNoMainEdge': 57, 'swFeatureErrorPartialEdgeFilletOffsetTooBig': 58, 'swFeatureErrorPartialEdgeFilletNoReferenceEntity': 59, 'swFeatureErrorPartialEdgeFilletTooManyRefEntities': 60, 'swFeatureErrorPartialEdgeFilletInvalidOffsetValue': 61, 'swFeatureErrorPartialEdgeFilletCrossOverEndCondition': 62, 'swFeatureErrorPartialEdgeFilletMissingReferenceEntity': 63, 'swFeatureErrorPartialEdgeFilletInvalidReferenceEntity': 64, 'swFeatureErrorPartialEdgeFilletNotSupported': 65, 'swFeatureErrorPartialEdgeFilletNotSupportedForClosedLoop': 66, 'swFeatureErrorPartialEdgeFilletMultiProjectionPoint': 67, 'swFeatureErrorPartialEdgeFilletFailedToRepair': 68, 'swFeatureErrorSweptFlangeInvalidProfileOrPath': 69, 'swFeatureErrorSweptFlangeSelfIntersectingGeometry': 70, 'swFeatureErrorCutNotIntersectModel': 71, 'swFeatureErrorSketchContainsSelfIntersectingContour': 72, 'swFeatureErrorMissingItemsInFeature': 73}
+  fact   swconst_path = 'C:\\Program Files\\SOLIDWORKS Corp\\SOLIDWORKS\\swconst.tlb'
+  fact   enum swFeatureSuppressionAction_e = {'swSuppressFeature': 0, 'swUnSuppressFeature': 1, 'swUnSuppressDependent': 2}
+  fact   swconst_path = 'C:\\Program Files\\SOLIDWORKS Corp\\SOLIDWORKS\\swconst.tlb'
+  fact   enum swInConfigurationOpts_e = {'swConfigPropertySuppressFeatures': 0, 'swThisConfiguration': 1, 'swAllConfiguration': 2, 'swSpecifyConfiguration': 3, 'swLinkedToParent': 4, 'swSpeedpakConfiguration': 5}
+  fact   swconst_path = 'C:\\Program Files\\SOLIDWORKS Corp\\SOLIDWORKS\\swconst.tlb'
+  fact   enum swMateEntity2ReferenceType_e = {'swMateEntity2ReferenceType_Point': 0, 'swMateEntity2ReferenceType_Line': 1, 'swMateEntity2ReferenceType_Circle': 2, 'swMateEntity2ReferenceType_Plane': 3, 'swMateEntity2ReferenceType_Cylinder': 4, 'swMateEntity2ReferenceType_Sphere': 5, 'swMateEntity2ReferenceType_Set': 6, 'swMateEntity2ReferenceType_Cone': 7, 'swMateEntity2ReferenceType_SweptSurface': 8, 'swMateEntity2ReferenceType_MultipleSurface': 9, 'swMateEntity2ReferenceType_GenSurface': 10, 'swMateEntity2ReferenceType_Ellipse': 11, 'swMateEntity2ReferenceType_GeneralCurve': 12, 'swMateEntity2ReferenceType_UNKNOWN': 13}
+  ok     swMateAlignCLOSEST is 2, as the mates use
+  ok     every value tier 8 uses is in swconst.tlb: missing []
+  fact   motion_enum_values = {'concentric': 1, 'lock': 16, 'parallel': 3, 'coincident': 0, 'distance': 5, 'angle': 6, 'gear': 10, 'aligned': 0, 'anti_aligned': 1, 'closest': 2, 'no_error': 1, 'suppress': 0, 'unsuppress': 1, 'this_configuration': 1}
+pass    planetary_put_back  (149.4 s)
+  ok     the built gearbox to copy is there: C:\Users\M0obo\Documents\GearGeneratorProbe\w7-full-20261115-000138\out\p1
+  ok     nothing of the source folder is open in SolidWorks: []
+  ok     the scratch folder is on a drive: 'C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\20261115-012409'
+  ok     C:\Users\M0obo\Documents\GearGeneratorProbe\20261115-012409\w7put does not exist yet
+  ok     A-turned: the carrier stands 9.25° off after the user's turn: 9.25
+  ok     A-turned: every planet copy is off its built frame: {'Sun': (0.601815023152, 0.0), 'Planet copy 1': (0.321457588797, 2.893366181), 'Planet copy 2': (0.321457588797, 2.388695914), 'Planet copy 3': (0.321457588797, 2.622761316), 'Ring': (0.0, 0.0), 'CarrierGear': (0.160742565604, 0.0), 'C carrier': (0.160742565604, 0.0)}
+  try    set_mate_suppressed CarrierGear locked to C carrier True: returned None
+  try    place_component C carrier: raised SolidWorksError — Planetary_4to1_C_Carrier-1 did not take its frame (rotation off 1.1e-01, origin 0.0e+00 mm).
+  try    place_component Sun: returned None
+  try    place_component Planet copy 1: raised SolidWorksError — Planet-1 did not take its frame (rotation off 1.2e-32, origin 1.9e+00 mm).
+  try    place_component Planet copy 2: raised SolidWorksError — Planet-2 did not take its frame (rotation off 1.1e-16, origin 1.6e+00 mm).
+  try    place_component Planet copy 3: raised SolidWorksError — Planet-3 did not take its frame (rotation off 1.1e-16, origin 1.7e+00 mm).
+  try    place_component CarrierGear: returned None
+  try    set_mate_suppressed CarrierGear locked to C carrier False: returned None
+  try    gear_mate_sense Sun meshes Planet copy 1: returned 'tuple'
+  try    gear_mate_sense Sun meshes Planet copy 2: returned 'tuple'
+  try    gear_mate_sense Sun meshes Planet copy 3: returned 'tuple'
+  try    gear_mate_sense Planet copy 1 meshes Ring: returned 'tuple'
+  note   A-turned: {'frames': False, 'senses': False, 'clear': False, 'drive': False, 'held': False}; errors []
+  ok     B-turned: the carrier stands 9.25° off after the user's turn: 9.25
+  ok     B-turned: every planet copy is off its built frame: {'Sun': (0.601815023152, 0.0), 'Planet copy 1': (0.321457588797, 2.893366181), 'Planet copy 2': (0.321457588797, 2.388695914), 'Planet copy 3': (0.321457588797, 2.622761316), 'Ring': (0.0, 0.0), 'CarrierGear': (0.160742565604, 0.0), 'C carrier': (0.160742565604, 0.0)}
+  try    set_mate_suppressed CarrierGear locked to C carrier True: returned None
+  try    place_component Sun: returned None
+  try    gear_mate_sense Sun meshes Planet copy 1: returned 'tuple'
+  try    gear_mate_sense Sun meshes Planet copy 2: returned 'tuple'
+  try    gear_mate_sense Sun meshes Planet copy 3: returned 'tuple'
+  try    gear_mate_sense Planet copy 1 meshes Ring: returned 'tuple'
+  try    place_component C carrier: raised SolidWorksError — Planetary_4to1_C_Carrier-1 did not take its frame (rotation off 1.1e-01, origin 0.0e+00 mm).
+  try    place_component Planet copy 1: raised SolidWorksError — Planet-1 did not take its frame (rotation off 1.2e-32, origin 1.9e+00 mm).
+  try    place_component Planet copy 2: raised SolidWorksError — Planet-2 did not take its frame (rotation off 1.1e-16, origin 1.6e+00 mm).
+  try    place_component Planet copy 3: raised SolidWorksError — Planet-3 did not take its frame (rotation off 1.1e-16, origin 1.7e+00 mm).
+  try    place_component CarrierGear: returned None
+  try    set_mate_suppressed CarrierGear locked to C carrier False: returned None
+  try    gear_mate_sense Sun meshes Planet copy 1: returned 'tuple'
+  try    gear_mate_sense Sun meshes Planet copy 2: returned 'tuple'
+  try    gear_mate_sense Sun meshes Planet copy 3: returned 'tuple'
+  try    gear_mate_sense Planet copy 1 meshes Ring: returned 'tuple'
+  note   B-turned: {'frames': False, 'senses': False, 'clear': False, 'drive': False, 'held': False}; errors []
+  ok     C-turned: the carrier stands 9.25° off after the user's turn: 9.25
+  ok     C-turned: every planet copy is off its built frame: {'Sun': (0.601815023152, 0.0), 'Planet copy 1': (0.321457588797, 2.893366181), 'Planet copy 2': (0.321457588797, 2.388695914), 'Planet copy 3': (0.321457588797, 2.622761316), 'Ring': (0.0, 0.0), 'CarrierGear': (0.160742565604, 0.0), 'C carrier': (0.160742565604, 0.0)}
+  try    set_mate_suppressed CarrierGear locked to C carrier True: returned None
+  try    set_mate_suppressed Sun meshes Planet copy 1 True: returned None
+  try    set_mate_suppressed Sun meshes Planet copy 2 True: returned None
+  try    set_mate_suppressed Sun meshes Planet copy 3 True: returned None
+  try    set_mate_suppressed Planet copy 1 meshes Ring True: returned None
+  try    place_component C carrier: returned None
+  try    place_component Sun: returned None
+  try    place_component Planet copy 1: returned None
+  try    place_component Planet copy 2: returned None
+  try    place_component Planet copy 3: returned None
+  try    place_component CarrierGear: returned None
+  try    set_mate_suppressed Planet copy 1 meshes Ring False: returned None
+  try    set_mate_suppressed Sun meshes Planet copy 3 False: returned None
+  try    set_mate_suppressed Sun meshes Planet copy 2 False: returned None
+  try    set_mate_suppressed Sun meshes Planet copy 1 False: returned None
+  try    set_mate_suppressed CarrierGear locked to C carrier False: returned None
+  try    gear_mate_sense Sun meshes Planet copy 1: returned 'tuple'
+  try    gear_mate_sense Sun meshes Planet copy 2: returned 'tuple'
+  try    gear_mate_sense Sun meshes Planet copy 3: returned 'tuple'
+  try    gear_mate_sense Planet copy 1 meshes Ring: returned 'tuple'
+  note   C-turned: {'frames': True, 'senses': False, 'clear': True, 'drive': True, 'held': False}; errors []
+  ok     D-turned: the carrier stands 9.25° off after the user's turn: 9.25
+  ok     D-turned: every planet copy is off its built frame: {'Sun': (0.601815023152, 0.0), 'Planet copy 1': (0.321457588797, 2.893366181), 'Planet copy 2': (0.321457588797, 2.388695914), 'Planet copy 3': (0.321457588797, 2.622761316), 'Ring': (0.0, 0.0), 'CarrierGear': (0.160742565604, 0.0), 'C carrier': (0.160742565604, 0.0)}
+  try    set_mate_suppressed CarrierGear locked to C carrier True: returned None
+  try    set_mate_suppressed CarrierGear locked to C carrier False: returned None
+  try    gear_mate_sense Sun meshes Planet copy 1: returned 'tuple'
+  try    gear_mate_sense Sun meshes Planet copy 2: returned 'tuple'
+  try    gear_mate_sense Sun meshes Planet copy 3: returned 'tuple'
+  try    gear_mate_sense Planet copy 1 meshes Ring: returned 'tuple'
+  note   D-turned: {'frames': False, 'senses': False, 'clear': True, 'drive': True, 'held': False}; errors []
+  ok     E-turned: the carrier stands 9.25° off after the user's turn: 9.25
+  ok     E-turned: every planet copy is off its built frame: {'Sun': (0.601815023152, 0.0), 'Planet copy 1': (0.321457588797, 2.893366181), 'Planet copy 2': (0.321457588797, 2.388695914), 'Planet copy 3': (0.321457588797, 2.622761316), 'Ring': (0.0, 0.0), 'CarrierGear': (0.160742565604, 0.0), 'C carrier': (0.160742565604, 0.0)}
+  try    set_mate_suppressed CarrierGear locked to C carrier True: returned None
+  try    set_mate_suppressed Sun meshes Planet copy 1 True: returned None
+  try    set_mate_suppressed Sun meshes Planet copy 2 True: returned None
+  try    set_mate_suppressed Sun meshes Planet copy 3 True: returned None
+  try    set_mate_suppressed Planet copy 1 meshes Ring True: returned None
+  try    set_mate_suppressed Planet copy 1 on P copy 1 Axis True: returned None
+  try    set_mate_suppressed Planet copy 2 on P copy 2 Axis True: returned None
+  try    set_mate_suppressed Planet copy 3 on P copy 3 Axis True: returned None
+  try    place_component C carrier: returned None
+  try    place_component Sun: returned None
+  try    place_component Planet copy 1: returned None
+  try    place_component Planet copy 2: returned None
+  try    place_component Planet copy 3: returned None
+  try    place_component CarrierGear: returned None
+  try    set_mate_suppressed Planet copy 3 on P copy 3 Axis False: returned None
+  try    set_mate_suppressed Planet copy 2 on P copy 2 Axis False: returned None
+  try    set_mate_suppressed Planet copy 1 on P copy 1 Axis False: returned None
+  try    set_mate_suppressed Planet copy 1 meshes Ring False: returned None
+  try    set_mate_suppressed Sun meshes Planet copy 3 False: returned None
+  try    set_mate_suppressed Sun meshes Planet copy 2 False: returned None
+  try    set_mate_suppressed Sun meshes Planet copy 1 False: returned None
+  try    set_mate_suppressed CarrierGear locked to C carrier False: returned None
+  try    gear_mate_sense Sun meshes Planet copy 1: returned 'tuple'
+  try    gear_mate_sense Sun meshes Planet copy 2: returned 'tuple'
+  try    gear_mate_sense Sun meshes Planet copy 3: returned 'tuple'
+  try    gear_mate_sense Planet copy 1 meshes Ring: returned 'tuple'
+  note   E-turned: {'frames': True, 'senses': False, 'clear': True, 'drive': True, 'held': False}; errors []
+  try    gear_mate_sense Planet copy 1 meshes Ring: returned 'tuple'
+  try    swbuild._sense_read Planet copy 1 meshes Ring: returned False
+  try    gear_mate_sense Sun meshes Planet copy 2: returned 'tuple'
+  try    swbuild._sense_read Sun meshes Planet copy 2: returned False
+  try    set_mate_suppressed Planet copy 1 meshes Ring True: returned None
+  try    SaveAs3 the suppressed-read copy to Planetary_4to1.SLDASM: returned True
+  try    is the mate suppressed: returned True
+  try    gear_mate_sense Planet copy 1 meshes Ring: returned 'tuple'
+  try    swbuild._sense_read Planet copy 1 meshes Ring: returned False
+  try    gear_mate_sense Planet copy 1 meshes Ring: returned 'tuple'
+  try    swbuild._sense_read Planet copy 1 meshes Ring: returned False
+  try    gear_mate_sense Sun meshes Planet copy 2: returned 'tuple'
+  try    swbuild._sense_read Sun meshes Planet copy 2: returned False
+  try    gear_mate_sense Sun meshes Planet copy 2: returned 'tuple'
+  try    swbuild._sense_read Sun meshes Planet copy 2: returned False
+  fact   planetary_put_back = {'source': 'C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w7-full-20261115-000138\\out\\p1', 'cases': {'A turned': {'route': 'A', 'scenario': 'turned', 'errors': [], 'open': {'title': 'Planetary_4to1.SLDASM', 'modified_on_open': False, 'paths_outside': {}}, 'at_open_off': {'Sun': (0.0, 0.0), 'Planet copy 1': (0.0, 0.0), 'Planet copy 2': (0.0, 2e-09), 'Planet copy 3': (0.0, 2e-09), 'Ring': (0.0, 0.0), 'CarrierGear': (0.0, 0.0), 'C carrier': (0.0, 0.0)}, 'turn': {'turns': {'Sun': 37.0, 'Planet copy 1': -18.5, 'Planet copy 2': -18.5, 'Planet copy 3': -18.5, 'Ring': 0.0, 'CarrierGear': 9.25, 'C carrier': 9.25}, 'moved_mm': {'Sun': 0.0, 'Planet copy 1': 2.902818367, 'Planet copy 2': 2.902818367, 'Planet copy 3': 2.902818367, 'Ring': 0.0, 'CarrierGear': 0.0, 'C carrier': 0.0}, 'right': {'Sun': True, 'C carrier': True, 'CarrierGear': True, 'Ring': True, 'Planet copy 1': True, 'Planet copy 2': True, 'Planet copy 3': True}, 'clashes': []}, 'turned_off': {'Sun': (0.601815023152, 0.0), 'Planet copy 1': (0.321457588797, 2.893366181), 'Planet copy 2': (0.321457588797, 2.388695914), 'Planet copy 3': (0.321457588797, 2.622761316), 'Ring': (0.0, 0.0), 'CarrierGear': (0.160742565604, 0.0), 'C carrier': (0.160742565604, 0.0)}, 'carrier_turned': 9.25, 'flags_before': {'assembly': True, 'Sun': False, 'Planet copy 1': False, 'Planet copy 2': False, 'Planet copy 3': False, 'Ring': False, 'CarrierGear': False, 'C carrier': False}, 'steps': {'order': ['C carrier', 'Sun', 'Planet copy 1', 'Planet copy 2', 'Planet copy 3', 'CarrierGear'], 'puts': {'C carrier': {'raised': "{'type': 'SolidWorksError', 'hresult': '', 'name': '', 'text': 'Planetary_4to1_C_Carrier-1 did not take its frame (rotation off 1.1e-01, origin 0.0e+00 mm).', 'argerror': None}", 'off': (0.107420963876, 0.0)}, 'Sun': {'raised': None, 'off': (0.0, 0.0)}, 'Planet copy 1': {'raised': "{'type': 'SolidWorksError', 'hresult': '', 'name': '', 'text': 'Planet-1 did not take its frame (rotation off 1.2e-32, origin 1.9e+00 mm).', 'argerror': None}", 'off': (0.0, 1.93357735)}, 'Planet copy 2': {'raised': "{'type': 'SolidWorksError', 'hresult': '', 'name': '', 'text': 'Planet-2 did not take its frame (rotation off 1.1e-16, origin 1.6e+00 mm).', 'argerror': None}", 'off': (0.0, 1.62244975)}, 'Planet copy 3': {'raised': "{'type': 'SolidWorksError', 'hresult': '', 'name': '', 'text': 'Planet-3 did not take its frame (rotation off 1.1e-16, origin 1.7e+00 mm).', 'argerror': None}", 'off': (0.0, 1.72660446)}, 'CarrierGear': {'raised': None, 'off': (0.0, 0.0)}}, 'held_off': {'Ring': (0.0, 0.0)}, 'suppressed': {'CarrierGear locked to C carrier': None}, 'back_on': {'CarrierGear locked to C carrier': None}}, 'frames_off': {'Sun': (0.0, 0.0), 'Planet copy 1': (0.0, 1.93357735), 'Planet copy 2': (0.0, 1.62244975), 'Planet copy 3': (0.0, 1.72660446), 'Ring': (0.0, 0.0), 'CarrierGear': (0.0, 0.0), 'C carrier': (0.107420963876, 0.0)}, 'senses': {'Sun meshes Planet copy 1': {'right': False, 'tau': [1, 1]}, 'Sun meshes Planet copy 2': {'right': False, 'tau': [1, 1]}, 'Sun meshes Planet copy 3': {'right': False, 'tau': [1, 1]}, 'Planet copy 1 meshes Ring': {'right': False, 'tau': [1, 1]}}, 'clashes': [[['Planet-3', 'Ring_m1_N54-1'], 14.956966914783203], [['Planet-2', 'Ring_m1_N54-1'], 14.956959362410858], [['Planet-1', 'Ring_m1_N54-1'], 14.95347158025098], [['Planet-2', 'Ring_m1_N54-1'], 14.009639580756268], [['Planet-3', 'Ring_m1_N54-1'], 14.00962917329784], [['Planet-1', 'Ring_m1_N54-1'], 14.006503279287891], [['Sun-1', 'Planet-2'], 13.804879505122793], [['Sun-1', 'Planet-3'], 13.804837326642339], [['Sun-1', 'Planet-1'], 13.800996014990888], [['Planet-1', 'Ring_m1_N54-1'], 8.51109105895079], [['Planet-2', 'Ring_m1_N54-1'], 8.511090033085711], [['Planet-3', 'Ring_m1_N54-1'], 8.511083754626892], [['Sun-1', 'Planet-3'], 7.720630812163539], [['Sun-1', 'Planet-2'], 7.720621256882958], [['Sun-1', 'Planet-1'], 7.718604317220818], [['Planet-3', 'Ring_m1_N54-1'], 4.442390862078378], [['Planet-1', 'Ring_m1_N54-1'], 4.442390555333432], [['Planet-2', 'Ring_m1_N54-1'], 4.442382775029717], [['Sun-1', 'Planet-1'], 0.17329563523080044], [['Sun-1', 'Planet-3'], 0.17329479267006095], [['Sun-1', 'Planet-2'], 0.17329262463739273], [['Planet-2', 'Ring_m1_N54-1'], 0.021777010767181727], [['Planet-1', 'Ring_m1_N54-1'], 0.021777003341637693], [['Planet-3', 'Ring_m1_N54-1'], 0.021776985428513404]], 'flags_after': {'assembly': True, 'Sun': False, 'Planet copy 1': False, 'Planet copy 2': False, 'Planet copy 3': False, 'Ring': False, 'CarrierGear': False, 'C carrier': False}, 'drive': {'turns': {'Sun': 20.0, 'Planet copy 1': -10.0, 'Planet copy 2': -10.0, 'Planet copy 3': -10.0, 'Ring': 0.0, 'CarrierGear': 5.0, 'C carrier': 5.0}, 'moved_mm': {'Sun': 0.0, 'Planet copy 1': 1.570297945, 'Planet copy 2': 1.570297945, 'Planet copy 3': 1.570297945, 'Ring': 0.0, 'CarrierGear': 0.0, 'C carrier': 0.0}, 'right': {'Sun': True, 'C carrier': True, 'CarrierGear': True, 'Ring': True, 'Planet copy 1': True, 'Planet copy 2': True, 'Planet copy 3': True}, 'clashes': [[['Planet-3', 'Ring_m1_N54-1'], 15.617064475167927], [['Planet-2', 'Ring_m1_N54-1'], 15.6167702109433], [['Planet-1', 'Ring_m1_N54-1'], 15.609186717908381], [['Sun-1', 'Planet-2'], 14.743089548101178], [['Sun-1', 'Planet-3'], 14.743085762278834], [['Sun-1', 'Planet-1'], 14.739892172220575], [['Planet-2', 'Ring_m1_N54-1'], 12.24973236425102], [['Planet-1', 'Ring_m1_N54-1'], 12.249725837391237], [['Planet-3', 'Ring_m1_N54-1'], 12.249721564774491], [['Planet-3', 'Ring_m1_N54-1'], 10.582576401044546], [['Planet-2', 'Ring_m1_N54-1'], 10.582571645874253], [['Planet-1', 'Ring_m1_N54-1'], 10.579105302141125], [['Sun-1', 'Planet-3'], 3.5901549138936346], [['Sun-1', 'Planet-3'], 3.590154910142108], [['Sun-1', 'Planet-2'], 3.5901539162654217], [['Sun-1', 'Planet-2'], 3.5901538784951486], [['Sun-1', 'Planet-1'], 3.59015060342711], [['Sun-1', 'Planet-1'], 3.5897900442644715], [['Planet-3', 'Ring_m1_N54-1'], 1.853221327448809], [['Planet-2', 'Ring_m1_N54-1'], 1.853221114521301], [['Planet-1', 'Ring_m1_N54-1'], 1.853217672633606], [['Planet-2', 'Ring_m1_N54-1'], 1.7308175144595328], [['Planet-3', 'Ring_m1_N54-1'], 1.730813511448829], [['Planet-1', 'Ring_m1_N54-1'], 1.730812538281505]]}, 'verdict': {'frames': False, 'senses': False, 'clear': False, 'drive': False, 'held': False}}, 'B turned': {'route': 'B', 'scenario': 'turned', 'errors': [], 'open': {'title': 'Planetary_4to1.SLDASM', 'modified_on_open': False, 'paths_outside': {}}, 'at_open_off': {'Sun': (0.0, 0.0), 'Planet copy 1': (0.0, 0.0), 'Planet copy 2': (0.0, 2e-09), 'Planet copy 3': (0.0, 2e-09), 'Ring': (0.0, 0.0), 'CarrierGear': (0.0, 0.0), 'C carrier': (0.0, 0.0)}, 'turn': {'turns': {'Sun': 37.0, 'Planet copy 1': -18.5, 'Planet copy 2': -18.5, 'Planet copy 3': -18.5, 'Ring': 0.0, 'CarrierGear': 9.25, 'C carrier': 9.25}, 'moved_mm': {'Sun': 0.0, 'Planet copy 1': 2.902818367, 'Planet copy 2': 2.902818367, 'Planet copy 3': 2.902818367, 'Ring': 0.0, 'CarrierGear': 0.0, 'C carrier': 0.0}, 'right': {'Sun': True, 'C carrier': True, 'CarrierGear': True, 'Ring': True, 'Planet copy 1': True, 'Planet copy 2': True, 'Planet copy 3': True}, 'clashes': []}, 'turned_off': {'Sun': (0.601815023152, 0.0), 'Planet copy 1': (0.321457588797, 2.893366181), 'Planet copy 2': (0.321457588797, 2.388695914), 'Planet copy 3': (0.321457588797, 2.622761316), 'Ring': (0.0, 0.0), 'CarrierGear': (0.160742565604, 0.0), 'C carrier': (0.160742565604, 0.0)}, 'carrier_turned': 9.25, 'flags_before': {'assembly': True, 'Sun': False, 'Planet copy 1': False, 'Planet copy 2': False, 'Planet copy 3': False, 'Ring': False, 'CarrierGear': False, 'C carrier': False}, 'steps': {'order': ['C carrier', 'Sun', 'Planet copy 1', 'Planet copy 2', 'Planet copy 3', 'CarrierGear'], 'puts': {'Sun': {'raised': None, 'off': (0.0, 0.0)}, 'C carrier': {'raised': "{'type': 'SolidWorksError', 'hresult': '', 'name': '', 'text': 'Planetary_4to1_C_Carrier-1 did not take its frame (rotation off 1.1e-01, origin 0.0e+00 mm).', 'argerror': None}", 'off': (0.107420963876, 0.0)}, 'Planet copy 1': {'raised': "{'type': 'SolidWorksError', 'hresult': '', 'name': '', 'text': 'Planet-1 did not take its frame (rotation off 1.2e-32, origin 1.9e+00 mm).', 'argerror': None}", 'off': (0.0, 1.93357735)}, 'Planet copy 2': {'raised': "{'type': 'SolidWorksError', 'hresult': '', 'name': '', 'text': 'Planet-2 did not take its frame (rotation off 1.1e-16, origin 1.6e+00 mm).', 'argerror': None}", 'off': (0.0, 1.62244975)}, 'Planet copy 3': {'raised': "{'type': 'SolidWorksError', 'hresult': '', 'name': '', 'text': 'Planet-3 did not take its frame (rotation off 1.1e-16, origin 1.7e+00 mm).', 'argerror': None}", 'off': (0.0, 1.72660446)}, 'CarrierGear': {'raised': None, 'off': (0.0, 0.0)}}, 'held_off': {'Ring': (0.0, 0.0)}, 'suppressed': {'CarrierGear locked to C carrier': None}, 'after_sun_alone': {'frames_off': {'Sun': (0.0, 0.0), 'Planet copy 1': (0.321457588797, 2.893366181), 'Planet copy 2': (0.321457588797, 2.388695914), 'Planet copy 3': (0.321457588797, 2.622761316), 'Ring': (0.0, 0.0), 'CarrierGear': (0.160742565604, 0.0), 'C carrier': (0.160742565604, 0.0)}, 'senses': {'Sun meshes Planet copy 1': {'right': False, 'tau': [1, 1]}, 'Sun meshes Planet copy 2': {'right': False, 'tau': [1, 1]}, 'Sun meshes Planet copy 3': {'right': False, 'tau': [1, 1]}, 'Planet copy 1 meshes Ring': {'right': False, 'tau': [1, 1]}}, 'clashes': [[['Sun-1', 'Planet-2'], 1.446547756782772], [['Sun-1', 'Planet-3'], 1.4465433774888896], [['Sun-1', 'Planet-1'], 1.4433016236529492], [['Sun-1', 'Planet-3'], 0.6013044013474155], [['Sun-1', 'Planet-2'], 0.6013019111814322], [['Sun-1', 'Planet-1'], 0.5985556581030238]]}, 'back_on': {'CarrierGear locked to C carrier': None}}, 'frames_off': {'Sun': (0.213598772265, 0.0), 'Planet copy 1': (0.0, 1.93357735), 'Planet copy 2': (0.0, 1.62244975), 'Planet copy 3': (0.0, 1.72660446), 'Ring': (0.0, 0.0), 'CarrierGear': (0.0, 0.0), 'C carrier': (0.107420963876, 0.0)}, 'senses': {'Sun meshes Planet copy 1': {'right': False, 'tau': [1, 1]}, 'Sun meshes Planet copy 2': {'right': False, 'tau': [1, 1]}, 'Sun meshes Planet copy 3': {'right': False, 'tau': [1, 1]}, 'Planet copy 1 meshes Ring': {'right': False, 'tau': [1, 1]}}, 'clashes': [[['Planet-3', 'Ring_m1_N54-1'], 14.956966914783203], [['Planet-2', 'Ring_m1_N54-1'], 14.956959362410858], [['Planet-1', 'Ring_m1_N54-1'], 14.95347158025098], [['Planet-2', 'Ring_m1_N54-1'], 14.009639580756268], [['Planet-3', 'Ring_m1_N54-1'], 14.00962917329784], [['Planet-1', 'Ring_m1_N54-1'], 14.006503279287891], [['Planet-1', 'Ring_m1_N54-1'], 8.51109105895079], [['Planet-2', 'Ring_m1_N54-1'], 8.511090033085711], [['Planet-3', 'Ring_m1_N54-1'], 8.511083754626892], [['Sun-1', 'Planet-3'], 4.98475002482439], [['Sun-1', 'Planet-1'], 4.984684421276367], [['Sun-1', 'Planet-2'], 4.984656746936483], [['Planet-3', 'Ring_m1_N54-1'], 4.442390862078378], [['Planet-1', 'Ring_m1_N54-1'], 4.442390555333432], [['Planet-2', 'Ring_m1_N54-1'], 4.442382775029717], [['Sun-1', 'Planet-3'], 4.378900560962078], [['Sun-1', 'Planet-2'], 4.378602886494505], [['Sun-1', 'Planet-1'], 4.376038734955561], [['Planet-2', 'Ring_m1_N54-1'], 0.021777010767181727], [['Planet-1', 'Ring_m1_N54-1'], 0.021777003341637693], [['Planet-3', 'Ring_m1_N54-1'], 0.021776985428513404]], 'flags_after': {'assembly': True, 'Sun': False, 'Planet copy 1': False, 'Planet copy 2': False, 'Planet copy 3': False, 'Ring': False, 'CarrierGear': False, 'C carrier': False}, 'drive': {'turns': {'Sun': 20.0, 'Planet copy 1': -10.0, 'Planet copy 2': -10.0, 'Planet copy 3': -10.0, 'Ring': 0.0, 'CarrierGear': 5.0, 'C carrier': 5.0}, 'moved_mm': {'Sun': 0.0, 'Planet copy 1': 1.570297945, 'Planet copy 2': 1.570297945, 'Planet copy 3': 1.570297945, 'Ring': 0.0, 'CarrierGear': 0.0, 'C carrier': 0.0}, 'right': {'Sun': True, 'C carrier': True, 'CarrierGear': True, 'Ring': True, 'Planet copy 1': True, 'Planet copy 2': True, 'Planet copy 3': True}, 'clashes': [[['Planet-3', 'Ring_m1_N54-1'], 15.041546173707824], [['Planet-1', 'Ring_m1_N54-1'], 15.041402952317295], [['Planet-2', 'Ring_m1_N54-1'], 15.041114921983642], [['Planet-3', 'Ring_m1_N54-1'], 14.056805516906724], [['Planet-2', 'Ring_m1_N54-1'], 14.056616620864826], [['Planet-1', 'Ring_m1_N54-1'], 14.04822276275595], [['Planet-2', 'Ring_m1_N54-1'], 6.827500917598665], [['Planet-3', 'Ring_m1_N54-1'], 6.827500821572862], [['Planet-1', 'Ring_m1_N54-1'], 6.827499633505713], [['Planet-3', 'Ring_m1_N54-1'], 6.629638135407636], [['Planet-2', 'Ring_m1_N54-1'], 6.629636986236179], [['Planet-1', 'Ring_m1_N54-1'], 6.62858622687672], [['Sun-1', 'Planet-3'], 5.352391162396213], [['Sun-1', 'Planet-2'], 5.3522046346958], [['Sun-1', 'Planet-1'], 5.349056074451123], [['Sun-1', 'Planet-3'], 3.727705388015331], [['Sun-1', 'Planet-2'], 3.7275511787864364], [['Sun-1', 'Planet-1'], 3.7233468003766776]]}, 'verdict': {'frames': False, 'senses': False, 'clear': False, 'drive': False, 'held': False}}, 'C turned': {'route': 'C', 'scenario': 'turned', 'errors': [], 'open': {'title': 'Planetary_4to1.SLDASM', 'modified_on_open': False, 'paths_outside': {}}, 'at_open_off': {'Sun': (0.0, 0.0), 'Planet copy 1': (0.0, 0.0), 'Planet copy 2': (0.0, 2e-09), 'Planet copy 3': (0.0, 2e-09), 'Ring': (0.0, 0.0), 'CarrierGear': (0.0, 0.0), 'C carrier': (0.0, 0.0)}, 'turn': {'turns': {'Sun': 37.0, 'Planet copy 1': -18.5, 'Planet copy 2': -18.5, 'Planet copy 3': -18.5, 'Ring': 0.0, 'CarrierGear': 9.25, 'C carrier': 9.25}, 'moved_mm': {'Sun': 0.0, 'Planet copy 1': 2.902818367, 'Planet copy 2': 2.902818367, 'Planet copy 3': 2.902818367, 'Ring': 0.0, 'CarrierGear': 0.0, 'C carrier': 0.0}, 'right': {'Sun': True, 'C carrier': True, 'CarrierGear': True, 'Ring': True, 'Planet copy 1': True, 'Planet copy 2': True, 'Planet copy 3': True}, 'clashes': []}, 'turned_off': {'Sun': (0.601815023152, 0.0), 'Planet copy 1': (0.321457588797, 2.893366181), 'Planet copy 2': (0.321457588797, 2.388695914), 'Planet copy 3': (0.321457588797, 2.622761316), 'Ring': (0.0, 0.0), 'CarrierGear': (0.160742565604, 0.0), 'C carrier': (0.160742565604, 0.0)}, 'carrier_turned': 9.25, 'flags_before': {'assembly': True, 'Sun': False, 'Planet copy 1': False, 'Planet copy 2': False, 'Planet copy 3': False, 'Ring': False, 'CarrierGear': False, 'C carrier': False}, 'steps': {'order': ['C carrier', 'Sun', 'Planet copy 1', 'Planet copy 2', 'Planet copy 3', 'CarrierGear'], 'puts': {'C carrier': {'raised': None, 'off': (0.0, 0.0)}, 'Sun': {'raised': None, 'off': (0.0, 0.0)}, 'Planet copy 1': {'raised': None, 'off': (0.0, 0.0)}, 'Planet copy 2': {'raised': None, 'off': (0.0, 2e-09)}, 'Planet copy 3': {'raised': None, 'off': (0.0, 2e-09)}, 'CarrierGear': {'raised': None, 'off': (0.0, 0.0)}}, 'held_off': {'Ring': (0.0, 0.0)}, 'suppressed': {'CarrierGear locked to C carrier': None, 'Sun meshes Planet copy 1': None, 'Sun meshes Planet copy 2': None, 'Sun meshes Planet copy 3': None, 'Planet copy 1 meshes Ring': None}, 'ratios_before_back_on': {'Sun meshes Planet copy 1': [18.0, 18.0], 'Sun meshes Planet copy 2': [18.0, 18.0], 'Sun meshes Planet copy 3': [18.0, 18.0], 'Planet copy 1 meshes Ring': [18.0, 54.0]}, 'flags_before_back_on': {'assembly': True, 'Sun': False, 'Planet copy 1': False, 'Planet copy 2': False, 'Planet copy 3': False, 'Ring': False, 'CarrierGear': False, 'C carrier': False}, 'back_on': {'Planet copy 1 meshes Ring': None, 'Sun meshes Planet copy 3': None, 'Sun meshes Planet copy 2': None, 'Sun meshes Planet copy 1': None, 'CarrierGear locked to C carrier': None}, 'ratios_after_back_on': {'Sun meshes Planet copy 1': [18.0, 18.0], 'Sun meshes Planet copy 2': [18.0, 18.0], 'Sun meshes Planet copy 3': [18.0, 18.0], 'Planet copy 1 meshes Ring': [18.0, 54.0]}, 'flags_after_back_on': {'assembly': True, 'Sun': False, 'Planet copy 1': False, 'Planet copy 2': False, 'Planet copy 3': False, 'Ring': False, 'CarrierGear': False, 'C carrier': False}}, 'frames_off': {'Sun': (0.0, 0.0), 'Planet copy 1': (0.0, 0.0), 'Planet copy 2': (0.0, 2e-09), 'Planet copy 3': (0.0, 2e-09), 'Ring': (0.0, 0.0), 'CarrierGear': (0.0, 0.0), 'C carrier': (0.0, 0.0)}, 'senses': {'Sun meshes Planet copy 1': {'right': False, 'tau': [1, 1]}, 'Sun meshes Planet copy 2': {'right': False, 'tau': [1, 1]}, 'Sun meshes Planet copy 3': {'right': False, 'tau': [1, 1]}, 'Planet copy 1 meshes Ring': {'right': False, 'tau': [1, 1]}}, 'clashes': [], 'flags_after': {'assembly': True, 'Sun': False, 'Planet copy 1': False, 'Planet copy 2': False, 'Planet copy 3': False, 'Ring': False, 'CarrierGear': False, 'C carrier': False}, 'drive': {'turns': {'Sun': 20.0, 'Planet copy 1': -10.0, 'Planet copy 2': -10.0, 'Planet copy 3': -10.0, 'Ring': 0.0, 'CarrierGear': 5.0, 'C carrier': 5.0}, 'moved_mm': {'Sun': 0.0, 'Planet copy 1': 1.570297945, 'Planet copy 2': 1.570297945, 'Planet copy 3': 1.570297945, 'Ring': 0.0, 'CarrierGear': 0.0, 'C carrier': 0.0}, 'right': {'Sun': True, 'C carrier': True, 'CarrierGear': True, 'Ring': True, 'Planet copy 1': True, 'Planet copy 2': True, 'Planet copy 3': True}, 'clashes': []}, 'verdict': {'frames': True, 'senses': False, 'clear': True, 'drive': True, 'held': False}}, 'D turned': {'route': 'D', 'scenario': 'turned', 'errors': [], 'open': {'title': 'Planetary_4to1.SLDASM', 'modified_on_open': False, 'paths_outside': {}}, 'at_open_off': {'Sun': (0.0, 0.0), 'Planet copy 1': (0.0, 0.0), 'Planet copy 2': (0.0, 2e-09), 'Planet copy 3': (0.0, 2e-09), 'Ring': (0.0, 0.0), 'CarrierGear': (0.0, 0.0), 'C carrier': (0.0, 0.0)}, 'turn': {'turns': {'Sun': 37.0, 'Planet copy 1': -18.5, 'Planet copy 2': -18.5, 'Planet copy 3': -18.5, 'Ring': 0.0, 'CarrierGear': 9.25, 'C carrier': 9.25}, 'moved_mm': {'Sun': 0.0, 'Planet copy 1': 2.902818367, 'Planet copy 2': 2.902818367, 'Planet copy 3': 2.902818367, 'Ring': 0.0, 'CarrierGear': 0.0, 'C carrier': 0.0}, 'right': {'Sun': True, 'C carrier': True, 'CarrierGear': True, 'Ring': True, 'Planet copy 1': True, 'Planet copy 2': True, 'Planet copy 3': True}, 'clashes': []}, 'turned_off': {'Sun': (0.601815023152, 0.0), 'Planet copy 1': (0.321457588797, 2.893366181), 'Planet copy 2': (0.321457588797, 2.388695914), 'Planet copy 3': (0.321457588797, 2.622761316), 'Ring': (0.0, 0.0), 'CarrierGear': (0.160742565604, 0.0), 'C carrier': (0.160742565604, 0.0)}, 'carrier_turned': 9.25, 'flags_before': {'assembly': True, 'Sun': False, 'Planet copy 1': False, 'Planet copy 2': False, 'Planet copy 3': False, 'Ring': False, 'CarrierGear': False, 'C carrier': False}, 'steps': {'order': ['C carrier', 'Sun', 'Planet copy 1', 'Planet copy 2', 'Planet copy 3', 'CarrierGear'], 'puts': {}, 'held_off': {'Ring': (0.0, 0.0)}, 'suppressed': {'CarrierGear locked to C carrier': None}, 'after_one_rebuild': {'Sun': (0.213598772265, 0.0), 'Planet copy 1': (0.10478420497, 1.93357735), 'Planet copy 2': (0.10478420497, 1.62244975), 'Planet copy 3': (0.10478420497, 1.72660446), 'Ring': (0.0, 0.0), 'CarrierGear': (0.0, 0.0), 'C carrier': (0.107420963876, 0.0)}, 'back_on': {'CarrierGear locked to C carrier': None}}, 'frames_off': {'Sun': (0.213598772265, 0.0), 'Planet copy 1': (0.10478420497, 1.93357735), 'Planet copy 2': (0.10478420497, 1.62244975), 'Planet copy 3': (0.10478420497, 1.72660446), 'Ring': (0.0, 0.0), 'CarrierGear': (0.0, 0.0), 'C carrier': (0.107420963876, 0.0)}, 'senses': {'Sun meshes Planet copy 1': {'right': False, 'tau': [1, 1]}, 'Sun meshes Planet copy 2': {'right': False, 'tau': [1, 1]}, 'Sun meshes Planet copy 3': {'right': False, 'tau': [1, 1]}, 'Planet copy 1 meshes Ring': {'right': False, 'tau': [1, 1]}}, 'clashes': [], 'flags_after': {'assembly': True, 'Sun': False, 'Planet copy 1': False, 'Planet copy 2': False, 'Planet copy 3': False, 'Ring': False, 'CarrierGear': False, 'C carrier': False}, 'drive': {'turns': {'Sun': 20.0, 'Planet copy 1': -10.0, 'Planet copy 2': -10.0, 'Planet copy 3': -10.0, 'Ring': 0.0, 'CarrierGear': 5.0, 'C carrier': 5.0}, 'moved_mm': {'Sun': 0.0, 'Planet copy 1': 1.570297945, 'Planet copy 2': 1.570297945, 'Planet copy 3': 1.570297945, 'Ring': 0.0, 'CarrierGear': 0.0, 'C carrier': 0.0}, 'right': {'Sun': True, 'C carrier': True, 'CarrierGear': True, 'Ring': True, 'Planet copy 1': True, 'Planet copy 2': True, 'Planet copy 3': True}, 'clashes': []}, 'verdict': {'frames': False, 'senses': False, 'clear': True, 'drive': True, 'held': False}}, 'E turned': {'route': 'E', 'scenario': 'turned', 'errors': [], 'open': {'title': 'Planetary_4to1.SLDASM', 'modified_on_open': False, 'paths_outside': {}}, 'at_open_off': {'Sun': (0.0, 0.0), 'Planet copy 1': (0.0, 0.0), 'Planet copy 2': (0.0, 2e-09), 'Planet copy 3': (0.0, 2e-09), 'Ring': (0.0, 0.0), 'CarrierGear': (0.0, 0.0), 'C carrier': (0.0, 0.0)}, 'turn': {'turns': {'Sun': 37.0, 'Planet copy 1': -18.5, 'Planet copy 2': -18.5, 'Planet copy 3': -18.5, 'Ring': 0.0, 'CarrierGear': 9.25, 'C carrier': 9.25}, 'moved_mm': {'Sun': 0.0, 'Planet copy 1': 2.902818367, 'Planet copy 2': 2.902818367, 'Planet copy 3': 2.902818367, 'Ring': 0.0, 'CarrierGear': 0.0, 'C carrier': 0.0}, 'right': {'Sun': True, 'C carrier': True, 'CarrierGear': True, 'Ring': True, 'Planet copy 1': True, 'Planet copy 2': True, 'Planet copy 3': True}, 'clashes': []}, 'turned_off': {'Sun': (0.601815023152, 0.0), 'Planet copy 1': (0.321457588797, 2.893366181), 'Planet copy 2': (0.321457588797, 2.388695914), 'Planet copy 3': (0.321457588797, 2.622761316), 'Ring': (0.0, 0.0), 'CarrierGear': (0.160742565604, 0.0), 'C carrier': (0.160742565604, 0.0)}, 'carrier_turned': 9.25, 'flags_before': {'assembly': True, 'Sun': False, 'Planet copy 1': False, 'Planet copy 2': False, 'Planet copy 3': False, 'Ring': False, 'CarrierGear': False, 'C carrier': False}, 'steps': {'order': ['C carrier', 'Sun', 'Planet copy 1', 'Planet copy 2', 'Planet copy 3', 'CarrierGear'], 'puts': {'C carrier': {'raised': None, 'off': (0.0, 0.0)}, 'Sun': {'raised': None, 'off': (0.0, 0.0)}, 'Planet copy 1': {'raised': None, 'off': (0.0, 0.0)}, 'Planet copy 2': {'raised': None, 'off': (0.0, 0.0)}, 'Planet copy 3': {'raised': None, 'off': (0.0, 0.0)}, 'CarrierGear': {'raised': None, 'off': (0.0, 0.0)}}, 'held_off': {'Ring': (0.0, 0.0)}, 'suppressed': {'CarrierGear locked to C carrier': None, 'Sun meshes Planet copy 1': None, 'Sun meshes Planet copy 2': None, 'Sun meshes Planet copy 3': None, 'Planet copy 1 meshes Ring': None, 'Planet copy 1 on P copy 1 Axis': None, 'Planet copy 2 on P copy 2 Axis': None, 'Planet copy 3 on P copy 3 Axis': None}, 'ratios_before_back_on': {'Sun meshes Planet copy 1': [18.0, 18.0], 'Sun meshes Planet copy 2': [18.0, 18.0], 'Sun meshes Planet copy 3': [18.0, 18.0], 'Planet copy 1 meshes Ring': [18.0, 54.0]}, 'flags_before_back_on': {'assembly': True, 'Sun': False, 'Planet copy 1': False, 'Planet copy 2': False, 'Planet copy 3': False, 'Ring': False, 'CarrierGear': False, 'C carrier': False}, 'back_on': {'Planet copy 3 on P copy 3 Axis': None, 'Planet copy 2 on P copy 2 Axis': None, 'Planet copy 1 on P copy 1 Axis': None, 'Planet copy 1 meshes Ring': None, 'Sun meshes Planet copy 3': None, 'Sun meshes Planet copy 2': None, 'Sun meshes Planet copy 1': None, 'CarrierGear locked to C carrier': None}, 'ratios_after_back_on': {'Sun meshes Planet copy 1': [18.0, 18.0], 'Sun meshes Planet copy 2': [18.0, 18.0], 'Sun meshes Planet copy 3': [18.0, 18.0], 'Planet copy 1 meshes Ring': [18.0, 54.0]}, 'flags_after_back_on': {'assembly': True, 'Sun': False, 'Planet copy 1': False, 'Planet copy 2': False, 'Planet copy 3': False, 'Ring': False, 'CarrierGear': False, 'C carrier': False}}, 'frames_off': {'Sun': (0.0, 0.0), 'Planet copy 1': (0.0, 0.0), 'Planet copy 2': (0.0, 2e-09), 'Planet copy 3': (0.0, 2e-09), 'Ring': (0.0, 0.0), 'CarrierGear': (0.0, 0.0), 'C carrier': (0.0, 0.0)}, 'senses': {'Sun meshes Planet copy 1': {'right': False, 'tau': [1, 1]}, 'Sun meshes Planet copy 2': {'right': False, 'tau': [1, 1]}, 'Sun meshes Planet copy 3': {'right': False, 'tau': [1, 1]}, 'Planet copy 1 meshes Ring': {'right': False, 'tau': [1, 1]}}, 'clashes': [], 'flags_after': {'assembly': True, 'Sun': False, 'Planet copy 1': False, 'Planet copy 2': False, 'Planet copy 3': False, 'Ring': False, 'CarrierGear': False, 'C carrier': False}, 'drive': {'turns': {'Sun': 20.0, 'Planet copy 1': -10.0, 'Planet copy 2': -10.0, 'Planet copy 3': -10.0, 'Ring': 0.0, 'CarrierGear': 5.0, 'C carrier': 5.0}, 'moved_mm': {'Sun': 0.0, 'Planet copy 1': 1.570297945, 'Planet copy 2': 1.570297945, 'Planet copy 3': 1.570297945, 'Ring': 0.0, 'CarrierGear': 0.0, 'C carrier': 0.0}, 'right': {'Sun': True, 'C carrier': True, 'CarrierGear': True, 'Ring': True, 'Planet copy 1': True, 'Planet copy 2': True, 'Planet copy 3': True}, 'clashes': []}, 'verdict': {'frames': True, 'senses': False, 'clear': True, 'drive': True, 'held': False}}}, 'held_turned': None, 'suppressed_read': {'errors': [], 'open': {'title': 'Planetary_4to1.SLDASM', 'modified_on_open': False, 'paths_outside': {}}, 'before_suppressing': {'Planet copy 1 meshes Ring': {'raw': [False, [1, 1]], 'app': False}, 'Sun meshes Planet copy 2': {'raw': [False, [1, 1]], 'app': False}}, 'suppress': {'Planet copy 1 meshes Ring': None}, 'saved': True, 'reopen': {'title': 'Planetary_4to1.SLDASM', 'modified_on_open': False, 'paths_outside': {}}, 'modified_on_reopen': False, 'suppressed_reads_suppressed': True, 'suppressed': {'mate': 'Planet copy 1 meshes Ring', 'first': {'raw': [False, [1, 1]], 'app': False}, 'modified_after_first': False, 'second': {'raw': [False, [1, 1]], 'app': False}, 'modified_after_second': False}, 'control': {'mate': 'Sun meshes Planet copy 2', 'first': {'raw': [False, [1, 1]], 'app': False}, 'modified_after_first': False, 'second': {'raw': [False, [1, 1]], 'app': False}, 'modified_after_second': False}}}
+  ok     planetary put-back: held when turned None; {'A turned': {'frames': False, 'senses': False, 'clear': False, 'drive': False, 'held': False}, 'B turned': {'frames': False, 'senses': False, 'clear': False, 'drive': False, 'held': False}, 'C turned': {'frames': True, 'senses': False, 'clear': True, 'drive': True, 'held': False}, 'D turned': {'frames': False, 'senses': False, 'clear': True, 'drive': True, 'held': False}, 'E turned': {'frames': True, 'senses': False, 'clear': True, 'drive': True, 'held': False}}
+decide  flank_recipe = STOP
+decide  trig_default = None
+decide  equation_add_call = Add2
+decide  equation_set_route = indexed put Equation(i)
+decide  set_units_mmgs_after_new = False
+decide  plane_select_route = Select2 checked by count, then SelectByID2 by tree name
+decide  equal_constraint = sgSAMELENGTH
+decide  circle_dimension = diameter
+decide  arc_dimension = radius
+decide  curve_trig = None
+decide  curves_are_fixed = None
+decide  shared_ends_are_one_point = None
+decide  cut_end_condition = None
+decide  pattern_count_dim_index = None
+decide  save_as_overwrites = True
+decide  first_component_fixed = False
+decide  end_to_end = False
+decide  helix_route = STOP
+decide  herringbone_route = STOP
+decide  inverse_tangent = None
+decide  extrude_z_sign = None
+decide  top_sketch_y_is_minus_z = None
+decide  ref_plane_unflipped_is_plus_z = None
+decide  twist_turn = None
+decide  twist_reverse_flips = None
+decide  mirror_body_route = None
+decide  helical_end_to_end = False
+decide  annulus_extrudes = None
+decide  interference_route = None
+decide  internal_end_to_end = False
+decide  revolve_axis_mark = None
+decide  bevel_section_x_sign = None
+decide  bevel_crown_section_x_sign = None
+decide  bevel_internal_section_x_sign = None
+decide  loft_cut_route = None
+decide  loft_cut_type = None
+decide  place_route = None
+decide  transform_array_order = None
+decide  origin_select_route = None
+decide  bevel_mate_route = None
+decide  crossed_route = None
+decide  custom_property_route = None
+decide  custom_info_text = None
+decide  custom_property_replace = None
+decide  property_read_route = None
+decide  property_links_globals = None
+decide  gear_mate_route = mates
+decide  mate_gear_type = 10
+decide  gear_mate_numerator_first = True
+decide  gear_mate_external_flip = False
+decide  bevel_end_to_end = False
+decide  crossed_end_to_end = False
+decide  workbook_layout_route = STOP
+decide  layout_plus_flip = None
+decide  layout_negated_link = None
+decide  axis_plane_select_route = None
+decide  axis_through_base_plane = None
+decide  component_find_route = None
+decide  replace_fixed_route = None
+decide  open_assembly_route = None
+decide  update_open_route = ask
+decide  open_doc_route = None
+decide  open_doc_makes_active = None
+decide  open_part_beside_assembly = None
+decide  offset_global_crosses_zero = None
+decide  components_resolved_after_reopen = None
+decide  reuse_add_route = None
+decide  interference_names_route = None
+decide  same_name_elsewhere_inserted = None
+decide  assembly_rebuild_route = STOP
+decide  assembly_rebuild_keeps_components_unmodified = None
+decide  put_needs_rebuild = None
+decide  full_rebuild_marks_components_modified = None
+decide  opened_reads_unmodified = None
+decide  motion_route = STOP
+decide  axis_mate_route = None
+decide  axis_concentric_refused = None
+decide  axial_mate_route = None
+decide  gear_mate_flip_rule = None
+decide  gear_mate_sense_depends_on_entities = None
+decide  compound_lock_route = None
+decide  layout_move_carries_mates = None
+decide  mesh_phase_route = None
+decide  axial_global_moves_gear = None
+decide  lock_unsuppress_keeps_the_new_angle = None
+decide  feature_suppress = 0
+decide  feature_unsuppress = 1
+decide  this_configuration = 1
+decide  suppression_route = None
+decide  lock_select_route = None
+decide  mate_delete_route = None
+decide  gear_mate_ratio_route = None
+decide  gear_mate_update_holds = None
+decide  gear_mate_definition_recipe = None
+decide  gear_mate_definition_numerator_is_second = None
+decide  modified_gear_mate_closes = None
+decide  remake_on_twice_meshed_gear_holds = None
+decide  lock_retakes_an_offset = None
+decide  mate_rename_route = None
+decide  mate_find_route = None
+decide  demonstration_drive_holds = None
+decide  put_on_twice_meshed_gear_holds = None
+decide  axial_datum_route = None
+decide  axial_datum_flip = None
+decide  mated_assembly_rebuild_route = None
+decide  mated_rebuild_keeps_components_unmodified = None
+decide  mated_build_rebuild_route = None
+decide  mates_under_command_in_progress = None
+decide  mate_rename_at_once = None
+decide  mate_group_walk_sees_mates_in_a_folder = None
+decide  lightweight_remake = None
+decide  second_assembly_beside_unsaved = None
+decide  mated_build_keeps_components_unmodified = None
+decide  idler_update_holds = None
+decide  update_interference_control_discriminates = None
+decide  idler_interference_control_discriminates = None
+decide  unsaved_update_close_asks = None
+decide  unsaved_update_close_discards = None
+decide  drag_operator_turns_train = None
+decide  gear_mate_definition_read_marks = None
+decide  origin_noise_mm = None
+decide  origin_noise_within_moved_tolerance = None
+decide  mate_folders_hold_in_every_case = None
+decide  lightweight_first_drive_right = None
+decide  lightweight_resolved_by = None
+decide  component_resolved_read = None
+decide  ring_sense_needed_flip = None
+decide  ring_sense_app_way = None
+decide  ring_risky_app_way_right = None
+decide  ring_check_and_remake_holds = None
+decide  ring_sense_clash_tells = None
+decide  gear_mate_read_back_tells_sense = None
+decide  entity_params_read_marks = None
+decide  ring_trains_read_back_tells_sense = None
+decide  ring_trains_needed_flip = None
+decide  ring_update_shape = None
+decide  gear_mate_sense_read_under_command_in_progress = None
+decide  gear_mate_remake_under_command_in_progress = None
+decide  cross_version_ring_turns_right = None
+decide  cross_version_read_back_tells_sense = None
+decide  cross_version_closed_unsaved_unchanged = None
+decide  turned_sense_read_back = None
+decide  turned_sense_angles = None
+decide  turned_sense_angles_skew = None
+decide  collinear_gear_mate_sense_read_back = None
+decide  collinear_gear_mate_flip_needed = None
+decide  collinear_gear_mate_moves_on_make = None
+decide  collinear_gear_mate_holds_slide = None
+decide  configuration_routes = None
+decide  configuration_show_raises_dialog = None
+decide  multi_configuration_save_asks = None
+decide  reopens_in_saved_configuration = None
+decide  handles_stale_after_configuration_change = None
+decide  fixed_kept_in_new_configuration = None
+decide  new_mate_in_other_configurations = None
+decide  suppression_right_after_add = None
+decide  configuration_show_marks = None
+decide  suppression_read_marks = None
+decide  value_read_marks = None
+decide  slide_value_per_configuration = None
+decide  value_unset_reads_zero = None
+decide  system_value_follows_configuration = None
+decide  positions_per_configuration = None
+decide  turned_gear_mate_moves_on_make = None
+decide  gear_mate_entity_order = None
+decide  manual_steps = ['material']
+done    18 pass
