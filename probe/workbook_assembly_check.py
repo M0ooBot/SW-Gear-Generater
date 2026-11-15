@@ -6537,8 +6537,10 @@ def w8_and(items):
 
 
 PUT_IN = {}       # section -> the configurations its Updates have put in, in order (s2's fresh turn says the state)
-# The sentence a press that found a coupling across says where the version's turn finding is False; its first words are
-# being reworded (5989c7d: "can show … in the others"), so only its tail is held and the whole is logged.
+# The sentence a press that found a coupling across says where the version's turn finding is False. ui_text has no
+# constant for it (it is written inline in _mode_after) and its first words were reworded in 5989c7d, so only its tail,
+# unchanged by that rewording, is held; the whole status is logged. Every sentence ui_text does hold as a constant
+# (TURN_SHOWN_ELSEWHERE, TURN_CAN_SHOW_ELSEWHERE) is taken from ui_text, never quoted.
 SHARED_MAY = "so the turn may have been given in another."
 
 
@@ -6652,7 +6654,7 @@ def w8_press_after_turn(worker, desk, label, mode, positions, turns, folder, pre
         check(not result.put_in, f"{label}: a turn stays in its mode on this version, so {mode} stands as built and "
               f"nothing is put: put_in {result.put_in}")
     elif expect == "finding" and positions is False:
-        check(bool(result.put_in), f"{label}: this version shows the turn in every mode, so {mode}'s couplings are "
+        check(bool(result.put_in), f"{label}: the turn finding is False, so {mode}'s couplings are "
               f"found across and the press puts: put_in {result.put_in}")
     else:
         say(f"fact    {label}: judged by what the press reports (put_in {result.put_in})")
@@ -6799,7 +6801,7 @@ def section_s2(worker, excel):
     folder, path, book, desk, built = start_w8_copy(worker, excel, "s2")
     box = desk.record.gearbox
     positions = swcom.positions_per_configuration(TAG["revision"])
-    reading = {True: "a turn stays in its mode (the plan's reading)", False: "a turn shows in every mode",
+    reading = {True: "a turn stays in its mode (the plan's reading)", False: "a turn can show in other modes",
                None: "unsettled: nothing is asserted about a turn in the other modes"}[positions]
     say(f"fact    s2: swcom.positions_per_configuration({TAG['revision']}) is {positions}: {reading}")
     presses = []
@@ -7375,7 +7377,7 @@ def section_s5(worker, excel):
             f"the sentences verbatim: {problems}; the mate named in them: {any(S5_COUPLE in p for p in problems)}")
         check(statuses.get(S5_COUPLE) == findings.ADD_MATE_NO_ERROR, f"s5 (ii): SolidWorks made {S5_COUPLE} with "
               f"AddMate5 status {statuses.get(S5_COUPLE)} (no error)")
-        want = {"Sun", "InDog", "Carrier carrier", "LoDog", "Pl copy 1", "Pl copy 2", "Pl copy 3"}
+        want = {"Sun", "InDog", "Carrier (the carrier)", "LoDog", "Pl copy 1", "Pl copy 2", "Pl copy 3"}   # c4b827a
         check(step6 and stuck and len(stuck) == len(problems) and set(bodies_named) == want,
               f"s5 (ii): the build stops at step 6's mate check, naming mode N and the bodies of N's locked train "
               f"({sorted(want)}) as fully defined: {bodies_named}")
