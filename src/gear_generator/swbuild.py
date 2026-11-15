@@ -4090,9 +4090,10 @@ def _modes_assembly(sw: SolidWorks, result: GearboxUpdate, assembly: str, placem
     own links (:func:`links_in`); a train is put whole (its lock mates off in that configuration around the puts)
     when the workbook moved it or it is out of step there; fixed gears W4's way; a rebuild. Each mode shown is
     post-checked (frames, sliders at their values after the show, its mates on and off, gears free to turn) and its
-    interference read, into a :class:`ModeCheck`. With nothing to change, only the active mode is judged, from where
-    it stands, and nothing is shown. Whatever happens, the configuration that was active is shown again at the end;
-    one that cannot be is said, naming the configuration left active."""
+    interference read, into a :class:`ModeCheck`. After the last mode, every per-mode mate's flag is read in every
+    configuration and held against the record (:func:`_modes_flags_after`). With nothing to change, only the active
+    mode is judged, from where it stands, and nothing is shown. Whatever happens, the configuration that was active
+    is shown again at the end; one that cannot be is said, naming the configuration left active."""
     file, stem = _file(assembly), _stem(assembly)
     sw.open_document(assembly)
     _note_opened(sw, assembly, result)
@@ -4181,6 +4182,7 @@ def _modes_assembly(sw: SolidWorks, result: GearboxUpdate, assembly: str, placem
                     check.clashes = _clashes(sw.interferences(), gear_of)
                 except Exception as exc:  # noqa: BLE001 - a clash check that cannot run is a CHECK, never a failure
                     check.interference_error = _said(exc)
+        _modes_flags_after(sw, result, motion, names, mate_handle, file)
         if result.modes:
             result.clashes = list(result.modes[-1].clashes)
             result.interference_error = result.modes[-1].interference_error
@@ -4204,6 +4206,34 @@ def _modes_assembly(sw: SolidWorks, result: GearboxUpdate, assembly: str, placem
                                               f"active in SolidWorks ({_said(exc)})"))
         placed = list(dict.fromkeys(result.placed))
         result.placed[:] = placed
+
+
+def _modes_flags_after(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, names: Mapping[str, str],
+                       mate_handle: Mapping[str, str], file: str) -> None:
+    """Once every mode is put and post-checked: every per-mode mate's flag (record's ``modes`` or a J14 on-set) read
+    in every configuration (``mate_suppression``, ``IsSuppressed2(3, names)``, which marks nothing) and held against
+    what the record wants (:func:`_on_set`). Each mode's post-check reads only the configuration shown, so a flag a
+    later mode's put changed in a mode already checked would otherwise go unseen (W8-REVIEW-LATE-A point 1). A
+    difference is the post-check's own failure, *"In mode 2H, the mate … is on in SolidWorks, where this mode has it
+    off."*, said once."""
+    configurations = [names[mode] for mode in motion.configurations]
+    edited = dict(motion.on_sets)
+    for mate in motion.mates:
+        if not (mate.modes or mate.name in edited):
+            continue
+        on_set = _on_set(motion, mate)
+        read = sw.mate_suppression(mate_handle[mate.name], configurations)
+        for mode in motion.configurations:
+            on, off_read = on_in(on_set, mode), bool(read[names[mode]])
+            if on and off_read:
+                problem = f"The mate {mate.name} is suppressed in SolidWorks, where this mode has it on."
+            elif not on and not off_read:
+                problem = f"The mate {mate.name} is on in SolidWorks, where this mode has it off."
+            else:
+                continue
+            failure = (file, _in_mode(mode, problem))
+            if failure not in result.failures:
+                result.failures.append(failure)
 
 
 def _modes_put(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, mode: str, configuration: str,
@@ -4248,7 +4278,7 @@ def _modes_put(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, mode
         on_here = [m.name for m in motion.mates if m.kind in GEAR_MATE_KINDS and on_in(_on_set(motion, m), mode)]
         _put_train(sw, result, motion, train, lock_mates, [], handle, mate_handle, wanted, rebuild, file, touched,
                    held=held_here, carriers=[link.carrier for link in links], live=live, pitch=pitch, route=route,
-                   gear_mates=on_here)
+                   gear_mates=on_here, configuration=configuration)
         put_any = True
     unfix = route == REPLACE_ROUTES[1]
     for placement in placements:
@@ -4867,7 +4897,8 @@ def _put_train(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, trai
                sense_wrong: Collection[str] = (), resensed: Collection[str] = (),
                respaced: Collection[str] = (), *, held: Collection[str] = (), carriers: Collection[str] = (),
                live: Optional[Mapping[str, Frame9]] = None, pitch: Optional[Mapping[str, float]] = None,
-               route: Optional[str] = None, gear_mates: Optional[Collection[str]] = None) -> None:
+               route: Optional[str] = None, gear_mates: Optional[Collection[str]] = None,
+               configuration: Optional[str] = None) -> None:
     """One train put back whole: every lock of it suppressed (a lock does not hold against a put: W5-DECISIONS),
     a rebuild, its ratios remade, EVERY mated gear of it put (review M1), then — whatever happened — every lock
     turned back on and a rebuild (review M8).
@@ -4886,10 +4917,16 @@ def _put_train(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, trai
     suppression and its rebuild, read for sense, and suppressed again before the puts. A train with no carrier is
     put as before, its gear mates on. ``gear_mates`` (W8): the gear mates on in the configuration shown; only those
     are suppressed and turned back on, so a per-mode one off there stays off (§9.1). None (W7): every gear mate of
-    the train, which D10 has turned on before any put. A lock or gear mate that will not come back on is a failure naming it, and
-    stops the job (:class:`_LocksLeftOff`); what raised inside is raised again once they are tried. A gear mate gone
-    from the assembly by then (a remake that lost it after the delete) is not said to be left suppressed: the error on
-    its way out says it is gone, and, with none, its own ``MateGone`` sentence stops the job.
+    the train, which D10 has turned on before any put. ``configuration`` (W8): the configuration shown; every lock
+    and gear mate is then suppressed and turned back on in it alone by the measured per-configuration route
+    (``set_mate_suppressed_in``, ``findings.MATE_SUPPRESSION_PER_CONFIGURATION_ROUTE``, each flag read back) and
+    read before it is turned back on by ``mate_suppression`` (``IsSuppressed2(3, names)``, which marks nothing),
+    never by ``SetSuppression2(…, this configuration, None)``, which no probe has run on an assembly with several
+    configurations (W8-REVIEW-LATE-A point 1). None (W5, W6, W7): ``set_mate_suppressed`` and ``mate_states``, the
+    calls as before. A lock or gear mate that will not come back on is a failure naming it, and stops the job
+    (:class:`_LocksLeftOff`); what raised inside is raised again once they are tried. A gear mate gone from the
+    assembly by then (a remake that lost it after the delete) is not said to be left suppressed: the error on its
+    way out says it is gone, and, with none, its own ``MateGone`` sentence stops the job.
 
     A lock counts as tried the moment its suppression is asked for, so one whose suppression took before the call
     raised (a read-back that failed) is still turned back on. Turning back on, each lock is read first and one that
@@ -4898,18 +4935,25 @@ def _put_train(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, trai
     off: List[LockLink] = []
     gear_off: List[str] = []                 # a train with a carrier: its gear mates, off around the puts
     pending: Optional[BaseException] = None
+
+    def suppress(name: str, suppressed: bool) -> None:
+        if configuration is None:
+            sw.set_mate_suppressed(mate_handle[name], suppressed)
+        else:
+            sw.set_mate_suppressed_in(mate_handle[name], suppressed, [configuration])
+
     try:
         for lock in locks:
             off.append(lock)
             touched[0] = True
-            sw.set_mate_suppressed(mate_handle[_lock_mate_name(motion, lock)], True)
+            suppress(_lock_mate_name(motion, lock), True)
         if carriers:
             for mate in motion.mates:
                 if mate.kind in GEAR_MATE_KINDS and len(mate.gears) == 2 and all(g in train for g in mate.gears) \
                         and mate.name in mate_handle and (gear_mates is None or mate.name in gear_mates):
                     gear_off.append(mate.name)
                     touched[0] = True
-                    sw.set_mate_suppressed(mate_handle[mate.name], True)
+                    suppress(mate.name, True)
         if off or gear_off:
             rebuild()
         for name, numerator, denominator in ratios:
@@ -4938,7 +4982,7 @@ def _put_train(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, trai
                 result.sense_found_wrong.append(name)
         remade_off = [name for name, _, _ in ratios if name in gear_off]
         for name in remade_off:                       # made again on: off again before the puts
-            sw.set_mate_suppressed(mate_handle[name], True)
+            suppress(name, True)
         if remade_off:
             rebuild()
         unfix = route == REPLACE_ROUTES[1]
@@ -4962,18 +5006,25 @@ def _put_train(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, trai
     except BaseException as exc:  # noqa: BLE001 - raised again below, once the locks are back on
         pending = exc
     left_off = False
-    states: Optional[Dict[str, MateState]] = None
-    if off or gear_off:
+    states: Optional[Dict[str, bool]] = None           # mate name -> suppressed in the configuration shown
+    if (off or gear_off) and configuration is None:
         try:
-            states = {state.name: state for state in sw.mate_states()}
+            states = {state.name: state.suppressed for state in sw.mate_states()}
         except Exception:  # noqa: BLE001 - unread: each lock is turned back on, as if it read suppressed
             states = None
+    elif off or gear_off:
+        states = {}
+        for name in [_lock_mate_name(motion, lock) for lock in off] + gear_off:
+            try:
+                states[name] = bool(sw.mate_suppression(mate_handle[name], [configuration])[configuration])
+            except Exception:  # noqa: BLE001 - unread: turned back on, as if it read suppressed
+                pass
     for lock in off:
         name = _lock_mate_name(motion, lock)
-        if states is not None and name in states and not states[name].suppressed:
+        if states is not None and name in states and not states[name]:
             continue
         try:
-            sw.set_mate_suppressed(mate_handle[name], False)
+            suppress(name, False)
         except Exception as exc:  # noqa: BLE001 - review M8: said, never lost
             left_off = True
             said = _said(exc).rstrip(".")
@@ -4981,10 +5032,10 @@ def _put_train(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, trai
                                           f"SolidWorks would not turn {name} back on ({said}); press Update "
                                           "SolidWorks again, which turns it back on."))
     for name in gear_off:
-        if states is not None and name in states and not states[name].suppressed:
+        if states is not None and name in states and not states[name]:
             continue
         try:
-            sw.set_mate_suppressed(mate_handle[name], False)
+            suppress(name, False)
         except MateGone as exc:
             # Gone, not left suppressed (a remake inside the route that lost its mate after the delete): pressing
             # Update again would find it gone, so the error on its way out, which says so, is the sentence.

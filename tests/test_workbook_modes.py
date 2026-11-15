@@ -953,11 +953,12 @@ def test_a_mode_spelt_4l_builds_updates_and_reads_back_clean_on_the_fake(mode_fi
     assert all(set(c.frames) == set(box.modes) for c in box.components)
 
 
-# -- E4's carrier train put in every mode (W8-REVIEW-LATE-A point 2) -------------------------------------------------
+# -- E4's carrier train put in every mode (W8-REVIEW-LATE-A points 1 and 2) -----------------------------------------
 #
 # E4 is the one fixture with a carrier and modes: each mode's put suppresses the train's locks and the gear mates on in
-# that mode around the puts (findings.PLANETARY_PUT_ROUTE), and must leave every flag in every configuration as the
-# record has it, whether the Update ends well or a put is refused part-way.
+# that mode around the puts (findings.PLANETARY_PUT_ROUTE). On a gearbox with modes every one of those calls goes
+# through the measured per-configuration route, in the configuration shown alone, and after the last mode every
+# per-mode mate's flag is read in every configuration.
 
 E4_COUPLINGS = {"RangeSlv engages InDog": {"2H", "4H"}, "RangeSlv engages LoDog": {"4L"},
                 "ModeSlv engages FrontDog": {"4H", "4L"}}
@@ -1016,6 +1017,99 @@ def test_e4_put_refused_part_way_leaves_flags_as_recorded(mode_findings):
     assert any("refused by the test" in text for _, text in result.failures)
     assert flags_all(sw) == before
     assert sw.config == "2H"
+
+
+def test_e4_put_suppresses_and_restores_in_the_configuration_shown_alone_by_the_measured_route(mode_findings):
+    """Point 1 (b): no SetSuppression2(…, this configuration, None) on a gearbox with modes. In each mode the locks
+    and the gear mates on there are suppressed and turned back on with set_mate_suppressed_in naming only the
+    configuration shown, each read before it is turned back on with mate_suppression of that configuration alone;
+    a coupling off in the mode is never called. After the last mode, every coupling read in every configuration."""
+    sw, _, record = build_on_fake(e4_transfer_case())
+    sw.calls.clear()
+    up, result = press_e4(sw, record, moved_spec())
+    assert result.failures == [] and result.placed[0] == "Carrier carrier"
+    name_of = sw.mate_handles
+    assert "set_mate_suppressed" not in [n for n, _ in sw.calls]
+    first_show = next(i for i, (n, _) in enumerate(sw.calls) if n == "show_configuration")
+    assert not [a for n, a in sw.calls[:first_show] if n == "set_mate_suppressed_in"]        # no D10 to do here
+    shown, per_mode, last_read = None, {}, []
+    for n, a in sw.calls[first_show:]:
+        if n == "show_configuration":
+            shown = a[0]
+            per_mode[shown] = {"off": [], "on": [], "read": []}
+        elif n == "set_mate_suppressed_in":
+            assert a[2] == (shown,), (a, shown)
+            per_mode[shown]["off" if a[1] else "on"].append(name_of[a[0]])
+        elif n == "mate_suppression" and a[1] == (shown,):
+            per_mode[shown]["read"].append(name_of[a[0]])
+        elif n == "mate_suppression":
+            last_read.append((name_of[a[0]], a[1]))
+    assert list(per_mode) == ["4H", "N", "4L", "2H"]
+    locks = ["InDog locked to Sun", "LoDog locked to Carrier carrier", "FDrive locked to FrontDog"]
+    always = ["ModeSlv splined to RangeSlv", "Sun meshes Pl copy 1", "Sun meshes Pl copy 2", "Sun meshes Pl copy 3",
+              "Pl copy 1 meshes Ring", "FDrive meshes FIdler", "FIdler meshes FOut"]
+    for mode, calls in per_mode.items():
+        here = locks + always + [c for c, on in E4_COUPLINGS.items() if mode in on]
+        assert sorted(calls["off"]) == sorted(here), mode
+        assert sorted(calls["read"]) == sorted(here), mode
+        assert sorted(calls["on"]) == sorted(here), mode
+    assert sorted(last_read) == sorted((name, ("2H", "4H", "N", "4L")) for name in E4_COUPLINGS)
+    last_put = max(i for i, (n, _) in enumerate(sw.calls) if n == "place_component")
+    assert all(i > last_put for i, (n, a) in enumerate(sw.calls[first_show:], first_show)
+               if n == "mate_suppression" and len(a[1]) == 4)
+
+
+def test_e4_a_flag_a_put_changes_in_a_mode_already_checked_is_a_failure_naming_the_mate_and_the_mode(mode_findings):
+    """Point 1 (a): each mode's post-check reads only the configuration shown, so a put that changed a flag in a mode
+    checked before it would go unseen; the read of every per-mode mate in every configuration after the last mode
+    says it, in the post-check's own sentence.
+
+    The fake is made to leak here: turning a mate back on in 2H (the active mode, put last) turns it on in every
+    configuration. SolidWorks was not seen to do this; set_mate_suppressed_in was measured to set only the
+    configurations it names (the W8 spike). The leak stands in for any flag left wrong outside the mode shown."""
+    sw, _, record = build_on_fake(e4_transfer_case())
+    before = flags_all(sw)
+    real = sw.set_mate_suppressed_in
+
+    def leaky(handle, suppressed, configurations):
+        real(handle, suppressed, configurations)
+        if not suppressed and list(configurations) == ["2H"] and sw.config == "2H":
+            mate = sw.mate(sw.mate_handles[handle])
+            mate.flags = {c: False for c in sw.configs}
+    sw.set_mate_suppressed_in = leaky
+    up, result = press_e4(sw, record, moved_spec())
+    assert sorted(text for _, text in result.failures) == [
+        "In mode 4L, the mate RangeSlv engages InDog is on in SolidWorks, where this mode has it off.",
+        "In mode N, the mate RangeSlv engages InDog is on in SolidWorks, where this mode has it off."]
+    assert all(file == "TransferCase.SLDASM" or file.endswith(".SLDASM") for file, _ in result.failures)
+    assert not result.ok
+    assert flags_all(sw)["RangeSlv engages InDog"] == {"2H": False, "4H": False, "N": False, "4L": False}
+    assert flags_all(sw)["RangeSlv engages LoDog"] == before["RangeSlv engages LoDog"]
+
+
+def test_the_read_after_the_last_mode_says_each_wrong_flag_once_both_ways(mode_findings):
+    """The read after the last mode, alone on the built E4: a coupling on where its mode has it off and one off where
+    its mode has it on are each the post-check's sentence, and one a mode's own post-check already said is not said
+    again."""
+    sw, _, record = build_on_fake(e4_transfer_case())
+    kwargs = update.classify(record, assessed(e4_transfer_case()), exists=lambda p: True).update_kwargs()
+    motion = kwargs["motion"]
+    sw.open_document(kwargs["assembly"])
+    mate_handle = {}
+    for index, mate in enumerate(motion.mates, 1):
+        sw.find_mate(f"mate{index}", mate.name)
+        mate_handle[mate.name] = f"mate{index}"
+    file = kwargs["assembly"].replace("\\", "/").rsplit("/", 1)[-1]
+    sw.mate("ModeSlv engages FrontDog").suppressed = False          # on in 2H, the active mode
+    sw.mate("RangeSlv engages LoDog").flags["4L"] = True             # off in 4L
+    said = "In mode 2H, the mate ModeSlv engages FrontDog is on in SolidWorks, where this mode has it off."
+    result = swbuild.GearboxUpdate(failures=[(file, said)])         # as 2H's own post-check would leave it
+    swbuild._modes_flags_after(sw, result, motion, {m: m for m in motion.configurations}, mate_handle, file)
+    assert result.failures == [
+        (file, said),
+        (file, "In mode 4L, the mate RangeSlv engages LoDog is suppressed in SolidWorks, where this mode has it on.")]
+    reads = [a for n, a in sw.calls if n == "mate_suppression" and a[1] == ("2H", "4H", "N", "4L")]
+    assert sorted(sw.mate_handles[h] for h, _ in reads[-3:]) == sorted(E4_COUPLINGS)
 
 
 # -- the frames that reach SolidWorks, per mode (W8-PLAN §1.6): engaged outlines clear, and clashing half a pitch off --
