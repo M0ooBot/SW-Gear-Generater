@@ -38,6 +38,7 @@ def load_probes() -> None:
     from . import p8_motion  # noqa: F401
     from . import p9_turned  # noqa: F401
     from . import p10_planetary  # noqa: F401
+    from . import p11_modes  # noqa: F401
 
 
 def default_scratch() -> str:
