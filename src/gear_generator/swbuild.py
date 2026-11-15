@@ -3125,7 +3125,8 @@ def _trains(mated: Sequence[str], meshes: Sequence[MeshLink], locks: Sequence[Lo
             carriers: Sequence[CarrierLink] = ()) -> List[Tuple[str, ...]]:
     """The mated gears grouped into trains — joined by meshes and locks, and (W7) a carrier to every gear on its
     planet shafts — each in ``mated``'s order, the trains in the order of their first gear. A gear joined to
-    nothing is a train of its own. A held gear given in ``mated`` joins the trains its gear mates touch."""
+    nothing is a train of its own. A held gear given in ``mated`` joins the trains the ``meshes`` touch, so the
+    caller gives, for a held gear, only its gear-mated meshes (W7-PLAN §2.9)."""
     parent = {g: g for g in mated}
 
     def root(g: str) -> str:
@@ -3545,11 +3546,24 @@ def _motion_assembly(sw: SolidWorks, result: GearboxUpdate, assembly: str, place
                 [lock for lock in motion.locks if lock.anchor in train and lock.follower in train],
                 [link for link in motion.carriers if link.carrier in train], [g for g in held if g in train])
 
-    for train in _trains(judged, motion.meshes, motion.locks, motion.carriers):
+    def judge(frames: Mapping[str, Frame9], train: Sequence[str]) -> TrainCheck:
+        meshes, locks, links, held_here = links_of(train)
+        try:
+            return train_check({g: frames[g] for g in train}, {g: wanted[g] for g in train}, meshes, locks, pitch,
+                               carriers=links, held=held_here)
+        except ValueError as exc:                     # W7-INTERFACES §6.3, as the check phase says it
+            raise SolidWorksError(f"Update SolidWorks cannot judge the gears on record: {exc} That is a fault in "
+                                  "Gear Generator.") from None
+
+    # A held gear joins a train through its GEAR MATES only (W7-PLAN §2.9): an unmated mesh (a planetary's other
+    # ring meshes) does not join two trains, so a train the user turned in step is never put because another one
+    # sharing the held gear needed it; the unmated meshes are still judged within the train their gears are in.
+    mated_pairs = {tuple(m.gears) for m in motion.mates if m.kind == "mesh" and len(m.gears) == 2}
+    joining = [m for m in motion.meshes if not ({m.a, m.b} & set(held)) or (m.a, m.b) in mated_pairs]
+    for train in _trains(judged, joining, motion.locks, motion.carriers):
         meshes, locks, links, held_here = links_of(train)
         ratios = [r for r in remakes if all(g in train for m in motion.mates if m.name == r[0] for g in m.gears)]
-        here = train_check({g: live[g] for g in train}, {g: wanted[g] for g in train}, meshes, locks, pitch,
-                           carriers=links, held=held_here)
+        here = judge(live, train)
         # Update moves a gear of this train (a shaft moved under it, its Face Z set, its gear mate remade): the user's
         # answer 2 — whenever Update moves any gear of a train, the train goes back to its built turn, whole.
         moved = any(g in axial_gears or _moved(result.found.get(g), live[g]) for g in train)
@@ -3595,9 +3609,7 @@ def _motion_assembly(sw: SolidWorks, result: GearboxUpdate, assembly: str, place
             problems.append(f"{gear} is not where Update SolidWorks put it once the assembly rebuilt: a mate holds it "
                             "elsewhere.")
     for train in put_trains:
-        meshes, locks, links, held_here = links_of(train)
-        again = train_check({g: after[g] for g in train}, {g: wanted[g] for g in train}, meshes, locks, pitch,
-                            carriers=links, held=held_here)
+        again = judge(after, train)
         problems += [f"{a} and {b} are out of step once the assembly rebuilt." for a, b in again.out_of_step]
         problems += [f"{gear} is not where its train was put once the assembly rebuilt: a mate holds it elsewhere."
                      for gear in again.off_axis if gear not in result.placed]

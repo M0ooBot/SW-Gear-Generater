@@ -5505,3 +5505,129 @@ def test_a_planetary_record_the_check_cannot_judge_is_refused_with_a_sentence(tu
                                         "is measured against D carrier")
     assert str(raised.value).endswith("So nothing is changed; that is a fault in Gear Generator.")
     assert not any(n in CHANGING for n in names(fake))
+
+
+# -- W7: the cases the spike did not build (W7-PLAN §4.2-§4.4), planned here by hand; each drive is Willis worked out
+# by hand for sun 18, planet 18, ring 54: in the carrier's frame (ω_s − ω_c)·18 = −(ω_p − ω_c)·18 (an outside mesh)
+# and (ω_p − ω_c)·18 = (ω_r − ω_c)·54 (inside the ring), every turn about the gear's own axis.
+
+F_MINUS = (1.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, -1.0)      # base_frame(Z-): rot_x(180°)
+
+
+def _pl_case(held="ring", minus=False, path=PL_ASM):
+    """The 4 : 1's mates with ``held`` the member that stays fixed (W7-PLAN §2.7, §4.2, §4.4): a held sun or ring
+    never unfixed and never mated to its shaft; a held carrier fixed with CarrierGear, neither mated, its copies still
+    mated to its axes. ``minus``: the stage on Z− (§4.3): every frame F₋·rot_z(θ), the copies where F₋ puts the
+    offsets (y negated), the front faces at z −5, held there by flipped point distances."""
+    f = F_MINUS if minus else IDENTITY
+    z_face, z_gear = (-5.0, -27.0) if minus else (5.0, 27.0)
+    copies = {c: (x, -y if minus else y) for c, (x, y) in COPY_AT.items()}
+    frames = {"Sun": (f, (0.0, 0.0, z_face)), "Ring": (f, (0.0, 0.0, z_face)), "CarrierGear": (f, (0.0, 0.0, z_gear)),
+              C_ID: (f, (0.0, 0.0, 0.0)), **{c: (_mul(f, _rot_z(10.0)), (x, y, z_face)) for c, (x, y) in copies.items()}}
+    steps = [ops.NewAssembly(""), ops.AddGlobal("Sun Face Z", "5"), ops.AddGlobal("Ring Face Z", "5"),
+             ops.AddGlobal("Planet Face Z", "5"),
+             ops.AddComponent("layout", PL_LAYOUT), ops.Place("layout", IDENTITY, (0.0, 0.0, 0.0)), ops.Fix("layout"),
+             ops.AddComponent("carrier1", PL_CARRIER), ops.Place("carrier1", *frames[C_ID]), ops.Fix("carrier1")]
+    parts = {"gear1": SUN18, "gear3": RING54, "gear4": CGEAR20, **{f"gear2c{k}": PLANET18 for k in (1, 2, 3)}}
+    for handle in ("gear1", "gear2c1", "gear2c2", "gear2c3", "gear3", "gear4"):
+        rotation, at = frames[PL_HANDLES[handle]]
+        steps += [ops.AddComponent(handle, parts[handle], at), ops.Place(handle, rotation, at), ops.Fix(handle)]
+    sign = -1.0 if minus else 1.0
+    for handle, gear, shaft in (("gear1", "Sun", "S"), ("gear3", "Ring", "R")):
+        if held == gear.lower():
+            continue
+        steps += [ops.Unfix(handle),
+                  ops.Mate(f"axis{gear}", "coincident", f"{handle}:Gear Axis", f"layout:{shaft} Axis",
+                           name=f"{gear} on {shaft} Axis"),
+                  ops.Mate(f"along{gear}", "point distance", f"{handle}:origin", "layout:plane1", sign * 5.0,
+                           name=f"{gear} along {shaft}"),
+                  ops.LinkDimension(f"D1@{gear} along {shaft}", f'"{gear} Face Z"')]
+    if held != "carrier":
+        steps += [ops.Unfix("carrier1"),
+                  ops.Mate("axisC", "coincident", "carrier1:C Axis", "layout:C Axis", name="C carrier on C Axis"),
+                  ops.Mate("alongC", "point", "carrier1:origin", "layout:plane1", name="C carrier along C"),
+                  ops.Unfix("gear4"),
+                  ops.Mate("lock1", "lock", "carrier1", "gear4", name="CarrierGear locked to C carrier")]
+    for k in (1, 2, 3):
+        steps += [ops.Unfix(f"gear2c{k}"),
+                  ops.Mate(f"axis{k}", "coincident", f"gear2c{k}:Gear Axis", f"carrier1:P copy {k} Axis",
+                           name=f"Planet copy {k} on P copy {k} Axis"),
+                  ops.Mate(f"along{k}", "point distance", f"gear2c{k}:origin", "layout:plane1", sign * 5.0,
+                           name=f"Planet copy {k} along P copy {k}"),
+                  ops.LinkDimension(f"D1@Planet copy {k} along P copy {k}", '"Planet Face Z"')]
+    for k in (1, 2, 3):
+        steps.append(ops.Mate(f"mesh{k}", "gear", "gear1:Gear Axis", f"gear2c{k}:Gear Axis",
+                              name=f"Sun meshes Planet copy {k}", ratio=(18.0, 18.0)))
+    steps.append(ops.Mate("ring1", "gear", "gear2c1:Gear Axis", "gear3:Gear Axis", name="Planet copy 1 meshes Ring",
+                          ratio=(18.0, 54.0)))
+    return BuildPlan("gearbox", "", tuple(steps) + (ops.Rebuild(), ops.SaveAs(path)), path), frames
+
+
+def _built_case(held="ring", minus=False):
+    assembly, frames = _pl_case(held, minus)
+    fake, result = _build_pl(assembly=assembly)
+    assert result.ok and result.assembly.turned_round == ["Planet copy 1 meshes Ring"], result.log_lines()
+    for gear, frame in frames.items():
+        assert _close(fake.frames[PL_COMPONENT[gear]], frame), gear      # the rebuild left every body placed
+    return fake
+
+
+def test_the_sun_held_drives_from_the_ring_at_four_to_three(turned_findings):
+    """§4.2. ω_s = 0, ring +30°: (0 − ω_c)·18 = −(ω_p − ω_c)·18 gives ω_p − ω_c = ω_c; (ω_p − ω_c)·18 = (30 −
+    ω_c)·54 gives ω_c = 3·(30 − ω_c), so ω_c = +22.5° (ring : carrier = 30 : 22.5 = 4 : 3, the same way), each copy
+    +22.5° on the carrier, +45° about its own axis; the sun stays."""
+    fake = _built_case(held="sun")
+    assert fake.constrained_status("gear1") == findings.COMPONENT_FULLY_DEFINED
+    turns = fake.drive("gear3-1", 30.0)
+    assert turns["carrier1-1"] == pytest.approx(22.5) and turns["gear4-1"] == pytest.approx(22.5)
+    assert all(turns[f"gear2c{k}-1"] == pytest.approx(45.0) for k in (1, 2, 3)) and "gear1-1" not in turns
+    assert _close(fake.frames["gear1-1"], (IDENTITY, (0.0, 0.0, 5.0)))
+
+
+def test_the_carrier_held_is_a_plain_train_turning_the_ring_back_at_a_third(turned_findings):
+    """§4.4. ω_c = 0, sun +30°: 30·18 = −ω_p·18 gives each copy −30°; ω_p·18 = ω_r·54 gives the ring −10° (−1/3 of
+    the sun: 3 : 1 the other way); the carrier, CarrierGear and the copies' places stay."""
+    fake = _built_case(held="carrier")
+    assert fake.constrained_status("carrier1") == findings.COMPONENT_FULLY_DEFINED
+    assert fake.constrained_status("gear4") == findings.COMPONENT_FULLY_DEFINED
+    assert not any(a[0] == "lock" for n, a in fake.calls if n == "add_mate")       # nothing locks a held carrier
+    turns = fake.drive("gear1-1", 30.0)
+    assert turns["gear3-1"] == pytest.approx(-10.0)
+    assert all(turns[f"gear2c{k}-1"] == pytest.approx(-30.0) for k in (1, 2, 3)) and "carrier1-1" not in turns
+    for copy, (x, y) in COPY_AT.items():
+        assert fake.frames[PL_COMPONENT[copy]][1] == pytest.approx((x, y, 5.0))
+
+
+def test_the_stage_on_z_minus_turns_as_the_z_plus_one_about_each_gears_own_axis(turned_findings):
+    """§4.3. Every axis points −Z, so every gear's own-axis turn is the Z+ stage's (the rows hold own-axis turns,
+    and every axis against the carrier's is +1): sun +30° → carrier +7.5°, each copy −15°. Seen from +Z every turn
+    is reversed, so copy 1 at (18, 0) is carried round −7.5° about +Z, to (17.846008, −2.349471): what flips is the
+    world's view of the turns and of the copies' places (y negated by F₋), not the speeds."""
+    fake = _built_case(minus=True)
+    turns = fake.drive("gear1-1", 30.0)
+    assert turns["carrier1-1"] == pytest.approx(7.5)
+    assert all(turns[f"gear2c{k}-1"] == pytest.approx(-15.0) for k in (1, 2, 3))
+    assert fake.frames["gear2c1-1"][1] == pytest.approx((17.846008, -2.349471, -5.0), abs=1e-6)
+    assert fake.frames["gear2c2-1"][1][:2] == pytest.approx((-10.957706, -14.280360), abs=1e-6)
+
+
+def test_a_mesh_the_change_phase_cannot_judge_is_a_failure_sentence_not_a_bare_error(turned_findings):
+    fake = _built_pl()
+    stray = PL_MESHES + (MeshLink("Sun", "Planet copy 1", -1.0, 20.0, carrier="D carrier"),)
+    result = _update_pl(fake, motion=_pl_motion(meshes=stray))
+    assert not result.ok
+    (failure,) = [why for _, why in result.failures]
+    assert failure.startswith("Update SolidWorks cannot judge the gears on record: The mesh Sun–Planet copy 1 is "
+                              "measured against D carrier") and failure.endswith("That is a fault in Gear Generator.")
+    assert not any(m.suppressed for m in fake.memory_mates[_key(PL_ASM)])
+
+
+def test_a_held_ring_joins_a_train_through_its_gear_mate_only(turned_findings):
+    """W7-PLAN §2.9: the unmated ring meshes do not join trains; they are judged inside the train the ring mate
+    makes, so one copy turned alone shows as out of step through them."""
+    fake = _built_pl()
+    fake.turn("gear2c2-1", 3.0)                     # copy 2 alone: its sun mate and its unmated ring mesh both see it
+    fake.calls.clear()
+    result = _update_pl(fake)
+    assert ("Sun", "Planet copy 2") in result.out_of_step and ("Planet copy 2", "Ring") in result.out_of_step
+    assert result.ok and set(_puts(fake)) == {f"placed{i}" for i in (1, 2, 3, 4, 6, 7)}, result.log_lines()
