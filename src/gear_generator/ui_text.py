@@ -1125,6 +1125,25 @@ def _copies_of(shaft) -> int:
     return n if n > 0 else 1
 
 
+def _held_members(spec) -> set:
+    """The held members of a planetary stage, from the workbook's rows (W7): a carrier (a shaft another is mounted
+    on) or a frame shaft whose gear meshes a planet, whose Role is ``fixed`` — whether or not a torque is typed, so
+    the Speeds panel says *held* either way."""
+    shafts = list(getattr(spec, "shafts", ()) or ())
+    mounted = {s.id: s.mount() for s in shafts if hasattr(s, "mount") and s.mount() != "frame"}
+    if not mounted:
+        return set()
+    shaft_of = {g.id: g.shaft for g in getattr(spec, "gears", ()) or ()}
+    planets = {g for g, shaft in shaft_of.items() if shaft in mounted}
+    members = set(mounted.values())
+    for mesh in getattr(spec, "meshes", ()) or ():
+        if mesh.a in planets:
+            members.add(shaft_of.get(mesh.b, ""))
+        if mesh.b in planets:
+            members.add(shaft_of.get(mesh.a, ""))
+    return {s.id for s in shafts if s.id in members and str(getattr(s, "role", "")).strip().lower() == "fixed"}
+
+
 def workbook_speed_lines(spec, motion) -> Tuple[List[str], str]:
     """The Speeds panel: one line per shaft (speed, way round, torque), and its header readout. A gearbox a
     later phase drives gives the one sentence saying so, and no readout.
@@ -1141,14 +1160,14 @@ def workbook_speed_lines(spec, motion) -> Tuple[List[str], str]:
     seen = getattr(motion, "seen_from", None) or {}
     every_z = all(seen.get(shaft.id, "+Z") == "+Z" for shaft in spec.shafts)
     lines = []
-    held = getattr(motion, "held", None) or {}
+    held = set(getattr(motion, "held", None) or {}) | _held_members(spec)
     for shaft in spec.shafts:
         mount = shaft.mount() if hasattr(shaft, "mount") else "frame"
         if mount != "frame":                      # W7: a planet shaft, its speed on its carrier and its copies
             lines.append(planetary_speed_line(shaft.id, motion, copies=_copies_of(shaft), carrier=mount))
             continue
         if shaft.id in held:                      # W7: a held member of a planetary stage, and what it holds
-            lines.append(planetary_speed_line(shaft.id, motion))
+            lines.append(planetary_speed_line(shaft.id, motion, held=True))
             continue
         speed = motion.speeds.get(shaft.id)
         if speed is None:
@@ -1161,6 +1180,9 @@ def workbook_speed_lines(spec, motion) -> Tuple[List[str], str]:
         if not every_z and turns and turns != "still":
             turns = f"{turns} seen from the {where} end"
         lines.append(f"{shaft.id:<4}  {abs(float(speed)):.1f}{NBSP}rpm {turns}{torque_text}")
+    note = getattr(motion, "torque_note", "")
+    if note and motion.speeds:                    # W7: why a torque through a planetary stage is not given
+        lines.append(_sentence(note))
     if not motion.speeds:
         return lines, "no input"
     return lines, ("seen from +Z" if every_z else "seen from each shaft's + end")
@@ -3361,16 +3383,17 @@ def _turn_word(value, sign: int) -> str:
     return "still" if about == 0 else ("anticlockwise" if about > 0 else "clockwise")
 
 
-def planetary_speed_line(shaft: str, motion, *, copies: int = 1, carrier: str = "") -> str:
+def planetary_speed_line(shaft: str, motion, *, copies: int = 1, carrier: str = "", held: bool = False) -> str:
     """The Speeds line of a planet shaft or a held member (W7-PLAN §2.12) from a ``kinematics.Motion``, in the
     panel's own form (:func:`workbook_speed_lines`): a planet shaft's speed about its own axis, then its speed on its
     carrier (``motion.relative``), and how many copies turn so — *"P     500.0 rpm clockwise, 750.0 rpm clockwise
-    on C · 3 copies"*, with W6's *seen from the +X end* once after the first way round when any shaft is off Z
-    (W6-INTERFACES §7.19); a held member *"R     held still · 5.76 N·m"* (``motion.held``, the torque it holds).
+    relative to C · 3 copies"*, with W6's *seen from the +X end* once after the first way round when any shaft is
+    off Z (W6-INTERFACES §7.19); a held member (``held``, or in ``motion.held``) *"R     held still · 5.76 N·m"*,
+    the torque it holds when one is worked out.
     Numbers are joined to their units by :data:`NBSP`."""
-    held = getattr(motion, "held", None) or {}
-    if not carrier and shaft in held:
-        return f"{shaft:<4}  held still · {held[shaft]:.2f}{NBSP}N·m"
+    holds = getattr(motion, "held", None) or {}
+    if not carrier and (held or shaft in holds):
+        return f"{shaft:<4}  held still" + (f" · {holds[shaft]:.2f}{NBSP}N·m" if shaft in holds else "")
     speed = motion.speeds.get(shaft)
     if speed is None:
         return f"{shaft:<4}  not driven"
@@ -3382,7 +3405,7 @@ def planetary_speed_line(shaft: str, motion, *, copies: int = 1, carrier: str = 
     text = f"{shaft:<4}  {abs(float(speed)):.1f}{NBSP}rpm {turns}"
     relative = (getattr(motion, "relative", None) or {}).get(shaft)
     if carrier and relative is not None:
-        text += f", {abs(float(relative)):.1f}{NBSP}rpm {_turn_word(relative, sign)} on {carrier}"
+        text += f", {abs(float(relative)):.1f}{NBSP}rpm {_turn_word(relative, sign)} relative to {carrier}"
     if copies > 1:
         text += f" · {copies} copies"
     return text

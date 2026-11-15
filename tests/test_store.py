@@ -1162,8 +1162,8 @@ def _planetary_raw():
     (lambda raw: raw["gearbox"].update(carriers=[]), r"is made to an axis on 'C carrier', which is no carrier on record"),
     (lambda raw: raw["gearbox"]["components"][-1].update(of="Sun"),
      r"gearbox\.components\[1\] \('Planet copy 2'\) is recorded as a copy of 'Sun', which its own name does not say\)"),
-    (lambda raw: raw["gearbox"]["components"][-1].update(gear="Planet"),
-     r"\('Planet'\) is recorded as a copy of 'Planet', which its own name does not say"),
+    (lambda raw: raw["gearbox"]["components"][-1].update(gear="Sun copy 2"),
+     r"\('Sun copy 2'\) is recorded as a copy of 'Planet', which its own name does not say"),
 ])
 def test_a_planetary_entry_update_could_not_use_is_refused_with_a_sentence_and_left_alone(tmp_path, change, match):
     raw = _planetary_raw()
@@ -1258,3 +1258,13 @@ def test_a_continued_builds_record_with_its_carrier_reused_reads_clean():
     continued = planetary_record("R.xlsx")
     _carrier_mates(continued.gearbox)
     assert store.link_record_from_json(store.link_record_to_json(continued)) == continued
+
+
+def test_a_component_whose_of_is_its_own_id_reads_as_no_copy():
+    """W7-INTERFACES §6.1: a finisher writing ``of = planetary.copy_of(gear)[0]`` for every gear writes a plain
+    gear's own id; that is "no copy", never a refusal that would move the record aside."""
+    from gear_generator.workbook import planetary
+    record = planetary_record("R.xlsx")
+    record.gearbox.components[0].of = planetary.copy_of(record.gearbox.components[0].gear)[0]
+    assert record.gearbox.components[0].of == record.gearbox.components[0].gear
+    assert store.link_record_from_json(store.link_record_to_json(record)) == record

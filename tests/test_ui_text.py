@@ -2880,15 +2880,15 @@ def test_the_speeds_panel_on_a_planetary_stage():
     lines, readout = ui_text.workbook_speed_lines(SimpleNamespace(shafts=shafts), motion)
     assert lines == ["S     1000.0 rpm anticlockwise · 2.00 N·m",
                      "C     250.0 rpm anticlockwise · 7.76 N·m",
-                     "P     500.0 rpm clockwise, 750.0 rpm clockwise on C · 3 copies",
+                     "P     500.0 rpm clockwise, 750.0 rpm clockwise relative to C · 3 copies",
                      "R     held still · 5.76 N·m"]
     assert readout == "seen from +Z"
     _held_together(lines)
     assert ui_text.planetary_speed_line("P", motion, copies=1, carrier="C") == (
-        "P     500.0 rpm clockwise, 750.0 rpm clockwise on C")
+        "P     500.0 rpm clockwise, 750.0 rpm clockwise relative to C")
     on_x = dataclasses.replace(motion, seen_from={"S": "+X", "C": "+X", "P": "+X", "R": "+X"})
     assert ui_text.planetary_speed_line("P", on_x, copies=3, carrier="C") == (
-        "P     500.0 rpm clockwise seen from the +X end, 750.0 rpm clockwise on C · 3 copies")
+        "P     500.0 rpm clockwise seen from the +X end, 750.0 rpm clockwise relative to C · 3 copies")
 
 
 def test_copies_share_one_part_cell():
@@ -2969,3 +2969,45 @@ def test_each_carriers_result_is_matched_to_its_part_by_file_name_never_by_posit
     assert "planets on C " not in text and "planets on C in" not in text
     stray = [swbuild.UpdateResult(document="Somewhere_Else.SLDPRT", changed=["X"], rebuilt=True)]
     assert "planets" not in ui_text.gearbox_update_status(update, _moved(carriers=stray, changed=[]))[0]
+
+
+def test_the_speeds_panel_through_the_solver_on_the_4_to_1_held_ring_and_held_sun():
+    """W7-PLAN §4.1 and §4.2 through ``kinematics.solve`` (B's), so a sign that differs from the solver's shows."""
+    from test_workbook_planetary import planetary_4to1, sun_held
+    lines, readout = ui_text.workbook_speed_lines(planetary_4to1(), kinematics.solve(planetary_4to1()))
+    assert (lines, readout) == (["S     1000.0\u00a0rpm anticlockwise · 2.00\u00a0N·m",
+                                 "C     250.0\u00a0rpm anticlockwise · 7.76\u00a0N·m",
+                                 "P     500.0\u00a0rpm clockwise, 750.0\u00a0rpm clockwise relative to C · 3 copies",
+                                 "R     held still · 5.76\u00a0N·m"], "seen from +Z")
+    _held_together(lines)
+    lines, _ = ui_text.workbook_speed_lines(sun_held(), kinematics.solve(sun_held()))
+    assert lines == ["S     held still · 0.64\u00a0N·m",
+                     "C     750.0\u00a0rpm anticlockwise · 2.64\u00a0N·m",
+                     "P     1500.0\u00a0rpm anticlockwise, 750.0\u00a0rpm anticlockwise relative to C · 3 copies",
+                     "R     1000.0\u00a0rpm anticlockwise · 2.00\u00a0N·m"]
+
+
+def test_a_held_member_reads_held_with_no_torque_typed_and_the_missing_torque_is_said():
+    """"held" comes from the stage's held member, not from whether a torque is worked out; when the torque through
+    the stage is not worked out, the panel says why (``Motion.torque_note``) in a line of its own."""
+    from test_workbook_planetary import edited, planetary_4to1
+    no_torque = edited(planetary_4to1(), shafts={"S": dict(torque="")})
+    motion = kinematics.solve(no_torque)
+    lines, _ = ui_text.workbook_speed_lines(no_torque, motion)
+    assert lines[3] == "R     held still" and "R" not in motion.held
+    noted = dataclasses.replace(motion, torque_note="The torque through C's planetary stage is not worked out: its "
+                                                    "members' speeds do not settle which of them drives.")
+    assert ui_text.workbook_speed_lines(no_torque, noted)[0][-1] == (
+        "The torque through C's planetary stage is not worked out: its members' speeds do not settle which of them "
+        "drives.")
+
+
+def test_the_4_to_1s_gears_table_has_one_row_and_one_part_cell_for_the_planet_and_its_copies(tmp_path):
+    from test_workbook_planetary import planetary_4to1
+    (tmp_path / "p").mkdir()
+    read, diagnostics = model.from_book(xlsx.read(write(tmp_path / "p", planetary_4to1())))
+    a = assess.assess(read, diagnostics, "C:\\Parts\\Planetary_4to1")
+    rows = ui_text.workbook_gear_rows(a.spec, a.parts, a.diagnostics)
+    planet = [r for r in rows if r[0] == "Planet"]
+    assert [r[0] for r in rows] == ["Sun", "Planet", "Ring", "CarrierGear"] and len(planet) == 1
+    assert planet[0][6] == "Planet" and [s.copies for s in a.spec.shafts if s.id == planet[0][1]] == ["3"]

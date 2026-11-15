@@ -951,7 +951,8 @@ def _carriers_checked(box: "GearboxRecord") -> None:
     is not the row its own id is a copy of (Update compares copies through it). What the app writes always passes:
     every finisher keeps one ``CarrierEntry`` per carrier of the plan, built or reused, whenever it writes mates
     (W7-INTERFACES §6.1 a), a mate's ``on`` is that carrier's ``layout.carrier_id``, and ``of`` is the row of the
-    copy's id. A carrier is never required to be a component: its own mates name it in ``gears``."""
+    copy's id — or the gear's own id, which ``planetary.copy_of`` gives for a gear with no copies, read as "no
+    copy". A carrier is never required to be a component: its own mates name it in ``gears``."""
     shafts = [c.shaft for c in box.carriers]
     for index, shaft in enumerate(shafts):
         if shaft in shafts[:index]:
@@ -962,7 +963,7 @@ def _carriers_checked(box: "GearboxRecord") -> None:
             where = f"gearbox.mates[{index}]" + (f" ({mate.name!r})" if mate.name else "")
             raise ValueError(f"{where} is made to an axis on {mate.on!r}, which is no carrier on record")
     for index, component in enumerate(box.components):
-        if not component.of:
+        if not component.of or component.of == component.gear:      # "no copy": ``planetary.copy_of`` of a plain id
             continue
         row, sep, k = component.gear.rpartition(_COPY_WORD)
         if not (sep and k.isdigit() and row == component.of):
