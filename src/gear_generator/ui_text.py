@@ -3347,8 +3347,9 @@ def _motion_after(update, result, earlier: str = "") -> List[str]:
         how = "as they were found" if earlier else "where they were turned"
         if not put:
             out.append(f"The gears stand {how} in SolidWorks.")
-            if getattr(result, "configuration", "") and getattr(result, "positions_per_configuration", None) is False \
-                    and not getattr(result, "visited", ()):
+            # The switch is False only on an Update with modes: swbuild._modes_check sets it on the result just after
+            # the configuration worked in, and nothing else sets it on an Update, so no configuration test is needed.
+            if getattr(result, "positions_per_configuration", None) is False and not getattr(result, "visited", ()):
                 # After an earlier unsaved Update the sentence before says the gears stand "as they were found", so
                 # "that turn" would have no antecedent: the wording that needs none.
                 out.append(GEARS_SHOWN_ELSEWHERE if earlier else TURN_SHOWN_ELSEWHERE)

@@ -3321,6 +3321,15 @@ def test_a_quiet_update_that_found_the_gears_turned_in_step_warns_of_the_other_m
                     put_in=["2H"], visited=["4H", "N", "4L"], changed=[TC_ASM])
     assert warning not in ui_text.gearbox_update_status(_tc_update(), put)[0]
     assert warning not in " ".join(ui_text.motion_update_lines(_motion_update(), _moved(turned=True)))
+    # nor after a changed Update that put no mated gear but showed and checked every other mode (the review of the
+    # fixes, point 4: the visit has just looked at them)
+    part = _path("Sleeve_m1.5_N30")
+    visited = _tc_moved(turned=True, configuration="2H", positions_per_configuration=False, placed=[],
+                        visited=["4H", "N", "4L"], changed=[part],
+                        parts=[swbuild.UpdateResult(document="Sleeve_m1.5_N30", changed=["Teeth"], rebuilt=True)])
+    text = ui_text.gearbox_update_status(_tc_update(parts=(PartUpdate(part, ("RangeSlv",), None, None, (),
+                                                                       changed=True),)), visited)[0]
+    assert "The gears stand where they were turned in SolidWorks." in text and warning not in text
 
 
 @pytest.mark.parametrize("earlier", ["not saved", "lost"])
