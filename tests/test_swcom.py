@@ -2311,3 +2311,57 @@ def test_axis_line_refuses_a_feature_that_is_not_an_axis(com):
     session, _ = _line_doc(com)
     with pytest.raises(SolidWorksError, match="Top Plane in Part1.SLDPRT is not an axis"):
         session.axis_line("read", "Top Plane")
+
+
+class UnreadManager(Sketch3DManager):
+    """Opens the sketch, then will not say so: ActiveSketch raises while it is open."""
+    __slots__ = ()
+
+    @property
+    def ActiveSketch(self):
+        if self.open:
+            raise SolidWorksError("ActiveSketch failed.")
+        return None
+
+
+class StuckManager(Sketch3DManager):
+    """Opens the sketch and draws, then refuses to close it."""
+    __slots__ = ()
+
+    def Insert3DSketch(self, rebuild):
+        if self.open:
+            self.doc.app.log.append(("Insert3DSketch", rebuild))
+            raise SolidWorksError("Insert3DSketch failed.")
+        Sketch3DManager.Insert3DSketch(self, rebuild)
+
+
+def test_a_sketch_opened_whose_read_fails_is_counted_open_and_closed(com):
+    """The open call returned, so the sketch counts as open even though the read of it failed: it is drawn in and
+    closed, never left open."""
+    session, doc = _line_doc(com)
+    doc.SketchManager = UnreadManager(doc)
+    assert session.line_axis("line3", "S3 Axis", SLANT_POINT, SLANT_DIRECTION, 100.0) == "S3 Axis"
+    assert len(_calls(com, "Insert3DSketch")) == 2 and not doc.SketchManager.open
+
+
+class UnreadNoLineManager(UnreadManager):
+    __slots__ = ()
+
+    def CreateLine(self, *coordinates):
+        return None
+
+
+def test_a_sketch_opened_whose_read_fails_is_closed_when_the_line_fails(com):
+    session, doc = _line_doc(com)
+    doc.SketchManager = UnreadNoLineManager(doc)
+    with pytest.raises(SolidWorksError, match="would not draw the line of the axis of S3"):
+        session.line_axis("line3", "S3 Axis", SLANT_POINT, SLANT_DIRECTION, 100.0)
+    assert len(_calls(com, "Insert3DSketch")) == 2 and not doc.SketchManager.open
+
+
+def test_the_flags_are_restored_even_when_the_sketch_will_not_close(com):
+    session, doc = _line_doc(com)
+    doc.SketchManager = StuckManager(doc)
+    with pytest.raises(SolidWorksError):
+        session.line_axis("line3", "S3 Axis", SLANT_POINT, SLANT_DIRECTION, 100.0)
+    assert doc.SketchManager.AddToDB is False and doc.SketchManager.DisplayWhenAdded is True

@@ -2633,9 +2633,16 @@ class Session:
         try:
             try:
                 call(manager, "Insert3DSketch", True)
-                opened = call(manager, "ActiveSketch") is not None
             except (AttributeError, SolidWorksError):
-                opened = False
+                pass
+            else:
+                # Counted open once the call returns, so it is closed whatever follows; only a read that answers
+                # "no sketch" says it did not open (closing then would open one instead).
+                opened = True
+                try:
+                    opened = call(manager, "ActiveSketch") is not None
+                except (AttributeError, SolidWorksError):
+                    pass
             if not opened:
                 raise SolidWorksError(f"SolidWorks would not open a 3D sketch for the axis of {shaft}, so the slanted "
                                       f"shaft {shaft} is not laid out.")
@@ -2650,10 +2657,12 @@ class Session:
                                       f"so the slanted shaft {shaft} is not laid out.")
             segment = _segment_name(line)
         finally:
-            if opened:
-                call(manager, "Insert3DSketch", True)          # the toggle closes the sketch it opened
-            _put(manager, "AddToDB", False)
-            _put(manager, "DisplayWhenAdded", True)
+            try:
+                if opened:
+                    call(manager, "Insert3DSketch", True)      # the toggle closes the sketch it opened
+            finally:
+                _put(manager, "AddToDB", False)
+                _put(manager, "DisplayWhenAdded", True)
         if call(manager, "ActiveSketch") is not None:
             raise SolidWorksError(f"SolidWorks would not close the 3D sketch of the axis of {shaft}, so the slanted "
                                   f"shaft {shaft} is not laid out.")
