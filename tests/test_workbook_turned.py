@@ -337,3 +337,211 @@ def test_a_turned_build_on_the_fake_writes_a_record_that_reads_with_each_meshs_s
     planned = {m.name: m.sense for m in plan.motion.mates if m.kind == motion.MESH}
     held = {m.name: m.sense for m in read.gearbox.mates if m.kind == motion.MESH}
     assert held == planned and set(held) == {"G1 meshes G2", "G3 meshes G4"} and 0 not in held.values()
+
+
+# -- Update's classification and the turning round trip on the fake (W6-PLAN §2.7, §2.8, §2.9) ------------------
+
+BOOK = "C:\\Books\\W.xlsx"
+REBUILD = "so the gearbox needs building again."
+
+
+def direct(spec):
+    return assess.assess(replace(spec, source_path=BOOK), [], "C:\\Out\\")
+
+
+def edited(spec, shafts=None, gears=None):
+    shafts, gears = shafts or {}, gears or {}
+    return replace(spec, shafts=tuple(replace(s, **shafts.get(s.id, {})) for s in spec.shafts),
+                   gears=tuple(replace(g, **gears.get(g.id, {})) for g in spec.gears))
+
+
+def crossed_off_base():
+    """Fixture B moved 10 mm up, so S1 can pass to the other side of S2 without crossing the Top plane (the plan's
+    review M4 move: the checks pass both sides, and the crossed mesh's sense flips)."""
+    return edited(crossed_slant(), shafts={"S1": dict(y="10"), "S2": dict(y="94.852814"), "S3": dict(y="94.852814")})
+
+
+def fake_turned_build(spec):
+    """plan -> build_gearbox on the fake -> finish_build -> the record written and read back: (sw, record)."""
+    from gear_generator import store, swbuild
+    from gear_generator.workbook import gearbox
+    from test_swbuild import FakeSolidWorks
+    sw = FakeSolidWorks()
+    plan = gearbox.plan_gearbox(direct(spec), None, exists=sw.exists, read_sidecar=lambda p: None)
+    assert plan.refusal == "" and plan.motion is not None, plan.refusal
+    result = swbuild.build_gearbox(sw, **plan.build_kwargs(), exists=sw.exists)
+    assert result.ok, result.log_lines()
+    done = gearbox.finish_build(plan, result, None, workbook=BOOK, digest="d1", written_by="test",
+                                read_sidecar=lambda p: None, exists=sw.exists)
+    return sw, store.link_record_from_json(store.link_record_to_json(done.record))
+
+
+def fake_press(sw, record, spec):
+    """classify -> update_gearbox on the fake -> finish_update -> the record written and read back."""
+    from gear_generator import store, swbuild
+    from gear_generator.workbook import update
+    a = direct(spec)
+    assert a.lay_out_refusal() == ""
+    plan = update.classify(record, a, exists=lambda p: True)
+    assert plan.refusal == "" and not plan.needs_new_revision, (plan.refusal, plan.structural)
+    result = swbuild.update_gearbox(sw, **plan.update_kwargs(), exists=lambda p: True, mtime=lambda p: 5.0)
+    assert result.failures == [], result.failures
+    done = update.finish_update(plan, result, record, digest="d2", read_sidecar=lambda p: None, mtime=lambda p: 5.0)
+    return plan, result, store.link_record_from_json(store.link_record_to_json(done.record))
+
+
+def senses_of(record):
+    return {m.name: m.sense for m in record.gearbox.mates if m.kind == motion.MESH}
+
+
+def nothing_to_do(record, spec):
+    from gear_generator.workbook import update
+    plan = update.classify(record, direct(spec), exists=lambda p: True)
+    return (plan.refusal, plan.structural, plan.resensed, plan.ratios, plan.axial, plan.replaced, plan.moved_shafts)
+
+
+@pytest.mark.parametrize("make, senses", [(bevel_reducer, {"G1 meshes G2": 1, "G3 meshes G4": 1}),
+                                          (crossed_slant, {"G1 meshes G2": -1, "G3 meshes G4": 1})])
+def test_a_turned_gearbox_built_on_the_fake_reads_back_with_nothing_to_update(turned_findings, make, senses):
+    sw, record = fake_turned_build(make())
+    assert senses_of(record) == senses
+    assert nothing_to_do(record, make()) == ("", (), (), (), (), (), ())
+    plan, result, after = fake_press(sw, record, make())        # pressed anyway: SolidWorks holds it already
+    assert result.placed == [] and result.resensed == [] and senses_of(after) == senses
+
+
+def test_a_crossed_shaft_moved_to_the_other_side_remakes_its_gear_mate_for_the_new_sense(turned_findings):
+    spec = crossed_off_base()
+    sw, record = fake_turned_build(spec)
+    assert senses_of(record) == {"G1 meshes G2": -1, "G3 meshes G4": 1}
+    moved = edited(spec, shafts={"S1": dict(y="179.705628")})
+    plan, result, after = fake_press(sw, record, moved)
+    assert (plan.resensed, plan.ratios, plan.structural, plan.moved_shafts) == (("G1 meshes G2",), (), (), ("S1",))
+    assert plan.motion.ratios == (("G1 meshes G2", 20, 40),)       # the motion gate sees it (§7.14)
+    assert [(m.a, m.b, m.k) for m in plan.motion.meshes][0] == ("G1", "G2", -0.5)
+    assert [(m.a, m.b, m.k) for m in plan.motion.recorded_meshes][0] == ("G1", "G2", 0.5)
+    assert result.resensed == ["G1 meshes G2"] and result.ratios == [] and result.sense_found_wrong == []
+    assert senses_of(after) == {"G1 meshes G2": 1, "G3 meshes G4": 1}
+    assert nothing_to_do(after, moved) == ("", (), (), (), (), (), ())
+
+
+def test_a_tooth_change_across_the_parallel_stage_of_fixture_a_remakes_only_that_mate(turned_findings):
+    sw, record = fake_turned_build(bevel_reducer())
+    spec = edited(bevel_reducer(), gears={"G3": dict(teeth="16"), "G4": dict(teeth="52")})
+    plan, result, after = fake_press(sw, record, spec)
+    assert (plan.ratios, plan.resensed, result.ratios) == (("G3 meshes G4",), (), ["G3 meshes G4"])
+    held = {m.name: (m.ratio, m.sense) for m in after.gearbox.mates if m.kind == motion.MESH}
+    assert held == {"G1 meshes G2": ([20, 40], 1), "G3 meshes G4": ([16, 52], 1)}
+    assert nothing_to_do(after, spec) == ("", (), (), (), (), (), ())
+
+
+def test_a_v3_mesh_entry_takes_its_sense_from_the_read_and_is_written_real_when_rewritten(turned_findings):
+    """W6-INTERFACES §7.1: sense 0 on a parallel mesh entry is "parallel, take it from the read"; the finisher writes
+    the real sense when it rewrites the entry."""
+    sw, record = fake_turned_build(bevel_reducer())
+    for entry in record.gearbox.mates:
+        if entry.name == "G3 meshes G4":
+            entry.sense = 0
+    assert nothing_to_do(record, bevel_reducer()) == ("", (), (), (), (), (), ())
+    teeth = edited(bevel_reducer(), gears={"G3": dict(teeth="16"), "G4": dict(teeth="52")})
+    _, _, after = fake_press(sw, record, teeth)
+    assert senses_of(after) == {"G1 meshes G2": 1, "G3 meshes G4": 1}
+
+
+@pytest.mark.parametrize("make, change, said", [
+    (bevel_reducer, dict(gears={"G1": dict(at="2")}),
+     "G1's At (0 → 2) moves its cone tip off the Right plane (x 0 → 2): the mate G1 along S1 holds it on that "
+     f"plane and cannot take a distance, {REBUILD}"),
+    (bevel_reducer, dict(shafts={"S1": dict(axis="X-")}),
+     "S1's axis is now X- where it was built X+: the layout's axis and the mates on it keep the direction they were "
+     f"made with, {REBUILD}"),
+    (crossed_off_base, dict(shafts={"S3": dict(z="10")}),
+     f"S3's axis slants, and the layout holds a slanted axis as a fixed line: its point moved (Z 8 → 10), {REBUILD}"),
+    (crossed_off_base, dict(shafts={"S3": dict(axis="-1, 1.8, 0")}),
+     f"S3's axis slants, and the layout holds a slanted axis as a fixed line: its direction changed, {REBUILD}"),
+    (crossed_off_base, dict(shafts={"S3": dict(axis="-1, 1.8, 0", x="-111")}),
+     "S3's axis slants, and the layout holds a slanted axis as a fixed line: its point moved (X -110 → -111) and "
+     f"its direction changed, {REBUILD}"),
+    (crossed_off_base, dict(gears={"G4": dict(teeth="40")}),
+     "G4's teeth (30 → 40) make it a crown gear where it was built a cone, which its values cannot carry; build it "
+     "again as a new part."),
+    (crossed_off_base, dict(shafts={"S2": dict(z="-8")}),
+     "S2's Z crosses 0 (8 → -8): a layout plane cannot follow a global across its base plane, so it needs a new "
+     "layout part."),
+])
+def test_what_a_turned_gearbox_cannot_take_through_update_is_said_once(turned_findings, make, change, said):
+    from gear_generator.workbook import update
+    _, record = fake_turned_build(make())
+    plan = update.classify(record, direct(edited(make(), **change)), exists=lambda p: True)
+    assert plan.structural == (said,)
+
+
+def test_a_bevel_form_change_is_said_for_its_teeth_mate_teeth_or_shaft_angle():
+    from gear_generator.spec import GearSpec
+    from gear_generator.store import PartEntry
+    from gear_generator.workbook import update
+    entry = PartEntry(path="C:\\Out\\G2.SLDPRT", gears=["G2"])
+    cone = GearSpec(kind="bevel", teeth="30", mate_teeth="20", shaft_angle="120", module="2.5", face_width="10",
+                    bore="8")
+    assert update._bevel_form_change(entry, cone, replace(cone, mate_teeth="20")) == ""
+    assert update._bevel_form_change(entry, cone, replace(cone, shaft_angle="140")).startswith(
+        "The shaft angle (120 → 140) makes it an internal bevel gear where it was built a cone")
+    assert update._bevel_form_change(entry, cone, replace(cone, mate_teeth="15")).startswith(
+        "Its mate's teeth (20 → 15) make it a crown gear where it was built a cone")
+
+
+def test_a_static_gearbox_turning_a_shaft_onto_another_axis_needs_a_new_layout_part(turned_findings, monkeypatch):
+    from gear_generator import store, swbuild
+    from gear_generator.workbook import gearbox, update
+    from test_swbuild import FakeSolidWorks
+    monkeypatch.setattr(findings, "MOTION_ROUTE", None)
+    sw = FakeSolidWorks()
+    plan = gearbox.plan_gearbox(direct(bevel_reducer()), None, exists=sw.exists, read_sidecar=lambda p: None)
+    assert plan.motion is None and plan.refusal == ""
+    result = swbuild.build_gearbox(sw, **plan.build_kwargs(), exists=sw.exists)
+    record = gearbox.finish_build(plan, result, None, workbook=BOOK, digest="d1", written_by="test",
+                                  read_sidecar=lambda p: None, exists=sw.exists).record
+    record = store.link_record_from_json(store.link_record_to_json(record))
+    turned = edited(bevel_reducer(), shafts={"S3": dict(axis="X+", x="-68", y="0", z="0")})
+    up = update.classify(record, direct(turned), exists=lambda p: True)
+    assert "S3's axis is now X+ where it was built Z+: the layout part's planes and axis for it keep the direction " \
+           "they were made with, so it needs a new layout part." in up.structural
+    flipped = edited(bevel_reducer(), shafts={"S3": dict(axis="Z-")}, gears={"G4": dict(at="-5")})
+    assert update.classify(record, direct(flipped), exists=lambda p: True).structural == ()
+
+
+def test_update_refuses_a_recorded_mate_whose_plane_or_sense_it_cannot_read(turned_findings):
+    from gear_generator.workbook import update
+    _, record = fake_turned_build(bevel_reducer())
+    along = next(m for m in record.gearbox.mates if m.kind == motion.ALONG)
+    along.plane = "side"
+    assert "measured from the plane 'side', where an along mate is measured from the Front, Top or Right plane" in \
+        update.classify(record, direct(bevel_reducer()), exists=lambda p: True).refusal
+    along.plane = "front"
+    mesh = next(m for m in record.gearbox.mates if m.kind == motion.MESH)
+    mesh.sense = 2
+    assert "with the sense 2, where a gear mate's sense is -1 or +1" in \
+        update.classify(record, direct(bevel_reducer()), exists=lambda p: True).refusal
+
+
+def test_the_worker_is_given_each_slanted_line_axis_to_read_back(turned_findings):
+    """W6-INTERFACES §7.15: ``lines={axis name: (point, direction)}`` to update_gearbox, and to build_gearbox when the
+    layout part is reused; nothing when no shaft slants."""
+    from dataclasses import replace as replaced
+    from gear_generator.workbook import gearbox, layout, update
+    line = ("S3 Axis", (-110.0, 94.852814, 8.0), (-0.5, 0.866025404, 0.0))
+    shafts = layout.shaft_layouts(crossed_off_base())
+    (name, point, direction), = layout.layout_lines(shafts)
+    assert (name, point) == line[:2] and direction == pytest.approx(line[2])
+    assert layout.layout_lines(layout.shaft_layouts(bevel_reducer())) == ()
+    sw, record = fake_turned_build(crossed_off_base())
+    kwargs = update.classify(record, direct(crossed_off_base()), exists=lambda p: True).update_kwargs()
+    assert list(kwargs["lines"]) == ["S3 Axis"] and kwargs["lines"]["S3 Axis"][0] == line[1]
+    plan = gearbox.plan_gearbox(direct(crossed_off_base()), None, exists=lambda p: False, read_sidecar=lambda p: None)
+    assert "lines" not in plan.build_kwargs()                      # a new layout part draws its lines
+    reuse = gearbox.LayoutReuse(plan.layout.path if hasattr(plan.layout, "path") else "C:\\Out\\L.SLDPRT",
+                                layout.layout_globals(shafts), layout.layout_features(shafts),
+                                lines=layout.layout_lines(shafts))
+    assert replaced(plan, layout=reuse).build_kwargs()["lines"] == {name: (point, direction)}
+    _, _, after = fake_press(sw, record, edited(crossed_off_base(), gears={"G1": dict(at="12")}))
+    assert senses_of(after) == {"G1 meshes G2": -1, "G3 meshes G4": 1}

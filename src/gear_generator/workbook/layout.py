@@ -290,6 +290,15 @@ def _top_first() -> bool:
     return sign == -1
 
 
+def layout_lines(shafts: Sequence[ShaftLayout]) -> Tuple[Tuple[str, Tuple[float, float, float],
+                                                             Tuple[float, float, float]], ...]:
+    """Each slanted shaft's line axis as the layout part draws it (W6-INTERFACES §7.15): ``(axis name, point,
+    direction)``, the point the shaft's X, Y, Z and the direction its unit Axis, in Shafts-sheet order; ``()``
+    when no shaft slants. The worker reads each back on a reused layout and in Update's check phase."""
+    return tuple((s.axis_name, (float(s.x), float(s.y), float(s.z)), tuple(float(v) for v in s.direction))
+                 for s in shafts if s.line)
+
+
 def layout_features(shafts: Sequence[ShaftLayout]) -> Tuple[str, ...]:
     """Every plane and axis name the layout part holds, in plan order: what a reused layout is checked for live
     (``swbuild.DocumentValues.features``) beside its globals."""

@@ -176,6 +176,8 @@ class LayoutReuse:
     variables: Tuple[GlobalVariable, ...]
     features: Tuple[str, ...]
     journaled: bool = False        # an interrupted build's, found by the journal rather than continued on record
+    # W6 (W6-INTERFACES §7.15): each slanted shaft's line axis (axis name, point, direction), read back on reuse.
+    lines: Tuple[Tuple[str, Tuple[float, float, float], Tuple[float, float, float]], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -287,6 +289,8 @@ class GearboxPlan:
         }
         if self.motion is not None and self.assembly is not None:
             kwargs["senses"] = dict(self.mate_senses)       # a turning build: every gear mate read back
+        if isinstance(self.layout, LayoutReuse) and self.layout.lines:
+            kwargs["lines"] = {name: (point, direction) for name, point, direction in self.layout.lines}
         return kwargs
 
 
@@ -682,12 +686,13 @@ def _try(n: int, a: Assessment, jobs: Sequence[PartJob], parts: _Parts, shafts: 
                 return attempt
             if continued and _same_layout(_recorded_shafts(continuing), shafts):
                 attempt.layout_reuse = LayoutReuse(attempt.layout_path, layout.layout_globals(shafts),
-                                                   layout.layout_features(shafts))
+                                                   layout.layout_features(shafts), lines=layout.layout_lines(shafts))
             elif journaled:
                 # An interrupted build's own layout part: what it holds is not on record, so the live check decides
                 # whether it is the layout the shafts now want (every global and every plane and axis).
                 attempt.layout_reuse = LayoutReuse(attempt.layout_path, layout.layout_globals(shafts),
-                                                   layout.layout_features(shafts), journaled=True)
+                                                   layout.layout_features(shafts), journaled=True,
+                                                   lines=layout.layout_lines(shafts))
             elif continued:
                 attempt.obstacle = (f"{layout_name} was saved by a build whose assembly was not made, but the shafts "
                                     "have moved since, so it is not the layout part this workbook needs.")

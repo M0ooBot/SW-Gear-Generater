@@ -49,13 +49,13 @@ from dataclasses import asdict, dataclass, field, replace
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from .. import findings, store
-from ..gears import equations, kind_for
+from ..gears import bevel, equations, kind_for
 from ..gears.base import GlobalVariable
 from ..spec import GearSpec, InputError
 from ..store import GearboxRecord, LinkRecord, MateEntry, PartEntry, ShaftEntry, Sidecar
 from ..swbuild import (POSE_TOLERANCE, DocumentValues, GearboxUpdate, MotionUpdate, Placement, _caps_with_arc,
                        same_frame, structural_change)
-from . import gearbox, layout, motion, schema
+from . import gearbox, geometry, layout, motion, schema
 from .assess import Assessment
 from .build import PartJob
 from .gearbox import Finished
@@ -158,6 +158,9 @@ class UpdatePlan:
         }
         if self.motion is not None:
             kwargs["motion"] = self.motion
+        lines = layout.layout_lines(self.shafts) if self.layout is not None else ()
+        if lines:                                     # W6 (§7.15): each slanted shaft's line axis, read back
+            kwargs["lines"] = {name: (point, direction) for name, point, direction in lines}
         return kwargs
 
 
@@ -270,6 +273,9 @@ def _part(entry: PartEntry, job: PartJob, exists: Callable[[str], bool]) -> Tupl
         return update, (f"{label}: its Part name now makes {job.spec.stem()}{layout.PART_EXTENSION}, and a built "
                         "part's file is never renamed, so it needs a new part.")
     unchanged = gearbox._variables_match(entry.variables, entry.trig, variables)
+    reformed = _bevel_form_change(entry, built, job.spec)
+    if reformed:
+        return update, reformed
     if gearbox.same_part(built, job.spec, template):
         return replace(update, changed=not unchanged or not entry.variables), ""
     b, w = _ignored_fields_as_built(built, job.spec, template)
@@ -286,6 +292,45 @@ def _part(entry: PartEntry, job: PartJob, exists: Callable[[str], bool]) -> Tupl
             return update, (f"{label}: it would now be built differently in a way its values do not carry, so it "
                             "needs a new part.")
     return update, ""
+
+
+_FORM_WORDS = {bevel.FORM_CONE: "a cone", bevel.FORM_CROWN: "a crown gear",
+               bevel.FORM_INTERNAL: "an internal bevel gear"}
+
+
+def _bevel_form(spec: GearSpec) -> str:
+    """A bevel gear's form (``bevel.form_of`` of its pitch cone), or ``""`` when it is not a bevel gear or its
+    teeth, mate teeth or shaft angle do not read."""
+    if str(getattr(spec, "kind", "")) != "bevel":
+        return ""
+    try:
+        return bevel.form_of(bevel.pitch_cone_angle(spec.teeth_count(), spec.mate_teeth_count(),
+                                                    spec.shaft_angle_deg()))
+    except (InputError, ValueError, ZeroDivisionError):
+        return ""
+
+
+def _bevel_form_change(entry: PartEntry, built: GearSpec, wanted: GearSpec) -> str:
+    """W6 (D14, W6-PLAN §2.7): a bevel gear whose new teeth, mate teeth or shaft angle change its form (cone, crown,
+    internal) needs a new part, since the part's operations differ and ``swbuild.structural_change`` does not see
+    it: *G2's teeth (40 → 41) make it a crown gear where it was built a cone, which its values cannot carry; build
+    it again as a new part.* ``""`` otherwise."""
+    was, now = _bevel_form(built), _bevel_form(wanted)
+    if not was or not now or was == now:
+        return ""
+    gear = entry.gears[0] if entry.gears else "The gear"
+    edits = []
+    for field_, words in (("teeth", f"{gear}'s teeth"), ("mate_teeth", "its mate's teeth"),
+                          ("shaft_angle", "the shaft angle")):
+        old, new = (str(getattr(form, field_, "")).strip() for form in (built, wanted))
+        if old != new:
+            edits.append(f"{words} ({old} → {new})")
+    if not edits:
+        edits = [f"{gear}'s values"]
+    edits[0] = edits[0][0].upper() + edits[0][1:]
+    verb = "makes" if len(edits) == 1 and edits[0].startswith("The shaft angle") else "make"
+    return (f"{' and '.join(edits)} {verb} it {_FORM_WORDS[now]} where it was built {_FORM_WORDS[was]}, which its "
+            "values cannot carry; build it again as a new part.")
 
 
 @store.in_one_pass
@@ -370,10 +415,17 @@ def classify(record: Optional[LinkRecord], a: Assessment, *,
             old = before.get(shaft.shaft)
             if old is None:
                 continue
-            for coordinate, was, value in (("X", old.x, shaft.x), ("Y", old.y, shaft.y)):
-                why = _side_change(shaft.shaft, coordinate, was, value)
-                if why:
-                    structural.append(why)
+            # The coordinates the layout holds as planes (W6: square to the shaft's axis; a slant has none).
+            index = _cardinal(_direction(shaft))
+            if index is not None and index == _cardinal(_direction(old)):
+                for i, (coordinate, was, value) in enumerate((("X", old.x, shaft.x), ("Y", old.y, shaft.y),
+                                                               ("Z", old.z, shaft.z))):
+                    why = "" if i == index else _side_change(shaft.shaft, coordinate, was, value)
+                    if why:
+                        structural.append(why)
+            why = _slant_change(old, shaft) or ("" if turning else _family_change(old, shaft))
+            if why:
+                structural.append(why)
             if (any(abs(p - q) > MOVE_TOLERANCE for p, q in ((old.x, shaft.x), (old.y, shaft.y), (old.z, shaft.z)))
                     or _direction(old) != _direction(shaft)):
                 moved.append(shaft.shaft)
@@ -441,7 +493,8 @@ def classify(record: Optional[LinkRecord], a: Assessment, *,
     return UpdatePlan(parts=tuple(parts), layout=layout_values, assembly=assembly, placements=tuple(placements),
                       moved_shafts=tuple(moved), replaced=tuple(replaced), structural=tuple(structural),
                       missing=tuple(dict.fromkeys(missing)), unsaved=tuple(record.current_marks(record.unsaved)),
-                      shafts=shafts, motion=turn.motion, axial=turn.axial, ratios=turn.ratios, drag=turn.drag)
+                      shafts=shafts, motion=turn.motion, axial=turn.axial, ratios=turn.ratios, drag=turn.drag,
+                      resensed=turn.resensed)
 
 
 # -- a gearbox built to turn (W5-PLAN §1.6's classify, as W5-DECISIONS and W5-INTERFACES amend it) ------------------
@@ -462,6 +515,46 @@ def _direction(shaft: Any) -> Tuple[float, ...]:
 
 def _axis_name(shaft: Any) -> str:
     return getattr(shaft, "axis", "") or _axis_word(int(_direction(shaft)[2] or 1))
+
+
+def _cardinal(direction: Sequence[float]) -> Optional[int]:
+    """The index (0 X, 1 Y, 2 Z) of the base axis ``direction`` lies along, either way; None for a slant."""
+    for index, value in enumerate(direction):
+        if abs(abs(float(value)) - 1.0) <= 1e-9:
+            return index
+    return None
+
+
+def _slanted(shaft: Any) -> bool:
+    """A shaft the layout holds as a fixed line (``line``; a slant), recorded or as now read."""
+    return bool(getattr(shaft, "line", "")) or _cardinal(_direction(shaft)) is None
+
+
+def _slant_change(old: Any, new: Any) -> str:
+    """W6 (D4, W6-PLAN §2.7, §2.9): a slanted shaft's point or direction changing, which a fixed line axis cannot
+    follow: *S3's axis slants, and the layout holds a slanted axis as a fixed line: its point moved (Z 8 → 10), so
+    the gearbox needs building again.* ``""`` when either is not a slant, or neither changed."""
+    if not (_slanted(old) and _slanted(new)):
+        return ""
+    moved = [f"{c} {_number(p)} → {_number(q)}" for c, p, q in (("X", old.x, new.x), ("Y", old.y, new.y),
+                                                                 ("Z", old.z, new.z)) if abs(p - q) > MOVE_TOLERANCE]
+    pieces = [f"point moved ({', '.join(moved)})"] if moved else []
+    if any(abs(p - q) > 1e-9 for p, q in zip(_direction(old), _direction(new))):
+        pieces.append("direction changed")
+    if not pieces:
+        return ""
+    return (f"{new.shaft}'s axis slants, and the layout holds a slanted axis as a fixed line: its "
+            f"{' and its '.join(pieces)}, {_REBUILD}.")
+
+
+def _family_change(old: Any, new: Any) -> str:
+    """A static gearbox's shaft turned onto another base axis, or between a base axis and a slant: the layout part's
+    planes and axis for it are another set, so a new layout part (a flip along one base axis is W4's move)."""
+    a, b = _cardinal(_direction(old)), _cardinal(_direction(new))
+    if (a is not None and a == b) or (_slanted(old) and _slanted(new)):
+        return ""                                   # a flip along one base axis, or a slant's (said by _slant_change)
+    return (f"{new.shaft}'s axis is now {_axis_name(new)} where it was built {_axis_name(old)}: the layout part's "
+            "planes and axis for it keep the direction they were made with, so it needs a new layout part.")
 
 
 def _plural(items: Sequence[str], one: str, many: str) -> str:
@@ -505,6 +598,13 @@ def _bad_mates(box: GearboxRecord) -> str:
             return f"{label} with no shaft, where a {kind} mate names the shaft it holds its gear to{tail}"
         if kind == motion.ALONG and _number_or_none(entry.z_front) is None:
             return f"{label} with the distance {entry.z_front!r}, which is not a number{tail}"
+        plane = getattr(entry, "plane", motion.FRONT_PLANE)
+        if kind == motion.ALONG and plane not in motion.PLANES:
+            return (f"{label} measured from the plane {plane!r}, where an along mate is measured from the Front, Top "
+                    f"or Right plane{tail}")
+        sense = getattr(entry, "sense", 0)
+        if kind == motion.MESH and (isinstance(sense, bool) or sense not in (-1, 0, 1)):
+            return f"{label} with the sense {sense!r}, where a gear mate's sense is -1 or +1{tail}"
         if kind == motion.MESH:
             ratio = list(entry.ratio) if isinstance(entry.ratio, (list, tuple)) else []
             counts = [_number_or_none(n) for n in ratio]
@@ -526,6 +626,7 @@ class _Turning:
     axial: Tuple[str, ...] = ()
     ratios: Tuple[str, ...] = ()
     drag: Tuple[str, ...] = ()
+    resensed: Tuple[str, ...] = ()
 
 
 def _built_part(entries: Sequence[PartEntry], gear: str) -> Dict[str, Any]:
@@ -534,27 +635,34 @@ def _built_part(entries: Sequence[PartEntry], gear: str) -> Dict[str, Any]:
     return dict(entry.spec) if entry is not None else {}
 
 
-def _axial_edit(gear: str, shaft: str, z_front: float, sigma: int, built_shaft_z: Optional[float],
-                shaft_z: float, built_face: Optional[float], face: float, at: float) -> Tuple[str, str]:
+def _axial_edit(gear: str, shaft: str, z_front: float, along: float, built_shaft_z: Optional[float],
+                shaft_z: float, built_face: Optional[float], face: float, at: float, *, coordinate: str = "Z",
+                cone: bool = False) -> Tuple[str, str]:
     """``(subject and verb, object)`` naming the edit that moves ``gear`` along its shaft (W5-DECISIONS answer 3:
     the sentence names the edit, never only the plane): *G1's face width (15 → 20) moves* / *its front face*;
     *G4's At (27 → 30) and S3's Z (0 → 5) move* / *G4's front face*. The built At is worked back from the
     built front face, the shaft's built Z and the part's built face width; an edit that cannot be told is left
-    out, and with none told the subject is the gear's front face itself."""
+    out, and with none told the subject is the gear's front face itself.
+
+    W6: ``z_front`` and the shaft's coordinates are along the measuring plane's normal (``coordinate``: X for
+    Right, Y for Top, Z for Front), and ``along`` the shaft direction's component there (W5's sigma on Z). A bevel
+    gear (``cone``) is placed by its cone tip, which its face width does not move: *G1's At (0 → 2) moves* / *its
+    cone tip*."""
     gear_edits: List[str] = []
-    if built_face is not None and abs(built_face - face) > MOVE_TOLERANCE:
+    thing = "cone tip" if cone else "front face"
+    if not cone and built_face is not None and abs(built_face - face) > MOVE_TOLERANCE:
         gear_edits.append(f"face width ({_number(built_face)} → {_number(face)})")
-    if built_face is not None and built_shaft_z is not None:
-        built_at = (z_front - built_shaft_z) * sigma + built_face / 2.0
+    if (cone or built_face is not None) and built_shaft_z is not None and along:
+        built_at = (z_front - built_shaft_z) / along + (0.0 if cone else built_face / 2.0)
         if abs(built_at - at) > MOVE_TOLERANCE:
             gear_edits.append(f"At ({_number(built_at)} → {_number(at)})")
     moved = built_shaft_z is not None and abs(built_shaft_z - shaft_z) > MOVE_TOLERANCE
     parts = ([f"{gear}'s " + " and ".join(gear_edits)] if gear_edits else []) + (
-        [f"{shaft}'s Z ({_number(built_shaft_z)} → {_number(shaft_z)})"] if moved else [])
+        [f"{shaft}'s {coordinate} ({_number(built_shaft_z)} → {_number(shaft_z)})"] if moved else [])
     if not parts:
-        return f"{gear}'s front face moves", ""
+        return f"{gear}'s {thing} moves", ""
     verb = "moves" if len(gear_edits) + moved == 1 else "move"
-    return f"{' and '.join(parts)} {verb}", ("its front face" if not moved else f"{gear}'s front face")
+    return f"{' and '.join(parts)} {verb}", (f"its {thing}" if not moved else f"{gear}'s {thing}")
 
 
 def _drag(spec: Any, of_kind: Mapping[str, Sequence[MateEntry]], built_on: Mapping[str, str]) -> Tuple[str, ...]:
@@ -630,7 +738,12 @@ def _turning(box: GearboxRecord, entries: Sequence[PartEntry], a: Assessment,
     flipped = set()
     for m in of_kind[motion.AXIS]:
         old, new = before.get(m.shaft), now.get(m.shaft)
-        if old is None or new is None or _direction(old) == _direction(new):
+        if old is None or new is None:
+            continue
+        if _slant_change(old, new):                # said by classify: a fixed line moved or turned
+            told.update(g for g, s in built_on.items() if s == m.shaft)
+            continue
+        if _direction(old) == _direction(new):
             continue
         flipped.add(m.shaft)
         told.update(g for g, s in built_on.items() if s == m.shaft)
@@ -676,13 +789,17 @@ def _turning(box: GearboxRecord, entries: Sequence[PartEntry], a: Assessment,
         out.structural.append(f"{why}, but {_names(names)} {_plural(names, 'was', 'were')} built mated to turn, so "
                               f"the gearbox needs building again to hold {_plural(names, 'it', 'them')} fixed.")
 
-    def edit(gear: str, shaft: str, z_front: float) -> Tuple[str, str]:
+    def point(shaft: Any) -> Tuple[float, float, float]:
+        return (float(shaft.x), float(shaft.y), float(shaft.z))
+
+    def edit(gear: str, shaft: str, z_front: float, index: int = 2) -> Tuple[str, str]:
         old, new = before.get(shaft), now.get(shaft)
-        sigma = new.sigma if new is not None else placed[gear].sigma
+        direction = _direction(new) if new is not None else tuple(placed[gear].axis)
         built_face = _number_or_none(_built_part(entries, gear).get("face_width"))
-        return _axial_edit(gear, shaft, z_front, sigma, old.z if old is not None else None,
-                           new.z if new is not None else placed[gear].z, built_face, placed[gear].face,
-                           _number_or_none(gear_of[gear].at or 0) or 0.0)
+        return _axial_edit(gear, shaft, z_front, direction[index], point(old)[index] if old is not None else None,
+                           point(new)[index] if new is not None else placed[gear].centre[index], built_face,
+                           placed[gear].face, _number_or_none(gear_of[gear].at or 0) or 0.0,
+                           coordinate="XYZ"[index], cone=bool(getattr(placed[gear], "bevel", False)))
 
     face_globals: List[Tuple[str, GlobalVariable]] = []
     axial: List[str] = []
@@ -690,7 +807,9 @@ def _turning(box: GearboxRecord, entries: Sequence[PartEntry], a: Assessment,
         gear = m.gears[0]
         if gear not in wanted or gear not in gear_of:
             continue
-        old_z, new_z = float(m.z_front), float(wanted[gear].at[2])
+        plane = m.plane or motion.FRONT_PLANE
+        index = motion._PLANE_INDEX.get(plane, 2)
+        old_z, new_z = float(m.z_front), float(wanted[gear].at[index])
         if m.face_global:
             face_globals.append((gear, GlobalVariable(m.face_global, equations.literal(round(abs(new_z), 9)))))
         if gear in told:
@@ -701,15 +820,16 @@ def _turning(box: GearboxRecord, entries: Sequence[PartEntry], a: Assessment,
                 axial.append(gear)
             continue
         told.add(gear)
-        subject, what = edit(gear, m.shaft, old_z)
+        subject, what = edit(gear, m.shaft, old_z, index)
+        named = f"the {plane.capitalize()} plane"
         if was == layout.BASE:
-            where, why = "off the Front plane", f"the mate {m.name} holds it on that plane and cannot take a distance"
+            where, why = f"off {named}", f"the mate {m.name} holds it on that plane and cannot take a distance"
         elif is_ == layout.BASE:
-            where, why = ("onto the Front plane", f"the mate {m.name} holds it at a distance from that plane and "
+            where, why = (f"onto {named}", f"the mate {m.name} holds it at a distance from that plane and "
                           "cannot reach it")
         else:
-            where, why = "across the Front plane", f"the mate {m.name} cannot carry its distance across that plane"
-        out.structural.append(f"{subject} {what + ' ' if what else ''}{where} (z {_number(old_z)} → "
+            where, why = f"across {named}", f"the mate {m.name} cannot carry its distance across that plane"
+        out.structural.append(f"{subject} {what + ' ' if what else ''}{where} ({'xyz'[index]} {_number(old_z)} → "
                               f"{_number(new_z)}): {why}, {_REBUILD}.")
 
     retakes = getattr(findings, "LOCK_RETAKES_AN_OFFSET", None)
@@ -718,20 +838,22 @@ def _turning(box: GearboxRecord, entries: Sequence[PartEntry], a: Assessment,
         c = components.get(follower)
         if follower in told or follower not in wanted or follower not in gear_of or c is None or len(c.at) < 3:
             continue
-        old_z, new_z = float(c.at[2]), float(wanted[follower].at[2])
+        shaft = built_on.get(follower, placed[follower].shaft)
+        index = motion._PLANE_INDEX[motion.along_plane(_direction(now[shaft]) if shaft in now
+                                                       else placed[follower].axis)]
+        old_z, new_z = float(c.at[index]), float(wanted[follower].at[index])
         if abs(old_z - new_z) <= MOVE_TOLERANCE or retakes is True:
             continue
         told.add(follower)
-        shaft = built_on.get(follower, placed[follower].shaft)
-        subject, what = edit(follower, shaft, old_z)
+        subject, what = edit(follower, shaft, old_z, index)
         if retakes is None:
             why = (f"whether its lock to {anchor} takes a new place along the shaft is not settled "
                    "(findings.LOCK_RETAKES_AN_OFFSET)")
         else:
             why = (f"the probes found that its lock to {anchor} does not take a new place along the shaft "
                    "(findings.LOCK_RETAKES_AN_OFFSET)")
-        out.structural.append(f"{subject} {what + ' ' if what else ''}along {shaft} (z {_number(old_z)} → "
-                              f"{_number(new_z)}), and {why}, {_REBUILD}.")
+        out.structural.append(f"{subject} {what + ' ' if what else ''}along {shaft} ({'xyz'[index]} "
+                              f"{_number(old_z)} → {_number(new_z)}), and {why}, {_REBUILD}.")
 
     route = getattr(findings, "GEAR_MATE_RATIO_ROUTE", None)
     teeth = {g: int(p.teeth) for g, p in placed.items()}
@@ -766,8 +888,44 @@ def _turning(box: GearboxRecord, entries: Sequence[PartEntry], a: Assessment,
     mated = {g for m in mates for g in m.gears}
     if not all(g in placed for g in mated):
         return out                                 # a mated gear is gone: said above, and there is nothing to give
-    sigma = {g: p.sigma for g, p in placed.items()}
-    internal = {g: p.internal for g, p in placed.items()}
+
+    # Each gear mate's sense now (the new read's mesh, else W5's parallel rule from the placed axes) and as made
+    # (the record's own; 0, a v3 or parallel entry, is taken from the read: W6-INTERFACES §7.1). A mate whose sense
+    # the read changes (a crossed shaft moved to the other side of its partner) is remade by Update — the worker
+    # finds it from the two senses — and named in ``resensed``; in ``UpdatePlan.ratios`` only when its teeth changed
+    # too.
+    sense: Dict[Tuple[str, str], int] = {}
+    built_sense: Dict[Tuple[str, str], int] = {}
+    resensed: List[str] = []
+    for m in of_kind[motion.MESH]:
+        a_, b_ = m.gears
+        laid = a.report.meshes.get((a_, b_)) or a.report.meshes.get((b_, a_))      # c is the same either way round
+        was_c = int(m.sense) if m.sense in (-1, 1) else 0
+        if laid is not None and laid.sense in (-1, 1):
+            now_c = int(laid.sense)
+        elif was_c and not geometry.parallel(placed[a_], placed[b_]):
+            now_c = was_c                          # a turned mesh the checks did not lay out: they say why
+        else:
+            now_c = motion._parallel_sense_of(placed[a_], placed[b_])
+        was_c = was_c or now_c
+        sense[(a_, b_)], built_sense[(a_, b_)] = now_c, was_c
+        if was_c == now_c or a_ in told or b_ in told:
+            continue                               # unchanged, or its gears' edit is said already
+        if route == "remake":
+            resensed.append(m.name)
+            # In the worker's ratios too (W6-INTERFACES §7.14), its tooth counts new or not, so the motion gate
+            # refuses it first while the remake route is missing; never in ``UpdatePlan.ratios`` for a sense alone.
+            if all(name != m.name for name, _, _ in ratios):
+                ratios.append((m.name, teeth[a_], teeth[b_]))
+            continue
+        if route is None:
+            why = ("and making a gear mate again in a built assembly is not settled by the probes "
+                   "(findings.GEAR_MATE_RATIO_ROUTE)")
+        else:
+            why = f"and findings.GEAR_MATE_RATIO_ROUTE is {route!r}, which this version does not follow for it"
+        out.structural.append(f"{b_} now turns the other way against {a_} about its axis, so the gear mate {m.name} "
+                              f"must be made again, {why}, {_REBUILD}.")
+    out.resensed = tuple(resensed)
 
     def built_teeth(gear: str) -> int:
         value = _number_or_none(_built_part(entries, gear).get("teeth"))
@@ -783,14 +941,13 @@ def _turning(box: GearboxRecord, entries: Sequence[PartEntry], a: Assessment,
             recorded.append(Placement(c.gear, c.name, tuple(float(v) for v in c.rotation),
                                       tuple(float(v) for v in c.at), 360.0 / z if z > 0 else 0.0))
     meshes = [tuple(m.gears) for m in of_kind[motion.MESH]]
-    sense = {(a, b): motion.parallel_sense(a, b, sigma, internal) for a, b in meshes}    # W5's parallel meshes
     out.motion = MotionUpdate(
         mates=tuple(motion.mate_ref(m) for m in mates),
         meshes=motion.mesh_links(meshes, teeth, sense),
         locks=motion.lock_links([tuple(m.gears) for m in of_kind[motion.LOCK]], teeth),
         recorded=tuple(recorded),
         recorded_meshes=tuple(motion.mesh_links([tuple(m.gears)], {m.gears[0]: int(m.ratio[0]),
-                                                                    m.gears[1]: int(m.ratio[1])}, sense)[0]
+                                                                    m.gears[1]: int(m.ratio[1])}, built_sense)[0]
                               for m in of_kind[motion.MESH]),
         face_globals=tuple(face_globals),
         ratios=tuple(ratios),
@@ -1040,8 +1197,22 @@ def _follow_mates(box: GearboxRecord, plan: UpdatePlan, result: GearboxUpdate) -
     own gear order), and an ALONG entry's ``z_front`` for each
     gear in ``result.axial`` (where its wanted frame puts its front face). A MESH whose gears' parts now hold teeth
     at the same ratio as the mate (17 : 68 → 34 : 136: no remake needed) takes those counts too, so a later
-    classify does not read it as a change, and its pitch is the teeth the parts hold."""
+    classify does not read it as a change, and its pitch is the teeth the parts hold.
+
+    W6 (W6-PLAN §2.7, §2.8; W6-INTERFACES §7.1): a MESH entry rewritten here takes its real sense (+1 or −1, the
+    plan's ``k`` as ``c = −sign k``), never 0; one the worker remade for its sense (``result.resensed``) takes the new
+    sense whether or not its ratio changed, and one the plan meant to remake that was not (a failure first) keeps
+    the sense it was made with."""
     teeth = _teeth_held(plan, result)
+    now_c = {(m.a, m.b): (1 if m.k < 0 else -1) for m in plan.motion.meshes if m.k}
+    was_c = {(m.a, m.b): (1 if m.k < 0 else -1) for m in plan.motion.recorded_meshes if m.k}
+    remade = set(getattr(result, "resensed", []) or [])
+
+    def real(entry: MateEntry) -> int:
+        pair = (entry.gears[0], entry.gears[1])
+        if entry.name in plan.resensed and entry.name not in remade:
+            return int(was_c.get(pair, entry.sense))
+        return int(now_c.get(pair, entry.sense))
     for entry in box.mates:
         if entry.kind != motion.MESH or len(entry.gears) != 2 or len(entry.ratio) != 2:
             continue
@@ -1049,6 +1220,9 @@ def _follow_mates(box: GearboxRecord, plan: UpdatePlan, result: GearboxUpdate) -
         if a in teeth and b in teeth and (teeth[a], teeth[b]) != tuple(entry.ratio) and \
                 entry.ratio[0] * teeth[b] == entry.ratio[1] * teeth[a]:
             entry.ratio = [teeth[a], teeth[b]]
+            entry.sense = real(entry)
+        if entry.name in remade:
+            entry.sense = real(entry)
     # A gear mate remade (``ratios``), or one the plan asked to change that SolidWorks already held at the wanted
     # ratio and so was not remade (``ratios_already``: a lost Update's record typed back, say), takes the plan's
     # ratio. One found at another ratio and remade though the plan asked no change (``ratios_found``, also in
@@ -1065,8 +1239,10 @@ def _follow_mates(box: GearboxRecord, plan: UpdatePlan, result: GearboxUpdate) -
     for entry in box.mates:
         if entry.kind == motion.MESH and entry.name in set_ratios and entry.name in given:
             entry.ratio = list(given[entry.name])
+            entry.sense = real(entry)
         elif entry.kind == motion.ALONG and entry.gears and entry.gears[0] in moved and entry.gears[0] in at:
-            entry.z_front = float(at[entry.gears[0]][2])
+            index = motion._PLANE_INDEX.get(entry.plane or motion.FRONT_PLANE, 2)
+            entry.z_front = float(at[entry.gears[0]][index])
 
 
 def _in(path: str, paths) -> bool:
