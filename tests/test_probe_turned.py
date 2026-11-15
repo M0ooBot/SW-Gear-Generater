@@ -113,3 +113,14 @@ def test_decide_reads_the_verdict_off_a_pass_only():
     records["turned_gear_mate_sense"]["status"] = "fail"
     decided = decide.decide(records)
     assert decided["turned_sense_read_back"] is None and decided["turned_sense_angles"] is None
+
+
+def test_parallel_entities_are_paired_by_order_since_either_pairing_gives_one_product():
+    z, mz = (0.0, 0.0, 1.0), (0.0, 0.0, -1.0)
+    m = p9.match_entities([z, mz], (z, mz))
+    assert m["parallel"] and m["tau"][0] * m["tau"][1] == 1
+    assert p9.match_entities([mz, z], (z, mz))["tau"][0] * p9.match_entities([mz, z], (z, mz))["tau"][1] == 1
+    # A case recorded without τ is matched again from its directions and axes.
+    case = {"reverse": False, "directions": [z, z], "own_axes": [z, z], "delta_a": 30.0, "delta_b": -15.0,
+            "right_m": -1}
+    assert p9.judge(case)["m_h"] == -1 and p9.judge(case)["h_tells"]

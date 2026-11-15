@@ -138,6 +138,11 @@ def match_entities(directions: Sequence[Sequence[float]], axes: Sequence[Sequenc
     MateEntity(0) is the first selection (A). Raises ValueError when the matching fails."""
     if len(directions) != 2:
         raise ValueError(f"A gear mate holds {len(directions)} entities, not two.")
+    if all(abs(_dot(d, g)) >= MATCH for d in directions for g in axes):
+        # Parallel axes: each entity lies along both gears, and either pairing gives the same τA·τB (§2.6), so the
+        # selection order is taken; nothing here says which entity is which.
+        return {"tau": tuple(1 if _dot(d, g) > 0 else -1 for d, g in zip(directions, axes)), "entity_of": (0, 1),
+                "first_is_a": None, "parallel": True}
     found: Dict[int, Tuple[int, float]] = {}
     for i, d in enumerate(directions):
         hits = [j for j, g in enumerate(axes) if abs(_dot(d, g)) >= MATCH]
@@ -220,7 +225,14 @@ def judge(case: Mapping[str, Any]) -> Dict[str, Any]:
         out["ratio_ok"] = abs(abs(ratio) - TEETH[0] / TEETH[1]) < RATIO_TOL and \
             abs(abs(da) - (DRIVE_TO - DRIVE_FROM)) < 1e-6
         out["m"] = 1 if ratio > 0 else -1
-    out["m_h"] = h_says(case["reverse"], case["tau"]) if case.get("tau") else None
+    tau = case.get("tau")
+    if not tau and case.get("directions") and case.get("own_axes"):
+        try:      # the recorded directions and axes, matched again (a case recorded before the parallel matching)
+            tau = match_entities(case["directions"], case["own_axes"])["tau"]
+        except ValueError:
+            tau = None
+    out["tau"] = list(tau) if tau else None
+    out["m_h"] = h_says(case["reverse"], tau) if tau and isinstance(case.get("reverse"), bool) else None
     out["right_m"] = case.get("right_m")
     out["turned_right"] = out["m"] == out["right_m"] if out["m"] is not None else None
     out["h_right"] = out["m_h"] == out["right_m"] if out["m_h"] is not None else None
