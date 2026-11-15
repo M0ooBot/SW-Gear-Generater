@@ -8031,7 +8031,12 @@ def s7_case_8(worker, excel):
             s7_note_put(c.forked, mode, [g for g, _ in bodies(c.box) if g not in c.box.fixed])
         c.last = frames
         c.drive("fresh drive +37 in 2H", "2H", 37.0)
-        built = {g: f for g, f in mode_record_frames(c.desk, "2H").items() if g not in c.box.fixed}
+        # Put as the app's loop puts a train (_put_train): the carrier first, so each planet's axis, which is the
+        # carrier part's, is where the planet is put (2024's first run put the planets first and the axis mate, still
+        # on, held Pl copy 1 3.9 mm off: the script's order, not SolidWorks refusing a put).
+        record = mode_record_frames(c.desk, "2H")
+        carriers = [g for g in record if g.endswith(wb_layout.CARRIER_ID_SUFFIX)]
+        built = {g: record[g] for g in carriers + [g for g in record if g not in carriers] if g not in c.box.fixed}
         c.put("moving put in 2H, the train back to its built frames", "2H", lambda before: dict(built))
         c.reopen("saved and reopened")
     finally:
@@ -8160,7 +8165,14 @@ def section_s7(worker, excel):
         TAG["revision"]), cases=[])
     path = os.path.join(os.path.dirname(os.path.abspath(LOG_PATH)), f"w8-s7-{started}.json")
     try:
-        for case in (s7_case_1, s7_case_2, s7_case_3, s7_case_4, s7_case_5, s7_case_8, s7_case_7):
+        chosen = sys.argv[sys.argv.index("--s7-cases") + 1].split(",") if "--s7-cases" in sys.argv else None
+        cases = (("1", s7_case_1), ("2", s7_case_2), ("3", s7_case_3), ("4", s7_case_4), ("5", s7_case_5),
+                 ("8", s7_case_8), ("7", s7_case_7))
+        if chosen:
+            say(f"fact    s7: only the cases {chosen} run (--s7-cases)")
+        for key, case in cases:
+            if chosen and key not in chosen:
+                continue
             guard()
             try:
                 case(worker, excel)
