@@ -218,3 +218,27 @@ written rules. These bind A, B and C from now; a line number is the line at `5d5
     changed). Each name is appended straight after its own `place_component` returns, and a put that raises is not
     listed. For a planetary train: a held member that is off its place, then the carrier, then the rest in the
     order of planning's placements. The demonstration's p3 asserts that order from this list.
+17. **At W7's close (2026-11-15).** Ruling 13's unshown assumption was false: on SolidWorks 2026 a put of the carrier
+    does not hold while the train's gear mates are on (the demonstration's p3, first run). The probe
+    `planetary_put_back` measured the route that does: every gear mate of the train and its locks suppressed, a
+    rebuild, the puts in ruling 13's order each read back, a rebuild, everything turned back on, a rebuild; the
+    gear mates keep ratio and sense and mark nothing beyond the puts (`findings.PLANETARY_PUT_ROUTE`,
+    `GEAR_MATE_BACK_ON_KEEPS_SENSE_AND_RATIO`, `GEAR_MATE_BACK_ON_MARKS`). A train with a carrier is put that way
+    (A's `9f21d99`) and refused in the check phase when the finding is missing; a train without a carrier is put as
+    W5 put it, call for call. Caveats, carried as they stand:
+    - The put order is logged from the app's own result; SolidWorks confirms the frames after the puts.
+    - In p7 (the carrier held) a wrong Flip lands every gear a whole number of pitches off, so interference cannot
+      tell the two Flips apart there; the right sense rests on SolidWorks' frames against the plan's hand-worked
+      turns.
+    - On SolidWorks 2024 the planet–ring gear mate turns right as first made, while 2026 needs it turned round; the
+      read-back handles both. 2024 ran p1, p5 and p3's first step only, and the put route was probed on 2026 only
+      (p3's first step passing on 2024 is its evidence there).
+    - A gear mate remade inside the suppression (a tooth change on a planetary) is read when it is remade and not
+      again once turned back on; `GEAR_MATE_BACK_ON_KEEPS_SENSE_AND_RATIO` was measured on built mates. p3's third
+      step drove such a train right on 2026.
+    - On the final code SolidWorks 2026 ran every planetary section (p3, p4 and the window on `9f21d99`; p1, p2,
+      p5, p6, p7 on `08fd712`) and five of the W5/W6 sections that press Update (r1, r2, r3, m8, m5). The other
+      W5/W6 sections — r4 to r8, m1 to m4, m6, m7, a, a2, a3, b, c — ran on `39ecf66` only, before `db4d4e3` and
+      `ccb05ae` changed Update and the sense read; the sections left out repeat what the five rerun cover, by the
+      demonstration's own account.
+    - `Planetary_4to1.xlsx` as Excel saves it is not committed; no test or script reads it.

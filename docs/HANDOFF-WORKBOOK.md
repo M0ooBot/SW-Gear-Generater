@@ -20,8 +20,8 @@ answers of that day and the rulings that follow from them are in `notes-workbook
 | W4 layout part + static assembly, Update SolidWorks, build-again `_r<n>` | **closed 2026-11-14**: the rebuild fault probed and fixed, pass 4 verified, both demonstrations rerun on SolidWorks 2026 and 2024 with every check passing, each step reviewed. Details and what is left open below. |
 | W5 motion | **closed 2026-11-14**: probes P0 to P0d and the two ring rounds run and reviewed, packages A to E written and reviewed, the demonstration run in full on SolidWorks 2026 and confirmed on 2024, the user's hand drag passed on both. Details, and what is left open, below. |
 | W6 right-angle | **closed 2026-11-15, but for the person's drag**: planned, reviewed and revised; probe tier 9 (a turned gear mate's sense, on cylinders, SolidWorks 2026) run and reviewed; packages A to E written and each reviewed; the full build run on SolidWorks 2026 and the confirming build on 2024, both from one snapshot (`931fe1a`), every check passing, each run reviewed. Left for the user: drag G1 in the built right-angle gearbox. Details below. |
-| W7 planetary | **in progress (2026-11-15)**: the plan written, reviewed and revised (`W7-PLAN.md`, `W7-PLAN-REVIEW.md`); its riskiest point measured on SolidWorks 2026 before any code (`W7-SPIKE.md`); the interface commit `5d5d51d` with its rulings (`W7-INTERFACES.md` §6); packages A, B, C and D written and each reviewed. The demonstration's first full run on SolidWorks 2026 (logs in `bf281b8`, snapshot `39ecf66`): the build, the turning, the edits and the controls pass (p1, p2, p4 to p7), and W6's sections pass again; **p3 fails on an app fault**: putting a turned planetary train back starts with the carrier, and SolidWorks does not hold that put while the train's gear mates are on. **Left:** the probe of which put route holds (`c1cf8cd`), the fix, p3 again, the confirming run on 2024, and the close. Details below. |
-| W8 sleeves and modes | **in progress (2026-11-15)**: planned, reviewed and revised to the spike (`W8-PLAN.md`, `W8-PLAN-REVIEW.md`, `W8-SPIKE.md` with its follow-up and its SolidWorks 2024 section: one slide mate with a value per configuration, mates switched per configuration, positions kept per configuration, handles stale after every add and show, the same on both versions); the interface commit with its rulings (`W8-INTERFACES.md` §9); the findings set and reviewed (`ea7a46f`); packages A, B, C and D written, each reviewed, the reviews' fixes going in. **No W8 code has run on SolidWorks:** the demonstration (package E), the full build on 2026, the confirming build on 2024 and the close are left. Details below. |
+| W7 planetary | **closed 2026-11-15, but for the person's drag**: planned, reviewed and revised; the spike on SolidWorks 2026 (`W7-SPIKE.md`); packages A to E written and each reviewed; the demonstration run on SolidWorks 2026 — its first run found one app fault (a turned planetary's put did not hold), the probe `planetary_put_back` measured the route that does, the fix `9f21d99` was reviewed, and every section then passed, the planetary sections and the W5/W6 Update sections once more on the final code; the confirming build on 2024 passed; the run's evidence reviewed. Left for the user: drag Sun in the built planetary. Details below. |
+| W8 sleeves and modes | **paused 2026-11-15 before its run on SolidWorks (the user's call)**: planned, reviewed and revised to the spike (`W8-PLAN.md`, `W8-PLAN-REVIEW.md`, `W8-SPIKE.md` with its follow-up and its SolidWorks 2024 section: one slide mate with a value per configuration, mates switched per configuration, positions kept per configuration, handles stale after every add and show, the same on both versions); the interface commit with its rulings (`W8-INTERFACES.md` §9); the findings set and reviewed (`ea7a46f`); packages A, B, C and D written, each reviewed, the reviews' points in, the suite green. **No W8 code has run on SolidWorks:** the demonstration (package E), the full build on 2026, the confirming build on 2024 and the close are left. Details below. |
 | How the user's absence is handled | the user said on 2026-11-14 to carry on, in order, until W8 is done. Judgement calls are taken at each plan's recommended reading and listed for the user as readings to overrule. |
 | The small-pinion tip cap | `fix/small-pinion-cap` merged at `0f5a121` (the user's instruction): 6- and 7-tooth pinions build with an arc on the tip cap, version 0.3.2. Built on SolidWorks 2024 by the branch; the 2026 build and the merge's review are in hand. |
 
@@ -363,7 +363,7 @@ way round as the Speeds panel says. The 2026 build is kept at
 
 ## W7 in detail
 
-*Written 2026-11-14, while packages A and B land their passes.* The
+*Written 2026-11-14 and brought to the close on 2026-11-15.* The
 authority order is `PLAN-WORKBOOK.md` → `W5-DECISIONS.md` → `notes-workbook/W7-PLAN.md` (revised after its review
 `W7-PLAN-REVIEW.md`, `939b726`, and the spike `W7-SPIKE.md`, `8a798fe`; its §10 lists every change, "After the W8
 check" included) → `W7-INTERFACES.md`, whose §6 holds the rulings on the interface review that bind the packages.
@@ -396,18 +396,17 @@ carrier or off Z±, a second carrier — each listed for the user as something a
 SolidWorks 2026 only): a gear mate between a carrier-borne axis and another turns its gears relative to the line
 between their axes, so in a planetary relative to the carrier; the plan's mates turned the 4 : 1 right (sun 30°,
 carrier 7.5°, each planet −15°, ring still, no interference); the ring mate read back wrong with Flip False and right
-remade. The first draft's kinematic fallback turned the planets wrong and is gone. **That is all W7 has shown on
-SolidWorks: no W7 code has run there yet.**
+remade. The first draft's kinematic fallback turned the planets wrong and is gone.
 
-**Interface commit** `5d5d51d`, its review's rulings `abca489`, `541585b`. The packages so far:
+**Interface commit** `5d5d51d`, its review's rulings `abca489`, `541585b`. The packages:
 
 - **A — SolidWorks** (`swcom.py`, `swbuild.py`, the fake): `75d089b` (the carrier part built and updated; a planetary
-  train put back in order), `f1395ae` (a held gear joined by its gear mates; the stages the drive had not covered).
-  Its review is running.
+  train put back in order), `f1395ae` (a held gear joined by its gear mates; the stages the drive had not covered),
+  `7a34852`; after the run, `9f21d99` (the put with the gear mates off). Reviewed.
 - **B — planning** (`workbook/`): `366ff42` (lay out, solve and check a stage), `5146b75` (the carrier part, mates and
   build; the carrier on record), `42fbe29` (Update's classification of a stage), `4700a3e` (the Results sheet: a
   planet's speed on its carrier, a held member's torque), `a22369f` (every fixture driven on the fake after its build
-  and each Update). Still landing passes; its review is running.
+  and each Update), then the review's points (`6ed3439`, `765c2ca`). Reviewed.
 - **C — record and sentences** (`store.py`, `ui_text.py`): `efe47a2` (schema 5's refusals), `f81fec5` (the carrier id
   suffix in the store), `0e8df59` (a stage's words: carrier, copies, speeds), `ff57941` (the refusals whole, with
   Build parts offered), `60f2fbe` (a carrier part's moved planets after Update), `cc106e5` (the review's points on the
@@ -422,20 +421,56 @@ SolidWorks: no W7 code has run there yet.**
 
 **The fixtures** (W7-PLAN §4), as B's `tests/test_workbook_planetary.py` writes them: `Planetary_4to1` (the ring
 held, sun in at 1000 rpm, carrier out, three copies, `CarrierGear` on the carrier: 4.000 : 1), the sun held (1.333 :
-1), the stage on Z−, the carrier held (3.000 : 1, the other way). E commits `Planetary_4to1.xlsx`
-as Excel saves it, under `tests/fixtures/excel-windows/`.
+1), the stage on Z−, the carrier held (3.000 : 1, the other way).
 
-**What the demonstration (package E) still has to show** (W7-PLAN §6), on SolidWorks 2026 with the committed findings
-and then one confirming build on 2024: the 4 : 1 built through the app, its mates as J5 makes them read back and
-driven (carrier +7.5° for the sun's +30°, CarrierGear with the carrier, the unmated ring meshes in step); the sun
-held, the carrier held, the stage on Z−, Copies 4; Update's values (Sun 21, Ring 57, P X 19.5), moves and puts after a
-turn by hand (held member first, then the carrier); and the window run through these states. Then J20's finding
-`PLANET_GEAR_MATE_ROUTE` is committed with that evidence. One STOP stands: if 2024 turns the planetary otherwise than
-2026 and no read-back remake puts it right, the user is asked.
+**The demonstration, as run** (package E, `probe/workbook_assembly_check.py` sections p1 to p7; W7-PLAN §6). Every
+number below is SolidWorks' own reading, judged against the plan's hand-worked turns.
+
+- **The 4 : 1 built through the app turns right** (p1): the sun's +30° gives the carrier and CarrierGear +7.5°,
+  every copy −15°, the ring 0, to about 1e-13°; all six meshes stay in step, the two ring meshes with no gear mate
+  among them; no interference as built, at three other phases, or driven. A wrong Flip clashes (about 50 mm³ at each
+  planet–ring mesh). The carrier part has no solid body, and each copy's axis passes through its copy's centre to
+  2e-9 mm.
+- **The other stages** build, drive and reopen: the sun held (p5: carrier +22.5°, planets +45°), the stage on Z−
+  (p6), the carrier held (p7: ring −10°, planets −30°), four copies (p4). A second planet–ring gear mate (p2, never
+  saved) was logged as facts only.
+- **Update** (p3): after a turn of 37° on the sun and an edit, the whole train goes back — the carrier first, or the
+  held ring first when it is off — and a tooth change to 3.714 : 1 remakes its four gear mates and turns right
+  (carrier +8.077°).
+- **The one app fault the run found, and its fix.** The first full run (snapshot `39ecf66`) stopped in p3: the
+  carrier's put did not hold while the train's gear mates were on (ruling 13's unshown assumption). The probe
+  `planetary_put_back` (tier 10, `probe/p10_planetary.py`, results `w7-planetary-put-20261115-012409.*` and its
+  follow-ons) tried four routes on SolidWorks 2026; the one that held is **every gear mate of the train and its
+  locks suppressed around the puts**, then everything turned back on (`findings.PLANETARY_PUT_ROUTE`). A's `9f21d99`
+  does that for a train with a carrier only; a train without one makes the calls it always made (468 call sequences
+  on the fake compared identical). `5fcaa6a` then keeps a per-mode gear mate off through such a put (W8's path).
+- **SolidWorks 2024, the confirming build** (log `w7-2024-20261115-020234-p1-p5-p3-step1.log`): p1, p5
+  and p3's put-back pass. One difference, handled by the read-back as everywhere: on 2024 the planet–ring gear mate
+  turns right as first made, on 2026 the build turns it round.
+- **The window** ran through its boards on 2026 (`w7-window-20261115-015017.log`): the planetary builds with its
+  carrier part, its footer says to drag Sun, and five copies give the assembly-condition error with Build not
+  offered.
+
+Logs: `probe/results/w7-workbook-assembly-20261115-000138-*.log` (the first run and the regression of W6's and W5's
+sections, all passing, on `39ecf66`), `w7-put-fix-20261115-014257-p3-p4.log`, and the two named above (on `9f21d99`).
+The closing run, from one archive of HEAD `08fd712` (which holds `5fcaa6a`), on SolidWorks 2026:
+`w7-close-20261115-021540-p-r-m.log` — p1, p2, p5, p6, p7 again, and the W6 and W5 sections that press Update (r1 a
+quiet Update, r2 a turned train put back, r3 a ratio remade, m8 a move and the ring mate remade, m5 a lost Update
+pressed again), all passing: the review of the evidence asked for it, since `db4d4e3` and `ccb05ae` had changed
+Update and the sense read for every gearbox after the first run.
+
+**Caveats at the close** (`W7-INTERFACES.md` §6.17 has them in full): the put order is logged from the app's own
+result, SolidWorks confirming the frames after the puts; in p7 a wrong Flip lands every gear a whole number of
+pitches off, so there the right sense rests on the frames, not on a clash; 2024 ran p1, p5 and p3's first step
+only; a gear mate remade inside the suppression (a tooth change on a planetary) is read when remade and not again
+once turned back on; `Planetary_4to1.xlsx` as Excel saves it is not committed (no test or script reads it).
+
+**Left for the user:** open `Planetary_4to1.SLDASM` in the built folder
+`C:\Users\M0obo\Documents\GearGeneratorProbe\w7-full-20261115-000138\out\p1` and drag Sun by hand: the carrier
+should follow at a quarter of the turn with the planets rolling between sun and ring. Close without saving.
 
 **Open:**
 
-- A's and B's reviews, and B's further passes; a shape may still move.
 - `assess.lay_out_refusal`'s *"The gearbox cannot be laid out yet, since it is not checked: …"* is reached by no
   input found: `Report.unchecked` is set only from `planetary.not_laid_out` (a carrier riding a carrier, a planet
   across its carrier), and `planetary.refusals` says each of those as an error at its cell under the same
@@ -512,9 +547,32 @@ modes (an inactive configuration's value and flag set back, a J14 edit, a turn i
 another); and the window through these states. Sliding gears are tested against the fake only: neither fixture has
 one.
 
-**Open:**
+**Where W8 was paused (2026-11-15, the user's call, to keep usage down).** Every package is written and reviewed,
+and each review's points are in: A (`6a851c2` the slide's dimension reached as the probes reached it, `ccb05ae` and
+ruling 9.16, `5fcaa6a`), B (`13043de` the frames each mode hands the build pinned from the teeth, `89f143b` and
+ruling 9.17, `e56e892`), C (`45479ea`, `295a214`: the Gears table's states shortened to fit their column — "same as
+G1", "changes on Update", "new part on Build"), D (`22d0dce`, `14d1125` the window back at 1080 px with modes and
+every mode name whole, `93708d6` the boards redrawn as the window draws). The suite is green. **No W8 code has run
+on SolidWorks**, and the findings are set, so the app WILL build a gearbox with modes there: treat it as unshown.
 
-- A's, B's and C's passes and reviews; a shape may still move.
+**To pick W8 up:**
+
+1. Package E writes W8's sections of the demonstration (W8-PLAN §5) — fresh handles after every configuration
+   switch; every mode shown and post-checked after a per-mode put, which also settles the one path the review of the
+   findings found unmeasured (a put on a gear whose gear mates are on in every configuration).
+2. The full build on SolidWorks 2026, fixes, then one confirming build on 2024. On 2024 read once a suppressed gear
+   mate's sense on a reopened, unmodified copy: `SUPPRESSED_GEAR_MATE_SENSE_READ` is measured on 2026 only.
+3. D's last pass (`14d1125`, `93708d6`) and C's (`45479ea`, `295a214`) had no separate review; A's `5fcaa6a` was
+   read by the orchestrating session only.
+4. The lesser point left from A's review: a gear mate remade inside a planetary's suppressed put is not read again
+   once it is turned back on (`swbuild._put_train`, the comment says so). Reading it again changes W7's call
+   sequence, so it waits for a run on SolidWorks.
+
+**Open, for the user to overrule:** making a gear mate of a gearbox with modes again (a tooth change, a sense found
+wrong) is refused with a sentence that says to build the gearbox again (ruling 9.16); a slider whose place moves in
+a workbook with no Modes rows needs a new revision; the chooser goes to rows above the Speeds lines when its
+segments pass 200 px; the sleeve's and dog's pressure angle is the Box's (20° by default), with no fork groove, hub
+or chamfers.
 
 ## Questions waiting for the user
 
@@ -529,6 +587,22 @@ Questions 1 to 5 of 2026-11-14 are answered (`notes-workbook/W5-DECISIONS.md`; P
 3. Readings the user may overrule: Update SolidWorks does not save; a part keeps its file name after a teeth change;
    one build button; no static option in the window once W5 is in (a gearbox is built static only when a W5 finding
    is missing, and a W4 one stays static until Build again…).
+
+4. **Defaults taken while the user was away (2026-11-14 and 15), each to overrule.** They are the rulings of the
+   orchestrating session, listed whole in `W6-INTERFACES.md` §7, `W7-INTERFACES.md` §6 and `W8-INTERFACES.md` §9, and
+   marked *ruled* in PLAN-WORKBOOK §4.5. The ones a user would notice: W6 — long part names in the Gears table are
+   shortened head and tail. W7 — a planetary's gear mates are one per sun mesh and one with the ring from copy 1,
+   whatever the Meshes sheet's row order (§6.14); two inputs on a stage are refused (§6.15), as are compound
+   planets, a second stage, helical planetaries and a carrier gear that meshes. W8 — the list at the end of *W8 in
+   detail*.
+5. **Two hand drags** (a person's step the scripts cannot stand in for): G1 in the right-angle gearbox
+   (`…\GearGeneratorProbe\w6-full-20261114-210827\out\r1`), and Sun in the planetary
+   (`…\GearGeneratorProbe\w7-full-20261115-000138\out\p1`).
+6. **`tests/fixtures/excel-windows/Planetary_4to1.xlsx`** as Excel saves it was not committed: the session's
+   permission check refused the write, and no test or script reads it. Commit it by hand if it is wanted; the file
+   is in `…\GearGeneratorProbe\w7-full-20261115-000138\fixtures\`.
+7. **Probe folders** under `C:\Users\M0obo\Documents\GearGeneratorProbe` hold over a gigabyte of built gearboxes;
+   only the two folders of item 5 are still needed.
 
 Answered ahead of its phase (the user, 2026-11-14), for W7's sub-plan:
 

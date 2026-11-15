@@ -541,8 +541,9 @@ The W4 demonstration (`probe/workbook_assembly_check.py`, `probe/workbook_window
 
 What is not built yet:
 
-- **Planetary stages (phase W7) on SolidWorks**: the demonstration is still to
-  run.
+- **Planetary stages (phase W7)** are shown on SolidWorks 2026, with a
+  confirming build on 2024 (`docs/HANDOFF-WORKBOOK.md`, *W7 in detail*); what
+  is left is a person's drag of the sun by hand.
 - **Sleeves and modes (phase W8) on SolidWorks**: the demonstration is still to
   run. Sliding gears (as opposed to sleeves) are designed and tested against
   the fake with made-up workbooks only: neither W8 fixture has one.
