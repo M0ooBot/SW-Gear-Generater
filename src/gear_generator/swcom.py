@@ -443,6 +443,28 @@ class MateGone(ComponentGone):
     SolidWorks.*"""
 
 
+class ConfigurationGone(ComponentGone):
+    """W8: a configuration on record (a mode's) is not in the assembly any more (renamed or deleted in SolidWorks):
+    only a new revision makes it again, so Update's check phase turns it into ``swbuild.NotAsBuilt``. Sentence:
+    *The configuration 4H is not in TransferCase.SLDASM any more: it was renamed or deleted in SolidWorks.*"""
+
+
+def positions_per_configuration(revision: Sequence[int]) -> Optional[bool]:
+    """Whether the running SolidWorks keeps each component's position per configuration (W8-PLAN §1.9; the one home
+    of the per-version switch, W8-INTERFACES.md §2): ``findings.POSITIONS_PER_CONFIGURATION_ON_<year>`` for the
+    revision's release year (``ON_2026`` for major 34, ``ON_2024`` for 32), read with getattr. True: a turn stays in
+    its configuration; False: positions are shared; None — the finding missing, unsettled (not a bool), or no
+    revision — means neither claim is made. Chooses sentences only, never a SolidWorks call."""
+    if not revision:
+        return None
+    try:
+        major = int(revision[0])
+    except (TypeError, ValueError):
+        return None
+    value = getattr(findings, f"POSITIONS_PER_CONFIGURATION_ON_{release_year(major)}", None)
+    return value if isinstance(value, bool) else None
+
+
 def is_available() -> bool:
     return pythoncom is not None
 
@@ -845,6 +867,9 @@ class Session:
         self.pid = pid
         # AddMate5's status out-parameter for every mate this session made, by the name it kept (W5: mate_status).
         self._mate_statuses: Dict[str, int] = {}
+        # W8's configuration epoch (the handle rule, W8-PLAN §3.2): raised by every call that can change the active
+        # configuration; a component or mate kept in an older epoch is fetched again by name before it is used.
+        self._epoch = 0
 
     @property
     def label(self) -> str:
@@ -2736,6 +2761,87 @@ class Session:
         point, direction = self._axis_params(name)
         self._handles[handle] = name
         return point, direction
+
+    # --- W8: configurations (W8-PLAN §3.2, W8-INTERFACES.md §2). Agent A writes the bodies, each through ``call`` /
+    # ``_guarded`` as W4's N3 requires, copying probe tier 9's raw calls; until then each refuses with a sentence.
+
+    def _raise_epoch(self) -> None:
+        """Start a new configuration epoch (the handle rule): called by ``add_configuration``,
+        ``show_configuration``, ``open_document`` / ``activate`` of an assembly, and anything else that can change
+        the active configuration, straight after the SolidWorks call (``delete_configuration`` does not: held
+        handles survived it in the spike). Every component and mate kept before it is stale from here on."""
+        self._epoch = getattr(self, "_epoch", 0) + 1
+
+    def _component(self, handle: str) -> Any:
+        """The ``IComponent2`` kept as ``handle``, fetched again by the name it was kept by (``GetComponentByName``,
+        ``findings.COMPONENT_FIND_ROUTE``) when the epoch it was fetched in is not the current one, and kept again
+        with the current epoch; ``ComponentGone`` with W5's sentence when nothing answers to the name. Every member
+        that uses a kept component goes through this (no other code holds one across an epoch); a kept entry holds
+        ``{"component", "path", "name", "epoch"}``, the name from insertion or ``find_component``, never a fresh
+        handle's ``Name2``. Agent A writes it with the handle rule."""
+        raise SolidWorksError("Fetching a component again after a configuration change is not in this version of "
+                              "Gear Generator yet, so nothing was read or changed.")
+
+    def configurations(self) -> List[str]:
+        """The build document's configuration names (``GetConfigurationNames``), in SolidWorks' order. Marks
+        nothing."""
+        raise SolidWorksError("Reading an assembly's configurations is not in this version of Gear Generator yet, "
+                              "so nothing was read.")
+
+    def active_configuration(self) -> str:
+        """The active configuration's name (``ConfigurationManager.ActiveConfiguration.Name``). Marks nothing."""
+        raise SolidWorksError("Reading the active configuration is not in this version of Gear Generator yet, so "
+                              "nothing was read.")
+
+    def add_configuration(self, name: str) -> None:
+        """Add a configuration and make it active: ``AddConfiguration2(name, "", "", 0, "", "", True)``, the active
+        name read back (never the return); otherwise ``SolidWorksError`` *"SolidWorks would not make the
+        configuration 4L."* Raises the epoch. Does not rebuild (W8-PLAN §1.8 step 3: the caller rebuilds before the
+        first ``set_mate_suppressed_in``)."""
+        raise SolidWorksError(f"Making the configuration {name} is not in this version of Gear Generator yet, so "
+                              "nothing was made.")
+
+    def show_configuration(self, name: str) -> None:
+        """Make ``name`` the active configuration: ``ShowConfiguration2``, success judged by the active name read
+        back, never the return (GOTCHAS §23: False when already active). Raises the epoch. Marks the assembly
+        modified (the spike). Does not rebuild."""
+        raise SolidWorksError(f"Showing the configuration {name} is not in this version of Gear Generator yet, so "
+                              "nothing was changed.")
+
+    def delete_configuration(self, name: str) -> None:
+        """Delete a configuration that is not active: ``DeleteConfiguration2``, the names read back; refuses the
+        active one with a sentence. Does not raise the epoch (held handles survived it in the spike)."""
+        raise SolidWorksError(f"Deleting the configuration {name} is not in this version of Gear Generator yet, so "
+                              "nothing was changed.")
+
+    def set_mate_suppressed_in(self, handle: str, suppressed: bool, configurations: Sequence[str]) -> None:
+        """Suppress or unsuppress a kept mate in the named configurations, whichever is active:
+        ``SetSuppression2(0 or 1, findings.SPECIFY_CONFIGURATIONS, names)``, the names a ``VT_ARRAY | VT_BSTR``,
+        the return never trusted; every flag read back with ``IsSuppressed2`` and a sentence raised if any
+        configuration disagrees. Does not rebuild."""
+        raise SolidWorksError("Suppressing a mate per configuration is not in this version of Gear Generator yet, "
+                              "so nothing was changed.")
+
+    def mate_suppression(self, handle: str, configurations: Sequence[str]) -> Dict[str, bool]:
+        """A kept mate's flag in each named configuration, ``IsSuppressed2(3, names)``, one per name, no
+        configuration activated. Marks nothing (the spike)."""
+        raise SolidWorksError("Reading a mate's state per configuration is not in this version of Gear Generator "
+                              "yet, so nothing was read.")
+
+    def set_dimension_in(self, mate_handle: str, value_mm: float, configurations: Sequence[str]) -> None:
+        """Set a kept distance mate's ``D1`` in the named configurations only: ``IFeature.GetFirstDisplayDimension``
+        -> ``GetDimension``, ``SetSystemValue3(value_mm / 1000, 3, names)``; a return other than 0
+        (``swSetValue_Successful``) raises with a sentence; read back with ``GetSystemValue3`` for those
+        configurations. Never reads ``IDimension.SystemValue``. Does not rebuild."""
+        raise SolidWorksError("Setting a slide's value per configuration is not in this version of Gear Generator "
+                              "yet, so nothing was changed.")
+
+    def dimension_values(self, mate_handle: str, configurations: Sequence[str]) -> Dict[str, float]:
+        """A kept distance mate's ``D1`` in each named configuration, mm: ``GetSystemValue3(3, names)``, no
+        configuration activated. A 0 means that configuration has no value of its own (J7's caution); the caller
+        decides what that means. Marks nothing."""
+        raise SolidWorksError("Reading a slide's value per configuration is not in this version of Gear Generator "
+                              "yet, so nothing was read.")
 
     def set_custom_property(self, name: str, value: str) -> None:
         """A text custom property on the build's part, added or replaced, and read back.

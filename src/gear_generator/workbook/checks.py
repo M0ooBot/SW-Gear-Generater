@@ -30,6 +30,25 @@ CLASH_GAP = 0.5               # × module: the least room between gears that do 
 
 
 @dataclass
+class ModeReport:
+    """One mode worked out (W8-PLAN §1.3-§1.5; B fills it, C and D read it). ``name``: the mode's, ``""`` for the
+    implicit mode of sliders with no Modes rows; ``row`` its Modes-sheet row (0 for the implicit one).
+    ``positions``: slider -> (position name, offset mm) here. ``engaged``: (sleeve, dog) pairs engaged here, dogs in
+    Gears-sheet order. ``out_of_mesh``: listed meshes a slide takes out of mesh here. ``off``: relations left off
+    here as loop-closers (J15). ``placed``: every slider placed at its position here. ``motion``: this mode's
+    speeds (``kinematics.Motion``; a free member's speed is absent, J16)."""
+
+    name: str
+    row: int = 0
+    positions: Dict[str, Tuple[str, float]] = field(default_factory=dict)
+    engaged: Tuple[Tuple[str, str], ...] = ()
+    out_of_mesh: Tuple[Tuple[str, str], ...] = ()
+    off: Tuple[Tuple[str, str], ...] = ()
+    placed: Dict[str, Placed] = field(default_factory=dict)
+    motion: kinematics.Motion = field(default_factory=kinematics.Motion)
+
+
+@dataclass
 class Report:
     diagnostics: List[Diagnostic] = field(default_factory=list)
     fixes: Dict[str, List[Fix]] = field(default_factory=dict)   # by the diagnostic's field (its cell)
@@ -46,6 +65,9 @@ class Report:
     # order), whose undercut is not modelled — for the interference sentence's clause; () when there is none.
     undercut: Tuple[str, ...] = ()
     off_centre: List[Diagnostic] = field(default_factory=list)   # the "not where the teeth put them" errors
+    # W8 (B; W8-PLAN §1.4-§1.5, W8-INTERFACES.md §4): one ModeReport per mode in Modes-sheet order, or one with name ""
+    # for sliders with no Modes rows; () with no sliders. ``motion`` above is then the first mode's (S1).
+    modes: Tuple["ModeReport", ...] = ()
     worked_out_as: str = ""
     # Why the gearbox was not checked at all ("" when it was): a carrier or a turned axis, laid out in a later
     # phase. Then ``diagnostics`` is empty because nothing was looked at, not because nothing is wrong.

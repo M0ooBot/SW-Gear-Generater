@@ -92,7 +92,7 @@ from ..gears import kind_for, plan_for
 from ..gears.base import BuildPlan, GlobalVariable
 from ..spec import GearSpec, InputError, sanitize_stem
 from ..store import (ComponentEntry, EarlierRevision, GearboxRecord, LinkRecord, PartEntry, ShaftEntry, Sidecar)
-from ..swbuild import BuildResult, DocumentValues, GearboxResult
+from ..swbuild import BuildResult, DocumentValues, GearboxResult, ModesPlan
 from . import layout, motion, planetary
 from .assess import Assessment
 from .build import PartJob
@@ -280,6 +280,9 @@ class GearboxPlan:
     # W7 (B, proposed for pinning; W7-PLAN §2.3 item 7): the gears of a planetary stage below the undercut limit
     # (``checks.Report.undercut``), for the interference sentence's clause; () when there is none.
     undercut: Tuple[str, ...] = ()
+    # W8 (B; W8-PLAN §1.8, W8-INTERFACES.md §4): the configurations of a turning assembly with modes
+    # (``motion.modes_plan``), None with no Modes rows; ``build_kwargs`` passes it as ``modes`` only when set.
+    modes_plan: Optional[ModesPlan] = None
 
     @property
     def carrier_handles(self) -> Dict[str, str]:
@@ -321,6 +324,8 @@ class GearboxPlan:
         if self.carriers:                     # W7: only with a planetary stage, so every other call is W6's
             kwargs["carriers"] = [DocumentValues(c.path, tuple(c.variables), tuple(c.features))
                                   if isinstance(c, CarrierReuse) else c for c in self.carriers]
+        if self.modes_plan is not None:       # W8: only with Modes rows, so every other call is W7's key for key
+            kwargs["modes"] = self.modes_plan
         return kwargs
 
 

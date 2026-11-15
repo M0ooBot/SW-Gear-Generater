@@ -223,7 +223,7 @@ def test_a_link_record_round_trips(tmp_path):
     assert store.read_link_record(workbook) == record
     assert store.open_link_record(workbook) == record
     raw = json.loads((tmp_path / "R.workbook.json").read_text())
-    assert raw["link_schema_version"] == store.LINK_SCHEMA_VERSION == 5
+    assert raw["link_schema_version"] == store.LINK_SCHEMA_VERSION == 6
     assert raw["schema_version"] == 1          # what a build from before schema 2 checks: see the next test
     assert raw["parts"][0]["revision"] == 0 and raw["gearbox"]["components"][0]["name"] == "Gear_m1.5_N17_r2-1"
 
@@ -719,7 +719,8 @@ def test_a_turning_gearbox_round_trips_byte_for_byte(tmp_path):
     assert again.gearbox.mates[3].ratio == [17, 68] and again.gearbox.mates[1].z_front == -12.5
     written = json.loads((tmp_path / "R.workbook.json").read_text())["gearbox"]["mates"][2]
     assert written == {"name": "G6 locked to G5", "kind": "lock", "gears": ["G5", "G6"], "shaft": "", "ratio": [],
-                       "face_global": "", "z_front": 0.0, "plane": "front", "sense": 0, "on": ""}
+                       "face_global": "", "z_front": 0.0, "plane": "front", "sense": 0, "on": "", "values": {},
+                       "modes": []}
 
 
 def test_a_refused_build_is_kept_with_the_read_it_came_from():
@@ -747,7 +748,7 @@ def test_a_mate_entry_of_the_wrong_type_is_refused(field, value):
 
 @pytest.mark.parametrize("index,changes,match", [
     (3, {"kind": "gear"}, r"gearbox\.mates\[3\] \('G1 meshes G5'\) has kind 'gear', not one of axis, along, lock, "
-                          r"mesh\)"),
+                          r"mesh, slide, spline, couple\)"),
     (3, {"kind": ""}, r"has kind '', not one of"),
     (0, {"gears": []}, r"gearbox\.mates\[0\] \('G5 on S2 Axis'\) is an axis mate with 0 gears, where an axis mate "
                        r"holds 1\)"),
@@ -1118,7 +1119,7 @@ def test_a_record_the_app_wrote_before_schema_5_reads_writes_and_reads_again(tmp
     target = tmp_path / "R.workbook.json"
     target.write_text(json.dumps(raw))
     first = store.read_link_record(str(tmp_path / "R.xlsx"))
-    assert first.schema_version == store.LINK_SCHEMA_VERSION == 5 and first.gearbox.carriers == []
+    assert first.schema_version == store.LINK_SCHEMA_VERSION == 6 and first.gearbox.carriers == []
     assert all(c.of == "" for c in first.gearbox.components) and all(m.on == "" for m in first.gearbox.mates)
     store.save_link_record(first)
     assert json.loads(target.read_text())["link_schema_version"] == store.LINK_SCHEMA_VERSION
@@ -1268,3 +1269,157 @@ def test_a_component_whose_of_is_its_own_id_reads_as_no_copy():
     record.gearbox.components[0].of = planetary.copy_of(record.gearbox.components[0].gear)[0]
     assert record.gearbox.components[0].of == record.gearbox.components[0].gear
     assert store.link_record_from_json(store.link_record_to_json(record)) == record
+
+
+# -- schema 6 (W8: W8-PLAN §1.11, W8-INTERFACES.md §5) ----------------------------------------------------------------
+
+_MODES = ["2H", "4H", "N", "4L"]
+_EYE = [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
+
+
+def modes_record(workbook):
+    """The Parallel fixture's W8 mates and per-configuration frames as a finish writes them (§2.3's table)."""
+    record = turning_record(workbook)
+    box = record.gearbox
+    box.modes = list(_MODES)
+    box.mates += [
+        store.MateEntry(name="RangeSlv on Rear Axis", kind="axis", gears=["RangeSlv"], shaft="Rear"),
+        store.MateEntry(name="RangeSlv along Rear", kind="slide", gears=["RangeSlv"], shaft="Rear", z_front=46.0,
+                        values={"2H": 46.0, "4H": 46.0, "N": 56.0, "4L": 66.0}),
+        store.MateEntry(name="ModeSlv on Rear Axis", kind="axis", gears=["ModeSlv"], shaft="Rear"),
+        store.MateEntry(name="ModeSlv along Rear", kind="slide", gears=["ModeSlv"], shaft="Rear", z_front=96.0,
+                        values={"2H": 96.0, "4H": 106.0, "N": 96.0, "4L": 106.0}),
+        store.MateEntry(name="ModeSlv splined to RangeSlv", kind="spline", gears=["RangeSlv", "ModeSlv"],
+                        ratio=[1, 1], sense=-1),
+        store.MateEntry(name="RangeSlv engages InDog", kind="couple", gears=["RangeSlv", "InDog"], ratio=[1, 1],
+                        sense=-1, modes=["2H", "4H"]),
+        store.MateEntry(name="RangeSlv engages LoDog", kind="couple", gears=["RangeSlv", "LoDog"], ratio=[1, 1],
+                        sense=-1, modes=["4L"]),
+        store.MateEntry(name="ModeSlv engages FrontDog", kind="couple", gears=["ModeSlv", "FrontDog"], ratio=[1, 1],
+                        sense=-1, modes=["4H", "4L"])]
+    slider = store.ComponentEntry(gear="RangeSlv", part=r"C:\P\Sleeve_m1.5_N30.SLDPRT", name="Sleeve_m1.5_N30-1",
+                                  rotation=list(_EYE), at=[0.0, 0.0, 46.0],
+                                  frames={m: {"rotation": list(_EYE), "at": [0.0, 0.0, z]}
+                                          for m, z in zip(_MODES, (46.0, 46.0, 56.0, 66.0))})
+    box.components.append(slider)
+    return record
+
+
+def _before_schema_6(raw, version):
+    """What a file of ``version`` (3, 4 or 5) holds of a record: W8's fields gone, and each earlier schema's too."""
+    raw["link_schema_version"] = version
+    box = raw["gearbox"]
+    del box["modes"]
+    for component in box["components"]:
+        del component["frames"]
+    for mate in box["mates"]:
+        del mate["values"], mate["modes"]
+    if version < 5:
+        del box["carriers"]
+        for component in box["components"]:
+            del component["of"]
+        for mate in box["mates"]:
+            del mate["on"]
+    if version < 4:
+        for mate in box["mates"]:
+            del mate["plane"], mate["sense"]
+        for shaft in box["shafts"]:
+            for key in ("direction", "z_side", "z_global", "z_plane", "line", "axis"):
+                del shaft[key]
+    return raw
+
+
+def test_schema_6_is_one_past_what_w7_left_and_every_kind_has_its_gear_count():
+    assert store.LINK_SCHEMA_VERSION == store._W7_LINK_SCHEMA + 1 == 6
+    assert {k: store._MATE_GEARS[k] for k in ("slide", "spline", "couple")} == {"slide": 1, "spline": 2, "couple": 2}
+
+
+@pytest.mark.parametrize("version", [3, 4, 5])
+def test_a_record_the_app_wrote_before_schema_6_reads_writes_and_reads_again(tmp_path, version):
+    """W8-INTERFACES §5: every new field has a default that cannot refuse a record the app wrote — no modes, no
+    values, every on-set and per-configuration frame empty."""
+    record = turning_record(str(tmp_path / "R.xlsx"))
+    raw = _before_schema_6(json.loads(store.link_record_to_json(record)), version)
+    target = tmp_path / "R.workbook.json"
+    target.write_text(json.dumps(raw))
+    first = store.read_link_record(str(tmp_path / "R.xlsx"))
+    assert first.schema_version == store.LINK_SCHEMA_VERSION and first.gearbox.modes == []
+    assert all(m.values == {} and m.modes == [] for m in first.gearbox.mates)
+    assert all(c.frames == {} for c in first.gearbox.components)
+    store.save_link_record(first)
+    assert json.loads(target.read_text())["link_schema_version"] == store.LINK_SCHEMA_VERSION
+    second = store.read_link_record(str(tmp_path / "R.xlsx"))
+    assert second == first
+    if version == 5:
+        assert first == record
+
+
+def test_a_record_with_modes_round_trips_byte_for_byte(tmp_path):
+    workbook = str(tmp_path / "R.xlsx")
+    record = modes_record(workbook)
+    store.save_link_record(record)
+    again = store.read_link_record(workbook)
+    assert again == record and again.gearbox.modes == _MODES
+    text = store.link_record_to_json(again)
+    assert store.link_record_from_json(text) == record and store.link_record_to_json(
+        store.link_record_from_json(text)) == text
+    slide = next(m for m in again.gearbox.mates if m.name == "ModeSlv along Rear")
+    assert slide.values == {"2H": 96.0, "4H": 106.0, "N": 96.0, "4L": 106.0}
+    assert again.gearbox.components[-1].frames["4L"] == {"rotation": _EYE, "at": [0.0, 0.0, 66.0]}
+
+
+def test_whole_numbers_in_w8_fields_read_as_floats_so_a_second_write_is_the_same():
+    raw = json.loads(store.link_record_to_json(modes_record("R.xlsx")))
+    slide = next(m for m in raw["gearbox"]["mates"] if m["kind"] == "slide")
+    slide["values"] = {"2H": 46, "4H": 46, "N": 56, "4L": 66}
+    raw["gearbox"]["components"][-1]["frames"]["N"] = {"rotation": [1, 0, 0, 0, 1, 0, 0, 0, 1], "at": [0, 0, 56]}
+    once = store.link_record_from_json(json.dumps(raw))
+    assert once == modes_record("R.xlsx")
+    text = store.link_record_to_json(once)
+    assert store.link_record_to_json(store.link_record_from_json(text)) == text
+
+
+def test_a_continued_builds_record_with_modes_reads_clean():
+    """A build whose train was refused (layout on record, no assembly, no mates, no modes), then continued: both
+    records as the finishes write them read back unchanged."""
+    refused = modes_record("R.xlsx")
+    box = refused.gearbox
+    box.assembly, box.components, box.mates, box.modes = "", [], [], []
+    box.mate_problems, box.mate_problems_digest = ["In mode 4L, the mate RangeSlv engages LoDog over-defines the "
+                                                   "assembly."], "d"
+    assert store.link_record_from_json(store.link_record_to_json(refused)) == refused
+    continued = modes_record("R.xlsx")
+    assert store.link_record_from_json(store.link_record_to_json(continued)) == continued
+
+
+@pytest.mark.parametrize("change,match", [
+    (lambda raw: next(m for m in raw["gearbox"]["mates"] if m["kind"] == "slide").update(values={"2H": "46"}),
+     r"MateEntry\.values is not configuration names to numbers"),
+    (lambda raw: next(m for m in raw["gearbox"]["mates"] if m["kind"] == "slide").update(values=[46.0]),
+     r"MateEntry\.values is not Dict"),
+    (lambda raw: next(m for m in raw["gearbox"]["mates"] if m["kind"] == "couple").update(modes="2H"),
+     r"MateEntry\.modes is not List\[str\]"),
+    (lambda raw: raw["gearbox"].update(modes=[2]), r"GearboxRecord\.modes is not List\[str\]"),
+    (lambda raw: raw["gearbox"]["components"][-1]["frames"].update(N={"rotation": [1.0], "at": [0.0, 0.0, 56.0]}),
+     r"ComponentEntry\.frames\['N'\] is not a rotation of 9 numbers and an origin of 3"),
+    (lambda raw: raw["gearbox"]["components"][-1]["frames"].update(N={"at": [0.0, 0.0, 56.0]}),
+     r"ComponentEntry\.frames\['N'\] is not"),
+    (lambda raw: next(m for m in raw["gearbox"]["mates"] if m["kind"] == "spline").update(gears=["ModeSlv"]),
+     r"is a spline mate with 1 gear, where a spline mate holds 2"),
+])
+def test_a_w8_field_of_the_wrong_shape_is_refused_with_a_sentence(change, match):
+    raw = json.loads(store.link_record_to_json(modes_record("R.xlsx")))
+    change(raw)
+    with pytest.raises(StoreError, match=match):
+        store.link_record_from_json(json.dumps(raw))
+
+
+def test_a_record_newer_than_schema_6_is_refused_and_left_byte_identical(tmp_path):
+    raw = json.loads(store.link_record_to_json(modes_record("R.xlsx")))
+    raw["link_schema_version"] = 7
+    target = tmp_path / "R.workbook.json"
+    text = json.dumps(raw)
+    target.write_text(text)
+    with pytest.raises(store.UnknownSchema, match=r"schema 7, this one reads 6"):
+        store.read_link_record(str(tmp_path / "R.xlsx"))
+    assert target.read_text() == text and sorted(p.name for p in tmp_path.iterdir()) == ["R.workbook.json"]

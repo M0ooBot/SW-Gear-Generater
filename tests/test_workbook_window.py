@@ -307,7 +307,7 @@ def test_build_makes_the_parts_the_layout_and_the_assembly_and_records_them(desk
         sidecar = store.read_sidecar(desk.part(stem))
         assert sidecar is not None and store.same_path(sidecar.record.workbook, window.link.path)
     raw = json.loads(record_bytes(window))
-    assert raw["link_schema_version"] == store.LINK_SCHEMA_VERSION == 5
+    assert raw["link_schema_version"] == store.LINK_SCHEMA_VERSION == 6
     record = record_of(window)
     assert record.gearbox.revision == 0 and store.same_path(record.gearbox.assembly, desk.part(NAME, ".SLDASM"))
     assert store.same_path(record.assembly, record.gearbox.assembly)

@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import math
 import os
+import re
 from dataclasses import dataclass, field
 from typing import Callable, Collection, Dict, List, Mapping, Optional, Protocol, Sequence, Tuple, Union
 
@@ -120,6 +121,18 @@ class SolidWorks(Protocol):
     def axis_line(self, handle: str, name: str) -> Tuple[Vec3, Vec3]: ...
     def remake_gear_mate(self, handle: str, a: str, b: str, ratio: Sequence[float], flip: bool,
                          *, saved: bool = True) -> None: ...
+    # W8 (W8-INTERFACES.md §2; Agent A writes the bodies in swcom.Session): an assembly's configurations, a mate's
+    # flag and a distance mate's value per configuration. After add_configuration and show_configuration (and an
+    # open) every component and mate handle is fetched again by name before it is used (the handle rule).
+    def configurations(self) -> List[str]: ...
+    def active_configuration(self) -> str: ...
+    def add_configuration(self, name: str) -> None: ...
+    def show_configuration(self, name: str) -> None: ...
+    def delete_configuration(self, name: str) -> None: ...
+    def set_mate_suppressed_in(self, handle: str, suppressed: bool, configurations: Sequence[str]) -> None: ...
+    def mate_suppression(self, handle: str, configurations: Sequence[str]) -> Dict[str, bool]: ...
+    def set_dimension_in(self, mate_handle: str, value_mm: float, configurations: Sequence[str]) -> None: ...
+    def dimension_values(self, mate_handle: str, configurations: Sequence[str]) -> Dict[str, float]: ...
 
 
 class BuildError(SolidWorksError):
@@ -569,7 +582,7 @@ _RUNNERS: Mapping[type, Callable] = {
 
 def build(sw: SolidWorks, plan: BuildPlan, exists: Callable[[str], bool] = os.path.exists,
           kind: Optional[str] = None, *, gears: Optional[Mapping[str, str]] = None,
-          senses: Optional[Mapping[str, bool]] = None) -> BuildResult:
+          senses: Optional[Mapping[str, bool]] = None, modes: Optional[ModesPlan] = None) -> BuildResult:
     """Make the plan's document, run every step, rebuild once, check, and save.
 
     Raises :class:`BuildError` only before anything is made. After that every
@@ -621,11 +634,16 @@ def build(sw: SolidWorks, plan: BuildPlan, exists: Callable[[str], bool] = os.pa
     by the Name2 it kept. The check runs only when every op ran (a build
     stopped part-way has its failure already), and is refused before
     anything is made while a finding it reads is missing (:func:`_train_gate`).
+
+    ``modes`` (keyword, W8; W8-INTERFACES.md §3): the configurations of a turning assembly, set up after the mate
+    check and before the save (W8-PLAN §1.8, steps 1-8, Agent A). None is W5's build call for call. Given, it is
+    judged before anything is made (:func:`_modes_gate`).
     """
     _gate(sw)
     problems = plan.check()
     if problems:
         raise BuildError("The build plan is not sound: " + " ".join(problems))
+    _modes_gate(plan, modes)
     first = plan.ops[0]
     if kind is None:
         kind = workbook_assembly_kind(plan)
@@ -680,6 +698,24 @@ def _said(exc: BaseException) -> str:
         return str(exc)
     text = str(exc).strip().rstrip(".")
     return f"it stopped on an unexpected {type(exc).__name__}" + (f": {text}." if text else ".")
+
+
+def _modes_gate(plan: Optional[BuildPlan], modes: Optional[ModesPlan]) -> None:
+    """Before anything is made: ``modes`` None passes; otherwise a ``ModesPlan`` with no assembly plan to set up in,
+    or one :meth:`ModesPlan.check` finds unsound against it, is a :class:`BuildError` naming every problem. Until
+    package A writes the configuration phase (W8-PLAN §1.8), a sound one is refused too, with a sentence, so a build
+    with modes never saves an assembly without its configurations. (A lifts that last refusal in the same change
+    that passes ``modes`` from :func:`build_gearbox` through :func:`_build_in_job` to the assembly's :func:`build`.)"""
+    if modes is None:
+        return
+    if plan is None or not plan.ops or not isinstance(plan.ops[0], base.NewAssembly):
+        raise BuildError("Modes were given with no assembly to make their configurations in, so nothing is made; "
+                         "that is a fault in Gear Generator.")
+    problems = modes.check(plan)
+    if problems:
+        raise BuildError("The modes plan is not sound, so nothing is made: " + " ".join(problems))
+    raise BuildError("This version of Gear Generator does not make an assembly's configurations yet, so a gearbox "
+                     "with modes is not built and nothing is made.")
 
 
 def _build_in_job(sw: SolidWorks, plan: BuildPlan, exists: Callable[[str], bool],
@@ -1312,8 +1348,9 @@ STAGE_INTERFERENCE = "interference"   # checking the assembly for interference
 STAGE_VALUES = "values"               # Update: setting a part's or the layout's globals
 STAGE_PLACE = "place"                 # Update: re-placing components in the assembly
 STAGE_CARRIER = "carrier"             # W7: building a carrier part (Step.name: its stem)
+STAGE_MODE = "mode"                   # W8: setting up or checking a mode's configuration (Step.name: the mode's name)
 STAGES = (STAGE_CHECK, STAGE_PART, STAGE_LAYOUT, STAGE_ASSEMBLY, STAGE_INTERFERENCE, STAGE_VALUES, STAGE_PLACE,
-          STAGE_CARRIER)
+          STAGE_CARRIER, STAGE_MODE)
 
 
 @dataclass(frozen=True)
@@ -1452,6 +1489,9 @@ class MeshLink:
     k: float
     pitch: float
     carrier: str = ""
+    # W8 (W8-INTERFACES.md §3): the configurations (modes) this link holds in — a coupling's or a sliding mesh's
+    # on-set — and () for one on in every configuration; :func:`links_in` is the one rule that reads it.
+    modes: Tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -1463,6 +1503,8 @@ class LockLink:
     anchor: str
     follower: str
     pitch: float
+    # W8: as MeshLink.modes (a spline is a LockLink, on in every configuration, so () in practice; kept for the rule).
+    modes: Tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -1513,6 +1555,24 @@ class CarrierLink:
     planets: Tuple[str, ...]
     point: Tuple[float, float, float]
     axis: Tuple[float, float, float]
+
+
+def on_in(modes: Sequence[str], configuration: str) -> bool:
+    """Whether a mate or link whose on-set is ``modes`` is on in ``configuration`` (W8-INTERFACES.md §3: the one
+    home of "which mates are on in mode M"). ``()`` is on in every configuration (W5's mates, W7's, the splines,
+    the slides, the axis mates). Names compare ignoring case, since mode names are unique ignoring case (J6) and a
+    mode named as one of the template's configurations uses that configuration (§1.8 step 2)."""
+    if not modes:
+        return True
+    wanted = str(configuration).casefold()
+    return any(str(mode).casefold() == wanted for mode in modes)
+
+
+def links_in(links: Sequence[object], configuration: str) -> Tuple[object, ...]:
+    """The links (``MeshLink``, ``LockLink``, ``MateRef``, …) on in ``configuration``, in the order given: each by
+    :func:`on_in` of its ``modes``; one with no ``modes`` field (a :class:`CarrierLink`) is on in every one. What
+    :func:`train_check` is given in a configuration (W8-PLAN §1.7: it judges only the links on there)."""
+    return tuple(link for link in links if on_in(getattr(link, "modes", ()), configuration))
 
 
 def _about(axis: Sequence[float], angle: float) -> Tuple[Tuple[float, float, float], ...]:
@@ -1659,6 +1719,175 @@ def train_check(found: Mapping[str, Frame9], wanted: Mapping[str, Frame9], meshe
     return TrainCheck(tuple(off_axis), tuple(out), turned, tuple(residuals))
 
 
+MODE_NAME = re.compile(r"^[A-Za-z0-9_-]+$")    # a mode's name, a configuration's (``schema.NAME_PATTERN``, J6)
+SLIDE_TOLERANCE = 1e-9                          # mm: a SLIDE's value at or below it is on the Front plane (J27)
+FrameValue = Tuple[Tuple[float, ...], Tuple[float, float, float]]
+
+
+@dataclass(frozen=True)
+class ModeStep:
+    """One mode's configuration, as the build sets it up (W8-PLAN §1.8, W8-INTERFACES.md §3).
+
+    ``name``: the configuration's name, the mode's (letters, digits, ``_`` and ``-``). ``ops``: the gear ``Mate``
+    ops (couplings, sliding meshes) first made in this configuration — each made while it is shown, named
+    (``Mate.name``, ``workbook.motion.mate_name``), in the order made. ``on``: every mate name on in this
+    configuration — the base plan's mates (always on) and the per-mode mates on here; ``off``: every per-mode mate
+    off here. ``values``: every SLIDE's name -> its |z_front| in mm here (a magnitude, > 0: the mate's Flip carries
+    the side, J27). ``frames``: assembly handle -> ``(rotation 9 by rows, origin mm)`` wanted here, for the
+    per-mode check (every gear at the built turn, each slider at its value)."""
+
+    name: str
+    ops: Tuple[base.Op, ...] = ()
+    on: Tuple[str, ...] = ()
+    off: Tuple[str, ...] = ()
+    values: Mapping[str, float] = field(default_factory=dict)
+    frames: Mapping[str, FrameValue] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class ModesPlan:
+    """The configurations a turning assembly gets, beside its ``BuildPlan`` (W8-PLAN §1.8): one :class:`ModeStep`
+    per mode in Modes-sheet order, ``steps[0]`` the one the assembly is saved and opens in. ``same_way``: the
+    steps' gear mates (by name) that turn their two gears the same way about their own axes (``k > 0``: every
+    coupling; a sliding mesh only inside a ring); a step gear mate not listed turns them opposite ways. It is the
+    steps' half of W6's ``senses`` — the base plan's gear mates (meshes and splines) are in ``build``'s
+    ``senses`` and never here, and each name has its sense in exactly one of the two (W8-INTERFACES.md §6)."""
+
+    steps: Tuple[ModeStep, ...]
+    same_way: Tuple[str, ...] = ()
+
+    def check(self, plan: Optional[BuildPlan] = None) -> List[str]:
+        """Every way this plan is unsound, as sentences (``[]`` when sound); pure. ``plan`` (the assembly's
+        ``BuildPlan``), when given, is checked against too. The rules (W8-PLAN §3.2, W8-INTERFACES.md §3):
+
+        * at least one step; every name a mode name (:data:`MODE_NAME`) and the names unique ignoring case;
+        * every step op a named gear ``Mate`` (no ``LinkDimension``: a slide has no global), op ids unique across
+          the steps and the plan, op names unique across the steps and not a plan mate's name;
+        * in every step ``on`` and ``off`` share no name, and ``on`` ∪ ``off`` is the same set in every step;
+        * every per-mode mate (a name in some ``off``, or a step op) is made exactly once, in the first step it is
+          on in, and is on in some step; ``same_way`` names only step ops;
+        * every step's ``values`` names the same SLIDEs, each value finite and above :data:`SLIDE_TOLERANCE`
+          (J27: never on the Front plane; the one side is the Flip's, so a magnitude is all a step holds);
+        * every frame nine and three finite numbers;
+        * with ``plan``: ``on`` ∪ ``off`` is exactly the plan's mate names and the step ops' names, each SLIDE is
+          a ``point distance`` mate of the plan, and each frame's handle a component the plan adds.
+        """
+        problems: List[str] = []
+        if not self.steps:
+            return ["The modes plan has no modes."]
+        seen: Dict[str, str] = {}
+        for step in self.steps:
+            if not MODE_NAME.match(step.name or ""):
+                problems.append(f"The mode name {step.name!r} is not letters, digits, _ and - only.")
+            elif step.name.casefold() in seen:
+                problems.append(f"The modes {seen[step.name.casefold()]} and {step.name} have one name, ignoring "
+                                "case, and a configuration name can be used once.")
+            else:
+                seen[step.name.casefold()] = step.name
+        plan_mates = [op for op in (plan.ops if plan is not None else ()) if isinstance(op, base.Mate)]
+        plan_ids = {getattr(op, "id", "") for op in (plan.ops if plan is not None else ()) if getattr(op, "id", "")}
+        plan_names = {op.name or op.id for op in plan_mates}
+        made_in: Dict[str, int] = {}
+        op_ids: set = set()
+        for index, step in enumerate(self.steps):
+            for op in step.ops:
+                if not isinstance(op, base.Mate) or op.kind != "gear":
+                    problems.append(f"In mode {step.name}, {getattr(op, 'id', op)!r} is not a gear mate, and a "
+                                    "mode makes only couplings and sliding meshes.")
+                    continue
+                if not op.name:
+                    problems.append(f"In mode {step.name}, the gear mate {op.id} has no name to be found by.")
+                    continue
+                if op.id in op_ids or op.id in plan_ids:
+                    problems.append(f"In mode {step.name}, the id {op.id} is used twice.")
+                op_ids.add(op.id)
+                if op.name in made_in or op.name in plan_names:
+                    problems.append(f"In mode {step.name}, the mate {op.name} is made a second time.")
+                    continue
+                made_in[op.name] = index
+        per_mode = set(made_in)
+        everything = None
+        for index, step in enumerate(self.steps):
+            on, off = set(step.on), set(step.off)
+            both = sorted(on & off)
+            if both:
+                problems.append(f"In mode {step.name}, {', '.join(both)} {'is' if len(both) == 1 else 'are'} both "
+                                "on and off.")
+            per_mode |= off
+            if everything is None:
+                everything = on | off
+            elif on | off != everything:
+                differ = sorted((on | off) ^ everything)
+                problems.append(f"Mode {step.name} does not say on or off for the same mates as mode "
+                                f"{self.steps[0].name}: {', '.join(differ)}.")
+        for name in sorted(per_mode):
+            on_steps = [i for i, step in enumerate(self.steps) if name in step.on]
+            if name not in made_in:
+                problems.append(f"The mate {name} is switched per mode but no mode makes it.")
+            elif not on_steps:
+                problems.append(f"The mate {name} is on in no mode.")
+            elif made_in[name] != on_steps[0]:
+                problems.append(f"The mate {name} is made in mode {self.steps[made_in[name]].name}, not in "
+                                f"{self.steps[on_steps[0]].name}, the first mode it is on in.")
+        for name in self.same_way:
+            if name not in made_in:
+                problems.append(f"{name} is said to turn its gears the same way, and no mode makes it.")
+        slides = set(self.steps[0].values)
+        for step in self.steps:
+            if set(step.values) != slides:
+                differ = sorted(set(step.values) ^ slides)
+                problems.append(f"Mode {step.name} does not give a value for the same slides as mode "
+                                f"{self.steps[0].name}: {', '.join(differ)}.")
+            for name, value in step.values.items():
+                ok = isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
+                if not ok or value <= SLIDE_TOLERANCE:
+                    problems.append(f"In mode {step.name}, the slide {name} is given {value!r} mm, where it holds a "
+                                    "distance from the Front plane above 0.")
+            for handle, frame in step.frames.items():
+                if not _frame_sound(frame):
+                    problems.append(f"In mode {step.name}, the frame of {handle} is not nine and three numbers.")
+        if plan is not None:
+            wanted = plan_names | set(made_in)
+            if everything is not None and everything != wanted:
+                differ = sorted(everything ^ wanted)
+                problems.append(f"The modes do not say on or off for exactly the assembly's mates: "
+                                f"{', '.join(differ)}.")
+            distances = {op.name or op.id for op in plan_mates if op.kind == "point distance"}
+            for name in sorted(slides - distances):
+                problems.append(f"The slide {name} is not a distance mate of the assembly.")
+            components = {op.id for op in plan.ops if isinstance(op, base.AddComponent)}
+            for step in self.steps:
+                for handle in step.frames:
+                    if handle not in components:
+                        problems.append(f"In mode {step.name}, {handle} is not a component of the assembly.")
+        return problems
+
+
+def _frame_sound(frame: object) -> bool:
+    """Whether ``frame`` is ``(rotation, at)`` of nine and three finite numbers."""
+    try:
+        rotation, at = frame                                        # type: ignore[misc]
+        numbers = [float(v) for v in rotation] + [float(v) for v in at]
+    except (TypeError, ValueError):
+        return False
+    return len(rotation) == 9 and len(at) == 3 and all(math.isfinite(v) for v in numbers)
+
+
+@dataclass
+class ModeCheck:
+    """One configuration as the per-mode check read it (W8-PLAN §1.8 step 6, §1.10's post-check), through handles
+    fetched after it was shown. ``mates``: every mate as read there. ``suppressed``: every per-mode mate's flag
+    there, as read back. ``values``: every SLIDE's value there, as read back (mm). ``clashes`` and
+    ``interference_error``: this configuration's interference, as :class:`GearboxResult` holds the first's."""
+
+    name: str
+    mates: List[MateState] = field(default_factory=list)
+    suppressed: Dict[str, bool] = field(default_factory=dict)
+    values: Dict[str, float] = field(default_factory=dict)
+    clashes: list = field(default_factory=list)
+    interference_error: str = ""
+
+
 @dataclass(frozen=True)
 class MateRef:
     """A mate on record, as Update needs it: its name in SolidWorks' tree, its kind (``workbook.motion`` AXIS,
@@ -1670,6 +1899,11 @@ class MateRef:
     kind: str
     gears: Tuple[str, ...]
     shaft: str = ""
+    # W8 (W8-INTERFACES.md §3): a SLIDE's values on record, ``(configuration, signed z_front mm)`` — the pairs of
+    # ``store.MateEntry.values`` in the order it holds them (read them as a dict) — else (); a coupling's or sliding
+    # mesh's on-set (``MateEntry.modes``), () = every configuration.
+    values: Tuple[Tuple[str, float], ...] = ()
+    modes: Tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -1712,6 +1946,19 @@ class MotionUpdate:
     # touches — judged against their wanted frames, and re-placed FIRST, before the carrier and the train (M1).
     carriers: Tuple[CarrierLink, ...] = ()
     held: Tuple[str, ...] = ()
+    # W8 (B fills them, A reads them; W8-PLAN §1.10, W8-INTERFACES.md §3). All empty for a gearbox with no modes,
+    # which is W7's path unchanged. ``configurations``: the modes on record (``GearboxRecord.modes``), in order.
+    # ``mode_placements``: per configuration, the frames now wanted there (``update_gearbox``'s ``placements`` are
+    # the active one's too, as before). ``recorded_by_mode``: per configuration, the frames on record there
+    # (``ComponentEntry.frames``; a configuration with none of its own repeats ``recorded``). ``slide_values``:
+    # ``(SLIDE name, configuration, wanted |z_front| mm)``, one per SLIDE per configuration. ``on_sets``:
+    # ``(per-mode mate, the configurations wanted on)`` for every coupling and sliding mesh, the J14 edits included;
+    # an always-on mate is not listed.
+    configurations: Tuple[str, ...] = ()
+    mode_placements: Tuple[Tuple[str, Tuple["Placement", ...]], ...] = ()
+    recorded_by_mode: Tuple[Tuple[str, Tuple["Placement", ...]], ...] = ()
+    slide_values: Tuple[Tuple[str, str, float], ...] = ()
+    on_sets: Tuple[Tuple[str, Tuple[str, ...]], ...] = ()
 
 
 def same_named_elsewhere(documents: Sequence[DocInfo], paths: Sequence[str]) -> List[Tuple[str, str]]:
@@ -2137,6 +2384,11 @@ class GearboxResult:
     # and the paths of the carrier parts reused (checked live, as the layout is).
     carriers: List[BuildResult] = field(default_factory=list)
     carriers_reused: List[str] = field(default_factory=list)
+    # W8 (A fills them; W8-PLAN §1.8, W8-INTERFACES.md §3): the per-mode check of each configuration, in mode order
+    # (empty with no ``modes``); and ``swcom.positions_per_configuration`` of the running version, read once by the
+    # worker for the sentences (None: neither claim made).
+    modes: List[ModeCheck] = field(default_factory=list)
+    positions_per_configuration: Optional[bool] = None
 
     @property
     def ok(self) -> bool:
@@ -2190,7 +2442,8 @@ def build_gearbox(sw: SolidWorks, parts: Sequence[BuildPlan], reuse: Sequence[Do
                   mtime: Callable[[str], float] = os.path.getmtime,
                   senses: Optional[Mapping[str, bool]] = None,
                   lines: Optional[Mapping[str, Tuple[Vec3, Vec3]]] = None,
-                  carriers: Sequence[Union[BuildPlan, DocumentValues]] = ()) -> GearboxResult:
+                  carriers: Sequence[Union[BuildPlan, DocumentValues]] = (),
+                  modes: Optional[ModesPlan] = None) -> GearboxResult:
     """A workbook's parts, its layout part and its static assembly, in one worker job (PLAN-WORKBOOK §4.2–§4.3).
 
     ``parts`` are the new parts' plans; ``reuse`` the parts already built and
@@ -2272,6 +2525,9 @@ def build_gearbox(sw: SolidWorks, parts: Sequence[BuildPlan], reuse: Sequence[Do
     part that fails skips the assembly, the parts and the layout part staying saved. Its paths join the pre-flight
     (never overwritten, a reused one still there, both among what the assembly may insert). The assembly's mate
     problems name a carrier by its id when ``gears`` maps the carrier's handle to it.
+
+    W8 (W8-INTERFACES.md §3): ``modes`` (keyword), passed to :func:`build` for the assembly (its configurations,
+    W8-PLAN §1.8), judged before anything is made, parts included (:func:`_modes_gate`). None is W7's call.
     """
     say = progress or _quiet
     _gate(sw)
@@ -2289,6 +2545,7 @@ def build_gearbox(sw: SolidWorks, parts: Sequence[BuildPlan], reuse: Sequence[Do
     if assembly is not None and layout is None:
         raise BuildError("The assembly is built around its layout part, and this build has neither a layout part "
                          "to make nor one to reuse.")
+    _modes_gate(assembly, modes)
     if assembly is not None:
         _assembly_rebuild_gate(workbook_assembly_kind(assembly))
         if workbook_assembly_kind(assembly) == ASSEMBLY_TRAIN:
@@ -2534,6 +2791,25 @@ class GearboxUpdate:
     resensed: List[str] = field(default_factory=list)
     extra_mates: List[str] = field(default_factory=list)
     mates: List[MateState] = field(default_factory=list)
+    # W8 (A fills them; W8-PLAN §1.10, W8-INTERFACES.md §3), all empty for a gearbox with no modes. ``configuration``:
+    # the one Update worked in (active when it opened the assembly). ``visited``: the others it showed and
+    # post-checked, in mode order (none in a quiet Update). ``unsuppressed_in`` / ``suppressed_in``: ``(mate,
+    # configuration)`` turned on / suppressed (D10 per configuration and J14's flags). ``slid``: ``(SLIDE name,
+    # configuration, value mm)`` set for a J14 edit; ``values_restored``: ``(SLIDE name, configuration)`` set back to
+    # the record's value. ``put_in``: the configurations in which gears were put, in the order put (the active one
+    # last). ``extra_configurations``: configurations the record does not know, left as they are. ``modes``: the
+    # post-check of each configuration visited, and of the one worked in. ``positions_per_configuration``: as on
+    # GearboxResult.
+    configuration: str = ""
+    visited: List[str] = field(default_factory=list)
+    unsuppressed_in: List[Tuple[str, str]] = field(default_factory=list)
+    suppressed_in: List[Tuple[str, str]] = field(default_factory=list)
+    slid: List[Tuple[str, str, float]] = field(default_factory=list)
+    values_restored: List[Tuple[str, str]] = field(default_factory=list)
+    put_in: List[str] = field(default_factory=list)
+    extra_configurations: List[str] = field(default_factory=list)
+    modes: List[ModeCheck] = field(default_factory=list)
+    positions_per_configuration: Optional[bool] = None
 
     @property
     def ok(self) -> bool:

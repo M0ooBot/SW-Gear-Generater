@@ -48,8 +48,8 @@ def test_the_record_mirrors_a_mate_field_for_field():
     for plan in plans:
         entry = motion.mate_entry(plan)
         assert isinstance(entry.gears, list) and isinstance(entry.ratio, list)
-        assert {k: (tuple(v) if isinstance(v, list) else v) for k, v in dataclasses.asdict(entry).items()} == \
-            dataclasses.asdict(plan)
+        assert {k: (tuple(v) if isinstance(v, list) else tuple(v.items()) if isinstance(v, dict) else v)
+                for k, v in dataclasses.asdict(entry).items()} == dataclasses.asdict(plan)     # W8: values as pairs
         assert motion.mate_ref(entry) == swbuild.MateRef(plan.name, plan.kind, plan.gears, plan.shaft)
     assert store.link_record_from_json(store.link_record_to_json(store.LinkRecord(gearbox=store.GearboxRecord(
         kind=motion.MOTION, mates=[motion.mate_entry(p) for p in plans])))).gearbox.mates == [

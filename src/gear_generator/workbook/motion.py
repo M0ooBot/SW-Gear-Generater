@@ -32,14 +32,15 @@ from .. import findings, store
 from ..gears import equations
 from ..gears.base import AddGlobal, BuildPlan, LinkDimension, Mate, Rebuild, SaveAs, Unfix
 from ..gears.spur import AXIS_NAME
-from ..swbuild import CarrierLink, LockLink, MateRef, MeshLink
+from ..swbuild import CarrierLink, LockLink, MateRef, MeshLink, ModesPlan
 from . import layout
 from .checks import Report
 from .layout import Frame
 from .model import GearboxSpec
 
 AXIS, ALONG, LOCK, MESH = "axis", "along", "lock", "mesh"       # MatePlan.kind (and store.MateEntry.kind)
-MATE_KINDS = (AXIS, ALONG, LOCK, MESH)
+SLIDE, SPLINE, COUPLE = "slide", "spline", "couple"             # W8: a slider's distance mate, its 1:1 gear mates
+MATE_KINDS = (AXIS, ALONG, LOCK, MESH, SLIDE, SPLINE, COUPLE)
 STATIC, MOTION = store.GEARBOX_STATIC, store.GEARBOX_MOTION     # GearboxRecord.kind, GearboxResult.kind
 FACE_GLOBAL_SUFFIX = " Face Z"                                  # "G4 Face Z": an anchor's distance along its shaft
 
@@ -88,6 +89,13 @@ class MatePlan:
     # id (``layout.carrier_id``: "C carrier"); ``shaft`` then holds the axis stem ("P copy 2"), so the axis is
     # always f"{shaft} Axis". "" for every other kind. A MESH's ``sense`` is its carrier-frame sense.
     on: str = ""
+    # W8 (B; W8-PLAN §1.7, W8-INTERFACES.md §4): a SLIDE's signed z_front per configuration, ``(mode, mm)`` in mode
+    # order — its ``z_front`` is the first mode's, its ``plane`` "front", its ``face_global`` "" — else (); a
+    # coupling's or sliding mesh's on-set, the modes it is on in, in mode order, () for a mate on in every one.
+    # A SPLINE or COUPLE has ``ratio`` (1, 1) and ``sense`` −1 when it turns its gears the same way about their
+    # own axes (W6's ``k = −c·za/zb``, so ``mate_senses``' identity ``sense == −1`` holds for it unchanged).
+    values: Tuple[Tuple[str, float], ...] = ()
+    modes: Tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -117,6 +125,11 @@ class MotionPlan:
     # W7 (B; W7-PLAN §2.7): the carrier ids (``layout.carrier_id``) mated to turn; a held carrier's id is in
     # ``fixed`` instead. A train includes its carrier.
     carriers: Tuple[str, ...] = ()
+    # W8 (B; W8-PLAN §1.7): the modes, which become the configurations, in Modes-sheet order (() with no Modes
+    # rows); and per mode the gears to drag there (``drag``'s meaning in that mode's trains). ``drag`` itself is
+    # the first mode's when there are modes.
+    modes: Tuple[str, ...] = ()
+    drag_by_mode: Mapping[str, Tuple[str, ...]] = field(default_factory=dict)
 
 
 def mate_name(kind: str, gears: Sequence[str], shaft: str = "") -> str:
@@ -124,22 +137,30 @@ def mate_name(kind: str, gears: Sequence[str], shaft: str = "") -> str:
     (the shaft's layout axis is ``"<Shaft> Axis"``), ALONG ``"G1 along S1"``, LOCK ``"G3 locked to G2"`` (gears
     ``(anchor, follower)``: the follower is named first), MESH ``"G1 meshes G2"`` (gears ``(a, b)``). Gear and
     shaft ids are letters, digits, ``_`` and ``-`` (the schema), so no two mates share a name. A kind not in
-    :data:`MATE_KINDS`, the wrong number of gears, or a shaft missing from (or given to) a kind is a ValueError."""
+    :data:`MATE_KINDS`, the wrong number of gears, or a shaft missing from (or given to) a kind is a ValueError.
+
+    W8 (J23): SLIDE ``"RangeSlv along Rear"`` (gears ``(slider,)``, its shaft; a slider never has an ALONG, so the
+    two kinds never name one gear twice), SPLINE ``"ModeSlv splined to RangeSlv"`` (gears ``(anchor, slider)``: the
+    slider is named first, as a LOCK's follower), COUPLE ``"RangeSlv engages InDog"`` (gears ``(sleeve, dog)``)."""
     gears = tuple(gears)
     if kind not in MATE_KINDS:
         raise ValueError(f"{kind!r} is not a kind of mate the turning assembly makes ({', '.join(MATE_KINDS)}).")
-    wanted = 1 if kind in (AXIS, ALONG) else 2
+    on_shaft = kind in (AXIS, ALONG, SLIDE)
+    wanted = 1 if on_shaft else 2
     if len(gears) != wanted or not all(gears):
         raise ValueError(f"A {kind} mate holds {wanted} gear{'s' if wanted != 1 else ''}, not {gears!r}.")
-    if (kind in (AXIS, ALONG)) != bool(shaft):
-        raise ValueError(f"A {kind} mate {'needs' if kind in (AXIS, ALONG) else 'takes no'} shaft, and was given "
-                         f"{shaft!r}.")
+    if on_shaft != bool(shaft):
+        raise ValueError(f"A {kind} mate {'needs' if on_shaft else 'takes no'} shaft, and was given {shaft!r}.")
     if kind == AXIS:
         return f"{gears[0]} on {shaft} Axis"
-    if kind == ALONG:
+    if kind in (ALONG, SLIDE):
         return f"{gears[0]} along {shaft}"
     if kind == LOCK:
         return f"{gears[1]} locked to {gears[0]}"
+    if kind == SPLINE:
+        return f"{gears[1]} splined to {gears[0]}"
+    if kind == COUPLE:
+        return f"{gears[0]} engages {gears[1]}"
     return f"{gears[0]} meshes {gears[1]}"
 
 
@@ -187,12 +208,15 @@ def mate_entry(mate: MatePlan) -> store.MateEntry:
     ``finish_build`` writes for a turning assembly)."""
     return store.MateEntry(name=mate.name, kind=mate.kind, gears=list(mate.gears), shaft=mate.shaft,
                            ratio=[int(n) for n in mate.ratio], face_global=mate.face_global,
-                           z_front=float(mate.z_front), plane=mate.plane, sense=int(mate.sense), on=mate.on)
+                           z_front=float(mate.z_front), plane=mate.plane, sense=int(mate.sense), on=mate.on,
+                           values={str(m): float(v) for m, v in mate.values}, modes=list(mate.modes))
 
 
 def mate_ref(entry: store.MateEntry) -> MateRef:
-    """A recorded mate as Update's worker takes it (``swbuild.MateRef``): its name, kind, gears and shaft."""
-    return MateRef(name=entry.name, kind=entry.kind, gears=tuple(entry.gears), shaft=entry.shaft)
+    """A recorded mate as Update's worker takes it (``swbuild.MateRef``): its name, kind, gears and shaft; W8 its
+    SLIDE values as ``(configuration, mm)`` pairs in the entry's order and its on-set."""
+    return MateRef(name=entry.name, kind=entry.kind, gears=tuple(entry.gears), shaft=entry.shaft,
+                   values=tuple((str(m), float(v)) for m, v in entry.values.items()), modes=tuple(entry.modes))
 
 
 _SET = object()      # a finding that must merely be settled (not None)
@@ -270,6 +294,26 @@ def motion_reason() -> str:
     if value is None:
         return f"{what[0].upper()}{what[1:]} is not settled by the probes for this version (findings.{name})."
     return f"The probes found {value!r} for {what} (findings.{name}), which this version does not build."
+
+
+def modes_reason() -> str:
+    """W8 (B writes it; W8-PLAN §1.9, §4): ``""`` when every finding a build with modes needs is settled for the
+    running version, else the whole sentence refusing a gearbox with modes (a ``GearboxPlan.refusal``), naming the
+    finding — read with getattr, as :func:`motion_reason` reads its own; a missing one is refused before anything
+    is made. Until B writes it, the sentence below refuses every gearbox with modes."""
+    return ("A gearbox with modes is not built by this version of Gear Generator yet: its configurations cannot be "
+            "made.")
+
+
+def modes_plan(motion: MotionPlan, handle_of: Mapping[str, str],
+               frames_by_mode: Mapping[str, Mapping[str, Frame]]) -> Optional[ModesPlan]:
+    """W8 (B writes it; W8-PLAN §1.8, W8-INTERFACES.md §4): the ``swbuild.ModesPlan`` for a turning plan with modes,
+    None with none (``motion.modes`` empty). ``handle_of``: gear id -> assembly handle (``GearboxPlan.handles``
+    inverted); ``frames_by_mode``: mode -> gear id -> its frame there. One step per mode in ``motion.modes`` order;
+    each per-mode mate's op in the first step it is on in; every SLIDE's |z_front| per step; ``same_way`` every
+    step gear mate whose ``sense == −1``. Its ``check(plan)`` is ``[]`` for both fixtures."""
+    raise ValueError("Planning an assembly's configurations is not in this version of Gear Generator yet, so a "
+                     "gearbox with modes cannot be planned.")
 
 
 def update_reason() -> str:

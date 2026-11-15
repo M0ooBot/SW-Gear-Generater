@@ -404,7 +404,14 @@ def link_record_path(workbook_path: str) -> str:
     return stem + LINK_SUFFIX
 
 
-LINK_SCHEMA_VERSION = 5          # the link record's own schema, apart from the .gear.json's SCHEMA_VERSION
+_W7_LINK_SCHEMA = 5               # the schema W7 left (W8-PLAN §1.11: W8's is one past it, written from it)
+LINK_SCHEMA_VERSION = _W7_LINK_SCHEMA + 1    # the link record's own schema, apart from the .gear.json's SCHEMA_VERSION
+# Schema 6 (W8, every record: W8-PLAN §1.11, W8-INTERFACES.md §5): the gearbox keeps its configurations
+# (GearboxRecord.modes), a SLIDE mate its value per configuration (MateEntry.values), a coupling or sliding mesh the
+# configurations it is on in (MateEntry.modes), and a component its frame per configuration (ComponentEntry.frames);
+# mate kinds gain "slide", "spline" and "couple". Every new field is defaulted, so a v1-v5 record reads as v6 with no
+# modes — what a record with no Modes rows holds — and a v6 written from it reads back the same. A record of any newer
+# schema is refused and left byte-identical.
 # Schema 5 (W7, every record: W7-PLAN §2.11, J16): the gearbox keeps its carrier parts (CarrierEntry), a component the
 # Gears row it is a copy of (ComponentEntry.of) and a mate the carrier its axis is in (MateEntry.on). Every new field is
 # defaulted, so a v1-v4 record reads as v5 with no carriers, every ``of`` and ``on`` empty — which is what a record
@@ -497,6 +504,10 @@ class ComponentEntry:
     # Schema 5 (W7): the Gears row this component is a copy of (``"Planet"`` for ``gear`` ``"Planet copy 2"``),
     # ``""`` when the gear has no copies (Copies 1, or a frame gear). A v4 entry reads as ``""``.
     of: str = ""
+    # Schema 6 (W8): per configuration, the frame last put there, ``{"2H": {"rotation": [9 by rows], "at": [3 mm]}}``
+    # (:data:`FRAME_KEYS`); ``{}`` = the one frame above, in every configuration. ``rotation`` and ``at`` stay the
+    # frame of the configuration the assembly was saved in (the first mode's at a build). A v5 entry reads as ``{}``.
+    frames: Dict[str, Dict[str, List[float]]] = field(default_factory=dict)
 
 
 @dataclass
@@ -532,6 +543,11 @@ class MateEntry:
     # component id (``"C carrier"``, ``layout.carrier_id``) — ``motion.MatePlan.on``; ``shaft`` then holds the axis
     # stem (``"P copy 2"``). A v4 entry reads as ``""``. A mesh's ``sense`` is its carrier-frame sense, as made.
     on: str = ""
+    # Schema 6 (W8; ``motion.MatePlan.values`` / ``modes``): a SLIDE's signed z_front per configuration, mm, as set
+    # (its ``z_front`` the first mode's, ``plane`` "front", ``face_global`` ""), ``{}`` for every other kind; a
+    # coupling's or sliding mesh's on-set, ``[]`` = every configuration. A v5 entry reads as ``{}`` and ``[]``.
+    values: Dict[str, float] = field(default_factory=dict)
+    modes: List[str] = field(default_factory=list)
 
 
 @dataclass
@@ -586,6 +602,9 @@ class GearboxRecord:
     mate_problems: List[str] = field(default_factory=list)
     mate_problems_digest: str = ""
     carriers: List["CarrierEntry"] = field(default_factory=list)   # schema 5 (W7): the carrier parts on record
+    # Schema 6 (W8): the configurations as built, in Modes-sheet order; the first is the one the assembly was saved
+    # in; ``[]`` = no configuration was added (no Modes rows). A v5 record reads as ``[]``.
+    modes: List[str] = field(default_factory=list)
 
 
 @dataclass
@@ -831,7 +850,7 @@ def _checked(item: Any) -> Any:
     return item
 
 
-_MATE_GEARS = {"axis": 1, "along": 1, "lock": 2, "mesh": 2}
+_MATE_GEARS = {"axis": 1, "along": 1, "lock": 2, "mesh": 2, "slide": 1, "spline": 2, "couple": 2}
 # How many gears each kind of mate holds (``workbook.motion.MATE_KINDS``, which imports this module, so the kinds are
 # spelled here too; a test keeps the two the same).
 
@@ -846,8 +865,9 @@ _FAMILY = 1e-9        # one family when |a×b| is below this (``workbook.geometr
 
 def _mate_checked(entry: MateEntry, index: int) -> MateEntry:
     """``entry`` (already type-checked) as a mate Update can act on, else a ValueError phrase naming it: a kind not
-    one of the four, gears not as many as its kind holds, or a mesh whose ratio is not two whole numbers above 0.
-    Read here so a damaged record is refused when it is read, never met as an IndexError while planning.
+    one of :data:`_MATE_GEARS` (W5's four and, schema 6, W8's three), gears not as many as its kind holds, or a
+    mesh whose ratio is not two whole numbers above 0. Read here so a damaged record is refused when it is read,
+    never met as an IndexError while planning.
 
     Schema 4 (W6): a ``plane`` not one of the three base planes, and a ``sense`` other than -1, 0 or +1. A mesh's
     0 is legal (W6-INTERFACES §7.1: "parallel, take it from the read", as W5 had it, and what a v3 record saved
@@ -866,6 +886,34 @@ def _mate_checked(entry: MateEntry, index: int) -> MateEntry:
         raise ValueError(f"{where} measures from the plane {entry.plane!r}, not one of {', '.join(_MATE_PLANES)}")
     if entry.sense not in (-1, 0, 1):
         raise ValueError(f"{where} has sense {entry.sense!r}, not -1, 0 or +1")
+    return entry
+
+
+FRAME_KEYS = ("rotation", "at")      # ComponentEntry.frames' frame: 9 numbers by rows, 3 numbers in mm
+
+
+def _w8_read(entry: Any) -> Any:
+    """Schema 6's new fields (W8) in their JSON shapes, numbers made floats so a round trip is byte-deterministic,
+    else a TypeError naming the field: ``MateEntry.values`` names to numbers; ``ComponentEntry.frames`` names to a
+    :data:`FRAME_KEYS` frame of 9 and 3 numbers. (The rules over the gearbox — every configuration named, no 0, one
+    sign, ``modes`` within ``GearboxRecord.modes``, a couple's ratio — are package C's, W8-PLAN §1.11.)"""
+    def number(v: Any) -> bool:
+        return isinstance(v, _NUMBER) and not isinstance(v, bool)
+    name = type(entry).__name__
+    if isinstance(entry, MateEntry):
+        if not all(isinstance(k, str) and number(v) for k, v in entry.values.items()):
+            raise TypeError(f"{name}.values is not configuration names to numbers")
+        entry.values = {k: float(v) for k, v in entry.values.items()}
+    if isinstance(entry, ComponentEntry):
+        frames: Dict[str, Dict[str, List[float]]] = {}
+        for key, frame in entry.frames.items():
+            sound = (isinstance(key, str) and isinstance(frame, dict) and set(frame) == set(FRAME_KEYS)
+                     and all(isinstance(frame[k], list) and all(number(v) for v in frame[k]) for k in FRAME_KEYS)
+                     and len(frame["rotation"]) == 9 and len(frame["at"]) == 3)
+            if not sound:
+                raise TypeError(f"{name}.frames[{key!r}] is not a rotation of 9 numbers and an origin of 3")
+            frames[key] = {k: [float(v) for v in frame[k]] for k in FRAME_KEYS}
+        entry.frames = frames
     return entry
 
 
@@ -972,7 +1020,7 @@ def _carriers_checked(box: "GearboxRecord") -> None:
 
 
 def link_record_from_json(text: str) -> LinkRecord:
-    """Parse a link record of any schema up to :data:`LINK_SCHEMA_VERSION`; a v1–v4 record is read as v5, and a
+    """Parse a link record of any schema up to :data:`LINK_SCHEMA_VERSION`; a v1–v5 record is read as v6, and a
     record of any newer schema is refused (:class:`UnknownSchema`) and left alone.
 
     The schema is ``link_schema_version`` when the file has it, else
@@ -1007,9 +1055,9 @@ def link_record_from_json(text: str) -> LinkRecord:
             record.gearbox.shafts = [_shaft_checked(_v3_shaft(_checked(s), raw_s, version), i)
                                      for i, (s, raw_s) in enumerate(zip(_entries(ShaftEntry, gearbox.get("shafts", [])),
                                                                         gearbox.get("shafts", [])))]
-            record.gearbox.components = [_checked(c) for c in _entries(ComponentEntry,
-                                                                        gearbox.get("components", []))]
-            record.gearbox.mates = [_mate_checked(_checked(m), i)
+            record.gearbox.components = [_w8_read(_checked(c)) for c in _entries(ComponentEntry,
+                                                                                  gearbox.get("components", []))]
+            record.gearbox.mates = [_mate_checked(_w8_read(_checked(m)), i)
                                     for i, m in enumerate(_entries(MateEntry, gearbox.get("mates", [])))]
             record.gearbox.carriers = [_carrier_read(c, raw_c, i) for i, (c, raw_c) in
                                        enumerate(zip(_entries(CarrierEntry, gearbox.get("carriers", []) or []),

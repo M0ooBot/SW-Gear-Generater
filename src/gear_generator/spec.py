@@ -254,6 +254,9 @@ class GearSpec:
         return GearSpec(**values)
 
 
+CLUTCH_WORDS = {"sleeve": "Sleeve", "dog": "Dog"}   # a workbook sleeve's and dog's stem word, never Gear or Ring
+
+
 def default_stem(spec: GearSpec, prefix: str = "") -> str:
     """``Gear_m1.5_N25``; ``Helical_m2_N20_15R`` and ``Herringbone_m2_N20_30L`` for the helical kinds.
 
@@ -272,6 +275,7 @@ def default_stem(spec: GearSpec, prefix: str = "") -> str:
     words = {KIND_HELICAL: "Helical", KIND_HERRINGBONE: "Herringbone", KIND_BEVEL: "Bevel"}
     internal = spec.is_internal() and spec.kind != KIND_BEVEL
     lead = "Ring" if internal and prefix != "Pinion" else (prefix or words.get(spec.kind, "Gear"))
+    lead = CLUTCH_WORDS.get(spec.kind, lead)          # W8: Sleeve_m1.5_N30, Dog_m1.5_N30 (W8-PLAN §1.1)
     stem = f"{lead}_m{_number_text(spec.module)}_N{_number_text(spec.teeth)}"
     if spec.kind in HELICAL_KINDS:
         hand = str(spec.hand).strip().lower()[:1].upper()

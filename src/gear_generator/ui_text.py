@@ -3427,3 +3427,68 @@ def planetary_speed_line(shaft: str, motion, *, copies: int = 1, carrier: str = 
     if copies > 1:
         text += f" · {copies} copies"
     return text
+
+
+# --- W8: modes (W8-PLAN §1.12, W8-INTERFACES.md §7). Package C writes each sentence exactly as §1.12 gives it, filled
+# from fields; the existing functions keep their signatures and call these. Until then each refuses with a sentence,
+# and nothing calls them.
+
+TURN_STAYS = "A turn you give the gears in one configuration stays in that configuration."
+TURN_SHOWS_EVERYWHERE = ("A turn you give the gears in one configuration shows in every configuration, so a dog can "
+                         "stand across its sleeve in another mode until Update SolidWorks puts the gears back.")
+
+
+def turning_note(positions_per_configuration: Optional[bool]) -> str:
+    """The footer's sentence about turning in a gearbox with modes (W8-PLAN §1.9, §1.12), chosen by
+    ``swcom.positions_per_configuration`` for the running version — carried on ``GearboxResult`` /
+    ``GearboxUpdate.positions_per_configuration``: True :data:`TURN_STAYS`, False :data:`TURN_SHOWS_EVERYWHERE`,
+    None (the finding unsettled for this version) ``""``: neither claim. The one home of that switch; every
+    sentence that says where a turn shows asks it."""
+    if positions_per_configuration is True:
+        return TURN_STAYS
+    if positions_per_configuration is False:
+        return TURN_SHOWS_EVERYWHERE
+    return ""
+
+
+def _modes_not_yet(what: str) -> ValueError:
+    return ValueError(f"The sentence {what} is not written in this version of Gear Generator yet.")
+
+
+def modes_ready_line(plan) -> str:
+    """Before Build, for a ``GearboxPlan`` whose workbook has modes (or sliders and no Modes rows): *"It has {4}
+    modes, {2H, 4H, N and 4L}: each becomes a configuration of the assembly, and it opens in {2H}."* · *"{RangeSlv
+    and ModeSlv} slide, but the Modes sheet has no rows, so the assembly has one configuration with each at its
+    position 0."*; ``""`` with neither."""
+    raise _modes_not_yet("before a Build with modes")
+
+
+def modes_done_line(plan, result) -> str:
+    """After a Build with modes (``motion_done_line`` asks it): the configurations made, no mate in error in any of
+    them, the one it opens in, the gear to drag, and the interference ending per mode (W8-PLAN §1.12)."""
+    raise _modes_not_yet("after a Build with modes")
+
+
+def mode_problem(problem: str) -> str:
+    """A mate problem of the per-mode check (A writes *"In mode {4L}, …"*), shown whole."""
+    raise _modes_not_yet("for a problem in one mode")
+
+
+def modes_record_line(record) -> str:
+    """The footer for a record with modes: *"It was built with a configuration per mode ({2H, 4H, N and 4L}): pick
+    one in SolidWorks and drag {Sun} to turn it."*, the reordered rows' sentence, and :func:`turning_note`."""
+    raise _modes_not_yet("for a gearbox built with modes")
+
+
+def mode_update_lines(update, result) -> List[str]:
+    """After an Update with modes: each slide value set or set back, each flag turned on or suppressed again, the
+    configuration it worked in and those it showed, an extra configuration left, and the quiet Update's sentence
+    (J25: *"It worked in {4H}, the configuration that was active; it did not show the other modes, since nothing
+    needed changing."*)."""
+    raise _modes_not_yet("after an Update with modes")
+
+
+def mode_speed_lines(spec, report, mode: str) -> Tuple[List[str], str]:
+    """The Speeds panel at ``mode`` (a ``checks.ModeReport`` name): its lines (*"{4L}: Rear 375 rpm · Front 375 rpm ·
+    4.000 : 1"*, neutral's, a shared output's torque) and its ratio line."""
+    raise _modes_not_yet(f"for the speeds in mode {mode}")

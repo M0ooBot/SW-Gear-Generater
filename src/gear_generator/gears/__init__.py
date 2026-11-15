@@ -1,6 +1,7 @@
 """Gear kinds: the maths of each, and the SolidWorks recipe that builds it."""
 
 from .bevel import BevelGear
+from .clutch import DogKind, SleeveKind
 from .helical import HelicalGear, HerringboneGear
 from .internal import InternalHelicalGear, InternalHerringboneGear, InternalSpurGear
 from .spur import SpurGear
@@ -16,8 +17,17 @@ INTERNAL_KINDS = {"spur": InternalSpurGear(), "helical": InternalHelicalGear(),
 PLANNED_KINDS: tuple = ()
 
 
+# W8: the workbook's own kinds (W8-PLAN §1.1), never offered by the strip (``gui.KIND_VALUES`` reads ``KINDS``).
+WORKBOOK_KINDS = {"sleeve": SleeveKind(), "dog": DogKind()}
+
+
 def kind_for(spec):
-    """The calculation for a form: its kind, and a ring's when its teeth are internal. None when there is none."""
+    """The calculation for a form: its kind, and a ring's when its teeth are internal. None when there is none.
+
+    A workbook kind (``WORKBOOK_KINDS``: a sleeve or dog) is found first, before the internal branch, since a
+    sleeve is internal and ``INTERNAL_KINDS`` has none."""
+    if getattr(spec, "kind", None) in WORKBOOK_KINDS:
+        return WORKBOOK_KINDS[spec.kind]
     if str(getattr(spec, "teeth_side", "")).strip().lower() == "internal":
         return INTERNAL_KINDS.get(spec.kind)
     return KINDS.get(spec.kind)
