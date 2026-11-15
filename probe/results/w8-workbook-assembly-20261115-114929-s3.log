@@ -1,0 +1,857 @@
+run     2026-11-15 11:49:55; app gear-generator 0.3.2 from C:\Users\M0obo\Documents\GearGeneratorProbe\w8-s3-20261115-114929\snap\src (snapshot: e670e7e); sections ['s3']
+attach  SolidWorks 2026 (revision 34.0.0), PID 26600; SolidWorks 0.77 GB private, 6.82 GB free
+open    before: []
+findings LAYOUT_PLUS_FLIP {'right': False, 'top': False}, LAYOUT_NEGATED_LINK 'minus', LAYOUT_AXIS_Z_SIGN -1, REPLACE_FIXED_ROUTE 'Transform2 put'
+findings W5: GEAR_MATE_RATIO_ROUTE 'remake', MATED_ASSEMBLY_REBUILD_ROUTE 'ForceRebuild3(True)', MATED_BUILD_REBUILD_ROUTE 'ForceRebuild3(True)', GEAR_MATE_FLIP False, DEMONSTRATION_DRIVE_SENSE 1, MESH_PHASE_ROUTE 'Transform2 put with the gear mate on', LOCK_RETAKES_AN_OFFSET True; P0c {'GEAR_MATE_REMAKE_UNDER_COMMAND_IN_PROGRESS': True, 'GEAR_MATE_SENSE_READ_UNDER_COMMAND_IN_PROGRESS': True, 'IDLER_UPDATE_HOLDS': True, 'LIGHTWEIGHT_FIRST_DRIVE_RIGHT': False, 'LIGHTWEIGHT_FORCED_BY': 'swOpenDocOptions_LoadLightweight | swOpenDocOptions_OverrideDefaultLoadLightweight', 'LIGHTWEIGHT_OPEN_RAISES_AN_ADDIN_DIALOG': True, 'LIGHTWEIGHT_REMAKE_HOLDS': True, 'LIGHTWEIGHT_RESOLVED_BY': 'the first drive', 'MATES_UNDER_COMMAND_IN_PROGRESS': True, 'MATE_FOLDER_ROUTE': 'IFeatureManager.InsertFeatureTreeFolder2(swFeatureTreeFolder_Containing)', 'MATE_FOLDER_SUPPRESSION_SUPPRESSES_ITS_MATES': True, 'MATE_FOLDER_TYPE_NAME': 'FtrFolder', 'MATE_GROUP_WALK_SEES_MATES_IN_A_FOLDER': True, 'MATE_RENAME_AT_ONCE': True, 'PUT_ON_TWICE_MESHED_GEAR_HOLDS': True, 'REMAKE_ON_TWICE_MESHED_GEAR_HOLDS': True, 'SECOND_ASSEMBLY_BESIDE_UNSAVED_HOLDS': True, 'SUPPRESSED_MATE_ERROR_CODE': 0, 'UNSUPPRESS_ON_LOCK_ALREADY_ON_MARKS_MODIFIED': True}; AXIAL_RESTORES True; m4 offset 0 mm
+findings W6: TURNED_GEAR_MATE_SENSE_READ_BACK 'entity senses', TURNED_GEAR_MATE_SENSE_ANGLES (30.0, 150.0), TURNED_GEAR_MATE_SENSE_ANGLES_SKEW (60.0, 120.0), GEAR_MATE_SENSE_READ_BACK '(Reverse == entities parallel) == internal', LAYOUT_PLUS_FLIP {'right': False, 'top': False}, REF_PLANE_UNFLIPPED_IS_PLUS_Z True, AXIAL_MATE_ROUTE 'origin distance'
+findings W8: CONFIGURATION_SHOW_RAISES_DIALOG False, HANDLES_STALE_AFTER_CONFIGURATION_CHANGE True, SLIDE_VALUE_ROUTE 'SetSystemValue3(m, 3, [configuration]); GetSystemValue3(3, configurations)', POSITIONS_PER_CONFIGURATION_ON_2026 True, _ON_2024 True, SUPPRESSED_GEAR_MATE_SENSE_READ 'answers, marks nothing', COLLINEAR_GEAR_MATE_SENSE_READ_BACK True; positions per configuration here True
+fact    a SolidWorks balloon tip ['Check1', 'Simplified Interface', 'The Simplified Interface provides a minimalist layout for quick and basic modeling. It can be customized similarly to the standard interface.\n\nShow how to turn off the Simplified Interface.'] came up while no SolidWorks call was in progress (left standing, never answered)
+DIALOG  SolidWorks shows '': ['Title', 'Description', 'Button1', 'Button2', 'Hyperlink Text 1', 'Hyperlink Text 2']
+NOTE    SolidWorks' notification box came up while no SolidWorks call was in progress (exempt by the coordinator's ruling; nothing answers it)
+excel   started our own Excel, PID 69956, 16.0 build 20430.0
+== s3  D10 per configuration and the refusals (W8-PLAN §5, with W8-REVIEW-FIX-TIER11's M2), a copy of s1.master, 2H active: two flags in 4L and N's slide value changed by the script -> Update puts them right; an angle mate the record does not know -> refused in every mode, then in N only, then listed and left; Exploded added, then active (J13); 4H deleted -> Build again…
+copy    s1.master -> s3: 17 files, mtimes kept
+        TransferCase_E4.xlsx's record: 24 path(s) put onto the copy: ['record.workbook', 'record.parts[0].path', 'record.parts[1].path', 'record.parts[2].path', 'record.parts[3].path', 'record.parts[4].path', 'record.parts[5].path', 'record.assembly', 'record.gearbox.layout', 'record.gearbox.assembly', 'record.gearbox.components[0].part', 'record.gearbox.components[1].part', 'record.gearbox.components[2].part', 'record.gearbox.components[3].part', 'record.gearbox.components[4].part', 'record.gearbox.components[5].part', 'record.gearbox.components[6].part', 'record.gearbox.components[7].part', 'record.gearbox.components[8].part', 'record.gearbox.components[9].part', 'record.gearbox.components[10].part', 'record.gearbox.components[11].part', 'record.gearbox.components[12].part', 'record.gearbox.carriers[0].path']
+        Dog_m1.5_N30.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1_N24.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m2_N20.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m2_N30.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Ring_m1_N72.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Sleeve_m1.5_N30.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+ok      s3: the copy's record is valid: owner ('ours', ''); left on the master []; missing in the copy []; clear_saved dropped nothing (unsaved, mismatched ([], [])); the read's digest equals the record's
+probe   W6-PLAN §7.1: TransferCase_E4.SLDASM of s3, whose stored references name a folder that is gone, opened under the dialog watch (120 s at most)
+DIALOG  SolidWorks shows '': ['Close', 'Opened 15\nComponents', 'Updating\nAssembly', 'Update\nGraphics', 'Post load updating', 'Elapsed time: 5 seconds', 'This file was last opened in 11 minutes and 28 seconds.', 'For more information, view: ']
+fact    s3: the copy's assembly opened in 12.9 s; marked modified straight after the open: {'TransferCase_E4_Layout.SLDPRT': False, 'TransferCase_E4_Carrier_Carrier.SLDPRT': False, 'Gear_m1_N24.SLDPRT': False, 'Ring_m1_N72.SLDPRT': False, 'Dog_m1.5_N30.SLDPRT': False, 'Sleeve_m1.5_N30.SLDPRT': False, 'Gear_m2_N30.SLDPRT': False, 'Gear_m2_N20.SLDPRT': False, 'TransferCase_E4.SLDASM': False}
+fact    W6-PLAN §7.1: dialogs while the copied assembly opened: none
+ok      s3: SolidWorks found all 14 components and the layout in the copy, and the copy closed without saving (left []): elsewhere none
+ok      Excel opened TransferCase_E4.xlsx with no dialog or repair: []
+ok      read TransferCase_E4.xlsx: ok
+        warning Gears!Q5: InDog: The involute starts at 42.96 mm, above the form diameter of 42.801 mm, so the bottom of the working flank is a straight line.
+        warning Gears!Q6: LoDog: The involute starts at 42.96 mm, above the form diameter of 42.801 mm, so the bottom of the working flank is a straight line.
+        warning Gears!F7: RangeSlv: The teeth's tips, at 42 mm, are inside the base circle of 42.286 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!Q8: FrontDog: The involute starts at 42.96 mm, above the form diameter of 42.801 mm, so the bottom of the working flank is a straight line.
+        warning Gears!F9: ModeSlv: The teeth's tips, at 42 mm, are inside the base circle of 42.286 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!Q10: FDrive: The involute starts at 57.28 mm, above the form diameter of 57.068 mm, so the bottom of the working flank is a straight line.
+        warning Gears!Q12: FOut: The involute starts at 57.28 mm, above the form diameter of 57.068 mm, so the bottom of the working flank is a straight line.
+        8 shafts · 11 gears · 4 meshes; gate ''
+ok      s3: the copy reads as built from this workbook, its gearbox in the copy, with the modes ['2H', '4H', 'N', '4L']
+classify parts changed []; moved []; re-place []; structural []; missing []; unsaved []; refusal ''; turning True; axial []; ratios []
+        layout globals wanted ['Idler X = 50', 'Front X = 100']
+summary SolidWorks already matches the workbook on record; Update SolidWorks checks it live and puts right anything changed there; gears turned in SolidWorks stay where they are unless something must move.
+ok      s3: the copy classifies as an Update with nothing structural: [] ''
+footer  (s3, the copy read) [green] SolidWorks already matches the workbook on record; Update SolidWorks checks it live and puts right anything changed there; gears turned in SolidWorks stay where they are unless something must move. It was built with a configuration per mode (2H, 4H, N and 4L), each named as its mode, and saved in 2H; to switch mode, double-click another mode's configuration in SolidWorks' ConfigurationManager. Drag Sun in SolidWorks to turn one train and FrontDog to turn the other. Carrier (the carrier) is axes and planes only, so it has nothing to drag.
+        button 'Build again…' on; Update SolidWorks shown on primary
+DIALOG  SolidWorks shows '': ['Close', 'Opened 15\nComponents', 'Updating\nAssembly', 'Update\nGraphics', 'Post load updating', 'Elapsed time: 3 seconds', 'This file was last opened in 11 minutes and 28 seconds.', 'For more information, view: ']
+        changed by the script with 2H active: {'RangeSlv engages LoDog': {'2H': True, '4H': True, 'N': True, '4L': True}, 'RangeSlv engages InDog': {'2H': False, '4H': False, 'N': True, '4L': False}, 'RangeSlv along Rear': {'2H': 46.0, '4H': 46.0, 'N': 58.0, '4L': 66.0}}
+ok      s3: in 4L RangeSlv engages LoDog suppressed and RangeSlv engages InDog on, N's RangeSlv along Rear 58 mm, 2H active, nothing shown
+person  saved in SolidWorks (s3: after the script's changes, so the marks after the Update are its own): [('TransferCase_E4_Layout.SLDPRT', True), ('TransferCase_E4_Carrier_Carrier.SLDPRT', True), ('Gear_m1_N24.SLDPRT', True), ('Ring_m1_N72.SLDPRT', True), ('Dog_m1.5_N30.SLDPRT', True), ('Sleeve_m1.5_N30.SLDPRT', True), ('Gear_m2_N30.SLDPRT', True), ('Gear_m2_N20.SLDPRT', True), ('TransferCase_E4.SLDASM', True)]
+classify parts changed []; moved []; re-place []; structural []; missing []; unsaved []; refusal ''; turning True; axial []; ratios []
+        layout globals wanted ['Idler X = 50', 'Front X = 100']
+summary SolidWorks already matches the workbook on record; Update SolidWorks checks it live and puts right anything changed there; gears turned in SolidWorks stay where they are unless something must move.
+update  SolidWorks 1.01 GB private, 6.29 GB free
+DIALOG  SolidWorks shows 'Calculating Interference Detection': ['Cancel', 'Calculating interferences between components...'] (a progress box that closes itself; not logged again)
+        update  Gear_m1_N24.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Ring_m1_N72.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Dog_m1.5_N30.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Sleeve_m1.5_N30.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Gear_m2_N30.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Gear_m2_N20.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  TransferCase_E4_Layout.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  TransferCase_E4_Carrier_Carrier.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        ok      every gear is where the workbook puts it
+        ok      worked in 2H, the configuration that was active, and showed 4H, N, 4L too
+        ok      turned back on: RangeSlv engages LoDog in 4L
+        ok      suppressed again: RangeSlv engages InDog in 4L
+        ok      slides set back to the record: RangeSlv along Rear in N
+        mate    Sun on In Axis
+        mate    Sun along In
+        mate    InDog locked to Sun
+        mate    Carrier carrier on Carrier Axis
+        mate    Carrier carrier along Carrier
+        mate    LoDog locked to Carrier carrier
+        mate    Pl copy 1 on Planet copy 1 Axis
+        mate    Pl copy 1 along Planet copy 1
+        mate    Pl copy 2 on Planet copy 2 Axis
+        mate    Pl copy 2 along Planet copy 2
+        mate    Pl copy 3 on Planet copy 3 Axis
+        mate    Pl copy 3 along Planet copy 3
+        mate    RangeSlv on Rear Axis
+        mate    RangeSlv along Rear
+        mate    ModeSlv on Rear Axis
+        mate    ModeSlv along Rear
+        mate    FrontDog on FrontDrv Axis
+        mate    FrontDog along FrontDrv
+        mate    FDrive locked to FrontDog
+        mate    FIdler on Idler Axis
+        mate    FIdler along Idler
+        mate    FOut on Front Axis
+        mate    FOut along Front
+        mate    ModeSlv splined to RangeSlv
+        mate    Sun meshes Pl copy 1
+        mate    Sun meshes Pl copy 2
+        mate    Sun meshes Pl copy 3
+        mate    Pl copy 1 meshes Ring
+        mate    FDrive meshes FIdler
+        mate    FIdler meshes FOut
+        mate    RangeSlv engages InDog
+        mate    ModeSlv engages FrontDog · suppressed
+        mate    RangeSlv engages LoDog · suppressed
+        ok      assembly rebuilt once
+        ok      no interference between the gears
+        not saved: TransferCase_E4.SLDASM changed in SolidWorks; save there to keep it
+        in 162.4 s; SolidWorks 1.57 GB private, 6.55 GB free
+        steps [('check', 'Gear_m1_N24', 1, 9), ('check', 'Ring_m1_N72', 2, 9), ('check', 'Dog_m1.5_N30', 3, 9), ('check', 'Sleeve_m1.5_N30', 4, 9), ('check', 'Gear_m2_N30', 5, 9), ('check', 'Gear_m2_N20', 6, 9), ('check', 'TransferCase_E4_Layout', 7, 9), ('check', 'TransferCase_E4_Carrier_Carrier', 8, 9), ('check', 'TransferCase_E4', 9, 9), ('place', 'TransferCase_E4', 0, 0), ('mode', '4H', 1, 4), ('mode', 'N', 2, 4), ('mode', '4L', 3, 4), ('mode', '2H', 4, 4)]
+        loaded from disk []
+        motion: turned False; out of step []; off axis []; restored []; unsuppressed []; axial []; ratios []; extra mates []; ratios found [], already [], read []; sense found wrong [], turned round []
+        train_check residuals (rad) [('Sun', 'Pl copy 1', '3.83e-15'), ('Sun', 'Pl copy 2', '5.55e-17'), ('Sun', 'Pl copy 3', '5.55e-17'), ('Pl copy 1', 'Ring', '1.20e-15'), ('FDrive', 'FIdler', '1.39e-16'), ('FIdler', 'FOut', '9.25e-17'), ('Pl copy 2', 'Ring', '5.55e-17'), ('Pl copy 3', 'Ring', '6.94e-17'), ('RangeSlv', 'InDog', '0.00e+00'), ('Sun', 'InDog', '0.00e+00'), ('Carrier carrier', 'LoDog', '2.78e-17'), ('FrontDog', 'FDrive', '0.00e+00'), ('RangeSlv', 'ModeSlv', '2.78e-17')]
+        finish: dragged []; earlier update ''
+ok      the Update's check phase found no gear mate turning against its mesh: []
+record  0 sidecar(s) written; record written; notes []
+status  [green] Updated SolidWorks: set RangeSlv's place in N back to 56 mm, where it had been changed in SolidWorks, turned the mate RangeSlv engages LoDog back on in 4L, suppressed the mate RangeSlv engages InDog again in 4L, where it was on; no interference between the gears in any mode, where they stand. It worked in 2H, the configuration that was active, then showed and checked 4H, N and 4L and left the assembly in 2H. Save TransferCase_E4 in SolidWorks to keep it.
+fact    s3 D10 Update in 2H: the press took 162.4 s; SolidWorks calls by member {'OpenDoc6': 10, 'IsSuppressed2': 311, 'SetSuppression2': 2, 'SetSystemValue3': 1, 'ForceRebuild3': 5, 'ShowConfiguration2': 4}
+        shows and puts in order: [('ShowConfiguration2', '4H'), ('ShowConfiguration2', 'N'), ('ShowConfiguration2', '4L'), ('ShowConfiguration2', '2H')]
+        configuration '2H'; visited ['4H', 'N', '4L']; put_in []; placed []; unsuppressed_in [('RangeSlv engages LoDog', '4L')]; suppressed_in [('RangeSlv engages InDog', '4L')]; slid []; values_restored [('RangeSlv along Rear', 'N')]; extra configurations []; extra mates []; senses unread []; positions per configuration True; failures []
+        post-check of 4H: turned False; out of step []; off axis []; clashes []; interference error ''
+        post-check of N: turned False; out of step []; off axis []; clashes []; interference error ''
+        post-check of 4L: turned False; out of step []; off axis []; clashes []; interference error ''
+        post-check of 2H: turned False; out of step []; off axis []; clashes []; interference error ''
+ok      s3 D10 Update: the two flags in 4L and N's value put right, nothing else
+ok      s3 D10 Update: every flag and value set before anything is shown (sets at [175, 177, 179], first show at [181])
+ok      s3 D10 Update: having changed something, it shows and checks every mode: visited ['4H', 'N', '4L']
+        the sentence: "Updated SolidWorks: set RangeSlv's place in N back to 56 mm, where it had been changed in SolidWorks, turned the mate RangeSlv engages LoDog back on in 4L, suppressed the mate RangeSlv engages InDog again in 4L, where it was on; no interference between the gears in any mode, where they stand. It worked in 2H, the configuration that was active, then showed and checked 4H, N and 4L and left the assembly in 2H. Save TransferCase_E4 in SolidWorks to keep it."
+        marked modified in SolidWorks right after the update: {'TransferCase_E4_Layout.SLDPRT': False, 'TransferCase_E4_Carrier_Carrier.SLDPRT': False, 'Gear_m1_N24.SLDPRT': False, 'Ring_m1_N72.SLDPRT': False, 'Dog_m1.5_N30.SLDPRT': False, 'Sleeve_m1.5_N30.SLDPRT': False, 'Gear_m2_N30.SLDPRT': False, 'Gear_m2_N20.SLDPRT': False, 'TransferCase_E4.SLDASM': True}
+ok      s3 D10 Update: SolidWorks marks modified exactly ['TransferCase_E4.SLDASM']
+        raw reads, GetConfigurationNames ['2H', '4H', 'N', '4L']
+read    s3 after D10: Sun on In Axis: raw in document order {'2H': False, '4H': False, 'N': False, '4L': False}; the app per name {'2H': False, '4H': False, 'N': False, '4L': False}; §2.3 {'2H': False, '4H': False, 'N': False, '4L': False}
+ok      s3 after D10: the raw IsSuppressed2 of Sun on In Axis, paired in document order, is §2.3's
+ok      s3 after D10: the app's per-name read of Sun on In Axis is §2.3's
+fact    s3 after D10: Sun on In Axis, names passed reversed ['4L', 'N', '4H', '2H']: answered [False, False, False, False] — the same either way (every flag alike)
+read    s3 after D10: Sun along In: raw in document order {'2H': False, '4H': False, 'N': False, '4L': False}; the app per name {'2H': False, '4H': False, 'N': False, '4L': False}; §2.3 {'2H': False, '4H': False, 'N': False, '4L': False}
+ok      s3 after D10: the raw IsSuppressed2 of Sun along In, paired in document order, is §2.3's
+ok      s3 after D10: the app's per-name read of Sun along In is §2.3's
+fact    s3 after D10: Sun along In, names passed reversed ['4L', 'N', '4H', '2H']: answered [False, False, False, False] — the same either way (every flag alike)
+read    s3 after D10: InDog locked to Sun: raw in document order {'2H': False, '4H': False, 'N': False, '4L': False}; the app per name {'2H': False, '4H': False, 'N': False, '4L': False}; §2.3 {'2H': False, '4H': False, 'N': False, '4L': False}
+ok      s3 after D10: the raw IsSuppressed2 of InDog locked to Sun, paired in document order, is §2.3's
+ok      s3 after D10: the app's per-name read of InDog locked to Sun is §2.3's
+fact    s3 after D10: InDog locked to Sun, names passed reversed ['4L', 'N', '4H', '2H']: answered [False, False, False, False] — the same either way (every flag alike)
+read    s3 after D10: Carrier carrier on Carrier Axis: raw in document order {'2H': False, '4H': False, 'N': False, '4L': False}; the app per name {'2H': False, '4H': False, 'N': False, '4L': False}; §2.3 {'2H': False, '4H': False, 'N': False, '4L': False}
+ok      s3 after D10: the raw IsSuppressed2 of Carrier carrier on Carrier Axis, paired in document order, is §2.3's
+ok      s3 after D10: the app's per-name read of Carrier carrier on Carrier Axis is §2.3's
+fact    s3 after D10: Carrier carrier on Carrier Axis, names passed reversed ['4L', 'N', '4H', '2H']: answered [False, False, False, False] — the same either way (every flag alike)
+read    s3 after D10: Carrier carrier along Carrier: raw in document order {'2H': False, '4H': False, 'N': False, '4L': False}; the app per name {'2H': False, '4H': False, 'N': False, '4L': False}; §2.3 {'2H': False, '4H': False, 'N': False, '4L': False}
+ok      s3 after D10: the raw IsSuppressed2 of Carrier carrier along Carrier, paired in document order, is §2.3's
+ok      s3 after D10: the app's per-name read of Carrier carrier along Carrier is §2.3's
+fact    s3 after D10: Carrier carrier along Carrier, names passed reversed ['4L', 'N', '4H', '2H']: answered [False, False, False, False] — the same either way (every flag alike)
+read    s3 after D10: LoDog locked to Carrier carrier: raw in document order {'2H': False, '4H': False, 'N': False, '4L': False}; the app per name {'2H': False, '4H': False, 'N': False, '4L': False}; §2.3 {'2H': False, '4H': False, 'N': False, '4L': False}
+ok      s3 after D10: the raw IsSuppressed2 of LoDog locked to Carrier carrier, paired in document order, is §2.3's
+ok      s3 after D10: the app's per-name read of LoDog locked to Carrier carrier is §2.3's
+fact    s3 after D10: LoDog locked to Carrier carrier, names passed reversed ['4L', 'N', '4H', '2H']: answered [False, False, False, False] — the same either way (every flag alike)
+read    s3 after D10: Pl copy 1 on Planet copy 1 Axis: raw in document order {'2H': False, '4H': False, 'N': False, '4L': False}; the app per name {'2H': False, '4H': False, 'N': False, '4L': False}; §2.3 {'2H': False, '4H': False, 'N': False, '4L': False}
+ok      s3 after D10: the raw IsSuppressed2 of Pl copy 1 on Planet copy 1 Axis, paired in document order, is §2.3's
+ok      s3 after D10: the app's per-name read of Pl copy 1 on Planet copy 1 Axis is §2.3's
+fact    s3 after D10: Pl copy 1 on Planet copy 1 Axis, names passed reversed ['4L', 'N', '4H', '2H']: answered [False, False, False, False] — the same either way (every flag alike)
+read    s3 after D10: Pl copy 1 along Planet copy 1: raw in document order {'2H': False, '4H': False, 'N': False, '4L': False}; the app per name {'2H': False, '4H': False, 'N': False, '4L': False}; §2.3 {'2H': False, '4H': False, 'N': False, '4L': False}
+ok      s3 after D10: the raw IsSuppressed2 of Pl copy 1 along Planet copy 1, paired in document order, is §2.3's
+ok      s3 after D10: the app's per-name read of Pl copy 1 along Planet copy 1 is §2.3's
+fact    s3 after D10: Pl copy 1 along Planet copy 1, names passed reversed ['4L', 'N', '4H', '2H']: answered [False, False, False, False] — the same either way (every flag alike)
+read    s3 after D10: Pl copy 2 on Planet copy 2 Axis: raw in document order {'2H': False, '4H': False, 'N': False, '4L': False}; the app per name {'2H': False, '4H': False, 'N': False, '4L': False}; §2.3 {'2H': False, '4H': False, 'N': False, '4L': False}
+ok      s3 after D10: the raw IsSuppressed2 of Pl copy 2 on Planet copy 2 Axis, paired in document order, is §2.3's
+ok      s3 after D10: the app's per-name read of Pl copy 2 on Planet copy 2 Axis is §2.3's
+fact    s3 after D10: Pl copy 2 on Planet copy 2 Axis, names passed reversed ['4L', 'N', '4H', '2H']: answered [False, False, False, False] — the same either way (every flag alike)
+read    s3 after D10: Pl copy 2 along Planet copy 2: raw in document order {'2H': False, '4H': False, 'N': False, '4L': False}; the app per name {'2H': False, '4H': False, 'N': False, '4L': False}; §2.3 {'2H': False, '4H': False, 'N': False, '4L': False}
+ok      s3 after D10: the raw IsSuppressed2 of Pl copy 2 along Planet copy 2, paired in document order, is §2.3's
+ok      s3 after D10: the app's per-name read of Pl copy 2 along Planet copy 2 is §2.3's
+fact    s3 after D10: Pl copy 2 along Planet copy 2, names passed reversed ['4L', 'N', '4H', '2H']: answered [False, False, False, False] — the same either way (every flag alike)
+read    s3 after D10: Pl copy 3 on Planet copy 3 Axis: raw in document order {'2H': False, '4H': False, 'N': False, '4L': False}; the app per name {'2H': False, '4H': False, 'N': False, '4L': False}; §2.3 {'2H': False, '4H': False, 'N': False, '4L': False}
+ok      s3 after D10: the raw IsSuppressed2 of Pl copy 3 on Planet copy 3 Axis, paired in document order, is §2.3's
+ok      s3 after D10: the app's per-name read of Pl copy 3 on Planet copy 3 Axis is §2.3's
+fact    s3 after D10: Pl copy 3 on Planet copy 3 Axis, names passed reversed ['4L', 'N', '4H', '2H']: answered [False, False, False, False] — the same either way (every flag alike)
+read    s3 after D10: Pl copy 3 along Planet copy 3: raw in document order {'2H': False, '4H': False, 'N': False, '4L': False}; the app per name {'2H': False, '4H': False, 'N': False, '4L': False}; §2.3 {'2H': False, '4H': False, 'N': False, '4L': False}
+ok      s3 after D10: the raw IsSuppressed2 of Pl copy 3 along Planet copy 3, paired in document order, is §2.3's
+ok      s3 after D10: the app's per-name read of Pl copy 3 along Planet copy 3 is §2.3's
+fact    s3 after D10: Pl copy 3 along Planet copy 3, names passed reversed ['4L', 'N', '4H', '2H']: answered [False, False, False, False] — the same either way (every flag alike)
+read    s3 after D10: RangeSlv on Rear Axis: raw in document order {'2H': False, '4H': False, 'N': False, '4L': False}; the app per name {'2H': False, '4H': False, 'N': False, '4L': False}; §2.3 {'2H': False, '4H': False, 'N': False, '4L': False}
+ok      s3 after D10: the raw IsSuppressed2 of RangeSlv on Rear Axis, paired in document order, is §2.3's
+ok      s3 after D10: the app's per-name read of RangeSlv on Rear Axis is §2.3's
+fact    s3 after D10: RangeSlv on Rear Axis, names passed reversed ['4L', 'N', '4H', '2H']: answered [False, False, False, False] — the same either way (every flag alike)
+read    s3 after D10: RangeSlv along Rear: raw in document order {'2H': False, '4H': False, 'N': False, '4L': False}; the app per name {'2H': False, '4H': False, 'N': False, '4L': False}; §2.3 {'2H': False, '4H': False, 'N': False, '4L': False}
+ok      s3 after D10: the raw IsSuppressed2 of RangeSlv along Rear, paired in document order, is §2.3's
+ok      s3 after D10: the app's per-name read of RangeSlv along Rear is §2.3's
+fact    s3 after D10: RangeSlv along Rear, names passed reversed ['4L', 'N', '4H', '2H']: answered [False, False, False, False] — the same either way (every flag alike)
+read    s3 after D10: ModeSlv on Rear Axis: raw in document order {'2H': False, '4H': False, 'N': False, '4L': False}; the app per name {'2H': False, '4H': False, 'N': False, '4L': False}; §2.3 {'2H': False, '4H': False, 'N': False, '4L': False}
+ok      s3 after D10: the raw IsSuppressed2 of ModeSlv on Rear Axis, paired in document order, is §2.3's
+ok      s3 after D10: the app's per-name read of ModeSlv on Rear Axis is §2.3's
+fact    s3 after D10: ModeSlv on Rear Axis, names passed reversed ['4L', 'N', '4H', '2H']: answered [False, False, False, False] — the same either way (every flag alike)
+read    s3 after D10: ModeSlv along Rear: raw in document order {'2H': False, '4H': False, 'N': False, '4L': False}; the app per name {'2H': False, '4H': False, 'N': False, '4L': False}; §2.3 {'2H': False, '4H': False, 'N': False, '4L': False}
+ok      s3 after D10: the raw IsSuppressed2 of ModeSlv along Rear, paired in document order, is §2.3's
+ok      s3 after D10: the app's per-name read of ModeSlv along Rear is §2.3's
+fact    s3 after D10: ModeSlv along Rear, names passed reversed ['4L', 'N', '4H', '2H']: answered [False, False, False, False] — the same either way (every flag alike)
+read    s3 after D10: ModeSlv splined to RangeSlv: raw in document order {'2H': False, '4H': False, 'N': False, '4L': False}; the app per name {'2H': False, '4H': False, 'N': False, '4L': False}; §2.3 {'2H': False, '4H': False, 'N': False, '4L': False}
+ok      s3 after D10: the raw IsSuppressed2 of ModeSlv splined to RangeSlv, paired in document order, is §2.3's
+ok      s3 after D10: the app's per-name read of ModeSlv splined to RangeSlv is §2.3's
+fact    s3 after D10: ModeSlv splined to RangeSlv, names passed reversed ['4L', 'N', '4H', '2H']: answered [False, False, False, False] — the same either way (every flag alike)
+read    s3 after D10: FrontDog on FrontDrv Axis: raw in document order {'2H': False, '4H': False, 'N': False, '4L': False}; the app per name {'2H': False, '4H': False, 'N': False, '4L': False}; §2.3 {'2H': False, '4H': False, 'N': False, '4L': False}
+ok      s3 after D10: the raw IsSuppressed2 of FrontDog on FrontDrv Axis, paired in document order, is §2.3's
+ok      s3 after D10: the app's per-name read of FrontDog on FrontDrv Axis is §2.3's
+fact    s3 after D10: FrontDog on FrontDrv Axis, names passed reversed ['4L', 'N', '4H', '2H']: answered [False, False, False, False] — the same either way (every flag alike)
+read    s3 after D10: FrontDog along FrontDrv: raw in document order {'2H': False, '4H': False, 'N': False, '4L': False}; the app per name {'2H': False, '4H': False, 'N': False, '4L': False}; §2.3 {'2H': False, '4H': False, 'N': False, '4L': False}
+ok      s3 after D10: the raw IsSuppressed2 of FrontDog along FrontDrv, paired in document order, is §2.3's
+ok      s3 after D10: the app's per-name read of FrontDog along FrontDrv is §2.3's
+fact    s3 after D10: FrontDog along FrontDrv, names passed reversed ['4L', 'N', '4H', '2H']: answered [False, False, False, False] — the same either way (every flag alike)
+read    s3 after D10: FDrive locked to FrontDog: raw in document order {'2H': False, '4H': False, 'N': False, '4L': False}; the app per name {'2H': False, '4H': False, 'N': False, '4L': False}; §2.3 {'2H': False, '4H': False, 'N': False, '4L': False}
+ok      s3 after D10: the raw IsSuppressed2 of FDrive locked to FrontDog, paired in document order, is §2.3's
+ok      s3 after D10: the app's per-name read of FDrive locked to FrontDog is §2.3's
+fact    s3 after D10: FDrive locked to FrontDog, names passed reversed ['4L', 'N', '4H', '2H']: answered [False, False, False, False] — the same either way (every flag alike)
+read    s3 after D10: FIdler on Idler Axis: raw in document order {'2H': False, '4H': False, 'N': False, '4L': False}; the app per name {'2H': False, '4H': False, 'N': False, '4L': False}; §2.3 {'2H': False, '4H': False, 'N': False, '4L': False}
+ok      s3 after D10: the raw IsSuppressed2 of FIdler on Idler Axis, paired in document order, is §2.3's
+ok      s3 after D10: the app's per-name read of FIdler on Idler Axis is §2.3's
+fact    s3 after D10: FIdler on Idler Axis, names passed reversed ['4L', 'N', '4H', '2H']: answered [False, False, False, False] — the same either way (every flag alike)
+read    s3 after D10: FIdler along Idler: raw in document order {'2H': False, '4H': False, 'N': False, '4L': False}; the app per name {'2H': False, '4H': False, 'N': False, '4L': False}; §2.3 {'2H': False, '4H': False, 'N': False, '4L': False}
+ok      s3 after D10: the raw IsSuppressed2 of FIdler along Idler, paired in document order, is §2.3's
+ok      s3 after D10: the app's per-name read of FIdler along Idler is §2.3's
+fact    s3 after D10: FIdler along Idler, names passed reversed ['4L', 'N', '4H', '2H']: answered [False, False, False, False] — the same either way (every flag alike)
+read    s3 after D10: FOut on Front Axis: raw in document order {'2H': False, '4H': False, 'N': False, '4L': False}; the app per name {'2H': False, '4H': False, 'N': False, '4L': False}; §2.3 {'2H': False, '4H': False, 'N': False, '4L': False}
+ok      s3 after D10: the raw IsSuppressed2 of FOut on Front Axis, paired in document order, is §2.3's
+ok      s3 after D10: the app's per-name read of FOut on Front Axis is §2.3's
+fact    s3 after D10: FOut on Front Axis, names passed reversed ['4L', 'N', '4H', '2H']: answered [False, False, False, False] — the same either way (every flag alike)
+read    s3 after D10: FOut along Front: raw in document order {'2H': False, '4H': False, 'N': False, '4L': False}; the app per name {'2H': False, '4H': False, 'N': False, '4L': False}; §2.3 {'2H': False, '4H': False, 'N': False, '4L': False}
+ok      s3 after D10: the raw IsSuppressed2 of FOut along Front, paired in document order, is §2.3's
+ok      s3 after D10: the app's per-name read of FOut along Front is §2.3's
+fact    s3 after D10: FOut along Front, names passed reversed ['4L', 'N', '4H', '2H']: answered [False, False, False, False] — the same either way (every flag alike)
+read    s3 after D10: Sun meshes Pl copy 1: raw in document order {'2H': False, '4H': False, 'N': False, '4L': False}; the app per name {'2H': False, '4H': False, 'N': False, '4L': False}; §2.3 {'2H': False, '4H': False, 'N': False, '4L': False}
+ok      s3 after D10: the raw IsSuppressed2 of Sun meshes Pl copy 1, paired in document order, is §2.3's
+ok      s3 after D10: the app's per-name read of Sun meshes Pl copy 1 is §2.3's
+fact    s3 after D10: Sun meshes Pl copy 1, names passed reversed ['4L', 'N', '4H', '2H']: answered [False, False, False, False] — the same either way (every flag alike)
+read    s3 after D10: Sun meshes Pl copy 2: raw in document order {'2H': False, '4H': False, 'N': False, '4L': False}; the app per name {'2H': False, '4H': False, 'N': False, '4L': False}; §2.3 {'2H': False, '4H': False, 'N': False, '4L': False}
+ok      s3 after D10: the raw IsSuppressed2 of Sun meshes Pl copy 2, paired in document order, is §2.3's
+ok      s3 after D10: the app's per-name read of Sun meshes Pl copy 2 is §2.3's
+fact    s3 after D10: Sun meshes Pl copy 2, names passed reversed ['4L', 'N', '4H', '2H']: answered [False, False, False, False] — the same either way (every flag alike)
+read    s3 after D10: Sun meshes Pl copy 3: raw in document order {'2H': False, '4H': False, 'N': False, '4L': False}; the app per name {'2H': False, '4H': False, 'N': False, '4L': False}; §2.3 {'2H': False, '4H': False, 'N': False, '4L': False}
+ok      s3 after D10: the raw IsSuppressed2 of Sun meshes Pl copy 3, paired in document order, is §2.3's
+ok      s3 after D10: the app's per-name read of Sun meshes Pl copy 3 is §2.3's
+fact    s3 after D10: Sun meshes Pl copy 3, names passed reversed ['4L', 'N', '4H', '2H']: answered [False, False, False, False] — the same either way (every flag alike)
+read    s3 after D10: Pl copy 1 meshes Ring: raw in document order {'2H': False, '4H': False, 'N': False, '4L': False}; the app per name {'2H': False, '4H': False, 'N': False, '4L': False}; §2.3 {'2H': False, '4H': False, 'N': False, '4L': False}
+ok      s3 after D10: the raw IsSuppressed2 of Pl copy 1 meshes Ring, paired in document order, is §2.3's
+ok      s3 after D10: the app's per-name read of Pl copy 1 meshes Ring is §2.3's
+fact    s3 after D10: Pl copy 1 meshes Ring, names passed reversed ['4L', 'N', '4H', '2H']: answered [False, False, False, False] — the same either way (every flag alike)
+read    s3 after D10: FDrive meshes FIdler: raw in document order {'2H': False, '4H': False, 'N': False, '4L': False}; the app per name {'2H': False, '4H': False, 'N': False, '4L': False}; §2.3 {'2H': False, '4H': False, 'N': False, '4L': False}
+ok      s3 after D10: the raw IsSuppressed2 of FDrive meshes FIdler, paired in document order, is §2.3's
+ok      s3 after D10: the app's per-name read of FDrive meshes FIdler is §2.3's
+fact    s3 after D10: FDrive meshes FIdler, names passed reversed ['4L', 'N', '4H', '2H']: answered [False, False, False, False] — the same either way (every flag alike)
+read    s3 after D10: FIdler meshes FOut: raw in document order {'2H': False, '4H': False, 'N': False, '4L': False}; the app per name {'2H': False, '4H': False, 'N': False, '4L': False}; §2.3 {'2H': False, '4H': False, 'N': False, '4L': False}
+ok      s3 after D10: the raw IsSuppressed2 of FIdler meshes FOut, paired in document order, is §2.3's
+ok      s3 after D10: the app's per-name read of FIdler meshes FOut is §2.3's
+fact    s3 after D10: FIdler meshes FOut, names passed reversed ['4L', 'N', '4H', '2H']: answered [False, False, False, False] — the same either way (every flag alike)
+read    s3 after D10: RangeSlv engages InDog: raw in document order {'2H': False, '4H': False, 'N': True, '4L': True}; the app per name {'2H': False, '4H': False, 'N': True, '4L': True}; §2.3 {'2H': False, '4H': False, 'N': True, '4L': True}
+ok      s3 after D10: the raw IsSuppressed2 of RangeSlv engages InDog, paired in document order, is §2.3's
+ok      s3 after D10: the app's per-name read of RangeSlv engages InDog is §2.3's
+fact    s3 after D10: RangeSlv engages InDog, names passed reversed ['4L', 'N', '4H', '2H']: answered [False, False, True, True] — in document order, as on run 1
+read    s3 after D10: RangeSlv engages LoDog: raw in document order {'2H': True, '4H': True, 'N': True, '4L': False}; the app per name {'2H': True, '4H': True, 'N': True, '4L': False}; §2.3 {'2H': True, '4H': True, 'N': True, '4L': False}
+ok      s3 after D10: the raw IsSuppressed2 of RangeSlv engages LoDog, paired in document order, is §2.3's
+ok      s3 after D10: the app's per-name read of RangeSlv engages LoDog is §2.3's
+fact    s3 after D10: RangeSlv engages LoDog, names passed reversed ['4L', 'N', '4H', '2H']: answered [True, True, True, False] — in document order, as on run 1
+read    s3 after D10: ModeSlv engages FrontDog: raw in document order {'2H': True, '4H': False, 'N': True, '4L': False}; the app per name {'2H': True, '4H': False, 'N': True, '4L': False}; §2.3 {'2H': True, '4H': False, 'N': True, '4L': False}
+ok      s3 after D10: the raw IsSuppressed2 of ModeSlv engages FrontDog, paired in document order, is §2.3's
+ok      s3 after D10: the app's per-name read of ModeSlv engages FrontDog is §2.3's
+fact    s3 after D10: ModeSlv engages FrontDog, names passed reversed ['4L', 'N', '4H', '2H']: answered [True, False, True, False] — in document order, as on run 1
+ok      s3 after D10: the raw flag reads: SolidWorks marks modified exactly ['TransferCase_E4.SLDASM']
+measure s3 after D10: every mode (2H, 4H, N, 4L); controls True; SolidWorks 1.56 GB private, 6.53 GB free
+        configurations ['2H', '4H', 'N', '4L']; active 2H
+        flags Sun on In Axis: 2H on, 4H on, N on, 4L on
+        flags Sun along In: 2H on, 4H on, N on, 4L on
+        flags InDog locked to Sun: 2H on, 4H on, N on, 4L on
+        flags Carrier carrier on Carrier Axis: 2H on, 4H on, N on, 4L on
+        flags Carrier carrier along Carrier: 2H on, 4H on, N on, 4L on
+        flags LoDog locked to Carrier carrier: 2H on, 4H on, N on, 4L on
+        flags Pl copy 1 on Planet copy 1 Axis: 2H on, 4H on, N on, 4L on
+        flags Pl copy 1 along Planet copy 1: 2H on, 4H on, N on, 4L on
+        flags Pl copy 2 on Planet copy 2 Axis: 2H on, 4H on, N on, 4L on
+        flags Pl copy 2 along Planet copy 2: 2H on, 4H on, N on, 4L on
+        flags Pl copy 3 on Planet copy 3 Axis: 2H on, 4H on, N on, 4L on
+        flags Pl copy 3 along Planet copy 3: 2H on, 4H on, N on, 4L on
+        flags RangeSlv on Rear Axis: 2H on, 4H on, N on, 4L on
+        flags RangeSlv along Rear: 2H on, 4H on, N on, 4L on
+        flags ModeSlv on Rear Axis: 2H on, 4H on, N on, 4L on
+        flags ModeSlv along Rear: 2H on, 4H on, N on, 4L on
+        flags ModeSlv splined to RangeSlv: 2H on, 4H on, N on, 4L on
+        flags FrontDog on FrontDrv Axis: 2H on, 4H on, N on, 4L on
+        flags FrontDog along FrontDrv: 2H on, 4H on, N on, 4L on
+        flags FDrive locked to FrontDog: 2H on, 4H on, N on, 4L on
+        flags FIdler on Idler Axis: 2H on, 4H on, N on, 4L on
+        flags FIdler along Idler: 2H on, 4H on, N on, 4L on
+        flags FOut on Front Axis: 2H on, 4H on, N on, 4L on
+        flags FOut along Front: 2H on, 4H on, N on, 4L on
+        flags Sun meshes Pl copy 1: 2H on, 4H on, N on, 4L on
+        flags Sun meshes Pl copy 2: 2H on, 4H on, N on, 4L on
+        flags Sun meshes Pl copy 3: 2H on, 4H on, N on, 4L on
+        flags Pl copy 1 meshes Ring: 2H on, 4H on, N on, 4L on
+        flags FDrive meshes FIdler: 2H on, 4H on, N on, 4L on
+        flags FIdler meshes FOut: 2H on, 4H on, N on, 4L on
+        flags RangeSlv engages InDog: 2H on, 4H on, N suppressed, 4L suppressed
+        flags RangeSlv engages LoDog: 2H suppressed, 4H suppressed, N suppressed, 4L on
+        flags ModeSlv engages FrontDog: 2H suppressed, 4H on, N suppressed, 4L on
+        values RangeSlv along Rear: {'2H': 46.0, '4H': 46.0, 'N': 56.0, '4L': 66.0}
+        values ModeSlv along Rear: {'2H': 96.0, '4H': 106.0, 'N': 96.0, '4L': 106.0}
+ok      s3 after D10: the assembly's configurations are exactly the modes, no template configuration left: ['2H', '4H', 'N', '4L']
+ok      s3 after D10: the active configuration is 2H, 2H expected
+ok      s3 after D10: shown nothing, every mate's flag in every configuration is §2.3's (the couplings on only where engaged, every other mate on): wrong []
+ok      s3 after D10: shown nothing, every slide's value in every configuration is §2.3's (none 0): wrong []
+fact    s3 after D10: GetSaveFlag before the reads {'TransferCase_E4_Layout.SLDPRT': False, 'TransferCase_E4_Carrier_Carrier.SLDPRT': False, 'Gear_m1_N24.SLDPRT': False, 'Ring_m1_N72.SLDPRT': False, 'Dog_m1.5_N30.SLDPRT': False, 'Sleeve_m1.5_N30.SLDPRT': False, 'Gear_m2_N30.SLDPRT': False, 'Gear_m2_N20.SLDPRT': False, 'TransferCase_E4.SLDASM': True}, after them {'TransferCase_E4_Layout.SLDPRT': False, 'TransferCase_E4_Carrier_Carrier.SLDPRT': False, 'Gear_m1_N24.SLDPRT': False, 'Ring_m1_N72.SLDPRT': False, 'Dog_m1.5_N30.SLDPRT': False, 'Sleeve_m1.5_N30.SLDPRT': False, 'Gear_m2_N30.SLDPRT': False, 'Gear_m2_N20.SLDPRT': False, 'TransferCase_E4.SLDASM': True}
+ok      s3 after D10: the flag and value reads: SolidWorks marks modified exactly ['TransferCase_E4.SLDASM']
+ok      s3 after D10, in 2H: 2H shown, the active configuration reads 2H
+ok      s3 after D10, in 2H: the train's rebuild in 2H answered True
+ok      s3 after D10, in 2H: every body stands at its frame on record for 2H (largest 8.3e-10 at Pl copy 2)
+ok      s3 after D10, in 2H: the frames on record for 2H are the workbook's (largest 0.0e+00 at -)
+ok      s3 after D10, in 2H: every body stands where §2.3 and the edit put it in 2H (largest 8.3e-10 at Pl copy 2)
+ok      s3 after D10, in 2H: RangeSlv stands at (0.0, 0.0, 46.0) mm in 2H, on Rear's axis at its slide RangeSlv along Rear's §2.3 value 46 mm (off 0.0e+00)
+ok      s3 after D10, in 2H: ModeSlv stands at (-0.0, 0.0, 96.0) mm in 2H, on Rear's axis at its slide ModeSlv along Rear's §2.3 value 96 mm (off 0.0e+00)
+ok      s3 after D10, in 2H: the layout (TransferCase_E4_Layout-1) is at identity in 2H
+        mates in 2H: [('Sun on In Axis', 0, True, False), ('Sun along In', 0, True, False), ('InDog locked to Sun', 0, True, False), ('Carrier carrier on Carrier Axis', 0, True, False), ('Carrier carrier along Carrier', 0, True, False), ('LoDog locked to Carrier carrier', 0, True, False), ('Pl copy 1 on Planet copy 1 Axis', 0, True, False), ('Pl copy 1 along Planet copy 1', 0, True, False), ('Pl copy 2 on Planet copy 2 Axis', 0, True, False), ('Pl copy 2 along Planet copy 2', 0, True, False), ('Pl copy 3 on Planet copy 3 Axis', 0, True, False), ('Pl copy 3 along Planet copy 3', 0, True, False), ('RangeSlv on Rear Axis', 0, True, False), ('RangeSlv along Rear', 0, True, False), ('ModeSlv on Rear Axis', 0, True, False), ('ModeSlv along Rear', 0, True, False), ('FrontDog on FrontDrv Axis', 0, True, False), ('FrontDog along FrontDrv', 0, True, False), ('FDrive locked to FrontDog', 0, True, False), ('FIdler on Idler Axis', 0, True, False), ('FIdler along Idler', 0, True, False), ('FOut on Front Axis', 0, True, False), ('FOut along Front', 0, True, False), ('ModeSlv splined to RangeSlv', 0, True, False), ('Sun meshes Pl copy 1', 0, True, False), ('Sun meshes Pl copy 2', 0, True, False), ('Sun meshes Pl copy 3', 0, True, False), ('Pl copy 1 meshes Ring', 0, True, False), ('FDrive meshes FIdler', 0, True, False), ('FIdler meshes FOut', 0, True, False), ('RangeSlv engages InDog', 0, True, False), ('ModeSlv engages FrontDog', 0, True, True), ('RangeSlv engages LoDog', 0, True, True)]; others []; constrained {'Sun': 2, 'Pl copy 1': 2, 'Pl copy 2': 2, 'Pl copy 3': 2, 'InDog': 2, 'LoDog': 2, 'RangeSlv': 2, 'FrontDog': 2, 'ModeSlv': 2, 'FDrive': 2, 'FIdler': 2, 'FOut': 2, 'Carrier carrier': 2}; fixed {'Ring': True, 'layout': True}
+ok      s3 after D10, in 2H: the mates are exactly the record's 33, nothing else in the mate group: extra [], missing [], others []
+ok      s3 after D10, in 2H: in 2H the couplings §2.3 has off there read suppressed and every other mate on: wrong []
+ok      s3 after D10, in 2H: every mate on in 2H has error code 0: []
+ok      s3 after D10, in 2H: every mated body under-defined (2) in 2H: {'Sun': 2, 'Pl copy 1': 2, 'Pl copy 2': 2, 'Pl copy 3': 2, 'InDog': 2, 'LoDog': 2, 'RangeSlv': 2, 'FrontDog': 2, 'ModeSlv': 2, 'FDrive': 2, 'FIdler': 2, 'FOut': 2, 'Carrier carrier': 2}
+ok      s3 after D10, in 2H: the layout and every fixed body read IsFixed in 2H through handles fetched after the show: {'Ring': True, 'layout': True}
+ok      s3 after D10, in 2H: no interference in 2H: []
+        2H measured in 3.4 s; SolidWorks 1.57 GB private, 6.59 GB free
+ok      s3 after D10, in 2H, mesh control on Pl copy 1: Pl copy 1's control ran in 2H: [] []
+fact    s3 after D10, in 2H, mesh control on Pl copy 1: the put turned Pl copy 1 +7.500000°; other bodies moved by it (beyond 1e-6): none
+ok      s3 after D10, in 2H, mesh control on Pl copy 1: Pl copy 1 turned half a pitch (7.5000°) clashes with exactly ['Ring', 'Sun']: [(('Pl copy 1', 'Ring'), 57.732), (('Sun', 'Pl copy 1'), 30.111)]
+ok      s3 after D10, in 2H, mesh control on Pl copy 1: Pl copy 1 put back, no interference in 2H (9.6 s): []
+ok      s3 after D10, in 2H, mesh control on Pl copy 1: the locks back on after Pl copy 1's control, no interference (review N4): []
+ok      s3 after D10, in 2H, mesh control on Pl copy 1: no lock left suppressed in any configuration: {}
+ok      s3 after D10, in 2H, mesh control on Pl copy 1: after Pl copy 1's control every body at its frame on record for 2H (largest 8.3e-10 at Pl copy 2)
+ok      s3 after D10, in 2H, mesh control on Pl copy 2: Pl copy 2's control ran in 2H: [] []
+fact    s3 after D10, in 2H, mesh control on Pl copy 2: the put turned Pl copy 2 +7.500000°; other bodies moved by it (beyond 1e-6): none
+ok      s3 after D10, in 2H, mesh control on Pl copy 2: Pl copy 2 turned half a pitch (7.5000°) clashes with exactly ['Ring', 'Sun']: [(('Pl copy 2', 'Ring'), 57.733), (('Sun', 'Pl copy 2'), 30.112)]
+ok      s3 after D10, in 2H, mesh control on Pl copy 2: Pl copy 2 put back, no interference in 2H (9.6 s): []
+ok      s3 after D10, in 2H, mesh control on Pl copy 2: the locks back on after Pl copy 2's control, no interference (review N4): []
+ok      s3 after D10, in 2H, mesh control on Pl copy 2: no lock left suppressed in any configuration: {}
+ok      s3 after D10, in 2H, mesh control on Pl copy 2: after Pl copy 2's control every body at its frame on record for 2H (largest 8.3e-10 at Pl copy 2)
+ok      s3 after D10, in 2H, mesh control on Pl copy 3: Pl copy 3's control ran in 2H: [] []
+fact    s3 after D10, in 2H, mesh control on Pl copy 3: the put turned Pl copy 3 +7.500000°; other bodies moved by it (beyond 1e-6): none
+ok      s3 after D10, in 2H, mesh control on Pl copy 3: Pl copy 3 turned half a pitch (7.5000°) clashes with exactly ['Ring', 'Sun']: [(('Pl copy 3', 'Ring'), 57.733), (('Sun', 'Pl copy 3'), 30.112)]
+ok      s3 after D10, in 2H, mesh control on Pl copy 3: Pl copy 3 put back, no interference in 2H (9.5 s): []
+ok      s3 after D10, in 2H, mesh control on Pl copy 3: the locks back on after Pl copy 3's control, no interference (review N4): []
+ok      s3 after D10, in 2H, mesh control on Pl copy 3: no lock left suppressed in any configuration: {}
+ok      s3 after D10, in 2H, mesh control on Pl copy 3: after Pl copy 3's control every body at its frame on record for 2H (largest 8.3e-10 at Pl copy 2)
+ok      s3 after D10, in 2H, mesh control on FIdler: FIdler's control ran in 2H: [] []
+fact    s3 after D10, in 2H, mesh control on FIdler: the put turned FIdler +9.000000°; other bodies moved by it (beyond 1e-6): none
+ok      s3 after D10, in 2H, mesh control on FIdler: FIdler turned half a pitch (9.0000°) clashes with exactly ['FDrive', 'FOut']: [(('FDrive', 'FIdler'), 120.404), (('FIdler', 'FOut'), 120.396)]
+ok      s3 after D10, in 2H, mesh control on FIdler: FIdler put back, no interference in 2H (9.3 s): []
+ok      s3 after D10, in 2H, mesh control on FIdler: the locks back on after FIdler's control, no interference (review N4): []
+ok      s3 after D10, in 2H, mesh control on FIdler: no lock left suppressed in any configuration: {}
+ok      s3 after D10, in 2H, mesh control on FIdler: after FIdler's control every body at its frame on record for 2H (largest 8.3e-10 at Pl copy 2)
+ok      s3 after D10, in 2H, mesh control on FOut: FOut's control ran in 2H: [] []
+fact    s3 after D10, in 2H, mesh control on FOut: the put turned FOut +6.000000°; other bodies moved by it (beyond 1e-6): none
+ok      s3 after D10, in 2H, mesh control on FOut: FOut turned half a pitch (6.0000°) clashes with exactly ['FIdler']: [(('FIdler', 'FOut'), 133.273)]
+ok      s3 after D10, in 2H, mesh control on FOut: FOut put back, no interference in 2H (9.1 s): []
+ok      s3 after D10, in 2H, mesh control on FOut: the locks back on after FOut's control, no interference (review N4): []
+ok      s3 after D10, in 2H, mesh control on FOut: no lock left suppressed in any configuration: {}
+ok      s3 after D10, in 2H, mesh control on FOut: after FOut's control every body at its frame on record for 2H (largest 8.3e-10 at Pl copy 2)
+ok      s3 after D10, in 2H, the coupling RangeSlv–InDog: InDog's control ran in 2H: [] []
+fact    s3 after D10, in 2H, the coupling RangeSlv–InDog: the put turned InDog +6.000000°; other bodies moved by it (beyond 1e-6): none
+ok      s3 after D10, in 2H, the coupling RangeSlv–InDog: InDog turned half a pitch (6.0000°) with ['InDog locked to Sun'] suppressed in 2H clashes with exactly ['RangeSlv']: [(('InDog', 'RangeSlv'), 743.097)]
+ok      s3 after D10, in 2H, the coupling RangeSlv–InDog: InDog put back, no interference in 2H (10.7 s): []
+ok      s3 after D10, in 2H, the coupling RangeSlv–InDog: the locks back on after InDog's control, no interference (review N4): []
+ok      s3 after D10, in 2H, the coupling RangeSlv–InDog: no lock left suppressed in any configuration: {'InDog locked to Sun': []}
+ok      s3 after D10, in 2H, the coupling RangeSlv–InDog: after InDog's control every body at its frame on record for 2H (largest 8.3e-10 at Pl copy 2)
+ok      s3 after D10, in 2H, LoDog: LoDog's control ran in 2H: [] []
+fact    s3 after D10, in 2H, LoDog: the put turned LoDog +6.000000°; other bodies moved by it (beyond 1e-6): none
+ok      s3 after D10, in 2H, LoDog: LoDog, disengaged in 2H, turned half a pitch (6.0000°) with ['LoDog locked to Carrier carrier'] suppressed in 2H clashes with nothing: []
+ok      s3 after D10, in 2H, LoDog: LoDog put back, no interference in 2H (10.3 s): []
+ok      s3 after D10, in 2H, LoDog: the locks back on after LoDog's control, no interference (review N4): []
+ok      s3 after D10, in 2H, LoDog: no lock left suppressed in any configuration: {'LoDog locked to Carrier carrier': []}
+ok      s3 after D10, in 2H, LoDog: after LoDog's control every body at its frame on record for 2H (largest 8.3e-10 at Pl copy 2)
+ok      s3 after D10, in 2H, FrontDog: FrontDog's control ran in 2H: [] []
+fact    s3 after D10, in 2H, FrontDog: the put turned FrontDog +6.000000°; other bodies moved by it (beyond 1e-6): none
+ok      s3 after D10, in 2H, FrontDog: FrontDog, disengaged in 2H, turned half a pitch (6.0000°) with ['FDrive locked to FrontDog'] suppressed in 2H clashes with nothing: []
+ok      s3 after D10, in 2H, FrontDog: FrontDog put back, no interference in 2H (10.4 s): []
+ok      s3 after D10, in 2H, FrontDog: the locks back on after FrontDog's control, no interference (review N4): []
+ok      s3 after D10, in 2H, FrontDog: no lock left suppressed in any configuration: {'FDrive locked to FrontDog': []}
+ok      s3 after D10, in 2H, FrontDog: after FrontDog's control every body at its frame on record for 2H (largest 8.3e-10 at Pl copy 2)
+        2H's controls in 78.6 s; SolidWorks 1.58 GB private, 6.61 GB free
+ok      s3 after D10, in 4H: 4H shown, the active configuration reads 4H
+ok      s3 after D10, in 4H: the train's rebuild in 4H answered True
+ok      s3 after D10, in 4H: every body stands at its frame on record for 4H (largest 8.3e-10 at Pl copy 2)
+ok      s3 after D10, in 4H: the frames on record for 4H are the workbook's (largest 0.0e+00 at -)
+ok      s3 after D10, in 4H: every body stands where §2.3 and the edit put it in 4H (largest 8.3e-10 at Pl copy 2)
+ok      s3 after D10, in 4H: RangeSlv stands at (0.0, 0.0, 46.0) mm in 4H, on Rear's axis at its slide RangeSlv along Rear's §2.3 value 46 mm (off 0.0e+00)
+ok      s3 after D10, in 4H: ModeSlv stands at (0.0, 0.0, 106.0) mm in 4H, on Rear's axis at its slide ModeSlv along Rear's §2.3 value 106 mm (off 0.0e+00)
+ok      s3 after D10, in 4H: the layout (TransferCase_E4_Layout-1) is at identity in 4H
+        mates in 4H: [('Sun on In Axis', 0, True, False), ('Sun along In', 0, True, False), ('InDog locked to Sun', 0, True, False), ('Carrier carrier on Carrier Axis', 0, True, False), ('Carrier carrier along Carrier', 0, True, False), ('LoDog locked to Carrier carrier', 0, True, False), ('Pl copy 1 on Planet copy 1 Axis', 0, True, False), ('Pl copy 1 along Planet copy 1', 0, True, False), ('Pl copy 2 on Planet copy 2 Axis', 0, True, False), ('Pl copy 2 along Planet copy 2', 0, True, False), ('Pl copy 3 on Planet copy 3 Axis', 0, True, False), ('Pl copy 3 along Planet copy 3', 0, True, False), ('RangeSlv on Rear Axis', 0, True, False), ('RangeSlv along Rear', 0, True, False), ('ModeSlv on Rear Axis', 0, True, False), ('ModeSlv along Rear', 0, True, False), ('FrontDog on FrontDrv Axis', 0, True, False), ('FrontDog along FrontDrv', 0, True, False), ('FDrive locked to FrontDog', 0, True, False), ('FIdler on Idler Axis', 0, True, False), ('FIdler along Idler', 0, True, False), ('FOut on Front Axis', 0, True, False), ('FOut along Front', 0, True, False), ('ModeSlv splined to RangeSlv', 0, True, False), ('Sun meshes Pl copy 1', 0, True, False), ('Sun meshes Pl copy 2', 0, True, False), ('Sun meshes Pl copy 3', 0, True, False), ('Pl copy 1 meshes Ring', 0, True, False), ('FDrive meshes FIdler', 0, True, False), ('FIdler meshes FOut', 0, True, False), ('RangeSlv engages InDog', 0, True, False), ('ModeSlv engages FrontDog', 0, True, False), ('RangeSlv engages LoDog', 0, True, True)]; others []; constrained {'Sun': 2, 'Pl copy 1': 2, 'Pl copy 2': 2, 'Pl copy 3': 2, 'InDog': 2, 'LoDog': 2, 'RangeSlv': 2, 'FrontDog': 2, 'ModeSlv': 2, 'FDrive': 2, 'FIdler': 2, 'FOut': 2, 'Carrier carrier': 2}; fixed {'Ring': True, 'layout': True}
+ok      s3 after D10, in 4H: the mates are exactly the record's 33, nothing else in the mate group: extra [], missing [], others []
+ok      s3 after D10, in 4H: in 4H the couplings §2.3 has off there read suppressed and every other mate on: wrong []
+ok      s3 after D10, in 4H: every mate on in 4H has error code 0: []
+ok      s3 after D10, in 4H: every mated body under-defined (2) in 4H: {'Sun': 2, 'Pl copy 1': 2, 'Pl copy 2': 2, 'Pl copy 3': 2, 'InDog': 2, 'LoDog': 2, 'RangeSlv': 2, 'FrontDog': 2, 'ModeSlv': 2, 'FDrive': 2, 'FIdler': 2, 'FOut': 2, 'Carrier carrier': 2}
+ok      s3 after D10, in 4H: the layout and every fixed body read IsFixed in 4H through handles fetched after the show: {'Ring': True, 'layout': True}
+ok      s3 after D10, in 4H: no interference in 4H: []
+        4H measured in 3.8 s; SolidWorks 1.58 GB private, 6.57 GB free
+ok      s3 after D10, in 4H, mesh control on Pl copy 1: Pl copy 1's control ran in 4H: [] []
+fact    s3 after D10, in 4H, mesh control on Pl copy 1: the put turned Pl copy 1 +7.500000°; other bodies moved by it (beyond 1e-6): none
+ok      s3 after D10, in 4H, mesh control on Pl copy 1: Pl copy 1 turned half a pitch (7.5000°) clashes with exactly ['Ring', 'Sun']: [(('Pl copy 1', 'Ring'), 57.732), (('Sun', 'Pl copy 1'), 30.111)]
+ok      s3 after D10, in 4H, mesh control on Pl copy 1: Pl copy 1 put back, no interference in 4H (10.5 s): []
+ok      s3 after D10, in 4H, mesh control on Pl copy 1: the locks back on after Pl copy 1's control, no interference (review N4): []
+ok      s3 after D10, in 4H, mesh control on Pl copy 1: no lock left suppressed in any configuration: {}
+ok      s3 after D10, in 4H, mesh control on Pl copy 1: after Pl copy 1's control every body at its frame on record for 4H (largest 8.3e-10 at Pl copy 2)
+ok      s3 after D10, in 4H, mesh control on Pl copy 2: Pl copy 2's control ran in 4H: [] []
+fact    s3 after D10, in 4H, mesh control on Pl copy 2: the put turned Pl copy 2 +7.500000°; other bodies moved by it (beyond 1e-6): none
+ok      s3 after D10, in 4H, mesh control on Pl copy 2: Pl copy 2 turned half a pitch (7.5000°) clashes with exactly ['Ring', 'Sun']: [(('Pl copy 2', 'Ring'), 57.733), (('Sun', 'Pl copy 2'), 30.112)]
+ok      s3 after D10, in 4H, mesh control on Pl copy 2: Pl copy 2 put back, no interference in 4H (10.4 s): []
+ok      s3 after D10, in 4H, mesh control on Pl copy 2: the locks back on after Pl copy 2's control, no interference (review N4): []
+ok      s3 after D10, in 4H, mesh control on Pl copy 2: no lock left suppressed in any configuration: {}
+ok      s3 after D10, in 4H, mesh control on Pl copy 2: after Pl copy 2's control every body at its frame on record for 4H (largest 8.3e-10 at Pl copy 2)
+ok      s3 after D10, in 4H, mesh control on Pl copy 3: Pl copy 3's control ran in 4H: [] []
+fact    s3 after D10, in 4H, mesh control on Pl copy 3: the put turned Pl copy 3 +7.500000°; other bodies moved by it (beyond 1e-6): none
+ok      s3 after D10, in 4H, mesh control on Pl copy 3: Pl copy 3 turned half a pitch (7.5000°) clashes with exactly ['Ring', 'Sun']: [(('Pl copy 3', 'Ring'), 57.733), (('Sun', 'Pl copy 3'), 30.112)]
+ok      s3 after D10, in 4H, mesh control on Pl copy 3: Pl copy 3 put back, no interference in 4H (10.2 s): []
+ok      s3 after D10, in 4H, mesh control on Pl copy 3: the locks back on after Pl copy 3's control, no interference (review N4): []
+ok      s3 after D10, in 4H, mesh control on Pl copy 3: no lock left suppressed in any configuration: {}
+ok      s3 after D10, in 4H, mesh control on Pl copy 3: after Pl copy 3's control every body at its frame on record for 4H (largest 8.3e-10 at Pl copy 2)
+ok      s3 after D10, in 4H, mesh control on FIdler: FIdler's control ran in 4H: [] []
+fact    s3 after D10, in 4H, mesh control on FIdler: the put turned FIdler +9.000000°; other bodies moved by it (beyond 1e-6): none
+ok      s3 after D10, in 4H, mesh control on FIdler: FIdler turned half a pitch (9.0000°) clashes with exactly ['FDrive', 'FOut']: [(('FDrive', 'FIdler'), 120.404), (('FIdler', 'FOut'), 120.396)]
+ok      s3 after D10, in 4H, mesh control on FIdler: FIdler put back, no interference in 4H (9.8 s): []
+ok      s3 after D10, in 4H, mesh control on FIdler: the locks back on after FIdler's control, no interference (review N4): []
+ok      s3 after D10, in 4H, mesh control on FIdler: no lock left suppressed in any configuration: {}
+ok      s3 after D10, in 4H, mesh control on FIdler: after FIdler's control every body at its frame on record for 4H (largest 8.3e-10 at Pl copy 2)
+ok      s3 after D10, in 4H, mesh control on FOut: FOut's control ran in 4H: [] []
+fact    s3 after D10, in 4H, mesh control on FOut: the put turned FOut +6.000000°; other bodies moved by it (beyond 1e-6): none
+ok      s3 after D10, in 4H, mesh control on FOut: FOut turned half a pitch (6.0000°) clashes with exactly ['FIdler']: [(('FIdler', 'FOut'), 133.273)]
+ok      s3 after D10, in 4H, mesh control on FOut: FOut put back, no interference in 4H (9.9 s): []
+ok      s3 after D10, in 4H, mesh control on FOut: the locks back on after FOut's control, no interference (review N4): []
+ok      s3 after D10, in 4H, mesh control on FOut: no lock left suppressed in any configuration: {}
+ok      s3 after D10, in 4H, mesh control on FOut: after FOut's control every body at its frame on record for 4H (largest 8.3e-10 at Pl copy 2)
+ok      s3 after D10, in 4H, the coupling RangeSlv–InDog: InDog's control ran in 4H: [] []
+fact    s3 after D10, in 4H, the coupling RangeSlv–InDog: the put turned InDog +6.000000°; other bodies moved by it (beyond 1e-6): none
+ok      s3 after D10, in 4H, the coupling RangeSlv–InDog: InDog turned half a pitch (6.0000°) with ['InDog locked to Sun'] suppressed in 4H clashes with exactly ['RangeSlv']: [(('InDog', 'RangeSlv'), 743.097)]
+ok      s3 after D10, in 4H, the coupling RangeSlv–InDog: InDog put back, no interference in 4H (11.2 s): []
+ok      s3 after D10, in 4H, the coupling RangeSlv–InDog: the locks back on after InDog's control, no interference (review N4): []
+ok      s3 after D10, in 4H, the coupling RangeSlv–InDog: no lock left suppressed in any configuration: {'InDog locked to Sun': []}
+ok      s3 after D10, in 4H, the coupling RangeSlv–InDog: after InDog's control every body at its frame on record for 4H (largest 8.3e-10 at Pl copy 2)
+ok      s3 after D10, in 4H, LoDog: LoDog's control ran in 4H: [] []
+fact    s3 after D10, in 4H, LoDog: the put turned LoDog +6.000000°; other bodies moved by it (beyond 1e-6): none
+ok      s3 after D10, in 4H, LoDog: LoDog, disengaged in 4H, turned half a pitch (6.0000°) with ['LoDog locked to Carrier carrier'] suppressed in 4H clashes with nothing: []
+ok      s3 after D10, in 4H, LoDog: LoDog put back, no interference in 4H (11.0 s): []
+ok      s3 after D10, in 4H, LoDog: the locks back on after LoDog's control, no interference (review N4): []
+ok      s3 after D10, in 4H, LoDog: no lock left suppressed in any configuration: {'LoDog locked to Carrier carrier': []}
+ok      s3 after D10, in 4H, LoDog: after LoDog's control every body at its frame on record for 4H (largest 8.3e-10 at Pl copy 2)
+ok      s3 after D10, in 4H, the coupling ModeSlv–FrontDog: FrontDog's control ran in 4H: [] []
+fact    s3 after D10, in 4H, the coupling ModeSlv–FrontDog: the put turned FrontDog +6.000000°; other bodies moved by it (beyond 1e-6): none
+ok      s3 after D10, in 4H, the coupling ModeSlv–FrontDog: FrontDog turned half a pitch (6.0000°) with ['FDrive locked to FrontDog'] suppressed in 4H clashes with exactly ['ModeSlv']: [(('FrontDog', 'ModeSlv'), 743.097)]
+ok      s3 after D10, in 4H, the coupling ModeSlv–FrontDog: FrontDog put back, no interference in 4H (11.3 s): []
+ok      s3 after D10, in 4H, the coupling ModeSlv–FrontDog: the locks back on after FrontDog's control, no interference (review N4): []
+ok      s3 after D10, in 4H, the coupling ModeSlv–FrontDog: no lock left suppressed in any configuration: {'FDrive locked to FrontDog': []}
+ok      s3 after D10, in 4H, the coupling ModeSlv–FrontDog: after FrontDog's control every body at its frame on record for 4H (largest 8.3e-10 at Pl copy 2)
+        4H's controls in 84.4 s; SolidWorks 1.60 GB private, 6.48 GB free
+ok      s3 after D10, in N: N shown, the active configuration reads N
+ok      s3 after D10, in N: the train's rebuild in N answered True
+ok      s3 after D10, in N: every body stands at its frame on record for N (largest 8.3e-10 at Pl copy 2)
+ok      s3 after D10, in N: the frames on record for N are the workbook's (largest 0.0e+00 at -)
+ok      s3 after D10, in N: every body stands where §2.3 and the edit put it in N (largest 8.3e-10 at Pl copy 2)
+ok      s3 after D10, in N: RangeSlv stands at (0.0, 0.0, 56.0) mm in N, on Rear's axis at its slide RangeSlv along Rear's §2.3 value 56 mm (off 0.0e+00)
+ok      s3 after D10, in N: ModeSlv stands at (-0.0, 0.0, 96.0) mm in N, on Rear's axis at its slide ModeSlv along Rear's §2.3 value 96 mm (off 0.0e+00)
+ok      s3 after D10, in N: the layout (TransferCase_E4_Layout-1) is at identity in N
+        mates in N: [('Sun on In Axis', 0, True, False), ('Sun along In', 0, True, False), ('InDog locked to Sun', 0, True, False), ('Carrier carrier on Carrier Axis', 0, True, False), ('Carrier carrier along Carrier', 0, True, False), ('LoDog locked to Carrier carrier', 0, True, False), ('Pl copy 1 on Planet copy 1 Axis', 0, True, False), ('Pl copy 1 along Planet copy 1', 0, True, False), ('Pl copy 2 on Planet copy 2 Axis', 0, True, False), ('Pl copy 2 along Planet copy 2', 0, True, False), ('Pl copy 3 on Planet copy 3 Axis', 0, True, False), ('Pl copy 3 along Planet copy 3', 0, True, False), ('RangeSlv on Rear Axis', 0, True, False), ('RangeSlv along Rear', 0, True, False), ('ModeSlv on Rear Axis', 0, True, False), ('ModeSlv along Rear', 0, True, False), ('FrontDog on FrontDrv Axis', 0, True, False), ('FrontDog along FrontDrv', 0, True, False), ('FDrive locked to FrontDog', 0, True, False), ('FIdler on Idler Axis', 0, True, False), ('FIdler along Idler', 0, True, False), ('FOut on Front Axis', 0, True, False), ('FOut along Front', 0, True, False), ('ModeSlv splined to RangeSlv', 0, True, False), ('Sun meshes Pl copy 1', 0, True, False), ('Sun meshes Pl copy 2', 0, True, False), ('Sun meshes Pl copy 3', 0, True, False), ('Pl copy 1 meshes Ring', 0, True, False), ('FDrive meshes FIdler', 0, True, False), ('FIdler meshes FOut', 0, True, False), ('RangeSlv engages InDog', 0, True, True), ('ModeSlv engages FrontDog', 0, True, True), ('RangeSlv engages LoDog', 0, True, True)]; others []; constrained {'Sun': 2, 'Pl copy 1': 2, 'Pl copy 2': 2, 'Pl copy 3': 2, 'InDog': 2, 'LoDog': 2, 'RangeSlv': 2, 'FrontDog': 2, 'ModeSlv': 2, 'FDrive': 2, 'FIdler': 2, 'FOut': 2, 'Carrier carrier': 2}; fixed {'Ring': True, 'layout': True}
+ok      s3 after D10, in N: the mates are exactly the record's 33, nothing else in the mate group: extra [], missing [], others []
+ok      s3 after D10, in N: in N the couplings §2.3 has off there read suppressed and every other mate on: wrong []
+ok      s3 after D10, in N: every mate on in N has error code 0: []
+ok      s3 after D10, in N: every mated body under-defined (2) in N: {'Sun': 2, 'Pl copy 1': 2, 'Pl copy 2': 2, 'Pl copy 3': 2, 'InDog': 2, 'LoDog': 2, 'RangeSlv': 2, 'FrontDog': 2, 'ModeSlv': 2, 'FDrive': 2, 'FIdler': 2, 'FOut': 2, 'Carrier carrier': 2}
+ok      s3 after D10, in N: the layout and every fixed body read IsFixed in N through handles fetched after the show: {'Ring': True, 'layout': True}
+ok      s3 after D10, in N: no interference in N: []
+        N measured in 3.3 s; SolidWorks 1.60 GB private, 6.49 GB free
+ok      s3 after D10, in N, mesh control on Pl copy 1: Pl copy 1's control ran in N: [] []
+fact    s3 after D10, in N, mesh control on Pl copy 1: the put turned Pl copy 1 +7.500000°; other bodies moved by it (beyond 1e-6): none
+ok      s3 after D10, in N, mesh control on Pl copy 1: Pl copy 1 turned half a pitch (7.5000°) clashes with exactly ['Ring', 'Sun']: [(('Pl copy 1', 'Ring'), 57.732), (('Sun', 'Pl copy 1'), 30.111)]
+ok      s3 after D10, in N, mesh control on Pl copy 1: Pl copy 1 put back, no interference in N (8.9 s): []
+ok      s3 after D10, in N, mesh control on Pl copy 1: the locks back on after Pl copy 1's control, no interference (review N4): []
+ok      s3 after D10, in N, mesh control on Pl copy 1: no lock left suppressed in any configuration: {}
+ok      s3 after D10, in N, mesh control on Pl copy 1: after Pl copy 1's control every body at its frame on record for N (largest 8.3e-10 at Pl copy 2)
+ok      s3 after D10, in N, mesh control on Pl copy 2: Pl copy 2's control ran in N: [] []
+fact    s3 after D10, in N, mesh control on Pl copy 2: the put turned Pl copy 2 +7.500000°; other bodies moved by it (beyond 1e-6): none
+ok      s3 after D10, in N, mesh control on Pl copy 2: Pl copy 2 turned half a pitch (7.5000°) clashes with exactly ['Ring', 'Sun']: [(('Pl copy 2', 'Ring'), 57.733), (('Sun', 'Pl copy 2'), 30.112)]
+ok      s3 after D10, in N, mesh control on Pl copy 2: Pl copy 2 put back, no interference in N (9.1 s): []
+ok      s3 after D10, in N, mesh control on Pl copy 2: the locks back on after Pl copy 2's control, no interference (review N4): []
+ok      s3 after D10, in N, mesh control on Pl copy 2: no lock left suppressed in any configuration: {}
+ok      s3 after D10, in N, mesh control on Pl copy 2: after Pl copy 2's control every body at its frame on record for N (largest 8.3e-10 at Pl copy 2)
+ok      s3 after D10, in N, mesh control on Pl copy 3: Pl copy 3's control ran in N: [] []
+fact    s3 after D10, in N, mesh control on Pl copy 3: the put turned Pl copy 3 +7.500000°; other bodies moved by it (beyond 1e-6): none
+ok      s3 after D10, in N, mesh control on Pl copy 3: Pl copy 3 turned half a pitch (7.5000°) clashes with exactly ['Ring', 'Sun']: [(('Pl copy 3', 'Ring'), 57.733), (('Sun', 'Pl copy 3'), 30.112)]
+ok      s3 after D10, in N, mesh control on Pl copy 3: Pl copy 3 put back, no interference in N (8.9 s): []
+ok      s3 after D10, in N, mesh control on Pl copy 3: the locks back on after Pl copy 3's control, no interference (review N4): []
+ok      s3 after D10, in N, mesh control on Pl copy 3: no lock left suppressed in any configuration: {}
+ok      s3 after D10, in N, mesh control on Pl copy 3: after Pl copy 3's control every body at its frame on record for N (largest 8.3e-10 at Pl copy 2)
+ok      s3 after D10, in N, mesh control on FIdler: FIdler's control ran in N: [] []
+fact    s3 after D10, in N, mesh control on FIdler: the put turned FIdler +9.000000°; other bodies moved by it (beyond 1e-6): none
+ok      s3 after D10, in N, mesh control on FIdler: FIdler turned half a pitch (9.0000°) clashes with exactly ['FDrive', 'FOut']: [(('FDrive', 'FIdler'), 120.404), (('FIdler', 'FOut'), 120.396)]
+ok      s3 after D10, in N, mesh control on FIdler: FIdler put back, no interference in N (8.7 s): []
+ok      s3 after D10, in N, mesh control on FIdler: the locks back on after FIdler's control, no interference (review N4): []
+ok      s3 after D10, in N, mesh control on FIdler: no lock left suppressed in any configuration: {}
+ok      s3 after D10, in N, mesh control on FIdler: after FIdler's control every body at its frame on record for N (largest 8.3e-10 at Pl copy 2)
+DIALOG  SolidWorks shows 'Loading...': ['Cancel'] (a progress box that closes itself; not logged again)
+ok      s3 after D10, in N, mesh control on FOut: FOut's control ran in N: [] []
+fact    s3 after D10, in N, mesh control on FOut: the put turned FOut +6.000000°; other bodies moved by it (beyond 1e-6): none
+ok      s3 after D10, in N, mesh control on FOut: FOut turned half a pitch (6.0000°) clashes with exactly ['FIdler']: [(('FIdler', 'FOut'), 133.273)]
+ok      s3 after D10, in N, mesh control on FOut: FOut put back, no interference in N (8.8 s): []
+ok      s3 after D10, in N, mesh control on FOut: the locks back on after FOut's control, no interference (review N4): []
+ok      s3 after D10, in N, mesh control on FOut: no lock left suppressed in any configuration: {}
+ok      s3 after D10, in N, mesh control on FOut: after FOut's control every body at its frame on record for N (largest 8.3e-10 at Pl copy 2)
+ok      s3 after D10, in N, InDog: InDog's control ran in N: [] []
+fact    s3 after D10, in N, InDog: the put turned InDog +6.000000°; other bodies moved by it (beyond 1e-6): none
+ok      s3 after D10, in N, InDog: InDog, disengaged in N, turned half a pitch (6.0000°) with ['InDog locked to Sun'] suppressed in N clashes with nothing: []
+ok      s3 after D10, in N, InDog: InDog put back, no interference in N (9.7 s): []
+ok      s3 after D10, in N, InDog: the locks back on after InDog's control, no interference (review N4): []
+ok      s3 after D10, in N, InDog: no lock left suppressed in any configuration: {'InDog locked to Sun': []}
+ok      s3 after D10, in N, InDog: after InDog's control every body at its frame on record for N (largest 8.3e-10 at Pl copy 2)
+ok      s3 after D10, in N, LoDog: LoDog's control ran in N: [] []
+fact    s3 after D10, in N, LoDog: the put turned LoDog +6.000000°; other bodies moved by it (beyond 1e-6): none
+ok      s3 after D10, in N, LoDog: LoDog, disengaged in N, turned half a pitch (6.0000°) with ['LoDog locked to Carrier carrier'] suppressed in N clashes with nothing: []
+ok      s3 after D10, in N, LoDog: LoDog put back, no interference in N (9.6 s): []
+ok      s3 after D10, in N, LoDog: the locks back on after LoDog's control, no interference (review N4): []
+ok      s3 after D10, in N, LoDog: no lock left suppressed in any configuration: {'LoDog locked to Carrier carrier': []}
+ok      s3 after D10, in N, LoDog: after LoDog's control every body at its frame on record for N (largest 8.3e-10 at Pl copy 2)
+ok      s3 after D10, in N, FrontDog: FrontDog's control ran in N: [] []
+fact    s3 after D10, in N, FrontDog: the put turned FrontDog +6.000000°; other bodies moved by it (beyond 1e-6): none
+ok      s3 after D10, in N, FrontDog: FrontDog, disengaged in N, turned half a pitch (6.0000°) with ['FDrive locked to FrontDog'] suppressed in N clashes with nothing: []
+ok      s3 after D10, in N, FrontDog: FrontDog put back, no interference in N (9.7 s): []
+ok      s3 after D10, in N, FrontDog: the locks back on after FrontDog's control, no interference (review N4): []
+ok      s3 after D10, in N, FrontDog: no lock left suppressed in any configuration: {'FDrive locked to FrontDog': []}
+ok      s3 after D10, in N, FrontDog: after FrontDog's control every body at its frame on record for N (largest 8.3e-10 at Pl copy 2)
+        N's controls in 73.3 s; SolidWorks 1.61 GB private, 6.42 GB free
+ok      s3 after D10, in 4L: 4L shown, the active configuration reads 4L
+ok      s3 after D10, in 4L: the train's rebuild in 4L answered True
+ok      s3 after D10, in 4L: every body stands at its frame on record for 4L (largest 8.3e-10 at Pl copy 3)
+ok      s3 after D10, in 4L: the frames on record for 4L are the workbook's (largest 0.0e+00 at -)
+ok      s3 after D10, in 4L: every body stands where §2.3 and the edit put it in 4L (largest 8.3e-10 at Pl copy 3)
+ok      s3 after D10, in 4L: RangeSlv stands at (0.0, 0.0, 66.0) mm in 4L, on Rear's axis at its slide RangeSlv along Rear's §2.3 value 66 mm (off 0.0e+00)
+ok      s3 after D10, in 4L: ModeSlv stands at (0.0, -0.0, 106.0) mm in 4L, on Rear's axis at its slide ModeSlv along Rear's §2.3 value 106 mm (off 0.0e+00)
+ok      s3 after D10, in 4L: the layout (TransferCase_E4_Layout-1) is at identity in 4L
+        mates in 4L: [('Sun on In Axis', 0, True, False), ('Sun along In', 0, True, False), ('InDog locked to Sun', 0, True, False), ('Carrier carrier on Carrier Axis', 0, True, False), ('Carrier carrier along Carrier', 0, True, False), ('LoDog locked to Carrier carrier', 0, True, False), ('Pl copy 1 on Planet copy 1 Axis', 0, True, False), ('Pl copy 1 along Planet copy 1', 0, True, False), ('Pl copy 2 on Planet copy 2 Axis', 0, True, False), ('Pl copy 2 along Planet copy 2', 0, True, False), ('Pl copy 3 on Planet copy 3 Axis', 0, True, False), ('Pl copy 3 along Planet copy 3', 0, True, False), ('RangeSlv on Rear Axis', 0, True, False), ('RangeSlv along Rear', 0, True, False), ('ModeSlv on Rear Axis', 0, True, False), ('ModeSlv along Rear', 0, True, False), ('FrontDog on FrontDrv Axis', 0, True, False), ('FrontDog along FrontDrv', 0, True, False), ('FDrive locked to FrontDog', 0, True, False), ('FIdler on Idler Axis', 0, True, False), ('FIdler along Idler', 0, True, False), ('FOut on Front Axis', 0, True, False), ('FOut along Front', 0, True, False), ('ModeSlv splined to RangeSlv', 0, True, False), ('Sun meshes Pl copy 1', 0, True, False), ('Sun meshes Pl copy 2', 0, True, False), ('Sun meshes Pl copy 3', 0, True, False), ('Pl copy 1 meshes Ring', 0, True, False), ('FDrive meshes FIdler', 0, True, False), ('FIdler meshes FOut', 0, True, False), ('RangeSlv engages InDog', 0, True, True), ('ModeSlv engages FrontDog', 0, True, False), ('RangeSlv engages LoDog', 0, True, False)]; others []; constrained {'Sun': 2, 'Pl copy 1': 2, 'Pl copy 2': 2, 'Pl copy 3': 2, 'InDog': 2, 'LoDog': 2, 'RangeSlv': 2, 'FrontDog': 2, 'ModeSlv': 2, 'FDrive': 2, 'FIdler': 2, 'FOut': 2, 'Carrier carrier': 2}; fixed {'Ring': True, 'layout': True}
+ok      s3 after D10, in 4L: the mates are exactly the record's 33, nothing else in the mate group: extra [], missing [], others []
+ok      s3 after D10, in 4L: in 4L the couplings §2.3 has off there read suppressed and every other mate on: wrong []
+ok      s3 after D10, in 4L: every mate on in 4L has error code 0: []
+ok      s3 after D10, in 4L: every mated body under-defined (2) in 4L: {'Sun': 2, 'Pl copy 1': 2, 'Pl copy 2': 2, 'Pl copy 3': 2, 'InDog': 2, 'LoDog': 2, 'RangeSlv': 2, 'FrontDog': 2, 'ModeSlv': 2, 'FDrive': 2, 'FIdler': 2, 'FOut': 2, 'Carrier carrier': 2}
+ok      s3 after D10, in 4L: the layout and every fixed body read IsFixed in 4L through handles fetched after the show: {'Ring': True, 'layout': True}
+ok      s3 after D10, in 4L: no interference in 4L: []
+        4L measured in 3.7 s; SolidWorks 1.61 GB private, 6.42 GB free
+ok      s3 after D10, in 4L, mesh control on Pl copy 1: Pl copy 1's control ran in 4L: [] []
+fact    s3 after D10, in 4L, mesh control on Pl copy 1: the put turned Pl copy 1 +7.500000°; other bodies moved by it (beyond 1e-6): none
+ok      s3 after D10, in 4L, mesh control on Pl copy 1: Pl copy 1 turned half a pitch (7.5000°) clashes with exactly ['Ring', 'Sun']: [(('Pl copy 1', 'Ring'), 57.732), (('Sun', 'Pl copy 1'), 30.111)]
+ok      s3 after D10, in 4L, mesh control on Pl copy 1: Pl copy 1 put back, no interference in 4L (10.2 s): []
+ok      s3 after D10, in 4L, mesh control on Pl copy 1: the locks back on after Pl copy 1's control, no interference (review N4): []
+ok      s3 after D10, in 4L, mesh control on Pl copy 1: no lock left suppressed in any configuration: {}
+ok      s3 after D10, in 4L, mesh control on Pl copy 1: after Pl copy 1's control every body at its frame on record for 4L (largest 8.3e-10 at Pl copy 3)
+ok      s3 after D10, in 4L, mesh control on Pl copy 2: Pl copy 2's control ran in 4L: [] []
+fact    s3 after D10, in 4L, mesh control on Pl copy 2: the put turned Pl copy 2 +7.500000°; other bodies moved by it (beyond 1e-6): none
+ok      s3 after D10, in 4L, mesh control on Pl copy 2: Pl copy 2 turned half a pitch (7.5000°) clashes with exactly ['Ring', 'Sun']: [(('Pl copy 2', 'Ring'), 57.733), (('Sun', 'Pl copy 2'), 30.112)]
+ok      s3 after D10, in 4L, mesh control on Pl copy 2: Pl copy 2 put back, no interference in 4L (10.2 s): []
+ok      s3 after D10, in 4L, mesh control on Pl copy 2: the locks back on after Pl copy 2's control, no interference (review N4): []
+ok      s3 after D10, in 4L, mesh control on Pl copy 2: no lock left suppressed in any configuration: {}
+ok      s3 after D10, in 4L, mesh control on Pl copy 2: after Pl copy 2's control every body at its frame on record for 4L (largest 8.3e-10 at Pl copy 3)
+ok      s3 after D10, in 4L, mesh control on Pl copy 3: Pl copy 3's control ran in 4L: [] []
+fact    s3 after D10, in 4L, mesh control on Pl copy 3: the put turned Pl copy 3 +7.500000°; other bodies moved by it (beyond 1e-6): none
+ok      s3 after D10, in 4L, mesh control on Pl copy 3: Pl copy 3 turned half a pitch (7.5000°) clashes with exactly ['Ring', 'Sun']: [(('Pl copy 3', 'Ring'), 57.733), (('Sun', 'Pl copy 3'), 30.112)]
+ok      s3 after D10, in 4L, mesh control on Pl copy 3: Pl copy 3 put back, no interference in 4L (10.1 s): []
+ok      s3 after D10, in 4L, mesh control on Pl copy 3: the locks back on after Pl copy 3's control, no interference (review N4): []
+ok      s3 after D10, in 4L, mesh control on Pl copy 3: no lock left suppressed in any configuration: {}
+ok      s3 after D10, in 4L, mesh control on Pl copy 3: after Pl copy 3's control every body at its frame on record for 4L (largest 8.3e-10 at Pl copy 3)
+ok      s3 after D10, in 4L, mesh control on FIdler: FIdler's control ran in 4L: [] []
+fact    s3 after D10, in 4L, mesh control on FIdler: the put turned FIdler +9.000000°; other bodies moved by it (beyond 1e-6): none
+ok      s3 after D10, in 4L, mesh control on FIdler: FIdler turned half a pitch (9.0000°) clashes with exactly ['FDrive', 'FOut']: [(('FDrive', 'FIdler'), 120.404), (('FIdler', 'FOut'), 120.396)]
+ok      s3 after D10, in 4L, mesh control on FIdler: FIdler put back, no interference in 4L (9.9 s): []
+ok      s3 after D10, in 4L, mesh control on FIdler: the locks back on after FIdler's control, no interference (review N4): []
+ok      s3 after D10, in 4L, mesh control on FIdler: no lock left suppressed in any configuration: {}
+ok      s3 after D10, in 4L, mesh control on FIdler: after FIdler's control every body at its frame on record for 4L (largest 8.3e-10 at Pl copy 3)
+ok      s3 after D10, in 4L, mesh control on FOut: FOut's control ran in 4L: [] []
+fact    s3 after D10, in 4L, mesh control on FOut: the put turned FOut +6.000000°; other bodies moved by it (beyond 1e-6): none
+ok      s3 after D10, in 4L, mesh control on FOut: FOut turned half a pitch (6.0000°) clashes with exactly ['FIdler']: [(('FIdler', 'FOut'), 133.273)]
+ok      s3 after D10, in 4L, mesh control on FOut: FOut put back, no interference in 4L (10.0 s): []
+ok      s3 after D10, in 4L, mesh control on FOut: the locks back on after FOut's control, no interference (review N4): []
+ok      s3 after D10, in 4L, mesh control on FOut: no lock left suppressed in any configuration: {}
+ok      s3 after D10, in 4L, mesh control on FOut: after FOut's control every body at its frame on record for 4L (largest 8.3e-10 at Pl copy 3)
+ok      s3 after D10, in 4L, InDog: InDog's control ran in 4L: [] []
+fact    s3 after D10, in 4L, InDog: the put turned InDog +6.000000°; other bodies moved by it (beyond 1e-6): none
+ok      s3 after D10, in 4L, InDog: InDog, disengaged in 4L, turned half a pitch (6.0000°) with ['InDog locked to Sun'] suppressed in 4L clashes with nothing: []
+ok      s3 after D10, in 4L, InDog: InDog put back, no interference in 4L (10.9 s): []
+ok      s3 after D10, in 4L, InDog: the locks back on after InDog's control, no interference (review N4): []
+ok      s3 after D10, in 4L, InDog: no lock left suppressed in any configuration: {'InDog locked to Sun': []}
+ok      s3 after D10, in 4L, InDog: after InDog's control every body at its frame on record for 4L (largest 8.3e-10 at Pl copy 3)
+ok      s3 after D10, in 4L, the coupling RangeSlv–LoDog: LoDog's control ran in 4L: [] []
+fact    s3 after D10, in 4L, the coupling RangeSlv–LoDog: the put turned LoDog +6.000000°; other bodies moved by it (beyond 1e-6): none
+ok      s3 after D10, in 4L, the coupling RangeSlv–LoDog: LoDog turned half a pitch (6.0000°) with ['LoDog locked to Carrier carrier'] suppressed in 4L clashes with exactly ['RangeSlv']: [(('LoDog', 'RangeSlv'), 743.089)]
+ok      s3 after D10, in 4L, the coupling RangeSlv–LoDog: LoDog put back, no interference in 4L (11.3 s): []
+ok      s3 after D10, in 4L, the coupling RangeSlv–LoDog: the locks back on after LoDog's control, no interference (review N4): []
+ok      s3 after D10, in 4L, the coupling RangeSlv–LoDog: no lock left suppressed in any configuration: {'LoDog locked to Carrier carrier': []}
+ok      s3 after D10, in 4L, the coupling RangeSlv–LoDog: after LoDog's control every body at its frame on record for 4L (largest 8.3e-10 at Pl copy 3)
+ok      s3 after D10, in 4L, the coupling ModeSlv–FrontDog: FrontDog's control ran in 4L: [] []
+fact    s3 after D10, in 4L, the coupling ModeSlv–FrontDog: the put turned FrontDog +6.000000°; other bodies moved by it (beyond 1e-6): none
+ok      s3 after D10, in 4L, the coupling ModeSlv–FrontDog: FrontDog turned half a pitch (6.0000°) with ['FDrive locked to FrontDog'] suppressed in 4L clashes with exactly ['ModeSlv']: [(('FrontDog', 'ModeSlv'), 743.097)]
+ok      s3 after D10, in 4L, the coupling ModeSlv–FrontDog: FrontDog put back, no interference in 4L (11.3 s): []
+ok      s3 after D10, in 4L, the coupling ModeSlv–FrontDog: the locks back on after FrontDog's control, no interference (review N4): []
+ok      s3 after D10, in 4L, the coupling ModeSlv–FrontDog: no lock left suppressed in any configuration: {'FDrive locked to FrontDog': []}
+ok      s3 after D10, in 4L, the coupling ModeSlv–FrontDog: after FrontDog's control every body at its frame on record for 4L (largest 8.3e-10 at Pl copy 2)
+        4L's controls in 83.9 s; SolidWorks 1.62 GB private, 6.42 GB free
+ok      s3 after D10, in 2H after every mode's controls: 2H shown, the active configuration reads 2H
+ok      s3 after D10, in 2H after every mode's controls: the train's rebuild in 2H answered True
+ok      s3 after D10, in 2H after every mode's controls: every body stands at its frame on record for 2H (largest 8.3e-10 at Pl copy 2)
+ok      s3 after D10, in 2H after every mode's controls: the frames on record for 2H are the workbook's (largest 0.0e+00 at -)
+ok      s3 after D10, in 2H after every mode's controls: every body stands where §2.3 and the edit put it in 2H (largest 8.3e-10 at Pl copy 2)
+ok      s3 after D10, in 2H after every mode's controls: RangeSlv stands at (0.0, 0.0, 46.0) mm in 2H, on Rear's axis at its slide RangeSlv along Rear's §2.3 value 46 mm (off 0.0e+00)
+ok      s3 after D10, in 2H after every mode's controls: ModeSlv stands at (-0.0, 0.0, 96.0) mm in 2H, on Rear's axis at its slide ModeSlv along Rear's §2.3 value 96 mm (off 0.0e+00)
+ok      s3 after D10, in 2H after every mode's controls: the layout (TransferCase_E4_Layout-1) is at identity in 2H
+ok      s3 after D10, in 4H after every mode's controls: 4H shown, the active configuration reads 4H
+ok      s3 after D10, in 4H after every mode's controls: the train's rebuild in 4H answered True
+ok      s3 after D10, in 4H after every mode's controls: every body stands at its frame on record for 4H (largest 8.3e-10 at Pl copy 2)
+ok      s3 after D10, in 4H after every mode's controls: the frames on record for 4H are the workbook's (largest 0.0e+00 at -)
+ok      s3 after D10, in 4H after every mode's controls: every body stands where §2.3 and the edit put it in 4H (largest 8.3e-10 at Pl copy 2)
+ok      s3 after D10, in 4H after every mode's controls: RangeSlv stands at (0.0, 0.0, 46.0) mm in 4H, on Rear's axis at its slide RangeSlv along Rear's §2.3 value 46 mm (off 0.0e+00)
+ok      s3 after D10, in 4H after every mode's controls: ModeSlv stands at (0.0, 0.0, 106.0) mm in 4H, on Rear's axis at its slide ModeSlv along Rear's §2.3 value 106 mm (off 0.0e+00)
+ok      s3 after D10, in 4H after every mode's controls: the layout (TransferCase_E4_Layout-1) is at identity in 4H
+ok      s3 after D10, in N after every mode's controls: N shown, the active configuration reads N
+ok      s3 after D10, in N after every mode's controls: the train's rebuild in N answered True
+ok      s3 after D10, in N after every mode's controls: every body stands at its frame on record for N (largest 8.3e-10 at Pl copy 2)
+ok      s3 after D10, in N after every mode's controls: the frames on record for N are the workbook's (largest 0.0e+00 at -)
+ok      s3 after D10, in N after every mode's controls: every body stands where §2.3 and the edit put it in N (largest 8.3e-10 at Pl copy 2)
+ok      s3 after D10, in N after every mode's controls: RangeSlv stands at (0.0, 0.0, 56.0) mm in N, on Rear's axis at its slide RangeSlv along Rear's §2.3 value 56 mm (off 0.0e+00)
+ok      s3 after D10, in N after every mode's controls: ModeSlv stands at (-0.0, 0.0, 96.0) mm in N, on Rear's axis at its slide ModeSlv along Rear's §2.3 value 96 mm (off 0.0e+00)
+ok      s3 after D10, in N after every mode's controls: the layout (TransferCase_E4_Layout-1) is at identity in N
+ok      s3 after D10, in 4L after every mode's controls: 4L shown, the active configuration reads 4L
+ok      s3 after D10, in 4L after every mode's controls: the train's rebuild in 4L answered True
+ok      s3 after D10, in 4L after every mode's controls: every body stands at its frame on record for 4L (largest 8.3e-10 at Pl copy 2)
+ok      s3 after D10, in 4L after every mode's controls: the frames on record for 4L are the workbook's (largest 0.0e+00 at -)
+ok      s3 after D10, in 4L after every mode's controls: every body stands where §2.3 and the edit put it in 4L (largest 8.3e-10 at Pl copy 2)
+ok      s3 after D10, in 4L after every mode's controls: RangeSlv stands at (0.0, 0.0, 66.0) mm in 4L, on Rear's axis at its slide RangeSlv along Rear's §2.3 value 66 mm (off 0.0e+00)
+ok      s3 after D10, in 4L after every mode's controls: ModeSlv stands at (0.0, -0.0, 106.0) mm in 4L, on Rear's axis at its slide ModeSlv along Rear's §2.3 value 106 mm (off 0.0e+00)
+ok      s3 after D10, in 4L after every mode's controls: the layout (TransferCase_E4_Layout-1) is at identity in 4L
+ok      s3: 2H shown and rebuilt: (True, '2H')
+        made 'Angle1' (SolidWorks' own name) on Sun with 2H active: AddMate5 status 1, rebuilt True, Sun moved 0.0e+00
+ok      s3 M2: the angle mate made with 2H active moved nothing
+fact    s3 M2: Angle1 as made reads {'2H': False, '4H': False, 'N': False, '4L': False} (suppressed True) in each mode
+ok      s3 M2: Angle1 on in every mode: {'2H': False, '4H': False, 'N': False, '4L': False}
+person  saved in SolidWorks (s3 M2, on in every mode: so the marks after the refused press are its own): [('TransferCase_E4_Layout.SLDPRT', True), ('TransferCase_E4_Carrier_Carrier.SLDPRT', True), ('Gear_m1_N24.SLDPRT', True), ('Ring_m1_N72.SLDPRT', True), ('Dog_m1.5_N30.SLDPRT', True), ('Sleeve_m1.5_N30.SLDPRT', True), ('Gear_m2_N30.SLDPRT', True), ('Gear_m2_N20.SLDPRT', True), ('TransferCase_E4.SLDASM', True)]
+update  SolidWorks 1.63 GB private, 6.36 GB free
+        raised BuildError in 52.7 s: In modes 2H, 4H, N and 4L, Angle1 is a mate in TransferCase_E4.SLDASM that Gear Generator did not make, and it may hold the gears where Update SolidWorks would put them, so nothing is changed; in SolidWorks, suppress Angle1 in 2H, 4H, N and 4L and press Update SolidWorks again.
+status  [red] In modes 2H, 4H, N and 4L, Angle1 is a mate in TransferCase_E4.SLDASM that Gear Generator did not make, and it may hold the gears where Update SolidWorks would put them, so nothing is changed; in SolidWorks, suppress Angle1 in 2H, 4H, N and 4L and press Update SolidWorks again.
+fact    s3 M2, on in every mode: the press took 52.7 s; SolidWorks calls by member {'OpenDoc6': 9, 'IsSuppressed2': 170}
+        shows and puts in order: []
+        the refusal: 'In modes 2H, 4H, N and 4L, Angle1 is a mate in TransferCase_E4.SLDASM that Gear Generator did not make, and it may hold the gears where Update SolidWorks would put them, so nothing is changed; in SolidWorks, suppress Angle1 in 2H, 4H, N and 4L and press Update SolidWorks again.'
+ok      s3 M2, on in every mode: Update refuses naming Angle1 and 2H, 4H, N and 4L
+ok      s3 M2, on in every mode: between the open and the refusal no show, flag, value, rebuild, put or mate made: []
+ok      s3 M2, on in every mode: Angle1 found by its name and read one IsSuppressed2(3, [c]) per mode, in mode order: [['2H'], ['4H'], ['N'], ['4L']]
+ok      s3 M2, on in every mode: nothing changed: 2H still active (2H), every frame where it stood (largest 0.0e+00 at -), nothing marked (before [], after []), no window under the watch (0 new)
+ok      s3 M2: Angle1 suppressed in 2H, 4H and 4L with 2H active, read back one name per call: {'2H': True, '4H': True, 'N': False, '4L': True}, active 2H
+person  saved in SolidWorks (s3 M2, on in N only: so the marks after the refused press are its own): [('TransferCase_E4_Layout.SLDPRT', True), ('TransferCase_E4_Carrier_Carrier.SLDPRT', True), ('Gear_m1_N24.SLDPRT', True), ('Ring_m1_N72.SLDPRT', True), ('Dog_m1.5_N30.SLDPRT', True), ('Sleeve_m1.5_N30.SLDPRT', True), ('Gear_m2_N30.SLDPRT', True), ('Gear_m2_N20.SLDPRT', True), ('TransferCase_E4.SLDASM', True)]
+update  SolidWorks 1.63 GB private, 6.47 GB free
+        raised BuildError in 53.7 s: In mode N, Angle1 is a mate in TransferCase_E4.SLDASM that Gear Generator did not make, and it may hold the gears where Update SolidWorks would put them, so nothing is changed; in SolidWorks, suppress Angle1 in N and press Update SolidWorks again.
+status  [red] In mode N, Angle1 is a mate in TransferCase_E4.SLDASM that Gear Generator did not make, and it may hold the gears where Update SolidWorks would put them, so nothing is changed; in SolidWorks, suppress Angle1 in N and press Update SolidWorks again.
+fact    s3 M2, on in N only: the press took 53.7 s; SolidWorks calls by member {'OpenDoc6': 9, 'IsSuppressed2': 170}
+        shows and puts in order: []
+        the refusal: 'In mode N, Angle1 is a mate in TransferCase_E4.SLDASM that Gear Generator did not make, and it may hold the gears where Update SolidWorks would put them, so nothing is changed; in SolidWorks, suppress Angle1 in N and press Update SolidWorks again.'
+ok      s3 M2, on in N only: Update refuses naming Angle1 and N verbatim
+ok      s3 M2, on in N only: between the open and the refusal no show, flag, value, rebuild, put or mate made: []
+ok      s3 M2, on in N only: Angle1 found by its name and read one IsSuppressed2(3, [c]) per mode, in mode order: [['2H'], ['4H'], ['N'], ['4L']]
+ok      s3 M2, on in N only: nothing changed: 2H still active (2H), every frame where it stood (largest 0.0e+00 at -), nothing marked (before [], after []), no window under the watch (0 new)
+ok      s3 M2: Angle1 suppressed in N, 2H active: {'2H': True, '4H': True, 'N': True, '4L': True}
+person  saved in SolidWorks (s3 M2, suppressed in every mode: so the marks after the press are its own): [('TransferCase_E4_Layout.SLDPRT', True), ('TransferCase_E4_Carrier_Carrier.SLDPRT', True), ('Gear_m1_N24.SLDPRT', True), ('Ring_m1_N72.SLDPRT', True), ('Dog_m1.5_N30.SLDPRT', True), ('Sleeve_m1.5_N30.SLDPRT', True), ('Gear_m2_N30.SLDPRT', True), ('Gear_m2_N20.SLDPRT', True), ('TransferCase_E4.SLDASM', True)]
+update  SolidWorks 1.63 GB private, 6.39 GB free
+        update  Gear_m1_N24.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Ring_m1_N72.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Dog_m1.5_N30.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Sleeve_m1.5_N30.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Gear_m2_N30.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Gear_m2_N20.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  TransferCase_E4_Layout.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  TransferCase_E4_Carrier_Carrier.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        ok      every gear is where the workbook puts it
+        CHECK   mates Gear Generator did not make, suppressed in every mode, left as they are: Angle1
+        ok      worked in 2H, the configuration that was active; did not show the other modes
+        mate    Sun on In Axis
+        mate    Sun along In
+        mate    InDog locked to Sun
+        mate    Carrier carrier on Carrier Axis
+        mate    Carrier carrier along Carrier
+        mate    LoDog locked to Carrier carrier
+        mate    Pl copy 1 on Planet copy 1 Axis
+        mate    Pl copy 1 along Planet copy 1
+        mate    Pl copy 2 on Planet copy 2 Axis
+        mate    Pl copy 2 along Planet copy 2
+        mate    Pl copy 3 on Planet copy 3 Axis
+        mate    Pl copy 3 along Planet copy 3
+        mate    RangeSlv on Rear Axis
+        mate    RangeSlv along Rear
+        mate    ModeSlv on Rear Axis
+        mate    ModeSlv along Rear
+        mate    FrontDog on FrontDrv Axis
+        mate    FrontDog along FrontDrv
+        mate    FDrive locked to FrontDog
+        mate    FIdler on Idler Axis
+        mate    FIdler along Idler
+        mate    FOut on Front Axis
+        mate    FOut along Front
+        mate    ModeSlv splined to RangeSlv
+        mate    Sun meshes Pl copy 1
+        mate    Sun meshes Pl copy 2
+        mate    Sun meshes Pl copy 3
+        mate    Pl copy 1 meshes Ring
+        mate    FDrive meshes FIdler
+        mate    FIdler meshes FOut
+        mate    RangeSlv engages InDog
+        mate    ModeSlv engages FrontDog · suppressed
+        mate    RangeSlv engages LoDog · suppressed
+        mate    Angle1 · suppressed
+        nothing changed in SolidWorks
+        in 73.9 s; SolidWorks 1.63 GB private, 6.47 GB free
+        steps [('check', 'Gear_m1_N24', 1, 9), ('check', 'Ring_m1_N72', 2, 9), ('check', 'Dog_m1.5_N30', 3, 9), ('check', 'Sleeve_m1.5_N30', 4, 9), ('check', 'Gear_m2_N30', 5, 9), ('check', 'Gear_m2_N20', 6, 9), ('check', 'TransferCase_E4_Layout', 7, 9), ('check', 'TransferCase_E4_Carrier_Carrier', 8, 9), ('check', 'TransferCase_E4', 9, 9), ('place', 'TransferCase_E4', 0, 0)]
+        loaded from disk []
+        motion: turned False; out of step []; off axis []; restored []; unsuppressed []; axial []; ratios []; extra mates ['Angle1']; ratios found [], already [], read []; sense found wrong [], turned round []
+        train_check residuals (rad) [('Sun', 'Pl copy 1', '3.89e-15'), ('Sun', 'Pl copy 2', '1.11e-16'), ('Sun', 'Pl copy 3', '5.55e-17'), ('Pl copy 1', 'Ring', '1.22e-15'), ('FDrive', 'FIdler', '1.39e-16'), ('FIdler', 'FOut', '9.25e-17'), ('Pl copy 2', 'Ring', '5.55e-17'), ('Pl copy 3', 'Ring', '6.94e-17'), ('RangeSlv', 'InDog', '0.00e+00'), ('Sun', 'InDog', '0.00e+00'), ('Carrier carrier', 'LoDog', '5.55e-17'), ('FrontDog', 'FDrive', '0.00e+00'), ('RangeSlv', 'ModeSlv', '2.78e-17')]
+        finish: dragged []; earlier update ''
+ok      the Update's check phase found no gear mate turning against its mesh: []
+record  0 sidecar(s) written; record written; notes []
+status  [green] SolidWorks already matches the workbook: nothing was changed. TransferCase_E4.SLDASM also has a mate the app did not make, Angle1, suppressed in every mode; Update SolidWorks left it as it is. It worked in 2H, the configuration that was active; it did not show the other modes, since nothing needed changing.
+fact    s3 M2, suppressed in every mode: the press took 73.9 s; SolidWorks calls by member {'OpenDoc6': 10, 'IsSuppressed2': 170}
+        shows and puts in order: []
+        configuration '2H'; visited []; put_in []; placed []; unsuppressed_in []; suppressed_in []; slid []; values_restored []; extra configurations []; extra mates ['Angle1']; senses unread []; positions per configuration True; failures []
+        the result's line: CHECK   mates Gear Generator did not make, suppressed in every mode, left as they are: Angle1
+        the result's line: mate    Angle1 · suppressed
+footer  (s3 M2, suppressed in every mode, after the press) [green] SolidWorks already matches the workbook: nothing was changed. TransferCase_E4.SLDASM also has a mate the app did not make, Angle1, suppressed in every mode; Update SolidWorks left it as it is. It worked in 2H, the configuration that was active; it did not show the other modes, since nothing needed changing.
+        button 'Build again…' on; Update SolidWorks shown on primary
+ok      s3 M2, suppressed in every mode: Update goes through: []
+ok      s3 M2, suppressed in every mode: Angle1 listed and left, named in the result's lines and the footer: extra mates ['Angle1']
+ok      s3 M2, suppressed in every mode: a quiet press: no show, flag, value, rebuild or put: []
+ok      s3 M2, suppressed in every mode: read from SolidWorks, every gear stands where it stood before the press (largest 0.0e+00 at -)
+fact    s3 M2, suppressed in every mode: GetSaveFlag before the press {'TransferCase_E4_Layout.SLDPRT': False, 'TransferCase_E4_Carrier_Carrier.SLDPRT': False, 'Gear_m1_N24.SLDPRT': False, 'Ring_m1_N72.SLDPRT': False, 'Dog_m1.5_N30.SLDPRT': False, 'Sleeve_m1.5_N30.SLDPRT': False, 'Gear_m2_N30.SLDPRT': False, 'Gear_m2_N20.SLDPRT': False, 'TransferCase_E4.SLDASM': False}, after it {'TransferCase_E4_Layout.SLDPRT': False, 'TransferCase_E4_Carrier_Carrier.SLDPRT': False, 'Gear_m1_N24.SLDPRT': False, 'Ring_m1_N72.SLDPRT': False, 'Dog_m1.5_N30.SLDPRT': False, 'Sleeve_m1.5_N30.SLDPRT': False, 'Gear_m2_N30.SLDPRT': False, 'Gear_m2_N20.SLDPRT': False, 'TransferCase_E4.SLDASM': False}
+ok      s3 M2, suppressed in every mode: every document reads GetSaveFlag False before and after an Update that changed nothing (GEAR_MATE_DEFINITION_READ_MARKS 'nothing'): marked before [], after []
+ok      s3 M2: Angle1's four flags unchanged by the Update: {'2H': True, '4H': True, 'N': True, '4L': True}
+        Exploded added by the script (active Exploded), 2H shown again: rebuilt True, active 2H, configurations ['2H', '4H', 'N', '4L', 'Exploded']
+person  saved in SolidWorks (s3 M2, Exploded added: so the marks after the press are its own): [('TransferCase_E4_Layout.SLDPRT', True), ('TransferCase_E4_Carrier_Carrier.SLDPRT', True), ('Gear_m1_N24.SLDPRT', True), ('Ring_m1_N72.SLDPRT', True), ('Dog_m1.5_N30.SLDPRT', True), ('Sleeve_m1.5_N30.SLDPRT', True), ('Gear_m2_N30.SLDPRT', True), ('Gear_m2_N20.SLDPRT', True), ('TransferCase_E4.SLDASM', True)]
+update  SolidWorks 1.63 GB private, 6.49 GB free
+        update  Gear_m1_N24.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Ring_m1_N72.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Dog_m1.5_N30.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Sleeve_m1.5_N30.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Gear_m2_N30.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Gear_m2_N20.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  TransferCase_E4_Layout.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  TransferCase_E4_Carrier_Carrier.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        ok      every gear is where the workbook puts it
+        CHECK   mates Gear Generator did not make, suppressed in every mode, left as they are: Angle1
+        ok      worked in 2H, the configuration that was active; did not show the other modes
+        CHECK   configurations Gear Generator did not make, left as they are: Exploded
+        mate    Sun on In Axis
+        mate    Sun along In
+        mate    InDog locked to Sun
+        mate    Carrier carrier on Carrier Axis
+        mate    Carrier carrier along Carrier
+        mate    LoDog locked to Carrier carrier
+        mate    Pl copy 1 on Planet copy 1 Axis
+        mate    Pl copy 1 along Planet copy 1
+        mate    Pl copy 2 on Planet copy 2 Axis
+        mate    Pl copy 2 along Planet copy 2
+        mate    Pl copy 3 on Planet copy 3 Axis
+        mate    Pl copy 3 along Planet copy 3
+        mate    RangeSlv on Rear Axis
+        mate    RangeSlv along Rear
+        mate    ModeSlv on Rear Axis
+        mate    ModeSlv along Rear
+        mate    FrontDog on FrontDrv Axis
+        mate    FrontDog along FrontDrv
+        mate    FDrive locked to FrontDog
+        mate    FIdler on Idler Axis
+        mate    FIdler along Idler
+        mate    FOut on Front Axis
+        mate    FOut along Front
+        mate    ModeSlv splined to RangeSlv
+        mate    Sun meshes Pl copy 1
+        mate    Sun meshes Pl copy 2
+        mate    Sun meshes Pl copy 3
+        mate    Pl copy 1 meshes Ring
+        mate    FDrive meshes FIdler
+        mate    FIdler meshes FOut
+        mate    RangeSlv engages InDog
+        mate    ModeSlv engages FrontDog · suppressed
+        mate    RangeSlv engages LoDog · suppressed
+        mate    Angle1 · suppressed
+        nothing changed in SolidWorks
+        in 73.6 s; SolidWorks 1.63 GB private, 6.58 GB free
+        steps [('check', 'Gear_m1_N24', 1, 9), ('check', 'Ring_m1_N72', 2, 9), ('check', 'Dog_m1.5_N30', 3, 9), ('check', 'Sleeve_m1.5_N30', 4, 9), ('check', 'Gear_m2_N30', 5, 9), ('check', 'Gear_m2_N20', 6, 9), ('check', 'TransferCase_E4_Layout', 7, 9), ('check', 'TransferCase_E4_Carrier_Carrier', 8, 9), ('check', 'TransferCase_E4', 9, 9), ('place', 'TransferCase_E4', 0, 0)]
+        loaded from disk []
+        motion: turned False; out of step []; off axis []; restored []; unsuppressed []; axial []; ratios []; extra mates ['Angle1']; ratios found [], already [], read []; sense found wrong [], turned round []
+        train_check residuals (rad) [('Sun', 'Pl copy 1', '3.89e-15'), ('Sun', 'Pl copy 2', '1.11e-16'), ('Sun', 'Pl copy 3', '5.55e-17'), ('Pl copy 1', 'Ring', '1.22e-15'), ('FDrive', 'FIdler', '1.39e-16'), ('FIdler', 'FOut', '9.25e-17'), ('Pl copy 2', 'Ring', '5.55e-17'), ('Pl copy 3', 'Ring', '6.94e-17'), ('RangeSlv', 'InDog', '0.00e+00'), ('Sun', 'InDog', '0.00e+00'), ('Carrier carrier', 'LoDog', '5.55e-17'), ('FrontDog', 'FDrive', '0.00e+00'), ('RangeSlv', 'ModeSlv', '2.78e-17')]
+        finish: dragged []; earlier update ''
+ok      the Update's check phase found no gear mate turning against its mesh: []
+record  0 sidecar(s) written; record written; notes []
+status  [green] SolidWorks already matches the workbook: nothing was changed. TransferCase_E4.SLDASM also has a mate the app did not make, Angle1, suppressed in every mode; Update SolidWorks left it as it is. It worked in 2H, the configuration that was active; it did not show the other modes, since nothing needed changing. TransferCase_E4.SLDASM also has a configuration the app did not make (Exploded); Update SolidWorks left it as it is.
+fact    s3 M2, Exploded added: the press took 73.6 s; SolidWorks calls by member {'OpenDoc6': 10, 'IsSuppressed2': 170}
+        shows and puts in order: []
+        configuration '2H'; visited []; put_in []; placed []; unsuppressed_in []; suppressed_in []; slid []; values_restored []; extra configurations ['Exploded']; extra mates ['Angle1']; senses unread []; positions per configuration True; failures []
+        the result's line: CHECK   mates Gear Generator did not make, suppressed in every mode, left as they are: Angle1
+        the result's line: CHECK   configurations Gear Generator did not make, left as they are: Exploded
+footer  (s3 M2, Exploded added, after the press) [green] SolidWorks already matches the workbook: nothing was changed. TransferCase_E4.SLDASM also has a mate the app did not make, Angle1, suppressed in every mode; Update SolidWorks left it as it is. It worked in 2H, the configuration that was active; it did not show the other modes, since nothing needed changing. TransferCase_E4.SLDASM also has a configuration the app did not make (Exploded); Update SolidWorks left it as it is.
+        button 'Build again…' on; Update SolidWorks shown on primary
+ok      s3 M2, Exploded added: Update goes through: []
+ok      s3 M2, Exploded added: a quiet press: no show, flag, value, rebuild or put: []
+ok      s3 M2, Exploded added: read from SolidWorks, every gear stands where it stood before the press (largest 0.0e+00 at -)
+fact    s3 M2, Exploded added: GetSaveFlag before the press {'TransferCase_E4_Layout.SLDPRT': False, 'TransferCase_E4_Carrier_Carrier.SLDPRT': False, 'Gear_m1_N24.SLDPRT': False, 'Ring_m1_N72.SLDPRT': False, 'Dog_m1.5_N30.SLDPRT': False, 'Sleeve_m1.5_N30.SLDPRT': False, 'Gear_m2_N30.SLDPRT': False, 'Gear_m2_N20.SLDPRT': False, 'TransferCase_E4.SLDASM': False}, after it {'TransferCase_E4_Layout.SLDPRT': False, 'TransferCase_E4_Carrier_Carrier.SLDPRT': False, 'Gear_m1_N24.SLDPRT': False, 'Ring_m1_N72.SLDPRT': False, 'Dog_m1.5_N30.SLDPRT': False, 'Sleeve_m1.5_N30.SLDPRT': False, 'Gear_m2_N30.SLDPRT': False, 'Gear_m2_N20.SLDPRT': False, 'TransferCase_E4.SLDASM': False}
+ok      s3 M2, Exploded added: every document reads GetSaveFlag False before and after an Update that changed nothing (GEAR_MATE_DEFINITION_READ_MARKS 'nothing'): marked before [], after []
+ok      s3 M2: Exploded listed and left: ['Exploded']
+ok      s3 M2: Angle1 on in N again, 2H active: {'2H': True, '4H': True, 'N': False, '4L': True}
+ok      s3 M2: Exploded shown and rebuilt: (True, 'Exploded')
+person  saved in SolidWorks (s3 M2: Exploded active, so the marks after the refused press are its own): [('TransferCase_E4_Layout.SLDPRT', True), ('TransferCase_E4_Carrier_Carrier.SLDPRT', True), ('Gear_m1_N24.SLDPRT', True), ('Ring_m1_N72.SLDPRT', True), ('Dog_m1.5_N30.SLDPRT', True), ('Sleeve_m1.5_N30.SLDPRT', True), ('Gear_m2_N30.SLDPRT', True), ('Gear_m2_N20.SLDPRT', True), ('TransferCase_E4.SLDASM', True)]
+update  SolidWorks 1.64 GB private, 6.53 GB free
+        raised BuildError in 8.6 s: Update SolidWorks works in one of the gearbox's own configurations (2H, 4H, N and 4L), and Exploded is active in SolidWorks: pick one of them and press Update SolidWorks again.
+status  [red] Update SolidWorks works in one of the gearbox's own configurations (2H, 4H, N and 4L), and Exploded is active in SolidWorks: pick one of them and press Update SolidWorks again.
+fact    s3 M2, Exploded active: the press took 8.6 s; SolidWorks calls by member {'OpenDoc6': 9, 'IsSuppressed2': 34}
+        shows and puts in order: []
+        the refusal: "Update SolidWorks works in one of the gearbox's own configurations (2H, 4H, N and 4L), and Exploded is active in SolidWorks: pick one of them and press Update SolidWorks again."
+ok      s3 M2: with Exploded active the refusal is J13's, not M2's
+ok      s3 M2: with Exploded active Angle1 is never read and nothing changes: reads [], changes []
+ok      s3 M2: Exploded's refusal changed nothing (largest 0.0e+00; marked after [])
+ok      s3 M2: 2H shown and rebuilt: (True, '2H')
+ok      s3 M2: Angle1 suppressed in N again: {'2H': True, '4H': True, 'N': True, '4L': True}
+        4H deleted by the script: configurations ['2H', 'N', '4L', 'Exploded'], active 2H
+person  saved in SolidWorks (s3: 4H deleted): [('TransferCase_E4_Layout.SLDPRT', True), ('TransferCase_E4_Carrier_Carrier.SLDPRT', True), ('Gear_m1_N24.SLDPRT', True), ('Ring_m1_N72.SLDPRT', True), ('Dog_m1.5_N30.SLDPRT', True), ('Sleeve_m1.5_N30.SLDPRT', True), ('Gear_m2_N30.SLDPRT', True), ('Gear_m2_N20.SLDPRT', True), ('TransferCase_E4.SLDASM', True)]
+update  SolidWorks 1.65 GB private, 6.54 GB free
+        raised NotAsBuilt in 8.0 s: The configuration 4H is not in TransferCase_E4.SLDASM any more: it was renamed or deleted in SolidWorks.
+status  [red] The configuration 4H is not in TransferCase_E4.SLDASM any more: it was renamed or deleted in SolidWorks. Update SolidWorks cannot put that back; Build again… builds the next revision beside it, with an assembly of its own, and leaves this one as it is.
+fact    s3 with 4H deleted: the press took 8.0 s; SolidWorks calls by member {'OpenDoc6': 9, 'IsSuppressed2': 34}
+        shows and puts in order: []
+        the refusal: 'The configuration 4H is not in TransferCase_E4.SLDASM any more: it was renamed or deleted in SolidWorks. Update SolidWorks cannot put that back; Build again… builds the next revision beside it, with an assembly of its own, and leaves this one as it is.'; raised NotAsBuilt
+ok      s3: with 4H deleted the Update says so and changes nothing
+ok      s3 with 4H deleted: nothing changed: []
+footer  (s3, 4H deleted) [red] The configuration 4H is not in TransferCase_E4.SLDASM any more: it was renamed or deleted in SolidWorks. Update SolidWorks cannot put that back; Build again… builds the next revision beside it, with an assembly of its own, and leaves this one as it is.
+        button 'Build again…' on; Update SolidWorks shown on primary
+ok      s3: Build again… offered ('Build again…')
+ok      s3, the copy's end: s3 ends clean: every document of it closed in SolidWorks (left []), Excel's workbook closed (['TransferCase_E4.xlsx']), no open document by a file name it holds ([])
+close   section s3: left of ours []; 879 s; SolidWorks 1.25 GB private, 6.65 GB free
+excel   quit our own Excel
+close   left of ours []; stray []; lost []; SolidWorks 1.20 GB private, 6.77 GB free
+dialogs progress boxes seen {'Calculating Interference Detection': 97, 'Updating...': 0, 'Opening': 0, 'Loading...': 5}; other dialogs are logged above as DIALOG
+noted   SolidWorks' notification box came up while no SolidWorks call was in progress (exempt by the coordinator's ruling; nothing answers it)
+person  W5-PLAN §4.4, the step only a person can do (for 2026, then 2024):
+person  In SolidWorks, open the Reducer_12to1.SLDASM a section built (a2 or m4). Click gear G1 — the small gear on S1, at the origin — and drag it round its axis by about a quarter turn. Watch G4, the large gear on S3: it turns the same way as G1, much more slowly — a quarter turn of G1 turns G4 about 7.5°. G2 and G3, on S2, turn together the other way. No gear should leave its axis, slide along it, or pass through another. Then, in the Workbook window, press Update SolidWorks with nothing changed: the footer should say the gears stand where they were turned. Tell us what you saw, on each version.
+done    0 failed: []; 1 noted for a ruling
