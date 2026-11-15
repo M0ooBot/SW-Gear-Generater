@@ -451,3 +451,46 @@ def test_a_row_held_back_says_the_layout_and_assembly_are_not_built_in_cs_words(
     assert a.lay_out_refusal() == ("The layout and assembly are not built: Gears row 3: InDog is a dog ring: dog rings "
                                    "are not built by this version of the app. (2 more under Checks)")
     assert a.lay_out_refusal() == ui_text._left_for_later(a.parts).strip()
+
+
+def lower_4l(spec):
+    """Parallel with its last mode spelled ``4l`` and RangeSlv's pick ``l`` where Slides says ``L`` (§9.6)."""
+    modes = list(spec.modes)
+    modes[3] = replace(modes[3], positions=(("RangeSlv", "l"), ("ModeSlv", "4wd")))
+    return replace(spec, modes=tuple(modes[:3]) + (replace(modes[3], name="4l"),))
+
+
+def test_names_written_in_another_case_read_as_the_same_and_the_record_keeps_the_workbooks_spelling(tmp_path):
+    """W8-INTERFACES §9.6: a pick and a mode name compare ignoring case; the record keeps the workbook's spelling,
+    and every name a mate's on-set or a slide's values hold is one of ``GearboxRecord.modes``, read back clean."""
+    path = str(tmp_path / "TransferCase.xlsx")
+    xlsx.write_new(path, model.to_sheets(lower_4l(transfer_case_parallel())))
+    spec, problems = model.from_book(xlsx.read(path))
+    assert [d.message for d in problems if d.is_error] == []
+    a = assess.assess(replace(spec, source_path=BOOK), problems, "C:\\Out\\")
+    assert a.lay_out_refusal() == ""
+    assert {m.name: m.positions["RangeSlv"] for m in a.report.modes}["4l"] == ("L", 10.0)
+    disk = Disk()
+    plan = gearbox.plan_gearbox(a, None, exists=disk.exists, read_sidecar=disk.read_sidecar)
+    done = gearbox.finish_build(plan, run_modes(plan, disk), None, workbook=BOOK, digest="d1", written_by="test",
+                                read_sidecar=disk.read_sidecar, exists=disk.exists, stamp="2026-11-14T00:00:00Z")
+    box = store.link_record_from_json(store.link_record_to_json(done.record)).gearbox
+    assert box.modes == ["2H", "4H", "N", "4l"]
+    mates = {m.name: m for m in box.mates}
+    assert mates["RangeSlv along Rear"].values == {"2H": 46.0, "4H": 46.0, "N": 56.0, "4l": 66.0}
+    assert mates["RangeSlv engages LoDog"].modes == ["4l"]
+    assert all(set(m.modes) <= set(box.modes) and set(m.values) <= set(box.modes) for m in box.mates)
+    assert all(set(c.frames) == set(box.modes) for c in box.components)
+
+
+def test_a_mode_named_twice_in_another_case_and_a_position_named_twice_are_errors(tmp_path):
+    spec = transfer_case_parallel()
+    twice = replace(spec, modes=spec.modes + (replace(spec.modes[0], name="2h", row=6),),
+                    gears=tuple(replace(g, slides="2WD=0, 4wd=+10, 4WD=+10") if g.id == "ModeSlv" else g
+                                for g in spec.gears))
+    path = str(tmp_path / "Twice.xlsx")
+    xlsx.write_new(path, model.to_sheets(twice))
+    _, problems = model.from_book(xlsx.read(path))
+    said = [d.message for d in problems if d.is_error]
+    assert any("the mode 2h is also on row 2." in m for m in said)
+    assert any("The position 4WD is named twice." in m for m in said)

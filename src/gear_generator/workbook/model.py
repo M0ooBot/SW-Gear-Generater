@@ -199,7 +199,7 @@ def parse_slides(text: str) -> Dict[str, float]:
         if not match:
             raise ValueError(f"{piece.strip()!r} is not a position; write each as name=offset, e.g. H=-10, N=0, L=+10.")
         name = match.group(1)
-        if name in out:
+        if any(name.casefold() == other.casefold() for other in out):      # names compare ignoring case (§9.6)
             raise ValueError(f"The position {name} is named twice.")
         out[name] = float(match.group(2))
     return out
@@ -546,12 +546,13 @@ def _check_references(reader: _Reader, spec: GearboxSpec) -> None:
             reader.error(f"Modes!{make_ref(1, col)}", f"{slider} is not a gear on the Gears sheet.")
         elif not gear.slides:
             reader.error(f"Modes!{make_ref(1, col)}", f"{slider} has no Slides positions on the Gears sheet.")
-    names: Dict[str, int] = {}
+    names: Dict[str, int] = {}                     # W8-INTERFACES §9.6: mode names compare ignoring case
     for mode in spec.modes:
-        if mode.name in names:
-            reader.error(at("Modes", mode.row, "name"), f"the mode {mode.name} is also on row {names[mode.name]}.")
+        if mode.name.casefold() in names:
+            reader.error(at("Modes", mode.row, "name"),
+                         f"the mode {mode.name} is also on row {names[mode.name.casefold()]}.")
         elif mode.name:
-            names[mode.name] = mode.row
+            names[mode.name.casefold()] = mode.row
         for index, (slider, pick) in enumerate(mode.positions):
             gear = gears_by_id.get(slider)
             if gear is None or not gear.slides or not pick:
@@ -560,7 +561,7 @@ def _check_references(reader: _Reader, spec: GearboxSpec) -> None:
                 positions = gear.positions()
             except ValueError:
                 continue
-            if pick not in positions:
+            if not any(pick.casefold() == name.casefold() for name in positions):
                 reader.error(f"Modes!{make_ref(mode.row, reader.slider_columns.get(slider, index + 2))}",
                              f"{slider} has no position {pick}; it has {', '.join(positions)}.")
 

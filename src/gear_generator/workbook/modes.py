@@ -89,9 +89,10 @@ def mode_picks(spec: GearboxSpec) -> Tuple[List[Picks], List[Diagnostic]]:
                     errors.append(Diagnostic(ERROR, f"{where}: {gid} has no position at 0, so a blank here does not "
                                                     f"say where it sits; pick one of {listed}.", where))
                     continue
-            if pick not in positions:
+            name = next((p for p in positions if p.casefold() == pick.casefold()), None)    # §9.6: ignoring case
+            if name is None:
                 continue                                  # the read's error (model): a pick not among the positions
-            picks[gid] = (pick, float(positions[pick]))
+            picks[gid] = (name, float(positions[name]))
         out.append(Picks(mode.name, mode.row, picks))
     return out, errors
 
