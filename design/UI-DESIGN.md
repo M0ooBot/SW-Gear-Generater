@@ -442,10 +442,22 @@ left or up rather than off the screen.
 
   Values are shown as typed, a bad one included (`68.5`); a ring's kind reads
   *Ring*. No gears: *No gears yet: add rows to the Gears sheet and save.*
-  A part name longer than 18 characters (`ui_text.PART_CHARS`) shows its first
-  four, *…*, and its end (`Bevel_m2.5_N20_M30_S120` → `Beve…_N20_M30_S120`),
-  never two different parts in one cell, so the window keeps its width;
-  sentences always name the part whole. That is a default the user may overrule.
+  A part name longer than the Part column has room for shows its first four,
+  *…*, and its end (`Bevel_m2.5_N20_M30_S120` → `Beve…_N20_M30_S120`), never
+  two different parts in one cell, so the window keeps its width; sentences
+  always name the part whole. The room is measured for each workbook
+  (`WorkbookWindow._fit_part_cells`): the left column's width at 1080 px (the
+  window less its pads, the gap and the right column as it asks), less the Gears
+  panel's frame and pads and every other column as this workbook's ids, kinds,
+  values and states ask for it, in the table's own fonts. The cells take the most
+  characters that fit, 18 at most (`ui_text.PART_CHARS`) and 10 at least
+  (`ui_text.PART_CHARS_FLOOR`); below 10 a cell would no longer tell one part
+  from another, so past the floor the window widens instead. With the reducer's
+  short ids every cell has its 18; beside TransferCase_Parallel's 8-character
+  ids the column holds about 16 (`Sleeve_m1.25_N100` whole), and a second
+  workbook's `Sleeve_m1.5_N30_r2` in the same output folder reads
+  `Slee…m1.5_N30_r2`. The boards are drawn at 18, which every board's names fit.
+  That is a default the user may overrule.
 - **Checks** (readout `1 error · 2 warnings`, or *no problems*): first any fix
   chosen and not yet written, *Chosen, not yet written: Move S2 and S3 beyond it
   by -0.25 mm* with **Undo**; then the errors in red and the warnings in grey,
