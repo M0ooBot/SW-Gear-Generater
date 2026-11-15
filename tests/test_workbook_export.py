@@ -66,10 +66,12 @@ def test_results_end_with_the_overall_ratio_and_the_box_size(tmp_path):
 
 
 def test_results_say_so_when_there_is_no_ratio_or_size(tmp_path):
-    """No output shaft, and nothing laid out (a planet on a carrier is W7's): a dash, never a guess."""
+    """No output shaft, and nothing laid out (a carrier riding a carrier, which no version builds): a dash, never a
+    guess."""
     spec = reducer()
-    spec = model.replace(spec, shafts=(model.replace(spec.shafts[0], mounted_on="S3"),) + spec.shafts[1:2]
-                         + (model.replace(spec.shafts[2], role=""),))
+    spec = model.replace(spec, shafts=(model.replace(spec.shafts[0], mounted_on="S2"),
+                                       model.replace(spec.shafts[1], mounted_on="S3"),
+                                       model.replace(spec.shafts[2], role="")))
     path = write(tmp_path, spec)
     spec, _ = read(path)
     report = checks.check(spec)

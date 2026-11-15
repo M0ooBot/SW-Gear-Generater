@@ -442,6 +442,25 @@ def _read_modes(reader: _Reader, sheet: Optional[Sheet]) -> Tuple[List[Mode], Li
     return modes, [t for _, t in slider_cols]
 
 
+def _below_one(text: str) -> bool:
+    try:
+        return float(str(text).strip()) < 1
+    except ValueError:
+        return False                               # not a number: the column's own reading says so
+
+
+def _mount_loops(spec: "GearboxSpec", shaft: "Shaft") -> bool:
+    """Whether following ``Mounted on`` from ``shaft`` comes back to it (W7-PLAN §1.2: an error, not a refusal)."""
+    mounts = {s.id: s.mount() for s in spec.shafts if s.id}
+    seen, at = {shaft.id}, shaft.mount()
+    while at in mounts and at != FRAME:
+        if at in seen:
+            return at == shaft.id
+        seen.add(at)
+        at = mounts[at]
+    return False
+
+
 def _check_references(reader: _Reader, spec: GearboxSpec) -> None:
     at = reader.at
     """Names, and every reference from one sheet to another. Geometry and maths are checks.py's (W3)."""
@@ -467,6 +486,13 @@ def _check_references(reader: _Reader, spec: GearboxSpec) -> None:
         if shaft.copies and shaft.copies != "1" and mount == FRAME:
             reader.error(at("Shafts", shaft.row, "copies"), "Copies is for a shaft mounted on another shaft, "
                                                  "spaced round it; a shaft on the frame is one shaft.")
+        elif shaft.copies and _below_one(shaft.copies):
+            reader.error(at("Shafts", shaft.row, "copies"), f"{shaft.id} has {shaft.copies} copies; a shaft has at "
+                                                            "least one.")
+        if mount != FRAME and mount != shaft.id and mount in shaft_ids and _mount_loops(spec, shaft):
+            reader.error(at("Shafts", shaft.row, "mounted_on"),
+                         f"{shaft.id} is mounted on {mount}, and following the mounts from {mount} comes back to "
+                         f"{shaft.id}: a chain of mounts must end on the frame.")
         if (shaft.speed or shaft.torque) and shaft.role != "input":
             reader.error(at("Shafts", shaft.row, "role"), f"{shaft.id} has a speed or torque but is not an input; "
                                                  "set Role to input, or clear them.")

@@ -115,16 +115,24 @@ def solve(spec: GearboxSpec, skip_gears=(), senses: Optional[Mapping[Tuple[str, 
     is a stub."""
     motion = Motion()
     shafts = [s for s in spec.shafts if s.id]
-    if any(s.mount() != FRAME for s in shafts):
-        motion.later = "Speeds through a carrier (a planetary) are worked out in phase W7."
-        return motion
-    from .geometry import axis_vector, family      # geometry imports nothing of this module
+    from . import planetary
+    from .geometry import axis_vector, family, shaft_lines      # geometry imports nothing of this module
+    mounted = any(s.mount() != FRAME for s in shafts)
+    if mounted:
+        why = planetary.not_laid_out(spec)
+        if why:
+            motion.later = why
+            return motion
     direction: Dict[str, Tuple[float, float, float]] = {}
-    for s in shafts:
-        try:
-            direction[s.id] = axis_vector(s.axis)
-        except ValueError:
-            pass                                   # the read says so at the cell; its meshes are left out
+    if mounted:
+        # W7: a planet shaft's Axis is read in its carrier's frame (W7-PLAN §2.1).
+        direction = {sid: line[1] for sid, line in shaft_lines(spec).items()}
+    else:
+        for s in shafts:
+            try:
+                direction[s.id] = axis_vector(s.axis)
+            except ValueError:
+                pass                               # the read says so at the cell; its meshes are left out
     motion.axis_sign = {sid: family(d)[1] for sid, d in direction.items()}
     motion.seen_from = {sid: seen_from(family(d)[0]) for sid, d in direction.items()}
     inputs = [s for s in shafts if s.role == "input" and s.speed]
@@ -159,10 +167,21 @@ def solve(spec: GearboxSpec, skip_gears=(), senses: Optional[Mapping[Tuple[str, 
         c = _sense(mesh, a, b, direction, senses)
         if c is None:
             continue
+        carrier = planetary.mesh_carrier(spec, a.id, b.id) if mounted else FRAME
+        if carrier is None:
+            continue                               # a mesh that fits no carrier: checks says so at its row
         za, zb = int(_fraction(a.teeth)), int(_fraction(b.teeth))
         r = row()
         r[index[a.shaft]] += za
         r[index[b.shaft]] += c * zb               # z_a·ω_a + c·z_b·ω_b = 0, speeds about each own Axis (§2.4)
+        if carrier != FRAME:
+            # W7-PLAN §2.5: z_a·(ω_a − s_a·ω_c) + c·z_b·(ω_b − s_b·ω_c) = 0, s_x = a_x·a_c.
+            if not all(x in direction for x in (carrier, a.shaft, b.shaft)):
+                continue
+            dc = direction[carrier]
+            s_a = round(sum(x * y for x, y in zip(direction[a.shaft], dc)))
+            s_b = round(sum(x * y for x, y in zip(direction[b.shaft], dc)))
+            r[index[carrier]] -= za * s_a + c * zb * s_b
         rows.append(r)
         meshes.append((mesh, a, b, za, zb))
 
@@ -177,7 +196,13 @@ def solve(spec: GearboxSpec, skip_gears=(), senses: Optional[Mapping[Tuple[str, 
             motion.free.append(shaft.id)
         else:
             motion.speeds[shaft.id] = value                    # about the shaft's own Axis
-    _torques(spec, motion, inputs, meshes)
+    if mounted:
+        for shaft in shafts:
+            carrier = shaft.mount()
+            if carrier != FRAME and shaft.id in motion.speeds and carrier in motion.speeds:
+                s_p = round(sum(x * y for x, y in zip(direction[shaft.id], direction[carrier])))
+                motion.relative[shaft.id] = motion.speeds[shaft.id] - s_p * motion.speeds[carrier]
+    _torques(spec, motion, inputs, meshes, direction if mounted else None)
     return motion
 
 
@@ -208,18 +233,34 @@ def _reduce(rows: List[List[Fraction]], width: int) -> Tuple[Dict[int, Fraction]
     return settled, free, consistent
 
 
-def _torques(spec: GearboxSpec, motion: Motion, inputs, meshes) -> None:
+_STAGE = "\0stage"        # the planetary stage as one link of the power path (W7-PLAN §2.5, reading J10)
+
+
+def _torques(spec: GearboxSpec, motion: Motion, inputs, meshes, direction=None) -> None:
     """Torque along the power path from the first input, gear to gear, through each mesh's efficiency.
 
     A gear passes ``T · z_out / z_in · η`` to the gear it drives. A shaft takes the torque of the gear driven on
     it and hands it to its other gear; an idler — one gear meshing on both sides, alone on its shaft — passes
     the tooth force straight on and its shaft carries none (0). Where power splits (two onward meshes) the
     share each takes depends on the loads, so nothing past the split is given.
+
+    W7 (``direction`` given: a workbook with a carrier): a planetary stage with one member held is one link of
+    the path, from the member the power reaches to the other turning member, by the basic-train method
+    (:func:`_stage_torques`); its planet shafts carry 0 about their own axes and its held member's torque goes to
+    ``motion.held``. Its meshes are not walked gear to gear.
     """
     first = inputs[0]
     if not first.torque:
         return
     box_eta = float(spec.box.efficiency_text())
+    stage = None
+    if direction is not None:
+        from . import planetary
+        found = planetary.stages(spec)
+        stage = found[0] if found else None
+        planets = {g.id for g in spec.gears if spec.shaft(g.shaft) is not None and spec.shaft(g.shaft).mount() != FRAME}
+        stage_meshes = [m for m in meshes if m[1].id in planets or m[2].id in planets]
+        meshes = [m for m in meshes if m not in stage_meshes]
     links: Dict[str, List] = {}               # gear -> [(the gear it meshes with, η)]
     teeth: Dict[str, int] = {}
     shaft_of: Dict[str, str] = {}
@@ -233,16 +274,52 @@ def _torques(spec: GearboxSpec, motion: Motion, inputs, meshes) -> None:
     for gear_id, shaft in shaft_of.items():
         on_shaft.setdefault(shaft, []).append(gear_id)
     torque = {first.id: abs(float(_fraction(first.torque)))}
+    members: Dict[str, str] = {}
+    if stage is not None:
+        gears = {g.id: g for g in spec.gears}
+        if not (stage.sun and stage.ring and stage.held):
+            motion.torque_note = (f"The torque through {stage.carrier}'s planetary stage is not worked out: with no "
+                                  "member held, how it splits depends on the loads.")
+            stage = None
+        else:
+            members = {gears[stage.sun].shaft: "sun", gears[stage.ring].shaft: "ring", stage.carrier: "carrier"}
+            eta0 = 1.0
+            for mesh, _a, _b, _za, _zb in stage_meshes:
+                eta0 *= (float(mesh.efficiency) if mesh.efficiency else box_eta) / 100.0
+    used = [False]
 
     def onward_from_shaft(shaft: str, came_in: str) -> List:
-        return [(g, h, eta) for g in on_shaft.get(shaft, []) for h, eta in links.get(g, [])
-                if not (g == came_in or h == came_in)]
+        out = [(g, h, eta) for g in on_shaft.get(shaft, []) for h, eta in links.get(g, [])
+               if not (g == came_in or h == came_in)]
+        if stage is not None and shaft in members and shaft != stage.held and not used[0] and came_in != _STAGE:
+            out.append((_STAGE, _STAGE, 1.0))
+        return out
 
     queue = deque()
-    start = onward_from_shaft(first.id, "")
-    if len(start) == 1:
-        g, h, eta = start[0]
-        queue.append((h, torque[first.id] * teeth[h] / teeth[g] * eta, g))
+
+    def go_on(shaft: str, shaft_torque: float, came_in: str) -> None:
+        onward = onward_from_shaft(shaft, came_in)
+        if len(onward) != 1:
+            return
+        g, h, eta = onward[0]
+        if g != _STAGE:
+            queue.append((h, shaft_torque * teeth[h] / teeth[g] * eta, g))
+            return
+        used[0] = True
+        result = _stage_torques(motion, members, stage.held, shaft, shaft_torque, eta0)
+        if result is None:
+            motion.torque_note = (f"The torque through {stage.carrier}'s planetary stage is not worked out: its "
+                                  "members' speeds do not settle which of them drives.")
+            return
+        out_shaft, out_torque, held_torque = result
+        motion.held[stage.held] = held_torque
+        for planet_shaft in (x.id for x in spec.shafts if x.mount() == stage.carrier):
+            torque[planet_shaft] = 0.0           # W3's idler rule: a planet carries no torque about its own axis
+        if out_shaft not in torque:
+            torque[out_shaft] = out_torque
+            go_on(out_shaft, out_torque, _STAGE)
+
+    go_on(first.id, torque[first.id], "")
     while queue:
         gear, gear_torque, came_from = queue.popleft()
         shaft = shaft_of[gear]
@@ -259,8 +336,43 @@ def _torques(spec: GearboxSpec, motion: Motion, inputs, meshes) -> None:
         if through_gear:
             continue                             # a gear both idling and driving its shaft: the split is unknown
         torque[shaft] = gear_torque
-        onward = onward_from_shaft(shaft, gear)
-        if len(onward) == 1:
-            g, h, eta = onward[0]
-            queue.append((h, gear_torque * teeth[h] / teeth[g] * eta, g))
+        go_on(shaft, gear_torque, gear)
     motion.torques = torque
+
+
+def _stage_torques(motion: Motion, members: Dict[str, str], held: str, shaft_in: str, torque_in: float,
+                   eta0: float):
+    """(output member shaft, its torque, the held member's torque), N·m magnitudes, for a planetary stage with one
+    member held (W7-PLAN §2.5, reading J10): ``T_s + T_r + T_c = 0`` and, in the carrier's frame, the member whose
+    relative power is positive drives and the other receives η₀ of it, ``T_receiver·(ω_receiver − ω_c) =
+    −η₀·T_driver·(ω_driver − ω_c)``. Torques are signed as acting on the stage (power in positive); each driver is
+    tried in turn and the one whose relative power comes out positive is kept. None when no speed settles it."""
+    role = {r: shaft for shaft, r in members.items()}
+    omega = {}
+    for r, shaft in role.items():
+        if shaft not in motion.speeds:
+            return None
+        omega[r] = float(motion.speeds[shaft])
+    r_in = members[shaft_in]
+    if omega[r_in] == 0:
+        return None
+    known = torque_in if omega[r_in] > 0 else -torque_in
+    unknown = [r for r in ("sun", "ring", "carrier") if r != r_in]
+    for driver, receiver in (("sun", "ring"), ("ring", "sun")):
+        rel = {r: omega[r] - omega["carrier"] for r in ("sun", "ring")}
+        eq2 = {"sun": 0.0, "ring": 0.0, "carrier": 0.0}
+        eq2[receiver] += rel[receiver]
+        eq2[driver] += eta0 * rel[driver]
+        # unknowns u, v: [1 1; eq2[u] eq2[v]] · [Tu Tv] = [−known; −eq2[r_in]·known]
+        u, v = unknown
+        det = eq2[v] - eq2[u]
+        if abs(det) < 1e-12:
+            continue
+        rhs1, rhs2 = -known, -eq2[r_in] * known
+        t_u = (rhs1 * eq2[v] - rhs2) / det
+        t_v = (rhs2 - rhs1 * eq2[u]) / det
+        t = {r_in: known, u: t_u, v: t_v}
+        if t[driver] * rel[driver] > 1e-12:
+            out_role = next(r for r in unknown if role[r] != held)
+            return role[out_role], abs(t[out_role]), abs(t[members[held]])
+    return None

@@ -233,9 +233,11 @@ def layout(spec: GearboxSpec, skip_gears=()) -> Layout:
     Axis cell does not read is the read's error; its gears are left out as "could not be placed"."""
     out = Layout()
     shafts = {s.id: s for s in spec.shafts}
-    for shaft in spec.shafts:
-        if shaft.mount() != FRAME:
-            out.later.append(f"{shaft.id} is mounted on {shaft.mount()}: carriers are laid out in phase W7.")
+    # W7: a planet shaft is placed in its carrier's frame (planetary); only what no version builds stops the layout.
+    from . import planetary
+    why = planetary.not_laid_out(spec)
+    if why:
+        out.later.append(why)
     names = [g.id for g in spec.gears]
 
     def label(gear: Gear) -> str:
@@ -263,10 +265,76 @@ def layout(spec: GearboxSpec, skip_gears=()) -> Layout:
             out.left_out[label(gear)] = "an error of its own"     # its cut's problem is said at its cell
             continue
         try:
-            out.placed[gear.id] = _place(spec, gear, shaft, cut)
+            if shaft.mount() != FRAME:
+                copies = planetary.copies_of(shaft)
+                carrier = shafts.get(shaft.mount())
+                if copies is None or carrier is None:
+                    out.left_out[label(gear)] = "an error of its own"      # the read says so at its cell
+                    continue
+                for placed in _place_copies(spec, gear, shaft, carrier, copies, cut):
+                    out.placed[placed.gear] = placed
+            else:
+                out.placed[gear.id] = _place(spec, gear, shaft, cut)
         except (ValueError, TypeError, ArithmeticError) as exc:
             out.problems[gear.id] = str(exc)
             out.left_out[label(gear)] = "could not be placed"
+    return out
+
+
+def _point(shaft: Shaft) -> Vec3:
+    return (_num(shaft.x, f"{shaft.id}'s X"), _num(shaft.y, f"{shaft.id}'s Y"), _num(shaft.z, f"{shaft.id}'s Z"))
+
+
+def _planet_axis(planet: Shaft) -> Vec3:
+    """A planet shaft's Axis in its carrier's own frame (W7-PLAN §2.1): blank or Z+ is the carrier's own +Z."""
+    return axis_vector(str(planet.axis or "").strip() or "Z+")
+
+
+def shaft_lines(spec: GearboxSpec) -> Dict[str, Tuple[Vec3, Vec3]]:
+    """Each shaft's line, ``(point, direction)`` in world (W7-PLAN §2.1, reading J4): a frame shaft's typed point
+    and Axis; a shaft mounted on a frame shaft at its first copy, composed in the carrier's frame — ``p_c + F·(x, y,
+    z)`` and ``F·a_local``, ``F = base_frame(a_c)``. A shaft whose cells do not read, or that rides a mounted shaft,
+    is left out (the read and :func:`planetary.not_laid_out` say why)."""
+    shafts = {s.id: s for s in spec.shafts if s.id}
+    out: Dict[str, Tuple[Vec3, Vec3]] = {}
+    for shaft in spec.shafts:
+        if not shaft.id or shaft.mount() != FRAME:
+            continue
+        try:
+            out[shaft.id] = (_point(shaft), axis_vector(shaft.axis))
+        except ValueError:
+            continue
+    for shaft in spec.shafts:
+        mount = shaft.mount()
+        if not shaft.id or mount == FRAME or mount not in out or shafts[mount].mount() != FRAME:
+            continue
+        point_c, axis_c = out[mount]
+        frame = base_frame(axis_c)
+        try:
+            local, offset = _planet_axis(shaft), _point(shaft)
+        except ValueError:
+            continue
+        out[shaft.id] = (tuple(p + v + 0.0 for p, v in zip(point_c, _matmul(frame, offset))),
+                         tuple(v + 0.0 for v in _matmul(frame, local)))
+    return out
+
+
+def _place_copies(spec: GearboxSpec, gear: Gear, planet: Shaft, carrier: Shaft, copies: int,
+                  cut: Optional["BevelCut"] = None) -> List[Placed]:
+    """A gear on a planet shaft, once per copy (W7-PLAN §2.2): copy k at ``p_c + F·rot_z(ψ_k)·(x, y, z)`` along
+    ``F·a_local``, ``F`` the carrier's ``base_frame``, plus its At along that axis; keyed by its copy id, its
+    ``shaft`` the copy's own shaft id, ``row`` the Gears row, ``copy`` k (0 with Copies 1), ``carrier`` the carrier."""
+    from .planetary import copy_id, copy_offsets
+    axis_c = axis_vector(carrier.axis)
+    frame = base_frame(axis_c)
+    point_c = _point(carrier)
+    axis = tuple(v + 0.0 for v in _matmul(frame, _planet_axis(planet)))
+    x, y, z = _point(planet)
+    out = []
+    for k, offset in enumerate(copy_offsets(x, y, z, copies), 1):
+        point = tuple(p + v + 0.0 for p, v in zip(point_c, _matmul(frame, offset)))
+        out.append(_place(spec, gear, planet, cut, point=point, axis=axis, gear_id=copy_id(gear.id, k, copies),
+                          shaft_id=copy_id(planet.id, k, copies), copy=k if copies > 1 else 0, carrier=carrier.id))
     return out
 
 
@@ -295,27 +363,29 @@ def _matmul(rows: Tuple[float, ...], v: Vec3) -> Vec3:
     return tuple(rows[3 * i] * v[0] + rows[3 * i + 1] * v[1] + rows[3 * i + 2] * v[2] for i in range(3))  # type: ignore
 
 
-def _place(spec: GearboxSpec, gear: Gear, shaft: Shaft, cut: Optional["BevelCut"] = None) -> Placed:
-    axis = axis_vector(shaft.axis)
+def _place(spec: GearboxSpec, gear: Gear, shaft: Shaft, cut: Optional["BevelCut"] = None, *,
+           point: Optional[Vec3] = None, axis: Optional[Vec3] = None, gear_id: str = "", shaft_id: str = "",
+           copy: int = 0, carrier: str = "") -> Placed:
+    axis = axis if axis is not None else axis_vector(shaft.axis)
     plus, sigma = family(axis)
     gear_spec = gear.gear_spec(spec.box, **cut_overrides(cut))
     kind = kind_for(gear_spec)
     derived = kind.derive(gear_spec)
     helical = gear_spec.kind in ("helical", "herringbone")
     bevel = gear_spec.kind == "bevel"
-    point = (_num(shaft.x, f"{shaft.id}'s X"), _num(shaft.y, f"{shaft.id}'s Y"), _num(shaft.z, f"{shaft.id}'s Z"))
+    point = point if point is not None else _point(shaft)
     at = _num(gear.at, f"{gear.id}'s At")
     centre = tuple(p + at * a + 0.0 for p, a in zip(point, axis))
     x, y, z = _matmul_t(base_frame(plus), centre)      # the At point in the family's plus frame (Z family: world)
     return Placed(
-        gear=gear.id, shaft=shaft.id, x=x + 0.0, y=y + 0.0, z=z + 0.0, sigma=sigma,
+        gear=gear_id or gear.id, shaft=shaft_id or shaft.id, x=x + 0.0, y=y + 0.0, z=z + 0.0, sigma=sigma,
         axis=axis, centre=(centre[0], centre[1], centre[2]), family=plus, bevel=bevel,
         face=float(gear.face_width), teeth=int(float(gear.teeth)), module=float(gear.module),
         internal=False if bevel else gear_spec.is_internal(), derived=derived,
         hand_sign=getattr(derived, "hand_sign", 0) if helical else 0,
         lead=getattr(derived, "lead", 0.0) if helical else 0.0,
         herringbone=gear_spec.kind == "herringbone",
-        spec=gear_spec,
+        spec=gear_spec, row=gear.id, copy=copy, carrier=carrier,
     )
 
 
@@ -358,10 +428,9 @@ def phases(spec: GearboxSpec, placed: Dict[str, Placed], with_conflicts: bool = 
     a loop that does not close, reported as ``(gear, the gear asking otherwise)``.
     """
     meshes: Dict[str, List[str]] = {}
-    for mesh in spec.meshes:
-        if mesh.a in placed and mesh.b in placed:
-            meshes.setdefault(mesh.a, []).append(mesh.b)
-            meshes.setdefault(mesh.b, []).append(mesh.a)
+    for a, b in expand_meshes(spec, placed):     # W7: copy by copy, so a carrier's loop is walked at every copy
+        meshes.setdefault(a, []).append(b)
+        meshes.setdefault(b, []).append(a)
     inputs = {s.id for s in spec.shafts if s.role == "input"}
     starts = [g for g in placed if placed[g].shaft in inputs] + list(placed)
     theta: Dict[str, float] = {}
@@ -831,7 +900,19 @@ def shaft_span(placed: Dict[str, Placed], shaft: str) -> Optional[Cylinder]:
 def expand_meshes(spec: GearboxSpec, placed: Dict[str, Placed]) -> Tuple[Tuple[str, str], ...]:
     """The listed meshes at copy level (W7-PLAN §2.2), in Meshes-sheet order and copy order within a row: ``Sun–
     Planet`` with three copies becomes ``(Sun, Planet copy 1)``, ``(Sun, Planet copy 2)``, ``(Sun, Planet copy 3)``,
-    each pair in its Meshes row's order. Everything that takes "the listed meshes" takes this list. Agent B writes
-    it."""
-    raise ValueError("Meshes with planet copies are not listed copy by copy by this version of Gear Generator yet, so "
-                     "this workbook is not laid out.")
+    each pair in its Meshes row's order. Everything that takes "the listed meshes" takes this list. A gear with
+    copies meshing a gear with copies (a double planet) pairs copy k with copy k; a pair either of whose gears is
+    not placed is left out."""
+    copies: Dict[str, List[str]] = {}
+    for p in placed.values():
+        copies.setdefault(p.row or p.gear, []).append(p.gear)
+    out: List[Tuple[str, str]] = []
+    for mesh in spec.meshes:
+        a, b = copies.get(mesh.a, []), copies.get(mesh.b, [])
+        if not a or not b:
+            continue
+        if len(a) > 1 and len(b) > 1:
+            out.extend(zip(a, b))
+        else:
+            out.extend((x, y) for x in a for y in b)
+    return tuple(out)

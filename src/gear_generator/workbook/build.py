@@ -28,9 +28,9 @@ from typing import Any, Dict, List, Optional, Tuple
 from ..gears import kind_for, plan_for
 from ..gears.base import ERROR, WARNING, BuildPlan, Diagnostic, GeometryError
 from ..spec import GearSpec, InputError
+from . import planetary
 from .geometry import bevel_cuts, cut_overrides
 from .model import Gear, GearboxSpec
-from .schema import FRAME
 
 PART_SUFFIX = ".SLDPRT"
 
@@ -178,27 +178,19 @@ def _later_kind(gear: Gear) -> str:
 def later_rows(spec: GearboxSpec) -> List[Diagnostic]:
     """Every row a later phase builds, each a warning naming its cell, the row and the phase that builds it.
 
-    Shafts first, as they decide the most: a carrier means no gearbox check
-    runs at all yet (:func:`checks.check` stops at the layout). Then the gears
-    whose own part waits (sleeve, dog), the gears that slide, and the modes.
-    Turned axes and bevel gears are W6's, laid out and built (a turned mesh
-    waits only for its probe finding: ``motion.turned_refusal``).
+    First the planetary stages W7 does not build (``planetary.refusals``,
+    W7-PLAN §1.2: a carrier riding a carrier, a planet across its carrier, a
+    differential, compound or double planets, …). Then the gears whose own
+    part waits (sleeve, dog), the gears that slide, and the modes. Turned axes
+    and bevel gears are W6's, laid out and built (a turned mesh waits only for
+    its probe finding: ``motion.turned_refusal``); carriers and copies W7's.
     """
     out: List[Diagnostic] = []
 
     def refuse(where: str, sentence: str) -> None:
         out.append(Diagnostic(WARNING, f"{where}: {sentence}", where))
 
-    for shaft in spec.shafts:
-        where = spec.cell("Shafts", shaft.row, "id")
-        if shaft.mount() != FRAME:
-            copies = shaft.copies.strip()
-            if copies and copies != "1":
-                refuse(where, f"{shaft.id} is mounted on {shaft.mount()}, with {copies} copies round it: carriers "
-                              "and copies are laid out in phase W7, and the gearbox is not checked until then.")
-            else:
-                refuse(where, f"{shaft.id} is mounted on {shaft.mount()}: carriers are laid out in phase W7, and "
-                              "the gearbox is not checked until then.")
+    out.extend(planetary.refusals(spec))           # W7-PLAN §1.2: what W7 does not build
     for gear in spec.gears:
         where = spec.cell("Gears", gear.row, "id")
         if gear.kind_word() in LATER:

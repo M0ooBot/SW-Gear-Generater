@@ -103,7 +103,7 @@ class Assessment:
         refused = self.parts.refused
         if refused:
             return f"The layout and assembly wait for a later phase: {refused[0].message}{_more(refused)}"
-        placed = self.report.layout.placed
+        placed = {p.row or p.gear for p in self.report.layout.placed.values()}     # W7: a planet's copies, its row
         planned = {g for job in self.parts.jobs for g in job.gear_ids}
         missing = [g.id for g in self.spec.gears if g.id not in placed or g.id not in planned]
         if missing:

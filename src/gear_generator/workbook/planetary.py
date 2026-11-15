@@ -16,8 +16,9 @@ import math
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
-from ..gears.base import Diagnostic
-from .model import GearboxSpec
+from ..gears.base import WARNING, Diagnostic
+from .model import GearboxSpec, Shaft
+from .schema import FRAME
 
 COPY_WORD = " copy "          # "Planet copy 2": a space is not allowed in a workbook name, so no copy id is a name
 
@@ -80,35 +81,271 @@ class Stage:
     held: str
 
 
-def stages(spec: GearboxSpec, placed: Dict[str, object]) -> Tuple[Stage, ...]:
-    """Every planetary stage of ``spec`` (W7 builds one; §1.2 refuses a second), from the read and the placed gears
-    (keyed by copy id). Agent B writes it."""
-    raise ValueError("Planetary stages are not recognised by this version of Gear Generator yet, so this workbook is "
-                     "not laid out.")
+COAXIAL_TOLERANCE = 0.005    # mm: two shaft lines this close (and parallel) are one line (checks.CENTRE_TOLERANCE)
+
+
+def copies_of(shaft: Shaft) -> Optional[int]:
+    """A shaft's Copies as a whole number (blank is 1), or None when it does not read as one of at least 1 (the
+    read's error, ``model._check_references``)."""
+    text = str(shaft.copies or "").strip() or "1"
+    try:
+        value = float(text)
+    except ValueError:
+        return None
+    if value != int(value) or value < 1:
+        return None
+    return int(value)
+
+
+def carriers(spec: GearboxSpec) -> List[str]:
+    """The carrier shafts, in Shafts-sheet order: frame shafts another shaft is mounted on."""
+    ids = {s.id for s in spec.shafts if s.id}
+    mounted = {s.mount() for s in spec.shafts if s.mount() != FRAME}
+    return [s.id for s in spec.shafts if s.id in mounted and s.id in ids and s.mount() == FRAME]
+
+
+def _axis_word(text: str) -> str:
+    return str(text or "").strip() or "Z+"
+
+
+def not_laid_out(spec: GearboxSpec) -> str:
+    """Why the rows cannot be laid out at all (``geometry.layout``'s ``later``; ``kinematics.solve``'s), or ``""``:
+    a shaft mounted on a shaft that is itself mounted (W7-PLAN §1.2), or a planet shaft whose Axis does not lie
+    along its carrier's (either way). Each is also a refusal at its cell (:func:`refusals`); this is the one home
+    of both sentences. A mount the read refuses (no such shaft, a shaft on itself) is the read's error."""
+    from .geometry import axis_vector
+    shafts = {s.id: s for s in spec.shafts if s.id}
+    for shaft in spec.shafts:
+        mount = shaft.mount()
+        if mount == FRAME or mount not in shafts or mount == shaft.id:
+            continue
+        carrier = shafts[mount]
+        if carrier.mount() != FRAME:
+            return _nested(shaft, carrier)
+        try:
+            local = axis_vector(_axis_word(shaft.axis))
+        except ValueError:
+            continue                                      # the read says so at the cell
+        if abs(abs(local[2]) - 1.0) > 1e-9:
+            return _across(shaft)
+    return ""
+
+
+def _nested(shaft: Shaft, carrier: Shaft) -> str:
+    return (f"{shaft.id} is mounted on {carrier.id}, which is itself mounted on {carrier.mount()}: a carrier riding "
+            "another carrier is not built by this version.")
+
+
+def _across(shaft: Shaft) -> str:
+    return (f"{shaft.id}'s axis is {_axis_word(shaft.axis)} on {shaft.mount()}: a planet turns about an axis parallel "
+            "to its carrier's, so this is not built by this version.")
+
+
+def _coaxial(line_a, line_b) -> bool:
+    """Two shaft lines ``(point, direction)`` that are one line, either way along it."""
+    (pa, da), (pb, db) = line_a, line_b
+    cross = (da[1] * db[2] - da[2] * db[1], da[2] * db[0] - da[0] * db[2], da[0] * db[1] - da[1] * db[0])
+    if math.sqrt(sum(c * c for c in cross)) > 1e-9:
+        return False
+    d = tuple(b - a for a, b in zip(pa, pb))
+    along = sum(x * y for x, y in zip(d, da))
+    off = math.sqrt(max(0.0, sum(x * x for x in d) - along * along))
+    return off <= COAXIAL_TOLERANCE
+
+
+def coaxial(spec: GearboxSpec, a: str, b: str) -> bool:
+    """Whether two frame shafts lie on one line (sun, carrier and ring of a stage; W7-PLAN §2.3 item 5)."""
+    lines = _lines(spec)
+    return a in lines and b in lines and _coaxial(lines[a], lines[b])
+
+
+def _lines(spec: GearboxSpec):
+    from .geometry import shaft_lines
+    return shaft_lines(spec)
+
+
+def stages(spec: GearboxSpec, placed: Optional[Dict[str, object]] = None) -> Tuple[Stage, ...]:
+    """Every planetary stage of ``spec``, one per carrier in Shafts-sheet order (W7 builds one; §1.2 refuses a
+    second), recognised from the rows: the carrier's first planet shaft and its first gear; the sun, a gear outside
+    the planet on a frame shaft coaxial with the carrier that meshes it; the ring, a ring that meshes it on such a
+    shaft (``""`` when there is none); the held member, the first of the sun's, the ring's and the carrier's shafts
+    whose Role is fixed (``""`` when none is). ``placed`` is not needed: the rows say it all."""
+    del placed
+    shafts = {s.id: s for s in spec.shafts if s.id}
+    gears = {g.id: g for g in spec.gears if g.id}
+    lines = _lines(spec)
+    out = []
+    for carrier in carriers(spec):
+        planet_shafts = [s for s in spec.shafts if s.mount() == carrier and s.id]
+        if not planet_shafts:
+            continue
+        planet_shaft = planet_shafts[0]
+        on_planet = [g for g in spec.gears if g.shaft == planet_shaft.id and g.id]
+        if not on_planet:
+            continue
+        planet = on_planet[0]
+        sun = ring = ""
+        for mesh in spec.meshes:
+            if planet.id not in (mesh.a, mesh.b):
+                continue
+            other = gears.get(mesh.b if mesh.a == planet.id else mesh.a)
+            if other is None or other.shaft not in shafts or shafts[other.shaft].mount() != FRAME:
+                continue
+            if other.shaft == carrier or other.shaft not in lines or carrier not in lines:
+                continue
+            if not _coaxial(lines[other.shaft], lines[carrier]):
+                continue
+            if other.side == "internal":
+                ring = ring or other.id
+            else:
+                sun = sun or other.id
+        held = ""
+        for member in ([gears[sun].shaft] if sun else []) + ([gears[ring].shaft] if ring else []) + [carrier]:
+            if shafts[member].role == "fixed":
+                held = member
+                break
+        out.append(Stage(carrier, sun, ring, planet.id, planet_shaft.id, copies_of(planet_shaft) or 1, held))
+    return tuple(out)
 
 
 def assembly_counts(z_sun: int, z_ring: int, fit: int) -> Tuple[int, ...]:
     """Every number of copies from 1 to ``fit`` that meshes with the sun and the ring at once: N dividing ``z_sun +
-    z_ring`` (W7-PLAN §2.3 item 2). Agent B writes it."""
-    raise ValueError("Which numbers of planets fit a planetary stage is not worked out by this version of Gear "
-                     "Generator yet.")
+    z_ring`` (W7-PLAN §2.3 item 2; profile shift changes nothing, being symmetric about the space centre)."""
+    total = int(z_sun) + int(z_ring)
+    return tuple(n for n in range(1, int(fit) + 1) if total % n == 0)
 
 
 def most_that_fit(a: float, outer_diameter: float, module: float) -> int:
     """The most copies that stand round a carrier at ``a`` mm from its axis with their tips clear: the largest N
-    with ``2a·sin(π/N) >= outer_diameter + CLASH_GAP·module`` (W7-PLAN §2.3 item 3). Agent B writes it."""
-    raise ValueError("How many planets fit round a carrier is not worked out by this version of Gear Generator yet.")
+    with ``2a·sin(π/N) >= outer_diameter + CLASH_GAP·module`` (W7-PLAN §2.3 item 3); 1 always fits."""
+    from .checks import CLASH_GAP
+    need = float(outer_diameter) + CLASH_GAP * float(module)
+    best, n = 1, 2
+    while n <= 1000 and 2.0 * float(a) * math.sin(math.pi / n) >= need - 1e-9:
+        best, n = n, n + 1
+    return best
 
 
 def mesh_carrier(spec: GearboxSpec, a: str, b: str) -> Optional[str]:
-    """What a listed mesh between gears ``a`` and ``b`` is measured against (W7-PLAN §2.5): ``"frame"`` when both
-    are on frame shafts; the carrier shaft's id when one is on a shaft mounted on it and the other on a frame shaft
-    coaxial with it; None when it fits no carrier (an error). Agent B writes it."""
-    raise ValueError("Which carrier a mesh turns against is not worked out by this version of Gear Generator yet.")
+    """What a listed mesh between gears ``a`` and ``b`` (row ids, or copy ids) is measured against (W7-PLAN §2.5):
+    ``"frame"`` when both are on frame shafts; the carrier shaft's id when one is on a shaft mounted on it and the
+    other on a frame shaft coaxial with it (the carrier's own shaft among them), or both on shafts mounted on that
+    carrier; None when it fits no carrier (an error)."""
+    gears = {g.id: g for g in spec.gears if g.id}
+    shafts = {s.id: s for s in spec.shafts if s.id}
+    ga, gb = gears.get(copy_of(a)[0]), gears.get(copy_of(b)[0])
+    if ga is None or gb is None or ga.shaft not in shafts or gb.shaft not in shafts:
+        return None
+    ma, mb = shafts[ga.shaft].mount(), shafts[gb.shaft].mount()
+    if ma == FRAME and mb == FRAME:
+        return FRAME
+    if ma != FRAME and mb != FRAME:
+        return ma if ma == mb else None
+    carrier, frame_shaft = (ma, gb.shaft) if ma != FRAME else (mb, ga.shaft)
+    if frame_shaft == carrier:
+        return carrier
+    lines = _lines(spec)
+    if carrier in lines and frame_shaft in lines and _coaxial(lines[carrier], lines[frame_shaft]):
+        return carrier
+    return None
+
+
+def _warn(spec: GearboxSpec, sheet: str, row: int, key: str, sentence: str) -> Diagnostic:
+    where = spec.cell(sheet, row, key)
+    return Diagnostic(WARNING, f"{where}: {sentence}", where)
 
 
 def refusals(spec: GearboxSpec) -> List[Diagnostic]:
     """§1.2's rows of what W7 does not build, each a warning at its cell, for ``build.later_rows`` (Build parts still
-    builds every gear's part). Agent B writes it."""
-    raise ValueError("Which planetary stages this version builds is not worked out by this version of Gear "
-                     "Generator yet.")
+    builds every gear's part): a carrier riding a carrier; a carrier off Z±; a planet facing away from its carrier or
+    across it; a sun or ring facing the other way from its carrier; a stage with no member held; a compound planet;
+    a double planet; a gear on a carrier's own shaft that meshes; a helical or herringbone gear in a stage; a second
+    carrier."""
+    from .geometry import axis_vector
+    out: List[Diagnostic] = []
+    shafts = {s.id: s for s in spec.shafts if s.id}
+    gears = {g.id: g for g in spec.gears if g.id}
+    lines = _lines(spec)
+    for shaft in spec.shafts:
+        mount = shaft.mount()
+        if mount == FRAME or mount not in shafts or mount == shaft.id:
+            continue
+        carrier = shafts[mount]
+        if carrier.mount() != FRAME:
+            out.append(_warn(spec, "Shafts", shaft.row, "id", _nested(shaft, carrier)))
+            continue
+        try:
+            local = axis_vector(_axis_word(shaft.axis))
+        except ValueError:
+            continue
+        if abs(abs(local[2]) - 1.0) > 1e-9:
+            out.append(_warn(spec, "Shafts", shaft.row, "id", _across(shaft)))
+        elif local[2] < 0:
+            out.append(_warn(spec, "Shafts", shaft.row, "id",
+                             f"{shaft.id} faces {_axis_word(shaft.axis)} on {mount}, the other way from its carrier: "
+                             "a planet that faces away from its carrier is not built by this version."))
+    found = carriers(spec)
+    for index, carrier_id in enumerate(found):
+        carrier = shafts[carrier_id]
+        if index:
+            out.append(_warn(spec, "Shafts", carrier.row, "id", f"{carrier_id} is a second carrier: one planetary "
+                                                                "stage per workbook is built by this version."))
+            continue
+        if carrier_id in lines and lines[carrier_id][1] not in ((0.0, 0.0, 1.0), (0.0, 0.0, -1.0)):
+            out.append(_warn(spec, "Shafts", carrier.row, "id", f"{carrier_id}'s axis is {_axis_word(carrier.axis)}: a "
+                                                                "planetary stage is built only on an axis along Z+ or "
+                                                                "Z- by this version."))
+        for planet_shaft in (s for s in spec.shafts if s.mount() == carrier_id and s.id):
+            on = [g.id for g in spec.gears if g.shaft == planet_shaft.id and g.id]
+            if len(on) > 1:
+                out.append(_warn(spec, "Shafts", planet_shaft.row, "id",
+                                 f"{planet_shaft.id} carries {_and(on)}: a compound planet is not built by this "
+                                 "version."))
+    for stage in stages(spec):
+        carrier = shafts[stage.carrier]
+        members = [g for g in (stage.sun, stage.ring) if g]
+        for gear_id in members:
+            shaft_id = gears[gear_id].shaft
+            if shaft_id in lines and stage.carrier in lines:
+                dot = sum(x * y for x, y in zip(lines[shaft_id][1], lines[stage.carrier][1]))
+                if dot < 0:
+                    out.append(_warn(spec, "Shafts", shafts[shaft_id].row, "id",
+                                     f"{shaft_id} faces {_axis_word(shafts[shaft_id].axis)} and {stage.carrier} faces "
+                                     f"{_axis_word(carrier.axis)}: a planetary stage whose shafts face different ways "
+                                     "is not built by this version."))
+        if not stage.held and stage.sun and stage.ring:
+            names = [gears[stage.sun].shaft] if stage.sun else []
+            names += [stage.carrier] + ([gears[stage.ring].shaft] if stage.ring else [])
+            out.append(_warn(spec, "Shafts", carrier.row, "id",
+                             f"{_and(names)} form a planetary stage with no member held: a differential is not built "
+                             "by this version; set one of them to Role fixed."))
+        for gear_id in members + [stage.planet]:
+            kind = gears[gear_id].kind_word()
+            if kind in ("helical", "herringbone"):
+                out.append(_warn(spec, "Gears", gears[gear_id].row, "id",
+                                 f"{gear_id} is {kind}: a planetary stage is built with spur gears only by this "
+                                 "version."))
+    for mesh in spec.meshes:
+        ga, gb = gears.get(mesh.a), gears.get(mesh.b)
+        if ga is None or gb is None or ga.shaft not in shafts or gb.shaft not in shafts:
+            continue
+        ma, mb = shafts[ga.shaft].mount(), shafts[gb.shaft].mount()
+        if ma != FRAME and ma == mb:
+            out.append(_warn(spec, "Meshes", mesh.row, "a", f"{mesh.a} meshes {mesh.b} on the same carrier: a double "
+                                                            "planet is not built by this version."))
+            continue
+        for gear, other in ((ga, gb), (gb, ga)):
+            if gear.shaft in found:
+                out.append(_warn(spec, "Meshes", mesh.row, "a",
+                                 f"{gear.id} is on {gear.shaft}, the carrier, and meshes {other.id}: a gear on the "
+                                 "carrier that meshes another gear is not built by this version; it is built locked "
+                                 "to the carrier when it meshes nothing."))
+                break
+    return out
+
+
+def _and(items: List[str]) -> str:
+    items = list(items)
+    if len(items) <= 1:
+        return "".join(items)
+    return ", ".join(items[:-1]) + " and " + items[-1]

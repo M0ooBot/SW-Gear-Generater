@@ -287,11 +287,14 @@ def test_a_spur_on_a_z_minus_shaft_is_mirrored_and_meshes():
                         section(b, theta["B"] + math.pi / b.teeth, plane, g["B"])) > 0
 
 
-def test_shafts_a_later_phase_lays_out_are_said_not_guessed():
+def test_shafts_no_version_lays_out_are_said_not_guessed():
+    """W6 lays turned axes out and W7 carriers and copies; a carrier riding a carrier is said, not guessed."""
     spec = box([Shaft("S", x="0", y="0", axis="X+"), Shaft("C", x="0", y="0"),
                 Shaft("P", "C", x="24", y="0", copies="3")], [], [])
-    later = geometry.layout(spec).later
-    assert not any("W6" in s for s in later) and any("W7" in s for s in later)     # W6 lays turned axes out
+    assert geometry.layout(spec).later == []
+    nested = box([Shaft("C", x="0", y="0"), Shaft("P", "C", x="24", y="0"), Shaft("P2", "P", x="5", y="0")], [], [])
+    assert geometry.layout(nested).later == ["P2 is mounted on P, which is itself mounted on C: a carrier riding "
+                                             "another carrier is not built by this version."]
 
 
 # -- every kind on every pair of facings, the part read from its own plan -----------------------------

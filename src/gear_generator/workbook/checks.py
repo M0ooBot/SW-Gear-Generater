@@ -87,13 +87,28 @@ def check(spec: GearboxSpec, skip_gears=()) -> Report:
     for gear_id, why in lay.problems.items():
         _error(report, spec.cell("Gears", gears[gear_id].row, "id"), f"{gear_id} could not be placed: {why}")
 
-    listed = set()
+    # W7: a planet's copies are placed one by one (keyed by copy id); a Meshes row is checked once, on copy 1, under
+    # its row's names, and clearances and phases take the meshes copy by copy (W7-PLAN §2.2, §2.3).
+    first = {}
+    for p in placed.values():
+        first.setdefault(p.row or p.gear, p)
+    expanded = geometry.expand_meshes(spec, placed)
+    listed = {frozenset(pair) for pair in expanded} | {frozenset((m.a, m.b)) for m in spec.meshes}
+    report.stages = planetary.stages(spec) if any(p.carrier for p in placed.values()) else ()
     for mesh in spec.meshes:
-        a, b = placed.get(mesh.a), placed.get(mesh.b)
-        listed.add(frozenset((mesh.a, mesh.b)))
+        a, b = first.get(mesh.a), first.get(mesh.b)
         if a is None or b is None:
             continue
         where = spec.cell("Meshes", mesh.row, "a")
+        if a.carrier or b.carrier:
+            a, b = _as_row(a), _as_row(b)
+            if planetary.mesh_carrier(spec, mesh.a, mesh.b) is None:
+                carried, other = (a, b) if a.carrier else (b, a)
+                carrier = carried.carrier
+                _error(report, where, f"{carried.gear} rides {carrier} and meshes {other.gear}, whose shaft "
+                                      f"{other.shaft} is not on {carrier}'s axis: a gear on a carrier meshes only a "
+                                      f"gear on a shaft along its carrier's axis.")
+                continue
         try:
             laid = geometry.mesh_geometry(a, b)
         except (ValueError, ArithmeticError, AttributeError) as exc:
@@ -102,10 +117,11 @@ def check(spec: GearboxSpec, skip_gears=()) -> Report:
         if laid.kind == geometry.PARALLEL:
             _check_mesh(report, spec, mesh, a, b, where)
             needed = report.centres.get((a.gear, b.gear), (laid.needed, laid.placed))[0]
-            report.meshes[(mesh.a, mesh.b)] = replace(laid, needed=needed)
+            report.meshes[(mesh.a, mesh.b)] = replace(laid, a=mesh.a, b=mesh.b, needed=needed)
         else:
             if _check_turned(report, spec, a, b, laid, where):
                 report.meshes[(mesh.a, mesh.b)] = laid
+    assembly_said = _check_stages(report, spec, placed) if report.stages else False
 
     report.motion = kinematics.solve(spec, skip_gears, senses={key: m.sense for key, m in report.meshes.items()
                                                                if not m.problem})
@@ -114,12 +130,92 @@ def check(spec: GearboxSpec, skip_gears=()) -> Report:
     _check_turned_clearances(report, spec, placed, listed)
     _check_motion(report, spec)
     report.theta, conflicts = geometry.phases(spec, placed, with_conflicts=True, meshes_=report.meshes)
+    carried = {p.gear for p in placed.values() if p.carrier}
     for gear_id, other in conflicts:
-        _warning(report, spec.cell("Gears", gears[gear_id].row, "id"),
-                 f"{gear_id}'s teeth cannot sit in the spaces of every gear it meshes with at once (the turn "
-                 f"{other} asks of it disagrees): a loop of meshes that does not close; check the tooth counts.")
+        row = placed[gear_id].row or gear_id
+        sentence = (f"{gear_id}'s teeth cannot sit in the spaces of every gear it meshes with at once (the turn "
+                    f"{other} asks of it disagrees): a loop of meshes that does not close; check the tooth counts.")
+        if gear_id in carried or other in carried:
+            # W7-PLAN §2.4: a loop through a carrier's copies that does not close is the assembly condition failing,
+            # an error; said once, by _check_stages, when it reduces to the simple stage's count.
+            if not assembly_said:
+                _error(report, spec.cell("Gears", gears[row].row, "id"), sentence)
+            continue
+        _warning(report, spec.cell("Gears", gears[row].row, "id"), sentence)
     report.worked_out_as = _worked_out_as(spec, report)
     return report
+
+
+def _as_row(p: Placed) -> Placed:
+    """A placed copy under its row's names (``Planet``, ``P``), for the checks a Meshes row says once."""
+    return replace(p, gear=p.row or p.gear, shaft=planetary.copy_of(p.shaft)[0])
+
+
+def _and(items: List[str], word: str = "and") -> str:
+    items = list(items)
+    if len(items) <= 1:
+        return "".join(items)
+    return ", ".join(items[:-1]) + f" {word} " + items[-1]
+
+
+def _check_stages(report: Report, spec: GearboxSpec, placed: Dict[str, Placed]) -> bool:
+    """What W7 adds on top of the mesh checks for each planetary stage (W7-PLAN §2.3 items 1-3, 7), each at its
+    cell: the ring's tooth count for a simple unshifted stage, said in place of the centre errors it causes; the
+    assembly condition; the copies' room round the carrier; a sun or planet below the undercut limit. Whether the
+    assembly condition was said (the phase walk's loop error is then not said again)."""
+    gears = {g.id: g for g in spec.gears}
+    shafts = {x.id: x for x in spec.shafts}
+    said = False
+    for stage in report.stages:
+        copies = [p for p in placed.values() if p.row == stage.planet and p.carrier == stage.carrier]
+        sun, ring = placed.get(stage.sun), placed.get(stage.ring)
+        if not copies:
+            continue
+        planet = copies[0]
+        n = len(copies)
+        planet_shaft = shafts[stage.planet_shaft]
+        copies_cell = spec.cell("Shafts", planet_shaft.row, "copies")
+        if sun is not None and ring is not None:
+            z_s, z_p, z_r = sun.teeth, planet.teeth, ring.teeth
+            shifted = any(getattr(g.derived, "shift", 0.0) for g in (sun, planet, ring))
+            ring_wrong = not shifted and z_r != z_s + 2 * z_p
+            if ring_wrong:
+                said = True                         # the copies' loop cannot close either: said once, here
+                rows = {spec.cell("Meshes", m.row, "a") for m in spec.meshes
+                        if {m.a, m.b} in ({stage.sun, stage.planet}, {stage.planet, stage.ring})}
+                report.diagnostics = [d for d in report.diagnostics if d not in report.off_centre or d.field not in rows]
+                report.off_centre = [d for d in report.off_centre if d.field not in rows]
+                _error(report, spec.cell("Gears", gears[stage.ring].row, "teeth"),
+                       f"{stage.ring} has {z_r} teeth, and a ring around {stage.sun} ({z_s}) and {stage.planet} "
+                       f"({z_p}) needs {z_s} + 2 × {z_p} = {z_s + 2 * z_p}: with {z_r} the planets cannot mesh with "
+                       "both at once.")
+            a = math.hypot(planet.x - sun.x, planet.y - sun.y)
+            fit = planetary.most_that_fit(a, planet.outer_radius * 2.0, planet.module)
+            counts = planetary.assembly_counts(z_s, z_r, fit)
+            listed = _and([str(c) for c in counts], "or")
+            if (z_s + z_r) % n and not ring_wrong:
+                said = True
+                _error(report, copies_cell,
+                       f"{n} copies of {stage.planet} cannot all mesh with {stage.sun} and {stage.ring} at once: "
+                       f"({z_s} + {z_r}) / {n} = {_n((z_s + z_r) / n)} is not a whole number. With these teeth the "
+                       f"copies can be {listed}; more would not fit round {stage.carrier}.")
+            if n > fit:
+                need = planet.outer_radius * 2.0 + CLASH_GAP * planet.module
+                also = (f", and of those {_and([str(c) for c in counts])} also mesh with {stage.sun} and "
+                        f"{stage.ring}." if counts else ".")
+                _error(report, copies_cell,
+                       f"{n} copies of {stage.planet} stand {_n(2 * a * math.sin(math.pi / n))} mm apart round "
+                       f"{stage.carrier}, and their tips need {_n(need)} mm: {fit} is the most that fit round "
+                       f"{stage.carrier}{also}")
+        for small, other in ((sun, planet), (planet, sun)):
+            if small is None or other is None or not getattr(small.derived, "undercut", False):
+                continue
+            row = small.row or small.gear
+            _warning(report, spec.cell("Gears", gears[row].row, "id"),
+                     f"{row} ({small.teeth} teeth) is below the undercut limit, which is not modelled, and meshes "
+                     f"{other.row or other.gear} ({other.teeth} teeth): the build checks interference only where the "
+                     f"gears stand, so check {row} with {other.row or other.gear} turning in SolidWorks.")
+    return said
 
 
 def _plane_cells(gear: geometry.Placed) -> str:
@@ -133,6 +229,7 @@ def _plane_cells(gear: geometry.Placed) -> str:
 def _check_mesh(report: Report, spec: GearboxSpec, mesh, a: Placed, b: Placed, where: str) -> None:
     gears = {g.id: g for g in spec.gears}
     ga, gb = gears[a.gear], gears[b.gear]
+    planetary_mesh = bool(a.carrier or b.carrier)
     if a.shaft == b.shaft:
         _error(report, where, f"{a.gear} and {b.gear} are on the same shaft, {a.shaft}; gears that mesh turn on "
                               "different shafts.")
@@ -201,7 +298,7 @@ def _check_mesh(report: Report, spec: GearboxSpec, mesh, a: Placed, b: Placed, w
                 except ValueError:
                     _error(report, where, f"{a.gear} and {b.gear}: a profile shift of {shifts[0]:+g} on "
                                           f"{pinion.gear} is too much for it to mesh inside {other.gear} at all.")
-                    unshift = fixes_mod.unshift_fix(spec, pinion, other, CENTRE_TOLERANCE)
+                    unshift = None if planetary_mesh else fixes_mod.unshift_fix(spec, pinion, other, CENTRE_TOLERANCE)
                     if unshift is not None:
                         report.fixes[where] = [unshift]
                     return
@@ -226,13 +323,17 @@ def _check_mesh(report: Report, spec: GearboxSpec, mesh, a: Placed, b: Placed, w
     off = placed_at - needed
     if abs(off) > CENTRE_TOLERANCE:
         shafts = {s.id: s for s in spec.shafts}
+        tail = ("; no fix is offered for a planetary stage, whose three gears and copies must change together."
+                if planetary_mesh else ".")
         off_error = Diagnostic(
             ERROR, f"{where}: {a.gear} and {b.gear} are {_n(placed_at)} apart; their teeth make {_n(needed)} "
                    f"({'+' if off > 0 else '−'}{_n(abs(off))} mm). Check the {_plane_cells(a)} of {a.shaft} and {b.shaft} "
                    f"(Shafts rows {shafts[a.shaft].row} and {shafts[b.shaft].row}); a shaft at an angle is "
-                   "best placed by formula.", where)
+                   f"best placed by formula{tail}", where)
         report.diagnostics.append(off_error)
         report.off_centre.append(off_error)
+        if planetary_mesh:
+            return                                 # W7-PLAN §2.3 item 6 (review M3): no fix on a planetary mesh
         offered = []
         move = fixes_mod.move_fix(spec, a, b, needed)
         if move is not None:
@@ -299,11 +400,13 @@ def _check_clearances(report: Report, spec: GearboxSpec, placed: Dict[str, Place
     for a, b in combinations(placed.values(), 2):
         if a.shaft == b.shaft or frozenset((a.gear, b.gear)) in listed or not geometry.parallel(a, b):
             continue                                   # across an angle: _check_turned_clearances
+        if a.carrier and a.row == b.row and a.carrier == b.carrier:
+            continue                                   # copies of one planet: _check_stages' room round the carrier
         if geometry.faces_overlap(a, b) <= 0:
             continue
         d = geometry.centre_distance(a, b)
         gap = CLASH_GAP * max(a.module, b.module)
-        where = spec.cell("Gears", gears[b.gear].row, "shaft")
+        where = spec.cell("Gears", gears[b.row or b.gear].row, "shaft")
         if a.internal and b.internal:
             continue
         if a.internal or b.internal:
@@ -442,7 +545,7 @@ def _check_turned_clearances(report: Report, spec: GearboxSpec, placed: Dict[str
             continue
         gap = geometry.cylinder_gap(a, b)
         if gap < CLASH_GAP * max(a.module, b.module):
-            where = spec.cell("Gears", gears[b.gear].row, "shaft")
+            where = spec.cell("Gears", gears[b.row or b.gear].row, "shaft")
             _warning(report, where, f"{a.gear} and {b.gear} may touch: on shafts at {_n(geometry.angle_between_axes(a, b))}°, "
                                     f"their blanks come within {_n(gap)} mm of each other; the build's interference "
                                     "check says for certain.")
@@ -457,7 +560,7 @@ def _check_turned_clearances(report: Report, spec: GearboxSpec, placed: Dict[str
                 continue                               # the partner's axis runs through every bevel blank's apex region
             gap = geometry.solid_gap(span, geometry.bounding_cylinder(g))
             if gap < CLASH_GAP * g.module:
-                where = spec.cell("Gears", gears[g.gear].row, "shaft")
+                where = spec.cell("Gears", gears[g.row or g.gear].row, "shaft")
                 _warning(report, where, f"{shaft} may touch {g.gear}: on shafts at "
                                         f"{_n(geometry.angle_between_axes(g, mine[0]))}°, the shaft comes within "
                                         f"{_n(gap)} mm of its blank; the build's interference check says for certain.")
@@ -467,14 +570,23 @@ def _check_shafts(report: Report, spec: GearboxSpec, placed: Dict[str, Placed]) 
     gears_on: Dict[str, List[Placed]] = {}
     for p in placed.values():
         gears_on.setdefault(p.shaft, []).append(p)
+    carriers = planetary.carriers(spec) if any(p.carrier for p in placed.values()) else []
+    on_carrier_axis = set()
+    if carriers:
+        # W7-PLAN §2.3 item 5 (review S4): shafts on a carrier's axis (sun, carrier, ring, coaxial frame shafts)
+        # pass over each other's axes by design, and a carrier needs no gear of its own.
+        on_carrier_axis = {x.id for x in spec.shafts if x.mount() == "frame" and x.id
+                           and any(planetary.coaxial(spec, x.id, c) for c in carriers)}
     for shaft in spec.shafts:
-        if shaft.id and not any(g.shaft == shaft.id for g in spec.gears):
+        if shaft.id and not any(g.shaft == shaft.id for g in spec.gears) and shaft.id not in carriers:
             _warning(report, spec.cell("Shafts", shaft.row, "id"), f"{shaft.id} carries no gear.")
     # A gear whose metal passes over another shaft's line, within the height that shaft's gears span.
     for g in placed.values():
         for shaft_id, on in gears_on.items():
             if shaft_id == g.shaft or not geometry.parallel(g, on[0]):
                 continue                               # a shaft across an angle: _check_turned_clearances
+            if g.shaft in on_carrier_axis and shaft_id in on_carrier_axis:
+                continue
             lo = min(p.z_range[0] for p in on)
             hi = max(p.z_range[1] for p in on)
             if min(g.z_range[1], hi) - max(g.z_range[0], lo) <= 0:
@@ -483,7 +595,7 @@ def _check_shafts(report: Report, spec: GearboxSpec, placed: Dict[str, Placed]) 
             d = ((other.x - g.x) ** 2 + (other.y - g.y) ** 2) ** 0.5
             inside_metal = (g.tip_radius <= d <= g.outer_radius) if g.internal else d < g.outer_radius
             if inside_metal:
-                row = {x.id: x.row for x in spec.gears}[g.gear]
+                row = {x.id: x.row for x in spec.gears}[g.row or g.gear]
                 _warning(report, spec.cell("Gears", row, "id"),
                          f"{g.gear} passes over {shaft_id}'s axis, {_n(d)} mm from its own: a real shaft there "
                          "would be cut.")
@@ -522,6 +634,10 @@ def _driven_from(spec: GearboxSpec, start: str) -> set:
         if a and b:
             joins.setdefault(a, set()).add(b)
             joins.setdefault(b, set()).add(a)
+    for shaft in spec.shafts:                       # W7: a planet shaft and its carrier turn together
+        if shaft.mount() != "frame" and shaft.id:
+            joins.setdefault(shaft.id, set()).add(shaft.mount())
+            joins.setdefault(shaft.mount(), set()).add(shaft.id)
     seen, todo = {start}, [start]
     while todo:
         for other in joins.get(todo.pop(), ()):
@@ -569,7 +685,8 @@ def overall_ratio(spec: GearboxSpec, report: Report) -> Tuple[Optional[float], s
     if report.unchecked:
         return None, "", "the gearbox is not checked yet"
     meshed = {g for m in spec.meshes for g in (m.a, m.b)}
-    missing = [g.id for g in spec.gears if g.id in meshed and g.id not in report.layout.placed]
+    laid_out = {p.row or p.gear for p in report.layout.placed.values()}       # W7: a planet's copies are its row
+    missing = [g.id for g in spec.gears if g.id in meshed and g.id not in laid_out]
     if missing:
         one = len(missing) == 1
         return None, "", f"{', '.join(missing)} {'meshes but is' if one else 'mesh but are'} not laid out"
@@ -583,12 +700,20 @@ def overall_ratio(spec: GearboxSpec, report: Report) -> Tuple[Optional[float], s
 
 
 def _worked_out_as(spec: GearboxSpec, report: Report) -> str:
-    """``Parallel train · 2 meshes · 12.000 : 1`` — what the rows add up to."""
+    """``Parallel train · 2 meshes · 12.000 : 1`` — what the rows add up to. W7: ``Planetary, R fixed · 3 planets ·
+    4.000 : 1 · output turns the same way`` (``Planetary and parallel, …`` with meshes off the stage)."""
     kinds = [m.kind for m in report.meshes.values()]
     meshes = len(report.meshes) if report.meshes else len(report.centres)
     pieces = ["Parallel train", f"{meshes} mesh{'es' if meshes != 1 else ''}"]
     turned = [k for k in (geometry.CROSSED, geometry.BEVEL) if k in kinds]
-    if turned:
+    if report.stages:
+        stage = report.stages[0]
+        in_stage = {stage.sun, stage.planet, stage.ring}
+        others = [m for m in spec.meshes if not {m.a, m.b} <= in_stage]
+        held = f", {stage.held} fixed" if stage.held else ""
+        pieces = [f"Planetary{' and parallel' if others else ''}{held}",
+                  f"{stage.copies} planet{'s' if stage.copies != 1 else ''}"]
+    elif turned:
         words = [k.capitalize() if i == 0 else k for i, k in enumerate(turned)]
         if geometry.PARALLEL in kinds:
             words.append("parallel")
