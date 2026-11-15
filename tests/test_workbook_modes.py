@@ -492,5 +492,5 @@ def test_a_mode_named_twice_in_another_case_and_a_position_named_twice_are_error
     xlsx.write_new(path, model.to_sheets(twice))
     _, problems = model.from_book(xlsx.read(path))
     said = [d.message for d in problems if d.is_error]
-    assert any("the mode 2h is also on row 2." in m for m in said)
+    assert "Modes!A6: the mode 2h is also at Modes!A2 (2H), as mode names are compared ignoring case." in said
     assert any("The position 4WD is named twice." in m for m in said)

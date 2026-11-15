@@ -546,13 +546,18 @@ def _check_references(reader: _Reader, spec: GearboxSpec) -> None:
             reader.error(f"Modes!{make_ref(1, col)}", f"{slider} is not a gear on the Gears sheet.")
         elif not gear.slides:
             reader.error(f"Modes!{make_ref(1, col)}", f"{slider} has no Slides positions on the Gears sheet.")
-    names: Dict[str, int] = {}                     # W8-INTERFACES §9.6: mode names compare ignoring case
+    # W8-INTERFACES §9.6 (J6): mode names compare as SolidWorks' configuration names do, through ``swbuild.on_in``
+    # (the one home of that comparison), so "2H" and "2h" are one name said twice.
+    from ..swbuild import on_in
+    named: List[Mode] = []
     for mode in spec.modes:
-        if mode.name.casefold() in names:
+        first = next((m for m in named if on_in((m.name,), mode.name)), None) if mode.name else None
+        if first is not None:
+            same = "" if first.name == mode.name else f" ({first.name}), as mode names are compared ignoring case"
             reader.error(at("Modes", mode.row, "name"),
-                         f"the mode {mode.name} is also on row {names[mode.name.casefold()]}.")
+                         f"the mode {mode.name} is also at {at('Modes', first.row, 'name')}{same}.")
         elif mode.name:
-            names[mode.name.casefold()] = mode.row
+            named.append(mode)
         for index, (slider, pick) in enumerate(mode.positions):
             gear = gears_by_id.get(slider)
             if gear is None or not gear.slides or not pick:
