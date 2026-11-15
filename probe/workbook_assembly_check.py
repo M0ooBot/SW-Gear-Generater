@@ -198,7 +198,8 @@ section's own workbook edit changes it (``KEY``), and frames after an Update the
 - ``s5`` (built fresh, the coordinator's ruling 3 of stage 2d): (i) the plan doctored with a second distance mate on
   RangeSlv on in N only (60 mm against N's 56), through the app as it is -> refused at the gate verbatim, nothing made,
   no SolidWorks call; (ii) a coupling the mode step can make, the Sun to LoDog 1 : 1 on in N only (against the
-  planetary's 4 : 1, so SolidWorks cannot hold it) -> the build stops in step 5 naming mode N; the parts and layout on
+  planetary's 4 : 1, locking N's train) -> SolidWorks makes it, and step 6's mate check stops the build naming mode N
+  and the bodies it reads fully defined (the 2026 run's reading, ruled as the app's behaviour); the parts and layout on
   record, no assembly file, the document open and named; the footer never offering the same build again; closed as
   m4 closes it. The watch tolerates an "Over Defined" balloon from the make to the close.
 - ``s7`` (each case on its own copy of s1.master): what a configuration keeps. After every step every configuration is
@@ -7233,7 +7234,8 @@ def section_s5(worker, excel):
         f"doctored with a second distance mate on RangeSlv ({S5_HELD!r}, {S5_VALUE:g} mm against N's 56), on in N "
         "only, through the app as it is -> refused at the gate, nothing made; (ii) the build's own handling of a mate "
         f"SolidWorks will not take in one mode: a coupling {S5_COUPLE!r} (1 : 1 against the planetary's 4 : 1) made in "
-        "N's step, on in N only -> the build stops naming mode N; the parts and layout on record, no assembly file, "
+        "N's step, on in N only -> SolidWorks makes it and step 6's mate check stops the build, naming mode N and the "
+        "bodies it reads fully defined; the parts and layout on record, no assembly file, "
         "the document left open and named; the footer never offering the same build again; closed as W5's m4 closes "
         "it. From the make to the close, an \"Over Defined\" balloon is a fact and any other window a STOP")
     s5_gate(worker, excel)
@@ -7270,13 +7272,22 @@ def section_s5(worker, excel):
             f"{asm.document if asm else None!r}; saved {asm.saved if asm else None!r}; kind {result.kind!r}")
         statuses = run(worker, lambda s: {n: s.mate_status(n) for n in [S5_COUPLE]}) if asm and asm.document else {}
         say(f"        AddMate5 status of {S5_COUPLE}: {statuses}")
-        named = [p for p in problems + [str(f[1]) for f in failures] if p.startswith("In mode N,") and S5_COUPLE in p]
-        made_in_step5 = bool(stopped and "in mode N" in stopped) or any("over-defines" in p for p in named)
-        say(f"fact    s5 (ii): the step that refused: "
-            f"{'step 5, the make in N (or its sense read straight after)' if made_in_step5 else 'after step 5'}; the "
-            f"refusal verbatim: {named}")
-        check(bool(named) and made_in_step5, f"s5 (ii): the build stops at the make in step 5 naming mode N and "
-              f"{S5_COUPLE}: {named or problems or failures}")
+        # The coordinator's ruling (stage 2d): SolidWorks makes the coupling (AddMate5 no error) and the build catches
+        # it at step 6's mate check per mode, naming mode N and the bodies it reads fully defined, not the mate; that
+        # is the app as written, asserted here, the sentence logged verbatim (whether it should name the mate is
+        # ruled separately).
+        stuck = [p for p in problems if p.startswith("In mode N, ") and p.endswith("cannot turn: SolidWorks reads it "
+                                                                                    "fully defined.")]
+        bodies_named = [p[len("In mode N, "):].split(" cannot turn")[0] for p in stuck]
+        step6 = bool(failures) and all(str(f[0]) == "the mate check in mode N" for f in failures)
+        say(f"fact    s5 (ii): the step that refused: {'step 6, the mate check in mode N' if step6 else failures}; "
+            f"the sentences verbatim: {problems}; the mate named in them: {any(S5_COUPLE in p for p in problems)}")
+        check(statuses.get(S5_COUPLE) == findings.ADD_MATE_NO_ERROR, f"s5 (ii): SolidWorks made {S5_COUPLE} with "
+              f"AddMate5 status {statuses.get(S5_COUPLE)} (no error)")
+        want = {"Sun", "InDog", "Carrier carrier", "LoDog", "Pl copy 1", "Pl copy 2", "Pl copy 3"}
+        check(step6 and stuck and len(stuck) == len(problems) and set(bodies_named) == want,
+              f"s5 (ii): the build stops at step 6's mate check, naming mode N and the bodies of N's locked train "
+              f"({sorted(want)}) as fully defined: {bodies_named}")
         if asm is not None and asm.document and not asm.saved:
             REFUSED.append(asm.document)
         check(asm is not None and asm.document and not asm.saved and not result.ok,

@@ -56,7 +56,9 @@ and the footer, read line and gear table are logged.
    verbatim (their turn sentence is not asserted: it may change after s7), the footer whole, the window 1080 px wide
    in every state. ``--only w8`` runs this stage alone.
 
-Afterwards the window is closed, Excel quit, and this run's SolidWorks documents saved and closed.
+Afterwards the window is closed, Excel quit, and this run's SolidWorks documents saved and closed. Any exception in a
+Tk callback ends the run as failed (``report_callback_exception``), a watchdog ends it when no step has completed for
+15 minutes, and the log is written line by line as it goes, so a run that stalls or is stopped keeps it.
 
 Run on SolidWorks 2026 on 2026-11-13 (w4-window-20261113-195843.log) before the W4 review's fixes, and again on
 2026 and 2024 on 2026-11-14 (w4-window-20261114-055011.log, sw2024/w4-window-20261114-061023.log) for stages 1-3.
@@ -86,6 +88,7 @@ sys.path.insert(1, os.path.join(HERE, "excel"))
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 LOG_PATH = sys.argv[sys.argv.index("--log") + 1] if "--log" in sys.argv else os.path.join(ROOT, "window.log")
 W4_STATIC = sys.argv[sys.argv.index("--w4-static") + 1] if "--w4-static" in sys.argv else ""
+open(LOG_PATH, "w", encoding="utf-8").close()       # log() appends each line as it goes
 
 import tkinter as tk  # noqa: E402
 
@@ -123,6 +126,12 @@ def log(kind, **kw):
     text = time.strftime("%H:%M:%S") + " " + kind + " " + json.dumps(kw, ensure_ascii=False, default=str)
     print(text, flush=True)
     LINES.append(text)
+    # Written as it goes (a run that hangs or is stopped keeps its log), and again whole at the end.
+    try:
+        with open(LOG_PATH, "a", encoding="utf-8", newline="\n") as handle:
+            handle.write(text + "\n")
+    except OSError:
+        pass
 
 
 def check(ok, what):
@@ -654,7 +663,7 @@ def w8_built_check():
     record = store.read_link_record(W6_PATHS["E4"])
     box = record.gearbox if record is not None else None
     text = win.status.get()
-    log("W8 built", status=text, kind=box.kind if box else None, modes=list(box.modes) if box else None,
+    log("W8 built", status=text, box_kind=box.kind if box else None, modes=list(box.modes) if box else None,
         positions_per_configuration=win.positions_per_configuration)
     check(box is not None and box.kind == store.GEARBOX_MOTION and box.assembly and tuple(box.modes) ==
           ("2H", "4H", "N", "4L"), f"W8: built to turn with a configuration per mode: {box and box.kind!r} "
@@ -934,9 +943,13 @@ W8_STEPS = ([] if ONLY == "w8" else [
 STEPS = W8_STEPS if ONLY == "w8" else STEPS + W8_STEPS
 T0 = time.time()
 DEADLINE = T0 + 2400
+STALL = 900                  # s: a run in which no step completes for this long is hung (a build takes some minutes)
+PROGRESS = {"at": time.time(), "finished": False}
 
 
 def step():
+    if PROGRESS["finished"]:
+        return
     if time.time() > DEADLINE:
         log("TIMEOUT", left=[s[0] for s in STEPS][:3])
         FAILS.append("timeout")
@@ -945,33 +958,63 @@ def step():
     if not STEPS:
         finish()
         return
-    kind, arg = STEPS[0]
+    current = STEPS[0]
+    kind, arg = current
     try:
         if kind == "do":
             STEPS.pop(0)
+            PROGRESS["at"] = time.time()
             arg()
             if win is not None:
                 log("status", now=win.status.get())
         elif kind == "wait":
             if arg():
                 STEPS.pop(0)
+                PROGRESS["at"] = time.time()
                 log("waited", status=win.status.get() if win is not None else "")
             elif win is not None and time.time() - LAST.get("said", 0) > 15:
                 LAST["said"] = time.time()
                 log("waiting", status=win.status.get())
         elif kind == "pause":
             STEPS.pop(0)
+            PROGRESS["at"] = time.time()
             root.after(int(arg * 1000), step)
             return
     except Exception:  # noqa: BLE001
         import traceback
         log("STEP FAILED", step=kind, error=traceback.format_exc())
         FAILS.append("step failed")
-        STEPS.pop(0)
+        if STEPS and STEPS[0] is current:     # a "do" has already left the list; a failing "wait" has not
+            STEPS.pop(0)
     root.after(200, step)
 
 
+def callback_failed(exc, value, tb):
+    """Tk's report_callback_exception: any exception in a Tk callback (a step, the window's own poll) is logged and
+    ENDS the run as failed, never leaving the mainloop idle."""
+    import traceback
+    log("CALLBACK FAILED", error="".join(traceback.format_exception(exc, value, tb)))
+    FAILS.append(f"a Tk callback raised {exc.__name__}")
+    finish()
+
+
+def watchdog():
+    """Fails and closes the run if no step has completed for STALL seconds, or the deadline has passed."""
+    if PROGRESS["finished"]:
+        return
+    if time.time() - PROGRESS["at"] > STALL or time.time() > DEADLINE + 60:
+        log("WATCHDOG", what=f"no step completed for {time.time() - PROGRESS['at']:.0f} s",
+            next=[s[0] for s in STEPS][:3], status=win.status.get() if win is not None else "")
+        FAILS.append("watchdog: the run stalled")
+        finish()
+        return
+    root.after(5000, watchdog)
+
+
 def finish():
+    if PROGRESS["finished"]:
+        return
+    PROGRESS["finished"] = True
     jobs.put(None)
     try:
         if win is not None:
@@ -989,7 +1032,9 @@ def finish():
         root.after(250, later)
 
 
+root.report_callback_exception = callback_failed
 root.after(500, step)
+root.after(5000, watchdog)
 root.mainloop()
 log("closed in SolidWorks", left=close_ours())
 CAM_STOP.set()
