@@ -19,6 +19,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Sequence, Tuple
 
+from ..gears import bevel, crossed
 from . import checks, geometry, schema, xlsx
 from .checks import Report
 from .fixes import Fix
@@ -50,19 +51,32 @@ def results_sheet(spec: GearboxSpec, report: Report, when: Optional[str] = None)
     box was worked out as, its overall ratio, and the room its gears take (:func:`geometry.extent`)."""
     when = when or time.strftime("%Y-%m-%d %H:%M")
     motion = report.motion
-    rows: List[List] = [["Shaft", "Speed (rpm)", "Turns, seen from +Z", "Torque (N·m)"]]
+    # W6 (D12): every shaft in the Z family keeps W3's column; else each cell says what it is seen from.
+    all_z = all(motion.seen_from.get(s.id, "+Z") == "+Z" for s in spec.shafts)
+    rows: List[List] = [["Shaft", "Speed (rpm)", "Turns, seen from +Z" if all_z else "Turns", "Torque (N·m)"]]
     for shaft in spec.shafts:
         speed = motion.speeds.get(shaft.id)
         torque = motion.torques.get(shaft.id)
-        rows.append([shaft.id, round(float(speed), 6) if speed is not None else "—", motion.turns(shaft.id) or "—",
+        turns = motion.turns(shaft.id)
+        if turns and not all_z and turns != "still":
+            turns = f"{turns}, seen from {motion.seen_from.get(shaft.id, '+Z')}"
+        rows.append([shaft.id, round(float(speed), 6) if speed is not None else "—", turns or "—",
                      round(torque, 6) if torque is not None else "—"])
     rows.append([])
-    rows.append(["Mesh", "Ratio", "Centres needed (mm)", "Centres placed (mm)", "Off by (mm)", "Contact ratio"])
+    turned = [m for m in report.meshes.values() if m.kind != geometry.PARALLEL and not m.problem]
+    rows.append(["Mesh", "Ratio", "Centres needed (mm)", "Centres placed (mm)", "Off by (mm)", "Contact ratio"]
+                + (["Shaft angle (°)", "Cone distance (mm)", "Apex distance (mm)"] if turned else []))
     gears = {g.id: g for g in spec.gears}
+    mesh_rows: Dict[Tuple[str, str], List] = {}
     for (a, b), (needed, placed) in report.centres.items():
         ratio = float(gears[b].teeth) / float(gears[a].teeth)
-        rows.append([f"{a}–{b}", round(ratio, 6), round(needed, 6), round(placed, 6), round(placed - needed, 6),
-                     round(report.contact.get((a, b), 0.0), 4)])
+        mesh_rows[(a, b)] = [f"{a}–{b}", round(ratio, 6), round(needed, 6), round(placed, 6), round(placed - needed, 6),
+                             round(report.contact.get((a, b), 0.0), 4)] + (["", "", ""] if turned else [])
+    if turned:                                    # W6: every kind of mesh in the Meshes sheet's order
+        mesh_rows.update({(m.a, m.b): _turned_row(m, report.layout.placed) for m in turned})
+        listed = [(m.a, m.b) for m in spec.meshes if (m.a, m.b) in mesh_rows]
+        mesh_rows = {key: mesh_rows[key] for key in listed + [k for k in mesh_rows if k not in listed]}
+    rows.extend(mesh_rows.values())
     rows.append([])
     rows.append(["Overall", "Value"])
     rows.append(["Worked out as", report.worked_out_as or "—"])
@@ -78,7 +92,28 @@ def results_sheet(spec: GearboxSpec, report: Report, when: Optional[str] = None)
     if left_out:
         rows.append([RESULTS_LEFT_OUT, left_out])
     note = schema.RESULTS_NOTE.format(when=when)
+    if any(m.kind == geometry.CROSSED for m in turned):
+        note += (" The efficiency typed for a crossed helical mesh is the workbook's: a crossed pair slides along its "
+                 "teeth, and its real efficiency is far lower.")
     return NewSheet(schema.RESULTS, rows, header=False, note=note)
+
+
+def _turned_row(laid: geometry.MeshGeometry, placed: Dict[str, geometry.Placed]) -> List:
+    """A BEVEL or CROSSED mesh's Results row (W6-PLAN §2.4, review S5): the ratio and shaft angle; a bevel pair's
+    cone distance, the distance between its two cone tips (0 when right) and the contact ratio of its back-cone
+    pair, its centres blank; a crossed pair's centres needed and placed along the common perpendicular, off by, and
+    its normal contact ratio."""
+    a, b = placed[laid.a], placed[laid.b]
+    ratio = round(b.teeth / a.teeth, 6)
+    angle = round(laid.shaft_angle, 6)
+    if laid.kind == geometry.BEVEL:
+        cone = bevel.cone_distance(a.module, a.teeth, b.teeth, laid.shaft_angle)
+        return [f"{laid.a}–{laid.b}", ratio, "", "", "", round(bevel.contact_ratio(a.derived), 4), angle,
+                round(cone, 6), round(laid.placed, 6)]
+    contact = crossed.normal_contact_ratio(a.module, a.teeth, b.teeth, a.derived.helix_angle_deg,
+                                           b.derived.helix_angle_deg, a.derived.normal_pressure_angle_deg)
+    return [f"{laid.a}–{laid.b}", ratio, round(laid.needed, 6), round(laid.placed, 6),
+            round(laid.placed - laid.needed, 6), round(contact, 4), angle, "", ""]
 
 
 def box_left_out(spec: GearboxSpec, report: Report) -> str:

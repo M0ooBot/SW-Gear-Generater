@@ -545,3 +545,31 @@ def test_the_worker_is_given_each_slanted_line_axis_to_read_back(turned_findings
     assert replaced(plan, layout=reuse).build_kwargs()["lines"] == {name: (point, direction)}
     _, _, after = fake_press(sw, record, edited(crossed_off_base(), gears={"G1": dict(at="12")}))
     assert senses_of(after) == {"G1 meshes G2": -1, "G3 meshes G4": 1}
+
+
+# -- the Results sheet (W6-PLAN §2.4, review S5; D12) -----------------------------------------------------------
+
+def test_the_results_sheet_gives_each_turned_mesh_its_own_figures_and_each_shaft_what_it_is_seen_from():
+    from gear_generator.gears import bevel
+    from gear_generator.workbook import export
+    a = direct(bevel_reducer())
+    sheet = export.results_sheet(a.spec, a.report, when="T")
+    assert sheet.rows[:4] == [["Shaft", "Speed (rpm)", "Turns", "Torque (N·m)"],
+                              ["S1", 1500.0, "anticlockwise, seen from +X", 10.0],
+                              ["S2", -750.0, "clockwise, seen from +Z", 19.6],
+                              ["S3", 250.0, "anticlockwise, seen from +Z", 57.624]]
+    assert sheet.rows[5][6:] == ["Shaft angle (°)", "Cone distance (mm)", "Apex distance (mm)"]
+    cone = round(3 * 20 / (2 * math.sin(math.atan2(20, 40))), 6)
+    assert sheet.rows[6] == ["G1–G2", 2.0, "", "", "", round(bevel.contact_ratio(a.report.layout.placed["G1"].derived),
+                                                              4), 90.0, cone, 0.0] and cone == 67.082039
+    assert sheet.rows[7] == ["G3–G4", 3.0, 68.0, 68.0, 0.0, 1.6364, "", "", ""]
+    assert "crossed" not in sheet.note
+    b = direct(crossed_slant())
+    sheet = export.results_sheet(b.spec, b.report, when="T")
+    assert sheet.rows[3] == ["S3", -333.333333, "anticlockwise, seen from (0.5, −0.866, 0)", 14.406]
+    g1 = b.report.layout.placed["G1"]
+    contact = crossed.normal_contact_ratio(2, 20, 40, 45.0, 45.0, 20.0)
+    assert sheet.rows[6] == ["G1–G2", 2.0, 84.852814, 84.852814, 0.0, round(contact, 4), 90.0, "", ""]
+    assert g1.module == 2 and sheet.rows[7][:2] == ["G3–G4", 1.5] and sheet.rows[7][6:] == [120.0, 38.188131, 0.0]
+    assert sheet.note.endswith("The efficiency typed for a crossed helical mesh is the workbook's: a crossed pair "
+                               "slides along its teeth, and its real efficiency is far lower.")
