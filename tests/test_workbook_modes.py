@@ -440,3 +440,14 @@ def test_a_plan_has_modes_exactly_when_it_has_a_configurations_plan(make):
         assert bool(plan.motion.modes) == (plan.modes_plan is not None) == bool(s.modes)
         if not s.modes:
             assert all(m.values == () and m.modes == () for m in plan.motion.mates)
+
+
+def test_a_row_held_back_says_the_layout_and_assembly_are_not_built_in_cs_words(monkeypatch):
+    """W8 is the last phase: nothing waits for one. Should a row ever be held back again, the refusal reads as C's
+    footer does (``ui_text._left_for_later``), word for word."""
+    from gear_generator.workbook import build
+    monkeypatch.setitem(build.LATER, "dog", ("a dog ring", "dog rings are not built by this version of the app"))
+    a = assess.assess(replace(transfer_case_parallel(), source_path=BOOK), [], "C:\\Out\\")
+    assert a.lay_out_refusal() == ("The layout and assembly are not built: Gears row 3: InDog is a dog ring: dog rings "
+                                   "are not built by this version of the app. (2 more under Checks)")
+    assert a.lay_out_refusal() == ui_text._left_for_later(a.parts).strip()
