@@ -1202,7 +1202,7 @@ class FakeSolidWorks:
         """Each named configuration's own value; one with none of its own reads 0, but for the active one, which
         reads where it stands (follow-up A)."""
         self._log("dimension_values", mate_handle, tuple(configurations))
-        self._configuration_gate("SLIDE_VALUE_ROUTE", "SET_VALUE_IN_SPECIFIC_CONFIGURATIONS")
+        self._configuration_gate("SLIDE_VALUE_ROUTE", "SPECIFY_CONFIGURATIONS")
         mate = self.mate(self.mate_handles[mate_handle])
         out = {}
         for config in configurations:

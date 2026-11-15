@@ -2478,8 +2478,9 @@ class ConfigDisplayDimension:
     def __init__(self, dimension):
         self._dimension = dimension
 
-    @property
-    def GetDimension(self):
+    def GetDimension2(self, which):
+        """``IDisplayDimension.GetDimension2(0)``, as the probes reached a dimension: the only member here."""
+        assert which == 0
         return self._dimension
 
 
@@ -2740,7 +2741,7 @@ CONFIGURATION_MEMBER_CALLS = [
     ("SLIDE_VALUE_ROUTE", lambda s: s.set_dimension_in("slide1", 66.0, ["Default"])),
     ("SET_VALUE_IN_SPECIFIC_CONFIGURATIONS", lambda s: s.set_dimension_in("slide1", 66.0, ["Default"])),
     ("SLIDE_VALUE_ROUTE", lambda s: s.dimension_values("slide1", ["Default"])),
-    ("SET_VALUE_IN_SPECIFIC_CONFIGURATIONS", lambda s: s.dimension_values("slide1", ["Default"])),
+    ("SPECIFY_CONFIGURATIONS", lambda s: s.dimension_values("slide1", ["Default"])),
 ]
 
 

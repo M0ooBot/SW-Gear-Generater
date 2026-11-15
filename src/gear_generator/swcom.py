@@ -2992,10 +2992,11 @@ class Session:
                                   f"{', '.join(wrong)}: it still reads {state} there.")
 
     def _slide_dimension(self, handle: str) -> Tuple[str, Any]:
-        """A kept distance mate's D1: ``IFeature.GetFirstDisplayDimension`` → ``IDisplayDimension.GetDimension``."""
+        """A kept distance mate's D1, as every probe reached one (``scaffold.dimensions_of``, the W8 follow-up's
+        included): ``IFeature.GetFirstDisplayDimension`` → ``IDisplayDimension.GetDimension2(0)``."""
         name, feature = self._kept_mate(handle)
         shown = _read(feature, "GetFirstDisplayDimension")
-        dimension = _read(shown, "GetDimension") if shown is not None else None
+        dimension = call(shown, "GetDimension2", 0) if shown is not None else None
         if dimension is None:
             raise SolidWorksError(f"The mate {name} has no distance to set, so the slide cannot be placed.")
         return name, dimension
@@ -3005,9 +3006,11 @@ class Session:
         no configuration activated. A 0 means that configuration has no value of its own (J7's caution); the caller
         decides what that means. Marks nothing. Never ``IDimension.SystemValue`` (it answered another
         configuration's value)."""
-        self._configuration_gate("SLIDE_VALUE_ROUTE", "SET_VALUE_IN_SPECIFIC_CONFIGURATIONS")
+        self._configuration_gate("SLIDE_VALUE_ROUTE", "SPECIFY_CONFIGURATIONS")
         name, dimension = self._slide_dimension(mate_handle)
-        values = _per_name(call(dimension, "GetSystemValue3", findings.SET_VALUE_IN_SPECIFIC_CONFIGURATIONS,
+        # GetSystemValue3's first argument is a swInConfigurationOpts_e (3, swSpecifyConfiguration), as the W8
+        # follow-up passed it (IN_SPECIFIC); SetSystemValue3's is a swSetValueInConfiguration_e (also 3).
+        values = _per_name(call(dimension, "GetSystemValue3", findings.SPECIFY_CONFIGURATIONS,
                                 self._names(configurations)))
         if len(values) != len(configurations):
             raise SolidWorksError(f"Asked for the distance of the mate {name} in {len(configurations)} "
@@ -3022,7 +3025,7 @@ class Session:
         """Set a kept distance mate's ``D1`` in the named configurations only: ``IDimension.SetSystemValue3(value_mm /
         1000, 3, names)``; a return other than 0 (``swSetValue_Successful``) raises with a sentence; read back with
         ``GetSystemValue3`` for those configurations. Never reads ``IDimension.SystemValue``. Does not rebuild."""
-        self._configuration_gate("SLIDE_VALUE_ROUTE", "SET_VALUE_IN_SPECIFIC_CONFIGURATIONS")
+        self._configuration_gate("SLIDE_VALUE_ROUTE", "SET_VALUE_IN_SPECIFIC_CONFIGURATIONS", "SPECIFY_CONFIGURATIONS")
         if not configurations:
             return
         name, dimension = self._slide_dimension(mate_handle)
