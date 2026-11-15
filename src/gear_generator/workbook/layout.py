@@ -390,6 +390,20 @@ def frames(report: Report) -> Dict[str, Frame]:
     return out
 
 
+def frames_by_mode(report: Report) -> Dict[str, Dict[str, Frame]]:
+    """W8: every placed gear's frame in each mode (``report.modes``), the mode's sliders where it puts them and every
+    other gear at the built turn; ``{}`` with no named modes."""
+    base = frames(report)
+    out: Dict[str, Dict[str, Frame]] = {}
+    for mode in report.modes:
+        if not mode.name:
+            continue
+        here = dict(base)
+        here.update({g: frame(p, report.theta[g]) for g, p in mode.placed.items() if g in report.theta})
+        out[mode.name] = here
+    return out
+
+
 def pitch(placed: Placed) -> float:
     """The gear's angular pitch in degrees, 360 / teeth: frames are compared modulo it (``swbuild.same_frame``)."""
     return 360.0 / placed.teeth

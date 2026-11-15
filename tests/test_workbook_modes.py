@@ -96,12 +96,17 @@ def test_the_w8_fields_default_to_a_gearbox_with_no_modes():
     assert (report.positions, report.engaged, report.out_of_mesh, report.off, report.placed) == ({}, (), (), (), {})
 
 
-def test_until_b_writes_them_the_modes_plan_refuses_and_modes_reason_says_why():
-    with pytest.raises(ValueError, match=r"^Planning an assembly's configurations is not in this version of Gear "
-                                         r"Generator yet, so a gearbox with modes cannot be planned\.$"):
-        motion.modes_plan(motion.MotionPlan(modes=("2H",)), {}, {})
+def test_modes_reason_names_the_version_independent_finding_and_a_plan_without_modes_is_none(monkeypatch):
+    """§9.5: modes_reason covers the version-independent finding only; the per-version ones are the worker's."""
+    from gear_generator import findings
+    assert motion.modes_plan(motion.MotionPlan(), {}, {}) is None
+    monkeypatch.setattr(findings, "COMPONENT_FIND_ROUTE", None, raising=False)
     reason = motion.modes_reason()
-    assert reason.startswith("A gearbox with modes is not built") and reason.endswith(".")
+    assert reason.startswith("A gearbox with modes is not built") and "COMPONENT_FIND_ROUTE" in reason
+    _, plan = plan_of(transfer_case_parallel())
+    assert plan.refusal == reason and plan.modes_plan is None
+    monkeypatch.setattr(findings, "COMPONENT_FIND_ROUTE", "by name")
+    assert motion.modes_reason() == ""
 
 
 def test_build_kwargs_passes_modes_only_when_the_plan_has_them():
@@ -242,3 +247,196 @@ def test_every_workbook_before_w8_plans_bit_for_bit_as_it_did(name, monkeypatch)
     else:
         a = planetary_tests.direct(getattr(planetary_tests, name)())
     assert planetary_tests._fingerprint(a) == BEFORE_W8[name]
+
+
+# -- the mates, the configurations' plan and the record (W8-PLAN §1.7-§1.8, §1.11; W8-INTERFACES §7, §9) ----------
+
+from gear_generator.gears.base import Mate  # noqa: E402
+from gear_generator.workbook import layout  # noqa: E402
+
+W8_MATES = [  # (name, kind, values, modes, sense), §2.3's table
+    ("RangeSlv on Rear Axis", "axis", (), (), 0),
+    ("RangeSlv along Rear", "slide", (("2H", 46.0), ("4H", 46.0), ("N", 56.0), ("4L", 66.0)), (), 0),
+    ("ModeSlv on Rear Axis", "axis", (), (), 0),
+    ("ModeSlv along Rear", "slide", (("2H", 96.0), ("4H", 106.0), ("N", 96.0), ("4L", 106.0)), (), 0),
+    ("ModeSlv splined to RangeSlv", "spline", (), (), -1),
+    ("RangeSlv engages InDog", "couple", (), ("2H", "4H"), -1),
+    ("RangeSlv engages LoDog", "couple", (), ("4L",), -1),
+    ("ModeSlv engages FrontDog", "couple", (), ("4H", "4L"), -1),
+]
+
+
+def plan_of(spec):
+    a = assessed(spec)
+    return a, gearbox.plan_gearbox(a, None, exists=lambda p: False, read_sidecar=lambda p: None)
+
+
+@pytest.mark.parametrize("make", [transfer_case_parallel, e4_transfer_case])
+def test_the_mates_w8_adds_are_the_answer_keys(make):
+    a, plan = plan_of(make())
+    assert plan.refusal == ""
+    added = [(m.name, m.kind, m.values, m.modes, m.sense) for m in plan.motion.mates
+             if m.kind in ("slide", "spline", "couple") or m.name.startswith(("RangeSlv on", "ModeSlv on"))]
+    assert added == W8_MATES
+    assert plan.motion.modes == ("2H", "4H", "N", "4L")
+    assert not any(m.name.startswith(("RangeSlv locked", "ModeSlv locked", "RangeSlv along Rear Axis"))
+                   for m in plan.motion.mates)
+    assert {m.name: m.z_front for m in plan.motion.mates if m.kind == "slide"} == {"RangeSlv along Rear": 46.0,
+                                                                                   "ModeSlv along Rear": 96.0}
+
+
+def test_a_couplings_sense_is_worked_by_hand():
+    """§9.3: about each gear's own axis a sleeve and the dog it engages turn by k = σ_S·σ_D — both on Z+ shafts
+    here, so k = +1, the same way: sense = −σ_S·σ_D = −1 and the coupling is in ``same_way``; the spline turns its
+    slider with the anchor, sense −1, so ``mate_senses`` holds it True (W6 §7.2's identity)."""
+    _, plan = plan_of(transfer_case_parallel())
+    assert set(plan.modes_plan.same_way) == {"RangeSlv engages InDog", "RangeSlv engages LoDog",
+                                             "ModeSlv engages FrontDog"}
+    assert plan.mate_senses["ModeSlv splined to RangeSlv"] is True
+    assert not any(name in plan.mate_senses for name in plan.modes_plan.same_way)     # one home per gear mate
+    spec = transfer_case_parallel()
+    flipped = replace(spec, shafts=tuple(replace(s, axis="Z-") if s.id == "Lo" else s for s in spec.shafts),
+                      gears=tuple(replace(g, at=str(-float(g.at))) if g.shaft == "Lo" else g for g in spec.gears))
+    _, refused = plan_of(flipped)
+    assert refused.refusal == (
+        "RangeSlv and LoDog face opposite ways along their shaft line, and a coupling between shafts facing opposite "
+        "ways has not been shown on SolidWorks, so it is not built: give Rear and Lo the same Axis.")
+
+
+@pytest.mark.parametrize("make", [transfer_case_parallel, e4_transfer_case])
+def test_the_configurations_plan_makes_each_coupling_where_it_is_first_on_and_sets_every_value(make):
+    a, plan = plan_of(make())
+    mp = plan.modes_plan
+    assert mp.check(plan.assembly) == [] and plan.build_kwargs()["modes"] is mp                 # §9.10
+    assert [(s.name, [o.name for o in s.ops]) for s in mp.steps] == [
+        ("2H", ["RangeSlv engages InDog"]), ("4H", ["ModeSlv engages FrontDog"]), ("N", []),
+        ("4L", ["RangeSlv engages LoDog"])]
+    assert [s.values for s in mp.steps] == [{"RangeSlv along Rear": 46.0, "ModeSlv along Rear": 96.0},
+                                            {"RangeSlv along Rear": 46.0, "ModeSlv along Rear": 106.0},
+                                            {"RangeSlv along Rear": 56.0, "ModeSlv along Rear": 96.0},
+                                            {"RangeSlv along Rear": 66.0, "ModeSlv along Rear": 106.0}]
+    assert mp.steps[2].off == ("RangeSlv engages InDog", "RangeSlv engages LoDog", "ModeSlv engages FrontDog")
+    handle = {g: h for h, g in plan.handles.items()}
+    for step, z in zip(mp.steps, (46.0, 46.0, 56.0, 66.0)):                 # the frames that reach SolidWorks
+        assert step.frames[handle["RangeSlv"]][1] == (0.0, 0.0, z)
+        assert step.frames[handle["InDog"]][1] == (0.0, 0.0, 47.0)
+    ops = [op for op in plan.assembly.ops if isinstance(op, Mate)]
+    slide = next(op for op in ops if op.name == "RangeSlv along Rear")
+    assert (slide.kind, slide.b, slide.value) == ("point distance", "layout:plane1", 46.0)
+    spline = next(op for op in ops if op.name == "ModeSlv splined to RangeSlv")
+    assert (spline.kind, spline.ratio) == ("gear", (1.0, 1.0))
+    assert not any(op.name.endswith(("InDog", "LoDog", "FrontDog")) and "engages" in op.name for op in ops)
+
+
+def test_a_slide_on_the_front_plane_is_refused():
+    """J27: RangeSlv at H with At 14 puts its front face at 0."""
+    spec = transfer_case_parallel()
+    moved = replace(spec, gears=tuple(replace(g, at="14", slides="H=-10, N=0, L=+10") if g.id == "RangeSlv" else g
+                                      for g in spec.gears))
+    _, plan = plan_of(moved)
+    assert plan.refusal == ("RangeSlv's position H puts its front face on the Front plane, from which a slide is "
+                            "measured, so it is not built: move the slide off the plane.")
+
+
+from gear_generator import swbuild  # noqa: E402
+from test_workbook_gearbox import Disk, built, stem  # noqa: E402
+
+
+def run_modes(plan, disk):
+    """What build_gearbox answers for a first build, by its pinned fields, carriers included."""
+    result = swbuild.GearboxResult()
+    for job in plan.build:
+        result.parts.built.append(built(job.path, job.spec.kind))
+        disk.add(job.path)
+    result.layout = built(plan.layout_path, "layout")
+    disk.add(plan.layout_path)
+    for item in plan.carriers:
+        result.carriers.append(built(item.path, "carrier"))
+        disk.add(item.path)
+    result.assembly = built(plan.assembly_path, "assembly")
+    disk.add(plan.assembly_path)
+    carrier_part = {h: plan.carrier_paths[c[:-len(" carrier")]] for h, c in plan.carrier_handles.items()}
+    names, counts = {layout.LAYOUT_HANDLE: stem(plan.layout_path) + "-1"}, {}
+    for handle, gear in list(plan.handles.items()) + list(plan.carrier_handles.items()):
+        part = stem(plan.part_of[gear]) if gear in plan.part_of else stem(carrier_part[handle])
+        counts[part] = counts.get(part, 0) + 1
+        names[handle] = f"{part}-{counts[part]}"
+    result.components = names
+    result.assembly.components = dict(names)
+    return result
+
+
+@pytest.mark.parametrize("make", [transfer_case_parallel, e4_transfer_case])
+def test_a_build_with_modes_records_the_modes_values_on_sets_and_frames_and_reads_them_back(make):
+    """W8-PLAN §1.11 (schema 6): the record keeps the modes as built, each SLIDE's value per mode, each coupling's
+    on-set and each component's frame per mode — real values, in the change that lets a modes gearbox through."""
+    disk = Disk()
+    a = assessed(make())
+    plan = gearbox.plan_gearbox(a, None, exists=disk.exists, read_sidecar=disk.read_sidecar)
+    assert plan.refusal == ""
+    done = gearbox.finish_build(plan, run_modes(plan, disk), None, workbook=BOOK, digest="d1", written_by="test",
+                                read_sidecar=disk.read_sidecar, exists=disk.exists, stamp="2026-11-14T00:00:00Z")
+    record = store.link_record_from_json(store.link_record_to_json(done.record))
+    box = record.gearbox
+    assert box.kind == motion.MOTION and box.modes == ["2H", "4H", "N", "4L"]
+    mates = {m.name: m for m in box.mates}
+    assert mates["RangeSlv along Rear"].values == {"2H": 46.0, "4H": 46.0, "N": 56.0, "4L": 66.0}
+    assert mates["ModeSlv along Rear"].values == {"2H": 96.0, "4H": 106.0, "N": 96.0, "4L": 106.0}
+    assert {n: m.modes for n, m in mates.items() if m.kind == COUPLE} == {
+        "RangeSlv engages InDog": ["2H", "4H"], "RangeSlv engages LoDog": ["4L"],
+        "ModeSlv engages FrontDog": ["4H", "4L"]}
+    assert {n: m.sense for n, m in mates.items() if m.kind in (COUPLE, SPLINE)} == {
+        "RangeSlv engages InDog": -1, "RangeSlv engages LoDog": -1, "ModeSlv engages FrontDog": -1,
+        "ModeSlv splined to RangeSlv": -1}
+    assert all(m.modes for m in box.mates if m.kind == COUPLE)                          # §9.1: never []
+    frames = {c.gear: c.frames for c in box.components}
+    assert [frames["RangeSlv"][m]["at"] for m in box.modes] == [[0.0, 0.0, z] for z in (46.0, 46.0, 56.0, 66.0)]
+    assert [frames["ModeSlv"][m]["at"] for m in box.modes] == [[0.0, 0.0, z] for z in (96.0, 106.0, 96.0, 106.0)]
+    assert {frames["InDog"][m]["at"][2] for m in box.modes} == {47.0}
+    first = {c.gear: c.at for c in box.components}
+    assert first["RangeSlv"] == [0.0, 0.0, 46.0]                  # the component as saved: the first mode's frame
+
+
+def test_a_build_without_modes_records_none():
+    disk = Disk()
+    a = direct(planetary_4to1())
+    plan = gearbox.plan_gearbox(a, None, exists=disk.exists, read_sidecar=disk.read_sidecar)
+    done = gearbox.finish_build(plan, run_modes(plan, disk), None, workbook=BOOK, digest="d1", written_by="test",
+                                read_sidecar=disk.read_sidecar, exists=disk.exists, stamp="2026-11-14T00:00:00Z")
+    box = done.record.gearbox
+    assert box.modes == [] and all(c.frames == {} for c in box.components)
+    assert all(m.values == {} and m.modes == [] for m in box.mates)
+
+
+@pytest.mark.parametrize("make", [transfer_case_parallel, e4_transfer_case])
+def test_the_mates_made_do_not_depend_on_row_order(make):
+    """Meshes rows, slider columns and the shafts' blocks of Gears rows reversed: the same mates, the same steps.
+    (The order of gears on one shaft picks its anchor, J9, as W5's does, so it is kept.)"""
+    spec = make()
+    _, plan = plan_of(spec)
+    blocks = list(dict.fromkeys(g.shaft for g in spec.gears))[::-1]
+    shuffled = replace(spec, gears=tuple(sorted(spec.gears, key=lambda g: blocks.index(g.shaft))),
+                       meshes=tuple(reversed(spec.meshes)), sliders=tuple(reversed(spec.sliders)),
+                       modes=tuple(replace(m, positions=tuple(reversed(m.positions))) for m in spec.modes))
+    _, again = plan_of(shuffled)
+    assert again.refusal == ""
+
+    def made(p):
+        return {(m.name, m.kind, m.gears, m.values, m.modes, m.sense) for m in p.motion.mates}
+    assert made(again) == made(plan)
+    assert [(s.name, s.values, sorted(s.on), sorted(s.off)) for s in again.modes_plan.steps] == [
+        (s.name, s.values, sorted(s.on), sorted(s.off)) for s in plan.modes_plan.steps]
+    assert [sorted(o.name for o in s.ops) for s in again.modes_plan.steps] == [
+        sorted(o.name for o in s.ops) for s in plan.modes_plan.steps]
+
+
+@pytest.mark.parametrize("make", [transfer_case_parallel, e4_transfer_case, planetary_4to1])
+def test_a_plan_has_modes_exactly_when_it_has_a_configurations_plan(make):
+    """§9.10: MotionPlan.modes is non-empty ⇔ GearboxPlan.modes_plan is set; §9.8: no Modes rows, no values."""
+    spec = make()
+    for s in (spec, replace(spec, modes=())):
+        _, plan = plan_of(s)
+        assert plan.refusal == ""
+        assert bool(plan.motion.modes) == (plan.modes_plan is not None) == bool(s.modes)
+        if not s.modes:
+            assert all(m.values == () and m.modes == () for m in plan.motion.mates)

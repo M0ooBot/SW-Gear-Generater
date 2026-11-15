@@ -998,6 +998,11 @@ def plan_gearbox(a: Assessment, record: Optional[LinkRecord], *, part_template: 
     static_reason = motion.motion_reason()
     turning: Optional[MotionPlan] = None
     senses: Dict[str, bool] = {}
+    modes_plan = None
+    if a.report.modes and a.report.modes[0].name:
+        why = motion.modes_reason()                # W8: a gearbox with modes is built to turn, never static
+        if why:
+            return GearboxPlan(revision=n, name=name, refusal=why, **empty)
     try:
         layout_item: Union[BuildPlan, LayoutReuse] = chosen.layout_reuse or layout.layout_plan(
             shafts, part_tpl, chosen.layout_path)
@@ -1009,13 +1014,21 @@ def plan_gearbox(a: Assessment, record: Optional[LinkRecord], *, part_template: 
             handle_of = {gear: handle for handle, gear in list(handles.items()) + list(carrier_handles.items())}
             assembly = motion.motion_assembly_plan(chosen.layout_path, components, handle_of, turning,
                                                    asm_tpl, chosen.assembly_path)
+            modes_plan = motion.modes_plan(turning, handle_of, layout.frames_by_mode(a.report))
+            if bool(turning.modes) != (modes_plan is not None):          # W8-INTERFACES §9.10
+                raise ValueError("The modes plan does not match the modes of the turning assembly, so it is not "
+                                 "built.")
+            if modes_plan is not None:
+                problems = modes_plan.check(assembly)
+                if problems:
+                    raise ValueError(" ".join(problems))
         carrier_items = tuple(reuse or layout.carrier_plan(carrier, part_tpl, path)
                               for carrier, path, reuse in chosen.carriers)
     except ValueError as exc:
         return GearboxPlan(revision=n, name=name, refusal=str(exc), **empty)
     fields.update(layout_path=chosen.layout_path, assembly_path=chosen.assembly_path, shafts=shafts,
                   frames=frames, layout=layout_item, assembly=assembly, handles=handles, motion=turning,
-                  static_reason=static_reason, mate_senses=senses, carriers=carrier_items,
+                  static_reason=static_reason, mate_senses=senses, carriers=carrier_items, modes_plan=modes_plan,
                   carrier_paths={carrier.shaft: path for carrier, path, _ in chosen.carriers},
                   carrier_layouts=tuple(carrier for carrier, _, _ in chosen.carriers),
                   undercut=tuple(a.report.undercut))
@@ -1025,7 +1038,7 @@ def plan_gearbox(a: Assessment, record: Optional[LinkRecord], *, part_template: 
 def mate_senses(turning: MotionPlan) -> Dict[str, bool]:
     """Each gear mate's same-sense flag for the worker's read-back: ``k > 0`` for the mesh, which is
     ``MatePlan.sense == −1`` (W6-INTERFACES §7.2, written as that identity on purpose)."""
-    return {m.name: (m.sense == -1) for m in turning.mates if m.kind == motion.MESH}
+    return {m.name: (m.sense == -1) for m in turning.mates if m.kind in (motion.MESH, motion.SPLINE) and not m.modes}
 
 
 def _journal_of(record: Optional[LinkRecord], here: str, ours: bool) -> List[PartEntry]:
@@ -1157,6 +1170,18 @@ def _merge(record: LinkRecord, entry: PartEntry) -> None:
 _KIND_WORDS = {motion.MOTION: "to turn", motion.STATIC: "static"}
 
 
+def _frames_by_mode(plan: GearboxPlan, handle: str) -> Dict[str, Dict[str, List[float]]]:
+    """W8 (schema 6): a component's frame in each mode (``ModeStep.frames``), ``{}`` with no modes."""
+    if plan.modes_plan is None:
+        return {}
+    out: Dict[str, Dict[str, List[float]]] = {}
+    for step in plan.modes_plan.steps:
+        if handle in step.frames:
+            rotation, at = step.frames[handle]
+            out[step.name] = {"rotation": [float(v) for v in rotation], "at": [float(v) for v in at]}
+    return out
+
+
 def _record_carriers(gearbox: GearboxRecord, plan: GearboxPlan, result: GearboxResult) -> None:
     """One ``CarrierEntry`` per carrier part of the plan that is on disk now — saved by this job, reused by it
     (checked live), or on record already for this revision — built or reused alike (W7-INTERFACES §6.1 (a)), so
@@ -1190,12 +1215,14 @@ def _record_kind(gearbox: GearboxRecord, plan: GearboxPlan, result: GearboxResul
     gearbox.kind = kind
     if turning is not None:
         gearbox.mates = [motion.mate_entry(m) for m in turning.mates]
+        gearbox.modes = list(turning.modes)             # W8: as built, Modes-sheet order; the first is the one saved
         gearbox.unmated = [list(pair) for pair in turning.unmated]
         gearbox.fixed = list(turning.fixed)
         gearbox.drag = list(turning.drag)
         gearbox.static_reason = ""
     else:
         gearbox.mates, gearbox.unmated, gearbox.fixed, gearbox.drag = [], [], [], []
+        gearbox.modes = []                              # a static assembly has no configurations
         gearbox.static_reason = plan.static_reason
     reported = getattr(result, "kind", "") or ""
     if reported and reported != kind:
@@ -1404,7 +1431,8 @@ def finish_build(plan: GearboxPlan, result: GearboxResult, record: Optional[Link
             gearbox.components = [
                 ComponentEntry(gear=gear, part=plan.part_of[gear], name=result.components.get(handle, ""),
                                rotation=list(plan.frames[gear].rotation), at=list(plan.frames[gear].at),
-                               of=planetary.copy_of(gear)[0] if planetary.copy_of(gear)[1] else "")
+                               of=planetary.copy_of(gear)[0] if planetary.copy_of(gear)[1] else "",
+                               frames=_frames_by_mode(plan, handle))
                 for handle, gear in plan.handles.items()]
             rec.assembly = assembly_path
             missing = [gear for handle, gear in plan.handles.items() if not result.components.get(handle)]

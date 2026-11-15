@@ -25,14 +25,14 @@ is the one rule for which gears stay fixed, shared with ``update.classify``.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Set, Tuple
 
 from .. import findings, store
 from ..gears import equations
 from ..gears.base import AddGlobal, BuildPlan, LinkDimension, Mate, Rebuild, SaveAs, Unfix
 from ..gears.spur import AXIS_NAME
-from ..swbuild import CarrierLink, LockLink, MateRef, MeshLink, ModesPlan
+from ..swbuild import CarrierLink, LockLink, MateRef, MeshLink, ModesPlan, ModeStep
 from . import layout
 from .checks import Report
 from .layout import Frame
@@ -297,12 +297,19 @@ def motion_reason() -> str:
 
 
 def modes_reason() -> str:
-    """W8 (B writes it; W8-PLAN §1.9, §4): ``""`` when every finding a build with modes needs is settled for the
-    running version, else the whole sentence refusing a gearbox with modes (a ``GearboxPlan.refusal``), naming the
-    finding — read with getattr, as :func:`motion_reason` reads its own; a missing one is refused before anything
-    is made. Until B writes it, the sentence below refuses every gearbox with modes."""
-    return ("A gearbox with modes is not built by this version of Gear Generator yet: its configurations cannot be "
-            "made.")
+    """W8 (W8-PLAN §1.9, §4; W8-INTERFACES §9.5): ``""`` when every finding a build with modes needs that does not
+    depend on the SolidWorks version is settled, else the whole sentence refusing a gearbox with modes (a
+    ``GearboxPlan.refusal``), naming the finding. The per-version findings (positions per configuration, the
+    configuration calls) are the worker's gate (``swbuild._modes_gate``), since planning cannot know which
+    SolidWorks will run. A gearbox with modes turns, so W5's own findings must be settled first."""
+    why = motion_reason()
+    if why:
+        return f"A gearbox with modes is built to turn, and {why[0].lower()}{why[1:]}"
+    route = getattr(findings, "COMPONENT_FIND_ROUTE", None)
+    if route is None:
+        return ("A gearbox with modes is not built: how a component is found again after a configuration change is "
+                "not settled by the probes for this version (findings.COMPONENT_FIND_ROUTE).")
+    return ""
 
 
 def modes_plan(motion: MotionPlan, handle_of: Mapping[str, str],
@@ -312,8 +319,39 @@ def modes_plan(motion: MotionPlan, handle_of: Mapping[str, str],
     inverted); ``frames_by_mode``: mode -> gear id -> its frame there. One step per mode in ``motion.modes`` order;
     each per-mode mate's op in the first step it is on in; every SLIDE's |z_front| per step; ``same_way`` every
     step gear mate whose ``sense == −1``. Its ``check(plan)`` is ``[]`` for both fixtures."""
-    raise ValueError("Planning an assembly's configurations is not in this version of Gear Generator yet, so a "
-                     "gearbox with modes cannot be planned.")
+    if not motion.modes:
+        return None
+    flip = getattr(findings, "GEAR_MATE_FLIP", None)
+    if flip is None:
+        raise ValueError("findings.GEAR_MATE_FLIP, which says the flip every gear mate takes, is not settled, so "
+                         "the configurations are not planned.")
+    per_mode = [m for m in motion.mates if m.modes]
+    base = [m.name for m in motion.mates if not m.modes]
+    slides = [m for m in motion.mates if m.kind == SLIDE]
+    made: Set[str] = set()
+    steps = []
+    count = 0
+    for name in motion.modes:
+        here = [m for m in per_mode if any(name.casefold() == x.casefold() for x in m.modes)]
+        ops = []
+        for m in here:
+            if m.name in made:
+                continue
+            made.add(m.name)
+            count += 1
+            a, b = (handle_of.get(g) for g in m.gears)
+            if a is None or b is None:
+                raise ValueError(f"A gear of the mate {m.name} is not in the assembly, so it cannot be made in {name}.")
+            ops.append(Mate(f"mode{count}", "gear", f"{a}:{AXIS_NAME}", f"{b}:{AXIS_NAME}",
+                            ratio=tuple(float(n) for n in m.ratio), flip=flip, name=m.name))
+        values = {m.name: abs(dict(m.values)[name]) for m in slides if m.values}
+        frames = {}
+        for gear, frame in frames_by_mode.get(name, {}).items():
+            if gear in handle_of:
+                frames[handle_of[gear]] = (tuple(frame.rotation), tuple(frame.at))
+        steps.append(ModeStep(name, tuple(ops), tuple(base + [m.name for m in here]),
+                              tuple(m.name for m in per_mode if m not in here), values, frames))
+    return ModesPlan(tuple(steps), tuple(m.name for m in per_mode if m.sense == -1))
 
 
 def update_reason() -> str:
@@ -393,8 +431,13 @@ def motion_plan(spec: GearboxSpec, report: Report, frames: Mapping[str, Frame]) 
 
     anchors: Dict[str, str] = {}
     shaft_mates: List[MatePlan] = []
+    moving = _sliders(spec, report)
     for shaft in order:
         if shaft.id in still or not on[shaft.id]:
+            continue
+        if any(g in moving for g in on[shaft.id]):
+            anchors[shaft.id], mates_here = _sliding_shaft(shaft.id, on[shaft.id], placed, frames, report)
+            shaft_mates.extend(mates_here)
             continue
         anchor = on[shaft.id][0]
         if anchor not in frames:
@@ -426,6 +469,8 @@ def motion_plan(spec: GearboxSpec, report: Report, frames: Mapping[str, Frame]) 
         a, b = placed.get(mesh.a), placed.get(mesh.b)
         if a is None or b is None or mesh.a in fixed or mesh.b in fixed or a.shaft == b.shaft:
             continue
+        if mesh.a in moving or mesh.b in moving:
+            continue                               # W8: a sliding mesh is on per mode (_with_modes)
         if root(a.shaft) == root(b.shaft):
             unmated.append((mesh.a, mesh.b))
             continue
@@ -445,9 +490,151 @@ def motion_plan(spec: GearboxSpec, report: Report, frames: Mapping[str, Frame]) 
         members = [s for s in order if s.id in joined and root(s.id) == root(shaft.id)]
         trains.append(tuple(s.id for s in members if s.role == "input")
                       + tuple(s.id for s in members if s.role != "input"))
-    drag = tuple(anchors[train[0]] for train in trains)
-    return MotionPlan(anchors=anchors, mates=tuple(shaft_mates + meshes), fixed=fixed, unmated=tuple(unmated),
-                      trains=tuple(trains), drag=drag)
+    drag = tuple(anchors[train[0]] for train in trains if train[0] in anchors)
+    return _with_modes(spec, report, MotionPlan(anchors=anchors, mates=tuple(shaft_mates + meshes), fixed=fixed,
+                                                unmated=tuple(unmated), trains=tuple(trains), drag=drag))
+
+
+# -- W8: sliders, couplings and modes (W8-PLAN §1.7; W8-INTERFACES §4, §9) -------------------------------------------
+
+SLIDE_TOLERANCE = 1e-9          # mm: a slide this near the Front plane is on it (layout.BASE_TOLERANCE)
+
+
+def _sliders(spec: GearboxSpec, report: Report) -> Set[str]:
+    """The gears that slide (with Slides), when the report worked out modes; none otherwise."""
+    if not report.modes:
+        return set()
+    return {g.id for g in spec.gears if g.slides.strip() and g.id in report.layout.placed}
+
+
+def _slide_values(report: Report, slider: str) -> Tuple[Tuple[str, float], ...]:
+    """A SLIDE's signed z_front per mode, Modes-sheet order (§9.8: () with no Modes rows); J27 refused here: every
+    value non-zero and of one sign, else the gearbox is not built, with W5's answer 3's reason."""
+    values = []
+    for m in report.modes:
+        p = m.placed.get(slider) or report.layout.placed[slider]
+        z = float(p.origin[2])
+        if abs(z) < SLIDE_TOLERANCE:
+            position = m.positions.get(slider, ("", 0.0))[0]
+            raise ValueError(f"{slider}'s position {position} puts its front face on the Front plane, from which a "
+                             "slide is measured, so it is not built: move the slide off the plane.")
+        values.append((m.name, z))
+    if len({v > 0 for _, v in values}) > 1:
+        raise ValueError(f"{slider}'s positions put its front face on both sides of the Front plane, from which a "
+                         "slide is measured, so it is not built: keep every position on one side of the plane.")
+    return tuple(values) if report.modes[0].name else ()
+
+
+def _sliding_shaft(shaft: str, on: Sequence[str], placed, frames: Mapping[str, Frame],
+                   report: Report) -> Tuple[str, List[MatePlan]]:
+    """A shaft with sliders (J9): its anchor is its first gear that does not slide, mated as W5 mates it (AXIS,
+    ALONG), the others locked to it; with none, its first slider is a sliding anchor (AXIS and its SLIDE, no ALONG).
+    Every other slider gets AXIS, its SLIDE and a SPLINE to the anchor (never a lock: a lock holds it along the shaft
+    too). A SLIDE carries its signed z_front per mode (``values``), ``z_front`` the first mode's."""
+    moving = {g for g in on if report.layout.placed[g].spec is not None and _is_slider(report, g)}
+    still_gears = [g for g in on if g not in moving]
+    anchor = still_gears[0] if still_gears else on[0]
+    if anchor not in frames:
+        raise ValueError(f"{anchor} is placed but has no frame, so it cannot be mated to {shaft}.")
+    out: List[MatePlan] = []
+
+    def slide(gear: str) -> MatePlan:
+        values = _slide_values(report, gear)
+        first = values[0][1] if values else float(frames[gear].at[2])
+        return MatePlan(mate_name(SLIDE, (gear,), shaft), SLIDE, (gear,), shaft, z_front=first, plane=FRONT_PLANE,
+                        values=values)
+    out.append(MatePlan(mate_name(AXIS, (anchor,), shaft), AXIS, (anchor,), shaft))
+    if anchor in moving:
+        out.append(slide(anchor))
+    else:
+        z_front = float(frames[anchor].at[2])
+        out.append(MatePlan(mate_name(ALONG, (anchor,), shaft), ALONG, (anchor,), shaft,
+                            face_global=(face_global(anchor) if abs(z_front) >= layout.BASE_TOLERANCE else ""),
+                            z_front=z_front, plane=FRONT_PLANE))
+    for gear in on:
+        if gear == anchor:
+            continue
+        if gear in moving:
+            out.append(MatePlan(mate_name(AXIS, (gear,), shaft), AXIS, (gear,), shaft))
+            out.append(slide(gear))
+            out.append(MatePlan(mate_name(SPLINE, (anchor, gear)), SPLINE, (anchor, gear), ratio=(1, 1), sense=-1))
+        else:
+            out.append(MatePlan(mate_name(LOCK, (anchor, gear)), LOCK, (anchor, gear)))
+    return anchor, out
+
+
+def _is_slider(report: Report, gear: str) -> bool:
+    return any(gear in m.positions for m in report.modes)
+
+
+def _with_modes(spec: GearboxSpec, report: Report, plan: MotionPlan) -> MotionPlan:
+    """The per-mode mates (J15): per mode, the always-on joins first (the plan's gear mates and every shaft's own
+    mates), then that mode's sliding meshes, then its couplings, each in Meshes-sheet / dog order; one that joins two
+    bodies already joined there is left off in that mode. A COUPLE carries the modes it is on in (§9.1: a per-mode
+    mate is never on in none: one on in no mode is not made) and ``sense = −σ_S·σ_D`` (§9.3; a coupling between
+    shafts facing opposite ways is refused until one has been shown on SolidWorks). ``modes`` the Modes-sheet names
+    (() for the implicit mode); ``drag_by_mode`` the first mode's drag in each."""
+    if not report.modes:
+        return plan
+    placed = report.layout.placed
+    names = tuple(m.name for m in report.modes if m.name)
+    moving = _sliders(spec, report)
+    body = {g: p.shaft for g, p in placed.items()}
+    fixed = set(plan.fixed)
+    base_joins = [(body[m.gears[0]], body[m.gears[1]]) for m in plan.mates if m.kind == MESH]
+    sliding = [(m.a, m.b) for m in spec.meshes if (m.a in moving or m.b in moving) and m.a in placed and m.b in placed
+               and not (m.a in fixed and m.b in fixed)]
+    couples: List[Tuple[str, str]] = []
+    for m in report.modes:
+        couples += [pair for pair in m.engaged if pair not in couples]
+    order = [g.id for g in spec.gears]
+    couples.sort(key=lambda pair: order.index(pair[1]))
+    on_in: Dict[Tuple[str, str], List[str]] = {}
+    for m in report.modes:
+        parent: Dict[str, str] = {}
+
+        def root(x: str) -> str:
+            while parent.setdefault(x, x) != x:
+                parent[x] = parent[parent[x]]
+                x = parent[x]
+            return x
+        for x, y in base_joins:
+            parent[root(x)] = root(y)
+        for pair in sliding:
+            if pair in m.out_of_mesh:
+                continue
+            x, y = body[pair[0]], body[pair[1]]
+            if root(x) != root(y):
+                parent[root(x)] = root(y)
+                on_in.setdefault(pair, []).append(m.name)
+        for pair in couples:
+            if pair not in m.engaged:
+                continue
+            x, y = body[pair[0]], body[pair[1]]
+            if root(x) != root(y):
+                parent[root(x)] = root(y)
+                on_in.setdefault(pair, []).append(m.name)
+    extra: List[MatePlan] = []
+    for a, b in sliding:
+        if (a, b) not in on_in:
+            continue
+        pa, pb = placed[a], placed[b]
+        laid = report.meshes.get((a, b))
+        extra.append(MatePlan(mate_name(MESH, (a, b)), MESH, (a, b), ratio=(int(pa.teeth), int(pb.teeth)),
+                              sense=laid.sense if laid is not None else _parallel_sense_of(pa, pb),
+                              modes=tuple(on_in[(a, b)]) if names else ()))
+    for sleeve, dog in couples:
+        if (sleeve, dog) not in on_in:
+            continue
+        sigma_s, sigma_d = placed[sleeve].sigma, placed[dog].sigma
+        if sigma_s != sigma_d:
+            raise ValueError(f"{sleeve} and {dog} face opposite ways along their shaft line, and a coupling between "
+                             "shafts facing opposite ways has not been shown on SolidWorks, so it is not built: give "
+                             f"{body[sleeve]} and {body[dog]} the same Axis.")
+        extra.append(MatePlan(mate_name(COUPLE, (sleeve, dog)), COUPLE, (sleeve, dog), ratio=(1, 1),
+                              sense=-sigma_s * sigma_d, modes=tuple(on_in[(sleeve, dog)]) if names else ()))
+    return replace(plan, mates=plan.mates + tuple(extra), modes=names,
+                   drag_by_mode={n: plan.drag for n in names})
 
 
 def _rank_add(basis: List[Tuple[int, List[Fraction]]], row: List[Fraction]) -> bool:
@@ -486,6 +673,7 @@ def _planetary_plan(spec: GearboxSpec, report: Report, frames: Mapping[str, Fram
     order = [s for s in spec.shafts if s.id]
     still = still_shafts(spec, report)
     carriers = planetary.carriers(spec)
+    moving = _sliders(spec, report)
     held_carriers = [c for c in carriers if c in still]
     gears = [p.gear for p in placed.values()]             # gears and copies, Gears-sheet then copy order
     fixed = tuple(g for g in gears if placed[g].shaft in still) + tuple(layout.carrier_id(c) for c in held_carriers)
@@ -512,6 +700,10 @@ def _planetary_plan(spec: GearboxSpec, report: Report, frames: Mapping[str, Fram
         for body in bodies:
             on = [g for g in gears if placed[g].shaft == body]
             if body in still or not on:
+                continue
+            if any(g in moving for g in on):
+                anchors[body], mates_here = _sliding_shaft(body, on, placed, frames, report)
+                shaft_mates.extend(mates_here)
                 continue
             anchor = on[0]
             if anchor not in frames:
@@ -558,6 +750,8 @@ def _planetary_plan(spec: GearboxSpec, report: Report, frames: Mapping[str, Fram
         a, b = placed[a_id], placed[b_id]
         if (a_id in held_gears and b_id in held_gears) or a.shaft == b.shaft:
             continue
+        if a_id in moving or b_id in moving:
+            continue                               # W8: a sliding mesh is on per mode (_with_modes)
         laid = report.meshes.get((a.row or a_id, b.row or b_id))
         sense = laid.sense if laid is not None else _parallel_sense_of(a, b)
         carrier = a.carrier or b.carrier
@@ -612,9 +806,9 @@ def _planetary_plan(spec: GearboxSpec, report: Report, frames: Mapping[str, Fram
         trains.append(tuple(b for b in members if role.get(b) == "input")
                       + tuple(b for b in members if role.get(b) != "input"))
     drag = tuple(next((anchors[b] for b in train if b in anchors), "") for train in trains)
-    return MotionPlan(anchors=anchors, mates=tuple(shaft_mates + meshes), fixed=fixed, unmated=tuple(unmated),
-                      trains=tuple(trains), drag=drag,
-                      carriers=tuple(layout.carrier_id(c) for c in carriers if c not in still))
+    return _with_modes(spec, report, MotionPlan(
+        anchors=anchors, mates=tuple(shaft_mates + meshes), fixed=fixed, unmated=tuple(unmated),
+        trains=tuple(trains), drag=drag, carriers=tuple(layout.carrier_id(c) for c in carriers if c not in still)))
 
 
 def geometry_expand(spec: GearboxSpec, placed) -> Tuple[Tuple[str, str], ...]:
@@ -673,9 +867,11 @@ def motion_assembly_plan(layout_path: str, components: Sequence[Tuple[str, str, 
     globals_: List[Any] = []
     mates: List[Any] = []
     gear_mates: List[Any] = []
-    count = {AXIS: 0, ALONG: 0, LOCK: 0, MESH: 0}
+    count = {AXIS: 0, ALONG: 0, LOCK: 0, MESH: 0, SLIDE: 0, SPLINE: 0}
     lead = layout.LAYOUT_HANDLE
     for mate in motion.mates:
+        if mate.modes:
+            continue                               # W8: a per-mode mate is made in its mode's step (modes_plan)
         if mate.kind not in count:
             raise ValueError(f"{mate.kind!r} is not a kind of mate the turning assembly makes, so the mate "
                              f"{mate.name} is not planned.")
@@ -699,6 +895,16 @@ def motion_assembly_plan(layout_path: str, components: Sequence[Tuple[str, str, 
                 mates.append(LinkDimension(f"D1@{mate.name}", equations.quote(mate.face_global)))
             else:
                 mates.append(Mate(ident, "point", f"{h}:origin", plane, name=mate.name))
+        elif mate.kind == SLIDE:
+            # W8 (J7): one distance mate per slider at its first mode's z_front, linked to no global; its value is
+            # set per configuration by the worker (ModeStep.values).
+            h = handle(mate.gears[0], mate)
+            mates.append(Mate(ident, "point distance", f"{h}:origin", f"{lead}:plane{_PLANE_REF[mate.plane]}",
+                              mate.z_front, name=mate.name))
+        elif mate.kind == SPLINE:
+            a, b = handle(mate.gears[0], mate), handle(mate.gears[1], mate)
+            gear_mates.append(Mate(ident, "gear", f"{a}:{AXIS_NAME}", f"{b}:{AXIS_NAME}", ratio=(1.0, 1.0), flip=flip,
+                                   name=mate.name))
         elif mate.kind == LOCK:
             a, b = handle(mate.gears[0], mate), handle(mate.gears[1], mate)
             mates.append(Unfix(b))
