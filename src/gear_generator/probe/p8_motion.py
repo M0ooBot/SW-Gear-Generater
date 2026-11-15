@@ -7105,6 +7105,19 @@ def _show(px: Px, doc: Any, name: str, pid: int, paths: Sequence[str]) -> Dict[s
     return out
 
 
+def _w8_select(px: Px, doc: Any, feature: str, component: str, kind: str, append: bool) -> bool:
+    """SelectByID2 "<feature>@<component>@<assembly>" by names held from before any configuration change (a handle
+    fetched again after one answered Name2 with ""); judged by the selection count."""
+    asm = os.path.splitext(str(call(doc, "GetTitle")))[0]
+    if not append:
+        call(doc, "ClearSelection2", True)
+    before = sc.selected_count(doc)
+    px.attempt(f"SelectByID2 {feature}@{component} {kind}",
+               lambda: call(sc.extension(doc), "SelectByID2", f"{feature}@{component}@{asm}", kind, 0.0, 0.0, 0.0,
+                            append, 1, sc.null(), 0))
+    return sc.selected_count(doc) > before
+
+
 def _w8_flags(px: Px, doc: Any, paths: Sequence[str]) -> Dict[str, Optional[bool]]:
     """Every document's GetSaveFlag: the parts and layout by path, the assembly through its own document."""
     out = _all_flags(px, paths)
@@ -7127,6 +7140,8 @@ def _w8_refresh(px: Px, doc: Any, comps: Dict[str, Any], names: Mapping[str, str
         comps[k] = call(doc, "GetComponentByName", n)
     fresh = call(doc, "GetComponentByName", layout_name)
     out["new_model_doc_none"] = {}
+    out["new_name2"] = {k: px.attempt(f"Name2 of the fresh {k}", lambda c=c: str(call(c, "Name2")))[1]
+                        for k, c in dict(comps, layout=fresh).items() if c is not None}
     for k, c in dict(comps, layout=fresh).items():
         out["new_is_fixed"][k] = bool(call(c, "IsFixed")) if c is not None else None
         got, md = px.attempt(f"GetModelDoc2 of the fresh {k}", lambda c=c: call(c, "GetModelDoc2"))
@@ -7141,9 +7156,15 @@ def _w8_drive(px: Px, doc: Any, comps: Mapping[str, Any], layout: Any, label: st
     about its own axis; S's origin along the axis; set back; the drive taken away."""
     add = adder(px, call(doc, "GetEquationMgr"))
     px.require(add(f'"{W8_DRIVE}"= {DEMO_FROM:g}') >= 0, f"{W8_DRIVE} is added")
-    drive = drive_mate(px, doc, comps["A"], _W8["gear"], layout, _W8["layout"], f"A {label}", add,
-                       _enums(px)["closest"], angle=DEMO_FROM, global_name=W8_DRIVE)
-    px.require(bool(drive), f"A {label} is driven")
+    px.require(_w8_select(px, doc, _W8["gear"], _W8["names"]["A"], "PLANE", False) and
+               _w8_select(px, doc, _W8["layout"], _W8["layout_name"], "PLANE", True), f"A {label}: the planes select")
+    made = add_mate(px, doc, f"A {label}: drive angle", _enums(px)["angle"], _enums(px)["closest"], angle=DEMO_FROM)
+    px.require(bool(made.get("name")), f"A {label}: the drive is made: {made}")
+    drive = _rename(px, mate_feature(doc, made["name"]), f"{W8_DRIVE} A {label}")
+    match = [d for d in sc.dimensions_of(mate_feature(doc, drive))
+             if abs(float(call(d, "SystemValue")) - math.radians(DEMO_FROM)) < 1e-9]
+    px.require(len(match) == 1 and add(f'"{call(match[0], "Name")}@{drive}"= "{W8_DRIVE}"') >= 0,
+               f"A {label}: the drive's dimension is linked")
     rebuild(px, doc, f"{label}: drive added", top_only=TOP_ONLY)
     start = _frames(comps)
     _set_global(call(doc, "GetEquationMgr"), W8_DRIVE, DEMO_FROM + 30.0)
@@ -7255,17 +7276,15 @@ def _w8_run(px: Px, facts: Dict[str, Any]) -> None:
                             "flags": _w8_flags(px, doc, paths)}
         keys = asm.names()
         layout_name = str(call(layout, "Name2"))
-        from .p4_nonparallel import select_origin  # noqa: PLC0415
+        from .p4_nonparallel import origin_name  # noqa: PLC0415
         from .p7_workbook import _doc_at  # noqa: PLC0415
         _W8.clear()
         _W8.update(gear=_plane_names(comps["A"])[1], layout=_plane_names(layout)[2], front=_plane_names(layout)[0],
-                   sleeve=_doc_at(px, sleeve_path))
-        px.require(_W8["sleeve"] is not None, "the sleeve's part is open")
+                   origin=origin_name(_doc_at(px, sleeve_path)), names=dict(keys), layout_name=layout_name)
 
         def s_origin_and_front() -> bool:
-            return bool(px.attempt("select S's origin", lambda: select_origin(px, doc, comps["S"], _W8["sleeve"],
-                                                                              False))[0]) and \
-                bool(select_in(px, doc, layout, _W8["front"], "PLANE", True))
+            return _w8_select(px, doc, f"Point1@{_W8['origin']}", keys["S"], "EXTSKETCHPOINT", False) and \
+                _w8_select(px, doc, _W8["front"], layout_name, "PLANE", True)
 
         # 1-3: the spline S–A, both Flips, each driven.
         spline: Dict[str, Any] = {}
