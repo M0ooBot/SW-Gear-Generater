@@ -430,7 +430,7 @@ def test_the_demonstration_edit_is_summed_up_and_update_carries_it_unsaved(desk,
                                    f"{NAME}_Layout, and re-place G2, G3 and G4. It was built static, before gears could "
                                    "be mated to turn: Build again… makes a new revision whose gears turn.")
     assert window.read_line.get().endswith(" · changed since it was built")
-    assert gear_states(window)["G2"] == "built · changes on Update" and gear_states(window)["G1"] == "built"
+    assert gear_states(window)["G2"] == "changes on Update" and gear_states(window)["G1"] == "built"
     assert window.update_button._enabled and window.update_button._primary
 
     window.press_update()
@@ -1093,7 +1093,7 @@ def test_the_demonstrations_structural_step_with_update_unsaved_asks_for_the_sav
     assert window.read_line.get().endswith(" · changed since it was built")
     # The table agrees with the footer (the W4 rerun on SolidWorks 2026, state 06: G2 read "built" while the footer
     # made its part new): G1 needs a new part, G2's part is made new by the build, G3 and G4 are reused as built.
-    assert gear_states(window) == {"G1": "needs a new part", "G2": "built · new part on Build", "G3": "built",
+    assert gear_states(window) == {"G1": "needs a new part", "G2": "new part on Build", "G3": "built",
                                    "G4": "built"}
 
 
@@ -1762,8 +1762,8 @@ def test_the_structural_step_with_update_unsaved_on_a_turning_gearbox_asks_for_t
     assert text.count("save them") == 1 and text.lower().count("build again") == 1
     footer = window.footer()
     assert footer.ok and footer.build_enabled and footer.update_enabled
-    assert gear_states(window) == {"G1": "needs a new part", "G2": "built", "G3": "built · new part on Build",
-                                   "G4": "built · new part on Build"}
+    assert gear_states(window) == {"G1": "needs a new part", "G2": "built", "G3": "new part on Build",
+                                   "G4": "new part on Build"}
 
 
 # -- W6: turned axes, bevel and crossed meshes ----------------------------------------------------------------------
@@ -2257,17 +2257,26 @@ def shifted(spec, dx, dy):
         for s in spec.shafts))
 
 
+def chooser_cells(window):
+    """The mode chooser's segments as drawn, row by row and left to right: (cell, its label)."""
+    out = []
+    for segmented in window.mode_choosers:
+        cells = sorted(segmented.winfo_children(), key=lambda c: int(c.grid_info()["column"]))
+        out += [(c, c.winfo_children()[0]) for c in cells]
+    return out
+
+
 def chooser(window):
-    """The Speeds panel's mode chooser as drawn: each segment's text, left to right, and which is chosen."""
-    if window.mode_chooser is None:
+    """The Speeds panel's mode chooser as drawn: each segment's text, in order, and which is chosen."""
+    if not window.mode_choosers:
         return [], ""
-    cells = sorted(window.mode_chooser.winfo_children(), key=lambda c: int(c.grid_info()["column"]))
-    return [c.winfo_children()[0].cget("text") for c in cells], window.mode.get()
+    return [label.cget("text") for _, label in chooser_cells(window)], window.mode.get()
 
 
 def choose_mode(window, name):
     """A click on the segment ``name`` (the Segmented's own handler, as its <Button-1> binding calls it)."""
-    window.mode_chooser._choose(name)  # noqa: SLF001 - the binding's target; the window is withdrawn
+    owner = next(s for s in window.mode_choosers if name in s._values)  # noqa: SLF001 - the binding's target
+    owner._choose(name)  # noqa: SLF001 - the window is withdrawn, so no click reaches it
 
 
 def colours_of(window, gear):
@@ -2326,8 +2335,9 @@ def test_a_gearbox_with_modes_has_a_mode_chooser_and_the_speeds_panel_shows_the_
     window = desk.open(transfer_case_parallel(), name="TransferCase_Parallel.xlsx")
     assert window.footer().ok and window.footer().build_label == "Build"
     assert window.counts.get() == "7 shafts · 12 gears · 4 meshes · 4 modes"
-    assert window.box_values["type"].cget("text") == ("Parallel train with modes · 4 meshes · 2H 1.000 : 1, 4H "
-                                                       "1.000 : 1, N neutral, 4L 4.000 : 1")
+    nb = "\u00a0"                                   # B's no-break spaces hold each mode's ratio together
+    assert window.box_values["type"].cget("text") == (f"Parallel train with modes · 4 meshes · 2H{nb}1.000{nb}:{nb}1, "
+                                                       f"4H{nb}1.000{nb}:{nb}1, N{nb}neutral, 4L{nb}4.000{nb}:{nb}1")
     assert chooser(window) == (["2H", "4H", "N", "4L"], "2H")
     only_here = "The mode chosen here changes only what this window shows."     # nothing built yet
     assert speed_lines(window) == PARALLEL_SPEEDS["2H"] + [only_here] and window.speeds_readout.get() == "seen from +Z"
@@ -2344,7 +2354,58 @@ def test_a_gearbox_with_modes_has_a_mode_chooser_and_the_speeds_panel_shows_the_
 
 def test_a_gearbox_with_no_modes_has_no_chooser(desk):
     window = desk.open()
-    assert chooser(window) == ([], "") and window.mode_chooser is None
+    assert chooser(window) == ([], "") and window.mode_choosers == []
+
+
+def with_modes(spec, names, extra=()):
+    """``spec`` (a transfer case) with its four modes renamed ``names`` and ``extra`` modes ((name, range, mode))
+    after them, in Modes-sheet order."""
+    from gear_generator.workbook.model import Mode
+    modes = [model.replace(m, name=n) for m, n in zip(spec.modes, names)]
+    row = len(modes) + 2
+    for name, rng, drive in extra:
+        modes.append(Mode(name, (("RangeSlv", rng), ("ModeSlv", drive)), "", row=row))
+        row += 1
+    return model.replace(spec, modes=tuple(modes))
+
+
+def six_modes():
+    from workbook_fixtures import transfer_case_parallel
+    return with_modes(transfer_case_parallel(), ("HighRange2WD", "HighRange4WD", "Neutral", "LowRange4WD"),
+                      (("Neutral4WD", "N", "4WD"), ("LowRange2WD", "L", "2WD")))
+
+
+@pytest.mark.parametrize("make", ["reducer", "parallel", "e4", "long_names", "six"])
+def test_the_window_keeps_its_width_with_modes_and_every_mode_name_shows_whole(desk, make):
+    """W8 review: "Worked out as" names every mode's ratio and wraps in its cell; the Gears table keeps within its
+    column; the chooser sizes each segment to the longest name and, when they would not fit the header, goes in
+    rows at the Speeds panel's top. So the window keeps its 1080 px, and no segment's name is wider than its cell."""
+    from gear_generator import workbook_gui
+    from gear_generator.theme import px
+    from workbook_fixtures import e4_transfer_case, transfer_case_parallel
+    spec = {"reducer": reducer, "parallel": transfer_case_parallel, "e4": e4_transfer_case,
+            "long_names": lambda: with_modes(transfer_case_parallel(), ("Road", "AllWheel", "Towing", "CrawlLow")),
+            "six": six_modes}[make]()
+    window = desk.open(spec, name="Box.xlsx")
+    assert window.footer().ok, window.status.get()
+    for segmented in window.mode_choosers:          # each segment's share of its row, less the 2 px between
+        share = int(segmented.cget("width")) / len(segmented._values) - px(2)  # noqa: SLF001 - its names
+        for name in segmented._values:  # noqa: SLF001
+            assert window.fonts.mono_bold.measure(name) <= share, name          # chosen: bold, the widest
+    assert width_and_height(window)[0] == px(workbook_gui.WINDOW_WIDTH)
+    assert window.winfo_reqwidth() <= px(workbook_gui.WINDOW_WIDTH)
+    names = [m.name for m in spec.modes]
+    assert chooser(window) == (names, names[0] if names else "")
+
+
+def test_a_mode_renamed_only_in_case_keeps_its_choice(desk):
+    """Mode names compare ignoring case (J6, W8-INTERFACES §9.6): 4L saved as 4l is the same mode, still chosen."""
+    from workbook_fixtures import transfer_case_parallel
+    window = desk.open(transfer_case_parallel(), name="TransferCase_Parallel.xlsx")
+    choose_mode(window, "4L")
+    save_in_excel(window, {"Modes": {"A5": "4l"}})
+    assert chooser(window) == (["2H", "4H", "N", "4l"], "4l")
+    assert speed_lines(window)[0] == "4l: Rear 375\u00a0rpm · Front 375\u00a0rpm · 4.000 : 1"
 
 
 def test_the_end_view_stands_each_sleeve_on_the_face_of_the_dog_its_mode_engages(desk):
@@ -2428,9 +2489,11 @@ def test_a_quiet_update_and_a_modes_pick_changed_update_a_gearbox_with_modes(des
     desk.finish(window)
     window.press_update()
     desk.finish(window)
-    assert window.status.get() == ("SolidWorks already matches the workbook: nothing was changed. It worked in 2H, the "
-                                   "configuration that was active; it did not show the other modes, since nothing "
-                                   "needed changing.")
+    assert window.status.get() == (
+        "SolidWorks already matches the workbook: nothing was changed. It worked in 2H, the configuration that was "
+        "active; it did not show the other modes, since nothing needed changing. Which way RangeSlv and LoDog, and "
+        "ModeSlv and FrontDog, turn against each other was not checked this time: their mates are switched off in 2H, "
+        "the mode SolidWorks is showing, and are checked when an Update works in a mode that has them on.")
     save_in_excel(window, {"Modes": {"C3": "2WD"}})
     footer = window.footer()
     assert (footer.build_label, footer.update_enabled, footer.update_primary) == ("Build again…", True, True)

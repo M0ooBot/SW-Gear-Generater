@@ -102,7 +102,14 @@ from .workbook import fixes as wb_fixes, gearbox as wb_gearbox, geometry as wb_g
 from .workbook import model as wb_model
 from .workbook import update as wb_update, xlsx
 
-MODE_SEGMENT = 44            # W8: each mode's segment in the Speeds panel's chooser, px at 100 %
+# W8: the Speeds panel's mode chooser (design/UI-DESIGN.md §9, *Modes*). Every segment as wide as the longest name
+# needs (MODE_CHAR px a character of the chosen segment's bold mono, MODE_PAD either side, MODE_SEGMENT at least);
+# in the header when they all fit in MODE_HEADER_ROOM px, else in rows at the top of the panel, each no wider than
+# the end view, so every name shows whole and the window keeps its width.
+MODE_SEGMENT = 32
+MODE_CHAR = 8
+MODE_PAD = 8
+MODE_HEADER_ROOM = 200
 WINDOW_WIDTH = 1080          # two columns: the workbook and its checks, and the end view and speeds (W3)
 LEFT_WIDTH = 610
 END_VIEW = (392, 300)        # the end view's canvas, px
@@ -139,6 +146,55 @@ def clock_text() -> str:
 def ask_yes_no(parent: tk.Misc, title: str, question: str) -> bool:
     """A yes/no question whose answer defaults to No (tests replace this)."""
     return bool(messagebox.askyesno(title, question, parent=parent, default=messagebox.NO, icon=messagebox.QUESTION))
+
+
+def mode_segment_width(names) -> int:
+    """Each segment of the mode chooser, px at 100 %: wide enough for the longest name, chosen (bold)."""
+    return max([MODE_SEGMENT] + [MODE_CHAR * len(n) + 2 * MODE_PAD for n in names])
+
+
+def mode_chooser_rows(names) -> Tuple[bool, List[Tuple[str, ...]]]:
+    """Where the mode chooser goes and how it breaks: ``(in the header, rows of names)``. In the header, one row,
+    when every segment fits in :data:`MODE_HEADER_ROOM`; else rows at the top of the Speeds panel, as many names a
+    row as fit in the end view's width. ``(False, [])`` with no names."""
+    names = tuple(names)
+    if not names:
+        return False, []
+    seg = mode_segment_width(names)
+    if seg * len(names) <= MODE_HEADER_ROOM:
+        return True, [names]
+    per = max(1, END_VIEW[0] // seg)
+    return False, [names[i:i + per] for i in range(0, len(names), per)]
+
+
+def chosen_mode(report, name: str):
+    """The ``checks.ModeReport`` the Speeds panel and end view show: the one named ``name`` (names compared as
+    everywhere, ``swbuild.on_in``), else the first; None for a gearbox with no modes. The window's and the
+    boards' one home."""
+    modes = getattr(report, "modes", ()) if report is not None else ()
+    if not modes:
+        return None
+    return next((m for m in modes if m.name and swbuild.on_in((m.name,), name or "")), modes[0])
+
+
+def mode_placed(report, mode) -> Dict[str, Any]:
+    """Every gear where the end view draws it at ``mode``: the layout, each slider where that mode puts it."""
+    return {**report.layout.placed, **(mode.placed if mode is not None else {})}
+
+
+def speeds_panel(spec, report, mode, *, chooser: bool, record=None) -> Tuple[List[str], str, Any, set]:
+    """The Speeds panel's lines, readout, the motion they read and which lines are prose: the chosen mode's
+    (``ui_text.mode_speed_lines``) or the gearbox's, then, while the chooser shows, C's note that it changes only
+    the window. The window's and the boards' one home."""
+    if mode is not None:
+        lines, readout = ui_text.mode_speed_lines(spec, report, mode.name)
+        motion = mode.motion
+    else:
+        lines, readout = ui_text.workbook_speed_lines(spec, report.motion)
+        motion = report.motion
+    if chooser:
+        lines = lines + [ui_text.mode_chooser_note(record)]
+    return lines, readout, motion, ui_text.speeds_prose_rows(motion, lines, mode=mode is not None, chooser=chooser)
 
 
 def _update_gate(a: wb_assess.Assessment, record: store.LinkRecord) -> str:
@@ -249,7 +305,7 @@ class WorkbookWindow(tk.Toplevel):
         # header; kept across re-reads while a mode of that name is there. And the running SolidWorks' answer on
         # positions per configuration as the last job's result carried it (None after a restart: W8-INTERFACES §9.12).
         self.mode = tk.StringVar(value="")
-        self.mode_chooser: Optional[widgets.Segmented] = None
+        self.mode_choosers: List[widgets.Segmented] = []     # one in the header, or one per row in the panel
         self._mode_names: Tuple[str, ...] = ()
         self.positions_per_configuration: Optional[bool] = None
 
@@ -313,8 +369,13 @@ class WorkbookWindow(tk.Toplevel):
         self.canvas.grid(row=0, column=0)
         speeds = widgets.Panel(right, "Speeds", self.speeds_readout)
         speeds.grid(row=1, column=0, sticky="ew")
-        self.speeds_body = speeds.body
-        self._mode_slot = speeds.header_slot()         # W8: the mode chooser, when the workbook has modes
+        speeds.body.columnconfigure(0, weight=1)
+        self._mode_slot = speeds.header_slot()         # W8: the mode chooser, when the workbook has modes and it fits
+        self._mode_rows = tk.Frame(speeds.body, bg=theme.WHITE)     # … or here, in rows, when it does not
+        self._mode_rows.grid(row=0, column=0, sticky="w")
+        self._mode_rows.grid_remove()
+        self.speeds_body = tk.Frame(speeds.body, bg=theme.WHITE)
+        self.speeds_body.grid(row=1, column=0, sticky="ew")
         self.speeds_body.columnconfigure(0, weight=1)
 
         box = widgets.Panel(body, "Workbook", self.counts)
@@ -333,6 +394,10 @@ class WorkbookWindow(tk.Toplevel):
             if key == "folder":
                 self.folder_hint = tk.Label(cell, text="", bg=theme.WHITE, fg=theme.MUTED, font=f.hint)
                 self.folder_hint.pack(side="left", padx=(px(10), 0))
+        # "Worked out as" wraps in the room its column leaves (W8: a gearbox with modes names every mode's ratio),
+        # as the footer and the Speeds lines wrap, so the window keeps its width.
+        labels = max(f.label.measure(t) for t in ("File", "Name", "Output folder", "Worked out as")) + px(24)
+        self.box_values["type"].configure(justify="left", wraplength=px(LEFT_WIDTH - 2 * 12 - 2) - labels)
 
         gears = widgets.Panel(body, "Gears", self.parts_readout)
         gears.grid(row=2, column=0, sticky="ew", pady=(0, px(8)))
@@ -383,7 +448,11 @@ class WorkbookWindow(tk.Toplevel):
             pads = child.grid_info().get("padx", 0)
             pads = pads if isinstance(pads, (tuple, list)) else str(pads).split()
             used += child.winfo_reqwidth() + sum(int(float(p)) for p in pads)
-        room = px(WINDOW_WIDTH) - 2 * px(BODY_PAD) - used - px(2)     # the body's padding either side
+        # The label's own padding and border sit outside its wraplength (W8 review: a sentence that wrapped right at
+        # the limit made the window 1 px too wide).
+        label = 2 * sum(int(float(str(self.status_label.cget(k)))) for k in ("padx", "borderwidth",
+                                                                              "highlightthickness"))
+        room = px(WINDOW_WIDTH) - 2 * px(BODY_PAD) - used - label - px(2)     # the body's padding either side
         wrap = max(px(STATUS_MIN_WRAP), room)
         if int(float(str(self.status_label.cget("wraplength")))) != wrap:
             self.status_label.configure(wraplength=wrap)
@@ -826,9 +895,7 @@ class WorkbookWindow(tk.Toplevel):
         carriers = {c: point[:2] for c, (point, _) in wb_geometry.carrier_axes(spec, report).items()}
         # W8: every slider where the chosen mode puts it (ModeReport.placed); a slide runs along the view, so only
         # its face's height, and with it its colour, changes.
-        mode = self._chosen_mode()
-        placed = {**report.layout.placed, **(mode.placed if mode is not None else {})}
-        view = preview.layout_gearbox(placed, report.theta, px(END_VIEW[0]), px(END_VIEW[1]), step=2,
+        view = preview.layout_gearbox(mode_placed(report, self._chosen_mode()), report.theta, px(END_VIEW[0]), px(END_VIEW[1]), step=2,
                                       unit=px(100) / 100, carriers=carriers, shafts=[s.id for s in spec.shafts])
         for gear, plane, points in view.outlines:      # each tagged with its gear, so a test can find it
             colour = PLANE_COLOURS[plane % len(PLANE_COLOURS)]
@@ -860,20 +927,12 @@ class WorkbookWindow(tk.Toplevel):
         if report is None:
             return
         spec = self.effective or self.reading.spec
-        mode = self._chosen_mode()
-        chooser = self.mode_chooser is not None
-        if mode is not None:                          # W8: the chosen mode's speeds, torques and ratio
-            lines, readout = ui_text.mode_speed_lines(spec, report, mode.name)
-            motion = mode.motion
-        else:
-            lines, readout = ui_text.workbook_speed_lines(spec, report.motion)
-            motion = report.motion
-        if chooser:                                   # and that the chooser changes only this window (J21)
-            lines = lines + [ui_text.mode_chooser_note(self.record)]
+        # W8: the chosen mode's speeds, torques and ratio, and while the chooser shows, that it changes only this
+        # window (J21). A sentence rather than a shaft's line (ui_text says which) is in prose, wrapped at the end
+        # view's width like the lines, so the right column keeps its width.
+        lines, readout, motion, prose = speeds_panel(spec, report, self._chosen_mode(),
+                                                     chooser=bool(self.mode_choosers), record=self.record)
         colour = theme.MUTED if motion.later else theme.INK
-        # A sentence rather than a shaft's line (ui_text says which): in prose, wrapped at the end view's width like
-        # the lines, so the right column keeps its width.
-        prose = ui_text.speeds_prose_rows(motion, lines, mode=mode is not None, chooser=chooser)
         for r, text in enumerate(lines):
             if r in prose:
                 tk.Label(self.speeds_body, text=text, bg=theme.WHITE, fg=theme.MUTED, font=self.fonts.hint,
@@ -888,31 +947,37 @@ class WorkbookWindow(tk.Toplevel):
     # ---------------------------------------------------------------- modes (W8)
 
     def _chosen_mode(self) -> Optional[wb_checks.ModeReport]:
-        """The mode the Speeds panel and end view show: the chosen one (names compared as everywhere,
-        ``swbuild.on_in``), else the first; None for a gearbox with no modes."""
-        modes = self.report.modes if self.report is not None else ()
-        if not modes:
-            return None
-        return next((m for m in modes if m.name and swbuild.on_in((m.name,), self.mode.get())), modes[0])
+        return chosen_mode(self.report, self.mode.get())
 
     def _place_mode_chooser(self) -> None:
-        """The mode chooser in the Speeds panel's header (W8-PLAN §1.12, J21): one segment per Modes row, the
-        first chosen at first; the choice kept across re-reads while a mode of that name is there. None for a
-        gearbox with no Modes rows (sliders alone have one mode, with no name)."""
+        """The mode chooser (W8-PLAN §1.12, J21): one segment per Modes row, each as wide as the longest name, in
+        the Speeds panel's header when they fit there, else in rows at the panel's top (:func:`mode_chooser_rows`);
+        the first chosen at first, the choice kept across re-reads while a mode of that name is there (a rename in
+        case only keeps it). None for a gearbox with no Modes rows (sliders alone have one mode, with no name)."""
         modes = self.report.modes if self.report is not None else ()
         names = tuple(m.name for m in modes if m.name)
         kept = next((n for n in names if swbuild.on_in((n,), self.mode.get())), names[0] if names else "")
         if names != self._mode_names:
-            if self.mode_chooser is not None:
-                self.mode_chooser.destroy()
-                self.mode_chooser = None
+            for chooser in self.mode_choosers:
+                chooser.destroy()
+            self.mode_choosers = []
             self._mode_names = names
-            if names:
-                self.mode.set(kept)
-                self.mode_chooser = widgets.Segmented(self._mode_slot, self.mode, names, command=self._mode_chosen,
-                                                      mono=True, height=16, width=MODE_SEGMENT * len(names),
-                                                      bg=theme.HEADER_BG)
-                self.mode_chooser.pack(side="left")
+            self.mode.set(kept)
+            in_header, rows = mode_chooser_rows(names)
+            seg = mode_segment_width(names)
+            for r, row in enumerate(rows):
+                parent = self._mode_slot if in_header else self._mode_rows
+                chooser = widgets.Segmented(parent, self.mode, row, command=self._mode_chosen, mono=True, height=16,
+                                            width=seg * len(row), bg=theme.HEADER_BG if in_header else theme.WHITE)
+                if in_header:
+                    chooser.pack(side="left")
+                else:
+                    chooser.grid(row=r, column=0, sticky="w", pady=(0, px(4)))
+                self.mode_choosers.append(chooser)
+            if self.mode_choosers and not in_header:
+                self._mode_rows.grid()
+            else:
+                self._mode_rows.grid_remove()
         self.mode.set(kept)
 
     def _mode_chosen(self) -> None:

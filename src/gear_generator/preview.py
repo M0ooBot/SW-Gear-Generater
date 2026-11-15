@@ -295,9 +295,11 @@ ARROW_HEAD = 3
 LABEL_GAP = 6
 LABEL_CHAR = 7            # a character's width at 11.5 px mono, a little over
 LABEL_HEIGHT = 13
-# Where a shaft's name goes, in order of preference: below right, then the other sides. Each is the corner of
-# the text at the anchor point, as Tk names it (``nw``: the text's top left is at the point).
-LABEL_SIDES = (("nw", 1, 1), ("ne", -1, 1), ("se", -1, -1), ("sw", 1, -1))
+# Where a shaft's name goes, in order of preference: below right, then above right, so a name pushed off its first
+# side stays on the same side of its cross (W8 review: an idler's name above left read as a planet's), then below
+# left and above left. Each is the corner of the text at the anchor point, as Tk names it (``nw``: the text's top
+# left is at the point).
+LABEL_SIDES = (("nw", 1, 1), ("sw", 1, -1), ("ne", -1, 1), ("se", -1, -1))
 
 
 @dataclass
