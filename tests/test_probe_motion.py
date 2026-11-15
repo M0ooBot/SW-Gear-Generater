@@ -22,7 +22,7 @@ TIER_8 = ["motion_enums", "shaft_axis_mates", "gear_mate_sense", "compound_lock"
           "mate_folders", "lightweight_remake", "second_assembly_beside_unsaved", "gear_mate_definition_read",
           "origin_noise", "unsaved_update_close",
           "drag_operator_turns_train", "ring_mate_sense", "ring_trains_saved",
-          "ring_trains_from_another_version", "w7_planetary_spike", "w8_modes_spike",
+          "ring_trains_from_another_version", "w7_planetary_spike", "w8_modes_spike", "w8_followup",
           "gear_mate_definition"]
 
 
@@ -847,3 +847,8 @@ def test_the_w8_spike_parts_are_the_apps_own_and_pass_assess():
     assert [(g.id, g.kind, g.side, g.teeth, g.module) for g in spec.gears] == [
         ("Anchor", "spur", "external", "30", "1.5"), ("Sleeve", "spur", "internal", "30", "1.5")]
     assert wb_assess.assess(spec, [], spec.box.output_folder, "").lay_out_refusal() == ""
+
+
+def test_the_w8_followup_judges_positions_within_a_micron():
+    assert p8._w8f_at([10.0, 30.0000001], [10.0, 30.0])
+    assert not p8._w8f_at([10.0, 29.9], [10.0, 30.0]) and not p8._w8f_at([10.0], [10.0, 30.0])
