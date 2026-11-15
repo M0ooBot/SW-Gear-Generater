@@ -306,11 +306,16 @@ def _user_mate(fake, flags):
     (("4H", "N"), "In modes 4H and N, Distance3 is a mate in TransferCase.SLDASM that Gear Generator did not make, and "
                   "it may hold the gears where Update SolidWorks would put them, so nothing is changed; in SolidWorks, "
                   "suppress Distance3 in 4H and N and press Update SolidWorks again."),
+    (("2H", "4H", "N", "4L"), "In modes 2H, 4H, N and 4L, Distance3 is a mate in TransferCase.SLDASM that Gear "
+                              "Generator did not make, and it may hold the gears where Update SolidWorks would put "
+                              "them, so nothing is changed; in SolidWorks, suppress Distance3 in 2H, 4H, N and 4L and "
+                              "press Update SolidWorks again."),
 ])
 def test_a_mate_not_on_record_on_in_a_mode_not_active_refuses_before_anything_is_shown(tc_built, on, said):
     """The review's case: Distance3, a user's mate, suppressed in 2H (active) and on in N; a workbook change that
     would show every mode. Refused in the check phase, naming the mate and each mode it is on in; nothing shown,
-    nothing changed, no document marked."""
+    nothing changed, no document marked. Also on in every mode, the active one among them, as a mate made by hand
+    usually is: every mode named, the list in _modes_check's form."""
     fake, built = tc_built
     _user_mate(fake, {m: m not in on for m in ("2H", "4H", "N", "4L")})
     marked = {k for k in fake.touched}
