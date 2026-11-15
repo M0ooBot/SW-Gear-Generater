@@ -489,7 +489,8 @@ def test_a_mode_named_twice_in_another_case_and_a_position_named_twice_are_error
 
 from gear_generator.swbuild import GearboxUpdate, LockLink, MeshLink, UpdateResult  # noqa: E402
 from gear_generator.workbook import update  # noqa: E402
-from gear_generator.workbook.model import Mode  # noqa: E402
+from gear_generator.workbook import modes  # noqa: E402
+from gear_generator.workbook.model import Box, Gear, GearboxSpec, Mesh, Mode, Shaft  # noqa: E402
 
 
 def built_record(make=transfer_case_parallel, spec=None):
@@ -789,3 +790,56 @@ def test_a_spline_and_a_coupling_are_made_with_every_gear_mates_flip_and_told_on
     assert plan.mate_senses["ModeSlv splined to RangeSlv"] is True
     assert set(plan.modes_plan.same_way) == {"RangeSlv engages InDog", "RangeSlv engages LoDog",
                                              "ModeSlv engages FrontDog"}
+
+
+# -- the checks across modes (W8-PLAN §1.5, J22) --------------------------------------------------------------------
+
+def said(spec):
+    return [(d.is_error, d.message) for d in assessed(spec).report.diagnostics]
+
+
+def all_modes(spec, **picks):
+    return replace(spec, modes=tuple(replace(m, positions=tuple((s, picks.get(s, p)) for s, p in m.positions))
+                                     for m in spec.modes))
+
+
+def sliding_spur():
+    """A spur that slides into mesh: S1 on In (Slides A=0, B=+20) and G2 on Out, 10 wide each."""
+    shafts = (Shaft("In", "frame", "0", "0", "0", "Z+", "input", "", "1000", "1", row=2),
+              Shaft("Out", "frame", "40", "0", "0", "Z+", "output", row=3))
+    gears = (Gear("S1", "In", "10", "spur", "", "20", "2", "", "10", "", slides="A=+30, B=+50", row=2),
+             Gear("G2", "Out", "10", "spur", "", "20", "2", "", "10", "", row=3))
+    return GearboxSpec(box=Box(name="Slide", pressure_angle="20", efficiency="98"), shafts=shafts, gears=gears,
+                       meshes=(Mesh("S1", "G2", row=2),), modes=(Mode("One", (("S1", "A"),), row=2),
+                                                                 Mode("Two", (("S1", "B"),), row=3)),
+                       sliders=("S1",))
+
+
+@pytest.mark.parametrize("spec, error, sentence", [
+    (with_gear(transfer_case_parallel(), "ModeSlv", slides="2WD=-38, 4WD=+10"), True,
+     "Modes row 4: in N RangeSlv and ModeSlv overlap by 6 mm on Rear: two sliders on one shaft must stay clear of "
+     "each other."),
+    (with_mode(transfer_case_parallel(), 3, positions=(("RangeSlv", "N"), ("ModeSlv", "4WD"))), False,
+     "Gears row 7: no mode engages LoDog: no sleeve covers its face in any mode."),
+    (with_gear(transfer_case_parallel(), "RangeSlv", face_width="16"), False,
+     "Gears row 8: RangeSlv is 16 mm long and InDog and LoDog are 14 mm apart: on its way from H to L it would hold "
+     "both at once."),
+    (replace(transfer_case_parallel(), modes=transfer_case_parallel().modes + (
+        Mode("4X", (("RangeSlv", "H"), ("ModeSlv", "4WD")), row=6),)), False,
+     "Modes row 6: 4H and 4X engage the same: they are one mode twice."),
+    (all_modes(transfer_case_parallel(), ModeSlv="2WD"), True,                 # an output that turns in no mode
+     "Shafts row 8: nothing settles Front's speed in any mode: no input reaches it through the meshes and couplings, "
+     "so the box needs another input (or a fixed shaft) to be driven."),
+    (all_modes(transfer_case_parallel(), ModeSlv="2WD"), True,
+     "Shafts row 6: nothing settles FrontDrv's speed in any mode: no input reaches it through the meshes and "
+     "couplings, so the box needs another input (or a fixed shaft) to be driven."),
+    (sliding_spur(), False, "Meshes row 2: S1 and G2 are in mesh in no mode: no position of S1 brings it over G2."),
+])
+def test_each_check_across_modes_is_said_at_its_cell(spec, error, sentence):
+    assert (error, sentence) in said(spec), said(spec)
+
+
+@pytest.mark.parametrize("make", [transfer_case_parallel, e4_transfer_case])
+def test_the_fixtures_draw_none_of_the_checks_across_modes(make):
+    a = assessed(make())
+    assert modes.mode_checks(a.spec, a.report.layout.placed, a.report.modes) == []

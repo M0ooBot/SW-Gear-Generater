@@ -266,3 +266,93 @@ def row_errors(spec: GearboxSpec) -> List[Diagnostic]:
                                          "by this version of the app; a slider, sleeve or dog is built on a shaft that "
                                          "turns.", where))
     return out
+
+
+def _n(value: float) -> str:
+    return f"{value:.3f}".rstrip("0").rstrip(".")
+
+
+def _listed(items: List[str]) -> str:
+    return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " and " + items[-1]
+
+
+def mode_checks(spec: GearboxSpec, placed: Dict[str, Placed], reports) -> List[Diagnostic]:
+    """The checks across modes (W8-PLAN §1.5, J22), each at its cell, from the layout (``placed``: sliders at the
+    first mode's place) and every mode worked out (``reports``: ``checks.ModeReport``s). *Errors:* two sliders on
+    one shaft overlapping in a mode. *Warnings:* a dog no mode engages; a listed sliding mesh in mesh in no mode; a
+    sleeve longer than the gap between two dogs within its travel; two modes that engage the same."""
+    out: List[Diagnostic] = []
+    if not reports:
+        return out
+    gears = {g.id: g for g in spec.gears}
+    moving = [g.id for g in sliders(spec) if g.id in placed]
+    for m in reports:                                        # J22: two sliders on one shaft overlap
+        where = spec.cell("Modes", m.row, "name") if m.row else ""
+        here = {g: m.placed.get(g, placed[g]) for g in moving}
+        said = set()
+        for i, a in enumerate(moving):
+            for b in moving[i + 1:]:
+                pa, pb = here[a], here[b]
+                if pa.shaft != pb.shaft or (a, b) in said or overlap(pa, pb) <= 0.0:
+                    continue
+                said.add((a, b))
+                cell = where or spec.cell("Gears", gears[b].row, "slides")
+                label = f"in {m.name} " if m.name else ""
+                out.append(Diagnostic(ERROR, f"{cell}: {label}{a} and {b} overlap by {_n(overlap(pa, pb))} mm on "
+                                             f"{pa.shaft}: two sliders on one shaft must stay clear of each other.",
+                                      cell))
+    engaged = {d for m in reports for _, d in m.engaged}
+    for g in spec.gears:                                     # a dog no mode engages
+        if g.kind_word() == DOG and g.id in placed and g.id not in engaged:
+            cell = spec.cell("Gears", g.row, "id")
+            out.append(Diagnostic(WARNING, f"{cell}: no mode engages {g.id}: no sleeve covers its face in any mode.",
+                                  cell))
+    for mesh in spec.meshes:                                 # a sliding mesh in mesh in no mode
+        if mesh.a not in moving and mesh.b not in moving:
+            continue
+        if all((mesh.a, mesh.b) in m.out_of_mesh for m in reports):
+            cell = spec.cell("Meshes", mesh.row, "a")
+            slider = mesh.a if mesh.a in moving else mesh.b
+            other = mesh.b if slider == mesh.a else mesh.a
+            out.append(Diagnostic(WARNING, f"{cell}: {mesh.a} and {mesh.b} are in mesh in no mode: no position of "
+                                           f"{slider} brings it over {other}.", cell))
+    shafts = {s.id: s for s in spec.shafts}
+    for gid in moving:                                       # J22: a stroke that bridges two dogs
+        gear = gears[gid]
+        if gear.kind_word() != SLEEVE or gear.shaft not in shafts:
+            continue
+        try:
+            positions = gear.positions()
+        except ValueError:
+            continue
+        if len(positions) < 2:
+            continue
+        low = min(positions, key=lambda p: positions[p])
+        high = max(positions, key=lambda p: positions[p])
+        ends = [_place(spec, replace(gear, at=repr(float(gear.at or 0) + positions[p])), shafts[gear.shaft])
+                for p in (low, high)]
+        swept = (min(_span(e)[0] for e in ends), max(_span(e)[1] for e in ends))
+        length = _span(ends[0])[1] - _span(ends[0])[0]
+        dogs = sorted((placed[g.id] for g in spec.gears if g.kind_word() == DOG and g.id in placed
+                       and _coaxial(placed[g.id], placed[gid])
+                       and min(swept[1], _span(placed[g.id])[1]) - max(swept[0], _span(placed[g.id])[0]) > 0),
+                      key=lambda p: _span(p)[0])
+        for d1, d2 in zip(dogs, dogs[1:]):
+            gap = _span(d2)[0] - _span(d1)[1]
+            if length > gap:
+                cell = spec.cell("Gears", gear.row, "slides")
+                out.append(Diagnostic(WARNING, f"{cell}: {gid} is {_n(length)} mm long and {d1.gear} and {d2.gear} "
+                                               f"are {_n(gap)} mm apart: on its way from {low} to {high} it would hold "
+                                               "both at once.", cell))
+    seen: Dict[Tuple[frozenset, frozenset], str] = {}         # two modes that engage the same
+    for m in reports:
+        if not m.name:
+            continue
+        key = (frozenset(m.engaged), frozenset(frozenset(p) for p in m.out_of_mesh))
+        if key in seen:
+            cell = spec.cell("Modes", m.row, "name")
+            out.append(Diagnostic(WARNING, f"{cell}: {seen[key]} and {m.name} engage the same: they are one mode "
+                                           "twice.", cell))
+        else:
+            seen[key] = m.name
+    return out

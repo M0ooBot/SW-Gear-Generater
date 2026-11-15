@@ -187,6 +187,8 @@ def check(spec: GearboxSpec, skip_gears=()) -> Report:
         here = dict(placed)
         here.update(m.placed)
         _check_clearances(report, spec, here, listed, only=set(m.placed), said={d.message for d in report.diagnostics})
+    report.diagnostics.extend(d for d in modes_mod.mode_checks(spec, placed, report.modes)
+                              if d not in report.diagnostics)
     _check_shafts(report, spec, placed, upset)
     _check_turned_clearances(report, spec, placed, listed)
     _check_motion(report, spec, upset)
@@ -787,7 +789,15 @@ def _check_motion(report: Report, spec: GearboxSpec, upset=frozenset()) -> None:
         if shaft.id not in free_everywhere or shaft.id in upset:
             continue
         where = spec.cell("Shafts", shaft.row, "id")
-        if shaft.id in meshed_shafts:
+        if report.modes and any(m.name for m in report.modes):      # W8: across the modes
+            if shaft.id in meshed_shafts:
+                _error(report, where, f"nothing settles {shaft.id}'s speed in any mode: no input reaches it through "
+                                      "the meshes and couplings, so the box needs another input (or a fixed shaft) "
+                                      "to be driven.")
+            elif shaft.role == "output":
+                _warning(report, where, f"nothing drives {shaft.id} in any mode: no input reaches it through the "
+                                        "meshes and couplings.")
+        elif shaft.id in meshed_shafts:
             _error(report, where, f"nothing settles {shaft.id}'s speed: no input reaches it through the meshes, "
                                   "so the box needs another input (or a fixed shaft) to be driven.")
         elif shaft.role == "output":
