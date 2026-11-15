@@ -1,0 +1,511 @@
+run     2026-11-15 00:16:51; app gear-generator 0.3.2 from C:\Users\M0obo\Documents\GearGeneratorProbe\w7-full-20261115-000138\snap\src (snapshot: git archive 39ecf66; p7's rerun with the probe script of e8756d1); sections ['p7']
+attach  SolidWorks 2026 (revision 34.1.1), PID 10192; SolidWorks 1.14 GB private, 3.75 GB free
+open    before: []
+findings LAYOUT_PLUS_FLIP {'right': False, 'top': False}, LAYOUT_NEGATED_LINK 'minus', LAYOUT_AXIS_Z_SIGN -1, REPLACE_FIXED_ROUTE 'Transform2 put'
+findings W5: GEAR_MATE_RATIO_ROUTE 'remake', MATED_ASSEMBLY_REBUILD_ROUTE 'ForceRebuild3(True)', MATED_BUILD_REBUILD_ROUTE 'ForceRebuild3(True)', GEAR_MATE_FLIP False, DEMONSTRATION_DRIVE_SENSE 1, MESH_PHASE_ROUTE 'Transform2 put with the gear mate on', LOCK_RETAKES_AN_OFFSET True; P0c {'GEAR_MATE_REMAKE_UNDER_COMMAND_IN_PROGRESS': True, 'GEAR_MATE_SENSE_READ_UNDER_COMMAND_IN_PROGRESS': True, 'IDLER_UPDATE_HOLDS': True, 'LIGHTWEIGHT_FIRST_DRIVE_RIGHT': False, 'LIGHTWEIGHT_FORCED_BY': 'swOpenDocOptions_LoadLightweight | swOpenDocOptions_OverrideDefaultLoadLightweight', 'LIGHTWEIGHT_OPEN_RAISES_AN_ADDIN_DIALOG': True, 'LIGHTWEIGHT_REMAKE_HOLDS': True, 'LIGHTWEIGHT_RESOLVED_BY': 'the first drive', 'MATES_UNDER_COMMAND_IN_PROGRESS': True, 'MATE_FOLDER_ROUTE': 'IFeatureManager.InsertFeatureTreeFolder2(swFeatureTreeFolder_Containing)', 'MATE_FOLDER_SUPPRESSION_SUPPRESSES_ITS_MATES': True, 'MATE_FOLDER_TYPE_NAME': 'FtrFolder', 'MATE_GROUP_WALK_SEES_MATES_IN_A_FOLDER': True, 'MATE_RENAME_AT_ONCE': True, 'PUT_ON_TWICE_MESHED_GEAR_HOLDS': True, 'REMAKE_ON_TWICE_MESHED_GEAR_HOLDS': True, 'SECOND_ASSEMBLY_BESIDE_UNSAVED_HOLDS': True, 'SUPPRESSED_MATE_ERROR_CODE': 0, 'UNSUPPRESS_ON_LOCK_ALREADY_ON_MARKS_MODIFIED': True}; AXIAL_RESTORES True; m4 offset 0 mm
+findings W6: TURNED_GEAR_MATE_SENSE_READ_BACK 'entity senses', TURNED_GEAR_MATE_SENSE_ANGLES (30.0, 150.0), TURNED_GEAR_MATE_SENSE_ANGLES_SKEW (60.0, 120.0), GEAR_MATE_SENSE_READ_BACK '(Reverse == entities parallel) == internal', LAYOUT_PLUS_FLIP {'right': False, 'top': False}, REF_PLANE_UNFLIPPED_IS_PLUS_Z True, AXIAL_MATE_ROUTE 'origin distance'
+excel   started our own Excel, PID 42504, 16.0 build 20527.0
+== p7  a copy of p1.master: the carrier held (C fixed, R the output) -> Build again…; the carrier and CarrierGear fixed and never mated; copies -30°, Ring -10° for +30° on the sun
+copy    p1.master -> p7: 13 files, mtimes kept
+        Planetary_4to1.xlsx's record: 15 path(s) put onto the copy: ['record.workbook', 'record.parts[0].path', 'record.parts[1].path', 'record.parts[2].path', 'record.parts[3].path', 'record.assembly', 'record.gearbox.layout', 'record.gearbox.assembly', 'record.gearbox.components[0].part', 'record.gearbox.components[1].part', 'record.gearbox.components[2].part', 'record.gearbox.components[3].part', 'record.gearbox.components[4].part', 'record.gearbox.components[5].part', 'record.gearbox.carriers[0].path']
+        CarrierGear.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Planet.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Ring_m1_N54.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Sun.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+ok      p7: the copy's record is valid: owner ('ours', ''); left on the master []; missing in the copy []; clear_saved dropped nothing (unsaved, mismatched ([], [])); the read's digest equals the record's
+probe   W6-PLAN §7.1: Planetary_4to1.SLDASM of p7, whose stored references name a folder that is gone, opened under the dialog watch (120 s at most)
+DIALOG  SolidWorks shows 'Opening': ['Close', 'Opening Component 8 of 8', 'Update\nAssembly', 'Update\nGraphics', 'Opening File: C:\\Use...0138\\out\\p7\\CarrierGear.SLDPRT', 'Elapsed time: 0s', 'This file was last opened in 1 seconds.', 'For more information, view: '] (a progress box that closes itself; not logged again)
+fact    p7: the copy's assembly opened in 2.2 s; marked modified straight after the open: {'Planetary_4to1_Layout.SLDPRT': False, 'Planetary_4to1_C_Carrier.SLDPRT': False, 'Sun.SLDPRT': False, 'Planet.SLDPRT': False, 'Ring_m1_N54.SLDPRT': False, 'CarrierGear.SLDPRT': False, 'Planetary_4to1.SLDASM': False}
+fact    W6-PLAN §7.1: dialogs while the copied assembly opened: none
+ok      p7: SolidWorks found all 7 components and the layout in the copy, and the copy closed without saving (left []): elsewhere none
+ok      Excel opened Planetary_4to1.xlsx with no dialog or repair: []
+ok      read Planetary_4to1.xlsx: ok
+        4 shafts · 4 gears · 2 meshes; gate ''
+ok      p7: the copy reads as built from this workbook, its gearbox in the copy: p7
+classify parts changed []; moved []; re-place []; structural []; missing []; unsaved []; refusal ''; turning True; axial []; ratios []
+        layout globals wanted []
+summary SolidWorks already matches the workbook on record; Update SolidWorks checks it live and puts right anything changed there; gears turned in SolidWorks stay where they are unless something must move.
+footer  (p7, the copy read) [green] SolidWorks already matches the workbook on record; Update SolidWorks checks it live and puts right anything changed there; gears turned in SolidWorks stay where they are unless something must move. It was built with its gears mated to turn: drag Sun in SolidWorks and the rest of its train follow. C (the carrier) is axes and planes only, so it has nothing to drag.
+        button 'Build again…' on; Update SolidWorks shown on primary
+excel   Shafts!G3 := 'fixed'
+excel   Shafts!G5 := 'output'
+excel   saved Planetary_4to1.xlsx
+poll    a new read 0.0 s after asking; changes:
+          Shafts!G3 C Role output → fixed
+          Shafts!G5 R Role fixed → output
+ok      read Planetary_4to1.xlsx: ok
+        4 shafts · 4 gears · 2 meshes; gate ''
+classify parts changed []; moved []; re-place []; structural ['Ring was built fixed, but R now turns (its Role is not fixed and no fixed shaft holds it still), so the gearbox needs building again to mate it to turn.', "C's Role is now fixed, but CarrierGear was built mated to turn, so the gearbox needs building again to hold it fixed."]; missing []; unsaved []; refusal ''; turning True; axial []; ratios []
+        layout globals wanted []
+summary Ring was built fixed, but R now turns (its Role is not fixed and no fixed shaft holds it still), so the gearbox needs building again to mate it to turn (and 1 other change Update SolidWorks cannot carry). Update SolidWorks offers to build again as a new revision.
+ok      p7: the Checks panel is empty and the gate open: []; gate ''
+ok      p7: the header 'Planetary, C fixed · 3 planets · 3.000 : 1 · output turns the other way'
+ok      p7: own-axis speeds §4's: {'S': 1000.0, 'C': 0.0, 'P': -1000.0, 'R': -333.3333333333333}
+ok      p7: the planet's speed on its carrier: {'P': -1000.0}
+ok      p7: torques {'S': 2.0, 'P': 0.0, 'R': 5.7623999999999995}, held {'C': 7.7623999999999995}
+speeds  S     1000.0 rpm anticlockwise · 2.00 N·m
+speeds  C     held still · 7.76 N·m
+speeds  P     1000.0 rpm clockwise, 1000.0 rpm clockwise relative to C · 3 copies
+speeds  R     333.3 rpm clockwise · 5.76 N·m
+ok      p7: the Speeds lines are D's tests' (no-break spaces as spaces)
+        stage (Stage(carrier='C', sun='Sun', ring='Ring', planet='Planet', planet_shaft='P', copies=3, held='C'),)
+ok      p7: one planetary stage recognised
+ok      p7: the kinematics give the plan's turns for +30° of Sun: Sun +30.000000000° (plan +30.000000000°), C carrier +0.000000000° (plan +0.000000000°), CarrierGear +0.000000000° (plan +0.000000000°), Ring -10.000000000° (plan -10.000000000°), Planet copy 1 -30.000000000° (plan -30.000000000°), Planet copy 2 -30.000000000° (plan -30.000000000°), Planet copy 3 -30.000000000° (plan -30.000000000°)
+ok      p7: structural: "Ring was built fixed, but R now turns (its Role is not fixed and no fixed shaft holds it still), so the gearbox needs building again to mate it to turn. C's Role is now fixed, but CarrierGear was built mated to turn, so the gearbox needs building again to hold it fixed."
+footer  (p7, after the edit) [green] Ring was built fixed, but R now turns (its Role is not fixed and no fixed shaft holds it still), so the gearbox needs building again to mate it to turn (and 1 other change Update SolidWorks cannot carry). Update SolidWorks offers to build again as Planetary_4to1_r2. It was built with its gears mated to turn: drag Sun in SolidWorks and the rest of its train follow. C (the carrier) is axes and planes only, so it has nothing to drag.
+        button 'Build again…' on; Update SolidWorks shown on primary
+ok      p7: Build again… offered
+footer  (p7 Build again, read) [green] Ring was built fixed, but R now turns (its Role is not fixed and no fixed shaft holds it still), so the gearbox needs building again to mate it to turn (and 1 other change Update SolidWorks cannot carry). Update SolidWorks offers to build again as Planetary_4to1_r2. It was built with its gears mated to turn: drag Sun in SolidWorks and the rest of its train follow. C (the carrier) is axes and planes only, so it has nothing to drag.
+        button 'Build again…' on; Update SolidWorks shown on primary
+plan    revision 2 Planetary_4to1_r2: refusal ''; reason 'Planetary_4to1.SLDASM was built from this workbook already. So this build is Planetary_4to1_r2, beside it; nothing is overwritten.'; turning True; static reason ''
+        layout C:\Users\M0obo\Documents\GearGeneratorProbe\w7-full-20261115-000138\out\p7\Planetary_4to1_r2_Layout.SLDPRT; assembly C:\Users\M0obo\Documents\GearGeneratorProbe\w7-full-20261115-000138\out\p7\Planetary_4to1_r2.SLDASM
+        reuse Sun for Sun at C:\Users\M0obo\Documents\GearGeneratorProbe\w7-full-20261115-000138\out\p7\Sun.SLDPRT (made by revision 0, 24 globals checked live)
+        reuse Planet for Planet at C:\Users\M0obo\Documents\GearGeneratorProbe\w7-full-20261115-000138\out\p7\Planet.SLDPRT (made by revision 0, 24 globals checked live)
+        reuse Ring_m1_N54 for Ring at C:\Users\M0obo\Documents\GearGeneratorProbe\w7-full-20261115-000138\out\p7\Ring_m1_N54.SLDPRT (made by revision 0, 25 globals checked live)
+        reuse CarrierGear for CarrierGear at C:\Users\M0obo\Documents\GearGeneratorProbe\w7-full-20261115-000138\out\p7\CarrierGear.SLDPRT (made by revision 0, 24 globals checked live)
+        shaft S: (0, 0, 0) axis Z+ (0.0, 0.0, 1.0) sigma +1; X base '', Y base '', Z  ''; line ''; S Axis
+        shaft C: (0, 0, 0) axis Z+ (0.0, 0.0, 1.0) sigma +1; X base '', Y base '', Z  ''; line ''; C Axis
+        shaft R: (0, 0, 0) axis Z+ (0.0, 0.0, 1.0) sigma +1; X base '', Y base '', Z  ''; line ''; R Axis
+        frame Sun: R [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0] at [0.0, 0.0, 5.0]
+        frame Planet copy 1: R [0.984807753, -0.173648178, 0.0, 0.173648178, 0.984807753, 0.0, 0.0, 0.0, 1.0] at [18.0, 0.0, 5.0]
+        frame Planet copy 2: R [0.984807753, -0.173648178, 0.0, 0.173648178, 0.984807753, 0.0, 0.0, 0.0, 1.0] at [-9.0, 15.588457268, 5.0]
+        frame Planet copy 3: R [0.984807753, -0.173648178, 0.0, 0.173648178, 0.984807753, 0.0, 0.0, 0.0, 1.0] at [-9.0, -15.588457268, 5.0]
+        frame Ring: R [1.0, -0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0] at [0.0, 0.0, 5.0]
+        frame CarrierGear: R [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0] at [0.0, 0.0, 27.0]
+        motion: trains [('S', 'P copy 1', 'P copy 2', 'P copy 3', 'R')]; drag ['Sun']; fixed ['CarrierGear', 'C carrier']; unmated [('Planet copy 2', 'Ring'), ('Planet copy 3', 'Ring')]
+        mate 'Sun on S Axis': axis ['Sun'] S ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'Sun along S': along ['Sun'] S ratio [] face 'Sun Face Z' z_front 5 plane 'front' sense 0
+        mate 'Planet copy 1 on P copy 1 Axis': axis ['Planet copy 1'] P copy 1 ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'Planet copy 1 along P copy 1': along ['Planet copy 1'] P copy 1 ratio [] face 'Planet Face Z' z_front 5 plane 'front' sense 0
+        mate 'Planet copy 2 on P copy 2 Axis': axis ['Planet copy 2'] P copy 2 ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'Planet copy 2 along P copy 2': along ['Planet copy 2'] P copy 2 ratio [] face 'Planet Face Z' z_front 5 plane 'front' sense 0
+        mate 'Planet copy 3 on P copy 3 Axis': axis ['Planet copy 3'] P copy 3 ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'Planet copy 3 along P copy 3': along ['Planet copy 3'] P copy 3 ratio [] face 'Planet Face Z' z_front 5 plane 'front' sense 0
+        mate 'Ring on R Axis': axis ['Ring'] R ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'Ring along R': along ['Ring'] R ratio [] face 'Ring Face Z' z_front 5 plane 'front' sense 0
+        mate 'Sun meshes Planet copy 1': mesh ['Sun', 'Planet copy 1']  ratio [18, 18] face '' z_front 0 plane 'front' sense 1
+        mate 'Sun meshes Planet copy 2': mesh ['Sun', 'Planet copy 2']  ratio [18, 18] face '' z_front 0 plane 'front' sense 1
+        mate 'Sun meshes Planet copy 3': mesh ['Sun', 'Planet copy 3']  ratio [18, 18] face '' z_front 0 plane 'front' sense 1
+        mate 'Planet copy 1 meshes Ring': mesh ['Planet copy 1', 'Ring']  ratio [18, 54] face '' z_front 0 plane 'front' sense -1
+        ops of Planetary_4to1_r2_Layout.SLDPRT:
+          new     NewPart from (default template)
+          axis    'S Axis' through planes 2 and 3
+          axis    'C Axis' through planes 2 and 3
+          axis    'R Axis' through planes 2 and 3
+          rebuild once
+          save    C:\Users\M0obo\Documents\GearGeneratorProbe\w7-full-20261115-000138\out\p7\Planetary_4to1_r2_Layout.SLDPRT
+        ops of Planetary_4to1_r2.SLDASM:
+          new     NewAssembly from (default template)
+          global  "Sun Face Z"= 5
+          global  "Planet Face Z"= 5
+          global  "Ring Face Z"= 5
+          insert  layout C:\Users\M0obo\Documents\GearGeneratorProbe\w7-full-20261115-000138\out\p7\Planetary_4to1_r2_Layout.SLDPRT at (0, 0, 0)
+          place   layout at (0, 0, 0) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     layout
+          insert  carrier1 C:\Users\M0obo\Documents\GearGeneratorProbe\w7-full-20261115-000138\out\p7\Planetary_4to1_r2_C_Carrier.SLDPRT at (0, 0, 0)
+          place   carrier1 at (0, 0, 0) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     carrier1
+          insert  gear1 C:\Users\M0obo\Documents\GearGeneratorProbe\w7-full-20261115-000138\out\p7\Sun.SLDPRT at (0, 0, 5)
+          place   gear1 at (0, 0, 5) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     gear1
+          insert  gear2c1 C:\Users\M0obo\Documents\GearGeneratorProbe\w7-full-20261115-000138\out\p7\Planet.SLDPRT at (18, 0, 5)
+          place   gear2c1 at (18, 0, 5) turned (0.984808, -0.173648, 0, 0.173648, 0.984808, 0, 0, 0, 1)
+          fix     gear2c1
+          insert  gear2c2 C:\Users\M0obo\Documents\GearGeneratorProbe\w7-full-20261115-000138\out\p7\Planet.SLDPRT at (-9, 15.588457, 5)
+          place   gear2c2 at (-9, 15.588457, 5) turned (0.984808, -0.173648, 0, 0.173648, 0.984808, 0, 0, 0, 1)
+          fix     gear2c2
+          insert  gear2c3 C:\Users\M0obo\Documents\GearGeneratorProbe\w7-full-20261115-000138\out\p7\Planet.SLDPRT at (-9, -15.588457, 5)
+          place   gear2c3 at (-9, -15.588457, 5) turned (0.984808, -0.173648, 0, 0.173648, 0.984808, 0, 0, 0, 1)
+          fix     gear2c3
+          insert  gear3 C:\Users\M0obo\Documents\GearGeneratorProbe\w7-full-20261115-000138\out\p7\Ring_m1_N54.SLDPRT at (0, 0, 5)
+          place   gear3 at (0, 0, 5) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     gear3
+          insert  gear4 C:\Users\M0obo\Documents\GearGeneratorProbe\w7-full-20261115-000138\out\p7\CarrierGear.SLDPRT at (0, 0, 27)
+          place   gear4 at (0, 0, 27) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     gear4
+          unfix   gear1
+          mate    coincident gear1:Gear Axis ~ layout:S Axis as 'Sun on S Axis'
+          mate    point distance 5 gear1:origin ~ layout:plane1 as 'Sun along S'
+          link    "D1@Sun along S"= "Sun Face Z"
+          unfix   gear2c1
+          mate    coincident gear2c1:Gear Axis ~ carrier1:P copy 1 Axis as 'Planet copy 1 on P copy 1 Axis'
+          mate    point distance 5 gear2c1:origin ~ layout:plane1 as 'Planet copy 1 along P copy 1'
+          link    "D1@Planet copy 1 along P copy 1"= "Planet Face Z"
+          unfix   gear2c2
+          mate    coincident gear2c2:Gear Axis ~ carrier1:P copy 2 Axis as 'Planet copy 2 on P copy 2 Axis'
+          mate    point distance 5 gear2c2:origin ~ layout:plane1 as 'Planet copy 2 along P copy 2'
+          link    "D1@Planet copy 2 along P copy 2"= "Planet Face Z"
+          unfix   gear2c3
+          mate    coincident gear2c3:Gear Axis ~ carrier1:P copy 3 Axis as 'Planet copy 3 on P copy 3 Axis'
+          mate    point distance 5 gear2c3:origin ~ layout:plane1 as 'Planet copy 3 along P copy 3'
+          link    "D1@Planet copy 3 along P copy 3"= "Planet Face Z"
+          unfix   gear3
+          mate    coincident gear3:Gear Axis ~ layout:R Axis as 'Ring on R Axis'
+          mate    point distance 5 gear3:origin ~ layout:plane1 as 'Ring along R'
+          link    "D1@Ring along R"= "Ring Face Z"
+          mate    gear 18:18 gear1:Gear Axis ~ gear2c1:Gear Axis as 'Sun meshes Planet copy 1'
+          mate    gear 18:18 gear1:Gear Axis ~ gear2c2:Gear Axis as 'Sun meshes Planet copy 2'
+          mate    gear 18:18 gear1:Gear Axis ~ gear2c3:Gear Axis as 'Sun meshes Planet copy 3'
+          mate    gear 18:54 gear2c1:Gear Axis ~ gear3:Gear Axis as 'Planet copy 1 meshes Ring'
+          rebuild once
+          save    C:\Users\M0obo\Documents\GearGeneratorProbe\w7-full-20261115-000138\out\p7\Planetary_4to1_r2.SLDASM
+ok      p7 Build again: the plan turns (W5): static reason ''
+journal written: 3 paths
+build   Planetary_4to1_r2: SolidWorks 1.14 GB private, 3.49 GB free
+DIALOG  SolidWorks shows 'Calculating Interference Detection': ['Cancel', 'Calculating Interference Detection'] (a progress box that closes itself; not logged again)
+        ok      checked Sun.SLDPRT: it holds what the workbook asks, so it is reused
+        ok      checked Planet.SLDPRT: it holds what the workbook asks, so it is reused
+        ok      checked Ring_m1_N54.SLDPRT: it holds what the workbook asks, so it is reused
+        ok      checked CarrierGear.SLDPRT: it holds what the workbook asks, so it is reused
+        build   Part15 · layout · recipe  · trig degrees
+        ok      new part Part15
+        ok      trig units measured: degrees
+        ok      axis S Axis
+        ok      axis C Axis
+        ok      axis R Axis
+        ok      rebuilt once
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w7-full-20261115-000138\out\p7\Planetary_4to1_r2_Layout.SLDPRT
+        build   Part16 · carrier · recipe  · trig degrees
+        ok      new part Part16
+        ok      trig units measured: degrees
+        ok      global "P copy 1 X"
+        ok      global "P copy 2 X"
+        ok      global "P copy 2 Y"
+        ok      global "P copy 3 X"
+        ok      global "P copy 3 Y"
+        ok      axis C Axis
+        ok      plane P copy 1 X Plane
+        ok      link "Offset@P copy 1 X Plane"
+        ok      axis P copy 1 Axis
+        ok      plane P copy 2 X Plane
+        ok      link "Offset@P copy 2 X Plane"
+        ok      plane P copy 2 Y Plane
+        ok      link "Offset@P copy 2 Y Plane"
+        ok      axis P copy 2 Axis
+        ok      plane P copy 3 X Plane
+        ok      link "Offset@P copy 3 X Plane"
+        ok      plane P copy 3 Y Plane
+        ok      link "Offset@P copy 3 Y Plane"
+        ok      axis P copy 3 Axis
+        ok      5 globals read back and match the maths
+        ok      rebuilt once
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w7-full-20261115-000138\out\p7\Planetary_4to1_r2_C_Carrier.SLDPRT
+        build   Assem6 · assembly · recipe  · trig degrees
+        ok      new assembly Assem6
+        ok      trig units measured: degrees
+        ok      global "Sun Face Z"
+        ok      global "Planet Face Z"
+        ok      global "Ring Face Z"
+        ok      component Planetary_4to1_r2_Layout-1
+        ok      placed layout
+        ok      fixed layout
+        ok      component Planetary_4to1_r2_C_Carrier-1
+        ok      placed carrier1
+        ok      fixed carrier1
+        ok      component Sun-1
+        ok      placed gear1
+        ok      fixed gear1
+        ok      component Planet-1
+        ok      placed gear2c1
+        ok      fixed gear2c1
+        ok      component Planet-2
+        ok      placed gear2c2
+        ok      fixed gear2c2
+        ok      component Planet-3
+        ok      placed gear2c3
+        ok      fixed gear2c3
+        ok      component Ring_m1_N54-1
+        ok      placed gear3
+        ok      fixed gear3
+        ok      component CarrierGear-1
+        ok      placed gear4
+        ok      fixed gear4
+        ok      unfixed gear1
+        ok      mate coincident gear1:Gear Axis ~ layout:S Axis as Sun on S Axis
+        ok      mate point distance gear1:origin ~ layout:plane1 as Sun along S
+        ok      link "D1@Sun along S"
+        ok      unfixed gear2c1
+        ok      mate coincident gear2c1:Gear Axis ~ carrier1:P copy 1 Axis as Planet copy 1 on P copy 1 Axis
+        ok      mate point distance gear2c1:origin ~ layout:plane1 as Planet copy 1 along P copy 1
+        ok      link "D1@Planet copy 1 along P copy 1"
+        ok      unfixed gear2c2
+        ok      mate coincident gear2c2:Gear Axis ~ carrier1:P copy 2 Axis as Planet copy 2 on P copy 2 Axis
+        ok      mate point distance gear2c2:origin ~ layout:plane1 as Planet copy 2 along P copy 2
+        ok      link "D1@Planet copy 2 along P copy 2"
+        ok      unfixed gear2c3
+        ok      mate coincident gear2c3:Gear Axis ~ carrier1:P copy 3 Axis as Planet copy 3 on P copy 3 Axis
+        ok      mate point distance gear2c3:origin ~ layout:plane1 as Planet copy 3 along P copy 3
+        ok      link "D1@Planet copy 3 along P copy 3"
+        ok      unfixed gear3
+        ok      mate coincident gear3:Gear Axis ~ layout:R Axis as Ring on R Axis
+        ok      mate point distance gear3:origin ~ layout:plane1 as Ring along R
+        ok      link "D1@Ring along R"
+        ok      mate gear gear1:Gear Axis ~ gear2c1:Gear Axis as Sun meshes Planet copy 1
+        ok      mate gear gear1:Gear Axis ~ gear2c2:Gear Axis as Sun meshes Planet copy 2
+        ok      mate gear gear1:Gear Axis ~ gear2c3:Gear Axis as Sun meshes Planet copy 3
+        ok      mate gear gear2c1:Gear Axis ~ gear3:Gear Axis as Planet copy 1 meshes Ring
+        ok      3 globals read back and match the maths
+        ok      every mate sound, every gear free to turn
+        mate    Sun on S Axis
+        mate    Sun along S
+        mate    Planet copy 1 on P copy 1 Axis
+        mate    Planet copy 1 along P copy 1
+        mate    Planet copy 2 on P copy 2 Axis
+        mate    Planet copy 2 along P copy 2
+        mate    Planet copy 3 on P copy 3 Axis
+        mate    Planet copy 3 along P copy 3
+        mate    Ring on R Axis
+        mate    Ring along R
+        mate    Sun meshes Planet copy 1
+        mate    Sun meshes Planet copy 2
+        mate    Sun meshes Planet copy 3
+        mate    Planet copy 1 meshes Ring
+        ok      read turning against their mesh, so made again with the other Flip: Planet copy 1 meshes Ring
+        ok      rebuilt once
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w7-full-20261115-000138\out\p7\Planetary_4to1_r2.SLDASM
+        ok      no interference between the gears
+        in 30.3 s; SolidWorks 1.65 GB private, 3.36 GB free; kind 'motion'; turned round (made again with the other Flip) ['Planet copy 1 meshes Ring']
+        steps [('check', 'Sun', 1, 4), ('check', 'Planet', 2, 4), ('check', 'Ring_m1_N54', 3, 4), ('check', 'CarrierGear', 4, 4), ('layout', 'Planetary_4to1_r2_Layout', 0, 0), ('carrier', 'Planetary_4to1_r2_C_Carrier', 0, 0), ('assembly', 'Planetary_4to1_r2', 0, 0), ('interference', 'Planetary_4to1_r2', 0, 0)]
+        progress words ['Building in SolidWorks: checking Sun (1 of 4 already built)…', 'Building in SolidWorks: checking interference…']
+record  0 sidecar(s) written; record written; notes []
+status  [green] Built Planetary_4to1_r2_Layout, Planetary_4to1_r2_C_Carrier and Planetary_4to1_r2.SLDASM, reusing the 4 parts already built; no interference between the gears where they stand. Its turning gears are mated to turn together, and SolidWorks reports no mate in error: drag Sun in SolidWorks and the rest of its train follow. The 3 copies of Planet turn on C, which is held fixed, and Planetary_4to1_r2_C_Carrier holds C's axes and planes only: a plate and pins are yours to add. CarrierGear stays fixed where it is placed: its shaft does not turn.
+ok      p7 Build again: every part(s), the layout part and the assembly built and saved, turning: ok True, parts built 0, kind 'motion'
+ok      p7 Build again: no interference: []
+fact    p7 Build again: the build's sense read made again with the other Flip: ['Planet copy 1 meshes Ring']
+ok      p7 Build again: the record holds a turning gearbox built from this read
+ok      p7 Build again: the record's mates are the plan's: ['Sun on S Axis', 'Sun along S', 'Planet copy 1 on P copy 1 Axis', 'Planet copy 1 along P copy 1', 'Planet copy 2 on P copy 2 Axis', 'Planet copy 2 along P copy 2', 'Planet copy 3 on P copy 3 Axis', 'Planet copy 3 along P copy 3', 'Ring on R Axis', 'Ring along R', 'Sun meshes Planet copy 1', 'Sun meshes Planet copy 2', 'Sun meshes Planet copy 3', 'Planet copy 1 meshes Ring']
+ok      p7 Build again: the build's sentence says how to turn it: 'drag Sun in SolidWorks and the rest of its train follow'
+footer  (p7 Build again, built) [green] Built Planetary_4to1_r2_Layout, Planetary_4to1_r2_C_Carrier and Planetary_4to1_r2.SLDASM, reusing the 4 parts already built; no interference between the gears where they stand. Its turning gears are mated to turn together, and SolidWorks reports no mate in error: drag Sun in SolidWorks and the rest of its train follow. The 3 copies of Planet turn on C, which is held fixed, and Planetary_4to1_r2_C_Carrier holds C's axes and planes only: a plate and pins are yours to add. CarrierGear stays fixed where it is placed: its shaft does not turn.
+        button 'Build again…' on; Update SolidWorks shown on primary
+ok      p7 Build again: the footer says how to turn it: 'drag Sun in SolidWorks and the rest of its train follow'
+tag     ' · built from this version'
+ok      p7 Build again: 7 files on disk
+        marked modified in SolidWorks right after the build: {'Sun.SLDPRT': False, 'Planet.SLDPRT': False, 'Ring_m1_N54.SLDPRT': False, 'CarrierGear.SLDPRT': False, 'Planetary_4to1_r2_Layout.SLDPRT': False, 'Planetary_4to1_r2_C_Carrier.SLDPRT': False, 'Planetary_4to1_r2.SLDASM': True}
+ok      p7 Build again: the assembly is marked after the build (a read after its save)
+ok      p7 Build again, right after the build and its saves: SolidWorks marks modified exactly ['Planetary_4to1_r2.SLDASM']
+ok      p7: the new revision is Planetary_4to1_r2: Planetary_4to1_r2.SLDASM
+ok      p7: every earlier SolidWorks file's sha256 and mtime unchanged: changed []
+ok      p7: the gear to drag is Sun: ['Sun']
+ok      p7 built: Sun meshes Planet copy 1's sense on record 1 agrees with the kinematics (k > 0 False)
+ok      p7 built: Sun meshes Planet copy 2's sense on record 1 agrees with the kinematics (k > 0 False)
+ok      p7 built: Sun meshes Planet copy 3's sense on record 1 agrees with the kinematics (k > 0 False)
+ok      p7 built: Planet copy 1 meshes Ring's sense on record -1 agrees with the kinematics (k > 0 True)
+read    p7 built: Sun meshes Planet copy 1: Reverse False; entity 1 direction (0.0, 0.0, 1.0) through (0.0, 0.0, 4.432502) mm; entity 2 direction (0.0, 0.0, 1.0) through (18.0, 0.0, 4.432502) mm; k > 0 False; rule H right True, τa·τb +1; the app right True, τa·τb +1; parallel axes ((0.0, 0.0, 1.0), (0.0, 0.0, 1.0))
+ok      p7 built: the app reads Sun meshes Planet copy 1 turning right (parallel axes): (True, (1, 1))
+ok      p7 built: rule H on the raw read agrees with the app's own read of Sun meshes Planet copy 1
+read    p7 built: Sun meshes Planet copy 2: Reverse False; entity 1 direction (0.0, 0.0, 1.0) through (0.0, 0.0, 4.432502) mm; entity 2 direction (0.0, 0.0, 1.0) through (-9.0, 15.588457, 4.432502) mm; k > 0 False; rule H right True, τa·τb +1; the app right True, τa·τb +1; parallel axes ((0.0, 0.0, 1.0), (0.0, 0.0, 1.0))
+ok      p7 built: the app reads Sun meshes Planet copy 2 turning right (parallel axes): (True, (1, 1))
+ok      p7 built: rule H on the raw read agrees with the app's own read of Sun meshes Planet copy 2
+read    p7 built: Sun meshes Planet copy 3: Reverse False; entity 1 direction (0.0, 0.0, 1.0) through (0.0, 0.0, 4.432502) mm; entity 2 direction (0.0, 0.0, 1.0) through (-9.0, -15.588457, 4.432502) mm; k > 0 False; rule H right True, τa·τb +1; the app right True, τa·τb +1; parallel axes ((0.0, 0.0, 1.0), (0.0, 0.0, 1.0))
+ok      p7 built: the app reads Sun meshes Planet copy 3 turning right (parallel axes): (True, (1, 1))
+ok      p7 built: rule H on the raw read agrees with the app's own read of Sun meshes Planet copy 3
+read    p7 built: Planet copy 1 meshes Ring: Reverse True; entity 1 direction (0.0, 0.0, 1.0) through (18.0, 0.0, 4.432502) mm; entity 2 direction (0.0, 0.0, 1.0) through (0.0, 0.0, 4.447452) mm; k > 0 True; rule H right True, τa·τb +1; the app right True, τa·τb +1; parallel axes ((0.0, 0.0, 1.0), (0.0, 0.0, 1.0))
+ok      p7 built: the app reads Planet copy 1 meshes Ring turning right (parallel axes): (True, (1, 1))
+ok      p7 built: rule H on the raw read agrees with the app's own read of Planet copy 1 meshes Ring
+measure p7 built: SolidWorks 1.64 GB private, 3.56 GB free; turning True
+ok      p7 built: the carrier C (Planetary_4to1_r2_C_Carrier-1) at (0.0, 0.0, 0.0), origin off 0.0e+00 mm, turn off 0.0e+00° (exactly), axis off 0.0e+00
+ok      p7 built: the carrier C's frame on record is the one the workbook wants
+ok      p7 built: Sun (Sun-1) at (0.0, 0.0, 5.0), origin off 0.0e+00 mm, turn off 0.0e+00° (exactly), axis off 0.0e+00
+ok      p7 built: Sun's frame on record is the one the workbook wants
+ok      p7 built: Planet copy 1 (Planet-1) at (18.0, 0.0, 5.0), origin off 0.0e+00 mm, turn off 0.0e+00° (exactly), axis off 0.0e+00
+ok      p7 built: Planet copy 1's frame on record is the one the workbook wants
+ok      p7 built: Planet copy 2 (Planet-2) at (-9.0, 15.58845727, 5.0), origin off 1.9e-09 mm, turn off 0.0e+00° (exactly), axis off 0.0e+00
+ok      p7 built: Planet copy 2's frame on record is the one the workbook wants
+ok      p7 built: Planet copy 3 (Planet-3) at (-9.0, -15.58845727, 5.0), origin off 1.9e-09 mm, turn off 0.0e+00° (exactly), axis off 0.0e+00
+ok      p7 built: Planet copy 3's frame on record is the one the workbook wants
+ok      p7 built: Ring (Ring_m1_N54-1) at (0.0, 0.0, 5.0), origin off 0.0e+00 mm, turn off 5.6e-15° (exactly), axis off 0.0e+00
+ok      p7 built: Ring's frame on record is the one the workbook wants
+ok      p7 built: CarrierGear (CarrierGear-1) at (0.0, 0.0, 27.0), origin off 0.0e+00 mm, turn off 0.0e+00° (exactly), axis off 0.0e+00
+ok      p7 built: CarrierGear's frame on record is the one the workbook wants
+ok      p7 built: the layout (Planetary_4to1_r2_Layout-1) is at identity
+        frames read in 0.2 s
+        Planetary_4to1_r2_Layout.SLDPRT globals {}
+ok      p7 built: S Axis on S's line through (0, 0, 0) (off 0.0e+00 mm), along (0.0, 0.0, 1.0), + its Axis Z+ (reads +Z)
+ok      p7 built: C Axis on C's line through (0, 0, 0) (off 0.0e+00 mm), along (0.0, 0.0, 1.0), + its Axis Z+ (reads +Z)
+ok      p7 built: R Axis on R's line through (0, 0, 0) (off 0.0e+00 mm), along (0.0, 0.0, 1.0), + its Axis Z+ (reads +Z)
+        Planetary_4to1_r2_C_Carrier.SLDPRT: solid bodies 0; features [('Front Plane', 'RefPlane'), ('Top Plane', 'RefPlane'), ('Right Plane', 'RefPlane'), ('C Axis', 'RefAxis'), ('P copy 1 X Plane', 'RefPlane'), ('P copy 1 Axis', 'RefAxis'), ('P copy 2 X Plane', 'RefPlane'), ('P copy 2 Y Plane', 'RefPlane'), ('P copy 2 Axis', 'RefAxis'), ('P copy 3 X Plane', 'RefPlane'), ('P copy 3 Y Plane', 'RefPlane'), ('P copy 3 Axis', 'RefAxis')]; globals {'P copy 1 X': 18.0, 'P copy 2 X': -9.0, 'P copy 2 Y': 15.58845727, 'P copy 3 X': -9.0, 'P copy 3 Y': -15.58845727, 'Offset@P copy 1 X Plane': 18.0, 'Offset@P copy 2 X Plane': 9.0, 'Offset@P copy 2 Y Plane': 15.58845727, 'Offset@P copy 3 X Plane': 9.0, 'Offset@P copy 3 Y Plane': 15.58845727}
+ok      p7 built: Planetary_4to1_r2_C_Carrier.SLDPRT is axes and planes only: 0 solid bodies, no solid feature
+ok      p7 built: C Axis, carried into the assembly, through the carrier's own centre (0.0, 0.0, 0.0) (off 0.0e+00 mm) along the carrier's direction (+)
+ok      p7 built: P copy 1 Axis, carried into the assembly, through Planet copy 1 centre (18.0, 0.0, 10.0) (off 0.0e+00 mm) along the carrier's direction (+)
+ok      p7 built: P copy 2 Axis, carried into the assembly, through Planet copy 2 centre (-9.0, 15.588457268, 10.0) (off 1.9e-09 mm) along the carrier's direction (+)
+ok      p7 built: P copy 3 Axis, carried into the assembly, through Planet copy 3 centre (-9.0, -15.588457268, 10.0) (off 1.9e-09 mm) along the carrier's direction (+)
+ok      p7 built: every held body reads IsFixed: {'CarrierGear': True, 'C carrier': True}
+ok      p7 built: no mate names the held carrier ['C carrier']: []
+ok      p7 built: no interference in Planetary_4to1_r2.SLDASM: []
+        mates [('Sun on S Axis', 0, True, False), ('Sun along S', 0, True, False), ('Planet copy 1 on P copy 1 Axis', 0, True, False), ('Planet copy 1 along P copy 1', 0, True, False), ('Planet copy 2 on P copy 2 Axis', 0, True, False), ('Planet copy 2 along P copy 2', 0, True, False), ('Planet copy 3 on P copy 3 Axis', 0, True, False), ('Planet copy 3 along P copy 3', 0, True, False), ('Ring on R Axis', 0, True, False), ('Ring along R', 0, True, False), ('Sun meshes Planet copy 1', 0, True, False), ('Sun meshes Planet copy 2', 0, True, False), ('Sun meshes Planet copy 3', 0, True, False), ('Planet copy 1 meshes Ring', 0, True, False)]; others []; constrained {'Sun': 2, 'Planet copy 1': 2, 'Planet copy 2': 2, 'Planet copy 3': 2, 'Ring': 2, 'CarrierGear': 3, 'C carrier': 3}
+ok      p7 built: the mates are exactly the record's 14: extra [], missing []
+ok      p7 built: nothing but mates in the mate group: []
+ok      p7 built: every mate's error code is 0: []
+ok      p7 built: no mate suppressed: []
+ok      p7 built: every mated gear and carrier under-defined (2): {'Sun': 2, 'Planet copy 1': 2, 'Planet copy 2': 2, 'Planet copy 3': 2, 'Ring': 2, 'CarrierGear': 3, 'C carrier': 3}
+ok      p7 built: Planet copy 1 turned half a pitch (10.0000°) clashes with exactly ['Ring', 'Sun']: [(('Planet copy 1', 'Ring'), 50.57), (('Sun', 'Planet copy 1'), 27.532)]
+ok      p7 built: Planet copy 1 put back, no interference (4.9 s)
+ok      p7 built: Planet copy 2 turned half a pitch (10.0000°) clashes with exactly ['Ring', 'Sun']: [(('Planet copy 2', 'Ring'), 50.573), (('Sun', 'Planet copy 2'), 27.535)]
+ok      p7 built: Planet copy 2 put back, no interference (5.3 s)
+ok      p7 built: Planet copy 3 turned half a pitch (10.0000°) clashes with exactly ['Ring', 'Sun']: [(('Planet copy 3', 'Ring'), 50.573), (('Sun', 'Planet copy 3'), 27.535)]
+ok      p7 built: Planet copy 3 put back, no interference (5.0 s)
+ok      p7 built: Sun turned half a pitch (10.0000°) clashes with exactly ['Planet copy 1', 'Planet copy 2', 'Planet copy 3']: [(('Sun', 'Planet copy 2'), 27.369), (('Sun', 'Planet copy 3'), 27.369), (('Sun', 'Planet copy 1'), 27.366)]
+ok      p7 built: Sun put back, no interference (4.6 s)
+ok      p7 built, after the controls: the carrier C (Planetary_4to1_r2_C_Carrier-1) at (0.0, 0.0, 0.0), origin off 0.0e+00 mm, turn off 0.0e+00° (exactly), axis off 0.0e+00
+ok      p7 built, after the controls: the carrier C's frame on record is the one the workbook wants
+ok      p7 built, after the controls: Sun (Sun-1) at (0.0, 0.0, 5.0), origin off 0.0e+00 mm, turn off 0.0e+00° (exactly), axis off 0.0e+00
+ok      p7 built, after the controls: Sun's frame on record is the one the workbook wants
+ok      p7 built, after the controls: Planet copy 1 (Planet-1) at (18.0, 0.0, 5.0), origin off 0.0e+00 mm, turn off 1.6e-15° (exactly), axis off 0.0e+00
+ok      p7 built, after the controls: Planet copy 1's frame on record is the one the workbook wants
+ok      p7 built, after the controls: Planet copy 2 (Planet-2) at (-9.0, 15.58845727, 5.0), origin off 1.9e-09 mm, turn off 3.2e-15° (exactly), axis off 0.0e+00
+ok      p7 built, after the controls: Planet copy 2's frame on record is the one the workbook wants
+ok      p7 built, after the controls: Planet copy 3 (Planet-3) at (-9.0, -15.58845727, 5.0), origin off 1.9e-09 mm, turn off 1.6e-15° (exactly), axis off 0.0e+00
+ok      p7 built, after the controls: Planet copy 3's frame on record is the one the workbook wants
+ok      p7 built, after the controls: Ring (Ring_m1_N54-1) at (0.0, 0.0, 5.0), origin off 0.0e+00 mm, turn off 5.6e-15° (exactly), axis off 0.0e+00
+ok      p7 built, after the controls: Ring's frame on record is the one the workbook wants
+ok      p7 built, after the controls: CarrierGear (CarrierGear-1) at (0.0, 0.0, 27.0), origin off 0.0e+00 mm, turn off 0.0e+00° (exactly), axis off 0.0e+00
+ok      p7 built, after the controls: CarrierGear's frame on record is the one the workbook wants
+ok      p7 built, after the controls: the layout (Planetary_4to1_r2_Layout-1) is at identity
+        frames read in 0.3 s
+        mates [('Sun on S Axis', 0, True, False), ('Sun along S', 0, True, False), ('Planet copy 1 on P copy 1 Axis', 0, True, False), ('Planet copy 1 along P copy 1', 0, True, False), ('Planet copy 2 on P copy 2 Axis', 0, True, False), ('Planet copy 2 along P copy 2', 0, True, False), ('Planet copy 3 on P copy 3 Axis', 0, True, False), ('Planet copy 3 along P copy 3', 0, True, False), ('Ring on R Axis', 0, True, False), ('Ring along R', 0, True, False), ('Sun meshes Planet copy 1', 0, True, False), ('Sun meshes Planet copy 2', 0, True, False), ('Sun meshes Planet copy 3', 0, True, False), ('Planet copy 1 meshes Ring', 0, True, False)]; others []; constrained {'Sun': 2, 'Planet copy 1': 2, 'Planet copy 2': 2, 'Planet copy 3': 2, 'Ring': 2, 'CarrierGear': 3, 'C carrier': 3}
+ok      p7 built, after the controls: the mates are exactly the record's 14: extra [], missing []
+ok      p7 built, after the controls: nothing but mates in the mate group: []
+ok      p7 built, after the controls: every mate's error code is 0: []
+ok      p7 built, after the controls: no mate suppressed: []
+ok      p7 built, after the controls: every mated gear and carrier under-defined (2): {'Sun': 2, 'Planet copy 1': 2, 'Planet copy 2': 2, 'Planet copy 3': 2, 'Ring': 2, 'CarrierGear': 3, 'C carrier': 3}
+drive   p7 built, control on Planet copy 1 meshes Ring: input Sun; control ('Planet copy 1', 'Ring'); SolidWorks 1.67 GB private, 3.55 GB free
+ok      p7 built, control on Planet copy 1 meshes Ring: the drive's assumptions hold: Sun on S (0.0, 0.0, 1.0) at θ = 0, u₀ (1.0, 0.0, 0.0), its Top plane against the layout's Right (plane3); the input's turn ruled by DEMONSTRATION_DRIVE_SENSE 1 and measured; tolerance 1e-06 relative
+        in 24.4 s; rebuilds [('drive added', True), ('Drive 120', True), ('Drive 90', True), ('control added, Flip True', True), ('Drive 120', True), ('Drive 90', True), ('control added, Flip False', True), ('Drive 120', True), ('Drive 90', True), ('control gone', True), ('drive gone', True)]; drive mate ('Demonstration drive', 'D1', 1); control mate [(True, 'Control Planet copy 1 meshes Ring', 1), (False, 'Control Planet copy 1 meshes Ring', 1)]
+ok      p7 built, control on Planet copy 1 meshes Ring: the drive ran without a raise: []
+ok      p7 built, control on Planet copy 1 meshes Ring: every cleanup step ran: []
+ok      p7 built, control on Planet copy 1 meshes Ring: before the drive every gear stands at its frame on record (largest 1.9e-09 at Planet copy 2)
+        states with the drive added: [('Sun on S Axis', 0, True, False), ('Sun along S', 0, True, False), ('Planet copy 1 on P copy 1 Axis', 0, True, False), ('Planet copy 1 along P copy 1', 0, True, False), ('Planet copy 2 on P copy 2 Axis', 0, True, False), ('Planet copy 2 along P copy 2', 0, True, False), ('Planet copy 3 on P copy 3 Axis', 0, True, False), ('Planet copy 3 along P copy 3', 0, True, False), ('Ring on R Axis', 0, True, False), ('Ring along R', 0, True, False), ('Sun meshes Planet copy 1', 0, True, False), ('Sun meshes Planet copy 2', 0, True, False), ('Sun meshes Planet copy 3', 0, True, False), ('Planet copy 1 meshes Ring', 0, True, False), ('Demonstration drive', 0, True, False)]
+ok      p7 built, control on Planet copy 1 meshes Ring: adding the 90° drive moved nothing (largest 0.0e+00)
+fact    p7 built, control on Planet copy 1 meshes Ring: the input Sun turned +30.000000000° about its own +Z, measured (as DEMONSTRATION_DRIVE_SENSE says for a Z+ input)
+        Drive 90 -> 120: Sun +30.000000000° (kinematics +30.000000000°), Planet copy 1 -30.000000000° (kinematics -30.000000000°), Planet copy 2 -30.000000000° (kinematics -30.000000000°), Planet copy 3 -30.000000000° (kinematics -30.000000000°), Ring -10.000000000° (kinematics -10.000000000°), CarrierGear +0.000000000° (kinematics +0.000000000°), C carrier +0.000000000° (kinematics +0.000000000°)
+ok      p7 built, control on Planet copy 1 meshes Ring: Sun turned +30.000000000° for +30.000000000°, sign included (off 2.8e-13)
+ok      p7 built, control on Planet copy 1 meshes Ring: Planet copy 1 turned -30.000000000° for -30.000000000°, sign included (off 2.8e-13)
+ok      p7 built, control on Planet copy 1 meshes Ring: Planet copy 2 turned -30.000000000° for -30.000000000°, sign included (off 2.9e-13)
+ok      p7 built, control on Planet copy 1 meshes Ring: Planet copy 3 turned -30.000000000° for -30.000000000°, sign included (off 2.9e-13)
+ok      p7 built, control on Planet copy 1 meshes Ring: Ring turned -10.000000000° for -10.000000000°, sign included (off 9.8e-14)
+ok      p7 built, control on Planet copy 1 meshes Ring: CarrierGear turned +0.000000000° for +0.000000000°, sign included (off 0.0e+00)
+ok      p7 built, control on Planet copy 1 meshes Ring: C carrier turned +0.000000000° for +0.000000000°, sign included (off 0.0e+00)
+ok      p7 built, control on Planet copy 1 meshes Ring: driven, every body where the kinematics put it — each copy's origin carried round its carrier, the held member unmoved: {'Sun': '4.3e-15', 'Planet copy 1': '4.8e-15', 'Planet copy 2': '4.9e-15', 'Planet copy 3': '4.8e-15', 'Ring': '1.7e-15', 'CarrierGear': '0.0e+00', 'C carrier': '0.0e+00'}
+        Planet copy 1 carried to (18.0, 0.0, 5.0)
+        Planet copy 2 carried to (-9.0, 15.588457, 5.0)
+        Planet copy 3 carried to (-9.0, -15.588457, 5.0)
+ok      p7 built, control on Planet copy 1 meshes Ring: every listed mesh in step, the unmated ones included: [('Sun', 'Planet copy 1', '-1.2e-16 rad'), ('Sun', 'Planet copy 2', '-2.5e-16 rad'), ('Sun', 'Planet copy 3', '-2.5e-16 rad'), ('Planet copy 1', 'Ring', '-6.2e-17 rad'), ('Planet copy 2', 'Ring', '-3.1e-17 rad'), ('Planet copy 3', 'Ring', '-3.1e-17 rad')]
+ok      p7 built, control on Planet copy 1 meshes Ring: interferences() with Drive at 120: none, every mesh, mated or not, clear: []
+        states driven: [('Sun on S Axis', 0, True, False), ('Sun along S', 0, True, False), ('Planet copy 1 on P copy 1 Axis', 0, True, False), ('Planet copy 1 along P copy 1', 0, True, False), ('Planet copy 2 on P copy 2 Axis', 0, True, False), ('Planet copy 2 along P copy 2', 0, True, False), ('Planet copy 3 on P copy 3 Axis', 0, True, False), ('Planet copy 3 along P copy 3', 0, True, False), ('Ring on R Axis', 0, True, False), ('Ring along R', 0, True, False), ('Sun meshes Planet copy 1', 0, True, False), ('Sun meshes Planet copy 2', 0, True, False), ('Sun meshes Planet copy 3', 0, True, False), ('Planet copy 1 meshes Ring', 0, True, False), ('Demonstration drive', 0, True, False)]
+ok      p7 built, control on Planet copy 1 meshes Ring: no mate in error while driven
+ok      p7 built, control on Planet copy 1 meshes Ring: Drive set back to 90, every gear at its built frame (largest 3.6e-15 at Planet copy 1)
+ok      p7 built, control on Planet copy 1 meshes Ring, control: the gear mate with Flip True moved nothing when made (largest 3.6e-15)
+        control, Control Planet copy 1 meshes Ring with Flip True: Sun +30.000000000° (kinematics +30.000000000°), Planet copy 1 -30.000000000° (kinematics -30.000000000°), Planet copy 2 -30.000000000° (kinematics -30.000000000°), Planet copy 3 -30.000000000° (kinematics -30.000000000°), Ring -10.000000000° (kinematics -10.000000000°), CarrierGear +0.000000000° (kinematics +0.000000000°), C carrier +0.000000000° (kinematics +0.000000000°)
+        control with Flip True: largest frame off the kinematics 8.2e-15
+ok      p7 built, control on Planet copy 1 meshes Ring, control: Drive set back with Flip True's mate on: every gear at its built frame (largest 7.1e-15 at Planet copy 1)
+ok      p7 built, control on Planet copy 1 meshes Ring, control: the gear mate with Flip False moved nothing when made (largest 7.1e-15)
+        control, Control Planet copy 1 meshes Ring with Flip False: Sun +30.000000000° (kinematics +30.000000000°), Planet copy 1 -30.000000000° (kinematics -30.000000000°), Planet copy 2 -30.000000000° (kinematics -30.000000000°), Planet copy 3 -30.000000000° (kinematics -30.000000000°), Ring +10.000000000° (kinematics -10.000000000°), CarrierGear +0.000000000° (kinematics +0.000000000°), C carrier +0.000000000° (kinematics +0.000000000°)
+fact    p7 built, control on Planet copy 1 meshes Ring, control: with Flip False every body stands a whole number of its own pitches from its right place: {'Sun': 0.0, 'Planet copy 1': -0.0, 'Planet copy 2': -0.0, 'Planet copy 3': -0.0, 'Ring': 20.0, 'CarrierGear': 0.0, 'C carrier': 0.0}
+        control with Flip False: largest frame off the kinematics 3.5e-01
+ok      p7 built, control on Planet copy 1 meshes Ring, control: Drive set back with Flip False's mate on: every gear at its built frame (largest 1.1e-14 at Planet copy 1)
+ok      p7 built, control on Planet copy 1 meshes Ring, control: a wrong sense is seen: with Flip [False] the train turns off the kinematics, with Flip [True] it turns right (the comparison tells one from the other)
+fact    p7 built, control on Planet copy 1 meshes Ring: Planet copy 1 meshes Ring turns right with Flip [True] here on SolidWorks 34.1.1 (findings.GEAR_MATE_FLIP False; a planetary train)
+ok      p7 built, control on Planet copy 1 meshes Ring, control: the Flip that turns right, [True], is the one SolidWorks made Planet copy 1 meshes Ring with ([True]: turned round); neither gear has moved since
+read    p7 built, control on Planet copy 1 meshes Ring, control with Flip True: Control Planet copy 1 meshes Ring: Reverse True; entity 1 direction (0.0, 0.0, 1.0) through (18.0, 0.0, 4.432502) mm; entity 2 direction (0.0, 0.0, 1.0) through (0.0, 0.0, 4.447452) mm; k > 0 True; rule H right True, τa·τb +1; the app right True, τa·τb +1; parallel axes ((0.0, 0.0, 1.0), (0.0, 0.0, 1.0))
+ok      p7 built, control on Planet copy 1 meshes Ring, control: the app's read of the mate with Flip True says right True; the drive says True
+read    p7 built, control on Planet copy 1 meshes Ring, control with Flip False: Control Planet copy 1 meshes Ring: Reverse False; entity 1 direction (0.0, 0.0, 1.0) through (18.0, 0.0, 4.432502) mm; entity 2 direction (0.0, 0.0, 1.0) through (0.0, 0.0, 4.447452) mm; k > 0 True; rule H right False, τa·τb +1; the app right False, τa·τb +1; parallel axes ((0.0, 0.0, 1.0), (0.0, 0.0, 1.0))
+ok      p7 built, control on Planet copy 1 meshes Ring, control: the app's read of the mate with Flip False says right False; the drive says False
+fact    p7 built, control on Planet copy 1 meshes Ring, control: driven 30° with Flip True (right): interference []
+ok      p7 built, control on Planet copy 1 meshes Ring, control: with the Flip that turns right (True) Planet copy 1 meshes Ring runs clear: []
+fact    p7 built, control on Planet copy 1 meshes Ring, control: driven 30° with Flip False (wrong): interference []
+fact    p7 built, control on Planet copy 1 meshes Ring, control: the wrong Flip (False) puts every gear a whole pitch off, so no clash can show it; the drive's frames told it wrong
+ok      p7 built, control on Planet copy 1 meshes Ring, control: the control mates deleted and the recorded one back on: every gear at its built frame (largest 1.1e-14 at Planet copy 1)
+ok      p7 built, control on Planet copy 1 meshes Ring: the drive gone, every frame against the built frames (largest 1.1e-14 at Planet copy 1)
+ok      p7 built, control on Planet copy 1 meshes Ring: no Drive equation left: []
+ok      p7 built, control on Planet copy 1 meshes Ring: no angle mate or control mate left; the mates as before: ['Sun on S Axis', 'Sun along S', 'Planet copy 1 on P copy 1 Axis', 'Planet copy 1 along P copy 1', 'Planet copy 2 on P copy 2 Axis', 'Planet copy 2 along P copy 2', 'Planet copy 3 on P copy 3 Axis', 'Planet copy 3 along P copy 3', 'Ring on R Axis', 'Ring along R', 'Sun meshes Planet copy 1', 'Sun meshes Planet copy 2', 'Sun meshes Planet copy 3', 'Planet copy 1 meshes Ring']
+ok      p7 built, control on Planet copy 1 meshes Ring: no mate (no lock) left suppressed
+ok      p7 built, control on Planet copy 1 meshes Ring: no mate in error after the drive
+ok      p7 built, control on Planet copy 1 meshes Ring: every mated gear under-defined again: {'Sun': 2, 'Planet copy 1': 2, 'Planet copy 2': 2, 'Planet copy 3': 2, 'Ring': 2}
+        closing: saved this run's modified documents first, as a person would: ['Planetary_4to1_r2.SLDASM']
+ok      p7 built: saved and closed this run's documents: left []
+        open now: []
+ok      p7 built, reopened: every document just opened from its file reads GetSaveFlag False (the record clears a mark on that reading): {'Planetary_4to1_r2_Layout.SLDPRT': False, 'Planetary_4to1_r2_C_Carrier.SLDPRT': False, 'Sun.SLDPRT': False, 'Planet.SLDPRT': False, 'Ring_m1_N54.SLDPRT': False, 'CarrierGear.SLDPRT': False, 'Planetary_4to1_r2.SLDASM': False}
+ok      p7 built, reopened: the carrier C (Planetary_4to1_r2_C_Carrier-1) at (0.0, 0.0, 0.0), origin off 0.0e+00 mm, turn off 0.0e+00° (exactly), axis off 0.0e+00
+ok      p7 built, reopened: the carrier C's frame on record is the one the workbook wants
+ok      p7 built, reopened: Sun (Sun-1) at (0.0, -0.0, 5.0), origin off 1.1e-15 mm, turn off 0.0e+00° (exactly), axis off 0.0e+00
+ok      p7 built, reopened: Sun's frame on record is the one the workbook wants
+ok      p7 built, reopened: Planet copy 1 (Planet-1) at (18.0, 0.0, 5.0), origin off 1.1e-14 mm, turn off 4.8e-15° (exactly), axis off 0.0e+00
+ok      p7 built, reopened: Planet copy 1's frame on record is the one the workbook wants
+ok      p7 built, reopened: Planet copy 2 (Planet-2) at (-9.0, 15.58845727, 5.0), origin off 1.9e-09 mm, turn off 1.6e-15° (exactly), axis off 1.1e-16
+ok      p7 built, reopened: Planet copy 2's frame on record is the one the workbook wants
+ok      p7 built, reopened: Planet copy 3 (Planet-3) at (-9.0, -15.58845727, 5.0), origin off 1.9e-09 mm, turn off 3.2e-15° (exactly), axis off 1.2e-32
+ok      p7 built, reopened: Planet copy 3's frame on record is the one the workbook wants
+ok      p7 built, reopened: Ring (Ring_m1_N54-1) at (0.0, -0.0, 5.0), origin off 4.8e-32 mm, turn off 5.6e-15° (exactly), axis off 0.0e+00
+ok      p7 built, reopened: Ring's frame on record is the one the workbook wants
+ok      p7 built, reopened: CarrierGear (CarrierGear-1) at (0.0, 0.0, 27.0), origin off 0.0e+00 mm, turn off 0.0e+00° (exactly), axis off 0.0e+00
+ok      p7 built, reopened: CarrierGear's frame on record is the one the workbook wants
+ok      p7 built, reopened: the layout (Planetary_4to1_r2_Layout-1) is at identity
+        frames read in 0.1 s
+fact    p7 built, reopened: marked modified after the frame reads (component_frame): []
+        mates [('Sun on S Axis', 0, True, False), ('Sun along S', 0, True, False), ('Planet copy 1 on P copy 1 Axis', 0, True, False), ('Planet copy 1 along P copy 1', 0, True, False), ('Planet copy 2 on P copy 2 Axis', 0, True, False), ('Planet copy 2 along P copy 2', 0, True, False), ('Planet copy 3 on P copy 3 Axis', 0, True, False), ('Planet copy 3 along P copy 3', 0, True, False), ('Ring on R Axis', 0, True, False), ('Ring along R', 0, True, False), ('Sun meshes Planet copy 1', 0, True, False), ('Sun meshes Planet copy 2', 0, True, False), ('Sun meshes Planet copy 3', 0, True, False), ('Planet copy 1 meshes Ring', 0, True, False)]; others []; constrained {'Sun': 2, 'Planet copy 1': 2, 'Planet copy 2': 2, 'Planet copy 3': 2, 'Ring': 2, 'CarrierGear': 3, 'C carrier': 3}
+ok      p7 built, reopened: the mates are exactly the record's 14: extra [], missing []
+ok      p7 built, reopened: nothing but mates in the mate group: []
+ok      p7 built, reopened: every mate's error code is 0: []
+ok      p7 built, reopened: no mate suppressed: []
+ok      p7 built, reopened: every mated gear and carrier under-defined (2): {'Sun': 2, 'Planet copy 1': 2, 'Planet copy 2': 2, 'Planet copy 3': 2, 'Ring': 2, 'CarrierGear': 3, 'C carrier': 3}
+fact    p7 built, reopened: marked modified after the mate reads (mate_states, GetConstrainedStatus): []
+fact    p7 built, reopened: marked modified after interferences() (0 found): ['Planetary_4to1_r2.SLDASM']
+ok      p7 reopened: Sun meshes Planet copy 1's sense on record 1 agrees with the kinematics (k > 0 False)
+ok      p7 reopened: Sun meshes Planet copy 2's sense on record 1 agrees with the kinematics (k > 0 False)
+ok      p7 reopened: Sun meshes Planet copy 3's sense on record 1 agrees with the kinematics (k > 0 False)
+ok      p7 reopened: Planet copy 1 meshes Ring's sense on record -1 agrees with the kinematics (k > 0 True)
+read    p7 reopened: Sun meshes Planet copy 1: Reverse False; entity 1 direction (0.0, 0.0, 1.0) through (0.0, -0.0, 4.432502) mm; entity 2 direction (0.0, 0.0, 1.0) through (18.0, 0.0, 4.432502) mm; k > 0 False; rule H right True, τa·τb +1; the app right True, τa·τb +1; parallel axes ((0.0, 0.0, 1.0), (0.0, 0.0, 1.0))
+ok      p7 reopened: the app reads Sun meshes Planet copy 1 turning right (parallel axes): (True, (1, 1))
+ok      p7 reopened: rule H on the raw read agrees with the app's own read of Sun meshes Planet copy 1
+read    p7 reopened: Sun meshes Planet copy 2: Reverse False; entity 1 direction (0.0, 0.0, 1.0) through (0.0, -0.0, 4.432502) mm; entity 2 direction (0.0, -0.0, 1.0) through (-9.0, 15.588457, 4.432502) mm; k > 0 False; rule H right True, τa·τb +1; the app right True, τa·τb +1; parallel axes ((0.0, 0.0, 1.0), (0.0, 0.0, 1.0))
+ok      p7 reopened: the app reads Sun meshes Planet copy 2 turning right (parallel axes): (True, (1, 1))
+ok      p7 reopened: rule H on the raw read agrees with the app's own read of Sun meshes Planet copy 2
+read    p7 reopened: Sun meshes Planet copy 3: Reverse False; entity 1 direction (0.0, 0.0, 1.0) through (0.0, -0.0, 4.432502) mm; entity 2 direction (0.0, 0.0, 1.0) through (-9.0, -15.588457, 4.432502) mm; k > 0 False; rule H right True, τa·τb +1; the app right True, τa·τb +1; parallel axes ((0.0, 0.0, 1.0), (0.0, 0.0, 1.0))
+ok      p7 reopened: the app reads Sun meshes Planet copy 3 turning right (parallel axes): (True, (1, 1))
+ok      p7 reopened: rule H on the raw read agrees with the app's own read of Sun meshes Planet copy 3
+read    p7 reopened: Planet copy 1 meshes Ring: Reverse True; entity 1 direction (0.0, 0.0, 1.0) through (18.0, 0.0, 4.432502) mm; entity 2 direction (0.0, 0.0, 1.0) through (0.0, -0.0, 4.447452) mm; k > 0 True; rule H right True, τa·τb +1; the app right True, τa·τb +1; parallel axes ((0.0, 0.0, 1.0), (0.0, 0.0, 1.0))
+ok      p7 reopened: the app reads Planet copy 1 meshes Ring turning right (parallel axes): (True, (1, 1))
+ok      p7 reopened: rule H on the raw read agrees with the app's own read of Planet copy 1 meshes Ring
+drive   p7 reopened: input Sun; control None; SolidWorks 1.24 GB private, 3.76 GB free
+ok      p7 reopened: the drive's assumptions hold: Sun on S (0.0, 0.0, 1.0) at θ = 0, u₀ (1.0, 0.0, 0.0), its Top plane against the layout's Right (plane3); the input's turn ruled by DEMONSTRATION_DRIVE_SENSE 1 and measured; tolerance 1e-06 relative
+        in 6.8 s; rebuilds [('drive added', True), ('Drive 120', True), ('Drive 90', True), ('drive gone', True)]; drive mate ('Demonstration drive', 'D1', 1); control mate None
+ok      p7 reopened: the drive ran without a raise: []
+ok      p7 reopened: every cleanup step ran: []
+ok      p7 reopened: before the drive every gear stands at its frame on record (largest 1.9e-09 at Planet copy 2)
+        states with the drive added: [('Sun on S Axis', 0, True, False), ('Sun along S', 0, True, False), ('Planet copy 1 on P copy 1 Axis', 0, True, False), ('Planet copy 1 along P copy 1', 0, True, False), ('Planet copy 2 on P copy 2 Axis', 0, True, False), ('Planet copy 2 along P copy 2', 0, True, False), ('Planet copy 3 on P copy 3 Axis', 0, True, False), ('Planet copy 3 along P copy 3', 0, True, False), ('Ring on R Axis', 0, True, False), ('Ring along R', 0, True, False), ('Sun meshes Planet copy 1', 0, True, False), ('Sun meshes Planet copy 2', 0, True, False), ('Sun meshes Planet copy 3', 0, True, False), ('Planet copy 1 meshes Ring', 0, True, False), ('Demonstration drive', 0, True, False)]
+ok      p7 reopened: adding the 90° drive moved nothing (largest 0.0e+00)
+fact    p7 reopened: the input Sun turned +30.000000000° about its own +Z, measured (as DEMONSTRATION_DRIVE_SENSE says for a Z+ input)
+        Drive 90 -> 120: Sun +30.000000000° (kinematics +30.000000000°), Planet copy 1 -30.000000000° (kinematics -30.000000000°), Planet copy 2 -30.000000000° (kinematics -30.000000000°), Planet copy 3 -30.000000000° (kinematics -30.000000000°), Ring -10.000000000° (kinematics -10.000000000°), CarrierGear +0.000000000° (kinematics +0.000000000°), C carrier +0.000000000° (kinematics +0.000000000°)
+ok      p7 reopened: Sun turned +30.000000000° for +30.000000000°, sign included (off 2.5e-13)
+ok      p7 reopened: Planet copy 1 turned -30.000000000° for -30.000000000°, sign included (off 2.3e-13)
+ok      p7 reopened: Planet copy 2 turned -30.000000000° for -30.000000000°, sign included (off 3.0e-13)
+ok      p7 reopened: Planet copy 3 turned -30.000000000° for -30.000000000°, sign included (off 3.0e-13)
+ok      p7 reopened: Ring turned -10.000000000° for -10.000000000°, sign included (off 1.0e-13)
+ok      p7 reopened: CarrierGear turned +0.000000000° for +0.000000000°, sign included (off 0.0e+00)
+ok      p7 reopened: C carrier turned +0.000000000° for +0.000000000°, sign included (off 0.0e+00)
+ok      p7 reopened: driven, every body where the kinematics put it — each copy's origin carried round its carrier, the held member unmoved: {'Sun': '3.8e-15', 'Planet copy 1': '1.1e-14', 'Planet copy 2': '5.3e-15', 'Planet copy 3': '5.3e-15', 'Ring': '1.8e-15', 'CarrierGear': '0.0e+00', 'C carrier': '0.0e+00'}
+        Planet copy 1 carried to (18.0, 0.0, 5.0)
+        Planet copy 2 carried to (-9.0, 15.588457, 5.0)
+        Planet copy 3 carried to (-9.0, -15.588457, 5.0)
+ok      p7 reopened: every listed mesh in step, the unmated ones included: [('Sun', 'Planet copy 1', '3.1e-16 rad'), ('Sun', 'Planet copy 2', '-8.1e-16 rad'), ('Sun', 'Planet copy 3', '-8.1e-16 rad'), ('Planet copy 1', 'Ring', '-4.3e-16 rad'), ('Planet copy 2', 'Ring', '-6.2e-17 rad'), ('Planet copy 3', 'Ring', '-6.2e-17 rad')]
+ok      p7 reopened: interferences() with Drive at 120: none, every mesh, mated or not, clear: []
+        states driven: [('Sun on S Axis', 0, True, False), ('Sun along S', 0, True, False), ('Planet copy 1 on P copy 1 Axis', 0, True, False), ('Planet copy 1 along P copy 1', 0, True, False), ('Planet copy 2 on P copy 2 Axis', 0, True, False), ('Planet copy 2 along P copy 2', 0, True, False), ('Planet copy 3 on P copy 3 Axis', 0, True, False), ('Planet copy 3 along P copy 3', 0, True, False), ('Ring on R Axis', 0, True, False), ('Ring along R', 0, True, False), ('Sun meshes Planet copy 1', 0, True, False), ('Sun meshes Planet copy 2', 0, True, False), ('Sun meshes Planet copy 3', 0, True, False), ('Planet copy 1 meshes Ring', 0, True, False), ('Demonstration drive', 0, True, False)]
+ok      p7 reopened: no mate in error while driven
+ok      p7 reopened: Drive set back to 90, every gear at its built frame (largest 3.6e-15 at Planet copy 2)
+ok      p7 reopened: the drive gone, every frame against the built frames (largest 3.6e-15 at Planet copy 2)
+ok      p7 reopened: no Drive equation left: []
+ok      p7 reopened: no angle mate or control mate left; the mates as before: ['Sun on S Axis', 'Sun along S', 'Planet copy 1 on P copy 1 Axis', 'Planet copy 1 along P copy 1', 'Planet copy 2 on P copy 2 Axis', 'Planet copy 2 along P copy 2', 'Planet copy 3 on P copy 3 Axis', 'Planet copy 3 along P copy 3', 'Ring on R Axis', 'Ring along R', 'Sun meshes Planet copy 1', 'Sun meshes Planet copy 2', 'Sun meshes Planet copy 3', 'Planet copy 1 meshes Ring']
+ok      p7 reopened: no mate (no lock) left suppressed
+ok      p7 reopened: no mate in error after the drive
+ok      p7 reopened: every mated gear under-defined again: {'Sun': 2, 'Planet copy 1': 2, 'Planet copy 2': 2, 'Planet copy 3': 2, 'Ring': 2}
+ok      p7, the copy's end: p7 ends clean: every document of it closed in SolidWorks (left []), Excel's workbook closed (['Planetary_4to1.xlsx']), no open document by a file name it holds ([])
+close   section p7: left of ours []; 107 s; SolidWorks 1.24 GB private, 3.77 GB free
+excel   quit our own Excel
+close   left of ours []; stray []; lost []; SolidWorks 1.15 GB private, 3.90 GB free
+dialogs progress boxes seen {'Calculating Interference Detection': 10, 'Updating...': 0, 'Opening': 1, 'Loading...': 0}; other dialogs are logged above as DIALOG
+p1      p1.master renamed back to p1 for the person's step: C:\Users\M0obo\Documents\GearGeneratorProbe\w7-full-20261115-000138\out\p1
+person  W5-PLAN §4.4, the step only a person can do (for 2026, then 2024):
+person  In SolidWorks, open the Reducer_12to1.SLDASM a section built (a2 or m4). Click gear G1 — the small gear on S1, at the origin — and drag it round its axis by about a quarter turn. Watch G4, the large gear on S3: it turns the same way as G1, much more slowly — a quarter turn of G1 turns G4 about 7.5°. G2 and G3, on S2, turn together the other way. No gear should leave its axis, slide along it, or pass through another. Then, in the Workbook window, press Update SolidWorks with nothing changed: the footer should say the gears stand where they were turned. Tell us what you saw, on each version.
+person  W7-PLAN §6, the step only a person can do (for 2026, then 2024):
+person  In C:\Users\M0obo\Documents\GearGeneratorProbe\w7-full-20261115-000138\out\p1, open Planetary_4to1.xlsx in the Workbook window and Planetary_4to1.SLDASM in SolidWorks. Drag Sun round its axis by about a quarter turn, and watch the three planets: they roll round inside the ring the same way as Sun, about a quarter as fast, each spinning the other way on its own axis; the ring does not move. Then press Update SolidWorks with nothing changed: the footer should say the gears stand where they were turned.
+done    0 failed: []; 0 noted for a ruling
