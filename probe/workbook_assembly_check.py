@@ -3897,7 +3897,7 @@ def copy_opens(worker, copy, section, records):
             found = {}
             for index, name in enumerate(names):
                 s.find_component(f"copy{index}", name)
-                found[name] = str(s._handles[f"copy{index}"].get("path") or "")  # noqa: SLF001
+                found[name] = s.component_path(f"copy{index}")
             return found
         held = {n.lower() for n in os.listdir(copy)}
         same = sorted({n for n in run(worker, open_names) if n.lower() in held})
@@ -4556,7 +4556,7 @@ def held_fixed(worker, desk, label):
         out = {}
         for index, (g, n) in enumerate(pairs):
             s.find_component(f"h{index}", n)
-            out[g] = bool(call(s._handles[f"h{index}"]["component"], "IsFixed"))  # noqa: SLF001
+            out[g] = s.is_fixed(f"h{index}")
         return out
     got = run(worker, in_assembly(box.assembly, work)) if pairs else {}
     check(all(got.values()), f"{label}: every held body reads IsFixed: {got}")
