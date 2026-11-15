@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
 from .gears import pair as pairs, standards
 from .gears.base import Diagnostic
@@ -1116,6 +1116,15 @@ NBSP = "\u00a0"
 # in every font Tk and the boards' HTML fall back to, and keeps an ordinary space's width, so nothing moves.
 
 
+def _copies_of(shaft) -> int:
+    """A Shafts row's Copies as a number (blank, or anything not a whole number above 0, is 1)."""
+    try:
+        n = int(str(getattr(shaft, "copies", "") or "1").strip())
+    except ValueError:
+        return 1
+    return n if n > 0 else 1
+
+
 def workbook_speed_lines(spec, motion) -> Tuple[List[str], str]:
     """The Speeds panel: one line per shaft (speed, way round, torque), and its header readout. A gearbox a
     later phase drives gives the one sentence saying so, and no readout.
@@ -1126,13 +1135,21 @@ def workbook_speed_lines(spec, motion) -> Tuple[List[str], str]:
     rpm anticlockwise seen from the +X end · 10.00 N·m* (a slant's *seen from the (0.5, −0.866, 0) end*: one form
     for both, so the slant's components never read as a point), and the readout is *seen from each shaft's + end*.
     Each number is joined to its unit, and a slant's vector held together, by :data:`NBSP`, so a wrapped line
-    breaks only between its parts."""
+    breaks only between its parts. W7: a planet shaft and a held member take :func:`planetary_speed_line`."""
     if motion.later:
         return [motion.later], ""
     seen = getattr(motion, "seen_from", None) or {}
     every_z = all(seen.get(shaft.id, "+Z") == "+Z" for shaft in spec.shafts)
     lines = []
+    held = getattr(motion, "held", None) or {}
     for shaft in spec.shafts:
+        mount = shaft.mount() if hasattr(shaft, "mount") else "frame"
+        if mount != "frame":                      # W7: a planet shaft, its speed on its carrier and its copies
+            lines.append(planetary_speed_line(shaft.id, motion, copies=_copies_of(shaft), carrier=mount))
+            continue
+        if shaft.id in held:                      # W7: a held member of a planetary stage, and what it holds
+            lines.append(planetary_speed_line(shaft.id, motion))
+            continue
         speed = motion.speeds.get(shaft.id)
         if speed is None:
             lines.append(f"{shaft.id:<4}  not driven")
@@ -1437,13 +1454,29 @@ def gearbox_status(plan, result, again: bool = False) -> Tuple[str, bool]:
         return f"{lead}{text} The assembly was not attempted.{then}", False
 
     layout_name = _stem(layout.saved) if layout is not None and layout.saved else ""
+    carriers = list(getattr(result, "carriers", ()) or ())                  # W7: the carrier parts, after the layout
+    carrier_names = [_stem(c.saved) for c in carriers if c.ok and c.saved]
+    carriers_reused = [_stem(p) for p in getattr(result, "carriers_reused", ()) or ()]
+    for carrier in carriers:
+        if not (carrier.ok and carrier.saved):
+            text = _went_wrong(carrier, "the carrier part")
+            done = _done_phrase(made_names + ([layout_name] if layout_name else []) + carrier_names,
+                                ([reused_layout] if reused_layout else []) + carriers_reused
+                                + ([_already(reused_parts)] if reused_parts else []))
+            lead = f"{done}; " if done else ""
+            text = text if lead else text[:1].upper() + text[1:]
+            reused = "the parts and layout are reused" if done else ""
+            then = _template_first(carrier, button, reused) or (
+                f" Press {button} to carry on" + (f": {reused}." if reused else "."))
+            return f"{lead}{text} The assembly was not attempted.{then}", False
     assembly = result.assembly
     if (assembly is not None and not (assembly.ok and assembly.saved)
             and any(str(p).strip() for p in assembly.mate_problems)):
         return mate_refused_status(plan, result, again)      # W5: a refused or flagged mate stops the build
     if assembly is not None and not (assembly.ok and assembly.saved):
-        made_now = made_names + ([layout_name] if layout_name else [])
-        reused_now = ([reused_layout] if reused_layout else []) + ([_already(reused_parts)] if reused_parts else [])
+        made_now = made_names + ([layout_name] if layout_name else []) + carrier_names
+        reused_now = (([reused_layout] if reused_layout else []) + carriers_reused
+                      + ([_already(reused_parts)] if reused_parts else []))
         done = _done_phrase(made_now, reused_now)
         failed = _went_wrong(assembly, "the assembly", f"the assembly {assembly.document}")
         lead = f"{done}; " if done else ""
@@ -1452,11 +1485,12 @@ def gearbox_status(plan, result, again: bool = False) -> Tuple[str, bool]:
             f" Press {button} to try the assembly again: the parts and layout are reused.")
         return f"{lead}{failed}{then}", False
 
-    built_names = made_names + ([layout_name] if layout_name else [])
+    built_names = made_names + ([layout_name] if layout_name else []) + carrier_names
     asm_name = _file(assembly.saved) if assembly is not None and assembly.saved else ""
     if asm_name:
         built_names.append(asm_name)
-    reused_names = ([reused_layout] if reused_layout else []) + ([_already(reused_parts)] if reused_parts else [])
+    reused_names = (([reused_layout] if reused_layout else []) + carriers_reused
+                    + ([_already(reused_parts)] if reused_parts else []))
     done = _done_phrase(built_names, reused_names)
     if result.failures:
         # A raise between documents (W4 review B1): the job returned what it had saved, and says where it stopped.
@@ -1474,7 +1508,7 @@ def gearbox_status(plan, result, again: bool = False) -> Tuple[str, bool]:
         return f"{done}. {stopped} Press {button} to carry on: what was built is reused.", False
     if not done:
         return "Nothing was built.", False
-    results = made + [r for r in (layout, assembly) if r is not None and r.saved]
+    results = made + [r for r in (layout, *carriers, assembly) if r is not None and r.saved]
     checks = [c for r in results for c in r.checks]
     ok = not checks
     if not parts_only and not asm_name:
@@ -1554,6 +1588,21 @@ def _again_sentence(update, name: str = "", *, turning: str = "") -> str:
     return f"{_cannot_carry(update)} {offer}"
 
 
+def _mated_copies(update) -> Dict[str, int]:
+    """Each planet row's copies among the recorded mates (``update.motion.mates``), for :func:`_bodies`."""
+    motion = getattr(update, "motion", None)
+    return _copy_counts(g for m in getattr(motion, "mates", ()) or () for g in m.gears)
+
+
+def _carrier_part_of(update, shaft: str) -> str:
+    """The stem of ``shaft``'s carrier part among ``update.carriers`` (``layout.carrier_stem``'s ending), or ``""``."""
+    from .workbook.layout import CARRIER_SUFFIX
+    for doc in getattr(update, "carriers", ()) or ():
+        if _stem(doc.path).endswith(f"_{shaft}{CARRIER_SUFFIX}"):
+            return _stem(doc.path)
+    return ""
+
+
 def _to_replace(update) -> List[str]:
     """The gears Update SolidWorks will put: ``update.replaced`` on W4's static path. On a turning gearbox
     (``update.motion``), a mated gear the plan must move — its frame changes, its Face Z is set (``update.axial``),
@@ -1569,11 +1618,17 @@ def _to_replace(update) -> List[str]:
         return replaced
     mated = [g for m in motion.mates for g in m.gears if g]
     group = {g: {g} for g in mated}
-    for a, b in [(m.a, m.b) for m in motion.meshes] + [(k.anchor, k.follower) for k in motion.locks]:
+    links = [(m.a, m.b) for m in motion.meshes] + [(k.anchor, k.follower) for k in motion.locks]
+    links += [(c.carrier, p) for c in getattr(motion, "carriers", ()) or () for p in c.planets]   # W7: its planets
+    for a, b in links:
         joined = group.setdefault(a, {a}) | group.setdefault(b, {b})
         for g in joined:
             group[g] = joined
-    wanted = set(replaced) | {g for g in getattr(update, "axial", ()) or () if g}
+    axial = {g for g in getattr(update, "axial", ()) or () if g}
+    # W7: a row's shared Face Z global is keyed by the row (W7-INTERFACES §6.7): every copy of it moves.
+    rows = {g for g in mated if _copy_parts(g)[1] and _copy_parts(g)[0] in axial}
+    axial = {g for g in axial if g in group or not any(_copy_parts(c)[0] == g for c in rows)} | rows
+    wanted = set(replaced) | axial
     for name in getattr(update, "ratios", ()) or ():
         wanted.update(g for m in motion.mates if m.name == name for g in m.gears if g)
     moved = set(getattr(update, "moved_shafts", ()) or ())
@@ -1581,10 +1636,17 @@ def _to_replace(update) -> List[str]:
     out = set()
     for gear in wanted:
         out |= group.get(gear, {gear})
+    # W7 (§6.5): a held member is put only when it must be re-placed itself, and then first (J15's order: held
+    # member, carrier, train); a train's put never moves it.
+    held = set(getattr(motion, "held", ()) or ())
+    out -= held - set(replaced)
     import re
+    from .store import CARRIER_ID_SUFFIX
     seen = [g for g in dict.fromkeys(p.gear for p in update.placements) if g in out]
     rest = sorted(out - set(seen), key=lambda g: [int(t) if t.isdigit() else t for t in re.split(r"(\d+)", g)])
-    return seen + rest
+    ordered = seen + rest
+    return ([g for g in ordered if g in held] + [g for g in ordered if g.endswith(CARRIER_ID_SUFFIX)]
+            + [g for g in ordered if g not in held and not g.endswith(CARRIER_ID_SUFFIX)])
 
 
 def update_summary(update) -> str:
@@ -1599,7 +1661,8 @@ def update_summary(update) -> str:
         return _again_sentence(update)
     axial = [g for g in getattr(update, "axial", ()) if g]
     ratios = [n for n in getattr(update, "ratios", ()) if n]
-    if update.record_matches and not (axial or ratios or getattr(update, "resensed", ())):
+    if update.record_matches and not (axial or ratios or getattr(update, "resensed", ())
+                                      or getattr(update, "carriers_moved", ())):
         text = ("SolidWorks already matches the workbook on record; Update SolidWorks checks it live and puts right "
                 "anything changed there")
         if getattr(update, "motion", None) is not None:
@@ -1614,6 +1677,9 @@ def update_summary(update) -> str:
     if update.moved_shafts:
         layout = f" in {_stem(update.layout.path)}" if update.layout is not None else ""
         pieces.append(f"move {_and(update.moved_shafts)}{layout}")
+    for shaft in getattr(update, "carriers_moved", ()) or ():   # W7: the planets' axes in the carrier part
+        part = _carrier_part_of(update, shaft)
+        pieces.append(f"move the planets on {shaft}" + (f" in {part}" if part else ""))
     if axial:                                  # W5: an anchor's distance along its shaft (its Face Z global)
         pieces.append(f"move {_along(update, axial)}")
     resensed = [n for n in getattr(update, "resensed", ()) or () if n]
@@ -1625,7 +1691,7 @@ def update_summary(update) -> str:
         pieces.append(f"remake the gear mate {name}{at} {_resense_why(update, name)}")
     replaced = _to_replace(update)
     if replaced:
-        pieces.append(f"re-place {_and(replaced)}")
+        pieces.append(f"re-place {_and(_bodies(replaced, _mated_copies(update)))}")
     if len(pieces) > 1:
         pieces[-1] = "and " + pieces[-1]
     return "Update SolidWorks will " + ", ".join(pieces) + "."
@@ -1734,8 +1800,8 @@ def gearbox_update_status(update, result, dragged: Sequence[str] = (), *, meshes
     after = _motion_after(update, result, earlier) if motion else []
     dragged = list(dragged)
     placed = [g for g in result.placed if g not in dragged]
-    if placed:
-        pieces.append(f"re-placed {_and(placed)}")
+    if placed:                                       # W7: the carrier and N copies named once (§2.12)
+        pieces.append(f"re-placed {_and(_bodies(placed, _mated_copies(update)) if motion else placed)}")
 
     assembly = _file(update.assembly) if update.assembly else ""
     nothing = not pieces and not dragged and not result.changed
@@ -1916,10 +1982,19 @@ def build_again_question(update, again, *, record=None) -> str:
     if kept:
         does.append(f"reuses {_plural(kept, 'part')} that {'has' if kept == 1 else 'have'} not changed")
     asm = _file(again.assembly_path) if again.assembly_path else ""
+    new_carriers, kept_carriers = _plan_carriers(again)          # W7: the carrier part beside the layout part
     if _layout_reused(again):
-        does.append(f"reuses {_stem(again.layout.path)} and makes a new assembly, {asm}")
+        reusing = [_stem(again.layout.path)] + kept_carriers
+        made = (f"makes a new carrier part and assembly ({_and(new_carriers + [asm])})" if new_carriers
+                else f"makes a new assembly, {asm}")
+        does.append(f"reuses {_and(reusing)} and {made}")
     elif again.layout is not None:
-        does.append(f"makes a new layout part and assembly ({_stem(again.layout_path)} and {asm})")
+        if new_carriers or kept_carriers:
+            also = f", reusing {_and(kept_carriers)}" if kept_carriers else ""
+            what = "layout part, carrier part and assembly" if new_carriers else "layout part and assembly"
+            does.append(f"makes a new {what} ({_and([_stem(again.layout_path)] + new_carriers + [asm])}){also}")
+        else:
+            does.append(f"makes a new layout part and assembly ({_stem(again.layout_path)} and {asm})")
     if does:
         text += " That " + _and(does) + "."
     for why, because, after in ((UNSAVED, "has changes from Update SolidWorks that are not saved", True),
@@ -1965,6 +2040,19 @@ def _without_folder(assessment):
     return dataclasses.replace(assessment, folder="-")
 
 
+def _plan_carriers(plan) -> Tuple[List[str], List[str]]:
+    """The carrier parts a ``GearboxPlan`` makes and those it reuses, by stem (W7: ``plan.carriers``, a
+    ``CarrierReuse`` for one reused, and ``plan.carrier_paths``)."""
+    from .workbook.gearbox import CarrierReuse
+    kept = [c.path for c in getattr(plan, "carriers", ()) or () if isinstance(c, CarrierReuse)]
+    paths = list((getattr(plan, "carrier_paths", None) or {}).values())
+    if not getattr(plan, "carriers", ()):
+        return [], []
+    from . import store
+    made = [p for p in paths if not any(store.same_path(p, k) for k in kept)]
+    return [_stem(p) for p in made], [_stem(p) for p in kept]
+
+
 def _ready_build(assessment, plan, folder: str, superseded: Sequence[str] = ()) -> Tuple[str, bool]:
     """*Ready: Build makes 4 parts, Reducer_12to1_Layout and Reducer_12to1.SLDASM in C:\\Parts\\Reducer_12to1.*,
     reusing what is built; whether its gears are mated to turn (:func:`motion_ready_line`); why the revision is not
@@ -1980,6 +2068,9 @@ def _ready_build(assessment, plan, folder: str, superseded: Sequence[str] = ()) 
         reused.append(_stem(plan.layout.path))
     elif plan.layout is not None:
         made.append(_stem(plan.layout_path))
+    new_carriers, kept_carriers = _plan_carriers(plan)          # W7: the carrier part, made or reused
+    made += new_carriers
+    reused += kept_carriers
     if plan.assembly is not None:
         made.append(_file(plan.assembly_path))
     if plan.reuse:
@@ -2535,10 +2626,12 @@ APP_STAYED_OPEN = ("Gear Generator stayed open: a workbook's job has something t
 def _gears_alone(motion) -> List[str]:
     """The gears of a turning plan that are mated to their shaft but turn apart from every train: the anchor of a
     shaft in no train, then the gears locked to it (``MotionPlan.anchors``, ``trains``, LOCK mates)."""
+    from .store import CARRIER_ID_SUFFIX
     in_trains = {shaft for train in motion.trains for shaft in train}
+    on_carrier = {m.shaft for m in motion.mates if getattr(m, "on", "") and m.shaft}     # W7: planet copies' axes
     out: List[str] = []
     for shaft, anchor in motion.anchors.items():
-        if shaft in in_trains or not anchor:
+        if shaft in in_trains or not anchor or shaft in on_carrier or anchor.endswith(CARRIER_ID_SUFFIX):
             continue
         out.append(anchor)
         out.extend(m.gears[1] for m in motion.mates
@@ -2558,7 +2651,7 @@ def _alone_sentence(gears: Sequence[str], trains: int = 1) -> str:
 
 def _turning_subject(motion) -> str:
     """``Its gears``, or ``Its turning gears`` when some are left fixed (said after it)."""
-    return "Its turning gears" if any(motion.fixed) else "Its gears"
+    return "Its turning gears" if _fixed_gears(motion) else "Its gears"
 
 
 def _train_count(motion) -> int:
@@ -2594,6 +2687,59 @@ def _mates_lead(problems: Sequence[str]) -> str:
 
 SAME_MATES = "the same workbook would make the same mates"
 UPDATE_WAITS_FOR_ASSEMBLY = "Update SolidWorks waits until Build has made the assembly."
+
+
+def _fixed_gears(motion) -> List[str]:
+    """``MotionPlan.fixed`` less a held carrier, which :func:`_carrier_sentences` says (W7)."""
+    from .store import CARRIER_ID_SUFFIX
+    return [g for g in motion.fixed if g and not g.endswith(CARRIER_ID_SUFFIX)]
+
+
+def _planets_phrase(planets: Sequence[str]) -> Tuple[str, bool]:
+    """(*the 3 copies of Planet* / *Planet* / *Planet and PlanetB*, whether it is plural)."""
+    counts = _copy_counts(planets)
+    names, rows = [], set()
+    for name in planets:
+        row, k = _copy_parts(name)
+        if k and counts.get(row, 0) > 1:
+            if row not in rows:
+                names.append(f"the {counts[row]} copies of {row}")
+                rows.add(row)
+        else:
+            names.append(name)
+    plural = len(names) > 1 or any(counts.get(_copy_parts(n)[0], 0) > 1 for n in planets)
+    return _and(names), plural
+
+
+def _carrier_sentences(plan, built: bool = False) -> str:
+    """What a planetary stage's carrier is (W7-PLAN §2.12), from a ``GearboxPlan``'s ``motion`` and carriers, once
+    per carrier. Before Build: *C is built as a carrier of axes and planes only, turning with the 3 copies of Planet
+    on it.*; a held carrier *C is built as axes and planes only, held fixed; the 3 copies of Planet turn on it.*
+    After Build: *The 3 copies of Planet turn on C, and Planetary_4to1_C_Carrier holds C's axes and planes only: a
+    plate and pins are yours to add.* (*…turn on C, which is held fixed, and …*). The copies are said once, never
+    one by one; the held ring is said by :func:`_fixed_sentence`, the meshes left unmated not at all (J17)."""
+    from .store import CARRIER_ID_SUFFIX
+    motion = getattr(plan, "motion", None)
+    if motion is None:
+        return ""
+    out = []
+    for shaft, path in _carrier_parts(plan):
+        cid = f"{shaft}{CARRIER_ID_SUFFIX}"
+        planets = [m.gears[0] for m in motion.mates if m.kind == "axis" and getattr(m, "on", "") == cid and m.gears]
+        if not planets:
+            continue
+        what, many = _planets_phrase(planets)
+        held = cid in motion.fixed and cid not in getattr(motion, "carriers", ())
+        if not built:
+            out.append(f"{shaft} is built as axes and planes only, held fixed; {what} turn{'' if many else 's'} on it."
+                       if held else
+                       f"{shaft} is built as a carrier of axes and planes only, turning with {what} on it.")
+            continue
+        part = (f"{_stem(path)} holds {shaft}'s axes and planes only: a plate and pins are yours to add" if path
+                else f"{shaft} is axes and planes only: a plate and pins are yours to add")
+        where = f"{shaft}, which is held fixed," if held else f"{shaft},"
+        out.append(f"{what[:1].upper()}{what[1:]} turn{'' if many else 's'} on {where} and {part}.")
+    return " ".join(out)
 
 
 def drag_phrase(drag: Sequence[str]) -> str:
@@ -2646,7 +2792,8 @@ def motion_ready_line(plan) -> str:
         text = f"{who} are mated to their shafts and{where} to each other, so {together} in SolidWorks."
     else:
         text = f"{who} are mated to their shafts and{where} to each other, so each train turns together in SolidWorks."
-    return _joined(text, _alone_sentence(alone, trains) if trains else "", _fixed_sentence(motion.fixed))
+    return _joined(text, _alone_sentence(alone, trains) if trains else "", _carrier_sentences(plan),
+                   _fixed_sentence(_fixed_gears(motion)))
 
 
 def motion_done_line(plan, result) -> str:
@@ -2691,7 +2838,8 @@ def motion_done_line(plan, result) -> str:
         text = f"{who} are mated to turn together, and SolidWorks reports no mate in error{tail}"
     else:
         text = f"{who} are mated to turn in {trains} trains, and SolidWorks reports no mate in error{tail}"
-    return _joined(text, _alone_sentence(alone, trains) if trains else "", _fixed_sentence(motion.fixed))
+    return _joined(text, _alone_sentence(alone, trains) if trains else "", _carrier_sentences(plan, built=True),
+                   _fixed_sentence(_fixed_gears(motion)))
 
 
 def mate_refused_status(plan, result, again: bool = False) -> Tuple[str, bool]:
@@ -2719,12 +2867,16 @@ def mate_refused_status(plan, result, again: bool = False) -> Tuple[str, bool]:
     layout_name = _stem(layout.saved) if layout is not None and layout.saved else ""
     reused_parts = len(plan.reuse) if plan is not None else 0
     reused_layout = _stem(result.layout_reused) if result.layout_reused else ""
-    done = _done_phrase(made_names + ([layout_name] if layout_name else []),
-                        ([reused_layout] if reused_layout else []) + ([_already(reused_parts)] if reused_parts else []))
+    carriers = [_stem(c.saved) for c in getattr(result, "carriers", ()) or () if c.ok and c.saved]
+    carriers_reused = [_stem(p) for p in getattr(result, "carriers_reused", ()) or ()]
+    done = _done_phrase(made_names + ([layout_name] if layout_name else []) + carriers,
+                        ([reused_layout] if reused_layout else []) + carriers_reused
+                        + ([_already(reused_parts)] if reused_parts else []))
     problems = list(assembly.mate_problems)
     because = f"no assembly was saved, because SolidWorks found {_mates_lead(problems)} with its mates."
     lead = f"{done}; {because}" if done else because[:1].upper() + because[1:]
-    kept = "The parts and the layout part are kept." if done else ""
+    kept = (("The parts, the layout part and the carrier part are kept." if carriers or carriers_reused
+             else "The parts and the layout part are kept.") if done else "")
     left = (f"The assembly is left open in SolidWorks as {assembly.document}, not saved; its parts are the saved ones."
             if assembly.document else "")
     then = f"{button} is available again once the workbook changes: {SAME_MATES}."
@@ -2775,9 +2927,12 @@ def motion_record_line(record, digest: str = "", *, offer: bool = True) -> str:
         return _joined(lead, _mate_problems(problems), then)
     if box.kind == GEARBOX_MOTION:
         drag = [g for g in box.drag if g]
+        # W7 (J14): a carrier is axes and planes only, so the drag is a gear of its train, never the carrier.
+        carrier = carrier_phrase(record)
+        nothing = f" {carrier} is axes and planes only, so it has nothing to drag." if carrier else ""
         if drag:
-            return f"It was built with its gears mated to turn: {drag_phrase(drag)}."
-        return "It was built with its gears each mated to their shaft, free to turn."
+            return f"It was built with its gears mated to turn: {drag_phrase(drag)}.{nothing}"
+        return f"It was built with its gears each mated to their shaft, free to turn.{nothing}"
     if box.static_reason:
         return _joined(f"It was built static. {_sentence(box.static_reason)}",
                        "That is settled now, so Build again… makes a new revision whose gears turn." if offer else "")
@@ -2795,8 +2950,25 @@ def _shaft_of(update, gear: str) -> str:
 
 
 def _along(update, gears: Sequence[str]) -> str:
-    """``G4 along S3`` / ``G4 along S3 and G6 along S5`` (``along its shaft`` if no ALONG mate names it)."""
-    return _and(f"{g} along {_shaft_of(update, g) or 'its shaft'}" for g in gears)
+    """``G4 along S3`` / ``G4 along S3 and G6 along S5`` (``along its shaft`` if no ALONG mate names it). W7: a
+    planet row (its shared Face Z global is keyed by the row, W7-INTERFACES §6.7), or all its copies, as *Planet (3
+    copies) along P*, the shaft found through the along mates of the row's copies."""
+    motion = getattr(update, "motion", None)
+    alongs = [m for m in getattr(motion, "mates", ()) or () if m.kind == "along" and m.gears]
+    items, rows = [], set()
+    for g in gears:
+        shaft = _shaft_of(update, g)
+        row, k = _copy_parts(g)
+        copies = [m for m in alongs if _copy_parts(m.gears[0])[1] and _copy_parts(m.gears[0])[0] == (row if k else g)]
+        if (not shaft or k) and copies:
+            key = row if k else g
+            if key in rows:
+                continue
+            rows.add(key)
+            items.append(f"{copies_phrase(key, len(copies))} along {_copy_parts(copies[0].shaft)[0]}")
+            continue
+        items.append(f"{g} along {shaft or 'its shaft'}")
+    return _and(items)
 
 
 def _asked_ratio(update, name: str) -> str:
@@ -2975,8 +3147,9 @@ def _motion_after(update, result, earlier: str = "") -> List[str]:
             gears = [g for g in gears if g]
             if not gears:
                 continue
+            names = _bodies(gears, _mated_copies(update))          # W7: "C (the carrier)", "Planet (3 copies)"
             one = len(gears) == 1
-            out.append(f"{_and(gears)} had been turned in SolidWorks; {'its' if one else 'their'} train is back at "
+            out.append(f"{_and(names)} had been turned in SolidWorks; {'its' if one else 'their'} train is back at "
                        "the turn it was built at.")
     if result.turned:
         # Answer 2: with nothing to put, the train stays where it was turned, and the sentence says so plainly.
@@ -3089,21 +3262,103 @@ def motion_update_lines(update, result) -> List[str]:
 # nothing calls them before C does.
 
 
-def carrier_phrase(record_or_plan) -> str:
+def _carrier_parts(record_or_plan) -> List[Tuple[str, str]]:
+    """``(carrier shaft, part path)`` from a ``store.LinkRecord`` (``gearbox.carriers``) or a
+    ``workbook.gearbox.GearboxPlan`` (``carrier_layouts`` and ``carrier_paths``), in their order."""
+    box = getattr(record_or_plan, "gearbox", None)
+    if box is not None:
+        return [(c.shaft, c.path) for c in getattr(box, "carriers", ()) or () if c.shaft]
+    paths = getattr(record_or_plan, "carrier_paths", None) or {}
+    layouts = getattr(record_or_plan, "carrier_layouts", ()) or ()
+    shafts = [c.shaft for c in layouts] or list(paths)
+    return [(shaft, paths.get(shaft, "")) for shaft in shafts if shaft]
+
+
+def carrier_phrase(record_or_plan, *, part: bool = False) -> str:
     """How the carrier is named in the window's sentences, from a ``store.LinkRecord`` (its ``gearbox.carriers``) or
-    a ``workbook.gearbox.GearboxPlan`` (its ``carrier_layouts``): *"C (the carrier)"*, and with its part *"C, built
-    as Planetary_4to1_C_Carrier (axes and planes only)"* where a sentence names the part; ``""`` with no carrier."""
-    raise ValueError("Planetary stages are not described by this version of Gear Generator yet.")
+    a ``workbook.gearbox.GearboxPlan`` (its ``carrier_layouts``): *"C (the carrier)"*, and with ``part`` — where a
+    sentence names the part — *"C, built as Planetary_4to1_C_Carrier (axes and planes only)"*; ``""`` with no
+    carrier."""
+    carriers = _carrier_parts(record_or_plan)
+    if part:
+        return _and(f"{shaft}, built as {_stem(path)} (axes and planes only)" if path else f"{shaft} (the carrier)"
+                    for shaft, path in carriers)
+    return _and(f"{shaft} (the carrier)" for shaft, _ in carriers)
 
 
 def copies_phrase(row: str, n: int) -> str:
     """A planet row and its copies in a sentence: *"Planet (3 copies)"*, and the row alone with Copies 1."""
-    raise ValueError("Planetary stages are not described by this version of Gear Generator yet.")
+    return f"{row} ({n} copies)" if n > 1 else row
+
+
+def _copy_parts(name: str) -> Tuple[str, int]:
+    """``("Planet", 2)`` for ``"Planet copy 2"`` (``workbook.planetary.copy_of``), ``(name, 0)`` for any other."""
+    row, sep, k = name.rpartition(" copy ")
+    return (row, int(k)) if sep and row and k.isdigit() else (name, 0)
+
+
+def _copy_counts(names: Iterable[str]) -> Dict[str, int]:
+    """Each planet row's number of copies among ``names`` (every gear the plan or the record mates)."""
+    counts: Dict[str, set] = {}
+    for name in names:
+        row, k = _copy_parts(name)
+        if k:
+            counts.setdefault(row, set()).add(k)
+    return {row: len(ks) for row, ks in counts.items()}
+
+
+def _bodies(ids: Sequence[str], counts: Mapping[str, int]) -> List[str]:
+    """Gear and carrier ids as a sentence names them (W7-PLAN §2.12): a carrier ``"C carrier"`` as *C (the
+    carrier)*; every copy of a planet row, when all of them are listed, once as *Planet (3 copies)* where its first
+    copy stands — never N near-identical names; a copy listed without its fellows by its own id."""
+    from .store import CARRIER_ID_SUFFIX
+    listed = set(ids)
+    out: List[str] = []
+    done: set = set()
+    for name in ids:
+        if not name:
+            continue
+        if name.endswith(CARRIER_ID_SUFFIX):
+            out.append(f"{name[:-len(CARRIER_ID_SUFFIX)]} (the carrier)")
+            continue
+        row, k = _copy_parts(name)
+        n = counts.get(row, 0)
+        if k and n > 1 and all(f"{row} copy {i}" in listed for i in range(1, n + 1)):
+            if row not in done:
+                out.append(copies_phrase(row, n))
+                done.add(row)
+            continue
+        out.append(name)
+    return out
+
+
+def _turn_word(value, sign: int) -> str:
+    about = value * sign
+    return "still" if about == 0 else ("anticlockwise" if about > 0 else "clockwise")
 
 
 def planetary_speed_line(shaft: str, motion, *, copies: int = 1, carrier: str = "") -> str:
-    """The Speeds line of a planet shaft or a held member (W7-PLAN §2.12) from a ``kinematics.Motion``: *"P −500
-    rpm, −750 on C · 3 copies"* with W6's seen-from wording (W6-INTERFACES §7.19) for a mounted shaft (``carrier``
-    its carrier, ``motion.relative`` its speed on it), *"R held · 5.762 N·m"* for a held member
-    (``motion.held``)."""
-    raise ValueError("Planetary stages are not described by this version of Gear Generator yet.")
+    """The Speeds line of a planet shaft or a held member (W7-PLAN §2.12) from a ``kinematics.Motion``, in the
+    panel's own form (:func:`workbook_speed_lines`): a planet shaft's speed about its own axis, then its speed on its
+    carrier (``motion.relative``), and how many copies turn so — *"P     500.0 rpm clockwise, 750.0 rpm clockwise
+    on C · 3 copies"*, with W6's *seen from the +X end* once after the first way round when any shaft is off Z
+    (W6-INTERFACES §7.19); a held member *"R     held still · 5.76 N·m"* (``motion.held``, the torque it holds).
+    Numbers are joined to their units by :data:`NBSP`."""
+    held = getattr(motion, "held", None) or {}
+    if not carrier and shaft in held:
+        return f"{shaft:<4}  held still · {held[shaft]:.2f}{NBSP}N·m"
+    speed = motion.speeds.get(shaft)
+    if speed is None:
+        return f"{shaft:<4}  not driven"
+    seen = getattr(motion, "seen_from", None) or {}
+    sign = (getattr(motion, "axis_sign", None) or {}).get(shaft, 1)
+    turns = _turn_word(speed, sign)
+    if turns != "still" and any(v != "+Z" for v in seen.values()):
+        turns = f"{turns} seen from the {seen.get(shaft, '+Z').replace(' ', NBSP)} end"
+    text = f"{shaft:<4}  {abs(float(speed)):.1f}{NBSP}rpm {turns}"
+    relative = (getattr(motion, "relative", None) or {}).get(shaft)
+    if carrier and relative is not None:
+        text += f", {abs(float(relative)):.1f}{NBSP}rpm {_turn_word(relative, sign)} on {carrier}"
+    if copies > 1:
+        text += f" · {copies} copies"
+    return text

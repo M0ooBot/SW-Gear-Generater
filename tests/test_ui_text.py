@@ -2715,3 +2715,196 @@ def test_fixture_bs_rows_keep_their_ends_and_the_12_to_1s_are_unchanged(ready, t
                                     "Beve…_N30_M20_S120"]
     twelve = ui_text.workbook_gear_rows(ready.spec, ready.parts, ready.diagnostics)
     assert [r[6] for r in twelve] == list(STEMS)
+
+
+# -- W7: the planetary stage (W7-PLAN §2.12, as W7-INTERFACES §6 rules) ----------------------------------------------
+
+from gear_generator.workbook.gearbox import CarrierReuse  # noqa: E402
+from gear_generator.workbook.layout import CarrierLayout  # noqa: E402
+
+PLANETS = ("Planet copy 1", "Planet copy 2", "Planet copy 3")
+CARRIER_PATH = _path("Planetary_4to1_C_Carrier")
+
+
+def _planetary_motion(held="ring"):
+    """W7-PLAN §4.1's mates by rank: three sun mates and ONE ring mate; two planet–ring meshes left unmated."""
+    mates = [MatePlan("Sun on S Axis", "axis", ("Sun",), "S"), MatePlan("Sun along S", "along", ("Sun",), "S")]
+    if held != "carrier":
+        mates += [MatePlan("C carrier on C Axis", "axis", ("C carrier",), "C"),
+                  MatePlan("C carrier along C", "along", ("C carrier",), "C")]
+    for k, planet in enumerate(PLANETS, 1):
+        mates += [MatePlan(f"{planet} on P copy {k} Axis", "axis", (planet,), f"P copy {k}", on="C carrier"),
+                  MatePlan(f"{planet} along P copy {k}", "along", (planet,), f"P copy {k}",
+                           face_global="Planet Face Z", z_front=5.0)]
+    mates += [MatePlan(f"Sun meshes {p}", "mesh", ("Sun", p), ratio=(18, 18), sense=1) for p in PLANETS]
+    mates += [MatePlan("Planet copy 1 meshes Ring", "mesh", ("Planet copy 1", "Ring"), ratio=(18, 54), sense=-1)]
+    return MotionPlan(anchors={"S": "Sun", **{f"P copy {k}": p for k, p in enumerate(PLANETS, 1)}},
+                      mates=tuple(mates), fixed=("Ring",) if held == "ring" else ("C carrier",),
+                      unmated=(("Planet copy 2", "Ring"), ("Planet copy 3", "Ring")), trains=(("S", "C"),),
+                      drag=("Sun",), carriers=("C carrier",) if held != "carrier" else ())
+
+
+def _planetary_plan(held="ring", reuse_carrier=False, **changes):
+    carriers = (CarrierReuse(CARRIER_PATH, (), ()),) if reuse_carrier else (BuildPlan("carrier", "", (NewPart(""),)),)
+    fields = dict(build=[_job(s, [s]) for s in ("Sun", "Planet", "Ring")], motion=_planetary_motion(held),
+                  carrier_layouts=(CarrierLayout("C", 0.0, 0.0, 0.0, (0.0, 0.0, 1.0), ()),),
+                  carrier_paths={"C": CARRIER_PATH}, carriers=carriers)
+    fields.update(changes)
+    name = fields.pop("name", "Planetary_4to1")
+    return _gearbox(name, **fields)
+
+
+def _planetary_built(**values):
+    fields = dict(parts=swbuild.ManyResult(built=[_saved(s) for s in ("Sun", "Planet", "Ring")]),
+                  layout=_saved("Planetary_4to1_Layout"), carriers=[_saved("Planetary_4to1_C_Carrier")],
+                  assembly=_saved("Planetary_4to1", ".SLDASM"), kind="motion")
+    fields.update(values)
+    return swbuild.GearboxResult(**fields)
+
+
+def test_copies_phrase_and_carrier_phrase():
+    assert ui_text.copies_phrase("Planet", 3) == "Planet (3 copies)" and ui_text.copies_phrase("Planet", 1) == "Planet"
+    assert ui_text.carrier_phrase(_planetary_plan()) == "C (the carrier)"
+    assert ui_text.carrier_phrase(_planetary_plan(), part=True) == (
+        "C, built as Planetary_4to1_C_Carrier (axes and planes only)")
+    record = _record()
+    assert ui_text.carrier_phrase(record) == "" and ui_text.carrier_phrase(_gearbox(**FULL)) == ""
+    record.gearbox.carriers = [store.CarrierEntry(shaft="C", path=CARRIER_PATH, direction=[0.0, 0.0, 1.0])]
+    assert ui_text.carrier_phrase(record) == "C (the carrier)"
+
+
+def test_before_build_the_carrier_is_said_once_with_its_copies_and_the_held_ring(ready):
+    f = _footer(ready, plan=_planetary_plan())
+    assert _clean(f.text) == (
+        f"Ready: Build makes 3 parts, Planetary_4to1_Layout, Planetary_4to1_C_Carrier and Planetary_4to1.SLDASM in "
+        f"{P}. Its turning gears are mated to their shafts and to each other, so they turn together in SolidWorks. "
+        "C is built as a carrier of axes and planes only, turning with the 3 copies of Planet on it. Ring stays fixed "
+        "where it is placed: its shaft does not turn.")
+    assert "copy 2" not in f.text and "unmated" not in f.text
+    held = ui_text.motion_ready_line(_planetary_plan("carrier"))
+    assert held == ("Its gears are mated to their shafts and to each other, so they turn together in SolidWorks. C is "
+                    "built as axes and planes only, held fixed; the 3 copies of Planet turn on it.")
+    reused = _footer(ready, plan=_planetary_plan(reuse_carrier=True))
+    assert reused.text.startswith(f"Ready: Build makes 3 parts, Planetary_4to1_Layout and Planetary_4to1.SLDASM in "
+                                  f"{P}, reusing Planetary_4to1_C_Carrier.")
+
+
+def test_after_build_the_carrier_part_is_named_and_one_ring_mate_reads_as_nothing_missing():
+    """Three planet–ring meshes and ONE gear mate (J5): nothing may read as two mates missing or broken (§6.6)."""
+    text, ok = ui_text.gearbox_status(_planetary_plan(), _planetary_built())
+    assert (_clean(text), ok) == (
+        "Built 3 parts, Planetary_4to1_Layout, Planetary_4to1_C_Carrier and Planetary_4to1.SLDASM; no interference "
+        "between the gears where they stand. Its turning gears are mated to turn together, and SolidWorks reports no "
+        "mate in error: drag Sun in SolidWorks and the rest of its train follow. The 3 copies of Planet turn on C, "
+        "and Planetary_4to1_C_Carrier holds C's axes and planes only: a plate and pins are yours to add. Ring stays "
+        "fixed where it is placed: its shaft does not turn.", True)
+    for word in ("unmated", "missing", "copy 2", "2 mates", "not mated"):
+        assert word not in text
+    held = ui_text.gearbox_status(_planetary_plan("carrier"), _planetary_built())[0]
+    assert held.endswith("The 3 copies of Planet turn on C, which is held fixed, and Planetary_4to1_C_Carrier holds "
+                         "C's axes and planes only: a plate and pins are yours to add.")
+
+
+def test_a_carrier_part_that_fails_leaves_the_parts_and_layout_and_the_refused_train_keeps_it():
+    failed = _planetary_built(carriers=[_failed("Part4", "insert plane 'P copy 2 X Plane'", "SolidWorks returned "
+                                                                                             "None.")],
+                              assembly=None, kind="")
+    assert ui_text.gearbox_status(_planetary_plan(), failed) == (
+        "Built 3 parts and Planetary_4to1_Layout; Part4 was left open, unsaved; insert plane 'P copy 2 X Plane': "
+        "SolidWorks returned None. The assembly was not attempted. Press Build to carry on: the parts and layout are "
+        "reused.", False)
+    refused, _ = ui_text.mate_refused_status(_planetary_plan(), _refused(LOCK_PROBLEM,
+                                                                         carriers=[_saved("Planetary_4to1_C_Carrier")]))
+    assert ("Built 4 parts, Reducer_12to1_Layout and Planetary_4to1_C_Carrier; no assembly was saved" in refused
+            and "The parts, the layout part and the carrier part are kept." in refused)
+
+
+def _planetary_update(**changes):
+    refs = tuple(swbuild.MateRef(m.name, m.kind, m.gears, m.shaft) for m in _planetary_motion().mates)
+    meshes = tuple(swbuild.MeshLink("Sun", p, -1.0, 20.0, carrier="C carrier") for p in PLANETS) + tuple(
+        swbuild.MeshLink(p, "Ring", 1 / 3, 6.6667, carrier="C carrier") for p in PLANETS)   # unmated ones too (§6.6)
+    link = swbuild.CarrierLink("C carrier", PLANETS, (0.0, 0.0, 0.0), (0.0, 0.0, 1.0))
+    motion = swbuild.MotionUpdate(mates=refs, meshes=meshes, carriers=(link,), held=("Ring",), fixed=("Ring",))
+    fields = dict(motion=motion, parts=(), layout=None, moved_shafts=(), replaced=(),
+                  assembly=_path("Planetary_4to1", ".SLDASM"),
+                  carriers=(swbuild.DocumentValues(CARRIER_PATH),))
+    fields.update(changes)
+    return UpdatePlan(**fields)
+
+
+def test_the_update_summary_names_the_carrier_and_the_copies_once():
+    assert _clean(ui_text.update_summary(_planetary_update(carriers_moved=("C",), replaced=("Planet copy 1",)))) == (
+        "Update SolidWorks will move the planets on C in Planetary_4to1_C_Carrier, and re-place C (the carrier), "
+        "Planet (3 copies) and Sun.")
+    # The shared Face Z global is keyed by the row (§6.7): one move, the shaft from the copies' along mates.
+    assert _clean(ui_text.update_summary(_planetary_update(axial=("Planet",)))) == (
+        "Update SolidWorks will move Planet (3 copies) along P, and re-place C (the carrier), Planet (3 copies) and "
+        "Sun.")
+    # The held ring moves: re-placed first, then the carrier, then the train (J15).
+    assert ui_text.update_summary(_planetary_update(replaced=("Ring",))) == (
+        "Update SolidWorks will re-place Ring, C (the carrier), Planet (3 copies) and Sun.")
+    # A train only turned, with nothing the plan must put, is promised nothing.
+    assert ui_text.update_summary(_planetary_update()).startswith("SolidWorks already matches the workbook on record")
+
+
+def test_after_update_the_restored_train_names_the_carrier_and_its_copies_once():
+    result = _moved(placed=["C carrier", "Sun", *PLANETS], changed=[_path("Planetary_4to1", ".SLDASM")],
+                    restored=[("Sun", "C carrier", *PLANETS)])
+    text, ok = ui_text.gearbox_update_status(_planetary_update(), result)
+    assert (_clean(text), ok) == (
+        "Updated SolidWorks: re-placed C (the carrier), Sun and Planet (3 copies); no interference between the gears "
+        "where they stand. Sun, C (the carrier) and Planet (3 copies) had been turned in SolidWorks; their train is "
+        "back at the turn it was built at. Save Planetary_4to1 in SolidWorks to keep it.", True)
+    one = _moved(placed=["Planet copy 2"], changed=[_path("Planetary_4to1", ".SLDASM")])
+    assert "re-placed Planet copy 2;" in ui_text.gearbox_update_status(_planetary_update(), one)[0]
+
+
+def test_the_footer_on_a_built_planetary_says_what_to_drag_and_that_the_carrier_has_nothing_to_grab():
+    record = _turning_record(("Sun",))
+    record.gearbox.carriers = [store.CarrierEntry(shaft="C", path=CARRIER_PATH, direction=[0.0, 0.0, 1.0])]
+    record.gearbox.unmated = [["Planet copy 2", "Ring"], ["Planet copy 3", "Ring"]]
+    assert ui_text.motion_record_line(record) == (
+        "It was built with its gears mated to turn: drag Sun in SolidWorks and the rest of its train follow. C (the "
+        "carrier) is axes and planes only, so it has nothing to drag.")
+
+
+def test_the_speeds_panel_on_a_planetary_stage():
+    """W7-PLAN §4.1, ring held: S 1000, C 250 (4 : 1), P −500 about its own axis and −750 on C, R held 5.762."""
+    from fractions import Fraction
+    shafts = [SimpleNamespace(id="S", mount=lambda: "frame", copies=""),
+              SimpleNamespace(id="C", mount=lambda: "frame", copies=""),
+              SimpleNamespace(id="P", mount=lambda: "C", copies="3"),
+              SimpleNamespace(id="R", mount=lambda: "frame", copies="")]
+    motion = kinematics.Motion(speeds={"S": Fraction(1000), "C": Fraction(250), "P": Fraction(-500), "R": Fraction(0)},
+                               torques={"S": 2.0, "C": 7.7624}, relative={"P": Fraction(-750)}, held={"R": 5.7624},
+                               seen_from={"S": "+Z", "C": "+Z", "P": "+Z", "R": "+Z"})
+    lines, readout = ui_text.workbook_speed_lines(SimpleNamespace(shafts=shafts), motion)
+    assert lines == ["S     1000.0 rpm anticlockwise · 2.00 N·m",
+                     "C     250.0 rpm anticlockwise · 7.76 N·m",
+                     "P     500.0 rpm clockwise, 750.0 rpm clockwise on C · 3 copies",
+                     "R     held still · 5.76 N·m"]
+    assert readout == "seen from +Z"
+    _held_together(lines)
+    assert ui_text.planetary_speed_line("P", motion, copies=1, carrier="C") == (
+        "P     500.0 rpm clockwise, 750.0 rpm clockwise on C")
+    on_x = dataclasses.replace(motion, seen_from={"S": "+X", "C": "+X", "P": "+X", "R": "+X"})
+    assert ui_text.planetary_speed_line("P", on_x, copies=3, carrier="C") == (
+        "P     500.0 rpm clockwise seen from the +X end, 750.0 rpm clockwise on C · 3 copies")
+
+
+def test_copies_share_one_part_cell():
+    """The Gears table has one row per Gears row, so the copies of Planet are one row; two rows sharing a part file
+    still show the same cell."""
+    assert _rows_for("Bevel_m2.5_N20_M30_S120", "Bevel_m2.5_N20_M30_S120") == ["Beve…_N20_M30_S120"] * 2
+
+
+def test_the_build_again_question_names_the_carrier_part():
+    reused = _planetary_plan(reuse_carrier=True, layout="reuse", name="Planetary_4to1_r2",
+                             assembly_path=_path("Planetary_4to1_r2", ".SLDASM"))
+    assert ("reuses Planetary_4to1_r2_Layout and Planetary_4to1_C_Carrier and makes a new assembly, "
+            "Planetary_4to1_r2.SLDASM") in ui_text.build_again_question(_update(), reused)
+    fresh = _planetary_plan(name="Planetary_4to1_r2", layout_path=_path("Planetary_4to1_r2_Layout"),
+                            assembly_path=_path("Planetary_4to1_r2", ".SLDASM"),
+                            carrier_paths={"C": _path("Planetary_4to1_r2_C_Carrier")})
+    assert ("makes a new layout part, carrier part and assembly (Planetary_4to1_r2_Layout, Planetary_4to1_r2_C_Carrier "
+            "and Planetary_4to1_r2.SLDASM)") in ui_text.build_again_question(_update(), fresh)
