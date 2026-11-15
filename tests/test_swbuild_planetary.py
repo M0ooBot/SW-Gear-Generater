@@ -240,3 +240,38 @@ def test_a_remake_that_loses_its_mate_inside_the_planetary_put_is_said_gone_neve
     assert not any(text.startswith(f'The mate "{lost[0]}" is not in') for text in texts), texts
     # every other gear mate and lock the put turned off is back on
     assert not [m.name for m in sw.mates if m.suppressed], [m.name for m in sw.mates if m.suppressed]
+
+
+# The other path (W8-REVIEW-FIX-A point 5): a gear mate gone during the puts with nothing raised, so no error is on its
+# way out. The restore's MateGone is then the error: every other lock and gear mate is still turned back on, and
+# Update says the mate is gone, never "left suppressed".
+
+def test_a_gear_mate_gone_during_the_puts_with_no_error_pending():
+    from gear_generator import swbuild, swcom
+    from gear_generator.workbook import update
+    from test_workbook_planetary import direct, edited, fake_build, planetary_4to1
+
+    sw, _, record = fake_build(planetary_4to1())
+    spec = edited(planetary_4to1(), gears={"Planet": dict(at="12")})
+    real_place, real_supp, lost = sw.place_component, sw.set_mate_suppressed, []
+
+    def place(handle, rotation, at, kind=None):
+        if not lost:                                   # gone during the puts, with nothing raised
+            old = sw.mate("Sun meshes Planet copy 2")
+            sw.mates.remove(old)
+            lost.append(old.name)
+        return real_place(handle, rotation, at, kind=kind)
+
+    def supp(handle, suppressed):
+        name = sw.mate_handles[handle]
+        if sw.mate(name) is None:
+            raise swcom.MateGone(f'The mate "{name}" is not in Planetary_4to1.SLDASM any more: it was renamed or '
+                                 "deleted in SolidWorks.")
+        return real_supp(handle, suppressed)
+    sw.place_component, sw.set_mate_suppressed = place, supp
+    up = update.classify(record, direct(spec), exists=lambda p: True)
+    result = swbuild.update_gearbox(sw, **up.update_kwargs(), exists=lambda p: True, mtime=lambda p: 5.0)
+    texts = [t for _, t in result.failures]
+    assert lost and texts == ['The mate "Sun meshes Planet copy 2" is not in Planetary_4to1.SLDASM any more: it was '
+                              'renamed or deleted in SolidWorks.'], texts
+    assert not [m.name for m in sw.mates if m.suppressed]
