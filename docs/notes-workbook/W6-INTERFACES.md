@@ -182,3 +182,45 @@ with axes, `_mesh_senses`), then drop `internal` and `_internal_from_senses`; th
 `mate_senses` and drop `ring_meshes`; the turning round trip for fixtures A and B as its second pass.
 **C.** Schema 4's refusals and every §2.9 sentence C shows. **E.** `copy_built` as §4; the turned interference
 controls. **P.** The two findings, reviewed, before E.
+
+## 7. Rulings on the interface review (2026-11-14)
+
+The independent review of `34bfb85` found the shapes right (it worked `sense_reading` through all 128 parallel cases
+by hand, `layout.frame` bit for bit against W4's, and the schema reads) and asked for written rules. These are
+binding on A, B and C from now; where one names a line number it is the line at `34bfb85`.
+
+1. **`sense` 0 stays legal on a mesh in a v4 record.** A v3 record reads with its mesh senses at 0, and any write
+   from W6 (the window's mark saves, an adopt, `finish_build`, `finish_update`) saves it as v4 with those zeros; a
+   v4 reader that refused 0 would refuse the record on its next read and move it aside as `.bad`. So 0 means
+   "parallel, take it from the read", as W5 did. B's `_turning` and `_bad_mates` treat 0 that way. C refuses 0 only
+   on a mesh whose two shafts the record holds as different families. B's finishers write the real sense whenever
+   they rewrite a mesh entry.
+2. **`mate_senses[name] = (plan.sense == -1)`**, written as that identity. `mate_senses[name]` is `k > 0`, and
+   `k = −c·za/zb`, so it is the opposite of `sense > 0`; filled the natural way round it flips every gear mate's
+   verdict and the read-back then "corrects" each mate to the wrong Flip in SolidWorks. B tests it on the 12 : 1
+   (all outside: all False) and on Risky_Placements' ring mesh.
+3. **No turned mesh reaches SolidWorks before the turned finding exists.** B lifts the later-phase refusal of turned
+   rows (`build.py:168`) only in the same change that wires `turned_refusal` into `lay_out_refusal` and moves
+   `build_kwargs` to `"senses"`. A's first change is a pre-flight guard in `_sense_gate` that checks every gear
+   mate's planned axes, whether `senses` or `internal` is given, and refuses with a `BuildError` before anything is
+   made.
+4. **On parallel axes only the product `τa·τb` from `sense_reading` means anything.** Both pairings pass there, so
+   the two come back in entity order and swap when the entities do. No log line, sentence or fake names a single τ
+   on parallel axes.
+5. **The gate's "parallel" is planning's.** Only axes of one family (`|a×b| < FAMILY_TOLERANCE`) are parallel; the
+   `|ga·gb| > 0.99` tests at `swcom.py:2425` and `swbuild.py:815` go. Anything else needs the turned finding and
+   an angle inside the range it covers.
+6. **An ALONG mate's `z_front`** is the origin's signed coordinate along its plane's normal: Right is +X (plane3),
+   Top +Y (plane2), Front +Z (plane1). A flips the distance mate by its sign there, and the fake models it the same
+   way.
+7. **`ShaftLayout.axis` and `ShaftEntry.axis` are for sentences only.** Every comparison reads `direction`. B moves
+   the sigma comparisons at `update.py:378` and `622` onto `direction` (sigma is 0 for every shaft off Z), and pins
+   the text of a vector axis, which C shows.
+8. **On a v4 record the `_v3_shaft` fill** (`store.py:820`) applies only when `direction` is missing; a v4 shaft
+   written without one is C's refusal.
+9. **`copy_built` step 1** (end clean, rename to `.master`) runs once, at the end of the section that builds, not on
+   every call; `copy_built` asserts the master's name ends in `.master`.
+10. **`copy_built` rewrites a path only where the original folder is followed by a separator**, so `…\r1` never
+    matches `…\r10`.
+11. **The `NotImplementedError` stubs are temporary.** A's and B's real bodies raise sentences: a `BuildError`
+    before anything is made.
