@@ -427,7 +427,7 @@ left or up rather than off the screen.
   |---|---|---|
   | to build | green | *to build* |
   | the same part as another row | green | *the same part as G1* (identical rows share one file) |
-  | a later phase builds it | grey `#8f8f8f` | *later · phase W6* |
+  | a later phase builds it | grey `#8f8f8f` | *later · phase W8* |
   | an error of its own | red | *see Checks*, in red |
   | built, and Update leaves it | green | *built* |
   | built, and Update changes its values | near-black `#2b2b2b` | *built · changes on Update* |
@@ -435,6 +435,10 @@ left or up rather than off the screen.
 
   Values are shown as typed, a bad one included (`68.5`); a ring's kind reads
   *Ring*. No gears: *No gears yet: add rows to the Gears sheet and save.*
+  A part name longer than 18 characters (`ui_text.PART_CHARS`) shows its first
+  four, *…*, and its end (`Bevel_m2.5_N20_M30_S120` → `Beve…_N20_M30_S120`),
+  never two different parts in one cell, so the window keeps its width;
+  sentences always name the part whole. That is a default the user may overrule.
 - **Checks** (readout `1 error · 2 warnings`, or *no problems*): first any fix
   chosen and not yet written, *Chosen, not yet written: Move S2 and S3 beyond it
   by -0.25 mm* with **Undo**; then the errors in red and the warnings in grey,

@@ -307,7 +307,7 @@ def test_build_makes_the_parts_the_layout_and_the_assembly_and_records_them(desk
         sidecar = store.read_sidecar(desk.part(stem))
         assert sidecar is not None and store.same_path(sidecar.record.workbook, window.link.path)
     raw = json.loads(record_bytes(window))
-    assert raw["link_schema_version"] == store.LINK_SCHEMA_VERSION == 4
+    assert raw["link_schema_version"] == store.LINK_SCHEMA_VERSION == 5
     record = record_of(window)
     assert record.gearbox.revision == 0 and store.same_path(record.gearbox.assembly, desk.part(NAME, ".SLDASM"))
     assert store.same_path(record.assembly, record.gearbox.assembly)
@@ -1998,3 +1998,21 @@ def test_a_wrapped_speeds_line_never_splits_a_number_from_its_unit_nor_a_slants_
             for piece in (w for w in whole if w in text):
                 assert any(piece in line for line in lines), (piece, width, lines)
     assert wrapped                                         # the widths tried do wrap the lines
+
+
+def test_long_part_names_keep_their_cells_apart_and_the_window_its_width(desk):
+    """Fixture B's two bevel parts are named for their mates and angle (…_S120), longer than the Part column: the
+    table shows each by its head and end (C's ui_text.part_cell), the two apart, and the window keeps its width."""
+    from gear_generator import workbook_gui
+    from gear_generator.theme import px
+    from test_workbook_turned import crossed_slant
+    window = desk.open(crossed_slant(), name="Crossed_Slant.xlsx")
+    parts = {}
+    for cell in window.table.grid_slaves(column=6):
+        row = int(cell.grid_info()["row"])
+        if row:
+            parts[window.table.grid_slaves(row=row, column=0)[0].cget("text")] = cell.cget("text")
+    assert parts == {"G1": "Helical_m2_N20_45R", "G2": "Helical_m2_N40_45R", "G3": "Beve…_N20_M30_S120",
+                     "G4": "Beve…_N30_M20_S120"}
+    assert width_and_height(window)[0] == px(workbook_gui.WINDOW_WIDTH)
+    assert window.winfo_reqwidth() <= px(workbook_gui.WINDOW_WIDTH)
