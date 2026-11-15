@@ -181,6 +181,20 @@
       "x": 23636,
       "y": 0,
       "w": 1080
+    },
+    {
+      "file": "WorkbookPlanetary.dc.html",
+      "title": "Workbook · a 4 : 1 planetary built: the ring held, three planets on a carrier",
+      "x": 24796,
+      "y": 0,
+      "w": 1080
+    },
+    {
+      "file": "WorkbookPlanetaryCopies.dc.html",
+      "title": "Workbook · five planets that cannot all mesh: the assembly condition",
+      "x": 25956,
+      "y": 0,
+      "w": 1080
     }
   ],
   "annotations": [

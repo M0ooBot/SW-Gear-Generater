@@ -580,8 +580,8 @@ def chosen_row(pair, test):
 
 import copy as copying, dataclasses, hashlib, shutil, tempfile
 from gear_generator import __version__, store, swbuild, workbook_gui as wb_gui
-from gear_generator.workbook import assess as wb_assess, gearbox as wb_gearbox, link as wb_link, \
-    model as wb_model, motion as wb_motion, update as wb_update, xlsx as wb_xlsx
+from gear_generator.workbook import assess as wb_assess, gearbox as wb_gearbox, geometry as wb_geometry, \
+    link as wb_link, model as wb_model, motion as wb_motion, update as wb_update, xlsx as wb_xlsx
 sys.path.insert(0, os.path.join(HERE, "..", "..", "tests"))
 from test_swbuild import FakeSolidWorks          # the fake SolidWorks swbuild's own tests run against
 
@@ -765,13 +765,16 @@ def check_lines(diagnostics, offered, chosen):
     return out
 
 
-def end_view_svg(report):
+def end_view_svg(report, spec):
     w, h = wb_gui.END_VIEW
     if not report.layout.placed:
         reason = report.layout.later[0] if report.layout.later else "Nothing to draw yet."
         return (f'<div style="width: {w}px; height: {h}px; background: #ffffff; font-size: 12px; color: {MUTED}; '
                 f'padding: 12px; box-sizing: border-box;">{reason}</div>'), ""
-    view = layout_of.layout_gearbox(report.layout.placed, report.theta, w, h, step=2)
+    lines = wb_geometry.shaft_lines(spec) if report.stages else {}       # WorkbookWindow._draw_end_view (W7)
+    carriers = {stage.carrier: tuple(lines[stage.carrier][0][:2]) for stage in report.stages
+                if stage.carrier in lines}
+    view = layout_of.layout_gearbox(report.layout.placed, report.theta, w, h, step=2, carriers=carriers)
     body = []
     for _, plane, points in view.outlines:
         colour = wb_gui.PLANE_COLOURS[plane % len(wb_gui.PLANE_COLOURS)]
@@ -782,6 +785,9 @@ def end_view_svg(report):
                     f'stroke="{wb_gui.PLANE_COLOURS[plane % len(wb_gui.PLANE_COLOURS)]}"></circle>')
     for name, x, y in view.shafts:
         body.append(f'<path d="M{x - 5:.1f} {y:.1f}H{x + 5:.1f}M{x:.1f} {y - 5:.1f}V{y + 5:.1f}" stroke="{INK}"></path>')
+    for name, x, y, r in view.carriers or ():               # a carrier (W7): dashed, through its planets' axes
+        body.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{r:.1f}" fill="none" stroke="{INK}" '
+                    f'stroke-dasharray="4 3"></circle>')
     for name, x0, y0, x1, y1 in view.lines or ():         # a turned shaft (W6), as the window draws it
         body.append(f'<path d="M{x0:.1f} {y0:.1f}L{x1:.1f} {y1:.1f}" stroke="{INK}"></path>')
     for name, x, y, anchor in view.labels:        # the window's Tk anchors: n/s the top or bottom, w/e the start or end
@@ -897,12 +903,17 @@ def workbook_board(spec, *, clock="14:02:31", open_in_excel=True, before=None, c
                   [f'<div style="{mono} line-height: 1.5;">{c}</div>' for c in ui_text.workbook_change_lines(changes, did, covered)]
                   or [warning("Nothing changed.")],
                   gap=2)
-    svg, view_readout = end_view_svg(report)
+    svg, view_readout = end_view_svg(report, effective)
     view = panel("End view, from your origin", view_readout, [svg])
     lines, speeds_readout = ui_text.workbook_speed_lines(effective, report.motion)
+    # A sentence in place of a shaft's line (a later phase's, or W7's torque note, last) in prose, as the window.
+    prose = range(len(lines)) if report.motion.later else (
+        [len(lines) - 1] if getattr(report.motion, "torque_note", "") and report.motion.speeds else [])
     speeds = panel("Speeds", speeds_readout,
-                   [f'<div style="{mono} white-space: pre-wrap; line-height: 1.5; max-width: {wb_gui.END_VIEW[0]}px;">'
-                    f'{line}</div>' for line in lines], gap=0)        # wrapped at the end view's width, as the window
+                   [f'<div style="font-size: 12px; color: {MUTED}; line-height: 1.45; max-width: {wb_gui.END_VIEW[0]}px;">'
+                    f'{line}</div>' if r in prose else
+                    f'<div style="{mono} white-space: pre-wrap; line-height: 1.5; max-width: {wb_gui.END_VIEW[0]}px;">'
+                    f'{line}</div>' for r, line in enumerate(lines)], gap=0)   # wrapped at the end view's width
 
     colour = OK if footer.ok else ERR
     exporting = building is None                                        # Export waits while a job runs
@@ -1140,6 +1151,21 @@ boards["WorkbookRightAngle"] = ("Workbook · a right-angle gearbox built: a beve
                                 workbook_board(right_angle, desk=right_desk, note=right_note), WINDOW_WIDTH)
 boards["WorkbookCrossed"] = ("Workbook · a crossed stage and a bevel stage onto a slanted shaft, read",
                              workbook_board(with_folder(crossed_slant())), WINDOW_WIDTH)
+
+# W7. W7-PLAN §4.1's 4 : 1 planetary built (the ring held, the sun in, the carrier out, three planet copies and a
+# gear on the carrier): every copy drawn, the carrier a dashed circle through its planets' axes, S, R and C one
+# cross, and the footer naming the gear to drag and the carrier part as axes and planes only. And the same workbook
+# with Copies 5, read: the assembly condition fails, an error at the planet shaft's row (W7-PLAN §4.5).
+from test_workbook_planetary import edited as planetary_edited, planetary_4to1      # noqa: E402 - B's fixtures
+
+planetary = with_folder(planetary_4to1())
+planetary_desk = Desk()
+planetary_note = press_build(planetary_desk, planetary)
+boards["WorkbookPlanetary"] = ("Workbook · a 4 : 1 planetary built: the ring held, three planets on a carrier",
+                               workbook_board(planetary, desk=planetary_desk, note=planetary_note), WINDOW_WIDTH)
+five = with_folder(planetary_edited(planetary_4to1(), shafts={"P": dict(copies="5")}))
+boards["WorkbookPlanetaryCopies"] = ("Workbook · five planets that cannot all mesh: the assembly condition",
+                                     workbook_board(five, before=planetary), WINDOW_WIDTH)
 
 layout = []
 x = 0
