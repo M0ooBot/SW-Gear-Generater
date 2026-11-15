@@ -3033,3 +3033,15 @@ def test_the_raw_component_a_probe_touches_is_fetched_in_the_current_epoch(confi
     session, doc = configured
     _change(session, doc, how)
     assert session.raw_component("layout").IsFixed is True       # a held handle would raise StaleHandle here
+
+
+def test_no_code_but_swcom_reads_the_sessions_component_registry():
+    """W8-INTERFACES §9.4: only the Session holds COM handles, so ``._handles[`` is read in swcom.py alone, across
+    src/ and probe/ (``carrier_handles[`` and other names of one's own are not the Session's)."""
+    import pathlib
+    import re
+    root = pathlib.Path(__file__).resolve().parent.parent
+    pattern = re.compile(r"\._handles\[")
+    offenders = [str(p.relative_to(root)) for folder in ("src", "probe") for p in sorted((root / folder).rglob("*.py"))
+                 if p.name != "swcom.py" and pattern.search(p.read_text("utf-8"))]
+    assert offenders == []

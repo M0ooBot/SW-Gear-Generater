@@ -631,6 +631,34 @@ class FakeSolidWorks:
         self.component_names[handle] = name
         return name
 
+    def is_fixed(self, handle):
+        """``Session.is_fixed``: the component's fixed state as fix and unfix left it (the layout and a held member
+        fixed, every other gear not). The W8 spike kept a fixed component fixed in every configuration made after it
+        was fixed (``FIXED_KEPT_IN_NEW_CONFIGURATION``), so one set serves every configuration."""
+        self._log("is_fixed", handle)
+        return self._name2(handle) in self.fixed
+
+    def component_path(self, handle):
+        """``Session.component_path``: the file the component was inserted from; in an assembly opened from a
+        copied folder whose stored folder is gone, the same file beside the assembly, as SolidWorks resolves it."""
+        self._log("component_path", handle)
+        name = self._name2(handle)
+        stored = self.component_paths.get(name)
+        if stored is None:
+            raise SolidWorksError(f"SolidWorks gave no file for {name}, so where it comes from cannot be read.")
+        if _key(stored) in self.saved or not self.current:
+            return stored
+        folder = self.current.replace("/", "\\").rsplit("\\", 1)[0]
+        beside = folder + "\\" + stored.replace("/", "\\").rsplit("\\", 1)[-1]
+        return beside if _key(beside) in self.saved else stored
+
+    def copied(self, folder, to):
+        """A built folder copied to ``to`` and the master folder gone (the demonstration's copy_built): every saved
+        file under ``folder`` is now under ``to``, its stored references (``component_paths``) unchanged."""
+        for kept in (self.saved, self.saved_mates, self.saved_axes, self.assembly_components):
+            for key in [k for k in kept if k.startswith(_key(folder))]:
+                kept[_key(to) + key[len(_key(folder)):]] = kept.pop(key)
+
     def component_frame(self, handle):
         self._log("component_frame", handle)
         identity = ((1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0), (0.0, 0.0, 0.0))
@@ -5570,6 +5598,24 @@ def _built_case(held="ring", minus=False):
     for gear, frame in frames.items():
         assert _close(fake.frames[PL_COMPONENT[gear]], frame), gear      # the rebuild left every body placed
     return fake
+
+
+def test_the_fake_says_which_components_are_fixed_and_where_each_comes_from_even_from_a_copy(turned_findings):
+    """The fake's ``is_fixed`` and ``component_path`` on the 4 : 1 with the ring held: the layout and the ring stay
+    fixed, a planet copy floats; every component comes from the build folder, and from the copy once the folder is
+    copied and the master gone."""
+    fake = _built_case(held="ring")
+    assert fake.is_fixed("layout") and fake.is_fixed("gear3")
+    assert not fake.is_fixed("gear2c1") and not fake.is_fixed("gear1")
+    handles = ("layout", "carrier1", "gear1", "gear2c1", "gear2c2", "gear2c3", "gear3", "gear4")
+    assert all(fake.component_path(h).startswith(PL) for h in handles)
+    assert fake.component_path("gear2c2") == PLANET18
+    fake.copied(PL, "C:\\Copy\\")
+    fake.open_document("C:\\Copy\\Planetary_4to1.SLDASM")
+    for index, handle in enumerate(handles):
+        fake.find_component(f"copy{index}", f"{handle}-1")
+        assert fake.component_path(f"copy{index}") == "C:\\Copy\\" + fake.component_paths[f"{handle}-1"][len(PL):]
+    assert fake.is_fixed("copy6") and not fake.is_fixed("copy3")
 
 
 def test_the_sun_held_drives_from_the_ring_at_four_to_three(turned_findings):
