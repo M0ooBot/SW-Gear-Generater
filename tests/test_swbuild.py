@@ -6533,6 +6533,52 @@ def test_a_turn_in_step_in_the_mode_showing_is_left_and_the_status_warns_of_the_
     assert turned == pytest.approx({"RangeSlv": 37.0, "LoDog": 0.0}, abs=1e-6)
 
 
+def test_a_build_with_modes_on_2026_says_a_turn_shows_in_every_mode_from_the_finding_as_committed(mode_findings,
+                                                                                                 monkeypatch):
+    """The review of ruling 9.18's commits, point 3: with TURN_PER_CONFIGURATION_ON_2026 as committed (False, W8 s2),
+    a build on the fake's 2026 revision carries False, and its status says the shared sentence and neither claim of
+    the old one. Hard-wiring True into the build's result fails here."""
+    from gear_generator import ui_text
+    from gear_generator.workbook import gearbox
+    from test_workbook_modes import assessed
+    from workbook_fixtures import transfer_case_parallel
+    monkeypatch.setattr(findings, "TURN_PER_CONFIGURATION_ON_2026", COMMITTED_TURN_2026)
+    fake = FakeSolidWorks()
+    assert fake.revision[0] == 34
+    plan = gearbox.plan_gearbox(assessed(transfer_case_parallel()), None, exists=fake.exists,
+                                read_sidecar=lambda p: None)
+    result = swbuild.build_gearbox(fake, **plan.build_kwargs(), exists=fake.exists)
+    assert result.ok and result.positions_per_configuration is False, result.log_lines()
+    text = ui_text.gearbox_status(plan, result)[0]
+    assert ("RangeSlv and ModeSlv slide along Rear, each to its place in each mode. A turn you give the gears in one "
+            "mode shows in every mode, so a dog can stand across its sleeve in another mode") in text
+    assert ui_text.TURN_STAYS not in text and ui_text.SWITCH_IN_STEP not in text
+
+
+def test_a_quiet_update_that_puts_on_2026_says_so_from_the_finding_as_committed(mode_findings, monkeypatch):
+    """The same for an Update: the fake's shared variant, a turn in 4L seen in 2H, put there and every mode visited
+    (§9.18). Hard-wiring True into the Update's result fails here."""
+    monkeypatch.setattr(findings, "INTERFERENCE_CHECKED", True, raising=False)
+    fake = FakeSolidWorks()
+    fake.shared_positions = True
+    fake, built, _ = _tc_gearbox(fake)
+    monkeypatch.setattr(findings, "TURN_PER_CONFIGURATION_ON_2026", COMMITTED_TURN_2026)
+    fake.show_configuration("4L")
+    for gear in ("gear7-1", "gear8-1", "gear6-1", "gear9-1"):
+        fake.turn(gear, 30.0)
+    fake.show_configuration("2H")
+    done = _tc_update(fake, built)
+    assert done.ok and done.positions_per_configuration is False and done.put_in == ["2H"], done.log_lines()
+    assert _status_sentences(built, done) == [
+        "RangeSlv and InDog had been turned out of step with each other in SolidWorks; they are back in mesh.",
+        "In 2H, RangeSlv's teeth stood across InDog's; the gears of 2H are back at the turn they were built at.",
+        "This version of SolidWorks shows a turn given in one mode in every mode, so the turn may have been given "
+        "in another.",
+        "The gears of 4H, N and 4L stood at the turn they were built at when Update SolidWorks showed them.",
+        "It worked in 2H, the configuration that was active, then showed and checked 4H, N and 4L and left the "
+        "assembly in 2H."]
+
+
 def _mode_sentences(built, done):
     from types import SimpleNamespace
     from gear_generator import ui_text
