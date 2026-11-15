@@ -159,13 +159,13 @@ Each is argued where it is used; the column says where.
 | J26 | **Puts are made mode by mode.** A put holds only in the configuration shown (2026), so restoring a mode takes a put made with that configuration shown. In each mode that needs a put, the set put is the gears connected over **every** mode's relations (for both fixtures, the whole gearbox: review M5). A mode needs a put when a workbook change moves its gears (a shaft moved, a tooth count, an At — these touch every mode, so every mode is visited and put) or when its own `train_check` finds it off its axis or out of step. A mode whose own train is in step and that no change touches keeps the user's turn (W5's answer 2). Right also if 2024 shares positions (§1.9). | W5's single put in the active configuration; the review's M5 set without per-mode puts. | 1.10 |
 | J27 | **A slide never reaches the Front plane:** every mode's value of one SLIDE is non-zero and on one side of the plane (|z_front| ≥ `layout.BASE_TOLERANCE`, one sign), else the gearbox is refused at Build, and an edit that would take one there is structural. A distance of 0 and a change of side were not tried on one mate with per-configuration values; W5's answer 3 (no datum plane) already makes an anchor's front face reaching the plane structural, and this is the same rule for a slide. | A coincident mate for a position at 0 (W5's ALONG rule), which a single SLIDE with per-configuration values cannot switch to. | 1.7 |
 
-*(2026-11-15: J11 and J26 — W8's s2 measured, on SolidWorks 2026 34.0.0, that a turn of a mated train given in one
-configuration shows in every configuration; a free component's put stays per configuration. Of the app's own
-Transform2 puts of the mated train, one made with 2H shown reached 4H and N and did not reach 4L, so what such a put
-does across configurations, J26's premise, is not settled; section s7 is to measure it, and behaviour does not depend
-on it, since every mode is put and post-checked (§1.9). So J26's "a mode needs a put when … its own train_check finds
-it off its axis or out of step" now also includes a mode found turned in step: every mode an Update shows ends at its
-built frames, and a quiet Update that has anything to put puts every mode. The sentences now read
+*(2026-11-15: J11 and J26 — W8's s7 measured, on SolidWorks 2026 34.0.0, that a turn of the mated train given in one
+configuration shows in every configuration, in every state tried, after the app's own Update too, and that a put which
+moves a body is kept by the configuration showing, mated or free; s2 had first shown the turn, and its put readings,
+once thought to say a configuration put in splits off, are a moving put kept per configuration. So J11 holds for a put
+and not for a turn, and J26's "a put holds only in the configuration shown" holds. J26's "a mode needs a put when …
+its own train_check finds it off its axis or out of step" now also includes a mode found turned in step: every mode an
+Update shows ends at its built frames, and a quiet Update that has anything to put puts every mode. The sentences read
 `TURN_PER_CONFIGURATION_ON_<year>`: W8-INTERFACES §9.18. The text above is as approved.)*
 
 ### 0.4 What needs the user
@@ -504,10 +504,11 @@ are skipped: each slider's SLIDE is made at its one value and the assembly keeps
 
 ### 1.9 Turning, and a change of configuration
 
-*(2026-11-15: on SolidWorks 2026 34.0.0 a turn of a mated train shows in every configuration (W8's s2), which is
-this section's "if SolidWorks shares positions" case for a turn, while a free component's Transform2 put stays per
-configuration (the follow-up, rerun on that host). What the app says follows `TURN_PER_CONFIGURATION_ON_<year>`:
-W8-INTERFACES §9.18. The text below is as approved.)*
+*(2026-11-15: on SolidWorks 2026 34.0.0 a turn of the mated train shows in every configuration (W8's s2, settled by s7
+in every state tried, after the app's own Update too), which is this section's "if SolidWorks shares positions" case
+for a turn; a put that moves a body is kept by the configuration showing, mated or free (s7, and the follow-up rerun
+on that host). What the app says follows `TURN_PER_CONFIGURATION_ON_<year>`: W8-INTERFACES §9.18. The text below is as
+approved.)*
 
 A train turns in a configuration exactly as W5's does: one freedom per train in that mode (a free member in neutral
 is a train of its own, as an unmeshed shaft is in W5), the drag gear the input's anchor.

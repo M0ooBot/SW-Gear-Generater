@@ -314,30 +314,30 @@ the kind the last two interface reviews found, and asked for written rules. Thes
     same wherever that row stands. One home: `checks._check_motion`.
 18. **A turn of a mated train shows in every mode; a put on a quiet Update obliges the visit** (W8's s2 and the
     check after it, SolidWorks 2026 34.0.0 on this host, 2026-11-15; `eff7bad`, `933de81`, `d3c2e97`).
-    - *What s2 measured.* The built E4, 2H shown, its train turned +37° on the Sun by W5's drive: shown in 4H, N
-      and 4L, every body stood turned as in 2H, and in 4L LoDog read in interference with RangeSlv (531.913 mm³).
-      The check after it turned the train by a value set in 2H alone (`SetSystemValue3(rad, 3, ['2H'])`) and by a
-      global: every body turned alike in all four configurations
-      (`probe/results/w8-workbook-assembly-20261115-111951-s2-turn-carried-per-body.log`,
-      `probe/results/w8-turn-across-configurations-20261115-115500.txt`). The spike's follow-up, rerun unchanged
-      on this host (`e670e7e`), read a free component's Transform2 put per configuration, as on 34.1.1. So a mated
-      train's turn, which is what a user's turn is, is shared between configurations, where a free component's put
-      is not. That agrees with GOTCHAS §83. Of the app's puts of the mated train, s2 read one across
-      configurations: the changed Update showed 2H first and put the train there (its locks and gear mates off in
-      2H alone); judged on showing, 4H and N then found FDrive at the place the workbook had just given it and the
-      train in step, while 4L, shown last, found FDrive at its old place. So 2H's put reached 4H and N and did not
-      reach 4L, where three things coincide: the quiet Update's earlier put there, 4L active at open, and FDrive
-      free there during that put. (Corrected after `W8-REVIEW-FIX-9-18-AND-WINDOW.md` point 1: an earlier
-      reading here, that the quiet put in 4L showed in 2H, 4H and N, rested on "turned False", which judges nothing
-      for a train with a gear off its place.) What a put of a mated train does across configurations is therefore
-      not settled; section s7 is to measure it, and behaviour does not depend on it, since every mode is put and
-      post-checked (W8-PLAN §1.9). The mated turn has not been read on 34.1.1; the free put reads the same on
-      34.0.0 and 34.1.1.
+    - *What s2 and s7 measured.* The built E4, 2H shown, its train turned +37° on the Sun by W5's drive: shown in 4H,
+      N and 4L, every body stood turned as in 2H, and in 4L LoDog read in interference with RangeSlv (531.913 mm³)
+      (`probe/results/w8-workbook-assembly-20261115-111951-s2-turn-carried-per-body.log`, and the check after it,
+      `probe/results/w8-turn-across-configurations-20261115-115500.txt`). s7 then settled it
+      (`probe/results/w8-s7-20261115-135428.json`, SolidWorks 2026 34.0.0): the drive's turn showed in all four
+      configurations in every state tried, on a copy as built, after a no-op put by the app's route in 4L and in each
+      configuration, after the app's own changed Update had put every mode, for a turn given in 4L, and after a save
+      and reopen for one given in N; a no-op put changed nothing; a put that moved a body stayed in the configuration
+      showing, FIdler turned by a plain Transform2 with its mates on in N and in 4H, and FDrive moved 2 mm along its
+      axis in 2H by the app's route; every reading held through a save and reopen. So a turn is shared by every
+      configuration and a moving put is kept by the configuration it was made in, whether or not a mate holds the
+      body; the spike's follow-up, rerun on this host (`e670e7e`), reads the same of a free component's put. For a
+      turn that agrees with GOTCHAS §83. How it was found: the two s2 logs had suggested that a configuration once put
+      in splits off from the rest, and an earlier reading here (corrected after `W8-REVIEW-FIX-9-18-AND-WINDOW.md`
+      point 1) had a put reaching some configurations and not others; s7 rules both out, and what the s2 rerun read
+      was a moving put kept per configuration (the app's puts in 4L and 4H moved the train from +37° to the built turn
+      there, while 2H and N, not put, kept the +37°). Behaviour depends on neither fact, since every mode an Update
+      shows is put to its built frames and post-checked. Not measured: a turn given while the configurations already
+      stand differently, a drag in the user interface, 34.1.1, and 2024.
     - *The split.* `findings.TURN_PER_CONFIGURATION_ON_<year>` (2026 False, 2024 None until the confirming run's
       s2 and s7) is what the sentences about a turn and a switch read, through `swcom.positions_per_configuration`,
       which keeps its name and its three states. `POSITIONS_PER_CONFIGURATION_ON_<year>` stays as the put fact it
       was measured as and is read by nothing. No behaviour reads either: Update's per-mode puts are right either
-      way (W8-PLAN §1.9). Section s7 will measure both on the built E4, and the findings' pins move to its file.
+      way (W8-PLAN §1.9). s7 measured both on the built E4, and the findings' pins are on its file (`4b164a7`).
     - *A put on a quiet Update obliges the visit* (J13, W8-PLAN §1.10's post-check, "all of them when anything
       changed"). An Update with nothing changed in the workbook that finds the active mode out of step and puts it
       has changed something: every other mode is then shown and handled as a changed Update handles it (put only
@@ -373,6 +373,8 @@ the kind the last two interface reviews found, and asked for written rules. Thes
       - the switch False, after a put in the mode worked in and the visit: *"The gears of 2H and N stood at the
         turn they were built at when Update SolidWorks showed them."*, naming only the visited modes whose own
         judgement on showing read them so (not put there, in step, on their axes, not turned).
+    - *For the user's list:* the app's sentences about a turn on SolidWorks 2026 are now measured both before and
+      after an Update (s7's case 4: a turn after the app's own changed Update showed in every mode, as before one).
     - *Not taken, for the user to overrule:* with a turn shared between modes, a quiet Update could judge every
       mode's couplings from the rotations it reads in the active mode, without showing anything, and say which mode
       stands with a dog across its sleeve. Today a quiet Update judges the mode showing alone (J25).
