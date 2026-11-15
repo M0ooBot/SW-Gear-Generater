@@ -771,10 +771,9 @@ def end_view_svg(report, spec):
         reason = report.layout.later[0] if report.layout.later else "Nothing to draw yet."
         return (f'<div style="width: {w}px; height: {h}px; background: #ffffff; font-size: 12px; color: {MUTED}; '
                 f'padding: 12px; box-sizing: border-box;">{reason}</div>'), ""
-    lines = wb_geometry.shaft_lines(spec) if report.stages else {}       # WorkbookWindow._draw_end_view (W7)
-    carriers = {stage.carrier: tuple(lines[stage.carrier][0][:2]) for stage in report.stages
-                if stage.carrier in lines}
-    view = layout_of.layout_gearbox(report.layout.placed, report.theta, w, h, step=2, carriers=carriers)
+    carriers = {c: point[:2] for c, (point, _) in wb_geometry.carrier_axes(spec, report).items()}   # as the window
+    view = layout_of.layout_gearbox(report.layout.placed, report.theta, w, h, step=2, carriers=carriers,
+                                    shafts=[s.id for s in spec.shafts])
     body = []
     for _, plane, points in view.outlines:
         colour = wb_gui.PLANE_COLOURS[plane % len(wb_gui.PLANE_COLOURS)]
@@ -792,6 +791,10 @@ def end_view_svg(report, spec):
         body.append(f'<path d="M{x0:.1f} {y0:.1f}L{x1:.1f} {y1:.1f}" stroke="{INK}"></path>')
     for name, x, y, anchor in view.labels:        # the window's Tk anchors: n/s the top or bottom, w/e the start or end
         baseline = y + 10 if anchor[0] == "n" else y - 3
+        wide = len(name) * 6.6                    # 11 px mono; on a plain backing, as the window's bbox rectangle
+        left = x if anchor[1] == "w" else x - wide
+        body.append(f'<rect x="{left:.1f}" y="{baseline - 10:.1f}" width="{wide:.1f}" height="13" fill="#ffffff">'
+                    f'</rect>')
         body.append(f'<text x="{x:.1f}" y="{baseline:.1f}" text-anchor="{"start" if anchor[1] == "w" else "end"}" '
                     f'font-family="{MONO}" font-size="11" fill="{INK}">{name}</text>')
     if view.origin is not None:
@@ -906,9 +909,8 @@ def workbook_board(spec, *, clock="14:02:31", open_in_excel=True, before=None, c
     svg, view_readout = end_view_svg(report, effective)
     view = panel("End view, from your origin", view_readout, [svg])
     lines, speeds_readout = ui_text.workbook_speed_lines(effective, report.motion)
-    # A sentence in place of a shaft's line (a later phase's, or W7's torque note, last) in prose, as the window.
-    prose = range(len(lines)) if report.motion.later else (
-        [len(lines) - 1] if getattr(report.motion, "torque_note", "") and report.motion.speeds else [])
+    # A sentence in place of a shaft's line in prose, as the window: ui_text says which.
+    prose = ui_text.speeds_prose_rows(report.motion, lines)
     speeds = panel("Speeds", speeds_readout,
                    [f'<div style="font-size: 12px; color: {MUTED}; line-height: 1.45; max-width: {wb_gui.END_VIEW[0]}px;">'
                     f'{line}</div>' if r in prose else
