@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
+from typing import Dict, Iterable, List, Mapping, Optional, Sequence, Set, Tuple
 
 from .gears import pair as pairs, standards
 from .gears.base import Diagnostic
@@ -1180,12 +1180,30 @@ def workbook_speed_lines(spec, motion) -> Tuple[List[str], str]:
         if not every_z and turns and turns != "still":
             turns = f"{turns} seen from the {where} end"
         lines.append(f"{shaft.id:<4}  {abs(float(speed)):.1f}{NBSP}rpm {turns}{torque_text}")
-    note = getattr(motion, "torque_note", "")
-    if note and motion.speeds:                    # W7: why a torque through a planetary stage is not given
+    note = _torque_note_shown(motion)
+    if note:                                      # W7: why a torque through a planetary stage is not given
         lines.append(_sentence(note))
     if not motion.speeds:
         return lines, "no input"
     return lines, ("seen from +Z" if every_z else "seen from each shaft's + end")
+
+
+def _torque_note_shown(motion) -> str:
+    """``Motion.torque_note`` when the Speeds panel ends with it (shafts are turning and no later phase drives the
+    gearbox), else ""."""
+    note = getattr(motion, "torque_note", "")
+    return note if note and motion.speeds and not motion.later else ""
+
+
+def speeds_prose_rows(motion, lines: Sequence[str]) -> Set[int]:
+    """Which of :func:`workbook_speed_lines`' ``lines`` are sentences, shown in prose, not as a shaft's line: every
+    line when a later phase drives the gearbox (``Motion.later``), else the last line when the panel ends with the
+    torque note (W7). The one home of that rule; the window and the design board ask it."""
+    if not lines:
+        return set()
+    if motion.later:
+        return set(range(len(lines)))
+    return {len(lines) - 1} if _torque_note_shown(motion) else set()
 
 
 def end_view_readout(view) -> str:

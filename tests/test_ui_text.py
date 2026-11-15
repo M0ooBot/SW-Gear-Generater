@@ -3002,6 +3002,32 @@ def test_a_held_member_reads_held_with_no_torque_typed_and_the_missing_torque_is
         "drives.")
 
 
+def test_the_speeds_prose_rows_are_the_torque_note_or_a_later_phases_sentence():
+    """``speeds_prose_rows`` is the one rule for which Speeds lines are prose: on the 4 : 1 with its torque typed
+    none; with no torque typed and the note given, the last; on a W6 gearbox none; and a later phase's panel all."""
+    from test_workbook_planetary import edited, planetary_4to1
+    from test_workbook_turned import bevel_reducer, laid
+    spec = planetary_4to1()
+    motion = kinematics.solve(spec)
+    lines, _ = ui_text.workbook_speed_lines(spec, motion)
+    assert ui_text.speeds_prose_rows(motion, lines) == set()
+    no_torque = edited(spec, shafts={"S": dict(torque="")})
+    noted = dataclasses.replace(kinematics.solve(no_torque), torque_note="The torque through C's planetary stage is "
+                                "not worked out: its members' speeds do not settle which of them drives.")
+    lines, _ = ui_text.workbook_speed_lines(no_torque, noted)
+    assert ui_text.speeds_prose_rows(noted, lines) == {len(lines) - 1} and len(lines) == 5
+    assert lines[-1].startswith("The torque through C's")
+    turned = bevel_reducer()
+    _, meshes = laid(turned)
+    w6 = kinematics.solve(turned, senses={k: v.sense for k, v in meshes.items()})
+    assert ui_text.speeds_prose_rows(w6, ui_text.workbook_speed_lines(turned, w6)[0]) == set()
+    later = dataclasses.replace(noted, later="G6 is driven through a dog ring: its speeds come in phase W8.")
+    lines, readout = ui_text.workbook_speed_lines(no_torque, later)
+    assert (lines, readout) == ([later.later], "") and ui_text.speeds_prose_rows(later, lines) == {0}
+    idle = dataclasses.replace(noted, speeds={})                 # nothing turning: no note, no prose
+    assert ui_text.speeds_prose_rows(idle, ui_text.workbook_speed_lines(no_torque, idle)[0]) == set()
+
+
 def test_the_4_to_1s_gears_table_has_one_row_and_one_part_cell_for_the_planet_and_its_copies(tmp_path):
     from test_workbook_planetary import planetary_4to1
     (tmp_path / "p").mkdir()
