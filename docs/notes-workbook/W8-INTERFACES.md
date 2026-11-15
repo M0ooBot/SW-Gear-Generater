@@ -286,3 +286,15 @@ the kind the last two interface reviews found, and asked for written rules. Thes
     what makes a mode "front not driven" or "neutral" (B, one home shared with the checks); and what an Update found
     out of step in each mode it showed (A, on `ModeCheck`). C says nothing about a mode an Update did not show
     beyond ruling 11's sentence.
+14. **What an Update says about each mode it showed.** `ModeCheck` gains `out_of_step: List[Tuple[str, str]]`,
+    `off_axis: List[str]` and `turned: bool`. `GearboxUpdate.modes` holds a `ModeCheck` only for each mode the Update
+    showed: empty lists for a mode shown and found right, no entry for a mode it did not show. `GearboxUpdate.
+    configuration` is always set for a gearbox with modes. The build gate came off with the modes build (`f9a8cae`)
+    ahead of the Update across configurations; until that is written, the Update gate of ruling 2 is what keeps a
+    built gearbox with modes off W7's motion path.
+15. **SolidWorks 2024 behaves as 2026 on what W8 rests on** (`W8-SPIKE.md`, the SolidWorks 2024 section): a slide's
+    value held per configuration, positions kept per configuration, a put holding in the active configuration only,
+    handles stale after an add or a show, `SetSuppression2` after `AddConfiguration2`. So modes are built on both, and
+    the claims about a turn staying in its mode are made on both. One difference was measured: a collinear spline's
+    gear mate needed Flip True on 2024 and False on 2026, and the read-back named the right one each time. No Flip is
+    assumed for a spline or a coupling, as for every other gear mate.
