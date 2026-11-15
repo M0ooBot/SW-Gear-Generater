@@ -5964,6 +5964,21 @@ def test_an_update_of_a_gearbox_with_modes_is_refused_before_anything_is_read_wh
     assert fake.calls == []
 
 
+@pytest.mark.parametrize("value", [None, "the document's configuration order"])
+def test_an_update_of_a_gearbox_with_modes_is_refused_before_anything_is_read_unless_values_answer_in_the_order_asked(
+        mode_findings, monkeypatch, value):
+    """swcom.dimension_values pairs GetSystemValue3(3, names)' answers with the names in the order passed: the gate
+    reads findings.VALUE_READ_ORDER (tier 11)."""
+    monkeypatch.setattr(findings, "VALUE_READ_ORDER", value, raising=False)
+    fake = FakeSolidWorks()
+    with pytest.raises(swbuild.BuildError) as raised:
+        swbuild.update_gearbox(fake, assembly=r"C:\T\R.SLDASM", motion=replace(_W7, configurations=("2H", "4H")),
+                               exists=lambda _p: True)
+    assert str(raised.value) == ("Update SolidWorks on a gearbox with modes needs findings.VALUE_READ_ORDER settled on "
+                                 f"SolidWorks (it is {value!r}), so nothing was read or changed.")
+    assert fake.calls == []
+
+
 def test_an_update_of_a_gearbox_without_modes_passes_the_modes_gate():
     swbuild._update_modes_gate(None)
     swbuild._update_modes_gate(_W7)
@@ -6034,8 +6049,9 @@ def mode_findings(monkeypatch):
     """Every finding a build with modes reads, pinned here at what the W8 spike found on SolidWorks 2026 (never the
     committed values), with the read-back's and the remake's, a suppressed gear mate's sense read as probe
     planetary_put_back found it on 2026 (an Update with modes reads every sense; a test of the unread sentence sets
-    it to None), and the planetary put route that probe found there (an Update of a train with a carrier refuses
-    without it)."""
+    it to None), the planetary put route that probe found there (an Update of a train with a carrier refuses
+    without it), and the order tier 11 found GetSystemValue3(3, names) answers in, VALUE_READ_ORDER (a build or
+    Update with modes refuses without it, since the slide values are paired with the names in that order)."""
     for name, value in tuple(swcom.CONFIGURATION_FINDINGS) + (
             ("CONFIGURATION_SHOW_RAISES_DIALOG", False), ("MULTI_CONFIGURATION_SAVE_ASKS", False),
             ("COLLINEAR_GEAR_MATE_SENSE_READ_BACK", True), ("SLIDE_VALUE_PER_CONFIGURATION_ON_2026", True),
@@ -6047,7 +6063,7 @@ def mode_findings(monkeypatch):
             ("MATE_DELETE_ROUTE", "Select2 then EditDelete()"), ("MATE_RENAME_ROUTE", "IFeature.Name put"),
             ("POSITIONS_PER_CONFIGURATION_ON_2024", True),
             ("SUPPRESSED_GEAR_MATE_SENSE_READ", "answers, marks nothing"),
-            ("PLANETARY_PUT_ROUTE", "gear mates off around the puts")):
+            ("PLANETARY_PUT_ROUTE", "gear mates off around the puts"), ("VALUE_READ_ORDER", "the order passed")):
         monkeypatch.setattr(findings, name, value, raising=False)
 
 
@@ -6205,6 +6221,12 @@ def test_a_build_with_modes_on_the_fake_is_finished_and_its_record_written_and_r
     ("COMPONENT_FIND_ROUTE", None, "Finding a component again after a configuration change has not been settled on "
                                    "SolidWorks (findings.COMPONENT_FIND_ROUTE is None), so a gearbox with modes is "
                                    "not built and nothing is made."),
+    ("VALUE_READ_ORDER", "the document's configuration order", "A gearbox with modes needs findings.VALUE_READ_ORDER "
+                                                               "settled on SolidWorks (it is \"the document's "
+                                                               "configuration order\"), so it is not built and "
+                                                               "nothing is made."),
+    ("VALUE_READ_ORDER", None, "A gearbox with modes needs findings.VALUE_READ_ORDER settled on SolidWorks (it is "
+                               "None), so it is not built and nothing is made."),
     ("SLIDE_VALUE_PER_CONFIGURATION_ON_2026", None, "SolidWorks 2026 has not been shown to hold a slide's value per "
                                                     "configuration, so a gearbox with modes is not built there and "
                                                     "nothing is made."),

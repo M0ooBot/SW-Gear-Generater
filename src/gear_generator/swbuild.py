@@ -1986,9 +1986,11 @@ class ModeCheck:
 
 # Findings the build of a gearbox with modes reads that do not depend on the version (W8-PLAN §4.2), each with getattr
 # before anything is made: ``_SET`` for any value but None, else the value it must hold.
+# VALUE_READ_ORDER: swcom.dimension_values pairs GetSystemValue3(3, names)' answers with the names in the order passed,
+# which tier 11 found SolidWorks 2026 answers in (measured on 2026 only; 2024's confirming run should read it).
 MODES_FINDINGS = (("FEATURE_SUPPRESS", _SET), ("FEATURE_UNSUPPRESS", _SET), ("MATE_FIND_ROUTE", "mate group"),
                   ("CONFIGURATION_SHOW_RAISES_DIALOG", False), ("MULTI_CONFIGURATION_SAVE_ASKS", False),
-                  ("COLLINEAR_GEAR_MATE_SENSE_READ_BACK", True))
+                  ("COLLINEAR_GEAR_MATE_SENSE_READ_BACK", True), ("VALUE_READ_ORDER", "the order passed"))
 SLIDE_READ_TOLERANCE = 1e-6        # mm: a slide's value read back per configuration
 
 
@@ -3886,8 +3888,10 @@ def _not_whole(turn: float, pitch: float) -> bool:
 
 # -- W8: Update SolidWorks across configurations (W8-PLAN §1.10)
 
+# As MODES_FINDINGS: VALUE_READ_ORDER because the check phase reads every slide's value with dimension_values.
 MODES_UPDATE_FINDINGS = (("FEATURE_SUPPRESS", _SET), ("FEATURE_UNSUPPRESS", _SET), ("MATE_FIND_ROUTE", "mate group"),
-                         ("CONFIGURATION_SHOW_RAISES_DIALOG", False), ("COLLINEAR_GEAR_MATE_SENSE_READ_BACK", True))
+                         ("CONFIGURATION_SHOW_RAISES_DIALOG", False), ("COLLINEAR_GEAR_MATE_SENSE_READ_BACK", True),
+                         ("VALUE_READ_ORDER", "the order passed"))
 
 
 @dataclass

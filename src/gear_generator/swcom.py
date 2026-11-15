@@ -3015,7 +3015,11 @@ class Session:
         """A kept distance mate's ``D1`` in each named configuration, mm: ``IDimension.GetSystemValue3(3, names)``,
         no configuration activated. A 0 means that configuration has no value of its own (J7's caution); the caller
         decides what that means. Marks nothing. Never ``IDimension.SystemValue`` (it answered another
-        configuration's value)."""
+        configuration's value). The answers are paired with the names in the order passed, which rests on
+        ``findings.VALUE_READ_ORDER`` ("the order passed": tier 11 and W8 s0's reads on SolidWorks 2026; the flags'
+        IsSuppressed2 answers in the document's order instead, so :meth:`mate_suppression` asks one name per call).
+        That finding is read by the gate a gearbox with modes must pass to be built or updated
+        (``swbuild.MODES_FINDINGS``, ``swbuild.MODES_UPDATE_FINDINGS``), not here."""
         self._configuration_gate("SLIDE_VALUE_ROUTE", "SPECIFY_CONFIGURATIONS")
         name, dimension = self._slide_dimension(mate_handle)
         # GetSystemValue3's first argument is a swInConfigurationOpts_e (3, swSpecifyConfiguration), as the W8
