@@ -1063,6 +1063,12 @@ RECALC_WAIT = ("Export wrote cells that formulas in the workbook may depend on: 
 RESULTS_DUE = " Export again to write the Results sheet: it waited for Excel to recalculate."
 
 
+NBSP = "\u00a0"
+# A no-break space: the Speeds lines wrap at the end view's width in the window, and must break only between their
+# parts, never between a number and its unit or inside a slant's vector. U+00A0 rather than the narrow U+202F: it is
+# in every font Tk and the boards' HTML fall back to, and keeps an ordinary space's width, so nothing moves.
+
+
 def workbook_speed_lines(spec, motion) -> Tuple[List[str], str]:
     """The Speeds panel: one line per shaft (speed, way round, torque), and its header readout. A gearbox a
     later phase drives gives the one sentence saying so, and no readout.
@@ -1071,7 +1077,9 @@ def workbook_speed_lines(spec, motion) -> Tuple[List[str], str]:
     ``"+X"``, or a slant's plus direction ``"(0.5, −0.866, 0)"``). When every shaft is in the Z family the panel
     reads as W3's, *seen from +Z* in the readout; otherwise each line says which end it is seen from, *S1 1500.0
     rpm anticlockwise seen from the +X end · 10.00 N·m* (a slant's *seen from the (0.5, −0.866, 0) end*: one form
-    for both, so the slant's components never read as a point), and the readout is *seen from each shaft's + end*."""
+    for both, so the slant's components never read as a point), and the readout is *seen from each shaft's + end*.
+    Each number is joined to its unit, and a slant's vector held together, by :data:`NBSP`, so a wrapped line
+    breaks only between its parts."""
     if motion.later:
         return [motion.later], ""
     seen = getattr(motion, "seen_from", None) or {}
@@ -1083,12 +1091,12 @@ def workbook_speed_lines(spec, motion) -> Tuple[List[str], str]:
             lines.append(f"{shaft.id:<4}  not driven")
             continue
         torque = motion.torques.get(shaft.id)
-        torque_text = f" · {torque:.2f} N·m" if torque is not None else ""
+        torque_text = f" · {torque:.2f}{NBSP}N·m" if torque is not None else ""
         turns = motion.turns(shaft.id)
-        where = seen.get(shaft.id, "+Z")
+        where = seen.get(shaft.id, "+Z").replace(" ", NBSP)        # a slant's vector held together
         if not every_z and turns and turns != "still":
             turns = f"{turns} seen from the {where} end"
-        lines.append(f"{shaft.id:<4}  {abs(float(speed)):.1f} rpm {turns}{torque_text}")
+        lines.append(f"{shaft.id:<4}  {abs(float(speed)):.1f}{NBSP}rpm {turns}{torque_text}")
     if not motion.speeds:
         return lines, "no input"
     return lines, ("seen from +Z" if every_z else "seen from each shaft's + end")

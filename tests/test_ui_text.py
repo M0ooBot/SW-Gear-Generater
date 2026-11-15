@@ -2463,6 +2463,15 @@ from types import SimpleNamespace  # noqa: E402
 from gear_generator.workbook import kinematics  # noqa: E402
 
 
+def _held_together(lines):
+    """No ordinary space inside a number and its unit, or inside a slant's vector: a wrapped line breaks only
+    between its parts (the window wraps the Speeds lines at the end view's width)."""
+    for line in lines:
+        assert not re.search(r"\d (rpm|N·m)", line), line
+        for vector in re.findall(r"\([^)]*\)", line):
+            assert " " not in vector, line
+
+
 def _speeds_spec(*ids):
     return SimpleNamespace(shafts=[SimpleNamespace(id=i) for i in ids])
 
@@ -2473,8 +2482,9 @@ def test_the_speeds_panel_on_z_shafts_reads_as_w3():
                                torques={"S1": 10.0, "S2": 39.2, "S3": 115.248}, axis_sign={"S1": 1, "S2": 1, "S3": -1},
                                seen_from={"S1": "+Z", "S2": "+Z", "S3": "+Z"})
     lines, readout = ui_text.workbook_speed_lines(_speeds_spec("S1", "S2", "S3"), motion)
-    assert lines == ["S1    1500.0 rpm anticlockwise · 10.00 N·m", "S2    375.0 rpm clockwise · 39.20 N·m",
-                     "S3    125.0 rpm clockwise · 115.25 N·m"]
+    assert lines == ["S1    1500.0\u00a0rpm anticlockwise · 10.00\u00a0N·m",
+                     "S2    375.0\u00a0rpm clockwise · 39.20\u00a0N·m",
+                     "S3    125.0\u00a0rpm clockwise · 115.25\u00a0N·m"]
     assert readout == "seen from +Z"
     motion.seen_from = {}                                   # before planning fills it: the same
     assert ui_text.workbook_speed_lines(_speeds_spec("S1", "S2", "S3"), motion) == (lines, readout)
@@ -2487,13 +2497,14 @@ def test_the_speeds_panel_across_turned_axes_says_where_each_is_seen_from():
                                torques={"S1": 10.0, "S2": 9.8, "S3": 14.406},
                                seen_from={"S1": "+X", "S2": "+Z", "S3": "(0.5, −0.866, 0)", "S4": "+Y"})
     lines, readout = ui_text.workbook_speed_lines(_speeds_spec("S1", "S2", "S3", "S4", "S5"), motion)
-    assert lines == ["S1    1500.0 rpm anticlockwise seen from the +X end · 10.00 N·m",
-                     "S2    500.0 rpm clockwise seen from the +Z end · 9.80 N·m",
-                     "S3    333.3 rpm anticlockwise seen from the (0.5, −0.866, 0) end · 14.41 N·m",
-                     "S4    0.0 rpm still",
+    assert lines == ["S1    1500.0\u00a0rpm anticlockwise seen from the +X end · 10.00\u00a0N·m",
+                     "S2    500.0\u00a0rpm clockwise seen from the +Z end · 9.80\u00a0N·m",
+                     "S3    333.3\u00a0rpm anticlockwise seen from the (0.5,\u00a0−0.866,\u00a00) end · 14.41\u00a0N·m",
+                     "S4    0.0\u00a0rpm still",
                      "S5    not driven"]
     assert readout == "seen from each shaft's + end"
     assert not any("None" in line or line.endswith(" ") for line in lines)
+    _held_together(lines)
     assert ui_text.workbook_speed_lines(_speeds_spec("S1"), kinematics.Motion(seen_from={"S1": "+X"}))[1] == \
         "no input"
 
@@ -2548,9 +2559,9 @@ def test_the_speeds_panel_through_the_solver_on_an_x_shaft():
     _, meshes = laid(spec)
     motion = kinematics.solve(spec, senses={k: v.sense for k, v in meshes.items()})
     assert ui_text.workbook_speed_lines(spec, motion) == (
-        ["S1    1500.0 rpm anticlockwise seen from the +X end · 10.00 N·m",
-         "S2    750.0 rpm clockwise seen from the +Z end · 19.60 N·m",
-         "S3    250.0 rpm anticlockwise seen from the +Z end · 57.62 N·m"], "seen from each shaft's + end")
+        ["S1    1500.0\u00a0rpm anticlockwise seen from the +X end · 10.00\u00a0N·m",
+         "S2    750.0\u00a0rpm clockwise seen from the +Z end · 19.60\u00a0N·m",
+         "S3    250.0\u00a0rpm anticlockwise seen from the +Z end · 57.62\u00a0N·m"], "seen from each shaft's + end")
 
 
 def test_w6_structural_sentences_are_shown_whole(ready):
