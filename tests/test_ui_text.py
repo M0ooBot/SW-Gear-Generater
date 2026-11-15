@@ -3043,7 +3043,7 @@ def test_the_4_to_1s_gears_table_has_one_row_and_one_part_cell_for_the_planet_an
 
 # -- W8: modes (W8-PLAN §1.12, W8-INTERFACES §7 and §9), on TransferCase_Parallel's shapes (§2.2, §2.3) ----------
 
-from gear_generator.workbook import checks  # noqa: E402
+from gear_generator.workbook import checks, gearbox  # noqa: E402
 
 MODES = ("2H", "4H", "N", "4L")
 TC_ASM = _path("TransferCase", ".SLDASM")
@@ -3114,10 +3114,10 @@ def test_after_build_each_mode_is_named_once_and_the_switch_is_said_in_the_workb
     assert (_clean(text), ok) == (
         "Built 3 parts, TransferCase_Layout and TransferCase.SLDASM; no interference between the gears in any mode, "
         "where they stand. Its gears are mated to turn in each of its 4 modes, one configuration each (2H, 4H, N and "
-        "4L), and SolidWorks reports no mate in error in any of them: it opens in 2H; drag InPin in SolidWorks and the "
-        "rest of its train follow, and to switch mode, double-click another in SolidWorks' ConfigurationManager. "
-        "RangeSlv and ModeSlv slide along Rear, each to its place in each mode. A turn you give the gears in one "
-        "configuration stays in that configuration. Switching mode never by itself puts a dog tooth on tooth.", True)
+        "4L), and SolidWorks reports no mate in error in any of them: it opens in 2H; to switch mode, double-click "
+        "another mode's configuration in SolidWorks' ConfigurationManager. Drag InPin in SolidWorks and the rest of "
+        "its train follow. RangeSlv and ModeSlv slide along Rear, each to its place in each mode. A turn you give the "
+        "gears in one mode stays in that mode. Switching mode never by itself puts a dog tooth on tooth.", True)
     for word in ("pick a configuration", "same way"):
         assert word not in text
 
@@ -3162,8 +3162,8 @@ def test_the_footer_on_a_gearbox_built_with_modes_says_where_it_was_saved_and_ho
     record = _tc_record()
     line = ui_text.motion_record_line(record)
     assert line == ("It was built with a configuration per mode (2H, 4H, N and 4L), each named as its mode, and saved "
-                    "in 2H; to switch mode, double-click another in SolidWorks' ConfigurationManager, and drag InPin in "
-                    "SolidWorks and the rest of its train follow.")
+                    "in 2H; to switch mode, double-click another mode's configuration in SolidWorks' "
+                    "ConfigurationManager. Drag InPin in SolidWorks and the rest of its train follow.")
     assert "pick a configuration" not in line
     kept = ui_text.motion_record_line(record, positions_per_configuration=True)
     assert kept == f"{line} {ui_text.TURN_STAYS} {ui_text.SWITCH_IN_STEP}"
@@ -3235,7 +3235,11 @@ def test_a_quiet_update_says_where_it_worked_and_that_it_did_not_show_the_other_
     assert ui_text.mode_update_lines(_tc_update(), _tc_moved()) == [
         "It worked in 4H, the configuration that was active; it did not show the other modes, since nothing needed "
         "changing."]
-    assert ui_text.mode_update_lines(_tc_update(), _moved()) == []
+    assert ui_text.mode_update_lines(_update(), _moved()) == []
+    # A result on a gearbox with modes that names no configuration still says the others were not shown.
+    assert ui_text.gearbox_update_status(_tc_update(), _moved()) == (
+        "SolidWorks already matches the workbook: nothing was changed. It worked in the configuration that was "
+        "active; it did not show the other modes, since nothing needed changing.", True)
 
 
 def test_an_update_that_showed_the_other_modes_says_so_and_that_the_assembly_reads_modified():
@@ -3250,6 +3254,8 @@ def test_an_update_that_showed_the_other_modes_says_so_and_that_the_assembly_rea
         "assembly in 4H. Showing them leaves TransferCase.SLDASM marked modified in SolidWorks, although nothing in "
         "it changed. Save Sleeve_m1.5_N30 in SolidWorks to keep it.")
     assert "quiet" not in text and "nothing needed changing" not in text
+    one = ui_text.gearbox_update_status(update, dataclasses.replace(result, visited=["2H"]))[0]
+    assert "then showed and checked 2H and left the assembly in 4H. Showing it leaves TransferCase.SLDASM" in one
 
 
 def test_after_update_slides_and_flags_are_said_once_across_modes():
@@ -3281,7 +3287,7 @@ def test_a_coupling_out_of_step_is_said_only_in_the_mode_it_was_found_and_put_in
     result = _tc_moved(out_of_step=[("RangeSlv", "InDog")], put_in=["4H"], placed=["RangeSlv", "InDog"],
                        changed=[TC_ASM], visited=["2H", "N", "4L"])
     lines = ui_text.mode_update_lines(_tc_update(), result)
-    assert lines[0] == ("In 4H RangeSlv's teeth stood across InDog's; the gears of 4H are back at the turn they were "
+    assert lines[0] == ("In 4H, RangeSlv's teeth stood across InDog's; the gears of 4H are back at the turn they were "
                         "built at.")
     assert "another" not in " ".join(lines)
     shared = ui_text.mode_update_lines(_tc_update(), dataclasses.replace(result, positions_per_configuration=False))
@@ -3363,21 +3369,81 @@ def test_the_implicit_mode_has_no_name_to_lead_with():
         "With every slider at its position 0, RangeSlv engages InDog; G4 and G5 are out of mesh.")
 
 
-def test_the_workers_refusal_of_modes_on_a_version_is_shown_whole_as_a_build_refusal():
-    """§9.5: the per-version refusal is the worker's, before anything is made; the window shows it as it came."""
-    why = ("SolidWorks 2024 has not been shown to hold a slide's value per configuration, so a gearbox with modes is "
-           "not built there and nothing is made.")
-    assert ui_text.job_failed(swbuild.BuildError(why)) == why
+def test_the_workers_refusal_of_modes_on_a_version_is_shown_whole_as_a_build_refusal(monkeypatch):
+    """§9.5: the per-version refusal is the worker's (``swbuild._modes_version_refusal``), before anything is made;
+    the window shows it whole, naming the version as the window does and no API word."""
+    from gear_generator import findings
+    monkeypatch.setattr(findings, "SLIDE_VALUE_PER_CONFIGURATION_ON_2024", None, raising=False)
+    why = swbuild._modes_version_refusal((32, 0, 0))
+    shown = ui_text.job_failed(swbuild.BuildError(why))
+    assert shown == why and "SolidWorks 2024" in shown and shown.endswith("nothing is made.")
+    for word in ("Flip", "Reverse", "entit", "SystemValue", "Suppress", "findings", "revision", "IConfiguration"):
+        assert word not in shown
 
 
-def test_the_strip_refuses_a_part_made_from_a_gearbox_workbook_with_its_name_and_kind():
-    assert ui_text.workbook_part_refusal(r"C:\T\Sleeve_m1.5_N30.SLDPRT", "sleeve") == (
-        "Sleeve_m1.5_N30.SLDPRT is a sleeve made from a gearbox workbook; open that workbook to change it.")
-    assert ui_text.workbook_part_refusal(r"C:\T\Dog_m1.5_N30.SLDPRT", "dog") == (
-        "Dog_m1.5_N30.SLDPRT is a dog made from a gearbox workbook; open that workbook to change it.")
-    from gear_generator import gears
-    assert set(gears.WORKBOOK_KINDS) == {"sleeve", "dog"}
-    for kind in [*gears.KINDS, ""]:
-        with pytest.raises(ValueError, match=r"is not made from a gearbox workbook, so the strip does not refuse it "
-                                             r"as one\.$"):
-            ui_text.workbook_part_refusal(r"C:\T\Gear_m1.5_N17.SLDPRT", kind)
+def test_any_mode_is_said_only_when_every_mode_was_checked():
+    """§9.11, §9.13: an Update that showed 4H and 2H of four modes says those two, never "any mode"."""
+    asm = TC_ASM
+    def status(checked):
+        result = _tc_moved(visited=[m for m in checked if m != "4H"], modes=[swbuild.ModeCheck(m) for m in checked],
+                           changed=[asm], placed=["InPin"], put_in=["4H"])
+        return ui_text.gearbox_update_status(_tc_update(), result)[0]
+    assert "; no interference between the gears in 4H and 2H, where they stand." in status(["4H", "2H"])
+    assert "; no interference between the gears in any mode, where they stand." in status(["4H", "2h", "n", "4L"])
+    assert "; no interference between the gears in 4H, where they stand." in status(["4H"])
+    assert "any mode" not in status(["4H", "2H"])
+    built = ui_text.gearbox_status(_tc_plan(), _tc_built(modes=[swbuild.ModeCheck("2H"), swbuild.ModeCheck("4H")]))
+    assert "; no interference between the gears in 2H and 4H, where they stand." in built[0]
+
+
+def test_an_error_in_one_mode_never_hides_a_clash_in_another():
+    clash = swbuild.Clash(components=("a", "b"), gears=("RangeSlv", "InDog"), volume=0.5)
+    modes = [swbuild.ModeCheck("2H", clashes=[clash]), swbuild.ModeCheck("4H"), swbuild.ModeCheck("N"),
+             swbuild.ModeCheck("4L", interference_error="SolidWorks returned nothing.")]
+    text, ok = ui_text.gearbox_status(_tc_plan(), _tc_built(modes=modes))
+    assert not ok and _clean(text).startswith(
+        "Built 3 parts, TransferCase_Layout and TransferCase.SLDASM. Check: in 2H, RangeSlv and InDog interfere, 0.5 "
+        "mm³; look where they meet in TransferCase.SLDASM. Interference could not be checked in 4L: SolidWorks "
+        "returned nothing. Look at each mesh in TransferCase.SLDASM by eye. Its gears are mated")
+
+
+# The real-plan variants (the review): B's plan_gearbox and finish, A's build_gearbox on its fake, beside the hand-made
+# shapes above. The Update's and the record's wait for A's Update across configurations (§9.2's gate) and a finish
+# the fake's result can pass.
+
+from test_swbuild import mode_findings  # noqa: E402,F401 - the fixture: every finding a build with modes reads
+
+
+def _tc_real_plan(sw):
+    a = _tc_assessed("parallel")
+    plan = gearbox.plan_gearbox(a, None, exists=sw.exists, read_sidecar=lambda p: None)
+    assert plan.refusal == ""
+    return plan
+
+
+def test_the_real_plan_names_its_modes_before_build(mode_findings):  # noqa: F811
+    from test_swbuild import FakeSolidWorks
+    line = ui_text.motion_ready_line(_tc_real_plan(FakeSolidWorks()))
+    assert line == ("Its gears are mated to their shafts and, as each mode engages them, to each other, so they turn "
+                    "together in SolidWorks. It has 4 modes, 2H, 4H, N and 4L: each becomes a configuration of the "
+                    "assembly, and it opens in 2H.")
+
+
+def test_a_real_build_with_modes_on_the_fake_is_said_mode_by_mode(mode_findings):  # noqa: F811
+    from test_swbuild import FakeSolidWorks
+    sw = FakeSolidWorks()
+    plan = _tc_real_plan(sw)
+    result = swbuild.build_gearbox(sw, **plan.build_kwargs(), exists=sw.exists)
+    assert result.ok and [m.name for m in result.modes] == list(MODES)
+    text, ok = ui_text.gearbox_status(plan, result)
+    assert ok and _clean(text).startswith(
+        "Built 6 parts, TransferCase_Parallel_Layout and TransferCase_Parallel.SLDASM; no interference between the "
+        "gears in any mode, where they stand. Its gears are mated to turn in each of its 4 modes, one configuration "
+        "each (2H, 4H, N and 4L), and SolidWorks reports no mate in error in any of them: it opens in 2H; to switch "
+        "mode, double-click another mode's configuration in SolidWorks' ConfigurationManager. Drag InPin in "
+        "SolidWorks to turn one train and FrontDog to turn the other. RangeSlv and ModeSlv slide along Rear, each to "
+        "its place in each mode.")
+    assert (ui_text.TURN_STAYS in text) == (result.positions_per_configuration is True)
+    assert (ui_text.SWITCH_IN_STEP in text) == (result.positions_per_configuration is True)
+    for word in ("Flip", "Reverse", "entities", "same way"):
+        assert word not in text
