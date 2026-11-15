@@ -1134,3 +1134,66 @@ def test_a_carrier_entry_of_the_wrong_type_is_refused():
     raw["gearbox"]["carriers"] = [{"shaft": 3}]
     with pytest.raises(StoreError, match="CarrierEntry.shaft is not"):
         store.link_record_from_json(json.dumps(raw))
+
+
+# -- schema 5's refusals (package C) ---------------------------------------------------------------------------------
+
+
+def _planetary_raw():
+    return json.loads(store.link_record_to_json(planetary_record("R.xlsx")))
+
+
+@pytest.mark.parametrize("change,match", [
+    (lambda raw: raw["gearbox"]["carriers"][0].update(shaft=""), r"gearbox\.carriers\[0\] names no carrier shaft\)"),
+    (lambda raw: raw["gearbox"]["carriers"][0].update(path=""),
+     r"gearbox\.carriers\[0\] \('C'\) names no carrier part\)"),
+    (lambda raw: raw["gearbox"]["carriers"][0].update(direction=[]),
+     r"gearbox\.carriers\[0\] \('C'\) has direction \[\], not three finite numbers\)"),
+    (lambda raw: raw["gearbox"]["carriers"][0].update(direction=[0.0, 0.0, 2.0]),
+     r"\('C'\) has direction \[0\.0, 0\.0, 2\.0\], of length 2, not of unit length\)"),
+    (lambda raw: raw["gearbox"]["carriers"][0]["axes"][1].update(direction=[0.0, 0.0]),
+     r"gearbox\.carriers\[0\] \('C'\)\.axes\[1\] \('P copy 2'\) has direction \[0\.0, 0\.0\], not three finite "
+     r"numbers\)"),
+    (lambda raw: raw["gearbox"]["carriers"].append(dict(raw["gearbox"]["carriers"][0])),
+     r"gearbox\.carriers\[1\] \('C'\) is a second carrier part for the shaft 'C'\)"),
+    (lambda raw: raw["gearbox"]["mates"][-1].update(on="C2 carrier"),
+     r"gearbox\.mates\[4\] \('Planet copy 2 on P copy 2 Axis'\) is made to an axis on 'C2 carrier', which is no "
+     r"carrier on record\)"),
+    (lambda raw: raw["gearbox"].update(carriers=[]), r"is made to an axis on 'C carrier', which is no carrier on record"),
+    (lambda raw: raw["gearbox"]["components"][-1].update(of="Sun"),
+     r"gearbox\.components\[1\] \('Planet copy 2'\) is recorded as a copy of 'Sun', which its own name does not say\)"),
+    (lambda raw: raw["gearbox"]["components"][-1].update(gear="Planet"),
+     r"\('Planet'\) is recorded as a copy of 'Planet', which its own name does not say"),
+])
+def test_a_planetary_entry_update_could_not_use_is_refused_with_a_sentence_and_left_alone(tmp_path, change, match):
+    raw = _planetary_raw()
+    change(raw)
+    with pytest.raises(StoreError, match=match):
+        store.link_record_from_json(json.dumps(raw))
+    target = tmp_path / "R.workbook.json"
+    text = json.dumps(raw)
+    target.write_text(text)
+    with pytest.raises(StoreError, match=r"^The record of what was built, R\.workbook\.json, cannot be read: its "
+                                         r"contents are not a link record \(gearbox\."):
+        store.read_link_record(str(tmp_path / "R.xlsx"))
+    assert target.read_text() == text and sorted(p.name for p in tmp_path.iterdir()) == ["R.workbook.json"]
+
+
+def test_what_a_planetary_finish_writes_always_reads_and_the_store_names_carriers_as_layout_does():
+    """The reading rules cannot refuse what the app writes: a mate's ``on`` is ``layout.carrier_id`` of a carrier on
+    record, ``of`` the row of the copy's id (``planetary.copy_of``), a frame gear's ``of`` empty."""
+    from gear_generator.workbook import layout, planetary
+    assert layout.carrier_id("C") == "C carrier"
+    assert planetary.copy_id("Planet", 2, 3) == "Planet" + store._COPY_WORD + "2"
+    record = planetary_record("R.xlsx")
+    box = record.gearbox
+    box.components.append(store.ComponentEntry(gear="Planet copy 10", part=r"C:\P\Planet.SLDPRT", name="Planet-10",
+                                               rotation=[1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
+                                               at=[0.0, 0.0, 0.0], of=planetary.copy_of("Planet copy 10")[0]))
+    box.mates.append(store.MateEntry(name="CarrierGear locked to C carrier", kind="lock",
+                                     gears=["C carrier", "CarrierGear"]))
+    again = store.link_record_from_json(store.link_record_to_json(record))
+    assert again == record
+    record.gearbox.carriers[0].component = ""            # written as soon as the carrier part saves (a refused train)
+    record.gearbox.mates = [m for m in record.gearbox.mates if not m.on]
+    assert store.link_record_from_json(store.link_record_to_json(record)) == record

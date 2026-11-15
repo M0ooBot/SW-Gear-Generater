@@ -892,16 +892,21 @@ def _turned_senses_checked(box: "GearboxRecord") -> None:
                              "+1")
 
 
-def _shaft_checked(entry: ShaftEntry, index: int) -> ShaftEntry:
-    """``entry`` (already type-checked, a v3 one given its direction) with a ``direction`` of three finite numbers of
-    unit length, else a ValueError phrase naming it: every frame Update and the layout make rests on it."""
-    where = f"gearbox.shafts[{index}]" + (f" ({entry.shaft!r})" if entry.shaft else "")
-    direction = entry.direction
+def _direction_checked(where: str, direction: List[float]) -> None:
+    """A ValueError phrase naming ``where`` unless ``direction`` is three finite numbers of unit length."""
     if len(direction) != 3 or not all(math.isfinite(v) for v in direction):
         raise ValueError(f"{where} has direction {direction!r}, not three finite numbers")
     length = math.sqrt(sum(v * v for v in direction))
     if abs(length - 1.0) > _UNIT:
         raise ValueError(f"{where} has direction {direction!r}, of length {length:.9g}, not of unit length")
+
+
+def _shaft_checked(entry: ShaftEntry, index: int, within: str = "gearbox.shafts") -> ShaftEntry:
+    """``entry`` (already type-checked, a v3 one given its direction) with a ``direction`` of three finite numbers of
+    unit length, else a ValueError phrase naming it: every frame Update and the layout make rests on it. ``within``
+    names the list it is in (a carrier's ``axes`` too)."""
+    where = f"{within}[{index}]" + (f" ({entry.shaft!r})" if entry.shaft else "")
+    _direction_checked(where, entry.direction)
     return entry
 
 
@@ -918,12 +923,47 @@ def _v3_shaft(entry: ShaftEntry, raw: Dict[str, Any], version: int = 3) -> Shaft
     return entry
 
 
-def _carrier_read(entry: CarrierEntry, raw: Dict[str, Any]) -> CarrierEntry:
-    """A carrier entry type-checked, its ``axes`` read as ``ShaftEntry``s (schema 5 only: no v3 fill). C adds the
-    refusals of W7-PLAN §5.3 (no shaft or path; an ``on`` naming no carrier on record)."""
+def _carrier_read(entry: CarrierEntry, raw: Dict[str, Any], index: int = 0) -> CarrierEntry:
+    """A carrier entry type-checked, its ``axes`` read as ``ShaftEntry``s (schema 5 only: no v3 fill), else a
+    ValueError phrase naming it: no shaft or no path (Update finds the carrier part by both), a direction or a planet
+    axis's direction not three finite numbers of unit length (every copy's frame is turned about it)."""
     entry = _checked(entry)
-    entry.axes = [_checked(a) for a in _entries(ShaftEntry, raw.get("axes", []) or [])]
+    where = f"gearbox.carriers[{index}]" + (f" ({entry.shaft!r})" if entry.shaft else "")
+    if not entry.shaft:
+        raise ValueError(f"{where} names no carrier shaft")
+    if not entry.path:
+        raise ValueError(f"{where} names no carrier part")
+    _direction_checked(where, entry.direction)
+    entry.axes = [_shaft_checked(_checked(a), i, f"{where}.axes")
+                  for i, a in enumerate(_entries(ShaftEntry, raw.get("axes", []) or []))]
     return entry
+
+
+_COPY_WORD = " copy "     # ``workbook.planetary.copy_id``: "Planet copy 2" (a space is never in a workbook name)
+
+
+def _carriers_checked(box: "GearboxRecord") -> None:
+    """Across the gearbox, as ValueError phrases naming the entry: two carrier parts for one shaft; a mate whose
+    ``on`` names no carrier on record (Update looks the axis up in that carrier part); a component whose ``of``
+    is not the row its own id is a copy of (Update compares copies through it). What the app writes always passes:
+    a mate's ``on`` is ``f"{shaft} carrier"`` of a carrier written with the carrier part, and ``of`` is the row of
+    the copy's id."""
+    shafts = [c.shaft for c in box.carriers]
+    for index, shaft in enumerate(shafts):
+        if shaft in shafts[:index]:
+            raise ValueError(f"gearbox.carriers[{index}] ({shaft!r}) is a second carrier part for the shaft {shaft!r}")
+    ids = {f"{shaft} carrier" for shaft in shafts}            # ``layout.carrier_id``, kept the same by a test
+    for index, mate in enumerate(box.mates):
+        if mate.on and mate.on not in ids:
+            where = f"gearbox.mates[{index}]" + (f" ({mate.name!r})" if mate.name else "")
+            raise ValueError(f"{where} is made to an axis on {mate.on!r}, which is no carrier on record")
+    for index, component in enumerate(box.components):
+        if not component.of:
+            continue
+        row, sep, k = component.gear.rpartition(_COPY_WORD)
+        if not (sep and k.isdigit() and row == component.of):
+            where = f"gearbox.components[{index}]" + (f" ({component.gear!r})" if component.gear else "")
+            raise ValueError(f"{where} is recorded as a copy of {component.of!r}, which its own name does not say")
 
 
 def link_record_from_json(text: str) -> LinkRecord:
@@ -966,10 +1006,11 @@ def link_record_from_json(text: str) -> LinkRecord:
                                                                         gearbox.get("components", []))]
             record.gearbox.mates = [_mate_checked(_checked(m), i)
                                     for i, m in enumerate(_entries(MateEntry, gearbox.get("mates", [])))]
-            record.gearbox.carriers = [_carrier_read(c, raw_c) for c, raw_c in
-                                       zip(_entries(CarrierEntry, gearbox.get("carriers", []) or []),
-                                           gearbox.get("carriers", []) or [])]
+            record.gearbox.carriers = [_carrier_read(c, raw_c, i) for i, (c, raw_c) in
+                                       enumerate(zip(_entries(CarrierEntry, gearbox.get("carriers", []) or []),
+                                                     gearbox.get("carriers", []) or []))]
             _turned_senses_checked(record.gearbox)
+            _carriers_checked(record.gearbox)
             if record.gearbox.kind not in GEARBOX_KINDS:
                 raise ValueError(f"gearbox.kind is {record.gearbox.kind!r}, not one of {', '.join(GEARBOX_KINDS)}")
         record.earlier = [_checked(e) for e in _entries(EarlierRevision, raw.get("earlier", []))]
