@@ -2146,6 +2146,7 @@ class GearboxResult:
             return result is None or (result.ok and bool(result.saved))
 
         return (all(saved(r) for r in self.parts.built) and not self.parts.skipped and saved(self.layout)
+                and all(saved(r) for r in self.carriers)
                 and saved(self.assembly) and not self.skipped and not self.failures and not self.mismatched)
 
     def _interference_ran(self) -> bool:
@@ -2163,12 +2164,17 @@ class GearboxResult:
             lines.extend(self.layout.log_lines())
         elif self.layout_reused:
             lines.append(f"ok      layout {_file(self.layout_reused)} reused")
+        for carrier in self.carriers:
+            lines.extend(carrier.log_lines())
+        lines.extend(f"ok      carrier part {_file(p)} reused" for p in self.carriers_reused)
         if self.assembly is not None:
             lines.extend(self.assembly.log_lines())
             if self.assembly.mate_problems and not self.assembly.saved and self.assembly.document:
+                held = ("the parts, the layout part and the carrier part" if self.carriers or self.carriers_reused
+                        else "the parts and the layout part")
                 lines.append(f"STOPPED SolidWorks refused or flagged a mate, so {self.assembly.document} is left open "
-                             "in SolidWorks, unsaved, and no assembly is built in its place; the parts and the "
-                             "layout part it holds are saved")
+                             f"in SolidWorks, unsaved, and no assembly is built in its place; {held} it holds are "
+                             "saved")
         lines.extend(_interference_lines(self.clashes, self.interference_error, self._interference_ran()))
         lines.extend(f"FAIL    {what}: {why}" for what, why in self.failures)
         if self.skipped:
@@ -2259,18 +2265,27 @@ def build_gearbox(sw: SolidWorks, parts: Sequence[BuildPlan], reuse: Sequence[Do
     SolidWorks makes the layout mismatched (:attr:`GearboxResult.mismatched`),
     as a changed global does, so it is not reused.
 
-    W7 (A writes it; W7-PLAN §2.9, W7-INTERFACES.md): ``carriers`` (keyword): each carrier part, a plan to make
-    or a saved one to reuse (checked live like the layout), built after the layout and before the assembly; a
-    failure skips the assembly. Until A's pass a build given any is refused before anything is made.
+    W7 (W7-PLAN §2.9, W7-INTERFACES.md): ``carriers`` (keyword): each carrier part, a plan to make (a skeleton of
+    axes and planes, built as the layout part is) or a saved one to reuse (checked live as the layout is, a
+    mismatch recorded and nothing built), made after the layout part and before the assembly, each announced as
+    ``Step(STAGE_CARRIER, stem)``, into :attr:`GearboxResult.carriers` (reused: ``carriers_reused``). A carrier
+    part that fails skips the assembly, the parts and the layout part staying saved. Its paths join the pre-flight
+    (never overwritten, a reused one still there, both among what the assembly may insert). The assembly's mate
+    problems name a carrier by its id when ``gears`` maps the carrier's handle to it.
     """
-    if carriers:
-        raise BuildError("This gearbox has a planetary stage, and building its carrier part is not in this version "
-                         "of Gear Generator yet, so nothing is made.")
     say = progress or _quiet
     _gate(sw)
     gear_of_handle = dict(gears or {})
     layout_plan = layout if isinstance(layout, BuildPlan) else None
     layout_reuse = layout if isinstance(layout, DocumentValues) else None
+    carrier_plans = [c for c in carriers if isinstance(c, BuildPlan)]
+    carrier_reuse = [c for c in carriers if isinstance(c, DocumentValues)]
+    if len(carrier_plans) + len(carrier_reuse) != len(carriers):
+        raise BuildError("A carrier part was given as something that is neither a plan to make nor a saved part to "
+                         "reuse, so nothing is made; that is a fault in Gear Generator.")
+    if carriers and assembly is None:
+        raise BuildError("Carrier parts were given with no assembly to put them in, so nothing is made; that is a "
+                         "fault in Gear Generator.")
     if assembly is not None and layout is None:
         raise BuildError("The assembly is built around its layout part, and this build has neither a layout part "
                          "to make nor one to reuse.")
@@ -2279,14 +2294,15 @@ def build_gearbox(sw: SolidWorks, parts: Sequence[BuildPlan], reuse: Sequence[Do
         if workbook_assembly_kind(assembly) == ASSEMBLY_TRAIN:
             _train_gate(assembly, building=True)
             senses = _sense_gate(assembly, senses)
-    plans = list(parts) + [p for p in (layout_plan, assembly) if p is not None]
+    plans = list(parts) + ([layout_plan] if layout_plan is not None else []) + carrier_plans + \
+        ([assembly] if assembly is not None else [])
     for plan in plans:
         problems = plan.check()
         if problems:
             raise BuildError(f"The build plan for {_file(_saved_path(plan)) or plan.kind} is not sound: "
                              + " ".join(problems))
     made = [p for p in (_saved_path(plan) for plan in plans) if p]
-    reused_docs = list(reuse) + ([layout_reuse] if layout_reuse is not None else [])
+    reused_docs = list(reuse) + ([layout_reuse] if layout_reuse is not None else []) + carrier_reuse
     reused = [d.path for d in reused_docs]
     for path in made:
         if exists(path):
@@ -2330,18 +2346,22 @@ def build_gearbox(sw: SolidWorks, parts: Sequence[BuildPlan], reuse: Sequence[Do
     # From here on documents are made and saved: nothing raises out (W4 review B1). Each document's own trouble
     # is a failure on its BuildResult (_build_in_job); anything else becomes a failure on the result, so what
     # SolidWorks already saved still reaches the finish and the record.
-    stage = ["the parts" if parts else "the layout part" if layout_plan is not None else "the assembly"]
+    stage = ["the parts" if parts else "the layout part" if layout_plan is not None
+             else "the carrier parts" if carrier_plans else "the assembly"]
     try:
         _build_gearbox_body(sw, result, parts, layout_plan, layout_reuse, assembly, gear_of_handle, exists, say,
-                            stage, senses)
+                            stage, senses, carrier_plans, carrier_reuse)
     except Exception as exc:  # noqa: BLE001 - see above
         if stage[0] == "the interference check":
             result.interference_error = _said(exc)        # a clash check that cannot run is a CHECK, not a failure
             return result
         result.failures.append((stage[0], _said(exc)))
         rest = {"the parts": [p for p, planned in (("the layout part", layout_plan is not None),
+                                                    (_carrier_phrase(carrier_plans), bool(carrier_plans)),
                                                     ("the assembly", assembly is not None)) if planned],
-                "the layout part": ["the assembly"] if assembly is not None else [],
+                "the layout part": [p for p, planned in ((_carrier_phrase(carrier_plans), bool(carrier_plans)),
+                                                         ("the assembly", assembly is not None)) if planned],
+                "the carrier parts": ["the assembly"] if assembly is not None else [],
                 }.get(stage[0], [])
         if rest and not result.skipped:
             result.skipped = f"{' and '.join(rest)}, because the job stopped during {stage[0]}"
@@ -2352,10 +2372,12 @@ def _build_gearbox_body(sw: SolidWorks, result: GearboxResult, parts: Sequence[B
                         layout_plan: Optional[BuildPlan], layout_reuse: Optional[DocumentValues],
                         assembly: Optional[BuildPlan], gear_of_handle: Mapping[str, str],
                         exists: Callable[[str], bool], say: Callable[[Step], None], stage: List[str],
-                        senses: Optional[Mapping[str, bool]] = None) -> None:
+                        senses: Optional[Mapping[str, bool]] = None, carrier_plans: Sequence[BuildPlan] = (),
+                        carrier_reuse: Sequence[DocumentValues] = ()) -> None:
     """Steps 2–4 of :func:`build_gearbox`, filling ``result`` as each document finishes; ``stage[0]`` says which
-    step is under way, for the failure if something raises."""
+    step is under way, for the failure if something raises. W7: the carrier parts after the layout part."""
     later = [phrase for phrase, planned in (("the layout part", layout_plan is not None),
+                                            (_carrier_phrase(carrier_plans), bool(carrier_plans)),
                                             ("the assembly", assembly is not None)) if planned]
     if parts:
         stage[0] = "the parts"
@@ -2370,11 +2392,26 @@ def _build_gearbox_body(sw: SolidWorks, result: GearboxResult, parts: Sequence[B
         say(Step(STAGE_LAYOUT, _stem(_saved_path(layout_plan))))
         result.layout = _build_in_job(sw, layout_plan, exists)
         if not (result.layout.ok and result.layout.saved):
-            if assembly is not None:
-                result.skipped = "the assembly, because the layout part failed"
+            rest = [p for p, planned in ((_carrier_phrase(carrier_plans), bool(carrier_plans)),
+                                         ("the assembly", assembly is not None)) if planned]
+            if rest:
+                result.skipped = f"{' and '.join(rest)}, because the layout part failed"
             return
     elif layout_reuse is not None:
         result.layout_reused = layout_reuse.path
+
+    # W7: each carrier part, a skeleton of axes and planes built as the layout part is, before the assembly.
+    for doc in carrier_reuse:
+        result.carriers_reused.append(doc.path)
+    for plan in carrier_plans:
+        stage[0] = "the carrier parts"
+        say(Step(STAGE_CARRIER, _stem(_saved_path(plan))))
+        built = _build_in_job(sw, plan, exists)
+        result.carriers.append(built)
+        if not (built.ok and built.saved):
+            if assembly is not None:
+                result.skipped = f"the assembly, because the carrier part {_file(_saved_path(plan))} failed"
+            return
 
     if assembly is None:
         return
@@ -2396,6 +2433,10 @@ def _build_gearbox_body(sw: SolidWorks, result: GearboxResult, parts: Sequence[B
             result.clashes = _clashes(sw.interferences(), gear_of)
         except Exception as exc:  # noqa: BLE001 - a clash check that cannot run is a CHECK, never a failure
             result.interference_error = _said(exc)
+
+
+def _carrier_phrase(plans: Sequence[BuildPlan]) -> str:
+    return "the carrier part" if len(plans) == 1 else "the carrier parts"
 
 
 REPLACE_ROUTES = ("Transform2 put", "UnfixComponent, Transform2 put, FixComponent")   # REPLACE_FIXED_ROUTE
@@ -2432,6 +2473,8 @@ class GearboxUpdate:
 
     parts: List[UpdateResult] = field(default_factory=list)
     layout: Optional[UpdateResult] = None
+    # W7: each carrier part's values as set, in the order given (after the layout's).
+    carriers: List[UpdateResult] = field(default_factory=list)
     found: Dict[str, Tuple[Tuple[float, ...], Tuple[float, float, float]]] = field(default_factory=dict)
     placed: List[str] = field(default_factory=list)
     rebuilt: bool = False
@@ -2502,7 +2545,7 @@ class GearboxUpdate:
         """Each document's values, the re-placed gears, the assembly's rebuild, any failure, the interference,
         what was changed and not saved, then ``SKIPPED …``."""
         lines: List[str] = []
-        for result in self.parts + ([self.layout] if self.layout is not None else []):
+        for result in self.parts + ([self.layout] if self.layout is not None else []) + list(self.carriers):
             lines.append(f"update  {result.document or '(no document)'} · trig {result.trig or '?'}")
             if result.changed:
                 lines.append("ok      set " + ", ".join(f'"{n}"' for n in result.changed))
@@ -2662,22 +2705,29 @@ def update_gearbox(sw: SolidWorks, parts: Sequence[DocumentValues] = (), layout:
     direction), mm), read back in the check phase with the layout part; one
     moved in SolidWorks is a :class:`NotAsBuilt` and nothing changes.
 
-    W7 (A writes it; W7-PLAN §2.9): ``carriers`` (keyword): each carrier part's globals as now wanted, read in the
-    check phase and set in the change phase after the layout's, so its axes move before the assembly rebuild. Until
-    A's pass an Update given any is refused before anything is read.
+    W7 (W7-PLAN §2.9): ``carriers`` (keyword): each carrier part's globals as now wanted, read in the check
+    phase with the parts and the layout (a missing global or plane is :class:`NotAsBuilt`) and set in the change
+    phase after the layout's, as the layout's are (one already holding them untouched), so its axes move before the
+    assembly rebuilds; each result in :attr:`GearboxUpdate.carriers`. A carrier part that fails stops the job before
+    the assembly.
     """
-    if carriers:
-        raise BuildError("This gearbox has a planetary stage, and updating its carrier part is not in this version "
-                         "of Gear Generator yet, so nothing is changed.")
     if lines and layout is None:
         raise BuildError("Update SolidWorks was given line axes to check but no layout part to find them in, so "
                          "nothing is changed; that is a fault in Gear Generator.")
+    if motion is not None and not carriers and (
+            motion.carriers or motion.held
+            or any(m.carrier for m in tuple(motion.meshes) + tuple(motion.recorded_meshes))):
+        # W7-INTERFACES §6.3: a planetary gearbox always comes with its carrier parts, so it can never be updated
+        # as a W6 train.
+        raise BuildError("Update SolidWorks was given a planetary stage without its carrier part, so nothing is "
+                         "changed; that is a fault in Gear Generator.")
     if motion is not None:
-        return _update_motion(sw, parts, layout, assembly, placements, motion, exists, progress, mtime, lines)
+        return _update_motion(sw, parts, layout, assembly, placements, motion, exists, progress, mtime, lines,
+                              carriers=carriers)
     say = progress or _quiet
     _gate(sw)
     result = GearboxUpdate()
-    documents = list(parts) + ([layout] if layout is not None else [])
+    documents = list(parts) + ([layout] if layout is not None else []) + list(carriers)
     paths = [d.path for d in documents] + ([assembly] if assembly else [])
     if placements and not assembly:
         raise BuildError("Gears can only be re-placed in an assembly, and Update SolidWorks was given none.")
@@ -2753,11 +2803,14 @@ def update_gearbox(sw: SolidWorks, parts: Sequence[DocumentValues] = (), layout:
 def _update_values(sw: SolidWorks, result: GearboxUpdate, parts: Sequence[DocumentValues],
                    layout: Optional[DocumentValues], documents: Sequence[DocumentValues], holds: Sequence[str],
                    assembly: str, say: Callable[[Step], None], stage: List[str]) -> bool:
-    """Each part, then the layout, set as W4's Update sets them (a document holding its values already is left
-    untouched: S2); True when one failed, which stops the job (``result.skipped`` says what was left)."""
+    """Each part, then the layout, then each carrier part (W7: ``documents`` past the parts and the layout), set as
+    W4's Update sets them (a document holding its values already is left untouched: S2); True when one failed,
+    which stops the job (``result.skipped`` says what was left)."""
+    first_carrier = len(parts) + (1 if layout is not None else 0)
     for position, doc in enumerate(documents):
         stage[0] = _file(doc.path)
         in_parts = position < len(parts)
+        is_carrier = position >= first_carrier
         if holds[position]:
             # It already holds every global as asked: left as it is, not even its trig units measured (S2).
             done = UpdateResult(document=_file(doc.path), unchanged=[v.name for v in doc.variables],
@@ -2768,6 +2821,8 @@ def _update_values(sw: SolidWorks, result: GearboxUpdate, parts: Sequence[Docume
             done, failures = _update_document(sw, doc)
         if in_parts:
             result.parts.append(done)
+        elif is_carrier:
+            result.carriers.append(done)
         else:
             result.layout = done
         if done.changed:
@@ -2778,6 +2833,9 @@ def _update_values(sw: SolidWorks, result: GearboxUpdate, parts: Sequence[Docume
             left = [f"{rest} more part{'s' if rest != 1 else ''}"] if rest else []
             if layout is not None and in_parts:
                 left.append("the layout part")
+            carriers_left = len(documents) - max(position + 1, first_carrier)
+            if carriers_left:
+                left.append("the carrier part" if carriers_left == 1 else f"{carriers_left} carrier parts")
             if assembly:
                 left.append("the assembly")
             if left:
@@ -3041,7 +3099,8 @@ def _motion_consistent(motion: MotionUpdate, placements: Sequence[Placement]) ->
     a fault in the caller, refused with a sentence before anything is read."""
     placed = {p.gear for p in placements}
     named = [g for m in motion.mates for g in m.gears] + [g for m in motion.meshes for g in (m.a, m.b)] + \
-        [g for lock in motion.locks for g in (lock.anchor, lock.follower)] + list(motion.fixed)
+        [g for lock in motion.locks for g in (lock.anchor, lock.follower)] + list(motion.fixed) + \
+        [g for link in motion.carriers for g in (link.carrier,) + tuple(link.planets)] + list(motion.held)
     stray = [g for g in dict.fromkeys(named) if g not in placed]
     if stray:
         raise BuildError(f"Update SolidWorks was given a gearbox to turn whose record names {', '.join(stray)} without "
@@ -3062,16 +3121,19 @@ def _lock_mate_name(motion: MotionUpdate, lock: LockLink) -> Optional[str]:
                 None)
 
 
-def _trains(mated: Sequence[str], meshes: Sequence[MeshLink], locks: Sequence[LockLink]) -> List[Tuple[str, ...]]:
-    """The mated gears grouped into trains — joined by meshes and locks — each in ``mated``'s order, the trains in
-    the order of their first gear. A gear joined to nothing is a train of its own."""
+def _trains(mated: Sequence[str], meshes: Sequence[MeshLink], locks: Sequence[LockLink],
+            carriers: Sequence[CarrierLink] = ()) -> List[Tuple[str, ...]]:
+    """The mated gears grouped into trains — joined by meshes and locks, and (W7) a carrier to every gear on its
+    planet shafts — each in ``mated``'s order, the trains in the order of their first gear. A gear joined to
+    nothing is a train of its own. A held gear given in ``mated`` joins the trains its gear mates touch."""
     parent = {g: g for g in mated}
 
     def root(g: str) -> str:
         while parent[g] != g:
             g = parent[g]
         return g
-    for a, b in [(m.a, m.b) for m in meshes] + [(lock.anchor, lock.follower) for lock in locks]:
+    carried = [(link.carrier, planet) for link in carriers for planet in link.planets]
+    for a, b in [(m.a, m.b) for m in meshes] + [(lock.anchor, lock.follower) for lock in locks] + carried:
         if a in parent and b in parent:
             parent[root(a)] = root(b)
     groups: Dict[str, List[str]] = {}
@@ -3092,7 +3154,8 @@ def _not_whole(turn: float, pitch: float) -> bool:
 def _update_motion(sw: SolidWorks, parts: Sequence[DocumentValues], layout: Optional[DocumentValues], assembly: str,
                    placements: Sequence[Placement], motion: MotionUpdate, exists: Callable[[str], bool],
                    progress: Optional[Callable[[Step], None]], mtime: Callable[[str], float],
-                   lines: Optional[Mapping[str, Tuple[Vec3, Vec3]]] = None) -> GearboxUpdate:
+                   lines: Optional[Mapping[str, Tuple[Vec3, Vec3]]] = None, *,
+                   carriers: Sequence[DocumentValues] = ()) -> GearboxUpdate:
     """:func:`update_gearbox` for a gearbox built to turn, in W5-INTERFACES §3's order.
 
     *Check — writes nothing; a raise here changes nothing:* W4's checks
@@ -3127,7 +3190,7 @@ def _update_motion(sw: SolidWorks, parts: Sequence[DocumentValues], layout: Opti
     say = progress or _quiet
     _gate(sw)
     result = GearboxUpdate()
-    documents = list(parts) + ([layout] if layout is not None else [])
+    documents = list(parts) + ([layout] if layout is not None else []) + list(carriers)
     if not assembly:
         raise BuildError("A gearbox built to turn is updated through its assembly, and Update SolidWorks was given "
                          "none.")
@@ -3326,10 +3389,18 @@ def _update_motion(sw: SolidWorks, parts: Sequence[DocumentValues], layout: Opti
     finally:
         sw.end_build()
     mated = [p.gear for p in placements if p.gear not in fixed]
+    # W7: the held gears a recorded gear mate touches are judged with the trains (review M1), and each carrier's
+    # planets against their carried frames (train_check's carriers).
+    judged = mated + [g for g in motion.held if g not in mated]
     recorded = {p.gear: p for p in motion.recorded}
-    found = {g: result.found[g] for g in mated if g in result.found}
-    check = train_check(found, {g: (recorded[g].rotation, recorded[g].at) for g in mated if g in recorded},
-                        motion.recorded_meshes, motion.locks, {g: p.pitch for g, p in recorded.items()})
+    found = {g: result.found[g] for g in judged if g in result.found}
+    try:
+        check = train_check(found, {g: (recorded[g].rotation, recorded[g].at) for g in judged if g in recorded},
+                            motion.recorded_meshes, motion.locks, {g: p.pitch for g, p in recorded.items()},
+                            carriers=motion.carriers, held=motion.held)
+    except ValueError as exc:                         # W7-INTERFACES §6.3: a record that cannot be judged
+        raise BuildError(f"Update SolidWorks cannot judge the gears on record: {exc} So nothing is changed; that is "
+                         "a fault in Gear Generator.") from None
     result.turned, result.off_axis = check.turned, list(check.off_axis)
     result.out_of_step, result.residuals = list(check.out_of_step), list(check.residuals)
     turned_back: Dict[str, bool] = {}                # per mated gear: its check-phase turn was not whole teeth
@@ -3466,31 +3537,42 @@ def _motion_assembly(sw: SolidWorks, result: GearboxUpdate, assembly: str, place
     wanted = {p.gear: (p.rotation, p.at) for p in placements}
     pitch = {p.gear: p.pitch for p in placements}
     put_trains: List[Tuple[str, ...]] = []
-    for train in _trains(mated, motion.meshes, motion.locks):
-        meshes = [m for m in motion.meshes if m.a in train and m.b in train]
-        locks = [lock for lock in motion.locks if lock.anchor in train and lock.follower in train]
+    held = [g for g in motion.held if g in wanted]
+    judged = list(mated) + [g for g in held if g not in mated]
+
+    def links_of(train: Sequence[str]) -> Tuple[List[MeshLink], List[LockLink], List[CarrierLink], List[str]]:
+        return ([m for m in motion.meshes if m.a in train and m.b in train],
+                [lock for lock in motion.locks if lock.anchor in train and lock.follower in train],
+                [link for link in motion.carriers if link.carrier in train], [g for g in held if g in train])
+
+    for train in _trains(judged, motion.meshes, motion.locks, motion.carriers):
+        meshes, locks, links, held_here = links_of(train)
         ratios = [r for r in remakes if all(g in train for m in motion.mates if m.name == r[0] for g in m.gears)]
-        here = train_check({g: live[g] for g in train}, {g: wanted[g] for g in train}, meshes, locks, pitch)
+        here = train_check({g: live[g] for g in train}, {g: wanted[g] for g in train}, meshes, locks, pitch,
+                           carriers=links, held=held_here)
         # Update moves a gear of this train (a shaft moved under it, its Face Z set, its gear mate remade): the user's
         # answer 2 — whenever Update moves any gear of a train, the train goes back to its built turn, whole.
         moved = any(g in axial_gears or _moved(result.found.get(g), live[g]) for g in train)
-        if not (meshes or locks):
+        if not (meshes or locks or links):
             needed = bool(here.off_axis) or moved     # a lone mated gear turns freely: put when off its axis or moved
         else:
             needed = not here.in_step or bool(ratios) or moved
         if not needed:
             continue
         _put_train(sw, result, motion, train, locks, ratios, handle, mate_handle, wanted, rebuild, file, touched,
-                   settle, sense_wrong, resensed, respaced)
+                   settle, sense_wrong, resensed, respaced, held=held_here,
+                   carriers=[link.carrier for link in links], live=live, pitch=pitch, route=route)
         put_trains.append(train)
         dirty[0] = dirty[0] or not locks
         restored = tuple(g for g in train if turned_back.get(g))
         if restored:
             result.restored.append(restored)
     unfix = route == REPLACE_ROUTES[1]
+    put_set = {g for train in put_trains for g in train}
     for placement in placements:
-        if placement.gear in mated or same_frame(live[placement.gear][0], live[placement.gear][1], placement.rotation,
-                                                 placement.at, placement.pitch):
+        if placement.gear in mated or placement.gear in put_set or \
+                same_frame(live[placement.gear][0], live[placement.gear][1], placement.rotation, placement.at,
+                           placement.pitch):
             continue
         touched[0] = True
         if unfix:
@@ -3513,10 +3595,12 @@ def _motion_assembly(sw: SolidWorks, result: GearboxUpdate, assembly: str, place
             problems.append(f"{gear} is not where Update SolidWorks put it once the assembly rebuilt: a mate holds it "
                             "elsewhere.")
     for train in put_trains:
-        meshes = [m for m in motion.meshes if m.a in train and m.b in train]
-        locks = [lock for lock in motion.locks if lock.anchor in train and lock.follower in train]
-        again = train_check({g: after[g] for g in train}, {g: wanted[g] for g in train}, meshes, locks, pitch)
+        meshes, locks, links, held_here = links_of(train)
+        again = train_check({g: after[g] for g in train}, {g: wanted[g] for g in train}, meshes, locks, pitch,
+                            carriers=links, held=held_here)
         problems += [f"{a} and {b} are out of step once the assembly rebuilt." for a, b in again.out_of_step]
+        problems += [f"{gear} is not where its train was put once the assembly rebuilt: a mate holds it elsewhere."
+                     for gear in again.off_axis if gear not in result.placed]
     for name in result.ratios:
         status = sw.mate_status(name)
         if status != findings.ADD_MATE_NO_ERROR:
@@ -3542,10 +3626,21 @@ def _put_train(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, trai
                file: str, touched: List[bool],
                settle: Optional[Callable[[str, str, str, Tuple[int, int]], None]] = None,
                sense_wrong: Collection[str] = (), resensed: Collection[str] = (),
-               respaced: Collection[str] = ()) -> None:
+               respaced: Collection[str] = (), *, held: Collection[str] = (), carriers: Collection[str] = (),
+               live: Optional[Mapping[str, Frame9]] = None, pitch: Optional[Mapping[str, float]] = None,
+               route: Optional[str] = None) -> None:
     """One train put back whole: every lock of it suppressed (a lock does not hold against a put: W5-DECISIONS),
     a rebuild, its ratios remade, EVERY mated gear of it put (review M1), then — whatever happened — every lock
-    turned back on and a rebuild (review M8). A lock that will not come back on is a failure naming the compound
+    turned back on and a rebuild (review M8).
+
+    W7 (W7-PLAN §2.9, review M1, M5; reading J15): the puts go in this order — each ``held`` gear of the train that
+    is not where it belongs (whole pitches allowed) re-placed FIRST, by ``findings.REPLACE_FIXED_ROUTE`` as a fixed
+    gear is; then each carrier; then every other gear, its planets among them. A carrier's lock to the gear on its
+    own shaft is one of the train's locks, so it is off around the puts and that gear is put to its own wanted
+    frame. What this relies on, which no probe has shown (the spike drove, it did not put): a put of a carrier holds
+    with its planets' axis mates on, and a planet put to its frame on the carrier's axis, once the carrier stands
+    at its own, holds; ``place_component`` reads each frame back, and the post-check reads every frame again, so a
+    put that does not hold is a sentence. A lock that will not come back on is a failure naming the compound
     gears, and stops the job (:class:`_LocksLeftOff`); what raised inside is raised again once the locks are tried.
 
     A lock counts as tried the moment its suppression is asked for, so one whose suppression took before the call
@@ -3585,7 +3680,21 @@ def _put_train(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, trai
                 result.resensed.append(name)
             elif name in sense_wrong:
                 result.sense_found_wrong.append(name)
-        for gear in train:
+        unfix = route == REPLACE_ROUTES[1]
+        for gear in [g for g in train if g in held]:
+            frame = (live or {}).get(gear)
+            if frame is not None and same_frame(frame[0], frame[1], wanted[gear][0], wanted[gear][1],
+                                                (pitch or {}).get(gear, 0.0)):
+                continue                          # a held gear where it belongs (whole teeth allowed) stays
+            touched[0] = True
+            if unfix:
+                sw.unfix_component(handle[gear])
+            sw.place_component(handle[gear], wanted[gear][0], wanted[gear][1], kind=ASSEMBLY_TRAIN)
+            result.placed.append(gear)
+            if unfix:
+                sw.fix_component(handle[gear])
+        rest = [g for g in train if g not in held]
+        for gear in [g for g in rest if g in carriers] + [g for g in rest if g not in carriers]:
             touched[0] = True
             sw.place_component(handle[gear], wanted[gear][0], wanted[gear][1], kind=ASSEMBLY_TRAIN)
             result.placed.append(gear)
