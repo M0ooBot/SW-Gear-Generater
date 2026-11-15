@@ -195,10 +195,20 @@ section's own workbook edit changes it (``KEY``), and frames after an Update the
   values 97); 4H's ModeSlv 4WD -> 2WD (J14: the value and FrontDog's coupling off in 4H); each measured, with a drive;
   then a Modes row 4X -> the structural sentence -> Build again… -> ``_r2`` with five configurations, built and judged
   as s1, every earlier file unchanged.
-- ``s5`` (built fresh, W8-REVIEW-TIER11 (3)): the plan doctored with a second distance mate on RangeSlv on in N only, at
-  60 mm against N's 56 -> the build stops at the make in step 5, "In mode N, … over-defines the assembly."; the parts
-  and layout on record, no assembly file, the document open and named; the footer never offering the same build
-  again; closed as m4 closes it. The watch tolerates an "Over Defined" balloon from the make to the close.
+- ``s5`` (built fresh, the coordinator's ruling 3 of stage 2d): (i) the plan doctored with a second distance mate on
+  RangeSlv on in N only (60 mm against N's 56), through the app as it is -> refused at the gate verbatim, nothing made,
+  no SolidWorks call; (ii) a coupling the mode step can make, the Sun to LoDog 1 : 1 on in N only (against the
+  planetary's 4 : 1, so SolidWorks cannot hold it) -> the build stops in step 5 naming mode N; the parts and layout on
+  record, no assembly file, the document open and named; the footer never offering the same build again; closed as
+  m4 closes it. The watch tolerates an "Over Defined" balloon from the make to the close.
+- ``s7`` (each case on its own copy of s1.master): what a configuration keeps. After every step every configuration is
+  shown, rebuilt and read through fresh handles, each body as its turn from its frame on record and its axial
+  offset; saved, reopened, read again; each reading judged against "shared by all", "kept per configuration" and the
+  coordinator's hypothesis H. Cases: 1 the drive's +37° in 2H on an untouched copy; 2 a no-op put by the app's route
+  in 4L, then the drive in 2H; 3 the no-op put in every configuration, then the drive in 2H, in 4L, a reopen, in N; 4
+  the app's changed Update, then the drive in 2H; 5 FIdler put in N and 4H by a plain Transform2, FDrive moved along
+  its axis by the app's route in 2H; 6 each body put, held or wholly free during the put; 7 a slide's value set in 4L
+  with 2H active, a handle held across a show, IsFixed through fresh handles. The readings go to w8-s7-<ts>.json.
 
 The W5 sections, each in its own folder under the output folder (the default order is W8's, W7's, W6's, then m1 m3 m7
 m8 m2 m4 m5 m6 a a2 a3 b c; ``--only ring`` runs m3, m7 and m8, the ring-train sections):
@@ -304,6 +314,7 @@ import copy
 import ctypes
 import dataclasses
 import hashlib
+import json
 import math
 import os
 import queue
@@ -322,7 +333,7 @@ W6_ORDER = ["r1", "r5", "r2", "r3", "r4", "r6", "r8", "r7"]
 # W7 (W7-PLAN §6): p1 builds the master, the rest start from its copies.
 W7_ORDER = ["p1", "p2", "p3", "p4", "p5", "p6", "p7"]
 # W8 (W8-PLAN §5): s0 the shakedown, s1 the E4 transfer case, kept as s1.master for s2-s4, which copy it.
-W8_ORDER = ["s0", "s1", "s2", "s3", "s4", "s5"]
+W8_ORDER = ["s0", "s1", "s2", "s3", "s4", "s5", "s7"]
 DEFAULT_ORDER = W8_ORDER + W7_ORDER + W6_ORDER + ["m1", "m3", "m7", "m8", "m2", "m4", "m5", "m6", "a", "a2", "a3", "b", "c"]
 RING = ["m3", "m7", "m8"]         # ``--only ring``: the two ring-train sections, rerun after the ring-sense fix
 # ``--only confirm``: SolidWorks 2024's confirming build (W6-PLAN §6.1, with W6-INTERFACES §7.17 (a) and (c)): both
@@ -427,7 +438,7 @@ _RAW_CALL = swcom.call
 # W8 s2's put order per mode, s3's "nothing shown, set or put before the refusal"). Each entry: (member, what):
 # a configuration's name for a show, the mate's name and the names for a flag call, the value and names for a
 # value set, the component's Name2 for a put.
-TRACE = {"on": False, "calls": []}
+TRACE = {"on": False, "calls": [], "count": 0}     # count: every swcom call while on (s5 (i))
 TRACED = ("ShowConfiguration2", "SetSuppression2", "IsSuppressed2", "SetSystemValue3", "DeleteConfiguration2",
           "AddConfiguration2", "ForceRebuild3", "EditRebuild3", "AddMate5", "OpenDoc6", "SaveAs3")
 
@@ -457,8 +468,10 @@ def traced_call(obj, name, *args):
     """``swcom.call``, with the member in progress kept in CALLS["now"] for the dialog watcher, and the TRACE kept."""
     if name == "AddConfiguration2":
         CALLS["configurations"] = True
-    if TRACE["on"] and name in TRACED:
-        TRACE["calls"].append(_traced_entry(obj, name, args))
+    if TRACE["on"]:
+        TRACE["count"] = TRACE.get("count", 0) + 1
+        if name in TRACED:
+            TRACE["calls"].append(_traced_entry(obj, name, args))
     before, CALLS["now"] = CALLS["now"], name
     try:
         return _RAW_CALL(obj, name, *args)
@@ -7164,24 +7177,88 @@ def s5_doctored(plan, mode="N", value=S5_VALUE):
     return dataclasses.replace(plan, modes_plan=modes), extra
 
 
-def section_s5(worker, excel):
-    say("== s5  the refused mate in one mode, forced (W8-PLAN §5 as W8-REVIEW-TIER11 (3) corrects it): the E4 built "
-        f"fresh with a second distance mate on RangeSlv ({S5_HELD!r}, {S5_VALUE:g} mm against N's 56) on in N only -> "
-        "the build stops at the make in step 5 while N is shown, \"In mode N, … over-defines the assembly.\"; the parts "
-        "and layout part on record, no assembly file, the document left open and named; the footer never offering the "
-        "same build again; closed as W5's m4 closes it. The watch: an \"Over Defined\" balloon from the make to the "
-        "close is a fact; any other window a STOP")
+S5_GATE = "In mode N, 'inject1' is not a gear mate, and a mode makes only couplings and sliding meshes."
+S5_COUPLE = "Sun held to LoDog in N"
+
+
+def s5_coupled(plan, mode="N"):
+    """Part (ii)'s plan (the coordinator's ruling 3): a mode-step op the build can make, a coupling made in ``mode``'s
+    step and on there alone, ``S5_COUPLE``, the Sun to LoDog 1 : 1 — a copy of 4L's ``RangeSlv engages LoDog`` with
+    the Sun's handle in RangeSlv's place, listed as turning both the same way (both on Z+ along one line, so the
+    gate's §9.7 rule wants it in ``same_way``). The planetary holds LoDog, on the carrier, at a quarter of the Sun's
+    turn; a 1 : 1 coupling between them contradicts it, so the mode's train is over-constrained. It passes
+    ``ModesPlan.check`` as it is: no patch of the app. Returns (plan, the op)."""
+    handle_of = {g: h for h, g in plan.handles.items()}
+    template = next(op for s in plan.modes_plan.steps for op in s.ops if op.name == "RangeSlv engages LoDog")
+    extra = dataclasses.replace(template, id="inject1", name=S5_COUPLE, a=f"{handle_of['Sun']}:Gear Axis",
+                                b=f"{handle_of['LoDog']}:Gear Axis")
+    steps = []
+    for step in plan.modes_plan.steps:
+        if swbuild.on_in((mode,), step.name):
+            step = dataclasses.replace(step, ops=step.ops + (extra,), on=step.on + (extra.name,))
+        else:
+            step = dataclasses.replace(step, off=step.off + (extra.name,))
+        steps.append(step)
+    modes = dataclasses.replace(plan.modes_plan, steps=tuple(steps),
+                                same_way=plan.modes_plan.same_way + (extra.name,))
+    return dataclasses.replace(plan, modes_plan=modes), extra
+
+
+def s5_gate(worker, excel):
+    """Part (i): the doctored distance mate through the app as it is -> refused at the gate, verbatim; nothing made,
+    no part saved, no SolidWorks call during the build job."""
     folder, path, book, desk = write_fixture(worker, excel, "s5", spec_e4, keep="TransferCase_E4.xlsx")
-    desk.say_plan(full=False)
-    if desk.plan is None or desk.plan.refusal or desk.plan.modes_plan is None:
-        check(False, f"s5: the E4 plans a build with modes: {desk.plan and desk.plan.refusal!r}")
+    try:
+        desk.say_plan(full=False)
+        plan, extra = s5_doctored(desk.plan)
+        say(f"        doctored: {base.describe(extra)} ({S5_HELD!r}), made in N's step, on in N, off in "
+            f"{[s.name for s in plan.modes_plan.steps if extra.name in s.off]}")
+        say(f"fact    s5 (i): ModesPlan.check on the doctored plan before the build: "
+            f"{plan.modes_plan.check(plan.assembly)}")
+        guard()
+        TRACE["calls"].clear()
+        TRACE.update(on=True, count=0)
+        try:
+            _, result = desk.build(plan)
+        finally:
+            TRACE["on"] = False
+        said = desk.note[0] if desk.note else ""
+        say(f"        the refusal verbatim: {str(desk.error)!r}")
+        say(f"        the status verbatim: {said!r}")
+        check(result is None and isinstance(desk.error, swbuild.BuildError) and S5_GATE in str(desk.error)
+              and str(desk.error).startswith("The modes plan is not sound, so nothing is made:"),
+              f"s5 (i): the build refused at the gate (swbuild._modes_gate, ModesPlan.check) with {S5_GATE!r}")
+        made = sorted(n for n in os.listdir(folder) if n.upper().endswith((".SLDPRT", ".SLDASM")))
+        check(not made and (desk.record is None or not desk.record.parts), f"s5 (i): nothing made, no part saved: "
+              f"files {made}, record {'none' if desk.record is None else [e.path for e in desk.record.parts]}")
+        check(TRACE["count"] == 0 and not TRACE["calls"], f"s5 (i): no SolidWorks call during the build job: "
+              f"{TRACE['count']} calls, {TRACE['calls'][:5]}")
+        say("fact    s5 (i): the step that refused: the gate, before anything is made")
+    finally:
         book.close()
-        return
-    plan, extra = s5_doctored(desk.plan)
-    say(f"        doctored: {base.describe(extra)}, made in N's step, on in N, off in "
-        f"{[s.name for s in plan.modes_plan.steps if extra.name in s.off]}")
+
+
+def section_s5(worker, excel):
+    say("== s5  the refused mate in one mode, forced (W8-PLAN §5; the coordinator's ruling 3, stage 2d): (i) the plan "
+        f"doctored with a second distance mate on RangeSlv ({S5_HELD!r}, {S5_VALUE:g} mm against N's 56), on in N "
+        "only, through the app as it is -> refused at the gate, nothing made; (ii) the build's own handling of a mate "
+        f"SolidWorks will not take in one mode: a coupling {S5_COUPLE!r} (1 : 1 against the planetary's 4 : 1) made in "
+        "N's step, on in N only -> the build stops naming mode N; the parts and layout on record, no assembly file, "
+        "the document left open and named; the footer never offering the same build again; closed as W5's m4 closes "
+        "it. From the make to the close, an \"Over Defined\" balloon is a fact and any other window a STOP")
+    s5_gate(worker, excel)
+    # Part (ii). A distance op would reach the make (step 5's _mate makes any Mate), but straight after it the step
+    # settles every op's turning sense as a gear mate's (_settle_sense: both handles' origins, the read, then a remake
+    # with the other Flip), which a distance mate to the layout cannot go through honestly; so, as ruled, a coupling
+    # the step can make, chosen so that SolidWorks cannot hold it with the planetary.
+    say("-- s5 (ii): a coupling the mode step can make, refused by SolidWorks in N")
+    folder, path, book, desk = write_fixture(worker, excel, "s5b", spec_e4, keep="TransferCase_E4.xlsx")
+    desk.say_plan(full=False)
+    plan, extra = s5_coupled(desk.plan)
+    say(f"        doctored: {base.describe(extra)} ({S5_COUPLE!r}), made in N's step, on in N, off in "
+        f"{[s.name for s in plan.modes_plan.steps if extra.name in s.off]}, listed in same_way")
     problems = plan.modes_plan.check(plan.assembly)
-    say(f"fact    s5: the doctored modes plan as ModesPlan.check reads it before the build: {problems or 'sound'}")
+    check(not problems, f"s5 (ii): the doctored plan passes ModesPlan.check as it is (no patch of the app): {problems}")
     asm_path = os.path.join(folder, "TransferCase_E4.SLDASM")
     S5_WATCH.update(on=True, balloons=[], windows=[])
     windows = WINDOWS["count"]
@@ -7189,62 +7266,673 @@ def section_s5(worker, excel):
         guard()
         started = time.monotonic()
         _, result = desk.build(plan)
-        say(f"fact    s5: the build answered in {time.monotonic() - started:.1f} s; progress steps {desk.steps}")
+        say(f"fact    s5 (ii): the build answered in {time.monotonic() - started:.1f} s; progress steps {desk.steps}")
         said = desk.note[0] if desk.note else ""
         say(f"        the status verbatim: {said!r}")
-        asm = result.assembly if result is not None else None
-        lines = list(asm.mate_problems if asm else []) + [str(f[1]) for f in (asm.failures if asm else [])]
         if result is None:
-            gate = "The modes plan is not sound" in str(desk.error)
-            where = ("the gate before anything is made (swbuild._modes_gate, ModesPlan.check)" if gate else
-                     "a raise before any result")
-            say(f"fact    s5: the step that refused: {where}: {desk.error}")
-            check(False, f"s5: the build stops at the make in step 5 while N is shown, not before: it refused at {where}")
-            made = sorted(n for n in os.listdir(folder) if n.upper().endswith((".SLDPRT", ".SLDASM")))
-            say(f"fact    s5: SolidWorks files in the folder after the refusal: {made}; record "
-                f"{'none' if desk.record is None else 'present'}")
-            check(False, "s5: the parts and layout part saved and on record (the build never reached them)")
+            check(False, f"s5 (ii): the build raised instead of stopping with a result: {desk.error}")
             return
-        refusal = next((p for p in lines if "over-defines the assembly" in p), "")
-        step = ("step 5, the make in N (AddMate5's status sentence)" if refusal and asm.document and not asm.saved
-                else "not step 5's make" + (f": {lines}" if lines else ""))
-        say(f"fact    s5: the step that refused: {step}; the refusal verbatim: {refusal!r}")
-        say(f"        mate problems {asm.mate_problems if asm else None}; failures {asm.failures if asm else None}; "
-            f"left open as {asm.document if asm else None!r}; saved {asm.saved if asm else None!r}; kind "
-            f"{result.kind!r}")
-        check(refusal.startswith("In mode N,") and S5_HELD in refusal and refusal.endswith("over-defines the assembly."),
-              f"s5: the refusal is in mode N, names {S5_HELD} and says it over-defines the assembly: {refusal!r}")
-        check(bool(refusal) and refusal in said, "s5: the status carries the refusal")
+        asm = result.assembly
+        problems = list(asm.mate_problems if asm else [])
+        failures = list(asm.failures if asm else [])
+        stopped = getattr(asm, "stopped_at", "") if asm else ""
+        say(f"        mate problems {problems}; failures {failures}; stopped at {stopped!r}; left open as "
+            f"{asm.document if asm else None!r}; saved {asm.saved if asm else None!r}; kind {result.kind!r}")
+        statuses = run(worker, lambda s: {n: s.mate_status(n) for n in [S5_COUPLE]}) if asm and asm.document else {}
+        say(f"        AddMate5 status of {S5_COUPLE}: {statuses}")
+        named = [p for p in problems + [str(f[1]) for f in failures] if p.startswith("In mode N,") and S5_COUPLE in p]
+        made_in_step5 = bool(stopped and "in mode N" in stopped) or any("over-defines" in p for p in named)
+        say(f"fact    s5 (ii): the step that refused: "
+            f"{'step 5, the make in N (or its sense read straight after)' if made_in_step5 else 'after step 5'}; the "
+            f"refusal verbatim: {named}")
+        check(bool(named) and made_in_step5, f"s5 (ii): the build stops at the make in step 5 naming mode N and "
+              f"{S5_COUPLE}: {named or problems or failures}")
         if asm is not None and asm.document and not asm.saved:
             REFUSED.append(asm.document)
         check(asm is not None and asm.document and not asm.saved and not result.ok,
-              f"s5: the build stopped, the assembly not saved, left open as {asm.document if asm else None!r}")
+              f"s5 (ii): the assembly not saved, left open as {asm.document if asm else None!r}")
         titles = run(worker, open_titles)
-        check(asm is not None and asm.document in titles, f"s5: the document is open and named {asm and asm.document!r}: "
-              f"open {titles}")
-        check(not os.path.exists(asm_path), f"s5: no assembly file ({os.path.basename(asm_path)})")
-        check(result.kind == "", f"s5: nothing saved in its place: kind {result.kind!r}")
+        check(asm is not None and asm.document in titles, f"s5 (ii): the document is open and named: open {titles}")
+        check(not os.path.exists(asm_path) and result.kind == "", f"s5 (ii): no assembly file, nothing saved in its "
+              f"place: kind {result.kind!r}")
         rec = desk.record
         box = rec.gearbox if rec is not None else None
         check(rec is not None and rec.parts and box is not None and box.layout and not box.assembly
               and all(os.path.isfile(e.path) for e in rec.parts) and os.path.isfile(box.layout),
-              f"s5: the parts and the layout part saved and on record, no assembly on record: parts "
-              f"{[os.path.basename(e.path) for e in rec.parts] if rec else None}, layout "
-              f"{os.path.basename(box.layout) if box and box.layout else None}")
-        say(f"fact    s5: carriers on record {[os.path.basename(c.path) for c in carriers_of(box)] if box else None}, "
-            f"each file present {[os.path.isfile(c.path) for c in carriers_of(box)] if box else None}")
-        f = desk.say_footer("s5 refused")
+              f"s5 (ii): the parts and the layout part saved and on record, no assembly on record: parts "
+              f"{[os.path.basename(e.path) for e in rec.parts] if rec else None}")
+        f = desk.say_footer("s5 (ii) refused")
         check(not f.build_enabled and "Build is available again once the workbook changes" in f.text,
-              "s5: the footer never offers the same build of the unchanged workbook")
-        say("-- s5  the refused document closed, as W5's m4 closes it (this run's modified documents saved first, the "
-            "refused one by its title)")
+              "s5 (ii): the footer never offers the same build of the unchanged workbook")
+        say("-- s5 (ii): the refused document closed, as W5's m4 closes it")
         left = run(worker, close_ours)
-        check(not left, f"s5: closed, the refused one by its title: left {left}")
+        check(not left, f"s5 (ii): closed, the refused one by its title: left {left}")
     finally:
         S5_WATCH["on"] = False
-        say(f"fact    s5: from the make to the close, balloons {S5_WATCH['balloons'] or 'none'}; other windows "
+        say(f"fact    s5 (ii): from the make to the close, balloons {S5_WATCH['balloons'] or 'none'}; other windows "
             f"{S5_WATCH['windows'] or 'none'} ({WINDOWS['count'] - windows} counted)")
         book.close()
+
+
+# -- W8 s7: what a configuration keeps (W8-PLAN §5, the coordinator's stage 2d) ---------------------------------------
+#
+# Hypothesis H (the coordinator's, from s2's two runs and tier 8's follow-up): every configuration shares a component's
+# place until a put (Transform2) is made on it with a configuration showing; from then on that configuration keeps its
+# own place for it and the rest go on sharing; a turn by the drive moves the shared place. Each case runs on its own
+# fresh copy of s1.master; after every step every configuration is shown, rebuilt and read through fresh handles. Only
+# self-consistency and the reads themselves are asserted: H broken is a result. A put SolidWorks refuses, a frame read
+# None, or a window during a configuration call is a STOP.
+
+S7 = {"cases": [], "hypotheses": {
+    "shared": "shared by all: every configuration shows every turn and put",
+    "per_configuration": "kept per configuration: a turn or put shows in the configuration it was made in alone",
+    "H": "H: shared until a put is made on a body with a configuration showing, which from then keeps its own place "
+         "for it; a turn or put made in a configuration not yet put in moves the shared place (every configuration "
+         "not yet put in); one made in a configuration already put in moves that configuration alone",
+    "H_private_put": "H, a put moving its own configuration alone: as H, except that a put never moves the shared place"}}
+S7_ROUTE_KINDS = ("lock", "mesh", "couple", "spline")     # what the app's put route suppresses (_put_train)
+S7_TOL = 1e-6
+
+
+class S7Stop(Exception):
+    """A STOP inside an s7 case: the case ends there, its readings kept."""
+
+
+def s7_route_mates(box, mode):
+    """The app's put route in ``mode``: every lock and gear mate (mesh, coupling, spline) on in ``mode``."""
+    return [m.name for m in box.mates if m.kind in S7_ROUTE_KINDS and (not m.modes or any(swbuild.on_in((x,), mode)
+                                                                                         for x in m.modes))]
+
+
+def s7_held(box, off):
+    """Each body's state during a put with ``off`` suppressed: "wholly free", or "held by" the mates left on it."""
+    out = {}
+    for g, _ in bodies(box):
+        left = [m.name for m in box.mates if g in (m.gears or ()) and m.name not in off]
+        out[g] = "wholly free" if not left else "held by " + ", ".join(left)
+    return out
+
+
+def s7_read_job(box):
+    """Every configuration shown in mode order and rebuilt, every body found again by Name2 and its frame read; the
+    configuration active before the read read first without a show (the self-consistency reading) and shown again
+    last, so a read leaves the active configuration where the step left it."""
+    pairs = bodies(box)
+
+    def work(s):
+        out = {"active_before": s.active_configuration(), "frames": {}, "first": {}, "rebuilt": {}}
+        for i, (g, n) in enumerate(pairs):
+            s.find_component(f"s7a{i}", n)
+            out["first"][g] = s.component_frame(f"s7a{i}")
+        for mode in box.modes:
+            s.show_configuration(mode)
+            out["rebuilt"][mode] = bool(s.rebuild(kind=swcom.ASSEMBLY_TRAIN))
+            here = {}
+            for i, (g, n) in enumerate(pairs):
+                s.find_component(f"s7r{i}", n)
+                here[g] = s.component_frame(f"s7r{i}")
+            out["frames"][mode] = here
+        s.show_configuration(out["active_before"])
+        s.rebuild(kind=swcom.ASSEMBLY_TRAIN)
+        out["active_after"] = s.active_configuration()
+        return out
+    return in_assembly(box.assembly, work)
+
+
+def s7_put_job(box, mode, targets, off):
+    """``mode`` shown and rebuilt; every mate in ``off`` suppressed in ``mode`` alone (marked before the call, restored
+    whatever happens) and rebuilt; ``targets(before)`` (body -> frame, from the frames read just before) each put by
+    ``place_component`` on a fresh handle; rebuilt; every frame read with the mates still off; the mates turned back on
+    in ``mode`` (each that reads suppressed) and rebuilt; every frame read again; the mates' flags in every
+    configuration."""
+    pairs = bodies(box)
+    name_of = dict(pairs)
+
+    def work(s):
+        out = {"errors": [], "cleanup": [], "puts": {}}
+        s.show_configuration(mode)
+        s.rebuild(kind=swcom.ASSEMBLY_TRAIN)
+        out["active"] = s.active_configuration()
+
+        def frames(prefix):
+            got = {}
+            for i, (g, n) in enumerate(pairs):
+                s.find_component(f"{prefix}{i}", n)
+                got[g] = s.component_frame(f"{prefix}{i}")
+            return got
+        held = []
+        try:
+            for i, name in enumerate(off):
+                s.find_mate(f"s7m{i}", name)
+                held.append(i)
+                s.set_mate_suppressed_in(f"s7m{i}", True, [mode])
+            if off:
+                s.rebuild(kind=swcom.ASSEMBLY_TRAIN)
+            out["before"] = frames("s7b")
+            wanted_frames = targets(out["before"])
+            for i, (g, frame) in enumerate(wanted_frames.items()):
+                s.find_component(f"s7p{i}", name_of[g])
+                s.place_component(f"s7p{i}", frame[0], frame[1], kind=swcom.ASSEMBLY_TRAIN)
+                out["puts"][g] = frame
+            s.rebuild(kind=swcom.ASSEMBLY_TRAIN)
+            out["mates_off"] = frames("s7o")
+        except Exception as exc:  # noqa: BLE001 - said; the mates still go back on below
+            out["errors"].append(f"{type(exc).__name__}: {exc}")
+        finally:
+            for i in held:
+                try:
+                    if s.mate_suppression(f"s7m{i}", [mode])[mode]:
+                        s.set_mate_suppressed_in(f"s7m{i}", False, [mode])
+                except Exception as exc:  # noqa: BLE001
+                    out["cleanup"].append(f"{off[i]} back on: {type(exc).__name__}: {exc}")
+            s.rebuild(kind=swcom.ASSEMBLY_TRAIN)
+        out["mates_on"] = frames("s7n")
+        out["flags"] = {off[i]: s.mate_suppression(f"s7m{i}", list(box.modes)) for i in held}
+        return out
+    return in_assembly(box.assembly, work)
+
+
+def s7_drive_job(box, mode, degrees, plane, built_sun):
+    """The drive's turn in ``mode`` (W5's angle mate, the turn repro's way): ``mode`` shown and rebuilt; the mate made
+    from the input's Top plane to the layout's ``plane`` at 90° plus the input's turn from its built frame where it
+    stands (so making it moves nothing, read), its value set in ``mode`` alone (``set_dimension_in``, the value
+    route), rebuilt; the mate deleted and rebuilt."""
+    pairs = bodies(box)
+    sun = dict(pairs)[box.drag[0]]
+
+    def work(s):
+        out = {"errors": [], "cleanup": []}
+        s.show_configuration(mode)
+        s.rebuild(kind=swcom.ASSEMBLY_TRAIN)
+        out["active"] = s.active_configuration()
+
+        def frames(prefix):
+            got = {}
+            for i, (g, n) in enumerate(pairs):
+                s.find_component(f"{prefix}{i}", n)
+                got[g] = s.component_frame(f"{prefix}{i}")
+            return got
+        name = ""
+        try:
+            out["before"] = frames("s7b")
+            now = turn_degrees(built_sun[0], out["before"][box.drag[0]][0])
+            if now is None:
+                raise swcom.SolidWorksError(f"the input stands off its axis in {mode}, so no drive is made")
+            out["input_at"] = now
+            at = 90.0 + now
+            s.find_component("s7sun", sun)
+            s.find_component("s7lay", box.layout_component)
+            name, dim = s.add_mate("s7d", "angle", "s7sun:plane2", f"s7lay:{plane}", at, "S7 drive")
+            out["mate"] = (name, dim, s.mate_status(name), at)
+            s.rebuild(kind=swcom.ASSEMBLY_TRAIN)
+            out["made"] = frames("s7m")
+            s.set_dimension_in("s7d", math.radians(at + degrees) * 1000.0, [mode])
+            s.rebuild(kind=swcom.ASSEMBLY_TRAIN)
+            out["driven"] = frames("s7d")
+        except Exception as exc:  # noqa: BLE001
+            out["errors"].append(f"{type(exc).__name__}: {exc}")
+        finally:
+            if name:
+                try:
+                    delete_mate(s, name)
+                except Exception as exc:  # noqa: BLE001
+                    out["cleanup"].append(f"{name} deleted: {type(exc).__name__}: {exc}")
+            s.rebuild(kind=swcom.ASSEMBLY_TRAIN)
+        out["after"] = frames("s7f")
+        out["mates"] = [m.name for m in s.mate_states()]
+        return out
+    return in_assembly(box.assembly, work)
+
+
+def s7_run(worker, label, job):
+    """A worker job of s7: a frame read None (SolidWorks' answer through a stale handle) or any other raise is a STOP
+    that ends the case."""
+    try:
+        return run(worker, job)
+    except Exception as exc:  # noqa: BLE001
+        text = f"{type(exc).__name__}: {exc}"
+        stop_check(False, f"{label}: the reads succeed: {text}")
+        frame_none_stop([text], label)
+        raise S7Stop(text) from None
+
+
+def s7_express(desk, frames_by_mode):
+    """Each body in each configuration as (turn about its own axis from its frame on record for that mode, degrees, or
+    None off its axis; axial offset along Z from that frame, mm; radial distance of its origin from that frame's, mm)."""
+    out = {}
+    for mode, frames in frames_by_mode.items():
+        record = mode_record_frames(desk, mode)
+        here = {}
+        for g, (rot, at) in frames.items():
+            r_rot, r_at = record[g]
+            turn = turn_degrees(r_rot, rot)
+            here[g] = [None if turn is None else round(turn, 6), round(float(at[2]) - float(r_at[2]), 6),
+                       round(math.hypot(float(at[0]) - float(r_at[0]), float(at[1]) - float(r_at[1])), 6)]
+        out[mode] = here
+    return out
+
+
+def s7_table(label, expressed):
+    modes = list(expressed)
+    say(f"table   {label}: each body's (turn from its frame on record for the mode °, axial offset mm) "
+        f"[radial offset of the origin mm where not 0]; columns {modes}")
+    for g in expressed[modes[0]]:
+        cells = []
+        for m in modes:
+            turn, axial, radial = expressed[m][g]
+            t = "off-axis" if turn is None else f"{turn:+9.3f}"
+            cells.append(f"{t} {axial:+7.3f}" + (f" [{radial:.3f}]" if radial > S7_TOL else ""))
+        say(f"        {g:16} " + " | ".join(cells))
+
+
+def s7_change(prev, now):
+    """Per mode, per body, how it moved from ``prev`` to ``now`` (frames): (turn about its own axis °, or None off its
+    axis; axial mm; origin moved mm), or None for a body that stands still (frame gap ≤ 1e-6)."""
+    out = {}
+    for mode in now:
+        here = {}
+        for g, frame in now[mode].items():
+            if frame_gap(prev[mode][g], frame) <= S7_TOL:
+                here[g] = None
+                continue
+            turn = turn_degrees(prev[mode][g][0], frame[0])
+            here[g] = (None if turn is None else turn, float(frame[1][2]) - float(prev[mode][g][1][2]),
+                       math.dist([float(v) for v in prev[mode][g][1]], [float(v) for v in frame[1]]))
+        out[mode] = here
+    return out
+
+
+def s7_same(a, b):
+    if a is None or b is None:
+        return a is None and b is None
+    if (a[0] is None) != (b[0] is None):
+        return False
+    return (a[0] is None or abs(a[0] - b[0]) <= 1e-5) and abs(a[1] - b[1]) <= 1e-5 and abs(a[2] - b[2]) <= 1e-5
+
+
+def s7_judge(box, label, step, kind, made_in, prev, now, forked):
+    """Which hypothesis the step's reading fits, per body that moved where the step was made: each other configuration
+    "moved" (the same change as ``made_in``), "still", or "other"; each hypothesis's predicted set of configurations
+    that move; fits where they agree for every such body. ``forked``: body -> configurations put in BEFORE this step
+    (updated here for a put). Returns the judgement for the JSON."""
+    change = s7_change(prev, now)
+    moved_bodies = [g for g, c in change[made_in].items() if c is not None]
+    seen, fits = {}, {h: True for h in S7["hypotheses"]}
+    modes = list(box.modes)
+    for g in moved_bodies:
+        state = {m: ("moved" if s7_same(change[m][g], change[made_in][g]) else
+                     "still" if change[m][g] is None else "other") for m in modes}
+        observed = {m for m, v in state.items() if v == "moved"}
+        before = forked.get(g, set())
+        unforked = {m for m in modes if m not in before}
+        predicted = {"shared": set(modes), "per_configuration": {made_in}}
+        if made_in in before:
+            predicted["H"] = predicted["H_private_put"] = {made_in}
+        else:
+            predicted["H"] = unforked | {made_in}
+            predicted["H_private_put"] = {made_in} if kind == "put" else unforked | {made_in}
+        seen[g] = {"change_where_made": change[made_in][g], "state": state, "forked_before": sorted(before),
+                   "predicted": {h: sorted(p) for h, p in predicted.items()}}
+        for h, p in predicted.items():
+            if observed != p or any(v == "other" for v in state.values()):
+                fits[h] = False
+    fit = [h for h, ok in fits.items() if ok] if moved_bodies else []
+    out = [h for h, ok in fits.items() if not ok] if moved_bodies else []
+    say(f"judge   {label}, {step}: bodies moved in {made_in}: {moved_bodies or 'none (nothing to judge)'}")
+    for g, v in seen.items():
+        say(f"        {g:16} {v['state']} (put in before: {v['forked_before'] or 'none'})")
+    say(f"        fits {(fit or 'none') if moved_bodies else 'nothing to judge'}; rules out {out or '-'}")
+    return {"step": step, "kind": kind, "made_in": made_in, "moved_bodies": moved_bodies, "bodies": seen,
+            "fits": fit, "rules_out": out}
+
+
+def s7_note_put(forked, mode, bodies_put):
+    for g in bodies_put:
+        forked.setdefault(g, set()).add(mode)
+
+
+class S7Case:
+    """One s7 case on its own copy: the readings, tables and judgements kept for the JSON."""
+
+    def __init__(self, worker, excel, key, title):
+        self.worker, self.key, self.title = worker, key, title
+        say(f"-- s7 case {key}: {title}")
+        self.folder, self.path, self.book, self.desk, self.built = start_w8_copy(worker, excel, f"s7-{key}")
+        self.box = self.desk.record.gearbox
+        self.forked = {}
+        self.reads = []
+        self.judged = []
+        self.last = None
+        self.json = {"case": key, "title": title, "copy": os.path.basename(self.folder), "steps": []}
+        S7["cases"].append(self.json)
+
+    def read(self, step):
+        label = f"s7 {self.key} {step}"
+        out = s7_run(self.worker, label, s7_read_job(self.box))
+        active = out["active_before"]
+        gap, at = frames_gap(out["first"], out["frames"][next(m for m in self.box.modes if swbuild.on_in((m,), active))])
+        check(gap <= S7_TOL and all(out["rebuilt"].values()) and swbuild.on_in((active,), out["active_after"]),
+              f"{label}: every configuration shown and rebuilt; {active}, active, read the same before any show and "
+              f"after its own (largest {gap:.1e} at {at or '-'}); left active again ({out['active_after']})")
+        expressed = s7_express(self.desk, out["frames"])
+        s7_table(f"{label} (active {active})", expressed)
+        self.json["steps"].append({"step": step, "active": active, "expressed": expressed,
+                                   "frames": {m: {g: [list(f[0]), list(f[1])] for g, f in fr.items()}
+                                              for m, fr in out["frames"].items()}})
+        return out["frames"]
+
+    def judge(self, step, kind, made_in, now, bodies_put=()):
+        if self.last is not None:
+            j = s7_judge(self.box, f"s7 {self.key}", step, kind, made_in, self.last, now, self.forked)
+            self.json["steps"][-1]["judgement"] = j
+            self.judged.append(j)
+        if kind == "put":
+            s7_note_put(self.forked, made_in, bodies_put)
+        self.last = now
+
+    def put(self, step, mode, targets, route=True):
+        """A put in ``mode`` (the app's route when ``route``), then every configuration read and judged."""
+        off = s7_route_mates(self.box, mode) if route else []
+        held = s7_held(self.box, off)
+        label = f"s7 {self.key} {step}"
+        out = s7_run(self.worker, label, s7_put_job(self.box, mode, targets, off))
+        if out["errors"] or out["cleanup"]:
+            stop_check(False, f"{label}: SolidWorks took the put and the mates went back on: {out['errors']} "
+                              f"{out['cleanup']}")
+            frame_none_stop(out["errors"] + out["cleanup"], label)
+            raise S7Stop(f"{label}: {out['errors']} {out['cleanup']}")
+        wrong = {n: f for n, f in out["flags"].items() if any(f.values())}
+        check(swbuild.on_in((mode,), out["active"]) and not wrong, f"{label}: put in {out['active']}; every mate "
+              f"suppressed for the put back on in every configuration: wrong {wrong}")
+        put_bodies = list(out["puts"])
+        moved = {g: frame_gap(out["before"][g], f) for g, f in out["puts"].items()}
+        say(f"step    {label}: put in {mode} by {'the app' if route else 'a plain Transform2'}'s route, mates off "
+            f"there {off or 'none'}; each body put and how far from where it stood {({g: round(v, 6) for g, v in moved.items()})}")
+        say(f"        during the put: {({g: held[g] for g in put_bodies})}")
+        for when in ("mates_off", "mates_on"):
+            gap, at = frames_gap(out[when], {g: out["puts"][g] for g in put_bodies})
+            say(f"        in {mode}, {when.replace('_', ' ')}: every body put stands where it was put, largest "
+                f"{gap:.1e} at {at or '-'}; others moved {[g for g in out[when] if g not in out['puts'] and frame_gap(out['before'][g], out[when][g]) > S7_TOL]}")
+        frames = self.read(step)
+        self.json["steps"][-1].update(put={"mode": mode, "route": "app" if route else "plain", "mates_off": off,
+                                           "bodies": put_bodies, "held": {g: held[g] for g in put_bodies},
+                                           "moved_mm_or_rad": moved,
+                                           "in_mode_mates_off": s7_express(self.desk, {mode: out["mates_off"]})[mode],
+                                           "in_mode_mates_on": s7_express(self.desk, {mode: out["mates_on"]})[mode]})
+        self.judge(step, "put", mode, frames, put_bodies)
+        return frames
+
+    def drive(self, step, mode, degrees):
+        label = f"s7 {self.key} {step}"
+        plane, _ = drive_assumptions(self.desk, box_drag(self.box), label)
+        built_sun = wanted(self.desk)[box_drag(self.box)]
+        out = s7_run(self.worker, label, s7_drive_job(self.box, mode, degrees, plane, built_sun))
+        if out["errors"] or out["cleanup"] or "driven" not in out:
+            stop_check(False, f"{label}: the drive turned and was deleted: {out['errors']} {out['cleanup']}")
+            raise S7Stop(f"{label}: {out['errors']} {out['cleanup']}")
+        sun = box_drag(self.box)
+        gap = max(frame_gap(out["before"][g], out["made"][g]) for g in out["before"])
+        turned = turn_degrees(out["before"][sun][0], out["after"][sun][0])
+        check(gap <= S7_TOL and turned is not None and abs(turned - degrees) <= DRIVE_TOLERANCE * abs(degrees)
+              and "S7 drive" not in out["mates"] and swbuild.on_in((mode,), out["active"]),
+              f"{label}: in {out['active']} the drive made at {out['mate'][3]:.6f}° (the input at "
+              f"{out['input_at']:+.6f}°) moved nothing ({gap:.1e}), turned {sun} {turned}° for {degrees:+g}°, and was "
+              f"deleted")
+        say(f"step    {label}: the drive's {degrees:+g}° in {mode}")
+        frames = self.read(step)
+        self.json["steps"][-1].update(drive={"mode": mode, "degrees": degrees, "input_at": out["input_at"]})
+        self.judge(step, "turn", mode, frames)
+        return frames
+
+    def reopen(self, step):
+        """Saved (this run's modified documents, as a person would), closed, reopened, every configuration read."""
+        active = run(self.worker, in_assembly(self.box.assembly, lambda s: s.active_configuration()))
+        left = run(self.worker, close_ours)
+        check(not left, f"s7 {self.key} {step}: saved with {active} active and closed: left {left}")
+        run(self.worker, lambda s: live_open(s, self.box.assembly))
+        again = run(self.worker, in_assembly(self.box.assembly, lambda s: s.active_configuration()))
+        say(f"step    s7 {self.key} {step}: reopened in {again} (saved with {active} active)")
+        prev = self.last
+        frames = self.read(step)
+        if prev is not None:
+            gaps = {m: frames_gap(frames[m], prev[m]) for m in frames}
+            same = all(g <= S7_TOL for g, _ in gaps.values())
+            check(same, f"s7 {self.key} {step}: every configuration reads after the reopen as before the save "
+                        f"(largest per mode {({m: f'{g:.1e} at {a or chr(45)}' for m, (g, a) in gaps.items()})})")
+            self.json["steps"][-1]["same_as_before_save"] = same
+        self.json["steps"][-1]["reopened_in"] = again
+        self.last = frames
+        return frames
+
+    def end(self):
+        end_copy(self.worker, self.folder, f"s7-{self.key}")       # closes the copy's documents and Excel's workbook
+
+
+def box_drag(box):
+    return box.drag[0]
+
+
+def s7_noop(desk, only=None):
+    """A put's targets: every mated body (or ``only``) put where it stands."""
+    box = desk.record.gearbox
+    names = [g for g, _ in bodies(box) if g not in box.fixed and (only is None or g in only)]
+    return lambda before: {g: before[g] for g in names}
+
+
+def s7_axial(body, dz):
+    return lambda before: {body: (before[body][0], (before[body][1][0], before[body][1][1], before[body][1][2] + dz))}
+
+
+def s7_spin(body, degrees):
+    return lambda before: {body: (turn_about_z(before[body][0], degrees), before[body][1])}
+
+
+def s7_built_check(case, frames):
+    """Case 1's first read: does the copy as built differ between configurations, and from the frames on record?"""
+    box = case.box
+    off = {m: frames_gap(frames[m], mode_record_frames(case.desk, m)) for m in box.modes}
+    first = box.modes[0]
+    differ = {}
+    for m in box.modes[1:]:
+        differ[m] = [g for g in frames[m] if frame_gap(frames[m][g], frames[first][g]) > S7_TOL]
+    say(f"fact    s7 {case.key}: as copied, each configuration against its frames on record: "
+        f"{({m: f'{g:.1e} at {a or chr(45)}' for m, (g, a) in off.items()})}; bodies standing differently from "
+        f"{first}: {differ} (the sliders' slide values differ by design)")
+    case.json["as_built"] = {"against_record": {m: g for m, (g, _) in off.items()}, "differ_from_first": differ}
+
+
+def s7_case_1(worker, excel):
+    c = S7Case(worker, excel, "1", "virgin: straight from the copy, read; the drive's +37° in 2H; read; reopen")
+    try:
+        frames = c.read("as copied")
+        s7_built_check(c, frames)
+        c.last = frames
+        c.drive("drive +37 in 2H", "2H", 37.0)
+        c.reopen("saved and reopened")
+    finally:
+        c.end()
+
+
+def s7_case_2(worker, excel):
+    c = S7Case(worker, excel, "2", "a no-op put forks? 4L (not the configuration the copy opens in): the app's put "
+                                   "route to the same frames; then the drive's +37° in 2H")
+    try:
+        c.last = c.read("as copied")
+        c.put("no-op put in 4L", "4L", s7_noop(c.desk))
+        c.drive("drive +37 in 2H", "2H", 37.0)
+        c.reopen("saved and reopened")
+    finally:
+        c.end()
+
+
+def s7_case_3(worker, excel):
+    c = S7Case(worker, excel, "3", "every configuration put in: the no-op put in 2H, 4H, N and 4L in turn; the drive's "
+                                   "+37° in 2H; +20° in 4L; save and reopen; +11° in N")
+    try:
+        c.last = c.read("as copied")
+        for mode in c.box.modes:
+            c.put(f"no-op put in {mode}", mode, s7_noop(c.desk))
+        c.drive("drive +37 in 2H", "2H", 37.0)
+        c.drive("drive +20 in 4L", "4L", 20.0)
+        c.reopen("saved and reopened")
+        c.drive("drive +11 in N after the reopen", "N", 11.0)
+        c.reopen("saved and reopened again")
+    finally:
+        c.end()
+
+
+def s7_case_4(worker, excel):
+    c = S7Case(worker, excel, "4", "after the app's own Update: At 130 -> 132 (every mode put); the drive's +37° in 2H")
+    try:
+        c.last = c.read("as copied")
+        say("-- s7 4: Excel FDrive, FIdler and FOut At 130 -> 132 -> Update (through the app)")
+        edit(c.desk, c.book, *[("Gears", cell(c.book, "Gears", "At", g), 132) for g in ("FDrive", "FIdler", "FOut")])
+        result, calls, seconds = w8_update(worker, c.desk, "s7 4 changed Update")
+        check(result is not None and result.ok, f"s7 4: the changed Update went through: "
+              f"{result and result.failures} {desk_note(c.desk)!r}")
+        put_in = list(result.put_in) if result is not None else []
+        c.json["update"] = {"put_in": put_in, "visited": list(result.visited) if result else [], "seconds": seconds,
+                            "status": desk_note(c.desk)}
+        moved = {}
+        for mode, names in puts_by_mode(calls, "2H"):
+            moved.setdefault(mode, []).extend(names)
+        gear_of = {n: g for g, n in bodies(c.box)}
+        frames = c.read("after the changed Update")
+        # The Update moved the workbook's gears: the frames on record are the new ones now (the record was rewritten),
+        # so nothing is judged across it; it forks every configuration it put in, for every body it put there.
+        for mode, names in moved.items():
+            s7_note_put(c.forked, mode, [gear_of.get(n, n) for n in names])
+        say(f"fact    s7 4: the Update put in {put_in}; bodies put by configuration {moved}")
+        c.last = frames
+        c.drive("drive +37 in 2H", "2H", 37.0)
+        c.reopen("saved and reopened")
+    finally:
+        c.end()
+
+
+def desk_note(desk):
+    return desk.note[0] if desk.note else ""
+
+
+def s7_case_5(worker, excel):
+    c = S7Case(worker, excel, "5", "a free component (the plan's case): FIdler +20° in N by a plain Transform2, its "
+                                   "mates on; +10° in 4H; FDrive +2 mm along its axis by the app's route in 2H")
+    try:
+        c.last = c.read("as copied")
+        c.put("FIdler +20 in N, plain", "N", s7_spin("FIdler", 20.0), route=False)
+        c.put("FIdler +10 in 4H, plain", "4H", s7_spin("FIdler", 10.0), route=False)
+        c.put("FDrive +2 mm in 2H, the app's route", "2H", s7_axial("FDrive", 2.0))
+        c.reopen("saved and reopened")
+    finally:
+        c.end()
+
+
+def s7_case_7(worker, excel):
+    c = S7Case(worker, excel, "7", "the plan's other readings: RangeSlv along Rear's 4L value set with 2H active; a "
+                                   "handle held across a show; the layout's IsFixed through fresh handles in each "
+                                   "configuration")
+    box = c.box
+    sun = dict(bodies(box))[box_drag(box)]
+
+    def work(s):
+        out = {}
+        s.show_configuration("2H")
+        s.rebuild(kind=swcom.ASSEMBLY_TRAIN)
+        s.find_mate("s7v", "RangeSlv along Rear")
+        out["values_before"] = s.dimension_values("s7v", list(box.modes))
+        target = out["values_before"]["4L"] + 3.0
+        s.set_dimension_in("s7v", target, ["4L"])
+        out["values_set"] = s.dimension_values("s7v", list(box.modes))
+        out["active_after_set"] = s.active_configuration()
+        s.set_dimension_in("s7v", out["values_before"]["4L"], ["4L"])
+        out["values_restored"] = s.dimension_values("s7v", list(box.modes))
+        out["target"] = target
+        s.find_component("s7h", sun)
+        s.find_component("s7l", box.layout_component)
+        comp = s._handles["s7h"]["component"]  # noqa: SLF001 - held raw across the show, as the plan asks
+        lay = s._handles["s7l"]["component"]  # noqa: SLF001
+        out["held_before"] = (s.component_frame("s7h"), s.is_fixed("s7l"))
+        s.show_configuration("4H")
+        s.rebuild(kind=swcom.ASSEMBLY_TRAIN)
+        try:
+            t = call(comp, "Transform2")
+            out["held_transform"] = None if t is None else [float(v) for v in call(t, "ArrayData")][:12]
+        except Exception as exc:  # noqa: BLE001
+            out["held_transform"] = f"{type(exc).__name__}: {exc}"
+        try:
+            out["held_is_fixed"] = bool(call(lay, "IsFixed"))
+        except Exception as exc:  # noqa: BLE001
+            out["held_is_fixed"] = f"{type(exc).__name__}: {exc}"
+        out["fresh_is_fixed"] = {}
+        for mode in box.modes:
+            s.show_configuration(mode)
+            s.rebuild(kind=swcom.ASSEMBLY_TRAIN)
+            s.find_component(f"s7f{mode}", box.layout_component)
+            s.find_component(f"s7r{mode}", dict(bodies(box))[box.fixed[0]])
+            out["fresh_is_fixed"][mode] = (s.is_fixed(f"s7f{mode}"), s.is_fixed(f"s7r{mode}"))
+        s.show_configuration("2H")
+        s.rebuild(kind=swcom.ASSEMBLY_TRAIN)
+        return out
+    try:
+        out = s7_run(worker, "s7 7", in_assembly(box.assembly, work))
+        say(f"fact    s7 7: RangeSlv along Rear before {out['values_before']}; 4L set to {out['target']:g} with "
+            f"{out['active_after_set']} active -> {out['values_set']}; set back -> {out['values_restored']}")
+        others = all(abs(out["values_set"][m] - out["values_before"][m]) <= 1e-6 for m in box.modes if m != "4L")
+        check(abs(out["values_set"]["4L"] - out["target"]) <= 1e-6 and others
+              and swbuild.on_in(("2H",), out["active_after_set"])
+              and all(abs(out["values_restored"][m] - out["values_before"][m]) <= 1e-6 for m in box.modes),
+              "s7 7: 4L's value set and read back without activating 4L, the others unchanged, set back")
+        say(f"fact    s7 7: a handle held across a show of 4H (fetched in 2H): Transform2 {out['held_transform']!r}; the "
+            f"layout's IsFixed {out['held_is_fixed']!r} (fresh in 2H before the show: frame read, IsFixed "
+            f"{out['held_before'][1]})")
+        say(f"fact    s7 7: IsFixed through handles fetched after each show, (layout, {box.fixed[0]}): "
+            f"{out['fresh_is_fixed']}")
+        check(all(a is True and b is True for a, b in out["fresh_is_fixed"].values()),
+              "s7 7: the layout and the fixed ring read IsFixed True through fresh handles in every configuration")
+        c.json["readings"] = {k: v for k, v in out.items() if k != "held_before"}
+    finally:
+        c.end()
+
+
+def s7_per_body():
+    """Case 6 (the review's (c)): for every put of cases 2-5, each body put, whether it was held by its axis mates or
+    wholly free during the put, and how the configurations other than the put's read after it."""
+    rows = []
+    for case in S7["cases"]:
+        for step in case["steps"]:
+            put, j = step.get("put"), step.get("judgement")
+            if not put or not j:
+                continue
+            for g in put["bodies"]:
+                state = j["bodies"].get(g, {}).get("state")
+                rows.append({"case": case["case"], "step": step["step"], "body": g, "during": put["held"][g],
+                             "configurations": state or "did not move where it was put"})
+    say("table   s7 6: each body put, held or wholly free during the put, and how each configuration read after it")
+    for r in rows:
+        say(f"        {r['case']} {r['step']}: {r['body']:16} {r['during'][:60]:60} {r['configurations']}")
+    S7["per_body"] = rows
+
+
+def section_s7(worker, excel):
+    say("== s7  what a configuration keeps (W8-PLAN §5, the coordinator's stage 2d): each case on its own copy of "
+        "s1.master; after every step every configuration shown, rebuilt and read through fresh handles; saved, "
+        "reopened, read again; each reading judged against \"shared by all\", \"kept per configuration\" and H")
+    started = time.strftime("%Y%m%d-%H%M%S")
+    S7.update(revision=list(TAG["revision"]), snapshot=snapshot().strip(' ()').replace('snapshot: ', ''), finding_turn=swcom.positions_per_configuration(
+        TAG["revision"]), cases=[])
+    path = os.path.join(os.path.dirname(os.path.abspath(LOG_PATH)), f"w8-s7-{started}.json")
+    try:
+        for case in (s7_case_1, s7_case_2, s7_case_3, s7_case_4, s7_case_5, s7_case_7):
+            guard()
+            try:
+                case(worker, excel)
+            except S7Stop as exc:
+                say(f"        s7: the case stopped at a STOP ({exc}); the next case goes on")
+        s7_per_body()
+    finally:
+        with open(path, "w", encoding="utf-8") as handle:
+            json.dump(S7, handle, indent=1, default=str)
+        say(f"result  s7's readings written to {path}")
 
 
 SECTIONS = {"m1": section_m1, "m2": section_m2, "m3": section_m3, "m4": section_m4, "m5": section_m5, "m6": section_m6,
@@ -7255,7 +7943,7 @@ SECTIONS = {"m1": section_m1, "m2": section_m2, "m3": section_m3, "m4": section_
             "p1": section_p1, "p2": section_p2, "p3": section_p3, "p4": section_p4, "p5": section_p5,
             "p6": section_p6, "p7": section_p7,
             "s0": section_s0, "s1": section_s1, "s2": section_s2, "s3": section_s3, "s4": section_s4,
-            "s5": section_s5}
+            "s5": section_s5, "s7": section_s7}
 
 
 def connect_pid():
