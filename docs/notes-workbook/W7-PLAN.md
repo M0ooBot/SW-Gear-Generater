@@ -50,9 +50,20 @@ the ring fixed builds")
 
 **What W7 builds**, exactly: a workbook with **one simple planetary stage** — one sun, one ring, one planet gear on a
 planet shaft with any number of copies, all spur, every shaft of the stage facing the carrier's way along Z+ or Z-,
-**exactly one member held** (sun, ring or carrier) and one input — possibly joined to parallel trains by W5's
-ordinary meshes and locks on the **sun's or ring's** frame shafts only (each piece shown by W5 or W7). §6 demonstrates the ring held, the sun held, the carrier held, a Z- stage, Copies 4,
-and Update's values, moves and puts on it.
+**exactly one member held** (sun, ring or carrier) and one input. Beside the stage's own gears:
+
+- **more gears on the sun's or the ring's shaft**: ordinary W5 — the first gear on the shaft is its anchor and every
+  other is locked to it; they may mesh other frame gears by W5's rules (on a held ring's shaft they are held too,
+  W5-PLAN D9);
+- **gears on the carrier's own shaft**, each **locked to the carrier skeleton** (*reading J8*, restored; §2.7), meshing
+  nothing (a carrier gear on Meshes is refused, §1.2); on a held carrier they are held;
+- **other frame shafts on the carrier's axis** (coaxial, not members of the stage) with their own gears and W5/W6
+  trains: built as any frame shaft, with the coaxial exemptions of §2.3 item 5.
+
+That is what W8's E4 transfer case asks of W7 (`W8-PLAN.md` §0.2 and §2.1, `9e1937f`): `InDog` locked to `Sun` on In,
+`LoDog` on the Carrier's own shaft locked to the carrier, and Rear and FrontDrv as further frame shafts on the
+carrier's axis, every axis Z+, one stage (§10, "After the W8 check"). §6 demonstrates the ring held with a gear on the
+carrier, the sun held, the carrier held, a Z- stage, Copies 4, and Update's values, moves and puts on it.
 
 ### 1.2 What stays refused, and with which sentence
 
@@ -70,10 +81,9 @@ Refused at Build after W7, as `later_rows` warnings at their cells (so Build par
 | no member of the stage held (two inputs: a differential) | *"S, C and R form a planetary stage with no member held: a differential is not built by this version; set one of them to Role fixed."* |
 | a planet shaft with more than one gear (a compound or stepped planet) | *"P carries Planet and Planet2: a compound planet is not built by this version."* |
 | a planet meshing another planet (a double planet) | *"Planet meshes PlanetB on the same carrier: a double planet is not built by this version."* |
-| a gear on a carrier's own shaft | *"G7 is on C, the carrier: a gear turning with the carrier is not built by this version; put it on a shaft of its own."* |
+| a gear on a carrier's own shaft listed on Meshes (it would mesh a frame gear, or lock the planets if it meshed them) | *"CarrierGear is on C, the carrier, and meshes G8: a gear on the carrier that meshes another gear is not built by this version; it is built locked to the carrier when it meshes nothing."* |
 | a helical or herringbone gear in a planetary stage | *"Planet is helical: a planetary stage is built with spur gears only by this version."* |
 | two or more carriers in one workbook | *"C2 is a second carrier: one planetary stage per workbook is built by this version."* |
-| a parallel mesh on a carrier-coaxial shaft other than the sun's or ring's | covered by the gear-on-carrier row above |
 
 Errors, in `checks` (Build parts waits for them): a mesh between a planet and a gear on a frame shaft that is not
 coaxial with the planet's carrier (§3.5: *"a mesh that fits no carrier is an error"*); a mount chain that loops (`A`
@@ -117,7 +127,8 @@ A planetary stage is written with the rows §1 already has. The 4 : 1 fixture (�
 Gears `Sun` on S, `Planet` on P (one row, three components), `Ring` on R (internal); Meshes `Sun–Planet`,
 `Planet–Ring`. The model needs no new field.
 
-- **A carrier** is a frame shaft another shaft is mounted on. In W7 it carries no gear of its own (§1.2).
+- **A carrier** is a frame shaft another shaft is mounted on. It may carry gears of its own, each locked to the
+  carrier skeleton and meshing nothing (J8; §1.1, §2.7).
 - **A planet shaft is placed by composing frames** (PLAN-WORKBOOK §1: "X Y Z are then measured on that shaft at its
   starting turn"; §3.3: "`mounted on` composes frames"; *reading J4*, review M4). Its X, Y, Z and its Axis are read
   in the carrier's own frame at the carrier's starting turn: the carrier's frame is `base_frame` of its direction
@@ -297,14 +308,18 @@ Mates, every one a W5 kind, named by `motion.mate_name`:
 | … along it | `point` `carrier1:origin` ~ `layout:plane1` (always coincident: §2.6) | `C carrier along C` |
 | each planet copy on its carrier axis | `coincident` `gear2c2:Gear Axis` ~ `carrier1:P copy 2 Axis` | `Planet copy 2 on P copy 2 Axis` |
 | … along its shaft | `point distance` `gear2c2:origin` ~ `layout:plane1` (W6's `plane` `"front"`), D1 linked to **one global per row**, `"Planet Face Z"`, added once and shared by the copies (*reading J7*; review S5) | `Planet copy 2 along P copy 2` |
-| frame shafts | as W5 | `Sun on S Axis`, `Sun along S` |
+| a gear on the carrier's own shaft (J8) | `lock`, bare handles, the carrier component first as anchor (W5's lock route, `Select4` with a mark-1 select data); the gear is unfixed immediately before it; no axis or along mate of its own (a locked gear also on an axis over-defines: tier 8) | `CarrierGear locked to C carrier` |
+| frame shafts (a second gear on the sun's or ring's shaft locked to that shaft's anchor) | as W5 | `Sun on S Axis`, `Sun along S`, `InDog locked to Sun` |
 | gear mates | as W5 (§ below) | `Sun meshes Planet copy 1` |
 
 `MatePlan` gains `on: str = ""`: the component holding the axis the mate is made to (`""` the layout, else a carrier
 id); `shaft` holds the axis stem (`"P copy 2"`), so the axis is always `f"{shaft} Axis"`. `motion_assembly_plan`
 adds each face global once, and `BuildPlan.check()` refuses a global added twice (review S5). A **held carrier** is
-inserted, placed and fixed, never unfixed and never mated; its copies are mated to its axes as above. A **held sun or
-ring** stays fixed (W5-PLAN D9; *reading J6*).
+inserted, placed and fixed, never unfixed and never mated; its copies are mated to its axes as above, and the gears on
+its own shaft stay fixed with it (`still_shafts` names the held carrier's shaft). A **held sun or ring** stays fixed
+(W5-PLAN D9; *reading J6*). A gear on the carrier's shaft meshes nothing, so it adds no row to the rank below and the
+carrier never becomes a node of the mate count (review S6's case needs a carrier gear on Meshes, which §1.2 refuses);
+it joins the carrier's train by its lock.
 
 **Which gear mates, by rank** (*reading J5*; review S6, S12). Each listed mesh at copy level is one row of the system
 of §2.5 written per **body** — a frame shaft or one copy — with the carrier's column (the spike's interpretation:
@@ -373,12 +388,16 @@ part is one `update_variables` on the one file, which every copy follows.
   the carrier, `δ − s·δ_c`; a **held** gear that a recorded gear mate touches is judged too, against its wanted frame
   (its δ must be 0 or whole pitches, its origin and axis in place), so `Planet copy 1 meshes Ring` is judged in the
   check phase and in the post-check; then `δ_b − k·δ_a` is a whole pitch of b, k the tooth ratio `mesh_links` makes.
-  A carrier's pitch is 0, so any carrier turn makes the train `turned`. With neither carriers nor held gears it is
-  W5's function byte for byte.
+  A carrier's pitch is 0, so any carrier turn makes the train `turned`. A gear on the carrier's own shaft is a
+  `LockLink(anchor="C carrier", follower="CarrierGear")`, tested exactly as W5's locks are (its δ equal to δ_c); it is
+  coaxial with the carrier, so it is not carried. With neither carriers nor held gears it is W5's function byte for
+  byte.
 - `_trains` joins a carrier to its planets and a held gear to the trains its gear mates touch. **Order of a put**
   (review M1, M5; *reading J15*): a gear-mated held member that must be re-placed is put **first** (`REPLACE_FIXED_ROUTE`),
-  then the carrier, then every gear of the train, with the gear mates on (`MESH_PHASE_ROUTE`) and any locks
-  suppressed around the puts (W5 M1, M8). Fixed gears no gear mate touches keep W5's place at the end. A put of a
+  then the carrier, then every gear of the train, with the gear mates on (`MESH_PHASE_ROUTE`) and every lock of the
+  train suppressed around the puts (W5 M1, M8) — the carrier gear's lock among them, so the carrier is put with its
+  lock off and the carrier gear is put to its own wanted frame (the carrier's turn applied about their shared axis),
+  then the lock turned back on in a `finally`, as W5's `_put_train` does for any lock. Fixed gears no gear mate touches keep W5's place at the end. A put of a
   component whose axis is mated to another free component is not covered by the spike; `place_component` reads each
   frame back and the post-check reads every frame again (held members included), so a put that does not hold is a
   sentence, never silence; §6's p3 shows it on SolidWorks.
@@ -386,7 +405,8 @@ part is one `update_variables` on the one file, which every copy follows.
   whose last `Fix`/`Unfix` is `Unfix`, so `_mated_handles` includes it.
 - **COM:** nothing new. Every call is one W4–W6 used: `NewPart` and `layout_plan`'s ops; `AddComponent`/`Place`/
   `Fix`/`Unfix`; `add_mate` coincident, point, point distance and gear, with references `_component_ref` resolves in
-  any component by feature name. The new combinations — an axis mate between two free components, a gear mate with
+  any component by feature name; `lock` between a carrier skeleton (no body) and a gear is W5's lock route on a
+  component the spike did not lock, shown first by p1. The new combinations — an axis mate between two free components, a gear mate with
   one fixed component, a coaxial carrier, one part inserted three or four times — were made by the spike on 2026
   without a dialog or an error.
 
@@ -492,7 +512,7 @@ dashed circle through its planets' axes, named at its cross. Boards (D): `Workbo
 | J5 | Which gear mates of a planetary are made | (a) by exact rank of the carrier-frame rows, Meshes-sheet order expanded copy by copy (fixture: N sun mates and one ring mate); (b) all 2N; (c) (a) with external meshes before internal ones | **(a)**: measured right by the spike; (c), fewer ring mates when Planet–Ring is listed first, is the user's to choose. |
 | J6 | How a held member is held | `Fix` (W5-PLAN D9) | as W5. |
 | J7 | Planet copies along their shafts | one Face Z global per row, added once, shared | reuses W5's along mate. |
-| J8 | A gear on the carrier's own shaft | (a) locked to the carrier skeleton; (b) refused | **(b)** now: no section builds it, and it makes the carrier a body in the mate count (review S6). Listed for a later pass. |
+| J8 | A gear on the carrier's own shaft | (a) locked to the carrier skeleton, meshing nothing; (b) refused; (c) locked and free to mesh frame gears | **(a)**: W8's E4 needs it (`LoDog`), p1 builds and drives one (`CarrierGear`), and meshing nothing it adds no row to the mate count. (c) is left for a later pass: a carrier gear on Meshes makes the carrier a node (review S6) and no section builds one. |
 | J9 | Planetary checks | the ring/shift checks as they stand; the `z_r` sentence only unshifted; assembly condition and neighbours as errors; no fix offered | review M2, M3. |
 | J10 | Torque through a planetary | basic-train efficiency, one held member, joined to W3's walk | the textbook method, pinned by numbers. |
 | J11 | A stage with no member held (a differential) | refused at Build | the orchestrator's ruling (review S16); listed for a later pass. |
@@ -509,7 +529,7 @@ dashed circle through its planets' axes, named at its cross. Boards (D): `Workbo
 ### 3.2 For the user afterwards, and what cannot proceed without them
 
 Nothing needs the user before W7 can be built: the riskiest point is measured. Listed for them as a later pass could
-open: differentials (J11), compound and double planets (J12), a gear on the carrier's shaft (J8), helical and
+open: differentials (J11), compound and double planets (J12), a gear on the carrier's shaft that meshes (J8 (c)), helical and
 herringbone planetaries, opposite-facing members, two stages in one workbook, J4 (a) and J5 (c). One STOP stays: if
 SolidWorks 2024's confirming build turns the planetary otherwise than 2026 did (the spike ran on 2026 only) and no
 read-back remake puts it right, W7 cannot be confirmed on 2024, and the user is asked.
@@ -528,9 +548,13 @@ face 10, At 10, so every front face is at z = 5 and every anchor gets a Face Z g
 | Sun | S | external | 18 | 6 | Sun |
 | Planet | P | external | 18 | 8 | Planet |
 | Ring | R | internal | 54 | — | (default) |
+| CarrierGear | C | external | 20 | 10 | CarrierGear (face 6, At 30) |
 
-Meshes `Sun–Planet`, `Planet–Ring`. Three parts, the layout part, `Planetary_4to1_C_Carrier`, the assembly. Every
-number below recomputed by the review with `geometry.external_space` / `ring_space` / `pinion_space`.
+`CarrierGear` is J8's gear on the carrier's own shaft (the part W8's `LoDog` plays in E4, here a plain spur): it
+meshes nothing, sits at z 27–33, clear of the stage's faces (z 5–15), and is locked to the carrier. Meshes
+`Sun–Planet`, `Planet–Ring`. Four parts, the layout part, `Planetary_4to1_C_Carrier`, the assembly. Every number
+below but CarrierGear's was recomputed by the review with `geometry.external_space` / `ring_space` /
+`pinion_space`; CarrierGear changes none of them.
 
 - **Checks:** `54 = 18 + 2·18` ✓; centres `m(18 + 18)/2 = 18 = m(54 − 18)/2` ✓; assembly `(18 + 54)/3 = 24` ✓;
   neighbours `2·18·sin 60° = 31.177 mm` > 20.5 ✓; 18 teeth above the undercut limit 17.1. Copies that fit: up to 5
@@ -538,17 +562,18 @@ number below recomputed by the review with `geometry.external_space` / `ring_spa
 - **Positions** (mid-face z = 10, front face z = 5): Sun (0, 0); Planet copy 1 (18, 0); copy 2 (−9, 15.588457268);
   copy 3 (−9, −15.588457268); Ring (0, 0); carrier origin (0, 0, 0).
 - **Phases:** Sun 0; every copy 10°; Ring 0 modulo 6.6667°. Frames: Sun I at (0, 0, 5); copy k `rot_z(10°)` at its
-  centre, z 5; Ring I at (0, 0, 5) modulo its pitch; carrier I at (0, 0, 0).
+  centre, z 5; Ring I at (0, 0, 5) modulo its pitch; carrier I at (0, 0, 0); CarrierGear (reached by no mesh, so θ 0)
+  I at (0, 0, 27).
 - **Carrier part:** `C Axis`; `P copy 1 X Plane` 18 from Right with Top (base); copy 2: x −9, y 15.588457268; copy 3:
   x −9, y −15.588457268; globals `P copy 1 X`, `P copy 2 X`, `P copy 2 Y`, `P copy 3 X`, `P copy 3 Y`.
 - **Speeds** (own-axis, rpm): S 1000, C 250, P −500 (−750 on C), R 0; **4.000 : 1**, same way.
 - **Torques:** S 2.000; C 7.7624 (η₀ 0.9604, stage 97.03 %); R held 5.7624; P 0.
-- **Mates (14), components (7):** `Sun on S Axis`, `Sun along S` (`Sun Face Z` 5), `C carrier on C Axis`, `C carrier
-  along C`, per copy `Planet copy k on P copy k Axis` and `Planet copy k along P copy k` (`Planet Face Z` 5, once),
+- **Mates (15), components (8):** `Sun on S Axis`, `Sun along S` (`Sun Face Z` 5), `C carrier on C Axis`, `C carrier
+  along C`, `CarrierGear locked to C carrier`, per copy `Planet copy k on P copy k Axis` and `Planet copy k along P copy k` (`Planet Face Z` 5, once),
   gear mates `Sun meshes Planet copy 1/2/3`, `Planet copy 1 meshes Ring`; unmated `Planet copy 2–Ring`,
   `Planet copy 3–Ring`; fixed `Ring`.
-- **A 30° drive of the sun** (measured by the spike to match): carrier +7.5°; each copy's own turn −15° (−22.5° on C);
-  Ring 0; copy origins at (17.846008, 2.349471), (−10.957706, 14.280360), (−6.888302, −16.629832), z unchanged; the
+- **A 30° drive of the sun** (measured by the spike to match, CarrierGear apart): carrier +7.5° and CarrierGear +7.5°
+  with it, its origin unmoved; each copy's own turn −15° (−22.5° on C); Ring 0; copy origins at (17.846008, 2.349471), (−10.957706, 14.280360), (−6.888302, −16.629832), z unchanged; the
   unmated meshes in step, `(−22.5)·18 = −405 = (0 − 7.5)·54`.
 
 ### 4.2 The sun held
@@ -575,7 +600,8 @@ P −500, R 0); the same 4.000 : 1; seen from +Z every turn is reversed.
 
 The same workbook with C `fixed` and R `output` (S input 1000). Speeds: S 1000, P −1000 (on C as well), R −333.33,
 C 0; **3.000 : 1**, the other way. Torques: R 5.7624, C held 7.7624, P 0. Gear mates as §4.1, every axis still; the
-ring mated to `R Axis`. A 30° drive of the sun: each copy −30°, Ring −10°, carrier 0.
+ring mated to `R Axis`; CarrierGear held fixed with the carrier, no lock made. A 30° drive of the sun: each copy
+−30°, Ring −10°, carrier and CarrierGear 0.
 
 ### 4.5 The tests' made-up specs
 
@@ -678,7 +704,8 @@ scenario 1); Z- carrier signs; with no carriers and no held gears, W5's results 
 
 §2.9: the carriers step, pre-flight, progress, log lines; carriers in Update's values phase; `_trains` with carrier
 and held links; the put order (held member, carrier, train); the fake. **Done (against the fake):** a planetary build
-makes the carrier part then the assembly, every mate status read, carrier and copies under-defined, ring fixed; a plan
+makes the carrier part then the assembly, every mate status read, carrier, copies and CarrierGear under-defined, ring fixed, CarrierGear's lock made carrier
+first; a plan
 doctored to add `Planet copy 2 meshes Ring` is over-defined by the fake's rank → refused (W5 answer 1), carrier part
 and layout kept; a failed carrier part skips the assembly; a reused carrier checked live; Update: a consistent turn →
 nothing put, `turned`; the ring mate suppressed and the carrier turned off Willis → out of step → put (M1 scenario 1);
@@ -747,16 +774,18 @@ Measurements, all from SolidWorks' own readings:
 
 Sections:
 
-- **`p1` — `Planetary_4to1`, ring held.** Fresh build. Every-build checks, the driven proof (control on `Planet copy 1
-  meshes Ring`), reopen; the marks after a build (no part, layout or carrier part marked; the assembly marked). Kept
+- **`p1` — `Planetary_4to1`, ring held.** Fresh build. Every-build checks (`CarrierGear locked to C carrier` among
+  the mates, CarrierGear `GetConstrainedStatus` 2), the driven proof (control on `Planet copy 1 meshes Ring`;
+  CarrierGear's own turn read against the carrier's, +7.5° for +30° on the sun, to 1e-6, its origin unmoved), reopen; the marks after a build (no part, layout or carrier part marked; the assembly marked). Kept
   as the master. The fixture saved by Excel and copied to `tests/fixtures/excel-windows/Planetary_4to1.xlsx`.
 - **`p2` — the user's turn and a quiet Update** (copy). Drive 37° and delete; Update with nothing changed: nothing
   put, *"… The gears stand where they were turned in SolidWorks."*; `train_check`'s residuals with the carrier and the
   held ring logged; every frame before and after equal to 1e-6; no document marked.
 - **`p3` — puts, moves and values on a turned carrier** (copy; review M5, S8). Before **each** edit the train is
   driven 37° and the drive deleted, so the carrier stands at δ_c = 9.25°. (1) `Planet` At 10 → 12 → Update:
-  `"Planet Face Z"` set once, the train put back, the log's put order carrier first, every frame, carrier included, at
-  the built frame to 1e-6. (2) `Ring` At 10 → 12 → Update: the gear-mated held Ring re-placed **first**, then the
+  `"Planet Face Z"` set once, the train put back, the log's put order carrier first, the lock `CarrierGear locked to
+  C carrier` suppressed around the puts and on again after, every frame, carrier and CarrierGear included, at the
+  built frame to 1e-6. (2) `Ring` At 10 → 12 → Update: the gear-mated held Ring re-placed **first**, then the
   carrier, then the train (M1's order, asserted from the log); frames; the ring mesh judged in step after. (3) Sun 18 →
   21, Ring 54 → 57, P's X 18 → 19.5 → Update: two parts' values, the carrier part's globals (copies at (19.5, 0),
   (−9.75, 16.887495374), (−9.75, −16.887495374)), all four gear mates remade (copy 1's planet carries two:
@@ -774,7 +803,7 @@ Sections:
 - **`p6` — the stage on Z-** (copy). §4.3's Axis edits → structural → Build again… `_r2`: every-build checks (the
   copies where §4.3 puts them, the carrier part's local coordinates equal to p1's), the driven proof, reopen.
 - **`p7` — the carrier held** (copy; review S10). §4.4's Role edits → structural → Build again… `_r2`: every-build
-  checks (the carrier fixed and never mated), the driven proof (copies −30°, Ring −10° for +30° on the sun), reopen.
+  checks (the carrier and CarrierGear fixed and never mated), the driven proof (copies −30°, Ring −10° for +30° on the sun), reopen.
 - **window** (`workbook_window_check.py`, 2026): the built planetary footer and end view; the Copies 5 error.
 
 **SolidWorks 2024, the confirming run:** `p1` and `p5` (the ring mates, where the versions have differed), and the
@@ -871,8 +900,8 @@ Review: `W7-PLAN-REVIEW.md` (`939b726`). Spike: `W7-SPIKE.md` (`8a798fe`). Rulin
 - **S3** the neighbour sentence: "5 is the most that fit; of those 1, 2, 3 and 4 also mesh"; the list includes 1.
 - **S4** a carrier exempt from "carries no gear".
 - **S5** one shared Face Z global, added once; `BuildPlan.check()` refuses a duplicate global; `face_globals` once.
-- **S6** gear mates chosen by exact rank of the carrier-frame rows; with J8 refused the carrier is never a node in
-  what W7 builds, and the rank rule stays right if a later pass opens J8.
+- **S6** gear mates chosen by exact rank of the carrier-frame rows; a carrier gear meshes nothing in what W7 builds
+  (§1.2), so the carrier is never a node, and the rank rule stays right if a later pass opens J8 (c).
 - **S7** `CarrierLink.planets` holds every gear on the carrier's planet shafts.
 - **S8** p3's value edit is teeth (Sun 21, Ring 57, P X 19.5: 3.714 : 1), so unequal sun and planet teeth are built
   and driven.
@@ -887,12 +916,12 @@ Review: `W7-PLAN-REVIEW.md` (`939b726`). Spike: `W7-SPIKE.md` (`8a798fe`). Rulin
 - **S16** with the orchestrator's ruling: J11 and J12 refused at Build and listed for the user.
 
 **Notes taken:** `still_shafts` never names a mounted shaft (§2.7); a ring's θ compared modulo its pitch (§2.4, §4.1);
-a gear on C meshing its own planets is covered by J8's refusal; helical and herringbone planetaries are refused rather
+a gear on C meshing its own planets is covered by the refusal of a carrier gear on Meshes; helical and herringbone planetaries are refused rather
 than given a spec test, under the scope principle.
 
 **Other rulings and alignments.**
 - **Scope principle** (the J11/J12 ruling applied throughout): beyond J11 and J12, W7 also refuses a gear on the
-  carrier's shaft (J8), opposite-facing members, helical and herringbone planetaries and two stages in one workbook,
+  carrier's shaft that meshes (J8 (c)), opposite-facing members, helical and herringbone planetaries and two stages in one workbook,
   since no section builds them (§1.2, §3.2). This goes further than the ruling's letter; it is its reason applied the
   same way everywhere, and each item is listed for the user.
 - **Schema:** `LINK_SCHEMA_VERSION = 5`, the constant named and read by code and tests, no other phase's number
@@ -904,3 +933,29 @@ than given a spec test, under the scope principle.
   `MateEntry.plane` `"front"` for copies' along mates, `geometry.base_frame` for the carrier's frame, `Placed.axis`
   and `centre` set per copy; `CarrierLink.axis` as a W6 vector in place of `sigma`.
 - **Not taken:** nothing from the review or the rulings is left out.
+
+**After the W8 check** (the orchestrator, after `c6df0a4`: W8 builds on W7, and its E4 fixture's low range is a
+planetary). Read against `W8-PLAN.md` (`9e1937f`) §0.2 and §2.1:
+
+- **A gear on the carrier's own shaft — needed.** E4's `LoDog` (a dog, Shaft `Carrier`, At 70) sits on the carrier's
+  shaft, and W8-PLAN §0.2 counts on W7 locking it to the carrier (*"LoDog locked to Carrier carrier"*, from J8 as
+  first written). `c6df0a4` had refused it. J8 is restored as (a): locked to the carrier skeleton, meshing nothing; how
+  it is mated (§2.7's table: a lock, carrier first, no axis or along mate), judged (a `LockLink` to the carrier, exact,
+  §2.9) and put (lock suppressed around the train's puts, put to its own wanted frame, lock on again in a `finally`,
+  §2.9); held with a held carrier (§2.7). Shown by p1's new `CarrierGear` (§4.1), driven with the rest and read
+  against the carrier's turn, and by p3's puts and p7's held carrier (§6). A carrier gear on Meshes stays refused
+  (J8 (c)); E4's `LoDog` meshes nothing (its coupling to Rear is W8's own gear mate, per mode).
+- **A second gear on the sun's shaft — ordinary W5.** E4's `InDog` on In beside `Sun` is a follower locked to In's
+  anchor `Sun`, as W5 builds every compound shaft; nothing new (§1.1). The same holds for a second gear on a turning
+  ring's shaft; on a held ring's shaft it is held (W5-PLAN D9). E4's ring shaft carries only `Ring`.
+- **Other frame shafts on the carrier's axis — needed and allowed.** E4's Rear and FrontDrv lie on the carrier's
+  axis without being members of the stage; §1.1 now says such shafts are built as any frame shaft, with §2.3 item 5's
+  coaxial exemptions. The first revision's last §1.2 row, which could be read as refusing them, is gone.
+- **Two stages in one workbook — not needed.** E4 has one carrier; the refusal stays.
+- **Members facing different ways — not needed.** Every E4 axis is Z+ (W8-PLAN §0.2: *"every axis is Z+"*); the
+  refusal stays.
+- **The mate count.** W8-PLAN §0.2 assumes W7's union-find over bodies with still bodies merged; the rank rule this
+  revision adopted (review S6) chooses the same joins on every case W7 builds, E4's included (its planetary is §4.1's
+  shape at 24/24/72), which `W8-INTERFACES.md` should restate.
+- **Kept for the user**, as a later pass could open (§3.2): differentials, compound and double planets, a carrier
+  gear that meshes, helical and herringbone planetaries, opposite-facing members, two stages, J4 (a), J5 (c).
