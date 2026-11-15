@@ -378,6 +378,28 @@ def test_coaxial_shafts_share_one_cross_named_once_in_the_shafts_sheets_order():
     assert names == ["S, C, R", "P copy 1", "P copy 2", "P copy 3"]      # S, C, R: the Speeds panel's order
 
 
+def test_a_cross_many_shafts_share_is_named_on_lines_and_every_name_stays_on_the_canvas():
+    """W8's E4 transfer case: five shafts on the origin's axis. Their name breaks at commas onto lines of about
+    LABEL_WRAP characters, in the Shafts sheet's order, and no name's box leaves the canvas or covers another's."""
+    from gear_generator.workbook import checks
+    from workbook_fixtures import e4_transfer_case
+    spec = e4_transfer_case()
+    report = checks.check(spec)
+    view = preview.layout_gearbox(report.layout.placed, report.theta, 392, 300, shafts=[s.id for s in spec.shafts])
+    names = [label[0] for label in view.labels]
+    assert names[0] == "In, Carrier,\nRing, Rear,\nFrontDrv"
+    assert sorted(names[1:]) == ["Front", "Idler", "Planet copy 1", "Planet copy 2", "Planet copy 3"]
+    sides = {side[0]: side for side in preview.LABEL_SIDES}
+    boxes = []
+    for name, x, y, anchor in view.labels:
+        gap = preview.LABEL_GAP
+        sx, sy = sides[anchor][1:]
+        boxes.append(preview._label_box(name, x - sx * gap, y - sy * gap, sides[anchor], 1.0))
+    for left, top, right, bottom in boxes:
+        assert left >= 0 and top >= 0 and right <= 392 and bottom <= 300
+    assert not any(preview._overlaps(a, b) for i, a in enumerate(boxes) for b in boxes[i + 1:])
+
+
 def test_without_the_carriers_axis_the_circle_is_about_its_copies_centre():
     _, given = _planetary_view()
     _, guessed = _planetary_view(given=False)

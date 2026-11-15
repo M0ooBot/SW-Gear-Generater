@@ -102,6 +102,7 @@ from .workbook import fixes as wb_fixes, gearbox as wb_gearbox, geometry as wb_g
 from .workbook import model as wb_model
 from .workbook import update as wb_update, xlsx
 
+MODE_SEGMENT = 44            # W8: each mode's segment in the Speeds panel's chooser, px at 100 %
 WINDOW_WIDTH = 1080          # two columns: the workbook and its checks, and the end view and speeds (W3)
 LEFT_WIDTH = 610
 END_VIEW = (392, 300)        # the end view's canvas, px
@@ -244,6 +245,13 @@ class WorkbookWindow(tk.Toplevel):
         self._close_when_done = False
         self._asking = False           # a question is open (Build again?, or moved or a copy?): not destroyed under it
         self._after: Optional[str] = None
+        # W8 (W8-PLAN §1.12, J21): the mode the Speeds panel and the end view show, chosen in the Speeds panel's
+        # header; kept across re-reads while a mode of that name is there. And the running SolidWorks' answer on
+        # positions per configuration as the last job's result carried it (None after a restart: W8-INTERFACES §9.12).
+        self.mode = tk.StringVar(value="")
+        self.mode_chooser: Optional[widgets.Segmented] = None
+        self._mode_names: Tuple[str, ...] = ()
+        self.positions_per_configuration: Optional[bool] = None
 
         self.title(f"Workbook — {os.path.basename(path)}")
         self.configure(bg=theme.WINDOW)
@@ -306,6 +314,7 @@ class WorkbookWindow(tk.Toplevel):
         speeds = widgets.Panel(right, "Speeds", self.speeds_readout)
         speeds.grid(row=1, column=0, sticky="ew")
         self.speeds_body = speeds.body
+        self._mode_slot = speeds.header_slot()         # W8: the mode chooser, when the workbook has modes
         self.speeds_body.columnconfigure(0, weight=1)
 
         box = widgets.Panel(body, "Workbook", self.counts)
@@ -672,7 +681,8 @@ class WorkbookWindow(tk.Toplevel):
             folder_exists=bool(folder) and os.path.isdir(folder),
             building=job is not None and not job.updating, updating=job is not None and job.updating,
             progress=job.progress.step if job is not None else None, note=self.note, results_due=self.results_due,
-            digest=self.reading.digest if self.reading is not None else "")
+            digest=self.reading.digest if self.reading is not None else "",
+            positions_per_configuration=self.positions_per_configuration)
 
     def _refresh_state(self) -> None:
         footer = self.footer()
@@ -786,6 +796,7 @@ class WorkbookWindow(tk.Toplevel):
                 r += 1
         if not ordered and not self.chosen and not self.recalc:
             self._line(self.checks_body, 0, "No problems: every row reads, and every gear works out.", theme.MUTED)
+        self._place_mode_chooser()
         self._draw_end_view()
         self._paint_speeds()
 
@@ -813,13 +824,17 @@ class WorkbookWindow(tk.Toplevel):
         # W7: each carrier's circle about its own axis, where planning puts it; names on one cross in Shafts order.
         spec = self.effective or self.reading.spec
         carriers = {c: point[:2] for c, (point, _) in wb_geometry.carrier_axes(spec, report).items()}
-        view = preview.layout_gearbox(report.layout.placed, report.theta, px(END_VIEW[0]), px(END_VIEW[1]), step=2,
+        # W8: every slider where the chosen mode puts it (ModeReport.placed); a slide runs along the view, so only
+        # its face's height, and with it its colour, changes.
+        mode = self._chosen_mode()
+        placed = {**report.layout.placed, **(mode.placed if mode is not None else {})}
+        view = preview.layout_gearbox(placed, report.theta, px(END_VIEW[0]), px(END_VIEW[1]), step=2,
                                       unit=px(100) / 100, carriers=carriers, shafts=[s.id for s in spec.shafts])
-        for gear, plane, points in view.outlines:
+        for gear, plane, points in view.outlines:      # each tagged with its gear, so a test can find it
             colour = PLANE_COLOURS[plane % len(PLANE_COLOURS)]
-            c.create_polygon(*[v for xy in points for v in xy], outline=colour, fill="", width=1)
+            c.create_polygon(*[v for xy in points for v in xy], outline=colour, fill="", width=1, tags=(gear,))
         for gear, plane, x, y, r in view.rims:
-            c.create_oval(x - r, y - r, x + r, y + r, outline=PLANE_COLOURS[plane % len(PLANE_COLOURS)])
+            c.create_oval(x - r, y - r, x + r, y + r, outline=PLANE_COLOURS[plane % len(PLANE_COLOURS)], tags=(gear,))
         for name, x, y in view.shafts:
             c.create_line(x - px(5), y, x + px(5), y, fill=theme.INK)
             c.create_line(x, y - px(5), x, y + px(5), fill=theme.INK)
@@ -828,7 +843,8 @@ class WorkbookWindow(tk.Toplevel):
         for name, x, y, r in view.carriers or ():         # a carrier (W7): dashed, through its planets' axes
             c.create_oval(x - r, y - r, x + r, y + r, outline=theme.INK, dash=(4, 3))
         for name, x, y, anchor in view.labels:          # beside each cross, clear of the origin's arrows
-            text = c.create_text(x, y, text=name, anchor=anchor, fill=theme.INK, font=self.fonts.mono_tiny)
+            text = c.create_text(x, y, text=name, anchor=anchor, fill=theme.INK, font=self.fonts.mono_tiny,
+                                 justify="right" if anchor.endswith("e") else "left")     # a shared cross's lines
             x0, y0, x1, y1 = c.bbox(text)               # on a plain backing, so a name reads over teeth (W7)
             c.tag_lower(c.create_rectangle(x0, y0, x1, y1, fill=theme.WHITE, outline=""), text)
         if view.origin is not None:
@@ -843,11 +859,21 @@ class WorkbookWindow(tk.Toplevel):
         report = self.report
         if report is None:
             return
-        lines, readout = ui_text.workbook_speed_lines(self.effective or self.reading.spec, report.motion)
-        colour = theme.MUTED if report.motion.later else theme.INK
+        spec = self.effective or self.reading.spec
+        mode = self._chosen_mode()
+        chooser = self.mode_chooser is not None
+        if mode is not None:                          # W8: the chosen mode's speeds, torques and ratio
+            lines, readout = ui_text.mode_speed_lines(spec, report, mode.name)
+            motion = mode.motion
+        else:
+            lines, readout = ui_text.workbook_speed_lines(spec, report.motion)
+            motion = report.motion
+        if chooser:                                   # and that the chooser changes only this window (J21)
+            lines = lines + [ui_text.mode_chooser_note(self.record)]
+        colour = theme.MUTED if motion.later else theme.INK
         # A sentence rather than a shaft's line (ui_text says which): in prose, wrapped at the end view's width like
         # the lines, so the right column keeps its width.
-        prose = ui_text.speeds_prose_rows(report.motion, lines)
+        prose = ui_text.speeds_prose_rows(motion, lines, mode=mode is not None, chooser=chooser)
         for r, text in enumerate(lines):
             if r in prose:
                 tk.Label(self.speeds_body, text=text, bg=theme.WHITE, fg=theme.MUTED, font=self.fonts.hint,
@@ -858,6 +884,41 @@ class WorkbookWindow(tk.Toplevel):
                 tk.Label(self.speeds_body, text=text, bg=theme.WHITE, fg=colour, font=self.fonts.mono_tiny,
                          anchor="w", justify="left", wraplength=px(END_VIEW[0])).grid(row=r, column=0, sticky="w")
         self.speeds_readout.set(readout + (ui_text.provisional_tag(self.recalc) if readout else ""))
+
+    # ---------------------------------------------------------------- modes (W8)
+
+    def _chosen_mode(self) -> Optional[wb_checks.ModeReport]:
+        """The mode the Speeds panel and end view show: the chosen one (names compared as everywhere,
+        ``swbuild.on_in``), else the first; None for a gearbox with no modes."""
+        modes = self.report.modes if self.report is not None else ()
+        if not modes:
+            return None
+        return next((m for m in modes if m.name and swbuild.on_in((m.name,), self.mode.get())), modes[0])
+
+    def _place_mode_chooser(self) -> None:
+        """The mode chooser in the Speeds panel's header (W8-PLAN §1.12, J21): one segment per Modes row, the
+        first chosen at first; the choice kept across re-reads while a mode of that name is there. None for a
+        gearbox with no Modes rows (sliders alone have one mode, with no name)."""
+        modes = self.report.modes if self.report is not None else ()
+        names = tuple(m.name for m in modes if m.name)
+        kept = next((n for n in names if swbuild.on_in((n,), self.mode.get())), names[0] if names else "")
+        if names != self._mode_names:
+            if self.mode_chooser is not None:
+                self.mode_chooser.destroy()
+                self.mode_chooser = None
+            self._mode_names = names
+            if names:
+                self.mode.set(kept)
+                self.mode_chooser = widgets.Segmented(self._mode_slot, self.mode, names, command=self._mode_chosen,
+                                                      mono=True, height=16, width=MODE_SEGMENT * len(names),
+                                                      bg=theme.HEADER_BG)
+                self.mode_chooser.pack(side="left")
+        self.mode.set(kept)
+
+    def _mode_chosen(self) -> None:
+        self._draw_end_view()
+        self._paint_speeds()
+        self._fit()
 
     def _recheck_chosen(self, reading: wb_link.Reading) -> None:
         """After an outside save, keep a chosen fix only if the new read still offers exactly that fix.
@@ -1134,10 +1195,10 @@ class WorkbookWindow(tk.Toplevel):
                     self._mark_not_as_built(error)
                 elif not job.updating:
                     self._settle_journal()
-            elif job.updating:
-                self.note = self._finish_update(job, value)
             else:
-                self.note = self._finish_build(job, value)
+                # W8 (§9.12): the running SolidWorks' answer, for the footer's sentence about turns in a mode.
+                self.positions_per_configuration = getattr(value, "positions_per_configuration", None)
+                self.note = self._finish_update(job, value) if job.updating else self._finish_build(job, value)
         except Exception as exc:  # noqa: BLE001 - the finishes catch their own; this is the last net
             self.note = ui_text.Note(ui_text.collect_failed(exc, job.updating), False)
         if self._close_when_done:

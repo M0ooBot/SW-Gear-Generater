@@ -28,6 +28,7 @@ from gear_generator.workbook.gearbox import LayoutReuse
 from gear_generator.workbook.model import Gear
 from test_swbuild import FakeSolidWorks
 from test_workbook_build import a_later_kind  # noqa: F401 - a fixture: a dog ring made a later phase's (W9)
+from test_swbuild import mode_findings  # noqa: F401 - a fixture: the findings a build with modes reads (A's)
 from test_workbook_model import reducer, write
 
 tk = pytest.importorskip("tkinter")
@@ -2244,3 +2245,232 @@ def test_moving_the_planets_is_an_update_of_the_carrier_part(desk, monkeypatch):
                            "Planetary_4to1_C_Carrier, set the gear mates Sun meshes Planet copy 1 to 21 : 18, ")
     assert text.endswith("Save Sun, Ring_m1_N54, Planetary_4to1_C_Carrier and Planetary_4to1 in SolidWorks to keep "
                          "them.")
+
+
+# -- W8: a gearbox with modes ---------------------------------------------------------------------------------------
+
+
+def shifted(spec, dx, dy):
+    """``spec`` with every frame shaft moved by (dx, dy) mm, so nothing the end view draws is at the origin."""
+    return model.replace(spec, shafts=tuple(
+        model.replace(s, x=f"{float(s.x) + dx:g}", y=f"{float(s.y) + dy:g}") if s.mount() == "frame" else s
+        for s in spec.shafts))
+
+
+def chooser(window):
+    """The Speeds panel's mode chooser as drawn: each segment's text, left to right, and which is chosen."""
+    if window.mode_chooser is None:
+        return [], ""
+    cells = sorted(window.mode_chooser.winfo_children(), key=lambda c: int(c.grid_info()["column"]))
+    return [c.winfo_children()[0].cget("text") for c in cells], window.mode.get()
+
+
+def choose_mode(window, name):
+    """A click on the segment ``name`` (the Segmented's own handler, as its <Button-1> binding calls it)."""
+    window.mode_chooser._choose(name)  # noqa: SLF001 - the binding's target; the window is withdrawn
+
+
+def colours_of(window, gear):
+    """The outline colours the end view drew ``gear`` in (its outline and, for a ring or sleeve, its rim)."""
+    c = window.canvas
+    return {c.itemcget(i, "outline") for i in c.find_withtag(gear)}
+
+
+def rim_centre(window, gear):
+    c = window.canvas
+    (rim,) = [i for i in c.find_withtag(gear) if c.type(i) == "oval"]
+    x0, y0, x1, y1 = c.coords(rim)
+    return (x0 + x1) / 2, (y0 + y1) / 2
+
+
+def crosses_named(window):
+    """Each label's text and the centre of the shaft cross nearest it."""
+    c = window.canvas
+    crosses = []
+    for i in c.find_all():
+        if c.type(i) == "line" and not c.itemcget(i, "arrow") in ("last", "first"):
+            a, b, d, e = c.coords(i)
+            if b == e and 0 < abs(d - a) < 20:                   # a cross's horizontal stroke
+                crosses.append(((a + d) / 2, b))
+    named = {}
+    for i in c.find_all():
+        if c.type(i) == "text":
+            lx, ly = c.coords(i)
+            named[c.itemcget(i, "text")] = min(crosses, key=lambda p: math.hypot(p[0] - lx, p[1] - ly))
+    return named
+
+
+PARALLEL_SPEEDS = {
+    "2H": ["2H: Rear 1500\u00a0rpm · Front not driven · 1.000 : 1", "In 2H, RangeSlv engages InDog.",
+           "In    1500.0\u00a0rpm anticlockwise · 10.00\u00a0N·m", "Lay   750.0\u00a0rpm clockwise",
+           "Lo    375.0\u00a0rpm anticlockwise", "Rear  1500.0\u00a0rpm anticlockwise · 10.00\u00a0N·m",
+           "FrontDrv  turns freely", "Idler  turns freely", "Front  turns freely"],
+    "N": ["N: neutral — Rear, FrontDrv, Idler and Front turn freely.", "In N, no sleeve engages a dog.",
+          "In    1500.0\u00a0rpm anticlockwise · 10.00\u00a0N·m", "Lay   750.0\u00a0rpm clockwise",
+          "Lo    375.0\u00a0rpm anticlockwise", "Rear  turns freely", "FrontDrv  turns freely", "Idler  turns freely",
+          "Front  turns freely"],
+    "4L": ["4L: Rear 375\u00a0rpm · Front 375\u00a0rpm · 4.000 : 1",
+           "In 4L, RangeSlv engages LoDog and ModeSlv engages FrontDog.",
+           "In    1500.0\u00a0rpm anticlockwise · 10.00\u00a0N·m", "Lay   750.0\u00a0rpm clockwise · 19.60\u00a0N·m",
+           "Lo    375.0\u00a0rpm anticlockwise · 38.42\u00a0N·m",
+           "Rear  375.0\u00a0rpm anticlockwise · 38.42\u00a0N·m, shared with FrontDrv (the share depends on the loads)",
+           "FrontDrv  375.0\u00a0rpm anticlockwise · — (past a split)",
+           "Idler  562.5\u00a0rpm clockwise · — (past a split)",
+           "Front  375.0\u00a0rpm anticlockwise · — (past a split)"]}
+
+
+def test_a_gearbox_with_modes_has_a_mode_chooser_and_the_speeds_panel_shows_the_chosen_mode(desk):
+    """W8-PLAN §1.12 (J21): the Speeds panel's header gets one segment per Modes row, the first chosen; the panel
+    shows that mode's speeds, torques and ratio, and a member the mode leaves free turns freely (J16)."""
+    from workbook_fixtures import transfer_case_parallel
+    window = desk.open(transfer_case_parallel(), name="TransferCase_Parallel.xlsx")
+    assert window.footer().ok and window.footer().build_label == "Build"
+    assert window.counts.get() == "7 shafts · 12 gears · 4 meshes · 4 modes"
+    assert window.box_values["type"].cget("text") == ("Parallel train with modes · 4 meshes · 2H 1.000 : 1, 4H "
+                                                       "1.000 : 1, N neutral, 4L 4.000 : 1")
+    assert chooser(window) == (["2H", "4H", "N", "4L"], "2H")
+    only_here = "The mode chosen here changes only what this window shows."     # nothing built yet
+    assert speed_lines(window) == PARALLEL_SPEEDS["2H"] + [only_here] and window.speeds_readout.get() == "seen from +Z"
+    for name in ("N", "4L"):
+        choose_mode(window, name)
+        assert chooser(window) == (["2H", "4H", "N", "4L"], name)
+        assert speed_lines(window) == PARALLEL_SPEEDS[name] + [only_here], name
+    # The first two lines and the last are prose (ui_text.speeds_prose_rows), the shafts' lines mono.
+    fonts = [str(w.cget("font")) for w in sorted(window.speeds_body.winfo_children(),
+                                                 key=lambda c: int(c.grid_info()["row"]))]
+    assert fonts[0] == fonts[1] == fonts[-1] == str(window.fonts.hint)
+    assert set(fonts[2:-1]) == {str(window.fonts.mono_tiny)}
+
+
+def test_a_gearbox_with_no_modes_has_no_chooser(desk):
+    window = desk.open()
+    assert chooser(window) == ([], "") and window.mode_chooser is None
+
+
+def test_the_end_view_stands_each_sleeve_on_the_face_of_the_dog_its_mode_engages(desk):
+    """A slide runs along the view, so the end view shows the chosen mode by each slider's face height, which picks
+    its colour: a sleeve over a dog is on that dog's face, in that dog's colour, and over none in a colour of no dog
+    it could engage. The fixture is moved off the origin; each sleeve's rim stands on the cross its shaft shares
+    with the dogs' shafts."""
+    from workbook_fixtures import transfer_case_parallel
+    window = desk.open(shifted(transfer_case_parallel(), 150, 120), name="TransferCase_Parallel.xlsx")
+    engaged = {"2H": {"RangeSlv": "InDog"}, "4H": {"RangeSlv": "InDog", "ModeSlv": "FrontDog"}, "N": {},
+               "4L": {"RangeSlv": "LoDog", "ModeSlv": "FrontDog"}}
+    dogs = {"RangeSlv": ("InDog", "LoDog"), "ModeSlv": ("FrontDog",)}
+    for mode in ("2H", "4H", "N", "4L"):
+        choose_mode(window, mode) if mode != window.mode.get() else None
+        for sleeve, its_dogs in dogs.items():
+            for dog in its_dogs:
+                same = colours_of(window, sleeve) == colours_of(window, dog)
+                assert same == (engaged[mode].get(sleeve) == dog), (mode, sleeve, dog)
+        named = crosses_named(window)
+        for sleeve in ("RangeSlv", "ModeSlv"):
+            assert rim_centre(window, sleeve) == pytest.approx(named["In, Lo, Rear,\nFrontDrv"], abs=0.5), mode
+    assert window.view_readout.get().endswith("origin off view")
+
+
+def test_the_chosen_mode_is_kept_across_a_save_while_a_mode_of_that_name_is_there(desk):
+    """W8-PLAN §1.12: the choice survives a re-read; a mode renamed away takes the chooser back to the first."""
+    from workbook_fixtures import transfer_case_parallel
+    window = desk.open(transfer_case_parallel(), name="TransferCase_Parallel.xlsx")
+    choose_mode(window, "4L")
+    save_in_excel(window, {"Box": {"B8": 97}})                       # the efficiency: a change, the modes the same
+    assert chooser(window) == (["2H", "4H", "N", "4L"], "4L")
+    assert speed_lines(window)[0] == "4L: Rear 375\u00a0rpm · Front 375\u00a0rpm · 4.000 : 1"
+    save_in_excel(window, {"Modes": {"A5": "Low"}}, seconds=4)       # 4L renamed: no mode of that name now
+    assert chooser(window) == (["2H", "4H", "N", "Low"], "2H")
+    assert speed_lines(window)[0] == "2H: Rear 1500\u00a0rpm · Front not driven · 1.000 : 1"
+
+
+def test_a_gearbox_with_modes_builds_one_configuration_per_mode_and_says_where_a_turn_shows(desk, mode_findings):
+    """W8-PLAN §1.8, §1.12: Build makes the configurations; the footer after it says how to switch mode in
+    SolidWorks, and — from the build result's ``positions_per_configuration``, which the window passes on
+    (W8-INTERFACES §9.12) — that a turn stays in its configuration. A window opened afresh has no job's answer, so
+    it makes neither claim. The chooser is the window's own: choosing a mode presses nothing in SolidWorks."""
+    from workbook_fixtures import transfer_case_parallel
+    window = desk.open(transfer_case_parallel(), name="TransferCase_Parallel.xlsx")
+    window.press_build()
+    desk.finish(window)
+    assert window.positions_per_configuration is True
+    status = window.status.get()
+    assert status.startswith("Built 6 parts, TransferCase_Parallel_Layout and TransferCase_Parallel.SLDASM; no "
+                             "interference between the gears in any mode, where they stand. Its gears are mated to "
+                             "turn in each of its 4 modes, one configuration each (2H, 4H, N and 4L), and SolidWorks "
+                             "reports no mate in error in any of them: it opens in 2H; ")
+    stays = ui_text.turning_note(True)            # C's one home of the sentence (W8-INTERFACES §6.7)
+    assert stays and stays in status
+    assert record_of(window).gearbox.modes == ["2H", "4H", "N", "4L"]
+    calls = len(desk.sw.calls)
+    choose_mode(window, "4L")
+    assert len(desk.sw.calls) == calls and chooser(window) == (["2H", "4H", "N", "4L"], "4L")
+    assert speed_lines(window)[-1] == ("The mode chosen here changes only what this window shows; it does not switch "
+                                       "the mode SolidWorks shows.")
+    window.note = None
+    window._refresh_state()
+    on_record = window.status.get()
+    assert stays in on_record
+    again = desk.open(path=window.link.path)
+    assert again.positions_per_configuration is None
+    expected = on_record                          # the same sentence, without either claim about a turn
+    for claim in (ui_text.turning_note(True), ui_text.switching_note(True)):
+        expected = expected.replace(f" {claim}", "") if claim else expected
+    assert again.status.get() == expected and stays not in expected
+
+
+def test_a_quiet_update_and_a_modes_pick_changed_update_a_gearbox_with_modes(desk, mode_findings):
+    """W8-PLAN §1.10 and J14 through the window, on the fake: a quiet Update says which mode it worked in and that
+    it did not show the others (W8-INTERFACES §9.11); a Modes pick changed between existing positions (4H's ModeSlv
+    4WD → 2WD) is an Update that sets that mode's slide value and switches its coupling off, and the Speeds panel
+    reads the new 4H."""
+    from workbook_fixtures import transfer_case_parallel
+    window = desk.open(transfer_case_parallel(), name="TransferCase_Parallel.xlsx")
+    window.press_build()
+    desk.finish(window)
+    window.press_update()
+    desk.finish(window)
+    assert window.status.get() == ("SolidWorks already matches the workbook: nothing was changed. It worked in 2H, the "
+                                   "configuration that was active; it did not show the other modes, since nothing "
+                                   "needed changing.")
+    save_in_excel(window, {"Modes": {"C3": "2WD"}})
+    footer = window.footer()
+    assert (footer.build_label, footer.update_enabled, footer.update_primary) == ("Build again…", True, True)
+    assert window.status.get().startswith("Update SolidWorks will move ModeSlv in 4H to 96 mm along Rear, and switch "
+                                          "the mate ModeSlv engages FrontDog off in 4H. ")
+    choose_mode(window, "4H")
+    assert speed_lines(window)[:2] == ["4H: Rear 1500\u00a0rpm · Front not driven · 1.000 : 1",
+                                       "In 4H, RangeSlv engages InDog."]
+    window.press_update()
+    desk.finish(window)
+    assert window.status.get() == (
+        "Updated SolidWorks: moved ModeSlv in 4H to 96 mm along Rear, switched the mate ModeSlv engages FrontDog off "
+        "in 4H, re-placed InPin, InDog, LayGear, LayPin, LoGear, LoDog, RangeSlv, FrontDog, ModeSlv, FDrive, FIdler "
+        "and FOut in every mode; no interference between the gears in any mode, where they stand. It worked in 2H, "
+        "the configuration that was active, then showed and checked 4H, N and 4L and left the assembly in 2H. Save "
+        "TransferCase_Parallel in SolidWorks to keep it.")
+    assert chooser(window) == (["2H", "4H", "N", "4L"], "4H")          # the window's choice, not SolidWorks' mode
+
+
+def test_the_strip_refuses_a_sleeves_part_record_and_keeps_its_form(desk, tmp_path):
+    """W8-PLAN §1.1 (review S9): a sleeve's or dog's .gear.json, opened in the strip, is refused with C's sentence;
+    the form keeps what it had and nothing is remembered for Update values. A spur gear's record opens as always."""
+    from gear_generator import gui
+    from gear_generator.spec import GearSpec
+    app = gui.GearApp(desk.root)
+    teeth_before = app.gear_vars["a"]["teeth"].get()
+    for kind, stem in (("sleeve", "Sleeve_m1.5_N30"), ("dog", "Dog_m1.5_N30")):
+        part = str(tmp_path / f"{stem}.SLDPRT")
+        spec = GearSpec(module="1.5", teeth="30", face_width="8", kind=kind,
+                        teeth_side="internal" if kind == "sleeve" else "external")
+        record = store.GearRecord(kind=kind, spec=spec.to_dict())
+        store.save(store.sidecar_path(part), store.Sidecar(part_path=part, record=record))
+        app._load_record(store.sidecar_path(part))
+        assert app.status.get() == f"{stem}.SLDPRT is a {kind} made from a gearbox workbook; open that workbook to " \
+                                   "change it.", kind
+        assert app._loaded is None and app.gear_vars["a"]["teeth"].get() == teeth_before, kind
+    part = str(tmp_path / "Gear_m2_N40.SLDPRT")
+    spur = GearSpec(module="2", teeth="40", face_width="10")
+    store.save(store.sidecar_path(part), store.Sidecar(part_path=part, record=store.GearRecord(spec=spur.to_dict())))
+    app._load_record(store.sidecar_path(part))
+    assert app.status.get().startswith("Opened Gear_m2_N40.gear.json.")
+    assert app._loaded is not None and app.gear_vars["a"]["teeth"].get() == "40"
+

@@ -9,7 +9,8 @@ from tkinter import filedialog, font as tkfont, ttk
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 from . import __version__, findings, preview, store, swbuild, swcom, theme, ui_text, widgets
-from .gears import KINDS, PLANNED_KINDS, crossed, helical as helix, kind_for, pair as pairs, standards, plan_for
+from .gears import KINDS, PLANNED_KINDS, WORKBOOK_KINDS, crossed, helical as helix, kind_for, pair as pairs, standards
+from .gears import plan_for
 from .gears.base import Diagnostic, GeometryError, Point2
 from .gears.equations import literal
 from .spec import (
@@ -1463,6 +1464,11 @@ class GearApp(ttk.Frame):
             self._set_status(f"There is no gear record at {path}.", ok=False)
             return
         spec = GearSpec.from_dict(sidecar.record.spec)
+        if spec.kind in WORKBOOK_KINDS:
+            # W8 (W8-PLAN §1.1, review S9): a sleeve or dog is made from a gearbox workbook, never on this form, so
+            # it is not put on it, nor remembered for Update values (the live link's only use of an opened record).
+            self._set_status(ui_text.workbook_part_refusal(sidecar.part_path or path, spec.kind), ok=False)
+            return
         self.mode.set(MODE_SINGLE)
         self._on_mode_changed()
         if spec.recipe in (RECIPE_INVOLUTE, RECIPE_ARCS):

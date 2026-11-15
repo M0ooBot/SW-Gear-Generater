@@ -318,10 +318,30 @@ class EndView:
     carriers: List[Tuple[str, float, float, float]] = None               # (name, x, y, r): W7, through its planets
 
 
+LABEL_WRAP = 16            # a name shared by several shafts on one cross breaks onto lines of about this many characters
+
+
+def _shared_name(names) -> str:
+    """The names on one cross, joined in order and broken onto lines of up to :data:`LABEL_WRAP` characters at a
+    comma (a line never splits a name), so a cross five shafts share (W8's transfer case) does not run its name
+    across the drawing: ``S, C, R``; ``In, Carrier,\nRing, Rear,\nFrontDrv``."""
+    lines, line = [], ""
+    for i, name in enumerate(names):
+        piece = name + ("," if i < len(names) - 1 else "")
+        if line and len(line) + 1 + len(piece) > LABEL_WRAP:
+            lines.append(line)
+            line = piece
+        else:
+            line = f"{line} {piece}" if line else piece
+    return "\n".join(lines + [line])
+
+
 def _label_box(name: str, x: float, y: float, side, unit: float) -> Tuple[float, float, float, float]:
-    """The box a shaft's name takes on ``side`` of its cross at (x, y): (left, top, right, bottom)."""
+    """The box a shaft's name takes on ``side`` of its cross at (x, y): (left, top, right, bottom); a name on
+    several lines (:func:`_shared_name`) as wide as its longest and as tall as all of them."""
     _, sx, sy = side
-    w, h, gap = len(name) * LABEL_CHAR * unit, LABEL_HEIGHT * unit, LABEL_GAP * unit
+    lines = name.split("\n")
+    w, h, gap = max(len(t) for t in lines) * LABEL_CHAR * unit, LABEL_HEIGHT * unit * len(lines), LABEL_GAP * unit
     ax, ay = x + sx * gap, y + sy * gap
     return (ax if sx > 0 else ax - w, ay if sy > 0 else ay - h, ax + w if sx > 0 else ax, ay + h if sy > 0 else ay)
 
@@ -331,12 +351,14 @@ def _overlaps(a, b) -> bool:
 
 
 def _place_label(name: str, x: float, y: float, origin, unit: float,
-                 bounds: Optional[Tuple[float, float]] = None) -> Tuple[str, float, float, str]:
+                 bounds: Optional[Tuple[float, float]] = None, taken=()) -> Tuple[str, float, float, str]:
     """A shaft's name below right of its cross, unless that would sit on the origin's arrows: then the first
     side clear of them (below left, for a shaft at the origin, since the arrows point right and up). With no
-    side clear, below right as ever. ``bounds`` (the canvas's width and height, given when a turned shaft is
-    named at the end of its line, which may be the canvas's edge: W6): the sides that keep the name on the canvas
-    are tried first, in the same order."""
+    side clear, below right as ever. ``bounds`` (the canvas's width and height): the sides that keep the name on
+    the canvas are tried first, in the same order (W6 for a turned shaft named at its line's end, which may be the
+    canvas's edge; since W8 for every name, as a cross many shafts share carries a long one). ``taken``: the boxes
+    of the names already placed; a side clear of them is preferred, then one clear of the arrows alone (W8: a
+    planet copy's name beside an idler's)."""
     sides = LABEL_SIDES
     if bounds is not None:
         w, h = bounds
@@ -345,16 +367,18 @@ def _place_label(name: str, x: float, y: float, origin, unit: float,
             left, top, right, bottom = _label_box(name, x, y, side, unit)
             return left >= 0 and top >= 0 and right <= w and bottom <= h
         sides = tuple(s for s in LABEL_SIDES if inside(s)) or LABEL_SIDES
+    arrows = ()
     if origin is not None:
         ox, oy = origin
         reach, head, gap = ORIGIN_ARROW * unit, ARROW_HEAD * unit, LABEL_GAP * unit
         # Each arrow from the origin out, with a gap round it, so a name never crowds a head or the shaft.
         arrows = ((ox, oy - head - gap, ox + reach + gap, oy + head + gap),       # X, to the right
                   (ox - head - gap, oy - reach - gap, ox + head + gap, oy))       # Y, up
-        side = next((s for s in sides
-                     if not any(_overlaps(_label_box(name, x, y, s, unit), a) for a in arrows)), sides[0])
-    else:
-        side = sides[0]
+
+    def clear(side, boxes) -> bool:
+        return not any(_overlaps(_label_box(name, x, y, side, unit), b) for b in boxes)
+    side = (next((s for s in sides if clear(s, arrows) and clear(s, taken)), None)
+            or next((s for s in sides if clear(s, arrows)), None) or sides[0])
     anchor, sx, sy = side
     return name, x + sx * LABEL_GAP * unit, y + sy * LABEL_GAP * unit, anchor
 
@@ -435,7 +459,9 @@ def layout_gearbox(placed, theta, width: int = 696, height: int = 300, pad: floa
     (x, y) (``geometry.shaft_lines``); without it the centre of its copies is
     taken. Shafts on one line (a planetary's sun, carrier and ring) share a
     cross, named once with every name on it in ``shafts``' order (the Shafts
-    sheet's ids, as the Speeds panel lists them): ``S, C, R``.
+    sheet's ids, as the Speeds panel lists them): ``S, C, R``; a long one on
+    several lines (:func:`_shared_name`). Since W8 every name is kept on the
+    canvas and, where a side allows, clear of the names placed before it.
     """
     from .gears import kind_for
     view = EndView(outlines=[], rims=[], shafts=[], planes=[], labels=[], lines=[], carriers=[])
@@ -559,6 +585,10 @@ def layout_gearbox(placed, theta, width: int = 696, height: int = 300, pad: floa
     sheet = {name: i for i, name in enumerate(shafts)}
     for names, _, _ in shared.values():
         names.sort(key=lambda name: sheet.get(name, len(sheet)))       # stable: the rest keep their order
-    view.labels = [_place_label(", ".join(names), x, y, view.origin, unit, (width, height) if lines else None)
-                   for names, x, y in shared.values()]
+    view.labels, taken = [], []
+    for names, x, y in shared.values():
+        name, lx, ly, anchor = _place_label(_shared_name(names), x, y, view.origin, unit, (width, height), taken)
+        view.labels.append((name, lx, ly, anchor))
+        side = next(s for s in LABEL_SIDES if s[0] == anchor)
+        taken.append(_label_box(name, x, y, side, unit))
     return view
