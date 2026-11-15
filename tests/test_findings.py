@@ -1132,7 +1132,6 @@ def test_a_turn_of_the_mated_train_given_in_one_mode_was_read_in_every_mode_on_a
         for mode in ("2H", "4H", "N", "4L"):
             assert f"{route}: {mode}: turned from the start {turns}" in check, (route, mode)
     assert findings.TURN_PER_CONFIGURATION_ON_2026 is False
-    assert getattr(findings, "TURN_PER_CONFIGURATION_ON_2024", "missing") is None
 
 
 W8_S7 = LATEST.parent / "w8-s7-20261115-135428.json"
@@ -1228,13 +1227,88 @@ def test_s7_pins_fail_on_a_doctored_copy(doctor):
         _s7_holds(data)
 
 
+W8_S7_2024 = LATEST.parent / "sw2024" / "w8-s7-20261115-162418.json"
+W8_S7_2024_CASE8 = LATEST.parent / "sw2024" / "w8-s7-20261115-172104-case8.json"
+S7_TRAIN = ["Sun", "Pl copy 1", "Pl copy 2", "Pl copy 3", "InDog", "LoDog", "RangeSlv", "ModeSlv", "Carrier carrier"]
+S7_2024_TURNS = (("1", "drive +37 in 2H", 37.0), ("2", "drive +37 in 2H", 37.0), ("3", "drive +37 in 2H", 37.0),
+                 ("3", "drive +20 in 4L", 20.0), ("3", "drive +11 in N after the reopen", 11.0),
+                 ("4", "drive +37 in 2H before the Update", 37.0), ("4", "drive +37 in 2H", 37.0),
+                 ("8", "drive +37 in 2H", 37.0), ("8", "fresh drive +37 in 2H", 37.0))
+
+
+def _s7_2024_holds(data, rerun):
+    """What W8 s7 read on SolidWorks 2024 32.5.0, the grounds of TURN_PER_CONFIGURATION_ON_2024 = False: every turn
+    of the train read moved in all four configurations, by the step's amount where it was made, "shared" fitting and
+    "per_configuration" ruled out — on copies no Update had moved (cases 1-3), after the app's changed Update had put
+    the turned train back in every mode (case 4), and after its quiet Update in 4L had put every mode (case 8, and the
+    rerun). Raises AssertionError on any that the data does not show."""
+    assert data["revision"] == [32, 5, 0] and data["finding_turn"] is None and rerun["revision"] == [32, 5, 0]
+    for case, step, amount in S7_2024_TURNS:
+        judgement = _s7_step(data, case, step)["judgement"]
+        assert judgement["kind"] == "turn" and "Sun" in judgement["moved_bodies"], (case, step)
+        if "in 2H" in step:       # in 4L the front train turns too, in N the sleeves stand free
+            assert judgement["moved_bodies"] == S7_TRAIN, (case, step)
+        for body, read in judgement["bodies"].items():
+            assert read["state"] == {m: "moved" for m in S7_MODES}, (case, step, body)
+        assert abs(judgement["bodies"]["Sun"]["change_where_made"][0] - amount) < 1e-6, (case, step)
+        assert "shared" in judgement["fits"] and "per_configuration" in judgement["rules_out"], (case, step)
+    for case, step in (("1", "drive +37 in 2H"), ("8", "fresh drive +37 in 2H")):
+        turned = _s7_step(data, case, step)["expressed"]
+        for mode in S7_MODES:     # LoDog a quarter of RangeSlv's turn in 4L, where they are coupled
+            assert [turned[mode][b][0] for b in ("Sun", "RangeSlv", "LoDog", "Carrier carrier", "Pl copy 1")] == \
+                [37.0, 37.0, 9.25, 9.25, -18.5], (case, mode)
+    for case, step in (("4", "after the changed Update"), ("8", "after the quiet Update in 4L")):
+        back = _s7_step(data, case, step)["expressed"]
+        assert all(abs(back[m][b][0]) < 1e-9 for m in S7_MODES for b in S7_TRAIN), (case, step)
+    update = next(c for c in data["cases"] if c["case"] == "8")["update"]
+    assert update["put_in"] == ["2H", "4H", "N", "4L"] and update["failures"] == []
+    # the rerun of case 8: the fresh turn in all four again, then the moving put in 2H stayed there
+    fresh = _s7_step(rerun, "8", "fresh drive +37 in 2H")["judgement"]
+    assert all(r["state"] == {m: "moved" for m in S7_MODES} for r in fresh["bodies"].values())
+    assert fresh["fits"] == ["shared"]
+    put = _s7_step(rerun, "8", "moving put in 2H, the train back to its built frames")["judgement"]
+    assert put["kind"] == "put" and put["moved_bodies"] == S7_TRAIN and "shared" in put["rules_out"]
+    assert all(r["state"] == {m: ("moved" if m == "2H" else "still") for m in S7_MODES} for r in put["bodies"].values())
+    reopens = [s for d in (data, rerun) for c in d["cases"] for s in c["steps"] if "same_as_before_save" in s]
+    assert len(reopens) == 7 and all(s["same_as_before_save"] is True for s in reopens)
+
+
+def test_s7_on_2024_read_every_turn_in_every_configuration_so_the_2024_turn_finding_is_false():
+    """W8 s7 on SolidWorks 2024 32.5.0 (snapshot 1560b25; probe/results/sw2024/w8-workbook-assembly-20261115-162357-
+    s7.log, whose one FAIL is case 8's put, its expectation since corrected; the case-8 rerun at 8702389, 0 failed)."""
+    _s7_2024_holds(json.loads(W8_S7_2024.read_text(encoding="utf-8")),
+                   json.loads(W8_S7_2024_CASE8.read_text(encoding="utf-8")))
+    assert findings.TURN_PER_CONFIGURATION_ON_2024 is False
+
+
+@pytest.mark.parametrize("doctor", ["a turn not reaching N", "case 8's fresh turn not reaching 4H",
+                                    "the case-8 put reaching 4L", "case 4's Update leaving the train turned"])
+def test_the_2024_s7_pins_fail_on_a_doctored_copy(doctor):
+    import copy
+    data = copy.deepcopy(json.loads(W8_S7_2024.read_text(encoding="utf-8")))
+    rerun = copy.deepcopy(json.loads(W8_S7_2024_CASE8.read_text(encoding="utf-8")))
+    if doctor == "a turn not reaching N":
+        _s7_step(data, "2", "drive +37 in 2H")["judgement"]["bodies"]["LoDog"]["state"]["N"] = "still"
+    elif doctor == "case 8's fresh turn not reaching 4H":
+        _s7_step(data, "8", "fresh drive +37 in 2H")["judgement"]["bodies"]["Sun"]["state"]["4H"] = "still"
+    elif doctor == "the case-8 put reaching 4L":
+        step = _s7_step(rerun, "8", "moving put in 2H, the train back to its built frames")
+        step["judgement"]["bodies"]["Sun"]["state"]["4L"] = "moved"
+    else:
+        _s7_step(data, "4", "after the changed Update")["expressed"]["4H"]["RangeSlv"][0] = 37.0
+    with pytest.raises(AssertionError):
+        _s7_2024_holds(data, rerun)
+
+
 def test_the_w8_gates_open_on_both_versions_from_these_findings():
     """The worker's per-version refusal reads these findings by the revision; the sentence switch reads the turn
-    finding: on 2026 a turn can show in other modes, on 2024 neither claim is made until it is measured."""
+    finding: on 2026 and on 2024 a turn can show in other modes (False); a version with no finding of its own makes
+    neither claim."""
     from gear_generator import swbuild, swcom
     assert swbuild._modes_version_refusal((34, 1, 1)) is None and swbuild._modes_version_refusal((32, 5, 0)) is None
     assert swcom.positions_per_configuration((34, 1, 1)) is False
-    assert swcom.positions_per_configuration((32, 5, 0)) is None
+    assert swcom.positions_per_configuration((32, 5, 0)) is False
+    assert swcom.positions_per_configuration((33, 0, 0)) is None
     assert swbuild._settled(swbuild.MODES_FINDINGS) is None
 
 

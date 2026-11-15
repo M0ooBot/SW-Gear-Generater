@@ -1272,13 +1272,20 @@ POSITIONS_PER_CONFIGURATION_ON_2024 = True
 # open. s7 case 4's Update moved only the front train, so a turn "after the app's own Update" rests there on no-op
 # puts of the driven train. A further s7 case (a turn, an Update putting every mode, a turn, a moving put, every
 # configuration read after each) is to measure it. The sentences say "can show in other modes" for that reason.
+# On 2024 (32.5.0, W8 s7 on that host; probe/results/sw2024/w8-s7-20261115-162418.json and its log
+# w8-workbook-assembly-20261115-162357-s7.log) every turn of the train s7 gave read "moved" in all four
+# configurations, by the same amount, "shared" among the fits and "per_configuration" ruled out: on copies no Update
+# had moved (cases 1-3); after the app's changed Update had put the turned train back in every mode (case 4); and after
+# the app's quiet Update in 4L had put every mode (case 8, and its rerun, …-172046-s7-case8.log and
+# w8-s7-20261115-172104-case8.json, 0 failed).
+# LoDog then stood +9.25° against RangeSlv's +37° in 4L, where they are coupled: the dog across its sleeve the
+# sentences warn of. So TURN_PER_CONFIGURATION_ON_2024 is False too.
 # Read by swcom.positions_per_configuration for the sentences about a turn (ui_text.turning_note, switching_note,
-# TURN_SHOWN_ELSEWHERE, GEARS_SHOWN_ELSEWHERE, and _mode_after's two); no behaviour reads it.
-# Not covered: a turn given while the configurations already stand differently; a drag in the user interface (s6);
-# 34.1.1; 2024, where the confirming run's s2 and s7 set TURN_PER_CONFIGURATION_ON_2024 and until then neither claim
-# is made.
+# TURN_SHOWN_ELSEWHERE, GEARS_SHOWN_ELSEWHERE, and _mode_after's two); no behaviour reads it. A version with no
+# finding of its own (None) makes neither claim.
+# Not covered: a drag in the user interface (s6); 34.1.1.
 TURN_PER_CONFIGURATION_ON_2026 = False
-TURN_PER_CONFIGURATION_ON_2024 = None
+TURN_PER_CONFIGURATION_ON_2024 = False
 
 # -- W7's follow-up: putting a turned planetary back (probe planetary_put_back, tier 10, SolidWorks 2026 34.1.1) -----
 #
