@@ -224,3 +224,12 @@ binding on A, B and C from now; where one names a line number it is the line at 
     matches `…\r10`.
 11. **The `NotImplementedError` stubs are temporary.** A's and B's real bodies raise sentences: a `BuildError`
     before anything is made.
+12. **The angle range is per class of mesh** (the tier 9 review's must-fix, 2026-11-14). Tier 9 ran axes that meet at
+    own-axis angles 30, 60, 90, 120 and 150°, and axes that pass each other (skew) only at 60, 90 and 120°. The one
+    tuple `TURNED_GEAR_MATE_SENSE_ANGLES = (30.0, 150.0)` therefore lets a crossed mesh through at 40° or 140°,
+    which was never run. Ruling: `TURNED_GEAR_MATE_SENSE_ANGLES` covers axes that meet (a BEVEL mesh) and a new
+    finding `TURNED_GEAR_MATE_SENSE_ANGLES_SKEW = (60.0, 120.0)` covers axes that do not (a CROSSED mesh); the
+    probe agent adds it to `findings.py`, `decide.py` and the pins from the committed results, with no rerun. Both
+    gates (`swcom.turned_refusal`, A's; `motion.turned_refusal`, B's) take the mesh's class and read the finding
+    for it, refusing with a full sentence when that finding is missing or the angle is outside it. A mesh whose
+    axes are neither parallel, meeting nor of the CROSSED kind is refused.
