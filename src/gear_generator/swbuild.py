@@ -4143,8 +4143,9 @@ def _modes_assembly(sw: SolidWorks, result: GearboxUpdate, assembly: str, placem
     post-checked (frames, sliders at their values after the show, its mates on and off, gears free to turn) and its
     interference read, into a :class:`ModeCheck`. After the last mode, every per-mode mate's flag is read in every
     configuration and held against the record (:func:`_modes_flags_after`). With nothing to change, only the active
-    mode is judged, from where it stands, and nothing is shown, unless it is put there: then every other mode is shown
-    and handled as on a changed Update, the active one last (J13, W8-INTERFACES §9.18). Whatever happens, the
+    mode is judged, from where it stands, and nothing is shown, unless something is to be put there: then it is a
+    changed Update, every mode shown and every train put whole to its built frames, the active one last (J13, W5's
+    answer 2, W8-INTERFACES §9.18). Whatever happens, the
     configuration that was active is shown again at the end; one that cannot be is said, naming the configuration
     left active."""
     file, stem = _file(assembly), _stem(assembly)
@@ -4209,28 +4210,32 @@ def _modes_assembly(sw: SolidWorks, result: GearboxUpdate, assembly: str, placem
         found_here: Optional[ModeCheck] = None
         if not (moved or fixes):
             # Nothing the workbook or the record changes: only the active mode is judged, where it stands, and
-            # nothing is shown (J25); put back only if out of step there (W5's answer 2). A put there has changed
-            # something, so from there on this is a changed Update (J13, §1.10: "all of them when anything
-            # changed"): every other mode is shown and handled below as any changed Update handles it (put only
-            # where its own train needs it, J26), the active mode last, its judgement on showing kept in its
-            # ModeCheck, then every per-mode flag read in every configuration.
+            # nothing is shown (J25). Nothing to put there: done, nothing shown or marked. Something to put there
+            # (W5's answer 2: Update returns a turned train to its built turn whenever it has to move any gear): from
+            # here this is a changed Update (J13, §1.10) and is done as one, every mode shown and every train put
+            # whole to its built frames, the active mode last, then every per-mode flag read in every configuration.
+            # SolidWorks 2026 was seen (W8 s2, twice) to keep a put in the configuration it was made in while a turn
+            # given before any put showed in the others, so a mode not put could be left turned and fail its
+            # post-check against the built frames. Its judgement on showing is kept in its ModeCheck.
             found_here = ModeCheck(active_mode)
-            _modes_put(sw, result, motion, active_mode, active, placements, mated, wanted_in(active_mode), handle,
-                       mate_handle, route, rebuild, file, touched, moved=False, check=found_here)
-            if not result.put_in:
+            if not _modes_put(sw, result, motion, active_mode, active, placements, mated, wanted_in(active_mode),
+                              handle, mate_handle, route, rebuild, file, touched, moved=False, check=found_here,
+                              judge_only=True):
                 return
+            moved = True
         order = [m for m in motion.configurations if m != active_mode] + [active_mode]
         for index, mode in enumerate(order, 1):
             say(Step(STAGE_MODE, mode, index, len(order)))
             sw.show_configuration(names[mode])
             shown[0] = names[mode]
             rebuild()
-            check = found_here if found_here is not None and mode == active_mode else ModeCheck(mode)
+            judged = found_here is not None and mode == active_mode      # already judged where it stood
+            check = found_here if judged else ModeCheck(mode)
             result.modes.append(check)
             if mode != active_mode:
                 result.visited.append(names[mode])
             _modes_put(sw, result, motion, mode, names[mode], placements, mated, wanted_in(mode), handle,
-                       mate_handle, route, rebuild, file, touched, moved=moved, check=check)
+                       mate_handle, route, rebuild, file, touched, moved=moved, check=None if judged else check)
             _modes_post_check(sw, result, motion, mode, names[mode], placements, mated, wanted_in(mode), handle,
                               mate_handle, gear_of_handle, check, file, state.read)
             if getattr(findings, "INTERFERENCE_CHECKED", False):
@@ -4297,13 +4302,14 @@ def _modes_put(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, mode
                placements: Sequence[Placement], mated: Sequence[str], wanted: Mapping[str, Frame9],
                handle: Mapping[str, str], mate_handle: Mapping[str, str], route: Optional[str],
                rebuild: Callable[[], None], file: str, touched: List[bool], *, moved: bool,
-               check: Optional[ModeCheck]) -> None:
+               check: Optional[ModeCheck], judge_only: bool = False) -> bool:
     """One mode's puts, with it shown (or, on a quiet Update, the active one judged where it stands): every frame
     read through fresh handles; the trains — joined over EVERY mode's relations, so the same set is right if
     positions turn out shared (§1.9, J26) — each judged with this mode's links; one put whole when the workbook
     ``moved`` it or it is out of step here, its lock mates off in this configuration around the puts; fixed gears
     W4's way; a rebuild after. The judgement found on showing is the ``check``'s ``off_axis``, ``out_of_step`` and
-    ``turned`` (§9.14)."""
+    ``turned`` (§9.14). Returns whether anything was put; with ``judge_only``, whether anything would be, and
+    nothing is put or rebuilt."""
     live = {p.gear: sw.component_frame(handle[p.gear]) for p in placements}
     pitch = {p.gear: p.pitch for p in placements}
     held = [g for g in motion.held if g in wanted]
@@ -4330,6 +4336,9 @@ def _modes_put(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, mode
         needed = moved or (bool(here.off_axis) if lone else not here.in_step)
         if not needed:
             continue
+        if judge_only:
+            put_any = True
+            continue
         lock_mates = _real_locks(motion, [lock for lock in locks_here
                                           if lock.anchor in train and lock.follower in train])
         on_here = [m.name for m in motion.mates if m.kind in GEAR_MATE_KINDS and on_in(_on_set(motion, m), mode)]
@@ -4343,6 +4352,9 @@ def _modes_put(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, mode
         if gear in mated or gear not in wanted or same_frame(live[gear][0], live[gear][1], wanted[gear][0],
                                                              wanted[gear][1], placement.pitch):
             continue
+        if judge_only:
+            put_any = True
+            continue
         touched[0] = True
         if unfix:
             sw.unfix_component(handle[gear])
@@ -4351,9 +4363,12 @@ def _modes_put(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, mode
         if unfix:
             sw.fix_component(handle[gear])
         put_any = True
+    if judge_only:
+        return put_any
     if put_any:
         rebuild()
         result.put_in.append(configuration)
+    return put_any
 
 
 def _modes_post_check(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, mode: str, configuration: str,

@@ -290,6 +290,12 @@ class FakeSolidWorks:
         self.unsettled = 0             # flag calls left misbehaving after an add, until the next rebuild
         self.new_mate_elsewhere = "suppressed"   # or "on": a mate made outside the template's configuration
         self.shared_positions = False  # True: one set of frames for every configuration (GOTCHAS §83, made up here)
+        # None: as above. A set (the configurations put in so far, empty to start): a put made in a configuration
+        # stays in that configuration, while a turn given before any put there (turn, drive) shows in every
+        # configuration not yet put in. Read twice on SolidWorks 2026 34.0.0 (W8 s2: probe/results/
+        # w8-workbook-assembly-20261115-111951-s2-turn-carried-per-body.log and …-132348-s2-put-kept-per-
+        # configuration.log) and not yet probed; modelled only as far as the fault it pins.
+        self.put_splits = None
         self.clashes_in = {}           # configuration -> what interferences() returns there
         # configuration -> {mate name: (code, warning)} read by mate_states while that configuration is active, and
         # nowhere else (tier 11, SolidWorks 2026: two slides on in one configuration each read code 47, warning False,
@@ -597,6 +603,8 @@ class FakeSolidWorks:
             put = (_mul(put[0], _rot_z(-6.2)), put[1])
         if any(m.kind == "lock" and not m.suppressed and name in (m.a[0], m.b[0]) for m in self.mates):
             self.locked_puts.append(name)          # held, its partner left where it was, nothing reported
+        if self.put_splits is not None:
+            self.put_splits.add(self.config)       # from now on this configuration keeps its own places
         self.frames[handle] = put
         self.frames[name] = put
         if handle in self.found:
@@ -801,7 +809,25 @@ class FakeSolidWorks:
     def turn(self, name, degrees):
         """A component turned about its own axis (``R · rot_z``), as a drag in SolidWorks would leave it."""
         rotation, at = self.frames[name]
-        self.frames[name] = (_mul(rotation, _rot_z(degrees)), at)
+        self._moved_by_hand({name: (_mul(rotation, _rot_z(degrees)), at)})
+
+    def _moved_by_hand(self, new):
+        """Bodies moved by a turn (not a put) in the active configuration; with ``put_splits`` set and the active
+        configuration not yet put in, the same motion of each body is given to it in every other configuration not
+        yet put in (each keeps its own slide place: the motion is the body's, about its own axis or its carrier's)."""
+        if self.put_splits is not None and self.config not in self.put_splits:
+            for config, frames in self.frames_by.items():
+                if config == self.config or config in self.put_splits:
+                    continue
+                for body, (r1, p1) in new.items():
+                    if body not in frames or body not in self.frames:
+                        continue
+                    r0, p0 = self.frames[body]
+                    move = _mul(r1, tuple(r0[j * 3 + i] for i in range(3) for j in range(3)))
+                    shift = tuple(a - b for a, b in zip(p1, _apply(move, p0)))
+                    q_r, q_p = frames[body]
+                    frames[body] = (_mul(move, q_r), tuple(a + b for a, b in zip(_apply(move, q_p), shift)))
+        self.frames.update(new)
 
     def _values_of(self, path):
         from gear_generator.gears.equations import evaluate_all
@@ -1379,7 +1405,7 @@ class FakeSolidWorks:
             else:
                 rotation, at = self.frames[body]
                 new[body] = (_mul(rotation, _rot_z(turn)), at)
-        self.frames.update(new)
+        self._moved_by_hand(new)
         return turns
 
 
@@ -6556,7 +6582,7 @@ def test_a_build_with_modes_on_2026_says_a_turn_shows_in_every_mode_from_the_fin
 
 
 def test_a_quiet_update_that_puts_on_2026_says_so_from_the_finding_as_committed(mode_findings, monkeypatch):
-    """The same for an Update: the fake's shared variant, a turn in 4L seen in 2H, put there and every mode visited
+    """The same for an Update: the fake's shared variant, a turn in 4L seen in 2H, so every mode shown and put
     (§9.18). Hard-wiring True into the Update's result fails here."""
     monkeypatch.setattr(findings, "INTERFERENCE_CHECKED", True, raising=False)
     fake = FakeSolidWorks()
@@ -6568,12 +6594,12 @@ def test_a_quiet_update_that_puts_on_2026_says_so_from_the_finding_as_committed(
         fake.turn(gear, 30.0)
     fake.show_configuration("2H")
     done = _tc_update(fake, built)
-    assert done.ok and done.positions_per_configuration is False and done.put_in == ["2H"], done.log_lines()
+    assert done.ok and done.positions_per_configuration is False, done.log_lines()
+    assert done.put_in == ["4H", "N", "4L", "2H"]
     assert _status_sentences(built, done) == [          # the crossed coupling said once, in the per-mode form
         "In 2H, RangeSlv's teeth stood across InDog's; the gears of 2H are back at the turn they were built at.",
         "This version of SolidWorks shows a turn given in one mode in every mode, so the turn may have been given "
         "in another.",
-        "The gears of 4H, N and 4L stood at the turn they were built at when Update SolidWorks showed them.",
         "It worked in 2H, the configuration that was active, then showed and checked 4H, N and 4L and left the "
         "assembly in 2H."]
 
@@ -6599,17 +6625,17 @@ def test_a_turn_in_another_mode_is_unseen_by_a_quiet_update_or_if_shared_put_bac
         assert done.put_in == [] and done.turned is False and done.out_of_step == []
         assert not [n for n, _ in fake.calls if n in ("place_component", "rebuild", "set_mate_suppressed_in")]
     else:
-        # Shared positions: the turn is seen in 2H, where InDog (not turned) is coupled to RangeSlv: out of step,
-        # put back in 2H. That put changed something, so (J13, §1.10, since the review of W8 s2) every other mode is
-        # then shown and checked as a changed Update does, 2H last and left active. The 2H put brought every mode
-        # back to the built turn, so none of the others needs a put.
-        assert done.out_of_step == [("RangeSlv", "InDog")] and done.put_in == ["2H"]
+        # Shared positions: the turn is seen in 2H, where InDog (not turned) is coupled to RangeSlv: out of step.
+        # Something to put, so (W5's answer 2, J13, §1.10, ruling 9.18 after W8 s2's rerun) it is a changed Update:
+        # every mode shown and every train put whole to its built frames, 2H last and left active. 4H is found
+        # crossed too on showing (the shared turn), N and 4L not.
+        assert done.out_of_step == [("RangeSlv", "InDog")] and done.put_in == ["4H", "N", "4L", "2H"]
         assert _shown(fake) == ["4H", "N", "4L", "2H"] and done.visited == ["4H", "N", "4L"]
         assert [(c.name, c.out_of_step, c.off_axis) for c in done.modes] == [
-            ("4H", [], []), ("N", [], []), ("4L", [], []), ("2H", [("RangeSlv", "InDog")], [])]
+            ("4H", [("RangeSlv", "InDog")], []), ("N", [], []), ("4L", [], []), ("2H", [("RangeSlv", "InDog")], [])]
         puts = [(n, a[0]) for n, a in fake.calls if n in ("show_configuration", "place_component")]
-        assert puts == [("place_component", f"placed{i}") for i in range(1, 6)] + [
-            ("show_configuration", m) for m in ("4H", "N", "4L", "2H")]
+        assert puts == [x for m in ("4H", "N", "4L", "2H")
+                        for x in [("show_configuration", m)] + [("place_component", f"placed{i}") for i in range(1, 6)]]
         assert fake.config == "2H" and done.failures == []
         assert _mode_sentences(built, done) == [
             "In 2H, RangeSlv's teeth stood across InDog's; the gears of 2H are back at the turn they were built at.",
@@ -6618,18 +6644,19 @@ def test_a_turn_in_another_mode_is_unseen_by_a_quiet_update_or_if_shared_put_bac
 
 
 def test_a_put_in_the_active_mode_on_a_quiet_update_visits_every_other_mode_and_reads_every_flag_after(tc_built):
-    """J13, §1.10: an Update with nothing changed in the workbook that finds the active mode out of step and puts it
-    has changed something, so it shows and checks every other mode, the active one last, and then reads every
-    per-mode flag in every configuration. On either reading of positions: here the two sleeves are turned in 2H
-    without the gears they engage."""
+    """J13, §1.10, W5's answer 2: an Update with nothing changed in the workbook that finds the active mode out of
+    step has something to put, so it is a changed Update: every mode shown and every train put whole, the active one
+    last, and then every per-mode flag read in every configuration. On either reading of positions: here the two
+    sleeves are turned in 2H without the gears they engage."""
     fake, built = tc_built
     for gear in ("gear7-1", "gear8-1"):                            # RangeSlv and ModeSlv, splined: out of step with
         fake.turn(gear, 30.0)                                      # InDog in 2H
     fake.calls.clear()
     done = _tc_update(fake, built)
     assert done.ok, done.log_lines()
-    assert done.put_in == ["2H"] and done.out_of_step == [("RangeSlv", "InDog")]
+    assert done.put_in == ["4H", "N", "4L", "2H"] and done.out_of_step == [("RangeSlv", "InDog")]
     assert _shown(fake) == ["4H", "N", "4L", "2H"] and done.visited == ["4H", "N", "4L"] and fake.config == "2H"
+    assert sum(1 for n, _ in fake.calls if n == "place_component") == 4 * 5     # every train, every mode
     assert [c.name for c in done.modes] == ["4H", "N", "4L", "2H"]
     assert done.modes[-1].out_of_step == [("RangeSlv", "InDog")]  # found in 2H before its put
     last_put = max(i for i, (n, _) in enumerate(fake.calls) if n == "place_component")

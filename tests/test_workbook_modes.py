@@ -1059,6 +1059,45 @@ def test_e4_put_suppresses_and_restores_in_the_configuration_shown_alone_by_the_
                if n == "mate_suppression" and len(a[1]) == 4)
 
 
+def test_e4_a_turn_in_2h_then_an_update_in_4l_puts_every_mode_back_where_a_put_stays_in_its_configuration(
+        mode_findings):
+    """W8 s2's rerun on SolidWorks 2026 (…-132348-s2-put-kept-per-configuration.log): the train turned 37° in 2H,
+    shown in every mode; Update pressed in 4L found 4L's couplings across and put the train there, but the put stayed
+    in 4L, so 2H and N, in step at the turn and not put, failed their post-check against the built frames. Once a
+    quiet Update has something to put it is a changed Update (W5's answer 2): every mode shown and every train put
+    whole, 4L last. The fake's put_splits is what SolidWorks was seen to do there (twice, not yet probed)."""
+    sw, _, record = build_on_fake(e4_transfer_case())
+    sw.put_splits = set()
+    sun = next(c.name for c in record.gearbox.components if c.gear == "Sun")
+    sw.drive(sun, 37.0)                                            # in 2H, before any put: shows in every mode
+    sw.show_configuration("4L")
+    sw.calls.clear()
+    up, result = press_e4(sw, record, e4_transfer_case())
+    assert result.failures == [], result.failures
+    assert [a[0] for n, a in sw.calls if n == "show_configuration"] == ["2H", "4H", "N", "4L"]
+    assert result.put_in == ["2H", "4H", "N", "4L"] and result.visited == ["2H", "4H", "N"] and sw.config == "4L"
+    assert sum(1 for n, _ in sw.calls if n == "place_component") == 52             # 13 bodies in each of 4 modes
+    assert [c.name for c in result.modes] == ["2H", "4H", "N", "4L"]
+    assert result.modes[-1].out_of_step == [("RangeSlv", "LoDog"), ("ModeSlv", "FrontDog")]   # 4L, before its put
+    kwargs = up.update_kwargs()
+    base = {p.component: (p.rotation, p.at) for p in kwargs["placements"]}
+    gear_of = {p.component: p.gear for p in kwargs["placements"]}
+    by_mode = {mode: {p.gear: (p.rotation, p.at) for p in frames} for mode, frames in kwargs["motion"].mode_placements}
+    for mode in ("2H", "4H", "N", "4L"):
+        sw.show_configuration(mode)
+        for component, frame in base.items():
+            want = by_mode.get(mode, {}).get(gear_of[component], frame)
+            got = sw.frames[component]
+            assert swbuild.same_frame(got[0], got[1], want[0], want[1]), (mode, component)
+    assert ui_text.gearbox_update_status(up, result) == (
+        "Updated SolidWorks: re-placed Carrier (the carrier), Sun, Pl (3 copies), InDog, LoDog, RangeSlv, FrontDog, "
+        "ModeSlv, FDrive, FIdler and FOut in every mode; no interference between the gears in any mode, where they "
+        "stand. In 4L, RangeSlv's teeth stood across LoDog's. In 4L, ModeSlv's teeth stood across FrontDog's; the "
+        "gears of 4L are back at the turn they were built at. It worked in 4L, the configuration that was active, "
+        "then showed and checked 2H, 4H and N and left the assembly in 4L. Save TransferCase_E4 in SolidWorks to "
+        "keep it.", True)
+
+
 def test_e4_a_flag_a_put_changes_in_a_mode_already_checked_is_a_failure_naming_the_mate_and_the_mode(mode_findings):
     """Point 1 (a): each mode's post-check reads only the configuration shown, so a put that changed a flag in a mode
     checked before it would go unseen; the read of every per-mode mate in every configuration after the last mode
