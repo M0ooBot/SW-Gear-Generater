@@ -2610,6 +2610,41 @@ def test_on_2026_a_built_gearbox_with_modes_says_a_turn_shows_in_every_mode_and_
     assert label.winfo_reqwidth() <= int(str(label.cget("wraplength"))) + px(4)      # wrapped, not widening
 
 
+def test_on_2026_a_quiet_update_that_finds_the_gears_turned_in_step_warns_of_the_other_modes(desk, mode_findings,
+                                                                                            monkeypatch):
+    """W8-INTERFACES §9.18 (the review of its commits, point 1) through the window, on the fake's shared variant with
+    the turn finding as committed (2026: a turn shows in every mode): the 2H train turned 37°, in step in 2H, and
+    Update pressed there puts nothing and shows no other mode. The footer shows its status alone, so the status says
+    another mode may stand with a dog across its sleeve; it is shown whole, and the window keeps its 1080 px."""
+    from gear_generator import workbook_gui
+    from gear_generator.theme import px
+    from workbook_fixtures import transfer_case_parallel
+    monkeypatch.setattr(findings, "TURN_PER_CONFIGURATION_ON_2026", False)
+    desk.sw.shared_positions = True
+    window = desk.open(transfer_case_parallel(), name="TransferCase_Parallel.xlsx")
+    window.press_build()
+    desk.finish(window)
+    # The 2H train turned 37° on In, in step: Lay at -1/2, Lo at +1/4 (17 : 34 twice), Rear coupled to In by InDog.
+    for gear, k in {"InPin": 1, "InDog": 1, "LayGear": -0.5, "LayPin": -0.5, "LoGear": 0.25, "LoDog": 0.25,
+                    "RangeSlv": 1, "ModeSlv": 1}.items():
+        desk.sw.turn(name2(window, gear), 37.0 * k)
+    window.press_update()
+    desk.finish(window)
+    assert window.status.get() == (
+        "SolidWorks already matches the workbook: nothing was changed. The gears stand where they were turned in "
+        "SolidWorks. This version of SolidWorks shows that turn in every mode, so a dog may stand across its sleeve "
+        "in another mode; to put the gears back there, press Update SolidWorks with that mode showing. It worked in "
+        "2H, the configuration that was active; it did not show the other modes, since nothing in 2H needed "
+        "changing.")
+    width, height = width_and_height(window)
+    assert width == px(workbook_gui.WINDOW_WIDTH) and window.winfo_reqwidth() <= px(workbook_gui.WINDOW_WIDTH)
+    assert height == window.winfo_reqheight()
+    window.update_idletasks()
+    label = window.status_label
+    assert (label.winfo_width(), label.winfo_height()) == (label.winfo_reqwidth(), label.winfo_reqheight())
+    assert label.winfo_reqwidth() <= int(str(label.cget("wraplength"))) + px(4)      # wrapped, not widening
+
+
 QUIET_UPDATE_WITH_MODES = ("SolidWorks already matches the workbook: nothing was changed. It worked in 2H, the "
                            "configuration that was active; it did not show the other modes, since nothing in 2H "
                            "needed changing.")
