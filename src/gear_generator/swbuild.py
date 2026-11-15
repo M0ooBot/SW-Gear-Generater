@@ -3210,6 +3210,11 @@ class GearboxUpdate:
     extra_configurations: List[str] = field(default_factory=list)
     modes: List[ModeCheck] = field(default_factory=list)
     positions_per_configuration: Optional[bool] = None
+    # W8-INTERFACES §9.16: the recorded gear mates (meshes, couplings, splines) of a gearbox with modes whose sense no
+    # read reached in this Update — in a quiet one, those off in the active configuration while a suppressed gear
+    # mate's sense is not read (findings.SUPPRESSED_GEAR_MATE_SENSE_READ), and every one while the read-back is not
+    # settled — by name, in the record's order; empty when every sense was read, and for a gearbox with no modes.
+    senses_unread: List[str] = field(default_factory=list)
 
     @property
     def ok(self) -> bool:
@@ -3321,6 +3326,9 @@ class GearboxUpdate:
         if self.extra_configurations:
             lines.append("CHECK   configurations Gear Generator did not make, left as they are: "
                          + ", ".join(self.extra_configurations))
+        if self.senses_unread:
+            lines.append("CHECK   which way these gear mates turn was not read, since no mode shown had them on: "
+                         + ", ".join(self.senses_unread))
         return lines
 
 
@@ -3877,7 +3885,7 @@ def _not_whole(turn: float, pitch: float) -> bool:
 # -- W8: Update SolidWorks across configurations (W8-PLAN §1.10)
 
 MODES_UPDATE_FINDINGS = (("FEATURE_SUPPRESS", _SET), ("FEATURE_UNSUPPRESS", _SET), ("MATE_FIND_ROUTE", "mate group"),
-                         ("CONFIGURATION_SHOW_RAISES_DIALOG", False))
+                         ("CONFIGURATION_SHOW_RAISES_DIALOG", False), ("COLLINEAR_GEAR_MATE_SENSE_READ_BACK", True))
 
 
 @dataclass
@@ -3891,6 +3899,36 @@ class _ModesState:
     flags: List[Tuple[str, str, bool]] = field(default_factory=list)      # (mate, configuration, suppress)
     values: List[Tuple[str, str, float, bool]] = field(default_factory=list)   # (slide, configuration, mm, an edit)
     off_here: List[str] = field(default_factory=list)
+    read: set = field(default_factory=set)                                   # gear mates whose sense was read
+
+
+def _suppressed_readable() -> bool:
+    """Whether a suppressed gear mate's sense may be read (``findings.SUPPRESSED_GEAR_MATE_SENSE_READ``: it answers
+    and marks nothing). Until then a gear mate off in the configuration shown is read only in a mode that has it on."""
+    return getattr(findings, "SUPPRESSED_GEAR_MATE_SENSE_READ", None) == "answers, marks nothing"
+
+
+def _gear_mate_same(motion: MotionUpdate, mate: MateRef) -> bool:
+    """Whether a recorded gear mate turns its two gears the same way about their own axes, as now wanted: a SPLINE
+    always (§9.3); a COUPLE or a MESH by its ``MeshLink``'s ``k``. A coupling or mesh with no link is a fault in the
+    record, refused with a sentence."""
+    if mate.kind == "spline":
+        return True
+    link = next((m for m in motion.meshes if {m.a, m.b} == set(mate.gears)), None)
+    if link is None:
+        raise BuildError(f"Update SolidWorks was given the gear mate {mate.name} on record with no mesh between "
+                         f"{mate.gears[0]} and {mate.gears[1]} to say which way it turns them, so nothing is changed; "
+                         "that is a fault in Gear Generator, not in SolidWorks.")
+    return link.k > 0
+
+
+def _senses_readable() -> bool:
+    """Whether a gear mate's sense may be read in an Update: the read-back settled and the check-phase findings
+    (:data:`SENSE_CHECK_FINDINGS`), as W6's loop requires."""
+    return _sense_settled() and _settled(SENSE_CHECK_FINDINGS) is None
+
+
+GEAR_MATE_KINDS = ("mesh", "couple", "spline")
 
 
 def _update_modes_gate(motion: Optional[MotionUpdate], revision: Sequence[int] = ()) -> None:
@@ -4008,21 +4046,21 @@ def _modes_check(sw: SolidWorks, assembly: str, motion: MotionUpdate, result: Ge
 def _modes_senses(sw: SolidWorks, assembly: str, motion: MotionUpdate, state: _ModesState,
                   mate_handle: Mapping[str, str], axes: Mapping[str, Vec3], origins: Mapping[str, Vec3]) -> None:
     """Every coupling's and spline's sense read in the check phase (§1.10; §9.3: a SPLINE the same way, a COUPLE by
-    its ``k``). One off in the active configuration is read only while ``findings.SUPPRESSED_GEAR_MATE_SENSE_READ``
-    says a suppressed gear mate answers and marks nothing. One read wrong refuses the Update before anything
-    changes: making a gear mate of a gearbox with modes again is not written yet."""
-    readable = getattr(findings, "SUPPRESSED_GEAR_MATE_SENSE_READ", None) == "answers, marks nothing"
+    its ``k``), when the read-back and the check-phase findings are settled (:func:`_senses_readable`). One off in
+    the active configuration is read only while :func:`_suppressed_readable`; otherwise a mode shown with it on reads
+    it (:func:`_modes_post_check`), and one never read is listed in ``senses_unread`` (W8-INTERFACES §9.16). One read
+    wrong refuses the Update before anything changes: making a gear mate of a gearbox with modes again is not
+    written yet."""
+    if not _senses_readable():
+        return
     for mate in motion.mates:
         if mate.kind not in ("couple", "spline") or len(mate.gears) != 2:
             continue
-        if mate.name in state.off_here and not readable:
+        same = _gear_mate_same(motion, mate)
+        if mate.name in state.off_here and not _suppressed_readable():
             continue
         ga, gb = mate.gears
-        if mate.kind == "spline":
-            same = True
-        else:
-            link = next((m for m in motion.meshes if {m.a, m.b} == {ga, gb}), None)
-            same = link is None or link.k > 0
+        state.read.add(mate.name)
         if not _sense_read(sw, mate_handle[mate.name], mate.name, same, axes[ga], axes[gb], ga, gb, BuildError,
                            (origins[ga], origins[gb])):
             raise BuildError(f"The gear mate {mate.name} in {_file(assembly)} turns its gears against each other, and "
@@ -4120,7 +4158,7 @@ def _modes_assembly(sw: SolidWorks, result: GearboxUpdate, assembly: str, placem
                        mate_handle, route, rebuild, file, touched, moved=False, check=None)
             if result.put_in:
                 _modes_post_check(sw, result, motion, active_mode, active, placements, mated, wanted_in(active_mode),
-                                  handle, mate_handle, gear_of_handle, ModeCheck(active_mode), file)
+                                  handle, mate_handle, gear_of_handle, ModeCheck(active_mode), file, state.read)
             return
         order = [m for m in motion.configurations if m != active_mode] + [active_mode]
         for index, mode in enumerate(order, 1):
@@ -4135,7 +4173,7 @@ def _modes_assembly(sw: SolidWorks, result: GearboxUpdate, assembly: str, placem
             _modes_put(sw, result, motion, mode, names[mode], placements, mated, wanted_in(mode), handle,
                        mate_handle, route, rebuild, file, touched, moved=moved, check=check)
             _modes_post_check(sw, result, motion, mode, names[mode], placements, mated, wanted_in(mode), handle,
-                              mate_handle, gear_of_handle, check, file)
+                              mate_handle, gear_of_handle, check, file, state.read)
             if getattr(findings, "INTERFERENCE_CHECKED", False):
                 gear_of = {p.component: p.gear for p in placements}
                 try:
@@ -4146,13 +4184,22 @@ def _modes_assembly(sw: SolidWorks, result: GearboxUpdate, assembly: str, placem
             result.clashes = list(result.modes[-1].clashes)
             result.interference_error = result.modes[-1].interference_error
     finally:
-        if shown[0] != active:
+        # Which configuration is active is read, never assumed from the last show asked for: a show whose read-back
+        # raised may still have switched.
+        try:
+            now = str(sw.active_configuration())
+        except Exception:  # noqa: BLE001 - unread: show the one that was active again all the same
+            now = ""
+        if not on_in((active,), now):
             try:
                 sw.show_configuration(active)
-                shown[0] = active
                 sw.rebuild(kind=ASSEMBLY_TRAIN)
             except Exception as exc:  # noqa: BLE001 - said: which configuration is left active
-                result.failures.append((file, f"Update SolidWorks could not show {active} again, so {shown[0]} is left "
+                try:
+                    left = str(sw.active_configuration())
+                except Exception:  # noqa: BLE001
+                    left = now or "another configuration"
+                result.failures.append((file, f"Update SolidWorks could not show {active} again, so {left} is left "
                                               f"active in SolidWorks ({_said(exc)})"))
         placed = list(dict.fromkeys(result.placed))
         result.placed[:] = placed
@@ -4195,7 +4242,7 @@ def _modes_put(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, mode
         needed = moved or (bool(here.off_axis) if lone else not here.in_step)
         if not needed:
             continue
-        lock_mates = _real_locks(motion, [lock for lock in motion.locks
+        lock_mates = _real_locks(motion, [lock for lock in locks_here
                                           if lock.anchor in train and lock.follower in train])
         _put_train(sw, result, motion, train, lock_mates, [], handle, mate_handle, wanted, rebuild, file, touched,
                    held=held_here, carriers=[link.carrier for link in links], live=live, pitch=pitch, route=route)
@@ -4222,7 +4269,8 @@ def _modes_put(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, mode
 def _modes_post_check(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, mode: str, configuration: str,
                       placements: Sequence[Placement], mated: Sequence[str], wanted: Mapping[str, Frame9],
                       handle: Mapping[str, str], mate_handle: Mapping[str, str],
-                      gear_of_handle: Mapping[str, str], check: ModeCheck, file: str) -> None:
+                      gear_of_handle: Mapping[str, str], check: ModeCheck, file: str,
+                      state_read: Optional[set] = None) -> None:
     """A mode shown, post-checked through fresh handles: every gear's origin where this mode wants it (a slider
     read back after the show, so a put on a slider that its slide does not take back is said, as SolidWorks has not
     shown what it does), each train in step with this mode's links, every recorded mate on here present,
@@ -4264,6 +4312,25 @@ def _modes_post_check(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdat
         if mate.kind == "slide":
             check.values[mate.name] = sw.dimension_values(mate_handle[mate.name], [configuration])[configuration]
     problems += _free_to_turn(sw, [handle[g] for g in mated], lambda h: gear_of_handle.get(h, h))
+    # W8-INTERFACES §9.16: every gear mate on in this mode read for sense, through fresh handles; a wrong one is a
+    # problem naming it and the mode, never a remake (remaking a gear mate of a gearbox with modes is refused).
+    if _senses_readable():
+        frames = {p.gear: (p.rotation, wanted.get(p.gear, (p.rotation, p.at))[1]) for p in placements}
+        for mate in motion.mates:
+            if mate.kind not in GEAR_MATE_KINDS or len(mate.gears) != 2 or not on_in(_on_set(motion, mate), mode):
+                continue
+            ga, gb = mate.gears
+            axis_a, axis_b = _axis_of(frames[ga][0]), _axis_of(frames[gb][0])
+            try:
+                right = _sense_read(sw, mate_handle[mate.name], mate.name, _gear_mate_same(motion, mate), axis_a,
+                                    axis_b, ga, gb, SolidWorksError, (frames[ga][1], frames[gb][1]))
+            except SolidWorksError as exc:
+                problems.append(str(exc))
+                continue
+            if state_read is not None:
+                state_read.add(mate.name)
+            if not right:
+                problems.append(f"The gear mate {mate.name} turns its gears against the way they mesh.")
     for problem in problems:
         result.failures.append((file, _in_mode(mode, problem)))
 
@@ -4462,12 +4529,14 @@ def _update_motion(sw: SolidWorks, parts: Sequence[DocumentValues], layout: Opti
             for index, mate in enumerate(motion.mates, 1):
                 if mate.name not in wanted_teeth or mate.name in resensed:
                     continue
-                if modes_state is not None and mate.name in modes_state.off_here:
-                    continue                          # a sliding mesh off in this mode, as its record has it
+                if modes_state is not None and mate.name in modes_state.off_here and not _suppressed_readable():
+                    continue                          # a sliding mesh off in this mode: read when a mode shows it on
                 if mate.name in suppressed:
                     deferred.append(mate.name)
                     continue
                 ga, gb = mate.gears
+                if modes_state is not None:
+                    modes_state.read.add(mate.name)
                 if not _sense_read(sw, f"mate{index}", mate.name, senses.get(mate.name, False), axes[ga], axes[gb],
                                    ga, gb, BuildError, (origins[ga], origins[gb])):
                     if ratio_route != "remake":
@@ -4494,6 +4563,9 @@ def _update_motion(sw: SolidWorks, parts: Sequence[DocumentValues], layout: Opti
                              f"(findings.GEAR_MATE_RATIO_ROUTE is {ratio_route!r}), so nothing is changed; unsuppress "
                              f"{name} in SolidWorks and press Update SolidWorks again.")
         if modes_state is not None:
+            for mate in motion.mates:
+                if mate.kind in GEAR_MATE_KINDS and mate.kind != "mesh" and len(mate.gears) == 2:
+                    _gear_mate_same(motion, mate)          # a coupling with no link is a fault, refused now
             _modes_senses(sw, assembly, motion, modes_state,
                           {m.name: f"mate{i}" for i, m in enumerate(motion.mates, 1)}, axes, origins)
             if remakes or deferred or resensed:
@@ -4581,6 +4653,9 @@ def _update_motion(sw: SolidWorks, parts: Sequence[DocumentValues], layout: Opti
                 or result.unsuppressed_in or result.suppressed_in or result.slid or result.values_restored) \
                 and assembly not in result.changed:
             result.changed.append(assembly)
+        if modes_state is not None:          # W8-INTERFACES §9.16: what no read reached, for C to say
+            result.senses_unread = [m.name for m in motion.mates
+                                    if m.kind in GEAR_MATE_KINDS and m.name not in modes_state.read]
     return result
 
 

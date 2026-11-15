@@ -6496,3 +6496,77 @@ def test_a_slider_off_its_place_in_a_mode_is_named_as_the_workbook_spells_it(mod
     fake = FakeSolidWorks()
     fake, result, _, _ = _tc_build(fake, modes=replace(_tc_modes(), steps=tuple(steps)))
     assert result.mate_problems == ["In mode 2H, RangeSlv stands at (0, 0, 46) where the mode places it at (0, 0, 66)."]
+
+
+# -- W8-INTERFACES §9.16: every gear mate's sense read in some mode, or said unread
+
+def test_a_quiet_update_lists_the_senses_it_could_not_read_without_a_show(tc_built):
+    fake, built = tc_built
+    done = _tc_update(fake, built)
+    assert done.ok, done.log_lines()
+    assert done.senses_unread == ["ModeSlv engages FrontDog", "RangeSlv engages LoDog"]   # off in 2H, the record's order
+    assert ("CHECK   which way these gear mates turn was not read, since no mode shown had them on: "
+            "ModeSlv engages FrontDog, RangeSlv engages LoDog") in done.log_lines()
+
+
+def test_with_suppressed_senses_readable_a_quiet_update_reads_every_sense(tc_built, monkeypatch):
+    monkeypatch.setattr(findings, "SUPPRESSED_GEAR_MATE_SENSE_READ", "answers, marks nothing", raising=False)
+    fake, built = tc_built
+    done = _tc_update(fake, built)
+    assert done.ok and done.senses_unread == [] and _shown(fake) == []
+    read = [a[0] for n, a in fake.calls if n == "gear_mate_sense"]
+    assert {_handle_of(built, n) for n in ("ModeSlv engages FrontDog", "RangeSlv engages LoDog")} <= set(read)
+
+
+def test_an_update_that_shows_every_mode_reads_every_sense_there(tc_built):
+    fake, built = tc_built
+    fake.mate("ModeSlv engages FrontDog").flags["4H"] = True        # off where the record has it on: D10 in 4H
+    done = _tc_update(fake, built)
+    assert done.ok and done.senses_unread == [], done.log_lines()
+
+
+def test_a_sense_read_wrong_in_a_mode_shown_is_a_failure_naming_the_mate_and_the_mode(tc_built):
+    fake, built = tc_built
+    fake.never_right = {"RangeSlv engages LoDog"}
+    fake.mate("ModeSlv engages FrontDog").flags["4H"] = True
+    done = _tc_update(fake, built)
+    assert (TC_ASM.rsplit("\\", 1)[-1], "In mode 4L, the gear mate RangeSlv engages LoDog turns its gears against the "
+                                       "way they mesh.") in done.failures
+    assert "remake_gear_mate" not in names(fake) and fake.config == "2H"
+
+
+def test_a_coupling_on_record_with_no_mesh_is_a_fault_refused_before_anything_changes(tc_built):
+    fake, built = tc_built
+    motion, placements = _tc_motion(built)
+    motion = replace(motion, meshes=motion.meshes[1:], recorded_meshes=motion.recorded_meshes[1:])
+    with pytest.raises(swbuild.BuildError) as raised:
+        swbuild.update_gearbox(fake, assembly=TC_ASM, placements=placements, motion=motion, exists=fake.exists,
+                               mtime=lambda _p: 0.0)
+    assert str(raised.value) == ("Update SolidWorks was given the gear mate RangeSlv engages InDog on record with no "
+                                 "mesh between RangeSlv and InDog to say which way it turns them, so nothing is "
+                                 "changed; that is a fault in Gear Generator, not in SolidWorks.")
+    assert not [n for n, _ in fake.calls if n.startswith("set_") or n == "show_configuration"]
+
+
+def test_a_show_that_switches_and_then_raises_still_ends_in_the_configuration_that_was_active(tc_built):
+    fake, built = tc_built
+    fake.mate("ModeSlv engages FrontDog").flags["4H"] = True
+    show = fake.show_configuration
+
+    def switch_then_raise(name):
+        show(name)
+        if name == "N":
+            raise SolidWorksError("SolidWorks would not show the configuration N.")
+    fake.show_configuration = switch_then_raise
+    done = _tc_update(fake, built)
+    assert not done.ok and fake.config == "2H"
+    assert _shown(fake)[-1] == "2H"
+
+
+def test_an_update_with_modes_needs_the_collinear_read_back_settled(mode_findings, monkeypatch):
+    monkeypatch.setattr(findings, "COLLINEAR_GEAR_MATE_SENSE_READ_BACK", None, raising=False)
+    with pytest.raises(swbuild.BuildError) as raised:
+        swbuild._update_modes_gate(replace(_W7, configurations=("2H",)), (34, 0, 0))
+    assert str(raised.value) == ("Update SolidWorks on a gearbox with modes needs findings."
+                                 "COLLINEAR_GEAR_MATE_SENSE_READ_BACK settled on SolidWorks (it is None), so nothing "
+                                 "was read or changed.")
