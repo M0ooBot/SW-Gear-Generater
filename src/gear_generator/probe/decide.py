@@ -370,6 +370,36 @@ def remake_under_command_in_progress(records: Records) -> Optional[bool]:
     return all(cip_remake_same(c["on"], c["off"]) for c in cases.values())
 
 
+def _turned_cases(records: Records) -> Optional[Dict[str, Any]]:
+    if not _passed(records, "turned_gear_mate_sense"):
+        return None
+    facts = (records.get("turned_gear_mate_sense") or {}).get("facts") or {}
+    if not facts.get("turned_sense_cases"):
+        return None
+    return facts
+
+
+def turned_sense_read_back(records: Records) -> Optional[str]:
+    """W6-PLAN §7.2: "entity senses" when H tells all 40 turned mates and the 4 controls agree with W5's rule (or the
+    alternative reading that tells them all); None otherwise or when the probe did not pass. Recomputed from the
+    recorded cases by the probe's own pure judgement."""
+    facts = _turned_cases(records)
+    if facts is None:
+        return None
+    from .p9_turned import read_back_verdict  # noqa: PLC0415 - pure
+    return read_back_verdict(facts["turned_sense_cases"], facts.get("turned_sense_reopened") or [])["value"]
+
+
+def turned_sense_angles(records: Records) -> Optional[tuple]:
+    """The least and greatest angle between the own axes over which every turned case held."""
+    facts = _turned_cases(records)
+    if facts is None:
+        return None
+    from .p9_turned import angles_verdict  # noqa: PLC0415 - pure
+    angles = angles_verdict(facts["turned_sense_cases"], turned_sense_read_back(records))
+    return tuple(angles) if angles else None
+
+
 def decide(records: Records) -> Dict[str, Any]:
     recipe = flank_recipe(records)
     units = _fact(records, "document_units", "default_template_is_mm")
@@ -531,5 +561,9 @@ def decide(records: Records) -> Dict[str, Any]:
                                                      "cross_version_read_back_tells_sense"),
         "cross_version_closed_unsaved_unchanged": _fact(records, "ring_trains_from_another_version",
                                                         "cross_version_closed_unsaved_unchanged"),
+        "turned_sense_read_back": turned_sense_read_back(records),
+        "turned_sense_angles": turned_sense_angles(records),
+        "turned_gear_mate_moves_on_make": _fact(records, "turned_gear_mate_sense", "turned_gear_mate_moves_on_make"),
+        "gear_mate_entity_order": _fact(records, "turned_gear_mate_sense", "gear_mate_entity_order"),
         "manual_steps": manual_steps(records, recipe),
     }

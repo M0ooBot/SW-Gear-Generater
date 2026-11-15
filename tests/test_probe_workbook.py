@@ -71,8 +71,8 @@ def test_only_tier_selects_the_tier_and_stops_before_solidworks(monkeypatch, cap
     monkeypatch.setattr(swcom, "is_available", lambda: False)
     monkeypatch.setattr(swcom, "unavailable_reason", lambda: "not here")
     assert probe_main.main(["--only-tier", "7"]) == swcom.EXIT_NOT_AVAILABLE
-    assert probe_main.main(["--only-tier", "9"]) == probe_main.EXIT_FINDINGS
-    assert "no probes in tier 9" in capsys.readouterr().out
+    assert probe_main.main(["--only-tier", "99"]) == probe_main.EXIT_FINDINGS     # tier 9 is W6's probe now
+    assert "no probes in tier 99" in capsys.readouterr().out
 
 
 # -- pure measurements --------------------------------------------------------
