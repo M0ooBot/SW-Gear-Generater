@@ -351,6 +351,20 @@ plane is linked to the global as `- "S2 X"`. Components are not renamed: the rec
 `Name2` SolidWorks gave it (`Gear_m1.5_N68-1`), and they are found again by that. A revision's files are
 `<Name>_r<n>_Layout.SLDPRT` beside `<Name>_r<n>.SLDASM`.
 
+*Turned axes (W6, 2026-11-14; `notes-workbook/W6-PLAN.md` §2.1–§2.2 and §2.6, decisions D3–D5b):* the paragraph
+above left X, Y and slanted axes to W6, and W6 lays them out without an angled plane. A shaft along X± or Y± is
+built as W4 builds a Z± one, turned: the axis through two planes offset from the two base planes parallel to it,
+each driven by a global for a non-zero coordinate (*S1 along X+ at z 60*: the Top plane and `"S1 Z Plane"`, `"S1 Z"`
+= 60 from Front), so a move along either of them is an Update and a coordinate that reaches, leaves or changes side
+of 0 is structural, as in W4. A **slanted** shaft (any `"dx, dy, dz"` Axis) is a fixed line: a 3D sketch,
+`"S3 Line"`, through its point along its direction, and `"S3 Axis"` along that line, with no globals, so any change
+of its point or direction is structural. The line is read back from SolidWorks: Update refuses, with a sentence,
+when it finds one moved, and a build that would reuse the layout part makes it new instead. Retyping the same direction in another form is no change. Each shaft's anchor is
+held along it from the base plane square to it (Right for X, Top for Y, Front for Z; for a slant the nearest, ties
+taken Right, Top, Front), by a global named for the coordinate it sets, `"<Gear> Face X"`, `"… Face Y"` or `"… Face
+Z"`, and `"<Gear> Apex …"` for a bevel gear, whose At is its pitch apex (D2). No datum plane is added (W5's answer
+3), so an anchor's edit that takes its origin onto, off or across that plane needs Build again….
+
 ### 4.3 The static assembly (phase W4)
 
 `<Name>.SLDASM`: the layout part inserted and fixed at the origin; each gear inserted, `Place`d at its face centre
@@ -461,6 +475,43 @@ again… for a new revision whose gears turn, never forcing it. **A recorded mat
 on** by Update, and said; a suppressed mate the app did not make is left alone and named, and an unsuppressed one
 refuses the Update until it is suppressed. A gearbox is built static only when a W5 finding is missing at
 planning, and the window says so before Build.
+
+*Readings chosen (W6, 2026-11-14; `notes-workbook/W6-PLAN.md` §3 as revised after its review, and the rulings in
+`W6-INTERFACES.md` §7):* taken at the plan's default while the user is away, and to be put to the user as readings to
+overrule — D1, D4 and D16 first.
+
+- **D1 — a gear faces its shaft's Axis**, its own +Z along it, whatever its partner; two bevel gears on one shaft
+  therefore cannot face apart.
+- **D2 — a bevel gear's At is its pitch apex**, the part's origin and the point two bevels share.
+- **D3 — a cardinal turned axis** is two offset planes from the base planes square to it, with globals as W4's
+  (§4.2's note).
+- **D4 — a slanted axis** is a fixed 3D-sketch line; any change of it is structural. If the full build shows the line
+  failing, slanted axes are refused in W6 with *"S3's axis slants: the app checks it and works out its speeds, but
+  builds axes along X, Y or Z only so far."*, and that goes to the user.
+- **D5 — an anchor along a turned shaft** is measured from the base plane square to it (the nearest for a slant); no
+  datum plane. **D5b** — the global names the coordinate: `"<Gear> Face X/Y/Z"`, `"<Gear> Apex …"` for a bevel.
+- **D6 — the turned gear mate's sense was probed first** (tier 9, `turned_gear_mate_sense`, on SolidWorks 2026),
+  while the packages were written; the full build confirms its finding with real teeth. Findings come from committed
+  `findings.py` only.
+- **D7 — speeds** are solved about each shaft's own axis, with a sign per mesh from its geometry; a parallel
+  gearbox's speeds are unchanged.
+- **D8 — clearance across non-parallel shafts** is a warning, from the true bounding cylinders of the gears and the
+  spans of the shafts (a bevel's partner shaft exempt); the build's interference check is exact.
+- **D9 — a bevel gear's mate teeth and shaft angle** come from its Meshes row and the two axes, one mate per gear; a
+  bevel gear listed with two different mates or angles is an error.
+- **D10 — no fix** for a bevel apex or a crossed centre distance off: the sentence gives the number.
+- **D11 — crossed meshes** are helical, external and unshifted, as the strip's crossed pair is.
+- **D12 — "seen from"**: each shaft's speed is said about its own axis, seen from the + end of its family (`+X`, or a
+  slant's plus direction, the one whose first non-zero component is positive).
+- **D13 — schema 4** for every record W6 writes; a sense of 0 on a parallel mesh stays legal (§7.1 of the rulings).
+- **D14 — a bevel gear's form change** (cone, crown, internal) is structural.
+- **D15 — the window gets no new control**: its Speeds lines, header and end view say what is new (UI-DESIGN §9).
+- **D16 — a turned mesh is refused before Build**, with a full sentence and Build parts still offered, while the
+  turned finding is missing or the mesh's angle is outside what it covers; there is no static fallback.
+- **D17 — a crossed mesh whose sense changes with a move** is an Update that makes its gear mate again (a
+  remake, W5's route), not a new revision.
+- **D18 — the turned finding covers only the angles probed**: 30°–150° between the own axes for axes that meet
+  (bevel), 60°–120° for axes that pass each other (crossed); other angles are refused (D16).
 
 ## 5. The Workbook window: `workbook_gui.py` (+ `ui_text`)
 

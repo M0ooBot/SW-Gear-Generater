@@ -323,13 +323,14 @@ And where the window differs from the artboards, because Tk would not do it:
   gear B turned Σ, dimensioned `R 67.082 mm · Σ 90°`. A crossed pair is drawn as
   a parallel one with `· Σ 90°` after the centre distance.
 
-## 9. The Workbook window (W2–W5, docs/PLAN-WORKBOOK.md §4.2–§4.5, §5)
+## 9. The Workbook window (W2–W6, docs/PLAN-WORKBOOK.md §4.2–§4.5, §5)
 
 A second window for a whole gearbox written in an `.xlsx` workbook, linked to
 the file: it reads it, checks it, re-reads it on every save, and builds it in
 SolidWorks — its parts, a layout part with an axis per shaft and an assembly
 whose gears are mated so the train turns (W5; *The gearbox that turns*
-below) — then carries later edits of the
+below), shafts along any axis included, with bevel and crossed helical
+meshes across them (W6; *Turned axes* below) — then carries later edits of the
 workbook into what it built (**Update SolidWorks**), or builds the next
 revision beside it (**Build again…**). It is a `Toplevel`, `Workbook —
 Reducer_12to1.xlsx`, sharing the strip's theme, widgets and SolidWorks worker;
@@ -346,7 +347,7 @@ Opening a workbook whose window is already open brings that window forward.
 
 Artboards, each with its render in `design/renders/`: `WorkbookReady` (after
 a save that made G4 wider), `WorkbookError` (a save that broke a cell and added
-a bevel gear), `WorkbookFix` (S2 and S3 typed 0.25 mm on, so G1–G2 is off its
+a bevel gear that meshes nothing, an error since W6), `WorkbookFix` (S2 and S3 typed 0.25 mm on, so G1–G2 is off its
 centres, both fixes offered), `WorkbookChosen` (the move chosen, waiting for
 Export), `WorkbookBuilt` (Build pressed: the build's sentence, the gears
 mated to turn, **Build again…** and **Update SolidWorks**), `WorkbookUpdate`
@@ -367,7 +368,11 @@ for W5, `WorkbookRefused` (SolidWorks flags the lock G3 locked to G2: no
 assembly saved, Build greyed for this read), `WorkbookTurned` (the train
 turned by hand in SolidWorks, then the edit above: Update puts the train back
 at its built turn and says so) and `WorkbookStatic` (a gearbox W4 built
-static, offered a turning revision). `gen.py` draws them from a real workbook written, read and worked
+static, offered a turning revision); for W6, `WorkbookRightAngle` (fixture
+A built: a bevel stage from S1 along X into a parallel stage, S1 a line in the
+end view, the footer naming the gear to drag) and `WorkbookCrossed` (fixture B
+read: a crossed helical stage and a bevel stage at 120° onto a slanted shaft,
+the Speeds panel seen from each shaft's + end). `gen.py` draws them from a real workbook written, read and worked
 through by the app, with the window's own sizes and colours from
 `workbook_gui`, the end view from `preview.layout_gearbox` and every line from
 `ui_text` — the footer is `workbook_footer` whole. The built boards run
@@ -489,12 +494,24 @@ left or up rather than off the screen.
   shaft at the origin has it below left). The origin: X a red arrow and Y a
   green one, 26 px, and a dot. All of where is `preview.layout_gearbox`, headless
   and tested; the window only strokes it. A gearbox this phase does not lay out
-  (a carrier, a turned axis) shows that sentence in grey instead, and no readout.
+  (a carrier) shows that sentence in grey instead, and no readout. Since W6 a
+  gear on a shaft not along Z is drawn as its section seen side-on — a bevel
+  gear's blank in both halves, apex at its At, any other gear the rectangle of
+  its face and outside diameter — projected onto XY at its place, and its shaft
+  is a line through its gears and 12 mm past them, named at its + end on a side
+  that keeps the name on the canvas; a bevel gear on a Z shaft is its heel and
+  toe tip circles. Such a gear's colour is the height of its At point, so a
+  right-angle stage reads as one colour. A gearbox with no turned shaft draws as
+  it did.
 - **Speeds** (readout *seen from +Z*, or *no input*): one mono line per shaft,
   `S2    375.0 rpm clockwise · 39.20 N·m` (`ui_text.workbook_speed_lines`),
   turning as seen from +Z, torque where the power path gives one; *not driven*
   for a shaft nothing reaches. A gearbox a later phase drives gets one grey
-  sentence instead.
+  sentence instead. Once any shaft is off the Z family (W6, D12) the readout is
+  *seen from each shaft's + end* and each line says its end: `S1    1500.0 rpm
+  anticlockwise seen from the +X end · 10.00 N·m`, a slant's `… seen from the
+  (0.5, −0.866, 0) end · 14.41 N·m`; the lines wrap at the end view's width, so
+  the window keeps its own.
 - **Footer.** A dot and one sentence, green when all is well, wrapped in the
   room the dot and the buttons showing leave (never narrower than 400 px), so
   the window keeps its 1080 px with all four buttons and grows taller instead;
@@ -984,6 +1001,36 @@ file); otherwise as text, and each path is read once per planning pass, so an
 offline share holds the window up once, not at every comparison. The Gears
 table shows each part to build under the name the build will give it
 (`plan.part_of`).
+
+### Turned axes: bevel and crossed meshes (W6)
+
+No new control (D15: the window's buttons, panels and menus are W5's, checked
+in `workbook_gui.py`); what is new is read-only. The header's *Worked out as*
+names the train (*Bevel and parallel train · 2 meshes · 6.000 : 1 · output at
+90° to the input*, *Crossed and bevel train · … · 3.000 : 1 · output at 90° to
+the input*); the end view and the Speeds panel are as above; Checks gain W6's
+sentences at their cells (a bevel apex off, bevel gears on parallel shafts, spur
+gears across an angle, a crossed pair whose hands do not make the angle, a
+contact outside a face, a clearance warning across an angle:
+`notes-workbook/W6-PLAN.md` §2.9); and the footer and Update say W6's states:
+
+| State | Sentence | Build button | Update SolidWorks |
+|---|---|---|---|
+| a turned gearbox ready (fixture A) | *Ready: Build makes 4 parts, Bevel_Reducer_Layout and Bevel_Reducer.SLDASM in C:\Parts\Bevel_Reducer. Its gears are mated to their shafts and to each other, so they turn together in SolidWorks.* | **Build**, on | hidden |
+| built and turning | *Built 4 parts, Bevel_Reducer_Layout and Bevel_Reducer.SLDASM; no interference between the gears where they stand. Its gears are mated to turn together, and SolidWorks reports no mate in error: drag G1 in SolidWorks and the rest of its train follow.* | **Build again…**, on | on, primary |
+| a turned mesh the probes have not settled, parts not built (D16) | *Ready: Build parts makes 4 parts in …. G1 and G2 mesh across shafts at 90°, and which way a gear mate turns gears on shafts at an angle is not settled by the probes for this version (findings.TURNED_GEAR_MATE_SENSE_READ_BACK), so the gearbox is not built.* (an angle outside the finding's range has its own sentence) | **Build parts**, on | hidden |
+| … the parts built | *The 4 parts are built already, so Build parts has nothing to make.* and the same refusal | **Build parts**, off | shown |
+| … a gearbox already built (the finding gone since) | the refusal alone, red | **Build again…**, off | shown, off |
+| a crossed shaft moved to the other side (D17), before the press | *Update SolidWorks will move S1 in Crossed_Slant_Layout, remake the gear mate G1 meshes G2 (since S1 now passes S2 on its other side, so G1 and G2 turn the other way against each other), and re-place G1, G2, G3 and G4.* and the line on the gears turning | **Build again…**, on | on, primary |
+| … after it | *Updated SolidWorks: moved S1 in Crossed_Slant_Layout, remade the gear mate G1 meshes G2 (since …), re-placed G1, G2, G3 and G4; no interference between the gears where they stand. Save Crossed_Slant_Layout and Crossed_Slant in SolidWorks to keep them.* | **Build again…**, on | on |
+| the same move with no remake route | *G2 now turns the other way against G1 about its axis, so the gear mate G1 meshes G2 must be made again, and making a gear mate again in a built assembly is not settled by the probes (findings.GEAR_MATE_RATIO_ROUTE), so the gearbox needs building again. Update SolidWorks offers to build again as Crossed_Slant_r2.* | **Build again…**, on | on (asks) |
+
+While the footer offers Build parts for a refused turned mesh, the window plans
+exactly that build (`workbook_gui._turned_refusal`, the footer's rule), so the
+press has something to run. Update's structural sentences for a turned
+gearbox (an Axis word changed, a slanted line moved, an anchor's origin off its
+base plane, a bevel gear's form changed) are B's and are shown as classify
+writes them (W6-PLAN §2.9).
 
 ### The gearbox that turns (W5)
 

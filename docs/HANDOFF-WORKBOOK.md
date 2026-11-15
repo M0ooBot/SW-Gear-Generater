@@ -277,6 +277,79 @@ an idler's tooth change: no fixture has one; the idler was shown by probe P0c).
 - For the next phase's demonstration: build each fixture once and start later sections from a copy (*Rules carried
   over*).
 
+## W6 in detail
+
+*Written 2026-11-14, after packages A–D (A on a small second pass, A's and B's reviews running).* The authority order
+is `PLAN-WORKBOOK.md` → `notes-workbook/W6-PLAN.md` (revised after its review `W6-PLAN-REVIEW.md`, at `eb195d0`; its
+*Changes after the review* section says what moved) → `W6-INTERFACES.md`, whose §7 holds the sixteen rulings on the
+interface review that bind the packages. W5's decisions stay in force.
+
+**What W6 adds.** Shafts along `X±`, `Y±` or any direction; bevel meshes between shafts that meet and crossed
+helical meshes between shafts that pass each other; speeds about each shaft's own axis; the layout part with planes
+for cardinal turned axes and a fixed 3D-sketch line for a slanted one; anchors measured from the base plane square to
+the shaft; gear mates between non-parallel axes, read back by a rule probe tier 9 found; the record's schema 4. The
+decisions D1–D18 are in PLAN-WORKBOOK §4.5 as *Readings chosen (W6)*, and §4.2 has a dated note on turned axes;
+the ones to put to the user first are D1 (one facing per shaft), D4 (if the 3D line fails, slanted axes are refused
+in W6) and D16 (a turned mesh is refused before Build while the finding is missing, with no static fallback).
+
+**Probe tier 9** (package P, `turned_gear_mate_sense`, W6-PLAN §7.2): run first, on SolidWorks 2026, while the
+packages were written (D6). `8f529f6`, `1b9b281`, `c2fbaca`; results `c0483f3`; findings `11ee1e2`
+(`TURNED_GEAR_MATE_SENSE_READ_BACK = "entity senses"`, `TURNED_GEAR_MATE_SENSE_ANGLES = (30.0, 150.0)`) and, after
+the tier 9 review's must-fix, `9ac7d6d` (`TURNED_GEAR_MATE_SENSE_ANGLES_SKEW = (60.0, 120.0)`: axes that pass each
+other were run only at 60°, 90° and 120°). Both gates read the class of the mesh (`swcom.lines_meet`) and its
+range (`swcom.turned_angles`), ruling §7.12–§7.13.
+
+**Interface commit** `34bfb85`, its review's rulings `9d3b43f`, `8200fcb`, `c65cd15`, `92dd04e`, `63c6e65`. The packages:
+
+- **A — SolidWorks** (`swcom.py`, `swbuild.py`, the fake): `11ec034` (`lines_meet`, `turned_angles`), `8b6a080`
+  (the turned sense read by rule H, gated per class), `128aa8e` (build and update turned gear mates against their
+  planned axes; remake a mesh whose sense moved), `ec85d3e`, `377921a` (W5's ring list dropped once planning passes
+  senses), `293fdee` (the fake works a turned mesh's sense out itself; fixture B driven whole). A second pass is in
+  hand.
+- **B — planning** (`workbook/`): `25d677a` (turned layout, own-axis speeds), `59b196f` (check, refuse and plan
+  turned meshes; bevel and turned rows built), `1d14dbd` (the turned refusal asked only with a turned mesh),
+  `efe2709` (classify turned Updates, the resense remake, the slanted lines to the worker), `e3ae0ce` (Results rows
+  for bevel and crossed meshes; *seen from*), `2d660fa` (the move fix in any parallel family's plane), `f38036e`
+  (bevel rows of `plan_parts`), `107c6ea` (a mesh's recorded sense kept on a failed Update).
+- **C — record and sentences** (`store.py`, `ui_text.py`): `c2e48b5` (schema 4's refusals), `7657e62` (sense 0 legal
+  on a parallel mesh, ruling §7.1), `95c1589` (speeds, the turned refusal, the sense remake), `34ed1c8` (W6's
+  structural sentences), `26c6776` (the remake and refusal sentences made true).
+- **D — window, boards, docs**: `f88e331` (five later-phase tests re-pinned to a carrier, a sleeve and a slide, since
+  W6 builds bevel rows and turned axes), `872e596` (the end view draws turned shafts; the window plans Build parts
+  when a turned mesh is refused, which the footer already offered and the press could not run; W6's window tests),
+  `cd1c168` (a turned shaft's name kept on the canvas; the Speeds lines wrap at the end view's width so the window
+  keeps its own), `34e1238` (boards `WorkbookRightAngle` and `WorkbookCrossed`; `WorkbookError` redrawn, its bevel
+  row now an error), and the docs commit after it. The window has no new control (D15), checked from the code: the
+  only changes to `workbook_gui.py` since W5 closed are the end view's lines, the Speeds wrap and the parts-only
+  plan.
+
+**The two fixtures** (W6-PLAN §5), written as specs in `tests/test_workbook_turned.py`, to be committed as Excel
+saves them by E: A, `Bevel_Reducer` (a bevel stage, S1 along X+ into S2, feeding a parallel stage: 6.000 : 1, output at 90°
+to the input); B, `Crossed_Slant` (a crossed helical stage, then a bevel stage at 120° onto the slanted S3: 3.000 :
+1). Their Checks panels, header lines and speeds are pinned by B. In the window both build to turn on the fake; a crossed
+shaft moved to its partner's other side is an Update that remakes the gear mate (D17).
+
+**What the demonstration (package E) still has to show**, on SolidWorks 2026 with the committed findings only and
+then one confirming build on 2024 (W6-PLAN §6, the testing rule of 2026-11-14): both fixtures built end to end,
+fixture A first; each turned gear mate read back and driven, with the interference check after every control drive
+(the right Flip clear, the wrong one clashing: M2); the slanted line axis (`line_axis`, never probed ahead: ruling
+§7.16) built and read back; sections r1–r6 (r1 and r5 the full builds of A and B; from copies of them, `copy_built`
+of W6-INTERFACES §4: r2 a turn by hand then a move along S1 with G2's apex, r3 G1 20 → 21 teeth with the remake on
+the bevel mate, r4 S1's Axis X+ → X− as Build again…, r6 on B a Face Z move, G4 30 → 31 on the 120° mate, the slant
+changed as classify only, and the crossed resense as classify only); and the window check rw. Its expected Speeds
+lines in W6-PLAN §6.1 read *"seen from +X"*; C's sentence, as the window shows it, is *"seen from the +X end"*. Then
+the person's drag of fixture A's input (W6-PLAN §6.1's last paragraph).
+
+**Open:**
+
+- A's second pass and A's and B's reviews are running; a shape may still move slightly.
+- If the full build shows the 3D-sketch line failing, D4 falls back to refusing slanted axes in W6, and that goes to
+  the user.
+- The Speeds line of a shaft seen from an end other than +Z is longer than the end view is wide, and wraps there
+  (`cd1c168`); a shorter wording is C's, if wanted.
+- The end view's readout still names the face heights (`z 5 · z 60`); for a gear on a turned shaft that is the height
+  of its At point (a bevel's apex), which is what colours a right-angle stage as one.
+
 ## Questions waiting for the user
 
 Questions 1 to 5 of 2026-11-14 are answered (`notes-workbook/W5-DECISIONS.md`; PLAN-WORKBOOK §4.5, *Readings chosen
@@ -285,7 +358,8 @@ Questions 1 to 5 of 2026-11-14 are answered (`notes-workbook/W5-DECISIONS.md`; P
 1. **A journaled file on a disconnected drive is treated as gone** — keep that, or hold such entries until the drive
    is back?
 2. ~~Should the Checks panel say, before a build, that a profile-shifted pinion inside a ring clashes at the
-   unshifted centre distance?~~ **Yes** (the user, 2026-11-14); being added to `workbook/checks.py`.
+   unshifted centre distance?~~ **Yes** (the user, 2026-11-14); added in `d3f4dcf` and `9efde87` (the pinion is held
+   to the working centre distance its shifts make, with the outside pair's error and move fix).
 3. Readings the user may overrule: Update SolidWorks does not save; a part keeps its file name after a teeth change;
    one build button; no static option in the window once W5 is in (a gearbox is built static only when a W5 finding
    is missing, and a W4 one stays static until Build again…).

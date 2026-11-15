@@ -4,9 +4,10 @@ Builds parametric spur gears in SolidWorks from a form, and solves gear pairs:
 given a centre distance and a ratio, it finds module and tooth counts that work,
 builds both gears and mates them in an assembly. A whole gearbox written in an
 Excel workbook can be imported, checked and built: its parts, a layout part and
-an assembly whose gears are mated to their shafts and to each other, each
-turning gear left free to turn. That dragging the input turns the whole train
-in SolidWorks is still to be shown on SolidWorks for the app's own build.
+an assembly whose gears are mated to their shafts and to each other, so that
+dragging the input in SolidWorks turns the whole train (shown on SolidWorks
+2026 and 2024 for gearboxes on parallel shafts; for shafts at an angle, still
+to be shown).
 
 The gear it builds is parametric in SolidWorks itself. Its sizes live in the
 Equation Manager as global variables, starting with the ten a person would type
@@ -289,8 +290,8 @@ last few workbooks you opened.
 | Sheet | Holds |
 |---|---|
 | Box | the gearbox's Name, its Output folder (blank: the form's Folder), part and assembly templates, and the pressure angle and efficiency per mesh that blank cells elsewhere take |
-| Shafts | one row per shaft: X, Y and Z of a point on its axis, from the origin; its Axis (`Z+`, `Z-` …); its Role (`input`, `output`, `fixed`); and on an input, its speed in rpm and torque in N·m |
-| Gears | one row per gear: the shaft it is on, how far along the axis its face's middle is (At), and the values the form takes — Kind, Teeth, Module, Face width, Bore, Helix angle, Hand, Profile shift … — a blank cell taking the form's default; and a Part name if you want one |
+| Shafts | one row per shaft: X, Y and Z of a point on its axis, from the origin; its Axis (`Z+`, `Z-`, `X+`, `Y-` …, or a direction `dx, dy, dz`); its Role (`input`, `output`, `fixed`); and on an input, its speed in rpm and torque in N·m |
+| Gears | one row per gear: the shaft it is on, how far along the axis its face's middle is (At; a bevel gear's pitch apex), and the values the form takes — Kind, Teeth, Module, Face width, Bore, Helix angle, Hand, Profile shift … — a blank cell taking the form's default; and a Part name if you want one |
 | Meshes | one row per pair of gears in mesh, and its efficiency |
 | Modes | the positions of sliding gears, one row per mode |
 | Results | written by the app on Export, and never read |
@@ -306,8 +307,10 @@ what changed, cell by cell. Every problem names its cell (*Gears!F3: Teeth must
 be a whole number (got '68.5').*), and every gear says what Build will do with
 it. The window works out what the rows add up to (*Parallel train · 2 meshes ·
 12.000 : 1 · output turns the same way*), draws the gears seen from +Z, each
-turned so its teeth sit in its partner's spaces, and gives each shaft's speed,
-which way it turns and its torque. Nothing reaches SolidWorks until you press
+turned so its teeth sit in its partner's spaces — a gear on a shaft along X, Y
+or a slant as its section seen side-on, its shaft as a line — and gives each
+shaft's speed, which way it turns and its torque (about the shaft's own axis,
+seen from its + end, once any shaft is not along Z). Nothing reaches SolidWorks until you press
 **Build** or **Update SolidWorks**.
 
 **Checks and fixes.** Two gears listed in Meshes must sit where their teeth put
@@ -317,6 +320,28 @@ need it, or keep your positions and profile-shift both gears to meet them
 (*x +0.084550 / +0.084550 → 64.000 exact*). A chosen fix is checked at once
 and can be undone; it is written to the workbook only on **Export**, and Build
 and Update SolidWorks wait until it is, so the workbook and SolidWorks agree.
+A profile-shifted pinion inside a ring is held to the working centre distance
+its shifts make, not the plain one, with the same error and move fix as an
+outside pair (a shifted pinion at the plain distance clashes when built).
+
+**Shafts at an angle (phase W6).** A shaft's Axis may be `X±`, `Y±` or any
+direction. Across an angle, gears on shafts that meet are a bevel pair — each
+bevel gear is cut for its partner's teeth and the angle between the shafts,
+worked out from its Meshes row and the two axes, and the two must meet apex to
+apex (the check gives the At that would put them there) — and gears on shafts
+that pass each other are a crossed helical pair, whose hands and helix angles
+must make the angle the shafts cross at, at the centre distance along their
+common perpendicular. Spur and ring gears mesh only on parallel shafts. A shaft
+along X or Y is laid out from two offset planes, as a Z shaft is, so moving it
+is an Update; a slanted shaft is a fixed line, so any change of it needs Build
+again…. The gear mate between shafts at an angle turns the right way by a rule
+probe tier 9 found on SolidWorks 2026 for the angles it ran (30° to 150°
+between shafts that meet, 60° to 120° between shafts that pass); a mesh outside
+those, or on a SolidWorks whose findings lack the rule, is refused before Build
+with a sentence, and Build parts still makes its parts. Moving a crossed shaft
+to the other side of its partner turns its mesh the other way round, and
+Update makes that gear mate again. Built and tested against the test suite's
+fake SolidWorks; the demonstration on SolidWorks is still to run.
 
 **Export** writes the chosen fixes' cells and a Results sheet — each shaft's
 speed and torque, each mesh's ratio, centres and contact ratio, the overall
@@ -352,10 +377,9 @@ the workbook changes, since the same workbook would make the same mates. It
 then runs SolidWorks' interference detection: *no interference between the
 gears where they stand*, or a check naming the two gears and the volume, and
 says which gear to drag: *drag G1 in SolidWorks and the rest of its train
-follow*. That the train then turns at its ratio was shown by probe tier 8 on a
-train the probe mated the same way; the app's own build has been tested
-against the test suite's fake SolidWorks only, and its demonstration on
-SolidWorks, a person's drag included, is still to run. (When a finding the mates need is missing for the SolidWorks in use,
+follow*. That the app's own build then turns at its ratio, the right way, was
+shown on SolidWorks 2026 and 2024: by a temporary driving mate in the
+demonstration, and by a person dragging the input. (When a finding the mates need is missing for the SolidWorks in use,
 the gears are placed meshed and fixed instead, and the window says so before
 Build. A gearbox built before the gears could be mated stays static, and
 Build again… offers a new revision whose gears turn.) A part
@@ -469,20 +493,15 @@ The W4 demonstration (`probe/workbook_assembly_check.py`, `probe/workbook_window
 
 What is not built yet:
 
-- **Motion (phase W5) on SolidWorks.** Build mates the gears and Update
-  carries edits into a turning gearbox, built and tested against the test
-  suite's fake SolidWorks; the demonstration on SolidWorks 2026 and 2024 (the
-  build, the driven proof, Update on a train turned by hand, and a person
-  dragging the input) is still to run.
+- **Shafts at an angle (phase W6) on SolidWorks**: the demonstration of the two
+  right-angle fixtures is still to run.
 - Rows a later phase builds are read, and refused with the phase that builds
-  them: bevel gears and turned axes (any Axis but `Z+` or `Z-`) phase W6,
-  shafts mounted on a carrier and their copies phase W7, sleeves, dog rings,
-  sliding gears and modes phase W8. Each is listed under Checks at its cell.
-  While one is there the button reads **Build parts**: a bevel gear's,
-  sleeve's or dog ring's part is not built, the other gears' parts are (a
-  planet's or a sliding gear's included), and the layout part and assembly
-  wait for its phase — a carrier or a turned axis stops the gearbox checks and
-  speeds altogether. Build parts has run on SolidWorks 2024 and 2026: the
+  them: shafts mounted on a carrier and their copies phase W7, sleeves, dog
+  rings, sliding gears and modes phase W8. Each is listed under Checks at its
+  cell. While one is there the button reads **Build parts**: a sleeve's or dog
+  ring's part is not built, the other gears' parts are (a planet's or a
+  sliding gear's included), and the layout part and assembly wait for its
+  phase — a carrier stops the gearbox checks and speeds altogether. Build parts has run on SolidWorks 2024 and 2026: the
   12 : 1 reducer's four parts built, each part's `.gear.json` variables matched
   the same gear built from the form, and a second build was refused rather
   than overwrite them (logs in `probe/results/`).
