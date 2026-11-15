@@ -573,3 +573,32 @@ def test_the_results_sheet_gives_each_turned_mesh_its_own_figures_and_each_shaft
     assert g1.module == 2 and sheet.rows[7][:2] == ["G3–G4", 1.5] and sheet.rows[7][6:] == [120.0, 38.188131, 0.0]
     assert sheet.note.endswith("The efficiency typed for a crossed helical mesh is the workbook's: a crossed pair "
                                "slides along its teeth, and its real efficiency is far lower.")
+
+
+# -- the move fix in any parallel family (W6-PLAN §4.2) ---------------------------------------------------------
+
+def _pair_on(axis, point):
+    return GearboxSpec(
+        box=Box(name="Pair", pressure_angle="20", efficiency="98"),
+        shafts=(Shaft("S1", "frame", "0", "0", "0", axis, "input", "", "1000", "5"),
+                Shaft("S2", "frame", *point, axis, "output")),
+        gears=(Gear("G1", "S1", "5", "spur", "external", "20", "2", "", "10", "8"),
+               Gear("G2", "S2", "5", "spur", "external", "40", "2", "", "10", "8")),
+        meshes=(Mesh("G1", "G2"),))
+
+
+@pytest.mark.parametrize("axis, point, cells, detail, edits", [
+    ("X+", ("0", "30", "40"), "Y and Z", "S2 Y 30 → 36, Z 40 → 48", (("y", "36"), ("z", "48"))),
+    ("Y-", ("30", "0", "40"), "X and Z", "S2 X 30 → 36, Z 40 → 48", (("x", "36"), ("z", "48"))),
+    ("-1, 1.732050807569, 0", ("0", "0", "50"), "X, Y and Z", "S2 Z 50 → 60", (("z", "60"),)),
+])
+def test_the_move_fix_lies_in_the_familys_plane_and_writes_that_familys_cells(axis, point, cells, detail, edits):
+    from gear_generator.workbook import fixes
+    a = direct(_pair_on(axis, point))
+    (error,) = [d.message for d in a.diagnostics if d.level == "error"]
+    assert error.endswith(f"their teeth make 60 (−10 mm). Check the {cells} of S1 and S2 (Shafts rows 0 and 0); a "
+                          "shaft at an angle is best placed by formula.")
+    (move,) = [f for fx in a.report.fixes.values() for f in fx if f.title.startswith("Move")]
+    assert (move.title, move.detail) == ("Move S2 by 10 mm", detail)
+    assert [(e.key, e.value) for e in move.edits] == list(edits)
+    assert [d for d in direct(fixes.apply(a.spec, move)).diagnostics if d.level == "error"] == []

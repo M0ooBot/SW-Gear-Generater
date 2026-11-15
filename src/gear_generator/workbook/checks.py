@@ -120,6 +120,14 @@ def check(spec: GearboxSpec, skip_gears=()) -> Report:
     return report
 
 
+def _plane_cells(gear: geometry.Placed) -> str:
+    """The Shafts cells that place a shaft in its family's plane (W6): ``X and Y`` for the Z family, ``Y and Z`` for
+    X, ``X and Z`` for Y, all three for a slant."""
+    plus = tuple(float(v) for v in getattr(gear, "family", (0.0, 0.0, 1.0)))
+    return {(1.0, 0.0, 0.0): "Y and Z", (0.0, 1.0, 0.0): "X and Z", (0.0, 0.0, 1.0): "X and Y"}.get(plus,
+                                                                                                  "X, Y and Z")
+
+
 def _check_mesh(report: Report, spec: GearboxSpec, mesh, a: Placed, b: Placed, where: str) -> None:
     gears = {g.id: g for g in spec.gears}
     ga, gb = gears[a.gear], gears[b.gear]
@@ -218,7 +226,7 @@ def _check_mesh(report: Report, spec: GearboxSpec, mesh, a: Placed, b: Placed, w
         shafts = {s.id: s for s in spec.shafts}
         off_error = Diagnostic(
             ERROR, f"{where}: {a.gear} and {b.gear} are {_n(placed_at)} apart; their teeth make {_n(needed)} "
-                   f"({'+' if off > 0 else '−'}{_n(abs(off))} mm). Check the X and Y of {a.shaft} and {b.shaft} "
+                   f"({'+' if off > 0 else '−'}{_n(abs(off))} mm). Check the {_plane_cells(a)} of {a.shaft} and {b.shaft} "
                    f"(Shafts rows {shafts[a.shaft].row} and {shafts[b.shaft].row}); a shaft at an angle is "
                    "best placed by formula.", where)
         report.diagnostics.append(off_error)

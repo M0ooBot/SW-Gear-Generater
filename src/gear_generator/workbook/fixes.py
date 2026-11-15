@@ -23,7 +23,7 @@ from typing import Dict, List, Optional, Set, Tuple
 
 from ..gears import pair as pairs
 from ..gears.spur import undercut_teeth
-from .geometry import Placed, centre_distance
+from .geometry import Placed, base_frame, centre_distance
 from .model import GearboxSpec
 from .xlsx import number_text
 
@@ -121,7 +121,22 @@ def move_fix(spec: GearboxSpec, a: Placed, b: Placed, required: float) -> Option
     shafts = {s.id: s for s in spec.shafts}
     edits: List[Edit] = []
     moves: List[str] = []
-    for shaft_id in sorted(moving, key=lambda s: shafts[s].row):
+    plus = tuple(float(v) for v in getattr(near, "family", (0.0, 0.0, 1.0)))
+    if plus != (0.0, 0.0, 1.0):
+        # W6: the move lies in the family's plane (x, y of its plus frame) and is written as the world vector it is,
+        # to the coordinate cells it changes (an X shaft's Y and Z); every shaft beyond moves by the same vector.
+        f = base_frame(plus)
+        delta = tuple(f[3 * i] * dx + f[3 * i + 1] * dy for i in range(3))
+        for shaft_id in sorted(moving, key=lambda s: shafts[s].row):
+            shaft = shafts[shaft_id]
+            said = []
+            for key, old, d in zip("xyz", (shaft.x, shaft.y, shaft.z), delta):
+                if abs(d) > 1e-12:
+                    new = float(old or 0) + d
+                    edits.append(Edit("Shafts", shaft_id, key, _text(new)))
+                    said.append(f"{key.upper()} {_text(float(old or 0), 3)} → {_text(new, 3)}")
+            moves.append(f"{shaft_id} {', '.join(said)}")
+    for shaft_id in sorted(moving, key=lambda s: shafts[s].row) if plus == (0.0, 0.0, 1.0) else ():
         shaft = shafts[shaft_id]
         x, y = float(shaft.x) + dx, float(shaft.y) + dy
         if abs(dx) > 1e-12:
