@@ -2658,3 +2658,35 @@ def test_the_workers_turned_refusals_are_shown_as_whole_sentences_with_no_solidw
         assert text.endswith(".") and text[0].isupper() and "  " not in text
         for word in ("Flip", "Reverse", "entit", "EntityParams", "AddMate"):
             assert word not in text
+
+
+# -- the Gears table's Part column (package D's finding on fixture B) ------------------------------------------------
+
+
+def test_a_part_name_longer_than_the_column_is_shortened_in_the_middle_keeping_its_last_suffix():
+    assert ui_text.PART_CHARS == 18
+    assert ui_text.part_cell("Bevel_m2.5_N20_M30_S120") == "Bevel_m2.5_N…_S120"
+    assert ui_text.part_cell("Bevel_m2.5_N30_M20_S120") == "Bevel_m2.5_N…_S120"
+    at_limit = "Helical_m2_N20_45R"                                   # 18: as it is
+    assert len(at_limit) == 18 and ui_text.part_cell(at_limit) == at_limit
+    one_over = "Helical_m2_N20_45RX"                                  # 19
+    assert ui_text.part_cell(one_over) == "Helical_m2_N…_45RX"
+    assert ui_text.part_cell("Bevel_m2.5_N20_M30_S120_r2") == "Bevel_m2.5_N20…_r2"
+    # No suffix to keep, or one too long to leave a head: the middle goes, head and tail kept.
+    assert ui_text.part_cell("ABCDEFGHIJKLMNOPQRSTUVWXYZ") == "ABCDEFGHI…STUVWXYZ"
+    assert ui_text.part_cell("a_" + "b" * 30) == "a_bbbbbbb…bbbbbbbb"
+    for name in ("Bevel_m2.5_N20_M30_S120", one_over, "x" * 40, "a_" + "b" * 30):
+        assert len(ui_text.part_cell(name)) == 18
+    assert ui_text.part_cell("") == "" and ui_text.part_cell("Gear_m1.5_N17_r2") == "Gear_m1.5_N17_r2"
+
+
+def test_fixture_bs_rows_keep_their_suffix_and_the_12_to_1s_are_unchanged(ready, tmp_path):
+    from test_workbook_turned import crossed_slant
+    (tmp_path / "b").mkdir()
+    read, diagnostics = model.from_book(xlsx.read(write(tmp_path / "b", crossed_slant())))
+    b = assess.assess(read, diagnostics, "C:\\Parts\\Crossed_Slant")
+    rows = ui_text.workbook_gear_rows(b.spec, b.parts, b.diagnostics)
+    assert [r[6] for r in rows] == ["Helical_m2_N20_45R", "Helical_m2_N40_45R", "Bevel_m2.5_N…_S120",
+                                    "Bevel_m2.5_N…_S120"]
+    twelve = ui_text.workbook_gear_rows(ready.spec, ready.parts, ready.diagnostics)
+    assert [r[6] for r in twelve] == list(STEMS)

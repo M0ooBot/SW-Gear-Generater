@@ -766,11 +766,33 @@ GEAR_STATE_BUILDS, GEAR_STATE_SHARES, GEAR_STATE_LATER, GEAR_STATE_ERROR = "buil
 GEAR_STATE_BUILT, GEAR_STATE_CHANGES, GEAR_STATE_NEW_PART = "built", "changes", "new part"
 
 
+PART_CHARS = 18
+# The characters the Gears table's Part column holds at the window's design width (workbook_gui.LEFT_WIDTH 610 less
+# the fixed columns, TABLE_WIDTHS, in the table's 11.5 px mono): the longest names the boards show whole, fixture
+# B's "Helical_m2_N20_45R", are 18. A longer name is shortened in the middle (:func:`part_cell`); Tk never cuts a
+# label, so it would widen the window, and the board's end-cut hid the suffix that tells a part from its neighbour.
+
+
+def part_cell(name: str, width: int = PART_CHARS) -> str:
+    """``name`` as the Gears table's Part cell shows it: as it is when it fits ``width`` characters, else shortened
+    in the middle with an ellipsis, keeping its head and the whole last ``_`` suffix — ``Bevel_m2.5_N20_M30_S120``
+    becomes ``Bevel_m2.5_N…_S120`` — never at the end. Only the table's cell: every sentence names the part whole."""
+    if len(name) <= width:
+        return name
+    head, sep, tail = name.rpartition("_")
+    suffix = sep + tail if head else ""
+    if not suffix or len(suffix) > width - 4:          # no suffix to keep, or one that leaves no head
+        keep = width - 1
+        return name[:keep - keep // 2] + "…" + name[len(name) - keep // 2:]
+    return name[:width - 1 - len(suffix)] + "…" + suffix
+
+
 def workbook_gear_rows(spec, parts, diagnostics: Sequence[Diagnostic], *, record=None,
                        update=None, plan=None) -> List[Tuple[str, ...]]:
     """One row per gear for the window's table: gear, shaft, kind, teeth, module, face, part, state, what.
 
-    ``part`` is the part file's name without ``.SLDPRT`` (every part is one), so the column stays narrow.
+    ``part`` is the part file's name without ``.SLDPRT`` (every part is one), so the column stays narrow, and
+    one longer than the column holds is shortened in the middle (:func:`part_cell`, :data:`PART_CHARS`).
 
     ``parts`` is a :class:`workbook.build.PartsPlan` (it may be empty when the
     workbook has errors); ``diagnostics`` are the per-gear ones, each naming its
@@ -823,7 +845,8 @@ def workbook_gear_rows(spec, parts, diagnostics: Sequence[Diagnostic], *, record
                 state, what = GEAR_STATE_BUILDS, "to build"
         else:
             state, what = GEAR_STATE_ERROR, "see Checks"
-        rows.append((gear.id, gear.shaft, kind, gear.teeth, gear.module, gear.face_width, part, state, what))
+        rows.append((gear.id, gear.shaft, kind, gear.teeth, gear.module, gear.face_width, part_cell(part), state,
+                     what))
     return rows
 
 
