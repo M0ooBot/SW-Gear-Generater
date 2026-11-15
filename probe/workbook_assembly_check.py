@@ -3099,8 +3099,9 @@ def section_a(worker, excel):
     say(f"tag     {ui_text.workbook_built_tag(desk.record, desk.reading.digest)!r}")
     measure_frames(worker, desk, "a updated")
     axes = measure_axes(worker, desk, "a updated")
-    check(abs(axes["S2 Axis"][0][0] - 64.5) < 1e-6 and abs(axes["S3 Axis"][0][0] - 132.5) < 1e-6,
-          "S2 Axis at x 64.5 and S3 Axis at x 132.5")
+    off2 = axis_on_line(axes["S2 Axis"], (64.5, 0.0, 0.0), (0.0, 0.0, 1.0))[0]
+    off3 = axis_on_line(axes["S3 Axis"], (132.5, 0.0, 0.0), (0.0, 0.0, 1.0))[0]
+    check(off2 < 1e-6 and off3 < 1e-6, f"S2 Axis at x 64.5 and S3 Axis at x 132.5 (off {off2:.1e}, {off3:.1e} mm)")
     g1 = next(c for c in desk.record.gearbox.components if c.gear == "G1")
     check(swbuild.same_frame(first["G1"][0], first["G1"][1], g1.rotation, g1.at), "G1 unchanged")
     g2 = next(c for c in desk.record.gearbox.components if c.gear == "G2")
