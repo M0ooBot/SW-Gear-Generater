@@ -34,8 +34,9 @@ from .gears.equations import DEGREES, RADIANS, EquationError, evaluate_all, spli
 from .gears.spur import AXIS_NAME
 from .store import GEARBOX_MOTION, GEARBOX_STATIC, same_path
 from .swcom import (ASSEMBLY_PAIR, ASSEMBLY_STATIC, ASSEMBLY_TRAIN, DOC_ASSEMBLY, MINIMUM_MAJOR,
-                    RESOLVED_ROUTE_FINDING, ComponentGone, DocInfo, MateGone, MateRefused, MateState, SolidWorksError,
-                    Vec3, meets_minimum, rebuild_call, release_year)
+                    ENTITY_ALONG, LINE_TOLERANCE, RESOLVED_ROUTE_FINDING, ComponentGone, DocInfo, MateGone, MateRefused, MateState,
+                    SenseUnreadable, SolidWorksError, Vec3, axes_parallel, lines_meet, meets_minimum, own_axes_angle,
+                    rebuild_call, release_year, turned_refusal)
 
 VALUE_TOLERANCE = 1e-6
 FULLY_DEFINED = 3
@@ -111,9 +112,8 @@ class SolidWorks(Protocol):
     def set_gear_ratio(self, handle: str, a: str, b: str, ratio: Tuple[int, int]) -> None: ...
     def gear_mate_ratio(self, handle: str) -> Tuple[float, float]: ...
     def component_resolved(self, handle: str) -> bool: ...
-    # W6 (W6-INTERFACES.md): the turned form, which swcom.Session answers from the interface commit on. swbuild's
-    # own calls and the fake still use W5's ``(handle, internal) -> (right, parallel)`` until Agent A moves them
-    # (``_planned_axes``, ``_sense_read`` with axes, ``_mesh_senses``); only the fake is called meanwhile.
+    # W6 (W6-INTERFACES.md): ``(right, (τa, τb))`` against the two gears' own +Z as placed and the mesh's ``k > 0``;
+    # on parallel axes only the product τa·τb means anything (§7.4), and nothing here names a single τ.
     def gear_mate_sense(self, handle: str, same_sense: bool,
                         axes: Tuple[Vec3, Vec3]) -> Tuple[bool, Tuple[int, int]]: ...
     def line_axis(self, handle: str, name: str, point: Vec3, direction: Vec3, length: float) -> str: ...
@@ -600,23 +600,27 @@ def build(sw: SolidWorks, plan: BuildPlan, exists: Callable[[str], bool] = os.pa
     kind decides, so a pair (``ASSEMBLY_PAIR``) and a static assembly are
     never mate-checked.
 
-    ``internal`` (keyword): the names of the plan's gear mates whose mesh is
-    inside a ring, every other gear mate being outside; None when the caller
-    does not say, and then no gear mate's sense is read (as before). Given,
-    and with the read-back settled (:func:`_sense_settled`), every gear mate is
-    read straight after it is made (:func:`_settle_sense`) and one turning its
-    gears against their mesh is made again with the other Flip; given, with
-    the read-back not settled, a plan with a mesh inside a ring is refused
-    before anything is made, since its sense cannot be told.
-
     ``senses`` (keyword, W6; W6-INTERFACES.md): gear mate name -> whether
     the mesh turns its two gears the same way about their own axes (``k >
-    0``), the form that replaces ``internal`` for every axis. Until Agent A
-    reads it through ``_mesh_senses``, a mesh between parallel axes is
-    turned into W5's ``internal`` here (:func:`_internal_from_senses`: inside
-    a ring exactly when the same sense agrees with the two planned axes
-    pointing the same way), and a turned one is a stub. ``internal`` goes
-    when A's pass removes it with its tests; giving both is refused.
+    0``; ``GearboxPlan.mate_senses``). Given, and with the read-back settled
+    (:func:`_sense_settled`), every gear mate is read straight after it is
+    made (:func:`_settle_sense`) against its two gears' planned axes, and one
+    turning its gears against their mesh is made again with the other Flip;
+    with the read-back not settled, a plan with a mesh inside a ring is
+    refused before anything is made, since its sense cannot be told. None:
+    no gear mate between parallel axes is read (as before).
+
+    Whatever is given, every gear mate's planned axes are judged before
+    anything is made (:func:`_sense_gate`; W6-INTERFACES §7.3): one between
+    gears whose axes are not of one family is refused while its sense cannot
+    be read (the turned finding missing, or its angle outside the angles the
+    finding covers) — there is no static fallback (W6-PLAN D16) — and, when
+    it can, refused too unless ``senses`` says which way it turns.
+
+    ``internal`` (keyword, W5's form, kept only until ``GearboxPlan.
+    build_kwargs`` passes ``senses``): the names of the gear mates inside a
+    ring, for parallel meshes only; turned into ``senses`` from the planned
+    axes (:func:`_given_senses`). Giving both is refused.
 
     ``gears`` (keyword, :func:`build_gearbox`'s map of assembly handle to
     workbook gear id) names a gear in a mate problem by its id; without it,
@@ -628,7 +632,6 @@ def build(sw: SolidWorks, plan: BuildPlan, exists: Callable[[str], bool] = os.pa
     problems = plan.check()
     if problems:
         raise BuildError("The build plan is not sound: " + " ".join(problems))
-    internal = _internal_from_senses(plan, senses, internal)
     first = plan.ops[0]
     if kind is None:
         kind = workbook_assembly_kind(plan)
@@ -636,7 +639,7 @@ def build(sw: SolidWorks, plan: BuildPlan, exists: Callable[[str], bool] = os.pa
         _assembly_rebuild_gate(kind)
         if kind == ASSEMBLY_TRAIN:
             _train_gate(plan, building=True)
-            _sense_gate(plan, internal)
+            senses = _sense_gate(plan, senses, internal)
     save = next((op for op in plan.ops if isinstance(op, base.SaveAs)), None)
     if save is not None and save.path and exists(save.path):
         raise BuildError(f"{save.path} already exists, and a build never overwrites a file.")
@@ -653,8 +656,8 @@ def build(sw: SolidWorks, plan: BuildPlan, exists: Callable[[str], bool] = os.pa
             result.done.append(f"trig units measured: {result.trig}")
             made: Dict[str, str] = {}
             sense = None
-            if kind == ASSEMBLY_TRAIN and internal is not None and _sense_settled():
-                sense = (frozenset(internal), _planned_sigma(plan), dict(gears or {}))
+            if kind == ASSEMBLY_TRAIN and senses is not None and _sense_settled():
+                sense = (dict(senses), _planned_axes(plan), dict(gears or {}), _planned_origins(plan))
             _run(sw, plan, result, kind, made, sense)
             result.rebuilt = bool(sw.rebuild(kind=kind))
             _verify(sw, plan, result)
@@ -687,7 +690,7 @@ def _said(exc: BaseException) -> str:
 
 def _build_in_job(sw: SolidWorks, plan: BuildPlan, exists: Callable[[str], bool],
                   kind: Optional[str] = None, gears: Optional[Mapping[str, str]] = None,
-                  internal: Optional[Collection[str]] = None) -> BuildResult:
+                  senses: Optional[Mapping[str, bool]] = None) -> BuildResult:
     """:func:`build`, for one document of a job that has already saved others: what :func:`build` raises (its
     template is not there, SolidWorks would not make the document, the path was taken since the job's own check)
     comes back as a failed :class:`BuildResult` instead, so the job still reports, and the record still keeps,
@@ -700,7 +703,7 @@ def _build_in_job(sw: SolidWorks, plan: BuildPlan, exists: Callable[[str], bool]
     already saved), with its type named.
     """
     try:
-        return build(sw, plan, exists, kind=kind, gears=gears, internal=internal)
+        return build(sw, plan, exists, kind=kind, gears=gears, senses=senses)
     except Exception as exc:  # noqa: BLE001 - see the docstring
         first = plan.ops[0] if plan.ops else None
         what = ("new part" if isinstance(first, base.NewPart) else "new assembly"
@@ -713,11 +716,13 @@ def _build_in_job(sw: SolidWorks, plan: BuildPlan, exists: Callable[[str], bool]
 
 def _run(sw: SolidWorks, plan: BuildPlan, result: BuildResult, kind: str,
          made: Optional[Dict[str, str]] = None,
-         sense: Optional[Tuple[Collection[str], Mapping[str, int], Mapping[str, str]]] = None) -> None:
+         sense: Optional[Tuple[Mapping[str, bool], Mapping[str, Vec3], Mapping[str, str],
+                               Mapping[str, Vec3]]] = None) -> None:
     """Every op in order, stopping at the first failure. ``made`` collects each ``Mate`` op's id and the name its
     mate kept (for the train's mate check). In a train, a mate SolidWorks would not make (``swcom.MateRefused``)
     is a mate problem as well as the failure; any other raise is the failure alone (W5-INTERFACES). ``sense``
-    (the internal gear mates' names, each handle's planned shaft sense, the gears map): each gear mate's sense is
+    (each gear mate's same sense, each handle's planned axis, the gears map, each handle's planned origin): each
+    gear mate's sense is
     read straight after it is made, as probe ring_mate_sense read it (:func:`_settle_sense`); a sense SolidWorks
     gets wrong with either Flip is a mate problem too."""
     sw.set_rebuild_suppressed(True)
@@ -765,101 +770,186 @@ def _sense_settled() -> bool:
     return _settled(SENSE_FINDINGS) is None
 
 
-def _sense_gate(plan: BuildPlan, internal: Optional[Collection[str]]) -> None:
-    """Before anything is made: with the read-back settled, a train with gear mates needs the remake's findings too
-    (a wrong one is made again with the other Flip); without it, a train with a mesh inside a ring is refused, since
-    no Flip chosen before the mate is made is right on both versions (findings.GEAR_MATE_FLIP_STATIC_RULE None) and
-    its sense cannot be told. ``internal`` None (the caller did not say): nothing is read, as before."""
-    if internal is None:
-        return
+def _sense_gate(plan: BuildPlan, senses: Optional[Mapping[str, bool]],
+                internal: Optional[Collection[str]] = None) -> Optional[Dict[str, bool]]:
+    """Before anything is made; returns each gear mate's same sense (``senses``, or W5's ``internal`` turned into
+    it), or None when neither is given.
+
+    First, whatever is given (W6-INTERFACES §7.3), every gear mate's two planned axes (each handle's last ``Place``):
+    a gear mate between gears whose axes are not of one family (:func:`swcom.axes_parallel`, planning's rule, §7.5)
+    is refused with its sentence while its sense cannot be read — the turned finding missing, or the angle between
+    the own axes outside the angles it covers (:func:`swcom.turned_refusal`; W6-PLAN §2.6, D16, D18) — and refused
+    as a fault when it can be read but nothing says which way it turns. Then W5's rule for the rest: with the
+    read-back settled, a train with gear mates needs the remake's findings too (a wrong one is made again with the
+    other Flip); without it, a train with a mesh inside a ring is refused, since no Flip chosen before the mate is
+    made is right on both versions (findings.GEAR_MATE_FLIP_STATIC_RULE None) and its sense cannot be told."""
     gear_mates = [op for op in plan.ops if isinstance(op, base.Mate) and op.kind == "gear"]
     if not gear_mates:
-        return
+        return _given_senses(plan, senses, internal, {})
+    axes, origins = _planned_axes(plan), _planned_origins(plan)
+    turned: List[str] = []
+    for op in gear_mates:
+        name = op.name or op.id
+        ga, gb = _mate_axes(op, name, axes)
+        if not axes_parallel(ga, gb):
+            oa, ob = _mate_axes(op, name, origins)
+            refusal = turned_refusal(name, own_axes_angle(ga, gb), "so nothing is made or changed.",
+                                     meet=lines_meet(oa, ga, ob, gb))
+            if refusal is not None:
+                raise BuildError(refusal)
+            turned.append(name)
+    given = _given_senses(plan, senses, internal, axes)
+    if given is None:
+        if turned:
+            raise BuildError(f"The gear mate {turned[0]} joins gears on shafts at an angle, and the build was not told "
+                             "which way it turns them, so nothing is made; that is a fault in Gear Generator.")
+        return None
+    for op in gear_mates:
+        if (op.name or op.id) not in given:
+            raise BuildError(f"The build was not told which way the gear mate {op.name or op.id} turns its gears, so "
+                             "nothing is made; that is a fault in Gear Generator.")
     missing = _settled(SENSE_FINDINGS)
     if missing is not None:
-        rings = [op.name or op.id for op in gear_mates if (op.name or op.id) in set(internal)]
+        rings = [op.name or op.id for op in gear_mates
+                 if _inside_ring(given[op.name or op.id], *_mate_axes(op, op.name or op.id, axes))]
         if rings:
             raise BuildError(f"The gear mate {rings[0]} meshes inside a ring, and which way a gear mate turns a ring "
                              f"cannot be told on SolidWorks yet (findings.{missing[0]} is {missing[1]!r}), so nothing "
                              "is made or changed; run probe ring_mate_sense first.")
-        return
+        return given
     missing = _settled(SENSE_REMAKE_FINDINGS)
     if missing is not None:
         raise BuildError(f"A gearbox built to turn needs findings.{missing[0]} settled on SolidWorks (it is "
                          f"{missing[1]!r}), so nothing is made or changed; run probe tier 8 first.")
+    return given
 
 
-def _internal_from_senses(plan: BuildPlan, senses: Optional[Mapping[str, bool]],
-                          internal: Optional[Collection[str]]) -> Optional[Collection[str]]:
-    """W6's ``senses`` as W5's ``internal``, for meshes between parallel axes only (the interface commit's bridge;
-    Agent A replaces it with ``_mesh_senses``): a gear mate is inside a ring exactly when its same sense agrees with
-    its two gears' planned axes (each handle's last ``Place``'s third column) pointing the same way. A turned gear
-    mate is not this bridge's to judge."""
-    if senses is None:
-        return internal
-    if internal is not None:
+def _given_senses(plan: BuildPlan, senses: Optional[Mapping[str, bool]], internal: Optional[Collection[str]],
+                  axes: Mapping[str, Vec3]) -> Optional[Dict[str, bool]]:
+    """``senses`` as given, or W5's ``internal`` (the gear mates inside a ring; parallel meshes only) turned into
+    them: a parallel mesh turns its gears the same way about their own axes exactly when it is inside a ring and
+    their axes point alike, or outside and they point opposite ways (``k = ∓σaσb·za/zb``, review M2 of W5). The
+    bridge goes once ``GearboxPlan.build_kwargs`` passes ``senses``."""
+    if senses is not None and internal is not None:
         raise BuildError("A build was given both the W6 senses and the W5 ring meshes of its gear mates, so which way "
                          "each turns is said twice and nothing is made; that is a fault in Gear Generator.")
-    axes: Dict[str, Tuple[float, float, float]] = {}
-    for op in plan.ops:
-        if isinstance(op, base.Place):
-            axes[op.component] = (float(op.rotation[2]), float(op.rotation[5]), float(op.rotation[8]))
-    out = []
+    if senses is not None:
+        return {str(name): bool(same) for name, same in senses.items()}
+    if internal is None:
+        return None
+    inside = set(internal)
+    out: Dict[str, bool] = {}
     for op in plan.ops:
         if not (isinstance(op, base.Mate) and op.kind == "gear"):
             continue
         name = op.name or op.id
-        if name not in senses:
-            continue
-        ga, gb = axes.get(op.a.partition(":")[0]), axes.get(op.b.partition(":")[0])
-        if ga is None or gb is None:
-            raise BuildError(f"The gear mate {name} joins a gear the plan never places, so which way it turns "
-                             "cannot be told and nothing is made; that is a fault in Gear Generator.")
-        dot = sum(p * q for p, q in zip(ga, gb))
-        if abs(dot) <= 0.99:
-            raise NotImplementedError("W6: Agent A, swbuild._mesh_senses for a gear mate between turned axes")
-        if bool(senses[name]) == (dot > 0):
-            out.append(name)
-    return tuple(out)
-
-
-def _planned_sigma(plan: BuildPlan) -> Dict[str, int]:
-    """Each handle's shaft sense as the plan places it: +1 when its last ``Place`` points its own Z along +Z."""
-    out: Dict[str, int] = {}
-    for op in plan.ops:
-        if isinstance(op, base.Place):
-            out[op.component] = 1 if float(op.rotation[8]) > 0 else -1
+        ga, gb = _mate_axes(op, name, axes)
+        if not axes_parallel(ga, gb):
+            raise BuildError(f"The gear mate {name} joins gears on shafts at an angle, and the build was told only "
+                             "which gear mates mesh inside a ring, which says nothing of which way it turns, so "
+                             "nothing is made; that is a fault in Gear Generator.")
+        alike = sum(p * q for p, q in zip(ga, gb)) > 0
+        out[name] = (name in inside or op.name in inside or op.id in inside) == alike
     return out
 
 
-def _sense_read(sw: SolidWorks, handle: str, name: str, internal: bool, sigma_a: Optional[int],
-                sigma_b: Optional[int], gear_a: str, gear_b: str, refusal: type) -> bool:
-    """One read of a gear mate's sense, cross-checked: the two entity directions must point the same way exactly when
-    the two gears' shafts do (ring_mate_sense: so it was in all 52 cases); otherwise the mate's entities are not the
-    axes the plan asked for, and nothing is guessed: ``refusal`` with a sentence."""
-    right, parallel = sw.gear_mate_sense(handle, internal)
-    if sigma_a is not None and sigma_b is not None and parallel != (sigma_a == sigma_b):
-        said = ("the same way", "opposite ways")
-        raise refusal(f"SolidWorks reads the axes of the gear mate {name} as pointing {said[0 if parallel else 1]}, "
-                      f"but {gear_a} and {gear_b} sit on shafts pointing {said[0 if sigma_a == sigma_b else 1]}, so "
-                      "the mate does not hold the axes the gears were placed on, and nothing is guessed.")
-    return right
+def _inside_ring(same: bool, axis_a: Sequence[float], axis_b: Sequence[float]) -> bool:
+    """A parallel mesh is inside a ring exactly when its same sense agrees with its two axes pointing alike."""
+    return axes_parallel(axis_a, axis_b) and bool(same) == (sum(p * q for p, q in zip(axis_a, axis_b)) > 0)
+
+
+def _axis_of(rotation: Sequence[float]) -> Vec3:
+    """A gear's own +Z: its frame's third column (W6-PLAN §4.3's convention for every ``Place`` and ``Placement``)."""
+    return (float(rotation[2]), float(rotation[5]), float(rotation[8]))
+
+
+def _planned_axes(plan: BuildPlan) -> Dict[str, Vec3]:
+    """Each handle's own +Z as the plan places it: its last ``Place``'s third column."""
+    out: Dict[str, Vec3] = {}
+    for op in plan.ops:
+        if isinstance(op, base.Place):
+            out[op.component] = _axis_of(op.rotation)
+    return out
+
+
+def _planned_origins(plan: BuildPlan) -> Dict[str, Vec3]:
+    """Each handle's origin as the plan places it (its last ``Place``): a point on its axis, so with
+    :func:`_planned_axes` the gear's axis as a line (a bevel gear's origin is its apex)."""
+    out: Dict[str, Vec3] = {}
+    for op in plan.ops:
+        if isinstance(op, base.Place):
+            out[op.component] = tuple(float(v) for v in op.at)
+    return out
+
+
+def _mate_axes(op: base.Mate, name: str, axes: Mapping[str, Vec3]) -> Tuple[Vec3, Vec3]:
+    """The planned axes (or origins) of a gear mate's two gears, its first gear first; a gear the plan never places
+    is a fault."""
+    ga, gb = axes.get(op.a.partition(":")[0]), axes.get(op.b.partition(":")[0])
+    if ga is None or gb is None:
+        raise BuildError(f"The gear mate {name} joins a gear the plan never places, so which way it turns cannot be "
+                         "told and nothing is made; that is a fault in Gear Generator.")
+    return ga, gb
+
+
+def _vector(v: Sequence[float]) -> str:
+    return "(" + ", ".join(f"{round(float(x), 3) + 0.0:g}" for x in v) + ")"
+
+
+def _sense_read(sw: SolidWorks, handle: str, name: str, same: bool, axis_a: Sequence[float],
+                axis_b: Sequence[float], gear_a: str, gear_b: str, refusal: type,
+                origins: Optional[Tuple[Sequence[float], Sequence[float]]] = None) -> bool:
+    """One read of a gear mate's sense against its gears' own axes as placed (``swcom.sense_reading``'s rule H,
+    which is W5's rule on parallel axes): whether it turns them as they mesh. A turned mate is read with whether its
+    planned axes meet (``origins``, a point on each; :func:`swcom.lines_meet`), which picks the angles its gate
+    reads. A mate whose entities are not one along each gear's axis does not hold the axes the plan asked for, and
+    nothing is guessed: ``refusal`` with a sentence naming the gears (W6-PLAN §2.9)."""
+    meet = None
+    if origins is not None and not axes_parallel(axis_a, axis_b):
+        meet = lines_meet(origins[0], axis_a, origins[1], axis_b)
+    try:
+        right, _ = sw.gear_mate_sense(handle, bool(same), (tuple(axis_a), tuple(axis_b)), meet=meet)
+    except SenseUnreadable as exc:
+        raise refusal(_unreadable(name, exc, gear_a, gear_b)) from None
+    return bool(right)
+
+
+def _unreadable(name: str, exc: SenseUnreadable, gear_a: str, gear_b: str) -> str:
+    """The read-back's refusal, naming the gears (W6-PLAN §2.9) where :func:`swcom.sense_reading` could name only
+    the axes."""
+    found, wanted = list(exc.directions), list(exc.axes)
+    if len(found) != 2 or len(wanted) != 2:
+        return str(exc)
+
+    def along(d: Sequence[float], g: Sequence[float]) -> bool:
+        return abs(sum(p * q for p, q in zip(d, g))) >= ENTITY_ALONG
+
+    stray = next((d for d in found if not any(along(d, g) for g in wanted)), None)
+    if stray is not None:
+        return (f"SolidWorks reads an axis of the gear mate {name} as pointing {_vector(stray)}, which is not along "
+                f"{gear_a}'s axis {_vector(wanted[0])} or {gear_b}'s {_vector(wanted[1])}, so the mate does not hold "
+                "the axes the gears were placed on, and nothing is guessed.")
+    gear, axis = (gear_a, wanted[0]) if all(along(d, wanted[0]) for d in found) else (gear_b, wanted[1])
+    return (f"SolidWorks reads both axes of the gear mate {name} as along {gear}'s axis {_vector(axis)}, where it "
+            f"should hold one along {gear_a}'s and one along {gear_b}'s, so the mate does not hold the axes the gears "
+            "were placed on, and nothing is guessed.")
 
 
 def _settle_sense(sw: SolidWorks, op: base.Mate, name: str,
-                  sense: Tuple[Collection[str], Mapping[str, int], Mapping[str, str]], result: BuildResult) -> None:
+                  sense: Tuple[Mapping[str, bool], Mapping[str, Vec3], Mapping[str, str]], result: BuildResult) -> None:
     """A gear mate just made (and renamed), read where probe ring_mate_sense read it — before any rebuild: wrong,
     it is made again with the other Flip (``GEAR_MATE_CHECK_AND_REMAKE_HOLDS``) and read again; wrong again, the
     build stops with a mate problem naming it (the user's answer 1)."""
-    internal, sigma, gears = sense
+    senses, axes, gears, origins = sense
     ha, hb = op.a.partition(":")[0], op.b.partition(":")[0]
+    ends = (origins[ha], origins[hb])
     ga, gb = gears.get(ha) or result.components.get(ha) or ha, gears.get(hb) or result.components.get(hb) or hb
-    inside = name in internal or op.name in internal or op.id in internal
-    if _sense_read(sw, op.id, name, inside, sigma.get(ha), sigma.get(hb), ga, gb, _SenseRefused):
+    same = senses.get(op.name or op.id, senses.get(name))
+    if _sense_read(sw, op.id, name, same, axes[ha], axes[hb], ga, gb, _SenseRefused, ends):
         return
     sw.remake_gear_mate(op.id, op.a, op.b, op.ratio, not op.flip, saved=False)
     result.turned_round.append(name)
-    if not _sense_read(sw, op.id, name, inside, sigma.get(ha), sigma.get(hb), ga, gb, _SenseRefused):
+    if not _sense_read(sw, op.id, name, same, axes[ha], axes[hb], ga, gb, _SenseRefused, ends):
         raise _SenseRefused(f"SolidWorks turns the gears of the mate {name} against the way they mesh, whichever way "
                             "round the mate is made.")
 
@@ -1638,7 +1728,8 @@ def _held(current: Sequence[Tuple[str, float]]) -> Dict[str, str]:
 
 
 def _read_live(sw: SolidWorks, doc: DocumentValues, verb: str,
-               after_open: Optional[Callable[[str], None]] = None) -> Tuple[List[Tuple[str, float]],
+               after_open: Optional[Callable[[str], None]] = None, *,
+               lines: Optional[Mapping[str, Tuple[Vec3, Vec3]]] = None) -> Tuple[List[Tuple[str, float]],
                                                                             Dict[str, List[Tuple[str, str]]],
                                                                             Dict[str, float]]:
     """Open a saved document and read what it holds, writing nothing: its equations, the planned changes
@@ -1659,6 +1750,13 @@ def _read_live(sw: SolidWorks, doc: DocumentValues, verb: str,
     the radian form of every global holds what is asked, in those units —
     provided SolidWorks also evaluates them as that unit would (see
     :func:`_held_unit`).
+
+    W6 (W6-PLAN §2.7, review S7): ``lines`` (a layout part's slanted shafts'
+    line axes as the record has them, axis name -> (point, direction) in mm)
+    are each read back (``axis_line``, which marks nothing) and must lie on
+    the recorded line, either way along it, to 1e-6: an axis moved in
+    SolidWorks is a :class:`NotAsBuilt`, since only a new revision rebuilds
+    a fixed line.
     """
     name = _file(doc.path)
     sw.begin_build()
@@ -1686,6 +1784,18 @@ def _read_live(sw: SolidWorks, doc: DocumentValues, verb: str,
                 listed = ", ".join(f'"{f}"' for f in lost)
                 raise NotAsBuilt(f"{name} cannot be {verb}: {listed} {'is' if len(lost) == 1 else 'are'} no "
                                  "longer in it; it was renamed or deleted in SolidWorks.", doc.path)
+        for index, (axis, (point, direction)) in enumerate(sorted((lines or {}).items()), 1):
+            try:
+                read = sw.axis_line(f"line{index}", axis)
+            except SolidWorksError as exc:
+                raise BuildError(f"{name} cannot be {verb}: where its axis {axis} lies could not be read: "
+                                 f"{exc}") from None
+            if not _on_line(read, point, direction):
+                shaft = axis[:-len(" Axis")] if axis.endswith(" Axis") else axis
+                said = ("so Update SolidWorks cannot act on it; Build again… makes a new revision."
+                        if verb == "updated" else f"so {name} cannot be {verb}.")
+                raise NotAsBuilt(f"{shaft}'s axis in the layout part is not where the record has it (it was moved in "
+                                 f"SolidWorks), {said}", doc.path)
         try:
             values = dict(sw.equation_values())
         except SolidWorksError as exc:
@@ -1693,6 +1803,27 @@ def _read_live(sw: SolidWorks, doc: DocumentValues, verb: str,
         return current, by_unit, values
     finally:
         sw.end_build()
+
+
+def _on_line(read: Tuple[Sequence[float], Sequence[float]], point: Sequence[float],
+             direction: Sequence[float]) -> bool:
+    """Whether an axis read back (a point on it, its direction) lies on the line through ``point`` along
+    ``direction``, either way along it, to ``swcom.LINE_TOLERANCE`` (mm, and per direction component)."""
+    try:
+        at, along = [float(v) for v in read[0]], [float(v) for v in read[1]]
+        want = [float(v) for v in direction]
+        size, wanted = math.sqrt(sum(v * v for v in along)), math.sqrt(sum(v * v for v in want))
+        along, want = [v / size for v in along], [v / wanted for v in want]
+    except (TypeError, ValueError, IndexError, ZeroDivisionError):
+        return False
+    if len(at) != 3 or len(along) != 3 or len(want) != 3:
+        return False
+    sign = 1.0 if sum(p * q for p, q in zip(along, want)) >= 0 else -1.0
+    if max(abs(sign * along[i] - want[i]) for i in range(3)) > LINE_TOLERANCE:
+        return False
+    off = [at[i] - float(point[i]) for i in range(3)]
+    reach = sum(off[i] * want[i] for i in range(3))
+    return math.sqrt(max(0.0, sum(v * v for v in off) - reach * reach)) <= LINE_TOLERANCE
 
 
 def _values_off(values: Mapping[str, float], variables: Sequence[GlobalVariable],
@@ -1741,13 +1872,14 @@ def _held_unit(by_unit: Mapping[str, Sequence[Tuple[str, str]]], values: Optiona
 
 
 def _check_live(sw: SolidWorks, doc: DocumentValues, verb: str,
-                after_open: Optional[Callable[[str], None]] = None) -> str:
+                after_open: Optional[Callable[[str], None]] = None, *,
+                lines: Optional[Mapping[str, Tuple[Vec3, Vec3]]] = None) -> str:
     """A document to be reused, opened and checked, writing nothing (:func:`_read_live`): it must hold every
     global exactly, in either trig unit, SolidWorks must evaluate them as that unit would (:func:`_held_unit`),
     and every feature named must be there; returns that unit. Otherwise a :class:`NotAsBuilt` saying what
     differs — the texts in the unit that differs less, or the first value when only the angle unit is wrong —
     (a :class:`BuildError` when it cannot be opened or read at all)."""
-    current, by_unit, values = _read_live(sw, doc, verb, after_open)
+    current, by_unit, values = _read_live(sw, doc, verb, after_open, lines=lines)
     unit = _held_unit(by_unit, values, doc.variables)
     if unit:
         return unit
@@ -1967,7 +2099,8 @@ def build_gearbox(sw: SolidWorks, parts: Sequence[BuildPlan], reuse: Sequence[Do
                   progress: Optional[Callable[[Step], None]] = None,
                   mtime: Callable[[str], float] = os.path.getmtime,
                   senses: Optional[Mapping[str, bool]] = None,
-                  internal: Optional[Collection[str]] = None) -> GearboxResult:
+                  internal: Optional[Collection[str]] = None,
+                  lines: Optional[Mapping[str, Tuple[Vec3, Vec3]]] = None) -> GearboxResult:
     """A workbook's parts, its layout part and its static assembly, in one worker job (PLAN-WORKBOOK §4.2–§4.3).
 
     ``parts`` are the new parts' plans; ``reuse`` the parts already built and
@@ -2031,22 +2164,21 @@ def build_gearbox(sw: SolidWorks, parts: Sequence[BuildPlan], reuse: Sequence[Do
     records them as W4's continued revision. :attr:`GearboxResult.kind` says
     which assembly saved. The signature is unchanged: no ``static=``.
 
-    ``internal`` (keyword, after the probe ring_mate_sense): the names of the
-    assembly plan's gear mates whose mesh is inside a ring; passed to
-    :func:`build`, which reads every gear mate's sense once it is given (and
-    refuses a ring train before anything is made while the read-back is not
-    settled). None, as before: no sense is read.
-
     ``senses`` (keyword, W6): gear mate name -> same sense (``k > 0``), as
-    :func:`build` takes it; ``GearboxPlan.build_kwargs`` passes it for a
-    turning plan once Agent B moves it there, and ``internal`` goes with
-    A's pass. Until then it is turned into ``internal`` for parallel meshes
-    (:func:`_internal_from_senses`).
+    :func:`build` takes it, judged with every gear mate's planned axes before
+    anything is made, parts included (:func:`_sense_gate`: a turned gear
+    mate is refused while its sense cannot be read). ``internal`` (W5's
+    form, until ``GearboxPlan.build_kwargs`` passes ``senses``): the gear
+    mates inside a ring, turned into ``senses``.
+
+    ``lines`` (keyword, W6; review S7): a reused layout part's slanted
+    shafts' line axes as the record has them (axis name -> (point,
+    direction), mm), each read back when the layout is checked; one moved in
+    SolidWorks makes the layout mismatched (:attr:`GearboxResult.mismatched`),
+    as a changed global does, so it is not reused.
     """
     say = progress or _quiet
     _gate(sw)
-    if assembly is not None:
-        internal = _internal_from_senses(assembly, senses, internal)
     gear_of_handle = dict(gears or {})
     layout_plan = layout if isinstance(layout, BuildPlan) else None
     layout_reuse = layout if isinstance(layout, DocumentValues) else None
@@ -2057,7 +2189,7 @@ def build_gearbox(sw: SolidWorks, parts: Sequence[BuildPlan], reuse: Sequence[Do
         _assembly_rebuild_gate(workbook_assembly_kind(assembly))
         if workbook_assembly_kind(assembly) == ASSEMBLY_TRAIN:
             _train_gate(assembly, building=True)
-            _sense_gate(assembly, internal)
+            senses = _sense_gate(assembly, senses, internal)
     plans = list(parts) + [p for p in (layout_plan, assembly) if p is not None]
     for plan in plans:
         problems = plan.check()
@@ -2090,7 +2222,8 @@ def build_gearbox(sw: SolidWorks, parts: Sequence[BuildPlan], reuse: Sequence[Do
     for index, doc in enumerate(reused_docs, 1):
         say(Step(STAGE_CHECK, _stem(doc.path), index, len(reused_docs)))
         try:
-            result.held[doc.path] = _check_live(sw, doc, "reused", lambda path: _note_opened(sw, path, result))
+            result.held[doc.path] = _check_live(sw, doc, "reused", lambda path: _note_opened(sw, path, result),
+                                                lines=lines if doc is layout_reuse else None)
         except NotAsBuilt as exc:
             # Not a refusal: the finish records it, and the next plan makes that part new (review B2's last
             # corner). Every document is still checked, so one press finds them all.
@@ -2111,7 +2244,7 @@ def build_gearbox(sw: SolidWorks, parts: Sequence[BuildPlan], reuse: Sequence[Do
     stage = ["the parts" if parts else "the layout part" if layout_plan is not None else "the assembly"]
     try:
         _build_gearbox_body(sw, result, parts, layout_plan, layout_reuse, assembly, gear_of_handle, exists, say,
-                            stage, internal)
+                            stage, senses)
     except Exception as exc:  # noqa: BLE001 - see above
         if stage[0] == "the interference check":
             result.interference_error = _said(exc)        # a clash check that cannot run is a CHECK, not a failure
@@ -2130,7 +2263,7 @@ def _build_gearbox_body(sw: SolidWorks, result: GearboxResult, parts: Sequence[B
                         layout_plan: Optional[BuildPlan], layout_reuse: Optional[DocumentValues],
                         assembly: Optional[BuildPlan], gear_of_handle: Mapping[str, str],
                         exists: Callable[[str], bool], say: Callable[[Step], None], stage: List[str],
-                        internal: Optional[Collection[str]] = None) -> None:
+                        senses: Optional[Mapping[str, bool]] = None) -> None:
     """Steps 2–4 of :func:`build_gearbox`, filling ``result`` as each document finishes; ``stage[0]`` says which
     step is under way, for the failure if something raises."""
     later = [phrase for phrase, planned in (("the layout part", layout_plan is not None),
@@ -2162,7 +2295,7 @@ def _build_gearbox_body(sw: SolidWorks, result: GearboxResult, parts: Sequence[B
     # Its kind said explicitly: today's workbook gearbox is fixed (static, top-only); W5's mated one is a train, by
     # the same predicate the gate above used.
     kind = workbook_assembly_kind(assembly)
-    result.assembly = _build_in_job(sw, assembly, exists, kind=kind, gears=gear_of_handle, internal=internal)
+    result.assembly = _build_in_job(sw, assembly, exists, kind=kind, gears=gear_of_handle, senses=senses)
     result.components = dict(result.assembly.components)
     if result.assembly.ok and result.assembly.saved:
         result.kind = GEARBOX_MOTION if kind == ASSEMBLY_TRAIN else GEARBOX_STATIC
@@ -2262,6 +2395,11 @@ class GearboxUpdate:
     # the sense (:data:`SENSE_CHECK_FINDINGS`).
     turned_round: List[str] = field(default_factory=list)
     sense_found_wrong: List[str] = field(default_factory=list)
+    # W6 (review M4): gear mates remade because the workbook now turns their gears the other way (a crossed shaft
+    # moved to the other side of its partner; ``UpdatePlan.resensed``), read back against the new ``k``. Never in
+    # ``sense_found_wrong`` (not found wrong: the workbook moved), and in ``ratios`` only when the ratio changed
+    # too (then ``ratios_read`` has its counts). Filled once each is remade and read back.
+    resensed: List[str] = field(default_factory=list)
     extra_mates: List[str] = field(default_factory=list)
     mates: List[MateState] = field(default_factory=list)
 
@@ -2332,6 +2470,9 @@ class GearboxUpdate:
             lines.append("ok      already at the ratio the workbook asks, so not remade: " + ", ".join(self.ratios_already))
         if self.sense_found_wrong:
             lines.append("ok      found turning against their mesh, so made again: " + ", ".join(self.sense_found_wrong))
+        if self.resensed:
+            lines.append("ok      made again to turn their gears the other way, as the workbook now has them: "
+                         + ", ".join(self.resensed))
         if self.turned_round:
             lines.append("ok      made again with the other Flip: " + ", ".join(self.turned_round))
         if self.extra_mates:
@@ -2361,7 +2502,8 @@ def update_gearbox(sw: SolidWorks, parts: Sequence[DocumentValues] = (), layout:
                    motion: Optional[MotionUpdate] = None,
                    exists: Callable[[str], bool] = os.path.exists,
                    progress: Optional[Callable[[Step], None]] = None,
-                   mtime: Callable[[str], float] = os.path.getmtime) -> GearboxUpdate:
+                   mtime: Callable[[str], float] = os.path.getmtime,
+                   lines: Optional[Mapping[str, Tuple[Vec3, Vec3]]] = None) -> GearboxUpdate:
     """Update SolidWorks from the workbook: part values, the layout's globals, and the static assembly's
     components re-placed (PLAN-WORKBOOK §4.5), in one worker job and in two phases, so a missing piece changes
     nothing.
@@ -2424,9 +2566,17 @@ def update_gearbox(sw: SolidWorks, parts: Sequence[DocumentValues] = (), layout:
     (``ASSEMBLY_TRAIN`` for every rebuild and put) and the motion path runs
     in W5-PLAN §1.6's order as W5-INTERFACES.md amends it
     (:func:`_update_motion`).
+
+    W6: ``lines`` (keyword; W6-PLAN §2.7, review S7): the layout part's
+    slanted shafts' line axes as the record has them (axis name -> (point,
+    direction), mm), read back in the check phase with the layout part; one
+    moved in SolidWorks is a :class:`NotAsBuilt` and nothing changes.
     """
+    if lines and layout is None:
+        raise BuildError("Update SolidWorks was given line axes to check but no layout part to find them in, so "
+                         "nothing is changed; that is a fault in Gear Generator.")
     if motion is not None:
-        return _update_motion(sw, parts, layout, assembly, placements, motion, exists, progress, mtime)
+        return _update_motion(sw, parts, layout, assembly, placements, motion, exists, progress, mtime, lines)
     say = progress or _quiet
     _gate(sw)
     result = GearboxUpdate()
@@ -2468,7 +2618,8 @@ def update_gearbox(sw: SolidWorks, parts: Sequence[DocumentValues] = (), layout:
     holds: List[str] = []           # per document: the trig unit it already holds every global in, or ""
     for index, doc in enumerate(documents, 1):
         say(Step(STAGE_CHECK, _stem(doc.path), index, total))
-        _, by_unit, values = _read_live(sw, doc, "updated", lambda path: _note_opened(sw, path, result))
+        _, by_unit, values = _read_live(sw, doc, "updated", lambda path: _note_opened(sw, path, result),
+                                        lines=lines if doc is layout else None)
         holds.append(_held_unit(by_unit, values, doc.variables))
     if assembly and (beside or not documents):
         say(Step(STAGE_CHECK, _stem(assembly), total, total))
@@ -2684,28 +2835,66 @@ BUILD_SENSE_FINDINGS = (("GEAR_MATE_SENSE_READ_UNDER_COMMAND_IN_PROGRESS", True)
                         ("GEAR_MATE_REMAKE_UNDER_COMMAND_IN_PROGRESS", True))
 
 
-def _internal_meshes(motion: MotionUpdate, sigma: Mapping[str, int]) -> Dict[str, bool]:
-    """Each recorded gear mate's mesh: inside a ring or not, from its ``MeshLink`` and its gears' shaft senses —
-    ``k`` is ``-σa·σb·za/zb`` outside and ``+σa·σb·za/zb`` inside (review M2), so inside exactly when ``k·σa·σb``
-    is positive."""
+def _mesh_senses(motion: MotionUpdate) -> Dict[str, bool]:
+    """Each recorded gear mate's mesh sense as now wanted: whether it turns its two gears the same way about their own
+    axes, ``k > 0`` of its ``MeshLink`` (``k = −c·za/zb``, W6-PLAN §2.4) — for any axes, parallel or turned."""
     out: Dict[str, bool] = {}
     for mate in motion.mates:
         if mate.kind != "mesh" or len(mate.gears) != 2:
             continue
         link = next((m for m in motion.meshes if (m.a, m.b) == tuple(mate.gears)), None)
-        if link is None or mate.gears[0] not in sigma or mate.gears[1] not in sigma:
-            continue
-        out[mate.name] = link.k * sigma[mate.gears[0]] * sigma[mate.gears[1]] > 0
+        if link is not None:
+            out[mate.name] = link.k > 0
     return out
 
 
-def _remake_sense_gate(remakes: Sequence[Tuple[str, int, int]], internal_of: Mapping[str, bool]) -> None:
+def _resensed(motion: MotionUpdate) -> List[str]:
+    """The recorded gear mates whose mesh sense the plan changes (a crossed shaft moved to the other side of its
+    partner, W6-PLAN §2.7, review M4): ``k``'s sign in ``meshes`` against ``recorded_meshes`` (the record's own
+    senses). Each is remade, its tooth counts new or not, and read back against the new ``k``."""
+    out: List[str] = []
+    for mate in motion.mates:
+        if mate.kind != "mesh" or len(mate.gears) != 2:
+            continue
+        now = next((m for m in motion.meshes if (m.a, m.b) == tuple(mate.gears)), None)
+        then = next((m for m in motion.recorded_meshes if (m.a, m.b) == tuple(mate.gears)), None)
+        if now is not None and then is not None and now.k and then.k and (now.k > 0) != (then.k > 0):
+            out.append(mate.name)
+    return out
+
+
+def _mate_ends(motion: MotionUpdate, name: str, axes: Mapping[str, Vec3]) -> Tuple[str, str, Vec3, Vec3]:
+    """A recorded gear mate's two gears and their own axes as now placed."""
+    ga, gb = next(m.gears for m in motion.mates if m.name == name)
+    return ga, gb, axes[ga], axes[gb]
+
+
+def _turned_update_gate(motion: MotionUpdate, axes: Mapping[str, Vec3], origins: Mapping[str, Vec3]) -> None:
+    """Before anything is read or changed: every recorded gear mate between gears whose axes are not of one family
+    needs its sense readable (the turned finding, the angle inside it; :func:`swcom.turned_refusal`), since the
+    check phase reads it and a remake reads it back (W6-PLAN §2.6, §2.7)."""
+    for mate in motion.mates:
+        if mate.kind != "mesh" or len(mate.gears) != 2:
+            continue
+        ga, gb = axes.get(mate.gears[0]), axes.get(mate.gears[1])
+        if ga is None or gb is None or axes_parallel(ga, gb):
+            continue
+        meet = lines_meet(origins[mate.gears[0]], ga, origins[mate.gears[1]], gb)
+        refusal = turned_refusal(mate.name, own_axes_angle(ga, gb), "so nothing is made or changed.", meet=meet)
+        if refusal is not None:
+            raise BuildError(refusal)
+
+
+def _remake_sense_gate(remakes: Sequence[Tuple[str, int, int]], senses: Mapping[str, bool], motion: MotionUpdate,
+                       axes: Mapping[str, Vec3]) -> None:
     """A remake's gear mate is read back and turned round if wrong: that needs the read-back and the remake with the
     other Flip settled; without the read-back a remake inside a ring is refused (its sense cannot be told), and one
-    outside goes ahead as before (GEAR_MATE_FLIP is right for an outside pair on both versions)."""
+    outside goes ahead as before (GEAR_MATE_FLIP is right for an outside pair on both versions). A turned gear mate
+    never gets here unread: :func:`_turned_update_gate` refuses it first."""
     missing = _settled(SENSE_FINDINGS)
     if missing is not None:
-        rings = [name for name, _, _ in remakes if internal_of.get(name)]
+        rings = [name for name, _, _ in remakes
+                 if name in senses and _inside_ring(senses[name], *_mate_ends(motion, name, axes)[2:])]
         if rings:
             raise BuildError(f"The gear mate {rings[0]} meshes inside a ring, and which way a gear mate turns a ring "
                              f"cannot be told on SolidWorks yet (findings.{missing[0]} is {missing[1]!r}), so nothing "
@@ -2805,7 +2994,8 @@ def _not_whole(turn: float, pitch: float) -> bool:
 
 def _update_motion(sw: SolidWorks, parts: Sequence[DocumentValues], layout: Optional[DocumentValues], assembly: str,
                    placements: Sequence[Placement], motion: MotionUpdate, exists: Callable[[str], bool],
-                   progress: Optional[Callable[[Step], None]], mtime: Callable[[str], float]) -> GearboxUpdate:
+                   progress: Optional[Callable[[Step], None]], mtime: Callable[[str], float],
+                   lines: Optional[Mapping[str, Tuple[Vec3, Vec3]]] = None) -> GearboxUpdate:
     """:func:`update_gearbox` for a gearbox built to turn, in W5-INTERFACES §3's order.
 
     *Check — writes nothing; a raise here changes nothing:* W4's checks
@@ -2859,6 +3049,9 @@ def _update_motion(sw: SolidWorks, parts: Sequence[DocumentValues], layout: Opti
                 raise BuildError(f"{placement.component} is recorded for both {earlier.gear} and {placement.gear}, "
                                  "so one of them would be placed twice.")
     _motion_consistent(motion, placements)
+    axes = {p.gear: _axis_of(p.rotation) for p in placements}
+    origins = {p.gear: tuple(float(v) for v in p.at) for p in placements}
+    _turned_update_gate(motion, axes, origins)
     fixed = set(motion.fixed)
     route = getattr(findings, "REPLACE_FIXED_ROUTE", None)
     if fixed and route not in REPLACE_ROUTES:
@@ -2880,13 +3073,15 @@ def _update_motion(sw: SolidWorks, parts: Sequence[DocumentValues], layout: Opti
     holds: List[str] = []
     for index, doc in enumerate(documents, 1):
         say(Step(STAGE_CHECK, _stem(doc.path), index, total))
-        _, by_unit, values = _read_live(sw, doc, "updated", lambda path: _note_opened(sw, path, result))
+        _, by_unit, values = _read_live(sw, doc, "updated", lambda path: _note_opened(sw, path, result),
+                                        lines=lines if doc is layout else None)
         holds.append(_held_unit(by_unit, values, doc.variables))
     say(Step(STAGE_CHECK, _stem(assembly), total, total))
     recorded_names = {m.name for m in motion.mates}
     wanted_teeth = _wanted_teeth(motion)
-    sigma = {p.gear: (1 if float(p.rotation[8]) > 0 else -1) for p in placements}
-    internal_of = _internal_meshes(motion, sigma)
+    senses = _mesh_senses(motion)
+    resensed = _resensed(motion)                     # gear mates the plan turns the other way: each remade
+    respaced: set = set()                            # gear mates found live at another ratio than wanted
     remakes: List[Tuple[str, int, int]] = []         # gear mates found live at another ratio than wanted
     sense_wrong = set()                              # gear mates read turning against their mesh, to be remade
     deferred: List[str] = []                         # recorded gear mates found suppressed: read once turned on
@@ -2950,35 +3145,45 @@ def _update_motion(sw: SolidWorks, parts: Sequence[DocumentValues], layout: Opti
             live = tuple(float(n) for n in sw.gear_mate_ratio(f"mate{index}"))
             want = wanted_teeth[mate.name]
             read = (mate.name, int(round(live[0])), int(round(live[1])), want[0], want[1])
-            if _same_ratio(live, want):
+            same = _same_ratio(live, want)
+            if same and mate.name not in resensed:
                 if mate.name in asked:
                     result.ratios_already.append(mate.name)
                     result.ratios_read.append(read)
                 continue
+            if same and ratio_route != "remake":
+                raise BuildError(f"The gear mate {mate.name} in {_file(assembly)} must be made again, since the "
+                                 "workbook now has it turn its gears the other way about their axes, and making a "
+                                 "gear mate again has not been settled on SolidWorks (findings.GEAR_MATE_RATIO_ROUTE "
+                                 f"is {ratio_route!r}), so nothing is changed; build the gearbox again.")
             if ratio_route != "remake":
                 raise BuildError(f"The gear mate {mate.name} in {_file(assembly)} is at {live[0]:g} : {live[1]:g} "
                                  f"and the workbook wants {want[0]} : {want[1]}, and giving a gear mate a new ratio "
                                  "has not been settled on SolidWorks (findings.GEAR_MATE_RATIO_ROUTE is "
                                  f"{ratio_route!r}), so nothing is changed; build the gearbox again.")
             remakes.append((mate.name, want[0], want[1]))
-            result.ratios_read.append(read)
-            if mate.name not in asked:
-                result.ratios_found.append(mate.name)
+            if not same:
+                respaced.add(mate.name)
+                result.ratios_read.append(read)
+                if mate.name not in asked:
+                    result.ratios_found.append(mate.name)
         # Which way each recorded gear mate turns, read before anything changes (SENSE_CHECK_FINDINGS; without
         # them the sense is not read here, as before).
         # A gear mate found suppressed is never read here (no probe read Reverse or its axes on a suppressed mate):
         # it is read once D10 has turned it back on and the assembly has rebuilt (``deferred``, in the change
-        # phase; GEAR_MATE_SENSE_READ_POINTS_AGREE covers a read after a rebuild).
+        # phase; GEAR_MATE_SENSE_READ_POINTS_AGREE covers a read after a rebuild). A gear mate the plan turns the
+        # other way (``resensed``) is not read here: it is remade whatever it reads, and read back against its new
+        # ``k`` once remade, so it is never said to have been found turning wrong (W6-PLAN §2.7).
         if _sense_settled() and _settled(SENSE_CHECK_FINDINGS) is None:
             for index, mate in enumerate(motion.mates, 1):
-                if mate.name not in wanted_teeth:
+                if mate.name not in wanted_teeth or mate.name in resensed:
                     continue
                 if mate.name in suppressed:
                     deferred.append(mate.name)
                     continue
                 ga, gb = mate.gears
-                if not _sense_read(sw, f"mate{index}", mate.name, internal_of.get(mate.name, False), sigma.get(ga),
-                                   sigma.get(gb), ga, gb, BuildError):
+                if not _sense_read(sw, f"mate{index}", mate.name, senses.get(mate.name, False), axes[ga], axes[gb],
+                                   ga, gb, BuildError, (origins[ga], origins[gb])):
                     if ratio_route != "remake":
                         raise BuildError(f"The gear mate {mate.name} in {_file(assembly)} turns its gears against the "
                                          "way they mesh, and making a gear mate again has not been settled on "
@@ -3007,7 +3212,7 @@ def _update_motion(sw: SolidWorks, parts: Sequence[DocumentValues], layout: Opti
         if possible:
             _remake_gate()
             _idler_gate(motion, possible)
-            _remake_sense_gate(possible, internal_of)
+            _remake_sense_gate(possible, senses, motion, axes)
         held = _held(sw.equations()) if motion.face_globals else {}
         for gear, variable in motion.face_globals:
             if variable.name not in held:
@@ -3050,7 +3255,7 @@ def _update_motion(sw: SolidWorks, parts: Sequence[DocumentValues], layout: Opti
             try:
                 _motion_assembly(sw, result, assembly, placements, motion, mated, route, suppressed, axial,
                                  turned_back, say, touched, remakes, sense_wrong=sense_wrong, deferred=deferred,
-                                 wanted_teeth=wanted_teeth)
+                                 wanted_teeth=wanted_teeth, resensed=resensed, respaced=respaced)
             finally:
                 sw.end_build()
     except _LocksLeftOff:
@@ -3076,7 +3281,8 @@ def _motion_assembly(sw: SolidWorks, result: GearboxUpdate, assembly: str, place
                      say: Callable[[Step], None], touched: List[bool],
                      remakes: Sequence[Tuple[str, int, int]] = (), *, sense_wrong: Optional[set] = None,
                      deferred: Sequence[str] = (),
-                     wanted_teeth: Optional[Mapping[str, Tuple[int, int]]] = None) -> None:
+                     wanted_teeth: Optional[Mapping[str, Tuple[int, int]]] = None,
+                     resensed: Collection[str] = (), respaced: Collection[str] = ()) -> None:
     """Steps 2-7 of the motion path's change phase, in the build begun by :func:`_update_motion`. ``sense_wrong``:
     gear mates read turning against their mesh (remade; listed in ``sense_found_wrong`` once remade, and in
     ``ratios`` only when the plan asked their ratio changed). ``deferred``: gear mates found suppressed, whose sense
@@ -3095,8 +3301,14 @@ def _motion_assembly(sw: SolidWorks, result: GearboxUpdate, assembly: str, place
         sw.find_mate(f"mate{index}", mate.name)
         mate_handle[mate.name] = f"mate{index}"
     gear_of_handle = {h: g for g, h in handle.items()}
-    sigma = {p.gear: (1 if float(p.rotation[8]) > 0 else -1) for p in placements}
-    internal_of = _internal_meshes(motion, sigma)
+    axes = {p.gear: _axis_of(p.rotation) for p in placements}
+    origins = {p.gear: tuple(float(v) for v in p.at) for p in placements}
+    senses = _mesh_senses(motion)
+
+    def read(name: str) -> bool:
+        ga, gb = next(m.gears for m in motion.mates if m.name == name)
+        return _sense_read(sw, mate_handle[name], name, senses.get(name, False), axes[ga], axes[gb], ga, gb,
+                           SolidWorksError, (origins[ga], origins[gb]))
 
     def settle(name: str, a_ref: str, b_ref: str, ratio: Tuple[int, int]) -> None:
         """A gear mate just remade, read where probe ring_mate_sense read it (straight after it is made and named):
@@ -3104,15 +3316,13 @@ def _motion_assembly(sw: SolidWorks, result: GearboxUpdate, assembly: str, place
         again; wrong again, Update stops naming it (the locks are turned back on as for any failure)."""
         if not _sense_settled():
             return
-        ga, gb = next(m.gears for m in motion.mates if m.name == name)
-        inside = internal_of.get(name, False)
-        if _sense_read(sw, mate_handle[name], name, inside, sigma.get(ga), sigma.get(gb), ga, gb, SolidWorksError):
+        if read(name):
             return
         touched[0] = True
         first = bool(getattr(findings, "GEAR_MATE_FLIP", False))
         sw.remake_gear_mate(mate_handle[name], a_ref, b_ref, ratio, not first)
         result.turned_round.append(name)
-        if not _sense_read(sw, mate_handle[name], name, inside, sigma.get(ga), sigma.get(gb), ga, gb, SolidWorksError):
+        if not read(name):
             raise SolidWorksError(f"SolidWorks turns the gears of the mate {name} against the way they mesh, whichever "
                                   f"way round it is made; the saved {file} still has it as it was: close {file} in "
                                   "SolidWorks without saving to bring it back.")
@@ -3144,9 +3354,7 @@ def _motion_assembly(sw: SolidWorks, result: GearboxUpdate, assembly: str, place
     for name in deferred:
         if name not in result.unsuppressed:
             continue
-        ga, gb = next(m.gears for m in motion.mates if m.name == name)
-        if _sense_read(sw, mate_handle[name], name, internal_of.get(name, False), sigma.get(ga), sigma.get(gb), ga, gb,
-                       SolidWorksError):
+        if read(name):
             continue
         # At the wanted ratio but turning wrong (an Update stopped on a remake wrong either way round, then the mate
         # suppressed): not "already there" — it is remade, as the check phase does for one found on.
@@ -3176,7 +3384,7 @@ def _motion_assembly(sw: SolidWorks, result: GearboxUpdate, assembly: str, place
         if not needed:
             continue
         _put_train(sw, result, motion, train, locks, ratios, handle, mate_handle, wanted, rebuild, file, touched,
-                   settle, sense_wrong)
+                   settle, sense_wrong, resensed, respaced)
         put_trains.append(train)
         dirty[0] = dirty[0] or not locks
         restored = tuple(g for g in train if turned_back.get(g))
@@ -3236,7 +3444,8 @@ def _put_train(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, trai
                mate_handle: Mapping[str, str], wanted: Mapping[str, Frame9], rebuild: Callable[[], None],
                file: str, touched: List[bool],
                settle: Optional[Callable[[str, str, str, Tuple[int, int]], None]] = None,
-               sense_wrong: Collection[str] = ()) -> None:
+               sense_wrong: Collection[str] = (), resensed: Collection[str] = (),
+               respaced: Collection[str] = ()) -> None:
     """One train put back whole: every lock of it suppressed (a lock does not hold against a put: W5-DECISIONS),
     a rebuild, its ratios remade, EVERY mated gear of it put (review M1), then — whatever happened — every lock
     turned back on and a rebuild (review M8). A lock that will not come back on is a failure naming the compound
@@ -3264,13 +3473,20 @@ def _put_train(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, trai
             # because it turned wrong, at the ratio it already held, is ``sense_found_wrong`` alone. One the plan asked
             # stays in ``ratios`` even if SolidWorks already held the asked ratio (a stopped remake pressed again,
             # read on or turned back on first): the workbook's record takes the plan's ratio from ``ratios``.
+            # One remade because the workbook now turns it the other way (``resensed``) is in ``ratios`` only when its
+            # ratio changed too (``respaced``), and is listed in ``resensed`` once read back against its new ``k``.
             sense_only = name in sense_wrong and all(n != name for n, _, _ in motion.ratios) \
                 and name not in result.ratios_found
-            if not sense_only:
+            if name in resensed:
+                if name in respaced:
+                    result.ratios.append(name)
+            elif not sense_only:
                 result.ratios.append(name)
             if settle is not None:
                 settle(name, f"{handle[a]}:{AXIS_NAME}", f"{handle[b]}:{AXIS_NAME}", (numerator, denominator))
-            if name in sense_wrong:
+            if name in resensed:
+                result.resensed.append(name)
+            elif name in sense_wrong:
                 result.sense_found_wrong.append(name)
         for gear in train:
             touched[0] = True

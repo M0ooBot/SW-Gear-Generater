@@ -181,6 +181,24 @@ class FakeSolidWorks:
     catches app code that puts with a lock on. ``slips`` (Name2s) turns those gears 5° on every later
     ``rebuild()`` of the assembly: a put that does not hold. Nothing else is solved: a gear mate turns nothing
     (no solver, no drive, no drag).
+
+    W6, turned axes (W6-PLAN §4.2, row A). Components stand on any frame. The layout part's axes are read from its
+    plan's ops as it is built, never from the planning code: an axis through two planes lies where they cross,
+    each plane a base plane (Front plane1 holds z = 0, Top plane2 y = 0, Right plane3 x = 0) or a plane made from
+    one, whose coordinate is the layout's ``"<Shaft> X/Y/Z"`` global (0 when there is none), the axis running along
+    the remaining coordinate; a ``line_axis`` is a fixed line. Both are saved with the layout document.
+    ``axis_line`` reads one back; ``moved_lines={axis name: (point, direction)}`` stands for a line axis moved in
+    SolidWorks. A rebuild carries each anchor onto its layout axis wherever it points, and along it to the
+    coordinate its along mate holds along that mate's plane's normal (plane1 z, plane2 y, plane3 x), signed as the
+    mate was made (W6-INTERFACES §7.6). ``gear_mate_sense`` answers by rule H (``swcom.sense_reading``) from a
+    Reverse and two entity directions that tell the mate's TRUE sense: on parallel axes W5's, from the ring tables;
+    on turned axes the mesh's true sense is ``turned_senses[name]`` (``k > 0``), taken from the first caller when a
+    test sets none, and a turned mate turns right when its Flip is ``turned_flip_needed`` (made up: no probe ties a
+    turned Flip to anything). It gates a turned mate as ``Session`` does (the turned finding, the angles for axes
+    that meet or pass each other). Overrides: ``turned_reverse={name: bool}`` fixes the Reverse SolidWorks reads,
+    whatever the mate does (the rule failing); ``entity_senses={name: (±1, ±1)}`` points an entity against its
+    gear's axis (tier 9 never saw it, W6-INTERFACES §7.12); ``entity_swapped`` (names) gives the entities in the
+    other order; ``entity_stray={name: direction}`` reads the first entity along something else.
     """
 
     def __init__(self, trig=DEGREES, fail_on=None, rename=None, rebuild_ok=True, statuses=None, values=None,
@@ -240,6 +258,18 @@ class FakeSolidWorks:
         self.ring_parts = set()        # part paths that are rings (also: a file named "Ring…", as the app names one)
         self.helical_parts = set()     # part paths that are helical (also: a stem ending "_20L", as the app names one)
         self.never_right = set()       # gear mate names SolidWorks turns the wrong way whatever the Flip (made up)
+        # W6
+        self.plane_defs = {}           # plane handle and name -> its base plane (1 Front, 2 Top, 3 Right), this document
+        self.axis_defs = {}            # axis name -> ("planes", (index, index)) or ("line", point, direction)
+        self.saved_axes = {}           # lower-cased path -> axis_defs as saved
+        self.memory_axes = {}          # lower-cased path -> axis_defs as open now
+        self.moved_lines = {}          # axis name -> (point, direction): a line axis moved in SolidWorks
+        self.turned_senses = {}        # turned gear mate name -> its mesh's true same sense (k > 0)
+        self.turned_flip_needed = False
+        self.turned_reverse = {}       # gear mate name -> the Reverse SolidWorks reads whatever the mate does
+        self.entity_senses = {}        # gear mate name -> (±1, ±1): each entity along or against its gear's axis
+        self.entity_swapped = set()    # gear mate names whose entities come back in the other order
+        self.entity_stray = {}         # gear mate name -> a direction its first entity reads along instead
 
     def _log(self, name, *args):
         self.calls.append((name, args))
@@ -267,6 +297,7 @@ class FakeSolidWorks:
     def new_part(self, template=""):
         self._log("new_part", template)
         self.equations_text, self.made, self.current = [], [], ""
+        self.plane_defs, self.axis_defs = {}, {}
         self.kind, self.mates = 1, []
         return DocInfo(title="Part1", path="", doc_type=1)
 
@@ -320,6 +351,8 @@ class FakeSolidWorks:
         self.memory[_key(path)] = (self.equations_text, self.made)
         self.saved_mates[_key(path)] = copy.deepcopy(self.mates)
         self.memory_mates[_key(path)] = self.mates
+        self.saved_axes[_key(path)] = dict(self.axis_defs)
+        self.memory_axes[_key(path)] = self.axis_defs
         if path.lower().endswith(".sldasm"):
             self.saved_frames = dict(self.frames)        # where the components are in the file
             if not self.current:
@@ -338,6 +371,7 @@ class FakeSolidWorks:
         self.open_docs = []
         self.memory = {}
         self.memory_mates = {}
+        self.memory_axes = {}
         self.touched.clear()
         self.frames = dict(getattr(self, "saved_frames", self.frames))
 
@@ -379,7 +413,45 @@ class FakeSolidWorks:
         self._log("insert_axis", handle, name, tuple(planes))
         kept = self.rename.get(name, name)
         self.made.append(kept)
+        bases = [p if isinstance(p, int) else self.plane_defs.get(p) for p in planes]
+        if all(b in (1, 2, 3) for b in bases):
+            self.axis_defs[kept] = ("planes", tuple(3 - b for b in bases))      # plane1 holds z, 2 y, 3 x
         return kept
+
+    def line_axis(self, handle, name, point, direction, length):
+        """As swcom.Session.line_axis: a one-line 3D sketch and the axis on it, fixed (no global drives it)."""
+        self._log("line_axis", handle, name, tuple(point), tuple(direction), length)
+        sketch = name[:-len(" Axis")] + " Line" if name.endswith(" Axis") else name + " Line"
+        self.made.append(sketch)
+        kept = self.rename.get(name, name)
+        self.made.append(kept)
+        size = math.sqrt(sum(float(v) ** 2 for v in direction))
+        self.axis_defs[kept] = ("line", tuple(float(v) for v in point), tuple(float(v) / size for v in direction))
+        return kept
+
+    def _line_of(self, defs, name, values):
+        """A layout axis as (point, unit direction) from its definition and the layout's globals; None if unknown."""
+        if name in self.moved_lines:
+            return self.moved_lines[name]
+        held = defs.get(name)
+        if held is None:
+            return None
+        if held[0] == "line":
+            return held[1], held[2]
+        shaft = name[:-len(" Axis")] if name.endswith(" Axis") else name
+        point = [0.0, 0.0, 0.0]
+        for index in held[1]:
+            point[index] = float(values.get(f"{shaft} {'XYZ'[index]}", 0.0))
+        free = ({0, 1, 2} - set(held[1])).pop()
+        return tuple(point), tuple(1.0 if i == free else 0.0 for i in range(3))
+
+    def axis_line(self, handle, name):
+        """As swcom.Session.axis_line: the axis ``name`` of the document open now, read back (moved_lines first)."""
+        self._log("axis_line", handle, name)
+        line = self._line_of(self.axis_defs, name, self._values_of(self.current) if self.current else {})
+        if line is None:
+            raise SolidWorksError(f"No feature called {name!r} is in {self.active.title if self.active else 'it'}.")
+        return line
 
     def open_sketch(self, handle, plane):
         self._log("open_sketch", handle, plane)
@@ -435,6 +507,8 @@ class FakeSolidWorks:
         self._log("ref_plane", name, round(offset, 6), flip)
         kept = self.rename.get(name, name)
         self.made.append(kept)
+        base = plane if isinstance(plane, int) else self.plane_defs.get(plane)
+        self.plane_defs[handle] = self.plane_defs[kept] = base
         return kept, offset_dim
 
     def sweep_cut(self, handle, profile, path, name, twist, reverse, twist_dim):
@@ -527,6 +601,9 @@ class FakeSolidWorks:
         if not (is_open and _key(path) in self.memory_mates):
             self.memory_mates[_key(path)] = copy.deepcopy(self.saved_mates.get(_key(path), []))
         self.mates = self.memory_mates[_key(path)]
+        if not (is_open and _key(path) in self.memory_axes):
+            self.memory_axes[_key(path)] = dict(self.saved_axes.get(_key(path), {}))
+        self.axis_defs = self.memory_axes[_key(path)]
         self.current = path
         if not is_open:
             self.open_docs.append(info)
@@ -640,16 +717,28 @@ class FakeSolidWorks:
         own = self.equation_values() if self.equations_text else {}
         for axis in (m for m in live if m.axis):
             gear, (layout, target) = axis.a[0], axis.b
-            shaft = target[:-len("Axis")].strip()
-            values = self._values_of(self.component_paths.get(layout))
+            path = self.component_paths.get(layout)
+            values = self._values_of(path)
+            key = _key(path) if path else ""
+            defs = self.memory_axes.get(key, self.saved_axes.get(key, {}))
+            line = self._line_of(defs, target, values)
+            if line is None:                                   # a layout the fake never saw built: a Z axis by globals
+                shaft = target[:-len("Axis")].strip()
+                line = ((values.get(f"{shaft} X", 0.0), values.get(f"{shaft} Y", 0.0), 0.0), (0.0, 0.0, 1.0))
+            point, direction = line
             old = self.frames.get(gear, (IDENTITY9, (0.0, 0.0, 0.0)))
-            x, y = values.get(f"{shaft} X", 0.0), values.get(f"{shaft} Y", 0.0)
-            z = old[1][2]
+            off = tuple(old[1][i] - point[i] for i in range(3))
+            t = sum(off[i] * direction[i] for i in range(3))
             for along in (m for m in live if m.along and m.a[0] == gear):
+                index = {"plane1": 2, "plane2": 1, "plane3": 0}.get(along.b[1])
                 sign = -1.0 if along.value < 0 else 1.0
-                z = sign * own[along.link] if along.link in own else along.value
-            moved = math.hypot(x - old[1][0], y - old[1][1]) > 1e-9
-            new = (_mul(old[0], _rot_z(-13.0)) if moved else old[0], (x, y, z))
+                value = sign * own[along.link] if along.link in own else along.value
+                if index is not None and abs(direction[index]) > 1e-12:
+                    t = (value - point[index]) / direction[index]
+            origin = tuple(point[i] + t * direction[i] for i in range(3))
+            gap = math.sqrt(max(0.0, sum(v * v for v in off) - (sum(off[i] * direction[i] for i in range(3))) ** 2))
+            moved = gap > 1e-9
+            new = (_mul(old[0], _rot_z(-13.0)) if moved else old[0], origin)
             if _frame_off(new, old) == (0.0, 0.0):
                 continue
             for lock in (m for m in live if m.kind == "lock" and m.a[0] == gear):
@@ -752,9 +841,23 @@ class FakeSolidWorks:
         self.mates.remove(old)
         self._keep_mate(handle, old.name, "gear", a, b, 0.0, tuple(float(n) for n in ratio), bool(flip))
 
-    def _sigma(self, name):
+    def _axis(self, name):
+        """A component's own +Z as it stands: its frame's third column."""
         rotation, _ = self.frames.get(name, (IDENTITY9, (0.0, 0.0, 0.0)))
-        return 1 if rotation[8] > 0 else -1
+        return (rotation[2], rotation[5], rotation[8])
+
+    def _origin(self, name):
+        return self.frames.get(name, (IDENTITY9, (0.0, 0.0, 0.0)))[1]
+
+    def _sigma(self, name):
+        """A component's axis sense within its family: the sign of its axis's first component that is not 0 (+1 on
+        +Z, as W5's rotation[8] was)."""
+        axis = self._axis(name)
+        first = next((v for v in axis if abs(v) > 1e-12), 1.0)
+        return 1 if first > 0 else -1
+
+    def _turned(self, mate):
+        return not swcom.axes_parallel(self._axis(mate.a[0]), self._axis(mate.b[0]))
 
     def _is_ring(self, name):
         path = self.component_paths.get(name, "")
@@ -770,6 +873,8 @@ class FakeSolidWorks:
     def mesh_case(self, mate):
         """(internal, the key of the probe's tables for this pair, the Flip it needs on this fake's version)."""
         a, b = mate.a[0], mate.b[0]
+        if self._turned(mate):
+            return False, "turned", bool(self.turned_flip_needed)
         internal = self._is_ring(a) or self._is_ring(b)
         if internal:
             pinion, ring = (b, a) if self._is_ring(a) else (a, b)
@@ -786,18 +891,45 @@ class FakeSolidWorks:
             return False
         return mate.flip == self.mesh_case(mate)[2]
 
-    def gear_mate_sense(self, handle, internal):
-        """As swcom.Session.gear_mate_sense: a Reverse and two entity directions such that the read-back rule tells
-        the mate's TRUE sense for its true case; judged here for the mesh the caller says it is."""
-        self._log("gear_mate_sense", handle, internal)
+    def _true_same(self, mate, asked=None):
+        """Whether the mesh truly turns its gears the same way about their own axes (k > 0)."""
+        if self._turned(mate):
+            if mate.name not in self.turned_senses:
+                if asked is None:
+                    raise AssertionError(f"the fake was never told which way the turned mesh {mate.name} turns")
+                self.turned_senses[mate.name] = bool(asked)
+            return self.turned_senses[mate.name]
+        alike = sum(p * q for p, q in zip(self._axis(mate.a[0]), self._axis(mate.b[0]))) > 0
+        return self.mesh_case(mate)[0] == alike
+
+    def gear_mate_sense(self, handle, same_sense, axes, meet=None):
+        """As swcom.Session.gear_mate_sense: the turned gate, then a Reverse and two entity directions such that rule
+        H tells the mate's TRUE sense (see the class), judged by ``swcom.sense_reading`` for the mesh and the axes
+        the caller says."""
+        self._log("gear_mate_sense", handle, same_sense)
         mate = self.mate(self.mate_handles[handle])
+        title = self.active.title if self.active else "the assembly"
         if mate.suppressed:
             # No probe has read Reverse or a suppressed mate's axes: the fake refuses, so a read made too early fails.
             raise SolidWorksError(f"The fake will not read which way the suppressed gear mate {mate.name} turns.")
-        true_internal = self.mesh_case(mate)[0]
-        parallel = self._sigma(mate.a[0]) == self._sigma(mate.b[0])        # entity directions = the gear axes
-        reverse = parallel if self.turns_right(mate.name) == true_internal else not parallel
-        return (reverse == parallel) == bool(internal), parallel
+        a, b = mate.a[0], mate.b[0]
+        if self._turned(mate):
+            if meet is None:
+                meet = swcom.lines_meet(self._origin(a), self._axis(a), self._origin(b), self._axis(b))
+            refusal = swcom.turned_refusal(f"{mate.name} in {title}", swcom.own_axes_angle(*axes),
+                                           "so which way it turns is not read.", meet=bool(meet))
+            if refusal is not None:
+                raise SolidWorksError(refusal)
+        taus = self.entity_senses.get(mate.name, (1, 1))
+        directions = [tuple(taus[0] * v for v in self._axis(a)), tuple(taus[1] * v for v in self._axis(b))]
+        product = (1 if self._true_same(mate, same_sense) else -1) * taus[0] * taus[1]
+        reverse = (product > 0) if self.turns_right(mate.name) else not (product > 0)
+        reverse = self.turned_reverse.get(mate.name, reverse)
+        if mate.name in self.entity_stray:
+            directions[0] = tuple(self.entity_stray[mate.name])
+        if mate.name in self.entity_swapped:
+            directions.reverse()
+        return swcom.sense_reading(reverse, directions, axes, same_sense, mate=f"{mate.name} in {title}")
 
     def drive(self, name, degrees):
         """Turn one gear about its own axis and every gear its unsuppressed gear mates and locks carry, as the
@@ -817,8 +949,7 @@ class FakeSolidWorks:
                     turns[y] = turns[x]
                 else:
                     zx, zy = (m.ratio[0], m.ratio[1]) if x == ends[0] else (m.ratio[1], m.ratio[0])
-                    internal = self.mesh_case(m)[0]
-                    k = (1 if internal else -1) * self._sigma(x) * self._sigma(y) * zx / zy
+                    k = (1 if self._true_same(m) else -1) * zx / zy
                     turns[y] = (k if self.turns_right(m.name) else -k) * turns[x]
                 queue.append(y)
         for gear, turn in turns.items():
@@ -3876,12 +4007,12 @@ def test_a_mate_solidworks_turns_wrong_with_either_flip_stops_the_build_as_a_ref
 
 def test_axes_read_otherwise_than_the_plan_placed_them_stop_the_build_without_a_guess():
     fake = FakeSolidWorks()
-    real = fake.gear_mate_sense
-    fake.gear_mate_sense = lambda handle, internal: (real(handle, internal)[0], not real(handle, internal)[1])
+    fake.entity_stray = {"G1 meshes G2": (1.0, 0.0, 0.0)}
     _, result = _build_ring(fake)
     assert not result.ok and result.assembly.mate_problems == [
-        "SolidWorks reads the axes of the gear mate G1 meshes G2 as pointing opposite ways, but G1 and G2 sit on shafts "
-        "pointing the same way, so the mate does not hold the axes the gears were placed on, and nothing is guessed."]
+        "SolidWorks reads an axis of the gear mate G1 meshes G2 as pointing (1, 0, 0), which is not along G1's axis "
+        "(0, 0, 1) or G2's (0, 0, 1), so the mate does not hold the axes the gears were placed on, and nothing is "
+        "guessed."]
 
 
 def test_an_external_train_reads_every_gear_mate_and_turns_none_round():
@@ -4262,3 +4393,461 @@ def test_a_suppressed_idler_gear_mate_needs_the_idler_finding_before_anything_ch
                                  "settled on SolidWorks (findings.IDLER_UPDATE_HOLDS is None), so nothing is changed; "
                                  "run probe tier 8 first, or build the gearbox again.")
     assert not any(n in CHANGING + ("remake_gear_mate",) for n in names(fake))
+
+
+
+# -- W6: turned axes (W6-PLAN §2.6, §4.2 row A), on the fake: fixture A's bevel stage and fixture B's crossed one,
+# planned here by hand from §5's numbers (the fake never reads the planning code)
+
+@pytest.fixture
+def turned_findings(monkeypatch):
+    """Tier 9's findings (11ee1e2) and the skew range the probe agent adds (W6-INTERFACES §7.12), pinned here."""
+    for name, value in (("TURNED_GEAR_MATE_SENSE_READ_BACK", "entity senses"),
+                        ("TURNED_GEAR_MATE_SENSE_ANGLES", (30.0, 150.0)),
+                        ("TURNED_GEAR_MATE_SENSE_ANGLES_SKEW", (60.0, 120.0))):
+        monkeypatch.setattr(findings, name, value, raising=False)
+
+
+X_FRAME = (0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0)       # geometry.base_frame(X+): [+Y | +Z | +X] by rows
+A_LAYOUT, A_ASM = W + "Bevel_Reducer_Layout.SLDPRT", W + "Bevel_Reducer.SLDASM"
+B20, B40 = W + "Bevel_m3_N20.SLDPRT", W + "Bevel_m3_N40.SLDPRT"
+A_PARTS = {"gear1": B20, "gear2": B40, "gear3": P17, "gear4": P51}
+A_SENSES = {"G1 meshes G2": False, "G3 meshes G4": False}     # k < 0 on both: c = +1 (bevel), c = a·a = +1 (spur)
+
+
+def _a_layout_plan(path=A_LAYOUT):
+    """Fixture A's layout (§5.1): S1 on X+ through Top and "S1 Z Plane" (60 from Front); S2 on Z through Top and
+    Right; S3 on Z through "S3 X Plane" (68 on Right's minus side) and Top."""
+    return BuildPlan("layout", "", (
+        ops.NewPart(""), ops.AddGlobal("S1 Z", "60"), ops.AddGlobal("S3 X", "-68"),
+        ops.RefPlane("z1", "S1 Z Plane", 1, 60.0), ops.RefPlane("x3", "S3 X Plane", 3, 68.0, True),
+        ops.Axis("axis1", "S1 Axis", (2, "z1")), ops.Axis("axis2", "S2 Axis", (2, 3)),
+        ops.Axis("axis3", "S3 Axis", (2, "x3")), ops.Rebuild(), ops.SaveAs(path)), path)
+
+
+def _a_frames(z1=60.0):
+    return {"G1": (X_FRAME, (0.0, 0.0, z1)), "G2": (IDENTITY, (0.0, 0.0, z1)),
+            "G3": (_rot_z(0.0), (0.0, 0.0, 0.0)), "G4": (_rot_z(180.0 / 51), (-68.0, 0.0, 0.0))}
+
+
+def _a_plan(path=A_ASM, frames=None):
+    """Fixture A's turning assembly: G1's apex on the Right plane, G2's apex 60 from Front ("G2 Apex Z"), G3 locked
+    to G2, G4's face on Front; the bevel gear mate across 90°."""
+    frames = frames or _a_frames()
+    steps = [ops.NewAssembly(""), ops.AddGlobal("G2 Apex Z", "60"),
+             ops.AddComponent("layout", A_LAYOUT), ops.Place("layout", IDENTITY, (0.0, 0.0, 0.0)), ops.Fix("layout")]
+    for handle, gear in TRAIN_GEARS.items():
+        rotation, at = frames[gear]
+        steps += [ops.AddComponent(handle, A_PARTS[handle], at), ops.Place(handle, rotation, at), ops.Fix(handle)]
+    steps += [ops.Unfix("gear1"),
+              ops.Mate("axis1", "coincident", "gear1:Gear Axis", "layout:S1 Axis", name="G1 on S1 Axis"),
+              ops.Mate("along1", "point", "gear1:origin", "layout:plane3", name="G1 along S1"),
+              ops.Unfix("gear2"),
+              ops.Mate("axis2", "coincident", "gear2:Gear Axis", "layout:S2 Axis", name="G2 on S2 Axis"),
+              ops.Mate("along2", "point distance", "gear2:origin", "layout:plane1", 60.0, name="G2 along S2"),
+              ops.LinkDimension("D1@G2 along S2", '"G2 Apex Z"'),
+              ops.Unfix("gear3"), ops.Mate("lock1", "lock", "gear2", "gear3", name="G3 locked to G2"),
+              ops.Unfix("gear4"),
+              ops.Mate("axis3", "coincident", "gear4:Gear Axis", "layout:S3 Axis", name="G4 on S3 Axis"),
+              ops.Mate("along3", "point", "gear4:origin", "layout:plane1", name="G4 along S3"),
+              ops.Mate("mesh1", "gear", "gear1:Gear Axis", "gear2:Gear Axis", name="G1 meshes G2", ratio=(20.0, 40.0)),
+              ops.Mate("mesh2", "gear", "gear3:Gear Axis", "gear4:Gear Axis", name="G3 meshes G4", ratio=(17.0, 51.0))]
+    return BuildPlan("gearbox", "", tuple(steps) + (ops.Rebuild(), ops.SaveAs(path)), path)
+
+
+def _build_a(fake=None, **kwargs):
+    fake = fake or FakeSolidWorks()
+    kwargs.setdefault("parts", [plan(S17, path=B20), plan(S17, path=B40), plan(S17, path=P17), plan(S51, path=P51)])
+    kwargs.setdefault("layout", _a_layout_plan())
+    kwargs.setdefault("assembly", _a_plan())
+    kwargs.setdefault("gears", TRAIN_GEARS)
+    kwargs.setdefault("exists", fake.exists)
+    if "internal" not in kwargs:
+        kwargs.setdefault("senses", dict(A_SENSES))
+    return fake, swbuild.build_gearbox(fake, **kwargs)
+
+
+def test_fixture_a_plans_are_sound_and_its_bevel_mesh_meets_at_ninety_degrees():
+    assert _a_plan().check() == [] and _a_layout_plan().check() == []
+    axes, origins = swbuild._planned_axes(_a_plan()), swbuild._planned_origins(_a_plan())
+    assert axes["gear1"] == (1.0, 0.0, 0.0) and swcom.own_axes_angle(axes["gear1"], axes["gear2"]) == 90.0
+    assert swcom.lines_meet(origins["gear1"], axes["gear1"], origins["gear2"], axes["gear2"])
+
+
+def test_a_bevel_train_builds_with_every_gear_mate_read_against_its_planned_axes(turned_findings):
+    fake, result = _build_a()
+    assert result.ok and result.kind == swbuild.GEARBOX_MOTION, result.log_lines()
+    reads = [a for n, a in fake.calls if n == "gear_mate_sense"]
+    assert [same for _, same in reads] == [False, False]                    # both meshes: k < 0
+    assert result.assembly.turned_round == [] and result.assembly.mate_problems == []
+    assert fake.turns_right("G1 meshes G2", A_ASM) and fake.turns_right("G3 meshes G4", A_ASM)
+    for gear, frame in _a_frames().items():                                 # the rebuild left every gear placed
+        assert _close(fake.frames[f"gear{gear[1]}-1"], frame), gear
+
+
+def test_the_fake_layout_puts_a_turned_axis_where_its_planes_cross():
+    fake = FakeSolidWorks()
+    swbuild.build(fake, _a_layout_plan(), fake.exists)
+    assert fake.axis_line("a1", "S1 Axis") == ((0.0, 0.0, 60.0), (1.0, 0.0, 0.0))
+    assert fake.axis_line("a3", "S3 Axis") == ((-68.0, 0.0, 0.0), (0.0, 0.0, 1.0))
+    fake.set_global_variable("S1 Z", "64")
+    assert fake.axis_line("a1", "S1 Axis") == ((0.0, 0.0, 64.0), (1.0, 0.0, 0.0))
+
+
+@pytest.mark.parametrize("given", ["senses", "internal", "neither"])
+def test_a_turned_mesh_is_refused_before_anything_is_made_while_the_turned_finding_is_missing(
+        turned_findings, monkeypatch, given):
+    """W6-INTERFACES §7.3: whatever the caller gives, no turned gear mate reaches AddMate5 unread (D16)."""
+    monkeypatch.setattr(findings, "TURNED_GEAR_MATE_SENSE_READ_BACK", None)
+    fake = FakeSolidWorks()
+    kwargs = {"senses": dict(A_SENSES)} if given == "senses" else {"internal": ()} if given == "internal" \
+        else {"senses": None}
+    with pytest.raises(swbuild.BuildError) as raised:
+        _build_a(fake, **kwargs)
+    assert str(raised.value) == ("The gear mate G1 meshes G2 joins gears on shafts that meet at an angle, and which way "
+                                 "such a gear mate turns cannot be told on SolidWorks yet "
+                                 "(findings.TURNED_GEAR_MATE_SENSE_READ_BACK is None), so nothing is made or changed.")
+    assert fake.calls == []
+
+
+def test_a_turned_mesh_outside_the_angles_the_finding_covers_is_refused_before_anything_is_made(
+        turned_findings, monkeypatch):
+    monkeypatch.setattr(findings, "TURNED_GEAR_MATE_SENSE_ANGLES", (100.0, 150.0))
+    fake = FakeSolidWorks()
+    with pytest.raises(swbuild.BuildError) as raised:
+        _build_a(fake)
+    assert str(raised.value) == ("The gear mate G1 meshes G2 joins gears on shafts that meet at 90°, outside the "
+                                 "100°–150° the probes showed such a gear mate turning right at "
+                                 "(findings.TURNED_GEAR_MATE_SENSE_ANGLES), so nothing is made or changed.")
+    assert fake.calls == []
+
+
+def test_a_turned_mesh_needs_the_build_told_its_sense_in_the_new_form(turned_findings):
+    for kwargs, said in (({"senses": None}, "the build was not told which way it turns them"),
+                         ({"internal": ()}, "the build was told only which gear mates mesh inside a ring")):
+        fake = FakeSolidWorks()
+        with pytest.raises(swbuild.BuildError) as raised:
+            _build_a(fake, **kwargs)
+        assert said in str(raised.value) and str(raised.value).endswith("a fault in Gear Generator.")
+        assert fake.calls == []
+    with pytest.raises(swbuild.BuildError, match="not told which way the gear mate G3 meshes G4"):
+        _build_a(senses={"G1 meshes G2": False})
+
+
+def test_a_turned_mate_read_wrong_is_made_again_with_the_other_flip(turned_findings):
+    fake = FakeSolidWorks()
+    fake.turned_flip_needed = True                               # made up: this SolidWorks wants the other Flip
+    fake, result = _build_a(fake)
+    assert result.ok and result.assembly.turned_round == ["G1 meshes G2"], result.log_lines()
+    assert fake.mate("G1 meshes G2", A_ASM).flip is True and fake.turns_right("G1 meshes G2", A_ASM)
+
+
+def test_a_turned_mate_read_wrong_either_way_round_stops_the_build_as_a_mate_problem(turned_findings):
+    fake = FakeSolidWorks()
+    fake.turned_reverse = {"G1 meshes G2": True}                 # SolidWorks' Reverse not as rule H says
+    fake, result = _build_a(fake)
+    assert not result.ok and result.assembly.mate_problems == [
+        "SolidWorks turns the gears of the mate G1 meshes G2 against the way they mesh, whichever way round the mate "
+        "is made."]
+    assert not result.assembly.saved
+
+
+@pytest.mark.parametrize("override", [{"entity_swapped": {"G1 meshes G2"}},
+                                      {"entity_senses": {"G1 meshes G2": (-1, 1)}},
+                                      {"entity_senses": {"G1 meshes G2": (-1, -1)}, "entity_swapped": {"G1 meshes G2"}}])
+def test_a_turned_mates_entities_in_either_order_and_either_direction_are_judged_by_rule_h(turned_findings, override):
+    """Tier 9 saw every entity along its own gear's +Z, first selection first (W6-INTERFACES §7.12); the fake's
+    overrides keep the other cases tested: H matches each entity to its gear by alignment, and its sense counts."""
+    fake = FakeSolidWorks()
+    for name, value in override.items():
+        setattr(fake, name, value)
+    fake, result = _build_a(fake)
+    assert result.ok and result.assembly.turned_round == [], result.log_lines()
+    assert fake.turns_right("G1 meshes G2", A_ASM)
+
+
+def test_a_turned_mate_holding_an_axis_along_neither_gear_stops_the_build_naming_both(turned_findings):
+    fake = FakeSolidWorks()
+    fake.entity_stray = {"G1 meshes G2": (0.0, 1.0, 0.0)}
+    fake, result = _build_a(fake)
+    assert result.assembly.mate_problems == [
+        "SolidWorks reads an axis of the gear mate G1 meshes G2 as pointing (0, 1, 0), which is not along G1's axis "
+        "(1, 0, 0) or G2's (0, 0, 1), so the mate does not hold the axes the gears were placed on, and nothing is "
+        "guessed."]
+
+
+def test_the_drive_turns_a_bevel_train_as_section_five_says(turned_findings):
+    fake, result = _build_a()
+    assert result.ok
+    turns = fake.drive("gear1-1", 30.0)
+    assert turns["gear2-1"] == pytest.approx(-15.0) and turns["gear3-1"] == pytest.approx(-15.0)
+    assert turns["gear4-1"] == pytest.approx(5.0)
+
+
+# fixture B's crossed stage alone (§5.2): S1 on Z, S2 on X+ at y 84.852814, z 8; G2's origin on Right's minus side
+C_SHAFT = 84.852814
+H20, H40 = W + "Helical_m2_N20_45R.SLDPRT", W + "Helical_m2_N40_45R.SLDPRT"
+
+
+def _b_layout_plan(path=A_LAYOUT):
+    return BuildPlan("layout", "", (
+        ops.NewPart(""), ops.AddGlobal("S2 Y", repr(C_SHAFT)), ops.AddGlobal("S2 Z", "8"),
+        ops.RefPlane("y2", "S2 Y Plane", 2, C_SHAFT), ops.RefPlane("z2", "S2 Z Plane", 1, 8.0),
+        ops.Axis("axis1", "S1 Axis", (2, 3)), ops.Axis("axis2", "S2 Axis", ("y2", "z2")),
+        ops.Rebuild(), ops.SaveAs(path)), path)
+
+
+def _b_plan(path=A_ASM):
+    steps = [ops.NewAssembly(""), ops.AddGlobal("G1 Face Z", "2"), ops.AddGlobal("G2 Face X", "8"),
+             ops.AddComponent("layout", A_LAYOUT), ops.Place("layout", IDENTITY, (0.0, 0.0, 0.0)), ops.Fix("layout"),
+             ops.AddComponent("gear1", H20, (0.0, 0.0, 2.0)), ops.Place("gear1", IDENTITY, (0.0, 0.0, 2.0)),
+             ops.Fix("gear1"),
+             ops.AddComponent("gear2", H40, (-8.0, C_SHAFT, 8.0)), ops.Place("gear2", X_FRAME, (-8.0, C_SHAFT, 8.0)),
+             ops.Fix("gear2"),
+             ops.Unfix("gear1"),
+             ops.Mate("axis1", "coincident", "gear1:Gear Axis", "layout:S1 Axis", name="G1 on S1 Axis"),
+             ops.Mate("along1", "point distance", "gear1:origin", "layout:plane1", 2.0, name="G1 along S1"),
+             ops.LinkDimension("D1@G1 along S1", '"G1 Face Z"'),
+             ops.Unfix("gear2"),
+             ops.Mate("axis2", "coincident", "gear2:Gear Axis", "layout:S2 Axis", name="G2 on S2 Axis"),
+             ops.Mate("along2", "point distance", "gear2:origin", "layout:plane3", -8.0, name="G2 along S2"),
+             ops.LinkDimension("D1@G2 along S2", '"G2 Face X"'),
+             ops.Mate("mesh1", "gear", "gear1:Gear Axis", "gear2:Gear Axis", name="G1 meshes G2", ratio=(20.0, 40.0))]
+    return BuildPlan("gearbox", "", tuple(steps) + (ops.Rebuild(), ops.SaveAs(path)), path)
+
+
+def _build_b(fake=None, **kwargs):
+    fake = fake or FakeSolidWorks()
+    kwargs.setdefault("parts", [plan(S17, path=H20), plan(S68, path=H40)])
+    kwargs.setdefault("layout", _b_layout_plan())
+    kwargs.setdefault("assembly", _b_plan())
+    kwargs.setdefault("gears", {"gear1": "G1", "gear2": "G2"})
+    kwargs.setdefault("exists", fake.exists)
+    kwargs.setdefault("senses", {"G1 meshes G2": True})          # c = −1: k = +20/40 > 0
+    return fake, swbuild.build_gearbox(fake, **kwargs)
+
+
+def test_a_crossed_mesh_reads_the_skew_range_and_builds_inside_it(turned_findings):
+    fake, result = _build_b()
+    assert result.ok, result.log_lines()
+    assert fake.turns_right("G1 meshes G2", A_ASM)
+    assert _close(fake.frames["gear2-1"], (X_FRAME, (-8.0, C_SHAFT, 8.0)))   # held on Right's minus side, flipped
+    assert fake.drive("gear1-1", 30.0)["gear2-1"] == pytest.approx(15.0)     # §5.2: G2 +15°
+
+
+def test_a_crossed_mesh_is_refused_while_the_skew_finding_is_missing(turned_findings, monkeypatch):
+    monkeypatch.delattr(findings, "TURNED_GEAR_MATE_SENSE_ANGLES_SKEW", raising=False)
+    fake = FakeSolidWorks()
+    with pytest.raises(swbuild.BuildError) as raised:
+        _build_b(fake)
+    assert str(raised.value) == ("The gear mate G1 meshes G2 joins gears on shafts that pass each other at an angle, "
+                                 "and which way such a gear mate turns cannot be told on SolidWorks yet "
+                                 "(findings.TURNED_GEAR_MATE_SENSE_ANGLES_SKEW is None), so nothing is made or "
+                                 "changed.")
+    assert fake.calls == []
+
+
+# -- W6 Update on fixture A (W6-PLAN §2.7): the check phase reads a turned gear mate, a remake reads it back by rule H
+
+A_TEETH = {"G1": 20, "G2": 40, "G3": 17, "G4": 51}
+A_MESHES = (MeshLink("G1", "G2", -20.0 / 40, 360.0 / 40), MeshLink("G3", "G4", -17.0 / 51, 360.0 / 51))
+A_LOCKS = (LockLink("G2", "G3", 360.0 / 17),)
+A_MATE_REFS = (MateRef("G1 on S1 Axis", "axis", ("G1",), "S1"), MateRef("G1 along S1", "along", ("G1",), "S1"),
+               MateRef("G2 on S2 Axis", "axis", ("G2",), "S2"), MateRef("G2 along S2", "along", ("G2",), "S2"),
+               MateRef("G3 locked to G2", "lock", ("G2", "G3")), MateRef("G4 on S3 Axis", "axis", ("G4",), "S3"),
+               MateRef("G4 along S3", "along", ("G4",), "S3"), MateRef("G1 meshes G2", "mesh", ("G1", "G2")),
+               MateRef("G3 meshes G4", "mesh", ("G3", "G4")))
+A_LAYOUT_VALUES = swbuild.DocumentValues(A_LAYOUT, (GlobalVariable("S1 Z", "60"), GlobalVariable("S3 X", "-68")),
+                                         ("S1 Z Plane", "S3 X Plane", "S1 Axis", "S2 Axis", "S3 Axis"))
+
+
+def _a_placements(teeth=None):
+    teeth = teeth or A_TEETH
+    frames = _a_frames()
+    return [swbuild.Placement(g, f"gear{g[1]}-1", frames[g][0], frames[g][1], 360.0 / teeth[g]) for g in TRAIN_ORDER]
+
+
+def _a_motion(**kwargs):
+    kwargs.setdefault("mates", A_MATE_REFS)
+    kwargs.setdefault("meshes", A_MESHES)
+    kwargs.setdefault("locks", A_LOCKS)
+    kwargs.setdefault("recorded", tuple(_a_placements()))
+    kwargs.setdefault("recorded_meshes", A_MESHES)
+    kwargs.setdefault("face_globals", (("G2", GlobalVariable("G2 Apex Z", "60")),))
+    return swbuild.MotionUpdate(**kwargs)
+
+
+def _built_a(fake=None):
+    fake, result = _build_a(fake)
+    assert result.ok, result.log_lines()
+    fake.calls.clear()
+    return fake
+
+
+def _update_a(fake, **kwargs):
+    kwargs.setdefault("assembly", A_ASM)
+    kwargs.setdefault("placements", _a_placements())
+    kwargs.setdefault("motion", _a_motion())
+    kwargs.setdefault("exists", fake.exists)
+    return swbuild.update_gearbox(fake, **kwargs)
+
+
+def test_an_update_with_nothing_changed_reads_the_turned_gear_mate_and_puts_nothing(turned_findings):
+    fake = _built_a()
+    result = _update_a(fake)
+    assert result.ok and result.placed == [] and result.sense_found_wrong == [], result.log_lines()
+    assert [a[1] for n, a in fake.calls if n == "gear_mate_sense"] == [False, False]
+
+
+def test_a_tooth_change_remakes_the_turned_gear_mate_and_reads_it_back_by_rule_h(turned_findings):
+    fake = FakeSolidWorks()
+    fake.turned_flip_needed = True               # made up: the remade mate (GEAR_MATE_FLIP False first) reads wrong
+    fake = _built_a(fake)
+    teeth = dict(A_TEETH, G1=21)
+    meshes = (MeshLink("G1", "G2", -21.0 / 40, 360.0 / 40), A_MESHES[1])
+    result = _update_a(fake, placements=_a_placements(teeth),
+                       motion=_a_motion(meshes=meshes, ratios=(("G1 meshes G2", 21, 40),)))
+    assert result.ok, result.log_lines()
+    assert result.ratios == ["G1 meshes G2"] and result.turned_round == ["G1 meshes G2"]
+    assert result.ratios_read == [("G1 meshes G2", 20, 40, 21, 40)] and result.placed == list(TRAIN_ORDER)
+    assert fake.mate("G1 meshes G2", A_ASM).ratio == (21.0, 40.0) and fake.turns_right("G1 meshes G2", A_ASM)
+    assert fake.locked_puts == []
+
+
+def test_an_update_of_a_turned_gearbox_is_refused_before_anything_is_read_while_the_finding_is_missing(
+        turned_findings, monkeypatch):
+    fake = _built_a()
+    monkeypatch.setattr(findings, "TURNED_GEAR_MATE_SENSE_READ_BACK", None)
+    with pytest.raises(swbuild.BuildError) as raised:
+        _update_a(fake)
+    assert str(raised.value).startswith("The gear mate G1 meshes G2 joins gears on shafts that meet at an angle")
+    assert not any(n in ("open_document", "gear_mate_sense") + CHANGING for n in names(fake))
+
+
+@pytest.mark.parametrize("teeth2, counts", [(40, None), (41, ("G1 meshes G2", 20, 40, 20, 41))])
+def test_a_crossed_mesh_whose_sense_the_workbook_changes_is_remade_and_listed_as_resensed(
+        turned_findings, teeth2, counts):
+    """Review M4: S2 moved to the other side of S1 turns G2 the other way (c = s1·s2 flips). The mate is remade,
+    read back against the new k, listed in ``resensed``; in ``ratios`` (with its counts read) only when its ratio
+    changed too; never ``sense_found_wrong``: it was not found wrong, the workbook moved."""
+    fake, result = _build_b()
+    assert result.ok, result.log_lines()
+    fake.calls.clear()
+    fake.turned_senses["G1 meshes G2"] = False                 # the truth after the move: k < 0
+    mates = (MateRef("G1 on S1 Axis", "axis", ("G1",), "S1"), MateRef("G1 along S1", "along", ("G1",), "S1"),
+             MateRef("G2 on S2 Axis", "axis", ("G2",), "S2"), MateRef("G2 along S2", "along", ("G2",), "S2"),
+             MateRef("G1 meshes G2", "mesh", ("G1", "G2")))
+    placements = [swbuild.Placement("G1", "gear1-1", IDENTITY, (0.0, 0.0, 2.0), 360.0 / 20),
+                  swbuild.Placement("G2", "gear2-1", X_FRAME, (-8.0, C_SHAFT, 8.0), 360.0 / teeth2)]
+    motion = swbuild.MotionUpdate(
+        mates=mates, meshes=(MeshLink("G1", "G2", -20.0 / teeth2, 360.0 / teeth2),),
+        recorded=tuple(swbuild.Placement(p.gear, p.component, p.rotation, p.at, 360.0 / (20 if p.gear == "G1" else 40))
+                       for p in placements),
+        recorded_meshes=(MeshLink("G1", "G2", 20.0 / 40, 360.0 / 40),),
+        face_globals=(("G1", GlobalVariable("G1 Face Z", "2")), ("G2", GlobalVariable("G2 Face X", "8"))),
+        ratios=(("G1 meshes G2", 20, teeth2),))
+    result = swbuild.update_gearbox(fake, assembly=A_ASM, placements=placements, motion=motion, exists=fake.exists)
+    assert result.ok, result.log_lines()
+    assert result.resensed == ["G1 meshes G2"] and result.sense_found_wrong == []
+    assert result.ratios == ([] if counts is None else ["G1 meshes G2"]) and result.ratios_already == []
+    assert result.ratios_read == ([] if counts is None else [counts]) and result.ratios_found == []
+    called = names(fake)
+    assert called.index("set_gear_ratio") < called.index("gear_mate_sense")          # never read before the remake
+    assert [a[1] for n, a in fake.calls if n == "gear_mate_sense"] == [False]        # read against the new k
+    assert ("ok      made again to turn their gears the other way, as the workbook now has them: G1 meshes G2"
+            in result.log_lines())
+
+
+def test_a_sense_change_is_refused_before_anything_changes_without_the_remake_route(turned_findings, monkeypatch):
+    fake, result = _build_b()
+    fake.calls.clear()
+    monkeypatch.setattr(findings, "GEAR_MATE_RATIO_ROUTE", None)
+    mates = (MateRef("G1 on S1 Axis", "axis", ("G1",), "S1"), MateRef("G1 along S1", "along", ("G1",), "S1"),
+             MateRef("G2 on S2 Axis", "axis", ("G2",), "S2"), MateRef("G2 along S2", "along", ("G2",), "S2"),
+             MateRef("G1 meshes G2", "mesh", ("G1", "G2")))
+    placements = [swbuild.Placement("G1", "gear1-1", IDENTITY, (0.0, 0.0, 2.0), 18.0),
+                  swbuild.Placement("G2", "gear2-1", X_FRAME, (-8.0, C_SHAFT, 8.0), 9.0)]
+    motion = swbuild.MotionUpdate(mates=mates, meshes=(MeshLink("G1", "G2", -0.5, 9.0),), recorded=tuple(placements),
+                                  recorded_meshes=(MeshLink("G1", "G2", 0.5, 9.0),))
+    # Planning lists the remake in ``ratios`` too, and the motion gate refuses it first; this is the worker's own
+    # guard for a sense change it finds without one.
+    with pytest.raises(swbuild.BuildError) as raised:
+        swbuild.update_gearbox(fake, assembly=A_ASM, placements=placements, motion=motion, exists=fake.exists)
+    assert str(raised.value) == ("The gear mate G1 meshes G2 in Bevel_Reducer.SLDASM must be made again, since the "
+                                 "workbook now has it turn its gears the other way about their axes, and making a gear "
+                                 "mate again has not been settled on SolidWorks (findings.GEAR_MATE_RATIO_ROUTE is "
+                                 "None), so nothing is changed; build the gearbox again.")
+    assert not any(n in CHANGING for n in names(fake))
+
+
+# -- W6 line axes (D4, review S7): made by line_axis, read back by axis_line in Update's check phase and on reuse
+
+def _slant_layout_plan(path=A_LAYOUT):
+    return BuildPlan("layout", "", (
+        ops.NewPart(""), ops.AddGlobal("S1 Z", "60"),
+        ops.RefPlane("z1", "S1 Z Plane", 1, 60.0), ops.Axis("axis1", "S1 Axis", (2, "z1")),
+        ops.LineAxis("line3", "S3 Axis", (-110.0, C_SHAFT, 8.0), (-0.5, math.sqrt(3) / 2, 0.0)),
+        ops.Rebuild(), ops.SaveAs(path)), path)
+
+
+SLANT = (-110.0, C_SHAFT, 8.0), (-0.5, math.sqrt(3) / 2, 0.0)
+
+
+def test_a_slanted_axis_is_made_on_its_line_and_read_back_there():
+    fake = FakeSolidWorks()
+    result = swbuild.build(fake, _slant_layout_plan(), fake.exists)
+    assert result.ok and "axis S3 Axis on S3 Line" in result.done, result.done
+    assert [a for n, a in fake.calls if n == "line_axis"] == [("line3", "S3 Axis") + SLANT + (100.0,)]
+    assert "S3 Line" in fake.made and "S3 Axis" in fake.made
+    point, direction = fake.axis_line("l", "S3 Axis")
+    assert swbuild._on_line((point, direction), *SLANT)
+    assert swbuild._on_line((point, tuple(-v for v in direction)), *SLANT)          # either way along it
+    assert not swbuild._on_line(((-110.0, C_SHAFT, 8.001), direction), *SLANT)
+    assert not swbuild._on_line((point, (-0.5, 0.866, 0.0)), *SLANT)
+
+
+def test_an_update_refuses_a_line_axis_moved_in_solidworks_before_anything_changes(turned_findings):
+    fake = _built_a()
+    values = swbuild.DocumentValues(A_LAYOUT, A_LAYOUT_VALUES.variables, A_LAYOUT_VALUES.features)
+    lines = {"S1 Axis": ((0.0, 0.0, 60.0), (1.0, 0.0, 0.0))}
+    assert _update_a(fake, layout=values, lines=lines).ok                  # where the record has it: nothing said
+    assert [a[1] for n, a in fake.calls if n == "axis_line"] == ["S1 Axis"]
+    fake.calls.clear()
+    fake.moved_lines = {"S1 Axis": ((0.0, 0.0, 61.0), (1.0, 0.0, 0.0))}
+    with pytest.raises(swbuild.NotAsBuilt) as raised:
+        _update_a(fake, layout=values, lines=lines)
+    assert str(raised.value) == ("S1's axis in the layout part is not where the record has it (it was moved in "
+                                 "SolidWorks), so Update SolidWorks cannot act on it; Build again… makes a new "
+                                 "revision.")
+    assert not any(n in CHANGING for n in names(fake))
+
+
+def test_line_axes_without_a_layout_part_are_a_fault():
+    with pytest.raises(swbuild.BuildError, match="no layout part to find them in"):
+        swbuild.update_gearbox(FakeSolidWorks(), assembly=A_ASM, lines={"S3 Axis": SLANT})
+
+
+def test_a_reused_layout_whose_line_axis_moved_is_mismatched_not_reused():
+    fake = FakeSolidWorks()
+    swbuild.build(fake, _slant_layout_plan(), fake.exists)
+    fake.calls.clear()
+    values = swbuild.DocumentValues(A_LAYOUT, (GlobalVariable("S1 Z", "60"),), ("S1 Z Plane", "S1 Axis", "S3 Axis"))
+    fake.moved_lines = {"S3 Axis": ((-110.0, C_SHAFT, 9.0), SLANT[1])}
+    result = swbuild.build_gearbox(fake, [], layout=values, exists=fake.exists, lines={"S3 Axis": SLANT})
+    assert result.mismatched == [(A_LAYOUT, "S3's axis in the layout part is not where the record has it (it was "
+                                            "moved in SolidWorks), so Bevel_Reducer_Layout.SLDPRT cannot be reused.")]
+
+
+def test_the_fakes_rebuild_carries_anchors_along_turned_axes_and_planes_as_its_globals_say(turned_findings):
+    """S1 Z 60 → 64 and G2 Apex Z 60 → 64 (r2): G1 rides its X axis up (and swings, as SolidWorks may), G2 rides
+    S2 up to 64 measured from Front, G3 follows G2 through its lock; G4, on Front, stays."""
+    fake = _built_a()
+    fake.open_document(A_LAYOUT)
+    fake.set_global_variable("S1 Z", "64")
+    fake.open_document(A_ASM)
+    fake.set_global_variable("G2 Apex Z", "64")
+    fake.rebuild(kind=swcom.ASSEMBLY_TRAIN)
+    g1, g2, g3, g4 = (fake.frames[f"gear{i}-1"] for i in range(1, 5))
+    assert g1[1] == pytest.approx((0.0, 0.0, 64.0)) and (g1[0][2], g1[0][5], g1[0][8]) == pytest.approx((1, 0, 0))
+    assert g2[1] == pytest.approx((0.0, 0.0, 64.0)) and g3[1] == pytest.approx((0.0, 0.0, 4.0))
+    assert _close(g4, _a_frames()["G4"])
