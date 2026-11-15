@@ -410,13 +410,18 @@ W6B = GearboxSpec(
            Gear("G3", "S2", "-110", "bevel", "external", "20", "2.5", face_width="10", bore="8"),
            Gear("G4", "S3", "0", "bevel", "external", "30", "2.5", face_width="10", bore="8")),
     meshes=(Mesh("G1", "G2"), Mesh("G3", "G4")))
+# The Speeds lines exactly, C's wording (W6-INTERFACES §7.19): "seen from the +X end", a no-break space joining each
+# number to its unit and holding the vector together.
+NB = "\u00a0"
 W6_EXPECT = {
     "A": ("Bevel and parallel train · 2 meshes · 6.000 : 1 · output at 90° to the input",
-          ["1500.0 rpm anticlockwise", "+X", "750.0 rpm clockwise", "250.0 rpm anticlockwise", "10.00 N·m",
-           "19.60 N·m", "57.62 N·m"]),
+          [f"S1    1500.0{NB}rpm anticlockwise seen from the +X end · 10.00{NB}N·m",
+           f"S2    750.0{NB}rpm clockwise seen from the +Z end · 19.60{NB}N·m",
+           f"S3    250.0{NB}rpm anticlockwise seen from the +Z end · 57.62{NB}N·m"]),
     "B": ("Crossed and bevel train · 2 meshes · 3.000 : 1 · output at 90° to the input",
-          ["1000.0 rpm anticlockwise", "500.0 rpm anticlockwise", "333.3 rpm anticlockwise", "+X",
-           "(0.5, −0.866, 0)", "9.80 N·m", "14.41 N·m"])}
+          [f"S1    1000.0{NB}rpm anticlockwise seen from the +Z end · 5.00{NB}N·m",
+           f"S2    500.0{NB}rpm anticlockwise seen from the +X end · 9.80{NB}N·m",
+           f"S3    333.3{NB}rpm anticlockwise seen from the (0.5,{NB}−0.866,{NB}0) end · 14.41{NB}N·m"])}
 W6_PATHS = {}
 for _which, _spec, _folder in (("A", W6A, W6A_FOLDER), ("B", W6B, W6B_FOLDER)):
     os.makedirs(_folder)
@@ -493,10 +498,35 @@ def status_starts(*heads):
     return lambda: idle() and win.status.get().startswith(heads)
 
 
+def speeds_labels():
+    return [w for w in win.speeds_body.winfo_children() if isinstance(w, tk.Label)]
+
+
 def speeds_lines():
-    """The Speeds panel's lines as the window shows them (its labels), the no-break space read as a space."""
-    return [str(w.cget("text")).replace("\u00a0", " ") for w in win.speeds_body.winfo_children()
-            if isinstance(w, tk.Label)]
+    """The Speeds panel's lines as the window shows them (its labels' text, exactly)."""
+    return [str(w.cget("text")) for w in speeds_labels()]
+
+
+def speeds_panel(name):
+    """The Speeds panel cut from shot ``name`` and doubled (``<name>-speeds.png``), and how many lines Tk drew each
+    label on (its height over its font's line spacing): a wrapped line is there to LOOK at, whether each number
+    stays with its unit (W6-INTERFACES §7.19)."""
+    import tkinter.font as tkfont
+    hwnd = int(win.wm_frame(), 16)
+    left, top, _, _ = win32gui.GetWindowRect(hwnd)
+    body = win.speeds_body
+    x0, y0 = body.winfo_rootx() - left, body.winfo_rooty() - top
+    img = Image.open(os.path.join(SHOTS, name + ".png"))
+    crop = img.crop((max(0, x0 - 8), max(0, y0 - 8), x0 + body.winfo_width() + 8, y0 + body.winfo_height() + 8))
+    crop = crop.resize((crop.width * 2, crop.height * 2), Image.LANCZOS)
+    path = os.path.join(SHOTS, name + "-speeds.png")
+    crop.save(path)
+    rows = []
+    for w in speeds_labels():
+        font = tkfont.Font(root=win, font=w.cget("font"))
+        rows.append({"text": str(w.cget("text")), "drawn_on_lines": round(w.winfo_height() / font.metrics("linespace")),
+                     "wraplength": str(w.cget("wraplength")), "width_needed": font.measure(str(w.cget("text")))})
+    log("speeds panel", shot=path, labels=rows)
 
 
 def w6_read_check(which):
@@ -505,9 +535,8 @@ def w6_read_check(which):
     log("W6 read", board=which, header=shown, speeds=lines, speeds_readout=win.speeds_readout.get(),
         end_view=win.view_readout.get())
     check(shown == header, f"W6 {which}: the header {shown!r}")
-    text = "\n".join(lines)
-    check(all(w in text for w in wanted), f"W6 {which}: the Speeds lines carry {wanted}: missing "
-          f"{[w for w in wanted if w not in text]}")
+    check(lines == wanted, f"W6 {which}: the Speeds lines are C's exactly (no-break spaces included): "
+          f"{[(got, want) for got, want in zip(lines, wanted) if got != want] or (lines if len(lines) != len(wanted) else 'equal')}")
 
 
 def w6_built_check():
@@ -693,6 +722,7 @@ STEPS = [
     ("wait", lambda: win.reading is not None and win.reading.ok and idle() and win.footer().build_enabled),
     ("pause", 1.0),
     ("do", lambda: shoot("11-right-angle-read")),
+    ("do", lambda: speeds_panel("11-right-angle-read")),
     ("do", lambda: w6_read_check("A")),
     ("do", lambda: win.build_button.command()),
     ("wait", status_starts("Built", "Check", "SolidWorks cannot", "No assembly", "The gearbox")),
@@ -712,6 +742,7 @@ STEPS = [
     ("wait", lambda: win.reading is not None and win.reading.ok and idle()),
     ("pause", 1.5),
     ("do", lambda: shoot("13-crossed-read")),
+    ("do", lambda: speeds_panel("13-crossed-read")),
     ("do", lambda: w6_read_check("B")),
 ]
 T0 = time.time()

@@ -3818,8 +3818,12 @@ A_EXPECT = {
     "torques": {"S1": 10.0, "S2": 19.6, "S3": 57.624},
     "seen": {"S1": "+X", "S2": "+Z", "S3": "+Z"},
     "kinds": {("G1", "G2"): "bevel", ("G3", "G4"): "parallel"},
-    "speed_texts": ["1500.0 rpm anticlockwise", "750.0 rpm clockwise", "250.0 rpm anticlockwise"]}
-A_Y_EXPECT = dict(A_EXPECT, seen={"S1": "+Y", "S2": "+Z", "S3": "+Z"})
+    "speed_texts": ["1500.0 rpm anticlockwise", "750.0 rpm clockwise", "250.0 rpm anticlockwise"],
+    "lines": ["S1    1500.0\u00a0rpm anticlockwise seen from the +X end · 10.00\u00a0N·m",
+              "S2    750.0\u00a0rpm clockwise seen from the +Z end · 19.60\u00a0N·m",
+              "S3    250.0\u00a0rpm anticlockwise seen from the +Z end · 57.62\u00a0N·m"]}
+A_Y_EXPECT = dict(A_EXPECT, seen={"S1": "+Y", "S2": "+Z", "S3": "+Z"},
+                  lines=[A_EXPECT["lines"][0].replace("+X end", "+Y end")] + A_EXPECT["lines"][1:])
 B_EXPECT = {
     "warnings": ["Gears!Q2: G1: The involute starts at 53.849 mm, " + INVOLUTE.format("53.14 mm"),
                  "Gears!L2: G1: A helix angle of 45° is outside the usual 8–30° for a helical gear.",
@@ -3833,7 +3837,10 @@ B_EXPECT = {
     "seen": {"S1": "+Z", "S2": "+X", "S3": "(0.5, −0.866, 0)"},
     "kinds": {("G1", "G2"): "crossed", ("G3", "G4"): "bevel"},
     "speed_texts": ["1000.0 rpm anticlockwise", "500.0 rpm anticlockwise", "333.3 rpm anticlockwise",
-                    "(0.5, −0.866, 0)"]}
+                    "(0.5, −0.866, 0)"],
+    "lines": ["S1    1000.0\u00a0rpm anticlockwise seen from the +Z end · 5.00\u00a0N·m",
+              "S2    500.0\u00a0rpm anticlockwise seen from the +X end · 9.80\u00a0N·m",
+              "S3    333.3\u00a0rpm anticlockwise seen from the (0.5,\u00a0−0.866,\u00a00) end · 14.41\u00a0N·m"]}
 # Each gear's turn for +30° of G1 (W6-PLAN §5), the input's own sign: worked by hand there, held against the app's
 # kinematics before every build and Update that changes the ratio.
 A_DRIVE = {"G1": 30.0, "G2": -15.0, "G3": -15.0, "G4": 5.0}
@@ -3894,6 +3901,7 @@ def expect_read(desk, label, expect):
     say(f"speeds  readout {readout!r}")
     text = "\n".join(lines).replace("\u00a0", " ")      # the unit is held to its number by a no-break space
     check(all(t in text for t in expect["speed_texts"]), f"{label}: the Speeds lines carry {expect['speed_texts']}")
+    check(lines == expect["lines"], f"{label}: the Speeds lines are C's exactly (W6-INTERFACES §7.19)")
 
 
 def pin_drive(desk, label, want, input_gear="G1"):
@@ -4248,6 +4256,25 @@ def snapshot():
         return ""
 
 
+def give_back_r1():
+    """At the very end, once nothing copies from it any more: r1.master renamed back to r1, so the person's step opens
+    it where its records and the assembly's references point."""
+    master = os.path.join(OUT, "r1" + MASTER_SUFFIX)
+    target = os.path.join(OUT, "r1")
+    if not os.path.isdir(master):
+        return
+    if os.path.exists(target):
+        say(f"r1      {target} exists; r1.master left as it is")
+        return
+    try:
+        os.rename(master, target)
+    except OSError as exc:
+        say(f"r1      r1.master could not be renamed back to r1: {exc}")
+        return
+    PERSON_W6[:] = [os.path.join(target, "Bevel_Reducer.SLDASM")]
+    say(f"r1      r1.master renamed back to r1 for the person's step: {target}")
+
+
 def person_step():
     """W5-PLAN §4.4: the step only a person can do, with the assembly to open."""
     where = next((p for what, p in PERSON if what == "a2"), "") or next((p for _, p in PERSON), "")
@@ -4260,10 +4287,8 @@ def person_step():
         "should say the gears stand where they were turned. Tell us what you saw, on each version.")
     if PERSON_W6:
         say("person  W6-PLAN §6.1, the step only a person can do (for 2026, then 2024):")
-        say(f"person  After the run, rename {os.path.dirname(PERSON_W6[0])} back to "
-            f"{os.path.basename(os.path.dirname(PERSON_W6[0]))[:-len(MASTER_SUFFIX)]} (its records and the assembly's "
-            f"references name that folder), open Bevel_Reducer.xlsx there in the Workbook window and "
-            f"Bevel_Reducer.SLDASM in SolidWorks. Drag G1 — the small bevel gear on the "
+        say(f"person  In {os.path.dirname(PERSON_W6[0])}, open Bevel_Reducer.xlsx in the Workbook window and "
+            f"{os.path.basename(PERSON_W6[0])} in SolidWorks. Drag G1 — the small bevel gear on the "
             "horizontal shaft S1 — round its axis by about a quarter turn. G2, the large bevel gear on the upright "
             "shaft, turns half as far, and G3 under it with it; G4, the large spur gear on S3, turns a sixth as far as "
             "G1 and the other way round from G2. Nothing leaves its axis or passes through another gear. Then press "
@@ -4347,6 +4372,7 @@ def main():
         watch.stop.set()
         say(f"dialogs progress boxes seen {PROGRESS}; other dialogs are logged above as DIALOG")
         worker.shutdown()
+    give_back_r1()
     for line in NOTES:
         say(f"noted   {line}")
     person_step()
