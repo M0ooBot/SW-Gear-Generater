@@ -298,3 +298,17 @@ the kind the last two interface reviews found, and asked for written rules. Thes
     the claims about a turn staying in its mode are made on both. One difference was measured: a collinear spline's
     gear mate needed Flip True on 2024 and False on 2026, and the read-back named the right one each time. No Flip is
     assumed for a spline or a coupling, as for every other gear mate.
+16. **A gear mate's sense in a mode that has it off** (package A's review, 2026-11-15). While
+    `findings.SUPPRESSED_GEAR_MATE_SENSE_READ` is not set to "answers, marks nothing", the check phase does not read
+    the sense of a coupling, spline or sliding mesh that is suppressed in the configuration shown: an unmeasured read
+    could mark a saved assembly modified in a quiet Update. So (a) each mode an Update shows reads, in its post-check
+    through fresh handles, the sense of every gear mate on in it; a wrong one is a failure naming the mate and the
+    mode, never a raise and never a remake. (b) Every recorded gear mate no read reached is listed in the additive
+    `GearboxUpdate.senses_unread: List[str]` (the record's spelling and order; empty when all were read), with one
+    line under the result; package C words it from that field. (c) With the finding set, the check phase reads them
+    all and `senses_unread` is empty. Making a gear mate of a gearbox with modes again (a new ratio, a sense found
+    wrong, a mate the workbook now turns the other way) stays refused in the check phase, before anything changes,
+    with a sentence that says to build the gearbox again: a default the user may overrule, listed in the handoff.
+17. **A whole-box jam with modes** (package B's review). With Modes rows, "the box cannot turn at all" is said only
+    when every mode jams; a mode that jams is an error at its own Modes row naming what engages what, and reads the
+    same wherever that row stands. One home: `checks._check_motion`.
