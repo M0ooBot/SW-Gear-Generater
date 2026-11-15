@@ -143,8 +143,12 @@ a configuration change (§1.8's handle rule). On top of W5's every-build checks:
   mates exactly the record's, the per-mode mates off there suppressed and every other on with code 0, every mated
   body under-defined, the layout and every fixed body IsFixed through fresh handles, no interference; a half-pitch
   control on every dog (the dog put 6° with every lock touching it suppressed in that mode only: clashes with its
-  sleeve alone where the mode engages it, with nothing where it does not); in the first mode W5's and W7's
-  half-pitch controls on the listed meshes; every mode shown again after the controls and its frames read;
+  sleeve alone where the mode engages it, with nothing where it does not, and the bodies the put moved besides it
+  logged); in every mode W5's and W7's half-pitch controls on the listed meshes (review S1: N engages nothing); every
+  mode shown again after the controls and its frames read. Every expectation of flags, values, the mates off in a
+  mode and the drive's turns is §2.3's key itself (review S3, S4), the record held to the key separately; after the
+  build a raw ``IsSuppressed2(3, GetConfigurationNames())`` of every coupling and one slide, paired in document order,
+  beside the app's per-name read (run 1 found it answers in document order), and one with the names reversed;
 - the driven proof in every mode (``mode_drive_proof``; W5's angle-mate drive with the mode shown — when SolidWorks
   refuses the drive's link to its global with several configurations, as the W8 spike saw Add2 do, "Drive" is the
   angle mate's own value in that mode): every body's turn against the mode's kinematics to 1e-6 relative, sleeves and
@@ -154,10 +158,14 @@ a configuration change (§1.8's handle rule). On top of W5's every-build checks:
   right and the app's read names it, else the run HALTS (W8-PLAN §0.5); then M12's hygiene and every flag in every
   configuration as recorded;
 - reopened: saved in the first mode, every document unmodified straight after the open and the first mode active;
-  every mode measured again (no controls).
+  every mode measured again (no controls); the first mode shown and rebuilt last (review S2).
 
 A failure that is one of W8-PLAN §0.5's STOP triggers is a FAIL followed by a ``STOP`` line, and is listed again at
-the end; the section goes on gathering. A later section that copies s1's build checks ``s_blocked``.
+the end; the section goes on gathering. Among them (review S5): a window that comes up while a configuration call
+(or a save or open after the run made a configuration) is in progress — every ``call`` is traced for the dialog
+watcher — unless it is the box already seen before any configuration was made (SolidWorks' startup notification, a
+NOTE); a frame reading None; a gear mate the build reads wrong both ways round. s1 is kept as ``s1.master`` only with
+no FAIL and no STOP of its own (review S6); a later section that copies it checks ``s_blocked``.
 
 - ``s0``: TransferCase_Parallel (§2.2), the shakedown, W7-free: built fresh and judged as above.
 - ``s1``: the E4 transfer case (§2.1): E3's 4 : 1 planetary as the low range; built fresh (the one E4 build), judged as
@@ -368,6 +376,33 @@ TYPED_BACK_SENTENCE = ("SolidWorks already matches the workbook: nothing was cha
 # that were turned. (So a Face Z change on an UNTURNED train puts every gear too, with ``restored`` empty.)
 AXIAL_RESTORES = True
 
+# W8-PLAN §0.5 (review S5): a modal dialog from a configuration call is a STOP. Every SolidWorks member the app (swcom)
+# and this script reach goes through ``call``; it is wrapped here so the dialog watcher can say which member was in
+# progress when a window came up. A configuration call, or a save or open once this run has made a configuration,
+# with a window up is a STOP, unless the window is the same box (title and texts) already seen before any
+# configuration was made (the coordinator's ruling: SolidWorks' startup notification, a NOTE).
+CALLS = {"now": "", "configurations": False}
+CONFIGURATION_CALLS = ("AddConfiguration2", "ShowConfiguration2", "SetSuppression2", "SetSystemValue3",
+                       "DeleteConfiguration2")
+DOCUMENT_CALLS = ("SaveAs3", "OpenDoc6")
+STARTUP_BOXES = set()
+_RAW_CALL = swcom.call
+
+
+def traced_call(obj, name, *args):
+    """``swcom.call``, with the member in progress kept in CALLS["now"] for the dialog watcher."""
+    if name == "AddConfiguration2":
+        CALLS["configurations"] = True
+    before, CALLS["now"] = CALLS["now"], name
+    try:
+        return _RAW_CALL(obj, name, *args)
+    finally:
+        CALLS["now"] = before
+
+
+swcom.call = traced_call
+call = traced_call
+
 
 class Stopped(Exception):
     """Free memory fell under the floor on SolidWorks 2024: the run stops between steps."""
@@ -524,6 +559,22 @@ class DialogWatch(threading.Thread):
                         pressed = press_dont_save(hwnd, OPEN_BUTTONS)
                         say(f"DIALOG  opening a copied assembly (W6-PLAN §7.1): pressed {pressed!r}; the copy route "
                             "is dropped")
+                    elif not ticking:
+                        now = CALLS["now"]
+                        box = (title, texts)
+                        if not CALLS["configurations"]:
+                            STARTUP_BOXES.add(box)
+                        configuring = now in CONFIGURATION_CALLS or (now in DOCUMENT_CALLS and CALLS["configurations"])
+                        if configuring and box not in STARTUP_BOXES:
+                            check(False, f"a SolidWorks window {title!r} {list(texts)} came up while {now} was in "
+                                         "progress, after this run made a configuration")
+                            STOPS.append(f"a window {title!r} came up while {now} was in progress")
+                            say("STOP    W8-PLAN §0.5: a modal dialog during a configuration call")
+                        else:
+                            note(f"a SolidWorks window {title!r} {list(texts)} came up while "
+                                 f"{now or 'no SolidWorks call'} was in progress"
+                                 + (" (the same box was seen before any configuration was made)" if configuring else
+                                    "" if CALLS["configurations"] else ", before this run made any configuration"))
             if TAG["major"] == 32 and free_gb() < 2.0 and not STOP.is_set():
                 say(f"STOP    {memory()}: under 2 GB free, the run stops at the next step")
                 STOP.set()
@@ -1582,6 +1633,11 @@ def drive_job(asm, components, layout_name, input_gear, control=None, turn_by=No
                 session.set_global_variable(DRIVE, f"{value:g}")
             made["at"] = value
             rebuild(f"{DRIVE} {value:g}")
+            if made["route"] == "value":          # the review's watch: the angle as read back, and the input after
+                read = session.dimension_values("ddrive", [mode])[mode]
+                out.setdefault("route_reads", []).append(
+                    (value, round(math.degrees(read / 1000.0), 9),
+                     tuple(round(v, 9) for v in session.component_frame(handle[input_gear])[0][:2])))
 
         def drop_drive_equations():
             texts = [text for text, _ in session.equations()]
@@ -1649,6 +1705,7 @@ def drive_job(asm, components, layout_name, input_gear, control=None, turn_by=No
                         a, b, mesh, ratio = control["a"], control["b"], control["mesh"], control["ratio"]
                         session.find_mate("dmesh", mesh)
                         if mode:
+                            made["suppressed"] = True     # review N3: marked first, restored whatever the call answers
                             session.set_mate_suppressed_in("dmesh", True, [mode])
                         else:
                             session.set_mate_suppressed("dmesh", True)
@@ -1691,7 +1748,8 @@ def drive_job(asm, components, layout_name, input_gear, control=None, turn_by=No
             if made["suppressed"]:
                 def back_on():
                     if mode:
-                        session.set_mate_suppressed_in("dmesh", False, [mode])
+                        if session.mate_suppression("dmesh", [mode])[mode]:
+                            session.set_mate_suppressed_in("dmesh", False, [mode])
                     else:
                         session.set_mate_suppressed("dmesh", False)
                     made["suppressed"] = False
@@ -5125,6 +5183,17 @@ def stop_check(ok, what):
     return ok
 
 
+def frame_none_stop(texts, label):
+    """W8-PLAN §0.5 (review S5): a frame reading None — SolidWorks' answer through a handle held across a configuration
+    change, which ``component_frame`` refuses with "gave no frame" — is a STOP, not a retry."""
+    for text in texts:
+        if "gave no frame" in str(text):
+            STOPS.append(f"{label}: a frame read None: {text}")
+            say(f"STOP    W8-PLAN §0.5: {label}: a frame read None (a handle held across a configuration change?)")
+            return True
+    return False
+
+
 def w8_fixtures():
     """``tests/workbook_fixtures.py``, the one home of W8's two fixtures (W8-PLAN §2), loaded from the snapshot."""
     import importlib.util
@@ -5195,8 +5264,19 @@ def body_ids(desk):
 
 
 def mode_expected(desk, mode, gears, input_gear, step, sense=1):
-    """W5's δ_i = sense · step · ω_i / ω_in with ``mode``'s own speeds (``ModeReport.motion``), about each body's own
-    axis; a body whose shaft has no speed in ``mode`` is free there: its δ is 0 and it is in the set returned."""
+    """Each body's turn for ``step``° of the input in ``mode`` from §2.3's 30° row (``w8_turns``), never from the app
+    (review S3): δ_g = sense · (step / 30) · row[shaft of g], about its own axis; a body whose shaft the row has
+    free (None) is in the set returned, its δ 0. ``input_gear`` must be on the row's 30° shaft."""
+    turns = w8_turns(desk, mode)
+    w_in = turns[body_shaft(desk, input_gear)]
+    free = {g for g in gears if turns[body_shaft(desk, g)] is None}
+    return ({g: 0.0 if g in free else sense * step * turns[body_shaft(desk, g)] / w_in for g in gears}, free)
+
+
+def app_mode_expected(desk, mode, gears, input_gear, step, sense=1):
+    """W5's δ_i = sense · step · ω_i / ω_in with ``mode``'s own speeds (``ModeReport.motion``, the app's), about each
+    body's own axis; a body whose shaft has no speed in ``mode`` is free there: its δ is 0 and it is in the set
+    returned. Held against §2.3 before the build (``expect_modes_read``) and logged beside the key in the drive."""
     speeds = mode_of(desk, mode).motion.speeds
     w_in = speeds[body_shaft(desk, input_gear)]
     free = {g for g in gears if body_shaft(desk, g) not in speeds}
@@ -5225,6 +5305,22 @@ def mode_record_frames(desk, mode):
         out[c.gear] = ((tuple(here["rotation"]), tuple(here["at"])) if here else (tuple(c.rotation), tuple(c.at)))
     out.update({wb_layout.carrier_id(c.shaft): (tuple(c.rotation), tuple(c.at)) for c in carriers_of(box)})
     return out
+
+
+def key_suppressed(name, mode):
+    """§2.3's flag for a mate in ``mode``: suppressed only for a coupling (``W8_COUPLES``) off there; every other mate
+    of the gearbox, the slides, axes and spline (``W8_ALWAYS``) included, is on everywhere (review S4)."""
+    return name in W8_COUPLES and not swbuild.on_in(W8_COUPLES[name], mode)
+
+
+def key_off(mode):
+    """§2.3's mates off in ``mode``: the couplings it does not engage."""
+    return sorted(n for n in W8_COUPLES if key_suppressed(n, mode))
+
+
+def key_slide(name, mode):
+    """§2.3's value of the slide ``name`` in ``mode``, mm (``W8_SLIDES``)."""
+    return next(v for m, v in W8_SLIDES[name].items() if swbuild.on_in((m,), mode))
 
 
 def off_in(box, mode):
@@ -5286,7 +5382,7 @@ def expect_modes_read(desk, label):
             continue
         gears = body_ids(desk)
         input_gear = next(g for g in gears if body_shaft(desk, g) == "In" and g in ("InPin", "Sun"))
-        got, free = mode_expected(desk, mode, gears, input_gear, 30.0)
+        got, free = app_mode_expected(desk, mode, gears, input_gear, 30.0)
         turns = w8_turns(desk, mode)
         hand = {g: turns[body_shaft(desk, g)] for g in gears}
         bad = {g: (got[g], hand[g]) for g in gears if (hand[g] is None) != (g in free)
@@ -5357,8 +5453,11 @@ def check_modes_record(desk, label):
               f"{m and m.ratio}, sense {m and m.sense}")
     for name, kind in W8_ALWAYS.items():
         m = mates.get(name)
-        check(m is not None and m.kind == kind and not m.modes and not m.values,
-              f"{label}: {name} on record, a {kind} mate on in every mode")
+        spline = kind == "spline"
+        check(m is not None and m.kind == kind and not m.modes and not m.values
+              and (not spline or (list(m.ratio) == [1, 1] and int(m.sense) == -1)),
+              f"{label}: {name} on record, a {kind} mate on in every mode"
+              + (f", ratio {m and m.ratio}, sense {m and m.sense} (§9 ruling 3: [1, 1], −1)" if spline else ""))
     per_mode = sorted(n for n, m in mates.items() if m.modes)
     check(per_mode == sorted(W8_COUPLES), f"{label}: the per-mode mates on record are the couplings: {per_mode}")
     first = box.modes[0] if box.modes else ""
@@ -5410,19 +5509,17 @@ def modes_unshown(worker, desk, label, active):
     stop_check(swbuild.on_in((active,), out["active"]), f"{label}: the active configuration is {out['active']}, "
                f"{active} expected")
     wrong = [(m.name, c, out["flags"][m.name].get(c)) for m in box.mates for c in configs
-             if out["flags"][m.name].get(c) != flags_wanted(m, c)]
-    stop_check(not wrong, f"{label}: shown nothing, every mate's flag in every configuration is the record's: wrong "
-               f"{wrong}")
+             if out["flags"][m.name].get(c) != key_suppressed(m.name, c)]
+    stop_check(not wrong, f"{label}: shown nothing, every mate's flag in every configuration is §2.3's (the couplings "
+               f"on only where engaged, every other mate on): wrong {wrong}")
     bad = []
-    for m in box.mates:
-        if m.kind != "slide":
-            continue
+    for name in W8_SLIDES:
         for c in configs:
-            want = abs(float(next(v for k, v in m.values.items() if swbuild.on_in((k,), c))))
-            got = out["values"][m.name].get(c)
+            want = key_slide(name, c)
+            got = out["values"].get(name, {}).get(c)
             if got is None or got <= 0.0 or abs(got - want) > 1e-6:
-                bad.append((m.name, c, got, want))
-    stop_check(not bad, f"{label}: shown nothing, every slide's value in every configuration is the record's (none 0): "
+                bad.append((name, c, got, want))
+    stop_check(not bad, f"{label}: shown nothing, every slide's value in every configuration is §2.3's (none 0): "
                f"wrong {bad}")
     say(f"fact    {label}: GetSaveFlag before the reads {out['flags_before']}, after them {out['flags_after']}")
     check_marks(out["flags_after"], marked(out["flags_before"]), f"{label}: the flag and value reads")
@@ -5476,15 +5573,14 @@ def judge_mode_frames(desk, label, mode, out):
     gap, at = frames_gap(record, want)
     check(gap <= FRAME_TOLERANCE, f"{label}: the frames on record for {mode} are the workbook's (largest {gap:.1e} at "
           f"{at or '-'})")
-    for m in box.mates:
-        if m.kind != "slide":
-            continue
-        slider = m.gears[0]
-        value = abs(float(next(v for k, v in m.values.items() if swbuild.on_in((k,), mode))))
+    for name in W8_SLIDES:
+        slider = name.split(" along ")[0]
+        value = key_slide(name, mode)
         where = live[slider][1]
-        stop_check(abs(float(where[2]) - value) <= 1e-6 and frame_gap(live[slider], record[slider]) <= 1e-6,
-                   f"{label}: {slider} stands at z {float(where[2]):.9f} mm in {mode}, its slide {m.name} "
-                   f"{value:g} mm (off {abs(float(where[2]) - value):.1e})")
+        stop_check(abs(float(where[2]) - value) <= 1e-6 and abs(float(where[0])) <= 1e-6
+                   and abs(float(where[1])) <= 1e-6,
+                   f"{label}: {slider} stands at {tuple(round(float(v), 9) for v in where)} mm in {mode}, on Rear's "
+                   f"axis at its slide {name}'s §2.3 value {value:g} mm (off {abs(float(where[2]) - value):.1e})")
     lay = live["layout"]
     check(swbuild.same_frame(lay[0], lay[1], wb_layout.IDENTITY, (0.0, 0.0, 0.0)),
           f"{label}: the layout ({box.layout_component}) is at identity in {mode}")
@@ -5500,7 +5596,7 @@ def measure_mode(worker, desk, label, mode):
     started = time.monotonic()
     out = run(worker, mode_state_job(box, mode))
     live = judge_mode_frames(desk, label, mode, out)
-    off = set(off_in(box, mode))
+    off = set(key_off(mode))
     states = out["states"]
     say(f"        mates in {mode}: {states}; others {out['others']}; constrained {out['status']}; fixed {out['fixed']}")
     names = [s[0] for s in states]
@@ -5509,8 +5605,8 @@ def measure_mode(worker, desk, label, mode):
           f"{len(want)}, nothing else in the mate group: extra {sorted(set(names) - set(want))}, missing "
           f"{sorted(set(want) - set(names))}, others {out['others']}")
     wrong = [(s[0], s[3]) for s in states if (s[0] in off) != bool(s[3])]
-    stop_check(not wrong, f"{label}: in {mode} every per-mode mate off there reads suppressed and every other mate on: "
-               f"wrong {wrong}")
+    stop_check(not wrong, f"{label}: in {mode} the couplings §2.3 has off there read suppressed and every other mate "
+               f"on: wrong {wrong}")
     bad = [(s[0], s[1], s[2]) for s in states if s[1] and not s[3]]
     check(not bad, f"{label}: every mate on in {mode} has error code 0: {bad}")
     loose = {g: v for g, v in out["status"].items() if v != findings.COMPONENT_UNDER_DEFINED}
@@ -5539,16 +5635,25 @@ def put_in_mode(box, mode, gear, rotation, at, locks):
         s.rebuild(kind=swcom.ASSEMBLY_TRAIN)
         out["active"] = s.active_configuration()
         held = []
+
+        def all_frames(prefix):
+            got = {}
+            for index, (g, name) in enumerate(bodies(box)):
+                s.find_component(f"{prefix}{index}", name)
+                got[g] = s.component_frame(f"{prefix}{index}")
+            return got
         try:
             for index, lock in enumerate(locks):
                 s.find_mate(f"lock{index}", lock)
+                held.append(index)                  # review N3: marked before the call, restored whatever it answers
                 s.set_mate_suppressed_in(f"lock{index}", True, [mode])
-                held.append(index)
             if locks:
                 s.rebuild(kind=swcom.ASSEMBLY_TRAIN)
+            out["unput"] = all_frames("u")
             s.find_component("moved", name_of[gear])
             before = s.component_frame("moved")
             s.place_component("moved", rotation, at, kind=swcom.ASSEMBLY_TRAIN)
+            out["put"] = all_frames("p")             # the review's watch: does any body but the put one move?
             out["moved"] = s.interferences()
             s.place_component("moved", before[0], before[1], kind=swcom.ASSEMBLY_TRAIN)
             out["back"] = s.interferences()
@@ -5558,11 +5663,13 @@ def put_in_mode(box, mode, gear, rotation, at, locks):
         finally:
             for index in held:
                 try:
-                    s.set_mate_suppressed_in(f"lock{index}", False, [mode])
+                    if s.mate_suppression(f"lock{index}", [mode])[mode]:
+                        s.set_mate_suppressed_in(f"lock{index}", False, [mode])
                 except Exception as exc:  # noqa: BLE001
                     out["cleanup"].append(f"{locks[index]} back on: {type(exc).__name__}: {exc}")
             if locks:
                 s.rebuild(kind=swcom.ASSEMBLY_TRAIN)
+            out["restored"] = s.interferences() if not out["errors"] else None
         out["locks"] = {lock: s.mate_suppression(f"lock{index}", list(box.modes)) for index, lock in enumerate(locks)
                         if index in held}
         out["frames"] = {}
@@ -5588,6 +5695,13 @@ def mode_put_control(worker, desk, label, mode, gear, partners, locks):
     gear_of = {n: g for g, n in bodies(box)}
     check(not out["errors"] and not out["cleanup"] and swbuild.on_in((mode,), out["active"]),
           f"{label}: {gear}'s control ran in {out['active']}: {out['errors']} {out['cleanup']}")
+    frame_none_stop(out["errors"] + out["cleanup"], label)
+    if "put" in out and "unput" in out:
+        others = {g: frame_gap(out["put"][g], out["unput"][g]) for g in out["put"] if g != gear}
+        moved = {g: f"{v:.1e}" for g, v in others.items() if v > FRAME_TOLERANCE}
+        turned = turn_degrees(out["unput"][gear][0], out["put"][gear][0])
+        say(f"fact    {label}: the put turned {gear} {turned if turned is None else f'{turned:+.6f}'}°; other bodies "
+            f"moved by it (beyond 1e-6): {moved or 'none'}")
     merged = swbuild._clashes(out.get("moved", []), gear_of)  # noqa: SLF001
     said = [(c.gears, round(c.volume, 3)) for c in merged]
     pairs = {frozenset(c.gears) for c in merged if c.volume > 0}
@@ -5602,6 +5716,9 @@ def mode_put_control(worker, desk, label, mode, gear, partners, locks):
     back = swbuild._clashes(out.get("back", []), gear_of)  # noqa: SLF001
     stop_check("back" in out and not back, f"{label}: {gear} put back, no interference in {mode} "
                f"({time.monotonic() - started:.1f} s): {[(c.gears, round(c.volume, 3)) for c in back]}")
+    restored = swbuild._clashes(out.get("restored") or [], gear_of)  # noqa: SLF001
+    check(out.get("restored") is not None and not restored, f"{label}: the locks back on after {gear}'s control, no "
+          f"interference (review N4): {[(c.gears, round(c.volume, 3)) for c in restored]}")
     left = {lock: [c for c, f in flags.items() if f] for lock, flags in out["locks"].items()}
     check(len(out["locks"]) == len(locks) and not any(left.values()),
           f"{label}: no lock left suppressed in any configuration: {left}")
@@ -5652,9 +5769,10 @@ def mesh_controls(worker, desk, label, mode):
 
 def measure_modes(worker, desk, label, controls=True):
     """W8-PLAN §5, "what every mode gets measured": the reads that show nothing (``modes_unshown``), then each mode
-    shown and measured (``measure_mode``) with, given ``controls``, its couplings' half-pitch controls and, in the
-    first mode, the listed meshes'; after the controls, every mode shown again and its frames read, so a control is
-    seen to have touched no other mode. Returns each mode's read."""
+    shown and measured (``measure_mode``) with, given ``controls``, its couplings' half-pitch controls and the listed
+    meshes'; after the controls, every mode shown again and its frames read, so a control is
+    seen to have touched no other mode. The mesh controls run in every mode (review S1: N has no engaged coupling, so
+    without them nothing in N would show that the interference read can see a clash). Returns each mode's read."""
     box = desk.record.gearbox
     say(f"measure {label}: every mode ({', '.join(box.modes)}); controls {controls}; {memory()}")
     modes_unshown(worker, desk, label, box.modes[0])
@@ -5663,9 +5781,10 @@ def measure_modes(worker, desk, label, controls=True):
         guard()
         reads[mode] = measure_mode(worker, desk, f"{label}, in {mode}", mode)
         if controls:
-            if mode == box.modes[0]:
-                mesh_controls(worker, desk, f"{label}, in {mode}", mode)
+            started = time.monotonic()
+            mesh_controls(worker, desk, f"{label}, in {mode}", mode)        # review S1: a positive control in every mode
             coupling_controls(worker, desk, f"{label}, in {mode}", mode)
+            say(f"        {mode}'s controls in {time.monotonic() - started:.1f} s; {memory()}")
     if controls:
         for mode in box.modes:
             guard()
@@ -5694,8 +5813,10 @@ def mode_drive_proof(worker, desk, label, mode, control=None):
         entry = next(m for m in box.mates if m.name == name)
         a, b = entry.gears
         axes = gear_axes(frames_on_record(desk), a, b)
-        spec = {"a": a, "b": b, "mesh": name, "ratio": tuple(entry.ratio) or (1, 1), "axes": axes,
-                "same": int(entry.sense) == -1, "clash": True, "turned": False}
+        # W8-INTERFACES §9 ruling 3: a SPLINE's sense is −1 and a COUPLE's −σ_S·σ_D, −1 for these Z+ shafts: both turn
+        # their gears the same way, from the key and not from the record (review S4).
+        spec = {"a": a, "b": b, "mesh": name, "ratio": (1, 1), "axes": axes, "same": True, "clash": True,
+                "turned": False}
     started = time.monotonic()
     out = run(worker, drive_job(box.assembly, components, box.layout_component, input_gear, control=spec,
                                 fixed=box.fixed, plane=plane, clash_driven=True, mode=mode, configs=list(box.modes)))
@@ -5704,10 +5825,18 @@ def mode_drive_proof(worker, desk, label, mode, control=None):
     if "link_refused" in out:
         say(f"fact    {label}: the drive's link to the global {DRIVE} was refused with {len(box.modes)} configurations "
             f"({out['link_refused']}); {DRIVE} moved by the angle mate's own value in {mode} instead")
+    if out.get("route") == "value":
+        say(f"ROUTE   {label}: the DRIVE RAN BY THE VALUE ROUTE, not W5's global (a ruling for the coordinator): the angle "
+            f"mate's own D1 set in {mode} by SetSystemValue3; (value set, read back in degrees, input's R[0:2]) "
+            f"{out.get('route_reads')}")
+    elif out.get("route") == "global":
+        say(f"fact    {label}: the drive ran by W5's global {DRIVE}, its link accepted with {len(box.modes)} "
+            "configurations")
     for line in out.get("traceback", "").splitlines():
         say("        " + line)
     check(not out["errors"], f"{label}: the drive ran without a raise: {out['errors']}")
     check(not out["cleanup"], f"{label}: every cleanup step ran: {out['cleanup']}")
+    frame_none_stop(out["errors"] + out["cleanup"], label)
     stop_check(swbuild.on_in((mode,), out.get("active", "")), f"{label}: {mode} shown for the drive, the active "
                f"configuration reads {out.get('active')}")
     built = out.get("built")
@@ -5730,7 +5859,12 @@ def mode_drive_proof(worker, desk, label, mode, control=None):
         turns = {g: turn_degrees(built[g][0], out["driven"][g][0]) for g in gears}
         sense = input_sense(label, turns, input_gear, step, ruled)
         expected, free = mode_expected(desk, mode, gears, input_gear, step, sense)
-        say_turns(f"{DRIVE} {DRIVE_FROM:g} -> {DRIVE_TO:g} in {mode}", turns, expected)
+        app_exp, app_free = app_mode_expected(desk, mode, gears, input_gear, step, sense)
+        differ = {g: (expected[g], app_exp[g]) for g in gears
+                  if (g in free) != (g in app_free) or abs(expected[g] - app_exp[g]) > 1e-9 * max(1.0, abs(expected[g]))}
+        say(f"        §2.3's key against the app's kinematics in {mode}: "
+            + (f"DIFFER {differ}" if differ else "the same for every body, the free ones alike"))
+        say_turns(f"{DRIVE} {DRIVE_FROM:g} -> {DRIVE_TO:g} in {mode} (expected from §2.3's key)", turns, expected)
         for g in gears:
             if g not in free:
                 stop_check(close_turn(turns[g], expected[g]), f"{label}: {g} turned "
@@ -5838,18 +5972,17 @@ def mode_drive_proof(worker, desk, label, mode, control=None):
                                                                                    for n in names),
               f"{label}: no angle mate or control mate left; the mates as before: {names}")
         off = sorted(s[0] for s in out["states_after"] if s[3])
-        check(off == off_in(box, mode), f"{label}: suppressed in {mode} exactly the per-mode mates off there, no lock: "
+        check(off == key_off(mode), f"{label}: suppressed in {mode} exactly the couplings §2.3 has off there, no lock: "
               f"{off}")
         check(not [s for s in out["states_after"] if s[1] and not s[3]], f"{label}: no mate on in {mode} in error "
               "after the drive")
         check(all(v == findings.COMPONENT_UNDER_DEFINED for v in out["constrained_after"].values()),
               f"{label}: every mated body under-defined again: {out['constrained_after']}")
         flags = out.get("flags_after")
-        mates = {m.name: m for m in box.mates}
-        wrong = ([(n, c, f) for n, by in flags.items() for c, f in by.items()
-                  if n in mates and f != flags_wanted(mates[n], c)] if flags is not None else None)
+        wrong = ([(n, c, f) for n, by in flags.items() for c, f in by.items() if f != key_suppressed(n, c)]
+                 if flags is not None else None)
         stop_check(flags is not None and not wrong, f"{label}: after the drive every mate's flag in every "
-                   f"configuration is the record's: wrong {wrong}")
+                   f"configuration is §2.3's: wrong {wrong}")
     else:
         check(False, f"{label}: the state after the drive could not be read: {out['cleanup']}")
     if halt:
@@ -5860,7 +5993,8 @@ def mode_drive_proof(worker, desk, label, mode, control=None):
 def reopen_modes(worker, desk, label):
     """§5's reopen: the first mode shown (the assembly reopens in the configuration saved active), this run's
     documents saved and closed; opened: every document unmodified straight after the open, the first mode active;
-    then the flags, values and every mode's frames, mates and interference measured again (no controls)."""
+    then the flags, values and every mode's frames, mates and interference measured again (no controls); and the
+    first mode shown and rebuilt last, so the assembly is left (and on 2024 kept) in the mode it opens in."""
     box = desk.record.gearbox
     first = box.modes[0]
 
@@ -5882,6 +6016,54 @@ def reopen_modes(worker, desk, label):
     say(f"fact    {label}, reopened: marked modified after the active configuration's read: "
         f"{marked(run(worker, lambda s: save_flags(s, paths)))}")
     measure_modes(worker, desk, f"{label}, reopened", controls=False)
+    # Review S2: what is left (and what end_clean saves on 2024) is the assembly in its first mode, as the record says.
+    left_in = run(worker, in_assembly(box.assembly, show_first))
+    stop_check(left_in[0] and swbuild.on_in((first,), left_in[1]), f"{label}: left with {first} shown and the train "
+               f"rebuilt: {left_in}")
+
+
+def raw_flag_reads(worker, desk, label):
+    """The coordinator's widening of review N2: for every coupling and one slide, a RAW ``IFeature.IsSuppressed2(3,
+    GetConfigurationNames())`` paired in document order (W8's run 1: it answers in that order), beside the app's own
+    per-name read (``mate_suppression``), both held to §2.3; and one raw read with the names reversed, logged as a
+    fact, to show on each run whether SolidWorks still answers in document order. Shows nothing; the marks logged."""
+    box = desk.record.gearbox
+    names = list(W8_COUPLES) + ["RangeSlv along Rear"]
+    paths = box_paths(box)
+
+    def work(s):
+        out = {"flags_before": save_flags(s, paths), "configurations": s.configurations(), "raw": {}, "reversed": {},
+               "app": {}}
+        order = out["configurations"]
+        for index, name in enumerate(names):
+            feature = s._mate_feature(name)  # noqa: SLF001 - the raw call, beside the app's
+            out["raw"][name] = swcom._per_name(call(feature, "IsSuppressed2", findings.SPECIFY_CONFIGURATIONS,  # noqa: SLF001
+                                                    s._names(order)))  # noqa: SLF001
+            out["reversed"][name] = swcom._per_name(call(feature, "IsSuppressed2", findings.SPECIFY_CONFIGURATIONS,  # noqa: SLF001
+                                                         s._names(list(reversed(order)))))  # noqa: SLF001
+            s.find_mate(f"raw{index}", name)
+            out["app"][name] = s.mate_suppression(f"raw{index}", order)
+        out["flags_after"] = save_flags(s, paths)
+        return out
+    out = run(worker, in_assembly(box.assembly, work))
+    order = out["configurations"]
+    say(f"        raw reads, GetConfigurationNames {order}")
+    for name in names:
+        raw = dict(zip(order, [bool(f) for f in out["raw"][name]]))
+        app = {c: bool(f) for c, f in out["app"][name].items()}
+        want = {c: key_suppressed(name, c) for c in order}
+        say(f"read    {label}: {name}: raw in document order {raw}; the app per name {app}; §2.3 {want}")
+        stop_check(len(out["raw"][name]) == len(order) and raw == want, f"{label}: the raw IsSuppressed2 of {name}, "
+                   "paired in document order, is §2.3's")
+        stop_check(app == want, f"{label}: the app's per-name read of {name} is §2.3's")
+        rev = [bool(f) for f in out["reversed"][name]]
+        in_doc = rev == [raw[c] for c in order]
+        in_passed = rev == [raw[c] for c in reversed(order)]
+        say(f"fact    {label}: {name}, names passed reversed {list(reversed(order))}: answered {rev} — "
+            + ("in document order, as on run 1" if in_doc and not in_passed else
+               "in the order passed" if in_passed and not in_doc else
+               "the same either way (every flag alike)" if in_doc and in_passed else "in neither order"))
+    check_marks(out["flags_after"], marked(out["flags_before"]), f"{label}: the raw flag reads")
 
 
 def modes_built(worker, desk, label):
@@ -5890,8 +6072,17 @@ def modes_built(worker, desk, label):
     record against §2.3; every mode measured with the coupling and mesh controls; W7's carrier part read as a
     skeleton; the driven proof in every mode, the both-Flips controls in 4H and 4L; reopened and measured again."""
     check_modes_plan(desk, label)
+    started = time.monotonic()
     plan, result = build_turning(worker, desk, label, None, None)
+    say(f"fact    {label}: the build, its checks and its saves took {time.monotonic() - started:.1f} s")
     asm = result.assembly
+    said = [desk.note[0]] + list(result.log_lines()) + list(asm.mate_problems if asm else [])
+    check(not any("where the mode has it" in line for line in said), f"{label}: no \"reads … where the mode has it …\" "
+          "sentence in the build's words")
+    both = [p for p in (asm.mate_problems if asm else []) if "whichever way" in p]
+    if both:
+        STOPS.append(f"{label}: a gear mate reads wrong both ways round: {both}")
+        say("STOP    W8-PLAN §0.5: a coupling or spline gear mate reads wrong both ways round (J8 then needs a probe)")
     if not result.ok or desk.record is None or desk.record.gearbox is None or not desk.record.gearbox.assembly:
         # Refused (W5's answer 1: nothing saved, the document left open): nothing below has an assembly to measure.
         # The refused, never-saved document is this run's, so close_ours closes it by its title (as m4's).
@@ -5903,6 +6094,7 @@ def modes_built(worker, desk, label):
     check_modes_result(desk, result, label)
     check_modes_record(desk, label)
     box = desk.record.gearbox
+    raw_flag_reads(worker, desk, f"{label} built")
     reads = measure_modes(worker, desk, f"{label} built", controls=True)
     if carriers_of(box):
         carrier_part_check(worker, desk, f"{label} built, in {box.modes[0]}", reads[box.modes[0]]["names"])
@@ -5937,6 +6129,7 @@ def section_s1(worker, excel):
     say("== s1  the E4 transfer case (W8-PLAN §2.1, §5): E3's 4 : 1 planetary as the low range, LoDog on the carrier; "
         "built fresh (the one E4 build); every mode measured with its couplings' half-pitch controls; the driven proof "
         "in every mode with the both-Flips controls in 4H and 4L; reopen; then kept as s1.master")
+    fails, stops = len(FAILS), len(STOPS)
     folder, path, book, desk = write_fixture(worker, excel, "s1", spec_e4, keep="TransferCase_E4.xlsx")
     expect_modes_read(desk, "s1")
     try:
@@ -5947,6 +6140,11 @@ def section_s1(worker, excel):
     except Exception as exc:
         W8_MASTER["failed"] = f"{type(exc).__name__}: {exc}"
         raise
+    if len(FAILS) > fails or len(STOPS) > stops:
+        # Review S6: nothing is built on an s1 that failed or hit a STOP; its folder stays as it is, for the log.
+        W8_MASTER["failed"] = f"{len(FAILS) - fails} failed, {len(STOPS) - stops} STOP(s)"
+        say(f"master  s1 is not kept as s1.master ({W8_MASTER['failed']}); its folder stays s1, for the log")
+        return
     keep_master(worker, folder, "s1")
 
 
@@ -6088,6 +6286,7 @@ def main():
                 halted = True
             except Exception as exc:  # noqa: BLE001 - logged, and the documents still closed below
                 check(False, f"section {name} raised {type(exc).__name__}: {exc}")
+                frame_none_stop([str(exc)], f"section {name}")
                 for line in traceback.format_exc().splitlines():
                     say("        " + line)
             finally:
