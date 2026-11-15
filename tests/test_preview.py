@@ -285,7 +285,12 @@ def test_a_gear_on_a_turned_shaft_is_its_section_seen_side_on_and_its_shaft_a_li
     ends = sorted(_back(view, x, y0)[0] for x in (x0, x1))
     assert ends == pytest.approx([min(xs) - preview.SHAFT_OVERRUN, max(xs) + preview.SHAFT_OVERRUN], abs=1e-6)
     labels = {label[0]: label for label in view.labels}
-    assert set(labels) == {"S1", "S2", "S3"} and labels["S1"][1] > x1     # S1 named at its + end
+    assert set(labels) == {"S1", "S2", "S3"}
+    _, lx, ly, anchor = labels["S1"]                          # named at its + end, on a side that keeps it in view
+    assert abs(lx - x1) == pytest.approx(preview.LABEL_GAP) and abs(ly - y1) == pytest.approx(preview.LABEL_GAP)
+    left, top, right, bottom = preview._label_box("S1", x1, y1, next(s for s in preview.LABEL_SIDES
+                                                                     if s[0] == anchor), 1.0)
+    assert left >= 0 and top >= 0 and right <= 392 and bottom <= 300
 
 
 def test_a_bevel_gear_on_a_z_shaft_is_its_heel_and_toe_seen_end_on_and_the_stage_takes_one_colour():

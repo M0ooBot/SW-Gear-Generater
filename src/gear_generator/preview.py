@@ -329,20 +329,31 @@ def _overlaps(a, b) -> bool:
     return a[0] < b[2] and b[0] < a[2] and a[1] < b[3] and b[1] < a[3]
 
 
-def _place_label(name: str, x: float, y: float, origin, unit: float) -> Tuple[str, float, float, str]:
+def _place_label(name: str, x: float, y: float, origin, unit: float,
+                 bounds: Optional[Tuple[float, float]] = None) -> Tuple[str, float, float, str]:
     """A shaft's name below right of its cross, unless that would sit on the origin's arrows: then the first
     side clear of them (below left, for a shaft at the origin, since the arrows point right and up). With no
-    side clear, below right as ever."""
+    side clear, below right as ever. ``bounds`` (the canvas's width and height, given when a turned shaft is
+    named at the end of its line, which may be the canvas's edge: W6): the sides that keep the name on the canvas
+    are tried first, in the same order."""
+    sides = LABEL_SIDES
+    if bounds is not None:
+        w, h = bounds
+
+        def inside(side) -> bool:
+            left, top, right, bottom = _label_box(name, x, y, side, unit)
+            return left >= 0 and top >= 0 and right <= w and bottom <= h
+        sides = tuple(s for s in LABEL_SIDES if inside(s)) or LABEL_SIDES
     if origin is not None:
         ox, oy = origin
         reach, head, gap = ORIGIN_ARROW * unit, ARROW_HEAD * unit, LABEL_GAP * unit
         # Each arrow from the origin out, with a gap round it, so a name never crowds a head or the shaft.
         arrows = ((ox, oy - head - gap, ox + reach + gap, oy + head + gap),       # X, to the right
                   (ox - head - gap, oy - reach - gap, ox + head + gap, oy))       # Y, up
-        side = next((s for s in LABEL_SIDES
-                     if not any(_overlaps(_label_box(name, x, y, s, unit), a) for a in arrows)), LABEL_SIDES[0])
+        side = next((s for s in sides
+                     if not any(_overlaps(_label_box(name, x, y, s, unit), a) for a in arrows)), sides[0])
     else:
-        side = LABEL_SIDES[0]
+        side = sides[0]
     anchor, sx, sy = side
     return name, x + sx * LABEL_GAP * unit, y + sy * LABEL_GAP * unit, anchor
 
@@ -504,5 +515,6 @@ def layout_gearbox(placed, theta, width: int = 696, height: int = 300, pad: floa
     marks = [(name, x, y) for name, x, y in view.shafts] + [(name, x, y) for name, (x, y) in ends.items()]
     order = {name: i for i, name in enumerate(dict.fromkeys(p.shaft for _, p, _, _ in shapes))}
     marks.sort(key=lambda m: order.get(m[0], len(order)))
-    view.labels = [_place_label(name, x, y, view.origin, unit) for name, x, y in marks]
+    view.labels = [_place_label(name, x, y, view.origin, unit, (width, height) if lines else None)
+                   for name, x, y in marks]
     return view

@@ -851,8 +851,10 @@ class WorkbookWindow(tk.Toplevel):
             if report.motion.later:
                 self._line(self.speeds_body, r, text, colour)
             else:
+                # Wrapped at the end view's width: a turned shaft's line says which end it is seen from (W6), and
+                # would otherwise widen the right column and squeeze the Gears table.
                 tk.Label(self.speeds_body, text=text, bg=theme.WHITE, fg=colour, font=self.fonts.mono_tiny,
-                         anchor="w").grid(row=r, column=0, sticky="w")
+                         anchor="w", justify="left", wraplength=px(END_VIEW[0])).grid(row=r, column=0, sticky="w")
         self.speeds_readout.set(readout + (ui_text.provisional_tag(self.recalc) if readout else ""))
 
     def _recheck_chosen(self, reading: wb_link.Reading) -> None:
