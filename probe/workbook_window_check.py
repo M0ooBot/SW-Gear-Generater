@@ -710,7 +710,9 @@ STEPS = [
     ("do", lambda: shoot("10-refused")),
     ("do", refused_check),
     ("do", lambda: log("refused document", result=close_refused())),
-    # 6. W6, board WorkbookRightAngle: fixture A read and built.
+    # 6. W6, board WorkbookRightAngle: fixture A read and built. The refused stage's parts have fixture A's spur file
+    # names (Gear_m2_N17), and SolidWorks keeps one document per file name: they are saved and closed first.
+    ("do", lambda: log("closed the refused stage's documents in SolidWorks", left=close_ours())),
     ("do", lambda: excel("close")),
     ("wait", excel_done("close")),
     ("do", lambda: excel("open", W6_PATHS["A"])),
