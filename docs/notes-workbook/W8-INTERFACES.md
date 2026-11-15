@@ -342,7 +342,7 @@ the kind the last two interface reviews found, and asked for written rules. Thes
       This holds whichever way positions are kept. A quiet Update that puts nothing stays as it was: nothing shown,
       nothing marked. The test that had pinned the opposite, the shared-positions variant of
       `test_a_train_turned_in_another_mode_is_left_unseen_by_a_quiet_update_which_says_so` ("put back in 2H alone,
-      nothing shown"), now pins the visit.
+      nothing shown"), now pins the visit, renamed `test_a_turn_in_another_mode_is_unseen_by_a_quiet_update_or_if_shared_put_back_with_every_mode_visited`.
     - *Three sentences say only what was read*, verbatim:
       - a quiet Update: *"It worked in 4H, the configuration that was active; it did not show the other modes,
         since nothing in 4H needed changing."* (before: *"…since nothing needed changing."*; with no

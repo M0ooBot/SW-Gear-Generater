@@ -6585,7 +6585,7 @@ def _mode_sentences(built, done):
     return ui_text.mode_update_lines(SimpleNamespace(motion=_tc_motion(built)[0], assembly=TC_ASM), done)
 
 
-def test_a_train_turned_in_another_mode_is_left_unseen_by_a_quiet_update_which_says_so(tc_built):
+def test_a_turn_in_another_mode_is_unseen_by_a_quiet_update_or_if_shared_put_back_with_every_mode_visited(tc_built):
     fake, built = tc_built
     fake.show_configuration("4L")
     for gear in ("gear7-1", "gear8-1", "gear6-1", "gear9-1"):

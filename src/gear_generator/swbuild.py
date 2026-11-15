@@ -3203,15 +3203,16 @@ class GearboxUpdate:
     resensed: List[str] = field(default_factory=list)
     extra_mates: List[str] = field(default_factory=list)
     mates: List[MateState] = field(default_factory=list)
-    # W8 (A fills them; W8-PLAN §1.10, W8-INTERFACES.md §3), all empty for a gearbox with no modes. ``configuration``:
-    # the one Update worked in (active when it opened the assembly). ``visited``: the others it showed and
-    # post-checked, in mode order (none in a quiet Update). ``unsuppressed_in`` / ``suppressed_in``: ``(mate,
-    # configuration)`` turned on / suppressed (D10 per configuration and J14's flags). ``slid``: ``(SLIDE name,
-    # configuration, value mm)`` set for a J14 edit; ``values_restored``: ``(SLIDE name, configuration)`` set back to
-    # the record's value. ``put_in``: the configurations in which gears were put, in the order put (the active one
-    # last). ``extra_configurations``: configurations the record does not know, left as they are. ``modes``: the
-    # post-check of each configuration visited, and of the one worked in. ``positions_per_configuration``: as on
-    # GearboxResult.
+    # W8 (A fills them; W8-PLAN §1.10, W8-INTERFACES.md §3), all empty for a gearbox with no modes.
+    # ``configuration``: the one Update worked in (active when it opened the assembly). ``visited``: the others it
+    # showed and post-checked, in mode order (none in a quiet Update that put nothing; every other mode once it put
+    # the active one, W8-INTERFACES §9.18). ``unsuppressed_in`` / ``suppressed_in``: ``(mate, configuration)``
+    # turned on / suppressed (D10 per configuration and J14's flags). ``slid``: ``(SLIDE name, configuration, value
+    # mm)`` set for a J14 edit; ``values_restored``: ``(SLIDE name, configuration)`` set back to the record's value.
+    # ``put_in``: the configurations in which gears were put, in the order put (the active one last on a changed
+    # Update; first when a quiet Update put it and then visited the others). ``extra_configurations``:
+    # configurations the record does not know, left as they are. ``modes``: the post-check of each configuration
+    # visited, and of the one worked in. ``positions_per_configuration``: as on GearboxResult.
     configuration: str = ""
     visited: List[str] = field(default_factory=list)
     unsuppressed_in: List[Tuple[str, str]] = field(default_factory=list)
@@ -4142,8 +4143,10 @@ def _modes_assembly(sw: SolidWorks, result: GearboxUpdate, assembly: str, placem
     post-checked (frames, sliders at their values after the show, its mates on and off, gears free to turn) and its
     interference read, into a :class:`ModeCheck`. After the last mode, every per-mode mate's flag is read in every
     configuration and held against the record (:func:`_modes_flags_after`). With nothing to change, only the active
-    mode is judged, from where it stands, and nothing is shown. Whatever happens, the configuration that was active
-    is shown again at the end; one that cannot be is said, naming the configuration left active."""
+    mode is judged, from where it stands, and nothing is shown, unless it is put there: then every other mode is shown
+    and handled as on a changed Update, the active one last (J13, W8-INTERFACES §9.18). Whatever happens, the
+    configuration that was active is shown again at the end; one that cannot be is said, naming the configuration
+    left active."""
     file, stem = _file(assembly), _stem(assembly)
     sw.open_document(assembly)
     _note_opened(sw, assembly, result)
@@ -4295,7 +4298,7 @@ def _modes_put(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, mode
                handle: Mapping[str, str], mate_handle: Mapping[str, str], route: Optional[str],
                rebuild: Callable[[], None], file: str, touched: List[bool], *, moved: bool,
                check: Optional[ModeCheck]) -> None:
-    """One mode's puts, with it shown (or, ``check`` None, the active one judged where it stands): every frame
+    """One mode's puts, with it shown (or, on a quiet Update, the active one judged where it stands): every frame
     read through fresh handles; the trains — joined over EVERY mode's relations, so the same set is right if
     positions turn out shared (§1.9, J26) — each judged with this mode's links; one put whole when the workbook
     ``moved`` it or it is out of step here, its lock mates off in this configuration around the puts; fixed gears
