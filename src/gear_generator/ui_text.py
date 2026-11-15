@@ -997,13 +997,14 @@ def workbook_change_lines(changes: Sequence[str], consequence=None,
 
 
 def _left_for_later(parts) -> str:
-    """`` Left for a later phase: Gears!A6: G5 is a bevel gear: …`` — never a bare "Ready" or "Built" while rows
-    wait for a later phase: they are not checked, and nothing places them."""
+    """`` The layout and assembly are not built: Gears!A6: …`` — never a bare "Ready" or "Built" while rows hold the
+    layout back: they are not checked, and nothing places them. W8 is the last phase, so no phase is named: the
+    row's own sentence says it is not built by this version of the app (W8-PLAN J18)."""
     refused = getattr(parts, "refused", [])
     if not refused:
         return ""
     more = f" ({len(refused) - 1} more under Checks)" if len(refused) > 1 else ""
-    return f" Left for a later phase: {refused[0].message}{more}"
+    return f" The layout and assembly are not built: {refused[0].message}{more}"
 
 
 def _shared_steps(results) -> List[str]:
@@ -1155,6 +1156,12 @@ def workbook_speed_lines(spec, motion) -> Tuple[List[str], str]:
     for both, so the slant's components never read as a point), and the readout is *seen from each shaft's + end*.
     Each number is joined to its unit, and a slant's vector held together, by :data:`NBSP`, so a wrapped line
     breaks only between its parts. W7: a planet shaft and a held member take :func:`planetary_speed_line`."""
+    return _speed_lines(spec, motion)
+
+
+def _speed_lines(spec, motion, *, free: str = "not driven") -> Tuple[List[str], str]:
+    """:func:`workbook_speed_lines`' body; ``free`` is what a shaft no input settles reads (W8: a member a mode
+    leaves free *turns freely*, :func:`mode_speed_lines`)."""
     if motion.later:
         return [motion.later], ""
     seen = getattr(motion, "seen_from", None) or {}
@@ -1171,7 +1178,7 @@ def workbook_speed_lines(spec, motion) -> Tuple[List[str], str]:
             continue
         speed = motion.speeds.get(shaft.id)
         if speed is None:
-            lines.append(f"{shaft.id:<4}  not driven")
+            lines.append(f"{shaft.id:<4}  {free}")
             continue
         torque = motion.torques.get(shaft.id)
         torque_text = f" · {torque:.2f}{NBSP}N·m" if torque is not None else ""
@@ -1195,15 +1202,18 @@ def _torque_note_shown(motion) -> str:
     return note if note and motion.speeds and not motion.later else ""
 
 
-def speeds_prose_rows(motion, lines: Sequence[str]) -> Set[int]:
+def speeds_prose_rows(motion, lines: Sequence[str], *, mode: bool = False) -> Set[int]:
     """Which of :func:`workbook_speed_lines`' ``lines`` are sentences, shown in prose, not as a shaft's line: every
     line when a later phase drives the gearbox (``Motion.later``), else the last line when the panel ends with the
-    torque note (W7). The one home of that rule; the window and the design board ask it."""
+    torque note (W7). W8: with ``mode`` the lines are :func:`mode_speed_lines`' and ``motion`` that mode's
+    (``ModeReport.motion``), whose first line, what the mode couples, is a sentence too. The one home of that rule;
+    the window and the design board ask it."""
     if not lines:
         return set()
     if motion.later:
         return set(range(len(lines)))
-    return {len(lines) - 1} if _torque_note_shown(motion) else set()
+    rows = {len(lines) - 1} if _torque_note_shown(motion) else set()
+    return rows | ({0} if mode else set())
 
 
 def end_view_readout(view) -> str:
@@ -1310,6 +1320,9 @@ def progress_text(step, updating: bool = False) -> str:
         what = name or "the values"
     elif stage == swbuild.STAGE_PLACE:
         what = "placing the gears" + (f" in {name}" if name else "")
+    elif stage == getattr(swbuild, "STAGE_MODE", None):
+        # W8: one mode's configuration, set up or checked (Step.name: the mode's name; Step does not say which).
+        what = ("checking mode " if updating else "mode ") + name + (f", {of}" if of and not updating else "")
     else:
         what = name
     return f"{lead}: {what}…" if what else f"{lead}…"
@@ -1557,9 +1570,12 @@ def gearbox_status(plan, result, again: bool = False) -> Tuple[str, bool]:
         text, ok = f"{done}.{skipped}", False
     elif asm_name:
         from .store import GEARBOX_MOTION
-        ending, clean = _interference(result.clashes, result.interference_error, asm_name,
-                                      tuple(plan.meshes) if plan is not None and plan.meshes else None,
-                                      turning=getattr(result, "kind", "") == GEARBOX_MOTION)
+        listed = tuple(plan.meshes) if plan is not None and plan.meshes else None
+        if getattr(result, "modes", None):                 # W8: each mode's configuration, checked in turn
+            ending, clean = _modes_interference(result.modes, asm_name, listed)
+        else:
+            ending, clean = _interference(result.clashes, result.interference_error, asm_name, listed,
+                                          turning=getattr(result, "kind", "") == GEARBOX_MOTION)
         text, ok = done + ending, ok and clean
         turning = motion_done_line(plan, result)
         if turning:
@@ -1712,8 +1728,9 @@ def update_summary(update) -> str:
         return _again_sentence(update)
     axial = [g for g in getattr(update, "axial", ()) if g]
     ratios = [n for n in getattr(update, "ratios", ()) if n]
+    modal = _mode_summary_pieces(update)             # W8: slide values and flags per configuration
     if update.record_matches and not (axial or ratios or getattr(update, "resensed", ())
-                                      or getattr(update, "carriers_moved", ())):
+                                      or getattr(update, "carriers_moved", ()) or modal):
         text = ("SolidWorks already matches the workbook on record; Update SolidWorks checks it live and puts right "
                 "anything changed there")
         if getattr(update, "motion", None) is not None:
@@ -1740,6 +1757,7 @@ def update_summary(update) -> str:
     for name in resensed:                      # W6 (M4, D17): a crossed mesh's sense changed with a move
         at = f" at {_asked_ratio(update, name)}" if name in ratios and _asked_ratio(update, name) else ""
         pieces.append(f"remake the gear mate {name}{at} {_resense_why(update, name)}")
+    pieces += modal
     replaced = _to_replace(update)
     if replaced:
         pieces.append(f"re-place {_and(_bodies(replaced, _mated_copies(update)))}")
@@ -1861,21 +1879,29 @@ def gearbox_update_status(update, result, dragged: Sequence[str] = (), *, meshes
             ok = False
     if motion:
         pieces.extend(_motion_pieces(update, result))
+        pieces.extend(_mode_pieces(update, result))   # W8: slide values and flags, per configuration
     after = _motion_after(update, result, earlier) if motion else []
     dragged = list(dragged)
     placed = [g for g in result.placed if g not in dragged]
     if placed:                                       # W7: the carrier and N copies named once (§2.12)
-        pieces.append(f"re-placed {_and(_bodies(placed, _mated_copies(update)) if motion else placed)}")
+        pieces.append(f"re-placed {_and(_bodies(placed, _mated_copies(update)) if motion else placed)}"
+                      + _put_where(update, result))
 
     assembly = _file(update.assembly) if update.assembly else ""
     nothing = not pieces and not dragged and not result.changed
+    if motion:
+        after = after + _mode_after(update, result, changed=not nothing)
     if earlier:
         told = _earlier_update_sentence(update, result if motion else None, earlier, off_after, pairs_after,
                                         changed=not nothing)
         after = ([told] if told else []) + after
     if nothing:
         text = ALREADY_MATCHES
-        if assembly and (result.clashes or result.interference_error):
+        if assembly and getattr(result, "modes", None) and any(m.clashes or m.interference_error
+                                                                for m in result.modes):
+            ending, ok = _modes_interference(result.modes, assembly, meshes)
+            text += ending[1:]
+        elif assembly and (result.clashes or result.interference_error):
             ending, ok = _interference(result.clashes, result.interference_error, assembly, meshes, turning=motion)
             text += ending[1:]
         return _joined(text, *after), ok
@@ -1889,6 +1915,9 @@ def gearbox_update_status(update, result, dragged: Sequence[str] = (), *, meshes
         if not result.rebuilt:
             text += f". SolidWorks reported an error rebuilding {assembly}, so look at it before saving."
             ok = False
+        elif getattr(result, "modes", None):         # W8: each configuration it post-checked
+            ending, clean = _modes_interference(result.modes, assembly, meshes)
+            text, ok = text + ending, ok and clean
         else:
             ending, clean = _interference(result.clashes, result.interference_error, assembly, meshes,
                                           turning=motion)
@@ -1902,6 +1931,18 @@ def gearbox_update_status(update, result, dragged: Sequence[str] = (), *, meshes
     if result.changed:
         text += " " + save_to_keep(result.changed)
     return text, ok
+
+
+def _put_where(update, result) -> str:
+    """W8: `` in 4H and 4L`` / `` in every mode`` after *re-placed …*, from ``result.put_in`` (the configurations
+    gears were put in); ``""`` for a gearbox with no modes."""
+    put = [str(c) for c in getattr(result, "put_in", ()) or () if str(c)]
+    if not put:
+        return ""
+    every = [str(c).casefold() for c in getattr(getattr(update, "motion", None), "configurations", ()) or ()]
+    if every and sorted(c.casefold() for c in put) == sorted(every) and len(every) > 1:
+        return " in every mode"
+    return f" in {_and(put)}"
 
 
 def _made_new_by(plan, why: str) -> list:
@@ -2157,12 +2198,12 @@ def _ready_build(assessment, plan, folder: str, superseded: Sequence[str] = ()) 
 def _waiting_rows(parts) -> str:
     refused = parts.refused
     more = f" ({len(refused) - 1} more under Checks)" if len(refused) > 1 else ""
-    return f"the layout and assembly wait for a later phase: {refused[0].message}{more}" if refused else ""
+    return f"the layout and assembly are not built: {refused[0].message}{more}" if refused else ""
 
 
 def _ready_parts(assessment, plan, folder: str, superseded: Sequence[str] = (), *,
                  turned: str = "") -> Tuple[str, bool]:
-    """*Ready: Build parts makes 2 parts in …; the layout and assembly wait for a later phase: Shafts!A4: …* (W2's
+    """*Ready: Build parts makes 2 parts in …; the layout and assembly are not built: Gears!A6: …* (W2's
     batch, through the same reuse as Build, decision 9). ``turned`` (W6, D16): planning's refusal of a gearbox with
     a turned mesh while the probes have not settled it (``motion.turned_refusal``), said whole after the line."""
     where = short_path((plan.folder if plan is not None and plan.folder else folder), 48)
@@ -2203,7 +2244,7 @@ def _unsaved_line(paths: Sequence[str], update_puts_back: bool = False) -> str:
 def workbook_footer(assessment, *, record=None, record_problem: str = "", plan=None, update=None,
                     error: str = "", folder: str = "", folder_exists: bool = True, building: bool = False,
                     updating: bool = False, progress=None, note=None, results_due: bool = False,
-                    digest: str = "") -> Footer:
+                    digest: str = "", positions_per_configuration: Optional[bool] = None) -> Footer:
     """The footer for every state of the window (design/UI-DESIGN.md §9's table): its sentence, colour, buttons.
 
     ``assessment`` is the last good read's ``workbook.assess.Assessment``
@@ -2249,6 +2290,10 @@ def workbook_footer(assessment, *, record=None, record_problem: str = "", plan=N
     that changing the workbook makes Build available again (W5-DECISIONS, answer 1:
     the footer never invites a retry of an unchanged workbook). ``""``, as
     every W4 caller passes, never matches.
+
+    W8 (W8-INTERFACES §9.12): ``positions_per_configuration`` is the running SolidWorks' answer as the last job's
+    result carried it (None after a restart: neither claim is made), for the record line of a gearbox with modes,
+    which also reads the workbook's Modes rows now (``assessment.spec.modes``) to say a reorder.
     """
     from .store import GEARBOX_STATIC, LINK_WAITS
     a = assessment
@@ -2268,6 +2313,8 @@ def workbook_footer(assessment, *, record=None, record_problem: str = "", plan=N
                         and any(str(p).strip() for p in gearbox.mate_problems)
                         and gearbox.mate_problems_digest and gearbox.mate_problems_digest == digest)
     refused_shown = False
+    record_words = dict(positions_per_configuration=positions_per_configuration,
+                        modes=tuple(m.name for m in getattr(getattr(a, "spec", None), "modes", ()) or ()))
 
     def footer(text: str, ok: bool, build: bool = False, update_on: bool = False) -> Footer:
         return Footer(text, ok, action, BUILD_LABELS[action], build, action != BUILD_AGAIN, on_record,
@@ -2346,14 +2393,15 @@ def workbook_footer(assessment, *, record=None, record_problem: str = "", plan=N
             # W5: what kind of assembly is on record; W4's static one is offered a turning revision only when Build
             # again… is on and its plan turns (D5: never forced), so a W4 sentence otherwise stays as it was.
             line = motion_record_line(record, digest, offer=bool(
-                build_on and plan is not None and not plan.refusal and getattr(plan, "motion", None) is not None))
+                build_on and plan is not None and not plan.refusal and getattr(plan, "motion", None) is not None),
+                **record_words)
             if line:
                 text += " " + line
     else:
         if build_block:
             text, ok, build_on = build_block, False, False
         elif refused_here and action == BUILD:
-            text, ok, build_on, refused_shown = motion_record_line(record, digest), False, False, True
+            text, ok, build_on, refused_shown = motion_record_line(record, digest, **record_words), False, False, True
         elif action == BUILD_PARTS:
             text, ok = _ready_parts(a, plan, where, superseded, turned=turned)
             build_on = plan is None or bool(plan.build)
@@ -2364,7 +2412,7 @@ def workbook_footer(assessment, *, record=None, record_problem: str = "", plan=N
             subject = "Build"
             if ok and gearbox is not None and not gearbox.assembly:
                 # W5: a refusal on record, from an earlier read
-                line = motion_record_line(record, digest, offer=build_on)
+                line = motion_record_line(record, digest, offer=build_on, **record_words)
                 if line:
                     text += " " + line
         if on_record and update is not None and not update.refusal and update.needs_new_revision:
@@ -2740,7 +2788,7 @@ def _joined(*sentences: str) -> str:
 
 def _mate_problems(problems: Sequence[str]) -> str:
     """The worker's mate problems, each its own whole sentence as it came (never lower-cased or cut into another)."""
-    return " ".join(_sentence(p) for p in problems if str(p).strip())
+    return " ".join(mode_problem(p) for p in problems if str(p).strip())
 
 
 def _mates_lead(problems: Sequence[str]) -> str:
@@ -2847,6 +2895,11 @@ def motion_ready_line(plan) -> str:
     trains = _train_count(motion)
     who = _turning_subject(motion)
     where = ", where they mesh," if alone else ""
+    if getattr(motion, "modes", ()):
+        # W8: what turns together is each mode's, said by mode (modes_ready_line), never one train for all.
+        return _joined(f"{who} are mated to their shafts and, as each mode engages them, to each other, so they turn "
+                       "together in SolidWorks.", modes_ready_line(plan), _carrier_sentences(plan),
+                       _fixed_sentence(_fixed_gears(motion)))
     if not motion.anchors:
         text = ""
     elif not trains:
@@ -2857,7 +2910,7 @@ def motion_ready_line(plan) -> str:
     else:
         text = f"{who} are mated to their shafts and{where} to each other, so each train turns together in SolidWorks."
     return _joined(text, _alone_sentence(alone, trains) if trains else "", _carrier_sentences(plan),
-                   _fixed_sentence(_fixed_gears(motion)))
+                   _fixed_sentence(_fixed_gears(motion)), modes_ready_line(plan))
 
 
 def motion_done_line(plan, result) -> str:
@@ -2886,6 +2939,8 @@ def motion_done_line(plan, result) -> str:
     motion = getattr(plan, "motion", None) if plan is not None else None
     if motion is None:
         return "Its gears are mated to turn, and SolidWorks reports no mate in error."
+    if getattr(motion, "modes", ()):
+        return modes_done_line(plan, result)              # W8: a configuration per mode
     drag = [g for g in motion.drag if g]
     alone = _gears_alone(motion)
     trains = _train_count(motion)
@@ -2937,7 +2992,8 @@ def mate_refused_status(plan, result, again: bool = False) -> Tuple[str, bool]:
                         ([reused_layout] if reused_layout else []) + carriers_reused
                         + ([_already(reused_parts)] if reused_parts else []))
     problems = list(assembly.mate_problems)
-    because = f"no assembly was saved, because SolidWorks found {_mates_lead(problems)} with its mates."
+    what = "its mates or its modes" if getattr(plan, "modes_plan", None) is not None else "its mates"
+    because = f"no assembly was saved, because SolidWorks found {_mates_lead(problems)} with {what}."
     lead = f"{done}; {because}" if done else because[:1].upper() + because[1:]
     kept = (("The parts, the layout part and the carrier part are kept." if carriers or carriers_reused
              else "The parts and the layout part are kept.") if done else "")
@@ -2947,7 +3003,8 @@ def mate_refused_status(plan, result, again: bool = False) -> Tuple[str, bool]:
     return _joined(lead, _mate_problems(problems), kept, left, then), False
 
 
-def motion_record_line(record, digest: str = "", *, offer: bool = True) -> str:
+def motion_record_line(record, digest: str = "", *, offer: bool = True,
+                       positions_per_configuration: Optional[bool] = None, modes: Sequence[str] = ()) -> str:
     """The footer's line on a gearbox on record (``store.LinkRecord``), appended in the Build again… states whose
     sentence is not an error, and in Build's state after a refusal.
 
@@ -2969,6 +3026,9 @@ def motion_record_line(record, digest: str = "", *, offer: bool = True) -> str:
     tries the assembly again.* when both digests are known and differ, and
     only *Build tries the assembly again.* when either is ``""`` (a change
     cannot be claimed then). ``""`` with no gearbox.
+
+    W8: a gearbox on record with modes is said by :func:`modes_record_line`, given ``positions_per_configuration``
+    and ``modes`` (the workbook's Modes rows now) as they come.
     """
     from .store import GEARBOX_MOTION
     box = getattr(record, "gearbox", None)
@@ -2994,6 +3054,9 @@ def motion_record_line(record, digest: str = "", *, offer: bool = True) -> str:
         # W7 (J14): a carrier is axes and planes only, so the drag is a gear of its train, never the carrier.
         carrier = carrier_phrase(record)
         nothing = f" {carrier} is axes and planes only, so it has nothing to drag." if carrier else ""
+        if box.modes:
+            return modes_record_line(record, positions_per_configuration=positions_per_configuration,
+                                     modes=modes) + nothing
         if drag:
             return f"It was built with its gears mated to turn: {drag_phrase(drag)}.{nothing}"
         return f"It was built with its gears each mated to their shaft, free to turn.{nothing}"
@@ -3429,9 +3492,10 @@ def planetary_speed_line(shaft: str, motion, *, copies: int = 1, carrier: str = 
     return text
 
 
-# --- W8: modes (W8-PLAN §1.12, W8-INTERFACES.md §7). Package C writes each sentence exactly as §1.12 gives it, filled
-# from fields; the existing functions keep their signatures and call these. Until then each refuses with a sentence,
-# and nothing calls them.
+# --- W8: modes (W8-PLAN §1.12, W8-INTERFACES.md §7 and §9). Each sentence as §1.12 gives it, filled from fields,
+# with two changes of words: a mode is "a mode" wherever the user acts on it (each is a configuration named as the
+# mode, said once, and switched in SolidWorks' ConfigurationManager: SWITCH_MODE), and the assembly is said to be
+# saved in its first mode (§9.9). The existing functions keep their signatures (keyword-only additions) and call these.
 
 TURN_STAYS = "A turn you give the gears in one configuration stays in that configuration."
 TURN_SHOWS_EVERYWHERE = ("A turn you give the gears in one configuration shows in every configuration, so a dog can "
@@ -3451,44 +3515,427 @@ def turning_note(positions_per_configuration: Optional[bool]) -> str:
     return ""
 
 
-def _modes_not_yet(what: str) -> ValueError:
-    return ValueError(f"The sentence {what} is not written in this version of Gear Generator yet.")
+SWITCH_IN_STEP = "Switching mode never by itself puts a dog tooth on tooth."
+
+
+def switching_note(positions_per_configuration: Optional[bool]) -> str:
+    """What showing another mode does to a coupling's teeth, said only where the running version keeps each
+    configuration's own positions (``positions_per_configuration`` True, W8-PLAN §1.9: each coupling was made in its
+    own configuration at the built turn, and a switch inherits no angle); ``""`` where it is False or unknown, since
+    with shared positions a switch can engage a coupling at whatever angle a turn left."""
+    return SWITCH_IN_STEP if positions_per_configuration is True else ""
+
+
+def _positions_notes(positions_per_configuration: Optional[bool]) -> str:
+    """:func:`turning_note` and :func:`switching_note`, as the footer says them."""
+    return _joined(turning_note(positions_per_configuration), switching_note(positions_per_configuration))
+
+
+SWITCH_MODE = "to switch mode, double-click another in SolidWorks' ConfigurationManager"
+# How a user shows another mode in SolidWorks (each mode is a configuration named as the mode): said in the
+# workbook's word, mode, naming SolidWorks' own list as the place.
+
+
+def _slides(mates) -> List[Tuple[str, str]]:
+    """``(slider, shaft)`` for each SLIDE mate of a turning plan or record, in order."""
+    return [(tuple(m.gears)[0], m.shaft) for m in mates or () if m.kind == "slide" and tuple(m.gears)]
 
 
 def modes_ready_line(plan) -> str:
-    """Before Build, for a ``GearboxPlan`` whose workbook has modes (or sliders and no Modes rows): *"It has {4}
-    modes, {2H, 4H, N and 4L}: each becomes a configuration of the assembly, and it opens in {2H}."* · *"{RangeSlv
-    and ModeSlv} slide, but the Modes sheet has no rows, so the assembly has one configuration with each at its
-    position 0."*; ``""`` with neither."""
-    raise _modes_not_yet("before a Build with modes")
+    """Before Build (:func:`motion_ready_line` asks it), for a ``GearboxPlan`` whose ``motion`` has modes: *It has 4
+    modes, 2H, 4H, N and 4L: each becomes a configuration of the assembly, and it opens in 2H.*; one mode, *It has
+    one mode, 2H, which becomes a configuration of the assembly, the one it opens in.*; sliders and no Modes rows,
+    *RangeSlv and ModeSlv slide, but the Modes sheet has no rows, so the assembly has one configuration with each at
+    its position 0.* (*RangeSlv slides, … with it at …*); ``""`` with neither."""
+    motion = getattr(plan, "motion", None) if plan is not None else None
+    if motion is None:
+        return ""
+    modes = [str(m) for m in getattr(motion, "modes", ()) or () if str(m)]
+    if len(modes) == 1:
+        return (f"It has one mode, {modes[0]}, which becomes a configuration of the assembly, the one it opens in.")
+    if modes:
+        return (f"It has {len(modes)} modes, {_and(modes)}: each becomes a configuration of the assembly, and it opens "
+                f"in {modes[0]}.")
+    sliders = [g for g, _ in _slides(motion.mates)]
+    if not sliders:
+        return ""
+    who, one = _and(sliders), len(sliders) == 1
+    return (f"{who} slide{'s' if one else ''}, but the Modes sheet has no rows, so the assembly has one configuration "
+            f"with {'it' if one else 'each'} at its position 0.")
+
+
+def _modes_of(plan) -> List[str]:
+    motion = getattr(plan, "motion", None) if plan is not None else None
+    return [str(m) for m in getattr(motion, "modes", ()) or () if str(m)]
+
+
+def _slides_sentence(motion) -> str:
+    """*RangeSlv and ModeSlv slide along Rear, each to its place in each mode.* (*G4 slides along S3 and G7 along
+    S5, …* for sliders on different shafts)."""
+    slides = _slides(getattr(motion, "mates", ()))
+    if not slides:
+        return ""
+    shafts = list(dict.fromkeys(shaft for _, shaft in slides))
+    one = len(slides) == 1
+    if len(shafts) == 1:
+        what = f"{_and(g for g, _ in slides)} slide{'s' if one else ''} along {shafts[0]}"
+    else:
+        what = (f"{slides[0][0]} slides along {slides[0][1]} and "
+                + _and(f"{g} along {s}" for g, s in slides[1:]))
+    return f"{what}, {'to its' if one else 'each to its'} place in each mode."
 
 
 def modes_done_line(plan, result) -> str:
-    """After a Build with modes (``motion_done_line`` asks it): the configurations made, no mate in error in any of
-    them, the one it opens in, the gear to drag, and the interference ending per mode (W8-PLAN §1.12)."""
-    raise _modes_not_yet("after a Build with modes")
+    """After a Build with modes whose assembly saved (:func:`motion_done_line` asks it): *Its gears are mated to
+    turn in each of its 4 modes, one configuration each (2H, 4H, N and 4L), and SolidWorks reports no mate in error
+    in any of them: it opens in 2H; drag Sun in SolidWorks and the rest of its train follow, and to switch mode,
+    double-click another in SolidWorks' ConfigurationManager.*, the sliders' sentence, then, by the running
+    version (``result.positions_per_configuration``), :func:`turning_note` and :func:`switching_note`. The
+    interference ending per mode is :func:`gearbox_status`'s (:func:`_modes_interference`). ``""`` without modes."""
+    modes = _modes_of(plan)
+    motion = getattr(plan, "motion", None) if plan is not None else None
+    if not modes or motion is None:
+        return ""
+    drag = [g for g in motion.drag if g]
+    count = "one mode, one configuration" if len(modes) == 1 else f"{len(modes)} modes, one configuration each"
+    names = modes[0] if len(modes) == 1 else _and(modes)
+    any_of = "in it" if len(modes) == 1 else "in any of them"
+    then = f"{drag_phrase(drag)}, and {SWITCH_MODE}" if drag else SWITCH_MODE
+    if len(modes) == 1:
+        then = drag_phrase(drag) if drag else ""
+    text = (f"{_turning_subject(motion)} are mated to turn in each of its {count} ({names}), and SolidWorks "
+            f"reports no mate in error {any_of}: it opens in {modes[0]}" + (f"; {then}." if then else "."))
+    return _joined(text, _slides_sentence(motion), _carrier_sentences(plan, built=True),
+                   _fixed_sentence(_fixed_gears(motion)),
+                   _positions_notes(getattr(result, "positions_per_configuration", None)))
+
+
+def _modes_interference(modes, assembly: str, meshes=None) -> Tuple[str, bool]:
+    """:func:`_interference` across the configurations a build or an Update checked (``ModeCheck`` each, mode
+    order): *; no interference between the gears in any mode, where they stand.*; a mode it could not check, *.
+    Interference could not be checked in 4L: …*; clashes, each list of clashes said once with the modes it was found
+    in, *. Check: in 2H and 4H, RangeSlv and InDog interfere, 0.5 mm³; look where they meet in TransferCase.SLDASM.*"""
+    where = f" in {assembly}" if assembly else ""
+    errors = [(m.name, m.interference_error) for m in modes if m.interference_error]
+    if errors:
+        said = " ".join(f"Interference could not be checked in {name}: {_sentence(err)}" for name, err in errors)
+        return f". {said} Look at each mesh{where} by eye.", False
+    groups: List[Tuple[List[str], Tuple[str, ...]]] = []
+    every: list = []
+    for mode in modes:
+        if not mode.clashes:
+            continue
+        lines = tuple(_clash_lines(mode.clashes))
+        every.extend(mode.clashes)
+        for names, said in groups:
+            if said == lines:
+                names.append(mode.name)
+                break
+        else:
+            groups.append(([mode.name], lines))
+    if groups:
+        look = ("at their mesh" if len(groups) == 1 and len(groups[0][1]) == 1 else "at those meshes") \
+            if _all_meshes(every, meshes) else "where they meet"
+        found = "; ".join(f"in {_and(names)}, {'; '.join(lines)}" for names, lines in groups)
+        return f". Check: {found}; look {look}{where}.", False
+    if len(modes) == 1:
+        return f"; no interference between the gears in {modes[0].name}, where they stand.", True
+    return "; no interference between the gears in any mode, where they stand.", True
 
 
 def mode_problem(problem: str) -> str:
-    """A mate problem of the per-mode check (A writes *"In mode {4L}, …"*), shown whole."""
-    raise _modes_not_yet("for a problem in one mode")
+    """A problem of the per-mode check (A writes *In mode 4L, the mate RangeSlv engages LoDog over-defines the
+    assembly.*, *SolidWorks would not make the configuration 4L.*, …), shown whole: the one home of how a worker's
+    problem sentence is shown (:func:`_mate_problems` says each through it)."""
+    return _sentence(str(problem))
 
 
-def modes_record_line(record) -> str:
-    """The footer for a record with modes: *"It was built with a configuration per mode ({2H, 4H, N and 4L}): pick
-    one in SolidWorks and drag {Sun} to turn it."*, the reordered rows' sentence, and :func:`turning_note`."""
-    raise _modes_not_yet("for a gearbox built with modes")
+def _order_sentence(built: Sequence[str], modes: Sequence[str]) -> str:
+    """The Modes rows reordered since the build (the same names, ignoring case, in another order: W8-INTERFACES
+    §9.9, an Update with nothing to do): *The Modes rows are in another order now, which changes nothing in
+    SolidWorks: it keeps 2H as the mode it was saved in, and Build again… would save the next revision in 4L.*; with
+    the same first mode, *…: it keeps 2H as the mode it was saved in.*"""
+    built = [str(m) for m in built if str(m)]
+    modes = [str(m) for m in modes if str(m)]
+    if not built or not modes or len(built) != len(modes):
+        return ""
+    folded = [m.casefold() for m in built], [m.casefold() for m in modes]
+    if sorted(folded[0]) != sorted(folded[1]) or folded[0] == folded[1]:
+        return ""
+    text = (f"The Modes rows are in another order now, which changes nothing in SolidWorks: it keeps {built[0]} as "
+            f"the mode it was saved in")
+    if folded[0][0] != folded[1][0]:
+        text += f", and Build again… would save the next revision in {modes[0]}"
+    return text + "."
+
+
+def modes_record_line(record, *, positions_per_configuration: Optional[bool] = None,
+                      modes: Sequence[str] = ()) -> str:
+    """The footer for a gearbox on record with modes (``GearboxRecord.modes``; :func:`motion_record_line` asks it):
+    *It was built with a configuration per mode (2H, 4H, N and 4L), each named as its mode, and saved in 2H; to
+    switch mode, double-click another in SolidWorks' ConfigurationManager, and drag Sun in SolidWorks and the rest
+    of its train follow.* (the first of ``modes`` on record is the one it was saved in, W8-INTERFACES §9.9). Then,
+    with ``modes`` (the workbook's Modes rows now, in order), the reordered rows' sentence (:func:`_order_sentence`),
+    and by ``positions_per_configuration`` (the running version's, from the last job; None after a restart: neither
+    claim) :func:`turning_note` and :func:`switching_note`. ``""`` with no modes on record."""
+    box = getattr(record, "gearbox", None)
+    built = [str(m) for m in getattr(box, "modes", ()) or () if str(m)] if box is not None else []
+    if not built:
+        return ""
+    drag = [g for g in box.drag if g]
+    each = "one configuration, named as its mode," if len(built) == 1 else \
+        f"a configuration per mode ({_and(built)}), each named as its mode, and"
+    lead = f"It was built with {each} saved in {built[0]}"
+    if len(built) == 1:
+        lead = f"It was built with {each} and saved in it"
+    tail = SWITCH_MODE if len(built) > 1 else ""
+    if drag:
+        tail = f"{tail}, and {drag_phrase(drag)}" if tail else drag_phrase(drag)
+    text = f"{lead}; {tail}." if tail else f"{lead}."
+    return _joined(text, _order_sentence(built, modes), _positions_notes(positions_per_configuration))
+
+
+def _recorded_mate(update, name: str):
+    for mate in getattr(getattr(update, "motion", None), "mates", ()) or ():
+        if mate.name == name:
+            return mate
+    return None
+
+
+def _slide_words(update, name: str) -> Tuple[str, str]:
+    """(slider, shaft) of the SLIDE ``name`` on record, else (``name``, "")."""
+    mate = _recorded_mate(update, name)
+    if mate is None or not tuple(mate.gears):
+        return name, ""
+    return tuple(mate.gears)[0], mate.shaft
+
+
+def _by_value(entries: Sequence[Tuple[str, float]]) -> List[Tuple[List[str], float]]:
+    """``[(configurations, value)]``: entries of one value said once, in the order first met."""
+    groups: List[Tuple[List[str], float]] = []
+    for config, value in entries:
+        for names, v in groups:
+            if abs(v - value) < 1e-9:
+                names.append(config)
+                break
+        else:
+            groups.append(([config], float(value)))
+    return groups
+
+
+def _places(groups: Sequence[Tuple[List[str], float]], back: bool = False) -> str:
+    """``in 4L to 66.5 mm`` / ``in 2H and 4H to 46 mm and in 4L to 66 mm`` (``back to`` with ``back``)."""
+    to = "back to" if back else "to"
+    return " and ".join(f"in {_and(names)} {to} {_n(value)} mm" for names, value in groups)
+
+
+def _per_slide(triples: Sequence[Tuple[str, str, float]]) -> List[Tuple[str, List[Tuple[str, float]]]]:
+    """``[(slide, [(configuration, value)])]`` in the order the slides are first met."""
+    out: Dict[str, List[Tuple[str, float]]] = {}
+    for name, config, value in triples:
+        out.setdefault(name, []).append((config, float(value)))
+    return list(out.items())
+
+
+def _wanted_value(update, name: str, config: str) -> Optional[float]:
+    for slide, conf, value in getattr(getattr(update, "motion", None), "slide_values", ()) or ():
+        if slide == name and str(conf).casefold() == str(config).casefold():
+            return float(value)
+    return None
+
+
+def _recorded_value(update, name: str, config: str) -> Optional[float]:
+    mate = _recorded_mate(update, name)
+    for conf, value in getattr(mate, "values", ()) or ():
+        if str(conf).casefold() == str(config).casefold():
+            return abs(float(value))
+    return None
+
+
+def _on_record(update, name: str, config: str) -> bool:
+    """Whether the record has the mate ``name`` on in ``config`` (``swbuild.on_in`` of its recorded on-set)."""
+    from .swbuild import on_in
+    mate = _recorded_mate(update, name)
+    return on_in(tuple(getattr(mate, "modes", ()) or ()), config)
+
+
+def _flag_pieces(pairs_on: Sequence[Tuple[str, str]], pairs_off: Sequence[Tuple[str, str]], update,
+                 *, done: bool) -> List[str]:
+    """Each mate's flags set, per mate, its configurations named once. A flag that puts the record's own state back
+    (D10 per configuration) — *turned the mate RangeSlv engages LoDog back on in 4L* / *suppressed the mate RangeSlv
+    engages InDog again in 4L, where it was on* — or one a workbook edit changes (J14) — *switched the mate ModeSlv
+    engages FrontDog off in 4H* (``done`` False: *switch …*)."""
+    order: List[str] = []
+    back_on: Dict[str, List[str]] = {}
+    again: Dict[str, List[str]] = {}
+    switch: Dict[str, List[Tuple[str, bool]]] = {}
+    for (name, config), on in [(p, True) for p in pairs_on] + [(p, False) for p in pairs_off]:
+        if name not in order:
+            order.append(name)
+        recorded = _on_record(update, name, config)
+        if done and on and recorded:
+            back_on.setdefault(name, []).append(config)
+        elif done and not on and not recorded:
+            again.setdefault(name, []).append(config)
+        else:
+            switch.setdefault(name, []).append((config, on))
+    pieces = []
+    verb = "switched" if done else "switch"
+    for name in order:
+        if name in back_on:
+            pieces.append(f"turned the mate {name} back on in {_and(back_on[name])}")
+        if name in again:
+            pieces.append(f"suppressed the mate {name} again in {_and(again[name])}, where it was on")
+        if name in switch:
+            ons = [c for c, on in switch[name] if on]
+            offs = [c for c, on in switch[name] if not on]
+            said = [f"on in {_and(ons)}"] if ons else []
+            said += [f"off in {_and(offs)}"] if offs else []
+            pieces.append(f"{verb} the mate {name} {' and '.join(said)}")
+    return pieces
+
+
+def _mode_summary_pieces(update) -> List[str]:
+    """What an Update with modes will do (:func:`update_summary`): each slide value that differs from the record,
+    *move RangeSlv in 4L to 66.5 mm along Rear*, and each coupling's or sliding mesh's on-set that differs, *switch
+    the mate ModeSlv engages FrontDog off in 4H*."""
+    motion = getattr(update, "motion", None)
+    if motion is None or not getattr(motion, "configurations", ()):
+        return []
+    pieces = []
+    moves = [(name, config, value) for name, config, value in motion.slide_values
+             if _recorded_value(update, name, config) is None
+             or abs(_recorded_value(update, name, config) - float(value)) > 1e-9]
+    for name, entries in _per_slide(moves):
+        gear, shaft = _slide_words(update, name)
+        pieces.append(f"move {gear} {_places(_by_value(entries))}" + (f" along {shaft}" if shaft else ""))
+    on, off = [], []
+    for name, wanted in motion.on_sets:
+        from .swbuild import on_in
+        for config in motion.configurations:
+            want, had = on_in(tuple(wanted), config), _on_record(update, name, config)
+            if want != had:
+                (on if want else off).append((name, config))
+    pieces += _flag_pieces(on, off, update, done=False)
+    return pieces
+
+
+def _mode_pieces(update, result) -> List[str]:
+    """What an Update with modes did, as pieces of *Updated SolidWorks: …*: the slide values set for an edit
+    (``result.slid``: *moved RangeSlv in 4H and 4L to 66.5 mm along Rear*), those set back to the record's
+    (``values_restored``: *set RangeSlv's place in 4L back to 66 mm, where it had been changed in SolidWorks*), and
+    the flags set (``unsuppressed_in``, ``suppressed_in``: :func:`_flag_pieces`), each configuration named once."""
+    pieces = []
+    for name, entries in _per_slide(getattr(result, "slid", ()) or ()):
+        gear, shaft = _slide_words(update, name)
+        pieces.append(f"moved {gear} {_places(_by_value(entries))}" + (f" along {shaft}" if shaft else ""))
+    restored = []
+    for name, config in getattr(result, "values_restored", ()) or ():
+        value = _wanted_value(update, name, config)
+        if value is None:
+            value = _recorded_value(update, name, config)
+        if value is not None:
+            restored.append((name, config, value))
+    for name, entries in _per_slide(restored):
+        gear, _ = _slide_words(update, name)
+        pieces.append(f"set {gear}'s place {_places(_by_value(entries), back=True)}, where it had been changed in "
+                      "SolidWorks")
+    pieces += _flag_pieces(list(getattr(result, "unsuppressed_in", ()) or ()),
+                           list(getattr(result, "suppressed_in", ()) or ()), update, done=True)
+    return pieces
+
+
+def _couple_pair(update, pair: Tuple[str, str]) -> bool:
+    """Whether ``pair`` is a coupling on record (a COUPLE mate of those two gears, either order)."""
+    mates = getattr(getattr(update, "motion", None), "mates", ()) or ()
+    return any(m.kind == "couple" and set(m.gears) == set(pair) for m in mates)
+
+
+def _mode_after(update, result, *, changed: bool) -> List[str]:
+    """The whole sentences an Update with modes adds (``result.configuration`` set): a coupling found out of step
+    in the configuration it worked in and put there, *In 4H RangeSlv's teeth stood across InDog's; the gears of 4H
+    are back at the turn they were built at.* (and, only where the running version shares positions, that the turn
+    may have been given in another mode); where it worked and what it showed (W8-INTERFACES §9.11: always, for a
+    quiet Update too), *It worked in 4H, the configuration that was active, then showed and checked 2H, N and 4L and
+    left the assembly in 4H.* or *It worked in 4H, the configuration that was active; it did not show the other
+    modes, since nothing needed changing.*; after showing others with nothing of the assembly's changed, that
+    SolidWorks marks it modified; and the configurations the app did not make, left alone."""
+    config = getattr(result, "configuration", "")
+    if not config:
+        return []
+    out = []
+    asm = _file(update.assembly) if getattr(update, "assembly", "") else "the assembly"
+    put_here = any(str(c).casefold() == config.casefold() for c in getattr(result, "put_in", ()) or ())
+    if put_here:
+        for a, b in result.out_of_step:
+            if _couple_pair(update, (a, b)):
+                out.append(f"In {config} {a}'s teeth stood across {b}'s; the gears of {config} are back at the turn "
+                           "they were built at.")
+                if getattr(result, "positions_per_configuration", None) is False:
+                    out.append("This version of SolidWorks shows a turn given in one mode in every mode, so the turn "
+                               "may have been given in another.")
+    visited = [str(v) for v in getattr(result, "visited", ()) or () if str(v)]
+    if visited:
+        out.append(f"It worked in {config}, the configuration that was active, then showed and checked "
+                   f"{_and(visited)} and left the assembly in {config}.")
+        if update.assembly and not any(_file(p).lower() == _file(update.assembly).lower() for p in result.changed):
+            out.append(f"Showing them leaves {asm} marked modified in SolidWorks, although nothing in it changed.")
+    else:
+        since = ", since nothing needed changing" if not changed else ""
+        out.append(f"It worked in {config}, the configuration that was active; it did not show the other "
+                   f"modes{since}.")
+    extra = [str(c) for c in getattr(result, "extra_configurations", ()) or () if str(c)]
+    if extra:
+        one = len(extra) == 1
+        out.append(f"{asm[:1].upper()}{asm[1:]} also has {'a configuration' if one else 'configurations'} the app did "
+                   f"not make ({_and(extra)}); Update SolidWorks left {'it as it is' if one else 'them as they are'}.")
+    return out
 
 
 def mode_update_lines(update, result) -> List[str]:
-    """After an Update with modes: each slide value set or set back, each flag turned on or suppressed again, the
-    configuration it worked in and those it showed, an extra configuration left, and the quiet Update's sentence
-    (J25: *"It worked in {4H}, the configuration that was active; it did not show the other modes, since nothing
-    needed changing."*)."""
-    raise _modes_not_yet("after an Update with modes")
+    """After an Update with modes, each a whole sentence: :func:`_mode_pieces`' (*Moved RangeSlv in 4L to 66.5 mm
+    along Rear.*, …) then :func:`_mode_after`'s. :func:`gearbox_update_status` folds the pieces into its *Updated
+    SolidWorks: …* list and adds the rest after it. ``[]`` for a gearbox with no modes."""
+    if not getattr(result, "configuration", ""):
+        return []
+    pieces = _mode_pieces(update, result)
+    return ([_sentence(p[:1].upper() + p[1:]) for p in pieces]
+            + _mode_after(update, result, changed=bool(pieces or result.changed or result.placed)))
+
+
+def _mode_report(report, mode: str):
+    for entry in getattr(report, "modes", ()) or ():
+        if str(entry.name).casefold() == str(mode).casefold():
+            return entry
+    return None
+
+
+FREE = "turns freely"        # a member a mode leaves free (J16): never "0 rpm"
+
+
+def _engaged_sentence(entry) -> str:
+    """What a mode couples, from its ``ModeReport``: *In 4H, RangeSlv engages InDog and ModeSlv engages FrontDog.*;
+    *In N, no sleeve engages a dog.*; a listed mesh a slide takes out of mesh, *…; G4 and G5 are out of mesh.*; the
+    implicit mode of sliders with no Modes rows, *With every slider at its position 0, …*. How a coupled pair turns
+    is never said here (W8-INTERFACES §9.3: it follows each coupling's own sense)."""
+    where = f"In {entry.name}" if entry.name else "With every slider at its position 0"
+    engaged = [(s, d) for s, d in entry.engaged if s and d]
+    said = _and(f"{s} engages {d}" for s, d in engaged) if engaged else "no sleeve engages a dog"
+    out = [f"{a} and {b}" for a, b in entry.out_of_mesh if a and b]
+    if out:
+        said += "; " + "; ".join(f"{pair} are out of mesh" for pair in out)
+    return f"{where}, {said}."
 
 
 def mode_speed_lines(spec, report, mode: str) -> Tuple[List[str], str]:
-    """The Speeds panel at ``mode`` (a ``checks.ModeReport`` name): its lines (*"{4L}: Rear 375 rpm · Front 375 rpm ·
-    4.000 : 1"*, neutral's, a shared output's torque) and its ratio line."""
-    raise _modes_not_yet(f"for the speeds in mode {mode}")
+    """The Speeds panel at ``mode`` (a ``checks.ModeReport`` of ``report.modes``, its name compared ignoring case):
+    first what the mode couples (:func:`_engaged_sentence`), then one line per shaft from that mode's
+    ``motion`` as :func:`workbook_speed_lines` gives them, a member the mode leaves free reading *Front  turns
+    freely* (J16), a held member *held still*; and the readout. ``([], "")`` for a mode the report does not have.
+    The mode's speeds-and-ratio line and a shared output's torque wait for the fields B pins (W8-PLAN §1.12)."""
+    entry = _mode_report(report, mode)
+    if entry is None:
+        return [], ""
+    lines, readout = _speed_lines(spec, entry.motion, free=FREE)
+    return [_engaged_sentence(entry)] + lines, readout
+

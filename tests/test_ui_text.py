@@ -307,15 +307,19 @@ def ready(tmp_path):
     return a
 
 
+HELD_BACK = ("Gears!A6: G6 slides on S3, a shaft whose Role is fixed, so it is not built by this version of the "
+             "app.")
+
+
 @pytest.fixture
 def with_carrier(tmp_path):
-    """The 12 : 1 workbook with a dog ring: its parts build, its layout waits for W8 (a bevel row did until W6 laid
-    bevels out, then a carrier until W7 laid carriers out)."""
-    spec = reducer()
-    spec = model.replace(spec, gears=spec.gears + (Gear("G6", "S2", "60", "dog", "external", "20", "1.5", "", "10",
-                                                        "10"),))
-    read, diagnostics = model.from_book(xlsx.read(write(tmp_path, spec)))
-    a = assess.assess(read, diagnostics, P)
+    """The 12 : 1 workbook with a row whose part builds and which holds the layout back (a bevel row did until W6
+    laid bevels out, a carrier until W7, a dog ring until W8 built them; W8 is the last phase, so such a row is one
+    this version does not build, W8-PLAN §0.1 — written into the parts plan here, since its sentence is B's)."""
+    spec, diagnostics = model.from_book(xlsx.read(write(tmp_path, reducer())))
+    a = assess.assess(spec, diagnostics, P)
+    a = dataclasses.replace(a, parts=dataclasses.replace(a.parts, refused=[Diagnostic("error", HELD_BACK,
+                                                                                         "Gears!A6")]))
     assert a.build_refusal() == "" and a.parts.refused
     return a
 
@@ -679,8 +683,7 @@ def test_a_refused_plan_holds_build_back(ready):
 
 def test_build_parts_while_a_later_phase_holds_the_layout_back(with_carrier):
     f = _footer(with_carrier, plan=_gearbox(layout=None, assembly=False, **FULL))
-    assert f.text == (f"Ready: Build parts makes 4 parts in {P}; the layout and assembly wait for a later "
-                             "phase: Gears!A6: G6 is a dog ring: dog rings are built in phase W8, with modes.")
+    assert f.text == f"Ready: Build parts makes 4 parts in {P}; the layout and assembly are not built: {HELD_BACK}"
     assert (f.ok, f.build_action, f.build_label, f.build_enabled, f.build_primary) == (
         True, ui_text.BUILD_PARTS, "Build parts", True, True)
     plan = _gearbox(layout=None, assembly=False, build=[_job(STEMS[3], ["G4"])],
@@ -2921,8 +2924,7 @@ def test_a_planetary_refused_at_build_is_said_whole_with_build_parts_offered_and
     for message in refusals:
         parts = dataclasses.replace(ready.parts, refused=[Diagnostic(WARNING, message, message.split(":")[0])])
         f = _footer(dataclasses.replace(ready, parts=parts), plan=_gearbox(layout=None, assembly=False, **FULL))
-        assert _clean(f.text) == (f"Ready: Build parts makes 4 parts in {P}; the layout and assembly wait for a later "
-                                  f"phase: {message}")
+        assert _clean(f.text) == f"Ready: Build parts makes 4 parts in {P}; the layout and assembly are not built: {message}"
         assert (f.build_action, f.build_enabled) == (ui_text.BUILD_PARTS, True)
     condition = ("Shafts!H4: 5 copies of Planet cannot all mesh with Sun and Ring at once: (18 + 54) / 5 = 14.4 is not "
                  "a whole number. With these teeth the copies can be 1, 2, 3 or 4; more would not fit round C.")
@@ -3037,3 +3039,308 @@ def test_the_4_to_1s_gears_table_has_one_row_and_one_part_cell_for_the_planet_an
     planet = [r for r in rows if r[0] == "Planet"]
     assert [r[0] for r in rows] == ["Sun", "Planet", "Ring", "CarrierGear"] and len(planet) == 1
     assert planet[0][6] == "Planet" and [s.copies for s in a.spec.shafts if s.id == planet[0][1]] == ["3"]
+
+
+# -- W8: modes (W8-PLAN §1.12, W8-INTERFACES §7 and §9), on TransferCase_Parallel's shapes (§2.2, §2.3) ----------
+
+from gear_generator.workbook import checks  # noqa: E402
+
+MODES = ("2H", "4H", "N", "4L")
+TC_ASM = _path("TransferCase", ".SLDASM")
+SLIDE_VALUES = {"RangeSlv along Rear": (46.0, 46.0, 56.0, 66.0), "ModeSlv along Rear": (96.0, 106.0, 96.0, 106.0)}
+ON_SETS = {"RangeSlv engages InDog": ("2H", "4H"), "RangeSlv engages LoDog": ("4L",),
+           "ModeSlv engages FrontDog": ("4H", "4L")}
+
+
+def _tc_mates(modes=MODES):
+    mates = [MatePlan("InPin on In Axis", "axis", ("InPin",), "In"), MatePlan("InPin along In", "along", ("InPin",), "In"),
+             MatePlan("InDog locked to InPin", "lock", ("InPin", "InDog")),
+             MatePlan("RangeSlv on Rear Axis", "axis", ("RangeSlv",), "Rear"),
+             MatePlan("RangeSlv along Rear", "slide", ("RangeSlv",), "Rear", z_front=46.0,
+                      values=tuple(zip(modes, SLIDE_VALUES["RangeSlv along Rear"])) if modes else ()),
+             MatePlan("ModeSlv on Rear Axis", "axis", ("ModeSlv",), "Rear"),
+             MatePlan("ModeSlv along Rear", "slide", ("ModeSlv",), "Rear", z_front=96.0,
+                      values=tuple(zip(modes, SLIDE_VALUES["ModeSlv along Rear"])) if modes else ()),
+             MatePlan("ModeSlv splined to RangeSlv", "spline", ("RangeSlv", "ModeSlv"), ratio=(1, 1), sense=-1)]
+    if modes:
+        mates += [MatePlan(name, "couple", tuple(name.split(" engages ")), ratio=(1, 1), sense=-1, modes=on)
+                  for name, on in ON_SETS.items()]
+    mates += [MatePlan("InPin meshes LayGear", "mesh", ("InPin", "LayGear"), ratio=(17, 34), sense=-1)]
+    return tuple(mates)
+
+
+def _tc_motion(modes=MODES):
+    return MotionPlan(anchors={"In": "InPin", "Lay": "LayGear", "Lo": "LoGear", "Rear": "RangeSlv",
+                               "FrontDrv": "FrontDog", "Idler": "FIdler", "Front": "FOut"},
+                      mates=_tc_mates(modes), trains=(("In", "Lay", "Lo"),), drag=("InPin",), modes=modes,
+                      drag_by_mode={m: ("InPin",) for m in modes})
+
+
+def _tc_plan(modes=MODES, **changes):
+    fields = dict(build=[_job(s, [s]) for s in ("InPin", "InDog", "RangeSlv")], motion=_tc_motion(modes),
+                  meshes=(("InPin", "LayGear"),))
+    fields.update(changes)
+    return _gearbox("TransferCase", **fields)
+
+
+def _tc_built(**values):
+    checks_ = [swbuild.ModeCheck(m) for m in MODES]
+    fields = dict(parts=swbuild.ManyResult(built=[_saved(s) for s in ("InPin", "InDog", "RangeSlv")]),
+                  layout=_saved("TransferCase_Layout"), assembly=_saved("TransferCase", ".SLDASM"), kind="motion",
+                  modes=checks_, positions_per_configuration=True)
+    fields.update(values)
+    return swbuild.GearboxResult(**fields)
+
+
+def test_before_build_the_modes_are_named_and_the_first_is_where_it_opens(ready):
+    f = _footer(ready, plan=_tc_plan())
+    assert _clean(f.text) == (
+        f"Ready: Build makes 3 parts, TransferCase_Layout and TransferCase.SLDASM in {P}. Its gears are mated to their "
+        "shafts and, as each mode engages them, to each other, so they turn together in SolidWorks. It has 4 modes, "
+        "2H, 4H, N and 4L: each becomes a configuration of the assembly, and it opens in 2H.")
+    assert ui_text.modes_ready_line(_tc_plan(modes=("2H",))) == (
+        "It has one mode, 2H, which becomes a configuration of the assembly, the one it opens in.")
+    assert ui_text.modes_ready_line(_tc_plan(modes=())) == (
+        "RangeSlv and ModeSlv slide, but the Modes sheet has no rows, so the assembly has one configuration with each "
+        "at its position 0.")
+    assert ui_text.motion_ready_line(_tc_plan(modes=())).endswith(
+        "RangeSlv and ModeSlv slide, but the Modes sheet has no rows, so the assembly has one configuration with each "
+        "at its position 0.")
+    assert ui_text.modes_ready_line(_gearbox(**FULL)) == ""
+
+
+def test_after_build_each_mode_is_named_once_and_the_switch_is_said_in_the_workbooks_word():
+    text, ok = ui_text.gearbox_status(_tc_plan(), _tc_built())
+    assert (_clean(text), ok) == (
+        "Built 3 parts, TransferCase_Layout and TransferCase.SLDASM; no interference between the gears in any mode, "
+        "where they stand. Its gears are mated to turn in each of its 4 modes, one configuration each (2H, 4H, N and "
+        "4L), and SolidWorks reports no mate in error in any of them: it opens in 2H; drag InPin in SolidWorks and the "
+        "rest of its train follow, and to switch mode, double-click another in SolidWorks' ConfigurationManager. "
+        "RangeSlv and ModeSlv slide along Rear, each to its place in each mode. A turn you give the gears in one "
+        "configuration stays in that configuration. Switching mode never by itself puts a dog tooth on tooth.", True)
+    for word in ("pick a configuration", "same way"):
+        assert word not in text
+
+
+@pytest.mark.parametrize("positions", [False, None])
+def test_the_two_claims_about_positions_are_made_only_where_the_running_version_keeps_them(positions):
+    text = ui_text.gearbox_status(_tc_plan(), _tc_built(positions_per_configuration=positions))[0]
+    assert ui_text.SWITCH_IN_STEP not in text and ui_text.TURN_STAYS not in text
+    assert (ui_text.TURN_SHOWS_EVERYWHERE in text) == (positions is False)
+
+
+def test_a_clash_in_some_modes_is_said_once_with_the_modes_it_was_found_in():
+    clash = swbuild.Clash(components=("Sleeve_m1.5_N30-1", "Dog_m1.5_N30-2"), gears=("RangeSlv", "LoDog"), volume=0.5)
+    modes = [swbuild.ModeCheck("2H"), swbuild.ModeCheck("4H"), swbuild.ModeCheck("N", clashes=[clash]),
+             swbuild.ModeCheck("4L", clashes=[clash])]
+    text, ok = ui_text.gearbox_status(_tc_plan(), _tc_built(modes=modes))
+    assert not ok and _clean(text).startswith(
+        "Built 3 parts, TransferCase_Layout and TransferCase.SLDASM. Check: in N and 4L, RangeSlv and LoDog interfere, "
+        "0.5 mm³; look where they meet in TransferCase.SLDASM. Its gears are mated")
+    error = [swbuild.ModeCheck("2H"), swbuild.ModeCheck("4L", interference_error="SolidWorks returned nothing.")]
+    assert ". Interference could not be checked in 4L: SolidWorks returned nothing. Look at each mesh in " \
+           "TransferCase.SLDASM by eye." in ui_text.gearbox_status(_tc_plan(), _tc_built(modes=error))[0]
+
+
+def test_a_problem_in_one_mode_is_shown_whole_and_the_refusal_names_the_modes():
+    problems = ("In mode 4L, the mate RangeSlv engages LoDog over-defines the assembly.",
+                "SolidWorks would not make the configuration 4L.",
+                "RangeSlv's place in 4L reads 0 mm in SolidWorks, not the 66 mm set.")
+    assert [ui_text.mode_problem(p) for p in problems] == list(problems)
+    plan = _tc_plan(modes_plan=swbuild.ModesPlan(steps=tuple(swbuild.ModeStep(m) for m in MODES)))
+    text, ok = ui_text.mate_refused_status(plan, _refused(*problems))
+    assert not ok and "SolidWorks found 3 problems with its mates or its modes. " + " ".join(problems) in text
+
+
+def _tc_record(modes=MODES):
+    record = _turning_record(("InPin",))
+    record.gearbox.name, record.gearbox.assembly, record.gearbox.modes = "TransferCase", TC_ASM, list(modes)
+    return record
+
+
+def test_the_footer_on_a_gearbox_built_with_modes_says_where_it_was_saved_and_how_to_switch():
+    record = _tc_record()
+    line = ui_text.motion_record_line(record)
+    assert line == ("It was built with a configuration per mode (2H, 4H, N and 4L), each named as its mode, and saved "
+                    "in 2H; to switch mode, double-click another in SolidWorks' ConfigurationManager, and drag InPin in "
+                    "SolidWorks and the rest of its train follow.")
+    assert "pick a configuration" not in line
+    kept = ui_text.motion_record_line(record, positions_per_configuration=True)
+    assert kept == f"{line} {ui_text.TURN_STAYS} {ui_text.SWITCH_IN_STEP}"
+    shared = ui_text.motion_record_line(record, positions_per_configuration=False)
+    assert shared == f"{line} {ui_text.TURN_SHOWS_EVERYWHERE}"
+    assert ui_text.modes_record_line(_turning_record()) == ""
+
+
+def test_the_modes_rows_reordered_change_nothing_and_say_where_the_next_revision_is_saved():
+    record = _tc_record()
+    assert ui_text.modes_record_line(record, modes=("4L", "2H", "4H", "N")).endswith(
+        "The Modes rows are in another order now, which changes nothing in SolidWorks: it keeps 2H as the mode it was "
+        "saved in, and Build again… would save the next revision in 4L.")
+    assert ui_text.modes_record_line(record, modes=("2h", "N", "4H", "4L")).endswith(
+        "The Modes rows are in another order now, which changes nothing in SolidWorks: it keeps 2H as the mode it was "
+        "saved in.")
+    for same in (MODES, ("2h", "4h", "n", "4l"), ("2H", "4H", "N", "4X"), ("2H", "4H", "N")):
+        assert "another order" not in ui_text.modes_record_line(record, modes=same)
+
+
+def test_the_footer_reads_the_modes_rows_from_the_workbook_and_the_positions_from_the_window(ready):
+    spec = dataclasses.replace(ready.spec, modes=tuple(SimpleNamespace(name=m) for m in ("N", "2H", "4H", "4L")))
+    a = dataclasses.replace(ready, spec=spec)
+    update = _update(parts=(), moved_shafts=(), replaced=(), layout=None)
+    f = _footer(a, record=_tc_record(), plan=_again(), update=update, positions_per_configuration=False)
+    assert "Build again… would save the next revision in N." in f.text and ui_text.TURN_SHOWS_EVERYWHERE in f.text
+
+
+def _tc_update(**changes):
+    refs = tuple(swbuild.MateRef(m.name, m.kind, m.gears, m.shaft, values=m.values, modes=m.modes)
+                 for m in _tc_mates())
+    slide_values = tuple((name, m, v) for name, vs in SLIDE_VALUES.items() for m, v in zip(MODES, vs))
+    motion = dict(mates=refs, configurations=MODES, slide_values=slide_values,
+                  on_sets=tuple(ON_SETS.items()))
+    motion.update(changes.pop("motion", {}))
+    fields = dict(motion=swbuild.MotionUpdate(**motion), parts=(), layout=None, moved_shafts=(), replaced=(),
+                  assembly=TC_ASM)
+    fields.update(changes)
+    return UpdatePlan(**fields)
+
+
+def _tc_moved(**values):
+    fields = dict(configuration="4H", positions_per_configuration=True)
+    fields.update(values)
+    return _moved(**fields)
+
+
+def test_the_update_summary_moves_a_slide_in_one_mode_and_switches_a_coupling():
+    values = tuple((n, m, 66.5 if (n, m) == ("RangeSlv along Rear", "4L") else v)
+                   for n, vs in SLIDE_VALUES.items() for m, v in zip(MODES, vs))
+    assert _clean(ui_text.update_summary(_tc_update(motion=dict(slide_values=values)))) == (
+        "Update SolidWorks will move RangeSlv in 4L to 66.5 mm along Rear.")
+    # J14: 4H's ModeSlv pick 4WD -> 2WD: its value in 4H, and the coupling to FrontDog off there.
+    values = tuple((n, m, 96.0 if (n, m) == ("ModeSlv along Rear", "4H") else v)
+                   for n, vs in SLIDE_VALUES.items() for m, v in zip(MODES, vs))
+    on_sets = tuple((n, ("4L",) if n == "ModeSlv engages FrontDog" else on) for n, on in ON_SETS.items())
+    assert _clean(ui_text.update_summary(_tc_update(motion=dict(slide_values=values, on_sets=on_sets)))) == (
+        "Update SolidWorks will move ModeSlv in 4H to 96 mm along Rear, and switch the mate ModeSlv engages FrontDog "
+        "off in 4H.")
+    assert ui_text.update_summary(_tc_update()).startswith("SolidWorks already matches the workbook on record")
+
+
+def test_a_quiet_update_says_where_it_worked_and_that_it_did_not_show_the_other_modes():
+    """§9.11: every quiet Update of a gearbox with modes says it, always."""
+    text, ok = ui_text.gearbox_update_status(_tc_update(), _tc_moved())
+    assert (text, ok) == (
+        "SolidWorks already matches the workbook: nothing was changed. It worked in 4H, the configuration that was "
+        "active; it did not show the other modes, since nothing needed changing.", True)
+    assert ui_text.mode_update_lines(_tc_update(), _tc_moved()) == [
+        "It worked in 4H, the configuration that was active; it did not show the other modes, since nothing needed "
+        "changing."]
+    assert ui_text.mode_update_lines(_tc_update(), _moved()) == []
+
+
+def test_an_update_that_showed_the_other_modes_says_so_and_that_the_assembly_reads_modified():
+    part = _path("Sleeve_m1.5_N30")
+    result = _tc_moved(parts=[swbuild.UpdateResult(document="Sleeve_m1.5_N30", changed=["Teeth"], rebuilt=True)],
+                       visited=["2H", "N", "4L"], changed=[part])
+    update = _tc_update(parts=(PartUpdate(part, ("RangeSlv",), None, None, (), changed=True),))
+    text, ok = ui_text.gearbox_update_status(update, result)
+    assert _clean(text) == (
+        "Updated SolidWorks: changed 1 variable in Sleeve_m1.5_N30; no interference between the gears where they "
+        "stand. It worked in 4H, the configuration that was active, then showed and checked 2H, N and 4L and left the "
+        "assembly in 4H. Showing them leaves TransferCase.SLDASM marked modified in SolidWorks, although nothing in "
+        "it changed. Save Sleeve_m1.5_N30 in SolidWorks to keep it.")
+    assert "quiet" not in text and "nothing needed changing" not in text
+
+
+def test_after_update_slides_and_flags_are_said_once_across_modes():
+    result = _tc_moved(slid=[("RangeSlv along Rear", "4H", 47.0), ("RangeSlv along Rear", "2H", 47.0),
+                             ("RangeSlv along Rear", "4L", 67.0)],
+                       values_restored=[("ModeSlv along Rear", "4H"), ("ModeSlv along Rear", "4L")],
+                       unsuppressed_in=[("RangeSlv engages LoDog", "4L")],
+                       suppressed_in=[("RangeSlv engages InDog", "N"), ("RangeSlv engages InDog", "4L")],
+                       visited=["2H", "N", "4L"], put_in=list(MODES), placed=["RangeSlv", "ModeSlv"],
+                       modes=[swbuild.ModeCheck(m) for m in MODES], changed=[TC_ASM])
+    text, ok = ui_text.gearbox_update_status(_tc_update(), result)
+    assert (_clean(text), ok) == (
+        "Updated SolidWorks: moved RangeSlv in 4H and 2H to 47 mm and in 4L to 67 mm along Rear, set ModeSlv's place "
+        "in 4H and 4L back to 106 mm, where it had been changed in SolidWorks, turned the mate RangeSlv engages LoDog "
+        "back on in 4L, suppressed the mate RangeSlv engages InDog again in N and 4L, where it was on, re-placed "
+        "RangeSlv and ModeSlv in every mode; no interference between the gears in any mode, where they stand. It "
+        "worked in 4H, the configuration that was active, then showed and checked 2H, N and 4L and left the assembly "
+        "in 4H. Save TransferCase in SolidWorks to keep it.", True)
+
+
+def test_a_flag_a_workbook_edit_changes_is_a_switch_not_a_repair():
+    result = _tc_moved(suppressed_in=[("ModeSlv engages FrontDog", "4H")], unsuppressed_in=[
+        ("ModeSlv engages FrontDog", "N")], visited=["2H", "N", "4L"], changed=[TC_ASM])
+    lines = ui_text.mode_update_lines(_tc_update(), result)
+    assert lines[0] == "Switched the mate ModeSlv engages FrontDog on in N and off in 4H."
+
+
+def test_a_coupling_out_of_step_is_said_only_in_the_mode_it_was_found_and_put_in():
+    result = _tc_moved(out_of_step=[("RangeSlv", "InDog")], put_in=["4H"], placed=["RangeSlv", "InDog"],
+                       changed=[TC_ASM], visited=["2H", "N", "4L"])
+    lines = ui_text.mode_update_lines(_tc_update(), result)
+    assert lines[0] == ("In 4H RangeSlv's teeth stood across InDog's; the gears of 4H are back at the turn they were "
+                        "built at.")
+    assert "another" not in " ".join(lines)
+    shared = ui_text.mode_update_lines(_tc_update(), dataclasses.replace(result, positions_per_configuration=False))
+    assert shared[1] == ("This version of SolidWorks shows a turn given in one mode in every mode, so the turn may "
+                         "have been given in another.")
+    unknown = ui_text.mode_update_lines(_tc_update(), dataclasses.replace(result, positions_per_configuration=None))
+    assert "another" not in " ".join(unknown)
+    not_put = ui_text.mode_update_lines(_tc_update(), dataclasses.replace(result, put_in=["2H"]))
+    assert not any("teeth" in line for line in not_put)
+
+
+def test_a_configuration_the_app_did_not_make_is_left_and_said():
+    lines = ui_text.mode_update_lines(_tc_update(), _tc_moved(extra_configurations=["Exploded"]))
+    assert lines[-1] == ("TransferCase.SLDASM also has a configuration the app did not make (Exploded); Update "
+                         "SolidWorks left it as it is.")
+    two = ui_text.mode_update_lines(_tc_update(), _tc_moved(extra_configurations=["Exploded", "Display"]))
+    assert two[-1].endswith("configurations the app did not make (Exploded and Display); Update SolidWorks left them "
+                            "as they are.")
+
+
+def test_a_mode_added_needs_build_again_with_bs_sentence_whole(ready):
+    why = ("The Modes sheet has a new mode, 4X, and each mode's configuration is made when the assembly is built, so "
+           "it needs a new revision.")
+    f = _footer(ready, record=_tc_record(), plan=_again(), update=_update(structural=(why,)))
+    assert f.text.startswith(why[:-1] + ". Update SolidWorks offers to build again as")
+
+
+def test_the_progress_of_a_mode():
+    assert ui_text.progress_text(swbuild.Step(swbuild.STAGE_MODE, "4L", 4, 4)) == (
+        "Building in SolidWorks: mode 4L, 4 of 4…")
+    assert ui_text.progress_text(swbuild.Step(swbuild.STAGE_MODE, "4L"), updating=True) == (
+        "Updating SolidWorks: checking mode 4L…")
+
+
+def _tc_report():
+    from fractions import Fraction
+    spec = SimpleNamespace(shafts=tuple(Shaft(s, "frame") if False else SimpleNamespace(id=s) for s in
+                                        ("In", "Lay", "Lo", "Rear", "FrontDrv", "Idler", "Front")))
+    speeds = {"2H": {"In": 1500, "Lay": -750, "Lo": 375, "Rear": 1500},
+              "N": {"In": 1500, "Lay": -750, "Lo": 375}}
+    modes = (checks.ModeReport("2H", 2, engaged=(("RangeSlv", "InDog"),),
+                               motion=kinematics.Motion(speeds={k: Fraction(v) for k, v in speeds["2H"].items()})),
+             checks.ModeReport("N", 4, motion=kinematics.Motion(speeds={k: Fraction(v) for k, v in
+                                                                         speeds["N"].items()})))
+    return spec, SimpleNamespace(modes=modes)
+
+
+def test_the_speeds_panel_in_a_mode_says_what_it_couples_and_reads_a_free_member_as_free():
+    spec, report = _tc_report()
+    lines, readout = ui_text.mode_speed_lines(spec, report, "2h")
+    assert lines == ["In 2H, RangeSlv engages InDog.",
+                     "In    1500.0 rpm anticlockwise", "Lay   750.0 rpm clockwise",
+                     "Lo    375.0 rpm anticlockwise", "Rear  1500.0 rpm anticlockwise",
+                     "FrontDrv  turns freely", "Idler  turns freely", "Front  turns freely"]
+    assert readout == "seen from +Z" and not re.search(r"\s0\.0\u00a0rpm", " ".join(lines))
+    neutral, _ = ui_text.mode_speed_lines(spec, report, "N")
+    assert neutral[0] == "In N, no sleeve engages a dog." and "Rear  turns freely" in neutral
+    assert ui_text.speeds_prose_rows(report.modes[0].motion, lines, mode=True) == {0}
+    assert ui_text.mode_speed_lines(spec, report, "4X") == ([], "")
+    implicit = checks.ModeReport("", engaged=(("RangeSlv", "InDog"),), out_of_mesh=(("G4", "G5"),))
+    assert ui_text._engaged_sentence(implicit) == (
+        "With every slider at its position 0, RangeSlv engages InDog; G4 and G5 are out of mesh.")
