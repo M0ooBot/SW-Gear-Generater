@@ -1933,7 +1933,7 @@ def gearbox_update_status(update, result, dragged: Sequence[str] = (), *, meshes
     assembly = _file(update.assembly) if update.assembly else ""
     nothing = not pieces and not dragged and not result.changed
     if motion:
-        after = after + _mode_after(update, result, changed=not nothing)
+        after = after + _mode_after(update, result, changed=not nothing, earlier=earlier)
     if earlier:
         told = _earlier_update_sentence(update, result if motion else None, earlier, off_after, pairs_after,
                                         changed=not nothing)
@@ -3978,7 +3978,7 @@ def _couple_pair(update, pair: Tuple[str, str]) -> bool:
     return any(m.kind == "couple" and set(m.gears) == set(pair) for m in mates)
 
 
-def _mode_after(update, result, *, changed: bool) -> List[str]:
+def _mode_after(update, result, *, changed: bool, earlier: str = "") -> List[str]:
     """The whole sentences an Update with modes adds (``result.configuration`` set): a coupling found out of step
     in the configuration it worked in and put there, *In 4H, RangeSlv's teeth stood across InDog's; the gears of 4H
     are back at the turn they were built at.* (and, only where the running version shares positions, that the turn
@@ -3992,7 +3992,11 @@ def _mode_after(update, result, *, changed: bool) -> List[str]:
     the assembly's changed, that SolidWorks marks it modified; and the configurations the app did not make, left
     alone. A result on a gearbox with modes (``MotionUpdate.configurations``) that names no configuration still says
     the other modes were not shown: *It worked in the configuration that was active; it did not show the other
-    modes, …*."""
+    modes, …*.
+
+    ``earlier`` (``Finished.earlier_update``, an earlier Update's changes never saved): a crossed coupling is said
+    once, by :func:`_earlier_update_sentence` (it is in ``Finished.out_of_step_after_update``), and never laid to a
+    turn, so neither its per-mode sentence nor the shared-turn one is said here (W8-REVIEW-LATE-FIXES S1)."""
     config = getattr(result, "configuration", "")
     if not config:
         if not _configurations_of(update):
@@ -4002,7 +4006,7 @@ def _mode_after(update, result, *, changed: bool) -> List[str]:
     out = []
     asm = _file(update.assembly) if getattr(update, "assembly", "") else "the assembly"
     put_here = any(str(c).casefold() == config.casefold() for c in getattr(result, "put_in", ()) or ())
-    if put_here:
+    if put_here and not earlier:
         # One sentence per crossed coupling, the last carrying "the gears of 4L are back …" once, then the
         # shared-turn sentence once: two crossed couplings in one mode (W8 s2's 4L) are not said back twice.
         crossed = [(a, b) for a, b in result.out_of_step if _couple_pair(update, (a, b))]

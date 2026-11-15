@@ -3351,6 +3351,31 @@ def test_after_an_earlier_unsaved_update_the_warning_needs_no_antecedent(earlier
         assert "The gears stand as they were found in SolidWorks." in text and "This version of SolidWorks" not in text
 
 
+@pytest.mark.parametrize("kind", ["not saved", "lost"])
+def test_after_an_earlier_unsaved_update_a_crossed_coupling_is_said_once_and_no_turn_is_laid_to_the_user(kind):
+    """W8-REVIEW-LATE-FIXES S1: 4L worked in, RangeSlv across LoDog, every mode put, the switch False, an earlier
+    Update not saved. The pair is said once, by the earlier-update sentence (``Finished.out_of_step_after_update`` is
+    the result's out_of_step, workbook.update), and "the turn may have been given in another" is not said."""
+    from gear_generator.workbook.gearbox import UPDATE_LOST
+    earlier = UPDATE_LOST if kind == "lost" else "not saved"
+    result = _tc_moved(configuration="4L", out_of_step=[("RangeSlv", "LoDog")], put_in=["2H", "4H", "N", "4L"],
+                       visited=["2H", "4H", "N"], placed=["RangeSlv"], changed=[TC_ASM],
+                       positions_per_configuration=False)
+    text = ui_text.gearbox_update_status(_tc_update(), result,
+                                         finished=_finished(earlier, pairs=[("RangeSlv", "LoDog")]))
+    told = {"not saved": "RangeSlv and LoDog were not in step as the last Update SolidWorks, which is not saved, has "
+                         "them on record; they are in step again.",
+            "lost": "The last Update SolidWorks was not saved before TransferCase.SLDASM was closed, so its changes "
+                    "were made again: RangeSlv and LoDog are back in step with each other."}[kind]
+    assert text == ("Updated SolidWorks: re-placed RangeSlv in every mode; no interference between the gears where they "
+                    f"stand. {told} It worked in 4L, the configuration that was active, then showed and checked 2H, 4H "
+                    "and N and left the assembly in 4L. Save TransferCase in SolidWorks to keep it.", True)
+    fresh = ui_text.gearbox_update_status(_tc_update(), result)[0]      # with no earlier Update: as before
+    assert ("In 4L, RangeSlv's teeth stood across LoDog's; the gears of 4L are back at the turn they were built at. "
+            "This version of SolidWorks can show a turn given in one mode in the others, so the turn may have been "
+            "given in another.") in fresh
+
+
 def _put_and_visited(positions, **values):
     """A quiet Update that found 4H's coupling out of step, put 4H, then showed and checked the others (J13): 2H and N
     found at the built turn, 4L found with a gear off its axis."""
