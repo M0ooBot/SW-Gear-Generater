@@ -224,3 +224,55 @@ three kinds (`_bad_mates` today counts gears as 1 only for axis and along); `fin
 **C.** Schema 6's refusals (§5), every §1.12 sentence into the stubs (`modes_ready_line`, `modes_done_line`,
 `mode_problem`, `modes_record_line`, `mode_update_lines`, `mode_speed_lines`), `turning_note` wherever a sentence
 says where a turn shows. **D.** After A–C.
+
+## 9. Rulings on the interface review (2026-11-14)
+
+The independent review of `e9efab9` checked both fixtures by hand (the sliders' spans and covers, the eight slide
+values, what is engaged in each of 2H, 4H, N and 4L, the speeds) and found the shapes right. It found two faults of
+the kind the last two interface reviews found, and asked for written rules. These bind A, B, C and E from now.
+
+1. **A mate that belongs to modes is never on in none of them.** `MateEntry.modes == []` means "on in every
+   configuration". An edit after which a coupling or a sliding mesh would be on in no mode is therefore structural
+   (Build again…), never an Update: otherwise `finish_update` would write `[]` for it, and the next Update's rule
+   that a recorded mate found suppressed is turned back on would switch it on in every mode — in 2H both dogs
+   engaged, the train jammed in SolidWorks. B's classify owns the rule and tests it.
+2. **`update_gearbox` has a modes gate, before anything is read.** It refuses with a sentence when any of these is
+   non-empty: `motion.configurations`, `slide_values`, `on_sets`, any `MateRef.modes`, `MeshLink.modes` or
+   `LockLink.modes`, or a `MateRef` of kind slide, spline or couple. Without it a W8 record goes down W7's motion
+   path, which reads only the active configuration and turns on every recorded mate it finds suppressed. A lifts
+   this refusal in the same change that writes the Update across configurations (W8-PLAN §1.10), and lifts the
+   build gate no earlier.
+3. **A coupling's sense follows the two shafts' facing; it is not always "the same way".** About each gear's own
+   axis `k = σ_S·σ_D`. So: COUPLE `sense = −σ_S·σ_D`; SPLINE `sense = −1`; and `same_way ∋ name ⇔ plan.sense == −1`,
+   the identity of W6 §7.2. The spike's case pins it: parallel shafts, the first Flip read right, both entities
+   along +Z. Until a coupling between shafts facing opposite ways has been shown on SolidWorks, planning refuses it
+   with a sentence. For Update, a SPLINE (a `LockLink`, which has no k) is read with `same_sense` True from its
+   kind, and a COUPLE is a `MeshLink` with `k = σ_S·σ_D`.
+4. **No code outside `swcom.py` touches `Session._handles`.** A held component object answers `IsFixed` False and
+   `Transform2` None silently after any `AddConfiguration2` or `ShowConfiguration2`. A adds a public
+   `Session.is_fixed(handle)` that goes through `_component`, calls `_raise_epoch` from `open_document` and
+   `activate` too, and adds a test that scans `src/` and `probe/` for `_handles[` and fails on any use outside
+   `swcom.py`; E moves `probe/workbook_assembly_check.py`'s direct read (about line 4559) to the public member.
+   Every `Session` member that touches a component has a test run after an add and after a show. The handle rule
+   itself stands as the interface commit has it (§3): only the `Session` holds COM handles and re-fetches them at
+   first use after the epoch is raised, and the COM-level fake's `StaleHandle` is what catches a held one; the
+   protocol fake goes on modelling per-configuration state.
+5. **The per-version refusal is the worker's.** `_modes_gate` reads the per-version findings from the running
+   SolidWorks' revision before anything is made, as `_sense_gate` does. `modes_reason()` runs at planning, cannot
+   know which SolidWorks will run, and covers only findings that do not depend on the version.
+6. **Mode names are compared in one way everywhere:** through `on_in`'s casefold — against SolidWorks'
+   configuration names, in C's check that a mate's `modes` are among `GearboxRecord.modes`, and in B's classify.
+   `GearboxRecord.modes` keeps the workbook's spelling.
+7. **`ModesPlan.check(plan)` also refuses** a step op whose `a` or `b` is not a component of the plan, and a
+   coupling missing from `same_way` where the planned axes (the third column of each component's `Place`) say it
+   belongs there.
+8. **Sliders with no Modes rows:** `MatePlan.values == ()` and `MateEntry.values == {}`, which C allows when
+   `GearboxRecord.modes` is `[]`.
+9. **Modes reordered is an Update with nothing to do.** `GearboxRecord.modes` is never reordered by an Update;
+   its first entry stays the configuration the assembly was saved in.
+10. **`MotionPlan.modes` is non-empty exactly when `modes_plan` is set** (B's invariant, tested), so `build_kwargs`
+    can never drop `"modes"` and build a gearbox without its configurations.
+11. **Every quiet Update of a gearbox with modes says which mode it worked in and that it did not show the others.**
+    Flags and senses are read in every mode without showing it; another mode's frames, error codes and constrained
+    statuses are not, so a turn or a put out of step there goes unseen until that mode is shown. The sentence is
+    said always, not only "when it matters".
