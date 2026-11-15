@@ -108,6 +108,13 @@ X and Y were added with `IConfigurationManager.AddConfiguration2(name, "", "", 0
 | S along A at Q | `SS-` | `SS-` | `SS-` | `SS-` | `S-` | `S-` |
 | S engages D | `--S` | `--S` | `--S` | `--S` | `-S` | `-S` |
 
+*Note, 2026-11-15.* The spike asked in the document's own configuration order (Default, X, Y, as they were made), so
+the flags above are right, but "in that order" does not hold in general. `IsSuppressed2(3, names)` answers in the
+document's configuration order (`GetConfigurationNames`), filtered to the names asked, whatever order they are passed
+in; asked one name, it answers that configuration's flag. `GetSystemValue3(3, names)` answers in the order passed.
+Evidence: `probe/results/w8-configuration-order-20261115-092100.txt` (SolidWorks 2026, read on the assembly W8 s0's
+first run left open). The app has asked one configuration per call since `03a4e51`.
+
 **ShowConfiguration2** went X → Y → X under the dialog watcher, each show followed by `ForceRebuild3(True)`:
 
 | Shown | returned | dialog | active | S's origin z | mate errors | drive: A, S, D |

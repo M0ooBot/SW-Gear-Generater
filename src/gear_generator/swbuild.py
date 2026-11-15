@@ -4212,11 +4212,11 @@ def _modes_assembly(sw: SolidWorks, result: GearboxUpdate, assembly: str, placem
 def _modes_flags_after(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, names: Mapping[str, str],
                        mate_handle: Mapping[str, str], file: str) -> None:
     """Once every mode is put and post-checked: every per-mode mate's flag (record's ``modes`` or a J14 on-set) read
-    in every configuration (``mate_suppression``, ``IsSuppressed2(3, names)``, which marks nothing) and held against
-    what the record wants (:func:`_on_set`). Each mode's post-check reads only the configuration shown, so a flag a
-    later mode's put changed in a mode already checked would otherwise go unseen (W8-REVIEW-LATE-A point 1). A
-    difference is the post-check's own failure, *"In mode 2H, the mate … is on in SolidWorks, where this mode has it
-    off."*, said once."""
+    in every configuration (``mate_suppression``, one ``IsSuppressed2(3, [name])`` per configuration, which marks
+    nothing) and held against what the record wants (:func:`_on_set`). Each mode's post-check reads only the
+    configuration shown, so a flag a later mode's put changed in a mode already checked would otherwise go unseen
+    (W8-REVIEW-LATE-A point 1). A difference is the post-check's own failure, *"In mode 2H, the mate … is on in
+    SolidWorks, where this mode has it off."*, said once."""
     configurations = [names[mode] for mode in motion.configurations]
     edited = dict(motion.on_sets)
     for mate in motion.mates:
@@ -4921,13 +4921,14 @@ def _put_train(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, trai
     the train, which D10 has turned on before any put. ``configuration`` (W8): the configuration shown; every lock
     and gear mate is then suppressed and turned back on in it alone by the measured per-configuration route
     (``set_mate_suppressed_in``, ``findings.MATE_SUPPRESSION_PER_CONFIGURATION_ROUTE``, each flag read back) and
-    read before it is turned back on by ``mate_suppression`` (``IsSuppressed2(3, names)``, which marks nothing),
-    never by ``SetSuppression2(…, this configuration, None)``, which no probe has run on an assembly with several
-    configurations (W8-REVIEW-LATE-A point 1). None (W5, W6, W7): ``set_mate_suppressed`` and ``mate_states``, the
-    calls as before. A lock or gear mate that will not come back on is a failure naming it, and stops the job
-    (:class:`_LocksLeftOff`); what raised inside is raised again once they are tried. A gear mate gone from the
-    assembly by then (a remake that lost it after the delete) is not said to be left suppressed: the error on its
-    way out says it is gone, and, with none, its own ``MateGone`` sentence stops the job.
+    read before it is turned back on by ``mate_suppression`` (one ``IsSuppressed2(3, [name])`` per configuration,
+    here the one shown, which marks nothing), never by ``SetSuppression2(…, this configuration, None)``, which no
+    probe has run on an assembly with several configurations (W8-REVIEW-LATE-A point 1). None (W5, W6, W7):
+    ``set_mate_suppressed`` and ``mate_states``, the calls as before. A lock or gear mate that will not come back on
+    is a failure naming it, and stops the job (:class:`_LocksLeftOff`); what raised inside is raised again once they
+    are tried. A gear mate gone from the assembly by then (a remake that lost it after the delete) is not said to be
+    left suppressed: the error on its way out says it is gone, and, with none, its own ``MateGone`` sentence stops
+    the job.
 
     A lock counts as tried the moment its suppression is asked for, so one whose suppression took before the call
     raised (a read-back that failed) is still turned back on. Turning back on, each lock is read first and one that
