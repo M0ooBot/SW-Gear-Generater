@@ -276,3 +276,13 @@ the kind the last two interface reviews found, and asked for written rules. Thes
     Flags and senses are read in every mode without showing it; another mode's frames, error codes and constrained
     statuses are not, so a turn or a put out of step there goes unseen until that mode is shown. The sentence is
     said always, not only "when it matters".
+12. **What the record cannot say, the caller passes.** `ui_text.modes_record_line(record, *,
+    positions_per_configuration=None, modes=())` and the same keyword on `workbook_footer`. The window passes the last
+    job result's `positions_per_configuration`, which is None after a restart, and then neither claim about a turn
+    staying in its mode is made. `modes` is the workbook's current Modes order (the footer takes it from
+    `assessment.spec.modes`), used for the sentence about reordered rows.
+13. **Three things C words are pinned by their owners, not worked out in `ui_text`:** which outputs share a torque
+    and with whom, and which members are past a split (B, on the kinematics result); each mode's overall ratio and
+    what makes a mode "front not driven" or "neutral" (B, one home shared with the checks); and what an Update found
+    out of step in each mode it showed (A, on `ModeCheck`). C says nothing about a mode an Update did not show
+    beyond ruling 11's sentence.
