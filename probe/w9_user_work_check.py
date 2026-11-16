@@ -227,8 +227,8 @@ def section_p0(worker):
                                             f"saved {result.saved!r}, failures {list(result.failures)}")
     out = RESULT["p0"]
     windows_before = sw_windows()
-    out["windows_before"] = [(c, t) for _, c, t in windows_before]
-    say(f"fact    P0: SolidWorks' visible windows before: {out['windows_before']}")
+    out["windows_before"] = sorted(c for _, c, _ in windows_before)    # classes only: the main window's title names
+    say(f"fact    P0: SolidWorks' visible windows before, by class: {out['windows_before']}")   # the licence
 
     def work(s):
         got = {"steps": []}
