@@ -322,17 +322,29 @@ the kind the last two interface reviews found, and asked for written rules. Thes
         (`probe/results/w8-s7-20261115-135428.json`): as built, after no-op puts by the app's route, for a turn
         given in 4L, and after a save and reopen for one given in N. After an Update had put every mode, in 4L:
         `probe/results/w8-workbook-assembly-20261115-151412-s2.log` line 356.
-      - Not settled. In that same state the fresh turn was not read in 4H and N: shown after a put in 2H, both read
-        at the built turn, in step and not turned (the same log, lines 448-451). So whether a turn reaches every
-        configuration once an Update has put every mode is open, and so is whether a put that moves a body can
-        reach another configuration: s2 twice found 2H's put in 4H and N and not in 4L (lines 448-451, and the
-        changed Update's FDrive, lines 569-572 and 709; the same in the 111951 log, lines 297-300), where s7's
-        case 5, the s2 rerun's puts in 4L and 4H (`…-132348-s2-put-kept-per-configuration.log`) and the spike's
-        follow-up (`e670e7e`) read each moving put kept in the configuration showing alone.
-        s7's case 4 in the 135428 run does not decide it: its Update moved only the front train, so the turn "after
-        the app's own Update" rests on no-op puts of the driven train (review S2). s7's case 8 (a turn, an Update
-        that puts every mode, a turn, a moving put, every configuration read after each) is to measure it on 2026;
-        it has not run there. This stays not settled for 2026.
+      - On 34.0.0, in that same state, the fresh turn was not read in 4H and N: shown after a put in 2H, both read
+        at the built turn, in step and not turned (the same log, lines 448-451). Either the turn did not reach them
+        or 2H's put did: s2 twice found 2H's put in 4H and N and not in 4L (lines 448-451, and the changed Update's
+        FDrive, lines 569-572 and 709; the same in the 111951 log, lines 297-300), where s7's case 5, the s2 rerun's
+        puts in 4L and 4H (`…-132348-s2-put-kept-per-configuration.log`) and the spike's follow-up (`e670e7e`)
+        read each moving put kept in the configuration showing alone. s7's case 4 in the 135428 run does not
+        decide it: its Update moved only the front train, so the turn "after the app's own Update" rests on no-op
+        puts of the driven train (review S2).
+      - *s7 case 8 on 34.1.1* (another machine, 2026-11-15; case 8 alone at `fe74276`, after `s1` built there:
+        `probe/results/w8-workbook-assembly-20261115-220745-s1-s7-case8.log`, `w8-s7-20261115-222252-case8.json`;
+        s1 555 checks, s7 27, 0 failed, no STOP) read neither 34.0.0 possibility, as 2024's case 8 did not:
+        - the drive's +37° in 2H read in all four by the same amount (the Sun, InDog, RangeSlv and ModeSlv +37°,
+          LoDog and the carrier +9.25°, each planet copy −18.5°);
+        - the app's quiet Update in 4L (239.6 s) put every mode with no failure; when it showed them, after its put
+          in 2H, 4H read ModeSlv–FrontDog out of step and N turned, so its 2H put had not reached them there; after
+          it every body in every configuration read at its built frame (largest 8.3e-10);
+        - a fresh +37° in 2H then read in all four by the same amount ("shared" fitting, "per_configuration", H
+          and H_private_put ruled out): the turn reached 4H and N;
+        - the moving put in 2H by the app's route (the train back to its built frames, the carrier first) stayed in
+          2H: 4H, N and 4L still stood at the fresh turn, through a save and reopen.
+        So on 34.1.1, after an Update had put every mode, a turn reached every configuration and a moving put
+        stayed where it was made. s2's 34.0.0 reading was not seen there; 34.0.0 has not run case 8, so that
+        reading stays as read, unexplained.
       - *On 2024* (SolidWorks 2024 32.5.0, s7: `probe/results/sw2024/w8-s7-20261115-162418.json` and its log
         `…/sw2024/w8-workbook-assembly-20261115-162357-s7.log`; case 8 rerun:
         `…/sw2024/w8-s7-20261115-172104-case8.json` and `…-172046-s7-case8.log`, 0 failed), read on that version
@@ -340,8 +352,8 @@ the kind the last two interface reviews found, and asked for written rules. Thes
         - every turn of the train read in all four configurations by the same amount: on copies no Update had
           moved (cases 1-3), after the app's changed Update had put the turned train back (case 4), and after its
           quiet Update had put every mode (case 8). So `TURN_PER_CONFIGURATION_ON_2024` is False (`ce775a6`);
-        - case 8 read neither of the two 2026 possibilities above: the fresh turn reached all four, and the moving
-          put in 2H after it stayed in 2H;
+        - case 8 read neither of the two 34.0.0 possibilities above: the fresh turn reached all four, and the
+          moving put in 2H after it stayed in 2H;
         - case 5's moving puts each stayed in their configuration (log 831-859, 909). Then FrontDog driven +15° in
           N left FIdler, which stood at 0, +10, +20 and 0 in 2H, 4H, N and 4L, at −2.5° in all four (log
           863-884, `same_amount_or_place`): a body driven in one configuration left its meshed neighbour at the same
@@ -349,8 +361,9 @@ the kind the last two interface reviews found, and asked for written rules. Thes
           moving put is kept by its configuration only until that train is next turned in any configuration.
           2026's s7 has not given that drive.
       - Behaviour depends on none of this, since every mode an Update shows is put to its built frames and
-        post-checked. Not measured: a turn given while the configurations already stand differently on 2026, a drag
-        in the user interface, and 34.1.1.
+        post-checked (case 8's Update on 34.1.1 held that: every configuration at its built frames after it). Not
+        measured: a turn given while the configurations already stand differently on 2026, a drag in the user
+        interface, and s7's cases other than 8 on 34.1.1.
     - *The split.* `findings.TURN_PER_CONFIGURATION_ON_<year>` (2026 False; 2024 False since its s7, `ce775a6`; a
       version with no finding of its own None, neither claim) is what the sentences about a turn and a switch read,
       through `swcom.positions_per_configuration`, which keeps its name and its three states.
@@ -396,8 +409,9 @@ the kind the last two interface reviews found, and asked for written rules. Thes
         judgement on showing read them so (not put there, in step, on their axes, not turned).
     - *For the user's list:* the app's sentences about a turn on SolidWorks 2026 and 2024 claim only that it can show
       in other modes. On 2026, before any Update has moved the train that has been read in every mode; after an
-      Update has put every mode, the app found 4L turned and 4H and N, shown after its put in 2H, at the built turn
-      (above), and s7's case 8 is to settle it there. On 2024 it has been read in every mode in every state s7 tried.
+      Update has put every mode, s2 on 34.0.0 found 4L turned and 4H and N, shown after the app's put in 2H, at the
+      built turn, while s7's case 8 on 34.1.1 read a fresh turn in all four and a moving put in 2H kept in 2H alone
+      (above). On 2024 it has been read in every mode in every state s7 tried.
     - *Not taken, for the user to overrule:* with a turn shared between modes, a quiet Update could judge every
       mode's couplings from the rotations it reads in the active mode, without showing anything, and say which mode
       stands with a dog across its sleeve. Today a quiet Update judges the mode showing alone (J25).

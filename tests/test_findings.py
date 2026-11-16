@@ -1300,6 +1300,59 @@ def test_the_2024_s7_pins_fail_on_a_doctored_copy(doctor):
         _s7_2024_holds(data, rerun)
 
 
+W8_S7_2026_CASE8 = LATEST.parent / "w8-s7-20261115-222252-case8.json"
+
+
+def _s7_case8_2026_holds(data):
+    """What W8 s7 case 8 read on SolidWorks 2026 34.1.1 (alone, at fe74276), cited by the comments of
+    TURN_PER_CONFIGURATION_ON_2026 and POSITIONS_PER_CONFIGURATION_ON_2026 and by W8-INTERFACES §9.18: both turns in
+    2H read in all four configurations by the same amount, the app's quiet Update in 4L put every mode and left every
+    configuration at its built frames, and the moving put in 2H after the fresh turn stayed in 2H. Pins of what was
+    read, not rules (s2 on 34.0.0 read otherwise). Raises AssertionError on any that the data does not show."""
+    assert data["revision"] == [34, 1, 1] and data["snapshot"] == "fe74276" and data["finding_turn"] is False
+    for step in ("drive +37 in 2H", "fresh drive +37 in 2H"):
+        judgement = _s7_step(data, "8", step)["judgement"]
+        assert judgement["kind"] == "turn" and judgement["moved_bodies"] == S7_TRAIN, step
+        assert all(r["state"] == {m: "moved" for m in S7_MODES} for r in judgement["bodies"].values()), step
+        assert "shared" in judgement["fits"] and "per_configuration" in judgement["rules_out"], step
+        turned = _s7_step(data, "8", step)["expressed"]
+        for mode in S7_MODES:
+            assert [turned[mode][b][0] for b in ("Sun", "RangeSlv", "LoDog", "Carrier carrier", "Pl copy 1")] == \
+                [37.0, 37.0, 9.25, 9.25, -18.5], (step, mode)
+    update = next(c for c in data["cases"] if c["case"] == "8")["update"]
+    assert update["put_in"] == ["2H", "4H", "N", "4L"] and update["failures"] == []
+    back = _s7_step(data, "8", "after the quiet Update in 4L")["expressed"]
+    assert all(abs(back[m][b][0]) < 1e-9 for m in S7_MODES for b in S7_TRAIN)
+    put = _s7_step(data, "8", "moving put in 2H, the train back to its built frames")["judgement"]
+    assert put["kind"] == "put" and put["moved_bodies"] == S7_TRAIN and "shared" in put["rules_out"]
+    assert all(r["state"] == {m: ("moved" if m == "2H" else "still") for m in S7_MODES} for r in put["bodies"].values())
+    reopens = [s for c in data["cases"] for s in c["steps"] if "same_as_before_save" in s]
+    assert len(reopens) == 1 and reopens[0]["same_as_before_save"] is True
+
+
+def test_s7_case8_on_2026_34_1_1_read_the_fresh_turn_in_every_configuration_and_the_put_in_2h_alone():
+    """W8 s7 case 8 alone on SolidWorks 2026 34.1.1 (probe/results/w8-workbook-assembly-20261115-220745-s1-s7-
+    case8.log, 0 failed): neither of s2's two 34.0.0 possibilities; the findings keep their values."""
+    _s7_case8_2026_holds(json.loads(W8_S7_2026_CASE8.read_text(encoding="utf-8")))
+    assert findings.TURN_PER_CONFIGURATION_ON_2026 is False and findings.POSITIONS_PER_CONFIGURATION_ON_2026 is True
+
+
+@pytest.mark.parametrize("doctor", ["the fresh turn not reaching 4H", "the put reaching N",
+                                    "the Update leaving 4L turned"])
+def test_the_2026_case8_pins_fail_on_a_doctored_copy(doctor):
+    import copy
+    data = copy.deepcopy(json.loads(W8_S7_2026_CASE8.read_text(encoding="utf-8")))
+    if doctor == "the fresh turn not reaching 4H":
+        _s7_step(data, "8", "fresh drive +37 in 2H")["judgement"]["bodies"]["Sun"]["state"]["4H"] = "still"
+    elif doctor == "the put reaching N":
+        step = _s7_step(data, "8", "moving put in 2H, the train back to its built frames")
+        step["judgement"]["bodies"]["Sun"]["state"]["N"] = "moved"
+    else:
+        _s7_step(data, "8", "after the quiet Update in 4L")["expressed"]["4L"]["RangeSlv"][0] = 37.0
+    with pytest.raises(AssertionError):
+        _s7_case8_2026_holds(data)
+
+
 def test_s7_on_2024_kept_each_moving_put_in_its_configuration_until_a_turn_wrote_one_place_into_every_one():
     """W8 s7 case 5 on SolidWorks 2024 32.5.0 (findings.py, POSITIONS_PER_CONFIGURATION): the three moving puts each
     read in their configuration alone; then FrontDog driven +15° in N left FIdler, standing at 0, +10, +20 and 0, at
