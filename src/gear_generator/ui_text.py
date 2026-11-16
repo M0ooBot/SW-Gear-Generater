@@ -3583,8 +3583,9 @@ GEARS_SHOWN_ELSEWHERE = ("This version of SolidWorks can show the gears at the s
                          "that mode showing.")
 # "Can show", not "shows": on 2026 a turn was read in every mode on a copy no Update had moved (W8 s7), but after an
 # Update had put every mode a fresh turn was read in 4L, while 4H and N, shown after a put in 2H, stood at the built
-# turn (W8 s2, 34.0.0); s7 case 8 on 34.1.1 read it in all four, and 34.0.0's reading stays unexplained (W8-INTERFACES
-# §9.18). On 2024 every turn s7 gave was read in every mode (findings.TURN_PER_CONFIGURATION).
+# turn (W8 s2, 34.0.0, a sequence that showed 4L alone before the press and has not run again). On 34.1.1 s2's current
+# sequence and every turn s7 gave showed in every mode, as on 2024 in s2 and s7; 34.0.0's one differing reading stays
+# unexplained (W8-INTERFACES §9.18, findings.TURN_PER_CONFIGURATION).
 TURN_CAN_SHOW_ELSEWHERE = ("A turn you give the gears in one mode can show in other modes, so a dog can stand across "
                            "its sleeve in another; to put the gears back there, press Update SolidWorks with that mode "
                            "showing.")

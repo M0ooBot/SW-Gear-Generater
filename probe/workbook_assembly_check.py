@@ -124,7 +124,10 @@ and the run goes on (no halt).
   coordinates p1's), the carrier held (it and CarrierGear fixed and never mated) -> Build again… each, measured,
   driven with both Flips on the ring mate, reopened, driven.
 
-W8 (W8-PLAN §5; ``--only modes`` runs s0 to s4, the sections written so far: s5–s7 are a later stage's). The fixtures
+W8 (W8-PLAN §5; ``--only modes`` runs s0, s1, s5, s2, s3, s4 and s7: s5 builds fresh and needs no master, so it comes
+before the sections that copy s1.master, and a run that stops in one of those still has it; s6 is the person's step).
+W8's closing run (2026-11-16) ran them instead as three invocations, each in a fresh session from one archive and one
+folder, s5 before s2 (HANDOFF, *W8 in detail*). The fixtures
 are ``tests/workbook_fixtures.py``'s two (W8-PLAN §2), written by ``write_new`` with the Output folder blank and saved
 once by Excel, as W6's are. Each mode is a configuration; every SolidWorks job of these sections opens the assembly,
 shows the mode it works in and rebuilds before it finds any component, so no component or mate handle is held across
@@ -338,8 +341,10 @@ PID = int(sys.argv[sys.argv.index("--pid") + 1])
 W6_ORDER = ["r1", "r5", "r2", "r3", "r4", "r6", "r8", "r7"]
 # W7 (W7-PLAN §6): p1 builds the master, the rest start from its copies.
 W7_ORDER = ["p1", "p2", "p3", "p4", "p5", "p6", "p7"]
-# W8 (W8-PLAN §5): s0 the shakedown, s1 the E4 transfer case, kept as s1.master for s2-s4, which copy it.
-W8_ORDER = ["s0", "s1", "s2", "s3", "s4", "s5", "s7"]
+# W8 (W8-PLAN §5): s0 the shakedown, s1 the E4 transfer case, kept as s1.master for s2, s3, s4 and s7, which copy it;
+# s5 builds fresh and needs nothing of theirs, so it runs before them, where a Stopped or hung worker in a copy section
+# (which ends the run) cannot cost it (W8-REVIEW-DEMO-S2-S7.md N7, W8-REVIEW-CLOSING-RUN.md S4).
+W8_ORDER = ["s0", "s1", "s5", "s2", "s3", "s4", "s7"]
 DEFAULT_ORDER = W8_ORDER + W7_ORDER + W6_ORDER + ["m1", "m3", "m7", "m8", "m2", "m4", "m5", "m6", "a", "a2", "a3", "b", "c"]
 RING = ["m3", "m7", "m8"]         # ``--only ring``: the two ring-train sections, rerun after the ring-sense fix
 # ``--only confirm``: SolidWorks 2024's confirming build (W6-PLAN §6.1, with W6-INTERFACES §7.17 (a) and (c)): both

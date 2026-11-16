@@ -352,8 +352,28 @@ the kind the last two interface reviews found, and asked for written rules. Thes
         put is the probe's own (`s7_put_job`: mates off in 2H, `place_component`, mates on), not the app's second
         Update press in 4L (`W8-REVIEW-LATE-FIXES.md` N2); and it ran on another machine as well as another
         revision. So `s2`'s 34.0.0 reading was not seen in case 8 and stays as read, unexplained between revision,
-        machine and sequence. The closing run's `s2` on 34.1.1, which now shows 4H, N and 4L after the fresh turn
-        and then presses in 4L, is what re-reads `s2`'s own sequence.
+        machine and sequence.
+      - *W8's closing run on 34.1.1* (2026-11-16, the same device as case 8, one `git archive` of `c583f48`:
+        `probe/results/w8-workbook-assembly-20261116-020805-s2-s7.log`, `w8-s7-20261116-023505.json`; s2 603
+        checks, s7 every case 154, 0 failed, no STOP):
+        - `s2` ran its current sequence, which shows 4H, N and 4L between the fresh turn and the press (`7c9634d`),
+          and read what 2024's `s2` and both case 8s read: the fresh +37° in 2H in 4H, N and 4L alike (log lines
+          357, 362, 367; LoDog–RangeSlv 531.913 mm³ in 4L, 368), and the Update in 4L after it found 4H out of step
+          at ModeSlv–FrontDog and N turned when it showed them after its put in 2H (461-464), every mode at its
+          built frames after the press (479-486). The turn reached every mode shown, and 2H's put did not carry.
+        - The 151412 sequence, 4L alone shown between the fresh turn and the press, has not run again on any
+          version, so 34.0.0's reading stays unexplained between revision, machine and sequence. On 34.0.0 itself
+          the first press, made after every mode had been shown, read the same as 34.1.1 and 2024 (`…-151412-s2.log`
+          lines 224-227): the one differing reading is the one press before which 4H and N were not shown. That
+          points at the shows rather than the revision; it is inference, and nothing depends on it, since every
+          Update that puts shows and puts every mode (`W8-REVIEW-CLOSING-RUN.md` N2).
+        - `s7` read every turn in all four configurations (cases 1-4 and 8, "shared" fitting, "per_configuration"
+          ruled out); case 5's three moving puts each stayed in their configuration (lines 1993, 2018, 2070), and
+          FrontDog driven +15° in N left FIdler, standing at 0, +10, +20 and 0, at −2.5° in all four (line 2043),
+          as on 2024; case 7 read the suppressed coupling's sense right and marked nothing (line 2382).
+        - The changed Update's put of FDrive in 2H was found in 4H and N and not in 4L (line 723), as on 34.0.0
+          (`…-151412-s2.log` 569-572, 709) and on 2024 (`sw2024/…-233045-s2.log` 724): a reading that recurs, not
+          a 34.0.0 peculiarity. It is recorded as read; nothing rests on it.
       - *On 2024* (SolidWorks 2024 32.5.0, s7: `probe/results/sw2024/w8-s7-20261115-162418.json` and its log
         `…/sw2024/w8-workbook-assembly-20261115-162357-s7.log`; case 8 rerun:
         `…/sw2024/w8-s7-20261115-172104-case8.json` and `…-172046-s7-case8.log`, 0 failed), read on that version
@@ -368,11 +388,15 @@ the kind the last two interface reviews found, and asked for written rules. Thes
           863-884, `same_amount_or_place`): a body driven in one configuration left its meshed neighbour at the same
           place in every configuration, not moved by the same amount, and 4H's earlier moving put was gone. So a
           moving put is kept by its configuration only until that train is next turned in any configuration.
-          2026's s7 has not given that drive.
+          The closing run's s7 gave that drive on 34.1.1 and read the same (above);
+        - `s2` on the next device (`0e7f203`, `sw2024/w8-workbook-assembly-20261115-233045-s2.log`), the first run
+          anywhere of `s2`'s current sequence: the fresh +37° in 2H read in 4H, N and 4L (354-370), and both of the
+          app's quiet Updates in 4L, after their put in 2H, found 4H out of step at ModeSlv–FrontDog and N turned
+          when they showed them (220-223, 462-465), every mode at its built frames after each put (237-244,
+          479-486).
       - Behaviour depends on none of this, since every mode an Update shows is put to its built frames and
-        post-checked (case 8's Update on 34.1.1 held that: every configuration at its built frames after it). Not
-        measured: a turn given while the configurations already stand differently on 2026, a drag in the user
-        interface, and s7's cases other than 8 on 34.1.1.
+        post-checked (case 8's Update and both of `s2`'s putting presses on 34.1.1 held that: every configuration at
+        its built frames after them). Not measured: a drag in the user interface (`s6`, the person's step).
     - *The split.* `findings.TURN_PER_CONFIGURATION_ON_<year>` (2026 False; 2024 False since its s7, `ce775a6`; a
       version with no finding of its own None, neither claim) is what the sentences about a turn and a switch read,
       through `swcom.positions_per_configuration`, which keeps its name and its three states.
@@ -380,7 +404,9 @@ the kind the last two interface reviews found, and asked for written rules. Thes
       behaviour reads either: Update's per-mode puts are right either way (W8-PLAN §1.9). The pins on s7's file
       (`4b164a7`) are of what s7 read, not rules; the s2 lines above are pinned beside them
       (`test_s2_after_an_update_had_put_every_mode_the_turn_was_read_in_4l_and_not_in_4h_or_n`), and 2024's s7 readings
-      beside those (`test_s7_on_2024_…`).
+      beside those (`test_s7_on_2024_…`); since the close, the closing run's s2 on 34.1.1
+      (`test_the_closing_s2_on_34_1_1_…`), its s7 case 5 (`test_s7_case5_on_2026_34_1_1_read_as_on_2024`) and case 7's
+      suppressed sense on both versions (`test_s7_case7_…`).
     - *A put on a quiet Update obliges the visit* (J13, W8-PLAN §1.10's post-check, "all of them when anything
       changed"). What the Update does now is the two amendments below: a quiet Update that has anything to put shows
       every mode and puts every train whole to its built frames there, out of step, off its axis or turned in step,
@@ -419,8 +445,9 @@ the kind the last two interface reviews found, and asked for written rules. Thes
     - *For the user's list:* the app's sentences about a turn on SolidWorks 2026 and 2024 claim only that it can show
       in other modes. On 2026, before any Update has moved the train that has been read in every mode; after an
       Update has put every mode, s2 on 34.0.0 found 4L turned and 4H and N, shown after the app's put in 2H, at the
-      built turn, while s7's case 8 on 34.1.1 read a fresh turn in all four and a moving put in 2H kept in 2H alone
-      (above). On 2024 it has been read in every mode in every state s7 tried.
+      built turn, in a sequence (4L alone shown before the press) that has not run again; on 34.1.1 s2's current
+      sequence and every s7 case read a turn in every mode, and s7's case 8 a moving put in 2H kept in 2H alone
+      (above). On 2024 it has been read in every mode in every state s7 tried and in s2's current sequence.
     - *Not taken, for the user to overrule:* with a turn shared between modes, a quiet Update could judge every
       mode's couplings from the rotations it reads in the active mode, without showing anything, and say which mode
       stands with a dog across its sleeve. Today a quiet Update judges the mode showing alone (J25).
@@ -433,3 +460,23 @@ the kind the last two interface reviews found, and asked for written rules. Thes
       stand across its sleeve in another; to put the gears back there, press Update SolidWorks with that mode
       showing."* Nothing is added when the switch is True or None, or after a put, which shows and checks every
       mode.
+19. **A mate refused in one mode: what `s5` shows, and what stays on the fake** (the coordinating session, 2026-11-16,
+    writing down what the probe alone recorded, `W8-REVIEW-CLOSING-RUN.md` S2; the user may overrule each). W8-PLAN
+    §5's `s5` asked for a doctored second distance mate that the build would make and SolidWorks refuse at the make,
+    with *"In mode N, … over-defines the assembly."*. What runs instead, on SolidWorks 2026 34.0.0 (`…-140811-s5.log`)
+    and 34.1.1 (the closing run, `…-20261116-010649-s4-s5.log`):
+    - *(i) the doctored distance mate is refused at the app's gate*, before anything is made and with no SolidWorks
+      call, with the sentence naming the script's own id. No user path makes such a mate. This is the coordinator's
+      ruling 3 of stage 2d (the probe's header and `section_s5`).
+    - *(ii) a coupling SolidWorks accepts but that locks a mode* (Sun to LoDog 1 : 1, on in N only, against the
+      planetary's 4 : 1): SolidWorks made it, `AddMate5` status 1, on both runs, and the build's step 6, the mate
+      check per mode, stopped the build with one sentence per locked body of the form *"In mode N, X cannot turn:
+      SolidWorks reads it fully defined."*, the seven bodies of N's locked train; the parts and layout part on
+      record, no assembly file, the document left open and named. **The sentence names the bodies, not the mate**:
+      that is the app as written, asserted by the script, and a default the user may overrule (the handoff lists
+      it).
+    - *`AddMate5` status 5 in a mode* (SolidWorks refusing the mate at the make, W8-PLAN §5's clause) **stays covered
+      on the fake only** (`tests/test_swbuild.py`,
+      `test_a_mode_whose_coupling_over_defines_stops_the_build_naming_the_mode_and_nothing_is_saved`). No run on
+      either version reached it, and it is not run again: a caveat, by the rule that a point the app does not depend
+      on is written down, not rerun (HANDOFF, *Rules carried over*).

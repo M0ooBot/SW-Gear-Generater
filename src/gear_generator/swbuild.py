@@ -1996,8 +1996,8 @@ class ModeCheck:
 # which tier 11 found SolidWorks 2026 answers in (measured on 2026 only; 2024's confirming run should read it).
 # CONFIGURATION_SHOW_OVER_DEFINED: CONFIGURATION_SHOW_RAISES_DIALOG was measured on configurations that solve (the
 # spike); the build's step 6 shows every mode, and would show one whose mates fight if step 5 let it through. Tier 11
-# showed such a configuration on SolidWorks 2026 with no window asking; it applies on 2024 unmeasured until the
-# confirming run, as SUPPRESSED_GEAR_MATE_SENSE_READ does.
+# showed such a configuration on SolidWorks 2026 with no window asking; it applies on 2024 unmeasured: nothing run on
+# 2024 has shown a configuration whose mates fight.
 # SUPPRESSION_READ_ORDER is no gate: IsSuppressed2(3, names) answers in the document's configuration order, and the app
 # asks one configuration per call (swcom.Session.mate_suppression), so it depends on no order.
 MODES_FINDINGS = (("FEATURE_SUPPRESS", _SET), ("FEATURE_UNSUPPRESS", _SET), ("MATE_FIND_ROUTE", "mate group"),

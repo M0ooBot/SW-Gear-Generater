@@ -1364,9 +1364,44 @@ def test_the_2026_case8_pins_fail_on_a_doctored_copy(doctor):
 def test_s7_on_2024_kept_each_moving_put_in_its_configuration_until_a_turn_wrote_one_place_into_every_one():
     """W8 s7 case 5 on SolidWorks 2024 32.5.0 (findings.py, POSITIONS_PER_CONFIGURATION): the three moving puts each
     read in their configuration alone; then FrontDog driven +15° in N left FIdler, standing at 0, +10, +20 and 0, at
-    −2.5° in all four — the same place, not the same amount — so 4H's put was gone. Read on 2024 only."""
+    −2.5° in all four — the same place, not the same amount — so 4H's put was gone. W8's closing run read the same on
+    2026 34.1.1 (the test after this one)."""
     data = json.loads(W8_S7_2024.read_text(encoding="utf-8"))
     assert data["revision"] == [32, 5, 0]
+    _s7_case5_holds(data)
+    assert findings.POSITIONS_PER_CONFIGURATION_ON_2024 is True
+
+
+W8_S7_CLOSE_2026 = LATEST.parent / "w8-s7-20261116-023505.json"
+
+
+def test_s7_case5_on_2026_34_1_1_read_as_on_2024():
+    """W8's closing run, s7 every case on SolidWorks 2026 34.1.1 (snapshot c583f48): case 5 read what 2024's did —
+    each moving put in its configuration alone, then FIdler at the same place in every configuration after FrontDog's
+    turn in N, not moved by the same amount (findings.py, POSITIONS_PER_CONFIGURATION)."""
+    data = json.loads(W8_S7_CLOSE_2026.read_text(encoding="utf-8"))
+    assert data["revision"] == [34, 1, 1] and data["snapshot"] == "c583f48" and data["finding_turn"] is False
+    _s7_case5_holds(data)
+    assert findings.POSITIONS_PER_CONFIGURATION_ON_2026 is True
+
+
+@pytest.mark.parametrize("path, revision", [(W8_S7_2024, [32, 5, 0]), (W8_S7_CLOSE_2026, [34, 1, 1])])
+def test_s7_case7_read_a_suppressed_couplings_sense_right_on_an_unmodified_copy_marking_nothing(path, revision):
+    """W8 s7 case 7 on SolidWorks 2024 32.5.0 and on 2026 34.1.1 (findings.py, SUPPRESSED_GEAR_MATE_SENSE_READ): on a
+    copy opened from its files, 2H active, "RangeSlv engages LoDog", suppressed in 2H by the build, answered right
+    (τ +1, +1) as "RangeSlv engages InDog", on in 2H, did, and no document read modified before or after."""
+    data = json.loads(path.read_text(encoding="utf-8"))
+    assert data["revision"] == revision
+    read = next(c for c in data["cases"] if c["case"] == "7")["suppressed_sense"]
+    assert read["active"] == "2H"
+    assert read["reads"] == {"RangeSlv engages LoDog": {"suppressed": True, "right": True, "taus": [1, 1]},
+                             "RangeSlv engages InDog": {"suppressed": False, "right": True, "taus": [1, 1]}}
+    assert len(read["flags_before"]) == len(read["flags_after"]) == 9
+    assert not any(read["flags_before"].values()) and not any(read["flags_after"].values())
+    assert findings.SUPPRESSED_GEAR_MATE_SENSE_READ == "answers, marks nothing"
+
+
+def _s7_case5_holds(data):
     for step, body, made_in, during in S7_MOVING_PUTS:
         judgement = _s7_step(data, "5", step)["judgement"]
         assert judgement["made_in"] == made_in and judgement["moved_bodies"] == [body], step
@@ -1381,7 +1416,6 @@ def test_s7_on_2024_kept_each_moving_put_in_its_configuration_until_a_turn_wrote
     assert before == {"2H": 0.0, "4H": 10.0, "N": 20.0, "4L": 0.0} and set(after.values()) == {-2.5}
     assert {m: read["by_configuration"][m]["same_place"] for m in S7_MODES} == {m: True for m in S7_MODES}
     assert {m: read["by_configuration"][m]["same_amount"] for m in S7_MODES} == {m: m == "N" for m in S7_MODES}
-    assert findings.POSITIONS_PER_CONFIGURATION_ON_2024 is True
 
 
 def test_the_w8_gates_open_on_both_versions_from_these_findings():
@@ -1404,9 +1438,11 @@ def test_s2_after_an_update_had_put_every_mode_the_turn_was_read_in_4l_and_not_i
     mode, a fresh +37° in 2H was read in 4L (line 356), and the next Update found 4H and N, shown after its put in 2H,
     at the built turn (lines 448-451); its changed Update found the put of FDrive in 2H in 4H and N and not in 4L
     (569-572, 709). The first press, from a copy no Update had moved, found 2H's put in neither (224-227). So a turn
-    has been read in another configuration (TURN_PER_CONFIGURATION_ON_2026 = False, what the sentences rest on). s7
-    case 8 on 34.1.1 read the turn in all four and the put in 2H alone in that state; this 34.0.0 reading was not seen
-    there and stays unexplained (W8-INTERFACES §9.18)."""
+    has been read in another configuration (TURN_PER_CONFIGURATION_ON_2026 = False, what the sentences rest on). This
+    run showed 4L alone between the fresh turn and the second press, a sequence no run has repeated. s7 case 8 on
+    34.1.1 read the turn in all four and the put in 2H alone in that state, and the closing run's s2 on 34.1.1, in
+    s2's current sequence (4H, N and 4L shown first), read the same as case 8 (the pin below); this 34.0.0 reading
+    stays unexplained (W8-INTERFACES §9.18)."""
     lines = W8_S2_AFTER_UPDATE.read_bytes().decode("utf-8", errors="replace").splitlines()
     assert lines[1].startswith("attach  SolidWorks 2026 (revision 34.0.0)") and "(snapshot: 4871a85)" in lines[0]
     assert lines[250].startswith("fact    s2: the state before the fresh turn: modes put in by an Update so far "
@@ -1435,7 +1471,42 @@ def test_s2_after_an_update_had_put_every_mode_the_turn_was_read_in_4l_and_not_i
     assert findings.TURN_PER_CONFIGURATION_ON_2026 is False
 
 
-W7_PUT = LATEST.parent / "w7-planetary-put-20261115-012409.json"
+W8_CLOSE_S2_2026 = LATEST.parent / "w8-workbook-assembly-20261116-020805-s2-s7.log"
+
+
+def test_the_closing_s2_on_34_1_1_read_the_fresh_turn_in_every_mode_and_2h_s_put_carried_to_none():
+    """W8's closing run, s2 on SolidWorks 2026 34.1.1 (snapshot c583f48): s2's current sequence, which shows 4H, N and
+    4L between the fresh turn and the press (7c9634d), not the 151412 one (4L alone). After an Update had put every
+    mode, the fresh +37° in 2H read in 4H, N and 4L alike (lines 357, 362, 367), and the Update in 4L after it found 4H
+    out of step at ModeSlv–FrontDog and N turned when it showed them after its put in 2H (461-464), as its first press
+    did (221-224): the turn reached every mode and 2H's put did not carry, what 2024's s2 and both case 8s read. The
+    changed Update's FDrive put in 2H was found in 4H and N and not in 4L (723), as on 34.0.0 and 2024."""
+    lines = W8_CLOSE_S2_2026.read_bytes().decode("utf-8", errors="replace").splitlines()
+    assert lines[1].startswith("attach  SolidWorks 2026 (revision 34.1.1)") and "(snapshot: c583f48)" in lines[0]
+    assert lines[248].startswith("fact    s2: the state before the fresh turn: modes put in by an Update so far "
+                                 "['2H', '4H', '4L', 'N']")
+    for i, mode in ((356, "4H"), (361, "N"), (366, "4L")):
+        assert lines[i].startswith(f"        s2, the fresh turn in 2H, {mode} shown"), mode
+        for body in ("Sun +37.000000000°", "InDog +37.000000000°", "RangeSlv +37.000000000°", "ModeSlv +37.000000000°",
+                     "LoDog +9.250000000°", "Pl copy 1 -18.500000000°", "FrontDog +0.000000000°"):
+            assert body in lines[i], (mode, body)
+    assert "(('LoDog', 'RangeSlv'), 531.913)" in lines[367]
+    for at, label in ((220, "s2 quiet Update in 4L: "), (460, "s2 Update in 4L after the fresh turn in 2H: ")):
+        head = "fact    " + label
+        assert lines[at] == head + "2H when shown: out of step [], off axis [], turned True; after its put: clashes []"
+        assert lines[at + 1] == head + "4H when shown: out of step [('ModeSlv', 'FrontDog')], off axis [], turned " \
+                                       "False; after its put: clashes []"
+        assert lines[at + 2] == head + "N when shown: out of step [], off axis [], turned True; after its put: " \
+                                       "clashes []"
+        assert lines[at + 3].startswith(head + "4L when shown: out of step [('RangeSlv', 'LoDog'), ('ModeSlv', "
+                                               "'FrontDog')]")
+    assert lines[722].startswith("fact    s2 changed Update: each mode's judgement when shown") and \
+        lines[722].endswith("[('2H', False, ['FDrive'], []), ('4H', False, [], []), ('N', False, [], []), "
+                            "('4L', False, ['FDrive'], [])]")
+    assert findings.TURN_PER_CONFIGURATION_ON_2026 is False and findings.POSITIONS_PER_CONFIGURATION_ON_2026 is True
+
+
+W7_PUT =LATEST.parent / "w7-planetary-put-20261115-012409.json"
 W7_PUT_FOLLOW_ONS = LATEST.parent / "w7-planetary-put-follow-ons-20261115-013108.json"
 
 

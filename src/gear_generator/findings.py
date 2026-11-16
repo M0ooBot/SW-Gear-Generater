@@ -1255,10 +1255,20 @@ SYSTEM_VALUE_FOLLOWS_CONFIGURATION = False
 #   configuration, not moved by the same amount, and 4H's put of +10° was gone. So on 2024 a moving put is kept by
 #   its configuration only until that train is next turned in any configuration. In case 8's rerun
 #   (…-172046-s7-case8.log, w8-s7-20261115-172104-case8.json) the moving put in 2H, after an Update had put every mode
-#   and a fresh turn, stayed in 2H. 2026's s7 has not given that drive.
+#   and a fresh turn, stayed in 2H. In 2024's s2 (…-233045-s2.log lines 220-223 and 462-465) both of the app's
+#   quiet Updates in 4L, after their put in 2H, found 4H out of step at ModeSlv–FrontDog and N turned when they showed
+#   them, so 2H's put had not reached them; after each put every mode read at its built frames (237-244, 479-486).
+# - On 2026 34.1.1 (W8's closing run, s7 every case at c583f48: probe/results/
+#   w8-workbook-assembly-20261116-020805-s2-s7.log, w8-s7-20261116-023505.json, 0 failed): case 5's three moving
+#   puts each stayed in their configuration alone (log lines 1993, 2018, 2070), and FrontDog driven +15° in N left
+#   FIdler, standing at 0, +10, +20 and 0, at −2.5° in all four (line 2043): the same place in every configuration,
+#   not moved by the same amount, as on 2024.
 # - On 2026 34.0.0, in W8 s2, after an Update had put every mode, a put in 2H was twice found in 4H and N, shown next,
 #   and not in 4L (probe/results/w8-workbook-assembly-20261115-151412-s2.log lines 448-451, the second press, and
 #   569-572 and 709, the changed Update's FDrive; the same in …-111951-s2-turn-carried-per-body.log lines 297-300).
+#   The changed Update's FDrive reading recurred where its sequence was run again: its put of FDrive in 2H was found
+#   in 4H and N and not in 4L on 34.1.1 (…-020805-s2-s7.log line 723) and on 2024 (sw2024/…-233045-s2.log line 724),
+#   so it is no 34.0.0 peculiarity. Read, and nothing is built on it: that Update shows and puts every mode.
 # - On 2026 34.1.1 (another machine; s7 case 8 alone at fe74276, after s1 built there: probe/results/
 #   w8-workbook-assembly-20261115-220745-s1-s7-case8.log, w8-s7-20261115-222252-case8.json, 0 failed), case 8 read
 #   what 2024's did: after the app's quiet Update in 4L had put every mode and a fresh +37° in 2H had read in all
@@ -1270,11 +1280,14 @@ SYSTEM_VALUE_FOLLOWS_CONFIGURATION = False
 #   moved (…-151412-s2.log lines 224-227), so that is no new difference. Case 8 is not s2's sequence: it showed every
 #   configuration between the fresh turn and the put, where that s2 showed 4L alone; its put is the probe's own
 #   (s7_put_job), not the app's second Update press in 4L; and it ran on another machine as well as another revision.
-#   So s2's 34.0.0 reading was not seen in case 8 and stays unexplained between revision, machine and sequence; the
-#   closing run's s2 on 34.1.1 is what re-reads s2's own sequence. A no-op put changed nothing (s7 cases 2 and 3, on
-#   both versions).
+#   The closing run's s2 on 34.1.1 (…-020805-s2-s7.log lines 357-369, 461-464) ran s2's current sequence, which shows
+#   4H, N and 4L between the fresh turn and the press (7c9634d), and read what 2024's s2 and both case 8s read: the
+#   turn in every mode shown, and 2H's put not carried. The 151412 sequence, 4L alone shown before the press, has not
+#   run again on any version, so 34.0.0's reading stays unexplained between revision, machine and sequence. On 34.0.0
+#   itself the first press, made after every mode had been shown, read the same as 34.1.1 and 2024 (…-151412-s2.log
+#   lines 224-227). A no-op put changed nothing (s7 cases 2 and 3, on both versions).
 # No behaviour reads these: every mode an Update shows is put to its built frames and post-checked (W8-INTERFACES
-# §9.18). Not covered: a drag in the user interface; case 5's moving puts on 34.1.1.
+# §9.18). Not covered: a drag in the user interface (s6).
 POSITIONS_PER_CONFIGURATION_ON_2026 = True
 POSITIONS_PER_CONFIGURATION_ON_2024 = True
 #
@@ -1297,8 +1310,16 @@ POSITIONS_PER_CONFIGURATION_ON_2024 = True
 #   in all four by the same amount again ("shared" fitting, "per_configuration" ruled out); the moving put in 2H after
 #   it stayed in 2H (POSITIONS above). So in case 8 on 34.1.1 the turn reached 4H and N and the put did not. Case 8
 #   is not s2's sequence (POSITIONS above: every configuration shown before the put, the probe's put for the app's
-#   second press, another machine), so s2's 34.0.0 reading stays unexplained; the closing run's s2 on 34.1.1 re-reads
-#   that sequence.
+#   second press, another machine).
+# - In every mode on 34.1.1, W8's closing run at c583f48 (…-020805-s2-s7.log, w8-s7-20261116-023505.json, 0 failed):
+#   s7 cases 1-4 and 8 each read the turn in all four configurations ("shared" fitting, "per_configuration" ruled
+#   out), as on 34.0.0 and 2024; and s2, in its current sequence (4H, N and 4L each shown after the fresh turn, then
+#   the press in 4L, 7c9634d), read the fresh +37° in 2H in 4H, N and 4L alike (lines 357, 362, 367; LoDog–RangeSlv
+#   531.913 mm³ in 4L, line 368), and the Update in 4L after it found 4H out of step at ModeSlv–FrontDog and N turned
+#   when it showed them after its put in 2H (461-464): the turn reached every mode and 2H's put did not carry, what
+#   2024's s2 and both case 8s read. The 151412 sequence (4L alone shown before the press) has not run again on any
+#   version, so s2's 34.0.0 reading stays unexplained between revision, machine and sequence; 34.0.0's own first
+#   press, made after every mode had been shown, read the same as 34.1.1 and 2024 (…-151412-s2.log lines 224-227).
 # On 2024 (32.5.0, W8 s7 on that host; probe/results/sw2024/w8-s7-20261115-162418.json and its log
 # w8-workbook-assembly-20261115-162357-s7.log) every turn of the train s7 gave read "moved" in all four
 # configurations, by the same amount, "shared" among the fits and "per_configuration" ruled out: on copies no Update
@@ -1306,13 +1327,15 @@ POSITIONS_PER_CONFIGURATION_ON_2024 = True
 # the app's quiet Update in 4L had put every mode (case 8, and its rerun, …-172046-s7-case8.log and
 # w8-s7-20261115-172104-case8.json, 0 failed).
 # LoDog then stood +9.25° against RangeSlv's +37° in 4L, where they are coupled: the dog across its sleeve the
-# sentences warn of. So TURN_PER_CONFIGURATION_ON_2024 is False too. A turn given while the configurations stood
-# differently (case 5, read on 2024 only) brought the turned bodies to the same place in every configuration, not
-# by the same amount (POSITIONS above).
+# sentences warn of. So TURN_PER_CONFIGURATION_ON_2024 is False too. 2024's s2 on the next device (0e7f203,
+# sw2024/w8-workbook-assembly-20261115-233045-s2.log lines 354-370) read the fresh turn in 4H, N and 4L after an
+# Update had put every mode, the sequence the closing run then repeated on 34.1.1. A turn given while the
+# configurations stood differently (case 5) brought the turned bodies to the same place in every configuration, not
+# by the same amount, on 2024 and on 34.1.1 (POSITIONS above).
 # Read by swcom.positions_per_configuration for the sentences about a turn (ui_text.turning_note, switching_note,
 # TURN_SHOWN_ELSEWHERE, GEARS_SHOWN_ELSEWHERE, and _mode_after's two); no behaviour reads it. A version with no
 # finding of its own (None) makes neither claim.
-# Not covered: a drag in the user interface (s6); on 34.1.1, s7's cases other than 8.
+# Not covered: a drag in the user interface (s6, the person's step).
 TURN_PER_CONFIGURATION_ON_2026 = False
 TURN_PER_CONFIGURATION_ON_2024 = False
 
@@ -1374,9 +1397,18 @@ GEAR_MATE_BACK_ON_MARKS = "nothing beyond the puts"
 # - Read twice, the mate answered right both times, as it had before it was suppressed (Reverse and both entities
 #   read; τ +1, +1). The assembly read GetSaveFlag False after each read.
 # - The control, "Sun meshes Planet copy 2" left on, did the same.
-# Not covered: SolidWorks 2024. The read is GetDefinition and EntityParams, which marked nothing on both versions for
-# a mate left on (GEAR_MATE_DEFINITION_READ_MARKS); 2024's confirming run should read it once before this is relied
-# on there.
+# On 2024 (32.5.0, W8 s7 case 7 at 1560b25; probe/results/sw2024/w8-workbook-assembly-20261115-162357-s7.log line
+# 1175, w8-s7-20261115-162418.json cases[6].suppressed_sense): on a copy of the 2024-built E4 opened from its files,
+# every document GetSaveFlag False, 2H active, the coupling "RangeSlv engages LoDog", suppressed in 2H by the build,
+# read once by gear_mate_sense answered right (τ +1, +1), as the control "RangeSlv engages InDog" left on did, and no
+# document read modified before or after. The app's own quiet Updates on 2024 then read every sense, the suppressed
+# couplings included, and marked nothing (sw2024/…-230215-s3.log lines 739-742 and 821-824, …-233045-s2.log lines
+# 344-349).
+# On 2026 34.1.1 (W8's closing run, s7 case 7 at c583f48; probe/results/w8-workbook-assembly-20261116-020805-s2-s7.log
+# line 2382, w8-s7-20261116-023505.json cases[6].suppressed_sense): the same read on a copy of the E4 built there,
+# with the same answers (τ +1, +1 for both mates) and no document modified before or after.
+# Not covered: on 2024, a suppressed mesh between parallel axes (2024 read a collinear coupling, 2026 a planet's
+# mesh), or a second read.
 SUPPRESSED_GEAR_MATE_SENSE_READ = "answers, marks nothing"
 
 # -- W8's last call probed ahead: a configuration whose mates fight, shown (W8-PLAN §4.2 item 1); and the order the
