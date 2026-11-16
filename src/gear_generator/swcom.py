@@ -923,7 +923,16 @@ class MateInfo:
 
     name: str
     type: int = UNREAD
-    components: Tuple[str, ...] = ()
+    components: Tuple[Optional[str], ...] = ()
+    # False when SolidWorks would not give the mate's specific feature or its entity count: ``components`` is then
+    # not the whole list. An entity that would not answer is ``None`` in ``components`` (never ``""``, the
+    # assembly's own), and an unread type is ``UNREAD``.
+    counted: bool = True
+
+    @property
+    def whole(self) -> bool:
+        """Whether every part of it was read: its type, its entity count and each entity's component."""
+        return self.counted and self.type != UNREAD and all(c is not None for c in self.components)
 
 
 @dataclass(frozen=True)
@@ -2505,21 +2514,40 @@ class Session:
         """What a kept mate (``find_mate``'s handle) joins: ``IFeature.GetSpecificFeature2`` → ``IMate2.Type`` and,
         for each ``MateEntity(i)`` up to ``GetMateEntityCount``, ``IMateEntity2.ReferenceComponent``'s ``Name2``
         (``""`` for the assembly's own entity, which ``ReferenceComponent`` gives as None: the macro database read it
-        so on 2024). The same members :meth:`gear_mate_sense` reads, so nothing here is selected or changed."""
+        so on 2024). The same members :meth:`gear_mate_sense` reads, so nothing here is selected or changed. What
+        would not answer is said so (``MateInfo.whole`` False), never read as the assembly's own: an entity that
+        will not answer is ``None``, a count that will not answer leaves ``counted`` False (W9a review point 2)."""
         name, feature = self._kept_mate(handle)
-        mate = _read(feature, "GetSpecificFeature2")
+        try:
+            mate = _read(feature, "GetSpecificFeature2")
+        except Exception:  # noqa: BLE001 - said as unread
+            mate = None
         if mate is None:
-            return MateInfo(name)
+            return MateInfo(name, counted=False)
         try:
             kind = int(_read(mate, "Type"))
-        except Exception:  # noqa: BLE001 - a kind that cannot be read is judged as "another kind", never a lock
+        except Exception:  # noqa: BLE001 - a kind that cannot be read is unread, never a lock
             kind = UNREAD
-        count = _read(mate, "GetMateEntityCount")
-        components: List[str] = []
-        for index in range(int(count) if isinstance(count, (int, float)) else 0):
-            entity = call(mate, "MateEntity", index)
-            component = _read(entity, "ReferenceComponent") if entity is not None else None
-            components.append("" if component is None else str(call(component, "Name2")))
+        try:
+            count = _read(mate, "GetMateEntityCount")
+        except Exception:  # noqa: BLE001
+            count = None
+        if not isinstance(count, (int, float)) or isinstance(count, bool):
+            return MateInfo(name, kind, (), counted=False)
+        components: List[Optional[str]] = []
+        for index in range(int(count)):
+            try:
+                entity = call(mate, "MateEntity", index)
+            except Exception:  # noqa: BLE001
+                entity = None
+            if entity is None:
+                components.append(None)
+                continue
+            try:
+                component = _read(entity, "ReferenceComponent")
+                components.append("" if component is None else str(call(component, "Name2")))
+            except Exception:  # noqa: BLE001
+                components.append(None)
         return MateInfo(name, kind, tuple(components))
 
     def feature_states(self) -> List[FeatureState]:

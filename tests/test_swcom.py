@@ -1674,6 +1674,36 @@ def test_mate_info_reads_the_type_and_each_entitys_component_the_assemblys_own_a
     assert not any(e[0] in ("SetSuppression2", "Select2", "AddMate5") for e in doc.log)
 
 
+def test_mate_info_says_what_solidworks_would_not_describe_and_never_reads_it_as_the_assemblys_own(mated):
+    """W9a review point 2: an entity that will not answer is None (not "", the assembly's own); a count that will not
+    answer leaves the list uncounted; either, or an unread type, makes the mate not whole."""
+    session, doc = mated
+
+    class Silent:
+        @property
+        def ReferenceComponent(self):
+            raise RuntimeError("no answer")
+
+    gone = MateFeature(doc, "Lock4", "MateLock")
+    gone.GetSpecificFeature2 = UserSpecific(findings.MATE_LOCK, [MatedComponent(doc, "Gear_m1.5_N17-1")])
+    gone.GetSpecificFeature2.entities.append(None)
+    gone.GetSpecificFeature2.GetMateEntityCount = 2
+    silent = MateFeature(doc, "Lock5", "MateLock")
+    silent.GetSpecificFeature2 = UserSpecific(findings.MATE_LOCK, [MatedComponent(doc, "Gear_m1.5_N17-1")])
+    silent.GetSpecificFeature2.entities.append(Silent())
+    silent.GetSpecificFeature2.GetMateEntityCount = 2
+    uncounted = MateFeature(doc, "Lock6", "MateLock")
+    uncounted.GetSpecificFeature2 = UserSpecific(findings.MATE_LOCK, [])
+    uncounted.GetSpecificFeature2.GetMateEntityCount = None
+    doc.mates = [gone, silent, uncounted]
+    for index, name in enumerate(("Lock4", "Lock5", "Lock6"), 1):
+        session.find_mate(f"other{index}", name)
+    read = [session.mate_info(f"other{i}") for i in (1, 2, 3)]
+    assert [r.components for r in read] == [("Gear_m1.5_N17-1", None), ("Gear_m1.5_N17-1", None), ()]
+    assert [r.whole for r in read] == [False, False, False] and read[2].counted is False
+    assert swcom.MateInfo("Lock7", findings.MATE_LOCK, ("A-1", "")).whole
+
+
 def test_feature_states_walks_the_top_level_tree_with_each_error_code(mated):
     session, doc = mated
     walk = [TreeFeature(doc.log, "Origin", type_name="OriginProfileFeature"), TreeFeature(doc.log, "Bore"),
