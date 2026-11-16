@@ -4,9 +4,11 @@
 and from W8's readings and rulings (`W8-PLAN.md` §0.3, `W8-INTERFACES.md` §9), each named in §0.2. Its review is
 `ISSUE-1-PLAN-REVIEW.md` (`8ce7426`); *Changes after the review* at the end lists every change against the review's
 points, and where the two differ the revised text below wins. The user answered the plan's choices on 2026-11-16
-(*Changes after the user's answers*, at the end): **all five stages approved, in order W9a–W9e**; an app-owned value
+(*Changes after the user's answers*, at the end): **all the stages approved, in order**; an app-owned value
 the user changed stops Update, named (K11); **Build again… carries the user's components and remakes their mates**
-(K5, a stage of its own, W9e); the hub is built by the app from a row (K8). Those now bind. GitHub issue #1 (`MoZ200701/SW-Gear-Generater`) is the
+(K5, a stage of its own, W9d); the hub is built by the app from a row (K8). Those now bind. A second review
+(`ISSUE-1-PLAN-REVIEW-2.md`, `16e45dc`) and the coordinating session's rulings on its cost points followed
+(*Changes after the second review*). GitHub issue #1 (`MoZ200701/SW-Gear-Generater`) is the
 source of the four problems. The user's own words on problem 4 set the first requirement:
 
 > "the thing about update cannot add a part is i have the assembly right then i made edits to some of its parts or
@@ -36,7 +38,8 @@ confirming build on 2024, each plan and result reviewed by a separate agent.
 
 ### 0.1 The name, and what it changes in the plan's statements
 
-**W9**, in five stages W9a–W9e. It is the next row of PLAN-WORKBOOK §6 because it changes the same import, record
+**W9**, in four stages W9a–W9d (renumbered after the second review: the sleeve checks and the bands and hub are one
+stage, W9b; *Changes after the second review*). It is the next row of PLAN-WORKBOOK §6 because it changes the same import, record
 and window W1–W8 built, and a W-number keeps the handoff, the boards and the results folder in one series. Two things
 change with the name, both when W9a lands (not in this commit):
 
@@ -53,35 +56,39 @@ change with the name, both when W9a lands (not in this commit):
 ### 0.2 Readings, and the user's answers
 
 Each is argued in §2. **K1–K6 and K11 are the heart of problem 4.** Rows marked **(the user's, 2026-11-16)** are
-the user's answers and bind; **(ruled)** is the coordinating session's ruling; every other row is the plan's reading,
-still for the user to overrule.
+the user's answers and bind; **(ruled)** is the coordinating session's ruling, for the user to overrule. K1, K3, K4,
+K6 and K7 were never put to the user as questions and stand approved with the stages; K2, K9 and K10 are the plan's
+readings still open in §6.
 
 | # | Reading | Instead of | Overturns |
 |---|---|---|---|
 | K1 | **What is the app's own** is what the record lists: the gear, carrier and layout components (by `Name2`), the mates (by name), the configurations named as modes, and in each app part the globals and features its plan made. Everything else is the user's. A recorded component not found by its `Name2` is found by its part path when exactly one unclaimed instance of that part is in the assembly, and its new name recorded. | Guessing ownership from names; a renamed component sending the user to Build again…. | — |
-| K2 | **A mate of the user's on a gear Update must move does not stop Update.** W9a's spike (§4, S0) decides between two routes, both shipped behind one rule: **(a)** the put carries a free user component with its gear, so nothing of the user's is written; or **(b)** it does not, so the user's mates on the train being put are suppressed in the configuration being put, around the put, as `_put_train` does for the app's locks, turned back on whatever happens, every flag read back, and any in error named. Under both, only a **grounded tie** refuses: a gear SolidWorks reads not free to turn (`constrained_status`, already read by the post-check) with the user's mates on, where the app's own mates leave it free — read in the mode showing before any change, and in each other mode when it is shown, before its put. SolidWorks' solver decides it, not a graph of mates: a sprocket concentric to the layout's axis and locked to Sun leaves Sun free and is not a tie. | Refusing every user mate on a moved gear (the plan before the review); today's refusal of every user mate; a topological graph check (wrong for a concentric mate to a fixed axis). | W5 review M7, W8 J12's last sentence |
+| K2 | **A mate of the user's on a gear Update must move does not stop Update.** W9a's spike (§4, S0) decides between two routes, both shipped behind one rule: **(a)** the put carries a free user component with its gear, so nothing of the user's is written; or **(b)** it does not, so the user's mates on the train being put are suppressed in the configuration being put, around the put, as `_put_train` does for the app's locks, turned back on whatever happens, every flag read back, and any in error named. Under both, only a **grounded tie** refuses: a train SolidWorks reads not free to turn (`constrained_status`, the read `_free_to_turn` makes) with the user's mates on, where the record says the app's own mates leave it free (the build's or last Update's post-check passed; nothing is suppressed to find out), the user's mates on **that train** named. It is read in the mode showing before any change; when every user mate on the train has the same flag in every mode (readable without showing), that read decides every mode; only when they differ by mode is a mode read when shown, before its put, and a tie there stops the job part way. A user mate joining gears of two different trains (a lock from Sun to RangeSlv) reads free but no put can satisfy it: the inventory refuses it, named, before any change. SolidWorks' solver decides the tie, not a graph of mates: a sprocket concentric to the layout's axis and locked to Sun leaves Sun free and is not a tie. | Refusing every user mate on a moved gear (the plan before the review); today's refusal of every user mate; a topological graph check (wrong for a concentric mate to a fixed axis). | W5 review M7, W8 J12's last sentence |
 | K3 | **The user's features in an app part are kept.** Update changes only the app's globals; SolidWorks rebuilds the user's features after them; the job reads each user feature's error state afterwards and names any in error, as theirs. Nothing is saved (as today). | Refusing to change a part with user features. | — |
 | K4 | **Told before anything is written.** Every job reads the user's work in the documents it opens and the finish records it, with the time read. The footer says before the press what Update will change, what of the user's it will suppress around a put (route b), and what it leaves. Something the record did not hold that would refuse makes the press refuse before any change and is recorded, so the footer then says it; the next press refuses again unless the user has dealt with it. No new control. | A check-only job and a question before each Update. | — |
-| K5 | **(the user's, 2026-11-16) Build again… carries the user's components and remakes their mates (W9e, §2.5).** Every top-level user component comes over at its frame, fixed or floating as it was, with its state in each mode; each mate of the user's is remade on the corresponding entities in the new revision, found by persistent reference on an unchanged file, by name on the layout and the assembly's planes, and by geometric role on an app part made new; a mate whose entity cannot be found, or that SolidWorks refuses, is named, and the user components joined through it come over fixed where they stood, unmated. Until W9e, Build again… says what stays behind, as read at a stated time, and the build job reads the old assembly first and lists it in its result. | Saying only; bringing components over fixed and unmated (the plan's recommendation before the user's answer). | — |
-| K6 | **Update adds, removes and re-mates (W9d):** a new gear on an existing frame shaft along Z±, inserted and mated as the build mates it; a gear removed (not one that anchors other gears) with its app mates; a coupling or sliding mesh newly needed between components on record; a gear mate of a gearbox with modes made again (a tooth change); each new or remade mate's and component's flag set and read back in every configuration. Bands are added to a built sleeve **in place** (§2.4). Replacing a part's file stays Build again… (deferred). | Every such edit structural; replacing the sleeve's component. | W8 J14 (in part), ruling 9.16 |
+| K5 | **(the user's, 2026-11-16) Build again… carries the user's components and remakes their mates (W9d, §2.5).** Every top-level user component comes over where it stood relative to its app gear (or the layout), fixed or floating as it was, with its state in each mode; every mate of the user's whose entities are found is remade — by persistent reference on a file both revisions use, by name or tree order on the layout, carrier parts and the assembly's planes, by component for a lock or gear mate — and every other is named with why; a mate on a face of an app part made new is named, not re-found **(ruled: no finding by geometric role)**; the user's features in an app part made new are named with why the part is new, and how to keep them where K11's value is the reason. Carried items are left **unsaved**, and the user's open documents are never shown in another mode or saved. Until W9d, Build again… says what stays behind, as read at a stated time. | Saying only; bringing components over fixed and unmated (the plan's recommendation before the user's answer); finding faces by role on a new file. | — |
+| K6 | **Update adds, removes and re-mates (W9c):** a new gear on an existing frame shaft along Z±, inserted and mated as the build mates it; a gear removed (not one that anchors other gears) with its app mates; a coupling or sliding mesh newly needed between components on record; a gear mate of a gearbox with modes made again (a tooth change); **Modes rows added or removed (ruled)**; each new or remade mate's and component's flag set and read back in every configuration. Bands are added to a built sleeve **in place** (§2.4). Replacing a part's file stays Build again… (deferred). | Every such edit structural; replacing the sleeve's component. | W8 J14 (in part), ruling 9.16 |
 | K7 | **Reachability is a warning**, by the points the sleeve's shaft must reach (§2.2). | An error; the issue's narrower rule. | — |
 | K8 | **(the user's, 2026-11-16) The hub is a workbook row**, kind `hub`, on the sleeve's own shaft, built by the app as a toothed ring like a dog with the row's Bore; the app never adds one by itself. A sleeve with no hub row is warned of. | A hub row checked but not built (a skeleton, as the carrier); the app adding one; leaving it to the user unchecked. | W8 J1 ("no hub") |
 | K9 | **Minimum running clearance 0.5 × module a side, at least 0.5 mm**, a warning per mode. | A fixed mm figure; an error. | W8 J22 (extended) |
 | K10 | **A sleeve declares two toothed bands** (two numeric columns, one at each end of its face); the span between is a relief bore of diameter m(z + 3), clearing a dog's tip by 0.5 m a side. One part. Engagement counts only toothed length. | One slider moving several rows. | W8 J4 (refined) |
 | K11 | **(the user's, 2026-11-16) The user's edit to an app-owned value is never set back without their word.** A part's, the layout's or a carrier's global, a Face Z equation, a slide value in a configuration, or a recorded mate's flag in a configuration, found live different both from what the record says the file holds and from what the workbook now asks, and not explained by a lost or unsaved Update (the record's `unsaved` and `mismatched` marks), refuses the Update before any change, every such value named at once with both values and the cell to change. A gear's turn stays W5's (put back when Update must move a gear), since turning is motion, not an edit. | Setting it back (today); keeping the user's value and saying so. | W5's D10 for a mate the user suppressed |
-| K12 | **(ruled) The Workbook window fits its screen (W9a, §2.6).** It never grows past the screen's work area; between a fixed header and a fixed footer, the two columns scroll as one page when the window is shorter than they ask; the footer and its buttons are always whole. Drawn on the board first; the window check asserts the footer whole on a 2560 × 1600 screen at 150 %. | Growing without a cap (today, `workbook_gui.py:1160-1170`); scrolling the Checks panel alone; the whole window scrolling as the strip's page does. | UI-DESIGN §9 "grows taller … moves left or up" |
+| K12 | **(ruled) The Workbook window fits its screen (W9a, §2.6).** It never grows past the primary screen's work area less its frame; between a fixed header and a fixed footer, the two columns scroll as one page when the window is shorter than they ask; the footer has a ceiling (a third of the work area), above which its sentence scrolls in itself, and the body a least height, so the buttons are always whole. Drawn on the board first; the window check asserts on a 2560 × 1600 screen at 150 % that the frame's bottom is inside the work area, the footer whole and the body's last line reachable. | Growing without a cap (today, `workbook_gui.py:1160-1170`); scrolling the Checks panel alone; the whole window scrolling as the strip's page does. | UI-DESIGN §9 "grows taller … moves left or up" |
 
 ### 0.3 STOP and ask (implementers)
 
 - **Anything that would write to, delete, move or rename a component, mate, feature, global or configuration that is
   not on record**, with two exceptions: route (b)'s suppression of the user's mates around a put, each turned back on
-  and read back in every configuration it was on in; and W9e's writes into the **new** revision's assembly (the
-  user's components inserted, their mates remade there), never into the old assembly or a user file. The fake fails
+  and read back in every configuration it was on in; and W9d's writes into the **new** revision's assembly (the
+  user's components inserted, their mates remade there, left unsaved), never into the old assembly or a user file.
+  The user's open documents are never saved by W9, and a configuration of theirs is never shown, unless S5 finds no
+  unshown read of a component's state per mode: then, and only then, W9d shows the old assembly's modes and restores
+  its active configuration, read back, with `GetSaveFlag` unchanged (a third exception, to be confirmed). The fake fails
   a test on any other such call, and on SolidWorks each demonstration compares every user item's flag, error code and
   entities before and after, in the old assembly as well after a Build again….
-- W9e: a persistent reference that resolves to an entity of another kind or another place than the one it was read
-  from (a face where an edge was, a face off the role's position); a remade mate SolidWorks accepts with an error code
-  but the app counts as remade.
+- W9d: a persistent reference that resolves to an entity of another kind than the one it was read from (a face where
+  an edge was); a remade mate SolidWorks accepts with an error code it did not have in the old assembly but the app
+  counts as remade; any file time of a user document changing during a Build again….
 - A read W9 adds (a mate's entities, a part's feature tree, a feature's error, an external-references list) found
   marking a document modified (`GetSaveFlag`), or reading `None` for a component other than the assembly's own.
 - A put with a user mate on its gear that SolidWorks accepts while leaving the gear off its frame without an error
@@ -203,7 +210,7 @@ every structural edit sends the user to Build again…, which leaves their work 
 
 ## 2. The behaviour proposed
 
-### 2.1 Problem 4: keep the user's work, keep the app usable (W9a, then W9d)
+### 2.1 Problem 4: keep the user's work, keep the app usable (W9a, then W9c)
 
 **W9a — the user's work is theirs.**
 
@@ -221,13 +228,21 @@ every structural edit sends the user to Build again…, which leaves their work 
    `swbuild.py:4213-4215`, `:4346`) goes through by the route the spike chose: (a) nothing written, or (b)
    suppressed in each configuration around the put there and turned back on, read back, as `_put_train` does with
    the app's own locks (`set_mate_suppressed_in`, `mate_suppression`, proven per configuration). Under both, the
-   **grounded tie** — a gear SolidWorks reads not free to turn with the user's mates on (K2) — refuses, naming every
-   user mate on that gear at once with its modes: *"Update SolidWorks must turn Sun back to its built place, and with
-   your mate Lock3 on SolidWorks reads Sun as unable to turn (Lock3 ties it to Housing-1), so nothing is changed;
-   suppress Lock3 in H, N and L and press Update SolidWorks again."* In the mode showing it is read before any change;
-   in another mode it can be read only when that mode is shown (J25), so there it stops the job before that mode's put,
-   with what was already changed said and left unsaved, as any failure after the check phase is (W4 review B1). The
-   post-check's *"cannot turn"* sentence (`_free_to_turn`) names the user's mates on the gear.
+   **grounded tie** — a train SolidWorks reads not free to turn with the user's mates on (K2) — refuses, naming every
+   user mate on **that train** at once with its modes (a tie on one gear makes the whole train read fully defined
+   through its gear mates and that mode's couplings, so the gear that reads not free may carry no user mate at all):
+   *"Update SolidWorks must turn Sun's train back to its built place, and with your mates on SolidWorks reads it as
+   unable to turn: Lock3 ties Sun to Housing-1, so nothing is changed; suppress Lock3 in H, N and L and press Update
+   SolidWorks again."* "Where the app's own mates leave it free" comes from the record (the build's or last Update's
+   post-check passed); nothing is suppressed to find it out. The read in the mode showing is made before any change.
+   When every user mate on the train has the same flag in every mode (`mate_suppression`, read without showing), that
+   read decides every mode, since a user mate that grounds a gear grounds it whatever the app's per-mode mates do.
+   Only when a user mate's flags differ by mode is another mode read when shown (J25), before its put; a tie there
+   stops the job before that mode's put, with what was already changed said and left unsaved, as any failure after the
+   check phase is (W4 review B1). A user mate joining gears of two trains (a lock from Sun to RangeSlv) reads free but
+   no put can satisfy it; the inventory finds it (both entities on app gears of different trains) and the press
+   refuses before any change, naming it. The post-check's *"cannot turn"* sentence (`_free_to_turn`) names the user's
+   mates on the train.
 4. *Values (K11).* The check phase already reads every global, slide value and recorded flag live; a user's edit
    refuses before any change, all named: *"Bore Diameter in Gear_m1.25_N17 is 12 in SolidWorks and 10 in the
    workbook: type 12 in Gears!J5, or set it back in SolidWorks, and press Update SolidWorks again."*
@@ -243,22 +258,22 @@ every structural edit sends the user to Build again…, which leaves their work 
    worker reads again; what the record did not hold and would refuse refuses before any change and is recorded, so
    the footer says it; the next press refuses again unless the user has dealt with it.
 7. *The window fits its screen (K12, §2.6),* since items 4 and 6 add words to the footer.
-8. *Build again… until W9e (K5).* The question gains, from the record and with its time: *"As read at 14:02, your
-   Sprocket-1, Chain-1 and 6 mates stay in RangeBox.SLDASM, and your Keyway stays in Gear_m1.25_N17, which RangeSlv's
-   new part replaces; RangeBox_r2 has none of them."* The build job opens the old assembly first, reads its user items
-   (a read), and its result lists what stayed behind as found.
+8. *Build again… until W9d (K5).* The question gains, from the record and with its time: *"As read at 14:02, your
+   Sprocket-1, Chain-1 and 6 mates stay in RangeBox.SLDASM, and your Keyway stays in Gear_m1.25_N17, which Sun's new
+   part replaces; RangeBox_r2 has none of them."* The build job reads the old assembly's user items first (as it is
+   in the session when open, never shown in another mode), and its result lists what stayed behind as found.
 
 *What the user can do after W9a* (RangeBox with modes, a bore feature in a gear part; route (a) or (b) taken):
 
 | Press | Sprocket mated only to the layout or to the user's own shaft | Sprocket mated to Sun or RangeSlv, nothing of it grounded |
 |---|---|---|
 | A slide offset, a face, a dog-and-sleeve tooth change | Works; the bore feature kept, named if in error | Works; the sprocket found on its gear after |
-| A tooth change of Sun, Planet or Ring | Build again… (9.16) until W9d | Build again… until W9d |
-| Add the hub | Build again… until W9d | Build again… until W9d |
+| A tooth change of Sun, Planet or Ring | Build again… (9.16) until W9c | Build again… until W9c |
+| Add the hub | Build again… until W9c | Build again… until W9c |
 | An app value the user edited in SolidWorks | Refused, named, until the workbook or SolidWorks agrees | Same |
 | A quiet press | Works | Works |
 
-**W9d — Update adds, removes and re-mates (K6).** A new gear on an existing frame shaft along Z± is built as a part
+**W9c — Update adds, removes and re-mates (K6).** A new gear on an existing frame shaft along Z± is built as a part
 (the build's part path), inserted into the open assembly (`AddComponent5`, used by the build), mated as the build
 mates it (axis, along or lock, spline, mesh or coupling), and every new mate's and the new component's flag set and
 read back in every configuration (the macro database: a mate made while a mode is active comes out suppressed in
@@ -269,17 +284,32 @@ references to it (an external-references read, new), refuses the removal before 
 sliding mesh newly needed between components on record is made as the build makes it, with its per-mode flags. A gear
 mate of a gearbox with modes is made again by W5's remake route (delete, add, rename; `findings.MATE_DELETE_ROUTE`)
 with its flags set and read back in every configuration, lifting ruling 9.16. Bands are added to a built sleeve in
-place (§2.4). Inserting a component into a configured assembly and setting its state per mode (M5) is also what W9e
+place (§2.4). Inserting a component into a configured assembly and setting its state per mode (M5) is also what W9d
 needs for the user's components.
 
-**Still Build again… after W9d** (from `workbook/update.py:404-453`, `_turning`, `_modes` `:1292-1368`; each said
-in the question): a gear that anchors other gears removed; a shaft added or removed; Modes rows added, removed or
-renamed; a gear starting or stopping to slide; a mated gear moved to another shaft; a Z± flip; a shaft starting or
+**Modes rows added or removed, by Update (W9c; ruled by the coordinating session after the second review).** No call
+here is new to the app: `AddConfiguration2` and `DeleteConfiguration2` are the build's own, verified on both versions
+by W8's configurations probe (`API-LEDGER.md:138-139`, `:220`), and every flag and slide value per configuration is
+set and read back as the build sets them (J10). What is new is the context — a saved, reopened assembly holding the
+user's items — and that is what W9c's full build measures beside M5 and M6 (M10). A **mode added** is added as the build
+adds one (a configuration copied from the active mode, so the user's components and mates there take the active
+mode's state, said by name), handles fetched again after it (ruling 9.4), the top-only rebuild before any flag
+(`API-LEDGER.md:333`), then every app mate's flag and slide value set in it and read back; a coupling or sliding
+mesh it newly needs is made as above. A **mode removed** has its configuration deleted with nothing shown (deleting
+a configuration other than the active one does not stale handles, `swcom.py:2950-2952`); removing the mode showing
+refuses, naming it (*"show another mode and press again"*); removing the first mode makes the next one the mode the
+record opens in, said. A mode **renamed** stays Build again…: the rename call (`IConfiguration.Name` put) is
+unverified and J10 avoided it, and a delete-and-add would lose the user's own states in that configuration. Ruling
+9.1 stands: a mode removed that leaves a coupling or sliding mesh on in no mode is Build again….
+
+**Still Build again… after W9c** (from `workbook/update.py:404-453`, `_turning`, `_modes` `:1292-1368`; each said
+in the question): a gear that anchors other gears removed; a shaft added or removed; a Modes row renamed, or one
+removed that leaves a coupling or sliding mesh on in no mode (ruling 9.1); a gear starting or stopping to slide; a mated gear moved to another shaft; a Z± flip; a shaft starting or
 ceasing to stand still; a shaft coordinate reaching, leaving or crossing its base plane (every RangeBox shaft is at
 X = Y = 0, so moving one off the axis is structural); an anchor's face or a slide value reaching the Front plane; the
 number of planet copies; a shared part splitting; a part whose file must change (Flank, Part name, a bevel's form); a
-renamed app mate (`MateGone`). These are the edits that still reach Build again… once W9d lets Update add, remove and
-re-mate in place, and the only ones W9e's carrying serves; that is why W9e can come last.
+renamed app mate (`MateGone`). These are the edits that still reach Build again… once W9c lets Update add, remove and
+re-mate in place, and the only ones W9d's carrying serves; that is why W9d can come last.
 
 *Not taken:* a check-only job and a question before every Update (K4 says it in the footer); narrowing ruling 9.18 to
 put only the trains whose frames change (it rests on s2's measurement that a mode not put can be left turned, and
@@ -360,85 +390,114 @@ catches it). Clearance (§2.3), the stroke warning, the hub rule and reach work 
 over a dog's tip m(z + 2). A typed Rim must clear it (error). The op route is the interface commit's to choose from
 proven ops; the herringbone groove's two blind extrudes and a plain ring between (`gears/helical.py:19-24`) are the
 precedent; `Cut` has no blind depth today (`gears/base.py:254-258`). The bands are globals of the part, so a band
-change on a banded sleeve is a value Update. *In place (W9d):* bands given to a sleeve built without them are added to
+change on a banded sleeve is a value Update. *In place (W9c):* bands given to a sleeve built without them are added to
 its part file — the band globals and the relief features, the same ops the build makes, run on the opened part — so
 RangeSlv keeps its file, the user's groove and every mate; bands taken away suppress the app's relief features. This
-is new (features added to an existing part) and is measured in W9d's full build (M8).
+is new (features added to an existing part) and is measured in W9c's full build (M8).
 
-*The record.* W9a's link record is **schema 7** (the user-work inventory, K1's found names); W9c's is **schema 8**
-(the bands in a sleeve's spec), so a W9a-era app refuses a W9c record as `store.py` refuses any newer one and leaves it
-as it is. A part with bands writes its `.gear.json` at sidecar **schema 2** (`store.py:30` is 1 today), since
+*The record.* W9a's link record is **schema 7** (the user-work inventory, K1's found names); W9b's is **schema 8**
+(the bands in a sleeve's spec), so a W9a-era app refuses a W9b record as `store.py` refuses any newer one and leaves it
+as it is; W9c adds nothing to the record's shape (its added components, mates and modes are entries of the kinds
+schema 6 already has) and W9d's carried items make it **schema 9**. A part with bands writes its `.gear.json` at sidecar **schema 2** (`store.py:30` is 1 today), since
 `GearSpec.from_dict` drops unknown keys (`spec.py:158-160`) and an older app would otherwise reuse a banded sleeve as an
 unbanded one; a part without bands stays at 1.
 
 *Not taken:* one slider moving several rows. It gets engagement right with no new geometry but builds the loose parts
 the issue complains of, needs a rigid mate between them, and has no relief bore.
 
-### 2.5 Build again… carries the user's work (K5, W9e)
+### 2.5 Build again… carries the user's work (K5, W9d)
 
 The user answered (2026-11-16) that a new revision must carry their components **and** remake their mates, naming a
-mate that cannot be remade. It is a stage of its own, **W9e, the last**: it needs W9a's reads (a mate's entities and
-components, the inventory), W9d's insertion and mate-making in a configured assembly with every flag read back (M5,
-M6), and a selection problem neither has met, re-finding an entity on a part that may be a new file. And once W9d lets
-Update add, remove and re-mate in place, only the edits listed at the end of §2.1 still reach Build again….
+mate that cannot be remade. It is a stage of its own, **W9d, the last**: it needs W9a's reads (a mate's entities and
+components, the inventory) and W9c's insertion and mate-making in a configured assembly with every flag read back (M5,
+M6). Once W9c lets Update add, remove and re-mate in place and add or remove modes, only the edits listed at the end of
+§2.1 still reach Build again….
 
-**When it runs.** In the Build again… job, after the new revision's assembly is built, checked and saved exactly as
-today, so the app's own result never rests on the carried items. The job then opens the old assembly (it never writes
-or saves it), reads the user's items, inserts and mates them in the new assembly, checks, and saves the new assembly
-again. If carrying stops part way, what was carried is said, the new assembly stays as the app built it plus what was
-carried and checked, and the old assembly is untouched.
+**When it runs, and what it never does to the user's documents.** In the Build again… job, after the new revision's
+assembly is built, checked and saved exactly as today (`SaveAs3` with option 1 saved no referenced document,
+`swbuild.py:2898-2906`), so the app's own result never rests on the carried items. The job then reads the old
+assembly's user items: as it is in the session when it is open there (never closed, never shown in another mode),
+opened read-only when it is not (`OpenDoc6` with the read-only option, new, in S5). Component state per mode is read
+without showing a mode if S5 finds a route, as `IsSuppressed2(3, names)` was for mates (`API-LEDGER.md:332`); if it
+finds none, the old assembly's modes are shown and its active configuration restored and read back, `GetSaveFlag`
+unchanged — the third exception of §0.3, stated there. Frames are read in the old assembly's active mode only. The
+job then inserts and mates the carried items in the new assembly and checks them, and **leaves them unsaved**, as
+Update leaves everything (PLAN-WORKBOOK §4.5): the result ends *"… RangeBox_r2 holds them unsaved: save it in
+SolidWorks to keep them."* No `Save3`, a call the app has never made, whose effect on modified referenced documents
+(the user's sprocket open with unsaved edits) is unmeasured. If carrying stops part way, what was carried is said, and
+the saved new assembly and the old assembly are untouched on disk.
 
 **What is carried.**
 
 | Item | Carried | Not carried, and named |
 |---|---|---|
-| A top-level user component (a part or a sub-assembly by its file) | Its file and referenced configuration, its frame, fixed or floating, and its suppressed or resolved state in each mode (by mode name; a mode new in this revision takes the first mode's state) | A virtual component (it has no file to insert; saving it out would write a file of the user's); a flexible sub-assembly's flexibility (carried rigid, said); display states and appearances set in the assembly |
-| A mate among the user's components, or between one and an app gear, the layout, or the assembly's planes | Coincident, concentric, parallel, perpendicular, tangent, distance, angle (with their limits), lock and gear mates, with alignment, flip, values and their flag in each mode | Width, path, slot, symmetric, profile-centre, cam, hinge, rack-and-pinion, screw, universal-joint and belt/chain: named as kinds this version does not remake |
+| A top-level user component (a part, or a sub-assembly by its file) | Its file and referenced configuration; fixed or floating as it was; its suppressed or resolved state in each mode (by mode name; a mode new in this revision takes the first mode's state, said). Placed where it stood **relative to its app component** — new frame of that component · old frame⁻¹ · old frame of the user component — so a sprocket locked to a turned Sun goes in at the same angle to Sun; a cluster tied to no app component is placed by its world frame. Placed once, in the first mode: a floating component that stood differently per mode stands, in the new revision, where it stood in the old assembly's active mode, said. | A virtual component (no file to insert; saving it out would write a file of the user's); a flexible sub-assembly's flexibility (carried rigid, said); display states and appearances set in the assembly |
+| A mate of the user's | Coincident, concentric, parallel, perpendicular, tangent, distance, angle (with limits), lock and gear, with alignment, flip, values and flag in each mode, whenever its entities are found | Width, path, slot, symmetric, profile-centre, cam, hinge, rack-and-pinion, screw, universal-joint and belt/chain: named as kinds this version does not remake; any mate whose entity is not found (below) |
+| **A feature of the user's in an app part this revision makes new** | — | Named before the press (from the inventory, with its time) and in the result, with why the part is new and that the old file keeps it: *"your Keyway is in Gear_m1.25_N17, not in Gear_m1.25_N17_r2, which is new because Sun's Flank changed; RangeBox.SLDASM and that file keep it."* Every mate on its faces is named with it. Where the part is new only because the user typed an app value in SolidWorks (`MISMATCHED`, K11's case), the sentence says how to keep it: *"type 12 in Gears!J5 and Build again… reuses the part with your Keyway."*; where it is new only because an Update left it unsaved (`UNSAVED`): *"save it in SolidWorks first and Build again… reuses it with your Keyway."* |
 | A user component pattern or mirror | Its seed component | Its instances (a pattern is an assembly feature the app does not make) |
-| The user's assembly features, sketches and reference geometry | — | All; a mate on them is not remade |
+| The user's assembly features, sketches and reference geometry | — | All; a mate on them is named |
 | A user part's in-context reference to an old app component | — | Said: the user's file still refers to the old assembly |
 
-**How each mate's entities are found in the new assembly**, by where the entity was:
+**How each mate's entities are found in the new assembly.** Components map first: a user component to its new
+instance; an app component by the record's gear id (planet copy *k* to copy *k*; a gear or copy that is gone means
+not found); the layout and each carrier to the new revision's.
 
-1. *On a file both revisions use* (every user component; an app part reused unchanged): its persistent reference,
-   read in the part through the component (`GetPersistReference3` on the part-level entity), resolved in the new
-   instance (`GetObjectByPersistReference3`, then the component's corresponding entity). Same file, same reference.
-2. *On the layout part* (always a new file, `<Name>_r<n>_Layout`) *or the assembly's own planes*: by name. The app
-   names every layout plane and axis (`"Output Axis"`), and the assembly's Front, Top and Right planes and Origin
-   have theirs. A shaft gone means not found.
-3. *On an app part made new* (a different file, whose persistent references are not expected to resolve — measured
-   in S5): by role, from the plan. The part's named planes, axis and origin by name; a face by role only when exactly
-   one face of the new part has it: the bore (a cylinder on the gear's axis at the Bore's radius), the two end faces
-   (planes square to the axis at the face's two ends), and the circles where those meet. Anything else — a tooth
-   flank or edge, a fillet, a face of a user feature in a part made new — is not found.
+1. *On a file both revisions use* (every user component; an app part reused as the same file): its persistent
+   reference, read in the part through the component (`GetPersistReference3` on the part-level entity), resolved in
+   the new instance (`GetObjectByPersistReference3`, then the component's corresponding entity). Same file, same
+   reference. User-to-user mates always come under this tier.
+2. *On the layout part or a carrier part* (new files every revision, `<Name>_r<n>_Layout`, `<Name>_r<n>_<C>_Carrier`)
+   *or the assembly itself*: by name for what the app names (`"Output Axis"`, a shaft's `"X Plane"`, a carrier's axes
+   and planes, `layout.py:219`, `:512`), and **by tree order** for every base plane and origin, never by its English
+   name (`swcom.py:1310`): on a non-English install "Front Plane" is not its name. A shaft gone means not found.
+3. *A lock or gear mate* references whole components, so on an app part made new it is found through the component
+   map, never "not found" for that reason.
+4. *A face, edge or vertex of an app part made new* is **not** re-found **(ruled)**: its persistent reference belongs
+   to the old file, and finding it by its geometric role would serve only the edits that change a part's file (a
+   Flank or Part name change), which are rare. The mate is named with why: *"Concentric5 was on Sun's bore, and Sun's
+   part is new because its Flank changed; it was not made again."*
 
-**Clusters, and the fallback.** The user's components joined through their own mates form clusters, with app
-components, the layout and the assembly outside them. A cluster is carried whole when every mate touching it is
-remade with no error code and SolidWorks still reads every app gear free to turn in every mode (the build's own
-post-check, now with the carried mates on). Otherwise every mate the job made for that cluster is deleted again (its
-own, just made, in the new assembly, by `MATE_DELETE_ROUTE`) and the cluster's components stay where they stood in
-the old assembly, **fixed, unmated**, each of its mates named with why: *"Sprocket-1 is in RangeBox_r2 where it stood,
-fixed and unmated: your Concentric5 was on a tooth face of Sun, whose part was made new, and that face cannot be found
-in it; Lock3 and Coincident7 were therefore not made either."* Half a cluster mated and fixed would over-define or tie
-a gear; half mated and floating would drift.
+**What is made, and the fallback.** Every mate whose entities are found is remade, and every other is named with
+why; the user's components stay floating where they were placed (or fixed, as they were): SolidWorks leaves an
+under-defined component where it stands, and dropping a mate cannot over-define anything. A remade mate that comes
+back with the same error it had in the old assembly (W9a reads every user mate's error code) is carried as it was and
+said, not counted against its cluster. A **cluster** (the user's components joined through their own mates) falls back
+only in three cases: a remade mate comes back in an error it did not have before; the cluster over-defines; or it ties
+a gear (the build's own post-check, now with the carried mates on). Then the mates it has to app parts, the layout,
+the carriers and the assembly's planes are deleted again (the job's own, just made in the new assembly, by
+`MATE_DELETE_ROUTE`), its user-to-user mates are **kept**, and its components are fixed where they were placed, each
+deleted mate named with why: *"Sprocket-1 and Chain-1 are fixed where they stood in RangeBox_r2: with your Lock3 and
+Concentric5 made again SolidWorks reads Sun unable to turn, so those two were not kept; Coincident7 between them was."*
 
-**The record.** The carried items stay the user's: they go into the new revision's inventory (schema 7), with which
-mates were remade.
+**The record.** The carried items stay the user's: they go into the new revision's inventory, with which mates were
+remade and which named — link record **schema 9** (§2.4).
 
 ### 2.6 The window on a short screen (K12, W9a, ruled)
 
 *Today.* `WorkbookWindow._fit` (`workbook_gui.py:1160-1170`) asks for `max(winfo_reqheight, current)` with no cap,
 and keeps the window on screen against `winfo_screenheight()`, the whole screen, by moving it up. On this device
-(2560 × 1600 at 150 %) Windows holds the window to 1570 px inside, and the built E4 window wants about 1690: the
-footer's last lines are cut (`W8-REVIEW-SW2024-CONFIRM.md` question 3; the closing run's window check, `fb85bcc`). By
-the same arithmetic a 1920 × 1080 screen at 100 % would cut it too (that review's S6; inference, not measured). W9a
-adds words to the footer and to what the window says before a press, so it cannot be shown on this device until the
-window fits.
+(2560 × 1600 at 150 %) Windows holds the window to 1570 px inside, and in the closing run's window check the built E4
+footer's label ended at 1657 (`w8-window-20261116-031412.log:283`; it is 281 px tall): its last lines are cut
+(`W8-REVIEW-SW2024-CONFIRM.md` question 3; `fb85bcc`). By the same arithmetic a 1920 × 1080 screen at 100 % would cut
+it too (that review's S6; inference, not measured). W9a adds words to the footer and to what the window says before a
+press, so it cannot be shown on this device until the window fits.
 
-*The change.* The window never grows past the screen's work area (on Windows the work area of the window's monitor,
-`SystemParametersInfoW(SPI_GETWORKAREA)` through `ctypes`; elsewhere the screen less a margin), and is placed inside
-it. The header and the footer, with its buttons, stay fixed and whole; between them **the two columns scroll as one
-page** when the window is shorter than they ask, a scroll bar shown only then, the mouse wheel scrolling it.
+*The change* — a constructor change, not a rebuild of the window at run time. Rows 1-5 of `body`
+(`workbook_gui.py:390-452`) are built into a frame inside a canvas, and the header and footer stay outside it, as the
+strip's page is built (`create_window` with a width, then `<Configure>` setting the scroll region, `gui.py:270-316`).
+1. *The cap.* The window never grows past the **primary** screen's work area (`gui._work_area`, `gui.py:1836-1849`,
+   reused) less the window's frame (title bar and borders, as the strip subtracts 40 px, `gui.py:1999`), and is placed
+   inside it. A second monitor is not followed.
+2. *The body page.* Between the fixed header and footer **the two columns scroll as one page** when the window is
+   shorter than they ask. The body keeps a least height (enough for the Checks panel's first lines).
+3. *The footer's ceiling.* The footer may take at most a third of the work area; above that its sentence scrolls in
+   itself, so the buttons are always whole whatever W9a's inventory and K11's lists add. (The other way — the lists
+   moving to Checks with a count in the footer — is left for the board to weigh.)
+4. *The scroll bar's width* is reserved always beside the body, counted in the left column's width
+   (`workbook_gui.py:931`), so a bar appearing never narrows the column, re-wraps it and hides the bar again.
+5. *The mouse wheel.* The strip binds `<MouseWheel>` app-wide (`gui.py:285`) and its `_on_wheel` (`gui.py:318-326`)
+   scrolls the strip's page wherever the pointer is but the flyout, the Workbook window included. Both handlers act
+   only for their own toplevel.
 
 *Why the body and not the Checks panel, and not the whole window.* The strip's rule — "when the screen is shorter
 than the strip, the whole page scrolls" (UI-DESIGN §1) — would, applied to the whole Workbook window, scroll the
@@ -446,9 +505,15 @@ footer and its buttons out of sight, the one part that must stay whole. Scrollin
 promise a fit: the right column (the end view and Speeds, eleven lines and the chooser on E4) can be the taller one,
 and Checks may hold few lines. The body page is the strip's rule kept, with the footer pinned.
 
-*Done when:* the board is drawn first (a new board of the built E4 at 1570 px, the body scrolled, the footer whole),
-UI-DESIGN §9's layout paragraph rewritten, a Tk test with a forced work area asserting the footer's bottom inside the
-window and the body scrollable, and the window check's W8 stage passing `w8_footer_whole` on this device.
+*What it contradicts, rewritten in the same package:* `test_the_window_keeps_its_width_with_update_shown_and_a_long_sentence`
+(`tests/test_workbook_window.py:751-768`), which pins `height == winfo_reqheight()`; UI-DESIGN §9's three places that
+say the window "grows taller" (lines 397-399, 557, and 1128, which adds "(a test pins it)").
+
+*Done when:* the board is drawn first (a new board of the built E4 at 1570 px, the body scrolled, the footer whole);
+UI-DESIGN's three places and the test rewritten; a Tk test with a forced work area asserting the footer's bottom
+inside the window, the footer at its ceiling scrolling in itself, and the body's last line reachable; and the window
+check's W8 stage on this device, on SolidWorks 2026 only (K12 is Tk alone), passing `w8_footer_whole` and two new
+assertions: the frame's bottom (`GetWindowRect`) inside the work area, and the body's last line scrolled into view.
 
 ---
 
@@ -471,7 +536,7 @@ written the box is jammed in this mode."*, with the stroke warning and *"H and N
 *After W9b (the same workbook):* three warnings more: no hub, and none can fit (§2.2); Output cannot reach RangeSlv
 (§2.2); in N 0 mm from HighDog and LowDog (§2.3). Engagement and speeds unchanged.
 
-**RangeBox_Fixed (after W9c):** RangeSlv face 26 at −35, Start band 5, End band 5 (relief 16, Ø 25.0), Slides
+**RangeBox_Fixed (after W9b):** RangeSlv face 26 at −35, Start band 5, End band 5 (relief 16, Ø 25.0), Slides
 `H=-7.5, N=0, L=+7.5`; Hub 17 hub on Output at −45.5 face 20 (−55.5…−35.5). Hand-worked answers to pin (checked by the
 review):
 
@@ -501,41 +566,61 @@ damage a file or session.
 | # | Unknown | How |
 |---|---|---|
 | S0 | **W9a's spike**, which decides K2's route (brief below) | **W9a's first step**, 2026 then 2024 |
-| P0 | A rebuild that fails on a user feature, with SolidWorks' "show errors every rebuild" on: does What's Wrong open | **Probe ahead** (a dialog), a scratch part with a feature made to fail, in S0's session, about 5 min per version |
+| P0 | A rebuild that fails on a user feature, with SolidWorks' "show errors every rebuild" on: does What's Wrong open | **Probe ahead** (a dialog), a scratch part with a feature made to fail, **first** in S0's session, about 5 min per version |
 | M1 | Reading a user mate's entities' components on coincident, concentric, distance, angle, width, limit, path, lock and gear mates, user–user, user–layout, user–gear; a mate to a component inside a user sub-assembly (`ReferenceComponent` gives the leaf, its `Name2` a path); a mate suppressed in the active configuration but on in another mode; and that none of it marks a document modified (new on 2026) | W9a full build |
 | M2 | The feature walk telling the plan's features from the user's; each user feature's error code after a rebuild | W9a full build |
 | M3 | Whether a part's rebuild, and the assembly's rebuild, report failure when only a user feature or a user mate is in error | W9a full build, one section |
-| P1 | Deleting a component from an assembly with configurations (`Select2` then `EditDelete`, or `DeleteSelection2`): any "delete mates too?" confirmation | **Probe ahead** (a dialog), scratch assembly, 2026 then 2024, before W9d's packages |
-| M4 | An external-references read on the user's parts (in-context references to an app component) | W9d full build |
-| M5 | `AddComponent5` into a reopened assembly with mode configurations: its state in each configuration, set and read back | W9d full build |
-| M6 | Mates made in that assembly (axis, along, spline, coupling) and a gear mate remade there: flags set and read back in every configuration | W9d full build |
-| M7 | The banded sleeve's part (the relief op route) on both versions | W9c's build of `RangeBox_Fixed` from scratch |
-| M8 | Band globals and relief features added to a built sleeve part in place, the user's groove in it kept | W9d full build |
-| S5 | **W9e's spike:** each standard mate kind's definition read (type, alignment, flip, values, limits; the macro database's *assemblies/06, read every mate* is the start) and remade by `AddMate5`; a mate entity's persistent reference read through its component (`GetPersistReference3`) and resolved in a new instance of the same file in another assembly, then selected for a mate through the component's corresponding entity; the same reference tried on a part rebuilt as a new file by the same plan (expected not to resolve); a bore and an end face found by role on that new file; a mate to a layout axis and to the assembly's Front plane re-selected by name; every read checked for `GetSaveFlag` | **W9e's first step**, scratch assemblies, 2026 then 2024, about 45 min and 70 min |
-| P2 | Inserting a user **sub-assembly** by its file into the new assembly (it must be opened first, `API-LEDGER.md:531`), one with a missing reference among its own files: a "find file" dialog | **Probe ahead** (a dialog), in S5's session |
-| M9 | Carrying on a whole Build again…: two clusters (a sprocket and its "chain" on Sun, a housing mated to the layout), one mate on a tooth face, the new revision made by an edit that still needs Build again… (Sun's Flank changed, so its part is a new file; a Modes row added) | W9e full build |
+| P1 | Deleting a component from an assembly with configurations (`Select2` then `EditDelete`, or `DeleteSelection2`): any "delete mates too?" confirmation | **Probe ahead** (a dialog), scratch assembly, at the start of W9c's sessions on 2026 and 2024, before W9c's packages |
+| M4 | An external-references read on the user's parts (in-context references to an app component) | W9c full build |
+| M5 | `AddComponent5` into a reopened assembly with mode configurations: its state in each configuration, set and read back | W9c full build |
+| M6 | Mates made in that assembly (axis, along, spline, coupling) and a gear mate remade there: flags set and read back in every configuration | W9c full build |
+| M7 | The banded sleeve's part (the relief op route) on both versions | W9b's build of `RangeBox_Fixed` from scratch |
+| M8 | Band globals and relief features added to a built sleeve part in place, the user's groove in it kept | W9c full build |
+| M10 | A Modes row added and one removed by Update in a saved, reopened assembly holding the user's items: the new configuration's flags and slide values, the user's items' state in it, a configuration deleted with nothing shown | W9c full build |
+| S5 | **W9d's spike:** each standard mate kind's definition read (type, alignment, flip, values, limits; the macro database's *assemblies/06, read every mate* is the start) and remade by `AddMate5`; a mate entity's persistent reference read through its component (`GetPersistReference3` on the part-level entity, the route from the assembly-context entity unverified) and resolved in a new instance of the same file in another assembly, then selected through the component's corresponding entity; a mate to a layout axis re-selected by name and to the assembly's first base plane by tree order; the old assembly opened read-only (`OpenDoc6` with the read-only option, new) when not open; a component's suppressed or resolved state read per configuration **without showing** it (the route sought); every read checked for `GetSaveFlag` | **In W9c's sessions** on 2026 and 2024, after P1, about 40 min and 60 min |
+| P2 | Inserting a user **sub-assembly** by its file (it must be opened first, `API-LEDGER.md:531`), one with a missing reference among its own files: a "find file" dialog | **Probe ahead** (a dialog), in S5's session, about 10 and 15 min |
+| M9 | Carrying on a whole Build again…: two clusters (a sprocket and its "chain" on Sun, a housing mated to the layout), one mate on a bore of a part made new, a keyway in Sun, the new revision made by an edit that still needs Build again… (Sun's Flank changed, so its part is a new file; a shaft added) | W9d full build |
 
 **S0, W9a's first step, precisely.** On SolidWorks 2026 (34.1.1) in a session the agent starts, then on 2024
-(32.5.0) in a fresh session (a 2026 file does not open in 2024, so each version builds its own). *Builds:* the
-issue's RangeBox (§3) through the app's own Build into a fresh output folder named in the run, then copies the built
-folder (J24's scheme). Into the copy the script adds, through the API and saved only in the copy: a "sprocket" (a
-strip-built spur, 20 teeth, module 1.25, face 6, Bore 10) on the Input axis in front of Sun and one on the Output
-axis behind RangeSlv's travel, and a "housing" (any app-built part standing in, inserted fixed). *Cases*, each from a
-fresh copy, each read in H and in L (shown in turn): **A** sprocket concentric to the layout's `Input Axis` and locked
-to Sun; **B** the second sprocket concentric to `Output Axis` and locked to RangeSlv; **C** as A plus a coincident from
-the sprocket's face to the fixed housing (the grounded tie). In each case the train is first turned +37° by the
-drive W8's s7 used, then put back to its built frames by the put W8's s7 made the app's way (`s7_put_job` in
-`probe/workbook_assembly_check.py`: the app's locks off in that configuration, `place_component` per gear, locks on) —
-today's Update cannot be used, since it refuses the user's mate — first with the user's mate on (route a), then on a
-fresh copy with it suppressed in that configuration around the put and turned back on (route b). *Reads*, before and
-after each put: each gear's and each sprocket's frame (`component_frame`), whether the sprocket turned with its gear by
-the same angle, each put gear against its target to 1e-6, every mate's error code and flag in every mode (app's and
-user's), each gear's and sprocket's `constrained_status`, `GetSaveFlag` of every document before and after every
-read, and for C whether Sun reads not free before any put. P0 runs in the same session. *Time:* about 20 min on 2026
-and 35 min on 2024. *Output:* a log and JSON under `probe/results/` (2024's under `sw2024/`), proposed findings
-(`USER_MATE_PUT_ROUTE` "carried" or "suppress around", `USER_TIE_READ` the constrained-status reading for C, the
-What's Wrong reading), reviewed before W9a's packages start. *STOP:* any dialog; a document marked modified by a
-read; a put that holds in neither route.
+(32.5.0) in a fresh session (a 2026 file does not open in 2024, so each version builds its own). In this order:
+
+1. *P0 first,* so a dialog costs nothing of S0: a scratch part with a feature made to fail on rebuild, with
+   SolidWorks' "show errors every rebuild" as found (read, and if off, turned on for the probe and restored, read
+   back); whether What's Wrong opens.
+2. *Build* the issue's RangeBox (§3) through the app's own Build into a fresh output folder named in the run. Its built
+   folder is kept as **S0's master**, which W9a's demonstration starts from on that version, so RangeBox is built once
+   per version.
+3. *Add the user's work* to a copy of the master (J24's scheme): a "sprocket" (a strip-built spur, 20 teeth, module
+   1.25, face 6, Bore 10) on the Input axis in front of Sun, a second on the Output axis behind RangeSlv's travel, and
+   a "housing" (an app-built part standing in) inserted fixed. They go in by `AddComponent5` into the reopened assembly
+   with configurations — the first use of that context, ahead of W9c's M5, said in the log — and are mated by their
+   parts' **named axes and planes** through `GetCorresponding`, as the app mates gears (`API-LEDGER.md:552`), never by
+   faces picked by coordinate. Each case's setup is saved by the app's `save_as` **under a new name** (the proven
+   route; `Save3` is new and not used).
+4. *Cases*, each on its own saved setup:
+   - **A** — sprocket 1's axis on the layout's `Input Axis`, locked to Sun;
+   - **B** — sprocket 2's axis on `Output Axis`, locked to RangeSlv (the sliding train);
+   - **C** — A plus sprocket 1's plane coincident with the fixed housing's (the grounded tie);
+   - **C′** — C with that coincident suppressed in H and on in L (a user mate whose flags differ by mode, K2).
+5. *In each case, in H and then in L* (each shown in turn): the train is turned +37° by the drive W8's s7 used, then
+   put back to its built frames by the put s7 made the app's way (`s7_put_job`, `probe/workbook_assembly_check.py:7481-
+   7531`: the app's locks off in that configuration, `place_component` per gear, locks on). Today's Update cannot be
+   used: it refuses the user's mate. A and B run twice, each from its own setup: **route (a)** with the user's mate on,
+   **route (b)** with it suppressed in that configuration around the put and turned back on. C and C′ run route (a)
+   only: what matters there is the tie's read, and the put shows what SolidWorks does against it.
+6. *After the last put of each case,* every mode is shown, the assembly rebuilt, and every body read again (s7's
+   discipline), so a put that holds only until the solver next runs does not read as success.
+
+*Reads,* before and after each put: each gear's and sprocket's frame (`component_frame`); whether the sprocket turned
+with its gear by the same angle; each put gear against its target to 1e-6; every mate's error code and flag in every
+mode, the app's and the user's; each gear's and sprocket's `constrained_status`, and for C and C′, before any put,
+whether Sun's train reads not free in H and in L; `GetSaveFlag` of every document before and after every read.
+*Time:* about 40 min on 2026 and 70 min on 2024 (W8's s1 took 946 s to build E4 and s7 about 165 s a case).
+*Output:* a log and JSON under `probe/results/` (2024's under `sw2024/`), the kept master's path, and proposed
+findings — `USER_MATE_PUT_ROUTE` ("carried" or "suppress around"), `USER_TIE_READ` (the constrained status a tie
+gives, and whether the showing mode's read decides C′), the What's Wrong reading — reviewed before W9a's packages
+start. *STOP:* any dialog; a document marked modified by a read; a put that holds in neither route; a mode found
+moved after the every-mode read.
 
 Each demonstration works on a copy of one built folder (J24's scheme) into which the script puts the user's work: a
 part of its own (a block "housing", a strip-built "sprocket"), mates among them, to the layout and to gears, a keyway
@@ -545,103 +630,125 @@ in a gear part and a groove in the sleeve part.
 
 ## 5. Stages, in order
 
-The user is watching usage: the leanest sound order is below, each stage closing before the next is planned in
-detail. All five are approved (the user, 2026-11-16), in order W9a–W9e. **W9a gives the app back soonest**; W9b is
-pure and can run beside it; W9e comes last because W9d first shrinks what reaches Build again… to §2.1's list.
+The user is watching usage and approved the stages at about 30 to 35 agent runs. The order is below, each stage
+closing before the next is planned in detail. **W9a gives the app back soonest**; W9d comes last because W9c first
+shrinks what reaches Build again… to §2.1's list. The coordinating session's savings after the second review are
+taken (each listed in *Changes after the second review*, for the user to overrule): the sleeve checks merged with the
+bands and hub (W9b), K12 inside W9a's package B, S5 and P2 run in W9c's sessions, W9b's 2024 build run in W9c's 2024
+session, the window check on 2026 only.
 
 **W9a — the user's work is theirs.**
-- *First:* S0 and P0 on 2026 and 2024; their result picks K2's route and is reviewed before the packages.
-- *Packages:* A (worker: the reads, K2 by the chosen route with the grounded-tie refusal, K11's refusals, errors read
-  before and after, all names at once, `_free_to_turn` naming user mates, the component found by part path); B
-  (planning, link record schema 7, the inventory in the finish, the Build again… clause and the build job's read of
-  the old assembly, the footer line, UI-DESIGN §9 and the boards' footers redrawn; the W99 rename and the "last phase"
-  edits of §0.1); C (K12, §2.6: the board first, then `_fit` capped at the work area and the body page, its Tk test).
+- *First:* S0 with P0 (§4) on 2026 and 2024; their result picks K2's route and is reviewed before the packages.
+- *Packages:* A (worker: the reads, K2 by the chosen route with the train's grounded-tie refusal and the two-train
+  refusal, K11's refusals, errors read before and after, all names at once, `_free_to_turn` naming the user's mates on
+  the train, the component found by part path); B (planning, link record schema 7, the inventory in the finish, the
+  Build again… clause and the build job's read of the old assembly, the footer line; K12 (§2.6), the board first, then
+  `_fit` capped and the body page, its Tk test and the three UI-DESIGN places; the boards' footers redrawn; the W99
+  rename and the "last phase" edits of §0.1).
 - *Tests against the fake:* user–user and user–layout mates never refuse; a user lock on a put gear goes through by the
   chosen route (route b: every one back on in every configuration it was on in, whatever raised, as the test for M8's
-  locks); a grounded tie refuses before any write, every one named; no call targets an item not on record but route
-  (b)'s; a user's edit to each kind of K11 value refuses, named, and one a lost Update explains does not; user features
-  survive a value Update and one in error is named; the inventory reaches the footer before the press; the Build
-  again… question names what stays behind with its time.
-- *Done when:* the suite is green; on SolidWorks 2026, on a copy of RangeBox with the user's components, their mates
+  locks); a grounded tie refuses before any write, the train's user mates named; a mode-dependent tie (C′) is read in
+  the right mode; a two-train user mate refuses; no call targets an item not on record but route (b)'s; a user's edit
+  to each kind of K11 value refuses, named, and one a lost Update explains does not; user features survive a value
+  Update and one in error is named; the inventory reaches the footer before the press; the Build again… question names
+  what stays behind with its time; K12's Tk test.
+- *Done when:* the suite is green; on SolidWorks 2026, on a copy of S0's master with the user's components, their mates
   among themselves and to the layout, a keyway in a gear part, and **a user lock from a free sprocket to Sun and to
   RangeSlv**, a value Update and a slide-offset Update go ahead, the sprocket is found on its gear afterwards, every
   user mate is on in the modes it was on in and in no error, and the keyway rebuilt; a lock to a fixed housing refuses
   naming it; a Bore Diameter typed in SolidWorks refuses naming the cell; M1–M3 answered; the window check's W8 stage
-  and W9a's window states pass on this device with the footer whole (K12); 2024 confirms; reviewed.
-- *Cost:* the spike about 20 min on 2026 and 35 min on 2024; the demonstration about 1.5 h on 2026 and the
-  confirming build about 2 h on 2024 (it puts every mode on each changing press: 238 s on 2026, 515 s on 2024 in W8);
-  the window check about 30 min on each; about 13 agent runs.
+  passes on this device on 2026 with K12's assertions; 2024 confirms the assembly sections; reviewed.
+- *Cost:* S0 about 40 min on 2026 and 70 min on 2024; the demonstration about 1.5 h on 2026 and 2 h 45 min on 2024
+  (W8 measured 1.6-2.2× on 2024: a press that puts every mode took 238 s on 2026 and 515 s on 2024); the window check
+  about 15 min on 2026 (W8's took 12); about 11 agent runs (S0's script and run, its review; two packages, their
+  reviews; the demonstration script, its review; the two runs' reviews).
 
-**W9b — sleeve checks (problems 1 and 2).** Pure, Linux-tested, no SolidWorks.
-- *Package:* one (`modes.py`, `checks.py`, sentences; W8 fixtures' warning pins moved by three each, §3).
-- *Tests:* §3's answers for RangeBox, RangeBox_Fixed's checks and both W8 fixtures; the open intervals and tolerance;
-  a nested input through a hollow carrier not warned; clearance at exactly c clean, below it warned.
-- *Done when:* green and reviewed. *STOP:* any warning on a fixture other than §3's.
-- *Cost:* no SolidWorks; about 3 agent runs.
-
-**W9c — bands and the hub kind (problem 3, problem 1's hub).**
-- *Package:* one for schema, model, engagement per band, the `hub` kind and its rules, the relief op, record schema 8
-  and sidecar schema 2; the board for the Gears sheet's two columns (no window control changes).
-- *Tests:* RangeBox_Fixed's table; old workbooks and schema 6 and 7 records read as before; the banded plan equals the
-  internal ring's plus the relief; an older reader refuses schema 8.
+**W9b — sleeves: the checks, the bands and the hub (problems 1, 2 and 3).**
+- *Packages:* A (pure: reach, hub-length and clearance checks in `modes.py` and `checks.py`, the W8 fixtures' pins
+  moved by three each, §3); B (schema, model, engagement per band, the `hub` kind and its rules, the relief op, record
+  schema 8 and sidecar schema 2; the board for the Gears sheet's two columns, no window control).
+- *Tests:* §3's answers for RangeBox, RangeBox_Fixed and both W8 fixtures; the open intervals and tolerance; a nested
+  input through a hollow carrier not warned; clearance at exactly c clean, below it warned; old workbooks and schema 6
+  and 7 records read as before; the banded plan equals the internal ring's plus the relief; an older reader refuses
+  schema 8.
 - *Done when:* green; `RangeBox_Fixed` built from scratch on 2026 (M7) with every mode's engagement, slides and
-  interference as §3, confirmed on 2024; reviewed.
-- *STOP:* the relief op failing on either version; a mode reading other than §3.
-- *Cost:* about 30 min on 2026 and 50 min on 2024; about 5 agent runs.
+  interference as §3; the same build on 2024 in W9c's 2024 session; reviewed.
+- *STOP:* any warning on a fixture other than §3's; the relief op failing on either version; a mode reading other
+  than §3.
+- *Cost:* about 30 min on 2026 and 50 min on 2024 (in W9c's session); about 6 agent runs.
 
-**W9d — Update adds, removes and re-mates (problem 4's "cannot add a part").**
-- *First:* P1 on 2026 and 2024.
+**W9c — Update adds, removes and re-mates, and adds and removes modes (problem 4's "cannot add a part").**
+- *First, in the same sessions:* P1, then S5 and P2 for W9d (§4); reviewed before W9c's and W9d's packages
+  respectively.
 - *Packages:* A (worker: insert, mate, per-configuration flags, delete with app mates, remake with modes, bands in
-  place); B (classify: what moves from structural to Update, the remaining list
-  said in the question; the sentences; UI-DESIGN §9).
+  place, a configuration added or deleted with its flags and values); B (classify: what moves from structural to
+  Update, the remaining list said in the question; the sentences; UI-DESIGN §9).
 - *Tests:* adding a gear on an existing shaft and a hub that becomes an anchor; removing a non-anchor gear, refused
   when a user mate or in-context reference touches it; bands added in place keeping a user feature; a new coupling
-  made with its per-mode flags; a tooth change on a gearbox with modes remade and read back.
+  made with its per-mode flags; a tooth change on a gearbox with modes remade and read back; a mode added (the user's
+  items taking the active mode's state, said) and one removed; removing the mode showing refused; ruling 9.1 kept.
 - *Done when:* on a copy of the built RangeBox with the user's work (W9a's), the workbook edited to `RangeBox_Fixed`
   and one Update adds Hub, gives RangeSlv its bands in place and leaves every user item as it was, the groove in
-  RangeSlv kept, each mode then engaging and turning as §3; confirmed on 2024; reviewed.
+  RangeSlv kept, each mode then engaging and turning as §3; then a mode added and one removed by Update (M10);
+  confirmed on 2024; reviewed.
 - *STOP:* §0.3; P1 showing a dialog (then removal stays Build again…, put to the user).
-- *Cost:* P1 about 10 min on 2026 and 15 min on 2024; the demonstration about 2 h on 2026 and 3 h on 2024; about 13
-  agent runs.
+- *Cost:* P1 about 10 min on 2026 and 15 on 2024; S5 and P2 (W9d's) about 50 min and 75 min; the demonstration about
+  2 h 20 min on 2026 and 3 h 35 min on 2024; about 10 agent runs (the probes' script and run, its review; two packages,
+  their reviews; the demonstration script, its review; the two runs' reviews).
 
-**W9e — Build again… carries the user's work (K5, §2.5; the user's answer).**
-- *First:* S5 and P2 on 2026 and 2024, reviewed before the packages.
-- *Packages:* A (worker: the old assembly read, the user's components inserted with their state per mode, each mate's
-  definition read and remade on entities found by reference, name or role, clusters judged whole or brought over
-  fixed and unmated, the post-check with the carried mates on); B (planning: what the question says will be carried
-  and what not, from the record's inventory with its time; the result's sentences; UI-DESIGN §9).
-- *Tests against the fake:* each row of §2.5's table, carried or named; a cluster with one mate not found comes over
-  fixed and unmated, every mate named; a carried mate that ties a gear un-mates its cluster; nothing is written to
-  the old assembly or a user file; a mode new in the revision takes the first mode's flags.
-- *Done when:* M9 on 2026: after Sun's Flank change and a Modes row added, Build again… makes RangeBox_r2 with both
-  clusters carried, their mates remade and on in the modes they were, every app gear free to turn in every mode, the
-  tooth-face mate's cluster fixed and named, the old assembly unchanged; confirmed on 2024; reviewed.
+**W9d — Build again… carries the user's work (K5, §2.5; the user's answer).**
+- *Packages:* A (worker: the old assembly read without showing or saving it, the user's components inserted where they
+  stood relative to their app components with their state per mode, each mate's definition read and remade on
+  entities found by reference, name, tree order or component, every other named, clusters judged and fixed only in
+  §2.5's three cases with their user-to-user mates kept, the post-check with the carried mates on, the carried items
+  left unsaved); B (planning: what the question says will be carried and what not, the user's features in parts made
+  new and how to keep them, from the record's inventory with its time; the result's sentences; UI-DESIGN §9).
+- *Tests against the fake:* each row of §2.5's table, carried or named; a mate whose entity is not found named, its
+  component left floating where it stood and its other mates remade; a mate in error before carried as it was; a
+  cluster that ties a gear loses only its mates to app parts, the layout and the assembly, and is fixed; a sprocket
+  locked to a turned Sun placed at its angle to Sun; nothing written to the old assembly or a user file, nothing saved
+  after the first save, no mode of the old assembly shown (or, on S5's fallback, shown and restored); a mode new in
+  the revision takes the first mode's flags.
+- *Done when:* M9 on 2026: after Sun's Flank change and a shaft added, Build again… makes RangeBox_r2 with both
+  clusters carried and their mates remade and on in the modes they were, the bore mate on Sun named, the keyway in
+  Sun named in the question and the result, every app gear free to turn in every mode, the carried items unsaved, the
+  old assembly and every user file unchanged on disk; confirmed on 2024; reviewed.
 - *STOP:* §0.3; a dialog in S5 or P2 (then sub-assemblies come over fixed and unmated, put to the user).
-- *Cost:* the spike about 45 min on 2026 and 70 min on 2024; the demonstration about 1.5 h on 2026 and 2.5 h on
-  2024; about 13 agent runs.
+- *Cost:* the demonstration about 1 h 15 min on 2026 and 2 h 15 min on 2024; about 8 agent runs (two packages, their
+  reviews; the demonstration script, its review; the two runs' reviews).
 
 | Stage | SolidWorks 2026 | SolidWorks 2024 | Agent runs |
 |---|---|---|---|
-| W9a | ~2 h 20 min (spike, demonstration, window check) | ~3 h 05 min (spike, confirming build, window check) | ~13 |
-| W9b | — | — | ~3 |
-| W9c | ~30 min | ~50 min | ~5 |
-| W9d | ~2 h 10 min (probe, demonstration) | ~3 h 15 min (probe, confirming build) | ~13 |
-| W9e | ~2 h 15 min (spike, demonstration) | ~3 h 40 min (spike, confirming build) | ~13 |
-| **All** | **~7 h 15 min** | **~10 h 50 min** | **~47 (42–52)** |
+| W9a | ~2 h 25 min (S0 with P0, demonstration, window check) | ~3 h 55 min (S0 with P0, confirming build) | ~11 |
+| W9b | ~30 min | ~50 min (run in W9c's 2024 session) | ~6 |
+| W9c | ~3 h 20 min (P1, S5 and P2 for W9d, demonstration) | ~5 h 05 min (the same, confirming build) | ~10 |
+| W9d | ~1 h 15 min (demonstration) | ~2 h 15 min (confirming build) | ~8 |
+| **All** | **~7 h 30 min** | **~12 h 05 min** | **~35** |
 
-Carrying the mates (W9e) adds about 2 h 15 min on 2026, 3 h 40 min on 2024 and 13 agent runs to the plan as it
-stood; the window's fit (K12) adds about 30 min on each version and 2 runs to W9a. W8 took 16 review notes beyond its
-plan; the run counts allow for one fix round per stage, not more. **Deferrable** (each its own follow-up, on the
-user's word): replacing a part's file by Update; Update adding or removing a shaft or Modes rows, or removing an
-anchor gear; carrying the mate kinds §2.5 names, component patterns, and the user's assembly features.
+2024 is the larger half because every press that puts every mode takes about twice as long there; the 2024 runs are
+split into fresh sessions per section, as W8's were. W8 took 16 review notes beyond its plan; the run counts allow
+for one fix round per stage, not more. **Deferrable** (each its own follow-up, on the user's word): replacing a part's
+file by Update; Update adding or removing a shaft, renaming a mode, or removing an anchor gear; finding a face by its
+role on an app part made new; carrying the mate kinds §2.5 names, component patterns, and the user's assembly
+features.
+
+**What still reaches Build again… after W9c, and so what W9d is for:** a shaft added or removed; a Modes row renamed,
+or one removed that leaves a coupling or sliding mesh on in no mode; a gear starting or stopping to slide; a gear that
+anchors others removed; a mated gear moved to another shaft; a Z± flip; a shaft starting or ceasing to stand still; a
+shaft coordinate reaching, leaving or crossing its base plane (on RangeBox, moving any shaft off the axis); an
+anchor's face or a slide value reaching the Front plane; the number of planet copies; a shared part splitting; a part
+whose file must change (Flank, Part name, a bevel's form); a renamed app mate. Of these, the ones a user with work in
+the assembly is likely to make are a shaft added or removed, the planet copies, and a Flank or Part name change; for
+all but the last, every gear part is reused as the same file, so W9d remakes nearly every mate.
 
 ---
 
 ## 6. For the user
 
-**Answered (2026-11-16), and binding:** all five stages, in order W9a–W9e; an app-owned value you changed in
+**Answered (2026-11-16), and binding:** all the stages, in order (now four, W9a–W9d, after the second review's
+merge); an app-owned value you changed in
 SolidWorks stops Update, named (K11); Build again… carries your components and remakes your mates, naming any it
-cannot (K5, W9e); the hub is built by the app from a row you write (K8).
+cannot (K5, W9d); the hub is built by the app from a row you write (K8).
 
 **Still open, each going on at the recommended reading unless you overrule it:**
 
@@ -663,6 +770,11 @@ cannot (K5, W9e); the hub is built by the app from a row you write (K8).
    screen's work area and its two columns scroll between a fixed header and footer. *Alternatives:* only the Checks
    panel scrolls; the whole window scrolls as the strip's page does (the footer and buttons would scroll away).
 
+**Ruled by the coordinating session after the second review, each for you to overrule:** the savings of §5 (the
+sleeve checks merged with the bands and hub; K12 inside W9a's package B; W9d's spike run in W9c's sessions; W9b's
+2024 build in W9c's 2024 session; the window check on 2026 only); a face of an app part made new not re-found by its
+role, its mate named (K5); Modes rows added or removed by Update (W9c).
+
 ---
 
 ## 7. What reading could not settle
@@ -671,13 +783,16 @@ cannot (K5, W9e); the hub is built by the app from a row you write (K8).
   to the same rule and test.
 - Whether a user feature's or mate's error makes SolidWorks report the rebuild as failed (M3), and whether it opens
   What's Wrong (P0).
-- How a component inserted into an assembly with configurations stands in the configurations not active (M5); W9d
+- How a component inserted into an assembly with configurations stands in the configurations not active (M5); W9c
   sets and reads every flag rather than relying on either version.
 - Whether features can be added to a built part without disturbing the user's features after them (M8).
 - Whether a 1920 × 1080 screen at 100 % cuts today's footer (by arithmetic it does; K12 makes it not matter).
-- W9e: whether a persistent reference read through a component resolves in a new instance of the same file in
+- W9d: whether a persistent reference read through a component resolves in a new instance of the same file in
   another assembly, how faithfully each mate kind's definition reads back for a remake, and whether inserting a user
-  sub-assembly can raise a dialog (S5, P2).
+  sub-assembly can raise a dialog (S5, P2); the route from a mate's assembly-context entity to its part-level entity
+  for `GetPersistReference3`, which is tier 1's crux; whether a component's state per configuration can be read
+  without showing it (if not, §0.3's third exception applies); whether `GetConstrainedStatus` reads Sun free with a
+  floating sprocket locked to it (S0, case A).
 
 ---
 
@@ -767,3 +882,55 @@ The user's answers of 2026-11-16, relayed by the coordinating session, and its r
 - **§6 rewritten:** the answered points listed as binding; still open, at the recommended reading: a user mate on a
   gear Update must move, bands versus several rows, the hub warning's scope, the running clearance, W8's fixtures, and
   the window ruling.
+
+---
+
+## Changes after the second review
+
+Against `ISSUE-1-PLAN-REVIEW-2.md` (`16e45dc`) and the coordinating session's rulings on its cost points. Every
+must-fix and should-fix is taken; none is declined.
+
+- **Stages renumbered.** The sleeve checks (old W9b) and the bands and hub (old W9c) are one stage, **W9b**; old W9d is
+  **W9c**; old W9e is **W9d**. The body of the plan uses the new letters; the two change lists above keep the old ones.
+- **M1** (the user's features in an app part made new). A row of §2.5's table names each such feature, before the
+  press and in the result, with why the part is new and that the old file keeps it, and every mate on its faces with
+  it; where the part is new only because of K11's case (`MISMATCHED`) or an unsaved Update (`UNSAVED`), the sentence
+  says how to have it reused. In M9 and W9d's *Done when*.
+- **M2** (the fallback dropped remakeable mates). Every mate whose entities are found is remade, every other named;
+  components stay floating where they were placed. A cluster is fixed only when a remade mate comes back in a new
+  error, it over-defines, or it ties a gear, and then only its mates to app parts, the layout, the carriers and the
+  assembly are deleted; its user-to-user mates are kept. A lock or gear mate maps through the component map (tier 3).
+  The example sentence reworded.
+- **M3** (W9d acting on the user's documents). The carried items are left **unsaved**, as Update leaves everything; no
+  `Save3`. The old assembly is read as it is in the session when open, opened read-only when not (in S5), frames in its
+  active mode only, component state per mode by an unshown read if S5 finds one; if not, show-and-restore is §0.3's
+  third exception, stated there and to be confirmed. A STOP on any user file's time changing.
+- **S1** Components placed by their pose relative to their app component (new · old⁻¹ · old), once, in the first mode,
+  from the old assembly's active mode, said.
+- **S2** Base planes and origins by tree order, never by English name; carrier parts in tier 2; components mapped by
+  gear id, copy *k* to copy *k*.
+- **S3** A remade mate with the error it already had is carried as it was and said.
+- **S4** The tie is the train's: the user's mates on the train named; "where the app's mates leave it free" comes from
+  the record; the showing mode's read decides every mode unless a user mate's flags differ by mode (case C′ added to
+  S0); a user mate joining two trains refuses from the inventory.
+- **S5** S0 resized to about 40 and 70 min and reordered: P0 first; the sprocket and housing mated by named axes and
+  planes through `GetCorresponding`; each setup saved under a new name by `save_as`; the first use of `AddComponent5`
+  in a reopened configured assembly said; every mode read after the last put; S0's built master kept for W9a's
+  demonstration.
+- **S6** K12's five gaps closed in §2.6 (the footer's ceiling and the body's least height; the primary work area by
+  `gui._work_area` less the frame; the window check's two new assertions; the scroll bar's width reserved; each wheel
+  handler for its own toplevel); the test at `tests/test_workbook_window.py:751-768` and UI-DESIGN's three "grows
+  taller" places named for rewriting; the 1657 figure cited as measured.
+- **S7** W9d's record is schema 9; W9c adds none.
+- **S8** 2024's confirming builds at 1.6-2.2× of 2026; the window check about 15 min, on 2026 only.
+- **The coordinating session's rulings** (each for the user to overrule, listed in §6): (1) every saving of the
+  review's question 6 taken — W9b merged, K12 in W9a's package B, S5 and P2 in W9c's sessions, W9b's 2024 build in W9c's
+  2024 session, the window check on 2026 only; (2) no finding of an entity by geometric role on an app part made new:
+  such a mate is named, its component still comes over where it stood; S5 loses its role item; (3) **Modes rows added
+  or removed move into W9c's Update**: no call is new (`AddConfiguration2` and `DeleteConfiguration2` are the build's
+  own, verified on both versions by W8's configurations probe), only the context (a saved, reopened assembly with the
+  user's items), measured as M10 in W9c's full build. A renamed mode stays Build again… (the rename call is unverified,
+  and delete-and-add would lose the user's own states in that configuration), and so does a mode removed that leaves a
+  coupling on in no mode (ruling 9.1).
+- **Costs, one last pass** (§5): about 7 h 30 min on 2026, 12 h 05 min on 2024, about 35 agent runs; the list of what
+  still reaches Build again… after W9c stated beside the table.
