@@ -43,6 +43,9 @@ class FakeMate:
     # set in a configuration of its own (mm, a magnitude; a configuration with none stands at ``value``)
     flags: dict = field(default_factory=dict)
     own: dict = field(default_factory=dict)
+    # W9a: a mate the user made in SolidWorks (``FakeSolidWorks.user_mate`` / ``user_lock``): the fake fails a test on
+    # any write to it (W9a's §0.3 STOP: nothing not on record is written but route (c1)'s puts)
+    user: bool = False
 
     @property
     def axis(self):
@@ -305,6 +308,26 @@ class FakeSolidWorks:
         # there, the mate itself made with status 1 and no error code (W8 s5 (ii), SolidWorks 2026: a 1 : 1 Sun-LoDog
         # coupling on in N alone locked N's rear train, seven bodies read fully defined, 140811-s5.log 894-900)
         self.locks = {}
+        # W9a (ISSUE-1-PLAN §2.1; W9A-INTERFACES.md): the user's work. ``adding_names`` / ``assembly_names``: the
+        # Name2s a new assembly was given / each saved assembly holds, so ``components()`` lists them; ``user_parts``:
+        # lower-cased assembly path -> the user's components put in it by ``user_component``; ``component_codes``
+        # and ``component_states``: Name2 -> its tree feature's error code / GetSuppression2 (else 0 / 2);
+        # ``feature_codes``: (lower-cased path, feature) -> its error code (a part with one in error rebuilds False,
+        # as P0 read on 2026 and 2024); ``user_features``: lower-cased path -> the user's features after the app's;
+        # ``user_puts``: (Name2, frame, configuration) for each put of a user component — the only write to a user
+        # item the fake allows (route (c1)); any other write to one raises AssertionError.
+        self.adding_names = []
+        self.assembly_names = {}
+        self.user_parts = {}
+        self.component_codes = {}
+        self.component_states = {}
+        self.feature_codes = {}
+        self.user_features = {}
+        self.user_puts = []
+        # (lower-cased path) -> [(feature, code)] put in error by the next set_global_variable in that document, and
+        # {mate: (code, warning)} given to mate_codes at the first put: a rebuild that breaks the user's work
+        self.breaks_on_set = {}
+        self.codes_after_put = {}
 
     def _log(self, name, *args):
         self.calls.append((name, args))
@@ -345,6 +368,7 @@ class FakeSolidWorks:
         self._fresh_configurations()
         self.equations_text, self.made, self.current = [], [], ""
         self.kind, self.adding, self.mates = 2, [], []
+        self.adding_names = []
         return DocInfo(title="Assem1", path="", doc_type=2)
 
     def document_path(self):
@@ -376,7 +400,9 @@ class FakeSolidWorks:
             self.assembly_kinds.append(kind)
         self._touch()
         if not self._is_assembly():
-            return self.rebuild_ok
+            # W9a, P0 (2026 and 2024): a part's rebuild with a feature in error returns False.
+            return self.rebuild_ok and not any(code for (key, _), code in self.feature_codes.items()
+                                               if self.current and key == _key(self.current))
         components = self.assembly_components.get(_key(self.current), []) if self.current else self.adding
         if (member, args) == ("ForceRebuild3", (False,)):
             self.touched.update(_key(p) for p in components)
@@ -399,6 +425,7 @@ class FakeSolidWorks:
             self.saved_configs[_key(path)] = (list(self.configs), self.config, copy.deepcopy(self.frames_by))
             if not self.current:
                 self.assembly_components[_key(path)] = list(self.adding)
+                self.assembly_names[_key(path)] = list(self.adding_names)
         self.current = path
         self.touched.discard(_key(path))
         if not any(_key(d.path) == _key(path) for d in self.open_docs):
@@ -430,6 +457,8 @@ class FakeSolidWorks:
     def set_global_variable(self, name, expression):
         self._log("set_global_variable", name, expression)
         self._touch()
+        for feature, code in self.breaks_on_set.pop(_key(self.current), []) if self.current else []:
+            self.feature_codes[(_key(self.current), feature)] = code
         for i, text in enumerate(self.equations_text):
             if split_equation(text)[0] == name:
                 self.equations_text[i] = f'"{name}"= {expression}'
@@ -576,16 +605,19 @@ class FakeSolidWorks:
     def add_component(self, handle, path, at):
         self._log("add_component", handle, path)
         self.adding.append(path)
+        self.adding_names.append(f"{handle}-1")
         self.component_names[handle] = f"{handle}-1"
         self.component_paths[f"{handle}-1"] = path
         return f"{handle}-1"
 
     def fix_component(self, handle):
         self._log("fix_component", handle)
+        self._not_users(self._name2(handle), "fixed")
         self.fixed.add(self._name2(handle))
 
     def unfix_component(self, handle):
         self._log("unfix_component", handle)
+        self._not_users(self._name2(handle), "unfixed")
         self.fixed.discard(self._name2(handle))
 
     def add_mate(self, handle, kind, a, b, value=0.0, name="", ratio=(1.0, 1.0), flip=False):
@@ -600,6 +632,11 @@ class FakeSolidWorks:
             self._touch()
         put = asked = (tuple(rotation), tuple(at))
         name = self._name2(handle)
+        if self._is_users(name):
+            self.user_puts.append((name, asked, self.config))
+        if self.codes_after_put:
+            self.mate_codes.update(self.codes_after_put)
+            self.codes_after_put = {}
         bodies, geared = self._planetary()
         if name in bodies and geared:
             # Probe planetary_put_back (SolidWorks 2026): a put of a member of a train with a carrier, while that
@@ -790,10 +827,106 @@ class FakeSolidWorks:
         mates = self.memory_mates.get(_key(path), []) if path else self.mates
         return next((m for m in mates if m.name == name), None)
 
-    def user_mate(self, path, name, suppressed=False):
-        """A mate the user added by hand in SolidWorks (an angle mate driving a gear, say), in the open document."""
-        self.memory_mates[_key(path)].append(FakeMate(name, "angle", ("gear1-1", "plane2"), ("layout-1", "plane3"),
-                                                      suppressed=suppressed))
+    def user_mate(self, path, name, suppressed=False, kind="angle", a=None, b=("layout-1", "plane3")):
+        """A mate the user added by hand in SolidWorks (an angle mate driving a gear, say), in the open document:
+        ``a`` and ``b`` as a FakeMate's, ``a`` by default a gear's plane — ``gear1-1``'s where the assembly has it,
+        else its first component that is not the layout. Returns the mate."""
+        if a is None:
+            names = self._assembly_names(path)
+            first = "gear1-1" if "gear1-1" in names or not names else \
+                next((n for n in names if not n.startswith("layout")), "gear1-1")
+            a = (first, "plane2")
+        mate = FakeMate(name, kind, tuple(a), tuple(b), suppressed=suppressed, user=True)
+        mate.flags = {c: bool(suppressed) for c in self.configs}
+        self.memory_mates[_key(path)].append(mate)
+        return mate
+
+    def user_lock(self, path, name, a, b, flags=None):
+        """A lock the user made between two components (Name2s; ``a`` first), on in every configuration unless
+        ``flags`` (configuration -> suppressed) says otherwise. Returns the mate."""
+        mate = FakeMate(name, "lock", (a, ""), (b, ""), user=True)
+        mate.flags = dict(flags) if flags else {c: False for c in self.configs}
+        mate.suppressed = mate.flags.get(self.config, False)
+        self.memory_mates[_key(path)].append(mate)
+        return mate
+
+    def user_component(self, path, name, part, frame=None, fixed=False):
+        """A component the user inserted into the assembly at ``path`` (in memory, as an open document holds it):
+        its Name2, the part it stands for, its frame (identity at the origin by default; in every configuration),
+        fixed or floating."""
+        self.user_parts.setdefault(_key(path), []).append(name)
+        self.component_paths[name] = part
+        self.frames[name] = frame or (IDENTITY9, (0.0, 0.0, 0.0))
+        for frames in self.frames_by.values():
+            frames[name] = self.frames[name]
+        if fixed:
+            self.fixed.add(name)
+
+    def rename_component(self, path, old, new):
+        """A component renamed in SolidWorks (its Name2 ``old`` now ``new``), in the assembly at ``path``: found by
+        the new name only, its mates and frames following it."""
+        names = self.assembly_names.get(_key(path), [])
+        names[names.index(old)] = new
+        self.component_paths[new] = self.component_paths[old]
+        for frames in [self.frames] + list(self.frames_by.values()):
+            if old in frames:
+                frames[new] = frames[old]
+        if old in self.fixed:
+            self.fixed.add(new)
+        for mate in self.memory_mates.get(_key(path), []):
+            mate.a = (new, mate.a[1]) if mate.a[0] == old else mate.a
+            mate.b = (new, mate.b[1]) if mate.b[0] == old else mate.b
+        self.missing_components.add(old)
+
+    def user_feature(self, path, name, code=0, type_name="ICE"):
+        """A feature the user added to the document at ``path``, after the app's; ``code`` its error code."""
+        self.user_features.setdefault(_key(path), []).append((name, type_name))
+        if code:
+            self.feature_codes[(_key(path), name)] = code
+
+    def _assembly_names(self, path):
+        key = _key(path)
+        return list(self.assembly_names.get(key, [])) + list(self.user_parts.get(key, []))
+
+    def _is_users(self, name):
+        return any(name in names for names in self.user_parts.values())
+
+    def _not_users(self, name, what):
+        if self._is_users(name):
+            raise AssertionError(f"the app {what} {name}, a component of the user's (W9a §0.3)")
+
+    def _not_users_mate(self, name, what):
+        mate = self.mate(name)
+        if mate is not None and mate.user:
+            raise AssertionError(f"the app {what} {name}, a mate of the user's (W9a §0.3)")
+
+    def components(self):
+        """``Session.components``: the open assembly's top-level components, the app's in insertion order then the
+        user's, each with its file, fixed state, ``GetSuppression2`` and error code."""
+        self._log("components")
+        names = self._assembly_names(self.current) if self.current else list(self.adding_names)
+        return [swcom.ComponentInfo(n, self.component_paths.get(n, ""), n in self.fixed,
+                                    self.component_states.get(n, 2), self.component_codes.get(n, 0)) for n in names]
+
+    MATE_TYPES = {"coincident": 0, "point": 0, "distance": 5, "point distance": 5, "angle": 6, "axis angle": 6,
+                  "gear": 10, "lock": 16}
+
+    def mate_info(self, handle):
+        """``Session.mate_info``: the mate's swMateType_e and the Name2 its entities are on ("" for the assembly's)."""
+        self._log("mate_info", handle)
+        mate = self.mate(self.mate_handles[handle])
+        return swcom.MateInfo(mate.name, self.MATE_TYPES.get(mate.kind, 7),
+                              tuple("" if end[0] == "asm" else end[0] for end in (mate.a, mate.b)))
+
+    def feature_states(self):
+        """``Session.feature_states``: the template's planes and origin, then every feature the app made in the
+        document, then the user's, each with its error code."""
+        self._log("feature_states")
+        key = _key(self.current) if self.current else ""
+        names = [("Front Plane", "RefPlane"), ("Top Plane", "RefPlane"), ("Right Plane", "RefPlane"),
+                 ("Origin", "OriginProfileFeature")] + [(n, "?") for n in self.made] + self.user_features.get(key, [])
+        return [swcom.FeatureState(n, t, self.feature_codes.get((key, n), 0), False if self.feature_codes.get(
+            (key, n), 0) else True) for n, t in names]
 
     def user_folder(self, path, name):
         """A folder the user made among the mates in SolidWorks, in the open document, as probe round P0c saw one in
@@ -932,6 +1065,7 @@ class FakeSolidWorks:
     def set_mate_suppressed(self, handle, suppressed):
         self._log("set_mate_suppressed", handle, suppressed)
         name = self.mate_handles[handle]
+        self._not_users_mate(name, "suppressed or turned on")
         if not suppressed and name in self.held_suppressed:
             # As swcom.Session.set_mate_suppressed's read-back: the call returned, the mate still reads suppressed.
             title = self.active.title if self.active else "the assembly"
@@ -1227,6 +1361,7 @@ class FakeSolidWorks:
             return
         name = self.mate_handles[handle]
         mate = self.mate(name)
+        self._not_users_mate(name, "suppressed or turned on")
         if self.unsettled == 1:
             self.unsettled = 0
             state = "suppressed" if not suppressed else "on"
@@ -1254,6 +1389,7 @@ class FakeSolidWorks:
         self._log("set_dimension_in", mate_handle, float(value_mm), tuple(configurations))
         self._configuration_gate("SLIDE_VALUE_ROUTE", "SET_VALUE_IN_SPECIFIC_CONFIGURATIONS")
         mate = self.mate(self.mate_handles[mate_handle])
+        self._not_users_mate(mate.name, "given a value")
         for config in configurations:
             mate.own[self._named(config) or str(config)] = abs(float(value_mm))
 
