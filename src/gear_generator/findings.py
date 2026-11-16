@@ -1398,7 +1398,7 @@ GEAR_MATE_BACK_ON_MARKS = "nothing beyond the puts"
 #   read; τ +1, +1). The assembly read GetSaveFlag False after each read.
 # - The control, "Sun meshes Planet copy 2" left on, did the same.
 # On 2024 (32.5.0, W8 s7 case 7 at 1560b25; probe/results/sw2024/w8-workbook-assembly-20261115-162357-s7.log line
-# 1175, w8-s7-20261115-162418.json cases[6].suppressed_sense): on a copy of the 2024-built E4 opened from its files,
+# 1170, w8-s7-20261115-162418.json cases[6].suppressed_sense): on a copy of the 2024-built E4 opened from its files,
 # every document GetSaveFlag False, 2H active, the coupling "RangeSlv engages LoDog", suppressed in 2H by the build,
 # read once by gear_mate_sense answered right (τ +1, +1), as the control "RangeSlv engages InDog" left on did, and no
 # document read modified before or after. The app's own quiet Updates on 2024 then read every sense, the suppressed

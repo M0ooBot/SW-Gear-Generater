@@ -745,11 +745,11 @@ SolidWorks 2026 34.1.1 from one snapshot of the final source (`c583f48`), and so
 sleeves built with no hub or reachability check, a neutral with no running clearance, no relief bore, and Update
 unable to add a part), and the user's word that once they have edited parts or added their own in a built assembly
 they cannot use the app any more for fear of it overwriting their work, open a ninth phase:
-`notes-workbook/ISSUE-1-PLAN.md`, stages W9a to W9e, reviewed in `ISSUE-1-PLAN-REVIEW.md` and approved by the user
-(2026-11-16), who also answered its choices (an app-owned value changed in SolidWorks stops Update, named; Build
-again… carries the user's components and remakes their mates; the hub built from a row). The table's W8 row above is
-as approved; W9 has no row of its own here. This file stays the authority, and the plan says where W9 departs from
-it.
+`notes-workbook/ISSUE-1-PLAN.md`, stages W9a to W9d, reviewed in `ISSUE-1-PLAN-REVIEW.md`, revised to its second
+review (`ISSUE-1-PLAN-REVIEW-2.md`) and approved by the user (2026-11-16), who also answered its choices (an
+app-owned value changed in SolidWorks stops Update, named; Build again… carries the user's components and remakes
+their mates; the hub built from a row). The table's W8 row above is as approved; W9 has no row of its own here.
+This file stays the authority, and the plan says where W9 departs from it.
 
 The planner (PLAN-GEARBOX) starts after W5 and reuses W1–W5 whole: its data model becomes `GearboxSpec`
 (superseding PLAN-GEARBOX §1), and its Solve fills one.
