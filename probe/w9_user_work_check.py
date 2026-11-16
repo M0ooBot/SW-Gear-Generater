@@ -2,7 +2,7 @@ r"""W9's S0 on SolidWorks (ISSUE-1-PLAN §4, *S0, W9a's first step, precisely*, 
 mated to an app gear while the app puts the train back to its built frames, and the What's Wrong probe P0.
 
 python.exe probe/w9_user_work_check.py <repo src> <output folder under C:\> --pid PID [--log FILE]
-                                       [--cases 0,A-a,A-b,B-a,B-b,C,C2] [--master DIR] [--skip-p0]
+                                       [--cases 0,A-a,A-b,A-c1,...,D,C,C2] [--master DIR] [--skip-p0]
 
 It imports ``probe/workbook_assembly_check.py`` (the W8 demonstration) for everything it can: the attach, the dialog
 watch, the log, ``write_fixture`` and ``build_turning`` (the app's own Build), ``keep_master`` and ``copy_built`` (J24's
@@ -27,9 +27,9 @@ In this order, in one session:
 3. **The user's parts**, built by the strip as a person would (``plan_for`` then ``swbuild.build``): ``Sprocket``
    (spur, 20 teeth, module 1.25, face 6, bore 10) and ``Housing`` (spur, 40 teeth, module 1.25, face 4, bore 30,
    standing in for a housing).
-4. **The cases**, each on its own ``copy_built`` of the master: the sprocket inserted twice and the housing once by
-   ``AddComponent5`` into the reopened assembly with its configurations (the first use of that context, ahead of
-   W9c's M5, said in the log), each put at an identity frame (sprocket 1 at z 30 in front of Sun on Input's axis,
+4. **The cases**, each on its own ``copy_built`` of the master: the sprocket inserted twice (three times in E, the
+   third at z 40) and the housing once by ``AddComponent5`` into the reopened assembly with its configurations (the
+   first use of that context, ahead of W9c's M5, said in the log), each put at an identity frame (sprocket 1 at z 30 in front of Sun on Input's axis,
    sprocket 2 at z -70 behind RangeSlv's travel on Output's axis, the housing at z 60) and the housing fixed. Mated by
    the parts' named axes and planes (``Gear Axis`` to the layout's ``Input Axis`` / ``Output Axis``, ``Top Plane`` to
    ``Top Plane``) and the lock by components, through the app's own ``add_mate``; findings.py records the axes
@@ -38,31 +38,42 @@ In this order, in one session:
    in H and N) and read back; each new component's state and the housing's IsFixed read in every configuration shown.
    Saved by the app's ``save_as`` under a new name, closed unsaved, reopened.
 
-   - ``0``, the control: both sprockets on their layout axes only, nothing of the user's on a gear;
-   - ``A-a`` / ``A-b``: sprocket 1 also locked to Sun (``UserLock1``), route (a) / route (b);
-   - ``B-a`` / ``B-b``: sprocket 2 also locked to RangeSlv (``UserLock2``, the sliding train), route (a) / (b);
-   - ``C``: A plus sprocket 1's Top plane coincident with the fixed housing's (``UserTie``, the grounded tie);
-   - ``C2`` (the plan's C′): C with ``UserTie`` suppressed in H and N, on in L.
+   The 2026 run at 55a82c1 found that neither route keeps a locked sprocket on its gear: the user's lock re-takes
+   the put's offset (findings.LOCK_RETAKES_AN_OFFSET). The coordinator's ruling added route (c): every user component
+   rigid to an app gear through the user's locks (directly or through another user component) is put with the gear by
+   the gear's rigid motion, U_target = G_target · inv(G_before) · U_before, in the configuration shown, as
+   ``swbuild._put_train`` puts the app's own locked pairs (``put_c_job``). (c1) leaves the user's locks on; (c2)
+   suppresses them in the mode around the puts and turns them back on, each flag read back.
+
+   - ``0``, the control: both sprockets on their layout axes only; L shown and read after H's drive and before H's put
+     (whether the drive's turn reaches another mode);
+   - ``A-*``: Sprocket-1 also locked to Sun (``UserLock1``); ``B-*``: Sprocket-2 locked to RangeSlv (``UserLock2``,
+     the sliding train); ``E-*``: A plus a third sprocket locked to Sprocket-1 (``UserLock3``, a chain); each under
+     route ``a``, ``b``, ``c1`` or ``c2``;
+   - ``D``: no lock: Sprocket-2 on Output Axis and its Front plane coincident with RangeSlv's, which slides between
+     modes; nothing of the user's moved by the put;
+   - ``C``: A plus Sprocket-1's Top plane coincident with the fixed housing's (``UserTie``, the grounded tie), route
+     (c1); ``C2`` (the plan's C′): C with ``UserTie`` suppressed in H and N, on in L.
+
+   By default the cases 0, A-c1, A-c2, B-c1, B-c2, E-c1, E-c2, D, C and C2 run (``--cases`` picks others).
 
    Before any put, in the mode the copy opens in and with nothing shown: every body's and user component's frame,
    ``GetConstrainedStatus``, every mate's error code and its flag in every configuration, ``GetSaveFlag`` of every
    document before and after (the tie read; a read that marks a document is a STOP). Then in H, then in L, each shown
-   and rebuilt: the same read (the tie read in that mode); the drive's +37° (``s7_drive_job``); the read; where the
-   tie is on, a moving put against it (Sun alone turned +37° by the app's put route), the read; the put back to the
-   mode's built frames by ``s7_put_job`` — route (a) with the user's mates as they are, route (b) with the user's lock
-   on the put train added to the mates it suppresses in that mode and turned back on, its flags read in every
-   configuration; the read. After the last put every mode shown, rebuilt, and every body read (s7's discipline).
+   and rebuilt: the same read; the drive's +37° (``s7_drive_job``); the read; the put back to the mode's built frames
+   by the case's route; the read. Under route (c) then a further rebuild, a second drive and a second put, each read.
+   After the last put every mode shown, rebuilt, and every body read (s7's discipline).
 
-Judged, per case and mode: the drive turned Sun +37° and each locked sprocket by the same angle (its pose relative to
-its gear unchanged); the put took every body to its target to 1e-6 with the app's mates back on; each sprocket's pose
-relative to its gear afterwards as it was before the drive (it went with its gear); every mate's code 0 and flag as
-set in every configuration; the tie read 2 (free) for every mated body in 0, A and B and in C2's H, not free in C and
-C2's L. Proposed findings at the end: ``USER_MATE_PUT_ROUTE`` ("carried" when route (a) held in A and B in both modes,
-"suppress around" when only route (b) came back clean; neither is a STOP), ``USER_TIE_READ`` and the What's Wrong
-reading. STOPs (plan §0.3 and §4): any dialog; a read marking a document; a put SolidWorks accepts that leaves a gear
-off its frame with no error code; a user mate route (b) cannot turn back on; a new component or mate whose state per
-configuration does not read back as set; a mode put earlier found off its built frames in the last read; a put that
-holds in neither route. The readings go to ``w9-s0-<ts>.json`` beside the log.
+Judged against each sprocket's pose in its gear's frame as set up (the first read), to 1e-6 on every rotation entry
+(about 6e-5°) and every origin coordinate (mm): the drive carries a locked sprocket exactly; a put is clean when every
+body put (the user's included) reads at its target to 1e-6 with the mates back on, each locked sprocket at its pose
+of the setup, no mate in error and the user's flags back on in every configuration. D: Sprocket-2's z less RangeSlv's
+as set up in each mode. Proposed: ``USER_MATE_PUT_ROUTE`` (the (c) variant clean in A, B and E, c1 preferred, writing
+least of the user's), ``USER_TIE_READ``, D's reading and the What's Wrong reading. STOPs (plan §0.3 and §4): any
+dialog; a read marking a document; a put SolidWorks accepts that leaves a body off its target with no error code; a
+user mate that cannot be turned back on; a new component or mate whose state per configuration does not read back as
+set; the last put's mode found off its built frames in the last read; route (c) holding in neither variant. The
+readings go to ``w9-s0-<ts>.json`` beside the log.
 """
 
 import dataclasses
@@ -103,26 +114,52 @@ TOL = 1e-6
 SPROCKET = GearSpec(kind="spur", module="1.25", teeth="20", face_width="6", bore="10", name="Sprocket")
 HOUSING = GearSpec(kind="spur", module="1.25", teeth="40", face_width="4", bore="30", name="Housing")
 P0_PART = GearSpec(kind="spur", module="1.25", teeth="20", face_width="6", bore="10", name="P0_Scratch")
-S1_AT, S2_AT, HOUSING_AT = (0.0, 0.0, 30.0), (0.0, 0.0, -70.0), (0.0, 0.0, 60.0)
-SPROCKET_OF = {"Sprocket-1": "Sun", "Sprocket-2": "RangeSlv"}
+S1_AT, S2_AT, S3_AT, HOUSING_AT = (0.0, 0.0, 30.0), (0.0, 0.0, -70.0), (0.0, 0.0, 40.0), (0.0, 0.0, 60.0)
+# Each sprocket's gear, for its pose in that gear's frame: Sprocket-3 is locked to Sprocket-1, so rigid to Sun.
+GEAR_OF = {"Sprocket-1": "Sun", "Sprocket-2": "RangeSlv", "Sprocket-3": "Sun"}
 ROUTE_MODES = ("H", "L")
+ROUTES = {"a": "route (a): the user's mates left on, nothing of the user's moved",
+          "b": "route (b): the user's locks suppressed in the mode around the put and turned back on",
+          "c1": "route (c1): the user's locked components put with their gears by the gear's rigid motion, the user's "
+                "locks left on",
+          "c2": "route (c2): the user's locked components put with their gears, the user's locks suppressed in the "
+                "mode around the puts and turned back on, as _put_train does with the app's locks"}
 
-# key -> (folder, title, lock1, lock2, tie modes (None: no tie), route)
+
+def case(key, sub, title, mates, route, tie=None, twice=False, l_probe=False):
+    """A case: its key, folder, title, the user's mates it makes (axis1, axis2, lock1, lock2, lock3: Sprocket-3 locked
+    to Sprocket-1, tie, slide2: Sprocket-2's Front plane coincident with RangeSlv's), the route, the modes the tie is
+    on in, ``twice``: a rebuild, a second drive and a second put after the first put in each mode; ``l_probe``: L
+    shown and read after H's drive and before H's put."""
+    return {"key": key, "sub": sub, "title": title, "mates": tuple(mates), "route": route, "tie": tie,
+            "twice": twice, "l_probe": l_probe}
+
+
+A_MATES, B_MATES = ("axis1", "axis2", "lock1"), ("axis1", "axis2", "lock2")
+E_MATES = ("axis1", "axis2", "lock1", "lock3")
 CASES = (
-    ("0", "c0", "the control: both sprockets on their layout axes only, nothing of the user's on a gear",
-     False, False, None, "a"),
-    ("A-a", "cAa", "sprocket 1 on Input Axis and locked to Sun; route (a), the user's mates left on", True, False, None,
-     "a"),
-    ("A-b", "cAb", "sprocket 1 on Input Axis and locked to Sun; route (b), UserLock1 suppressed around the put", True,
-     False, None, "b"),
-    ("B-a", "cBa", "sprocket 2 on Output Axis and locked to RangeSlv; route (a)", False, True, None, "a"),
-    ("B-b", "cBb", "sprocket 2 on Output Axis and locked to RangeSlv; route (b), UserLock2 suppressed around the put",
-     False, True, None, "b"),
-    ("C", "cC", "A plus sprocket 1's Top plane coincident with the fixed housing's (the grounded tie); route (a)",
-     True, False, ("H", "N", "L"), "a"),
-    ("C2", "cC2", "C with the tie suppressed in H and N, on in L (C' of the plan: a user mate whose flag differs by "
-                  "mode); route (a)", True, False, ("L",), "a"),
+    case("0", "c0", "the control: both sprockets on their layout axes only, nothing of the user's on a gear; L read "
+                    "after H's drive and before H's put", ("axis1", "axis2"), "a", l_probe=True),
+    case("A-a", "cAa", "Sprocket-1 on Input Axis and locked to Sun", A_MATES, "a"),
+    case("A-b", "cAb", "Sprocket-1 on Input Axis and locked to Sun", A_MATES, "b"),
+    case("A-c1", "cAc1", "Sprocket-1 on Input Axis and locked to Sun", A_MATES, "c1", twice=True),
+    case("A-c2", "cAc2", "Sprocket-1 on Input Axis and locked to Sun", A_MATES, "c2", twice=True),
+    case("B-a", "cBa", "Sprocket-2 on Output Axis and locked to RangeSlv", B_MATES, "a"),
+    case("B-b", "cBb", "Sprocket-2 on Output Axis and locked to RangeSlv", B_MATES, "b"),
+    case("B-c1", "cBc1", "Sprocket-2 on Output Axis and locked to RangeSlv", B_MATES, "c1", twice=True),
+    case("B-c2", "cBc2", "Sprocket-2 on Output Axis and locked to RangeSlv", B_MATES, "c2", twice=True),
+    case("E-c1", "cEc1", "A plus Sprocket-3 locked to Sprocket-1 (a chain of user locks rigid to Sun)", E_MATES, "c1",
+         twice=True),
+    case("E-c2", "cEc2", "A plus Sprocket-3 locked to Sprocket-1 (a chain of user locks rigid to Sun)", E_MATES, "c2",
+         twice=True),
+    case("D", "cD", "no lock: Sprocket-2 on Output Axis and its Front plane coincident with RangeSlv's (which slides "
+                    "between modes); nothing of the user's moved by the put", ("axis1", "axis2", "slide2"), "a"),
+    case("C", "cC", "A plus Sprocket-1's Top plane coincident with the fixed housing's (the grounded tie)",
+         A_MATES + ("tie",), "c1", tie=("H", "N", "L")),
+    case("C2", "cC2", "C with the tie suppressed in H and N, on in L (C' of the plan: a user mate whose flag differs "
+                      "by mode)", A_MATES + ("tie",), "c1", tie=("L",)),
 )
+DEFAULT_CASES = ("0", "A-c1", "A-c2", "B-c1", "B-c2", "E-c1", "E-c2", "D", "C", "C2")
 RESULT = {"cases": {}, "p0": {}, "master": "", "stops": []}
 
 
@@ -359,15 +396,89 @@ def build_user_parts(worker):
 # -- the jobs of a case --------------------------------------------------------------------------------------------
 
 
-class Case:
-    def __init__(self, worker, master, parts, key, sub, title, lock1, lock2, tie, route):
-        self.worker, self.key, self.title = worker, key, title
-        self.lock1, self.lock2, self.tie, self.route = lock1, lock2, tie, route
-        say(f"-- S0 case {key}: {title}")
+def fmt(gaps):
+    return {k: f"{v:.1e}" for k, v in gaps.items()}
+
+
+def carry(gear_before, gear_target, user_before):
+    """Route (c): the user's component moved by its gear's rigid motion, U_target = G_target · inv(G_before) ·
+    U_before (rotations by rows, origins in mm)."""
+    (rb, pb), (rt, pt), (ru, pu) = gear_before, gear_target, user_before
+    m = [[sum(float(rt[i * 3 + k]) * float(rb[j * 3 + k]) for k in range(3)) for j in range(3)] for i in range(3)]
+    rot = tuple(sum(m[i][k] * float(ru[k * 3 + j]) for k in range(3)) for i in range(3) for j in range(3))
+    d = [float(pu[k]) - float(pb[k]) for k in range(3)]
+    at = tuple(sum(m[i][k] * d[k] for k in range(3)) + float(pt[i]) for i in range(3))
+    return rot, at
+
+
+def put_c_job(box, mode, built, ties, user_off, users):
+    """Route (c) in ``mode``, as ``swbuild._put_train`` puts the app's own locked pairs: ``mode`` shown and rebuilt;
+    every app lock, gear mate and coupling on in ``mode`` (``s7_route_mates``) and, for (c2), the user's locks
+    ``user_off`` suppressed in ``mode`` alone and rebuilt; every frame read; each app body put to ``built`` (carriers
+    first), then each user component in ``ties`` (component -> its gear) put by its gear's rigid motion from the frames
+    just read, each by ``place_component`` (read back); rebuilt; every frame read; every mate suppressed here read and
+    turned back on in ``mode`` where it reads suppressed, whatever happened; rebuilt; every frame read; their flags in
+    every configuration."""
+    pairs = W.bodies(box) + [(u, u) for u in users]
+    name_of = dict(pairs)
+    off = W.s7_route_mates(box, mode) + list(user_off)
+
+    def work(s):
+        out = {"errors": [], "cleanup": [], "puts": {}, "off": off}
+        s.show_configuration(mode)
+        s.rebuild(kind=swcom.ASSEMBLY_TRAIN)
+        out["active"] = s.active_configuration()
+
+        def frames(prefix):
+            got = {}
+            for i, (g, n) in enumerate(pairs):
+                s.find_component(f"{prefix}{i}", n)
+                got[g] = s.component_frame(f"{prefix}{i}")
+            return got
+        held = []
         try:
-            self.folder = W.copy_built(master, sub)
+            for i, name in enumerate(off):
+                s.find_mate(f"cm{i}", name)
+                held.append(i)
+                s.set_mate_suppressed_in(f"cm{i}", True, [mode])
+            if off:
+                s.rebuild(kind=swcom.ASSEMBLY_TRAIN)
+            out["before"] = frames("cb")
+            targets = dict(built)
+            for u, g in ties.items():
+                targets[u] = carry(out["before"][g], built[g], out["before"][u])
+            for i, (g, frame) in enumerate(targets.items()):
+                s.find_component(f"cp{i}", name_of[g])
+                s.place_component(f"cp{i}", frame[0], frame[1], kind=swcom.ASSEMBLY_TRAIN)
+                out["puts"][g] = frame
+            s.rebuild(kind=swcom.ASSEMBLY_TRAIN)
+            out["mates_off"] = frames("co")
+        except Exception as exc:  # noqa: BLE001 - said; the mates still go back on below
+            out["errors"].append(f"{type(exc).__name__}: {exc}")
+        finally:
+            for i in held:
+                try:
+                    if s.mate_suppression(f"cm{i}", [mode])[mode]:
+                        s.set_mate_suppressed_in(f"cm{i}", False, [mode])
+                except Exception as exc:  # noqa: BLE001
+                    out["cleanup"].append(f"{off[i]} back on: {type(exc).__name__}: {exc}")
+            s.rebuild(kind=swcom.ASSEMBLY_TRAIN)
+        out["mates_on"] = frames("cn")
+        out["flags"] = {off[i]: s.mate_suppression(f"cm{i}", list(box.modes)) for i in held}
+        return out
+    return job_in(box.assembly, work)
+
+
+class Case:
+    def __init__(self, worker, master, parts, spec):
+        self.worker, self.spec = worker, spec
+        self.key, self.title, self.route, self.tie = spec["key"], spec["title"], spec["route"], spec["tie"]
+        self.mates = spec["mates"]
+        say(f"-- S0 case {self.key}: {self.title}; {ROUTES[self.route]}")
+        try:
+            self.folder = W.copy_built(master, spec["sub"])
         except W.CopyStop as exc:
-            stop(f"S0 {key}: the copy of the master stopped: {exc}")
+            stop(f"S0 {self.key}: the copy of the master stopped: {exc}")
         for name in ("Sprocket.SLDPRT", "Housing.SLDPRT"):
             shutil.copy2(os.path.join(parts, name), os.path.join(self.folder, name))
         path = os.path.join(self.folder, "RangeBox.xlsx")
@@ -375,39 +486,57 @@ class Case:
         self.desk.read()
         self.box0 = self.desk.record.gearbox
         check(W.under(self.box0.assembly, self.folder) and list(self.box0.modes) == ["H", "N", "L"],
-              f"S0 {key}: the copy reads as built, its assembly in the copy: {os.path.basename(self.box0.assembly)}")
+              f"S0 {self.key}: the copy reads as built, its assembly in the copy: {os.path.basename(self.box0.assembly)}")
         self.box = self.box0
         self.modes = list(self.box0.modes)
         self.names = dict(W.bodies(self.box0))
         self.users = []
-        self.json = {"case": key, "title": title, "route": route, "tie": list(tie) if tie else None,
-                     "copy": os.path.basename(self.folder), "steps": []}
-        RESULT["cases"][key] = self.json
-        self.rel0 = {}            # mode -> sprocket -> its pose in its gear's frame, before the drive
+        self.json = {"case": self.key, "title": self.title, "route": self.route, "mates": list(self.mates),
+                     "tie": list(self.tie) if self.tie else None, "copy": os.path.basename(self.folder), "steps": []}
+        RESULT["cases"][self.key] = self.json
+        self.rel_orig = {}        # each sprocket's pose in its gear's frame as set up (the first read)
+        self.dz_orig = None       # D: Sprocket-2's origin z less RangeSlv's, per mode, as set up
+        self.rel0 = {}            # mode -> sprocket -> its pose before that mode's first drive
 
-    # the setup ---------------------------------------------------------------------------------------------------
+    # the user's work ---------------------------------------------------------------------------------------------
+
+    def ties(self):
+        """Each user component rigid to an app gear through the user's locks (directly or through another user
+        component), in the order put: component -> its gear."""
+        out = {}
+        if "lock1" in self.mates:
+            out["Sprocket-1"] = "Sun"
+        if "lock2" in self.mates:
+            out["Sprocket-2"] = "RangeSlv"
+        if "lock3" in self.mates and "lock1" in self.mates:
+            out["Sprocket-3"] = "Sun"
+        return out
+
+    def user_locks(self):
+        return [n for n, k in (("UserLock1", "lock1"), ("UserLock2", "lock2"), ("UserLock3", "lock3")) if k in self.mates]
 
     def user_mates(self):
         """(handle, kind, a, b, name) of the case's mates, in the order made."""
         axes = {s.shaft: s.axis_name for s in wb_layout.shaft_layouts(self.desk.a.spec)}
-        out = [("ua1", "coincident", "u1:Gear Axis", f"lay:{axes['Input']}", "UserAxis1"),
-               ("ua2", "coincident", "u2:Gear Axis", f"lay:{axes['Output']}", "UserAxis2")]
-        if self.lock1:
-            out.append(("ul1", "lock", "sun", "u1", "UserLock1"))
-        if self.lock2:
-            out.append(("ul2", "lock", "slv", "u2", "UserLock2"))
-        if self.tie:
-            out.append(("ut", "coincident", "u1:plane2", "uh:plane2", "UserTie"))
-        return out
+        made = {"axis1": ("ua1", "coincident", "u1:Gear Axis", f"lay:{axes['Input']}", "UserAxis1"),
+                "axis2": ("ua2", "coincident", "u2:Gear Axis", f"lay:{axes['Output']}", "UserAxis2"),
+                "lock1": ("ul1", "lock", "sun", "u1", "UserLock1"),
+                "lock2": ("ul2", "lock", "slv", "u2", "UserLock2"),
+                "lock3": ("ul3", "lock", "u1", "u3", "UserLock3"),
+                "slide2": ("us2", "coincident", "u2:plane1", "slv:plane1", "UserSlide2"),
+                "tie": ("ut", "coincident", "u1:plane2", "uh:plane2", "UserTie")}
+        return [made[k] for k in ("axis1", "axis2", "lock1", "lock2", "lock3", "slide2", "tie") if k in self.mates]
 
     def setup(self):
-        say(f"step    S0 {self.key}: the user's work added. AddComponent5 into the reopened assembly with its "
-            "configurations (H, N, L) is used here first, ahead of W9c's M5")
+        say(f"step    S0 {self.key}: the user's work added by AddComponent5 into the reopened assembly with its "
+            "configurations (H, N, L), ahead of W9c's M5")
         asm = self.box0.assembly
         spr, hou = os.path.join(self.folder, "Sprocket.SLDPRT"), os.path.join(self.folder, "Housing.SLDPRT")
         mates = self.user_mates()
         modes = self.modes
         tie_off = [m for m in modes if self.tie and m not in self.tie]
+        inserts = [("u1", spr, S1_AT), ("u2", spr, S2_AT)] + ([("u3", spr, S3_AT)] if "lock3" in self.mates else []) \
+            + [("uh", hou, HOUSING_AT)]
 
         def work(s):
             out = {"components": {}, "mates": {}}
@@ -416,7 +545,7 @@ class Case:
             s.open_document(asm)
             out["active"] = s.active_configuration()
             out["configurations"] = s.configurations()
-            for handle, path, at in (("u1", spr, S1_AT), ("u2", spr, S2_AT), ("uh", hou, HOUSING_AT)):
+            for handle, path, at in inserts:
                 name = s.add_component(handle, path, at)
                 s.place_component(handle, IDENTITY, at, kind=swcom.ASSEMBLY_TRAIN)
                 out["components"][handle] = name
@@ -445,7 +574,7 @@ class Case:
             out["states"] = [(m.name, m.code, m.suppressed) for m in s.mate_states()]
             return out
         got = self.run("setup", job_in(asm, work), 900)
-        self.users = [got["components"]["u1"], got["components"]["u2"], got["components"]["uh"]]
+        self.users = [got["components"][h] for h, _, _ in inserts]
         say(f"fact    S0 {self.key}: inserted {got['components']} with {got['active']} active "
             f"(configurations {got['configurations']})")
         for name, m in got["mates"].items():
@@ -456,9 +585,10 @@ class Case:
             want = {c: bool(name == "UserTie" and c in tie_off) for c in modes}
             if m["set"] != want:
                 wrong[name] = (m["set"], want)
-        stop_check(not wrong and self.users[:2] == ["Sprocket-1", "Sprocket-2"],
+        expected = ["Sprocket-1", "Sprocket-2"] + (["Sprocket-3"] if "lock3" in self.mates else []) + ["Housing-1"]
+        stop_check(not wrong and self.users == expected,
                    f"S0 {self.key}: every new mate reads back as set in every configuration (wrong {wrong}); the "
-                   f"sprocket inserted twice is {self.users[:2]}")
+                   f"components are {self.users}")
         bad = [(n, c) for n, c, sup in got["states"] if c and not sup]
         check(not bad, f"S0 {self.key}: every mate on in {got['active']} reads error code 0 after the setup: {bad}")
         self.json["setup"] = got
@@ -487,7 +617,7 @@ class Case:
                         comp = swcom.Session._component_by(route, s._doc(), name)  # noqa: SLF001
                         here[name]["set"] = int(swcom._read(comp, "GetSuppression2"))  # noqa: SLF001
                         s.rebuild(kind=swcom.ASSEMBLY_TRAIN)
-                s.find_component(f"pmh{mode}", users[2])
+                s.find_component(f"pmh{mode}", "Housing-1")
                 fixed = s.is_fixed(f"pmh{mode}")
                 here["housing_fixed"] = fixed
                 if not fixed:
@@ -542,16 +672,23 @@ class Case:
     def run(self, what, job, timeout=600):
         try:
             return W.run(self.worker, job, timeout)
-        except W.WorkerHung:
-            raise
-        except S0Stop:
+        except (W.WorkerHung, S0Stop):
             raise
         except Exception as exc:  # noqa: BLE001
             text = f"{type(exc).__name__}: {exc}"
             W.frame_none_stop([text], f"S0 {self.key} {what}")
             raise AssertionError(f"S0 {self.key} {what}: {text}") from None
 
-    def read(self, label, flags_matter=False):
+    def rel_of(self, frames):
+        return {u: relative(frames[g], frames[u]) for u, g in GEAR_OF.items() if u in frames}
+
+    def rel_gaps(self, rel, against):
+        return {u: W.frame_gap(rel[u], against[u]) for u in rel if u in against}
+
+    def dz(self, frames):
+        return float(frames["Sprocket-2"][1][2]) - float(frames["RangeSlv"][1][2])
+
+    def read(self, label):
         """In the active configuration, nothing shown or rebuilt: every body's and user component's frame and
         GetConstrainedStatus, every mate's error code and its flag in every configuration; GetSaveFlag of every
         document of the copy before and after."""
@@ -579,16 +716,26 @@ class Case:
         tie = {g: got["status"][g] for g in train if got["status"][g] != findings.COMPONENT_UNDER_DEFINED}
         users = {u: got["status"][u] for u in self.users}
         errors = {n: c for n, (c, sup) in got["mates"].items() if c and not sup}
-        rel = {u: relative(got["frames"][g], got["frames"][u]) for u, g in SPROCKET_OF.items()}
+        rel = self.rel_of(got["frames"])
+        if not self.rel_orig:
+            self.rel_orig = rel
+        angles = {g: W.turn_degrees(IDENTITY, got["frames"][g][0]) for g in ("Sun", "RangeSlv") + tuple(GEAR_OF)
+                  if g in got["frames"]}
+        gaps = self.rel_gaps(rel, self.rel_orig)
+        extra = ""
+        if "slide2" in self.mates:
+            dz = self.dz(got["frames"])
+            extra = f"; Sprocket-2 z less RangeSlv's {dz:+.9f} mm"
+            got["dz"] = dz
         say(f"read    S0 {self.key} {label} (active {got['active']}): train not free {tie or 'none'} (every other mated "
-            f"body 2); user components {users}; mates in error {errors or 'none'}; user mates' flags "
-            f"{({n: f for n, f in got['by_mode'].items() if n.startswith('User')})}")
-        got["tie"] = tie
-        got["errors"] = errors
-        got["rel"] = rel
+            f"body 2); user components {users}; mates in error {errors or 'none'}; turns from identity "
+            f"{({g: None if a is None else round(a, 6) for g, a in angles.items()})}; sprockets' poses in their "
+            f"gears' frames against the setup {({u: f'{v:.1e}' for u, v in gaps.items()})}{extra}")
+        got.update(tie=tie, errors=errors, rel=rel, rel_gap=gaps, angles=angles)
         self.json["steps"].append({"step": label, "active": got["active"], "flags_before": got["flags_before"],
                                    "flags_after": got["flags_after"], "status": got["status"], "mates": got["mates"],
-                                   "by_mode": got["by_mode"], "tie": tie, "frames": frames_text(got["frames"])})
+                                   "by_mode": got["by_mode"], "tie": tie, "angles": angles, "rel_gap": gaps,
+                                   "dz": got.get("dz"), "frames": frames_text(got["frames"])})
         return got
 
     def show(self, mode):
@@ -598,10 +745,12 @@ class Case:
         got = self.run(f"show {mode}", job_in(self.box.assembly, work), 300)
         check(swbuild.on_in((mode,), got[1]), f"S0 {self.key}: {mode} shown and rebuilt (rebuild {got[0]})")
 
-    # the steps ---------------------------------------------------------------------------------------------------
+    def rebuild_read(self, mode, label):
+        """A further rebuild in ``mode`` (shown again and rebuilt), then the read."""
+        self.show(mode)
+        return self.read(label)
 
-    def user_locks(self):
-        return [n for n, on in (("UserLock1", self.lock1), ("UserLock2", self.lock2)) if on]
+    # the steps ---------------------------------------------------------------------------------------------------
 
     def tie_on(self, mode):
         return bool(self.tie) and mode in self.tie
@@ -609,99 +758,100 @@ class Case:
     def targets(self, mode):
         record = W.mode_record_frames(self.desk, mode)
         carriers = [g for g in record if g.endswith(wb_layout.CARRIER_ID_SUFFIX)]
-        built = {g: record[g] for g in carriers + [g for g in record if g not in carriers] if g not in self.box.fixed}
-        return built
+        return {g: record[g] for g in carriers + [g for g in record if g not in carriers] if g not in self.box.fixed}
 
-    def judge_rel(self, label, mode, got, want_with):
-        """Each sprocket's pose relative to its gear against the one before the drive in ``mode``: same (it went with
-        its gear) or not; ``want_with`` the sprockets that are locked."""
-        out = {}
-        for u, g in SPROCKET_OF.items():
-            gap = W.frame_gap(got["rel"][u], self.rel0[mode][u])
-            out[u] = gap
-        say(f"        {label}: each sprocket's pose in its gear's frame against before the drive: "
-            f"{({u: f'{v:.1e}' for u, v in out.items()})} (locked: {want_with or 'none'})")
-        return out
-
-    def drive(self, mode, plane, built_sun):
-        label = f"drive +{TURN:g} in {mode}"
-        before = self.read(f"before the drive in {mode}")
-        self.rel0[mode] = before["rel"]
-        out = self.run(label, W.s7_drive_job(self.box, mode, TURN, plane, built_sun), 300 if self.tie_on(mode) else 600)
-        after = self.read(f"after the drive in {mode}")
+    def drive(self, mode, plane, built_sun, label):
+        before = self.read(f"before {label}")
+        self.rel0.setdefault(mode, before["rel"])
+        out = self.run(label, W.s7_drive_job(self.box, mode, TURN, plane, built_sun),
+                       300 if self.tie_on(mode) else 600)
+        after = self.read(f"after {label}")
         sun = self.box.drag[0]
         turned = W.turn_degrees(before["frames"][sun][0], after["frames"][sun][0])
-        turns = {u: W.turn_degrees(before["frames"][u][0], after["frames"][u][0]) for u in SPROCKET_OF}
-        gear_turns = {u: W.turn_degrees(before["frames"][g][0], after["frames"][g][0]) for u, g in SPROCKET_OF.items()}
-        made_gap = max(W.frame_gap(out["before"][g], out["made"][g]) for g in out["before"]) if "made" in out else None
-        say(f"step    S0 {self.key} {label}: errors {out['errors']} cleanup {out['cleanup']}; making the drive moved "
-            f"{made_gap if made_gap is None else f'{made_gap:.1e}'}; {sun} turned {turned}; sprockets turned {turns}, "
-            f"their gears {gear_turns}")
-        locked = [u for u, on in (("Sprocket-1", self.lock1), ("Sprocket-2", self.lock2)) if on]
-        rel = self.judge_rel(label, mode, after, locked)
-        step = {"drive": {"mode": mode, "errors": out["errors"], "cleanup": out["cleanup"], "sun_turned": turned,
-                          "sprocket_turns": turns, "gear_turns": gear_turns, "rel_gap": rel,
-                          "mates_left": out.get("mates")}}
-        self.json["steps"][-1].update(step)
+        turns = {u: W.turn_degrees(before["frames"][u][0], after["frames"][u][0]) for u in GEAR_OF if u in self.users}
+        carried = self.rel_gaps(after["rel"], before["rel"])
+        say(f"step    S0 {self.key} {label}: errors {out['errors']} cleanup {out['cleanup']}; {sun} turned {turned}; "
+            f"sprockets turned {turns}; each sprocket's pose in its gear's frame against before the drive "
+            f"{({u: f'{v:.1e}' for u, v in carried.items()})}")
+        tied = list(self.ties())
+        self.json["steps"][-1].update(drive={"mode": mode, "label": label, "errors": out["errors"],
+                                             "cleanup": out["cleanup"], "sun_turned": turned, "sprocket_turns": turns,
+                                             "carried_gap": carried})
         if self.tie_on(mode):
             say(f"fact    S0 {self.key}: the tie is on in {mode}: the drive's turn against it is read as a fact "
                 f"({sun} turned {turned})")
-        else:
-            check(not out["errors"] and not out["cleanup"] and turned is not None and abs(turned - TURN) <= 1e-6 * TURN,
-                  f"S0 {self.key} {label}: {sun} turned {turned}° for {TURN:g}° and the drive was deleted")
-            moved_with = all(rel[u] <= TOL for u in locked)
-            free_still = all(turns[u] is not None and abs(turns[u]) <= 1e-6 for u in SPROCKET_OF if u not in locked)
-            check(moved_with and free_still, f"S0 {self.key} {label}: each locked sprocket turned with its gear (its "
-                  f"pose in the gear's frame unchanged) and each sprocket not locked stood still: locked {locked}, "
-                  f"turns {turns}")
+            return after
+        check(not out["errors"] and not out["cleanup"] and turned is not None and abs(turned - TURN) <= 1e-6 * TURN,
+              f"S0 {self.key} {label}: {sun} turned {turned}° for {TURN:g}° and the drive was deleted")
+        loose = [u for u in turns if u not in tied and not (u == "Sprocket-2" and "slide2" in self.mates)]
+        check(all(carried[u] <= TOL for u in tied) and all(turns[u] is not None and abs(turns[u]) <= 1e-6
+                                                            for u in loose),
+              f"S0 {self.key} {label}: each locked sprocket carried exactly by its gear (its pose in the gear's frame "
+              f"unchanged to {TOL:g}) and each sprocket not locked stood still: locked {tied}, turns {turns}")
+        if self.route in ("c1", "c2"):
+            check(all(after["rel_gap"][u] <= TOL for u in tied),
+                  f"S0 {self.key} {label}: under route (c) each locked sprocket stands at its pose of the setup in its "
+                  f"gear's frame (no offset re-taken): {fmt({u: after['rel_gap'][u] for u in tied})}")
         return after
 
-    def put(self, mode, label, targets, route, user_off, control=False):
-        """``s7_put_job`` in ``mode``: the app's route mates there, plus ``user_off`` (route b) suppressed in ``mode``
-        around the put and turned back on. ``control``: the moving put against a tie, whose target is off the built
-        frames on purpose (plan §0.3's silent-put STOP is for a put back to them)."""
-        off = W.s7_route_mates(self.box, mode) + list(user_off)
-        out = self.run(label, W.s7_put_job(self.box, mode, targets, off), 900)
+    def put(self, mode, label):
+        """The put back to ``mode``'s built frames by the case's route."""
+        built = self.targets(mode)
+        tied = self.ties()
+        if self.route in ("a", "b"):
+            user_off = self.user_locks() if self.route == "b" else []
+            off = W.s7_route_mates(self.box, mode) + user_off
+            out = self.run(label, W.s7_put_job(self.box, mode, lambda before, b=built: dict(b), off), 900)
+        else:
+            user_off = self.user_locks() if self.route == "c2" else []
+            out = self.run(label, put_c_job(self.box, mode, built, tied, user_off, self.users), 900)
+            off = out["off"]
         after = self.read(f"after {label}")
         put = out["puts"]
         gap_on, at_on = W.frames_gap(out.get("mates_on", {}), put) if put else (None, "")
         gap_off, at_off = W.frames_gap(out.get("mates_off", {}), put) if put and "mates_off" in out else (None, "")
         gap_read, at_read = W.frames_gap(after["frames"], put) if put else (None, "")
         user_flags = {n: out["flags"].get(n) for n in user_off}
-        say(f"step    S0 {self.key} {label}: route ({route}), suppressed in {mode} around the put {off}; errors "
-            f"{out['errors']} cleanup {out['cleanup']}; bodies put {list(put)}; against their targets with the mates "
-            f"off {gap_off if gap_off is None else f'{gap_off:.1e}'} at {at_off or '-'}, back on "
+        say(f"step    S0 {self.key} {label}: {ROUTES[self.route][:10]}, suppressed in {mode} around the put {off}; "
+            f"errors {out['errors']} cleanup {out['cleanup']}; bodies put {list(put)}; against their targets with the "
+            f"mates off {gap_off if gap_off is None else f'{gap_off:.1e}'} at {at_off or '-'}, back on "
             f"{gap_on if gap_on is None else f'{gap_on:.1e}'} at {at_on or '-'}, read after "
             f"{gap_read if gap_read is None else f'{gap_read:.1e}'} at {at_read or '-'}; the user's mates suppressed "
             f"for it, flags after {user_flags}")
-        locked = [u for u, on in (("Sprocket-1", self.lock1), ("Sprocket-2", self.lock2)) if on]
-        rel = self.judge_rel(label, mode, after, locked)
         user_errors = {n: c for n, c in after["errors"].items() if n.startswith("User")}
         app_errors = {n: c for n, c in after["errors"].items() if not n.startswith("User")}
         held = (not out["errors"] and not out["cleanup"] and gap_read is not None and gap_read <= TOL
                 and gap_on is not None and gap_on <= TOL)
-        with_gear = all(rel[u] <= TOL for u in locked)
+        with_gear = all(after["rel_gap"].get(u, 1.0) <= TOL for u in tied)
         flags_back = all(f is not None and not any(f.values()) for f in user_flags.values()) if user_off else True
-        everything = held and with_gear and not after["errors"] and flags_back
-        self.json["steps"][-1].update(put={"mode": mode, "label": label, "route": route, "off": off,
+        on_slide = True
+        if "slide2" in self.mates:
+            on_slide = abs(after["dz"] - self.dz_orig[mode]) <= TOL if mode in self.dz_orig else True
+            check(on_slide, f"S0 {self.key} {label}: Sprocket-2 stays on RangeSlv's Front plane, z less RangeSlv's "
+                            f"{after['dz']:+.9f} against the setup's {self.dz_orig.get(mode)} in {mode}")
+        clean = held and with_gear and not after["errors"] and flags_back and on_slide
+        say(f"        {label}: held {held}; each locked sprocket at its pose of the setup in its gear's frame "
+            f"{with_gear} ({fmt({u: after['rel_gap'].get(u, 0.0) for u in tied})}); mates in error "
+            f"{after['errors'] or 'none'}; the user's flags back {flags_back}: clean {clean}")
+        self.json["steps"][-1].update(put={"mode": mode, "label": label, "route": self.route, "off": off,
                                            "errors": out["errors"], "cleanup": out["cleanup"], "bodies": list(put),
                                            "gap_mates_off": gap_off, "gap_mates_on": gap_on, "gap_read": gap_read,
-                                           "at": at_read, "rel_gap": rel, "user_flags": user_flags,
-                                           "user_errors": user_errors, "app_errors": app_errors, "held": held,
-                                           "with_gear": with_gear, "flags_back": flags_back, "clean": everything})
-        if put and not control and not held and not out["errors"] and not after["errors"]:
+                                           "at": at_read, "user_flags": user_flags, "user_errors": user_errors,
+                                           "app_errors": app_errors, "held": held, "with_gear": with_gear,
+                                           "flags_back": flags_back, "on_slide": on_slide, "clean": clean})
+        if put and not held and not out["errors"] and not after["errors"]:
             stop(f"S0 {self.key} {label}: SolidWorks took the put and left a body off its target "
                  f"({gap_read if gap_read is None else f'{gap_read:.1e}'} at {at_read}) with no error code "
                  "(plan §0.3)")
         if user_off and not flags_back:
-            stop(f"S0 {self.key} {label}: a user mate route (b) suppressed did not come back on in every configuration: "
-                 f"{user_flags} (plan §0.3)")
-        return {"held": held, "with_gear": with_gear, "clean": everything, "errors": out["errors"],
-                "user_errors": user_errors, "app_errors": app_errors, "flags_back": flags_back}
+            stop(f"S0 {self.key} {label}: a user mate suppressed around the put did not come back on in every "
+                 f"configuration: {user_flags} (plan §0.3)")
+        return {"held": held, "with_gear": with_gear, "clean": clean, "errors": out["errors"],
+                "user_errors": user_errors, "app_errors": app_errors, "flags_back": flags_back, "on_slide": on_slide}
 
     def final(self):
-        """Every mode shown and rebuilt, every body and user component read, each mode's mates' codes; the first mode
-        shown last."""
+        """Every mode shown and rebuilt, every body and user component read, each mode's mates' codes and the train's
+        constrained status; the first mode shown last."""
         pairs = W.bodies(self.box) + [(u, u) for u in self.users]
         modes = self.modes
 
@@ -723,18 +873,24 @@ class Case:
             return out
         got = self.run("the last read", job_in(self.box.assembly, work), 900)
         summary = {}
+        tied = list(self.ties())
         for mode in modes:
             frames = got["frames"][mode]
             built = W.mode_record_frames(self.desk, mode)
-            gap, at = W.frames_gap(frames, {g: f for g, f in built.items()})
-            rel = {u: W.frame_gap(relative(frames[g], frames[u]), self.rel0.get(mode, self.rel0.get("H", {})).get(u,
-                   relative(frames[g], frames[u]))) for u, g in SPROCKET_OF.items()}
+            gap, at = W.frames_gap(frames, built)
+            gaps = self.rel_gaps(self.rel_of(frames), self.rel_orig)
             errors = {n: c for n, (c, sup) in got["mates"][mode].items() if c and not sup}
             sun = W.turn_degrees(built[self.box.drag[0]][0], frames[self.box.drag[0]][0])
-            summary[mode] = {"gap": gap, "at": at, "rel": rel, "errors": errors, "sun_from_built": sun}
+            free = {g: st for g, st in got["status"][mode].items()
+                    if g in self.names and g not in self.box.fixed and st != findings.COMPONENT_UNDER_DEFINED}
+            dz = self.dz(frames) if "slide2" in self.mates else None
+            summary[mode] = {"gap": gap, "at": at, "rel_gap": gaps, "errors": errors, "sun_from_built": sun,
+                             "not_free": free, "dz": dz, "tied_home": all(gaps.get(u, 1.0) <= TOL for u in tied)}
             say(f"read    S0 {self.key} the last read, {mode} shown: every body against its built frame, largest "
-                f"{gap:.1e} at {at or '-'} ({self.box.drag[0]} at {sun}° from built); sprockets in their gears' frames "
-                f"against before the drive {({u: f'{v:.1e}' for u, v in rel.items()})}; mates in error {errors or 'none'}")
+                f"{gap:.1e} at {at or '-'} ({self.box.drag[0]} at {sun}° from built); sprockets' poses in their gears' "
+                f"frames against the setup {({u: f'{v:.1e}' for u, v in gaps.items()})}; mates in error "
+                f"{errors or 'none'}; train not free {free or 'none'}"
+                + (f"; Sprocket-2 z less RangeSlv's {dz:+.9f} (setup {self.dz_orig.get(mode)})" if dz is not None else ""))
         self.json["last"] = {"summary": summary, "frames": {m: frames_text(f) for m, f in got["frames"].items()},
                              "status": got["status"], "mates": got["mates"]}
         return summary
@@ -744,54 +900,77 @@ class Case:
 
 
 def run_case(worker, master, parts, spec):
-    key, sub, title, lock1, lock2, tie, route = spec
-    c = Case(worker, master, parts, key, sub, title, lock1, lock2, tie, route)
+    c = Case(worker, master, parts, spec)
     outcome = {"modes": {}}
     c.json["outcome"] = outcome
     try:
         c.setup()
-        first = c.read(f"the tie read, before any put, in the mode the copy opens in, nothing shown")
+        first = c.read("the tie read, before any put, in the mode the copy opens in, nothing shown")
         outcome["tie_unshown"] = {"active": first["active"], "tie": first["tie"]}
+        if "slide2" in c.mates:
+            c.dz_orig = {}
         sun = c.box.drag[0]
-        plane, _ = W.drive_assumptions(c.desk, sun, f"S0 {key}")
+        plane, _ = W.drive_assumptions(c.desk, sun, f"S0 {c.key}")
         built_sun = W.wanted(c.desk)[sun]
+        if "slide2" in c.mates:          # D: Sprocket-2's place on RangeSlv in every mode as set up
+            for mode in c.modes:
+                c.show(mode)
+                c.dz_orig[mode] = c.read(f"D's setup in {mode}")["dz"]
+            say(f"fact    S0 {c.key}: Sprocket-2's z less RangeSlv's as set up, by mode: {c.dz_orig}")
         for mode in ROUTE_MODES:
             W.guard()
             c.show(mode)
             shown = c.read(f"the tie read in {mode}, shown, before its put")
             expect_tie = c.tie_on(mode)
             check(bool(shown["tie"]) == expect_tie,
-                  f"S0 {key}: in {mode} the train reads {'not free (a tie)' if shown['tie'] else 'free'}, as "
+                  f"S0 {c.key}: in {mode} the train reads {'not free (a tie)' if shown['tie'] else 'free'}, as "
                   f"{'the tie on there' if expect_tie else 'no tie'} wants: {shown['tie'] or 'every mated body 2'}")
-            here = {"tie": shown["tie"], "user_status": {u: shown["status"][u] for u in c.users}}
-            c.drive(mode, plane, built_sun)
-            if expect_tie:
-                spin = c.put(mode, f"the moving put against the tie in {mode} (Sun alone +{TURN:g}°)",
-                             W.s7_spin(sun, TURN), "a", [], control=True)
-                here["against_tie"] = spin
-                say(f"fact    S0 {key}: a put of Sun +{TURN:g}° against the tie in {mode}: errors {spin['errors']}; "
-                    f"held {spin['held']}; user mates in error {spin['user_errors']}")
-            built = c.targets(mode)
-            user_off = c.user_locks() if route == "b" else []
-            p = c.put(mode, f"the put back to the built frames in {mode}", lambda before, b=built: dict(b), route,
-                      user_off)
-            here["put"] = p
+            if mode != ROUTE_MODES[0] and c.ties() and c.route in ("c1", "c2"):
+                check(all(shown["rel_gap"].get(u, 1.0) <= TOL for u in c.ties()),
+                      f"S0 {c.key}: {mode} shown after {ROUTE_MODES[0]}'s put: each locked sprocket at its pose of the "
+                      f"setup in its gear's frame there ({ROUTE_MODES[0]}'s put moved nothing of {mode} wrongly)")
+            here = {"tie": shown["tie"], "user_status": {u: shown["status"][u] for u in c.users},
+                    "sun_before_drive": shown["angles"].get("Sun")}
+            c.drive(mode, plane, built_sun, f"drive +{TURN:g} in {mode}")
+            if c.spec["l_probe"] and mode == ROUTE_MODES[0]:
+                other = ROUTE_MODES[-1]
+                c.show(other)
+                probe = c.read(f"{other} shown after {mode}'s drive, before {mode}'s put")
+                here["l_after_drive"] = probe["angles"]
+                say(f"fact    S0 {c.key}: {other} shown after {mode}'s drive and before {mode}'s put: Sun at "
+                    f"{probe['angles'].get('Sun')}° from identity (Sun's built turn is 0): the drive's turn "
+                    f"{'reached' if abs(probe['angles'].get('Sun') or 0) > 1e-6 else 'did not reach'} {other}")
+                c.show(mode)
+            here["put"] = c.put(mode, f"the put back to the built frames in {mode}")
+            if c.spec["twice"]:
+                again = c.rebuild_read(mode, f"a further rebuild in {mode} after the put")
+                check(all(again["rel_gap"].get(u, 1.0) <= TOL for u in c.ties()),
+                      f"S0 {c.key}: after a further rebuild in {mode} each locked sprocket still at its pose of the "
+                      "setup in its gear's frame")
+                c.drive(mode, plane, built_sun, f"a second drive +{TURN:g} in {mode}")
+                here["put2"] = c.put(mode, f"the second put back to the built frames in {mode}")
             outcome["modes"][mode] = here
         outcome["last"] = c.final()
-        # The last put's mode must still stand at its built frames once every mode has been shown and rebuilt (a put
-        # that holds only until the solver next runs, plan §4's STOP). An earlier mode is read as a fact: W8 measured
-        # a turn reaching every mode and a put holding in its own (findings TURN_PER_CONFIGURATION_ON_* False,
-        # POSITIONS_PER_CONFIGURATION_ON_* True), so H stands turned by L's drive unless an Update puts it again.
         last = ROUTE_MODES[-1]
         s = outcome["last"][last]
         if s["gap"] > TOL:
-            stop(f"S0 {key}: in the last read {last}, put last, stands off its built frames ({s['gap']:.1e} at "
+            stop(f"S0 {c.key}: in the last read {last}, put last, stands off its built frames ({s['gap']:.1e} at "
                  f"{s['at']}): a mode found moved after the every-mode read (plan §4)")
-        check(True, f"S0 {key}: in the last read {last}, put last, every body at its built frame ({s['gap']:.1e})")
-        for mode in ROUTE_MODES[:-1]:
-            say(f"fact    S0 {key}: in the last read {mode}, put before {last}'s drive, {sun} stands "
-                f"{outcome['last'][mode]['sun_from_built']}° from built (largest gap {outcome['last'][mode]['gap']:.1e} "
-                f"at {outcome['last'][mode]['at'] or '-'}); W8's findings have a turn reach every mode")
+        check(True, f"S0 {c.key}: in the last read {last}, put last, every body at its built frame ({s['gap']:.1e})")
+        for mode in c.modes:
+            m = outcome["last"][mode]
+            if c.ties():
+                say(f"fact    S0 {c.key}: in the last read {mode}, each locked sprocket at its pose of the setup: "
+                    f"{m['tied_home']} ({({u: f'{v:.1e}' for u, v in m['rel_gap'].items()})})")
+        if c.route in ("c1", "c2"):
+            check(all(outcome["last"][m]["tied_home"] for m in c.modes),
+                  f"S0 {c.key}: in the last read every locked sprocket stands at its pose of the setup in its gear's "
+                  "frame in every mode")
+        if "slide2" in c.mates:
+            ok = all(abs(outcome["last"][m]["dz"] - c.dz_orig[m]) <= TOL for m in c.modes)
+            check(ok, f"S0 {c.key}: in the last read Sprocket-2 stays on RangeSlv's Front plane in every mode: "
+                      f"{({m: outcome['last'][m]['dz'] for m in c.modes})} against {c.dz_orig}")
+            outcome["d_on_slide"] = ok
     finally:
         c.end()
     return c
@@ -800,21 +979,35 @@ def run_case(worker, master, parts, spec):
 # -- the proposal ----------------------------------------------------------------------------------------------------
 
 
+def case_clean(key):
+    """Every put of the case clean (held, each locked sprocket at its pose of the setup in its gear's frame, no mate in
+    error, the user's flags back) and, in the last read, every locked sprocket at that pose in every mode."""
+    c = RESULT["cases"].get(key, {})
+    o = c.get("outcome", {})
+    modes = o.get("modes", {})
+    if len(modes) != len(ROUTE_MODES) or "last" not in o:
+        return False
+    puts = [modes[m].get(p) for m in ROUTE_MODES for p in ("put", "put2") if modes[m].get(p) is not None]
+    return all(p["clean"] for p in puts) and all(v["tied_home"] for v in o["last"].values())
+
+
 def propose():
     cases = RESULT["cases"]
-
-    def clean(key):
-        o = cases.get(key, {}).get("outcome", {}).get("modes", {})
-        return all(o.get(m, {}).get("put", {}).get("clean") for m in ROUTE_MODES) and len(o) == len(ROUTE_MODES)
-    have = [k for k in ("A-a", "A-b", "B-a", "B-b") if k in cases]
-    route_a = all(clean(k) for k in ("A-a", "B-a") if k in cases) and {"A-a", "B-a"} <= set(have)
-    route_b = all(clean(k) for k in ("A-b", "B-b") if k in cases) and {"A-b", "B-b"} <= set(have)
-    proposal = "carried" if route_a else "suppress around" if route_b else None
-    say(f"propose USER_MATE_PUT_ROUTE: {proposal!r} (route (a) held clean in A and B in H and L: {route_a}; route (b) "
-        f"came back clean: {route_b}; cases run {have})")
-    if have and {"A-a", "A-b", "B-a", "B-b"} <= set(have) and proposal is None:
-        RESULT["stops"].append("a put that holds in neither route")
-        W.stop_check(False, "S0: a put holds in neither route (plan §4's STOP)")
+    verdict = {}
+    for route in ("a", "b", "c1", "c2"):
+        keys = [k for k in cases if cases[k]["route"] == route and k[0] in "ABE"]
+        if keys:
+            verdict[route] = {"cases": keys, "clean": {k: case_clean(k) for k in keys}}
+    say(f"propose each route's cases and whether every put came back clean: {verdict}")
+    held = [r for r in ("c1", "c2") if r in verdict and {"A", "B", "E"} <= {k[0] for k in verdict[r]["cases"]}
+            and all(verdict[r]["clean"].values())]
+    proposal = {"c1": "put along, the user's locks left on", "c2": "put along, the user's locks suppressed around"}.get(
+        held[0]) if held else None
+    say(f"propose USER_MATE_PUT_ROUTE: {proposal!r} (route (c) variants clean in A, B and E: {held})")
+    ran_c = all(r in verdict for r in ("c1", "c2"))
+    if ran_c and not held:
+        RESULT["stops"].append("route (c) holds in neither variant")
+        W.stop_check(False, "S0: route (c) holds in neither variant (the coordinator's stop)")
     tie = {}
     for key in ("C", "C2"):
         o = cases.get(key, {}).get("outcome", {})
@@ -822,8 +1015,11 @@ def propose():
             tie[key] = {"unshown": o.get("tie_unshown"), "shown": {m: o.get("modes", {}).get(m, {}).get("tie")
                                                                     for m in ROUTE_MODES}}
     say(f"propose USER_TIE_READ: {tie}")
-    RESULT["proposal"] = {"USER_MATE_PUT_ROUTE": proposal, "route_a_clean": route_a, "route_b_clean": route_b,
-                          "USER_TIE_READ": tie, "WHATS_WRONG": RESULT["p0"].get("whats_wrong_opened")}
+    d = cases.get("D", {}).get("outcome", {})
+    say(f"propose D (no lock, plane to plane with RangeSlv): stays on RangeSlv in every mode {d.get('d_on_slide')}; "
+        f"puts {[d.get('modes', {}).get(m, {}).get('put') for m in ROUTE_MODES]}")
+    RESULT["proposal"] = {"USER_MATE_PUT_ROUTE": proposal, "routes": verdict, "USER_TIE_READ": tie,
+                          "D_on_slide": d.get("d_on_slide"), "WHATS_WRONG_OPENED": RESULT["p0"].get("whats_wrong_opened")}
 
 
 # -- main ------------------------------------------------------------------------------------------------------------
@@ -834,7 +1030,7 @@ def main():
     started = time.strftime("%Y%m%d-%H%M%S")
     json_path = os.path.join(os.path.dirname(os.path.abspath(W.LOG_PATH)), f"w9-s0-{started}.json")
     say(f"run     {time.strftime('%Y-%m-%d %H:%M:%S')}; W9 S0 (ISSUE-1-PLAN §4) from {W.SRC}{W.snapshot()}; cases "
-        f"{CHOSEN or [c[0] for c in CASES]}; master {MASTER_GIVEN or 'built here'}; P0 {'skipped' if SKIP_P0 else 'first'}")
+        f"{list(CHOSEN or DEFAULT_CASES)}; master {MASTER_GIVEN or 'built here'}; P0 {'skipped' if SKIP_P0 else 'first'}")
     worker = swcom.Worker(W.connect_pid)
     W.CURRENT["worker"] = worker
     label, pid, revision = W.run(worker, lambda s: (s.label, s.pid, s.revision), 120)
@@ -865,18 +1061,18 @@ def main():
             parts = build_user_parts(worker)
             watch_check("the user's parts")
             for spec in CASES:
-                if CHOSEN and spec[0] not in CHOSEN:
+                if spec["key"] not in (CHOSEN or DEFAULT_CASES):
                     continue
                 W.guard()
                 started_case = time.monotonic()
                 try:
                     run_case(worker, master, parts, spec)
                 except AssertionError as exc:
-                    check(False, f"S0 {spec[0]}: {exc}")
+                    check(False, f"S0 {spec['key']}: {exc}")
                     for line in traceback.format_exc().splitlines()[-6:]:
                         say("        " + line)
-                say(f"time    S0 {spec[0]}: {time.monotonic() - started_case:.0f} s; {W.memory()}")
-                watch_check(f"S0 {spec[0]}")
+                say(f"time    S0 {spec['key']}: {time.monotonic() - started_case:.0f} s; {W.memory()}")
+                watch_check(f"S0 {spec['key']}")
             propose()
         except S0Stop as exc:
             say(f"STOP    the run ends at its STOP: {exc}")
