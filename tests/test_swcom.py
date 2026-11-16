@@ -1604,6 +1604,91 @@ def test_a_components_constrained_status_is_read_as_a_property_or_called(mated, 
     assert session.constrained_status("gear2") == findings.COMPONENT_UNDER_DEFINED
 
 
+# -- W9a: the reads of the user's work (ISSUE-1-PLAN §2.1 item 2), read only
+
+
+class UserComponent:
+    def __init__(self, name, path, fixed=False, state=2):
+        self.Name2, self.GetPathName, self.IsFixed, self.GetSuppression2 = name, path, fixed, state
+        self.GetModelDoc2 = None
+
+
+class TreeFeature:
+    def __init__(self, log, name, code=0, warning=True, type_name="ICE", raises=False):
+        self.log, self.Name, self.code, self.warning, self.GetTypeName2 = log, name, code, warning, type_name
+        self.raises, self.next = raises, None
+
+    def GetErrorCode2(self, flag):
+        self.log.append(("GetErrorCode2", self.Name))
+        if self.raises:
+            raise RuntimeError("no answer")
+        flag.value = self.warning
+        return self.code
+
+    @property
+    def GetNextFeature(self):
+        return self.next
+
+
+class UserEntity:
+    def __init__(self, component):
+        self.ReferenceComponent = component
+
+
+class UserSpecific:
+    def __init__(self, kind, components):
+        self.Type, self.entities = kind, [UserEntity(c) for c in components]
+        self.GetMateEntityCount = len(self.entities)
+
+    def MateEntity(self, index):
+        return self.entities[index]
+
+
+def test_components_lists_each_top_level_component_with_its_file_fixed_state_and_error_code(mated):
+    session, doc = mated
+    housing = UserComponent("Housing-1", W + "Housing.SLDPRT", fixed=True)
+    sprocket = UserComponent("Sprocket-1", W + "Sprocket.SLDPRT", state=1)
+    doc.GetComponents = lambda top_level: (housing, sprocket)
+    features = {"Housing-1": TreeFeature(doc.log, "Housing-1", 0), "Sprocket-1": TreeFeature(doc.log, "Sprocket-1", 51)}
+    doc.FeatureByName = lambda name: features.get(name)
+    assert session.components() == [swcom.ComponentInfo("Housing-1", W + "Housing.SLDPRT", True, 2, 0),
+                                    swcom.ComponentInfo("Sprocket-1", W + "Sprocket.SLDPRT", False, 1, 51)]
+    doc.FeatureByName = lambda name: None
+    assert [c.code for c in session.components()] == [swcom.UNREAD, swcom.UNREAD]
+    assert not any(e[0].startswith(("SetSuppression2", "Select", "ForceRebuild")) for e in doc.log)
+
+
+def test_mate_info_reads_the_type_and_each_entitys_component_the_assemblys_own_as_blank(mated):
+    session, doc = mated
+    mate = MateFeature(doc, "Lock3", "MateLock")
+    mate.GetSpecificFeature2 = UserSpecific(findings.MATE_LOCK, [MatedComponent(doc, "Gear_m1.5_N17-1"),
+                                                                 MatedComponent(doc, "Sub-1/Sprocket-1")])
+    plane = MateFeature(doc, "Coincident7")
+    plane.GetSpecificFeature2 = UserSpecific(0, [MatedComponent(doc, "Housing-1"), None])
+    doc.mates = [mate, plane]
+    session.find_mate("other1", "Lock3")
+    session.find_mate("other2", "Coincident7")
+    assert session.mate_info("other1") == swcom.MateInfo("Lock3", findings.MATE_LOCK,
+                                                         ("Gear_m1.5_N17-1", "Sub-1/Sprocket-1"))
+    assert session.mate_info("other2") == swcom.MateInfo("Coincident7", 0, ("Housing-1", ""))
+    assert not any(e[0] in ("SetSuppression2", "Select2", "AddMate5") for e in doc.log)
+
+
+def test_feature_states_walks_the_top_level_tree_with_each_error_code(mated):
+    session, doc = mated
+    walk = [TreeFeature(doc.log, "Origin", type_name="OriginProfileFeature"), TreeFeature(doc.log, "Bore"),
+            TreeFeature(doc.log, "Keyway", 71, False), TreeFeature(doc.log, "Odd", raises=True)]
+    for one, after in zip(walk, walk[1:]):
+        one.next = after
+    type(doc).FirstFeature = property(lambda self: walk[0])
+    try:
+        assert session.feature_states() == [
+            swcom.FeatureState("Origin", "OriginProfileFeature"), swcom.FeatureState("Bore", "ICE"),
+            swcom.FeatureState("Keyway", "ICE", 71, False), swcom.FeatureState("Odd", "ICE", swcom.UNREAD, True)]
+    finally:
+        type(doc).FirstFeature = property(lambda self: Origin(self))
+
+
 def test_a_mate_is_found_by_its_name_and_kept_and_a_folder_of_that_name_is_not_a_mate(mated):
     session, doc = mated
     doc.mates = [MateFeature(doc, "G4 along S3", "FtrFolder"), MateFeature(doc, "G1 meshes G2", "MateGearDim")]

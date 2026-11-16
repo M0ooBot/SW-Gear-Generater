@@ -893,6 +893,64 @@ class MateState:
     suppressed: bool = False
 
 
+# -- W9a (ISSUE-1-PLAN §2.1 item 2): what the reads of the user's work give back. Every one is a read; none is behind
+# a probe of its own (the plan's M1 and M2 are measured in W9a's demonstration, which compares GetSaveFlag around
+# each), and each answers what it could not read rather than guessing it.
+
+UNREAD = -1          # an error code or a mate type that SolidWorks would not give
+
+
+@dataclass(frozen=True)
+class ComponentInfo:
+    """One top-level component of the build's assembly (:meth:`Session.components`): its ``Name2``, the file it stands
+    for (``""`` unread), whether it is fixed in the active configuration (``IsFixed``), its ``GetSuppression2`` state
+    (``UNREAD`` when it would not say) and the error code of its feature in the tree (``FeatureByName(Name2)`` →
+    ``GetErrorCode2``; ``UNREAD`` when that could not be read)."""
+
+    name: str
+    path: str = ""
+    fixed: bool = False
+    state: int = UNREAD
+    code: int = 0
+
+
+@dataclass(frozen=True)
+class MateInfo:
+    """What a mate joins (:meth:`Session.mate_info`): its ``IMate2.Type`` (``swMateType_e``, ``UNREAD`` when not
+    given) and, per entity in ``MateEntity(i)`` order, the ``Name2`` of the component it is on
+    (``IMateEntity2.ReferenceComponent``; ``""`` for the assembly's own planes and origin). A component inside a
+    sub-assembly is its leaf, whose ``Name2`` is a path (``Sub-1/Part-1``)."""
+
+    name: str
+    type: int = UNREAD
+    components: Tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class FeatureState:
+    """One top-level feature of the build document (:meth:`Session.feature_states`), in tree order: its name, its
+    ``GetTypeName2``, and ``GetErrorCode2`` with its warning flag (as :class:`MateState` reads a mate's)."""
+
+    name: str
+    type_name: str = "?"
+    code: int = 0
+    warning: bool = True
+
+
+def _error_code(feature: Any) -> Tuple[int, bool]:
+    """``IFeature.GetErrorCode2`` with a by-reference bool for ``IsWarning`` (a tuple back, or the out parameter's
+    ``.value``), as :meth:`Session.mate_states` reads a mate's: ``(code, warning)``, the warning True with no error."""
+    flag = _out_bool()
+    answer = call(feature, "GetErrorCode2", flag)
+    if isinstance(answer, tuple):
+        code = answer[0] if answer else 0
+        warning = answer[1] if len(answer) > 1 else getattr(flag, "value", True)
+    else:
+        code, warning = answer, getattr(flag, "value", True)
+    code = _by_ref(code)
+    return code, (bool(warning) if code else True)
+
+
 # The most documents ``Session.documents`` walks before it calls the list a runaway (one whose ``GetNext`` never
 # answers nothing). Far beyond any assembly's documents: it is a guard against a loop, not a limit on work.
 DOCUMENT_WALK_LIMIT = 100_000
@@ -2396,16 +2454,9 @@ class Session:
                 if others is not None and not (folder is not None and _type_name(feature) == folder):
                     others.append(str(call(feature, "Name")))
                 continue
-            flag = _out_bool()
-            answer = call(feature, "GetErrorCode2", flag)
-            if isinstance(answer, tuple):
-                code = answer[0] if answer else 0
-                warning = answer[1] if len(answer) > 1 else getattr(flag, "value", True)
-            else:
-                code, warning = answer, getattr(flag, "value", True)
-            code = _by_ref(code)
-            out.append(MateState(name=str(call(feature, "Name")), code=code,
-                                 warning=bool(warning) if code else True, suppressed=self._is_suppressed(feature)))
+            code, warning = _error_code(feature)
+            out.append(MateState(name=str(call(feature, "Name")), code=code, warning=warning,
+                                 suppressed=self._is_suppressed(feature)))
         return out
 
     def constrained_status(self, handle: str) -> int:
@@ -2422,6 +2473,71 @@ class Session:
         except (TypeError, ValueError):
             raise SolidWorksError(f"SolidWorks answered {value!r} when asked whether {self._component_name(handle)} is free to "
                                   "turn, which is not a constrained status.") from None
+
+    # -- W9a: the user's work (ISSUE-1-PLAN §2.1 item 2). Reads only; none of them selects, sets or rebuilds.
+
+    def components(self) -> List[ComponentInfo]:
+        """Every top-level component of the build's assembly, in ``IAssemblyDoc.GetComponents(True)`` order (the
+        top-level listing ``findings.COMPONENT_FIND_ROUTES`` has found components by on 2026 and 2024): each one's
+        ``Name2``, its file (:meth:`_component_path`), ``IsFixed``, ``GetSuppression2`` and its tree feature's error
+        code. One that will not answer a member keeps that member's "unread" value, never a guess."""
+        doc = self._doc()
+        out: List[ComponentInfo] = []
+        for component in list(call(doc, "GetComponents", True) or ()):
+            name = str(call(component, "Name2"))
+            try:
+                fixed = bool(call(component, "IsFixed"))
+            except Exception:  # noqa: BLE001 - unread counts as not fixed: such a component is never taken as ground
+                fixed = False
+            try:
+                state = int(_read(component, "GetSuppression2"))
+            except Exception:  # noqa: BLE001
+                state = UNREAD
+            try:
+                feature = call(doc, "FeatureByName", name)
+                code = _error_code(feature)[0] if feature is not None else UNREAD
+            except Exception:  # noqa: BLE001
+                code = UNREAD
+            out.append(ComponentInfo(name, self._component_path(component), fixed, state, code))
+        return out
+
+    def mate_info(self, handle: str) -> MateInfo:
+        """What a kept mate (``find_mate``'s handle) joins: ``IFeature.GetSpecificFeature2`` → ``IMate2.Type`` and,
+        for each ``MateEntity(i)`` up to ``GetMateEntityCount``, ``IMateEntity2.ReferenceComponent``'s ``Name2``
+        (``""`` for the assembly's own entity, which ``ReferenceComponent`` gives as None: the macro database read it
+        so on 2024). The same members :meth:`gear_mate_sense` reads, so nothing here is selected or changed."""
+        name, feature = self._kept_mate(handle)
+        mate = _read(feature, "GetSpecificFeature2")
+        if mate is None:
+            return MateInfo(name)
+        try:
+            kind = int(_read(mate, "Type"))
+        except Exception:  # noqa: BLE001 - a kind that cannot be read is judged as "another kind", never a lock
+            kind = UNREAD
+        count = _read(mate, "GetMateEntityCount")
+        components: List[str] = []
+        for index in range(int(count) if isinstance(count, (int, float)) else 0):
+            entity = call(mate, "MateEntity", index)
+            component = _read(entity, "ReferenceComponent") if entity is not None else None
+            components.append("" if component is None else str(call(component, "Name2")))
+        return MateInfo(name, kind, tuple(components))
+
+    def feature_states(self) -> List[FeatureState]:
+        """Every top-level feature of the build document in tree order (``FirstFeature`` / ``GetNextFeature``, the
+        walk :meth:`features_of_build` makes), each with its type and ``GetErrorCode2``: what tells the user's
+        features from the app's and says which is in error (ISSUE-1-PLAN K3)."""
+        out: List[FeatureState] = []
+        feature = call(self._doc(), "FirstFeature")
+        guard = 0
+        while feature is not None and guard < 5000:
+            guard += 1
+            try:
+                code, warning = _error_code(feature)
+            except Exception:  # noqa: BLE001 - a feature that will not say
+                code, warning = UNREAD, True
+            out.append(FeatureState(str(call(feature, "Name")), _type_name(feature), code, warning))
+            feature = call(feature, "GetNextFeature")
+        return out
 
     def find_mate(self, handle: str, name: str) -> str:
         """Find a mate of the build document by its name (``findings.MATE_FIND_ROUTE``) and keep it as ``handle``,
