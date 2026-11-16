@@ -606,6 +606,16 @@ MOTION_ROUTE = "mates"
 # unsuppressed, held the new 11° through a drive. The output's axial distance mate
 # (D1) linked to an assembly global and the global changed moved the gear along its
 # shaft alone.
+# W9 S0 read the unsuppress again for a user's lock (route (b) of ISSUE-1-PLAN's K2; W9-S0.md), on RangeBox, a
+# gearbox with modes: run 1, SolidWorks 2026 34.1.1 at 55a82c1 (probe/results/w9-s0-sw2026-20261116-050200.log,
+# w9-s0-20261116-045653.json, cases A-b and B-b), and 2024 32.5.0 at 423e227
+# (probe/results/sw2024/w9-s0-sw2024-20261116-065000.log, case A-b, its put lines 974 and 989, "clean False"). The
+# user's lock (Sprocket-1 to Sun, Sprocket-2 to RangeSlv) was suppressed in the mode around the app's put and turned
+# back on, read back on in every configuration with code 0: the gear went back to its built frame and the sprocket
+# stayed where the drive had left it, the lock keeping the new angle (Sprocket-1 37° from Sun after H's put, 74° after
+# L's; on 2024 its pose in Sun's frame 0.60 and 0.96 off). What tier 8 did not hold: the angle kept is the mate's, so
+# it reaches every mode: in the last read, each mode shown, A-b's Sprocket-1 stood 74° from Sun in H, N and L alike
+# (the JSON's frames). This is why the app puts a user's locked component with its gear (USER_MATE_PUT_ROUTE).
 LAYOUT_MOVE_CARRIES_MATES = True
 MESH_PHASE_ROUTE = "Transform2 put with the gear mate on"
 LOCK_UNSUPPRESS_KEEPS_THE_NEW_ANGLE = True
@@ -727,6 +737,17 @@ DEMONSTRATION_DRIVE_SENSE = 1    # the input (on Z+) turns +θ about +Z as the a
 # other train: found by its name and the other mate by its own, the joined train turning at the
 # new ratio through both (UG1 -2.125° for TG1's 10°); the remade mate went to the end of the
 # mate group (8th of 21 before, last after). The same on both versions.
+# W9 S0 read the lock's re-take again for a user's lock left on through the app's put (route (a) of ISSUE-1-PLAN's
+# K2; W9-S0.md), on RangeBox, a gearbox with modes: run 1, SolidWorks 2026 34.1.1 at 55a82c1
+# (probe/results/w9-s0-sw2026-20261116-050200.log, w9-s0-20261116-045653.json, cases A-a and B-a), and 2024 32.5.0 at
+# 423e227 (probe/results/sw2024/w9-s0-sw2024-20261116-065000.log, case A-a, its put lines 893 and 908, "clean False").
+# Every put held, no mate read an error, and the user's sprocket stayed where the drive had taken it, its lock taking
+# the new relation: Sprocket-1 37° from Sun after H's put and 74° after L's (each put adds to it), Sprocket-2 37° and
+# 49.77° on RangeSlv; on 2024 Sprocket-1's pose in Sun's frame 0.60 and 0.96 off. What P0b did not hold: the relation
+# re-taken is the mate's, so it reaches every mode: in the last read, each mode shown, A-a's Sprocket-1 stood 74° from
+# Sun in H, N and L alike; and in C2, where Sprocket-1, locked to Sun, was tied to a fixed part in L only, H's put
+# left L, shown next, with Sun at -37° and no error (the JSON's frames). So a user's lock is never left on
+# through a put of its gear alone: the app puts the user's component with it (USER_MATE_PUT_ROUTE).
 PUT_ON_TWICE_MESHED_GEAR_HOLDS = True
 LOCK_RETAKES_AFTER_A_PUT = True                     # with the lock on: the pair's new relation is kept
 REMAKE_ON_TWICE_MESHED_GEAR_HOLDS = True
@@ -1492,3 +1513,91 @@ CONFIGURATION_SHOW_OVER_DEFINED = "shown; no window asks; its mates read in erro
 # document's order; a value read may pair answers with the names passed.
 SUPPRESSION_READ_ORDER = "the document's configuration order"
 VALUE_READ_ORDER = "the order passed"
+
+# -- W9 S0: the user's work on a gear Update puts back (ISSUE-1-PLAN §4, probe/w9_user_work_check.py; W9-S0.md,
+# -- reviewed in W9-S0-REVIEW.md) ------------------------------------------------------------------------------------
+#
+# Results, each run in a SolidWorks session started fresh for it:
+#   probe/results/w9-s0-sw2026-20261116-050200.log, w9-s0-20261116-045653.json    run 1, 2026 34.1.1 at 55a82c1: P0,
+#                                                                                  case 0, routes (a) and (b), C, C2
+#   probe/results/w9-s0c-sw2026-20261116-054300.log, w9-s0-20261116-054213.json   run 2, 2026 34.1.1 at 423e227:
+#                                                                                  route (c) in A, B, E; D, C, C2
+#   probe/results/sw2024/w9-s0-sw2024-20261116-065000.log                         run 3, 2024 32.5.0 at 423e227: P0
+#                                                                                  to C; no JSON (the session was
+#                                                                                  lost at the start of C2)
+# The app's source is the same at 55a82c1 and 423e227. Each case: the issue's RangeBox (tests/workbook_fixtures.
+# range_box) built by the app; the user's sprockets and housing added by AddComponent5 into the reopened assembly with
+# its modes H, N and L, mated by named axes and planes, saved under a new name and reopened; in H and then in L, each
+# shown, W8 s7's drive +37°, then the train put back to its built frames, read before and after; after the last put,
+# every mode shown, rebuilt and read. Which user components a case ties came from the case's own list, not from reading
+# the user's mates. No app code reads these findings yet.
+#
+# The route for a user's component locked to a gear the put moves (ISSUE-1-PLAN K2, route (c1)). Routes (a) and (b)
+# leave the component behind (LOCK_RETAKES_AFTER_A_PUT, LOCK_UNSUPPRESS_KEEPS_THE_NEW_ANGLE). Route (c1): in the mode
+# shown, the app's locks, gear mates and couplings on there suppressed and the assembly rebuilt; the app's bodies put
+# (carriers first); then each user component rigid to a put gear through the user's locks, directly or through a
+# chain, put by its gear's rigid motion (G_target · G_before⁻¹ · U_before), each read back by place_component; a
+# rebuild, the app's mates back on; the user's locks left on throughout. Cases A (Sprocket-1 locked to Sun), B
+# (Sprocket-2 locked to RangeSlv, which slides by mode) and E (A, and Sprocket-3 locked to Sprocket-1), each put twice
+# in H and twice in L: every put clean (every body, the user's included, at its target to 6.6e-10 or better with the
+# mates back on; each locked sprocket at its pose of the setup in its gear's frame, the worst 7.1e-15; no mate in
+# error; no read marking a document); a further rebuild and a second drive re-took no offset; and in the last read,
+# each mode shown, every app body stood at its built frame and every locked sprocket at its pose. (c2), the user's
+# locks suppressed around the puts and turned back on, read the same, and writes more of the user's.
+# - 2026: run 2's proposal (the JSON's "proposal", log lines 1034-1035) and each case's outcome; 0 failed.
+# - 2024: run 3's per-put lines, every one "clean True": 1055-1104 (A-c1), 1171-1220 (A-c2), 1289-1340 (B-c1),
+#   1408-1457 (B-c2), 1526-1575 (E-c1), 1644-1695 (E-c2); and each case's last-read checks (1112, 1228, 1348, 1465,
+#   1583, 1703). There is no propose line: the run ended before it.
+# Covers user LOCK mates that are on in the mode being put, chains included, and nothing else. Not measured, and
+# refused by K2 before any write until measured: a user gear mate on a put gear (a put with a gear mate on re-phases
+# it silently, MESH_PHASE_ROUTE), a concentric, coincident, parallel or angle mate to a gear's own faces or planes, and
+# a user lock whose flag differs between the mode put and another (S0 carried a tied component in every mode whatever
+# its lock's flag there). The chain is to be read from each user lock's entities in the mode shown (the plan's M1).
+USER_MATE_PUT_ROUTE = "put along, the user's locks left on"
+#
+# The grounded tie (K2), case C: Sprocket-1 locked to Sun and its Top plane coincident with the fixed Housing-1's, the
+# tie on in every mode. Three things, written apart:
+# - USER_TIE_READ, the value read: GetConstrainedStatus 3 (COMPONENT_FULLY_DEFINED) on every app body of the tied
+#   train (Sun, the three planet copies, the carrier, HighDog, LowDog, RangeSlv), unshown with H active, shown in H and
+#   shown in L, before any put; every case without the tie read 2 for every mated body. On 2026: run 2 lines 909, 914
+#   and 929, the JSON's proposal "USER_TIE_READ" "C", and run 1 the same; on 2024: run 3 lines 1835, 1840 and 1857.
+#   Never 4 in these reads. N was read only in the last read, after the puts, and there RangeSlv, not coupled in N,
+#   read 2 (run 2 line 945): which bodies a tie holds follows the mode's couplings.
+# - USER_TIE_RULE, the rule the app applies: a train is tied when a body of it reads anything but
+#   COMPONENT_UNDER_DEFINED, as swbuild._free_to_turn tests, never "equal to 3". SolidWorks raised its "The assembly is
+#   over defined" balloon during C's drive in H on both versions (run 2 line 917, run 3 line 1843) while the drive job
+#   read no error, so a tie whose geometry conflicts could read 4.
+# - USER_TIE_READ_PER_MODE_ON_<year>, case C2 (the tie suppressed in H and N, on in L): True where a mode's tie was read
+#   only with that mode shown. On 2026: the unshown read with H active and H shown read the train free, every mated
+#   body 2, and L shown read it tied (run 2 lines 991, 996 and 1012; the JSON's proposal "USER_TIE_READ" "C2"; run 1
+#   the same). On 2024 None: C2 is owed there (run 3 ended at its first read, line 1920), to be run alone in a fresh
+#   session. With the same flags in every mode, C read H and L the same; that the showing mode's read decides every
+#   mode is not measured (N was not read before a put).
+# No behaviour may rest on the per-mode reading: K2 reads a mode whose user flags differ when it is shown, on every
+# version.
+USER_TIE_READ = 3                               # COMPONENT_FULLY_DEFINED; on 2026 and 2024
+USER_TIE_RULE = "not COMPONENT_UNDER_DEFINED"
+USER_TIE_READ_PER_MODE_ON_2026 = True
+USER_TIE_READ_PER_MODE_ON_2024 = None           # C2 is owed on 2024
+#
+# What's Wrong on a failing rebuild (the plan's P0, probed ahead for a dialog), first in runs 1 and 3: a scratch part
+# built by the strip and opened by the app's route, visible and active; a user keyway (a Ø3 cut through the bore's
+# edge) made by the session's own sketch and cut calls; "show errors every rebuild" (swUserPreferenceToggle_e 77) on as
+# found and after; Bore Diameter 10 -> 14, which left the keyway inside the bore. The part's rebuild (s.rebuild(),
+# ForceRebuild3(False) for a part) returned False, the keyway alone read in error (GetErrorCode2 71 on 2026 and 51 on
+# 2024, warning False; never read for meaning, as MATE_ERROR_2024's comment rules), GetWhatsWrongCount read 1, and no
+# new window of SolidWorks' process came up in the 8 s after. On 2026: run 1 lines 9-12, the JSON's "p0"; on 2024:
+# run 3 lines 8-12.
+# Covers a part's rebuild only. An assembly's rebuild (Update's ForceRebuild3(True)) with only a user mate or feature
+# in error was not run: whether it opens What's Wrong or reports failure is the plan's M3, to be measured in W9a's
+# demonstration, where a dialog is a STOP.
+WHATS_WRONG_OPENS_ON_PART_REBUILD = False
+#
+# D: Sprocket-2's axis on Output Axis and its Front plane coincident with the sliding RangeSlv's, no lock; the train put
+# by the app's route with nothing of the user's moved. It stood on RangeSlv's plane (0 mm from it, to 1e-9) through the
+# drives and puts in H and L and in the last read in H, N and L, no mate in error, RangeSlv and Sprocket-2
+# under-defined throughout. On 2026: run 2 line 868, the JSON's proposal "D_on_slide" and D's last frames (RangeSlv at
+# z -34.5, -29.5 and -24.5 in H, N and L, Sprocket-2 with it); on 2024: run 3 lines 1771, 1787 and 1792 (no frames
+# there, so RangeSlv's slide itself was read on 2026 only). Scope: an axis mate and a plane-coincident mate, no lock;
+# the puts turned RangeSlv only, and the slide came from showing each mode. Nothing reads it.
+USER_PLANE_MATE_ON_SLIDER_FOLLOWS = True

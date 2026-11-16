@@ -1611,3 +1611,233 @@ def test_a_flag_read_answers_in_the_documents_order_and_a_value_read_in_the_orde
     earlier = W8_CONFIGURATION_ORDER.read_text(encoding="utf-8")
     assert "RangeSlv engages InDog IsSuppressed2(3, ['N', '2H'] ) -> (False, True)" in earlier
     assert "RangeSlv along Rear GetSystemValue3(3, ['4L', 'N'] ) -> (0.066, 0.056)" in earlier
+
+
+# -- W9 S0: the user's work on a gear Update puts back (ISSUE-1-PLAN §4; W9-S0.md, reviewed in W9-S0-REVIEW.md)
+
+W9_S0_RUN1 = LATEST.parent / "w9-s0-20261116-045653.json"
+W9_S0_RUN1_LOG = LATEST.parent / "w9-s0-sw2026-20261116-050200.log"
+W9_S0_RUN2 = LATEST.parent / "w9-s0-20261116-054213.json"
+W9_S0_RUN2_LOG = LATEST.parent / "w9-s0c-sw2026-20261116-054300.log"
+W9_S0_2024_LOG = LATEST.parent / "sw2024" / "w9-s0-sw2024-20261116-065000.log"
+W9_TRAIN = {"Sun": 3, "Planet copy 1": 3, "Planet copy 2": 3, "Planet copy 3": 3, "HighDog": 3, "LowDog": 3,
+            "RangeSlv": 3, "Carrier carrier": 3}
+W9_ROUTE_C = ("A-c1", "A-c2", "B-c1", "B-c2", "E-c1", "E-c2")
+# Run 3's per-put lines (1-based), each case's two puts in H then two in L, and its last-read check.
+W9_2024_PUTS = {"A-c1": (1055, 1071, 1088, 1104), "A-c2": (1171, 1187, 1204, 1220),
+                "B-c1": (1289, 1305, 1324, 1340), "B-c2": (1408, 1424, 1441, 1457),
+                "E-c1": (1526, 1542, 1559, 1575), "E-c2": (1644, 1662, 1679, 1695)}
+W9_2024_LAST = {"A-c1": 1112, "A-c2": 1228, "B-c1": 1348, "B-c2": 1465, "E-c1": 1583, "E-c2": 1703}
+
+
+def _w9_json(path, snapshot):
+    data = json.loads(path.read_text(encoding="utf-8"))
+    assert data["revision"] == [34, 1, 1] and data["snapshot"] == snapshot
+    return data
+
+
+def _w9_log(path):
+    return path.read_bytes().decode("utf-8", errors="replace").splitlines()
+
+
+def _w9_2024():
+    """Run 3's log, SolidWorks 2024 32.5.0 at 423e227: the evidence for 2024, which has no JSON."""
+    lines = _w9_log(W9_S0_2024_LOG)
+    assert "(snapshot: 423e227)" in lines[0]
+    assert lines[1].startswith("attach  SolidWorks 2024 (revision 32.5.0), PID 12968")
+    return lines
+
+
+def _w9_turn(frame):
+    """A body's turn about its own Z in degrees, from a JSON frame's rotation (as the note's tables read it)."""
+    rotation = frame[0]
+    return round(math.degrees(math.atan2(rotation[3], rotation[0])), 2)
+
+
+def test_s0_route_c1_on_2026_put_every_users_locked_component_with_its_gear():
+    """Run 2 (SolidWorks 2026 34.1.1 at 423e227, findings.py USER_MATE_PUT_ROUTE): route (c) in A, B and E, each put
+    twice in H and twice in L, every put clean, and in the last read every locked sprocket at its pose in every mode;
+    the user's mates were locks (and axis mates) only, so that is all the finding covers."""
+    data = _w9_json(W9_S0_RUN2, "423e227")
+    assert data["fails"] == [] and data["stops"] == []
+    proposal = data["proposal"]
+    assert proposal["USER_MATE_PUT_ROUTE"] == findings.USER_MATE_PUT_ROUTE == "put along, the user's locks left on"
+    assert proposal["routes"] == {
+        "c1": {"cases": ["A-c1", "B-c1", "E-c1"], "clean": {"A-c1": True, "B-c1": True, "E-c1": True}},
+        "c2": {"cases": ["A-c2", "B-c2", "E-c2"], "clean": {"A-c2": True, "B-c2": True, "E-c2": True}}}
+    locks = {"A": ["axis1", "axis2", "lock1"], "B": ["axis1", "axis2", "lock2"],
+             "E": ["axis1", "axis2", "lock1", "lock3"]}
+    for name in W9_ROUTE_C:
+        case = data["cases"][name]
+        assert case["route"] == name[-2:] and case["mates"] == locks[name[0]] and case["tie"] is None, name
+        for mode in ("H", "L"):
+            for put in ("put", "put2"):
+                got = case["outcome"]["modes"][mode][put]
+                assert got["held"] and got["with_gear"] and got["clean"] and got["flags_back"], (name, mode, put)
+                assert got["errors"] == [] and got["user_errors"] == {} and got["app_errors"] == {}, (name, mode, put)
+        last = case["outcome"]["last"]
+        assert all(last[m]["tied_home"] and last[m]["gap"] < 1e-9 and last[m]["errors"] == {} for m in "HNL"), name
+    lines = _w9_log(W9_S0_RUN2_LOG)
+    assert lines[1].startswith("attach  SolidWorks 2026 (revision 34.1.1)") and "(snapshot: 423e227)" in lines[0]
+    assert lines[1033].startswith("propose each route's cases and whether every put came back clean: ")
+    assert lines[1034].startswith('propose USER_MATE_PUT_ROUTE: "put along, the user\'s locks left on"')
+    assert lines[-1] == "done    0 failed: []; 4 noted; 0 STOP(s)"
+
+
+def test_s0_route_c1_on_2024_from_run_3s_per_put_lines():
+    """Run 3 (SolidWorks 2024 32.5.0 at 423e227) has no JSON and no propose line: every one of route (c)'s 24 puts
+    reads "clean True" in its own line, B's locked sprocket worst at 7.1e-15 (as on 2026), and each case's last read
+    has every locked sprocket at its pose in every mode (findings.py USER_MATE_PUT_ROUTE)."""
+    lines = _w9_2024()
+    for name, puts in W9_2024_PUTS.items():
+        for at, (label, mode) in zip(puts, (("put", "H"), ("second put", "H"), ("put", "L"), ("second put", "L"))):
+            line = lines[at - 1]
+            assert line.startswith(f"        the {label} back to the built frames in {mode}: held True; each locked "
+                                   "sprocket at its pose of the setup in its gear's frame True ("), (name, at)
+            assert line.endswith("mates in error none; the user's flags back True: clean True"), (name, at)
+            assert lines[at - 2].startswith(f"step    S0 {name} the {label} back to the built frames in {mode}: "
+                                            f"route ({name[-2:]})"), (name, at)
+        assert lines[W9_2024_LAST[name] - 1] == f"ok      S0 {name}: in the last read every locked sprocket " \
+                                                "stands at its pose of the setup in its gear's frame in every mode"
+    for at in (1324, 1340):
+        assert "({'Sprocket-2': '7.1e-15'})" in lines[at - 1]
+    assert not any(line.startswith(("propose", "done")) for line in lines)
+    assert findings.USER_MATE_PUT_ROUTE == "put along, the user's locks left on"
+
+
+def test_s0_routes_a_and_b_left_the_users_locked_sprocket_behind_in_every_mode():
+    """Run 1 (SolidWorks 2026 34.1.1 at 55a82c1) and run 3 (2024): a user's lock left on through the put (route a) or
+    suppressed around it and turned back on (route b) takes the put's offset with no error, and the offset is the
+    mate's, so it reaches every mode (findings.py, the comments of LOCK_RETAKES_AFTER_A_PUT and
+    LOCK_UNSUPPRESS_KEEPS_THE_NEW_ANGLE; no new constant)."""
+    data = _w9_json(W9_S0_RUN1, "55a82c1")
+    assert data["proposal"]["USER_MATE_PUT_ROUTE"] is None
+    assert data["proposal"]["route_a_clean"] is False and data["proposal"]["route_b_clean"] is False
+    after = {"after the drive in H": None, "after the put back to the built frames in H": None,
+             "after the drive in L": None, "after the put back to the built frames in L": None}
+    expected = {("Sun", "Sprocket-1"): ((37.0, 37.0), (0.0, 37.0), (37.0, 74.0), (0.0, 74.0)),
+                ("RangeSlv", "Sprocket-2"): ((47.59, 37.0), (10.59, 37.0), (23.36, 49.77), (10.59, 49.77))}
+    for name, route, bodies in (("A-a", "a", ("Sun", "Sprocket-1")), ("A-b", "b", ("Sun", "Sprocket-1")),
+                                ("B-a", "a", ("RangeSlv", "Sprocket-2")), ("B-b", "b", ("RangeSlv", "Sprocket-2"))):
+        case = data["cases"][name]
+        assert case["route"] == route
+        steps = {s["step"]: s for s in case["steps"] if s["step"] in after}
+        assert tuple(tuple(_w9_turn(steps[k]["frames"][b]) for b in bodies) for k in after) == expected[bodies], name
+        last = case["last"]["frames"]
+        assert {m: (_w9_turn(last[m][bodies[0]]), _w9_turn(last[m][bodies[1]])) for m in "HNL"} == \
+            {m: expected[bodies][-1] for m in "HNL"}, name
+    c2 = {s["step"]: s for s in data["cases"]["C2"]["steps"]}
+    assert _w9_turn(c2["the tie read in L, shown, before its put"]["frames"]["Sun"]) == -37.0
+    lines = _w9_2024()
+    for at, gap, case in ((893, "6.0e-01", "A-a"), (908, "9.6e-01", "A-a"), (974, "6.0e-01", "A-b"),
+                          (989, "9.6e-01", "A-b")):
+        assert f"({{'Sprocket-1': '{gap}'}}); mates in error none" in lines[at - 1], at
+        assert lines[at - 1].endswith("clean False") and f"S0 {case} the put back" in lines[at - 2], at
+    assert findings.LOCK_RETAKES_AFTER_A_PUT is True and findings.LOCK_UNSUPPRESS_KEEPS_THE_NEW_ANGLE is True
+    assert not hasattr(findings, "USER_LOCK_RETAKES_PUT_OFFSET")
+
+
+def test_s0_the_tie_reads_3_on_every_body_of_the_train_and_the_rule_is_not_under_defined():
+    """Case C on both versions (findings.py USER_TIE_READ, USER_TIE_RULE): every app body of Sun's train read 3,
+    unshown with H active, shown in H and shown in L, before any put; never 4 in these reads, though SolidWorks raised
+    its over-defined balloon during the drive, so the app's rule is "not under-defined", as _free_to_turn's is. N, read
+    only after the puts, left RangeSlv (not coupled in N) out of the tied set."""
+    for path, snapshot in ((W9_S0_RUN2, "423e227"), (W9_S0_RUN1, "55a82c1")):
+        tie = _w9_json(path, snapshot)["proposal"]["USER_TIE_READ"]["C"]
+        assert tie == {"unshown": {"active": "H", "tie": W9_TRAIN}, "shown": {"H": W9_TRAIN, "L": W9_TRAIN}}, path
+    run2 = _w9_json(W9_S0_RUN2, "423e227")
+    tied_last = {m: v["not_free"] for m, v in run2["cases"]["C"]["outcome"]["last"].items()}
+    assert tied_last["H"] == tied_last["L"] == W9_TRAIN
+    assert tied_last["N"] == {b: s for b, s in W9_TRAIN.items() if b != "RangeSlv"}
+    lines = _w9_log(W9_S0_RUN2_LOG)
+    assert lines[908].startswith("read    S0 C the tie read, before any put, in the mode the copy opens in, nothing "
+                                 f"shown (active H): train not free {W9_TRAIN}")
+    for at, mode in ((913, "H"), (928, "L")):
+        assert lines[at] == f"ok      S0 C: in {mode} the train reads not free (a tie), as the tie on there wants: " \
+                            f"{W9_TRAIN}"
+    balloon = "a SolidWorks balloon tip ['Check1', 'Over Defined', 'The assembly is over defined. Click here to view " \
+              "mate errors.']"
+    assert balloon in lines[916] and lines[919].startswith("step    S0 C drive +37 in H: errors [] cleanup []")
+    old = _w9_2024()
+    assert old[1834].startswith("read    S0 C the tie read, before any put, in the mode the copy opens in, nothing "
+                                f"shown (active H): train not free {W9_TRAIN}")
+    for at, mode in ((1839, "H"), (1856, "L")):
+        assert old[at] == f"ok      S0 C: in {mode} the train reads not free (a tie), as the tie on there wants: " \
+                          f"{W9_TRAIN}"
+    assert balloon in old[1842] and old[1847].startswith("step    S0 C drive +37 in H: errors [] cleanup []")
+    assert findings.USER_TIE_READ == findings.COMPONENT_FULLY_DEFINED == 3
+    assert findings.USER_TIE_RULE == "not COMPONENT_UNDER_DEFINED"
+
+
+def test_s0_the_tie_is_read_per_mode_on_2026_and_c2_is_owed_on_2024():
+    """Case C2, the tie suppressed in H and N and on in L: on 2026 the unshown read with H active and H shown read the
+    train free and L shown read it tied (USER_TIE_READ_PER_MODE_ON_2026 True). On 2024 C2's first read found the
+    session gone (the laptop's lid closed into Modern Standby; W9-S0.md), so nothing of C2 was read and the 2024
+    reading stays None until C2 runs there."""
+    for path, snapshot in ((W9_S0_RUN2, "423e227"), (W9_S0_RUN1, "55a82c1")):
+        data = _w9_json(path, snapshot)
+        assert data["proposal"]["USER_TIE_READ"]["C2"] == {"unshown": {"active": "H", "tie": {}},
+                                                           "shown": {"H": {}, "L": W9_TRAIN}}, path
+    run2 = _w9_json(W9_S0_RUN2, "423e227")
+    assert run2["cases"]["C2"]["tie"] == ["L"]
+    lines = _w9_log(W9_S0_RUN2_LOG)
+    assert lines[990].startswith("read    S0 C2 the tie read, before any put, in the mode the copy opens in, nothing "
+                                 "shown (active H): train not free none (every other mated body 2)")
+    assert lines[995] == "ok      S0 C2: in H the train reads free, as no tie wants: every mated body 2"
+    assert lines[1011] == f"ok      S0 C2: in L the train reads not free (a tie), as the tie on there wants: {W9_TRAIN}"
+    old = _w9_2024()
+    assert old[1918] == "fact    S0 C2: reopened RangeBox_S0_C2.SLDASM in H; marked straight after the open: none"
+    assert old[1919] == "FAIL    S0 raised NotRunning: No SolidWorks session with PID 12968 is reachable."
+    assert not any(line.startswith("read    S0 C2") or (line.startswith("ok      S0 C2") and "the train reads" in line)
+                   for line in old)
+    assert findings.USER_TIE_READ_PER_MODE_ON_2026 is True
+    assert findings.USER_TIE_READ_PER_MODE_ON_2024 is None
+
+
+def test_s0_a_parts_failing_rebuild_opened_no_whats_wrong_on_either_version():
+    """P0 (findings.py WHATS_WRONG_OPENS_ON_PART_REBUILD): a part's rebuild failing on a user keyway, "show errors
+    every rebuild" on as found and after, returned False with the keyway alone in error and GetWhatsWrongCount 1, and no
+    new window came up. A part's rebuild only: an assembly's is the plan's M3, still to be measured."""
+    p0 = _w9_json(W9_S0_RUN1, "55a82c1")["p0"]
+    assert p0["toggle_found"] is True and p0["toggle_for_probe"] is True and p0["toggle_after"] is True
+    assert p0["steps"] == [{"bore": "14", "rebuild": False, "errors": [["User Keyway", "ICE", 71, False]],
+                            "whats_wrong_count": 1}]
+    assert p0["failed"] is True and p0["user_feature_failed"] is True
+    assert p0["windows_new"] == [] and p0["whats_wrong_opened"] is False
+    for lines, code, seconds in ((_w9_log(W9_S0_RUN1_LOG), 71, "4.1"), (_w9_2024(), 51, "5.6")):
+        at = next(i for i, line in enumerate(lines) if line.startswith('fact    P0: "show errors every rebuild"'))
+        assert lines[at].startswith('fact    P0: "show errors every rebuild" found True, for the probe True, after '
+                                    "True; the keyway made (rebuild True, features in error [])")
+        assert lines[at + 1] == "fact    P0: Bore Diameter -> 14: rebuild returned False; features in error " \
+                                f"[('User Keyway', 'ICE', {code}, False)]; GetWhatsWrongCount 1"
+        assert lines[at + 2] == f"fact    P0: windows of SolidWorks' process new after the failing rebuild: none " \
+                                f"({seconds} s)"
+        assert lines[at + 3] == 'ok      P0: "show errors every rebuild" is back as found'
+    assert findings.WHATS_WRONG_OPENS_ON_PART_REBUILD is False
+    assert not hasattr(findings, "WHATS_WRONG_OPENS_ON_API_REBUILD")
+
+
+def test_s0_d_a_users_plane_mate_on_the_sliding_rangeslv_followed_it_in_every_mode():
+    """Case D (findings.py USER_PLANE_MATE_ON_SLIDER_FOLLOWS): Sprocket-2 on Output Axis with its Front plane on the
+    sliding RangeSlv's, no lock, stood on RangeSlv's plane through every put and in the last read in H, N and L on both
+    versions; on 2026 the frames show RangeSlv itself slid (z -34.5, -29.5, -24.5)."""
+    run2 = _w9_json(W9_S0_RUN2, "423e227")
+    assert run2["proposal"]["D_on_slide"] is True
+    case = run2["cases"]["D"]
+    assert case["mates"] == ["axis1", "axis2", "slide2"] and case["outcome"]["d_on_slide"] is True
+    assert all(case["outcome"]["modes"][m]["put"]["clean"] for m in ("H", "L"))
+    assert all(case["outcome"]["last"][m]["dz"] == 0.0 for m in "HNL")
+    frames = case["last"]["frames"]
+    assert {m: frames[m]["RangeSlv"][1][2] for m in "HNL"} == {"H": -34.5, "N": -29.5, "L": -24.5}
+    assert all(frames[m]["Sprocket-2"][1][2] == frames[m]["RangeSlv"][1][2] for m in "HNL")
+    on_slide = "ok      S0 D: in the last read Sprocket-2 stays on RangeSlv's Front plane in every mode: " \
+               "{'H': 0.0, 'N': 0.0, 'L': 0.0} against {'H': 0.0, 'N': 0.0, 'L': 0.0}"
+    assert _w9_log(W9_S0_RUN2_LOG)[867] == on_slide
+    old = _w9_2024()
+    assert old[1791] == on_slide
+    for at, mode in ((1771, "H"), (1787, "L")):
+        assert old[at - 1].startswith(f"        the put back to the built frames in {mode}: held True;") and \
+            old[at - 1].endswith("clean True")
+        assert old[at - 2].startswith(f"ok      S0 D the put back to the built frames in {mode}: Sprocket-2 stays on "
+                                      "RangeSlv's Front plane, z less RangeSlv's +0.000000000")
+    assert findings.USER_PLANE_MATE_ON_SLIDER_FOLLOWS is True
