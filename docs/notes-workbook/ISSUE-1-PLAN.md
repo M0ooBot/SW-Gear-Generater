@@ -63,9 +63,9 @@ readings still open in §6.
 | # | Reading | Instead of | Overturns |
 |---|---|---|---|
 | K1 | **What is the app's own** is what the record lists: the gear, carrier and layout components (by `Name2`), the mates (by name), the configurations named as modes, and in each app part the globals and features its plan made. Everything else is the user's. A recorded component not found by its `Name2` is found by its part path when exactly one unclaimed instance of that part is in the assembly, and its new name recorded. | Guessing ownership from names; a renamed component sending the user to Build again…. | — |
-| K2 | **A mate of the user's on a gear Update must move does not stop Update.** W9a's spike (§4, S0) decides between two routes, both shipped behind one rule: **(a)** the put carries a free user component with its gear, so nothing of the user's is written; or **(b)** it does not, so the user's mates on the train being put are suppressed in the configuration being put, around the put, as `_put_train` does for the app's locks, turned back on whatever happens, every flag read back, and any in error named. Under both, only a **grounded tie** refuses: a train SolidWorks reads not free to turn (`constrained_status`, the read `_free_to_turn` makes) with the user's mates on, where the record says the app's own mates leave it free (the build's or last Update's post-check passed; nothing is suppressed to find out), the user's mates on **that train** named. It is read in the mode showing before any change; when every user mate on the train has the same flag in every mode (readable without showing), that read decides every mode; only when they differ by mode is a mode read when shown, before its put, and a tie there stops the job part way. A user mate joining gears of two different trains (a lock from Sun to RangeSlv) reads free but no put can satisfy it: the inventory refuses it, named, before any change. SolidWorks' solver decides the tie, not a graph of mates: a sprocket concentric to the layout's axis and locked to Sun leaves Sun free and is not a tie. | Refusing every user mate on a moved gear (the plan before the review); today's refusal of every user mate; a topological graph check (wrong for a concentric mate to a fixed axis). | W5 review M7, W8 J12's last sentence |
+| K2 | **A user lock on a gear Update must move does not stop Update** (amended after S0: *Changes after S0 and its review*). S0 (§4, `W9-S0.md`) measured the plan's two routes, **(a)** the put left to carry the user's component, nothing of the user's written, and **(b)** the user's mates suppressed around the put and turned back on, and both leave the component where the drive took it, the user's lock taking the new offset with no error. **Route (c1) is taken** (the coordinating session's ruling, accepted by the user 2026-11-16): every user component rigid to a gear this press puts, through user lock mates that are on in the mode being put, directly or through a chain of user locks (the chain read from each user lock's entities in that mode, M1's read), is put by that gear's own rigid motion in the same step, in the mode shown (its target G_target · G_before⁻¹ · U_before), after the app's bodies, each read back by `place_component`; the user's locks stay on. **Every other kind of user mate that ties a user's component to a gear Update would put back refuses before any write, named, until that kind is measured** (ruled, put to the user): a user gear mate above all (a put re-phases a gear mate silently, `MESH_PHASE_ROUTE`), a mate to a gear's own faces or planes, and a user lock whose flag differs between the mode being put and another mode. Beside both, only a **grounded tie** refuses: a train SolidWorks reads not free to turn (`constrained_status`, the read `_free_to_turn` makes) with the user's mates on, where the record says the app's own mates leave it free (the build's or last Update's post-check passed; nothing is suppressed to find out), the user's mates on **that train** named, the train as the mode read joins it (its couplings decide which bodies a tie holds). It is read in the mode showing before any change; when every user mate on the train has the same flag in every mode (readable without showing), that read decides whether a tie stands in every mode; only when they differ by mode is a mode read when shown, before its put, and a tie there stops the job part way. A user mate joining gears of two different trains (a lock from Sun to RangeSlv) reads free but no put can satisfy it: the inventory refuses it, named, before any change. SolidWorks' solver decides the tie, not a graph of mates: a sprocket concentric to the layout's axis and locked to Sun leaves Sun free and is not a tie. | Refusing every user mate on a moved gear (the plan before the review); routes (a) and (b), which S0 found leave a locked component behind; today's refusal of every user mate; a topological graph check (wrong for a concentric mate to a fixed axis). | W5 review M7, W8 J12's last sentence |
 | K3 | **The user's features in an app part are kept.** Update changes only the app's globals; SolidWorks rebuilds the user's features after them; the job reads each user feature's error state afterwards and names any in error, as theirs. Nothing is saved (as today). | Refusing to change a part with user features. | — |
-| K4 | **Told before anything is written.** Every job reads the user's work in the documents it opens and the finish records it, with the time read. The footer says before the press what Update will change, what of the user's it will suppress around a put (route b), and what it leaves. Something the record did not hold that would refuse makes the press refuse before any change and is recorded, so the footer then says it; the next press refuses again unless the user has dealt with it. No new control. | A check-only job and a question before each Update. | — |
+| K4 | **Told before anything is written.** Every job reads the user's work in the documents it opens and the finish records it, with the time read. The footer says before the press what Update will change, which of the user's components it will put with their gears (route c, K2), and what it leaves. Something the record did not hold that would refuse makes the press refuse before any change and is recorded, so the footer then says it; the next press refuses again unless the user has dealt with it. No new control. | A check-only job and a question before each Update. | — |
 | K5 | **(the user's, 2026-11-16) Build again… carries the user's components and remakes their mates (W9d, §2.5).** Every top-level user component comes over where it stood relative to its app gear (or the layout), fixed or floating as it was, with its state in each mode; every mate of the user's whose entities are found is remade — by persistent reference on a file both revisions use, by name or tree order on the layout, carrier parts and the assembly's planes, by component for a lock or gear mate — and every other is named with why; a mate on a face of an app part made new is named, not re-found **(ruled: no finding by geometric role)**; the user's features in an app part made new are named with why the part is new, and how to keep them where K11's value is the reason. Carried items are left **unsaved**, and the user's open documents are never shown in another mode or saved. Until W9d, Build again… says what stays behind, as read at a stated time. | Saying only; bringing components over fixed and unmated (the plan's recommendation before the user's answer); finding faces by role on a new file. | — |
 | K6 | **Update adds, removes and re-mates (W9c):** a new gear on an existing frame shaft along Z±, inserted and mated as the build mates it; a gear removed (not one that anchors other gears) with its app mates; a coupling or sliding mesh newly needed between components on record; a gear mate of a gearbox with modes made again (a tooth change); **Modes rows added or removed (ruled)**; each new or remade mate's and component's flag set and read back in every configuration. Bands are added to a built sleeve **in place** (§2.4). Replacing a part's file stays Build again… (deferred). | Every such edit structural; replacing the sleeve's component. | W8 J14 (in part), ruling 9.16 |
 | K7 | **Reachability is a warning**, by the points the sleeve's shaft must reach (§2.2). | An error; the issue's narrower rule. | — |
@@ -78,12 +78,15 @@ readings still open in §6.
 ### 0.3 STOP and ask (implementers)
 
 - **Anything that would write to, delete, move or rename a component, mate, feature, global or configuration that is
-  not on record**, with two exceptions: route (b)'s suppression of the user's mates around a put, each turned back on
-  and read back in every configuration it was on in; and W9d's writes into the **new** revision's assembly (the
-  user's components inserted, their mates remade there, left unsaved), never into the old assembly or a user file.
+  not on record**, with three exceptions: route (b)'s suppression of the user's mates around a put, each turned back
+  on and read back in every configuration it was on in; route (c)'s move of a user's locked component with its gear
+  (K2, added after S0): a user component rigid to a put gear through the user's locks on in the mode shown is moved
+  by that gear's rigid motion, in that mode, and each one is read back by `place_component`; and W9d's writes into the
+  **new** revision's assembly (the user's components inserted, their mates remade there, left unsaved), never into
+  the old assembly or a user file.
   The user's open documents are never saved by W9, and a configuration of theirs is never shown, unless S5 finds no
   unshown read of a component's state per mode: then, and only then, W9d shows the old assembly's modes and restores
-  its active configuration, read back, with `GetSaveFlag` unchanged (a third exception, to be confirmed). The fake fails
+  its active configuration, read back, with `GetSaveFlag` unchanged (a fourth exception, to be confirmed). The fake fails
   a test on any other such call, and on SolidWorks each demonstration compares every user item's flag, error code and
   entities before and after, in the old assembly as well after a Build again….
 - W9d: a persistent reference that resolves to an entity of another kind than the one it was read from (a face where
@@ -225,18 +228,27 @@ every structural edit sends the user to Build again…, which leaves their work 
 3. *Mates on put gears (K2).* A user mate whose entities are all on the user's components, the layout component or
    the assembly is left alone and listed. One on a gear or carrier this press may put (without modes, from
    `train_check` and the placements; with modes, every gear of a mated train whenever the press changes anything,
-   `swbuild.py:4213-4215`, `:4346`) goes through by the route the spike chose: (a) nothing written, or (b)
-   suppressed in each configuration around the put there and turned back on, read back, as `_put_train` does with
-   the app's own locks (`set_mate_suppressed_in`, `mate_suppression`, proven per configuration). Under both, the
-   **grounded tie** — a train SolidWorks reads not free to turn with the user's mates on (K2) — refuses, naming every
-   user mate on **that train** at once with its modes (a tie on one gear makes the whole train read fully defined
-   through its gear mates and that mode's couplings, so the gear that reads not free may carry no user mate at all):
+   `swbuild.py:4213-4215`, `:4346`) goes through by **route (c1)**, the route S0 found to hold (amended after S0,
+   K2): in the mode shown, after the app's locks, gear mates and couplings on there are suppressed and the assembly
+   rebuilt, the app's bodies are put (carriers first), then each user component rigid to a put gear through user
+   locks on in that mode, directly or through a chain of user locks (the chain read from each lock's entities in that
+   mode, item 2's read), is put by its gear's rigid motion (G_target · G_before⁻¹ · U_before) and read back by
+   `place_component`; then a rebuild and the app's mates back on, as `_put_train` turns back its own. The user's locks
+   are left on and nothing else of the user's is written. Any other user mate on a gear this press puts that ties a
+   user's component to it (a user gear mate, a mate to a gear's faces or planes, a user lock whose flag differs
+   between the mode put and another) refuses before any change, named, until that kind is measured (K2). Beside
+   this, the **grounded tie** — a train SolidWorks reads not free to turn with the user's mates on (K2) — refuses,
+   naming every user mate on **that train** at once with its modes, the train as the mode read joins it (a tie on
+   one gear makes the whole train read fully defined through its gear mates and that mode's couplings, so the gear
+   that reads not free may carry no user mate at all; S0 read RangeSlv outside the tied set in N, where it is not
+   coupled):
    *"Update SolidWorks must turn Sun's train back to its built place, and with your mates on SolidWorks reads it as
    unable to turn: Lock3 ties Sun to Housing-1, so nothing is changed; suppress Lock3 in H, N and L and press Update
    SolidWorks again."* "Where the app's own mates leave it free" comes from the record (the build's or last Update's
    post-check passed); nothing is suppressed to find it out. The read in the mode showing is made before any change.
    When every user mate on the train has the same flag in every mode (`mate_suppression`, read without showing), that
-   read decides every mode, since a user mate that grounds a gear grounds it whatever the app's per-mode mates do.
+   read decides whether a tie stands in every mode, since a user mate that grounds a gear grounds it whatever the
+   app's per-mode mates do (S0's C read H and L alike; which bodies it holds follows each mode's couplings).
    Only when a user mate's flags differ by mode is another mode read when shown (J25), before its put; a tie there
    stops the job before that mode's put, with what was already changed said and left unsaved, as any failure after the
    check phase is (W4 review B1). A user mate joining gears of two trains (a lock from Sun to RangeSlv) reads free but
@@ -252,9 +264,10 @@ every structural edit sends the user to Build again…, which leaves their work 
 6. *Told before (K4).* The finish of every job, a refused one included, records what it read of the user's work (link
    record schema 7, §2.4: per part path the user's features, and the user's components and mates with what each
    touches, fixed or not, with the time read). The footer's Update line then says, before the press, what Update
-   would change, what of the user's it would suppress around a put (route b) and what it leaves (*"Update SolidWorks
-   changes RangeSlv's part, where your Keyway follows the app's features; it leaves Sprocket-1, Chain-1 and 6 mates of
-   yours as they are, and suppresses your Lock3 on Sun while it turns Sun back, then turns it on again."*). The
+   would change, which of the user's components it would put with their gears (route c, item 3) and what it leaves
+   (*"Update SolidWorks changes RangeSlv's part, where your Keyway follows the app's features; it turns your
+   Sprocket-1, which your Lock3 holds to Sun, back with Sun, and leaves Chain-1 and 6 mates of yours as they
+   are."*). The
    worker reads again; what the record did not hold and would refuse refuses before any change and is recorded, so
    the footer says it; the next press refuses again unless the user has dealt with it.
 7. *The window fits its screen (K12, §2.6),* since items 4 and 6 add words to the footer.
@@ -263,7 +276,8 @@ every structural edit sends the user to Build again…, which leaves their work 
    part replaces; RangeBox_r2 has none of them."* The build job reads the old assembly's user items first (as it is
    in the session when open, never shown in another mode), and its result lists what stayed behind as found.
 
-*What the user can do after W9a* (RangeBox with modes, a bore feature in a gear part; route (a) or (b) taken):
+*What the user can do after W9a* (RangeBox with modes, a bore feature in a gear part; route (c) taken, the sprocket
+held to its gear by the user's locks, K2):
 
 | Press | Sprocket mated only to the layout or to the user's own shaft | Sprocket mated to Sun or RangeSlv, nothing of it grounded |
 |---|---|---|
@@ -420,7 +434,7 @@ assembly's user items: as it is in the session when it is open there (never clos
 opened read-only when it is not (`OpenDoc6` with the read-only option, new, in S5). Component state per mode is read
 without showing a mode if S5 finds a route, as `IsSuppressed2(3, names)` was for mates (`API-LEDGER.md:332`); if it
 finds none, the old assembly's modes are shown and its active configuration restored and read back, `GetSaveFlag`
-unchanged — the third exception of §0.3, stated there. Frames are read in the old assembly's active mode only. The
+unchanged — the fourth exception of §0.3, stated there. Frames are read in the old assembly's active mode only. The
 job then inserts and mates the carried items in the new assembly and checks them, and **leaves them unsaved**, as
 Update leaves everything (PLAN-WORKBOOK §4.5): the result ends *"… RangeBox_r2 holds them unsaved: save it in
 SolidWorks to keep them."* No `Save3`, a call the app has never made, whose effect on modified referenced documents
@@ -645,10 +659,14 @@ session, the window check on 2026 only.
   Build again… clause and the build job's read of the old assembly, the footer line; K12 (§2.6), the board first, then
   `_fit` capped and the body page, its Tk test and the three UI-DESIGN places; the boards' footers redrawn; the W99
   rename and the "last phase" edits of §0.1).
-- *Tests against the fake:* user–user and user–layout mates never refuse; a user lock on a put gear goes through by the
-  chosen route (route b: every one back on in every configuration it was on in, whatever raised, as the test for M8's
-  locks); a grounded tie refuses before any write, the train's user mates named; a mode-dependent tie (C′) is read in
-  the right mode; a two-train user mate refuses; no call targets an item not on record but route (b)'s; a user's edit
+- *Tests against the fake:* user–user and user–layout mates never refuse; a user lock on a put gear goes through by
+  route (c1) (amended after S0, K2): each user component rigid to the put gear through user locks on in that mode,
+  a chain included, put by the gear's rigid motion after the app's bodies and read back, the user's locks left on and
+  their flags untouched; any other kind of user mate tying a user's component to a put gear (a gear mate, a mate to a
+  gear's faces or planes, a user lock whose flag differs by mode) refuses before any write, named; a grounded tie
+  refuses before any write, the train's user mates named; a mode-dependent tie (C′) is read in the right mode; a
+  two-train user mate refuses; no call targets an item not on record but route (c)'s puts of those components, and
+  the fake fails on any other move of a user component; a user's edit
   to each kind of K11 value refuses, named, and one a lost Update explains does not; user features survive a value
   Update and one in error is named; the inventory reaches the footer before the press; the Build again… question names
   what stays behind with its time; K12's Tk test.
@@ -756,7 +774,10 @@ cannot (K5, W9d); the hub is built by the app from a row you write (K8).
    touched because the put carries your component with the gear, or your mate is switched off around the put and
    back on after, read back and said — chosen by a measurement at the start of W9a; it stops, naming the mate, only
    when SolidWorks reads the gear unable to turn with your mate on. *Alternative:* it always stops and names your mate
-   (you suppress and unsuppress it by hand).
+   (you suppress and unsuppress it by hand). *After S0 (2026-11-16):* neither of the two ways held for a component
+   you locked to a gear; a third, which puts your locked component with its gear, held, and you accepted it (K2). A
+   mate of yours of any other kind on such a gear stops Update, named, until that kind is measured (ruled; *Changes
+   after S0 and its review*).
 2. **How a sleeve with a relief is written.** *Recommended:* two band lengths on the sleeve's row, one part (K10).
    *Alternative:* several rows that one slider moves together, several parts, no relief bore.
 3. **The hub warning.** *Recommended:* a warning on every sleeve with no hub row. *Alternative:* only when no hub
@@ -791,7 +812,7 @@ role, its mate named (K5); Modes rows added or removed by Update (W9c).
   another assembly, how faithfully each mate kind's definition reads back for a remake, and whether inserting a user
   sub-assembly can raise a dialog (S5, P2); the route from a mate's assembly-context entity to its part-level entity
   for `GetPersistReference3`, which is tier 1's crux; whether a component's state per configuration can be read
-  without showing it (if not, §0.3's third exception applies); whether `GetConstrainedStatus` reads Sun free with a
+  without showing it (if not, §0.3's fourth exception applies); whether `GetConstrainedStatus` reads Sun free with a
   floating sprocket locked to it (S0, case A).
 
 ---
@@ -934,3 +955,49 @@ must-fix and should-fix is taken; none is declined.
   coupling on in no mode (ruling 9.1).
 - **Costs, one last pass** (§5): about 7 h 30 min on 2026, 12 h 05 min on 2024, about 35 agent runs; the list of what
   still reaches Build again… after W9c stated beside the table.
+
+---
+
+## Changes after S0 and its review
+
+2026-11-16. Against W9a's first measurement, S0 (`W9-S0.md`; runs on SolidWorks 2026 34.1.1 and 2024 32.5.0), its
+review (`W9-S0-REVIEW.md`, `2ded80a`) and the coordinating session's rulings on it. The plan's text before this section
+is amended only where it named routes (a) and (b) alone or forbade route (c)'s move; S0's brief in §4, §7 and the
+change lists above keep what was planned before S0 ran.
+
+- **Route (c1) is K2's route** (review M1). S0 found that routes (a) and (b) both leave a user's component locked to
+  a put gear where the drive took it, the lock taking the put's offset with no error code, on both versions. The
+  coordinating session ruled a third route, (c), and the user accepted it on 2026-11-16 (HANDOFF-WORKBOOK, *Where W9
+  stands*): the app puts every user component rigid to a put gear through the user's locks on in the mode shown,
+  chains included, by that gear's own rigid motion in the same step, each read back by `place_component`, the user's
+  locks left on (c1). It held in every put of cases A, B and E on both versions. Amended: K2 (the route, and routes
+  (a) and (b) moved to *Instead of*); K4 (the footer names the components it will put with their gears, not what it
+  will suppress); §0.3's STOP (route (c)'s move named as an exception beside route (b)'s suppression and W9d's
+  writes; the show-and-restore exception is now the fourth, and §2.5 and §7 say so); §2.1 item 3 (the put, step by
+  step) and item 6 (the footer's sentence); the head of §2.1's table of what the user can do; §5's W9a tests against
+  the fake (route (c1), and the fake failing on any other move of a user component); §6 item 1 (what S0 found and
+  the user accepted).
+- **Route (c1) covers user locks only; every other kind of user mate on a put gear refuses until measured** (review
+  M2; the coordinating session's ruling, put to the user as HANDOFF-WORKBOOK's *Questions waiting for the user*, item
+  9). S0 measured user components tied to an app gear by user locks on in the mode put, directly or through a chain
+  of user locks, and one plane-coincident mate with no lock (case D). K2 now refuses, before any write and naming
+  the mate, every other kind of user mate that ties a user's component to a gear Update would put back: a user gear
+  mate (a `Transform2` put with a gear mate on re-phases it silently, `findings.MESH_PHASE_ROUTE`, as the lock's
+  re-take sank routes (a) and (b)); a concentric, coincident, parallel or angle mate to a gear's own faces or planes;
+  and a user lock whose flag differs between the mode being put and another mode (S0 carried a tied component in
+  every mode whatever its lock's flag there). Measuring those kinds in W9a's demonstration would lift the refusal for
+  each kind that holds, at the cost of SolidWorks time on both versions. Which components are tied comes from
+  reading each user lock's entities in the mode shown (M1 of §4), not from a list, as S0's own cases had it.
+- **What's Wrong is read for a part's rebuild only** (review M3). P0 rebuilt a part (`ForceRebuild3(False)`) with a
+  user feature in error and "show errors every rebuild" on, on both versions: no window. Whether an assembly's
+  rebuild with only a user mate or feature in error opens What's Wrong or reports failure stays §4's M3, answered in
+  W9a's demonstration. No line of the plan changes; §0.3's STOP on any dialog stands for that rebuild.
+- **The tie's read** (review M4 and S7). K2's test was already "not free to turn", the read `_free_to_turn` makes (any
+  status but `COMPONENT_UNDER_DEFINED`), never "equal to fully defined", so it stands: SolidWorks itself said the
+  assembly was over defined during case C's drive, and a tie whose geometry conflicts could read 4. K2 and §2.1 item 3
+  now say that the showing mode's read, when every user mate's flags are the same in every mode, decides whether a tie
+  stands in every mode, and that the train it names is the one the mode read joins: in S0's case C, H and L read the
+  same tied set, and N, read only after the puts, left RangeSlv out, since it is not coupled there. Nothing in the app
+  rests on the per-mode reading of case C2, which is still owed on SolidWorks 2024: a mode whose user flags differ is
+  read when shown on every version.
+- The review's S1 to S6 touch S0's script, the note, the handoff, PLAN-WORKBOOK and `findings.py`, not this plan.

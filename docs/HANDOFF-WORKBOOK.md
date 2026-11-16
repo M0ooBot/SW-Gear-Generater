@@ -1001,6 +1001,16 @@ after the user's answers*). Still open (updated 2026-11-16):
    kept by its configuration (until that train is next turned anywhere), while a turn of a mated train by its drive
    shows in every configuration, on 2026 (34.0.0 and 34.1.1) and 2024 alike (`findings.py`,
    `POSITIONS_PER_CONFIGURATION_ON_<year>` and `TURN_PER_CONFIGURATION_ON_<year>`; ruling 9.18).
+9. **A mate of yours other than a lock, on a gear Update puts back** (ruled 2026-11-16 by the coordinating session
+   after S0's review; overrule it if you want). Route (c), which you accepted, puts a component of yours with its
+   gear when your own locks hold it there, as they are in the mode being put; that is the one kind S0 measured. Every
+   other kind of mate of yours that ties your component to a gear Update would put back makes Update refuse before
+   it changes anything, naming the mate: a gear mate of yours above all, a mate to a gear's own faces or planes, and
+   a lock of yours that is on in some modes and off in others. Why: SolidWorks lets a gear mate take a put gear's new
+   phase without any error (measured in W5 on the app's own gear mates), so your component's teeth would be left out of
+   step with the gear's with no word, and the other kinds were never tested against a put. Measuring those kinds in W9a's demonstration would
+   lift the refusal for each kind that holds, at the cost of more SolidWorks time on both versions
+   (`notes-workbook/ISSUE-1-PLAN.md`, K2 and *Changes after S0 and its review*).
 
 Answered ahead of its phase (the user, 2026-11-14), for W7's sub-plan:
 
