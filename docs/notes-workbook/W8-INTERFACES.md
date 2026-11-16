@@ -332,7 +332,7 @@ the kind the last two interface reviews found, and asked for written rules. Thes
         puts of the driven train (review S2).
       - *s7 case 8 on 34.1.1* (another machine, 2026-11-15; case 8 alone at `fe74276`, after `s1` built there:
         `probe/results/w8-workbook-assembly-20261115-220745-s1-s7-case8.log`, `w8-s7-20261115-222252-case8.json`;
-        s1 555 checks, s7 27, 0 failed, no STOP) read neither 34.0.0 possibility, as 2024's case 8 did not:
+        s1 555 checks, s7 27, 0 failed, no STOP) read neither 34.0.0 possibility, and read what 2024's case 8 read:
         - the drive's +37° in 2H read in all four by the same amount (the Sun, InDog, RangeSlv and ModeSlv +37°,
           LoDog and the carrier +9.25°, each planet copy −18.5°);
         - the app's quiet Update in 4L (239.6 s) put every mode with no failure; when it showed them, after its put

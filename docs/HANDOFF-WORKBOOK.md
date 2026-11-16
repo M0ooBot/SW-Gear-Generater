@@ -653,8 +653,8 @@ this paragraph says what has been done of it.
   alone, run on 34.1.1 (2026-11-15, another device; `fe74276`, after `s1` built there, 0 failed:
   `probe/results/w8-workbook-assembly-20261115-220745-s1-s7-case8.log`, `w8-s7-20261115-222252-case8.json`), read
   neither: after the app's quiet Update in 4L had put every mode (every configuration then at its built frames), a
-  fresh +37° in 2H read in all four by the same amount, and the moving put in 2H after it stayed in 2H, 4H, N and
-  4L still at the fresh turn through a save and reopen — what 2024's case 8 read. In that Update, after its put in
+  fresh +37° in 2H read in all four by the same amount, and the moving put in 2H after it stayed in 2H: 4H, N and
+  4L still stood at the fresh turn, through a save and reopen — what 2024's case 8 read. In that Update, after its put in
   2H, 4H and N still showed the first turn. So s2's 34.0.0 reading was not seen on 34.1.1 and stays unexplained;
   34.0.0 has not run case 8. The findings keep their values (`TURN_PER_CONFIGURATION_ON_2026` False,
   `POSITIONS_PER_CONFIGURATION_ON_2026` True); their comments and ruling 9.18 say this. The app does not depend on
