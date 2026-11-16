@@ -69,8 +69,8 @@ issue overturns stay as W8 built them until W9 changes them, and are marked *und
 J22's bridging warning (it fires only when `length > gap`), and ruling 9.16 (a gear mate of a gearbox with modes is
 not made again).
 
-**Where W9 stands (paused by the user, 2026-11-16).** Only W9a's first measurement, S0, has run. No app code of W9 is
-written. Pick up here:
+**Where W9 stands (resumed on the user's word, 2026-11-16 afternoon).** W9a's first measurement, S0, is measured on
+both versions, reviewed, and in `findings.py`. No app code of W9 is written. Pick up here:
 
 1. **S0's readings** are in `notes-workbook/W9-S0.md`, from `probe/w9_user_work_check.py` on the issue's RangeBox
    (`tests/workbook_fixtures.range_box`). In short: when Update puts a gear back to its built frame, a component of
@@ -79,17 +79,26 @@ written. Pick up here:
    ruled a third route, **(c)**: the app puts the user's locked component by its gear's own rigid motion in the same
    step. **The user accepted route (c) on 2026-11-16.** It held on SolidWorks 2026 (466 checks, 0 failed) and on 2024
    in cases A, B, E and D.
-2. **Owed on SolidWorks 2024: case C2** (a user tie suppressed in one mode). 2024's run ended at the start of C2 with
-   the log's own line, "No SolidWorks session with PID 12968 is reachable"; the cause was not looked into. Run C2
-   alone in a fresh 2024 session before `USER_TIE_READ` is set for 2024.
-3. **S0 has had no independent review.** It was pushed unreviewed because the user asked for everything to be on
-   GitHub before the pause. The next step is one review of the script, both versions' logs, the note and its proposed
-   findings (`USER_MATE_PUT_ROUTE`, `USER_TIE_READ`, the What's Wrong reading), which also reads W8's close documents
-   (`782d774`, `e20440f`), which had no review of their own. Only then do the findings go into `findings.py`.
-4. Then W9a's packages as `notes-workbook/ISSUE-1-PLAN.md` §5 has them, then W9b, W9c and W9d.
+2. **Case C2 on SolidWorks 2024 is read** (run 4, `probe/results/sw2024/w9-s0-c2-sw2024-20261116-155327.log`, 0
+   failed, the same as 2026). Run 3 had lost its session there 30 s after the laptop's lid closed into Modern Standby
+   (Windows' event log), not through the script. **On this device a closed lid, or the display's idle timeout, puts
+   the whole machine into standby and freezes a run.** The S0 script now asks Windows to stay awake while it runs and
+   writes its JSON after every case (`d086705`); no other script asks Windows to stay awake, so give the next
+   demonstration script that request, and its results written as it goes, before its first long run. The user raised the plugged-in timeouts
+   themselves on 2026-11-16 (screen 30 min, no sleep); a closed lid still sleeps the machine.
+3. **S0 is reviewed** (`notes-workbook/W9-S0-REVIEW.md`, `2ded80a`), with W8's close documents. Its four must-fix
+   points are taken: the plan names route (c) (`1cc0bf6`), the note and W8's documents are corrected (`1a6370a`), and
+   the findings are set and pinned (`ba06c4f`, and 2024's per-mode tie reading with run 4): `USER_MATE_PUT_ROUTE`
+   (a user's lock that is on in the mode put, and nothing else), `USER_TIE_READ`, `USER_TIE_RULE`,
+   `USER_TIE_READ_PER_MODE_ON_2026` / `_2024`, `WHATS_WRONG_OPENS_ON_PART_REBUILD`. The coordinator's ruling that every
+   other kind of user mate on a put gear refuses until measured is question 9 under *Questions waiting for the user*.
+   The review's notes N1 to N7 are not taken; the taking of the points and the script's fix were checked by the
+   coordinator, not by a second reviewer, and are read with package A's review.
+4. **Next: W9a's packages A and B** as `notes-workbook/ISSUE-1-PLAN.md` §5 has them, each reviewed; then the
+   demonstration script, its review, and its runs; then W9b, W9c and W9d.
 
 Run folders kept on this device under `C:\Users\M0obo\Documents\GearGeneratorProbe\`: `w9-s0-20261116-045513`
-(2026's `out\rangebox.master`, where W9a's demonstration starts) and `w9-s0-sw2024-20261116-064725` (2024's). The
+(2026's `out\rangebox.master`, where W9a's demonstration starts) and `w9-s0-sw2024-20261116-064725` (2024's, with its `out\rangebox.master`) and `w9-s0c2-sw2024-20261116-155303` (run 4). The
 person's steps of W8 (`s6` on both versions, the two hand drags) are still theirs to do, under *Questions waiting for
 the user*.
 
@@ -105,7 +114,7 @@ the user*.
 | W6 right-angle | **closed 2026-11-15, but for the person's drag**: planned, reviewed and revised; probe tier 9 (a turned gear mate's sense, on cylinders, SolidWorks 2026) run and reviewed; packages A to E written and each reviewed; the full build run on SolidWorks 2026 and the confirming build on 2024, both from one snapshot (`931fe1a`), every check passing, each run reviewed. Left for the user: drag G1 in the built right-angle gearbox. Details below. |
 | W7 planetary | **closed 2026-11-15, but for the person's drag**: planned, reviewed and revised; the spike on SolidWorks 2026 (`W7-SPIKE.md`); packages A to E written and each reviewed; the demonstration run on SolidWorks 2026 — its first run found one app fault (a turned planetary's put did not hold), the probe `planetary_put_back` measured the route that does, the fix `9f21d99` was reviewed, and every section then passed, the planetary sections and the W5/W6 Update sections once more on the final code; the confirming build on 2024 passed; the run's evidence reviewed. Left for the user: drag Sun in the built planetary. Details below. |
 | W8 sleeves and modes | **closed 2026-11-16, but for three things: the built footer on a screen shorter than the window asks (cut off; open as K12 of W9), the person's step `s6`, and the two hand drags of W6 and W7**: planned, reviewed and revised to the spike (`W8-PLAN.md`, `W8-PLAN-REVIEW.md`, `W8-SPIKE.md`); the interface commit with its rulings (`W8-INTERFACES.md` §9); the findings set and reviewed (`ea7a46f`); packages A to D written and each reviewed; probe tier 11, and the one app fault the first build found, fixed and reviewed; package E's demonstration run on SolidWorks 2026 (34.0.0 on the second host, 34.1.1 here); the closing run from one snapshot of the final source (`c583f48`, 34.1.1): `s0` to `s5` and `s7` and the W5 to W7 sections r1, r2, r3, m5, m8, p1 and p3, every check passing (`c351b1f` to `aff9bfe`), and the full window check 1 failed, the built footer's height (`fb85bcc`); the confirming build on 2024 (32.5.0): `s0`, `s1`, `s2`, `s3`, `s7` 0 failed, its window stage the same one failure (`c3ed9b6`); each run reviewed (`W8-REVIEW-SW2024-CONFIRM.md`, `W8-REVIEW-CLOSING-RUN.md`). The ruling on the footer, the steps for the user and what is left are under *How W8 closed* below. |
-| W9 the user's work in a built assembly, and dog-clutch sleeves (issue #1) | **paused by the user 2026-11-16 after W9a's first measurement (S0); no app code written yet.** S0 is in `notes-workbook/W9-S0.md` and is **not yet reviewed**; nothing of it is in `findings.py`. See *Where W9 stands* above. Planned, reviewed, approved by the user (2026-11-16). The plan is `notes-workbook/ISSUE-1-PLAN.md` (stages W9a to W9d), reviewed in `ISSUE-1-PLAN-REVIEW.md` and revised to its second review (`ISSUE-1-PLAN-REVIEW-2.md`). See the dated paragraph of 2026-11-15/16 above. |
+| W9 the user's work in a built assembly, and dog-clutch sleeves (issue #1) | **resumed 2026-11-16; W9a's first measurement (S0) is measured on both versions, reviewed (`notes-workbook/W9-S0-REVIEW.md`) and in `findings.py`; no app code written yet; packages A and B are next.** See *Where W9 stands* above. Planned, reviewed, approved by the user (2026-11-16). The plan is `notes-workbook/ISSUE-1-PLAN.md` (stages W9a to W9d), reviewed in `ISSUE-1-PLAN-REVIEW.md` and revised to its second review (`ISSUE-1-PLAN-REVIEW-2.md`). See the dated paragraph of 2026-11-15/16 above. |
 | Printed gears (FDM, PLA): stages F1 to F4 | **planned, waiting behind W9; nothing built and nothing to be built yet (the user, 2026-11-16).** The plan is `docs/PLAN-PRINTED.md`, reviewed once in `docs/PLAN-PRINTED-REVIEW.md` and revised to that review and to the user's answers (Printed the default everywhere, D-flat first, STEP for Bambu Studio, the first layer left to the slicer, printed parts named `_P`, W9 first). Its D3, D6 and D7 stand as assumed. The revision is not reviewed: when it is taken up, after W9 closes, it is read against the code as W9 left it and reviewed again before any code. |
 | How the user's absence is handled | the user said on 2026-11-14 to carry on, in order, until W8 is done. Judgement calls are taken at each plan's recommended reading and listed for the user as readings to overrule. |
 | The small-pinion tip cap | `fix/small-pinion-cap` merged at `0f5a121` (the user's instruction): 6- and 7-tooth pinions build with an arc on the tip cap, version 0.3.2. Built on SolidWorks 2024 by the branch; the 2026 build and the merge's review are in hand. |

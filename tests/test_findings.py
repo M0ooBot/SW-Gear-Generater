@@ -1620,6 +1620,8 @@ W9_S0_RUN1_LOG = LATEST.parent / "w9-s0-sw2026-20261116-050200.log"
 W9_S0_RUN2 = LATEST.parent / "w9-s0-20261116-054213.json"
 W9_S0_RUN2_LOG = LATEST.parent / "w9-s0c-sw2026-20261116-054300.log"
 W9_S0_2024_LOG = LATEST.parent / "sw2024" / "w9-s0-sw2024-20261116-065000.log"
+W9_S0_2024_C2 = LATEST.parent / "sw2024" / "w9-s0-c2-20261116-155327.json"
+W9_S0_2024_C2_LOG = LATEST.parent / "sw2024" / "w9-s0-c2-sw2024-20261116-155327.log"
 W9_TRAIN = {"Sun": 3, "Planet copy 1": 3, "Planet copy 2": 3, "Planet copy 3": 3, "HighDog": 3, "LowDog": 3,
             "RangeSlv": 3, "Carrier carrier": 3}
 W9_ROUTE_C = ("A-c1", "A-c2", "B-c1", "B-c2", "E-c1", "E-c2")
@@ -1769,11 +1771,11 @@ def test_s0_the_tie_reads_3_on_every_body_of_the_train_and_the_rule_is_not_under
     assert findings.USER_TIE_RULE == "not COMPONENT_UNDER_DEFINED"
 
 
-def test_s0_the_tie_is_read_per_mode_on_2026_and_c2_is_owed_on_2024():
+def test_s0_the_tie_is_read_per_mode_on_2026_and_on_2024():
     """Case C2, the tie suppressed in H and N and on in L: on 2026 the unshown read with H active and H shown read the
-    train free and L shown read it tied (USER_TIE_READ_PER_MODE_ON_2026 True). On 2024 C2's first read found the
-    session gone (the laptop's lid closed into Modern Standby; W9-S0.md), so nothing of C2 was read and the 2024
-    reading stays None until C2 runs there."""
+    train free and L shown read it tied (USER_TIE_READ_PER_MODE_ON_2026 True). On 2024 run 3's C2 found the session
+    gone at its first read (the laptop's lid closed into Modern Standby; W9-S0.md) and read nothing; run 4, C2 alone in
+    a fresh session at d086705, read the same as 2026 with 0 failed (USER_TIE_READ_PER_MODE_ON_2024 True)."""
     for path, snapshot in ((W9_S0_RUN2, "423e227"), (W9_S0_RUN1, "55a82c1")):
         data = _w9_json(path, snapshot)
         assert data["proposal"]["USER_TIE_READ"]["C2"] == {"unshown": {"active": "H", "tie": {}},
@@ -1790,8 +1792,21 @@ def test_s0_the_tie_is_read_per_mode_on_2026_and_c2_is_owed_on_2024():
     assert old[1919] == "FAIL    S0 raised NotRunning: No SolidWorks session with PID 12968 is reachable."
     assert not any(line.startswith("read    S0 C2") or (line.startswith("ok      S0 C2") and "the train reads" in line)
                    for line in old)
+    run4 = json.loads(W9_S0_2024_C2.read_text(encoding="utf-8"))
+    assert run4["revision"] == [32, 5, 0] and run4["snapshot"] == "d086705" and run4["fails"] == []
+    assert list(run4["cases"]) == ["C2"] and run4["cases"]["C2"]["tie"] == ["L"]
+    assert run4["proposal"]["USER_TIE_READ"]["C2"] == {"unshown": {"active": "H", "tie": {}},
+                                                       "shown": {"H": {}, "L": W9_TRAIN}}
+    new = _w9_log(W9_S0_2024_C2_LOG)
+    assert "(snapshot: d086705); cases ['C2']" in new[1]
+    assert new[2].startswith("attach  SolidWorks 2024 (revision 32.5.0), PID 13944")
+    assert new[53].startswith("read    S0 C2 the tie read, before any put, in the mode the copy opens in, nothing "
+                              "shown (active H): train not free none (every other mated body 2)")
+    assert new[58] == "ok      S0 C2: in H the train reads free, as no tie wants: every mated body 2"
+    assert new[74] == f"ok      S0 C2: in L the train reads not free (a tie), as the tie on there wants: {W9_TRAIN}"
+    assert new[-1] == "done    0 failed: []; 1 noted; 0 STOP(s)"
     assert findings.USER_TIE_READ_PER_MODE_ON_2026 is True
-    assert findings.USER_TIE_READ_PER_MODE_ON_2024 is None
+    assert findings.USER_TIE_READ_PER_MODE_ON_2024 is True
 
 
 def test_s0_a_parts_failing_rebuild_opened_no_whats_wrong_on_either_version():

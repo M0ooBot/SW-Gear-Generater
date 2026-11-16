@@ -1570,15 +1570,16 @@ USER_MATE_PUT_ROUTE = "put along, the user's locks left on"
 # - USER_TIE_READ_PER_MODE_ON_<year>, case C2 (the tie suppressed in H and N, on in L): True where a mode's tie was read
 #   only with that mode shown. On 2026: the unshown read with H active and H shown read the train free, every mated
 #   body 2, and L shown read it tied (run 2 lines 991, 996 and 1012; the JSON's proposal "USER_TIE_READ" "C2"; run 1
-#   the same). On 2024 None: C2 is owed there (run 3 ended at its first read, line 1920), to be run alone in a fresh
-#   session. With the same flags in every mode, C read H and L the same; that the showing mode's read decides every
+#   the same). On 2024 the same, from C2 run alone in a fresh session at d086705 (run 4,
+#   sw2024/w9-s0-c2-sw2024-20261116-155327.log lines 54, 59 and 75 and its JSON's proposal; 0 failed): run 3 had
+#   ended at C2's first read (line 1920). With the same flags in every mode, C read H and L the same; that the showing mode's read decides every
 #   mode is not measured (N was not read before a put).
 # No behaviour may rest on the per-mode reading: K2 reads a mode whose user flags differ when it is shown, on every
 # version.
 USER_TIE_READ = 3                               # COMPONENT_FULLY_DEFINED; on 2026 and 2024
 USER_TIE_RULE = "not COMPONENT_UNDER_DEFINED"
 USER_TIE_READ_PER_MODE_ON_2026 = True
-USER_TIE_READ_PER_MODE_ON_2024 = None           # C2 is owed on 2024
+USER_TIE_READ_PER_MODE_ON_2024 = True           # run 4, C2 alone
 #
 # What's Wrong on a failing rebuild (the plan's P0, probed ahead for a dialog), first in runs 1 and 3: a scratch part
 # built by the strip and opened by the app's route, visible and active; a user keyway (a Ø3 cut through the bore's
