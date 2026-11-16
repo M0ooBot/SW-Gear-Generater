@@ -67,3 +67,26 @@ def e4_transfer_case() -> GearboxSpec:
               Mesh("FIdler", "FOut", row=5))
     return GearboxSpec(box=Box(name="TransferCase_E4", pressure_angle="20", efficiency="98"), shafts=shafts,
                        gears=gears, meshes=meshes, modes=MODES, sliders=SLIDERS)
+
+
+def range_box() -> GearboxSpec:
+    """ISSUE-1-PLAN §3, ``RangeBox``: the issue's two-speed planetary range box as the issue wrote it (before W9b). The
+    sun on Input drives three planets on Carrier inside a fixed ring; RangeSlv on Output engages HighDog (Input) in H,
+    nothing in N, LowDog (Carrier) in L. Module 1.25 throughout, the Box's 20° and 98 %."""
+    shafts = (Shaft("Input", "frame", "0", "0", "0", "Z+", "input", "", "1500", "10", row=2),
+              Shaft("Carrier", "frame", "0", "0", "0", "Z+", "", row=3),
+              Shaft("Planet", "Carrier", "26.25", "0", "0", "", "", "3", row=4),
+              Shaft("Ring", "frame", "0", "0", "0", "Z+", "fixed", row=5),
+              Shaft("Output", "frame", "0", "0", "0", "Z+", "output", row=6))
+    gears = (_gear("Sun", "Input", "10.5", "spur", "29", "1.25", "10", row=2),
+             _gear("Planet", "Planet", "10.5", "spur", "13", "1.25", "10", row=3),
+             _gear("Ring", "Ring", "10.5", "spur", "55", "1.25", "10", side="internal", row=4),
+             _gear("HighDog", "Input", "-32", "dog", "17", "1.25", "5", row=5),
+             _gear("LowDog", "Carrier", "-17", "dog", "17", "1.25", "5", row=6),
+             _gear("RangeSlv", "Output", "-24.5", "sleeve", "17", "1.25", "10", "H=-5, N=0, L=+5", row=7))
+    meshes = (Mesh("Sun", "Planet", row=2), Mesh("Planet", "Ring", row=3))
+    modes = (Mode("H", (("RangeSlv", "H"),), "", row=2),
+             Mode("N", (("RangeSlv", "N"),), "", row=3),
+             Mode("L", (("RangeSlv", "L"),), "", row=4))
+    return GearboxSpec(box=Box(name="RangeBox", pressure_angle="20", efficiency="98"), shafts=shafts, gears=gears,
+                       meshes=meshes, modes=modes, sliders=("RangeSlv",))
