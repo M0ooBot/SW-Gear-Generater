@@ -53,7 +53,7 @@ from ..gears import bevel, equations, kind_for, spur
 from ..gears.base import GlobalVariable
 from ..spec import GearSpec, InputError
 from ..store import GearboxRecord, LinkRecord, MateEntry, PartEntry, ShaftEntry, Sidecar
-from ..swbuild import (POSE_TOLERANCE, DocumentValues, GearboxUpdate, LockLink, MeshLink, MotionUpdate, Placement,
+from ..swbuild import (MARK_MISMATCHED, MARK_UNSAVED, POSE_TOLERANCE, DocumentValues, GearboxUpdate, LockLink, MeshLink, MotionUpdate, Placement,
                        _caps_with_arc, on_in, plan_features, same_frame, structural_change)
 from . import gearbox, geometry, layout, motion, planetary, schema
 from .assess import Assessment
@@ -75,12 +75,14 @@ class PartUpdate:
     variables: Tuple[GlobalVariable, ...]
     changed: bool = False
     # W9a (ISSUE-1-PLAN K11, K1/K3; W9A-INTERFACES.md), handed to the worker in its ``DocumentValues``: ``recorded``
-    # the ``(global, expression)`` pairs the record says the file holds (None when it cannot say: no variables on
-    # record, or the file marked unsaved or mismatched), ``cells`` the workbook cell of each global a cell sets, and
-    # ``made`` every feature the part's plan makes.
+    # the ``(global, expression)`` pairs the record says the file holds (None when it has none), ``cells`` the
+    # workbook cell of each global a cell sets (every row's, joined, for a shared part), ``made`` every feature the
+    # record lists for the part (its ``.gear.json``), else the part's plan's, and ``mark`` the record's mark on it,
+    # from which the worker decides whether the record vouches for the file.
     recorded: Optional[Tuple[Tuple[str, str], ...]] = None
     cells: Tuple[Tuple[str, str], ...] = ()
     made: Tuple[str, ...] = ()
+    mark: str = ""                  # the record's mark on the file: "unsaved", "mismatched" or ""
 
 
 @dataclass(frozen=True)
@@ -169,8 +171,8 @@ class UpdatePlan:
             raise ValueError("Update SolidWorks cannot carry this change: "
                              + " ".join((self.refusal,) + self.structural + self.missing).strip())
         kwargs: Dict[str, Any] = {
-            "parts": [DocumentValues(p.path, tuple(p.variables), recorded=p.recorded, cells=p.cells, made=p.made)
-                      for p in self.parts],
+            "parts": [DocumentValues(p.path, tuple(p.variables), recorded=p.recorded, cells=p.cells, made=p.made,
+                                     mark=p.mark) for p in self.parts],
             "layout": self.layout,
             "assembly": self.assembly,
             "placements": list(self.placements),
@@ -358,7 +360,8 @@ def _bevel_form_change(entry: PartEntry, built: GearSpec, wanted: GearSpec) -> s
 
 @store.in_one_pass
 def classify(record: Optional[LinkRecord], a: Assessment, *,
-             exists: Callable[[str], bool] = os.path.exists) -> UpdatePlan:
+             exists: Callable[[str], bool] = os.path.exists,
+             read_sidecar: Optional[Callable[[str], Optional[Sidecar]]] = None) -> UpdatePlan:
     """What Update SolidWorks would change, from the planning read of the record (``store.read_link_record``) and
     an assessment that passed ``a.lay_out_refusal()`` (or ``a.build_refusal()`` when only parts are recorded).
     Acts only on ``record.current_parts()`` (decision 2). Pure but for ``exists``.
@@ -500,7 +503,8 @@ def classify(record: Optional[LinkRecord], a: Assessment, *,
         update, why = _part(entry, jobs[0], exists)
         if why:
             structural.append(why)
-        parts.append(replace(update, cells=_gear_cells(spec, entry.gears)))
+        parts.append(replace(update, cells=_gear_cells(spec, entry.gears),
+                             made=_recorded_features(entry.path, read_sidecar) or update.made))
 
     # The assembly: every gear's wanted frame, by the Name2 on record.
     placements: List[Placement] = []
@@ -551,17 +555,17 @@ def classify(record: Optional[LinkRecord], a: Assessment, *,
 
     if box is None:
         carrier_values, carriers_moved = (), ()
-    # W9a (K11): what the record says each file holds, given only where no unsaved or mismatched mark makes it
-    # unsure (a lost or unsaved Update explains a difference there); and the assembly's own, the same way.
-    marked = list(record.unsaved) + list(record.mismatched)
-    unsure = lambda path: any(store.same_path(path, m) for m in marked)            # noqa: E731
-    parts = [replace(p, recorded=None) if unsure(p.path) else p for p in parts]
-    if layout_values is not None and unsure(layout_values.path):
-        layout_values = replace(layout_values, recorded=None)
-    carrier_values = [replace(c, recorded=None) if unsure(c.path) else c for c in carrier_values]
+    # W9a (K11, ruling 3 after package A's review): the record's mark on each file goes with what the record says it
+    # holds; the worker vouches for a marked file only when it stayed open, modified, since the Update that marked
+    # it (swbuild._vouches), and a lost Update keeps W8's set-back.
+    mark_of = lambda path: _mark(record, path)                                       # noqa: E731
+    parts = [replace(p, mark=mark_of(p.path)) for p in parts]
+    if layout_values is not None:
+        layout_values = replace(layout_values, mark=mark_of(layout_values.path))
+    carrier_values = [replace(c, mark=mark_of(c.path)) for c in carrier_values]
     moving = modal.motion or turn.motion
     if moving is not None and box is not None:
-        moving = _with_user_work(moving, box, spec, unsure(box.assembly))
+        moving = _with_user_work(moving, box, spec, mark_of(box.assembly))
     return UpdatePlan(parts=tuple(parts), layout=layout_values, assembly=assembly, placements=tuple(placements),
                       moved_shafts=tuple(moved), replaced=tuple(replaced), structural=tuple(structural),
                       missing=tuple(dict.fromkeys(missing)), unsaved=tuple(record.current_marks(record.unsaved)),
@@ -580,18 +584,40 @@ _GLOBAL_COLUMN = {spur.TEETH: "teeth", spur.MODULE: "module", spur.BORE: "bore",
                   spur.PROFILE_SHIFT: "profile_shift"}
 
 
+def _mark(record: LinkRecord, path: str) -> str:
+    """The record's mark on a file: ``"mismatched"`` (an Update lost), ``"unsaved"`` (an Update not yet saved), or
+    ``""``."""
+    if any(store.same_path(path, m) for m in record.mismatched):
+        return MARK_MISMATCHED
+    if any(store.same_path(path, m) for m in record.unsaved):
+        return MARK_UNSAVED
+    return ""
+
+
+def _recorded_features(path: str, read_sidecar: Optional[Callable[[str], Optional[Sidecar]]]) -> Tuple[str, ...]:
+    """The features the part's ``.gear.json`` lists as the build kept them (K1: what the record lists), or ``()``
+    when there is no reader, no sidecar or no list (a reused part's sidecar may hold none): then the plan's are used."""
+    if read_sidecar is None:
+        return ()
+    try:
+        sidecar = read_sidecar(store.sidecar_path(path))
+    except (OSError, ValueError, store.StoreError):
+        return ()
+    return tuple(sidecar.record.features) if sidecar is not None and sidecar.record.features else ()
+
+
 def _gear_cells(spec: Any, gears: Sequence[str]) -> Tuple[Tuple[str, str], ...]:
-    """``(global, Gears cell)`` for a part's globals a cell sets, on the part's first gear's row that the workbook
-    has (a planet copy's by its row)."""
-    row = 0
+    """``(global, Gears cell)`` for a part's globals a cell sets: every row the part serves (a part shared by G1 and
+    G3 is set by both rows, and typing one alone would split it), joined, ``"Gears!J3 and Gears!J5"``; a planet copy
+    by its row."""
+    rows: List[int] = []
     for gear in gears:
         found = spec.gear(gear) or spec.gear(gear.split(" copy ")[0])
-        if found is not None and found.row:
-            row = found.row
-            break
-    if not row:
+        if found is not None and found.row and found.row not in rows:
+            rows.append(found.row)
+    if not rows:
         return ()
-    return tuple((name, spec.cell("Gears", row, key)) for name, key in _GLOBAL_COLUMN.items())
+    return tuple((name, _names([spec.cell("Gears", row, key) for row in rows])) for name, key in _GLOBAL_COLUMN.items())
 
 
 def _shaft_cells(spec: Any, shafts: Sequence[ShaftLayout]) -> Tuple[Tuple[str, str], ...]:
@@ -617,9 +643,9 @@ def _recorded_layout(box: GearboxRecord) -> Optional[Tuple[Tuple[str, str], ...]
         return None
 
 
-def _with_user_work(moving: MotionUpdate, box: GearboxRecord, spec: Any, unsure: bool) -> MotionUpdate:
-    """The motion path's W9a fields: the layout's Name2 on record; ``record_holds`` unless the assembly is marked
-    unsaved or mismatched; each Face Z as the record holds it (``|z_front|`` of its along mate, keyed as
+def _with_user_work(moving: MotionUpdate, box: GearboxRecord, spec: Any, mark: str) -> MotionUpdate:
+    """The motion path's W9a fields: the layout's Name2 on record; ``record_holds`` (the record's word is given) and
+    the assembly's ``mark``, from which the worker decides whether it vouches; each Face Z as the record holds it (``|z_front|`` of its along mate, keyed as
     ``face_globals`` is, by the gear's row); and the cell each Face Z (the gear's At) and each slide (its Slides)
     is set by."""
     rows = {g.name: row for row, g in moving.face_globals}
@@ -635,7 +661,7 @@ def _with_user_work(moving: MotionUpdate, box: GearboxRecord, spec: Any, unsure:
             gear = spec.gear(mate.gears[0])
             if gear is not None and gear.row:
                 cells.append((mate.name, spec.cell("Gears", gear.row, "slides")))
-    return replace(moving, layout_component=box.layout_component, record_holds=not unsure,
+    return replace(moving, layout_component=box.layout_component, record_holds=True, assembly_mark=mark,
                    recorded_faces=tuple(dict(faces).items()), cells=tuple(cells))
 
 

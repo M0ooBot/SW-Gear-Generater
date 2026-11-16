@@ -1155,6 +1155,23 @@ def _e4_at_built_frames(sw, up):
             assert swbuild.same_frame(got[0], got[1], want[0], want[1]), (mode, component)
 
 
+def _lost_update(sw, record):
+    """The lost Update (W9a, the coordinator's ruling 3 after package A's review): an earlier Update left the
+    assembly unsaved — the record's mark — and SolidWorks closed it unsaved and loaded it again from its file, which
+    holds what the fake holds now. The record cannot vouch for it, so a value found otherwise is set back as W8 set it
+    back (K11's "lost Update")."""
+    import copy
+    from test_swbuild import _key
+    asm = record.gearbox.assembly
+    key = _key(asm)
+    sw.saved_mates[key] = copy.deepcopy(sw.memory_mates[key])
+    sw.saved[key] = (list(sw.memory[key][0]), list(sw.memory[key][1]))
+    sw.saved_configs[key] = (list(sw.configs), sw.config, copy.deepcopy(sw.frames_by))
+    sw.open_docs = [d for d in sw.open_docs if _key(d.path) != key]
+    sw.touched.discard(key)
+    record.unsaved[asm] = 1.0
+
+
 def _e4_flags_or_value_changed(sw, change):
     """A change only to flags (D10: a recorded coupling found suppressed in 4H, where the record has it on) or only
     to a slide's value (RangeSlv's place in 2H changed in SolidWorks)."""
@@ -1178,6 +1195,7 @@ def test_e4_a_turn_in_2h_then_a_flags_or_values_update_in_4l_puts_every_turned_m
     sw.drive(sun, 37.0)
     sw.show_configuration("4L")
     piece = _e4_flags_or_value_changed(sw, change)
+    _lost_update(sw, record)
     sw.calls.clear()
     up, result = press_e4(sw, record, e4_transfer_case())
     assert result.failures == [], result.failures
@@ -1199,10 +1217,35 @@ def test_e4_a_flags_or_values_update_of_a_gearbox_nobody_turned_puts_nothing(mod
     sw.put_splits = set()
     sw.show_configuration("4L")
     _e4_flags_or_value_changed(sw, change)
+    _lost_update(sw, record)
     sw.calls.clear()
     up, result = press_e4(sw, record, e4_transfer_case())
     assert result.failures == [] and result.put_in == [] and result.visited == ["2H", "4H", "N"]
     assert not [n for n, _ in sw.calls if n == "place_component"]
+
+
+@pytest.mark.parametrize("change, said", [
+    ("flag", "The mate ModeSlv engages FrontDog is suppressed in 4H in SolidWorks, where Gear Generator made it on and "
+             "the workbook has it on: in SolidWorks, turn it back on in 4H and press Update SolidWorks again."),
+    ("value", "RangeSlv along Rear in TransferCase_E4 in 2H is 50 mm in SolidWorks, where Gear Generator set it to "
+              "46 mm and the workbook now asks 46 mm: set it back to 46 mm in SolidWorks, or change Gears row 7 so the "
+              "workbook asks 50 mm, and press Update SolidWorks again.")])
+@pytest.mark.parametrize("marked", [False, True], ids=["no mark", "unsaved, still open and modified"])
+def test_e4_a_flag_or_value_the_user_changed_refuses_where_the_record_vouches(mode_findings, change, said, marked):
+    """K11 on E4 through classify: the same changes as above, with the record vouching for the assembly — no mark, or
+    an unsaved mark on an assembly that stayed open, modified, since that Update — refuse before anything is shown,
+    naming the value (W9a, ruling 3)."""
+    sw, _, record = build_on_fake(e4_transfer_case())
+    sw.show_configuration("4L")
+    _e4_flags_or_value_changed(sw, change)
+    if marked:
+        record.unsaved[record.gearbox.assembly] = 1.0
+    sw.calls.clear()
+    with pytest.raises(swbuild.UserWorkRefused) as raised:
+        press_e4(sw, record, e4_transfer_case())
+    assert str(raised.value) == said
+    assert not [n for n, _ in sw.calls if n in ("show_configuration", "place_component", "set_mate_suppressed_in",
+                                                "set_dimension_in")]
 
 
 def test_e4_a_turn_put_back_in_the_mode_worked_in_names_the_modes_read_at_the_built_turn(mode_findings, monkeypatch):
@@ -1215,6 +1258,7 @@ def test_e4_a_turn_put_back_in_the_mode_worked_in_names_the_modes_read_at_the_bu
     sun = next(c.name for c in record.gearbox.components if c.gear == "Sun")
     sw.drive(sun, 37.0)
     piece = _e4_flags_or_value_changed(sw, "flag")
+    _lost_update(sw, record)
     up, result = press_e4(sw, record, e4_transfer_case())
     assert result.failures == [] and result.put_in == ["4L"] and result.modes[-1].turned
     assert [(c.name, c.out_of_step, c.off_axis, c.turned) for c in result.modes[:3]] == [
