@@ -27,7 +27,7 @@ from gear_generator.workbook import model, motion, xlsx
 from gear_generator.workbook.gearbox import LayoutReuse
 from gear_generator.workbook.model import Gear
 from test_swbuild import FakeSolidWorks
-from test_workbook_build import a_later_kind  # noqa: F401 - a fixture: a dog ring made a later phase's (W9)
+from test_workbook_build import a_later_kind  # noqa: F401 - a fixture: a dog ring made a later phase's (W99)
 from test_swbuild import mode_findings  # noqa: F401 - a fixture: the findings a build with modes reads (A's)
 from test_workbook_model import reducer, write
 
@@ -645,7 +645,7 @@ def test_build_parts_falls_back_while_a_later_row_holds_the_layout_back(desk, a_
     assert (footer.build_action, footer.build_label, footer.build_primary) == (ui_text.BUILD_PARTS, "Build parts",
                                                                                True)
     assert window.status.get().startswith("Ready: Build parts makes 4 parts in ") and window.status.get().endswith(
-        "; the layout and assembly are not built: Gears!A6: G7 is a dog ring: dog rings are built in phase W9.")
+        "; the layout and assembly are not built: Gears!A6: G7 is a dog ring: dog rings are built in phase W99.")
     desk.sw.fail_on = {"save_as": (desk.part("OutputGear"), "The disk is full.")}
     window.press_build()
     desk.finish(window)

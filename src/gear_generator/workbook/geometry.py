@@ -225,7 +225,9 @@ class Layout:
 
 
 # The kinds no phase before W8 lays out, as a few words for a list of what was left out.
-LATER_KINDS: Dict[str, str] = {}      # W8 lays out sleeves and dogs: no kind waits for a later phase now
+# W8 lays out sleeves and dogs: it was the last phase of the import as planned on 2026-11-11, and W9 (issue #1)
+# builds on it and leaves no row waiting for a phase.
+LATER_KINDS: Dict[str, str] = {}
 
 
 def layout(spec: GearboxSpec, skip_gears=()) -> Layout:

@@ -314,7 +314,8 @@ HELD_BACK = ("Gears!A6: G6 slides on S3, a shaft whose Role is fixed, so it is n
 @pytest.fixture
 def with_carrier(tmp_path):
     """The 12 : 1 workbook with a row whose part builds and which holds the layout back (a bevel row did until W6
-    laid bevels out, a carrier until W7, a dog ring until W8 built them; W8 is the last phase, so such a row is one
+    laid bevels out, a carrier until W7, a dog ring until W8 built them; W8 was the last phase of the import as
+    planned on 2026-11-11, and W9 (issue #1) builds on it and leaves no row waiting for a phase, so such a row is one
     this version does not build, W8-PLAN §0.1 — written into the parts plan here, since its sentence is B's)."""
     spec, diagnostics = model.from_book(xlsx.read(write(tmp_path, reducer())))
     a = assess.assess(spec, diagnostics, P)

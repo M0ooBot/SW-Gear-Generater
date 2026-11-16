@@ -449,7 +449,7 @@ fixed header and footer, the footer always whole).
   |---|---|---|
   | to build | green | *to build* |
   | the same part as another row | green | *same as G1* (identical rows share one file; a long name shortened as the Part column's) |
-  | a later phase builds it (since W8 no kind does; the state stays for one that may) | grey `#8f8f8f` | *later · phase W9* |
+  | a later phase builds it (since W8 no kind does; the state stays for one that may) | grey `#8f8f8f` | *later · phase W99* (a made-up phase in the tests) |
   | an error of its own | red | *see Checks*, in red |
   | built, and Update leaves it | green | *built* |
   | built, and Update changes its values | near-black `#2b2b2b` | *changes on Update* |
@@ -484,10 +484,12 @@ fixed header and footer, the footer always whole).
   1.62` (`workbook.fixes`, for centres that are off; the move is not offered
   inside a loop of meshes, nor the shift where it does not apply). Each row a
   later phase builds would be a grey line at its cell, naming the row and the
-  phase (`workbook.build.later_rows`); since W8, the last phase, no kind of row
-  waits for one (bevel gears and turned axes are W6's, carriers W7's, sleeves,
-  dog rings, slides and modes W8's), and what this version does not build is an
-  error at its cell, saying so without naming a phase. Clean: *No problems:
+  phase (`workbook.build.later_rows`). W8 was the last phase of the import as
+  planned on 2026-11-11; W9 (issue #1) builds on it and leaves no row waiting
+  for a phase. So since W8 no kind of row waits for one (bevel gears and turned
+  axes are W6's, carriers W7's, sleeves, dog rings, slides and modes W8's), and
+  what this version does not build is an error at its cell, saying so without
+  naming a phase. Clean: *No problems:
   every row reads, and every gear works out.*
   **While Excel has yet to recalculate an Export** (the footer's recalculation
   wait) the read is provisional: Checks opens with *Provisional: the workbook's

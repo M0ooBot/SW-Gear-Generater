@@ -276,7 +276,8 @@ refused at Build before W6. Then:
   dogs, modes) — "*G5 is a bevel gear: right-angle stages are built in phase W6.*"
 
 *Sleeves, dogs, slides and modes (W8, 2026-11-15; `notes-workbook/W8-PLAN.md` §1.1–§1.5, readings J3–J6, J16, J18,
-J22):* W8 is the last phase, so no row is refused for a later one any more (`build.LATER` and
+J22):* W8 was the last phase of the import as planned on 2026-11-11; W9 (issue #1) builds on it and leaves no row
+waiting for a phase, so no row is refused for a later one any more (`build.LATER` and
 `geometry.LATER_KINDS` stay, empty). `kind_for` finds `sleeve` and `dog` (`gears.WORKBOOK_KINDS`, never offered by
 the strip). Every check runs per mode, at each slider's position there: an engagement is a sleeve covering a dog's
 whole face (a partial cover is an error at that mode's Modes cell), a jam in a mode is an error at its row, two
@@ -730,11 +731,13 @@ the pattern: `POLL_MS`).
 | **W6 right-angle** | Turned axes, bevel and crossed meshes | A bevel stage feeding a parallel stage builds; sub-plan and questions at the time. |
 | **W7 planetary** | Carriers, copies, loops in kinematics and phases | A 4 : 1 planetary with the ring fixed builds; own sub-plan. |
 | **W8 sleeves and modes** | Sleeve and dog kinds, Slides, Modes → configurations | The E4 transfer case's four modes; own sub-plan and probes (per-configuration mate suppression). |
+| **W9 the user's work, and dog-clutch sleeves** (issue #1) | W9a Update leaves the user's work in a built assembly alone or refuses naming it; W9b sleeve checks, bands and the hub; W9c Update adds, removes and re-mates; W9d Build again… carries the user's work | Own plan, `notes-workbook/ISSUE-1-PLAN.md`, §5 per stage. |
 
 *W8 (2026-11-15):* the sub-plan is `notes-workbook/W8-PLAN.md`, revised after its review and after the spike, its
 interfaces `W8-INTERFACES.md` with the rulings of its §9. Its own fixture **TransferCase_Parallel** (the E4 transfer
 case with the low range on a layshaft, no planetary) is built first as the shakedown, then the E4 transfer case. W8
-is the last phase: nothing is left for a later one, and what it does not build is an error naming no phase.
+was the last phase of the import as planned on 2026-11-11; W9 (issue #1) builds on it and leaves no row waiting for a
+phase, and what this version does not build is an error naming no phase.
 
 *W8 closed (2026-11-16), but for three things:* the built footer on a screen shorter than the window asks (cut off;
 taken up as K12 of W9), the person's step `s6`, and the hand drags of W6 and W7. Every assembly section passed on
@@ -748,7 +751,8 @@ they cannot use the app any more for fear of it overwriting their work, open a n
 `notes-workbook/ISSUE-1-PLAN.md`, stages W9a to W9d, reviewed in `ISSUE-1-PLAN-REVIEW.md`, revised to its second
 review (`ISSUE-1-PLAN-REVIEW-2.md`) and approved by the user (2026-11-16), who also answered its choices (an
 app-owned value changed in SolidWorks stops Update, named; Build again… carries the user's components and remakes
-their mates; the hub built from a row). The table's W8 row above is as approved; W9 has no row of its own here.
+their mates; the hub built from a row). The table's W8 row above is as approved, and W9's row was added when W9a
+landed.
 This file stays the authority, and the plan says where W9 departs from it.
 
 The planner (PLAN-GEARBOX) starts after W5 and reuses W1–W5 whole: its data model becomes `GearboxSpec`

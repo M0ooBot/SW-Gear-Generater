@@ -676,9 +676,9 @@ what it engages is worked out (a sleeve covering a dog's whole face couples thei
 ratios and checks are per mode. Build makes one configuration per mode, named as the mode, the first Modes row the
 one the assembly opens in; one distance mate per slider with a value per configuration; each coupling and each
 spline a 1 : 1 gear mate between collinear axes, settled by the read-back, a coupling switched on only in the modes
-that engage it. Update works across the configurations (W8-PLAN §1.10). The record's schema 6. W8 is the last phase:
-no row waits for a later one, and what this version does not build is an error naming no phase (so it was written;
-since issue #1, 2026-11-16, W9 follows, and what W8 refuses stays an error naming no phase). The readings J1–J27
+that engage it. Update works across the configurations (W8-PLAN §1.10). The record's schema 6. W8 was the last phase
+of the import as planned on 2026-11-11; W9 (issue #1) builds on it and leaves no row waiting for a phase, and what
+this version does not build is an error naming no phase. The readings J1–J27
 as revised are in PLAN-WORKBOOK §4.5, *Readings chosen (W8)*, with a note under §3.4 and one under §6.
 
 **The orchestrating session's rulings, taken while the user was away; the user may overrule each** (PLAN-WORKBOOK

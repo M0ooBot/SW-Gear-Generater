@@ -1012,8 +1012,9 @@ def workbook_change_lines(changes: Sequence[str], consequence=None,
 
 def _left_for_later(parts) -> str:
     """`` The layout and assembly are not built: Gears!A6: …`` — never a bare "Ready" or "Built" while rows hold the
-    layout back: they are not checked, and nothing places them. W8 is the last phase, so no phase is named: the
-    row's own sentence says it is not built by this version of the app (W8-PLAN J18)."""
+    layout back: they are not checked, and nothing places them. W8 was the last phase of the import as planned on
+    2026-11-11; W9 (issue #1) builds on it and leaves no row waiting for a phase, so no phase is named: the row's own
+    sentence says it is not built by this version of the app (W8-PLAN J18)."""
     refused = getattr(parts, "refused", [])
     if not refused:
         return ""

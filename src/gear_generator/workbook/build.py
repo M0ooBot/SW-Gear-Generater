@@ -34,7 +34,9 @@ from .model import Gear, GearboxSpec
 PART_SUFFIX = ".SLDPRT"
 
 # Kinds a later phase builds: what such a row is, and the phase that builds it (PLAN-WORKBOOK §6).
-LATER: Dict[str, Tuple[str, str]] = {}     # W8 is the last phase: sleeves and dogs are built (gears/clutch.py)
+# W8 was the last phase of the import as planned on 2026-11-11 (sleeves and dogs are built, gears/clutch.py); W9
+# (issue #1) builds on it and leaves no row waiting for a phase.
+LATER: Dict[str, Tuple[str, str]] = {}
 
 # A GearSpec field's diagnostics belong to a workbook column; most share the name.
 FIELD_COLUMN = {"teeth_side": "side", "recipe": "flank", "name": "part_name"}

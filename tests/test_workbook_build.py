@@ -22,11 +22,12 @@ def from_file(path):
 @pytest.fixture
 def a_later_kind(monkeypatch):
     """After W8 no kind of row waits for a later phase, but the channel for one stays (``build.LATER``,
-    ``geometry.LATER_KINDS``): here a dog ring stands in for such a kind, said to be built in a made-up phase W9, so
-    the tests of that channel keep showing what a later phase's row does — named at its cell with its phase, its own
-    part not built, the other parts built by Build parts, the layout and assembly waiting."""
-    monkeypatch.setattr(build, "LATER", {"dog": ("a dog ring", "dog rings are built in phase W9")})
-    monkeypatch.setattr(geometry, "LATER_KINDS", {"dog": "a dog ring, phase W9"})
+    ``geometry.LATER_KINDS``): here a dog ring stands in for such a kind, said to be built in a made-up phase W99
+    (W9 is a real phase since issue #1), so the tests of that channel keep showing what a later phase's row does —
+    named at its cell with its phase, its own part not built, the other parts built by Build parts, the layout and
+    assembly waiting."""
+    monkeypatch.setattr(build, "LATER", {"dog": ("a dog ring", "dog rings are built in phase W99")})
+    monkeypatch.setattr(geometry, "LATER_KINDS", {"dog": "a dog ring, phase W99"})
 
 
 # -- every row builds the strip's part ---------------------------------------------
@@ -103,12 +104,12 @@ def test_a_kind_a_later_phase_builds_is_set_aside_by_itself(tmp_path, a_later_ki
     dog = Gear("G7", "S3", "60", "dog", "external", "30", "1.5", "", "6", "")
     spec = from_file(write(tmp_path, model.replace(spec, gears=(dog,), meshes=()), "d.xlsx"))
     parts = build.plan_parts(spec, FOLDER)
-    assert parts.jobs == [] and parts.later == [("G7", "G7 is a dog ring: dog rings are built in phase W9.")]
+    assert parts.jobs == [] and parts.later == [("G7", "G7 is a dog ring: dog rings are built in phase W99.")]
     assert [(d.field, d.message, d.is_error) for d in parts.refused] == [
-        ("Gears!A2", "Gears!A2: G7 is a dog ring: dog rings are built in phase W9.", False)]
+        ("Gears!A2", "Gears!A2: G7 is a dog ring: dog rings are built in phase W99.", False)]
     footer = ui_text.workbook_footer(assess.assess(spec, [], FOLDER), folder=FOLDER)
     assert (footer.text, footer.ok, footer.build_label, footer.build_enabled) == (
-        "Nothing in this workbook can be built yet: G7 is a dog ring: dog rings are built in phase W9.", False,
+        "Nothing in this workbook can be built yet: G7 is a dog ring: dog rings are built in phase W99.", False,
         "Build parts", False)
 
 
@@ -151,15 +152,15 @@ def test_a_later_phases_row_is_named_with_its_phase_and_build_parts_builds_the_r
     gears' parts are planned, and the layout and assembly wait for it."""
     read_spec, diagnostics = model.from_book(xlsx.read(write(tmp_path, later_rows())))
     parts = build.plan_parts(read_spec, FOLDER)
-    assert [d.message for d in parts.refused] == ["Gears!A6: G7 is a dog ring: dog rings are built in phase W9."]
+    assert [d.message for d in parts.refused] == ["Gears!A6: G7 is a dog ring: dog rings are built in phase W99."]
     assert [j.gear_ids for j in parts.jobs] == [("G1",), ("G2",), ("G3",), ("G4",)]
     state = assess.assess(read_spec, diagnostics, FOLDER)
     assert state.build_refusal() == "" and state.lay_out_refusal() == (
-        "The layout and assembly are not built: Gears!A6: G7 is a dog ring: dog rings are built in phase W9.")
+        "The layout and assembly are not built: Gears!A6: G7 is a dog ring: dog rings are built in phase W99.")
     footer = ui_text.workbook_footer(state, folder=FOLDER)
     assert (footer.ok, footer.build_label, footer.build_enabled) == (True, "Build parts", True)
     assert footer.text == (f"Ready: Build parts makes 4 parts in {FOLDER}; the layout and assembly are not built: "
-                           "Gears!A6: G7 is a dog ring: dog rings are built in phase W9.")
+                           "Gears!A6: G7 is a dog ring: dog rings are built in phase W99.")
 
 
 def test_slides_sleeves_and_dogs_are_no_longer_a_later_phases_rows(tmp_path):
@@ -463,7 +464,7 @@ def test_the_window_says_what_a_later_phase_builds(tmp_path, a_later_kind):
         status = window.status.get()
         # The parts build (W2's batch, now Build parts: the layout and assembly wait for the dog ring's phase).
         assert status.startswith("Ready: Build parts makes 4 parts in ") and status.endswith(
-            "; the layout and assembly are not built: Gears!A6: G7 is a dog ring: dog rings are built in phase W9.")
+            "; the layout and assembly are not built: Gears!A6: G7 is a dog ring: dog rings are built in phase W99.")
         assert window.footer().build_action == ui_text.BUILD_PARTS
         assert window.build_button.label.cget("text") == "Build parts"
         assert window.build_button._enabled  # noqa: SLF001 - the button's own flag; it is never pressed here
@@ -473,7 +474,7 @@ def test_the_window_says_what_a_later_phase_builds(tmp_path, a_later_kind):
             "working flank is a straight line.",
             "Gears!Q5: G4: The involute starts at 99.28 mm, above the form diameter of 98.614 mm, so the bottom of the "
             "working flank is a straight line.",
-            "Gears!A6: G7 is a dog ring: dog rings are built in phase W9."]
+            "Gears!A6: G7 is a dog ring: dog rings are built in phase W99."]
     finally:
         window.close()
         root.destroy()
@@ -535,14 +536,14 @@ def test_the_gear_tables_states(tmp_path, a_later_kind):
     spec = model.replace(spec, gears=(
         spec.gears[0], model.replace(spec.gears[1], teeth="68.5"), spec.gears[2], spec.gears[3],
         Gear("G5", "S3", "47", "spur", "external", "17", "1.5", "", "15", "8"),
-        Gear("G6", "S3", "60", "dog", "external", "30", "1.5", "", "6", "")))      # a later phase's, W9 (a_later_kind)
+        Gear("G6", "S3", "60", "dog", "external", "30", "1.5", "", "6", "")))      # a later phase's, W99 (a_later_kind)
     read_spec, diagnostics = model.from_book(xlsx.read(write(tmp_path, spec)))
     parts = build.plan_parts(read_spec, FOLDER, skip_rows=build.rows_with_errors(diagnostics))
     rows = {r[0]: r for r in ui_text.workbook_gear_rows(read_spec, parts, diagnostics + parts.diagnostics)}
     assert rows["G1"][6:] == ("Gear_m1.5_N17", ui_text.GEAR_STATE_BUILDS, "to build")
     assert rows["G2"][3] == "68.5" and rows["G2"][7:] == (ui_text.GEAR_STATE_ERROR, "see Checks")
     assert rows["G5"][6:] == ("Gear_m1.5_N17", ui_text.GEAR_STATE_SHARES, "same as G1")
-    assert rows["G6"][7:] == (ui_text.GEAR_STATE_LATER, "later · phase W9")
+    assert rows["G6"][7:] == (ui_text.GEAR_STATE_LATER, "later · phase W99")
     footer = ui_text.workbook_footer(assess.assess(read_spec, diagnostics, FOLDER), folder=FOLDER)
     assert not footer.ok and not footer.build_enabled
     assert footer.text.startswith("Fix the workbook before building: Gears!F3: Teeth must be a whole number")
@@ -794,7 +795,7 @@ def test_after_a_build_the_footer_still_names_the_rows_left_for_later(tmp_path, 
     f = ui_text.workbook_footer(state, folder=FOLDER, note=("Built 2 parts.", True))
     assert (f.ok, f.build_enabled) == (True, True)
     assert f.text == ("Built 2 parts. The layout and assembly are not built: Gears!A6: G7 is a dog ring: dog rings are "
-                      "built in phase W9.")
+                      "built in phase W99.")
 
 
 def test_results_left_out_for_a_formula_are_due_after_excels_save(tmp_path):
