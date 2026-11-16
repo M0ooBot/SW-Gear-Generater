@@ -15,6 +15,23 @@ answers of that day and the rulings that follow from them are in `notes-workbook
 up again at the user's word. *W8 picked up* under "W8 in detail" says where it stands. The run folders of W5 to W7
 (`w6-full-…`, `w7-full-…`) are on the other machine, not this one.
 
+**Updated 2026-11-15, evening: the work moves to another device again.** Every branch is on `origin` and
+`workbook` there is the whole state; nothing is uncommitted. W8 is paused, not closed: *Paused at the user's
+word* and *Left* under "W8 in detail" say what remains. What stays behind on the second host and has to be made
+again elsewhere:
+
+- **The 2024-built `s1.master`** (`…\w8-sw2024-20261115\out`). `s2` on SolidWorks 2024 starts from it, so on
+  another device run `s1` on 2024 again first. The committed result files under `probe/results/` stand as they
+  are; no run folder is needed to read them.
+- **The preview exe** of `29e6c34` (`dist/` is not tracked). Build one with `build.bat` from a copy on `C:`.
+- **The sessions' own notes** (not in the repo). What they held is in *Rules carried over* below, plus these three:
+  a run that will tie SolidWorks up says so to the user first, with how long; a build always names its output
+  folder (a blank Output folder cell means the folder the app last remembered, which may be another project's);
+  and on a host whose Linux venv has no tkinter the two tests named under "W8 in detail" fail for that alone.
+
+The rule "no agent starts SolidWorks on the host until the user says so" was said of the second host. On another
+device ask once before the first run.
+
 ## Where it stands
 
 | Phase | State |
@@ -26,7 +43,7 @@ up again at the user's word. *W8 picked up* under "W8 in detail" says where it s
 | W5 motion | **closed 2026-11-14**: probes P0 to P0d and the two ring rounds run and reviewed, packages A to E written and reviewed, the demonstration run in full on SolidWorks 2026 and confirmed on 2024, the user's hand drag passed on both. Details, and what is left open, below. |
 | W6 right-angle | **closed 2026-11-15, but for the person's drag**: planned, reviewed and revised; probe tier 9 (a turned gear mate's sense, on cylinders, SolidWorks 2026) run and reviewed; packages A to E written and each reviewed; the full build run on SolidWorks 2026 and the confirming build on 2024, both from one snapshot (`931fe1a`), every check passing, each run reviewed. Left for the user: drag G1 in the built right-angle gearbox. Details below. |
 | W7 planetary | **closed 2026-11-15, but for the person's drag**: planned, reviewed and revised; the spike on SolidWorks 2026 (`W7-SPIKE.md`); packages A to E written and each reviewed; the demonstration run on SolidWorks 2026 — its first run found one app fault (a turned planetary's put did not hold), the probe `planetary_put_back` measured the route that does, the fix `9f21d99` was reviewed, and every section then passed, the planetary sections and the W5/W6 Update sections once more on the final code; the confirming build on 2024 passed; the run's evidence reviewed. Left for the user: drag Sun in the built planetary. Details below. |
-| W8 sleeves and modes | **picked up 2026-11-15 on the second host; shown on SolidWorks 2026 (34.0.0) but for the closing run, and SolidWorks 2024's confirming build in progress**: on 2026 `s0` to `s4` and the window stage each have a 0-failed run; `s5` and `s7` ran once and wait for the closing run; on 2024 `s1` and `s7` are in. Left: the rest of 2024, `s7` case 8 on 2026, the closing run from the final source, the person's step `s6`, the close. See *W8 picked up* below. Before that: planned, reviewed and revised to the spike (`W8-PLAN.md`, `W8-PLAN-REVIEW.md`, `W8-SPIKE.md` with its follow-up and its SolidWorks 2024 section: one slide mate with a value per configuration, mates switched per configuration, positions kept per configuration, handles stale after every add and show, the same on both versions); the interface commit with its rulings (`W8-INTERFACES.md` §9); the findings set and reviewed (`ea7a46f`); packages A, B, C and D written, each reviewed, the reviews' points in, the suite green. **No W8 code has run on SolidWorks:** the demonstration (package E), the full build on 2026, the confirming build on 2024 and the close are left. Details below. |
+| W8 sleeves and modes | **picked up 2026-11-15 on the second host; shown on SolidWorks 2026 (34.0.0) but for the closing run, and SolidWorks 2024's confirming build part done; paused at the user's word that evening**: on 2026 `s0` to `s4` and the window stage each have a 0-failed run; `s5` and `s7` ran once and wait for the closing run; on 2024 `s1` and `s7` are in. Left: the rest of 2024, `s7` case 8 on 2026, the closing run from the final source, the person's step `s6`, the close. See *W8 picked up* below. Before that: planned, reviewed and revised to the spike (`W8-PLAN.md`, `W8-PLAN-REVIEW.md`, `W8-SPIKE.md` with its follow-up and its SolidWorks 2024 section: one slide mate with a value per configuration, mates switched per configuration, positions kept per configuration, handles stale after every add and show, the same on both versions); the interface commit with its rulings (`W8-INTERFACES.md` §9); the findings set and reviewed (`ea7a46f`); packages A, B, C and D written, each reviewed, the reviews' points in, the suite green. **No W8 code has run on SolidWorks:** the demonstration (package E), the full build on 2026, the confirming build on 2024 and the close are left. Details below. |
 | How the user's absence is handled | the user said on 2026-11-14 to carry on, in order, until W8 is done. Judgement calls are taken at each plan's recommended reading and listed for the user as readings to overrule. |
 | The small-pinion tip cap | `fix/small-pinion-cap` merged at `0f5a121` (the user's instruction): 6- and 7-tooth pinions build with an arc on the tip cap, version 0.3.2. Built on SolidWorks 2024 by the branch; the 2026 build and the merge's review are in hand. |
 
