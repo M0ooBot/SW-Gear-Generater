@@ -412,3 +412,167 @@ All six fail as the implementer says, and none shows a regression.
   and fix; whether moving a user sub-assembly by `Transform2` holds; whether SolidWorks' rebuild after a part change
   can move a mated gear (point 7).
 - **On the fake.** The fake's tie is hand-set (`fake.locks`), so the tie tests check the plumbing, not the solver.
+
+---
+
+## The fix round, re-checked (2026-11-16)
+
+*Narrow, against `git diff 51b398b..66cbb77` (`5c5043e`, `ebdb81a`, `ce5a081`, `56f12b8`, `66cbb77`) and the
+coordinator's rulings 1 to 7. I ran only the non-Tk files named to me: `test_swbuild.py`,
+`test_swbuild_user_work.py`, `test_swbuild_modes.py`, `test_workbook_user_work.py`, `test_workbook_modes.py`,
+`test_findings.py` and `test_swcom.py`, 1132 passed. I re-ran my throwaway reproductions from the scratchpad against
+the new code and added a few more. I did not run the whole suite or any window test, and I did not read package B's
+files in progress.*
+
+**Verdict.**
+
+- **Every must-fix point is closed in the worker.** Points 1, 2, 3, 4 and 6 are closed, and my reproductions now
+  refuse or run as they should. Point 5 is closed but for one scope change that needs a ruling (N7).
+- **The should-fix points are taken.** One (8) is still open in the running app until package B passes the reader.
+  Another (7) has a small gap where it meets the quiet-press decision (N3).
+- **No pin moved beyond those named:** the W5 other-kind sentence test, the three W8 cases in `test_swbuild_modes.py`,
+  the W7 call log (re-pinned, the old hash still asserted on the filtered log) and the five E4 tests (made the
+  lost-Update case, every assertion unchanged). The other changes to existing test files are additions, or the
+  package's own tests.
+- **What the fix itself got wrong or newly lets through** is small. Four should-fix points (N1 to N4), four notes and
+  one scope ruling (N7).
+- **The two decisions the coordinator accepted.**
+  - An unreadable mate is not refused on a quiet press. Acceptable, once N3 is fixed.
+  - The sub-assembly branch is a fourth gated finding. Acceptable, with N4.
+
+### The review's points
+
+- **1. Closed.** `_may_put` counts a held or fixed gear only when it is off its frame, whole pitches allowed
+  (`_off_frame`). A grounded cluster refuses only when its gear is put. My held-Ring reproductions (a lock and a
+  concentric from a fixed housing) now run, with the Ring not placed. The new tests cover both, and also the Ring
+  re-placed: then the carry is gated (`HELD_GEAR`) and a lock to the ground refuses.
+- **2. Closed.**
+  - `mate_info` now gives `None` for an entity that would not answer and `counted=False` for a count that would not.
+    Every read is wrapped.
+  - A mate not `whole` refuses whenever anything is put (`PROBLEM_UNREAD`), and is kept out of clusters and the
+    other-kind judgement.
+  - My unread gear mate and my unread lock (entity `None`, count unread) now refuse.
+  - One gap remains: a read that comes back *whole* with fewer than two entities (N2).
+- **3. Closed.**
+  - `_vouches`: no mark vouches; `mismatched` does not; `unsaved` vouches only when the document was not loaded from
+    its file by this job and reads modified.
+  - My round trip (Bore set by Update 1, left unsaved, the user's 14 typed after) now refuses, and the new round-trip
+    test does the same.
+  - No path is left where a user's in-memory edit is set back silently. An edit marks the document modified, so it
+    is vouched for; a saved edit clears the mark in the window's `clear_saved`.
+  - Two residuals remain: N1 (an honest lost Update can now be refused) and N8 (a mismatched mark).
+- **4. Closed.**
+  - Each unmeasured branch is its own finding: `USER_MATE_PUT_{NO_CARRIER,HELD_GEAR,FIXED_GEAR,SUBASSEMBLY}_ON_
+    {2026,2024}`. All eight are None, pinned by `test_findings.py`.
+  - `judge_user_work` refuses a carry on any of them (`user_branch_settled` per the running version; an unknown
+    version is not settled). The other-kind sentence offers the lock only where the branch is settled.
+  - A put of a user component can now happen only on S0's branch (a train with a carrier) or on a branch whose
+    finding a test sets. I checked the planetary: every mated gear is S0's branch, and the held Ring is `HELD_GEAR`.
+  - The autouse fixture `no_carrier_measured` in `test_swbuild_user_work.py` hides nothing. The None path of every
+    branch has a test that unsets or leaves it: `NO_CARRIER` on 2026 and on 2024 by revision, `HELD_GEAR`,
+    `FIXED_GEAR`, `SUBASSEMBLY`.
+  - Two loose ends: the TransferCase (no carrier either) is tested only with `NO_CARRIER` True, which runs the same
+    code; and the branch labels are joined differently from the no-modes change phase (N5).
+- **5. Closed, but for N7.**
+  - The note's §2.2 now lists the refusal's `problems` for schema 7.
+  - §2.3 gives B `judge_user_work` (pure, `read_tie=None` listing `unread_ties`), `user_carry_branches` and
+    `user_branch_settled`. The worker calls the same function.
+  - One unsafe default for B: N6.
+- **6. Closed.**
+  - The fake's `place_component` fails a put of a user component not locked (on in the configuration shown) to an
+    app body put in the same step.
+  - `set_gear_ratio` and `remake_gear_mate` are guarded.
+  - The guard test exercises every guarded call and both stray puts.
+  - The walk through `self.mates` also passes through the app's own locks, which is slightly permissive but
+    harmless.
+- **7. Closed, with N3.**
+  - `_bind` stops the change phase before putting a body the check did not judge, where the user's work is.
+  - `_carried_problems` reads each carried pose in its gear's frame after the rebuild.
+  - Both have tests that fail without them.
+- **8. Closed in the worker, open in the app.**
+  - `classify` takes `read_sidecar` and uses the features the part's `.gear.json` lists, else today's plan's.
+  - The window's call (`workbook_gui.py:701`, B's file) passes no reader, so in the running app the plan's names are
+    still used. Package B should pass `read_sidecar` there.
+- **9 to 14 and 18. Closed.**
+  - 9: the motion-mate types (9, 13, 17, 18) are judged as gear mates.
+  - 10: the lock-chain refusal has its own sentence and reads nothing (asserted).
+  - 11: the other-kind sentence names the gear and the lock; the pins moved as named.
+  - 12: a shared part's cells are joined; a value no cell sets alone is to be set back.
+  - 13: the missing tests are added: the component state, two trains on TransferCase, held and fixed gears, unread
+    mates, the sub-assembly leaf, radians.
+  - 14: the layout is found by its part when its recorded name is absent.
+  - 18: §0.3's route (b) exception is dropped and the later references renumbered.
+- **15 to 17. Said in the note** (§4), as asked. 19, the nit, is unchanged, which is fine.
+
+### New, from the fix itself
+
+**N1. Should fix (or accept as a note): an honest lost Update can now be refused as the user's edit.**
+
+- *Reproduced.* Update 1 set G2's Bore to 13, left unsaved. The part was then put back to its file's 12, as if
+  SolidWorks had closed it unsaved and the user reopened it, and the user did anything that marks it modified.
+  Update 2 refused: "Bore Diameter in Gear_m1.5_N68 is 12 in SolidWorks and 13 in the workbook …".
+- *Why it matters.* `_vouches` cannot tell "open since the Update" from "reopened from the file, then touched". The
+  same holds for the assembly: reopened after a crash, a gear dragged, and every Face Z, slide value and flag the
+  lost Update set refuses. It refuses on the safe side, but the sentence blames the user for the app's lost
+  values.
+- *What to do.* Keep with the unsaved mark what the file held before that Update (the record's values before it,
+  in schema 7). A live value equal to that is the lost Update, and is set back. Otherwise, say in the sentence that
+  SolidWorks may have been closed unsaved since the last Update.
+
+**N2. Should fix: a mate read "whole" with fewer than two entities is judged.**
+
+- *What happens.* `MateInfo.whole` checks the count was read, not what it says.
+  - A lock that read type 16 and a count of 0 passed: nothing carried, nothing refused.
+  - One with a single entity on G1 refused as `PROBLEM_UNSETTLED`, but with an empty component list ("would put
+    your  with G1").
+- *What to do.* Count a mate with fewer than two entities as not whole.
+
+**N3. Should fix: `_bind` cannot see the bodies of a mate not wholly read.**
+
+- *What happens.* `UserJudgement.touched` holds only the bodies of mates read whole. The coordinator accepted that
+  an unread mate is not refused on a quiet press because a quiet press writes nothing. `_bind` is what holds that
+  promise if the change phase decides otherwise, yet it does not know where an unread mate is.
+- *What to do.* When any live mate is not whole, treat every body as touched. With that, I accept the quiet-press
+  decision.
+
+**N4. Should fix: the sub-assembly gate goes by the path's suffix.**
+
+- *What happens.* `judge_user_work` takes a user component as a sub-assembly when its path ends `.sldasm`.
+  `ComponentInfo.path` is `""` when unread, so an unread sub-assembly is carried as a part, on an unmeasured
+  branch.
+- *What to do.* Treat a carried component with an unread path as a sub-assembly, refused until measured.
+
+**N5. Note: the branch labels are joined over every mesh.**
+
+- *What happens.* `user_carry_branches` joins trains over every mesh. The no-modes change phase joins through a
+  held gear only by its *mated* meshes (`joining`, W7 §2.9).
+- *Why it matters.* A no-carrier train meeting a carrier train only through an unmated mesh to a held gear would be
+  labelled S0's branch while put with its gear mates on. I found no such train on the fixtures (the planetary is one
+  train either way).
+- *What to do.* Use the change phase's own joining for the no-modes labels.
+
+**N6. Note: `judge_user_work(branches=None)` means "every branch measured".**
+
+- *Why it matters.* That is an unsafe default for package B's prediction. A caller that forgets `branches` predicts
+  carries the worker then refuses.
+- *What to do.* Make `branches` required, or default it from the motion.
+
+**N7. Needs a ruling: the build job's read of the old assembly moved to W9d.**
+
+- *What the note says.* §2.3 now says the build job's read "has no worker entry point in W9a … written in W9d". W9a's
+  Build again… clause speaks from the recorded inventory with its time.
+- *What the plan says.* §2.1 item 8 and §5's W9a package B include "the build job's read of the old assembly". Its
+  result is to list "what stayed behind as found".
+- *Why it needs a ruling.* The question's sentence is served from the record, but the result's "as found" is not.
+  This is a scope change for the coordinator to rule on, not the implementer.
+
+**N8. Note: a document marked mismatched is never vouched for.**
+
+- *What happens.* A user's edit made in it after the mark is set back silently. This is inherent, since the record
+  cannot say what such a file holds. It is narrow: a later job found the earlier Update lost and did not put it
+  right.
+
+**N9. Note: the other-kind sentence puts a gear mate on the wrong body.**
+
+- *What happens.* For a user gear mate between two user components, one of them carried, the sentence says the
+  mate is "on G1" (the carrying gear). The mate is not on G1.
