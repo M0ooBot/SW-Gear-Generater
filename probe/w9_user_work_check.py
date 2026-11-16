@@ -1025,10 +1025,33 @@ def propose():
 # -- main ------------------------------------------------------------------------------------------------------------
 
 
+def keep_awake(on):
+    """Ask Windows to keep the display and the system awake while this process runs (``SetThreadExecutionState``;
+    nothing of the user's power settings is changed, and the request ends with the process). On this device the
+    display's idle timeout puts the whole machine into Modern Standby, which freezes SolidWorks and this script.
+    A closed lid still does: run 3 lost its session 30 s after the lid closed (Windows' event log, 2026-11-16 08:52)."""
+    try:
+        import ctypes
+        continuous, system, display = 0x80000000, 0x00000001, 0x00000002
+        previous = ctypes.windll.kernel32.SetThreadExecutionState(continuous | (system | display if on else 0))
+        return f"display and system {'held awake for the run' if on else 'released'} (previous state {previous:#x})"
+    except Exception as exc:  # noqa: BLE001
+        return f"not asked: {type(exc).__name__}: {exc}"
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     started = time.strftime("%Y%m%d-%H%M%S")
     json_path = os.path.join(os.path.dirname(os.path.abspath(W.LOG_PATH)), f"w9-s0-{started}.json")
+
+    def write_json():
+        # After every case and first in the finally: run 3 (2024) lost its session in its last case and left no JSON,
+        # since the close raised before the one write at the end (W9-S0-REVIEW S1).
+        RESULT["fails"], RESULT["notes"] = list(W.FAILS), list(W.NOTES)
+        with open(json_path, "w", encoding="utf-8") as handle:
+            json.dump(RESULT, handle, indent=1, default=str)
+
+    say(f"awake   {keep_awake(True)}")
     say(f"run     {time.strftime('%Y-%m-%d %H:%M:%S')}; W9 S0 (ISSUE-1-PLAN §4) from {W.SRC}{W.snapshot()}; cases "
         f"{list(CHOSEN or DEFAULT_CASES)}; master {MASTER_GIVEN or 'built here'}; P0 {'skipped' if SKIP_P0 else 'first'}")
     worker = swcom.Worker(W.connect_pid)
@@ -1072,6 +1095,7 @@ def main():
                     for line in traceback.format_exc().splitlines()[-6:]:
                         say("        " + line)
                 say(f"time    S0 {spec['key']}: {time.monotonic() - started_case:.0f} s; {W.memory()}")
+                write_json()
                 watch_check(f"S0 {spec['key']}")
             propose()
         except S0Stop as exc:
@@ -1084,6 +1108,12 @@ def main():
             for line in traceback.format_exc().splitlines():
                 say("        " + line)
     finally:
+        if "proposal" not in RESULT:
+            try:
+                propose()          # from what was read, whatever ended the run; it asks nothing of SolidWorks
+            except Exception as exc:  # noqa: BLE001
+                say(f"propose not made: {type(exc).__name__}: {exc}")
+        write_json()
         books = W.close_books()
         if books:
             say(f"excel   left open: {books}, closed without saving")
@@ -1101,14 +1131,13 @@ def main():
                 after = W.run(worker, W.open_titles, 120)
                 say(f"close   left of ours {left}; stray {[t for t in after if t not in before]}; lost "
                     f"{[t for t in before if t not in after]}; {W.memory()}")
-            except W.WorkerHung as exc:
-                say(f"close   not closed: {exc}")
+            except Exception as exc:  # noqa: BLE001  (a session that is gone raises NotRunning, not WorkerHung)
+                say(f"close   not closed: {type(exc).__name__}: {exc}")
         watch.stop.set()
         say(f"dialogs progress boxes seen {W.PROGRESS}; other windows the watch logged: {W.WINDOWS['count']}")
         worker.shutdown()
-        RESULT["fails"], RESULT["notes"] = list(W.FAILS), list(W.NOTES)
-        with open(json_path, "w", encoding="utf-8") as handle:
-            json.dump(RESULT, handle, indent=1, default=str)
+        write_json()
+        say(f"awake   {keep_awake(False)}")
         say(f"result  S0's readings written to {json_path}; the master kept at {RESULT['master'] or MASTER_GIVEN}")
     for line in W.NOTES:
         say(f"noted   {line}")
