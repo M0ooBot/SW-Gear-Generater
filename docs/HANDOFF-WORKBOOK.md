@@ -32,6 +32,42 @@ again elsewhere:
 The rule "no agent starts SolidWorks on the host until the user says so" was said of the second host. On another
 device ask once before the first run.
 
+**Updated 2026-11-15/16, night, on a third device** (a WSL clone; it is in fact the machine W5 to W7 ran on:
+SolidWorks 2026 revision **34.1.1**, SolidWorks 2024 32.5.0; its `GearGeneratorProbe` folder still holds
+`w6-full-20261114-210827` and `w7-full-20261115-000138`). **W8 is closed but for three things** (*W8 in detail*,
+*How W8 closed*), and **W9 is planned and approved** (issue #1, below). What ran here, in order, each run from a `git
+archive` snapshot in its run folder under `C:\Users\M0obo\Documents\GearGeneratorProbe\`, each SolidWorks started
+for the run and exited after:
+
+- `s7` case 8 alone on 2026 34.1.1, after `s1` built there (`w8-s7c8-sw2026-20261115-220518`; `9bd3a58`, the
+  findings' comments and pins `0e7f203`, reviewed `867d1af`, its points `5946fdf`);
+- the rest of 2024's confirming build, `s1`, `s3`, the window stage, `s2` (`w8-sw2024-20261115-223821`; `233e03d`,
+  `b6bb186`, `c3ed9b6`, `eae38c9`; the handoff `c583f48`; reviewed `fd44e7c`, `W8-REVIEW-SW2024-CONFIRM.md`);
+- the closing run on 2026 34.1.1 from one snapshot of `c583f48` (`w8-close-sw2026-20261116-001758`; `c351b1f`,
+  `8fd13c9`, `c2eed05`, `aff9bfe`, `fb85bcc`; reviewed `ec14e4f`, `W8-REVIEW-CLOSING-RUN.md`).
+
+The first two runs' snapshots had no `SNAPSHOT_COMMIT` file beside them, so the logs of `9bd3a58`, `233e03d`,
+`b6bb186`, `c3ed9b6` and `eae38c9` do not name their snapshot in their heads; their commit messages do, and no log line
+can tell `0e7f203` from the source just before it (its changes after `ce775a6` were comments). The closing run's
+logs name `c583f48`. Write the file with every snapshot from now on. The window check's log never prints SolidWorks'
+revision: its 2024 run had a session of its own (PID 18160 in the log; that it was SolidWorks 2024 32.5.0 rests on
+`c3ed9b6`'s message), its closing run a fresh one (PID 16424; SolidWorks 2026 34.1.1 by `fb85bcc`'s message). A
+later change to the window check could log the revision as the assembly check does; it would be reviewed as code. The user was told how long each run would tie SolidWorks
+up and gave the word for all of them. Before the first, the user's own SolidWorks 2024 session had documents open;
+at the user's instruction they were saved and closed and that session exited. That session did not show in the
+running object table as an application, only its documents; every SolidWorks an agent started here did.
+
+**GitHub issue #1** (opened by the user 2026-11-16): sleeves built with no hub and no check that one can reach its
+dog, a neutral with no running clearance, no relief bore in a sleeve, and Update unable to add a part. The user's
+words on the last: once they have edited parts or added their own in the built assembly they cannot use the app any
+more, for fear of it overwriting their work. Its plan is `notes-workbook/ISSUE-1-PLAN.md`, phase **W9**, stages W9a
+to W9e, reviewed in `ISSUE-1-PLAN-REVIEW.md`, with a second review of its revision in hand. The user's answers of
+2026-11-16: every stage approved; a value the app owns that the user changed in SolidWorks makes Update stop and name
+it; Build again… carries the user's components and remakes their mates; the hub is built by the app from a row. **So
+W8 is not the last phase** (PLAN-WORKBOOK §3.4 and §6 carry dated notes). The W8 readings the issue overturns stay as
+W8 built them until W9 changes them, and are marked *under issue #1* below: J1's "no hub", J22's bridging warning
+(it fires only when `length > gap`), and ruling 9.16 (a gear mate of a gearbox with modes is not made again).
+
 ## Where it stands
 
 | Phase | State |
@@ -43,7 +79,8 @@ device ask once before the first run.
 | W5 motion | **closed 2026-11-14**: probes P0 to P0d and the two ring rounds run and reviewed, packages A to E written and reviewed, the demonstration run in full on SolidWorks 2026 and confirmed on 2024, the user's hand drag passed on both. Details, and what is left open, below. |
 | W6 right-angle | **closed 2026-11-15, but for the person's drag**: planned, reviewed and revised; probe tier 9 (a turned gear mate's sense, on cylinders, SolidWorks 2026) run and reviewed; packages A to E written and each reviewed; the full build run on SolidWorks 2026 and the confirming build on 2024, both from one snapshot (`931fe1a`), every check passing, each run reviewed. Left for the user: drag G1 in the built right-angle gearbox. Details below. |
 | W7 planetary | **closed 2026-11-15, but for the person's drag**: planned, reviewed and revised; the spike on SolidWorks 2026 (`W7-SPIKE.md`); packages A to E written and each reviewed; the demonstration run on SolidWorks 2026 — its first run found one app fault (a turned planetary's put did not hold), the probe `planetary_put_back` measured the route that does, the fix `9f21d99` was reviewed, and every section then passed, the planetary sections and the W5/W6 Update sections once more on the final code; the confirming build on 2024 passed; the run's evidence reviewed. Left for the user: drag Sun in the built planetary. Details below. |
-| W8 sleeves and modes | **picked up 2026-11-15 on the second host; shown on SolidWorks 2026 (34.0.0) but for the closing run, and SolidWorks 2024's confirming build in but for one window ruling; paused at the user's word that evening, then carried on from another device that night**: on 2026 `s0` to `s4` and the window stage each have a 0-failed run; `s5` and `s7` ran once and wait for the closing run (`s7` case 8 alone 0 failed on 34.1.1); on 2024 `s0`, `s1`, `s7` (case 8 alone 0 failed) and, on the next device from `0e7f203`, `s1`, `s3` and `s2` each 0 failed, and the window stage 1 failed: the built footer cut off by that device's 150 % screen, not SolidWorks'. Left: that ruling, the closing run from the final source, the person's step `s6`, the close. See *W8 picked up* below. Before that: planned, reviewed and revised to the spike (`W8-PLAN.md`, `W8-PLAN-REVIEW.md`, `W8-SPIKE.md` with its follow-up and its SolidWorks 2024 section: one slide mate with a value per configuration, mates switched per configuration, positions kept per configuration, handles stale after every add and show, the same on both versions); the interface commit with its rulings (`W8-INTERFACES.md` §9); the findings set and reviewed (`ea7a46f`); packages A, B, C and D written, each reviewed, the reviews' points in, the suite green. **No W8 code has run on SolidWorks:** the demonstration (package E), the full build on 2026, the confirming build on 2024 and the close are left. Details below. |
+| W8 sleeves and modes | **closed 2026-11-16, but for three things: the built footer on a screen shorter than the window asks (cut off; open as K12 of W9), the person's step `s6`, and the two hand drags of W6 and W7**: planned, reviewed and revised to the spike (`W8-PLAN.md`, `W8-PLAN-REVIEW.md`, `W8-SPIKE.md`); the interface commit with its rulings (`W8-INTERFACES.md` §9); the findings set and reviewed (`ea7a46f`); packages A to D written and each reviewed; probe tier 11, and the one app fault the first build found, fixed and reviewed; package E's demonstration run on SolidWorks 2026 (34.0.0 on the second host, 34.1.1 here); the closing run from one snapshot of the final source (`c583f48`, 34.1.1): `s0` to `s5` and `s7` and the W5 to W7 sections r1, r2, r3, m5, m8, p1 and p3, every check passing (`c351b1f` to `aff9bfe`), and the full window check 1 failed, the built footer's height (`fb85bcc`); the confirming build on 2024 (32.5.0): `s0`, `s1`, `s2`, `s3`, `s7` 0 failed, its window stage the same one failure (`c3ed9b6`); each run reviewed (`W8-REVIEW-SW2024-CONFIRM.md`, `W8-REVIEW-CLOSING-RUN.md`). The ruling on the footer, the steps for the user and what is left are under *How W8 closed* below. |
+| W9 the user's work in a built assembly, and dog-clutch sleeves (issue #1) | **planned, reviewed, approved by the user (2026-11-16); not begun.** The plan is `notes-workbook/ISSUE-1-PLAN.md` (stages W9a to W9e), reviewed in `ISSUE-1-PLAN-REVIEW.md`, a second review of its revision in hand. See the dated paragraph of 2026-11-15/16 above. |
 | How the user's absence is handled | the user said on 2026-11-14 to carry on, in order, until W8 is done. Judgement calls are taken at each plan's recommended reading and listed for the user as readings to overrule. |
 | The small-pinion tip cap | `fix/small-pinion-cap` merged at `0f5a121` (the user's instruction): 6- and 7-tooth pinions build with an arc on the tip cap, version 0.3.2. Built on SolidWorks 2024 by the branch; the 2026 build and the merge's review are in hand. |
 
@@ -56,6 +93,12 @@ The window's Tk tests run under Windows Python: `python.exe -m pytest tests/test
 tests/test_workbook_window.py -q` → 115 passed, 2 skipped at `c7770c8` (a "no display for Tk" skip is a known flake that moves between tests;
 rerun). The `PYTHONPATH` matters in a copy: the
 venv's editable install otherwise imports the working tree's `src`, uncommitted edits and all.
+At the closing run's snapshot `c583f48` (2026-11-16, the third device): Linux **3280 passed, 1 skipped, 1 failed**;
+Windows window tests (`python.exe -m pytest tests/test_workbook_build.py tests/test_workbook_window.py -q`) 160
+passed, 1 skipped. This host's Linux venv has tkinter, and its one failure is
+`tests/test_workbook_window.py::test_a_second_workbooks_r2_parts_beside_long_ids_are_shortened_to_the_room_left`,
+for this host's Linux Tk font width alone: it expects `Slee…m1.5_N30_r2`, and the wider room here leaves
+`Sleeve_m1.5_N30_r2` whole. It passes under Windows Python; it is not a fault of the app.
 
 ## W4 in detail
 
@@ -506,6 +549,92 @@ should follow at a quarter of the turn with the planets rolling between sun and 
 spike* list every change, and where they differ the second wins) → `W8-INTERFACES.md` (interface commit `e9efab9`),
 whose §9 holds the rulings on the interface review that bind the packages.
 
+### How W8 closed (2026-11-16)
+
+**W8 is closed but for three things:** the built footer on a screen shorter than the window asks (cut off; open, K12
+of W9), the person's step `s6`, and the two hand drags of W6 and W7. The record below this block, from *What W8
+adds* on, is kept as it was written day by day; where it and this block differ, this block is the later word.
+
+**The closing run** (`W8-REVIEW-CLOSING-RUN.md`, `ec14e4f`): one `git archive` of `c583f48` in one run folder,
+`C:\Users\M0obo\Documents\GearGeneratorProbe\w8-close-sw2026-20261116-001758` on the third device, its
+`SNAPSHOT_COMMIT` in every log's head, run as five invocations, each in a fresh SolidWorks 2026 34.1.1 session
+exited after (the window check's log names no revision; its commit message does):
+
+| commit | sections | checks | result |
+|---|---|---|---|
+| `c351b1f` | `s0`, `s1` (kept as `s1.master`), `s3` | 517, 555, 409 | 0 failed |
+| `8fd13c9` | `s4`, `s5` | 1864, 16 | 0 failed |
+| `c2eed05` | `s2`, `s7` (every case) | 603, 154 | 0 failed |
+| `aff9bfe` | `r1`, `r2`, `r3`, `m5`, `m8`, `p1`, `p3` | 152, 96, 128, 73, 141, 236, 290 | 0 failed, W7's close's counts but p3's (built from a copy, not fresh) |
+| `fb85bcc` | the full window check, W4's to W8's stages | — | 1 failed: the built footer's height |
+
+`s2`, `s4` and `s7` copied the first group's `s1.master`. Five invocations rather than one `--only modes`, because
+`--only modes` then put `s5` after `s2`, and `s5` builds fresh and was to run before the copy sections; `W8_ORDER`
+now puts it first of them. Every NOTE was SolidWorks' untitled notification box, exempt. No STOP.
+
+**What it read** (ruling 9.18, `findings.py`'s comments, the pins in `tests/test_findings.py`): on 34.1.1 `s2`'s
+current sequence (4H, N and 4L shown after the fresh turn, then the press in 4L) and every `s7` case read a turn in
+every mode, and `s2` read 2H's put not carried to 4H and N, as 2024's `s2` and both case 8s read. 34.0.0's own first
+press read the same; its one differing reading came from a sequence (4L alone shown before the press) that nothing
+has re-read. It is recorded as unexplained and **not pursued** (the coordinator, 2026-11-16): the app does not depend
+on it. The changed Update's put of FDrive in 2H found in 4H and N and not in 4L recurs on 34.0.0, 34.1.1 and 2024; it
+is recorded as read. `s7` case 5 on 34.1.1 read what 2024's did, and case 7 read a suppressed coupling's sense right,
+marking nothing, on both versions. No finding's value changed.
+
+**Rulings taken at the close by the coordinating session, dated 2026-11-16, each for the user to overrule:**
+
+- **The window check's one failure** (`W8 built: the footer whole … its bottom at 1657 of 1570`, on this device's
+  2560 × 1600 screen at 150 %; the same on SolidWorks 2024 and 2026; by the code a 1920 × 1080 screen at 100 % would
+  be cut too, inferred, not measured): **W8 does not change the app for it.** It is carried into the next phase as
+  K12 of `notes-workbook/ISSUE-1-PLAN.md`: the window stops at the screen's work area and its two columns scroll
+  between a fixed header and footer, and the window check asserts the footer whole on this device. UI-DESIGN §9
+  says what the window does today on such a screen. W8-PLAN §6 item 4's "the window check pass(es)" is met but for
+  this one check.
+- **The three mode boards** (`WorkbookModes`, `WorkbookModesBuilt`, `WorkbookModesUpdated`) are **not redrawn now**:
+  W9 redraws them with K12 and its new footer words. Checked against the app's sentences today, their words are
+  right for the states they draw; the one sentence change since they were drawn (`0ff56d3`) is said only after an
+  earlier unsaved Update, which no board draws. Only the 1 % text width between hosts (*W8 picked up*, first bullet)
+  stands against them.
+- **`s5`'s status-5 path** (SolidWorks refusing the coupling at the make) has no SolidWorks run on either version:
+  SolidWorks accepted the doctored coupling both times and the build's step 6 caught it. It stays covered on the fake
+  only, a caveat, not run again (ruling 9.19, which also writes down `s5`'s other two departures from W8-PLAN §5).
+- **34.0.0's own `s2` sequence** is not re-read on any version and not pursued (above).
+
+**W8-PLAN §6, item by item:** 1 to 3 met earlier; 4 met but for the footer's height (above); 5, the person's step
+handed to the user with the readings J1–J27 (*Questions waiting for the user*, item 5, and *Open, for the user to
+overrule* at the end of this section); 6, the documents: PLAN-WORKBOOK §4.5 (*How W8 ended*) and §6 (dated notes),
+UI-DESIGN §9 (*The layout* and *Modes*' last words), this table's row and this section; the boards as ruled above;
+the macro database is the user's to update (GOTCHAS §83 against 2026's reading: *Questions waiting*, item 8).
+
+**The two reviews' points, each done or answered** (the records and comments in `782d774`, the rest with this note):
+
+- `W8-REVIEW-SW2024-CONFIRM.md`: **S1** done (the `SUPPRESSED_GEAR_MATE_SENSE_READ` comment in the review's words,
+  with the closing run's 34.1.1 read beside it; `swbuild.py`'s "as SUPPRESSED_GEAR_MATE_SENSE_READ does" dropped;
+  a pin on both JSON files). **S2** done (the 2024 bullet says the two `s2`s ran different sequences). **S3** done
+  (2024's `s2` lines in `findings.py` and ruling 9.18). **S4** answered: the missing snapshot and the unlogged
+  revision are recorded (the dated paragraph at the top); logging the revision in the window check is left for a
+  reviewed script change. **S5** done (the W8 row). **S6** done (the ruling above; UI-DESIGN and this note say a
+  1920 × 1080 screen at 100 % would be cut too, inferred). N1 to N4 taken in the 2024 bullet and *Left*.
+- `W8-REVIEW-CLOSING-RUN.md`: **M1** done (s6 reworded as a dated note in W8-PLAN §5; both E4 folders given back as
+  `s1` by hand, below; the steps in *Questions waiting*, item 5). **M2** ruled (above). **S1** done (`findings.py`,
+  ruling 9.18, PLAN-WORKBOOK §4.5's J11 note, W8-PLAN's two dated notes, `ui_text`'s comment, the handoff; a pin on
+  the closing `s2`). **S2** done (ruling 9.19; W8-PLAN §5's `s5` annotated; "names the bodies, not the mate" on the
+  list to overrule). **S3** done (as above). **S4** done but for one part: the probe's docstring corrected and
+  `W8_ORDER` puts `s5` before the copy sections (nothing else reads the order); `give_back_r1` does not give back
+  `s1`, and is not changed here (a probe change with no run to show it): the next run that builds an E4 for a person
+  should add it, with a W8 person-step line. **S5** done (*Questions waiting*, item 5). N1 and N3 done; N2 recorded;
+  N4 in the suite paragraph; **N5** (the probe labels each mode's judgement on showing "post-check of …") not done:
+  rename it when the probe is next touched.
+
+**The folders handed to the user (made ready 2026-11-16, no SolidWorks started).** The probe leaves a built E4 as
+`out\s1.master`, whose record and `.gear.json` files name `out\s1`; `give_back_r1` renames only r1 and p1 back. In
+both run folders the E4's `s1.master` was renamed back to `s1` by hand, the same plain rename the script makes for
+r1 and p1, with nothing open (no SolidWorks, no Excel running), and every path in the records then read back as an
+existing file (10 of 10 in each): `…\w8-close-sw2026-20261116-001758\out\s1` (built on 2026 34.1.1) and
+`…\w8-sw2024-20261115-223821\out\s1` (built on 2024 32.5.0, at `0e7f203`, whose app source differs from `c583f48`
+in comments only). The hand drags' folders are the closing run's `out\r1` and `out\p1`, given back by the script
+(built on 2026 34.1.1).
+
 **What W8 adds.** The `sleeve` and `dog` kinds (the strip's ring and spur teeth, `gears/clutch.py`, never offered by
 the strip), gears that slide (`Slides`) on frame shafts along Z±, and the Modes sheet: each mode places every slider,
 what it engages is worked out (a sleeve covering a dog's whole face couples their shafts), and speeds, torques,
@@ -513,7 +642,8 @@ ratios and checks are per mode. Build makes one configuration per mode, named as
 one the assembly opens in; one distance mate per slider with a value per configuration; each coupling and each
 spline a 1 : 1 gear mate between collinear axes, settled by the read-back, a coupling switched on only in the modes
 that engage it. Update works across the configurations (W8-PLAN §1.10). The record's schema 6. W8 is the last phase:
-no row waits for a later one, and what this version does not build is an error naming no phase. The readings J1–J27
+no row waits for a later one, and what this version does not build is an error naming no phase (so it was written;
+since issue #1, 2026-11-16, W9 follows, and what W8 refuses stays an error naming no phase). The readings J1–J27
 as revised are in PLAN-WORKBOOK §4.5, *Readings chosen (W8)*, with a note under §3.4 and one under §6.
 
 **The orchestrating session's rulings, taken while the user was away; the user may overrule each** (PLAN-WORKBOOK
@@ -529,9 +659,9 @@ and is announced as such. W8-PLAN §0.4 puts J1, J2, J16, J14 and J11 at the top
 **Measured by the probes, not yet by the app:** **positions are kept per configuration** (a turn the user gives in
 one mode stays in that mode, J11) and **a put holds in the configuration shown only** (so Update puts mode by mode,
 J26). The W8 spike's follow-up measured both on SolidWorks 2026, and its rerun on 2024 measured the same, against
-what GOTCHAS §83 recorded for a free mechanism (the findings are committed in `ea7a46f`). **No W8 code has run on
-SolidWorks yet**: the spike and its follow-up,
-on both versions, are all W8 has shown there. What the app says about a turn follows the running version's finding
+what GOTCHAS §83 recorded for a free mechanism (the findings are committed in `ea7a46f`). No W8 code had run on
+SolidWorks yet (so on 2026-11-15; it has since: *How W8 closed*): the spike and its follow-up, on both versions,
+were all W8 had shown there. What the app says about a turn follows the running version's finding
 (`swcom.positions_per_configuration`), and makes neither claim where it is unsettled or after a restart.
 
 **The window (package D).** The **mode chooser** in the Speeds panel's header — the window's first new control since
@@ -574,8 +704,8 @@ and each review's points are in: A (`6a851c2` the slide's dimension reached as t
 ruling 9.16, `5fcaa6a`), B (`13043de` the frames each mode hands the build pinned from the teeth, `89f143b` and
 ruling 9.17, `e56e892`), C (`45479ea`, `295a214`: the Gears table's states shortened to fit their column — "same as
 G1", "changes on Update", "new part on Build"), D (`22d0dce`, `14d1125` the window back at 1080 px with modes and
-every mode name whole, `93708d6` the boards redrawn as the window draws). The suite is green. **No W8 code has run
-on SolidWorks**, and the findings are set, so the app WILL build a gearbox with modes there: treat it as unshown.
+every mode name whole, `93708d6` the boards redrawn as the window draws). The suite is green. No W8 code had run
+on SolidWorks then (it has since), and the findings were set, so the app WILL build a gearbox with modes there: treat it as unshown.
 
 **W8 picked up (2026-11-15, the second host; the coordinating session with Opus subagents, each step reviewed
 by a separate one, every commit pushed as it lands).** The list under *To pick W8 up* below is kept as it was written;
@@ -645,18 +775,25 @@ this paragraph says what has been done of it.
   showed in other modes, so a dog could stand across its sleeve there. The finding is split
   (`POSITIONS_PER_CONFIGURATION_ON_<year>`, the put fact, read by nothing; `TURN_PER_CONFIGURATION_ON_<year>`, read
   by `swcom.positions_per_configuration`, False on 2026). The Update now: a quiet Update that has anything to put
-  puts every train in every mode back to the built frames (`a87c1c5`; 52 puts on the E4, about 15 minutes on 2024),
+  puts every train in every mode back to the built frames (`a87c1c5`; 52 puts on the E4, about 15 minutes on 2024 on the second host, about 9 on the third device),
   and a mode found turned in step is put as one found out of step (`baa1a56`); every mode shown is post-checked.
-  The sentences say a turn **can** show in other modes (`5989c7d`), not that it does. **Read on 2026 34.1.1, not
-  on 34.0.0:** in `s2`'s closing log (34.0.0) a fresh turn in 2H, after an Update had put every mode, read in 4L,
+  The sentences say a turn **can** show in other modes (`5989c7d`), not that it does. **Read on 2026 34.1.1 and
+  on 2024; one 34.0.0 reading stays unexplained:** in `s2`'s 34.0.0 log (`…-151412-s2.log`) a fresh turn in 2H, after an Update had put every mode, read in 4L,
   yet 4H and N were then found at the built turn — either the turn did not reach them or 2H's put did. `s7` case 8
   alone, run on 34.1.1 (2026-11-15, another device; `fe74276`, after `s1` built there, 0 failed:
   `probe/results/w8-workbook-assembly-20261115-220745-s1-s7-case8.log`, `w8-s7-20261115-222252-case8.json`), read
   neither: after the app's quiet Update in 4L had put every mode (every configuration then at its built frames), a
   fresh +37° in 2H read in all four by the same amount, and the moving put in 2H after it stayed in 2H: 4H, N and
   4L still stood at the fresh turn, through a save and reopen — what 2024's case 8 read. In that Update, after its put in
-  2H, 4H and N still showed the first turn. So s2's 34.0.0 reading was not seen on 34.1.1 and stays unexplained;
-  34.0.0 has not run case 8. The findings keep their values (`TURN_PER_CONFIGURATION_ON_2026` False,
+  2H, 4H and N still showed the first turn. Then W8's closing run on 34.1.1 (2026-11-16, `c2eed05`) ran `s2`'s
+  current sequence, which shows 4H, N and 4L between the fresh turn and the press (`7c9634d`), and read what 2024's
+  `s2` and both case 8s read: the turn in every mode shown, 2H's put not carried; and every `s7` case read the turn
+  in every mode. The 151412 sequence showed 4L alone before the press; it has not run again on any version, and on
+  34.0.0 itself the first press, made after every mode had been shown, read the same as 34.1.1 and 2024 (lines
+  224-227). So 34.0.0's one differing reading came from a sequence nothing has re-read and stays unexplained; it is
+  not pursued (the coordinator, 2026-11-16), since the app does not depend on it. One reading against the put fact
+  recurs: the changed Update's put of FDrive in 2H was found in 4H and N and not in 4L on 34.0.0, on 34.1.1 and on
+  2024; it is recorded as read, and nothing is built on it. The findings keep their values (`TURN_PER_CONFIGURATION_ON_2026` False,
   `POSITIONS_PER_CONFIGURATION_ON_2026` True); their comments and ruling 9.18 say this. The app does not depend on
   the answer (`W8-REVIEW-LATE-FIXES.md` walked every path: the one state where a mode can stand wrong under a green
   status is the quiet Update that puts nothing, whose status says it did not show the other modes).
@@ -673,21 +810,26 @@ this paragraph says what has been done of it.
   gear mate's sense on the copy as opened, unmodified (`RangeSlv engages LoDog`, suppressed in 2H): it answered right
   (τ +1, +1), as the mate left on did, and no document read modified before or after — what
   `SUPPRESSED_GEAR_MATE_SENSE_READ` says of 2026 (`sw2024/w8-workbook-assembly-20261115-162357-s7.log`; the
-  finding's comment still says 2024 is not covered).
+  finding's comment says so since the close, and a pin holds it).
   *On the next device* (2026-11-15 night, run folder `C:\Users\M0obo\Documents\GearGeneratorProbe\w8-sw2024-20261115-223821`,
-  one `git archive` of `0e7f203`, which has `ce775a6`): `s1` again to make this device's `s1.master`, 555 checks, 0
-  failed (`233e03d`); `s3` 409 checks, 0 failed (`b6bb186`), read as 2026 read it; `s2` 603 checks, 0 failed
-  (`eae38c9`), each quiet Update that puts about 515 s (52 puts; 238 s on 2026 34.0.0), the section 43 minutes. In
+  one `git archive` of `0e7f203`, which has `ce775a6`; its logs name no snapshot, since no `SNAPSHOT_COMMIT` was
+  written beside the archive, so `0e7f203` is the commit messages' record): `s1` again to make this device's `s1.master`, 555 checks, 0
+  failed (`233e03d`); `s3` 409 checks, 0 failed (`b6bb186`), read as 2026 read it at `e670e7e`, so the first `s3`
+  anywhere on the current Update (`a87c1c5`, `baa1a56`); `s2` 603 checks, 0 failed (`eae38c9`), each Update that
+  puts 511-521 s (52 puts; 210-238 s on 2026 34.0.0), the section 43 minutes. In
   `s2` the fresh +37° in 2H read in 4H, N and 4L alike, and the Update in 4L after it found 4H out of step at
   ModeSlv–FrontDog and N turned when it showed them after 2H's put, as in its first quiet Update: the turn reached
   every mode and 2H's put did not carry to the others. That is what 2024's and 34.1.1's case 8 read; 34.0.0's `s2` had
-  found 4H and N at the built turn there. The window stage (`--only w8`) 1 failed (`c3ed9b6`), not SolidWorks': this
+  found 4H and N at the built turn there. (34.0.0's `s2` showed 4L alone between the fresh turn and the press; this
+  `s2` shows 4H, N and 4L, the sequence the closing run repeated on 34.1.1. The first press is the like-for-like
+  comparison, and it read the same on both versions.) The window stage (`--only w8`) 1 failed (`c3ed9b6`), not SolidWorks': this
   device runs Windows at 150 % on a 2560 × 1600 screen, so the window is 1618 px wide and the built E4 footer asks
   281 px, its bottom at 1657 where Windows holds the window to 1570; the shot (`…\window\shots\20-transfer-case-built.png`
   in the run folder) shows the footer's last lines, the turn sentence and the material to-do, cut off. Every footer
   sentence the stage asserts was said, the read state's footer fitted (106 px, bottom 1483 of 1501), and the chooser
-  drew the Speeds panel on 2H, 4L and N. Left for a ruling: the window's height on a short screen (the app's layout,
-  not changed).
+  drew the Speeds panel on 2H, 4L and N. Left for a ruling: the window's height on any screen shorter than it asks,
+  which by the code includes a 1920 × 1080 screen at 100 % (inferred, not measured). Ruled at the close: *How W8
+  closed*.
 - **Reviews of the day** (all under `notes-workbook/`): `W8-REVIEW-9-18.md`, `W8-REVIEW-FIX-9-18-AND-WINDOW.md`,
   `W8-REVIEW-DEMO-S2-S7.md`, `W8-REVIEW-LATE-FIXES.md` (must-fix: `s7` case 8 holds nothing of the Update it
   presses, and must run on 2026 alone before the closing run).
@@ -705,11 +847,11 @@ this paragraph says what has been done of it.
   since: a run ends by its own path or its own STOP, never by stopping its Python mid-call and then quitting
   SolidWorks. (2) The next 2024 start showed "Toolbar information is inconsistent, default toolbar setting will be
   used." and the agent answered OK, so **the user's 2024 toolbars may be back at their defaults**.
-- **Left:** ~~2024's remaining sections~~ (run on the next device, see the 2024 bullet above; a ruling on its window
-  failure, the built footer cut off on a short screen); the late review's points; ~~`s7` case 8 on 2026, then the findings and ruling
-  9.18 from it~~ (done on 34.1.1, see *Positions across configurations* above); **one closing run on 2026 from the
-  final source** (`--only modes` with `s5` before `s2`, the W5 to W7 sections r1, r2, r3, m5, m8, p1, p3, and the full window check); the person's step `s6`; PLAN-WORKBOOK §4.5
-  and UI-DESIGN's last words; the close.
+- **Left:** ~~2024's remaining sections~~ (run on the next device); ~~the late review's points~~ (in; its S6 not
+  taken); ~~`s7` case 8 on 2026~~ (done on 34.1.1); ~~one closing run on 2026 from the final source~~ (done,
+  `c351b1f` to `fb85bcc`); ~~PLAN-WORKBOOK §4.5 and UI-DESIGN's last words~~ (in at the close); ~~the close~~
+  (2026-11-16). What is truly left is under *How W8 closed* above: the built footer on a short screen (K12 of W9), the
+  person's step `s6`, and the two hand drags.
 - **Slips on record:** `3579c0c`'s message says the footer is "a line shorter"; it is not.
 - **Small things open:** `tests/test_workbook_planetary.py::test_an_update_on_the_fake_leaves_the_train_turning_as_worked_by_hand`
   still rides on the committed `PLANETARY_PUT_ROUTE` (a one-line pin); W8-PLAN §2.2's sentence on the Checks
@@ -720,7 +862,9 @@ this paragraph says what has been done of it.
 - **On this host the Linux venv has no tkinter** (Python 3.14): two tests fail there for that alone
   (`tests/test_gears_clutch.py::test_the_strip_never_offers_them`,
   `tests/test_ui_text.py::test_the_end_view_readout_always_fits_and_lists_up_to_four_heights`) and pass under
-  Windows Python. At `74ac826`: 3112 passed, 10 skipped, those 2 failed.
+  Windows Python. At `74ac826`: 3112 passed, 10 skipped, those 2 failed. *On the third device* (2026-11-16) the
+  Linux venv has tkinter, and one test fails there for its Tk font width alone, as the suite paragraph under *Where it
+  stands* says.
 
 **To pick W8 up:**
 
@@ -736,41 +880,102 @@ this paragraph says what has been done of it.
    sequence, so it waits for a run on SolidWorks.
 
 **Open, for the user to overrule:** making a gear mate of a gearbox with modes again (a tooth change, a sense found
-wrong) is refused with a sentence that says to build the gearbox again (ruling 9.16); a slider whose place moves in
+wrong) is refused with a sentence that says to build the gearbox again (ruling 9.16; *under issue #1*: W9c lifts
+it); when a mode's mates lock a train, the build's step 6 names the mode and every body that cannot turn, not the
+mate (ruling 9.19, `s5`); the built footer on a screen shorter than the window asks is cut off, left so in W8 and
+taken up as K12 of W9 (*How W8 closed*); a slider whose place moves in
 a workbook with no Modes rows needs a new revision; the chooser goes to rows above the Speeds lines when its
-segments pass the room the header leaves beside the readout (at most 200 px; `b12838d`); the sleeve's and dog's pressure angle is the Box's (20° by default), with no fork groove, hub
-or chamfers.
+segments pass the room the header leaves beside the readout (at most 200 px; `b12838d`); the sleeve's and dog's
+pressure angle is the Box's (20° by default), with no fork groove, hub or chamfers (J1's "no hub" *under issue #1*:
+the user chose a hub built from a row, W9b); a stroke that bridges two dogs is warned of only when the sleeve is
+longer than the gap (J22, `length > gap`, *under issue #1*).
 
 ## Questions waiting for the user
 
 Questions 1 to 5 of 2026-11-14 are answered (`notes-workbook/W5-DECISIONS.md`; PLAN-WORKBOOK §4.5, *Readings chosen
-(W5)*). Still open:
+(W5)*), and so is the one after them on a profile-shifted pinion inside a ring (**yes**, 2026-11-14: `d3f4dcf`,
+`9efde87`). The issue #1 plan's questions were answered on 2026-11-16 (`notes-workbook/ISSUE-1-PLAN.md`, *Changes
+after the user's answers*). Still open (updated 2026-11-16):
 
 1. **A journaled file on a disconnected drive is treated as gone** — keep that, or hold such entries until the drive
    is back?
-2. ~~Should the Checks panel say, before a build, that a profile-shifted pinion inside a ring clashes at the
-   unshifted centre distance?~~ **Yes** (the user, 2026-11-14); added in `d3f4dcf` and `9efde87` (the pinion is held
-   to the working centre distance its shifts make, with the outside pair's error and move fix).
-3. Readings the user may overrule: Update SolidWorks does not save; a part keeps its file name after a teeth change;
+2. Readings the user may overrule: Update SolidWorks does not save; a part keeps its file name after a teeth change;
    one build button; no static option in the window once W5 is in (a gearbox is built static only when a W5 finding
    is missing, and a W4 one stays static until Build again…).
-
-4. **Defaults taken while the user was away (2026-11-14 and 15), each to overrule.** They are the rulings of the
+3. **Defaults taken while the user was away (2026-11-14 to 16), each to overrule.** They are the rulings of the
    orchestrating session, listed whole in `W6-INTERFACES.md` §7, `W7-INTERFACES.md` §6 and `W8-INTERFACES.md` §9, and
    marked *ruled* in PLAN-WORKBOOK §4.5. The ones a user would notice: W6 — long part names in the Gears table are
    shortened head and tail. W7 — a planetary's gear mates are one per sun mesh and one with the ring from copy 1,
    whatever the Meshes sheet's row order (§6.14); two inputs on a stage are refused (§6.15), as are compound
-   planets, a second stage, helical planetaries and a carrier gear that meshes. W8 — the list at the end of *W8 in
-   detail*.
-5. **Two hand drags** (a person's step the scripts cannot stand in for): G1 in the right-angle gearbox
-   (`…\GearGeneratorProbe\w6-full-20261114-210827\out\r1`), and Sun in the planetary
-   (`…\GearGeneratorProbe\w7-full-20261115-000138\out\p1`).
-   *Both folders are on the machine W5 to W7 ran on, not on the second host of 2026-11-15.*
+   planets, a second stage, helical planetaries and a carrier gear that meshes. W8 — the readings J1–J27, J1, J2,
+   J16, J14 and J11 first (W8-PLAN §0.4), and the list at the end of *W8 in detail*; J1's "no hub", J22's bridging
+   warning and ruling 9.16 are *under issue #1* and change in W9.
+4. **The Workbook window on a screen shorter than it asks** (ruled 2026-11-16 by the coordinating session; overrule
+   it if you want W8 itself changed): today the window grows past the screen and the footer's last lines are cut off
+   (on this device's 2560 × 1600 screen at 150 % the built E4 footer's turn sentence and material to-do; by the code
+   also on a 1920 × 1080 screen at 100 %, not measured). W8 leaves it so; W9a takes it up as K12 of
+   `notes-workbook/ISSUE-1-PLAN.md`: the window stops at the screen's work area, its two columns scroll between a
+   fixed header and footer, and the footer is always whole.
+5. **The person's steps** (what the scripts cannot stand in for). Everything is on this device, under
+   `C:\Users\M0obo\Documents\GearGeneratorProbe\`, and nothing in these folders has been opened since it was built.
+   Have one SolidWorks running at a time (the app talks to whichever is running), and start the app as W8 closed it:
+   in a Command Prompt, `cd C:\Users\M0obo\Documents\GearGeneratorProbe\w8-close-sw2026-20261116-001758\snap`, then
+   `python main.py`; in its Gear panel, **Import workbook… → Open a workbook…** opens a workbook in the Workbook
+   window. If the window's footer runs off the bottom of the screen (item 4), tell us the lines you can see, or set
+   Windows' display scale to 100 % for the step to see them all.
+
+   **W8's step `s6`, on SolidWorks 2026, then on 2024** (W8-PLAN §5, its 2026-11-16 note):
+   1. Start SolidWorks 2026 alone. Open `w8-close-sw2026-20261116-001758\out\s1\TransferCase_E4.SLDASM` in it, and
+      `TransferCase_E4.xlsx` from the same folder in the Workbook window. The assembly opens in 2H.
+   2. Double-click **4L** in SolidWorks' ConfigurationManager. RangeSlv, the sleeve between the two dog rings, now
+      sits over LoDog, and ModeSlv over FrontDog. Drag the sun, the small gear at the front on In, round by about a
+      quarter turn: the rear sleeves and the front output gear should turn the same way as the sun at a quarter of
+      its angle, and the idler between the front gears the other way.
+   3. Double-click **N** and drag the sun again: the planets should roll round it and LoDog, the dog ring on the
+      carrier, turn the same way at a quarter; the rear and the front should stand still.
+   4. Double-click **4L** again. Tell us whether the gears stand where you left them in 4L or where you left them in
+      N. (A turn has been read in every mode on both versions, so we expect where you left them in N; a drag by hand
+      has never been read, which is why we ask.)
+   5. With 4L showing, press **Update SolidWorks** in the Workbook window with nothing changed. It shows and puts
+      every mode, about 4 minutes on 2026 (about 9 on 2024). The footer should begin *"Updated SolidWorks: re-placed
+      … in every mode"* and say *"In 4L, RangeSlv's teeth stood across LoDog's; the gears of 4L are back at the turn
+      they were built at. This version of SolidWorks can show a turn given in one mode in the others, so the turn may
+      have been given in another. It worked in 4L, the configuration that was active, then showed and checked 2H, 4H
+      and N and left the assembly in 4L."* If it says instead that the gears stand where they were turned and that
+      it did not show the other modes, or anything else, copy the footer to us: that is the reading we lack.
+   6. Close the assembly without saving, and exit SolidWorks.
+   7. Then the same in SolidWorks 2024, alone, with `w8-sw2024-20261115-223821\out\s1` (the E4 built on 2024; the
+      2026 folder does not open in 2024).
+
+   **The two hand drags, on SolidWorks 2026** (W6-PLAN §6.1, W7-PLAN §6; both folders built on 2026 34.1.1 by the
+   closing run):
+   1. Open `w8-close-sw2026-20261116-001758\out\r1\Bevel_Reducer.SLDASM` in SolidWorks 2026 and `Bevel_Reducer.xlsx`
+      from the same folder in the Workbook window. Drag **G1**, the small bevel gear on the horizontal shaft S1, round
+      its axis by about a quarter turn: G2, the large bevel gear on the upright shaft, turns half as far, and G3 under
+      it with it; G4, the large spur gear on S3, turns a sixth as far as G1 and the other way round from G2. Nothing
+      leaves its axis or passes through another gear. Press Update SolidWorks with nothing changed: the footer says
+      the gears stand where they were turned. Close without saving.
+   2. Open `w8-close-sw2026-20261116-001758\out\p1\Planetary_4to1.SLDASM` and `Planetary_4to1.xlsx` the same way.
+      Drag **Sun** round its axis by about a quarter turn: the three planets roll round inside the ring the same way
+      as Sun, about a quarter as fast, each spinning the other way on its own axis; the ring does not move. Press
+      Update SolidWorks with nothing changed: the footer says the gears stand where they were turned. Close without
+      saving.
+   3. If a gear does anything else (turns the wrong way or by another amount, leaves its axis, passes through
+      another, or SolidWorks asks something on closing), tell us which gear did what, and copy the footer.
+
+   *The older drag folders* (`w6-full-20261114-210827\out\r1`, `w7-full-20261115-000138\out\p1`, built before W8's
+   code) are on this device too and still serve, but the closing run's are built by the app as W8 closed it.
 6. **`tests/fixtures/excel-windows/Planetary_4to1.xlsx`** as Excel saves it was not committed: the session's
    permission check refused the write, and no test or script reads it. Commit it by hand if it is wanted; the file
    is in `…\GearGeneratorProbe\w7-full-20261115-000138\fixtures\`.
-7. **Probe folders** under `C:\Users\M0obo\Documents\GearGeneratorProbe` hold over a gigabyte of built gearboxes;
-   only the two folders of item 5 are still needed.
+7. **Probe folders** under `C:\Users\M0obo\Documents\GearGeneratorProbe` hold several gigabytes of built gearboxes;
+   only the two run folders of item 5 (`w8-close-sw2026-20261116-001758` and `w8-sw2024-20261115-223821`) are still
+   needed, and those only until the steps are done.
+8. **The macro database is yours to update** (W8-PLAN §6 item 6): GOTCHAS §83 and assemblies/07 record, on 2024, that
+   component positions are not stored per configuration. What W8 read is finer: a put that moves a component is
+   kept by its configuration (until that train is next turned anywhere), while a turn of a mated train by its drive
+   shows in every configuration, on 2026 (34.0.0 and 34.1.1) and 2024 alike (`findings.py`,
+   `POSITIONS_PER_CONFIGURATION_ON_<year>` and `TURN_PER_CONFIGURATION_ON_<year>`; ruling 9.18).
 
 Answered ahead of its phase (the user, 2026-11-14), for W7's sub-plan:
 

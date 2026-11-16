@@ -164,8 +164,10 @@ read in others: in all four on copies no Update had moved (W8's s2, s7 cases 1-3
 every mode (s2, `…-151412-s2.log` line 356), where 4H and N, shown after a put in 2H, read the built turn (lines
 448-451). A put that moves a body was kept by the configuration showing in s7 case 5, while in s2 a put in 2H was twice
 found in 4H and N. So J11 does not hold for a turn. Once an Update had put every mode, s7 case 8 on 34.1.1 read the
-put held in 2H alone and the turn in all four; 34.0.0's s2 reading was not seen there, unexplained (W8-INTERFACES
-§9.18).
+put held in 2H alone and the turn in all four. 2026-11-16: on 34.1.1 W8's closing run then read s2's current sequence
+(4H, N and 4L shown after the fresh turn) and every s7 case, and on 2024 s2 and s7 read, the same: the turn in every
+mode shown, 2H's put not carried. 34.0.0's own first press read the same; its one differing reading came from a
+sequence (4L alone shown before the press) that nothing has re-read, and stays unexplained (W8-INTERFACES §9.18).
 Behaviour rests on neither: J26's "a mode needs a put when … its own train_check finds it off its axis or out of
 step" now also includes a mode found turned in step: every mode an Update shows ends at its built frames, and a quiet
 Update that has anything to put puts every mode. The sentences read `TURN_PER_CONFIGURATION_ON_<year>`: W8-INTERFACES
@@ -511,8 +513,11 @@ are skipped: each slider's SLIDE is made at its one value and the assembly keeps
 in all four on copies no Update had moved (W8's s2, s7 cases 1-3), so this section's "if SolidWorks shares positions"
 case applies to a turn at least there; after an Update had put every mode it was read in 4L, while 4H and N, shown
 after the app's put in 2H, stood at the built turn: either the turn did not reach them or the put did. s7 case 8 on
-34.1.1 read the turn in all four and the put in 2H alone; 34.0.0's reading was not seen there, unexplained. On
-SolidWorks 2024 s7 read every turn in all four, in that state too, and the put stayed in 2H. What the app says follows
+34.1.1 read the turn in all four and the put in 2H alone; on 34.1.1 W8's closing run (2026-11-16) read the same in s2's
+current sequence (4H, N and 4L shown after the fresh turn) and in every s7 case. 34.0.0's own first press read the
+same; its one differing reading came from a sequence (4L alone shown before the press) that nothing has re-read, and
+stays unexplained. On SolidWorks 2024 s7 read every turn in all four, in that state too, and the put stayed in 2H, and
+2024's s2 read as 34.1.1's. What the app says follows
 `TURN_PER_CONFIGURATION_ON_<year>`, False on both, as "can show": W8-INTERFACES §9.18. The text below is as
 approved.)*
 
@@ -1360,6 +1365,11 @@ configuration as recorded.
   every mode shown. On SolidWorks 2024 the same section is run and its readings say which reading of §1.9 holds there
   (with shared positions the 37° turn shows in every mode, and the quiet Update in 4L finds a coupling out of step and
   puts 4L, then — having changed something — shows and checks the others).
+  *(2026-11-16: "on 2026 every other mode stands exactly as built" is superseded by ruling 9.18: on 34.0.0, 34.1.1
+  and 2024 the turn was read in other modes, and the script holds the False reading. "2H's 37° turn put back too" is
+  not shown by s2's changed Update, which since `a87c1c5` finds every mode already at its built frames; a turn put
+  back by an Update is shown by s2's two quiet Updates that put every mode and by s7 case 4's changed Update after a
+  +37° (`W8-REVIEW-CLOSING-RUN.md` question 4, N3). The text above is as approved.)*
 - **`s3` — D10 per configuration and the refusals** (a copy of s1): in 4L `RangeSlv engages LoDog` suppressed and
   `RangeSlv engages InDog` turned on, and `RangeSlv along Rear`'s value in N set to 58 by the script
   (`SetSystemValue3`, 2H active) → Update in 2H puts all three right (the two flags in 4L, the value in N) and says
@@ -1383,6 +1393,11 @@ configuration as recorded.
   document left open and named; the footer never offering the same build again; then closed as W5's m4 closes it. (The
   build shows N to check it, so tier 9 item 1 must have settled what showing an over-defined configuration does
   before this section runs.)
+  *(2026-11-16: what runs is W8-INTERFACES §9.19. (i) The doctored distance mate is refused at the app's gate, before
+  anything is made, with no SolidWorks call. (ii) A coupling SolidWorks accepts but that locks N (Sun to LoDog 1 : 1)
+  is made, `AddMate5` status 1, and the build's step 6 stops it with one sentence per locked body, naming mode N and
+  the bodies, not the mate. SolidWorks refusing a mate at the make (`AddMate5` status 5, "… over-defines the
+  assembly.") stays covered on the fake only, a caveat not run again. The text above is as approved.)*
 - **`s6` — the person's step** (handed to the user, 2026 then 2024): *"In SolidWorks, open the TransferCase.SLDASM the
   demonstration built (its folder is in the log). It opens in 2H. Pick the configuration 4L in the ConfigurationManager.
   RangeSlv, the sleeve between the two dog rings, now sits over LoDog, and ModeSlv over FrontDog. Drag the sun, the small
@@ -1393,6 +1408,30 @@ configuration as recorded.
   changed: the footer should say the gears stand where they were turned and that the other modes were not shown. Tell
   us what you saw, on each version."* (The question about where the gears stand is the person's view of §1.9; the
   answer is expected to differ if 2024 shares positions.)
+  *(2026-11-16: reworded before it is handed over (`W8-REVIEW-9-18.md`, `W8-REVIEW-CLOSING-RUN.md` M1). The text
+  above names a file that does not exist (the E4 is `TransferCase_E4.SLDASM`) and predicts what the turn finding now
+  contradicts: on SolidWorks 2026 34.1.1 and 2024 a turn has been read in every mode
+  (`TURN_PER_CONFIGURATION_ON_2026` and `…_ON_2024` False). In N no sleeve engages a dog, so the drag there turns
+  LoDog (on the carrier) and not RangeSlv; in 4L the two are coupled, so 4L will read out of step, and the Update
+  there puts every mode and says so, as s2's second press did on both versions. The step as handed over, with its
+  folders, is in HANDOFF, *Questions waiting for the user*; its words:*
+  *"In SolidWorks open TransferCase_E4.SLDASM from the folder named for your version, and open TransferCase_E4.xlsx
+  from the same folder in the Workbook window. It opens in 2H. Double-click 4L in the ConfigurationManager:
+  RangeSlv, the sleeve between the two dog rings, now sits over LoDog, and ModeSlv over FrontDog. Drag the sun, the
+  small gear at the front on In, round by about a quarter turn: the rear sleeves and the front output gear turn the
+  same way as the sun at a quarter of its angle, and the idler between the front gears the other way. Then
+  double-click N and drag the sun again: the planets roll round it and LoDog, the dog ring on the carrier, turns the
+  same way at a quarter; the rear and the front stand still.
+  Then double-click 4L again and tell us whether the gears stand where you left them in 4L or where you left them in
+  N. Then, with 4L showing, press Update SolidWorks with nothing changed. It shows and puts every mode, a few
+  minutes, and its footer should begin 'Updated SolidWorks: re-placed … in every mode' and say 'In 4L, RangeSlv's
+  teeth stood across LoDog's; the gears of 4L are back at the turn they were built at. This version of SolidWorks can
+  show a turn given in one mode in the others, so the turn may have been given in another. It worked in 4L, the
+  configuration that was active, then showed and checked 2H, 4H and N and left the assembly in 4L.' Tell us what you
+  saw, on each version, and close without saving."*
+  *Expected on these versions: in 4L the gears stand where they were left in N (a drag by hand has never been read,
+  so this is the step's question, not a claim). If the footer instead says the gears stand where they were turned and
+  that it did not show the other modes, the drag in N did not show in 4L: tell us. The text above is as approved.)*
 - **`s7` — what a configuration keeps, on 2024 first** (run on 2026 too, as the control that it reads as the
   follow-up did): on the built E4 (a copy of s1), with handles fetched again after every change: in N, where FrontDrv's
   train is free, FIdler put 20° about its own axis (a put on a fresh handle) and rebuilt; 4H shown and rebuilt: FIdler's

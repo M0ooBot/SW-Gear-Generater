@@ -398,6 +398,21 @@ folder 32) so nothing pushes it wider — and grows taller when a save brings
 more lines, never shrinking below what the user dragged it to. Grown, it moves
 left or up rather than off the screen.
 
+*On a screen shorter than the window asks (2026-11-16), it does not fit.*
+`WorkbookWindow._fit` asks the height the contents need, with no cap, and keeps
+the window's top on the whole screen's height, not its work area; Windows then
+holds the window at the most the screen gives, and **the footer's last lines
+are cut off below it**. Measured on a 2560 × 1600 screen at 150 % (the window
+1618 px wide): the built E4 transfer case's footer asks 281 px, its bottom at
+1657 where the window is held to 1570 inside, so its last sentences (the turn
+sentence and the material to-do) are not on screen; the same on SolidWorks 2026
+and 2024 (W8's window checks, `c3ed9b6`, `fb85bcc`). By the arithmetic a 1920 ×
+1080 screen at 100 % would cut it too; that is inferred, not measured. Ruled by
+the coordinating session for the user to overrule: W8 leaves the layout as it is,
+and the next phase changes it (K12 of `docs/notes-workbook/ISSUE-1-PLAN.md`: the
+window stops at the screen's work area and its two columns scroll between a
+fixed header and footer, the footer always whole).
+
 - **Header.** The file's name in bold (13 px; the artboards draw it at 15);
   under it a dot and `linked · read 14:02:31 · open in Excel`
   (`ui_text.workbook_read_line`; *open in Excel* while
@@ -1108,7 +1123,7 @@ coupling's turning, so it says nothing of it).
 | State | Sentence | Build button | Update SolidWorks |
 |---|---|---|---|
 | ready | *Ready: Build makes 6 parts, TransferCase_Parallel_Layout and TransferCase_Parallel.SLDASM in …. Its gears are mated to their shafts and, as each mode engages them, to each other, so they turn together in SolidWorks. It has 4 modes, 2H, 4H, N and 4L: each becomes a configuration of the assembly, and it opens in 2H.* | **Build**, on | hidden |
-| built | *Built 6 parts, …; no interference between the gears in any mode, where they stand. Its gears are mated to turn in each of its 4 modes, one configuration each (2H, 4H, N and 4L), and SolidWorks reports no mate in error in any of them: it opens in 2H; to switch mode, double-click another mode's configuration in SolidWorks' ConfigurationManager. …* then what the running version's answer, carried by the build (`positions_per_configuration`, read from `findings.TURN_PER_CONFIGURATION_ON_<year>`, ruling 9.18), says of a turn. On SolidWorks 2026 (False): *A turn you give the gears in one mode can show in other modes, so a dog can stand across its sleeve in another; to put the gears back there, press Update SolidWorks with that mode showing.* It says *can* because SolidWorks 2026 was read carrying a turn into every mode on a gearbox no Update had moved, and, after an Update had put every mode, into 4L, while 4H and N, shown after a put in 2H, stood at the built turn; which it reaches then is not settled on 2026 (ruling 9.18, W8's s2 and s7). Where the finding is True: *A turn you give the gears in one mode stays in that mode. Switching mode never by itself puts a dog tooth on tooth.* Where a version has no finding of its own (None): neither. | **Build again…**, on | on, primary |
+| built | *Built 6 parts, …; no interference between the gears in any mode, where they stand. Its gears are mated to turn in each of its 4 modes, one configuration each (2H, 4H, N and 4L), and SolidWorks reports no mate in error in any of them: it opens in 2H; to switch mode, double-click another mode's configuration in SolidWorks' ConfigurationManager. …* then what the running version's answer, carried by the build (`positions_per_configuration`, read from `findings.TURN_PER_CONFIGURATION_ON_<year>`, ruling 9.18), says of a turn. On SolidWorks 2026 (False): *A turn you give the gears in one mode can show in other modes, so a dog can stand across its sleeve in another; to put the gears back there, press Update SolidWorks with that mode showing.* It says *can* because SolidWorks 2026 was read carrying a turn into every mode on a gearbox no Update had moved, and, after an Update had put every mode, on 34.0.0 once into 4L alone, while 4H and N, shown after a put in 2H, stood at the built turn; on 34.1.1 W8's closing run read it in every mode in that state too (s2's current sequence and s7), as 2024 did, and the 34.0.0 reading, from a sequence no run has repeated, stays unexplained (ruling 9.18). Where the finding is True: *A turn you give the gears in one mode stays in that mode. Switching mode never by itself puts a dog tooth on tooth.* Where a version has no finding of its own (None): neither. | **Build again…**, on | on, primary |
 | built, on SolidWorks 2024 | the same sentence as on 2026: `findings.TURN_PER_CONFIGURATION_ON_2024` is False since 2024's s7 (`ce775a6`), which read every turn of the train in all four modes, by the same amount, on a gearbox no Update had moved, after a changed Update and after a quiet Update that had put every mode (ruling 9.18). The Update sentences on a turn (the two rows below) are 2026's too | **Build again…**, on | on, primary |
 | the same, the window opened afresh | the record's sentence with neither claim about a turn, since no job of this session has said which SolidWorks runs (W8-INTERFACES §9.12) | **Build again…**, on | on, primary |
 | a quiet Update | *SolidWorks already matches the workbook: nothing was changed. It worked in 2H, the configuration that was active; it did not show the other modes, since nothing in 2H needed changing.* (the reason is known only for the mode worked in, ruling 9.18), whichever way the turn finding reads. With `findings.SUPPRESSED_GEAR_MATE_SENSE_READ` as committed (*answers, marks nothing*) it reads the turning of the mates switched off in 2H too, and says no more; with the finding unset it adds what it could not read: *Which way RangeSlv and LoDog, and ModeSlv and FrontDog, turn against each other was not checked this time: their mates are switched off in 2H, …* | **Build again…**, on | on, primary |
@@ -1123,10 +1138,30 @@ changed Update puts every train it finds off its axis, out of step or turned
 (`baa1a56`), and a quiet Update that has anything to put puts every train in
 every mode (`a87c1c5`), the active mode last (ruling 9.18); *It worked in 4H, … it did not show the other
 modes, since nothing in 4H needed changing.* after a quiet Update that put
-nothing) is C's and A's sentences; the window shows them whole and adds nothing.
-The footer holds the longest of them, 2026's turn sentence after Build, wrapped
-beside the buttons: the window keeps its 1080 px and grows taller (a test pins
-it).
+nothing) is C's and A's sentences; the window shows them in full and adds
+nothing. The footer holds the longest of them, 2026's turn sentence after Build,
+wrapped beside the buttons: the window keeps its 1080 px and grows taller (a test
+pins it).
+
+*How W8 ended (2026-11-16).* On SolidWorks 2026 (34.0.0 and 34.1.1) and 2024
+(32.5.0) the turn finding is False, so on both versions the window says a turn
+*can* show in other modes: after Build and in the record line, *A turn you give
+the gears in one mode can show in other modes, …*; after a quiet Update that found
+the mode showing turned in step, `TURN_SHOWN_ELSEWHERE`; after one that put,
+*This version of SolidWorks can show a turn given in one mode in the others, so
+the turn may have been given in another.* The built E4 footer says all eight of
+its sentences on both versions (W8's window checks), but **on a screen shorter
+than the window then asks, its last lines are cut off**: on a 2560 × 1600 screen
+at 150 % the footer asks 281 px and its bottom stands at 1657 of the 1570 the
+window is held to, so the turn sentence and the material to-do are off screen
+(*The layout* above; by arithmetic also a 1920 × 1080 screen at 100 %, not
+measured). The window does not yet show its footer whole on such a screen; K12
+of `docs/notes-workbook/ISSUE-1-PLAN.md`, the next phase, makes it, and its
+window check asserts the footer whole on that screen. The three mode boards
+are not redrawn at W8's close: their words are the app's today for the states
+they draw (the one sentence change since they were drawn, `0ff56d3`, is said
+only after an earlier unsaved Update, which no board draws), and the next phase
+redraws them with K12 and its footer's new words.
 
 ### Planetary stages (W7)
 

@@ -285,6 +285,9 @@ sliders overlapping in a mode an error, a stroke that would hold two dogs at onc
 error naming no phase. **The warning above on "a gear on an `output` shaft that nothing drives in some mode" is
 departed from (J16, announced):** W8 warns only on an output that turns in *no* mode, since a member free in a mode
 (neutral; the front not driven in 2H) is what modes are for; the Speeds panel says it (*turns freely*).
+*(2026-11-16: W8 is no longer the last phase. GitHub issue #1 opened a ninth, W9, planned in
+`notes-workbook/ISSUE-1-PLAN.md` and approved by the user; until it lands the checks stay as W8 built them, and what
+does not build stays an error naming no phase. The text above is as written at W8.)*
 
 ### 3.5 `kinematics.py` — speeds and torques, any layout
 
@@ -640,10 +643,12 @@ their rerun on 2024 measured the same (findings committed in `ea7a46f`); no W8 c
   and "a put holds in the configuration shown only", with the sentences on `POSITIONS_PER_CONFIGURATION_ON_<year>`.
   W8's s2 and s7 read otherwise. On 2026 34.0.0, after an Update had put every mode, a fresh turn was read in 4L,
   while 4H and N, shown after the app's put in 2H, stood at the built turn: either the turn did not reach them or the
-  put did. s7 case 8 on 34.1.1, in its own sequence, read the turn in all four and the put in 2H alone; 34.0.0's
-  reading was not seen there and stays unexplained. On 2024 the turn reached all four and the put stayed in 2H; a
-  moving put was kept by its configuration only until its train was next turned anywhere:
-  notes-workbook/W8-INTERFACES.md §9.18.)*
+  put did. s7 case 8 on 34.1.1, in its own sequence, read the turn in all four and the put in 2H alone, and W8's
+  closing run on 34.1.1 (2026-11-16) read the same in s2's current sequence (4H, N and 4L shown after the fresh turn)
+  and in every s7 case. 34.0.0's own first press read the same; its one differing reading came from a sequence (4L
+  alone shown before the press) that nothing has re-read, and stays unexplained. On 2024 s2 and s7 read the turn in
+  all four and the put staying in 2H; on 2024 and 34.1.1 a moving put was kept by its configuration only until its
+  train was next turned anywhere: notes-workbook/W8-INTERFACES.md §9.18.)*
 - **J12** — D10 per configuration. **J13** — Update works in the configuration active when it opens and returns to
   it. **J14** (**ruled**, the review's S6) — an edit after which every mate the modes need is already on record (a
   Modes pick between existing positions, an offset, an At, a renamed position) is an Update; Modes rows added,
@@ -661,6 +666,22 @@ their rerun on 2024 measured the same (findings committed in `ea7a46f`); no W8 c
   **J24** — the demonstration's copied built folder. **J25** — a quiet Update reads only what needs no configuration
   change, and says after every quiet Update of a gearbox with modes which mode it worked in and that it did not show
   the others (**ruled**, W8-INTERFACES §9.11).
+
+*How W8 ended (2026-11-16; HANDOFF-WORKBOOK, W8 in detail).* The paragraph above says no W8 code had run on
+SolidWorks; it has since. Every assembly section passed on SolidWorks 2026 in a closing run from one snapshot of
+the final source (`c583f48`, 34.1.1; `c351b1f` to `aff9bfe`, 0 failed), and so did 2024's confirming sections (32.5.0;
+`s0`, `s1`, `s2`, `s3`, `s7`); the window check passed on both but for one check, the built footer's height, below.
+The readings above stand as written, with three changes already marked: J11 and J26
+as corrected (a turn can show in other modes, on both versions: ruling 9.18), and `s5`'s refused mate (ruling 9.19:
+the doctored distance mate refused at the gate, a coupling that locks a mode stopped at the build's step 6 naming
+the bodies, not the mate; SolidWorks refusing a mate at the make covered on the fake only). W8 is closed but for: the
+built footer on a screen shorter than the window asks, which is cut off (ruled 2026-11-16 by the coordinating
+session, for the user to overrule: not changed in W8, taken up as K12 of `notes-workbook/ISSUE-1-PLAN.md`); the
+person's step `s6`; and the hand drags of W6 and W7. **Under issue #1** (GitHub issue #1, opened by the user
+2026-11-16), and staying as W8 built them until W9 changes them: J1's "no hub" (the user's answer: the app builds the
+hub from a row), J22's warning on a stroke that bridges two dogs (it fires only when the sleeve is longer than the
+gap, `length > gap`, so a sleeve flush against both dogs in neutral is silent), and
+ruling 9.16 (making a gear mate of a gearbox with modes again is refused): `notes-workbook/ISSUE-1-PLAN.md`.
 
 ## 5. The Workbook window: `workbook_gui.py` (+ `ui_text`)
 
@@ -714,6 +735,21 @@ the pattern: `POLL_MS`).
 interfaces `W8-INTERFACES.md` with the rulings of its §9. Its own fixture **TransferCase_Parallel** (the E4 transfer
 case with the low range on a layshaft, no planetary) is built first as the shakedown, then the E4 transfer case. W8
 is the last phase: nothing is left for a later one, and what it does not build is an error naming no phase.
+
+*W8 closed (2026-11-16), but for three things:* the built footer on a screen shorter than the window asks (cut off;
+taken up as K12 of W9), the person's step `s6`, and the hand drags of W6 and W7. Every assembly section passed on
+SolidWorks 2026 34.1.1 from one snapshot of the final source (`c583f48`), and so did 2024's confirming sections; §4.5,
+*How W8 ended*, and HANDOFF-WORKBOOK say what was read where.
+
+*W9 (2026-11-16): W8 is not the last phase after all.* GitHub issue #1, opened by the user that day (dog-clutch
+sleeves built with no hub or reachability check, a neutral with no running clearance, no relief bore, and Update
+unable to add a part), and the user's word that once they have edited parts or added their own in a built assembly
+they cannot use the app any more for fear of it overwriting their work, open a ninth phase:
+`notes-workbook/ISSUE-1-PLAN.md`, stages W9a to W9e, reviewed in `ISSUE-1-PLAN-REVIEW.md` and approved by the user
+(2026-11-16), who also answered its choices (an app-owned value changed in SolidWorks stops Update, named; Build
+again… carries the user's components and remakes their mates; the hub built from a row). The table's W8 row above is
+as approved; W9 has no row of its own here. This file stays the authority, and the plan says where W9 departs from
+it.
 
 The planner (PLAN-GEARBOX) starts after W5 and reuses W1–W5 whole: its data model becomes `GearboxSpec`
 (superseding PLAN-GEARBOX §1), and its Solve fills one.
