@@ -49,12 +49,12 @@ from dataclasses import asdict, dataclass, field, replace
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from .. import findings, store
-from ..gears import bevel, equations, kind_for
+from ..gears import bevel, equations, kind_for, spur
 from ..gears.base import GlobalVariable
 from ..spec import GearSpec, InputError
 from ..store import GearboxRecord, LinkRecord, MateEntry, PartEntry, ShaftEntry, Sidecar
 from ..swbuild import (POSE_TOLERANCE, DocumentValues, GearboxUpdate, LockLink, MeshLink, MotionUpdate, Placement,
-                       _caps_with_arc, on_in, same_frame, structural_change)
+                       _caps_with_arc, on_in, plan_features, same_frame, structural_change)
 from . import gearbox, geometry, layout, motion, planetary, schema
 from .assess import Assessment
 from .build import PartJob
@@ -74,6 +74,13 @@ class PartUpdate:
     derived: Any
     variables: Tuple[GlobalVariable, ...]
     changed: bool = False
+    # W9a (ISSUE-1-PLAN K11, K1/K3; W9A-INTERFACES.md), handed to the worker in its ``DocumentValues``: ``recorded``
+    # the ``(global, expression)`` pairs the record says the file holds (None when it cannot say: no variables on
+    # record, or the file marked unsaved or mismatched), ``cells`` the workbook cell of each global a cell sets, and
+    # ``made`` every feature the part's plan makes.
+    recorded: Optional[Tuple[Tuple[str, str], ...]] = None
+    cells: Tuple[Tuple[str, str], ...] = ()
+    made: Tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -162,7 +169,8 @@ class UpdatePlan:
             raise ValueError("Update SolidWorks cannot carry this change: "
                              + " ".join((self.refusal,) + self.structural + self.missing).strip())
         kwargs: Dict[str, Any] = {
-            "parts": [DocumentValues(p.path, tuple(p.variables)) for p in self.parts],
+            "parts": [DocumentValues(p.path, tuple(p.variables), recorded=p.recorded, cells=p.cells, made=p.made)
+                      for p in self.parts],
             "layout": self.layout,
             "assembly": self.assembly,
             "placements": list(self.placements),
@@ -267,7 +275,9 @@ def _part(entry: PartEntry, job: PartJob, exists: Callable[[str], bool]) -> Tupl
     """What Update does to one built part, and the sentence if it cannot (``""``)."""
     variables = gearbox._variables_of(job)
     label = f"{gearbox._stem_of(entry.path)} ({_names(entry.gears)})"
-    update = PartUpdate(entry.path, tuple(entry.gears), job.spec, job.derived, variables, changed=True)
+    recorded = tuple((str(pair[0]), str(pair[1])) for pair in entry.variables if len(pair) == 2) or None
+    update = PartUpdate(entry.path, tuple(entry.gears), job.spec, job.derived, variables, changed=True,
+                        recorded=recorded, made=plan_features(job.plan) if job.plan is not None else ())
     built: Optional[GearSpec] = None
     if entry.spec:
         try:
@@ -452,7 +462,10 @@ def classify(record: Optional[LinkRecord], a: Assessment, *,
             structural.append(f"The mesh {'–'.join(sorted(pair))} is no longer listed, and Update SolidWorks cannot "
                               "take one out.")
         try:
-            layout_values = DocumentValues(box.layout, layout.layout_globals(shafts), layout.layout_features(shafts))
+            features = layout.layout_features(shafts)
+            layout_values = DocumentValues(box.layout, layout.layout_globals(shafts), features,
+                                           recorded=_recorded_layout(box), cells=_shaft_cells(spec, shafts),
+                                           made=features)
         except ValueError as exc:
             return UpdatePlan(refusal=str(exc))
         if not exists(box.layout):
@@ -487,7 +500,7 @@ def classify(record: Optional[LinkRecord], a: Assessment, *,
         update, why = _part(entry, jobs[0], exists)
         if why:
             structural.append(why)
-        parts.append(update)
+        parts.append(replace(update, cells=_gear_cells(spec, entry.gears)))
 
     # The assembly: every gear's wanted frame, by the Name2 on record.
     placements: List[Placement] = []
@@ -510,14 +523,14 @@ def classify(record: Optional[LinkRecord], a: Assessment, *,
             if f is None:
                 continue
             cid = layout.carrier_id(entry.shaft)
-            placements.append(Placement(cid, entry.component, f.rotation, f.at, 0.0))
+            placements.append(Placement(cid, entry.component, f.rotation, f.at, 0.0, part=entry.path))
             if not (entry.rotation and entry.at and same_frame(entry.rotation, entry.at, f.rotation, f.at, 0.0)):
                 replaced.append(cid)
         for c in box.components:
             if c.gear not in wanted:
                 continue
             f, step = wanted[c.gear], layout.pitch(placed[c.gear])
-            placements.append(Placement(c.gear, c.name, f.rotation, f.at, step))
+            placements.append(Placement(c.gear, c.name, f.rotation, f.at, step, part=c.part))
             # W8: a slider's place along its shaft is its slide mate's value, set per configuration (J14), never a
             # put: it is re-placed only when its frame differs otherwise.
             at = list(c.at)
@@ -538,13 +551,92 @@ def classify(record: Optional[LinkRecord], a: Assessment, *,
 
     if box is None:
         carrier_values, carriers_moved = (), ()
+    # W9a (K11): what the record says each file holds, given only where no unsaved or mismatched mark makes it
+    # unsure (a lost or unsaved Update explains a difference there); and the assembly's own, the same way.
+    marked = list(record.unsaved) + list(record.mismatched)
+    unsure = lambda path: any(store.same_path(path, m) for m in marked)            # noqa: E731
+    parts = [replace(p, recorded=None) if unsure(p.path) else p for p in parts]
+    if layout_values is not None and unsure(layout_values.path):
+        layout_values = replace(layout_values, recorded=None)
+    carrier_values = [replace(c, recorded=None) if unsure(c.path) else c for c in carrier_values]
+    moving = modal.motion or turn.motion
+    if moving is not None and box is not None:
+        moving = _with_user_work(moving, box, spec, unsure(box.assembly))
     return UpdatePlan(parts=tuple(parts), layout=layout_values, assembly=assembly, placements=tuple(placements),
                       moved_shafts=tuple(moved), replaced=tuple(replaced), structural=tuple(structural),
                       missing=tuple(dict.fromkeys(missing)), unsaved=tuple(record.current_marks(record.unsaved)),
-                      shafts=shafts, motion=modal.motion or turn.motion, axial=turn.axial, ratios=turn.ratios,
+                      shafts=shafts, motion=moving, axial=turn.axial, ratios=turn.ratios,
                       drag=turn.drag, modes_changed=modal.changed,
                       resensed=turn.resensed, carriers=tuple(carrier_values), carriers_moved=tuple(carriers_moved),
                       carrier_layouts=_carrier_layouts_on_record(box, a))
+
+
+# -- W9a: what the worker needs to tell the user's work from the app's (ISSUE-1-PLAN K1, K11; W9A-INTERFACES.md) ------
+
+# The part globals a Gears cell sets as it is: the global's name -> the Gears column's key. A global another sets
+# through a formula (Pitch Diameter, Backlash's default) has no cell, and its sentence names none.
+_GLOBAL_COLUMN = {spur.TEETH: "teeth", spur.MODULE: "module", spur.BORE: "bore", spur.PRESSURE_ANGLE: "pressure_angle",
+                  spur.FACE_WIDTH: "face_width", spur.BACKLASH: "backlash", spur.FILLET: "fillet",
+                  spur.PROFILE_SHIFT: "profile_shift"}
+
+
+def _gear_cells(spec: Any, gears: Sequence[str]) -> Tuple[Tuple[str, str], ...]:
+    """``(global, Gears cell)`` for a part's globals a cell sets, on the part's first gear's row that the workbook
+    has (a planet copy's by its row)."""
+    row = 0
+    for gear in gears:
+        found = spec.gear(gear) or spec.gear(gear.split(" copy ")[0])
+        if found is not None and found.row:
+            row = found.row
+            break
+    if not row:
+        return ()
+    return tuple((name, spec.cell("Gears", row, key)) for name, key in _GLOBAL_COLUMN.items())
+
+
+def _shaft_cells(spec: Any, shafts: Sequence[ShaftLayout]) -> Tuple[Tuple[str, str], ...]:
+    """``(layout global, Shafts cell)``: ``"S2 X"`` -> its shaft's X cell, and so for Y and Z."""
+    out: List[Tuple[str, str]] = []
+    for s in shafts:
+        found = spec.shaft(s.shaft)
+        if found is None or not found.row:
+            continue
+        for name, key in ((s.x_global, "x"), (s.y_global, "y"), (s.z_global, "z")):
+            if name:
+                out.append((name, spec.cell("Shafts", found.row, key)))
+    return tuple(out)
+
+
+def _recorded_layout(box: GearboxRecord) -> Optional[Tuple[Tuple[str, str], ...]]:
+    """The layout's globals as the record's shafts say the file holds them (``layout.layout_globals`` of the shafts
+    on record), or None when they cannot be read."""
+    try:
+        was = tuple(ShaftLayout(**asdict(entry)) for entry in box.shafts)
+        return tuple((g.name, g.expression) for g in layout.layout_globals(was))
+    except (TypeError, ValueError):
+        return None
+
+
+def _with_user_work(moving: MotionUpdate, box: GearboxRecord, spec: Any, unsure: bool) -> MotionUpdate:
+    """The motion path's W9a fields: the layout's Name2 on record; ``record_holds`` unless the assembly is marked
+    unsaved or mismatched; each Face Z as the record holds it (``|z_front|`` of its along mate, keyed as
+    ``face_globals`` is, by the gear's row); and the cell each Face Z (the gear's At) and each slide (its Slides)
+    is set by."""
+    rows = {g.name: row for row, g in moving.face_globals}
+    faces = tuple((rows[m.face_global], equations.literal(round(abs(float(m.z_front)), 9))) for m in box.mates
+                  if m.kind == motion.ALONG and m.face_global in rows)
+    cells: List[Tuple[str, str]] = []
+    for row, variable in moving.face_globals:
+        gear = spec.gear(row)
+        if gear is not None and gear.row:
+            cells.append((variable.name, spec.cell("Gears", gear.row, "at")))
+    for mate in moving.mates:
+        if mate.kind == "slide" and mate.gears:
+            gear = spec.gear(mate.gears[0])
+            if gear is not None and gear.row:
+                cells.append((mate.name, spec.cell("Gears", gear.row, "slides")))
+    return replace(moving, layout_component=box.layout_component, record_holds=not unsure,
+                   recorded_faces=tuple(dict(faces).items()), cells=tuple(cells))
 
 
 # -- W7: a planetary stage on record (W7-PLAN §2.10; W7-INTERFACES §6.1, §6.3, §6.4) ------------------------------
@@ -591,7 +683,10 @@ def _carrier_parts(box: GearboxRecord, a: Assessment) -> Tuple[List[DocumentValu
             continue
         drawn = layout.carrier_shafts(now)
         was = layout.carrier_shafts(_recorded_carrier_layout(entry))
-        values.append(DocumentValues(entry.path, layout.layout_globals(drawn), layout.layout_features(drawn)))
+        features = layout.layout_features(drawn)
+        values.append(DocumentValues(entry.path, layout.layout_globals(drawn), features,
+                                     recorded=tuple((g.name, g.expression) for g in layout.layout_globals(was)),
+                                     made=features))
         if layout.layout_globals(drawn) != layout.layout_globals(was):
             moved.append(entry.shaft)
         old = {x.shaft: x for x in was}
@@ -1532,6 +1627,14 @@ def finish_update(plan: UpdatePlan, result: GearboxUpdate, record: LinkRecord, *
     if box is not None:
         if plan.layout is not None and result.layout is not None and not result.layout.failures and plan.shafts:
             box.shafts = [ShaftEntry(**asdict(s)) for s in plan.shafts]
+        # W9a (K1): a component the worker found by its part, not its recorded Name2, is recorded by the name found.
+        for gear, before, found_name in getattr(result, "renamed", []) or []:
+            for component in box.components:
+                if component.gear == gear and component.name == before:
+                    component.name = found_name
+            for carrier in box.carriers:
+                if carrier.component == before and layout.carrier_id(carrier.shaft) == gear:
+                    carrier.component = found_name
         wanted = {p.gear: p for p in plan.placements}
         turning = plan.motion is not None
         held = set(plan.motion.fixed) if turning else set()
