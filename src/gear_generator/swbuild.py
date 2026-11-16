@@ -1492,6 +1492,9 @@ class DocumentValues:
     recorded: Optional[Tuple[Tuple[str, str], ...]] = None
     cells: Tuple[Tuple[str, str], ...] = ()
     made: Tuple[str, ...] = ()
+    # ``mark``: the record's mark on the file, ``"unsaved"`` or ``"mismatched"`` (``LinkRecord.unsaved`` /
+    # ``mismatched``), ``""`` none. The worker decides from it whether the record vouches for the file (``_vouches``).
+    mark: str = ""
 
 
 @dataclass(frozen=True)
@@ -2384,16 +2387,20 @@ class MotionUpdate:
     on_sets: Tuple[Tuple[str, Tuple[str, ...]], ...] = ()
     # W9a (ISSUE-1-PLAN K1, K11; W9A-INTERFACES.md). ``layout_component``: the layout's Name2 on record
     # (``GearboxRecord.layout_component``); ``""`` finds it by the layout part's path instead. ``record_holds``: the
-    # record says what the assembly holds — no ``unsaved`` or ``mismatched`` mark on it — so a recorded value found
-    # otherwise in SolidWorks than both the record and the workbook (a Face Z, a slide's value in a mode, a recorded
-    # mate's flag) is the user's edit, and the Update refuses naming it instead of setting it back (K11, overturning
-    # D10 for a mate the user suppressed). False (the default) is W8's behaviour: such a value is set back.
+    # caller gives the record's word on what the assembly holds (the mates' recorded values, ``recorded_faces``), so
+    # a recorded value found otherwise in SolidWorks than both the record and the workbook (a Face Z, a slide's
+    # value in a mode, a recorded mate's flag) is the user's edit, and the Update refuses naming it instead of setting
+    # it back (K11, overturning D10 for a mate the user suppressed) — where the record vouches for the assembly
+    # (``assembly_mark``, ``_vouches``). False (the default) is W8's behaviour: such a value is set back.
     # ``recorded_faces``: ``(gear, its "<Gear> Face Z" expression as the record holds it)``. ``cells``: ``(a Face Z
     # global's name or a SLIDE's name, the workbook cell that sets it)``, for the refusal's sentence.
     layout_component: str = ""
     record_holds: bool = False
     recorded_faces: Tuple[Tuple[str, str], ...] = ()
     cells: Tuple[Tuple[str, str], ...] = ()
+    # ``assembly_mark``: the record's mark on the assembly, as ``DocumentValues.mark``; with ``record_holds`` the
+    # worker vouches for the assembly unless the mark says the Update was lost (``_vouches``).
+    assembly_mark: str = ""
 
 
 # -- W9a: the user's work in a built assembly (ISSUE-1-PLAN §2.1, K1-K4, K11; W9A-INTERFACES.md) ----------------
@@ -2418,6 +2425,8 @@ PROBLEM_TWO_BODIES = "two bodies"  # K2: user locks holding two of the app's bod
 PROBLEM_TIE = "tie"                # K2: a train SolidWorks reads unable to turn with the user's mates on
 PROBLEM_UNSETTLED = "unsettled"    # a finding route (c1) or the tie read rests on is missing
 PROBLEM_COMPONENT = "component"    # a user component Update would put is suppressed or lightweight
+PROBLEM_UNREAD = "unread"          # a user mate SolidWorks would not describe (W9a review point 2)
+UNREAD_ENTITY = "unread"           # UserMate.touches: an entity SolidWorks would not describe (never the assembly)
 
 
 @dataclass(frozen=True)
@@ -2449,6 +2458,7 @@ class UserMate:
     on: Tuple[str, ...] = ()
     code: int = 0
     warning: bool = True
+    whole: bool = True         # False: SolidWorks would not give its type, its entity count or an entity
 
     def gears(self) -> Tuple[str, ...]:
         """The app's bodies (gear or carrier ids) its entities are on, each once, in entity order."""
@@ -3788,10 +3798,15 @@ def update_gearbox(sw: SolidWorks, parts: Sequence[DocumentValues] = (), layout:
     for index, doc in enumerate(documents, 1):
         say(Step(STAGE_CHECK, _stem(doc.path), index, total))
         read_states: Optional[List[FeatureState]] = [] if doc.made else None
-        current, by_unit, values = _read_live(sw, doc, "updated", lambda path: _note_opened(sw, path, result),
+        vouched: List[bool] = []
+
+        def opened(path: str, doc: DocumentValues = doc, vouched: List[bool] = vouched) -> None:
+            _note_opened(sw, path, result)
+            vouched.append(_vouches(sw, path, doc.mark, result))
+        current, by_unit, values = _read_live(sw, doc, "updated", opened,
                                               lines=lines if doc is layout else None, states=read_states)
         holds.append(_held_unit(by_unit, values, doc.variables))
-        edits.extend(_value_edits(doc, current, values))
+        edits.extend(_value_edits(doc, current, values, all(vouched)))
         if read_states is not None:
             features.extend(_user_features(doc.path, read_states, set(doc.made) | set(doc.features)))
     if features:
@@ -4307,8 +4322,9 @@ def _modes_check(sw: SolidWorks, assembly: str, motion: MotionUpdate, result: Ge
     against the record and J14's. Fills ``configuration``, ``extra_configurations`` and
     ``positions_per_configuration``.
 
-    W9a (ISSUE-1-PLAN K11): with ``motion.record_holds``, a flag or a slide value found otherwise than both the
-    record (a mate's ``modes``, a slide's ``values``) and the workbook is the user's edit: it goes into ``edits``
+    W9a (ISSUE-1-PLAN K11): given ``edits`` (the record vouches for the assembly), a flag or a slide value found
+    otherwise than both the record (a mate's ``modes``, a slide's ``values``) and the workbook is the user's edit: it
+    goes into ``edits``
     (refused by the caller, every one at once) and is never set back; one the record still holds is set as J14
     asks, as before."""
     file = _file(assembly)
@@ -4341,7 +4357,7 @@ def _modes_check(sw: SolidWorks, assembly: str, motion: MotionUpdate, result: Ge
             want_off = not on_in(on_set, mode)
             live_off = bool(read.get(names[mode], want_off))
             if live_off != want_off:
-                if motion.record_holds and edits is not None and live_off != (not on_in(mate.modes, mode)):
+                if edits is not None and live_off != (not on_in(mate.modes, mode)):
                     word = lambda off: "suppressed" if off else "on"           # noqa: E731
                     edits.append(ValueEdit(file, mate.name, word(live_off), word(want_off),
                                            word(not on_in(mate.modes, mode)), mode=names[mode]))
@@ -4360,7 +4376,7 @@ def _modes_check(sw: SolidWorks, assembly: str, motion: MotionUpdate, result: Ge
             live = float(read.get(names[mode], 0.0))
             if abs(live - wanted) > SLIDE_READ_TOLERANCE:
                 on_record = recorded.get(mode.casefold())
-                if motion.record_holds and edits is not None and on_record is not None and \
+                if edits is not None and on_record is not None and \
                         abs(live - on_record) > SLIDE_READ_TOLERANCE:
                     edits.append(ValueEdit(file, mate.name, f"{live:.6g}", f"{wanted:.6g}", f"{on_record:.6g}",
                                            mode=names[mode], cell=dict(motion.cells).get(mate.name, "")))
@@ -4519,7 +4535,7 @@ def _modes_assembly(sw: SolidWorks, result: GearboxUpdate, assembly: str, placem
                     _modes_tie_read(sw, user, mode, handle)
             _modes_put(sw, result, motion, mode, names[mode], placements, mated, wanted_in(mode), handle,
                        mate_handle, route, rebuild, file, touched, moved=moved, check=None if judged else check,
-                       put_turned=True, carried=carried)
+                       put_turned=True, carried=carried, user=user)
             _modes_post_check(sw, result, motion, mode, names[mode], placements, mated, wanted_in(mode), handle,
                               mate_handle, gear_of_handle, check, file, state.read, user=user,
                               active_mode=active_mode)
@@ -4602,7 +4618,8 @@ def _modes_put(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, mode
                handle: Mapping[str, str], mate_handle: Mapping[str, str], route: Optional[str],
                rebuild: Callable[[], None], file: str, touched: List[bool], *, moved: bool,
                check: Optional[ModeCheck], judge_only: bool = False, put_turned: bool = False,
-               carried: Optional[Mapping[str, Sequence[Tuple[str, str]]]] = None) -> bool:
+               carried: Optional[Mapping[str, Sequence[Tuple[str, str]]]] = None,
+               user: Optional["_UserPlan"] = None) -> bool:
     """One mode's puts, with it shown (or, on a quiet Update, the active one judged where it stands): every frame
     read through fresh handles; the trains — joined over EVERY mode's relations, so the same set is right if
     positions turn out shared (§1.9, J26) — each judged with this mode's links; one put whole when the workbook
@@ -4647,7 +4664,7 @@ def _modes_put(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, mode
         on_here = [m.name for m in motion.mates if m.kind in GEAR_MATE_KINDS and on_in(_on_set(motion, m), mode)]
         _put_train(sw, result, motion, train, lock_mates, [], handle, mate_handle, wanted, rebuild, file, touched,
                    held=held_here, carriers=[link.carrier for link in links], live=live, pitch=pitch, route=route,
-                   gear_mates=on_here, configuration=configuration, carried=carried)
+                   gear_mates=on_here, configuration=configuration, carried=carried, user=user)
         put_any = True
     unfix = route == REPLACE_ROUTES[1]
     for placement in placements:
@@ -4658,6 +4675,7 @@ def _modes_put(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, mode
         if judge_only:
             put_any = True
             continue
+        _bind(user, [gear])
         touched[0] = True
         before = _carried_before(sw, [gear], carried or {}, handle)
         if unfix:
@@ -4666,7 +4684,7 @@ def _modes_put(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, mode
         result.placed.append(gear)
         if unfix:
             sw.fix_component(handle[gear])
-        _put_carried(sw, result, [gear], carried or {}, before, wanted, touched, configuration)
+        _put_carried(sw, result, [gear], carried or {}, before, wanted, touched, configuration, user)
         put_any = True
     if judge_only:
         return put_any
@@ -4734,6 +4752,7 @@ def _modes_post_check(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdat
                 problems.append(f"Your mate {name} is in error in SolidWorks, and was not before this Update.")
         found_now = _components_after(sw, user, result, mode)
         problems += found_now if mode == active_mode else []
+        problems += _carried_problems(sw, user, handle, configuration)
     for mate in motion.mates:
         if mate.kind == "slide":
             check.values[mate.name] = sw.dimension_values(mate_handle[mate.name], [configuration])[configuration]
@@ -4803,14 +4822,35 @@ def _literal(text: str) -> Optional[float]:
         return None
 
 
+MARK_UNSAVED, MARK_MISMATCHED = "unsaved", "mismatched"            # DocumentValues.mark, MotionUpdate.assembly_mark
+
+
+def _vouches(sw: SolidWorks, path: str, mark: str, result: "GearboxUpdate") -> bool:
+    """K11's word on one document, right after the job opened it (W9a review point 3, the coordinator's ruling 3):
+    with no mark, the record vouches for it. Marked ``mismatched`` (an Update lost, found by a later job), it does not.
+    Marked ``unsaved``, it does only when the document was not loaded from its file by this job (W4's third review:
+    ``_note_opened`` lists one loaded from its file, holding no unsaved changes, in ``result.opened``) and
+    SolidWorks reads it modified (``has_unsaved_changes``, ``GetSaveFlag``): it has stayed open since the Update
+    that marked it, so memory holds what that Update set. A document closed unsaved and loaded again is the lost
+    Update, where W8's set-back stands."""
+    if not mark:
+        return True
+    if mark != MARK_UNSAVED or any(same_path(path, p) for p in result.opened):
+        return False
+    try:
+        return bool(sw.has_unsaved_changes())
+    except SolidWorksError:
+        return False
+
+
 def _value_edits(doc: DocumentValues, current: Sequence[Tuple[str, float]],
-                 values: Mapping[str, float]) -> List[ValueEdit]:
+                 values: Mapping[str, float], vouched: bool = True) -> List[ValueEdit]:
     """K11 for one document read live: every global of ``doc.variables`` that SolidWorks holds otherwise than both
     the record (``doc.recorded``) and the workbook (in either trig unit) — the user's edit. None given for
-    ``recorded`` (the record cannot say: an unsaved or mismatched file, or a caller that does not know) judges
-    nothing. Writes nothing; the values said are SolidWorks' evaluation and the workbook's, as numbers where they
-    evaluate, else the expressions."""
-    if doc.recorded is None:
+    ``recorded`` (a caller that does not know), or ``vouched`` False (:func:`_vouches`), judges nothing. Writes
+    nothing; the values said are SolidWorks' evaluation and the workbook's, as numbers where they evaluate, else the
+    expressions."""
+    if doc.recorded is None or not vouched:
         return []
     held, recorded, cells = _held(current), dict(doc.recorded), dict(doc.cells)
     try:
@@ -4841,7 +4881,9 @@ def _value_edits(doc: DocumentValues, current: Sequence[Tuple[str, float]],
 
 def _value_sentence(edit: ValueEdit) -> str:
     """K11's sentence for one value: *Bore Diameter in Gear_m1.25_N17 is 12 in SolidWorks and 10 in the workbook:
-    type 12 in Gears!J5, or set it back in SolidWorks, and press Update SolidWorks again.*"""
+    type 12 in Gears!J5, or set it back in SolidWorks, and press Update SolidWorks again.* A part shared by several
+    rows names every row's cell (``cell`` "Gears!J3 and Gears!J5"); a value no cell sets alone (a formula global, a
+    carrier's) can only be set back in SolidWorks."""
     where = f" in {edit.mode}" if edit.mode else ""
     stem = edit.document.rsplit(".", 1)[0] if edit.document.lower().endswith((".sldprt", ".sldasm")) else \
         edit.document
@@ -4855,15 +4897,19 @@ def _value_sentence(edit: ValueEdit) -> str:
         return (f"{edit.name} in {stem}{where} is {edit.live} mm in SolidWorks, where Gear Generator set it to "
                 f"{edit.recorded} mm and the workbook now asks {edit.wanted} mm: set it back to {edit.wanted} mm in "
                 f"SolidWorks, or change {cell} so the workbook asks {edit.live} mm, and press Update SolidWorks again.")
-    told = f"type {edit.live} in {edit.cell}" if edit.cell else f"change the workbook to {edit.live}"
-    return (f"{edit.name} in {stem}{where} is {edit.live} in SolidWorks and {edit.wanted} in the workbook: {told}, or "
-            f"set it back to {edit.wanted} in SolidWorks, and press Update SolidWorks again.")
+    if not edit.cell:
+        return (f"{edit.name} in {stem}{where} is {edit.live} in SolidWorks and {edit.wanted} in the workbook, and no "
+                f"cell of the workbook sets it alone: set it back to {edit.wanted} in SolidWorks and press Update "
+                "SolidWorks again.")
+    return (f"{edit.name} in {stem}{where} is {edit.live} in SolidWorks and {edit.wanted} in the workbook: type "
+            f"{edit.live} in {edit.cell}, or set it back to {edit.wanted} in SolidWorks, and press Update SolidWorks "
+            "again.")
 
 
 def _user_features(path: str, states: Sequence[FeatureState], made: Collection[str]) -> List[UserFeature]:
     """The user's features in a document the app made (K1, K3): every top-level feature after the first one the
-    app's plan made (``made``) that is none of those. What stands before the plan's first feature is the template's
-    (its planes, origin and folders) and is nobody's to judge."""
+    app made (``made``: the features the record lists for it, else today's plan's) that is none of those. What
+    stands before the app's first feature is the template's (its planes, origin and folders) and is nobody's."""
     out: List[UserFeature] = []
     seen = False
     for state in states:
@@ -4902,13 +4948,381 @@ def _carry_frame(gear_before: Frame9, gear_target: Frame9, user_before: Frame9) 
     return (tuple(v for row in rotation for v in row), (at[0] + shift[0], at[1] + shift[1], at[2] + shift[2]))
 
 
+def _relative(gear: Frame9, user: Frame9) -> Tuple[Tuple[float, ...], Vec3]:
+    """A component's pose in its gear's frame, ``G⁻¹ · U``: :func:`_carry_frame` with the identity as the target."""
+    return _carry_frame(gear, ((1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0), (0.0, 0.0, 0.0)), user)
+
+
+# -- K2, judged on the inventory alone (pure: package B predicts with it what the worker does, W9A-INTERFACES §2) --
+
+# The branches of route (c1) S0 did not measure (W9a review point 4, ruling 4): S0 put a user component with its gear
+# on RangeBox's train with a carrier, every gear mate and lock of it off around the put. Each other branch is refused
+# until its finding ``findings.USER_MATE_PUT_<branch>_ON_<year>`` is True (measured clean on that version).
+BRANCH_NO_CARRIER = "NO_CARRIER"     # a train with no carrier, put with its gear mates on (_put_train)
+BRANCH_HELD = "HELD_GEAR"            # a held gear, re-placed first by REPLACE_FIXED_ROUTE (_put_train)
+BRANCH_FIXED = "FIXED_GEAR"          # a fixed gear re-placed W4's way, unfix, put, fix (_motion_assembly, _modes_put)
+BRANCH_SUBASSEMBLY = "SUBASSEMBLY"   # a user sub-assembly put as one component (Transform2 on an assembly component)
+_BRANCH_WORDS = {BRANCH_NO_CARRIER: "a gear on a train with no carrier, its gear mates left on around the put",
+                 BRANCH_HELD: "a gear held still and put back first",
+                 BRANCH_FIXED: "a fixed gear, unfixed, put and fixed again",
+                 BRANCH_SUBASSEMBLY: "a gear when the component is a sub-assembly"}
+# swMateType_e values that couple a motion as a gear mate does (W9a review point 9): cam follower, rack and pinion,
+# screw, linear coupler. Enumeration values (swconst), not readings: a put re-phases each of them as it does a gear
+# mate (findings.MESH_PHASE_ROUTE).
+MOTION_MATE_TYPES = (9, 13, 17, 18)
+
+
+def user_carry_branches(motion: MotionUpdate, placements: Sequence[Placement]) -> Dict[str, str]:
+    """Pure: for each app body, the branch of route (c1) its put takes when it is not the one S0 measured (a body
+    of a train with a carrier): :data:`BRANCH_HELD` for a held gear, :data:`BRANCH_FIXED` for any other fixed gear,
+    :data:`BRANCH_NO_CARRIER` for a mated gear whose train (joined over every mode's links) has no carrier. A body
+    S0's branch covers is absent."""
+    gears = [p.gear for p in placements]
+    fixed, held = set(motion.fixed), set(motion.held)
+    mated = [g for g in gears if g not in fixed]
+    judged = mated + [g for g in held if g in gears and g not in mated]
+    out: Dict[str, str] = {}
+    for train in _trains(judged, motion.meshes, motion.locks, motion.carriers):
+        carrier = any(link.carrier in train for link in motion.carriers)
+        for gear in train:
+            if gear in held:
+                out[gear] = BRANCH_HELD
+            elif not carrier:
+                out[gear] = BRANCH_NO_CARRIER
+    for gear in gears:
+        if gear in fixed and gear not in held:
+            out[gear] = BRANCH_FIXED
+    return out
+
+
+def user_branch_settled(branch: str, revision: Sequence[int]) -> Tuple[bool, str]:
+    """Whether a branch of route (c1) is measured on the SolidWorks in use: ``findings.USER_MATE_PUT_<branch>_ON_
+    <year>`` True. Returns (settled, the finding's name) — the name ``…_ON_?`` when the version is not known."""
+    year = release_year(int(revision[0])) if revision else None
+    name = f"USER_MATE_PUT_{branch}_ON_{year if year else '?'}"
+    return (year is not None and getattr(findings, name, None) is True), name
+
+
+@dataclass
+class UserJudgement:
+    """What :func:`judge_user_work` found (pure). ``problems``: every refusal, in the order found. ``carried``: gear
+    -> [(user component, the user's locks that hold it)], what route (c1) puts with each gear. ``on_train``: gear ->
+    the user's mates on its train. ``per_mode``: (the mated bodies of a train, its user mates) where a user mate's
+    flag differs by mode, each such mode read for a tie when shown. ``unread_ties``: (bodies, user mates) of each
+    train a tie would be read on, when the judgement was made without a read (``read_tie`` None): what a prediction
+    cannot know."""
+
+    problems: List[UserProblem] = field(default_factory=list)
+    carried: Dict[str, List[Tuple[str, Tuple[str, ...]]]] = field(default_factory=dict)
+    on_train: Dict[str, Tuple[str, ...]] = field(default_factory=dict)
+    per_mode: List[Tuple[Tuple[str, ...], Tuple[str, ...]]] = field(default_factory=list)
+    unread_ties: List[Tuple[Tuple[str, ...], Tuple[str, ...]]] = field(default_factory=list)
+    touched: set = field(default_factory=set)
+
+
+def _mate_kind(type_read: int) -> str:
+    """``swMateType_e`` as :class:`UserMate` names it, by the committed findings ``MATE_LOCK`` and ``MATE_GEAR``, a
+    motion-coupling type (:data:`MOTION_MATE_TYPES`) judged as a gear mate; a type no finding settles, or one not
+    read, is "another kind" (refused on a put gear, never taken for a lock)."""
+    lock, gear = getattr(findings, "MATE_LOCK", None), getattr(findings, "MATE_GEAR", None)
+    if lock is not None and type_read == lock:
+        return USER_LOCK
+    if (gear is not None and type_read == gear) or type_read in MOTION_MATE_TYPES:
+        return USER_GEAR
+    return USER_OTHER
+
+
+def _tie_sentence(gear: str, mates: Sequence[UserMate], modes: Sequence[str], mode: str = "") -> str:
+    """The tie SolidWorks read: *Update SolidWorks must turn Sun's train back to its built place, and with your
+    mates on SolidWorks reads it as unable to turn: your Lock3 and Coincident7 are on that train, so nothing is
+    changed; suppress Lock3 and Coincident7 in H, N and L and press Update SolidWorks again.*"""
+    said = (f"Update SolidWorks must turn {_body_name(gear)}'s train back to its built place, and with your mates on "
+            f"SolidWorks reads it as unable to turn: your {_and([m.name for m in mates])} "
+            f"{'is' if len(mates) == 1 else 'are'} on that train, so nothing is changed; {_suppress(mates, modes)} and "
+            "press Update SolidWorks again.")
+    return _in_mode(mode, said) if mode else said
+
+
+def _suppress(mates: Sequence[UserMate], modes: Sequence[str]) -> str:
+    """*suppress Lock3 and Coincident7 in H, N and L* (each group of mates with the modes it is on in), or *suppress
+    Lock3 in SolidWorks* with no modes."""
+    if not modes:
+        return f"suppress {_and([m.name for m in mates])} in SolidWorks"
+    groups: Dict[Tuple[str, ...], List[str]] = {}
+    for m in mates:
+        groups.setdefault(tuple(x for x in modes if x in m.on), []).append(m.name)
+    return "suppress " + "; ".join(f"{_and(group)} in {_and(on)}" for on, group in groups.items() if on)
+
+
+def _ground_sentence(gear: str, locks: Sequence[UserMate], grounds: Sequence[str], modes: Sequence[str]) -> str:
+    """A lock chain from a gear Update puts to something that does not move, found without a read (W9a review point
+    10): *Your Lock9 holds G1 to Housing-1, which does not move, and Update SolidWorks must put G1 back, so nothing
+    is changed; suppress Lock9 in SolidWorks and press Update SolidWorks again.*"""
+    one = len(locks) == 1
+    return (f"Your {_and([m.name for m in locks])} {'holds' if one else 'hold'} {_body_name(gear)} to "
+            f"{_and(list(dict.fromkeys(grounds)))}, which does not move, and Update SolidWorks must put "
+            f"{_body_name(gear)} back, so nothing is changed; {_suppress(locks, modes)} and press Update SolidWorks "
+            "again.")
+
+
+def _other_kind_sentence(mate: UserMate, file: str, modes: Sequence[str], gear: str, lock_goes: bool,
+                         branch_said: str = "") -> str:
+    """A mate of the user's that is not a lock, on a gear Update puts (or a gear mate on a component it would put
+    with one), refused until that kind is measured (K2 after S0). It says the way through (ruling 5 after package
+    A's review): a lock to that gear goes with it — or, where route (c1) on that gear is not measured yet, that it
+    will once measured — or suppressing the mate."""
+    on = [m for m in modes if m in mate.on]
+    listed = _and(on)
+    body = _body_name(gear)
+    where = f" in {listed}" if modes else " in SolidWorks"
+    said = (f"{mate.name} is a mate in {file} that Gear Generator did not make, on {body}, which Update SolidWorks "
+            "puts back, and a mate of that kind is not moved with its gear, so nothing is changed; ")
+    if modes:
+        said = f"In mode{'' if len(on) == 1 else 's'} {listed}, " + said + "in SolidWorks, "
+    if lock_goes:
+        return said + (f"lock your component to {body} instead, and Update SolidWorks puts it with {body}, or suppress "
+                       f"{mate.name}{where if not modes else ' in ' + listed}, and press Update SolidWorks again.")
+    return said + (f"suppress {mate.name}{where if not modes else ' in ' + listed} and press Update SolidWorks again (a "
+                   f"lock of your component to {body} will go with it once Update SolidWorks has been measured putting "
+                   f"a component of yours with {branch_said}).")
+
+
+def _unread_sentence(mate: UserMate, file: str, modes: Sequence[str]) -> str:
+    """A mate of the user's SolidWorks would not describe (W9a review point 2, ruling 2)."""
+    tail = f"in SolidWorks, suppress {mate.name} in {_and([m for m in modes if m in mate.on])}" if modes else \
+        f"suppress {mate.name} in SolidWorks"
+    return (f"SolidWorks would not say what {mate.name} in {file} holds, a mate Gear Generator did not make, so "
+            "Update SolidWorks cannot tell whether putting the gears back would leave something of yours behind, and "
+            f"nothing is changed; {tail} and press Update SolidWorks again.")
+
+
+def judge_user_work(work: UserWork, modes: Sequence[str], put: Collection[str], *, file: str = "the assembly",
+                    trains: Sequence[Tuple[str, ...]] = (), mated: Collection[str] = (),
+                    read_tie: Optional[Callable[[Tuple[str, ...]], bool]] = None,
+                    branches: Optional[Mapping[str, str]] = None, revision: Sequence[int] = ()) -> UserJudgement:
+    """K2 on the user's mates (ISSUE-1-PLAN §2.1 item 3, *Changes after S0*), from the inventory alone, but for the
+    tie read (``read_tie``; None judges without it and lists the trains a tie would be read on in ``unread_ties``).
+    Pure: the worker calls it before any write, package B to say before the press what a press putting ``put``
+    would do. ``modes``: the modes in order (``("",)`` for a gearbox with none); ``put``: the app bodies (gear or
+    carrier ids) put; ``trains``: the trains as the mode showing joins them; ``branches``: each body's unmeasured
+    branch of route (c1) (:func:`user_carry_branches`; None: none); ``revision``: the SolidWorks in use, for the
+    branch findings.
+
+    - A mate on in no mode is no tie; it is left as it is (``extra_mates``).
+    - A mate on in some mode that SolidWorks would not describe (its type, its count or an entity unread) refuses
+      when anything is put, never judged harmless (ruling 2).
+    - User locks on in EVERY mode join clusters of the user's components and the app's bodies; the ground (the
+      layout, the assembly, a fixed component of the user's) is a node of each lock's own. A cluster holding two app
+      bodies, one put, refuses (the two-train mate). One holding one put body and the ground refuses (the lock would
+      re-take, :func:`_ground_sentence`). One holding one put body and the user's floating components is put along
+      with it by route (c1): refused while ``findings.USER_MATE_PUT_ROUTE`` is not set, or the body's branch, or a
+      sub-assembly's, is not measured on this version.
+    - A user lock on in some modes only that reaches a put body refuses.
+    - Any other kind of user mate with an entity on a put body refuses, a gear mate above all; so does a user gear
+      mate (or a cam, rack-and-pinion, screw or linear-coupler mate) on a component route (c1) would put.
+    - Each train with a put body and the user's mates on it is read for a tie; a tie refuses, naming every user mate
+      on that train. A train whose user mates' flags differ by mode is also read in each other mode when shown."""
+    judgement = UserJudgement()
+    problems = judgement.problems
+    every = set(modes)
+    named = [m for m in modes if m]
+    live = [m for m in work.mates if m.on]
+    whole = [m for m in live if m.whole]
+    fixed = {c.name for c in work.components if c.fixed}
+    paths = {c.name: c.path for c in work.components}
+    put = set(put)
+    branches = dict(branches or {})
+
+    if put:
+        for mate in live:
+            if not mate.whole:
+                problems.append(UserProblem(PROBLEM_UNREAD, _unread_sentence(mate, file, named), (mate.name,)))
+
+    parent: Dict[Tuple[str, str], Tuple[str, str]] = {}
+
+    def root(node: Tuple[str, str]) -> Tuple[str, str]:
+        parent.setdefault(node, node)
+        while parent[node] != node:
+            node = parent[node]
+        return node
+
+    def node(touch: Tuple[str, str], lock: UserMate) -> Tuple[str, str]:
+        # The ground is a node of each lock's own, so two clusters locked to it do not join through it.
+        if touch[0] == APP or (touch[0] == USER and touch[1] not in fixed):
+            return touch
+        label = touch[1] if touch[0] == USER else "the layout" if touch[0] == LAYOUT else "the assembly"
+        return GROUND, f"{label}@{lock.name}"
+
+    firm = [m for m in whole if m.kind == USER_LOCK and set(m.on) == every]
+    for lock in firm:
+        nodes = [node(t, lock) for t in lock.touches]
+        for one in nodes:
+            root(one)
+        for one in nodes[1:]:
+            parent[root(one)] = root(nodes[0])
+    clusters: Dict[Tuple[str, str], List[Tuple[str, str]]] = {}
+    for one in list(parent):
+        clusters.setdefault(root(one), []).append(one)
+
+    def locks_in(nodes: Sequence[Tuple[str, str]]) -> List[UserMate]:
+        held = set(nodes)
+        return [m for m in firm if any(node(t, m) in held for t in m.touches)]
+
+    carried_comps: Dict[str, str] = {}            # user component -> the gear it is put with
+    grounded: Dict[str, Tuple[List[UserMate], List[str]]] = {}   # put body -> (its locks to the ground, the ground)
+    unsettled: List[str] = []
+    for nodes in clusters.values():
+        apps = sorted(n for w, n in nodes if w == APP)
+        users = [n for w, n in nodes if w == USER]
+        judgement.touched.update(apps)
+        if not (set(apps) & put):
+            continue
+        locks = locks_in(nodes)
+        names = tuple(m.name for m in locks)
+        if len(apps) >= 2:
+            via = f" through {_and(users)}" if users else ""
+            one = len(locks) == 1
+            problems.append(UserProblem(PROBLEM_TWO_BODIES, (
+                f"Your {_and(list(names))} {'holds' if one else 'hold'} {_and([_body_name(a) for a in apps])} "
+                f"together{via}, and no put of Update SolidWorks can keep {'it' if one else 'them'}, since it puts "
+                f"each of them back to its own built place, so nothing is changed; {_suppress(locks, named)} and "
+                "press Update SolidWorks again."), names))
+            continue
+        gear = apps[0]
+        grounds = [n.split("@")[0] for w, n in nodes if w == GROUND]
+        if grounds:
+            grounded[gear] = (locks, grounds)
+            continue
+        if getattr(findings, "USER_MATE_PUT_ROUTE", None) != USER_PUT_ROUTE:
+            unsettled.extend(names)
+            continue
+        refused = False
+        for branch in [branches.get(gear)] + [BRANCH_SUBASSEMBLY for u in users
+                                               if paths.get(u, "").lower().endswith(".sldasm")][:1]:
+            if branch is None:
+                continue
+            settled, finding = user_branch_settled(branch, revision)
+            if settled:
+                continue
+            refused = True
+            what = "sub-assembly" if branch == BRANCH_SUBASSEMBLY else "component"
+            problems.append(UserProblem(PROBLEM_UNSETTLED, (
+                f"Update SolidWorks would put your {_and(users)} with {_body_name(gear)}, which your "
+                f"{_and(list(names))} {'holds' if len(locks) == 1 else 'hold'} to it, and putting a {what} of yours "
+                f"with {_BRANCH_WORDS[branch]} has not been measured on this SolidWorks (findings.{finding} is "
+                f"{getattr(findings, finding, None)!r}), so nothing is changed; {_suppress(locks, named)} and press "
+                "Update SolidWorks again."), names))
+            break
+        if refused:
+            continue
+        for user in users:
+            judgement.carried.setdefault(gear, []).append((user, names))
+            carried_comps[user] = gear
+    if unsettled:
+        problems.append(UserProblem(PROBLEM_UNSETTLED, (
+            f"Update SolidWorks would put your components that {_and(unsettled)} "
+            f"{'holds' if len(unsettled) == 1 else 'hold'} to a gear along with that gear, and putting a component of "
+            "yours with its gear has not been settled on SolidWorks (findings.USER_MATE_PUT_ROUTE is "
+            f"{getattr(findings, 'USER_MATE_PUT_ROUTE', None)!r}), so nothing is changed; suppress "
+            f"{_and(unsettled)} in SolidWorks and press Update SolidWorks again."), tuple(unsettled)))
+
+    def reaches_put(mate: UserMate) -> bool:
+        return any((w == APP and n in put) or (w == USER and n in carried_comps) for w, n in mate.touches)
+
+    for mate in whole:
+        judgement.touched.update(mate.gears())
+        if mate.kind == USER_LOCK:
+            if set(mate.on) != every and reaches_put(mate):
+                on = [m for m in modes if m in mate.on]
+                off = [m for m in modes if m not in mate.on]
+                problems.append(UserProblem(PROBLEM_LOCK_BY_MODE, (
+                    f"Your lock {mate.name} is on in {_and(on)} and suppressed in {_and(off)}, and putting a "
+                    "component of yours with its gear has been settled only for a lock that is on in every mode, so "
+                    f"nothing is changed; turn {mate.name} on in every mode, or suppress it in every mode, in "
+                    "SolidWorks and press Update SolidWorks again."), (mate.name,)))
+            continue
+        on_put = [g for g in mate.gears() if g in put]
+        geared = [carried_comps[c] for c in mate.components() if c in carried_comps] if mate.kind == USER_GEAR else []
+        if on_put or geared:
+            gear = (on_put or geared)[0]
+            branch = branches.get(gear)
+            lock_goes = branch is None or user_branch_settled(branch, revision)[0]
+            problems.append(UserProblem(PROBLEM_OTHER_KIND, _other_kind_sentence(
+                mate, file, named, gear, lock_goes, _BRANCH_WORDS.get(branch or "", "")), (mate.name,)))
+
+    # The tie, train by train, as the mode showing joins them.
+    rule = getattr(findings, "USER_TIE_RULE", None)
+    told: set = set()
+    for train in trains:
+        if not (set(train) & put):
+            continue
+        reached = {(APP, g) for g in train}
+        on_train: List[UserMate] = []
+        grown = True
+        while grown:
+            grown = False
+            for mate in live:
+                if mate in on_train or not any((w, n) in reached for w, n in mate.touches if w in (APP, USER)):
+                    continue
+                on_train.append(mate)
+                grown = True
+                for what, name in mate.touches:
+                    if what == USER and name not in fixed:
+                        reached.add((USER, name))
+        if not on_train:
+            continue
+        names = tuple(m.name for m in on_train)
+        bodies = tuple(g for g in train if g in mated)
+        for gear in train:
+            judgement.on_train[gear] = names
+        judgement.touched.update(train)
+        touched = [g for g in train if any((APP, g) in m.touches for m in on_train)]
+        anchor = touched[0] if touched else train[0]
+        if any(set(m.on) != every for m in on_train):
+            judgement.per_mode.append((bodies, names))
+        ground_here = [g for g in train if g in grounded and g in put]
+        if ground_here:
+            told.update(ground_here)
+            for gear in ground_here:
+                locks, grounds = grounded[gear]
+                problems.append(UserProblem(PROBLEM_TIE, _ground_sentence(gear, locks, grounds, named),
+                                            tuple(m.name for m in locks)))
+            continue
+        if rule != USER_TIE_RULE:
+            problems.append(UserProblem(PROBLEM_UNSETTLED, (
+                f"Update SolidWorks must turn {_body_name(anchor)}'s train back to its built place with your "
+                f"{_and(list(names))} on it, and how a tie of yours is read has not been settled on SolidWorks "
+                f"(findings.USER_TIE_RULE is {rule!r}), so nothing is changed; suppress {_and(list(names))} in "
+                "SolidWorks and press Update SolidWorks again."), names))
+            continue
+        if read_tie is None:
+            judgement.unread_ties.append((bodies, names))
+        elif read_tie(bodies):
+            problems.append(UserProblem(PROBLEM_TIE, _tie_sentence(anchor, on_train, named), names))
+    for gear, (locks, grounds) in grounded.items():
+        if gear in put and gear not in told:          # a gear on no train read here (a fixed gear re-placed)
+            problems.append(UserProblem(PROBLEM_TIE, _ground_sentence(gear, locks, grounds, named),
+                                        tuple(m.name for m in locks)))
+    return judgement
+
+
+def _not_free(sw: SolidWorks, handles: Sequence[str]) -> bool:
+    """K2's tie read (``findings.USER_TIE_RULE``): a body of the train reads anything but
+    ``COMPONENT_UNDER_DEFINED``, as :func:`_free_to_turn` judges."""
+    return any(sw.constrained_status(h) != findings.COMPONENT_UNDER_DEFINED for h in handles)
+
+
 @dataclass
 class _UserPlan:
     """What the check phase judged of the user's work, for the change phase: ``carried`` gear -> [(user component,
     the user's locks that hold it)] for route (c1); ``per_mode`` the user mates whose flags differ by mode on a
     train Update puts, with the app bodies they reach (each mode is read for a tie when shown, before its put);
     ``on_train`` gear -> the user's mates on its train (for :func:`_free_to_turn`'s sentence); ``before`` each user
-    mate's error code before anything changed; ``in_error`` everything of the user's found in error then."""
+    mate's error code before anything changed and ``components_before`` each user component's; ``in_error``
+    everything of the user's found in error then. ``judged``: the bodies the check judged this press may put, and
+    ``touched`` those the user's work is on or reaches — a put of one of these outside ``judged`` stops the job
+    (W9a review point 7). ``carry_log``: (component, its handle, gear, configuration, its pose in the gear's frame
+    before) for each put by route (c1), read again in the post-check."""
 
     carried: Dict[str, List[Tuple[str, Tuple[str, ...]]]] = field(default_factory=dict)
     per_mode: List[Tuple[Tuple[str, ...], Tuple[str, ...]]] = field(default_factory=list)
@@ -4917,18 +5331,9 @@ class _UserPlan:
     in_error: List[str] = field(default_factory=list)
     mates: List[UserMate] = field(default_factory=list)
     components_before: Dict[str, int] = field(default_factory=dict)
-
-
-def _mate_kind(type_read: int) -> str:
-    """``swMateType_e`` as :class:`UserMate` names it, by the committed findings ``MATE_LOCK`` and ``MATE_GEAR``: a
-    type either finding does not settle, or that could not be read, is "another kind" (refused on a put gear, never
-    taken for a lock)."""
-    lock, gear = getattr(findings, "MATE_LOCK", None), getattr(findings, "MATE_GEAR", None)
-    if lock is not None and type_read == lock:
-        return USER_LOCK
-    if gear is not None and type_read == gear:
-        return USER_GEAR
-    return USER_OTHER
+    judged: set = field(default_factory=set)
+    touched: set = field(default_factory=set)
+    carry_log: List[Tuple[str, str, str, str, Frame9]] = field(default_factory=list)
 
 
 def _read_user_work(sw: SolidWorks, motion: MotionUpdate, placements: Sequence[Placement],
@@ -4938,18 +5343,23 @@ def _read_user_work(sw: SolidWorks, motion: MotionUpdate, placements: Sequence[P
     components not on record (:meth:`components`), every mate not on record (``unknown``, by name) found and read for
     what it joins (``mate_info``) and for its flag in each mode, one configuration per call (``mate_suppression``,
     which marks nothing; no configuration shown), and its error code as ``result.mates`` read it. ``configurations``:
-    mode -> its configuration (empty for a gearbox with no modes, whose flag is the one read). Names are read all at
+    mode -> its configuration (empty for a gearbox with no modes, whose flag is the one read). The layout is its
+    recorded Name2, or, when no component answers to it (renamed), the components of the layout part's file. An
+    entity SolidWorks would not describe is ``(UNREAD_ENTITY, "")``, never the assembly's own. Names are read all at
     once: nothing here refuses."""
     app_of = {p.component: p.gear for p in placements}
     comps = list(sw.components())
-    layout_names = {motion.layout_component} if motion.layout_component else set()
+    names = {c.name for c in comps}
+    layout_names = {motion.layout_component} if motion.layout_component in names else set()
     if not layout_names and layout_path:
-        layout_names = {c.name for c in comps if c.path and same_path(c.path, layout_path)}
+        layout_names = {c.name for c in comps if c.path and same_path(c.path, layout_path) and c.name not in app_of}
     work = UserWork(read_at=now(), features=list(features))
     work.components = [UserComponent(c.name, c.path, c.fixed, c.code, c.state) for c in comps
                        if c.name not in app_of and c.name not in layout_names]
 
-    def owner(name: str) -> Tuple[str, str]:
+    def owner(name: Optional[str]) -> Tuple[str, str]:
+        if name is None:
+            return UNREAD_ENTITY, ""
         if not name:
             return ASSEMBLY, ""
         for key in (name, name.split("/")[0]):
@@ -4973,228 +5383,8 @@ def _read_user_work(sw: SolidWorks, motion: MotionUpdate, placements: Sequence[P
         work.mates.append(UserMate(name, _mate_kind(info.type), info.type,
                                    tuple(owner(c) for c in info.components), on,
                                    state.code if state is not None else 0,
-                                   state.warning if state is not None else True))
+                                   state.warning if state is not None else True, whole=info.whole))
     return work
-
-
-def _tie_sentence(gear: str, mates: Sequence[UserMate], modes: Sequence[str], mode: str = "") -> str:
-    """*Update SolidWorks must turn Sun's train back to its built place, and with your mates on SolidWorks reads it as
-    unable to turn: your Lock3 and Coincident7 are on that train, so nothing is changed; suppress Lock3 and
-    Coincident7 in H, N and L and press Update SolidWorks again.*"""
-    names = [m.name for m in mates]
-    if modes:
-        groups: Dict[Tuple[str, ...], List[str]] = {}
-        for m in mates:
-            groups.setdefault(tuple(x for x in modes if x in m.on), []).append(m.name)
-        told = "; ".join(f"{_and(group)} in {_and(on)}" for on, group in groups.items() if on)
-        tail = f"suppress {told}"
-    else:
-        tail = f"suppress {_and(names)} in SolidWorks"
-    said = (f"Update SolidWorks must turn {_body_name(gear)}'s train back to its built place, and with your mates on "
-            f"SolidWorks reads it as unable to turn: your {_and(names)} {'is' if len(names) == 1 else 'are'} on that "
-            f"train, so nothing is changed; {tail} and press Update SolidWorks again.")
-    return _in_mode(mode, said) if mode else said
-
-
-def _other_kind_sentence(mate: UserMate, file: str, modes: Sequence[str]) -> str:
-    """W5's M7 sentence, kept for a mate of the user's that is not a lock on a gear Update puts (K2's refusal of
-    every kind but the lock until that kind is measured)."""
-    if not modes:
-        return (f"{mate.name} is a mate in {file} that Gear Generator did not make, and it may hold the gears where "
-                "Update SolidWorks would put them, so nothing is changed; suppress "
-                f"{mate.name} in SolidWorks and press Update SolidWorks again.")
-    on = [m for m in modes if m in mate.on]
-    listed = _and(on)
-    where = f"In mode {listed}" if len(on) == 1 else f"In modes {listed}"
-    return (f"{where}, {mate.name} is a mate in {file} that Gear Generator did not make, and it may hold the gears "
-            "where Update SolidWorks would put them, so nothing is changed; in SolidWorks, suppress "
-            f"{mate.name} in {listed} and press Update SolidWorks again.")
-
-
-def _judge_user_work(work: UserWork, file: str, modes: Sequence[str], may_put: Collection[str],
-                     trains: Sequence[Tuple[str, ...]], mated: Collection[str],
-                     read_tie: Callable[[Tuple[str, ...]], bool], states: Mapping[str, int]) -> Tuple[List[UserProblem],
-                                                                                                    _UserPlan]:
-    """K2 on the user's mates (ISSUE-1-PLAN §2.1 item 3, *Changes after S0*), before anything changes. ``modes``:
-    the modes in order (``("",)`` for a gearbox with none); ``may_put``: every app body (gear or carrier id) this
-    press may put; ``trains``: the trains as the mode showing joins them; ``read_tie(train)``: whether SolidWorks
-    reads that train unable to turn as it stands (``constrained_status``, the user's mates on); ``states``: each user
-    component's ``GetSuppression2`` (``swcom.UNREAD`` unread).
-
-    - A mate on in no mode is no tie; it is left as it is (``extra_mates``).
-    - User locks on in EVERY mode join clusters (the user's components, the app's bodies, the layout). A cluster
-      holding two app bodies, one of them put, refuses (the two-train mate: no put can keep it). One holding one
-      put body and the ground (the layout, a fixed component of the user's) is a tie. One holding one put body and
-      the user's components only is put along with it by route (c1) (``findings.USER_MATE_PUT_ROUTE``, else refused).
-    - A user lock on in some modes only that reaches a put body refuses (S0 carried a tied component in every mode,
-      whatever the lock's flag there).
-    - Any other kind of user mate with an entity on a put body refuses, a gear mate above all; so does a user gear
-      mate on a component route (c1) would put (a put re-phases a gear mate silently, ``MESH_PHASE_ROUTE``).
-    - Each train with a put body and the user's mates on it is read for a tie in the mode showing; a tie refuses,
-      naming every user mate on that train. A train whose user mates' flags differ by mode is also read in each
-      other mode when shown (``per_mode``)."""
-    problems: List[UserProblem] = []
-    plan = _UserPlan(mates=list(work.mates))
-    plan.before = {m.name: m.code for m in work.mates}
-    plan.components_before = {c.name: c.code for c in work.components}
-    plan.in_error = list(work.in_error)
-    every = set(modes)
-    live = [m for m in work.mates if m.on]
-    fixed = {c.name for c in work.components if c.fixed}
-    put = set(may_put)
-
-    parent: Dict[Tuple[str, str], Tuple[str, str]] = {}
-
-    def root(node: Tuple[str, str]) -> Tuple[str, str]:
-        parent.setdefault(node, node)
-        while parent[node] != node:
-            node = parent[node]
-        return node
-
-    def node(touch: Tuple[str, str], lock: UserMate) -> Tuple[str, str]:
-        # The ground (the layout, the assembly, a fixed component of the user's) is a node of each lock's own, so two
-        # clusters locked to it do not join through it: each is held to the ground, not to the other.
-        if touch[0] == APP or (touch[0] == USER and touch[1] not in fixed):
-            return touch
-        return GROUND, f"{touch[1]}@{lock.name}"
-
-    firm = [m for m in live if m.kind == USER_LOCK and set(m.on) == every]
-    for lock in firm:
-        nodes = [node(t, lock) for t in lock.touches]
-        for one in nodes:
-            root(one)
-        for one in nodes[1:]:
-            parent[root(one)] = root(nodes[0])
-    clusters: Dict[Tuple[str, str], List[Tuple[str, str]]] = {}
-    for one in list(parent):
-        clusters.setdefault(root(one), []).append(one)
-
-    def locks_in(nodes: Sequence[Tuple[str, str]]) -> List[str]:
-        held = set(nodes)
-        return [m.name for m in firm if any(node(t, m) in held for t in m.touches)]
-
-    carried_comps: Dict[str, str] = {}            # user component -> the gear it is put with
-    grounded: Dict[str, Tuple[str, ...]] = {}    # put body -> the user's locks that hold it to the ground
-    unsettled: List[str] = []
-    for nodes in clusters.values():
-        apps = [n for _, n in sorted(n for n in nodes if n[0] == APP)]
-        users = [n for w, n in nodes if w == USER]
-        if not (set(apps) & put):
-            continue
-        locks = locks_in(nodes)
-        if len(apps) >= 2:
-            joined = [_body_name(a) for a in apps]
-            via = f" through {_and(users)}" if users else ""
-            one = len(locks) == 1
-            problems.append(UserProblem(PROBLEM_TWO_BODIES, (
-                f"Your {_and(locks)} {'holds' if one else 'hold'} {_and(joined)} together{via}, and no put of Update "
-                f"SolidWorks can keep {'it' if one else 'them'}, since it puts each of them back to its own built "
-                f"place, so nothing is changed; suppress {_and(locks)} in SolidWorks and press Update SolidWorks "
-                "again."), tuple(locks)))
-            continue
-        if any(w == GROUND for w, _ in nodes):
-            grounded[apps[0]] = tuple(locks)
-            continue
-        if getattr(findings, "USER_MATE_PUT_ROUTE", None) != USER_PUT_ROUTE:
-            unsettled.extend(locks)
-            continue
-        for user in users:
-            plan.carried.setdefault(apps[0], []).append((user, tuple(locks)))
-            carried_comps[user] = apps[0]
-            work.carried.append((user, apps[0], tuple(locks)))
-    if unsettled:
-        problems.append(UserProblem(PROBLEM_UNSETTLED, (
-            f"Update SolidWorks would put your components that {_and(unsettled)} {'holds' if len(unsettled) == 1 else 'hold'} "
-            "to a gear along with that gear, and putting a component of yours with its gear has not been settled on "
-            f"SolidWorks (findings.USER_MATE_PUT_ROUTE is {getattr(findings, 'USER_MATE_PUT_ROUTE', None)!r}), so "
-            f"nothing is changed; suppress {_and(unsettled)} in SolidWorks and press Update SolidWorks again."),
-            tuple(unsettled)))
-    for user, gear in carried_comps.items():
-        state = states.get(user, UNREAD)
-        if state == COMPONENT_SUPPRESSED or state in COMPONENT_LIGHTWEIGHT:
-            how = "suppressed" if state == COMPONENT_SUPPRESSED else "loaded lightweight"
-            fix = "unsuppress it" if state == COMPONENT_SUPPRESSED else "set it to Resolved"
-            problems.append(UserProblem(PROBLEM_COMPONENT, (
-                f"Update SolidWorks would put your {user} with {_body_name(gear)}, which your mates hold it to, and "
-                f"{user} is {how} in {file}, so nothing is changed; in SolidWorks, {fix} and press Update SolidWorks "
-                "again.")))
-
-    def reaches_put(mate: UserMate) -> bool:
-        for what, name in mate.touches:
-            if what == APP and name in put:
-                return True
-            if what == USER and name in carried_comps:
-                return True
-        return False
-
-    for mate in live:
-        if mate.kind == USER_LOCK:
-            if set(mate.on) != every and reaches_put(mate):
-                on = [m for m in modes if m in mate.on]
-                off = [m for m in modes if m not in mate.on]
-                problems.append(UserProblem(PROBLEM_LOCK_BY_MODE, (
-                    f"Your lock {mate.name} is on in {_and(on)} and suppressed in {_and(off)}, and putting a "
-                    "component of yours with its gear has been settled only for a lock that is on in every mode, so "
-                    f"nothing is changed; turn {mate.name} on in every mode, or suppress it in every mode, in "
-                    "SolidWorks and press Update SolidWorks again."), (mate.name,)))
-            continue
-        on_put = any(name in put for name in mate.gears())
-        geared = mate.kind == USER_GEAR and any(c in carried_comps for c in mate.components())
-        if on_put or geared:
-            problems.append(UserProblem(PROBLEM_OTHER_KIND, _other_kind_sentence(
-                mate, file, [m for m in modes if m]), (mate.name,)))
-
-    # The tie, train by train, as the mode showing joins them.
-    rule = getattr(findings, "USER_TIE_RULE", None)
-    for train in trains:
-        if not (set(train) & put):
-            continue
-        reached = {(APP, g) for g in train}
-        on_train: List[UserMate] = []
-        grown = True
-        while grown:
-            grown = False
-            for mate in live:
-                if mate in on_train or not any((w, n) in reached for w, n in mate.touches if w in (APP, USER)):
-                    continue
-                on_train.append(mate)
-                grown = True
-                for what, name in mate.touches:
-                    if what == USER and name not in fixed:
-                        reached.add((USER, name))
-        if not on_train:
-            continue
-        names = tuple(m.name for m in on_train)
-        for gear in train:
-            plan.on_train[gear] = names
-        touched = [g for g in train if any((APP, g) in m.touches for m in on_train)]
-        anchor = touched[0] if touched else train[0]
-        if any(set(m.on) != every for m in on_train):
-            plan.per_mode.append((tuple(g for g in train if g in mated), names))
-        if any(g in grounded for g in train):
-            problems.append(UserProblem(PROBLEM_TIE, _tie_sentence(anchor, on_train, [m for m in modes if m]), names))
-            continue
-        if rule != USER_TIE_RULE:
-            problems.append(UserProblem(PROBLEM_UNSETTLED, (
-                f"Update SolidWorks must turn {_body_name(anchor)}'s train back to its built place with your "
-                f"{_and(names)} on it, and how a tie of yours is read has not been settled on SolidWorks "
-                f"(findings.USER_TIE_RULE is {rule!r}), so nothing is changed; suppress {_and(names)} in SolidWorks "
-                "and press Update SolidWorks again."), names))
-            continue
-        if read_tie(tuple(g for g in train if g in mated)):
-            problems.append(UserProblem(PROBLEM_TIE, _tie_sentence(anchor, on_train, [m for m in modes if m]), names))
-    told = {g for train in trains if set(train) & put for g in train}
-    for gear, locks in grounded.items():
-        if gear not in told:                      # a fixed gear's own lock chain to the ground: no train to read
-            mates = [m for m in live if m.name in locks]
-            problems.append(UserProblem(PROBLEM_TIE, _tie_sentence(gear, mates, [m for m in modes if m]), locks))
-    return problems, plan
-
-
-def _not_free(sw: SolidWorks, handles: Sequence[str]) -> bool:
-    """K2's tie read (``findings.USER_TIE_RULE``): a body of the train reads anything but
-    ``COMPONENT_UNDER_DEFINED``, as :func:`_free_to_turn` judges."""
-    return any(sw.constrained_status(h) != findings.COMPONENT_UNDER_DEFINED for h in handles)
 
 
 def _find_by_part(sw: SolidWorks, handle: str, placement: Placement, placements: Sequence[Placement],
@@ -5214,30 +5404,40 @@ def _find_by_part(sw: SolidWorks, handle: str, placement: Placement, placements:
     return replace(placement, component=name)
 
 
+def _off_frame(gear: str, found: Mapping[str, Frame9], wanted: Mapping[str, Frame9], pitch: Mapping[str, float]) -> bool:
+    """Whether a held or fixed gear is not where it belongs, whole pitches allowed — so Update would re-place it, as
+    ``_put_train`` and the W4-way puts judge it (W9a review point 1)."""
+    if gear not in found or gear not in wanted:
+        return True
+    return not same_frame(found[gear][0], found[gear][1], wanted[gear][0], wanted[gear][1], pitch.get(gear, 0.0))
+
+
 def _may_put(motion: MotionUpdate, placements: Sequence[Placement], found: Mapping[str, Frame9],
              mated: Sequence[str], fixed: Collection[str], everything: bool, axial_gears: Collection[str],
              remade: Collection[str], wanted: Optional[Mapping[str, Frame9]] = None,
              meshes: Optional[Sequence[MeshLink]] = None, locks: Optional[Sequence[LockLink]] = None) -> set:
     """Every app body (gear or carrier id) this press may put, judged before anything changes, conservatively
-    (ISSUE-1-PLAN §2.1 item 3): with ``everything``, every placed body; otherwise each train that is out of step or
+    (ISSUE-1-PLAN §2.1 item 3): with ``everything``, every mated body; otherwise each train that is out of step or
     off its axis against ``wanted`` (the placements' frames by default), whose Face Z changes (``axial_gears``) or
-    one of whose gear mates is remade (``remade``, by gear), and each fixed gear not where it belongs."""
+    one of whose gear mates is remade (``remade``, by gear). A held or fixed gear only when it is off its wanted
+    frame, whole pitches allowed (W9a review point 1): nothing puts one where it belongs."""
     bodies = [p.gear for p in placements]
-    if everything:
-        return set(bodies)
     wanted = dict(wanted) if wanted is not None else {p.gear: (p.rotation, p.at) for p in placements}
     pitch = {p.gear: p.pitch for p in placements}
+    still = set(fixed) | set(motion.held)
+    moved_still = {g for g in bodies if g in still and _off_frame(g, found, wanted, pitch)}
+    if everything:
+        return {g for g in bodies if g not in still} | moved_still
     held = [g for g in motion.held if g in wanted]
     judged = list(mated) + [g for g in held if g not in mated]
     meshes = list(motion.meshes if meshes is None else meshes)
     locks = list(motion.locks if locks is None else locks)
     out: set = set()
     for train in _trains(judged, meshes, locks, motion.carriers):
-        if any(g in axial_gears or g in remade for g in train):
-            out.update(train)
-            continue
-        if not all(g in found and g in wanted for g in train):
-            out.update(train)
+        free = [g for g in train if g not in still]
+        if any(g in axial_gears or g in remade for g in train) or \
+                not all(g in found and g in wanted for g in train):
+            out.update(free)
             continue
         links = [link for link in motion.carriers if link.carrier in train]
         try:
@@ -5246,16 +5446,12 @@ def _may_put(motion: MotionUpdate, placements: Sequence[Placement], found: Mappi
                                [lock for lock in locks if lock.anchor in train and lock.follower in train], pitch,
                                carriers=links, held=[g for g in held if g in train])
         except ValueError:
-            out.update(train)
+            out.update(free)
             continue
         lone = len(train) == 1 and not links
         if (bool(here.off_axis) if lone else not here.in_step):
-            out.update(train)
-    for gear in bodies:
-        if gear in fixed and gear not in out and gear in found and gear in wanted and \
-                not same_frame(found[gear][0], found[gear][1], wanted[gear][0], wanted[gear][1], pitch.get(gear, 0.0)):
-            out.add(gear)
-    return out
+            out.update(free)
+    return out | moved_still
 
 
 def _modes_moved(motion: MotionUpdate, placements: Sequence[Placement]) -> bool:
@@ -5281,11 +5477,12 @@ def _user_check(sw: SolidWorks, assembly: str, motion: MotionUpdate, placements:
                 fixed: Collection[str]) -> _UserPlan:
     """The end of an Update's check phase, the assembly open (ISSUE-1-PLAN §2.1 items 2-4): the user's work read
     (:func:`_read_user_work`) into ``result.user_work`` — mates suppressed in every mode into ``extra_mates``, as
-    before — then which app bodies this press may put (:func:`_may_put`; with modes, every body whenever the press
-    changes anything, as W8's ruling 9.18 puts every train in every mode), and K2 judged on them
-    (:func:`_judge_user_work`), a tie read in the mode showing. Every K11 value (``edits``) and every problem with
-    the user's work refuses here, at once (:class:`UserWorkRefused`), before anything is written. Returns what the
-    change phase needs."""
+    before — then which app bodies this press may put (:func:`_may_put`; with modes, every mated body whenever the
+    press changes anything, as W8's ruling 9.18 puts every train in every mode, and a held or fixed gear only when
+    it is off its frame in the mode showing), and K2 judged on them (:func:`judge_user_work`), a tie read in the
+    mode showing. Every K11 value (``edits``) and every problem with the user's work refuses here, at once
+    (:class:`UserWorkRefused`, whose ``problems`` and ``user_work`` are what the record keeps of a refused press),
+    before anything is written. Returns what the change phase needs."""
     file = _file(assembly)
     configurations = {m: modes_state.names[m] for m in motion.configurations} if modes_state is not None else {}
     work = _read_user_work(sw, motion, placements, layout.path if layout is not None else "", result, unknown,
@@ -5318,15 +5515,33 @@ def _user_check(sw: SolidWorks, assembly: str, motion: MotionUpdate, placements:
         quiet_put = not changing and bool(_may_put(
             motion, placements, found, mated, fixed, False, (), (), wanted=wanted,
             meshes=links_in(motion.meshes, active), locks=links_in(motion.locks, active)))
-        may_put = set(gears) if changing or quiet_put else set()
+        may_put = _may_put(motion, placements, found, mated, fixed, True, (), (), wanted=wanted) \
+            if changing or quiet_put else set()
         trains = _trains(judged, links_in(motion.meshes, active), links_in(motion.locks, active), motion.carriers)
         modes = tuple(motion.configurations)
+    judgement = judge_user_work(work, modes, may_put, file=file, trains=trains, mated=mated,
+                                read_tie=lambda train: _not_free(sw, [handle[g] for g in train]),
+                                branches=user_carry_branches(motion, placements), revision=sw.revision)
     states = {c.name: c.state for c in work.components}
-    problems, plan = _judge_user_work(work, file, modes, may_put, trains, mated,
-                                      lambda train: _not_free(sw, [handle[g] for g in train]), states)
+    problems = list(judgement.problems)
+    for gear, held_here in judgement.carried.items():
+        for user, _locks in held_here:
+            state = states.get(user, UNREAD)
+            if state == COMPONENT_SUPPRESSED or state in COMPONENT_LIGHTWEIGHT:
+                how = "suppressed" if state == COMPONENT_SUPPRESSED else "loaded lightweight"
+                fix = "unsuppress it" if state == COMPONENT_SUPPRESSED else "set it to Resolved"
+                problems.append(UserProblem(PROBLEM_COMPONENT, (
+                    f"Update SolidWorks would put your {user} with {_body_name(gear)}, which your mates hold it to, "
+                    f"and {user} is {how} in {file}, so nothing is changed; in SolidWorks, {fix} and press Update "
+                    "SolidWorks again.")))
+    work.carried = [(user, gear, locks) for gear, held_here in judgement.carried.items() for user, locks in held_here]
     values = [UserProblem(PROBLEM_VALUE, _value_sentence(e), values=(e,)) for e in edits]
     if values or problems:
         raise UserWorkRefused(values + problems, work)
+    plan = _UserPlan(carried=judgement.carried, per_mode=judgement.per_mode, on_train=judgement.on_train,
+                     before={m.name: m.code for m in work.mates}, in_error=list(work.in_error),
+                     mates=list(work.mates), components_before={c.name: c.code for c in work.components},
+                     judged=set(may_put), touched=set(judgement.touched))
     return plan
 
 
@@ -5420,10 +5635,15 @@ def _update_motion(sw: SolidWorks, parts: Sequence[DocumentValues], layout: Opti
     for index, doc in enumerate(documents, 1):
         say(Step(STAGE_CHECK, _stem(doc.path), index, total))
         read_states: Optional[List[FeatureState]] = [] if doc.made else None
-        current, by_unit, values = _read_live(sw, doc, "updated", lambda path: _note_opened(sw, path, result),
+        vouched: List[bool] = []
+
+        def opened(path: str, doc: DocumentValues = doc, vouched: List[bool] = vouched) -> None:
+            _note_opened(sw, path, result)
+            vouched.append(_vouches(sw, path, doc.mark, result))
+        current, by_unit, values = _read_live(sw, doc, "updated", opened,
                                               lines=lines if doc is layout else None, states=read_states)
         holds.append(_held_unit(by_unit, values, doc.variables))
-        edits.extend(_value_edits(doc, current, values))
+        edits.extend(_value_edits(doc, current, values, all(vouched)))
         if read_states is not None:
             features.extend(_user_features(doc.path, read_states, set(doc.made) | set(doc.features)))
     say(Step(STAGE_CHECK, _stem(assembly), total, total))
@@ -5441,6 +5661,8 @@ def _update_motion(sw: SolidWorks, parts: Sequence[DocumentValues], layout: Opti
     try:
         sw.open_document(assembly)
         _note_opened(sw, assembly, result)
+        # W9a K11 (ruling 3): whether the record vouches for the assembly's values, now it is open.
+        vouched_assembly = motion.record_holds and _vouches(sw, assembly, motion.assembly_mark, result)
         # Lightweight gears (a user whose SolidWorks loads assemblies lightweight). Probe round P0d: every gear of a
         # train opened lightweight read 1; the first drive turned one gear -24.17° where 2.5° is right, and afterwards
         # every gear read 2; the remake and the drive after it ran resolved and were right. So with the read settled
@@ -5498,9 +5720,10 @@ def _update_motion(sw: SolidWorks, parts: Sequence[DocumentValues], layout: Opti
             # W8: every flag and slide value read in every mode, no configuration shown; D10 is per configuration
             # there, so W5's this-configuration D10 list is not used (a per-mode mate off here is right off).
             modes_state = _modes_check(sw, assembly, motion, result,
-                                       {m.name: f"mate{i}" for i, m in enumerate(motion.mates, 1)}, edits)
+                                       {m.name: f"mate{i}" for i, m in enumerate(motion.mates, 1)},
+                                       edits if vouched_assembly else None)
             suppressed.clear()
-        elif motion.record_holds and suppressed:
+        elif vouched_assembly and suppressed:
             # W9a K11 (overturning D10 for a mate the user suppressed): the record says the assembly holds it on.
             for name in suppressed:
                 edits.append(ValueEdit(_file(assembly), name, "suppressed", "on", "on"))
@@ -5599,7 +5822,7 @@ def _update_motion(sw: SolidWorks, parts: Sequence[DocumentValues], layout: Opti
             _idler_gate(motion, possible)
             _remake_sense_gate(possible, senses, motion, axes)
         held = _held(sw.equations()) if motion.face_globals else {}
-        faces_on_record = dict(motion.recorded_faces) if motion.record_holds else {}
+        faces_on_record = dict(motion.recorded_faces) if vouched_assembly else {}
         for gear, variable in motion.face_globals:
             if variable.name not in held:
                 raise NotAsBuilt(f'{_file(assembly)} cannot be updated: "{variable.name}" is no longer in it, so its '
@@ -5725,7 +5948,8 @@ def _carried_before(sw: SolidWorks, gears: Sequence[str], carried: Mapping[str, 
 
 def _put_carried(sw: SolidWorks, result: GearboxUpdate, gears: Sequence[str],
                  carried: Mapping[str, Sequence[Tuple[str, str]]], before: Mapping[str, Frame9],
-                 wanted: Mapping[str, Frame9], touched: List[bool], configuration: str = "") -> None:
+                 wanted: Mapping[str, Frame9], touched: List[bool], configuration: str = "",
+                 user: Optional["_UserPlan"] = None) -> None:
     """Route (c1) (ISSUE-1-PLAN K2, ``findings.USER_MATE_PUT_ROUTE``), after the app's bodies are put: each user
     component a gear of ``gears`` carries is put by that gear's own rigid motion, ``G_target · G_before⁻¹ ·
     U_before`` (:func:`_carry_frame`), and read back by ``place_component``; the user's locks are left on. The one
@@ -5738,6 +5962,42 @@ def _put_carried(sw: SolidWorks, result: GearboxUpdate, gears: Sequence[str],
             touched[0] = True
             sw.place_component(user_handle, rotation, at, kind=ASSEMBLY_TRAIN)
             result.carried.append((component, gear, configuration))
+            if user is not None:
+                user.carry_log.append((component, user_handle, gear, configuration,
+                                       _relative(before[gear], before[component])))
+
+
+def _bind(user: Optional["_UserPlan"], gears: Sequence[str]) -> None:
+    """W9a review point 7: the change phase puts only what the check judged it would, where the user's work is.
+    A body about to be put that the check did not count among ``user.judged``, with the user's work on it or on its
+    train (``user.touched``), stops the job before it is put, naming it: its user locks were never judged."""
+    if user is None:
+        return
+    stray = [g for g in gears if g not in user.judged and g in user.touched]
+    if stray:
+        one = len(stray) == 1
+        raise SolidWorksError(f"Update SolidWorks would now put {_and([_body_name(g) for g in stray])}, which its "
+                              f"check before any change found it would not put, and your work is on "
+                              f"{'it' if one else 'them'}, so it stops here, before putting {'it' if one else 'them'}; "
+                              "press Update SolidWorks again, which reads it all afresh.")
+
+
+def _carried_problems(sw: SolidWorks, user: Optional["_UserPlan"], handle: Mapping[str, str],
+                      configuration: str = "") -> List[str]:
+    """W9a review point 7, S0's own check: once the assembly rebuilt with the app's mates back on, each component
+    route (c1) put in ``configuration`` is read again in its gear's frame against its pose before the put; one left
+    elsewhere is a problem said as the user's."""
+    if user is None:
+        return []
+    problems: List[str] = []
+    for component, user_handle, gear, put_in, rel in user.carry_log:
+        if put_in != configuration or gear not in handle:
+            continue
+        now = _relative(sw.component_frame(handle[gear]), sw.component_frame(user_handle))
+        if not same_frame(now[0], now[1], rel[0], rel[1]):
+            problems.append(f"Your {component} did not stay with {_body_name(gear)} where Update SolidWorks put it: "
+                            f"once the assembly rebuilt it stood elsewhere against {_body_name(gear)}.")
+    return problems
 
 
 def _components_after(sw: SolidWorks, user: Optional[_UserPlan], result: GearboxUpdate, mode: str = "") -> List[str]:
@@ -5905,7 +6165,8 @@ def _motion_assembly(sw: SolidWorks, result: GearboxUpdate, assembly: str, place
             continue
         _put_train(sw, result, motion, train, locks, ratios, handle, mate_handle, wanted, rebuild, file, touched,
                    settle, sense_wrong, resensed, respaced, held=held_here,
-                   carriers=[link.carrier for link in links], live=live, pitch=pitch, route=route, carried=carried)
+                   carriers=[link.carrier for link in links], live=live, pitch=pitch, route=route, carried=carried,
+                   user=user)
         put_trains.append(train)
         dirty[0] = dirty[0] or not locks
         restored = tuple(g for g in train if turned_back.get(g))
@@ -5918,6 +6179,7 @@ def _motion_assembly(sw: SolidWorks, result: GearboxUpdate, assembly: str, place
                 same_frame(live[placement.gear][0], live[placement.gear][1], placement.rotation, placement.at,
                            placement.pitch):
             continue
+        _bind(user, [placement.gear])
         touched[0] = True
         before = _carried_before(sw, [placement.gear], carried, handle)
         if unfix:
@@ -5926,7 +6188,7 @@ def _motion_assembly(sw: SolidWorks, result: GearboxUpdate, assembly: str, place
         result.placed.append(placement.gear)
         if unfix:
             sw.fix_component(handle[placement.gear])
-        _put_carried(sw, result, [placement.gear], carried, before, wanted, touched)
+        _put_carried(sw, result, [placement.gear], carried, before, wanted, touched, "", user)
         dirty[0] = True
     if dirty[0]:
         rebuild()
@@ -5954,6 +6216,7 @@ def _motion_assembly(sw: SolidWorks, result: GearboxUpdate, assembly: str, place
         user_found=result.user_in_error)
     problems += found_problems
     problems += _components_after(sw, user, result)
+    problems += _carried_problems(sw, user, handle)
     problems += _free_to_turn(sw, [handle[g] for g in mated], lambda h: gear_of_handle.get(h, h),
                               user.on_train if user is not None else None)
     result.failures.extend((file, problem) for problem in problems)
@@ -5978,7 +6241,8 @@ def _put_train(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, trai
                live: Optional[Mapping[str, Frame9]] = None, pitch: Optional[Mapping[str, float]] = None,
                route: Optional[str] = None, gear_mates: Optional[Collection[str]] = None,
                configuration: Optional[str] = None,
-               carried: Optional[Mapping[str, Sequence[Tuple[str, str]]]] = None) -> None:
+               carried: Optional[Mapping[str, Sequence[Tuple[str, str]]]] = None,
+               user: Optional["_UserPlan"] = None) -> None:
     """One train put back whole: every lock of it suppressed (a lock does not hold against a put: W5-DECISIONS),
     a rebuild, its ratios remade, EVERY mated gear of it put (review M1), then — whatever happened — every lock
     turned back on and a rebuild (review M8).
@@ -6018,7 +6282,13 @@ def _put_train(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, trai
     its handle)]: with the app's locks (and, with a carrier, its gear mates) off and the assembly rebuilt, every
     gear of the train that carries one and each such component are read where they stand; after the app's bodies
     are put, each component is put by its gear's rigid motion and read back (:func:`_put_carried`), before the app's
-    mates go back on. The user's locks are never touched."""
+    mates go back on. The user's locks are never touched. ``user`` (W9a review point 7): before anything is
+    written, a body this train would put that the check did not judge put, with the user's work on it, stops the
+    job (:func:`_bind`); each carried pose is logged for the post-check (:func:`_carried_problems`)."""
+    if user is not None:
+        going = [g for g in train if g not in held or (live or {}).get(g) is None or not same_frame(
+            live[g][0], live[g][1], wanted[g][0], wanted[g][1], (pitch or {}).get(g, 0.0))]
+        _bind(user, going)
     off: List[LockLink] = []
     gear_off: List[str] = []                 # a train with a carrier: its gear mates, off around the puts
     pending: Optional[BaseException] = None
@@ -6095,7 +6365,7 @@ def _put_train(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdate, trai
             sw.place_component(handle[gear], wanted[gear][0], wanted[gear][1], kind=ASSEMBLY_TRAIN)
             result.placed.append(gear)
             put_now.append(gear)
-        _put_carried(sw, result, put_now, carried, before, wanted, touched, configuration or "")
+        _put_carried(sw, result, put_now, carried, before, wanted, touched, configuration or "", user)
     except BaseException as exc:  # noqa: BLE001 - raised again below, once the locks are back on
         pending = exc
     left_off = False

@@ -21,6 +21,15 @@ from test_swbuild import (CHANGING, IDENTITY9, P17, P51, S17, T_ASM, TC_ASM, W, 
                           _train_placements, _train_routes_agree, _update_train, _values, _built_train, mode_findings,
                           names, plan, tc_built)  # noqa: F401
 
+@pytest.fixture(autouse=True)
+def no_carrier_measured(monkeypatch):
+    """Route (c1) on a train with no carrier (the T train's, the TransferCase's) as if a run had read it clean on both
+    versions (findings.USER_MATE_PUT_NO_CARRIER_ON_<year> True), so the tests below reach what they are about; the
+    committed None, and the other branches, are tested where a test unsets or sets them itself."""
+    for year in (2026, 2024):
+        monkeypatch.setattr(findings, f"USER_MATE_PUT_NO_CARRIER_ON_{year}", True, raising=False)
+
+
 SPROCKET = W + "Sprocket.SLDPRT"
 HOUSING = W + "Housing.SLDPRT"
 MODE_CHANGES = CHANGING + ("show_configuration", "set_mate_suppressed_in", "set_dimension_in")
@@ -167,11 +176,12 @@ def test_a_user_gear_mate_and_a_mate_to_a_gears_plane_on_put_gears_refuse_togeth
     assert [(p.kind, p.mates) for p in raised.value.problems] == [(PROBLEM_OTHER_KIND, ("Gear5",)),
                                                                   (PROBLEM_OTHER_KIND, ("Angle1",))]
     assert str(raised.value) == (
-        "Gear5 is a mate in T.SLDASM that Gear Generator did not make, and it may hold the gears where Update "
-        "SolidWorks would put them, so nothing is changed; suppress Gear5 in SolidWorks and press Update SolidWorks "
-        "again. Angle1 is a mate in T.SLDASM that Gear Generator did not make, and it may hold the gears where Update "
-        "SolidWorks would put them, so nothing is changed; suppress Angle1 in SolidWorks and press Update SolidWorks "
-        "again.")
+        "Gear5 is a mate in T.SLDASM that Gear Generator did not make, on G1, which Update SolidWorks puts back, and a "
+        "mate of that kind is not moved with its gear, so nothing is changed; lock your component to G1 instead, and "
+        "Update SolidWorks puts it with G1, or suppress Gear5 in SolidWorks, and press Update SolidWorks again. "
+        "Angle1 is a mate in T.SLDASM that Gear Generator did not make, on G1, which Update SolidWorks puts back, and "
+        "a mate of that kind is not moved with its gear, so nothing is changed; lock your component to G1 instead, "
+        "and Update SolidWorks puts it with G1, or suppress Angle1 in SolidWorks, and press Update SolidWorks again.")
     assert raised.value.user_work is not None and [m.name for m in raised.value.user_work.mates] == ["Gear5", "Angle1"]
     assert _no_changes(fake) and fake.touched == marked
 
@@ -230,6 +240,7 @@ def test_a_grounded_tie_refuses_before_any_write_naming_every_user_mate_on_the_t
         _moving(fake)
     (problem,) = raised.value.problems
     assert problem.kind == PROBLEM_TIE and problem.mates == ("UserLock1", "UserAxis1", "UserTie")
+    assert "SolidWorks reads it as unable to turn" in problem.sentence
     assert problem.sentence == (
         "Update SolidWorks must turn G1's train back to its built place, and with your mates on SolidWorks reads it as "
         "unable to turn: your UserLock1, UserAxis1 and UserTie are on that train, so nothing is changed; suppress "
@@ -246,6 +257,10 @@ def test_a_lock_chain_to_a_fixed_component_of_the_users_is_a_tie_whatever_the_re
     with pytest.raises(UserWorkRefused) as raised:
         _moving(fake)
     assert [(p.kind, p.mates) for p in raised.value.problems] == [(PROBLEM_TIE, ("UserLock1", "UserLock9"))]
+    assert str(raised.value) == ("Your UserLock1 and UserLock9 hold G1 to Housing-1, which does not move, and Update "
+                                 "SolidWorks must put G1 back, so nothing is changed; suppress UserLock1 and UserLock9 "
+                                 "in SolidWorks and press Update SolidWorks again.")
+    assert not [n for n, _ in fake.calls if n == "constrained_status"]        # nothing read, nothing said read
 
 
 def test_a_tie_on_a_train_nothing_puts_does_not_refuse():
@@ -409,7 +424,9 @@ def test_every_value_and_every_mate_in_the_way_is_named_at_once():
         _moving(fake, parts=[doc])
     assert [p.kind for p in raised.value.problems] == [PROBLEM_VALUE, PROBLEM_VALUE, PROBLEM_TWO_BODIES]
     assert [p.values[0].name for p in raised.value.problems[:2]] == ["Bore Diameter", "Face Width"]
-    assert "change the workbook to 12" in raised.value.problems[0].sentence
+    assert raised.value.problems[0].sentence == (
+        "Bore Diameter in Gear_m1.5_N17 is 12 in SolidWorks and 10 in the workbook, and no cell of the workbook sets "
+        "it alone: set it back to 10 in SolidWorks and press Update SolidWorks again.")
 
 
 def test_a_value_the_record_cannot_vouch_for_is_set_back_as_before():
@@ -670,12 +687,28 @@ def test_the_fake_fails_a_test_on_any_write_to_the_users_work_but_a_put():
     _sprocket_on_g1(fake)
     fake.find_component("user1", "Sprocket-1")
     fake.find_mate("other1", "UserLock1")
+    fake.user_mate(T_ASM, "Gear5", kind="gear", a=("Sprocket-1", "Gear Axis"), b=("gear2-1", "Gear Axis"))
+    fake.user_mate(T_ASM, "Distance9", kind="distance", a=("Sprocket-1", "plane1"), b=("layout-1", "plane1"))
+    fake.find_mate("other2", "Gear5")
+    fake.find_mate("other3", "Distance9")
     for call in (lambda: fake.fix_component("user1"), lambda: fake.unfix_component("user1"),
-                 lambda: fake.set_mate_suppressed("other1", True)):
+                 lambda: fake.set_mate_suppressed("other1", True),
+                 lambda: fake.set_mate_suppressed_in("other1", True, ["Default"]),
+                 lambda: fake.set_dimension_in("other3", 12.0, ["Default"]),
+                 lambda: fake.set_gear_ratio("other2", "user1:Gear Axis", "gear2:Gear Axis", (20, 68)),
+                 lambda: fake.remake_gear_mate("other2", "user1:Gear Axis", "gear2:Gear Axis", (20, 68), True)):
         with pytest.raises(AssertionError, match=r"of the user's \(W9a §0.3\)"):
             call()
+    with pytest.raises(AssertionError, match=r"route \(c1\) only"):                # no gear put with it
+        fake.place_component("user1", IDENTITY9, (0.0, 0.0, 31.0), kind=swcom.ASSEMBLY_TRAIN)
+    fake.find_component("placed1", "gear1-1")
+    fake.place_component("placed1", *fake.frames["gear1-1"], kind=swcom.ASSEMBLY_TRAIN)
     fake.place_component("user1", IDENTITY9, (0.0, 0.0, 31.0), kind=swcom.ASSEMBLY_TRAIN)
     assert [n for n, _, _ in fake.user_puts] == ["Sprocket-1"]
+    fake.find_component("placed2", "gear2-1")
+    fake.mate("UserLock1", T_ASM).suppressed = True                            # the lock off: no longer with G1
+    with pytest.raises(AssertionError, match=r"route \(c1\) only"):
+        fake.place_component("user1", IDENTITY9, (0.0, 0.0, 32.0), kind=swcom.ASSEMBLY_TRAIN)
 
 
 def test_a_carrier_or_layout_global_is_judged_as_a_parts_is():
@@ -697,5 +730,254 @@ def test_two_sprockets_locked_to_one_fixed_housing_are_two_ties_not_one_two_body
     fake.user_lock(T_ASM, "UserLockB", "Sprocket-4", "Housing-1")
     with pytest.raises(UserWorkRefused) as raised:
         _moving(fake)
-    assert [p.kind for p in raised.value.problems] == [PROBLEM_TIE]           # one train: G1 to G4 through G2-G3
-    assert raised.value.problems[0].mates == ("UserLock1", "UserLock4", "UserLockA", "UserLockB")
+    assert [(p.kind, p.mates) for p in raised.value.problems] == [(PROBLEM_TIE, ("UserLock1", "UserLockA")),
+                                                                  (PROBLEM_TIE, ("UserLock4", "UserLockB"))]
+
+
+# -- the fix round of W9a package A's review (W9A-REVIEW-A.md; the coordinator's rulings) -----------------------------
+
+from test_swbuild import _planetary_turned_and_pressed, turned_findings  # noqa: E402,F401
+
+
+def _planetary(monkeypatch):
+    sw, pressed, names = _planetary_turned_and_pressed(monkeypatch, "gear mates off around the puts")
+    return sw, pressed, names, pressed.assembly
+
+
+def _press(sw, pressed):
+    return swbuild.update_gearbox(sw, **pressed.update_kwargs(), exists=lambda _p: True, mtime=lambda _p: 5.0)
+
+
+@pytest.mark.parametrize("kind", ["lock", "coincident"])
+def test_a_housing_on_a_planetarys_held_ring_nothing_puts_never_refuses(turned_findings, monkeypatch, kind):
+    """Review point 1 (ruling 1): the Ring is held and stands where it belongs, so the press does not put it, and
+    the user's housing locked or mated to it is no tie and no other kind on a put gear."""
+    sw, pressed, names, asm = _planetary(monkeypatch)
+    sw.user_component(asm, "Housing-1", HOUSING, (IDENTITY9, (0.0, 0.0, -30.0)), fixed=True)
+    if kind == "lock":
+        sw.user_lock(asm, "Lock9", names["Ring"], "Housing-1")
+    else:
+        sw.user_mate(asm, "Concentric9", kind="coincident", a=("Housing-1", "Gear Axis"), b=(names["Ring"], "Gear Axis"))
+    result = _press(sw, pressed)
+    assert result.ok, result.failures
+    assert "Ring" not in result.placed and sw.user_puts == []
+
+
+def _ring_off_its_frame(sw, names):
+    sw.frames[names["Ring"]] = _turn_about_z(sw.frames[names["Ring"]], 1.0)       # not a whole pitch
+
+
+def test_a_held_gear_update_re_places_carries_the_users_locked_component_only_once_measured(turned_findings,
+                                                                                            monkeypatch):
+    sw, pressed, names, asm = _planetary(monkeypatch)
+    _ring_off_its_frame(sw, names)
+    sw.user_component(asm, "Sprocket-9", SPROCKET, (IDENTITY9, (0.0, 0.0, -40.0)))
+    sw.user_lock(asm, "Lock9", names["Ring"], "Sprocket-9")
+    with pytest.raises(UserWorkRefused) as raised:
+        _press(sw, pressed)
+    (problem,) = raised.value.problems
+    assert problem.kind == PROBLEM_UNSETTLED and problem.mates == ("Lock9",)
+    assert problem.sentence == (
+        "Update SolidWorks would put your Sprocket-9 with Ring, which your Lock9 holds to it, and putting a component "
+        "of yours with a gear held still and put back first has not been measured on this SolidWorks "
+        "(findings.USER_MATE_PUT_HELD_GEAR_ON_2026 is None), so nothing is changed; suppress Lock9 in SolidWorks and "
+        "press Update SolidWorks again.")
+    assert _no_changes(sw)
+    monkeypatch.setattr(findings, "USER_MATE_PUT_HELD_GEAR_ON_2026", True)
+    rel = _relative(sw, names["Ring"], "Sprocket-9")
+    result = _press(sw, pressed)
+    assert result.ok, result.failures
+    assert ("Sprocket-9", "Ring", "") in result.carried and "Ring" in result.placed
+    assert _close(_relative(sw, names["Ring"], "Sprocket-9"), rel, 1e-9)
+
+
+def test_a_lock_chain_from_a_held_gear_update_re_places_to_the_ground_refuses_without_a_read(turned_findings,
+                                                                                             monkeypatch):
+    sw, pressed, names, asm = _planetary(monkeypatch)
+    _ring_off_its_frame(sw, names)
+    sw.user_component(asm, "Housing-1", HOUSING, (IDENTITY9, (0.0, 0.0, -30.0)), fixed=True)
+    sw.user_lock(asm, "Lock9", names["Ring"], "Housing-1")
+    with pytest.raises(UserWorkRefused) as raised:
+        _press(sw, pressed)
+    assert str(raised.value) == ("Your Lock9 holds Ring to Housing-1, which does not move, and Update SolidWorks must "
+                                 "put Ring back, so nothing is changed; suppress Lock9 in SolidWorks and press Update "
+                                 "SolidWorks again.")
+
+
+def test_a_fixed_gear_update_re_places_w4s_way_carries_the_users_component_only_once_measured(monkeypatch):
+    fake = _built_train()
+    _sprocket_on_g1(fake, axis="")
+    for body in ("gear1-1", "Sprocket-1"):
+        fake.frames[body] = _turn_about_z(fake.frames[body], 10.0)
+    rel = _relative(fake, "gear1-1", "Sprocket-1")
+    with pytest.raises(UserWorkRefused) as raised:
+        _update_train(fake, motion=_motion(fixed=("G1",)))
+    assert "putting a component of yours with a fixed gear, unfixed, put and fixed again has not been measured" in \
+        str(raised.value) and "(findings.USER_MATE_PUT_FIXED_GEAR_ON_2026 is None)" in str(raised.value)
+    assert _no_changes(fake)
+    monkeypatch.setattr(findings, "USER_MATE_PUT_FIXED_GEAR_ON_2026", True)
+    result = _update_train(fake, motion=_motion(fixed=("G1",)))
+    assert result.ok, result.failures
+    assert result.carried == [("Sprocket-1", "G1", "")] and "G1" in result.placed
+    assert _close(_relative(fake, "gear1-1", "Sprocket-1"), rel, 1e-9)
+
+
+def test_a_train_with_no_carrier_carries_the_users_component_only_once_measured(monkeypatch):
+    for year in (2026, 2024):
+        monkeypatch.setattr(findings, f"USER_MATE_PUT_NO_CARRIER_ON_{year}", None)
+    fake = _built_train()
+    _sprocket_on_g1(fake)
+    with pytest.raises(UserWorkRefused) as raised:
+        _moving(fake)
+    assert str(raised.value) == (
+        "Update SolidWorks would put your Sprocket-1 with G1, which your UserLock1 holds to it, and putting a "
+        "component of yours with a gear on a train with no carrier, its gear mates left on around the put has not been "
+        "measured on this SolidWorks (findings.USER_MATE_PUT_NO_CARRIER_ON_2026 is None), so nothing is changed; "
+        "suppress UserLock1 in SolidWorks and press Update SolidWorks again.")
+    fake.revision = (32, 5, 0)
+    monkeypatch.setattr(findings, "USER_MATE_PUT_NO_CARRIER_ON_2026", True)      # measured on 2026 only: 2024 refuses
+    with pytest.raises(UserWorkRefused, match=r"USER_MATE_PUT_NO_CARRIER_ON_2024 is None"):
+        _moving(fake)
+
+
+def test_a_user_sub_assembly_is_carried_only_once_measured_its_leaf_naming_its_top_level(monkeypatch):
+    fake = _built_train()
+    fake.user_component(T_ASM, "Sub-1", W + "Drive.SLDASM", (IDENTITY9, (0.0, 0.0, 30.0)))
+    fake.user_lock(T_ASM, "UserLock1", "gear1-1", "Sub-1/Sprocket-1")
+    with pytest.raises(UserWorkRefused, match=r"putting a sub-assembly of yours with a gear when the component is a "
+                                              r"sub-assembly has not been measured"):
+        _moving(fake)
+    monkeypatch.setattr(findings, "USER_MATE_PUT_SUBASSEMBLY_ON_2026", True)
+    result = _moving(fake)
+    assert result.ok and result.carried == [("Sub-1", "G1", "")]
+    assert result.user_work.mates[0].touches == (("app", "G1"), ("user", "Sub-1"))
+
+
+@pytest.mark.parametrize("unread", ["type", "count", "entity"])
+def test_a_user_mate_solidworks_will_not_describe_refuses_whenever_anything_is_put(unread):
+    """Review point 2 (ruling 2): never judged harmless, never read as the assembly's own plane."""
+    fake = _built_train()
+    _sprocket_on_g1(fake, axis="")
+    fake.unread_mates = {"UserLock1": unread}
+    with pytest.raises(UserWorkRefused) as raised:
+        _moving(fake)
+    (problem,) = raised.value.problems
+    assert problem.kind == swbuild.PROBLEM_UNREAD and problem.mates == ("UserLock1",)
+    assert problem.sentence == (
+        "SolidWorks would not say what UserLock1 in T.SLDASM holds, a mate Gear Generator did not make, so Update "
+        "SolidWorks cannot tell whether putting the gears back would leave something of yours behind, and nothing is "
+        "changed; suppress UserLock1 in SolidWorks and press Update SolidWorks again.")
+    mate = raised.value.user_work.mates[0]
+    assert not mate.whole and ("assembly", "") not in mate.touches
+    assert _no_changes(fake)
+    assert _update_train(fake).ok                         # a quiet press puts nothing: nothing to judge it against
+
+
+@pytest.mark.parametrize("kind", ["rack and pinion", "screw"])
+def test_a_motion_mate_on_a_component_route_c1_would_put_refuses_as_a_gear_mate_does(kind):
+    fake = _built_train()
+    _sprocket_on_g1(fake, axis="")
+    fake.user_component(T_ASM, "Rack-1", SPROCKET, (IDENTITY9, (30.0, 0.0, 30.0)))
+    fake.user_mate(T_ASM, "Motion7", kind=kind, a=("Sprocket-1", "Gear Axis"), b=("Rack-1", "plane1"))
+    with pytest.raises(UserWorkRefused) as raised:
+        _moving(fake)
+    assert [(p.kind, p.mates) for p in raised.value.problems] == [(PROBLEM_OTHER_KIND, ("Motion7",))]
+    assert raised.value.user_work.mates[1].kind == swbuild.USER_GEAR
+
+
+@pytest.mark.parametrize("state, said", [(0, "suppressed in T.SLDASM, so nothing is changed; in SolidWorks, "
+                                             "unsuppress it"),
+                                         (1, "loaded lightweight in T.SLDASM, so nothing is changed; in SolidWorks, "
+                                             "set it to Resolved")])
+def test_a_component_route_c1_would_put_that_is_suppressed_or_lightweight_refuses(state, said):
+    fake = _built_train()
+    _sprocket_on_g1(fake)
+    fake.component_states = {"Sprocket-1": state}
+    with pytest.raises(UserWorkRefused) as raised:
+        _moving(fake)
+    (problem,) = raised.value.problems
+    assert problem.kind == swbuild.PROBLEM_COMPONENT
+    assert problem.sentence == ("Update SolidWorks would put your Sprocket-1 with G1, which your mates hold it to, and "
+                                f"Sprocket-1 is {said} and press Update SolidWorks again.")
+
+
+def test_with_modes_a_user_lock_joining_two_trains_refuses_naming_it(tc_built):
+    """The plan's two-train mate: LoDog and FrontDog are on two trains in 2H (neither engaged there)."""
+    fake, built = tc_built
+    fake.user_lock(TC_ASM, "Lock5", "gear6-1", "gear9-1")
+    with pytest.raises(UserWorkRefused) as raised:
+        _tc_update(fake, built, wanted_turn=6.0)
+    assert [(p.kind, p.mates) for p in raised.value.problems] == [(PROBLEM_TWO_BODIES, ("Lock5",))]
+    assert "holds FrontDog and LoDog together" in str(raised.value)
+
+
+def test_a_put_the_check_did_not_judge_stops_the_job_before_it_where_the_users_work_is(monkeypatch):
+    """Review point 7: what the change phase puts is bound to what the check judged; here the check is made to
+    judge nothing put, and the change phase finds the train to put, with the user's lock on it."""
+    fake = _built_train()
+    _sprocket_on_g1(fake)
+    monkeypatch.setattr(swbuild, "_may_put", lambda *args, **kwargs: set())
+    result = _moving(fake)
+    assert not result.ok and fake.user_puts == [] and "G1" not in result.placed
+    assert any("which its check before any change found it would not put, and your work is on" in text
+               for _, text in result.failures), result.failures
+
+
+def test_a_carried_component_found_off_its_gear_after_the_rebuild_is_a_failure_said_as_the_users():
+    fake = _built_train()
+    _sprocket_on_g1(fake)
+    fake.slips = {"Sprocket-1"}                          # turned 5° on every later rebuild: the put does not hold
+    result = _moving(fake)
+    assert ("T.SLDASM", "Your Sprocket-1 did not stay with G1 where Update SolidWorks put it: once the assembly "
+                        "rebuilt it stood elsewhere against G1.") in result.failures
+
+
+def test_a_marked_part_open_and_modified_since_the_update_is_vouched_for_and_one_loaded_from_its_file_is_not():
+    """Ruling 3: an Update left the part unsaved (the record's mark); while it stays open, modified, the record's word
+    holds and the user's edit refuses; closed and loaded from its file, the Update is lost and W8's set-back stands."""
+    fake = _built_train()
+    key = _key(P17)
+    fake.memory[key] = (list(fake.memory[key][0]), fake.memory[key][1])
+    for i, text in enumerate(fake.memory[key][0]):
+        if split_equation(text)[0] == "Face Width":
+            fake.memory[key][0][i] = '"Face Width"= 14'
+    doc = swbuild.DocumentValues(P17, _values(S17.with_values(face_width="12")), recorded=_recorded(S17),
+                                 mark=swbuild.MARK_UNSAVED)
+    with pytest.raises(UserWorkRefused, match="^Face Width in Gear_m1.5_N17 is 14 in SolidWorks"):
+        _update_train(fake, parts=[doc])
+    fake.saved[key] = (list(fake.memory[key][0]), list(fake.memory[key][1]))
+    fake.open_docs = [d for d in fake.open_docs if _key(d.path) != key]
+    done = _update_train(fake, parts=[doc])
+    assert done.ok and done.parts[0].changed == ["Face Width"]
+    assert _update_train(fake, parts=[replace(doc, mark=swbuild.MARK_MISMATCHED)]).ok
+
+
+def test_k11_compares_a_radians_document_in_its_own_unit():
+    variable = GlobalVariable("Base Diameter", '"Pitch Diameter" * cos ( 20 )', '"Pitch Diameter" * cos ( 0.349066 )')
+    doc = swbuild.DocumentValues(P17, (variable,), recorded=(("Base Diameter", '"Pitch Diameter" * cos ( 0.349066 )'),))
+    held = [('"Base Diameter"= "Pitch Diameter" * cos ( 0.349066 )', 23.9)]
+    assert swbuild._value_edits(doc, held, {"Base Diameter": 23.9}) == []
+    edited = [('"Base Diameter"= "Pitch Diameter" * cos ( 0.4 )', 23.4)]
+    (edit,) = swbuild._value_edits(doc, edited, {"Base Diameter": 23.4})
+    assert (edit.name, edit.live, edit.cell) == ("Base Diameter", "23.4", "")
+
+
+def test_a_layout_renamed_in_solidworks_is_still_the_apps_by_its_part():
+    fake = _built_train()
+    fake.rename_component(T_ASM, "layout-1", "T_Layout-3")
+    result = _update_train(fake, motion=_motion(layout_component="layout-1"),
+                           layout=_train_layout_values())
+    assert result.ok and result.user_work.components == []
+
+
+def test_the_judgement_is_pure_and_predicts_what_a_press_would_carry_without_a_read():
+    """Review point 5: package B says before the press what a press would put with its gears, from the inventory."""
+    work = swbuild.UserWork(
+        components=[swbuild.UserComponent("Sprocket-1", SPROCKET)],
+        mates=[swbuild.UserMate("Lock3", swbuild.USER_LOCK, 16, (("app", "Sun"), ("user", "Sprocket-1")), ("",)),
+               swbuild.UserMate("Axis3", swbuild.USER_OTHER, 0, (("user", "Sprocket-1"), ("layout", "")), ("",))])
+    told = swbuild.judge_user_work(work, ("",), {"Sun", "Planet"}, trains=[("Sun", "Planet")], mated=("Sun", "Planet"))
+    assert told.problems == [] and told.carried == {"Sun": [("Sprocket-1", ("Lock3",))]}
+    assert told.unread_ties == [(("Sun", "Planet"), ("Lock3", "Axis3"))] and told.on_train["Planet"] == ("Lock3", "Axis3")
+    nothing = swbuild.judge_user_work(work, ("",), set())
+    assert nothing.carried == {} and nothing.problems == []

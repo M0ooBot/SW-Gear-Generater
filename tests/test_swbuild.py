@@ -328,6 +328,11 @@ class FakeSolidWorks:
         # {mate: (code, warning)} given to mate_codes at the first put: a rebuild that breaks the user's work
         self.breaks_on_set = {}
         self.codes_after_put = {}
+        # W9a review point 6: the app bodies put since the app's mates last went back on (or a configuration was
+        # shown); a put of a user component is let through only when its user locks (on here) reach one of them.
+        # ``unread_mates``: mate name -> "type", "count" or "entity", what mate_info will not give for it.
+        self.step_puts = set()
+        self.unread_mates = {}
 
     def _log(self, name, *args):
         self.calls.append((name, args))
@@ -633,7 +638,12 @@ class FakeSolidWorks:
         put = asked = (tuple(rotation), tuple(at))
         name = self._name2(handle)
         if self._is_users(name):
+            if not self._locked_to_a_put(name):
+                raise AssertionError(f"the app put {name}, a component of the user's, not with a gear it put in the "
+                                     "same step through the user's locks (W9a §0.3: route (c1) only)")
             self.user_puts.append((name, asked, self.config))
+        else:
+            self.step_puts.add(name)
         if self.codes_after_put:
             self.mate_codes.update(self.codes_after_put)
             self.codes_after_put = {}
@@ -693,6 +703,7 @@ class FakeSolidWorks:
 
     def open_document(self, path):
         self._log("open_document", path)
+        self.step_puts = set()
         doc_type = 2 if path.lower().endswith(".sldasm") else 1
         info = DocInfo(title=path.replace("/", "\\").rsplit("\\", 1)[-1], path=path, doc_type=doc_type)
         is_open = any(_key(d.path) == _key(path) for d in self.open_docs)
@@ -891,6 +902,22 @@ class FakeSolidWorks:
     def _is_users(self, name):
         return any(name in names for names in self.user_parts.values())
 
+    def _locked_to_a_put(self, name):
+        """Whether the user's component ``name`` is held, through locks on in the configuration shown (a leaf of a
+        sub-assembly counting as its top level), to an app body put in this step."""
+        top = lambda n: n.split("/")[0]                                   # noqa: E731
+        reached, grown = {name}, True
+        while grown:
+            grown = False
+            for m in self.mates:
+                if m.kind != "lock" or m.suppressed:
+                    continue
+                ends = {top(m.a[0]), top(m.b[0])}
+                if ends & reached and not ends <= reached:
+                    reached |= ends
+                    grown = True
+        return bool(reached & self.step_puts)
+
     def _not_users(self, name, what):
         if self._is_users(name):
             raise AssertionError(f"the app {what} {name}, a component of the user's (W9a §0.3)")
@@ -909,14 +936,20 @@ class FakeSolidWorks:
                                     self.component_states.get(n, 2), self.component_codes.get(n, 0)) for n in names]
 
     MATE_TYPES = {"coincident": 0, "point": 0, "distance": 5, "point distance": 5, "angle": 6, "axis angle": 6,
-                  "gear": 10, "lock": 16}
+                  "gear": 10, "lock": 16, "rack and pinion": 13, "screw": 17}
 
     def mate_info(self, handle):
         """``Session.mate_info``: the mate's swMateType_e and the Name2 its entities are on ("" for the assembly's)."""
         self._log("mate_info", handle)
         mate = self.mate(self.mate_handles[handle])
-        return swcom.MateInfo(mate.name, self.MATE_TYPES.get(mate.kind, 7),
-                              tuple("" if end[0] == "asm" else end[0] for end in (mate.a, mate.b)))
+        unread = self.unread_mates.get(mate.name)
+        if unread == "count":
+            return swcom.MateInfo(mate.name, self.MATE_TYPES.get(mate.kind, 7), (), counted=False)
+        ends = tuple("" if end[0] == "asm" else end[0] for end in (mate.a, mate.b))
+        if unread == "entity":
+            ends = (ends[0], None)
+        kind = swcom.UNREAD if unread == "type" else self.MATE_TYPES.get(mate.kind, 7)
+        return swcom.MateInfo(mate.name, kind, ends)
 
     def feature_states(self):
         """``Session.feature_states``: the template's planes and origin, then every feature the app made in the
@@ -1066,6 +1099,8 @@ class FakeSolidWorks:
         self._log("set_mate_suppressed", handle, suppressed)
         name = self.mate_handles[handle]
         self._not_users_mate(name, "suppressed or turned on")
+        if not suppressed:
+            self.step_puts = set()
         if not suppressed and name in self.held_suppressed:
             # As swcom.Session.set_mate_suppressed's read-back: the call returned, the mate still reads suppressed.
             title = self.active.title if self.active else "the assembly"
@@ -1102,6 +1137,7 @@ class FakeSolidWorks:
 
     def set_gear_ratio(self, handle, a, b, ratio):
         self._log("set_gear_ratio", handle, a, b, tuple(ratio))
+        self._not_users_mate(self.mate_handles[handle], "made again")
         route = getattr(findings, "GEAR_MATE_RATIO_ROUTE", None)
         if route != "remake":
             raise SolidWorksError(f"findings.GEAR_MATE_RATIO_ROUTE is {route!r}, so the gear mate keeps its ratio.")
@@ -1116,6 +1152,7 @@ class FakeSolidWorks:
     def remake_gear_mate(self, handle, a, b, ratio, flip, saved=True):
         """As swcom.Session.remake_gear_mate: deleted and made again with ``flip``, at the end of the tree."""
         self._log("remake_gear_mate", handle, a, b, tuple(ratio), flip)
+        self._not_users_mate(self.mate_handles[handle], "made again")
         old = self.mate(self.mate_handles[handle])
         self.mates.remove(old)
         self._keep_mate(handle, old.name, "gear", a, b, 0.0, tuple(float(n) for n in ratio), bool(flip))
@@ -1326,6 +1363,7 @@ class FakeSolidWorks:
         self._log("show_configuration", name)
         self._configuration_gate("CONFIGURATION_SHOW_ROUTE")
         found = self._named(name)
+        self.step_puts = set()
         if found is None:
             self.epoch += 1
             raise SolidWorksError(f"SolidWorks would not show the configuration {name}.")
@@ -1362,6 +1400,8 @@ class FakeSolidWorks:
         name = self.mate_handles[handle]
         mate = self.mate(name)
         self._not_users_mate(name, "suppressed or turned on")
+        if not suppressed:
+            self.step_puts = set()
         if self.unsettled == 1:
             self.unsettled = 0
             state = "suppressed" if not suppressed else "on"
@@ -3827,9 +3867,14 @@ def test_an_unsuppressed_mate_the_record_does_not_know_refuses_the_update_naming
         _update_train(fake, layout=_train_layout_values("64.5"),
                       placements=_train_placements(_train_frames(s3=(64.5, 51.0))))
     assert not isinstance(raised.value, swbuild.NotAsBuilt)
-    assert str(raised.value) == ("Angle1 is a mate in T.SLDASM that Gear Generator did not make, and it may hold the "
-                                 "gears where Update SolidWorks would put them, so nothing is changed; suppress Angle1 "
-                                 "in SolidWorks and press Update SolidWorks again.")
+    # Re-pinned at W9a's fix round (ruling 5): the sentence names the gear and the way through, a lock, which on a
+    # train with no carrier goes with its gear once that branch of route (c1) is measured.
+    assert str(raised.value) == ("Angle1 is a mate in T.SLDASM that Gear Generator did not make, on G1, which Update "
+                                 "SolidWorks puts back, and a mate of that kind is not moved with its gear, so nothing "
+                                 "is changed; suppress Angle1 in SolidWorks and press Update SolidWorks again (a lock "
+                                 "of your component to G1 will go with it once Update SolidWorks has been measured "
+                                 "putting a component of yours with a gear on a train with no carrier, its gear mates "
+                                 "left on around the put).")
     assert not any(n in CHANGING for n in names(fake))
 
 
@@ -7024,6 +7069,11 @@ def test_with_its_gear_mates_on_a_planetary_put_does_not_hold_in_the_fake(turned
 
 
 W7_PUT_BACK_LOG = "c0e98c21b97164fb77e9963594dee9ea91eb0b63d8aa4e9b5684a47534676cd1"
+# W9a (re-pinned at package A's fix round): the same log with W9a's reads of the user's work in it — one
+# feature_states per part document read with its features, one components for the assembly. With those reads taken
+# out, the log still hashes to W7_PUT_BACK_LOG.
+W9A_PUT_BACK_LOG = "69d45d4cb956703b5bfa9cd4555b284fbf4f093d487794bdee8fa7d0ec3be5b4"
+W9A_READS = ("components", "mate_info", "feature_states")
 
 
 def test_the_w7_put_back_calls_are_pinned_whole(turned_findings, monkeypatch):
@@ -7032,7 +7082,10 @@ def test_the_w7_put_back_calls_are_pinned_whole(turned_findings, monkeypatch):
     import hashlib
     sw, pressed, _ = _planetary_turned_and_pressed(monkeypatch, "gear mates off around the puts")
     swbuild.update_gearbox(sw, **pressed.update_kwargs(), exists=lambda _p: True, mtime=lambda _p: 5.0)
-    calls = [(n, a) for n, a in sw.calls]
+    every = [(n, a) for n, a in sw.calls]
+    assert len(every) == 149 and hashlib.sha256(repr(every).encode()).hexdigest() == W9A_PUT_BACK_LOG
+    assert [n for n, _ in every if n in W9A_READS] == ["feature_states"] * 6 + ["components"]
+    calls = [(n, a) for n, a in every if n not in W9A_READS]
     assert len(calls) == 142
     put = [n for n, _ in calls[calls.index(("set_global_variable", calls[[n for n, _ in calls].index(
         "set_global_variable")][1])):]]

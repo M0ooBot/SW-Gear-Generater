@@ -304,17 +304,21 @@ def _user_mate(fake, flags):
     return mate
 
 
+# Re-pinned at W9a's fix round (ruling 5): the sentence names the gear (the fake's user mate is on InDog's plane) and
+# the way through, a lock, which on the TransferCase's trains (no carrier) goes with its gear once measured.
+_TAIL = ("which Update SolidWorks puts back, and a mate of that kind is not moved with its gear, so nothing is changed; "
+         "in SolidWorks, suppress Distance3 in {} and press Update SolidWorks again (a lock of your component to "
+         "InDog will go with it once Update SolidWorks has been measured putting a component of yours with a gear on "
+         "a train with no carrier, its gear mates left on around the put).")
+
+
 @pytest.mark.parametrize("on, said", [
-    (("N",), "In mode N, Distance3 is a mate in TransferCase.SLDASM that Gear Generator did not make, and it may hold "
-             "the gears where Update SolidWorks would put them, so nothing is changed; in SolidWorks, suppress "
-             "Distance3 in N and press Update SolidWorks again."),
-    (("4H", "N"), "In modes 4H and N, Distance3 is a mate in TransferCase.SLDASM that Gear Generator did not make, and "
-                  "it may hold the gears where Update SolidWorks would put them, so nothing is changed; in SolidWorks, "
-                  "suppress Distance3 in 4H and N and press Update SolidWorks again."),
+    (("N",), "In mode N, Distance3 is a mate in TransferCase.SLDASM that Gear Generator did not make, on InDog, "
+             + _TAIL.format("N")),
+    (("4H", "N"), "In modes 4H and N, Distance3 is a mate in TransferCase.SLDASM that Gear Generator did not make, on "
+                  "InDog, " + _TAIL.format("4H and N")),
     (("2H", "4H", "N", "4L"), "In modes 2H, 4H, N and 4L, Distance3 is a mate in TransferCase.SLDASM that Gear "
-                              "Generator did not make, and it may hold the gears where Update SolidWorks would put "
-                              "them, so nothing is changed; in SolidWorks, suppress Distance3 in 2H, 4H, N and 4L and "
-                              "press Update SolidWorks again."),
+                              "Generator did not make, on InDog, " + _TAIL.format("2H, 4H, N and 4L")),
 ])
 def test_a_mate_not_on_record_on_in_a_mode_not_active_refuses_before_anything_is_shown(tc_built, on, said):
     """The review's case: Distance3, a user's mate, suppressed in 2H (active) and on in N; a workbook change that
