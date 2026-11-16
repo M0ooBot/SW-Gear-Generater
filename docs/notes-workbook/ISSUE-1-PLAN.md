@@ -78,15 +78,15 @@ readings still open in §6.
 ### 0.3 STOP and ask (implementers)
 
 - **Anything that would write to, delete, move or rename a component, mate, feature, global or configuration that is
-  not on record**, with three exceptions: route (b)'s suppression of the user's mates around a put, each turned back
-  on and read back in every configuration it was on in; route (c)'s move of a user's locked component with its gear
+  not on record**, with two exceptions: route (c)'s move of a user's locked component with its gear
   (K2, added after S0): a user component rigid to a put gear through the user's locks on in the mode shown is moved
   by that gear's rigid motion, in that mode, and each one is read back by `place_component`; and W9d's writes into the
   **new** revision's assembly (the user's components inserted, their mates remade there, left unsaved), never into
-  the old assembly or a user file.
+  the old assembly or a user file. (Route (b)'s suppression of the user's mates around a put, an exception here
+  before S0, is ruled out with route (b) itself: K2's *Instead of*; dropped at W9a package A's review, point 18.)
   The user's open documents are never saved by W9, and a configuration of theirs is never shown, unless S5 finds no
   unshown read of a component's state per mode: then, and only then, W9d shows the old assembly's modes and restores
-  its active configuration, read back, with `GetSaveFlag` unchanged (a fourth exception, to be confirmed). The fake fails
+  its active configuration, read back, with `GetSaveFlag` unchanged (a third exception, to be confirmed). The fake fails
   a test on any other such call, and on SolidWorks each demonstration compares every user item's flag, error code and
   entities before and after, in the old assembly as well after a Build again….
 - W9d: a persistent reference that resolves to an entity of another kind than the one it was read from (a face where
@@ -434,7 +434,7 @@ assembly's user items: as it is in the session when it is open there (never clos
 opened read-only when it is not (`OpenDoc6` with the read-only option, new, in S5). Component state per mode is read
 without showing a mode if S5 finds a route, as `IsSuppressed2(3, names)` was for mates (`API-LEDGER.md:332`); if it
 finds none, the old assembly's modes are shown and its active configuration restored and read back, `GetSaveFlag`
-unchanged — the fourth exception of §0.3, stated there. Frames are read in the old assembly's active mode only. The
+unchanged — the third exception of §0.3, stated there. Frames are read in the old assembly's active mode only. The
 job then inserts and mates the carried items in the new assembly and checks them, and **leaves them unsaved**, as
 Update leaves everything (PLAN-WORKBOOK §4.5): the result ends *"… RangeBox_r2 holds them unsaved: save it in
 SolidWorks to keep them."* No `Save3`, a call the app has never made, whose effect on modified referenced documents
@@ -812,7 +812,7 @@ role, its mate named (K5); Modes rows added or removed by Update (W9c).
   another assembly, how faithfully each mate kind's definition reads back for a remake, and whether inserting a user
   sub-assembly can raise a dialog (S5, P2); the route from a mate's assembly-context entity to its part-level entity
   for `GetPersistReference3`, which is tier 1's crux; whether a component's state per configuration can be read
-  without showing it (if not, §0.3's fourth exception applies); whether `GetConstrainedStatus` reads Sun free with a
+  without showing it (if not, §0.3's third exception applies); whether `GetConstrainedStatus` reads Sun free with a
   floating sprocket locked to it (S0, case A).
 
 ---
