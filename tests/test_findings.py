@@ -1307,7 +1307,8 @@ def _s7_case8_2026_holds(data):
     """What W8 s7 case 8 read on SolidWorks 2026 34.1.1 (alone, at fe74276), cited by the comments of
     TURN_PER_CONFIGURATION_ON_2026 and POSITIONS_PER_CONFIGURATION_ON_2026 and by W8-INTERFACES §9.18: both turns in
     2H read in all four configurations by the same amount, the app's quiet Update in 4L put every mode and left every
-    configuration at its built frames, and the moving put in 2H after the fresh turn stayed in 2H. Pins of what was
+    configuration at its built frames, and the moving put in 2H after the fresh turn stayed in 2H (4H, N and 4L at
+    the fresh turn after it and after the reopen). Pins of what was
     read, not rules (s2 on 34.0.0 read otherwise). Raises AssertionError on any that the data does not show."""
     assert data["revision"] == [34, 1, 1] and data["snapshot"] == "fe74276" and data["finding_turn"] is False
     for step in ("drive +37 in 2H", "fresh drive +37 in 2H"):
@@ -1326,6 +1327,11 @@ def _s7_case8_2026_holds(data):
     put = _s7_step(data, "8", "moving put in 2H, the train back to its built frames")["judgement"]
     assert put["kind"] == "put" and put["moved_bodies"] == S7_TRAIN and "shared" in put["rules_out"]
     assert all(r["state"] == {m: ("moved" if m == "2H" else "still") for m in S7_MODES} for r in put["bodies"].values())
+    for step in ("moving put in 2H, the train back to its built frames", "saved and reopened"):
+        stood = _s7_step(data, "8", step)["expressed"]
+        for mode in S7_MODES:
+            assert [stood[mode][b][0] for b in ("Sun", "RangeSlv", "LoDog", "Carrier carrier", "Pl copy 1")] == \
+                ([0.0] * 5 if mode == "2H" else [37.0, 37.0, 9.25, 9.25, -18.5]), (step, mode)
     reopens = [s for c in data["cases"] for s in c["steps"] if "same_as_before_save" in s]
     assert len(reopens) == 1 and reopens[0]["same_as_before_save"] is True
 
@@ -1338,7 +1344,7 @@ def test_s7_case8_on_2026_34_1_1_read_the_fresh_turn_in_every_configuration_and_
 
 
 @pytest.mark.parametrize("doctor", ["the fresh turn not reaching 4H", "the put reaching N",
-                                    "the Update leaving 4L turned"])
+                                    "the Update leaving 4L turned", "the put's 4H Sun at 0, its judgement left"])
 def test_the_2026_case8_pins_fail_on_a_doctored_copy(doctor):
     import copy
     data = copy.deepcopy(json.loads(W8_S7_2026_CASE8.read_text(encoding="utf-8")))
@@ -1347,6 +1353,8 @@ def test_the_2026_case8_pins_fail_on_a_doctored_copy(doctor):
     elif doctor == "the put reaching N":
         step = _s7_step(data, "8", "moving put in 2H, the train back to its built frames")
         step["judgement"]["bodies"]["Sun"]["state"]["N"] = "moved"
+    elif doctor == "the put's 4H Sun at 0, its judgement left":
+        _s7_step(data, "8", "moving put in 2H, the train back to its built frames")["expressed"]["4H"]["Sun"][0] = 0.0
     else:
         _s7_step(data, "8", "after the quiet Update in 4L")["expressed"]["4L"]["RangeSlv"][0] = 37.0
     with pytest.raises(AssertionError):
@@ -1396,8 +1404,9 @@ def test_s2_after_an_update_had_put_every_mode_the_turn_was_read_in_4l_and_not_i
     mode, a fresh +37° in 2H was read in 4L (line 356), and the next Update found 4H and N, shown after its put in 2H,
     at the built turn (lines 448-451); its changed Update found the put of FDrive in 2H in 4H and N and not in 4L
     (569-572, 709). The first press, from a copy no Update had moved, found 2H's put in neither (224-227). So a turn
-    has been read in another configuration (TURN_PER_CONFIGURATION_ON_2026 = False, what the sentences rest on), and
-    whether a turn reaches every configuration, or a moving put another, in that state is open (findings.py)."""
+    has been read in another configuration (TURN_PER_CONFIGURATION_ON_2026 = False, what the sentences rest on). s7
+    case 8 on 34.1.1 read the turn in all four and the put in 2H alone in that state; this 34.0.0 reading was not seen
+    there and stays unexplained (W8-INTERFACES §9.18)."""
     lines = W8_S2_AFTER_UPDATE.read_bytes().decode("utf-8", errors="replace").splitlines()
     assert lines[1].startswith("attach  SolidWorks 2026 (revision 34.0.0)") and "(snapshot: 4871a85)" in lines[0]
     assert lines[250].startswith("fact    s2: the state before the fresh turn: modes put in by an Update so far "

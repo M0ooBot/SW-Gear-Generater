@@ -332,19 +332,28 @@ the kind the last two interface reviews found, and asked for written rules. Thes
         puts of the driven train (review S2).
       - *s7 case 8 on 34.1.1* (another machine, 2026-11-15; case 8 alone at `fe74276`, after `s1` built there:
         `probe/results/w8-workbook-assembly-20261115-220745-s1-s7-case8.log`, `w8-s7-20261115-222252-case8.json`;
-        s1 555 checks, s7 27, 0 failed, no STOP) read neither 34.0.0 possibility, and read what 2024's case 8 read:
+        s1 555 checks, s7 27, 0 failed, no STOP) read neither 34.0.0 possibility in its own sequence, and read what
+        2024's case 8 read:
         - the drive's +37° in 2H read in all four by the same amount (the Sun, InDog, RangeSlv and ModeSlv +37°,
           LoDog and the carrier +9.25°, each planet copy −18.5°);
-        - the app's quiet Update in 4L (239.6 s) put every mode with no failure; when it showed them, after its put
-          in 2H, 4H read ModeSlv–FrontDog out of step and N turned, so its 2H put had not reached them there; after
-          it every body in every configuration read at its built frame (largest 8.3e-10);
+        - the app's quiet Update in 4L (239.6 s) put every mode with no failure; after its put in 2H, read when each
+          mode was shown, before its put, 4H read ModeSlv–FrontDog out of step and N turned, so its 2H put had not
+          reached them there (log lines 1855 and 1905-1907, the lines the probe labels "post-check"; in the log only,
+          not the JSON, and not pinned). `s2`'s own first press on 34.0.0, from a copy no Update had moved, read the
+          same (`…-151412-s2.log` lines 224-227), so this is no new difference. After it every body in every
+          configuration read at its built frame (largest 8.3e-10);
         - a fresh +37° in 2H then read in all four by the same amount ("shared" fitting, "per_configuration", H
           and H_private_put ruled out): the turn reached 4H and N;
         - the moving put in 2H by the app's route (the train back to its built frames, the carrier first) stayed in
           2H: 4H, N and 4L still stood at the fresh turn, through a save and reopen.
-        So on 34.1.1, after an Update had put every mode, a turn reached every configuration and a moving put
-        stayed where it was made. s2's 34.0.0 reading was not seen there; 34.0.0 has not run case 8, so that
-        reading stays as read, unexplained.
+        So in case 8 on 34.1.1, after an Update had put every mode, a turn reached every configuration and a moving
+        put stayed where it was made. Case 8 is not `s2`'s sequence: it showed and rebuilt every configuration
+        between the fresh turn and the put, where the 151412 `s2` showed 4L alone (line 356, then the press); its
+        put is the probe's own (`s7_put_job`: mates off in 2H, `place_component`, mates on), not the app's second
+        Update press in 4L (`W8-REVIEW-LATE-FIXES.md` N2); and it ran on another machine as well as another
+        revision. So `s2`'s 34.0.0 reading was not seen in case 8 and stays as read, unexplained between revision,
+        machine and sequence. The closing run's `s2` on 34.1.1, which now shows 4H, N and 4L after the fresh turn
+        and then presses in 4L, is what re-reads `s2`'s own sequence.
       - *On 2024* (SolidWorks 2024 32.5.0, s7: `probe/results/sw2024/w8-s7-20261115-162418.json` and its log
         `…/sw2024/w8-workbook-assembly-20261115-162357-s7.log`; case 8 rerun:
         `…/sw2024/w8-s7-20261115-172104-case8.json` and `…-172046-s7-case8.log`, 0 failed), read on that version

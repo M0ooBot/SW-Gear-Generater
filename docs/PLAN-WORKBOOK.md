@@ -638,11 +638,12 @@ their rerun on 2024 measured the same (findings committed in `ea7a46f`); no W8 c
   finding of its own or after a restart.
   *(Approved as "each configuration keeps its own positions: a turn the user gives in one mode stays in that mode"
   and "a put holds in the configuration shown only", with the sentences on `POSITIONS_PER_CONFIGURATION_ON_<year>`.
-  W8's s2 and s7 read otherwise. On 2026, after an Update had put every mode, a fresh turn was read in 4L, while 4H
-  and N, shown after the app's put in 2H, stood at the built turn: either the turn did not reach them or the put did,
-  and 2026's s7 case 8 is to settle which. On 2024 the turn reached all four and the put stayed in 2H; a moving put
-  was kept by its configuration only until its train was next turned anywhere: notes-workbook/W8-INTERFACES.md
-  §9.18.)*
+  W8's s2 and s7 read otherwise. On 2026 34.0.0, after an Update had put every mode, a fresh turn was read in 4L,
+  while 4H and N, shown after the app's put in 2H, stood at the built turn: either the turn did not reach them or the
+  put did. s7 case 8 on 34.1.1, in its own sequence, read the turn in all four and the put in 2H alone; 34.0.0's
+  reading was not seen there and stays unexplained. On 2024 the turn reached all four and the put stayed in 2H; a
+  moving put was kept by its configuration only until its train was next turned anywhere:
+  notes-workbook/W8-INTERFACES.md §9.18.)*
 - **J12** — D10 per configuration. **J13** — Update works in the configuration active when it opens and returns to
   it. **J14** (**ruled**, the review's S6) — an edit after which every mate the modes need is already on record (a
   Modes pick between existing positions, an offset, an At, a renamed position) is an Update; Modes rows added,

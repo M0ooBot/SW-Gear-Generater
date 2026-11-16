@@ -1263,10 +1263,16 @@ SYSTEM_VALUE_FOLLOWS_CONFIGURATION = False
 #   w8-workbook-assembly-20261115-220745-s1-s7-case8.log, w8-s7-20261115-222252-case8.json, 0 failed), case 8 read
 #   what 2024's did: after the app's quiet Update in 4L had put every mode and a fresh +37° in 2H had read in all
 #   four, the moving put in 2H by the app's route (the train back to its built frames, the carrier first) stayed in
-#   2H; 4H, N and 4L still stood at the fresh turn (the Sun at +37°), through a save and reopen. And in that
-#   Update, after its put in 2H, 4H and N showed the first turn still standing (4H ModeSlv–FrontDog out of step, N
-#   turned) on a copy no Update had moved before. So s2's reading on 34.0.0 was not seen on 34.1.1; 34.0.0 has not
-#   run case 8. A no-op put changed nothing (s7 cases 2 and 3, on both versions).
+#   2H; 4H, N and 4L still stood at the fresh turn (the Sun at +37°), through a save and reopen. In that Update,
+#   after its put in 2H, 4H and N, each read when shown, before its put, showed the first turn still standing (4H
+#   ModeSlv–FrontDog out of step, N turned; log lines 1855 and 1905-1907, the lines the probe labels "post-check"; in
+#   the log only, not the JSON, and not pinned), as s2's own first press read on 34.0.0 from a copy no Update had
+#   moved (…-151412-s2.log lines 224-227), so that is no new difference. Case 8 is not s2's sequence: it showed every
+#   configuration between the fresh turn and the put, where that s2 showed 4L alone; its put is the probe's own
+#   (s7_put_job), not the app's second Update press in 4L; and it ran on another machine as well as another revision.
+#   So s2's 34.0.0 reading was not seen in case 8 and stays unexplained between revision, machine and sequence; the
+#   closing run's s2 on 34.1.1 is what re-reads s2's own sequence. A no-op put changed nothing (s7 cases 2 and 3, on
+#   both versions).
 # No behaviour reads these: every mode an Update shows is put to its built frames and post-checked (W8-INTERFACES
 # §9.18). Not covered: a drag in the user interface; case 5's moving puts on 34.1.1.
 POSITIONS_PER_CONFIGURATION_ON_2026 = True
@@ -1274,13 +1280,13 @@ POSITIONS_PER_CONFIGURATION_ON_2024 = True
 #
 # A turn per configuration: whether a turn given to the gears in one configuration (the solver moving the mated bodies,
 # here W5's drive) stays there. On 2026 it does not: it has been read in others.
-# - In all four, on copies no Update had moved (W8 s7 cases 1-3, as above): the drive's +37° on the Sun in 2H moved
-#   every body of the train by the same amount in each (the Sun, InDog, RangeSlv and ModeSlv +37°, each planet copy
-#   −18.5° and carried round, LoDog and the carrier +9.25°), also after no-op puts in 4L and in each configuration,
-#   for a turn given in 4L, and for one given in N after a save and reopen. W8 s2 read it first, with LoDog in
-#   interference with RangeSlv in 4L (531.913 mm³; …-111951-s2-turn-carried-per-body.log, and
+# - In all four, on copies no Update had moved, on 34.0.0 (W8 s7 cases 1-3, as above): the drive's +37° on the Sun
+#   in 2H moved every body of the train by the same amount in each (the Sun, InDog, RangeSlv and ModeSlv +37°, each
+#   planet copy −18.5° and carried round, LoDog and the carrier +9.25°), also after no-op puts in 4L and in each
+#   configuration, for a turn given in 4L, and for one given in N after a save and reopen. W8 s2 read it first, with
+#   LoDog in interference with RangeSlv in 4L (531.913 mm³; …-111951-s2-turn-carried-per-body.log, and
 #   probe/results/w8-turn-across-configurations-20261115-115500.txt, by a value set in 2H alone and by a global).
-# - In 4L after an Update had put every mode (…-151412-s2.log line 356: a fresh +37° in 2H read in 4L).
+# - In 4L after an Update had put every mode, on 34.0.0 (…-151412-s2.log line 356: a fresh +37° in 2H read in 4L).
 #   In that same state on 34.0.0 the fresh turn was NOT read in 4H and N: shown after the Update's put in 2H, both
 #   read at the built turn, in step and not turned (…-151412-s2.log lines 448-451). In the 135428 run s7 case 4's
 #   Update moved only the front train, so a turn "after the app's own Update" rests there on no-op puts of the driven
@@ -1289,8 +1295,10 @@ POSITIONS_PER_CONFIGURATION_ON_2024 = True
 #   w8-s7-20261115-222252-case8.json, 0 failed): the drive's +37° in 2H read in all four by the same amount; the app's
 #   quiet Update in 4L put every mode and every configuration then read at its built frames; a fresh +37° in 2H read
 #   in all four by the same amount again ("shared" fitting, "per_configuration" ruled out); the moving put in 2H after
-#   it stayed in 2H (POSITIONS above). So on 34.1.1 the turn reached 4H and N and the put did not; s2's 34.0.0 reading
-#   was not seen there, and 34.0.0 has not run case 8.
+#   it stayed in 2H (POSITIONS above). So in case 8 on 34.1.1 the turn reached 4H and N and the put did not. Case 8
+#   is not s2's sequence (POSITIONS above: every configuration shown before the put, the probe's put for the app's
+#   second press, another machine), so s2's 34.0.0 reading stays unexplained; the closing run's s2 on 34.1.1 re-reads
+#   that sequence.
 # On 2024 (32.5.0, W8 s7 on that host; probe/results/sw2024/w8-s7-20261115-162418.json and its log
 # w8-workbook-assembly-20261115-162357-s7.log) every turn of the train s7 gave read "moved" in all four
 # configurations, by the same amount, "shared" among the fits and "per_configuration" ruled out: on copies no Update

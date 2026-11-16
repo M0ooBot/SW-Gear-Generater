@@ -497,7 +497,8 @@ def positions_per_configuration(revision: Sequence[int]) -> Optional[bool]:
     Chooses sentences only, never a SolidWorks call: ``ui_text.turning_note`` and ``switching_note``, ``_mode_after``'s
     shared-turn sentence and its sentence on the modes found at the built turn, and ``_motion_after``'s warning
     after a turn left in the mode showing. The put fact (``POSITIONS_PER_CONFIGURATION_ON_<year>``: a Transform2 put
-    of a component no mate holds keeps its place per configuration) is separate and read by nothing."""
+    that moves a component, free or in a mated train, keeps its place per configuration; findings.py says on which
+    revisions it was read) is separate and read by nothing."""
     if not revision:
         return None
     try:

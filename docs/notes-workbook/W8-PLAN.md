@@ -163,8 +163,9 @@ Each is argued where it is used; the column says where.
 read in others: in all four on copies no Update had moved (W8's s2, s7 cases 1-3), and in 4L after an Update had put
 every mode (s2, `…-151412-s2.log` line 356), where 4H and N, shown after a put in 2H, read the built turn (lines
 448-451). A put that moves a body was kept by the configuration showing in s7 case 5, while in s2 a put in 2H was twice
-found in 4H and N. So J11 does not hold for a turn, and whether J26's "a put holds only in the configuration shown"
-holds once an Update has put every mode is not settled; a further s7 case is to measure it (W8-INTERFACES §9.18).
+found in 4H and N. So J11 does not hold for a turn. Once an Update had put every mode, s7 case 8 on 34.1.1 read the
+put held in 2H alone and the turn in all four; 34.0.0's s2 reading was not seen there, unexplained (W8-INTERFACES
+§9.18).
 Behaviour rests on neither: J26's "a mode needs a put when … its own train_check finds it off its axis or out of
 step" now also includes a mode found turned in step: every mode an Update shows ends at its built frames, and a quiet
 Update that has anything to put puts every mode. The sentences read `TURN_PER_CONFIGURATION_ON_<year>`: W8-INTERFACES
@@ -509,10 +510,11 @@ are skipped: each slider's SLIDE is made at its one value and the assembly keeps
 *(2026-11-15: on SolidWorks 2026 34.0.0 a turn of the mated train given in one configuration has been read in others,
 in all four on copies no Update had moved (W8's s2, s7 cases 1-3), so this section's "if SolidWorks shares positions"
 case applies to a turn at least there; after an Update had put every mode it was read in 4L, while 4H and N, shown
-after the app's put in 2H, stood at the built turn: either the turn did not reach them or the put did. Which is not
-settled on 2026; s7 case 8 is to measure it. On SolidWorks 2024 s7 read every turn in all four, in that state too, and
-the put stay in 2H. What the app says follows `TURN_PER_CONFIGURATION_ON_<year>`, False on both, as "can show":
-W8-INTERFACES §9.18. The text below is as approved.)*
+after the app's put in 2H, stood at the built turn: either the turn did not reach them or the put did. s7 case 8 on
+34.1.1 read the turn in all four and the put in 2H alone; 34.0.0's reading was not seen there, unexplained. On
+SolidWorks 2024 s7 read every turn in all four, in that state too, and the put stayed in 2H. What the app says follows
+`TURN_PER_CONFIGURATION_ON_<year>`, False on both, as "can show": W8-INTERFACES §9.18. The text below is as
+approved.)*
 
 A train turns in a configuration exactly as W5's does: one freedom per train in that mode (a free member in neutral
 is a train of its own, as an unmeshed shaft is in W5), the drag gear the input's anchor.
