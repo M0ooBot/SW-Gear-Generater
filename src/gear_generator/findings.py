@@ -1602,3 +1602,24 @@ WHATS_WRONG_OPENS_ON_PART_REBUILD = False
 # there, so RangeSlv's slide itself was read on 2026 only). Scope: an axis mate and a plane-coincident mate, no lock;
 # the puts turned RangeSlv only, and the slide came from showing each mode. Nothing reads it.
 USER_PLANE_MATE_ON_SLIDER_FOLLOWS = True
+#
+# Route (c1)'s branches S0 did not measure (W9a package A's review, point 4; the coordinating session's ruling 4,
+# 2026-11-16). S0 put a user component with its gear on RangeBox's one train, which has a carrier, every app lock,
+# gear mate and coupling on there suppressed around the put (USER_MATE_PUT_ROUTE above). Update also puts gears by
+# other sequences, and each is gated by its own finding here, None (not measured) on both versions, so a user
+# component locked to such a gear refuses before any write until a run reads the branch clean and sets it True:
+# - NO_CARRIER: a train with no carrier, put with its gear mates left on (swbuild._put_train), the commonest case
+#   (a plain parallel gearbox); W9a's demonstration is to measure it.
+# - HELD_GEAR: a held gear of a train, re-placed first by REPLACE_FIXED_ROUTE (swbuild._put_train).
+# - FIXED_GEAR: a fixed gear re-placed W4's way, unfixed, put and fixed again with the user's lock on
+#   (swbuild._motion_assembly, swbuild._modes_put).
+# - SUBASSEMBLY: a user sub-assembly put as one top-level component (Transform2 on an assembly component).
+# Nothing measured them; no probe or run is cited.
+USER_MATE_PUT_NO_CARRIER_ON_2026 = None
+USER_MATE_PUT_NO_CARRIER_ON_2024 = None
+USER_MATE_PUT_HELD_GEAR_ON_2026 = None
+USER_MATE_PUT_HELD_GEAR_ON_2024 = None
+USER_MATE_PUT_FIXED_GEAR_ON_2026 = None
+USER_MATE_PUT_FIXED_GEAR_ON_2024 = None
+USER_MATE_PUT_SUBASSEMBLY_ON_2026 = None
+USER_MATE_PUT_SUBASSEMBLY_ON_2024 = None

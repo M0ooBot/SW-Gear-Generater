@@ -1856,3 +1856,13 @@ def test_s0_d_a_users_plane_mate_on_the_sliding_rangeslv_followed_it_in_every_mo
         assert old[at - 2].startswith(f"ok      S0 D the put back to the built frames in {mode}: Sprocket-2 stays on "
                                       "RangeSlv's Front plane, z less RangeSlv's +0.000000000")
     assert findings.USER_PLANE_MATE_ON_SLIDER_FOLLOWS is True
+
+
+def test_route_c1s_branches_s0_did_not_measure_are_not_measured_on_either_version():
+    """Ruling 4 after W9a package A's review: each branch of route (c1) S0 did not read — a train with no carrier,
+    a held gear, a fixed gear re-placed W4's way, a user sub-assembly — is its own finding, None (not measured) on
+    2026 and 2024, until a run reads it clean (swbuild.user_branch_settled refuses it meanwhile)."""
+    for branch in ("NO_CARRIER", "HELD_GEAR", "FIXED_GEAR", "SUBASSEMBLY"):
+        for year in (2026, 2024):
+            name = f"USER_MATE_PUT_{branch}_ON_{year}"
+            assert hasattr(findings, name) and getattr(findings, name) is None, name
