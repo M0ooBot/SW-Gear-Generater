@@ -34,10 +34,14 @@ Sections (each runs alone; ``update`` copies ``fixed.master``, which ``build`` k
               and speeds, the unbanded sleeve built as before W9b (sidecar schema 1, no Relief), RangeSlv still
               Output's anchor; per mode as ``build``, without bands.
 
-**The volumes (M7).** The unbanded sleeve is one section along its face, F0 = V / 26; a band keeps it and the relief
+**The volumes (M7).** The unbanded sleeve is one section along its face, F0 (its front end face's area, else
+V / 26); a band keeps it and the relief
 leaves the ring π(Ro² − r²) between the bore and the outside, Ro and r read from the part's cylinders. So V(banded) =
-F0 × (b1 + b2) + π(Ro² − r²) × (26 − b1 − b2), for 5/5 and for 4/5, to 1e-4 of the volume (the first 2026 run read
-3.8e-5 and 3.5e-5). The area one more mm of relief removes (a difference of two volumes) is a fact, held to the hard
+F0 × (b1 + b2) + π(Ro² − r²) × (26 − b1 − b2), for 5/5 and for 4/5: a coarse guard against a gross fault, its
+allowance from the control in the same session (the unbanded sleeve's own V/26 against its end face's section, factor
+1.0, floor 1e-4, cap 5e-4: a control over the cap fails, and with no end face read the floor alone applies). The
+step faces' planes are read whole (every planar face in them) and their loops' edges integrated beside GetArea. The
+area one more mm of relief removes (a difference of two volumes) is a fact, held to the hard
 bounds π(R² − r_root²) and π(R² − r_tip²). The bore is found by its surface (one cylinder, r 12.5), its ends by the
 planes of the two step faces (``PlaneParams``), never by ``GetBox``, which SolidWorks pads. A slide's value is read
 without a sign: its size against the record's, its side by RangeSlv's own frame.
@@ -77,10 +81,13 @@ HUB = (-55.5, -35.5)
 HUB_TO_HIGHDOG = 1.0
 RELIEF_D, RELIEF_LEN, PLANES = 25.0, 16.0, (5.0, 21.0)
 SPAN_TOL = 1e-4            # mm: a span measured from a frame and a part's globals against §3 or the app's own
-# relative, of the part's volume: SolidWorks' mass-property volume against the exact form below. The first 2026 run
-# (w9b-demo-20261117-045137.json) read residuals of 3.8e-5 (5/5) and 3.5e-5 (4/5) of the volume; 1e-4 holds them with
-# room and is far below what a wrong relief would move (one mm of it is 114.6 mm³, 1.2e-2 of the part).
-VOLUME_TOL = 1e-4
+# relative, of the part's volume: SolidWorks' mass-property volume against the exact form below, a coarse guard
+# against a gross fault (a relief not cut, a wrong diameter or span: Ø 0.1 mm off is 6.5e-3). Its allowance comes from
+# the control in the same session, the unbanded sleeve's own residual against its end face's section (W9B-REVIEW,
+# addendum for 2024): factor 1.0, floor 1e-4, cap 5e-4. On 2026 the control read 1.1e-4 and the banded parts 9.0e-5;
+# on 2024 2.2e-4 and 1.3e-4 (2024's volumes run high by a constant per body; its faces read as 2026's).
+VOLUME_FACTOR, VOLUME_FLOOR, VOLUME_CAP = 1.0, 1e-4, 5e-4
+STEP_TOL = 1e-4            # relative: a step face's area by another route that lands on the geometry's figure
 BORE_TOL = 1e-6            # mm: the relief bore's radius and its ends against the planes
 # relative: two GetArea readings of faces of one section. The final 2026 run (w9b-demo-20261117-051122.json) read the
 # sleeve's two end faces 440.547728 and 440.515604 mm², 7.3e-5 apart, and the front one within 5e-7 of the section the
@@ -243,6 +250,97 @@ def step_area(f0, outer, bore):
     return f0 - math.pi * (outer * outer - bore * bore)
 
 
+def volume_guard(rows, v0, length, f0, from_face, outer, bore):
+    """The coarse volume guard, its allowance taken from the control in the same session (W9B-REVIEW, addendum for
+    2024): the unbanded sleeve's own residual, |V0/face − F0| / F0, against its end face's section F0. The allowance
+    is max(VOLUME_FLOOR, VOLUME_FACTOR × that); a control above VOLUME_CAP means the session's mass properties are
+    not fit to judge by, and the guard fails. Where F0 is V0/face itself (no end face read) there is no control and
+    the floor alone applies. ``rows``: (label, volume, (start band, end band)). The guard is for gross faults: each
+    row also carries what a relief Ø 0.1 mm off would move it by. Returns the control, the allowance, whether the
+    control is fit, and each row's expected volume, residual, room left and verdict."""
+    control = abs(v0 / length - f0) / f0 if from_face else None
+    allowance = VOLUME_FLOOR if control is None else max(VOLUME_FLOOR, VOLUME_FACTOR * control)
+    fit = control is None or control <= VOLUME_CAP
+    out = {"control": control, "allowance": allowance, "fit": fit, "rows": {}}
+    for label, volume, bands in rows:
+        want = banded_volume(f0, length, bands, outer, bore)
+        res = abs(volume - want) / volume
+        gross = abs(banded_volume(f0, length, bands, outer, bore + 0.05) - want) / volume
+        out["rows"][label] = {"volume": volume, "want": want, "residual": res, "room": 1 - res / allowance,
+                              "gross": gross, "ok": fit and res <= allowance}
+    return out
+
+
+def volume_guard_lines(g, length, f0, how):
+    """``volume_guard``'s answer as the log says it: ``[(is a check, holds, sentence)]``: the control first, then
+    each row."""
+    if g["control"] is None:
+        lines = [(False, True, f"the volume guard has no control: F0 {f0:.6f} mm² is {how}, so the floor "
+                               f"{VOLUME_FLOOR:g} alone is the allowance")]
+    else:
+        over = "" if g["fit"] else ": over it, so this session's mass properties are not fit to judge by"
+        lines = [(True, g["fit"], f"the volume guard's control, the unbanded sleeve in this session: V/{length:g} "
+                                  f"against its end face's section F0 {f0:.6f} mm² reads {g['control']:.1e} (cap "
+                                  f"{VOLUME_CAP:g}{over}"
+                                  f"); the allowance is max({VOLUME_FLOOR:g}, {VOLUME_FACTOR:g} × {g['control']:.1e}) "
+                                  f"= {g['allowance']:.1e}")]
+    for label, r in g["rows"].items():
+        lines.append((g["fit"], r["ok"], f"the banded part's volume ({label}), a coarse guard: {r['volume']:.6f} against "
+                                         f"{r['want']:.6f} mm³ (F0 over the bands, the ring π(Ro² − r²) over the relief)"
+                                         f", residual {r['residual']:.1e} against the allowance {g['allowance']:.1e}, "
+                                         f"{r['room']:.0%} of it left; the guard is for gross faults: a relief Ø 0.1 mm "
+                                         f"off moves it {r['gross']:.1e}"))
+    return lines
+
+
+def faces_in_planes(faces, zs, tol=BORE_TOL):
+    """Every planar face whose plane (by ``PlaneParams``: its normal along z, its z) is one of ``zs``: per plane, the
+    count, each area and their sum (None where an area did not read)."""
+    out = {}
+    for z in zs:
+        at = [f for f in faces if f["kind"] == "plane" and f.get("z") is not None and f.get("normal") is not None
+              and abs(abs(f["normal"][2]) - 1.0) <= 1e-9 and abs(f["z"] - z) <= tol]
+        areas = [f.get("area") for f in at]
+        out[z] = {"count": len(at), "areas": areas,
+                  "sum": round(sum(areas), 9) if at and None not in areas else None}
+    return out
+
+
+def chain_area(edges, tol=1e-6):
+    """A closed loop's area from its edges, each a list of (x, y) points along it (mm) in either direction and in any
+    order: chained end to start by the nearest free end, then the shoelace. Returns ``(area, largest gap where
+    two edges meet)``; the area is unsigned."""
+    left = [list(e) for e in edges if len(e) >= 2]
+    if not left:
+        return 0.0, None
+    path, worst = list(left.pop(0)), 0.0
+    while left:
+        end = path[-1]
+        best = min(range(len(left)), key=lambda i: min(math.dist(end, left[i][0]), math.dist(end, left[i][-1])))
+        e = left.pop(best)
+        if math.dist(end, e[-1]) < math.dist(end, e[0]):
+            e.reverse()
+        worst = max(worst, math.dist(end, e[0]))
+        path.extend(e[1:])
+    worst = max(worst, math.dist(path[-1], path[0]))
+    area = 0.5 * sum(x0 * y1 - x1 * y0 for (x0, y0), (x1, y1) in zip(path, path[1:] + path[:1]))
+    return abs(area), worst
+
+
+def face_area_from_loops(loops):
+    """A planar face's area from its loops, each ``{"outer": bool or None, "edges": [[(x, y), ...], ...]}``: the
+    outer loop's area less each other loop's. Where no loop says it is outer, the largest is taken as it. Returns
+    the area, each loop's area and the largest gap in any loop."""
+    areas = [chain_area(lp["edges"]) for lp in loops]
+    if not areas:
+        return None, [], None
+    outer = next((i for i, lp in enumerate(loops) if lp.get("outer")), None)
+    if outer is None:
+        outer = max(range(len(areas)), key=lambda i: areas[i][0])
+    total = areas[outer][0] - sum(a for i, (a, _) in enumerate(areas) if i != outer)
+    return total, [a for a, _ in areas], max((g for _, g in areas if g is not None), default=None)
+
+
 def slide_agrees(value, recorded, origin_z, tol=TOL):
     """A slide read back: SolidWorks gives a distance mate's dimension without a sign, and the record holds the signed
     z_front (the plan sets |z_front| and the mate's Flip carries the side: ``swbuild.ModeStep.values``). So its size
@@ -309,14 +407,15 @@ def replay_first_run(ok):
     outer, bore = outer_radius(faces, 26.0), RELIEF_D / 2
     v0, v1, v2 = part["unbanded"]["volume"], part["banded"]["volume"], part["band_changed"]["volume"]
     f0, how = section_of(v0, 26.0, {})
-    for label, volume, bands in (("5/5", v1, (5.0, 5.0)), ("4/5", v2, (4.0, 5.0))):
-        want = banded_volume(f0, 26.0, bands, outer, bore)
-        ok(abs(volume - want) <= VOLUME_TOL * volume,
-           f"replay volume {label}: {volume:.6f} against {want:.6f} (F0 {f0:.6f} from {how}, Ro {outer}), "
-           f"{abs(volume - want) / volume:.1e} of it")
+    g = volume_guard((("5/5", v1, (5.0, 5.0)), ("4/5", v2, (4.0, 5.0))), v0, 26.0, f0, False, outer, bore)
+    for is_check, holds, text in volume_guard_lines(g, 26.0, f0, how):
+        if is_check:
+            ok(holds, f"replay first: {text}")
+        else:
+            print(f"fact    replay first: {text}")
     wrong = banded_volume(f0, 26.0, (5.0, 5.0), outer, bore + 0.25)
-    ok(abs(v1 - wrong) > VOLUME_TOL * v1, f"replay volume: a relief 0.5 mm wider would fail by "
-                                          f"{abs(v1 - wrong) / v1:.1e} of the volume ({VOLUME_TOL:g} allowed)")
+    ok(abs(v1 - wrong) > VOLUME_CAP * v1, f"replay volume: a relief 0.5 mm wider would fail by "
+                                          f"{abs(v1 - wrong) / v1:.1e} of the volume, past even the cap {VOLUME_CAP:g}")
     pattern = re.compile(r"^FAIL    (build|update|old), ([HNL]) shown: .*RangeSlv along Output (-?[\d.]+) mm as on record "
                          r"\((-?[\d.]+)\)")
     origin = re.compile(r"^fact    (build|update|old), ([HNL]): measured bands \{'(?:start|whole)': \((-?[\d.]+),")
@@ -336,41 +435,97 @@ def replay_first_run(ok):
 
 
 FINAL_RUN = "probe/results/w9b-demo-20261117-051122.json"
+FINAL_LOG = "probe/results/w9b-demo-sw2026-20261117-2.log"
+RUN_2024 = "probe/results/sw2024/w9b-demo-20261117-063302.json"
+F0_IN_LOG = re.compile(r"F0 two ways: .*\(IFace2\.GetArea\) ([\d.]+) mm²")
+
+
+def replay_guard(ok, label, part, f0, how, from_face):
+    """The volume guard and the step faces replayed on one run's readings: the guard from the control in the same
+    run (``volume_guard``), and every planar face lying in the step planes, summed (``faces_in_planes``), against
+    F0 − π(Ro² − r²). Returns the guard."""
+    v0, v1, v2 = part["unbanded"]["volume"], part["banded"]["volume"], part["band_changed"]["volume"]
+    outer = outer_radius(part["banded"]["faces"], 26.0)
+    g = volume_guard((("5/5", v1, (5.0, 5.0)), ("4/5", v2, (4.0, 5.0))), v0, 26.0, f0, from_face, outer,
+                     RELIEF_D / 2)
+    for is_check, holds, text in volume_guard_lines(g, 26.0, f0, how):
+        if is_check:
+            ok(holds, f"replay {label}: {text}")
+        else:
+            print(f"fact    replay {label}: {text}")
+    old = [k for k, r in g["rows"].items() if r["residual"] > VOLUME_FLOOR]
+    print(f"fact    replay {label}: against the fixed 1e-4 the guard had before, {old or 'no row'} would fail")
+    want = step_area(f0, outer, RELIEF_D / 2)
+    for key, zs in (("banded", PLANES), ("band_changed", (float(BAND_EDIT), PLANES[1]))):
+        planes = faces_in_planes(part[key]["faces"], zs)
+        sums = {z: p["sum"] for z, p in planes.items()}
+        print(f"fact    replay {label} {key}: every planar face in the step planes z {zs} (PlaneParams): "
+              f"{ {z: (p['count'], p['areas']) for z, p in planes.items()} }; the cap is "
+              f"{'one face' if all(p['count'] == 1 for p in planes.values()) else 'several faces'} at each; summed "
+              f"against F0 − π(Ro² − r²) = {want:.6f}: "
+              f"{ {z: f'{(v - want) / want:+.1e}' if v else None for z, v in sums.items()} }")
+    return g
 
 
 def replay_final_run(ok):
-    """The closing review's three points replayed on the final 2026 run's readings (its faces carry PlaneParams and
-    GetArea): the section from the front end face, the volumes as a coarse guard against it, the step faces."""
+    """The closing review's points replayed on the final 2026 run's readings (its faces carry PlaneParams and GetArea):
+    the section from the front end face, the volumes under the guard from the same run's control, the step faces.
+    That run's JSON predates the section-level end-face reads, so F0 is the front end face's area as its log gives it
+    (``F0 two ways``), as the review's addendum says to take it."""
     import json
-    path = os.path.join(REPO, FINAL_RUN)
-    if not os.path.isfile(path):
-        print(f"skip    the final run's readings are not here: {FINAL_RUN}")
+    path, log = os.path.join(REPO, FINAL_RUN), os.path.join(REPO, FINAL_LOG)
+    if not (os.path.isfile(path) and os.path.isfile(log)):
+        print(f"skip    the final run's readings are not here: {FINAL_RUN}, {FINAL_LOG}")
         return
     part = json.load(open(path, encoding="utf-8"))["sections"]["part"]
-    v0, v1, v2 = part["unbanded"]["volume"], part["banded"]["volume"], part["band_changed"]["volume"]
+    logged = [float(m.group(1)) for m in map(F0_IN_LOG.search, open(log, encoding="utf-8")) if m]
+    ok(len(logged) == 1, f"replay final: the run's log gives the front end face's area once: {logged}")
+    if not logged:
+        return
+    f0, how = logged[0], f"the front end face's area as the 2026 log gives it ({FINAL_LOG}, 'F0 two ways')"
+    v0 = part["unbanded"]["volume"]
     areas = end_areas(part["unbanded"]["faces"], 26.0)
-    f0, how = section_of(v0, 26.0, areas)
-    ok(how.startswith("the front end face") and abs(f0 - 440.54751) <= AREA_TOL * f0,
-       f"replay final: F0 from {how} {f0:.6f} mm² (the review's worked section 440.54751); the back face {areas.get(26.0)}, "
-       f"V/26 {v0 / 26:.6f} ({(v0 / 26 - f0) / f0:+.1e} of it)")
+    ok(abs(f0 - 440.54751) <= AREA_TOL * f0 and abs(f0 - areas.get(0.0, 0.0)) <= 1e-6 * f0,
+       f"replay final: F0 {f0:.6f} mm² from the log (the review's worked section 440.54751; the JSON's front face "
+       f"{areas.get(0.0)}); the back face {areas.get(26.0)}, V/26 {v0 / 26:.6f} ({(v0 / 26 - f0) / f0:+.1e} of it)")
     ok(len(areas) == 2 and abs(areas[0.0] - areas[26.0]) <= AREA_TOL * f0,
        f"replay final: the two end faces of one section agree to {AREA_TOL:g}: {areas}")
-    faces = part["banded"]["faces"]
-    outer = outer_radius(faces, 26.0)
     for key, z_lo in (("banded", PLANES[0]), ("band_changed", float(BAND_EDIT))):
         found, held = relief_bore(part[key]["faces"], z_lo, PLANES[1], RELIEF_D / 2)
         ok(held, f"replay final {key}: the bore and its ends, read with PlaneParams: {found}")
-    for label, volume, bands in (("5/5", v1, (5.0, 5.0)), ("4/5", v2, (4.0, 5.0))):
-        want = banded_volume(f0, 26.0, bands, outer, RELIEF_D / 2)
-        res = abs(volume - want) / volume
-        ok(res <= VOLUME_TOL, f"replay final volume {label} against the face's section: {volume:.6f} against "
-                              f"{want:.6f}, {res:.1e} of it ({VOLUME_TOL:g} allowed, {1 - res / VOLUME_TOL:.0%} left)")
-    found, _ = relief_bore(faces, PLANES[0], PLANES[1], RELIEF_D / 2)
-    steps, want = found.get("step_areas") or [], step_area(f0, outer, RELIEF_D / 2)
-    ok(len(steps) == 2 and abs(steps[0] - steps[1]) <= AREA_TOL * want,
+    g = replay_guard(ok, "final 2026", part, f0, how, True)
+    rows = g["rows"]
+    ok(abs(g["control"] - 1.1e-4) < 0.05e-4 and abs(rows["5/5"]["residual"] - 9.0e-5) < 0.05e-5,
+       f"replay final 2026: the review's figures, control 1.1e-4 and 5/5 9.0e-5: {g['control']:.2e}, "
+       f"{rows['5/5']['residual']:.2e}")
+    found, _ = relief_bore(part["banded"]["faces"], PLANES[0], PLANES[1], RELIEF_D / 2)
+    steps = found.get("step_areas") or []
+    ok(len(steps) == 2 and abs(steps[0] - steps[1]) <= AREA_TOL * steps[0],
        f"replay final: the relief's two step faces read one area to {AREA_TOL:g}: {steps}")
-    print(f"fact    replay final: the step faces {steps} against F0 − π(Ro² − r²) = {want:.6f} mm²: "
-          f"{[f'{(a - want) / want:+.1e}' for a in steps]} (not judged: see the note)")
+
+
+def replay_2024(ok):
+    """W9b's 2024 run (9e77303): its two volume FAILs under the fixed 1e-4, replayed under the guard from the same
+    session's control; F0 its front end face's area from the JSON."""
+    import json
+    path = os.path.join(REPO, RUN_2024)
+    if not os.path.isfile(path):
+        print(f"skip    the 2024 run's readings are not here: {RUN_2024}")
+        return
+    part = json.load(open(path, encoding="utf-8"))["sections"]["part"]
+    v0 = part["unbanded"]["volume"]
+    areas = end_areas(part["unbanded"]["faces"], 26.0)
+    f0, how = section_of(v0, 26.0, areas)
+    ok(how.startswith("the front end face") and abs(f0 - 440.54751) <= AREA_TOL * f0,
+       f"replay 2024: F0 from {how} {f0:.6f} mm² (2026's 440.547728; the review's worked section 440.54751)")
+    for key, z_lo in (("banded", PLANES[0]), ("band_changed", float(BAND_EDIT))):
+        found, held = relief_bore(part[key]["faces"], z_lo, PLANES[1], RELIEF_D / 2)
+        ok(held, f"replay 2024 {key}: the bore and its ends, read with PlaneParams: {found}")
+    g = replay_guard(ok, "2024", part, f0, how, True)
+    rows = g["rows"]
+    ok(abs(g["control"] - 2.2e-4) < 0.05e-4 and abs(rows["5/5"]["residual"] - 1.3e-4) < 0.05e-4,
+       f"replay 2024: the review's figures, control 2.2e-4 and 5/5 1.3e-4: {g['control']:.2e}, "
+       f"{rows['5/5']['residual']:.2e}")
 
 
 def self_check():
@@ -442,8 +597,29 @@ def self_check():
        f"RangeBox: seven warnings, three of them W9b's: {[m[:60] for m in w9b_check_warnings(o)]}")
     speeds = {k: round(float(v), 3) for k, v in o.report.motion.speeds.items()}
     ok(speeds.get("Carrier") == 517.857 and speeds.get("Planet") == -1673.077, f"RangeBox's speeds: {speeds}")
+    # the guard's three branches on made-up readings: a fit control, one over the cap, and no control
+    g = volume_guard((("5/5", 1000.0 * (1 + 2e-4), (5.0, 5.0)),), 26.0 * 10.0 * (1 + 3e-4), 26.0, 10.0, True, 0.0, 0.0)
+    ok(g["fit"] and abs(g["allowance"] - 3e-4) < 1e-9, f"guard: a control of 3e-4 allows 3e-4: {g['allowance']:.2e}")
+    g = volume_guard((), 26.0 * 10.0 * (1 + 6e-4), 26.0, 10.0, True, 0.0, 0.0)
+    ok(not g["fit"] and not volume_guard_lines(g, 26.0, 10.0, "x")[0][1], "guard: a control over the cap fails")
+    g = volume_guard((), 260.0, 26.0, 10.0, False, 0.0, 0.0)
+    ok(g["control"] is None and g["allowance"] == VOLUME_FLOOR and not volume_guard_lines(g, 26.0, 10.0, "x")[0][0],
+       "guard: no end face, no control: the floor alone, said as a fact")
+    g = volume_guard((), 26.0 * 10.0 * (1 + 2e-5), 26.0, 10.0, True, 0.0, 0.0)
+    ok(g["allowance"] == VOLUME_FLOOR, "guard: a control under the floor allows the floor")
+    # the loop integration: a 10 × 10 square less a 4 × 4 hole, its edges in any order and direction, and a circle of
+    # r 12.5 in four arcs of 400 points each (the chord error is far under the 1e-4 the check would use)
+    square = [[(0, 0), (10, 0)], [(10, 10), (10, 0)], [(0, 10), (10, 10)], [(0, 0), (0, 10)]]
+    hole = [[(3, 3), (3, 7)], [(7, 7), (7, 3)], [(3, 7), (7, 7)], [(3, 3), (7, 3)]]
+    area, each, worst = face_area_from_loops([{"outer": None, "edges": hole}, {"outer": None, "edges": square}])
+    ok(abs(area - 84.0) < 1e-12 and worst < 1e-12, f"loops: a square less a hole, edges shuffled: {area}, {each}")
+    arcs = [[(12.5 * math.cos(t), 12.5 * math.sin(t)) for t in
+             (math.pi / 2 * (q + i / 399) for i in range(400))] for q in range(4)]
+    area, _, _ = face_area_from_loops([{"outer": True, "edges": arcs[::-1]}])
+    ok(abs(area - math.pi * 12.5 ** 2) / (math.pi * 12.5 ** 2) < 1e-5, f"loops: a circle in four arcs: {area:.6f}")
     replay_first_run(ok)
     replay_final_run(ok)
+    replay_2024(ok)
     print(f"done    {len(bad)} failed")
     return 0 if not bad else 1
 
@@ -518,7 +694,159 @@ def part_faces(s):
     return out
 
 
-def part_read(label, path, relief):
+STEP_CALLS = ("IFace2.GetLoops, ILoop2.IsOuter, ILoop2.GetEdges (no entry in the macro database for any of them); "
+              "IEdge.GetCurve, IEdge.GetCurveParams2, ICurve.Identity, ICurve.GetTessPts and ICurve.Evaluate2 "
+              "(verified on 2026 for other parts, Airfoil Converter; never on 2024); ICurve.IsCircle and "
+              "ICurve.CircleParams (no entry)")
+
+
+def step_faces(s, zs, chord=1e-8, length=1e-10, samples=200):
+    """NEW (``STEP_CALLS``): every planar face of the active part lying in one of the planes ``zs`` (by
+    ``PlaneParams``: its normal along z, its z, mm), with ``GetArea``; and of each such face, its loops (``IsOuter``),
+    each loop's edges (the curve's ``Identity``, a circle's radius from ``CircleParams``, the ends from
+    ``GetCurveParams2``, mm) and the points along each (``GetTessPts`` at a ``chord`` m chord tolerance, else
+    ``Evaluate2`` at ``samples`` parameters), from which the face's area is integrated (``face_area_from_loops``).
+    Every call is guarded: what will not read is said in its place, never fatal."""
+    from win32com.client import VARIANT
+    import pythoncom
+
+    def got(obj, name, *args):
+        value = call(obj, name, *args)
+        return swcom._guarded(name, value) if type(value).__name__ == "method" else value  # noqa: SLF001
+
+    def guarded(fn, default=None):
+        try:
+            return fn(), None
+        except Exception as exc:  # noqa: BLE001
+            return default, f"{type(exc).__name__}: {exc}"
+
+    out = []
+    for body in list(got(s._doc(), "GetBodies2", 0, True) or []):  # noqa: SLF001
+        for face in list(got(body, "GetFaces") or []):
+            surface = got(face, "GetSurface")
+            if not got(surface, "IsPlane"):
+                continue
+            p = [float(v) for v in got(surface, "PlaneParams")]
+            z = p[5] * 1000.0
+            if abs(abs(p[2]) - 1.0) > 1e-9 or not any(abs(z - w) <= BORE_TOL for w in zs):
+                continue
+            area, area_error = guarded(lambda: round(float(got(face, "GetArea")) * 1e6, 9))
+            record = {"z": round(z, 9), "area": area, "area_error": area_error, "loops": []}
+            loops, error = guarded(lambda: list(got(face, "GetLoops") or []), [])
+            if error:
+                record["loops_error"] = error
+            shapes = []
+            for loop in loops:
+                outer, outer_error = guarded(lambda: bool(got(loop, "IsOuter")))
+                edges, edges_error = guarded(lambda: list(got(loop, "GetEdges") or []), [])
+                lp = {"outer": outer, "outer_error": outer_error, "edges_error": edges_error, "edges": []}
+                points = []
+                for edge in edges:
+                    e = {}
+                    curve, e["curve_error"] = guarded(lambda: got(edge, "GetCurve"))
+                    params, e["params_error"] = guarded(lambda: [float(v) for v in got(edge, "GetCurveParams2")])
+                    if curve is None or params is None:
+                        lp["edges"].append(e)
+                        continue
+                    e["kind"], _ = guarded(lambda: int(got(curve, "Identity")))
+                    circle, _ = guarded(lambda: bool(got(curve, "IsCircle")))
+                    if circle:
+                        e["radius"], _ = guarded(lambda: round(float(list(got(curve, "CircleParams"))[6]) * 1000.0, 9))
+                    e["ends"] = [[round(v * 1000.0, 9) for v in params[0:3]], [round(v * 1000.0, 9) for v in params[3:6]]]
+
+                    def tess():
+                        start = VARIANT(pythoncom.VT_ARRAY | pythoncom.VT_R8, params[0:3])
+                        end = VARIANT(pythoncom.VT_ARRAY | pythoncom.VT_R8, params[3:6])
+                        flat = [float(v) for v in got(curve, "GetTessPts", chord, length, start, end)]
+                        return [(flat[i] * 1000.0, flat[i + 1] * 1000.0, flat[i + 2] * 1000.0)
+                                for i in range(0, len(flat) - 2, 3)]
+
+                    def evaluated():
+                        t0, t1 = params[6], params[7]
+                        return [tuple(float(v) * 1000.0 for v in list(got(curve, "Evaluate2", t0 + (t1 - t0) * i
+                                                                           / (samples - 1), 0))[0:3])
+                                for i in range(samples)]
+                    pts, e["tess_error"] = guarded(tess)
+                    e["points_by"] = "GetTessPts"
+                    if not pts or len(pts) < 2:
+                        pts, e["evaluate_error"] = guarded(evaluated)
+                        e["points_by"] = "Evaluate2"
+                    if pts:
+                        e["points"] = len(pts)
+                        e["off_plane"] = round(max(abs(q[2] - z) for q in pts), 9)
+                        points.append([(q[0], q[1]) for q in pts])
+                    lp["edges"].append(e)
+                lp["edge_count"] = len(edges)
+                record["loops"].append(lp)
+                shapes.append({"outer": outer, "edges": points})
+            integrated, each, gap_ = face_area_from_loops(shapes) if shapes else (None, [], None)
+            record.update(integrated=None if integrated is None else round(integrated, 9),
+                          loop_areas=[round(a, 9) for a in each], largest_gap=gap_)
+            out.append(record)
+    return out
+
+
+def step_summary(record):
+    """One step face's loops as the log says them: per loop, outer or not, its edge count, its curve kinds counted,
+    the circles' radii, how its points were read and anything that did not read."""
+    loops = []
+    for lp in record["loops"]:
+        kinds, radii, by, errors = {}, set(), set(), set()
+        for e in lp["edges"]:
+            kinds[e.get("kind")] = kinds.get(e.get("kind"), 0) + 1
+            if e.get("radius") is not None:
+                radii.add(e["radius"])
+            by.add(e.get("points_by"))
+            errors.update(v for k, v in e.items() if k.endswith("_error") and v)
+        loops.append({"outer": lp["outer"], "edges": lp.get("edge_count"), "kinds": kinds, "radii": sorted(radii),
+                      "points_by": sorted(str(b) for b in by), "errors": sorted(errors) or None})
+    return loops
+
+
+def step_report(out, records, want):
+    """The step faces settled by one more read (W9B-REVIEW, addendum: 2.2e-3 under F0 − π(Ro² − r²) on both
+    versions): per step plane, every planar face lying in it, its count, each area and the sum; the cap one face or
+    several; the sum against the geometry; each face's area integrated from its loops' edges against GetArea and
+    against the geometry. Facts, unless the summed or the integrated area lands on the geometry's figure to STEP_TOL:
+    then that is the check, and GetArea's reading stays a fact."""
+    if not isinstance(records, list):
+        say(f"fact    part: the step faces' loops were not read: {records}")
+        return
+    out["step_faces"] = records
+    planes = {}
+    for r in records:
+        planes.setdefault(r["z"], []).append(r)
+    landed = []
+    for z, faces in sorted(planes.items()):
+        areas = [f["area"] for f in faces]
+        total = sum(areas) if None not in areas else None
+        off = "" if total is None else f" ({(total - want) / want:+.1e})"
+        say(f"fact    part: step plane z {z}: {len(faces)} planar face(s) lie in it (PlaneParams), the cap is "
+            f"{'one face' if len(faces) == 1 else 'several faces'}; GetArea {areas}, summed {total} against F0 − "
+            f"π(Ro² − r²) = {want:.6f} mm²{off}")
+        if total is not None and len(faces) > 1 and abs(total - want) <= STEP_TOL * want:
+            landed.append(f"z {z}: {len(faces)} faces summed {total:.6f}")
+        integrated = [f.get("integrated") for f in faces]
+        for f in faces:
+            i, a = f.get("integrated"), f.get("area")
+            by_area = "" if i is None or a is None else f" against GetArea {a} ({(a - i) / i:+.1e})"
+            by_geometry = "" if i is None else f", against the geometry {(i - want) / want:+.1e}"
+            say(f"fact    part: step face at z {f['z']}: loops {step_summary(f)}; largest gap where edges meet "
+                f"{f.get('largest_gap')} mm; loop areas {f.get('loop_areas')}; integrated from its edges {i} mm²"
+                f"{by_area}{by_geometry}")
+        if None not in integrated and integrated:
+            whole = sum(integrated)
+            if abs(whole - want) <= STEP_TOL * want:
+                landed.append(f"z {z}: integrated from the edges {whole:.6f}")
+    if landed:
+        check(True, f"part: the step faces land on F0 − π(Ro² − r²) = {want:.6f} mm² to {STEP_TOL:g} by {landed} "
+                    "(GetArea's own reading kept as a fact above)")
+    else:
+        say(f"fact    part: neither the summed nor the integrated step area lands on F0 − π(Ro² − r²) to {STEP_TOL:g}; "
+            "both said above, not judged")
+
+
+def part_read(label, path, relief, steps=()):
     """The part read back: its globals, its equations' text, every feature's error code, its volume, its faces; with
     the relief, the dimensions on its planes and sketches (mm)."""
     def work(s):
@@ -537,6 +865,11 @@ def part_read(label, path, relief):
                 out["relief_subfeatures"] = subs
             except Exception as exc:  # noqa: BLE001 - said as a fact, not judged
                 out["relief_subfeatures"] = f"unread: {type(exc).__name__}: {exc}"
+        if steps:
+            try:
+                out["steps"] = step_faces(s, steps)
+            except Exception as exc:  # noqa: BLE001 - the step faces' read is a fact; it never fails the part
+                out["steps"] = f"unread: {type(exc).__name__}: {exc}"
         return out
     got = run(f"{label}: read", job(path, work), 300)
     bad = [(n, c) for n, c in got["features"] if c]
@@ -609,7 +942,9 @@ def _section_part(out):
 
     folder = os.path.join(root, "banded")
     path, kind, derived = build_part("part banded", folder, banded)
-    got = out["banded"] = part_read("part banded", path, True)
+    say(f"NEW     the step faces' loops and edges read and their area integrated: {STEP_CALLS}")
+    got = out["banded"] = part_read("part banded", path, True, steps=(EZ * PLANES[0], EZ * PLANES[1]))
+    banded_steps = got.get("steps")
     g, eq, dims = got["globals"], got["equations"], got["dims"]
     check(abs(g.get(clutch.START_BAND, -1) - 5) < 1e-9 and abs(g.get(clutch.END_BAND, -1) - 5) < 1e-9
           and abs(g.get(clutch.RELIEF_DIAMETER, -1) - RELIEF_D) < 1e-9,
@@ -693,24 +1028,22 @@ def _section_part(out):
         check(False, f"part: the outer radius ({outer}) and the bore's ({bore}) were not both read from the faces, so "
                      "the volumes cannot be judged")
     else:
-        for label, volume, bands in (("5/5", v1, (5.0, 5.0)), (f"{BAND_EDIT}/5", v2, (float(BAND_EDIT), 5.0))):
-            want = banded_volume(f0, length, bands, outer, bore)
-            res = abs(volume - want) / volume
-            out["volumes"][f"expected_{label}"] = want
-            check(res <= VOLUME_TOL,
-                  f"part: the banded part's volume ({label}), a coarse guard: the section F0 {f0:.6f} mm² over the bands "
-                  f"and the ring π(Ro² − r²), Ro {outer} and r {bore} from the faces, over the relief: {volume:.6f} "
-                  f"against {want:.6f} mm³, {res:.1e} of it ({VOLUME_TOL:g} allowed, {1 - res / VOLUME_TOL:.0%} of that "
-                  f"left; SolidWorks' volume runs high of the face's section, as V/{length:g} does)")
+        g = volume_guard((("5/5", v1, (5.0, 5.0)), (f"{BAND_EDIT}/5", v2, (float(BAND_EDIT), 5.0))), v0, length, f0,
+                         how.startswith("the front end face"), outer, bore)
+        out["volumes"]["guard"] = {k: v for k, v in g.items() if k != "rows"}
+        for label, r in g["rows"].items():
+            out["volumes"][f"expected_{label}"] = r["want"]
+            out["volumes"][f"residual_{label}"] = r["residual"]
+        for is_check, holds, text in volume_guard_lines(g, length, f0, how):
+            if is_check:
+                check(holds, f"part: {text}")
+            else:
+                say(f"fact    part: {text}")
         steps, want = face.get("step_areas") or [], step_area(f0, outer, bore)
         out["volumes"]["step_areas"], out["volumes"]["step_expected"] = steps, want
         check(len(steps) == 2 and None not in steps and abs(steps[0] - steps[1]) <= AREA_TOL * want,
               f"part: the relief's two step faces read one area to {AREA_TOL:g} (one section at each end of it): {steps}")
-        if len(steps) == 2 and None not in steps:
-            say(f"fact    part: each step face against F0 − π(Ro² − r²) = {want:.6f} mm²: {steps}, "
-                f"{[f'{(x - want) / want:+.1e}' for x in steps]} (not judged: on 2026 the step faces read 2.2e-3 under "
-                "it, where the end faces read the section to 5e-7 and the volumes agree with the section to 1e-4; "
-                "W9B-DEMONSTRATION.md)")
+        step_report(out, banded_steps, want)
 
     folder = os.path.join(root, "hub")
     path, _, _ = build_part("part hub", folder, hub)

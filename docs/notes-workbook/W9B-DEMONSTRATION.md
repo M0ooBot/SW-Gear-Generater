@@ -109,20 +109,78 @@ bore and the outside, π(Ro² − r²), with Ro (16.125) and r (12.5) taken from
 
   V(banded) = F0 × (start band + end band) + π(Ro² − r²) × (26 − start band − end band),
 
-checked for 5/5 and for 4/5 to 1e-4 of the part's volume, with the residual and the room left printed. **The room is
-small:** against the face's section the final run's banded parts are 9.0e-5 (5/5) and 8.2e-5 (4/5) over, leaving 10%
-and 18% of the 1e-4. The volume errs high by about 1e-4, as V/26 does. A relief 0.5 mm wider would miss by 3.3e-2, so
-the guard still catches a wrong relief. Before the review the script took F0 = V/26, which carried most of that error
-into the expected volumes and printed 3.8e-5 and 3.5e-5.
+checked for 5/5 and for 4/5. **This is a coarse guard against a gross fault:** a relief not cut, or a wrong diameter
+or span. The smallest such fault is a relief Ø off by 0.1 mm, which moves the volume by 6.5e-3. A relief 0.5 mm
+wider moves it by 3.3e-2. The exact checks on the relief are the faces: the cylinder r 12.5, the planes, and the
+end-face section.
+
+**The allowance comes from the control in the same session** (W9B-REVIEW, addendum for 2024). The control is the
+unbanded sleeve built just before, from the same plan less the bands: its own residual is |V/26 − F0| / F0, against
+its end face's section. The allowance is max(1e-4, 1.0 × that residual).
+
+- **A control over 5e-4 is a FAIL.** That session's mass properties are not fit to judge by.
+- **Where F0 fell back to V/26, there is no control.** The floor of 1e-4 alone applies, and the log says so.
+- **The log line gives** the control's residual, the allowance derived, each banded residual, the room left, and
+  what a relief Ø 0.1 mm off would move it by.
+
+Why the allowance moves with the session: on 2024 the mass-property volumes run high of 2026's by a constant per body
+(+1.193 unbanded, +0.376 banded), while every face reads the same to nine figures. The 5/5 − 4/5 difference is
+114.638326 on both versions. That is a version's volume integration, not geometry.
+
+**Replayed without SolidWorks** (`--self-check`):
+
+| Run | F0 (mm²) | Control | Allowance | 5/5 | 4/5 | Room left (5/5, 4/5) |
+|---|---|---|---|---|---|---|
+| 2026 final (`w9b-demo-20261117-051122.json`) | 440.547728 | 1.1e-4 | 1.1e-4 | 9.0e-5 | 8.2e-5 | 21 %, 28 % |
+| 2024 (`sw2024/w9b-demo-20261117-063302.json`) | 440.548068 | 2.2e-4 | 2.2e-4 | 1.3e-4 | 1.2e-4 | 41 %, 44 % |
+
+- **2026's F0** is the front end face's area as that run's log gives it (`w9b-demo-sw2026-20261117-2.log`, "F0 two
+  ways"), as the review's addendum says to take it. That JSON predates the section-level end-face reads. Its face
+  list does carry the same face, at 440.547727782, and the replay checks that the two agree.
+- **2024's F0** is from its JSON's end-face read.
+- **Under the old fixed 1e-4,** 2024's two rows fail (the run's two FAILs) and 2026's pass.
+- **The first run** (V/26, no end face) replays under the floor alone: 3.8e-5 and 3.5e-5.
 
 **The step faces.** The two planar faces at the relief's ends must read one area, to 2e-4. That holds a pair of
 GetArea readings of one section: the final run's two end faces agree to 7.3e-5.
 
-Each step face against the same geometry, F0 − π(Ro² − r²) = 114.558 mm², is logged and **not judged**. On the final
-run they read 114.303 and 114.295, 2.2e-3 under it. The same reading's end faces match the worked section to 5e-7,
-and the volumes match the section to 1e-4. A step area of 114.30 would put the 5/5 volume 3.4e-4 off, against 9.0e-5
-with 114.558. So GetArea on the step faces, whose boundary is the bore's circle and the 17 tooth spaces, reads low
-here, and does not settle the relief to better than that. Why it does is open.
+Against the same geometry, F0 − π(Ro² − r²) = 114.558 mm², the step faces read 114.303 and 114.295 on both versions,
+to nine figures: 2.2e-3 under it. **The cap is one planar face at each plane.** That is already shown by the committed
+readings: every face of the body is in the JSON with its `PlaneParams`, and the replay finds exactly one planar face
+in each of z 5, 21 (and 4, 21 after the change), on 2026 and on 2024. So the review's first guess, slivers at the roots,
+is ruled out for planar faces. A face that is not planar cannot lie in the plane.
+
+**One more read settles the rest** the next time `part` runs on SolidWorks; no run is owed for it. On the banded part,
+every planar face lying in z = start band and z = face − end band is taken by `PlaneParams`, with its count, each
+`GetArea` and their sum. Of each such face, the script reads:
+
+- its loops (`IFace2.GetLoops`, `ILoop2.IsOuter`);
+- each loop's edges (`ILoop2.GetEdges`): the curve's `Identity`, a circle's radius from `CircleParams`, and the ends
+  from `GetCurveParams2`;
+- the points along each edge, by `GetTessPts` at a chord tolerance of 1e-8 m (`Evaluate2` at 200 parameters if that
+  will not read).
+
+The face's area is then integrated from those points: the edges are chained end to end by the nearest free end, the
+shoelace is applied, and the outer loop's area less the others' is taken. The chord tolerance puts the integration
+within about 1e-5 of the area. The self-check holds the integration to a square less a hole with its edges shuffled,
+and to a circle in four arcs.
+
+The log prints:
+- whether the cap is one face or several;
+- the summed area against the geometry;
+- the integrated area against `GetArea` and against the geometry;
+- the largest gap where two edges meet.
+
+All of it is fact, not check, unless the summed or the integrated area lands on 114.558 to 1e-4. Then that is the
+check, and GetArea's reading stays a fact.
+
+The calls are new to the app:
+- **No entry in the macro database:** `GetLoops`, `IsOuter`, `ILoop2.GetEdges`, `IsCircle`, `CircleParams`.
+- **Verified on 2026 for the Airfoil Converter, never on 2024:** `GetCurve`, `GetCurveParams2`, `Identity`,
+  `GetTessPts`, `Evaluate2`.
+
+Each is guarded: what will not read is said in its place, and never fails the part. The members that return arrays
+go through the late-binding pattern.
 
 **What it replaced.** The first run took the area per mm from the 1 mm difference of two volumes and multiplied it by
 16. That multiplied the mass-property error by 16 and failed (1833.375 against 1834.213). The difference stays, as a
@@ -153,8 +211,9 @@ are given the z their padded boxes centre on. At this commit it passes: the bore
 nine slides, with a wrong relief and a wrong-side frame each failing. From now on each mode's readings go into the
 JSON too (`modes`). It also replays the closing review's points on the final run's readings
 (`probe/results/w9b-demo-20261117-051122.json`, whose faces carry `PlaneParams` and `GetArea`): F0 from the front face,
-both end faces as one, the bore, the volumes against the face's section (9.0e-5 and 8.2e-5), and the two step faces as
-one. The step faces against 114.558 are printed, not judged.
+both end faces as one, the bore, the volumes under the guard from that run's own control (above), and the two step faces as
+one. It replays W9b's 2024 run the same way (`probe/results/sw2024/w9b-demo-20261117-063302.json`). On both it lists
+every planar face in the step planes. The step faces against 114.558 are printed, not judged.
 
 ## STOPs
 
@@ -187,7 +246,9 @@ W9b's own (plan §5):
   the same, since they sit in the part's own frame (the part is turned in the assembly, not rebuilt).
 - **Unequal bands built from scratch.** Start 4 / End 5 is reached only by the value change, in `part` and in
   `update`.
-- **SolidWorks 2024.** Plan §5 puts that in W9c's 2024 session, about 50 min.
+- **SolidWorks 2024** is no longer unmeasured. It ran from 529f939 (9e77303): build, update and old had 0 failed, and
+  part's only FAILs were the old fixed volume guard. Under the guard from the same session's control, that run replays
+  at 1.3e-4 and 1.2e-4 against 2.2e-4 (above), so W9b closes on 2024 with this commit.
 - **A hub with a bore** (RangeBox_Fixed's Hub has none), and a hub on a Z− shaft.
 - **A typed Rim on a banded sleeve.**
 - **Bands added to or taken from a built sleeve in place.** That is W9c (M8); here it is *Build again…* only.
