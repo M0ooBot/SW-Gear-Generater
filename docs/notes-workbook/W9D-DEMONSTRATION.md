@@ -87,11 +87,12 @@ None)`, put back after), and `carry` proposes. Nothing is set.
 
 | Finding (`_ON_<year>`) | Refusal shown | Patched to | `propose` line | What it rests on |
 |---|---|---|---|---|
-| `CARRY_INSERTS` | `carry-gates`: the press itself (nothing carried, every component named with it) | True | `propose CARRY_INSERTS_ON_<y> = True  # carry: every user part inserted, placed …` | every component carried (Sprocket-9 may be named `no frame`), at its pose against its anchor in every mode, states read back per mode, the tied cluster alone fixed, nothing moved or stopped, every app gear free, the new assembly unsaved, the old assembly and the user's files untouched |
+| `CARRY_INSERTS` | `carry-gates`: the press itself (nothing carried, every component named with it) | True | `propose CARRY_INSERTS_ON_<y> = True  # carry: every user part inserted, placed …` | every mate's outcome as `expected_outcome` says; every component carried (Sprocket-9 may be named `no frame`); each against the fixture's anchor and at its pose against it in every mode where it is resolved (a frame that does not read is a FAIL); its states per mode as the script reads them by showing each mode; the tied cluster alone fixed; nothing moved or stopped; every app gear free; the new assembly unsaved; the old assembly and the user's files untouched |
 | `CARRY_INSERTS_IN_A_CONFIGURATION` | `carry-gates`: `plan_carry` on the press's own read, this gate as it stands and the others patched | True | `… = True  # carry: SprocketConf-1 inserted in Z20 …` | SprocketConf-1 inserted, `ReferencedConfiguration` Z20 read back in every mode of RangeBox_r2 |
 | `REFERENCED_CONFIGURATION_READ` | the same | True | `… = True  # carry: ReferencedConfiguration read Z20 …` | R read Z20 on SprocketConf-1 beside its document's Default (the re-check's R2) |
-| `CARRY_REMAKE_KINDS` | the same | every kind word | `… = ('coincident', …)  # carry: the kinds whose every mate was made again, read back equal …` | per kind: every mate of it made again, its definition re-read in RangeBox_r2 equal to the old (type, alignment, values; flipped except for a gear mate), its flags per mode as before. Perpendicular, tangent and limit angle are not in the fixture and are never proposed |
+| `CARRY_REMAKE_KINDS` | the same | every kind word | `… = ('coincident', …)  # carry: the kinds whose every mate was made again, read back equal …` | per kind (the fixture's own kind of each mate): every mate of it made again; its definition **and entities** read by the script's own read in RangeBox_r2 equal to the script's own read of the old one before the press (M2: type, alignment, values, flipped except for a gear mate, whose sense is compared by `gear_sense`; each entity mapped old→new: its component, its reference, a feature's name, a face's or edge's place in its own component); its flags per mode as before, read again. Perpendicular, tangent and limit angle are not in the fixture and are never proposed |
 | `CARRY_GEAR_MATE_ON_AN_APP_GEAR` | the same | True | `… = True  # carry: UserGear6 made again on the new Sun's Gear Axis …` | UserGear6 made again, ratio and sense read back by the worker, its definition re-read equal; UserGearRoot's outcome said beside it |
+| `CARRY_RESOLVES_A_LIGHTWEIGHT_COMPONENT_IN_THE_OLD_ASSEMBLY` (a fact, not a gate; the review's M1 (b), ruled) | — | — | `… = True/False  # carry: SprocketLight-1 … read 1 before the press and 2 after …` | SprocketLight-1's state in the open old assembly read before and after the press: carrying it opens its file, and lightweight is per file in the session. For D10, and for a sentence the result will need if True |
 | `CARRY_INSERTS_A_SUBASSEMBLY`, `CARRY_REMAKES_ON_A_LEAF`, `VIRTUAL_READ`, `PATTERN_INSTANCE_READ`, `ORIGIN_ENTITY_READ`, `PERSIST_REFERENCE_ROUTE_FOR_VERTICES` | — | — | `… = None  # <why>` | no sub-assembly, leaf, virtual component, pattern, origin or vertex in the fixture (package A's sub-assembly route is not the measured read-only insert, W9D-REVIEW-A) |
 
 The probe reads (`PERSIST_REFERENCE_ROUTE_FOR_FACES`, `COAXIAL_FACE_READ`, the state route, the closed-file reads, …)
@@ -110,10 +111,13 @@ press about 2 min, an every-mode read about 1 min).
 | 3 | `carry` | 35 min |
 | 4 | `carry-closed` | 20 min |
 
-**About 1 h 20 min on 2026** against the plan's 1 h 15 min. On 2024 at about twice the time per press, about 2 h 30 min
-against the plan's 2 h 15 min, each section in a fresh session. **I would cut first** `carry-closed`'s lost line (the
-later Update), then the W9b per-mode read inside `carry` (the script's own every-mode read already judges every gear
-free), then `carry-gates`' per-gate replays (pure, but they need the section's press).
+**About 1 h 30 to 1 h 45 on 2026** (the review's estimate after the revision: `carry`'s own reads of the old and new
+mates' definitions, the every-mode read and W9b's read come on top of a carry of 17 components and about 31 mates; it
+may take 45 min rather than 35), against the plan's 1 h 15 min. On 2024 at about twice the time per press, about
+3 h, each section in a fresh session. **What to cut first:** `carry-closed`'s lost line (the later Update; the fake
+shows it), then W9b's read inside `carry` (said as cut: it is the only read compared with `CarryResult.clashes`).
+**Never `carry-closed` whole**: it is the only section for the not-open read, contradiction 6, UserAsm6 and the light
+part's mate.
 
 ### `carry-gates`
 
@@ -131,7 +135,7 @@ free), then `carry-gates`' per-gate replays (pure, but they need the section's p
 
 ### `carry` (the Done-when)
 
-1. A copy of the fixture; the old assembly opened, H showing (checked); its frames read where it stands;
+1. A copy of the fixture; the old assembly opened, H showing (checked);
    SprocketLight-1 set lightweight by the user (`SetSuppression2(1)`, in the session only, never saved: SOLIDWORKS
    CAM's box on saving an assembly with a lightweight component); SprocketLight-1 alone must read lightweight.
 2. The edit, as above. With the gates patched, **the question**: the Keyway in Sun's part made new because its Flank
@@ -149,29 +153,60 @@ free), then `carry-gates`' per-gate replays (pure, but they need the section's p
    - **the tied cluster alone fell back**: `FELL_TIE`, UserLock8a deleted, UserLock8b kept, Sprocket-8 and Housing-1
      fixed;
    - no `same_error`, nothing `moved`, no stop, unsaved;
+   - the anchors (`CarryResult.anchors`) held to the fixture's (D20 **as ruled 2026-11-17**: a component fixed in the
+     old assembly, Housing-1, is placed by its world frame, never turned about an app gear through its cluster; a
+     floating one by its own lock to an app body, then any mate to an app body, then the world): cluster one and
+     Sprocket-5, -6, -8, -10, -11 against Sun, Sprocket-2 against RangeSlv, Housing-1 the world, the rest the world or
+     the layout;
    - Sprocket-7 suppressed in L alone and Sprocket-9 in H alone where the route reads states; resolved / suppressed
-     everywhere on D2's path;
+     everywhere on D2's path — **by the script's own read**, each mode shown and every carried component's
+     `GetSuppression2` read, held to the route's expectation and to what the carry said; every other carried component
+     resolved in every mode;
    - every remade mate on in the modes it was on in (the worker's read and the script's own every-mode read);
-   - every remade mate's definition re-read in RangeBox_r2 (`mate_definition`) equal to the old one;
+   - **M2**: every remade mate's definition and entities, by the script's own read (the probes' `mate_definition`,
+     assemblies/06's route, not the app's), in RangeBox_r2 against the same read of the old mate taken before the press:
+     each entity mapped old→new by the fixture's map (a user component by its carried Name2, an app body by gear id,
+     the layout, the assembly's own root by the assembly's stem), its reference (feature, component, geometry), a
+     feature's name, a face's or an edge's place in its own component (`entity_key`: `EntityParams`' point and
+     direction taken into the component's frame: a plane's offset along its normal, an axis' distance from the
+     component's origin, the radius), either order of the two entities; a gear mate's face on an app gear expected as
+     that gear's Gear Axis (§4.3); a gear mate's sense by `gear_sense` (`Reverse` with the entities' directions), never
+     `Reverse` alone. A mate made again on the wrong face, axis or component FAILs, and its kind is not proposed;
    - every app gear free to turn in every mode (the script's own `GetConstrainedStatus` read per mode, the fixed ring
      aside), then W9b's `mode_read` and `judge_every` (no app–app interference, every frame and flag as recorded),
      the carried components left to:
    - interference per mode with a carried component: what SolidWorks reports against `CarryResult.clashes`;
-   - each carried component's pose against its anchor (`CarryResult.anchors`; the world frame for ""), in every mode,
-     against its pose against that anchor in the old assembly's mode showing, to 1e-6;
+   - Sun's frame in the old assembly and in each mode of RangeBox_r2, logged before the poses are judged;
+   - each carried component's pose against its anchor (the world frame for ""), in every mode where it is resolved,
+     against its pose against that anchor in the old assembly's mode showing, to 1e-6; a frame that does not read in
+     such a mode is a FAIL (where the script's read of the old one does not read, R's frame is held, said);
    - SprocketConf-1's referenced configuration Z20 in every mode of RangeBox_r2, and Z20 read by R beside Default;
    - SprocketLight-1's configurations as read from its file closed (`ISldWorks.GetConfigurationNames(path)`), a fact;
    - RangeBox_r2's GetSaveFlag True; the record at schema 10 on disk, `unsaved_at` the file's time, the footer's line.
 5. **The proposals** (in the section's `finally`, None for whatever did not hold).
-6. **The user saves RangeBox_r2** alone (SprocketLight-1 resolved first, in the old assembly): the window's read drops
-   the footer's line. The copy is closed unsaved.
+6. **The user saves RangeBox_r2** alone (SprocketLight-1 resolved first, in the old assembly), **only if no component
+   of RangeBox_r2 reads lightweight** (M1 (a): saving an assembly with a lightweight component brings up SOLIDWORKS
+   CAM's modal box, which ignores `WM_CLOSE`); otherwise it is not saved, said, and the footer's line going is said
+   as not shown. Saved, the window's read drops the footer's line. The copy is closed unsaved.
+
+**M1 (b), ruled 2026-11-17.** Carrying SprocketLight-1 opens its file (C.3), and lightweight is per file in the
+session, so the old assembly's lightweight instance may come out resolved. That change, and only that (its own state,
+frame, fixed and referenced reads, and its mates' entity reads), is set apart by `old_diff` and is not a STOP: its
+state before and after is a fact and `propose CARRY_RESOLVES_A_LIGHTWEIGHT_COMPONENT_IN_THE_OLD_ASSEMBLY_ON_<y>` says
+which. Anything else changed in the old assembly or a user file remains a STOP.
 
 ### `carry-closed`
 
-1. A copy of the fixture; the user shows L and saves (the save also writes the assembly's references to this copy's
+1. A copy of the fixture; the edit typed; **R.2 on the copy as copied**, before any save: `_not_open_refusal` (closed-file
+   reads only) must refuse it — its stored dependency paths are the master's folder's (the ruling of 2026-11-17: a
+   copied folder whose stored paths lie outside its own folder, where a same-named file sits, is refused, "open it
+   first"; before package A's change it refuses as a file not found). Then the user shows L and saves (the save also writes the assembly's references to this copy's
    files: `GetDocumentDependencies2` gives the *stored* paths, and the master's were the master's folder's, which R.2
-   would refuse as not on disk); its frames read in L; everything closed.
-2. The edit; the question (its closed-assembly clause); the gates patched; **the press**. R reads **read-only**, L
+   would refuse); the old assembly read where it stands (frames, states, every mate's definition and entities by the
+   script's own read: M2's old side); everything closed.
+2. The question (its closed-assembly clause); the gates patched; **the press**. Where the closed-file findings are not
+   set (2024 until its probes are reviewed) the old assembly must come out `OLD_UNREAD`, nothing carried, and the
+   section ends there. R reads **read-only**, L
    showing as saved, nothing left open or marked; the old assembly closed again by the job. The traced calls allow its
    own read-only open and close, and its per-mode show only where the state route is None (2024).
 3. Judged as `carry` (no lightweight now: UserAsm6 and UserAxisLight made again; tier 1 on the faces after the reload
@@ -191,15 +226,24 @@ free), then `carry-gates`' per-gate replays (pure, but they need the section's p
 - **GetSaveFlag** of every open document of the copy before and after; a user document or the old assembly newly marked
   is a STOP (open path);
 - **the old assembly read where it stands** before and after, never opened or activated (`use_open_document`):
-  frames, every mate's code, flag per mode and entities, the mode showing, its rebuild state, every component's state
-  (`old_read`, which finds a suppressed component with `suppressed_ok`, where W9a's `read_now` would raise on M9's two);
-  any difference is a STOP;
+  frames, every mate's code, flag per mode and entities, every user mate's definition and entities by the script's
+  own read (values and places), the mode showing, its rebuild state, every component's state, fixed or floating and
+  referenced configuration (`old_read`, which finds a suppressed component with `suppressed_ok`, where W9a's
+  `read_now` would raise on M9's two); any difference is a STOP but M1 (b)'s. In `carry` the old assembly is marked
+  already by the user's lightweight set, so its save-flag bracket is blind there and this read carries the weight;
 - **the traced calls**: every `ShowConfiguration2`, `ForceRebuild3`, `EditRebuild3`, `AddMate5`, `AddComponent5`,
-  `EditDelete`, `Save3`, `SaveAs3`, `QuitDoc`, `CloseDoc`, `OpenDoc6` and `ActivateDoc3` with the file it is on
-  (`trace_problems`): none on the old assembly or a user file but the closed path's own read-only open, close (and show
+  `Save3`, `SaveAs3`, `QuitDoc`, `CloseDoc`, `OpenDoc6` and `ActivateDoc3` through `swcom.call`, with the file it is
+  on; and, by wrapping the Session members that make them without `swcom.call` or on no document object, `EditDelete`
+  (`delete_mate`, `delete_component`, through `_guarded`), `FixComponent` / `UnfixComponent`, the `Transform2` put
+  (`place_component`) and a mate's `SetSuppression2` (`set_mate_suppressed`, `_in`), each on the document the
+  session is building in; names compared by their stems (a title may lack its extension) (`trace_problems`): none on the old assembly or a user file but the closed path's own read-only open, close (and show
   on the None path), no `OpenDoc6`/`ActivateDoc3` of an open old assembly, and **no `SaveAs3` or `Save3` after the new
   assembly's first save**;
 - no window (W9a's watch and `windows_new`).
+
+**What the trace cannot see**: a mate's `Name` put (`_rename`, a static helper on the feature) and a component's own
+`SetSuppression2` (its object is the component, whose file is the user's own: it would read as a write to a user
+file). Both fall to the old assembly's read before and after (mate names, component states).
 
 ## Logged as facts: what only the fake had shown
 
@@ -247,13 +291,22 @@ A gate's refusal, a named item and a fallback are results, not failures.
   the gates patched (every component carried, the tied cluster alone fallen back, the result's sentence, schema 10,
   `unsaved_at`, the footer's line); the old assembly closed (read read-only, nothing left open or marked); R.2 refusing
   a record another version wrote;
+- **`expected_outcome` against the worker's own `plan_carry`** on an `OldWork` shaped like the fixture (its 17
+  components' kinds, states and configurations, its 31 mates' kinds and entities by owner, kind and feature), for
+  2026 open with a lightweight component, 2024 open, 2026 closed, closed without the reload finding, and Sprocket-9
+  without a frame; a fallback and D2's unread are the carry's, not the plan's, and are allowed for there;
+- **`DeskD.build` against the window's `_start_build`**, read as source: the same calls, kwargs for kwargs
+  (`old_assembly`, `carry_for` from that very object, the journal, the revision in the job, `build_gearbox`);
 - **the pure judgements on made-up readings**, each failing way: `expected_outcome` and `expected_states` for 2026
-  open with a lightweight component, 2024 open, closed, closed without the reload finding; `outcome_problems`,
-  `outcome_of`, `fingerprint_diff`, `trace_problems` (open and closed), `old_diff`, `definition_problems`,
-  `kinds_clean`, `pose_gap`; the kind words pinned to the worker's; every gate named a finding of findings.py, and every
-  patched one None there on both versions.
+  open with a lightweight component, 2024 open, closed (readable or not), closed without the reload finding, a
+  component named no frame; `outcome_problems`, `outcome_of`, `fingerprint_diff`, `trace_problems` (open and closed,
+  by stems), `old_diff` (and M1 (b)'s set-apart, which a second change beside it does not hide), `entity_key` (a face's
+  place survives its component's move, its other end face differs), `entity_problems` (the wrong face, component or
+  axis each FAIL; a gear mate's face made again on the gear's Gear Axis passes), `definition_problems` (a gear's
+  other Flip with its sense kept passes, its sense turned FAILs), `kinds_clean`, `pose_gap`; the kind words pinned to
+  the worker's; every gate named a finding of findings.py, and every patched one None there on both versions.
 
-`--help` imports nothing of SolidWorks.
+At this commit: 44 ok, 0 failed. `--help` imports nothing of SolidWorks.
 
 ## What the packages could not be driven to, and what is not a measurement here
 
@@ -280,6 +333,27 @@ A gate's refusal, a named item and a fallback are results, not failures.
 - Every judgement of "unchanged" is by reads, file fingerprints and traced document calls; a component-level
   `SetSuppression2` is not mapped to its assembly in the trace, so the old assembly's states are compared by reads.
 
+## The revision after the review (`W9D-DEMONSTRATION-REVIEW.md`, 6f67791)
+
+- **M1 (a)** RangeBox_r2 is saved by the user only when none of its components reads lightweight (above, `carry` 6).
+- **M1 (b), ruled** SprocketLight-1's lightweight-to-resolved change in the old assembly is set apart and proposed as a
+  fact; anything else is a STOP (above).
+- **M2** remade mates compared on their entities, mapped old→new, against the script's own read of the old mates
+  before the press (above).
+- **Should-fixes, all the script's, done**: the gear sense by `gear_sense`; flags per mode counted against a kind;
+  the states per mode by the script's own shown read; every carried component's frame required; the anchors held to
+  the fixture's; `outcome` and the anchors among `CARRY_INSERTS`' conditions; "component not carried" accepted for the
+  mates of a component named `no frame`; `expected_outcome` against `plan_carry` and `DeskD.build` against the
+  window's `_start_build` in the self-check; Sun's frames logged; the trace sees `EditDelete`, fix and unfix, the
+  `Transform2` put and a mate's flag, by stems; the old read holds fixed, the mates' values and entities and the
+  referenced configuration.
+- **Rulings of 2026-11-17 written into the expectations**: a fixed component is placed by its world frame (Housing-1's
+  expected anchor is ""); R.2 refuses a copied folder whose stored paths lie outside it (the unsaved copy's refusal in
+  `carry-closed`). Package A is being changed to match: until it is, Housing-1's anchor FAILs `carry`'s anchor check.
+- **B's last wording round** (`1ab1029`, `9a21c6d`): every fragment the script matches is in `ui_text` at head
+  (*Carried into RangeBox_r2, unsaved*, *has not yet been shown to carry your work*, *As read at*, *fixed where*, *was
+  closed without saving after Build again… carried your work into it*); the self-check's fake runs say them.
+
 ## Command lines
 
 2026 (fresh session; `RUN` the run folder with `snap` the repo snapshot):
@@ -290,7 +364,7 @@ python.exe RUN\snap\probe\w9d_demonstration.py RUN\snap\src RUN\out --pid PID --
     --user-master <W9a's setup.master> --other-version-file <a 2024-saved assembly, e.g. W9c's 2024 setup.master's RangeBox.SLDASM>
 ```
 
-About 80 min. 2024, after the 2024 W9d probes, in fresh sessions (each about twice as long):
+About 1 h 30 to 1 h 45. 2024, after the 2024 W9d probes, in fresh sessions (each about twice as long):
 
 ```
 python.exe RUN\snap\probe\w9d_demonstration.py RUN\snap\src RUN\out24 --pid PID --log RUN\w9d-demo-sw2024-1.log ^

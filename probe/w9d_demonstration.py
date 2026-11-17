@@ -41,14 +41,15 @@ Sections (each runs alone from a kept master; ``fixture`` keeps ``w9d-fixture.ma
                    end-face mate and the root-fillet gear mate named as on a part made new, the keyway named, the tied
                    cluster fallen back alone, every app gear free in every mode, interference per mode, the carried
                    items unsaved and nothing saved after the first save; the record at schema 10; then the user saves
-                   RangeBox_r2 and the footer's line goes. About 35 min.
+                   RangeBox_r2 (only if nothing in it reads lightweight) and the footer's line goes. About 45 min.
 - ``carry-closed`` the old assembly saved with L showing and nothing lightweight, then closed: the not-open read (R.2)
                    under its conditions, RangeSlv's train read in L and placed in H, the mate to the assembly's plane
                    and SprocketLight-1's mate made again; the R.2 refusals by closed-file reads (another version's file
                    with ``--other-version-file``); then RangeBox_r2 closed unsaved and a later Update says the carry
                    was lost. About 20 min.
 
-About 1 h 20 min on 2026 (the plan's 1 h 15 min), 5 min more if setup.master must be built first.
+About 1 h 30 to 1 h 45 on 2026 (the plan's 1 h 15 min; the review's estimate), 5 min more if setup.master must be
+built first. Cut first the later Update's lost line, then W9b's read in carry; never carry-closed.
 """
 
 import dataclasses
@@ -133,37 +134,81 @@ MATES = (("UserChainAxis", "app", "coincident", "c1:Gear Axis", "lay:Input Axis"
          ("UserAxisLight", "app", "coincident", "lt:Gear Axis", "lay:Input Axis", 0.0),
          ("UserAxisConf", "app", "coincident", "cf:Gear Axis", "lay:Input Axis", 0.0))
 SETUP_MATES = ("UserAxis1", "UserAxis2", "UserLock1", "UserLock2", "UserLock3", "UserAxis4", "UserDist4", "UserAngle4")
-CLUSTER_ONE = ("u1", "u3", "u4", "c1")               # the Done-when's first cluster: the sprockets on Sun and Chain-1
-CLUSTER_TWO = ("h2",)                                # the housing on the layout
+# W9a's setup's mates, in MATES' shorthand (its handles: u1..u4, uh; "slv" RangeSlv), for the expectations only.
+SETUP_SPEC = (("UserAxis1", "coincident", "u1:Gear Axis", "lay:Input Axis"),
+              ("UserAxis2", "coincident", "u2:Gear Axis", "lay:Output Axis"), ("UserLock1", "lock", "sun", "u1"),
+              ("UserLock2", "lock", "slv", "u2"), ("UserLock3", "lock", "u1", "u3"),
+              ("UserAxis4", "coincident", "u4:Gear Axis", "lay:Input Axis"),
+              ("UserDist4", "distance", "u4:plane1", "u3:plane1"), ("UserAngle4", "angle", "u4:plane2", "lay:plane3"))
+RAW_KINDS = {0: "coincident", 1: "concentric", 3: "parallel", 5: "limit distance", 10: "gear"}
 TIED = ("s8", "uh")                                  # falls back: UserLock8a deleted, UserLock8b kept, both fixed
+# Each carried component's anchor (CarryResult.anchors' CarryBody.old), by D20 as ruled 2026-11-17: a component fixed
+# in the old assembly by its world frame (""); a floating one by its own lock to an app body, else its cluster's, else
+# any mate to an app body, else the world ("" or the layout, which stands at the world's frame).
+WORLD = {"", "layout"}
+EXPECTED_ANCHORS = {"u1": {"Sun"}, "u3": {"Sun"}, "u4": {"Sun"}, "c1": {"Sun"}, "c2": {"Sun"} | WORLD,
+                    "u2": {"RangeSlv"}, "s8": {"Sun"}, "uh": {""}, "h2": WORLD, "s5": {"Sun"}, "s6": {"Sun"},
+                    "s10": {"Sun"}, "s11": {"Sun"}, "s7": WORLD, "s9": WORLD, "lt": WORLD, "cf": WORLD}
 FIXTURE_JSON = "w9d-fixture.json"
 
 
 # -- pure: what each section must find (self-checked) ------------------------------------------------------------------
 
 
-def expected_outcome(fs, made_mates, closed=False, light=False):
+def mate_specs():
+    """Every user mate of the fixture as (name, kind word, a, b), W9a's setup's and this script's."""
+    out = [tuple(m) for m in SETUP_SPEC]
+    for name, how, kind, a, b, _ in MATES:
+        out.append((name, kind if how == "app" else RAW_KINDS[kind], a, b))
+    return out
+
+
+def _handle(pick):
+    return pick[1] if isinstance(pick, tuple) else pick.split(":")[0]
+
+
+def _users():
+    return set(SETUP) | {h for h, _, _ in INSERTS}
+
+
+def mates_of(handle):
+    """The fixture's mates that join ``handle``."""
+    return [n for n, _, a, b in mate_specs() if handle in (_handle(a), _handle(b))]
+
+
+def expected_outcome(fs, made_mates, closed=False, light=False, no_frame=()):
     """What the carry must do with the fixture's mates on this SolidWorks, by the findings ``fs`` as they stand (the
     probe reads: ``faces`` the face and edge route set, ``coaxial`` COAXIAL_FACE_READ, ``states`` the per-mode state
-    route, ``reload`` PERSIST_REFERENCE_SURVIVES_RELOAD) with the write gates patched: ``closed`` the not-open path,
-    ``light`` a component lightweight in the session (no root read, §4.2). ``{mate: set of acceptable outcomes}``,
-    an outcome "remade", "fell" (made, then deleted by its cluster's fallback) or a ``WHY_*`` word."""
+    route, ``reload`` PERSIST_REFERENCE_SURVIVES_RELOAD, ``closed_read`` the not-open read's findings all set) with the
+    write gates patched: ``closed`` the not-open path, ``light`` a component lightweight in the session (no root read,
+    §4.2), ``no_frame`` the handles named ``no frame`` (their mates then name that component not carried).
+    ``{mate: set of acceptable outcomes}``: "remade", "fell" (made, then deleted by its cluster's fallback) or a
+    ``WHY_*`` word."""
+    if closed and not fs.get("closed_read"):
+        return {m: {"old unread"} for m in made_mates}
     out = {m: {"remade"} for m in made_mates}
+    users = _users()
     faces_ok = bool(fs.get("faces")) and (not closed or bool(fs.get("reload")))
-    for m in ("UserFaceConc", "UserFaceCoin"):
-        if not faces_ok:
-            out[m] = {"unmeasured"}
+    for name, kind, a, b in mate_specs():
+        ends = [p for p in (a, b) if _handle(p) in users]
+        if closed and not fs.get("reload") and any(isinstance(p, tuple) or ":" in p for p in ends):
+            out[name] = {"unmeasured"}               # tier 1 on the not-open path waits for the reload finding
+        elif not faces_ok and any(isinstance(p, tuple) for p in ends):
+            out[name] = {"unmeasured"}
     # Sun's part is new: a face of it is never found again (§4.4); whichever entity comes first names the mate.
     out["UserSunFace"] = {"part new"} if faces_ok else {"part new", "unmeasured"}
-    out["UserGearFillet"] = {"part new"}             # off-axis (2026) or not read (None): never Gear Axis
+    out["UserGearFillet"] = {"part new"} | (set() if faces_ok or not closed else {"unmeasured"})
     if not fs.get("coaxial"):
-        out["UserGearRoot"] = {"part new"}
+        out["UserGearRoot"] = {"part new"} | ({"unmeasured"} if closed and not fs.get("reload") else set())
     if light:
         out["UserAsm6"] = {"unread"}                 # no root read beside a lightweight component (§4.2, §11.5)
         out["UserAxisLight"] = {"lightweight"}       # D10
     if not (fs.get("states") or closed):
         out["UserAxis9"] = {"unread"}                # D2: Sprocket-9 takes H's state (suppressed) in every mode
     out["UserLock8a"] = {"fell"}
+    for handle in no_frame:
+        for name in mates_of(handle):
+            out[name] = set(out.get(name, {"remade"})) | {"component not carried"}
     return {m: v for m, v in out.items() if m in made_mates}
 
 
@@ -204,24 +249,37 @@ def fingerprint_diff(before, after):
     return {n: (before.get(n), after.get(n)) for n in sorted(set(before) | set(after)) if before.get(n) != after.get(n)}
 
 
-WRITES = ("ShowConfiguration2", "ForceRebuild3", "EditRebuild3", "AddMate5", "AddComponent5", "EditDelete",
-          "Save3", "SaveAs3", "QuitDoc", "CloseDoc")
+RAW_WRITES = ("ShowConfiguration2", "ForceRebuild3", "EditRebuild3", "AddMate5", "AddComponent5", "Save3", "SaveAs3",
+              "QuitDoc", "CloseDoc")
+# Writes that do not go through swcom.call (``_guarded``, a direct invoke, a ``_put``), or whose object is no document
+# (a mate feature's flag): kept by wrapping the Session member, on the document the session is building in.
+SESSION_WRITES = {"delete_mate": "EditDelete", "delete_component": "EditDelete", "fix_component": "FixComponent",
+                  "unfix_component": "UnfixComponent", "place_component": "Transform2",
+                  "set_mate_suppressed": "SetSuppression2", "set_mate_suppressed_in": "SetSuppression2"}
+WRITES = RAW_WRITES + tuple(sorted(set(SESSION_WRITES.values())))
+
+
+def _stem(name):
+    """A file's name without folder or extension, lower case: a title may lack the extension (Windows' setting)."""
+    base = os.path.basename(str(name or "").replace("\\", "/"))
+    return os.path.splitext(base)[0].lower() if base.lower().endswith((".sldasm", ".sldprt")) else base.lower()
 
 
 def trace_problems(calls, old, users, new_asm, read_only_old=False, shows_ok=False):
     """A traced Build again…'s calls ``[(member, file name)]`` against §3's *Never written*: no write, show, rebuild,
-    save or close of the old assembly or a user document (on the not-open path the job's own read-only open of the
-    old assembly and its close are allowed, a show only where the per-mode states are read by showing it); nothing
-    saved after the new assembly's first save. Returns sentences."""
+    delete, fix, move, flag, save or close of the old assembly or a user document (on the not-open path the job's own
+    read-only open of the old assembly and its close are allowed, a show only where the per-mode states are read by
+    showing it); the open old assembly never opened or activated; nothing saved after the new assembly's first save.
+    Names are compared by their stems. Returns sentences."""
     out, first_save = [], None
-    mine = {n.lower() for n in users}
+    mine, old_s, new_s = {_stem(n) for n in users}, _stem(old), _stem(new_asm)
     for i, (member, target) in enumerate(calls):
-        t = (target or "").lower()
+        t = _stem(target)
         if member in ("SaveAs3", "Save3") and first_save is not None:
             out.append(f"#{i} {member} of {target} after {new_asm} was first saved")
-        if member == "SaveAs3" and t == new_asm.lower() and first_save is None:
+        if member == "SaveAs3" and t == new_s and first_save is None:
             first_save = i
-        if t == old.lower():
+        if t == old_s:
             allowed = read_only_old and (member in ("QuitDoc",) or (member == "ShowConfiguration2" and shows_ok))
             if member in WRITES and not allowed:
                 out.append(f"#{i} {member} of the old assembly {target}")
@@ -234,9 +292,71 @@ def trace_problems(calls, old, users, new_asm, read_only_old=False, shows_ok=Fal
     return out
 
 
+def to_component(frame, point_mm):
+    """A point (mm, assembly) in a component's frame (rotation by rows, origin mm): R^T (p - o), as S0's relative."""
+    r, o = frame
+    d = [float(point_mm[k]) - float(o[k]) for k in range(3)]
+    return tuple(sum(float(r[k * 3 + i]) * d[k] for k in range(3)) for i in range(3))
+
+
+def entity_key(params, frame):
+    """An entity's place in its own component, from ``EntityParams`` (point x, y, z and direction in metres, then
+    radii; assembly space) and the component's frame: (|direction| per axis, a plane's |offset| along its normal or a
+    line's |distance| from the component's origin, the first radius), mm, to 1e-4; None when unread."""
+    if not params or len(params) < 6 or frame is None:
+        return None
+    p = tuple(float(v) * 1000.0 for v in params[:3])
+    q = tuple(float(p[i]) + float(params[3 + i]) for i in range(3))
+    a, b = to_component(frame, p), to_component(frame, q)
+    v = tuple(b[i] - a[i] for i in range(3))
+    radius = float(params[6]) * 1000.0 if len(params) > 6 and params[6] else 0.0
+    if radius > 1e-9:                                 # a cylinder or circle: its axis' distance from the origin
+        cross = (a[1] * v[2] - a[2] * v[1], a[2] * v[0] - a[0] * v[2], a[0] * v[1] - a[1] * v[0])
+        place = sum(c * c for c in cross) ** 0.5
+    else:                                             # a plane: its offset along its normal
+        place = abs(sum(a[i] * v[i] for i in range(3)))
+    return (tuple(round(abs(x), 4) for x in v), round(place, 4), round(radius, 4))
+
+
+def entity_problems(old, new, mapping, gear=False, tol=1e-3):
+    """M2: a remade mate's entities against the old mate's, each old one mapped to the new revision (``mapping``: old
+    component Name2 -> (new Name2, an app body or not)); either order of the two (a remake may select them the other
+    way). Each entity: its component, its reference (feature, component, geometry), a feature's name, a geometry's
+    place in its component (``key``). A gear mate's face on an app gear is expected as that gear's Gear Axis (§4.3).
+    Sentences; [] when one order matches."""
+    def one(o, n):
+        want = mapping.get(o.get("component"))
+        if want is None:
+            return [f"{o.get('component')} has no counterpart in the new revision"]
+        if n.get("component") != want[0]:
+            return [f"on {n.get('component')} where {want[0]}"]
+        if gear and want[1] and o.get("reference") == "geometry":
+            return [] if (n.get("reference"), n.get("feature")) == ("feature", "Gear Axis") else \
+                [f"a face of an app gear made again on {n.get('feature') or n.get('reference')}, not its Gear Axis"]
+        if o.get("reference") != n.get("reference"):
+            return [f"a {n.get('reference')} where a {o.get('reference')}"]
+        if o.get("reference") == "feature" and o.get("feature") != n.get("feature"):
+            return [f"{n.get('feature')} where {o.get('feature')}"]
+        if o.get("reference") == "geometry":
+            a, b = o.get("key"), n.get("key")
+            if a is None or b is None:
+                return ["its place not read"]
+            flat = lambda k: list(k[0]) + [k[1], k[2]]          # noqa: E731
+            if any(abs(x - y) > tol for x, y in zip(flat(a), flat(b))):
+                return [f"another face or edge: {b} where {a}"]
+        return []
+    if len(old) != len(new):
+        return [f"{len(new)} entities where {len(old)}"]
+    orders = [list(range(len(new)))] + ([[1, 0]] if len(new) == 2 else [])
+    tries = [[x for o, i in zip(old, order) for x in one(o, new[i])] for order in orders]
+    return min(tries, key=len)
+
+
 def definition_problems(old, new, kind):
     """A remade mate's definition read in the new revision against the old one's (type, alignment, values; flipped
-    except for a gear mate, whose sense the worker may have read right with the other Flip): sentences."""
+    except for a gear mate, whose sense is compared instead by ``gear_sense`` on ``Reverse`` and the entities'
+    ``EntityParams`` directions, never by ``Reverse`` alone): sentences."""
+    from gear_generator import swbuild
     out = []
     if old["type"] != new["type"]:
         out.append(f"type {old['type']} -> {new['type']}")
@@ -245,26 +365,46 @@ def definition_problems(old, new, kind):
     if kind != "gear" and bool(old["flipped"]) != bool(new["flipped"]):
         out.append(f"flipped {old['flipped']} -> {new['flipped']}")
     a, b = dict(old["values"]), dict(new["values"])
+    skip = ("Reverse", "FlipDimension") if kind == "gear" else ("FlipDimension",)
     for key in sorted(set(a) | set(b)):
-        if key in a and key in b and abs(float(a[key]) - float(b[key])) > VALUE_TOL:
-            out.append(f"{key} {a[key]} -> {b[key]}")
-        elif (key in a) != (key in b) and key not in ("Reverse", "FlipDimension"):
+        if key in skip:
+            continue
+        if key in a and key in b and isinstance(a[key], (int, float)) and isinstance(b[key], (int, float)):
+            if abs(float(a[key]) - float(b[key])) > VALUE_TOL:
+                out.append(f"{key} {a[key]} -> {b[key]}")
+        elif (key in a) != (key in b) and key != "Reverse":
             out.append(f"{key} read {'before only' if key in a else 'after only'}")
+    if kind == "gear":
+        sense = [swbuild.gear_sense(list(d["values"].items()) if isinstance(d["values"], dict) else d["values"],
+                                    [e.get("params") or () for e in d.get("entities", ())]) for d in (old, new)]
+        if sense[0] == 0 or sense[0] != sense[1]:
+            out.append(f"sense {sense[0]} -> {sense[1]}")
     return out
 
 
-def old_diff(before, after, mine):
-    """What differs on the old assembly between two reads made where it stands: a frame (to 1e-9), a mate's code or
-    flag per mode or entities, the mode showing, its rebuild state, a component's state, and the save flag of a
-    document of ``mine`` (file names). Sentences."""
-    out = []
+def old_diff(before, after, mine, light=""):
+    """What differs on the old assembly between two reads made where it stands: a frame (to 1e-9), a mate's code, flag
+    per mode, entities, definition (values, entities and their places), the mode showing, its rebuild state, a
+    component's state, fixed or floating and referenced configuration, and the save flag of a document of ``mine``.
+    ``light``: a component the user set lightweight, whose going to resolved (and what that alone changes: its own
+    reads, and its mates' entity reads) is set apart (the coordinator's ruling on M1 (b)). Returns (sentences, the
+    set-apart sentences)."""
+    out, apart = [], []
+    involved = {n for n, d in (before.get("definitions") or {}).items()
+                if any(e.get("component") == light for e in d.get("entities", ()))} if light else set()
+    went = bool(light) and (before.get("states") or {}).get(light) in (1, 4) and \
+        (after.get("states") or {}).get(light) in (2, 3)
     for g in sorted(set(before["frames"]) | set(after["frames"])):
         a, b = before["frames"].get(g), after["frames"].get(g)
         if (a is None) != (b is None) or (a is not None and pose_gap(a, b) > 1e-9):
-            out.append(f"{g} moved")
-    for key in ("mates", "by_mode", "entities", "states"):
-        if before.get(key) != after.get(key):
-            out.append(f"{key} {[(n, before[key].get(n), v) for n, v in after[key].items() if before[key].get(n) != v]}")
+            (apart if went and g == light else out).append(f"{g} moved")
+    for key in ("mates", "by_mode", "entities", "states", "fixed", "referenced", "definitions"):
+        x, y = before.get(key) or {}, after.get(key) or {}
+        for n in sorted(set(x) | set(y)):
+            if x.get(n) != y.get(n):
+                said = f"{key} of {n}: {x.get(n)} -> {y.get(n)}"
+                (apart if went and (n == light or (key in ("definitions", "entities") and n in involved)) else
+                 out).append(said)
     if before["active"] != after["active"]:
         out.append(f"the mode showing {before['active']} -> {after['active']}")
     if before.get("needs_rebuild") != after.get("needs_rebuild"):
@@ -273,7 +413,13 @@ def old_diff(before, after, mine):
              if before["flags_after"].get(n) != after["flags_after"].get(n)}
     if flips:
         out.append(f"save flags {flips}")
-    return out
+    return out, apart
+
+
+def pose_gap(rel_a, rel_b):
+    """The largest difference between two relative poses ((rotation 9), (origin mm))."""
+    return max([abs(float(x) - float(y)) for x, y in zip(rel_a[0], rel_b[0])]
+               + [abs(float(x) - float(y)) for x, y in zip(rel_a[1], rel_b[1])])
 
 
 def kinds_clean(kind_of, outcome, unclean):
@@ -288,12 +434,6 @@ def kinds_clean(kind_of, outcome, unclean):
         elif how in ("differs", "refused") or name in unclean:
             bad.add(kind)
     return tuple(k for k in KIND_WORDS if k in good and k not in bad)
-
-
-def pose_gap(rel_a, rel_b):
-    """The largest difference between two relative poses ((rotation 9), (origin mm))."""
-    return max([abs(float(x) - float(y)) for x, y in zip(rel_a[0], rel_b[0])]
-               + [abs(float(x) - float(y)) for x, y in zip(rel_a[1], rel_b[1])])
 
 
 def propose(name, value, evidence):
@@ -332,7 +472,9 @@ def probe_reads(year):
     return {"faces": g("PERSIST_REFERENCE_ROUTE_FOR_FACES") is not None, "coaxial": g("COAXIAL_FACE_READ") is True,
             "states": g("COMPONENT_STATE_PER_CONFIGURATION_ROUTE") is not None,
             "unsaved": g("COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED") is True,
-            "reload": g("PERSIST_REFERENCE_SURVIVES_RELOAD") is True}
+            "reload": g("PERSIST_REFERENCE_SURVIVES_RELOAD") is True,
+            "closed_read": all(g(n) is not None for n in ("FILE_VERSION_READ", "DEPENDENCIES_READ",
+                                                          "OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN"))}
 
 
 def edit_spec(rb):
@@ -396,6 +538,138 @@ def _closed_fake(desk):
         kept.pop(key, None)
     sw.touched.discard(key)
     return desk
+
+
+def fixture_work(fs, closed=False, light=False, no_frame=()):
+    """An OldWork shaped like the fixture as R would read it under ``fs`` (its components' kinds, owners, states and
+    configurations; each mate's kind and entities by MATES' shorthand), and the Carry its edit gives (Sun's part new,
+    the layout new, RangeSlv reused): for ``plan_carry`` against ``expected_outcome``."""
+    from gear_generator import swbuild as sb
+    names = dict(SETUP, c1="Chain-1", c2="Chain-2", h2="Housing-2", s5="Sprocket-5", s6="Sprocket-6",
+                 s7="Sprocket-7", s8="Sprocket-8", s9="Sprocket-9", s10="Sprocket-10", s11="Sprocket-11",
+                 lt="SprocketLight-1", cf="SprocketConf-1")
+    showing = "L" if closed else "H"
+    states = expected_states(fs, closed)
+    comps = []
+    for h, n in names.items():
+        state = 0 if (h, showing) in SUPPRESS else (1 if h == "lt" and light else 2)
+        sup = None
+        if fs.get("states") or closed:
+            sup = tuple(sorted(states.get(h, set())))
+        comps.append(sb.OldComponent(
+            n, f"C:\\U\\{n.split('-')[0]}.SLDPRT", "part", h == "uh", 0, state,
+            None if h in no_frame else (I9, (0.0, 0.0, 0.0)), CONF if h == "cf" else "Default", "Default",
+            sup, configurations=("Default", CONF) if h == "cf" else ("Default",)))
+    gear_owner = {"sun": "Sun", "slv": "RangeSlv"}
+
+    def ent(pick, gear):
+        h = _handle(pick)
+        if isinstance(pick, tuple):
+            what, owner = (sb.APP, gear_owner[h]) if h in gear_owner else (sb.USER, names[h])
+            coaxial, radius = None, None
+            if pick[0] in ("root", "fillet") and fs.get("coaxial"):
+                coaxial, radius = pick[0] == "root", 16.375 if pick[0] == "root" else 0.475
+            ref = "ab" if what == sb.USER and fs.get("faces") else ""
+            return sb.OldEntity(what, owner, sb.ENTITY_FACE, reference=ref, select_type=sb.SEL_FACES,
+                                coaxial=coaxial, radius_mm=radius)
+        feature = pick.split(":", 1)[1] if ":" in pick else ""
+        if h == "asm":
+            if light:
+                return sb.OldEntity(sb.UNREAD_ENTITY, "", sb.ENTITY_UNREAD)
+            return sb.OldEntity(sb.ASSEMBLY, "", sb.ENTITY_PLANE, feature, select_type=sb.SEL_DATUMPLANES)
+        what, owner = ((sb.LAYOUT, "") if h == "lay" else (sb.APP, gear_owner[h]) if h in gear_owner
+                       else (sb.USER, names[h]))
+        if not feature:
+            return sb.OldEntity(what, owner, sb.ENTITY_WHOLE, select_type=sb.SEL_COMPONENTS)
+        plane = feature.startswith("plane")
+        return sb.OldEntity(what, owner, sb.ENTITY_PLANE if plane else sb.ENTITY_FEATURE, feature,
+                            reference="ab" if what == sb.USER else "",
+                            select_type=sb.SEL_DATUMPLANES if plane else sb.SEL_DATUMAXES)
+    types = {"coincident": 0, "concentric": 1, "parallel": 3, "distance": 5, "limit distance": 5, "angle": 6,
+             "gear": 10, "lock": 16}
+    mates = []
+    for name, kind, a, b in mate_specs():
+        values = (("Distance", 0.02), ("MaximumDistance", 0.03), ("MinimumDistance", 0.01)) \
+            if kind == "limit distance" else (("GearRatioNumerator", 29.0), ("GearRatioDenominator", 20.0),
+                                                ("Reverse", 0.0)) if kind == "gear" else ()
+        params = ((0, 0, 0, 0, 0, 1.0), (0, 0, 0, 0, 0, 1.0)) if kind == "gear" else ()
+        mates.append(sb.OldMate(name, types[kind], "MateLimitDistanceDim" if kind == "limit distance" else "", 0,
+                                False, values, (ent(a, kind == "gear"), ent(b, kind == "gear")), params, MODES))
+    work = sb.OldWork("2026-11-17T12:00:00Z", "C:\\U\\RangeBox.SLDASM",
+                      sb.OLD_READ_ONLY if closed else sb.OLD_OPEN, showing, MODES, comps, mates, (),
+                      states_route="route" if (fs.get("states") or closed) else "")
+    lay = ("Input Axis", "Carrier Axis", "Ring Axis", "Output Axis")
+    gear = ("Gear Axis",)
+    bodies = (sb.CarryBody("layout", "layout-1", "layout", False, "its layout part is new with every revision",
+                           lay + ("Aux Axis",), lay),
+              sb.CarryBody("Sun", "Gear_m1.25_N29-1", "gear1", False, "its Flank changed", gear, gear, None),
+              sb.CarryBody("RangeSlv", "Sleeve-1", "gear6", True, "", gear, gear))
+    carry = sb.Carry(sb.OldAssembly("C:\\U\\RangeBox.SLDASM"), bodies, MODES, "H", (34,), ())
+    return work, carry
+
+
+def plan_parity(ok, made):
+    """The review's should-fix: ``expected_outcome`` held to the worker's own ``plan_carry`` on an OldWork shaped like
+    the fixture, for 2026's reads, 2024's, the closed path and a component named no frame. The carry's later steps
+    (a fallback, D2's unread for a component suppressed in every mode) are the worker's, not the plan's: there the
+    plan says it is made again."""
+    from gear_generator import swbuild as sb
+    later = {"fell", "unread"}
+    reads = {"faces": "PERSIST_REFERENCE_ROUTE_FOR_FACES", "coaxial": "COAXIAL_FACE_READ",
+             "states": "COMPONENT_STATE_PER_CONFIGURATION_ROUTE", "reload": "PERSIST_REFERENCE_SURVIVES_RELOAD"}
+    from gear_generator import swcom
+    cases = (("2026 open, SprocketLight lightweight", dict(faces=True, coaxial=True, states=True, reload=True,
+                                                          closed_read=True), False, True, ()),
+             ("2024 open", dict(faces=False, coaxial=False, states=False, reload=False), False, False, ()),
+             ("2026 closed", dict(faces=True, coaxial=True, states=True, reload=True, closed_read=True), True, False,
+              ()),
+             ("2026 closed, no reload finding", dict(faces=True, coaxial=True, states=True, reload=False,
+                                                     closed_read=True), True, False, ()),
+             ("2026 open, Sprocket-9 without a frame", dict(faces=True, coaxial=True, states=True, reload=True,
+                                                            closed_read=True), False, False, ("s9",)))
+    for label, fs, closed, light, no_frame in cases:
+        values = dict(WRITE_GATES, COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED=True)
+        values.update({reads["faces"]: swcom.PERSIST_ROUTE_R3 if fs["faces"] else None,
+                       "PERSIST_REFERENCE_ROUTE_FOR_EDGES": swcom.PERSIST_ROUTE_R3 if fs["faces"] else None,
+                       reads["coaxial"]: True if fs["coaxial"] else None,
+                       reads["states"]: "route" if fs["states"] else None,
+                       reads["reload"]: True if fs["reload"] else None})
+        work, carry = fixture_work(fs, closed, light, no_frame)
+        with patched_values(values, 2026, say=lambda _t: None):
+            plan = sb.plan_carry(work, carry, (34, 0, 0))
+        got = {m.mate.name: "remade" for m in plan.mates}
+        got.update({n.item: n.why for n in plan.named if n.what == "mate"})
+        want = expected_outcome(fs, made, closed=closed, light=light, no_frame=no_frame)
+        if not (fs["states"] or closed):
+            want["UserAxis9"] = {"remade"}            # D2's unread is the carry's (no mode where it is resolved)
+        want = {m: (w - later) | ({"remade"} if "fell" in w else set()) | (w & {"unread"} if m == "UserAsm6" else set())
+                for m, w in want.items()}
+        wrong = outcome_problems(want, got)
+        named_c = {n.item: n.why for n in plan.named if n.what == "component"}
+        ok(not wrong and set(named_c) == {SETUP.get(h, h) for h in ()} | {
+            "Sprocket-9" for _ in no_frame},
+           f"plan parity, {label}: the worker's plan_carry on a fixture-shaped read gives what expected_outcome says: "
+           f"{wrong or 'every mate'}; components named {named_c or 'none'}")
+
+
+def window_parity(ok):
+    """The review's should-fix: DeskD.build restates the window's ``_start_build``; the two are held to the same calls
+    (old_assembly as before, carry_for from that very object as carry, the journal, the revision taken in the job), so
+    the restated press cannot drift silently. Read as source, so the self-check needs no Tk."""
+    import re
+    src = open(os.path.join(REPO, "src", "gear_generator", "workbook_gui.py"), encoding="utf-8").read()
+    window = re.search(r"\n    def _start_build\(self\).*?(?=\n    def )", src, re.S)
+    mine = open(os.path.abspath(__file__), encoding="utf-8").read()
+    desk = re.search(r"\nclass DeskD\(A\.Desk9\):.*?(?=\ndef )", mine, re.S)
+    w_calls = ["old_assembly(self.record, plan)", "carry_for(self.record, plan, job.before)",
+               'kwargs["carry"] = job.carry', "job.revision = tuple(", "write_journal(plan)",
+               "swbuild.build_gearbox(session, **kwargs"]
+    d_calls = [c.replace("job.", "jb.").replace("session", "s") for c in w_calls]
+    ok(window is not None and desk is not None and all(c in window.group(0) for c in w_calls)
+       and all(c in desk.group(0) for c in d_calls)
+       and window.group(0).count("kwargs[") == desk.group(0).count("kwargs["),
+       "DeskD.build makes the window's _start_build's calls, kwargs for kwargs (old_assembly, carry_for, the journal, "
+       "the revision in the job)")
 
 
 def self_check():
@@ -524,8 +798,15 @@ def self_check():
 
     # 4. The pure judgements, on made-up readings, each failing way.
     made = [m[0] for m in MATES] + list(SETUP_MATES)
-    fs26 = {"faces": True, "coaxial": True, "states": True, "reload": True}
-    fs24 = {"faces": False, "coaxial": False, "states": False, "reload": False}
+    fs26 = {"faces": True, "coaxial": True, "states": True, "reload": True, "closed_read": True}
+    fs24 = {"faces": False, "coaxial": False, "states": False, "reload": False, "closed_read": False}
+    ok(set(expected_outcome(fs24, made, closed=True)["UserLock1"]) == {"old unread"},
+       "expected, closed on 2024 (the closed-file reads None): the old assembly not read, every item old unread")
+    e = expected_outcome(fs26, made, no_frame=("s9",))
+    ok(e["UserAxis9"] == {"remade", "component not carried"} and e["UserAxis7"] == {"remade"},
+       "expected: a component named no frame lets its mates name it not carried (the review's false FAIL)")
+    plan_parity(ok, made)
+    window_parity(ok)
     e = expected_outcome(fs26, made, light=True)
     ok(e["UserFaceConc"] == {"remade"} and e["UserGearRoot"] == {"remade"} and e["UserAsm6"] == {"unread"}
        and e["UserAxisLight"] == {"lightweight"} and e["UserSunFace"] == {"part new"} and e["UserLock8a"] == {"fell"}
@@ -568,13 +849,45 @@ def self_check():
     ok(trace_problems(closed_calls, "RangeBox.SLDASM", [], "RangeBox_r2.SLDASM", True, shows_ok=True) == []
        and len(trace_problems(closed_calls, "RangeBox.SLDASM", [], "RangeBox_r2.SLDASM", True)) == 1,
        "trace, closed: the job's read-only open, show (where the states are read by showing) and close allowed")
-    old = {"type": 10, "alignment": 0, "flipped": False, "values": [("GearRatioNumerator", 29.0),
-                                                                     ("GearRatioDenominator", 20.0)]}
-    ok(definition_problems(old, dict(old, flipped=True), "gear") == []
-       and len(definition_problems(old, dict(old, values=[("GearRatioNumerator", 20.0),
-                                                          ("GearRatioDenominator", 29.0)]), "gear")) == 2
+    along = [{"params": [0, 0, 0, 0, 0, 1.0]}, {"params": [0, 0, 0, 0, 0, 1.0]}]
+    against = [{"params": [0, 0, 0, 0, 0, 1.0]}, {"params": [0, 0, 0, 0, 0, -1.0]}]
+    old = {"type": 10, "alignment": 0, "flipped": False, "entities": along,
+           "values": {"GearRatioNumerator": 29.0, "GearRatioDenominator": 20.0, "Reverse": 0.0}}
+    turned = dict(old, flipped=True, entities=against, values=dict(old["values"], Reverse=1.0))
+    ok(definition_problems(old, turned, "gear") == []
+       and definition_problems(old, dict(old, entities=against), "gear") == ["sense -1 -> 1"]
+       and len(definition_problems(old, dict(old, values=dict(old["values"], GearRatioNumerator=20.0,
+                                                               GearRatioDenominator=29.0)), "gear")) == 2
        and definition_problems(dict(old, type=0), dict(old, type=0, flipped=True), "coincident") != [],
-       "definitions: a gear's other Flip passes, a swapped ratio and a coincident's flip are said")
+       "definitions: a gear's other Flip with its entity turned (Reverse changed, the sense kept) passes; the sense "
+       "turned, a swapped ratio and a coincident's flip are said")
+    frame = (I9, (0.0, 0.0, 30.0))
+    face_lo, face_hi = [0, 0, 0.030, 0, 0, 1.0, 0, 0], [0, 0, 0.036, 0, 0, 1.0, 0, 0]
+    moved_frame = (I9, (0.0, 0.0, 130.0))
+    face_lo_moved = [0, 0, 0.130, 0, 0, 1.0, 0, 0]
+    bore = [0.0, 0.0, 0.033, 0, 0, 1.0, 0.005, 0]
+    ok(entity_key(face_lo, frame) == entity_key(face_lo_moved, moved_frame) != entity_key(face_hi, frame)
+       and entity_key(bore, frame)[2] == 5.0 and entity_key(None, frame) is None,
+       "entity key: a face's place in its own component survives the component's move; its other end face differs; "
+       "a bore by its radius")
+    mapping = {"Sprocket-1": ("Sprocket-1", False), "Gear_m1.25_N29-1": ("Gear_m1.25_N29_r2-1", True),
+               "layout-1": ("layout-2", True)}
+    o = [{"component": "Sprocket-1", "reference": "geometry", "key": entity_key(face_lo, frame)},
+         {"component": "layout-1", "reference": "feature", "feature": "Input Axis"}]
+    n_ok = [{"component": "layout-2", "reference": "feature", "feature": "Input Axis"},
+            {"component": "Sprocket-1", "reference": "geometry", "key": entity_key(face_lo_moved, moved_frame)}]
+    n_face = [dict(n_ok[0]), dict(n_ok[1], key=entity_key(face_hi, frame))]
+    n_comp = [dict(n_ok[0], component="layout-9"), dict(n_ok[1])]
+    n_axis = [dict(n_ok[0], feature="Output Axis"), dict(n_ok[1])]
+    gear_o = [{"component": "Sprocket-1", "reference": "feature", "feature": "Gear Axis"},
+              {"component": "Gear_m1.25_N29-1", "reference": "geometry", "key": entity_key(bore, frame)}]
+    gear_n = [dict(gear_o[0]), {"component": "Gear_m1.25_N29_r2-1", "reference": "feature", "feature": "Gear Axis"}]
+    ok(entity_problems(o, n_ok, mapping) == [] and entity_problems(o, n_face, mapping) != []
+       and entity_problems(o, n_comp, mapping) != [] and entity_problems(o, n_axis, mapping) != []
+       and entity_problems(gear_o, gear_n, mapping, gear=True) == []
+       and entity_problems(gear_o, [gear_n[0], dict(gear_n[1], feature="Mid Plane")], mapping, gear=True) != [],
+       "M2: a mate's entities against the old, either order: the wrong face, component or axis each FAIL; a gear "
+       "mate's face on an app gear made again on that gear's Gear Axis passes")
     kinds = {"A": "lock", "B": "lock", "C": "gear", "D": "parallel", "E": "angle"}
     ok(kinds_clean(kinds, {"A": "remade", "B": "fell", "C": "remade", "D": "differs", "E": "remade"}, {"E"})
        == ("lock", "gear"), "kinds remade clean: a kind with a mate that differed, or re-read otherwise, left out")
@@ -583,10 +896,25 @@ def self_check():
             "needs_rebuild": 0, "flags_after": {"RangeBox.SLDASM": False}}
     moved = dict(read, frames={"Sun": (I9, (0.0, 0.0, 1.0)), "Sprocket-9": None}, active="L",
                  flags_after={"RangeBox.SLDASM": True}, states={"Sprocket-9": 2})
-    ok(old_diff(read, dict(read), {"RangeBox.SLDASM"}) == []
-       and len(old_diff(read, moved, {"RangeBox.SLDASM"})) == 4,
+    ok(old_diff(read, dict(read), {"RangeBox.SLDASM"}) == ([], [])
+       and len(old_diff(read, moved, {"RangeBox.SLDASM"})[0]) == 4,
        "the old assembly: a frame moved, the mode showing, a state and its save flag each said; a suppressed "
        "component's unread frame the same both times is no change")
+    lit = dict(read, states={"Sprocket-9": 0, "SprocketLight-1": 1}, fixed={"SprocketLight-1": False},
+               definitions={"UserAxisLight": {"entities": [{"component": "SprocketLight-1", "params": None}]},
+                            "L1": {"entities": [{"component": "Sun"}], "values": {"Distance": 0.1}}})
+    resolved = dict(lit, states={"Sprocket-9": 0, "SprocketLight-1": 2},
+                    definitions=dict(lit["definitions"], UserAxisLight={"entities": [
+                        {"component": "SprocketLight-1", "params": [0, 0, 0.35, 0, 0, 1]}]}))
+    also = dict(resolved, definitions=dict(resolved["definitions"], L1={"entities": [{"component": "Sun"}],
+                                                                       "values": {"Distance": 0.2}}))
+    stays = dict(lit, states={"Sprocket-9": 0, "SprocketLight-1": 1}, fixed={"SprocketLight-1": True})
+    ok(old_diff(lit, resolved, set(), light="SprocketLight-1")[0] == []
+       and len(old_diff(lit, resolved, set(), light="SprocketLight-1")[1]) == 2
+       and len(old_diff(lit, also, set(), light="SprocketLight-1")[0]) == 1
+       and len(old_diff(lit, stays, set(), light="SprocketLight-1")[0]) == 1,
+       "M1 (b): the light component going to resolved, and its mate's entity read, set apart; another mate's value "
+       "changed beside it, or that component fixed without being resolved, still a change")
     rel = (I9, (0.0, 0.0, 10.0))
     ok(pose_gap(rel, rel) == 0.0 and abs(pose_gap(rel, (I9, (0.0, 0.0, 10.5))) - 0.5) < 1e-12, "pose gap")
     ok(tuple(swbuild.CARRY_KIND_WORDS) == KIND_WORDS and set(WRITE_GATES) | set(STAY_NONE) <= {
@@ -643,7 +971,7 @@ def proposed(name, value, evidence):
 # -- the document trace and the unmeasured calls, logged ---------------------------------------------------------------
 
 DOC_TRACE = {"on": False, "calls": [], "count": {}}
-DOC_MEMBERS = WRITES + ("OpenDoc6", "ActivateDoc3")
+DOC_MEMBERS = RAW_WRITES + ("OpenDoc6", "ActivateDoc3")
 COUNTED = ("GetCorresponding", "IsSame", "GetArea", "CircleParams", "GetPersistReference3",
            "GetObjectByPersistReference3")
 _PREV_CALL = swcom.call
@@ -756,6 +1084,27 @@ for _name in ("entity_references", "entity_reference", "component_configurations
               "open_read_only", "close_unsaved", "file_version", "running_file_version", "dependencies",
               "add_component_in", "set_component_suppressed", "remake_mate", "select_by_reference", "delete_mate"):
     _logged(_name)
+
+
+def _write_traced(name, member):
+    """``Session.<name>``, a write that does not go through ``swcom.call`` as a document member (``_guarded``, a
+    direct invoke, a ``_put``, a mate feature's flag), kept in the document trace as ``member`` on the document the
+    session is building in (the review's 3.4)."""
+    original = getattr(swcom.Session, name)
+
+    def wrapper(self, *args, **kwargs):
+        if DOC_TRACE["on"]:
+            try:
+                doc = os.path.basename(str(_RAW(self._doc(), "GetPathName") or "")) or "?"  # noqa: SLF001
+            except Exception:  # noqa: BLE001 - the trace never changes what the job does
+                doc = "?"
+            DOC_TRACE["calls"].append((member, doc))
+        return original(self, *args, **kwargs)
+    setattr(swcom.Session, name, wrapper)
+
+
+for _name, _member in SESSION_WRITES.items():
+    _write_traced(_name, _member)
 
 
 # -- the window's Build again… with the carry, traced ------------------------------------------------------------------
@@ -880,31 +1229,73 @@ def set_state_in(asm, name, state):
 
 
 def _frames(s, pairs, prefix):
-    """Each body's frame and GetConstrainedStatus, a component suppressed where it is read found all the same
-    (``suppressed_ok``) and its frame None where it will not read (W9a's reads would raise on it: M9 holds two)."""
-    frames, status = {}, {}
+    """Each body's frame, GetConstrainedStatus and (a user's) GetSuppression2, a component suppressed where it is
+    read found all the same (``suppressed_ok``) and its frame None where it will not read (W9a's reads would raise on
+    it: M9 holds two)."""
+    frames, status, states = {}, {}, {}
     for i, (g, n) in enumerate(pairs):
+        if g == n:
+            c = comp_of(s, n)
+            states[n] = None if c is None else int(swcom._read(c, "GetSuppression2"))  # noqa: SLF001
         try:
             s.find_component(f"{prefix}{i}", n, lightweight_ok=True, suppressed_ok=True)
             frames[g] = s.component_frame(f"{prefix}{i}")
             status[g] = s.constrained_status(f"{prefix}{i}")
         except Exception as exc:  # noqa: BLE001 - a frame that does not read is said, as None
             frames[g], status[g] = None, f"unread: {type(exc).__name__}"
-    return frames, status
+    return frames, status, states
+
+
+def mates_read(s, names):
+    """M2, the script's own read of each named mate (the probes' ``mate_definition``, assemblies/06's route, not the
+    app's): type, alignment, flipped, the definition's values, and each entity's component, reference (feature,
+    component, geometry), feature name, ``EntityParams`` and, for a face or an edge, its place in its own component
+    (``entity_key``, from the component's frame)."""
+    out, frames = {}, {}
+    for i, n in enumerate(names):
+        try:
+            s.find_mate(f"mr{i}", n)
+            _, feature = s._kept_mate(f"mr{i}")  # noqa: SLF001
+            d = CP.mate_definition(s, feature)
+        except Exception as exc:  # noqa: BLE001 - not read: judged as such
+            out[n] = {"unread": f"{type(exc).__name__}: {exc}"}
+            continue
+        ents = []
+        for e in d.get("entities") or []:
+            comp = e.get("component")
+            if comp and comp not in frames:
+                try:
+                    s.find_component(f"mrc{len(frames)}", comp, lightweight_ok=True, suppressed_ok=True)
+                    frames[comp] = s.component_frame(f"mrc{len(frames)}")
+                except Exception:  # noqa: BLE001 - the assembly's own root, or a component that will not read
+                    frames[comp] = None
+            ents.append({"component": comp, "reference": e.get("reference"), "feature": e.get("feature"),
+                         "type": e.get("reference_type"), "params": e.get("params"),
+                         "key": entity_key(e.get("params"), frames.get(comp)) if e.get("reference") == "geometry"
+                         else None})
+        out[n] = {"type": d.get("type"), "alignment": d.get("alignment"), "flipped": d.get("flipped"),
+                  "values": d.get("values") or {}, "entities": ents}
+    return out
 
 
 def old_read(label, old, folder, pairs, modes, mates):
-    """W9a's ``read_now`` of the old assembly where it stands (never opened or activated, nothing shown or rebuilt):
-    frames, statuses, every mate's code and flag per mode and its entities (``mate_info``), the mode showing, the save
-    flags before and after the read (a read that marks is §0.3's STOP); and every user component's state."""
+    """The old assembly read where it stands (never opened or activated, nothing shown or rebuilt): frames, statuses,
+    every component's state, fixed or floating and referenced configuration; every mate's code and flag per mode,
+    its entities (``mate_info``) and, for the user's, its definition by the script's own read (``mates_read``); the
+    mode showing; the save flags before and after the read (a read that marks is §0.3's STOP)."""
     def work(s):
         out = {"flags_before": W.folder_flags(s, folder), "active": s.active_configuration(), "mates": {},
-               "by_mode": {}, "entities": {}}
+               "by_mode": {}, "entities": {}, "fixed": {}, "referenced": {}}
         try:
             out["needs_rebuild"] = int(swcom._read(call(s._doc(), "Extension"), "NeedsRebuild2"))  # noqa: SLF001
         except Exception as exc:  # noqa: BLE001
             out["needs_rebuild"] = f"unread: {type(exc).__name__}"
-        out["frames"], out["status"] = _frames(s, pairs, "or")
+        out["frames"], out["status"], out["states"] = _frames(s, pairs, "or")
+        for g, n in pairs:
+            if g == n and comp_of(s, n) is not None:
+                c = comp_of(s, n)
+                out["fixed"][n] = CP._try(c, "IsFixed")  # noqa: SLF001
+                out["referenced"][n] = CP._try(c, "ReferencedConfiguration")  # noqa: SLF001
         for i, m in enumerate(s.mate_states()):
             out["mates"][m.name] = (m.code, m.suppressed)
             s.find_mate(f"orm{i}", m.name)
@@ -913,29 +1304,29 @@ def old_read(label, old, folder, pairs, modes, mates):
             if m.name in mates:
                 info = s.mate_info(f"orm{i}")
                 out["entities"][m.name] = (info.type, sorted(str(c) for c in info.components), info.whole)
-        out["states"] = {n: (None if comp_of(s, n) is None else int(swcom._read(comp_of(s, n), "GetSuppression2")))  # noqa: SLF001
-                         for g, n in pairs if g == n}
+        out["definitions"] = mates_read(s, [n for n in mates if n in out["mates"]])
         out["flags_after"] = W.folder_flags(s, folder)
         return out
-    got = run(f"read {label}", bare(old, work), 900)
+    got = run(f"read {label}", bare(old, work), 1200)
     marked = sorted(n for n, v in got["flags_after"].items() if v and not got["flags_before"].get(n))
     if marked:
         A.stop(f"{label}: a read marked {marked} modified (ISSUE-1-PLAN §0.3)")
     say(f"read    {label}: {got['active']} showing; mates in error "
         f"{ {n: c for n, (c, sup) in got['mates'].items() if c and not sup} or 'none'}; marked "
-        f"{W.marked(got['flags_after']) or 'none'}; rebuild state {got['needs_rebuild']}")
+        f"{W.marked(got['flags_after']) or 'none'}; rebuild state {got['needs_rebuild']}; states {got['states']}")
     return got
 
 
 def every_mode(label, asm, pairs, modes):
-    """W9a's every-mode read of the NEW assembly (each mode shown and rebuilt: frames, statuses, mate codes; then
-    every mate's flag per mode), a component suppressed in a mode read as such (its frame None there)."""
+    """W9a's every-mode read of the NEW assembly (each mode shown and rebuilt: frames, statuses, each user
+    component's GetSuppression2, mate codes; then every mate's flag per mode), a component suppressed in a mode read
+    as such (its frame None there)."""
     def work(s):
-        out = {"frames": {}, "status": {}, "mates": {}, "by_mode": {}}
+        out = {"frames": {}, "status": {}, "states": {}, "mates": {}, "by_mode": {}}
         for mode in modes:
             s.show_configuration(mode)
             s.rebuild(kind=swcom.ASSEMBLY_TRAIN)
-            out["frames"][mode], out["status"][mode] = _frames(s, pairs, f"em{mode}")
+            out["frames"][mode], out["status"][mode], out["states"][mode] = _frames(s, pairs, f"em{mode}")
             out["mates"][mode] = {m.name: (m.code, m.suppressed) for m in s.mate_states()}
         s.show_configuration(modes[0])
         s.rebuild(kind=swcom.ASSEMBLY_TRAIN)
@@ -947,19 +1338,8 @@ def every_mode(label, asm, pairs, modes):
 
 
 def definitions_in(asm, names):
-    """Each named mate's definition (``Session.mate_definition``) in ``asm`` (open), plain."""
-    def work(s):
-        out = {}
-        for i, n in enumerate(names):
-            try:
-                s.find_mate(f"dm{i}", n)
-                d = s.mate_definition(f"dm{i}")
-                out[n] = {"type": d.type, "alignment": d.alignment, "flipped": d.flipped, "values": list(d.values),
-                          "entities": [(e.component, e.kind, e.feature) for e in d.entities], "whole": d.whole}
-            except Exception as exc:  # noqa: BLE001 - said, judged as not read
-                out[n] = {"unread": f"{type(exc).__name__}: {exc}"}
-        return out
-    return run("the mates' definitions", bare(asm, work), 600)
+    """``mates_read`` in ``asm`` (open), where it stands."""
+    return run("the mates' definitions", bare(asm, lambda s: mates_read(s, names)), 900)
 
 
 def referenced_in(asm, name, modes):
@@ -1252,7 +1632,7 @@ def the_edit(label, desk, book):
     return u, plan, question
 
 
-def press_build(label, desk, folder, fx, old_open=True, shows_ok=False):
+def press_build(label, desk, folder, fx, old_open=True, shows_ok=False, light=""):
     """Build again… pressed as the window runs it (the footer must offer it), bracketed: every user file's and the
     old assembly's fingerprint (size, time, hash) and every open document's GetSaveFlag before and after; the old
     assembly, where open, read where it stands before and after (frames, codes, flags per mode, entities, states, the
@@ -1278,13 +1658,21 @@ def press_build(label, desk, folder, fx, old_open=True, shows_ok=False):
     out = {"seconds": round(desk.seconds), "calls": desk.calls, "flags_before": flags, "flags_after": flags_now(folder)}
     say(f"fact    {label}: the build took {desk.seconds:.0f} s; GetSaveFlag before {W.marked(flags) or 'none'}, after "
         f"{W.marked(out['flags_after']) or 'none'}")
+    out["old_before"] = before
     mine = {os.path.basename(p) for p in [old] + users}
     turned = [n for n in mine if out["flags_after"].get(n) and not flags.get(n)]
     if turned and old_open:
         A.stop(f"{label}: the Build again… marked {turned} modified (§0.3)")
     if old_open:
         after = old_read(f"{label}: the old assembly after", old, folder, pairs, modes, fx["mates"])
-        changes = old_diff(before, after, mine)
+        changes, apart = old_diff(before, after, mine, light=light)
+        out["old_after"] = after
+        if light:
+            was, now = before["states"].get(light), after["states"].get(light)
+            out["light"] = {"before": was, "after": now, "set_apart": apart}
+            say(f"fact    {label}: {light} in the old assembly, lightweight as the user set it, read {was} before the "
+                f"press and {now} after; what that alone changed, set apart (the coordinator's ruling on M1 (b)): "
+                f"{apart or 'nothing'}")
         if changes:
             A.stop(f"{label}: the Build again… changed the old assembly: {changes} (§0.3)")
         check(True, f"{label}: the old assembly's save flag, mode showing ({after['active']}), every component's frame "
@@ -1342,36 +1730,36 @@ def carry_facts(label, cr, out):
             f"values {m['values']}, on {m['on']}, code {m['code']}, entities {m['entities']}")
 
 
-def judge_carry(label, desk, fx, result, closed, light, out):
+def judge_carry(label, desk, fx, result, closed, light, out, old_before, old_box):
     """The carry's outcome against what the findings as they stand say it must be (``expected_outcome``), and the
-    new revision read again by the script in every mode: each remade mate's definition and flags per mode as the
-    old one's, each carried component's state per mode and pose against its anchor, every app gear free, the
-    interference with a carried component said. Returns what the proposals rest on."""
+    new revision read again by the script's own reads: each remade mate's definition and entities against the
+    script's own read of the old one before the press (M2), its flags per mode; each carried component's state per
+    mode (shown and read), its frame in every mode where it is resolved and its pose against its anchor, the anchor
+    the fixture's; every app gear free in every mode; the interference with a carried component said. Returns what
+    the proposals rest on: (clean, unclean mates, kind of each mate, outcomes)."""
     cr = result.carry
     fs = probe_reads(year())
     names = fx["names"]
+    handle_of = {n: h for h, n in names.items()}
     old_of = dict(cr.inserted)                       # old Name2 -> new Name2
     named = [(n.item, n.what, n.why) for n in cr.named]
     for n in cr.named:
         say(f"        named {n.item} ({n.what}): {n.why} {list(n.subjects)}")
+    not_carried = {n.item: n.why for n in cr.named if n.what == "component"}
+    no_frame = [handle_of[c] for c, w in not_carried.items() if w == swbuild.WHY_NO_FRAME and c in handle_of]
     got = outcome_of([r[0] for r in cr.remade], named, [f.deleted for f in cr.fixed])
-    want = expected_outcome(fs, fx["mates"], closed=closed, light=light)
+    want = expected_outcome(fs, fx["mates"], closed=closed, light=light, no_frame=no_frame)
     wrong = outcome_problems(want, got)
     out["outcome"], out["expected"] = got, {k: sorted(v) for k, v in want.items()}
     clean = {"outcome": check(not wrong, f"{label}: every mate made again, named or fallen back as the findings say "
                                          f"({fs}): {wrong or 'as expected'}")}
-    comps = {c: n for c, n in ((names[h], h) for h in names)}
-    not_carried = {n.item: n.why for n in cr.named if n.what == "component"}
-    allowed = {"s9": {swbuild.WHY_NO_FRAME}} if not closed else {"s7": {swbuild.WHY_NO_FRAME}}
-    bad = {c: w for c, w in not_carried.items() if w not in allowed.get(comps.get(c), set())}
+    allowed = {"s9"} if not closed else {"s7"}
+    bad = {c: w for c, w in not_carried.items() if not (w == swbuild.WHY_NO_FRAME and handle_of.get(c) in allowed)}
     clean["components"] = check(not bad and set(old_of) | set(not_carried) == set(names.values()),
                                 f"{label}: every component carried ({len(old_of)}), or named only as a component "
                                 f"suppressed in the mode showing may be: {not_carried or 'none'}; wrongly {bad or 'none'}")
-    for c in [names[h] for h, _ in SUPPRESS]:
-        say(f"fact    {label}: {c}, suppressed in {dict(SUPPRESS)} ... in the mode showing it was "
-            f"{'carried as ' + old_of[c] if c in old_of else 'named ' + not_carried.get(c, '?')}")
-    fell = [f for f in cr.fixed]
     tied = {names[h] for h in TIED}
+    fell = list(cr.fixed)
     clean["fallback"] = check(len(fell) == 1 and fell[0].why == swbuild.FELL_TIE
                               and set(fell[0].deleted) == {"UserLock8a"} and set(fell[0].kept) == {"UserLock8b"}
                               and set(fell[0].components) == {old_of.get(t, t) for t in tied},
@@ -1380,56 +1768,87 @@ def judge_carry(label, desk, fx, result, closed, light, out):
     clean["same_error"] = check(not cr.same_error and not cr.moved and not cr.stopped and cr.unsaved,
                                 f"{label}: no mate back in an old error {cr.same_error}, nothing moved {cr.moved}, no "
                                 f"stop {cr.stopped!r} {cr.skipped!r}, the new assembly unsaved {cr.unsaved}")
-    states = dict(cr.states)
-    want_states = expected_states(fs, closed)
-    got_states = {h: set(states.get(old_of.get(names[h], ""), ())) for h in want_states if names[h] in old_of}
-    clean["states"] = check(all(got_states[h] == want_states[h] for h in got_states),
-                            f"{label}: Sprocket-7 and Sprocket-9 read suppressed in {got_states}, as the route says "
-                            f"{want_states}")
-    remade_on = {r[0]: set(r[2]) for r in cr.remade}
-    old_on = {m.name: set(m.on) for m in cr.work.mates}
-    flags_wrong = {n: (old_on.get(n), on) for n, on in remade_on.items() if on != old_on.get(n)}
-    clean["flags"] = check(not flags_wrong, f"{label}: every remade mate on in the modes it was on in: "
-                                            f"{flags_wrong or 'all'}")
+    anchors = dict(cr.anchors)
+    off_anchor = {o: (anchors.get(n), sorted(EXPECTED_ANCHORS.get(handle_of.get(o), {"?"})))
+                  for o, n in old_of.items() if anchors.get(n, "?") not in EXPECTED_ANCHORS.get(handle_of.get(o), set())}
+    clean["anchors"] = check(not off_anchor, f"{label}: each carried component placed against the fixture's anchor "
+                                             f"(D20 as ruled 2026-11-17; a fixed one by the world): "
+                                             f"{off_anchor or 'all'}")
 
-    new_asm = desk.record.gearbox.assembly
-    box = desk.record.gearbox
-    modes = list(box.modes)
-    carried = [n for n in old_of.values()]
-    defs = out["definitions"] = definitions_in(new_asm, [r[1] for r in cr.remade])
-    kind_of = {m.name: swbuild.carry_kind(m) for m in cr.work.mates}
-    olds = {m.name: {"type": m.type, "alignment": m.alignment, "flipped": m.flipped, "values": list(m.values)}
-            for m in cr.work.mates}
+    new_box = desk.record.gearbox
+    new_asm, modes = new_box.assembly, list(new_box.modes)
+    carried = list(old_of.values())
+    pairs = W.bodies(new_box) + [("layout", new_box.layout_component)] + [(n, n) for n in carried]
+    every = out["every"] = every_mode(f"{label}: RangeBox_r2 in every mode", new_asm, pairs, modes)
+    # The states per mode, by the script's own read (each mode shown), against the route's.
+    want_states = expected_states(fs, closed)
+    own = {h: {m for m in modes if every["states"][m].get(old_of.get(names[h], "")) == SUPPRESSED}
+           for h in want_states if names[h] in old_of}
+    worker = {h: set(dict(cr.states).get(old_of[names[h]], ())) for h in own}
+    clean["states"] = check(all(own[h] == want_states[h] == worker[h] for h in own),
+                            f"{label}: Sprocket-7 and Sprocket-9 read suppressed in {own} (shown and read), as the "
+                            f"route says {want_states} and the carry said {worker}")
+    others = {n: [m for m in modes if every["states"][m].get(n) == SUPPRESSED] for n in carried
+              if n not in {old_of.get(names[h]) for h in want_states}}
+    check(not any(others.values()), f"{label}: every other carried component resolved in every mode: "
+                                    f"{ {n: v for n, v in others.items() if v} or 'all'}")
+    # M2: each remade mate against the script's own read of the old one, entities mapped old -> new.
+    kind_of = {n: k for n, k, _, _ in mate_specs()}
+    old_names = dict(W.bodies(old_box))                 # gear id -> old Name2
+    mapping = {old_names[g]: (n, True) for g, n in W.bodies(new_box) if g in old_names}
+    mapping[old_box.layout_component] = (new_box.layout_component, True)
+    mapping.update({o: (n, False) for o, n in old_of.items()})
+    mapping[_stem(old_box.assembly)] = (os.path.splitext(os.path.basename(new_asm))[0], False)
+    mapping[os.path.splitext(os.path.basename(old_box.assembly))[0]] = mapping[_stem(old_box.assembly)]
+    new_defs = out["definitions"] = definitions_in(new_asm, [r[1] for r in cr.remade])
     unclean = {}
     for old_name, kept, _ in cr.remade:
-        d = defs.get(kept, {})
-        diff = ["not read: " + d["unread"]] if "unread" in d else definition_problems(olds[old_name], d,
-                                                                                         kind_of[old_name])
+        o, n = (old_before.get("definitions") or {}).get(old_name), new_defs.get(kept, {})
+        if o is None or "unread" in o or "unread" in n:
+            unclean[old_name] = [f"not read: {(o or {}).get('unread', 'before')} / {n.get('unread', '')}"]
+            continue
+        kind = kind_of.get(old_name, "")
+        diff = definition_problems(o, n, kind) + entity_problems(o["entities"], n["entities"], mapping,
+                                                                 gear=kind == "gear")
         if diff:
             unclean[old_name] = diff
-    clean["definitions"] = check(not unclean, f"{label}: every remade mate's definition in RangeBox_r2 as the old "
-                                              f"one's: {unclean or 'all'}")
-    pairs = W.bodies(box) + [("layout", box.layout_component)] + [(n, n) for n in carried]
-    every = out["every"] = every_mode(f"{label}: RangeBox_r2 in every mode", new_asm, pairs, modes)
+    clean["definitions"] = check(not unclean, f"{label}: every remade mate's definition and entities in RangeBox_r2 "
+                                              f"as the old one's, by the script's own reads: {unclean or 'all'}")
+    remade_on = {r[0]: set(r[2]) for r in cr.remade}
+    old_on = {n: {m for m in modes if not (old_before.get("by_mode") or {}).get(n, {}).get(m, True)}
+              for n in remade_on} if old_before.get("by_mode") else {m.name: set(m.on) for m in cr.work.mates}
     by_mode = every["by_mode"]
-    flags_read = {r[1]: {m for m in modes if not by_mode.get(r[1], {}).get(m, True)} for r in cr.remade}
-    differ = {n: (sorted(remade_on[o]), sorted(flags_read.get(k, set()))) for o, k, _ in cr.remade
-              for n in [k] if flags_read.get(k) != remade_on[o]}
-    clean["flags_read"] = check(not differ, f"{label}: each remade mate's flag read again per mode as the carry said: "
-                                            f"{differ or 'all'}")
-    gear_ids = {g for g, _ in W.bodies(box)}
+    flags = {o: {m for m in modes if not by_mode.get(k, {}).get(m, True)} for o, k, _ in cr.remade}
+    flags_wrong = {o: (sorted(old_on.get(o, set())), sorted(flags[o]), sorted(remade_on[o])) for o in remade_on
+                   if not (flags[o] == remade_on[o] == (old_on.get(o, set()) & set(modes)))}
+    for o, why in flags_wrong.items():
+        unclean.setdefault(o, []).append(f"flags (old, read, said) {why}")
+    clean["flags"] = check(not flags_wrong, f"{label}: every remade mate on in the modes it was on in, read again: "
+                                            f"{flags_wrong or 'all'}")
+    gear_ids = {g for g, _ in W.bodies(new_box)}
     status = every["status"]
     not_free = {m: {g: v for g, v in status[m].items() if g in gear_ids and v != findings.COMPONENT_UNDER_DEFINED
-                    and g not in set(box.fixed)} for m in modes}
+                    and g not in set(new_box.fixed)} for m in modes}
     not_free = {m: v for m, v in not_free.items() if v}
     say(f"fact    {label}: GetConstrainedStatus per mode of the app's bodies {status}")
     clean["free"] = check(not not_free, f"{label}: every app gear free to turn in every mode with the carried mates "
                                         f"on: {not_free or 'all'}")
+    say(f"fact    {label}: Sun's frame in the old assembly ({old_before.get('active')}) "
+        f"{old_before['frames'].get('Sun')}; in RangeBox_r2 per mode "
+        f"{ {m: every['frames'][m].get('Sun') for m in modes} }")
+    anchor_of = {n: (o, anchors.get(n, "")) for o, n in old_of.items()}
+    before_frames = dict(old_before["frames"])
+    for c in cr.work.components:
+        if before_frames.get(c.name) is None and c.frame is not None:
+            say(f"fact    {label}: {c.name}'s frame did not read by the script's read of the old assembly (state "
+                f"{old_before['states'].get(c.name)}); R read it, and that frame is the one held")
+            before_frames[c.name] = c.frame
+    clean["poses"] = poses_judged(label, before_frames, every, anchor_of, old_before.get("active"), out)
     globals_ = B.part_globals(desk, ("RangeSlv", "HighDog", "LowDog"))
     every_b = B.mode_read(f"{label}: W9b's read", desk)
     B.judge_every(label, desk, every_b, globals_, banded=False, against_section3=False, out=out.setdefault("w9b", {}),
                   users=carried)
-    gear_of = {n: g for g, n in W.bodies(box)}
+    gear_of = {n: g for g, n in W.bodies(new_box)}
     named_clashes = {}
     for mode, clash in cr.clashes:
         named_clashes.setdefault(mode, []).append((tuple(clash.gears), float(clash.volume)))
@@ -1445,26 +1864,31 @@ def judge_carry(label, desk, fx, result, closed, light, out):
 
 
 def poses_judged(label, before, every_new, anchors, old_mode, out):
-    """Each carried component's pose against its anchor in the new revision's every mode against its pose against
-    that anchor in the old assembly's mode showing (§5.3; contradiction 6 on the closed path: read in L, placed in
-    H). ``anchors`` {new Name2: (old Name2, anchor body id)}."""
-    gaps = {}
+    """Each carried component's pose against its anchor in every mode of the new revision where it is resolved,
+    against its pose against that anchor in the old assembly's mode showing (§5.3; contradiction 6 on the closed
+    path: read in L, placed in H); "" the world frame. ``anchors`` {new Name2: (old Name2, anchor body id)}. A carried
+    component whose frame does not read in a mode where it is resolved is a FAIL, never skipped."""
+    gaps, missing = {}, []
 
     def rel(frames, anchor, name):
         if frames.get(name) is None or (anchor and frames.get(anchor) is None):
             return None
-        return S0.relative(frames[anchor], frames[name]) if anchor else frames[name]   # "" the world frame
-    old_rel = {old: rel(before, anchor, old) for new, (old, anchor) in anchors.items()}
+        return S0.relative(frames[anchor], frames[name]) if anchor else frames[name]
     for mode, frames in every_new["frames"].items():
         for new, (old, anchor) in anchors.items():
-            now = rel(frames, anchor, new)
-            if old_rel.get(old) is not None and now is not None:
-                gaps[(new, mode)] = pose_gap(old_rel[old], now)
+            if every_new["states"][mode].get(new) == SUPPRESSED:
+                continue
+            was, now = rel(before, anchor, old), rel(frames, anchor, new)
+            if was is None or now is None:
+                missing.append(f"{new} in {mode} ({'old' if was is None else 'new'} frame not read)")
+            else:
+                gaps[(new, mode)] = pose_gap(was, now)
     off = {f"{n} in {m}": round(g, 9) for (n, m), g in gaps.items() if g > POSE_TOL}
     out["poses"] = {f"{n} in {m}": g for (n, m), g in gaps.items()}
-    return check(bool(gaps) and not off, f"{label}: each carried component at its pose against its anchor, as it stood "
-                                         f"in {old_mode} of the old assembly, in every mode of RangeBox_r2 "
-                                         f"({len(gaps)} reads): off {off or 'none'}")
+    return check(bool(gaps) and not off and not missing,
+                 f"{label}: each carried component at its pose against its anchor, as it stood in {old_mode} of the "
+                 f"old assembly, in every mode of RangeBox_r2 where it is resolved ({len(gaps)} reads): off "
+                 f"{off or 'none'}; not read {missing or 'none'}")
 
 
 def record_judged(label, desk, result):
@@ -1564,9 +1988,8 @@ def section_carry(out):
         old, modes = box.assembly, list(box.modes)
         shown = run("carry: the old assembly opened (the user's)", job(old, lambda s: s.active_configuration()))
         check(shown == modes[0], f"carry: the old assembly shows {shown} ({modes[0]} expected, as saved)")
-        old_frames = old_frames_now("carry", old, folder, box, names)
         state = set_state_in(old, names["lt"], LIGHTWEIGHT)
-        light = state in (1, 4)
+        light = was_light = state in (1, 4)
         states = raw_states(old, list(names.values()))
         lit = [n for n, v in states.items() if v in (1, 4)]
         check(lit == [names["lt"]], f"carry: SprocketLight-1 alone reads lightweight (a file of its own): {lit}")
@@ -1580,9 +2003,18 @@ def section_carry(out):
             say(f"fact    carry: the question names UserSunFace (on Sun's face, not made again) "
                 f"{'by name' if 'UserSunFace' in q else 'only within a count'}")
             out["question"] = q
-            result, facts = press_build("carry", desk, folder, fx)
+            result, facts = press_build("carry", desk, folder, fx, light=names["lt"] if light else "")
             out.update(facts)
             cr = result.carry
+            lit = facts.get("light") or {}
+            resolved_it = lit.get("before") in (1, 4) and lit.get("after") in (2, 3)
+            light = light and not resolved_it
+            proposed(finding_name("CARRY_RESOLVES_A_LIGHTWEIGHT_COMPONENT_IN_THE_OLD_ASSEMBLY"),
+                     bool(resolved_it) if lit.get("after") is not None else None,
+                     f"carry: SprocketLight-1, lightweight in the open old assembly, read {lit.get('before')} before "
+                     f"the press and {lit.get('after')} after (carrying it opens its file, and lightweight is per "
+                     f"file in the session); a fact for D10 and for the result's sentence if True; set apart: "
+                     f"{lit.get('set_apart')}")
             check(result.ok and desk.record.gearbox.revision == 2 and cr is not None and cr.work.how == swbuild.OLD_OPEN,
                   f"carry: RangeBox_r2 built, checked and saved as today; the old assembly read open: "
                   f"{result.failures}")
@@ -1590,9 +2022,8 @@ def section_carry(out):
             status = out["status"]
             check("Carried into RangeBox_r2, unsaved" in status and "Keyway" in status and "UserSunFace" in status,
                   "carry: the result says what was carried unsaved, the Keyway with why, the mate on Sun's face")
-            clean, unclean, kind_of, got = judge_carry("carry", desk, fx, result, False, light, out)
-            anchors = {new: (o, dict(cr.anchors).get(new, "")) for o, new in cr.inserted}
-            clean["poses"] = poses_judged("carry", old_frames, out["every"], anchors, modes[0], out)
+            clean, unclean, kind_of, got = judge_carry("carry", desk, fx, result, False, was_light, out,
+                                                       facts["old_before"], box)
             conf = referenced_in(desk.record.gearbox.assembly, dict(cr.inserted).get(names["cf"], ""), modes)
             w = {c.name: c for c in cr.work.components}
             cf = w.get(names["cf"])
@@ -1619,10 +2050,17 @@ def section_carry(out):
             set_state_in(old, names["lt"], RESOLVED)
             light = False
         r2 = desk.record.gearbox.assembly
-        run("carry: the user saves RangeBox_r2", save_one(r2), 600)
-        desk.read()
-        check(ui_text.carry_footer_line(desk.record) == "", f"carry: after the save the footer's carry line is gone: "
-                                                           f"{ui_text.carry_footer_line(desk.record)!r}")
+        lit = light_in(r2)
+        if lit:
+            # M1 (a): never saved with a lightweight component (SOLIDWORKS CAM's modal box on the save, S-g).
+            say(f"fact    carry: RangeBox_r2 holds {lit} lightweight, so the user's save is not made (SOLIDWORKS "
+                "CAM's box on saving an assembly with a lightweight component): the footer's line going after a save "
+                "is not shown here")
+        else:
+            run("carry: the user saves RangeBox_r2", save_one(r2), 600)
+            desk.read()
+            check(ui_text.carry_footer_line(desk.record) == "", f"carry: after the save the footer's carry line is "
+                                                               f"gone: {ui_text.carry_footer_line(desk.record)!r}")
     finally:
         _propose(clean, unclean, kind_of, got, fx)
         if light and old and not W.HUNG["on"]:
@@ -1632,6 +2070,15 @@ def section_carry(out):
                 say(f"fact    carry: SprocketLight-1 not resolved again: {exc}")
         if not W.HUNG["on"]:
             A.w8_step(W.end_copy, CTX["worker"], folder, "carry", save=False)
+
+
+def light_in(asm):
+    """Every component of ``asm`` (open) that reads lightweight (GetSuppression2 1 or 4), by the script's own read."""
+    def work(s):
+        return [c.name for c in s.components() if c.state in (1, 4)]
+    got = run("the components read lightweight", bare(asm, work), 300)
+    say(f"read    lightweight in {os.path.basename(asm)}: {got or 'none'}")
+    return got
 
 
 def save_one(path):
@@ -1646,15 +2093,9 @@ def save_one(path):
     return work
 
 
-def old_frames_now(label, old, folder, box, names):
-    """The old assembly's app bodies' and user components' frames in the mode it shows, read where it stands."""
-    pairs = W.bodies(box) + [("layout", box.layout_component)] + [(n, n) for n in names.values()]
-    return old_read(f"{label}: the old assembly's frames", old, folder, pairs, [], [])["frames"]
-
-
 def _propose(clean, unclean, kind_of, outcome, fx):
-    inserts = bool(clean) and all(clean.get(k) for k in ("components", "states", "poses", "unsaved", "fallback",
-                                                         "same_error", "free"))
+    inserts = bool(clean) and all(clean.get(k) for k in ("outcome", "components", "states", "poses", "anchors",
+                                                         "unsaved", "fallback", "same_error", "free"))
     proposed(finding_name("CARRY_INSERTS"), True if inserts else None,
              f"carry: every user part inserted, placed against its anchor in every mode, fixed or floating, its state "
              f"set and read back per mode, the tied cluster fixed, nothing written to the old: {clean}")
@@ -1688,12 +2129,22 @@ def section_closed(out):
         C9.same_sheets("carry-closed", desk, C9.specs()[0])
         box = desk.record.gearbox
         old, modes = box.assembly, list(box.modes)
+        _, plan, question = the_edit("carry-closed", desk, book)
+        say("-- carry-closed  R.2 on the copy as copied, before the user's save: its stored dependency paths are the "
+            "master's folder's (the ruling of 2026-11-17: a copied folder is refused, open it first); closed-file "
+            "reads only")
+        copied = wb_update.carry_for(desk.record, plan, wb_update.old_assembly(desk.record, plan))
+        unsaved_copy = out["copy_refusal"] = run(
+            "R.2 on the unsaved copy", lambda s: swbuild._not_open_refusal(s, copied, []), 300)  # noqa: SLF001
+        check(bool(unsaved_copy), f"carry-closed: the copy, not saved since it was copied, is refused by R.2: "
+                                  f"{unsaved_copy!r}")
         run("carry-closed: the user shows L", job(old, lambda s: s.show_configuration(modes[-1])), 300)
         A.save_user(folder, "L showing (the save also writes the assembly's references to this copy's files)")
-        old_frames = old_frames_now("carry-closed", old, folder, box, names)
+        pairs = W.bodies(box) + [("layout", box.layout_component)] + [(n, n) for n in names.values()]
+        old_before = old_read("carry-closed: the old assembly as saved, before it is closed", old, folder, pairs,
+                              modes, fx["mates"])
         left = run("carry-closed: closed", W.quit_in(folder))
         check(not left, f"carry-closed: everything of the copy closed: left {left}")
-        _, plan, question = the_edit("carry-closed", desk, book)
         with patched_values(WRITE_GATES, year(), say=say):
             q = ui_text.build_again_question(desk.update, plan, record=desk.record)
             say(f"question (the gates patched) {q}")
@@ -1704,15 +2155,20 @@ def section_closed(out):
             cr = result.carry
             carry_facts("carry-closed", cr, out)
             w = cr.work
+            if not probe_reads(year())["closed_read"]:
+                check(result.ok and w is not None and w.how == swbuild.OLD_UNREAD and not cr.inserted,
+                      f"carry-closed: the closed-file reads are not set on this SolidWorks, so the old assembly is not "
+                      f"opened (OLD_UNREAD) and nothing is carried: {w and w.unread}")
+                A.section_stop("carry-closed: the not-open read waits for this version's closed-file findings; "
+                               "nothing more to judge here")
             check(result.ok and w is not None and w.how == swbuild.OLD_READ_ONLY and not w.left and not w.marked
                   and w.active == modes[-1],
                   f"carry-closed: read read-only ({w and w.how}), {w and w.active} showing as saved, nothing left open "
                   f"{w and w.left} or marked {w and w.marked}; unread {w and w.unread}")
             still = run("carry-closed: open names", W.open_names)
             check(os.path.basename(old) not in still, "carry-closed: the old assembly closed again by the job")
-            clean, unclean, kind_of, got = judge_carry("carry-closed", desk, fx, result, True, False, out)
-            anchors = {new: (o, dict(cr.anchors).get(new, "")) for o, new in cr.inserted}
-            clean["poses"] = poses_judged("carry-closed", old_frames, out["every"], anchors, modes[-1], out)
+            clean, unclean, kind_of, got = judge_carry("carry-closed", desk, fx, result, True, False, out,
+                                                       old_before, box)
             s2 = names["u2"]
             check(dict(cr.anchors).get(dict(cr.inserted).get(s2, ""), "") == "RangeSlv",
                   "carry-closed: Sprocket-2 placed against RangeSlv, read in L and placed in H (contradiction 6)")
