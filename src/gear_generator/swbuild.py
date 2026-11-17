@@ -3681,6 +3681,7 @@ class GearboxUpdate:
                     lines.append("CHECK   the rebuild reported an error, from your features alone: " + ", ".join(theirs))
                 else:
                     lines.append("FAIL    the rebuild reported an error")
+        lines.extend(self._in_place_lines())
         if self.found:
             if self.placed:
                 lines.append("ok      re-placed " + ", ".join(self.placed))
@@ -3705,6 +3706,35 @@ class GearboxUpdate:
             lines.append("nothing changed in SolidWorks")
         if self.skipped:
             lines.append(f"SKIPPED {self.skipped}")
+        return lines
+
+    def _in_place_lines(self) -> List[str]:
+        """W9c: what the Update made or took away in place (every field empty without an ``InPlace``)."""
+        lines: List[str] = []
+        lines.extend(f"ok      built {_file(b.saved or b.path)}" for b in self.built if b.ok)
+        if self.bands_added:
+            lines.append("ok      bands given in place: " + ", ".join(self.bands_added))
+        if self.bands_removed:
+            lines.append("ok      bands taken away in place (the relief suppressed): "
+                         + ", ".join(self.bands_removed))
+        if self.modes_removed:
+            lines.append("ok      configurations deleted: " + ", ".join(self.modes_removed))
+        lines.extend(f"CHECK   your {item} was {state} in {mode}, deleted with it"
+                     for mode, item, state in self.flags_lost)
+        lines.extend(f"ok      took {gear} out ({component}), with its mates" for gear, component in self.deleted)
+        if self.modes_added:
+            lines.append("ok      configurations added, each a copy of the mode showing: "
+                         + ", ".join(self.modes_added))
+        lines.extend(f"CHECK   your {item} is {state} in {mode}, as in the mode it was copied from"
+                     for mode, item, state in self.took_active_state)
+        lines.extend(f"ok      inserted {gear} as {component}" for gear, component in self.inserted)
+        lines.extend(f"ok      made {name}" + (f", on in {', '.join(on)}" if on else "")
+                     for name, on in self.mates_made)
+        if self.remade_in_modes:
+            lines.append("ok      made again in a mode, its flags set in every mode: "
+                         + ", ".join(self.remade_in_modes))
+        lines.extend(f"FAIL    {gear} reads {_STATE_WORDS.get(state, 'unread')} in {configuration}"
+                     for gear, configuration, state in self.not_resolved)
         return lines
 
     def _motion_lines(self) -> List[str]:
@@ -5805,7 +5835,7 @@ def judge_in_place(work: Optional[UserWork], in_place: InPlace, *, file: str = "
 
 # -- W9c: the worker's steps in place (W9C-INTERFACES §4), each called by _update_motion in that order ---------------
 
-_IN_PLACE_OPS = (base.AddGlobal, base.AddComponent, base.Place, base.Fix, base.Mate, base.LinkDimension)
+_IN_PLACE_OPS = (base.AddGlobal, base.AddComponent, base.Place, base.Fix, base.Unfix, base.Mate, base.LinkDimension)
 # IComponent2.GetSuppression2 (swComponentSuppressionState_e): the words a sentence says it in.
 _STATE_WORDS = {0: "suppressed", 1: "lightweight", 2: "resolved", 3: "resolved", 4: "lightweight"}
 _RESOLVED_STATES = (2, 3)
@@ -5815,7 +5845,7 @@ def _op_handles(op: base.Op) -> List[str]:
     """The plan handles an op of an added gear names (never the assembly's own ``asm``)."""
     if isinstance(op, base.AddComponent):
         out = [op.id]
-    elif isinstance(op, (base.Place, base.Fix)):
+    elif isinstance(op, (base.Place, base.Fix, base.Unfix)):
         out = [op.component]
     elif isinstance(op, base.Mate):
         out = [op.a, op.b] if op.kind == "lock" else [op.a.partition(":")[0], op.b.partition(":")[0]]
@@ -6175,6 +6205,8 @@ def _in_place_assembly(sw: SolidWorks, result: GearboxUpdate, assembly: str, in_
                     sw.place_component(op.component, op.rotation, op.at, kind=ASSEMBLY_TRAIN)
                 elif isinstance(op, base.Fix):
                     sw.fix_component(op.component)
+                elif isinstance(op, base.Unfix):
+                    sw.unfix_component(op.component)
                 elif isinstance(op, base.LinkDimension):
                     sw.link_dimension(dims.get(op.dimension, op.dimension), op.expression_for(DEGREES))
                 else:

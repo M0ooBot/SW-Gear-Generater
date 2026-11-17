@@ -180,8 +180,10 @@ work. New kinds:
   (findings.EXTERNAL_REFERENCES_READ_ON_2026 is None), so nothing is changed; …"* Once the read is measured this
   becomes "a user part with in-context references to it", named. ⟨C4⟩
 - **`PROBLEM_MODE_SHOWING = "mode showing"`** — the Modes row removed is the configuration showing (read live):
-  *"The mode L is no longer on the Modes sheet, and RangeBox.SLDASM is showing it, so nothing is changed; show
-  another mode in SolidWorks and press Update SolidWorks again."*
+  *"Update SolidWorks would delete the configuration L from RangeBox.SLDASM, and it is the configuration showing in
+  SolidWorks, so nothing is changed; show another mode in SolidWorks and press Update SolidWorks again."* (as
+  committed). It is read before the user's work, so that refusal's `UserWorkRefused.user_work` is **None** (nothing
+  read): B keeps the record's inventory as it was. The gates' `unsettled` problems come with it.
 - **`PROBLEM_UNSETTLED`** (W9a's kind) — a step whose finding gate (§8) is None or not the measured value on the
   version in use, naming the finding.
 - **`PROBLEM_CONFIGURATION = "configuration"`** — a configuration of an added mode's name already in the assembly
@@ -193,10 +195,23 @@ sentence names, so B can word it — the gear removed and the user's components 
 (`removed`), the mode (`mode showing`), the configuration (`configuration`), the finding (`unsettled` from an in-place
 gate). `mates` keeps the user's mates named.
 
-Faults (`BuildError`, "a fault in Gear Generator"): a `RemovedGear` that anchors a gear on record, an `AddedGear`
-on a shaft that is not on record or is not along Z±, an op naming a handle neither added nor in `handles`, a
-`NewMate` on in no configuration, a `BandChange` on a part that is not a sleeve's. B never sends these; A refuses
-them rather than act.
+Faults (`BuildError`, "a fault in Gear Generator"), as committed (`_in_place_faults`, before anything is read): a
+placement with `component == ""` and no `AddedGear`, or an `AddedGear` with no such placement; an `AddedGear` whose
+ops do not insert its own handle exactly once, hold an op other than `AddGlobal`, `AddComponent`, `Place`, `Fix`,
+`Unfix`, `Mate`, `LinkDimension`, or name a handle neither its own nor in `handles`; a `RemovedGear` that anchors a
+gear (a `LockLink` with it first) or that stays, or whose mates are still in `motion.mates`; a `NewMate` on in no
+configuration (ruling 9.1) or naming a handle not in its `handles`; a `BandChange` on a part not in `parts`, or with
+nothing to make or suppress; a mode added not in `motion.configurations` or one removed still in it; a mate on record
+left on in no mode once the modes removed are gone (ruling 9.1). B never sends these; A refuses them rather than act.
+
+Also refused before any write (`BuildError`, said to the user): an added gear's new part whose file is already on
+disk (*"… is already on disk, so Update SolidWorks would not build G5's new part over it, and nothing is changed;
+move it away or delete it, then press Update SolidWorks again."*); and, on a gearbox with modes where
+`UPDATE_MAKES_MATES_WITH_MODES_ON_<year>` is not True, a gear mate to be made again (ruling 9.16 kept, now naming the
+finding: *"The gear mate G3 meshes G4 in T.SLDASM would have to be made again, and making a gear mate of a gearbox
+with modes again has not been measured on this SolidWorks (findings.UPDATE_MAKES_MATES_WITH_MODES_ON_2026 is None),
+so nothing is changed; build the gearbox again."*). A suppressed gear mate that may need remaking with modes keeps
+W8's sentence.
 
 **For the footer** (B foresees the press, as W9a's `judge_user_work`): `swbuild.judge_in_place(work, in_place, *,
 file="the assembly", revision=(), modes=(), remakes=False) -> List[UserProblem]` is pure and returns, in this order,
@@ -214,7 +229,7 @@ said after the press, recorded, until the workbook changes.
 | `inserted: List[Tuple[str, str]]` | `(gear, Name2 SolidWorks kept)`, in the order inserted (the record's `ComponentEntry.name`) |
 | `deleted: List[Tuple[str, str]]` | `(gear, Name2)` taken out |
 | `mates_deleted: List[str]` | the app mates gone with them, each read gone by name |
-| `mates_made: List[Tuple[str, Tuple[str, ...]]]` | `(mate name kept, the configurations it reads on in)`, every mate made: an added gear's, a new coupling or sliding mesh |
+| `mates_made: List[Tuple[str, Tuple[str, ...]]]` | `(mate name kept, the configurations it reads on in)`, every mate made: an added gear's, a new coupling or sliding mesh. `()` with no modes (its one configuration); with modes, `()` only for a mate made when the job stopped before its flags were set (listed so nothing made goes unsaid) |
 | `remade_in_modes: List[str]` | gear mates made again on a gearbox with modes (also in `ratios`, as without modes) |
 | `bands_added: List[str]`, `bands_removed: List[str]` | sleeves (gear ids) given bands, or relieved of them, in place |
 | `modes_added: List[str]`, `modes_removed: List[str]` | configurations made and deleted |
@@ -223,7 +238,11 @@ said after the press, recorded, until the workbook changes.
 | `flags_lost: List[Tuple[str, str, str]]` | `(mode removed, the user's mate, its flag there)` for each user mate whose flag in that configuration differed from the active mode's, read unshown before the delete (`mate_suppression`); a user component's state there is not readable unshown (no route, the review's must-fix 2) and is said generally ⟨C5⟩ |
 
 Everything W9a returns stays (the user's items put, in error, kept). A failure part way says what was done, as every
-Update does, nothing saved; `inserted`, `deleted` and the rest list only what was done.
+Update does, nothing saved; `inserted`, `deleted` and the rest list only what was done, and `skipped` names what was
+not, in §4's order (*"adding the configuration 2L and putting the gears back and checking the assembly, because the
+job stopped in TransferCase.SLDASM"*; a new part or a band part that fails: *"… and the assembly, because
+Hub_m1.5_N30.SLDPRT failed"*). The configuration that was active is shown again. `log_lines()` gains a line for each
+(`ok      inserted G5 as gear5-1`, `CHECK   your UserFlush was suppressed in N, deleted with it`, …).
 
 ## 7. The record
 
@@ -239,13 +258,13 @@ W8's finish writes frames and on-sets.
 
 | Step | Reads | 2026 | 2024 |
 |---|---|---|---|
-| remove a gear | `COMPONENT_DELETE_ROUTE_ON_<year>` = `"select4-editdelete"`; `COMPONENT_DELETE_TAKES_ITS_MATES_ON_<year>` True; `COMPONENT_DELETE_DIALOG_ON_<year>` False; with modes `COMPONENT_DELETE_ROUTE_IN_EVERY_CONFIGURATION_ON_<year>` True | set (P1) | None until its run is reviewed |
+| remove a gear | `COMPONENT_DELETE_ROUTE_ON_<year>` = `"select4-editdelete"`; `COMPONENT_DELETE_TAKES_ITS_MATES_ON_<year>` True; `COMPONENT_DELETE_DIALOG_ON_<year>` False; with modes `COMPONENT_DELETE_ROUTE_IN_EVERY_CONFIGURATION_ON_<year>` True | set (P1) | set (P1 on 2024, `6ca42da`) |
 | remove a gear with any user component present | `EXTERNAL_REFERENCES_READ_ON_<year>` (new, M4) | None (refuses) | None |
 | add a gear (insert and mate in a reopened assembly) | `UPDATE_INSERTS_A_GEAR_ON_<year>` (new, M5 and M6) | None until the full build reads it clean ⟨C7⟩ | None |
 | a coupling or sliding mesh made by Update; a gear mate remade with modes | `UPDATE_MAKES_MATES_WITH_MODES_ON_<year>` (new, M6); the remake also `GEAR_MATE_RATIO_ROUTE` "remake" | None ⟨C7⟩ | None |
 | bands in place | `UPDATE_BANDS_IN_PLACE_ON_<year>` (new, M8) | None ⟨C7⟩ | None |
 | a mode added; a mode removed | `UPDATE_ADDS_A_MODE_ON_<year>`, `UPDATE_REMOVES_A_MODE_ON_<year>` (new, M10) | None ⟨C7⟩ | None |
-| the assembly's own entity | `ASSEMBLY_ENTITY_COMPONENT_IS_ROOT_ON_<year>` (read through `root_component`, `7e0d095`; nothing gates on it) | True | None |
+| the assembly's own entity | `ASSEMBLY_ENTITY_COMPONENT_IS_ROOT_ON_<year>` (read through `root_component`, `7e0d095`; nothing gates on it) | True | True (`6ca42da`) |
 
 The new findings are measured by W9c's full build (the plan's demonstration, `RangeBox` → `RangeBox_Fixed`, then a
 mode added and one removed), patched True in the demonstration's own process for the measurement only, as W9a's
@@ -253,6 +272,30 @@ mode added and one removed), patched True in the demonstration's own process for
 modes=False, remakes=False) -> List[Tuple[str, str]]` (pure) returns `(step, finding)` for each gate not settled, for
 A's refusal and B's footer; `step` is one of `STEP_REMOVE`, `STEP_ADD`, `STEP_MATES`, `STEP_BANDS`,
 `STEP_MODE_ADD`, `STEP_MODE_REMOVE`.
+
+**What the full build must measure, per gate** (each read on the user's SolidWorks, every write read back by the
+worker's own calls, a watch on dialogs throughout; patched True only in that run's process):
+- `UPDATE_INSERTS_A_GEAR`: in a saved, reopened assembly with modes and the user's items, a gear's part opened then
+  `AddComponent5` (the `Name2` kept), `Place`, `Fix`/`Unfix`, its axis, along and lock or spline made by `add_mate`
+  (a gear mate's sense read straight after, as the build's), `LinkDimension` on its Face Z; then every new mate's flag
+  set and read back in every configuration, and the component's `GetSuppression2` read resolved in every mode shown
+  (C9); the save flag of the parts and the user's components unmarked by the insert; no dialog.
+- `UPDATE_MAKES_MATES_WITH_MODES`: a coupling made between components on record in the first mode it is on in (shown),
+  its sense read, its flags set elsewhere and read back; and a gear mate of a gearbox with modes given a new ratio by
+  the remake route in a mode it is on in, its flags in every other configuration set and read back, its sense read in
+  each mode shown; the user's mates' flags unchanged (read before and after).
+- `UPDATE_BANDS_IN_PLACE`: on a built sleeve with a user feature after the app's, the band globals added and the
+  relief's planes, sketches and loft cut made after it, the part rebuilt clean, the user's feature unchanged; then the
+  relief suppressed by `suppress_feature` (`SetSuppression2` on a part feature, read back), the part rebuilt, the
+  assembly's mates on that sleeve without error.
+- `UPDATE_ADDS_A_MODE`: `AddConfiguration2` from the mode showing in the reopened assembly, the handle rule (every
+  handle fetched again), one top-only rebuild before any flag, every app mate's flag and slide value set there and
+  read back, the user's mates' flags and components' states there read (they copy the active mode's); the mode
+  showing again after.
+- `UPDATE_REMOVES_A_MODE`: `DeleteConfiguration2` of a mode not showing, the user's mates' flags there read unshown
+  first, the configuration gone after, every other configuration's flags and slide values unchanged.
+- `EXTERNAL_REFERENCES_READ` (M4): a read of each user part's external references that names a reference into a
+  gear's part (none is written yet; until it is, any user component refuses a removal, C4).
 
 ## 9. The calls each step makes, and where each was measured
 
@@ -352,3 +395,24 @@ kind of write, None until the full build reads it clean. C8's suppress of a part
 - **The footer's foresight** calls `judge_in_place` with the revision of the record's user-work inventory, or `()`
   when there is none, so every gated step then reads unsettled (`…_ON_?`); B words those itself by the finding's name
   (`ui_text.in_place_line`) and uses A's sentences for every other problem kind.
+
+### From A (the worker, `95530bd`, `0ea9ae9` and after): what the worker relies on, and what changed after B started
+
+- **Changed after B started (additive, defaults keep B's calls working):** `AddedGear.refs: Tuple[MateRef, ...] = ()`
+  and `NewMate.ref: Optional[MateRef] = None` — the record's `MateRef` for each mate made (matched by name). The
+  worker adds them to `motion.mates` once made, so the puts and post-checks judge them by kind: **B should fill them**
+  (the `MateEntry`s B records for the mates made, as `MateRef`s). Without one a mate is judged for presence, flags and
+  error only (a lock by its two gears), never for sense. A lock or spline an added gear makes needs its `MateRef` (or
+  the `LockLink` in `motion.locks` reads as a lock with no mate on record, a fault). `UserProblem.subjects` and
+  `PROBLEM_CONFIGURATION` (first commit); `GearboxUpdate.not_resolved`; the mode-showing refusal's `user_work` None
+  (§5). All in this note above.
+- **`motion.meshes`, `locks`, `carriers` hold the links of the gearbox after the Update**, new ones included (a mesh or
+  lock with an added gear, a new coupling's `MeshLink` with its `modes`): the check phase leaves out any link to a gear
+  not yet inserted, and the change phase puts each train whole with them. `recorded_meshes` holds only what is on
+  record. A new coupling's `MeshLink` is needed for its sense in the post-checks.
+- **`Unfix`** in `AddedGear.ops` is run (B's `dda8795` sends `Fix` then `Unfix`, as the build's plan has them).
+- **A new part's path must not be on disk** before the press (refused, §5): after a failed press that built it, the
+  file is there and the record does not list it. B may want the footer to say so; the worker never builds over it.
+- **A tooth change on a gearbox with modes needs no `InPlace`**: `motion.ratios` with `motion.configurations` is
+  remade by the worker where `UPDATE_MAKES_MATES_WITH_MODES_ON_<year>` is True, and refused naming it otherwise.
+- **`workbook/gearbox.py`**: nothing the worker needs changed there; B need not touch it for package A.

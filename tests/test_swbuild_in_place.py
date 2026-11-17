@@ -50,7 +50,8 @@ def test_a_removal_reads_the_delete_findings_as_measured(monkeypatch):
     monkeypatch.setattr(findings, "COMPONENT_DELETE_ROUTE_ON_2024", None)
     monkeypatch.setattr(findings, "COMPONENT_DELETE_DIALOG_ON_2024", True)
     assert swbuild.in_place_gates(InPlace(removed=(REMOVE_G4,)), Y24, modes=True) == [
-        (swbuild.STEP_REMOVE, "COMPONENT_DELETE_ROUTE_ON_2024"), (swbuild.STEP_REMOVE, "COMPONENT_DELETE_DIALOG_ON_2024")]
+        (swbuild.STEP_REMOVE, "COMPONENT_DELETE_ROUTE_ON_2024"),
+        (swbuild.STEP_REMOVE, "COMPONENT_DELETE_DIALOG_ON_2024")]
     assert swbuild.in_place_gates(InPlace(removed=(REMOVE_G4,)), Y26, modes=True) == []
 
 
@@ -153,8 +154,8 @@ def measured(monkeypatch):
 
 G5_AT = (63.75, 51.0, 40.0)
 # As the planner makes a follower (G3 locked to G2): its component, its place, its lock to the anchor.
-G5_OPS = (ops.AddComponent("gear5", P17, G5_AT), ops.Place("gear5", IDENTITY9, G5_AT),
-          ops.Mate("lock5", "lock", "gear4", "gear5", name="G5 locked to G4"))
+G5_OPS = (ops.AddComponent("gear5", P17, G5_AT), ops.Place("gear5", IDENTITY9, G5_AT), ops.Fix("gear5"),
+          ops.Unfix("gear5"), ops.Mate("lock5", "lock", "gear4", "gear5", name="G5 locked to G4"))
 G5_REFS = (MateRef("G5 locked to G4", "lock", ("G4", "G5")),)
 ADD_G5 = AddedGear("G5", "gear5", P17, ops=G5_OPS, handles=(("gear4", "gear4-1"),), refs=G5_REFS)
 
@@ -177,6 +178,7 @@ def test_a_gear_added_on_a_shaft_on_record_is_inserted_mated_and_put_with_its_tr
     called = names(fake)
     assert called.index("add_component") > called.index("open_document")
     assert T_ASM in result.changed and result.deleted == [] and result.built == []
+    assert "gear5-1" not in fake.fixed                       # fixed as placed, then let go, as the build's plan has it
 
 
 def test_a_gear_added_is_refused_by_name_while_its_gate_is_not_measured():
@@ -424,7 +426,7 @@ def test_a_new_coupling_is_made_in_the_first_mode_it_is_on_in_with_its_flag_set_
     assert shown == ["N"] and fake.config == "2H"
 
 
-# -- a tooth change on a gearbox with modes (lifting ruling 9.16 behind its gate) ----------------------------------------
+# -- a tooth change on a gearbox with modes (lifting ruling 9.16 behind its gate) -------------------------------------
 
 @pytest.fixture
 def t_with_modes(mode_findings, monkeypatch):
@@ -557,7 +559,7 @@ def test_on_2024_a_removal_reads_only_its_update_gates_none_while_the_delete_rou
     assert result.ok and result.deleted == [("G4", "gear4-1")]                  # P1 read the same on 2024
 
 
-# -- a failure half-way says exactly what was and was not done ----------------------------------------------------------
+# -- a failure half-way says exactly what was and was not done -------------------------------------------------------
 
 def test_a_failure_half_way_says_what_was_done_and_what_was_not(tc_built, measured):
     fake, built = tc_built
@@ -608,3 +610,15 @@ def test_a_failure_in_another_mode_shows_the_active_mode_again(tc_built, measure
     assert result.failures == [("TransferCase.SLDASM", "SolidWorks would not make the mate ModeSlv engages InDog.")]
     assert result.mates_made == [] and fake.config == "2H"
     assert result.skipped.startswith("making the mate ModeSlv engages InDog and putting the gears back")
+
+
+def test_the_log_says_what_was_made_and_taken_away_in_place(tc_built, measured):
+    fake, built = tc_built
+    _housing(fake, flags={"N": True})
+    result = _tc_in_place(fake, built, InPlace(modes_removed=("N",)), **_without_n(built))
+    lines = result.log_lines()
+    assert "ok      configurations deleted: N" in lines
+    assert "CHECK   your UserFlush was suppressed in N, deleted with it" in lines
+    fake = _built_train()
+    lines = _update_train(fake, in_place=InPlace(added=(ADD_G5,)), **_with_g5()).log_lines()
+    assert "ok      inserted G5 as gear5-1" in lines and "ok      made G5 locked to G4" in lines
