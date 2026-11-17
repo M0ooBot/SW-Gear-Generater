@@ -110,13 +110,44 @@ both versions, reviewed, and in `findings.py`. No app code of W9 is written. Pic
    the demonstration:** the re-check's R1 (after a refusal over a value typed in SolidWorks, any workbook change
    turns the footer green though the value still differs), R2 and R3 (two sentences); `ValueEdit.unsaved` stays in
    the record.
-5. **The demonstration script is written and never run** (`probe/w9a_demonstration.py` and the window check's K12
-   assertions, `a05911c`; its sections, times and command lines in `notes-workbook/W9A-DEMONSTRATION.md`, `dd9e13b`).
-   Its review is in hand (`notes-workbook/W9A-DEMONSTRATION-REVIEW.md` when it lands). It includes the coordinator's
-   added measurement of the no-carrier branch on the 12 : 1 reducer. **Next: take the script's review, then run it on
-   SolidWorks 2026 (about 1 h 25 min, estimated), its run reviewed, then 2024's confirming sections (about 2 h 05
-   min), then W9a's close; then W9b, W9c and W9d.** A Windows keep-awake request must be held for any long run on
-   this device (item 2).
+5. **W9a's demonstration has run on SolidWorks 2026, twice over, and its closing run there is clean** (2026-11-16
+   night into 11-17). The script is `probe/w9a_demonstration.py` (sections that run alone; note
+   `notes-workbook/W9A-DEMONSTRATION.md`; reviewed before its first run in `W9A-DEMONSTRATION-REVIEW.md`). First run:
+   `probe/results/w9a-demo-sw2026-20261116-*.log`, reviewed in `notes-workbook/W9A-RUN-2026-REVIEW.md` (`6700505`):
+   everything 0 failed but k3, which found that an assembly's rebuild returns False when a part has a feature in
+   error and the Update then stopped without naming the user's keyway. Fixed in the worker (`ebcd23d`) and in
+   `ui_text` (`596bcb1`), with package B's leftovers (`84b9303`); the rulings are in the plan's last section
+   (`3e7307a`). **Closing run on 2026, all twelve sections 0 failed, and the window check's W8 stage with K12 0
+   failed** (`probe/results/w9a-close-sw2026-2026111*.log`, `w9a-window-sw2026-20261117.log`; `19651ee`), reviewed
+   with the fixes in `notes-workbook/W9A-CLOSE-2026-REVIEW.md` (`2a8f9d1`): *Done when* is met on 2026 but for its
+   should-fix points. Findings set for 2026 and pinned: `USER_MATE_PUT_NO_CARRIER_ON_2026` True (the 12 : 1, no
+   modes; `USER_MATE_PUT_NO_CARRIER_MODES_ON_*` stays None), `ASSEMBLY_REBUILD_WITH_USER_MATE_IN_ERROR_ON_2026` True,
+   `ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_2026` False, `WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_2026` False,
+   and SOLIDWORKS CAM's box on saving an assembly with a lightweight component (a fact for W9d).
+6. **SolidWorks 2024 stopped W9a at a §0.3 STOP, which waits on the user** (asked 2026-11-17, about 00:45). First
+   confirming session (`probe/results/sw2024/w9a-confirm-sw2024-20261117-1-m3-stopped-by-whats-wrong.log`,
+   `820c002`): with two user mates in error the script's own assembly rebuild returned True with no window, as on
+   2026, but during the app's own value Update SolidWorks 2024 opened **What's Wrong** ("show errors every rebuild" on
+   as found). Which call raised it, whether it blocks, and whether the Update would have completed are not known.
+   The options put to the user: the app turns that SolidWorks setting off for its job and sets it back (the
+   coordinator's recommendation; never done on either version, so it needs a 2024 measurement and the user's word);
+   or Update refuses on 2024 when something of the user's is in error (does not cover an error the Update itself
+   makes, k3); or the box is left to the user (needs measuring that the Update completes). What each needs shown is
+   in `W9A-CLOSE-2026-REVIEW.md`. **Until the answer: m3 and k3 are not run on 2024, every 2024 M3 finding stays
+   None, and W9a is not closed.** A second 2024 session (setup, go, reducer, nocarrier, nothing of the user's in
+   error) was started at 00:50; its log, when it lands, is `sw2024/w9a-confirm-sw2024-20261117-2-*.log`, to be
+   reviewed with whatever the decision adds.
+7. **Owed in one round once the user has answered** (each owner as before: the worker, `ui_text`, the script):
+   the decision's own change and its 2024 measurement; the close review's must-fix 2 (a failed Update names the
+   user's features newly in error, so K3 holds where the Update stops, as on any version whose findings are None);
+   its should-fix points (the assembly's own feature tree read under "nothing of the app's in error", or the gap
+   said; the carried-component refusal foreseen after a quiet press, and an unread code refused; `stays_said`
+   tightened; `_values_set`'s wording for a raw equation and a blank cell; the lightweight fact worded as what was
+   read; the findings' comments with the closing run's lines; the plan's section saying the static path's limit).
+   Then 2024's m3 and k3, its run's review, the suite whole (the last whole Linux run: 1 failed, the known
+   font-width test, 3461 passed, at `6f3d6fb`; Windows window tests 165 passed, 1 skipped), and W9a's close. Then
+   W9b, W9c and W9d. **Agent runs so far in W9a: about 20 against the plan's 11**; the user was told and said to
+   keep going without asking (2026-11-16).
 
 Run folders kept on this device under `C:\Users\M0obo\Documents\GearGeneratorProbe\`: `w9-s0-20261116-045513`
 (2026's `out\rangebox.master`, where W9a's demonstration starts) and `w9-s0-sw2024-20261116-064725` (2024's, with its `out\rangebox.master`) and `w9-s0c2-sw2024-20261116-155303` (run 4). The
@@ -135,7 +166,7 @@ the user*.
 | W6 right-angle | **closed 2026-11-15, but for the person's drag**: planned, reviewed and revised; probe tier 9 (a turned gear mate's sense, on cylinders, SolidWorks 2026) run and reviewed; packages A to E written and each reviewed; the full build run on SolidWorks 2026 and the confirming build on 2024, both from one snapshot (`931fe1a`), every check passing, each run reviewed. Left for the user: drag G1 in the built right-angle gearbox. Details below. |
 | W7 planetary | **closed 2026-11-15, but for the person's drag**: planned, reviewed and revised; the spike on SolidWorks 2026 (`W7-SPIKE.md`); packages A to E written and each reviewed; the demonstration run on SolidWorks 2026 — its first run found one app fault (a turned planetary's put did not hold), the probe `planetary_put_back` measured the route that does, the fix `9f21d99` was reviewed, and every section then passed, the planetary sections and the W5/W6 Update sections once more on the final code; the confirming build on 2024 passed; the run's evidence reviewed. Left for the user: drag Sun in the built planetary. Details below. |
 | W8 sleeves and modes | **closed 2026-11-16, but for three things: the built footer on a screen shorter than the window asks (cut off; open as K12 of W9), the person's step `s6`, and the two hand drags of W6 and W7**: planned, reviewed and revised to the spike (`W8-PLAN.md`, `W8-PLAN-REVIEW.md`, `W8-SPIKE.md`); the interface commit with its rulings (`W8-INTERFACES.md` §9); the findings set and reviewed (`ea7a46f`); packages A to D written and each reviewed; probe tier 11, and the one app fault the first build found, fixed and reviewed; package E's demonstration run on SolidWorks 2026 (34.0.0 on the second host, 34.1.1 here); the closing run from one snapshot of the final source (`c583f48`, 34.1.1): `s0` to `s5` and `s7` and the W5 to W7 sections r1, r2, r3, m5, m8, p1 and p3, every check passing (`c351b1f` to `aff9bfe`), and the full window check 1 failed, the built footer's height (`fb85bcc`); the confirming build on 2024 (32.5.0): `s0`, `s1`, `s2`, `s3`, `s7` 0 failed, its window stage the same one failure (`c3ed9b6`); each run reviewed (`W8-REVIEW-SW2024-CONFIRM.md`, `W8-REVIEW-CLOSING-RUN.md`). The ruling on the footer, the steps for the user and what is left are under *How W8 closed* below. |
-| W9 the user's work in a built assembly, and dog-clutch sleeves (issue #1) | **resumed 2026-11-16; W9a's S0 is measured, reviewed and in `findings.py`; W9a's packages A and B are written, reviewed, fixed and re-checked against the fake; its demonstration script is written and not yet run.** See *Where W9 stands* above. Planned, reviewed, approved by the user (2026-11-16). The plan is `notes-workbook/ISSUE-1-PLAN.md` (stages W9a to W9d), reviewed in `ISSUE-1-PLAN-REVIEW.md` and revised to its second review (`ISSUE-1-PLAN-REVIEW-2.md`). See the dated paragraph of 2026-11-15/16 above. |
+| W9 the user's work in a built assembly, and dog-clutch sleeves (issue #1) | **resumed 2026-11-16; W9a's S0 is measured, reviewed and in `findings.py`; W9a's packages A and B are written, reviewed, fixed and re-checked against the fake; its demonstration is clean on SolidWorks 2026 (closing run, all sections 0 failed, K12 shown on the real screen), and SolidWorks 2024 stopped it at What's Wrong during an Update with the user's mates in error, a §0.3 STOP waiting on the user.** See *Where W9 stands* above. Planned, reviewed, approved by the user (2026-11-16). The plan is `notes-workbook/ISSUE-1-PLAN.md` (stages W9a to W9d), reviewed in `ISSUE-1-PLAN-REVIEW.md` and revised to its second review (`ISSUE-1-PLAN-REVIEW-2.md`). See the dated paragraph of 2026-11-15/16 above. |
 | Printed gears (FDM, PLA): stages F1 to F4 | **planned, waiting behind W9; nothing built and nothing to be built yet (the user, 2026-11-16).** The plan is `docs/PLAN-PRINTED.md`, reviewed once in `docs/PLAN-PRINTED-REVIEW.md` and revised to that review and to the user's answers (Printed the default everywhere, D-flat first, STEP for Bambu Studio, the first layer left to the slicer, printed parts named `_P`, W9 first). Its D3, D6 and D7 stand as assumed. The revision is not reviewed: when it is taken up, after W9 closes, it is read against the code as W9 left it and reviewed again before any code. |
 | How the user's absence is handled | the user said on 2026-11-14 to carry on, in order, until W8 is done. Judgement calls are taken at each plan's recommended reading and listed for the user as readings to overrule. |
 | The small-pinion tip cap | `fix/small-pinion-cap` merged at `0f5a121` (the user's instruction): 6- and 7-tooth pinions build with an arc on the tip cap, version 0.3.2. Built on SolidWorks 2024 by the branch; the 2026 build and the merge's review are in hand. |
