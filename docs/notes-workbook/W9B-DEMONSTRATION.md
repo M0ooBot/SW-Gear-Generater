@@ -34,7 +34,7 @@ that puts every mode took about 4 min there.
 
 | # | Section | What it does and asserts | 2026 |
 |---|---|---|---|
-| 1 | `part` | RangeBox_Fixed's RangeSlv built unbanded and banded (face 26, bands 5/5) by the strip's own `plan_for` and `swbuild.build`, each closed before the next (they share a file name). Banded, read back from SolidWorks: the globals Start Band 5, End Band 5, Relief Diameter 25.0; Relief Start Plane and Relief End Plane offset 5 and 21, each offset's equation linking it to its globals; each relief sketch's circle Ø 25.0, linked to Relief Diameter; the Relief feature present by name, nothing in error. The bore over the relief from the part's faces: a cylinder of radius 12.5 over exactly z 5…21, or, if the loft leaves another surface there, that face's box radius (the log says which). Then Start Band 5 → 4 through the strip's value route (`swbuild.update_variables`), read back: Start Band 4, the planes 4 and 21, no error. **The volumes:** see below. Then Hub (17 teeth, face 20) built, no error. | 3 min |
+| 1 | `part` | RangeBox_Fixed's RangeSlv built unbanded and banded (face 26, bands 5/5) by the strip's own `plan_for` and `swbuild.build`, each closed before the next (they share a file name). Banded, read back from SolidWorks: the globals Start Band 5, End Band 5, Relief Diameter 25.0; Relief Start Plane and Relief End Plane offset 5 and 21, each offset's equation linking it to its globals; each relief sketch's circle Ø 25.0, linked to Relief Diameter; the Relief feature present by name, nothing in error. The bore over the relief from the part's faces, and the relief sketches under Relief in the tree (see below). Then Start Band 5 → 4 through the strip's value route (`swbuild.update_variables`), read back: Start Band 4, the planes 4 and 21, no error. **The volumes:** see below. Then Hub (17 teeth, face 20) built, no error. | 3 min |
 | 2 | `build` | RangeBox_Fixed written by `write_new` and built from scratch by the app's own Build (W8's `build_turning`, as W9a's reducer). Kept as `fixed.master`. **Details below.** | 5 min |
 | 3 | `update` | A copy of fixed.master, three steps. **Details below.** | 7 min |
 | 4 | `old` | RangeBox as it is, written and built by today's app. **Details below.** | 4.5 min |
@@ -57,7 +57,7 @@ warnings and engagement, which need no SolidWorks).
   - no mate in error;
   - every app gear but the fixed Ring free to turn;
   - no interference (`Session.interferences`);
-  - the slide's value as on record;
+  - the slide's value as on record by its size, and RangeSlv's Front plane at its signed value (below);
   - RangeSlv moved −7.5, 0 and +7.5 from N;
   - every mate's flag as on record: the couplings on in H, respectively L, only.
 - **The bands, the relief, the dogs and the hub measured from the model**: each component's frame, and its part's own
@@ -98,16 +98,49 @@ document's save flag changes.
 
 ### The volumes (M7's measure of the relief)
 
-The relief removes, over its length, the sleeve's section inside Ø m(z + 3) = 25: its teeth and the thin ring between
-their roots (r 12.375) and r 12.5. That area needs the tooth form, so the script measures it rather than derive it:
+**The check (after the first 2026 run, 2ed441b).** The unbanded sleeve is one section along its whole face (Blank,
+Tooth Space, Teeth), so F0 = V(unbanded) / 26. Each band keeps that section. Over the relief the section is the ring
+between the bore and the outside, π(Ro² − r²), with Ro (16.125) and r (12.5) taken from the cylinders the part's faces
+read. So
 
-- **The area per mm.** The band change 5 → 4 lengthens the relief by exactly 1 mm, and the volume it removes is that
-  area A, in mm² per mm. The teeth are straight and the relief is a plain bore, so the removal is linear in length.
-- **The comparison.** V(unbanded) − V(banded) must equal 16 × A to 1e-4 of it.
-- **The bounds.** A must lie strictly between π(12.5² − 12.375²) = 9.768 mm² (no tooth at all) and π(12.5² − 9.375²)
-  = 214.757 mm² (a full ring of teeth to the tips).
+  V(banded) = F0 × (start band + end band) + π(Ro² − r²) × (26 − start band − end band),
+
+checked for 5/5 and for 4/5 after the band change, each to 1e-4 of the part's volume.
+
+- **Why 1e-4.** That is SolidWorks' mass-property volume against an exact form. The first run read residuals of
+  3.8e-5 (5/5: 9622.169 read, 9621.808 expected) and 3.5e-5 (4/5: 9507.530 and 9507.199). A relief 0.5 mm wider
+  would miss by 3.3e-2.
+- **F0 a second way.** The unbanded part's front end face's area (`IFace2.GetArea`) is logged beside V / 26, which
+  shows the size of the mass-property error directly.
+
+**What it replaced.** The first run took the area per mm from the 1 mm difference of two volumes and multiplied it by
+16. That multiplied the mass-property error by 16 and failed (1833.375 against 1834.213). The difference stays, as a
+fact line and in the bounds check: it must lie strictly between π(12.5² − 12.375²) = 9.768 mm² (no tooth at all) and
+π(12.5² − 9.375²) = 214.757 mm² (a full ring of teeth to the tips). The first run read 114.638.
 
 All volumes are `Session.volume_mm3` of the part, active.
+
+### The bore over the relief
+
+`IFace2.GetBox` is padded: the first run's bore read box z 4.76…21.24. So the bore is found by its surface, exactly
+one cylinder of r 12.5 (to 1e-6 mm) with its axis along the part's z. Its ends are the two planar step faces whose box
+is the cylinder's across, each plane's z from `PlaneParams` at 5 and 21 (4 and 21 after the change), to 1e-6 mm. The
+log says how much SolidWorks padded the box: 0.240284 mm at each end in the first run. The two relief sketches must
+sit under Relief in the feature tree (`GetFirstSubFeature`), absorbed by the loft cut; if that read raises, it is
+said as a fact.
+
+### The slide's value
+
+SolidWorks gives a distance mate's dimension without a sign (the first run read 55.5 where the record holds −55.5).
+The app sets |z_front| and lets the mate's Flip carry the side. So the read's size is held to the record's, and the
+sign to the slider's own frame: RangeSlv's origin, its Front plane, must stand at the record's signed value to 1e-6 mm.
+Either sign does not pass on its own: a frame on the other side fails.
+
+**Replayed without SolidWorks.** `--self-check` replays all three on the first run's committed readings
+(`probe/results/w9b-demo-20261117-045137.json` and its log). That run kept no `PlaneParams`, so its thin planar faces
+are given the z their padded boxes centre on. At this commit it passes: the bore and its ends, both volumes, and the
+nine slides, with a wrong relief and a wrong-side frame each failing. From now on each mode's readings go into the
+JSON too (`modes`).
 
 ## STOPs
 
@@ -135,5 +168,3 @@ W9b's own (plan §5):
 - **A typed Rim on a banded sleeve.**
 - **Bands added to or taken from a built sleeve in place.** That is W9c (M8); here it is *Build again…* only.
 - **W9b's checks on SolidWorks:** they are pure, and `build` and `old` only show which warnings the reads carry.
-- **The bore over the relief as a true cylinder.** If the loft cut leaves a B-spline face there, the radius comes
-  from its box, and the log says so.

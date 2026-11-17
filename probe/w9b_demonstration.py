@@ -34,11 +34,13 @@ Sections (each runs alone; ``update`` copies ``fixed.master``, which ``build`` k
               and speeds, the unbanded sleeve built as before W9b (sidecar schema 1, no Relief), RangeSlv still
               Output's anchor; per mode as ``build``, without bands.
 
-**The volumes (M7).** The relief removes, over its length, the sleeve's section inside Ø m(z + 3): its teeth and the
-metal between their roots and that circle. That section's area is not derivable without the tooth form, so it is
-measured: the band change 5 -> 4 lengthens the relief by exactly 1 mm, and the volume it takes is that area A (mm²
-per mm). Then V(unbanded) − V(banded) must be 16 × A, to 1e-4 of it, and A must lie between π(R² − r_root²) and
-π(R² − r_tip²) (the hard bounds: no tooth and a full ring of teeth).
+**The volumes (M7).** The unbanded sleeve is one section along its face, F0 = V / 26; a band keeps it and the relief
+leaves the ring π(Ro² − r²) between the bore and the outside, Ro and r read from the part's cylinders. So V(banded) =
+F0 × (b1 + b2) + π(Ro² − r²) × (26 − b1 − b2), for 5/5 and for 4/5, to 1e-4 of the volume (the first 2026 run read
+3.8e-5 and 3.5e-5). The area one more mm of relief removes (a difference of two volumes) is a fact, held to the hard
+bounds π(R² − r_root²) and π(R² − r_tip²). The bore is found by its surface (one cylinder, r 12.5), its ends by the
+planes of the two step faces (``PlaneParams``), never by ``GetBox``, which SolidWorks pads. A slide's value is read
+without a sign: its size against the record's, its side by RangeSlv's own frame.
 
 Everything W9a's script does for a run is done here by running its ``main`` with these sections: the attach, the
 dialog watch and the What's Wrong rule, keep-awake, the JSON after every section, the guarded close, APPDATA in the run
@@ -75,7 +77,11 @@ HUB = (-55.5, -35.5)
 HUB_TO_HIGHDOG = 1.0
 RELIEF_D, RELIEF_LEN, PLANES = 25.0, 16.0, (5.0, 21.0)
 SPAN_TOL = 1e-4            # mm: a span measured from a frame and a part's globals against §3 or the app's own
-VOLUME_TOL = 1e-4          # relative: V(unbanded) − V(banded) against 16 × the area one more mm of relief takes
+# relative, of the part's volume: SolidWorks' mass-property volume against the exact form below. The first 2026 run
+# (w9b-demo-20261117-045137.json) read residuals of 3.8e-5 (5/5) and 3.5e-5 (4/5) of the volume; 1e-4 holds them with
+# room and is far below what a wrong relief would move (one mm of it is 114.6 mm³, 1.2e-2 of the part).
+VOLUME_TOL = 1e-4
+BORE_TOL = 1e-6            # mm: the relief bore's radius and its ends against the planes
 TOL = 1e-6                 # mm: a body's frame against its frame on record (W9a's go)
 BAND_EDIT = 4              # Start band 5 -> 4: legal, a value Update (the self-check shows it)
 # The smallest legal edit that takes the bands off: RangeSlv as RangeBox has it, and Hub's row cleared (a 26 mm sleeve
@@ -166,6 +172,51 @@ def errors_of(a):
     return [d.message for d in a.diagnostics if d.level == "error"]
 
 
+def relief_bore(faces, z_lo, z_hi, radius):
+    """The bore over the relief from the part's faces, exactly (W9b's first run: ``IFace2.GetBox`` is padded, the bore's
+    box read z 4.76…21.24): exactly one cylinder of ``radius`` (to BORE_TOL) with its axis along the part's z, and its
+    two ends the two planar step faces whose box is the cylinder's across, each plane's z from ``PlaneParams`` at
+    ``z_lo`` and ``z_hi``. Returns the finding and whether it holds."""
+    cyl = [f for f in faces if f["kind"] == "cylinder" and abs(f["r"] - radius) <= BORE_TOL
+           and abs(abs(f["axis"][2]) - 1.0) <= 1e-9]
+    out = {"cylinders": len(cyl), "r": [f["r"] for f in cyl]}
+    if len(cyl) != 1:
+        return out, False
+    box = cyl[0]["box"]
+    across = (box[0], box[1], box[3], box[4])
+    steps = [f for f in faces if f.get("z") is not None and f.get("normal") is not None
+             and abs(abs(f["normal"][2]) - 1.0) <= 1e-9
+             and all(abs(a - b) <= 1e-6 for a, b in zip((f["box"][0], f["box"][1], f["box"][3], f["box"][4]), across))]
+    ends = sorted(f["z"] for f in steps)
+    out.update(ends=ends, box_z=(box[2], box[5]),
+               padding=(round(ends[0] - box[2], 6), round(box[5] - ends[-1], 6)) if len(ends) == 2 else None)
+    held = len(ends) == 2 and abs(ends[0] - z_lo) <= BORE_TOL and abs(ends[1] - z_hi) <= BORE_TOL
+    return out, held
+
+
+def outer_radius(faces, face):
+    """The sleeve's outer cylinder: the largest cylinder whose box runs the whole face (its radius is exact; its box,
+    padded or not, is only used to tell it from the short ones)."""
+    whole = [f for f in faces if f["kind"] == "cylinder" and f["box"][2] <= 1e-3 and f["box"][5] >= face - 1e-3]
+    return max(f["r"] for f in whole) if whole else None
+
+
+def banded_volume(v_unbanded, face, bands, outer, bore):
+    """What a banded sleeve's volume must be, exactly in form: the unbanded sleeve is one section along its whole face
+    (Blank, Tooth Space, Teeth), F0 = V / face; each band keeps it, and over the relief the section is the ring between
+    the bore and the outside, π(Ro² − r²)."""
+    f0 = v_unbanded / face
+    relief = face - bands[0] - bands[1]
+    return f0 * (bands[0] + bands[1]) + math.pi * (outer * outer - bore * bore) * relief, f0
+
+
+def slide_agrees(value, recorded, origin_z, tol=TOL):
+    """A slide read back: SolidWorks gives a distance mate's dimension without a sign, and the record holds the signed
+    z_front (the plan sets |z_front| and the mate's Flip carries the side: ``swbuild.ModeStep.values``). So its size
+    against the record's, and the sign by the slider's own frame: its origin, its Front plane, at the signed value."""
+    return abs(abs(value) - abs(recorded)) <= tol and abs(origin_z - recorded) <= tol
+
+
 def section_area_bounds(derived, diameter):
     """The hard bounds on the area one more mm of relief removes: the ring between the roots and the relief circle
     (no tooth at all) and the ring between the tips and it (a full ring of teeth), in mm²."""
@@ -194,6 +245,60 @@ def as_rangebox(spec):
     spec = with_gear(spec, "RangeSlv", at="-24.5", face_width="10", slides="H=-5, N=0, L=+5", start_band="",
                      end_band="")
     return dataclasses.replace(spec, gears=tuple(g for g in spec.gears if g.id != "Hub"))
+
+
+FIRST_RUN = ("probe/results/w9b-demo-20261117-045137.json", "probe/results/w9b-demo-sw2026-20261117-1-script-faults.log")
+
+
+def replay_first_run(ok):
+    """The three judgements corrected after W9b's first 2026 run (2ed441b) replayed on what that run read: its faces
+    and volumes (JSON) and its slides (log). That run kept no plane's PlaneParams, so a planar face thin in z is given
+    the normal z and the z its box centres on, which the padded boxes (4.759716…5.240284) put exactly at the plane."""
+    import json
+    paths = [os.path.join(REPO, p) for p in FIRST_RUN]
+    if not all(os.path.isfile(p) for p in paths):
+        print(f"skip    the first run's readings are not here: {FIRST_RUN}")
+        return
+    part = json.load(open(paths[0], encoding="utf-8"))["sections"]["part"]
+
+    def planes_given(faces):
+        out = []
+        for f in faces:
+            f = dict(f)
+            if f["kind"] == "4001" and f["box"][5] - f["box"][2] < 1.0:
+                f.update(kind="plane", normal=[0.0, 0.0, 1.0], z=round((f["box"][2] + f["box"][5]) / 2, 9))
+            out.append(f)
+        return out
+    for key, z_lo in (("banded", PLANES[0]), ("band_changed", float(BAND_EDIT))):
+        found, held = relief_bore(planes_given(part[key]["faces"]), z_lo, PLANES[1], RELIEF_D / 2)
+        ok(held, f"replay {key}: the bore is one cylinder r {RELIEF_D / 2}, its ends at {z_lo} and {PLANES[1]}: {found}")
+    faces = part["banded"]["faces"]
+    outer, bore = outer_radius(faces, 26.0), RELIEF_D / 2
+    v0, v1, v2 = part["unbanded"]["volume"], part["banded"]["volume"], part["band_changed"]["volume"]
+    for label, volume, bands in (("5/5", v1, (5.0, 5.0)), ("4/5", v2, (4.0, 5.0))):
+        want, f0 = banded_volume(v0, 26.0, bands, outer, bore)
+        ok(abs(volume - want) <= VOLUME_TOL * volume,
+           f"replay volume {label}: {volume:.6f} against {want:.6f} (F0 {f0:.6f}, Ro {outer}), "
+           f"{abs(volume - want) / volume:.1e} of it")
+    wrong, _ = banded_volume(v0, 26.0, (5.0, 5.0), outer, bore + 0.25)
+    ok(abs(v1 - wrong) > VOLUME_TOL * v1, f"replay volume: a relief 0.5 mm wider would fail by "
+                                          f"{abs(v1 - wrong) / v1:.1e} of the volume ({VOLUME_TOL:g} allowed)")
+    pattern = re.compile(r"^FAIL    (build|update|old), ([HNL]) shown: .*RangeSlv along Output (-?[\d.]+) mm as on record "
+                         r"\((-?[\d.]+)\)")
+    origin = re.compile(r"^fact    (build|update|old), ([HNL]): measured bands \{'(?:start|whole)': \((-?[\d.]+),")
+    slides, origins = {}, {}
+    for line in open(paths[1], encoding="utf-8"):
+        m = pattern.match(line)
+        if m:
+            slides[(m.group(1), m.group(2))] = (float(m.group(3)), float(m.group(4)))
+        m = origin.match(line)
+        if m:
+            origins[(m.group(1), m.group(2))] = float(m.group(3))
+    agreed = {k: slide_agrees(v[0], v[1], origins.get(k, float("nan"))) for k, v in slides.items()}
+    ok(len(slides) == 9 and all(agreed.values()),
+       f"replay slides: the nine readings that failed now agree by size and by RangeSlv's Front plane: {agreed}")
+    flipped = all(not slide_agrees(v[0], v[1], -origins[k]) for k, v in slides.items())
+    ok(flipped, "replay slides: a frame on the other side of the Front plane would still fail them")
 
 
 def self_check():
@@ -262,6 +367,7 @@ def self_check():
        f"RangeBox: seven warnings, three of them W9b's: {[m[:60] for m in w9b_check_warnings(o)]}")
     speeds = {k: round(float(v), 3) for k, v in o.report.motion.speeds.items()}
     ok(speeds.get("Carrier") == 517.857 and speeds.get("Planet") == -1673.077, f"RangeBox's speeds: {speeds}")
+    replay_first_run(ok)
     print(f"done    {len(bad)} failed")
     return 0 if not bad else 1
 
@@ -319,8 +425,18 @@ def part_faces(s):
             box = [round(float(v) * 1000.0, 6) for v in got(face, "GetBox")]
             if got(surface, "IsCylinder"):
                 p = [float(v) for v in got(surface, "CylinderParams")]
-                out.append({"kind": "cylinder", "r": round(p[6] * 1000.0, 6),
-                            "axis": [round(v, 6) for v in p[3:6]], "box": box})
+                out.append({"kind": "cylinder", "r": round(p[6] * 1000.0, 9), "axis": [round(v, 9) for v in p[3:6]],
+                            "point": [round(v * 1000.0, 9) for v in p[0:3]], "box": box})
+            elif got(surface, "IsPlane"):
+                # PlaneParams: the normal, then a point on the plane (m): its z exact where the box is padded.
+                p = [float(v) for v in got(surface, "PlaneParams")]
+                try:        # IFace2.GetArea (m²), new to this repo: an area that will not read is None, said, not fatal
+                    area = round(float(got(face, "GetArea")) * 1e6, 9)
+                except Exception:  # noqa: BLE001
+                    area = None
+                out.append({"kind": "plane", "normal": [round(v, 9) for v in p[0:3]],
+                            "z": round(p[5] * 1000.0, 9) if abs(abs(p[2]) - 1.0) <= 1e-9 else None,
+                            "area": area, "box": box})
             else:
                 out.append({"kind": str(got(surface, "Identity")), "box": box})
     return out
@@ -337,6 +453,14 @@ def part_read(label, path, relief):
             out["dims"] = {name: [(n, round(v * 1000.0, 9)) for n, v in s.feature_dimensions(name)]
                            for name in (clutch.RELIEF_START_PLANE, clutch.RELIEF_END_PLANE, clutch.RELIEF_START_SKETCH,
                                         clutch.RELIEF_END_SKETCH)}
+            try:        # the sketches the loft cut absorbed sit under it in the tree (IFeature.GetFirstSubFeature)
+                subs, sub = [], call(s._by_name(clutch.RELIEF), "GetFirstSubFeature")  # noqa: SLF001
+                while sub is not None and len(subs) < 50:
+                    subs.append(str(call(sub, "Name")))
+                    sub = call(sub, "GetNextSubFeature")
+                out["relief_subfeatures"] = subs
+            except Exception as exc:  # noqa: BLE001 - said as a fact, not judged
+                out["relief_subfeatures"] = f"unread: {type(exc).__name__}: {exc}"
         return out
     got = run(f"{label}: read", job(path, work), 300)
     bad = [(n, c) for n, c in got["features"] if c]
@@ -349,20 +473,6 @@ def linked(equations, dimension, expression):
     """Whether the part holds the equation ``"dimension" = expression`` (spaces aside)."""
     want = f'"{dimension}"={expression}'.replace(" ", "")
     return any(t.replace(" ", "") == want for t in equations)
-
-
-def relief_face(faces, z0, z1):
-    """The bore over the relief from the part's faces: a cylinder over exactly the relief's length, or, if the loft
-    left another surface, a face over that length whose box gives its radius."""
-    over = [f for f in faces if abs(f["box"][2] - min(z0, z1)) <= 1e-3 and abs(f["box"][5] - max(z0, z1)) <= 1e-3]
-    cyl = [f for f in over if f["kind"] == "cylinder"]
-    if cyl:
-        return {"how": "a cylinder over the relief's length", "r": [f["r"] for f in cyl]}
-    if over:
-        return {"how": "a non-cylindrical face over the relief's length, its radius from its box",
-                "r": [round(max(abs(v) for v in (f["box"][0], f["box"][1], f["box"][3], f["box"][4])), 6)
-                      for f in over], "kinds": [f["kind"] for f in over]}
-    return {"how": "no face spans the relief's length", "r": []}
 
 
 def build_part(label, folder, spec):
@@ -417,6 +527,8 @@ def _section_part(out):
     check(not any(c for _, c in got["features"]) and not any(n.startswith("Relief") for n, _ in got["features"]),
           f"part unbanded: no feature in error and no relief feature: {[n for n, _ in got['features']]}")
     v0 = got["volume"]
+    ends = [f for f in got["faces"] if f["kind"] == "plane" and f.get("z") is not None and abs(f["z"]) <= 1e-6]
+    out["end_face_area"] = max((f["area"] for f in ends if f["area"] is not None), default=None)
     close_folder("part unbanded", folder)
 
     folder = os.path.join(root, "banded")
@@ -444,10 +556,22 @@ def _section_part(out):
     check(clutch.RELIEF in features and features[clutch.RELIEF] == 0 and not any(features.values()),
           f"part banded: the {clutch.RELIEF} feature present by name and in no error, nothing in error: "
           f"{ {n: c for n, c in features.items() if c or 'Relief' in n} }")
-    face = out["relief_face"] = relief_face(got["faces"], EZ * PLANES[0], EZ * PLANES[1])
-    say(f"fact    part banded: the bore over the relief: {face}")
-    check(bool(face["r"]) and all(abs(r - RELIEF_D / 2) < 1e-3 for r in face["r"]),
-          f"part banded: the bore over the relief reads radius {RELIEF_D / 2} ({face['how']}): {face['r']}")
+    face, held = relief_bore(got["faces"], min(EZ * PLANES[0], EZ * PLANES[1]), max(EZ * PLANES[0], EZ * PLANES[1]),
+                             RELIEF_D / 2)
+    out["relief_face"] = face
+    check(held, f"part banded: the bore over the relief is one cylinder of radius {RELIEF_D / 2} along the part's axis, "
+                f"its ends the two step faces at z {PLANES} to {BORE_TOL:g} mm (PlaneParams): {face}")
+    if face.get("padding"):
+        say(f"fact    part banded: SolidWorks padded the bore's GetBox by {face['padding']} mm at its two ends (box z "
+            f"{face['box_z']}, the planes {face['ends']})")
+    subs = got.get("relief_subfeatures")
+    if isinstance(subs, list):
+        check(clutch.RELIEF_START_SKETCH in subs and clutch.RELIEF_END_SKETCH in subs,
+              f"part banded: the two relief sketches sit under {clutch.RELIEF} in the tree, absorbed by the loft cut: "
+              f"{subs}")
+    else:
+        say(f"fact    part banded: {clutch.RELIEF}'s sub-features not read: {subs}")
+    outer = outer_radius(got["faces"], derived.face_width)
     v1 = got["volume"]
 
     say(f"-- part  a band changed through the strip's value route: Start Band 5 -> {BAND_EDIT} "
@@ -473,17 +597,30 @@ def _section_part(out):
 
     area = v1 - v2
     low, high = section_area_bounds(derived, RELIEF_D)
-    removed, want = v0 - v1, RELIEF_LEN * area
-    out["volumes"] = {"unbanded": v0, "banded": v1, "banded_start_4": v2, "area_per_mm": area, "removed": removed,
-                      "expected_removed": want, "bounds_per_mm": [low, high]}
+    bore = face["r"][0] if face.get("r") else None
+    out["volumes"] = {"unbanded": v0, "banded": v1, "banded_start_4": v2, "area_per_mm_measured": area,
+                      "bounds_per_mm": [low, high], "outer_radius": outer, "bore_radius": bore,
+                      "end_face_area": out.get("end_face_area")}
     say(f"fact    part: volumes unbanded {v0:.6f}, banded {v1:.6f}, Start Band {BAND_EDIT} {v2:.6f} mm³; one more mm of "
-        f"relief removes {area:.6f} mm² x 1 mm (bounds {low:.3f} to {high:.3f}: no tooth, a full ring of teeth); the "
-        f"relief removed {removed:.6f} mm³ against 16 x that, {want:.6f}")
+        f"relief removed {area:.6f} mm³ (a difference of two mass-property volumes, a fact only)")
     check(low < area < high, f"part: the area one more mm of relief removes, {area:.6f} mm², lies between the ring "
                              f"outside the roots ({low:.3f}) and the ring outside the tips ({high:.3f})")
-    check(abs(removed - want) <= VOLUME_TOL * abs(want),
-          f"part: the banded part's volume is the unbanded one's less what the relief removes: {removed:.6f} mm³ "
-          f"against 16 x {area:.6f} = {want:.6f}, to {VOLUME_TOL:g} of it ({abs(removed - want):.3e})")
+    if outer is None or bore is None:
+        check(False, f"part: the outer radius ({outer}) and the bore's ({bore}) were not both read from the faces, so "
+                     "the volumes cannot be judged")
+    else:
+        for label, volume, bands in (("5/5", v1, (5.0, 5.0)), (f"{BAND_EDIT}/5", v2, (float(BAND_EDIT), 5.0))):
+            want, f0 = banded_volume(v0, derived.face_width, bands, outer, bore)
+            out["volumes"][f"expected_{label}"] = want
+            check(abs(volume - want) <= VOLUME_TOL * volume,
+                  f"part: the banded part's volume ({label}) is the unbanded section F0 = V/{derived.face_width:g} = "
+                  f"{f0:.6f} mm² over the bands and the ring π(Ro² − r²), Ro {outer} and r {bore} from the faces, over "
+                  f"the relief: {volume:.6f} against {want:.6f} mm³, {abs(volume - want):.6f} apart "
+                  f"({abs(volume - want) / volume:.1e} of it; {VOLUME_TOL:g} allowed)")
+        if out.get("end_face_area"):
+            say(f"fact    part: F0 two ways: the unbanded volume over its face {v0 / derived.face_width:.6f} mm², its "
+                f"front end face's area (IFace2.GetArea) {out['end_face_area']:.6f} mm² "
+                f"({abs(v0 / derived.face_width - out['end_face_area']) / out['end_face_area']:.1e} apart)")
 
     folder = os.path.join(root, "hub")
     path, _, _ = build_part("part hub", folder, hub)
@@ -559,7 +696,7 @@ def measured(frames, globals_, banded=True):
     return bands, dogs, hub
 
 
-def judge_every(label, desk, every, globals_, banded=True, against_section3=True):
+def judge_every(label, desk, every, globals_, banded=True, against_section3=True, out=None):
     """Per mode, the read against the app's record and its own read of the workbook, and (``against_section3``) §3's
     table: the frames on record, the flags, the slide's value, the gears free, no mate in error, no interference, the
     bands and dogs where the app says, what is engaged and the least running gaps."""
@@ -591,12 +728,21 @@ def judge_every(label, desk, every, globals_, banded=True, against_section3=True
             off.append(f"Hub {hub} not {app_hub}")
         judged = judge_mode(bands, dogs)
         engaged = [g for _, g in reports[mode].engaged]
+        origin = frames["RangeSlv"][1][2]
+        slid = slide_agrees(value, recorded[mode], origin)
+        if out is not None:
+            out.setdefault("modes", {})[mode] = {
+                "slide_read": value, "slide_recorded": recorded[mode], "origin_z": origin, "frame_gap": gap_,
+                "bands": bands, "dogs": dogs, "hub": hub, "interferences": clashes, "errors": errors,
+                "not_free": free, "engaged": judged["engaged"], "least": judged["least"]}
         ok = (gap_ <= TOL and not errors and not free and not clashes and not off and judged["engaged"] == engaged
-              and abs(value - recorded[mode]) <= TOL)
+              and slid)
         check(ok, f"{label}, {mode} shown: every body at its frame on record ({gap_:.1e} at {at or '-'}); no mate in "
                   f"error {errors or ''}; every app gear free {not free} {free or ''}; no interference {clashes or ''}; "
-                  f"{slide.name} {value:.6f} mm as on record ({recorded[mode]:.6f}); bands and dogs where the app's read "
-                  f"puts them to {SPAN_TOL:g} mm {off or ''}; engaged {judged['engaged']} as the app's {engaged}")
+                  f"{slide.name} reads {value:.6f} mm, the record {recorded[mode]:.6f} (SolidWorks gives a distance "
+                  f"without its sign), RangeSlv's Front plane at z {origin:.6f}: {'agree' if slid else 'DISAGREE'}; bands "
+                  f"and dogs where the app's read puts them to {SPAN_TOL:g} mm {off or ''}; engaged {judged['engaged']} "
+                  f"as the app's {engaged}")
         say(f"fact    {label}, {mode}: measured bands {bands}, dogs {dogs}, hub {hub}; RangeSlv moved {moved:+.6f} mm "
             f"from N; least running gap {judged['least']} at {judged['least_at']}; relief holds {judged['relief_holds']}")
         clean = clean and ok
@@ -677,7 +823,7 @@ def section_build(out):
         shown = {g: {k: v for k, v in gl.items() if k in SLEEVE_GLOBALS} for g, gl in globals_.items()}
         say(f"fact    build: the parts' globals {shown}")
         every = mode_read("build", desk)
-        out["clean"] = judge_every("build", desk, every, globals_)
+        out["clean"] = judge_every("build", desk, every, globals_, out=out)
         RESULT["proposal"]["M7_build"] = {"clean": out["clean"], "interferences": every["interferences"]}
     finally:
         if not W.HUNG["on"]:
@@ -760,7 +906,7 @@ def section_update(out):
               and any(abs(v - PLANES[1]) < 1e-6 for v in offsets[clutch.RELIEF_END_PLANE]) and not bad,
               f"update: the part reads Start Band {BAND_EDIT}, its planes {offsets}, no feature in error {bad or ''}")
         every = mode_read("update", desk)
-        out["clean"] = judge_every("update", desk, every, globals_, against_section3=False)
+        out["clean"] = judge_every("update", desk, every, globals_, against_section3=False, out=out)
         for mode in box.modes:      # what the band change leaves as §3 has it: slides, the end band, engagement
             bands, dogs, _ = measured(every["frames"][mode], globals_)
             judged = judge_mode(bands, dogs)
@@ -830,7 +976,7 @@ def section_old(out):
               f"{sidecar.schema_version if sidecar else None}, no {clutch.RELIEF}")
         globals_ = part_globals(desk, ("RangeSlv", "HighDog", "LowDog"))
         every = mode_read("old", desk)
-        out["clean"] = judge_every("old", desk, every, globals_, banded=False, against_section3=False)
+        out["clean"] = judge_every("old", desk, every, globals_, banded=False, against_section3=False, out=out)
     finally:
         if not W.HUNG["on"]:
             A.w8_step(W.keep_master, CTX["worker"], folder, "old")
