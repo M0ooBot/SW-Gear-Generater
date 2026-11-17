@@ -2719,7 +2719,9 @@ def user_work_entry(work: swbuild.UserWork, *, assembly: str, digest: str = "", 
         components=[store.UserComponentEntry(c.name, _component_kind(c.path), bool(c.fixed), int(c.code), int(c.state))
                     for c in work.components],
         mates=[store.UserMateEntry(m.name, m.kind, int(m.type), [[w, n] for w, n in m.touches], list(m.on),
-                                   int(m.code), bool(m.warning), bool(m.whole)) for m in work.mates],
+                                   int(m.code), bool(m.warning), bool(m.whole),
+                                   [[str(x) for x in e] for e in getattr(m, "entities", ()) or ()])  # W9d, D5
+               for m in work.mates],
         features=[store.UserFeatureEntry(f.path, f.name, f.type_name, int(f.code), bool(f.warning))
                   for f in work.features],
         carried=[store.UserCarriedEntry(c, g, list(locks)) for c, g, locks in work.carried],
@@ -3153,3 +3155,162 @@ def old_assembly(record: Optional[LinkRecord], again: Any) -> Optional[swbuild.O
     bodies += [(layout.carrier_id(c.shaft), c.component) for c in box.carriers if c.component]
     return swbuild.OldAssembly(box.assembly, tuple(bodies), box.layout_component, box.layout,
                                tuple(m.name for m in box.mates), tuple(box.modes))
+
+
+# -- W9d: Build again… carries the user's work (ISSUE-1-PLAN §2.5; W9D-INTERFACES §2.1, §7, §9.1) -----------------
+
+# Each spec field a gear's part is built from, as the Gears sheet calls it (``schema.GEAR_COLUMNS``), for why a gear's
+# part is new: *its Flank changed*. ``shaft_angle`` and ``mate_teeth`` are a bevel gear's, from its shafts and its mate.
+_SPEC_COLUMNS = (("name", "Part name"), ("kind", "Kind"), ("teeth_side", "Side"), ("recipe", "Flank"),
+                 ("teeth", "Teeth"), ("module", "Module"), ("pressure_angle", "Pressure angle"),
+                 ("face_width", "Face width"), ("bore", "Bore"), ("helix_angle", "Helix angle"), ("hand", "Hand"),
+                 ("groove", "Groove"), ("profile_shift", "Profile shift"), ("backlash", "Backlash"),
+                 ("fillet", "Fillet"), ("rim", "Rim"), ("start_band", "Start band"), ("end_band", "End band"),
+                 ("shaft_angle", "shaft angle"), ("mate_teeth", "mate's Teeth"))
+
+WHY_NEW_UNSAVED = "it had changes from Update SolidWorks that were not saved"
+WHY_NEW_MISMATCHED = "it did not hold what the record says, as the last job in SolidWorks found"
+WHY_NEW_LAYOUT = "its layout part is new with every revision"
+WHY_NEW_CARRIER = "its carrier part is new with this revision"
+WHY_NEW_VALUES = "its values changed"
+
+
+def _changed_columns(built: Mapping[str, Any], wanted: Mapping[str, Any]) -> List[str]:
+    """The Gears columns whose values differ between two parts' forms (``GearSpec.to_dict``), in sheet order; a blank
+    and its default compare the same way ``gearbox.same_part`` reads them, as text without spaces."""
+    out = []
+    for key, column in _SPEC_COLUMNS:
+        default = "external" if key == "teeth_side" else ""
+        was, now = (str(values.get(key, default) or default) for values in (built, wanted))
+        if swbuild._squash(was) != swbuild._squash(now):
+            out.append(column)
+    return out
+
+
+def _why_part_new(entry: Optional[PartEntry], gear: str, again: Any) -> str:
+    """B's phrase for why ``gear``'s part in the new revision is a new file (``CarryBody.why_new``): a part that would
+    have been reused but for Update's unsaved changes or a live check (``again.made_new``), else the Gears columns that
+    changed (*its Flank changed*, *its Teeth and Face width changed*), else *its values changed*."""
+    for made in getattr(again, "made_new", ()) or ():
+        if gear in made.gear_ids and made.why == gearbox.UNSAVED:
+            return WHY_NEW_UNSAVED
+        if gear in made.gear_ids and made.why == gearbox.MISMATCHED:
+            return WHY_NEW_MISMATCHED
+    job = next((j for j in getattr(again, "build", ()) or () if gear in j.gear_ids), None)
+    if entry is not None and entry.spec and job is not None:
+        columns = _changed_columns(entry.spec, job.spec.to_dict())
+        if columns:
+            return f"its {_names(columns)} changed"
+    return WHY_NEW_VALUES
+
+
+def _old_carrier_names(entry: store.CarrierEntry) -> Tuple[str, ...]:
+    """The app's own feature names in a carrier part as the record has it: its own axis, then each copy's planes and
+    axis (``layout.carrier_shafts``' order)."""
+    return layout.layout_features((layout._local_axis(entry.shaft, 0.0, 0.0, 0.0),) + tuple(entry.axes))
+
+
+def carry_for(record: Optional[LinkRecord], again: Any, old: Optional[swbuild.OldAssembly], *,
+              read_sidecar: Callable[[str], Optional[Sidecar]] = store.read_sidecar) -> Optional[swbuild.Carry]:
+    """What a carrying Build again… is given (W9D-INTERFACES §2.1): every app body on record in ``old`` (the layout
+    first, carriers, then gears) and what stands for it in ``again`` (``gearbox.GearboxPlan``): planet copy *k* to copy
+    *k* (by id, the same on both), a body the new plan has no handle for with handle ``""``; ``same_file`` when the new
+    plan reuses the very file the old component was; ``why_new`` from ``again.made_new`` and the Gears columns that
+    changed; ``names`` the app's own features in the new file (``plan_features`` of a part made new, the sidecar's of
+    one reused, ``layout_features`` of the layout and each carrier) and ``old_names`` in the old (its sidecar's, the
+    recorded shafts'). ``modes`` the new revision's in Modes-sheet order, ``first`` the old record's first mode,
+    ``written_on`` the SolidWorks the last job on record ran on, ``app_files`` every file the record names as the app's.
+    None when ``old`` is None (not a Build again…). Pure but for ``read_sidecar``."""
+    box = getattr(record, "gearbox", None)
+    if old is None or box is None or again is None:
+        return None
+    bodies: List[swbuild.CarryBody] = []
+    new_layout = getattr(again, "layout_path", "") or ""
+    layout_same = bool(new_layout) and store.same_path(new_layout, box.layout)
+    bodies.append(swbuild.CarryBody(
+        old=layout.LAYOUT_HANDLE, old_name=box.layout_component,
+        handle=layout.LAYOUT_HANDLE if getattr(again, "layout", None) is not None else "", same_file=layout_same,
+        why_new="" if layout_same else WHY_NEW_LAYOUT, names=layout.layout_features(tuple(again.shafts)),
+        old_names=layout.layout_features(tuple(box.shafts))))
+    handle_of = {cid: h for h, cid in again.carrier_handles.items()}
+    new_carriers = {c.shaft: c for c in getattr(again, "carrier_layouts", ()) or ()}
+    for c in box.carriers:
+        cid = layout.carrier_id(c.shaft)
+        handle = handle_of.get(cid, "")
+        path = (getattr(again, "carrier_paths", None) or {}).get(c.shaft, "")
+        same = bool(handle) and bool(path) and store.same_path(path, c.path)
+        drawn = new_carriers.get(c.shaft)
+        bodies.append(swbuild.CarryBody(
+            old=cid, old_name=c.component, handle=handle, same_file=same,
+            why_new="" if same or not handle else WHY_NEW_CARRIER,
+            names=layout.layout_features(layout.carrier_shafts(drawn)) if drawn is not None else (),
+            old_names=_old_carrier_names(c)))
+    gear_handle = {gear: h for h, gear in again.handles.items()}
+    parts = {p.path: p for p in record.parts}
+    for c in box.components:
+        handle = gear_handle.get(c.gear, "")
+        new_path = again.part_of.get(c.gear, "") if handle else ""
+        reused = next((r for r in again.reuse if store.same_path(r.path, c.part)), None)
+        same = bool(handle) and reused is not None and store.same_path(new_path, c.part)
+        entry = next((p for path, p in parts.items() if store.same_path(path, c.part)), None)
+        old_sidecar = read_sidecar(store.sidecar_path(c.part)) if c.part else None
+        old_names = tuple(old_sidecar.record.features) if old_sidecar is not None else ()
+        if same:
+            names = tuple(reused.features) or old_names
+        else:
+            job = next((j for j in again.build if c.gear in j.gear_ids), None)
+            names = swbuild.plan_features(job.plan) if job is not None and job.plan is not None else ()
+        bodies.append(swbuild.CarryBody(
+            old=c.gear, old_name=c.name, handle=handle, same_file=same,
+            why_new="" if same or not handle else _why_part_new(entry, c.gear, again),
+            names=tuple(names), old_names=old_names))
+    modes_plan = getattr(again, "modes_plan", None)
+    modes = tuple(step.name for step in modes_plan.steps) if modes_plan is not None else ()
+    files: List[str] = [p.path for p in record.parts]
+    files += [box.layout, box.assembly] + [c.path for c in box.carriers]
+    for earlier in record.earlier:
+        files += [earlier.layout, earlier.assembly] + list(earlier.parts)
+    app_files: List[str] = []
+    for path in files:
+        if path and not any(store.same_path(path, p) for p in app_files):
+            app_files.append(path)
+    return swbuild.Carry(old=old, bodies=tuple(bodies), modes=modes, first=box.modes[0] if box.modes else "",
+                         written_on=tuple(int(n) for n in box.solidworks), app_files=tuple(app_files))
+
+
+def recorded_old_work(record: Optional[LinkRecord]) -> Optional[swbuild.OldWork]:
+    """The record's inventory of the user's work in its assembly as an :class:`swbuild.OldWork` (W9D-INTERFACES §2.3),
+    for the Build again? question to foresee through ``swbuild.plan_carry`` what is carried and what named: no frames
+    (``new_frames`` empty, and each component at the world frame, so its placement is not judged here), no definitions
+    beyond what the inventory keeps (type, entities, flags per mode, code), ``how`` OLD_OPEN (as it would be read where
+    it stands), ``active`` ``""`` (the inventory does not keep which mode showed), each component's configurations
+    None (never kept). A schema 9 inventory's mates have no entity kinds:
+    a lock's entities are whole components by what a lock is (S5's ReferenceType2 0), every other mate's are
+    ``ENTITY_UNREAD`` with ``unread`` ``"not on record"``, which the question words as *may*. None with no inventory of
+    the current assembly, or one never read."""
+    entry = _on_record(record)
+    if entry is None or entry.unread:
+        return None
+    box = record.gearbox
+    identity: swbuild.Frame9 = (layout.IDENTITY, (0.0, 0.0, 0.0))
+    components = [swbuild.OldComponent(
+        name=c.name, path="", kind=c.kind, fixed=c.fixed, code=c.code, state=c.state, frame=identity,
+        virtual="^" in c.name) for c in entry.components]
+    mates = []
+    for m in entry.mates:
+        if m.entities:
+            entities = tuple(swbuild.OldEntity(what=e[0], owner=e[1], kind=e[2], feature=e[3]) for e in m.entities)
+        else:
+            kind = swbuild.ENTITY_WHOLE if m.kind == swbuild.USER_LOCK else swbuild.ENTITY_UNREAD
+            entities = tuple(swbuild.OldEntity(what=t[0], owner=t[1], kind=kind,
+                                               unread="" if kind == swbuild.ENTITY_WHOLE else UNKNOWN_ENTITY)
+                             for t in m.touches)
+        mates.append(swbuild.OldMate(name=m.name, type=m.type, type_name="", alignment=0, flipped=False, values=(),
+                                     entities=entities, on=tuple(m.on), code=m.code, warning=m.warning,
+                                     whole=m.whole))
+    return swbuild.OldWork(read_at=entry.read_at, assembly=box.assembly, how=swbuild.OLD_OPEN,
+                           active="", modes=tuple(box.modes), components=components,
+                           mates=mates, app_frames=())
+
+
+UNKNOWN_ENTITY = "not on record"     # OldEntity.unread of a schema 9 inventory's entity: its kind was never kept

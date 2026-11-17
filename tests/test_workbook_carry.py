@@ -148,3 +148,122 @@ def test_the_spelled_words_are_swbuilds():
     assert set(store._ENTITY_KINDS) == {swbuild.ENTITY_WHOLE, swbuild.ENTITY_FEATURE, swbuild.ENTITY_PLANE,
                                         swbuild.ENTITY_ORIGIN, swbuild.ENTITY_FACE, swbuild.ENTITY_EDGE,
                                         swbuild.ENTITY_VERTEX, swbuild.ENTITY_UNREAD}
+
+
+# -- carry_for and recorded_old_work ---------------------------------------------------------------------------------
+
+from dataclasses import replace  # noqa: E402
+
+from gear_generator import findings, swbuild, ui_text  # noqa: E402
+from gear_generator.workbook import gearbox, layout, update  # noqa: E402
+from test_workbook_in_place_round_trip import Desk, users_work  # noqa: E402,F401
+from test_workbook_update import gears  # noqa: E402
+from workbook_fixtures import range_box  # noqa: E402
+
+
+@pytest.fixture
+def desk():
+    """RangeBox built on the fake, W9a's user work on it read onto the record by a quiet press (Sprocket-1 locked to
+    Sun, Housing-1 fixed, a Keyway in Sun's part and a Groove in RangeSlv's)."""
+    d = Desk()
+    d.build(range_box())
+    users_work(d)
+    return d
+
+
+def _again(desk, spec):
+    a = desk.a(spec)
+    again = gearbox.plan_gearbox(a, desk.record, exists=desk.disk.exists, read_sidecar=desk.disk.read_sidecar)
+    assert again.refusal == "" and again.name == "RangeBox_r2", again.refusal
+    return again
+
+
+def _carry(desk, again):
+    return update.carry_for(desk.record, again, update.old_assembly(desk.record, again),
+                            read_sidecar=desk.disk.read_sidecar)
+
+
+def test_carry_for_maps_every_body_on_record_to_the_new_plan(desk):
+    again = _again(desk, gears(range_box(), Sun=dict(flank="arcs")))
+    carry = _carry(desk, again)
+    box = desk.record.gearbox
+    assert carry.old is not None and carry.old.path == box.assembly
+    assert [b.old for b in carry.bodies] == ["layout", "Carrier carrier", "Sun", "Planet copy 1", "Planet copy 2",
+                                            "Planet copy 3", "Ring", "HighDog", "LowDog", "RangeSlv"]
+    by = {b.old: b for b in carry.bodies}
+    lay = by["layout"]
+    assert (lay.old_name, lay.handle, lay.same_file, lay.why_new) == (
+        box.layout_component, "layout", False, "its layout part is new with every revision")
+    assert lay.names == lay.old_names == ("Input Axis", "Carrier Axis", "Ring Axis", "Output Axis")
+    carrier = by["Carrier carrier"]
+    assert (carrier.handle, carrier.same_file, carrier.why_new) == ("carrier1", False,
+                                                                    "its carrier part is new with this revision")
+    assert carrier.names[0] == "Carrier Axis" and "Planet copy 2 Axis" in carrier.names
+    assert carrier.old_names == carrier.names
+    sun = by["Sun"]
+    assert (sun.handle, sun.same_file, sun.why_new) == ("gear1", False, "its Flank changed")
+    sun_job = next(j for j in again.build if "Sun" in j.gear_ids)
+    assert sun.names == swbuild.plan_features(sun_job.plan) and "Gear Axis" in sun.old_names
+    for k in (1, 2, 3):                                  # planet copy k to copy k, the very file reused
+        planet = by[f"Planet copy {k}"]
+        assert (planet.old_name, planet.handle, planet.same_file, planet.why_new) == (
+            f"gear2c{k}-1", f"gear2c{k}", True, "")
+    assert carry.modes == ("H", "N", "L") and carry.first == "H" and carry.written_on == tuple(box.solidworks)
+    assert box.assembly in carry.app_files and box.layout in carry.app_files
+    assert all(any(store.same_path(p.path, f) for f in carry.app_files) for p in desk.record.parts)
+    assert box.carriers[0].path in carry.app_files
+
+
+def test_carry_for_says_why_each_new_part_is_new_and_names_a_body_the_revision_lacks(desk):
+    again = _again(desk, gears(range_box(), Sun=dict(face_width="12", bore="8"), Ring=dict(face_width="12")))
+    by = {b.old: b for b in _carry(desk, again).bodies}
+    assert by["Sun"].why_new == "its Face width and Bore changed" and by["Ring"].why_new == "its Face width changed"
+    renamed = _again(desk, gears(range_box(), Sun=dict(flank="arcs", part_name="SunX")))
+    assert {b.old: b for b in _carry(desk, renamed).bodies}["Sun"].why_new == "its Part name and Flank changed"
+    sun_part = next(p.path for p in desk.record.parts if "Sun" in p.gears)
+    for why, said in ((gearbox.UNSAVED, "it had changes from Update SolidWorks that were not saved"),
+                      (gearbox.MISMATCHED, "it did not hold what the record says, as the last job in SolidWorks found")):
+        made = replace(again, made_new=(gearbox.MadeNew(("Sun",), sun_part, again.part_of["Sun"], why),))
+        assert {b.old: b for b in _carry(desk, made).bodies}["Sun"].why_new == said
+    # A gear the new plan has no handle for: on record still, handle "" and no reason.
+    gone = replace(again, handles={h: g for h, g in again.handles.items() if g != "HighDog"})
+    high = {b.old: b for b in _carry(desk, gone).bodies}["HighDog"]
+    assert (high.handle, high.same_file, high.why_new, high.names) == ("", False, "", ())
+
+
+def test_carry_for_is_none_for_any_other_build(desk):
+    again = _again(desk, gears(range_box(), Sun=dict(flank="arcs")))
+    assert update.carry_for(desk.record, again, None) is None
+    assert update.carry_for(None, again, update.old_assembly(desk.record, again)) is None
+
+
+def test_recorded_old_work_is_the_inventory_with_its_time_and_says_what_it_cannot_know(desk):
+    entry = desk.record.gearbox.user_work
+    work = update.recorded_old_work(desk.record)
+    assert (work.read_at, work.assembly, work.how, work.active) == (entry.read_at, desk.record.gearbox.assembly,
+                                                                    swbuild.OLD_OPEN, "")
+    assert work.modes == ("H", "N", "L") and work.app_frames == ()
+    assert [(c.name, c.kind, c.fixed, c.state) for c in work.components] == [("Sprocket-1", "part", False, 2),
+                                                                             ("Housing-1", "part", True, 2)]
+    assert all(c.configurations is None and c.frame is not None for c in work.components)
+    lock = work.mates[0]
+    assert (lock.name, lock.on) == ("Lock3", ("H", "N", "L"))
+    # A schema 9 inventory (no entities): a lock's are whole components by what a lock is.
+    assert [(e.what, e.owner, e.kind) for e in lock.entities] == [("app", "Sun", "whole"), ("user", "Sprocket-1", "whole")]
+    rec = copy.deepcopy(desk.record)
+    rec.gearbox.user_work.mates[0].kind = "other"
+    assert {e.kind for e in update.recorded_old_work(rec).mates[0].entities} == {swbuild.ENTITY_UNREAD}
+    assert {e.unread for e in update.recorded_old_work(rec).mates[0].entities} == {update.UNKNOWN_ENTITY}
+    # A schema 10 inventory keeps them as read.
+    rec.gearbox.user_work.mates[0].entities = [["app", "Sun", "face", ""], ["user", "Sprocket-1", "feature", "Axis1"]]
+    assert [(e.what, e.owner, e.kind, e.feature) for e in update.recorded_old_work(rec).mates[0].entities] == [
+        ("app", "Sun", "face", ""), ("user", "Sprocket-1", "feature", "Axis1")]
+    rec.gearbox.user_work = None
+    assert update.recorded_old_work(rec) is None
+
+
+def test_an_updates_inventory_keeps_each_mates_entities():
+    mate = swbuild.UserMate("Lock3", swbuild.USER_LOCK, 16, (("app", "Sun"), ("user", "Sprocket-1")), ("H",),
+                            entities=(("app", "Sun", "whole", ""), ("user", "Sprocket-1", "whole", "")))
+    entry = update.user_work_entry(swbuild.UserWork(read_at="2026-11-17T14:02:00Z", mates=[mate]), assembly="R.SLDASM")
+    assert entry.mates[0].entities == [["app", "Sun", "whole", ""], ["user", "Sprocket-1", "whole", ""]]
