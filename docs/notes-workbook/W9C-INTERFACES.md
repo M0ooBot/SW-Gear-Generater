@@ -709,3 +709,19 @@ that went through and after one that failed. Nothing else in the build's bracket
 subject (pinned: `test_two_gates_unmeasured_refuse_as_two_problems_each_with_its_finding_as_its_subject`), and B
 records each problem with its subjects. The loss is in the demonstration script's check (`refusal_on_record` keys the
 record's problems by kind, so the second `unsettled` overwrites the first's subjects).
+
+### From B (the runs review): the inventory after a press that added a mode, and a stop in a part left in error
+
+- **The inventory follows the modes a press added.** It is read at the press's start, before the mode exists. After
+  the press, each user mate's flag the worker read in each added mode (`took_active_state`) goes into that mate's
+  `on`. `UserWorkEntry.modes` (additive at schema 9) lists the configurations the inventory covers: the record's modes
+  after the press.
+- **A record written before this** has `modes` empty. The footer then takes a mode that none of its mates is on in as
+  never read, and judges it as a copy of a mode it did read, as an added mode is judged. So run 5's record after H2
+  foresees nothing false. The cost is one case: a mode in which the user genuinely suppressed every mate of theirs is
+  judged the same way, and the press still reads and refuses it.
+- **What SolidWorks is asked to do is unchanged.** What the record says after a mode is added is changed.
+- **A stop in a part whose rebuild reported an error never offers saving.** *It had already changed Gear_m1.25_N29,
+  not saved, and Gear_m1.25_N29 is left in error: close it in SolidWorks without saving (the file on disk is as before
+  this Update), then press Update SolidWorks again once that is put right.* Every other stop keeps W4's offer.
+- **B now uses `swbuild.work_without_modes`.** Its own copy is gone.
