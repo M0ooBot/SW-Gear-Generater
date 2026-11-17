@@ -3800,6 +3800,10 @@ class GearboxUpdate:
     rebuild_from_user_alone: List[str] = field(default_factory=list)
     values_set: List[ValueSet] = field(default_factory=list)
     features_read: Dict[str, bool] = field(default_factory=dict)
+    # ``read_clean``: each document marked left in error (``DocumentValues.left_in_error``) whose check-phase read of
+    # its features was made and found no feature of the app's in error and none unread (repaired in SolidWorks, say),
+    # by path; its mark goes (the review of the M3 fix, (ii)). A document not read, or read with one unread, is not.
+    read_clean: List[str] = field(default_factory=list)
     # W9c (W9C-INTERFACES §6), what an Update did in place, each listing only what was done. ``built``: each new
     # part's build. ``inserted`` / ``deleted``: ``(gear, Name2)``. ``mates_deleted``: the app mates gone with them,
     # each read gone by name. ``mates_made``: ``(mate name kept, the configurations it reads on in)``.
@@ -4260,6 +4264,7 @@ def update_gearbox(sw: SolidWorks, parts: Sequence[DocumentValues] = (), layout:
         if read_states is not None:
             features.extend(_user_features(doc.path, read_states, set(doc.made) | set(doc.features)))
             app_in_error[doc.path] = _app_features_in_error(doc, read_states)
+            _read_clean(doc, read_states, result)
     if features:
         result.user_work = UserWork(read_at=now(), features=features)
     if edits:
@@ -4306,6 +4311,15 @@ def _app_features_in_error(doc: DocumentValues, states: Sequence[FeatureState]) 
     is not counted here (it blocks nothing), nor is any feature of the user's."""
     made = set(doc.made) | set(doc.features)
     return [s.name for s in states if s.name in made and _in_error(s.code)]
+
+
+def _read_clean(doc: DocumentValues, states: Sequence[FeatureState], result: GearboxUpdate) -> None:
+    """Notes ``doc`` in ``result.read_clean`` when it is marked left in error and ``states`` (its check-phase read)
+    is not empty and holds no feature the app made in error or unread."""
+    made = set(doc.made) | set(doc.features)
+    if doc.left_in_error and states and not any(s.name in made and (_in_error(s.code) or s.code == UNREAD)
+                                                for s in states):
+        result.read_clean.append(doc.path)
 
 
 def _held_in_error(documents: Sequence[DocumentValues], holds: Sequence[str],
@@ -7185,6 +7199,7 @@ def _update_motion(sw: SolidWorks, parts: Sequence[DocumentValues], layout: Opti
                 features_read[doc.path] = any(s.name in made and (_in_error(s.code) or s.code == UNREAD)
                                               for s in read_states)
             app_in_error[doc.path] = _app_features_in_error(doc, read_states)
+            _read_clean(doc, read_states, result)
     say(Step(STAGE_CHECK, _stem(assembly), total, total))
     recorded_names = {m.name for m in motion.mates}
     wanted_teeth = _wanted_teeth(motion)

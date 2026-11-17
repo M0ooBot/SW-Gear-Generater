@@ -1962,12 +1962,17 @@ def _gearbox_update_status(update, result, dragged: Sequence[str] = (), *, meshe
         if motion and result.skipped and getattr(update, "in_place", None):
             text += f" It did not get to {str(result.skipped).rstrip('.')}."
         in_error = _parts_left_in_error(result)
+        # The review of the M3 fix, (iii): a part an earlier stop left in error, still open so (Finished
+        # .still_in_error), is closed without saving as well, so the stop never offers to save beside it.
+        for path in getattr(finished, "still_in_error", ()) or () if finished is not None else ():
+            if _stem(path).casefold() not in {s.casefold() for s in in_error}:
+                in_error.append(_stem(path))
         if changed_docs and in_error:
             # The W9c runs review's should-fix: a part whose rebuild reported an error stays open in its failed state,
             # holding the new value, so a press on it sets nothing and it never mends; and the documents changed with
             # it, saved beside it closed, would leave gears at their new values against it as it was. So every
             # document changed is closed without saving, and saving is never offered.
-            one = len(changed_docs) == 1
+            one = len(list(dict.fromkeys(s.casefold() for s in changed_docs + in_error))) == 1
             text += (f" It had already changed {_and(changed_docs)}, not saved, and {_and(in_error)} "
                      f"{'is' if len(in_error) == 1 else 'are'} left in error: close {'it' if one else 'them all'} in "
                      f"SolidWorks without saving (the {'file' if one else 'files'} on disk {'is' if one else 'are'} as "

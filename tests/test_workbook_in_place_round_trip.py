@@ -1059,24 +1059,27 @@ def test_a_record_without_the_mark_reads_its_unsaved_line_as_before():
 # -- the fixes review: M3 (a press that sets nothing proves nothing), S6 (modes read), S7 (one name rule) ------------
 
 def test_pressing_again_without_closing_keeps_the_mark_and_says_close_without_saving_not_already_matches():
+    """The part is put in error as SolidWorks shows one (P0: a feature of the app's with an error code; the fake's
+    rebuild_ok alone, which this test used before the review of the M3 fix, is an error no feature read can see, and
+    a part read clean now sheds its mark). Pressed again without closing, the press stops on it before any write."""
     d = Desk()
     d.build(range_box())
-    d.sw.rebuild_ok = False
-    d.press(_sun_backlash(range_box()))
     part = next(p.path for p in d.record.parts if "Sun" in p.gears)
+    d.sw.breaks_on_set[_key(part)] = [("Teeth", 1)]
+    d.press(_sun_backlash(range_box()))
+    mark = len(d.sw.calls)
     again = d.press(_sun_backlash(range_box()))              # not closed: the part holds the new value, in error
-    assert again.result.ok and not again.result.failures
+    assert d.writes(mark) == [] and [w for w, _ in again.result.failures] == ["Gear_m1.25_N29.SLDPRT"]
     assert [store.same_path(p, part) for p in d.record.unsaved_in_error] == [True]
     assert not again.ok and again.after == (
         "Gear_m1.25_N29 is still open in SolidWorks as an earlier Update SolidWorks left it, in error and holding the "
         "new values, so this press set nothing in it: close it in SolidWorks without saving (the file on disk is as "
-        "before that Update), then press Update SolidWorks again. It worked in H, the configuration that was active; "
-        "it did not show the other modes, since nothing in H needed changing.")      # the rest is kept (N4)
+        "before that Update), then press Update SolidWorks again.")
     text, _ = d.footer(_sun_backlash(range_box()))
     assert "was left in error when it stopped: close it in SolidWorks without saving" in text
     assert "in SolidWorks to keep" not in text
     d.sw.close_all()
-    d.sw.rebuild_ok = True
+    d.sw.feature_codes.pop((_key(part), "Teeth"))            # reopened from its file, as it was before: clean
     clean = d.press(_sun_backlash(range_box()))              # rebuilt that very document clean: the mark goes
     assert clean.result.ok and clean.ok and d.record.unsaved_in_error == []
 
@@ -1274,3 +1277,73 @@ def test_only_a_part_marked_left_in_error_holding_its_values_with_the_apps_own_f
                                       ["the assembly"]) is stops
         assert [w for w, _ in result.failures] == (["Ring_m1.25_N55.SLDPRT"] if stops else [])
         assert result.skipped == ("the assembly, because Ring_m1.25_N55.SLDPRT is in error" if stops else "")
+
+
+# -- the review of the M3 fix: (ii) a marked part read clean, (iii) a part still in error beside another failure -----
+
+def _m3_stopped():
+    """remake's M3 step 1 on the fake: the stage set straight stops in the ring, which the record marks. The desk and
+    the ring's path."""
+    d = Desk()
+    d.build(range_box())
+    steps, swbuild.LANDING_STEPS = swbuild.LANDING_STEPS, ()
+    try:
+        first = d.press(_m3_stage())
+    finally:
+        swbuild.LANDING_STEPS = steps
+    ring = _part(d.record, "Ring")
+    assert [store.same_path(p, ring) for p in d.record.unsaved_in_error] == [True], first.after
+    return d, ring
+
+
+def _ring_codes(d, ring, tooth_space):
+    """The ring's landing in the fake set aside, its Tooth Space then reading ``tooth_space`` (0: clean, as a repair
+    in SolidWorks leaves it)."""
+    d.sw.wrong_branch.discard(_key(ring))
+    d.sw.feature_codes.pop((_key(ring), "Teeth"), None)
+    d.sw.feature_codes[(_key(ring), "Tooth Space")] = tooth_space
+    if not tooth_space:
+        del d.sw.feature_codes[(_key(ring), "Tooth Space")]
+
+
+def test_a_marked_part_repaired_in_solidworks_sheds_its_mark_and_is_never_called_still_in_error(measured):
+    """(ii): the ring, left in error, is repaired by hand and reads clean at 54. The press is not stopped on it, and
+    neither the status nor the footer may call it still in error or tell the user to throw it away."""
+    d, ring = _m3_stopped()
+    _ring_codes(d, ring, 0)
+    again = d.press(_m3_stage())
+    assert "still open in SolidWorks" not in again.after, again.after
+    assert d.record.unsaved_in_error == [] and again.finished.still_in_error == []
+    text, _ = d.footer(_m3_stage())
+    assert "left in error" not in text, text
+    assert [store.same_path(p, ring) for p in again.result.read_clean] == [True]
+
+
+def test_a_marked_part_whose_read_has_a_code_unread_keeps_its_mark_and_the_stop_never_offers_to_save(measured):
+    """(ii)'s other side, and (iii): a code SolidWorks would not give is no repair, so the mark stays and the part is
+    still said in error; the press is not stopped on it and fails further on, and its stop then tells the user to
+    close everything without saving, never to save what it changed beside a part to be closed unsaved."""
+    d, ring = _m3_stopped()
+    _ring_codes(d, ring, swbuild.UNREAD)
+    again = d.press(_m3_stage())
+    assert "Ring_m1.25_N55 is left in error: close them all in SolidWorks without saving" in again.after, again.after
+    assert "to keep" not in again.after and "Ring_m1.25_N55 is still open in SolidWorks" in again.after, again.after
+    assert again.result.failures and again.result.changed
+    assert [store.same_path(p, ring) for p in d.record.unsaved_in_error] == [True]
+    assert again.result.read_clean == []
+
+
+def test_a_mark_goes_on_a_read_only_when_it_was_made_whole():
+    """swbuild._read_clean: marked, read, nothing of the app's in error or unread. Not read (no ``made``: an empty
+    read), unread, in error, or not marked: the mark stays."""
+    from gear_generator import swcom
+    doc = swbuild.DocumentValues("C:\\\\Out\\\\Ring_m1.25_N55.SLDPRT", made=("Tooth Space", "Teeth"), left_in_error=True)
+    clean = [swcom.FeatureState("Tooth Space", "Cut", 0, True), swcom.FeatureState("Keyway", "ICE", 41, False)]
+    for document, states, noted in ((doc, clean, True),
+                                    (doc, [], False),
+                                    (doc, [swcom.FeatureState("Tooth Space", "Cut", swcom.UNREAD, False)], False),
+                                    (doc, [swcom.FeatureState("Tooth Space", "Cut", 72, False)], False),
+                                    (replace(doc, left_in_error=False), clean, False)):
+        result = swbuild.GearboxUpdate()
+        swbuild._read_clean(document, states, result)                                           # noqa: SLF001
+        assert result.read_clean == ([document.path] if noted else []), (states, document.left_in_error)
