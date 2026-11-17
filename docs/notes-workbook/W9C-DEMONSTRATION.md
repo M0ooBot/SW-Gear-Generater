@@ -88,11 +88,11 @@ Times are estimates for SolidWorks 2026, from W9a's and W9b's measured runs. An 
 
 | # | Section | What it does | 2026 |
 |---|---|---|---|
-| 0 | `ring` | The ring's part at 54, 56, 53, 50 and 60 teeth on fresh copies, a 54-tooth ring from scratch, and Sun at 30: a diagnostic, facts only. Details under the fourth run, below. | 4 min |
+| 0 | `ring` | The ring's Tooth Space sketch dumped as built at 55, set to 54 and built at 54, the last two compared; routes to 54 and 56 → 55; Sun at 30: a diagnostic, facts only. Details under the fifth run, below. | 2 min |
 | 1 | `fixed` | **The Done-when.** Details below. Kept as `fixed-updated.master`. | 30 min |
 | 2 | `modes` | **M10.** Four edits, three presses and three refusals. Details below. | 30 min |
 | 3 | `remove` | G4 out of the 12 : 1; HighDog out of setup refused, twice. Details below. | 15 min |
-| 4 | `remake` | Sun 29 → 30, Planet 13 → 12, Ring 55 → 54 with modes, on a copy of `setup.master` (it needs nothing of `fixed`'s). Details below. | 15 min |
+| 4 | `remake` | Sun 29 → 28, Planet 13 → 14, Ring 55 → 56 with modes, on a copy of `setup.master` (it needs nothing of `fixed`'s). Details below. | 12 min |
 | 5 | `bands-off` | The take-away side. Details below. | 8 min |
 | 6 | `m4` | The external-references read, a probe. Details below. | 5 min |
 | 7 | `w9b-part` | W9b's `part` section again, so its step-face read runs on SolidWorks in this session. | 2 min |
@@ -230,10 +230,15 @@ H's coupling to HighDog stays on in H2. That is why H2 is added first: removing 
 
 ### `remake`
 
-On a copy of `setup.master`, RangeBox with the user's work: Sun 30, Planet 12, Ring 54. It needs nothing of
+On a copy of `setup.master`, RangeBox with the user's work: Sun 28, Planet 14, Ring 56. It needs nothing of
 `fixed`'s, so it runs when `fixed` has not (the first run's `remake` died for want of `fixed-updated.master`). The
-centre distance is m(30 + 12)/2 = 26.25 as before; 30 + 2 × 12 = 54; and (30 + 54)/3 = 28, so three planets stay
+centre distance is m(28 + 14)/2 = 26.25 as before; 28 + 2 × 14 = 56; and (28 + 56)/3 = 28, so three planets stay
 evenly spaced. The workbook needs no band column for this edit.
+
+**Not 30/12/54, as it was until the fifth run.** The ring's part from S0's master does not rebuild when set from 55 to
+54 teeth: its Tooth Space cut reads code 72, a self-intersecting contour, and the pattern after it fails. Set to 56,
+53, 50 or 60 it rebuilds, and so does a 54-tooth ring built from scratch. That is a fault of the part's sketch older
+than W9c, which `ring` reads on its own; it is not what `remake` is here to show.
 
 - **classify:** a value Update remaking four gear mates: Sun meshes Planet copy 1–3, and Planet copy 1 meshes Ring.
 - **Unpatched, the press refuses before any write**, a `UserWorkRefused` with `PROBLEM_UNSETTLED` naming
@@ -247,7 +252,7 @@ evenly spaced. The workbook needs no band column for this edit.
   - every mode judged by W9b's `judge_every` for an unbanded sleeve, each engaging as §3's RangeBox (H HighDog, N
     nothing, L LowDog);
   - the record brought forward to this app's schema and nothing left over (`left` empty);
-  - the app's read of L at 1 + 54/30 = 2.8.
+  - the app's read of L at 1 + 56/28 = 3.
 
 ### `bands-off`
 
@@ -352,7 +357,9 @@ find, reads it back with the app's own reader, and classifies it against a recor
   edit.
 - **modes:** H2 added; N removed; H2 removed; H2 put back with H removed and L first.
 - **remove:** G4 and HighDog removed in place, no gate unsettled.
-- **remake:** on RangeBox, legal, four remakes, its gate, L at 2.8.
+- **remake:** on RangeBox with Sun 28, Planet 14, Ring 56: legal, four remakes, its gate, L at 3.
+- **ring, pure:** 54 and 56 each with their Sun and Planet legal; `arc_sweep` and `sketch_diff` on made-up dumps;
+  `start_lands_on_cap` by the app's own maths (55 → 54 and 56 → 55 within 0.03 mm, 55 → 53, 55 → 56, 53 → 54 not).
 - **bands-off:** the four candidates above.
 - **The pure judgements, on made-up readings:** `user_items_judged`, `flags_lost_expected`, `took_active_differs`,
   `groove_kept`.
@@ -387,6 +394,52 @@ At this commit it passes, 0 failed. `--help` imports nothing of SolidWorks.
   SolidWorks.
 - **On 2024,** the What's Wrong box may come in `fixed` (a user feature rebuilt after the relief), and is handled by
   W9a's rule. Nothing here is version-specific beyond the `_ON_<year>` names.
+
+## The fifth run on 2026 (from 9efcb2c), and what changed
+
+`probe/results/w9c-demo-sw2026-20261117-5-fixed-modes-bands-off-clean.log` (88289c4). `fixed`, `modes` and
+`bands-off` passed with 0 failed. `remake` stopped again in the ring's part. `ring` said where: set from 55 to 54 by
+the app's own `update_variables`, Tooth Space reads code 72 (`swFeatureErrorSketchContainsSelfIntersectingContour`)
+and Teeth code 1. Every sketch still reads fully defined, and no equation is in error. Set to 56, 53, 50 or 60 the
+same part rebuilds; a 54-tooth ring built from scratch is clean.
+
+- **`remake` now changes Sun 29 → 28, Planet 13 → 14, Ring 55 → 56** (above), which the diagnostic shows rebuilds and
+  keeps the stage. L's ratio is 3.
+- **`ring` is now short (about 2 min) and facts only.** 53, 50 and 60 are dropped. On fresh copies, nothing saved,
+  every copy closed:
+  - **The Tooth Space sketch dumped** (`sketch_dump`) on (i) the part as built at 55, (ii) after the set to 54, and
+    (iii) a 54-tooth ring built from scratch by the strip's `plan_for` and `swbuild.build`. The dump holds:
+    - every segment in `GetSketchSegments` order: its `swSketchSegments_e` type, construction flag, end points, and
+      for an arc its centre, radius, `GetRotationDir` and sweep, in sketch coordinates to 1e-6 mm (a spline its
+      point count and first and last points);
+    - the sketch's dimensions by name, as `SystemValue` (m, rad);
+    - the relations' `swConstraintType_e` kinds.
+
+    Every member returning an array goes through `member`, which calls one late binding hands back uncalled. Then
+    `sketch_diff` prints (ii) against (iii): which segments differ and by how much, and any dimension or relation
+    kind that differs; also (i) against (ii), the segments whose direction or sweep changed.
+  - **Routes on fresh copies,** each reporting only whether every feature ends clean, and the volume:
+    - 54, then a second forced rebuild (`ForceRebuild3(False)`);
+    - 56, then 54;
+    - 53, then 54;
+    - 54, then 55 (does it recover?);
+    - 56, then 55, the hypothesis's own test (below).
+  - **No `begin_build`/`end_build` route:** `swbuild.update_variables` already runs inside that bracket.
+  - **Sun 29 → 30,** the external-gear control.
+- **The hypothesis, from `gears/internal.py`'s `_space_ops_involute`.** The ring's sketch holds two fixed equation
+  curves `I±`. `Li±` is a radial line from each curve's start (the flank start, diameter da − m here, since
+  db < da − m) to the tip-cap circle (diameter da − 2m). It is held only by "origin on `Li±`" and "`Li±.end` on
+  `cap`", and is 0.625 mm long. The chord `T` joins the two `Li` ends.
+  - For every count from 51 up, n's cap diameter (nm − 4m) is exactly (n − 1)'s flank start (nm − 3m).
+  - So set from 55 to 54, the new `I+.start` lands 0.024 mm from where `Li+` ends now (`start_lands_on_cap`). The
+    0.625 mm line collapses almost to a point and turns nearly tangential.
+  - From there "on the cap, on a line through the origin" has two solutions: the near end (0.625 mm inward) and
+    the far one, past the origin (about 63 mm). If the solver takes the far one, or swaps `T`'s ends, the contour
+    crosses itself, and is still fully defined.
+  - 55 → 53, 55 → 56 and 53 → 54 put the new start 0.6 mm or more away, and they rebuild.
+  - The dump confirms this if, in (ii) against (iii), a short line (`Li+` or `Li-`) or `T` differs by tens of
+    mm while the curves, fillets and root arc agree, and if 56 → 55 fails too. It refutes it if (ii) and (iii) differ
+    first in a fillet or `R`'s sweep (an arc's other side), or if 56 → 55 rebuilds.
 
 ## The fourth run on 2026 (from cdd3bbb), and what changed
 

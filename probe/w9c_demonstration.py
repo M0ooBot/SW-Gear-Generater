@@ -19,10 +19,11 @@ from what it read (``propose``); none is set here.
 
 Sections (each can run alone from a kept master; ``fixed`` keeps ``fixed-updated.master`` for the next four):
 
-- ``ring``      a diagnostic, facts only: the ring's part from S0's master set to 54, 56, 53, 50 and 60 teeth by the
-                app's own update_variables, each on a fresh copy, nothing saved; a 54-tooth ring built from scratch;
-                Sun 29 -> 30 for comparison: every feature's error, the sketches, the equations, What's Wrong (remake's
-                ring did not rebuild at 54 on 2026's fourth run).
+- ``ring``      a diagnostic, facts only: why the ring's part from S0's master does not rebuild set from 55 to 54 teeth
+                (code 72 on Tooth Space, 2026's fifth run). On fresh copies, nothing saved: the Tooth Space sketch's
+                segments, dimensions and relation kinds as built at 55, set to 54, and built from scratch at 54, the
+                last two compared; routes to 54 (a forced rebuild after; through 56; through 53; 54 then 55) and 56
+                then 55, each clean or not and the volume; Sun 29 -> 30 for comparison.
 - ``fixed``     the plan's Done-when. A copy of ``setup.master`` (RangeBox with the user's work: the sprockets locked to
                 Sun and RangeSlv, the housing, their mates, the keyway in Sun's part), with a user groove cut in
                 RangeSlv's part; a quiet press records it; the workbook edited in Excel to RangeBox_Fixed (the
@@ -36,7 +37,8 @@ Sections (each can run alone from a kept master; ``fixed`` keeps ``fixed-updated
 - ``remove``    G4 taken out of a copy of the 12 : 1 (no user component); HighDog taken out of a copy of
                 ``setup.master`` refused before any write (C4: the external-references read is unmeasured), then
                 with a user lock on HighDog refused naming that lock too.
-- ``remake``    Sun 29 -> 30, Planet 13 -> 12, Ring 55 -> 54 on a copy of ``setup.master`` (RangeBox with the user's
+- ``remake``    Sun 29 -> 28, Planet 13 -> 14, Ring 55 -> 56 (not 30/12/54: the ring's part does not rebuild set to 54,
+                which ``ring`` reads) on a copy of ``setup.master`` (RangeBox with the user's
                 work; it needs nothing of ``fixed``'s; the centre distance and the planets' even spacing kept): four
                 gear mates of a gearbox with modes made again (ruling 9.16 lifted), flags and senses read in every
                 mode, the user's mates unchanged.
@@ -50,7 +52,7 @@ Sections (each can run alone from a kept master; ``fixed`` keeps ``fixed-updated
                 and the route proposed from it.
 - ``w9b-part``  W9b's ``part`` section again (88 s on 2026), so its step-face read runs on SolidWorks in this session.
 
-Time on 2026, estimated: ring 4 min, fixed 30 min, modes 30, remove 15, remake 15, bands-off 8, m4 5, w9b-part 2: about 1 h 45
+Time on 2026, estimated: ring 2 min, fixed 30 min, modes 30, remove 15, remake 12, bands-off 8, m4 5, w9b-part 2: about 1 h 45
 min (the plan's budget 2 h 20 min); add 5 min if setup.master and 4 if the 12 : 1's master must be built first.
 """
 
@@ -77,8 +79,11 @@ REMOVED_MODE = "N"                     # modes: removed while another shows; the
 FIRST_MODE = "H"                       # modes: the record's first, removed last (H2 keeps HighDog's coupling on)
 NEXT_FIRST = "L"                       # ... and the record's first after it (H, L, H2 less H)
 USER_OFF_IN_N = "UserAngle4"           # a user mate the user suppresses in N alone before N goes (flags_lost)
-GEARS_TEETH = {"Sun": "30", "Planet": "12", "Ring": "54"}   # remake: m(30 + 12)/2 = 26.25 as before; 30 + 2 × 12 = 54;
-REMAKE_RATIO_L = 1.0 + 54.0 / 30.0                         # (30 + 54)/3 = 28 (three planets evenly); L 1 + 54/30
+GEARS_TEETH = {"Sun": "28", "Planet": "14", "Ring": "56"}   # remake: m(28 + 14)/2 = 26.25 as before; 28 + 2 × 14 = 56;
+REMAKE_RATIO_L = 1.0 + 56.0 / 28.0                         # (28 + 56)/3 = 28 (three planets evenly); L 1 + 56/28 = 3
+# Not 30/12/54: the ring's part from S0's master does not rebuild when set from 55 to 54 teeth (its Tooth Space cut
+# reads swFeatureErrorSketchContainsSelfIntersectingContour, run 5's ring section), while 56 does, as does a 54-tooth
+# ring built from scratch; that is a part-level fault older than W9c, which the ring section reads on its own.
 REMOVED_SETUP, REMOVED_REDUCER = "HighDog", "G4"
 GROOVE = {"name": "User Groove", "at": (14.25, 0.0), "radius": 1.0}   # an axial Ø2 cut through the sleeve's wall
 GROOVE_TOL = 1e-6          # mm
@@ -249,7 +254,70 @@ def record_changes(before, after, revision):
     return ([b for _, _, b in allowed][0] if allowed else None), [x for x in out if x not in allowed]
 
 
-RING_COUNTS = (54, 56, 53, 50, 60)    # ring: the failing count first, then up one, down one, down further, up further
+RING_COUNTS = (54, 56)        # ring: the failing count (55 -> 54) and remake's (55 -> 56); 53, 50, 60 rebuilt (run 5)
+RING_ROUTES = {"54, then a forced rebuild": (54, "force"), "56, then 54": (56, 54), "53, then 54": (53, 54),
+               "54, then 55 again": (54, 55),
+               "56, then 55 (the hypothesis's test: one tooth down from another count)": (56, 55)}
+
+
+def start_lands_on_cap(before, after, module=1.25, pressure_angle=20.0, backlash=0.375, fillet=0.1875):
+    """The ring's involute Tooth Space sketch (gears.internal._space_ops_involute) set from ``before`` to ``after``
+    teeth: how far the new flank start (``I+.start``, where ``Li+`` must begin) lands from where ``Li+`` ends now (on
+    the old tip-cap circle), against ``Li+``'s length (mm), by the app's own maths. For n >= 51 at these sizes, n's
+    tip cap (nm - 4m) is (n - 1)'s flank start (da - m), so one tooth down puts the new start 0.024 mm from the old
+    end and ``Li+`` nearly collapses: the hypothesis the ring section's dump tests."""
+    from gear_generator.gears.internal import involute_flank, section
+    g, h = (section(n, module, pressure_angle, 10.0, None, backlash, fillet) for n in (before, after))
+    old, new = involute_flank(g), involute_flank(h)
+    return math.dist(old.cap, new.start), math.dist(new.start, new.cap)
+SKETCH_TOL = 1e-6             # mm: a sketch point or radius the same in two states
+
+
+def arc_sweep(centre, start, end, direction):
+    """An arc's sweep in degrees, from its start to its end about its centre, counter-clockwise for direction 1 (and
+    clockwise for -1), in [0, 360)."""
+    a0 = math.atan2(start[1] - centre[1], start[0] - centre[0])
+    a1 = math.atan2(end[1] - centre[1], end[0] - centre[0])
+    sweep = (a1 - a0) if direction >= 0 else (a0 - a1)
+    return math.degrees(sweep % (2.0 * math.pi))
+
+
+def sketch_diff(a, b, tol=SKETCH_TOL):
+    """Two dumps of one sketch (``segments``: each ``{"type", "construction", "start", "end", "centre", "radius",
+    "direction", "sweep"}`` in creation order; ``dimensions``; ``relations``), segment by segment: every segment that
+    differs, with what differs and by how much (points and radii in mm, sweep in degrees), and the dimensions (SI,
+    compared to ``tol`` × 1e-3) and the relation kinds that differ. Points read None compare as differing."""
+    out = {"segments": [], "dimensions": [], "relations": None, "count": None}
+    sa, sb = a.get("segments") or [], b.get("segments") or []
+    if len(sa) != len(sb):
+        out["count"] = (len(sa), len(sb))
+    for i, (x, y) in enumerate(zip(sa, sb)):
+        what = {}
+        for key in ("type", "construction", "direction"):
+            if x.get(key) != y.get(key):
+                what[key] = (x.get(key), y.get(key))
+        for key in ("start", "end", "centre"):
+            p, q = x.get(key), y.get(key)
+            if p is None and q is None:
+                continue
+            if p is None or q is None:
+                what[key] = (p, q)
+                continue
+            gap = max(abs(u - v) for u, v in zip(p, q))
+            if gap > tol:
+                what[key] = round(gap, 6)
+        for key in ("radius", "sweep"):
+            p, q = x.get(key), y.get(key)
+            if p is not None and q is not None and abs(p - q) > (tol if key == "radius" else 1e-6):
+                what[key] = (round(p, 6), round(q, 6))
+        if what:
+            out["segments"].append((i, x.get("type"), what))
+    da, db = dict(a.get("dimensions") or []), dict(b.get("dimensions") or [])
+    out["dimensions"] = [(n, da.get(n), db.get(n)) for n in sorted(set(da) | set(db))
+                         if da.get(n) is None or db.get(n) is None or abs(da[n] - db[n]) > tol * 1e-3]
+    if sorted(a.get("relations") or []) != sorted(b.get("relations") or []):
+        out["relations"] = (sorted(a.get("relations") or []), sorted(b.get("relations") or []))
+    return out
 
 
 def ring_partners(ring):
@@ -696,8 +764,8 @@ def self_check():
         ok(up is not None and not up.structural and not up.in_place and len(up.ratios) == 4
            and gates(swbuild.InPlace(), modes=True, remakes=True) == [f"UPDATE_MAKES_MATES_WITH_MODES_ON_{year_}"]
            and ratio is not None and abs(ratio - REMAKE_RATIO_L) < 1e-9,
-           f"remake: on RangeBox, Sun 30, Planet 12, Ring 54 legal, four gear mates remade, gated on UPDATE_MAKES_MATES_WITH_MODES, "
-           f"L's ratio {ratio} (1 + 54/30): {errors or (up and (list(up.structural), list(up.ratios)))}")
+           f"remake: on RangeBox, Sun 28, Planet 14, Ring 56 legal, four gear mates remade, gated on UPDATE_MAKES_MATES_WITH_MODES, "
+           f"L's ratio {ratio} (1 + 56/28): {errors or (up and (list(up.structural), list(up.ratios)))}")
 
         # bands-off: every candidate edit illegal, or Build again
         candidates = {
@@ -748,7 +816,34 @@ def self_check():
         ring_said = [d.message for d in a.diagnostics if "Ring" in d.message]
         print(f"fact    ring {n}: with Sun {sun} and Planet {planet} (three planets evenly spaced: {even}) the fixture "
               f"reads {'legal' if not errors else 'illegal: ' + str(errors[:2])}; of the ring it says {ring_said}")
-    ok(ring_partners(54) == (30, 12, True), "ring: 54 goes with Sun 30 and Planet 12, as remake's edit")
+    ok(ring_partners(54) == (30, 12, True) and ring_partners(56) == (28, 14, True)
+       and (GEARS_TEETH["Sun"], GEARS_TEETH["Planet"], GEARS_TEETH["Ring"]) == ("28", "14", "56"),
+       "ring: 54 goes with Sun 30 and Planet 12; remake's edit is 56 with Sun 28 and Planet 14")
+    gaps = {(a, b): start_lands_on_cap(a, b) for a, b in ((55, 54), (56, 55), (55, 53), (55, 56), (53, 54))}
+    ok(all(gaps[k][0] < 0.03 for k in ((55, 54), (56, 55))) and all(gaps[k][0] > 0.6 for k in ((55, 53), (55, 56),
+                                                                                            (53, 54)))
+       and all(abs(v[1] - 0.625) < 1e-9 for v in gaps.values()),
+       f"ring: one tooth down (55 -> 54, 56 -> 55) puts the new flank start within 0.03 mm of where Li+ ends now, "
+       f"Li+ 0.625 mm long; 55 -> 53, 55 -> 56, 53 -> 54 do not: "
+       f"{ {k: (round(v[0], 4), round(v[1], 4)) for k, v in gaps.items()} }")
+    ok(abs(arc_sweep((0, 0), (1, 0), (0, 1), 1) - 90.0) < 1e-9 and abs(arc_sweep((0, 0), (1, 0), (0, 1), -1) - 270.0)
+       < 1e-9 and abs(arc_sweep((0, 0), (0, 1), (1, 0), 1) - 270.0) < 1e-9,
+       "ring: an arc's sweep runs from its start to its end, counter-clockwise for direction 1, clockwise for -1")
+    arc = {"type": "swSketchARC", "construction": False, "start": (1.0, 0.0), "end": (0.0, 1.0), "centre": (0.0, 0.0),
+           "radius": 1.0, "direction": 1, "sweep": 90.0}
+    line = {"type": "swSketchLINE", "construction": False, "start": (0.0, 0.0), "end": (2.0, 0.0)}
+    same = sketch_diff({"segments": [line, arc], "dimensions": [("Root", 0.0355)], "relations": ["a", "b"]},
+                       {"segments": [line, dict(arc, start=(1.0, 4e-7))], "dimensions": [("Root", 0.0355 + 4e-10)],
+                        "relations": ["b", "a"]})
+    flipped = sketch_diff({"segments": [line, arc], "dimensions": [("Root", 0.0355)], "relations": ["a"]},
+                          {"segments": [line, dict(arc, start=(0.0, 1.0), end=(1.0, 0.0), sweep=270.0)],
+                           "dimensions": [("Root", 0.0356)], "relations": ["a", "c"]})
+    ok(same == {"segments": [], "dimensions": [], "relations": None, "count": None}
+       and [i for i, _, _ in flipped["segments"]] == [1] and set(flipped["segments"][0][2]) == {"start", "end", "sweep"}
+       and flipped["segments"][0][2]["sweep"] == (90.0, 270.0) and flipped["dimensions"] == [("Root", 0.0355, 0.0356)]
+       and flipped["relations"] == (["a"], ["a", "c"]),
+       f"ring: the sketch difference keeps points within 1e-6 mm and SI dimensions within 1e-9 as the same, and names "
+       f"an arc whose ends swapped (its sweep 90 -> 270), a changed dimension and an added relation: {flipped}")
     before = {"gearbox": {"solidworks": [], "modes": ["H"]}, "parts": [{"path": "a"}]}
     allowed, other = record_changes(before, {"gearbox": {"solidworks": [34, 1, 1], "modes": ["H"]},
                                              "parts": [{"path": "a"}]}, [34, 1, 1])
@@ -1854,7 +1949,9 @@ RANGEBOX_ENGAGED = {"H": ["HighDog"], "N": [], "L": ["LowDog"]}   # §3, RangeBo
 def section_remake(out):
     stems = GATES["remake"]
     say(f"== remake  Sun 29 -> {GEARS_TEETH['Sun']}, Planet 13 -> {GEARS_TEETH['Planet']}, Ring 55 -> "
-        f"{GEARS_TEETH['Ring']} on a copy of setup.master, RangeBox with the user's work (the centre distance and the "
+        f"{GEARS_TEETH['Ring']} (not 30/12/54: the ring's part does not rebuild set from 55 to 54, a part-level fault "
+        "the ring section reads; 56 rebuilds) on a copy of setup.master, RangeBox with the user's work (the centre "
+        "distance and the "
         "planets' spacing kept; it needs nothing of fixed's): the gear mates of a gearbox with modes made again "
         f"(ruling 9.16 lifted), first refused with findings.{finding_name(stems[0])} as it stands")
     rb, _, _ = specs()
@@ -1901,7 +1998,7 @@ def section_remake(out):
                          engaged=RANGEBOX_ENGAGED, result=result)
             l_ratio = next((m.ratio for m in desk.a.report.modes if m.name == "L"), None)
             check(l_ratio is not None and abs(l_ratio - REMAKE_RATIO_L) < 1e-9,
-                  f"remake: the app's read gives L {l_ratio} (1 + 54/30 = {REMAKE_RATIO_L})")
+                  f"remake: the app's read gives L {l_ratio} (1 + 56/28 = {REMAKE_RATIO_L})")
     finally:
         if not W.HUNG["on"]:
             A.w8_step(W.end_copy, CTX["worker"], folder, "remake")
@@ -2016,92 +2113,207 @@ def diagnosis_said(label, got):
     say(f"fact    {label}: equations reading in error or unread: {bad or 'none'}; What's Wrong {got.get('whats_wrong')}")
 
 
+SPACE_SKETCH_NAME = "Tooth Space Sketch"   # gears.spur.SPACE_SKETCH: the ring's tooth-space sketch, as the app names it
+
+
+def sketch_dump(s, enums, name=SPACE_SKETCH_NAME):
+    """The sketch ``name`` of the build part as SolidWorks holds it, in sketch coordinates (mm, to 1e-6): every
+    segment in ``GetSketchSegments`` order, its type (``swSketchSegments_e``), its construction flag, its end points,
+    and for an arc its centre, radius, direction (``GetRotationDir``) and sweep; a spline or equation curve its point
+    count and first and last points; the dimensions (``Session.feature_dimensions``: names and SystemValue, in
+    metres or radians as SolidWorks holds them, so 1e-9 there is 1e-6 mm); the
+    relations' kinds (``swConstraintType_e``). Every member that returns an array is called if late binding hands it
+    back uncalled (``member``); each read guarded."""
+    seg_words = {v: k for k, v in enums.get("swSketchSegments_e", {}).items()}
+    rel_words = {v: k for k, v in enums.get("swConstraintType_e", {}).items()}
+    doc = s._doc()  # noqa: SLF001
+
+    def mm(point):
+        if point is None:
+            return None
+        return (round(float(call(point, "X")) * 1000.0, 6), round(float(call(point, "Y")) * 1000.0, 6))
+
+    def guarded(fn):
+        try:
+            return fn()
+        except Exception as exc:  # noqa: BLE001
+            return f"unread: {type(exc).__name__}: {exc}"
+
+    feature = call(doc, "FeatureByName", name)
+    if feature is None:
+        return {"error": f"no feature {name}"}
+    sketch = call(feature, "GetSpecificFeature2")
+    segments = []
+    for seg in list(member(sketch, "GetSketchSegments") or []):
+        kind = guarded(lambda: int(member(seg, "GetType")))
+        row = {"type": seg_words.get(kind, kind), "construction": guarded(lambda: bool(call(seg, "ConstructionGeometry")))}
+        for key, getter in (("start", "GetStartPoint2"), ("end", "GetEndPoint2")):
+            got = guarded(lambda g=getter: mm(member(seg, g)))
+            row[key] = got if isinstance(got, tuple) else None
+            if not isinstance(got, tuple):
+                row[f"{key}_read"] = got
+        if row["type"] in ("swSketchARC",) or kind == 1:
+            centre = guarded(lambda: mm(member(seg, "GetCenterPoint2")))
+            row["centre"] = centre if isinstance(centre, tuple) else None
+            radius = guarded(lambda: float(member(seg, "GetRadius")) * 1000.0)
+            row["radius"] = round(radius, 6) if isinstance(radius, float) else None
+            direction = guarded(lambda: int(member(seg, "GetRotationDir")))
+            row["direction"] = direction if isinstance(direction, int) else None
+            if row["centre"] and row["start"] and row["end"] and row["direction"] is not None:
+                row["sweep"] = round(arc_sweep(row["centre"], row["start"], row["end"], row["direction"]), 6)
+        if row["type"] in ("swSketchSPLINE",) or kind == 3:
+            def spline_points():
+                flat = [float(v) * 1000.0 for v in (member(seg, "GetPoints2") or [])]
+                pts = [(round(flat[i], 6), round(flat[i + 1], 6)) for i in range(0, len(flat) - 2, 3)]
+                return {"count": len(pts), "first": pts[0] if pts else None, "last": pts[-1] if pts else None}
+            row["points"] = guarded(spline_points)
+        segments.append(row)
+
+    def relations():
+        manager = call(sketch, "RelationManager")
+        everything = enums.get("swSketchRelationFilterType_e", {}).get("swAll", 0)
+        found = list(member(manager, "GetRelations", everything) or [])
+        return sorted(rel_words.get(int(member(r, "GetRelationType")), "?") for r in found)
+    dims = guarded(lambda: [(n, round(v, 12)) for n, v in s.feature_dimensions(name)])   # SystemValue: m, rad
+    return {"segments": segments, "dimensions": dims if isinstance(dims, list) else [],
+            "dimensions_read": None if isinstance(dims, list) else dims, "relations": guarded(relations)}
+
+
+def ring_route(path, steps, variables_of):
+    """One copy taken through ``steps`` (a tooth count set by the app's ``update_variables``, or ``"force"``, a
+    second ``ForceRebuild3(False)``), each step's features in error read after it; at the end whether every feature
+    is clean, and the volume. Nothing saved."""
+    def work(s):
+        s.open_document(path)
+        doc = s._doc()  # noqa: SLF001
+        out = {"steps": []}
+        for step in steps:
+            if step == "force":
+                done = {"forced": bool(call(doc, "ForceRebuild3", False))}
+            else:
+                result = swbuild.update_variables(s, variables_of(step), path)
+                done = {"set": step, "rebuilt": result.rebuilt, "failures": list(result.failures)}
+            done["in_error"] = [(f.name, f.code) for f in s.feature_states() if f.code]
+            out["steps"].append(done)
+        out["clean"] = not out["steps"][-1]["in_error"]
+        out["volume"] = s.volume_mm3()
+        return out
+    return work
+
+
 def section_ring(out):
-    say("== ring  a diagnostic, script-side and facts only (no proposal): why the ring's part from S0's master did not "
-        "rebuild at 54 teeth in remake. On fresh copies of the part, nothing saved: (a) No. of Teeth 54 by the app's "
-        "update_variables; (b) 56, 53, 50, 60; (c) a 54-tooth ring built from scratch by the strip's plan_for and "
-        "swbuild.build; (d) Sun 29 -> 30 for comparison")
+    say("== ring  a diagnostic, script-side and facts only (no proposal): why the ring's part from S0's master does not "
+        "rebuild set from 55 to 54 teeth (run 5: its Tooth Space cut reads code 72, a self-intersecting contour; 56, "
+        "53, 50 and 60 rebuild, so does a 54-tooth ring from scratch). On fresh copies, nothing saved: the Tooth Space "
+        "sketch dumped as built at 55, after the set to 54, and built from scratch at 54, the last two compared; then "
+        "routes to 54 (a forced rebuild after; through 56; through 53; and 54 then back to 55) and 56 then 55; Sun at 30 for "
+        "comparison. update_variables already runs inside begin_build and end_build, so no bracket is added")
     import shutil
     import w9c_probes as P
     from gear_generator.gears import kind_for, plan_for
-    enums = P.swconst(RING_ENUMS)
-    say("NEW     IModelDocExtension.GetWhatsWrong (three out arrays), ISketch.GetConstrainedStatus, "
-        "ISketch.RelationManager.GetRelationsCount(filter), IEquationMgr.Status, each read only; IFeature.GetErrorCode2 "
-        "as the app reads it, its out value said")
+    P.ENUMS.clear()
+    enums = P.swconst(RING_ENUMS + ("swSketchSegments_e", "swConstraintType_e"))
+    say("NEW     ISketch.GetSketchSegments, ISketchSegment.GetType and ConstructionGeometry, GetStartPoint2, "
+        "GetEndPoint2, ISketchArc.GetCenterPoint2, GetRadius and GetRotationDir, ISketchSpline.GetPoints2, "
+        "ISketchRelationManager.GetRelations(swAll) and ISketchRelation.GetRelationType, each read only")
+    gaps = {(a, b): start_lands_on_cap(a, b) for a, b in ((55, 54), (56, 55), (55, 53), (55, 56), (53, 54))}
+    say(f"fact    ring: by the app's own maths, the new flank start's distance from where Li+ (0.625 mm, flank start to "
+        f"tip cap) ends before the set, mm: { {f'{a} -> {b}': round(v[0], 4) for (a, b), v in gaps.items()} }")
     rb, _, _ = specs()
     master = A.rangebox_master()
-    box = rb.box
     root = W.fresh_folder("ring")
+    ring_part = "Ring_m1.25_N55.SLDPRT"           # RangeBox's ring as S0's master holds it
 
-    def gear_spec(spec, gear):
-        return spec.gear(gear).gear_spec(box)
+    def variables_of(gear, teeth):
+        spec = with_gear_spec(rb, gear, teeth=str(teeth)).gear(gear).gear_spec(rb.box)
+        kind = kind_for(spec)
+        return kind.variables(spec, kind.derive(spec))
 
-    def copy_of(name, gear, case):
-        source = os.path.join(master, name)
+    def copy_of(name, case):
         folder = os.path.join(root, case)
         os.makedirs(folder, exist_ok=True)
-        shutil.copy2(source, os.path.join(folder, name))
+        shutil.copy2(os.path.join(master, name), os.path.join(folder, name))
         return folder, os.path.join(folder, name)
 
-    def diagnose(case, name, gear, teeth):
-        folder, path = copy_of(name, gear, case)
-        if teeth is None:
-            variables = None
-        else:
-            spec = gear_spec(with_gear_spec(rb, gear, teeth=str(teeth)), gear)
-            kind = kind_for(spec)
-            variables = kind.variables(spec, kind.derive(spec))
-        try:
-            got = run(f"ring {case}", part_diagnosis(path, variables, enums), 600)
-        finally:
-            left = run(f"ring {case}: closed unsaved", W.quit_in(folder))
-            say(f"fact    ring {case}: closed without saving, left {left}")
-        diagnosis_said(f"ring {case}", got)
-        return got
+    def closed(case, folder):
+        left = run(f"ring {case}: closed unsaved", W.quit_in(folder))
+        say(f"fact    ring {case}: closed without saving, left {left}")
 
-    ring_part = "Ring_m1.25_N55.SLDPRT"           # RangeBox's ring as S0's master holds it
-    out["copies"] = {}
-    for n in RING_COUNTS:
-        sun, planet, even = ring_partners(n)
-        say(f"-- ring  No. of Teeth 55 -> {n} (with Sun {sun} and Planet {planet} the stage would keep its centre "
-            f"distance and, three planets, even spacing {even})")
-        out["copies"][n] = diagnose(f"set-{n}", ring_part, "Ring", n)
+    def dumped(case, path, variables):
+        diagnose = part_diagnosis(path, variables, enums)
+
+        def work(s):
+            got = diagnose(s)
+            got["sketch"] = sketch_dump(s, enums)
+            return got
+        return run(f"ring {case}", work, 600)
+
+    def say_dump(case, dump):
+        for i, seg in enumerate(dump.get("segments") or []):
+            say(f"        {case} #{i}: {seg}")
+        say(f"        {case} dimensions {dump.get('dimensions')} {dump.get('dimensions_read') or ''}; relations "
+            f"{dump.get('relations')}")
+
+    states = {}
+    for case, teeth in (("built-55", None), ("set-54", 54)):
+        folder, path = copy_of(ring_part, case)
+        try:
+            got = dumped(case, path, None if teeth is None else variables_of("Ring", teeth))
+        finally:
+            closed(case, folder)
+        diagnosis_said(f"ring {case}", got)
+        say_dump(case, got["sketch"])
+        states[case] = got
     say("-- ring  a 54-tooth ring built from scratch by the strip's own plan_for and swbuild.build")
-    spec54 = gear_spec(with_gear_spec(rb, "Ring", teeth="54"), "Ring")
+    spec54 = with_gear_spec(rb, "Ring", teeth="54").gear("Ring").gear_spec(rb.box)
     kind = kind_for(spec54)
-    derived = kind.derive(spec54)
     folder = os.path.join(root, "build-54")
     os.makedirs(folder, exist_ok=True)
     path54 = os.path.join(folder, spec54.stem() + ".SLDPRT")
-    plan = plan_for(spec54, derived, "", path54)
+    plan = plan_for(spec54, kind.derive(spec54), "", path54)
     say(f"fact    ring build-54: the plan's checks {plan.check()}")
-    legal = with_gear_spec(with_gear_spec(with_gear_spec(rb, "Sun", teeth="30"), "Planet", teeth="12"), "Ring",
-                           teeth="54")
-    from gear_generator.workbook import assess
-    a = assess.assess(dataclasses.replace(legal, source_path="C:\\B\\X.xlsx"), [], "C:\\Out\\")
-    say(f"fact    ring build-54: the strip's read of RangeBox with Sun 30, Planet 12, Ring 54 says of the ring "
-        f"{[d.message for d in a.diagnostics if 'Ring' in d.message] or 'nothing'}")
     try:
         built = run("ring build-54", lambda s: swbuild.build(s, plan), 900)
-        out["build_54"] = {"ok": built.ok, "failures": list(built.failures), "saved": built.saved}
         say(f"fact    ring build-54: built ok {built.ok}, failures {list(built.failures)}")
         if built.ok:
-            got = run("ring build-54: read", part_diagnosis(path54, None, enums), 600)
-            out["build_54"]["read"] = got
+            got = dumped("build-54", path54, None)
             diagnosis_said("ring build-54", got)
+            say_dump("build-54", got["sketch"])
+            states["build-54"] = got
     finally:
-        left = run("ring build-54: closed", W.quit_in(folder))
-        say(f"fact    ring build-54: closed, left {left}")
-    say("-- ring  for comparison: Sun 29 -> 30 on a copy of Sun's part (it rebuilt in remake)")
-    out["sun_30"] = diagnose("sun-30", "Gear_m1.25_N29.SLDPRT", "Sun", 30)
-    rebuilt = {n: not got.get("in_error") and isinstance(got.get("set"), dict) and got["set"].get("rebuilt")
-               for n, got in out["copies"].items()}
-    say(f"fact    ring: which counts rebuilt in no error: {rebuilt}; the 54-tooth ring from scratch "
-        f"{(out.get('build_54') or {}).get('ok')}; Sun at 30 {not out['sun_30'].get('in_error')}")
-    fine = [n for n, r in rebuilt.items() if r and ring_partners(n)[2]]
-    if fine:
-        say(f"fact    ring: counts that rebuild and keep the fixture's stage (centre distance, three planets evenly): "
-            f"{[(n, ring_partners(n)[:2]) for n in fine]}; remake stays on 30/12/54 until the cause is known")
+        closed("build-54", folder)
+    out["states"] = {k: {"in_error": v.get("in_error"), "volume": v.get("volume"), "sketch": v.get("sketch")}
+                     for k, v in states.items()}
+    if "set-54" in states and "build-54" in states:
+        diff = out["diff_set_vs_scratch"] = sketch_diff(states["set-54"]["sketch"], states["build-54"]["sketch"])
+        say(f"fact    ring: the Tooth Space sketch set to 54 against the one built at 54: segments that differ "
+            f"{diff['segments'] or 'none'}; dimensions {diff['dimensions'] or 'the same'}; relation kinds "
+            f"{'the same' if diff['relations'] is None else diff['relations']}; count {diff['count'] or 'the same'}")
+    if "built-55" in states and "set-54" in states:
+        moved = out["diff_55_vs_set"] = sketch_diff(states["built-55"]["sketch"], states["set-54"]["sketch"])
+        flips = [(i, t, w) for i, t, w in moved["segments"] if "direction" in w or "sweep" in w]
+        say(f"fact    ring: from 55 to the set 54, the segments whose direction or sweep changed: {flips or 'none'}")
+
+    say("-- ring  routes to 54 on fresh copies: whether every feature ends clean, and the volume")
+    out["routes"] = {}
+    for label, steps in RING_ROUTES.items():
+        case = "route-" + "-".join(str(x) for x in steps)
+        folder, path = copy_of(ring_part, case)
+        try:
+            got = run(f"ring {case}", ring_route(path, steps, lambda n: variables_of("Ring", n)), 600)
+        finally:
+            closed(case, folder)
+        out["routes"][label] = got
+        say(f"fact    ring {label}: each step {got['steps']}; clean at the end {got['clean']}, volume "
+            f"{got['volume']:.6f} mm³")
+    say("-- ring  for comparison: Sun 29 -> 30 on a copy of Sun's part (it rebuilt in run 4's remake)")
+    folder, path = copy_of("Gear_m1.25_N29.SLDPRT", "sun-30")
+    try:
+        got = run("ring sun-30", part_diagnosis(path, variables_of("Sun", 30), enums), 600)
+    finally:
+        closed("sun-30", folder)
+    diagnosis_said("ring sun-30", got)
+    out["sun_30"] = {"in_error": got.get("in_error"), "volume": got.get("volume")}
 
 
 def with_gear_spec(spec, gid, **changes):
