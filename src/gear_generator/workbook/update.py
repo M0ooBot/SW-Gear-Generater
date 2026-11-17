@@ -2249,6 +2249,33 @@ def finish_update(plan: UpdatePlan, result: GearboxUpdate, record: LinkRecord, *
         rec.last_updated = stamp
     if not (result.failures or result.skipped):
         rec.digest = digest
+    # The runs review's should-fix: a stop that left a part in error is marked on the unsaved documents, so the footer
+    # says to close them without saving until they are found closed or saved; a press that ends clean clears it.
+    if result.failures:
+        failed = _documents_left_in_error(plan, result)
+        if failed:
+            rec.unsaved_in_error = list(dict.fromkeys(list(rec.unsaved_in_error) + failed))
+    elif not result.skipped:
+        rec.unsaved_in_error = []
+    store.keep_in_error(rec)
+    return out
+
+
+def _documents_left_in_error(plan: UpdatePlan, result: GearboxUpdate) -> List[str]:
+    """The paths of the documents this Update changed whose rebuild reported an error (``ui_text``'s rule: a change
+    set, not rebuilt, and a failure of the job naming the document)."""
+    named = [str(what).strip() for what, _why in getattr(result, "failures", []) or []]
+    paths = [p.path for p in plan.parts] + ([plan.layout.path] if plan.layout is not None else []) + \
+        [c.path for c in getattr(plan, "carriers", ()) or () if getattr(c, "path", "")]
+    docs = list(getattr(result, "parts", []) or []) + [getattr(result, "layout", None)] + \
+        list(getattr(result, "carriers", []) or [])
+    out: List[str] = []
+    for d in docs:
+        if d is None or not getattr(d, "document", "") or not d.changed or d.rebuilt:
+            continue
+        if not any(w.startswith(d.document) for w in named):
+            continue
+        out += [p for p in paths if os.path.basename(p.replace("\\", "/")).casefold() == d.document.casefold()]
     return out
 
 

@@ -894,6 +894,10 @@ class LinkRecord:
     gearbox: Optional[GearboxRecord] = None
     earlier: List[EarlierRevision] = field(default_factory=list)
     unsaved: Dict[str, float] = field(default_factory=dict)
+    # W9c (the runs review's should-fix): the documents among ``unsaved`` that the Update which stopped left in error
+    # (a part whose rebuild reported an error): the footer then says to close every unsaved one without saving, never
+    # to save. Kept only while each is still in ``unsaved``; ``[]`` on a record without it. Additive at schema 9.
+    unsaved_in_error: List[str] = field(default_factory=list)
     moved_from: List[str] = field(default_factory=list)   # the workbook's earlier paths, oldest first
     mismatched: Dict[str, float] = field(default_factory=dict)
     copy_of: str = ""                 # this session's "a copy" answer: in memory only, never written (see above)
@@ -1626,7 +1630,14 @@ def clear_saved(record: LinkRecord, mtime: Callable[[str], float] = os.path.getm
             if now_ is None or now_ > then:
                 del marks[path]
                 dropped = True
+    keep_in_error(record)
     return dropped
+
+
+def keep_in_error(record: LinkRecord) -> None:
+    """``unsaved_in_error`` kept only while each document is still unsaved (saved, found closed or put right, it goes),
+    and dropped whole once none is. In place."""
+    record.unsaved_in_error = [p for p in record.unsaved_in_error if any(same_path(p, u) for u in record.unsaved)]
 
 
 def read_sidecar(path: str) -> Optional[Sidecar]:

@@ -1408,7 +1408,11 @@ whose rebuild reported an error: then it never offers saving (*… and
 Gear_m1.25_N29 is left in error: close it in SolidWorks without saving (the file
 on disk is as before this Update), then press Update SolidWorks again.*; with
 several changed, *close them all*, since the good ones saved beside the failed one
-closed would leave gears at new values against it as it was). The record holds what was done (a new part built and saved, the bands, a gear inserted, each mate made) and, as
+closed would leave gears at new values against it as it was). The footer's line on
+documents not saved says the same until they are found closed or saved (*… and
+Gear_m1.25_N29 was left in error when it stopped: close it in SolidWorks without
+saving (the file on disk is as before that Update), then press Update SolidWorks
+again.*), never to save them. The record holds what was done (a new part built and saved, the bands, a gear inserted, each mate made) and, as
 the app's leftovers, each global and configuration the stopped press added, until
 a press uses them. While the workbook does not use them, the footer and the result
 say them as the app's own: *An Update SolidWorks that stopped part way left the

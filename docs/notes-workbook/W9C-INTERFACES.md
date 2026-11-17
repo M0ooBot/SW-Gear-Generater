@@ -728,3 +728,10 @@ record's problems by kind, so the second `unsettled` overwrites the first's subj
   it says *close them all*. Saving the good ones beside the failed one closed would leave gears at their new values
   against it as it was. Every other stop keeps W4's offer.
 - **B now uses `swbuild.work_without_modes`.** Its own copy is gone.
+- **The record keeps the stop's warning** (`LinkRecord.unsaved_in_error`, additive at schema 9). It holds the paths
+  among `unsaved` that a stopped Update left in error. While any is still unsaved, the footer's unsaved line says what
+  the stop said: *Gear_m1.25_N29 has changes from Update SolidWorks that are not saved, and Gear_m1.25_N29 was left in
+  error when it stopped: close it in SolidWorks without saving (the file on disk is as before that Update), then press
+  Update SolidWorks again.* With several documents it says *close them all*.
+- **When the mark goes:** it is dropped with the unsaved marks themselves (saved, or found closed by the next job),
+  and cleared by a press that ends with no failure. A record without it reads as before.

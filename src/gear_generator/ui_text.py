@@ -2361,7 +2361,7 @@ def _ready_parts(assessment, plan, folder: str, superseded: Sequence[str] = (), 
     return text, True
 
 
-def _unsaved_line(paths: Sequence[str], update_puts_back: bool = False) -> str:
+def _unsaved_line(paths: Sequence[str], update_puts_back: bool = False, in_error: Sequence[str] = ()) -> str:
     """The save asked for once, naming every document of the current revision Update changed and that is not
     saved: parts first, the assembly last, as Update changed them. Nothing here can know whether SolidWorks has
     them open still, so the sentence is true either way (second review N2): if SolidWorks closed them without
@@ -2370,6 +2370,16 @@ def _unsaved_line(paths: Sequence[str], update_puts_back: bool = False) -> str:
     paths = sorted(paths, key=lambda p: str(p).lower().endswith(".sldasm"))
     one = len(paths) == 1
     them = _them(len(paths))
+    if in_error:
+        # The W9c runs review's should-fix, kept on the record (``LinkRecord.unsaved_in_error``): the Update that left
+        # them stopped on a part in error, so the footer says what that press said, never to save.
+        from .store import same_path
+        failed = [p for p in paths if any(same_path(p, e) for e in in_error)] or list(in_error)
+        return (f"{_and(_stem(p) for p in paths)} {'has' if one else 'have'} changes from Update SolidWorks that are "
+                f"not saved, and {_and(_stem(p) for p in failed)} {'was' if len(failed) == 1 else 'were'} left in "
+                f"error when it stopped: close {'it' if one else 'them all'} in SolidWorks without saving (the "
+                f"{'file' if one else 'files'} on disk {'is' if one else 'are'} as before that Update), then press "
+                "Update SolidWorks again.")
     then = (" press Update SolidWorks to make them again." if update_puts_back else " those changes are gone.")
     return (f"{_and(_stem(p) for p in paths)} {'has' if one else 'have'} changes from Update SolidWorks that are not "
             f"saved: save {them} in SolidWorks to keep {them}. If SolidWorks closed {them} without saving,{then}")
@@ -2587,7 +2597,7 @@ def workbook_footer(assessment, *, record=None, record_problem: str = "", plan=N
                 if said:
                     text, ok = f"{text} {said}", ok and said_ok
         if unsaved:
-            text += " " + _unsaved_line(unsaved, puts_back)
+            text += " " + _unsaved_line(unsaved, puts_back, getattr(record, "unsaved_in_error", ()) or ())
         if subject and plan is not None and not plan.refusal:
             back = _held_back(plan, subject, after_unsaved_line=bool(unsaved))
             if back:

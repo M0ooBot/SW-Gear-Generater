@@ -1019,3 +1019,38 @@ def test_a_stop_with_nothing_changed_in_error_still_offers_to_save(fixed_desk):
     desk.sw.fail_on = {"add_configuration": "SolidWorks would not add the configuration R."}
     press = desk.press(_fixed_with_mode())
     assert "or save it in SolidWorks to keep what it did." in press.after and "left in error" not in press.after
+
+
+def test_the_footer_after_a_stop_in_a_part_left_in_error_says_close_without_saving_until_the_next_press_goes_through():
+    """The mark rides on the record (``LinkRecord.unsaved_in_error``): the footer says what the stop said, never to
+    save, until the documents are found closed; closed without saving, the next press goes through and the mark goes."""
+    d = Desk()
+    d.build(range_box())
+    d.sw.rebuild_ok = False
+    stopped = d.press(_sun_backlash(range_box()))
+    assert "left in error" in stopped.after
+    part = next(p.path for p in d.record.parts if "Sun" in p.gears)
+    assert [store.same_path(p, part) for p in d.record.unsaved_in_error] == [True]
+    text, _ = d.footer(_sun_backlash(range_box()))
+    assert text.endswith(
+        "Gear_m1.25_N29 has changes from Update SolidWorks that are not saved, and Gear_m1.25_N29 was left in error "
+        "when it stopped: close it in SolidWorks without saving (the file on disk is as before that Update), then "
+        "press Update SolidWorks again."), text
+    assert "save them in SolidWorks to keep" not in text and "save it in SolidWorks to keep" not in text
+    back = store.link_record_from_json(store.link_record_to_json(d.record))
+    assert back.unsaved_in_error == d.record.unsaved_in_error                  # written and read back
+    d.sw.close_all()                                          # the user closes it without saving
+    d.sw.rebuild_ok = True                                    # and the fault is gone (A's routed change, say)
+    again = d.press(_sun_backlash(range_box()))
+    assert again.result.ok, again.after
+    assert d.record.unsaved_in_error == []
+    assert "left in error" not in d.footer(_sun_backlash(range_box()))[0]
+
+
+def test_a_record_without_the_mark_reads_its_unsaved_line_as_before():
+    d = Desk()
+    d.build(range_box())
+    d.press(_sun_backlash(range_box()))
+    assert d.record.unsaved and d.record.unsaved_in_error == []
+    text, _ = d.footer(_sun_backlash(range_box()))
+    assert "in SolidWorks to keep" in text and "left in error" not in text
