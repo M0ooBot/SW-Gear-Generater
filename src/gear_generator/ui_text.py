@@ -5433,14 +5433,16 @@ def _standing() -> str:
     return CARRY_STANDING
 
 
-def carried_status(result, again, old_path: str = "", anchors: Optional[Mapping[str, str]] = None) -> str:
+def carried_status(result, again, old_path: str = "", anchors: Optional[Mapping[str, str]] = None,
+                   revision: Sequence[int] = ()) -> str:
     """After a carrying Build again…, what was carried, after ``gearbox_status`` (W9D-INTERFACES §9.2; replaces W9a's
     :func:`stayed_behind_status`), from ``result.carry`` (``swbuild.CarryResult``): *Carried into RangeBox_r2,
     unsaved: your Sprocket-1, Sprocket-2, Chain-1 and Housing-1, each where it stood against its gear, and 7 of your
     8 mates, each on in the modes it was on in. Not carried: …*, then each fallback, mate in the error it had,
     component moved, clash, the placement and the states, a sub-assembly made rigid, the standing list, the marks
     fact, a stop, or why nothing was carried. ``anchors``: each carried component's anchor by its old Name2
-    (``workbook.gearbox.carry_anchors``), for *against its gear*; ``""`` without a carry."""
+    (``workbook.gearbox.carry_anchors``), for *against its gear*; ``revision`` the SolidWorks the job ran on, for the
+    marks fact; ``""`` without a carry."""
     from . import swbuild as sb
     done = getattr(result, "carry", None)
     if done is None:
@@ -5516,11 +5518,17 @@ def carried_status(result, again, old_path: str = "", anchors: Optional[Mapping[
         if component is not None and component.kind == "assembly":
             texts.append(f"Your sub-assembly {n} comes over rigid: set it flexible in SolidWorks again if it was.")
     if done.marked_user:
+        # The fact CARRY_INSERT_MARKS_USER_DOCUMENTS (§8): True, the insert alone marks them, so nothing in them is
+        # said to have changed; otherwise only what SolidWorks reads is said.
+        from . import findings, swcom
         files = _and(_file(p) for p in done.marked_user)
         one = len(done.marked_user) == 1
+        year = swcom.release_year(int(revision[0])) if revision else None
+        fact = year is not None and getattr(findings, f"CARRY_INSERT_MARKS_USER_DOCUMENTS_ON_{year}", None) is True
+        though = f", though nothing in {'it' if one else 'them'} changed" if fact else ""
         texts.append(f"SolidWorks reads {files} as changed since {'it was' if one else 'they were'} inserted into "
-                     f"{name}, though nothing in {'it' if one else 'them'} changed: saving {name} with its parts saves "
-                     f"{'that file' if one else 'those files'} again too.")
+                     f"{name}{though}: saving {name} with its parts saves {'that file' if one else 'those files'} "
+                     "again too.")
     if done.stopped:
         tail = f", so it did not get to {done.skipped.rstrip('.')}" if done.skipped else ""
         texts.append(f"Carrying your work stopped: {done.stopped.rstrip('.')}{tail}; what was carried before it is in "

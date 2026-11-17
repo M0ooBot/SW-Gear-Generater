@@ -540,8 +540,8 @@ class _Again:
         steps = tuple(type("Step", (), {"name": m})() for m in ("H", "N", "L"))
 
 
-def _status(done, anchors=None):
-    return ui_text.carried_status(type("R", (), {"carry": done})(), _Again(), OLD, anchors)
+def _status(done, anchors=None, revision=()):
+    return ui_text.carried_status(type("R", (), {"carry": done})(), _Again(), OLD, anchors, revision)
 
 
 def test_the_result_says_what_was_carried_unsaved_and_to_save_it():
@@ -672,13 +672,14 @@ def test_each_cluster_that_fell_back_is_said_with_why(fallback, said):
     assert said in _status(_done(fixed=[fallback]))
 
 
-def test_the_results_other_sentences_each_as_they_apply():
+def test_the_results_other_sentences_each_as_they_apply(monkeypatch):
     work = _work(components=("Sprocket-2", "Drive-1"), mates=2)
     work.components[1] = replace(work.components[1], kind="assembly", path="C:\\Parts\\Drive.SLDASM")
     clash = swbuild.Clash(("Sprocket-2", "gear6-1"), ("Sprocket-2", "RangeSlv"), 12.3)
     done = _done(work, same_error=[("M0", 46)], moved=[("Sprocket-2", "L", 2.04)], clashes=[("L", clash)],
                  marked_user=[r"C:\Parts\Sprocket.SLDPRT"])
-    said = _status(done)
+    monkeypatch.setattr(findings, "CARRY_INSERT_MARKS_USER_DOCUMENTS_ON_2026", True)
+    said = _status(done, revision=(34, 0, 0))
     for sentence in ("Your M0 was in error in RangeBox.SLDASM and is in RangeBox_r2 too, as it was.",
                      "In L, SolidWorks moved Sprocket-2 2.0 mm from where it was placed when your mates were made "
                      "again.",
@@ -687,6 +688,10 @@ def test_the_results_other_sentences_each_as_they_apply():
                      "SolidWorks reads Sprocket.SLDPRT as changed since it was inserted into RangeBox_r2, though "
                      "nothing in it changed: saving RangeBox_r2 with its parts saves that file again too."):
         assert sentence in said, (sentence, said)
+    # The fact not set: only what SolidWorks reads is said.
+    monkeypatch.setattr(findings, "CARRY_INSERT_MARKS_USER_DOCUMENTS_ON_2026", None)
+    assert ("SolidWorks reads Sprocket.SLDPRT as changed since it was inserted into RangeBox_r2: saving RangeBox_r2 "
+            "with its parts saves that file again too.") in _status(done, revision=(34, 0, 0))
     # With the states read per mode, nothing is said of them; a fixed component is not said to float.
     read = _work(components=("Housing-1",), mates=0, states_route="GetComponentSuppressionState")
     said = _status(_done(read))
@@ -833,3 +838,60 @@ def test_a_later_update_that_finds_the_new_assembly_loaded_from_its_file_says_th
     # Saved since: the mark goes silently.
     update._follow_carry(desk.record, up, still, out, mtime=lambda p: 1763400500.0)
     assert out.notes == [] and store.carry_unsaved(desk.record) is None
+
+
+# -- the round trip on the fake (A's worker) ---------------------------------------------------------------------------
+
+def test_the_round_trip_classify_question_build_with_carry_finish_record_footer(desk, carrying, monkeypatch):
+    """The window's path, without the window (its own test drives ``_start_build`` / ``_finish_build`` under Tk):
+    classify needs a new revision; the question foresees the carry from the record's inventory with its time; the
+    job is given ``carry`` from the very old assembly it passes as ``before``; the worker (package A's, on the fake)
+    reads the old assembly first and carries; the finish records it at schema 10 with the new revision's inventory
+    and ``unsaved_at``; the footer asks for the save until the new assembly's file is newer."""
+    import os
+    real = os.path.isfile
+    monkeypatch.setattr(os.path, "isfile", lambda p: desk.disk.exists(p) or real(p))
+    desk.disk.files |= {"c:\\parts\\sprocket.sldprt", "c:\\parts\\housing.sldprt"}
+    spec = gears(range_box(), **SUN_FLANK)
+    up = update.classify(desk.record, desk.a(spec), exists=desk.disk.exists, read_sidecar=desk.disk.read_sidecar)
+    assert up.needs_new_revision
+    again = _again(desk, spec)
+    question = ui_text.build_again_question(up, again, record=desk.record)
+    assert (f"As read at {_at(desk)}, RangeBox_r2 takes your Sprocket-1 and Housing-1, each where it stands, against "
+            "the gear it is mated to where it has one, and makes your Lock3 again on what it joins, on in the modes it "
+            "was on in.") in question, question
+    old = update.old_assembly(desk.record, again)
+    carry = update.carry_for(desk.record, again, old, read_sidecar=desk.disk.read_sidecar)
+    old_mates = {k: copy.deepcopy(v) for k, v in desk.sw.memory_mates.items()}
+    result = swbuild.build_gearbox(desk.sw, **again.build_kwargs(), exists=desk.disk.exists, before=old, carry=carry)
+    assert result.ok and result.carry is not None and result.carry.work.how == swbuild.OLD_OPEN
+    key = old.path.replace("/", "\\").lower()
+    assert desk.sw.memory_mates[key] == old_mates[key]           # nothing written to the old assembly's mates
+    done = result.carry
+    assert [o for o, _ in done.inserted] == ["Sprocket-1", "Housing-1"] and [m for m, _, _ in done.remade] == ["Lock3"]
+    said = ui_text.carried_status(result, again, old.path, gearbox.carry_anchors(carry, done, desk.sw.revision),
+                                  desk.sw.revision)
+    assert said.startswith("Carried into RangeBox_r2, unsaved: your ") and "and your Lock3, on in the modes it was " \
+        "on in." in said, said
+    assert said.endswith("Save RangeBox_r2 in SolidWorks to keep what was carried.")
+    times = {}
+
+    def mtime(path):
+        return times.setdefault(path, 1763400000.5)
+    finished = gearbox.finish_build(again, result, desk.record, workbook=r"C:\B\RangeBox.xlsx", digest="d9",
+                                    written_by="test", read_sidecar=desk.disk.read_sidecar, exists=desk.disk.exists,
+                                    stamp="2026-11-17T14:12:00Z", revision=desk.sw.revision, mtime=mtime, carry=carry)
+    record = store.link_record_from_json(store.link_record_to_json(finished.record))
+    assert json.loads(store.link_record_to_json(record))["link_schema_version"] == 10
+    box = record.gearbox
+    assert box.carry.how == "open" and [c.was for c in box.carry.components] == ["Sprocket-1", "Housing-1"]
+    assert {c.was: c.anchor for c in box.carry.components} == {"Sprocket-1": "Sun", "Housing-1": ""}
+    assert [m.was for m in box.carry.mates] == ["Lock3"] and box.carry.unsaved_at == 1763400000.5
+    assert [c.name for c in box.user_work.components] == [n for _, n in done.inserted]
+    assert record.unsaved == {}
+    line = "RangeBox_r2 holds what Build again… carried of yours, not saved: save it in SolidWorks to keep it."
+    a = desk.a(spec)
+    footer = ui_text.workbook_footer(a, record=record, digest="d9", folder="C:\\Out\\")
+    assert line in footer.text, footer.text
+    store.clear_saved(record, mtime=lambda p: 1763400900.0)
+    assert line not in ui_text.workbook_footer(a, record=record, digest="d9", folder="C:\\Out\\").text

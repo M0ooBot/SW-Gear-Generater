@@ -1288,8 +1288,11 @@ sees is words, each from `ui_text`, each with the time the work was read:
   component found by its part under a new name. Each refusal of the worker's (a
   value the user changed, a mate of another kind on a gear it puts, a tie) is
   its own sentence, said as the job's.
-- **Build again?** ends with what stays behind (K5 until W9d carries it). From
-  the record's inventory, with its time: *As read at 14:02, your Sprocket-1,
+- **Build again?** ended, until W9d, with what stays behind (K5). Since W9d it
+  says what the new revision takes (*Build again… carries your work*, below);
+  W9a's clause is still said, led by the finding, while
+  `findings.CARRY_INSERTS_ON_<year>` is unset. From the record's inventory, with
+  its time: *As read at 14:02, your Sprocket-1,
   Chain-1 and 6 mates stay in RangeBox.SLDASM, and your Keyway stays in
   Gear_m1.25_N17, which Sun's new part replaces; RangeBox_r2 has none of them,
   nor anything added since.*, and *Your Groove in Sleeve_m1.25_N17 comes with
@@ -1310,9 +1313,10 @@ sees is words, each from `ui_text`, each with the time the work was read:
   open, *RangeBox.SLDASM was not open in SolidWorks, so it was not read again;
   as read at 14:02, …* (or the clause without a time); when the read raised, its
   reason, then the record's sentence. A read that raises never stops the build.
-  The fresh read is said, not kept: after Build again… the record holds no
-  inventory until the new revision's first Update (W9d's schema 9 keeps carried
-  items).
+  The fresh read is said, not kept. Since W9d, a Build again… that carried
+  anything gives the new revision an inventory built from what it carried
+  (schema 10), so the footer foresees the next Update from it; one that carried
+  nothing leaves none until the new revision's first Update.
 
 ### A sleeve's bands and its hub (W9b)
 
@@ -1458,6 +1462,74 @@ in-place one makes the whole press Build again…, and nothing is written.
 
 Board: `WorkbookInPlace` (RangeBox with the user's work, its workbook edited to
 RangeBox_Fixed's rows, before the press). Its PNG is owed, as the W9b ones are.
+
+### Build again… carries your work (W9d)
+
+Issue #1's last promise: an edit Update cannot carry (a Flank changed, a shaft
+added) sent the user to Build again…, which left everything of theirs in the
+old assembly. Since W9d a Build again… reads the old assembly first, builds and
+saves the new revision exactly as before, then inserts the user's components
+into it, makes their mates again where every entity is found by a measured
+route, judges each cluster as it is made, and names everything it cannot carry
+(`W9D-INTERFACES.md`). **No new control**; nothing of the user's is ever written
+to the old assembly or to their files, and nothing is saved after the new
+assembly's own save: it holds what was carried **unsaved**.
+
+**The question** (`ui_text.carry_sentence`, from `workbook.update.
+carry_foresight`: the record's inventory, with its time, through the worker's
+own `swbuild.plan_carry`) ends: *As read at 14:02, RangeBox_r2 takes your
+Sprocket-1, Sprocket-2, Chain-1 and 1 other component, each where it stands
+against the gear it is mated to, and makes your 8 mates again on what they
+join, each on in the modes it was on in. Concentric5 was on Sun's bore, and
+Sun's part is new because its Flank changed, so it is not made again. Your
+Keyway stays in Gear_m1.25_N29, which Sun's new part replaces because its Flank
+changed; RangeBox.SLDASM and that file keep it.* Then, as they apply: a step the
+app has not yet been shown to do on the SolidWorks the record last saw, with
+its finding, its items grouped (*Gear Generator has not yet been shown to make
+concentric mates again in a new revision on SolidWorks 2024
+(findings.CARRY_REMAKE_KINDS_ON_2024), so Concentric5 and Concentric8 are not
+made again.*); the way back to reusing a part made new only because of the user
+(the value and cell from the record's K11 entry, or a save); a mate the record
+read before its entities were kept, said as *may*; a component lightweight or
+suppressed as read, with what to do; a component whose file's configurations
+the record does not keep, *carried only if its file has a single
+configuration* while the two configuration findings are unset; **an old
+assembly not open when you press** (the window cannot know, so it is said as
+*if*): which finding holds a closed one unread, or the conditions it is read
+under, and *open RangeBox.SLDASM in SolidWorks before you press, and it is read
+as it stands there* — while `FILE_VERSION_READ` is unset a closed old assembly
+is never opened; the states clause (without a clean route, every carried
+component takes the state it has in the mode showing, in every mode); a mode
+renamed or removed; *RangeBox_r2 is saved as built, and holds what it carries
+unsaved: save it in SolidWorks to keep them.*; and the standing list of what is
+not carried as it was (assembly features, display states, appearances; a
+sub-assembly rigid; a pattern's instance as a component of its own). With
+`CARRY_INSERTS` unset on that SolidWorks the question says W9a's clause led by
+that finding; with no version on record, W9c's mixed form.
+
+**The result** (`ui_text.carried_status`, after the build's own sentence):
+*Carried into RangeBox_r2, unsaved: your Sprocket-1, … each where it stood
+against the gear it is mated to, and 7 of your 8 mates, each on in the modes it
+was on in.*, each item not carried with its reason (§9.3's clause per reason,
+kept on the record with its sentence), then each cluster that fell back (*Sprocket-8
+is fixed where it stood in RangeBox_r2: with your Lock8 and Lock9 made again
+SolidWorks reads Sun unable to turn, so those two were not kept; Coincident7
+beside them was.*), a mate in the error it had before, a component SolidWorks
+moved, a clash naming a carried component, where the components were placed and
+which states were read, a sub-assembly come over rigid, the standing list, the
+in-context note, a part SolidWorks reads changed after the insert, a stop, and
+*Save RangeBox_r2 in SolidWorks to keep what was carried.* An old assembly not
+read, a read that marked a document, or one that left a document open, each say
+that nothing of the user's was carried and why.
+
+**The record** (schema 10) keeps the carry on the new revision's gearbox
+(`CarryEntry`), and `unsaved_at`, the new assembly's file time, while it holds
+the carry unsaved. **The footer** then says *RangeBox_r2 holds what Build again…
+carried of yours, not saved: save it in SolidWorks to keep it.* until the file
+on disk is newer; a later Update that finds the assembly loaded from its file
+says *RangeBox_r2 was closed without saving after Build again… carried your work
+into it, so it does not hold it; RangeBox.SLDASM still does.* Nothing offers to
+carry again.
 
 ### Planetary stages (W7)
 

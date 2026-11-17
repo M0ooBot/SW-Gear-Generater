@@ -1562,7 +1562,7 @@ class WorkbookWindow(tk.Toplevel):
                 if getattr(result, "carry", None) is not None:
                     # W9d (§9.2): what was carried into the new revision, made again and named, after the build's own.
                     anchors = wb_gearbox.carry_anchors(job.carry, result.carry, job.revision)
-                    behind = ui_text.carried_status(result, job.plan, job.before.path, anchors)
+                    behind = ui_text.carried_status(result, job.plan, job.before.path, anchors, job.revision)
                 else:
                     # W9a: what of the user's stayed in the old assembly, as the job read it first (or the record
                     # held), once the new revision's assembly is saved (a build that made nothing leaves nothing).
