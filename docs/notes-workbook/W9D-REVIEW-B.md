@@ -616,3 +616,118 @@ Two things in it are the fake's, not B's:
 ### What I did not check
 
 As before: the four K12 window-mapping tests, deselected on Windows.
+
+---
+
+## Re-check of package B's round `5f52913` (after the first SolidWorks 2026 run), with A's fifth round at head
+
+*Independent, 2026-11-17.* I read `5f52913`'s diff. The strings below come from scratch scripts on A's worker and the
+fake at head, with hand-made inventories where the fixture holds no gear mate. **Suite: 2 failed (tkinter), 3904
+passed, 10 skipped.**
+
+### Verdict
+
+**One must-fix before the run, a one-line fault in the new *may* code: the question says UserGearRoot twice, once as
+not made again and once as made again if.** The demonstration's own fixture, with its gates patched on 2026, will
+print it. The rest of the round is sound. Two sentences need words (B2, B3).
+
+### B1 (must-fix). UserGearRoot is said both ways
+
+`carry_sentence` drops from the definite reasons the items said as *may*:
+
+```python
+named = [n for n in plan.named if … and n.item not in silent_axis …]
+```
+
+`silent_axis` is a dict from **gear id** to mate names (`_foresight_silences`), so `n.item not in silent_axis` tests a
+mate name against `"Sun"` and never drops anything.
+
+With `COAXIAL_FACE_READ_ON_2026` True (set) and the write gates patched, a recorded gear mate on a face of Sun gives:
+
+> *UserGearRoot was on a face of Sun, and Sun's part is new because its Flank changed, so it is not made again. … Your
+> UserGearRoot is made again only if the face of Sun it is on proves to be on Sun's axis, since Sun's part is new.*
+
+**Fix:** flatten the dict for the filter:
+
+```python
+axis_items = {m for ms in silent_axis.values() for m in ms}
+```
+
+then test `n.item not in axis_items`. Pin it by asserting that the *may* item's definite clause is absent.
+
+### B2 (should-fix). Two *may* sentences say more than they know
+
+- **The axis *may* is said even while a gate holds the mate back anyway.**
+  - With `CARRY_GEAR_MATE_ON_AN_APP_GEAR` None, or `gear` not in `CARRY_REMAKE_KINDS`, the question still says *"Your
+    UserGearRoot is made again only if the face of Sun it is on proves to be on Sun's axis"*.
+  - Literally that is true (*only if*), but it implies the axis is all that stands in the way.
+  - Say it only when both of those gates hold. Otherwise the plan's own reason is the one to say.
+  - The ratio *may* is already safe: with the gear gate unset, `plan_carry` names UserGear6 `unmeasured` (by the gate),
+    not `unread`, so no *may* is said.
+- **The in-error clause's *only if* is false.**
+  - It reads: *"Lock3 was in error in RangeBox.SLDASM as read; made again, it is carried only if it reads the same
+    error, and it never keeps a gear from turning."*
+  - A mate made again with **no** error is carried too: `_judge` passes a code of 0.
+  - *it never keeps a gear from turning* reads as a claim about the mate, not the rule.
+  - Fix: *"…; made again, it is carried if it reads no error or the one it had, and not if it keeps a gear from
+    turning."*
+  - With that wording the clause agrees with A's M3: a tie is never excused, whatever error the mate reads.
+
+### B3 (should-fix, with A). The why for UserAxis9 and UserAsm6, end to end
+
+UserAxis9 is a mate on a component suppressed in the mode showing. Results, printed from A's worker:
+
+- **The fake as it is:** *"SolidWorks would not describe UserAxis9 wholly (its part is not loaded in SolidWorks
+  (lightweight or suppressed)), so it is not made again."*
+  - The why is there, but in nested parentheses.
+  - It says *lightweight or suppressed* where R knows which.
+- **The fake made to read as SolidWorks did in run 2** (the entity's kind `unread`):
+  *"SolidWorks would not describe UserAxis9 wholly, so it is not made again."*
+  - **No why.** A's new field is not reached on SolidWorks' read (`W9D-REVIEW-A.md`, re-check A1).
+
+UserAsm6 is the assembly's own plane beside a lightweight component. On SolidWorks, A's new why is said through B's
+clause as *"SolidWorks would not describe UserAsm6 wholly (the assembly's own plane is not told while a component of
+it is lightweight), so it is not made again."* This is wrong twice:
+- it is Gear Generator's rule, not SolidWorks declining;
+- *"is not told"* is not English.
+
+The fake never reaches it, since it names the assembly's own entity `""`.
+
+**What B owes:** word `WHY_UNREAD` by where the why comes from. Once A hands a slot for each case:
+- *"UserAxis9 is on Sprocket-9, which is suppressed in H, the mode RangeBox.SLDASM showed, so it is not made again"*;
+- *"UserAsm6 is on the assembly's own plane, which Gear Generator does not read while a component of it is
+  lightweight (SprocketLight-1), so it is not made again"*.
+
+Until A changes the field, B can tell these two cases by the text A sends. Also use a colon rather than a second pair
+of parentheses when the reason holds one.
+
+### The footer (§9.4 after a job's sentence)
+
+True in every state I traced:
+- **Carry finished.** The build's sentence ends *"Save RangeBox_r2 in SolidWorks to keep what was carried."*, so
+  `_asks_carry_save` holds the line back. It is said once.
+- **Carry stopped with something carried.** The stop sentence asks no save, so the line follows it. That is true,
+  since `unsaved_at` stands.
+- **Nothing carried.** `unsaved_at` is 0, so there is no line.
+- **Saved since.** The planning read's `clear_saved` drops the mark, so there is no line.
+- **A later Update:** the line follows the Update's sentence while the mark stands. When that Update found the carry
+  lost, the mark is gone, so there is no line.
+- **Never twice.** For a `NOTE_JOB` the state's own block, which also adds the line, is not run. For a `NOTE_ANSWER`
+  only that block adds it.
+
+A copy's window shows the other workbook's record, and would say the line too. That is the same as W9c's Update line
+(house behaviour), noted, not judged.
+
+### The in-error clause against M3
+
+With B2's wording the two agree. As written, *"carried only if it reads the same error"* is false for a mate that
+comes back clean. It does not contradict M3, which only adds the tie.
+
+### What only the record's silence names (the *may* sentences)
+
+- **The ratio *may*.** It is said only for a gear mate the inventory holds whole, with every entity's kind known, that
+  `plan_carry` names unread. That is the ratio and sense the inventory never keeps, so it never covers what the record
+  does know. Both outcomes are true: if R reads the ratio, the mate is made again (other gates permitting); if not, it
+  is named.
+- **The axis *may*.** It needs B1 and B2's gate condition.
+- **Grammar.** Both stay within §9.1's grammar.
