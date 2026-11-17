@@ -532,3 +532,85 @@ on 2026, unless case 8's printed links show a name other than `…@Tooth Space S
 None. The four notes above — N1's stale-mark reverse, the `UPDATE_LOST` clause after the still-in-error sentence,
 the leg-one log, and the user's dimension inside the app's sketch — are all narrow and none is user-facing advice in
 error.
+
+## Third re-check: `7787f0d`, `00e3c2d`, `09a1183`, `7f16a52` (2026-11-17)
+
+Read at head `7f16a52`.
+- **Suite:** 3694 passed, 10 skipped, 2 failed. The two failures are the `tkinter`-only pair.
+- **New tests:** the three new tests pass at head. Each fails when its file is put back as it was before its fix, in a
+  scratch copy:
+  - `test_a_sleeve_left_in_error_then_given_only_its_bands_clean_sheds_its_mark` on `7787f0d^`'s `update.py`;
+  - `test_a_route_whose_first_count_set_fails_beside_another_global_is_not_taken_and_says_what_the_part_holds` on
+    `00e3c2d^`'s `swbuild.py`;
+  - `test_after_a_lost_update_with_a_part_still_in_error_it_never_says_solidworks_holds_the_workbook` on `09a1183^`'s
+    `ui_text.py`.
+
+**`7787f0d`: right.** `_documents_changed_clean` (`update.py:2311`) now also counts the paths in
+`GearboxUpdate.changed`, which is filled in three places:
+- a document whose values step changed it (`swbuild.py:4320`), as before;
+- the assembly (`:4290`, `:6336`, `:7455`), which is never among `_plan_paths`;
+- a sleeve's band step (`:6261`). That step raises on any app feature in error, a feature not made, a rebuild error
+  not from the user's work alone, or a band global absent, and the raise becomes a failure named by the file.
+
+New parts built in place go to `result.built`, not to `changed`. Parts a stopped press changed before its stop carry
+their own failure if they failed. So no path can clear a mark while the app's own feature is in error.
+- *Shown:* a sleeve stopped with `Tooth Space` at code 72, pressed again without closing. The band step raises
+  "Tooth Space in error", and the mark stays.
+- One theoretical gap: the band step's `made` is `band.features` alone if the sleeve has no `DocumentValues`. Every
+  plan part gets one with recorded or planned features (`update.py:553-557`), so this is a note only.
+
+**Should-fix, older than this round but in the very disagreement `7787f0d` set out to end: a band step that fails on
+the app's own feature offers to save the sleeve.** `documents_left_in_error` (`update.py:2289-2297`) still asks for
+`d.changed` on the sleeve's `UpdateResult`, and a sleeve changed by its bands alone has none. So:
+- the stop's "left in error, close it without saving" is not said;
+- no mark is written;
+- the stop offers the usual *"press Update SolidWorks again once that is put right, or save it in SolidWorks to keep
+  what it did"*.
+
+*Shown* in the case above. The second press's status ends with that save offer, while the footer, from the first
+stop's mark, says *"Sleeve_m1.25_N17 … was left in error when it stopped: close it in SolidWorks without saving"*.
+Without an earlier mark, the same happens to a relief that comes out in error the first time its bands are given:
+saving is offered for a sleeve with a broken relief (reasoned from the same rule; not built on the fake).
+*Fix:* count a document as changed in `documents_left_in_error` by the same rule as `_documents_changed_clean`: its
+`UpdateResult.changed`, or its path in `result.changed`. This is on the Tk side only.
+
+**`00e3c2d`: right.**
+- *`planned_changes` is unchanged in behaviour.* `_held_expressions` keeps the same `split_equation`, catches the same
+  `(ValueError, EquationError)` and skips the same lines, and `dict(...)` keeps the last duplicate as the old loop
+  did. Every test that pins it passes (`test_swbuild`, `test_swbuild_landing`, the round trips).
+- *Can `stopped_before_the_way` (`swbuild.py:264`) be true in any other state?* It needs three things: a route given,
+  the count not in `changed`, and a failure that is exactly `'"No. of Teeth"'`.
+  - At a module-only route's S4 removal, the count is out of `changed` but no count failure exists.
+  - A second-set failure keeps the count in `changed`, which is `left_on_the_way`.
+  - A count-only first-set failure makes it true with `changed == []`. Every consumer is gated on `result.changed`,
+    so that is "as before", as the commit says.
+
+  It is true only in the first-set failure.
+- *Shown:* the second reading's re-check case (40 m1.25 → 32 m1.5) now logs "the route was not taken", adds no
+  rebuild failure, says "holds … = 40 as before, beside the workbook's "Module"", and is left in error.
+
+**`09a1183`: right** (`ui_text.py:3573`). With `UPDATE_LOST`, nothing changed and a part still in error, the earlier
+sentence drops its "already holds the workbook" clause. The flag comes from `Finished.still_in_error`, the same list
+the wrapper uses.
+
+**`7f16a52`: right, for the documents it touches.**
+- `W9C-INTERFACES.md` §11 (M3 and the bullet before it) and `UI-DESIGN.md:1412-1419` now say what the code does.
+- The `update_variables` docstring is right.
+- Still stale, outside this round: `HANDOFF-WORKBOOK.md:86-89` and `:100`.
+- Once the should-fix above is in, the `UI-DESIGN.md` rule that a stop in a part left in error "never offers saving"
+  is exact. Until then, the band step is the one exception.
+
+**The demonstration (c).** No commit of this round changes a SolidWorks call.
+- `00e3c2d` changes only the first-set failure branch, the log and `_update_document`'s rebuild-failure condition in
+  that state. `planned_changes` gives the same output.
+- The other three are Tk-side: the mark, the status and the documents.
+
+Against `probe/w9c_demonstration.py`:
+- **`fixed`:** gives bands with no mark on record, so `_documents_changed_clean` has nothing to clear.
+- **`remake_again`:** step 1 stops in the ring before the assembly, so `earlier_update` is empty and `09a1183` has
+  nothing to say. Steps 2 and 3 have no bands.
+- **`landing`:** no case fails a set.
+
+The 2026 whole run on `64bec58`'s `src/` stands for head `7f16a52` in every section, with the one condition the
+re-check gave (case 8's printed links at `…@Tooth Space Sketch`). The should-fix above does not change that: its
+fix is Tk-side, and no section fails a band step.
