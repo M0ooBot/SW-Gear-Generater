@@ -638,3 +638,193 @@ overstatement.** The values match, and the gearbox does not work. I recommend:
   with the mates on, the states, and the not-open read with a working walk. These stand from this run:
   `REFERENCED_CONFIGURATION_READ`, the configuration insert, the lightweight fact, R.2's refusals, and the
   read-only open and close.
+
+---
+
+## Re-check of the revision `7ea8864`, before the second 2026 run
+
+*Independent, 2026-11-17.*
+
+- *Judged from the diff* `e2207d9..7ea8864` of `probe/w9d_demonstration.py`, `W9D-DEMONSTRATION.md` and
+  `W9D-INTERFACES.md` §11.5 and §15.
+- *Against:* the app as committed (package A's fourth round `94f57f8`; `_judge`, `_set_flags` and `plan_carry`), and
+  the first run's logs and JSON.
+- *The self-check:* run on a clean `git archive 7ea8864` (the tree holds package A's uncommitted fifth round in
+  `src/` and tests): **0 failed**.
+- *No SolidWorks.* Nothing but this file was changed.
+
+**Verdict: the script is fit for the second run.**
+- I found nothing in the revision that would end or spoil the run for a reason of the script's own.
+- The two new STOPs fire in `fixture`, about eight minutes in, and only on what they should.
+- Every check the review called vacuous now needs something to judge.
+- No `propose` line can come out non-None on evidence that was not reached.
+- Five points are below: one should-fix, four notes. Two of them depend on package A's and B's rounds still in flight.
+
+### 1. The tie as built
+
+**The plane pair.**
+- `angle_pair` (`:462`) chooses Sprocket-8's Top and Housing-1's Right by default, and takes another Top/Right pair if
+  the housing stands turned.
+- It requires both normals across Sun's axis (their z below 1e-9) and at 90° to each other. That is exactly the
+  condition for one angle equation to remove one freedom: the rotation about Z.
+- The frames are read in the fixture job, after the lock and before the angle (`:1622`). The lock moves nothing, so
+  the pair is judged as the angle will meet it. Self-checked: identity, a turned housing, and a tipped one that gives
+  None.
+
+**Whether `add_mate("angle", …)` makes it on SolidWorks.**
+- Not measured between two components of the user's.
+- But W9a's setup made **UserAngle4** by the same call, the same form and the same value: `u4:plane2` to `lay:plane3`
+  at 90° (`probe/w9a_demonstration.py:968`), on both versions.
+- The second end there was the layout's plane. The layout is a component like Housing-1, and each end is selected by
+  `_component_ref` through its component's own tree order. The selection and the `AddMate5(6, …, radians(90))` call
+  are the same code.
+- I rate it low risk. If it is not made:
+  - the try is logged and `missing` FAILs;
+  - Sun then reads under-defined, and `fixture_problems` STOPs (*"Sun … can turn, so there is no tie"*);
+  - the run ends in `fixture` with no master kept.
+
+  That is the right end: it costs minutes, not the two hours.
+
+**Sun unable to turn, every mate 0.**
+- Sun has one freedom under the app's own mates: its axis coincident and its point distance along Input. The train
+  has one freedom in each mode; the build's own per-mode check holds every gear free.
+- UserLock8a makes Sprocket-8 rigid with Sun. UserAngle8b then removes the one freedom left, with no constraint
+  repeated, so nothing over-defines.
+- "Fully defined" (`COMPONENT_FULLY_DEFINED`, 3) is the right reading for "cannot turn": a Sun that cannot slide reads
+  3 exactly when its rotation is held. It reads 4 if something conflicts and 2 if it can turn. K2's `_free` reads the
+  same thing.
+- **In run 1, Sun read 4 (over-defined) in the old assembly** (JSON `carry-gates/old_before`, Sun 4, Planet and Ring 3).
+  The new `fixture_problems` STOPs on exactly that.
+- The codes are read before Sprocket-9 is suppressed, so no mate reads an error there for that reason.
+
+**The expected outcome after the fallback, against `_judge` as it stands.**
+- In the cluster {Sprocket-8, Housing-1}, UserLock8a and UserAngle8b both read 0 as they did before, so no
+  `same_error` arises and nothing is excused.
+- Sun, free before the cluster, reads 3 after: `FELL_TIE`.
+- `_fall_back` deletes the lock (to an app body) and keeps the angle (user–user). It fixes Sprocket-8 and Housing-1,
+  the latter already fixed and placed by its world frame (`EXPECTED_ANCHORS["uh"] == {""}`).
+- **Package A's fifth round does not change this.** The same-error excuse never excusing a tie does not apply, since
+  there is no same error.
+- **One note to log, not a STOP:** after the fallback, UserAngle8b joins **two fixed components**. Whether SolidWorks
+  gives a satisfied mate between fixed components a code is not measured.
+  - The worker skips a fallen cluster in its post-check, so the carry is unaffected.
+  - W9b's `judge_every` counts every mate in error, so a code there would show as a FAIL on W9b's line, outside the
+    proposals.
+  - The run's reader should know that it is this mate and why.
+
+**`_set_flags` in package A's fifth round (pending) may change an expectation.** Mates touched:
+- UserAxis7 on the open path (Sprocket-7 suppressed in L);
+- UserAxis9 on the closed path (Sprocket-9 suppressed in H).
+
+The worker will no longer judge their flag in that mode. The script's flag check holds `flags read == the worker's
+on-modes == the old on-modes` (`flags_wrong`). If the fifth round leaves that mode out of `CarryResult.remade`'s
+on-modes, these two FAIL `flags`, and with it `CARRY_INSERTS`. **Should-fix, when A lands:** compare a mate's flags
+only in modes where every component of it is resolved, or match whatever the fifth round reports there.
+
+### 2. The closed path without the reload finding
+
+**It is right by the contract and by `plan_carry`.**
+- UserAngle8b's two ends are base planes of the user's components, which is tier 1. On the not-open path that waits
+  for `PERSIST_REFERENCE_SURVIVES_RELOAD` (§4.1; `_entity_target`'s `tier1`, `not_open`), so the angle is named
+  `unmeasured`.
+- UserLock8a's ends are whole components, which is tier 3 and needs no reload, so it is made again.
+- Sun then has only the lock on it and does not tie, so the expectation `remade` follows.
+
+**On 2026 the branch is never taken.** The reload finding is True, so `carry-closed` makes the angle again and shows
+the tie falling back exactly as `carry` does: it shows everything. On 2024, `closed_read` is None, so the whole closed
+expectation is `old unread`.
+
+**A note only:** the fallback check (`clean["fallback"]`) does not follow the branch. It would FAIL there, but only in
+a configuration no run will meet.
+
+### 3. Checks over remade mates; the proposals
+
+**None of these can pass on an empty population or after a stop:**
+
+| Check | What it now needs |
+|---|---|
+| `definitions` (`:2001`) | every mate expected `remade` reached (`not_reached`) and every outcome as expected |
+| `flags` | the same population |
+| `free` (`:2025`) and `interference` (`:2050`) | the carry finished and remade something (`post`) |
+| contradiction 6 | Sprocket-2's pose against RangeSlv in every mode, N and L included |
+| `states` | both state-carrying components carried |
+| "every other carried component resolved" | at least one |
+| `anchors` and `poses` | at least one carried and read |
+| `record_judged` | something unsaved, where unsaved is expected |
+| `outcome`, `fallback` and `same_error` | not vacuous before; still not |
+
+**`proposal_values` (`:500`).**
+- It is right that **the configuration insert stands when nothing was remade.** Its evidence is the insert in Z20 and
+  the script's own read of Z20 in every mode. Neither needs a mate, and `clean["configuration"]` needs SprocketConf-1
+  carried.
+- `REFERENCED_CONFIGURATION_READ` likewise rests on R's own read.
+- `CARRY_REMAKE_KINDS` drops any kind with a mate whose outcome is not the expected one. `unclean` now carries every
+  such mate, including those not reached, so a carry that stops part way cannot propose a kind on its first few mates.
+- The gear gate needs `definitions` (all reached).
+- `CARRY_INSERTS` needs every key, `definitions` and `flags` among them.
+- Self-checked with a carry that remade nothing: inserts, kinds and gear None, configuration True.
+- **Note:** this ties `CARRY_INSERTS` to every expected mate being made again. One face mate named for an unrelated
+  reason withholds the insert gate. That is conservative and acceptable, but the coordinator may want to set
+  `CARRY_INSERTS` from the inserts' own lines if only a mate fails.
+
+### 4. The narrowed set-apart
+
+`old_diff` (`:386`) and `_only_light_reads` (`:435`) set apart exactly four things, and only while SprocketLight-1
+goes from lightweight to resolved:
+1. its **state**;
+2. its **frame going from unread to read** (a read frame that moves is `moved`, a STOP);
+3. a mate's **definition or entities differing only in its entity on the light component**, which was unread before
+   (no reference, no `EntityParams`) and reads on it after; every other field equal;
+4. the **light file's flag** going from not open to open and unmarked.
+
+Every other change is a STOP. Self-checked: a move, the fixed state, the referenced configuration and a mate's value
+beside the resolve each STOP.
+
+Run 2's actual difference was the state and the flag only (run 2 :570), which the narrowed rule still sets apart. So
+it passes the same reading.
+
+Package A's fourth round now reads no entity of a lightweight component in R. The script's own reads of the old
+assembly are the only ones (3) still bears on.
+
+### 5. `record_judged`'s two footer readings (`:2085`)
+
+**Both are what a user sees.**
+- **First reading, after `desk.read()`, the finish's sentence standing:** the window as it stands after the build.
+  `asks` requires that sentence to ask for the save (`:2107`).
+- **Second reading, the note set aside:** the footer a user sees once the note goes, by reopening the window or by a
+  read that changes something. The script sets `desk.note = None` and puts it back after, which arranges a state a user
+  reaches; it adds nothing a user would not see.
+
+**Neither is made to pass:** each needs its own text, and the record's `unsaved_at` must equal the file's time.
+
+**Notes:**
+- `asks` matches a literal phrase of package B's sentence: *"Save RangeBox_r2 in SolidWorks to keep what was
+  carried"*. B's wording round in flight must keep it, or the script must follow it. Run the self-check after B lands;
+  it says that phrase on the fake.
+- If B decides the window shows both lines at once, both readings still hold.
+- `carry-gates` calls it with `unsaved=False`, which is right there: nothing is carried.
+
+### 6. What could end or spoil the run for the script's own reason
+
+**Nothing I found.**
+- The new STOPs are in `fixture` and fire only on a fixture that is not M9's: a mate in error, or Sun able to turn.
+- The checks above are `check`s, not STOPs.
+- The self-check covers each new pure judgement: `angle_pair`, `fixture_problems`, `not_reached`, `proposal_values`,
+  `_only_light_reads` through `old_diff`, `as_new`, and the new expectations through `plan_parity`. The new tie is in
+  `fixture_work`, so `plan_carry` itself is held to `expected_outcome` with it.
+- The new live code (`record_judged`'s two readings, the fixture's `angle_pair` and `sun_status` reads) uses only
+  members the script already used live (`desk.read`, `desk.note`, `component_frame`, `constrained_status`).
+
+**Where a pending app change would alter an expectation:**
+- **Package A, fifth round:**
+  - `_set_flags` on a suppressed component's mode: item 1, should-fix when it lands;
+  - the same-error excuse: no change for this fixture.
+- **Package B:** the save phrase `asks` matches (item 5); the gear-ratio and coaxial foresight now said as *may*,
+  which the script does not check.
+- **Package A, fourth round (committed):** UserAxisLight now named `lightweight`, as expected. The r3 walk and the Aux
+  gear's handle are fixed, so the face mates, UserSunFace (`part new`) and UserGearRoot (`remade` on Gear Axis) can
+  meet their expectations for the first time on SolidWorks.
+
+**The face mates' expectations rest on the walk's first real run.**
+- An r3 failure on SolidWorks makes them `unread` and FAILs `outcome` and `definitions`: a reading, not a STOP.
+- `CARRY_INSERTS` would then not be proposed (item 3's note).
