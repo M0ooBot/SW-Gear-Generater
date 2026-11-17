@@ -367,7 +367,9 @@ def definition_problems(old, new, kind):
         out.append(f"type {old['type']} -> {new['type']}")
     if old["alignment"] != new["alignment"]:
         out.append(f"alignment {old['alignment']} -> {new['alignment']}")
-    if kind != "gear" and bool(old["flipped"]) != bool(new["flipped"]):
+    # A gear's sense is compared below; a distance's or an angle's Flip now stands for its FlipDimension (7e3ad9a,
+    # ruling 1 on the audit) and its side is the pose check's: flipped compared for the other kinds only.
+    if kind not in FLIP_DIMENSION_KINDS + ("gear",) and bool(old["flipped"]) != bool(new["flipped"]):
         out.append(f"flipped {old['flipped']} -> {new['flipped']}")
     a, b = dict(old["values"]), dict(new["values"])
     skip = ("Reverse", "FlipDimension") if kind == "gear" else ("FlipDimension",)
@@ -506,7 +508,8 @@ def proposal_values(clean, unclean, kind_of, outcome, mates):
     tied cluster's components fixed); the mates' definitions and flags feed CARRY_REMAKE_KINDS and the gear-mate
     gate, never the insert gate."""
     inserts = bool(clean) and all(clean.get(k) for k in (
-        "components", "states", "poses", "anchors", "unsaved", "fallback_fixed", "same_error"))
+        "components", "states", "poses", "anchors", "unsaved", "fallback_fixed", "same_error",
+        "fixed_every_mode"))
     kinds = kinds_clean({n: kind_of.get(n, "") for n in mates if n in kind_of}, outcome, set(unclean))
     gear = outcome.get("UserGear6") == "remade" and "UserGear6" not in unclean and bool(clean.get("definitions"))
     return {"CARRY_INSERTS": True if inserts else None,
@@ -540,6 +543,69 @@ def question_problems(question, old="RangeBox.SLDASM"):
     if f"in error in {old} as read" in question:
         out.append("a mate of the user's said in error, which the fixture has none of")
     return out
+
+
+FLIP_DIMENSION_KINDS = ("distance", "angle", "limit distance", "limit angle")
+FACT_TAGS = (("made again with Flip", "flip dimension"), ("is carried as", "renamed"),
+             ("fell back in", "fixed after a fallback"), ("fixed as in", "fixed as in the old"),
+             ("where a component it joins is suppressed", "flag where suppressed"))
+
+
+def fact_tag(line):
+    """The tag a fact of the worker's is logged under, by its wording (7e3ad9a's facts; a366938's)."""
+    return next((tag for words, tag in FACT_TAGS if words in line), "worker")
+
+
+def renames_problems(remade, facts):
+    """Every remade mate's kept name against its old one: equal, or said by the worker (`<old> is carried as <kept>:
+    SolidWorks kept the name it gave it`). ``remade`` the worker's (old, kept, on)."""
+    return [f"{o} kept as {k} and not said" for o, k, _ in remade
+            if k != o and not any(f.startswith(f"{o} is carried as {k}") for f in facts)]
+
+
+def fixed_problems(fixed_by_mode, names, modes):
+    """Each named component fixed in every mode, by the script's own read (``fixed_by_mode`` {mode: {Name2: IsFixed}}):
+    {Name2: the modes it reads not fixed in}."""
+    out = {}
+    for n in names:
+        bad = [m for m in modes if fixed_by_mode.get(m, {}).get(n) is not True]
+        if bad:
+            out[n] = bad
+    return out
+
+
+def fix_sentences(facts, lead):
+    """Which of the worker's two sentences it gave after a fix (``lead``: "after … fell back in" or "fixed as in"):
+    "one FixComponent" (fixed in every mode by one), "had to be fixed" (a mode it was put and fixed again), or none."""
+    said = [f for f in facts if f.startswith(lead) or lead in f]
+    if any("had to be fixed in" in f for f in said):
+        return "had to be fixed"
+    if any("fixed in every mode by one FixComponent" in f for f in said):
+        return "one FixComponent"
+    return None
+
+
+def flip_dimensions(old_defs, new_defs, remade, kind_of, facts):
+    """Each distance or angle mate made again: its FlipDimension read by the script in the old assembly before the
+    press and in RangeBox_r2 after, beside the worker's own sentence for it. Rows (old, kept, before, after, worker)."""
+    rows = []
+    for o, k, _ in remade:
+        if kind_of.get(o) not in FLIP_DIMENSION_KINDS:
+            continue
+        before = ((old_defs.get(o) or {}).get("values") or {}).get("FlipDimension", "unread")
+        after = ((new_defs.get(k) or {}).get("values") or {}).get("FlipDimension", "unread")
+        said = next((f for f in facts if f.startswith(f"{k} made again with Flip")), "none")
+        rows.append((o, k, before, after, said))
+    return rows
+
+
+def kind_mates(kind_of, outcome, unclean):
+    """Per kind word the worker asks for, the mates that stood for it (made again, read back clean)."""
+    out = {}
+    for name, kind in kind_of.items():
+        if outcome.get(name) == "remade" and name not in unclean:
+            out.setdefault(kind, []).append(name)
+    return {k: sorted(v) for k, v in out.items()}
 
 
 def as_new(old, old_of):
@@ -1100,7 +1166,7 @@ def self_check():
     nothing = {"outcome": False, "components": True, "states": True, "poses": False, "anchors": True,
                "unsaved": False, "fallback": False, "same_error": False, "free": False, "definitions": False,
                "flags": False, "interference": False, "configuration": True, "referenced_read": True,
-               "fallback_fixed": False}
+               "fallback_fixed": False, "fixed_every_mode": False}
     values = proposal_values(nothing, {"UserGear6": ["not reached"]}, {n: k for n, k, _, _ in mate_specs()}, {},
                              made)
     full = proposal_values(dict(nothing, **{k: True for k in nothing}), {}, {n: k for n, k, _, _ in mate_specs()},
@@ -1127,6 +1193,45 @@ def self_check():
        and len(question_problems(q_ok + " UserLock8a was in error in RangeBox.SLDASM as read; made again, …")) == 1
        and len(question_problems("Build again as RangeBox_r2? Nothing of yours.")) == 2,
        "5f52913: the question's two may sentences held, its in-error clause held absent")
+    ok(fact_tag("UserDist4 made again with Flip True for its FlipDimension 1; it reads FlipDimension 1")
+       == "flip dimension" and fact_tag("Lock1 is carried as Lock1-2: SolidWorks kept the name it gave it")
+       == "renamed" and fact_tag("anything else") == "worker",
+       "7e3ad9a: each of the worker's facts logged under its tag")
+    facts = ["UserLock1 is carried as Lock5: SolidWorks kept the name it gave it",
+             "after Sprocket-8 and Housing-1 fell back in H: Sprocket-8 and Housing-1 fixed in every mode by one "
+             "FixComponent in H",
+             "fixed as in RangeBox.SLDASM: Housing-1 had to be fixed in N and L, where one FixComponent in H had left "
+             "it not fixed (0 mm from its frame)",
+             "UserDist4 made again with Flip True for its FlipDimension 1.0; it reads FlipDimension 1.0"]
+    ok(renames_problems([("A", "A", ()), ("UserLock1", "Lock5", ())], facts) == []
+       and renames_problems([("UserLock2", "Lock6", ())], facts) == ["UserLock2 kept as Lock6 and not said"],
+       "7e3ad9a: a remade mate's kept name equal to its old, or said by the worker; one not said FAILs")
+    fixed = {"H": {"Sprocket-8": True, "Housing-1": True}, "N": {"Sprocket-8": True, "Housing-1": False},
+             "L": {"Sprocket-8": True}}
+    ok(fixed_problems(fixed, ["Sprocket-8", "Housing-1"], MODES) == {"Housing-1": ["N", "L"]}
+       and fixed_problems(fixed, ["Sprocket-8"], MODES) == {}
+       and fix_sentences(facts, "fell back in") == "one FixComponent"
+       and fix_sentences(facts, "fixed as in") == "had to be fixed" and fix_sentences([], "fixed as in") is None,
+       "7e3ad9a: fixed in every mode by the script's read, a mode not fixed or not read said; which of the worker's "
+       "two sentences it gave")
+    rows = flip_dimensions({"UserDist4": {"values": {"FlipDimension": 1.0}}, "UserAxis1": {"values": {}}},
+                           {"UserDist4": {"values": {"FlipDimension": 1.0}}}, [("UserDist4", "UserDist4", ()),
+                                                                                ("UserAxis1", "UserAxis1", ())],
+                           {"UserDist4": "distance", "UserAxis1": "coincident"}, facts)
+    ok(rows == [("UserDist4", "UserDist4", 1.0, 1.0, facts[3])],
+       "7e3ad9a: each distance or angle mate's FlipDimension before and after, beside the worker's sentence")
+    ok(kind_mates({"A": "distance", "B": "limit distance", "C": "distance"}, {"A": "remade", "B": "unread",
+                                                                            "C": "remade"}, {"C"})
+       == {"distance": ["A"]} and kinds_clean({"A": "distance", "B": "limit distance"},
+                                              {"A": "remade", "B": "unread"}, set()) == ("distance",),
+       "7e3ad9a: the kinds proposed are the worker's words for the mates shown, no limit kind not shown")
+    from gear_generator import swbuild as _sb
+    plain = _sb.OldMate("UserDist4", 5, "MateDistanceDim", 0, False,
+                        (("Distance", 0.09), ("MaximumDistance", 0.09), ("MinimumDistance", 0.09)), ())
+    limit = _sb.OldMate("UserLimit10", 5, "MateLimitDistanceDim", 0, False,
+                        (("Distance", 0.02), ("MaximumDistance", 0.03), ("MinimumDistance", 0.01)), ())
+    ok(_sb.carry_kind(plain) == "distance" and _sb.carry_kind(limit) == "limit distance",
+       "7e3ad9a: the worker takes a plain distance (its range its value) as distance, a limit one as limit")
     ok(as_new("Sprocket-2", {"Sprocket-2": "Sprocket-5"}) == "Sprocket-2 as Sprocket-5"
        and as_new("Sprocket-1", {"Sprocket-1": "Sprocket-1"}) == "Sprocket-1", "ruling 5: old and new Name2 said")
     rel = (I9, (0.0, 0.0, 10.0))
@@ -1536,11 +1641,13 @@ def every_mode(label, asm, pairs, modes):
     component's GetSuppression2, mate codes; then every mate's flag per mode), a component suppressed in a mode read
     as such (its frame None there)."""
     def work(s):
-        out = {"frames": {}, "status": {}, "states": {}, "mates": {}, "by_mode": {}}
+        out = {"frames": {}, "status": {}, "states": {}, "mates": {}, "by_mode": {}, "fixed": {}}
         for mode in modes:
             s.show_configuration(mode)
             s.rebuild(kind=swcom.ASSEMBLY_TRAIN)
             out["frames"][mode], out["status"][mode], out["states"][mode] = _frames(s, pairs, f"em{mode}")
+            out["fixed"][mode] = {n: CP._try(comp_of(s, n), "IsFixed") if comp_of(s, n) is not None else None  # noqa: SLF001
+                                  for g, n in pairs if g == n}
             out["mates"][mode] = {m.name: (m.code, m.suppressed) for m in s.mate_states()}
         s.show_configuration(modes[0])
         s.rebuild(kind=swcom.ASSEMBLY_TRAIN)
@@ -1929,7 +2036,7 @@ def carry_facts(label, cr, out):
     w = cr.work
     out["facts"], out["changed_files"] = list(cr.facts), list(cr.changed_files)
     for line in cr.facts:
-        say(f"fact    {label}: {line}")
+        say(f"fact    {label} [{fact_tag(line)}]: {line}")
     check(not cr.changed_files, f"{label}: no file changed on disk after the carry (CarryResult.changed_files): "
                                 f"{cr.changed_files or 'none'}")
     out["work"] = None if w is None else {
@@ -2033,7 +2140,13 @@ def judge_carry(label, desk, fx, result, closed, light, out, old_before, old_box
           f"{label}: every other carried component resolved in every mode: "
           f"{ {n: v for n, v in others.items() if v} or ('all' if others else 'not reached: none carried')}")
     # M2: each remade mate against the script's own read of the old one, entities mapped old -> new.
-    kind_of = {n: k for n, k, _, _ in mate_specs()}
+    # The kind words as the worker asks for them (its carry_kind on what R read: a plain distance or angle is no
+    # limit since 7e3ad9a), beside the fixture's own; the proposal uses the worker's.
+    spec_kind = {n: k for n, k, _, _ in mate_specs()}
+    kind_of = dict(spec_kind)
+    kind_of.update({m.name: swbuild.carry_kind(m) for m in cr.work.mates})
+    differ_kind = {n: (spec_kind.get(n), k) for n, k in kind_of.items() if spec_kind.get(n) not in (None, k)}
+    say(f"fact    {label}: the worker's kind words differ from the fixture's for {differ_kind or 'no mate'}")
     old_names = dict(W.bodies(old_box))                 # gear id -> old Name2
     mapping = {old_names[g]: (n, True) for g, n in W.bodies(new_box) if g in old_names}
     mapping[old_box.layout_component] = (new_box.layout_component, True)
@@ -2081,6 +2194,26 @@ def judge_carry(label, desk, fx, result, closed, light, out, old_before, old_box
     clean["flags"] = check(not flags_wrong and not reached,
                            f"{label}: every mate expected to be made again on in the modes it was on in, read again: "
                            f"{flags_wrong or 'all'}; {reached or 'every one reached'}")
+    # 7e3ad9a, the audit's rulings: what one FixComponent does across configurations, first measured here; the
+    # FlipDimension each distance or angle mate was made again with; a kept name another than the old.
+    fallen = sorted({n for f in cr.fixed for n in f.components})
+    was_fixed = sorted(old_of[c.name] for c in cr.work.components if c.fixed and c.name in old_of)
+    must_fix = sorted(set(fallen) | set(was_fixed))
+    unfixed = fixed_problems(every.get("fixed", {}), must_fix, modes)
+    clean["fixed_every_mode"] = check(bool(must_fix) and not unfixed,
+                                      f"{label}: every component of the fallen cluster {fallen} and every one fixed in "
+                                      f"the old assembly {was_fixed} reads fixed in every mode (the script's IsFixed): "
+                                      f"{unfixed or ('all' if must_fix else 'not reached: none')}")
+    say(f"fact    {label}: the worker's sentence after the fallback: {fix_sentences(cr.facts, 'fell back in')}; for "
+        f"the components fixed in the old assembly: {fix_sentences(cr.facts, 'fixed as in')} (the first reading of "
+        f"what one FixComponent does across configurations: the script read {every.get('fixed')})")
+    for o, k, before, after, said in flip_dimensions(old_before.get("definitions") or {}, new_defs, cr.remade,
+                                                     kind_of, cr.facts):
+        say(f"fact    {label}: {o} as {k}: FlipDimension {before} in the old assembly, {after} in RangeBox_r2 (the "
+            f"script's reads); the worker: {said}")
+    renamed = renames_problems(cr.remade, cr.facts)
+    check(not renamed, f"{label}: every remade mate kept under its old name, or the worker said the name SolidWorks "
+                       f"kept: {renamed or [(o, k) for o, k, _ in cr.remade if o != k] or 'every one its own'}")
     kept_angle = next((k for o, k, _ in cr.remade if o == "UserAngle8b"), "")
     if kept_angle:
         say(f"fact    {label}: {kept_angle}, joining two components fixed by the fallback, reads code per mode "
@@ -2392,6 +2525,9 @@ def _propose(clean, unclean, kind_of, outcome, fx):
              "carry: SprocketConf-1 inserted in Z20 by AddComponent5 with its configuration, read back in every mode")
     proposed(finding_name("REFERENCED_CONFIGURATION_READ"), values["REFERENCED_CONFIGURATION_READ"],
              "carry: ReferencedConfiguration read Z20 on SprocketConf-1 beside its document's Default (R2)")
+    stood = kind_mates({n: kind_of.get(n, "") for n in fx["mates"] if n in kind_of}, outcome, set(unclean))
+    for kind in values["CARRY_REMAKE_KINDS"] or ():
+        say(f"fact    carry: the kind {kind!r} stood on {stood.get(kind)}")
     proposed(finding_name("CARRY_REMAKE_KINDS"), values["CARRY_REMAKE_KINDS"],
              "carry: the kinds whose every mate was made again as expected, read back equal and on in the modes it was "
              "on in (perpendicular, tangent and limit angle are not in the fixture)")

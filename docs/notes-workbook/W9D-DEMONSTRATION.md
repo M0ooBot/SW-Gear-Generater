@@ -491,6 +491,29 @@ Run 2's `carry-closed` (401 s, 8 failed) is superseded by run 3: its closed read
   the gear-mate gate only. The proposal line prints every condition. The self-check shows the insert gate proposed
   with the mates' checks failed, and the gear kind and gate then withheld.
 
+## Following package A's seventh round and the audit's rulings (`7e3ad9a`)
+
+- **UserAsm6** is made again and kept wherever the old assembly holds no lightweight component: `expected_outcome`
+  says `remade` on the closed path and `unread` beside the lightweight SprocketLight-1 on the open one (unchanged;
+  the self-check's `plan_carry` agrees).
+- **Kind words.** The worker no longer takes a plain distance or angle (its range equal to its value) for a limit
+  one. The script's `CARRY_REMAKE_KINDS` line now uses the worker's own words (`swbuild.carry_kind` on what R read),
+  per mate shown and read back clean, so a finding set from it opens the gate for the kinds the run showed and for no
+  limit kind it did not show. It prints, per kind, the mates that stood for it, and where the worker's word differs
+  from the fixture's. For a distance or an angle `flipped` is no longer compared (its Flip now stands for its
+  FlipDimension; its side is the pose check's), as the worker does.
+- **The worker's facts** (`CarryResult.facts`) are each logged under a tag: `flip dimension`, `renamed`, `fixed after
+  a fallback`, `fixed as in the old`, `flag where suppressed`, else `worker`.
+- **The script's own reads beside them:**
+  - **fixed in every mode** (a check, and a condition of `CARRY_INSERTS`): every component of the fallen cluster
+    and every component fixed in the old assembly (Housing-1) reads `IsFixed` in every mode of RangeBox_r2 after the
+    carry; which of the worker's two sentences it gave (one FixComponent, or "had to be fixed") is printed. This is
+    the first measurement of what one FixComponent does across configurations;
+  - **FlipDimension** of each distance or angle mate, read in the old assembly before the press and in RangeBox_r2
+    after, printed side by side with the worker's sentence (a fact);
+  - **kept names**: every remade mate's name against its old one, a check that passes when equal and, when not, only
+    if the worker said `<old> is carried as <kept>`. Every mate check finds the mate under its kept name.
+
 ## Command lines
 
 2026 (fresh session; `RUN` the run folder with `snap` the repo snapshot):
