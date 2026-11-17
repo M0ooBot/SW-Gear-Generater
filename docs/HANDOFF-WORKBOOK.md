@@ -69,8 +69,9 @@ issue overturns stay as W8 built them until W9 changes them, and are marked *und
 J22's bridging warning (it fires only when `length > gap`), and ruling 9.16 (a gear mate of a gearbox with modes is
 not made again).
 
-**Where W9 stands (resumed on the user's word, 2026-11-16 afternoon).** W9a's first measurement, S0, is measured on
-both versions, reviewed, and in `findings.py`. No app code of W9 is written. Pick up here:
+**Where W9 stands (resumed on the user's word, 2026-11-16 afternoon).** **W9a is closed (2026-11-17, early
+morning):** measured, written, reviewed and shown on SolidWorks 2026 and 2024. W9b is next; none of W9b, W9c or W9d
+is written. How W9a went, in order, and what it leaves open:
 
 1. **S0's readings** are in `notes-workbook/W9-S0.md`, from `probe/w9_user_work_check.py` on the issue's RangeBox
    (`tests/workbook_fixtures.range_box`). In short: when Update puts a gear back to its built frame, a component of
@@ -135,18 +136,36 @@ both versions, reviewed, and in `findings.py`. No app code of W9 is written. Pic
    `10a6a08`): setup, go, reducer, nocarrier (`-2-*.log`), m3 (`-4-m3.log`) and reducer, k3 (`-5-*.log`) all 0
    failed. Reviewed in `notes-workbook/W9A-CLOSE-2024-REVIEW.md` (`8e984e2`): the set is complete, no 2024 rerun is
    needed, the ruling is defensible as a default put to the user.
-7. **What W9a still owes before it is closed** (the 2024 review's list): (a) 2024's findings' comments and pins
-   brought up to the last three logs, one finding's scope corrected (the worker's implementer, in hand); (b) the
-   two What's Wrong sentences made true to what was measured and not said after a quiet press (`ui_text`, in hand);
-   (c) the script checking SolidWorks' frame on every poll while the box is up (in hand); (d) **the final full run
-   on SolidWorks 2026 from the final code** (all twelve sections and the window check; started 02:45 from
-   `91d40f5`, run folder `w9a-final-sw2026-*` under `GearGeneratorProbe`), its logs committed and a short addendum
-   to the review; (e) the suite whole after (a) and (b) (last whole run, at `91d40f5`: 1 failed, the known
-   font-width test, 3493 passed, 1 skipped). Then W9a is closed and this block is rewritten. **Questions the user
-   has not answered:** the ruling on the What's Wrong box (the default stands until they say otherwise); question 9
-   (other kinds of user mate on a put gear refuse until measured); whether three older W8 result files that carry
-   SolidWorks' frame title (with the licence edition) should be scrubbed. Then W9b, W9c and W9d. **Agent runs in
-   W9a: far over the plan's 11**; the user was told and said to keep going without asking (2026-11-16).
+7. **W9a closed** (2026-11-17, about 04:00). The 2024 review's list was worked off: 2024's findings' comments
+   and pins re-based on its last three logs, with the feature-in-error case of a plain assembly rebuild recorded on
+   its own (`ebc33f3`: `WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_2024` True, `_ON_2026`
+   None because the 2026 runs looked every 2 s and that box lasts half a second; nothing reads it); the two What's
+   Wrong sentences (`633fd83`: "for up to half a minute", "leave it alone", *may have shown* only after a press that
+   changed or put something, never both in the footer); the script checking SolidWorks' frame on every poll
+   (`9280433`). **The final full run on SolidWorks 2026**, one session from `91d40f5`: all twelve sections 0 failed,
+   0 STOPs, and the window check's W8 stage with K12 no fails (`probe/results/w9a-final-sw2026-20261117.log`,
+   `w9a-demo-20261117-023503.json`, `w9a-final-window-sw2026-20261117.log`; `f0c5ff7`). Reviewed in the addendum at
+   the end of `notes-workbook/W9A-CLOSE-2024-REVIEW.md` (`bf2960d`): the fixes answer the review, the run is no
+   weaker than the closing run it replaces, and the three commits after `91d40f5` change nothing the worker does on
+   2026, so nothing is re-run. Suite at `ebc33f3`: Linux 1 failed (the known font-width test), 3498 passed, 1
+   skipped; Windows window tests at `633fd83` 165 passed, 1 skipped.
+8. **What W9a leaves open.** *Questions the user has not answered:* the ruling that the app leaves SolidWorks
+   2024's What's Wrong box alone (the default stands until they say otherwise; the other way is the app turning
+   SolidWorks' "show errors every rebuild" off for its job, unmeasured, and theirs to allow); question 9 (other
+   kinds of user mate on a put gear refuse until measured); whether three older W8 result files that carry
+   SolidWorks' frame title (with the licence edition) should be scrubbed; whether `refuse` should be run on 2024
+   (not in the confirming set by rule). *Not measured, each said in the plan's last section:* a person pressing the
+   What's Wrong box during an Update, a box that outlives its job, a Build with the user's work in error, the mate
+   case on a gearbox without modes on 2024. *Refusing until measured (`None` findings):* route (c1) on a held gear,
+   a fixed gear, a sub-assembly, and a no-carrier train with modes. *Moved to S5 in W9c:* M1's unread kinds
+   (concentric, width, limit, path, a user gear mate on an app gear, a sub-assembly's leaf). *Small, known:* under
+   the window check's W8 helper a blocking What's Wrong box is logged at once but the run waits out W8's timeout
+   before stopping (time, not safety); `PROBLEM_COMPONENT` and `PROBLEM_UNSETTLED` can say one thing twice; the
+   assembly's own feature tree is not read for the user's features. **Agent runs in W9a: far over the plan's 11**;
+   the user was told and said to keep going without asking (2026-11-16).
+9. **Next: W9b** (plan §5: the sleeve checks, the bands and the hub; packages A and B against the fake, then
+   `RangeBox_Fixed` built from scratch on SolidWorks 2026, about 30 min; its 2024 build rides in W9c's 2024
+   session). The printed-gears plan (`docs/PLAN-PRINTED.md`) waits behind W9 on the user's word.
 
 Run folders kept on this device under `C:\Users\M0obo\Documents\GearGeneratorProbe\`: `w9-s0-20261116-045513`
 (2026's `out\rangebox.master`, where W9a's demonstration starts) and `w9-s0-sw2024-20261116-064725` (2024's, with its `out\rangebox.master`) and `w9-s0c2-sw2024-20261116-155303` (run 4). The
@@ -165,7 +184,7 @@ the user*.
 | W6 right-angle | **closed 2026-11-15, but for the person's drag**: planned, reviewed and revised; probe tier 9 (a turned gear mate's sense, on cylinders, SolidWorks 2026) run and reviewed; packages A to E written and each reviewed; the full build run on SolidWorks 2026 and the confirming build on 2024, both from one snapshot (`931fe1a`), every check passing, each run reviewed. Left for the user: drag G1 in the built right-angle gearbox. Details below. |
 | W7 planetary | **closed 2026-11-15, but for the person's drag**: planned, reviewed and revised; the spike on SolidWorks 2026 (`W7-SPIKE.md`); packages A to E written and each reviewed; the demonstration run on SolidWorks 2026 — its first run found one app fault (a turned planetary's put did not hold), the probe `planetary_put_back` measured the route that does, the fix `9f21d99` was reviewed, and every section then passed, the planetary sections and the W5/W6 Update sections once more on the final code; the confirming build on 2024 passed; the run's evidence reviewed. Left for the user: drag Sun in the built planetary. Details below. |
 | W8 sleeves and modes | **closed 2026-11-16, but for three things: the built footer on a screen shorter than the window asks (cut off; open as K12 of W9), the person's step `s6`, and the two hand drags of W6 and W7**: planned, reviewed and revised to the spike (`W8-PLAN.md`, `W8-PLAN-REVIEW.md`, `W8-SPIKE.md`); the interface commit with its rulings (`W8-INTERFACES.md` §9); the findings set and reviewed (`ea7a46f`); packages A to D written and each reviewed; probe tier 11, and the one app fault the first build found, fixed and reviewed; package E's demonstration run on SolidWorks 2026 (34.0.0 on the second host, 34.1.1 here); the closing run from one snapshot of the final source (`c583f48`, 34.1.1): `s0` to `s5` and `s7` and the W5 to W7 sections r1, r2, r3, m5, m8, p1 and p3, every check passing (`c351b1f` to `aff9bfe`), and the full window check 1 failed, the built footer's height (`fb85bcc`); the confirming build on 2024 (32.5.0): `s0`, `s1`, `s2`, `s3`, `s7` 0 failed, its window stage the same one failure (`c3ed9b6`); each run reviewed (`W8-REVIEW-SW2024-CONFIRM.md`, `W8-REVIEW-CLOSING-RUN.md`). The ruling on the footer, the steps for the user and what is left are under *How W8 closed* below. |
-| W9 the user's work in a built assembly, and dog-clutch sleeves (issue #1) | **resumed 2026-11-16; W9a's S0 is measured, reviewed and in `findings.py`; W9a's packages A and B are written, reviewed, fixed and re-checked against the fake; its demonstration is clean on SolidWorks 2026 (closing run, all sections 0 failed, K12 shown on the real screen), and SolidWorks 2024's confirming set is complete, 0 failed, under the coordinator's ruling that its What's Wrong box is left alone (measured: it blocks nothing and goes by itself); a final full run on 2026 and three small fixes are owed before the close.** See *Where W9 stands* above. Planned, reviewed, approved by the user (2026-11-16). The plan is `notes-workbook/ISSUE-1-PLAN.md` (stages W9a to W9d), reviewed in `ISSUE-1-PLAN-REVIEW.md` and revised to its second review (`ISSUE-1-PLAN-REVIEW-2.md`). See the dated paragraph of 2026-11-15/16 above. |
+| W9 the user's work in a built assembly, and dog-clutch sleeves (issue #1) | **W9a closed 2026-11-17: the user's work is kept by Update or refused by name before any write; measured, written, reviewed, shown on SolidWorks 2026 (final full run, all sections 0 failed, K12 on the real screen) and confirmed on 2024 under the coordinator's ruling that its What's Wrong box is left alone. W9b (sleeve checks, bands, hub) is next; W9c and W9d after it.** See *Where W9 stands* above. Planned, reviewed, approved by the user (2026-11-16). The plan is `notes-workbook/ISSUE-1-PLAN.md` (stages W9a to W9d), reviewed in `ISSUE-1-PLAN-REVIEW.md` and revised to its second review (`ISSUE-1-PLAN-REVIEW-2.md`). See the dated paragraph of 2026-11-15/16 above. |
 | Printed gears (FDM, PLA): stages F1 to F4 | **planned, waiting behind W9; nothing built and nothing to be built yet (the user, 2026-11-16).** The plan is `docs/PLAN-PRINTED.md`, reviewed once in `docs/PLAN-PRINTED-REVIEW.md` and revised to that review and to the user's answers (Printed the default everywhere, D-flat first, STEP for Bambu Studio, the first layer left to the slicer, printed parts named `_P`, W9 first). Its D3, D6 and D7 stand as assumed. The revision is not reviewed: when it is taken up, after W9 closes, it is read against the code as W9 left it and reviewed again before any code. |
 | How the user's absence is handled | the user said on 2026-11-14 to carry on, in order, until W8 is done. Judgement calls are taken at each plan's recommended reading and listed for the user as readings to overrule. |
 | The small-pinion tip cap | `fix/small-pinion-cap` merged at `0f5a121` (the user's instruction): 6- and 7-tooth pinions build with an arc on the tip cap, version 0.3.2. Built on SolidWorks 2024 by the branch; the 2026 build and the merge's review are in hand. |
