@@ -1263,6 +1263,13 @@ def test_what_only_the_inventorys_silence_names_is_said_as_may(desk, carrying, m
     said = _said(desk, record=record, plan=_plan([_item("Sprocket-1")], named=named))
     assert ("Your UserGearRoot is made again only if the face of Sun it is on proves to be on Sun's axis, since Sun's "
             "part is new.") in said, said
+    assert "UserGearRoot was on a face of Sun" not in said                    # B1: said once, as may
+    # B2: a gate that holds the mate back anyway leaves the plan's own reason, said as the fact it is.
+    for gate, value in (("CARRY_GEAR_MATE_ON_AN_APP_GEAR_ON_2026", None), ("CARRY_REMAKE_KINDS_ON_2026", ("lock",))):
+        with monkeypatch.context() as m:
+            m.setattr(findings, gate, value)
+            held = _said(desk, record=record, plan=_plan([_item("Sprocket-1")], named=named))
+            assert "proves to be on" not in held and "UserGearRoot was on a face of Sun" in held, (gate, held)
     assert ("UserFace was on a face of Sun, and Sun's part is new because its Flank changed, so it is not made again."
             ) in said
     monkeypatch.setattr(findings, "COAXIAL_FACE_READ_ON_2026", None)                # not read: the fact stands
@@ -1275,8 +1282,13 @@ def test_a_mate_in_error_as_read_is_carried_only_with_the_same_error(desk, carry
     record = copy.deepcopy(desk.record)
     record.gearbox.user_work.mates[0].code = 46
     said = _said(desk, record=record)
-    assert ("Lock3 was in error in RangeBox.SLDASM as read; made again, it is carried only if it reads the same error, "
-            "and it never keeps a gear from turning.") in said, said
+    assert ("makes your Lock3 again in the modes it was on in; it was in error in RangeBox.SLDASM as read, and made "
+            "again it is carried if it reads no error or the one it had, and not if it keeps a gear from turning."
+            ) in said, said
+    assert said.count("Lock3") == 1
+    many = _plan([_item("Sprocket-1")], [_mate_item("Lock3"), _mate_item("Lock9")])
+    assert ("Lock3 was in error in RangeBox.SLDASM as read; made again, it is carried if it reads no error or the one "
+            "it had, and not if it keeps a gear from turning.") in _said(desk, record=record, plan=many)
     assert "was in error in RangeBox.SLDASM as read" not in _said(desk)
 
 
@@ -1297,3 +1309,32 @@ def test_the_footer_after_a_build_says_the_carrys_line_unless_the_builds_sentenc
                            "built is saved.", True, ui_text.NOTE_JOB)
     assert ui_text.workbook_footer(a, record=record, note=stopped, folder="C:\\\\Out\\\\").text.endswith(line)
     assert line in ui_text.workbook_footer(a, record=record, folder="C:\\\\Out\\\\").text       # the note gone
+
+
+
+def test_the_demonstrations_question_names_each_mate_in_exactly_one_sentence(desk, carrying, monkeypatch):
+    """B1, for every mate: the question's shape on the demonstration's 2026 (the probe reads measured, the write gates
+    patched, the coaxial read shown), with a ratio's *may*, an axis's *may*, a face of a part made new, a mate in error
+    and a lock: each mate's name is in exactly one sentence of the question."""
+    import re
+    _reads(monkeypatch, "measured")
+    for gate, value in (("CARRY_GEAR_MATE_ON_AN_APP_GEAR", True),
+                        ("CARRY_REMAKE_KINDS", tuple(swbuild.CARRY_KIND_WORDS))):
+        monkeypatch.setattr(findings, f"{gate}_ON_2026", value)
+    record = copy.deepcopy(desk.record)
+    record.gearbox.user_work.mates[0].code = 46
+    _gear_mates(record,
+                store.UserMateEntry("UserGear6", "gear", 10, [["user", "Sprocket-1"], ["app", "Sun"]], ["H", "N", "L"],
+                                    entities=[["user", "Sprocket-1", "feature", "Gear Axis"],
+                                              ["app", "Sun", "feature", "Gear Axis"]]),
+                store.UserMateEntry("UserGearRoot", "gear", 10, [["user", "Sprocket-1"], ["app", "Sun"]], ["H"],
+                                    entities=[["user", "Sprocket-1", "feature", "Gear Axis"], ["app", "Sun", "face", ""]]),
+                store.UserMateEntry("UserSunFace", "other", 0, [["user", "Sprocket-1"], ["app", "Sun"]], ["H"],
+                                    entities=[["user", "Sprocket-1", "face", ""], ["app", "Sun", "face", ""]]))
+    said = _said(desk, record=record)
+    assert "made again if the press reads" in said and "proves to be on Sun's axis" in said, said
+    sentences = re.split(r"(?<=[.)])\s+(?=[A-Z(])", said)
+    for mate in [m.name for m in record.gearbox.user_work.mates]:
+        found = [x for x in sentences if re.search(rf"\b{re.escape(mate)}\b", x)]
+        # Each mate named once: in its own sentence, or counted in "makes your N mates again" and named nowhere.
+        assert len(found) == 1 or (not found and "mates again" in said), (mate, found)

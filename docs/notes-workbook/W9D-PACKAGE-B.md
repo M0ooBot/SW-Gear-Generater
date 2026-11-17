@@ -240,6 +240,23 @@ Committed as `73db554`. Tests at the end of `tests/test_workbook_carry.py`.
 
 The seven printed states below are unchanged by this round.
 
+## The re-check of `5f52913` (`W9D-REVIEW-B.md`, `7892a53`)
+
+- **B1**: the definite reasons drop the axis *may*'s mates by mate, not by gear, so UserGearRoot is said once.
+  `test_the_demonstrations_question_names_each_mate_in_exactly_one_sentence` builds the demonstration's question on
+  2026 (the probe reads measured, the write gates patched, the coaxial read shown; a ratio *may*, an axis *may*, a face
+  of a part made new, a mate in error, a lock) and asserts every mate is named in exactly one sentence. To hold that for
+  a single mate made again that the inventory holds in error, its clause now joins the lead: *… and makes your Lock3
+  again in the modes it was on in; it was in error in RangeBox.SLDASM as read, and made again it is carried if it reads
+  no error or the one it had, and not if it keeps a gear from turning.* With several, the sentence of its own stands.
+- **B2**: the axis *may* only while `CARRY_GEAR_MATE_ON_AN_APP_GEAR` is True and `gear` is in `CARRY_REMAKE_KINDS`
+  (else the plan's reason, said as fact); the in-error clause in the reviewer's words: *Lock3 was in error in
+  RangeBox.SLDASM as read; made again, it is carried if it reads no error or the one it had, and not if it keeps a gear
+  from turning.*
+- **B3** waits for A's coded cause.
+
+The seven printed states below are unchanged by this round.
+
 ## The strings, in full
 
 Made by A's worker on the fake (`Desk`'s RangeBox, W9a's user work: Sprocket-1 locked to Sun, Housing-1 fixed, a
