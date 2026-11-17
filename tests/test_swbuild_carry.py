@@ -7,7 +7,8 @@ import math
 
 import pytest
 
-from gear_generator import findings, swbuild
+from gear_generator import findings, swbuild, swcom
+from gear_generator.swcom import SolidWorksError
 from gear_generator.swbuild import (APP, ASSEMBLY, ENTITY_EDGE, ENTITY_FACE, ENTITY_FEATURE, ENTITY_ORIGIN,
                                     ENTITY_PLANE, ENTITY_UNREAD, ENTITY_VERTEX, ENTITY_WHOLE, LAYOUT, USER, Carry,
                                     CarryBody, OldComponent, OldEntity, OldMate, OldWork, UNREAD_ENTITY)
@@ -533,3 +534,214 @@ def test_a_user_part_locked_to_g1_is_carried_placed_against_g1_and_its_lock_made
     assert fake.memory_mates[_key(T_ASM)] == old_mates and (_key(T_ASM) in fake.touched) == (_key(T_ASM) in touched)
     assert [p for n, (p, *_) in ((n, a) for n, a in fake.calls if n == "save_as")][-1] == R2[T_ASM]
     assert cr.moved == [] and cr.fixed == []
+
+
+def _closed(fake):
+    """T.SLDASM saved with the user's work in it, then closed: only the app's parts and layout stay open."""
+    import copy
+    fake.saved_mates[_key(T_ASM)] = copy.deepcopy(fake.memory_mates[_key(T_ASM)])
+    fake.open_docs = [d for d in fake.open_docs if _key(d.path) != _key(T_ASM)]
+    for kept in (fake.memory, fake.memory_mates, fake.memory_configs):
+        kept.pop(_key(T_ASM), None)
+    fake.touched.discard(_key(T_ASM))
+    return fake
+
+
+@pytest.mark.parametrize("doctor, clause", [
+    (dict(FILE_VERSION_READ=None), "findings.FILE_VERSION_READ_ON_2026"),
+    (dict(DEPENDENCIES_READ=None), "findings.DEPENDENCIES_READ_ON_2026"),
+    (dict(OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN=None), "findings.OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN_ON_2026"),
+    (dict(OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS=None), "findings.OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS_ON_2026"),
+    ("written on 2024", "it was last written on this SolidWorks"),
+    ("file saved on 2024", "every file it uses were last saved by this SolidWorks"),
+    ("a part of the user's saved on 2024", "every file it uses were last saved by this SolidWorks"),
+    ("another document open", "nothing else is open in SolidWorks"),
+])
+def test_the_not_open_read_is_refused_unless_every_condition_holds_and_never_opens(monkeypatch, every_gate, doctor,
+                                                                                  clause):
+    every_gate(**(doctor if isinstance(doctor, dict) else {}))
+    fake = _closed(_old_train())
+    _isfile(monkeypatch, fake)
+    fake.dependencies_of[_key(T_ASM)] = [SPROCKET]
+    carry = _t_carry(written_on=(32,) if doctor == "written on 2024" else (34,))
+    if doctor == "file saved on 2024":
+        fake.file_versions[_key(T_ASM)] = 32
+    if doctor == "a part of the user's saved on 2024":
+        fake.file_versions[_key(SPROCKET)] = 32
+    if doctor == "another document open":
+        fake.open_docs.append(swcom.DocInfo("Other.SLDPRT", W + "Other.SLDPRT", 1))
+    result = _build_again(fake, carry)
+    assert result.ok
+    cr = result.carry
+    assert cr.work.how == swbuild.OLD_UNREAD and clause in cr.work.unread[0], cr.work.unread
+    assert "open_read_only" not in [n for n, *_ in fake.calls]
+    assert cr.inserted == [] and not cr.unsaved
+
+
+def test_the_not_open_read_opens_read_only_shows_nothing_marks_nothing_and_closes(monkeypatch, every_gate):
+    every_gate(PERSIST_REFERENCE_SURVIVES_RELOAD=None)
+    fake = _closed(_old_train())
+    _isfile(monkeypatch, fake)
+    result = _build_again(fake)
+    assert result.ok, result.log_lines()
+    cr = result.carry
+    assert cr.work.how == swbuild.OLD_READ_ONLY and cr.work.left == [] and cr.work.marked == []
+    names = [n for n, *_ in fake.calls]
+    assert names.index("open_read_only") < names.index("close_unsaved") < names.index("new_part")
+    assert not any(_key(d.path) == _key(T_ASM) for d in fake.open_docs)
+    assert cr.inserted == [("Sprocket-1", "carried1-1")] and [r[0] for r in cr.remade] == ["Lock1"]
+    assert result.open_before == [d for d in result.open_before if _key(d) != _key(T_ASM)]
+
+
+def test_tier_one_on_the_not_open_path_is_named_until_a_reference_survives_a_reload(monkeypatch, every_gate):
+    every_gate(PERSIST_REFERENCE_SURVIVES_RELOAD=None)
+    fake = _old_train()
+    fake.user_mate(T_ASM, "Coincident2", kind="coincident", a=("Sprocket-1", "plane1"), b=("gear1-1", "plane1"))
+    _closed(fake)
+    _isfile(monkeypatch, fake)
+    cr = _build_again(fake).carry
+    assert {n.item: (n.why, n.subjects) for n in cr.named} == {
+        "Coincident2": ("unmeasured", ("plane", "PERSIST_REFERENCE_SURVIVES_RELOAD_ON_2026", Y))}
+    # Set, but the reference does not resolve after the reload on this fake: not found, its component carried.
+    every_gate()
+    fake = _old_train()
+    fake.user_mate(T_ASM, "Coincident2", kind="coincident", a=("Sprocket-1", "plane1"), b=("gear1-1", "plane1"))
+    _closed(fake)
+    _isfile(monkeypatch, fake)
+    cr = _build_again(fake).carry
+    assert {n.item: n.why for n in cr.named} == {"Coincident2": "not found"}
+    assert cr.inserted and [r[0] for r in cr.remade] == ["Lock1"]
+    fake = _old_train()
+    fake.user_mate(T_ASM, "Coincident2", kind="coincident", a=("Sprocket-1", "plane1"), b=("gear1-1", "plane1"))
+    _closed(fake)
+    _isfile(monkeypatch, fake)
+    fake.reload_ok = True
+    cr = _build_again(fake).carry
+    assert cr.named == [] and sorted(r[0] for r in cr.remade) == ["Coincident2", "Lock1"]
+
+
+def test_a_read_that_marks_a_document_carries_nothing_and_says_so(monkeypatch, every_gate):
+    every_gate()
+    fake = _old_train()
+    _isfile(monkeypatch, fake)
+    fake.read_marks = {_key(T_ASM)}
+    fake.touched.discard(_key(T_ASM))
+    fake.memory[_key(T_ASM)] = fake.saved[_key(T_ASM)]
+    result = _build_again(fake)
+    assert result.ok and result.carry.work.marked == [T_ASM]
+    assert result.carry.inserted == [] and result.carry.stopped.startswith("Reading T.SLDASM marked T.SLDASM")
+
+
+def test_a_read_only_close_that_leaves_the_document_open_carries_nothing(monkeypatch, every_gate):
+    every_gate()
+    fake = _closed(_old_train())
+    _isfile(monkeypatch, fake)
+    fake.read_only_left = True
+    result = _build_again(fake)
+    assert result.ok and result.carry.work.left == [T_ASM] and result.carry.inserted == []
+    assert "left T.SLDASM open" in result.carry.stopped
+
+
+def _two_clusters(fake):
+    """Sprocket-1 locked to G1 (the old train); Housing-1 fixed, with Sprocket-2 locked to it and to G4: a cluster that
+    ties G4's train once its locks are on."""
+    fake.user_component(T_ASM, "Housing-1", HOUSING, (I9, (0.0, 0.0, -40.0)), fixed=True)
+    fake.user_component(T_ASM, "Sprocket-2", SPROCKET, (I9, (0.0, 0.0, 50.0)))
+    fake.user_lock(T_ASM, "Lock2", "Housing-1", "Sprocket-2")
+    fake.user_lock(T_ASM, "Lock3", "gear4-1", "Sprocket-2")
+    return fake
+
+
+def test_a_tied_cluster_falls_back_alone_while_the_other_is_carried_with_every_mate(monkeypatch, every_gate):
+    every_gate()
+    fake = _two_clusters(_old_train())
+    _isfile(monkeypatch, fake)
+    # Made again, Lock3 ties G4's train to the fixed housing (G3, G4 read fully defined while it is on).
+    fake.locks["Lock3"] = ("gear3", "gear4", "gear3-1", "gear4-1", "gear2", "gear2-1")
+    result = _build_again(fake)
+    assert result.ok, result.log_lines()
+    cr = result.carry
+    assert cr.stopped == "", cr.stopped
+    (fell,) = cr.fixed
+    assert fell.why == swbuild.FELL_TIE and fell.deleted == ("Lock3",) and fell.kept == ("Lock2",)
+    assert set(fell.components) == {"carried2-1", "carried3-1"}
+    assert {r[0] for r in cr.remade} == {"Lock1", "Lock2"}
+    assert fake.mate("Lock3", R2[T_ASM]) is None and fake.mate("Lock1", R2[T_ASM]) is not None
+    assert {"carried2-1", "carried3-1"} <= fake.fixed
+    assert all(fake.constrained_status(h) == findings.COMPONENT_UNDER_DEFINED for h in ("gear1", "gear4"))
+
+
+@pytest.mark.parametrize("case", ["new error", "over-defined", "same error"])
+def test_a_new_error_or_an_over_definition_falls_back_and_the_same_error_is_carried(monkeypatch, every_gate, case):
+    every_gate()
+    fake = _two_clusters(_old_train())
+    _isfile(monkeypatch, fake)
+    if case == "same error":
+        fake.mate_codes["Lock3"] = (46, True)          # in error in the old assembly already
+        fake.remake_codes["Lock3"] = (46, True)
+    elif case == "new error":
+        fake.remake_codes["Lock3"] = (46, True)
+    else:
+        fake.remake_status["Lock3"] = findings.ADD_MATE_OVER_DEFINED
+    cr = _build_again(fake).carry
+    if case == "same error":
+        assert cr.fixed == [] and cr.same_error == [("Lock3", 46)]
+        return
+    (fell,) = cr.fixed
+    assert fell.why == (swbuild.FELL_NEW_ERROR if case == "new error" else swbuild.FELL_OVER_DEFINED)
+    assert fell.subjects == (("Lock3", "46", "0", "") if case == "new error" else ("Lock3",))
+    assert "Lock1" in {r[0] for r in cr.remade}
+
+
+def test_a_carry_that_stops_part_way_says_what_it_did_and_leaves_the_build_saved(monkeypatch, every_gate):
+    every_gate()
+    fake = _two_clusters(_old_train())
+    _isfile(monkeypatch, fake)
+    fake.raises["remake_mate"] = (3, SolidWorksError("SolidWorks stopped answering."))
+    result = _build_again(fake)
+    assert result.ok and result.assembly.saved == R2[T_ASM]
+    cr = result.carry
+    assert cr.inserted and len(cr.remade) == 2 and cr.unsaved
+    assert cr.stopped.startswith("SolidWorks stopped the carry while making Lock3 again")
+    assert cr.skipped == "making Lock3 again and everything after it"
+
+
+def test_a_component_whose_configuration_reads_back_otherwise_is_deleted_again_and_named(monkeypatch, every_gate):
+    every_gate()
+    fake = _old_train()
+    _isfile(monkeypatch, fake)
+    fake.component_configs["Sprocket-1"] = ("Z20", "Z15", ("Z15", "Z20"))
+    fake.insert_config_kept = False
+    cr = _build_again(fake).carry
+    assert {n.item: (n.why, n.subjects) for n in cr.named} == {
+        "Sprocket-1": ("configuration", ("Sprocket-1", "Z20", "Z15")),
+        "Lock1": ("component not carried", ("Sprocket-1",))}
+    assert cr.inserted == [] and fake.deleted == ["carried1-1"]
+    fake = _old_train()
+    _isfile(monkeypatch, fake)
+    fake.component_configs["Sprocket-1"] = ("Z20", "Z15", ("Z15", "Z20"))
+    cr = _build_again(fake).carry
+    assert cr.inserted == [("Sprocket-1", "carried1-1")]
+    assert [a for n, a in fake.calls if n == "add_component_in"] == [("carried1", SPROCKET, "Z20")]
+
+
+def test_a_remade_mate_read_back_otherwise_is_deleted_again_and_named(monkeypatch, every_gate):
+    every_gate()
+    fake = _old_train()
+    _isfile(monkeypatch, fake)
+    fake.kind_swap = {"Lock1"}
+    cr = _build_again(fake).carry
+    assert {n.item: (n.why, n.subjects) for n in cr.named} == {"Lock1": ("differs", ("entities",))}
+    assert cr.remade == [] and fake.mate("Lock1", R2[T_ASM]) is None
+
+
+def test_a_lightweight_user_component_is_carried_resolved_and_its_mates_named(monkeypatch, every_gate):
+    every_gate()
+    fake = _old_train()
+    _isfile(monkeypatch, fake)
+    fake.lightweight.add("Sprocket-1")
+    cr = _build_again(fake).carry
+    assert cr.inserted == [("Sprocket-1", "carried1-1")]
+    assert {n.item: n.why for n in cr.named} == {"Lock1": "lightweight"}
+    assert "Sprocket-1" in fake.lightweight                         # nothing resolved in the old assembly
+    assert ("root_component", (True,)) not in fake.calls

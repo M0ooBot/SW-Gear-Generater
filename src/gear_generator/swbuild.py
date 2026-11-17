@@ -8038,6 +8038,7 @@ def _judge(sw: SolidWorks, result: GearboxResult, carry: Carry, work: OldWork,
     carried as it was (``same_error``)."""
     cr = result.carry
     states = {s.name: s for s in sw.mate_states()}
+    excused: set = set()
     for item, _, kept in made:
         state = states.get(kept)
         if state is None or state.suppressed or not state.code:
@@ -8045,15 +8046,17 @@ def _judge(sw: SolidWorks, result: GearboxResult, carry: Carry, work: OldWork,
         if state.code == item.mate.code:
             if (item.mate.name, state.code) not in cr.same_error:
                 cr.same_error.append((item.mate.name, state.code))
+            excused.update(_user_targets(item))   # its components read over-defined by it, as they did before
+            excused.update(_app_handles(item.targets, handle_of))
             continue
         return FELL_NEW_ERROR, (item.mate.name, str(state.code), str(item.mate.code), mode)
-    users = {h for item, _, _ in made for h in _user_targets(item)}
+    users = {h for item, _, _ in made for h in _user_targets(item)} - excused
     for handle in sorted(users):
         if handle in handle_of.values() and sw.constrained_status(handle) == findings.COMPONENT_OVER_DEFINED:
             return FELL_OVER_DEFINED, ("",)
     after = _free(sw, train)
     gear_of = {b.handle: b.old for b in carry.bodies if b.handle}
-    tied = [h for h in train if before.get(h) and not after.get(h)]
+    tied = [h for h in train if before.get(h) and not after.get(h) and h not in excused]
     if tied:
         return FELL_TIE, (gear_of.get(tied[0], tied[0]), mode)
     return None
