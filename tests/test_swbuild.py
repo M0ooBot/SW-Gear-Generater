@@ -741,11 +741,13 @@ class FakeSolidWorks:
 
     def fix_component(self, handle):
         self._log("fix_component", handle)
+        self._strict(handle)
         self._not_users(self._name2(handle), "fixed")
         self.fixed.add(self._name2(handle))
 
     def unfix_component(self, handle):
         self._log("unfix_component", handle)
+        self._strict(handle)
         self._not_users(self._name2(handle), "unfixed")
         self.fixed.discard(self._name2(handle))
 
@@ -757,6 +759,7 @@ class FakeSolidWorks:
 
     def place_component(self, handle, rotation, at, kind=None):
         self._log("place_component", handle)
+        self._strict(handle)
         if getattr(findings, "PUT_MARKS_ASSEMBLY_MODIFIED", False):
             self._touch()
         put = asked = (tuple(rotation), tuple(at))
@@ -908,12 +911,14 @@ class FakeSolidWorks:
         fixed, every other gear not). The W8 spike kept a fixed component fixed in every configuration made after it
         was fixed (``FIXED_KEPT_IN_NEW_CONFIGURATION``), so one set serves every configuration."""
         self._log("is_fixed", handle)
+        self._strict(handle)
         return self._name2(handle) in self.fixed
 
     def component_path(self, handle):
         """``Session.component_path``: the file the component was inserted from; in an assembly opened from a
         copied folder whose stored folder is gone, the same file beside the assembly, as SolidWorks resolves it."""
         self._log("component_path", handle)
+        self._strict(handle)
         name = self._name2(handle)
         stored = self.component_paths.get(name)
         if stored is None:
@@ -1164,6 +1169,7 @@ class FakeSolidWorks:
         ``findings.COMPONENT_DELETE_ROUTE_ON_<year>`` is not the route. A component of the user's, or one a user mate
         touches, fails the test (W9a §0.3: that would write the user's work)."""
         self._log("delete_component", handle)
+        self._strict(handle)
         year = swcom.release_year(self.revision[0])
         if getattr(findings, f"COMPONENT_DELETE_ROUTE_ON_{year}", None) != "select4-editdelete":
             raise SolidWorksError("Deleting a component has not been settled on this SolidWorks.")
@@ -1374,6 +1380,7 @@ class FakeSolidWorks:
     def component_resolved(self, handle):
         """As swcom.Session.component_resolved: False for a component loaded lightweight (``lightweight``)."""
         self._log("component_resolved", handle)
+        self._strict(handle)
         return self._name2(handle) not in self.lightweight
 
     def gear_mate_ratio(self, handle):
@@ -1939,6 +1946,7 @@ class FakeSolidWorks:
 
     def component_configurations(self, handle):
         self._log("component_configurations", handle)
+        self._strict(handle)
         name = self._name2(handle)
         referenced, active, names = self._w9d().component_configs.get(name, ("Default", "Default", ("Default",)))
         if name in self.lightweight or self._state_in(name, self.config) in (0, 1, 4):
@@ -1962,6 +1970,7 @@ class FakeSolidWorks:
 
     def set_component_suppressed(self, handle, suppressed):
         self._log("set_component_suppressed", handle, suppressed)
+        self._strict(handle)
         self._gate("CARRY_INSERTS", "Setting a carried component's state")
         name = self._name2(handle)
         self._not_users(name, "suppressed or resolved")
@@ -2037,6 +2046,7 @@ class FakeSolidWorks:
         (default 0, Ok), ``r3_seconds`` the seconds each candidate takes (default 0), ``radius`` a cylinder's or
         circle's radius in mm; ``coaxial`` as before. ``walks`` logs (component, items) per call."""
         self._log("entity_references", component, tuple(items))
+        self._strict(component)
         self._w9d()
         for name in ("r3_filtered", "r3_matches", "r3_resolve", "r3_seconds", "radius", "walks"):
             if not hasattr(self, name):
@@ -2091,6 +2101,7 @@ class FakeSolidWorks:
         if target.startswith("ref:"):
             _, handle, kind, hexed = target.split(":", 3)
             part, _, entity = bytes.fromhex(hexed).decode().partition("|")
+            self._strict(handle)                    # select_by_reference's handle
             name = self._name2(handle)
             if _key(self.component_paths.get(name, "")) != part:
                 raise SolidWorksError(f"The {kind} could not be found again in {name}.")
@@ -2102,7 +2113,10 @@ class FakeSolidWorks:
             return name, entity
         if ":" in target:
             handle, _, feature = target.partition(":")
+            if handle != "asm":
+                self._strict(handle)                # a mate's target, as Session._component refuses it
             return ("asm" if handle == "asm" else self._name2(handle)), feature
+        self._strict(target)
         return self._name2(target), ""
 
     def remake_mate(self, handle, definition, targets, name, ratio=(1.0, 1.0), flip=None):

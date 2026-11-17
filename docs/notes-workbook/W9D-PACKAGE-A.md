@@ -371,3 +371,17 @@ Gear Generator, not in SolidWorks" instead of Python text.
   `Extension` as attributes, a Session test with no part document, `strict_handles` in every handle-taking fake
   member, the two carry tests without it); the gear sense against real geometry: the W9d probes remade no gear mate,
   so nothing measured exists to model; left for the run.
+
+### Fifth round, finished
+- **S3.** The r3 stand-in has `GetModelDoc2` and `Extension` as plain attributes; only `GetFaces` and the face members
+  come back as uncalled methods, so the old `call(body, member)` fails there, where SolidWorks failed (checked).
+  `tests/test_swcom.py::test_with_no_part_document_both_reference_reads_say_the_part_is_not_loaded` pins S4's
+  sentence for `entity_references` and `entity_reference`. `strict_handles` now refuses, as the Session's
+  `_component` does, in every fake member that takes a component handle: `constrained_status`, `component_frame`,
+  `place_component`, `fix_component`, `unfix_component`, `delete_component`, `component_configurations`,
+  `set_component_suppressed`, `entity_references` (its component), `component_resolved`, `is_fixed`,
+  `component_path`, a mate's targets in `remake_mate` and `select_by_reference`'s handle (`_resolve`). The two carry
+  tests built without it now have it. No carry test failed with strictness on everywhere: no finding.
+- **S2's remainder.** `Session.reference_faults` reaches the log's facts ("reference read fault: …") after R's mates,
+  then is emptied. Pin: `test_a_fault_in_a_features_reference_read_reaches_the_logs_facts`.
+- `probe/w9d_demonstration.py --self-check` at `a366938`: 0 failed (M2 and M3 change none of its expectations).

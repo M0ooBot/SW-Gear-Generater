@@ -814,6 +814,7 @@ def test_states_and_flags_are_set_in_every_mode_and_a_mode_the_old_assembly_has_
     assert built.ok
     fake._w9d()
     fake.read_entity_kinds = True
+    fake.strict_handles = True
     fake.user_component(TC_ASM, "Sprocket-1", SPROCKET, (I9, (0.0, 0.0, 200.0)))
     fake.states_by.setdefault("N", {})["Sprocket-1"] = 0                       # suppressed in N
     # Locked to InDog, which stands still in every mode (the fake solves no lock on a show: a sleeve's slide carrying
@@ -897,6 +898,7 @@ def test_a_cluster_with_only_mates_between_app_bodies_leaves_the_new_assembly_un
     every_gate()
     fake = _built_train()
     fake.read_entity_kinds = True
+    fake.strict_handles = True
     fake.user_mate(T_ASM, "Angle9", kind="angle", a=("gear1-1", "plane1"), b=("gear4-1", "plane1"))
     fake._w9d()
     fake.protected = {_key(T_ASM)}
@@ -1416,3 +1418,21 @@ def test_a_mates_flag_read_otherwise_where_its_component_is_suppressed_is_a_fact
     cr, fake = _tc_again(monkeypatch, ALL_ON, tweak)
     assert cr.stopped == "" and [r[0] for r in cr.remade] == ["Lock1"]
     assert any("Lock1 reads suppressed in N, where a component it joins is suppressed" in f for f in cr.facts)
+
+
+
+def test_a_fault_in_a_features_reference_read_reaches_the_logs_facts(monkeypatch, every_gate):
+    """S2's remainder: the Session keeps the Python text of a fault of ours in reference_faults; it reaches the log."""
+    every_gate()
+    fake = _old_train()
+    fake.user_mate(T_ASM, "Coincident2", kind="coincident", a=("Sprocket-1", "plane1"), b=("gear1-1", "plane1"))
+    _isfile(monkeypatch, fake)
+
+    def reading(mate_handle, index):
+        fake.reference_faults = getattr(fake, "reference_faults", []) + ["AttributeError: no FeatureByName"]
+        return "plane", "", None, "its reference could not be read (a fault in Gear Generator)"
+    monkeypatch.setattr(fake, "entity_reference", reading)
+    cr = _build_again(fake).carry
+    assert "fact    reference read fault: AttributeError: no FeatureByName" in cr.log_lines()
+    assert {n.item: n.subjects for n in cr.named}["Coincident2"] == (
+        "its reference could not be read (a fault in Gear Generator)",)

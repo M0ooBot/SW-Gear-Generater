@@ -3371,8 +3371,8 @@ def test_the_r3_walk_calls_the_members_late_binding_hands_back_uncalled(monkeypa
             return [Body()]
 
     class Component:
-        def GetModelDoc2(self):
-            return Part()
+        GetModelDoc2 = Part()            # S3: a property get through late binding, as on SolidWorks (only GetFaces
+                                         # and the face members come back uncalled)
 
         def GetCorresponding(self, face):
             return in_assembly[id(face)]
@@ -3431,3 +3431,36 @@ def test_a_member_handed_back_uncalled_is_called_under_the_com_error_guard(monke
         assert "GetFaces" in str(exc)
     else:
         raise AssertionError("no ComError")
+
+
+
+def test_with_no_part_document_both_reference_reads_say_the_part_is_not_loaded(monkeypatch):
+    """S3 / S4: a lightweight or suppressed component (GetModelDoc2 None): entity_references and entity_reference each
+    say its part is not loaded, and read nothing else."""
+    monkeypatch.setattr(findings, "PERSIST_REFERENCE_ROUTE_FOR_FACES_ON_2026", swcom.PERSIST_ROUTE_R3)
+
+    class Component:
+        GetModelDoc2 = None
+
+    class Entity:
+        Reference = object()
+        ReferenceComponent = Component()
+
+    class Mate:
+        def MateEntity(self, index):
+            return Entity()
+
+    class Feature:
+        GetSpecificFeature2 = Mate()
+
+    session = swcom.Session.__new__(swcom.Session)
+    session.revision = (34, 0, 0)
+    monkeypatch.setattr(session, "_component", lambda handle: Component(), raising=False)
+    monkeypatch.setattr(session, "_kept_mate", lambda handle: ("M", Feature()), raising=False)
+    monkeypatch.setattr(session, "_component_name", lambda handle: "SprocketLight-1", raising=False)
+    monkeypatch.setattr(session, "mate_definition", lambda handle: swcom.MateDefinition(
+        "M", 0, "", 0, False, (), (swcom.MateEntityRead("SprocketLight-1", 5, "feature", "Sprocket Axis"),)),
+        raising=False)
+    said = "its part is not loaded in SolidWorks (lightweight or suppressed)"
+    assert session.entity_references("old1", [("oldmate1", 0, "face")]) == [("face", "", None, None, "", said)]
+    assert session.entity_reference("oldmate1", 0) == ("feature", "", None, said)

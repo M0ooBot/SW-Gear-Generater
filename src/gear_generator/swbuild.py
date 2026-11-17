@@ -7889,6 +7889,12 @@ def _read_old_mates(sw: SolidWorks, carry: Carry, work: OldWork, configurations:
                                   definition.flipped, definition.values, tuple(entities),
                                   tuple(e.params for e in definition.entities), on, state.code,
                                   state.warning if state.code else True, definition.whole))
+    # S2: a fault of ours in a feature's reference read is kept where a developer finds it, the log's facts.
+    work.walks.extend(f"reference read fault: {f}" for f in getattr(sw, "reference_faults", None) or ())
+    try:
+        sw.reference_faults = []
+    except Exception:  # noqa: BLE001 - a session that keeps none
+        pass
 
 
 def _old_mode(mode: str, old_modes: Sequence[str]) -> Optional[str]:
