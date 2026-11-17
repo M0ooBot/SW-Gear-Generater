@@ -630,12 +630,14 @@ def test_tier_one_on_the_not_open_path_is_named_until_a_reference_survives_a_rel
     cr = _build_again(fake).carry
     assert {n.item: (n.why, n.subjects) for n in cr.named} == {
         "Coincident2": ("unmeasured", ("plane", "PERSIST_REFERENCE_SURVIVES_RELOAD_ON_2026", Y, "Sprocket-1"))}
-    # Set, but the reference does not resolve after the reload on this fake: not found, its component carried.
+    # Set, but the reference does not resolve after the reload here (asked by name: the fake's default is the
+    # finding's, True on 2026): not found, its component carried.
     every_gate()
     fake = _old_train()
     fake.user_mate(T_ASM, "Coincident2", kind="coincident", a=("Sprocket-1", "plane1"), b=("gear1-1", "plane1"))
     _closed(fake)
     _isfile(monkeypatch, fake)
+    fake._w9d().reload_ok = False
     cr = _build_again(fake).carry
     assert {n.item: n.why for n in cr.named} == {"Coincident2": "not found"}
     assert cr.inserted and [r[0] for r in cr.remade] == ["Lock1"]
@@ -643,8 +645,7 @@ def test_tier_one_on_the_not_open_path_is_named_until_a_reference_survives_a_rel
     fake.user_mate(T_ASM, "Coincident2", kind="coincident", a=("Sprocket-1", "plane1"), b=("gear1-1", "plane1"))
     _closed(fake)
     _isfile(monkeypatch, fake)
-    fake.reload_ok = True
-    cr = _build_again(fake).carry
+    cr = _build_again(fake).carry                                   # the default: as the finding, set
     assert cr.named == [] and sorted(r[0] for r in cr.remade) == ["Coincident2", "Lock1"]
 
 

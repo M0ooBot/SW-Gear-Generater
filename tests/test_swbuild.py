@@ -1917,7 +1917,8 @@ class FakeSolidWorks:
     # ``states_mark`` (the unshown state read marks the assembly) and ``states_read_unsaved``; ``file_versions`` (lower-
     # cased path -> the version that last saved it; else the running one) and ``dependencies_of``; ``read_only_left``
     # (a read-only close leaves the document open); ``read_marks`` (lower-cased paths a definition read marks);
-    # ``reload_ok`` (a reference read in a read-only load resolves after it was closed); ``coaxial`` ((path, target) ->
+    # ``reload_ok`` (a reference read in a read-only load resolves after it was closed; None, as the finding says);
+    # ``coaxial`` ((path, target) ->
     # bool, read once findings.COAXIAL_FACE_READ is set); ``remake_status`` / ``remake_codes`` (old mate name -> AddMate5's
     # status / (code, warning) after the remake); ``insert_config_kept`` False: an insert in a configuration reads back
     # the document's active one; ``kind_swap`` (old mate names a remake reads back with its entities the other way).
@@ -1936,7 +1937,7 @@ class FakeSolidWorks:
         for name, value in (("protected", set()), ("no_save_after", ""), ("component_configs", {}), ("states_by", {}),
                             ("states_mark", False), ("states_read_unsaved", True), ("file_versions", {}),
                             ("dependencies_of", {}), ("read_only_opened", set()), ("read_only_left", False),
-                            ("read_marks", set()), ("reload_ok", False), ("coaxial", {}), ("remake_status", {}),
+                            ("read_marks", set()), ("reload_ok", None), ("coaxial", {}), ("remake_status", {}),
                             ("remake_codes", {}), ("insert_config_kept", True), ("kind_swap", set()),
                             ("refs_read_only", set()), ("saved_after", False)):
             if not hasattr(self, name):
@@ -2210,7 +2211,11 @@ class FakeSolidWorks:
             name = self._name2(handle)
             if _key(self.component_paths.get(name, "")) != part:
                 raise SolidWorksError(f"The {kind} could not be found again in {name}.")
-            if hexed in self._w9d().refs_read_only and not self.reload_ok:
+            # As SolidWorks 2026 measured (PERSIST_REFERENCE_SURVIVES_RELOAD: every reference resolved Ok in its part
+            # reopened alone), by the finding the test patches; ``reload_ok`` True or False where a test asks.
+            survives = self.reload_ok if self.reload_ok is not None else \
+                self._finding("PERSIST_REFERENCE_SURVIVES_RELOAD") is True
+            if hexed in self._w9d().refs_read_only and not survives:
                 raise SolidWorksError(f"The {kind} could not be found again in {name} after its part was reloaded.")
             if entity in getattr(self, "resolve_other_kind", set()):        # S8: resolved to another kind
                 raise swcom.ReferenceKindError(f"The {kind} of {name} found again is a face, which Gear Generator "
