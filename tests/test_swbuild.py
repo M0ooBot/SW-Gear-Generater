@@ -721,9 +721,11 @@ class FakeSolidWorks:
 
     def _strict(self, handle):
         """W9d, fourth round (``strict_handles``): as the Session, a handle not found or added since the last
-        end_build is not kept (the first M9 run: the build's gear7, never found again by the carry)."""
-        if getattr(self, "strict_handles", False) and handle not in getattr(self, "kept_handles", set()) \
-                and handle not in self.component_paths:
+        end_build is not kept (the first M9 run: the build's gear7, never found again by the carry). The audit: a Name2
+        is no handle either (Session._component knows only what it kept), so a Name2 passed for one is refused too.
+        Off by default only for the tests' own looks at the fake after a job (with it on by default, every failing test
+        in the suite failed in such a look, none in the app's code)."""
+        if getattr(self, "strict_handles", False) and handle not in getattr(self, "kept_handles", set()):
             raise SolidWorksError(f"No component is kept as {handle!r}, so it cannot be read or changed; that is a "
                                   "fault in Gear Generator, not in SolidWorks.")
 
@@ -832,8 +834,10 @@ class FakeSolidWorks:
 
     def open_document(self, path):
         self._log("open_document", path)
-        if getattr(self, "open_resolves_lightweight", False):
-            # W9d (D10, inferred): lightweight is per file in the session, so opening a part resolves its instances.
+        if getattr(self, "open_resolves_lightweight", True):
+            # W9d (D10): lightweight is per file in the session, so opening a part resolves its instances, as the first
+            # M9 run read it on 2026 (SprocketLight-1 read 1 before the press and 2 after, its part opened to insert it:
+            # w9d-demo-sw2026-…-2 :566, :570). False only where a test asks.
             for name in [n for n in self.lightweight if _key(self.component_paths.get(n, "")) == _key(path)]:
                 self.lightweight.discard(name)
                 if self.component_states.get(name) in (1, 4):
@@ -899,7 +903,7 @@ class FakeSolidWorks:
         if not suppressed_ok and self._state_in(name, self.config) == 0:   # as swcom.Session.find_component
             raise SolidWorksError(f"{name} is suppressed in {title}, so it cannot be placed; unsuppress it in "
                                   "SolidWorks and try again.")
-        if name in self.lightweight and not lightweight_ok:          # as swcom.Session.find_component refuses it
+        if self._light(name) and not lightweight_ok:                 # as swcom.Session.find_component refuses it
             raise SolidWorksError(f"{name} is loaded lightweight in {title}, and resolving a component is not "
                                   "settled here; set it to Resolved in SolidWorks and try again.")
         self.found[handle] = name
@@ -1104,12 +1108,14 @@ class FakeSolidWorks:
         derived = self._feature_rule() is False
         by = getattr(self, "states_by", {}).get(self.config, {})          # W9d: a state set per configuration
         return [swcom.ComponentInfo(n, self.component_paths.get(n, ""), n in self.fixed,
-                                    by.get(n, self.component_states.get(n, 1 if n in self.lightweight else 2)),
+                                    by.get(n, self.component_states.get(n, 1 if self._light(n) else 2)),
                                     self.component_codes.get(n, 1 if derived and self._part_in_error(
                                         self.component_paths.get(n, "")) else 0)) for n in names]
 
+    # swMateType_e as IMate2.Type reads it. A limit mate reads its plain kind's type, 5 or 6 (W9c's m1,
+    # findings.M1_READS_LIMIT_DISTANCE / _LIMIT_ANGLE: MateLimitDistanceDim type 5, MateLimitPlanarAngleDim type 6).
     MATE_TYPES = {"coincident": 0, "point": 0, "distance": 5, "point distance": 5, "angle": 6, "axis angle": 6,
-                  "gear": 10, "lock": 16, "rack and pinion": 13, "screw": 17}
+                  "gear": 10, "lock": 16, "rack and pinion": 13, "screw": 17, "limit distance": 5, "limit angle": 6}
 
     def mate_info(self, handle):
         """``Session.mate_info``: the mate's swMateType_e and the Name2 its entities are on ("" for the assembly's)."""
@@ -1136,6 +1142,11 @@ class FakeSolidWorks:
         if mate.kind == "lock" or not target:
             return ("whole", "")
         if target.startswith("plane") and target[5:].isdigit():
+            if end[0] != "asm" and self._light(end[0]):
+                # As Session.mate_info reads it: ReferenceType2 answers a plane, but its tree order needs the part's
+                # document, which a lightweight component has not (W9c probes: GetModelDoc2 None), so unread. A
+                # feature's own name still reads (the first M9 run, :634: SprocketLight-1's Gear Axis).
+                return ("unread", "")
             return ("plane", target)
         if target == "origin":
             return ("origin", "origin")
@@ -1157,11 +1168,14 @@ class FakeSolidWorks:
         self._log("root_component", resolve)
         if resolve:
             names = self._assembly_names(self.current) if self.current else list(self.adding_names)
-            heavy = [n for n in names if n in self.lightweight or self.component_states.get(n) in (1, 4)]
+            heavy = [n for n in names if self._light(n) or self.component_states.get(n) in (1, 4)]
             if heavy:
+                files = {_key(self.component_paths.get(n, "")) for n in heavy}
                 for name in heavy:
                     self.lightweight.discard(name)
                     self.component_states[name] = 2
+                for name in [n for n in self.lightweight if _key(self.component_paths.get(n, "")) in files - {""}]:
+                    self.lightweight.discard(name)
                 self._touch()
         return None if self.root_unread else self._root_name()
 
@@ -1379,11 +1393,20 @@ class FakeSolidWorks:
         first, second = self.mate(name, path).ratio
         return float(second), float(first)
 
+    def _light(self, name):
+        """Whether a component reads lightweight. Lightweight is per file in a session: one Sprocket set lightweight
+        read every Sprocket.SLDPRT instance lightweight (W9d probe state (f), w9d-probes-sw2026-…-1 :121), so a
+        component does when it, or another instance of its file, is in ``lightweight``."""
+        if name in self.lightweight:
+            return True
+        path = self.component_paths.get(name)
+        return bool(path) and any(_key(self.component_paths.get(n, "")) == _key(path) for n in self.lightweight)
+
     def component_resolved(self, handle):
         """As swcom.Session.component_resolved: False for a component loaded lightweight (``lightweight``)."""
         self._log("component_resolved", handle)
         self._strict(handle)
-        return self._name2(handle) not in self.lightweight
+        return not self._light(self._name2(handle))
 
     def gear_mate_ratio(self, handle):
         """As swcom.Session.gear_mate_ratio: the definition read, and turned back into the mate's own order by the
@@ -1873,6 +1896,12 @@ class FakeSolidWorks:
     DEF_TYPES = dict(MATE_TYPES, concentric=1, perpendicular=2, parallel=3, tangent=4, width=11, slot=21)
     _TYPE_WORDS = {0: "coincident", 1: "concentric", 2: "perpendicular", 3: "parallel", 4: "tangent", 5: "distance",
                    6: "angle", 10: "gear", 16: "lock"}
+    # GetTypeName2 as SolidWorks 2026 read each (the first M9 run, w9d-demo-sw2026-…-2 :589-635; W9c's m1 for the limit
+    # angle). A kind no run read keeps its word (perpendicular, tangent: unmeasured).
+    TYPE_NAMES = {"coincident": "MateCoincident", "concentric": "MateConcentric", "parallel": "MateParallel",
+                  "distance": "MateDistanceDim", "angle": "MatePlanarAngleDim", "limit distance": "MateLimitDistanceDim",
+                  "limit angle": "MateLimitPlanarAngleDim", "gear": "MateGearDim", "lock": "MateLock"}
+    _BASE_PLANE_NORMALS = {"plane1": (0.0, 0.0, 1.0), "plane2": (0.0, 1.0, 0.0), "plane3": (1.0, 0.0, 0.0)}
 
     def _w9d(self):
         for name, value in (("protected", set()), ("no_save_after", ""), ("component_configs", {}), ("states_by", {}),
@@ -1909,7 +1938,17 @@ class FakeSolidWorks:
     def dependencies(self, path):
         self._log("dependencies", path)
         self._gate("DEPENDENCIES_READ", "Reading a file's dependencies")
-        return list(self._w9d().dependencies_of.get(_key(path), []))
+        if _key(path) in self._w9d().dependencies_of:
+            return list(self.dependencies_of[_key(path)])
+        # As SolidWorks read a closed assembly's (DEPENDENCIES_READ, w9d-probes-sw2026-…-1 :124: every part it holds,
+        # top level): each file inserted into it, the app's and the user's, once, in insertion order.
+        files = list(self.assembly_components.get(_key(path), [])) + \
+            [self.component_paths[n] for n in self.user_parts.get(_key(path), []) if n in self.component_paths]
+        out = []
+        for f in files:
+            if not any(_key(f) == _key(o) for o in out):
+                out.append(f)
+        return out
 
     def open_read_only(self, path):
         self._log("open_read_only", path)
@@ -1951,7 +1990,7 @@ class FakeSolidWorks:
         self._strict(handle)
         name = self._name2(handle)
         referenced, active, names = self._w9d().component_configs.get(name, ("Default", "Default", ("Default",)))
-        if name in self.lightweight or self._state_in(name, self.config) in (0, 1, 4):
+        if self._light(name) or self._state_in(name, self.config) in (0, 1, 4):
             # As the Session: no document (GetModelDoc2 None), so the file's names read closed, no active one.
             self._log("file_configurations", self.component_paths.get(name, ""))
             active = ""
@@ -2007,17 +2046,52 @@ class FakeSolidWorks:
             values.append(("Angle", math.radians(mate.value)))
         if mate.kind in ("limit distance", "limit angle"):
             values += list(getattr(mate, "limits", ()))
+        elif mate.kind in ("distance", "point distance", "angle", "axis angle"):
+            # As SolidWorks reads a plain distance or angle: its range too, each end its value (W9c S5 (a); the first
+            # M9 run, w9d-demo-sw2026-…-2 :604-605: MateDistanceDim 0.09, MaximumDistance 0.09, MinimumDistance 0.09).
+            word = "Distance" if "distance" in mate.kind else "Angle"
+            values += [(f"Maximum{word}", values[0][1]), (f"Minimum{word}", values[0][1])]
+        if values:
+            values.append(("FlipDimension", 0.0))            # as every distance and angle the M9 run read
         if mate.kind == "gear":
             values += [("GearRatioNumerator", float(mate.ratio[1])), ("GearRatioDenominator", float(mate.ratio[0])),
                        ("Reverse", 1.0 if mate.flip else 0.0)]
-        select = {"face": 2, "edge": 1, "vertex": 3, "plane": 4, "whole": 20, "origin": 6}
-        entities = tuple(swcom.MateEntityRead(c, 5 if k == "feature" and f.endswith("Axis") else
-                                              select.get(k, 4 if k == "feature" else -1), k, f, (0, 0, 0, 0, 0, 1))
-                         for c, (k, f) in zip(info.components, kinds))
+        entities = tuple(swcom.MateEntityRead(c, self._entity_select(mate, end), k, f, self._entity_params(mate, end))
+                         for c, (k, f), end in zip(info.components, kinds, (mate.a, mate.b)))
         alignment = mate.alignment if mate.user else getattr(self, "readback_alignment", {}).get(mate.name,
                                                                                                   mate.alignment)
-        return swcom.MateDefinition(mate.name, self.DEF_TYPES.get(mate.kind, info.type), mate.kind, alignment,
+        return swcom.MateDefinition(mate.name, self.DEF_TYPES.get(mate.kind, info.type),
+                                    self.TYPE_NAMES.get(mate.kind, mate.kind), alignment,
                                     bool(mate.flip and mate.kind != "gear"), tuple(values), entities, info.whole)
+
+    def _entity_select(self, mate, end):
+        """What ``IMateEntity2.ReferenceType2`` answers for an entity (swSelectType_e): nothing through a component
+        suppressed in the configuration shown (the first M9 run, :621), else by what it is — a plane 4 even where its
+        tree order cannot be read (a lightweight component's: ReferenceType2 answers, its document does not)."""
+        target = end[1]
+        if end[0] != "asm" and self._state_in(end[0], self.config) == 0 and mate.user:
+            return swcom.UNREAD
+        if mate.kind == "lock" or not target:
+            return 20
+        if target == "origin":
+            return 6
+        kind = target.partition(":")[0]
+        if kind in ("face", "edge", "vertex"):
+            return {"face": 2, "edge": 1, "vertex": 3}[kind]
+        return 5 if target.endswith("Axis") else 4
+
+    def _entity_params(self, mate, end):
+        """``IMateEntity2.EntityParams`` as SolidWorks lays them out (a point in metres, then a direction: an axis's,
+        a cylinder's or circle's axis, a plane's normal; W5's ring_mate_sense and W6's tier 9 read them so), in the
+        assembly: the direction is the entity's own in its component's frame turned by that frame. A base plane's own
+        is its normal (Front Z, Top Y, Right X); anything else's own is +Z, or ``entity_axes[target]`` where a test
+        says otherwise (a cylindrical face whose axis SolidWorks gives against its part's Z, say)."""
+        target = end[1]
+        own = getattr(self, "entity_axes", {}).get(target) or self._BASE_PLANE_NORMALS.get(target, (0.0, 0.0, 1.0))
+        rotation, at = (IDENTITY9, (0.0, 0.0, 0.0)) if end[0] == "asm" else \
+            self.frames.get(end[0], (IDENTITY9, (0.0, 0.0, 0.0)))
+        direction = _apply(rotation, own)
+        return tuple(v / 1000.0 for v in at) + tuple(direction)
 
     def entity_reference(self, mate_handle, index):
         self._log("entity_reference", mate_handle, index)
@@ -2032,7 +2106,7 @@ class FakeSolidWorks:
             coaxial = self._w9d().coaxial.get((_key(self.component_paths.get(end[0], "")), end[1]))
         if kind not in ("feature", "plane") or self._finding(finding[kind]) is None:
             return kind, "", coaxial, "no measured route"           # a face or an edge is entity_references'
-        if end[0] in self.lightweight or self._state_in(end[0], self.config) in (0, 1, 4):
+        if self._light(end[0]) or self._state_in(end[0], self.config) in (0, 1, 4):
             return kind, "", None, "its part is not loaded in SolidWorks (lightweight or suppressed)"   # as the Session
 
         part = self.component_paths.get(end[0], "")
@@ -2134,8 +2208,13 @@ class FakeSolidWorks:
                                       f"{self.config}.")
         word = self._TYPE_WORDS.get(definition.type, "other")
         values = dict(definition.values)
-        if word in ("distance", "angle") and any(k.startswith(("Maximum", "Minimum")) for k in values):
-            word = f"limit {word}"
+        if word in ("distance", "angle"):
+            # AddMate5 makes a limit mate only of a range that is one (W9c m1: MateLimit… from unequal ends); with each
+            # end the value it makes the plain kind (the app's add_mate, and S5 (c)'s remakes from equal ends).
+            base = values.get("Distance" if word == "distance" else "Angle")
+            range_ends = [v for k, v in values.items() if k.startswith(("Maximum", "Minimum"))]
+            if range_ends and (base is None or any(abs(v - base) > 1e-12 for v in range_ends)):
+                word = f"limit {word}"
         # The ledger (API-LEDGER.md:612): MateEntity(0) is the SECOND selection for an axis–axis coincident, a
         # face–axis concentric and a point–plane coincident; the first otherwise. Kept here as MateEntity order.
         kinds = [self._entity_kind(FakeMate("", word, e, e), e) for e in ends]
@@ -2147,7 +2226,8 @@ class FakeSolidWorks:
             (word == "coincident" and any(point) and any(plane))
         if second_first:
             ends.reverse()
-        if definition.name in self.kind_swap:
+        swapped = definition.name in self.kind_swap
+        if swapped:
             ends.reverse()
         if word == "gear":
             value = 0.0
@@ -2164,6 +2244,10 @@ class FakeSolidWorks:
         mate.alignment = definition.alignment
         if word.startswith("limit"):
             mate.limits = tuple((k, v) for k, v in values.items() if k.startswith(("Maximum", "Minimum")))
+        if swapped:
+            # The counts are the mate's own entities' (unmeasured: every gear mate measured kept the first selection as
+            # MateEntity(0), API-LEDGER.md:612): a mate read with its entities the other way reads its counts so too.
+            mate.ratio = tuple(mate.ratio)[::-1]
         if word == "gear":
             # The Reverse SolidWorks reads follows the Flip given, the other way for a mate in ``flip_inverts``: a
             # remake with the old Flip may read the wrong sense, and the other Flip the right one (§10, W5's remake).
@@ -5106,12 +5190,14 @@ def resolved_read(monkeypatch):
 
 def test_a_lightweight_gear_refuses_a_turning_update_before_anything_changes(resolved_read):
     fake = _built_train()
-    fake.lightweight = {"gear3-1"}
+    # G4 alone in its file: lightweight is per file in a session (W9d probe state (f)), so G3, whose part G1 shares,
+    # would read G1 lightweight too (the fake's default since the W9d audit).
+    fake.lightweight = {"gear4-1"}
     fake.turn("gear4-1", 3.0)
     with pytest.raises(swbuild.BuildError) as raised:
         _update_train(fake)
     assert not isinstance(raised.value, swbuild.NotAsBuilt)
-    assert str(raised.value) == ("G3 (gear3-1) is not fully resolved in T.SLDASM: SolidWorks loaded it lightweight, and "
+    assert str(raised.value) == ("G4 (gear4-1) is not fully resolved in T.SLDASM: SolidWorks loaded it lightweight, and "
                                  "a train with a lightweight gear does not turn as it was built, so nothing is changed; "
                                  "in SolidWorks, right-click T.SLDASM and choose Set Lightweight to Resolved, then press "
                                  "Update SolidWorks again.")
@@ -5131,8 +5217,8 @@ def test_without_the_resolved_read_the_update_reads_nothing_new_and_goes_on_as_t
     fake = _built_train()
     fake.turn("gear4-1", 3.0)
     assert _update_train(fake).ok and "component_resolved" not in names(fake)
-    fake.lightweight = {"gear3-1"}                        # find_component's own check, as today
-    with pytest.raises(swbuild.BuildError, match="^gear3-1 is loaded lightweight in T.SLDASM"):
+    fake.lightweight = {"gear4-1"}        # find_component's own check, as today (G4 alone in its file: see above)
+    with pytest.raises(swbuild.BuildError, match="^gear4-1 is loaded lightweight in T.SLDASM"):
         _update_train(fake)
 
 

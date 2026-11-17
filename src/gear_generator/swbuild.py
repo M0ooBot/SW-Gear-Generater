@@ -44,8 +44,8 @@ from .swcom import (ASSEMBLY_PAIR, ASSEMBLY_STATIC, ASSEMBLY_TRAIN, COMPONENT_FI
                     ENTITY_ALONG, LINE_TOLERANCE, RESOLVED_ROUTE_FINDING, UNREAD, ComponentGone, ComponentInfo,
                     ConfigurationGone, ComError, DocInfo, FeatureState, MateGone, MateInfo, MateRefused, MateState,
                     ReferenceKindError,
-                    SenseUnreadable, SolidWorksError, Vec3, axes_parallel, lines_meet, meets_minimum, own_axes_angle,
-                    rebuild_call, release_year, turned_refusal)
+                    SenseUnreadable, SolidWorksError, Vec3, axes_parallel, entity_kind, lines_meet, meets_minimum,
+                    own_axes_angle, rebuild_call, release_year, turned_refusal)
 
 VALUE_TOLERANCE = 1e-6
 FULLY_DEFINED = 3
@@ -7213,10 +7213,25 @@ def carry_kind(mate: OldMate) -> str:
     """The mate's kind word (§4.5): a carried kind's (:data:`CARRY_KIND_WORDS`), another's (``"width"``, …), or
     ``"unknown"`` for a type not read or not known."""
     word = _CARRIED_TYPES.get(mate.type)
-    if word in ("distance", "angle") and ("Limit" in (mate.type_name or "")
-                                         or any(name in _LIMIT_VALUES for name, _ in mate.values)):
+    if word in ("distance", "angle") and _is_limit(mate, word):
         return f"limit {word}"
     return word or _OTHER_TYPES.get(mate.type, "unknown")
+
+
+def _is_limit(mate: OldMate, word: str) -> bool:
+    """Whether a distance or angle mate is a limit mate. SolidWorks names it by its type name (``MateLimitDistanceDim``,
+    ``MateLimitPlanarAngleDim``: W9c m1, both versions), and a plain one reads its range too, each end equal to its
+    value (``MateDistanceDim`` with ``MaximumDistance`` and ``MinimumDistance`` 0.09 beside ``Distance`` 0.09: W9c S5 (a)
+    and the first M9 run, ``w9d-demo-sw2026-…-2`` :604). So the range decides only where the type name was not read,
+    and then only when an end differs from the value (or the value was not read)."""
+    if mate.type_name:
+        return "Limit" in mate.type_name
+    values = dict(mate.values)
+    value = values.get("Distance" if word == "distance" else "Angle")
+    ends = [values[k] for k in _LIMIT_VALUES if k in values and k.endswith(word.capitalize())]
+    if not ends:
+        return False
+    return value is None or any(abs(float(e) - float(value)) > VALUE_TOLERANCE for e in ends)
 
 
 class _Findings:
@@ -7904,8 +7919,11 @@ def _read_old_mates(sw: SolidWorks, carry: Carry, work: OldWork, configurations:
                 unread = unread or "a component it joins is suppressed in the mode the old assembly showed"
             elif what == UNREAD_ENTITY and not unread:
                 unread = "SolidWorks would not say what it is on"
-            elif e.kind in (ENTITY_UNREAD, "") and not unread and e.select_type not in (UNREAD, None):
-                # S6: ReferenceType2 answered, with a type the app does not take (a sketch point, say).
+            elif e.kind in (ENTITY_UNREAD, "") and not unread and e.select_type not in (UNREAD, None) and \
+                    entity_kind(e.select_type) == ENTITY_UNREAD:
+                # S6: ReferenceType2 answered, with a type the app does not take (a sketch point, say). A type it does
+                # take that still reads unread (a plane whose tree order would not read: no part document, as on a
+                # lightweight component) is not that.
                 cause, parts = CAUSE_TYPE_NOT_TAKEN, (str(e.select_type),)
                 unread = "it is on a kind of entity Gear Generator does not make mates on again"
             elif e.kind in (ENTITY_UNREAD, "") and not unread:
@@ -8275,13 +8293,13 @@ def _remake(c: _Carrying, item: CarryMateItem) -> Optional[Tuple[str, str, int]]
     deleted again and named. A refusal or a selection that fails names the mate; it never stops the carry, but a
     reference found again as another kind does (§4.1, §0.3)."""
     sw, cr = c.sw, c.result.carry
-    targets, flip = list(item.targets), None
+    targets, flip, ratio = list(item.targets), None, tuple(item.ratio)
     tried = 0
     while True:
         c.counter += 1
         handle = f"carrymate{c.counter}"
         try:
-            kept, status = sw.remake_mate(handle, item.mate, targets, item.mate.name, item.ratio, flip=flip)
+            kept, status = sw.remake_mate(handle, item.mate, targets, item.mate.name, ratio, flip=flip)
         except ReferenceKindError as exc:
             raise _CarryStop(f"{exc} So the carry stopped at {item.mate.name}; the new assembly is left as it is, "
                              "unsaved.")
@@ -8313,7 +8331,11 @@ def _remake(c: _Carrying, item: CarryMateItem) -> Optional[Tuple[str, str, int]]
             return None
         tried += 1
         if tried == 1 and differs == "swapped":
+            # AddMate5's numerator goes with the first selection (§10, API-LEDGER.md:618): the counts are reversed
+            # with the selections, so each stays with its own gear (else a swapped gear mate would come back at the
+            # inverse ratio, and a ratio read keyed by selection would not see it).
             targets.reverse()
+            ratio = ratio[::-1]
             continue
         if tried == 1 and differs == "sense":
             flip = not bool(item.mate.flipped)

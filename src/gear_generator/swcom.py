@@ -1489,6 +1489,17 @@ class Session:
             time.sleep(0.25)
         return False
 
+    def _select_by_count(self, attempt: Callable[[], Any], before: int) -> bool:
+        """W9d: a selection judged by the selection count alone, as the probes that measured these selections judged it
+        (W9c S5 (c) and W9d ``faces`` (c) never read Select4's return; ``select_face`` read the count), retried briefly
+        as :meth:`_retry_select` is (Select4 has answered False with nothing selected just after a document was made)."""
+        for _ in range(4):
+            attempt()
+            if self._selected() > before:
+                return True
+            time.sleep(0.25)
+        return False
+
     def _select_feature(self, feature: Any, append: bool = False, mark: int = 0) -> None:
         doc = self._doc()
         if not append:
@@ -4170,7 +4181,8 @@ class Session:
             component = self._component(target)
             data = call(call(self._doc(), "SelectionManager"), "CreateSelectData")
             _put(data, "Mark", 1)
-            if not call(component, "Select4", append, data, False):
+            before = self._selected()
+            if not self._select_by_count(lambda: call(component, "Select4", append, data, False), before):
                 raise SolidWorksError(f"{self._component_name(target)} could not be selected for a mate.")
 
     def select_by_reference(self, handle: str, kind: str, hexed: str, append: bool) -> None:
@@ -4199,7 +4211,8 @@ class Session:
                                   "assembly (GetCorresponding gave nothing).")
         data = call(call(self._doc(), "SelectionManager"), "CreateSelectData")
         _put(data, "Mark", 1)
-        if not call(corresponding, "Select4", append, data):
+        before = self._selected()
+        if not self._select_by_count(lambda: call(corresponding, "Select4", append, data), before):
             raise SolidWorksError(f"The {kind} of {self._component_name(handle)} could not be selected.")
 
     def delete_mate(self, handle: str) -> None:

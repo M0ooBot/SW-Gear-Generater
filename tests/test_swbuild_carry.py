@@ -694,6 +694,7 @@ def test_a_tied_cluster_falls_back_alone_while_the_other_is_carried_with_every_m
     assert {r[0] for r in cr.remade} == {"Lock1", "Lock2"}
     assert fake.mate("Lock3", R2[T_ASM]) is None and fake.mate("Lock1", R2[T_ASM]) is not None
     assert {"carried2-1", "carried3-1"} <= fake.fixed
+    fake.strict_handles = False                                       # the test's own look, after the job
     assert all(fake.constrained_status(h) == findings.COMPONENT_UNDER_DEFINED for h in ("gear1-1", "gear4-1"))
 
 
@@ -788,8 +789,11 @@ def test_a_lightweight_user_component_is_carried_resolved_and_its_mates_named(mo
     cr = _build_again(fake).carry
     assert cr.inserted == [("Sprocket-1", "carried1-1")]
     assert {n.item: n.why for n in cr.named} == {"Lock1": "lightweight"}
-    assert "Sprocket-1" in fake.lightweight                         # nothing resolved in the old assembly
+    # The audit (2026-11-17): the fake's default is SolidWorks' as the first M9 run read it, opening the part to insert
+    # it resolves the old assembly's instance (lightweight is per file); the read itself resolved nothing.
+    assert "Sprocket-1" not in fake.lightweight and cr.resolved_in_old == ("Sprocket-1",)
     read = fake.calls[:[n for n, *_ in fake.calls].index("new_part")]
+    assert ("open_document", (SPROCKET,)) not in read                # R opens nothing of the user's
     assert ("root_component", (True,)) not in read      # never in the old assembly beside its lightweight component
 
 
@@ -1057,6 +1061,30 @@ def test_the_gear_mate_read_turning_the_wrong_way_is_made_once_more_with_the_oth
     fake.readback_alignment = {"Gear6": 1}
     cr = _build_again(fake).carry
     assert {n.item: n.why for n in cr.named} == {"Gear6": "differs"} and fake.mate("Gear6", R2[T_ASM]) is None
+
+
+def test_a_gear_mate_on_a_face_read_against_its_gears_axis_is_made_on_the_gear_axis_with_the_flip_that_keeps_its_sense(
+        monkeypatch, every_gate):
+    """The audit (2026-11-17): EntityParams are the entities' own directions in the assembly, as SolidWorks gives
+    them (W5 ring_mate_sense, W6 tier 9), not one direction for every entity. A user gear mate on G1's cylindrical face,
+    whose axis SolidWorks reads against G1's Z, is made again on G1's Gear Axis (§4.3), which reads along it: with the
+    old Flip it turns the other way, so it is made once more with the other Flip, and kept turning as it did."""
+    every_gate()
+    fake = _old_train()
+    _isfile(monkeypatch, fake)
+    gear = fake.user_mate(T_ASM, "Gear7", kind="gear", a=("Sprocket-1", "Sprocket Axis"), b=("gear1-1", "face:root"))
+    gear.ratio, gear.flip = (20.0, 17.0), False
+    fake.coaxial[(_key(P17), "face:root")] = True
+    fake.entity_axes = {"face:root": (0.0, 0.0, -1.0)}
+    cr = _build_again(fake).carry
+    old = next(m for m in cr.work.mates if m.name == "Gear7")
+    assert swbuild.gear_sense(old.values, old.params) == 1                     # Reverse 0 on entities lying opposite
+    flips = [a[3] for n, a in fake.calls if n == "remake_mate" and a[2] == "Gear7"]
+    assert flips == [None, True] and "Gear7" in {r[0] for r in cr.remade}, (cr.named, cr.stopped)
+    made = fake.mate("Gear7", R2[T_ASM])
+    assert made.b == ("gear1-1", "Gear Axis") and made.flip is True
+    assert swbuild.gear_sense(fake.mate_definition(next(h for h, n in fake.mate_handles.items() if n == "Gear7")).values,
+                              ((0, 0, 0, 0, 0, 1.0), (0, 0, 0, 0, 0, 1.0))) == 1
 
 
 def _tc_again(monkeypatch, flags, tweak=lambda fake: None, anchor="gear2-1"):
@@ -1546,3 +1574,93 @@ def test_an_entity_of_a_type_the_app_does_not_take_says_so_as_structure(monkeypa
     cr = _build_again(fake).carry
     named = {n.item: n.subjects for n in cr.named}
     assert named["Coincident8"][1:] == (swbuild.CAUSE_TYPE_NOT_TAKEN, "11")
+
+
+# -- the audit of the fake's defaults against SolidWorks as measured (W9D-PACKAGE-A.md, 2026-11-17) ------------------
+
+
+@pytest.mark.parametrize("type_name, values, word", [
+    # As SolidWorks 2026 read them (W9c S5 (a); the first M9 run, w9d-demo-sw2026-…-2 :604-605, :634; W9c m1):
+    ("MateDistanceDim", (("Distance", 0.09), ("MaximumDistance", 0.09), ("MinimumDistance", 0.09)), "distance"),
+    ("MatePlanarAngleDim", (("Angle", 1.5708), ("MaximumAngle", 1.5708), ("MinimumAngle", 1.5708)), "angle"),
+    ("MateLimitDistanceDim", (("Distance", 0.02), ("MaximumDistance", 0.03), ("MinimumDistance", 0.01)),
+     "limit distance"),
+    ("MateLimitPlanarAngleDim", (("Angle", 0.17), ("MaximumAngle", 0.70), ("MinimumAngle", 0.0)), "limit angle"),
+    # The type name not read (a recorded inventory, say): the range decides, and only a range that is one.
+    ("", (("Distance", 0.09), ("MaximumDistance", 0.09), ("MinimumDistance", 0.09)), "distance"),
+    ("", (("Distance", 0.02), ("MaximumDistance", 0.03), ("MinimumDistance", 0.01)), "limit distance"),
+    ("", (("MaximumDistance", 0.02), ("MinimumDistance", 0.01)), "limit distance"),
+    ("", (), "distance"),
+])
+def test_a_plain_distance_or_angle_reading_its_range_is_no_limit_mate(type_name, values, word):
+    """The audit: SolidWorks reads a plain distance's or angle's range too, each end its value, so the range alone
+    made every one a limit mate (named ``limit distance``, gated by a word M9 might not set)."""
+    kind = 6 if "Angle" in type_name or any(k == "Angle" for k, _ in values) else 5
+    m = mate("M", kind, ent(USER, "Sprocket-1", ENTITY_PLANE, "plane1"), ent(APP, "Sun", ENTITY_PLANE, "plane1"),
+             values=values, type_name=type_name)
+    assert swbuild.carry_kind(m) == word
+
+
+def test_a_plain_distance_as_solidworks_reads_it_is_made_again_under_the_distance_word(monkeypatch, every_gate):
+    """The audit: the fake now reads a plain distance as SolidWorks does (its range, each end its value, and
+    MateDistanceDim); it is made again while CARRY_REMAKE_KINDS holds "distance" and not "limit distance"."""
+    every_gate(CARRY_REMAKE_KINDS=("distance", "lock"))
+    fake = _old_train()
+    _isfile(monkeypatch, fake)
+    fake.user_mate(T_ASM, "UserDist4", kind="distance", a=("Sprocket-1", "plane1"), b=("gear1-1", "plane1"))
+    fake.memory_mates[_key(T_ASM)][-1].value = 90.0
+    cr = _build_again(fake).carry
+    old = next(m for m in cr.work.mates if m.name == "UserDist4")
+    assert dict(old.values)["MaximumDistance"] == dict(old.values)["Distance"] and old.type_name == "MateDistanceDim"
+    assert "UserDist4" in {r[0] for r in cr.remade} and cr.named == [], cr.named
+    assert fake.mate("UserDist4", R2[T_ASM]).kind == "distance"
+
+
+def test_a_gear_mate_read_back_swapped_is_made_once_more_with_its_counts_swapped_too(monkeypatch, every_gate):
+    """The audit: AddMate5's numerator goes with the first selection, so the reversed retry reverses the counts with
+    the selections; else the gear mate would come back at the inverse ratio (and kept, where SolidWorks reads the
+    ratio by selection)."""
+    every_gate()
+    fake = _old_train()
+    _isfile(monkeypatch, fake)
+    gear = fake.user_mate(T_ASM, "Gear6", kind="gear", a=("Sprocket-1", "Sprocket Axis"), b=("gear1-1", "Gear Axis"))
+    gear.ratio, gear.flip = (20.0, 17.0), False
+    fake.kind_swap = {"Gear6"}                                  # SolidWorks keeps the selection the other way
+    cr = _build_again(fake).carry
+    assert "Gear6" in {r[0] for r in cr.remade}, cr.named
+    made = fake.mate("Gear6", R2[T_ASM])
+    assert (made.a, made.b) == (("carried1-1", "Sprocket Axis"), ("gear1-1", "Gear Axis"))
+    assert fake.definition("Gear6", R2[T_ASM]) == fake.definition("Gear6", T_ASM)   # each count with its own gear
+
+
+def test_a_plane_on_a_lightweight_component_is_unread_for_no_document_not_for_its_type(monkeypatch, every_gate):
+    """The audit: ReferenceType2 answers a plane on a lightweight component, but its tree order needs the part's
+    document (none), so its kind reads unread; that is not "a kind of entity Gear Generator does not take" (S6), and
+    the mate is named lightweight (D10)."""
+    every_gate()
+    fake = _old_train()
+    _isfile(monkeypatch, fake)
+    fake.user_mate(T_ASM, "UserDist4", kind="distance", a=("Sprocket-1", "plane1"), b=("gear1-1", "plane1"))
+    fake.lightweight.add("Sprocket-1")
+    cr = _build_again(fake).carry
+    entity = next(m for m in cr.work.mates if m.name == "UserDist4").entities[0]
+    assert (entity.kind, entity.select_type) == (ENTITY_UNREAD, swbuild.SEL_DATUMPLANES)
+    assert entity.cause != swbuild.CAUSE_TYPE_NOT_TAKEN
+    assert {n.item: n.why for n in cr.named}["UserDist4"] == "lightweight"
+
+
+def test_the_closed_assemblys_dependencies_are_every_file_it_holds_as_solidworks_lists_them(monkeypatch, every_gate):
+    """The audit: the fake's GetDocumentDependencies2 lists what the closed assembly holds (the app's parts, the
+    layout, the user's parts), as DEPENDENCIES_READ read nine; R.2 judges each, and reads the old assembly."""
+    every_gate()
+    fake = _closed(_old_train())
+    _isfile(monkeypatch, fake)
+    listed = {_key(p) for p in fake.dependencies(T_ASM)}
+    assert {_key(P17), _key(P68), _key(P51), _key(T_LAYOUT), _key(SPROCKET)} <= listed
+    cr = _build_again(fake).carry
+    assert cr.work.how == swbuild.OLD_READ_ONLY, cr.work.unread
+    fake = _closed(_old_train())
+    _isfile(monkeypatch, fake)
+    fake.file_versions[_key(P68)] = 32                      # one app part last saved by 2024: not read
+    cr = _build_again(fake).carry
+    assert cr.work.how == swbuild.OLD_UNREAD and "last saved by this SolidWorks" in cr.work.unread[0]

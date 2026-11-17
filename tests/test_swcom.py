@@ -3464,3 +3464,61 @@ def test_with_no_part_document_both_reference_reads_say_the_part_is_not_loaded(m
     said = "its part is not loaded in SolidWorks (lightweight or suppressed)"
     assert session.entity_references("old1", [("oldmate1", 0, "face")]) == [("face", "", None, None, "", said)]
     assert session.entity_reference("oldmate1", 0) == ("feature", "", None, said)
+
+
+@pytest.mark.parametrize("answers, counts, selected", [
+    ((None,), (0, 1), True),                  # Select4's return not a Boolean, the face selected: taken by the count
+    ((False, True), (0, 0, 1), True),        # False with nothing selected, then it took (_retry_select's reading)
+    ((True,) * 4, (0,) * 5, False),          # True with nothing selected, every time: not selected
+])
+def test_a_carry_selection_is_judged_by_the_selection_count_as_the_probes_judged_it(monkeypatch, answers, counts,
+                                                                                   selected):
+    """The audit (W9d): W9c S5 (c) and W9d faces (c) selected a resolved reference's entity by GetCorresponding and
+    Select4 and judged by the selection count, never Select4's return; and Select4 has answered False with nothing
+    selected just after a document was made, then worked. select_by_reference judges so, retried briefly."""
+    monkeypatch.setattr(swcom.time, "sleep", lambda _seconds: None)
+    monkeypatch.setattr(swcom, "_out_unwritten", lambda: None)
+    answer, count = iter(answers), iter(counts)
+
+    class Data:
+        Mark = 0
+
+    class Manager:
+        CreateSelectData = property(lambda self: Data())     # a zero-argument member: late binding hands its value
+
+        def GetSelectedObjectCount2(self, mark):
+            return next(count)
+
+    class Doc:
+        SelectionManager = Manager()
+
+    class Entity:
+        def GetType(self):
+            return 2
+
+        def Select4(self, append, data):
+            return next(answer)
+
+    class ByReference:
+        def GetObjectByPersistReference3(self, raw, code):
+            return Entity(), 0
+
+    class Part:
+        Extension = ByReference()
+
+    class Component:
+        GetModelDoc2 = Part()
+
+        def GetCorresponding(self, entity):
+            return Entity()
+
+    session = swcom.Session.__new__(swcom.Session)
+    session.revision = (34, 0, 0)
+    monkeypatch.setattr(session, "_component", lambda handle: Component(), raising=False)
+    monkeypatch.setattr(session, "_component_name", lambda handle: "Sprocket-5", raising=False)
+    monkeypatch.setattr(session, "_doc", lambda: Doc(), raising=False)
+    if selected:
+        session.select_by_reference("carried1", "face", "0102", False)
+    else:
+        with pytest.raises(SolidWorksError, match="could not be selected"):
+            session.select_by_reference("carried1", "face", "0102", False)
