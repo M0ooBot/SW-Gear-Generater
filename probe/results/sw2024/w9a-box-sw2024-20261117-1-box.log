@@ -1,0 +1,157 @@
+awake   display and system held awake for the run (previous state -0x80000000)
+run     2026-11-17 01:31:03; W9a demonstration from C:\Users\M0obo\Documents\GearGeneratorProbe\w9a-box-sw2024-20261117-013038\snap\src (snapshot: b985cab); sections ['box']; masters {'rangebox': 'C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9-s0-sw2024-20261116-064725\\out\\rangebox.master', 'setup': '', 'reducer': ''}; redo False
+ok      the app's settings and Recent list go into this run's folder, not the user's: C:\Users\M0obo\Documents\GearGeneratorProbe\w9a-box-sw2024-20261117-013038\out\appdata\Gear Generator\recent.json
+attach  SolidWorks 2024 (revision 32.5.0) (revision 32.5.0), PID 2904; SolidWorks 0.66 GB private, 10.67 GB free
+open    before: []
+findings USER_MATE_PUT_ROUTE "put along, the user's locks left on", USER_TIE_RULE 'not COMPONENT_UNDER_DEFINED', WHATS_WRONG_OPENS_ON_PART_REBUILD False, the branches {'USER_MATE_PUT_FIXED_GEAR_ON_2024': None, 'USER_MATE_PUT_FIXED_GEAR_ON_2026': None, 'USER_MATE_PUT_HELD_GEAR_ON_2024': None, 'USER_MATE_PUT_HELD_GEAR_ON_2026': None, 'USER_MATE_PUT_NO_CARRIER_MODES_ON_2024': None, 'USER_MATE_PUT_NO_CARRIER_MODES_ON_2026': None, 'USER_MATE_PUT_NO_CARRIER_ON_2024': None, 'USER_MATE_PUT_NO_CARRIER_ON_2026': True, 'USER_MATE_PUT_SUBASSEMBLY_ON_2024': None, 'USER_MATE_PUT_SUBASSEMBLY_ON_2026': None}
+DIALOG  SolidWorks shows '': ['Title', 'Description', 'Button1', 'Button2', 'Hyperlink Text 1', 'Hyperlink Text 2']
+NOTE    SolidWorks' notification box came up while no SolidWorks call was in progress (exempt by the coordinator's ruling; nothing answers it)
+excel   started our own Excel, PID 3228, 16.0 build 20527.0
+== box  SolidWorks' What's Wrong box in the app's value Update with two user mates in error (2024's m3 STOP), measured: m3's set-up to just before that Update, then the press waited for up to 1800 s under a watch that only logs; nothing set, answered, closed or saved once a box is seen. Run by name, last in a fresh session
+copy    rangebox.master -> box: 15 files, mtimes kept
+        RangeBox.xlsx's record: 18 path(s) put onto the copy: ['record.workbook', 'record.parts[0].path', 'record.parts[1].path', 'record.parts[2].path', 'record.parts[3].path', 'record.parts[4].path', 'record.assembly', 'record.gearbox.layout', 'record.gearbox.assembly', 'record.gearbox.components[0].part', 'record.gearbox.components[1].part', 'record.gearbox.components[2].part', 'record.gearbox.components[3].part', 'record.gearbox.components[4].part', 'record.gearbox.components[5].part', 'record.gearbox.components[6].part', 'record.gearbox.components[7].part', 'record.gearbox.carriers[0].path']
+        Dog_m1.25_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.25_N13.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.25_N29.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Ring_m1.25_N55.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Sleeve_m1.25_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+ok      box: the copy's record is valid: owner ('ours', ''); left on the master []; missing in the copy []; clear_saved dropped nothing (unsaved, mismatched ([], [])); the read's digest equals the record's
+probe   W6-PLAN §7.1: RangeBox.SLDASM of box, whose stored references name a folder that is gone, opened under the dialog watch (120 s at most)
+DIALOG  SolidWorks shows 'Opening': ['Close', 'Opening Component 2 of 10', 'Update\nAssembly', 'Update\nGraphics', 'Opening File: C:\\Use...\\out\\box\\Gear_m1.25_N13.SLDPRT', 'Elapsed time: 0s', 'This file was last opened in 32 seconds', 'For more information, view: '] (a progress box that closes itself; not logged again)
+fact    box: the copy's assembly opened in 5.0 s; marked modified straight after the open: {'RangeBox_Layout.SLDPRT': False, 'RangeBox_Carrier_Carrier.SLDPRT': False, 'Gear_m1.25_N29.SLDPRT': False, 'Gear_m1.25_N13.SLDPRT': False, 'Ring_m1.25_N55.SLDPRT': False, 'Dog_m1.25_N17.SLDPRT': False, 'Sleeve_m1.25_N17.SLDPRT': False, 'RangeBox.SLDASM': False}
+fact    W6-PLAN §7.1: dialogs while the copied assembly opened: none
+ok      box: SolidWorks found all 9 components and the layout in the copy, and the copy closed without saving (left []): elsewhere none
+ok      read RangeBox.xlsx: ok
+        warning Gears!F3: Planet: 13 teeth at 20° is below the undercut limit of 17: a generated gear would lose the bottom of its flanks, which this profile does not show. A profile shift of 0.24 or more would clear it.
+        warning Gears!F3: Planet: The tooth tip is 0.36 mm thick, under 0.3 × module (0.375 mm).
+        warning Gears!F7: RangeSlv: The teeth's tips, at 18.75 mm, are inside the base circle of 19.968 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!A3: Planet (13 teeth) is below the undercut limit, which is not modelled, and meshes Sun (29 teeth): the build checks interference only where the gears stand, so check Planet with Sun turning in SolidWorks.
+        5 shafts · 6 gears · 2 meshes; gate ''
+ok      box: the copy reads as built from this workbook, its assembly in the copy
+ok      Excel opened RangeBox.xlsx with no dialog or repair: []
+== user parts  Sprocket (spur 20 teeth, module 1.25, face 6, bore 10) and Housing (spur 40, module 1.25, face 4, bore 30, standing in) built by the strip's own plan_for and swbuild.build
+ok      user parts: Sprocket.SLDPRT built and saved: ok True, failures []
+ok      user parts: Housing.SLDPRT built and saved: ok True, failures []
+ok      user parts: closed: left []
+ok      the M3 findings the app reads are in findings.py: missing none
+ok      the app reads the M3 findings as this script does: None / None
+fact    the M3 findings for 2024: {'ASSEMBLY_REBUILD_WITH_USER_MATE_IN_ERROR_ON_2024': True, 'ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_2024': None, 'WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_2024': None}
+fact    box: SolidWorks' "show errors every rebuild" (toggle 77) reads True
+DIALOG  SolidWorks shows '': ['Close', 'Opened 10\nComponents', 'Updating\nAssembly', 'Update\nGraphics', 'Post load updating', 'Elapsed time: 0s', 'This file was last opened in 32 seconds', 'For more information, view: ']
+fact    box: inserted ['Sprocket-1', 'Housing-1'] with H active; mates {'UserAxis': 1, 'UserFront': 1} (AddMate5 status)
+        UserAxis: as made {'H': False, 'N': False, 'L': False}; set {'H': False, 'N': False, 'L': False}
+        UserFront: as made {'H': False, 'N': False, 'L': False}; set {'H': False, 'N': False, 'L': False}
+ok      box: the components are named ['Sprocket-1', 'Housing-1']
+ok      box: every new mate's flag reads back as set in every mode
+ok      box: every mate on in H reads error code 0 after the user's work: []
+ok      box: the baseline's mates were made sound (AddMate5 status 1): {'UserAxis': 1, 'UserFront': 1}
+fact    box: UserFront left Sprocket-1's origin at z -100.000000 (inserted at 100: the side AddMate5's Flip False took); Housing-1 at z 60.000000; their Front planes 160.000000 mm apart
+person  saved in SolidWorks (the user's sprocket and housing): ['RangeBox.SLDASM']
+fact    box baseline: ForceRebuild (the app's train route) returned True; GetWhatsWrongCount 0; mates in error none; components in error none; windows new none
+ok      box: with nothing in error the assembly rebuild returns True and no mate is in error
+-- box  a user mate in error: UserGap, Sprocket-1's Front plane 161.000000 mm from Housing-1's (the distance read plus 1 mm), which UserFront contradicts on either side
+fact    box: UserGap made: AddMate5 status 5 (over-defining is 5); flags {'H': False, 'N': False, 'L': False}
+fact    box a user mate in error: ForceRebuild (the app's train route) returned True; GetWhatsWrongCount 3; mates in error {'UserFront': 51, 'UserGap': 51}; components in error none; windows new none
+ok      box: only the user's mates read in error, so the reading answers M3: user {'UserFront': 51, 'UserGap': 51} (codes as read, not read for meaning: findings.MATE_ERROR_2024), the app's none
+answer  M3 (assembly, a user mate in error): the rebuild returned True, What's Wrong 3, codes {'UserFront': 51, 'UserGap': 51}, no window
+person  saved in SolidWorks (the mate in error, as the user leaves it): ['RangeBox.SLDASM']
+-- box  a quiet press records the inventory, Sun's Backlash 0.4 typed, then the press under the box watch
+ok      box mate in error: the quiet press: the footer offers Update SolidWorks (shown True, enabled True, Build again… needed False)
+update  SolidWorks 4.07 GB private, 10.10 GB free
+        in 129.6 s; SolidWorks 6.97 GB private, 10.16 GB free; loaded from disk []
+        W9a: carried []; renamed []; user in error []; user features in error []; inventory read yes; failures []
+ok      the Update's check phase found no gear mate turning against its mesh: []
+status  [green] SolidWorks already matches the workbook: nothing was changed. It worked in H, the configuration that was active; it did not show the other modes, since nothing in H needed changing.
+fact    box mate in error: the quiet press: the press took 129.7 s; SolidWorks calls by member {'OpenDoc6': 9, 'IsSuppressed2': 92, 'GetSystemValue3': 1}
+        shows and puts in order: []
+        configuration 'H'; visited []; put_in []; placed []; unsuppressed_in []; suppressed_in []; slid []; values_restored []; extra configurations []; extra mates []; senses unread []; positions per configuration False; failures []
+fact    box mate in error: the quiet press: the press took 130 s
+ok      box mate in error: the quiet press read the user's work and changed nothing: ok
+excel   Gears!P2 := 0.4
+excel   saved RangeBox.xlsx
+poll    a new read 0.0 s after asking; changes:
+          Gears!P2 Sun Backlash blank → 0.4
+ok      read RangeBox.xlsx: ok
+        warning Gears!F3: Planet: 13 teeth at 20° is below the undercut limit of 17: a generated gear would lose the bottom of its flanks, which this profile does not show. A profile shift of 0.24 or more would clear it.
+        warning Gears!F3: Planet: The tooth tip is 0.36 mm thick, under 0.3 × module (0.375 mm).
+        warning Gears!F7: RangeSlv: The teeth's tips, at 18.75 mm, are inside the base circle of 19.968 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!A3: Planet (13 teeth) is below the undercut limit, which is not modelled, and meshes Sun (29 teeth): the build checks interference only where the gears stand, so check Planet with Sun turning in SolidWorks.
+        5 shafts · 6 gears · 2 meshes; gate ''
+classify parts changed ['Gear_m1.25_N29.SLDPRT']; moved []; re-place []; structural []; missing []; unsaved []; refusal ''; turning True; axial []; ratios []
+        layout globals wanted []
+summary Update SolidWorks will change Sun's values (Gear_m1.25_N29).
+footer  (box mate in error, before the press) [green] Update SolidWorks will change Sun's values (Gear_m1.25_N29). It was built with a configuration per mode (H, N and L), each named as its mode, and saved in H; to switch mode, double-click another mode's configuration in SolidWorks' ConfigurationManager. Drag Sun in SolidWorks and the rest of its train follow. A turn you give the gears in one mode can show in other modes, so a dog can stand across its sleeve in another; to put the gears back there, press Update SolidWorks with that mode showing. Carrier (the carrier) is axes and planes only, so it has nothing to drag. As read at 01:34, Update SolidWorks leaves your Sprocket-1, Housing-1 and 3 mates as they are. Your UserFront and UserGap were already in error in SolidWorks then.
+        button 'Build again…' on; Update SolidWorks shown on primary
+line    [green] As read at 01:34, Update SolidWorks leaves your Sprocket-1, Housing-1 and 3 mates as they are. Your UserFront and UserGap were already in error in SolidWorks then.
+        predicted: carried []; problems []; refused (recorded) []; changed since False; unread ties []
+ok      box mate in error, before the press: the footer says the user-work line as the window would: 'As read at 01:34, Update SolidWorks leaves your Sprocket-1, Housing-1 and 3 mate'…
+fact    box: the footer before the press: As read at 01:34, Update SolidWorks leaves your Sprocket-1, Housing-1 and 3 mates as they are. Your UserFront and UserGap were already in error in SolidWorks then.
+read    box before the press (active H; front document RangeBox.SLDASM): mates in error {'UserFront': 51, 'UserGap': 51}; not free {'Ring': 3, 'Sprocket-1': 4, 'Housing-1': 3}; marked none; rebuild state 0
+fact    box: before the press, by raw reads on a second connection: Backlash in Gear_m1.25_N29.SLDPRT {'equation': '"Backlash"= 0.3 * "Module"', 'value': 0.375}; save flags {'RangeBox_Layout.SLDPRT': False, 'RangeBox_Carrier_Carrier.SLDPRT': False, 'Gear_m1.25_N29.SLDPRT': False, 'Gear_m1.25_N13.SLDPRT': False, 'Ring_m1.25_N55.SLDPRT': False, 'Dog_m1.25_N17.SLDPRT': False, 'Sleeve_m1.25_N17.SLDPRT': False, 'Housing.SLDPRT': False, 'Sprocket.SLDPRT': False, 'RangeBox.SLDASM': False}; "show errors every rebuild" True; SolidWorks' frame {'class': 'Afx:0000000140000000:8:0000000000010003:0000000000000000:00000000208116F1', 'title_present': True, 'title_has_document': True} enabled True; the press waited for up to 1800 s
+ok      box: the app's value Update (Sun's Backlash 0.4) with the user's two mates in error: the footer offers Update SolidWorks (shown True, enabled True, Build again… needed False)
+update  SolidWorks 6.96 GB private, 10.18 GB free
+        box +    0.0 s: in None; 11787 calls, 0 traced
+        box +   10.0 s: in None; 14170 calls, 8 traced
+        box +   20.1 s: in None; 15008 calls, 8 traced
+        box +   30.1 s: in GetErrorCode2; 15878 calls, 11 traced
+        box +   40.2 s: in GetNextSubFeature; 16664 calls, 52 traced
+        box +   50.2 s: in GetTypeName2; 17500 calls, 76 traced
+        box +   60.3 s: in GetNextSubFeature; 18363 calls, 92 traced
+        box +   70.3 s: in Name; 19241 calls, 92 traced
+        box +   80.4 s: in None; 20120 calls, 94 traced
+        box +   90.4 s: in FirstFeature; 21024 calls, 98 traced
+fact    box: a box came up 97.45 s into the press, the worker in ActivateDoc3 (last traced ['OpenDoc6'], 21648 calls, 104 traced so far); SolidWorks' frame enabled True; the box [{'hwnd': 42145384, 'class': '#32770', 'title': "What's Wrong", 'texts': ['Show &errors', 'Show &warnings', "&Display What's Wrong during rebuild", '&FeatureXpert', '&Close', '&Help', 'Custom1', '* Select FeatureXpert to attempt repair of the highlighted error(s).    ', '&Save Anyway?'], 'style': '0x96ce0044', 'exstyle': '0x10100', 'popup': True, 'child': False, 'dlg_modal_frame': False, 'topmost': False, 'owner': 55447784, 'owner_class': 'Afx:0000000140000000:8:0000000000010003:0000000000000000:00000000208116F1', 'owner_title_present': True, 'owner_title_has_document': True, 'owner_is_frame': True, 'visible': True, 'enabled': True}]
+fact    box: the harmless read (the open documents, a second connection) with the box up: {'answered': True, 'seconds': 0.5, 'open': ['RangeBox_Layout.SLDPRT', 'RangeBox_Carrier_Carrier.SLDPRT', 'Gear_m1.25_N29.SLDPRT', 'Gear_m1.25_N13.SLDPRT', 'Ring_m1.25_N55.SLDPRT', 'Dog_m1.25_N17.SLDPRT', 'Sleeve_m1.25_N17.SLDPRT', 'Housing.SLDPRT', 'Sprocket.SLDPRT', 'RangeBox.SLDASM']}
+DIALOG  SolidWorks shows "What's Wrong": ['Show &errors', 'Show &warnings', "&Display What's Wrong during rebuild", '&FeatureXpert', '&Close', '&Help', 'Custom1', '* Select FeatureXpert to attempt repair of the highlighted error(s).    ']
+NOTE    a SolidWorks window "What's Wrong" ['Show &errors', 'Show &warnings', "&Display What's Wrong during rebuild", '&FeatureXpert', '&Close', '&Help', 'Custom1', '* Select FeatureXpert to attempt repair of the highlighted error(s).    '] came up while no SolidWorks call was in progress, before this run made any configuration
+fact    Update SolidWorks: W8's watch logged ['a SolidWorks window "What\'s Wrong" [\'Show &errors\', \'Show &warnings\', "&Display What\'s Wrong during rebuild", \'&FeatureXpert\', \'&Close\', \'&Help\', \'Custom1\', \'* Select FeatureXpert to attempt repair of the highlighted error(s).    \'] came up while no SolidWorks call was in progress, before this run made any configuration'] (box mode: logged, not a STOP; the job is waited for)
+        box +  100.5 s: in GetNextFeature; 22097 calls, 104 traced
+        box +  110.5 s: in Name; 22947 calls, 104 traced
+fact    box: the box was gone 120.08 s into the press (last seen at 119.57 s), the worker then in ShowConfiguration2, 23767 calls so far; nothing here closed it
+        box +  120.6 s: in None; 23775 calls, 107 traced
+        box +  130.6 s: in None; 24528 calls, 114 traced
+        box +  140.7 s: in None; 25238 calls, 137 traced
+        box +  150.7 s: in SetSuppression2; 26037 calls, 145 traced
+        box +  160.8 s: in None; 26814 calls, 151 traced
+        box +  170.8 s: in None; 27610 calls, 180 traced
+        box +  180.9 s: in GetNextFeature; 28297 calls, 185 traced
+        box +  190.9 s: in GetNextSubFeature; 29103 calls, 192 traced
+        box +  201.0 s: in GetNextFeature; 29845 calls, 216 traced
+        box +  211.0 s: in GetNextSubFeature; 30644 calls, 223 traced
+        box +  221.1 s: in GetNextFeature; 31415 calls, 230 traced
+        box +  231.1 s: in GetNextSubFeature; 32200 calls, 259 traced
+        box +  241.2 s: in Name; 32980 calls, 262 traced
+        box +  251.2 s: in GetNextFeature; 33730 calls, 270 traced
+        box +  261.3 s: in GetTypeName2; 34471 calls, 293 traced
+        box +  271.3 s: in None; 35312 calls, 300 traced
+        box +  281.4 s: in None; 36041 calls, 308 traced
+        box +  291.4 s: in GetFirstSubFeature; 36828 calls, 316 traced
+        box +  301.5 s: in GetNextFeature; 37690 calls, 340 traced
+        in 306.5 s; SolidWorks 7.11 GB private, 10.04 GB free; loaded from disk []
+        W9a: carried []; renamed []; user in error [('N', 'UserFront'), ('N', 'UserGap'), ('L', 'UserFront'), ('L', 'UserGap'), ('H', 'UserFront'), ('H', 'UserGap')]; user features in error []; inventory read yes; failures []
+ok      the Update's check phase found no gear mate turning against its mesh: []
+status  [green] Updated SolidWorks: changed 1 variable in Gear_m1.25_N29, re-placed Carrier (the carrier), Sun, Planet (3 copies), HighDog, LowDog and RangeSlv in every mode; no interference between the gears in any mode, where they stand. It worked in H, the configuration that was active, then showed and checked N and L and left the assembly in H. Your UserFront and UserGap were in error in SolidWorks in the mode showing before this Update changed anything; after it, UserFront in N, L and H and UserGap in N, L and H are in error. Save Gear_m1.25_N29 and RangeBox in SolidWorks to keep them.
+fact    box: the app's value Update (Sun's Backlash 0.4) with the user's two mates in error: the press took 306.6 s; SolidWorks calls by member {'OpenDoc6': 10, 'IsSuppressed2': 227, 'GetSystemValue3': 4, 'ForceRebuild3': 38, 'ShowConfiguration2': 3, 'SetSuppression2': 40, 'put': 24}
+        shows and puts in order: [('ShowConfiguration2', 'N'), ('put', 'RangeBox_Carrier_Carrier-1'), ('put', 'Gear_m1.25_N29-1'), ('put', 'Gear_m1.25_N13-1'), ('put', 'Gear_m1.25_N13-2'), ('put', 'Gear_m1.25_N13-3'), ('put', 'Dog_m1.25_N17-1'), ('put', 'Dog_m1.25_N17-2'), ('put', 'Sleeve_m1.25_N17-1'), ('ShowConfiguration2', 'L'), ('put', 'RangeBox_Carrier_Carrier-1'), ('put', 'Gear_m1.25_N29-1'), ('put', 'Gear_m1.25_N13-1'), ('put', 'Gear_m1.25_N13-2'), ('put', 'Gear_m1.25_N13-3'), ('put', 'Dog_m1.25_N17-1'), ('put', 'Dog_m1.25_N17-2'), ('put', 'Sleeve_m1.25_N17-1'), ('ShowConfiguration2', 'H'), ('put', 'RangeBox_Carrier_Carrier-1'), ('put', 'Gear_m1.25_N29-1'), ('put', 'Gear_m1.25_N13-1'), ('put', 'Gear_m1.25_N13-2'), ('put', 'Gear_m1.25_N13-3'), ('put', 'Dog_m1.25_N17-1'), ('put', 'Dog_m1.25_N17-2'), ('put', 'Sleeve_m1.25_N17-1')]
+        configuration 'H'; visited ['N', 'L']; put_in ['N', 'L', 'H']; placed ['Carrier carrier', 'Sun', 'Planet copy 1', 'Planet copy 2', 'Planet copy 3', 'HighDog', 'LowDog', 'RangeSlv']; unsuppressed_in []; suppressed_in []; slid []; values_restored []; extra configurations []; extra mates []; senses unread []; positions per configuration False; failures []
+        post-check of N: turned False; out of step []; off axis []; clashes []; interference error ''
+        post-check of L: turned False; out of step []; off axis []; clashes []; interference error ''
+        post-check of H: turned False; out of step []; off axis []; clashes []; interference error ''
+fact    box: the app's value Update (Sun's Backlash 0.4) with the user's two mates in error: the press took 307 s
+fact    box: the press returned after 306.49 s, a box not up when it did; ok True; the status: Updated SolidWorks: changed 1 variable in Gear_m1.25_N29, re-placed Carrier (the carrier), Sun, Planet (3 copies), HighDog, LowDog and RangeSlv in every mode; no interference between the gears in any mode, where they stand. It worked in H, the configuration that was active, then showed and checked N and L and left the assembly in H. Your UserFront and UserGap were in error in SolidWorks in the mode showing before this Update changed anything; after it, UserFront in N, L and H and UserGap in N, L and H are in error. Save Gear_m1.25_N29 and RangeBox in SolidWorks to keep them.
+fact    box: at the end, the worker in None; SolidWorks' frame enabled True; boxes still up 0; calls grew after the box was seen True, after it went True
+fact    box: written, raw reads before and after the press: {'Backlash': {'before': {'equation': '"Backlash"= 0.3 * "Module"', 'value': 0.375}, 'after': {'equation': '"Backlash"= 0.4', 'value': 0.4}}, 'flags_changed': {'Gear_m1.25_N29.SLDPRT': (False, True), 'RangeBox.SLDASM': (False, True)}, 'show_errors_every_rebuild': {'before': True, 'after': True}}
+read    box after the press (active H; front document RangeBox.SLDASM): mates in error {'UserFront': 51, 'UserGap': 51}; not free {'Ring': 3, 'Sprocket-1': 4, 'Housing-1': 3}; marked ['Gear_m1.25_N29.SLDPRT', 'RangeBox.SLDASM']; rebuild state 0
+fact    box: after the press, in H: the app bodies 6.6e-10 from their frames on record (at Planet copy 2); the user's components moved 0.0e+00 (at -); the user's mates (code, suppressed) before -> after {'UserAxis': ((0, False), (0, False)), 'UserFront': ((51, False), (51, False)), 'UserGap': ((51, False), (51, False))}; flags changed none; mates in error {'UserFront': 51, 'UserGap': 51}
+propose box (facts only, no finding's value): {'facts_only': True, 'wait': 1800.0, 'box_seen': {'seconds': 97.45, 'call_in_progress': 'ActivateDoc3', 'calls_so_far': 21648, 'last_traced_call': ['OpenDoc6'], 'traced_calls_so_far': 104, 'frame_enabled': True, 'boxes': [{'hwnd': 42145384, 'class': '#32770', 'title': "What's Wrong", 'texts': ['Show &errors', 'Show &warnings', "&Display What's Wrong during rebuild", '&FeatureXpert', '&Close', '&Help', 'Custom1', '* Select FeatureXpert to attempt repair of the highlighted error(s).    ', '&Save Anyway?'], 'style': '0x96ce0044', 'exstyle': '0x10100', 'popup': True, 'child': False, 'dlg_modal_frame': False, 'topmost': False, 'owner': 55447784, 'owner_class': 'Afx:0000000140000000:8:0000000000010003:0000000000000000:00000000208116F1', 'owner_title_present': True, 'owner_title_has_document': True, 'owner_is_frame': True, 'visible': True, 'enabled': True}]}, 'more_boxes': [], 'box_last_seen': 119.57, 'box_gone': {'seconds': 120.08, 'last_seen': 119.57, 'call_in_progress': 'ShowConfiguration2', 'calls_so_far': 23767, 'traced_so_far': 106, 'frame_enabled': True}, 'read_with_box_up': {'answered': True, 'seconds': 0.5, 'open': ['RangeBox_Layout.SLDPRT', 'RangeBox_Carrier_Carrier.SLDPRT', 'Gear_m1.25_N29.SLDPRT', 'Gear_m1.25_N13.SLDPRT', 'Ring_m1.25_N55.SLDPRT', 'Dog_m1.25_N17.SLDPRT', 'Sleeve_m1.25_N17.SLDPRT', 'Housing.SLDPRT', 'Sprocket.SLDPRT', 'RangeBox.SLDASM']}, 'returned': {'seconds': 306.49, 'box_up': False, 'frame_enabled': True, 'calls': 38021}, 'job': 'returned', 'calls_grew': {'after_the_box_was_seen': True, 'after_it_went': True, 'calls_at_the_end': 38021}, 'at_the_end': {'call_in_progress': None, 'last_traced_call': ['IsSuppressed2', 'RangeSlv engages LowDog', 3, ['L']], 'frame_enabled': True, 'boxes_up': []}, 'written': {'Backlash': {'before': {'equation': '"Backlash"= 0.3 * "Module"', 'value': 0.375}, 'after': {'equation': '"Backlash"= 0.4', 'value': 0.4}}, 'flags_changed': {'Gear_m1.25_N29.SLDPRT': (False, True), 'RangeBox.SLDASM': (False, True)}, 'show_errors_every_rebuild': {'before': True, 'after': True}}, 'after_reads': {'mode': 'H', 'app_bodies_gap_to_record': [6.580016531643196e-10, 'Planet copy 2'], 'user_components_moved': [0.0, ''], 'user_mates_code_suppressed_before_after': {'UserAxis': ((0, False), (0, False)), 'UserFront': ((51, False), (51, False)), 'UserGap': ((51, False), (51, False))}, 'user_mate_flags_changed': {}, 'mates_in_error_after': {'UserFront': 51, 'UserGap': 51}}, 'result_ok': True, 'status': 'Updated SolidWorks: changed 1 variable in Gear_m1.25_N29, re-placed Carrier (the carrier), Sun, Planet (3 copies), HighDog, LowDog and RangeSlv in every mode; no interference between the gears in any mode, where they stand. It worked in H, the configuration that was active, then showed and checked N and L and left the assembly in H. Your UserFront and UserGap were in error in SolidWorks in the mode showing before this Update changed anything; after it, UserFront in N, L and H and UserGap in N, L and H are in error. Save Gear_m1.25_N29 and RangeBox in SolidWorks to keep them.'}
+time    box: 670 s; 0 failed; SolidWorks 7.11 GB private, 10.04 GB free
+end     the run ends here by design: box: a box was seen during the press; SolidWorks is left as it stands, the box up or not, for the coordinator to end the session
+excel   left open: ['RangeBox.xlsx'], closed without saving
+excel   quit our own Excel
+close   the SolidWorks worker is hung: nothing closed at the end; SolidWorks is left as it is
+dialogs progress boxes seen {'Calculating Interference Detection': 0, 'Updating...': 0, 'Opening': 1, 'Loading...': 0}; other windows the watch logged: 2
+awake   display and system released (previous state -0x7ffffffd)
+result  written to C:\Users\M0obo\Documents\GearGeneratorProbe\w9a-box-sw2024-20261117-013038\w9a-demo-20261117-013103.json; masters kept {'rangebox': 'C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9-s0-sw2024-20261116-064725\\out\\rangebox.master', 'setup': '', 'reducer': ''}
+noted   SolidWorks' notification box came up while no SolidWorks call was in progress (exempt by the coordinator's ruling; nothing answers it)
+noted   a SolidWorks window "What's Wrong" ['Show &errors', 'Show &warnings', "&Display What's Wrong during rebuild", '&FeatureXpert', '&Close', '&Help', 'Custom1', '* Select FeatureXpert to attempt repair of the highlighted error(s).    '] came up while no SolidWorks call was in progress, before this run made any configuration
+done    0 failed: []; 2 noted; 0 STOP(s), a hung worker included: []

@@ -1,0 +1,383 @@
+{
+ "sections": {
+  "reducer": {
+   "seconds": 86,
+   "failed": []
+  },
+  "box-k3": {
+   "box": {
+    "wait": 1800.0,
+    "frame": {
+     "class": "Afx:0000000140000000:8:0000000000010003:0000000000000000:00000000079B2295",
+     "title_present": true,
+     "title_has_document": true
+    },
+    "before": {
+     "answered": true,
+     "seconds": 0.3,
+     "value": {
+      "open": [
+       "Gear_m1.5_N17.SLDPRT",
+       "Gear_m1.5_N68.SLDPRT",
+       "Gear_m2_N17.SLDPRT",
+       "OutputGear.SLDPRT",
+       "Reducer_12to1_Layout.SLDPRT",
+       "Reducer_12to1.SLDASM"
+      ],
+      "flags": {
+       "Gear_m1.5_N17.SLDPRT": false,
+       "Gear_m1.5_N68.SLDPRT": false,
+       "Gear_m2_N17.SLDPRT": false,
+       "OutputGear.SLDPRT": false,
+       "Reducer_12to1_Layout.SLDPRT": false,
+       "Reducer_12to1.SLDASM": false
+      },
+      "Bore Diameter": {
+       "equation": "\"Bore Diameter\"= 8",
+       "value": 8.0
+      },
+      "show_errors_every_rebuild": true
+     }
+    },
+    "box_seen": {
+     "seconds": 17.57,
+     "call_in_progress": "ActivateDoc3",
+     "calls_so_far": 5500,
+     "last_traced_call": [
+      "OpenDoc6"
+     ],
+     "traced_calls_so_far": 18,
+     "frame_enabled": true,
+     "boxes": [
+      {
+       "hwnd": 7937118,
+       "class": "#32770",
+       "title": "What's Wrong",
+       "texts": [
+        "Show &errors",
+        "Show &warnings",
+        "&Display What's Wrong during rebuild",
+        "&FeatureXpert",
+        "&Close",
+        "&Help",
+        "Custom1",
+        "* Select FeatureXpert to attempt repair of the highlighted error(s).    ",
+        "&Save Anyway?"
+       ],
+       "style": "0x96ce0044",
+       "exstyle": "0x10100",
+       "popup": true,
+       "child": false,
+       "dlg_modal_frame": false,
+       "topmost": false,
+       "owner": 6161360,
+       "owner_class": "Afx:0000000140000000:8:0000000000010003:0000000000000000:00000000079B2295",
+       "owner_title_present": true,
+       "owner_title_has_document": true,
+       "owner_is_frame": true,
+       "visible": true,
+       "enabled": true
+      }
+     ]
+    },
+    "more_boxes": [],
+    "box_last_seen": 22.09,
+    "box_gone": {
+     "seconds": 22.59,
+     "last_seen": 22.09,
+     "call_in_progress": null,
+     "calls_so_far": 6105,
+     "traced_so_far": 19,
+     "frame_enabled": true
+    },
+    "read_with_box_up": {
+     "answered": true,
+     "seconds": 0.5,
+     "open": [
+      "Gear_m1.5_N17.SLDPRT",
+      "Gear_m1.5_N68.SLDPRT",
+      "Gear_m2_N17.SLDPRT",
+      "OutputGear.SLDPRT",
+      "Reducer_12to1_Layout.SLDPRT",
+      "Reducer_12to1.SLDASM"
+     ]
+    },
+    "returned": {
+     "seconds": 22.59,
+     "box_up": false,
+     "frame_enabled": true,
+     "calls": 6105
+    },
+    "progress": [
+     [
+      0.0,
+      null,
+      2919,
+      0
+     ],
+     [
+      10.0,
+      "GetNextSubFeature",
+      4730,
+      6
+     ],
+     [
+      20.1,
+      "GetNextFeature",
+      5843,
+      18
+     ]
+    ],
+    "calls_grew": {
+     "after_the_box_was_seen": true,
+     "after_it_went": false,
+     "calls_at_the_end": 6105
+    },
+    "at_the_end": {
+     "call_in_progress": null,
+     "last_traced_call": [
+      "ForceRebuild3"
+     ],
+     "frame_enabled": true,
+     "boxes_up": []
+    },
+    "job": "returned",
+    "result": {
+     "ok": false,
+     "failures": [
+      [
+       "Reducer_12to1.SLDASM",
+       "SolidWorks reported an error rebuilding Reducer_12to1."
+      ]
+     ],
+     "user_in_error": [],
+     "user_features_in_error": [
+      [
+       "User Keyway",
+       "Gear_m1.5_N17.SLDPRT",
+       51
+      ]
+     ],
+     "in_error_before": [],
+     "sentence": "Update SolidWorks stopped. Reducer_12to1.SLDASM: SolidWorks reported an error rebuilding Reducer_12to1. It had already changed Gear_m1.5_N17, not saved: press Update SolidWorks again once that is put right, or save it in SolidWorks to keep what it did. Your User Keyway in Gear_m1.5_N17 is in error in SolidWorks now, after this Update set Bore Diameter 8 to 14 (Gears!J2) in that part: change your User Keyway to fit, or type 8 in Gears!J2 again."
+    },
+    "after": {
+     "answered": true,
+     "seconds": 0.3,
+     "value": {
+      "open": [
+       "Gear_m1.5_N17.SLDPRT",
+       "Gear_m1.5_N68.SLDPRT",
+       "Gear_m2_N17.SLDPRT",
+       "OutputGear.SLDPRT",
+       "Reducer_12to1_Layout.SLDPRT",
+       "Reducer_12to1.SLDASM"
+      ],
+      "flags": {
+       "Gear_m1.5_N17.SLDPRT": true,
+       "Gear_m1.5_N68.SLDPRT": false,
+       "Gear_m2_N17.SLDPRT": false,
+       "OutputGear.SLDPRT": false,
+       "Reducer_12to1_Layout.SLDPRT": false,
+       "Reducer_12to1.SLDASM": true
+      },
+      "Bore Diameter": {
+       "equation": "\"Bore Diameter\"= 14",
+       "value": 14.0
+      },
+      "show_errors_every_rebuild": true
+     }
+    },
+    "written": {
+     "Bore Diameter": {
+      "before": {
+       "equation": "\"Bore Diameter\"= 8",
+       "value": 8.0
+      },
+      "after": {
+       "equation": "\"Bore Diameter\"= 14",
+       "value": 14.0
+      }
+     },
+     "flags_changed": {
+      "Gear_m1.5_N17.SLDPRT": [
+       false,
+       true
+      ],
+      "Reducer_12to1.SLDASM": [
+       false,
+       true
+      ]
+     },
+     "show_errors_every_rebuild": {
+      "before": true,
+      "after": true
+     }
+    },
+    "after_reads": {
+     "mode": "",
+     "app_bodies_gap_to_record": [
+      0.0,
+      ""
+     ],
+     "user_components_moved": [
+      0.0,
+      ""
+     ],
+     "user_mates_code_suppressed_before_after": {},
+     "user_mate_flags_changed": {},
+     "mates_in_error_after": {}
+    },
+    "w8_watch": {
+     "fails_during_the_press": [],
+     "stops": []
+    }
+   },
+   "seconds": 65,
+   "failed": []
+  }
+ },
+ "stops": [],
+ "proposal": {
+  "box-k3": {
+   "facts_only": true,
+   "wait": 1800.0,
+   "box_seen": {
+    "seconds": 17.57,
+    "call_in_progress": "ActivateDoc3",
+    "calls_so_far": 5500,
+    "last_traced_call": [
+     "OpenDoc6"
+    ],
+    "traced_calls_so_far": 18,
+    "frame_enabled": true,
+    "boxes": [
+     {
+      "hwnd": 7937118,
+      "class": "#32770",
+      "title": "What's Wrong",
+      "texts": [
+       "Show &errors",
+       "Show &warnings",
+       "&Display What's Wrong during rebuild",
+       "&FeatureXpert",
+       "&Close",
+       "&Help",
+       "Custom1",
+       "* Select FeatureXpert to attempt repair of the highlighted error(s).    ",
+       "&Save Anyway?"
+      ],
+      "style": "0x96ce0044",
+      "exstyle": "0x10100",
+      "popup": true,
+      "child": false,
+      "dlg_modal_frame": false,
+      "topmost": false,
+      "owner": 6161360,
+      "owner_class": "Afx:0000000140000000:8:0000000000010003:0000000000000000:00000000079B2295",
+      "owner_title_present": true,
+      "owner_title_has_document": true,
+      "owner_is_frame": true,
+      "visible": true,
+      "enabled": true
+     }
+    ]
+   },
+   "more_boxes": [],
+   "box_last_seen": 22.09,
+   "box_gone": {
+    "seconds": 22.59,
+    "last_seen": 22.09,
+    "call_in_progress": null,
+    "calls_so_far": 6105,
+    "traced_so_far": 19,
+    "frame_enabled": true
+   },
+   "read_with_box_up": {
+    "answered": true,
+    "seconds": 0.5,
+    "open": [
+     "Gear_m1.5_N17.SLDPRT",
+     "Gear_m1.5_N68.SLDPRT",
+     "Gear_m2_N17.SLDPRT",
+     "OutputGear.SLDPRT",
+     "Reducer_12to1_Layout.SLDPRT",
+     "Reducer_12to1.SLDASM"
+    ]
+   },
+   "returned": {
+    "seconds": 22.59,
+    "box_up": false,
+    "frame_enabled": true,
+    "calls": 6105
+   },
+   "job": "returned",
+   "calls_grew": {
+    "after_the_box_was_seen": true,
+    "after_it_went": false,
+    "calls_at_the_end": 6105
+   },
+   "at_the_end": {
+    "call_in_progress": null,
+    "last_traced_call": [
+     "ForceRebuild3"
+    ],
+    "frame_enabled": true,
+    "boxes_up": []
+   },
+   "written": {
+    "Bore Diameter": {
+     "before": {
+      "equation": "\"Bore Diameter\"= 8",
+      "value": 8.0
+     },
+     "after": {
+      "equation": "\"Bore Diameter\"= 14",
+      "value": 14.0
+     }
+    },
+    "flags_changed": {
+     "Gear_m1.5_N17.SLDPRT": [
+      false,
+      true
+     ],
+     "Reducer_12to1.SLDASM": [
+      false,
+      true
+     ]
+    },
+    "show_errors_every_rebuild": {
+     "before": true,
+     "after": true
+    }
+   },
+   "after_reads": {
+    "mode": "",
+    "app_bodies_gap_to_record": [
+     0.0,
+     ""
+    ],
+    "user_components_moved": [
+     0.0,
+     ""
+    ],
+    "user_mates_code_suppressed_before_after": {},
+    "user_mate_flags_changed": {},
+    "mates_in_error_after": {}
+   },
+   "result_ok": false,
+   "status": "Update SolidWorks stopped. Reducer_12to1.SLDASM: SolidWorks reported an error rebuilding Reducer_12to1. It had already changed Gear_m1.5_N17, not saved: press Update SolidWorks again once that is put right, or save it in SolidWorks to keep what it did. Your User Keyway in Gear_m1.5_N17 is in error in SolidWorks now, after this Update set Bore Diameter 8 to 14 (Gears!J2) in that part: change your User Keyway to fit, or type 8 in Gears!J2 again."
+  }
+ },
+ "revision": [
+  32,
+  5,
+  0
+ ],
+ "snapshot": "b985cab",
+ "fails": [],
+ "notes": [
+  "SolidWorks' notification box came up while no SolidWorks call was in progress (exempt by the coordinator's ruling; nothing answers it)",
+  "a SolidWorks window \"What's Wrong\" ['Show &errors', 'Show &warnings', \"&Display What's Wrong during rebuild\", '&FeatureXpert', '&Close', '&Help', 'Custom1', '* Select FeatureXpert to attempt repair of the highlighted error(s).    '] came up while GetNextFeature was in progress, before this run made any configuration"
+ ]
+}

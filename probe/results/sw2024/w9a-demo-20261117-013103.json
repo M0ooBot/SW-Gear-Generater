@@ -1,0 +1,921 @@
+{
+ "sections": {
+  "box": {
+   "show_errors_every_rebuild": true,
+   "placed": {
+    "sprocket_z": -100.0,
+    "housing_z": 60.0,
+    "gap": 160.0
+   },
+   "baseline": {
+    "rebuilt": true,
+    "whats_wrong": 0,
+    "mates": {
+     "Sun on Input Axis": [
+      0,
+      false
+     ],
+     "Sun along Input": [
+      0,
+      false
+     ],
+     "HighDog locked to Sun": [
+      0,
+      false
+     ],
+     "Carrier carrier on Carrier Axis": [
+      0,
+      false
+     ],
+     "Carrier carrier along Carrier": [
+      0,
+      false
+     ],
+     "LowDog locked to Carrier carrier": [
+      0,
+      false
+     ],
+     "Planet copy 1 on Planet copy 1 Axis": [
+      0,
+      false
+     ],
+     "Planet copy 1 along Planet copy 1": [
+      0,
+      false
+     ],
+     "Planet copy 2 on Planet copy 2 Axis": [
+      0,
+      false
+     ],
+     "Planet copy 2 along Planet copy 2": [
+      0,
+      false
+     ],
+     "Planet copy 3 on Planet copy 3 Axis": [
+      0,
+      false
+     ],
+     "Planet copy 3 along Planet copy 3": [
+      0,
+      false
+     ],
+     "RangeSlv on Output Axis": [
+      0,
+      false
+     ],
+     "RangeSlv along Output": [
+      0,
+      false
+     ],
+     "Sun meshes Planet copy 1": [
+      0,
+      false
+     ],
+     "Sun meshes Planet copy 2": [
+      0,
+      false
+     ],
+     "Sun meshes Planet copy 3": [
+      0,
+      false
+     ],
+     "Planet copy 1 meshes Ring": [
+      0,
+      false
+     ],
+     "RangeSlv engages HighDog": [
+      0,
+      false
+     ],
+     "RangeSlv engages LowDog": [
+      0,
+      true
+     ],
+     "UserAxis": [
+      0,
+      false
+     ],
+     "UserFront": [
+      0,
+      false
+     ]
+    },
+    "components": {
+     "Sprocket-1": 0,
+     "Gear_m1.25_N29-1": 0,
+     "RangeBox_Layout-1": 0,
+     "RangeBox_Carrier_Carrier-1": 0,
+     "Gear_m1.25_N13-1": 0,
+     "Ring_m1.25_N55-1": 0,
+     "Dog_m1.25_N17-1": 0,
+     "Gear_m1.25_N13-2": 0,
+     "Gear_m1.25_N13-3": 0,
+     "Housing-1": 0,
+     "Sleeve_m1.25_N17-1": 0,
+     "Dog_m1.25_N17-2": 0
+    },
+    "flags": {
+     "RangeBox_Layout.SLDPRT": false,
+     "RangeBox_Carrier_Carrier.SLDPRT": false,
+     "Gear_m1.25_N29.SLDPRT": false,
+     "Gear_m1.25_N13.SLDPRT": false,
+     "Ring_m1.25_N55.SLDPRT": false,
+     "Dog_m1.25_N17.SLDPRT": false,
+     "Sleeve_m1.25_N17.SLDPRT": false,
+     "Housing.SLDPRT": false,
+     "Sprocket.SLDPRT": false,
+     "RangeBox.SLDASM": true
+    },
+    "windows_new": [],
+    "windows_counted": []
+   },
+   "mate_error": {
+    "rebuilt": true,
+    "whats_wrong": 3,
+    "mates": {
+     "Sun on Input Axis": [
+      0,
+      false
+     ],
+     "Sun along Input": [
+      0,
+      false
+     ],
+     "HighDog locked to Sun": [
+      0,
+      false
+     ],
+     "Carrier carrier on Carrier Axis": [
+      0,
+      false
+     ],
+     "Carrier carrier along Carrier": [
+      0,
+      false
+     ],
+     "LowDog locked to Carrier carrier": [
+      0,
+      false
+     ],
+     "Planet copy 1 on Planet copy 1 Axis": [
+      0,
+      false
+     ],
+     "Planet copy 1 along Planet copy 1": [
+      0,
+      false
+     ],
+     "Planet copy 2 on Planet copy 2 Axis": [
+      0,
+      false
+     ],
+     "Planet copy 2 along Planet copy 2": [
+      0,
+      false
+     ],
+     "Planet copy 3 on Planet copy 3 Axis": [
+      0,
+      false
+     ],
+     "Planet copy 3 along Planet copy 3": [
+      0,
+      false
+     ],
+     "RangeSlv on Output Axis": [
+      0,
+      false
+     ],
+     "RangeSlv along Output": [
+      0,
+      false
+     ],
+     "Sun meshes Planet copy 1": [
+      0,
+      false
+     ],
+     "Sun meshes Planet copy 2": [
+      0,
+      false
+     ],
+     "Sun meshes Planet copy 3": [
+      0,
+      false
+     ],
+     "Planet copy 1 meshes Ring": [
+      0,
+      false
+     ],
+     "RangeSlv engages HighDog": [
+      0,
+      false
+     ],
+     "RangeSlv engages LowDog": [
+      0,
+      true
+     ],
+     "UserAxis": [
+      0,
+      false
+     ],
+     "UserFront": [
+      51,
+      false
+     ],
+     "UserGap": [
+      51,
+      false
+     ]
+    },
+    "components": {
+     "Sprocket-1": 0,
+     "Gear_m1.25_N29-1": 0,
+     "RangeBox_Layout-1": 0,
+     "RangeBox_Carrier_Carrier-1": 0,
+     "Gear_m1.25_N13-1": 0,
+     "Ring_m1.25_N55-1": 0,
+     "Dog_m1.25_N17-1": 0,
+     "Gear_m1.25_N13-2": 0,
+     "Gear_m1.25_N13-3": 0,
+     "Housing-1": 0,
+     "Sleeve_m1.25_N17-1": 0,
+     "Dog_m1.25_N17-2": 0
+    },
+    "flags": {
+     "RangeBox_Layout.SLDPRT": false,
+     "RangeBox_Carrier_Carrier.SLDPRT": false,
+     "Gear_m1.25_N29.SLDPRT": false,
+     "Gear_m1.25_N13.SLDPRT": false,
+     "Ring_m1.25_N55.SLDPRT": false,
+     "Dog_m1.25_N17.SLDPRT": false,
+     "Sleeve_m1.25_N17.SLDPRT": false,
+     "Housing.SLDPRT": false,
+     "Sprocket.SLDPRT": false,
+     "RangeBox.SLDASM": true
+    },
+    "windows_new": [],
+    "windows_counted": [],
+    "add_mate_status": 5
+   },
+   "box": {
+    "wait": 1800.0,
+    "frame": {
+     "class": "Afx:0000000140000000:8:0000000000010003:0000000000000000:00000000208116F1",
+     "title_present": true,
+     "title_has_document": true
+    },
+    "before": {
+     "answered": true,
+     "seconds": 0.5,
+     "value": {
+      "open": [
+       "RangeBox_Layout.SLDPRT",
+       "RangeBox_Carrier_Carrier.SLDPRT",
+       "Gear_m1.25_N29.SLDPRT",
+       "Gear_m1.25_N13.SLDPRT",
+       "Ring_m1.25_N55.SLDPRT",
+       "Dog_m1.25_N17.SLDPRT",
+       "Sleeve_m1.25_N17.SLDPRT",
+       "Housing.SLDPRT",
+       "Sprocket.SLDPRT",
+       "RangeBox.SLDASM"
+      ],
+      "flags": {
+       "RangeBox_Layout.SLDPRT": false,
+       "RangeBox_Carrier_Carrier.SLDPRT": false,
+       "Gear_m1.25_N29.SLDPRT": false,
+       "Gear_m1.25_N13.SLDPRT": false,
+       "Ring_m1.25_N55.SLDPRT": false,
+       "Dog_m1.25_N17.SLDPRT": false,
+       "Sleeve_m1.25_N17.SLDPRT": false,
+       "Housing.SLDPRT": false,
+       "Sprocket.SLDPRT": false,
+       "RangeBox.SLDASM": false
+      },
+      "Backlash": {
+       "equation": "\"Backlash\"= 0.3 * \"Module\"",
+       "value": 0.375
+      },
+      "show_errors_every_rebuild": true
+     }
+    },
+    "box_seen": {
+     "seconds": 97.45,
+     "call_in_progress": "ActivateDoc3",
+     "calls_so_far": 21648,
+     "last_traced_call": [
+      "OpenDoc6"
+     ],
+     "traced_calls_so_far": 104,
+     "frame_enabled": true,
+     "boxes": [
+      {
+       "hwnd": 42145384,
+       "class": "#32770",
+       "title": "What's Wrong",
+       "texts": [
+        "Show &errors",
+        "Show &warnings",
+        "&Display What's Wrong during rebuild",
+        "&FeatureXpert",
+        "&Close",
+        "&Help",
+        "Custom1",
+        "* Select FeatureXpert to attempt repair of the highlighted error(s).    ",
+        "&Save Anyway?"
+       ],
+       "style": "0x96ce0044",
+       "exstyle": "0x10100",
+       "popup": true,
+       "child": false,
+       "dlg_modal_frame": false,
+       "topmost": false,
+       "owner": 55447784,
+       "owner_class": "Afx:0000000140000000:8:0000000000010003:0000000000000000:00000000208116F1",
+       "owner_title_present": true,
+       "owner_title_has_document": true,
+       "owner_is_frame": true,
+       "visible": true,
+       "enabled": true
+      }
+     ]
+    },
+    "more_boxes": [],
+    "box_last_seen": 119.57,
+    "box_gone": {
+     "seconds": 120.08,
+     "last_seen": 119.57,
+     "call_in_progress": "ShowConfiguration2",
+     "calls_so_far": 23767,
+     "traced_so_far": 106,
+     "frame_enabled": true
+    },
+    "read_with_box_up": {
+     "answered": true,
+     "seconds": 0.5,
+     "open": [
+      "RangeBox_Layout.SLDPRT",
+      "RangeBox_Carrier_Carrier.SLDPRT",
+      "Gear_m1.25_N29.SLDPRT",
+      "Gear_m1.25_N13.SLDPRT",
+      "Ring_m1.25_N55.SLDPRT",
+      "Dog_m1.25_N17.SLDPRT",
+      "Sleeve_m1.25_N17.SLDPRT",
+      "Housing.SLDPRT",
+      "Sprocket.SLDPRT",
+      "RangeBox.SLDASM"
+     ]
+    },
+    "returned": {
+     "seconds": 306.49,
+     "box_up": false,
+     "frame_enabled": true,
+     "calls": 38021
+    },
+    "progress": [
+     [
+      0.0,
+      null,
+      11787,
+      0
+     ],
+     [
+      10.0,
+      null,
+      14170,
+      8
+     ],
+     [
+      20.1,
+      null,
+      15008,
+      8
+     ],
+     [
+      30.1,
+      "GetErrorCode2",
+      15878,
+      11
+     ],
+     [
+      40.2,
+      "GetNextSubFeature",
+      16664,
+      52
+     ],
+     [
+      50.2,
+      "GetTypeName2",
+      17500,
+      76
+     ],
+     [
+      60.3,
+      "GetNextSubFeature",
+      18363,
+      92
+     ],
+     [
+      70.3,
+      "Name",
+      19241,
+      92
+     ],
+     [
+      80.4,
+      null,
+      20120,
+      94
+     ],
+     [
+      90.4,
+      "FirstFeature",
+      21024,
+      98
+     ],
+     [
+      100.5,
+      "GetNextFeature",
+      22097,
+      104
+     ],
+     [
+      110.5,
+      "Name",
+      22947,
+      104
+     ],
+     [
+      120.6,
+      null,
+      23775,
+      107
+     ],
+     [
+      130.6,
+      null,
+      24528,
+      114
+     ],
+     [
+      140.7,
+      null,
+      25238,
+      137
+     ],
+     [
+      150.7,
+      "SetSuppression2",
+      26037,
+      145
+     ],
+     [
+      160.8,
+      null,
+      26814,
+      151
+     ],
+     [
+      170.8,
+      null,
+      27610,
+      180
+     ],
+     [
+      180.9,
+      "GetNextFeature",
+      28297,
+      185
+     ],
+     [
+      190.9,
+      "GetNextSubFeature",
+      29103,
+      192
+     ],
+     [
+      201.0,
+      "GetNextFeature",
+      29845,
+      216
+     ],
+     [
+      211.0,
+      "GetNextSubFeature",
+      30644,
+      223
+     ],
+     [
+      221.1,
+      "GetNextFeature",
+      31415,
+      230
+     ],
+     [
+      231.1,
+      "GetNextSubFeature",
+      32200,
+      259
+     ],
+     [
+      241.2,
+      "Name",
+      32980,
+      262
+     ],
+     [
+      251.2,
+      "GetNextFeature",
+      33730,
+      270
+     ],
+     [
+      261.3,
+      "GetTypeName2",
+      34471,
+      293
+     ],
+     [
+      271.3,
+      null,
+      35312,
+      300
+     ],
+     [
+      281.4,
+      null,
+      36041,
+      308
+     ],
+     [
+      291.4,
+      "GetFirstSubFeature",
+      36828,
+      316
+     ],
+     [
+      301.5,
+      "GetNextFeature",
+      37690,
+      340
+     ]
+    ],
+    "calls_grew": {
+     "after_the_box_was_seen": true,
+     "after_it_went": true,
+     "calls_at_the_end": 38021
+    },
+    "at_the_end": {
+     "call_in_progress": null,
+     "last_traced_call": [
+      "IsSuppressed2",
+      "RangeSlv engages LowDog",
+      3,
+      [
+       "L"
+      ]
+     ],
+     "frame_enabled": true,
+     "boxes_up": []
+    },
+    "job": "returned",
+    "result": {
+     "ok": true,
+     "failures": [],
+     "user_in_error": [
+      [
+       "N",
+       "UserFront"
+      ],
+      [
+       "N",
+       "UserGap"
+      ],
+      [
+       "L",
+       "UserFront"
+      ],
+      [
+       "L",
+       "UserGap"
+      ],
+      [
+       "H",
+       "UserFront"
+      ],
+      [
+       "H",
+       "UserGap"
+      ]
+     ],
+     "user_features_in_error": [],
+     "in_error_before": [
+      "UserFront",
+      "UserGap"
+     ],
+     "sentence": "Updated SolidWorks: changed 1 variable in Gear_m1.25_N29, re-placed Carrier (the carrier), Sun, Planet (3 copies), HighDog, LowDog and RangeSlv in every mode; no interference between the gears in any mode, where they stand. It worked in H, the configuration that was active, then showed and checked N and L and left the assembly in H. Your UserFront and UserGap were in error in SolidWorks in the mode showing before this Update changed anything; after it, UserFront in N, L and H and UserGap in N, L and H are in error. Save Gear_m1.25_N29 and RangeBox in SolidWorks to keep them."
+    },
+    "after": {
+     "answered": true,
+     "seconds": 0.5,
+     "value": {
+      "open": [
+       "RangeBox_Layout.SLDPRT",
+       "RangeBox_Carrier_Carrier.SLDPRT",
+       "Gear_m1.25_N29.SLDPRT",
+       "Gear_m1.25_N13.SLDPRT",
+       "Ring_m1.25_N55.SLDPRT",
+       "Dog_m1.25_N17.SLDPRT",
+       "Sleeve_m1.25_N17.SLDPRT",
+       "Housing.SLDPRT",
+       "Sprocket.SLDPRT",
+       "RangeBox.SLDASM"
+      ],
+      "flags": {
+       "RangeBox_Layout.SLDPRT": false,
+       "RangeBox_Carrier_Carrier.SLDPRT": false,
+       "Gear_m1.25_N29.SLDPRT": true,
+       "Gear_m1.25_N13.SLDPRT": false,
+       "Ring_m1.25_N55.SLDPRT": false,
+       "Dog_m1.25_N17.SLDPRT": false,
+       "Sleeve_m1.25_N17.SLDPRT": false,
+       "Housing.SLDPRT": false,
+       "Sprocket.SLDPRT": false,
+       "RangeBox.SLDASM": true
+      },
+      "Backlash": {
+       "equation": "\"Backlash\"= 0.4",
+       "value": 0.4
+      },
+      "show_errors_every_rebuild": true
+     }
+    },
+    "written": {
+     "Backlash": {
+      "before": {
+       "equation": "\"Backlash\"= 0.3 * \"Module\"",
+       "value": 0.375
+      },
+      "after": {
+       "equation": "\"Backlash\"= 0.4",
+       "value": 0.4
+      }
+     },
+     "flags_changed": {
+      "Gear_m1.25_N29.SLDPRT": [
+       false,
+       true
+      ],
+      "RangeBox.SLDASM": [
+       false,
+       true
+      ]
+     },
+     "show_errors_every_rebuild": {
+      "before": true,
+      "after": true
+     }
+    },
+    "after_reads": {
+     "mode": "H",
+     "app_bodies_gap_to_record": [
+      6.580016531643196e-10,
+      "Planet copy 2"
+     ],
+     "user_components_moved": [
+      0.0,
+      ""
+     ],
+     "user_mates_code_suppressed_before_after": {
+      "UserAxis": [
+       [
+        0,
+        false
+       ],
+       [
+        0,
+        false
+       ]
+      ],
+      "UserFront": [
+       [
+        51,
+        false
+       ],
+       [
+        51,
+        false
+       ]
+      ],
+      "UserGap": [
+       [
+        51,
+        false
+       ],
+       [
+        51,
+        false
+       ]
+      ]
+     },
+     "user_mate_flags_changed": {},
+     "mates_in_error_after": {
+      "UserFront": 51,
+      "UserGap": 51
+     }
+    },
+    "w8_watch": {
+     "fails_during_the_press": [],
+     "stops": []
+    }
+   },
+   "seconds": 670,
+   "failed": []
+  }
+ },
+ "stops": [],
+ "proposal": {
+  "box": {
+   "facts_only": true,
+   "wait": 1800.0,
+   "box_seen": {
+    "seconds": 97.45,
+    "call_in_progress": "ActivateDoc3",
+    "calls_so_far": 21648,
+    "last_traced_call": [
+     "OpenDoc6"
+    ],
+    "traced_calls_so_far": 104,
+    "frame_enabled": true,
+    "boxes": [
+     {
+      "hwnd": 42145384,
+      "class": "#32770",
+      "title": "What's Wrong",
+      "texts": [
+       "Show &errors",
+       "Show &warnings",
+       "&Display What's Wrong during rebuild",
+       "&FeatureXpert",
+       "&Close",
+       "&Help",
+       "Custom1",
+       "* Select FeatureXpert to attempt repair of the highlighted error(s).    ",
+       "&Save Anyway?"
+      ],
+      "style": "0x96ce0044",
+      "exstyle": "0x10100",
+      "popup": true,
+      "child": false,
+      "dlg_modal_frame": false,
+      "topmost": false,
+      "owner": 55447784,
+      "owner_class": "Afx:0000000140000000:8:0000000000010003:0000000000000000:00000000208116F1",
+      "owner_title_present": true,
+      "owner_title_has_document": true,
+      "owner_is_frame": true,
+      "visible": true,
+      "enabled": true
+     }
+    ]
+   },
+   "more_boxes": [],
+   "box_last_seen": 119.57,
+   "box_gone": {
+    "seconds": 120.08,
+    "last_seen": 119.57,
+    "call_in_progress": "ShowConfiguration2",
+    "calls_so_far": 23767,
+    "traced_so_far": 106,
+    "frame_enabled": true
+   },
+   "read_with_box_up": {
+    "answered": true,
+    "seconds": 0.5,
+    "open": [
+     "RangeBox_Layout.SLDPRT",
+     "RangeBox_Carrier_Carrier.SLDPRT",
+     "Gear_m1.25_N29.SLDPRT",
+     "Gear_m1.25_N13.SLDPRT",
+     "Ring_m1.25_N55.SLDPRT",
+     "Dog_m1.25_N17.SLDPRT",
+     "Sleeve_m1.25_N17.SLDPRT",
+     "Housing.SLDPRT",
+     "Sprocket.SLDPRT",
+     "RangeBox.SLDASM"
+    ]
+   },
+   "returned": {
+    "seconds": 306.49,
+    "box_up": false,
+    "frame_enabled": true,
+    "calls": 38021
+   },
+   "job": "returned",
+   "calls_grew": {
+    "after_the_box_was_seen": true,
+    "after_it_went": true,
+    "calls_at_the_end": 38021
+   },
+   "at_the_end": {
+    "call_in_progress": null,
+    "last_traced_call": [
+     "IsSuppressed2",
+     "RangeSlv engages LowDog",
+     3,
+     [
+      "L"
+     ]
+    ],
+    "frame_enabled": true,
+    "boxes_up": []
+   },
+   "written": {
+    "Backlash": {
+     "before": {
+      "equation": "\"Backlash\"= 0.3 * \"Module\"",
+      "value": 0.375
+     },
+     "after": {
+      "equation": "\"Backlash\"= 0.4",
+      "value": 0.4
+     }
+    },
+    "flags_changed": {
+     "Gear_m1.25_N29.SLDPRT": [
+      false,
+      true
+     ],
+     "RangeBox.SLDASM": [
+      false,
+      true
+     ]
+    },
+    "show_errors_every_rebuild": {
+     "before": true,
+     "after": true
+    }
+   },
+   "after_reads": {
+    "mode": "H",
+    "app_bodies_gap_to_record": [
+     6.580016531643196e-10,
+     "Planet copy 2"
+    ],
+    "user_components_moved": [
+     0.0,
+     ""
+    ],
+    "user_mates_code_suppressed_before_after": {
+     "UserAxis": [
+      [
+       0,
+       false
+      ],
+      [
+       0,
+       false
+      ]
+     ],
+     "UserFront": [
+      [
+       51,
+       false
+      ],
+      [
+       51,
+       false
+      ]
+     ],
+     "UserGap": [
+      [
+       51,
+       false
+      ],
+      [
+       51,
+       false
+      ]
+     ]
+    },
+    "user_mate_flags_changed": {},
+    "mates_in_error_after": {
+     "UserFront": 51,
+     "UserGap": 51
+    }
+   },
+   "result_ok": true,
+   "status": "Updated SolidWorks: changed 1 variable in Gear_m1.25_N29, re-placed Carrier (the carrier), Sun, Planet (3 copies), HighDog, LowDog and RangeSlv in every mode; no interference between the gears in any mode, where they stand. It worked in H, the configuration that was active, then showed and checked N and L and left the assembly in H. Your UserFront and UserGap were in error in SolidWorks in the mode showing before this Update changed anything; after it, UserFront in N, L and H and UserGap in N, L and H are in error. Save Gear_m1.25_N29 and RangeBox in SolidWorks to keep them."
+  }
+ },
+ "revision": [
+  32,
+  5,
+  0
+ ],
+ "snapshot": "b985cab",
+ "fails": [],
+ "notes": [
+  "SolidWorks' notification box came up while no SolidWorks call was in progress (exempt by the coordinator's ruling; nothing answers it)",
+  "a SolidWorks window \"What's Wrong\" ['Show &errors', 'Show &warnings', \"&Display What's Wrong during rebuild\", '&FeatureXpert', '&Close', '&Help', 'Custom1', '* Select FeatureXpert to attempt repair of the highlighted error(s).    '] came up while no SolidWorks call was in progress, before this run made any configuration"
+ ]
+}
