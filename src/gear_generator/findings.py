@@ -2134,7 +2134,7 @@ CARRY_REMAKES_ON_A_LEAF_ON_2024 = None
 #   capped (W9D-INTERFACES §10; swbuild.CARRY_WALK_CANDIDATES, CARRY_WALK_SECONDS).
 # - PERSIST_REFERENCE_SURVIVES_RELOAD: 6 references (5 faces, 1 edge) resolved Ok in their parts reopened alone and
 #   unchanged on disk, kind, place and area as read, nothing marked (-2.log:103-104). A part edited and saved since may
-#   resolve otherwise: any code but Ok, or another kind, is WHY_NOT_FOUND.
+#   resolve otherwise: any code but Ok is WHY_NOT_FOUND; a resolve to another kind stops the carry (§4.1, §0.3).
 # - COAXIAL_FACE_READ: cylinders only, by CylinderParams of r3's part-level entity, in part coordinates
 #   (-2.log:92-93). Positives: the sprocket's bore, Sun's 29 tip and 29 root cylinders (so coaxial is not "bore");
 #   negatives: Sun's User Keyway, Sun's 58 root-fillet cylinders (r 0.475, app-made, off-axis), every plane.

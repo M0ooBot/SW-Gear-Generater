@@ -2550,22 +2550,22 @@ def test_w9d_2026_findings_rest_on_the_probes_two_runs():
         return line[len(f"propose {name} = "):].split("  #")[0]
     assert proposed(one, 118, "COMPONENT_STATE_PER_CONFIGURATION_ROUTE") == \
         repr(findings.COMPONENT_STATE_PER_CONFIGURATION_ROUTE_ON_2026)
-    assert proposed(one, 120, "COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED") == "True"
+    assert proposed(one, 120, "COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED") == repr(findings.COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED_ON_2026)
     assert proposed(one, 123, "FILE_VERSION_READ") == repr(findings.FILE_VERSION_READ_ON_2026)
     assert "'17000[2024/282]', '19000[2025/260]'" in one[122] and "GetLatestSupportedFileVersion 19000" in one[122]
     assert proposed(one, 125, "DEPENDENCIES_READ") == f'"{findings.DEPENDENCIES_READ_ON_2026}"'
-    assert proposed(one, 127, "OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS") == "True"
-    assert proposed(one, 129, "OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN") == "True"
-    assert proposed(one, 136, "SUBASSEMBLY_OPEN_MARKS") == "False"
-    assert proposed(one, 139, "SUBASSEMBLY_READ_ONLY_INSERT") == "True"
-    assert proposed(one, 142, "SUBASSEMBLY_OPEN_MARKS_WHEN_LOADED") == "False"
+    assert proposed(one, 127, "OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS") == repr(findings.OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS_ON_2026)
+    assert proposed(one, 129, "OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN") == repr(findings.OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN_ON_2026)
+    assert proposed(one, 136, "SUBASSEMBLY_OPEN_MARKS") == repr(findings.SUBASSEMBLY_OPEN_MARKS_ON_2026)
+    assert proposed(one, 139, "SUBASSEMBLY_READ_ONLY_INSERT") == repr(findings.SUBASSEMBLY_READ_ONLY_INSERT_ON_2026)
+    assert proposed(one, 142, "SUBASSEMBLY_OPEN_MARKS_WHEN_LOADED") == repr(findings.SUBASSEMBLY_OPEN_MARKS_WHEN_LOADED_ON_2026)
     assert proposed(two, 89, "PERSIST_REFERENCE_ROUTE_FOR_FACES") == f'"{findings.PERSIST_REFERENCE_ROUTE_FOR_FACES_ON_2026}"'
     assert proposed(two, 90, "PERSIST_REFERENCE_ROUTE_FOR_EDGES") == f'"{findings.PERSIST_REFERENCE_ROUTE_FOR_EDGES_ON_2026}"'
     assert findings.PERSIST_REFERENCE_ROUTE_FOR_FACES_ON_2026 == swcom.PERSIST_ROUTE_R3      # the route the app takes
-    assert proposed(two, 93, "COAXIAL_FACE_READ") == "True"
+    assert proposed(two, 93, "COAXIAL_FACE_READ") == repr(findings.COAXIAL_FACE_READ_ON_2026)
     assert "(0.475, False): 58" in two[92] and "(19.375, True): 29" in two[92]   # the fillets off-axis, tips coaxial
-    assert proposed(two, 102, "CARRY_INSERT_MARKS_USER_DOCUMENTS") == "False"
-    assert proposed(two, 104, "PERSIST_REFERENCE_SURVIVES_RELOAD") == "True"
+    assert proposed(two, 102, "CARRY_INSERT_MARKS_USER_DOCUMENTS") == repr(findings.CARRY_INSERT_MARKS_USER_DOCUMENTS_ON_2026)
+    assert proposed(two, 104, "PERSIST_REFERENCE_SURVIVES_RELOAD") == repr(findings.PERSIST_REFERENCE_SURVIVES_RELOAD_ON_2026)
     for name in W9D_SET_ON_2026:
         assert getattr(findings, f"{name}_ON_2024") is None, name
     for name in ("REFERENCED_CONFIGURATION_READ", "VIRTUAL_READ", "PATTERN_INSTANCE_READ", "CARRY_INSERTS",
