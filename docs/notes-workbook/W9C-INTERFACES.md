@@ -416,3 +416,43 @@ kind of write, None until the full build reads it clean. C8's suppress of a part
 - **A tooth change on a gearbox with modes needs no `InPlace`**: `motion.ratios` with `motion.configurations` is
   remade by the worker where `UPDATE_MAKES_MATES_WITH_MODES_ON_<year>` is True, and refused naming it otherwise.
 - **`workbook/gearbox.py`**: nothing the worker needs changed there; B need not touch it for package A.
+
+### From B (the joining round): the round trip through the window's path, and what it found on A's side
+
+B now fills `AddedGear.refs` (the record's `MateRef` for each of the added gear's mates, from `motion.mate_entry`, a
+mate on in some modes with its on-set in the record's spelling) and `NewMate.ref`, and adds the new links to
+`motion.meshes` and `motion.locks` (a lock's or spline's `LockLink`, a coupling's `MeshLink` with `k = σ_S·σ_D` and its
+`modes`, a gear mate's from its teeth and sense). A tooth change with modes hands no `InPlace`. A new part whose file is
+on disk though no record holds it is no longer structural: B says it in the footer before the press
+(`UpdatePlan.new_parts_on_disk`), and the worker refuses it. `tests/test_workbook_in_place_round_trip.py` runs each
+in-place kind through `classify` → `update_kwargs()` → `update_gearbox` on the fake → `finish_update` → the footer and
+the result's sentence. Three faults on A's side, each a test marked xfail (strict) with its reason:
+
+- **F1, an assembly global added again after a failed insert.** RangeBox → RangeBox_Fixed with `add_component` made
+  to fail: the press built Hub's part, gave the bands and added the global `Hub Face Z`, then stopped. Once the user
+  moves the new part's file away, the next press runs Hub's `AddGlobal` again and stops on *"Hub Face Z" is defined
+  twice* (an unexpected `EquationError`) instead of going on or refusing by name. The global is the app's own name, so
+  the worker could set it where it is already there with that name, or refuse saying so.
+  (`test_after_an_insert_that_failed_and_the_part_moved_away_the_next_press_goes_on`)
+- **F2, puts not judged when only modes change.** A mode added or removed on RangeBox_Fixed with the user's Sprocket-1
+  locked to Sun: with nothing else changing, the check phase judges no put (`may_put` empty), then the change phase puts
+  every train in every mode, Sun among them, and stops half way, after the configuration was added or deleted: *Update
+  SolidWorks would now put Sun, which its check before any change found it would not put, and your work is on it, …*.
+  Without the user's work the same presses go through. The check could judge the puts the change phase will make
+  whenever modes are added or removed, or the change phase could leave alone the gears no mode change moves.
+  (`test_a_mode_added_on_the_result_is_one_update_and_a_second_press_quiet[True]`, `…removed…[True]`)
+- **F3, `skipped` names a step that was done.** When the job stops at an added gear's mate (or its state read after the
+  insert), `result.inserted` lists Hub and `result.skipped` still begins *"inserting Hub and putting the gears back
+  …"*, so the sentence reads *… inserted Hub as gear7-1 … It did not get to inserting Hub and putting the gears back
+  …*. Once the component is in, the step left could be called *mating Hub* (no xfail: the sentence is A's wording).
+
+**`swbuild.structural_change`'s bands sentence** (*Bands cannot be given to or taken from a built sleeve through its
+values; …*) should stay. On a gearbox built to turn B now hands Update the sleeve's values without the band keys, so the
+sentence is not reached there. It is still reached for a sleeve on a record with no gearbox built to turn (parts built
+alone), where Update gives no bands in place.
+
+**On a part built by a press that then failed** (the coordinator to rule): rather than the worker taking an unrecorded
+file on disk as its own (it may be the user's), B could record a new part the failed press built and saved
+(`result.built`) as a `PartEntry` with its `.gear.json`. The next `classify` then finds it on record and hands an
+`AddedGear` with `build` None, which the worker already inserts as it does any part on record (the G5 path), with no
+change on A's side. Until ruled, the record does not hold it and the footer names the file to move.
