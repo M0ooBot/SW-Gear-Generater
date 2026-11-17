@@ -662,3 +662,223 @@ components is suppressed.**
   never exercised;
 - `place_component` seeds every configuration, where 2024 puts per configuration;
 - an unwritten out code reads Ok, here as in the Session.
+
+---
+
+## Addendum: package A's fourth round (`94f57f8`), before the second SolidWorks run
+
+*Independent, 2026-11-17.* I reviewed `git show 94f57f8` and the code around it, not the commit message's account. I
+read it against:
+- the first run's evidence at `50a8e54`:
+  - `w9d-demo-sw2026-20261117-2-carry-app-faults.log`;
+  - `…-3-carry-closed-read-only.log`;
+  - the run section of `W9D-DEMONSTRATION.md`;
+- the probe's `raw()` (`probe/w9c_probes.py:267`, which `probe/w9d_probes.py` imports);
+- r3's log, `w9d-probes-sw2026-20261117-2-faces-r3-clean.log`.
+
+No SolidWorks was started.
+
+**Suite.** At the tree's head: **2 failed, 3897 passed, 10 skipped**. The two failures are the known tkinter tests.
+The head includes `e2207d9` (docs only) and someone's uncommitted edits to `ui_text.py`, `probe/w9d_demonstration.py`
+and two test files, which I did not touch or judge.
+
+**The three new carry tests and the new swcom test, on `90cdf20`'s code.** I ran them in a scratch copy: `94f57f8`'s
+tests and fake, with `90cdf20`'s `swcom.py` and `swbuild.py` put back. `90cdf20..94f57f8^` changed no `src`. All four
+fail there:
+- `test_a_gear_new_in_the_revision_…` fails with SolidWorks' own sentence: *"No component is kept as 'gear4', so it
+  cannot be read or changed; that is a fault in Gear Generator, not in SolidWorks."* This is fault 2 exactly.
+- `test_a_fault_of_ours_never_reaches_a_sentence_…` fails with the Python text in `stopped`: *"…it stopped on an
+  unexpected TypeError: 'method' object is not iterable."* This is fault 3's sentence.
+- `test_a_mate_on_a_lightweight_components_feature_…` fails as `'unread' == 'lightweight'`. That is the precedence in
+  `plan_carry`, not SolidWorks' failure (`'NoneType' object has no attribute 'FeatureByName'` in
+  `Session.entity_reference`). The fake's `entity_reference` never reaches a `None` part, and no swcom test drives
+  `entity_reference` with `GetModelDoc2` answering `None`. The guard at `swcom.py:3899-3900` is right but unpinned
+  (S3 below).
+- `test_the_r3_walk_calls_the_members_late_binding_hands_back_uncalled` fails earlier than SolidWorks did: *"'function'
+  object has no attribute 'GetBodies2'"*. Its double makes `IComponent2.GetModelDoc2` a method. On SolidWorks it came
+  back a value through `call`: in run 2 the old code got past `GetBodies2` and failed on `GetFaces` (*'method' object
+  is not iterable*). With `GetModelDoc2` and `Extension` as plain attributes, the double would fail on the old code
+  for SolidWorks' reason (S3).
+
+### Verdict
+
+**Fit for the second SolidWorks run.** The three faults are fixed at their causes:
+- the r3 walk now calls what late binding hands back;
+- C.1 finds again every component the build placed, before anything reads one;
+- no Python exception text reaches a carry sentence.
+
+The `_read` decision cannot misread a COM object, `None` or a tuple, and no conversion can break a member `call` read
+correctly before.
+
+Before the run, I would make two small changes, each a few lines, because each could cost a two-hour run:
+- **M1, the `_read` guard.** A SolidWorks failure inside a method `_read` invokes is not turned into `ComError`. It is
+  said as "a fault in Gear Generator", and a lost session is not marked.
+- **M2, `_set_flags` judges every mode.** It judges the modes where one of the mate's carried components is
+  suppressed, which §3 C.6.1 says to leave as SolidWorks has it. On SolidWorks that could stop the whole carry at
+  Sprocket-7's cluster, before the tie.
+
+One thing outside `94f57f8` will make the run FAIL as the first one did, and it is the script's to change:
+- the expectations for UserAxis9 (`carry`) and UserAxis7 (`carry-closed`), which must accept `unread`
+  (`W9D-DEMONSTRATION-REVIEW.md`'s addendum, item 4);
+- at head, `expected_outcome` (`probe/w9d_demonstration.py:205-207`) still expects `remade` on 2026.
+
+### Must-fix before the run
+
+**M1. `_read` calls an uncalled method outside `_guarded` (`swcom.py:756-767`).**
+
+`value = call(obj, name)` is guarded, but `return value()` is not.
+
+The probe's `raw()`, the only variant measured on 2026, calls it as `swcom._guarded(name, value)`
+(`probe/w9c_probes.py:269-270`).
+
+So a `pywintypes.com_error` from the invocation leaves as itself, not `ComError`. That covers a call rejected while
+SolidWorks is busy, RPC gone, or a member that needs arguments. Then:
+- `CONNECTION.lost` is never set, so the next press fails its pre-flight against a dead session instead of connecting
+  again (W4 review N4's reason for `_guarded`);
+- `_carry_said` (`swbuild.py:8012`) takes it for a fault of ours and says *"a fault in Gear Generator, not in
+  SolidWorks"*;
+- in `entity_references` (`swcom.py:3994-3997`) a failing `GetFaces` is said the same way;
+- in `_remake`, `except ComError: raise` does not see it.
+
+Since `94f57f8`, every `GetFaces`/`GetEdges`, `GetArea`, `GetSurface`, `GetCurve` and `GetType` of the walk goes
+through this path. That is several hundred calls per component.
+
+**Fix:** `return _guarded(name, value) if type(value).__name__ in ("method", "function") else value`.
+
+**M2. `_set_flags` judges every mode, including one where the mate's own component is suppressed (`swbuild.py:8302-8320`).**
+
+It sets the remade mate's flag in every new mode and raises `_CarryStop` if any mode reads otherwise. §3 C.6.1 says a
+mode where one of its components is suppressed is "left as SolidWorks has it and not judged". The post-check does
+exactly that (`swbuild.py:8424-8433`, the `hidden` fact), but `_set_flags` does not.
+
+The next run reaches this:
+- UserAxis7 is made again in `carry`, where Sprocket-7 is resolved in H.
+- It is then flagged on in L, where Sprocket-7 is suppressed.
+- No run has read a newly made mate's `IsSuppressed2` in a mode where its component is suppressed. The old
+  assembly's mates read their own flag there (W9D-PROBES-REVIEW's fact (a)), which is reassuring but not this.
+- A mismatch stops the whole carry, and Sprocket-7's cluster comes before the tie in cluster order. One unmeasured
+  read could so end the run's main demonstration.
+- The fake's `mate_suppression` returns what was set, so no test can see it.
+
+**Fix:**
+- Compare `read_on` and `on` only over the modes where every carried component the mate joins is resolved
+  (`_wanted_suppressed`).
+- Keep the other modes' reads as a fact, as the post-check does.
+- Add a fake knob that reads such a mode otherwise, so a test pins it.
+
+### Should-fix
+
+**S1. The stop's sentence contradicts itself.**
+- For a fault of ours, `swbuild.py:8003` now says *"SolidWorks stopped the carry while making the mates of Sprocket-1
+  again: a fault in Gear Generator, not in SolidWorks"*, as the new test asserts.
+- The read's failure (`:3537-3539`) says *"SolidWorks did not answer the read of RangeBox.SLDASM: a fault in Gear
+  Generator, not in SolidWorks"*.
+- Each opens by blaming SolidWorks and closes by clearing it.
+- Fix: let `_carry_said` decide the lead as well. *"The carry stopped while …: a fault in Gear Generator, not in
+  SolidWorks."* and *"RangeBox.SLDASM could not be read: a fault in Gear Generator, not in SolidWorks."*
+
+**S2. The Python text is not always kept where a developer can find it.**
+- `_carry_said` puts it in `CarryResult.facts`, which `log_lines` prints. Good.
+- But `entity_references` puts it in `Session.last_walk["faults"]`, and `_read_old_mates` copies only `items`,
+  `carried`, `seconds` and `capped` into `work.walks` (`swbuild.py:7850-7854`). The next component's walk then
+  replaces `last_walk`, so the text is lost.
+- `entity_reference`'s fault branch (`swcom.py:3905-3907`) keeps the text nowhere.
+- Fix:
+  - add `walk.get('faults')` to the `work.walks` line;
+  - keep a `last_reference_fault` on the Session, which `_read_old_mates` copies to `work.walks` (or an `OldWork`
+    facts list).
+
+**S3. The tests could be closer to SolidWorks.**
+- **The r3 double.** In `test_the_r3_walk_calls_…`, make `Component.GetModelDoc2` and `Part.Extension` plain
+  attributes, as SolidWorks answered them in run 2. Keep `GetFaces`, `GetArea`, `GetSurface` and `GetType` as
+  methods. The test then fails on the old code with *'method' object is not iterable*.
+- **A swcom test of `entity_reference` with `GetModelDoc2` `None`.** The walk's sibling, `entity_references` with
+  `part is None`, needs one too (S4).
+- **`strict_handles`.**
+  - It refuses only in `component_frame` and `constrained_status` (`tests/test_swbuild.py:936`, `:1328`). The
+    Session refuses in every member that takes a component handle (`_component`, `swcom.py:3237-3248`):
+    `place_component`, `fix_component`, `set_component_suppressed`, `component_configurations`, `delete_component`,
+    `remake_mate`'s whole-component and `"<handle>:<feature>"` targets, `select_by_reference` and `entity_references`.
+  - It is on through `_old_train` and `_tc_again` only. `test_states_and_flags_are_set_in_every_mode_…`
+    (`tests/test_swbuild_carry.py:805`) and `test_a_cluster_with_only_mates_between_app_bodies_…` build their fakes
+    otherwise and run without it.
+  - Today C.1 finds every handle, so nothing leaks. But the fake would not catch the next forgotten handle in a
+    target, which is where the plan's app handles go.
+
+**S4. A component suppressed in the mode showing gets the wrong reason.**
+- Its face or edge mate goes to `entity_references`, whose `part is None` branch (`swcom.py:3934-3936`) says *"no
+  measured route for a face here"*. On 2026 the route is set, so that is false.
+- `entity_reference` says the right thing: *"its part is not loaded in SolidWorks (lightweight or suppressed)"*.
+- Fix: use the same words in `entity_references`.
+- The demonstration's two suppressed components have feature mates only (UserAxis7, UserAxis9), so the run does not
+  meet this; a user will.
+
+### Notes
+
+**`_read`'s decision against pywin32.**
+- It invokes only a value whose type is named `method` or `function`. pywin32's dynamic dispatch hands a member it
+  knows as a function back through `_make_method_`, a bound method (`types.MethodType`, named `method`).
+- A COM object comes back as `CDispatch`. That object is callable (its call invokes the default member), but it is
+  never invoked here, because its type name is not `method` or `function`.
+- `None`, tuples, numbers, strings and `bytes` are returned as they came.
+- So the only way to go wrong is a method that needs arguments, and M1 makes that a `ComError` sentence. Every
+  converted member is zero-argument, and their arguments match what the probes' `raw()` passed:
+  `GetTypeName2`, `GetArea`, `GetCurve`, `IsCircle`, `CircleParams`, `IsLine`, `GetSurface`, `IsCylinder`,
+  `CylinderParams`, `GetType` (`IEntity` and `IModelDoc2`), `GetSaveFlag`, `GetDefinition`, `GetModelDoc2`,
+  `GetConfigurationNames`, `GetActiveConfiguration`, `Name`, `GetSuppression2`, `GetFaces`, `GetEdges`.
+- `_read` differs from `call` only when `call` returned a method. So no conversion can break a member that an earlier
+  run read correctly as a property through `call`: `GetType`, `GetSaveFlag`, `GetDefinition` and `GetModelDoc2` on
+  the build path read exactly as before.
+
+**Members still read through `call` on the carry path.**
+- Each has come back a value on SolidWorks in an earlier run: `GetTitle`, `GetPathName`, `FirstFeature`,
+  `GetNextFeature`, `Name2`, `IsFixed`, `Extension`, `SelectionManager`, and `GetSpecificFeature2` in
+  `_component_by` and `constrained_status`.
+- `GetLatestSupportedFileVersion` (`swcom.py:4082`) is the one I checked for its effect. Had it come back a method,
+  `int()` would have failed, `running_file_version` would have answered None, and R.2 would have refused. Run 3
+  opened the old assembly read-only, so it answered a value.
+- The tier 1 resolve of a carried part's feature (`select_by_reference`) is new on this path. Its members match S5
+  (c)'s and the probe's r3 resolve: `GetObjectByPersistReference3(bytes, code)`, `GetCorresponding`, and `Select4`
+  with two arguments.
+- The out code is written by SolidWorks. r2's resolve read code 1 over a holder that began at 0. So the `-1`
+  initial value cannot misread an Ok.
+
+**C.1 (`swbuild.py:8036-8039`).**
+- `GearboxResult.components` holds each component's `Name2` as `add_component` read it back (`swcom.py:2190`,
+  `swbuild.py:553`). These are top-level components of the assembly the build made seconds earlier, so instance
+  suffixes are SolidWorks' own, and nothing renames them before the carry.
+- A name not found raises `ComponentGone`, a `SolidWorksError`. The stop says *"… X is not in RangeBox_r2.SLDASM any
+  more: it was renamed or deleted in SolidWorks."*, a sentence and not Python text.
+- One corner: a component whose `Name2` SolidWorks did not give is kept as `""` (the finish's own note). C.1 would
+  then stop on *" is not in …"*. Skip empty names.
+
+**Reads by handle after C.1.**
+- Every later read takes a handle the carry's own bracket found or made: the app bodies from C.1; the carried
+  components from `add_component`; the mates from `remake_mate` and `find_mate`.
+- `_component` finds a handle again by name after every show or open (the epoch rule), so the post-check, `_free`,
+  `_judge`, the fallback's `place_component`/`fix_component`, `_app_mates_check` and the per-mode `component_frame`
+  reads are all covered.
+- `_mated_handles` is a subset of `result.components`.
+
+**The lightweight choice (D10) is done as ruled.**
+- R reads nothing through a lightweight component's part: no walk and no `entity_reference` (`who in light`,
+  `swbuild.py:7834`, `:7870`).
+- `plan_carry` names its mates `WHY_LIGHTWEIGHT` before the unread check (`:7503-7511`).
+- `mate_definition`'s own reads (type, `ReferenceType2`, `EntityParams`) still run. Run 2 read them without
+  resolving anything; SprocketLight-1 resolved only when its file was opened to insert it, M1 (b)'s ruled fact.
+- The user reads, before the press, B's *"SprocketLight-1 was lightweight as read: its UserAxisLight is made again
+  only if you set it resolved in SolidWorks before you press."*
+- After the press: *"UserAxisLight is on SprocketLight-1, which was lightweight in RangeBox.SLDASM, so what it joins
+  could not be read, so it is not made again."* That is followed by *"SprocketLight-1 was lightweight in
+  RangeBox.SLDASM and is resolved there now: SolidWorks loaded its part to carry it."* True, and not contradictory,
+  since the order is said. The double *so* is B's to smooth.
+- `expected_outcome` agrees: UserAxisLight `{"lightweight"}`, and UserAsm6 `{"unread"}`, since there is no root read
+  beside a lightweight component.
+
+**The rest of the carry after the states.**
+- These lean on the fake only where the earlier addendum's "still kinder" list says: identical `EntityParams` (the
+  gear sense and the Flip retry are never met against real geometry), and remade codes per mode.
+- New in this round: the fake's `mate_suppression` returns what was set (M2), and the walk's exception path is
+  modelled, not COM's.
+- The reversed retry, the fallback and the post-check now read only handles the carry's bracket holds. I found no
+  further place that would have met fault 2.
