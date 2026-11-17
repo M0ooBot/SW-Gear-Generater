@@ -517,6 +517,65 @@ At this commit it passes, 0 failed. `--help` imports nothing of SolidWorks.
 - **On 2024,** the What's Wrong box may come in `fixed` (a user feature rebuilt after the relief), and is handled by
   W9a's rule. Nothing here is version-specific beyond the `_ON_<year>` names.
 
+## The tenth and eleventh runs on 2026: the final run (2026-11-17, `src` at 3a9e592, SolidWorks 2026 34.0.0)
+
+**Setup.**
+- Run folder `C:\Users\M0obo\Documents\GearGeneratorProbe\w9c-final-sw2026-20261117-143421`.
+- One session, PID 62172, started for the run and exited after.
+- The masters were this morning's, from `…\w9c-whole-sw2026-20261117-123612\out`: `rangebox.master`,
+  `setup.master` and `reducer.master`, given by `--master`, `--user-master` and `--reducer-master`. The script only
+  copies them (`copy_built`'s `copytree`, `landing`'s `copy2`). The files' sizes, times and md5 were the same before
+  and after.
+- `fixed-updated.master` was made afresh by this run's `fixed`.
+
+**The tenth run, every section, from a `git archive` of 3a9e592:**
+`probe/results/w9c-demo-sw2026-20261117-10-final-whole-remake-script-fault.log` and `w9c-demo-20261117-143454.json`.
+
+| Section | Time | Failed |
+|---|---|---|
+| landing | 824 s | 0 |
+| fixed | 700 s | 0 |
+| modes | 1115 s | 0 |
+| remove | 396 s | 0 |
+| remake | 397 s | 1 |
+| bands-off | 101 s | 0 |
+| m4 | 17 s | 0 |
+| w9b-part | 97 s | 0 |
+
+There was no STOP. Everything measured matches the eighth and ninth runs: `landing`'s straight facts, `fixed`'s
+interference volumes, the step faces and m4's answers.
+- `remake`'s first part (28/14/56) passed again and proposed its gate True.
+- Its M3 step stopped after step 1 on the script's own `AttributeError`. `gear_entry(box, "Planet")` is None: the
+  record holds the planet only as Planet copy 1 to 3. This was fixed in eabf14e (`files_of`), checks unchanged.
+
+**The eleventh run, `remake` again with `--redo`, in the same session and `out`:**
+`probe/results/w9c-demo-sw2026-20261117-11-final-remake-step2-assembly-flag.log` and `w9c-demo-20261117-153629.json`.
+697 s, one FAIL, no STOP. Its snapshot is `git archive 3a9e592` with `probe/w9c_demonstration.py` alone from eabf14e.
+Its `src` is 3a9e592's, compared file by file; 007b3aa, which changed `update.py` since, is not in it.
+
+- **Step 1** stops in the ring and marks it, as before.
+- **Step 2 wrote nothing, and the app stopped before any write.**
+  - The press made no call that changes or shows anything: by member, `OpenDoc6`, `IsSuppressed2` and
+    `GetSystemValue3` only.
+  - Every part's globals, every document's save flag and file time, the assembly's frames, mates and flags per mode,
+    and the four gear mates' ratios (29 : 13 and 13 : 55, as built) were the same before and after.
+  - The result's `changed`, `mates_made`, `remade_in_modes` and `placed` were empty. `skipped` said "the assembly,
+    because Ring_m1.25_N55.SLDPRT is in error", and the one failure named the ring's file.
+  - The ring still read Tooth Space 72 and Teeth 1 at 54 teeth.
+  - The status and the footer were the still-in-error sentence alone.
+- **The one FAIL is the script's expectation, not a write.** Only step 1's three parts were expected to read modified,
+  but `RangeBox.SLDASM` read modified before step 2 as well as after. The fact line says so:
+  `before step 2, modified ['Gear_m1.25_N13.SLDPRT', 'Gear_m1.25_N29.SLDPRT', 'RangeBox.SLDASM',
+  'Ring_m1.25_N55.SLDPRT']`, as did `read_now`'s own read before the press.
+  - No SolidWorks call came between step 1's press and that read. So it is step 1's press (its part value sets and
+    rebuilds) that leaves the assembly modified on SolidWorks.
+  - The check is left as it stands, for review.
+- **Step 3**, after every document was closed unsaved, loaded each from its file, the ring at 55. It went through
+  routed by way of 53 (rebuilt twice), and the ring ended at 54 with nothing in error. The mark was gone, the four gear
+  mates were remade, and the footer was quiet.
+  - The log does not show whether the mark went by 1cc2978's check-phase read (`read_clean`, not logged by the
+    script) or by the ring's change: both apply here.
+
 ## The eighth and ninth runs on 2026 (2026-11-17, from 64bec58, on SolidWorks 2026 34.0.0)
 
 On the second Windows host (`DESKTOP-QJTI7HF`), whose SolidWorks 2026 is revision 34.0.0, where the earlier runs had

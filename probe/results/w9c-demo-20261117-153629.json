@@ -1,0 +1,338 @@
+{
+ "sections": {
+  "remake": {
+   "refusal": {
+    "findings": {
+     "UPDATE_MAKES_MATES_WITH_MODES_ON_2026": null
+    },
+    "refusal": [
+     "Update SolidWorks would make a gear mate of a gearbox with modes again and set its flag in each mode, which has not been measured on this SolidWorks (findings.UPDATE_MAKES_MATES_WITH_MODES_ON_2026 is None), so nothing is changed; build the gearbox again instead."
+    ]
+   },
+   "press": {
+    "ok": true,
+    "failures": [],
+    "user_in_error": [],
+    "user_features_in_error": [],
+    "in_error_before": [],
+    "sentence": "Updated SolidWorks: made Sun meshes Planet copy 1, Sun meshes Planet copy 2, Sun meshes Planet copy 3 and Planet copy 1 meshes Ring again, with their flags set in every mode, changed 1 variable in Gear_m1.25_N29 (it now has 28 teeth; its file keeps its name), changed 1 variable in Gear_m1.25_N13 (it now has 14 teeth; its file keeps its name), changed 1 variable in Ring_m1.25_N55 (it now has 56 teeth; its file keeps its name), set the gear mates Sun meshes Planet copy 1 to 28 : 14, Sun meshes Planet copy 2 to 28 : 14, Sun meshes Planet copy 3 to 28 : 14 and Planet copy 1 meshes Ring to 14 : 56, re-placed Ring, Carrier (the carrier), Sun, Planet (3 copies), HighDog, LowDog and RangeSlv in every mode; no interference between the gears in any mode, where they stand. It worked in H, the configuration that was active, then showed and checked N and L and left the assembly in H. Your Sprocket-1 went with Sun in every mode, which your locks hold it to. Your Sprocket-3 went with Sun in every mode, which your locks hold it to. Your Sprocket-2 went with RangeSlv in every mode, which your locks hold it to. Save Gear_m1.25_N29, Gear_m1.25_N13, Ring_m1.25_N55 and RangeBox in SolidWorks to keep them."
+   },
+   "in_place": {
+    "inserted": [],
+    "deleted": [],
+    "mates_deleted": [],
+    "mates_made": [],
+    "remade_in_modes": [
+     "Sun meshes Planet copy 1",
+     "Sun meshes Planet copy 2",
+     "Sun meshes Planet copy 3",
+     "Planet copy 1 meshes Ring"
+    ],
+    "bands_added": [],
+    "bands_removed": [],
+    "modes_added": [],
+    "modes_removed": [],
+    "took_active_state": [],
+    "flags_lost": [],
+    "not_resolved": [],
+    "ratios": [
+     "Sun meshes Planet copy 1",
+     "Sun meshes Planet copy 2",
+     "Sun meshes Planet copy 3",
+     "Planet copy 1 meshes Ring"
+    ],
+    "senses_unread": [],
+    "turned_round": [],
+    "failures": [],
+    "skipped": "",
+    "clashes_by_mode": {
+     "N": [],
+     "L": [],
+     "H": []
+    }
+   },
+   "judged": {
+    "modes": {
+     "H": {
+      "slide_read": 34.5,
+      "slide_recorded": -34.5,
+      "origin_z": -34.5,
+      "frame_gap": 6.580016531643196e-10,
+      "bands": {
+       "whole": [
+        -34.5,
+        -24.5
+       ]
+      },
+      "dogs": {
+       "HighDog": [
+        -34.5,
+        -29.5
+       ],
+       "LowDog": [
+        -19.5,
+        -14.5
+       ]
+      },
+      "hub": null,
+      "interferences": [],
+      "errors": {},
+      "not_free": {},
+      "engaged": [
+       "HighDog"
+      ],
+      "least": 5.0
+     },
+     "N": {
+      "slide_read": 29.5,
+      "slide_recorded": -29.5,
+      "origin_z": -29.5,
+      "frame_gap": 6.580016531643196e-10,
+      "bands": {
+       "whole": [
+        -29.5,
+        -19.5
+       ]
+      },
+      "dogs": {
+       "HighDog": [
+        -34.5,
+        -29.5
+       ],
+       "LowDog": [
+        -19.5,
+        -14.5
+       ]
+      },
+      "hub": null,
+      "interferences": [],
+      "errors": {},
+      "not_free": {},
+      "engaged": [],
+      "least": 0.0
+     },
+     "L": {
+      "slide_read": 24.5,
+      "slide_recorded": -24.5,
+      "origin_z": -24.5,
+      "frame_gap": 6.580016531643196e-10,
+      "bands": {
+       "whole": [
+        -24.5,
+        -14.5
+       ]
+      },
+      "dogs": {
+       "HighDog": [
+        -34.5,
+        -29.5
+       ],
+       "LowDog": [
+        -19.5,
+        -14.5
+       ]
+      },
+      "hub": null,
+      "interferences": [],
+      "errors": {},
+      "not_free": {},
+      "engaged": [
+       "LowDog"
+      ],
+      "least": 5.0
+     }
+    },
+    "interference": {
+     "app_app": {},
+     "unnamed": {},
+     "unseen": {},
+     "unchecked": {},
+     "volumes": {
+      "H": {},
+      "N": {},
+      "L": {}
+     },
+     "app": {
+      "N": [],
+      "L": [],
+      "H": []
+     }
+    }
+   },
+   "again": {
+    "first": {
+     "status": "Update SolidWorks stopped. Ring_m1.25_N55.SLDPRT: SolidWorks reported an error rebuilding Ring_m1.25_N55. It had already changed Gear_m1.25_N29, Gear_m1.25_N13 and Ring_m1.25_N55, not saved, and Ring_m1.25_N55 is left in error: close them all in SolidWorks without saving (the files on disk are as before this Update), then press Update SolidWorks again.",
+     "failures": [
+      [
+       "Ring_m1.25_N55.SLDPRT",
+       "SolidWorks reported an error rebuilding Ring_m1.25_N55."
+      ]
+     ],
+     "marked": [
+      "C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9c-final-sw2026-20261117-143421\\out\\remake-again\\Ring_m1.25_N55.SLDPRT"
+     ]
+    },
+    "second": {
+     "status": "Ring_m1.25_N55 is still open in SolidWorks as an earlier Update SolidWorks left it, in error and holding the new values, so this press set nothing in it: close it in SolidWorks without saving (the file on disk is as before that Update), then press Update SolidWorks again.",
+     "set_in_parts": [],
+     "marked": [
+      "C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9c-final-sw2026-20261117-143421\\out\\remake-again\\Ring_m1.25_N55.SLDPRT"
+     ],
+     "remade_in_modes": [],
+     "result": {
+      "changed": [],
+      "mates_made": [],
+      "remade_in_modes": [],
+      "placed": [],
+      "failures": [
+       [
+        "Ring_m1.25_N55.SLDPRT",
+        "SolidWorks reads Tooth Space and Teeth, which Gear Generator made, in error in Ring_m1.25_N55, which already holds the workbook's values, so this press could set nothing there to put it right."
+       ]
+      ],
+      "skipped": "the assembly, because Ring_m1.25_N55.SLDPRT is in error"
+     },
+     "changing_calls": [],
+     "ring_before": {
+      "in_error": [
+       [
+        "Tooth Space",
+        72
+       ],
+       [
+        "Teeth",
+        1
+       ]
+      ],
+      "teeth": 54.0,
+      "module": 1.25,
+      "volume": 15215.125920417064
+     },
+     "ring_after": {
+      "in_error": [
+       [
+        "Tooth Space",
+        72
+       ],
+       [
+        "Teeth",
+        1
+       ]
+      ],
+      "teeth": 54.0,
+      "module": 1.25,
+      "volume": 15215.125920417064
+     },
+     "ratios": [
+      {
+       "Sun meshes Planet copy 1": [
+        29.0,
+        13.0
+       ],
+       "Sun meshes Planet copy 2": [
+        29.0,
+        13.0
+       ],
+       "Sun meshes Planet copy 3": [
+        29.0,
+        13.0
+       ],
+       "Planet copy 1 meshes Ring": [
+        13.0,
+        55.0
+       ]
+      },
+      {
+       "Sun meshes Planet copy 1": [
+        29.0,
+        13.0
+       ],
+       "Sun meshes Planet copy 2": [
+        29.0,
+        13.0
+       ],
+       "Sun meshes Planet copy 3": [
+        29.0,
+        13.0
+       ],
+       "Planet copy 1 meshes Ring": [
+        13.0,
+        55.0
+       ]
+      }
+     ],
+     "flags": [
+      {
+       "Gear_m1.25_N29.SLDPRT": true,
+       "Gear_m1.25_N13.SLDPRT": true,
+       "Ring_m1.25_N55.SLDPRT": true,
+       "Dog_m1.25_N17.SLDPRT": false,
+       "Sleeve_m1.25_N17.SLDPRT": false,
+       "RangeBox_Layout.SLDPRT": false,
+       "RangeBox_Carrier_Carrier.SLDPRT": false,
+       "Sprocket.SLDPRT": false,
+       "Housing.SLDPRT": false,
+       "RangeBox.SLDASM": true
+      },
+      {
+       "Gear_m1.25_N29.SLDPRT": true,
+       "Gear_m1.25_N13.SLDPRT": true,
+       "Ring_m1.25_N55.SLDPRT": true,
+       "Dog_m1.25_N17.SLDPRT": false,
+       "Sleeve_m1.25_N17.SLDPRT": false,
+       "RangeBox_Layout.SLDPRT": false,
+       "RangeBox_Carrier_Carrier.SLDPRT": false,
+       "Sprocket.SLDPRT": false,
+       "Housing.SLDPRT": false,
+       "RangeBox.SLDASM": true
+      }
+     ],
+     "wrote": [
+      "modified beyond step 1's parts ['RangeBox.SLDASM']"
+     ]
+    },
+    "third": {
+     "status": "Updated SolidWorks: made Sun meshes Planet copy 1, Sun meshes Planet copy 2, Sun meshes Planet copy 3 and Planet copy 1 meshes Ring again, with their flags set in every mode, changed 1 variable in Gear_m1.25_N29 (it now has 30 teeth; its file keeps its name), changed 1 variable in Gear_m1.25_N13 (it now has 12 teeth; its file keeps its name), changed 1 variable in Ring_m1.25_N55 (it now has 54 teeth; its file keeps its name), set the gear mates Sun meshes Planet copy 1 to 30 : 12, Sun meshes Planet copy 2 to 30 : 12, Sun meshes Planet copy 3 to 30 : 12 and Planet copy 1 meshes Ring to 12 : 54, re-placed Ring, Carrier (the carrier), Sun, Planet (3 copies), HighDog, LowDog and RangeSlv in every mode; no interference between the gears in any mode, where they stand. It worked in H, the configuration that was active, then showed and checked N and L and left the assembly in H. Your Sprocket-1 went with Sun in every mode, which your locks hold it to. Your Sprocket-3 went with Sun in every mode, which your locks hold it to. Your Sprocket-2 went with RangeSlv in every mode, which your locks hold it to. Save Gear_m1.25_N29, Gear_m1.25_N13, Ring_m1.25_N55 and RangeBox in SolidWorks to keep them.",
+     "ring_by_way_of": [
+      "No. of Teeth",
+      "53"
+     ],
+     "in_error": [],
+     "remade_in_modes": [
+      "Planet copy 1 meshes Ring",
+      "Sun meshes Planet copy 1",
+      "Sun meshes Planet copy 2",
+      "Sun meshes Planet copy 3"
+     ],
+     "marked": [],
+     "footer": "Updated SolidWorks: made Sun meshes Planet copy 1, Sun meshes Planet copy 2, Sun meshes Planet copy 3 and Planet copy 1 meshes Ring again, with their flags set in every mode, changed 1 variable in Gear_m1.25_N29 (it now has 30 teeth; its file keeps its name), changed 1 variable in Gear_m1.25_N13 (it now has 12 teeth; its file keeps its name), changed 1 variable in Ring_m1.25_N55 (it now has 54 teeth; its file keeps its name), set the gear mates Sun meshes Planet copy 1 to 30 : 12, Sun meshes Planet copy 2 to 30 : 12, Sun meshes Planet copy 3 to 30 : 12 and Planet copy 1 meshes Ring to 12 : 54, re-placed Ring, Carrier (the carrier), Sun, Planet (3 copies), HighDog, LowDog and RangeSlv in every mode; no interference between the gears in any mode, where they stand. It worked in H, the configuration that was active, then showed and checked N and L and left the assembly in H. Your Sprocket-1 went with Sun in every mode, which your locks hold it to. Your Sprocket-3 went with Sun in every mode, which your locks hold it to. Your Sprocket-2 went with RangeSlv in every mode, which your locks hold it to. Save Gear_m1.25_N29, Gear_m1.25_N13, Ring_m1.25_N55 and RangeBox in SolidWorks to keep them.",
+     "teeth": 54.0
+    }
+   },
+   "seconds": 697,
+   "failed": [
+    "remake, M3: step 2 stopped before any write: no call that changes or shows anything, every part's globals, every document's save flag and file time as before (only ['Gear_m1.25_N13.SLDPRT', 'Gear_m1.25_N29.SLDPRT', 'Ring_m1.25_N55.SLDPRT'] modified, from step 1), nothing changed, made, remade or placed, its stop said skipped and named Ring_m1.25_N55.SLDPRT alone, the ring still at Tooth Space 72 and 54 teeth, the assembly's frames, mates and flags and the gear mates' ratios as before: [\"modified beyond step 1's parts ['RangeBox.SLDASM']\"]"
+   ]
+  }
+ },
+ "stops": [],
+ "proposal": {
+  "UPDATE_MAKES_MATES_WITH_MODES_ON_2026": true,
+  "UPDATE_MAKES_MATES_WITH_MODES_ON_2026_evidence": "remake: gear mates of a gearbox with modes remade, flags and senses read in every mode: True"
+ },
+ "revision": [
+  34,
+  0,
+  0
+ ],
+ "snapshot": "3a9e592 with probe/w9c_demonstration.py from eabf14e",
+ "whats_wrong_rule": {
+  "helper_present": true,
+  "shows_in_update": false,
+  "allowance_seconds": 60.0
+ },
+ "fails": [
+  "remake, M3: step 2 stopped before any write: no call that changes or shows anything, every part's globals, every document's save flag and file time as before (only ['Gear_m1.25_N13.SLDPRT', 'Gear_m1.25_N29.SLDPRT', 'Ring_m1.25_N55.SLDPRT'] modified, from step 1), nothing changed, made, remade or placed, its stop said skipped and named Ring_m1.25_N55.SLDPRT alone, the ring still at Tooth Space 72 and 54 teeth, the assembly's frames, mates and flags and the gear mates' ratios as before: [\"modified beyond step 1's parts ['RangeBox.SLDASM']\"]"
+ ],
+ "notes": []
+}
