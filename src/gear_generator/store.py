@@ -405,7 +405,14 @@ def link_record_path(workbook_path: str) -> str:
 
 
 _W7_LINK_SCHEMA = 5               # the schema W7 left (W8-PLAN §1.11: W8's is one past it, written from it)
-LINK_SCHEMA_VERSION = _W7_LINK_SCHEMA + 1    # the link record's own schema, apart from the .gear.json's SCHEMA_VERSION
+_W8_LINK_SCHEMA = _W7_LINK_SCHEMA + 1        # the schema W8 left (ISSUE-1-PLAN §2.4: W9a's is one past it)
+LINK_SCHEMA_VERSION = _W8_LINK_SCHEMA + 1    # the link record's own schema, apart from the .gear.json's SCHEMA_VERSION
+# Schema 7 (W9a, ISSUE-1-PLAN §2.1 item 6, K4; W9A-INTERFACES.md §2.2): the gearbox keeps what the last Update read of
+# the user's work in its assembly (GearboxRecord.user_work, a UserWorkEntry): when, from which read of the workbook, on
+# which SolidWorks, the user's components, mates and features as read, what that press put with its gears, and — for a
+# press that refused over the user's work — every problem it said. A v1-v6 record reads as v7 with no user work —
+# nothing read yet — and a v7 written from it reads back the same. A record of any newer schema (W9b sets 8) is refused
+# and left byte-identical.
 # Schema 6 (W8, every record: W8-PLAN §1.11, W8-INTERFACES.md §5): the gearbox keeps its configurations
 # (GearboxRecord.modes), a SLIDE mate its value per configuration (MateEntry.values), a coupling or sliding mesh the
 # configurations it is on in (MateEntry.modes), and a component its frame per configuration (ComponentEntry.frames);
@@ -551,6 +558,113 @@ class MateEntry:
 
 
 @dataclass
+class UserComponentEntry:
+    """Schema 7 (W9a): a top-level component of the user's as an Update read it (``swbuild.UserComponent``): its
+    ``Name2``, file, whether fixed, its error code and its suppression state in the configuration active then (-1:
+    not read, ``swcom.UNREAD``)."""
+
+    name: str = ""
+    path: str = ""
+    fixed: bool = False
+    code: int = 0
+    state: int = -1
+
+
+@dataclass
+class UserMateEntry:
+    """Schema 7 (W9a): a mate of the user's as an Update read it (``swbuild.UserMate``): ``kind`` ``lock``, ``gear``
+    or ``other``; ``type`` the ``swMateType_e`` read (-1: not read); ``touches`` per entity ``[what, name]`` (``what``
+    ``app`` with a gear or carrier id, ``layout``, ``assembly``, ``user`` with a top-level Name2, or ``unread``); ``on``
+    the modes it was on in (``[""]`` on and ``[]`` suppressed on a gearbox with no modes); ``code`` / ``warning`` its
+    error as read; ``whole`` False when SolidWorks would not describe it."""
+
+    name: str = ""
+    kind: str = "other"
+    type: int = -1
+    touches: List[List[str]] = field(default_factory=list)
+    on: List[str] = field(default_factory=list)
+    code: int = 0
+    warning: bool = True
+    whole: bool = True
+
+
+@dataclass
+class UserFeatureEntry:
+    """Schema 7 (W9a): a feature of the user's in a document the app made (``swbuild.UserFeature``): the document's
+    path, the feature's name and type, and its error code as read."""
+
+    path: str = ""
+    name: str = ""
+    type_name: str = "?"
+    code: int = 0
+    warning: bool = True
+
+
+@dataclass
+class UserCarriedEntry:
+    """Schema 7 (W9a): a component of the user's a press put (or would have put) with an app gear by route (c1),
+    and the user's locks that hold it there."""
+
+    component: str = ""
+    gear: str = ""
+    locks: List[str] = field(default_factory=list)
+
+
+@dataclass
+class ValueEditEntry:
+    """Schema 7 (W9a, K11): an app-owned value found in SolidWorks otherwise than both the record and the workbook
+    (``swbuild.ValueEdit``), each as text."""
+
+    document: str = ""
+    name: str = ""
+    live: str = ""
+    wanted: str = ""
+    recorded: str = ""
+    mode: str = ""
+    cell: str = ""
+
+
+@dataclass
+class UserProblemEntry:
+    """Schema 7 (W9a): one reason a press refused over the user's work (``swbuild.UserProblem``): its kind, the
+    sentence said, the user's mates it names and, for K11, the values."""
+
+    kind: str = ""
+    sentence: str = ""
+    mates: List[str] = field(default_factory=list)
+    values: List[ValueEditEntry] = field(default_factory=list)
+
+
+@dataclass
+class UserWorkEntry:
+    """Schema 7 (W9a, ISSUE-1-PLAN K4): what the last Update read of the user's work in the assembly, before it
+    changed anything, kept so the footer can say before the next press what that press would do with it, and Build
+    again… what stays behind — each with the time it was read. ``read_at`` is ``now()``'s UTC stamp; ``assembly`` the
+    assembly it was read in; ``digest`` the read of the workbook that press was planned from; ``revision`` the
+    SolidWorks it ran on (``[]`` when not known); ``components``, ``mates`` and ``features`` as read; ``carried`` what
+    that press put with its gears; ``problems`` every problem of a press that refused over the user's work (``[]`` for
+    one that went ahead). A static gearbox's Update reads the features only."""
+
+    read_at: str = ""
+    assembly: str = ""
+    digest: str = ""
+    revision: List[int] = field(default_factory=list)
+    components: List[UserComponentEntry] = field(default_factory=list)
+    mates: List[UserMateEntry] = field(default_factory=list)
+    features: List[UserFeatureEntry] = field(default_factory=list)
+    carried: List[UserCarriedEntry] = field(default_factory=list)
+    problems: List[UserProblemEntry] = field(default_factory=list)
+
+    @property
+    def refused(self) -> bool:
+        return bool(self.problems)
+
+    def __bool__(self) -> bool:
+        """Whether anything of the user's was read (an entry with nothing in it still says when it was read)."""
+        return bool(self.components or self.mates or self.features)
+
+
+@dataclass
 class GearboxRecord:
     """The current revision's layout part and assembly (phase W4; schema 3 adds W5's turning assembly).
 
@@ -605,6 +719,9 @@ class GearboxRecord:
     # Schema 6 (W8): the configurations as built, in Modes-sheet order; the first is the one the assembly was saved
     # in; ``[]`` = no configuration was added (no Modes rows). A v5 record reads as ``[]``.
     modes: List[str] = field(default_factory=list)
+    # Schema 7 (W9a): what the last Update read of the user's work in ``assembly`` (UserWorkEntry); None = nothing read
+    # yet (every record before schema 7, and a new revision's assembly until its first Update).
+    user_work: Optional[UserWorkEntry] = None
 
 
 @dataclass
@@ -1083,8 +1200,42 @@ def _modes_checked(box: "GearboxRecord") -> None:
                              f"{whose}")
 
 
+_USER_WHAT = ("app", "layout", "assembly", "user", "unread")
+# What a user mate's entity is on (``swbuild.APP``, ``LAYOUT``, ``ASSEMBLY``, ``USER``, ``UNREAD_ENTITY``; spelled here,
+# since swbuild imports this module, and kept the same by a test).
+
+
+def _user_work_read(raw: Any) -> Optional[UserWorkEntry]:
+    """Schema 7's ``gearbox.user_work`` (W9a), every entry type-checked, else a TypeError or ValueError phrase naming
+    it: an entity that is not a ``[what, name]`` pair of words, or a ``what`` not one of :data:`_USER_WHAT`. None (or
+    a missing key) reads as None: nothing read."""
+    if raw is None:
+        return None
+    if not isinstance(raw, dict):
+        raise TypeError("gearbox.user_work is not an object")
+    entry = _checked(UserWorkEntry(**_known(UserWorkEntry, raw)))
+    entry.components = [_checked(c) for c in _entries(UserComponentEntry, raw.get("components", []) or [])]
+    entry.mates = [_checked(m) for m in _entries(UserMateEntry, raw.get("mates", []) or [])]
+    for index, mate in enumerate(entry.mates):
+        for touch in mate.touches:
+            if len(touch) != 2 or touch[0] not in _USER_WHAT:
+                raise ValueError(f"gearbox.user_work.mates[{index}] ({mate.name!r}) has an entity {touch!r}, not a "
+                                 f"pair of what it is on ({', '.join(_USER_WHAT)}) and its name")
+    entry.features = [_checked(f) for f in _entries(UserFeatureEntry, raw.get("features", []) or [])]
+    entry.carried = [_checked(c) for c in _entries(UserCarriedEntry, raw.get("carried", []) or [])]
+    problems = []
+    for raw_p in raw.get("problems", []) or []:
+        if not isinstance(raw_p, dict):
+            raise TypeError("gearbox.user_work.problems are not a list of objects")
+        problem = _checked(UserProblemEntry(**_known(UserProblemEntry, raw_p)))
+        problem.values = [_checked(v) for v in _entries(ValueEditEntry, raw_p.get("values", []) or [])]
+        problems.append(problem)
+    entry.problems = problems
+    return entry
+
+
 def link_record_from_json(text: str) -> LinkRecord:
-    """Parse a link record of any schema up to :data:`LINK_SCHEMA_VERSION`; a v1–v5 record is read as v6, and a
+    """Parse a link record of any schema up to :data:`LINK_SCHEMA_VERSION`; a v1–v6 record is read as v7, and a
     record of any newer schema is refused (:class:`UnknownSchema`) and left alone.
 
     The schema is ``link_schema_version`` when the file has it, else
@@ -1126,6 +1277,7 @@ def link_record_from_json(text: str) -> LinkRecord:
             record.gearbox.carriers = [_carrier_read(c, raw_c, i) for i, (c, raw_c) in
                                        enumerate(zip(_entries(CarrierEntry, gearbox.get("carriers", []) or []),
                                                      gearbox.get("carriers", []) or []))]
+            record.gearbox.user_work = _user_work_read(gearbox.get("user_work"))      # schema 7 (W9a)
             _turned_senses_checked(record.gearbox)
             _carriers_checked(record.gearbox)
             _modes_checked(record.gearbox)

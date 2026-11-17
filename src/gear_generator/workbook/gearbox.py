@@ -1427,6 +1427,8 @@ def finish_build(plan: GearboxPlan, result: GearboxResult, record: Optional[Link
         gearbox.built = stamp
         _record_carriers(gearbox, plan, result)
         if assembly_path:
+            if gearbox.user_work is not None and not store.same_path(gearbox.user_work.assembly, assembly_path):
+                gearbox.user_work = None          # W9a: an inventory read in another assembly is not this one's
             gearbox.assembly = assembly_path
             # Plain names, as the record's JSON holds them: a worker's own name object never reaches the record.
             gearbox.layout_component = str(result.components.get(layout.LAYOUT_HANDLE, ""))

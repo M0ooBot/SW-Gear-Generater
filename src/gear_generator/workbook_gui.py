@@ -286,6 +286,10 @@ class Job:
     record: Optional[store.LinkRecord] = None
     progress: swbuild.Progress = dataclasses.field(default_factory=swbuild.Progress)
     journaled: bool = False        # a build whose journal was written before it began (LinkRecord.pending)
+    # W9a: the running SolidWorks' revision, as the worker's session gave it when the job ran (for the record's
+    # inventory of the user's work), and, for a Build again…, the assembly it leaves behind, read first.
+    revision: Tuple[int, ...] = ()
+    before: Optional[swbuild.OldAssembly] = None
 
     @property
     def updating(self) -> bool:
@@ -698,7 +702,8 @@ class WorkbookWindow(tk.Toplevel):
                                                     assembly_template=self._strip("assembly_template"),
                                                     parts_only=parts_only)
             if ours is not None and (ours.parts or gearbox is not None) and not _update_gate(a, ours):
-                self.update_plan = wb_update.classify(ours, a)
+                # W9a: the features each part's .gear.json lists are the app's (K1), read as the worker needs them.
+                self.update_plan = wb_update.classify(ours, a, read_sidecar=store.read_sidecar)
         except Exception as exc:  # noqa: BLE001 - planning is pure and should never raise; if it does, say so
             self.plan = self.update_plan = None
             self.plan_trouble = ui_text.planning_failed(exc)
@@ -1209,7 +1214,11 @@ class WorkbookWindow(tk.Toplevel):
         update = self.update_plan
         job = Job(JOB_UPDATE, self.reading.digest, update=update, record=self.record)
         kwargs = update.update_kwargs()
-        self._submit(job, lambda session: swbuild.update_gearbox(session, **kwargs, progress=job.progress.say))
+
+        def work(session: Any) -> Any:
+            job.revision = tuple(getattr(session, "revision", ()) or ())
+            return swbuild.update_gearbox(session, **kwargs, progress=job.progress.say)
+        self._submit(job, work)
 
     def _build_again(self) -> None:
         """Ask (default No) whether to build the next revision, with what it makes, reuses and shares; then build
@@ -1261,6 +1270,10 @@ class WorkbookWindow(tk.Toplevel):
             return
         job = Job(JOB_BUILD, self.reading.digest, plan=plan, record=self.record)
         kwargs = plan.build_kwargs()
+        # W9a (ISSUE-1-PLAN §2.1 item 8): a Build again… reads what of the user's stays in the old assembly first.
+        job.before = wb_update.old_assembly(self.record, plan)
+        if job.before is not None:
+            kwargs["before"] = job.before
         job.journaled = self._write_journal(plan)
         self._submit(job, lambda session: swbuild.build_gearbox(session, **kwargs, progress=job.progress.say))
 
@@ -1336,6 +1349,8 @@ class WorkbookWindow(tk.Toplevel):
                 self.note = ui_text.Note(ui_text.job_failed(error, job.updating), False)
                 if job.updating and isinstance(error, swbuild.NotAsBuilt):
                     self._mark_not_as_built(error)
+                elif job.updating and isinstance(error, swbuild.UserWorkRefused):
+                    self._record_refusal(job, error)
                 elif not job.updating:
                     self._settle_journal()
             else:
@@ -1405,6 +1420,11 @@ class WorkbookWindow(tk.Toplevel):
             pass
         try:
             text, ok = ui_text.gearbox_status(job.plan, result, again=_had_assembly(job.record))
+            if job.before is not None:
+                # W9a: what of the user's stayed in the old assembly, as the job read it first (or the record held).
+                behind = ui_text.stayed_behind_status(wb_update.stays_behind(job.record, job.plan), result, job.plan)
+                if behind:
+                    text = f"{text} {behind}"
         except Exception as exc:  # noqa: BLE001
             text, ok = ui_text.collect_failed(exc), False
         try:
@@ -1435,7 +1455,8 @@ class WorkbookWindow(tk.Toplevel):
         try:
             record, may_write, notes = self._open_record()
             base = record if record is not None else job.record     # gone or set aside since the press: as planned
-            finished = wb_update.finish_update(job.update, result, base, digest=job.digest, workbook=self.link.path)
+            finished = wb_update.finish_update(job.update, result, base, digest=job.digest, workbook=self.link.path,
+                                               revision=job.revision)
             dragged = finished.dragged
             faults = self._write(finished, may_write)
             if not may_write:
@@ -1452,6 +1473,23 @@ class WorkbookWindow(tk.Toplevel):
         except Exception as exc:  # noqa: BLE001
             text, ok = ui_text.collect_failed(exc, updating=True), False
         return ui_text.Note(" ".join([text] + notes + faults), ok and not faults)
+
+    def _record_refusal(self, job: Job, error: swbuild.UserWorkRefused) -> None:
+        """Update refused over the user's work before changing anything (W9a, K4): the record keeps what it read and
+        every problem it said, with the time, so the footer says them until the next press reads again. Best
+        effort, as :meth:`_mark_not_as_built`: the job's sentence already says all of it."""
+        try:
+            record = store.open_link_record(self.link.path)
+        except (store.StoreError, OSError):
+            return
+        if record is None or store.foreign_workbook(self._settled(record), self.link.path):
+            return
+        try:
+            refused = wb_update.refused_update(record, job.update, error, digest=job.digest, revision=job.revision)
+            if refused.gearbox is not None and refused.gearbox.user_work != getattr(record.gearbox, "user_work", None):
+                store.save_link_record(refused, store.link_record_path(self.link.path))
+        except (store.StoreError, OSError):
+            pass
 
     def _mark_not_as_built(self, error: swbuild.NotAsBuilt) -> None:
         """Update's check found a part not holding what it should (a global gone): put it in the record's

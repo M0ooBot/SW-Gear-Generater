@@ -2979,6 +2979,12 @@ class GearboxResult:
     # worker for the sentences (None: neither claim made).
     modes: List[ModeCheck] = field(default_factory=list)
     positions_per_configuration: Optional[bool] = None
+    # W9a (ISSUE-1-PLAN §2.1 item 8; package B): a Build again… given ``before`` (:class:`OldAssembly`) reads the
+    # user's work in the assembly it leaves behind, first, read-only (:func:`read_old_assembly`). ``old_user_work``
+    # is what it found (None when not read); ``old_read`` says why it was not: :data:`OLD_NOT_OPEN` when that
+    # assembly was not open in this SolidWorks session, else the read's own trouble as a sentence, ``""`` when read.
+    old_user_work: Optional[UserWork] = None
+    old_read: str = ""
 
     @property
     def ok(self) -> bool:
@@ -3059,7 +3065,7 @@ def build_gearbox(sw: SolidWorks, parts: Sequence[BuildPlan], reuse: Sequence[Do
                   senses: Optional[Mapping[str, bool]] = None,
                   lines: Optional[Mapping[str, Tuple[Vec3, Vec3]]] = None,
                   carriers: Sequence[Union[BuildPlan, DocumentValues]] = (),
-                  modes: Optional[ModesPlan] = None) -> GearboxResult:
+                  modes: Optional[ModesPlan] = None, before: Optional["OldAssembly"] = None) -> GearboxResult:
     """A workbook's parts, its layout part and its static assembly, in one worker job (PLAN-WORKBOOK §4.2–§4.3).
 
     ``parts`` are the new parts' plans; ``reuse`` the parts already built and
@@ -3148,6 +3154,11 @@ def build_gearbox(sw: SolidWorks, parts: Sequence[BuildPlan], reuse: Sequence[Do
     (step 8, :func:`_modes_interference`), the first mode's clashes also in ``clashes``, and the assembly is left in
     the first mode. ``positions_per_configuration`` is the running version's (:func:`swcom.positions_per_configuration`).
     None is W7's call.
+
+    W9a (ISSUE-1-PLAN §2.1 item 8): ``before`` (keyword), for a Build again…, the assembly it leaves behind: its user
+    work is read first by :func:`read_old_assembly` — only when it is open in this session, as it stands there, never
+    shown in another mode, never saved or changed — into :attr:`GearboxResult.old_user_work` and ``old_read``.
+    None is W8's call.
     """
     say = progress or _quiet
     _gate(sw)
@@ -3171,6 +3182,9 @@ def build_gearbox(sw: SolidWorks, parts: Sequence[BuildPlan], reuse: Sequence[Do
         if workbook_assembly_kind(assembly) == ASSEMBLY_TRAIN:
             _train_gate(assembly, building=True)
             senses = _sense_gate(assembly, senses)
+    # W9a (ISSUE-1-PLAN §2.1 item 8): a Build again… reads what of the user's stays behind in the old assembly first,
+    # read-only, before anything is made; the read never stops the build.
+    old_work, old_read = (None, "") if before is None else _read_before(sw, before)
     plans = list(parts) + ([layout_plan] if layout_plan is not None else []) + carrier_plans + \
         ([assembly] if assembly is not None else [])
     for plan in plans:
@@ -3200,7 +3214,7 @@ def build_gearbox(sw: SolidWorks, parts: Sequence[BuildPlan], reuse: Sequence[Do
                          f"yet (findings.REUSE_ADD_ROUTE is {route!r}), so this build, which reuses "
                          f"{_file(reused_in_assembly[0])}, cannot start; run probe tier 7 first.")
 
-    result = GearboxResult(open_before=list(open_before))
+    result = GearboxResult(open_before=list(open_before), old_user_work=old_work, old_read=old_read)
     if modes is not None:
         result.positions_per_configuration = positions_per_configuration(sw.revision)
     for index, doc in enumerate(reused_docs, 1):
@@ -5385,6 +5399,64 @@ def _read_user_work(sw: SolidWorks, motion: MotionUpdate, placements: Sequence[P
                                    state.code if state is not None else 0,
                                    state.warning if state is not None else True, whole=info.whole))
     return work
+
+
+OLD_NOT_OPEN = "not open"     # GearboxResult.old_read: the old assembly was not open in this SolidWorks session
+
+
+@dataclass(frozen=True)
+class OldAssembly:
+    """W9a (ISSUE-1-PLAN §2.1 item 8; package B): the assembly a Build again… leaves behind, as the record has it:
+    its path; each app body's ``(gear or carrier id, Name2)``; the layout's Name2 and part; every recorded mate's
+    name; the modes on record. Planning fills it (``workbook.update.old_assembly``)."""
+
+    path: str
+    components: Tuple[Tuple[str, str], ...] = ()
+    layout_component: str = ""
+    layout_path: str = ""
+    mates: Tuple[str, ...] = ()
+    modes: Tuple[str, ...] = ()
+
+
+def read_old_assembly(sw: SolidWorks, old: OldAssembly) -> Optional[UserWork]:
+    """The user's work in the assembly a Build again… leaves behind, read by package A's own inventory read
+    (:func:`_read_user_work`), or None when that assembly is not open in this session (it is never opened from its
+    file here). Read as it stands in the session: it is made the active document (``open_document`` on a document
+    already open loads nothing), its mates and components read, each user mate's flag read per mode without showing
+    one (``mate_suppression``). Nothing is written, shown in another mode or saved; the user's features are not read
+    here (the record's inventory holds them)."""
+    if not any(d.path and same_path(d.path, old.path) for d in sw.documents()):
+        return None
+    sw.begin_build()
+    try:
+        sw.open_document(old.path)
+        result = GearboxUpdate()
+        result.mates = list(sw.mate_states(others=[]))
+        recorded = set(old.mates)
+        unknown = [s.name for s in result.mates if s.name not in recorded]
+        configurations: Dict[str, str] = {}
+        if old.modes:
+            names = sw.configurations()
+            for mode in old.modes:
+                found = next((n for n in names if n.casefold() == mode.casefold()), None)
+                if found is not None:
+                    configurations[mode] = found
+        identity = (1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0)            # unused: only the Name2s are read
+        placements = [Placement(gear, name, identity, (0.0, 0.0, 0.0)) for gear, name in old.components]
+        return _read_user_work(sw, MotionUpdate(layout_component=old.layout_component), placements, old.layout_path,
+                               result, unknown, configurations, ())
+    finally:
+        sw.end_build()
+
+
+def _read_before(sw: SolidWorks, old: OldAssembly) -> Tuple[Optional[UserWork], str]:
+    """:func:`read_old_assembly` for :func:`build_gearbox`: ``(what it found, "")``, ``(None, OLD_NOT_OPEN)``, or
+    ``(None, why)`` when the read raised — the build goes ahead whatever the read met."""
+    try:
+        work = read_old_assembly(sw, old)
+    except Exception as exc:  # noqa: BLE001 - a read of what stays behind never stops the build
+        return None, f"SolidWorks did not answer the read of {_file(old.path)}: {exc}"
+    return (work, "") if work is not None else (None, OLD_NOT_OPEN)
 
 
 def _find_by_part(sw: SolidWorks, handle: str, placement: Placement, placements: Sequence[Placement],

@@ -72,9 +72,13 @@ the gearbox for a gearbox with modes, which ruling 9.18 puts whole whenever it c
 user_carry_branches(plan.motion, plan.placements)` and the revision last seen, and says `carried` (gear -> [(component,
 locks)]) and `problems` before the press. `user_carry_branches` and `user_branch_settled` are pure too.
 
-**The build job's read of the old assembly** (§2.1 item 8) has no worker entry point in W9a: `_read_user_work` reads
-the assembly an Update has open. Its worker-side counterpart is written in W9d. W9a's Build again… clause reads, from
-the record, the inventory the last Update or refusal kept, with its `read_at`, and says it as read at that time.
+**The build job's read of the old assembly** (§2.1 item 8) is W9a's, package B's (the coordinator's correction of
+an earlier ruling that put it in W9d): `swbuild.read_old_assembly(sw, OldAssembly)` reads, with `_read_user_work`
+itself, the user's work in the assembly a Build again… leaves behind, only when that assembly is open in the session,
+as it stands there (no mode shown, nothing written or saved), and `build_gearbox(..., before=)` makes that read first,
+into `GearboxResult.old_user_work` / `old_read`. When it is not open, the result says what the record's inventory
+holds, with its `read_at`. The Build again? question says, from the record, the inventory the last Update or refusal
+kept, with its time. Carrying anything over stays W9d's. (`W9A-PACKAGE-B.md`.)
 
 ## 3. What the worker needs from planning (`classify` fills it; defaults keep W8's behaviour)
 

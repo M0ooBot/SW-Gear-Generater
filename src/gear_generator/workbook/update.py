@@ -48,7 +48,7 @@ import os
 from dataclasses import asdict, dataclass, field, replace
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
-from .. import findings, store
+from .. import findings, store, swbuild
 from ..gears import bevel, equations, kind_for, spur
 from ..gears.base import GlobalVariable
 from ..spec import GearSpec, InputError
@@ -1552,7 +1552,7 @@ def _modes(box: GearboxRecord, a: Assessment, turn: _Turning, placements: Sequen
 def finish_update(plan: UpdatePlan, result: GearboxUpdate, record: LinkRecord, *, digest: str,
                   read_sidecar: Callable[[str], Optional[Sidecar]] = store.read_sidecar,
                   mtime: Callable[[str], float] = os.path.getmtime,
-                  stamp: Optional[str] = None, workbook: str = "") -> Finished:
+                  stamp: Optional[str] = None, workbook: str = "", revision: Sequence[int] = ()) -> Finished:
     """The sidecars and record an update leaves (Tk thread, after the worker).
 
     ``record`` is the record as read just before writing
@@ -1573,6 +1573,11 @@ def finish_update(plan: UpdatePlan, result: GearboxUpdate, record: LinkRecord, *
     (``result.found``) differed from the recorded one while the recorded one
     was already the wanted one: moved by hand in SolidWorks, and put back.
     Pure but for ``read_sidecar`` and ``mtime``.
+
+    W9a (K4, schema 7): what the worker read of the user's work before it changed anything
+    (``result.user_work``) goes on record as the gearbox's ``user_work``, with the read of the workbook the press
+    came from (``digest``) and the SolidWorks it ran on (``revision``, the session's), whatever the press then did;
+    a press that read nothing leaves what is on record.
 
     A gearbox built to turn (``plan.motion`` set): a mated gear is dragged
     only when the worker found it off its axis (a turn is never a drag),
@@ -1690,6 +1695,8 @@ def finish_update(plan: UpdatePlan, result: GearboxUpdate, record: LinkRecord, *
             _follow_modes(box, plan, result)
             box.drag = list(plan.drag)
         _follow_carriers(box, plan, result)
+        record_user_work(rec, getattr(result, "user_work", None), assembly=plan.assembly, digest=digest,
+                         revision=revision)
         out.earlier_update = _earlier_update(record, plan, result, mtime)
         if out.earlier_update:
             out.off_after_update, out.dragged = out.dragged, []
@@ -1960,3 +1967,211 @@ def _settled(plan: UpdatePlan, result: GearboxUpdate) -> List[str]:
             and not result.skipped):
         out.append(asm)
     return out
+
+
+# -- W9a package B: the user's work on record, said before the press (ISSUE-1-PLAN §2.1 items 6 and 8, K4, K5) ---------
+
+def user_work_entry(work: swbuild.UserWork, *, assembly: str, digest: str = "", revision: Sequence[int] = (),
+                    problems: Sequence[swbuild.UserProblem] = ()) -> store.UserWorkEntry:
+    """What the record keeps of an Update's read of the user's work (schema 7): the worker's inventory, the assembly
+    and workbook read it was made in and from, the SolidWorks it ran on, and — for a press that refused over the
+    user's work — every problem it said."""
+    return store.UserWorkEntry(
+        read_at=work.read_at or store.now(), assembly=assembly, digest=digest,
+        revision=[int(n) for n in revision],
+        components=[store.UserComponentEntry(c.name, c.path, bool(c.fixed), int(c.code), int(c.state))
+                    for c in work.components],
+        mates=[store.UserMateEntry(m.name, m.kind, int(m.type), [[w, n] for w, n in m.touches], list(m.on),
+                                   int(m.code), bool(m.warning), bool(m.whole)) for m in work.mates],
+        features=[store.UserFeatureEntry(f.path, f.name, f.type_name, int(f.code), bool(f.warning))
+                  for f in work.features],
+        carried=[store.UserCarriedEntry(c, g, list(locks)) for c, g, locks in work.carried],
+        problems=[store.UserProblemEntry(p.kind, p.sentence, list(p.mates),
+                                         [store.ValueEditEntry(v.document, v.name, v.live, v.wanted, v.recorded,
+                                                               v.mode, v.cell) for v in p.values])
+                  for p in problems])
+
+
+def recorded_user_work(entry: store.UserWorkEntry) -> swbuild.UserWork:
+    """The record's inventory back as the worker's :class:`swbuild.UserWork`, for its pure judgement."""
+    return swbuild.UserWork(
+        read_at=entry.read_at,
+        components=[swbuild.UserComponent(c.name, c.path, c.fixed, c.code, c.state) for c in entry.components],
+        mates=[swbuild.UserMate(m.name, m.kind, m.type, tuple((w, n) for w, n in m.touches), tuple(m.on), m.code,
+                                m.warning, m.whole) for m in entry.mates],
+        features=[swbuild.UserFeature(f.path, f.name, f.type_name, f.code, f.warning) for f in entry.features],
+        carried=[(c.component, c.gear, tuple(c.locks)) for c in entry.carried])
+
+
+def record_user_work(record: LinkRecord, work: Optional[swbuild.UserWork], *, assembly: str, digest: str = "",
+                     revision: Sequence[int] = (), problems: Sequence[swbuild.UserProblem] = ()) -> bool:
+    """Put what a press read of the user's work into ``record`` (in place) as its gearbox's ``user_work``, when the
+    record's assembly is the one read (a record whose current revision has moved on is left alone). Whether it was
+    written. ``work`` None (the assembly was not read) leaves what is on record as it was."""
+    box = record.gearbox
+    if work is None or box is None or not box.assembly or not store.same_path(box.assembly, assembly):
+        return False
+    box.user_work = user_work_entry(work, assembly=assembly, digest=digest, revision=revision, problems=problems)
+    return True
+
+
+def refused_update(record: LinkRecord, plan: UpdatePlan, error: swbuild.UserWorkRefused, *, digest: str,
+                   revision: Sequence[int] = ()) -> LinkRecord:
+    """The record after a press that refused over the user's work before changing anything (K4): a copy with the
+    inventory as read and every problem said, so the footer says them until the next press reads again. Pure."""
+    rec = copy.deepcopy(record)
+    record_user_work(rec, error.user_work, assembly=plan.assembly, digest=digest, revision=revision,
+                     problems=error.problems)
+    return rec
+
+
+@dataclass(frozen=True)
+class UserWorkAhead:
+    """What the footer says before a press of the user's work on record (K4), decided here and worded by
+    ``ui_text``: ``entry`` the record's inventory (its ``read_at``); ``refused`` the problems of the last press when
+    it refused over the user's work, and ``changed_since`` whether the workbook read now is not the one that press
+    was made from; otherwise the prediction by the worker's own judgement (``swbuild.judge_user_work`` on the
+    inventory, no tie read): ``carried`` gear -> [(component, the user's locks)], ``problems`` the refusals it
+    foresees, ``unread_ties`` (gears, user mates) of each train SolidWorks will be asked about at the press.
+    ``followed``: the user's features in parts this press changes, which SolidWorks rebuilds after the app's."""
+
+    entry: store.UserWorkEntry
+    refused: Tuple[store.UserProblemEntry, ...] = ()
+    changed_since: bool = False
+    carried: Tuple[Tuple[str, Tuple[Tuple[str, Tuple[str, ...]], ...]], ...] = ()
+    problems: Tuple[swbuild.UserProblem, ...] = ()
+    unread_ties: Tuple[Tuple[Tuple[str, ...], Tuple[str, ...]], ...] = ()
+    followed: Tuple[swbuild.UserFeature, ...] = ()
+
+
+def _on_record(record: Optional[LinkRecord]) -> Optional[store.UserWorkEntry]:
+    """The record's inventory of the user's work in its current assembly, or None."""
+    box = getattr(record, "gearbox", None)
+    entry = getattr(box, "user_work", None)
+    if entry is None or not box.assembly or (entry.assembly and not store.same_path(entry.assembly, box.assembly)):
+        return None
+    return entry
+
+
+def _judged_trains(plan: UpdatePlan) -> Tuple[List[str], List[Tuple[str, ...]]]:
+    """The mated bodies, and the trains as the worker's check joins them (``swbuild._user_check``): without modes, a
+    held gear joined only through its gear-mated meshes; with modes, over every mode's links (the mode that will be
+    showing at the press is not known here)."""
+    m = plan.motion
+    gears = [p.gear for p in plan.placements]
+    fixed = set(m.fixed)
+    mated = [g for g in gears if g not in fixed]
+    held = [g for g in m.held if g in gears]
+    judged = mated + [g for g in held if g not in mated]
+    meshes = list(m.meshes)
+    if not m.configurations:
+        pairs = {tuple(x.gears) for x in m.mates if x.kind == motion.MESH and len(x.gears) == 2}
+        meshes = [x for x in meshes if not ({x.a, x.b} & set(held)) or (x.a, x.b) in pairs]
+    return mated, swbuild._trains(judged, meshes, m.locks, m.carriers)
+
+
+def bodies_put(plan: UpdatePlan) -> set:
+    """The app bodies a press of ``plan`` would put, foreseen from the record as the worker's check judges it from
+    SolidWorks (``swbuild._may_put``): with modes, every mated body whenever the press changes anything (ruling
+    9.18); without, every train with a gear re-placed, moved along its shaft or whose gear mate is remade, and every
+    train when the layout or a carrier moves. A held or fixed gear only when it is re-placed. A quiet press puts
+    nothing (unless SolidWorks turns out to differ, which only the press reads)."""
+    m = plan.motion
+    if m is None:
+        return set()
+    gears = [p.gear for p in plan.placements]
+    still = set(m.fixed) | set(m.held)
+    free = {g for g in gears if g not in still}
+    moved_still = {g for g in plan.replaced if g in still}
+    changing = bool(not plan.record_matches or plan.axial or plan.ratios or plan.resensed or plan.carriers_moved
+                    or plan.modes_changed)
+    if not changing:
+        return set()
+    if m.configurations or plan.moved_shafts or plan.carriers_moved:
+        return free | moved_still
+    remade = set(plan.ratios) | set(plan.resensed)
+    seeds = set(plan.replaced) | set(plan.axial) | {g for x in m.mates if x.name in remade for g in x.gears}
+    _, trains = _judged_trains(plan)
+    return {g for train in trains if set(train) & seeds for g in train if g in free} | moved_still
+
+
+def user_work_ahead(plan: Optional[UpdatePlan], record: Optional[LinkRecord],
+                    digest: str = "") -> Optional[UserWorkAhead]:
+    """K4: what a press of ``plan`` would do with the user's work the record holds, or None when nothing is on
+    record, nothing of the user's was read, or the plan is not an Update (refused, or a new revision). The worker's
+    own pure judgement on the recorded inventory, never a second one: a recorded refusal (a tie is a solver read
+    nothing here can redo) is said as recorded; otherwise ``swbuild.judge_user_work`` with the bodies the press
+    would put (:func:`bodies_put`), every branch of route (c1) from ``swbuild.user_carry_branches`` (always given:
+    an unmeasured branch is foreseen as refused) and the SolidWorks the inventory was read on."""
+    entry = _on_record(record)
+    if entry is None or plan is None or plan.refusal or plan.needs_new_revision:
+        return None
+    if not entry and not entry.problems:
+        return None
+    work = recorded_user_work(entry)
+    followed = tuple(f for f in work.features if any(store.same_path(f.path, p.path) for p in plan.changed_parts))
+    if entry.problems:
+        return UserWorkAhead(entry, refused=tuple(entry.problems), followed=followed,
+                             changed_since=bool(digest) and bool(entry.digest) and entry.digest != digest)
+    m = plan.motion
+    if m is None:                                    # W4's static path reads the user's features only
+        return UserWorkAhead(entry, followed=followed)
+    mated, trains = _judged_trains(plan)
+    judgement = swbuild.judge_user_work(
+        work, tuple(m.configurations) or ("",), bodies_put(plan), file=os.path.basename(plan.assembly.replace("\\",
+                                                                                                             "/")),
+        trains=trains, mated=mated, read_tie=None, branches=swbuild.user_carry_branches(m, plan.placements),
+        revision=tuple(entry.revision))
+    return UserWorkAhead(entry, carried=tuple((g, tuple(held)) for g, held in judgement.carried.items()),
+                         problems=tuple(judgement.problems), unread_ties=tuple(judgement.unread_ties),
+                         followed=followed)
+
+
+@dataclass(frozen=True)
+class StaysBehind:
+    """K5 until W9d: what of the user's a Build again… leaves in the old revision, from the record's inventory with
+    its time (``entry.read_at``): ``assembly`` the old assembly; ``components`` and ``mates`` (names) in it;
+    ``left`` (feature, old part path, the gears whose new part replaces it) for each user feature in a part the new
+    revision makes new; ``kept`` (feature, part path) for each in a part it reuses, which comes along with the part.
+    None from :func:`stays_behind` when nothing is on record."""
+
+    entry: store.UserWorkEntry
+    assembly: str
+    components: Tuple[str, ...] = ()
+    mates: Tuple[str, ...] = ()
+    left: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = ()
+    kept: Tuple[Tuple[str, str], ...] = ()
+
+
+def stays_behind(record: Optional[LinkRecord], again: Any) -> Optional[StaysBehind]:
+    """What :class:`StaysBehind` says for a Build again… of ``again`` (``gearbox.GearboxPlan``) from ``record``; None
+    when the record holds no inventory of its assembly, or one with nothing of the user's in it."""
+    entry = _on_record(record)
+    if entry is None or not entry or again is None:
+        return None
+    reused = [r.path for r in getattr(again, "reuse", ()) or ()]
+    gears_of = {p.path: p.gears for p in record.parts}
+    left, kept = [], []
+    for f in entry.features:
+        if any(store.same_path(f.path, r) for r in reused):
+            kept.append((f.name, f.path))
+            continue
+        gears = next((tuple(g) for path, g in gears_of.items() if store.same_path(path, f.path)), ())
+        left.append((f.name, f.path, gears))
+    return StaysBehind(entry, record.gearbox.assembly, tuple(c.name for c in entry.components),
+                       tuple(m.name for m in entry.mates), tuple(left), tuple(kept))
+
+
+def old_assembly(record: Optional[LinkRecord], again: Any) -> Optional[swbuild.OldAssembly]:
+    """For a Build again… (``again``, a ``gearbox.GearboxPlan`` whose assembly is not the one on record): the
+    assembly it leaves behind, for the build job to read the user's work in first (``swbuild.build_gearbox``'s
+    ``before``); None for any other build."""
+    box = getattr(record, "gearbox", None)
+    if box is None or not box.assembly or again is None or getattr(again, "assembly", None) is None:
+        return None
+    if store.same_path(getattr(again, "assembly_path", "") or "", box.assembly):
+        return None
+    bodies = [(c.gear, c.name) for c in box.components if c.name]
+    bodies += [(layout.carrier_id(c.shaft), c.component) for c in box.carriers if c.component]
+    return swbuild.OldAssembly(box.assembly, tuple(bodies), box.layout_component, box.layout,
+                               tuple(m.name for m in box.mates), tuple(box.modes))
