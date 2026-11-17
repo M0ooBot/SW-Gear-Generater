@@ -260,6 +260,13 @@ class UpdateResult:
     def ok(self) -> bool:
         return not self.failures
 
+    @property
+    def left_on_the_way(self) -> bool:
+        """The count was set to its intermediate (``by_way_of``) and the workbook's value then would not set: the part
+        holds the intermediate (the second reading of the fixes review, N3)."""
+        return bool(self.by_way_of) and self.by_way_of[0] in self.changed and \
+            any(what == f'"{self.by_way_of[0]}"' for what, _ in self.failures)
+
 
 def _mate_line(mate: MateState) -> str:
     """``mate    G3 locked to G2 · error code 46, at fault · suppressed``: one mate as the check read it. The error
@@ -1454,7 +1461,21 @@ def update_variables(sw: SolidWorks, variables: Sequence[GlobalVariable], expect
             if any(what == f'"{name}"' for what, _ in result.failures):
                 return result
             final = next(v for v in variables if v.name == name)
+            before_final = len(result.failures)
             result.rebuilt = apply([(name, final.expression_for(result.trig))])
+            if len(result.failures) > before_final:
+                # The final count would not set (the second reading of the fixes review, N3): the part holds the
+                # intermediate, neither the count it held nor the workbook's. The count stays changed, the part
+                # reads as not rebuilt (left in error: the stop says to close it without saving), and the failure
+                # says what it holds.
+                what, why = result.failures[-1]
+                result.failures[-1] = (what, f'{why} {_stem_of(result.document)} holds "{name}" = '
+                                             f"{result.by_way_of[1]}, the count this Update went by way of, not the "
+                                             f"workbook's {final.expression_for(result.trig)}.")
+                result.rebuilt = False
+                if name in result.unchanged:
+                    result.unchanged.remove(name)
+                return result
             held = dict(planned_changes(current, variables, result.trig))
             if name not in held and name in result.changed:
                 # A change that left the count as it was (a module alone, say) went by way of another and back: the
@@ -3801,7 +3822,10 @@ class GearboxUpdate:
             lines.append(f"update  {result.document or '(no document)'} · trig {result.trig or '?'}")
             if result.changed:
                 lines.append("ok      set " + ", ".join(f'"{n}"' for n in result.changed))
-                if result.by_way_of and result.by_way_of[0] in result.changed:
+                if result.left_on_the_way:
+                    lines.append(f'FAIL    set "{result.by_way_of[0]}" to {result.by_way_of[1]} on the way, and the '
+                                 f"workbook's value would not set: it holds {result.by_way_of[1]}")
+                elif result.by_way_of and result.by_way_of[0] in result.changed:
                     lines.append(f'ok      set "{result.by_way_of[0]}" by way of {result.by_way_of[1]} first, rebuilt '
                                  "there, then the workbook's value (a sketch line would have landed on itself)")
                 elif result.by_way_of:
@@ -3814,7 +3838,9 @@ class GearboxUpdate:
                 lines.append("ok      already holds the workbook's values")
             if result.changed:
                 theirs = [f.name for f in self.user_features_in_error if _file(f.path) == result.document]
-                if result.rebuilt:
+                if result.left_on_the_way:
+                    pass                    # said above: not rebuilt at the workbook's value, whatever it read
+                elif result.rebuilt:
                     lines.append("ok      rebuilt twice" if result.by_way_of else "ok      rebuilt once")
                 elif theirs and not any(what == result.document for what, _ in self.failures):
                     lines.append("CHECK   the rebuild reported an error, from your features alone: " + ", ".join(theirs))
@@ -4028,7 +4054,7 @@ def _update_document(sw: SolidWorks, doc: DocumentValues,
                 read[doc.path] = bool(ours)
             theirs_alone = bool(theirs) and not ours and \
                 getattr(findings, "WHATS_WRONG_OPENS_ON_PART_REBUILD", None) is False
-    if result.changed and not result.rebuilt and not theirs_alone:
+    if result.changed and not result.rebuilt and not theirs_alone and not result.left_on_the_way:
         failures.append((name, f"SolidWorks reported an error rebuilding {_stem(doc.path)}."))
     return result, failures
 

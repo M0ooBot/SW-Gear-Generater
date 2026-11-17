@@ -255,3 +255,51 @@ def test_an_update_gives_the_route_through_its_part_step_and_says_it(monkeypatch
     lines = swbuild.GearboxUpdate(parts=[done]).log_lines()
     assert (f'ok      set "{spur.TEETH}" by way of 53 first, rebuilt there, then the workbook\'s value (a sketch line '
             "would have landed on itself)") in lines and "ok      rebuilt twice" in lines
+
+
+# -- the fixes review's second reading: N3 (the count's second set fails) ---------------------------------------------
+
+def _second_count_set_fails(fake):
+    """The fake refuses the count's second set only: leg one goes through, the workbook's value does not."""
+    original, sets = fake.set_global_variable, []
+
+    def set_global_variable(name, expression):
+        if name == spur.TEETH:
+            sets.append(expression)
+            if len(sets) == 2:
+                raise RuntimeError("SolidWorks would not set the count.")
+        return original(name, expression)
+
+    fake.set_global_variable = set_global_variable
+    return fake
+
+
+@pytest.mark.parametrize("n, module, held, changed", [(54, "1.25", 53.0, [spur.TEETH]),
+                                                      (55, "1.225", 54.0, [spur.TEETH, "Module"])])
+def test_a_route_whose_second_count_set_fails_says_the_part_holds_the_intermediate_and_never_offers_to_save(
+        n, module, held, changed):
+    """The part is left at the intermediate: the count stays changed (for a module alone too, never also unchanged),
+    the part reads as not rebuilt and so left in error, the failure and the log say what it holds, and the stop says
+    to close it without saving, never to save it."""
+    from gear_generator import ui_text
+    from gear_generator.workbook import update
+    fake = _second_count_set_fails(_built(RING, 55, RING_PATH))
+    doc = swbuild.DocumentValues(RING_PATH, tuple(_variables(RING, n, module)), made=("Tooth Space",))
+    done, failures = swbuild._update_document(fake, doc)                         # noqa: SLF001
+    middle = done.by_way_of[1]
+    assert fake.equation_values()[spur.TEETH] == held and middle == f"{held:.0f}"
+    assert done.changed == changed and spur.TEETH not in done.unchanged and not done.rebuilt
+    assert failures == [(f'Ring_m1.25_N55.SLDPRT "{spur.TEETH}"',
+                         f'it stopped on an unexpected RuntimeError: SolidWorks would not set the count. '
+                         f'Ring_m1.25_N55 holds "{spur.TEETH}" = {middle}, the count this Update went by way of, not '
+                         f"the workbook's {n}.")]
+    result = swbuild.GearboxUpdate(parts=[done], failures=failures, changed=[RING_PATH])
+    lines = result.log_lines()
+    assert (f'FAIL    set "{spur.TEETH}" to {middle} on the way, and the workbook\'s value would not set: it holds '
+            f"{middle}") in lines
+    assert not [line for line in lines if "rebuilt twice" in line or "then the workbook's value" in line
+                or "and back" in line or "the rebuild reported" in line], lines
+    assert [d.document for d in update.documents_left_in_error(result)] == ["Ring_m1.25_N55.SLDPRT"]
+    text, ok = ui_text.gearbox_update_status(update.UpdatePlan(), result, [])
+    assert not ok and f'Ring_m1.25_N55 holds "{spur.TEETH}" = {middle}' in text, text
+    assert "close it in SolidWorks without saving" in text and "save it in SolidWorks to keep" not in text, text
