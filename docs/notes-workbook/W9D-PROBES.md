@@ -175,6 +175,47 @@ made.
 - RAM fell to 1.84 GB free at `sub`'s end (WSL's page cache had grown), under the 2 GB floor. Dropping that cache gave
   back 4.8 GB.
 
+## The second run on SolidWorks 2026 (2026-11-17, `faces` alone, from c86ad54): r3
+
+**Setup.**
+- Run folder `C:\Users\M0obo\Documents\GearGeneratorProbe\w9d-probes-sw2026-20261117-141350`.
+- SolidWorks 2026 revision 34.0.0, PID 66020, a fresh session, started for the run and exited after.
+- The same masters, unchanged (sizes, times and md5, before and after).
+
+**Result.** `probe/results/w9d-probes-sw2026-20261117-2-faces-r3-clean.log` and `w9d-probes-20261117-141450.json`.
+238 s, 0 failed, no STOP.
+
+- **r1 and r2 read as in the first run:** nothing, on every entity.
+- **r3 is clean on all six entities** (five faces and the edge):
+  - exactly one of the part's faces or edges carried back `IsSame` as the mate's entity;
+  - its reference resolved `swPersistReferencedObject_Ok` to its own kind, `IsSame` as the part entity and, carried
+    back, as the mate's entity;
+  - each bracket started unmarked and marked nothing.
+
+  | Entity | Walked | Reference | Found in | Route in |
+  |---|---|---|---|---|
+  | Sprocket bore face | 163 faces | 583 bytes | 0.26 s | 0.27 s |
+  | Sprocket end face | 163 faces | 8096 bytes | 2.1 s | 2.2 s |
+  | Sprocket end face | 163 faces | 8096 bytes | 3.7 s | 3.9 s |
+  | Sprocket circular edge | 482 edges | 599 bytes | 8.2 s | 8.3 s |
+  | Sun's end face | 235 faces | 11576 bytes | 5.6 s | 6.2 s |
+  | Sprocket end face | 163 faces | 8096 bytes | 8.1 s | 8.7 s |
+
+  **The same 163-face walk took 0.26 s first and 8.1 s by the sixth entity.** The cost per walk grows over the
+  session's calls, not with the part's faces alone. Why is not known; the app would pay it per mate.
+- **The proposals.** Both `PERSIST_REFERENCE_ROUTE_FOR_*` name r3.
+  - `COAXIAL_FACE_READ` True: the bore coaxial by r3 (r1 and r2 read none), the four other faces not, and Sun's User
+    Keyway (radius 1.5 mm, one face) not.
+  - Sun's cylindrical faces are now logged as counts: 29 at 19.375 and 29 at 16.375 coaxial, 58 fillets at 0.475 and
+    the keyway not.
+- **(c), on r3's references:** all four mates made again equal in the second assembly, every component where it stood,
+  and no document of the copy marked by the inserts or the mates. So `CARRY_INSERT_MARKS_USER_DOCUMENTS` False, the
+  bracket having started unmarked.
+- **(d):** every reference resolved again `_Ok` in its part opened alone, to its kind, its place and a face's area,
+  each bracket starting unmarked and marking nothing. So `PERSIST_REFERENCE_SURVIVES_RELOAD` True.
+- `state` and `sub` were not run again; their first run's answers stand. In particular, the read-only open's own flag
+  without the changed part beside it is not measured, and `state` was left as it is.
+
 ## What is untested
 
 Only `--self-check` and `--help` have run (the Linux venv, no SolidWorks): the pure judgements on made-up readings
