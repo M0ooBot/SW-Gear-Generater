@@ -31,25 +31,25 @@ window's own code: `_plan_solidworks_pass`, `_open_record`, `_write`, `_finish_u
 The short sections come first, so a fault in the script shows in minutes. Run them one or two at a time into the same
 `<out>`: a section `<out>` already holds is skipped, and kept masters are found there.
 
-Times marked "measured" are from the runs on SolidWorks 2026 (34.1.1) on 2026-11-16, committed as
-`probe/results/w9a-demo-sw2026-20261116-{1,2,3,4}-*.log` with their JSONs and reviewed in `W9A-RUN-2026-REVIEW.md`
-(`6700505`): runs 1 to 3 at `9dded70`, run 4 (lightweight) at `311ce5a`. The others are estimates, scaled from those
-runs and from W8 (a press putting every mode took 238 s on 2026 and 515 s on 2024; on 2024, about twice 2026).
+Times marked "measured" on 2026 are from the closing run on SolidWorks 2026 (34.1.1), one session at `6f3d6fb` with
+the again sections rerun at `6b9d8aa`: `probe/results/w9a-close-sw2026-2026111*.log`, reviewed in
+`W9A-CLOSE-2026-REVIEW.md` (`2a8f9d1`), about 70 min for the twelve sections. On 2024 they are from the confirming run
+on SolidWorks 2024 (32.5.0), `probe/results/sw2024/w9a-confirm-sw2024-20261117-*.log`. The others are estimates.
 
 | # | Section | What it does and proves | Answers | 2026 | 2024 |
 |---|---|---|---|---|---|
-| 1 | `m3` | On a copy of S0's master: a user sprocket (Sprocket-1) on Input Axis, held by one distance to the layout's Front plane (UserFront), and a fixed housing. It reads SolidWorks' "show errors every rebuild" and the three M3 findings (by `getattr`; a check fails if one is missing), held against the app's own `assembly_rebuild_settled`. The baseline is clean by construction; the distance it leaves to the housing is read. (1) UserGap to the housing at that distance plus 1 mm, which no side can satisfy; the assembly rebuild with it in error; a quiet press, then the footer naming UserGap as in error; a value Update. Then UserGap suppressed and the assembly clean again. (2) A keyway in the user's own Sprocket part, put in error by its Bore 10 → 14; the part's and the assembly's rebuild; a quiet press, the footer naming Sprocket-1, a value Update. Sprocket-1 is carried by nothing. Each Update is judged by the findings and by the rebuild just read: where they let it, it goes ahead, and its result and sentence name the user's item as already in error before; otherwise it stops as before, its sentence naming it. (3) Sprocket-1, its part still in error, locked to Sun so a press would carry it: the press must refuse before any write (the app's new rule), judged by its trace and reads. | **M3** for the assembly rebuild, first, because a dialog there is a STOP; K3 for a feature in a user's part | 7 min measured before (1) and (2) gained their quiet presses and (3) was added; about 14 min now | 28 min |
-| 2 | `setup` | On a copy of S0's master, the user's work (below), saved in place, closed and reopened. The app's reads (`components`, `mate_info`, `feature_states`) with GetSaveFlag around them. A quiet Update that records the inventory, with the footer before and after. The pure judgement showing each unmeasured branch refusing. Kept as `setup.master`. | **M1** (coincident, distance, angle and lock; user–user, user–layout and user–gear; marks nothing), **M2** (the inventory must list the keyway in Sun's part and nothing of the app's), the record's revision | 4 min (measured) | 8 min |
-| 3 | `go` | On a copy of setup.master, two presses, each after the user's turn of +37° in the mode it puts (H, then L): a value Update (Sun's Backlash 0.4) and a slide-offset Update (RangeSlv `L=+5.5`). Before each press: the footer's prediction and every user mate's entities. After: the checks listed below. | ***Done when*: both Updates go ahead, the sprockets found on their gears, every user mate on in its modes and in no error, the keyway rebuilt; the inventory and the footer before and after; review B's item 3 (the carry foreseen is the carry done)** | 17 min (measured) | 35 min |
-| 4 | `m1` | On a copy of setup.master: a user gear mate, and a distance mate suppressed in H (asserted to be the active mode) but on in N and L. Read by `mate_info` and by a quiet Update's inventory. | **M1**: the gear kind, and a mate suppressed in the active mode. Whether the latter reads whole is proposed, not asserted. | 3 min (measured) | — |
-| 5 | `refuse` | On a copy of setup.master, six steps (below), each under its own net. Each press is judged by its own call trace (no show, flag, value, rebuild, put or mate made) and by reads before and after: frames, the user mates' codes, flags and entities, and Sun's globals. A document marked by a refused press is a STOP. The record keeps each refusal, and the footer says it in red. | ***Done when*: a lock to a fixed housing refuses naming it; a Bore Diameter typed in SolidWorks refuses naming the cell**. Also review B's item 3, ruling 5, and `PROBLEM_OTHER_KIND` | about 20 min (measured: the six steps; the rest of the 32 min recorded was the wait behind SOLIDWORKS CAM's box under the old watch) | 40 min (by name only) |
-| 5a | `lightweight` | On a copy of setup.master: each instance's state read by the script's own `GetSuppression2` before, after Sprocket-1 alone is set lightweight, and after the reset; a quiet press records the states from the live session; the footer foresees the refusal; a press refuses, and must name exactly the carried instances the raw read shows lightweight. All on the assembly as it stands, never saved while anything is lightweight; every instance read lightweight is resolved again before the copy is closed. | **review B's item 4**; W9A-RUN-2026-REVIEW finding 3 (the refusal named three sprockets where one was set) | 7 min (measured at `311ce5a`) | 14 min (by name only) |
-| 6 | `again` | On a copy of setup.master, Sun's Part name changed, so Build again…. The question must say what stays behind, without pinning the app's wording: every user component named or covered by an "N other components" that adds up, the mates by their count, the User Keyway and its sketch with Sun's old part, the time the inventory was read (its date too, if one is said), and "nor anything added since". The build's sentence is held to the same: as the build read the old assembly (open), or the record's inventory with its time (closed). The old assembly is opened, then put behind `Housing.SLDPRT`. The app's own `swbuild.read_old_assembly` runs alone, then the build. | §2.1 item 8; review B's item 2; review point 4 | 7 min (measured) | — |
-| 7 | `again-dirty` | As `again`, but the old assembly also needs a rebuild: UserDist4 is changed and not rebuilt. | review B's item 2 | 7 min (measured) | — |
-| 8 | `again-closed` | As `again`, with the old assembly closed: not read and not opened; the window's sentence gives the record's inventory. | §2.1 item 8 | 2 min (measured) | — |
-| 9 | `reducer` | The 12 : 1, written by `write_new` with its Output folder blank and built to turn. Kept as `reducer.master`. | — | 2 min (measured) | 4 min |
-| 10 | `k3` | On a copy of reducer.master: a user keyway in G1's part. A quiet press must list it (M2 on the 12 : 1). Then G1's Bore 8 → 14 in the workbook, an ordinary value Update, rebuilds the keyway into error. The footer must say the keyway follows. The result must list it, and the SENTENCE must name it as the user's and newly in error; where the M3 findings let it (2026 after the app's change) the Update goes ahead, otherwise it stops as before. Every component's error code is read after it: G1's, in error through the keyway in its part, is not counted against the app. A window seen after the job ends this section only. | **K3 in an app part**, and M3 as the app meets it | 1 min (measured; it stopped) ; about 4 min going ahead | 8 min |
-| 11 | `nocarrier` | On a copy of reducer.master, three sprockets: locked to the driving G1 (S0's A), to the driven G4 (B), and one locked to the first (E, a chain). The user's turn and G4 At 27 → 30, first with `USER_MATE_PUT_NO_CARRIER_ON_<year>` None: the app's refusal, foreseen by the footer and judged by its trace. Then the finding patched True in this process only, the press, the reads. A further rebuild, a second turn, and G4 At 30 → 27. Every put must be an app body or a locked sprocket. | **The coordinator's measurement**: proposes the finding True only if both presses and every read are clean | 3 min (measured) | 6 min |
+| 1 | `m3` | On a copy of S0's master: a user sprocket (Sprocket-1) on Input Axis, held by one distance to the layout's Front plane (UserFront), and a fixed housing. It reads SolidWorks' "show errors every rebuild" and the three M3 findings (by `getattr`; a check fails if one is missing), held against the app's own `assembly_rebuild_settled`. The baseline is clean by construction; the distance it leaves to the housing is read. (1) UserGap to the housing at that distance plus 1 mm, which no side can satisfy; the assembly rebuild with it in error; a quiet press, then the footer naming UserGap as in error; a value Update. Then UserGap suppressed and the assembly clean again. (2) A keyway in the user's own Sprocket part, put in error by its Bore 10 → 14; the part's and the assembly's rebuild; a quiet press, the footer naming Sprocket-1, a value Update. Sprocket-1 is carried by nothing. Each Update is judged by the findings and by the rebuild just read: where they let it, it goes ahead, and its result and sentence name the user's item as already in error before; otherwise it stops as before, its sentence naming it. (3) Sprocket-1, its part still in error, locked to Sun so a press would carry it; a quiet press then records the lock (it carries nothing, so it does not refuse), the footer must foresee the refusal of Sprocket-1, and the press must refuse before any write (the app's new rule), judged by its trace and reads and held against the footer's prediction. | **M3** for the assembly rebuild, first, because a dialog there is a STOP; K3 for a feature in a user's part | 16 min (measured, closing run) | 5 min until the STOP (stopped at What's Wrong; see `box`) |
+| 2 | `setup` | On a copy of S0's master, the user's work (below), saved in place, closed and reopened. The app's reads (`components`, `mate_info`, `feature_states`) with GetSaveFlag around them. A quiet Update that records the inventory, with the footer before and after. The pure judgement showing each unmeasured branch refusing. Kept as `setup.master`. | **M1** (coincident, distance, angle and lock; user–user, user–layout and user–gear; marks nothing), **M2** (the inventory must list the keyway in Sun's part and nothing of the app's), the record's revision | 3 min (measured) | 6 min (measured) |
+| 3 | `go` | On a copy of setup.master, two presses, each after the user's turn of +37° in the mode it puts (H, then L): a value Update (Sun's Backlash 0.4) and a slide-offset Update (RangeSlv `L=+5.5`). Before each press: the footer's prediction and every user mate's entities. After: the checks listed below. | ***Done when*: both Updates go ahead, the sprockets found on their gears, every user mate on in its modes and in no error, the keyway rebuilt; the inventory and the footer before and after; review B's item 3 (the carry foreseen is the carry done)** | 11 min (measured) | 25 min (measured) |
+| 4 | `m1` | On a copy of setup.master: a user gear mate, and a distance mate suppressed in H (asserted to be the active mode) but on in N and L. Read by `mate_info` and by a quiet Update's inventory. | **M1**: the gear kind, and a mate suppressed in the active mode. Whether the latter reads whole is proposed, not asserted. | 2 min (measured) | — |
+| 5 | `refuse` | On a copy of setup.master, six steps (below), each under its own net. Each press is judged by its own call trace (no show, flag, value, rebuild, put or mate made) and by reads before and after: frames, the user mates' codes, flags and entities, and Sun's globals. A document marked by a refused press is a STOP. The record keeps each refusal, and the footer says it in red. | ***Done when*: a lock to a fixed housing refuses naming it; a Bore Diameter typed in SolidWorks refuses naming the cell**. Also review B's item 3, ruling 5, and `PROBLEM_OTHER_KIND` | 19 min (measured, closing run) | 40 min (by name only) |
+| 5a | `lightweight` | On a copy of setup.master: each instance's state read by the script's own `GetSuppression2` before, after Sprocket-1 alone is set lightweight, and after the reset; a quiet press records the states from the live session; the footer foresees the refusal; a press refuses, and must name exactly the carried instances the raw read shows lightweight. All on the assembly as it stands, never saved while anything is lightweight; Sprocket-1 is set back first and every instance read again, to log whether resolving one is reported as resolving the others; whatever still reads lightweight is then resolved, one by one, before the copy is closed. | **review B's item 4**; W9A-RUN-2026-REVIEW finding 3 (the refusal named three sprockets where one was set) | 4 min (measured) | 8 min (by name only) |
+| 6 | `again` | On a copy of setup.master, Sun's Part name changed, so Build again…. The question must say what stays behind, held to the clauses that say it (*your … stay in RangeBox.SLDASM*, *your … stay in <the old part>*) and without pinning the app's wording otherwise; whole names only, each count beside its noun in that clause, the features beside their part: every user component named or covered by an "N other components" that adds up, the mates by their count, the User Keyway and its sketch with Sun's old part, the time the inventory was read (its date too, if one is said), and "nor anything added since". The build's sentence is held to the same: as the build read the old assembly (open), or the record's inventory with its time (closed). The old assembly is opened, then put behind `Housing.SLDPRT`. The app's own `swbuild.read_old_assembly` runs alone, then the build. | §2.1 item 8; review B's item 2; review point 4 | 5 min (measured) | — |
+| 7 | `again-dirty` | As `again`, but the old assembly also needs a rebuild: UserDist4 is changed and not rebuilt. | review B's item 2 | 5 min (measured) | — |
+| 8 | `again-closed` | As `again`, with the old assembly closed: not read and not opened; the window's sentence gives the record's inventory. | §2.1 item 8 | 1.5 min (measured) | — |
+| 9 | `reducer` | The 12 : 1, written by `write_new` with its Output folder blank and built to turn. Kept as `reducer.master`. | — | 1.5 min (measured) | 1.5 min (measured) |
+| 10 | `k3` | On a copy of reducer.master: a user keyway in G1's part. A quiet press must list it (M2 on the 12 : 1). Then G1's Bore 8 → 14 in the workbook, an ordinary value Update, rebuilds the keyway into error. The footer must say the keyway follows. The result must list it, and the SENTENCE must name it as the user's and newly in error; where the M3 findings let it (2026 after the app's change) the Update goes ahead, otherwise it stops as before. Every component's error code is read after it: G1's, in error through the keyway in its part, is not counted against the app. A window seen after the job ends this section only. | **K3 in an app part**, and M3 as the app meets it | 1 min (measured, gone ahead) | 2 min |
+| 11 | `nocarrier` | On a copy of reducer.master, three sprockets: locked to the driving G1 (S0's A), to the driven G4 (B), and one locked to the first (E, a chain). The user's turn and G4 At 27 → 30, first with `USER_MATE_PUT_NO_CARRIER_ON_<year>` None: the app's refusal, foreseen by the footer and judged by its trace. Then the finding patched True in this process only, the press, the reads. A further rebuild, a second turn, and G4 At 30 → 27. Every put must be an app body or a locked sprocket. | **The coordinator's measurement**: proposes the finding True only if both presses and every read are clean | 1 min (measured) | 3.5 min (measured) |
 
 **Why m3 is built as it is.** An earlier attempt (not kept) made two distance mates that agreed in value but not in
 side. A plane-to-plane distance mate's side is AddMate5's Flip, which the app's `distance` leaves False, and no finding
@@ -119,16 +119,18 @@ that document, frames, mates' codes, flags and entities and the part's globals a
 (W8's `nothing_changed_calls`) does not see an equation write that sets a part's global; the part's globals read
 before and after every refused press cover it.
 
-**SolidWorks 2026: all twelve sections, about 1 h 30 min** (the measured times, with m3 and k3 as they now run).
+**SolidWorks 2026: all twelve sections, about 70 min** (the closing run's measured times).
 
-**The phase's closing run repeats all twelve sections on 2026**, in one session started for it, at the closing
-snapshot (after the app's M3 change), under the current watch (`311ce5a` or later: a dialog during a job is a STOP at
-once). Runs 1 to 3 ran under `9dded70`'s watch, which only noted a dialog during a job, so their evidence counts toward
-W9a but cannot stand as the closing run. Then the window check's W8 stage on 2026, then 2024's confirming set.
+**The phase's closing run on 2026** repeated all twelve sections in one session started for it, at `6f3d6fb` under the
+current watch, with the again sections rerun at `6b9d8aa` after their checks were corrected; every section's last run
+0 failed, and the window check's W8 stage 0 failed (`W9A-CLOSE-2026-REVIEW.md`, finding 9). The script changes since
+(the carried step's quiet press, the tighter `stays_said`, the lightweight reset read) are for the next run of m3,
+again and lightweight; `box` and `box-k3` are new and run on 2024 only by name.
 
 **SolidWorks 2024's confirming set** (`--sections confirm`) follows *Rules carried over*: one full turning build with
-its edits, plus the sections where the versions may differ. That is m3, setup, go, reducer, k3 and nocarrier, about
-1 h 25 min.
+its edits, plus the sections where the versions may differ. That is m3, setup, go, reducer, k3 and nocarrier. setup,
+go, reducer and nocarrier ran 0 failed in 36 min (`sw2024/w9a-confirm-sw2024-20261117-2-*.log`); m3 stopped at What's
+Wrong (Found on SolidWorks, item 4), so m3 and k3 wait on the user's decision, which `box` and `box-k3` inform.
 
 - `setup` and `go` are the build with its edits.
 - `m3` and `k3` are rebuilds that can raise a dialog there.
@@ -266,9 +268,92 @@ components.
    GetWhatsWrongCount 1, no window (lines 88-91). These are the findings `ASSEMBLY_REBUILD_WITH_USER_MATE_IN_ERROR_ON_2026`,
    `ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_2026` and `WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_2026`. "Show errors
    every rebuild" was not read in those runs; m3 now reads it.
-3. **Setting one instance of a part lightweight.** In `lightweight` at `311ce5a` (`probe/results/w9a-demo-sw2026-20261116-4-lightweight.log`), Sprocket-1 alone
-   was set lightweight, and the app refused naming Sprocket-1, Sprocket-2 and Sprocket-3 as lightweight. Whether
-   SolidWorks makes every instance of the part lightweight, or the app's read is wrong, is what the section now reads.
+3. **SolidWorks reports every instance of a part lightweight when one is set.** In the closing run's `lightweight`
+   (`probe/results/w9a-close-sw2026-20261116-1-m3-reducer-k3-setup-lightweight.log`, lines 936-938), after
+   `SetSuppression2(1)` on Sprocket-1 alone, the script's own `GetSuppression2` read 1 on all four instances of
+   Sprocket.SLDPRT, and 2 on Housing-1. The app's inventory read the same (line 969), and the refusal named exactly
+   the three carried ones (line 996). So the app reads what SolidWorks reports. It is not shown that SolidWorks made
+   each instance lightweight: both reads are the same member. Whether resolving one instance is reported as resolving
+   the others is what the section now logs (at `6f3d6fb` the reset set each back one by one). A fact for W9d, which
+   resolves components before it saves.
+4. **SolidWorks 2024 opens What's Wrong inside the app's value Update with only the user's mates in error.** With
+   "show errors every rebuild" on, UserFront and UserGap over-defined (codes 51), and the script's own assembly
+   rebuild raising no window, the app's value Update raised "What's Wrong" (Show errors, Show warnings, "Display
+   What's Wrong during rebuild", FeatureXpert, Close, Help) while the worker was in `GetNextSubFeature`
+   (`probe/results/sw2024/w9a-confirm-sw2024-20261117-1-m3-stopped-by-whats-wrong.log`, lines 37, 53, 88-91). 2026
+   opened nothing in the same Updates. The watch stopped on sight, so which call raised it, whether it is modal and
+   what had been written are not known: `box` and `box-k3` below measure them.
+
+## `box` and `box-k3`: SolidWorks 2024's What's Wrong box, measured
+
+Two sections, run by name only (never in `all` or `confirm`), so the user decides on facts what the app does on 2024
+(W9A-CLOSE-2026-REVIEW, *The 2024 fact and the options*). Neither sets a SolidWorks setting, answers a box, or closes
+or saves anything once a box has been seen; neither proposes a finding's value.
+
+- **`box`:** m3's set-up to just before its first value Update: the sprocket and housing, the clean baseline, UserGap
+  made over-defining, the quiet press, Sun's Backlash 0.4 typed. Then the app's Update is pressed.
+- **`box-k3`:** k3's set-up on the 12 : 1: the user's keyway in G1's part, the quiet press, G1's Bore 8 → 14 typed.
+  Then the app's Update, which rebuilds the keyway into error; with 2024's findings None it is expected to stop as
+  failed.
+
+**How the press is watched.** The press is waited for up to 300 s under a watch that only logs (`BOX`). A second
+connection to the same SolidWorks is made before the press, and every read is a raw call (`W._RAW_CALL`, so W8's "call
+in progress" is never moved by the script's own reads). Recorded, as read:
+
+- before the press: Sun's Backlash (or G1's Bore) as its Equation Manager holds it, each copy document's save flag,
+  "show errors every rebuild" (toggle 77, read, never set), and SolidWorks' frame (`IsWindowEnabled`);
+- when a box is first seen: the seconds into the press; the call the worker is in (W8's `CALLS["now"]`) and the last
+  traced call; whether SolidWorks' frame is enabled (a disabled frame means a modal box); the box's class, title,
+  texts, style, extended style, owner and whether the owner is the frame;
+- with the box up: whether a harmless raw read (the open documents) answers on the second connection, and how fast
+  (20 s at most);
+- whether the job returned, after how long, and whether the box was still up when it did; its result and status
+  sentence if it did;
+- at the end: the call the worker is in, the frame enabled or not, and the boxes still up;
+- what was written: the same raw reads after the press, against before (on the main worker if its job returned, else
+  on the second connection if it answered), and toggle 77 again.
+
+A box seen ends the run by design (`BoxSeen`, not a failure): the worker is marked hung so nothing more is asked of
+SolidWorks, and the session is left as it stands for the coordinator to end. W8's own watch keeps its rule (a box
+during a configuration call is its FAIL and STOP); what it logged during the press is recorded beside the facts. If the
+job does not return in 300 s, the worker is left alone and the section says so. With no box, the section ends as any
+copy section does.
+
+**Command lines, SolidWorks 2024.** Each in a fresh session, as the last thing asked of it; `RUN` holds `snap\` and
+`out\`.
+
+```
+rem box: first, alone in a fresh session
+python.exe RUN\snap\probe\w9a_demonstration.py RUN\snap\src RUN\out --pid PID --log RUN\w9a-box-sw2024-1.log ^
+    --sections box ^
+    --master C:\Users\M0obo\Documents\GearGeneratorProbe\w9-s0-sw2024-20261116-064725\out\rangebox.master
+
+rem box-k3: in another fresh session, with reducer before it (skipped if RUN\out already holds reducer.master)
+python.exe RUN\snap\probe\w9a_demonstration.py RUN\snap\src RUN\out --pid PID2 --log RUN\w9a-box-sw2024-2.log ^
+    --sections reducer,box-k3
+```
+
+**What each answer would mean for the three options.**
+
+- **Option 1, refuse first** (on 2024, when something of the user's is in error, before any write):
+  - `box` with a box: option 1 covers it, since the check phase already reads the two mates in error.
+  - `box-k3` with a box: option 1 alone cannot cover K3 on 2024, since the keyway is put in error by the Update's own
+    write; it would need option 2 or 3 as well.
+  - `box-k3` with no box: option 1 covers 2024 for what the check phase sees, and k3's stop stays a stop.
+- **Option 2, the app turns toggle 77 off for its job:**
+  - A box that does not depend on the toggle cannot be avoided this way. These sections do not set 77, so they cannot
+    show that the box obeys it. They show only whether there is a box to avoid, at which call, and what it costs. If
+    a box is seen, option 2 still needs its own measurement with the setting turned off and set back.
+  - The box raised at a rebuild call: option 2 is a candidate there. Raised at a read (`GetNextSubFeature`, as on the
+    first sighting) after the rebuild had returned: the toggle may still govern it, but that needs the same test.
+- **Option 3, leave the box to the user:**
+  - The job returns with the box up, the frame enabled, and a read answering: the box does not block. Option 3 then
+    needs the result checked as on 2026 (`ok`, puts, sentence).
+  - The job does not return, or the frame is disabled, or the read does not answer: the box blocks. A person must
+    close it during the job, and the app must say so while it waits. Whether the job then completes cleanly is
+    another measurement.
+- **In every case,** what was written before the box (Sun's Backlash, the save flags) tells whether a refusal after
+  the box would leave the user's documents changed but unsaved.
 
 ## What the script cannot show, and what it leans on
 
@@ -280,6 +365,8 @@ components.
   axis). Not read: concentric, width, limit and path mates, a user gear mate on an app gear, and a leaf inside a user's
   sub-assembly. These move to S5 in W9c's sessions, which reads every mate kind (the coordinator records it in the
   plan); until then the app refuses, when anything is put, a user mate it cannot read wholly.
+- **Frames after m3's gone-ahead Updates.** m3 does not read the bodies' frames after its two Updates; it rests on
+  the app's own post-check, which would have made `ok` False (W9A-CLOSE-2026-REVIEW finding 10). go reads them.
 - **A lock joining two different trains.** RangeBox is one train over every mode's links, so `refuse` shows the
   two-body refusal on one train. The judgement does not tell the two cases apart.
 - **`PROBLEM_LOCK_BY_MODE` on SolidWorks.** A user lock on in some modes only, on a put gear, would also tie Sun

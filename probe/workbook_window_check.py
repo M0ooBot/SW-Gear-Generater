@@ -654,7 +654,10 @@ def w8_footer_whole(name):
           f"W8 {name}: the footer whole, its box {box.winfo_width()} × {box.winfo_height()} px for the label's "
           f"{label.winfo_reqwidth()} × {label.winfo_reqheight()}, {'scrolling at the ceiling ' + str(ceiling) if scrolls else 'not scrolling'}"
           f", its bottom at {bottom} of {win.winfo_height()}")
-    log("W8 footer sentences", state=name, sentences=[t.strip() + "." for t in text.split(". ") if t.strip()])
+    # Split at ". " for the log: the last piece keeps its own full stop, the others get theirs back (the close review's
+    # finding 11: "press again.." was this split's, not the app's).
+    log("W8 footer sentences", state=name, sentences=[t.strip() if t.strip().endswith((".", "?", "!")) else t.strip() + "."
+                                                      for t in text.split(". ") if t.strip()])
 
 
 def _rect(hwnd):
