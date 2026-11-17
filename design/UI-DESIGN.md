@@ -1314,6 +1314,40 @@ sees is words, each from `ui_text`, each with the time the work was read:
   inventory until the new revision's first Update (W9d's schema 9 keeps carried
   items).
 
+### A sleeve's bands and its hub (W9b)
+
+GitHub issue #1's three sleeve problems: a sleeve with nothing keying it to its
+shaft, no room between a sleeve and a dog it passes, and no relief bore. W9b
+answers them in the workbook, with **no new control** in the window
+(`docs/notes-workbook/W9B-INTERFACES.md`).
+
+**Two Gears columns, after Slides**: *Start band (mm)* and *End band (mm)*, a
+sleeve's toothed length at each end of its face (the start toward its shaft's
+Axis minus side); between them the part has a relief bore of m(z + 3). Blank
+both, the sleeve is toothed over its whole face, as before. Their help and
+blank text come from `schema.GEARS` like every column's; a band on another
+kind, a band not more than 0, one band alone, a band as long as the face, two
+that leave no relief, and a typed Rim inside the relief are errors at the cell.
+A new workbook's Part name and Notes columns are two to the right of where they
+were (V and W).
+
+**The hub** is a Kind word, `hub`: a dog ring on the sleeve's own shaft that
+carries it. The Gears table says *Hub* in its Kind column and the end view
+draws it as it draws a dog; it engages nothing, is its shaft's anchor in the
+assembly and the sleeve is splined to it. A band of the sleeve covers it whole,
+or it the band, in every mode, else an error at that mode's Modes cell.
+
+**The checks** say, as warnings in the Checks list at the sleeve's Gears cell,
+a sleeve whose shaft cannot reach it past another shaft's gears, a sleeve with
+no hub (and when none could fit as laid out), and at a mode's Modes cell a
+sleeve standing less than max(0.5 mm, 0.5 × module) from a dog it does not
+engage there. The issue's RangeBox, as written, shows all three; RangeBox_Fixed
+none.
+
+Board: `WorkbookBands` (RangeBox_Fixed read, the Speeds panel on L: the end band
+on LowDog, HighDog in the relief, Hub under the start band). Its PNG is not
+rendered on this host, which has no Chrome; `render.py` makes it where one is.
+
 ### Planetary stages (W7)
 
 No new control (checked in `workbook_gui.py`: the only changes for W7 are the

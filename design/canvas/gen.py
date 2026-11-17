@@ -1313,6 +1313,17 @@ boards["WorkbookUserWork"] = ("Workbook · your work in the assembly, said befor
                               workbook_board(slid, before=rangebox, desk=user_desk,
                                              positions_per_configuration=user_desk.positions), WINDOW_WIDTH)
 
+# W9b (ISSUE-1-PLAN §2.2-§2.4, §3; W9B-INTERFACES §1, §3). ISSUE-1-PLAN §3's RangeBox_Fixed read: RangeSlv 26 mm long
+# with a 5 mm band in the Gears sheet's Start band and End band and the relief between, carried by Hub, a hub row on
+# Output. No new control: the Gears table shows the hub's kind, the end view draws it as a dog ring, and the Checks
+# list says nothing of the bands, the hub or the sleeve (§3: no warning from W9b's checks). The Speeds panel on L,
+# where the end band engages LowDog and HighDog stands in the relief.
+from workbook_fixtures import range_box_fixed  # noqa: E402
+
+fixed_box = with_folder(range_box_fixed())
+boards["WorkbookBands"] = ("Workbook · RangeBox_Fixed read: a banded sleeve on its hub, on L",
+                           workbook_board(fixed_box, mode="L"), WINDOW_WIDTH)
+
 layout = []
 x = 0
 for name, value in boards.items():
