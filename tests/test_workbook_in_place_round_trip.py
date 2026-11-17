@@ -905,3 +905,99 @@ def test_a_refusal_carried_with_nothing_read_never_hides_the_users_components_fr
     parallel.sw.user_component(parallel.record.gearbox.assembly, "Housing-1", "C:\\Parts\\Housing.SLDPRT", fixed=True)
     press = parallel.press(_without(spec, "FIdler"))
     assert [p.kind for p in press.refused.problems] == [swbuild.PROBLEM_REFERENCES]
+
+
+# -- the runs review's must-fix: the inventory after a press that added a mode holds the user's flags there --------
+
+def _sun_backlash(spec, value="0.4"):
+    return replace(spec, gears=tuple(replace(g, backlash=value) if g.id == "Sun" else g for g in spec.gears))
+
+
+def test_after_a_mode_is_added_the_record_holds_the_users_flags_there_and_no_footer_foresees_a_false_refusal(
+        fixed_desk_with_work):
+    desk = fixed_desk_with_work
+    assert desk.press(_fixed_with_mode()).result.ok
+    entry = desk.record.gearbox.user_work
+    assert entry.modes == ["H", "N", "L", "R"]
+    lock = next(m for m in entry.mates if m.name == "Lock3")
+    assert "R" in lock.on                                   # read there by the worker (took_active_state), recorded
+    with_r = _fixed_with_mode()
+    removal = replace(with_r, modes=tuple(m for m in with_r.modes if m.name != "N"))
+    for edit in (removal, _sun_backlash(with_r)):
+        text, ok = desk.footer(edit)
+        assert ok and "would stop" not in text and "suppressed in R" not in text, text
+    press = desk.press(removal)
+    assert press.result.ok, press.after
+
+
+def test_a_users_mate_suppressed_in_the_added_mode_afterwards_is_still_foreseen(fixed_desk_with_work):
+    desk = fixed_desk_with_work
+    assert desk.press(_fixed_with_mode()).result.ok
+    asm = _key(desk.record.gearbox.assembly)
+    lock = next(m for m in desk.sw.memory_mates[asm] if m.name == "Lock3")
+    lock.flags["R"] = True                                  # the user suppresses their lock in R
+    refused = desk.press(_sun_backlash(_fixed_with_mode()))
+    assert refused.refused is not None                       # the press reads it (W9a's lock rule) and refuses
+    entry = desk.record.gearbox.user_work
+    assert "R" in entry.modes and "R" not in next(m for m in entry.mates if m.name == "Lock3").on
+    text, ok = desk.footer(_sun_backlash(_fixed_with_mode(), "0.5"))       # the workbook changed since
+    assert not ok and "Your lock Lock3 is on in H, N and L and suppressed in R" in text, text
+
+
+def test_a_record_written_before_the_fix_reads_a_mode_its_inventory_never_read_as_a_copy(fixed_desk_with_work):
+    """A record a press wrote before this fix: its inventory has no ``modes`` and its mates' on-lists never name the
+    mode that press added. The footer takes that mode as a copy of a mode it did read, and foresees nothing false."""
+    desk = fixed_desk_with_work
+    assert desk.press(_fixed_with_mode()).result.ok
+    entry = desk.record.gearbox.user_work
+    entry.modes = []
+    for mate in entry.mates:
+        mate.on = [c for c in mate.on if c != "R"]
+    with_r = _fixed_with_mode()
+    removal = replace(with_r, modes=tuple(m for m in with_r.modes if m.name != "N"))
+    for edit in (removal, _sun_backlash(with_r)):
+        text, ok = desk.footer(edit)
+        assert ok and "would stop" not in text and "suppressed in R" not in text, text
+
+
+def test_run_5s_add_read_onto_its_inventory_puts_h2_in_every_users_mate_it_read_on():
+    """Replay of the real add (run 5's ``modes``, ``probe/results/w9c-demo-20261117-094223.json``): the JSON keeps the
+    worker's ``took_active_state`` and ``modes_added``, not the record, so its facts are put through the finish's own
+    step onto an inventory of the same eight mates as read before H2 existed (on in H, N and L)."""
+    import json
+    import os
+    path = os.path.join(os.path.dirname(__file__), "..", "probe", "results", "w9c-demo-20261117-094223.json")
+    if not os.path.exists(path):
+        pytest.skip("run 5's results are not in this checkout")
+    with open(path, encoding="utf-8") as handle:
+        add = json.load(handle)["sections"]["modes"]["add"]
+    mates = [name for mode, name, state in add["took_active_state"] if not name.startswith(("Sprocket", "Housing"))]
+    entry = store.UserWorkEntry(read_at=STAMP, mates=[store.UserMateEntry(name, "lock", 16, [], ["H", "N", "L"])
+                                                      for name in mates])
+    result = swbuild.GearboxUpdate(modes_added=list(add["modes_added"]),
+                                   took_active_state=[tuple(t) for t in add["took_active_state"]])
+    update.follow_modes_added(entry, result, ["H", "N", "L", "H2"])
+    assert add["modes_added"] == ["H2"] and len(mates) == 8
+    assert entry.modes == ["H", "N", "L", "H2"] and all(m.on == ["H", "N", "L", "H2"] for m in entry.mates)
+
+
+# -- the runs review's should-fix: a stop in a part left in error never offers to save ------------------------------
+
+def test_a_stop_in_a_part_left_in_error_says_close_it_without_saving_never_save_it():
+    d = Desk()
+    d.build(range_box())
+    d.sw.rebuild_ok = False
+    press = d.press(_sun_backlash(range_box()))
+    assert press.after == (
+        "Update SolidWorks stopped. Gear_m1.25_N29.SLDPRT: SolidWorks reported an error rebuilding Gear_m1.25_N29. It "
+        "had already changed Gear_m1.25_N29, not saved, and Gear_m1.25_N29 is left in error: close it in SolidWorks "
+        "without saving (the file on disk is as before this Update), then press Update SolidWorks again once that is "
+        "put right.")
+    assert "save it in SolidWorks to keep" not in press.after
+
+
+def test_a_stop_with_nothing_changed_in_error_still_offers_to_save(fixed_desk):
+    desk = fixed_desk
+    desk.sw.fail_on = {"add_configuration": "SolidWorks would not add the configuration R."}
+    press = desk.press(_fixed_with_mode())
+    assert "or save it in SolidWorks to keep what it did." in press.after and "left in error" not in press.after

@@ -1403,8 +1403,11 @@ move that file away or delete it, then press Update SolidWorks again.*
 before it stopped and what it did not get to: *Before it stopped it built
 Hub_m1.25_N17 and gave RangeSlv its bands. It did not get to inserting Hub and
 putting the gears back and checking the assembly, because the job stopped in
-RangeBox.SLDASM.*, then W4's unsaved sentence. The record holds what was done
-(a new part built and saved, the bands, a gear inserted, each mate made) and, as
+RangeBox.SLDASM.*, then W4's unsaved sentence, except when the stop is a part
+whose rebuild reported an error: then it never offers saving (*… and
+Gear_m1.25_N29 is left in error: close it in SolidWorks without saving (the file
+on disk is as before this Update), then press Update SolidWorks again once that is
+put right.*). The record holds what was done (a new part built and saved, the bands, a gear inserted, each mate made) and, as
 the app's leftovers, each global and configuration the stopped press added, until
 a press uses them. While the workbook does not use them, the footer and the result
 say them as the app's own: *An Update SolidWorks that stopped part way left the

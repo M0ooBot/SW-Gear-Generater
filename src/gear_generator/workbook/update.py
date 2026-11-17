@@ -2206,8 +2206,9 @@ def finish_update(plan: UpdatePlan, result: GearboxUpdate, record: LinkRecord, *
             _follow_modes(box, plan, result)
             box.drag = list(plan.drag)
         _follow_carriers(box, plan, result)
-        record_user_work(rec, getattr(result, "user_work", None), assembly=plan.assembly, digest=digest,
-                         revision=revision)
+        if record_user_work(rec, getattr(result, "user_work", None), assembly=plan.assembly, digest=digest,
+                            revision=revision):
+            follow_modes_added(box.user_work, result, box.modes)
         if revision:
             box.solidworks = [int(n) for n in revision]       # schema 9: the SolidWorks this press ran on
         out.earlier_update = _earlier_update(record, plan, result, mtime)
@@ -2694,6 +2695,7 @@ def record_user_work(record: LinkRecord, work: Optional[swbuild.UserWork], *, as
             box.user_work = replace(kept, digest=digest, refused_at=said.read_at, problems=said.problems)
         return True
     box.user_work = user_work_entry(work, assembly=assembly, digest=digest, revision=revision, problems=problems)
+    box.user_work.modes = list(box.modes)       # the configurations the read covered (a press's adds follow it)
     return True
 
 
@@ -2816,13 +2818,19 @@ def user_work_ahead(plan: Optional[UpdatePlan], record: Optional[LinkRecord],
     if plan.in_place.modes_removed:
         # The review's must-fix 1: the worker reads the user's flags over the modes after the Update only, so the modes
         # removed leave each recorded mate's on-list first (the mirror of swbuild.work_in_added_modes).
-        work = work_without_modes(work, plan.in_place.modes_removed)
+        work = swbuild.work_without_modes(work, plan.in_place.modes_removed)
+    # A mode the inventory never read the user's flags in: one this press adds, and — on a record written before the
+    # runs review's must-fix (its inventory has no ``modes``) — one an earlier press added after the read. Each is
+    # judged as a copy of a mode the inventory did read, as the worker made it.
+    read = _modes_read(entry)
+    copies = tuple(plan.in_place.modes_added) + tuple(
+        c for c in m.configurations if c not in plan.in_place.modes_added and read is not None and c not in read)
 
     def judge(copied: str) -> Any:
         judged = work
-        if plan.in_place.modes_added and copied:
+        if copies and copied:
             # F2: an added mode is a copy of the mode showing at the press: the user's mates on there are on in it too.
-            judged = swbuild.work_in_added_modes(work, plan.in_place.modes_added, copied)
+            judged = swbuild.work_in_added_modes(work, copies, copied)
         return swbuild.judge_user_work(
             judged, tuple(m.configurations) or ("",), bodies_put(plan),
             file=os.path.basename(plan.assembly.replace("\\", "/")), trains=trains, mated=mated, read_tie=None,
@@ -2830,7 +2838,7 @@ def user_work_ahead(plan: Optional[UpdatePlan], record: Optional[LinkRecord],
 
     # The mode showing at the press is not known here (the review's should-fix 4): an added mode is judged as a copy of
     # each mode on record in turn, and only what every one of them foresees is foreseen.
-    shown = [c for c in m.configurations if c not in plan.in_place.modes_added] if plan.in_place.modes_added else []
+    shown = [c for c in m.configurations if c not in copies] if copies else []
     judgements = [judge(c) for c in shown] or [judge("")]
     judgement = judgements[0]
     problems = [p for p in judgement.problems
@@ -2839,15 +2847,6 @@ def user_work_ahead(plan: Optional[UpdatePlan], record: Optional[LinkRecord],
                          carried=tuple((g, tuple(held)) for g, held in judgement.carried.items()),
                          problems=tuple(problems), unread_ties=tuple(judgement.unread_ties),
                          followed=followed)
-
-
-def work_without_modes(work: swbuild.UserWork, modes_removed: Sequence[str]) -> swbuild.UserWork:
-    """Pure (the review's must-fix 1; the mirror of ``swbuild.work_in_added_modes``, asked of A under §11 "From B"):
-    the user's work as the worker will read it once ``modes_removed`` are gone: each mate's on-list without them. The
-    inventory is not changed (a copy is returned)."""
-    gone = {c.casefold() for c in modes_removed}
-    return replace(work, mates=[replace(m, on=tuple(c for c in m.on if str(c).casefold() not in gone))
-                                for m in work.mates])
 
 
 def in_place_ahead(plan: Optional[UpdatePlan], record: Optional[LinkRecord]) -> Tuple[swbuild.UserProblem, ...]:
@@ -2897,6 +2896,37 @@ def in_place_ahead(plan: Optional[UpdatePlan], record: Optional[LinkRecord]) -> 
 # not on others, foreseen with no version on record. ``subjects``: the findings not yet shown, each on its year.
 PROBLEM_DEPENDS = "depends on the version"
 _FINDING_YEAR = re.compile(r"_ON_(\d{4}|\?)$")
+
+
+def _modes_read(entry: store.UserWorkEntry) -> Optional[set]:
+    """The configurations the inventory holds the user's flags for: its ``modes`` (written since the runs review's
+    must-fix); on an older record, the configurations any of its mates is on in (a mode no mate of the user's is on
+    in reads as never read, and is judged as a copy); None with no mates (nothing judged by mode)."""
+    if entry.modes:
+        return {str(c) for c in entry.modes}
+    if not entry.mates:
+        return None
+    return {str(c) for m in entry.mates for c in m.on}
+
+
+def follow_modes_added(entry: Optional[store.UserWorkEntry], result: GearboxUpdate, modes: Sequence[str]) -> None:
+    """The runs review's must-fix: an inventory read at the start of a press that then added modes holds no flag of
+    the user's there. Each user mate's flag the worker read in a mode it added (``result.took_active_state``) goes
+    into its on-list, for each added mode the record now holds; ``entry.modes`` becomes the record's modes, so the
+    inventory says which configurations it covers. In place."""
+    if entry is None or entry.unread:
+        return
+    on_record = {str(c) for c in modes}
+    by_name = {m.name: m for m in entry.mates}
+    for mode, item, state in getattr(result, "took_active_state", []) or []:
+        mate = by_name.get(item)
+        if mate is None or mode not in on_record:
+            continue
+        if state == "on" and mode not in mate.on:
+            mate.on = list(mate.on) + [mode]
+        elif state == "suppressed" and mode in mate.on:
+            mate.on = [c for c in mate.on if c != mode]
+    entry.modes = list(modes)
 
 
 def solidworks_on_record(record: Optional[LinkRecord]) -> Tuple[int, ...]:

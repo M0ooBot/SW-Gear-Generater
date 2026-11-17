@@ -692,6 +692,10 @@ class UserWorkEntry:
     # that carries such a refusal with no inventory ever read, which the foresight treats as no inventory at all.
     refused_at: str = ""
     unread: bool = False
+    # W9c (the runs review's must-fix): the configurations the user's flags here cover — the modes on record when it
+    # was read, and each mode the press then added (its flags as the worker read them there). ``[]`` on a record written
+    # before, which the footer reads by its mates' on-lists. Additive at schema 9: no schema change.
+    modes: List[str] = field(default_factory=list)
 
     @property
     def refused(self) -> bool:

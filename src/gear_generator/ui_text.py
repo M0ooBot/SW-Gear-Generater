@@ -1760,6 +1760,18 @@ def _to_replace(update) -> List[str]:
             + [g for g in ordered if g not in held and not g.endswith(CARRIER_ID_SUFFIX)])
 
 
+def _parts_left_in_error(result) -> List[str]:
+    """The documents an Update changed whose rebuild reported an error, by stem (``swbuild.UpdateResult``: a change
+    set, not rebuilt, and a failure of the job naming the document; a rebuild in error from the user's features alone
+    is no failure): the parts, the layout and the carriers."""
+    docs = list(getattr(result, "parts", []) or []) + [getattr(result, "layout", None)] + \
+        list(getattr(result, "carriers", []) or [])
+    named = [str(what).strip() for what, _why in getattr(result, "failures", []) or []]
+    return [_stem(d.document) for d in docs if d is not None and getattr(d, "document", "")
+            and getattr(d, "changed", None) and not getattr(d, "rebuilt", True)
+            and any(w.startswith(d.document) for w in named)]
+
+
 def update_summary(update) -> str:
     """What Update SolidWorks will do, before the press (``workbook.update.UpdatePlan``): *Update SolidWorks will
     change G2's values (Gear_m1.5_N68), move S2 and S3 in Reducer_12to1_Layout, and re-place G2, G3 and G4.*; the
@@ -1915,7 +1927,16 @@ def gearbox_update_status(update, result, dragged: Sequence[str] = (), *, meshes
             text += f" Before it stopped it {_and(done_in_place)}."
         if motion and result.skipped and getattr(update, "in_place", None):
             text += f" It did not get to {str(result.skipped).rstrip('.')}."
-        if changed_docs:
+        in_error = _parts_left_in_error(result)
+        if changed_docs and in_error:
+            # The W9c runs review's should-fix: a part whose rebuild reported an error may not recover when set back,
+            # and the gears changed with it would clash with it as it stands, so saving is never offered then.
+            one = len(changed_docs) == 1
+            text += (f" It had already changed {_and(changed_docs)}, not saved, and {_and(in_error)} "
+                     f"{'is' if len(in_error) == 1 else 'are'} left in error: close {'it' if one else 'them'} in "
+                     f"SolidWorks without saving (the {'file' if one else 'files'} on disk {'is' if one else 'are'} as "
+                     "before this Update), then press Update SolidWorks again once that is put right.")
+        elif changed_docs:
             one = len(changed_docs) == 1
             text += (f" It had already changed {_and(changed_docs)}, not saved: press Update SolidWorks again once "
                      f"that is put right, or save {'it' if one else 'them'} in SolidWorks to keep what it did.")
