@@ -5,7 +5,9 @@ the three things the plan's last section names, plus the calls W9d adds that the
 raise a dialog or change a document. It proposes findings in the log (`propose NAME = value  # evidence`) and sets
 none; each is set per version (`_ON_2026`, `_ON_2024`) from the reviewed log. **Revised** to the review
 (`W9D-INTERFACES-REVIEW.md`, `f0eb516`): every probe fault P1–P13 is taken (the table at the end); then to its re-check (`8d3695b`): R2, S-b, S-c and S-d
-are in the script, R1, S-a, S-e, S-f and S-g in the contract.
+are in the script, R1, S-a, S-e, S-f and S-g in the contract. **Then for the 2024 run**, to the review of the two 2026
+runs (`W9D-PROBES-REVIEW.md`, `94fbebf`, its point 5 and 3 (b)): `faces` (b) growth, `state` (v)'s dependency places and
+Traverse True read, `sub` (t), and `--faces-parts` for a short 2026 rerun (below).
 
 **How it runs.** As W9c's probes do: it runs W9a's script's `main` with its own three sections, through
 `probe/w9c_probes.py` (imported for the watch, `swconst`, `mate_definition`, `select_face`, `raw_mate`, `open_doc6`,
@@ -23,12 +25,17 @@ saved, read closed by `VersionHistory` only, never opened — `FILE_VERSION_READ
 
 | Section | What it asks | Proposes | 2026 (estimate) |
 |---|---|---|---|
-| `faces` | (a) On a copy of setup.master, Sprocket-5, -6 and -7 inserted and four mates made through `GetCorresponding` (m1's route): a concentric on Sprocket-5's bore face to Input Axis; a coincident between Sprocket-5's and Sprocket-6's end faces; a concentric on Sprocket-6's circular bore edge; a **parallel** (a kind never made or read before) between Sprocket-7's end face and Sun's; the copy then saved and read unmarked (P1). (b) Each face or edge entity: its `ReferenceType2` and the kind it gives, against which of `GetSurface`, `GetCurve`, `GetPoint` answer; what `IEntity.GetComponent` names; its coaxial read (`CylinderParams` of the part-level face against the part's Z axis); three routes to its part-level reference — **r1** `GetCorrespondingEntity2` in the assembly then the part's `GetPersistReference3`, **r2** the mate's entity straight to the part's `GetPersistReference3`, **r3** (the follow-up round, below) the part's faces or edges carried into the assembly by `IComponent2.GetCorresponding` and the one `IsSame` as the mate's entity, then the part's `GetPersistReference3` — each resolved in the part, carried back through the component and held to the original by `ISldWorks.IsSame` (else the face's area); the assembly-context reference's length (read only); Sun's cylindrical faces, its off-axis User Keyway among them, read for coaxial (the negative control, S-d), and the coaxial read taken on r2's resolved entity too; each face's and edge's place in its part (a plane's offset, a cylinder's or circle's axis); each user component's `ReferencedConfiguration`, its document's active configuration and configuration names, `IsVirtual` and `IsPatternInstance` (facts, R2); GetSaveFlag of every document around, and which were already marked at the start. (c) The four made again in a second assembly, each entity by its own kind's clean route (P10), layout and Sun fixed, definitions and frames compared; the copy's documents' flags read before the inserts, after them and after the mates. (d) The second assembly and the copy closed, each part opened alone, every face and edge reference resolved there again and held to its kind, its place in the part and a face's area, the save flags read around each resolve (P12, S-c; the not-open path's resolve). | `PERSIST_REFERENCE_ROUTE_FOR_FACES`, `_FOR_EDGES`, `COAXIAL_FACE_READ`, `CARRY_INSERT_MARKS_USER_DOCUMENTS`, `PERSIST_REFERENCE_SURVIVES_RELOAD` | 6 min |
-| `state` | (a) On a copy of setup.master, Housing-1 suppressed in H (the mode showing) and Sprocket-4 in L, saved and read unmarked; Sprocket-4's mates' flags read unshown (a fact). (b–d) With nothing shown, GetSaveFlag of every document around each, the start's flags kept (P4): **candidate 1** `IConfiguration.GetComponentSuppressionState(Name2)` per mode; **candidate 2** `GetRootComponent3(False)` per mode; **candidate 3**, W9c's marking route taken apart call by call for each mode not showing, naming the first call that marks (P5); then the truth, each mode shown. (e) Sprocket-2 suppressed in N and **not saved**: candidate 1 again (proposed only when (b–d) chose it, P6). (f) Sprocket-1 set lightweight: candidate 1, the active configuration's `GetRootComponent3(False)` and `(True)`, every state after each — facts only (P7); all resolved again. Then the copy closed. (v) Closed-file reads only: the copy's `ISldWorks.VersionHistory` against `GetLatestSupportedFileVersion`, the other version's file's `VersionHistory` (S-b), and the copy's `GetDocumentDependencies2` with each dependency's `VersionHistory` (S-f). (g) The Housing part opened unchanged and the Sprocket part opened and changed (a global added); the assembly opened `Silent | ReadOnly` beside them under the watch; what became of each part (open, flag, read-only; the global read back, P2); candidate 1 there; its modes shown. (h) That read-only document closed unsaved (`QuitDoc`) under the watch, 3 s waited inside the job; every document it loaded checked gone (P3), both parts as they were after the open, the shows and the close, every file's time unchanged. | `COMPONENT_STATE_PER_CONFIGURATION_ROUTE`, `COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED`, `FILE_VERSION_READ`, `DEPENDENCIES_READ`, `OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS`, `OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN` | 8 min |
-| `sub` | A healthy sub-assembly made from a copy of the sprocket. (a) Not loaded: `OpenDoc6` Silent, its flag straight after and after 5 s. (b) Opened `Silent | ReadOnly`, a new assembly saved, the sub-assembly inserted by `AddComponent5` (of a read-only document: new): inserted, its children, its flag and read-only state. (c) A host holding it made in `p2_make_sub`'s order and saved by the app's `save_as` only (P8), reopened so the sub-assembly is loaded as a component only; `OpenDoc6` of it (the warning, its flag), then inserted into another new assembly (its flag). Every step under the watch; a dialog that comes and goes ends that step with a STOP line and its finding proposed None (P9). | `SUBASSEMBLY_OPEN_MARKS`, `SUBASSEMBLY_READ_ONLY_INSERT`, `SUBASSEMBLY_OPEN_MARKS_WHEN_LOADED` | 3 min |
+| `faces` | (a) On a copy of setup.master, Sprocket-5, -6 and -7 inserted and four mates made through `GetCorresponding` (m1's route): a concentric on Sprocket-5's bore face to Input Axis; a coincident between Sprocket-5's and Sprocket-6's end faces; a concentric on Sprocket-6's circular bore edge; a **parallel** (a kind never made or read before) between Sprocket-7's end face and Sun's; the copy then saved and read unmarked (P1). (b) Each face or edge entity: its `ReferenceType2` and the kind it gives, against which of `GetSurface`, `GetCurve`, `GetPoint` answer; what `IEntity.GetComponent` names; its coaxial read (`CylinderParams` of the part-level face against the part's Z axis); three routes to its part-level reference — **r1** `GetCorrespondingEntity2` in the assembly then the part's `GetPersistReference3`, **r2** the mate's entity straight to the part's `GetPersistReference3`, **r3** (the follow-up round, below) the part's faces or edges carried into the assembly by `IComponent2.GetCorresponding` and the one `IsSame` as the mate's entity, then the part's `GetPersistReference3` — each resolved in the part, carried back through the component and held to the original by `ISldWorks.IsSame` (else the face's area); the assembly-context reference's length (read only); Sun's cylindrical faces, its off-axis User Keyway among them, read for coaxial (the negative control, S-d), and the coaxial read taken on r2's resolved entity too; each face's and edge's place in its part (a plane's offset, a cylinder's or circle's axis); each user component's `ReferencedConfiguration`, its document's active configuration and configuration names, `IsVirtual` and `IsPatternInstance` (facts, R2); GetSaveFlag of every document around, and which were already marked at the start. (c) The four made again in a second assembly, each entity by its own kind's clean route (P10), layout and Sun fixed, definitions and frames compared; the copy's documents' flags read before the inserts, after them and after the mates. (d) The second assembly and the copy closed, each part opened alone, every face and edge reference resolved there again and held to its kind, its place in the part and a face's area, the save flags read around each resolve (P12, S-c; the not-open path's resolve). | `PERSIST_REFERENCE_ROUTE_FOR_FACES`, `_FOR_EDGES`, `COAXIAL_FACE_READ`, `CARRY_INSERT_MARKS_USER_DOCUMENTS`, `PERSIST_REFERENCE_SURVIVES_RELOAD` | 4 min measured (run 2, with r3) |
+| `faces` (b) growth | After (b), on the same open copy (W9D-PROBES-REVIEW 3 (b)): on one face entity (UserFaceCoin's first, a sprocket end face) r3's **full walk repeated five times**, each timed; the **area-prefiltered walk** (the part's `GetArea` against the mate entity's, relative 1e-9) timed beside a full one, with the time the filter itself took, and its one match `IsSame` the full walk's; the same once for the edge (a circle's radius); **`component_frame` × 100** timed before and after the walks, to tell per-call growth from a slower session; **SolidWorks' private memory** before and after; the copy's flags around. | nothing (facts: the growth's reading, "flat", "per call" or "session"; a FAIL if the prefiltered walk misses the full walk's match) | 2–3 min |
+| `state` | (a) On a copy of setup.master, Housing-1 suppressed in H (the mode showing) and Sprocket-4 in L, saved and read unmarked; Sprocket-4's mates' flags read unshown (a fact). (b–d) With nothing shown, GetSaveFlag of every document around each, the start's flags kept (P4): **candidate 1** `IConfiguration.GetComponentSuppressionState(Name2)` per mode; **candidate 2** `GetRootComponent3(False)` per mode; **candidate 3**, W9c's marking route taken apart call by call for each mode not showing, naming the first call that marks (P5); then the truth, each mode shown. (e) Sprocket-2 suppressed in N and **not saved**: candidate 1 again (proposed only when (b–d) chose it, P6). (f) Sprocket-1 set lightweight: candidate 1, the active configuration's `GetRootComponent3(False)` and `(True)`, every state after each — facts only (P7); all resolved again. Then the copy closed. (v) Closed-file reads only: the copy's `ISldWorks.VersionHistory` against `GetLatestSupportedFileVersion`, the other version's file's `VersionHistory` (S-b), and the copy's `GetDocumentDependencies2` with each dependency's `VersionHistory` (S-f), each dependency logged by its **place relative to the run folder** (or *in --user-master*, or only its file name when outside both), **whether it lies under the copy**, and whether it is on disk; the same read with **Traverse True** beside it, logged. (g) The Housing part opened unchanged and the Sprocket part opened and changed (a global added); the assembly opened `Silent | ReadOnly` beside them under the watch; what became of each part (open, flag, read-only; the global read back, P2); candidate 1 there; its modes shown. (h) That read-only document closed unsaved (`QuitDoc`) under the watch, 3 s waited inside the job; every document it loaded checked gone (P3), both parts as they were after the open, the shows and the close, every file's time unchanged. | `COMPONENT_STATE_PER_CONFIGURATION_ROUTE`, `COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED`, `FILE_VERSION_READ`, `DEPENDENCIES_READ`, `OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS`, `OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN` | 8 min |
+| `sub` | A healthy sub-assembly made from a copy of the sprocket. (a) Not loaded: `OpenDoc6` Silent, its flag straight after and after 5 s. (b) Opened `Silent | ReadOnly`, a new assembly saved, the sub-assembly inserted by `AddComponent5` (of a read-only document: new): inserted, its children, its flag and read-only state. (c) A host holding it made in `p2_make_sub`'s order and saved by the app's `save_as` only (P8), reopened so the sub-assembly is loaded as a component only; `OpenDoc6` of it (the warning, its flag), then inserted into another new assembly (its flag). Every step under the watch; a dialog that comes and goes ends that step with a STOP line and its finding proposed None (P9). | `SUBASSEMBLY_OPEN_MARKS`, `SUBASSEMBLY_READ_ONLY_INSERT`, `SUBASSEMBLY_OPEN_MARKS_WHEN_LOADED` | 1 min measured |
+| `sub` (t) | After (c), everything closed: `GetDocumentDependencies2` of the closed `DSubHost2.SLDASM` (holding `DSub.SLDASM`, which holds `DSubPart.SLDPRT`) with Traverse False and True, each path by its place. | nothing (a fact: whether Traverse True lists the sub-assembly's part, which a later finding would need before R.2 accepts a sub-assembly dependency) | seconds |
 
-**About 19 minutes on 2026** with the harness's start (attach, Excel) and setup.master given; **about 37 minutes on
-2024** (S5 ran 1.6–2× slower there), in one fresh session or each section in its own.
+Measured on 2026 (34.0.0): `faces` 238 s with r3 (run 2), `state` 40 s, `sub` 39 s (run 1). **About 40 minutes on
+2024** for all three with r3 and the growth measurement, in one fresh session: about 3 for the harness's start, 8 for
+`faces` (a)–(d) at twice 2026's walks, 5 for the growth (five walks that may keep growing), 2 for `state`, 2 for `sub`,
+and the rest margin, as the review estimates. **About 10 minutes for the 2026 rerun** of `faces` (a), (b) and the
+growth alone.
 
 **Which answer sets which finding** (each per version; *settled when* as `W9D-INTERFACES.md` §8):
 
@@ -80,19 +87,45 @@ and carried back through the component `IsSame` as the mate's entity. It has its
 (the assembly and its parts) read before and after, starting unmarked and marking nothing. The walk's count, its
 seconds and the route's are logged per entity: the app would pay this walk per mate, and a gear part has hundreds of
 faces. (c) and (d) use the route (b) proposes for each kind. `--self-check` holds r3's judgement on made-up readings
-(63 checks).
+(63 checks then, 71 with the 2024 run's additions).
 
 Logged as facts, proposing nothing: the root read with a lightweight component (P7; the contract dropped
 `ROOT_COMPONENT_UNRESOLVED_READ`), the remake's equal definitions (P13; the remake's gate is M9's `CARRY_REMAKE_KINDS`),
-`ReferenceType2`'s kind against the members', candidate 3's first marking call.
+`ReferenceType2`'s kind against the members', candidate 3's first marking call; and for the 2024 run, the growth's
+reading, each dependency's place, the Traverse True reads (`state` (v), `sub` (t)). `DEPENDENCIES_READ` is proposed as
+before; the place says whether the stored paths were the copy's (the review's inference) and is not a condition of it.
 
 A dialog in any step ends that case with a STOP line and its finding proposed None; a job that does not return in
 120 s, or a dialog that stays, ends the run (W9c's `watched`). Recovery: a fresh SolidWorks, the remaining sections into
 a fresh `<out>`, or the same with `--redo`.
 
-## Command lines (SolidWorks 2026 first; then 2024)
+## Command lines
 
 `<probe folder>` is the probe folder under the Windows account's Documents (`…\Documents\GearGeneratorProbe`).
+`RUN` is the run's own folder, its `snap` a snapshot of the commit being run (as for every probe here).
+
+**SolidWorks 2024, all three sections** (fresh session; the masters are the ones W9c's 2024 probes ran on; the other
+version's file is one **SolidWorks 2026 saved**, so 2024's negative control reads newer; about 40 minutes):
+
+```
+python.exe RUN\snap\probe\w9d_probes.py RUN\snap\src RUN\out --pid PID --log RUN\w9d-probes-sw2024.log ^
+    --sections faces,state,sub ^
+    --user-master <probe folder>\w9a-confirm-sw2024-20261117-002313\out\setup.master ^
+    --master <probe folder>\w9-s0-sw2024-20261116-064725\out\rangebox.master ^
+    --other-version-file <probe folder>\w9c-whole-sw2026-20261117-123612\out\RangeBox.SLDASM
+```
+
+**SolidWorks 2026, `faces` (a), (b) and the growth alone** (fresh session, so the growth starts from a fresh session as
+in run 2; about 10 minutes):
+
+```
+python.exe RUN\snap\probe\w9d_probes.py RUN\snap\src RUN\out --pid PID --log RUN\w9d-probes-sw2026.log ^
+    --sections faces --faces-parts made,read,growth ^
+    --user-master <probe folder>\w9c-whole-sw2026-20261117-123612\out\setup.master ^
+    --master <probe folder>\w9c-whole-sw2026-20261117-123612\out\rangebox.master
+```
+
+The first 2026 run's command (all three sections, as run 1 ran it):
 
 ```
 python.exe RUN\snap\probe\w9d_probes.py RUN\snap\src RUN\out --pid PID --log RUN\w9d-probes-sw2026.log ^
@@ -100,10 +133,14 @@ python.exe RUN\snap\probe\w9d_probes.py RUN\snap\src RUN\out --pid PID --log RUN
     --user-master <probe folder>\w9c-whole-sw2026-20261117-123612\out\setup.master ^
     --master <probe folder>\w9c-whole-sw2026-20261117-123612\out\rangebox.master ^
     --other-version-file <probe folder>\w4-demo-sw2024-20261113-200555\run\a\Reducer_12to1.SLDASM
-python.exe RUN\snap\probe\w9d_probes.py RUN\snap\src RUN\out24 --pid PID --log RUN\w9d-probes-sw2024.log ^
-    --sections faces,state,sub --user-master <2024's setup.master> --master <2024's rangebox.master> ^
-    --other-version-file <probe folder>\w9c-whole-sw2026-20261117-123612\out\RangeBox.SLDASM
 ```
+
+On 2024, watch `state` (v)'s `VersionHistory` line for the 2026 file: a closed-file read of a newer file should not
+open it (the review's inference, not measured), and a failure there leaves `FILE_VERSION_READ` unproposed on 2024. Also
+expected to differ on 2024 (the review): `GetComponentSuppressionState` may mark or read otherwise (2024's W9c run saw
+`GetRootComponent3(True)` mark); the read-only open's NeedsRegen flag and whether `QuitDoc` of a flagged read-only
+document asks (GOTCHAS §100's box was seen once on 2024, from `CloseDoc`); r3's timings, about twice 2026's; the version
+numbers (17000 for 2024, its year label possibly lagging). r1 and r2 still run beside r3 and are likely dead there too.
 
 The 2026 control is a 12 : 1 assembly in a folder a 2024 run made on 2026-11-13 (its folder name says so; that 2024
 last saved it is what the read itself shows, and if it reads otherwise the finding is simply not proposed). The 2024
@@ -111,14 +148,13 @@ control is the 2026 whole run's RangeBox. Both files are only read closed, never
 can come up; whether 2024's `VersionHistory` reads a newer version's file at all is itself unknown, and a failure there
 leaves the finding unproposed on 2024.
 
-Commit the logs as `probe/results/w9d-probes-sw2026-<date>.log` and `probe/results/sw2024/w9d-probes-sw2024-<date>.log`
-with their JSON.
+Commit the logs as `probe/results/w9d-probes-sw2026-<date>-<n>-<what>.log` and
+`probe/results/sw2024/w9d-probes-sw2024-<date>.log` with their JSON.
 
 ## The run on SolidWorks 2026 (2026-11-17, from 23ed8c5)
 
 **Setup.**
-- Run folder `C:\Users\M0obo\Documents\GearGeneratorProbe\w9d-probes-sw2026-20261117-140201`, on the second Windows
-  host.
+- Run folder `<probe folder>\w9d-probes-sw2026-20261117-140201`, on the second Windows host.
 - SolidWorks 2026 revision **34.0.0**, PID 41968, started for the run and exited after.
 - Masters: the W9c whole run's `setup.master` and `rangebox.master`, both unchanged by the run (their files' sizes,
   times and md5 compared before and after).
@@ -178,7 +214,7 @@ made.
 ## The second run on SolidWorks 2026 (2026-11-17, `faces` alone, from c86ad54): r3
 
 **Setup.**
-- Run folder `C:\Users\M0obo\Documents\GearGeneratorProbe\w9d-probes-sw2026-20261117-141350`.
+- Run folder `<probe folder>\w9d-probes-sw2026-20261117-141350`.
 - SolidWorks 2026 revision 34.0.0, PID 66020, a fresh session, started for the run and exited after.
 - The same masters, unchanged (sizes, times and md5, before and after).
 
@@ -218,9 +254,13 @@ made.
 
 ## What is untested
 
-Only `--self-check` and `--help` have run (the Linux venv, no SolidWorks): the pure judgements on made-up readings
-(63 checks since r3, 0 failed). Nothing that talks to SolidWorks has run, so expect script faults first, as every probe script
-here has met. In particular, unverified and resting on the API help or on reading other scripts:
+Since the 2026 runs, `faces` (a)–(d), `state` and `sub` have run on 2026 (above). What has **not** run anywhere is what
+was added for the 2024 run: `faces` (b) growth, `state` (v)'s places and Traverse True read, `sub` (t) and
+`--faces-parts`; only `--self-check` (71 checks, 0 failed: the prefilter, the dependency places, the growth's reading)
+and `--help` have. Unverified there: `GetArea` on a part's faces in a loop and `ICurve.IsLine` through late binding;
+`GetDocumentDependencies2` with Traverse True on a closed file; `W.sw_private_gb` read inside a worker job; the
+`IsSame` of two part-level entities (the prefiltered match against the full walk's). Before the 2026 runs, the list
+below was what rested on the API help; the runs settled most of it:
 
 - that `GetComponentSuppressionState` takes the top-level `Name2` (its example passes `IComponent2.Name`) and answers a
   Boolean through late binding;
