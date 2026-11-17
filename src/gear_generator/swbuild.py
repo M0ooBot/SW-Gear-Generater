@@ -6826,8 +6826,9 @@ STEP_CARRY_ORIGIN = "find an origin"
 STEP_CARRY_KIND = "make a kind of mate again"
 STEP_CARRY_GEAR_MATE = "make a gear mate on an app gear again"
 STEP_CARRY_LEAF = "make a mate on a leaf again"
+STEP_CARRY_FEATURES = "find a reference feature again"   # not in §8's list: met only on a version not known
 STEP_CARRY_STEPS = (STEP_CARRY_OPEN, STEP_CARRY_STATES, STEP_CARRY_INSERT, STEP_CARRY_CONFIGURATION,
-                    STEP_CARRY_SUBASSEMBLY, STEP_CARRY_FACES, STEP_CARRY_EDGES, STEP_CARRY_VERTICES, STEP_CARRY_RELOAD,
+                    STEP_CARRY_SUBASSEMBLY, STEP_CARRY_FEATURES, STEP_CARRY_FACES, STEP_CARRY_EDGES, STEP_CARRY_VERTICES, STEP_CARRY_RELOAD,
                     STEP_CARRY_ORIGIN, STEP_CARRY_KIND, STEP_CARRY_GEAR_MATE, STEP_CARRY_LEAF)
 
 
@@ -7071,15 +7072,388 @@ class CarryResult:
     unsaved: bool = False
 
 
+# swSelectType_e as ReferenceType2 reads it (swconst.tlb, the W9d probe's table), for the selection-order rule only.
+SEL_EDGES, SEL_FACES, SEL_VERTICES, SEL_DATUMPLANES, SEL_DATUMAXES, SEL_DATUMPOINTS, SEL_COMPONENTS = 1, 2, 3, 4, 5, 6, 20
+
+# §4.5: the kinds the carry makes again, by swMateType_e; limit distance and angle are a distance or angle mate with
+# a range (Maximum/Minimum in the definition, or "Limit" in GetTypeName2).
+CARRY_KIND_WORDS = ("coincident", "concentric", "parallel", "perpendicular", "tangent", "distance", "angle",
+                    "limit distance", "limit angle", "lock", "gear")
+_CARRIED_TYPES = {0: "coincident", 1: "concentric", 2: "perpendicular", 3: "parallel", 4: "tangent", 5: "distance",
+                  6: "angle", 10: "gear", 16: "lock"}
+_OTHER_TYPES = {8: "symmetric", 9: "cam", 11: "width", 12: "lock to sketch", 13: "rack-and-pinion", 15: "path",
+                17: "screw", 18: "linear coupler", 19: "universal joint", 20: "coordinate", 21: "slot", 22: "hinge",
+                23: "slider", 24: "profile-centre", 25: "magnetic"}
+_LIMIT_VALUES = ("MaximumDistance", "MinimumDistance", "MaximumAngle", "MinimumAngle")
+OPEN_READ_ONLY_ROUTE = "OpenDoc6(path, assembly, Silent | ReadOnly)"   # findings.OPEN_READ_ONLY_ROUTE_WHEN_NOT_OPEN
+_TIER1_FINDINGS = {ENTITY_FEATURE: "PERSIST_REFERENCE_ROUTE_FOR_REFERENCE_FEATURES",
+                   ENTITY_PLANE: "PERSIST_REFERENCE_ROUTE_FOR_REFERENCE_FEATURES",
+                   ENTITY_FACE: "PERSIST_REFERENCE_ROUTE_FOR_FACES", ENTITY_EDGE: "PERSIST_REFERENCE_ROUTE_FOR_EDGES",
+                   ENTITY_VERTEX: "PERSIST_REFERENCE_ROUTE_FOR_VERTICES"}
+_TIER1_STEPS = {ENTITY_FEATURE: STEP_CARRY_FEATURES, ENTITY_PLANE: STEP_CARRY_FEATURES, ENTITY_FACE: STEP_CARRY_FACES,
+                ENTITY_EDGE: STEP_CARRY_EDGES, ENTITY_VERTEX: STEP_CARRY_VERTICES}
+_ASM = "asm"
+
+
+def carry_kind(mate: OldMate) -> str:
+    """The mate's kind word (§4.5): a carried kind's (:data:`CARRY_KIND_WORDS`), another's (``"width"``, …), or
+    ``"unknown"`` for a type not read or not known."""
+    word = _CARRIED_TYPES.get(mate.type)
+    if word in ("distance", "angle") and ("Limit" in (mate.type_name or "")
+                                         or any(name in _LIMIT_VALUES for name, _ in mate.values)):
+        return f"limit {word}"
+    return word or _OTHER_TYPES.get(mate.type, "unknown")
+
+
+class _Findings:
+    """The W9d gates on one SolidWorks (W9D-INTERFACES §8), read from findings.py; each unsettled one met is kept as
+    ``(step, full name)`` once, in the order met."""
+
+    def __init__(self, revision: Sequence[int]) -> None:
+        self.year = _finding_year(revision)
+        self.version = str(self.year) if self.year else ""
+        self.gates: List[Tuple[str, str]] = []
+
+    def full(self, name: str) -> str:
+        return f"{name}_ON_{self.year if self.year else '?'}"
+
+    def value(self, name: str) -> object:
+        return getattr(findings, self.full(name), None) if self.year else None
+
+    def settled(self, name: str, wanted: object = True) -> bool:
+        value = self.value(name)
+        if value is None:
+            return False
+        return value == wanted if wanted is not _SET else True
+
+    def need(self, step: str, name: str, wanted: object = True) -> Optional[str]:
+        """None when settled; else the finding's full name, kept as a gate."""
+        if self.settled(name, wanted):
+            return None
+        gate = (step, self.full(name))
+        if gate not in self.gates:
+            self.gates.append(gate)
+        return self.full(name)
+
+    def kinds(self) -> Tuple[str, ...]:
+        value = self.value("CARRY_REMAKE_KINDS")
+        return tuple(value) if isinstance(value, (tuple, list)) else ()
+
+
+def _is_virtual(component: OldComponent) -> bool:
+    return component.virtual or "^" in _file(component.path)
+
+
+def _unmeasured(item: str, what: str, word: str, finding: str, fs: _Findings) -> CarryNamed:
+    return CarryNamed(item, what, WHY_UNMEASURED, (word, finding, fs.version))
+
+
+def _component_named(c: OldComponent, active: str, fs: _Findings) -> Optional[CarryNamed]:
+    """Why a user component is not carried (W9D-INTERFACES §5.1, §5.3, §11.3), or None when it is."""
+    def un(word: str, finding: str) -> CarryNamed:
+        return _unmeasured(c.name, "component", word, finding, fs)
+
+    if _is_virtual(c):
+        return CarryNamed(c.name, "component", WHY_NO_FILE, (_file(c.path), "virtual"))
+    if not c.on_disk or not c.path:
+        return CarryNamed(c.name, "component", WHY_NO_FILE, (_file(c.path), ""))
+    finding = fs.need(STEP_CARRY_INSERT, "CARRY_INSERTS")
+    if finding:
+        return un("insert", finding)
+    if c.kind == "assembly":
+        finding = fs.need(STEP_CARRY_SUBASSEMBLY, "CARRY_INSERTS_A_SUBASSEMBLY")
+        if finding:
+            return un("sub-assembly", finding)
+        # §11.3: by an open measured marking nothing (not loaded, or loaded as a component), else the read-only insert.
+        if not (fs.settled("SUBASSEMBLY_OPEN_MARKS", False) and fs.settled("SUBASSEMBLY_OPEN_MARKS_WHEN_LOADED", False)):
+            finding = fs.need(STEP_CARRY_SUBASSEMBLY, "SUBASSEMBLY_READ_ONLY_INSERT")
+            if finding:
+                return un("sub-assembly", finding)
+    if c.configurations is None:
+        return CarryNamed(c.name, "component", WHY_CONFIGURATION, (c.name, c.configuration, c.active_configuration))
+    if len(c.configurations) != 1:
+        for name in ("REFERENCED_CONFIGURATION_READ", "CARRY_INSERTS_IN_A_CONFIGURATION"):
+            finding = fs.need(STEP_CARRY_CONFIGURATION, name)
+            if finding:
+                return un("configuration", finding)
+        if not c.configuration or (c.configurations and c.configuration not in c.configurations):
+            return CarryNamed(c.name, "component", WHY_CONFIGURATION,
+                              (c.name, c.configuration, c.active_configuration))
+    if c.frame is None:
+        return CarryNamed(c.name, "component", WHY_NO_FRAME, (c.name, active))
+    return None
+
+
+def _shaft_of(feature: str) -> str:
+    for tail in (" Axis", " Plane"):
+        if feature.endswith(tail):
+            return feature[:-len(tail)]
+    return feature
+
+
+def _is_axis(e: OldEntity) -> bool:
+    return e.select_type == SEL_DATUMAXES or (e.select_type == UNREAD and e.kind == ENTITY_FEATURE
+                                               and e.feature.endswith("Axis"))
+
+
+def _is_plane(e: OldEntity) -> bool:
+    return e.kind == ENTITY_PLANE or e.select_type == SEL_DATUMPLANES or (
+        e.select_type == UNREAD and e.kind == ENTITY_FEATURE and e.feature.endswith("Plane"))
+
+
+def _is_point(e: OldEntity) -> bool:
+    return e.kind in (ENTITY_ORIGIN, ENTITY_VERTEX) or e.select_type in (SEL_VERTICES, SEL_DATUMPOINTS)
+
+
+def selection_reversed(kind: str, entities: Sequence[OldEntity]) -> bool:
+    """§10, the ledger's rule (``API-LEDGER.md:612``): ``MateEntity(0)`` is the SECOND selection for an axis–axis
+    coincident, a face–axis concentric and a point–plane coincident, so those are selected in reverse; every other
+    kind and pair in ``MateEntity`` order."""
+    if len(entities) != 2:
+        return False
+    a, b = entities
+    if kind == "coincident" and _is_axis(a) and _is_axis(b):
+        return True
+    if kind == "concentric" and ((a.kind == ENTITY_FACE and _is_axis(b)) or (b.kind == ENTITY_FACE and _is_axis(a))):
+        return True
+    return kind == "coincident" and ((_is_point(a) and _is_plane(b)) or (_is_point(b) and _is_plane(a)))
+
+
+def gear_sense(values: Sequence[Tuple[str, float]], params: Sequence[Sequence[float]]) -> int:
+    """A gear mate's sense as read (§10, rule H, ``API-LEDGER.md:623``): its ``Reverse`` says whether it turns its two
+    gears the same way about its two entities' own directions (``EntityParams[3:6]``), so in the assembly it turns
+    them the same way (+1) exactly when that agrees with the two directions lying the same way; 0 when not read."""
+    reverse = dict(values).get("Reverse")
+    if reverse is None or len(params) != 2 or any(len(p) < 6 for p in params):
+        return 0
+    dot = sum(float(params[0][i]) * float(params[1][i]) for i in range(3, 6))
+    if abs(dot) < 1e-12:
+        return 0
+    return 1 if (bool(round(float(reverse))) == (dot > 0)) else -1
+
+
+@dataclass
+class _Target:
+    """An entity's target in the session's grammar, or why it is named."""
+
+    target: str = ""
+    named: Optional[Tuple[str, Tuple[str, ...]]] = None       # (WHY_*, subjects)
+
+
+def _entity_target(e: OldEntity, mate_kind: str, user_handle: Mapping[str, str],
+                   bodies: Mapping[str, CarryBody], not_open: bool, fs: _Findings) -> _Target:
+    """How one entity is found in the new revision (W9D-INTERFACES §4's four tiers), or why it is named."""
+    def tier1(handle: str) -> _Target:
+        finding = fs.need(_TIER1_STEPS[e.kind], _TIER1_FINDINGS[e.kind], _SET)
+        if finding:
+            return _Target(named=(WHY_UNMEASURED, (e.kind, finding, fs.version)))
+        if not_open:
+            finding = fs.need(STEP_CARRY_RELOAD, "PERSIST_REFERENCE_SURVIVES_RELOAD")
+            if finding:
+                return _Target(named=(WHY_UNMEASURED, (e.kind, finding, fs.version)))
+        return _Target(f"ref:{handle}:{e.kind}:{e.reference}")
+
+    if e.kind == ENTITY_ORIGIN:
+        finding = fs.need(STEP_CARRY_ORIGIN, "ORIGIN_ENTITY_READ")
+        # No route for an origin entity is written even once it is read (§4.2): named while that is so.
+        return _Target(named=(WHY_UNMEASURED, ("origin", finding or fs.full("ORIGIN_ENTITY_READ"), fs.version)))
+    if e.what == USER:
+        handle = user_handle.get(e.owner, "")
+        if e.kind == ENTITY_WHOLE:
+            return _Target(handle)
+        return tier1(handle)
+    if e.what == ASSEMBLY:
+        if e.kind == ENTITY_PLANE and e.feature in ("plane1", "plane2", "plane3"):
+            return _Target(f"{_ASM}:{e.feature}")
+        return _Target(named=(WHY_ASSEMBLY_FEATURE, (e.feature,)))
+    body = bodies.get("layout" if e.what == LAYOUT else e.owner)
+    if body is None or not body.handle:
+        return _Target(named=(WHY_GONE, ("gear", e.owner or "layout")))
+    shaft_body = body.old == "layout" or body.old.endswith(CARRIER_ID_SUFFIX)
+    if e.kind == ENTITY_WHOLE:
+        return _Target(body.handle)
+    if e.kind == ENTITY_PLANE:
+        return _Target(f"{body.handle}:{e.feature}")
+    gear_axis = mate_kind == "gear" and e.what == APP and not shaft_body
+    if gear_axis and e.kind == ENTITY_FACE and e.coaxial is None:
+        fs.need(STEP_CARRY_GEAR_MATE, "COAXIAL_FACE_READ")
+    if gear_axis and ((e.kind == ENTITY_FEATURE and e.feature == AXIS_NAME)
+                      or (e.kind == ENTITY_FACE and e.coaxial is True)):
+        # §4.3: a user gear mate's entity on an app gear is that gear's Gear Axis (a cylindrical face only coaxial).
+        if AXIS_NAME in body.names:
+            return _Target(f"{body.handle}:{AXIS_NAME}")
+        return _Target(named=(WHY_GONE, ("feature", AXIS_NAME)))
+    if e.kind == ENTITY_FEATURE and e.feature in body.old_names:
+        if e.feature in body.names:
+            return _Target(f"{body.handle}:{e.feature}")
+        return _Target(named=(WHY_GONE, ("shaft", _shaft_of(e.feature)) if shaft_body else ("feature", e.feature)))
+    if body.same_file:
+        return tier1(body.handle)
+    bore = "bore" if e.kind == ENTITY_FACE and e.coaxial is True else ""
+    return _Target(named=(WHY_PART_NEW, (body.old, body.why_new, e.kind, bore)))
+
+
+def _clusters(carried: Sequence[str], mates: Sequence[OldMate]) -> List[List[str]]:
+    """§5.3: the carried components joined through user–user mates, connected, numbered in first-mate order; a
+    component no such mate joins is a cluster of its own, after them, in component order."""
+    parent = {name: name for name in carried}
+
+    def root(name: str) -> str:
+        while parent[name] != name:
+            parent[name] = parent[parent[name]]
+            name = parent[name]
+        return name
+
+    order: List[str] = []
+    for mate in mates:
+        users = [e.owner for e in mate.entities if e.what == USER and e.owner in parent]
+        users = list(dict.fromkeys(users))
+        for name in users:
+            if name not in order:
+                order.append(name)
+        for a, b in zip(users, users[1:]):
+            parent[root(b)] = root(a)
+    order += [name for name in carried if name not in order]
+    groups: Dict[str, List[str]] = {}
+    for name in order:
+        groups.setdefault(root(name), []).append(name)
+    return list(groups.values())
+
+
+def _anchor(component: str, cluster: Sequence[str], mates: Sequence[OldMate], bodies: Mapping[str, CarryBody],
+            framed: Callable[[str], bool]) -> str:
+    """§5.3 (D20): the component's own user lock to an app body first; then its cluster's (the first user lock in mate
+    order from one of its components to an app body); then any other user mate to an app body; else "" (world)."""
+    def app_ends(mate: OldMate) -> List[str]:
+        return [e.owner for e in mate.entities if e.what == APP and e.owner in bodies and bodies[e.owner].handle
+                and framed(e.owner)]
+
+    def users(mate: OldMate) -> set:
+        return {e.owner for e in mate.entities if e.what == USER}
+
+    for pick in (lambda m: m.type == findings.MATE_LOCK and component in users(m),
+                 lambda m: m.type == findings.MATE_LOCK and bool(users(m) & set(cluster)),
+                 lambda m: bool(users(m) & set(cluster))):
+        for mate in mates:
+            ends = app_ends(mate)
+            if ends and pick(mate):
+                return ends[0]
+    return ""
+
+
 def plan_carry(work: OldWork, carry: Carry, revision: Sequence[int], *,
                new_frames: Mapping[str, Frame9] = {}) -> CarryPlan:   # noqa: B006 - read only
-    """Pure (W9D-INTERFACES §2.3): what of ``work`` is carried and how, and everything named with its reason."""
-    raise NotImplementedError("plan_carry: package A's W9d worker has not landed yet")
+    """Pure (W9D-INTERFACES §2.3, §4–§6): what of ``work`` is carried into the new revision and how, and everything
+    named with its reason and §2.3's subjects. ``new_frames``: the new revision's app bodies' frames by
+    ``CarryBody.old`` (the worker's call); empty, each component keeps its old frame (B's foresight). Every gate a
+    decision met unsettled is in ``gates`` (``(step, finding)``); a gate never refuses, it names."""
+    fs = _Findings(revision)
+    named: List[CarryNamed] = []
+    if work.how == OLD_UNREAD:
+        fs.need(STEP_CARRY_OPEN, "FILE_VERSION_READ", _SET)
+        fs.need(STEP_CARRY_OPEN, "DEPENDENCIES_READ", _SET)
+        fs.need(STEP_CARRY_OPEN, "OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN")
+        fs.need(STEP_CARRY_OPEN, "OPEN_READ_ONLY_ROUTE_WHEN_NOT_OPEN", OPEN_READ_ONLY_ROUTE)
+        why = work.unread[0] if work.unread else ""
+        named = [CarryNamed(c.name, "component", WHY_OLD_UNREAD, (why,)) for c in work.components] + \
+                [CarryNamed(m.name, "mate", WHY_OLD_UNREAD, (why,)) for m in work.mates]
+        return CarryPlan((), (), tuple(named), (), tuple(fs.gates))
+    bodies = {b.old: b for b in carry.bodies}
+    carried: List[OldComponent] = []
+    for c in work.components:
+        reason = _component_named(c, work.active, fs)
+        if reason is None:
+            carried.append(c)
+        else:
+            named.append(reason)
+    if carried and len(work.modes) > 1 and not work.states_route:
+        fs.need(STEP_CARRY_STATES, "COMPONENT_STATE_PER_CONFIGURATION_ROUTE", _SET)
+    by_name = {c.name: c for c in work.components}
+    user_handle = {c.name: f"carried{i}" for i, c in enumerate(carried, 1)}
+    not_open = work.how == OLD_READ_ONLY
+    remake_kinds = fs.kinds()
+    planned: List[Tuple[OldMate, Tuple[str, ...], Tuple[float, float], int]] = []
+    for mate in work.mates:
+        def name_it(why: str, *subjects: str) -> None:
+            named.append(CarryNamed(mate.name, "mate", why, tuple(subjects)))
+
+        kind = carry_kind(mate)
+        unread = [e for e in mate.entities if e.what == UNREAD_ENTITY or e.kind in (ENTITY_UNREAD, "") or e.unread]
+        if not mate.whole or unread or not mate.entities:
+            name_it(WHY_UNREAD, next((e.unread for e in unread if e.unread), ""))
+            continue
+        users = list(dict.fromkeys(e.owner for e in mate.entities if e.what == USER))
+        light = [u for u in users if u in by_name and by_name[u].state in _LIGHTWEIGHT_STATES]
+        if light:
+            name_it(WHY_LIGHTWEIGHT, light[0])
+            continue
+        if kind not in CARRY_KIND_WORDS:
+            name_it(WHY_KIND, kind)
+            continue
+        leaf = next((e for e in mate.entities if e.leaf), None)
+        if leaf is not None:
+            fs.need(STEP_CARRY_LEAF, "CARRY_REMAKES_ON_A_LEAF")
+            name_it(WHY_LEAF, leaf.owner)            # no target grammar for a leaf is written (§2.3), so named
+            continue
+        missing = [u for u in users if u not in user_handle]
+        if missing:
+            name_it(WHY_NOT_CARRIED, missing[0])
+            continue
+        targets: List[str] = []
+        reason: Optional[Tuple[str, Tuple[str, ...]]] = None
+        for e in mate.entities:
+            found = _entity_target(e, kind, user_handle, bodies, not_open, fs)
+            if found.named is not None:
+                reason = found.named
+                break
+            targets.append(found.target)
+        if reason is not None:
+            name_it(reason[0], *reason[1])
+            continue
+        if kind not in remake_kinds:
+            # D4: settled for a kind when its word is in the tuple; the gate is kept once, the kind in the subjects.
+            gate = (STEP_CARRY_KIND, fs.full("CARRY_REMAKE_KINDS"))
+            if gate not in fs.gates:
+                fs.gates.append(gate)
+            name_it(WHY_UNMEASURED, kind, gate[1], fs.version)
+            continue
+        if kind == "gear" and any(e.what == APP for e in mate.entities):
+            finding = fs.need(STEP_CARRY_GEAR_MATE, "CARRY_GEAR_MATE_ON_AN_APP_GEAR")
+            if finding:
+                name_it(WHY_UNMEASURED, "gear mate on an app gear", finding, fs.version)
+                continue
+        if selection_reversed(kind, mate.entities):
+            targets.reverse()
+        values = dict(mate.values)
+        ratio = (float(values.get("GearRatioDenominator", 1.0)), float(values.get("GearRatioNumerator", 1.0))) \
+            if kind == "gear" else (1.0, 1.0)
+        planned.append((mate, tuple(targets), ratio, gear_sense(mate.values, mate.params) if kind == "gear" else 0))
+    clusters = _clusters([c.name for c in carried], [m for m, *_ in planned])
+    cluster_of = {name: i for i, group in enumerate(clusters) for name in group}
+    old_frames = dict(work.app_frames)
+
+    def framed(old: str) -> bool:
+        return not new_frames or (old in old_frames and old in new_frames)
+
+    items: List[CarryPlanItem] = []
+    for c in carried:
+        group = clusters[cluster_of[c.name]]
+        anchor = _anchor(c.name, group, work.mates, bodies, framed)
+        frame: Frame9 = c.frame
+        if anchor and new_frames:
+            frame = _carry_frame(old_frames[anchor], new_frames[anchor], c.frame)
+        items.append(CarryPlanItem(c, anchor, frame, cluster_of[c.name]))
+    mates = []
+    for mate, targets, ratio, sense in planned:
+        users = [e.owner for e in mate.entities if e.what == USER]
+        mates.append(CarryMateItem(mate, cluster_of[users[0]] if users else -1, targets, ratio, sense))
+    return CarryPlan(tuple(items), tuple(mates), tuple(named), tuple(tuple(g) for g in clusters), tuple(fs.gates))
 
 
 def carry_gates(work: OldWork, carry: Carry, revision: Sequence[int]) -> List[Tuple[str, str]]:
-    """Pure (W9D-INTERFACES §8): ``(step, finding)`` for each gate not settled that something in ``work`` needs."""
-    raise NotImplementedError("carry_gates: package A's W9d worker has not landed yet")
+    """Pure (W9D-INTERFACES §8): ``(step, finding)`` for each gate not settled that something in ``work`` needs, in
+    the order :func:`plan_carry` meets them, for the worker's naming and B's question (as :func:`in_place_gates`)."""
+    return list(plan_carry(work, carry, revision).gates)
 
 
 def _find_by_part(sw: SolidWorks, handle: str, placement: Placement, placements: Sequence[Placement],
