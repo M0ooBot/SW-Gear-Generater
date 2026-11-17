@@ -729,9 +729,18 @@ LONG = ("Updated SolidWorks: changed 1 variable in Gear_m1.5_N68 (it now has 69 
 
 
 # W9a (the coordinator's ruling 4 on package B's review): the Build again? question's clause on the user's work when
-# the record holds no inventory of the assembly it leaves behind (ui_text.stays_behind_sentence).
-TIMELESS = (f"Anything you added to {NAME}.SLDASM in SolidWorks (components, mates, and features in parts this "
-            f"revision makes new) stays there, and {NAME}_r2 has none of it.")
+# the record holds no inventory of the assembly it leaves behind (ui_text.stays_behind_sentence); W9d (W9D-INTERFACES
+# §9.1): led, while CARRY_INSERTS is unset, by that finding on the SolidWorks the record last saw (the fake's 2026, or
+# not known on a record no job of this app wrote).
+def timeless(year="2026"):
+    on = (f"SolidWorks {year} (findings.CARRY_INSERTS_ON_{year})" if year != "?"
+          else "the SolidWorks it runs on (findings.CARRY_INSERTS_ON_<year>)")
+    return (f"Gear Generator has not yet been shown to carry your work into a new revision on {on}, so anything you "
+            f"added to {NAME}.SLDASM in SolidWorks (components, mates, and features in parts this revision makes new) "
+            f"stays there, and {NAME}_r2 has none of it.")
+
+
+TIMELESS = timeless()
 
 
 def width_and_height(window):

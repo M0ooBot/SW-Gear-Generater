@@ -2203,7 +2203,7 @@ def _copy_sentence(plan) -> str:
             "beside them, sharing and overwriting nothing.")
 
 
-def build_again_question(update, again, *, record=None) -> str:
+def build_again_question(update, again, *, record=None, foresight=None) -> str:
     """The *Build again?* question (``UpdatePlan``, and the ``GearboxPlan`` it would run): why Update cannot carry
     the change, what the new revision makes and reuses — and why a part is made new although one was built — and,
     decision 8, that the reused parts are shared, so a later Update changes the earlier revision's assembly too.
@@ -2216,7 +2216,10 @@ def build_again_question(update, again, *, record=None) -> str:
     revision's gears are mated to turn.* — in place of *Nothing on record
     needs a new revision.*, or after the reasons. Without ``record`` nothing
     is said about it: ``update.motion`` alone cannot tell a static gearbox
-    from a turning one whose change needs a new revision."""
+    from a turning one whose change needs a new revision.
+
+    W9d: what of the user's work the new revision takes (:func:`carry_sentence`), from ``foresight``
+    (``workbook.update.CarryForesight``; None: worked here from ``record``)."""
     from .store import GEARBOX_STATIC
     from .workbook.gearbox import MISMATCHED, UNSAVED
     reasons = []
@@ -2289,9 +2292,12 @@ def build_again_question(update, again, *, record=None) -> str:
                  f"{'it' if one else 'one of them'} changes {old} too.")
     else:
         text += f" Nothing is overwritten, and {old} and its files are left as they are."
-    # W9a (K5 until W9d): what of the user's stays behind, from the record's inventory with its time.
-    from .workbook.update import stays_behind
-    behind = stays_behind_sentence(stays_behind(record, again), again)
+    # W9d (W9D-INTERFACES §9.1): what of the user's the new revision takes, from the record's inventory with its time
+    # through plan_carry's foresight (W9a's stays-behind clause, led by its finding, while CARRY_INSERTS is unset).
+    if foresight is None:
+        from .workbook.update import carry_foresight
+        foresight = carry_foresight(record, again)
+    behind = carry_sentence(foresight, again)
     if behind:
         text += " " + behind
     return text
@@ -5010,3 +5016,563 @@ def in_place_after(update, result) -> List[str]:
     if ip and ip.first_mode and removed:
         out.append(f"{removed[0]} was the first mode on record; {ip.first_mode} is now.")
     return out
+
+
+# -- W9d: Build again… carries the user's work (ISSUE-1-PLAN §2.5; W9D-INTERFACES §9) ----------------------------
+
+# The kinds of mate a carry makes again (§2.5), as the sentences and CARRY_REMAKE_KINDS word them.
+CARRY_KIND_WORDS = ("coincident", "concentric", "parallel", "perpendicular", "tangent", "distance", "angle",
+                    "limit distance", "limit angle", "lock", "gear")
+CARRY_STANDING = ("Not carried as they are: assembly features of yours (cuts, patterns, sketches, planes), display "
+                  "states and appearances; a sub-assembly comes over rigid, and a component of a pattern of yours "
+                  "comes over as a component of its own.")
+CARRY_STANDING_NO_PATTERN = ("Not carried as they are: assembly features of yours (cuts, patterns, sketches, planes), "
+                             "display states and appearances; a sub-assembly comes over rigid.")
+CARRY_IN_CONTEXT = "A part of yours made in context of {old} still refers to its parts."
+_ENTITY_WORDS = {"face": "a face", "edge": "an edge", "vertex": "a vertex", "origin": "an origin",
+                 "feature": "a feature", "plane": "a base plane", "whole": "the whole", "unread": "an entity"}
+
+
+def _a(word: str) -> str:
+    return f"{'an' if word[:1].lower() in 'aeiou' else 'a'} {word}"
+
+
+def _on_version(version: str) -> str:
+    return f"SolidWorks {version}" if str(version).isdigit() else "the SolidWorks it runs on"
+
+
+def _finding_ref(finding: str) -> str:
+    return "findings." + str(finding).replace("_ON_?", "_ON_<year>")
+
+
+def _unmeasured_verb(what: str, finding: str) -> str:
+    """What a finding not yet set would show Gear Generator doing, by §2.3's ``unmeasured`` first slot."""
+    if what in CARRY_KIND_WORDS:
+        return f"make {what} mates again in a new revision"
+    if what in ("face", "edge", "vertex"):
+        after = ", after its part is closed and opened again," if "SURVIVES_RELOAD" in finding else ""
+        return f"find {_ENTITY_WORDS[what]} of a mate's again in a new revision{after}"
+    return {"origin": "read an origin as a mate's entity",
+            "insert": "carry your work into a new revision",
+            "sub-assembly": "insert a sub-assembly of yours into a new revision",
+            "configuration": "insert a component in a configuration of its file's several",
+            "gear mate on an app gear": "make a gear mate on an app gear again in a new revision",
+            "leaf": "make a mate on a part inside a sub-assembly of yours again"}.get(
+        what, f"carry what {what} needs into a new revision")
+
+
+def _marks_sub(finding: str) -> bool:
+    """Whether a sub-assembly finding reads that opening it marks it (settled the wrong way, not unset)."""
+    from . import findings
+    return finding.startswith("SUBASSEMBLY_OPEN_MARKS") and getattr(findings, finding, None) is True
+
+
+def carry_named_clause(named, *, name: str = "the new revision", old: str = "the old assembly") -> str:
+    """One item not carried, in §9.3's words, from its ``why`` and §2.3's subjects (``swbuild.CarryNamed``):
+    *Concentric5 was on Sun's bore, and Sun's part is new because its Flank changed*. ``name`` the new revision,
+    ``old`` the old assembly's file name. No full stop: the caller ends it."""
+    from . import swbuild as sb
+    item, why = named.item, named.why
+    s = [str(x) for x in named.subjects]
+    s += [""] * (4 - len(s))
+    if why == sb.WHY_KIND:
+        return f"{item} is {_a(s[0] or 'kind of')} mate, which Gear Generator does not make again"
+    if why == sb.WHY_UNMEASURED:
+        what, finding, version = s[0], s[1], s[2]
+        if what == "sub-assembly" and _marks_sub(finding):
+            return (f"your sub-assembly {item} is not carried: opening it to insert it marks it as changed in "
+                    "SolidWorks, and Gear Generator never changes a file of yours")
+        verb = _unmeasured_verb(what, finding)
+        if what in CARRY_KIND_WORDS:
+            head, verb = f"{item} is {_a(what)} mate", "make again in a new revision"
+        elif what in ("face", "edge", "vertex"):
+            head = f"{item} is on {_ENTITY_WORDS[what]}" + (f" of {s[3]}" if s[3] else "")
+            verb = "find again in a new revision" + (", after its part is closed and opened again,"
+                                                     if "SURVIVES_RELOAD" in finding else "")
+        elif what == "origin":
+            head = f"{item} is on an origin"
+        elif named.what == "component":
+            head = f"{item} is not carried"
+        else:
+            head = f"{item} is not made again"
+        return f"{head}, which Gear Generator has not yet been shown to {verb} on {_on_version(version)} " \
+               f"({_finding_ref(finding)})"
+    if why == sb.WHY_PART_NEW:
+        gear, because, kind, bore = s[0], s[1], s[2], s[3]
+        where = f"{gear}'s bore" if bore == "bore" else f"{_ENTITY_WORDS.get(kind, 'an entity')} of {gear}"
+        return f"{item} was on {where}, and {gear}'s part is new because {because or 'it changed'}"
+    if why == sb.WHY_GONE:
+        what, gone = s[0], s[1]
+        if what == "gear":
+            return f"{item} was on {gone}, which {name} does not have"
+        if what == "shaft":
+            return f"{item} was on the layout's {gone} Axis, and {name} has no shaft {gone}"
+        if s[2]:
+            return f"{item} was on {s[2]}'s {gone}, which {s[2]}'s new part does not have"
+        return f"{item} was on {gone} in an app part, which that part in {name} does not have"
+    if why == sb.WHY_ASSEMBLY_FEATURE:
+        return f"{item} is on {s[0]}, a feature you made in {old}, which is not carried"
+    if why == sb.WHY_NOT_CARRIED:
+        return f"{item} joins {s[0]}, which is not carried"
+    if why == sb.WHY_UNREAD:
+        return f"SolidWorks would not describe {item} wholly" + (f" ({s[0]})" if s[0] else "")
+    if why == sb.WHY_LIGHTWEIGHT:
+        return f"{item} is on {s[0]}, which was lightweight in {old}, so what it joins could not be read"
+    if why == sb.WHY_NO_FILE:
+        if s[1] == "virtual":
+            return f"{item} is a virtual component, with no file of its own, so it is not carried"
+        if not s[0]:
+            return f"{item} has no file SolidWorks would name, so it is not carried"
+        return f"{item}'s file {s[0]} is not on disk, so it is not carried"
+    if why == sb.WHY_LEAF:
+        return f"{item} is on a part inside your sub-assembly {s[0]}, which Gear Generator does not make again"
+    if why == sb.WHY_NOT_FOUND:
+        return f"{item}'s {s[0] or 'entity'} of {s[1]} could not be found again in {s[2] or 'its file'}"
+    if why == sb.WHY_CONFIGURATION:
+        component, used, opens = s[0] or item, s[1], s[2]
+        if not used:
+            return f"{component}'s configuration could not be read, so it is not carried"
+        besides = f", not {opens} which its file opens in," if opens and opens != used else ""
+        return (f"{component} uses its configuration {used}{besides} and Gear Generator cannot carry it in {used} "
+                "here, so it is not carried")
+    if why == sb.WHY_NO_FRAME:
+        mode = f"in {s[1]}, the mode {old} showed" if s[1] else f"in the mode {old} showed"
+        return (f"{s[0] or item} is suppressed {mode}, and SolidWorks would not say where it stands, so it is not "
+                "carried")
+    if why == sb.WHY_DIFFERS:
+        return f"{item} made again read otherwise than it was (its {s[0] or 'definition'}), so it was taken out again"
+    if why == sb.WHY_OLD_UNREAD:
+        return f"{old} was not read" + (f" ({s[0]})" if s[0] else "")
+    return f"{item} is not carried ({why})"
+
+
+_VERDICTS = ("not carried", "not make again", "taken out again", "is not made again")
+
+
+def _named_sentences(named, *, name: str, old: str) -> List[str]:
+    """Every item not carried as sentences: the ones a finding not yet set holds back grouped by what and finding
+    (*Gear Generator has not yet been shown to make concentric mates again in a new revision on SolidWorks 2024
+    (findings.CARRY_REMAKE_KINDS_ON_2024), so Concentric5 and Concentric8 are not made again.*), then each other one by
+    its clause, with *so it is not made again* (a mate) or *carried* (a component) where the clause does not say it."""
+    from . import swbuild as sb
+    groups: Dict[Tuple[str, str, str], List] = {}
+    out: List[str] = []
+    for n in named:
+        s = [str(x) for x in n.subjects] + ["", "", ""]
+        if n.why == sb.WHY_UNMEASURED and not (s[0] == "sub-assembly" and _marks_sub(s[1])):
+            groups.setdefault((s[0], s[1], s[2]), []).append(n)
+            continue
+        if n.why == sb.WHY_OLD_UNREAD:
+            continue                                          # said once, by the sentence for nothing read
+        clause = carry_named_clause(n, name=name, old=old)
+        if not any(clause.endswith(v) for v in _VERDICTS):
+            clause += (", and it is" if ", so " in clause else ", so it is") + \
+                (" not carried" if n.what == "component" else " not made again")
+        out.append(_sentence(clause[:1].upper() + clause[1:]))
+    lead: List[str] = []
+    for (what, finding, version), items in groups.items():
+        names = [n.item for n in items]
+        verdict = "carried" if all(n.what == "component" for n in items) else "made again"
+        lead.append(f"Gear Generator has not yet been shown to {_unmeasured_verb(what, finding)} on "
+                    f"{_on_version(version)} ({_finding_ref(finding)}), so {_and(names)} "
+                    f"{'is' if len(names) == 1 else 'are'} not {verdict}.")
+    return lead + out
+
+
+def _parts_left(stays, name: str, why_new: Mapping[str, str]) -> Tuple[List[str], List[Tuple[str, str]]]:
+    """W9a's features in parts made new, each part once, with the gears whose new part replaces it and why: *Your
+    Keyway stays in Gear_m1.25_N29, which Sun's new part replaces because its Flank changed*; and ``(feature names,
+    part path)`` per part, for the advice that follows."""
+    from . import store
+    if stays is None or stays.entry is None:
+        return [], []
+    by_part: Dict[str, Tuple[List[str], Tuple[str, ...]]] = {}
+    for feature, path, gears in stays.left:
+        by_part.setdefault(path, ([], gears))[0].append(feature)
+    out, parts = [], []
+    for path, (features, gears) in by_part.items():
+        replacing = [g for g in gears if g in why_new]
+        if replacing:
+            because = why_new[replacing[0]]
+            whose = f"which {_and(replacing)}'s new part replaces because {because}"
+        else:
+            whose = f"which {name} does not use"
+        out.append(f"your {_and(features)} {'stays' if len(features) == 1 else 'stay'} in {_stem(path)}, {whose}")
+        parts.append((_and(features), path))
+    return out, parts
+
+
+def _features_kept(stays, name: str) -> List[str]:
+    kept: Dict[str, List[str]] = {}
+    for feature, path in (stays.kept if stays is not None else ()):
+        kept.setdefault(path, []).append(feature)
+    return [f"Your {_and(f)} in {_stem(p)} {'comes' if len(f) == 1 else 'come'} with that part, which {name} reuses."
+            for p, f in kept.items()]
+
+
+def _reuse_advice(fore, parts: Sequence[Tuple[str, str]], again) -> List[str]:
+    """The way back to reusing a part made new only because of the user (D17): MISMATCHED with the value and cell the
+    record's K11 entry holds, or without one; UNSAVED: save it first."""
+    from .workbook.gearbox import MISMATCHED, UNSAVED
+    out = []
+    for features, path in parts:
+        made = [m for m in getattr(again, "made_new", ()) or () if _file(m.old).lower() == _file(path).lower()]
+        if not made:
+            continue
+        why = made[0].why
+        if why == MISMATCHED:
+            value = fore.values.get(_file(path).lower()) if fore is not None else None
+            if value is not None and value.live and value.cell:
+                out.append(f"{_stem(path)} is new only because it holds {value.name} {value.live} where the workbook "
+                           f"asks {value.wanted}: answer No, type {value.live} in {value.cell}, and Build again… "
+                           f"reuses that part with your {features}.")
+            else:
+                out.append(f"{_stem(path)} is new only because it does not hold what the record says: answer No, "
+                           "make the workbook ask what that part holds in SolidWorks, and Build again… reuses it "
+                           f"with your {features}.")
+        elif why == UNSAVED:
+            out.append(f"{_stem(path)} is new only because Update SolidWorks left it unsaved: answer No and save it "
+                       f"in SolidWorks first, and Build again… reuses it with your {features}.")
+    return out
+
+
+def _not_open_clause(fore, old: str) -> str:
+    """§9.1's clause for an old assembly not open when the press is made (the window cannot know whether it will be,
+    so it is said as *if*): which of R.2's conditions hold it unread, then the way round, *open it in SolidWorks
+    first*. While a closed-file read is not yet shown, a closed old assembly is never read (the re-check's R1)."""
+    tail = (f", so nothing of yours would be carried: open {old} in SolidWorks before you press, and it is read as it "
+            "stands there.")
+    if fore.not_open:
+        what = []
+        for finding in fore.not_open:
+            if finding.startswith("FILE_VERSION_READ"):
+                what.append(f"read which SolidWorks last saved a file ({_finding_ref(finding)})")
+            elif finding.startswith("DEPENDENCIES_READ"):
+                what.append(f"read which SolidWorks last saved each file it uses ({_finding_ref(finding)})")
+            else:
+                what.append(f"close it unchanged after reading it ({_finding_ref(finding)})")
+        return (f"If {old} is not open in SolidWorks when you press, it is not read: Gear Generator has not yet been "
+                f"shown to {_and(what)}{tail}")
+    others = ("nothing but Gear Generator's own files is open in SolidWorks" if not fore.keeps_open
+              else f"nothing else is open in SolidWorks ({_finding_ref(fore.keeps_open)})")
+    return (f"If {old} is not open in SolidWorks when you press, Gear Generator reads it then only when it and every "
+            f"file it uses were last saved by this SolidWorks (a file saved since on another SolidWorks is not read) "
+            f"and {others}; otherwise nothing of yours would be carried: open {old} in SolidWorks before you press, "
+            "and it is read as it stands there.")
+
+
+@dataclass(frozen=True)
+class _Anchor:
+    anchor: str
+
+
+def _placement_words(items) -> str:
+    anchors = [getattr(i, "anchor", "") for i in items]
+    if all(a and a != "layout" for a in anchors):
+        return "each where it stands against the gear it is mated to"
+    if not any(a and a != "layout" for a in anchors):
+        return "each where it stands"
+    return "each where it stands, against the gear it is mated to where it has one"
+
+
+def carry_sentence(fore, again) -> str:
+    """The Build again? question's clauses on the user's work (W9D-INTERFACES §9.1; replaces W9a's
+    :func:`stays_behind_sentence`), from ``workbook.update.CarryForesight``: with ``CARRY_INSERTS`` set on the
+    SolidWorks the record last saw, what is carried with the time it was read and everything named, each clause as it
+    applies; not set, W9a's sentence led by the finding; not known, W9c's mixed form. ``""`` with no assembly on
+    record."""
+    if fore is None:
+        return ""
+    name = getattr(again, "name", "") or fore.name or "the new revision"
+    old = _file(fore.assembly) if fore.assembly else "the old assembly"
+    stays = fore.stays
+    if stays is None:
+        from .workbook.update import StaysBehind
+        stays = StaysBehind(None, fore.assembly)
+    if fore.inserts is None:
+        found = [f"CARRY_INSERTS_ON_{y}" for y in fore.unshown]
+        return _joined(f"Whether {name} takes your work depends on the SolidWorks in use: Gear Generator has been "
+                       f"shown to do so on {_and('SolidWorks ' + y for y in fore.shown)}, not yet on "
+                       f"{_and('SolidWorks ' + y for y in fore.unshown)} ({_and(_finding_ref(f) for f in found)}), "
+                       "and the press reads which it runs on.",
+                       f"The press reads {old} again first, and says whatever it cannot carry.")
+    if not fore.inserts:
+        lead = (f"Gear Generator has not yet been shown to carry your work into a new revision on "
+                f"{_on_version(fore.year)} ({_finding_ref('CARRY_INSERTS_ON_' + fore.year)}), so ")
+        return lead + _stays_text(stays, again, "as read at")
+    entry = fore.entry
+    if entry is None:
+        return _joined(f"Anything you added to {old} in SolidWorks the press reads first and carries into {name} "
+                       "where it can, saying whatever it cannot.", _not_open_clause(fore, old))
+    at = read_time(entry.read_at)
+    plan = fore.plan
+    texts: List[str] = []
+    if plan is None:
+        items = _yours([c.name for c in entry.components], 0, _mate_words([m.name for m in entry.mates]))
+        texts.append(f"As read at {at}, {old} held your {_and(items)}: the press reads it again first and carries "
+                     f"into {name} what it can, saying whatever it cannot." if items else
+                     f"As read at {at}, {old} held features of yours in the app's parts, said below.")
+    else:
+        from . import swbuild as sb
+        unknown = {n.item for n in plan.named if n.why == sb.WHY_UNREAD and n.subjects
+                   and str(n.subjects[0]) == _unknown_entity()}
+        comps = [i.component.name for i in plan.components]
+        mates = [m.mate.name for m in plan.mates]
+        clauses = []
+        if comps:
+            clauses.append(f"takes your {_and(_yours(comps))}, {_placement_words(plan.components)}")
+        if mates:
+            one = len(mates) == 1
+            your = f"your {mates[0]}" if one else f"your {len(mates)} mates"
+            clauses.append(f"makes {your} again on what {'it joins' if one else 'they join'}, "
+                           f"{'' if one else 'each '}on in the modes it was on in")
+        if clauses:
+            texts.append(f"As read at {at}, {name} {', and '.join(clauses)}.")
+        else:
+            texts.append(f"As read at {at}, nothing of yours in {old} would be carried into {name}.")
+        named = [n for n in plan.named if n.item not in unknown]
+        texts += _named_sentences(named, name=name, old=old)
+        texts += _unknown_entities(fore, entry, unknown)
+        if fore.assumed and fore.configuration:
+            one = len(fore.assumed) == 1
+            texts.append(f"{_and(fore.assumed)} {'is' if one else 'are'} carried only if "
+                         f"{'its file has' if one else 'each one’s file has'} a single configuration: Gear Generator "
+                         f"has not yet been shown to insert a component in one of several on "
+                         f"{_on_version(fore.year)} ({_and(_finding_ref(f) for f in fore.configuration)}), and the "
+                         "press reads which.".replace("’", "'"))
+    texts += _component_states(entry, old)
+    left, parts = _parts_left(stays, name, fore.why_new)
+    if left:
+        texts.append(_sentence(f"{left[0][:1].upper()}{left[0][1:]}" + "".join(f"; {x}" for x in left[1:])
+                               + f"; {old} and {'that file keep' if len(parts) == 1 else 'those files keep'} "
+                               f"{'it' if len(left) == 1 and ' and ' not in parts[0][0] else 'them'}"))
+    texts += _reuse_advice(fore, parts, again)
+    texts += _features_kept(stays, name)
+    texts.append(_not_open_clause(fore, old))
+    if entry.components and fore.first and not fore.states_read:
+        texts.append(f"Your components take, in every mode of {name}, the state they have in the mode {old} shows "
+                     f"when you press: whether you suppressed one in another mode cannot be read without changing "
+                     f"{old}.")
+    texts += _modes_said(fore, name, old)
+    texts.append(f"{name} is saved as built, and holds what it carries unsaved: save it in SolidWorks to keep them. "
+                 f"The press reads {old} again first, and says whatever it cannot carry.")
+    texts.append(_standing())
+    return " ".join(t for t in texts if t)
+
+
+def _unknown_entity() -> str:
+    from .workbook.update import UNKNOWN_ENTITY
+    return UNKNOWN_ENTITY
+
+
+def _unknown_entities(fore, entry, unknown: Set[str]) -> List[str]:
+    """A schema 9 inventory's mates, whose entity kinds were never kept (*may*): those on an app gear whose part is
+    new, *your Lock3 and UserAxis4 join Sun, whose part is new: a mate on one of its faces or edges is not made again,
+    and the press reads which they are.*; any other, that the press reads what it is on and makes it again where it
+    can."""
+    if not unknown:
+        return []
+    out = []
+    on_new: Dict[str, List[str]] = {}
+    rest = []
+    for m in entry.mates:
+        if m.name not in unknown:
+            continue
+        gears = [n for w, n in m.touches if w == "app" and n in fore.why_new]
+        if gears:
+            on_new.setdefault(gears[0], []).append(m.name)
+        else:
+            rest.append(m.name)
+    for gear, names in on_new.items():
+        one = len(names) == 1
+        out.append(f"Your {_and(names)} {'joins' if one else 'join'} {gear}, whose part is new: a mate on one of its "
+                   f"faces or edges is not made again, and the press reads which {'it is' if one else 'they are'}.")
+    if rest:
+        one = len(rest) == 1
+        out.append(f"The record does not say what your {_and(rest)} {'is' if one else 'are'} on, so the press reads "
+                   f"{'it' if one else 'them'} and makes {'it' if one else 'each'} again where it can.")
+    return out
+
+
+def _component_states(entry, old: str) -> List[str]:
+    """§9.1's lightweight and suppressed components, as read (``UserComponentEntry.state``: 0 suppressed, 1 and 4
+    lightweight)."""
+    out = []
+    for c in entry.components:
+        mates = [m.name for m in entry.mates if any(w == "user" and n == c.name for w, n in m.touches)]
+        if c.state in (1, 4):
+            them = _plural(len(mates), "mate") if len(mates) != 1 else "mate"
+            its = f"its {them}"
+            out.append(f"{c.name} was lightweight as read, so {its} cannot be read through it: set it resolved in "
+                       f"SolidWorks before you press, or {'it is' if len(mates) == 1 else 'they are'} not made again."
+                       if mates else
+                       f"{c.name} was lightweight as read: it is carried resolved.")
+        elif c.state == 0:
+            out.append(f"{c.name} was suppressed in the mode {old} showed, as read; if SolidWorks cannot say where it "
+                       "stands there, it is not carried: show a mode where it is resolved before you press.")
+    return out
+
+
+def _modes_said(fore, name: str, old: str) -> List[str]:
+    out = []
+    for mode in fore.modes_gone:
+        out.append(f"{name} has no mode {mode}: what your items were in {mode} stays in {old}.")
+    if fore.modes_new and fore.first:
+        one = len(fore.modes_new) == 1
+        out.append(f"Its new {'mode' if one else 'modes'} {_and(fore.modes_new)} "
+                   f"{'takes' if one else 'take'} what they were in {fore.first}.")
+    return out
+
+
+def _standing() -> str:
+    """The standing list of what is not carried as it was; the pattern clause leaves it once
+    ``PATTERN_INSTANCE_READ`` is set and the per-instance sentence says it (D12)."""
+    return CARRY_STANDING
+
+
+def carried_status(result, again, old_path: str = "", anchors: Optional[Mapping[str, str]] = None) -> str:
+    """After a carrying Build again…, what was carried, after ``gearbox_status`` (W9D-INTERFACES §9.2; replaces W9a's
+    :func:`stayed_behind_status`), from ``result.carry`` (``swbuild.CarryResult``): *Carried into RangeBox_r2,
+    unsaved: your Sprocket-1, Sprocket-2, Chain-1 and Housing-1, each where it stood against its gear, and 7 of your
+    8 mates, each on in the modes it was on in. Not carried: …*, then each fallback, mate in the error it had,
+    component moved, clash, the placement and the states, a sub-assembly made rigid, the standing list, the marks
+    fact, a stop, or why nothing was carried. ``anchors``: each carried component's anchor by its old Name2
+    (``workbook.gearbox.carry_anchors``), for *against its gear*; ``""`` without a carry."""
+    from . import swbuild as sb
+    done = getattr(result, "carry", None)
+    if done is None:
+        return ""
+    name = getattr(again, "name", "") or "the new revision"
+    work = done.work
+    path = (work.assembly if work is not None and work.assembly else "") or old_path
+    old = _file(path) if path else "the old assembly"
+    if work is None:
+        why = done.stopped or "SolidWorks did not answer"
+        return f"{old} was not read ({why.rstrip('.')}), so nothing of yours was carried; it and your files are as they were."
+    if work.how == sb.OLD_UNREAD:
+        why = "; ".join(u.rstrip(".") for u in work.unread) or "it was not open in SolidWorks"
+        return (f"{old} was not read ({why}), so nothing of yours was carried; it and your files are as they were. "
+                f"Open {old} in SolidWorks before you press Build again… to carry it.")
+    if work.marked:
+        return (f"Reading {old} marked {_and(_file(p) for p in work.marked)} as changed in SolidWorks, which Gear "
+                f"Generator never does on purpose, so nothing of yours was carried; nothing in "
+                f"{'it' if len(work.marked) == 1 else 'them'} changed, and {old} and your files are as they were on "
+                "disk.")
+    if work.left:
+        one = len(work.left) == 1
+        return (f"Reading {old} left {_and(_file(p) for p in work.left)} open in SolidWorks, so nothing of yours was "
+                f"carried; close {'it' if one else 'them'} without saving.")
+    texts: List[str] = []
+    new_of = dict(done.inserted)
+    comps = [n if n == o else f"{n} (was {o})" for o, n in done.inserted]
+    total = len(work.mates)
+    clauses = []
+    if comps:
+        placed = _placement_words([_Anchor((anchors or {}).get(o, "")) for o, _ in done.inserted])
+        clauses.append(f"your {_and(_yours(comps))}, {placed.replace('stands', 'stood')}")
+    if done.remade:
+        made = len(done.remade)
+        if made == total == 1:
+            clauses.append(f"your {done.remade[0][0]}, on in the modes it was on in")
+        elif made == total:
+            clauses.append(f"your {_plural(total, 'mate')}, each on in the modes it was on in")
+        else:
+            clauses.append(f"{made} of your {_plural(total, 'mate')}, each on in the modes it was on in")
+    if clauses:
+        texts.append(f"Carried into {name}, unsaved: {', and '.join(clauses)}.")
+    texts += _named_sentences(done.named, name=name, old=old)
+    for fallback in done.fixed:
+        texts.append(_fallback_sentence(fallback, name, old, work.active, getattr(again, "modes_plan", None)))
+    for mate, code in done.same_error:
+        texts.append(f"Your {mate} was in error in {old} and is in {name} too, as it was.")
+    for component, mode, mm in done.moved:
+        where = f"In {mode}, " if mode else ""
+        texts.append(f"{where}SolidWorks moved {component} {mm:.1f} mm from where it was placed when your mates were "
+                     "made again.")
+    for mode, clash in done.clashes:
+        names = list(getattr(clash, "gears", ()) or getattr(clash, "components", ()))
+        carried = [n for n in names if n in new_of.values()]
+        others = [n for n in names if n not in carried]
+        if carried:
+            texts.append(f"{'In mode ' + mode + ', y' if mode else 'Y'}our {_and(carried)} "
+                         f"{'interferes' if len(carried) == 1 else 'interfere'} with {_and(others) or 'each other'} "
+                         f"({clash.volume:.1f} mm³).")
+    modes = [s.name for s in again.modes_plan.steps] if getattr(again, "modes_plan", None) is not None else []
+    floating = [c for c in work.components if c.name in new_of and not c.fixed]
+    if modes and floating and work.active:
+        texts.append(f"Your components were placed where they stood in {work.active}, the mode {old} showed; a "
+                     f"floating one that stood elsewhere in another mode stands, in {name}, where it stood in "
+                     f"{work.active}.")
+    if modes and done.inserted and not work.states_route and work.active:
+        others = [m for m in work.modes if m.casefold() != work.active.casefold()]
+        texts.append(f"Your components take in every mode the state they had in {work.active}, the mode {old} showed"
+                     + (f": their states in {_and(others)} could not be read without changing it." if others
+                        else "."))
+    for o, n in done.inserted:
+        component = next((c for c in work.components if c.name == o), None)
+        if component is not None and component.kind == "assembly":
+            texts.append(f"Your sub-assembly {n} comes over rigid: set it flexible in SolidWorks again if it was.")
+    if done.marked_user:
+        files = _and(_file(p) for p in done.marked_user)
+        one = len(done.marked_user) == 1
+        texts.append(f"SolidWorks reads {files} as changed since {'it was' if one else 'they were'} inserted into "
+                     f"{name}, though nothing in {'it' if one else 'them'} changed: saving {name} with its parts saves "
+                     f"{'that file' if one else 'those files'} again too.")
+    if done.stopped:
+        tail = f", so it did not get to {done.skipped.rstrip('.')}" if done.skipped else ""
+        texts.append(f"Carrying your work stopped: {done.stopped.rstrip('.')}{tail}; what was carried before it is in "
+                     f"{name}, unsaved, and {name} as built is saved.")
+    if done.inserted or done.remade:
+        texts.append(_standing())
+        if any(c.kind == "part" for c in work.components if c.name in new_of):
+            texts.append(CARRY_IN_CONTEXT.format(old=old))
+    if done.unsaved and not done.stopped:
+        texts.append(f"Save {name} in SolidWorks to keep what was carried.")
+    return " ".join(texts)
+
+
+def _fallback_sentence(fallback, name: str, old: str, active: str, modes_plan=None) -> str:
+    """A cluster that fell back (§6, §9.2): *Sprocket-8 is fixed where it stood in RangeBox_r2: with your Lock8 and
+    Lock9 made again SolidWorks reads Sun unable to turn, so those two were not kept; Coincident7 beside them was.*"""
+    from . import swbuild as sb
+    comps = list(fallback.components)
+    deleted = list(fallback.deleted)
+    s = [str(x) for x in fallback.subjects] + ["", "", "", ""]
+    one = len(comps) == 1
+    head = f"{_and(comps)} {'is' if one else 'are'} fixed where {'it' if one else 'they'} stood in {name}"
+    first = modes_plan.steps[0].name if modes_plan is not None and modes_plan.steps else ""
+    if fallback.why == sb.FELL_TIE:
+        mode = f" in {s[1]}" if s[1] and s[1] != first else ""
+        reason = f"with your {_and(deleted)} made again SolidWorks reads {s[0]} unable to turn{mode}"
+    elif fallback.why == sb.FELL_NEW_ERROR:
+        mate, now, before, mode = s[0], s[1], s[2], s[3]
+        was = (f", which it did not in {active}, the mode {old} showed" if before in ("", "0") else
+               f", where it read error {before} in {active}, the mode {old} showed")
+        reason = f"with your {mate} made again it reads error {now}" + (f" in {mode}" if mode else "") + was
+    else:
+        reason = (f"your {s[0]} made again over-defines {'it' if one else 'them'}" if s[0]
+                  else f"with your mates made again SolidWorks reads {'it' if one else 'one of them'} over-defined")
+    n = len(deleted)
+    gone = ("so it was not kept" if n == 1 else "so those two were not kept" if n == 2 else
+            f"so those {n} were not kept") if n else ""
+    kept = list(fallback.kept)
+    tail = (f"; {_and(kept)} beside them {'was' if len(kept) == 1 else 'were'}" if kept else "")
+    return f"{head}: {reason}" + (f", {gone}" if gone else "") + tail + "."
+
+
+def carry_footer_line(record) -> str:
+    """§9.4: while the current revision holds what Build again… carried unsaved (``CarryEntry.unsaved_at``), *RangeBox_r2
+    holds what Build again… carried of yours, not saved: save it in SolidWorks to keep it.*; ``""`` otherwise."""
+    from . import store
+    carry = store.carry_unsaved(record)
+    if carry is None:
+        return ""
+    return (f"{_stem(record.gearbox.assembly)} holds what Build again… carried of yours, not saved: save it in "
+            "SolidWorks to keep it.")
+
+
+def carry_lost_line(assembly: str, old: str) -> str:
+    """§9.4: found closed unsaved by a later job, *RangeBox_r2 was closed without saving after Build again… carried
+    your work into it, so it does not hold it; RangeBox.SLDASM still does.*"""
+    return (f"{_stem(assembly)} was closed without saving after Build again… carried your work into it, so it does "
+            f"not hold it; {_file(old) if old else 'the old assembly'} still does.")

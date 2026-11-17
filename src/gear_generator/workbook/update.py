@@ -3280,7 +3280,8 @@ def carry_for(record: Optional[LinkRecord], again: Any, old: Optional[swbuild.Ol
 
 def recorded_old_work(record: Optional[LinkRecord]) -> Optional[swbuild.OldWork]:
     """The record's inventory of the user's work in its assembly as an :class:`swbuild.OldWork` (W9D-INTERFACES §2.3),
-    for the Build again? question to foresee through ``swbuild.plan_carry`` what is carried and what named: no frames
+    for the Build again? question to foresee through ``swbuild.plan_carry`` what is carried and what named: each
+    component's file a stand-in by its Name2 (the record keeps only its kind), no frames
     (``new_frames`` empty, and each component at the world frame, so its placement is not judged here), no definitions
     beyond what the inventory keeps (type, entities, flags per mode, code), ``how`` OLD_OPEN (as it would be read where
     it stands), ``active`` ``""`` (the inventory does not keep which mode showed), each component's configurations
@@ -3293,8 +3294,10 @@ def recorded_old_work(record: Optional[LinkRecord]) -> Optional[swbuild.OldWork]
         return None
     box = record.gearbox
     identity: swbuild.Frame9 = (layout.IDENTITY, (0.0, 0.0, 0.0))
+    # The record never keeps a user's file (W9a ruling 6), only its kind: a component stands for its file by its own
+    # Name2 and the kind's extension, so the foresight takes it as on disk; the press reads the real one.
     components = [swbuild.OldComponent(
-        name=c.name, path="", kind=c.kind, fixed=c.fixed, code=c.code, state=c.state, frame=identity,
+        name=c.name, path=c.name + (".SLDASM" if c.kind == "assembly" else ".SLDPRT"), kind=c.kind, fixed=c.fixed, code=c.code, state=c.state, frame=identity,
         virtual="^" in c.name) for c in entry.components]
     mates = []
     for m in entry.mates:
@@ -3314,3 +3317,120 @@ def recorded_old_work(record: Optional[LinkRecord]) -> Optional[swbuild.OldWork]
 
 
 UNKNOWN_ENTITY = "not on record"     # OldEntity.unread of a schema 9 inventory's entity: its kind was never kept
+
+
+@dataclass(frozen=True)
+class CarryForesight:
+    """What the Build again? question says of the user's work (W9D-INTERFACES §9.1), from the record's inventory with
+    its time, through ``swbuild.plan_carry``'s foresight (:func:`carry_foresight`). ``assembly`` the old assembly,
+    ``entry`` its inventory (None: nothing of the user's on record); ``year`` the SolidWorks the record last saw
+    (``"?"``: not known); ``inserts`` whether ``CARRY_INSERTS`` is set there (None: not known, with ``shown`` and
+    ``unshown`` the years it is and is not set on); ``plan`` what ``plan_carry`` foresees (None: nothing foreseen, the
+    worker not able to say); ``assumed`` the components whose file's configurations the record does not keep (foreseen
+    as a file of one) and ``configuration`` the findings unset that a file of several needs; ``not_open`` the findings
+    unset that keep a closed old assembly from being read at all (R.2), and ``keeps_open`` the one that lets it be read
+    beside open documents, if unset; ``states_read`` whether the states per mode can be read unshown; ``modes_gone``
+    the old modes the revision has not, ``modes_new`` its modes the old record has not, ``first`` the old record's
+    first mode; ``stays`` the features left in parts made new and kept in parts reused (W9a's); ``why_new`` gear ->
+    why its part is new; ``made_new`` gear -> ``MadeNew.why``; ``values`` part file name -> the K11 value on record
+    for it (MISMATCHED's advice)."""
+
+    assembly: str
+    name: str
+    entry: Optional[store.UserWorkEntry]
+    year: str
+    inserts: Optional[bool]
+    shown: Tuple[str, ...] = ()
+    unshown: Tuple[str, ...] = ()
+    plan: Optional[swbuild.CarryPlan] = None
+    assumed: Tuple[str, ...] = ()
+    configuration: Tuple[str, ...] = ()
+    not_open: Tuple[str, ...] = ()
+    keeps_open: str = ""
+    states_read: bool = False
+    modes_gone: Tuple[str, ...] = ()
+    modes_new: Tuple[str, ...] = ()
+    first: str = ""
+    stays: Optional[StaysBehind] = None
+    why_new: Mapping[str, str] = field(default_factory=dict)
+    made_new: Mapping[str, str] = field(default_factory=dict)
+    values: Mapping[str, store.ValueEditEntry] = field(default_factory=dict)
+
+
+def _finding(name: str, year: str) -> Any:
+    return getattr(findings, f"{name}_ON_{year}", None)
+
+
+def _record_year(record: Optional[LinkRecord]) -> str:
+    """The SolidWorks year the record last saw (:func:`solidworks_on_record`), ``"?"`` when not known."""
+    from .. import swcom
+    revision = solidworks_on_record(record)
+    return str(swcom.release_year(int(revision[0]))) if revision else "?"
+
+
+# R.2's conditions that hold a closed old assembly unread whatever is open (W9D-INTERFACES §3 R.2, the re-check's R1
+# and S-f), in the order the question names them; OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS only when documents are open.
+NOT_OPEN_FINDINGS = ("FILE_VERSION_READ", "DEPENDENCIES_READ", "OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN")
+
+
+def carry_foresight(record: Optional[LinkRecord], again: Any, *, plan_carry: Optional[Callable[..., Any]] = None,
+                    read_sidecar: Callable[[str], Optional[Sidecar]] = store.read_sidecar
+                    ) -> Optional[CarryForesight]:
+    """:class:`CarryForesight` for a Build again… of ``again`` from ``record``; None when the record has no assembly
+    (nothing is left behind). ``plan_carry`` is ``swbuild.plan_carry`` (a test passes its own); called on
+    :func:`recorded_old_work` with ``new_frames`` empty, each component whose configurations the record does not keep
+    foreseen as a file of one (``assumed``: the question says so). A foresight that raises is no foresight
+    (``plan`` None): the question then says only that the press reads and carries what it can."""
+    box = getattr(record, "gearbox", None)
+    if box is None or not box.assembly or again is None:
+        return None
+    entry = _on_record(record)
+    if entry is not None and (entry.unread or not entry):
+        entry = None
+    year = _record_year(record)
+    if year == "?":
+        known = [str(y) for y, _ in known_finding_revisions()]
+        shown = tuple(y for y in known if _finding("CARRY_INSERTS", y))
+        unshown = tuple(y for y in known if y not in shown)
+        inserts = None if shown and unshown else bool(shown)
+    else:
+        shown = unshown = ()
+        inserts = bool(_finding("CARRY_INSERTS", year))
+    old = old_assembly(record, again)
+    carry = carry_for(record, again, old, read_sidecar=read_sidecar) if old is not None else None
+    plan = None
+    assumed: Tuple[str, ...] = ()
+    work = recorded_old_work(record) if entry is not None else None
+    if work is not None and carry is not None and inserts:
+        assumed = tuple(c.name for c in work.components if c.configurations is None)
+        work.components = [replace(c, configurations=("",)) if c.configurations is None else c
+                           for c in work.components]
+        revision = solidworks_on_record(record)
+        try:
+            plan = (plan_carry or swbuild.plan_carry)(work, carry, revision, new_frames={})
+        except Exception:  # noqa: BLE001 - a foresight never stops the question: the press reads and says
+            plan = None
+    probe = year if year != "?" else (unshown[0] if unshown else (shown[0] if shown else "?"))
+    configuration = tuple(f"{n}_ON_{probe}" for n in ("REFERENCED_CONFIGURATION_READ",
+                                                      "CARRY_INSERTS_IN_A_CONFIGURATION")
+                          if not _finding(n, probe))
+    not_open = tuple(f"{n}_ON_{probe}" for n in NOT_OPEN_FINDINGS if not _finding(n, probe))
+    keeps = "" if _finding("OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS", probe) else \
+        f"OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS_ON_{probe}"
+    new_modes = tuple(carry.modes) if carry is not None else ()
+    gone = tuple(m for m in box.modes if not any(m.casefold() == n.casefold() for n in new_modes))
+    added = tuple(m for m in new_modes if not any(m.casefold() == o.casefold() for o in box.modes))
+    why_new = {b.old: b.why_new for b in (carry.bodies if carry is not None else ()) if b.why_new}
+    made = {g: m.why for m in getattr(again, "made_new", ()) or () for g in m.gear_ids}
+    values: Dict[str, store.ValueEditEntry] = {}
+    for problem in (entry.problems if entry is not None else []):
+        for value in problem.values:
+            values.setdefault(value.document.lower(), value)
+    return CarryForesight(
+        assembly=box.assembly, name=getattr(again, "name", "") or "", entry=entry, year=year, inserts=inserts,
+        shown=shown, unshown=unshown, plan=plan, assumed=assumed if plan is not None else (),
+        configuration=configuration, not_open=not_open, keeps_open=keeps,
+        states_read=bool(_finding("COMPONENT_STATE_PER_CONFIGURATION_ROUTE", probe)),
+        modes_gone=gone if new_modes else (), modes_new=added if box.modes else (),
+        first=box.modes[0] if box.modes else "", stays=stays_behind(record, again), why_new=why_new, made_new=made,
+        values=values)

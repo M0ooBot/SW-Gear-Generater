@@ -247,18 +247,22 @@ def test_the_build_again_question_names_what_stays_behind_with_its_time(on_fake)
     upd, again = _again(record, gears(reducer(), G1=dict(flank="arcs")), sw.exists)
     assert upd.needs_new_revision and again.refusal == ""
     question = ui_text.build_again_question(upd, again, record=record)
+    # W9d (W9D-INTERFACES §9.1): while CARRY_INSERTS is unset (every version here: no version on record), W9a's clause
+    # is said led by the finding that holds the carry back.
+    lead = (" Gear Generator has not yet been shown to carry your work into a new revision on the SolidWorks it runs "
+            "on (findings.CARRY_INSERTS_ON_<year>), so")
     assert question.endswith(
-        f" As read at {at}, your Sprocket-1 and Lock3 stay in Reducer_12to1.SLDASM, and your Keyway stays in "
+        f"{lead} as read at {at}, your Sprocket-1 and Lock3 stay in Reducer_12to1.SLDASM, and your Keyway stays in "
         f"Gear_m1.5_N17, which G1's new part replaces; {again.name} has none of them, nor anything added since. Your "
         f"Groove in OutputGear comes with that part, which {again.name} reuses."), question
     # With nothing on record (or nothing of the user's read), a clause with no time (the coordinator's ruling 4).
-    timeless = (" Anything you added to Reducer_12to1.SLDASM in SolidWorks (components, mates, and features in parts "
-                f"this revision makes new) stays there, and {again.name} has none of it.")
+    timeless = (f"{lead} anything you added to Reducer_12to1.SLDASM in SolidWorks (components, mates, and features in "
+                f"parts this revision makes new) stays there, and {again.name} has none of it.")
     for empty in (None, store.UserWorkEntry(read_at="2026-11-16T14:02:00Z", assembly=record.gearbox.assembly)):
         bare = copy.deepcopy(record)
         bare.gearbox.user_work = empty
         assert ui_text.build_again_question(upd, again, record=bare) == \
-            question[:question.index(" As read at")] + timeless
+            question[:question.index(lead)] + timeless
 
 
 def _calls_from(sw, start):
