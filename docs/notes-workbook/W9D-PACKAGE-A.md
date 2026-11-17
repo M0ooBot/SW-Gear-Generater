@@ -344,3 +344,30 @@ through `_read`. Nothing else found that only the fake's kindness made pass; all
 
 **For B:** nothing in B's files must change for these; a sentence B builds from `stopped` may now end in "a fault in
 Gear Generator, not in SolidWorks" instead of Python text.
+
+## Fifth round (W9D-REVIEW-A.md eb66f22, W9D-DEMONSTRATION-REVIEW.md e2207d9)
+
+- **M1**: `_read` calls a member handed back uncalled under `_guarded`, so a COM error there is a `ComError` (SolidWorks'
+  sentence, a lost session marked, `_remake`'s `except ComError: raise` meets it). Pin:
+  `tests/test_swcom.py::test_a_member_handed_back_uncalled_is_called_under_the_com_error_guard` (fails on the old).
+- **M2**: `_set_flags` sets a mate's flag in every mode as recorded; in a mode where one of its components is
+  suppressed, what SolidWorks reads back is a fact, never a stop. Pin:
+  `test_a_mates_flag_read_otherwise_where_its_component_is_suppressed_is_a_fact_not_a_stop` (fails on the old).
+- **M3**: `_judge` never excuses a gear's tie; the same-error excuse keeps only the code and a body's over-definition.
+  Pin: the "same error" case of `test_a_new_error_or_an_over_definition_falls_back_and_the_same_error_is_carried`
+  (Lock1 back in 46 ties G1: it now falls back). Rule written into W9D-INTERFACES §6's same-error paragraph.
+- **S1**: a fault of ours reads "The carry stopped while …: a fault in Gear Generator, not in SolidWorks." and "The
+  read of … stopped: …"; SolidWorks is the subject only of its own refusals.
+- **S2**: a walk's faults are appended to its logged walk line; `entity_reference`'s fault text kept in
+  `Session.reference_faults` (not yet copied to the log: **not done**).
+- **S4**: `entity_references` on a component with no part document says "its part is not loaded in SolidWorks
+  (lightweight or suppressed)".
+- **Why-fields**: an entity SolidWorks gives no component for carries its why: "the assembly's own plane is not told
+  while a component of it is lightweight" (UserAsm6) or "SolidWorks would not say what it is on"; a feature on a
+  suppressed component carries the Session's "its part is not loaded in SolidWorks (lightweight or suppressed)"
+  (UserAxis9). B gets them as `WHY_UNREAD`'s one slot, the clause.
+- **Notes**: an empty Name2 is skipped in C.1. **Not done**: inserting each file's instances in their old order (not
+  checked against cluster order and placement in this round's budget); S3's closer stand-ins (`GetModelDoc2` and
+  `Extension` as attributes, a Session test with no part document, `strict_handles` in every handle-taking fake
+  member, the two carry tests without it); the gear sense against real geometry: the W9d probes remade no gear mate,
+  so nothing measured exists to model; left for the run.

@@ -3535,8 +3535,10 @@ def build_gearbox(sw: SolidWorks, parts: Sequence[BuildPlan], reuse: Sequence[Do
             old_read = "" if read.how != OLD_UNREAD else (OLD_NOT_OPEN if read.unread else "")
         except Exception as exc:  # noqa: BLE001 - the read never stops the build (§1)
             carried = CarryResult(None)
-            carried.stopped = (f"SolidWorks did not answer the read of {_file(carry.old.path)}: "
-                               f"{_carry_said(exc, carried.facts)}")
+            said = _carry_said(exc, carried.facts)
+            carried.stopped = (f"SolidWorks did not answer the read of {_file(carry.old.path)}: {said}"
+                               if isinstance(exc, SolidWorksError) else
+                               f"The read of {_file(carry.old.path)} stopped: {said}.")
             old_work, old_read = None, carried.stopped
     else:
         old_work, old_read = (None, "") if before is None else _read_before(sw, before)
@@ -7850,10 +7852,13 @@ def _read_old_mates(sw: SolidWorks, carry: Carry, work: OldWork, configurations:
         walk = getattr(sw, "last_walk", None) or {}
         per = "; ".join(f"{k} of {n}: {m} after the prefilter (key {key}), {hits} matched"
                         for k, n, m, key, hits in walk.get("items", ()))
+        faults = "; ".join(walk.get("faults", ()))
         work.walks.append(f"walk {walk.get('component', component)}: {per}; {walk.get('carried', '?')} carried, "
-                          f"{walk.get('seconds', '?')} s, cap {walk.get('capped') or 'not reached'}")
+                          f"{walk.get('seconds', '?')} s, cap {walk.get('capped') or 'not reached'}"
+                          + (f"; faults: {faults}" if faults else ""))
     for name, handle, definition, on, state in read:
         entities: List[OldEntity] = []
+        root()                                   # read now, so an unread assembly entity can say why
         for i, e in enumerate(definition.entities):
             what, who = owner(e.component)
             leaf = e.component if e.component and "/" in e.component and what == USER else ""
@@ -7874,6 +7879,10 @@ def _read_old_mates(sw: SolidWorks, carry: Carry, work: OldWork, configurations:
                     unread = f"its {e.kind} read as a {kind}"
                 elif why and not reference:
                     unread = why
+            if what == UNREAD_ENTITY and not unread:
+                # Why-fields: say which it is, so the result can say it.
+                unread = ("the assembly's own plane is not told while a component of it is lightweight"
+                          if e.component and lightweight else "SolidWorks would not say what it is on")
             entities.append(OldEntity(what, who, e.kind if what != UNREAD_ENTITY else ENTITY_UNREAD, e.feature,
                                       leaf, reference, e.select_type, coaxial, unread, radius, capped))
         work.mates.append(OldMate(name, definition.type, definition.type_name, definition.alignment,
@@ -8000,7 +8009,9 @@ def _carry(sw: SolidWorks, result: GearboxResult, carry: Carry, work: OldWork, a
     except _CarryStop as stop:
         cr.stopped, cr.skipped = str(stop), _and(c.left)
     except Exception as exc:  # noqa: BLE001 - the carry never stops the build
-        cr.stopped = f"SolidWorks stopped the carry while {c.doing}: {_carry_said(exc, cr.facts)}"
+        said = _carry_said(exc, cr.facts)
+        cr.stopped = (f"SolidWorks stopped the carry while {c.doing}: {said}" if isinstance(exc, SolidWorksError)
+                      else f"The carry stopped while {c.doing}: {said}.")              # S1: ours, not SolidWorks
         cr.skipped = _and(c.left)
     finally:
         try:
@@ -8036,7 +8047,8 @@ def _carry_steps(c: _Carrying, say: Callable[[Step], None]) -> None:
     # The fourth round: the build's handles end with its bracket (Session.end_build forgets them), so every app body of
     # the new assembly is found again by its Name2 here, a gear new in this revision (no CarryBody) included.
     for handle, name in c.result.components.items():
-        sw.find_component(handle, name)
+        if name:                                 # an empty Name2 is skipped (the review's note)
+            sw.find_component(handle, name)
     for body in carry.bodies:
         if body.handle and body.handle in c.result.components:
             c.new_frames[body.old] = sw.component_frame(body.handle)
@@ -8201,7 +8213,7 @@ def _carry_cluster(c: _Carrying, cluster: int, items: Sequence[CarryMateItem]) -
         if done is None:
             continue
         handle, kept, status = done
-        on = _set_flags(c, handle, kept, item.mate)
+        on = _set_flags(c, handle, kept, item.mate, item)
         made.append((item, handle, kept))
         cr.remade.append((item.mate.name, kept, on))
         if status == findings.ADD_MATE_OVER_DEFINED and fell is None:
@@ -8314,7 +8326,7 @@ def _read_back(c: _Carrying, handle: str, item: CarryMateItem) -> str:
     return ""
 
 
-def _set_flags(c: _Carrying, handle: str, kept: str, mate: OldMate) -> Tuple[str, ...]:
+def _set_flags(c: _Carrying, handle: str, kept: str, mate: OldMate, item: CarryMateItem) -> Tuple[str, ...]:
     """C.6.1: the remade mate's flag in every new mode from its old ``on`` by name, read back."""
     sw, carry = c.sw, c.carry
     if not carry.modes:
@@ -8328,7 +8340,18 @@ def _set_flags(c: _Carrying, handle: str, kept: str, mate: OldMate) -> Tuple[str
             sw.set_mate_suppressed_in(handle, suppressed, [c.config_of[m] for m in modes])
     flags = sw.mate_suppression(handle, [c.config_of[m] for m in carry.modes])
     read_on = tuple(m for m in carry.modes if not flags[c.config_of[m]])
-    if set(read_on) != set(on):
+    # M2 (§3 C.6.1): a mode where one of the mate's components is suppressed is left as SolidWorks has it: what it
+    # reads there is a fact, never a stop.
+    by_name = {i.component.name: i.component for i in c.plan.components}
+    names = {c.plan_handle[h] for h in _user_targets(item) if h in c.plan_handle}
+    hidden = {m for m in carry.modes if any(n in by_name and _wanted_suppressed(by_name[n], m, c.work, carry)
+                                             for n in names)}
+    for m in sorted(hidden):
+        if (m in read_on) != (m in on):
+            c.result.carry.facts.append(f"{kept} reads {'on' if m in read_on else 'suppressed'} in {m}, where a "
+                                        f"component it joins is suppressed, though set {'on' if m in on else 'off'}; "
+                                        "left so")
+    if {m for m in read_on if m not in hidden} != {m for m in on if m not in hidden}:
         raise _CarryStop(f"{kept} does not read on in {_and(on) or 'no mode'} as it was set, so the carry stopped "
                          "there.")
     return read_on
@@ -8362,7 +8385,7 @@ def _judge(c: _Carrying, made: Sequence[Tuple[CarryMateItem, str, str]], train: 
         if handle in users and sw.constrained_status(handle) == findings.COMPONENT_OVER_DEFINED:
             return FELL_OVER_DEFINED, ("",)
     after = _free(sw, train)
-    tied = [h for h in train if before.get(h) and not after.get(h) and h not in excused]
+    tied = [h for h in train if before.get(h) and not after.get(h)]      # M3: a gear's tie is never excused (K2)
     if tied:
         return FELL_TIE, (c.gear(tied[0]), mode)
     return None

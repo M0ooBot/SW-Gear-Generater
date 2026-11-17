@@ -763,7 +763,7 @@ def _read(obj: Any, name: str) -> Any:
     """
     value = call(obj, name)
     if type(value).__name__ in ("method", "function"):
-        return value()
+        return _guarded(name, value)          # W9d M1: the call itself under the COM-error guard, as raw() had it
     return value
 
 
@@ -3903,7 +3903,8 @@ class Session:
             return entity.kind, bytes(bytearray(int(b) & 0xFF for b in raw)).hex(), None, ""
         except SolidWorksError as exc:
             return entity.kind, "", None, f"its reference could not be read: {exc}"
-        except Exception:  # noqa: BLE001 - a fault of ours: no Python text in a sentence
+        except Exception as exc:  # noqa: BLE001 - a fault of ours: no Python text in a sentence; kept for the log (S2)
+            self.reference_faults = getattr(self, "reference_faults", []) + [f"{type(exc).__name__}: {exc}"]
             return entity.kind, "", None, "its reference could not be read (a fault in Gear Generator)"
 
     def entity_references(self, component_handle: str, items: Sequence[Tuple[str, int, str]], *,
@@ -3932,8 +3933,11 @@ class Session:
         started, capped = time.monotonic(), ""
         for mate_handle, index, kind in items:
             finding = "PERSIST_REFERENCE_ROUTE_FOR_FACES" if kind == "face" else "PERSIST_REFERENCE_ROUTE_FOR_EDGES"
-            if self._w9d_finding(finding) != PERSIST_ROUTE_R3 or part is None:
+            if self._w9d_finding(finding) != PERSIST_ROUTE_R3:
                 out.append((kind, "", None, None, "", f"no measured route for a {kind} here"))
+                continue
+            if part is None:                         # S4: as entity_reference says it
+                out.append((kind, "", None, None, "", "its part is not loaded in SolidWorks (lightweight or suppressed)"))
                 continue
             if capped:
                 out.append((kind, "", None, None, capped, ""))

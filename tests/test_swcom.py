@@ -3411,3 +3411,23 @@ def test_the_r3_walk_calls_the_members_late_binding_hands_back_uncalled(monkeypa
     (answer,) = session.entity_references("old1", [("oldmate1", 0, "face")])
     assert answer[1] == "0102" and answer[4] == "" and answer[2] is False, answer
     assert session.last_walk["items"] == [("face", 2, 2, ("area", 100.0), 1)]
+
+
+def test_a_member_handed_back_uncalled_is_called_under_the_com_error_guard(monkeypatch):
+    """W9d M1 (fifth round): _read calls the method late binding hands back inside _guarded, so a COM error there is
+    SolidWorks' sentence (a ComError), not a fault of Gear Generator's."""
+    class Boom(Exception):
+        pass
+
+    def failing():
+        raise Boom(-2147023174, "The RPC server is unavailable.", None, None)
+
+    class Body:
+        GetFaces = staticmethod(failing)
+    monkeypatch.setattr(swcom, "_COM_ERRORS", (Boom,))                 # no pywin32 here: the guard catches Boom
+    try:
+        swcom._read(Body(), "GetFaces")
+    except swcom.ComError as exc:
+        assert "GetFaces" in str(exc)
+    else:
+        raise AssertionError("no ComError")

@@ -712,7 +712,10 @@ def test_a_new_error_or_an_over_definition_falls_back_and_the_same_error_is_carr
         fake.remake_status["Lock3"] = findings.ADD_MATE_OVER_DEFINED
     cr = _build_again(fake).carry
     if case == "same error":
-        assert cr.fixed == [] and cr.same_error == [("Lock1", 46)]
+        # M3 (fifth round): Lock1 reads its old over-definition again, and with it G1, free before, no longer turns:
+        # the same-error excuse never excuses a gear's tie (K2), so its cluster falls back.
+        assert [(f.why, f.subjects) for f in cr.fixed][0] == (swbuild.FELL_TIE, ("G1", ""))
+        assert cr.same_error == []                      # what the fallback deleted is not said carried
         return
     (fell,) = cr.fixed
     assert fell.why == (swbuild.FELL_NEW_ERROR if case == "new error" else swbuild.FELL_OVER_DEFINED)
@@ -729,8 +732,8 @@ def test_a_carry_that_stops_part_way_says_what_it_did_and_leaves_the_build_saved
     assert result.ok and result.assembly.saved == R2[T_ASM]
     cr = result.carry
     assert cr.inserted and len(cr.remade) == 2 and cr.unsaved
-    assert cr.stopped.startswith("SolidWorks stopped the carry while making the mates of Housing-1 and Sprocket-2 "
-                                 "again"), cr.stopped
+    assert cr.stopped.startswith("The carry stopped while making the mates of Housing-1 and Sprocket-2 "
+                                 "again"), cr.stopped                     # ours, so SolidWorks is not the subject
     assert cr.skipped == "checking every mode with your mates on"          # what is left, not what was in hand (S6)
 
 
@@ -1387,5 +1390,29 @@ def test_a_fault_of_ours_never_reaches_a_sentence_as_python_text(monkeypatch, ev
     _isfile(monkeypatch, fake)
     fake.raises["remake_mate"] = (1, TypeError("'method' object is not iterable"))
     cr = _build_again(fake).carry
-    assert cr.stopped.endswith("a fault in Gear Generator, not in SolidWorks") and "method" not in cr.stopped
+    assert cr.stopped.startswith("The carry stopped while")                       # S1: not "SolidWorks stopped"
+    assert cr.stopped.endswith("a fault in Gear Generator, not in SolidWorks.") and "method" not in cr.stopped
     assert any("TypeError" in f for f in cr.facts)
+
+
+# -- the fifth round (W9D-REVIEW-A.md's addendum eb66f22, W9D-DEMONSTRATION-REVIEW.md's e2207d9) --------------------
+
+
+def test_a_mates_flag_read_otherwise_where_its_component_is_suppressed_is_a_fact_not_a_stop(
+        monkeypatch, every_gate, mode_findings):
+    """M2 (§3 C.6.1): Sprocket-1 suppressed in N; its Lock1 set on there reads suppressed (made up: unmeasured)."""
+    every_gate()
+
+    def tweak(fake):
+        fake.states_by.setdefault("N", {})["Sprocket-1"] = 0
+        original = fake.mate_suppression
+
+        def reads(handle, configurations):
+            out = original(handle, configurations)
+            if fake.mate_handles.get(handle) == "Lock1" and fake.saved_after:
+                out = {k: (True if k == "N" else v) for k, v in out.items()}
+            return out
+        monkeypatch.setattr(fake, "mate_suppression", reads)
+    cr, fake = _tc_again(monkeypatch, ALL_ON, tweak)
+    assert cr.stopped == "" and [r[0] for r in cr.remade] == ["Lock1"]
+    assert any("Lock1 reads suppressed in N, where a component it joins is suppressed" in f for f in cr.facts)

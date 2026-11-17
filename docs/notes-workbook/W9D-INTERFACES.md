@@ -653,7 +653,10 @@ in a configured assembly. For a mate remade from a user's definition it is M9's 
 - **The same error**: a remade mate that reads, in a mode, the error code it read in the old assembly's mode showing
   is carried as it was (`same_error`, said) and not counted against its cluster. Its old code was read in one mode
   only, so a mate in error before in another mode falls back as a new error there: conservative, said in the sentence
-  as "which it did not in H, the mode RangeBox.SLDASM showed".
+  as "which it did not in H, the mode RangeBox.SLDASM showed". The excuse covers the mate's code, and a body's
+  over-definition only where every mate of the cluster on that body is back in its old error; it **never excuses a
+  gear's tie** (the first run's review, §4; K2): a gear free to turn in the new revision before the cluster and not
+  free after it is tied by that cluster, whatever codes its mates read, and the cluster falls back (`FELL_TIE`).
 - **A cluster falls back in the plan's three cases, and only these, and only that cluster** (must-fix 1, D6 ruled
   against the first draft):
   1. `FELL_NEW_ERROR` — one of its remade mates reads, in a mode where it is on, an error code it did not have before;
