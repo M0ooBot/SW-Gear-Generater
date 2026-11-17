@@ -1345,8 +1345,12 @@ engage there. The issue's RangeBox, as written, shows all three; RangeBox_Fixed
 none.
 
 Board: `WorkbookBands` (RangeBox_Fixed read, the Speeds panel on L: the end band
-on LowDog, HighDog in the relief, Hub under the start band). Its PNG is not
-rendered on this host, which has no Chrome; `render.py` makes it where one is.
+on LowDog, HighDog in the relief, Hub under the start band). The boards drawn
+from W8's two fixtures and from RangeBox (`WorkbookModes`, `WorkbookModesBuilt`,
+`WorkbookModesUpdated`, `WorkbookShortScreen`, `WorkbookUserWork`) are redrawn
+with the three warnings each gains (the Checks count three higher: the E4's 7
+becomes 10). No PNG is rendered on this host, which has no Chrome; `render.py`
+makes `WorkbookBands.png` and redraws those five where one is.
 
 ### Planetary stages (W7)
 
