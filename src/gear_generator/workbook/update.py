@@ -2286,15 +2286,32 @@ def names_document(what: str, document: str) -> bool:
     return bool(stem) and text.startswith(stem) and (len(text) == len(stem) or text[len(stem)] in ". ")
 
 
-def documents_left_in_error(result: Any) -> List[Any]:
-    """The documents (``swbuild.UpdateResult``) an Update changed whose rebuild reported an error: a change set, not
-    rebuilt, and a failure of the job naming it (a rebuild in error from the user's features alone is no failure).
-    The parts, the layout and the carriers. One rule for the stop's sentence and the record's mark."""
-    named = [str(what) for what, _why in getattr(result, "failures", []) or []]
+def _value_documents(result: Any) -> List[Any]:
+    """The parts', the layout's and the carriers' ``swbuild.UpdateResult`` of an Update."""
     docs = list(getattr(result, "parts", []) or []) + [getattr(result, "layout", None)] + \
         list(getattr(result, "carriers", []) or [])
-    return [d for d in docs if d is not None and getattr(d, "document", "") and getattr(d, "changed", None)
-            and not getattr(d, "rebuilt", True) and any(names_document(w, d.document) for w in named)]
+    return [d for d in docs if d is not None and getattr(d, "document", "")]
+
+
+def changed_documents(result: Any) -> List[str]:
+    """Every document an Update changed, by name or path: a value set (its ``UpdateResult.changed``) or anything else
+    it changed there (``GearboxUpdate.changed``: a sleeve given or relieved of its bands alone). One rule for the stop's
+    "left in error" and for the mark's clearing, so the two never disagree about a document (the third re-check)."""
+    return [d.document for d in _value_documents(result) if getattr(d, "changed", None)] + \
+        [str(p) for p in getattr(result, "changed", []) or []]
+
+
+def documents_left_in_error(result: Any) -> List[Any]:
+    """The documents (``swbuild.UpdateResult``) an Update changed (:func:`changed_documents`) and left in error: a
+    failure of the job names it, and either its values' rebuild reported an error or the failure names the document
+    as a whole (a sleeve's band step: the app's own feature in error, after its values rebuilt clean). A rebuild in
+    error from the user's features alone is no failure; a single global refused beside a clean rebuild is not this.
+    The parts, the layout and the carriers. One rule for the stop's sentence and the record's mark."""
+    named = [str(what) for what, _why in getattr(result, "failures", []) or []]
+    changed = {document_stem(c) for c in changed_documents(result)}
+    return [d for d in _value_documents(result) if document_stem(d.document) in changed
+            and any(names_document(w, d.document) for w in named)
+            and (not getattr(d, "rebuilt", True) or any(document_stem(w) == document_stem(d.document) for w in named))]
 
 
 def _plan_paths(plan: UpdatePlan) -> List[str]:
@@ -2317,11 +2334,7 @@ def _documents_changed_clean(plan: UpdatePlan, result: GearboxUpdate) -> List[st
     it (``result.changed``: a sleeve given its bands alone, whose band step raises on any feature of the app's in
     error), so the mark and the status's save offer never disagree about it (the re-check's note under N1)."""
     named = [str(what) for what, _why in getattr(result, "failures", []) or []]
-    docs = list(getattr(result, "parts", []) or []) + [getattr(result, "layout", None)] + \
-        list(getattr(result, "carriers", []) or [])
-    changed = [d.document for d in docs if d is not None and getattr(d, "document", "") and d.changed] + \
-        [str(p) for p in getattr(result, "changed", []) or []]
-    stems = {document_stem(c) for c in changed if not any(names_document(w, c) for w in named)}
+    stems = {document_stem(c) for c in changed_documents(result) if not any(names_document(w, c) for w in named)}
     return [p for p in _plan_paths(plan) if document_stem(p) in stems]
 
 

@@ -1153,3 +1153,57 @@ def test_a_sleeve_left_in_error_then_given_only_its_bands_clean_sheds_its_mark(m
     assert d.record.unsaved_in_error == []
     text, _ = d.footer(fixed())
     assert "left in error" not in text and "save them in SolidWorks to keep them" in text, text
+
+
+# -- the third re-check: a sleeve's band step that fails on the app's own feature is left in error -------------------
+
+def _relief_comes_out_in_error(desk, sleeve):
+    """The fake makes the sleeve's relief, then reads it in error (an app feature: the band step raises)."""
+    made = desk.sw.loft_cut
+
+    def loft_cut(handle, name, profiles):
+        out = made(handle, name, profiles)
+        desk.sw.feature_codes[(_key(sleeve), name)] = 41
+        return out
+
+    desk.sw.loft_cut = loft_cut
+
+
+def _says_close_without_saving(press, footer):
+    assert "Sleeve_m1.25_N17 is left in error: close it in SolidWorks without saving" in press.after, press.after
+    assert "save it in SolidWorks to keep" not in press.after, press.after
+    assert "Sleeve_m1.25_N17 was left in error when it stopped: close it in SolidWorks without saving" in footer, \
+        footer
+    assert "save it in SolidWorks to keep" not in footer, footer
+
+
+def test_a_relief_in_error_the_first_time_bands_are_given_leaves_the_sleeve_in_error_never_offered_for_saving(
+        measured):
+    """Its values (the face width) rebuilt clean, then its band step fails on the relief: the stop and the footer
+    both say to close it without saving, and the mark is written."""
+    d = Desk()
+    d.build(range_box())
+    sleeve = _part(d.record, "RangeSlv")
+    _relief_comes_out_in_error(d, sleeve)
+    press = d.press(fixed())
+    assert press.result.failures == [("Sleeve_m1.25_N17.SLDPRT", "SolidWorks reported Relief in error in "
+                                                                 "Sleeve_m1.25_N17.")]
+    assert [store.same_path(p, sleeve) for p in d.record.unsaved_in_error] == [True]
+    _says_close_without_saving(press, d.footer(fixed())[0])
+
+
+def test_a_sleeve_marked_earlier_whose_bands_alone_fail_on_the_relief_keeps_its_mark_and_no_save_offer(measured):
+    """Stopped in the sleeve's values, pressed again without closing: no value is set in it, its band step fails on
+    the relief. The status no longer offers to save it while the footer says to close it without saving."""
+    d = Desk()
+    d.build(range_box())
+    sleeve = _part(d.record, "RangeSlv")
+    d.sw.rebuild_ok = False
+    d.press(fixed())
+    d.sw.rebuild_ok = True
+    _relief_comes_out_in_error(d, sleeve)
+    press = d.press(fixed())
+    assert not next(p for p in press.result.parts if p.document == "Sleeve_m1.25_N17.SLDPRT").changed
+    assert [what for what, _ in press.result.failures] == ["Sleeve_m1.25_N17.SLDPRT"]
+    assert [store.same_path(p, sleeve) for p in d.record.unsaved_in_error] == [True]
+    _says_close_without_saving(press, d.footer(fixed())[0])
