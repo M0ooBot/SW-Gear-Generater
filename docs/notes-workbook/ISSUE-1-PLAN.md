@@ -1063,3 +1063,34 @@ that says the Update stops there as before.
 - **Route (c1) on a train with no carrier is measured on 2024 too** (`USER_MATE_PUT_NO_CARRIER_ON_2024` True, the
   12 : 1 without modes).
 
+
+## Changes after W9b, W9c's probes and the review of W9c's packages
+
+Ruled by the coordinating session on 2026-11-17, each the user's to overrule. The detail is in
+`W9B-INTERFACES.md` §7, `W9C-INTERFACES.md` §10 and §11, `W9C-PROBES-REVIEW.md` and `W9C-REVIEW.md`.
+
+- **The record's schema.** §2.4 has W9c adding nothing to the record's shape and W9d's carried items making it
+  schema 9. W9c's record now keeps what a stopped press left in SolidWorks (`GearboxRecord.left`: the app's globals
+  and configurations, and a part built but not inserted), which decides whether a thing found there is the app's or
+  the user's, and an older reader would drop it silently. So **W9c's link record is schema 9 and W9d's will be 10**.
+- **Each new kind of write by Update is behind a per-version finding**, None until a full build on that SolidWorks
+  reads it clean, and refuses before any write, by name, while None: a gear inserted with its mates; a gear mate
+  made again on a gearbox with modes; bands given to a built sleeve; a mode added; a mode removed. Two more stay
+  None after W9c's demonstration, because no legal edit of its gearboxes reaches them: **a coupling or sliding mesh
+  newly made between gears already in the assembly**, and **bands taken away from, or given back to, a built
+  sleeve** (the relief suppressed). They are measured when a gearbox that needs them is built, on the user's word.
+- **M4 is not measured, and a removal refuses while any component of the user's is in the assembly.** Five reads of
+  a part's external references answer and mark nothing on SolidWorks 2026, but no part with an in-context
+  reference to an app gear could be made by proven calls, so none is shown to find one. Removal where the user has
+  nothing in the assembly is measured (P1's route).
+- **W9b's rulings**: a one-band sleeve is not built; a hub keys one sleeve; a banded and a plain sleeve of one size
+  share a default file name and need a Part name on one; no thin-wall warning over the relief.
+- **A part built by a press that then stopped is recorded and used by the next press**; the app never adopts a file
+  on disk that no record holds.
+- **Owed before W9d is designed** (§2.5), from S5: a face's persistent reference (only reference axes and planes
+  were measured); **no route reads a component's state per configuration without marking the assembly**, and the
+  fallback this plan names (show the old assembly's modes and restore) cannot leave its save flag as it was, since
+  showing a configuration marks the assembly on both versions; whether opening a healthy user sub-assembly marks
+  it. The mate kinds remade from their definitions are coincident, lock, distance and angle on axes, planes and
+  whole components; concentric, limit, width, gear, faces and edges, flipped mates and a sub-assembly's leaf are
+  not.
