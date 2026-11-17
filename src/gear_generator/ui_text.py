@@ -5036,12 +5036,12 @@ _ENTITY_PLURALS = {"face": "faces", "edge": "edges", "vertex": "vertices"}
 
 import re as _re  # noqa: E402 - W9d's path reduction only
 
-# A drive or share, then folders: a folder's name may hold spaces, but not a file's extension before a space (so a
-# path is never run on into the words after a file); then any word still ending in a separator (what is left of a
-# folder the first pass stopped in).
+# A drive or share, then folders: a folder's name may hold spaces, but not a file's extension before a space or a
+# punctuation mark, nor ". " or ", " (so a path is never run on into the words after a file); then a word ending in a
+# backslash before a file's name (what is left of a folder the first pass stopped in; "A\B" with no file is left).
 _FOLDERS = _re.compile(r"(?:[A-Za-z]:|\\\\[^\\/\s]+)[\\/]+"
-                       r"(?:(?:(?!\.[A-Za-z][A-Za-z0-9]{1,5}\s)[^\\/:*?\"<>|\r\n])+[\\/]+)*")
-_LEFT = _re.compile(r"[^\s\\/:*?\"<>|()]+\\+")
+                       r"(?:(?:(?!\.[A-Za-z][A-Za-z0-9]{1,5}(?:[\s.,;:)\]]|$)|[.,;] )[^\\/:*?\"<>|\r\n])+[\\/]+)*")
+_LEFT = _re.compile(r"[^\s\\/:*?\"<>|()]+\\+(?=[^\s\\/:*?\"<>|()]+\.[A-Za-z][A-Za-z0-9]{1,5}\b)")
 
 
 def bare_files(text: str) -> str:
@@ -5164,6 +5164,9 @@ def carry_named_clause(named, *, name: str = "the new revision", old: str = "the
         said = s[0].rstrip(".")
         return f"{item} is not made again: SolidWorks refused it" + (f", saying {said}" if said else "")
     if why == sb.WHY_DIFFERS:
+        if s[0] == "left":
+            return (f"{item} made again read otherwise than it was and could not be taken out again: it is left in "
+                    f"{name} as {s[1] or item}; delete it there in SolidWorks")
         return f"{item} made again read otherwise than it was (its {s[0] or 'definition'}), so it was taken out again"
     if why == sb.WHY_OLD_UNREAD:
         return f"{old} was not read" + (f": {s[0]}" if s[0] else "")
@@ -5335,11 +5338,12 @@ def _not_open_clause(fore, old: str, refs: List[str]) -> str:
 def _placement_words(anchors: Sequence[str], past: bool = False) -> str:
     """Where carried components stand: against their gear (or carrier) when each has one, else where they stand."""
     stands = "stood" if past else "stands"
+    each = "each " if len(anchors) != 1 else ""
     bodies = [a for a in anchors if a and a != "layout"]
     if anchors and len(bodies) == len(anchors):
         what = "gear or carrier" if any(a.endswith(" carrier") for a in bodies) else "gear"
-        return f"each where it {stands} against its {what}"
-    return f"each where it {stands}"
+        return f"{each}where it {stands} against its {what}"
+    return f"{each}where it {stands}"
 
 
 def _components_named(names: Sequence[str]) -> List[str]:
@@ -5518,20 +5522,41 @@ def _standing(revision: Sequence[int] = ()) -> str:
     return CARRY_STANDING
 
 
-# The two sentences the worker adds to ``CarryResult.stopped`` after the carry has finished (A's ``_carry_after``):
-# facts about the user's files, not stops (the review's M4), said apart until the worker gives them a field.
-_AFTER_CARRY = _re.compile(r"(?:^|(?<=\. ))((?:\S+ )*?\S+ changed on disk while Build again… carried your work[^.]*\."
-                           r"(?: look at it in SolidWorks\.)?|Whether your files changed could not be read after the "
-                           r"carry: .*$)")
-
-
-def _split_stop(stopped: str) -> Tuple[str, str]:
-    """``(the stop, what was found of the user's files after the carry)`` from the worker's ``stopped``."""
-    text = bare_files(stopped).strip()
-    found = _AFTER_CARRY.search(text)
-    if not found:
+def _split_stop(done) -> Tuple[str, str]:
+    """``(the stop, the files found changed after the carry)`` (the re-check's N2): the files from the worker's own
+    field, ``CarryResult.changed_files`` (base names), said in B's words; the worker's sentence for them, which it
+    still appends to ``stopped``, cut off at the last place that field's names begin it, so the stop is the stop only.
+    Nothing else of the worker's words is matched."""
+    text = bare_files(getattr(done, "stopped", "") or "").strip()
+    files = [bare_files(str(f)) for f in getattr(done, "changed_files", ()) or () if f]
+    if not files:
         return text, ""
-    return (text[:found.start()].strip(), text[found.start():].strip())
+    at = text.rfind(_and(files))
+    if at >= 0:
+        text = text[:at].strip()
+    one = len(files) == 1
+    return text, (f"{_and(files)} changed on disk while Build again… carried your work, which Gear Generator never "
+                  f"does; look at {'it' if one else 'them'} in SolidWorks.")
+
+
+def _stop_tail(stop: str, skipped: str) -> str:
+    """*It did not get to …*, without the step the stop already names (the re-check's note: *… stopped the carry while
+    reading the new revision: … It did not get to reading the new revision.*)."""
+    skipped = skipped.rstrip(".").strip()
+    if not skipped or not stop:
+        return ""
+    for sep in (", ", " and "):
+        head, _, rest = skipped.partition(sep)
+        if rest and f"while {head}" in stop:
+            return f" It did not get to {rest}."
+    if f"while {skipped}" in stop:
+        return ""
+    return f" It did not get to {skipped}."
+
+
+def _inserts_held(done) -> str:
+    """The ``CARRY_INSERTS`` finding when it held everything back (a gate the worker kept), else ``""``."""
+    return next((f for _, f in getattr(done, "gates", ()) or () if str(f).startswith("CARRY_INSERTS_ON_")), "")
 
 
 def carried_status(result, again, old_path: str = "", anchors: Optional[Mapping[str, str]] = None,
@@ -5558,11 +5583,18 @@ def carried_status(result, again, old_path: str = "", anchors: Optional[Mapping[
         from .workbook.update import StaysBehind
         stays = StaysBehind(None, path)
     why_new = {b.old: b.why_new for b in (getattr(carry, "bodies", ()) or ()) if b.why_new}
-    stop, after = _split_stop(done.stopped)
+    stop, after = _split_stop(done)
     if work is None:
         reason = stop.rstrip(".") or f"SolidWorks did not answer the read of {old}"
         return _joined(f"{reason}, so nothing of yours was carried; {old} and your files are as they were on disk.",
                        _stays_text(stays, again))
+    held = _inserts_held(done)
+    if work.how == sb.OLD_UNREAD and held:
+        # Nothing could be carried at all: W9a's own sentence for an old assembly not open, behind the one lead.
+        year = held.rsplit("_ON_", 1)[-1]
+        return _joined(f"Gear Generator has not yet been shown to carry your work into a new revision on "
+                       f"{_on_version(year)} ({_finding_ref(held)}).",
+                       stayed_behind_status(stays, result, again, path))
     if work.how == sb.OLD_UNREAD:
         reason = "; ".join(bare_files(u).rstrip(".") for u in work.unread) or f"{old} was not read"
         return f"{reason}, so nothing of yours was carried; {_stays_text(stays, again, 'as read at')}"
@@ -5575,7 +5607,7 @@ def carried_status(result, again, old_path: str = "", anchors: Optional[Mapping[
         one = len(work.left) == 1
         return (f"Reading {old} left {_and(_file(p) for p in work.left)} open in SolidWorks, so nothing of yours was "
                 f"carried; close {'it' if one else 'them'} without saving.")
-    skipped = f" It did not get to {done.skipped.rstrip('.')}." if done.skipped and stop else ""
+    skipped = _stop_tail(stop, done.skipped)
     if not done.inserted and not done.remade:
         return " ".join(t for t in _nothing_carried(done, result, again, path, stays, name, old, stop, skipped)
                         + [after] if t)
@@ -5614,10 +5646,14 @@ def carried_status(result, again, old_path: str = "", anchors: Optional[Mapping[
                          f"{'interferes' if len(carried) == 1 else 'interfere'} with {_and(others) or 'each other'} "
                          f"({clash.volume:.1f} mm³).")
     modes = [s.name for s in again.modes_plan.steps] if getattr(again, "modes_plan", None) is not None else []
-    floating = [c for c in work.components if c.name in new_of and not c.fixed]
-    if modes and floating and work.active:
-        texts.append(f"Your components stand in every mode of {name} where they stood in {work.active}, the mode "
-                     f"{old} showed.")
+    if modes and done.inserted and work.active:
+        # N1: where they were placed; the every-mode claim only of one no carried mate holds (a component locked to a
+        # sliding gear follows it).
+        remade = {o for o, _, _ in done.remade}
+        held_by = {e.owner for m in work.mates if m.name in remade for e in m.entities if e.what == sb.USER}
+        free = [c for c in work.components if c.name in new_of and not c.fixed and c.name not in held_by]
+        texts.append(f"Your components were placed where they stood in {work.active}, the mode {old} showed"
+                     + ("; one no mate holds stands there in every mode." if free else "."))
     if modes and done.inserted and not work.states_route and work.active:
         others = [m for m in work.modes if m.casefold() != work.active.casefold()]
         texts.append(f"Your components take in every mode the state they had in {work.active}, the mode {old} showed"
@@ -5734,7 +5770,13 @@ def _fallback_sentence(fallback, name: str, old: str, active: str, modes_plan=No
         mate, now, before, mode = s[0], s[1], s[2], s[3]
         was = (f", which it did not in {active}, the mode {old} showed" if before in ("", "0") else
                f", where it read error {before} in {active}, the mode {old} showed")
-        reason = f"with your {mate} made again it reads error {now}" + (f" in {mode}" if mode else "") + was
+        if mate in deleted or mate in fallback.kept or not mate:
+            reason = f"with your {mate} made again it reads error {now}" + (f" in {mode}" if mode else "") + was
+        else:                                  # one of the app's own mates, put in error by the cluster (A's M3)
+            was = was.replace("which it did not", "which it did not before your mates were made again").replace(
+                ", where it read", ", where it read before")
+            reason = (f"with your {_and(deleted) or 'mates'} made again the app's {mate} reads error {now}"
+                      + (f" in {mode}" if mode else "") + was)
     else:
         reason = (f"your {s[0]} made again over-defines {'it' if one else 'them'}" if s[0]
                   else f"with your mates made again SolidWorks reads {'it' if one else 'one of them'} over-defined")
@@ -5763,3 +5805,15 @@ def carry_lost_line(assembly: str, old: str) -> str:
     your work into it, so it does not hold it; RangeBox.SLDASM still does.*"""
     return (f"{_stem(assembly)} was closed without saving after Build again… carried your work into it, so it does "
             f"not hold it; {_file(old) if old else 'the old assembly'} still does.")
+
+
+def carry_unsaid(again, result, exc: BaseException) -> str:
+    """The re-check's N3: what the window says when the carry's own sentence raised, after the build's own (never as
+    the build failing): *What was carried into RangeBox_r2 could not be said (KeyError: …); it holds it unsaved: save
+    it in SolidWorks to keep it.*, the last clause only when something was written into it; the exception through
+    :func:`bare_files`."""
+    name = getattr(again, "name", "") or "the new revision"
+    said = bare_files(f"{type(exc).__name__}: {exc}").strip()
+    unsaved = bool(getattr(getattr(result, "carry", None), "unsaved", False))
+    return (f"What was carried into {name} could not be said ({said})"
+            + ("; it holds it unsaved: save it in SolidWorks to keep it." if unsaved else "."))

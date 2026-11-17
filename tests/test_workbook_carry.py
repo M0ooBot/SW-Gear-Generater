@@ -585,8 +585,8 @@ def test_the_result_says_what_was_carried_unsaved_and_the_feature_left_and_to_sa
         "against its gear, and 7 of your 8 mates, each on in the modes it was on in. M7 was on Sun's bore, and Sun's "
         "part is new because its Flank changed, so it is not made again. Your Keyway stays in Gear_m1.25_N29, which "
         "Sun's new part replaces because its Flank changed (RangeBox.SLDASM and that file keep it). Your components "
-        "stand in every mode of RangeBox_r2 where they stood in H, the mode RangeBox.SLDASM showed. Your components "
-        "take in every mode the state they had in H, the mode RangeBox.SLDASM showed: their states in N and L could "
+        "were placed where they stood in H, the mode RangeBox.SLDASM showed; one no mate holds stands there in every "
+        "mode. Your components take in every mode the state they had in H, the mode RangeBox.SLDASM showed: their states in N and L could "
         f"not be read without changing it. {ui_text.CARRY_STANDING} If a part of yours was made in context of "
         "RangeBox.SLDASM, it still refers to that assembly's parts. Save RangeBox_r2 in SolidWorks to keep what was "
         "carried."), said
@@ -594,6 +594,9 @@ def test_the_result_says_what_was_carried_unsaved_and_the_feature_left_and_to_sa
     assert "and your 8 mates, each on in the modes it was on in." in _status(every)
     assert "against its gear or carrier" in _status(_done(), {"Sprocket-1": "Sun", "Sprocket-2": "Carrier carrier",
                                                               "Chain-1": "Sun", "Housing-1": "Sun"})
+    one = _work(components=("Sprocket-1",), mates=1)
+    assert _status(_done(one), {"Sprocket-1": "Sun"}).startswith(
+        "Carried into RangeBox_r2, unsaved: your Sprocket-1, where it stood against its gear.")    # one: no "each"
     assert _status(None) == ""
 
 
@@ -791,9 +794,17 @@ def test_a_carry_that_stopped_says_the_workers_sentence_and_what_it_did_not_get_
 def test_a_files_change_found_after_the_carry_is_said_as_what_it_is_not_as_a_stop():
     after = ("Sprocket.SLDPRT changed on disk while Build again… carried your work, which Gear Generator never does; "
              "look at it in SolidWorks.")
-    said = _status(_done(stopped=after))
+    said = _status(_done(stopped=after, changed_files=["Sprocket.SLDPRT"]))
     assert said.endswith(f"{after} Save RangeBox_r2 in SolidWorks to keep what was carried."), said
     assert "did not get to" not in said and "What was carried before it" not in said
+    # N2: a stop with the fact after it keeps its tail and what was carried before it, and the fact apart.
+    stop = "SolidWorks stopped the carry while making UserDist4 again: SolidWorks: AddMate5 answered 2"
+    both = _done(stopped=f"{stop} {after}", changed_files=["Sprocket.SLDPRT"],
+                 skipped="making UserDist4 again and checking the assembly in every mode")
+    said = _status(both)
+    assert (f"{stop}. It did not get to checking the assembly in every mode. What was carried before it is in "
+            f"RangeBox_r2, unsaved, and RangeBox_r2 as built is saved.") in said, said
+    assert said.endswith(after) and "Save RangeBox_r2" not in said
 
 
 def test_nothing_carried_today_leads_w9as_sentence_with_the_finding(desk):
@@ -1081,3 +1092,93 @@ def test_once_pattern_instances_are_read_the_result_says_each_and_the_standing_l
     assert ui_text.CARRY_STANDING_NO_PATTERN in said and ui_text.CARRY_STANDING not in said
     assert "Your Sprocket-2 was an instance of a pattern of yours, and comes over as a component of its own." in said
     assert ui_text.CARRY_STANDING in _status(_done(work))          # the version not known: the clause stays
+
+
+# -- the re-check of the fix round (W9D-REVIEW-B.md, 56ca105) -------------------------------------------------------
+
+def test_a_component_a_carried_mate_holds_is_not_said_to_stand_still_in_every_mode():
+    """N1: Sprocket-2 locked to the sliding RangeSlv follows it, so only one no carried mate holds stands where it was
+    placed in every mode."""
+    lock = swbuild.OldMate("Lock5", 16, "MateLock", 0, False, (), (swbuild.OldEntity("app", "RangeSlv", "whole"),
+                                                                  swbuild.OldEntity("user", "Sprocket-2", "whole")))
+    work = _work(components=("Sprocket-2",), mates=0)
+    work.mates = [lock]
+    done = _done(work, remade=[("Lock5", "Lock5", ("H", "N", "L"))], moved=[("Sprocket-2", "N", 2.0)])
+    said = _status(done, {"Sprocket-2": "RangeSlv"})
+    assert ("Your components were placed where they stood in H, the mode RangeBox.SLDASM showed." in said
+            and "one no mate holds" not in said), said
+    free = _work(components=("Sprocket-2", "Chain-1"), mates=0)
+    free.mates = [lock]
+    said = _status(_done(free, remade=[("Lock5", "Lock5", ("H",))]))
+    assert ("Your components were placed where they stood in H, the mode RangeBox.SLDASM showed; one no mate holds "
+            "stands there in every mode.") in said
+
+
+def test_the_files_changed_are_kept_by_name_and_the_stop_alone_is_the_stop():
+    """N2, the record: ``CarryEntry.changed_files`` from the worker's field, ``stopped`` the stop only."""
+    work = _work(components=("Sprocket-1",), mates=0)
+    done = _done(work, stopped=(r"SolidWorks stopped the carry while checking: C:\Users\x\Lock.SLDPRT. "
+                                "Sprocket.SLDPRT changed on disk while Build again… carried your work, which Gear "
+                                "Generator never does; look at it in SolidWorks."), changed_files=["Sprocket.SLDPRT"])
+    entry = gearbox.carry_entry(_Again(), done, None, stamp="s", revision=(34, 0, 0), assembly=OLD,
+                                mtime=lambda p: 1.0)
+    assert entry.stopped == "SolidWorks stopped the carry while checking: Lock.SLDPRT."
+    assert entry.changed_files == ["Sprocket.SLDPRT"]
+    raw = json.loads(store.link_record_to_json(_record(entry)))
+    assert store.link_record_from_json(json.dumps(raw)).gearbox.carry.changed_files == ["Sprocket.SLDPRT"]
+
+
+def test_a_carry_sentence_that_raises_is_said_as_its_own_and_through_bare_files():
+    """N3: never *The build could not be collected*: what was carried could not be said, and it is unsaved."""
+    exc = KeyError(r"C:\Users\Mo Zhou\Parts\Sprocket.SLDPRT")
+    said = ui_text.carry_unsaid(_Again(), type("R", (), {"carry": _done()})(), exc)
+    assert said == ("What was carried into RangeBox_r2 could not be said (KeyError: 'Sprocket.SLDPRT'); it holds it "
+                    "unsaved: save it in SolidWorks to keep it."), said
+    nothing = swbuild.CarryResult(_work())
+    assert ui_text.carry_unsaid(_Again(), type("R", (), {"carry": nothing})(), exc).endswith("could not be said "
+                                                                                             "(KeyError: 'Sprocket.SLDPRT').")
+
+
+@pytest.mark.parametrize("text, kept", [
+    (r"Saved C:\R\RangeBox.SLDASM. Next/then", "Saved RangeBox.SLDASM. Next/then"),
+    (r"C:\A\x.SLDPRT, in folder D/E", "x.SLDPRT, in folder D/E"),
+    (r"mate A\B", r"mate A\B"),
+    (r"ratio 1:2 at 14:02, H/N", r"ratio 1:2 at 14:02, H/N"),
+    (r"opening C:\Users\Mo Zhou\v1.25 parts\Sprocket.SLDPRT (RPC_E_CALL_FAILED).",
+     "opening Sprocket.SLDPRT (RPC_E_CALL_FAILED)."),
+    (r"(C:\x\y.SLDPRT)", "(y.SLDPRT)"),
+])
+def test_bare_files_ends_a_file_name_on_punctuation_and_leaves_what_is_no_path(text, kept):
+    """N4."""
+    assert ui_text.bare_files(text) == kept
+
+
+def test_a_mate_left_in_the_new_assembly_says_where_and_what_to_do():
+    named = swbuild.CarryNamed("Lock4", "mate", swbuild.WHY_DIFFERS, ("left", "Lock4-2"))
+    assert ui_text._named_sentences([named], name="RangeBox_r2", old="RangeBox.SLDASM") == [
+        "Lock4 made again read otherwise than it was and could not be taken out again: it is left in RangeBox_r2 as "
+        "Lock4-2; delete it there in SolidWorks."]
+
+
+def test_a_fallback_for_an_app_mate_put_in_error_names_it_as_the_apps():
+    fallback = swbuild.CarryFallback(("Sprocket-3",), ("Lock3",), (), swbuild.FELL_NEW_ERROR,
+                                     ("G1 meshes G2", "46", "0", "L"))
+    assert ("Sprocket-3 is fixed where it stood in RangeBox_r2: with your Lock3 made again the app's G1 meshes G2 "
+            "reads error 46 in L, which it did not before your mates were made again in H, the mode RangeBox.SLDASM "
+            "showed, so it was not kept.") in _status(_done(fixed=[fallback]))
+
+
+def test_an_old_assembly_unread_because_nothing_can_be_carried_is_w9as_sentence_behind_the_lead():
+    """A's N3: with CARRY_INSERTS None a closed old assembly is never opened; the result is W9a's own sentence for
+    it, behind the one honest lead."""
+    unread = _work(how=swbuild.OLD_UNREAD, unread=[
+        "RangeBox.SLDASM is not open in SolidWorks, and Gear Generator reads it then only when it can carry your work "
+        "(findings.CARRY_INSERTS_ON_2026)"])
+    done = swbuild.CarryResult(unread, gates=[("insert a component", "CARRY_INSERTS_ON_2026")])
+    result = type("R", (), {"carry": done, "old_user_work": None, "old_read": swbuild.OLD_NOT_OPEN})()
+    said = _status(done, result=result, stays=_stays())
+    at = ui_text.read_time("2026-11-17T14:02:00Z")
+    assert said == ("Gear Generator has not yet been shown to carry your work into a new revision on SolidWorks 2026 "
+                    "(findings.CARRY_INSERTS_ON_2026). RangeBox.SLDASM was not open in SolidWorks, so it was not read "
+                    f"again; as read at {at}, your Sprocket-1 and M0 stay in RangeBox.SLDASM; RangeBox_r2 has none of "
+                    "them, nor anything added since."), said

@@ -1568,7 +1568,7 @@ class WorkbookWindow(tk.Toplevel):
                                                         carry=job.carry,
                                                         stays=wb_update.stays_behind(job.record, job.plan))
                     except Exception as exc:  # noqa: BLE001
-                        behind = ui_text.collect_failed(exc)
+                        behind = ui_text.carry_unsaid(job.plan, result, exc)
                 else:
                     # W9a: what of the user's stayed in the old assembly, as the job read it first (or the record
                     # held), once the new revision's assembly is saved (a build that made nothing leaves nothing).

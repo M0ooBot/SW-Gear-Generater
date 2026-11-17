@@ -798,6 +798,9 @@ class CarryEntry:
     fixed: List[CarryFallbackEntry] = field(default_factory=list)
     stopped: str = ""
     unsaved_at: float = 0.0
+    # The re-check's N2 (additive at schema 10, nothing having shipped at it): the user's files found changed on disk
+    # after the carry (``swbuild.CarryResult.changed_files``), by their names only; ``[]`` none.
+    changed_files: List[str] = field(default_factory=list)
 
 
 CARRY_HOWS = ("open", "read-only", "unread")
