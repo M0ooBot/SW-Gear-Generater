@@ -246,7 +246,14 @@ Hub_m1.5_N30.SLDPRT failed"*). The configuration that was active is shown again.
 
 ## 7. The record
 
-**Schema 8 gains nothing.** An added gear is a `ComponentEntry` (`name` from `inserted`, `frames` per mode from
+**Schema 9 (the coordinator's ruling on the review; W9b's was 8, W9d's carried items will be 10).** The gearbox gains
+`left_globals` (`[document path, name]`, each global an in-place step of a press that stopped added and no press has
+used since), `left_configurations` (each configuration such a press added for a mode, not yet a mode on record) and
+`solidworks` (the SolidWorks revision its last Build or Update ran on, `[]` on older records); a user-work inventory
+gains `refused_at` and `unread`, a problem `subjects`. `left_*` decides whether something in SolidWorks is the app's
+or the user's, so a W9b-era app refuses a schema 9 record (as `store.py` refuses any newer one) and leaves it
+byte-identical; schema 6, 7 and 8 records read as before (nothing left, no revision known) and are written forward as
+9 on the next write. An added gear is a `ComponentEntry` (`name` from `inserted`, `frames` per mode from
 `mode_placements`), its mates `MateEntry`s from the plan (`values`, `modes` as built), a new part a `PartEntry` with
 its sidecar; a removed gear's `ComponentEntry` and `MateEntry`s are dropped, and its part's `PartEntry` too when no
 gear of the revision uses that file (the file is never deleted) ⟨C6⟩; `modes` is the configurations after the Update in
@@ -606,3 +613,58 @@ is what its sentence offers.
   a mate's `on` that is not among them (one being removed) counts for nothing, and `PROBLEM_LOCK_BY_MODE` can no longer
   be said with an empty side.
 - **Schema:** no worker test pins the record's schema; nothing to change for 9.
+
+### From B (the review's round): what the footer judges, what the record keeps, and three asks of A
+
+**The footer judges what the worker will judge.** Gates are judged on the SolidWorks the record last saw: the
+inventory's `revision`, else `GearboxRecord.solidworks` (the Build's or last Update's, schema 9). With neither (a
+record from before schema 9 that no Update has read), each gate is judged over every version the findings know. If it
+is set on all of them, nothing is foreseen stopping. If it is None on all of them, the refusal is foreseen as before.
+If it is mixed, one sentence, neither red nor offering Build again…: *Whether Update SolidWorks can take a gear out of
+the assembly depends on the SolidWorks in use: Gear Generator has been shown to do so on SolidWorks 2026, not yet on
+SolidWorks 2024 (findings.COMPONENT_DELETE_ROUTE_ON_2024), and the press reads which it runs on before it changes
+anything.* W9a's foresight of the user's work always has a version (its inventory's), so it shares nothing of this.
+The recorded inventory is judged as the worker reads it:
+- each mode removed is taken out of each mate's on-list first (`update.work_without_modes`, the mirror of
+  `swbuild.work_in_added_modes`);
+- an added mode is judged as a copy of each mode on record in turn, and only what every one of them foresees is
+  foreseen. The summary says *add the mode R, a copy of the mode showing in SolidWorks when you press (your items
+  there take that mode's state)*, naming no mode it cannot know.
+
+A gear removed whose mates the inventory lists is judged by `judge_in_place` as the worker judges it. A gear added and
+bands put nothing of the user's that the check does not judge in both.
+
+**What the record keeps of a stopped press, and when it lets go** (the review's must-fix 2):
+- **A global** (`left_globals`) stays until a press uses it, that is, a step of its in-place change names it and that
+  step is done (the gear inserted, the bands given).
+- **A configuration** (`left_configurations`) stays until a press that runs to its end adds the mode, which puts it in
+  `modes`.
+- **A part** built for a gear no component names stays as a `PartEntry` with that gear, until a press inserts the gear.
+  It is used only while its file is on disk.
+- While the workbook does not use them, the footer before the press and the result after it say each as the app's:
+  *An Update SolidWorks that stopped part way left the global Hub Face Z and the part Hub_m1.25_N17.SLDPRT, which the
+  workbook no longer uses: Update SolidWorks leaves them as they are and keeps them on record as its own, so a later
+  press can use them again; delete them in SolidWorks if you no longer want them.* The result's sentence on
+  configurations the app did not make leaves out a configuration `left_configurations` names.
+- Nothing is taken away, so the worker needs no new call.
+
+**The mode-showing refusal's record** (should-fix 3):
+- *An inventory on record:* it keeps its own `read_at`; the refusal's time is `refused_at`, which the footer's
+  *refused at hh:mm* reads.
+- *No inventory on record:* the entry that carries the refusal is `unread` (`read_at` empty, nothing listed), and every
+  foresight takes it as no inventory at all. So it never hides the user's components from a later C4 foresight; the
+  press reads them.
+
+**Ruling C6 is now kept.** A removed gear's `PartEntry` leaves `parts` when no gear of the revision uses its file, and
+stays with the gears left when one does (HighDog and LowDog). The result says *took FIdler (gear11-1) out with 4 mates,
+leaving its part Gear_m2_N20.SLDPRT on disk*. Before this, `finish_update` looked for the entry through
+`current_parts()`, which no longer named it once its component was gone.
+
+**Asks of A:**
+1. `work_without_modes` belongs beside `work_in_added_modes` as a pure `swbuild` function. B uses its own
+   (`workbook/update.py`) until it lands, and will switch.
+2. `PROBLEM_LOCK_BY_MODE`'s sentence should never be built with an empty side (*suppressed in ,*). B no longer sends
+   the case, but `_and([])` should not reach a sentence.
+3. Taking a leftover configuration away: would the worker accept a name in `InPlace.modes_removed` that is in
+   `left_configurations` but not among the record's modes (delete it by the mode-removal route, behind
+   `UPDATE_REMOVES_A_MODE`)? Until then B leaves it and names it, as above.
