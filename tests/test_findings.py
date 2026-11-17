@@ -2344,8 +2344,6 @@ def test_w9c_p1_deleting_a_component_by_select4_and_editdelete_on_2026():
     for name in ("ROUTE_IN_EVERY_CONFIGURATION", "TAKES_ITS_MATES", "KEEPS_OTHER_HANDLES"):
         assert getattr(findings, f"COMPONENT_DELETE_{name}_ON_2026") is True
     assert findings.COMPONENT_DELETE_DIALOG_ON_2026 is False
-    for name in ("ROUTE", "ROUTE_IN_EVERY_CONFIGURATION", "TAKES_ITS_MATES", "KEEPS_OTHER_HANDLES", "DIALOG"):
-        assert getattr(findings, f"COMPONENT_DELETE_{name}_ON_2024") is None
 
 
 def test_w9c_m1_reads_the_kinds_w9a_left_unread_and_a_sub_assemblys_leaf_on_2026():
@@ -2370,7 +2368,6 @@ def test_w9c_m1_reads_the_kinds_w9a_left_unread_and_a_sub_assemblys_leaf_on_2026
     assert w9c[324].startswith("propose M1_READS_SUBASSEMBLY_LEAF = True")
     for name in ("CONCENTRIC", "LIMIT_DISTANCE", "LIMIT_ANGLE", "WIDTH", "GEAR_ON_AN_APP_GEAR", "SUBASSEMBLY_LEAF"):
         assert getattr(findings, f"M1_READS_{name}_ON_2026") is True
-        assert getattr(findings, f"M1_READS_{name}_ON_2024") is None
 
 
 def test_w9c_s5_the_assemblys_own_plane_names_the_root_component_on_2026():
@@ -2383,7 +2380,6 @@ def test_w9c_s5_the_assemblys_own_plane_names_the_root_component_on_2026():
     entity = data["sections"]["s5"]["read"]["mates"]["UserAsm6"]["entities"][1]
     assert entity["component"] == "RangeBox" and entity["kind"] == "assembly"
     assert findings.ASSEMBLY_ENTITY_COMPONENT_IS_ROOT_ON_2026 is True
-    assert findings.ASSEMBLY_ENTITY_COMPONENT_IS_ROOT_ON_2024 is None
 
 
 def test_w9c_s5_and_p2_readings_for_w9d_set_as_narrow_as_shown_on_2026():
@@ -2425,14 +2421,73 @@ def test_w9c_s5_and_p2_readings_for_w9d_set_as_narrow_as_shown_on_2026():
     assert findings.OPEN_READ_ONLY_DIALOG_ON_2026 is False
     assert findings.SUBASSEMBLY_INSERT_ROUTE_ON_2026 == "OpenDoc6 the sub-assembly, then AddComponent5"
     assert findings.SUBASSEMBLY_MISSING_REFERENCE_DIALOG_ON_2026 is False
-    for name in ("PERSIST_REFERENCE_ROUTE_FOR_REFERENCE_FEATURES", "MATE_REMAKE_ON_AXES_PLANES_AND_LOCKS_ROUTE",
-                 "COMPONENT_STATE_PER_CONFIGURATION_ROUTE", "OPEN_READ_ONLY_ROUTE_WHEN_NOT_OPEN",
-                 "OPEN_READ_ONLY_DIALOG", "SUBASSEMBLY_INSERT_ROUTE", "SUBASSEMBLY_MISSING_REFERENCE_DIALOG",
-                 "SUBASSEMBLY_MISSING_PART_READS"):
-        assert getattr(findings, f"{name}_ON_2024") is None, name
     for name in ("COMPONENT_DELETE_ROUTE", "PERSIST_REFERENCE_ROUTE", "MATE_REMAKE_FROM_DEFINITION_ROUTE",
                  "OPEN_READ_ONLY_ROUTE", "COMPONENT_DELETE_IN_EVERY_CONFIGURATION"):
         assert not hasattr(findings, name), name                  # set narrower, by the narrower name
+
+
+W9C_PROBES_2024 = LATEST.parent / "sw2024" / "w9c-probes-20261117-062201.json"
+W9C_PROBES_2024_LOG = LATEST.parent / "sw2024" / "w9c-probes-sw2024-20261117.log"
+
+# Every W9c probe finding the 2024 run sets as its 2026 twin (the review's addendum, 9b85411).
+W9C_TWINS = ("COMPONENT_DELETE_ROUTE", "COMPONENT_DELETE_ROUTE_IN_EVERY_CONFIGURATION",
+             "COMPONENT_DELETE_TAKES_ITS_MATES", "COMPONENT_DELETE_KEEPS_OTHER_HANDLES", "COMPONENT_DELETE_DIALOG",
+             "M1_READS_CONCENTRIC", "M1_READS_LIMIT_DISTANCE", "M1_READS_LIMIT_ANGLE", "M1_READS_WIDTH",
+             "M1_READS_GEAR_ON_AN_APP_GEAR", "M1_READS_SUBASSEMBLY_LEAF", "ASSEMBLY_ENTITY_COMPONENT_IS_ROOT",
+             "PERSIST_REFERENCE_ROUTE_FOR_REFERENCE_FEATURES", "MATE_REMAKE_ON_AXES_PLANES_AND_LOCKS_ROUTE",
+             "COMPONENT_STATE_PER_CONFIGURATION_ROUTE", "OPEN_READ_ONLY_ROUTE_WHEN_NOT_OPEN", "OPEN_READ_ONLY_DIALOG",
+             "SUBASSEMBLY_INSERT_ROUTE", "SUBASSEMBLY_MISSING_REFERENCE_DIALOG", "SUBASSEMBLY_MISSING_PART_READS")
+
+
+def test_w9c_probes_on_2024_read_as_on_2026_and_set_every_twin():
+    """findings.py, every W9c _ON_2024 (the probes' review addendum): the 2024 run reads as 2026's, so each is set as
+    its _ON_2026 twin at the same scope, COMPONENT_STATE_PER_CONFIGURATION_ROUTE None on both."""
+    data, w9c24 = _w9a_run(W9C_PROBES_2024, W9C_PROBES_2024_LOG, "529f939", (32, 5, 0))
+    assert data["stops"] == [] and data["fails"] == ["s5 (f): the unshown state reads marked no document: "
+                                                     "['RangeBox.SLDASM']"]
+    cases = data["sections"]["p1"]["cases"]
+    assert [c["route"] for c in cases.values()] == ["select4-editdelete", "feature-editdelete", "deleteselection2",
+                                                     "select4-editdelete"]
+    for case in cases.values():
+        verdict = case["verdict"]
+        assert verdict["clean"] and verdict["gone_everywhere"] and verdict["mates_left"] == {}
+        assert verdict["other_mates_lost"] == [] and verdict["handles_stale"] == []
+        assert case["read"]["epoch_kept"] == case["read"]["epoch_held_read"]
+    by_mode = cases["p1-4-select4-editdelete"]["read"]["components_by_configuration"]
+    assert sorted(by_mode) == ["H", "L", "N"] and not any("Dog_m1.25_N17-1" in names for names in by_mode.values())
+    for at, n in ((34, 1), (55, 2), (77, 3), (104, 4)):
+        assert w9c24[at].startswith(f"ok      p1 case {n} (") and w9c24[at].endswith("measured, no dialog; clean True")
+    assert w9c24[106].startswith("propose COMPONENT_DELETE_ROUTE = 'select4-editdelete'")
+    assert w9c24[110].startswith("propose COMPONENT_DELETE_DIALOG = False")
+    mates = data["sections"]["m1"]["read"]["mates"]
+    assert mates["UserWidth"]["mate_info"] == {"type": 11, "components": ["Sprocket-4", "Sprocket-4", "Housing-1",
+                                                                          "Housing-1"], "whole": True}
+    assert all(m["mate_info"]["whole"] for m in mates.values())
+    assert w9c24[152] == "ok      m1: the reads (mate_info, flags, definition, codes) marked no document: none"
+    assert [line.split(" = ")[0] for line in w9c24[196:201]] == [
+        "propose M1_READS_CONCENTRIC", "propose M1_READS_LIMIT_DISTANCE", "propose M1_READS_LIMIT_ANGLE",
+        "propose M1_READS_WIDTH", "propose M1_READS_GEAR_ON_AN_APP_GEAR"]
+    assert "its root component reads 'RangeBox'" in w9c24[233]
+    assert w9c24[263].strip().startswith("entity 1: assembly: the assembly's own (the root component); tree order 1; "
+                                         "component 'RangeBox'")
+    s5 = data["sections"]["s5"]
+    assert s5["read"]["mates"]["UserAsm6"]["entities"][1]["component"] == "RangeBox"
+    assert w9c24[266].startswith("fact    s5 (b): 13 feature entities; part-level reference read on 13")
+    assert set(ast.literal_eval(w9c24[279].split("first: ")[1]).values()) == {0.0}
+    assert [v["agrees"] for v in s5["states"]["verdicts"].values()] == [False, True]
+    assert w9c24[285].startswith("propose COMPONENT_STATE_PER_CONFIGURATION_ROUTE = None")
+    assert (s5["read_only"]["not_open"]["read_only"], s5["read_only"]["not_open"]["save_flag"]) == (True, False)
+    p2 = data["sections"]["p2"]
+    assert p2["insert"]["children"] == ["UserSub-1/P2Sprocket-1"]
+    assert p2["insert"]["mate"]["info"] == {"type": 0, "components": ["RangeBox_Layout-1", "UserSub-1/P2Sprocket-1"]}
+    assert (p2["missing"]["open"]["errors"], p2["missing"]["open"]["components"][0]["suppression"]) == (2, 0)
+    assert w9c24[327].startswith("propose SUBASSEMBLY_MISSING_REFERENCE_DIALOG = False")
+    assert not [line for line in w9c24 if line.startswith(("STOP", "NOTE    a SolidWorks window"))]
+    assert not [line for line in w9c24 if "What's Wrong" in line and line.startswith(("fact", "DIALOG"))]
+    for name in W9C_TWINS:
+        assert getattr(findings, f"{name}_ON_2024") == getattr(findings, f"{name}_ON_2026"), name
+    assert findings.COMPONENT_STATE_PER_CONFIGURATION_ROUTE_ON_2024 is None
+    assert findings.ASSEMBLY_ENTITY_COMPONENT_IS_ROOT_ON_2024 is True
 
 
 def test_w9c_gates_are_not_measured_until_the_full_build_reads_them():

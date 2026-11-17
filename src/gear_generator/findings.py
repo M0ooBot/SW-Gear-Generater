@@ -1827,8 +1827,14 @@ WHATS_WRONG_IN_UPDATE_BLOCKS_ON_2024 = False
 # (docs/notes-workbook/W9C-PROBES-REVIEW.md, 88a251e). w9c is probe/results/w9c-probes-sw2026-20261117-2.log (snapshot
 # 37eee43) with w9c-probes-20261117-061130.json, the second run, which repeats the first run's p1, m1 and p2 and runs
 # s5 whole. Every case under a watch that logs a dialog and answers none; none came but progress boxes and the
-# notification box (w9c:9, 23, 53, 126, 212, 290, 320-321, 325). 2026 only: each _ON_2024 is None until the 2024 run
-# is reviewed, and a path gated on one of these refuses on 2024 meanwhile.
+# notification box (w9c:9, 23, 53, 126, 212, 290, 320-321, 325).
+#
+# SolidWorks 2024 32.5.0, as the review's addendum sets it (W9C-PROBES-REVIEW.md, 9b85411 and 0df56da): w9c24 is
+# probe/results/sw2024/w9c-probes-sw2024-20261117.log (snapshot 529f939, the 2026 run's own) with
+# w9c-probes-20261117-062201.json, commit 9e77303. Every result line reads as 2026's but for the order s5 (a) lists the
+# top-level components in (nothing uses it), two balloon-tip facts and the times; no What's Wrong box came up in any
+# job. Each _ON_2024 below is set as its _ON_2026 twin, at the same scope, from w9c24's own lines as cited per finding;
+# COMPONENT_STATE_PER_CONFIGURATION_ROUTE stays None on both for the same two reasons.
 #
 # Deleting a component (P1). Four cases, each on its own fresh copy, the assembly reopened from disk: G4 out of the
 # 12 : 1 by three routes (w9c:14-35, 37-56, 58-76) and HighDog out of RangeBox with its three modes by the first
@@ -1850,16 +1856,18 @@ WHATS_WRONG_IN_UPDATE_BLOCKS_ON_2024 = False
 #   keeping a handle and using it (epoch_kept equal to epoch_held_read, every held handle answering Name2 and
 #   Transform2). After a show handles go stale anyway (ruling 9.4).
 # - COMPONENT_DELETE_DIALOG: False, on every route (w9c:35, 56, 76, 102, 108).
+# 2024: the same four cases clean by the same route, EditDelete returning None (w9c24:32-34, 55, 77, 102-104), the
+# RangeBox case with its three modes (w9c24:103) and the proposals as on 2026 (w9c24:106-110).
 COMPONENT_DELETE_ROUTE_ON_2026 = "select4-editdelete"
-COMPONENT_DELETE_ROUTE_ON_2024 = None
+COMPONENT_DELETE_ROUTE_ON_2024 = "select4-editdelete"
 COMPONENT_DELETE_ROUTE_IN_EVERY_CONFIGURATION_ON_2026 = True
-COMPONENT_DELETE_ROUTE_IN_EVERY_CONFIGURATION_ON_2024 = None
+COMPONENT_DELETE_ROUTE_IN_EVERY_CONFIGURATION_ON_2024 = True
 COMPONENT_DELETE_TAKES_ITS_MATES_ON_2026 = True
-COMPONENT_DELETE_TAKES_ITS_MATES_ON_2024 = None
+COMPONENT_DELETE_TAKES_ITS_MATES_ON_2024 = True
 COMPONENT_DELETE_KEEPS_OTHER_HANDLES_ON_2026 = True
-COMPONENT_DELETE_KEEPS_OTHER_HANDLES_ON_2024 = None
+COMPONENT_DELETE_KEEPS_OTHER_HANDLES_ON_2024 = True
 COMPONENT_DELETE_DIALOG_ON_2026 = False
-COMPONENT_DELETE_DIALOG_ON_2024 = None
+COMPONENT_DELETE_DIALOG_ON_2024 = False
 #
 # M1's leftovers: the user-mate kinds W9a left unread, each made on its own user component in a copy of RangeBox with
 # H active (every flag read back as set in every mode, w9c:142) and read by the app's own swcom.mate_info and a quiet
@@ -1875,25 +1883,30 @@ COMPONENT_DELETE_DIALOG_ON_2024 = None
 # - M1_READS_SUBASSEMBLY_LEAF: True. A coincident to a leaf of a user sub-assembly reads the leaf's Name2 as the path
 #   "UserSub-1/P2Sprocket-1" (w9c:322, 324), which swbuild's owner already splits to its top-level component. One
 #   leaf, one coincident, the sub-assembly with no configurations of its own.
+# 2024: every flag read back as set (w9c24:143), width again made only with the tab faces at mark 16 (w9c24:148-150),
+# the reads marking nothing (w9c24:152), the same mate_info for each (w9c24:196-200) and the leaf read as the same path
+# (w9c24:322, 324).
 M1_READS_CONCENTRIC_ON_2026 = True
-M1_READS_CONCENTRIC_ON_2024 = None
+M1_READS_CONCENTRIC_ON_2024 = True
 M1_READS_LIMIT_DISTANCE_ON_2026 = True
-M1_READS_LIMIT_DISTANCE_ON_2024 = None
+M1_READS_LIMIT_DISTANCE_ON_2024 = True
 M1_READS_LIMIT_ANGLE_ON_2026 = True
-M1_READS_LIMIT_ANGLE_ON_2024 = None
+M1_READS_LIMIT_ANGLE_ON_2024 = True
 M1_READS_WIDTH_ON_2026 = True
-M1_READS_WIDTH_ON_2024 = None
+M1_READS_WIDTH_ON_2024 = True
 M1_READS_GEAR_ON_AN_APP_GEAR_ON_2026 = True
-M1_READS_GEAR_ON_AN_APP_GEAR_ON_2024 = None
+M1_READS_GEAR_ON_AN_APP_GEAR_ON_2024 = True
 M1_READS_SUBASSEMBLY_LEAF_ON_2026 = True
-M1_READS_SUBASSEMBLY_LEAF_ON_2024 = None
+M1_READS_SUBASSEMBLY_LEAF_ON_2024 = True
 #
 # ASSEMBLY_ENTITY_COMPONENT_IS_ROOT: a mate entity on the assembly's own plane names, through ReferenceComponent, the
 # active configuration's root component (Name2 the assembly's title, "RangeBox"), not None. s5 (a) read UserAsm6's
 # second entity, a distance to the assembly's own Front Plane, so (w9c:232, 260-262). swbuild's user-work read maps
 # that root to the assembly's own (the review's must-fix 1); W9a's read before took it for a user component.
+# 2024: the same, the root read 'RangeBox' (w9c24:233) and UserAsm6's entity on the assembly's Front Plane naming it
+# (w9c24:261, 263). So the must-fix stands on both versions.
 ASSEMBLY_ENTITY_COMPONENT_IS_ROOT_ON_2026 = True
-ASSEMBLY_ENTITY_COMPONENT_IS_ROOT_ON_2024 = None
+ASSEMBLY_ENTITY_COMPONENT_IS_ROOT_ON_2024 = True
 #
 # For W9d (S5 and P2), on record now; nothing may rest on one that is None.
 # - PERSIST_REFERENCE_ROUTE_FOR_REFERENCE_FEATURES: GetPersistReference3 on the part-level feature, reached through
@@ -1922,25 +1935,30 @@ ASSEMBLY_ENTITY_COMPONENT_IS_ROOT_ON_2024 = None
 # - SUBASSEMBLY_MISSING_PART_READS: what that open read: errors 2, warnings 0; the missing child GetSuppression2 0,
 #   its stored path kept, no document; the sub-assembly modified (save flag True) straight after the open and after
 #   the settle; inserted, the child the same under "UserSubMissing-1/P2Missing-1" (w9c:326-327).
+# 2024, each as on 2026 at the same scope: 13 feature entities read and resolved, still no face (w9c24:266-267); the
+# same ten remade equal, every frame at 0.0 (w9c24:279-280); IsSuppressed2 read L wrong and GetRootComponent3(True)
+# read right but marked RangeBox.SLDASM, so no route (w9c24:282-285); the read-only open when not open, already open
+# reading as on 2026 (w9c24:289, 292-294); the sub-assembly insert (w9c24:322-323); the missing part's Silent open
+# and insert, errors 2, the child suppressed with no document, no dialog (w9c24:325-327).
 PERSIST_REFERENCE_ROUTE_FOR_REFERENCE_FEATURES_ON_2026 = (
     "GetPersistReference3 on the part-level feature, through the component's GetModelDoc2")
-PERSIST_REFERENCE_ROUTE_FOR_REFERENCE_FEATURES_ON_2024 = None
+PERSIST_REFERENCE_ROUTE_FOR_REFERENCE_FEATURES_ON_2024 = PERSIST_REFERENCE_ROUTE_FOR_REFERENCE_FEATURES_ON_2026
 MATE_REMAKE_ON_AXES_PLANES_AND_LOCKS_ROUTE_ON_2026 = (
     "AddMate5 from IMate2 Type, Alignment, Flipped and the definition's values")
-MATE_REMAKE_ON_AXES_PLANES_AND_LOCKS_ROUTE_ON_2024 = None
+MATE_REMAKE_ON_AXES_PLANES_AND_LOCKS_ROUTE_ON_2024 = MATE_REMAKE_ON_AXES_PLANES_AND_LOCKS_ROUTE_ON_2026
 COMPONENT_STATE_PER_CONFIGURATION_ROUTE_ON_2026 = None
 COMPONENT_STATE_PER_CONFIGURATION_ROUTE_ON_2024 = None
 OPEN_READ_ONLY_ROUTE_WHEN_NOT_OPEN_ON_2026 = "OpenDoc6(path, assembly, Silent | ReadOnly)"
-OPEN_READ_ONLY_ROUTE_WHEN_NOT_OPEN_ON_2024 = None
+OPEN_READ_ONLY_ROUTE_WHEN_NOT_OPEN_ON_2024 = "OpenDoc6(path, assembly, Silent | ReadOnly)"
 OPEN_READ_ONLY_DIALOG_ON_2026 = False
-OPEN_READ_ONLY_DIALOG_ON_2024 = None
+OPEN_READ_ONLY_DIALOG_ON_2024 = False
 SUBASSEMBLY_INSERT_ROUTE_ON_2026 = "OpenDoc6 the sub-assembly, then AddComponent5"
-SUBASSEMBLY_INSERT_ROUTE_ON_2024 = None
+SUBASSEMBLY_INSERT_ROUTE_ON_2024 = "OpenDoc6 the sub-assembly, then AddComponent5"
 SUBASSEMBLY_MISSING_REFERENCE_DIALOG_ON_2026 = False
-SUBASSEMBLY_MISSING_REFERENCE_DIALOG_ON_2024 = None
+SUBASSEMBLY_MISSING_REFERENCE_DIALOG_ON_2024 = False
 SUBASSEMBLY_MISSING_PART_READS_ON_2026 = (
     "the open's errors 2; the child suppressed (0), its path kept, no document; the sub-assembly marked modified")
-SUBASSEMBLY_MISSING_PART_READS_ON_2024 = None
+SUBASSEMBLY_MISSING_PART_READS_ON_2024 = SUBASSEMBLY_MISSING_PART_READS_ON_2026
 #
 # W9c's gates (W9C-INTERFACES.md §8, the coordinator's ruling C7, 2026-11-17): each new kind of write Update makes in
 # place is gated by its own per-version finding, None until W9c's full build (the plan's demonstration, RangeBox to

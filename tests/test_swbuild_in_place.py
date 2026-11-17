@@ -44,10 +44,18 @@ def test_each_step_reads_its_own_gate_none_on_both_versions_as_committed():
         (swbuild.STEP_BANDS, "UPDATE_BANDS_IN_PLACE_ON_2026"),
         (swbuild.STEP_MODE_ADD, "UPDATE_ADDS_A_MODE_ON_2026"),
         (swbuild.STEP_MODE_REMOVE, "UPDATE_REMOVES_A_MODE_ON_2026")]       # the delete route is set on 2026
-    assert [f for _, f in swbuild.in_place_gates(every, Y24, modes=True)][:4] == [
-        "COMPONENT_DELETE_ROUTE_ON_2024", "COMPONENT_DELETE_TAKES_ITS_MATES_ON_2024", "COMPONENT_DELETE_DIALOG_ON_2024",
-        "COMPONENT_DELETE_ROUTE_IN_EVERY_CONFIGURATION_ON_2024"]
+    assert [f for _, f in swbuild.in_place_gates(every, Y24, modes=True)] == [
+        "UPDATE_INSERTS_A_GEAR_ON_2024", "UPDATE_MAKES_MATES_WITH_MODES_ON_2024", "UPDATE_BANDS_IN_PLACE_ON_2024",
+        "UPDATE_ADDS_A_MODE_ON_2024", "UPDATE_REMOVES_A_MODE_ON_2024"]         # the delete route is set on 2024 too
     assert all(f.endswith("_ON_?") for _, f in swbuild.in_place_gates(every, ()))
+
+
+def test_a_removal_reads_the_delete_findings_as_measured(monkeypatch):
+    monkeypatch.setattr(findings, "COMPONENT_DELETE_ROUTE_ON_2024", None)
+    monkeypatch.setattr(findings, "COMPONENT_DELETE_DIALOG_ON_2024", True)
+    assert swbuild.in_place_gates(InPlace(removed=(REMOVE_G4,)), Y24, modes=True) == [
+        (swbuild.STEP_REMOVE, "COMPONENT_DELETE_ROUTE_ON_2024"), (swbuild.STEP_REMOVE, "COMPONENT_DELETE_DIALOG_ON_2024")]
+    assert swbuild.in_place_gates(InPlace(removed=(REMOVE_G4,)), Y26, modes=True) == []
 
 
 def test_a_remake_reads_the_mates_gate_only_with_modes(monkeypatch):
