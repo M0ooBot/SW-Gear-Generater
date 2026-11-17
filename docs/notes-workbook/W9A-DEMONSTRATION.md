@@ -135,16 +135,33 @@ What's Wrong (Found on SolidWorks, item 4); under the coordinator's ruling below
 
 - **The rule.** The script reads `swbuild.whats_wrong_shows_in_update(revision)` by `getattr` once a session, and the
   log's `rule` line says which rule is in force. Where it is True (2024), a #32770 box titled "What's Wrong" owned by
-  SolidWorks' frame, during an Update or a Build of the app's, is logged as a fact: when it came, the call in
-  progress, when it went. The job is waited for as usual. At the job's end the box must be gone (2 s allowed for one
-  closing as the job returns) and SolidWorks' frame enabled; a box still up, a frame disabled, or a What's Wrong the
-  watch never read as owned by the frame is the STOP. Where the helper is False, None or missing, What's Wrong during
-  a job stays a STOP, as any dialog. Every other window is judged as before. W8's watch is kept from calling the box
-  its own STOP by a wrapper on the set of boxes it treats as known (its file is not changed).
+  SolidWorks' frame, during ANY job the script waits on, is logged as a fact: when it came, the call in progress, when
+  it went. Under an app job (an Update or a Build) it is said "as the app's Update shows it"; under the script's own
+  steps, which stand for what a person does in SolidWorks (activating a document, an explicit rebuild, a read, a
+  save), "as SolidWorks shows it when a person does this". The confirming m3 at `0a60fd3` showed why: on 2024 the box
+  also came up when the script's own assembly rebuild activated the assembly with the user's keyway in error, and the
+  narrower rule called it the STOP. The job is waited for as usual. At its end the box must go within 60 s (`box` saw it
+  stay 22 s; how long it took is logged) and SolidWorks' frame must be enabled. A box still up after that, a frame
+  disabled, a What's Wrong not owned by the frame, or one W8 noted that the watch never read as owned by the frame,
+  is the STOP. Where the helper is False, None or missing, What's Wrong during a job stays a STOP, as any dialog.
+  Every other window is judged as before.
+- **W8's helpers.** `end_copy`, `copy_built`, `keep_master`, `write_fixture`, `build_turning` and the closing
+  `close_ours` wait with W8's own unwatched wait; under the rule each runs through `w8_step`, which looks for the box
+  from a thread while it runs and makes the same end check after it. W8's watch is kept from calling the box its own
+  FAIL or STOP, during any ruled job, by a wrapper on the set of boxes it treats as known (its file is not changed).
+- **The window list after a step** (`windows_new`): under the rule, a What's Wrong that came and went is a fact, not a
+  window left standing; one still up when the list is read is what counts. m3's two assembly-rebuild answers now say
+  whether the box showed during the step, not "no window".
+- **Every section checked for the pattern:** after anything of the user's is in error on 2024, every following job is
+  under the rule: m3's later steps (the part's bore, the assembly rebuild, the quiet presses, the carried step, its
+  refusal's reads, the save, the copy's end); k3's reads after its Update and its copy's end; refuse's two-body and
+  all-at-once steps, where app mates read in error; `box` and `box-k3` keep their own log-only watch and are not
+  under it.
 - **Where the box is expected.** After m3's two Updates and k3's, where
   `WHATS_WRONG_OPENS_IN_UPDATE_WITH_USER_MATE_IN_ERROR_ON_<year>` or `…_WITH_PART_FEATURE_IN_ERROR_ON_<year>` is True
-  and the rule is in force, the section asserts that What's Wrong showed and went by itself: a fact a user will see,
-  so the 2024 logs say it plainly, not a failure of the app. Elsewhere what the watch saw is said.
+  and the rule is in force, the section asserts that What's Wrong showed during the app's Update and went by itself:
+  a fact a user will see, so the 2024 logs say it plainly, not a failure of the app. Only the app's Updates feed
+  this assertion; a box under the script's own steps is a fact only. Elsewhere what the watch saw is said.
 - **The gate.** m3's and k3's judgement of whether an Update goes ahead follows the app's own gate,
   `swbuild.assembly_rebuild_settled(revision)`, as it stands, so it stays right as the gate changes; the check that
   the three findings it names exist is kept.

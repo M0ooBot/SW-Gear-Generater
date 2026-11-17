@@ -65,10 +65,11 @@ Sections (each runs alone by name; each copy section starts from a kept master a
 
 ``--sections confirm`` is SolidWorks 2024's confirming set: m3, setup, go, reducer, k3, nocarrier (``refuse`` by name).
 
-What's Wrong during an app job (the coordinator's ruling after ``box``): where ``swbuild.whats_wrong_shows_in_update``
-(read by ``getattr``) says True for the version, a What's Wrong box owned by SolidWorks' frame during an Update or a
-Build is a fact, not a STOP; at the job's end it must be gone and the frame enabled. Elsewhere it is a STOP, as any
-dialog. The log's ``rule`` line says which rule is in force.
+What's Wrong (the coordinator's rulings after ``box`` and after m3's confirming run): where
+``swbuild.whats_wrong_shows_in_update`` (read by ``getattr``) says True for the version, a What's Wrong box owned by
+SolidWorks' frame during any job the script waits on (an app Update or Build, the script's own steps, W8's helpers
+through ``w8_step``) is a fact, not a STOP; at the job's end it must go within 60 s and the frame be enabled.
+Elsewhere it is a STOP, as any dialog. The log's ``rule`` line says which rule is in force.
 
 Robustness (as S0's at d086705): Windows is asked to keep the display and system awake; the JSON is written after
 every section and first in the ``finally``; any exception around the close is caught; the head logs SolidWorks'
@@ -87,6 +88,7 @@ import re
 import os
 import shutil
 import sys
+import threading
 import time
 import traceback
 
@@ -175,24 +177,31 @@ RUN_ENDERS = (DemoStop, W.WorkerHung, swcom.NotRunning, W.Stopped, W.Halt)   # w
 # ``box`` and ``box-k3`` only: while "on", ``watched_wait`` logs a window instead of stopping on it, calls ``tick``
 # (seconds since the job began, whether it has returned) every poll, and gives the job ``timeout`` seconds.
 BOX = {"on": False, "tick": None, "timeout": BOX_WAIT}
-# The coordinator's ruling after box and box-k3 on 2024 (d7cbcda): on a version where
-# swbuild.whats_wrong_shows_in_update(revision) is True, SolidWorks' What's Wrong box during a job of the app's (an
-# Update or a Build), owned by SolidWorks' frame, is a fact, not a STOP; the job is waited for, and at its end the box
-# must be gone and the frame enabled (else the STOP). "rule": that helper's answer (None until read, or when the helper
-# is not in this source); "job": the app job in progress, if any; "last": the last app job's What's Wrong record.
+# The coordinator's rulings after box and box-k3 on 2024 (d7cbcda) and after m3's confirming run (0a60fd3): on a
+# version where swbuild.whats_wrong_shows_in_update(revision) is True, SolidWorks' What's Wrong box owned by its frame,
+# during ANY job the script waits on, is a fact, not a STOP: under an app job (an Update or a Build) "as the app's
+# Update shows it"; under the script's own job, or a W8 helper, "as SolidWorks shows it when a person does this" (on
+# 2024 activating an assembly with something in error raises it too). The job is waited for; at its end the box must
+# go within WW_ALLOWANCE s and the frame be enabled, else the STOP. "rule": that helper's answer (None until read, or
+# when the helper is not in this source); "job": a ruled job in progress; "last": the last app job's record (only these
+# feed whats_wrong_showed); "job_last": the last ruled job's record, of either kind.
 WHATS_WRONG = "What's Wrong"
-WW = {"rule": None, "read": False, "job": False, "last": None}
+WW_ALLOWANCE = 60.0          # box stayed 22 s after it came (box: 97.45 -> 120.08 s); the end check allows 60
+WW = {"rule": None, "read": False, "job": False, "last": None, "job_last": None}
+WW_WORDS = {"app": "as the app's Update shows it", "script": "as SolidWorks shows it when a person does this"}
 
 
 class _WhatsWrongTolerated(set):
     """W8's STARTUP_BOXES, which its watch consults before calling a window during a configuration call its FAIL and
-    STOP: while an app job runs under the What's Wrong rule, a What's Wrong box counts as known, so W8 logs it as a
-    NOTE and this script judges it (W8's file is not changed; only the set it reads is wrapped)."""
+    STOP: while a ruled job runs (an app job, the script's own, or a W8 helper's), a What's Wrong box counts as known,
+    so W8 logs it as a NOTE and this script judges it (W8's file is not changed; only the set it reads is wrapped)."""
 
     def __contains__(self, box):
         if WW["job"] and WW["rule"] is True and isinstance(box, tuple) and box and box[0] == WHATS_WRONG:
             return True
         return set.__contains__(self, box)
+
+
 SEEN = {"notes": 0}          # W8's watch notes already judged: a section-only window is not judged again by the run
 
 
@@ -238,12 +247,15 @@ def whats_wrong_rule():
         helper = getattr(swbuild, "whats_wrong_shows_in_update", None)
         WW["rule"] = None if helper is None else helper(tuple(W.TAG["revision"]))
         WW["read"] = True
-        say(f"rule    What's Wrong during an app job: swbuild.whats_wrong_shows_in_update "
+        say(f"rule    What's Wrong: swbuild.whats_wrong_shows_in_update "
             f"{'is not in this source' if helper is None else 'reads ' + repr(WW['rule'])}; "
-            + ("a What's Wrong box owned by SolidWorks' frame during an Update or a Build is logged as a fact, the job "
-               "waited for, and at its end the box must be gone and the frame enabled (else a STOP)"
+            + ("a What's Wrong box owned by SolidWorks' frame during any job the script waits on is logged as a fact "
+               "(under an app Update or Build, as the app's Update shows it; under the script's own steps and W8's "
+               "helpers, as SolidWorks shows it when a person does this), the job waited for, and at its end the box "
+               f"must go within {WW_ALLOWANCE:g} s and the frame be enabled (else a STOP)"
                if WW["rule"] is True else "What's Wrong during a job is a STOP, as any dialog"))
-        RESULT["whats_wrong_rule"] = {"helper_present": helper is not None, "shows_in_update": WW["rule"]}
+        RESULT["whats_wrong_rule"] = {"helper_present": helper is not None, "shows_in_update": WW["rule"],
+                                      "allowance_seconds": WW_ALLOWANCE}
     return WW["rule"]
 
 
@@ -266,40 +278,119 @@ def whats_wrong_boxes(frame):
     return found
 
 
-def whats_wrong_end(what, record, frame):
-    """At an app job's end under the rule: every What's Wrong box seen must be gone (2 s allowed for one closing as
-    the job returns) and SolidWorks' frame enabled; else the STOP. The record said as a fact."""
-    deadline = time.monotonic() + 2.0
-    up = [h for h, _ in whats_wrong_boxes(frame)]
-    while up and time.monotonic() < deadline:
+def ww_record(what, kind):
+    """A ruled job's What's Wrong record, kept as the last of its kind."""
+    record = {"what": what, "kind": kind, "seen": [], "gone": [], "unowned": []}
+    WW["job_last"] = record
+    if kind == "app":
+        WW["last"] = record
+    return record
+
+
+def ww_poll(record, frame, began):
+    """One look for What's Wrong during a ruled job: each box owned by the frame when it came (and the call in
+    progress), each when it went; a What's Wrong not owned by the frame kept for the STOP. Returns the boxes up."""
+    elapsed = round(time.monotonic() - began, 2)
+    now = whats_wrong_boxes(frame)
+    words = WW_WORDS[record["kind"]]
+    for h, owned in now:
+        if owned and h not in [e["hwnd"] for e in record["seen"]]:
+            record["seen"].append({"hwnd": h, "seconds": elapsed, "call_in_progress": W.CALLS["now"] or None})
+            say(f"fact    {record['what']}: What's Wrong came up {elapsed:.2f} s into the job, the worker in "
+                f"{W.CALLS['now'] or None}, owned by SolidWorks' frame: {words} (the ruling: a fact, not a STOP)")
+        elif not owned and h not in record["unowned"]:
+            record["unowned"].append(h)
+            say(f"fact    {record['what']}: a What's Wrong not owned by SolidWorks' frame came up {elapsed:.2f} s in")
+    up = {h for h, _ in now}
+    for e in record["seen"]:
+        if e["hwnd"] not in up and e["hwnd"] not in [g["hwnd"] for g in record["gone"]]:
+            record["gone"].append({"hwnd": e["hwnd"], "seconds": elapsed, "call_in_progress": W.CALLS["now"] or None})
+            say(f"fact    {record['what']}: What's Wrong gone {elapsed:.2f} s into the job, the worker in "
+                f"{W.CALLS['now'] or None}; nothing here closed it")
+    return [h for h, _ in now]
+
+
+def whats_wrong_end(record, frame, began):
+    """At a ruled job's end: every What's Wrong box owned by the frame must go within WW_ALLOWANCE s (how long it took
+    is logged), none may be unowned, and SolidWorks' frame must be enabled; W8's notes of the box are then the
+    ruling's fact (a What's Wrong W8 noted that this watch never read as owned by the frame stays the STOP). Else the
+    STOP. The record said as a fact."""
+    ended = time.monotonic()
+    up = ww_poll(record, frame, began)
+    while up and time.monotonic() - ended < WW_ALLOWANCE:
         time.sleep(0.25)
-        up = [h for h, _ in whats_wrong_boxes(frame)]
+        up = ww_poll(record, frame, began)
+    waited_for = round(time.monotonic() - ended, 2)
     enabled = frame_enabled(frame)
-    record.update(up_at_the_end=len(up), frame_enabled_at_the_end=enabled)
+    record.update(up_at_the_end=len(up), frame_enabled_at_the_end=enabled, waited_after_the_job=waited_for)
+    what = record["what"]
     if record["seen"]:
-        say(f"fact    {what}: What's Wrong showed during the job, as SolidWorks shows it on this version: "
-            f"{record['seen']}; gone {record['gone']}; at the job's end {len(up)} up, SolidWorks' frame enabled "
-            f"{enabled}")
-    if up or enabled is False:
+        say(f"fact    {what}: What's Wrong showed during the job, {WW_WORDS[record['kind']]}: {record['seen']}; gone "
+            f"{record['gone']}; after the job it took {waited_for:.2f} s to go (allowed {WW_ALLOWANCE:g}); "
+            f"{len(up)} up at the end, SolidWorks' frame enabled {enabled}")
+    if up or enabled is False or record["unowned"]:
         W.HUNG["on"] = True
-        stop(f"{what}: at the job's end What's Wrong is still up ({len(up)}) or SolidWorks' frame is disabled "
-             f"({enabled}): the ruling allows the box only while the job runs and goes by itself")
+        stop(f"{what}: at the job's end What's Wrong is still up after {WW_ALLOWANCE:g} s ({len(up)}), or SolidWorks' "
+             f"frame is disabled ({enabled}), or a What's Wrong was not owned by the frame ({len(record['unowned'])}): "
+             "the ruling allows only the frame's box, going by itself")
+    notes = [n for n in W.NOTES[SEEN["notes"]:] if n.startswith("a SolidWorks window")]
+    ww = [n for n in notes if n.startswith(f"a SolidWorks window {WHATS_WRONG!r}")]
+    if ww and not record["seen"]:
+        W.HUNG["on"] = True
+        stop(f"{what}: What's Wrong was noted but never read here as owned by SolidWorks' frame: {ww}")
+    if ww and len(ww) == len(notes):
+        SEEN["notes"] = len(W.NOTES)
+
+
+def w8_step(fn, *args, _label=None, **kwargs):
+    """A W8 helper the script calls with W8's own unwatched wait (``end_copy``, ``copy_built``, ``keep_master``,
+    ``write_fixture``, ``build_turning``, ``close_ours``): under the What's Wrong rule a thread looks for the box while
+    it runs, W8's watch is kept from calling it its FAIL (STARTUP_BOXES), and the end check follows, as for any job."""
+    if W.HUNG["on"] or BOX["on"] or WW["job"] or whats_wrong_rule() is not True:
+        return fn(*args, **kwargs)
+    record = ww_record(f"W8's {_label or getattr(fn, '__name__', 'step')}", "script")
+    frame, began, done = sw_frame(), time.monotonic(), threading.Event()
+
+    def look():
+        while not done.is_set():
+            try:
+                ww_poll(record, frame, began)
+            except Exception:  # noqa: BLE001 - a look that failed is retried; the end check reads again
+                pass
+            done.wait(0.25)
+    looker = threading.Thread(target=look, daemon=True)
+    WW["job"] = True
+    looker.start()
+    try:
+        value = fn(*args, **kwargs)
+    except BaseException:
+        done.set()
+        WW["job"] = False
+        raise
+    done.set()
+    looker.join(2.0)
+    try:
+        if not W.HUNG["on"]:
+            whats_wrong_end(record, frame, began)
+    finally:
+        WW["job"] = False
+    return value
 
 
 def watched_wait(pending, timeout, what, app_job=False):
     """W8's ``wait_job``, watching while the job runs: a SolidWorks window W8's watch logs (a dialog with buttons
     that is not the notification box, a balloon or a progress box) is a §0.3 STOP at once, the dialog named, the
     worker marked hung and left alone (nothing is asked of SolidWorks after it) — never a NOTE the run waits behind
-    until the job's timeout (refuse's lightweight step at 9dded70: SOLIDWORKS CAM's Yes/No warning under SaveAs3)."""
+    until the job's timeout (refuse's lightweight step at 9dded70: SOLIDWORKS CAM's Yes/No warning under SaveAs3).
+    The exception is What's Wrong under the rule (``whats_wrong_rule``): for every job, ``app_job`` (an Update or a
+    Build) or the script's own, the frame's box is a fact and the end check judges it (``whats_wrong_end``)."""
     if W.HUNG["on"]:
         raise W.WorkerHung("the SolidWorks worker is hung from an earlier job, so nothing more is asked of it")
     began = time.monotonic()
     deadline = began + (min(timeout, BOX["timeout"]) if BOX["on"] else timeout)
-    ruled = app_job and not BOX["on"] and whats_wrong_rule() is True
+    ruled = not BOX["on"] and whats_wrong_rule() is True
     frame = sw_frame() if ruled else None
-    record = {"seen": [], "gone": [], "unowned": []}
-    if app_job and not BOX["on"]:
-        WW["last"] = record
+    record = ww_record(what, "app" if app_job else "script") if ruled else None
     WW["job"] = ruled
     try:
         while True:
@@ -307,34 +398,10 @@ def watched_wait(pending, timeout, what, app_job=False):
             if BOX["on"] and BOX["tick"] is not None:
                 BOX["tick"](time.monotonic() - began, answer is not None)
             if ruled:
-                elapsed = round(time.monotonic() - began, 2)
-                now = whats_wrong_boxes(frame)
-                for h, owned in now:
-                    if owned and h not in [e["hwnd"] for e in record["seen"]]:
-                        record["seen"].append({"hwnd": h, "seconds": elapsed, "call_in_progress": W.CALLS["now"] or None})
-                        say(f"fact    {what}: What's Wrong came up {elapsed:.2f} s into the job, the worker in "
-                            f"{W.CALLS['now'] or None}, owned by SolidWorks' frame (the ruling: a fact, not a STOP)")
-                    elif not owned and h not in record["unowned"]:
-                        record["unowned"].append(h)
-                up = {h for h, _ in now}
-                for e in record["seen"]:
-                    if e["hwnd"] not in up and e["hwnd"] not in [g["hwnd"] for g in record["gone"]]:
-                        record["gone"].append({"hwnd": e["hwnd"], "seconds": elapsed,
-                                               "call_in_progress": W.CALLS["now"] or None})
-                        say(f"fact    {what}: What's Wrong gone {elapsed:.2f} s into the job, the worker in "
-                            f"{W.CALLS['now'] or None}; nothing here closed it")
+                ww_poll(record, frame, began)
             if answer is not None:
                 if ruled:
-                    whats_wrong_end(what, record, frame)
-                    # A What's Wrong W8 noted that this watch never saw owned by the frame is a dialog like any other.
-                    notes = [n for n in W.NOTES[SEEN["notes"]:] if n.startswith("a SolidWorks window")]
-                    ww = [n for n in notes if n.startswith(f"a SolidWorks window {WHATS_WRONG!r}")]
-                    if ww and (not record["seen"] or record["unowned"]):
-                        W.HUNG["on"] = True
-                        stop(f"{what}: What's Wrong was noted but never read here as owned by SolidWorks' frame "
-                             f"(seen {len(record['seen'])}, unowned {len(record['unowned'])}): {ww}")
-                    if ww and len(ww) == len(notes):
-                        SEEN["notes"] = len(W.NOTES)
+                    whats_wrong_end(record, frame, began)
                 return answer
             windows = [n for n in W.NOTES[SEEN["notes"]:] if n.startswith("a SolidWorks window")]
             if windows and BOX["on"]:
@@ -695,7 +762,7 @@ def windows_new(before, seconds=8):
     (a #32770 or a titled window), less what the note exempts, each said as a fact: SolidWorks' notification box, its
     balloon tips (class ``swBalloonTip``, the "Over Defined" one m3 brings, titled or not) and its progress boxes that
     close themselves (W8's ``PROGRESS`` titles, an "Elapsed time" box)."""
-    seen, new = {h for h, _, _ in before}, []
+    seen, new, handles = {h for h, _, _ in before}, [], []
     for _ in range(seconds):
         for h, c, t in S0.sw_windows():
             if h not in seen:
@@ -704,7 +771,19 @@ def windows_new(before, seconds=8):
                 # edition, kept out of this repo's logs) is said only as present or not.
                 new.append((c, t if c == "#32770" else ("<titled>" if t else ""),
                             tuple(S0.xlhelp.child_texts(h)[:8])))
+                handles.append(h)
         time.sleep(1.0)
+    if WW["rule"] is True:
+        # Under the What's Wrong rule a What's Wrong box that came and went is a fact, not a window left standing;
+        # one still up at the end of the read is what counts.
+        kept = []
+        for h, w in zip(handles, new):
+            if w[0] == "#32770" and w[1] == WHATS_WRONG and not visible_now([h]):
+                say(f"fact    What's Wrong came and went within the read after the step (the ruling: a fact); not "
+                    "counted as a window left standing")
+            else:
+                kept.append(w)
+        new = kept
     def exempt(w):
         return (w[0] == "swBalloonTip" or (not w[1] and w[2] == W.NOTIFICATION_TEXTS) or w[1] in W.PROGRESS
                 or any(str(t).startswith("Elapsed time") for t in w[2]))
@@ -913,7 +992,7 @@ def reducer_master():
 def copy_desk(master, section, workbook):
     """``copy_built`` of a kept master read through the window's W9a path, its workbook open in this run's Excel."""
     try:
-        folder = W.copy_built(master, section)
+        folder = w8_step(W.copy_built, master, section)
     except W.CopyStop as exc:
         raise AssertionError(f"{section}: the copy of {os.path.basename(master)} stopped: {exc}") from None
     path = os.path.join(folder, workbook)
@@ -953,6 +1032,11 @@ def assembly_rebuild(label, asm, folder):
         return {"rebuilt": rebuilt, "whats_wrong": count, "mates": {m.name: (m.code, m.suppressed) for m in s.mate_states()},
                 "components": {c.name: c.code for c in s.components()}, "flags": W.folder_flags(s, folder)}
     got = run(f"{label}: the assembly rebuild", job(asm, work), 300)
+    box = WW["job_last"] if WW["rule"] is True and WW["job_last"] and WW["job_last"]["what"].startswith(label) else None
+    got["whats_wrong_box"] = [] if box is None else [e["call_in_progress"] for e in box["seen"]]
+    if got["whats_wrong_box"]:
+        say(f"fact    {label}: What's Wrong showed during this step (the assembly activated and rebuilt), as SolidWorks "
+            f"shows it when a person does this, the worker in {got['whats_wrong_box']}; it went by itself")
     new, counted = windows_new(before)
     got["windows_new"], got["windows_counted"] = new, counted
     say(f"fact    {label}: ForceRebuild (the app's train route) returned {got['rebuilt']}; GetWhatsWrongCount "
@@ -1140,7 +1224,8 @@ def m3_mate_in_error(out, tag, folder, desk):
           f"{tag}: only the user's mates read in error, so the reading answers M3: user {users_bad} "
           f"(codes as read, not read for meaning: findings.MATE_ERROR_2024), the app's {app_bad or 'none'}")
     say(f"answer  M3 (assembly, a user mate in error): the rebuild returned {got['rebuilt']}, What's Wrong "
-        f"{got['whats_wrong']}, codes {users_bad}, no window")
+        f"{got['whats_wrong']}, codes {users_bad}, What's Wrong box during the step "
+        f"{got.get('whats_wrong_box') or 'none'}, windows left standing {got['windows_counted'] or 'none'}")
     save_user(folder, "the mate in error, as the user leaves it")
     return settled, box, asm, modes
 
@@ -1205,7 +1290,8 @@ def section_m3(out):
               f"m3: only the user's keyway is in error in the user's part: {errors}")
         got = out["feature_error"] = assembly_rebuild("m3 a user feature in error", asm, folder)
         say(f"answer  M3 (assembly, a user feature in error in a component's part): the rebuild returned "
-            f"{got['rebuilt']}, What's Wrong {got['whats_wrong']}, no window")
+            f"{got['rebuilt']}, What's Wrong {got['whats_wrong']}, What's Wrong box during the step "
+            f"{got.get('whats_wrong_box') or 'none'}, windows left standing {got['windows_counted'] or 'none'}")
         save_user(folder, "the user's part in error, as the user leaves it")
 
         say("-- m3  the app's value Update (Sun's Backlash 0.42) with only the user's feature in error, in the part of "
@@ -1275,7 +1361,7 @@ def section_m3(out):
             "update_ok_with_user_feature_in_error": (out["update_feature_error"] or {}).get("ok")}
         say(f"propose M3: {RESULT['proposal']['M3']}")
     finally:
-        W.end_copy(CTX["worker"], folder, "m3")
+        w8_step(W.end_copy, CTX["worker"], folder, "m3")
 
 
 def _update_fact(desk, result):
@@ -1299,9 +1385,9 @@ def section_setup(out):
     try:
         _setup(out, parts, folder, desk)
     except (AssertionError, W.Halt):
-        W.end_copy(CTX["worker"], folder, "setup")
+        w8_step(W.end_copy, CTX["worker"], folder, "setup")
         raise
-    MASTER["setup"] = W.keep_master(CTX["worker"], folder, "setup")
+    MASTER["setup"] = w8_step(W.keep_master, CTX["worker"], folder, "setup")
     if not MASTER["setup"]:
         raise AssertionError("setup: setup.master was not kept")
 
@@ -1551,7 +1637,7 @@ def section_m1(out):
         else:
             check(False, f"m1: the quiet press gave no inventory: {desk.error}")
     finally:
-        W.end_copy(CTX["worker"], folder, "m1")
+        w8_step(W.end_copy, CTX["worker"], folder, "m1")
 
 
 # -- go: the value and slide-offset Updates ---------------------------------------------------------------------------
@@ -1701,7 +1787,7 @@ def section_go(out):
                                      [("Gears", W.cell(book, "Gears", "Slides", "RangeSlv"), "H=-5, N=0, L=+5.5")],
                                      out, rel_orig, flags_set, dz_set))
     finally:
-        W.end_copy(CTX["worker"], folder, "go")
+        w8_step(W.end_copy, CTX["worker"], folder, "go")
 
 
 # -- refuse ----------------------------------------------------------------------------------------------------------
@@ -1942,7 +2028,7 @@ def section_refuse(out):
         refuse_step(out, "all at once: the housing lock and the two-body lock on again, the bore still 12", together)
 
     finally:
-        W.end_copy(CTX["worker"], folder, "refuse")
+        w8_step(W.end_copy, CTX["worker"], folder, "refuse")
 
 
 def section_lightweight(out):
@@ -2008,7 +2094,7 @@ def section_lightweight(out):
                 say(f"fact    lightweight: the states after the reset were not read: {exc}")
                 reset = False
             # Saved before the close only on 2024 (W8's end_clean), and only once nothing reads lightweight.
-            W.end_copy(CTX["worker"], folder, "lightweight", save=bool(reset))
+            w8_step(W.end_copy, CTX["worker"], folder, "lightweight", save=bool(reset))
 
 
 def raw_states(desk, when):
@@ -2266,7 +2352,7 @@ def section_again(out, variant="open"):
         check(True, f"{name}: no file time of the user's documents changed: {sorted(times)}")
         desk.say_footer(f"{name}, after the build")
     finally:
-        W.end_copy(CTX["worker"], folder, name)
+        w8_step(W.end_copy, CTX["worker"], folder, name)
 
 
 # -- box, box-k3: SolidWorks 2024's What's Wrong box, measured --------------------------------------------------------
@@ -2663,7 +2749,7 @@ def section_box(out):
                          users=("Sprocket-1", "Housing-1"), user_mates=("UserAxis", "UserFront", "UserGap"))
     finally:
         if not seen and not W.HUNG["on"]:
-            W.end_copy(CTX["worker"], folder, "box")
+            w8_step(W.end_copy, CTX["worker"], folder, "box")
     if seen:
         raise BoxSeen("box: a box was seen during the press; SolidWorks is left as it stands, the box up or not, for "
                       "the coordinator to end the session")
@@ -2681,7 +2767,7 @@ def section_box_k3(out):
                          "box-k3: the app's value Update (G1's Bore 14) rebuilding the user's keyway into error")
     finally:
         if not seen and not W.HUNG["on"]:
-            W.end_copy(CTX["worker"], folder, "box-k3")
+            w8_step(W.end_copy, CTX["worker"], folder, "box-k3")
     if seen:
         raise BoxSeen("box-k3: a box was seen during the press; SolidWorks is left as it stands for the coordinator "
                       "to end the session")
@@ -2700,13 +2786,13 @@ def spec_reducer(folder=""):
 def section_reducer(out):
     say("== reducer  the 12 : 1 (G1 on S1 drives G2, G3 locked to G2 drives G4 on S3; no carrier) written by the app's "
         "write_new and built to turn through the app's own Build; kept as reducer.master")
-    folder, path, book, desk = W.write_fixture(CTX["worker"], CTX["excel"], "reducer", spec_reducer)
+    folder, path, book, desk = w8_step(W.write_fixture, CTX["worker"], CTX["excel"], "reducer", spec_reducer)
     try:
-        W.build_turning(CTX["worker"], desk, "reducer", 4)
+        w8_step(W.build_turning, CTX["worker"], desk, "reducer", 4)
     except (AssertionError, W.Halt):
-        W.end_copy(CTX["worker"], folder, "reducer")
+        w8_step(W.end_copy, CTX["worker"], folder, "reducer")
         raise
-    MASTER["reducer"] = W.keep_master(CTX["worker"], folder, "reducer")
+    MASTER["reducer"] = w8_step(W.keep_master, CTX["worker"], folder, "reducer")
     if not MASTER["reducer"]:
         raise AssertionError("reducer: reducer.master was not kept")
 
@@ -2789,7 +2875,7 @@ def section_k3(out):
                                              "g1_component_code": codes.get(g1_name),
                                              "laid_to_user_alone": getattr(result, "rebuild_from_user_alone", None)}
     finally:
-        W.end_copy(CTX["worker"], folder, "k3")
+        w8_step(W.end_copy, CTX["worker"], folder, "k3")
 
 
 NC_LOCKED = {"Sprocket-1": "G1", "Sprocket-3": "G1", "Sprocket-2": "G4"}
@@ -2900,7 +2986,7 @@ def section_nocarrier(out):
     finally:
         setattr(findings, finding, was)
         say(f"PATCH   findings.{finding} back to {was!r}")
-        W.end_copy(CTX["worker"], folder, "nocarrier")
+        w8_step(W.end_copy, CTX["worker"], folder, "nocarrier")
         clean = len(held["clean"]) == 2 and all(held["clean"])
         RESULT["proposal"][finding] = True if clean else None
         RESULT["proposal"][f"{finding}_evidence"] = {"presses_clean": held["clean"],
@@ -3046,7 +3132,7 @@ def main():
             say("close   the SolidWorks worker is hung: nothing closed at the end; SolidWorks is left as it is")
         else:
             try:
-                left = W.run(worker, W.close_ours, 600)
+                left = w8_step(W.run, worker, W.close_ours, 600, _label="close_ours")
                 after = W.run(worker, W.open_titles, 120)
                 say(f"close   left of ours {left}; stray {[t for t in after if t not in before]}; lost "
                     f"{[t for t in before if t not in after]}; {W.memory()}")
