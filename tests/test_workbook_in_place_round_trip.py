@@ -991,9 +991,27 @@ def test_a_stop_in_a_part_left_in_error_says_close_it_without_saving_never_save_
     assert press.after == (
         "Update SolidWorks stopped. Gear_m1.25_N29.SLDPRT: SolidWorks reported an error rebuilding Gear_m1.25_N29. It "
         "had already changed Gear_m1.25_N29, not saved, and Gear_m1.25_N29 is left in error: close it in SolidWorks "
-        "without saving (the file on disk is as before this Update), then press Update SolidWorks again once that is "
-        "put right.")
-    assert "save it in SolidWorks to keep" not in press.after
+        "without saving (the file on disk is as before this Update), then press Update SolidWorks again.")
+    assert "save it in SolidWorks to keep" not in press.after and "put right" not in press.after
+
+
+def test_a_stop_in_one_part_in_error_among_several_changed_closes_them_all_without_saving():
+    """Run 5's remake: Sun, the planets and the ring changed, the ring left in error. Saving the good ones beside it
+    closed would leave gears at their new teeth against the old ring, so all are closed unsaved."""
+    from gear_generator.ui_text import gearbox_update_status
+    result = swbuild.GearboxUpdate(
+        parts=[swbuild.UpdateResult("Gear_m1.25_N29.SLDPRT", ["No. of Teeth"], rebuilt=True),
+               swbuild.UpdateResult("Gear_m1.25_N13.SLDPRT", ["No. of Teeth"], rebuilt=True),
+               swbuild.UpdateResult("Ring_m1.25_N55.SLDPRT", ["No. of Teeth"], rebuilt=False)],
+        failures=[("Ring_m1.25_N55.SLDPRT", "SolidWorks reported an error rebuilding Ring_m1.25_N55.")],
+        changed=["C:\\Out\\Gear_m1.25_N29.SLDPRT", "C:\\Out\\Gear_m1.25_N13.SLDPRT",
+                 "C:\\Out\\Ring_m1.25_N55.SLDPRT"])
+    up = update.UpdatePlan()
+    text, ok = gearbox_update_status(up, result, [])
+    assert not ok and text.endswith(
+        "It had already changed Gear_m1.25_N29, Gear_m1.25_N13 and Ring_m1.25_N55, not saved, and Ring_m1.25_N55 is "
+        "left in error: close them all in SolidWorks without saving (the files on disk are as before this Update), "
+        "then press Update SolidWorks again."), text
 
 
 def test_a_stop_with_nothing_changed_in_error_still_offers_to_save(fixed_desk):

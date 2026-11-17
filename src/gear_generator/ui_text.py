@@ -1929,13 +1929,15 @@ def gearbox_update_status(update, result, dragged: Sequence[str] = (), *, meshes
             text += f" It did not get to {str(result.skipped).rstrip('.')}."
         in_error = _parts_left_in_error(result)
         if changed_docs and in_error:
-            # The W9c runs review's should-fix: a part whose rebuild reported an error may not recover when set back,
-            # and the gears changed with it would clash with it as it stands, so saving is never offered then.
+            # The W9c runs review's should-fix: a part whose rebuild reported an error stays open in its failed state,
+            # holding the new value, so a press on it sets nothing and it never mends; and the documents changed with
+            # it, saved beside it closed, would leave gears at their new values against it as it was. So every
+            # document changed is closed without saving, and saving is never offered.
             one = len(changed_docs) == 1
             text += (f" It had already changed {_and(changed_docs)}, not saved, and {_and(in_error)} "
-                     f"{'is' if len(in_error) == 1 else 'are'} left in error: close {'it' if one else 'them'} in "
+                     f"{'is' if len(in_error) == 1 else 'are'} left in error: close {'it' if one else 'them all'} in "
                      f"SolidWorks without saving (the {'file' if one else 'files'} on disk {'is' if one else 'are'} as "
-                     "before this Update), then press Update SolidWorks again once that is put right.")
+                     "before this Update), then press Update SolidWorks again.")
         elif changed_docs:
             one = len(changed_docs) == 1
             text += (f" It had already changed {_and(changed_docs)}, not saved: press Update SolidWorks again once "
