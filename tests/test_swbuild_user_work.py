@@ -123,6 +123,22 @@ def test_a_mate_to_the_assemblys_own_plane_reads_user_to_assembly_whichever_way_
     assert "root_component" in names(fake)
 
 
+@pytest.mark.parametrize("answer", ["none", "root"])
+def test_a_mate_to_a_leaf_inside_a_user_sub_assembly_maps_to_its_top_level_component(answer):
+    """The coordinator's ruling on the read (2026-11-17): a leaf's Name2 comes as a path, "UserSub-1/P2Sprocket-1"
+    (findings.M1_READS_SUBASSEMBLY_LEAF_ON_2026), and must read as the user's top-level component, never as not
+    wholly read."""
+    fake = _built_train()
+    fake.assembly_entity = answer
+    fake.user_component(T_ASM, "UserSub-1", W + "UserSub.SLDASM", (IDENTITY9, (0.0, 0.0, 60.0)))
+    fake.user_mate(T_ASM, "Coincident1", kind="coincident", a=("layout-1", "S1 Axis"),
+                   b=("UserSub-1/P2Sprocket-1", "Gear Axis"))
+    result = _moving(fake)
+    assert result.ok, result.failures
+    (mate,) = result.user_work.mates
+    assert mate.touches[1] == ("user", "UserSub-1") and mate.whole
+
+
 def _refusals(answer, build):
     fake = _built_train()
     fake.assembly_entity = answer

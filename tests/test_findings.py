@@ -2433,3 +2433,12 @@ def test_w9c_s5_and_p2_readings_for_w9d_set_as_narrow_as_shown_on_2026():
     for name in ("COMPONENT_DELETE_ROUTE", "PERSIST_REFERENCE_ROUTE", "MATE_REMAKE_FROM_DEFINITION_ROUTE",
                  "OPEN_READ_ONLY_ROUTE", "COMPONENT_DELETE_IN_EVERY_CONFIGURATION"):
         assert not hasattr(findings, name), name                  # set narrower, by the narrower name
+
+
+def test_w9c_gates_are_not_measured_until_the_full_build_reads_them():
+    """W9C-INTERFACES.md §8 (ruling C7): every new kind of write Update makes in place is gated by its own finding,
+    None on both versions until W9c's full build reads it clean."""
+    for name in ("EXTERNAL_REFERENCES_READ", "UPDATE_INSERTS_A_GEAR", "UPDATE_MAKES_MATES_WITH_MODES",
+                 "UPDATE_BANDS_IN_PLACE", "UPDATE_ADDS_A_MODE", "UPDATE_REMOVES_A_MODE"):
+        for year in (2026, 2024):
+            assert hasattr(findings, f"{name}_ON_{year}") and getattr(findings, f"{name}_ON_{year}") is None, name

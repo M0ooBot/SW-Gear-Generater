@@ -2414,6 +2414,96 @@ class MotionUpdate:
     assembly_mark: str = ""
 
 
+# -- W9c: Update adds, removes and re-mates in place (ISSUE-1-PLAN K6, §2.4; W9C-INTERFACES.md) --------------------
+#
+# ``MotionUpdate`` describes the gearbox as it is to stand after the Update, less what is new in SolidWorks; an
+# ``InPlace`` describes only what the Update makes or takes away (W9C-INTERFACES §1). Planning (package B) builds both;
+# the worker (package A) runs them in §4's order, refusing before any write (§5) and gated per version (§8).
+
+
+@dataclass(frozen=True)
+class AddedGear:
+    """A gear the Update inserts on an existing frame shaft along Z+ or Z− (K6; W9C-INTERFACES §2). ``handle`` is the
+    gearbox plan's handle for its component (``base.AddComponent.id``); ``part`` its part's path; ``build`` the
+    part's plan when its file is new (built and saved first), None when a part file on record is reused. ``ops``:
+    its ops from the gearbox's assembly plan in plan order (AddGlobal for its Face Z, AddComponent, Place, Fix for a
+    fixed gear, every Mate that touches it, LinkDimension). ``handles``: every other plan handle those ops name ->
+    the ``Name2`` on record (the layout's, an anchor's, a mesh partner's, a sleeve's). ``senses``: each gear mate's
+    name -> it turns its two gears the same way (W6). ``on_sets``: each of its mates on in some modes only -> the
+    configurations it is on in (a mate absent is on in every configuration)."""
+
+    gear: str
+    handle: str
+    part: str
+    build: Optional[BuildPlan] = None
+    ops: Tuple[base.Op, ...] = ()
+    handles: Tuple[Tuple[str, str], ...] = ()
+    senses: Tuple[Tuple[str, bool], ...] = ()
+    on_sets: Tuple[Tuple[str, Tuple[str, ...]], ...] = ()
+
+
+@dataclass(frozen=True)
+class RemovedGear:
+    """A gear the Update takes out with its app mates; it anchors no other gear (K6). ``component`` its ``Name2``
+    on record, ``part`` its part's path (the file stays on disk), ``mates`` every recorded mate touching it, by name:
+    gone with it."""
+
+    gear: str
+    component: str
+    part: str = ""
+    mates: Tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class NewMate:
+    """A coupling or sliding mesh newly needed between components on record (K6), made as the build makes it:
+    ``op`` the gearbox plan's ``base.Mate``, ``handles`` its two plan handles -> ``Name2`` on record, ``on`` the
+    configurations it is on in (never empty: ruling 9.1), ``same_way`` as ``ModesPlan.same_way``."""
+
+    op: base.Mate
+    handles: Tuple[Tuple[str, str], ...] = ()
+    on: Tuple[str, ...] = ()
+    same_way: bool = False
+
+
+@dataclass(frozen=True)
+class BandChange:
+    """A built sleeve given bands, or relieved of them, in place (§2.4). ``part`` the sleeve's part path (kept: its
+    file, the user's groove and every mate); ``add`` True when bands are given; ``ops`` (given) the band globals and
+    ``gears.clutch.relief_ops`` as the banded plan has them after the teeth; ``features`` the relief's feature names
+    (given: those the ops make; taken away: the ``Relief`` loft cut suppressed, ruling C8)."""
+
+    gear: str
+    part: str
+    add: bool
+    ops: Tuple[base.Op, ...] = ()
+    features: Tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class InPlace:
+    """What an Update makes or takes away in place (W9C-INTERFACES §2). Empty: W9a's Update, call for call.
+    ``modes_added``: configuration names to add, in Modes-sheet order; ``modes_removed``: configuration names on
+    record to delete; ``first_mode``: the record's first mode after the Update when it changes (C11)."""
+
+    added: Tuple[AddedGear, ...] = ()
+    removed: Tuple[RemovedGear, ...] = ()
+    new_mates: Tuple[NewMate, ...] = ()
+    bands: Tuple[BandChange, ...] = ()
+    modes_added: Tuple[str, ...] = ()
+    modes_removed: Tuple[str, ...] = ()
+    first_mode: str = ""
+
+    def __bool__(self) -> bool:
+        return bool(self.added or self.removed or self.new_mates or self.bands or self.modes_added
+                    or self.modes_removed)
+
+
+# The steps an InPlace can carry, as in_place_gates names them (W9C-INTERFACES §8).
+STEP_REMOVE, STEP_ADD, STEP_MATES, STEP_BANDS, STEP_MODE_ADD, STEP_MODE_REMOVE = (
+    "remove a gear", "add a gear", "make a mate", "bands in place", "add a mode", "remove a mode")
+
+
 # -- W9a: the user's work in a built assembly (ISSUE-1-PLAN §2.1, K1-K4, K11; W9A-INTERFACES.md) ----------------
 #
 # What the app owns is what the record lists (K1): the components placed (``Placement.component``, the gears and
@@ -2437,6 +2527,11 @@ PROBLEM_TIE = "tie"                # K2: a train SolidWorks reads unable to turn
 PROBLEM_UNSETTLED = "unsettled"    # a finding route (c1) or the tie read rests on is missing
 PROBLEM_COMPONENT = "component"    # a user component Update would put is suppressed, lightweight or in error
 PROBLEM_UNREAD = "unread"          # a user mate SolidWorks would not describe (W9a review point 2)
+# W9c (W9C-INTERFACES §5)
+PROBLEM_REMOVED = "removed"        # a user mate on a gear the Update would take out
+PROBLEM_REFERENCES = "references"  # a removal while the user's components are there and M4 is unread (C4)
+PROBLEM_MODE_SHOWING = "mode showing"   # the Modes row removed is the configuration showing (C12)
+PROBLEM_CONFIGURATION = "configuration"   # an added mode's name taken by a configuration not on record (C10)
 UNREAD_ENTITY = "unread"           # UserMate.touches: an entity SolidWorks would not describe (never the assembly)
 
 
@@ -2533,12 +2628,16 @@ class ValueEdit:
 @dataclass(frozen=True)
 class UserProblem:
     """One reason an Update refuses over the user's work: its ``kind`` (``PROBLEM_*``), the sentence said, the
-    user's mates it names (in the order named) and, for K11, the values."""
+    user's mates it names (in the order named) and, for K11, the values. W9c: ``subjects``, the other things the
+    sentence names, for package B to word it — the gear removed and the user's components (``references``), the
+    mode (``mode showing``), the configuration (``configuration``), the finding (``unsettled`` from an in-place
+    gate)."""
 
     kind: str
     sentence: str
     mates: Tuple[str, ...] = ()
     values: Tuple[ValueEdit, ...] = ()
+    subjects: Tuple[str, ...] = ()
 
 
 @dataclass
@@ -3516,6 +3615,27 @@ class GearboxUpdate:
     rebuild_from_user_alone: List[str] = field(default_factory=list)
     values_set: List[ValueSet] = field(default_factory=list)
     features_read: Dict[str, bool] = field(default_factory=dict)
+    # W9c (W9C-INTERFACES §6), what an Update did in place, each listing only what was done. ``built``: each new
+    # part's build. ``inserted`` / ``deleted``: ``(gear, Name2)``. ``mates_deleted``: the app mates gone with them,
+    # each read gone by name. ``mates_made``: ``(mate name kept, the configurations it reads on in)``.
+    # ``remade_in_modes``: gear mates made again on a gearbox with modes (also in ``ratios``). ``bands_added`` /
+    # ``bands_removed``: sleeves (gear ids). ``modes_added`` / ``modes_removed``: configurations. ``took_active_state``:
+    # ``(mode added, the user's item, its state there)``; ``flags_lost``: ``(mode removed, the user's mate, its flag
+    # there)`` for each that differed from the active mode's (C5). ``not_resolved``: ``(gear, configuration, the
+    # state read)`` for an added gear's component reading other than resolved there, a failure (C9).
+    built: List[BuildResult] = field(default_factory=list)
+    inserted: List[Tuple[str, str]] = field(default_factory=list)
+    deleted: List[Tuple[str, str]] = field(default_factory=list)
+    mates_deleted: List[str] = field(default_factory=list)
+    mates_made: List[Tuple[str, Tuple[str, ...]]] = field(default_factory=list)
+    remade_in_modes: List[str] = field(default_factory=list)
+    bands_added: List[str] = field(default_factory=list)
+    bands_removed: List[str] = field(default_factory=list)
+    modes_added: List[str] = field(default_factory=list)
+    modes_removed: List[str] = field(default_factory=list)
+    took_active_state: List[Tuple[str, str, str]] = field(default_factory=list)
+    flags_lost: List[Tuple[str, str, str]] = field(default_factory=list)
+    not_resolved: List[Tuple[str, str, int]] = field(default_factory=list)
 
     def user_feature_was_in_error(self, feature: UserFeature) -> bool:
         """Whether a user feature found in error after the Update (``user_features_in_error``) was already in error
@@ -3746,7 +3866,8 @@ def update_gearbox(sw: SolidWorks, parts: Sequence[DocumentValues] = (), layout:
                    progress: Optional[Callable[[Step], None]] = None,
                    mtime: Callable[[str], float] = os.path.getmtime,
                    lines: Optional[Mapping[str, Tuple[Vec3, Vec3]]] = None,
-                   carriers: Sequence[DocumentValues] = ()) -> GearboxUpdate:
+                   carriers: Sequence[DocumentValues] = (),
+                   in_place: Optional[InPlace] = None) -> GearboxUpdate:
     """Update SolidWorks from the workbook: part values, the layout's globals, and the static assembly's
     components re-placed (PLAN-WORKBOOK §4.5), in one worker job and in two phases, so a missing piece changes
     nothing.
@@ -3839,6 +3960,13 @@ def update_gearbox(sw: SolidWorks, parts: Sequence[DocumentValues] = (), layout:
         # as a W6 train.
         raise BuildError("Update SolidWorks was given a planetary stage without its carrier part, so nothing is "
                          "changed; that is a fault in Gear Generator.")
+    if in_place and motion is None:
+        raise BuildError("Update SolidWorks was given changes to make in place to a gearbox not built to turn, so "
+                         "nothing is changed; that is a fault in Gear Generator.")
+    if in_place:
+        # W9c (W9C-INTERFACES §4): the worker's steps land one by one; until then nothing is made in place.
+        raise BuildError("Update SolidWorks cannot yet make these changes in place, so nothing is changed; build "
+                         "the gearbox again.")
     if motion is not None:
         return _update_motion(sw, parts, layout, assembly, placements, motion, exists, progress, mtime, lines,
                               carriers=carriers)
@@ -5559,6 +5687,106 @@ def judge_user_work(work: UserWork, modes: Sequence[str], put: Collection[str], 
                     f"and {user} is {how} in {file}, so nothing is changed; in SolidWorks, {fix} and press Update "
                     "SolidWorks again.")))
     return judgement
+
+
+# -- W9c: the pure judgements of an in-place Update (W9C-INTERFACES §5, §8) -----------------------------------------
+
+_STEP_WORDS = {STEP_REMOVE: "take a gear out of the assembly",
+               STEP_ADD: "insert a gear into the assembly and mate it",
+               STEP_MATES: "make a gear mate in an assembly with modes and set its flag in each mode",
+               STEP_BANDS: "give a built sleeve its bands, or take them away, in its own part",
+               STEP_MODE_ADD: "add a mode's configuration to the assembly",
+               STEP_MODE_REMOVE: "delete a mode's configuration from the assembly"}
+
+
+def _finding_year(revision: Sequence[int]) -> Optional[int]:
+    return release_year(int(revision[0])) if revision else None
+
+
+def in_place_gates(in_place: InPlace, revision: Sequence[int], *, modes: bool = False,
+                   remakes: bool = False) -> List[Tuple[str, str]]:
+    """Pure: ``(step, finding)`` for each step ``in_place`` carries whose finding is not settled on the SolidWorks in
+    use (W9C-INTERFACES §8; a version not known settles none). ``modes``: the gearbox has modes (a removal there also
+    reads ``COMPONENT_DELETE_ROUTE_IN_EVERY_CONFIGURATION``); ``remakes``: a gear mate of a gearbox with modes is made
+    again (``motion.ratios`` with modes), which reads ``UPDATE_MAKES_MATES_WITH_MODES``. Each finding is settled when
+    it holds the value measured: the delete route its route, a dialog False, every other True."""
+    year = _finding_year(revision)
+    out: List[Tuple[str, str]] = []
+
+    def need(step: str, name: str, wanted: object = True) -> None:
+        full = f"{name}_ON_{year if year else '?'}"
+        if year is None or getattr(findings, full, None) != wanted or getattr(findings, full, None) is None:
+            out.append((step, full))
+
+    if in_place.removed:
+        need(STEP_REMOVE, "COMPONENT_DELETE_ROUTE", "select4-editdelete")
+        need(STEP_REMOVE, "COMPONENT_DELETE_TAKES_ITS_MATES")
+        need(STEP_REMOVE, "COMPONENT_DELETE_DIALOG", False)
+        if modes:
+            need(STEP_REMOVE, "COMPONENT_DELETE_ROUTE_IN_EVERY_CONFIGURATION")
+    if in_place.added:
+        need(STEP_ADD, "UPDATE_INSERTS_A_GEAR")
+    if in_place.new_mates or (modes and remakes):
+        need(STEP_MATES, "UPDATE_MAKES_MATES_WITH_MODES")
+    if in_place.bands:
+        need(STEP_BANDS, "UPDATE_BANDS_IN_PLACE")
+    if in_place.modes_added:
+        need(STEP_MODE_ADD, "UPDATE_ADDS_A_MODE")
+    if in_place.modes_removed:
+        need(STEP_MODE_REMOVE, "UPDATE_REMOVES_A_MODE")
+    return out
+
+
+def _gate_sentence(step: str, finding: str) -> str:
+    value = getattr(findings, finding, None)
+    return (f"Update SolidWorks would {_STEP_WORDS[step]}, which has not been measured on this SolidWorks "
+            f"(findings.{finding} is {value!r}), so nothing is changed; build the gearbox again instead.")
+
+
+def judge_in_place(work: Optional[UserWork], in_place: InPlace, *, file: str = "the assembly",
+                   revision: Sequence[int] = (), modes: Sequence[str] = (),
+                   remakes: bool = False) -> List[UserProblem]:
+    """Pure (the footer's foresight, and the worker's own refusal before any write; W9C-INTERFACES §5): what of the
+    user's work, or which unmeasured step, stops ``in_place`` — in this order: each gate not settled
+    (:func:`in_place_gates`, ``PROBLEM_UNSETTLED``); per gear removed, the user's mates on it (``PROBLEM_REMOVED``,
+    a leaf of a sub-assembly counted by its top level) and, read wholly or not, every user mate on in some mode that
+    could not be read (``PROBLEM_UNREAD``: it may be on that gear); while ``EXTERNAL_REFERENCES_READ_ON_<year>`` is
+    not True, any component of the user's in the assembly (``PROBLEM_REFERENCES``, C4). ``modes``: the configurations
+    on record (named in an unread mate's sentence). The mode showing (``PROBLEM_MODE_SHOWING``) and a configuration
+    of an added mode's name not on record (``PROBLEM_CONFIGURATION``) are read live by the worker, never here."""
+    problems: List[UserProblem] = []
+    for step, finding in in_place_gates(in_place, revision, modes=bool(modes), remakes=remakes):
+        problems.append(UserProblem(PROBLEM_UNSETTLED, _gate_sentence(step, finding), subjects=(finding,)))
+    if not in_place.removed or work is None:
+        return problems
+    named = [m for m in modes if m]
+    for gone in in_place.removed:
+        on_it = [m for m in work.mates if m.on and any(what == APP and who == gone.gear for what, who in m.touches)]
+        if on_it:
+            names = tuple(m.name for m in on_it)
+            one = len(names) == 1
+            problems.append(UserProblem(PROBLEM_REMOVED, (
+                f"Update SolidWorks would take {_body_name(gone.gear)} out of {file}, and your {_and(list(names))} "
+                f"{'is' if one else 'are'} on it, so nothing is changed; delete or suppress {_and(list(names))} in "
+                f"SolidWorks, or keep {_body_name(gone.gear)} in the workbook, and press Update SolidWorks again."),
+                names, subjects=(gone.gear,)))
+    for mate in work.mates:
+        if mate.on and not mate.whole:
+            problems.append(UserProblem(PROBLEM_UNREAD, _unread_sentence(mate, file, named), (mate.name,)))
+    year = _finding_year(revision)
+    finding = f"EXTERNAL_REFERENCES_READ_ON_{year if year else '?'}"
+    if work.components and getattr(findings, finding, None) is not True:
+        gears = [g.gear for g in in_place.removed]
+        theirs = [c.name for c in work.components]
+        one = len(theirs) == 1
+        problems.append(UserProblem(PROBLEM_REFERENCES, (
+            f"Update SolidWorks would take {_and([_body_name(g) for g in gears])} out of {file}, and whether your "
+            f"{_and(theirs)} {'holds' if one else 'hold'} a reference to {'its' if len(gears) == 1 else 'their'} "
+            f"part has not been measured on this SolidWorks (findings.{finding} is "
+            f"{getattr(findings, finding, None)!r}), so nothing is changed; keep "
+            f"{_and([_body_name(g) for g in gears])} in the workbook, or build the gearbox again."),
+            subjects=tuple(gears) + tuple(theirs)))
+    return problems
 
 
 def _not_free(sw: SolidWorks, handles: Sequence[str]) -> bool:

@@ -184,8 +184,14 @@ work. New kinds:
   another mode in SolidWorks and press Update SolidWorks again."*
 - **`PROBLEM_UNSETTLED`** (W9a's kind) — a step whose finding gate (§8) is None or not the measured value on the
   version in use, naming the finding.
-- **`PROBLEM_COMPONENT`** (W9a's kind) — a configuration of an added mode's name already in the assembly and not on
-  record (it is not the app's to overwrite, §0.3): named as the user's.
+- **`PROBLEM_CONFIGURATION = "configuration"`** — a configuration of an added mode's name already in the assembly
+  and not on record (it is not the app's to overwrite, §0.3; C10): named as the user's. *(Amended at package A's
+  first commit: its own kind, not W9a's `PROBLEM_COMPONENT`.)*
+
+Every `UserProblem` gains **`subjects: Tuple[str, ...] = ()`** (package A's first commit): the other things its
+sentence names, so B can word it — the gear removed and the user's components (`references`), the gear removed
+(`removed`), the mode (`mode showing`), the configuration (`configuration`), the finding (`unsettled` from an in-place
+gate). `mates` keeps the user's mates named.
 
 Faults (`BuildError`, "a fault in Gear Generator"): a `RemovedGear` that anchors a gear on record, an `AddedGear`
 on a shaft that is not on record or is not along Z±, an op naming a handle neither added nor in `handles`, a
@@ -193,8 +199,11 @@ on a shaft that is not on record or is not along Z±, an op naming a handle neit
 them rather than act.
 
 **For the footer** (B foresees the press, as W9a's `judge_user_work`): `swbuild.judge_in_place(work, in_place, *,
-file, revision) -> List[UserProblem]` is pure and returns the `removed`, `references` and `unsettled` problems from the
-recorded inventory. `mode showing` cannot be foreseen (the record does not hold the configuration showing); it is
+file="the assembly", revision=(), modes=(), remakes=False) -> List[UserProblem]` is pure and returns, in this order,
+the `unsettled` problems of the gates, then per gear removed the `removed` problem, then an `unread` problem for each
+user mate on in some mode that could not be read (it may be on the gear removed), then `references`, from the
+recorded inventory. `modes`: the configurations on record (a gearbox with modes); `remakes`: a gear mate of a gearbox
+with modes is made again (`motion.ratios`). `mode showing` cannot be foreseen (the record does not hold the configuration showing); it is
 said after the press, recorded, until the workbook changes.
 
 ## 6. What the worker hands back (`GearboxUpdate`, new fields)
@@ -210,6 +219,7 @@ said after the press, recorded, until the workbook changes.
 | `bands_added: List[str]`, `bands_removed: List[str]` | sleeves (gear ids) given bands, or relieved of them, in place |
 | `modes_added: List[str]`, `modes_removed: List[str]` | configurations made and deleted |
 | `took_active_state: List[Tuple[str, str, str]]` | `(mode added, the user's item, its state there)`: each user mate's flag (`"on"`, `"suppressed"`) and each user component's state, read in the new configuration, which copied the active mode's — the plan's "said by name" |
+| `not_resolved: List[Tuple[str, str, int]]` | `(gear, configuration, the state read)` for an added gear's component reading other than resolved there: a failure (C9), its facts for B's sentence |
 | `flags_lost: List[Tuple[str, str, str]]` | `(mode removed, the user's mate, its flag there)` for each user mate whose flag in that configuration differed from the active mode's, read unshown before the delete (`mate_suppression`); a user component's state there is not readable unshown (no route, the review's must-fix 2) and is said generally ⟨C5⟩ |
 
 Everything W9a returns stays (the user's items put, in error, kept). A failure part way says what was done, as every
@@ -239,8 +249,10 @@ W8's finish writes frames and on-sets.
 
 The new findings are measured by W9c's full build (the plan's demonstration, `RangeBox` → `RangeBox_Fixed`, then a
 mode added and one removed), patched True in the demonstration's own process for the measurement only, as W9a's
-`nocarrier` was, and set in `findings.py` from its reviewed log. `swbuild.in_place_gates(in_place, revision) ->
-List[Tuple[str, str]]` (pure) returns `(step, finding)` for each gate not settled, for A's refusal and B's footer.
+`nocarrier` was, and set in `findings.py` from its reviewed log. `swbuild.in_place_gates(in_place, revision, *,
+modes=False, remakes=False) -> List[Tuple[str, str]]` (pure) returns `(step, finding)` for each gate not settled, for
+A's refusal and B's footer; `step` is one of `STEP_REMOVE`, `STEP_ADD`, `STEP_MATES`, `STEP_BANDS`,
+`STEP_MODE_ADD`, `STEP_MODE_REMOVE`.
 
 ## 9. The calls each step makes, and where each was measured
 
@@ -299,6 +311,14 @@ configuration) ⟨C8⟩. Nothing else.
   SolidWorks opens the assembly in whatever configuration the user saves it in, so nothing is shown for it.
 - **⟨C12⟩** `PROBLEM_MODE_SHOWING` cannot be foreseen by the footer; it is said after the press and recorded as W9a's
   refusals are, until the workbook changes or the user shows another mode.
+
+**Rulings.** C1 to C12 were taken as written by the coordinator on 2026-11-17, and are the user's to overrule; with
+them, the `_ON_2026` / `_ON_2024` pair on every W9c finding (`COMPONENT_STATE_PER_CONFIGURATION_ROUTE` included), and
+an entity naming neither a top-level component nor the assembly's root read as not wholly read (a leaf of a user
+sub-assembly still maps to its top-level component, pinned). C7 is the house rule: a per-version gate for each new
+kind of write, None until the full build reads it clean. C8's suppress of a part feature sits behind
+`UPDATE_BANDS_IN_PLACE`. C9 and C10 carry their sentences' facts in the result (`not_resolved`; the
+`configuration` problem's `subjects`).
 
 ## 11. What each package writes against the fake, in parallel
 

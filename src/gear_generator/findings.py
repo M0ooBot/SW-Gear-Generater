@@ -1941,3 +1941,34 @@ SUBASSEMBLY_MISSING_REFERENCE_DIALOG_ON_2024 = None
 SUBASSEMBLY_MISSING_PART_READS_ON_2026 = (
     "the open's errors 2; the child suppressed (0), its path kept, no document; the sub-assembly marked modified")
 SUBASSEMBLY_MISSING_PART_READS_ON_2024 = None
+#
+# W9c's gates (W9C-INTERFACES.md §8, the coordinator's ruling C7, 2026-11-17): each new kind of write Update makes in
+# place is gated by its own per-version finding, None until W9c's full build (the plan's demonstration, RangeBox to
+# RangeBox_Fixed, then a mode added and one removed) reads it clean on that version, patched True in that run's
+# process for the measurement only, as W9a's nocarrier was. Nothing measured them; no run is cited. A step whose
+# finding is not True refuses before any write, naming it.
+# - EXTERNAL_REFERENCES_READ (M4): an external-references read of the user's parts, so a removal can tell whether a
+#   user part holds an in-context reference to the gear removed. While None, a removal refuses whenever any component
+#   of the user's is in the assembly (C4).
+# - UPDATE_INSERTS_A_GEAR (M5, M6): a gear's part inserted into a saved, reopened assembly (with modes or without),
+#   placed and mated as the build mates it, every new mate's flag and the component's state read back in every
+#   configuration.
+# - UPDATE_MAKES_MATES_WITH_MODES (M6): a coupling or sliding mesh made by Update between components on record, and a
+#   gear mate of a gearbox with modes made again (lifting ruling 9.16), flags set and read back in every configuration.
+# - UPDATE_BANDS_IN_PLACE (M8): band globals and the relief features added to a built sleeve's part after the user's
+#   features, and the relief suppressed when the bands are taken away (IFeature.SetSuppression2 on a part feature).
+# - UPDATE_ADDS_A_MODE, UPDATE_REMOVES_A_MODE (M10): a configuration added by Update (copied from the active one, every
+#   app mate's flag and slide value set and read back there) and one deleted, in a reopened assembly with the user's
+#   items.
+EXTERNAL_REFERENCES_READ_ON_2026 = None
+EXTERNAL_REFERENCES_READ_ON_2024 = None
+UPDATE_INSERTS_A_GEAR_ON_2026 = None
+UPDATE_INSERTS_A_GEAR_ON_2024 = None
+UPDATE_MAKES_MATES_WITH_MODES_ON_2026 = None
+UPDATE_MAKES_MATES_WITH_MODES_ON_2024 = None
+UPDATE_BANDS_IN_PLACE_ON_2026 = None
+UPDATE_BANDS_IN_PLACE_ON_2024 = None
+UPDATE_ADDS_A_MODE_ON_2026 = None
+UPDATE_ADDS_A_MODE_ON_2024 = None
+UPDATE_REMOVES_A_MODE_ON_2026 = None
+UPDATE_REMOVES_A_MODE_ON_2024 = None
