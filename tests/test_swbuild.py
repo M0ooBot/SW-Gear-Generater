@@ -343,6 +343,13 @@ class FakeSolidWorks:
         # session's root read (root_component) answers nothing.
         self.assembly_entity = "none"
         self.root_unread = False
+        # W9c (W9C-INTERFACES §4): each open document keeps its own configurations, as SolidWorks does, so a part built
+        # or opened in the middle of an Update leaves the assembly's as they were (``memory_configs``, lower-cased
+        # path -> (configs, active, template's, frames_by)). ``suppressed_features``: (lower-cased path, feature) ->
+        # suppressed, as suppress_feature left it. ``deleted``: the Name2s delete_component took out.
+        self.memory_configs = {}
+        self.suppressed_features = {}
+        self.deleted = []
 
     def _log(self, name, *args):
         self.calls.append((name, args))
@@ -370,8 +377,14 @@ class FakeSolidWorks:
     def _fresh_configurations(self):
         self.configs, self.config, self.template_config, self.frames_by = ["Default"], "Default", "Default", {}
 
+    def _stash(self):
+        """The document left keeps its configurations (W9c)."""
+        if self.current:
+            self.memory_configs[_key(self.current)] = (self.configs, self.config, self.template_config, self.frames_by)
+
     def new_part(self, template=""):
         self._log("new_part", template)
+        self._stash()
         self._fresh_configurations()
         self.equations_text, self.made, self.current = [], [], ""
         self.plane_defs, self.axis_defs = {}, {}
@@ -380,6 +393,7 @@ class FakeSolidWorks:
 
     def new_assembly(self, template=""):
         self._log("new_assembly", template)
+        self._stash()
         self._fresh_configurations()
         self.equations_text, self.made, self.current = [], [], ""
         self.kind, self.adding, self.mates = 2, [], []
@@ -638,6 +652,9 @@ class FakeSolidWorks:
         self._log("add_component", handle, path)
         self.adding.append(path)
         self.adding_names.append(f"{handle}-1")
+        if self.current and _key(self.current) in self.assembly_names:      # W9c: inserted into a saved assembly
+            self.assembly_names[_key(self.current)].append(f"{handle}-1")
+            self.assembly_components.setdefault(_key(self.current), []).append(path)
         self.component_names[handle] = f"{handle}-1"
         self.component_paths[f"{handle}-1"] = path
         return f"{handle}-1"
@@ -730,6 +747,7 @@ class FakeSolidWorks:
 
     def open_document(self, path):
         self._log("open_document", path)
+        self._stash()
         self.step_puts = set()
         doc_type = 2 if path.lower().endswith(".sldasm") else 1
         info = DocInfo(title=path.replace("/", "\\").rsplit("\\", 1)[-1], path=path, doc_type=doc_type)
@@ -750,6 +768,8 @@ class FakeSolidWorks:
             self.open_docs.append(info)
             configs, config, frames_by = self.saved_configs.get(_key(path), (["Default"], "Default", {}))
             self.configs, self.config, self.frames_by = list(configs), config, copy.deepcopy(frames_by)
+        elif _key(path) in self.memory_configs:
+            self.configs, self.config, self.template_config, self.frames_by = self.memory_configs[_key(path)]
         self.epoch += 1                    # as the Session's: an open may change the active configuration
         self.active = info
         return info
@@ -1007,6 +1027,41 @@ class FakeSolidWorks:
         """``Session.root_component``: the active configuration's root component's Name2, or None unread."""
         self._log("root_component")
         return None if self.root_unread else self._root_name()
+
+    def delete_component(self, handle):
+        """``Session.delete_component`` (W9c, P1 on 2026 and 2024): the component out of the open assembly in every
+        configuration, every mate touching it with it, other handles kept; refused, as the Session refuses, where
+        ``findings.COMPONENT_DELETE_ROUTE_ON_<year>`` is not the route. A component of the user's, or one a user mate
+        touches, fails the test (W9a §0.3: that would write the user's work)."""
+        self._log("delete_component", handle)
+        year = swcom.release_year(self.revision[0])
+        if getattr(findings, f"COMPONENT_DELETE_ROUTE_ON_{year}", None) != "select4-editdelete":
+            raise SolidWorksError("Deleting a component has not been settled on this SolidWorks.")
+        name = self._name2(handle)
+        self._not_users(name, "deleted")
+        top = lambda n: n.split("/")[0]                                   # noqa: E731
+        theirs = [m.name for m in self.mates if m.user and name in (top(m.a[0]), top(m.b[0]))]
+        if theirs:
+            raise AssertionError(f"the app deleted {name} and with it {theirs}, mates of the user's (W9a §0.3)")
+        self.assembly_names[_key(self.current)].remove(name)
+        self.mates[:] = [m for m in self.mates if name not in (m.a[0], m.b[0])]
+        for frames in [self.frames] + list(self.frames_by.values()):
+            frames.pop(name, None)
+        self.fixed.discard(name)
+        self.deleted.append(name)
+        self._touch()
+
+    def suppress_feature(self, name, suppressed):
+        """``Session.suppress_feature`` (W9c): a feature of the open part suppressed or turned back on, read back. A
+        feature of the user's fails the test."""
+        self._log("suppress_feature", name, suppressed)
+        key = _key(self.current)
+        if any(n == name for n, _ in self.user_features.get(key, [])):
+            raise AssertionError(f"the app suppressed {name}, a feature of the user's (W9a §0.3)")
+        if name not in self.made:
+            raise SolidWorksError(f"{self.current} has no feature {name} to suppress.")
+        self.suppressed_features[(key, name)] = bool(suppressed)
+        self._touch()
 
     def feature_states(self):
         """``Session.feature_states``: the template's planes and origin, then every feature the app made in the

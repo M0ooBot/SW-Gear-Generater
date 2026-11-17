@@ -144,6 +144,8 @@ class SolidWorks(Protocol):
     def mate_info(self, handle: str) -> MateInfo: ...
     def feature_states(self) -> List[FeatureState]: ...
     def root_component(self) -> Optional[str]: ...                         # W9c: the assembly's own entity
+    def delete_component(self, handle: str) -> None: ...                    # W9c: a gear taken out (P1's route)
+    def suppress_feature(self, name: str, suppressed: bool) -> None: ...    # W9c: a sleeve's relief taken away
 
 
 class BuildError(SolidWorksError):
@@ -2430,7 +2432,10 @@ class AddedGear:
     fixed gear, every Mate that touches it, LinkDimension). ``handles``: every other plan handle those ops name ->
     the ``Name2`` on record (the layout's, an anchor's, a mesh partner's, a sleeve's). ``senses``: each gear mate's
     name -> it turns its two gears the same way (W6). ``on_sets``: each of its mates on in some modes only -> the
-    configurations it is on in (a mate absent is on in every configuration)."""
+    configurations it is on in (a mate absent is on in every configuration). ``refs`` (added after package B
+    started, W9C-INTERFACES §2): each mate its ops make as the record will hold it (``MateRef``, matched by name), so
+    the post-checks and the puts judge it as a recorded mate of its kind (a lock as a lock, a mesh read for sense); a
+    mate with none is judged for presence, flags and error only (a lock by its two gears)."""
 
     gear: str
     handle: str
@@ -2440,6 +2445,7 @@ class AddedGear:
     handles: Tuple[Tuple[str, str], ...] = ()
     senses: Tuple[Tuple[str, bool], ...] = ()
     on_sets: Tuple[Tuple[str, Tuple[str, ...]], ...] = ()
+    refs: Tuple[MateRef, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -2458,12 +2464,14 @@ class RemovedGear:
 class NewMate:
     """A coupling or sliding mesh newly needed between components on record (K6), made as the build makes it:
     ``op`` the gearbox plan's ``base.Mate``, ``handles`` its two plan handles -> ``Name2`` on record, ``on`` the
-    configurations it is on in (never empty: ruling 9.1), ``same_way`` as ``ModesPlan.same_way``."""
+    configurations it is on in (never empty: ruling 9.1), ``same_way`` as ``ModesPlan.same_way``. ``ref`` (added after
+    package B started): the mate as the record will hold it, as ``AddedGear.refs``."""
 
     op: base.Mate
     handles: Tuple[Tuple[str, str], ...] = ()
     on: Tuple[str, ...] = ()
     same_way: bool = False
+    ref: Optional[MateRef] = None
 
 
 @dataclass(frozen=True)
@@ -3963,13 +3971,9 @@ def update_gearbox(sw: SolidWorks, parts: Sequence[DocumentValues] = (), layout:
     if in_place and motion is None:
         raise BuildError("Update SolidWorks was given changes to make in place to a gearbox not built to turn, so "
                          "nothing is changed; that is a fault in Gear Generator.")
-    if in_place:
-        # W9c (W9C-INTERFACES §4): the worker's steps land one by one; until then nothing is made in place.
-        raise BuildError("Update SolidWorks cannot yet make these changes in place, so nothing is changed; build "
-                         "the gearbox again.")
     if motion is not None:
         return _update_motion(sw, parts, layout, assembly, placements, motion, exists, progress, mtime, lines,
-                              carriers=carriers)
+                              carriers=carriers, in_place=in_place)
     say = progress or _quiet
     _gate(sw)
     result = GearboxUpdate()
@@ -4635,7 +4639,8 @@ def _real_locks(motion: MotionUpdate, locks: Sequence[LockLink]) -> List[LockLin
 def _modes_assembly(sw: SolidWorks, result: GearboxUpdate, assembly: str, placements: Sequence[Placement],
                     motion: MotionUpdate, mated: Sequence[str], route: Optional[str],
                     axial: Sequence[Tuple[str, GlobalVariable]], say: Callable[[Step], None], touched: List[bool],
-                    state: _ModesState, user: Optional[_UserPlan] = None) -> None:
+                    state: _ModesState, user: Optional[_UserPlan] = None,
+                    added: Sequence[Tuple[str, str]] = ()) -> None:
     """The change phase of an Update of a gearbox with modes (W8-PLAN §1.10), in the build begun by
     :func:`_update_motion`.
 
@@ -4757,7 +4762,7 @@ def _modes_assembly(sw: SolidWorks, result: GearboxUpdate, assembly: str, placem
                        put_turned=True, carried=carried, user=user)
             _modes_post_check(sw, result, motion, mode, names[mode], placements, mated, wanted_in(mode), handle,
                               mate_handle, gear_of_handle, check, file, state.read, user=user,
-                              active_mode=active_mode)
+                              active_mode=active_mode, added=added)
             if getattr(findings, "INTERFERENCE_CHECKED", False):
                 gear_of = {p.component: p.gear for p in placements}
                 try:
@@ -4918,7 +4923,7 @@ def _modes_post_check(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdat
                       handle: Mapping[str, str], mate_handle: Mapping[str, str],
                       gear_of_handle: Mapping[str, str], check: ModeCheck, file: str,
                       state_read: Optional[set] = None, *, user: Optional[_UserPlan] = None,
-                      active_mode: str = "") -> None:
+                      active_mode: str = "", added: Sequence[Tuple[str, str]] = ()) -> None:
     """A mode shown, post-checked through fresh handles: every gear's origin where this mode wants it (a slider
     read back after the show, so a put on a slider that its slide does not take back is said, as SolidWorks has not
     shown what it does), each train in step with this mode's links, every recorded mate on here present,
@@ -4972,6 +4977,15 @@ def _modes_post_check(sw: SolidWorks, result: GearboxUpdate, motion: MotionUpdat
         found_now = _components_after(sw, user, result, mode)
         problems += found_now if mode == active_mode else []
         problems += _carried_problems(sw, user, handle, configuration)
+    if added:
+        # W9c (C9): each component Update inserted read resolved in this mode, its facts kept for the sentence.
+        states = {info.name: info.state for info in sw.components()}
+        for gear, name in added:
+            read = states.get(name, -1)
+            if read not in _RESOLVED_STATES:
+                result.not_resolved.append((gear, configuration, read))
+                problems.append(f"{gear} ({name}) reads {_STATE_WORDS.get(read, 'unread')} in SolidWorks, where "
+                                "Update SolidWorks inserted it resolved.")
     for mate in motion.mates:
         if mate.kind == "slide":
             check.values[mate.name] = sw.dimension_values(mate_handle[mate.name], [configuration])[configuration]
@@ -5789,6 +5803,451 @@ def judge_in_place(work: Optional[UserWork], in_place: InPlace, *, file: str = "
     return problems
 
 
+# -- W9c: the worker's steps in place (W9C-INTERFACES §4), each called by _update_motion in that order ---------------
+
+_IN_PLACE_OPS = (base.AddGlobal, base.AddComponent, base.Place, base.Fix, base.Mate, base.LinkDimension)
+# IComponent2.GetSuppression2 (swComponentSuppressionState_e): the words a sentence says it in.
+_STATE_WORDS = {0: "suppressed", 1: "lightweight", 2: "resolved", 3: "resolved", 4: "lightweight"}
+_RESOLVED_STATES = (2, 3)
+
+
+def _op_handles(op: base.Op) -> List[str]:
+    """The plan handles an op of an added gear names (never the assembly's own ``asm``)."""
+    if isinstance(op, base.AddComponent):
+        out = [op.id]
+    elif isinstance(op, (base.Place, base.Fix)):
+        out = [op.component]
+    elif isinstance(op, base.Mate):
+        out = [op.a, op.b] if op.kind == "lock" else [op.a.partition(":")[0], op.b.partition(":")[0]]
+    else:
+        out = []
+    return [h for h in out if h != "asm"]
+
+
+def _in_place_faults(in_place: InPlace, motion: MotionUpdate, placements: Sequence[Placement],
+                     documents: Sequence[DocumentValues]) -> None:
+    """W9C-INTERFACES §5's faults, before anything is read: an ``InPlace`` that does not agree with the gearbox it
+    changes is a fault in Gear Generator (package B never sends one), refused rather than acted on."""
+    def fault(what: str) -> BuildError:
+        return BuildError(f"Update SolidWorks was given {what}, so nothing is changed; that is a fault in Gear "
+                          "Generator, not in SolidWorks.")
+    empty = [p.gear for p in placements if not p.component]
+    standing = {p.gear for p in placements if p.component}
+    added = {g.gear: g for g in in_place.added}
+    for gear in empty:
+        if gear not in added:
+            raise fault(f"{gear} with no component on record and nothing to insert for it")
+    for gear in in_place.added:
+        if gear.gear not in empty:
+            raise fault(f"{gear.gear} to insert without its place, empty, among the gears that stand after the Update")
+        inserts = [op.id for op in gear.ops if isinstance(op, base.AddComponent)]
+        if inserts != [gear.handle]:
+            raise fault(f"{gear.gear} to insert whose ops do not insert its own component ({gear.handle}) once")
+        known = {gear.handle} | {h for h, _ in gear.handles}
+        for op in gear.ops:
+            if not isinstance(op, _IN_PLACE_OPS):
+                raise fault(f"{gear.gear} to insert with an op ({type(op).__name__}) an Update does not run")
+            stray = [h for h in _op_handles(op) if h not in known]
+            if stray:
+                raise fault(f"{gear.gear} to insert with an op naming {_and(stray)}, neither inserted nor on record")
+    recorded = {m.name for m in motion.mates}
+    for gone in in_place.removed:
+        anchored = [lock.follower for lock in motion.locks if lock.anchor == gone.gear]
+        if anchored:
+            raise fault(f"{gone.gear} to take out, which anchors {_and(anchored)}")
+        if gone.gear in standing or gone.gear in empty:
+            raise fault(f"{gone.gear} both to take out and to keep")
+        kept = [name for name in gone.mates if name in recorded]
+        if kept:
+            raise fault(f"{gone.gear} to take out with {_and(kept)}, which the gearbox keeps")
+    for new in in_place.new_mates:
+        if not new.on:
+            raise fault(f"the mate {new.op.name or new.op.id} to make on in no configuration (ruling 9.1)")
+        stray = [h for h in _op_handles(new.op) if h not in dict(new.handles)]
+        if stray:
+            raise fault(f"the mate {new.op.name or new.op.id} to make naming {_and(stray)}, not on record")
+    parts = {d.path.casefold() for d in documents}
+    for band in in_place.bands:
+        if band.part.casefold() not in parts:
+            raise fault(f"bands to change on {_file(band.part)}, which is not a part of the gearbox")
+        if not band.features or (band.add and not band.ops):
+            raise fault(f"bands to change on {_file(band.part)} with nothing to make or suppress")
+    after = {c.casefold() for c in motion.configurations}
+    for mode in in_place.modes_added:
+        if mode.casefold() not in after:
+            raise fault(f"the mode {mode} to add, not among the gearbox's modes after the Update")
+    for mode in in_place.modes_removed:
+        if mode.casefold() in after:
+            raise fault(f"the mode {mode} both to delete and to keep")
+    if in_place.modes_removed:
+        nowhere = [m.name for m in motion.mates if _on_set(motion, m)
+                   and not any(on_in(_on_set(motion, m), mode) for mode in motion.configurations)]
+        if nowhere:
+            raise fault(f"{_and(nowhere)} to keep on in no mode once a mode is deleted (ruling 9.1)")
+
+
+def _in_place_built(sw: SolidWorks, result: GearboxUpdate, in_place: InPlace, exists: Callable[[str], bool],
+                    say: Callable[[Step], None], stage: List[str], left_after: Sequence[str]) -> bool:
+    """§4 step 1: each added gear's new part built by the build's own :func:`build` and saved to its path, before
+    anything else changes. True when one failed: the job stops, ``skipped`` saying what was not done."""
+    new = [g for g in in_place.added if g.build is not None]
+    for index, gear in enumerate(new):
+        path = gear.build.path or gear.part
+        stage[0] = _file(path)
+        say(Step(STAGE_PART, _stem(path), index + 1, len(new)))
+        built = _build_in_job(sw, gear.build, exists)
+        result.built.append(built)
+        if not built.ok:
+            result.failures.extend((_file(path), why) for _what, why in built.failures)
+            rest = len(new) - index - 1
+            left = ([f"{rest} more new part{'s' if rest != 1 else ''}"] if rest else []) + list(left_after)
+            result.skipped = f"{_and(left)}, because building {_file(path)} failed"
+            return True
+    return False
+
+
+def _in_place_bands(sw: SolidWorks, result: GearboxUpdate, in_place: InPlace, documents: Sequence[DocumentValues],
+                    say: Callable[[Step], None], stage: List[str]) -> bool:
+    """§4 step 2, after the values: each built sleeve given its bands in its own part (the band globals and the
+    relief's ops, run by the build's own runners after the user's features) or relieved of them (the relief's
+    features suppressed, ruling C8), then rebuilt and its features read (K3: the user's in error are theirs, said;
+    the app's in error, or one not made, a failure). Nothing is saved. True when one failed (the job stops)."""
+    for index, band in enumerate(in_place.bands):
+        file = _file(band.part)
+        stage[0] = file
+        say(Step(STAGE_VALUES, _stem(band.part)))
+        doc = next((d for d in documents if d.path.casefold() == band.part.casefold()), None)
+        made = set(band.features) | (set(doc.made) | set(doc.features) if doc is not None else set())
+        try:
+            sw.open_document(band.part)
+            if band.add:
+                scratch = BuildResult(trig=sw.detect_trig_units())
+                _run(sw, BuildPlan("part", "", (base.NewPart(""),) + tuple(band.ops), band.part), scratch, "part")
+                if scratch.failures:
+                    what, why = scratch.failures[0]
+                    raise SolidWorksError(f"{what}: {why}")
+            else:
+                for name in band.features:
+                    sw.suppress_feature(name, True)
+            if band.part not in result.changed:
+                result.changed.append(band.part)
+            rebuilt = bool(sw.rebuild())
+            states = list(sw.feature_states())
+            listed = {s.name for s in states}
+            ours = [s.name for s in states if s.name in made and _in_error(s.code)]
+            missing = [n for n in band.features if band.add and n not in listed]
+            theirs = [f for f in _user_features(band.part, states, made) if _in_error(f.code)]
+            result.user_features_in_error.extend(theirs)
+            if ours or missing:
+                raise SolidWorksError(f"SolidWorks reported {_and(ours or missing)} "
+                                      f"{'in error' if ours else 'not made'} in {_stem(band.part)}.")
+            if not rebuilt and not (theirs and getattr(findings, "WHATS_WRONG_OPENS_ON_PART_REBUILD", None) is False):
+                raise SolidWorksError(f"SolidWorks reported an error rebuilding {_stem(band.part)}.")
+        except Exception as exc:  # noqa: BLE001 - this part's failure stops the job, what was done said (B1)
+            result.failures.append((file, _said(exc)))
+            rest = len(in_place.bands) - index - 1
+            left = ([f"the bands of {rest} more sleeve{'s' if rest != 1 else ''}"] if rest else []) + ["the assembly"]
+            result.skipped = f"{_and(left)}, because {file} failed"
+            return True
+        (result.bands_added if band.add else result.bands_removed).append(band.gear)
+    return False
+
+
+def _in_place_mate_ref(op: base.Mate, kept: str, gears: Sequence[str], refs: Sequence[MateRef],
+                       on: Tuple[str, ...]) -> MateRef:
+    """The mate made, as the rest of the Update judges it: package B's ``MateRef`` for it where given (by name),
+    else what the op says (a lock by its two gears, any other kind ``"made"``: read for presence, flags and error
+    only, never for sense)."""
+    given = next((r for r in refs if r.name in (kept, op.name)), None)
+    if given is not None:
+        return replace(given, name=kept, modes=given.modes or on)
+    return MateRef(kept, "lock" if op.kind == "lock" else "made", tuple(gears), modes=on)
+
+
+def _in_place_assembly(sw: SolidWorks, result: GearboxUpdate, assembly: str, in_place: InPlace,
+                       motion: MotionUpdate, placements: Sequence[Placement], state: Optional[_ModesState],
+                       remakes: Sequence[Tuple[str, int, int]], *, resensed: Collection[str],
+                       respaced: Collection[str], user: Optional[_UserPlan], touched: List[bool],
+                       say: Callable[[Step], None]) -> Tuple[List[Placement], MotionUpdate]:
+    """§4 step 3.1-3.6, the assembly open, before W8/W9a's modes path (or W7's) puts and post-checks everything:
+    modes removed, gears removed, modes added, gears added, new couplings and sliding meshes, and (with modes) gear
+    mates made again. Every write is read back; a failure raises, and ``result.skipped`` says first what was not
+    done (the plan's rule from W8: no half-change unsaid). Returns the placements with each added gear's ``Name2``
+    and the motion with every mate made, for the steps after."""
+    file, stem = _file(assembly), _stem(assembly)
+    placements = list(placements)
+    mates = list(motion.mates)
+    names: Dict[str, str] = state.names if state is not None else {}
+    active = names[state.active] if state is not None else ""
+    configurations = [names[m] for m in motion.configurations if m in names]
+    user_mates = list(user.mates) if user is not None else []
+    todo = ([f"deleting the configuration {m}" for m in in_place.modes_removed]
+            + [f"taking {g.gear} out" for g in in_place.removed]
+            + [f"adding the configuration {m}" for m in in_place.modes_added]
+            + [f"inserting {g.gear}" for g in in_place.added]
+            + [f"making the mate {n.op.name or n.op.id}" for n in in_place.new_mates]
+            + ([f"making the gear mate {name} again" for name, _, _ in remakes] if state is not None else [])
+            + ["putting the gears back and checking the assembly"])
+    count = [0]
+
+    def handle(prefix: str) -> str:
+        count[0] += 1
+        return f"inplace_{prefix}{count[0]}"
+
+    def wrote() -> None:
+        touched[0] = True
+        if assembly not in result.changed:
+            result.changed.append(assembly)
+
+    def rebuild() -> None:
+        result.rebuilt = bool(sw.rebuild(kind=ASSEMBLY_TRAIN))
+        if not result.rebuilt:
+            theirs = _rebuild_laid_to_user(sw, result, user, [m.name for m in mates])
+            if not theirs:
+                raise SolidWorksError(_rebuild_sentence(stem, "", user))
+            _lay_to_user(result, theirs)
+
+    def show(configuration: str) -> None:
+        if configuration and not on_in((configuration,), str(sw.active_configuration())):
+            sw.show_configuration(configuration)
+            rebuild()
+
+    def flags(mate_handle: str, name: str, on: Sequence[str]) -> Tuple[str, ...]:
+        """A mate just made: its flag set in every configuration from its on-set and read back; the configurations
+        it reads on in (``()`` with no modes, its one configuration)."""
+        if state is None:
+            return ()
+        wanted_on = [c for m, c in names.items() if c in configurations and (not on or on_in(on, m))]
+        read = sw.mate_suppression(mate_handle, configurations)
+        turn_on = [c for c in wanted_on if read.get(c, True)]
+        turn_off = [c for c in configurations if c not in wanted_on and not read.get(c, False)]
+        if turn_on:
+            sw.set_mate_suppressed_in(mate_handle, False, turn_on)
+        if turn_off:
+            sw.set_mate_suppressed_in(mate_handle, True, turn_off)
+        again = sw.mate_suppression(mate_handle, configurations)
+        reads_on = tuple(c for c in configurations if not again.get(c, True))
+        if set(reads_on) != set(wanted_on):
+            raise SolidWorksError(f"The mate {name} reads on in {_and(list(reads_on)) or 'no configuration'} of "
+                                  f"{file}, where Update SolidWorks set it on in {_and(wanted_on)}.")
+        return reads_on
+
+    gear_of_name = {p.component: p.gear for p in placements if p.component}
+    planned = {p.gear: p for p in placements}
+
+    def make(op: base.Mate, gear_of: Mapping[str, str], same: Optional[bool]) -> Tuple[str, Dict[str, str]]:
+        """One mate made as the build makes it (``add_mate``), a gear mate's sense read straight after where it is
+        settled and made again with the other Flip when wrong (the build's :func:`_settle_sense`)."""
+        extra = {"ratio": op.ratio, "flip": op.flip} if op.kind == "gear" else {}
+        kept, dim = sw.add_mate(op.id, op.kind, op.a, op.b, op.value, op.name, **extra)
+        dims = {f"D1@{op.name or op.id}": f"{dim}@{kept}"} if op.kind in base.VALUED_MATES and dim else {}
+        if op.kind == "gear" and same is not None and _senses_readable():
+            ga, gb = gear_of.get(op.a.partition(":")[0], ""), gear_of.get(op.b.partition(":")[0], "")
+            if ga in planned and gb in planned:
+                ends = (planned[ga].at, planned[gb].at)
+                axes = (_axis_of(planned[ga].rotation), _axis_of(planned[gb].rotation))
+                if not _sense_read(sw, op.id, kept, same, axes[0], axes[1], ga, gb, SolidWorksError, ends):
+                    sw.remake_gear_mate(op.id, op.a, op.b, op.ratio, not op.flip, saved=False)
+                    if not _sense_read(sw, op.id, kept, same, axes[0], axes[1], ga, gb, SolidWorksError, ends):
+                        raise SolidWorksError(f"SolidWorks turns the gears of the mate {kept} against the way they "
+                                              "mesh, whichever way round it is made.")
+        return kept, dims
+
+    def gears_named(op: base.Mate, gear_of: Mapping[str, str]) -> List[str]:
+        return [gear_of[h] for h in _op_handles(op) if h in gear_of]
+
+    def resolved_here(gears: Sequence[Tuple[str, str]], configuration: str) -> None:
+        states = {c.name: c.state for c in sw.components()}
+        for gear, name in gears:
+            read = states.get(name, -1)
+            if read not in _RESOLVED_STATES:
+                result.not_resolved.append((gear, configuration, read))
+                raise SolidWorksError(f"{gear} ({name}) reads {_STATE_WORDS.get(read, 'unread')} in "
+                                      f"{configuration or file} once inserted, not resolved.")
+
+    try:
+        sw.open_document(assembly)
+        _note_opened(sw, assembly, result)
+        present = [str(c) for c in sw.configurations()] if state is not None else []
+        # 3.1 modes removed: the user's mates' flags there read first, unshown (C5: said, never refused)
+        for mode in in_place.modes_removed:
+            target = next((c for c in present if on_in((mode,), c)), None)
+            if target is not None:
+                for mate in user_mates:
+                    h = handle("user")
+                    sw.find_mate(h, mate.name)
+                    read = sw.mate_suppression(h, [target, active])
+                    if bool(read.get(target)) != bool(read.get(active)):
+                        result.flags_lost.append((target, mate.name, "suppressed" if read.get(target) else "on"))
+                wrote()
+                sw.delete_configuration(target)
+                if any(on_in((mode,), str(c)) for c in sw.configurations()):
+                    raise SolidWorksError(f"SolidWorks would not delete the configuration {target} from {file}: it "
+                                          "is still there.")
+                result.modes_removed.append(target)
+            todo.remove(f"deleting the configuration {mode}")
+        # 3.2 gears removed (P1's route), each judged by the reads after
+        for gone in in_place.removed:
+            h = handle("removed")
+            sw.find_component(h, gone.component, lightweight_ok=True)
+            wrote()
+            sw.delete_component(h)
+            if any(c.name == gone.component for c in sw.components()):
+                raise SolidWorksError(f"SolidWorks would not take {gone.component} out of {file}: it is still there.")
+            live = {m.name for m in sw.mate_states()}
+            kept = [n for n in gone.mates if n in live]
+            lost = [m.name for m in mates if m.name not in live]
+            if kept:
+                raise SolidWorksError(f"SolidWorks took {gone.component} out of {file} and kept {_and(kept)}.")
+            if lost:
+                raise SolidWorksError(f"SolidWorks took {gone.component} out of {file}, and {_and(lost)} went with "
+                                      "it.")
+            result.deleted.append((gone.gear, gone.component))
+            result.mates_deleted.extend(gone.mates)
+            todo.remove(f"taking {gone.gear} out")
+        # 3.3 modes added: each a copy of the active mode (shown first), a rebuild before any flag, every app mate's
+        # flag and every slide's value set there and read back; the user's items there said (C5)
+        for mode in in_place.modes_added:
+            show(active)
+            wrote()
+            sw.add_configuration(mode)
+            sw.rebuild(kind=ASSEMBLY_TRAIN)
+            for mate in mates:
+                h = handle("mate")
+                sw.find_mate(h, mate.name)
+                off = not on_in(_on_set(motion, mate), mode)
+                if bool(sw.mate_suppression(h, [mode]).get(mode)) != off:
+                    sw.set_mate_suppressed_in(h, off, [mode])
+                    (result.suppressed_in if off else result.unsuppressed_in).append((mate.name, mode))
+                if mate.kind == "slide":
+                    value = _slide_wanted(motion, mate, mode)
+                    if value is None:
+                        raise SolidWorksError(f"Update SolidWorks was given the slide {mate.name} with no value in "
+                                              f"{mode}; that is a fault in Gear Generator.")
+                    sw.set_dimension_in(h, value, [mode])
+                    read = float(sw.dimension_values(h, [mode]).get(mode, 0.0))
+                    if abs(read - value) > SLIDE_READ_TOLERANCE:
+                        raise SolidWorksError(f"The slide {mate.name} reads {read:g} mm in {mode}, where Update "
+                                              f"SolidWorks set it to {value:g} mm.")
+                    result.slid.append((mate.name, mode, value))
+            for mate in user_mates:
+                h = handle("user")
+                sw.find_mate(h, mate.name)
+                there = sw.mate_suppression(h, [mode]).get(mode)
+                result.took_active_state.append((mode, mate.name, "suppressed" if there else "on"))
+            if user is not None and user.components_before:
+                for info in sw.components():
+                    if info.name in user.components_before:
+                        result.took_active_state.append((mode, info.name, _STATE_WORDS.get(info.state,
+                                                                                          str(info.state))))
+            names[mode] = mode
+            configurations.append(mode)
+            result.modes_added.append(mode)
+            todo.remove(f"adding the configuration {mode}")
+        configurations[:] = [names[m] for m in motion.configurations if m in names]
+        # 3.4 gears added, in the active mode: the build's ops for each, then its mates' flags everywhere
+        show(active)
+        for gear in in_place.added:
+            say(Step(STAGE_PLACE, gear.gear))
+            sw.open_document(gear.part)              # open, as an insert takes it (REUSE_ADD_ROUTE "opened")
+            sw.open_document(assembly)
+            for h, name in gear.handles:
+                sw.find_component(h, name, lightweight_ok=True)
+            gear_of = {h: gear_of_name[name] for h, name in gear.handles if name in gear_of_name}
+            gear_of[gear.handle] = gear.gear
+            senses, on_sets = dict(gear.senses), dict(gear.on_sets)
+            dims: Dict[str, str] = {}
+            made: List[Tuple[str, str, base.Mate]] = []
+            inserted = ""
+            for op in gear.ops:
+                wrote()
+                if isinstance(op, base.AddGlobal):
+                    sw.add_global_variable(op.name, op.expression_for(DEGREES))
+                elif isinstance(op, base.AddComponent):
+                    inserted = sw.add_component(op.id, op.path, op.at)
+                    result.inserted.append((gear.gear, inserted))
+                    at = next(i for i, p in enumerate(placements) if p.gear == gear.gear)
+                    placements[at] = replace(placements[at], component=inserted)
+                    gear_of_name[inserted] = gear.gear
+                elif isinstance(op, base.Place):
+                    sw.place_component(op.component, op.rotation, op.at, kind=ASSEMBLY_TRAIN)
+                elif isinstance(op, base.Fix):
+                    sw.fix_component(op.component)
+                elif isinstance(op, base.LinkDimension):
+                    sw.link_dimension(dims.get(op.dimension, op.dimension), op.expression_for(DEGREES))
+                else:
+                    kept, more = make(op, gear_of, senses.get(op.name, senses.get(op.id)))
+                    dims.update(more)
+                    made.append((kept, op.id, op))
+            rebuild()
+            resolved_here([(gear.gear, inserted)], active)
+            for kept, h, op in made:
+                on = tuple(on_sets.get(op.name, on_sets.get(kept, ())))
+                reads_on = flags(h, kept, on)
+                result.mates_made.append((kept, reads_on))
+                mates.append(_in_place_mate_ref(op, kept, gears_named(op, gear_of), gear.refs, on))
+            todo.remove(f"inserting {gear.gear}")
+        # 3.5 new couplings and sliding meshes, each made in the first mode it is on in, shown
+        for new in in_place.new_mates:
+            first = next((names[m] for m in motion.configurations if m in names and on_in(new.on, m)), active)
+            show(first)
+            for h, name in new.handles:
+                sw.find_component(h, name, lightweight_ok=True)
+            gear_of = {h: gear_of_name[name] for h, name in new.handles if name in gear_of_name}
+            wrote()
+            kept, _ = make(new.op, gear_of, new.same_way)
+            rebuild()
+            result.mates_made.append((kept, flags(new.op.id, kept, tuple(new.on))))
+            given = (new.ref,) if new.ref is not None else ()
+            mates.append(_in_place_mate_ref(new.op, kept, gears_named(new.op, gear_of), given, tuple(new.on)))
+            todo.remove(f"making the mate {new.op.name or new.op.id}")
+        # 3.6 with modes, gear mates made again (lifting ruling 9.16 where UPDATE_MAKES_MATES_WITH_MODES is set),
+        # each in a mode it is on in, its sense read there, its flags set everywhere and read back
+        if state is not None:
+            component_of = {p.gear: p.component for p in placements}
+            mesh_senses = _mesh_senses(replace(motion, mates=tuple(mates)))
+            for name, numerator, denominator in remakes:
+                mate = next(m for m in mates if m.name == name)
+                on = _on_set(motion, mate)
+                show(next((names[m] for m in motion.configurations if m in names and on_in(on, m)), active))
+                ha, hb = handle("gear"), handle("gear")
+                sw.find_component(ha, component_of[mate.gears[0]])
+                sw.find_component(hb, component_of[mate.gears[1]])
+                hm = handle("mate")
+                sw.find_mate(hm, name)
+                a_ref, b_ref = f"{ha}:{AXIS_NAME}", f"{hb}:{AXIS_NAME}"
+                wrote()
+                sw.set_gear_ratio(hm, a_ref, b_ref, (numerator, denominator))
+                if _sense_settled() and name in mesh_senses:
+                    ga, gb = mate.gears
+                    ends = (planned[ga].at, planned[gb].at)
+                    axes = (_axis_of(planned[ga].rotation), _axis_of(planned[gb].rotation))
+                    if not _sense_read(sw, hm, name, mesh_senses[name], axes[0], axes[1], ga, gb, SolidWorksError,
+                                       ends):
+                        first_flip = bool(getattr(findings, "GEAR_MATE_FLIP", False))
+                        sw.remake_gear_mate(hm, a_ref, b_ref, (numerator, denominator), not first_flip)
+                        result.turned_round.append(name)
+                        if not _sense_read(sw, hm, name, mesh_senses[name], axes[0], axes[1], ga, gb,
+                                           SolidWorksError, ends):
+                            raise SolidWorksError(f"SolidWorks turns the gears of the mate {name} against the way "
+                                                  "they mesh, whichever way round it is made.")
+                rebuild()
+                flags(hm, name, on)
+                result.remade_in_modes.append(name)
+                if name in resensed:
+                    if name in respaced:
+                        result.ratios.append(name)
+                    result.resensed.append(name)
+                else:
+                    result.ratios.append(name)
+                todo.remove(f"making the gear mate {name} again")
+            show(active)
+    except Exception:
+        result.skipped = f"{_and(todo)}, because the job stopped in {file}"
+        raise
+    return placements, replace(motion, mates=tuple(mates))
+
+
 def _not_free(sw: SolidWorks, handles: Sequence[str]) -> bool:
     """K2's tie read (``findings.USER_TIE_RULE``): a body of the train reads anything but
     ``COMPONENT_UNDER_DEFINED``, as :func:`_free_to_turn` judges."""
@@ -6035,7 +6494,7 @@ def _user_check(sw: SolidWorks, assembly: str, motion: MotionUpdate, placements:
                 parts: Sequence[DocumentValues], documents: Sequence[DocumentValues], holds: Sequence[str],
                 axial: Sequence[Tuple[str, GlobalVariable]], suppressed: Sequence[str],
                 remakes: Sequence[Tuple[str, int, int]], deferred: Sequence[str],
-                fixed: Collection[str]) -> _UserPlan:
+                fixed: Collection[str], in_place: Optional[InPlace] = None) -> _UserPlan:
     """The end of an Update's check phase, the assembly open (ISSUE-1-PLAN §2.1 items 2-4): the user's work read
     (:func:`_read_user_work`) into ``result.user_work`` — mates suppressed in every mode into ``extra_mates``, as
     before — then which app bodies this press may put (:func:`_may_put`; with modes, every mated body whenever the
@@ -6046,8 +6505,10 @@ def _user_check(sw: SolidWorks, assembly: str, motion: MotionUpdate, placements:
     before anything is written. Returns what the change phase needs."""
     file = _file(assembly)
     configurations = {m: modes_state.names[m] for m in motion.configurations} if modes_state is not None else {}
-    work = _read_user_work(sw, motion, placements, layout.path if layout is not None else "", result, unknown,
-                           configurations, features)
+    gone = [Placement(g.gear, g.component, (1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0), (0.0, 0.0, 0.0))
+            for g in (in_place.removed if in_place else ())]       # W9c: a gear to take out is the app's
+    work = _read_user_work(sw, motion, list(placements) + gone, layout.path if layout is not None else "", result,
+                           unknown, configurations, features)
     result.user_work = work
     result.extra_mates.extend(m.name for m in work.mates if not m.on)
     gears = [p.gear for p in placements]
@@ -6085,6 +6546,22 @@ def _user_check(sw: SolidWorks, assembly: str, motion: MotionUpdate, placements:
                                 branches=user_carry_branches(motion, placements), revision=sw.revision)
     problems = list(judgement.problems)          # a carried component suppressed or lightweight among them
     work.carried = [(user, gear, locks) for gear, held_here in judgement.carried.items() for user, locks in held_here]
+    if in_place:
+        # W9c §5: the in-place refusals, after W9a's, each said once: a gate not settled, the user's mates on a gear
+        # taken out, a removal while the user's components are there and M4 is unread, an added mode's name taken.
+        said = {(p.kind, p.mates) for p in problems}
+        for problem in judge_in_place(work, in_place, file=file, revision=sw.revision,
+                                      modes=tuple(motion.configurations)):
+            if (problem.kind, problem.mates) not in said:
+                problems.append(problem)
+        for mode in in_place.modes_added:
+            taken = [c for c in result.extra_configurations if on_in((mode,), c)]
+            if taken:
+                problems.append(UserProblem(PROBLEM_CONFIGURATION, (
+                    f"Update SolidWorks would add the mode {mode} to {file}, which already holds a configuration "
+                    f"{taken[0]} that Gear Generator did not make, so nothing is changed; rename or delete {taken[0]} "
+                    "in SolidWorks, or name the mode otherwise in the workbook, and press Update SolidWorks again."),
+                    subjects=(mode, taken[0])))
     values = [UserProblem(PROBLEM_VALUE, _value_sentence(e), values=(e,)) for e in edits]
     if values or problems:
         raise UserWorkRefused(values + problems, work)
@@ -6102,7 +6579,7 @@ def _update_motion(sw: SolidWorks, parts: Sequence[DocumentValues], layout: Opti
                    placements: Sequence[Placement], motion: MotionUpdate, exists: Callable[[str], bool],
                    progress: Optional[Callable[[Step], None]], mtime: Callable[[str], float],
                    lines: Optional[Mapping[str, Tuple[Vec3, Vec3]]] = None, *,
-                   carriers: Sequence[DocumentValues] = ()) -> GearboxUpdate:
+                   carriers: Sequence[DocumentValues] = (), in_place: Optional[InPlace] = None) -> GearboxUpdate:
     """:func:`update_gearbox` for a gearbox built to turn, in W5-INTERFACES §3's order.
 
     *Check — writes nothing; a raise here changes nothing:* W4's checks
@@ -6141,6 +6618,24 @@ def _update_motion(sw: SolidWorks, parts: Sequence[DocumentValues], layout: Opti
     if not assembly:
         raise BuildError("A gearbox built to turn is updated through its assembly, and Update SolidWorks was given "
                          "none.")
+    # W9c (W9C-INTERFACES §1, §5): what is made or taken away in place. A new part is built in the change phase, so
+    # it is neither checked nor set here; an added mode is not yet in SolidWorks, so the check reads the modes there
+    # now (``motion``) and the change phase the modes after (``motion_after``).
+    in_place = in_place or InPlace()
+    motion_after = motion
+    if in_place:
+        _in_place_faults(in_place, motion, placements, documents)
+        new_parts = {(g.build.path or g.part).casefold(): g for g in in_place.added if g.build is not None}
+        for path, gear in new_parts.items():
+            if exists(gear.build.path or gear.part):
+                raise BuildError(f"{_file(gear.build.path or gear.part)} is already on disk, so Update SolidWorks "
+                                 f"would not build {gear.gear}'s new part over it, and nothing is changed; move it "
+                                 "away or delete it, then press Update SolidWorks again.")
+        parts = [d for d in parts if d.path.casefold() not in new_parts]
+        documents = [d for d in documents if d.path.casefold() not in new_parts]
+        if in_place.modes_added:
+            motion = replace(motion, configurations=tuple(c for c in motion.configurations
+                                                          if c not in in_place.modes_added))
     paths = [d.path for d in documents] + [assembly]
     _assembly_rebuild_gate(ASSEMBLY_TRAIN)
     _train_gate()
@@ -6157,13 +6652,23 @@ def _update_motion(sw: SolidWorks, parts: Sequence[DocumentValues], layout: Opti
     result.open_before = list(_refuse_paths(sw, [], paths, "make", "change"))
     for index, placement in enumerate(placements):
         for earlier in placements[:index]:
-            if placement.component == earlier.component:
+            if placement.component and placement.component == earlier.component:
                 raise BuildError(f"{placement.component} is recorded for both {earlier.gear} and {placement.gear}, "
                                  "so one of them would be placed twice.")
-    _motion_consistent(motion, placements)
+    made_refs = tuple(r for g in in_place.added for r in g.refs) + \
+        tuple(n.ref for n in in_place.new_mates if n.ref is not None)
+    _motion_consistent(replace(motion, mates=tuple(motion.mates) + made_refs) if made_refs else motion, placements)
     axes = {p.gear: _axis_of(p.rotation) for p in placements}
     origins = {p.gear: tuple(float(v) for v in p.at) for p in placements}
     _turned_update_gate(motion, axes, origins)
+    everything = list(placements)                    # W9c: every gear standing after, an added one's Name2 ""
+    placements = [p for p in placements if p.component]
+    if len(placements) < len(everything):
+        # W9c: the check judges what stands now; a link to a gear not yet inserted is judged once it is.
+        here = {p.gear for p in placements}
+        motion = replace(motion, meshes=tuple(m for m in motion.meshes if m.a in here and m.b in here),
+                         locks=tuple(k for k in motion.locks if k.anchor in here and k.follower in here),
+                         fixed=tuple(g for g in motion.fixed if g in here))
     fixed = set(motion.fixed)
     route = getattr(findings, "REPLACE_FIXED_ROUTE", None)
     if fixed and route not in REPLACE_ROUTES:
@@ -6260,6 +6765,13 @@ def _update_motion(sw: SolidWorks, parts: Sequence[DocumentValues], layout: Opti
             result.found[placement.gear] = (tuple(rotation), tuple(at))
         for index, mate in enumerate(motion.mates, 1):
             sw.find_mate(f"mate{index}", mate.name)
+        # W9c: each gear to take out found by its Name2 and its mates by name, as any on record (a miss is
+        # NotAsBuilt); its mates are the app's, never read as the user's.
+        for index, gone in enumerate(in_place.removed, 1):
+            sw.find_component(f"gone{index}", gone.component, lightweight_ok=True)
+            for number, name in enumerate(gone.mates, 1):
+                sw.find_mate(f"gone{index}_{number}", name)
+        recorded_names |= {name for gone in in_place.removed for name in gone.mates}
         others: List[str] = []
         result.mates = list(sw.mate_states(others=others))
         if others:
@@ -6278,6 +6790,16 @@ def _update_motion(sw: SolidWorks, parts: Sequence[DocumentValues], layout: Opti
             else:
                 unknown.append(state.name)
         modes_state: Optional[_ModesState] = None
+        if in_place.modes_removed and motion.configurations:
+            # W9c (C12): the mode showing is never deleted; read live, refused before anything else is read.
+            showing = str(sw.active_configuration())
+            gone_mode = next((m for m in in_place.modes_removed if on_in((m,), showing)), None)
+            if gone_mode is not None:
+                raise UserWorkRefused([UserProblem(PROBLEM_MODE_SHOWING, (
+                    f"Update SolidWorks would delete the configuration {showing} from {_file(assembly)}, and it is "
+                    "the configuration showing in SolidWorks, so nothing is changed; show another mode in "
+                    "SolidWorks and press Update SolidWorks again."), subjects=(showing,))] + judge_in_place(
+                    None, in_place, file=_file(assembly), revision=sw.revision, modes=motion.configurations))
         if motion.configurations:
             # W8: every flag and slide value read in every mode, no configuration shown; D10 is per configuration
             # there, so W5's this-configuration D10 list is not used (a per-mode mate off here is right off).
@@ -6285,6 +6807,8 @@ def _update_motion(sw: SolidWorks, parts: Sequence[DocumentValues], layout: Opti
                                        {m.name: f"mate{i}" for i, m in enumerate(motion.mates, 1)},
                                        edits if vouched_assembly else None)
             suppressed.clear()
+            result.extra_configurations = [c for c in result.extra_configurations
+                                           if not any(on_in((m,), c) for m in in_place.modes_removed)]
         elif vouched_assembly and suppressed:
             # W9a K11 (overturning D10 for a mate the user suppressed): the record says the assembly holds it on.
             for name in suppressed:
@@ -6372,11 +6896,20 @@ def _update_motion(sw: SolidWorks, parts: Sequence[DocumentValues], layout: Opti
                     _gear_mate_same(motion, mate)          # a coupling with no link is a fault, refused now
             _modes_senses(sw, assembly, motion, modes_state,
                           {m.name: f"mate{i}" for i, m in enumerate(motion.mates, 1)}, axes, origins)
-            if remakes or deferred or resensed:
-                name = (remakes[0][0] if remakes else deferred[0] if deferred else resensed[0])
+            if deferred:
+                raise BuildError(f"The gear mate {deferred[0]} in {_file(assembly)} would have to be made again, and "
+                                 "making a gear mate of a gearbox with modes again is not in this version of Gear "
+                                 "Generator, so nothing is changed; build the gearbox again.")
+            unsettled = in_place_gates(InPlace(), sw.revision, modes=True, remakes=True) \
+                if (remakes or resensed) else []
+            if unsettled:
+                # W9c lifts ruling 9.16 where findings.UPDATE_MAKES_MATES_WITH_MODES_ON_<year> is set (§8).
+                name = remakes[0][0] if remakes else resensed[0]
+                finding = unsettled[0][1]
                 raise BuildError(f"The gear mate {name} in {_file(assembly)} would have to be made again, and making a "
-                                 "gear mate of a gearbox with modes again is not in this version of Gear Generator, "
-                                 "so nothing is changed; build the gearbox again.")
+                                 "gear mate of a gearbox with modes again has not been measured on this SolidWorks "
+                                 f"(findings.{finding} is {getattr(findings, finding, None)!r}), so nothing is "
+                                 "changed; build the gearbox again.")
         possible = list(remakes) + [(name, *wanted_teeth[name]) for name in deferred
                                     if all(n != name for n, _, _ in remakes)]
         if possible:
@@ -6407,7 +6940,9 @@ def _update_motion(sw: SolidWorks, parts: Sequence[DocumentValues], layout: Opti
             edits[first_assembly_edit:] = [replace(e, unsaved=True) for e in edits[first_assembly_edit:]]
         user_plan = _user_check(sw, assembly, motion, placements, layout, result, unknown, features, edits,
                                 modes_state, parts=parts, documents=documents, holds=holds, axial=axial,
-                                suppressed=suppressed, remakes=remakes, deferred=deferred, fixed=fixed)
+                                suppressed=suppressed, remakes=remakes, deferred=deferred, fixed=fixed,
+                                in_place=in_place)
+        user_plan.judged |= {g.gear for g in in_place.added}
         user_plan.features_before, user_plan.features_read = list(features), features_read
     except ComponentGone as exc:      # a component or a mate renamed or deleted: only a new revision puts it back
         raise NotAsBuilt(str(exc), assembly) from None
@@ -6451,16 +6986,31 @@ def _update_motion(sw: SolidWorks, parts: Sequence[DocumentValues], layout: Opti
     stage = [_file(documents[0].path) if documents else _file(assembly)]
     touched = [False]        # a change was asked of the assembly (it is then marked modified, even if the call failed)
     try:
-        if not _update_values(sw, result, parts, layout, documents, holds, assembly, say, stage):
+        # W9c §4: new parts first, then the values and bands, then the assembly's own steps in place, then W8/W7's.
+        after_parts = (["every part's values"] if documents else []) + (["the bands"] if in_place.bands else []) + \
+            ["the assembly"]
+        stopped = bool(in_place.added) and _in_place_built(sw, result, in_place, exists, say, stage, after_parts)
+        if not stopped:
+            stopped = _update_values(sw, result, parts, layout, documents, holds, assembly, say, stage)
+        if not stopped and in_place.bands:
+            stopped = _in_place_bands(sw, result, in_place, documents, say, stage)
+        if not stopped:
             stage[0] = _file(assembly)
             say(Step(STAGE_PLACE, _stem(assembly)))
             sw.begin_build()
             try:
+                standing, motion_now, mated_now = placements, motion, mated
+                if in_place or (modes_state is not None and (remakes or resensed)):
+                    standing, motion_now = _in_place_assembly(
+                        sw, result, assembly, in_place, motion_after, everything, modes_state,
+                        remakes if modes_state is not None else (), resensed=resensed, respaced=respaced,
+                        user=user_plan, touched=touched, say=say)
+                    mated_now = [p.gear for p in standing if p.gear not in set(motion_after.fixed)]
                 if modes_state is not None:
-                    _modes_assembly(sw, result, assembly, placements, motion, mated, route, axial, say, touched,
-                                    modes_state, user=user_plan)
+                    _modes_assembly(sw, result, assembly, standing, motion_now, mated_now, route, axial, say, touched,
+                                    modes_state, user=user_plan, added=list(result.inserted))
                 else:
-                    _motion_assembly(sw, result, assembly, placements, motion, mated, route, suppressed, axial,
+                    _motion_assembly(sw, result, assembly, standing, motion_now, mated_now, route, suppressed, axial,
                                      turned_back, say, touched, remakes, sense_wrong=sense_wrong, deferred=deferred,
                                      wanted_teeth=wanted_teeth, resensed=resensed, respaced=respaced, user=user_plan)
             finally:

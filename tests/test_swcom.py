@@ -3258,3 +3258,44 @@ def test_no_code_but_swcom_reads_the_sessions_component_registry():
     offenders = [str(p.relative_to(root)) for folder in ("src", "probe") for p in sorted((root / folder).rglob("*.py"))
                  if p.name != "swcom.py" and pattern.search(p.read_text("utf-8"))]
     assert offenders == []
+
+
+def test_delete_component_selects_it_alone_deletes_it_and_judges_by_the_components_read_after(mated, monkeypatch):
+    """W9c, P1's route (findings.COMPONENT_DELETE_ROUTE_ON_<year>): ClearSelection2, Select4(False, null, False),
+    EditDelete (its None return not trusted), and the component's name read gone from GetComponents(True)."""
+    session, doc = mated
+    left = [MatedComponent(doc, "Gear_m1.5_N68-1"), MatedComponent(doc, "Gear_m1.5_N17-2")]
+    doc.GetComponents = lambda top: list(left)
+
+    def edit_delete():
+        doc.log.append(("EditDelete",))
+        left[:] = [c for c in left if c.Name2 not in {s.Name2 for s in doc.selected}]
+    doc.EditDelete = edit_delete
+    session.delete_component("gear3")
+    assert [e[0] for e in doc.log] == ["Select4", "EditDelete"]
+    assert doc.log[0] == ("Select4", "Gear_m1.5_N17-2", False, None, False)
+    assert [c.Name2 for c in left] == ["Gear_m1.5_N68-1"] and "gear3" not in session._handles
+    doc.EditDelete = lambda: doc.log.append(("EditDelete",))              # nothing taken: said, never assumed
+    session._handles["gear2"]["epoch"] = session._epoch
+    with pytest.raises(swcom.SolidWorksError, match="would not delete Gear_m1.5_N68-1 from R.SLDASM: it is still"):
+        session.delete_component("gear2")
+    monkeypatch.setattr(findings, "COMPONENT_DELETE_ROUTE_ON_2026", None)
+    with pytest.raises(swcom.SolidWorksError, match=r"COMPONENT_DELETE_ROUTE_ON_2026 is None\), so nothing was "):
+        session.delete_component("gear2")
+
+
+def test_suppress_feature_sets_the_parts_feature_this_configuration_and_reads_it_back(mated, monkeypatch):
+    """W9c, bands taken from a sleeve in place (ruling C8): FeatureByName, SetSuppression2, IsSuppressed2."""
+    session, doc = mated
+    relief = MateFeature(doc, "Relief", "ICE")
+    doc.FeatureByName = lambda name: relief if name == "Relief" else None
+    monkeypatch.setattr(findings, "FEATURE_SUPPRESS", 0)
+    monkeypatch.setattr(findings, "FEATURE_UNSUPPRESS", 1)
+    monkeypatch.setattr(findings, "THIS_CONFIGURATION", 1)
+    session.suppress_feature("Relief", True)
+    assert relief.suppressed and ("SetSuppression2", "Relief", 0, 1, None) in doc.log
+    with pytest.raises(swcom.SolidWorksError, match="has no feature Groove to suppress"):
+        session.suppress_feature("Groove", True)
+    doc.suppression_takes = False
+    with pytest.raises(swcom.SolidWorksError, match="would not turn back on Relief"):
+        session.suppress_feature("Relief", False)

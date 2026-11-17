@@ -2553,6 +2553,50 @@ class Session:
                 components.append(None)
         return MateInfo(name, kind, tuple(components))
 
+    # -- W9c: in place (W9C-INTERFACES.md §9). Each a wrapper over a member the app or a probe has measured.
+
+    def delete_component(self, handle: str) -> None:
+        """Take a kept component out of the build assembly, its mates with it (W9c; the W9c probes' P1 on 2026):
+        ``ClearSelection2``, ``IComponent2.Select4(False, null, False)``, ``IModelDoc2.EditDelete()`` — its return
+        is None, so it is judged by the read after: the component's name gone from the top-level components
+        (``GetComponents(True)``). The epoch is raised. Refused while ``findings.COMPONENT_DELETE_ROUTE_ON_<year>`` is
+        not that route."""
+        year = release_year(self.revision[0]) if self.revision else None
+        route = getattr(findings, f"COMPONENT_DELETE_ROUTE_ON_{year}", None)
+        if route != "select4-editdelete":
+            raise SolidWorksError(f"Deleting a component has not been settled on this SolidWorks "
+                                  f"(findings.COMPONENT_DELETE_ROUTE_ON_{year} is {route!r}), so nothing was deleted.")
+        name = self._component_name(handle)
+        component = self._component(handle)
+        doc = self._doc()
+        call(doc, "ClearSelection2", True)
+        if not call(component, "Select4", False, _null_dispatch(), False):
+            raise SolidWorksError(f"SolidWorks would not select {name} to delete it, so nothing was deleted.")
+        _guarded("EditDelete", lambda: doc.EditDelete())
+        call(doc, "ClearSelection2", True)
+        self._handles.pop(handle, None)
+        self._raise_epoch()               # every other handle fetched again by name: kept within an epoch, as P1 read
+        if any(str(call(c, "Name2")) == name for c in list(call(doc, "GetComponents", True) or ())):
+            raise SolidWorksError(f"SolidWorks would not delete {name} from {call(doc, 'GetTitle')}: it is still "
+                                  "there.")
+
+    def suppress_feature(self, name: str, suppressed: bool) -> None:
+        """Suppress or unsuppress a feature of the build part by name (W9c, bands taken from a sleeve in place, ruling
+        C8): ``FeatureByName``, ``IFeature.SetSuppression2(FEATURE_SUPPRESS or FEATURE_UNSUPPRESS, THIS_CONFIGURATION,
+        None)`` — the member :meth:`set_mate_suppressed` calls on a mate — then ``IsSuppressed2`` read back."""
+        what = "Suppressing a part's feature" if suppressed else "Turning a part's suppressed feature back on"
+        action = self._settled("FEATURE_SUPPRESS" if suppressed else "FEATURE_UNSUPPRESS", what)
+        configuration = self._settled("THIS_CONFIGURATION", what)
+        doc = self._doc()
+        feature = call(doc, "FeatureByName", name)
+        if feature is None:
+            raise SolidWorksError(f"{call(doc, 'GetTitle')} has no feature {name} to "
+                                  f"{'suppress' if suppressed else 'turn back on'}.")
+        call(feature, "SetSuppression2", action, configuration, None)
+        if self._is_suppressed(feature) != bool(suppressed):
+            raise SolidWorksError(f"SolidWorks would not {'suppress' if suppressed else 'turn back on'} {name} in "
+                                  f"{call(doc, 'GetTitle')}.")
+
     def root_component(self) -> Optional[str]:
         """The ``Name2`` of the build assembly's active configuration's root component (``GetActiveConfiguration`` →
         ``GetRootComponent3(True)`` → ``Name2``, :data:`COMPONENT_FIND_ROUTES`' third route's first two calls), or None
