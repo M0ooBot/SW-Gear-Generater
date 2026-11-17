@@ -895,3 +895,13 @@ def test_the_round_trip_classify_question_build_with_carry_finish_record_footer(
     assert line in footer.text, footer.text
     store.clear_saved(record, mtime=lambda p: 1763400900.0)
     assert line not in ui_text.workbook_footer(a, record=record, digest="d9", folder="C:\\Out\\").text
+
+
+def test_once_pattern_instances_are_read_the_result_says_each_and_the_standing_list_drops_the_clause(monkeypatch):
+    monkeypatch.setattr(findings, "PATTERN_INSTANCE_READ_ON_2026", True)
+    work = _work(components=("Sprocket-1", "Sprocket-2"), mates=1)
+    work.components[1] = replace(work.components[1], pattern_instance=True)
+    said = _status(_done(work), revision=(34, 0, 0))
+    assert ui_text.CARRY_STANDING_NO_PATTERN in said and ui_text.CARRY_STANDING not in said
+    assert "Your Sprocket-2 was an instance of a pattern of yours, and comes over as a component of its own." in said
+    assert ui_text.CARRY_STANDING in _status(_done(work))          # the version not known: the clause stays

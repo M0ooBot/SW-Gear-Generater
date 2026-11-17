@@ -5352,7 +5352,7 @@ def carry_sentence(fore, again) -> str:
     texts += _reuse_advice(fore, parts, again)
     texts += _features_kept(stays, name)
     texts.append(_not_open_clause(fore, old))
-    if entry.components and fore.first and not fore.states_read:
+    if (plan.components if plan is not None else entry.components) and fore.first and not fore.states_read:
         texts.append(f"Your components take, in every mode of {name}, the state they have in the mode {old} shows "
                      f"when you press: whether you suppressed one in another mode cannot be read without changing "
                      f"{old}.")
@@ -5427,9 +5427,15 @@ def _modes_said(fore, name: str, old: str) -> List[str]:
     return out
 
 
-def _standing() -> str:
-    """The standing list of what is not carried as it was; the pattern clause leaves it once
-    ``PATTERN_INSTANCE_READ`` is set and the per-instance sentence says it (D12)."""
+def _standing(revision: Sequence[int] = ()) -> str:
+    """The standing list of what is not carried as it was. In the result the pattern clause leaves it once
+    ``PATTERN_INSTANCE_READ`` is set on the SolidWorks the job ran on, and the per-instance sentence says it (D12); the
+    question cannot know which component is an instance, so it keeps the clause."""
+    if revision:
+        from . import findings, swcom
+        year = swcom.release_year(int(revision[0]))
+        if getattr(findings, f"PATTERN_INSTANCE_READ_ON_{year}", None) is True:
+            return CARRY_STANDING_NO_PATTERN
     return CARRY_STANDING
 
 
@@ -5534,7 +5540,14 @@ def carried_status(result, again, old_path: str = "", anchors: Optional[Mapping[
         texts.append(f"Carrying your work stopped: {done.stopped.rstrip('.')}{tail}; what was carried before it is in "
                      f"{name}, unsaved, and {name} as built is saved.")
     if done.inserted or done.remade:
-        texts.append(_standing())
+        texts.append(_standing(revision))
+        if _standing(revision) == CARRY_STANDING_NO_PATTERN:
+            instances = [new_of[c.name] for c in work.components if c.name in new_of and c.pattern_instance]
+            if instances:
+                one = len(instances) == 1
+                own = "a component of its own" if one else "components of their own"
+                texts.append(f"Your {_and(instances)} {'was an instance' if one else 'were instances'} of a pattern of "
+                             f"yours, and {'comes' if one else 'come'} over as {own}.")
         if any(c.kind == "part" for c in work.components if c.name in new_of):
             texts.append(CARRY_IN_CONTEXT.format(old=old))
     if done.unsaved and not done.stopped:
