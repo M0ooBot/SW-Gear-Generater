@@ -6740,10 +6740,15 @@ def _read_user_work(sw: SolidWorks, motion: MotionUpdate, placements: Sequence[P
         else:
             on = () if state is None or state.suppressed else ("",)
         touches = tuple(owner(c) for c in info.components)
+        # W9d (D5): each entity's kind and feature beside what it is on, when the session read them.
+        kinds = tuple(getattr(info, "entities", ()) or ())
+        entities = tuple((what, who, kinds[i][0], kinds[i][1]) if i < len(kinds) else (what, who, ENTITY_UNREAD, "")
+                         for i, (what, who) in enumerate(touches)) if kinds else ()
         work.mates.append(UserMate(name, _mate_kind(info.type), info.type, touches, on,
                                    state.code if state is not None else 0,
                                    state.warning if state is not None else True,
-                                   whole=info.whole and all(what != UNREAD_ENTITY for what, _ in touches)))
+                                   whole=info.whole and all(what != UNREAD_ENTITY for what, _ in touches),
+                                   entities=entities))
     return work
 
 

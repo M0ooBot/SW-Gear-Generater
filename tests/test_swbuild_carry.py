@@ -385,3 +385,32 @@ def test_the_selection_order_follows_the_ledger():
     assert not swbuild.selection_reversed("distance", (origin, plane))
     assert not swbuild.selection_reversed("gear", (axis, axis))
     assert not swbuild.selection_reversed("coincident", (plane, plane))
+
+
+# -- UserMate.entities: every Update's inventory keeps each entity's kind and feature (D5) ----------------------------
+
+
+def test_an_updates_inventory_keeps_each_mates_entity_kinds_and_features():
+    from test_swbuild import IDENTITY9, T_ASM, W, _built_train
+    from test_swbuild_user_work import _moving
+
+    fake = _built_train()
+    fake.read_entity_kinds = True
+    fake.user_component(T_ASM, "Housing-1", W + "Housing.SLDPRT", (IDENTITY9, (0.0, 0.0, -40.0)), fixed=True)
+    fake.user_component(T_ASM, "Chain-1", W + "Sprocket.SLDPRT", (IDENTITY9, (0.0, 0.0, 60.0)))
+    fake.user_mate(T_ASM, "Coincident7", kind="coincident", a=("Chain-1", "face:3"), b=("Housing-1", "plane1"))
+    fake.user_mate(T_ASM, "Concentric8", kind="coincident", a=("Chain-1", "Gear Axis"), b=("layout-1", "S1 Axis"))
+    fake.user_mate(T_ASM, "Distance9", kind="distance", a=("Housing-1", "origin"), b=("asm", "plane2"))
+    fake.user_lock(T_ASM, "Lock1", "Housing-1", "Chain-1")
+    result = _moving(fake)
+    assert result.ok, result.log_lines()
+    assert {m.name: m.entities for m in result.user_work.mates} == {
+        "Coincident7": (("user", "Chain-1", "face", ""), ("user", "Housing-1", "plane", "plane1")),
+        "Concentric8": (("user", "Chain-1", "feature", "Gear Axis"), ("layout", "", "feature", "S1 Axis")),
+        "Distance9": (("user", "Housing-1", "origin", "origin"), ("assembly", "", "plane", "plane2")),
+        "Lock1": (("user", "Housing-1", "whole", ""), ("user", "Chain-1", "whole", ""))}
+    # A session that gives no kinds (an inventory read before W9d): no entities, as before.
+    fake = _built_train()
+    fake.user_component(T_ASM, "Housing-1", W + "Housing.SLDPRT", (IDENTITY9, (0.0, 0.0, -40.0)), fixed=True)
+    fake.user_mate(T_ASM, "Distance9", kind="distance", a=("Housing-1", "plane2"), b=("asm", "plane2"))
+    assert _moving(fake).user_work.mates[0].entities == ()

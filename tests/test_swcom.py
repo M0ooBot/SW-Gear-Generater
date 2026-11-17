@@ -1680,9 +1680,19 @@ def test_mate_info_reads_the_type_and_each_entitys_component_the_assemblys_own_a
     doc.mates = [mate, plane]
     session.find_mate("other1", "Lock3")
     session.find_mate("other2", "Coincident7")
+    # W9d (D5): each entity's kind by ReferenceType2; one that will not say is unread, never guessed.
+    unread = (("unread", ""), ("unread", ""))
     assert session.mate_info("other1") == swcom.MateInfo("Lock3", findings.MATE_LOCK,
-                                                         ("Gear_m1.5_N17-1", "Sub-1/Sprocket-1"))
-    assert session.mate_info("other2") == swcom.MateInfo("Coincident7", 0, ("Housing-1", ""))
+                                                         ("Gear_m1.5_N17-1", "Sub-1/Sprocket-1"), entities=unread)
+    assert session.mate_info("other2") == swcom.MateInfo("Coincident7", 0, ("Housing-1", ""), entities=unread)
+    for entity, select_type in zip(mate.GetSpecificFeature2.entities, (20, 2)):
+        entity.ReferenceType2 = select_type
+    plane.GetSpecificFeature2.entities[0].ReferenceType2 = 6
+    plane.GetSpecificFeature2.entities[1].ReferenceType2 = 99
+    assert session.mate_info("other1").entities == (("whole", ""), ("face", ""))
+    assert session.mate_info("other2").entities == (("origin", "origin"), ("unread", ""))
+    assert [swcom.entity_kind(v) for v in (1, 3, 4, 5, 0, True, None)] == [
+        "edge", "vertex", "feature", "feature", "whole", "unread", "unread"]
     assert not any(e[0] in ("SetSuppression2", "Select2", "AddMate5") for e in doc.log)
 
 

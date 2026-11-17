@@ -343,6 +343,9 @@ class FakeSolidWorks:
         # session's root read (root_component) answers nothing.
         self.assembly_entity = "none"
         self.root_unread = False
+        # W9d (D5): mate_info gives each entity's kind and feature (Session.mate_info reads ReferenceType2); False, the
+        # read before W9d (no kinds), which the suites before W9d were written against.
+        self.read_entity_kinds = False
         # W9c (W9C-INTERFACES §4): each open document keeps its own configurations, as SolidWorks does, so a part built
         # or opened in the middle of an Update leaves the assembly's as they were (``memory_configs``, lower-cased
         # path -> (configs, active, template's, frames_by)). ``suppressed_features``: (lower-cased path, feature) ->
@@ -1068,7 +1071,24 @@ class FakeSolidWorks:
         if unread == "entity":
             ends = (ends[0], None)
         kind = swcom.UNREAD if unread == "type" else self.MATE_TYPES.get(mate.kind, 7)
-        return swcom.MateInfo(mate.name, kind, ends)
+        kinds = tuple(self._entity_kind(mate, end) for end in (mate.a, mate.b))
+        return swcom.MateInfo(mate.name, kind, ends, entities=kinds if self.read_entity_kinds else ())
+
+    def _entity_kind(self, mate, end):
+        """W9d: an entity's (kind, feature) as ``Session.mate_info`` reads it from ReferenceType2: a lock's end whole,
+        ``planeN`` a base plane by order, ``origin``, ``face:<id>`` / ``edge:<id>`` / ``vertex:<id>``, else a reference
+        feature by name."""
+        target = end[1]
+        if mate.kind == "lock" or not target:
+            return ("whole", "")
+        if target.startswith("plane") and target[5:].isdigit():
+            return ("plane", target)
+        if target == "origin":
+            return ("origin", "origin")
+        kind, _, _ = target.partition(":")
+        if kind in ("face", "edge", "vertex"):
+            return (kind, "")
+        return ("feature", target)
 
     def _root_name(self):
         """The root component's Name2 as SolidWorks gives it: the open assembly's title, without its extension."""

@@ -65,3 +65,10 @@ not is kept below as the work goes.
   depends on what is open at the press, which an `OldWork` does not hold: the worker's `unread` sentence says it.
 - **The states route** is a gate (`STEP_CARRY_STATES`) when the work has two or more modes, a component is carried and
   `OldWork.states_route` is "" (it is not one when the read-only show read them).
+- **`UserMate.entities` is read by `mate_info`, not by a new call**: `swcom.MateInfo` gains `entities` (per entity
+  `(kind, feature)`, defaulted `()`), read inside `Session.mate_info` from `ReferenceType2` and the reference's name
+  (a base plane by tree order among the part's first three `RefPlane` features). A separate `mate_definition` call in
+  `_read_user_work` would have changed the calls every Update and W9a's old-assembly read make (W9a's tests pin
+  them). The fake gives the kinds only with **`FakeSolidWorks.read_entity_kinds = True`** (default False, so every
+  suite written before W9d, B's `test_workbook_carry` among them, reads as before); **B's round trip should set it**.
+  `tests/test_swcom.py`'s `mate_info` test (owned by neither package) gains the kinds read; nothing else there changed.

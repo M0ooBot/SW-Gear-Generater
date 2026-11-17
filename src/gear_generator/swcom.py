@@ -914,6 +914,18 @@ class ComponentInfo:
     code: int = 0
 
 
+# swSelectType_e as IMateEntity2.ReferenceType2 reads it (swconst.tlb; the W9d probe's table) -> W9d's entity kind.
+ENTITY_KIND_OF_SELECT_TYPE = {2: "face", 1: "edge", 3: "vertex", 5: "feature", 4: "feature", 20: "whole", 0: "whole",
+                              6: "origin"}
+
+
+def entity_kind(select_type: object) -> str:
+    """W9D-INTERFACES §2.2: a mate entity's kind by its ``ReferenceType2``; ``"unread"`` for anything else."""
+    if isinstance(select_type, bool) or not isinstance(select_type, (int, float)):
+        return "unread"
+    return ENTITY_KIND_OF_SELECT_TYPE.get(int(select_type), "unread")
+
+
 @dataclass(frozen=True)
 class MateInfo:
     """What a mate joins (:meth:`Session.mate_info`): its ``IMate2.Type`` (``swMateType_e``, ``UNREAD`` when not
@@ -928,6 +940,11 @@ class MateInfo:
     # not the whole list. An entity that would not answer is ``None`` in ``components`` (never ``""``, the
     # assembly's own), and an unread type is ``UNREAD``.
     counted: bool = True
+    # W9d (W9D-INTERFACES §2.2, D5): per entity in the same order, ``(kind, feature)``: its kind by
+    # ``IMateEntity2.ReferenceType2`` (:func:`entity_kind`: "whole", "feature", "plane", "origin", "face", "edge",
+    # "vertex", "unread") and, for a reference feature, its name (a base plane by tree order, ``"plane<n>"``; an origin
+    # ``"origin"``); ``()`` where not read.
+    entities: Tuple[Tuple[str, str], ...] = ()
 
     @property
     def whole(self) -> bool:
@@ -2538,6 +2555,7 @@ class Session:
         if not isinstance(count, (int, float)) or isinstance(count, bool):
             return MateInfo(name, kind, (), counted=False)
         components: List[Optional[str]] = []
+        kinds: List[Tuple[str, str]] = []
         for index in range(int(count)):
             try:
                 entity = call(mate, "MateEntity", index)
@@ -2545,13 +2563,42 @@ class Session:
                 entity = None
             if entity is None:
                 components.append(None)
+                kinds.append(("unread", ""))
                 continue
+            component = None
             try:
                 component = _read(entity, "ReferenceComponent")
                 components.append("" if component is None else str(call(component, "Name2")))
             except Exception:  # noqa: BLE001
                 components.append(None)
-        return MateInfo(name, kind, tuple(components))
+            kinds.append(self._entity_kind_read(entity, component))
+        return MateInfo(name, kind, tuple(components), entities=tuple(kinds))
+
+    def _entity_kind_read(self, entity: Any, component: Any) -> Tuple[str, str]:
+        """W9d (D5; UNMEASURED as written here): an entity's kind by ``ReferenceType2`` (read by S5 (a) and m1, marking
+        nothing on both versions) and a reference feature's name (``IMateEntity2.Reference`` → ``Name``, as S5 read
+        it), a base plane given by tree order (``plane<n>`` among the first three ``RefPlane`` features of the
+        component's part, or of the assembly for its own). What will not answer is ``("unread", "")``."""
+        try:
+            kind = entity_kind(_read(entity, "ReferenceType2"))
+        except Exception:  # noqa: BLE001 - said as unread
+            return "unread", ""
+        if kind == "origin":
+            return kind, "origin"
+        if kind != "feature":
+            return kind, ""
+        try:
+            name = str(_read(_read(entity, "Reference"), "Name"))
+        except Exception:  # noqa: BLE001
+            return "unread", ""
+        try:
+            doc = call(component, "GetModelDoc2") if component is not None else self._doc()
+            planes = [str(call(p, "Name")) for p in self._planes(doc)[:3]] if doc is not None else []
+        except Exception:  # noqa: BLE001 - a plane not told by order is unread, never named by its English name
+            return "unread", ""
+        if name in planes:
+            return "plane", f"plane{planes.index(name) + 1}"
+        return "feature", name
 
     # -- W9c: in place (W9C-INTERFACES.md §9). Each a wrapper over a member the app or a probe has measured.
 
