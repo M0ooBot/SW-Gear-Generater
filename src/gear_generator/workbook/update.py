@@ -2004,7 +2004,10 @@ def _component_kind(path: str) -> str:
 
 
 def recorded_user_work(entry: store.UserWorkEntry) -> swbuild.UserWork:
-    """The record's inventory back as the worker's :class:`swbuild.UserWork`, for its pure judgement."""
+    """The record's inventory back as the worker's :class:`swbuild.UserWork`, for its pure judgement only. Each
+    component's ``path`` is made up (its name with its kind's extension, ``Sprocket-1.SLDPRT``), since the record
+    keeps no path of the user's: right for the judgement's one use of it (the sub-assembly branch reads the
+    extension), and never a file to open."""
     return swbuild.UserWork(
         read_at=entry.read_at,
         # The record keeps no user file path, only its kind, so each component is given a path by its name with the
@@ -2047,11 +2050,14 @@ class UserWorkAhead:
     was made from; otherwise the prediction by the worker's own judgement (``swbuild.judge_user_work`` on the
     inventory, no tie read): ``carried`` gear -> [(component, the user's locks)], ``problems`` the refusals it
     foresees, ``unread_ties`` (gears, user mates) of each train SolidWorks will be asked about at the press.
-    ``followed``: the user's features in parts this press changes, which SolidWorks rebuilds after the app's."""
+    ``followed``: the user's features in parts this press changes, which SolidWorks rebuilds after the app's.
+    ``still``: after a refusal the workbook has changed since, each recorded K11 value the workbook still does not
+    ask as SolidWorks held it, with what the workbook asks now (package B's re-check R1): that refusal stands."""
 
     entry: store.UserWorkEntry
     refused: Tuple[store.UserProblemEntry, ...] = ()
     changed_since: bool = False
+    still: Tuple[Tuple[store.ValueEditEntry, str], ...] = ()
     carried: Tuple[Tuple[str, Tuple[Tuple[str, Tuple[str, ...]], ...]], ...] = ()
     problems: Tuple[swbuild.UserProblem, ...] = ()
     unread_ties: Tuple[Tuple[Tuple[str, ...], Tuple[str, ...]], ...] = ()
@@ -2128,21 +2134,67 @@ def user_work_ahead(plan: Optional[UpdatePlan], record: Optional[LinkRecord],
     changed_since = bool(refused) and bool(digest) and bool(entry.digest) and entry.digest != digest
     if refused and not changed_since:
         return UserWorkAhead(entry, refused=refused, followed=followed)
+    still: Tuple[Tuple[store.ValueEditEntry, str], ...] = ()
+    if changed_since:
+        still = tuple((v, now) for p in refused if p.kind == swbuild.PROBLEM_VALUE for v in p.values
+                      for now in [_asked_now(plan, v)] if now is not None)
     # A press that went ahead, or a refused one the workbook has changed since (the coordinator's ruling on package
     # B's review, point 5): the prediction, on the inventory as last read.
     m = plan.motion
     if m is None:                                    # W4's static path reads the user's features only
-        return UserWorkAhead(entry, refused=refused, changed_since=changed_since, followed=followed)
+        return UserWorkAhead(entry, refused=refused, changed_since=changed_since, still=still, followed=followed)
     mated, trains = _judged_trains(plan)
     judgement = swbuild.judge_user_work(
         work, tuple(m.configurations) or ("",), bodies_put(plan), file=os.path.basename(plan.assembly.replace("\\",
                                                                                                              "/")),
         trains=trains, mated=mated, read_tie=None, branches=swbuild.user_carry_branches(m, plan.placements),
         revision=tuple(entry.revision))
-    return UserWorkAhead(entry, refused=refused, changed_since=changed_since,
+    return UserWorkAhead(entry, refused=refused, changed_since=changed_since, still=still,
                          carried=tuple((g, tuple(held)) for g, held in judgement.carried.items()),
                          problems=tuple(judgement.problems), unread_ties=tuple(judgement.unread_ties),
                          followed=followed)
+
+
+def _same_value(live: str, wanted: str) -> bool:
+    """Whether two values K11 said, as text, are the same: as numbers where both are, else as text without spaces."""
+    a, b = swbuild._literal(live), swbuild._literal(wanted)
+    if a is not None and b is not None:
+        return abs(a - b) <= 1e-9 * max(1.0, abs(a), abs(b))
+    return swbuild._squash(str(live)) == swbuild._squash(str(wanted))
+
+
+def _asked_now(plan: UpdatePlan, value: store.ValueEditEntry) -> Optional[str]:
+    """R1 of package B's re-check: what the workbook now asks for a K11 value a press refused on, as text, when it
+    still is not what SolidWorks held (``value.live``), so that refusal stands; None when the workbook now asks the
+    value SolidWorks held, or no longer sets it. A part's, the layout's or a carrier's global is judged against the
+    plan's globals; on the assembly, a Face Z, a slide's value in its mode and a mate's flag in its mode against the
+    plan's motion; anything this cannot find stands (the press reads it again)."""
+    def named(path: str) -> bool:
+        return os.path.basename(str(path).replace("\\", "/")).lower() == value.document.lower()
+    documents = [(p.path, p.variables) for p in plan.parts]
+    documents += [(d.path, d.variables) for d in ([plan.layout] if plan.layout is not None else []) + list(plan.carriers)]
+    m = plan.motion
+    if m is not None and plan.assembly and named(plan.assembly):
+        documents.append((plan.assembly, tuple(g for _, g in m.face_globals)))
+        for name, configuration, wanted in m.slide_values:
+            if name == value.name and configuration.casefold() == value.mode.casefold():
+                now = swbuild._number_text(abs(float(wanted)), str(wanted))
+                return None if _same_value(value.live, now) else now
+        for name, on in m.on_sets:
+            if name == value.name and value.mode:
+                now = "on" if any(c.casefold() == value.mode.casefold() for c in on) else "suppressed"
+                return None if now == value.live else now
+    for path, variables in documents:
+        if not named(path):
+            continue
+        variable = next((v for v in variables if v.name == value.name), None)
+        if variable is None:
+            return None                              # the workbook no longer sets it
+        expression = variable.expression_for(equations.DEGREES)
+        literal = swbuild._literal(expression)
+        now = swbuild._number_text(literal, expression)
+        return None if _same_value(value.live, now) else now
+    return value.wanted or "another value"
 
 
 @dataclass(frozen=True)

@@ -4229,6 +4229,11 @@ def _mate_words(names: Sequence[str], other: bool = False) -> List[str]:
     return [_plural(len(names), "other mate" if other else "mate")] if names else []
 
 
+def _stem_of_file(name: str) -> str:
+    """``Gear_m1.25_N17.SLDPRT`` -> ``Gear_m1.25_N17``."""
+    return _stem(name)
+
+
 def _feature_words(features) -> List[str]:
     """*Keyway in Gear_m1.25_N17*, or *Keyway and Groove in Gear_m1.25_N17* for several in one part, for
     ``swbuild.UserFeature`` / ``store.UserFeatureEntry`` items, parts in the order first met."""
@@ -4236,6 +4241,15 @@ def _feature_words(features) -> List[str]:
     for f in features:
         by.setdefault(_stem(f.path), []).append(f.name)
     return [f"{_and(names)} in {stem}" for stem, names in by.items()]
+
+
+def _features_list(groups: Sequence[str]) -> str:
+    """Feature groups by part (:func:`_feature_words`) in one list: each part's own *and* kept apart from the list's,
+    by commas and a last *, and* when there are several parts."""
+    groups = list(groups)
+    if len(groups) <= 1:
+        return "".join(groups)
+    return ", ".join(groups[:-1]) + ", and " + groups[-1]
 
 
 def _clauses(clauses: Sequence[str]) -> str:
@@ -4246,14 +4260,20 @@ def _clauses(clauses: Sequence[str]) -> str:
     return " and ".join(clauses)
 
 
-def _prediction(ahead, at: str) -> Tuple[str, bool]:
+def _prediction(ahead, at: str, known: Sequence[str] = ()) -> Tuple[str, bool]:
     """What the worker's judgement on the recorded inventory says the next press does with it (or, red, that it
-    would refuse), with the time read; ``("", True)`` with nothing to say."""
+    would refuse), with the time read; ``("", True)`` with nothing to say. ``known``: refusal sentences already said
+    (a recorded refusal), said again only as *for the same reason*, never in full twice."""
     entry = ahead.entry
     if ahead.problems:
-        said = " ".join(_sentence(p.sentence) for p in ahead.problems if p.sentence)
-        return (f"As read at {at}, Update SolidWorks would stop before changing anything: {said} It reads your work "
-                "in SolidWorks again when pressed."), False
+        new = [p.sentence for p in ahead.problems if p.sentence and p.sentence not in known]
+        again = any(p.sentence in known for p in ahead.problems)
+        if not new:
+            return f"As read at {at}, the next press would stop for the same reason.", False
+        said = " ".join(_sentence(s) for s in new)
+        also = " for the same reason and" if again else ""
+        return (f"As read at {at}, the next press would stop{also} before changing anything: {said} It reads your "
+                "work in SolidWorks again when pressed."), False
     clauses: List[str] = []
     followed = list(ahead.followed)
     if followed:
@@ -4270,20 +4290,30 @@ def _prediction(ahead, at: str) -> Tuple[str, bool]:
                        f"{'holds' if len(locks) == 1 else 'hold'} {'it' if len(components) == 1 else 'them'} to")
     touched = {m.name: [n for w, n in m.touches if w == "app"] for m in entry.mates}
     for bodies, mates in ahead.unread_ties:
-        # The train is named by the first of its bodies the user's mates are on, as the worker's tie sentence is.
+        # The train is named by the first of its bodies the user's mates are on, as the worker's tie sentence is;
+        # its mates by name up to USER_NAMED, else counted (the demonstration's footer listed eight).
         on = [b for b in bodies if any(b in touched.get(m, ()) for m in mates)] or list(bodies)
         said += list(mates)
-        clauses.append(f"asks SolidWorks, when pressed, whether your {_and(mates)} "
-                       f"{'leaves' if len(mates) == 1 else 'leave'} {_and(_bodies(on[:1], {}))}'s train free to turn "
-                       "(if not, it changes nothing and names the mates to suppress)")
+        train = f"{_and(_bodies(on[:1], {}))}'s train"
+        whose = (f"your {_and(mates)} {'leaves' if len(mates) == 1 else 'leave'} {train}" if len(mates) <= USER_NAMED
+                 else f"the {len(mates)} mates of yours on {train} leave it")
+        clauses.append(f"asks SolidWorks, when pressed, whether {whose} free to turn (if not, it changes nothing and "
+                       "names the mates to suppress)")
     others = [m.name for m in entry.mates if m.name not in said]
-    rest = _yours([c.name for c in entry.components if c.name not in carried], 0,
-                  _mate_words(others, other=bool(said))
-                  + _feature_words([f for f in entry.features
-                                    if not any(f.path == g.path and f.name == g.name for g in followed)]))
-    if rest:
-        one = len(rest) == 1 and len(others) < 2
-        clauses.append(f"leaves your {_and(rest)} {'as it is' if one else 'as they are'}")
+    rest = _yours([c.name for c in entry.components if c.name not in carried], 0, _mate_words(others, other=bool(said)))
+    left = _feature_words([f for f in entry.features if not any(f.path == g.path and f.name == g.name for g in followed)])
+    if left and not any(" and " in group for group in left):
+        rest, left = rest + left, []                 # each part's one feature: one list
+    if rest or left:
+        # Several features of one part in a clause of their own after the rest (re-check R2: never "… 8 mates and
+        # Keyway and Groove in …").
+        one = len(rest) + len(left) == 1 and len(others) < 2
+        if rest and left:
+            clauses.append(f"leaves your {_and(rest)} as {'it is' if len(rest) == 1 and len(others) < 2 else 'they are'}"
+                           f", and your {_features_list(left)} too")
+        else:
+            clauses.append(f"leaves your {_features_list(left) if left else _and(rest)} "
+                           f"{'as it is' if one and not (left and ' and ' in left[0]) else 'as they are'}")
     text = f"As read at {at}, Update SolidWorks {_clauses(clauses)}." if clauses else ""
     work_errors = ([m.name for m in entry.mates if m.code and m.code != -1]
                    + [c.name for c in entry.components if c.code and c.code != -1]
@@ -4311,14 +4341,23 @@ def user_work_line(ahead) -> Tuple[str, bool]:
         return "", True
     at = read_time(ahead.entry.read_at)
     if ahead.refused:
-        said = " ".join(_sentence(p.sentence) for p in ahead.refused if p.sentence)
+        recorded = [p.sentence for p in ahead.refused if p.sentence]
+        said = " ".join(_sentence(s) for s in recorded)
         text = f"Update SolidWorks refused at {at}, before changing anything: {said}"
         if not ahead.changed_since:
             return (text + " The next press reads your work in SolidWorks again, and refuses again unless that has "
                            "been dealt with."), False
-        text += " The workbook has changed since, and the next press reads your work in SolidWorks again."
-        then, ok = _prediction(ahead, at)
-        return _joined(text, then), ok
+        still = list(getattr(ahead, "still", ()) or ())
+        if still:
+            # Re-check R1: a value the user typed in SolidWorks that the changed workbook still does not ask.
+            asks = _and(f"{now} for {v.name} in {_stem_of_file(v.document)}"
+                        + (f" in {v.mode}" if v.mode else "") + f", where SolidWorks held {v.live}" for v, now in still)
+            text += (f" The workbook has changed since, but it still asks {asks}, so that refusal stands unless "
+                     f"{'it has' if len(still) == 1 else 'they have'} been set in SolidWorks since.")
+        else:
+            text += " The workbook has changed since, and the next press reads your work in SolidWorks again."
+        then, ok = _prediction(ahead, at, known=recorded)
+        return _joined(text, then), ok and not still
     return _prediction(ahead, at)
 
 
@@ -4446,14 +4485,17 @@ def _user_after(update, result) -> List[str]:
         if mode and mode not in modes:
             modes.append(mode)
     for already in (True, False):
-        parts = [f"{name} in {_and(modes)}" if modes else name for name, modes in named.items()
-                 if (name in before) == already]
-        if not parts:
+        names = [name for name in named if (name in before) == already]
+        if not names:
             continue
-        one = len(parts) == 1
+        parts = [f"{name} in {_and(named[name])}" if named[name] else name for name in names]
+        one = len(names) == 1
         if already:
-            out.append(f"Your {_and(parts)} {'was' if one else 'were'} in error in SolidWorks before this Update "
-                       f"changed anything, and still {'is' if one else 'are'}.")
+            # Re-check R3: before the change only the mode showing was read (W9A-INTERFACES §5), so that is what is
+            # said of before, and the modes only of after.
+            out.append(f"Your {_and(names)} {'was' if one else 'were'} in error in SolidWorks in the mode showing "
+                       f"before this Update changed anything; after it, {_and(parts)} {'is' if one else 'are'} in "
+                       "error.")
         else:
             out.append(f"Your {_and(parts)} {'is' if one else 'are'} in error in SolidWorks now.")
     return out

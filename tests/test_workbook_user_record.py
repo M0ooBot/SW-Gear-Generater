@@ -179,7 +179,7 @@ def test_the_inventory_reaches_the_footer_before_the_press_with_its_time(on_fake
     # The same press on a SolidWorks where that branch is not measured: the footer foresees the worker's refusal.
     monkeypatch.setattr(findings, "USER_MATE_PUT_NO_CARRIER_ON_2026", None)
     footer, _ = _footer(record, moved)
-    assert f"As read at {at}, Update SolidWorks would stop before changing anything: Update SolidWorks would put " \
+    assert f"As read at {at}, the next press would stop before changing anything: Update SolidWorks would put " \
            "your Sprocket-1 with G1" in footer.text and not footer.ok and footer.update_enabled
     # A quiet press puts nothing: the user's work is left as it is.
     footer, upd = _footer(record, reducer())
@@ -365,7 +365,8 @@ def test_after_update_the_sentence_says_what_went_with_its_gear_and_what_of_the_
     result.user_work.mates = [swbuild.UserMate(m.name, m.kind, m.type, m.touches, m.on, 7, True, m.whole)
                               for m in result.user_work.mates]          # Lock3 in error before anything changed
     text, ok = ui_text.gearbox_update_status(plan, result, finished.dragged, finished=finished)
-    assert "Your Lock3 was in error in SolidWorks before this Update changed anything, and still is." in text
+    assert ("Your Lock3 was in error in SolidWorks in the mode showing before this Update changed anything; after it, "
+            "Lock3 is in error.") in text
 
 
 def test_a_carried_component_loaded_lightweight_is_foreseen_refused_as_the_press_refuses_it(on_fake, monkeypatch):
@@ -381,7 +382,8 @@ def test_a_carried_component_loaded_lightweight_is_foreseen_refused_as_the_press
     assert [(c.name, c.kind, c.state) for c in record.gearbox.user_work.components] == [("Sprocket-1", "part", 1)]
     moved = gears(reducer(), G4=dict(at="30"))
     footer, upd = _footer(record, moved)
-    assert "would stop before changing anything: Update SolidWorks would put your Sprocket-1 with G1, which your " \
+    assert "the next press would stop before changing anything: Update SolidWorks would put your Sprocket-1 with G1, "\
+           "which your " \
            "mates hold it to, and Sprocket-1 is loaded lightweight" in footer.text and not footer.ok, footer.text
     with pytest.raises(UserWorkRefused) as raised:
         swbuild.update_gearbox(sw, **upd.update_kwargs(), exists=lambda p: True, mtime=lambda p: 5.0)
@@ -407,5 +409,60 @@ def test_after_a_refusal_the_workbook_changed_runs_the_prediction_too(on_fake):
     footer, _ = _footer(refused, gears(reducer(), G2=dict(bore="14"), G4=dict(at="30")), digest="d3")
     at = ui_text.read_time(refused.gearbox.user_work.read_at)
     assert "The workbook has changed since, and the next press reads your work in SolidWorks again. As read at " \
-           f"{at}, Update SolidWorks would stop before changing anything: Coinc7 is a mate" in footer.text, footer.text
+           f"{at}, the next press would stop before changing anything: Coinc7 is a mate" in footer.text, footer.text
     assert not footer.ok and footer.update_enabled
+
+
+def test_a_value_refusal_stands_in_the_footer_until_the_workbook_asks_what_solidworks_holds(on_fake):
+    """Package B's re-check R1: a Bore of 14 typed in SolidWorks refuses; the user then moves G4 only. The footer stays
+    red, saying the workbook still asks 12 where SolidWorks held 14, then what else the next press would do; once the
+    workbook asks 14 too, the refusal no longer stands."""
+    from test_workbook_user_work import _edit
+    sw, record = on_fake
+    _sprocket(sw, record)
+    _edit(sw, next(p.path for p in record.current_parts() if "G2" in p.gears), "Bore Diameter", "14")
+    plan = update.classify(record, assessed(reducer()), exists=lambda p: True)
+    with pytest.raises(UserWorkRefused) as raised:
+        swbuild.update_gearbox(sw, **plan.update_kwargs(), exists=lambda p: True, mtime=lambda p: 5.0)
+    refused = update.refused_update(record, plan, raised.value, digest="d2", revision=(34, 1, 1))
+    at = ui_text.read_time(refused.gearbox.user_work.read_at)
+    footer, _ = _footer(refused, gears(reducer(), G4=dict(at="30")), digest="d3")
+    assert ("The workbook has changed since, but it still asks 12 for Bore Diameter in Gear_m1.5_N68, where "
+            "SolidWorks held 14, so that refusal stands unless it has been set in SolidWorks since. As read at "
+            f"{at}, the next press would stop before changing anything: Update SolidWorks would put your Sprocket-1 "
+            "with G1") in footer.text, footer.text
+    assert not footer.ok and footer.update_enabled
+    with pytest.raises(UserWorkRefused) as again:          # the press refuses on the same value again
+        swbuild.update_gearbox(sw, **update.classify(refused, assessed(gears(reducer(), G4=dict(at="30"))),
+                                                     exists=lambda p: True).update_kwargs(),
+                               exists=lambda p: True, mtime=lambda p: 5.0)
+    assert swbuild.PROBLEM_VALUE in [p.kind for p in again.value.problems]
+    footer, _ = _footer(refused, gears(reducer(), G2=dict(bore="14"), G4=dict(at="30")), digest="d4")
+    assert "still asks" not in footer.text and "The workbook has changed since, and the next press reads" in footer.text
+
+
+def test_a_refusal_the_prediction_repeats_is_said_once(on_fake):
+    """The demonstration's footer said a housing tie twice in full after the workbook changed: the prediction now says
+    a refusal it shares with the recorded one only as for the same reason."""
+    entry = _entry(problems=[store.UserProblemEntry("tie", "Your Lock3 holds G1 to Housing-1, so nothing is changed.")])
+    ahead = update.UserWorkAhead(entry, refused=tuple(entry.problems), changed_since=True,
+                                 problems=(swbuild.UserProblem("tie", entry.problems[0].sentence),))
+    text, ok = ui_text.user_work_line(ahead)
+    assert text.count("Your Lock3 holds G1 to Housing-1") == 1 and not ok
+    assert text.endswith(f"As read at {ui_text.read_time(entry.read_at)}, the next press would stop for the same "
+                         "reason."), text
+
+
+def test_features_in_a_longer_list_and_a_long_tie_read_once(on_fake):
+    """Re-check R2 and the demonstration's footer: features by part in a clause of their own, never "8 mates and Keyway
+    and Groove in …"; a train with more than three of the user's mates counted, not listed."""
+    entry = _entry(problems=[], components=[store.UserComponentEntry(f"Part{i}-1", "part") for i in range(5)],
+                   mates=[store.UserMateEntry(f"M{i}", "other", 0, [["app", "G1"]], [""]) for i in range(8)],
+                   features=[store.UserFeatureEntry(r"C:\P\Gear_m1.5_N17.SLDPRT", "Keyway"),
+                             store.UserFeatureEntry(r"C:\P\Gear_m1.5_N17.SLDPRT", "Groove")])
+    text, ok = ui_text.user_work_line(update.UserWorkAhead(entry))
+    assert text.endswith("leaves your Part0-1, Part1-1, Part2-1, 2 other components and 8 mates as they are, and your "
+                         "Keyway and Groove in Gear_m1.5_N17 too."), text
+    tie = update.UserWorkAhead(entry, unread_ties=((("G1", "G2"), tuple(f"M{i}" for i in range(8))),))
+    text, ok = ui_text.user_work_line(tie)
+    assert "whether the 8 mates of yours on G1's train leave it free to turn" in text and "M7" not in text, text
