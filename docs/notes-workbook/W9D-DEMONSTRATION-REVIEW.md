@@ -384,3 +384,257 @@ This is a should-fix for A and the contract. It does not block the 2026 run, sin
 **May it run on SolidWorks 2026 once the must-fixes are in? Yes.** It works only on copies. Every unmeasured call it
 makes is under the dialog watch. With M1(a) it saves nothing lightweight. Its STOPs keep proposals from coming out of
 a broken run. The should-fixes make its proposals stronger, but none of them risks a file.
+
+---
+
+## Addendum: the first run on SolidWorks 2026 (34.0.0)
+
+*Independent, 2026-11-17. What I reviewed:*
+- *the commits:* `10426c5` and `2fb3946` (the script) and `50a8e54` (the logs and the note);
+- *the logs and JSON:* `probe/results/w9d-demo-sw2026-20261117-1-first-contact-light-flag-stop.log` (run 1),
+  `…-2-carry-app-faults.log` (run 2), `…-3-carry-closed-read-only.log` (run 3), and the three
+  `w9d-demo-20261117-*.json`;
+- *the note:* `W9D-DEMONSTRATION.md`, "The first run on SolidWorks 2026";
+- *the code the logs point at:* `swbuild._judge` and `_read_old_mates`.
+
+*No SolidWorks.* Nothing in `src/`, the script or the handoff was changed. The two app faults the run named are
+being fixed, and I do not re-diagnose them.
+
+**In order of weight.**
+
+1. **Must-fix (fixture and §15): the tie as built cannot show `FELL_TIE`, even after the app's fix.**
+   - In the old assembly it over-defines: `UserLock8b` was made with status 5 (run 1 :60), and `UserLock8a` and the
+     app's `Sun along Input` read 46 (run 1 :70).
+   - `_judge` carries a remade mate that reads the error it had before (`same_error`). It then **excuses every body
+     that only such mates of the cluster touch**.
+   - Sun is touched in that cluster only by UserLock8a, which will read 46 again. So Sun's tie is excused and no
+     `FELL_TIE` comes. What comes instead is an over-definition fallback, or the post-check's stop on Sun ("no cluster
+     of yours explains it"), or `_app_mates_check` blaming another cluster for `Sun along Input`.
+   - This is reasoned from `_judge` (`swbuild.py`, the `excused` loop); it never ran, since the carry stopped before
+     any mate.
+   - A replacement is under item 5 below.
+2. **Must-fix (script): checks over remade mates passed with nothing remade.** Item 3 below lists each line and what
+   the script should do.
+3. **Must-fix (package A, not named in the run report): a lightweight component's mate is named "unread" with raw
+   Python text, not `lightweight`** (D10).
+   - What was read: R called `entity_reference` on SprocketLight-1's Gear Axis while the component was lightweight.
+     `GetModelDoc2` gave None, so the read raised *"'NoneType' object has no attribute 'FeatureByName'"* (run 2 :627).
+   - `_read_old_mates` keeps that as the entity's `unread`. `plan_carry` tests `unread` before lightweight, so
+     UserAxisLight is named *"SolidWorks would not describe UserAxisLight wholly (its reference could not be read
+     ('NoneType' …))"* (run 2 :565). The expectation was `lightweight`.
+   - *Fix:* do not read a tier-1 reference through a lightweight or suppressed component in R; its mate is named by
+     its component's state.
+4. **Should-fix (script): the expectations must take two readings this run measured.** On SolidWorks:
+   - the entities of a mate on a component **suppressed in the mode showing** read unread (UserAxis9 in `carry`, run 2
+     :621; UserAxis7 in `carry-closed`, run 3's outcome);
+   - a suppressed component's frame **does** read.
+
+   So M4 (b)'s "make it in a mode where its component is resolved" is never reached on the open path. That mate is
+   named `unread` instead, which is honest. `expected_outcome` should accept `unread` for UserAxis9 (open) and
+   UserAxis7 (closed). §11.5 of the contract should record the reading.
+5. **The rest, by item, below.**
+
+**A correction to my own review.** I wrote that the save-flag bracket is blind to the old assembly in `carry`, because
+the user's lightweight set would mark it. It did not mark it: *"GetSaveFlag before none"* (run 2 :566). The bracket was
+live, and the old assembly's flag did not turn.
+
+### 1. The two script fixes
+
+- **`10426c5` (the light file's flag): exact as far as it goes.**
+  - It sets apart only `flips[LIGHT_FILE] == (None, False)` (not open → open, unmarked), and only while `went`
+    (SprocketLight-1 read 1 or 4 before and 2 or 3 after). The file marked, the file loaded while the component stays
+    lightweight, the old assembly marked beside it, or any other file's flag still STOPs. Its self-checks show each.
+  - Run 2 set apart exactly two things: the state 1 → 2 and the flag (run 2 :570).
+- **But `old_diff`'s earlier set-apart (`90cdf20`, M1 (b)) is wider than the ruling** (`probe/w9d_demonstration.py:386-428`).
+  When `went` holds, it also sets apart:
+  - the light component **moving** (`:404`);
+  - its **fixed** state and **referenced configuration** (`n == light` across every key, `:405`);
+  - every difference in the **definitions and entities** of each mate on it (`involved`): a changed value too, not only
+    an entity read going from unread to read.
+
+  The ruling covers its state going lightweight → resolved, and what that alone changes.
+
+  *Should-fix:* set apart only:
+  - `states` of the light component;
+  - its frame only None → read;
+  - an involved mate's entity going from unread to read.
+
+  A move, a fix, a configuration or a value still STOPs.
+- **`2fb3946` (`carry-closed` saves the old assembly itself): the same act as a person's Save of that document.**
+  - First `save_modified_in(folder)`, as SolidWorks' own Save would offer for modified references. Then `SaveAs3` to
+    its own path, silent: one document, no references saved.
+  - It writes nothing a person's Save would not. It saves with L showing, as §15 asks, and writes the copy's paths,
+    which is why it is there.
+  - It happens before the press bracket, so the fingerprints are taken after it.
+  - The section still shows R.2 refusing the unsaved copy first (run 3 :75), then reading the saved one (run 3 :641).
+  - Nothing it shows is the script's write.
+
+### 2. What stands as measured from this run (the app at `90cdf20`)
+
+A fix's path is either the r3 walk in R (`swcom.py:3942`) or the code after C.5 (`swbuild.py:8060`).
+
+| Reading | Stands without being shown again? |
+|---|---|
+| 17 components inserted (`add_component`, `add_component_in`), each placed against its anchor, poses 0 in H (run 2 :642, :650) | The routes stand (`AddComponent5` and the put). **Show again** as part of `CARRY_INSERTS`' evidence. The r3 fix changes which face mates are planned, and so cluster membership and some anchors (Chain-2's), and the next run must prove placement with the mates on. Sun read identity, the same in old and new and in every mode (run 2 :649), so the D20 concern about a fixed Housing-1 did not bite here. |
+| `AddComponent5` with `Z20`; Z20 read back in every mode by the script (run 2 :660) | **Stands.** C.4 is before both faults. `CARRY_INSERTS_IN_A_CONFIGURATION_ON_2026 = True` may be taken from it. I would still set it with `CARRY_INSERTS` from the next run: it means nothing alone, and the next run repeats it at no cost. |
+| R read Z20 beside its document's Default (run 2 :661) | **Stands.** `component_configurations` is not on either fix's path. `REFERENCED_CONFIGURATION_READ_ON_2026 = True` may be set. |
+| States per mode: Sprocket-7 in L, Sprocket-9 in H, by the script's own shown read (run 2 :643, run 3 :654) | **Measured.** C.5 ran to its end. But `swbuild.py:8060`, the fault, is the line straight after it, so **show again** with the fix. |
+| SprocketLight-1 resolved in the old assembly by the carry's open, its file open and unmarked, the old assembly's flag not turned (run 2 :566, :570) | **Stands.** C.3 is not on either fix's path. The proposed fact `CARRY_RESOLVES_A_LIGHTWEIGHT_COMPONENT_IN_THE_OLD_ASSEMBLY_ON_2026 = True` may be recorded. |
+| R.2's refusals: the unsaved copy, a record of another version, the 2024 `Reducer_12to1.SLDASM` (run 3 :75, :681, :685) | **Stands.** Closed-file reads only. |
+| The not-open read: open read-only in 5.0 s, close in 0.3 s, L as saved, nothing left open or marked (run 3 :104, :156, :641) | The open and close **stand**. **Show again**: the fixed r3 walk will, for the first time, carry candidates (`GetCorresponding`, `IsSame`, `GetPersistReference3`) inside the job's read-only document, which no run has measured (marks, time). |
+| A suppressed component's frame read in R; `ISldWorks.GetConfigurationNames(path)` for a lightweight and a suppressed component, answering `('Default',)` (run 2 :594, :596) | **Stand**, as facts. |
+| A mate on a component suppressed in the mode showing reads unread (run 2 :621) | **Stands** as a fact: §11.5 and item 4. |
+
+### 3. The vacuous passes (must-fix, script)
+
+**The lines.** In run 2 (`carry`) and run 3 (`carry-closed`), with no mate remade and the post-check never reached:
+- `every remade mate's definition and entities in RangeBox_r2 as the old one's` (run 2 :645, run 3 :656;
+  `probe/w9d_demonstration.py:1838`);
+- `every remade mate on in the modes it was on in, read again` (run 2 :646, run 3 :657; `:1849`);
+- `every app gear free to turn in every mode with the carried mates on` (run 2 :648, run 3 :659; `:1857`). The gears
+  were read, but no carried mate was on;
+- `every interference SolidWorks reports with a carried component the carry named, and none other` (run 2 :659, run 3
+  :670; `:1883`). The carry's own clash read is in its post-check, which never ran, so "the carry named" holds of
+  nothing;
+- `Sprocket-2 placed against RangeSlv, read in L and placed in H (contradiction 6)` (run 3 :671; `:2214`). It is
+  judged on the anchor alone. Its pose FAILed in N and L (run 3 :661, "Sprocket-4", its new Name2) because its lock
+  was never made.
+- The run-2 superseded `carry-closed` block (run 2 :1132-1149) is the same with 0 components.
+
+**What the script should do:**
+- **(a)** Take the population each check should cover from `expected_outcome`: the mates expected `remade` or `fell`.
+  - Each remade-mate check covers exactly those, and FAILs naming the mates *not reached* when any is missing.
+  - With none remade where some are expected, it says *"not reached: nothing was remade (the carry stopped at …)"*
+    and counts as a FAIL.
+- **(b)** The two post-check claims ("with the carried mates on" and "the carry named") are judged only when
+  `cr.stopped == ""` and `cr.remade` is not empty. Otherwise each is *not reached*, a FAIL.
+- **(c)** Contradiction 6 also requires Sprocket-2's pose against RangeSlv in N and L within tolerance.
+- **(d)** Every `clean[...]` key fed to a proposal is False when *not reached*.
+
+### 4. Every "not made again" sentence (run 2), against §15
+
+**The question** (run 2 :79; the gates patched; this is the foresight, from the record's inventory, not a read):
+
+| Sentence | What it is |
+|---|---|
+| UserSunFace, on a face of Sun, part new | **Expected** (§4.4, §12). |
+| *"SolidWorks would not describe UserGear6 wholly (its gear ratio could not be read)"* | **Neither R nor the fixture. The foresight:** the record's inventory keeps no definition values. `plan_carry`'s M5 rule (no `GearRatio*` → `WHY_UNREAD`) then fires on every user gear mate in the question. R read it whole: `GearRatioNumerator 29, GearRatioDenominator 20, Reverse 1` (run 2 :616). It is not named in the result. **It does not block `CARRY_GEAR_MATE_ON_AN_APP_GEAR`.** *Should-fix, package B (with A):* where the inventory holds no values, say a gear mate as *may*, or skip the ratio and sense rule for a recorded `OldWork`. |
+| *"SolidWorks would not describe UserAxis9 wholly"* | **Something else, now measured:** a mate on a component suppressed in the mode showing reads unread (item 4 above). True, but the clause should say why: *"Sprocket-9 is suppressed in H, so SolidWorks would not describe UserAxis9 there"* (A gives the clause, B words it). |
+| UserGearRoot, on a face of Sun, part new | **Foresight:** the inventory keeps no coaxial read, so it cannot know. It should be said as *may*, not *is not*. |
+| UserGearFillet, part new | **Expected.** |
+| Sprocket-9 suppressed in the mode showing: show a mode where it is resolved | **Expected** (§9.1). |
+
+**The result** (run 2 :565):
+
+| Sentence | What it is |
+|---|---|
+| UserFaceConc, UserFaceCoin, UserSunFace *"would not describe … wholly (its reference could not be read ('method' object is not iterable))"* | **App fault 1** (the r3 walk), and the raw text (named). UserSunFace should be part new: it is named unread because its Sprocket-5 entity's walk failed. |
+| UserAsm6 *"would not describe wholly"* | **Expected** (no root read beside a lightweight component). The sentence gives no why. *Should-fix (A, B):* *"its plane of RangeBox.SLDASM is not read while a component is lightweight"*. |
+| UserAxis9 unread | Item 4 above. |
+| UserGearRoot part new | **App fault 1:** its coaxial read is the walk's. It is expected to be made again on Gear Axis on 2026. |
+| UserGearFillet part new | **Expected.** |
+| UserAxisLight *"('NoneType' object has no attribute 'FeatureByName')"* | **New app fault** (must-fix 3 above). It should be `lightweight`. |
+| *"SolidWorks stopped the carry … No component is kept as 'gear7'"* and the list it did not get to | **App fault 2.** |
+| *"SprocketLight-1 was lightweight … resolved there now"* | **Expected** (M1 (b), ruled). |
+
+**Two further readings the run report did not name:**
+- **Names (should-fix, script and note).** The pose FAIL keys components by their **new** Name2: "Sprocket-5 in N/L"
+  in `carry` and "Sprocket-4" in `carry-closed`. The note reads them as two different components. Both are **old
+  Sprocket-2**, carried as Sprocket-5 (run 2 :535) and as Sprocket-4 (run 3 :558), off by RangeSlv's slide (5 and
+  10 mm) because its lock to RangeSlv was never made: app fault 2's consequence. The note should say so, and the
+  script should name both (*Sprocket-2, as Sprocket-5*).
+  - *A note for the contract:* SolidWorks numbers the inserted instances in insertion order, so the user's components
+    come back renumbered (*"Sprocket-2 (was Sprocket-3)"*, run 2 :565). §2.4 allows it. Inserting each file's instances
+    in the order of their old numbers would keep most names.
+- **The record check FAILed on the footer** (run 2 :666, run 3 :674): `unsaved_at` equals the file's time, but the
+  footer's text after the build does not hold §9.4's line (`probe/w9d_demonstration.py:1928`). The run report does not
+  name it.
+  - Either the window shows the finish's note in place of the idle footer until the next read (then the script should
+    read the footer after `desk.read()`), or B's footer drops the line while a note stands (then it is B's, against
+    §9.4).
+  - Look before the next run. `after the save the footer's carry line is gone` (run 2 :684) reads the record, not the
+    footer, so it does not settle this.
+
+### 5. The fixture's tie: the recommendation
+
+**What the tie is for.** §6 and §14.1: on RangeBox's one train, a cluster whose remade mates tie a gear that is free
+in the new revision falls back **alone**:
+- its mates to app bodies are deleted and its user–user mates kept;
+- its components are put back where placed and fixed;
+- every other cluster on that train is carried;
+- every app gear is free after.
+
+M9 is the only place this shows on SolidWorks (§6: "What M9 can show").
+
+**Why the present one fails it.**
+- Locking Sprocket-8 to Sun and to the **fixed** Housing-1 takes all six freedoms of a body that Sun's own mates
+  already hold in five. That is over-definition (46) in the old assembly, not a tie.
+- The same-error rule then excuses it in the new revision (item 1 at the top of this addendum).
+- A user's working assembly does not stand in error.
+
+**The change.**
+- Keep **UserLock8a** (Sprocket-8 locked to Sun).
+- Replace UserLock8b by **UserAngle8b**: an **angle of 90°** between Sprocket-8's Top plane (`s8:plane2`) and the
+  fixed Housing-1's Right plane (`uh:plane3`), made by the app's `add_mate("angle", …, 90.0)` after the lock. Both
+  are inserted at identity frames, so the 90° holds as made and nothing moves.
+- An angle between two planes whose normals both lie across Sun's axis removes **one** freedom: the rotation Sun alone
+  still has. So in the old assembly Sun reads fully defined (it cannot turn, which is the tie), and **no mate reads in
+  error**. The fixture's "every mate on in H reads code 0" holds and becomes worth keeping as a STOP.
+- In the new revision:
+  1. UserLock8a and UserAngle8b are made again; Sun, free before them, reads fully defined: `FELL_TIE`.
+  2. The fallback deletes UserLock8a (to an app body) and keeps UserAngle8b (user–user, both components the user's).
+  3. Sprocket-8 and Housing-1 are fixed where placed (Housing-1 by its world frame, as ruled).
+  4. Sun is free again and every other cluster on Sun's train is carried.
+
+  That is everything the tie was meant to prove, and UserAngle8b is a second angle mate for `CARRY_REMAKE_KINDS`.
+- The quiet press over the fixture will still meet a grounded tie (K2) and may refuse. The inventory is recorded
+  either way, as now.
+
+**The edits.**
+- *Script:* `MATES`, the fixture's expected outcome (UserAngle8b `remade`, kept), and the fallback check
+  (`kept == {"UserAngle8b"}`).
+- *§15:* *"the tied cluster, Sprocket-8 locked to Sun and held at 90° to the fixed Housing-1 by an angle mate: one
+  freedom, so the old assembly reads every mate 0 while Sun cannot turn (`FELL_TIE`)"*. Its *Judged* list: *"the tied
+  cluster alone fixed, its angle mate kept"*.
+
+**Should-fix (A and the contract), whatever the fixture.** §6's same-error excuse should never excuse the **tie** of a
+gear that was free in the new revision before the cluster. The new revision is the app's own, and an old error says
+nothing about it. Keep the excuse for the mate's own code and its components' over-definition only.
+
+### 6. The quiet press over an assembly in error: my recommendation
+
+**As designed, and not a safety hole.**
+- An Update with nothing to change writes nothing and judges only what it would write. K2's tie judgement runs on a
+  put, and the check phase reads the user's work for a put.
+- So the quiet press "went through" (run 1 :89) over `Sun along Input` at 46 and Sun tied, and nothing was written
+  over the broken assembly.
+
+**But "SolidWorks already matches the workbook: nothing was changed" over one of the app's own mates in error is an
+overstatement.** The values match, and the gearbox does not work. I recommend:
+- **The Update's result** gains one CHECK clause when its read finds one of the app's own mates in error: *"SolidWorks
+  reads Sun along Input in error (over-defined) in RangeBox.SLDASM; something of yours may hold Sun"*. The mates' codes
+  are read in the press already; the cost is a sentence.
+- **Build again's question** gains a clause when the record's inventory (or the live read) has mates **of the user's**
+  in error: *"UserLock8a was in error in RangeBox.SLDASM as read; made again, it is carried only if it reads the same
+  error, and it never keeps a gear from turning"*. It bears on what the carry does (`same_error`).
+- An app mate in error in the old assembly needs no clause in the question: RangeBox_r2 builds it new.
+
+---
+
+**Summary.**
+- **Must-fix before the next run:**
+  1. the tie redesign (script and §15, item 5);
+  2. the vacuous passes (script, item 3);
+  3. UserAxisLight named unread with raw text instead of lightweight (package A, must-fix 3 at the top). This is
+     beside the two app faults already being fixed.
+- **Should-fix:**
+  - *Script:* `old_diff`'s M1 (b) set-apart narrowed (item 1); `expected_outcome` taking the suppressed component's
+    unread mate (item 4 at the top); poses named old and new; the footer check looked at.
+  - *Package B:* the question's gear-ratio and coaxial foresight said as *may*.
+  - *Package A and B:* clauses for UserAxis9 and UserAsm6.
+  - *Package A and the contract:* the same-error excuse never covering a tie.
+  - *The contract:* §11.5's reading recorded.
+- **May the next run go once those are in, with the app's two fixes?** Yes. It must show again inserts and placement
+  with the mates on, the states, and the not-open read with a working walk. These stand from this run:
+  `REFERENCED_CONFIGURATION_READ`, the configuration insert, the lightweight fact, R.2's refusals, and the
+  read-only open and close.
