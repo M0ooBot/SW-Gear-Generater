@@ -503,3 +503,107 @@ area reads there, since they replace an indirect argument with a direct measurem
 
 **W9b is closed on SolidWorks 2026, with 2024 owed in W9c's session.** C1 (the hub's owner taken from unpicked
 positions) and C2 (the note's Z− sentence) are should-fix and need not hold it.
+
+---
+
+## Addendum: W9b on SolidWorks 2024
+
+*2026-11-17, from `probe/results/sw2024/w9b-demo-sw2024-20261117.log` and `w9b-demo-20261117-063302.json` (commit
+`9e77303`). It ran in a fresh 2024 session from snapshot `529f939`, so the closing-review script `203ce86` and the
+hub's sleeve choice `fca29a2` were both in it (both are ancestors of `529f939`).*
+
+**The Done-when on 2024 is met.** RangeBox_Fixed was built from scratch by the app's Build:
+
+- *The read.* It carries the fixture's four warnings only, with no warning from W9b's three checks and no stroke
+  warning (:56-57).
+- *The build.* It ends ok, with no interference (:893, :906). Hub is Output's anchor with `RangeSlv splined to Hub`
+  (:909), and the sleeve's sidecar is at schema 2 with Relief (:910).
+- *Each mode, measured from SolidWorks' frames and the parts' live globals.* In H, N and L the slide, the bands, the
+  relief, the engagement, the least gaps (10, 2.5, 1.0) and Hub 1.0 from HighDog all match §3's own numbers. There is
+  no mate in error, every gear is free, and there is no interference in any mode (:912-924).
+- *`update`.* It is as on 2026: Start band 4 is a value Update, read back in the part and in every mode, with L's gap
+  now 2.0 (:966-993). Both refusals wrote nothing (:1015-1016, :1068-1069).
+- *`old`.* RangeBox carries seven warnings. W9b's three are now held to the plan's sentences word for word
+  (:1086-1088). The sleeve is unbanded, at schema 1, and is Output's anchor (:1807).
+- *What's Wrong* never showed (only the rule line, :7).
+- *M7 on 2024 is met by its exact reads* (part :9-21): the globals and their links; the sketches under Relief; the
+  bore one cylinder of r 12.5 between step planes at 5 and 21, to 1e-6; the band change read back as planes at 4
+  and 21; no feature in error.
+
+**Is the volume guard's failure a fault in the part?** No. The coordinator's reading is right.
+
+- *The geometry reads the same on both versions.*
+  - The end faces read 440.548068 and 440.556083 on 2024, against 440.547728 on 2026, and the app's own section
+    maths converges to 440.54751.
+  - The step faces read 114.302999694 and 114.294983996 on both versions, to nine figures.
+  - The cylinder and the planes are exact on both versions.
+- *Only the mass-property volumes differ between versions, by a constant per body.*
+  - Unbanded: 11456.7366 on 2024 against 11455.5439 on 2026, +1.193.
+  - Banded 5/5: 9622.5448 against 9622.1688, +0.376.
+  - Banded 4/5: 9507.9065 against 9507.5305, +0.376.
+  - The 5/5 − 4/5 difference is 114.638326 **on both versions**, to six decimals.
+- *That pattern is a version's volume integration, not geometry.* A real difference in the part would move the face
+  areas, or the difference that one millimetre of relief makes. It moves neither.
+- *Against the true section,* 2024's volumes run 2.2e-4 high on the unbanded part and 1.3e-4 / 1.2e-4 on the banded
+  ones. On 2026 they ran 1.1e-4 and 9.0e-5 / 8.2e-5. The banded body's residual is 0.55–0.79 of the control's on both
+  versions.
+
+**Taking the allowance from the control is sound, not bending the check, under three conditions:**
+
+1. *Say what the guard is for.* The exact checks on the relief are the faces: r 12.5, the planes, the end-face
+   section. The volume is a coarse guard against a gross fault, such as a relief not cut, a wrong diameter or a wrong
+   span.
+   - The smallest of those it must catch is a relief Ø off by 0.1 mm: 63 mm³, which is 6.5e-3 of the volume.
+   - A relief 0.5 mm longer gives 3.3e-2.
+   - So any allowance up to about 1e-3 still catches every fault it exists for.
+2. *Calibrate on a control that differs only in the feature under test.* The unbanded sleeve from the same plan, built
+   in the same session, is exactly that. It has more spline surface than the banded body, not less, so the control's
+   residual is a fair upper scale for the banded one's.
+3. *Use a factor of **1.0**, a floor of **1e-4** and a cap of **5e-4**.*
+   - The allowance is max(1e-4, 1.0 × the control's residual against its own end face), and that value goes in the
+     log.
+   - A control residual over 5e-4 is itself a FAIL: the session's mass properties are not fit to judge by.
+   - On the readings so far this passes with room: 2026 has 9.0e-5 against 1.1e-4, and 2024 has 1.3e-4 against
+     2.2e-4.
+   - I would accept a factor up to 1.5, not more. The evidence for anything larger is not there, and 1.0 already
+     leaves 21 % room on 2026 and 41 % on 2024.
+
+Replaying both versions' JSON against the new allowance is enough. No 2024 rerun is needed. For 2026, the final run's
+JSON (from `b15450f`) predates the end-face reads. Its log has the front end face's area (`F0 two ways`, 440.547728),
+which the replay should take, with the volumes from the same run.
+
+**So W9b is closed on SolidWorks 2024** once that guard change and its replay are committed and pass. Nothing else in
+the 2024 run stands in the way.
+
+**The hub's sleeve choice (`fca29a2`) on SolidWorks.** It was in the snapshot, and this is its first run on
+SolidWorks. The log bears it out as far as it can: every read of RangeBox_Fixed passes `hub_sleeve` through the row,
+hub and shared-hub checks, and carries no hub error and no "nothing keys" warning (:56-57, :967-968). RangeBox's read
+carries §3's own "nothing keys RangeSlv" word for word (:1087). The choice is pure, though: nothing about it depends
+on SolidWorks, and the anchor in the assembly comes from `motion._sliding_shaft`, by kind. So the run shows that it
+breaks nothing; the suite is what tests it.
+
+**The step faces: 2.2e-3 under F − π(Ro² − r²) = 114.5587 on both versions.**
+
+- *The volumes say the geometry is right and the cap's area is not the whole cap.* If 114.303 were the section inside
+  r 12.5, then:
+  - one millimetre of relief would remove 114.303 mm³. Both versions read 114.638, and the geometry says 114.559;
+  - the 5/5 relief would remove 16 × 114.303 = 1828.85 mm³. 2026 reads 1833.38 and 2024 reads 1834.19, against
+    1832.94 from the geometry.
+- *The likeliest cause* is that each relief end's cap is more than one planar face (slivers at the roots, say). The
+  script takes only the planar faces whose box spans the cylinder's diameter (`relief_bore`), and small faces would
+  not. That the shortfall is identical to nine figures on two kernels fits a fixed B-rep better than an integration
+  error, and `GetArea` reads the end face, with the same tooth edge, to 5e-7.
+- *I would not leave it wholly unexplained, but it is worth little.* One read settles it: every planar face whose
+  `PlaneParams` puts it at z = 5 (and 21), with its count and the sum of their areas.
+  - If the sum is 114.559, it is explained, and the step-face check can sum them.
+  - If one face reads 114.303 alone, then integrate its edges, as you suggest.
+  - That is a part-only read of about a minute. Put it into the next SolidWorks session already planned (W9c's full
+    build), not a session of its own.
+- It does not bear on closing W9b: the relief's geometry is fixed by the cylinder, the planes and the end-face
+  section, and the volumes agree with that geometry on both versions.
+
+**What you must act on:**
+
+- change the coarse volume guard as above (factor 1.0, floor 1e-4, cap 5e-4), and replay both versions' JSON;
+- set the 2024 W9b status closed when the replay passes;
+- optionally, add the step-plane face enumeration to W9c's full build.

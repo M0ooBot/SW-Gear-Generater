@@ -251,3 +251,64 @@ Whether a healthy sub-assembly's open marks it was not read. Add that to the 202
 - must-fix 3: a face's persistent reference;
 - the remake of the §2.5 kinds not yet covered (table);
 - whether opening a user's sub-assembly marks it.
+
+---
+
+## Addendum: the probes on SolidWorks 2024
+
+*2026-11-17, from `probe/results/sw2024/w9c-probes-sw2024-20261117.log` and `w9c-probes-20261117-062201.json`
+(commit `9e77303`; snapshot `529f939`, the 2026 run's own). I compared the whole log with the 2026 second run, ok,
+fact, FAIL and propose lines, with numbers and paths masked, as well as the outcome lines. The masters it used were
+2024's own: S0's 2024 `rangebox.master`, and the reducer and setup masters from W9a's 2024 confirming run.*
+
+**The two runs read the same.** Every result line matches 2026's except for three things:
+
+- the order in which s5 (a) lists the top-level components. Nothing uses that order: (a) finds components by name;
+- two balloon-tip facts, which are absent on 2024;
+- the times. m1's quiet press took 206 s against 172 s.
+
+The p1 verdicts are identical in all four cases, and so are the m1 readings: `mate_info`, flags, codes and
+definitions. Width was again made only with the tab at mark 16 (:148-150). The s5 (a)–(c) entities, the resolutions
+and the ten remakes "differ nowhere", with every frame at 0.0. The (d) and (e) readings and the p2 readings match too,
+including errors 2 and suppression 0 for the missing part.
+
+**What's Wrong.** The script read the 2024 rule (`whats_wrong_shows_in_update` True, :7) and was ready to log the box
+as a fact and wait it out. **No What's Wrong box came up in any job**: the log has no such fact. Every window it
+logged was the notification box, the post-load and performance boxes, or the opening progress box, as on 2026.
+
+**(a) The `_ON_2024` findings to set, each with the same scope as its 2026 setting in `c8da5bb`:**
+
+| Finding | Set on 2024 | Where |
+|---|---|---|
+| `COMPONENT_DELETE_ROUTE_ON_2024` (`select4-editdelete`) | as on 2026 | :32-33, :102-103, :106 |
+| `COMPONENT_DELETE_ROUTE_IN_EVERY_CONFIGURATION_ON_2024` | as on 2026 (route 1, RangeBox's three modes) | :103, :107 |
+| `COMPONENT_DELETE_TAKES_ITS_MATES_ON_2024` | as on 2026 | :108 |
+| `COMPONENT_DELETE_KEEPS_OTHER_HANDLES_ON_2024` | as on 2026 (within an epoch) | :109 |
+| `COMPONENT_DELETE_DIALOG_ON_2024` = False | as on 2026 | :110 |
+| `M1_READS_CONCENTRIC`, `_LIMIT_DISTANCE`, `_LIMIT_ANGLE`, `_WIDTH`, `_GEAR_ON_AN_APP_GEAR` `_ON_2024` | as on 2026, no document marked | :196-200 |
+| `M1_READS_SUBASSEMBLY_LEAF_ON_2024` | as on 2026 | :322, :324 |
+| **`ASSEMBLY_ENTITY_COMPONENT_IS_ROOT_ON_2024` = True** | **the root component, not None**. UserAsm6's entity on the assembly's Front Plane names `'RangeBox'`, the root's `Name2` read at :233 | :263 |
+| `PERSIST_REFERENCE_ROUTE_FOR_REFERENCE_FEATURES_ON_2024` | as on 2026 (13 feature entities; still no face) | :267 |
+| `MATE_REMAKE_ON_AXES_PLANES_AND_LOCKS_ROUTE_ON_2024` | as on 2026 (the same ten) | :280 |
+| `COMPONENT_STATE_PER_CONFIGURATION_ROUTE_ON_2024` | None, as on 2026. `IsSuppressed2` read False in L where the truth is suppressed; `GetRootComponent3(True)` read right but marked `RangeBox.SLDASM` | :282-285 |
+| `OPEN_READ_ONLY_ROUTE_WHEN_NOT_OPEN_ON_2024` | as on 2026 (read-only, flag False) | :292, :294 |
+| `OPEN_READ_ONLY_DIALOG_ON_2024` = False | as on 2026 | :293 |
+| `SUBASSEMBLY_INSERT_ROUTE_ON_2024` | as on 2026 | :322-323 |
+| `SUBASSEMBLY_MISSING_REFERENCE_DIALOG_ON_2024` = False (Silent open) | as on 2026 | :325-327 |
+| `SUBASSEMBLY_MISSING_PART_READS_ON_2024` | as on 2026: errors 2, the child suppressed (0) with no document, the opened sub-assembly marked | :325-326 |
+
+The already-open read-only case (:289) reads exactly as on 2026, with the same order of sections. So should-fix 1
+(the flag was not read before the call) applies on 2024 too.
+
+**About the must-fix 1 fix (`7e0d095`).** It maps the root component's `Name2` to the assembly's own, and reads any
+other unknown name as not wholly read. That is right on both versions now, since both name the root.
+
+**(b) Nothing on 2024 changes what W9c's packages may rely on.** That list stands on both versions once the findings
+above are set. What stays owed is owed on both versions, for W9d:
+
+- must-fix 2: an unshown per-configuration state that marks nothing. `GetRootComponent3(False)` is still untried, and
+  the plan's fallback needs a ruling;
+- must-fix 3: a face's persistent reference;
+- should-fix 1 and 2.
+
+The five `UPDATE_*_ON_2024` findings and `EXTERNAL_REFERENCES_READ_ON_2024` stay None until W9c's full build on 2024.
