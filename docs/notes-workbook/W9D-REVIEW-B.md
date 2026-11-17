@@ -390,3 +390,229 @@ if*), and `read_entity_kinds`' default (S9).
 - The Tk window's four K12 mapping tests, deselected above.
 - Any string on SolidWorks 2024's findings. Each finding there is None, so it is the "every finding None" state with
   2024 in place of 2026.
+
+---
+
+## Re-check of the fix round
+
+*Independent, 2026-11-17, at `b6251b4`.* Under review:
+- package B's `6441e34` (M1–M5, S1–S10, `bare_files`, `WHY_REFUSED` / `WHY_TOO_LONG`, the Tk tests on A's worker);
+- `4b36095` (`CarryResult.anchors`, `bore_mm`, the findings patched explicitly);
+- `b6251b4` (the window test's privacy check).
+
+Read against the contract as edited at `d3bb9e7` and package A's fix round (`98ed62e`…`0c0e5be`, the 2026 probe reads
+set in `findings.py` at `013c14c`). As before, every quoted sentence is real output: A's worker end to end on Desk's
+RangeBox (W9a's work, Sun's Flank to arcs, entity kinds read), plus hand-made results for what the fake cannot make.
+The script is in my scratchpad, not the repo.
+
+**Suite.** Linux, at `b6251b4`: **2 failed, 3859 passed, 10 skipped**. The two failures are the known tkinter tests.
+Windows (`python.exe` 3.13, pytest 9.1.1, a `git archive` of `b6251b4` on `C:`, deleted after):
+`test_workbook_build.py`, `test_workbook_window.py` and `test_workbook_carry.py` gave **259 passed, 2 skipped,
+4 deselected**. The four deselected are the K12 tests that put a window on screen, as before. B's 263 is the same run
+with them included.
+
+### Verdict
+
+**Fit for the demonstration once one sentence is fixed (N1).**
+
+All five must-fixes and all ten should-fixes are in:
+- Today's state, on both versions, is W9a's sentence led by an honest finding, in the question and after the press.
+- The carrying question fell from 326 to 169 words; B's part from about 180 to 85. That is a length a person reads,
+  and I would cut nothing more.
+
+N1 is new in the fix round. The result's compressed placement sentence now claims every component stands in every mode
+where it stood in the mode showing. That is false for a component mated to a sliding gear, and the same result
+contradicts it two sentences earlier.
+
+### The first round's points, at head
+
+| Point | At head | Evidence (real output) |
+|---|---|---|
+| M1 nothing carried | **fixed** | States 1, 2 and 2024 below: W9a's sentence, led by `CARRY_INSERTS`' finding |
+| M2 feature in a part made new | **fixed** | *Your Keyway stays in Gear_m1.25_N29, which Sun's new part replaces because its Flank changed (RangeBox.SLDASM and that file keep it).* |
+| M3 not read | **fixed** | *RangeBox.SLDASM is not open in SolidWorks, and Gear Generator reads it then only when its close has been shown clean (findings.OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN_ON_2026), so nothing of yours was carried; as read at 15:09, your Sprocket-1, Housing-1 and Lock3 stay in RangeBox.SLDASM, …* — no "press again" |
+| M4 stop | **fixed**, except one combination (N2) | *SolidWorks stopped the carry while reading the new revision: … It did not get to reading the new revision. Nothing of yours was carried, and RangeBox_r2 as built is saved. Your Sprocket-1, … stay in RangeBox.SLDASM, as read when this build began; …* |
+| M5 lightweight | **fixed** | *Sprocket-1 was lightweight as read: its Lock3 is made again only if you set it resolved in SolidWorks before you press.*, said once |
+| S1 verdicts, grouping | **fixed** | *Lock6 and Lock7 join Bracket-1, which is not carried, so they are not made again.* |
+| S2 no save asked for nothing | **fixed** | *As read at 15:10, nothing of yours in RangeBox.SLDASM would be carried into RangeBox_r2. Your Keyway stays …* — and nothing more |
+| S3 length | **fixed** | 169 words, 85 of them B's |
+| S4 anchors | **fixed** | `carry_anchors` takes `CarryResult.anchors` only; the round trip reads `[('carried1-1', 'Sun'), ('carried2-1', '')]` |
+| S5 D14 in the result | **fixed** | *RangeBox_r2 has no mode L: what your items were in L stays in RangeBox.SLDASM. Its new mode Low takes what they were in H.* |
+| S6 in-context | **fixed** | *If a part of yours was made in context of RangeBox.SLDASM, it still refers to that assembly's parts.* |
+| S7 a raised read | **fixed** | *SolidWorks stopped answering while reading RangeBox.SLDASM (RPC_E_CALL_FAILED), so nothing of yours was carried; RangeBox.SLDASM and your files are as they were on disk.* (the path in A's text reduced) |
+| S8 grammar | **fixed** | *Lock9 beside it was*; *find a mate's face of Sprocket-1 again*; *M1 is not made again: Gear Generator has not yet been shown to …*; *SolidWorks moved Sprocket-2 off where it stood against RangeSlv when your mates were made again: 2.0 mm in N and L.* |
+| S9 entity kinds | **fixed** | the round trip runs both ways |
+| S10 bore | **fixed** | *M4 was on Sun's bore, …* / *M5 was on a face of Sun on its axis, …* by A's where slot |
+
+### N1 (must-fix). The placement sentence says what the mates may not do
+
+`ui_text.carried_status` says the sentence below whenever a floating component was carried and the gearbox has modes:
+
+> *Your components stand in every mode of RangeBox_r2 where they stood in H, the mode RangeBox.SLDASM showed.*
+
+The first round's sentence said this only of *"a floating one that stood elsewhere in another mode"*. §9.2 means one
+no mate holds.
+
+A component locked to a gear that moves between modes follows that gear. §15's Sprocket-2, locked to the sliding
+RangeSlv, is one, and M9's `carry-closed` section is written to show it. In the same result, two sentences earlier:
+
+> *SolidWorks moved Sprocket-2 off where it stood against RangeSlv when your mates were made again: 2.0 mm in N and L.
+> Your components stand in every mode of RangeBox_r2 where they stood in H, the mode RangeBox.SLDASM showed.*
+
+**Fix.** Say where they were placed, and claim the every-mode part only for a component no carried mate holds:
+
+> *Your components were placed where they stood in H, the mode RangeBox.SLDASM showed; one no mate holds stands there
+> in every mode.*
+
+Say the second clause only when such a component was carried (one inserted with no entry in `remade` naming it).
+
+### Today's real strings
+
+**State 2: SolidWorks 2026, today.** The probe reads are set (`013c14c`) and every `CARRY_*` write gate is None.
+
+The question, the carry's part after the build's own (whole question 145 words):
+
+> *Gear Generator has not yet been shown to carry your work into a new revision on SolidWorks 2026
+> (findings.CARRY_INSERTS_ON_2026), so as read at 15:09, your Sprocket-1, Housing-1 and Lock3 stay in RangeBox.SLDASM,
+> and your Keyway stays in Gear_m1.25_N29, which Sun's new part replaces; RangeBox_r2 has none of them, nor anything
+> added since. Your Groove in Sleeve_m1.25_N17 comes with that part, which RangeBox_r2 reuses.*
+
+After the press, the carry's part after the build's own 179 words (62 words):
+
+> *Gear Generator has not yet been shown to carry your work into a new revision on SolidWorks 2026
+> (findings.CARRY_INSERTS_ON_2026), so your Sprocket-1, Housing-1 and Lock3 stay in RangeBox.SLDASM, as read when this
+> build began; RangeBox_r2 has none of them. As read at 15:09, your Keyway stays in Gear_m1.25_N29, which Sun's new part
+> replaces; RangeBox_r2 has none of it, nor anything added since.*
+
+- **The footer** afterwards adds nothing: no carry, no inventory, as W9a.
+- **The record** keeps the carry with `named` only. Its sentences are, for example, *Sprocket-1 is not carried: Gear
+  Generator has not yet been shown to carry your work into a new revision on SolidWorks 2026
+  (findings.CARRY_INSERTS_ON_2026)*.
+
+This is W9a's sentence, word for word, behind one honest lead, so it is **honest and no worse than W9a**. The same
+holds with the old assembly closed.
+
+**One thing for package A, not B.** In state 2, with RangeBox.SLDASM closed, the worker now opens it read-only
+(`open_read_only` in the fake's calls, `how` `read-only`), because the reads R.2 needs are set. It does so though
+`CARRY_INSERTS` is None, so nothing can be carried.
+- The user's sentence is then better than W9a's: *as read when this build began* instead of *was not open … so it was
+  not read again*.
+- But it is an open of the user's assembly made for nothing, on today's real path, where W9a made none.
+- R.2's measured conditions make it safe as far as measured. Whether the read should run at all while `CARRY_INSERTS`
+  is None is the coordinator's call.
+
+**2024 (everything None)** is the same text with 2024 in it: *Gear Generator has not yet been shown to carry your
+work into a new revision on SolidWorks 2024 (findings.CARRY_INSERTS_ON_2024), so …*, in the question and after the
+press alike.
+
+### The carrying states
+
+The question with every gate set (B's part, 85 words):
+
+> *As read at 15:09, RangeBox_r2 takes your Sprocket-1 and Housing-1 and makes your Lock3 again in the modes it was on
+> in. Your Keyway stays in Gear_m1.25_N29, which Sun's new part replaces (its Flank changed); your Groove comes with
+> Sleeve_m1.25_N17. RangeBox_r2 holds what it carries unsaved. If RangeBox.SLDASM is closed, open it first unless this
+> SolidWorks last saved it and its files and nothing of yours is open. Assembly features, display states and
+> appearances stay behind; sub-assemblies come over rigid, pattern instances as components of their own.*
+
+This is true, short and not contradictory. Before M9 sets `REFERENCED_CONFIGURATION_READ`, it adds *Sprocket-1 and
+Housing-1 are carried only if each file has one configuration.* and, at the end, *(Not yet shown on SolidWorks 2026:
+findings.REFERENCED_CONFIGURATION_READ_ON_2026.)*. That is the right hedge.
+
+The closed-assembly sentence is compressed past the point of saying what happens otherwise, but its advice, *open it
+first*, is the right one, so I leave it.
+
+The result (B's part, 133 words) is right, apart from N1:
+
+> *Carried into RangeBox_r2, unsaved: your carried1-1 (was Sprocket-1) and carried2-1 (was Housing-1), each where it
+> stood, and your Lock3, on in the modes it was on in. Your Keyway stays in Gear_m1.25_N29, which Sun's new part
+> replaces because its Flank changed (RangeBox.SLDASM and that file keep it). Your components stand in every mode of
+> RangeBox_r2 where they stood in H, the mode RangeBox.SLDASM showed. [the fake's marks sentence] Assembly features,
+> display states and appearances stay behind; sub-assemblies come over rigid, pattern instances as components of their
+> own. If a part of yours was made in context of RangeBox.SLDASM, it still refers to that assembly's parts. Save
+> RangeBox_r2 in SolidWorks to keep what was carried.*
+
+Two things in it are the fake's, not B's:
+- the components' names (*carried1-1*);
+- the marks sentence (the fake marks the parts; the 2026 probe found SolidWorks does not).
+
+### New things
+
+- **N2 (should-fix). `_split_stop` loses a stop that comes with the files-changed fact.**
+  - `_AFTER_CARRY`'s `^` alternative, with its lazy `(?:\S+ )*?`, matches from the very start of the text whenever
+    *changed on disk while Build again…* occurs anywhere. A's `_carry_after` runs after a stop too and appends its fact
+    to `stopped` (`swbuild.py:8398-8400`).
+  - So for a stop plus changed files, the stop comes back as part of the "after" text. `stop` is "". The *It did not
+    get to …* tail and *What was carried before it is …, unsaved* are lost, and *Save RangeBox_r2 in SolidWorks to keep
+    what was carried.* is said as if the carry had finished:
+
+    > *… SolidWorks stopped the carry while making UserDist4 again: SolidWorks: AddMate5 answered 2 for
+    > Sprocket.SLDPRT. Sprocket.SLDPRT changed on disk while Build again… carried your work, which Gear Generator never
+    > does; look at it in SolidWorks. Save RangeBox_r2 in SolidWorks to keep what was carried.*
+
+  - The user is never told that the assembly was not checked. The same happens when A's stop text has no final full
+    stop before the fact.
+  - **The field A should add**: `CarryResult.files_changed: List[str]`, the file **names** (never paths) of the old
+    assembly's and user's files whose time differed after the carry. Add `CarryResult.after_unread: str`: why the
+    times and flags could not be read after the carry (today's *Whether your files changed could not be read after the
+    carry: …*), "" when read.
+  - `stopped` is then a stop only. B words the fact from the field and keeps it on record (`CarryEntry` gains the same
+    two, defaulted).
+  - Until A adds it, the interim fix is to search from the last *. * before *changed on disk while* (`rfind`), not from
+    `^`.
+- **N3 (should-fix). The window's own `try` is not silent, but it says the wrong thing.**
+  - A raise in `carry_anchors` or `carried_status` now leaves the build's own sentence standing. That is the point,
+    and it is right.
+  - But it appends `collect_failed(exc)`: *The build could not be collected — KeyError: …*. That follows *Built 1
+    part, …*, so it reads as the build failing. It does not say that RangeBox_r2 holds the carry unsaved, though the
+    footer will.
+  - The exception's text is not passed through `bare_files`.
+  - Fix: a sentence of its own, through `bare_files`: *What was carried into RangeBox_r2 could not be said (KeyError:
+    …); it holds it unsaved: save it in SolidWorks to keep it.* Make the last clause conditional on `result.carry.unsaved`.
+- **N4 (should-fix). `bare_files` can eat words that are not a path.**
+  - Safe: ratios (*1:2*), times (*14:02*, *2026-11-17T14:02:00Z*), a mate's *SolidWorks:* prefix, leaf Name2s with
+    `/`, a path with spaces, a UNC path, a forward-slash path, two paths in one sentence, and a path followed by a word.
+  - It does go wrong when a path's file name is followed by a full stop or comma, and a `/` comes later in the same
+    text. The folder group then runs across the sentence:
+    - *Saved C:\R\RangeBox.SLDASM. Next/then* → *Saved then*;
+    - *C:\A\x.SLDPRT, in folder D/E* → *E*.
+  - And `_LEFT` cuts any token ending in a backslash: *mate A\B* → *mate B*.
+  - The first is plausible in an exception's text.
+  - Fix: let the lookahead end the file name on punctuation as well as space,
+    `(?!\.[A-Za-z][A-Za-z0-9]{1,5}(?:[\s.,;:)\]]|$))`. Do not let a folder segment hold `. ` or `, `.
+- **`WHY_REFUSED` and `WHY_TOO_LONG`: right.**
+  - With A's real refusal: *M2 is not made again: SolidWorks refused it, saying AddMate5 would not make M2 again
+    (status 1).*
+  - The cap: *Coincident8 is on a face of Sprocket-5 that Gear Generator did not look for, since finding it among
+    Sprocket.SLDPRT's faces would have taken too long* (an edge of an app gear: *an edge of Sun … among
+    Gear_m1.25_N29.SLDPRT's edges*).
+  - Both are §9.3's, and neither says the cap's name, as the contract wants.
+- **`bore_mm` from the OLD part: right.**
+  - The contract (`W9D-INTERFACES.md:69`) says the OLD gear part's bore, *what its Bore Diameter global was written
+    from*. A compares it with the cylinder's radius read in the old part (`swbuild.py:7392`).
+  - The new plan's bore would be wrong exactly when the Bore changed.
+  - B reads it from the record's `PartEntry.spec`, not the sidecar the contract names. Both hold what was written.
+  - A Bore that is an expression or carries a unit reads None, so the sentence falls back to *a face of Sun on its
+    axis*, which is never false.
+  - One residue: a part the user re-dimensioned in SolidWorks (K11 `MISMATCHED`) has a bore other than its spec. It
+    then reads *on its axis*, not *bore*, which is still true.
+- **Privacy: right.**
+  - `CarryEntry.stopped`, every named entry's subjects and sentences, and every fallback's subjects go through
+    `bare_files`.
+  - Components keep Name2, kind and configuration.
+  - `CarryEntry.assembly` is the old assembly, the app's own file.
+  - Only N3's fallback sentence and N4's edge cases remain.
+
+### Notes
+
+- *your Sprocket-1, each where it stood*: *each* with one component. Drop it for one.
+- The stop's tail repeats A's step: *… stopped the carry while reading the new revision: … It did not get to reading
+  the new revision.* A's `skipped` starts with the step it stopped in; B could drop the first item when it is the step
+  `stopped` names.
+- A's not-open reason still carries *(a file saved since on another SolidWorks is not read)*. That is A's text, and
+  the file's version is read; only the open is refused.
+- The Tk tests now drive A's worker (two tests, a carry and today's state), which closes the first round's gap.
+
+### What I did not check
+
+As before: the four K12 window-mapping tests, deselected on Windows.
