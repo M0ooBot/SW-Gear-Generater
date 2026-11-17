@@ -2631,6 +2631,9 @@ def workbook_footer(assessment, *, record=None, record_problem: str = "", plan=N
                     text, ok = f"{text} {said}", ok and said_ok
         if unsaved:
             text += " " + _unsaved_line(unsaved, puts_back, getattr(record, "unsaved_in_error", ()) or ())
+        carried = carry_footer_line(record)       # W9d (§9.4): the carry a Build again… left unsaved, until saved
+        if carried:
+            text += " " + carried
         if subject and plan is not None and not plan.refusal:
             back = _held_back(plan, subject, after_unsaved_line=bool(unsaved))
             if back:

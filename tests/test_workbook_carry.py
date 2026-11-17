@@ -725,3 +725,111 @@ def test_nothing_read_a_read_that_marked_and_a_document_left_open_each_say_nothi
 
 def test_the_carry_kind_words_are_the_workers():
     assert ui_text.CARRY_KIND_WORDS == swbuild.CARRY_KIND_WORDS
+
+
+# -- the finish's record (§7) and the footer's lines (§9.4) ------------------------------------------------------------
+
+def _carried_build(desk, done_for, spec=None, mtime=lambda p: 1763400000.5):
+    """A Build again… of ``spec`` (Sun's Flank to arcs) on the desk's fake, with ``done_for(work)`` its hand-made
+    CarryResult, finished as the window finishes it; (again, result, finished, carry)."""
+    spec = spec or gears(range_box(), **SUN_FLANK)
+    again = _again(desk, spec)
+    old = update.old_assembly(desk.record, again)
+    carry = update.carry_for(desk.record, again, old, read_sidecar=desk.disk.read_sidecar)
+    result = swbuild.build_gearbox(desk.sw, **again.build_kwargs(), exists=desk.disk.exists, before=old)
+    assert result.ok and result.assembly.saved
+    work = update.recorded_old_work(desk.record)
+    work.read_at = "2026-11-17T14:10:00Z"
+    work.components = [replace(c, configurations=("Default",)) for c in work.components]    # as the worker reads
+    result.carry = done_for(work)
+    finished = gearbox.finish_build(again, result, desk.record, workbook=r"C:\B\RangeBox.xlsx", digest="d9",
+                                    written_by="test", read_sidecar=desk.disk.read_sidecar, exists=desk.disk.exists,
+                                    stamp="2026-11-17T14:12:00Z", revision=(34, 0, 0), mtime=mtime, carry=carry)
+    return again, result, finished, carry
+
+
+def _all_carried(work):
+    return swbuild.CarryResult(
+        work, inserted=[("Sprocket-1", "Sprocket-1"), ("Housing-1", "Housing-2")],
+        states=[("Sprocket-1", ("L",)), ("Housing-2", ())], remade=[("Lock3", "Lock3", ("H", "N"))],
+        named=[swbuild.CarryNamed("Concentric5", "mate", swbuild.WHY_PART_NEW,
+                                  ("Sun", "its Flank changed", "face", "bore"))],
+        fixed=[swbuild.CarryFallback(("Housing-2",), ("Lock9",), (), swbuild.FELL_TIE, ("Sun", "H"))], unsaved=True)
+
+
+def test_the_finish_keeps_the_carry_on_the_new_revision_and_its_inventory_from_what_was_carried(desk, carrying):
+    again, result, finished, carry = _carried_build(desk, _all_carried)
+    box = finished.record.gearbox
+    assert box.name == "RangeBox_r2" and finished.record.unsaved == {}          # never LinkRecord.unsaved (D16)
+    entry = box.carry
+    assert (entry.assembly, entry.read_at, entry.how, entry.carried_at, entry.revision, entry.states_read) == (
+        desk.record.gearbox.assembly, "2026-11-17T14:10:00Z", "open", "2026-11-17T14:12:00Z", [34, 0, 0], False)
+    assert [(c.name, c.was, c.kind, c.fixed, c.suppressed_in, c.anchor) for c in entry.components] == [
+        ("Sprocket-1", "Sprocket-1", "part", False, ["L"], "Sun"), ("Housing-2", "Housing-1", "part", True, [], "")]
+    assert [(m.name, m.was, m.type, m.on, m.code_before, m.code_after) for m in entry.mates] == [
+        ("Lock3", "Lock3", 16, ["H", "N"], 0, 0)]
+    assert entry.named[0].sentence == "Concentric5 was on Sun's bore, and Sun's part is new because its Flank changed"
+    assert (entry.fixed[0].components, entry.fixed[0].why) == (["Housing-2"], "tie")
+    assert entry.unsaved_at == 1763400000.5
+    inventory = box.user_work
+    assert (inventory.read_at, inventory.assembly, inventory.revision, inventory.modes) == (
+        "2026-11-17T14:12:00Z", box.assembly, [34, 0, 0], ["H", "N", "L"])
+    assert [(c.name, c.fixed, c.state) for c in inventory.components] == [("Sprocket-1", False, 2),
+                                                                           ("Housing-2", True, 2)]
+    assert [(m.name, m.touches, m.on) for m in inventory.mates] == [
+        ("Lock3", [["app", "Sun"], ["user", "Sprocket-1"]], ["H", "N"])]
+    assert [(f.name, ui_text._stem(f.path)) for f in inventory.features] == [("Groove", "Sleeve_m1.25_N17")]
+    again_text = store.link_record_to_json(finished.record)
+    assert store.link_record_from_json(again_text).gearbox.carry == entry
+
+
+def test_with_nothing_carried_the_new_revision_holds_no_inventory_and_nothing_unsaved(desk):
+    def none_carried(work):
+        return swbuild.CarryResult(work, named=[swbuild.CarryNamed("Lock3", "mate", swbuild.WHY_UNMEASURED,
+                                                                   ("lock", "CARRY_REMAKE_KINDS_ON_2026", "2026"))])
+    _, _, finished, _ = _carried_build(desk, none_carried)
+    box = finished.record.gearbox
+    assert box.user_work is None and box.carry.unsaved_at == 0.0 and box.carry.components == []
+    assert box.carry.named[0].sentence.startswith("Lock3 is a lock mate, which Gear Generator has not yet been shown")
+    assert store.carry_unsaved(finished.record) is None and ui_text.carry_footer_line(finished.record) == ""
+
+
+def test_the_footer_says_the_carry_is_unsaved_until_the_file_is_newer(desk):
+    _, _, finished, _ = _carried_build(desk, _all_carried)
+    record = store.link_record_from_json(store.link_record_to_json(finished.record))
+    line = ("RangeBox_r2 holds what Build again… carried of yours, not saved: save it in SolidWorks to keep it.")
+    assert ui_text.carry_footer_line(record) == line
+    a = desk.a(gears(range_box(), **SUN_FLANK))
+    footer = ui_text.workbook_footer(a, record=record, plan=None, update=None, digest="d9", folder="C:\\Out\\")
+    assert line in footer.text, footer.text
+    store.clear_saved(record, mtime=lambda p: 1763400000.5)                   # the same time: still unsaved
+    assert ui_text.carry_footer_line(record) == line
+    store.clear_saved(record, mtime=lambda p: 1763400100.0)                   # saved in SolidWorks since
+    assert ui_text.carry_footer_line(record) == "" and record.gearbox.carry.unsaved_at == 0.0
+    assert record.gearbox.carry.components                                    # what was carried stays on record
+
+
+def test_a_later_update_that_finds_the_new_assembly_loaded_from_its_file_says_the_carry_was_lost(desk):
+    again, result, finished, carry = _carried_build(desk, _all_carried)
+    desk.record = store.link_record_from_json(store.link_record_to_json(finished.record))
+    desk.disk.write(finished)
+    up = update.classify(desk.record, desk.a(gears(range_box(), **SUN_FLANK)), exists=desk.disk.exists,
+                         read_sidecar=desk.disk.read_sidecar)
+    assert not up.needs_new_revision and up.refusal == "", (up.refusal, up.structural)
+    later = swbuild.GearboxUpdate()
+    later.opened = [desk.record.gearbox.assembly]
+    out = gearbox.Finished()
+    update._follow_carry(desk.record, up, later, out, mtime=lambda p: 1763400000.5)
+    assert out.notes == ["RangeBox_r2 was closed without saving after Build again… carried your work into it, so it "
+                         "does not hold it; RangeBox.SLDASM still does."]
+    assert store.carry_unsaved(desk.record) is None and desk.record.unsaved == {}
+    # Still open (in the session when the job began, not loaded): nothing said, the mark stands.
+    desk.record.gearbox.carry.unsaved_at = 1763400000.5
+    still = swbuild.GearboxUpdate()
+    still.open_before = [desk.record.gearbox.assembly]
+    out = gearbox.Finished()
+    update._follow_carry(desk.record, up, still, out, mtime=lambda p: 1763400000.5)
+    assert out.notes == [] and store.carry_unsaved(desk.record) is not None
+    # Saved since: the mark goes silently.
+    update._follow_carry(desk.record, up, still, out, mtime=lambda p: 1763400500.0)
+    assert out.notes == [] and store.carry_unsaved(desk.record) is None

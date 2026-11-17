@@ -2211,6 +2211,7 @@ def finish_update(plan: UpdatePlan, result: GearboxUpdate, record: LinkRecord, *
             follow_modes_added(box.user_work, result, box.modes)
         if revision:
             box.solidworks = [int(n) for n in revision]       # schema 9: the SolidWorks this press ran on
+        _follow_carry(rec, plan, result, out, mtime)           # W9d: what Build again… carried, found lost or saved
         out.earlier_update = _earlier_update(record, plan, result, mtime)
         if out.earlier_update:
             out.off_after_update, out.dragged = out.dragged, []
@@ -3316,7 +3317,27 @@ def recorded_old_work(record: Optional[LinkRecord]) -> Optional[swbuild.OldWork]
                            mates=mates, app_frames=())
 
 
-UNKNOWN_ENTITY = "not on record"     # OldEntity.unread of a schema 9 inventory's entity: its kind was never kept
+UNKNOWN_ENTITY = "not on record"
+
+
+def _follow_carry(rec: LinkRecord, plan: UpdatePlan, result: GearboxUpdate, out: Finished,
+                  mtime: Callable[[str], float]) -> None:
+    """W9d (D16, §9.4): ``CarryEntry.unsaved_at`` after a later Update of the revision a Build again… carried into.
+    Found loaded from its file by this job (``result.opened``, or not open when it began), the assembly does not hold
+    what was carried: the mark goes and the press's sentence says it was lost; saved since (its file newer), the mark
+    goes silently. ``LinkRecord.unsaved`` is not the carry's and is not touched."""
+    carried = store.carry_unsaved(rec)
+    if carried is None or not plan.assembly:
+        return
+    open_before = getattr(result, "open_before", None)
+    loaded = _in(plan.assembly, getattr(result, "opened", []) or []) or (
+        open_before is not None and not _in(plan.assembly, open_before))
+    if loaded and not store.saved_since(plan.assembly, carried.unsaved_at, mtime):
+        from .. import ui_text
+        carried.unsaved_at = 0.0
+        out.notes.append(ui_text.carry_lost_line(plan.assembly, carried.assembly))
+        return
+    store.clear_carry_saved(rec, mtime)     # OldEntity.unread of a schema 9 inventory's entity: its kind was never kept
 
 
 @dataclass(frozen=True)

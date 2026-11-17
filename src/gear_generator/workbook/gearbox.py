@@ -1241,8 +1241,16 @@ def finish_build(plan: GearboxPlan, result: GearboxResult, record: Optional[Link
                  read_sidecar: Callable[[str], Optional[Sidecar]] = store.read_sidecar,
                  stamp: Optional[str] = None,
                  mtime: Callable[[str], float] = os.path.getmtime,
-                 exists: Callable[[str], bool] = os.path.exists, revision: Sequence[int] = ()) -> Finished:
+                 exists: Callable[[str], bool] = os.path.exists, revision: Sequence[int] = (),
+                 carry: Optional[Any] = None) -> Finished:
     """The sidecars and record a build leaves, from what actually saved (Tk thread, after the worker).
+
+    W9d (W9D-INTERFACES §7): ``carry`` the ``swbuild.Carry`` the window passed a carrying Build again… With
+    ``result.carry`` set and the new assembly saved, the new revision's gearbox keeps what was carried
+    (:func:`carry_entry`: ``GearboxRecord.carry``, ``unsaved_at`` the new assembly's file time when anything was written
+    into it) and, when anything was carried, an inventory built from the carry (:func:`carried_user_work`) so the
+    footer foresees the next Update from it; with nothing carried, no inventory, as W9a has it. ``LinkRecord.unsaved``
+    is never the carry's (D16).
 
     ``revision``: the SolidWorks revision the build ran on (the window's ``Job.revision``), kept on the gearbox
     record (schema 9, ``GearboxRecord.solidworks``) so the footer judges W9c's gates on it before any Update.
@@ -1415,6 +1423,7 @@ def finish_build(plan: GearboxPlan, result: GearboxResult, record: Optional[Link
     before: Optional[GearboxRecord] = None
     if layout_path:
         old = rec.gearbox
+        old_inventory = old.user_work if old is not None else None      # W9d: the carry's old assembly's, on record
         before = copy.deepcopy(old) if old is not None and old.revision == plan.revision else None
         if old is not None and old.revision != plan.revision:
             in_use = list(plan.part_of.values())
@@ -1438,6 +1447,13 @@ def finish_build(plan: GearboxPlan, result: GearboxResult, record: Optional[Link
         if assembly_path:
             if gearbox.user_work is not None and not store.same_path(gearbox.user_work.assembly, assembly_path):
                 gearbox.user_work = None          # W9a: an inventory read in another assembly is not this one's
+            done = getattr(result, "carry", None)
+            if done is not None:
+                # W9d: what this Build again… carried into its new assembly, and the inventory it now holds.
+                gearbox.carry = carry_entry(plan, done, carry, stamp=stamp, revision=revision,
+                                            assembly=assembly_path, mtime=mtime)
+                gearbox.user_work = carried_user_work(plan, done, carry, old_inventory, stamp=stamp,
+                                                      revision=revision, assembly=assembly_path, digest=digest)
             if gearbox.assembly and not store.same_path(gearbox.assembly, assembly_path):
                 gearbox.left_globals, gearbox.left_configurations = [], []   # W9c: another assembly's leftovers
             gearbox.assembly = assembly_path
@@ -1495,3 +1511,124 @@ def finish_build(plan: GearboxPlan, result: GearboxResult, record: Optional[Link
     rec.written_by = written_by
     out.record = rec
     return out
+
+
+# -- W9d: what a carrying Build again… leaves on record (W9D-INTERFACES §7) ----------------------------------------
+
+
+def carry_anchors(carry: Any, result: Any, revision: Sequence[int]) -> Dict[str, str]:
+    """Each carried component's anchor (``CarryPlanItem.anchor``) by its old Name2. ``CarryResult`` does not hand it
+    back, so it is worked again by ``swbuild.plan_carry`` on what was read (pure; the anchor rests on the mates, never
+    on the frames); ``{}`` when that cannot be done."""
+    from .. import swbuild
+    work = getattr(result, "work", None)
+    if carry is None or work is None:
+        return {}
+    try:
+        planned = swbuild.plan_carry(work, carry, tuple(revision))
+    except Exception:  # noqa: BLE001 - only the record's anchor, said as the world frame
+        return {}
+    return {item.component.name: item.anchor for item in planned.components}
+
+
+def _new_modes(plan: GearboxPlan, carry: Any) -> List[str]:
+    if carry is not None and getattr(carry, "modes", ()):
+        return list(carry.modes)
+    return [step.name for step in plan.modes_plan.steps] if plan.modes_plan is not None else []
+
+
+def carry_entry(plan: GearboxPlan, result: Any, carry: Any, *, stamp: str, revision: Sequence[int], assembly: str,
+                mtime: Callable[[str], float] = os.path.getmtime) -> store.CarryEntry:
+    """``GearboxRecord.carry`` from a ``swbuild.CarryResult``: the old assembly read and how (``unread`` when the read
+    raised), each component inserted (its kind, the configuration it references, fixed as it was or by a fallback,
+    the new modes it reads suppressed in, its anchor), each mate made again (its type, the new modes it reads on in,
+    its code before, and after: the error it was carried in, else 0, since a new error falls its cluster back), each
+    item named with its sentence (``ui_text.carry_named_clause``), each fallback, a stop; ``unsaved_at`` the new
+    assembly's file time when anything was written into it (``result.unsaved``)."""
+    from .. import swbuild, ui_text
+    work = result.work
+    old_path = (work.assembly if work is not None else "") or (carry.old.path if carry is not None else "")
+    components = {c.name: c for c in (work.components if work is not None else [])}
+    mates = {m.name: m for m in (work.mates if work is not None else [])}
+    states = {new: list(modes) for new, modes in result.states}
+    fallen = {name for f in result.fixed for name in f.components}
+    anchors = carry_anchors(carry, result, revision)
+    entry = store.CarryEntry(
+        assembly=old_path, read_at=work.read_at if work is not None else "",
+        how=work.how if work is not None else swbuild.OLD_UNREAD, carried_at=stamp,
+        revision=[int(n) for n in revision], states_read=bool(work is not None and work.states_route),
+        stopped=result.stopped)
+    for was, name in result.inserted:
+        old = components.get(was)
+        entry.components.append(store.CarriedComponentEntry(
+            name=str(name), was=was, kind=old.kind if old is not None else "",
+            configuration=old.configuration if old is not None else "",
+            fixed=bool(old is not None and old.fixed) or name in fallen, suppressed_in=states.get(name, []),
+            anchor=anchors.get(was, "")))
+    same = dict(result.same_error)
+    for was, name, on in result.remade:
+        old = mates.get(was)
+        entry.mates.append(store.CarriedMateEntry(
+            name=str(name), was=was, type=int(old.type) if old is not None else -1, on=list(on),
+            code_before=int(old.code) if old is not None else 0, code_after=int(same.get(was, same.get(name, 0)))))
+    new_name, old_name = plan.name, os.path.basename(old_path.replace("\\", "/"))
+    for n in result.named:
+        entry.named.append(store.CarryNamedEntry(item=n.item, what=n.what, why=n.why,
+                                                 subjects=[str(s) for s in n.subjects],
+                                                 sentence=ui_text.carry_named_clause(n, name=new_name, old=old_name)))
+    for f in result.fixed:
+        entry.fixed.append(store.CarryFallbackEntry(list(f.components), list(f.deleted), list(f.kept), f.why,
+                                                    [str(s) for s in f.subjects]))
+    if result.unsaved:
+        try:
+            entry.unsaved_at = float(mtime(assembly))
+        except (OSError, ValueError, TypeError):
+            entry.unsaved_at = 0.0          # its time cannot be read: as a file that is gone, nothing is said
+    return entry
+
+
+def carried_user_work(plan: GearboxPlan, result: Any, carry: Any, old: Optional[store.UserWorkEntry], *,
+                      stamp: str, revision: Sequence[int], assembly: str, digest: str = ""
+                      ) -> Optional[store.UserWorkEntry]:
+    """The new revision's inventory, built from what was carried (W9D-INTERFACES §7), so the footer foresees the next
+    Update from it: ``read_at`` the carry's time, the carried components by their new Name2 (resolved, or suppressed
+    where they read suppressed in the first mode), the mates made again with their touches and entities in the new
+    revision's terms (a user component by its new Name2; the app's bodies keep their ids) and the modes they read on
+    in, the user's features in parts the new revision reuses (from the old inventory), the new modes. None when nothing
+    was carried, as W9a has it."""
+    from .. import swbuild
+    if not result.inserted and not result.remade:
+        return None
+    work = result.work
+    renamed = dict(result.inserted)
+    modes = _new_modes(plan, carry)
+    states = {new: set(m) for new, m in result.states}
+    fallen = {name for f in result.fixed for name in f.components}
+    olds = {c.name: c for c in (work.components if work is not None else [])}
+    entry = store.UserWorkEntry(read_at=stamp, assembly=assembly, digest=digest,
+                                revision=[int(n) for n in revision], modes=list(modes))
+    for was, name in result.inserted:
+        o = olds.get(was)
+        suppressed = bool(modes) and modes[0] in states.get(name, set())
+        entry.components.append(store.UserComponentEntry(
+            name=str(name), kind=o.kind if o is not None else "", fixed=bool(o is not None and o.fixed) or name in fallen,
+            code=0, state=0 if suppressed else 2))
+    same = dict(result.same_error)
+    mates = {m.name: m for m in (work.mates if work is not None else [])}
+
+    def now(what: str, owner: str) -> str:
+        return renamed.get(owner, owner) if what == swbuild.USER else owner
+    for was, name, on in result.remade:
+        o = mates.get(was)
+        entities = list(o.entities) if o is not None else []
+        entry.mates.append(store.UserMateEntry(
+            name=str(name), kind=swbuild._mate_kind(o.type) if o is not None else swbuild.USER_OTHER,
+            type=int(o.type) if o is not None else -1,
+            touches=[[e.what, now(e.what, e.owner)] for e in entities], on=list(on),
+            code=int(same.get(was, same.get(name, 0))), warning=bool(o.warning) if o is not None else True,
+            whole=bool(o.whole) if o is not None else True,
+            entities=[[e.what, now(e.what, e.owner), e.kind, e.feature] for e in entities]))
+    reused = [r.path for r in plan.reuse]
+    if old is not None:
+        entry.features = [copy.deepcopy(f) for f in old.features if any(store.same_path(f.path, p) for p in reused)]
+    return entry
