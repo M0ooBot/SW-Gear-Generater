@@ -422,7 +422,15 @@ _W7_LINK_SCHEMA = 5               # the schema W7 left (W8-PLAN §1.11: W8's is 
 _W8_LINK_SCHEMA = _W7_LINK_SCHEMA + 1        # the schema W8 left (ISSUE-1-PLAN §2.4: W9a's is one past it)
 _W9A_LINK_SCHEMA = _W8_LINK_SCHEMA + 1       # the schema W9a left (ISSUE-1-PLAN §2.4: W9b's is one past it)
 _W9B_LINK_SCHEMA = _W9A_LINK_SCHEMA + 1      # the schema W9b left (the coordinator's ruling: W9c's is one past it)
-LINK_SCHEMA_VERSION = _W9B_LINK_SCHEMA + 1   # the link record's own schema, apart from the .gear.json's SCHEMA_VERSION
+_W9C_LINK_SCHEMA = _W9B_LINK_SCHEMA + 1      # the schema W9c left (W9D-INTERFACES §7: W9d's is one past it)
+LINK_SCHEMA_VERSION = _W9C_LINK_SCHEMA + 1   # the link record's own schema, apart from the .gear.json's SCHEMA_VERSION
+# Schema 10 (W9d, W9D-INTERFACES §7): a Build again… that carried the user's work keeps what it carried on the new
+# revision's gearbox (``GearboxRecord.carry``, a CarryEntry: the old assembly it read and how, each component carried and
+# each mate made again, everything named with its reason, each cluster fixed, a stop, and ``unsaved_at`` while the new
+# assembly holds what was carried unsaved), and a user mate in an inventory keeps its entities (``UserMateEntry.
+# entities``, ``[what, name, kind, feature]``). A W9c-era app would drop both on write-back, so it refuses a schema 10
+# record and leaves it byte-identical. A v1-v9 record reads as v10 as it read as v9 (no carry, every ``entities`` [])
+# and is written forward as v10.
 # Schema 9 (W9c, the coordinator's ruling on the review; W9C-INTERFACES §7): the gearbox keeps what an Update that
 # stopped part way left of the app's (``left_globals``, ``left_configurations``) and the SolidWorks revision its last
 # Build or Update ran on (``solidworks``); a user-work inventory keeps a refusal's own time (``refused_at``) and says
@@ -615,6 +623,11 @@ class UserMateEntry:
     code: int = 0
     warning: bool = True
     whole: bool = True
+    # Schema 10 (W9d, D5): per entity ``[what, name, kind, feature]`` (``swbuild.UserMate.entities``): ``what`` and
+    # ``name`` as ``touches``, ``kind`` how SolidWorks classed the entity (``swbuild.ENTITY_*``: whole, feature, plane,
+    # origin, face, edge, vertex, unread), ``feature`` a reference feature's name or ``plane<n>``; ``[]`` on an older
+    # inventory, whose entity kinds are not known.
+    entities: List[List[str]] = field(default_factory=list)
 
 
 @dataclass
@@ -707,6 +720,92 @@ class UserWorkEntry:
 
 
 @dataclass
+class CarriedComponentEntry:
+    """Schema 10 (W9d): a component of the user's a Build again… carried into the new revision: its ``Name2`` there
+    and in the old assembly (``was``), ``part`` or ``assembly``, the referenced configuration it was inserted in
+    (``""`` its file's own), whether fixed, the new modes it reads suppressed in (as read back), and the app body
+    (``swbuild.CarryBody.old``) it was placed against (``""`` the world frame)."""
+
+    name: str = ""
+    was: str = ""
+    kind: str = ""
+    configuration: str = ""
+    fixed: bool = False
+    suppressed_in: List[str] = field(default_factory=list)
+    anchor: str = ""
+
+
+@dataclass
+class CarriedMateEntry:
+    """Schema 10 (W9d): a mate of the user's made again in the new revision: the name it kept and its old one, its
+    ``swMateType_e``, the new modes it reads on in (as read back), and its error code in the old assembly's mode
+    showing and in the new revision's first mode."""
+
+    name: str = ""
+    was: str = ""
+    type: int = -1
+    on: List[str] = field(default_factory=list)
+    code_before: int = 0
+    code_after: int = 0
+
+
+@dataclass
+class CarryNamedEntry:
+    """Schema 10 (W9d): something of the user's not carried (``swbuild.CarryNamed``): the mate's or component's old
+    name, ``mate`` or ``component``, the reason (``swbuild.WHY_*``), its subjects slot by slot, and the sentence
+    said."""
+
+    item: str = ""
+    what: str = ""
+    why: str = ""
+    subjects: List[str] = field(default_factory=list)
+    sentence: str = ""
+
+
+@dataclass
+class CarryFallbackEntry:
+    """Schema 10 (W9d): a cluster that fell back (``swbuild.CarryFallback``): its components (new Name2s) fixed where
+    placed, the mates made again and deleted again, the user-to-user mates kept, why (``swbuild.FELL_*``) and its
+    subjects."""
+
+    components: List[str] = field(default_factory=list)
+    deleted: List[str] = field(default_factory=list)
+    kept: List[str] = field(default_factory=list)
+    why: str = ""
+    subjects: List[str] = field(default_factory=list)
+
+
+@dataclass
+class CarryEntry:
+    """Schema 10 (W9d, W9D-INTERFACES §7): what a Build again… carried of the user's into this revision. ``assembly``
+    the old assembly it read, ``read_at`` when, ``how`` ``open``, ``read-only`` or ``unread``; ``carried_at`` when
+    the carry ran and ``revision`` the SolidWorks it ran on; ``states_read`` whether each component's state per mode
+    was read (else each took the mode showing's, as said); what was carried, made again, named and fixed; ``stopped``
+    the sentence of a carry that stopped part way. ``unsaved_at``: the new assembly's file time after its save, while
+    it holds what was carried unsaved (D16: a field of its own, never ``LinkRecord.unsaved``, whose readers mean an
+    Update's changes); dropped once the file on disk is newer (:func:`clear_saved`) or the assembly is found loaded
+    from its file; 0.0 nothing unsaved."""
+
+    assembly: str = ""
+    read_at: str = ""
+    how: str = ""
+    carried_at: str = ""
+    revision: List[int] = field(default_factory=list)
+    states_read: bool = False
+    components: List[CarriedComponentEntry] = field(default_factory=list)
+    mates: List[CarriedMateEntry] = field(default_factory=list)
+    named: List[CarryNamedEntry] = field(default_factory=list)
+    fixed: List[CarryFallbackEntry] = field(default_factory=list)
+    stopped: str = ""
+    unsaved_at: float = 0.0
+
+
+CARRY_HOWS = ("open", "read-only", "unread")
+# CarryEntry.how: ``swbuild.OLD_OPEN``, ``OLD_READ_ONLY`` and ``OLD_UNREAD`` (spelled here, since swbuild imports this
+# module; kept the same by a test).
+
+
+@dataclass
 class GearboxRecord:
     """The current revision's layout part and assembly (phase W4; schema 3 adds W5's turning assembly).
 
@@ -773,6 +872,9 @@ class GearboxRecord:
     # Schema 9: the SolidWorks revision the last Build or Update of this gearbox ran on (``Session.revision``), so the
     # footer judges a finding's gate on it before any Update has read the user's work; [] = not known (older records).
     solidworks: List[int] = field(default_factory=list)
+    # Schema 10 (W9d): what the Build again… that made this revision carried of the user's from the old assembly
+    # (CarryEntry); None for every gearbox not made by a carrying Build again… (and every record before schema 10).
+    carry: Optional[CarryEntry] = None
 
     @property
     def left(self) -> List[str]:
@@ -1263,6 +1365,9 @@ def _modes_checked(box: "GearboxRecord") -> None:
 _USER_WHAT = ("app", "layout", "assembly", "user", "unread")
 # What a user mate's entity is on (``swbuild.APP``, ``LAYOUT``, ``ASSEMBLY``, ``USER``, ``UNREAD_ENTITY``; spelled here,
 # since swbuild imports this module, and kept the same by a test).
+_ENTITY_KINDS = ("whole", "feature", "plane", "origin", "face", "edge", "vertex", "unread")
+# How SolidWorks classed a user mate's entity (``swbuild.ENTITY_*``, W9D-INTERFACES §2.2; spelled here for the same
+# reason, and kept the same by a test).
 
 
 def _user_work_read(raw: Any) -> Optional[UserWorkEntry]:
@@ -1285,6 +1390,11 @@ def _user_work_read(raw: Any) -> Optional[UserWorkEntry]:
             if len(touch) != 2 or touch[0] not in _USER_WHAT:
                 raise ValueError(f"gearbox.user_work.mates[{index}] ({mate.name!r}) has an entity {touch!r}, not a "
                                  f"pair of what it is on ({', '.join(_USER_WHAT)}) and its name")
+        for entity in mate.entities:                                        # schema 10 (W9d)
+            if len(entity) != 4 or entity[0] not in _USER_WHAT or entity[2] not in _ENTITY_KINDS:
+                raise ValueError(f"gearbox.user_work.mates[{index}] ({mate.name!r}) has an entity {entity!r}, not "
+                                 f"what it is on ({', '.join(_USER_WHAT)}), its name, its kind "
+                                 f"({', '.join(_ENTITY_KINDS)}) and its feature")
     entry.features = [_checked(f) for f in _entries(UserFeatureEntry, raw.get("features", []) or [])]
     entry.carried = [_checked(c) for c in _entries(UserCarriedEntry, raw.get("carried", []) or [])]
     problems = []
@@ -1298,9 +1408,32 @@ def _user_work_read(raw: Any) -> Optional[UserWorkEntry]:
     return entry
 
 
+def _carry_read(raw: Any) -> Optional[CarryEntry]:
+    """Schema 10's ``gearbox.carry`` (W9d), every nested entry read as its own type and type-checked, else a
+    TypeError or ValueError phrase naming it: a ``how`` not one of :data:`CARRY_HOWS`, or a component of a kind not
+    ``part`` or ``assembly``. None (or a missing key) reads as None: nothing carried."""
+    if raw is None:
+        return None
+    if not isinstance(raw, dict):
+        raise TypeError("gearbox.carry is not an object")
+    entry = _checked(CarryEntry(**_known(CarryEntry, raw)))
+    if entry.how not in CARRY_HOWS:
+        raise ValueError(f"gearbox.carry.how is {entry.how!r}, not one of {', '.join(CARRY_HOWS)}")
+    entry.components = [_checked(c) for c in _entries(CarriedComponentEntry, raw.get("components", []) or [])]
+    for index, component in enumerate(entry.components):
+        if component.kind not in ("", "part", "assembly"):
+            raise ValueError(f"gearbox.carry.components[{index}] ({component.name!r}) is of kind "
+                             f"{component.kind!r}, not part or assembly")
+    entry.mates = [_checked(m) for m in _entries(CarriedMateEntry, raw.get("mates", []) or [])]
+    entry.named = [_checked(n) for n in _entries(CarryNamedEntry, raw.get("named", []) or [])]
+    entry.fixed = [_checked(f) for f in _entries(CarryFallbackEntry, raw.get("fixed", []) or [])]
+    return entry
+
+
 def link_record_from_json(text: str) -> LinkRecord:
-    """Parse a link record of any schema up to :data:`LINK_SCHEMA_VERSION`; a v1–v7 record is read as v8, and a
-    record of any newer schema is refused (:class:`UnknownSchema`) and left alone.
+    """Parse a link record of any schema up to :data:`LINK_SCHEMA_VERSION`; an older record is read as the current
+    schema (a v9 one with no carry and every user mate's ``entities`` ``[]``), and a record of any newer schema is
+    refused (:class:`UnknownSchema`) and left alone.
 
     The schema is ``link_schema_version`` when the file has it, else
     ``schema_version`` (a W2 file, or one an old build rewrote; see
@@ -1342,6 +1475,7 @@ def link_record_from_json(text: str) -> LinkRecord:
                                        enumerate(zip(_entries(CarrierEntry, gearbox.get("carriers", []) or []),
                                                      gearbox.get("carriers", []) or []))]
             record.gearbox.user_work = _user_work_read(gearbox.get("user_work"))      # schema 7 (W9a)
+            record.gearbox.carry = _carry_read(gearbox.get("carry"))                 # schema 10 (W9d)
             _turned_senses_checked(record.gearbox)
             _carriers_checked(record.gearbox)
             _modes_checked(record.gearbox)
@@ -1631,7 +1765,32 @@ def clear_saved(record: LinkRecord, mtime: Callable[[str], float] = os.path.getm
                 del marks[path]
                 dropped = True
     keep_in_error(record)
-    return dropped
+    return clear_carry_saved(record, mtime) or dropped
+
+
+def carry_unsaved(record: Optional[LinkRecord]) -> Optional[CarryEntry]:
+    """The current revision's carry while its assembly holds what a Build again… carried unsaved
+    (``CarryEntry.unsaved_at`` set), else None."""
+    box = getattr(record, "gearbox", None)
+    carry = getattr(box, "carry", None)
+    return carry if carry is not None and carry.unsaved_at and box.assembly else None
+
+
+def clear_carry_saved(record: LinkRecord, mtime: Callable[[str], float] = os.path.getmtime) -> bool:
+    """W9d (D16): ``CarryEntry.unsaved_at`` dropped once the new assembly's file on disk is newer than it (the user
+    saved it in SolidWorks, so it holds what was carried), or is gone — :func:`clear_saved`'s rule for
+    ``LinkRecord.unsaved``, applied to this field by its own code. In place; whether it was dropped."""
+    carry = carry_unsaved(record)
+    if carry is None:
+        return False
+    try:
+        now_ = mtime(record.gearbox.assembly)
+    except OSError:
+        now_ = None
+    if now_ is None or now_ > carry.unsaved_at:
+        carry.unsaved_at = 0.0
+        return True
+    return False
 
 
 def keep_in_error(record: LinkRecord) -> None:

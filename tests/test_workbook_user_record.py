@@ -52,8 +52,8 @@ def test_schema_7_keeps_the_users_work_and_round_trips_byte_for_byte(tmp_path):
     record = _record(_entry())
     text = store.link_record_to_json(record)
     raw = json.loads(text)
-    assert store._W9A_LINK_SCHEMA == 7                 # schema 7's shape; W9b's 8 and W9c's 9 write it unchanged
-    assert raw["link_schema_version"] == store.LINK_SCHEMA_VERSION == 9 and raw["schema_version"] == 1
+    assert store._W9A_LINK_SCHEMA == 7                 # schema 7's shape; W9b's 8, W9c's 9 and W9d's 10 write it
+    assert raw["link_schema_version"] == store.LINK_SCHEMA_VERSION == 10 and raw["schema_version"] == 1
     assert raw["gearbox"]["user_work"]["mates"][0]["touches"] == [["app", "G1"], ["user", "Sprocket-1"]]
     back = store.link_record_from_json(text)
     again = store.link_record_to_json(back)
@@ -81,13 +81,14 @@ def test_a_record_written_before_schema_7_reads_with_nothing_of_the_users_read(t
 
 
 def test_a_record_newer_than_this_apps_schema_is_refused_and_left_alone(tmp_path):
-    """W9a's reader refused 8 (W9b's; ``test_workbook_bands``); this one, reading 9 (W9c's), refuses 10."""
+    """W9a's reader refused 8 (W9b's; ``test_workbook_bands``); this one, reading 10 (W9d's), refuses 11 (W9c's
+    refusal of 10 is ``test_workbook_carry``'s)."""
     raw = json.loads(store.link_record_to_json(_record(_entry())))
-    raw["link_schema_version"] = 10
+    raw["link_schema_version"] = 11
     target = tmp_path / "R.workbook.json"
     target.write_text(json.dumps(raw))
     before = target.read_bytes()
-    with pytest.raises(store.UnknownSchema, match=r"schema 10, this one reads 9"):
+    with pytest.raises(store.UnknownSchema, match=r"schema 11, this one reads 10"):
         store.read_link_record(str(tmp_path / "R.xlsx"))
     assert target.read_bytes() == before
 
