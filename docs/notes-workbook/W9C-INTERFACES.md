@@ -456,3 +456,59 @@ file on disk as its own (it may be the user's), B could record a new part the fa
 (`result.built`) as a `PartEntry` with its `.gear.json`. The next `classify` then finds it on record and hands an
 `AddedGear` with `build` None, which the worker already inserts as it does any part on record (the G5 path), with no
 change on A's side. Until ruled, the record does not hold it and the footer names the file to move.
+
+### From A (the joining round's faults): F1, F2 and F3 on the worker's side
+
+**F2: what each step puts, and where the check judges it.** The rule from W9a holds: every put the change phase
+makes on a body the user's work is on is judged before the first write (`_user_check`, then route (c1) carries the
+user's locked components in each mode put, or the press refuses by name).
+
+| §4 step | What it puts | Where the check judges it |
+|---|---|---|
+| 1. new parts built | nothing in the assembly | — |
+| 2. values, bands | nothing itself; a part changed makes the assembly "changed" | with modes, as 3.7 below |
+| 3.1 modes removed | nothing; the removed mode is never put | the user's work is judged over the modes after the Update (the removed mode left out) |
+| 3.2 gears removed | nothing; the trains left are judged as they will stand (B leaves the gear's links out of `motion`) | `_may_put` on the trains after |
+| 3.3 modes added | nothing itself (a copy of the mode showing) | each added mode is judged as the mode it copies: `work_in_added_modes(work, modes_added, active)` puts each user mate on in the active mode on in the new one too, and the added modes join the modes judged (K2's per-mode lock rule, route (c1)'s carry in every mode) |
+| 3.4 gears added | the gear's `Place` only (no user work can be on it) | without modes, the trains as they stand after (`after`: the motion after, every placement, the added gear at its wanted frame) are judged by `_may_put` too, so a train that gains a gear and is then out of step (a turn the user gave it) is judged put; with modes, as 3.7 |
+| 3.5 new couplings, 3.6 remakes | nothing themselves | with modes, as 3.7 |
+| 3.7 W8's modes path | **every train whole in every mode** whenever anything changed (ruling 9.18): any `InPlace`, or a gear mate remade, always changes something | with modes, `changing` is now True for any `InPlace` and any remake, so every mated body is judged put (and a held or fixed gear only off its frame), in every mode, the added ones included |
+| W7's path (no modes) | each train out of step, moved or remade, against the live frames | as before, plus the trains after an insert (3.4) |
+
+So a modes-only press with the user's sprocket locked to Sun either carries it in each mode put (`carried` lists
+every mode, the added one too) or, with a mate of another kind on a put body, refuses by name before the first write.
+**For B's footer:** the foresight should judge the same way: call `swbuild.work_in_added_modes` on the recorded
+inventory with the mode the press will copy (the record's active mode where it has one) before `judge_user_work`, or
+the footer foresees *"your lock … suppressed in R"* where the press goes through. That is why B's
+`test_a_mode_added_on_the_result_is_one_update_and_a_second_press_quiet[True]` still fails at its footer assertion,
+while the press itself now goes through; `…removed…[True]` now passes.
+
+**F1: a step repeated after a press that stopped.** Each looks for what the stopped press left, in the check phase,
+before any write:
+- *An assembly global an added gear adds* (`Hub Face Z`), or *a band global in a sleeve's part*: there at the value
+  wanted, taken as done (not added again, not in `globals_added`); there at another value and named in the new
+  **`InPlace.left`** (the record of the stopped press), set; otherwise the user's, refused by name with the new kind
+  **`PROBLEM_GLOBAL = "global"`** (`subjects`: the global, the file): *'T.SLDASM already holds a global "G5 Face Z" = 35
+  that Gear Generator did not add, where Update SolidWorks would add it as 40, so nothing is changed; rename or
+  delete "G5 Face Z" in SolidWorks and press Update SolidWorks again.'*
+- *A configuration an added mode names*: named in `InPlace.left`, gone on from (not added again; its flags and slide
+  values set unshown and read back; listed in `modes_added`); otherwise still `PROBLEM_CONFIGURATION`.
+- *A relief already made* in a sleeve to be given bands: refused by name (`BuildError`), *"Sleeve….SLDPRT already
+  holds Relief Start Plane, the relief of bands an Update SolidWorks that stopped part way began to give it, so
+  nothing is changed; delete it in SolidWorks and press Update SolidWorks again, or build the gearbox again."*
+- *A mate made without its flags*: on record by B, set by the check's D10 per mode (goes on, as B's test has it).
+- *A component inserted without its mates*: B sends Build again… by name; the worker has nothing of it to go on from
+  (it is not in `InPlace`), consistent with that.
+- **New on the result:** `GearboxUpdate.globals_added: List[(document path, name)]`, each global an in-place step
+  added. **For B:** keep these names (and `modes_added`) on the record of a press that stopped, and hand them back
+  as `InPlace.left` on the next press; without it a global left at the value wanted is still taken as done (B's F1
+  test passes on that), but one left at another value refuses as the user's.
+- **A part built by a press that then failed (the ruling):** `result.built` holds each new part's `BuildResult` in
+  `InPlace.added` order (those with `build`), its `saved` path set once saved, whatever happened after; B has the
+  spec in its own plan. Nothing more is needed from the worker.
+
+**F3: `skipped` names only what was not done**, at the result's grain: once a gear is inserted its step becomes
+*"making Hub's mates"*; once its mates are made, *"setting Hub's mates on in their modes and reading Hub back"* (with
+no modes, *"reading Hub back"*); a mode added becomes *"setting every mate and slide in the configuration R"*; a new
+coupling made, *"setting … on in its modes"*; a gear mate remade, the same. The last entry stays *"putting the gears
+back and checking the assembly"*.

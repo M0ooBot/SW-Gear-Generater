@@ -646,3 +646,172 @@ def test_with_modes_a_gear_taken_out_is_gone_from_every_mode_with_its_per_mode_c
     for mode in TC_MODES:
         fake.show_configuration(mode)
         assert "gear9-1" not in fake.frames and fake.mate("ModeSlv engages FrontDog", TC_ASM) is None
+
+
+# -- the joining round's faults (W9C-INTERFACES §11, From B): F2 the puts judged, F1 what a stopped press left, F3 ----
+
+from test_swbuild import _drag  # noqa: E402
+from test_swbuild_user_work import _tc_sprocket  # noqa: E402
+
+SPROCKET = "C:\\U\\Sprocket.SLDPRT"
+
+
+@pytest.fixture
+def carry(monkeypatch):
+    """Route (c1) on a train with no carrier, with modes and without, as if read clean (as W9a's tests set it)."""
+    for year in (2026, 2024):
+        monkeypatch.setattr(findings, f"USER_MATE_PUT_NO_CARRIER_ON_{year}", True, raising=False)
+        monkeypatch.setattr(findings, f"USER_MATE_PUT_NO_CARRIER_MODES_ON_{year}", True, raising=False)
+
+
+@pytest.mark.parametrize("change", ["added", "removed"])
+def test_f2_a_mode_added_or_removed_carries_the_users_locked_component_in_every_mode_put(tc_built, measured, carry,
+                                                                                       change):
+    """F2: only modes change, so the check sees nothing moved, yet the change phase puts every train in every mode:
+    the check judges those puts, and the user's sprocket locked to RangeSlv goes with it in each, the added mode too
+    (judged as the mode it copies), never stopped half way."""
+    fake, built = tc_built
+    _tc_sprocket(fake)
+    if change == "added":
+        result = _tc_in_place(fake, built, InPlace(modes_added=("2L",)), **_with_2l(built))
+        modes = ["4H", "N", "4L", "2L", "2H"]
+    else:
+        result = _tc_in_place(fake, built, InPlace(modes_removed=("N",)), **_without_n(built))
+        modes = ["4H", "4L", "2H"]
+    assert result.ok, (result.failures, result.skipped)
+    assert [(c, g, m) for c, g, m in result.carried] == [("Sprocket-2", "RangeSlv", m) for m in modes]
+
+
+def test_f2_a_users_mate_on_a_body_a_mode_change_will_put_refuses_before_any_write(tc_built, measured, carry):
+    fake, built = tc_built
+    fake.user_component(TC_ASM, "Sprocket-2", SPROCKET, (IDENTITY9, (0.0, 0.0, 300.0)))
+    fake.user_mate(TC_ASM, "UserAngle", kind="angle", a=("gear7-1", "plane2"), b=("Sprocket-2", "Front Plane"))
+    with pytest.raises(UserWorkRefused) as raised:
+        _tc_in_place(fake, built, InPlace(modes_added=("2L",)), **_with_2l(built))
+    assert [p.mates for p in raised.value.problems] == [("UserAngle",)]
+    assert _writes(fake) == [] and "2L" not in fake.configs
+
+
+def test_f2_a_mode_added_is_judged_as_the_mode_it_copies(tc_built):
+    lock = UserMate("UserLock2", swbuild.USER_LOCK, 16, (("app", "RangeSlv"), ("user", "Sprocket-2")), ("2H", "4H"))
+    work = swbuild.work_in_added_modes(UserWork(mates=[lock]), ("2L",), "2H")
+    assert work.mates[0].on == ("2H", "4H", "2L") and lock.on == ("2H", "4H")
+    assert swbuild.work_in_added_modes(UserWork(mates=[lock]), ("2L",), "N").mates[0].on == ("2H", "4H")
+
+
+def test_f2_without_modes_a_train_that_gains_a_gear_out_of_step_is_judged_put_and_carries_the_users_part(measured,
+                                                                                                        carry):
+    """The user turned the 12 : 1 in step; G5 goes in at its built turn, so G4's train is out of step once it is in
+    and is put whole: the check judges that put, and the sprocket locked to G4 goes with it."""
+    fake = _built_train()
+    _drag(fake, 10.0)
+    fake.user_component(T_ASM, "Sprocket-1", SPROCKET, (fake.frames["gear4-1"][0], (63.75, 51.0, 60.0)))
+    fake.user_lock(T_ASM, "UserLock1", "gear4-1", "Sprocket-1")
+    result = _update_train(fake, in_place=InPlace(added=(ADD_G5,)), **_with_g5())
+    assert result.ok, (result.failures, result.skipped)
+    assert "G4" in result.placed and [c for c, _, _ in result.carried] == ["Sprocket-1"]
+
+
+def test_f2_without_modes_a_users_mate_on_a_train_that_gains_a_gear_refuses_before_any_write(measured, carry):
+    fake = _built_train()
+    _drag(fake, 10.0)
+    fake.user_component(T_ASM, "Sprocket-1", SPROCKET, (IDENTITY9, (63.75, 51.0, 60.0)))
+    fake.user_mate(T_ASM, "UserAngle", kind="angle", a=("gear4-1", "plane2"), b=("Sprocket-1", "Front Plane"))
+    with pytest.raises(UserWorkRefused) as raised:
+        _update_train(fake, in_place=InPlace(added=(ADD_G5,)), **_with_g5())
+    assert [p.mates for p in raised.value.problems] == [("UserAngle",)]
+    assert _writes(fake) == []
+
+
+G5_FACE = ops.AddGlobal("G5 Face Z", "40")
+ADD_G5_FACE = replace(ADD_G5, ops=(G5_FACE,) + G5_OPS)
+
+
+def _t_global(fake, expression):
+    fake.open_document(T_ASM)
+    fake.add_global_variable("G5 Face Z", expression)
+    fake.calls.clear()
+
+
+@pytest.mark.parametrize("held, left, done", [(None, (), "added"), ("40", (), "done"), ("35", ("G5 Face Z",), "set")])
+def test_f1_an_assembly_global_a_stopped_press_left_is_taken_as_done_or_set(measured, held, left, done):
+    fake = _built_train()
+    if held is not None:
+        _t_global(fake, held)
+    result = _update_train(fake, in_place=InPlace(added=(ADD_G5_FACE,), left=left), **_with_g5())
+    assert result.ok, (result.failures, result.skipped)
+    called = [(n, a) for n, a in fake.calls if n in ("add_global_variable", "set_global_variable")]
+    assert called == {"added": [("add_global_variable", ("G5 Face Z", "40"))], "done": [],
+                      "set": [("set_global_variable", ("G5 Face Z", "40"))]}[done]
+    assert result.globals_added == ([(T_ASM, "G5 Face Z")] if done == "added" else [])
+
+
+def test_f1_a_global_of_the_users_by_that_name_refuses_by_name_before_any_write(measured):
+    fake = _built_train()
+    _t_global(fake, "35")
+    with pytest.raises(UserWorkRefused) as raised:
+        _update_train(fake, in_place=InPlace(added=(ADD_G5_FACE,)), **_with_g5())
+    (problem,) = raised.value.problems
+    assert problem.kind == swbuild.PROBLEM_GLOBAL and problem.subjects == ("G5 Face Z", "T.SLDASM")
+    assert problem.sentence == ('T.SLDASM already holds a global "G5 Face Z" = 35 that Gear Generator did not add, '
+                                'where Update SolidWorks would add it as 40, so nothing is changed; rename or delete '
+                                '"G5 Face Z" in SolidWorks and press Update SolidWorks again.')
+    assert _writes(fake) == []
+
+
+def test_f1_a_configuration_a_stopped_press_added_is_gone_on_from(tc_built, measured):
+    fake, built = tc_built
+    fake.add_configuration("2L")
+    fake.rebuild(kind=swcom.ASSEMBLY_TRAIN)
+    fake.show_configuration("2H")
+    fake.calls.clear()
+    result = _tc_in_place(fake, built, InPlace(modes_added=("2L",), left=("2L",)), **_with_2l(built))
+    assert result.ok, (result.failures, result.skipped)
+    assert "add_configuration" not in names(fake) and result.modes_added == ["2L"]
+    assert ("RangeSlv along Rear", "2L", 66.0) in result.slid
+
+
+def test_f1_band_globals_left_at_their_values_are_done_and_a_relief_left_refuses_by_name(measured):
+    fake = _built_train()
+    fake.open_document(P17)
+    for v in clutch.relief_globals((3.0, 2.0)):
+        fake.add_global_variable(v.name, v.expression)
+    fake.calls.clear()
+    result = _update_train(fake, parts=[_p17(RELIEF_FEATURES)], in_place=InPlace(bands=(_bands_given(),)))
+    assert result.ok, (result.failures, result.skipped)
+    assert "add_global_variable" not in names(fake) and result.bands_added == ["G3"]
+    fake = _built_train()
+    fake.open_document(P17)
+    fake.made.append(clutch.RELIEF_START_PLANE)
+    fake.calls.clear()
+    with pytest.raises(swbuild.BuildError, match="already holds Relief Start Plane, the relief of bands an Update"):
+        _update_train(fake, parts=[_p17(RELIEF_FEATURES)], in_place=InPlace(bands=(_bands_given(),)))
+    assert _writes(fake) == []
+
+
+def test_f3_skipped_names_only_what_was_not_done_at_the_results_grain(tc_built, measured):
+    fake, built = tc_built
+    added, placements, changes = _with_hub(built)
+    motion, _ = _tc_motion(built, "2H")
+    fake.fail_on = {"add_mate": "SolidWorks would not make the mate Hub on Rear Axis."}
+    result = swbuild.update_gearbox(fake, assembly=TC_ASM, placements=placements,
+                                    motion=replace(motion, layout_component="layout-1", **changes), exists=fake.exists,
+                                    mtime=lambda _p: 0.0, in_place=InPlace(added=(added,)))
+    assert result.inserted == [("Hub", "gear10-1")]
+    assert result.skipped == ("making Hub's mates and putting the gears back and checking the assembly, because the "
+                              "job stopped in TransferCase.SLDASM")
+
+
+def test_f3_a_flag_that_fails_after_the_mates_are_made_names_what_is_left(tc_built, measured):
+    fake, built = tc_built
+    added, placements, changes = _with_hub(built)
+    motion, _ = _tc_motion(built, "2H")
+    added = replace(added, on_sets=(("RangeSlv splined to Hub", ("2H", "4H")),))     # so a flag must be set
+    fake.fail_on = {"set_mate_suppressed_in": "SolidWorks would not set the flag."}
+    result = swbuild.update_gearbox(fake, assembly=TC_ASM, placements=placements,
+                                    motion=replace(motion, layout_component="layout-1", **changes), exists=fake.exists,
+                                    mtime=lambda _p: 0.0, in_place=InPlace(added=(added,)))
+    assert not result.ok and "inserting Hub" not in result.skipped and "making Hub's mates" not in result.skipped
+    assert result.skipped.startswith("setting Hub's mates on in their modes and reading Hub back and putting")
+    assert {n for n, _ in result.mates_made} == {"Hub on Rear Axis", "Hub along Rear", "RangeSlv splined to Hub"}
+
