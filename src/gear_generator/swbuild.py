@@ -3374,6 +3374,8 @@ class GearboxResult:
         lines.extend(f"FAIL    {what}: {why}" for what, why in self.failures)
         if self.skipped:
             lines.append(f"SKIPPED {self.skipped}")
+        if self.carry is not None:
+            lines.extend(self.carry.log_lines())
         return lines
 
 
@@ -7113,6 +7115,29 @@ class CarryResult:
     skipped: str = ""
     gates: List[Tuple[str, str]] = field(default_factory=list)
     unsaved: bool = False
+
+    def log_lines(self) -> List[str]:
+        """§2.4: a line per item — ``ok      carried Sprocket-1 as Sprocket-1``, ``ok      made Lock1 again, on in H
+        and L``, ``CHECK   not carried: Concentric5 (part new)``, ``FIXED   …`` per cluster fallen back, ``STOPPED`` and
+        ``SKIPPED`` for a stop."""
+        lines = [f"ok      carried {old} as {new}" for old, new in self.inserted]
+        for old, kept, on in self.remade:
+            modes = [m for m in on if m]
+            lines.append(f"ok      made {old} again" + (f" as {kept}" if kept != old else "")
+                         + (f", on in {_and(modes)}" if modes else ""))
+        lines.extend(f"CHECK   {name} is back in the error it had (code {code})" for name, code in self.same_error)
+        lines.extend(f"CHECK   not carried: {n.item} ({n.why})" for n in self.named)
+        lines.extend(f"FIXED   {_and(list(f.components)) or 'nothing'} fixed where placed ({f.why}); taken out again: "
+                     f"{_and(list(f.deleted)) or 'nothing'}" for f in self.fixed)
+        lines.extend(f"CHECK   {name} is off its pose in {mode or 'the assembly'} by {off:.3g} mm"
+                     for name, mode, off in self.moved)
+        if self.unsaved:
+            lines.append("CHECK   the new assembly holds what was carried, not saved")
+        if self.stopped:
+            lines.append(f"STOPPED {self.stopped}")
+        if self.skipped:
+            lines.append(f"SKIPPED {self.skipped}")
+        return lines
 
 
 # swSelectType_e as ReferenceType2 reads it (swconst.tlb, the W9d probe's table), for the selection-order rule only.

@@ -539,6 +539,9 @@ def test_a_user_part_locked_to_g1_is_carried_placed_against_g1_and_its_lock_made
     assert fake.memory_mates[_key(T_ASM)] == old_mates and (_key(T_ASM) in fake.touched) == (_key(T_ASM) in touched)
     assert [p for n, (p, *_) in ((n, a) for n, a in fake.calls if n == "save_as")][-1] == R2[T_ASM]
     assert cr.moved == [] and cr.fixed == []
+    lines = result.log_lines()
+    assert lines[-3:] == ["ok      carried Sprocket-1 as carried1-1", "ok      made Lock1 again",
+                          "CHECK   the new assembly holds what was carried, not saved"]
 
 
 def _closed(fake):

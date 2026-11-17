@@ -20,7 +20,7 @@ clashes naming a carried component), the user documents' flags and the files' ti
   reversed once): not written. A read-back that differs is deleted again and named `WHY_DIFFERS`.
 - A gear mate made again with the wrong sense is not made again with the other Flip once (§10, W5's remake): it is
   deleted and named `WHY_DIFFERS` ("sense").
-- `log_lines()` gains no carry lines yet (§2.4's `ok      carried …`); B's sentences say the result.
+- `log_lines()` gains the carry's lines (§2.4) through `CarryResult.log_lines()`, worded here, not by B.
 - The pattern instance's read (`PATTERN_INSTANCE_READ`) and `IsVirtual` (`VIRTUAL_READ`) are never read: both
   findings None, so the `^` rule decides and `pattern_instance` stays None.
 - The coaxial read: `Session.entity_reference` never reads `coaxial` (no route is written for it until
