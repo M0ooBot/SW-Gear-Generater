@@ -1,7 +1,10 @@
 """W8's two fixtures as specs (W8-PLAN §2.1, §2.2): the E4 transfer case (needs W7's planetary) and
 TransferCase_Parallel (the same with its low range on a reverted layshaft). Every shaft is on the frame along Z+
 unless said; the Box's pressure angle is 20° and its efficiency 98 %. The demonstration writes the same rows through
-``model.to_book`` / ``xlsx.write_new`` (``write``)."""
+``model.to_book`` / ``xlsx.write_new`` (``write``). ISSUE-1-PLAN §3's ``RangeBox`` (the issue's box as written) and
+``RangeBox_Fixed`` (after W9b) are here too."""
+
+from dataclasses import replace
 
 from gear_generator.workbook.model import Box, Gear, GearboxSpec, Mesh, Mode, Shaft
 
@@ -90,3 +93,15 @@ def range_box() -> GearboxSpec:
              Mode("L", (("RangeSlv", "L"),), "", row=4))
     return GearboxSpec(box=Box(name="RangeBox", pressure_angle="20", efficiency="98"), shafts=shafts, gears=gears,
                        meshes=meshes, modes=modes, sliders=("RangeSlv",))
+
+
+def range_box_fixed() -> GearboxSpec:
+    """ISSUE-1-PLAN §3, ``RangeBox_Fixed`` (after W9b): ``range_box`` with the issue put right — RangeSlv 26 mm long at
+    −35 with a 5 mm toothed band at each end (the relief between, 16 mm long, Ø 25.0), sliding H −7.5, N 0, L +7.5; and
+    Hub, a 17-tooth hub on Output at −45.5, 20 mm long (−55.5…−35.5), under RangeSlv's start band in every mode."""
+    made = range_box()
+    sleeve = next(g for g in made.gears if g.id == "RangeSlv")
+    sleeve = replace(sleeve, at="-35", face_width="26", slides="H=-7.5, N=0, L=+7.5", start_band="5", end_band="5")
+    hub = _gear("Hub", "Output", "-45.5", "hub", "17", "1.25", "20", row=8)
+    gears = tuple(sleeve if g.id == "RangeSlv" else g for g in made.gears) + (hub,)
+    return replace(made, box=replace(made.box, name="RangeBox_Fixed"), gears=gears)
