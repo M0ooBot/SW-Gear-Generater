@@ -184,7 +184,7 @@ def test_mates_named_for_each_reason_with_their_subjects(every_gate):
     sprocket_face = ent(USER, "Sprocket-1", ENTITY_FACE)
     mates = [
         mate("Width1", 11, sprocket_face, ent(APP, "Sun", ENTITY_FACE)),
-        mate("Concentric5", 1, ent(APP, "Sun", ENTITY_FACE, coaxial=True), ent(USER, "Sprocket-1", ENTITY_FEATURE,
+        mate("Concentric5", 1, ent(APP, "Sun", ENTITY_FACE, coaxial=True, radius_mm=5.0), ent(USER, "Sprocket-1", ENTITY_FEATURE,
                                                                                "Axis1")),
         lock("Lock4", ent(APP, "Ring", ENTITY_WHOLE), user),
         mate("UserAxis2", 0, ent(LAYOUT, "", ENTITY_FEATURE, "Output Axis"), ent(USER, "Sprocket-1", ENTITY_FEATURE,
@@ -203,7 +203,7 @@ def test_mates_named_for_each_reason_with_their_subjects(every_gate):
     ]
     bodies = _bodies(ring_handle="", output=False)
     bodies = bodies[:2] + (CarryBody("Sun", "gear1-1", "gear1", False, "its Flank changed", GEAR_NAMES,
-                                     GEAR_NAMES + ("Mid Plane",)),) + bodies[3:]
+                                     GEAR_NAMES + ("Mid Plane",), bore_mm=10.0),) + bodies[3:]
     carry = Carry(OLD, bodies, ("H", "L"), "H")
     w = work([comp(), comp("Sprocket-4", state=1), comp("Bracket-1", r"C:\U\Bracket.SLDPRT", on_disk=False)], mates)
     plan = swbuild.plan_carry(w, carry, REVISION)
@@ -219,8 +219,8 @@ def test_mates_named_for_each_reason_with_their_subjects(every_gate):
         "Mate12": ("unread", ("its second entity",)),
         "Lock7": ("lightweight", ("Sprocket-4",)),
         "LeafAxis": ("leaf", ("Drive-1",)),
-        "Coincident6": ("gone", ("feature", "Mid Plane")),
-        "Origin1": ("unmeasured", ("origin", "ORIGIN_ENTITY_READ_ON_2026", Y)),
+        "Coincident6": ("gone", ("feature", "Mid Plane", "Sun")),
+        "Origin1": ("unmeasured", ("origin", "ORIGIN_ENTITY_READ_ON_2026", Y, "Sprocket-1")),
         "Parallel2": ("unmeasured", ("parallel", "CARRY_REMAKE_KINDS_ON_2026", Y)),
     }, named
     assert {m.mate.name for m in plan.mates} == set()
@@ -241,9 +241,9 @@ def test_tier_one_on_faces_and_edges_named_with_the_finding_while_it_is_none(eve
               mate("Coincident3", 0, vertex, ent(APP, "Sun", ENTITY_PLANE, "plane2"))])
     plan = swbuild.plan_carry(w, _carry(), REVISION)
     assert _named(plan) == {
-        "Coincident1": ("unmeasured", ("face", "PERSIST_REFERENCE_ROUTE_FOR_FACES_ON_2026", Y)),
-        "Concentric2": ("unmeasured", ("edge", "PERSIST_REFERENCE_ROUTE_FOR_EDGES_ON_2026", Y)),
-        "Coincident3": ("unmeasured", ("vertex", "PERSIST_REFERENCE_ROUTE_FOR_VERTICES_ON_2026", Y))}
+        "Coincident1": ("unmeasured", ("face", "PERSIST_REFERENCE_ROUTE_FOR_FACES_ON_2026", Y, "Sprocket-1")),
+        "Concentric2": ("unmeasured", ("edge", "PERSIST_REFERENCE_ROUTE_FOR_EDGES_ON_2026", Y, "Sprocket-3")),
+        "Coincident3": ("unmeasured", ("vertex", "PERSIST_REFERENCE_ROUTE_FOR_VERTICES_ON_2026", Y, "Sprocket-1"))}
     assert [g[0] for g in plan.gates] == [swbuild.STEP_CARRY_FACES, swbuild.STEP_CARRY_EDGES,
                                           swbuild.STEP_CARRY_VERTICES]
     every_gate()
@@ -266,7 +266,7 @@ def test_the_not_open_path_names_tier_one_until_a_reference_is_shown_to_survive_
                         lock("Lock1", SUN_WHOLE, ent(USER, "Sprocket-1", ENTITY_WHOLE))],
              how=swbuild.OLD_READ_ONLY)
     plan = swbuild.plan_carry(w, _carry(), REVISION)
-    assert _named(plan) == {"Coincident1": ("unmeasured", ("feature", "PERSIST_REFERENCE_SURVIVES_RELOAD_ON_2026", Y))}
+    assert _named(plan) == {"Coincident1": ("unmeasured", ("feature", "PERSIST_REFERENCE_SURVIVES_RELOAD_ON_2026", Y, "Sprocket-1"))}
     assert [m.mate.name for m in plan.mates] == ["Lock1"]
     assert plan.gates == ((swbuild.STEP_CARRY_RELOAD, "PERSIST_REFERENCE_SURVIVES_RELOAD_ON_2026"),)
     # Open: the same mate goes by tier 1, axis to axis selected reversed (MateEntity(0) the second selection).
@@ -609,7 +609,7 @@ def test_tier_one_on_the_not_open_path_is_named_until_a_reference_survives_a_rel
     _isfile(monkeypatch, fake)
     cr = _build_again(fake).carry
     assert {n.item: (n.why, n.subjects) for n in cr.named} == {
-        "Coincident2": ("unmeasured", ("plane", "PERSIST_REFERENCE_SURVIVES_RELOAD_ON_2026", Y))}
+        "Coincident2": ("unmeasured", ("plane", "PERSIST_REFERENCE_SURVIVES_RELOAD_ON_2026", Y, "Sprocket-1"))}
     # Set, but the reference does not resolve after the reload on this fake: not found, its component carried.
     every_gate()
     fake = _old_train()
@@ -685,15 +685,16 @@ def test_a_new_error_or_an_over_definition_falls_back_and_the_same_error_is_carr
     fake = _two_clusters(_old_train())
     _isfile(monkeypatch, fake)
     if case == "same error":
-        fake.mate_codes["Lock3"] = (46, True)          # in error in the old assembly already
-        fake.remake_codes["Lock3"] = (46, True)
+        # Lock1 alone holds Sprocket-1 to G1 and was in error before: its over-definition and tie are its own, excused.
+        fake.mate_codes["Lock1"] = (46, True)
+        fake.remake_codes["Lock1"] = (46, True)
     elif case == "new error":
         fake.remake_codes["Lock3"] = (46, True)
     else:
         fake.remake_status["Lock3"] = findings.ADD_MATE_OVER_DEFINED
     cr = _build_again(fake).carry
     if case == "same error":
-        assert cr.fixed == [] and cr.same_error == [("Lock3", 46)]
+        assert cr.fixed == [] and cr.same_error == [("Lock1", 46)]
         return
     (fell,) = cr.fixed
     assert fell.why == (swbuild.FELL_NEW_ERROR if case == "new error" else swbuild.FELL_OVER_DEFINED)
@@ -705,13 +706,14 @@ def test_a_carry_that_stops_part_way_says_what_it_did_and_leaves_the_build_saved
     every_gate()
     fake = _two_clusters(_old_train())
     _isfile(monkeypatch, fake)
-    fake.raises["remake_mate"] = (3, SolidWorksError("SolidWorks stopped answering."))
+    fake.raises["remake_mate"] = (3, RuntimeError("SolidWorks stopped answering."))   # a COM failure, not a refusal
     result = _build_again(fake)
     assert result.ok and result.assembly.saved == R2[T_ASM]
     cr = result.carry
     assert cr.inserted and len(cr.remade) == 2 and cr.unsaved
-    assert cr.stopped.startswith("SolidWorks stopped the carry while making Lock3 again")
-    assert cr.skipped == "making Lock3 again and everything after it"
+    assert cr.stopped.startswith("SolidWorks stopped the carry while making the mates of Housing-1 and Sprocket-2 "
+                                 "again"), cr.stopped
+    assert cr.skipped == "checking every mode with your mates on"          # what is left, not what was in hand (S6)
 
 
 def test_a_component_whose_configuration_reads_back_otherwise_is_deleted_again_and_named(monkeypatch, every_gate):

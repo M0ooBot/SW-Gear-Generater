@@ -383,6 +383,8 @@ class FakeSolidWorks:
     def begin_build(self):
         """As ``Session.begin_build``: swInputDimValOnCreate read and turned off for the build's dimensions."""
         self._log("begin_build")
+        if getattr(self, "begin_drops_document", False):
+            self.current = ""                  # W9d (S4): as the Session's, the build document falls back to none
         self.dim_dialog_kept = self.dim_dialog_on
         self.dim_dialog_on = False
 
@@ -869,11 +871,14 @@ class FakeSolidWorks:
         key = _key(self.current)
         return key in self.touched or self.memory.get(key) != self.saved.get(key)
 
-    def find_component(self, handle, name, lightweight_ok=False):
+    def find_component(self, handle, name, lightweight_ok=False, suppressed_ok=False):
         self._log("find_component", handle, name)
         title = self.active.title if self.active else "the assembly"
         if name in self.missing_components:
             raise ComponentGone(f"{name} is not in {title} any more: it was renamed or deleted in SolidWorks.")
+        if not suppressed_ok and self._state_in(name, self.config) == 0:   # as swcom.Session.find_component
+            raise SolidWorksError(f"{name} is suppressed in {title}, so it cannot be placed; unsuppress it in "
+                                  "SolidWorks and try again.")
         if name in self.lightweight and not lightweight_ok:          # as swcom.Session.find_component refuses it
             raise SolidWorksError(f"{name} is loaded lightweight in {title}, and resolving a component is not "
                                   "settled here; set it to Resolved in SolidWorks and try again.")
@@ -1907,8 +1912,12 @@ class FakeSolidWorks:
 
     def component_configurations(self, handle):
         self._log("component_configurations", handle)
-        referenced, active, names = self._w9d().component_configs.get(self._name2(handle),
-                                                                      ("Default", "Default", ("Default",)))
+        name = self._name2(handle)
+        referenced, active, names = self._w9d().component_configs.get(name, ("Default", "Default", ("Default",)))
+        if name in self.lightweight or self._state_in(name, self.config) in (0, 1, 4):
+            # As the Session: no document (GetModelDoc2 None), so the file's names read closed, no active one.
+            self._log("file_configurations", self.component_paths.get(name, ""))
+            active = ""
         return (referenced if self._finding("REFERENCED_CONFIGURATION_READ") is True else ""), active, tuple(names)
 
     def component_states_in(self, names, configurations):
@@ -1981,13 +1990,67 @@ class FakeSolidWorks:
         coaxial = None
         if kind == "face" and self._finding("COAXIAL_FACE_READ") is True:
             coaxial = self._w9d().coaxial.get((_key(self.component_paths.get(end[0], "")), end[1]))
-        if kind not in finding or self._finding(finding[kind]) is None:
-            return kind, "", coaxial, "no measured route"
+        if kind not in ("feature", "plane") or self._finding(finding[kind]) is None:
+            return kind, "", coaxial, "no measured route"           # a face or an edge is entity_references'
+
         part = self.component_paths.get(end[0], "")
         hexed = f"{_key(part)}|{end[1]}".encode().hex()
         if self.current and _key(self.current) in self._w9d().read_only_opened:
             self.refs_read_only.add(hexed)
         return kind, hexed, coaxial, ""
+
+    def entity_references(self, component, items, candidates=200, seconds=20.0):
+        """§10's walk, as Session.entity_references: the finding must be swcom.PERSIST_ROUTE_R3 exactly. Knobs (by
+        (lower-cased part path, target)): ``r3_filtered`` the candidates left by the prefilter (default 2: a sprocket's
+        equal end faces), ``r3_matches`` how many of them read IsSame (default 1), ``r3_resolve`` the resolve's code
+        (default 0, Ok), ``r3_seconds`` the seconds each candidate takes (default 0), ``radius`` a cylinder's or
+        circle's radius in mm; ``coaxial`` as before. ``walks`` logs (component, items) per call."""
+        self._log("entity_references", component, tuple(items))
+        self._w9d()
+        for name in ("r3_filtered", "r3_matches", "r3_resolve", "r3_seconds", "radius", "walks"):
+            if not hasattr(self, name):
+                setattr(self, name, [] if name == "walks" else {})
+        self.walks.append((component, tuple(items)))
+        out, carried, clock, capped = [], set(), 0.0, ""
+        name = self._name2(component)
+        part = _key(self.component_paths.get(name, ""))
+        for mate_handle, index, kind in items:
+            finding = "PERSIST_REFERENCE_ROUTE_FOR_FACES" if kind == "face" else "PERSIST_REFERENCE_ROUTE_FOR_EDGES"
+            if self._finding(finding) != swcom.PERSIST_ROUTE_R3:
+                out.append((kind, "", None, None, "", f"no measured route for a {kind} here"))
+                continue
+            mate = self.mate(self.mate_handles[mate_handle])
+            end = (mate.a, mate.b)[index]
+            key = (part, end[1])
+            filtered = [(key, i) for i in range(self.r3_filtered.get(key, 2))]
+            fresh = [f for f in filtered if f not in carried]
+            if not capped and len(carried) + len(fresh) > candidates:
+                capped = "candidates"
+            if not capped and clock > seconds:
+                capped = "seconds"
+            if not capped:
+                for f in fresh:
+                    clock += self.r3_seconds.get(key, 0.0)
+                    if clock > seconds:
+                        capped = "seconds"
+                        break
+                    carried.add(f)
+            if capped:
+                out.append((kind, "", None, None, capped, ""))
+                continue
+            if self.r3_matches.get(key, 1) != 1:
+                out.append((kind, "", None, None, "", f"SolidWorks did not say which one {kind} of {name} it is on"))
+                continue
+            if self.r3_resolve.get(key, 0) != 0:
+                out.append((kind, "", None, None, "", f"its reference resolved {self.r3_resolve[key]}, not Ok"))
+                continue
+            coaxial = radius = None
+            if self._finding("COAXIAL_FACE_READ") is True:
+                coaxial, radius = self.coaxial.get(key), self.radius.get(key)
+            out.append((kind, f"{part}|{end[1]}".encode().hex(), coaxial, radius, "", ""))
+            if self.current and _key(self.current) in self.read_only_opened:
+                self.refs_read_only.add(out[-1][1])
+        return out
 
     def _resolve(self, target):
         if target.startswith("ref:"):
@@ -1998,18 +2061,26 @@ class FakeSolidWorks:
                 raise SolidWorksError(f"The {kind} could not be found again in {name}.")
             if hexed in self._w9d().refs_read_only and not self.reload_ok:
                 raise SolidWorksError(f"The {kind} could not be found again in {name} after its part was reloaded.")
+            if entity in getattr(self, "resolve_other_kind", set()):        # S8: resolved to another kind
+                raise swcom.ReferenceKindError(f"The {kind} of {name} found again is a face, which Gear Generator "
+                                               "never takes for it.")
             return name, entity
         if ":" in target:
             handle, _, feature = target.partition(":")
             return ("asm" if handle == "asm" else self._name2(handle)), feature
         return self._name2(target), ""
 
-    def remake_mate(self, handle, definition, targets, name, ratio=(1.0, 1.0)):
-        self._log("remake_mate", handle, tuple(targets), name)
+    def remake_mate(self, handle, definition, targets, name, ratio=(1.0, 1.0), flip=None):
+        self._log("remake_mate", handle, tuple(targets), name, flip)
         if not self._finding("CARRY_REMAKE_KINDS"):
             raise SolidWorksError("Making a mate again has not been measured on this SolidWorks.")
         self._w9d()
         ends = [self._resolve(t) for t in targets]
+        for end, target in zip(ends, targets):
+            if end[0] != "asm" and self._state_in(end[0], self.config) == 0:
+                # Inferred (W9c's probes: a suppressed component has no document): nothing of it can be selected.
+                raise SolidWorksError(f"{target} could not be selected for a mate: {end[0]} is suppressed in "
+                                      f"{self.config}.")
         word = self._TYPE_WORDS.get(definition.type, "other")
         values = dict(definition.values)
         if word in ("distance", "angle") and any(k.startswith(("Maximum", "Minimum")) for k in values):
@@ -2035,17 +2106,30 @@ class FakeSolidWorks:
             value = math.degrees(values.get("Angle", 0.0))
         taken = {m.name for m in self.mates}
         kept = name if name not in taken else f"Mate{len(self.calls)}"
-        self._keep_mate(handle, kept, word, "x", "x", value, tuple(ratio), bool(definition.flipped))
+        flipped = bool(definition.flipped) if flip is None else bool(flip)
+        self._keep_mate(handle, kept, word, "x", "x", value, tuple(ratio), flipped)
         mate = self.mates[-1]
         mate.a, mate.b = ends[0], ends[1]
         mate.alignment = definition.alignment
         if word.startswith("limit"):
             mate.limits = tuple((k, v) for k, v in values.items() if k.startswith(("Maximum", "Minimum")))
         if word == "gear":
-            mate.flip = bool(values.get("Reverse", 0.0))
+            # The Reverse SolidWorks reads follows the Flip given, the other way for a mate in ``flip_inverts``: a
+            # remake with the old Flip may read the wrong sense, and the other Flip the right one (§10, W5's remake).
+            mate.flip = flipped != (definition.name in getattr(self, "flip_inverts", set()))
         mate.status = self.remake_status.get(definition.name, 1)
         if definition.name in self.remake_codes:
             mate.code, mate.warning = self.remake_codes[definition.name]
+        for config, code in getattr(self, "remake_codes_in", {}).get(definition.name, {}).items():
+            self.mate_codes_in.setdefault(config, {})[kept] = code          # a code in one configuration only
+        if word == "lock" and ends[0][0] != "asm":
+            # A lock carries its follower with its anchor in every configuration (the fake solves nothing on a show).
+            anchor, follower = ends[0][0], ends[1][0]
+            if anchor in self.frames and follower in self.frames:
+                rel = _compose(_inverse(self.frames[anchor]), self.frames[follower])
+                for frames in self.frames_by.values():
+                    if anchor in frames:
+                        frames[follower] = _compose(frames[anchor], rel)
         self._touch()
         return kept, mate.status
 

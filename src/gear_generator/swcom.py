@@ -918,6 +918,80 @@ MATE_DEFINITION_VALUES = ("Distance", "Angle", "MaximumDistance", "MinimumDistan
                           "GearRatioNumerator", "GearRatioDenominator", "Reverse", "FlipDimension")
 
 
+PERSIST_REFERENCED_OK = 0       # swPersistReferencedObjectStates_e.swPersistReferencedObject_Ok (W9d probes' JSON)
+OBJECT_SAME = 1                 # swObjectEquality.swObjectSame, as the W9d probes read it from swconst.tlb (JSON)
+# §10's route r3 as findings.PERSIST_REFERENCE_ROUTE_FOR_FACES / _FOR_EDGES name it (W9D-INTERFACES §8.1); the walk is
+# taken only when the finding is exactly this string.
+PERSIST_ROUTE_R3 = ("each face (or edge) of the component's part carried into the assembly by IComponent2."
+                    "GetCorresponding, the one ISldWorks.IsSame as the mate's entity (exactly one), then the part's "
+                    "GetPersistReference3, resolved by its GetObjectByPersistReference3")
+_WALK_RELATIVE = 1e-9
+
+
+def _walk_key(entity: Any, kind: str) -> Tuple[str, Optional[float]]:
+    """§10's prefilter key of the mate's entity: a face's area; an edge's ("circle", radius), ("line", None) or
+    ("other", None); ("", None) when it does not read (every candidate kept)."""
+    try:
+        if kind == "face":
+            return "area", float(call(entity, "GetArea"))
+        curve = call(entity, "GetCurve")
+        if call(curve, "IsCircle"):
+            return "circle", float(list(call(curve, "CircleParams"))[6])
+        return ("line", None) if call(curve, "IsLine") else ("other", None)
+    except Exception:  # noqa: BLE001
+        return "", None
+
+
+def _walk_matches(candidate: Any, kind: str, key: Tuple[str, Optional[float]]) -> bool:
+    if not key[0] or key[0] == "other":
+        return True
+    got = _walk_key(candidate, kind)
+    if not got[0]:
+        return True
+    if got[0] != key[0]:
+        return False
+    if key[1] is None or got[1] is None:
+        return True
+    return abs(got[1] - key[1]) <= _WALK_RELATIVE * max(abs(key[1]), 1e-30)
+
+
+def _coaxial_read(entity: Any, kind: str) -> Tuple[Optional[bool], Optional[float]]:
+    """A part-level cylinder's (or circle's) axis against the part's Z axis through its origin, and its radius in mm;
+    (False, None) for a face that is no cylinder; (None, None) unread."""
+    try:
+        if kind == "face":
+            surface = call(entity, "GetSurface")
+            if not call(surface, "IsCylinder"):
+                return False, None
+            p = [float(v) for v in call(surface, "CylinderParams")]
+        else:
+            curve = call(entity, "GetCurve")
+            if not call(curve, "IsCircle"):
+                return None, None
+            p = [float(v) for v in call(curve, "CircleParams")]
+        along = abs(p[3]) <= 1e-9 and abs(p[4]) <= 1e-9 and abs(abs(p[5]) - 1.0) <= 1e-9
+        return along and abs(p[0]) <= 1e-9 and abs(p[1]) <= 1e-9, p[6] * MM_PER_METRE
+    except Exception:  # noqa: BLE001
+        return None, None
+
+
+class ReferenceKindError(SolidWorksError):
+    """W9d (§4.1): a persistent reference resolved to another kind of entity than was read (§0.3's STOP)."""
+
+
+def _entity_kind_of(entity: Any) -> str:
+    """An entity's kind by ``IEntity.GetType`` (swSelectType_e: 1 edge, 2 face, 3 vertex), "feature" for a feature
+    (``GetTypeName2`` answers), "" when it will not say."""
+    try:
+        return {1: "edge", 2: "face", 3: "vertex"}.get(int(call(entity, "GetType")), "")
+    except Exception:  # noqa: BLE001
+        try:
+            call(entity, "GetTypeName2")
+            return "feature"
+        except Exception:  # noqa: BLE001
+            return ""
+
+
 @dataclass(frozen=True)
 class MateEntityRead:
     """One entity of a mate as :meth:`Session.mate_definition` reads it (W9d)."""
@@ -1412,6 +1486,17 @@ class Session:
             return
         raise SolidWorksError(f"{name} ({_type_name(feature)}) could not be selected by Select2 or SelectByID2 "
                               f"{self._selection_context()}.")
+
+    def _first_planes(self, doc: Any, count: int) -> List[Any]:
+        """The first ``count`` reference planes in tree order, the walk stopped there (W9d: every Update's
+        inventory reads a plane entity's order, so the walk is cut short)."""
+        out = []
+        feature = call(doc, "FirstFeature")
+        while feature is not None and len(out) < count:
+            if _type_name(feature) == "RefPlane":
+                out.append(feature)
+            feature = call(feature, "GetNextFeature")
+        return out
 
     def _planes(self, doc: Any = None) -> List[Any]:
         doc = doc if doc is not None else self._doc()
@@ -2621,9 +2706,13 @@ class Session:
             name = str(_read(_read(entity, "Reference"), "Name"))
         except Exception:  # noqa: BLE001
             return "unread", ""
+        if _read(entity, "ReferenceType2") != 4:            # swSelDATUMPLANES: only a plane needs its tree order
+            return "feature", name
         try:
             doc = call(component, "GetModelDoc2") if component is not None else self._doc()
-            planes = [str(call(p, "Name")) for p in self._planes(doc)[:3]] if doc is not None else []
+            if doc is None:                                   # lightweight or suppressed: no tree to order it by
+                return "unread", ""
+            planes = [str(call(p, "Name")) for p in self._first_planes(doc, 3)]
         except Exception:  # noqa: BLE001 - a plane not told by order is unread, never named by its English name
             return "unread", ""
         if name in planes:
@@ -3528,7 +3617,8 @@ class Session:
             raise SolidWorksError(f"SolidWorks would not open {path} (error {error}).")
         return doc
 
-    def find_component(self, handle: str, name: str, *, lightweight_ok: bool = False) -> str:
+    def find_component(self, handle: str, name: str, *, lightweight_ok: bool = False,
+                       suppressed_ok: bool = False) -> str:
         """Find a component of the build's assembly by the ``Name2`` recorded when it was inserted, and keep it as
         ``handle`` (so ``place_component``, ``fix_component``, ``unfix_component`` and ``component_frame`` work on
         it). Returns ``Name2`` as read back.
@@ -3568,7 +3658,9 @@ class Session:
             state: Optional[int] = int(_read(component, "GetSuppression2"))
         except Exception:  # noqa: BLE001 - unread is judged by the finding below
             state = None
-        if state == COMPONENT_SUPPRESSED:
+        if state == COMPONENT_SUPPRESSED and not suppressed_ok:
+            # W9d (§5.3): ``suppressed_ok`` keeps the handle of a suppressed component for reads only (its frame,
+            # whether Transform2 answers there being unmeasured); nothing is placed through it.
             raise SolidWorksError(f"{name} is suppressed in {title}, so it cannot be placed; unsuppress it in "
                                   "SolidWorks and try again.")
         if not lightweight_ok and (state in COMPONENT_LIGHTWEIGHT or (
@@ -3776,22 +3868,104 @@ class Session:
         finding = {"feature": "PERSIST_REFERENCE_ROUTE_FOR_REFERENCE_FEATURES",
                    "plane": "PERSIST_REFERENCE_ROUTE_FOR_REFERENCE_FEATURES", "face": "PERSIST_REFERENCE_ROUTE_FOR_FACES",
                    "edge": "PERSIST_REFERENCE_ROUTE_FOR_EDGES", "vertex": "PERSIST_REFERENCE_ROUTE_FOR_VERTICES"}
-        if entity.kind not in finding or self._w9d_finding(finding[entity.kind]) is None:
-            return entity.kind, "", None, f"no measured route for a {entity.kind}"
+        if entity.kind not in ("feature", "plane") or self._w9d_finding(finding[entity.kind]) is None:
+            # A face or an edge is entity_references' (§10's walk, r3); r1 and r2 read nothing on 2026.
+            return entity.kind, "", None, f"no measured route for a {entity.kind} here"
         try:
             _, mate_feature = self._kept_mate(mate_handle)
             mate = _read(mate_feature, "GetSpecificFeature2")
             reference = _read(call(mate, "MateEntity", index), "Reference")
             component = _read(call(mate, "MateEntity", index), "ReferenceComponent")
             part = call(component, "GetModelDoc2")
-            if entity.kind in ("feature", "plane"):
-                reference = call(part, "FeatureByName", str(_read(reference, "Name")))
-            elif "GetCorrespondingEntity2" in str(self._w9d_finding(finding[entity.kind])):
-                reference = call(call(self._doc(), "Extension"), "GetCorrespondingEntity2", reference)
+            reference = call(part, "FeatureByName", str(_read(reference, "Name")))
             raw = call(call(part, "Extension"), "GetPersistReference3", reference)
             return entity.kind, bytes(bytearray(int(b) & 0xFF for b in raw)).hex(), None, ""
         except Exception as exc:  # noqa: BLE001 - said, never guessed
             return entity.kind, "", None, f"its reference could not be read ({exc})"
+
+    def entity_references(self, component_handle: str, items: Sequence[Tuple[str, int, str]], *,
+                          candidates: int = 200, seconds: float = 20.0
+                          ) -> List[Tuple[str, str, Optional[bool], Optional[float], str, str]]:
+        """§10's walk (route r3, measured on 2026 34.0.0 by probe/w9d_probes.py:route_r3), one call per component:
+        ``items`` its face and edge entities ``(mate handle, index, kind)`` in mate order; per item ``(kind, hex,
+        coaxial, radius_mm, capped, why)``. The part's faces listed once (``GetBodies2(0, True)`` → ``GetFaces``), its
+        edges once when an item is an edge; a prefilter read in the part (a face's ``GetArea`` against the mate
+        entity's, a circle's radius, a line against lines), relative 1e-9, a key that does not read kept; each
+        candidate carried by ``GetCorresponding`` at most once and compared by ``ISldWorks.IsSame`` (swObjectSame 1);
+        exactly one match; then ``GetPersistReference3``, resolved by ``GetObjectByPersistReference3`` to Ok (0), its
+        own kind and ``IsSame`` as the part entity. ``coaxial`` and ``radius_mm`` from the part entity's
+        ``CylinderParams`` (a circle's ``CircleParams``), only once ``COAXIAL_FACE_READ`` is True. The cap: past
+        ``candidates`` carried or ``seconds`` walked, this item and every later one are not searched (``capped``).
+        Each kind's finding must be :data:`PERSIST_ROUTE_R3` exactly; else nothing is read. UNMEASURED as written
+        here: the probe's route, grouped, filtered and capped as the contract rules it."""
+        out: List[Tuple[str, str, Optional[bool], Optional[float], str, str]] = []
+        component = self._component(component_handle)
+        part = call(component, "GetModelDoc2")
+        coaxial_read = self._w9d_finding("COAXIAL_FACE_READ") is True
+        lists: Dict[str, List[Any]] = {}
+        carried: Dict[Tuple[str, int], Any] = {}
+        started, capped = time.monotonic(), ""
+        for mate_handle, index, kind in items:
+            finding = "PERSIST_REFERENCE_ROUTE_FOR_FACES" if kind == "face" else "PERSIST_REFERENCE_ROUTE_FOR_EDGES"
+            if self._w9d_finding(finding) != PERSIST_ROUTE_R3 or part is None:
+                out.append((kind, "", None, None, "", f"no measured route for a {kind} here"))
+                continue
+            if capped:
+                out.append((kind, "", None, None, capped, ""))
+                continue
+            try:
+                _, feature = self._kept_mate(mate_handle)
+                entity = _read(call(_read(feature, "GetSpecificFeature2"), "MateEntity", index), "Reference")
+                if kind not in lists:
+                    member = "GetFaces" if kind == "face" else "GetEdges"
+                    lists[kind] = [x for body in list(call(part, "GetBodies2", 0, True) or ())
+                                   for x in list(call(body, member) or ())]
+                key = _walk_key(entity, kind)
+                filtered = [i for i, x in enumerate(lists[kind]) if _walk_matches(x, kind, key)]
+                fresh = [i for i in filtered if (kind, i) not in carried]
+                if len(carried) + len(fresh) > candidates:
+                    capped = "candidates"
+                elif time.monotonic() - started > seconds:
+                    capped = "seconds"
+                if capped:
+                    out.append((kind, "", None, None, capped, ""))
+                    continue
+                matches = []
+                for i in filtered:
+                    if time.monotonic() - started > seconds:
+                        capped = "seconds"
+                        break
+                    if (kind, i) not in carried:
+                        carried[(kind, i)] = call(component, "GetCorresponding", lists[kind][i])
+                    back = carried[(kind, i)]
+                    if back is not None and int(call(self._app, "IsSame", back, entity)) == OBJECT_SAME:
+                        matches.append(lists[kind][i])
+                if capped:
+                    out.append((kind, "", None, None, capped, ""))
+                    continue
+                if len(matches) != 1:
+                    out.append((kind, "", None, None, "", f"SolidWorks did not say which one {kind} of "
+                                f"{self._component_name(component_handle)} it is on ({len(matches)} matched)"))
+                    continue
+                part_entity = matches[0]
+                ext = call(part, "Extension")
+                raw = bytes(bytearray(int(b) & 0xFF for b in call(ext, "GetPersistReference3", part_entity)))
+                code = _out_long()
+                got = call(ext, "GetObjectByPersistReference3", raw, code)
+                status = _by_ref(got[1]) if isinstance(got, tuple) and len(got) > 1 else _by_ref(code)
+                got = got[0] if isinstance(got, tuple) else got
+                if got is None or status != PERSIST_REFERENCED_OK:
+                    out.append((kind, "", None, None, "", f"its reference resolved {status}, not Ok"))
+                    continue
+                if _entity_kind_of(got) not in ("", kind) or int(call(self._app, "IsSame", got, part_entity)) \
+                        != OBJECT_SAME:
+                    out.append((kind, "", None, None, "", "its reference resolved to another entity"))
+                    continue
+                coaxial, radius = _coaxial_read(part_entity, kind) if coaxial_read else (None, None)
+                out.append((kind, raw.hex(), coaxial, radius, "", ""))
+            except Exception as exc:  # noqa: BLE001 - said, never guessed
+                out.append((kind, "", None, None, "", f"its reference could not be read ({exc})"))
+        return out
 
     def component_configurations(self, handle: str) -> Tuple[str, str, Tuple[str, ...]]:
         """``(referenced, its document's active, its file's configurations)``: ``IComponent2.ReferencedConfiguration``
@@ -3800,10 +3974,14 @@ class Session:
         component = self._component(handle)
         doc = call(component, "GetModelDoc2")
         if doc is None:
-            raise SolidWorksError(f"{self._component_name(handle)}'s document is not loaded, so its configurations "
-                                  "cannot be read.")
-        names = tuple(str(n) for n in (call(doc, "GetConfigurationNames") or ()))
-        active = str(call(call(doc, "GetActiveConfiguration"), "Name"))
+            # Lightweight or suppressed: no document (W9C-PROBES.md:75). The file's configurations are read closed,
+            # ISldWorks.GetConfigurationNames(path) (documented; UNMEASURED: M9 logs it), and no active one is known.
+            path = self._component_path(component)
+            names = tuple(str(n) for n in (call(self._app, "GetConfigurationNames", path) or ()))
+            active = ""
+        else:
+            names = tuple(str(n) for n in (call(doc, "GetConfigurationNames") or ()))
+            active = str(call(call(doc, "GetActiveConfiguration"), "Name"))
         referenced = str(_read(component, "ReferencedConfiguration")) \
             if self._w9d_finding("REFERENCED_CONFIGURATION_READ") is True else ""
         return referenced, active, names
@@ -3836,6 +4014,8 @@ class Session:
         if doc is None:
             return None
         self._read_only_opened = getattr(self, "_read_only_opened", set()) | {path.lower()}
+        self._read_only_titles = dict(getattr(self, "_read_only_titles", {}), **{path.lower(): str(
+            call(doc, "GetTitle"))})
         self._build_doc = doc
         self._raise_epoch()
         return self._describe(doc)
@@ -3844,10 +4024,14 @@ class Session:
         """``ISldWorks.QuitDoc`` of a document this session opened read-only; refused for any other."""
         if path.lower() not in getattr(self, "_read_only_opened", set()):
             raise SolidWorksError(f"{_base_name(path)} was not opened by this job, so it is not closed.")
-        call(self._app, "QuitDoc", _base_name(path))
+        title = getattr(self, "_read_only_titles", {}).get(path.lower(), _base_name(path))
+        call(self._app, "QuitDoc", title)                   # by GetTitle, as the probe's state_close did
         self._read_only_opened.discard(path.lower())
         self._build_doc = None
         self._raise_epoch()
+        if any(same_path(str(call(d, "GetPathName") or ""), path) for d in self._walk_documents()):
+            raise SolidWorksError(f"{title} is still open in SolidWorks, read-only, after Gear Generator closed it "
+                                  "unsaved; close it there.")
 
     def file_version(self, path: str) -> Optional[int]:
         """The closed file's last saved version (``ISldWorks.VersionHistory``'s last entry, its number after the
@@ -3897,13 +4081,14 @@ class Session:
             self._w9d_refuse("CARRY_INSERTS", "Setting a carried component's state")
         component = self._component(handle)
         call(component, "SetSuppression2", 0 if suppressed else 2)
+        self.rebuild(ASSEMBLY_TRAIN)                       # as the probes did before reading it back
         state = int(call(component, "GetSuppression2"))
         if (state == 0) != bool(suppressed):
             raise SolidWorksError(f"SolidWorks would not {'suppress' if suppressed else 'resolve'} "
                                   f"{self._component_name(handle)}: it reads state {state}.")
 
     def remake_mate(self, handle: str, definition: Any, targets: Sequence[str], name: str,
-                    ratio: Tuple[float, float] = (1.0, 1.0)) -> Tuple[str, int]:
+                    ratio: Tuple[float, float] = (1.0, 1.0), flip: Optional[bool] = None) -> Tuple[str, int]:
         """``AddMate5`` from an old mate's definition (``swbuild.OldMate``: type, alignment, flipped, values) on
         ``targets`` selected in that order at mark 1 (§10: ``"<handle>:<feature or planeN>"``, ``"asm:planeN"``,
         ``"<handle>"`` whole, ``"ref:<handle>:<kind>:<hex>"``), renamed to ``name`` where it is free; ``ratio`` a gear
@@ -3920,7 +4105,8 @@ class Session:
         values = dict(getattr(definition, "values", ()) or ())
         distance = float(values.get("Distance", 0.0))
         angle = float(values.get("Angle", 0.0))
-        mate, status = self._add_mate5(int(definition.type), int(definition.alignment), bool(definition.flipped),
+        flipped = bool(definition.flipped) if flip is None else bool(flip)
+        mate, status = self._add_mate5(int(definition.type), int(definition.alignment), flipped,
                                        distance, float(values.get("MaximumDistance", distance)),
                                        float(values.get("MinimumDistance", distance)), float(ratio[0]),
                                        float(ratio[1]), angle, float(values.get("MaximumAngle", angle)),
@@ -3928,7 +4114,10 @@ class Session:
         call(doc, "ClearSelection2", True)
         made = [n for n in self._mate_names() if n not in before]
         if mate is None or len(made) != 1:
-            raise MateRefused(f"AddMate5 would not make {name} again.")
+            for left in made:                                 # a mate made though AddMate5 said otherwise: out again
+                self._handles[f"{handle}:left"] = {"mate": left}
+                self.delete_mate(f"{handle}:left")
+            raise MateRefused(f"AddMate5 would not make {name} again (status {status}).")
         kept = made[0]
         if name and name not in before:
             kept = self._rename(self._mate_feature(made[0]), name)
@@ -3958,11 +4147,21 @@ class Session:
             raise SolidWorksError(f"There is no reference to find again in {self._component_name(handle)}.")
         component = self._component(handle)
         part = call(component, "GetModelDoc2")
-        found = call(call(part, "Extension"), "GetObjectByPersistReference3", bytes.fromhex(hexed), _out_long())
+        code = _out_long()
+        found = call(call(part, "Extension"), "GetObjectByPersistReference3", bytes.fromhex(hexed), code)
         entity = found[0] if isinstance(found, tuple) else found
-        if entity is None:
-            raise SolidWorksError(f"The {kind} could not be found again in {self._component_name(handle)}.")
+        status = _by_ref(found[1]) if isinstance(found, tuple) and len(found) > 1 else _by_ref(code)
+        if entity is None or status != PERSIST_REFERENCED_OK:
+            raise SolidWorksError(f"The {kind} could not be found again in {self._component_name(handle)} "
+                                  f"(its reference resolved {status}).")
+        got = _entity_kind_of(entity)
+        if got and got != kind and not (kind == "plane" and got == "feature"):
+            raise ReferenceKindError(f"The {kind} of {self._component_name(handle)} found again is a {got}, which "
+                                     "Gear Generator never takes for it.")
         corresponding = call(component, "GetCorresponding", entity)
+        if corresponding is None:
+            raise SolidWorksError(f"The {kind} of {self._component_name(handle)} could not be carried into the "
+                                  "assembly (GetCorresponding gave nothing).")
         data = call(call(self._doc(), "SelectionManager"), "CreateSelectData")
         _put(data, "Mark", 1)
         if not call(corresponding, "Select4", append, data):
