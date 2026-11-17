@@ -1189,55 +1189,83 @@ the worker's side is `W9A-INTERFACES.md`). **No new control.** What the user
 sees is words, each from `ui_text`, each with the time the work was read:
 
 - **The record keeps what was read** (schema 7, below): every Update reads the
-  user's components, mates (what each joins, the modes it is on in, its error)
-  and the features in the app's parts before it changes anything, and its
-  finish keeps that with the time, the read of the workbook it came from and the
-  SolidWorks it ran on. A press that refuses over the user's work keeps every
-  problem it said.
-- **Before the press** the footer, after what Update will change, says what it
-  would do with that work (`workbook.update.user_work_ahead`: the worker's own
-  pure judgement, `swbuild.judge_user_work`, on the recorded inventory, with the
-  bodies the press would put and every unmeasured branch of putting a component
-  with its gear given, so it never promises what the worker would refuse): *As
-  read at 14:02, Update SolidWorks moves your Sprocket-1 with Sun, which your
-  Lock3 holds it to, asks SolidWorks, when pressed, whether your Lock3 leaves
-  Sun's train free to turn, and leaves your Housing-1 and Keyway in
-  Sleeve_m1.25_N17 as they are.* (`WorkbookUserWork`); with a part it changes,
-  *rebuilds your Keyway in Gear_m1.25_N17 after the app's features*; a mate or
-  component already in error then is named. One it foresees refusing is red:
-  *As read at 14:02, Update SolidWorks would stop before changing anything: …
-  It reads your work in SolidWorks again when pressed.* A press that refused is
-  said as recorded, red, *Update SolidWorks refused at 14:02, before changing
-  anything: … The next press reads your work in SolidWorks again, and refuses
-  again unless that has been dealt with.*, and once the workbook has changed
-  since, green, *… The workbook has changed since, and the next press reads your
-  work in SolidWorks again.* Update stays enabled throughout: the press reads
-  again, and the user may have dealt with it in SolidWorks since. The line
-  follows the state as the save line does (not after a job's own sentence,
-  which says it already). Nothing is said when nothing of the user's was read.
-  The inventory is never called all of the user's work: assembly features (a
-  cut, a pattern) are not read, a gearbox W4 built static reads only the
-  features, and per mode only the active configuration's states are read.
+  user's components (each by name, with whether it is a part or a
+  sub-assembly — never the user's own file path — fixed or not, its state and
+  its error), mates (what each joins, the modes it is on in, its error) and the
+  features in the app's parts before it changes anything, and its finish keeps
+  that with the time, the read of the workbook it came from and the SolidWorks
+  it ran on. A press that refuses over the user's work keeps every problem it
+  said.
+- **Before the press** the footer, after what Update will change, says what the
+  worker would do with the user's work **in the assembly as it was last read**
+  (`workbook.update.user_work_ahead`: the worker's own pure judgement,
+  `swbuild.judge_user_work` — the same function the press runs, which also
+  refuses a component it would put that is suppressed or loaded lightweight —
+  on the recorded inventory, with the bodies the press would put and every
+  unmeasured branch of putting a component with its gear given). The time says
+  how old that read is: what the user has changed in SolidWorks since is read
+  only by the press. *As read at 14:02, Update SolidWorks moves your Sprocket-1
+  with Sun, which your Lock3 holds it to, asks SolidWorks, when pressed,
+  whether your Lock3 leaves Sun's train free to turn (if not, it changes
+  nothing and names the mates to suppress), and leaves your Housing-1 and Keyway
+  in Sleeve_m1.25_N17 as they are.* (`WorkbookUserWork`); with a part it
+  changes, *rebuilds your Keyway in Gear_m1.25_N17 after the app's features*
+  (several features in one part named once with it, *Keyway and Groove in …*);
+  a mate or component already in error then is named. One it foresees refusing
+  is red: *As read at 14:02, Update SolidWorks would stop before changing
+  anything: … It reads your work in SolidWorks again when pressed.* A press that
+  refused is said as recorded, red, *Update SolidWorks refused at 14:02, before
+  changing anything: … The next press reads your work in SolidWorks again, and
+  refuses again unless that has been dealt with.*; once the workbook has changed
+  since, *… The workbook has changed since, and the next press reads your work
+  in SolidWorks again.* followed by what the next press would do, in that
+  prediction's colour (it may foresee a refusal the recorded press never reached,
+  as of a mate on a gear that press did not put). Update stays enabled
+  throughout: the press reads again, and the user may have dealt with it in
+  SolidWorks since. The line follows the state as the save line does (not after a
+  job's own sentence, which says it already). Nothing is said when nothing of
+  the user's was read. The inventory is never called all of the user's work:
+  assembly features (a cut, a pattern) are not read, a gearbox W4 built static
+  reads only the features, and per mode only the active configuration's states
+  are read. **What the prediction cannot know**: a quiet press is foreseen to put
+  nothing, though the worker also puts a train it finds out of step or off its
+  axis in SolidWorks (then it carries or refuses what the footer said it leaves);
+  and a feature of the user's in the layout or a carrier part is said to be left
+  as it is even when that part's globals change.
 - **After Update** its sentence adds what it did with the user's work: *Your
   Sprocket-1 went with Sun in every mode, which your locks hold it to.*,
   *SolidWorks rebuilt your Keyway in Gear_m1.25_N17 after the app's features,
-  and it is in error.*, *Your Lock7 in L is in error in SolidWorks after it.*,
-  and a component found by its part under a new name. Each refusal of the
-  worker's (a value the user changed, a mate of another kind on a gear it puts,
-  a tie) is its own sentence, said as the job's.
-- **Build again?** ends, from the record, with what stays behind (K5 until W9d
-  carries it): *As read at 14:02, your Sprocket-1, Chain-1 and 6 mates stay in
-  RangeBox.SLDASM, and your Keyway stays in Gear_m1.25_N17, which Sun's new part
-  replaces; RangeBox_r2 has none of them.*, and *Your Groove in Sleeve_m1.25_N17
-  comes with that part, which RangeBox_r2 reuses.* for a feature in a part the
-  new revision reuses. With nothing on record the question is as before. The
-  build job then reads the old assembly first, read-only, as it stands in the
-  session when it is open there (never shown in another mode, nothing written
-  or saved; `swbuild.read_old_assembly`), and its sentence says what stayed
-  behind as found, *Your Sprocket-1 and Lock3 stay in RangeBox.SLDASM, as read
-  when this build began; RangeBox_r2 has none of them.*, or, when it was not
-  open, *RangeBox.SLDASM was not open in SolidWorks, so it was not read again:*
-  and the record's sentence with its time.
+  and it is in error.*, *Your Lock3 in L is in error in SolidWorks now.* — or,
+  for one already in error before it changed anything, *Your Lock7 was in error
+  in SolidWorks before this Update changed anything, and still is.* — and a
+  component found by its part under a new name. Each refusal of the worker's (a
+  value the user changed, a mate of another kind on a gear it puts, a tie) is
+  its own sentence, said as the job's.
+- **Build again?** ends with what stays behind (K5 until W9d carries it). From
+  the record's inventory, with its time: *As read at 14:02, your Sprocket-1,
+  Chain-1 and 6 mates stay in RangeBox.SLDASM, and your Keyway stays in
+  Gear_m1.25_N17, which Sun's new part replaces; RangeBox_r2 has none of them,
+  nor anything added since.*, and *Your Groove in Sleeve_m1.25_N17 comes with
+  that part, which RangeBox_r2 reuses.* for a feature in a part the new revision
+  reuses. With nothing on record (an assembly no Update of this version has
+  read, or one where nothing of the user's was found), without a time: *Anything
+  you added to RangeBox.SLDASM in SolidWorks (components, mates, and features in
+  parts this revision makes new) stays there, and RangeBox_r2 has none of it.*
+  (`WorkbookAgain`; the coordinator's ruling on package B's review). The build
+  job then reads the old assembly first, read-only, as it stands in the session
+  when it is open there — made the document read without opening or activating
+  it (`swcom.Session.use_open_document`: no `OpenDoc6`, no `ActivateDoc3`, so it
+  is not brought forward), never shown in another mode, nothing written or saved
+  (`swbuild.read_old_assembly`) — and, once the new assembly is saved, its
+  sentence says what stayed behind as found, *Your Sprocket-1 and Lock3 stay in
+  RangeBox.SLDASM, as read when this build began; RangeBox_r2 has none of them.*,
+  with the features the record says stay in parts made new; when it was not
+  open, *RangeBox.SLDASM was not open in SolidWorks, so it was not read again;
+  as read at 14:02, …* (or the clause without a time); when the read raised, its
+  reason, then the record's sentence. A read that raises never stops the build.
+  The fresh read is said, not kept: after Build again… the record holds no
+  inventory until the new revision's first Update (W9d's schema 9 keeps carried
+  items).
 
 ### Planetary stages (W7)
 

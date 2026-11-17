@@ -54,13 +54,17 @@ it. `UserFeature(path, name, type_name, code, warning)`.
 `PROBLEM_VALUE` (K11, with `ValueEdit(document, name, live, wanted, recorded, mode, cell)`), `PROBLEM_OTHER_KIND`,
 `PROBLEM_LOCK_BY_MODE`, `PROBLEM_TWO_BODIES`, `PROBLEM_TIE` (read by SolidWorks, or a lock chain to the ground: its
 sentence says which), `PROBLEM_UNSETTLED` (a finding route (c1), one of its branches, or the tie read rests on is
-missing), `PROBLEM_COMPONENT` (a component route (c1) would put is suppressed or lightweight), `PROBLEM_UNREAD` (a user
-mate SolidWorks would not describe).
+missing), `PROBLEM_COMPONENT` (a component route (c1) would put is suppressed or lightweight: judged inside
+`judge_user_work` since package B's fix round, so the footer's prediction foresees it), `PROBLEM_UNREAD` (a user mate
+SolidWorks would not describe).
 
 **Schema 7 must hold**, per refused or finished job, with `read_at`: the inventory (per part path the user's features;
 the user's components; the user's mates with kind, touches, on and code) and, for a refused press, its `problems`
 (kind, sentence, mates, values). A tie is a solver read: B cannot recompute it, so the recorded refusal is what the
-footer says until the next press reads again. Another `BuildError` met earlier in the check (a `NotAsBuilt`, a missing
+footer says until the workbook changes; then the prediction runs on the inventory as well (the coordinator's ruling 5
+on package B's review). As written (`store.UserWorkEntry`, `W9A-PACKAGE-B.md`), a user component is kept by name and
+kind (`part`, `assembly`, or `""` when its file was not named), never by the user's own file path; reading the
+record back gives the judgement a path of that kind's extension. Another `BuildError` met earlier in the check (a `NotAsBuilt`, a missing
 finding) carries no inventory: the user's work is read at the end of the check phase.
 
 ### 2.3 Predicting a press before it is made (the footer)
@@ -79,10 +83,13 @@ means every body on S0's measured branch. Package B's one call (`update.user_wor
 **The build job's read of the old assembly** (§2.1 item 8) is W9a's, package B's (the coordinator's correction of
 an earlier ruling that put it in W9d): `swbuild.read_old_assembly(sw, OldAssembly)` reads, with `_read_user_work`
 itself, the user's work in the assembly a Build again… leaves behind, only when that assembly is open in the session,
-as it stands there (no mode shown, nothing written or saved), and `build_gearbox(..., before=)` makes that read first,
+as it stands there (no mode shown, nothing written or saved; made the document read by
+`swcom.Session.use_open_document`, which neither opens nor activates it: no `OpenDoc6`, no `ActivateDoc3`), and
+`build_gearbox(..., before=)` makes that read first,
 into `GearboxResult.old_user_work` / `old_read`. When it is not open, the result says what the record's inventory
 holds, with its `read_at`. The Build again? question says, from the record, the inventory the last Update or refusal
-kept, with its time. Carrying anything over stays W9d's. (`W9A-PACKAGE-B.md`.)
+kept, with its time and "nor anything added since", or, with none on record, without a time that anything added
+stays behind. Carrying anything over stays W9d's. (`W9A-PACKAGE-B.md`.)
 
 ## 3. What the worker needs from planning (`classify` fills it; defaults keep W8's behaviour)
 

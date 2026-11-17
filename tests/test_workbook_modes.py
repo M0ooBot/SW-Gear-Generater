@@ -435,7 +435,8 @@ def test_a_plan_has_modes_exactly_when_it_has_a_configurations_plan(make):
 
 
 def test_a_row_held_back_says_the_layout_and_assembly_are_not_built_in_cs_words(monkeypatch):
-    """W8 is the last phase: nothing waits for one. Should a row ever be held back again, the refusal reads as C's
+    """W8 was the last phase of the import as planned on 2026-11-11; W9 (issue #1) builds on it and leaves no row
+    waiting for a phase. Should a row ever be held back again, the refusal reads as C's
     footer does (``ui_text._left_for_later``), word for word."""
     from gear_generator.workbook import build
     monkeypatch.setitem(build.LATER, "dog", ("a dog ring", "dog rings are not built by this version of the app"))

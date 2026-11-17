@@ -547,7 +547,8 @@ What is not built yet:
 - **Sleeves and modes (phase W8) on SolidWorks**: the demonstration is still to
   run. Sliding gears (as opposed to sleeves) are designed and tested against
   the fake with made-up workbooks only: neither W8 fixture has one.
-- W8 is the last phase: no row waits for a later one. What this version does
+- W8 was the last phase of the import as planned on 2026-11-11; W9 (issue #1)
+  builds on it and leaves no row waiting for a phase. What this version does
   not build is an error at its cell that says so.
 
 ## Driving SolidWorks
