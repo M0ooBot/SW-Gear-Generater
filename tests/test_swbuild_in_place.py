@@ -459,11 +459,18 @@ def t_with_modes(mode_findings, monkeypatch):
 
 
 def test_a_tooth_change_with_modes_is_refused_by_name_until_its_gate_is_measured(t_with_modes):
+    """As every gate: a UserWorkRefused with the finding as its subject, the user's work read, so the refusal is
+    recorded and said after the press as the footer foresaw it (B's second joining round)."""
     fake = t_with_modes
-    with pytest.raises(swbuild.BuildError) as raised:
+    with pytest.raises(UserWorkRefused) as raised:
         _update_train(fake, motion=_motion(configurations=("Default", "L"), ratios=(("G3 meshes G4", 18, 50),)))
-    assert "(findings.UPDATE_MAKES_MATES_WITH_MODES_ON_2026 is None), so nothing is changed" in str(raised.value)
-    assert _writes(fake) == []
+    (problem,) = raised.value.problems
+    assert problem.kind == PROBLEM_UNSETTLED and problem.subjects == ("UPDATE_MAKES_MATES_WITH_MODES_ON_2026",)
+    assert problem.sentence == ("Update SolidWorks would make a gear mate of a gearbox with modes again and set its "
+                                "flag in each mode, which has not been measured on this SolidWorks (findings."
+                                "UPDATE_MAKES_MATES_WITH_MODES_ON_2026 is None), so nothing is changed; build the "
+                                "gearbox again instead.")
+    assert raised.value.user_work is not None and _writes(fake) == []
     assert swbuild.in_place_gates(InPlace(), Y26, modes=True, remakes=True)[0][1] == \
         "UPDATE_MAKES_MATES_WITH_MODES_ON_2026"                         # the footer foresees it the same way
 

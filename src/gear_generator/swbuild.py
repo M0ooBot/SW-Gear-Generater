@@ -6721,12 +6721,15 @@ def _user_check(sw: SolidWorks, assembly: str, motion: MotionUpdate, placements:
                                 branches=user_carry_branches(motion, placements), revision=sw.revision)
     problems = list(judgement.problems)          # a carried component suppressed or lightweight among them
     work.carried = [(user, gear, locks) for gear, held_here in judgement.carried.items() for user, locks in held_here]
-    if in_place:
-        # W9c §5: the in-place refusals, after W9a's, each said once: a gate not settled, the user's mates on a gear
-        # taken out, a removal while the user's components are there and M4 is unread, an added mode's name taken.
+    remade_with_modes = modes_state is not None and bool(remakes)
+    if in_place or remade_with_modes:
+        # W9c §5: the in-place refusals, after W9a's, each said once: a gate not settled (the remake of a gear mate
+        # with modes among them, ruling 9.16), the user's mates on a gear taken out, a removal while the user's
+        # components are there and M4 is unread, an added mode's name taken.
+        in_place = in_place or InPlace()
         said = {(p.kind, p.mates) for p in problems}
         for problem in judge_in_place(work, in_place, file=file, revision=sw.revision,
-                                      modes=tuple(motion.configurations)):
+                                      modes=tuple(motion.configurations), remakes=remade_with_modes):
             if (problem.kind, problem.mates) not in said:
                 problems.append(problem)
         left = {name.casefold() for name in in_place.left}
@@ -7101,16 +7104,8 @@ def _update_motion(sw: SolidWorks, parts: Sequence[DocumentValues], layout: Opti
                 raise BuildError(f"The gear mate {deferred[0]} in {_file(assembly)} would have to be made again, and "
                                  "making a gear mate of a gearbox with modes again is not in this version of Gear "
                                  "Generator, so nothing is changed; build the gearbox again.")
-            unsettled = in_place_gates(InPlace(), sw.revision, modes=True, remakes=True) \
-                if (remakes or resensed) else []
-            if unsettled:
-                # W9c lifts ruling 9.16 where findings.UPDATE_MAKES_MATES_WITH_MODES_ON_<year> is set (§8).
-                name = remakes[0][0] if remakes else resensed[0]
-                finding = unsettled[0][1]
-                raise BuildError(f"The gear mate {name} in {_file(assembly)} would have to be made again, and making a "
-                                 "gear mate of a gearbox with modes again has not been measured on this SolidWorks "
-                                 f"(findings.{finding} is {getattr(findings, finding, None)!r}), so nothing is "
-                                 "changed; build the gearbox again.")
+            # W9c lifts ruling 9.16 where findings.UPDATE_MAKES_MATES_WITH_MODES_ON_<year> is set (§8); while it is
+            # not, the remake refuses with the other gates, after the user's work is read (_user_check).
         possible = list(remakes) + [(name, *wanted_teeth[name]) for name in deferred
                                     if all(n != name for n, _, _ in remakes)]
         if possible:
