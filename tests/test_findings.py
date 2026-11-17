@@ -1936,7 +1936,6 @@ def test_w9a_m3_an_assembly_rebuild_with_only_user_mates_in_error_returned_true_
                              "GetWhatsWrongCount 0; mates in error none")
     assert r1[73].startswith("status  [green] Updated SolidWorks: changed 1 variable in Gear_m1.25_N29")
     assert findings.ASSEMBLY_REBUILD_WITH_USER_MATE_IN_ERROR_ON_2026 is True
-    assert findings.ASSEMBLY_REBUILD_WITH_USER_MATE_IN_ERROR_ON_2024 is None
 
 
 def test_w9a_m3_and_k3_an_assembly_rebuild_with_a_feature_in_error_in_a_part_returned_false_on_2026():
@@ -2000,3 +1999,124 @@ def test_w9a_the_cam_add_in_boxed_a_save_of_an_assembly_holding_a_lightweight_co
     assert r2[359].startswith("FAIL    W9a: WorkerHung")
     assert findings.LIGHTWEIGHT_SAVE_RAISES_AN_ADDIN_DIALOG_ON_2026 is True
     assert findings.LIGHTWEIGHT_SAVE_RAISES_AN_ADDIN_DIALOG_ON_2024 is None
+
+
+W9A_CLOSE_C1 = LATEST.parent / "w9a-demo-20261116-225659.json"
+W9A_CLOSE_C1_LOG = LATEST.parent / "w9a-close-sw2026-20261116-1-m3-reducer-k3-setup-lightweight.log"
+W9A_CLOSE_C2 = LATEST.parent / "w9a-demo-20261116-232221.json"
+W9A_CLOSE_C2_LOG = LATEST.parent / "w9a-close-sw2026-20261116-2-go-m1-refuse-again-nocarrier.log"
+W9A_2024_V24 = LATEST.parent / "sw2024" / "w9a-demo-20261117-002344.json"
+W9A_2024_V24_LOG = LATEST.parent / "sw2024" / "w9a-confirm-sw2024-20261117-1-m3-stopped-by-whats-wrong.log"
+
+
+def _w9a_run(path, log, snapshot, revision):
+    """One of W9a's later runs, its JSON and its log by line number from 1, checked for its snapshot and version."""
+    data = json.loads(path.read_text(encoding="utf-8"))
+    assert data["revision"] == list(revision) and data["snapshot"] == snapshot
+    lines = [""] + _w9_log(log)
+    assert f"(snapshot: {snapshot})" in lines[2]
+    assert lines[4].startswith(f"attach  SolidWorks {2026 if revision[0] == 34 else 2024} (revision "
+                               f"{'.'.join(map(str, revision))})")
+    return data, lines
+
+
+def test_w9a_closing_run_repeats_m3s_readings_with_the_toggle_on_and_the_updates_open_no_window_on_2026():
+    """findings.py, the M3 trio's closing-run paragraph (the close review, finding 3): toggle 77 read True, each
+    reading repeated with no new window, and the app's three Updates over the user's work in error ran with no
+    window, the two False rebuilds laid to the user."""
+    data, c1 = _w9a_run(W9A_CLOSE_C1, W9A_CLOSE_C1_LOG, "6f3d6fb", (34, 1, 1))
+    m3 = data["sections"]["m3"]
+    assert m3["show_errors_every_rebuild"] is True
+    assert (m3["mate_error"]["rebuilt"], m3["mate_error"]["whats_wrong"]) == (True, 3)
+    assert (m3["feature_error"]["rebuilt"], m3["feature_error"]["whats_wrong"]) == (False, 1)
+    assert m3["part_rebuild"]["rebuilt"] is False
+    assert all(m3[k]["windows_new"] == [] for k in ("baseline", "mate_error", "part_rebuild", "feature_error",
+                                                     "update_mate_error", "update_feature_error"))
+    assert m3["update_mate_error"]["ok"] is True and m3["update_feature_error"]["ok"] is True
+    assert c1[41] == "fact    m3: SolidWorks' \"show errors every rebuild\" (toggle 77) reads True"
+    assert c1[55] == ("fact    m3 a user mate in error: ForceRebuild (the app's train route) returned True; "
+                      "GetWhatsWrongCount 3; mates in error {'UserFront': 46, 'UserGap': 47}; components in error "
+                      "none; windows new none")
+    assert c1[111].startswith("fact    m3: the Sprocket part's rebuild returned False; What's Wrong 1") and \
+        c1[111].endswith("windows new none")
+    assert c1[113] == ("fact    m3 a user feature in error: ForceRebuild (the app's train route) returned False; "
+                       "GetWhatsWrongCount 1; mates in error none; components in error {'Sprocket-1': 1}; windows "
+                       "new none")
+    for at in (51, 107):
+        assert c1[at].endswith("windows new none")
+    assert c1[104].startswith("fact    m3 Update with a user mate in error: ok True; failures []")
+    assert c1[160].startswith("fact    m3 Update with a user feature in error: ok True; failures []; laid to the "
+                              "user's work alone ['Sprocket-1']")
+    assert c1[798].startswith("fact    k3 Update rebuilding the user's keyway into error: ok True; failures []; laid "
+                              "to the user's work alone ['User Keyway in Gear_m1.5_N17.SLDPRT']")
+    assert c1[800].startswith("fact    k3: component error codes after the Update: {'Gear_m1.5_N17-1': 1}")
+    # The three Updates: no dialog but the interference progress box, no STOP, no window NOTE.
+    for first, last in ((91, 105), (148, 161), (786, 800)):
+        seen = [line for line in c1[first:last + 1] if line.startswith(("DIALOG", "NOTE", "STOP"))]
+        assert all("Calculating Interference Detection" in line for line in seen), seen
+    assert data["stops"] == [] and data["fails"] == []
+    assert findings.WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_2026 is False
+
+
+def test_w9a_on_2024_an_assembly_rebuild_with_only_user_mates_in_error_returned_true():
+    """findings.py ASSEMBLY_REBUILD_WITH_USER_MATE_IN_ERROR_ON_2024 (the close review, "What 2024's findings may say"):
+    the script's own rebuild with UserGap over-defining returned True, What's Wrong 3, codes 51, no new window. The
+    other two 2024 findings stay None, so the gate stays shut on 2024."""
+    data, v24 = _w9a_run(W9A_2024_V24, W9A_2024_V24_LOG, "19651ee", (32, 5, 0))
+    m3 = data["sections"]["m3"]
+    assert m3["show_errors_every_rebuild"] is True
+    assert (m3["mate_error"]["rebuilt"], m3["mate_error"]["whats_wrong"]) == (True, 3)
+    assert {n: c for n, c in m3["mate_error"]["mates"].items() if c[0]} == {"UserFront": [51, False],
+                                                                             "UserGap": [51, False]}
+    assert v24[37] == "fact    m3: SolidWorks' \"show errors every rebuild\" (toggle 77) reads True"
+    assert v24[50].startswith("fact    m3: UserGap made: AddMate5 status 5")
+    assert v24[51] == ("fact    m3 a user mate in error: ForceRebuild (the app's train route) returned True; "
+                       "GetWhatsWrongCount 3; mates in error {'UserFront': 51, 'UserGap': 51}; components in error "
+                       "none; windows new none")
+    assert findings.ASSEMBLY_REBUILD_WITH_USER_MATE_IN_ERROR_ON_2024 is True
+    assert findings.ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_2024 is None
+    assert findings.WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_2024 is None
+
+
+def test_w9a_whats_wrong_opened_during_the_apps_update_with_user_mates_in_error_on_2024_and_not_on_2026():
+    """findings.py WHATS_WRONG_OPENS_IN_UPDATE_WITH_USER_MATE_IN_ERROR_ON_<year>: on 2024 the box came up during the
+    app's value Update, the quiet press before it raising none; on 2026 the same Update went ahead with no window.
+    Which call raised it, and whether it blocks, are not known; no app behaviour reads it."""
+    data, v24 = _w9a_run(W9A_2024_V24, W9A_2024_V24_LOG, "19651ee", (32, 5, 0))
+    assert v24[82].startswith("line    [green] As read at ") and \
+        v24[82].endswith("Your UserFront and UserGap were already in error in SolidWorks then.")
+    assert v24[88].startswith("DIALOG  SolidWorks shows \"What's Wrong\": ['Show &errors', 'Show &warnings', "
+                              "\"&Display What's Wrong during rebuild\", '&FeatureXpert', '&Close', '&Help'")
+    assert v24[89].startswith("NOTE    a SolidWorks window \"What's Wrong\"") and \
+        "came up while GetNextSubFeature was in progress" in v24[89]
+    assert v24[90].startswith("FAIL    Update SolidWorks: a SolidWorks dialog came up while it ran")
+    assert v24[91].startswith("STOP    ")
+    assert not [line for line in v24[56:67] if line.startswith(("DIALOG", "NOTE", "STOP"))]   # the quiet press
+    assert data["stops"] and "Wrong" in data["stops"][0] and "GetNextSubFeature" in data["stops"][0]
+    c1data, c1 = _w9a_run(W9A_CLOSE_C1, W9A_CLOSE_C1_LOG, "6f3d6fb", (34, 1, 1))
+    assert c1data["sections"]["m3"]["update_mate_error"]["ok"] is True
+    assert c1data["sections"]["m3"]["update_mate_error"]["windows_new"] == []
+    assert all("Calculating Interference Detection" in line for line in c1[91:106]
+               if line.startswith(("DIALOG", "NOTE", "STOP")))
+    assert findings.WHATS_WRONG_OPENS_IN_UPDATE_WITH_USER_MATE_IN_ERROR_ON_2024 is True
+    assert findings.WHATS_WRONG_OPENS_IN_UPDATE_WITH_USER_MATE_IN_ERROR_ON_2026 is False
+    assert "WHATS_WRONG_OPENS_IN_UPDATE" not in (Path(findings.__file__).parent / "swbuild.py").read_text(
+        encoding="utf-8")                                     # no app behaviour reads it yet
+
+
+def test_w9a_closing_run_read_nocarrier_clean_with_the_finding_committed_true():
+    """findings.py USER_MATE_PUT_NO_CARRIER_ON_2026, the closing run: the patch a no-op, both presses clean, the
+    footer's carry the press's. 2024 stays None: its run is not reviewed."""
+    data, c2 = _w9a_run(W9A_CLOSE_C2, W9A_CLOSE_C2_LOG, "6f3d6fb", (34, 1, 1))
+    assert data["sections"]["nocarrier"]["clean"] == [True, True]
+    assert data["proposal"]["USER_MATE_PUT_NO_CARRIER_ON_2026"] is True
+    assert c2[1350].endswith("(was True)")
+    assert c2[1412] == "PATCH   findings.USER_MATE_PUT_NO_CARRIER_ON_2026 back to True"
+    for at in (1367, 1408):
+        assert c2[at].startswith("ok      nocarrier G4 At ")
+        assert "what the footer said is what the press carried" in c2[at]
+    for at in (1366, 1407):
+        assert "the Update went ahead" in c2[at] and "failures []" in c2[at]
+    assert c2[1414] == ("propose USER_MATE_PUT_NO_CARRIER_ON_2026: True (both presses and their reads clean: "
+                        "[True, True])")
+    assert findings.USER_MATE_PUT_NO_CARRIER_ON_2026 is True and findings.USER_MATE_PUT_NO_CARRIER_ON_2024 is None
