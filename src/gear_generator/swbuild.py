@@ -6933,6 +6933,10 @@ class OldComponent:
     virtual: bool = False
     pattern_instance: Optional[bool] = None
     on_disk: bool = True
+    # Not in W9D-INTERFACES §2.2 as written (W9D-PACKAGE-A.md, shape changes): its file's configurations
+    # (``GetConfigurationNames`` on its document), so §5.1's one-configuration file (today's insert) is told from one
+    # of several (its configuration passed, both findings set); None not read, which §5.1 cannot carry by its rule.
+    configurations: Optional[Tuple[str, ...]] = None
 
 
 OLD_OPEN = "open"             # OldWork.how: read as it stands in the session

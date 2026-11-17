@@ -2017,7 +2017,11 @@ UPDATE_SUPPRESSES_THE_RELIEF_ON_2024 = None
 # - OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS (True): the read-only open leaves the app's documents already open as they
 #   were, one with changes included; gates the not-open read when any document is open (probe state (g)).
 # - FILE_VERSION_READ (a route string): the closed file's last saved version (ISldWorks.VersionHistory); the not-open
-#   read opens only when it is set and reads the running version (probe state (v)).
+#   read opens only when it is set and reads the running version (probe state (v)); while it is None a closed old
+#   assembly is never opened (the re-check's R1).
+# - DEPENDENCIES_READ (a route string): every file the old assembly references, read closed
+#   (ISldWorks.GetDocumentDependencies2), each one's last saved version; the not-open read opens only when it is set
+#   and every one reads the running version (S-f; probe state (v)).
 # - COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED (True): the per-mode state route reads an open assembly's unsaved
 #   change (probe state (e)).
 # - PERSIST_REFERENCE_ROUTE_FOR_FACES / _FOR_EDGES / _FOR_VERTICES (a route string): tier 1 on faces, edges, vertices
@@ -2025,7 +2029,8 @@ UPDATE_SUPPRESSES_THE_RELIEF_ON_2024 = None
 # - PERSIST_REFERENCE_SURVIVES_RELOAD (True): a part-level reference resolved after its part is closed and opened
 #   again; tier 1 on the not-open path (probe faces (d)).
 # - COAXIAL_FACE_READ (True): a face on an app gear read coaxial with its Gear Axis (probe faces (b)).
-# - REFERENCED_CONFIGURATION_READ (True): IComponent2.ReferencedConfiguration read right (M9's Sprocket-11 sets it).
+# - REFERENCED_CONFIGURATION_READ (True): IComponent2.ReferencedConfiguration read right on a file of several
+#   configurations (M9's Sprocket-11 sets it, the re-check's R2; the probe logs the read only).
 # - VIRTUAL_READ, PATTERN_INSTANCE_READ (True): IComponent2.IsVirtual, IsPatternInstance (read negative only).
 # - ORIGIN_ENTITY_READ (True): an origin as a mate entity (nothing in W9d).
 # - SUBASSEMBLY_OPEN_MARKS, SUBASSEMBLY_OPEN_MARKS_WHEN_LOADED (settled False): opening a healthy user sub-assembly,
@@ -2045,6 +2050,8 @@ OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS_ON_2026 = None
 OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS_ON_2024 = None
 FILE_VERSION_READ_ON_2026 = None
 FILE_VERSION_READ_ON_2024 = None
+DEPENDENCIES_READ_ON_2026 = None
+DEPENDENCIES_READ_ON_2024 = None
 COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED_ON_2026 = None
 COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED_ON_2024 = None
 PERSIST_REFERENCE_ROUTE_FOR_FACES_ON_2026 = None
