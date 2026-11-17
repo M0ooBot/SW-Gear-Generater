@@ -7,6 +7,7 @@ precisely so they can be tested here, on a machine with no CAD package at all.
 import math
 import threading
 import time
+import types
 
 import pytest
 
@@ -3577,3 +3578,38 @@ def test_states_per_mode_read_unshown_by_the_route_2026_measured(monkeypatch):
     read = session.component_states_in(["Housing-1", "Sprocket-4", "Sprocket-1"], ["H", "N", "L"])
     assert read == {"Housing-1": {"H": True, "N": False, "L": False}, "Sprocket-4": {"H": False, "N": False, "L": True},
                     "Sprocket-1": {"H": False, "N": False, "L": False}}
+
+
+@pytest.mark.parametrize("hresult, stops", [(-2147352567, False), (-2147023170, True)])
+def test_a_name_solidworks_refuses_for_a_remade_mate_keeps_its_own_but_a_lost_session_stops(monkeypatch, hresult,
+                                                                                         stops):
+    """Ruled (the audit's follow-up): a remade mate whose old name SolidWorks will not take keeps the name it gave and
+    is returned under it; a ComError that says the session has gone (the RPC server unavailable) still raises."""
+    monkeypatch.setattr(findings, "CARRY_REMAKE_KINDS_ON_2026", ("coincident",))
+
+    class Refused(Exception):
+        pass
+
+    def rename(feature, name):
+        raise swcom.ComError("setting Name", Refused(hresult, "Exception occurred.", None, None))
+
+    class Doc:
+        def ClearSelection2(self, all_):
+            return True
+
+    names = iter([[], ["Coincident12"]])
+    session = swcom.Session.__new__(swcom.Session)
+    session.revision, session._handles, session._mate_statuses = (34, 0, 0), {}, {}
+    monkeypatch.setattr(session, "_doc", lambda: Doc(), raising=False)
+    monkeypatch.setattr(session, "_mate_names", lambda: next(names), raising=False)
+    monkeypatch.setattr(session, "_select_target", lambda target, append: None, raising=False)
+    monkeypatch.setattr(session, "_add_mate5", lambda *args: (object(), 1), raising=False)
+    monkeypatch.setattr(session, "_mate_feature", lambda name: object(), raising=False)
+    monkeypatch.setattr(swcom.Session, "_rename", staticmethod(rename))
+    definition = types.SimpleNamespace(type=0, alignment=0, flipped=False, values=())
+    if stops:
+        with pytest.raises(swcom.ComError):
+            session.remake_mate("carrymate1", definition, ["a", "b"], "UserFaceCoin")
+    else:
+        assert session.remake_mate("carrymate1", definition, ["a", "b"], "UserFaceCoin") == ("Coincident12", 1)
+        assert session._handles["carrymate1"] == {"mate": "Coincident12"}

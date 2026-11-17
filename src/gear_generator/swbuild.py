@@ -8011,6 +8011,8 @@ class _Carrying:
     app_codes: Dict[str, Dict[str, int]] = field(default_factory=dict)   # mode -> each app mate's code before C.6
     new_frames: Dict[str, Frame9] = field(default_factory=dict)
     root: str = ""                               # N1: the new assembly's root component's Name2, as SolidWorks gives it
+    read_back: Tuple[Tuple[str, float], ...] = ()   # the last remade mate's definition values, as _read_back read them
+    showing: str = ""                            # the mode last shown by show()
     doing: str = "reading the new revision"
     left: List[str] = field(default_factory=list)
     counter: int = 0
@@ -8029,6 +8031,7 @@ class _Carrying:
     def show(self, mode: str) -> None:
         if mode:
             self.sw.show_configuration(self.config_of[mode])
+            self.showing = mode
 
 
 def _carry(sw: SolidWorks, result: GearboxResult, carry: Carry, work: OldWork, assembly: Optional[BuildPlan],
@@ -8190,6 +8193,8 @@ def _carry_states(c: _Carrying) -> None:
     sw, cr, carry = c.sw, c.result.carry, c.carry
     by_name = {item.component.name: item.component for item in c.plan.components}
     suppressed_in: Dict[str, List[str]] = {n: [] for n in c.handle_of}
+    fixed = [i for i in c.plan.components if i.component.fixed and i.component.name in c.handle_of]
+    had: Dict[str, List[Tuple[str, float]]] = {}
     for mode in (carry.modes or ("",)):
         c.show(mode)
         # M3: each app mate's code in this mode before any mate of the user's is made, for the post-check.
@@ -8205,8 +8210,19 @@ def _carry_states(c: _Carrying) -> None:
                                  f"{mode or 'the assembly'} as it was set, so the carry stopped there.")
             if wanted:
                 suppressed_in[name].append(mode)
+        if mode and mode != c.first():
+            # Ruled (the audit's follow-up): a component fixed in the old assembly was fixed at its insert, in the
+            # first mode; whether that fixed it in every mode is not measured, so each other mode is read.
+            for item in fixed:
+                if not _wanted_suppressed(item.component, mode, c.work, carry):
+                    off = _fix_here(c, item)
+                    if off is not None:
+                        had.setdefault(c.kept_of[item.component.name], []).append((mode, off))
     c.show(c.first())
     cr.states = [(c.kept_of[n], tuple(m for m in modes if m)) for n, modes in suppressed_in.items()]
+    if fixed and len(carry.modes) > 1:
+        _fix_facts(c, [c.kept_of[i.component.name] for i in fixed], had, c.first(),
+                   f"fixed as in {_file(carry.old.path)}")
 
 
 def _head(target: str) -> str:
@@ -8275,6 +8291,9 @@ def _carry_cluster(c: _Carrying, cluster: int, items: Sequence[CarryMateItem]) -
         on = _set_flags(c, handle, kept, item.mate, item)
         made.append((item, handle, kept))
         cr.remade.append((item.mate.name, kept, on))
+        if kept != item.mate.name:
+            # Ruled: a name SolidWorks would not give it (taken, or refused) leaves the mate carried under its own.
+            cr.facts.append(f"{item.mate.name} is carried as {kept}: SolidWorks kept the name it gave it")
         if status == findings.ADD_MATE_OVER_DEFINED and fell is None:
             fell = (FELL_OVER_DEFINED, (item.mate.name,))
     if made:
@@ -8294,6 +8313,12 @@ def _remake(c: _Carrying, item: CarryMateItem) -> Optional[Tuple[str, str, int]]
     reference found again as another kind does (§4.1, §0.3)."""
     sw, cr = c.sw, c.result.carry
     targets, flip, ratio = list(item.targets), None, tuple(item.ratio)
+    dimension = _flip_dimension(item.mate)
+    if dimension is not None:
+        # Ruled (the audit's follow-up): a distance or angle mate is made again with the side it was read on, its
+        # FlipDimension passed as AddMate5's Flip; what it reads back is said, never a reason to delete it (how a
+        # non-zero FlipDimension reads back was never measured; the pose check judges the side, ``moved``).
+        flip = dimension
     tried = 0
     while True:
         c.counter += 1
@@ -8320,6 +8345,11 @@ def _remake(c: _Carrying, item: CarryMateItem) -> Optional[Tuple[str, str, int]]
         try:
             differs = _read_back(c, handle, item)
             if not differs:
+                if dimension is not None:
+                    read = dict(getattr(c, "read_back", None) or {}).get("FlipDimension")
+                    cr.facts.append(f"{kept} made again with Flip {dimension} for its FlipDimension "
+                                    f"{_number(dict(item.mate.values).get('FlipDimension'))}; it reads FlipDimension "
+                                    f"{_number(read)}")
                 return handle, kept, status
             sw.delete_mate(handle)
         except ComError:
@@ -8343,6 +8373,21 @@ def _remake(c: _Carrying, item: CarryMateItem) -> Optional[Tuple[str, str, int]]
         cr.named.append(CarryNamed(item.mate.name, "mate", WHY_DIFFERS,
                                    ("entities" if differs == "swapped" else differs,)))
         return None
+
+
+_DIMENSION_KINDS = ("distance", "angle", "limit distance", "limit angle")
+
+
+def _flip_dimension(mate: OldMate) -> Optional[bool]:
+    """A distance or angle mate's side as read (``FlipDimension``, 0 or 1), None for any other kind or one not read."""
+    value = dict(mate.values).get("FlipDimension")
+    if carry_kind(mate) not in _DIMENSION_KINDS or value is None:
+        return None
+    return bool(round(float(value)))
+
+
+def _number(value: Any) -> str:
+    return "unread" if value is None else f"{float(value):g}"
 
 
 def _not_found_subjects(c: _Carrying, item: CarryMateItem) -> Tuple[str, ...]:
@@ -8369,6 +8414,7 @@ def _read_back(c: _Carrying, handle: str, item: CarryMateItem) -> str:
     else what differs ("entities", "alignment", "ratio", "values", "sense"). A gear mate's sense not read is
     "sense" (M5: never taken as right)."""
     definition = c.sw.mate_definition(handle)
+    c.read_back = tuple(definition.values)
     old = item.mate
     wanted = []                         # the old mate's entities in MateEntity order, whatever order was selected
     for target in item.targets:
@@ -8397,7 +8443,9 @@ def _read_back(c: _Carrying, handle: str, item: CarryMateItem) -> str:
     if item.sense:
         if gear_sense(definition.values, tuple(e.params for e in definition.entities)) != item.sense:
             return "sense"
-    elif definition.flipped != old.flipped:
+    elif definition.flipped != old.flipped and _flip_dimension(old) is None:
+        # A distance or angle mate was made with its FlipDimension as the Flip, so its IMate2.Flipped read back is the
+        # same unmeasured question; its side is said as a fact and judged by the pose (the ruling above).
         return "alignment"
     return ""
 
@@ -8502,6 +8550,57 @@ def _fall_back(c: _Carrying, cluster: int, fell: Tuple[str, Tuple[str, ...]], tr
         # app's gears in every mode stops it when nothing of the user's explains what still reads wrong.
         cr.facts.append(f"after {_and(list(components)) or 'the fallback'} fell back, {_and(still)} still "
                         f"{'reads' if len(still) == 1 else 'read'} unable to turn")
+    items = [i for i in c.plan.components if cluster >= 0 and i.cluster == cluster and i.component.name in c.handle_of]
+    _fixed_in_every_mode(c, items, f"after {_and(list(components))} fell back"
+                                   + (f" in {c.showing}" if c.showing else ""))
+
+
+def _fix_here(c: _Carrying, item: CarryPlanItem) -> Optional[float]:
+    """In the mode showing: None when the component reads fixed; else it is put at its frame and fixed, and how far it
+    stood from that frame (mm, the largest origin difference) is returned."""
+    sw = c.sw
+    handle = c.handle_of[item.component.name]
+    if sw.is_fixed(handle):
+        return None
+    stood = sw.component_frame(handle)
+    off = max(abs(float(a) - float(b)) for a, b in zip(stood[1], item.frame[1]))
+    sw.place_component(handle, item.frame[0], tuple(float(v) for v in item.frame[1]), kind=ASSEMBLY_TRAIN)
+    sw.fix_component(handle)
+    return off
+
+
+def _fixed_in_every_mode(c: _Carrying, items: Sequence[CarryPlanItem], what: str) -> None:
+    """Ruled (the audit's follow-up): whether one FixComponent fixes a component in every configuration is not
+    measured, and a put and a fix act in the mode showing. So, the components just fixed in the mode showing, each
+    other mode is shown and each of them not suppressed there read: one that is not fixed there is put at its frame
+    and fixed there. What was read is a fact; the mode showing is shown again."""
+    showing = c.showing
+    others = [m for m in c.carry.modes if m != showing]
+    if not items or not others or not showing:
+        return
+    had: Dict[str, List[Tuple[str, float]]] = {}
+    for mode in others:
+        c.show(mode)
+        for item in items:
+            if _wanted_suppressed(item.component, mode, c.work, c.carry):
+                continue
+            off = _fix_here(c, item)
+            if off is not None:
+                had.setdefault(c.kept_of[item.component.name], []).append((mode, off))
+    c.show(showing)
+    _fix_facts(c, [c.kept_of[i.component.name] for i in items], had, showing, what)
+
+
+def _fix_facts(c: _Carrying, names: Sequence[str], had: Mapping[str, Sequence[Tuple[str, float]]], showing: str,
+               what: str) -> None:
+    cr = c.result.carry
+    if not had:
+        cr.facts.append(f"{what}: {_and(list(names))} fixed in every mode by one FixComponent in {showing}")
+    for name in names:
+        if name in had:
+            modes = [m for m, _ in had[name]]
+            cr.facts.append(f"{what}: {name} had to be fixed in {_and(modes)}, where one FixComponent in {showing} "
+                            f"had left it not fixed ({max(o for _, o in had[name]):g} mm from its frame)")
 
 
 def _carry_post_check(c: _Carrying) -> None:

@@ -539,3 +539,43 @@ UserFaceCoin, kept now, passes it; its own kind words were never `carry_kind`'s 
 but the worker's `CARRY_REMAKE_KINDS` gate now asks `distance` and `angle` of UserDist4, UserAngle4, UserChainDist,
 UserHousingDist, UserAsm6 and UserAngle8b, where it asked `limit distance` and `limit angle` before (M9 patches every
 word, so the run is not changed by it; the finding set from it now means what it says).
+
+### The coordinator's rulings on the audit's never-run concerns (2026-11-17)
+
+1. **FlipDimension.** A distance or angle mate (plain or limit) is made again with its `FlipDimension` as read passed
+   as AddMate5's Flip (`_flip_dimension`), where the old IMate2.Flipped went before. What the remade mate reads back
+   is said, never a reason to delete it: `<kept> made again with Flip <True|False> for its FlipDimension <old>; it
+   reads FlipDimension <new>` (each number as read, `unread` when not read). For such a mate IMate2.Flipped is no
+   longer compared either, since the Flip passed now stands for the FlipDimension and how either reads back is
+   unmeasured; the side is judged by the pose check (`moved`). The fake puts a carried component on the other side
+   (a stand-in: 2 × the distance along Z, 10 mm for an angle) when a distance or angle is made with the other Flip
+   than its FlipDimension, and reads the Flip back as FlipDimension. Pins:
+   `test_a_distance_is_made_again_on_the_side_its_flip_dimension_says_and_its_read_back_said` (the old code passed
+   Flipped, False, and the component moved), `test_a_distance_reading_another_flip_dimension_back_is_kept_and_said`.
+   *Trying the other Flip on `moved`* would take: the post-check, on a component said moved in a mode, finding the
+   distance and angle mates its cluster just made (from `c.made`); deleting one, making it again with the other Flip
+   (`_remake` with `flip` forced), the top-only rebuild, and the pose read again in every mode, not only that one
+   (positions are per configuration); a rule for which mate to turn when several could, and for a second `moved`
+   (the first kept, said). About forty lines and a fake that solves the side; not built.
+2. **A refused rename.** `Session.remake_mate` keeps SolidWorks' name when the put of the old one raises a ComError
+   that does not say the session has gone; a lost session still raises. The carry hands the mate out under the kept
+   name, as it did for a name already taken: `CarryResult.remade` holds `(old, kept, on)`, and package B's record
+   writes `CarriedMateEntry(name=kept, was=old)` and the inventory's `UserMateEntry(name=kept)`, so the record names it
+   truly. The fact: `<old> is carried as <kept>: SolidWorks kept the name it gave it`. What is missing is B's: the
+   result's sentence ("your Lock1, on in the modes it was on in") names the old name only, never the kept one. Pins:
+   `test_a_name_solidworks_will_not_give_keeps_the_mate_under_its_own_and_says_so`,
+   `test_a_name_solidworks_refuses_for_a_remade_mate_keeps_its_own_but_a_lost_session_stops`.
+3. **Fixed in every mode.** After a fallback in any mode (`_fall_back`, now knowing the mode showing through
+   `_Carrying.showing`), each other mode is shown and each of the cluster's components not suppressed there read:
+   one not fixed there is put at its frame and fixed there, and the mode shown is shown again (`_fixed_in_every_mode`).
+   The same reading in C.5 for a component fixed in the old assembly, which C.4 fixes in the first mode only. The
+   facts: `after <components> fell back in <mode>: <components> fixed in every mode by one FixComponent in <mode>`, or
+   per component `after <components> fell back in <mode>: <kept> had to be fixed in <modes>, where one FixComponent in
+   <mode> had left it not fixed (<n> mm from its frame)`; and for a fixed one, the same two with the lead
+   `fixed as in <old assembly file>` and the first mode. The fake's `fix_per_configuration` (default True, the less
+   kind answer: a fix made while the assembly has several configurations holds in the one shown; a configuration
+   added after copies it) and False (every configuration), both tested:
+   `test_a_fallback_in_another_mode_fixes_its_components_in_every_mode_whatever_one_fix_does`,
+   `test_a_component_fixed_in_the_old_assembly_is_read_fixed_in_every_mode`. With the less kind default the whole
+   suite passes unchanged. Unmeasured still: whether a put in another mode with a kept user–user mate holds
+   (`Session.place_component` raises if pulled off), and whether FixComponent on a component already fixed is quiet.

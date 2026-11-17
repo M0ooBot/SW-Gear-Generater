@@ -1696,3 +1696,99 @@ def test_a_coincident_between_two_carried_components_inserted_in_another_order_i
     assert [e.owner for e in old.entities] == ["Chain-1", "Chain-2"]           # tree order, not the selection's
     assert cr.stopped == "" and "UserFaceCoin" in {r[0] for r in cr.remade}, cr.named
     assert [a[2] for n, a in fake.calls if n == "remake_mate"].count("UserFaceCoin") == 1    # made once, no retry
+
+
+# -- the coordinator's rulings on the audit's §3 (2026-11-17) --------------------------------------------------------
+
+
+def _distance_case(monkeypatch, every_gate, flipped_read=False, reads_back=None):
+    """A user distance on the side its FlipDimension 1 says, IMate2.Flipped read False (as every distance read so)."""
+    every_gate()
+    fake = _old_train()
+    _isfile(monkeypatch, fake)
+    gap = fake.user_mate(T_ASM, "UserDist4", kind="distance", a=("Sprocket-1", "plane1"), b=("gear1-1", "plane1"))
+    gap.value, gap.flip = 90.0, True
+    original = fake.mate_definition
+
+    def definition(handle):
+        d = original(handle)
+        if d.name != "UserDist4":
+            return d
+        if fake.mate(d.name) is gap:
+            return _replace(d, flipped=flipped_read)
+        if reads_back is not None:
+            return _replace(d, values=tuple((k, reads_back if k == "FlipDimension" else v) for k, v in d.values))
+        return d
+    monkeypatch.setattr(fake, "mate_definition", definition)
+    return _build_again(fake).carry, fake
+
+
+def test_a_distance_is_made_again_on_the_side_its_flip_dimension_says_and_its_read_back_said(monkeypatch, every_gate):
+    """Ruled: its FlipDimension goes to AddMate5 as the Flip, not IMate2.Flipped; the fake puts the component on the
+    other side for the other Flip, so the pose check would say it moved."""
+    cr, fake = _distance_case(monkeypatch, every_gate)
+    flips = [a[3] for n, a in fake.calls if n == "remake_mate" and a[2] == "UserDist4"]
+    assert flips == [True] and "UserDist4" in {r[0] for r in cr.remade} and cr.moved == [], (cr.named, cr.moved)
+    assert "UserDist4 made again with Flip True for its FlipDimension 1; it reads FlipDimension 1" in cr.facts
+
+
+def test_a_distance_reading_another_flip_dimension_back_is_kept_and_said(monkeypatch, every_gate):
+    """Ruled: how a FlipDimension reads back was never measured, so it is said, never a reason to delete."""
+    cr, fake = _distance_case(monkeypatch, every_gate, reads_back=0.0)
+    assert "UserDist4" in {r[0] for r in cr.remade} and cr.named == []
+    assert "UserDist4 made again with Flip True for its FlipDimension 1; it reads FlipDimension 0" in cr.facts
+
+
+def test_a_name_solidworks_will_not_give_keeps_the_mate_under_its_own_and_says_so(monkeypatch, every_gate):
+    """Ruled: the mate is good, only its name is not the old one; carried under SolidWorks' name, which the result's
+    remade (old, kept) and the record's CarriedMateEntry (name, was) already hold."""
+    every_gate()
+    fake = _old_train()
+    _isfile(monkeypatch, fake)
+    fake.rename_refused = {"Lock1"}
+    cr = _build_again(fake).carry
+    ((was, kept, _),) = cr.remade
+    assert was == "Lock1" and kept != "Lock1" and fake.mate(kept, R2[T_ASM]) is not None and cr.stopped == ""
+    assert f"Lock1 is carried as {kept}: SolidWorks kept the name it gave it" in cr.facts
+
+
+@pytest.mark.parametrize("per_configuration", [True, False])
+def test_a_fallback_in_another_mode_fixes_its_components_in_every_mode_whatever_one_fix_does(
+        monkeypatch, every_gate, mode_findings, per_configuration):
+    """Ruled: whether one FixComponent fixes in every configuration is not measured. After a fallback seen in 4L, each
+    other mode is read: a component not fixed there is put at its frame and fixed there, and what was read is said."""
+    every_gate()
+
+    def tweak(fake):
+        fake.remake_codes_in = {"Lock1": {"4L": (46, True)}}
+        fake.fix_per_configuration = per_configuration
+    cr, fake = _tc_again(monkeypatch, ALL_ON, tweak)
+    assert [(f.why, f.subjects) for f in cr.fixed] == [(swbuild.FELL_NEW_ERROR, ("Lock1", "46", "0", "4L"))]
+    said = [f for f in cr.facts if f.startswith("after carried1-1 fell back in 4L")]
+    if per_configuration:
+        assert said == ["after carried1-1 fell back in 4L: carried1-1 had to be fixed in 2H, 4H and N, where one "
+                        "FixComponent in 4L had left it not fixed (0 mm from its frame)"], cr.facts
+    else:
+        assert said == ["after carried1-1 fell back in 4L: carried1-1 fixed in every mode by one FixComponent in 4L"]
+    for mode in TC_MODES:
+        fake.config = mode
+        assert fake._fixed_here("carried1-1"), mode
+
+
+@pytest.mark.parametrize("per_configuration", [True, False])
+def test_a_component_fixed_in_the_old_assembly_is_read_fixed_in_every_mode(monkeypatch, every_gate, mode_findings,
+                                                                           per_configuration):
+    """The same reading for a component fixed in the old assembly, fixed at its insert in the first mode."""
+    every_gate()
+
+    def tweak(fake):
+        fake.user_component(TC_ASM, "Housing-1", HOUSING, (I9, (0.0, 0.0, -40.0)), fixed=True)
+        fake.saved[_key(HOUSING)] = ([], [])
+        fake.fix_per_configuration = per_configuration
+    cr, fake = _tc_again(monkeypatch, ALL_ON, tweak)
+    said = [f for f in cr.facts if f.startswith("fixed as in TransferCase.SLDASM")]
+    if per_configuration:
+        assert said == ["fixed as in TransferCase.SLDASM: carried2-1 had to be fixed in 4H, N and 4L, where one "
+                        "FixComponent in 2H had left it not fixed (0 mm from its frame)"], cr.facts
+    else:
+        assert said == ["fixed as in TransferCase.SLDASM: carried2-1 fixed in every mode by one FixComponent in 2H"]

@@ -744,14 +744,34 @@ class FakeSolidWorks:
     def fix_component(self, handle):
         self._log("fix_component", handle)
         self._strict(handle)
-        self._not_users(self._name2(handle), "fixed")
-        self.fixed.add(self._name2(handle))
+        name = self._name2(handle)
+        self._not_users(name, "fixed")
+        self.fixed.add(name)
+        if getattr(self, "fix_per_configuration", True) and len(self.configs) > 1:
+            # W9d audit: whether one FixComponent fixes a component in every configuration is not measured; by
+            # default the less kind answer, in the configuration shown only. ``fix_per_configuration`` False: in every
+            # one. Only a fix made while the assembly has several (a configuration added later copies the fixed
+            # state, FIXED_KEPT_IN_NEW_CONFIGURATION).
+            self.fixed_in = getattr(self, "fixed_in", {})
+            self.fixed_in.setdefault(name, set()).add(self.config)
+        elif name in getattr(self, "fixed_in", {}):
+            del self.fixed_in[name]
 
     def unfix_component(self, handle):
         self._log("unfix_component", handle)
         self._strict(handle)
-        self._not_users(self._name2(handle), "unfixed")
-        self.fixed.discard(self._name2(handle))
+        name = self._name2(handle)
+        self._not_users(name, "unfixed")
+        if name in getattr(self, "fixed_in", {}) and getattr(self, "fix_per_configuration", True):
+            self.fixed_in[name].discard(self.config)
+            if self.fixed_in[name]:
+                return
+            del self.fixed_in[name]
+        self.fixed.discard(name)
+
+    def _fixed_here(self, name):
+        """Fixed in the configuration shown (``fixed``, narrowed by ``fixed_in`` for a fix made per configuration)."""
+        return name in self.fixed and (name not in getattr(self, "fixed_in", {}) or self.config in self.fixed_in[name])
 
     def add_mate(self, handle, kind, a, b, value=0.0, name="", ratio=(1.0, 1.0), flip=False):
         self._log("add_mate", kind, a, b, *((ratio, flip) if kind == "gear" else ()))
@@ -916,7 +936,7 @@ class FakeSolidWorks:
         was fixed (``FIXED_KEPT_IN_NEW_CONFIGURATION``), so one set serves every configuration."""
         self._log("is_fixed", handle)
         self._strict(handle)
-        return self._name2(handle) in self.fixed
+        return self._fixed_here(self._name2(handle))
 
     def component_path(self, handle):
         """``Session.component_path``: the file the component was inserted from; in an assembly opened from a
@@ -1389,7 +1409,7 @@ class FakeSolidWorks:
             return findings.COMPONENT_OVER_DEFINED
         if any(not m.suppressed and {name, handle} & set(self.locks.get(m.name, ())) for m in self.mates):
             return findings.COMPONENT_FULLY_DEFINED
-        return findings.COMPONENT_FULLY_DEFINED if name in self.fixed else findings.COMPONENT_UNDER_DEFINED
+        return findings.COMPONENT_FULLY_DEFINED if self._fixed_here(name) else findings.COMPONENT_UNDER_DEFINED
 
     def find_mate(self, handle, name):
         self._log("find_mate", handle, name)
@@ -1664,6 +1684,9 @@ class FakeSolidWorks:
         self._configuration_gate("CONFIGURATION_ADD_ROUTE")
         self._leave()
         self.configs.append(str(name))
+        for configs in getattr(self, "fixed_in", {}).values():
+            if self.config in configs:
+                configs.add(str(name))                 # FIXED_KEPT_IN_NEW_CONFIGURATION
         for mate in self.mates:
             mate.flags[str(name)] = mate.suppressed
         frames = dict(self.frames)
@@ -2090,7 +2113,8 @@ class FakeSolidWorks:
             word = "Distance" if "distance" in mate.kind else "Angle"
             values += [(f"Maximum{word}", values[0][1]), (f"Minimum{word}", values[0][1])]
         if values:
-            values.append(("FlipDimension", 0.0))            # as every distance and angle the M9 run read
+            # The side a distance or angle stands on, as the Flip it was made with (every one the M9 run read, 0).
+            values.append(("FlipDimension", 1.0 if mate.flip else 0.0))
         if mate.kind == "gear":
             values += [("GearRatioNumerator", float(mate.ratio[1])), ("GearRatioDenominator", float(mate.ratio[0])),
                        ("Reverse", 1.0 if mate.flip else 0.0)]
@@ -2281,7 +2305,8 @@ class FakeSolidWorks:
         else:
             value = math.degrees(values.get("Angle", 0.0))
         taken = {m.name for m in self.mates}
-        kept = name if name not in taken else f"Mate{len(self.calls)}"
+        # ``rename_refused`` (old names): SolidWorks would not take the old name, so the mate keeps the one it gave.
+        kept = name if name not in taken and name not in getattr(self, "rename_refused", ()) else f"Mate{len(self.calls)}"
         flipped = bool(definition.flipped) if flip is None else bool(flip)
         self._keep_mate(handle, kept, word, "x", "x", value, tuple(ratio), flipped)
         mate = self.mates[-1]
@@ -2290,6 +2315,19 @@ class FakeSolidWorks:
         mate.alignment = definition.alignment
         if word.startswith("limit"):
             mate.limits = tuple((k, v) for k, v in values.items() if k.startswith(("Maximum", "Minimum")))
+        if word in ("distance", "angle", "limit distance", "limit angle") and \
+                flipped != bool(round(values.get("FlipDimension", 0.0))):
+            # Made with the other Flip than the side it was read on, a distance or angle puts its component on the
+            # other side (the W9d audit's follow-up: a stand-in, 2 x its value along Z for a distance, 10 mm for an
+            # angle, on the carried component it joins); it reads back that Flip as its FlipDimension.
+            carried = {n for h, n in self.component_names.items() if str(h).startswith("carried")}
+            other = next((e[0] for e in ends if e[0] in carried), None)
+            if other is not None:
+                shift = 2.0 * abs(value) if "distance" in word else 10.0
+                for frames in [self.frames] + list(self.frames_by.values()):
+                    if other in frames:
+                        rotation, at = frames[other]
+                        frames[other] = (rotation, (at[0], at[1], at[2] + shift))
         if swapped:
             # The counts are the mate's own entities' (unmeasured: every gear mate measured kept the first selection as
             # MateEntity(0), API-LEDGER.md:612): a mate read with its entities the other way reads its counts so too.

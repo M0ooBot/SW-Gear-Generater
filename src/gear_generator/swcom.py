@@ -4167,7 +4167,14 @@ class Session:
             raise MateRefused(f"AddMate5 would not make {name} again (status {status}).")
         kept = made[0]
         if name and name not in before:
-            kept = self._rename(self._mate_feature(made[0]), name)
+            try:
+                kept = self._rename(self._mate_feature(made[0]), name)
+            except ComError as exc:
+                if exc.lost:
+                    raise                             # the session gone: the carry stops, as on any member
+                # Ruled (the audit's follow-up): a name SolidWorks will not take leaves the mate good under the name
+                # it gave; the caller reads the kept name against the old one.
+                kept = made[0]
         self._mate_statuses[kept] = status
         self._handles[handle] = {"mate": kept}
         return kept, int(status)
