@@ -2162,7 +2162,24 @@ def section_closed(out):
         check(bool(unsaved_copy), f"carry-closed: the copy, not saved since it was copied, is refused by R.2: "
                                   f"{unsaved_copy!r}")
         run("carry-closed: the user shows L", job(old, lambda s: s.show_configuration(modes[-1])), 300)
-        A.save_user(folder, "L showing (the save also writes the assembly's references to this copy's files)")
+        # The user saves the assembly. W9a's save_user saves only what SolidWorks reads modified, and showing a mode
+        # does not mark it: the first 2026 run (90cdf20) saved nothing here, so the copy's stored paths stayed the
+        # master's folder's and R.2 refused the closed read. So the assembly itself is saved by W8's route
+        # (SaveAs3 to its own path, silent), after any document of the copy SolidWorks reads modified.
+        when = os.path.getmtime(old)
+
+        def save_assembly(s):
+            saved = W.save_modified_in(folder)(s)
+            if os.path.basename(old) not in saved:
+                call(call(s._doc(), "Extension"), "SaveAs3", old, 0, 1, swcom._null_dispatch(),  # noqa: SLF001
+                     swcom._null_dispatch(), swcom._out_long(), swcom._out_long())  # noqa: SLF001
+                saved.append(os.path.basename(old))
+            return saved
+        saved = run("carry-closed: the user saves", job(old, save_assembly), 600)
+        say(f"person  saved in SolidWorks (L showing; the save also writes the assembly's references to this copy's "
+            f"files): {saved}")
+        check(os.path.getmtime(old) != when, f"carry-closed: the copy's assembly saved with L showing (its file "
+                                             f"written: {os.path.getmtime(old) != when})")
         pairs = W.bodies(box) + [("layout", box.layout_component)] + [(n, n) for n in names.values()]
         old_before = old_read("carry-closed: the old assembly as saved, before it is closed", old, folder, pairs,
                               modes, fx["mates"])
