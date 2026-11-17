@@ -1526,3 +1526,58 @@ def test_on_package_as_worker_the_plane_beside_a_component_resolved_by_the_carry
         said = _status(done)
         assert (f"UserAsm6 is on a plane of T.SLDASM itself, which Gear Generator {words} lightweight in it, so it is "
                 "not made again.") in said, said
+
+
+# -- A's 7e3ad9a: a mate made again under the name SolidWorks kept ---------------------------------------------------
+
+def test_a_mate_kept_under_another_name_is_said_by_it_with_its_old_name_as_a_component_is():
+    work = _work(mates=1)
+    old = work.mates[0].name
+    said = _status(_done(work, remade=[(old, "Mate12", ("H", "N", "L"))]))
+    assert f"your Mate12 (was {old}), on in the modes it was on in." in said, said
+
+
+def test_among_several_mates_counted_the_renamed_ones_are_named():
+    work = _work(mates=3)
+    a, b, c = (m.name for m in work.mates)
+    said = _status(_done(work, remade=[(a, a, ("H",)), (b, "Mate12", ("H",)), (c, "Mate14", ("H",))]))
+    assert f"your 3 mates, Mate12 (was {b}) and Mate14 (was {c}) among them, each on in the modes it was on in." \
+        in said, said
+    said = _status(_done(work, remade=[(a, a, ("H",)), (b, "Mate12", ("H",))]))
+    assert f"2 of your 3 mates, Mate12 (was {b}) among them, each on in the modes it was on in." in said, said
+
+
+def test_a_renamed_mate_in_error_as_before_and_one_kept_beside_a_fallback_are_said_by_their_new_names():
+    work = _work(components=("Sprocket-8",), mates=2)
+    a, b = (m.name for m in work.mates)
+    fell = swbuild.CarryFallback(("Sprocket-8",), (a,), (b,), swbuild.FELL_TIE, ("Sun", "H"))
+    said = _status(_done(work, remade=[(b, "Mate12", ("H",))], same_error=[(b, 46)], fixed=[fell]))
+    assert f"Your Mate12 (was {b}) was in error in RangeBox.SLDASM and is in RangeBox_r2 too, as it was." in said, said
+    assert (f"Sprocket-8 is fixed where it stood in RangeBox_r2: with your {a} made again SolidWorks reads Sun unable "
+            f"to turn, so it was not kept; Mate12 (was {b}) beside it was.") in said, said
+
+
+def test_a_mate_solidworks_would_not_rename_end_to_end_on_package_as_worker(carrying):
+    """A's ``rename_refused``: Lock3 is made again under SolidWorks' own name. The result says both names; the record,
+    and so the next question and W9a's sentence of what stays, name it by the name it has in RangeBox_r2; the footer
+    and the lost-carry line name no mate."""
+    desk = _desk(True)
+    desk.sw.rename_refused = {"Lock3"}
+    spec = gears(range_box(), **SUN_FLANK)
+    again, carry, result, record = _carry_job(desk, spec)
+    ((was, kept, _),) = result.carry.remade
+    assert was == "Lock3" and kept != "Lock3"
+    said = _status_of(desk, again, carry, result)
+    assert f"and your {kept} (was Lock3), on in the modes it was on in." in said, said
+    box = record.gearbox
+    assert [(m.name, m.was) for m in box.carry.mates] == [(kept, "Lock3")]
+    assert [m.name for m in box.user_work.mates] == [kept]
+    later = gearbox.plan_gearbox(desk.a(spec), record, exists=desk.disk.exists, read_sidecar=desk.disk.read_sidecar)
+    assert later.refusal == "" and later.name == "RangeBox_r3"
+    fore = update.carry_foresight(record, later, read_sidecar=desk.disk.read_sidecar)
+    question = ui_text.carry_sentence(fore, later)
+    assert kept in question and "Lock3" not in question, question
+    stays = update.stays_behind(record, later)
+    assert stays.mates == (kept,)
+    assert "Lock3" not in ui_text.carry_footer_line(record) and ui_text.carry_footer_line(record)
+    assert "Lock3" not in ui_text.carry_lost_line(box.assembly, carry.old.path)

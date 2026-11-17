@@ -1515,8 +1515,10 @@ led by that finding; with no version on record, W9c's mixed form.
 
 **The result** (`ui_text.carried_status`, after the build's own sentence):
 *Carried into RangeBox_r2, unsaved: your Sprocket-1, … each where it stood
-against its gear, and 7 of your 8 mates, each on in the modes it was on in.*,
-each item not carried with its reason (§9.3's clause, kept on the record with
+against its gear, and 7 of your 8 mates, each on in the modes it was on in.*
+(a mate SolidWorks kept under its own name said as a renamed component is,
+*Mate12 (was Lock1)*, named among the counted ones too, and so wherever the
+result names it while it stands in the new revision), each item not carried with its reason (§9.3's clause, kept on the record with
 its sentence), the user's features left in parts made new (*Your Keyway stays
 in Gear_m1.25_N29, which Sun's new part replaces because its Flank changed
 (RangeBox.SLDASM and that file keep it).*), each cluster that fell back

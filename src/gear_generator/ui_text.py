@@ -5787,21 +5787,26 @@ def carried_status(result, again, old_path: str = "", anchors: Optional[Mapping[
     if comps:
         clauses.append(f"your {_and(_components_named(comps))}, "
                        f"{_placement_words([anchors.get(o, '') for o, _ in done.inserted], past=True)}")
+    kept_of = {o: k for o, k, _ in done.remade}
     if done.remade:
         made = len(done.remade)
+        # A's 7e3ad9a: a mate kept under SolidWorks' name, said as a renamed component is (*Mate12 (was Lock1)*).
+        renamed = [_kept_as(o, kept_of) for o, k, _ in done.remade if k and k != o]
+        among = f", {_and(renamed)} among them" if renamed else ""
         if made == total == 1:
-            clauses.append(f"your {done.remade[0][0]}, on in the modes it was on in")
+            clauses.append(f"your {_kept_as(done.remade[0][0], kept_of)}, on in the modes it was on in")
         elif made == total:
-            clauses.append(f"your {_plural(total, 'mate')}, each on in the modes it was on in")
+            clauses.append(f"your {_plural(total, 'mate')}{among}, each on in the modes it was on in")
         else:
-            clauses.append(f"{made} of your {_plural(total, 'mate')}, each on in the modes it was on in")
+            clauses.append(f"{made} of your {_plural(total, 'mate')}{among}, each on in the modes it was on in")
     texts.append(f"Carried into {name}, unsaved: {', and '.join(clauses)}.")
     texts += _named_sentences(done.named, name=name, old=old, resolved=getattr(done, "resolved_in_old", ()) or ())
     texts.append(_features_left_sentence(stays, name, old, why_new, past=True))
     for fallback in done.fixed:
-        texts.append(_fallback_sentence(fallback, name, old, work.active, getattr(again, "modes_plan", None)))
+        texts.append(_fallback_sentence(fallback, name, old, work.active, getattr(again, "modes_plan", None),
+                                        kept_of))
     for mate, code in done.same_error:
-        texts.append(f"Your {mate} was in error in {old} and is in {name} too, as it was.")
+        texts.append(f"Your {_kept_as(mate, kept_of)} was in error in {old} and is in {name} too, as it was.")
     texts += _moved_sentences(done.moved, old_of, anchors)
     for mode, clash in done.clashes:
         names = list(getattr(clash, "gears", ()) or getattr(clash, "components", ()))
@@ -5940,10 +5945,20 @@ def _moved_sentences(moved, old_of: Mapping[str, str], anchors: Mapping[str, str
     return out
 
 
-def _fallback_sentence(fallback, name: str, old: str, active: str, modes_plan=None) -> str:
+def _kept_as(old_name: str, kept_of: Mapping[str, str]) -> str:
+    """A mate made again by the name it has in the new revision: *Mate12 (was Lock1)* where SolidWorks kept its own
+    name (A's 7e3ad9a), else its old name, as :func:`carried_status` names a renamed component."""
+    kept = kept_of.get(old_name, old_name) or old_name
+    return old_name if kept == old_name else f"{kept} (was {old_name})"
+
+
+def _fallback_sentence(fallback, name: str, old: str, active: str, modes_plan=None,
+                       kept_of: Optional[Mapping[str, str]] = None) -> str:
     """A cluster that fell back (§6, §9.2): *Sprocket-8 is fixed where it stood in RangeBox_r2: with your Lock8 and
-    Lock9 made again SolidWorks reads Sun unable to turn, so those two were not kept; Coincident7 beside them was.*"""
+    Lock9 made again SolidWorks reads Sun unable to turn, so those two were not kept; Coincident7 beside them was.*
+    A mate kept is named as it is in the new revision (``kept_of``, old -> kept); one deleted by its old name."""
     from . import swbuild as sb
+    kept_of = kept_of or {}
     comps = list(fallback.components)
     deleted = list(fallback.deleted)
     s = [str(x) for x in fallback.subjects] + ["", "", "", ""]
@@ -5958,7 +5973,8 @@ def _fallback_sentence(fallback, name: str, old: str, active: str, modes_plan=No
         was = (f", which it did not in {active}, the mode {old} showed" if before in ("", "0") else
                f", where it read error {before} in {active}, the mode {old} showed")
         if mate in deleted or mate in fallback.kept or not mate:
-            reason = f"with your {mate} made again it reads error {now}" + (f" in {mode}" if mode else "") + was
+            said = _kept_as(mate, kept_of) if mate in fallback.kept else mate
+            reason = f"with your {said} made again it reads error {now}" + (f" in {mode}" if mode else "") + was
         else:                                  # one of the app's own mates, put in error by the cluster (A's M3)
             was = was.replace("which it did not", "which it did not before your mates were made again").replace(
                 ", where it read", ", where it read before")
@@ -5970,7 +5986,7 @@ def _fallback_sentence(fallback, name: str, old: str, active: str, modes_plan=No
     n = len(deleted)
     gone = ("so it was not kept" if n == 1 else "so those two were not kept" if n == 2 else
             f"so those {n} were not kept") if n else ""
-    kept = list(fallback.kept)
+    kept = [_kept_as(k, kept_of) for k in fallback.kept]
     tail = (f"; {_and(kept)} beside {'it' if n == 1 else 'them'} {'was' if len(kept) == 1 else 'were'}" if kept
             else "")
     return f"{head}: {reason}" + (f", {gone}" if gone else "") + tail + "."

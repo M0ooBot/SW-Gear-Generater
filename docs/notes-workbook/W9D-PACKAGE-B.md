@@ -308,6 +308,20 @@ The seven printed states below are unchanged by B3 (none has a suppressed compon
 
 The seven printed states below are unchanged by this round.
 
+## A mate kept under SolidWorks' name (A's `7e3ad9a`)
+
+`CarryResult.remade` holds `(old, kept, on)`; where the kept name differs the result says it as a renamed component
+is: one mate, *… and your Mate1303 (was Lock3), on in the modes it was on in.* (A's worker on the fake,
+`rename_refused`); several, counted, with the renamed ones named, *your 3 mates, Mate12 (was Lock2) and Mate14 (was
+Lock3) among them, each on in the modes it was on in.* The same form where the result names such a mate while it stands
+in the new revision: in error as before (*Your Mate12 (was Lock2) was in error in RangeBox.SLDASM and is in
+RangeBox_r2 too, as it was.*) and kept beside a fallback (*…; Mate12 (was Lock2) beside it was.*); a mate a fallback
+deleted keeps its old name, as it is no longer there. The record already wrote the kept name (`CarriedMateEntry(name=
+kept, was=old)`, the inventory's `UserMateEntry(name=kept)`), so the next question (*… makes your Mate1303 again in the
+modes it was on in.*) and W9a's sentence of what stays name it so; the footer's line and the lost-carry line name no
+mate. Pinned on exact strings, one end to end on A's worker. No fragment the demonstration matches changed; the seven
+printed states are unchanged.
+
 ## The strings, in full
 
 Made by A's worker on the fake (`Desk`'s RangeBox, W9a's user work: Sprocket-1 locked to Sun, Housing-1 fixed, a
