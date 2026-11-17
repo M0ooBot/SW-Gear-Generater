@@ -329,3 +329,26 @@ kind of write, None until the full build reads it clean. C8's suppress of a part
   each with its fake support: the fake inserts a component (it already does for a build), deletes one with its mates
   and refuses to delete a user's, adds and deletes configurations (it does for the build), and suppresses a part
   feature; every user item written stays an `AssertionError`, as W9a's fake has it.
+
+### From B (planning, `dda8795`): how classify fills the shapes, for A to rely on or object to
+
+- **A new part is not in `parts`.** `UpdatePlan.parts` (and so `update_kwargs()["parts"]`) holds only parts on
+  record; an added gear's new part is `AddedGear.build` alone (its path in `AddedGear.part`). §1's "a new part
+  included once built" is read as the worker's: B never hands a `DocumentValues` for a file not yet on disk.
+- **A sleeve given bands**: its `PartUpdate.variables` carry **no** band global (`Start Band`, `End Band`, `Relief
+  Diameter`): they are `BandChange.ops`' `AddGlobal`s, added in the bands' step. `recorded` is the record's own pairs;
+  `made` is the record's features plus the five relief features (C2). Taken away: `BandChange.ops` empty,
+  `features == ("Relief",)` (C8), and the unbanded spec's variables, which hold no band global.
+- **`configurations` after the Update**: the record's configurations in the record's order less those removed,
+  then the added ones in Modes-sheet order (a reorder of Modes rows still changes nothing, W8 §9.9). `first_mode` is
+  set only when the record's first is removed, and is then the first remaining. `recorded_by_mode` for an added mode
+  is its wanted frames (nothing is on record there).
+- **`RemovedGear.mates`**: every recorded mate whose `gears` hold the gear, per-mode couplings included; none of
+  them is in `motion.mates`, `meshes` or `locks`.
+- **`AddedGear.ops`** are filtered from `motion.motion_assembly_plan` over every gear (the layout `layout`, carriers
+  `carrier<i>` in the record's order, gears `gear<index>` by Gears-sheet index): its `AddGlobal` (Face Z),
+  `AddComponent`, `Place`, `Fix` and `Unfix`s, each `Mate` touching it, their `LinkDimension`s, then its per-mode
+  mates' ops from `motion.modes_plan`. `handles` names every other handle those mates use with its `Name2` on record.
+- **The footer's foresight** calls `judge_in_place` with the revision of the record's user-work inventory, or `()`
+  when there is none, so every gated step then reads unsettled (`…_ON_?`); B words those itself by the finding's name
+  (`ui_text.in_place_line`) and uses A's sentences for every other problem kind.
