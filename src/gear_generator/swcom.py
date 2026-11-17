@@ -2695,7 +2695,8 @@ class Session:
         it), a base plane given by tree order (``plane<n>`` among the first three ``RefPlane`` features of the
         component's part, or of the assembly for its own). What will not answer is ``("unread", "")``."""
         try:
-            kind = entity_kind(_read(entity, "ReferenceType2"))
+            select_type = _read(entity, "ReferenceType2")
+            kind = entity_kind(select_type)
         except Exception:  # noqa: BLE001 - said as unread
             return "unread", ""
         if kind == "origin":
@@ -2706,7 +2707,7 @@ class Session:
             name = str(_read(_read(entity, "Reference"), "Name"))
         except Exception:  # noqa: BLE001
             return "unread", ""
-        if _read(entity, "ReferenceType2") != 4:            # swSelDATUMPLANES: only a plane needs its tree order
+        if select_type != 4:                                # swSelDATUMPLANES: only a plane needs its tree order
             return "feature", name
         try:
             doc = call(component, "GetModelDoc2") if component is not None else self._doc()

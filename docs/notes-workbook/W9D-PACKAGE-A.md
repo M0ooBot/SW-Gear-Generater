@@ -154,3 +154,86 @@ the contract says SolidWorks does. In particular:
   test anchors to a body that does not slide; M9 must show it on RangeSlv.
 - The carried component's frame in every configuration after one put (the fake seeds it in every configuration's
   frames where the component had none).
+
+## Fix round after W9D-REVIEW-A.md (and the contract at d3bb9e7)
+
+**Must-fix, each with a test that failed before:**
+- M1 faces and edges by r3: `Session.entity_references(component, items, candidates=, seconds=)`, one walk per
+  component, the area / circle-radius / line prefilter, each candidate carried once, `IsSame` (swObjectSame 1)
+  deciding, exactly one match, the cap (`swbuild.CARRY_WALK_CANDIDATES = 200`, `CARRY_WALK_SECONDS = 20.0`; the item
+  and every later item of the component `capped`, its mate `WHY_TOO_LONG`), the resolve code `Ok` (0) required with
+  its kind and `IsSame`, `coaxial` and `radius_mm` from the part entity's `CylinderParams` / `CircleParams` once
+  `COAXIAL_FACE_READ` is True. The route is taken only when the finding equals `swcom.PERSIST_ROUTE_R3` exactly.
+  `entity_reference` now reads features and planes only. Never read on a part made new, **except** a gear mate's
+  face there, whose coaxial read alone can carry it (§4.3); its hex is dropped. Choice: "bore"/"axis" wording on a
+  part made new is therefore said only for a gear mate's face (the other faces there are not walked: the cap's cost).
+- M2 the tie only on `_mated_handles` gears, only against what was free before, after every fallback and in the
+  post-check; a body on no train is its own; named by gear id.
+- M3 the post-check reads each remade mate's code per mode where it is on (new error falls its cluster back there,
+  same error kept), and the app's gears meant to turn free in every mode (else a stop naming them).
+- M4 `find_component(..., suppressed_ok=True)` for R's reads (Session and fake); the frame judged before the
+  configurations; a cluster's mates made in the first mode where its components are resolved (shown, then the first
+  shown again), or named `WHY_UNREAD` ("a component it joins is suppressed in every mode…"); a selection that fails
+  names the mate (`WHY_REFUSED`), never stops the carry.
+- M5 a wrong sense made once more with the other Flip (`remake_mate(..., flip=)`); a gear mate whose ratio values or
+  sense did not read is named `WHY_UNREAD`; a remade sense 0 is "sense" (differs).
+- M6 a read-back with only its two entities swapped made once more reversed; the read-back compares against the old
+  mate's `MateEntity` order whatever order was selected.
+- M7 a lightweight or suppressed component's configurations read closed (`ISldWorks.GetConfigurationNames(path)`,
+  **inferred, unmeasured**: M9 should log it), its active configuration "".
+
+**Should-fix:** S1 `unsaved` on every remake, delete and fallback. S2 a fallback drops its deleted mates from
+`remade` and `same_error`; a body is excused its over-definition and tie only when every mate of the cluster on it is
+back in its old error. S3 a cluster falls back once (`fallen`). S4 the new assembly opened and its first mode shown
+before C.1 (the fake's `begin_drops_document` knob). S5 the carry's interference read is caught. S6 `skipped` is what
+is left (not the step in hand); C.8 runs in a `finally`. S7 a face with no reference read is `WHY_UNREAD` with R's
+clause; an AddMate5 refusal is `WHY_REFUSED` (new, below); a mate made though AddMate5 answered None is deleted
+again first. S8 the resolve's code, kind and `GetCorresponding` checked; another kind raises
+`swcom.ReferenceKindError`, a stop. S9 `QuitDoc` by the title read at the open; a document still open after it says
+so. S10 a plane with no document is `("unread", "")`. S11 a component suppressed in a mode is not pose-checked there;
+a world-anchored one is checked against its placed frame. S12 a build that did not finish sets `carry.skipped`.
+
+**The review's notes:** a `.SLDASM` dependency, a path not on disk or a history that does not read refuses R.2;
+R uses the build's `exists`; the read-only document is judged from its flag straight after `OpenDoc6` (not counted
+there), its own per-mode show on the None path not counted (not logged either: no log line exists in the worker);
+`close_unsaved` by `GetTitle`; `set_component_suppressed` rebuilds (top-only) before its read-back.
+
+**What `mate_info`'s extra reads cost every Update** (counted from the code; unmeasured on SolidWorks): per entity,
+`ReferenceType2` (1 call). A reference feature adds `Reference` and `Name` (2). A datum plane adds `GetModelDoc2` and
+a walk of the part's tree to its 3rd `RefPlane` (`FirstFeature`, then `GetNextFeature` and `GetTypeName2` per
+feature: about 2 per feature before the 3rd plane, then `Name` of 3): on the app's parts some 10–25 calls. So a mate
+on two planes costs about 50 more calls, a lock 2. Not material beside the Update's own reads, so they stay on every
+Update (D5).
+
+**Rulings taken:** `CarryResult.anchors` (per component, at the end); the trailing owner slot for `unmeasured` (whose
+face, edge, origin, plane: the component's Name2 or the gear id) and for `gone` ("feature", name, gear id);
+`exists` passed to the read; `CarryBody.bore_mm`; `OldEntity.radius_mm`, `OldEntity.capped`; no code-after field.
+
+**New shape additions (B must word them):** `WHY_REFUSED = "refused"`, subjects `(SolidWorks' sentence,)`;
+`WHY_TOO_LONG` subjects `(kind, owner, file, "candidates" or "seconds")`; `part new`'s 4th slot is now "bore",
+"axis" or "". `swcom.ReferenceKindError`, `swcom.PERSIST_ROUTE_R3`, `swcom.OBJECT_SAME`, `swcom.PERSIST_REFERENCED_OK`.
+
+**What B can now use:** `CarryResult.anchors` instead of re-deriving them; the owner slots; `CarryBody.bore_mm`
+(fill it in `carry_for`); `build_gearbox` passes `exists` to the read, so the round trip need not patch
+`os.path.isfile`; the fake's `read_entity_kinds` knob (still default False); B's tests that patch the face and edge
+findings must use `swcom.PERSIST_ROUTE_R3` (any other string reads nothing now). With §8.1 set on 2026, the not-open
+read and the states read now pass their gates on the fake's 2026: a test that wants them unset must patch them None.
+The "moved 30 mm in N and L" of B's round trip: the fake solved no lock on a show, so a carried component locked to a
+body that moves per mode stayed put there. The `moved` comparison is in the anchor's frame per mode (pinned by
+`test_a_carried_component_off_its_pose_in_a_mode_is_said_moved_in_its_anchors_frame`); the fake now carries a lock's
+follower with its anchor in every configuration when the lock is made, and seeds a put component in every
+configuration. Not re-run in B's test by me (B's file); B should check it reads no `moved` now.
+
+**What the fake now refuses that it allowed before:** finding a suppressed component without `suppressed_ok`;
+selecting anything of a suppressed component in `remake_mate`; a face or edge reference under any route but r3's
+exact string; `entity_reference` on a face or edge at all; a component's document (configurations, active one) for a
+lightweight or suppressed component. It now models: r3's walk (filtered count, matches, resolve code, seconds per
+candidate, the cap), a resolve to another kind, per-mode remake codes, a gear mate read the wrong way for the Flip
+given, a read-back alignment otherwise, a drift per configuration, a gear held only after the save, the read-only
+document marked by its own open, and the build bracket dropping the build document.
+
+**Still only on the fake** (beyond the list above): r3 grouped, filtered and capped as written in `entity_references`
+(the probe walked one entity at a time, unfiltered); `_walk_key`'s area and circle reads on the mate's entity;
+`ISldWorks.GetConfigurationNames(path)`; `find_component` with `suppressed_ok` and `component_frame` of a suppressed
+component; `remake_mate` with a Flip given; `set_component_suppressed`'s rebuild; whether selecting a suppressed
+component's entity fails (inferred).
