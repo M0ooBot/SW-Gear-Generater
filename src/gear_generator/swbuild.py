@@ -261,6 +261,13 @@ class UpdateResult:
         return not self.failures
 
     @property
+    def stopped_before_the_way(self) -> bool:
+        """The count would not set to its intermediate (``by_way_of``): the route was not taken, the count is as it
+        was, and any other global set beside it leaves the part at neither (the re-check's leg-one note)."""
+        return bool(self.by_way_of) and self.by_way_of[0] not in self.changed and \
+            any(what == f'"{self.by_way_of[0]}"' for what, _ in self.failures)
+
+    @property
     def left_on_the_way(self) -> bool:
         """The count was set to its intermediate (``by_way_of``) and the workbook's value then would not set: the part
         holds the intermediate (the second reading of the fixes review, N3)."""
@@ -1375,16 +1382,21 @@ def _caps_with_arc(values: Mapping[str, str]) -> Optional[bool]:
         return None
 
 
+def _held_expressions(current: Sequence[Tuple[str, float]]) -> List[Tuple[str, str]]:
+    """``(name, expression)`` of each equation the part holds that reads as one."""
+    out: List[Tuple[str, str]] = []
+    for text, _ in current:
+        try:
+            out.append(split_equation(text))
+        except (ValueError, EquationError):
+            continue
+    return out
+
+
 def planned_changes(current: Sequence[Tuple[str, float]], variables: Sequence[GlobalVariable],
                     trig: str) -> List[Tuple[str, str]]:
     """The globals whose text differs from what the part holds, as (name, expression)."""
-    held: Dict[str, str] = {}
-    for text, _ in current:
-        try:
-            name, expression = split_equation(text)
-        except (ValueError, EquationError):
-            continue
-        held[name] = expression
+    held: Dict[str, str] = dict(_held_expressions(current))
     out = []
     for variable in variables:
         expression = variable.expression_for(trig)
@@ -1457,10 +1469,22 @@ def update_variables(sw: SolidWorks, variables: Sequence[GlobalVariable], expect
             apply(first)
             # The final count is set and rebuilt whatever leg one's rebuild returned (a part's rebuild reads False
             # for any feature in error, the user's own included: the fixes' review, M1); only where the count's own
-            # set failed does the route stop, at the intermediate, said by that failure.
-            if any(what == f'"{name}"' for what, _ in result.failures):
-                return result
+            # set failed does the route stop, said by that failure.
             final = next(v for v in variables if v.name == name)
+            if any(what == f'"{name}"' for what, _ in result.failures):
+                # The count would not set to the intermediate (the re-check's leg-one note): the route was not taken
+                # and the count is as it was. Any other global set in the same batch leaves the part at neither its
+                # old values nor the workbook's, so the failure says what it holds; like ``left_on_the_way`` it reads
+                # as not rebuilt (``stopped_before_the_way``), with no rebuild error laid to it.
+                if result.changed:
+                    at = next(i for i, (what, _) in enumerate(result.failures) if what == f'"{name}"')
+                    what, why = result.failures[at]
+                    was = dict(_held_expressions(current)).get(name, "?")
+                    others = _and([f'"{n}"' for n in result.changed])
+                    result.failures[at] = (what, f'{why} {_stem_of(result.document)} holds "{name}" = {was} as before, '
+                                                 f"beside the workbook's {others}: neither as it was nor as the "
+                                                 "workbook has it.")
+                return result
             before_final = len(result.failures)
             result.rebuilt = apply([(name, final.expression_for(result.trig))])
             if len(result.failures) > before_final:
@@ -3825,6 +3849,9 @@ class GearboxUpdate:
                 if result.left_on_the_way:
                     lines.append(f'FAIL    set "{result.by_way_of[0]}" to {result.by_way_of[1]} on the way, and the '
                                  f"workbook's value would not set: it holds {result.by_way_of[1]}")
+                elif result.stopped_before_the_way:
+                    lines.append(f'FAIL    "{result.by_way_of[0]}" would not set to {result.by_way_of[1]} on the way, '
+                                 "so the route was not taken: the count is as it was, beside the values set")
                 elif result.by_way_of and result.by_way_of[0] in result.changed:
                     lines.append(f'ok      set "{result.by_way_of[0]}" by way of {result.by_way_of[1]} first, rebuilt '
                                  "there, then the workbook's value (a sketch line would have landed on itself)")
@@ -3838,7 +3865,7 @@ class GearboxUpdate:
                 lines.append("ok      already holds the workbook's values")
             if result.changed:
                 theirs = [f.name for f in self.user_features_in_error if _file(f.path) == result.document]
-                if result.left_on_the_way:
+                if result.left_on_the_way or result.stopped_before_the_way:
                     pass                    # said above: not rebuilt at the workbook's value, whatever it read
                 elif result.rebuilt:
                     lines.append("ok      rebuilt twice" if result.by_way_of else "ok      rebuilt once")
@@ -4054,7 +4081,8 @@ def _update_document(sw: SolidWorks, doc: DocumentValues,
                 read[doc.path] = bool(ours)
             theirs_alone = bool(theirs) and not ours and \
                 getattr(findings, "WHATS_WRONG_OPENS_ON_PART_REBUILD", None) is False
-    if result.changed and not result.rebuilt and not theirs_alone and not result.left_on_the_way:
+    if result.changed and not result.rebuilt and not theirs_alone and not result.left_on_the_way \
+            and not result.stopped_before_the_way:
         failures.append((name, f"SolidWorks reported an error rebuilding {_stem(doc.path)}."))
     return result, failures
 

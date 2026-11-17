@@ -312,3 +312,30 @@ def test_a_route_whose_second_count_set_fails_says_the_part_holds_the_intermedia
     text, ok = ui_text.gearbox_update_status(update.UpdatePlan(), result, [])
     assert not ok and f'Ring_m1.25_N55 holds "{spur.TEETH}" = {middle}' in text, text
     assert "close it in SolidWorks without saving" in text and "save it in SolidWorks to keep" not in text, text
+
+
+def test_a_route_whose_first_count_set_fails_beside_another_global_is_not_taken_and_says_what_the_part_holds():
+    """The re-check's leg-one note: ring m1.25 40 to m1.5 32 goes by way of 31; the count's first set fails, the
+    module's goes through. The part holds 40 teeth at m1.5: the log never says it went by way of 31 and back, no
+    rebuild error is laid to it, the failure says what it holds, and the stop says to close it without saving."""
+    from gear_generator import ui_text
+    from gear_generator.workbook import update
+    path = "C:\\W\\Ring_m1.25_N40.SLDPRT"
+    fake = _built(RING, 40, path)
+    fake.fail_on = {"set_global_variable": (spur.TEETH, "SolidWorks would not set the count.")}
+    doc = swbuild.DocumentValues(path, tuple(_variables(RING, 32, "1.5")), made=("Tooth Space",))
+    done, failures = swbuild._update_document(fake, doc)                         # noqa: SLF001
+    assert done.by_way_of == (spur.TEETH, "31") and done.stopped_before_the_way and not done.left_on_the_way
+    assert fake.equation_values()[spur.TEETH] == 40.0 and fake.equation_values()["Module"] == 1.5
+    assert done.changed == ["Module"] and not done.rebuilt
+    assert failures == [(f'Ring_m1.25_N40.SLDPRT "{spur.TEETH}"',
+                         f'SolidWorks would not set the count. Ring_m1.25_N40 holds "{spur.TEETH}" = 40 as before, '
+                         "beside the workbook's \"Module\": neither as it was nor as the workbook has it.")]
+    result = swbuild.GearboxUpdate(parts=[done], failures=failures, changed=[path])
+    lines = result.log_lines()
+    assert (f'FAIL    "{spur.TEETH}" would not set to 31 on the way, so the route was not taken: the count is as it '
+            "was, beside the values set") in lines
+    assert not [line for line in lines if "and back" in line or "rebuilt twice" in line
+                or "the rebuild reported" in line], lines
+    text, ok = ui_text.gearbox_update_status(update.UpdatePlan(), result, [])
+    assert not ok and "close it in SolidWorks without saving" in text and "save it in SolidWorks to keep" not in text
