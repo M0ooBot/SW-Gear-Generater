@@ -526,7 +526,7 @@ hub's sleeve choice `fca29a2` were both in it (both are ancestors of `529f939`).
 - *`old`.* RangeBox carries seven warnings. W9b's three are now held to the plan's sentences word for word
   (:1086-1088). The sleeve is unbanded, at schema 1, and is Output's anchor (:1807).
 - *What's Wrong* never showed (only the rule line, :7).
-- *M7 on 2024 is met by its exact reads* (part :9-21): the globals and their links; the sketches under Relief; the
+- *M7 on 2024 is met by its exact reads* (part :19-31): the globals and their links; the sketches under Relief; the
   bore one cylinder of r 12.5 between step planes at 5 and 21, to 1e-6; the band change read back as planes at 4
   and 21; no feature in error.
 
