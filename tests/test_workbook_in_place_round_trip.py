@@ -1132,3 +1132,24 @@ def test_a_part_left_in_error_then_put_right_beside_the_users_own_feature_in_err
     assert "without saving" not in again.after and "still open in SolidWorks" not in again.after, again.after
     text, _ = d.footer(_sun_backlash(range_box()))
     assert "was left in error when it stopped" not in text and "save them in SolidWorks to keep them" in text, text
+
+
+def test_a_sleeve_left_in_error_then_given_only_its_bands_clean_sheds_its_mark(measured):
+    """The re-check's note under N1: the sleeve holds its new face width from the stopped press, so the next press
+    sets no value in it and changes it only by its bands, which read clean. The status says to save it; the footer
+    must not still say it was left in error and to close it without saving."""
+    d = Desk()
+    d.build(range_box())
+    d.sw.rebuild_ok = False
+    stopped = d.press(fixed())
+    sleeve = _part(d.record, "RangeSlv")
+    assert "Sleeve_m1.25_N17 is left in error" in stopped.after
+    assert [store.same_path(p, sleeve) for p in d.record.unsaved_in_error] == [True]
+    d.sw.rebuild_ok = True
+    again = d.press(fixed())                                  # not closed: only the bands are left to give
+    assert again.result.ok and again.result.bands_added == ["RangeSlv"]
+    assert not next(p for p in again.result.parts if p.document == "Sleeve_m1.25_N17.SLDPRT").changed
+    assert "Save Sleeve_m1.25_N17 and RangeBox in SolidWorks to keep them." in again.after, again.after
+    assert d.record.unsaved_in_error == []
+    text, _ = d.footer(fixed())
+    assert "left in error" not in text and "save them in SolidWorks to keep them" in text, text
