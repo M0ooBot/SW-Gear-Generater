@@ -622,3 +622,27 @@ def test_the_log_says_what_was_made_and_taken_away_in_place(tc_built, measured):
     fake = _built_train()
     lines = _update_train(fake, in_place=InPlace(added=(ADD_G5,)), **_with_g5()).log_lines()
     assert "ok      inserted G5 as gear5-1" in lines and "ok      made G5 locked to G4" in lines
+
+
+def test_with_modes_a_gear_taken_out_is_gone_from_every_mode_with_its_per_mode_coupling(tc_built, measured):
+    fake, built = tc_built
+    motion, placements = _tc_motion(built, "2H")
+    gone = RemovedGear("FrontDog", "gear9-1", "C:\\TC\\Dog_m1.5_N30.SLDPRT",
+                       ("FrontDog on Rear Axis", "FrontDog along Rear", "ModeSlv engages FrontDog"))
+    keep = lambda frames: tuple(p for p in frames if p.gear != "FrontDog")         # noqa: E731
+    result = swbuild.update_gearbox(
+        fake, assembly=TC_ASM, placements=list(keep(placements)), exists=fake.exists, mtime=lambda _p: 0.0,
+        motion=replace(motion, layout_component="layout-1", mates=tuple(m for m in motion.mates
+                                                                        if m.name not in gone.mates),
+                       meshes=tuple(m for m in motion.meshes if "FrontDog" not in (m.a, m.b)),
+                       recorded_meshes=tuple(m for m in motion.recorded_meshes if "FrontDog" not in (m.a, m.b)),
+                       recorded=keep(motion.recorded),
+                       mode_placements=tuple((m, keep(f)) for m, f in motion.mode_placements),
+                       recorded_by_mode=tuple((m, keep(f)) for m, f in motion.recorded_by_mode)),
+        in_place=InPlace(removed=(gone,)))
+    assert result.ok, (result.failures, result.skipped)
+    assert result.deleted == [("FrontDog", "gear9-1")] and result.mates_deleted == list(gone.mates)
+    assert [m.name for m in result.modes] == ["4H", "N", "4L", "2H"]
+    for mode in TC_MODES:
+        fake.show_configuration(mode)
+        assert "gear9-1" not in fake.frames and fake.mate("ModeSlv engages FrontDog", TC_ASM) is None
