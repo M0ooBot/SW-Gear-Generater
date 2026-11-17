@@ -358,6 +358,10 @@ class Finished:
     earlier_update: str = ""
     off_after_update: List[str] = field(default_factory=list)
     out_of_step_after_update: List[Tuple[str, str]] = field(default_factory=list)
+    # W9c (the fixes review's M3): the documents still on record as left in error by an earlier Update that stopped,
+    # that this press neither found closed nor rebuilt clean (it set nothing in them: they hold the new values), for
+    # the status to say to close them without saving rather than that SolidWorks matches the workbook.
+    still_in_error: List[str] = field(default_factory=list)
 
 
 # Finished.earlier_update: why frames found off the record are not laid to the user.

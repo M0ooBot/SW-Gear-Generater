@@ -1764,12 +1764,8 @@ def _parts_left_in_error(result) -> List[str]:
     """The documents an Update changed whose rebuild reported an error, by stem (``swbuild.UpdateResult``: a change
     set, not rebuilt, and a failure of the job naming the document; a rebuild in error from the user's features alone
     is no failure): the parts, the layout and the carriers."""
-    docs = list(getattr(result, "parts", []) or []) + [getattr(result, "layout", None)] + \
-        list(getattr(result, "carriers", []) or [])
-    named = [str(what).strip() for what, _why in getattr(result, "failures", []) or []]
-    return [_stem(d.document) for d in docs if d is not None and getattr(d, "document", "")
-            and getattr(d, "changed", None) and not getattr(d, "rebuilt", True)
-            and any(w.startswith(d.document) for w in named)]
+    from .workbook.update import documents_left_in_error
+    return [_stem(d.document) for d in documents_left_in_error(result)]
 
 
 def update_summary(update) -> str:
@@ -1881,7 +1877,35 @@ def _layout_shafts(names: Sequence[str]) -> List[str]:
     return shafts
 
 
-def gearbox_update_status(update, result, dragged: Sequence[str] = (), *, meshes=None,
+def gearbox_update_status(update, result, dragged: Sequence[str] = (), **kwargs) -> Tuple[str, bool]:
+    """:func:`_gearbox_update_status`, and (the W9c fixes review's M3) when the finish found documents still on
+    record as left in error by an earlier Update that stopped (``Finished.still_in_error``: this press neither found
+    them closed nor rebuilt them clean, so it set nothing in them), the truthful answer: never *SolidWorks already
+    matches the workbook*, but to close them without saving and press again."""
+    text, ok = _gearbox_update_status(update, result, dragged, **kwargs)
+    finished = kwargs.get("finished")
+    still = list(getattr(finished, "still_in_error", ()) or ()) if finished is not None else []
+    if not still or result.failures:
+        return text, ok
+    said = still_in_error_sentence(still)
+    if text.startswith(ALREADY_MATCHES[:30]):
+        return said, False
+    return f"{text} {said}", False
+
+
+def still_in_error_sentence(paths: Sequence[str]) -> str:
+    """*Gear_m1.25_N29 is still open in SolidWorks as an earlier Update SolidWorks left it, in error and holding the
+    new values, so this press set nothing in it: close it in SolidWorks without saving (the file on disk is as before
+    that Update), then press Update SolidWorks again.*"""
+    one = len(paths) == 1
+    return (f"{_and(_stem(p) for p in paths)} {'is' if one else 'are'} still open in SolidWorks as an earlier Update "
+            f"SolidWorks left {'it' if one else 'them'}, in error and holding the new values, so this press set "
+            f"nothing in {'it' if one else 'them'}: close {'it' if one else 'them'} in SolidWorks without saving (the "
+            f"{'file' if one else 'files'} on disk {'is' if one else 'are'} as before that Update), then press Update "
+            "SolidWorks again.")
+
+
+def _gearbox_update_status(update, result, dragged: Sequence[str] = (), *, meshes=None,
                           finished=None, revision: Sequence[int] = ()) -> Tuple[str, bool]:
     """A finished update's sentence (``UpdatePlan``, ``swbuild.GearboxUpdate``, ``Finished.dragged``), ending
     with :func:`save_to_keep` naming the documents whenever ``result.changed`` is not empty; *SolidWorks already

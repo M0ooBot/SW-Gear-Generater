@@ -1412,7 +1412,12 @@ closed would leave gears at new values against it as it was). The footer's line 
 documents not saved says the same until they are found closed or saved (*… and
 Gear_m1.25_N29 was left in error when it stopped: close it in SolidWorks without
 saving (the file on disk is as before that Update), then press Update SolidWorks
-again.*), never to save them. The record holds what was done (a new part built and saved, the bands, a gear inserted, each mate made) and, as
+again.*), never to save them. A press made without closing them sets nothing in
+them, and says so rather than that SolidWorks matches: *Gear_m1.25_N29 is still open
+in SolidWorks as an earlier Update SolidWorks left it, in error and holding the new
+values, so this press set nothing in it: close it in SolidWorks without saving (the
+file on disk is as before that Update), then press Update SolidWorks again.* The
+record holds what was done (a new part built and saved, the bands, a gear inserted, each mate made) and, as
 the app's leftovers, each global and configuration the stopped press added, until
 a press uses them. While the workbook does not use them, the footer and the result
 say them as the app's own: *An Update SolidWorks that stopped part way left the

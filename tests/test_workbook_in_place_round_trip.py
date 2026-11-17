@@ -973,7 +973,7 @@ def test_run_5s_add_read_onto_its_inventory_puts_h2_in_every_users_mate_it_read_
         add = json.load(handle)["sections"]["modes"]["add"]
     mates = [name for mode, name, state in add["took_active_state"] if not name.startswith(("Sprocket", "Housing"))]
     entry = store.UserWorkEntry(read_at=STAMP, mates=[store.UserMateEntry(name, "lock", 16, [], ["H", "N", "L"])
-                                                      for name in mates])
+                                                      for name in mates], modes=["H", "N", "L"])
     result = swbuild.GearboxUpdate(modes_added=list(add["modes_added"]),
                                    took_active_state=[tuple(t) for t in add["took_active_state"]])
     update.follow_modes_added(entry, result, ["H", "N", "L", "H2"])
@@ -1054,3 +1054,55 @@ def test_a_record_without_the_mark_reads_its_unsaved_line_as_before():
     assert d.record.unsaved and d.record.unsaved_in_error == []
     text, _ = d.footer(_sun_backlash(range_box()))
     assert "in SolidWorks to keep" in text and "left in error" not in text
+
+
+# -- the fixes review: M3 (a press that sets nothing proves nothing), S6 (modes read), S7 (one name rule) ------------
+
+def test_pressing_again_without_closing_keeps_the_mark_and_says_close_without_saving_not_already_matches():
+    d = Desk()
+    d.build(range_box())
+    d.sw.rebuild_ok = False
+    d.press(_sun_backlash(range_box()))
+    part = next(p.path for p in d.record.parts if "Sun" in p.gears)
+    again = d.press(_sun_backlash(range_box()))              # not closed: the part holds the new value, in error
+    assert again.result.ok and not again.result.failures
+    assert [store.same_path(p, part) for p in d.record.unsaved_in_error] == [True]
+    assert not again.ok and again.after == (
+        "Gear_m1.25_N29 is still open in SolidWorks as an earlier Update SolidWorks left it, in error and holding the "
+        "new values, so this press set nothing in it: close it in SolidWorks without saving (the file on disk is as "
+        "before that Update), then press Update SolidWorks again.")
+    text, _ = d.footer(_sun_backlash(range_box()))
+    assert "was left in error when it stopped: close it in SolidWorks without saving" in text
+    assert "in SolidWorks to keep" not in text
+    d.sw.close_all()
+    d.sw.rebuild_ok = True
+    clean = d.press(_sun_backlash(range_box()))              # rebuilt that very document clean: the mark goes
+    assert clean.result.ok and clean.ok and d.record.unsaved_in_error == []
+
+
+def test_the_record_mark_and_the_stop_sentence_name_a_document_the_same_way_with_or_without_its_extension():
+    from gear_generator.ui_text import _parts_left_in_error
+    for title in ("Gear_m1.25_N29.SLDPRT", "Gear_m1.25_N29", "gear_m1.25_n29.sldprt"):
+        result = swbuild.GearboxUpdate(
+            parts=[swbuild.UpdateResult(title, ["Backlash"], rebuilt=False),
+                   swbuild.UpdateResult("Gear_m1.25_N2", ["Backlash"], rebuilt=False)],
+            failures=[(title, "SolidWorks reported an error rebuilding Gear_m1.25_N29.")])
+        plan = update.UpdatePlan(parts=(
+            update.PartUpdate("C:\\Out\\Gear_m1.25_N29.SLDPRT", ("Sun",), None, None, ()),
+            update.PartUpdate("C:\\Out\\Gear_m1.25_N2.SLDPRT", ("X",), None, None, ())))
+        assert update._documents_left_in_error(plan, result) == ["C:\\Out\\Gear_m1.25_N29.SLDPRT"], title
+        assert [s.casefold() for s in _parts_left_in_error(result)] == ["gear_m1.25_n29"], title
+    assert not update.names_document("Gear_m1.25_N29 Backlash", "Gear_m1.25_N2.SLDPRT")
+    assert update.names_document("Gear_m1.25_N29 Backlash", "C:\\Out\\Gear_m1.25_N29.SLDPRT")
+
+
+def test_a_press_that_stops_before_deleting_a_mode_records_only_the_modes_its_read_covered(fixed_desk_with_work):
+    desk = fixed_desk_with_work
+    desk.sw.fail_on = {"delete_configuration": "SolidWorks would not delete the configuration N."}
+    stopped = desk.press(_fixed_without_mode())
+    assert not stopped.ok and "N" in desk.record.gearbox.modes
+    entry = desk.record.gearbox.user_work
+    assert entry.modes == ["H", "L"]                       # the worker read the modes left after the Update only
+    desk.sw.fail_on = {}
+    text, ok = desk.footer(_sun_backlash(fixed()))          # N back in the workbook: judged as a copy, not as read
+    assert ok and "suppressed in N" not in text, text

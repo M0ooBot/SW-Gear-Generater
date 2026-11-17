@@ -2207,7 +2207,7 @@ def finish_update(plan: UpdatePlan, result: GearboxUpdate, record: LinkRecord, *
             box.drag = list(plan.drag)
         _follow_carriers(box, plan, result)
         if record_user_work(rec, getattr(result, "user_work", None), assembly=plan.assembly, digest=digest,
-                            revision=revision):
+                            revision=revision, modes_read=modes_read(plan)):
             follow_modes_added(box.user_work, result, box.modes)
         if revision:
             box.solidworks = [int(n) for n in revision]       # schema 9: the SolidWorks this press ran on
@@ -2250,33 +2250,69 @@ def finish_update(plan: UpdatePlan, result: GearboxUpdate, record: LinkRecord, *
     if not (result.failures or result.skipped):
         rec.digest = digest
     # The runs review's should-fix: a stop that left a part in error is marked on the unsaved documents, so the footer
-    # says to close them without saving until they are found closed or saved; a press that ends clean clears it.
+    # says to close them without saving. The mark goes only when the document leaves ``unsaved`` (saved, or found
+    # closed: store.keep_in_error) or this press changed and rebuilt that very document clean (the fixes review's M3:
+    # a press that set nothing in it proves nothing, the part still holding the new values in error).
+    clean = _documents_rebuilt_clean(plan, result)
+    rec.unsaved_in_error = [p for p in rec.unsaved_in_error if not any(store.same_path(p, q) for q in clean)]
     if result.failures:
         failed = _documents_left_in_error(plan, result)
         if failed:
             rec.unsaved_in_error = list(dict.fromkeys(list(rec.unsaved_in_error) + failed))
-    elif not result.skipped:
-        rec.unsaved_in_error = []
     store.keep_in_error(rec)
+    if not result.failures:
+        out.still_in_error = list(rec.unsaved_in_error)
     return out
+
+
+def document_stem(name: str) -> str:
+    """A document's name as the two "left in error" rules compare it (the fixes review's S7): its file name without
+    folder or SolidWorks extension, case aside — ``GetTitle`` comes without ``.SLDPRT`` where Windows hides
+    extensions."""
+    base = os.path.basename(str(name).replace("\\", "/")).strip()
+    for ext in (".sldprt", ".sldasm"):
+        if base.casefold().endswith(ext):
+            base = base[:-len(ext)]
+    return base.casefold()
+
+
+def names_document(what: str, document: str) -> bool:
+    """Whether a failure's ``what`` (``"Gear_m1.25_N29.SLDPRT"``, ``"Gear_m1.25_N29 Face Width"``) names ``document``
+    (a title or a path), by stem: the stem, then the end, an extension or a space."""
+    stem, text = document_stem(document), str(what).strip().casefold()
+    return bool(stem) and text.startswith(stem) and (len(text) == len(stem) or text[len(stem)] in ". ")
+
+
+def documents_left_in_error(result: Any) -> List[Any]:
+    """The documents (``swbuild.UpdateResult``) an Update changed whose rebuild reported an error: a change set, not
+    rebuilt, and a failure of the job naming it (a rebuild in error from the user's features alone is no failure).
+    The parts, the layout and the carriers. One rule for the stop's sentence and the record's mark."""
+    named = [str(what) for what, _why in getattr(result, "failures", []) or []]
+    docs = list(getattr(result, "parts", []) or []) + [getattr(result, "layout", None)] + \
+        list(getattr(result, "carriers", []) or [])
+    return [d for d in docs if d is not None and getattr(d, "document", "") and getattr(d, "changed", None)
+            and not getattr(d, "rebuilt", True) and any(names_document(w, d.document) for w in named)]
+
+
+def _plan_paths(plan: UpdatePlan) -> List[str]:
+    return [p.path for p in plan.parts] + ([plan.layout.path] if plan.layout is not None else []) + \
+        [c.path for c in getattr(plan, "carriers", ()) or () if getattr(c, "path", "")]
 
 
 def _documents_left_in_error(plan: UpdatePlan, result: GearboxUpdate) -> List[str]:
-    """The paths of the documents this Update changed whose rebuild reported an error (``ui_text``'s rule: a change
-    set, not rebuilt, and a failure of the job naming the document)."""
-    named = [str(what).strip() for what, _why in getattr(result, "failures", []) or []]
-    paths = [p.path for p in plan.parts] + ([plan.layout.path] if plan.layout is not None else []) + \
-        [c.path for c in getattr(plan, "carriers", ()) or () if getattr(c, "path", "")]
+    """The paths of the documents this Update left in error (:func:`documents_left_in_error`)."""
+    stems = {document_stem(d.document) for d in documents_left_in_error(result)}
+    return [p for p in _plan_paths(plan) if document_stem(p) in stems]
+
+
+def _documents_rebuilt_clean(plan: UpdatePlan, result: GearboxUpdate) -> List[str]:
+    """The paths of the documents this Update changed and rebuilt with no failure naming them."""
+    named = [str(what) for what, _why in getattr(result, "failures", []) or []]
     docs = list(getattr(result, "parts", []) or []) + [getattr(result, "layout", None)] + \
         list(getattr(result, "carriers", []) or [])
-    out: List[str] = []
-    for d in docs:
-        if d is None or not getattr(d, "document", "") or not d.changed or d.rebuilt:
-            continue
-        if not any(w.startswith(d.document) for w in named):
-            continue
-        out += [p for p in paths if os.path.basename(p.replace("\\", "/")).casefold() == d.document.casefold()]
-    return out
+    stems = {document_stem(d.document) for d in docs if d is not None and getattr(d, "document", "")
+             and d.changed and d.rebuilt and not any(names_document(w, d.document) for w in named)}
+    return [p for p in _plan_paths(plan) if document_stem(p) in stems]
 
 
 def entry_spec_of(rec: LinkRecord, path: str) -> Optional[Dict[str, Any]]:
@@ -2695,8 +2731,18 @@ def recorded_user_work(entry: store.UserWorkEntry) -> swbuild.UserWork:
         carried=[(c.component, c.gear, tuple(c.locks)) for c in entry.carried])
 
 
+def modes_read(plan: UpdatePlan) -> List[str]:
+    """The configurations a press's read of the user's work covers (the fixes review's S6): the worker reads the modes
+    after the Update that exist at its start, so the plan's configurations less those it adds; ``[]`` with no modes."""
+    m = plan.motion
+    if m is None:
+        return []
+    return [str(c) for c in m.configurations if c not in plan.in_place.modes_added]
+
+
 def record_user_work(record: LinkRecord, work: Optional[swbuild.UserWork], *, assembly: str, digest: str = "",
-                     revision: Sequence[int] = (), problems: Sequence[swbuild.UserProblem] = ()) -> bool:
+                     revision: Sequence[int] = (), problems: Sequence[swbuild.UserProblem] = (),
+                     modes_read: Sequence[str] = ()) -> bool:
     """Put what a press read of the user's work into ``record`` (in place) as its gearbox's ``user_work``, when the
     record's assembly is the one read (a record whose current revision has moved on is left alone). Whether it was
     written. ``work`` None (the assembly was not read) leaves what is on record as it was."""
@@ -2722,7 +2768,7 @@ def record_user_work(record: LinkRecord, work: Optional[swbuild.UserWork], *, as
             box.user_work = replace(kept, digest=digest, refused_at=said.read_at, problems=said.problems)
         return True
     box.user_work = user_work_entry(work, assembly=assembly, digest=digest, revision=revision, problems=problems)
-    box.user_work.modes = list(box.modes)       # the configurations the read covered (a press's adds follow it)
+    box.user_work.modes = list(modes_read)     # the configurations the read covered (a press's adds follow it)
     return True
 
 
@@ -2732,7 +2778,7 @@ def refused_update(record: LinkRecord, plan: UpdatePlan, error: swbuild.UserWork
     inventory as read and every problem said, so the footer says them until the next press reads again. Pure."""
     rec = copy.deepcopy(record)
     record_user_work(rec, error.user_work, assembly=plan.assembly, digest=digest, revision=revision,
-                     problems=error.problems)
+                     problems=error.problems, modes_read=modes_read(plan))
     if rec.gearbox is not None and revision:
         rec.gearbox.solidworks = [int(n) for n in revision]
     return rec
@@ -2940,12 +2986,16 @@ def follow_modes_added(entry: Optional[store.UserWorkEntry], result: GearboxUpda
     """The runs review's must-fix: an inventory read at the start of a press that then added modes holds no flag of
     the user's there. Each user mate's flag the worker read in a mode it added (``result.took_active_state``) goes
     into its on-list, for each added mode the record now holds; ``entry.modes`` becomes the record's modes, so the
-    inventory says which configurations it covers. In place."""
+    inventory says which configurations it covers: those the read covered (``entry.modes`` as recorded) and each added
+    mode on record whose flags the worker read (the fixes review's S6: never a mode no read covered). In place."""
     if entry is None or entry.unread:
         return
     on_record = {str(c) for c in modes}
     by_name = {m.name: m for m in entry.mates}
+    read_there: List[str] = []
     for mode, item, state in getattr(result, "took_active_state", []) or []:
+        if mode in on_record and mode not in read_there:
+            read_there.append(mode)
         mate = by_name.get(item)
         if mate is None or mode not in on_record:
             continue
@@ -2953,7 +3003,7 @@ def follow_modes_added(entry: Optional[store.UserWorkEntry], result: GearboxUpda
             mate.on = list(mate.on) + [mode]
         elif state == "suppressed" and mode in mate.on:
             mate.on = [c for c in mate.on if c != mode]
-    entry.modes = list(modes)
+    entry.modes = [c for c in modes if c in set(entry.modes) | set(read_there)]
 
 
 def solidworks_on_record(record: Optional[LinkRecord]) -> Tuple[int, ...]:

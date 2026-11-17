@@ -735,3 +735,19 @@ record's problems by kind, so the second `unsettled` overwrites the first's subj
   Update SolidWorks again.* With several documents it says *close them all*.
 - **When the mark goes:** it is dropped with the unsaved marks themselves (saved, or found closed by the next job),
   and cleared by a press that ends with no failure. A record without it reads as before.
+
+### From B (the fixes review): M3, S6, S7
+
+- **M3. The in-error mark is no longer cleared by a press that merely ends clean.** It goes only when the document
+  leaves `unsaved` (saved, or found closed by the next job), or when this press changed and rebuilt that very document
+  with no failure naming it. A press that set nothing in it proves nothing. Such a press says so
+  (`Finished.still_in_error`) instead of *already matches*: *Gear_m1.25_N29 is still open in SolidWorks as an earlier
+  Update SolidWorks left it, in error and holding the new values, so this press set nothing in it: close it in
+  SolidWorks without saving (the file on disk is as before that Update), then press Update SolidWorks again.* Nothing
+  new is needed from the worker.
+- **S6. `UserWorkEntry.modes` lists only the modes a read covered:** the plan's configurations less those it adds
+  (`update.modes_read`), plus each added mode on record whose flags the worker read (`took_active_state`). A mode a
+  stopped press failed to delete is not named there, so the footer judges it as a copy.
+- **S7. One name rule.** The stop sentence and the record mark both use `update.documents_left_in_error`, which
+  matches by stem, case aside, with or without `.SLDPRT` (`names_document`: the stem, then the end, an extension or a
+  space, so `Gear_m1.25_N2` never names `Gear_m1.25_N29`).
