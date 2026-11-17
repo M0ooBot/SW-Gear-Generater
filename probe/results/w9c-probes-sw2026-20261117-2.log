@@ -1,0 +1,337 @@
+awake   display and system held awake for the run (previous state -0x80000000)
+run     2026-11-17 06:11:30; W9c probes from C:\Users\M0obo\Documents\GearGeneratorProbe\w9c-probes-sw2026-20261117-061102\snap\src (snapshot: 37eee43); sections ['p1', 'm1', 's5', 'p2']; masters {'rangebox': 'C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9-s0-20261116-045513\\out\\rangebox.master', 'setup': 'C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9a-final-sw2026-20261117-023433\\out\\setup.master', 'reducer': 'C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9a-final-sw2026-20261117-023433\\out\\reducer.master'}; redo False
+ok      the app's settings and Recent list go into this run's folder, not the user's: C:\Users\M0obo\Documents\GearGeneratorProbe\w9c-probes-sw2026-20261117-061102\out\appdata\Gear Generator\recent.json
+attach  SolidWorks 2026 (revision 34.1.1) (revision 34.1.1), PID 43352; SolidWorks 0.68 GB private, 10.30 GB free
+open    before: []
+findings USER_MATE_PUT_ROUTE "put along, the user's locks left on", USER_TIE_RULE 'not COMPONENT_UNDER_DEFINED', WHATS_WRONG_OPENS_ON_PART_REBUILD False, the branches {'USER_MATE_PUT_FIXED_GEAR_ON_2024': None, 'USER_MATE_PUT_FIXED_GEAR_ON_2026': None, 'USER_MATE_PUT_HELD_GEAR_ON_2024': None, 'USER_MATE_PUT_HELD_GEAR_ON_2026': None, 'USER_MATE_PUT_NO_CARRIER_MODES_ON_2024': None, 'USER_MATE_PUT_NO_CARRIER_MODES_ON_2026': None, 'USER_MATE_PUT_NO_CARRIER_ON_2024': True, 'USER_MATE_PUT_NO_CARRIER_ON_2026': True, 'USER_MATE_PUT_SUBASSEMBLY_ON_2024': None, 'USER_MATE_PUT_SUBASSEMBLY_ON_2026': None}
+rule    What's Wrong: swbuild.whats_wrong_shows_in_update reads False; What's Wrong during a job is a STOP, as any dialog
+fact    a SolidWorks balloon tip ['Check1', 'Simplified Interface', 'The Simplified Interface provides a minimalist layout for quick and basic modeling. It can be customized similarly to the standard interface.\n\nShow how to turn off the Simplified Interface.'] came up while no SolidWorks call was in progress (left standing, never answered)
+DIALOG  SolidWorks shows '': ['Title', 'Description', 'Button1', 'Button2', 'Hyperlink Text 1', 'Hyperlink Text 2']
+NOTE    SolidWorks' notification box came up while no SolidWorks call was in progress (exempt by the coordinator's ruling; nothing answers it)
+excel   started our own Excel, PID 46624, 16.0 build 20527.0
+== p1  deleting a component from an assembly (W9c's removal; plan §4 P1): each route on its own fresh copy, under a watch that logs a dialog and answers none
+NEW     deleting a component: no route is in the app or verified in the macro database for a component. The ledger has EditDelete on a mate (MATE_DELETE_ROUTE, verified 2026 and 2024) and DeleteSelection2(options) 'verified, SW 2026' on a folder only
+-- p1  case 1: G4 out of a copy of reducer.master by IComponent2.Select4(False, null, False), then IModelDoc2.EditDelete()
+copy    reducer.master -> p1-1-select4-editdelete: 12 files, mtimes kept
+        Reducer_12to1.xlsx's record: 12 path(s) put onto the copy: ['record.workbook', 'record.parts[0].path', 'record.parts[1].path', 'record.parts[2].path', 'record.parts[3].path', 'record.assembly', 'record.gearbox.layout', 'record.gearbox.assembly', 'record.gearbox.components[0].part', 'record.gearbox.components[1].part', 'record.gearbox.components[2].part', 'record.gearbox.components[3].part']
+        Gear_m1.5_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.5_N68.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m2_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        OutputGear.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+ok      p1-1-select4-editdelete: the copy's record is valid: owner ('ours', ''); left on the master []; missing in the copy []; clear_saved dropped nothing (unsaved, mismatched ([], [])); the read's digest equals the record's
+probe   W6-PLAN §7.1: Reducer_12to1.SLDASM of p1-1-select4-editdelete, whose stored references name a folder that is gone, opened under the dialog watch (120 s at most)
+DIALOG  SolidWorks shows '': ['Close', 'Opened 5\nComponents', 'Updating\nAssembly', 'Update\nGraphics', 'Post load updating', 'Elapsed time: 0s', 'This file was last opened in 1 seconds.', 'For more information, view: ']
+fact    p1-1-select4-editdelete: the copy's assembly opened in 8.3 s; marked modified straight after the open: {'Reducer_12to1_Layout.SLDPRT': False, 'Gear_m1.5_N17.SLDPRT': False, 'Gear_m1.5_N68.SLDPRT': False, 'Gear_m2_N17.SLDPRT': False, 'OutputGear.SLDPRT': False, 'Reducer_12to1.SLDASM': False}
+fact    W6-PLAN §7.1: dialogs while the copied assembly opened: none
+ok      p1-1-select4-editdelete: SolidWorks found all 5 components and the layout in the copy, and the copy closed without saving (left []): elsewhere none
+ok      read Reducer_12to1.xlsx: ok
+        warning Gears!Q3: G2: The involute starts at 99.96 mm, above the form diameter of 99.343 mm, so the bottom of the working flank is a straight line.
+        warning Gears!Q5: G4: The involute starts at 99.28 mm, above the form diameter of 98.614 mm, so the bottom of the working flank is a straight line.
+        3 shafts · 4 gears · 2 meshes; gate ''
+ok      p1-1-select4-editdelete: the copy reads as built from this workbook, its assembly in the copy
+ok      Excel opened Reducer_12to1.xlsx with no dialog or repair: []
+fact    p1 case 1: selected [True, 1]; the call returned None; the assembly marked True (before False); rebuilt True
+fact    p1 case 1: {'gone_everywhere': True, 'mates_removed': ['G3 meshes G4', 'G4 along S3', 'G4 on S3 Axis'], 'mates_left': {}, 'touching_read': True, 'other_mates_lost': [], 'dangling': {}, 'errors_after': {}, 'others_moved': {}, 'handles_stale': [], 'handles_untested': False, 'dirty': True, 'clean': True}
+ok      p1 case 1 (select4-editdelete): measured, no dialog; clean True
+ok      p1-1-select4-editdelete, the copy's end: p1-1-select4-editdelete ends clean: every document of it closed in SolidWorks (left []), Excel's workbook closed (['Reducer_12to1.xlsx']), no open document by a file name it holds ([])
+-- p1  case 2: G4 out of a copy of reducer.master by the component's feature (IAssemblyDoc.FeatureByName(Name2)) Select2(False, 0), then EditDelete(): MATE_DELETE_ROUTE's form, used by the app for a mate
+copy    reducer.master -> p1-2-feature-editdelete: 12 files, mtimes kept
+        Reducer_12to1.xlsx's record: 12 path(s) put onto the copy: ['record.workbook', 'record.parts[0].path', 'record.parts[1].path', 'record.parts[2].path', 'record.parts[3].path', 'record.assembly', 'record.gearbox.layout', 'record.gearbox.assembly', 'record.gearbox.components[0].part', 'record.gearbox.components[1].part', 'record.gearbox.components[2].part', 'record.gearbox.components[3].part']
+        Gear_m1.5_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.5_N68.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m2_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        OutputGear.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+ok      p1-2-feature-editdelete: the copy's record is valid: owner ('ours', ''); left on the master []; missing in the copy []; clear_saved dropped nothing (unsaved, mismatched ([], [])); the read's digest equals the record's
+fact    p1-2-feature-editdelete: the copy's assembly opened in 2.8 s; marked modified straight after the open: {'Reducer_12to1_Layout.SLDPRT': False, 'Gear_m1.5_N17.SLDPRT': False, 'Gear_m1.5_N68.SLDPRT': False, 'Gear_m2_N17.SLDPRT': False, 'OutputGear.SLDPRT': False, 'Reducer_12to1.SLDASM': False}
+ok      p1-2-feature-editdelete: SolidWorks found all 5 components and the layout in the copy, and the copy closed without saving (left []): elsewhere none
+ok      read Reducer_12to1.xlsx: ok
+        warning Gears!Q3: G2: The involute starts at 99.96 mm, above the form diameter of 99.343 mm, so the bottom of the working flank is a straight line.
+        warning Gears!Q5: G4: The involute starts at 99.28 mm, above the form diameter of 98.614 mm, so the bottom of the working flank is a straight line.
+        3 shafts · 4 gears · 2 meshes; gate ''
+ok      p1-2-feature-editdelete: the copy reads as built from this workbook, its assembly in the copy
+ok      Excel opened Reducer_12to1.xlsx with no dialog or repair: []
+DIALOG  SolidWorks shows 'Opening': ['Close', 'Opening Component 5 of 5', 'Update\nAssembly', 'Update\nGraphics', 'Opening File: C:\\Use...e-editdelete\\OutputGear.SLDPRT', 'Elapsed time: 0s', 'This file was last opened in 1 seconds.', 'For more information, view: '] (a progress box that closes itself; not logged again)
+fact    p1 case 2: selected [True, 1]; the call returned None; the assembly marked True (before False); rebuilt True
+fact    p1 case 2: {'gone_everywhere': True, 'mates_removed': ['G3 meshes G4', 'G4 along S3', 'G4 on S3 Axis'], 'mates_left': {}, 'touching_read': True, 'other_mates_lost': [], 'dangling': {}, 'errors_after': {}, 'others_moved': {}, 'handles_stale': [], 'handles_untested': False, 'dirty': True, 'clean': True}
+ok      p1 case 2 (feature-editdelete): measured, no dialog; clean True
+ok      p1-2-feature-editdelete, the copy's end: p1-2-feature-editdelete ends clean: every document of it closed in SolidWorks (left []), Excel's workbook closed (['Reducer_12to1.xlsx']), no open document by a file name it holds ([])
+-- p1  case 3: G4 out of a copy of reducer.master by IComponent2.Select4(False, null, False), then IModelDocExtension.DeleteSelection2(0)
+copy    reducer.master -> p1-3-deleteselection2: 12 files, mtimes kept
+        Reducer_12to1.xlsx's record: 12 path(s) put onto the copy: ['record.workbook', 'record.parts[0].path', 'record.parts[1].path', 'record.parts[2].path', 'record.parts[3].path', 'record.assembly', 'record.gearbox.layout', 'record.gearbox.assembly', 'record.gearbox.components[0].part', 'record.gearbox.components[1].part', 'record.gearbox.components[2].part', 'record.gearbox.components[3].part']
+        Gear_m1.5_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.5_N68.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m2_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        OutputGear.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+ok      p1-3-deleteselection2: the copy's record is valid: owner ('ours', ''); left on the master []; missing in the copy []; clear_saved dropped nothing (unsaved, mismatched ([], [])); the read's digest equals the record's
+fact    p1-3-deleteselection2: the copy's assembly opened in 2.8 s; marked modified straight after the open: {'Reducer_12to1_Layout.SLDPRT': False, 'Gear_m1.5_N17.SLDPRT': False, 'Gear_m1.5_N68.SLDPRT': False, 'Gear_m2_N17.SLDPRT': False, 'OutputGear.SLDPRT': False, 'Reducer_12to1.SLDASM': False}
+ok      p1-3-deleteselection2: SolidWorks found all 5 components and the layout in the copy, and the copy closed without saving (left []): elsewhere none
+ok      read Reducer_12to1.xlsx: ok
+        warning Gears!Q3: G2: The involute starts at 99.96 mm, above the form diameter of 99.343 mm, so the bottom of the working flank is a straight line.
+        warning Gears!Q5: G4: The involute starts at 99.28 mm, above the form diameter of 98.614 mm, so the bottom of the working flank is a straight line.
+        3 shafts · 4 gears · 2 meshes; gate ''
+ok      p1-3-deleteselection2: the copy reads as built from this workbook, its assembly in the copy
+ok      Excel opened Reducer_12to1.xlsx with no dialog or repair: []
+fact    p1 case 3: selected [True, 1]; the call returned True; the assembly marked True (before False); rebuilt True
+fact    p1 case 3: {'gone_everywhere': True, 'mates_removed': ['G3 meshes G4', 'G4 along S3', 'G4 on S3 Axis'], 'mates_left': {}, 'touching_read': True, 'other_mates_lost': [], 'dangling': {}, 'errors_after': {}, 'others_moved': {}, 'handles_stale': [], 'handles_untested': False, 'dirty': True, 'clean': True}
+ok      p1 case 3 (deleteselection2): measured, no dialog; clean True
+ok      p1-3-deleteselection2, the copy's end: p1-3-deleteselection2 ends clean: every document of it closed in SolidWorks (left []), Excel's workbook closed (['Reducer_12to1.xlsx']), no open document by a file name it holds ([])
+-- p1  case 4: HighDog out of a copy of rangebox.master by IComponent2.Select4(False, null, False), then IModelDoc2.EditDelete()
+copy    rangebox.master -> p1-4-select4-editdelete: 15 files, mtimes kept
+        RangeBox.xlsx's record: 18 path(s) put onto the copy: ['record.workbook', 'record.parts[0].path', 'record.parts[1].path', 'record.parts[2].path', 'record.parts[3].path', 'record.parts[4].path', 'record.assembly', 'record.gearbox.layout', 'record.gearbox.assembly', 'record.gearbox.components[0].part', 'record.gearbox.components[1].part', 'record.gearbox.components[2].part', 'record.gearbox.components[3].part', 'record.gearbox.components[4].part', 'record.gearbox.components[5].part', 'record.gearbox.components[6].part', 'record.gearbox.components[7].part', 'record.gearbox.carriers[0].path']
+        Dog_m1.25_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.25_N13.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.25_N29.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Ring_m1.25_N55.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Sleeve_m1.25_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+ok      p1-4-select4-editdelete: the copy's record is valid: owner ('ours', ''); left on the master []; missing in the copy []; clear_saved dropped nothing (unsaved, mismatched ([], [])); the read's digest equals the record's
+fact    p1-4-select4-editdelete: the copy's assembly opened in 3.0 s; marked modified straight after the open: {'RangeBox_Layout.SLDPRT': False, 'RangeBox_Carrier_Carrier.SLDPRT': False, 'Gear_m1.25_N29.SLDPRT': False, 'Gear_m1.25_N13.SLDPRT': False, 'Ring_m1.25_N55.SLDPRT': False, 'Dog_m1.25_N17.SLDPRT': False, 'Sleeve_m1.25_N17.SLDPRT': False, 'RangeBox.SLDASM': False}
+ok      p1-4-select4-editdelete: SolidWorks found all 9 components and the layout in the copy, and the copy closed without saving (left []): elsewhere none
+ok      read RangeBox.xlsx: ok
+        warning Gears!F3: Planet: 13 teeth at 20° is below the undercut limit of 17: a generated gear would lose the bottom of its flanks, which this profile does not show. A profile shift of 0.24 or more would clear it.
+        warning Gears!F3: Planet: The tooth tip is 0.36 mm thick, under 0.3 × module (0.375 mm).
+        warning Gears!F7: RangeSlv: The teeth's tips, at 18.75 mm, are inside the base circle of 19.968 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!A3: Planet (13 teeth) is below the undercut limit, which is not modelled, and meshes Sun (29 teeth): the build checks interference only where the gears stand, so check Planet with Sun turning in SolidWorks.
+        warning Gears!A7: Output cannot reach RangeSlv: Input runs through RangeSlv's travel (from Sun at 10.5 to HighDog at −32), so Output would have to pass HighDog toward Z− or Sun toward Z+, each on Input.
+        warning Gears!A7: nothing keys RangeSlv to Output: its whole bore is teeth and no hub row is under it; add a hub on Output that a band of RangeSlv covers in every mode; as laid out none can, since its 10 mm face slides 10 mm (H −5 to L +5) and its places share no length.
+        warning Modes!A3: in N RangeSlv stands 0 mm from HighDog and 0 mm from LowDog, which it does not engage there: leave at least 0.625 mm (0.5 × module) each side.
+        5 shafts · 6 gears · 2 meshes; gate ''
+ok      p1-4-select4-editdelete: the copy reads as built from this workbook, its assembly in the copy
+ok      Excel opened RangeBox.xlsx with no dialog or repair: []
+fact    p1 case 4: selected [True, 1]; the call returned None; the assembly marked True (before False); rebuilt True
+fact    p1 case 4: {'gone_everywhere': True, 'mates_removed': ['HighDog locked to Sun', 'RangeSlv engages HighDog'], 'mates_left': {}, 'touching_read': True, 'other_mates_lost': [], 'dangling': {}, 'errors_after': {}, 'others_moved': {}, 'handles_stale': [], 'handles_untested': False, 'dirty': True, 'clean': True}
+ok      p1 case 4 (select4-editdelete): measured, no dialog; clean True
+ok      p1-4-select4-editdelete, the copy's end: p1-4-select4-editdelete ends clean: every document of it closed in SolidWorks (left []), Excel's workbook closed (['RangeBox.xlsx']), no open document by a file name it holds ([])
+propose COMPONENT_DELETE_ROUTE = 'select4-editdelete'  # p1: clean on ['select4-editdelete', 'feature-editdelete', 'deleteselection2', 'select4-editdelete'], a dialog on none; the first clean route, if any
+propose COMPONENT_DELETE_IN_EVERY_CONFIGURATION = True  # p1's RangeBox case, every mode shown
+propose COMPONENT_DELETE_TAKES_ITS_MATES = True  # p1: every case's mates_left [{}, {}, {}, {}], by the MateGroup walk and FeatureByName; touching read [True, True, True, True]; other mates lost [[], [], [], []]
+propose COMPONENT_DELETE_KEEPS_OTHER_HANDLES = True  # p1: every case's held handles used for Name2 and Transform2 in their own epoch: stale [[], [], [], []], untested [False, False, False, False]
+propose COMPONENT_DELETE_DIALOG = False  # p1: a dialog on no route
+time    p1: 92 s; 0 failed; SolidWorks 0.91 GB private, 10.00 GB free
+== m1  the user-mate kinds W9a left unread (plan, Changes after W9a's demonstration): concentric, limit distance, limit angle, width and a user gear mate on an app gear, each on its own user component in a copy of RangeBox; read by the app's mate_info and a quiet press; GetSaveFlag around every read. Path is not made (it needs a sketch path the app has no route for); the sub-assembly leaf is p2's
+fact    swconst.tlb beside the running sldworks.exe; read ['swComponentSuppressionState_e', 'swDeleteSelectionOptions_e', 'swDocumentTypes_e', 'swInConfigurationOpts_e', 'swMateAlign_e', 'swMateType_e', 'swMateWidthOptions_e', 'swOpenDocOptions_e', 'swSelectType_e']; the positive control (mate types findings.py holds) agrees
+NEW     AddMate5 with swMateCONCENTRIC on a face and an axis (the ledger: face-to-axis concentric verified for MateEntity order on 2026 and 2024, made by a probe, not the app), swMateWIDTH (no entry in the macro database; the first run's two mark forms made no mate on 2026; the installed API help gives two more, each tried in turn only if the ones before made nothing: AddMate5 with the tab at mark 16, then IAssemblyDoc.CreateMateData with IWidthMateFeatureData's WidthSelection and TabSelection and IAssemblyDoc.CreateMate, both in sldworks.tlb on both installs, neither ever called by the app or the macro database), limit distance and limit angle (AddMate5's upper and lower values; the ledger reads a limit's range back on IMate2, 'an inference from a handful of mates'), and a part face selected through IComponent2.GetCorresponding (verified for a feature only)
+== user parts  Sprocket (spur 20 teeth, module 1.25, face 6, bore 10) and Housing (spur 40, module 1.25, face 4, bore 30, standing in) built by the strip's own plan_for and swbuild.build
+ok      user parts: Sprocket.SLDPRT built and saved: ok True, failures []
+fact    a SolidWorks balloon tip ['Check1', 'The sketch is no longer over defined.'] came up while X was in progress (left standing, never answered)
+ok      user parts: Housing.SLDPRT built and saved: ok True, failures []
+ok      user parts: closed: left []
+copy    rangebox.master -> m1: 15 files, mtimes kept
+        RangeBox.xlsx's record: 18 path(s) put onto the copy: ['record.workbook', 'record.parts[0].path', 'record.parts[1].path', 'record.parts[2].path', 'record.parts[3].path', 'record.parts[4].path', 'record.assembly', 'record.gearbox.layout', 'record.gearbox.assembly', 'record.gearbox.components[0].part', 'record.gearbox.components[1].part', 'record.gearbox.components[2].part', 'record.gearbox.components[3].part', 'record.gearbox.components[4].part', 'record.gearbox.components[5].part', 'record.gearbox.components[6].part', 'record.gearbox.components[7].part', 'record.gearbox.carriers[0].path']
+        Dog_m1.25_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.25_N13.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.25_N29.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Ring_m1.25_N55.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Sleeve_m1.25_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+ok      m1: the copy's record is valid: owner ('ours', ''); left on the master []; missing in the copy []; clear_saved dropped nothing (unsaved, mismatched ([], [])); the read's digest equals the record's
+DIALOG  SolidWorks shows '': ['Close', 'Opened 10\nComponents', 'Updating\nAssembly', 'Update\nGraphics', 'Post load updating', 'Elapsed time: 0s', 'This file was last opened in 27 seconds.', 'For more information, view: ']
+fact    m1: the copy's assembly opened in 3.3 s; marked modified straight after the open: {'RangeBox_Layout.SLDPRT': False, 'RangeBox_Carrier_Carrier.SLDPRT': False, 'Gear_m1.25_N29.SLDPRT': False, 'Gear_m1.25_N13.SLDPRT': False, 'Ring_m1.25_N55.SLDPRT': False, 'Dog_m1.25_N17.SLDPRT': False, 'Sleeve_m1.25_N17.SLDPRT': False, 'RangeBox.SLDASM': False}
+ok      m1: SolidWorks found all 9 components and the layout in the copy, and the copy closed without saving (left []): elsewhere none
+ok      read RangeBox.xlsx: ok
+        warning Gears!F3: Planet: 13 teeth at 20° is below the undercut limit of 17: a generated gear would lose the bottom of its flanks, which this profile does not show. A profile shift of 0.24 or more would clear it.
+        warning Gears!F3: Planet: The tooth tip is 0.36 mm thick, under 0.3 × module (0.375 mm).
+        warning Gears!F7: RangeSlv: The teeth's tips, at 18.75 mm, are inside the base circle of 19.968 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!A3: Planet (13 teeth) is below the undercut limit, which is not modelled, and meshes Sun (29 teeth): the build checks interference only where the gears stand, so check Planet with Sun turning in SolidWorks.
+        warning Gears!A7: Output cannot reach RangeSlv: Input runs through RangeSlv's travel (from Sun at 10.5 to HighDog at −32), so Output would have to pass HighDog toward Z− or Sun toward Z+, each on Input.
+        warning Gears!A7: nothing keys RangeSlv to Output: its whole bore is teeth and no hub row is under it; add a hub on Output that a band of RangeSlv covers in every mode; as laid out none can, since its 10 mm face slides 10 mm (H −5 to L +5) and its places share no length.
+        warning Modes!A3: in N RangeSlv stands 0 mm from HighDog and 0 mm from LowDog, which it does not engage there: leave at least 0.625 mm (0.5 × module) each side.
+        5 shafts · 6 gears · 2 meshes; gate ''
+ok      m1: the copy reads as built from this workbook, its assembly in the copy
+ok      Excel opened RangeBox.xlsx with no dialog or repair: []
+fact    m1: inserted ['Sprocket-1', 'Sprocket-2', 'Sprocket-3', 'Sprocket-4', 'Sprocket-5', 'Housing-1'] with H active; mates {} (AddMate5 status)
+ok      m1: the components are named ['Sprocket-1', 'Sprocket-2', 'Sprocket-3', 'Sprocket-4', 'Sprocket-5', 'Housing-1']
+ok      m1: every new mate's flag reads back as set in every mode
+ok      m1: every mate on in H reads error code 0 after the user's work: []
+fact    m1 concentric: made
+fact    m1 limit distance: made
+fact    m1 limit angle: made
+fact    m1 width (width faces mark 1, tab faces mark 2): SolidWorksError: AddMate5 made no mate (status 0, 0 new)
+fact    m1 width (all four at mark 1): SolidWorksError: AddMate5 made no mate (status 0, 0 new)
+fact    m1 width (NEW: width faces mark 1, tab faces mark 16 (the API help's marks)): made
+fact    m1 gear on an app gear: made
+ok      m1: the reads (mate_info, flags, definition, codes) marked no document: none
+fact    m1 concentric (UserConcentric, AddMate5 status 1): mate_info {'type': 1, 'components': ['RangeBox_Layout-1', 'Sprocket-1'], 'whole': True}; flags {'H': False, 'N': False, 'L': False}; code (0, False); definition {'type_name': 'MateConcentric', 'suppressed': False, 'type': 1, 'alignment': 0, 'flipped': False, 'variation': (0.0, 0.0), 'values': {'MateAlignment': 0}, 'dimensions': []}; entities [{'component': 'RangeBox_Layout-1', 'reference_type': 5, 'params': [0.0, 0.0, -0.08899, 0.0, 0.0, 1.0, 0.0, 0.0], 'reference': 'feature', 'feature': 'Input Axis'}, {'component': 'Sprocket-1', 'reference_type': 2, 'params': [0.0, 0.0, 0.05993641526092376, -0.0, -0.0, 1.0, 0.005, 0.0], 'reference': 'geometry', 'feature': None}]
+fact    m1 limit distance (UserLimitDistance, AddMate5 status 1): mate_info {'type': 5, 'components': ['Sprocket-2', 'RangeBox_Layout-1'], 'whole': True}; flags {'H': False, 'N': False, 'L': False}; code (0, False); definition {'type_name': 'MateLimitDistanceDim', 'suppressed': False, 'type': 5, 'alignment': 0, 'flipped': False, 'variation': (0.0050000000000000044, -0.0050000000000000044), 'values': {'Distance': 0.08, 'MateAlignment': 0, 'FlipDimension': False, 'MaximumDistance': 0.085, 'MinimumDistance': 0.075}, 'dimensions': [('D1', 0.08)]}; entities [{'component': 'Sprocket-2', 'reference_type': 4, 'params': [0.0, 0.0, -0.08, 0.0, 0.0, 1.0, 0.0, 0.0], 'reference': 'feature', 'feature': 'Front Plane'}, {'component': 'RangeBox_Layout-1', 'reference_type': 4, 'params': [0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0], 'reference': 'feature', 'feature': 'Front Plane'}]
+fact    m1 limit angle (UserLimitAngle, AddMate5 status 1): mate_info {'type': 6, 'components': ['Sprocket-3', 'RangeBox_Layout-1'], 'whole': True}; flags {'H': False, 'N': False, 'L': False}; code (0, False); definition {'type_name': 'MateLimitPlanarAngleDim', 'suppressed': False, 'type': 6, 'alignment': 0, 'flipped': False, 'variation': (0.5235987755982988, -0.17453292519943295), 'values': {'Angle': 0.17453292519943295, 'MateAlignment': 0, 'FlipDimension': False, 'MaximumAngle': 0.6981317007977318, 'MinimumAngle': 0.0}, 'dimensions': [('D1', 0.17453292519943295)]}; entities [{'component': 'Sprocket-3', 'reference_type': 4, 'params': [0.0, 0.0, 0.1, 0.17364817766693036, 0.9848077530122081, 0.0, 0.0, 0.0], 'reference': 'feature', 'feature': 'Top Plane'}, {'component': 'RangeBox_Layout-1', 'reference_type': 4, 'params': [0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0], 'reference': 'feature', 'feature': 'Top Plane'}]
+fact    m1 width (UserWidth, AddMate5 status 1, NEW: width faces mark 1, tab faces mark 16 (the API help's marks)): mate_info {'type': 11, 'components': ['Sprocket-4', 'Sprocket-4', 'Housing-1', 'Housing-1'], 'whole': True}; flags {'H': False, 'N': False, 'L': False}; code (0, False); definition {'type_name': 'MateWidth', 'suppressed': False, 'type': 11, 'alignment': 0, 'flipped': False, 'variation': (0.0, 0.0), 'values': {'FlipDimension': False}, 'dimensions': []}; entities [{'component': 'Sprocket-4', 'reference_type': 2, 'params': [0.0, 0.0, 0.119, -0.0, -0.0, -1.0, 0.0, 0.0], 'reference': 'geometry', 'feature': None}, {'component': 'Sprocket-4', 'reference_type': 2, 'params': [0.0, 0.0, 0.125, 0.0, 0.0, 1.0, 0.0, 0.0], 'reference': 'geometry', 'feature': None}, {'component': 'Housing-1', 'reference_type': 2, 'params': [0.0, 0.0, 0.12, -0.0, -0.0, -1.0, 0.0, 0.0], 'reference': 'geometry', 'feature': None}, {'component': 'Housing-1', 'reference_type': 2, 'params': [0.0, 0.0, 0.124, 0.0, 0.0, 1.0, 0.0, 0.0], 'reference': 'geometry', 'feature': None}]
+fact    m1 gear on an app gear (UserGearOnSun, AddMate5 status 1): mate_info {'type': 10, 'components': ['Sprocket-5', 'Gear_m1.25_N29-1'], 'whole': True}; flags {'H': False, 'N': False, 'L': False}; code (0, False); definition {'type_name': 'MateGearDim', 'suppressed': False, 'type': 10, 'alignment': 2, 'flipped': False, 'variation': (0.0, 0.0), 'values': {'GearRatioNumerator': 29.0, 'GearRatioDenominator': 20.0, 'Reverse': True}, 'dimensions': [('D1', 29.0), ('D2', 20.0)]}; entities [{'component': 'Sprocket-5', 'reference_type': 5, 'params': [0.0, 0.0, 0.15963004517981985, 0.0, 0.0, 1.0, 0.0, 0.0], 'reference': 'feature', 'feature': 'Gear Axis'}, {'component': 'Gear_m1.25_N29-1', 'reference_type': 5, 'params': [0.0, 0.0, 0.004931645631857944, 0.0, 0.0, 1.0, 0.0, 0.0], 'reference': 'feature', 'feature': 'Gear Axis'}]
+-- m1  a quiet press records the inventory; then Sun's Backlash typed, and the footer's judgement
+ok      m1: the quiet press: the footer offers Update SolidWorks (shown True, enabled True, Build again… needed False)
+update  SolidWorks 1.19 GB private, 9.86 GB free
+        in 171.7 s; SolidWorks 1.55 GB private, 9.85 GB free; loaded from disk []
+        W9a: carried []; renamed []; user in error []; user features in error []; inventory read yes; failures []
+ok      the Update's check phase found no gear mate turning against its mesh: []
+status  [green] SolidWorks already matches the workbook: nothing was changed. It worked in H, the configuration that was active; it did not show the other modes, since nothing in H needed changing.
+fact    m1: the quiet press: the press took 171.8 s; SolidWorks calls by member {'OpenDoc6': 9, 'IsSuppressed2': 116, 'GetSystemValue3': 1}
+        shows and puts in order: []
+        configuration 'H'; visited []; put_in []; placed []; unsuppressed_in []; suppressed_in []; slid []; values_restored []; extra configurations []; extra mates []; senses unread []; positions per configuration False; failures []
+fact    m1: the quiet press: the press took 172 s
+ok      m1: the quiet press read the user's work and changed nothing: ok
+excel   Gears!P2 := 0.4
+excel   saved RangeBox.xlsx
+poll    a new read 0.0 s after asking; changes:
+          Gears!P2 Sun Backlash blank → 0.4
+ok      read RangeBox.xlsx: ok
+        warning Gears!F3: Planet: 13 teeth at 20° is below the undercut limit of 17: a generated gear would lose the bottom of its flanks, which this profile does not show. A profile shift of 0.24 or more would clear it.
+        warning Gears!F3: Planet: The tooth tip is 0.36 mm thick, under 0.3 × module (0.375 mm).
+        warning Gears!F7: RangeSlv: The teeth's tips, at 18.75 mm, are inside the base circle of 19.968 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!A3: Planet (13 teeth) is below the undercut limit, which is not modelled, and meshes Sun (29 teeth): the build checks interference only where the gears stand, so check Planet with Sun turning in SolidWorks.
+        warning Gears!A7: Output cannot reach RangeSlv: Input runs through RangeSlv's travel (from Sun at 10.5 to HighDog at −32), so Output would have to pass HighDog toward Z− or Sun toward Z+, each on Input.
+        warning Gears!A7: nothing keys RangeSlv to Output: its whole bore is teeth and no hub row is under it; add a hub on Output that a band of RangeSlv covers in every mode; as laid out none can, since its 10 mm face slides 10 mm (H −5 to L +5) and its places share no length.
+        warning Modes!A3: in N RangeSlv stands 0 mm from HighDog and 0 mm from LowDog, which it does not engage there: leave at least 0.625 mm (0.5 × module) each side.
+        5 shafts · 6 gears · 2 meshes; gate ''
+classify parts changed ['Gear_m1.25_N29.SLDPRT']; moved []; re-place []; structural []; missing []; unsaved []; refusal ''; turning True; axial []; ratios []
+        layout globals wanted []
+summary Update SolidWorks will change Sun's values (Gear_m1.25_N29).
+footer  (m1, before the press) [red] Update SolidWorks will change Sun's values (Gear_m1.25_N29). It was built with a configuration per mode (H, N and L), each named as its mode, and saved in H; to switch mode, double-click another mode's configuration in SolidWorks' ConfigurationManager. Drag Sun in SolidWorks and the rest of its train follow. A turn you give the gears in one mode can show in other modes, so a dog can stand across its sleeve in another; to put the gears back there, press Update SolidWorks with that mode showing. Carrier (the carrier) is axes and planes only, so it has nothing to drag. As read at 06:16, the next press would stop before changing anything: In modes H, N and L, UserGearOnSun is a mate in RangeBox.SLDASM that Gear Generator did not make, on Sun, which Update SolidWorks puts back, and a mate of that kind is not moved with its gear, so nothing is changed; in SolidWorks, lock your component to Sun instead, and Update SolidWorks puts it with Sun, or suppress UserGearOnSun in H, N and L, and press Update SolidWorks again. It reads your work in SolidWorks again when pressed.
+        button 'Build again…' on; Update SolidWorks shown on primary
+line    [red] As read at 06:16, the next press would stop before changing anything: In modes H, N and L, UserGearOnSun is a mate in RangeBox.SLDASM that Gear Generator did not make, on Sun, which Update SolidWorks puts back, and a mate of that kind is not moved with its gear, so nothing is changed; in SolidWorks, lock your component to Sun instead, and Update SolidWorks puts it with Sun, or suppress UserGearOnSun in H, N and L, and press Update SolidWorks again. It reads your work in SolidWorks again when pressed.
+        predicted: carried []; problems [('other kind', ['UserGearOnSun'])]; refused (recorded) []; changed since False; unread ties [(('Carrier carrier', 'Sun', 'Planet copy 1', 'Planet copy 2', 'Planet copy 3', 'HighDog', 'LowDog', 'RangeSlv'), ('UserGearOnSun', 'UserAxisE'))]
+ok      m1, before the press: the footer says the user-work line as the window would: 'As read at 06:16, the next press would stop before changing anything: In modes H'…
+fact    m1 concentric: in the recorded inventory True as UserMateEntry(name='UserConcentric', kind='other', type=1, touches=[['layout', ''], ['user', 'Sprocket-1']], on=['H', 'N', 'L'], code=0, warning=True, whole=True); named by the footer's judgement no
+fact    m1 limit distance: in the recorded inventory True as UserMateEntry(name='UserLimitDistance', kind='other', type=5, touches=[['user', 'Sprocket-2'], ['layout', '']], on=['H', 'N', 'L'], code=0, warning=True, whole=True); named by the footer's judgement no
+fact    m1 limit angle: in the recorded inventory True as UserMateEntry(name='UserLimitAngle', kind='other', type=6, touches=[['user', 'Sprocket-3'], ['layout', '']], on=['H', 'N', 'L'], code=0, warning=True, whole=True); named by the footer's judgement no
+fact    m1 width: in the recorded inventory True as UserMateEntry(name='UserWidth', kind='other', type=11, touches=[['user', 'Sprocket-4'], ['user', 'Sprocket-4'], ['user', 'Housing-1'], ['user', 'Housing-1']], on=['H', 'N', 'L'], code=0, warning=True, whole=True); named by the footer's judgement no
+fact    m1 gear on an app gear: in the recorded inventory True as UserMateEntry(name='UserGearOnSun', kind='gear', type=10, touches=[['user', 'Sprocket-5'], ['app', 'Sun']], on=['H', 'N', 'L'], code=0, warning=True, whole=True); named by the footer's judgement ['In modes H, N and L, UserGearOnSun is a mate in RangeBox.SLDASM that Gear Generator did not make, on Sun, which Update SolidWorks puts back, and a mate of that kind is not moved with its gear, so nothing is changed; in SolidWorks, lock your component to Sun instead, and Update SolidWorks puts it with Sun, or suppress UserGearOnSun in H, N and L, and press Update SolidWorks again.']
+propose M1_READS_CONCENTRIC = True  # m1: mate_info {'type': 1, 'components': ['RangeBox_Layout-1', 'Sprocket-1'], 'whole': True}, no document marked True
+propose M1_READS_LIMIT_DISTANCE = True  # m1: mate_info {'type': 5, 'components': ['Sprocket-2', 'RangeBox_Layout-1'], 'whole': True}, no document marked True
+propose M1_READS_LIMIT_ANGLE = True  # m1: mate_info {'type': 6, 'components': ['Sprocket-3', 'RangeBox_Layout-1'], 'whole': True}, no document marked True
+propose M1_READS_WIDTH = True  # m1: mate_info {'type': 11, 'components': ['Sprocket-4', 'Sprocket-4', 'Housing-1', 'Housing-1'], 'whole': True}, no document marked True
+propose M1_READS_GEAR_ON_AN_APP_GEAR = True  # m1: mate_info {'type': 10, 'components': ['Sprocket-5', 'Gear_m1.25_N29-1'], 'whole': True}, no document marked True
+ok      m1, the copy's end: m1 ends clean: every document of it closed in SolidWorks (left []), Excel's workbook closed (['RangeBox.xlsx']), no open document by a file name it holds ([])
+time    m1: 318 s; 0 failed; SolidWorks 1.19 GB private, 9.94 GB free
+== s5  W9d's spike (plan §4 S5): (a) every user mate's definition read and (b, c) remade by AddMate5 in a second assembly on entities found by reference, name, tree order or whole component, then compared; (e) a component's state per configuration read unshown; (d) the assembly opened read-only; (f) GetSaveFlag around every read. Each part runs on its own: one that fails is a FAIL and the next still runs; (b) and (c) need (a)'s read; (e) and (d) need only the copy
+NEW     IModelDocExtension.GetPersistReference3 on a part-level feature reached through a component, and GetObjectByPersistReference3 in that part (the ledger: both 'verified, SW 2026' on a part's own feature, curves/10; never through a component, never on 2024); IComponent2.GetCorresponding on the resolved feature (verified for a feature, tier 7/8); OpenDoc6 with swOpenDocOptions_ReadOnly (no entry; reading/08 advises it, unmeasured); IFeature.IsSuppressed2 on a component's feature and IConfiguration.GetRootComponent3 per configuration (no entry for either use); IConfiguration.GetRootComponent3 of the active configuration and its Name2, to tell the assembly's own entity from a component's (assemblies/06: ReferenceComponent None, or naming the top assembly)
+copy    setup.master -> s5: 17 files, mtimes kept
+        RangeBox.xlsx's record: 21 path(s) put onto the copy: ['record.workbook', 'record.parts[0].path', 'record.parts[1].path', 'record.parts[2].path', 'record.parts[3].path', 'record.parts[4].path', 'record.assembly', 'record.gearbox.layout', 'record.gearbox.assembly', 'record.gearbox.components[0].part', 'record.gearbox.components[1].part', 'record.gearbox.components[2].part', 'record.gearbox.components[3].part', 'record.gearbox.components[4].part', 'record.gearbox.components[5].part', 'record.gearbox.components[6].part', 'record.gearbox.components[7].part', 'record.gearbox.carriers[0].path', 'record.gearbox.user_work.assembly', 'record.gearbox.user_work.features[0].path', 'record.gearbox.user_work.features[1].path']
+        Dog_m1.25_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.25_N13.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.25_N29.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Ring_m1.25_N55.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Sleeve_m1.25_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+ok      s5: the copy's record is valid: owner ('ours', ''); left on the master []; missing in the copy []; clear_saved dropped nothing (unsaved, mismatched ([], [])); the read's digest equals the record's
+DIALOG  SolidWorks shows '': ['Close', 'Open\nComponents', 'Update\nAssembly', 'Update\nGraphics', ' ', 'Elapsed time: 0s', 'This file was last opened in 2 seconds.', 'For more information, view: ']
+fact    s5: the copy's assembly opened in 3.6 s; marked modified straight after the open: {'RangeBox_Layout.SLDPRT': False, 'RangeBox_Carrier_Carrier.SLDPRT': False, 'Gear_m1.25_N29.SLDPRT': False, 'Gear_m1.25_N13.SLDPRT': False, 'Ring_m1.25_N55.SLDPRT': False, 'Dog_m1.25_N17.SLDPRT': False, 'Sleeve_m1.25_N17.SLDPRT': False, 'Sprocket.SLDPRT': False, 'Housing.SLDPRT': False, 'RangeBox.SLDASM': False}
+ok      s5: SolidWorks found all 9 components and the layout in the copy, and the copy closed without saving (left []): elsewhere none
+ok      read RangeBox.xlsx: ok
+        warning Gears!F3: Planet: 13 teeth at 20° is below the undercut limit of 17: a generated gear would lose the bottom of its flanks, which this profile does not show. A profile shift of 0.24 or more would clear it.
+        warning Gears!F3: Planet: The tooth tip is 0.36 mm thick, under 0.3 × module (0.375 mm).
+        warning Gears!F7: RangeSlv: The teeth's tips, at 18.75 mm, are inside the base circle of 19.968 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!A3: Planet (13 teeth) is below the undercut limit, which is not modelled, and meshes Sun (29 teeth): the build checks interference only where the gears stand, so check Planet with Sun turning in SolidWorks.
+        warning Gears!A7: Output cannot reach RangeSlv: Input runs through RangeSlv's travel (from Sun at 10.5 to HighDog at −32), so Output would have to pass HighDog toward Z− or Sun toward Z+, each on Input.
+        warning Gears!A7: nothing keys RangeSlv to Output: its whole bore is teeth and no hub row is under it; add a hub on Output that a band of RangeSlv covers in every mode; as laid out none can, since its 10 mm face slides 10 mm (H −5 to L +5) and its places share no length.
+        warning Modes!A3: in N RangeSlv stands 0 mm from HighDog and 0 mm from LowDog, which it does not engage there: leave at least 0.625 mm (0.5 × module) each side.
+        5 shafts · 6 gears · 2 meshes; gate ''
+ok      s5: the copy reads as built from this workbook, its assembly in the copy
+ok      Excel opened RangeBox.xlsx with no dialog or repair: []
+fact    s5: inserted ['Sprocket-5'] with H active; mates {'UserAxis6': 1, 'UserAsm6': 1} (AddMate5 status)
+        UserAxis6: as made {'H': False, 'N': False, 'L': False}; set {'H': False, 'N': False, 'L': False}
+        UserAsm6: as made {'H': False, 'N': False, 'L': False}; set {'H': False, 'N': False, 'L': False}
+ok      s5: the components are named ['Sprocket-5']
+ok      s5: every new mate's flag reads back as set in every mode
+ok      s5: every mate on in H reads error code 0 after the user's work: []
+fact    s5 (a): the assembly's planes in tree order ['Front Plane', 'Top Plane', 'Right Plane']; its root component reads 'RangeBox'; top-level components ['RangeBox_Carrier_Carrier-1', 'RangeBox_Layout-1', 'Gear_m1.25_N13-1', 'Gear_m1.25_N29-1', 'Sleeve_m1.25_N17-1', 'Sprocket-4', 'Dog_m1.25_N17-1', 'Gear_m1.25_N13-3', 'Dog_m1.25_N17-2', 'Sprocket-2', 'Housing-1', 'Gear_m1.25_N13-2', 'Ring_m1.25_N55-1', 'Sprocket-1', 'Sprocket-3', 'Sprocket-5']
+fact    s5 (a) UserAxis1: MateCoincident type 0 alignment 0 flipped False variation (0.0, 0.0) values {'MateAlignment': 0} dimensions []
+        entity 0: layout: the layout's Input Axis by name; component 'RangeBox_Layout-1', reference feature type 5, feature 'Input Axis', persist {'part_level': '384a000001000000fffeff000000000018000000', 'length': 20, 'resolves_to': 'Input Axis', 'assembly_context_length': 88}
+        entity 1: feature: Sprocket-1's Gear Axis by its part-level reference; component 'Sprocket-1', reference feature type 5, feature 'Gear Axis', persist {'part_level': '384a000001000000fffeff000000000018000000', 'length': 20, 'resolves_to': 'Gear Axis', 'assembly_context_length': 74}
+fact    s5 (a) UserAxis2: MateCoincident type 0 alignment 0 flipped False variation (0.0, 0.0) values {'MateAlignment': 0} dimensions []
+        entity 0: layout: the layout's Output Axis by name; component 'RangeBox_Layout-1', reference feature type 5, feature 'Output Axis', persist {'part_level': '384a000001000000fffeff00000000001b000000', 'length': 20, 'resolves_to': 'Output Axis', 'assembly_context_length': 88}
+        entity 1: feature: Sprocket-2's Gear Axis by its part-level reference; component 'Sprocket-2', reference feature type 5, feature 'Gear Axis', persist {'part_level': '384a000001000000fffeff000000000018000000', 'length': 20, 'resolves_to': 'Gear Axis', 'assembly_context_length': 74}
+fact    s5 (a) UserLock1: MateLock type 16 alignment 2 flipped False variation (0.0, 0.0) values {} dimensions []
+        entity 0: whole: Gear_m1.25_N29-1 whole (reference type 0, reference component); component 'Gear_m1.25_N29-1', reference component type 0, feature None
+        entity 1: whole: Sprocket-1 whole (reference type 0, reference component); component 'Sprocket-1', reference component type 0, feature None
+fact    s5 (a) UserLock2: MateLock type 16 alignment 2 flipped False variation (0.0, 0.0) values {} dimensions []
+        entity 0: whole: Sleeve_m1.25_N17-1 whole (reference type 0, reference component); component 'Sleeve_m1.25_N17-1', reference component type 0, feature None
+        entity 1: whole: Sprocket-2 whole (reference type 0, reference component); component 'Sprocket-2', reference component type 0, feature None
+fact    s5 (a) UserLock3: MateLock type 16 alignment 2 flipped False variation (0.0, 0.0) values {} dimensions []
+        entity 0: whole: Sprocket-1 whole (reference type 0, reference component); component 'Sprocket-1', reference component type 0, feature None
+        entity 1: whole: Sprocket-3 whole (reference type 0, reference component); component 'Sprocket-3', reference component type 0, feature None
+fact    s5 (a) UserAxis4: MateCoincident type 0 alignment 0 flipped False variation (0.0, 0.0) values {'MateAlignment': 0} dimensions []
+        entity 0: layout: the layout's Input Axis by name; component 'RangeBox_Layout-1', reference feature type 5, feature 'Input Axis', persist {'part_level': '384a000001000000fffeff000000000018000000', 'length': 20, 'resolves_to': 'Input Axis', 'assembly_context_length': 88}
+        entity 1: feature: Sprocket-4's Gear Axis by its part-level reference; component 'Sprocket-4', reference feature type 5, feature 'Gear Axis', persist {'part_level': '384a000001000000fffeff000000000018000000', 'length': 20, 'resolves_to': 'Gear Axis', 'assembly_context_length': 74}
+fact    s5 (a) UserDist4: MateDistanceDim type 5 alignment 0 flipped False variation (0.0, 0.0) values {'Distance': 0.09, 'MateAlignment': 0, 'FlipDimension': False, 'MaximumDistance': 0.09, 'MinimumDistance': 0.09} dimensions [('D1', 0.09)]
+        entity 0: feature: Sprocket-4's Front Plane by its part-level reference; component 'Sprocket-4', reference feature type 4, feature 'Front Plane', persist {'part_level': '384a000001000000fffeff000000000002000000', 'length': 20, 'resolves_to': 'Front Plane', 'assembly_context_length': 74}
+        entity 1: feature: Sprocket-3's Front Plane by its part-level reference; component 'Sprocket-3', reference feature type 4, feature 'Front Plane', persist {'part_level': '384a000001000000fffeff000000000002000000', 'length': 20, 'resolves_to': 'Front Plane', 'assembly_context_length': 74}
+fact    s5 (a) UserAngle4: MatePlanarAngleDim type 6 alignment 0 flipped False variation (0.0, 0.0) values {'Angle': 1.5707963267948966, 'MateAlignment': 0, 'FlipDimension': False, 'MaximumAngle': 1.5707963267948966, 'MinimumAngle': 1.5707963267948966} dimensions [('D1', 1.5707963267948966)]
+        entity 0: feature: Sprocket-4's Top Plane by its part-level reference; component 'Sprocket-4', reference feature type 4, feature 'Top Plane', persist {'part_level': '384a000001000000fffeff000000000003000000', 'length': 20, 'resolves_to': 'Top Plane', 'assembly_context_length': 74}
+        entity 1: layout: the layout's Right Plane by name; component 'RangeBox_Layout-1', reference feature type 4, feature 'Right Plane', persist {'part_level': '384a000001000000fffeff000000000004000000', 'length': 20, 'resolves_to': 'Right Plane', 'assembly_context_length': 88}
+fact    s5 (a) UserAxis6: MateCoincident type 0 alignment 0 flipped False variation (0.0, 0.0) values {'MateAlignment': 0} dimensions []
+        entity 0: layout: the layout's Input Axis by name; component 'RangeBox_Layout-1', reference feature type 5, feature 'Input Axis', persist {'part_level': '384a000001000000fffeff000000000018000000', 'length': 20, 'resolves_to': 'Input Axis', 'assembly_context_length': 88}
+        entity 1: feature: Sprocket-5's Gear Axis by its part-level reference; component 'Sprocket-5', reference feature type 5, feature 'Gear Axis', persist {'part_level': '384a000001000000fffeff000000000018000000', 'length': 20, 'resolves_to': 'Gear Axis', 'assembly_context_length': 74}
+fact    s5 (a) UserAsm6: MateDistanceDim type 5 alignment 0 flipped False variation (0.0, 0.0) values {'Distance': 0.2, 'MateAlignment': 0, 'FlipDimension': False, 'MaximumDistance': 0.2, 'MinimumDistance': 0.2} dimensions [('D1', 0.2)]
+        entity 0: feature: Sprocket-5's Front Plane by its part-level reference; component 'Sprocket-5', reference feature type 4, feature 'Front Plane', persist {'part_level': '384a000001000000fffeff000000000002000000', 'length': 20, 'resolves_to': 'Front Plane', 'assembly_context_length': 74}
+        entity 1: assembly: the assembly's own (the root component); tree order 1; component 'RangeBox', reference feature type 4, feature 'Front Plane'
+ok      s5 (a): every user mate's definition read: unread none
+ok      s5 (f): the definitions and persistent references read marked no document: none
+fact    s5 (b): 13 feature entities; part-level reference read on 13, resolved in their part to ['Input Axis', 'Gear Axis', 'Output Axis', 'Gear Axis', 'Input Axis', 'Gear Axis', 'Front Plane', 'Front Plane', 'Top Plane', 'Right Plane', 'Input Axis', 'Gear Axis', 'Front Plane']; not read none
+propose PERSIST_REFERENCE_ROUTE = "GetPersistReference3 on the part-level feature, through the component's GetModelDoc2"  # s5 (b): 13 entities, each read and resolved to its own feature: True
+fact    s5 (c): the second assembly's components: {'RangeBox_Layout-1': 'inserted as RangeBox_Layout-1', 'Gear_m1.25_N29-1': 'inserted as Gear_m1.25_N29-1', 'Sleeve_m1.25_N17-1': 'inserted as Sleeve_m1.25_N17-1', 'Sprocket-1': 'inserted as Sprocket-1', 'Sprocket-2': 'inserted as Sprocket-2', 'Sprocket-3': 'inserted as Sprocket-3', 'Sprocket-4': 'inserted as Sprocket-4', 'Sprocket-5': 'inserted as Sprocket-5'}
+fact    s5 (c) UserAxis1: made again, AddMate5 status 1, entities by ["the layout's Input Axis by name", "Sprocket-1's Gear Axis by its part-level reference"]; code (0, False); definition differs nowhere
+fact    s5 (c) UserAxis2: made again, AddMate5 status 1, entities by ["the layout's Output Axis by name", "Sprocket-2's Gear Axis by its part-level reference"]; code (0, False); definition differs nowhere
+fact    s5 (c) UserLock1: made again, AddMate5 status 1, entities by ['Gear_m1.25_N29-1 whole (reference type 0, reference component)', 'Sprocket-1 whole (reference type 0, reference component)']; code (0, False); definition differs nowhere
+fact    s5 (c) UserLock2: made again, AddMate5 status 1, entities by ['Sleeve_m1.25_N17-1 whole (reference type 0, reference component)', 'Sprocket-2 whole (reference type 0, reference component)']; code (0, False); definition differs nowhere
+fact    s5 (c) UserLock3: made again, AddMate5 status 1, entities by ['Sprocket-1 whole (reference type 0, reference component)', 'Sprocket-3 whole (reference type 0, reference component)']; code (0, False); definition differs nowhere
+fact    s5 (c) UserAxis4: made again, AddMate5 status 1, entities by ["the layout's Input Axis by name", "Sprocket-4's Gear Axis by its part-level reference"]; code (0, False); definition differs nowhere
+fact    s5 (c) UserDist4: made again, AddMate5 status 1, entities by ["Sprocket-4's Front Plane by its part-level reference", "Sprocket-3's Front Plane by its part-level reference"]; code (0, False); definition differs nowhere
+fact    s5 (c) UserAngle4: made again, AddMate5 status 1, entities by ["Sprocket-4's Top Plane by its part-level reference", "the layout's Right Plane by name"]; code (0, False); definition differs nowhere
+fact    s5 (c) UserAxis6: made again, AddMate5 status 1, entities by ["the layout's Input Axis by name", "Sprocket-5's Gear Axis by its part-level reference"]; code (0, False); definition differs nowhere
+fact    s5 (c) UserAsm6: made again, AddMate5 status 1, entities by ["Sprocket-5's Front Plane by its part-level reference", "the assembly's own (the root component); tree order 1"]; code (0, False); definition differs nowhere
+fact    s5 (c): each component in the second assembly against where it stood in the first: {'Gear_m1.25_N29-1': 0.0, 'RangeBox_Layout-1': 0.0, 'Sleeve_m1.25_N17-1': 0.0, 'Sprocket-1': 0.0, 'Sprocket-2': 0.0, 'Sprocket-3': 0.0, 'Sprocket-4': 0.0, 'Sprocket-5': 0.0}
+propose MATE_REMAKE_FROM_DEFINITION_ROUTE = "AddMate5 from IMate2 Type, Alignment, Flipped and the definition's values"  # s5 (c): remade equal ['UserAxis1', 'UserAxis2', 'UserLock1', 'UserLock2', 'UserLock3', 'UserAxis4', 'UserDist4', 'UserAngle4', 'UserAxis6', 'UserAsm6'] of ['UserAngle4', 'UserAsm6', 'UserAxis1', 'UserAxis2', 'UserAxis4', 'UserAxis6', 'UserDist4', 'UserLock1', 'UserLock2', 'UserLock3']
+-- s5 (e)  a component's state per configuration, read without showing
+fact    s5 (e) component feature IsSuppressed2(swSpecifyConfiguration, names): {'H': False, 'N': False, 'L': False}; against the truth shown {'H': 2, 'N': 2, 'L': 0}: {'agrees': False, 'differ': {'L': (False, True)}}; marked nothing
+fact    s5 (e) IConfiguration.GetRootComponent3(True) per configuration, GetSuppression2: {'H': 2, 'N': 2, 'L': 0}; against the truth shown {'H': 2, 'N': 2, 'L': 0}: {'agrees': True, 'differ': {}}; marked ['RangeBox.SLDASM']
+FAIL    s5 (f): the unshown state reads marked no document: ['RangeBox.SLDASM']
+propose COMPONENT_STATE_PER_CONFIGURATION_ROUTE = None  # s5 (e): agreeing and marking nothing: none
+fact    s5: the second assembly closed unsaved before (d): left []
+-- s5 (d)  the assembly opened read-only, already open and then not open
+NEW     OpenDoc6 with swOpenDocOptions_ReadOnly (options 3)
+fact    s5 (d) already open: {'returned': 'a document', 'errors': 0, 'warnings': 128, 'extra': None, 'read_only': False, 'save_flag': True, 'title_is_the_runs': True}
+fact    s5 (d): the copy closed without saving to open it again: left []
+DIALOG  SolidWorks shows '': ['Close', 'Open\nComponents', 'Update\nAssembly', 'Update\nGraphics', 'Opening File: C:\\Use...\\out\\s5\\RangeBox_Layout.SLDPRT', 'Elapsed time: 0s', 'This file was last opened in 2 seconds.', 'For more information, view: ']
+fact    s5 (d) not open: {'returned': 'a document', 'errors': 0, 'warnings': 0, 'extra': None, 'read_only': True, 'save_flag': False, 'title_is_the_runs': True}
+propose OPEN_READ_ONLY_DIALOG = False  # s5 (d): already open and not open, no dialog
+propose OPEN_READ_ONLY_ROUTE = 'OpenDoc6(path, assembly, Silent | ReadOnly)'  # s5 (d): not open {'returned': 'a document', 'errors': 0, 'warnings': 0, 'extra': None, 'read_only': True, 'save_flag': False, 'title_is_the_runs': True}, already open {'returned': 'a document', 'errors': 0, 'warnings': 128, 'extra': None, 'read_only': False, 'save_flag': True, 'title_is_the_runs': True}
+ok      s5, the copy's end: s5 ends clean: every document of it closed in SolidWorks (left []), Excel's workbook closed (['RangeBox.xlsx']), no open document by a file name it holds ([])
+time    s5: 86 s; 1 failed; SolidWorks 1.04 GB private, 9.88 GB free
+== p2  a user sub-assembly inserted by its file (opened first), a mate to its leaf read; then one with a missing reference among its own files: a 'find file' dialog is the finding. Last: it may leave the session unusable
+NEW     AddComponent5 of an assembly file (the app inserts parts only; the ledger's 'not open returns None' is for a part), IComponent2.GetChildren on it, a mate to a leaf through GetCorresponding, and OpenDoc6 of an assembly whose part file is missing
+fact    p2: UserSub.SLDASM (P2Sprocket) and UserSubMissing.SLDASM made and closed (left [], []); P2Missing.SLDPRT deleted from disk
+copy    rangebox.master -> p2: 15 files, mtimes kept
+        RangeBox.xlsx's record: 18 path(s) put onto the copy: ['record.workbook', 'record.parts[0].path', 'record.parts[1].path', 'record.parts[2].path', 'record.parts[3].path', 'record.parts[4].path', 'record.assembly', 'record.gearbox.layout', 'record.gearbox.assembly', 'record.gearbox.components[0].part', 'record.gearbox.components[1].part', 'record.gearbox.components[2].part', 'record.gearbox.components[3].part', 'record.gearbox.components[4].part', 'record.gearbox.components[5].part', 'record.gearbox.components[6].part', 'record.gearbox.components[7].part', 'record.gearbox.carriers[0].path']
+        Dog_m1.25_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.25_N13.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.25_N29.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Ring_m1.25_N55.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Sleeve_m1.25_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+ok      p2: the copy's record is valid: owner ('ours', ''); left on the master []; missing in the copy []; clear_saved dropped nothing (unsaved, mismatched ([], [])); the read's digest equals the record's
+fact    p2: the copy's assembly opened in 3.2 s; marked modified straight after the open: {'RangeBox_Layout.SLDPRT': False, 'RangeBox_Carrier_Carrier.SLDPRT': False, 'Gear_m1.25_N29.SLDPRT': False, 'Gear_m1.25_N13.SLDPRT': False, 'Ring_m1.25_N55.SLDPRT': False, 'Dog_m1.25_N17.SLDPRT': False, 'Sleeve_m1.25_N17.SLDPRT': False, 'RangeBox.SLDASM': False}
+ok      p2: SolidWorks found all 9 components and the layout in the copy, and the copy closed without saving (left []): elsewhere none
+ok      read RangeBox.xlsx: ok
+        warning Gears!F3: Planet: 13 teeth at 20° is below the undercut limit of 17: a generated gear would lose the bottom of its flanks, which this profile does not show. A profile shift of 0.24 or more would clear it.
+        warning Gears!F3: Planet: The tooth tip is 0.36 mm thick, under 0.3 × module (0.375 mm).
+        warning Gears!F7: RangeSlv: The teeth's tips, at 18.75 mm, are inside the base circle of 19.968 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!A3: Planet (13 teeth) is below the undercut limit, which is not modelled, and meshes Sun (29 teeth): the build checks interference only where the gears stand, so check Planet with Sun turning in SolidWorks.
+        warning Gears!A7: Output cannot reach RangeSlv: Input runs through RangeSlv's travel (from Sun at 10.5 to HighDog at −32), so Output would have to pass HighDog toward Z− or Sun toward Z+, each on Input.
+        warning Gears!A7: nothing keys RangeSlv to Output: its whole bore is teeth and no hub row is under it; add a hub on Output that a band of RangeSlv covers in every mode; as laid out none can, since its 10 mm face slides 10 mm (H −5 to L +5) and its places share no length.
+        warning Modes!A3: in N RangeSlv stands 0 mm from HighDog and 0 mm from LowDog, which it does not engage there: leave at least 0.625 mm (0.5 × module) each side.
+        5 shafts · 6 gears · 2 meshes; gate ''
+ok      p2: the copy reads as built from this workbook, its assembly in the copy
+ok      Excel opened RangeBox.xlsx with no dialog or repair: []
+DIALOG  SolidWorks shows '': ['Close', 'Opened -1\nComponents', 'Updating\nAssembly', 'Update\nGraphics', 'Elapsed time: 0s', 'This file was last opened in 1 seconds.', 'For more information, view: ', 'Performance Evaluation']
+DIALOG  SolidWorks shows '': ['Close', 'Open\nComponents', 'Update\nAssembly', 'Update\nGraphics', ' ', 'Elapsed time: 0s', 'This file was last opened in 27 seconds.', 'For more information, view: ']
+fact    p2 insert: {'inserted': 'UserSub-1', 'children': ['UserSub-1/P2Sprocket-1'], 'flag': True, 'mate': {'status': 1, 'made': ['Coincident1'], 'info': {'type': 0, 'components': ['RangeBox_Layout-1', 'UserSub-1/P2Sprocket-1']}, 'flags': {'H': False, 'N': False, 'L': False}, 'code': 0}}
+propose SUBASSEMBLY_INSERT_ROUTE = 'OpenDoc6 the sub-assembly, then AddComponent5'  # p2: UserSub-1, children ['UserSub-1/P2Sprocket-1']
+propose M1_READS_SUBASSEMBLY_LEAF = True  # p2: the leaf mate's mate_info {'type': 0, 'components': ['RangeBox_Layout-1', 'UserSub-1/P2Sprocket-1']}
+DIALOG  SolidWorks shows '': ['Close', 'Opened -1\nComponents', 'Updating\nAssembly', 'Update\nGraphics', 'Post load updating', 'Elapsed time: 0s', 'This file was last opened in 1 seconds.', 'For more information, view: ']
+fact    p2 missing reference, opened: {'returned': 'a document', 'errors': 2, 'warnings': 0, 'extra': None, 'components': [{'name': 'P2Missing-1', 'suppression': 0, 'path': 'C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9c-probes-sw2026-20261117-061102\\out\\p2-parts\\P2Missing.SLDPRT', 'document': None}], 'save_flag': True, 'settled_s': 10.0, 'save_flag_after_settle': True}; no dialog in the open or the 10.0 s after it
+fact    p2 missing reference, inserted: {'inserted': 'UserSubMissing-1', 'host_flag_before': True, 'children': [{'name': 'UserSubMissing-1/P2Missing-1', 'suppression': 0, 'path': 'C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9c-probes-sw2026-20261117-061102\\out\\p2-parts\\P2Missing.SLDPRT', 'document': None}], 'host_flag': True, 'settled_s': 10.0}; no dialog in the insert or the 10.0 s after it
+propose SUBASSEMBLY_MISSING_REFERENCE_DIALOG = False  # p2: a dialog in neither step of the open and the insert; open {'returned': 'a document', 'errors': 2, 'warnings': 0, 'extra': None, 'save_flag': True, 'settled_s': 10.0, 'save_flag_after_settle': True}, its components [{'name': 'P2Missing-1', 'suppression': 0, 'path': 'C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9c-probes-sw2026-20261117-061102\\out\\p2-parts\\P2Missing.SLDPRT', 'document': None}]; insert {'inserted': 'UserSubMissing-1', 'host_flag_before': True, 'children': [{'name': 'UserSubMissing-1/P2Missing-1', 'suppression': 0, 'path': 'C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9c-probes-sw2026-20261117-061102\\out\\p2-parts\\P2Missing.SLDPRT', 'document': None}], 'host_flag': True, 'settled_s': 10.0}
+ok      p2, the copy's end: p2 ends clean: every document of it closed in SolidWorks (left []), Excel's workbook closed (['RangeBox.xlsx']), no open document by a file name it holds ([])
+time    p2: 51 s; 0 failed; SolidWorks 1.14 GB private, 9.85 GB free
+excel   quit our own Excel
+close   left of ours []; stray []; lost []; SolidWorks 0.99 GB private, 10.04 GB free
+dialogs progress boxes seen {'Calculating Interference Detection': 0, 'Updating...': 0, 'Opening': 4, 'Loading...': 0}; other windows the watch logged: 1
+awake   display and system released (previous state -0x7ffffffd)
+result  written to C:\Users\M0obo\Documents\GearGeneratorProbe\w9c-probes-sw2026-20261117-061102\w9c-probes-20261117-061130.json; masters kept {'rangebox': 'C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9-s0-20261116-045513\\out\\rangebox.master', 'setup': 'C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9a-final-sw2026-20261117-023433\\out\\setup.master', 'reducer': 'C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9a-final-sw2026-20261117-023433\\out\\reducer.master'}
+noted   SolidWorks' notification box came up while no SolidWorks call was in progress (exempt by the coordinator's ruling; nothing answers it)
+done    1 failed: ["s5 (f): the unshown state reads marked no document: ['RangeBox.SLDASM']"]; 1 noted; 0 STOP(s), a hung worker included: []
