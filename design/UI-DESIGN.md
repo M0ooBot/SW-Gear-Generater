@@ -1495,7 +1495,12 @@ made again.*); the way back to reusing a part made new only because of the user
 (the value and cell from the record's K11 entry, or a save); a mate the record
 read before its entities were kept, said as *may*; a component lightweight
 (*its Lock3 is made again only if you set it resolved in SolidWorks before you
-press*, said once, never also as final) or suppressed as read; a component
+press*, said once, never also as final) or suppressed as read (with the mates
+read unread on it in the same sentence: *… so UserAxis9 on it could not be
+read: show a mode where Housing-1 is resolved before you press*); a mate on a
+plane of the assembly itself, which Gear Generator does not read beside a
+lightweight component (*made again only if you set Sprocket-1 resolved*); a
+component
 whose file's configurations the record does not keep, *carried only if its file
 has one configuration*, while a configuration finding is unset; **an old
 assembly closed when you press** (the window cannot know, so it is said as

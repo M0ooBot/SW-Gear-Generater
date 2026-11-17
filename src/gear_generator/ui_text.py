@@ -5144,6 +5144,12 @@ def carry_named_clause(named, *, name: str = "the new revision", old: str = "the
     if why == sb.WHY_NOT_CARRIED:
         return f"{item} joins {s[0]}, which is not carried"
     if why == sb.WHY_UNREAD:
+        cause = s[1]
+        if cause == sb.CAUSE_SUPPRESSED:
+            return f"{item} is on {_suppressed_where(s[2], s[3], old)}, so it could not be read and is not made again"
+        if cause == sb.CAUSE_BESIDE_LIGHTWEIGHT:
+            return (f"{item} is on a plane of {old} itself, which Gear Generator does not read while {s[2]} is "
+                    "lightweight in it, so it is not made again")
         return f"SolidWorks would not describe {item} wholly" + (f" ({s[0]})" if s[0] else "")
     if why == sb.WHY_LIGHTWEIGHT:
         return f"{item} is on {s[0]}, which was lightweight in {old}, so what it joins could not be read"
@@ -5210,6 +5216,7 @@ def _named_sentences(named, *, name: str, old: str, refs: Optional[List[str]] = 
     from . import swbuild as sb
     groups: Dict[Tuple[str, str, str, str], List] = {}
     joins: Dict[str, List[str]] = {}
+    causes: Dict[Tuple[str, str, str], List[str]] = {}       # A's sixth round: (cause, component, mode) -> mates
     out: List[str] = []
     for n in named:
         s = _subjects(n)
@@ -5217,6 +5224,9 @@ def _named_sentences(named, *, name: str, old: str, refs: Optional[List[str]] = 
             groups.setdefault((s[0], s[1], s[2], s[3] if s[0] in ("face", "edge", "vertex") else ""), []).append(n)
         elif n.why == sb.WHY_NOT_CARRIED and n.what == "mate":
             joins.setdefault(s[0], []).append(n.item)
+        elif n.why == sb.WHY_UNREAD and s[1] in (sb.CAUSE_SUPPRESSED,
+                                                 sb.CAUSE_BESIDE_LIGHTWEIGHT):
+            causes.setdefault((s[1], s[2], s[3]), []).append(n.item)
         elif n.why != sb.WHY_OLD_UNREAD:                     # said once, by the sentence for nothing read
             out.append(_with_verdict(carry_named_clause(n, name=name, old=old), n.what))
     lead: List[str] = []
@@ -5236,7 +5246,23 @@ def _named_sentences(named, *, name: str, old: str, refs: Optional[List[str]] = 
         one = len(mates) == 1
         lead.append(f"{_and(mates)} {'joins' if one else 'join'} {component}, which is not carried, so "
                     f"{'it is' if one else 'they are'} not made again.")
+    for (cause, component, mode), mates in causes.items():
+        one = len(mates) == 1
+        if cause == sb.CAUSE_SUPPRESSED:
+            lead.append(f"{_and(mates)} {'is' if one else 'are'} on {_suppressed_where(component, mode, old)}, so "
+                        f"{'it' if one else 'they'} could not be read and {'is' if one else 'are'} not made again.")
+        else:
+            lead.append(f"{_and(mates)} {'is' if one else 'are'} on a plane of {old} itself, which Gear Generator "
+                        f"does not read while {component} is lightweight in it, so {'it is' if one else 'they are'} "
+                        "not made again.")
     return lead + out
+
+
+def _suppressed_where(component: str, mode: str, old: str) -> str:
+    """*Sprocket-9, which is suppressed in H, the mode RangeBox.SLDASM showed* (with no modes, *… suppressed in
+    RangeBox.SLDASM*)."""
+    return (f"{component}, which is suppressed in {mode}, the mode {old} showed" if mode
+            else f"{component}, which is suppressed in {old}")
 
 
 def _parts_left(stays, name: str, why_new: Mapping[str, str]) -> Tuple[List[str], List[Tuple[str, str]]]:
@@ -5404,6 +5430,8 @@ def carry_sentence(fore, again) -> str:
     at = read_time(entry.read_at)
     plan = fore.plan
     carries = plan is None or bool(plan.components or plan.mates)
+    on_suppressed: Dict[str, List[str]] = {}         # B3: component -> its mates unread for it, said with it
+    beside_light: Dict[str, List[str]] = {}          # B3: lightweight component -> the assembly's own planes' mates
     if plan is None:
         items = _yours([c.name for c in entry.components], 0, _mate_words([m.name for m in entry.mates]))
         texts.append(f"As read at {at}, {old} held your {_and(items)}: the press reads it again first and carries "
@@ -5434,8 +5462,18 @@ def carry_sentence(fore, again) -> str:
         # The demonstration's review (item 1): what only the inventory's silence names is said as *may*, never as fact.
         silent_ratio, silent_axis = _foresight_silences(fore, entry, plan)
         axis_items = {m for ms in silent_axis.values() for m in ms}          # B1: by mate, not by gear
+        # B3: a mate unread for its component suppressed as read is said with that component's own sentence, as one
+        # thought; one on the assembly's own plane beside a lightweight component, with what lets it be read.
+        for n in plan.named:
+            cause = (n.subjects[1] if n.why == sb.WHY_UNREAD and len(n.subjects) > 2 else "")
+            if cause == sb.CAUSE_SUPPRESSED and any(c.name == n.subjects[2] and c.state == 0
+                                                    for c in entry.components):
+                on_suppressed.setdefault(str(n.subjects[2]), []).append(n.item)
+            elif cause == sb.CAUSE_BESIDE_LIGHTWEIGHT:
+                beside_light.setdefault(str(n.subjects[2]), []).append(n.item)
+        caused = {m for ms in list(on_suppressed.values()) + list(beside_light.values()) for m in ms}
         named = [n for n in plan.named if n.item not in unknown and n.item not in silent_ratio
-                 and n.item not in axis_items
+                 and n.item not in axis_items and n.item not in caused
                  and not (n.why == sb.WHY_LIGHTWEIGHT and n.subjects and str(n.subjects[0]) in light)]
         texts += _named_sentences(named, name=name, old=old, refs=refs)
         texts += _unknown_entities(fore, entry, unknown)
@@ -5446,7 +5484,12 @@ def carry_sentence(fore, again) -> str:
             refs.extend(_finding_ref(f) for f in fore.configuration if _finding_ref(f) not in refs)
             texts.append(f"{_and(fore.assumed)} {'is' if one else 'are'} carried only if "
                          f"{'its file has' if one else 'each file has'} one configuration.")
-    texts += _component_states(entry, old)
+    texts += _component_states(entry, old, on_suppressed)
+    for light, mates in beside_light.items():
+        one = len(mates) == 1
+        texts.append(f"{_and(mates)} {'is' if one else 'are'} on a plane of {old} itself, which Gear Generator does "
+                     f"not read while {light} is lightweight in it: {'it is' if one else 'they are'} made again only "
+                     f"if you set {light} resolved in SolidWorks before you press.")
     left, parts = _parts_left(stays, name, fore.why_new)
     texts.append(_features_question(stays, name, fore.why_new))
     texts += _reuse_advice(fore, parts, again)
@@ -5568,10 +5611,12 @@ def _unknown_entities(fore, entry, unknown: Set[str]) -> List[str]:
     return out
 
 
-def _component_states(entry, old: str) -> List[str]:
+def _component_states(entry, old: str, unread: Optional[Mapping[str, Sequence[str]]] = None) -> List[str]:
     """§9.1's lightweight and suppressed components, as read (``UserComponentEntry.state``: 0 suppressed, 1 and 4
-    lightweight), each said once as the condition it is (M5)."""
+    lightweight), each said once as the condition it is (M5); a suppressed one with the mates ``unread`` for it (B3:
+    ``CAUSE_SUPPRESSED``) in the same sentence."""
     out = []
+    unread = unread or {}
     for c in entry.components:
         mates = [m.name for m in entry.mates if any(w == "user" and n == c.name for w, n in m.touches)]
         if c.state in (1, 4):
@@ -5584,6 +5629,12 @@ def _component_states(entry, old: str) -> List[str]:
                            "only if you set it resolved in SolidWorks before you press.")
             else:
                 out.append(f"{c.name} was lightweight as read: it is carried resolved, and {too}.")
+        elif c.state == 0 and unread.get(c.name):
+            ms = list(unread[c.name])
+            one = len(ms) == 1
+            out.append(f"{c.name} was suppressed in the mode {old} showed, as read, so {_and(ms)} on it could not be "
+                       f"read: show a mode where {c.name} is resolved before you press, or {c.name} may not be carried "
+                       f"and {ms[0] + ' is' if one else 'they are'} not made again.")
         elif c.state == 0:
             out.append(f"{c.name} was suppressed in the mode {old} showed, as read: show a mode where it is resolved "
                        "before you press, or it may not be carried.")

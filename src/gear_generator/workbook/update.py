@@ -3316,7 +3316,7 @@ def recorded_old_work(record: Optional[LinkRecord]) -> Optional[swbuild.OldWork]
     mates = []
     for m in entry.mates:
         if m.entities:
-            entities = tuple(swbuild.OldEntity(what=e[0], owner=e[1], kind=e[2], feature=e[3]) for e in m.entities)
+            entities = tuple(_recorded_entity(e, entry) for e in m.entities)
         else:
             kind = swbuild.ENTITY_WHOLE if m.kind == swbuild.USER_LOCK else swbuild.ENTITY_UNREAD
             entities = tuple(swbuild.OldEntity(what=t[0], owner=t[1], kind=kind,
@@ -3331,6 +3331,25 @@ def recorded_old_work(record: Optional[LinkRecord]) -> Optional[swbuild.OldWork]
 
 
 UNKNOWN_ENTITY = "not on record"
+
+
+def _recorded_entity(e: Sequence[str], entry: store.UserWorkEntry) -> swbuild.OldEntity:
+    """One recorded entity ``(what, owner, kind, feature)`` as an :class:`swbuild.OldEntity`, with the cause of its
+    being unread where the inventory knows it, as package A's worker gives it (its sixth round): on a component of the
+    user's suppressed as read, ``CAUSE_SUPPRESSED`` (the mode showing not kept, so ``""``); the assembly's own entity
+    while a component read lightweight, ``CAUSE_BESIDE_LIGHTWEIGHT`` (the first such, as the worker names it)."""
+    what, owner, kind, feature = (list(e) + ["", "", "", ""])[:4]
+    states = {c.name: c.state for c in entry.components}
+    light = [c.name for c in entry.components if c.state in (1, 4)]
+    cause, parts, unread = "", (), ""
+    if what == swbuild.UNREAD_ENTITY and light:
+        cause, parts = swbuild.CAUSE_BESIDE_LIGHTWEIGHT, (light[0],)
+        unread = "the assembly's own plane is not read while a component of it is lightweight"
+    elif what == swbuild.USER and states.get(owner) == 0 and kind in (swbuild.ENTITY_UNREAD, ""):
+        cause, parts = swbuild.CAUSE_SUPPRESSED, (owner, "")
+        unread = "a component it joins is suppressed in the mode the old assembly showed"
+    return swbuild.OldEntity(what=what, owner=owner, kind=kind, feature=feature, unread=unread, cause=cause,
+                             cause_parts=parts)
 
 
 def _follow_carry(rec: LinkRecord, plan: UpdatePlan, result: GearboxUpdate, out: Finished,

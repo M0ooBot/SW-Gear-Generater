@@ -253,9 +253,36 @@ The seven printed states below are unchanged by this round.
   (else the plan's reason, said as fact); the in-error clause in the reviewer's words: *Lock3 was in error in
   RangeBox.SLDASM as read; made again, it is carried if it reads no error or the one it had, and not if it keeps a gear
   from turning.*
-- **B3** waits for A's coded cause.
+- **B3** waited for A's coded cause: below.
 
 The seven printed states below are unchanged by this round.
+
+## B3: the unread reasons' coded causes (A's `5d51640`)
+
+- **The result.** `WHY_UNREAD` with `CAUSE_SUPPRESSED` (component, mode) says *UserAxis9 is on Sprocket-9, which is
+  suppressed in H, the mode RangeBox.SLDASM showed, so it could not be read and is not made again.*; with no modes,
+  *… which is suppressed in RangeBox.SLDASM, so …*. With `CAUSE_BESIDE_LIGHTWEIGHT` (component) it is Gear Generator's
+  rule, said so: *UserAsm6 is on a plane of RangeBox.SLDASM itself, which Gear Generator does not read while
+  SprocketLight-1 is lightweight in it, so it is not made again.* Mates of one cause, component and mode group into
+  one sentence (*Lock1 and UserAxis9 are on Sprocket-1, which is suppressed in 2H, …, so they could not be read and are
+  not made again.*), as a component not carried groups its mates. No cause: *SolidWorks would not describe … wholly
+  (…)* stands. The worker's clause is not shown where the cause is worded.
+- **The question.** `recorded_old_work` gives a recorded entity the worker's cause where the inventory knows it: on a
+  component of the user's suppressed as read (state 0) with its kind unread or empty, `CAUSE_SUPPRESSED` with mode
+  `""` (the inventory does not keep the mode showing); the assembly's own entity while a component read lightweight,
+  `CAUSE_BESIDE_LIGHTWEIGHT` with the first such. A schema 9 inventory's entities (no kinds) take no cause and stay
+  *may*. The suppressed component's own advice takes its mates, one thought: *Housing-1 was suppressed in the mode
+  RangeBox.SLDASM showed, as read, so UserAxis9 on it could not be read: show a mode where Housing-1 is resolved before
+  you press, or Housing-1 may not be carried and UserAxis9 is not made again.* (several: *… and they are not made
+  again.*). Beside a lightweight component the question says what the user can change: *UserAsm6 is on a plane of
+  RangeBox.SLDASM itself, which Gear Generator does not read while Sprocket-1 is lightweight in it: it is made again
+  only if you set Sprocket-1 resolved in SolidWorks before you press.* Each such mate is named in one sentence only.
+- **Fragments.** None the demonstration script matches changed: a suppressed component with no unread mate keeps
+  *… as read: show a mode where it is resolved before you press, or it may not be carried.*
+- Tests: four on the result's exact strings, one end to end on A's worker on the fake (`_tc_again`, Sprocket-1
+  suppressed in 2H with Lock1 and UserAxis9), two on the question's.
+
+The seven printed states below are unchanged by B3 (none has a suppressed component or a plane of the assembly).
 
 ## The strings, in full
 

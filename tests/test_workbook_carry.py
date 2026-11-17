@@ -159,6 +159,8 @@ from gear_generator.workbook import gearbox, layout, update  # noqa: E402
 from test_workbook_in_place_round_trip import Desk, users_work  # noqa: E402,F401
 from test_workbook_update import gears  # noqa: E402
 from workbook_fixtures import range_box  # noqa: E402
+from test_swbuild import mode_findings  # noqa: E402,F401 - a fixture: the findings a build with modes reads (A's)
+from test_swbuild_carry import every_gate  # noqa: E402,F401 - a fixture: every W9d gate on its 2026 value (A's)
 
 
 @pytest.fixture
@@ -1338,3 +1340,97 @@ def test_the_demonstrations_question_names_each_mate_in_exactly_one_sentence(des
         found = [x for x in sentences if re.search(rf"\b{re.escape(mate)}\b", x)]
         # Each mate named once: in its own sentence, or counted in "makes your N mates again" and named nowhere.
         assert len(found) == 1 or (not found and "mates again" in said), (mate, found)
+
+
+# -- B3: the unread reasons' coded causes (package A's 5d51640) ------------------------------------------------------
+
+def _unread(item, *subjects):
+    return swbuild.CarryNamed(item, "mate", swbuild.WHY_UNREAD, subjects)
+
+
+SUPPRESSED_CLAUSE = "a component it joins is suppressed in the mode the old assembly showed"
+
+
+def test_a_mate_unread_on_a_suppressed_component_says_so_with_the_mode_showing():
+    said = _status(_done(named=[_unread("UserAxis9", SUPPRESSED_CLAUSE, swbuild.CAUSE_SUPPRESSED, "Sprocket-9", "H")]))
+    assert ("UserAxis9 is on Sprocket-9, which is suppressed in H, the mode RangeBox.SLDASM showed, so it could not "
+            "be read and is not made again.") in said, said
+    assert "would not describe" not in said and SUPPRESSED_CLAUSE not in said
+
+
+def test_with_no_modes_the_suppressed_cause_has_no_mode_clause_and_mates_group_by_component():
+    named = [_unread(m, SUPPRESSED_CLAUSE, swbuild.CAUSE_SUPPRESSED, "Sprocket-9", "") for m in ("Lock1", "UserAxis9")]
+    said = _status(_done(named=named))
+    assert ("Lock1 and UserAxis9 are on Sprocket-9, which is suppressed in RangeBox.SLDASM, so they could not be read "
+            "and are not made again.") in said, said
+    assert said.count("Sprocket-9") == 1
+
+
+def test_a_plane_of_the_assembly_beside_a_lightweight_component_is_gear_generators_rule():
+    said = _status(_done(named=[_unread("UserAsm6", "the assembly's own plane is not read while a component of it is "
+                                        "lightweight", swbuild.CAUSE_BESIDE_LIGHTWEIGHT, "SprocketLight-1")]))
+    assert ("UserAsm6 is on a plane of RangeBox.SLDASM itself, which Gear Generator does not read while "
+            "SprocketLight-1 is lightweight in it, so it is not made again.") in said, said
+    assert "SolidWorks" not in said.split("UserAsm6", 1)[1].split(".")[0]
+
+
+def test_an_unread_reason_with_no_cause_stays_as_it_was():
+    said = _status(_done(named=[_unread("UserOdd", "SolidWorks would not say what kind of entity it is")]))
+    assert ("SolidWorks would not describe UserOdd wholly (SolidWorks would not say what kind of entity it is), so it "
+            "is not made again.") in said, said
+
+
+def test_the_causes_from_package_as_worker_on_the_fake_are_worded(monkeypatch, every_gate, mode_findings):
+    """End to end on A's worker (its sixth round): Sprocket-1 suppressed in 2H, the mode TransferCase showed, takes its
+    lock and a mate on its axis with it, in one sentence (the old file named as the result has it)."""
+    import test_swbuild_carry as a
+    every_gate()
+
+    def tweak(fake):
+        fake.user_mate(a.TC_ASM, "UserAxis9", kind="coincident", a=("Sprocket-1", "Sprocket Axis"),
+                       b=("gear1-1", "Gear Axis"))
+        fake.component_states["Sprocket-1"] = 0
+    done, _ = a._tc_again(monkeypatch, None, tweak)
+    said = _status(done)
+    assert ("Lock1 and UserAxis9 are on Sprocket-1, which is suppressed in 2H, the mode TransferCase.SLDASM showed, "
+            "so they could not be read and are not made again.") in said, said
+    assert "would not describe" not in said
+
+
+def test_the_question_says_a_mate_on_a_suppressed_component_with_that_component_as_one_thought(desk, carrying):
+    """B3 in the question: the inventory knows the component suppressed as read and the mate's entity on it read
+    unread, so the mate goes into the component's own advice, named once; the mode showing is not on record."""
+    import re
+    record = copy.deepcopy(desk.record)
+    entry = record.gearbox.user_work
+    entry.components[1].state = 0
+    entry.mates.append(store.UserMateEntry("UserAxis9", "other", 0, [["user", "Housing-1"], ["app", "Sun"]], ["H"],
+                                           entities=[["user", "Housing-1", "unread", ""],
+                                                     ["app", "Sun", "feature", "Gear Axis"]]))
+    said = _said(desk, record=record)
+    assert ("Housing-1 was suppressed in the mode RangeBox.SLDASM showed, as read, so UserAxis9 on it could not be "
+            "read: show a mode where Housing-1 is resolved before you press, or Housing-1 may not be carried and "
+            "UserAxis9 is not made again.") in said, said
+    sentences = re.split(r"(?<=[.)])\s+(?=[A-Z(])", said)
+    assert len([x for x in sentences if "UserAxis9" in x]) == 1
+    assert "would not describe" not in said and said.count("Housing-1 was") == 1
+    entry.mates.append(store.UserMateEntry("UserDist9", "other", 5, [["user", "Housing-1"], ["app", "Sun"]], ["H"],
+                                           entities=[["user", "Housing-1", "", ""], ["app", "Sun", "plane", "plane1"]]))
+    assert ("Housing-1 was suppressed in the mode RangeBox.SLDASM showed, as read, so UserAxis9 and UserDist9 on it "
+            "could not be read: show a mode where Housing-1 is resolved before you press, or Housing-1 may not be "
+            "carried and they are not made again.") in _said(desk, record=record)
+
+
+def test_the_question_says_a_plane_of_the_assembly_beside_a_lightweight_component_and_what_lets_it_be_read(
+        desk, carrying):
+    record = copy.deepcopy(desk.record)
+    entry = record.gearbox.user_work
+    entry.components[0].state = 1
+    entry.mates.append(store.UserMateEntry("UserAsm6", "other", 5, [["unread", ""], ["user", "Housing-1"]], ["H"],
+                                           entities=[["unread", "", "unread", ""],
+                                                     ["user", "Housing-1", "plane", "plane1"]]))
+    said = _said(desk, record=record)
+    assert ("UserAsm6 is on a plane of RangeBox.SLDASM itself, which Gear Generator does not read while Sprocket-1 is "
+            "lightweight in it: it is made again only if you set Sprocket-1 resolved in SolidWorks before you press."
+            ) in said, said
+    assert said.count("UserAsm6") == 1 and "would not describe" not in said
