@@ -45,14 +45,18 @@ and a cell such as `5, 5` is the read's own "must be a number" error, which name
 - `schema.KINDS` gains `hub` (after `dog`); `gears.WORKBOOK_KINDS["hub"] = clutch.HubKind()`: an external spline ring
   as a dog is (the spur plan, the row's Bore), kind word `hub`; part stem `Hub_m1.25_N17`
   (`spec.CLUTCH_WORDS`); the strip refuses its part as it refuses a sleeve's or dog's.
-- **A hub's sleeve** (`modes.hub_sleeve(spec, gear)`): the sleeve on the hub's shaft whose bands, over its
-  positions, overlap the hub; the first sleeve on that shaft when none does.
+- **A hub's sleeve** (`modes.hub_sleeve(spec, gear)`): the first sleeve on the hub's shaft, in Gears-sheet order, a
+  band of which overlaps the hub at one of its positions; the first sleeve on that shaft when none does. A hub keys
+  that one sleeve (§7).
 - **Errors**, each at its cell (`modes.row_errors` for the rows, `modes.hub_errors` per mode): Slides on a hub (Slides);
   a hub on Meshes (Meshes); a hub on a shaft with no sleeve (Kind); a hub whose teeth, module or pressure angle are
   not its sleeve's (Teeth: it carries the sleeve on those teeth); a hub on a carrier's, a turned or a fixed shaft, as
   a sleeve or dog there; and **in every mode a band of its sleeve covers it whole, or it the band** (the narrower
   covered), else an error at that mode's Modes cell (the hub's Gears cell with no Modes rows).
-- A hub engages nothing: engagement looks at dogs only, and a hub is not one.
+- A hub engages nothing. A band of a sleeve on *another* shaft over a hub, whole or in part, is an error at that
+  mode's Modes cell (the coordinator's ruling on the review's must-fix 1): a clash, not a coupling; the sentence says
+  to move the hub or the sleeve's position, or to make the hub a dog if a coupling is meant. A hub under that
+  sleeve's relief is clean, held to the running clearance as a dog is.
 - **Anchor (J9)**: on a shaft with sliders, `motion._sliding_shaft` takes a hub before any other gear that does not
   slide, so the hub is the shaft's anchor (`Hub on Output Axis`, `Hub along Output`) and the sleeve gets
   `RangeSlv splined to Hub`. A shaft with no hub keeps W8's anchor.
@@ -128,3 +132,15 @@ planes' offsets. If any of these fail, it is §5's STOP.
 
 The W8 fixtures each gain exactly three warnings (§3): reach on RangeSlv, the hub on RangeSlv and on ModeSlv. Their
 pins move by three.
+
+## 7. The coordinator's rulings (after `W9B-REVIEW.md`; the user may overrule each)
+
+- **One band typed and the other blank is an error: a one-band sleeve is not built.** A single band, teeth at one
+  end and the relief open to the face, is a part the plan never drew.
+- **A hub keys one sleeve.** A second sleeve on the same shaft whose band would ride the same hub is an error at that
+  sleeve's Gears cell, naming the hub and the sleeve it keys, and saying to give this sleeve a hub row of its own
+  (`modes.shared_hub`). A shared hub is not built, and the second sleeve is not also warned that nothing keys it.
+- **No band mark in a part's file name.** A banded and a plain sleeve of one module and teeth share their default
+  name, `Sleeve_m1.5_N30`, since W9c gives a built sleeve its bands in place and it keeps its file. Two such rows in
+  one workbook are the error that asks for a Part name, and it says why: *(RangeSlv has bands and ModeSlv has none,
+  and a file name does not say so)*.
