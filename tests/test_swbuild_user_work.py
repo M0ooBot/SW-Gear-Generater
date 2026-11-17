@@ -697,7 +697,10 @@ def test_the_same_with_an_app_feature_in_error_in_another_part_stays_a_failure_n
     assert ("T.SLDASM", "SolidWorks reported an error rebuilding T. Your Sprocket-1 was already in error before this "
                         "Update.") in result.failures
     assert result.rebuild_from_user_alone == []
-    assert [f.name for f in result.user_features_in_error] == ["User Keyway"]
+    # The close review's must-fix 2: the failed result still says what B names of the user's newly broken feature.
+    (keyway,) = result.user_features_in_error
+    assert keyway.name == "User Keyway" and result.user_feature_was_in_error(keyway) is False
+    assert [(v.name, v.was, v.now) for v in result.values_under(keyway)] == [("Face Width", "10", "12")]
 
 
 def test_a_false_rebuild_with_nothing_of_the_users_in_error_stays_a_failure():
@@ -735,6 +738,61 @@ def test_a_press_that_would_carry_a_component_in_error_refuses_before_any_write(
         "nothing is changed; in SolidWorks, put right what is in error in Sprocket-1, or suppress UserLock1, and press "
         "Update SolidWorks again.")
     assert _no_changes(fake) and fake.user_puts == []
+
+
+def test_a_press_that_would_carry_a_component_whose_error_code_is_unread_refuses_before_any_write():
+    """The close review's finding 5: unread counts as in error, as in the rebuild's rule."""
+    fake = _built_train()
+    _sprocket_on_g1(fake)
+    fake.component_codes["Sprocket-1"] = swcom.UNREAD
+    with pytest.raises(UserWorkRefused) as raised:
+        _moving(fake)
+    (problem,) = raised.value.problems
+    assert problem.kind == swbuild.PROBLEM_COMPONENT and problem.mates == ("UserLock1",)
+    assert problem.sentence == (
+        "Update SolidWorks would put your Sprocket-1 with G1, which your UserLock1 holds it to, and SolidWorks would "
+        "not say whether Sprocket-1 is in error in T.SLDASM; putting a component of yours that may be in error with "
+        "its gear has not been measured, so nothing is changed; in SolidWorks, suppress UserLock1, and press Update "
+        "SolidWorks again.")
+    assert _no_changes(fake) and fake.user_puts == []
+
+
+def test_a_failed_update_without_modes_still_carries_the_users_feature_newly_in_error_and_the_value_under_it(
+        monkeypatch):
+    """The close review's must-fix 2, the worker's half: k3 on a version whose findings are None (2024 today) stays a
+    failure, and its result still holds what package B names — the keyway newly in error, and what was set under
+    it."""
+    monkeypatch.setattr(findings, "WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_2026", None, raising=False)
+    fake = _built_train()
+    fake.user_feature(P17, "User Keyway")
+    fake.breaks_on_set[_key(P17)] = [("User Keyway", 71)]
+    result = _update_train(fake, parts=_every_t_part(_p17_update(cells=(("Face Width", "Gears!I2"),))))
+    assert ("T.SLDASM", "SolidWorks reported an error rebuilding T.") in result.failures
+    (keyway,) = result.user_features_in_error
+    assert (keyway.name, keyway.code) == ("User Keyway", 71)
+    assert result.user_feature_was_in_error(keyway) is False
+    assert result.values_under(keyway) == [swbuild.ValueSet(P17, "Face Width", "10", "12", "Gears!I2")]
+    assert result.rebuild_from_user_alone == []
+
+
+def test_a_failed_update_with_modes_still_carries_the_users_feature_newly_in_error_and_the_value_under_it(
+        tc_built, monkeypatch):
+    """The same on the path with modes: the TransferCase's Sleeve part set (Face Width 10 -> 12), the user's keyway in
+    it rebuilt into error, the finding unset, so the first rebuild in the active mode stops the Update."""
+    monkeypatch.setattr(findings, "WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_2026", None, raising=False)
+    fake, built = tc_built
+    fake.user_feature(TC_SLEEVE, "User Keyway")
+    fake.breaks_on_set[_key(TC_SLEEVE)] = [("User Keyway", 71)]
+    motion, placements = _tc_motion(built, "2H")
+    sleeve = swbuild.DocumentValues(TC_SLEEVE, _values(GearSpec().with_values(face_width="12")),
+                                    made=swbuild.plan_features(plan(path=TC_SLEEVE)),
+                                    cells=(("Face Width", "Gears!I4"),))
+    result = swbuild.update_gearbox(fake, parts=[sleeve, _still(GearSpec(), TC_DOG)], assembly=TC_ASM,
+                                    placements=placements, motion=motion, exists=fake.exists, mtime=lambda _p: 0.0)
+    assert any(why.startswith("SolidWorks reported an error rebuilding TransferCase in ") for _, why in result.failures)
+    (keyway,) = result.user_features_in_error
+    assert result.user_feature_was_in_error(keyway) is False
+    assert result.values_under(keyway) == [swbuild.ValueSet(TC_SLEEVE, "Face Width", "10", "12", "Gears!I4")]
 
 
 def test_an_app_component_in_error_whose_part_was_not_read_stays_a_failure():

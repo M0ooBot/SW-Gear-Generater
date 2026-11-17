@@ -5295,8 +5295,8 @@ def judge_user_work(work: UserWork, modes: Sequence[str], put: Collection[str], 
       mate (or a cam, rack-and-pinion, screw or linear-coupler mate) on a component route (c1) would put.
     - Each train with a put body and the user's mates on it is read for a tie; a tie refuses, naming every user mate
       on that train. A train whose user mates' flags differ by mode is also read in each other mode when shown.
-    - A component route (c1) would put that was suppressed or loaded lightweight when read, or read in error,
-      refuses (:data:`PROBLEM_COMPONENT`), last."""
+    - A component route (c1) would put that was suppressed or loaded lightweight when read, or read in error or
+      with its error code unread, refuses (:data:`PROBLEM_COMPONENT`), last."""
     judgement = UserJudgement()
     problems = judgement.problems
     every = set(modes)
@@ -5497,21 +5497,27 @@ def judge_user_work(work: UserWork, modes: Sequence[str], put: Collection[str], 
     # (W9a package B review point 3: judged here, so the worker and the footer's prediction cannot differ).
     # One that reads in error refuses too (the demonstration's ruling, the run's review finding 1): putting a component
     # whose own part has a feature in error was not measured (m3's Sprocket-1, in error from its part, was locked to
-    # nothing).
+    # nothing). So does one whose error code SolidWorks would not give (the close review's finding 5: anything unread
+    # counts as in error, as in the rebuild's rule).
     states = {c.name: c.state for c in work.components}
     codes = {c.name: c.code for c in work.components}
     for gear, held_here in judgement.carried.items():
         for user, locks in held_here:
             state = states.get(user, UNREAD)
+            code = codes.get(user, UNREAD)
             if state not in (COMPONENT_SUPPRESSED,) and state not in COMPONENT_LIGHTWEIGHT and \
-                    _in_error(codes.get(user, 0)):
+                    (code == UNREAD or _in_error(code)):
                 one = len(locks) == 1
+                said = (f"SolidWorks would not say whether {user} is in error in {file}; putting a component of yours "
+                        "that may be in error with its gear has not been measured" if code == UNREAD else
+                        f"{user} is in error in {file}; putting a component of yours that is in error with its gear "
+                        "has not been measured")
+                fix = (f"suppress {_and(list(locks))}" if code == UNREAD else
+                       f"put right what is in error in {user}, or suppress {_and(list(locks))}")
                 problems.append(UserProblem(PROBLEM_COMPONENT, (
                     f"Update SolidWorks would put your {user} with {_body_name(gear)}, which your "
-                    f"{_and(list(locks))} {'holds' if one else 'hold'} it to, and {user} is in error in {file}; "
-                    "putting a component of yours that is in error with its gear has not been measured, so nothing is "
-                    f"changed; in SolidWorks, put right what is in error in {user}, or suppress {_and(list(locks))}, "
-                    "and press Update SolidWorks again."), tuple(locks)))
+                    f"{_and(list(locks))} {'holds' if one else 'hold'} it to, and {said}, so nothing is changed; in "
+                    f"SolidWorks, {fix}, and press Update SolidWorks again."), tuple(locks)))
                 continue
             if state == COMPONENT_SUPPRESSED or state in COMPONENT_LIGHTWEIGHT:
                 how = "suppressed" if state == COMPONENT_SUPPRESSED else "loaded lightweight"
