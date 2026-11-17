@@ -154,7 +154,7 @@ def test_the_spelled_words_are_swbuilds():
 
 from dataclasses import replace  # noqa: E402
 
-from gear_generator import findings, swbuild, ui_text  # noqa: E402
+from gear_generator import findings, swbuild, swcom, ui_text  # noqa: E402
 from gear_generator.workbook import gearbox, layout, update  # noqa: E402
 from test_workbook_in_place_round_trip import Desk, users_work  # noqa: E402,F401
 from test_workbook_update import gears  # noqa: E402
@@ -287,7 +287,8 @@ PROBE_READS = {"COMPONENT_STATE_PER_CONFIGURATION_ROUTE": "IConfiguration.GetCom
                "DEPENDENCIES_READ": "GetDocumentDependencies2", "OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS": True,
                "OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN": True, "SUBASSEMBLY_OPEN_MARKS": False,
                "SUBASSEMBLY_READ_ONLY_INSERT": True, "SUBASSEMBLY_OPEN_MARKS_WHEN_LOADED": False,
-               "PERSIST_REFERENCE_ROUTE_FOR_FACES": "r3", "PERSIST_REFERENCE_ROUTE_FOR_EDGES": "r3",
+               "PERSIST_REFERENCE_ROUTE_FOR_FACES": swcom.PERSIST_ROUTE_R3,
+               "PERSIST_REFERENCE_ROUTE_FOR_EDGES": swcom.PERSIST_ROUTE_R3,
                "PERSIST_REFERENCE_SURVIVES_RELOAD": True, "COAXIAL_FACE_READ": True,
                "CARRY_INSERT_MARKS_USER_DOCUMENTS": False}
 
@@ -1030,6 +1031,7 @@ def test_the_round_trip_classify_question_build_with_carry_finish_record_footer(
     assert desk.sw.memory_mates[key] == old_mates[key]           # nothing written to the old assembly's mates
     done = result.carry
     assert [o for o, _ in done.inserted] == ["Sprocket-1", "Housing-1"] and [m for m, _, _ in done.remade] == ["Lock3"]
+    assert done.moved == [] and done.anchors                  # nothing reads as moved (the fake's fix, A's note)
     said = _status_of(desk, again, carry, result)
     assert said.startswith("Carried into RangeBox_r2, unsaved: your ") and "and your Lock3, on in the modes it was " \
         "on in." in said, said

@@ -1516,23 +1516,13 @@ def finish_build(plan: GearboxPlan, result: GearboxResult, record: Optional[Link
 # -- W9d: what a carrying Build again… leaves on record (W9D-INTERFACES §7) ----------------------------------------
 
 
-def carry_anchors(carry: Any, result: Any, revision: Sequence[int]) -> Dict[str, str]:
-    """Each carried component's anchor by its old Name2: the worker's own (``CarryResult.anchors``, as placed) when it
-    hands them back; else worked again by ``swbuild.plan_carry`` on what was read (pure, but without the new frames,
-    so it may name an anchor the worker passed over); ``{}`` when neither can be had."""
-    from .. import swbuild
-    given = getattr(result, "anchors", None)
-    if given:                               # the worker's own, as placed (the review's S4), by the new Name2
-        was = {str(new): str(old) for old, new in getattr(result, "inserted", []) or []}
-        return {was.get(str(new), str(new)): str(anchor) for new, anchor in given}
-    work = getattr(result, "work", None)
-    if carry is None or work is None:
-        return {}
-    try:
-        planned = swbuild.plan_carry(work, carry, tuple(revision))
-    except Exception:  # noqa: BLE001 - only the record's anchor, said as the world frame
-        return {}
-    return {item.component.name: item.anchor for item in planned.components}
+def carry_anchors(carry: Any, result: Any, revision: Sequence[int] = ()) -> Dict[str, str]:
+    """Each carried component's anchor by its old Name2, as the worker placed it (``CarryResult.anchors``, by the new
+    Name2; the review's S4, ruled); ``{}`` when the worker hands none. ``carry`` and ``revision`` are not read: kept
+    so the window's call stays as it was."""
+    given = getattr(result, "anchors", None) or []
+    was = {str(new): str(old) for old, new in getattr(result, "inserted", []) or []}
+    return {was.get(str(new), str(new)): str(anchor) for new, anchor in given}
 
 
 def _new_modes(plan: GearboxPlan, carry: Any) -> List[str]:
