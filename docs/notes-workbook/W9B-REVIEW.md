@@ -292,3 +292,214 @@ I worked these from `tests/workbook_fixtures.py`'s rows before reading `reach_wa
   - the bands as workbook-only spec fields.
   The jam test's third sentence is rewritten for its own fixture's `J=-30` place, which is the code saying the right
   thing about a different row, not a bent pin.
+
+---
+
+## Closing review: the fix round and the demonstration on SolidWorks 2026
+
+*Independent, 2026-11-17, at `de0a470`. I started no SolidWorks. I ran the suite once (1 failed, the known Tk
+font-width test; 3571 passed, 1 skipped), the script's `--self-check` (0 failed), and throwaway scripts in the
+scratchpad against `checks.check` and the app's own section maths. I changed no code.*
+
+Under review:
+
+| what | where |
+|---|---|
+| the fix round | `172e47c` (checks), `ce712b4` (Update and parts), `7ce72dd` (the interface note's §7 rulings) |
+| the demonstration | `probe/w9b_demonstration.py` and `W9B-DEMONSTRATION.md` (`5da5dbd`, `843e9e4`, `b15450f`) |
+| the first run | `probe/results/w9b-demo-sw2026-20261117-1-script-faults.log` and its JSON (`2ed441b`) |
+| the final run | `probe/results/w9b-demo-sw2026-20261117-2.log` and its JSON (`de0a470`) |
+
+**Verdict.**
+
+- **The fix round answers every point as I meant it.** Two new points remain, both should-fix (C1), plus a slip in
+  the demonstration note (C2). Neither keeps W9b open.
+- **The first run's eleven FAILs are the script's, as laid.** No fault of the app was explained away: in that run
+  every body already stood at its frame on record, and the relief bore read r 12.5 between planes at 5 and 21.
+- **The volume account is fair in substance but overstated in one figure.** Against the true section the residual
+  is 9.0e-5, not 3.8e-5 (§2).
+- **The final run meets W9b's Done-when on 2026, and no STOP fired.** The commit message overstates two things a
+  little (§4).
+- **Nothing unmeasured must be measured before W9b closes.** Two cheap reads should ride along in W9c's 2024 session
+  (§5).
+
+### 1. The review's points after the fix round
+
+| Point | Answered? | How |
+|---|---|---|
+| 1 (must) a band over another shaft's hub | **Yes** | `engagement` errs at the mode's cell, whole or in part (`modes.py:251-268`), and `_check_clearances` exempts {sleeve, hub} (`checks.py:558-560`). The Meshes advice is gone. |
+| 2 the reach sentence | **Yes** | One gear spanning both points is named once, with its span. |
+| 3 a shared hub | **Yes, by ruling** | A hub keys one sleeve; a second riding it is an error, not also warned unkeyed. One owner choice is wrong: C1. |
+| 4 K11's cell for the bands | **Yes** | `Start Band` and `End Band` are in `_GLOBAL_COLUMN`, with a test through `update_gearbox`. |
+| 5 the shared file name | **Yes, by ruling** | No mark in the name; the error now says why: *(RangeSlv has bands and ModeSlv has none, …)*. |
+| 6 a hub under a sleeve with no Slides | **Yes** | It is judged at the sleeve's one place. |
+| N1 reach through the hub | **Yes** | `Extra` holds the band's points but not the hub's: with Hub it is reached, without it warned. That test can fail. |
+| N5 the two band rules | **Yes** | Both now use `face - 1e-9`. |
+| N2, N3, N4, N6 | Left | As I offered them. N4 (a thin wall over the relief) is the coordinator's to put to the user. |
+
+**The new clash error.** I looked for wrong refusals and found none:
+
+- A hub on a coaxial shaft that no band ever overlaps gets no error (a scratch case with a sleeve and hub on Aux at
+  60 beside RangeSlv's box).
+- A hub wholly under the relief is clean, and held to c as a dog is (`test_another_shafts_hub_under_the_relief…`).
+- The band's own share is tested at `COVER_TOLERANCE`, so a hub touching a band edge (share 0) is not a clash. It
+  gets the clearance warning at gap 0, as a dog does.
+- Passing over a hub between two positions is not judged. That is the same as for a dog, where the stroke warning
+  covers only dogs, so it is consistent and not new.
+
+**C1 — should-fix: "a hub keys one sleeve" picks its sleeve from every Slides position, including positions no mode
+picks.**
+
+- `_rides` walks `sleeve.positions()` (`modes.py:189-200`). `hub_sleeve` then takes the first sleeve in sheet order
+  that rides the hub at any position.
+- *Reproduced against `checks.check`.* On Out:
+  - S1 at 0, face 10, Slides `A=-7.5, N=0, X=+38`, with its hub H1 under it in A and N.
+  - S2 at 40, face 10, Slides `B=0`, with its hub H2 at 40, face 6, under S2 in every mode.
+  - The modes pick A/B and N/B only, so X is never used. Yet S1's place at X (33…43) rides H2, so H2 is keyed to S1.
+- The read then says *"S2 rides H2, which keys S1: … give S2 a hub row of its own"*, though H2 is S2's own hub. It
+  also says *"in M1 S1 and H2 do not cover one another"* in both modes.
+- So a legal box is refused. It needs a position no mode uses, so it is rare.
+- *Fix.* Key a hub to the sleeve that covers it in every mode (the mode picks, or the implicit place), and only then
+  fall back to sheet order. A sleeve whose band covers it in one picked mode but not in every mode is then the
+  second-sleeve error, as ruled.
+
+**C2 — the note: `W9B-DEMONSTRATION.md`, *What the script does not measure*, says a Z− sleeve's "relief's planes'
+flips take the other sign (`helical._flip_for`)".**
+
+- They do not. `relief_ops` places both planes in the part's own frame. The flip depends only on
+  `EXTRUDE_Z_SIGN × offset`, and the shaft's direction never reaches the part plan.
+- On a Z− shaft only the assembly frame turns the part over, which W3's σ already does for every gear.
+- A one-line correction to the note. It matters for §5 below.
+
+### 2. The first run's eleven FAILs
+
+There are 11: one bore, one volume and nine slides (`build`, `update` and `old`, three modes each). I read each
+against the first log and its JSON.
+
+- **The padded `GetBox` holds.**
+  - The first run's bore check wanted a face whose box spanned the relief's length to a tight tolerance. It found
+    none.
+  - The final run reads the same part, with the same build ops and the same snapshot of the app's part code, and
+    shows why: the cylinder's box runs z 4.759716…21.240284, padded 0.240284 mm at each end. The cylinder is
+    exactly r 12.5, and the two step faces' `PlaneParams` give exactly 5 and 21 (4 and 21 after the change).
+  - The self-check replays that on the first run's readings. Nothing of the app was at fault.
+- **The slide's sign holds.**
+  - The nine lines read 55.5, 48, 40.5 (and 34.5, 29.5, 24.5 in `old`) against the record's −55.5 … −24.5.
+  - On the same lines, "every body at its frame on record" passed at 6.6e-10. The sleeve stood where the record
+    says, and only the mate dimension's sign was missing.
+  - The new check holds the size to the record and the sign by RangeSlv's own frame. A frame on the wrong side fails
+    it (replayed). That is sound, and it does not compare the app with itself: the frame is SolidWorks' read.
+- **The sixteen-fold amplification holds, and the account is fair, but the residual is understated.**
+  - 16 × 114.638326 = 1834.213 against 1833.375 removed. The 0.838 is 16 × the 1 mm difference's own error, as laid.
+  - The new check builds the expected banded volume from F0 = V(unbanded) / 26 over the bands, plus the ring
+    π(Ro² − r²) over the relief (Ro 16.125 and r 12.5 from faces). It reads 3.8e-5 (5/5) and 3.5e-5 (4/5).
+- **Weighing the "F0 two ways" line.** I computed the sleeve's section area from the app's own maths: π(Ro²) less
+  the area inside the toothed edge (`internal.involute_flank`, `flank_point`), sampled 1, 4, 16 and 64 times as
+  densely as the outline. It converges to **440.54751 mm²**.
+  - SolidWorks' `GetArea` of the end face is **440.547728**, which is 5e-7 from the maths. So the model's section is
+    right, and the face area is the truth.
+  - V / 26 = 440.597841 is the mass-property volume reading 1.14e-4 high.
+  - With the true section, the exact banded volumes are 9621.306 (5/5) and 9506.748 (4/5). SolidWorks reads 0.862
+    and 0.782 mm³ over: **9.0e-5 and 8.2e-5**, not 3.8e-5 and 3.5e-5. The script's F0 absorbs most of the unbanded
+    body's mass-property error into the "exact form".
+  - The two banded readings imply the same toothed section, 440.6340 and 440.6347 (taking the ring as exact). So the
+    banded bodies over-read about 0.086 mm³ per mm of toothed length, against the unbanded body's 0.050.
+- **Is that a real geometric difference? Very likely not.**
+  - The bands are untouched by the loft. Over the relief, every face that bounds the cut reads exact to 1e-6:
+    r 12.5, both step planes, and Ro.
+  - A geometric excess of 0.36 mm³ in the relief would need r small by 2.9e-4 mm or the planes 3e-3 mm apart, both
+    hundreds of times what the reads allow.
+  - What differs between the two bodies is their B-rep: each flank face is split at the step faces. Mass-property
+    error depends on that. So "SolidWorks' mass-property accuracy" is a fair account.
+  - But it is shown only indirectly, and "to 3.8e-5 of the exact form" overstates how exact the form is.
+- **What would settle it at no cost.** Read the banded part's own end-face area and each step face's area. The step
+  face should be F − π(Ro² − r²) = **114.558 mm²** exactly by the app's maths, against 114.638 from the two volumes.
+  That compares the relief with the teeth directly, with no mass property in it.
+- *My recommendation for the 2024 run:*
+  - add those two `GetArea` reads, held to 1e-4 of the area;
+  - take F from the end face, not from V / 26;
+  - keep the volume check at 1e-4 as a coarse guard (9.0e-5 passes, with less room than the note claims).
+
+### 3. The final run against the Done-when and the STOPs
+
+- **Done-when** (plan §5: RangeBox_Fixed built from scratch on 2026, M7, every mode's engagement, slides and
+  interference as §3): **met.**
+  - `build` 0 failed.
+  - In H, N and L the measured band, dog and hub spans equal §3's hard-coded table (`SECTION3`, `DOGS`, `HUB`, which
+    are the plan's numbers, not the app's). The relief holds HighDog in N and L. The least gaps are 10, 2.5 and 1.0,
+    with Hub 1.0 from HighDog.
+  - No mate is in error, every app gear is free, and `Session.interferences` is empty in every mode. The couplings
+    are on in H and L only.
+  - **M7** for 2026: the relief built, its globals and links read back, its sketches under `Relief`, the bore a true
+    cylinder between the planes, and the band changed and read back as plane offsets. 2024 is owed.
+- **STOPs:** none fired.
+  - The relief op did not fail, no mode read other than §3, and the read carried no warning but the fixture's four.
+  - The *Post load updating* box during the Update (log :970) is the elapsed-time notification box. W9a's script
+    exempts it by the coordinator's ruling, and it was seen in W9a's 2026 closing runs too. It is not a STOP.
+- **Can each check fail?**
+  - The measured spans come from SolidWorks frames and the parts' globals read live. They are held both to §3's
+    constants and to the app's read, so they are not the app against itself.
+  - Three things are the app's own:
+    - the ratios. The *1.0 / neutral / 2.896552* on each mode line is the app's motion report, not a turn in
+      SolidWorks;
+    - the read's warnings, compared with `assess` of the fixture in the same process. That shows the Excel round
+      trip, not a SolidWorks fact;
+    - `old`'s "seven warnings, W9b's three among them". It checks the count and that W9b's three are present, not the
+      text of the other four (the suite pins those).
+  - None of the three is in the Done-when, so none weakens it.
+- **The relief in the assembly is shown by its globals, its feature and the part section's geometry.**
+  `no interference` in N and L cannot by itself prove the relief is there, since the unrelieved teeth would sit in
+  phase over HighDog as built. The part section, through the same plan, is where the relief's geometry is measured,
+  and that is adequate.
+- **The corrected slide check** is sound (§2): size against the record, side by the frame, and either alone fails.
+- **`update` shows what its lines claim.**
+  - Start band 5 → 4 is classified as a value Update of `Sleeve_m1.25_N17` alone, pressed through the window's gate,
+    and ends ok.
+  - The part reads Start Band 4, with planes 4 and 21 and nothing in error.
+  - Per mode, the start band reads −55.5…−51.5, −48…−44 and −40.5…−36.5 from SolidWorks. L's least gap is 2.0. The
+    end band and engagement are as §3.
+  - The bands taken off alone are refused at the workbook with the jam sentence, and nothing is offered.
+  - RangeBox_Fixed made RangeBox again is sent to *Build again…* with both sentences (Hub removed; bands), the footer
+    offers it, and its question carries the bands sentence.
+  - Both refusals left every file's modification time and every save flag unchanged.
+  - The value Update re-placed every gear in every mode (226 s). That is W8's rule for any changing press on a box
+    with modes, not a W9b fault.
+- **`old` shows RangeBox as before, with three more warnings.**
+  - Seven warnings, W9b's three among them. Engagement, ratios and speeds as §3 (Carrier 517.857, Planet
+    −1673.077).
+  - RangeSlv is still Output's anchor, its sidecar is at schema 1, and there is no Relief.
+  - Per mode, the whole sleeve reads −34.5…−24.5, −29.5…−19.5 and −24.5…−14.5 from SolidWorks, which are my hand
+    numbers above, with N's gap 0 to both dogs. Frames, flags, freedom and interference are clean.
+
+### 4. The commit message on `de0a470`
+
+It claims nothing the log does not show, with two overstatements:
+
+- *"its volume the exact form's to 3.8e-5"*: the form is calibrated by SolidWorks' own unbanded volume. Against the
+  true section it is 9.0e-5 (§2). Still inside 1e-4, so the claim's substance stands.
+- *"the ratios as ISSUE-1-PLAN §3's table"*: the ratios are the app's report on SolidWorks' build, not measured by
+  turning.
+
+The rest is in the log line for line: the one cylinder r 12.5 between 5 and 21, the sketches under Relief, Hub as
+anchor with the spline, each mode's slide, bands, relief, engagement and gaps, no mate in error, every gear free, no
+interference, the band Update read back in the part and per mode, the two refusals with nothing written, and RangeBox
+with its seven warnings.
+
+### 5. What stays unmeasured
+
+| Unmeasured | Must it be measured before W9b closes? | Why |
+|---|---|---|
+| SolidWorks 2024 (M7's second version) | No | The plan puts it in W9c's 2024 session. It is the one item that is owed, not optional. |
+| A banded sleeve on a Z− shaft | No | The part is identical whatever the shaft's direction (C2). Turning a part over on a Z− shaft is W3's σ, measured for every kind. `band_spans`' mapping to the part's origin is pure and agrees with `Placed.origin` (my first review). |
+| Unequal bands from scratch | No | 4/5 was reached by the value route in `part` and `update` and read back exactly. From scratch differs only in the planes' first offsets, through the same `InsertRefPlane` with the same flip. |
+| A hub with a bore | No | The hub's plan is a dog's with the spur's bore ops, measured in every bored gear since W1. |
+| A typed Rim on a banded sleeve | No | Rim is the ring's own global, built before the relief and untouched by it. The error at or under m(z + 3) is pure. |
+| The step faces' and the banded end face's areas | No, but cheap | Add them to the 2024 run (§2). They settle the volume question exactly. |
+
+None of these is a reason to hold W9b open. I would not leave 2024 out of W9c's session. And I would add the two
+area reads there, since they replace an indirect argument with a direct measurement at no SolidWorks cost.
+
+### 6. In one line
+
+**W9b is closed on SolidWorks 2026, with 2024 owed in W9c's session.** C1 (the hub's owner taken from unpicked
+positions) and C2 (the note's Z− sentence) are should-fix and need not hold it.
