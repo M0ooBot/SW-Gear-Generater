@@ -4080,9 +4080,10 @@ class Session:
                                   "unsaved; close it there.")
 
     def file_version(self, path: str) -> Optional[int]:
-        """The closed file's last saved version (``ISldWorks.VersionHistory``'s last entry, its number after the
-        bracket, e.g. ``"[SldWorks 34.0]"`` → 34... as the route names it); refused while ``FILE_VERSION_READ`` is
-        None. UNMEASURED as written."""
+        """The closed file's last saved version: ``ISldWorks.VersionHistory``'s **last** entry's file version, its
+        first number (``"19000[2025/260]"`` → 19000, the form W9d's probe read on 2026; the year label is never
+        compared, as 2026 labels itself 2025), compared by the caller with :meth:`running_file_version`; refused
+        while ``FILE_VERSION_READ`` is None."""
         if self._w9d_finding("FILE_VERSION_READ") is None:
             self._w9d_refuse("FILE_VERSION_READ", "Reading which SolidWorks last saved a file")
         history = list(call(self._app, "VersionHistory", path) or ())

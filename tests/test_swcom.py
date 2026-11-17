@@ -3522,3 +3522,58 @@ def test_a_carry_selection_is_judged_by_the_selection_count_as_the_probes_judged
     else:
         with pytest.raises(SolidWorksError, match="could not be selected"):
             session.select_by_reference("carried1", "face", "0102", False)
+
+
+def test_a_closed_files_version_and_dependencies_read_as_solidworks_2026_answered_them(monkeypatch):
+    """The audit (W9d): the closed-file reads on the shapes W9d's probe state (v) read on 2026 (w9d-probes-sw2026-…-1
+    :122-125): VersionHistory a list whose last entry is the last save ('19000[2025/260]', a 2026 file's history
+    beginning with its template's 17000), GetLatestSupportedFileVersion 19000, GetDocumentDependencies2 a flat
+    name-then-path list."""
+    monkeypatch.setattr(findings, "FILE_VERSION_READ_ON_2026", "route")
+    monkeypatch.setattr(findings, "DEPENDENCIES_READ_ON_2026", "route")
+    histories = {r"C:\U\RangeBox.SLDASM": ("17000[2024/282]", "19000[2025/260]"),
+                 r"C:\U\Reducer_12to1.SLDASM": ("17000[2024/282]",)}
+
+    class App:
+        def VersionHistory(self, path):
+            return histories[path]
+
+        GetLatestSupportedFileVersion = 19000
+
+        def GetDocumentDependencies2(self, path, traverse, search, add_read_only):
+            assert (traverse, search, add_read_only) == (False, False, False)
+            return ("Sprocket.SLDPRT", r"C:\U\Sprocket.SLDPRT", "RangeBox_Layout.SLDPRT", r"C:\U\RangeBox_Layout.SLDPRT")
+
+    session = swcom.Session.__new__(swcom.Session)
+    session.revision, session._app = (34, 0, 0), App()
+    assert session.running_file_version() == 19000
+    assert session.file_version(r"C:\U\RangeBox.SLDASM") == 19000           # the last entry, not the template's
+    assert session.file_version(r"C:\U\Reducer_12to1.SLDASM") == 17000      # a 2024 file: not the running version
+    assert session.dependencies(r"C:\U\RangeBox.SLDASM") == [r"C:\U\Sprocket.SLDPRT", r"C:\U\RangeBox_Layout.SLDPRT"]
+
+
+def test_states_per_mode_read_unshown_by_the_route_2026_measured(monkeypatch):
+    """The audit (W9d): COMPONENT_STATE_PER_CONFIGURATION_ROUTE_ON_2026, as probe state (b) read it: each mode's
+    IConfiguration by GetConfigurationByName, GetComponentSuppressionState(top-level Name2) a Boolean, True
+    suppressed; a lightweight component reads False (w9d-probes-sw2026-…-1 :114-121)."""
+    monkeypatch.setattr(findings, "COMPONENT_STATE_PER_CONFIGURATION_ROUTE_ON_2026",
+                        "IConfiguration.GetComponentSuppressionState(Name2)")
+    truth = {"H": {"Housing-1": True}, "N": {}, "L": {"Sprocket-4": True}}
+
+    class Configuration:
+        def __init__(self, mode):
+            self.mode = mode
+
+        def GetComponentSuppressionState(self, name):
+            return truth[self.mode].get(name, False)
+
+    class Doc:
+        def GetConfigurationByName(self, mode):
+            return Configuration(mode)
+
+    session = swcom.Session.__new__(swcom.Session)
+    session.revision = (34, 0, 0)
+    monkeypatch.setattr(session, "_doc", lambda: Doc(), raising=False)
+    read = session.component_states_in(["Housing-1", "Sprocket-4", "Sprocket-1"], ["H", "N", "L"])
+    assert read == {"Housing-1": {"H": True, "N": False, "L": False}, "Sprocket-4": {"H": False, "N": False, "L": True},
+                    "Sprocket-1": {"H": False, "N": False, "L": False}}

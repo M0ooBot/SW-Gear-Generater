@@ -1129,12 +1129,14 @@ class FakeSolidWorks:
         mate = self.mate(self.mate_handles[handle])
         unread = self.unread_mates.get(mate.name)
         if unread == "count":
-            return swcom.MateInfo(mate.name, self.MATE_TYPES.get(mate.kind, 7), (), counted=False)
+            return swcom.MateInfo(mate.name, self.DEF_TYPES.get(mate.kind, 7), (), counted=False)
         own = self._root_name() if self.assembly_entity == "root" else ""
         ends = tuple(own if end[0] == "asm" else end[0] for end in self._read_ends(mate))
         if unread == "entity":
             ends = (ends[0], None)
-        kind = swcom.UNREAD if unread == "type" else self.MATE_TYPES.get(mate.kind, 7)
+        # IMate2.Type as SolidWorks reads it, the same member mate_definition reads (W9c's m1: a concentric 1, a limit
+        # distance 5, a limit angle 6, a width 11; S5 (a) and the W9d probe a parallel 3); 7 for a kind not modelled.
+        kind = swcom.UNREAD if unread == "type" else self.DEF_TYPES.get(mate.kind, 7)
         kinds = tuple(self._entity_kind(mate, end) for end in self._read_ends(mate))
         return swcom.MateInfo(mate.name, kind, ends, entities=kinds if self.read_entity_kinds else ())
 
@@ -1922,6 +1924,12 @@ class FakeSolidWorks:
     # bool, read once findings.COAXIAL_FACE_READ is set); ``remake_status`` / ``remake_codes`` (old mate name -> AddMate5's
     # status / (code, warning) after the remake); ``insert_config_kept`` False: an insert in a configuration reads back
     # the document's active one; ``kind_swap`` (old mate names a remake reads back with its entities the other way).
+    #
+    # The audit of 2026-11-17 (W9D-PACKAGE-A.md): every default above and below answers as SolidWorks 2026 measured,
+    # or is listed there as unmeasured. Its knobs: ``listing_order`` (Name2s components() lists first: GetComponents is
+    # not in tree order on SolidWorks); ``entity_axes`` (target -> its own direction in its component, for
+    # EntityParams); ``tree_order_entities`` False (a coincident, concentric or parallel read as selected, not in tree
+    # order); ``open_resolves_lightweight`` False; ``reload_ok`` True or False (else as the finding says).
 
     DEF_TYPES = dict(MATE_TYPES, concentric=1, perpendicular=2, parallel=3, tangent=4, width=11, slot=21)
     _TYPE_WORDS = {0: "coincident", 1: "concentric", 2: "perpendicular", 3: "parallel", 4: "tangent", 5: "distance",
