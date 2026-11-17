@@ -2486,7 +2486,10 @@ class ValueEdit:
     """K11: an app-owned value found in SolidWorks otherwise than both the record and the workbook. ``document`` is
     the file's name (the assembly's for a Face Z, a slide's value or a mate's flag); ``name`` the global, the slide or
     the mate; ``mode`` the configuration for a per-mode value (else ``""``); ``live``, ``wanted`` and ``recorded`` as
-    said (numbers as text, a flag as ``"on"`` / ``"suppressed"``); ``cell`` the workbook cell that sets it, or ``""``."""
+    said (numbers as text, a flag as ``"on"`` / ``"suppressed"``); ``cell`` the workbook cell that sets it, or ``""``.
+    ``unsaved`` (W9a re-check N1): the document carries the record's unsaved mark, so ``recorded`` is what an Update
+    last set and left unsaved, and the difference may be the user's edit or that Update lost and the document touched
+    since: the sentence says both (not kept in the record's schema; the sentence is)."""
 
     document: str
     name: str
@@ -2495,6 +2498,7 @@ class ValueEdit:
     recorded: str
     mode: str = ""
     cell: str = ""
+    unsaved: bool = False
 
 
 @dataclass(frozen=True)
@@ -4889,7 +4893,7 @@ def _value_edits(doc: DocumentValues, current: Sequence[Tuple[str, float]],
         out.append(ValueEdit(_file(doc.path), variable.name, _number_text(live_value, live),
                              _number_text(wanted, variable.expression_for(DEGREES)),
                              _number_text(_literal(recorded[variable.name]), recorded[variable.name]),
-                             cell=cells.get(variable.name, "")))
+                             cell=cells.get(variable.name, ""), unsaved=doc.mark == MARK_UNSAVED))
     return out
 
 
@@ -4897,10 +4901,12 @@ def _value_sentence(edit: ValueEdit) -> str:
     """K11's sentence for one value: *Bore Diameter in Gear_m1.25_N17 is 12 in SolidWorks and 10 in the workbook:
     type 12 in Gears!J5, or set it back in SolidWorks, and press Update SolidWorks again.* A part shared by several
     rows names every row's cell (``cell`` "Gears!J3 and Gears!J5"); a value no cell sets alone (a formula global, a
-    carrier's) can only be set back in SolidWorks."""
+    carrier's) can only be set back in SolidWorks. On a document the record marks unsaved (``edit.unsaved``) the
+    sentence says both readings (W9a re-check N1, :func:`_unsaved_value_sentence`)."""
+    if edit.unsaved:
+        return _unsaved_value_sentence(edit)
     where = f" in {edit.mode}" if edit.mode else ""
-    stem = edit.document.rsplit(".", 1)[0] if edit.document.lower().endswith((".sldprt", ".sldasm")) else \
-        edit.document
+    stem = _stem_of(edit.document)
     if edit.live in ("on", "suppressed"):
         return (f"The mate {edit.name} is {edit.live}{where} in SolidWorks, where Gear Generator made it "
                 f"{edit.recorded} and the workbook has it {edit.wanted}: in SolidWorks, turn it "
@@ -4918,6 +4924,38 @@ def _value_sentence(edit: ValueEdit) -> str:
     return (f"{edit.name} in {stem}{where} is {edit.live} in SolidWorks and {edit.wanted} in the workbook: type "
             f"{edit.live} in {edit.cell}, or set it back to {edit.wanted} in SolidWorks, and press Update SolidWorks "
             "again.")
+
+
+def _stem_of(document: str) -> str:
+    return document.rsplit(".", 1)[0] if document.lower().endswith((".sldprt", ".sldasm")) else document
+
+
+def _unsaved_value_sentence(edit: ValueEdit) -> str:
+    """K11 on a document an earlier Update left unsaved, open and modified now (W9a re-check N1, the coordinator's
+    ruling): the value differs from what that Update set, either because it was changed in SolidWorks since, or
+    because SolidWorks closed without saving that Update and the document was changed after it was opened again.
+    The refusal stands (the safe side); the sentence says both readings and what to do in each."""
+    where = f" in {edit.mode}" if edit.mode else ""
+    stem = _stem_of(edit.document)
+    why = (f"either it was changed in SolidWorks since, or SolidWorks closed without saving that Update and {stem} "
+           "was changed after it was opened again")
+    if edit.live in ("on", "suppressed"):
+        return (f"The mate {edit.name} is {edit.live}{where} in SolidWorks, where Update SolidWorks last made it "
+                f"{edit.recorded} and left {stem} unsaved: {why}. Either way, turn it "
+                f"{'back on' if edit.wanted == 'on' else 'off again'}{where} in SolidWorks and press Update SolidWorks "
+                "again.")
+    if edit.document.lower().endswith(".sldasm"):
+        cell = edit.cell or "the gear's row in the workbook"
+        return (f"{edit.name} in {stem}{where} is {edit.live} mm in SolidWorks, where Update SolidWorks last set it to "
+                f"{edit.recorded} mm and left {stem} unsaved, and the workbook now asks {edit.wanted} mm: {why}. If "
+                f"it was changed, change {cell} so the workbook asks {edit.live} mm, or set it back to {edit.wanted} mm "
+                f"in SolidWorks; if that Update was lost, set it to {edit.wanted} mm in SolidWorks. Then press Update "
+                "SolidWorks again.")
+    changed = (f"type {edit.live} in {edit.cell}, or set it back to {edit.wanted} in SolidWorks" if edit.cell else
+               f"set it back to {edit.wanted} in SolidWorks, since no cell of the workbook sets it alone")
+    return (f"{edit.name} in {stem}{where} is {edit.live} in SolidWorks and {edit.wanted} in the workbook, where Update "
+            f"SolidWorks last set {edit.recorded} and left {stem} unsaved: {why}. If it was changed, {changed}; if "
+            f"that Update was lost, set it to {edit.wanted} in SolidWorks. Then press Update SolidWorks again.")
 
 
 def _user_features(path: str, states: Sequence[FeatureState], made: Collection[str]) -> List[UserFeature]:
@@ -4976,7 +5014,10 @@ BRANCH_NO_CARRIER = "NO_CARRIER"     # a train with no carrier, put with its gea
 BRANCH_HELD = "HELD_GEAR"            # a held gear, re-placed first by REPLACE_FIXED_ROUTE (_put_train)
 BRANCH_FIXED = "FIXED_GEAR"          # a fixed gear re-placed W4's way, unfix, put, fix (_motion_assembly, _modes_put)
 BRANCH_SUBASSEMBLY = "SUBASSEMBLY"   # a user sub-assembly put as one component (Transform2 on an assembly component)
-_BRANCH_WORDS = {BRANCH_NO_CARRIER: "a gear on a train with no carrier, its gear mates left on around the put",
+# Every body when judge_user_work is given no ``branches``: never taken for S0's measured branch (W9a re-check N6);
+# it has no finding, so it never settles.
+BRANCH_UNGIVEN = "UNGIVEN"
+_BRANCH_WORDS = {BRANCH_UNGIVEN: "a gear put in a way not said to this judgement", BRANCH_NO_CARRIER: "a gear on a train with no carrier, its gear mates left on around the put",
                  BRANCH_HELD: "a gear held still and put back first",
                  BRANCH_FIXED: "a fixed gear, unfixed, put and fixed again",
                  BRANCH_SUBASSEMBLY: "a gear when the component is a sub-assembly"}
@@ -5119,7 +5160,8 @@ def judge_user_work(work: UserWork, modes: Sequence[str], put: Collection[str], 
     Pure: the worker calls it before any write, package B to say before the press what a press putting ``put``
     would do. ``modes``: the modes in order (``("",)`` for a gearbox with none); ``put``: the app bodies (gear or
     carrier ids) put; ``trains``: the trains as the mode showing joins them; ``branches``: each body's unmeasured
-    branch of route (c1) (:func:`user_carry_branches`; None: none); ``revision``: the SolidWorks in use, for the
+    branch of route (c1) (:func:`user_carry_branches`, where a body absent is S0's measured branch); None (the
+    default) is the safe reading, nothing measured: every carry refuses (W9a re-check N6); ``revision``: the SolidWorks in use, for the
     branch findings.
 
     - A mate on in no mode is no tie; it is left as it is (``extra_mates``).
@@ -5145,7 +5187,13 @@ def judge_user_work(work: UserWork, modes: Sequence[str], put: Collection[str], 
     fixed = {c.name for c in work.components if c.fixed}
     paths = {c.name: c.path for c in work.components}
     put = set(put)
-    branches = dict(branches or {})
+    # W9a re-check N6: no ``branches`` given means nothing measured, never every branch measured.
+    branch_of = (lambda gear: BRANCH_UNGIVEN) if branches is None else (lambda gear: branches.get(gear))  # noqa: E731
+
+    def as_subassembly(user: str) -> bool:
+        # W9a re-check N4: a component whose file SolidWorks did not name is not taken for a part.
+        path = paths.get(user, "")
+        return not path or path.lower().endswith(".sldasm")
 
     if put:
         for mate in live:
@@ -5211,18 +5259,27 @@ def judge_user_work(work: UserWork, modes: Sequence[str], put: Collection[str], 
             unsettled.extend(names)
             continue
         refused = False
-        for branch in [branches.get(gear)] + [BRANCH_SUBASSEMBLY for u in users
-                                               if paths.get(u, "").lower().endswith(".sldasm")][:1]:
+        for branch in [branch_of(gear)] + [BRANCH_SUBASSEMBLY for u in users if as_subassembly(u)][:1]:
             if branch is None:
                 continue
             settled, finding = user_branch_settled(branch, revision)
             if settled:
                 continue
             refused = True
-            what = "sub-assembly" if branch == BRANCH_SUBASSEMBLY else "component"
+            if branch == BRANCH_UNGIVEN:
+                problems.append(UserProblem(PROBLEM_UNSETTLED, (
+                    f"Update SolidWorks would put your {_and(users)} with {_body_name(gear)}, which your "
+                    f"{_and(list(names))} {'holds' if len(locks) == 1 else 'hold'} to it, and how "
+                    f"{_body_name(gear)} is put was not said to this judgement, so it is not known to be measured "
+                    f"and nothing is changed; that is a fault in Gear Generator."), names))
+                break
+            unnamed = [u for u in users if not paths.get(u, "")]
+            what = ("component of yours whose file SolidWorks would not name, taken for a sub-assembly," if
+                    branch == BRANCH_SUBASSEMBLY and unnamed else
+                    "sub-assembly of yours" if branch == BRANCH_SUBASSEMBLY else "component of yours")
             problems.append(UserProblem(PROBLEM_UNSETTLED, (
                 f"Update SolidWorks would put your {_and(users)} with {_body_name(gear)}, which your "
-                f"{_and(list(names))} {'holds' if len(locks) == 1 else 'hold'} to it, and putting a {what} of yours "
+                f"{_and(list(names))} {'holds' if len(locks) == 1 else 'hold'} to it, and putting a {what} "
                 f"with {_BRANCH_WORDS[branch]} has not been measured on this SolidWorks (findings.{finding} is "
                 f"{getattr(findings, finding, None)!r}), so nothing is changed; {_suppress(locks, named)} and press "
                 "Update SolidWorks again."), names))
@@ -5259,7 +5316,7 @@ def judge_user_work(work: UserWork, modes: Sequence[str], put: Collection[str], 
         geared = [carried_comps[c] for c in mate.components() if c in carried_comps] if mate.kind == USER_GEAR else []
         if on_put or geared:
             gear = (on_put or geared)[0]
-            branch = branches.get(gear)
+            branch = branch_of(gear)
             lock_goes = branch is None or user_branch_settled(branch, revision)[0]
             problems.append(UserProblem(PROBLEM_OTHER_KIND, _other_kind_sentence(
                 mate, file, named, gear, lock_goes, _BRANCH_WORDS.get(branch or "", "")), (mate.name,)))
@@ -5614,6 +5671,9 @@ def _user_check(sw: SolidWorks, assembly: str, motion: MotionUpdate, placements:
                      before={m.name: m.code for m in work.mates}, in_error=list(work.in_error),
                      mates=list(work.mates), components_before={c.name: c.code for c in work.components},
                      judged=set(may_put), touched=set(judgement.touched))
+    if any(m.on and not m.whole for m in work.mates):
+        # W9a re-check N3: a mate not wholly read could be on any body, so every body counts as the user's for _bind.
+        plan.touched |= set(gears)
     return plan
 
 
@@ -5735,6 +5795,7 @@ def _update_motion(sw: SolidWorks, parts: Sequence[DocumentValues], layout: Opti
         _note_opened(sw, assembly, result)
         # W9a K11 (ruling 3): whether the record vouches for the assembly's values, now it is open.
         vouched_assembly = motion.record_holds and _vouches(sw, assembly, motion.assembly_mark, result)
+        first_assembly_edit = len(edits)
         # Lightweight gears (a user whose SolidWorks loads assemblies lightweight). Probe round P0d: every gear of a
         # train opened lightweight read 1; the first drive turned one gear -24.17° where 2.5° is right, and afterwards
         # every gear read 2; the remake and the drive after it ran resolved and were right. So with the read settled
@@ -5913,6 +5974,8 @@ def _update_motion(sw: SolidWorks, parts: Sequence[DocumentValues], layout: Opti
                 axial.append((gear, variable))
         # W9a (ISSUE-1-PLAN §2.1 items 2-4): the user's work, read and judged before anything changes; every
         # problem with it, and every K11 value, refused at once.
+        if motion.assembly_mark == MARK_UNSAVED:     # W9a re-check N1: said with both readings
+            edits[first_assembly_edit:] = [replace(e, unsaved=True) for e in edits[first_assembly_edit:]]
         user_plan = _user_check(sw, assembly, motion, placements, layout, result, unknown, features, edits,
                                 modes_state, parts=parts, documents=documents, holds=holds, axial=axial,
                                 suppressed=suppressed, remakes=remakes, deferred=deferred, fixed=fixed)

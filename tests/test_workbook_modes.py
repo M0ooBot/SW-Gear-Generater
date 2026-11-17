@@ -1224,17 +1224,33 @@ def test_e4_a_flags_or_values_update_of_a_gearbox_nobody_turned_puts_nothing(mod
     assert not [n for n, _ in sw.calls if n == "place_component"]
 
 
-@pytest.mark.parametrize("change, said", [
-    ("flag", "The mate ModeSlv engages FrontDog is suppressed in 4H in SolidWorks, where Gear Generator made it on and "
-             "the workbook has it on: in SolidWorks, turn it back on in 4H and press Update SolidWorks again."),
-    ("value", "RangeSlv along Rear in TransferCase_E4 in 2H is 50 mm in SolidWorks, where Gear Generator set it to "
-              "46 mm and the workbook now asks 46 mm: set it back to 46 mm in SolidWorks, or change Gears row 7 so the "
-              "workbook asks 50 mm, and press Update SolidWorks again.")])
+_E4_SAID = {
+    ("flag", False): "The mate ModeSlv engages FrontDog is suppressed in 4H in SolidWorks, where Gear Generator made it "
+                     "on and the workbook has it on: in SolidWorks, turn it back on in 4H and press Update SolidWorks "
+                     "again.",
+    ("value", False): "RangeSlv along Rear in TransferCase_E4 in 2H is 50 mm in SolidWorks, where Gear Generator set it "
+                      "to 46 mm and the workbook now asks 46 mm: set it back to 46 mm in SolidWorks, or change Gears row "
+                      "7 so the workbook asks 50 mm, and press Update SolidWorks again.",
+    # W9a re-check N1: on an assembly the record marks unsaved, both readings are said.
+    ("flag", True): "The mate ModeSlv engages FrontDog is suppressed in 4H in SolidWorks, where Update SolidWorks last "
+                    "made it on and left TransferCase_E4 unsaved: either it was changed in SolidWorks since, or "
+                    "SolidWorks closed without saving that Update and TransferCase_E4 was changed after it was opened "
+                    "again. Either way, turn it back on in 4H in SolidWorks and press Update SolidWorks again.",
+    ("value", True): "RangeSlv along Rear in TransferCase_E4 in 2H is 50 mm in SolidWorks, where Update SolidWorks last "
+                     "set it to 46 mm and left TransferCase_E4 unsaved, and the workbook now asks 46 mm: either it was "
+                     "changed in SolidWorks since, or SolidWorks closed without saving that Update and TransferCase_E4 "
+                     "was changed after it was opened again. If it was changed, change Gears row 7 so the workbook asks "
+                     "50 mm, or set it back to 46 mm in SolidWorks; if that Update was lost, set it to 46 mm in "
+                     "SolidWorks. Then press Update SolidWorks again."}
+
+
+@pytest.mark.parametrize("change", ["flag", "value"])
 @pytest.mark.parametrize("marked", [False, True], ids=["no mark", "unsaved, still open and modified"])
-def test_e4_a_flag_or_value_the_user_changed_refuses_where_the_record_vouches(mode_findings, change, said, marked):
+def test_e4_a_flag_or_value_the_user_changed_refuses_where_the_record_vouches(mode_findings, change, marked):
     """K11 on E4 through classify: the same changes as above, with the record vouching for the assembly — no mark, or
     an unsaved mark on an assembly that stayed open, modified, since that Update — refuse before anything is shown,
-    naming the value (W9a, ruling 3)."""
+    naming the value (W9a, ruling 3); with the mark, the sentence says both readings (re-check N1)."""
+    said = _E4_SAID[(change, marked)]
     sw, _, record = build_on_fake(e4_transfer_case())
     sw.show_configuration("4L")
     _e4_flags_or_value_changed(sw, change)

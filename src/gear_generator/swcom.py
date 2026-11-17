@@ -931,8 +931,11 @@ class MateInfo:
 
     @property
     def whole(self) -> bool:
-        """Whether every part of it was read: its type, its entity count and each entity's component."""
-        return self.counted and self.type != UNREAD and all(c is not None for c in self.components)
+        """Whether every part of it was read: its type, its entity count and each entity's component — and at least
+        two entities, since every mate joins two or more (one read with fewer is not taken as described: W9a
+        re-check N2)."""
+        return self.counted and self.type != UNREAD and len(self.components) >= 2 and \
+            all(c is not None for c in self.components)
 
 
 @dataclass(frozen=True)

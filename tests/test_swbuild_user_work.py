@@ -976,8 +976,116 @@ def test_the_judgement_is_pure_and_predicts_what_a_press_would_carry_without_a_r
         components=[swbuild.UserComponent("Sprocket-1", SPROCKET)],
         mates=[swbuild.UserMate("Lock3", swbuild.USER_LOCK, 16, (("app", "Sun"), ("user", "Sprocket-1")), ("",)),
                swbuild.UserMate("Axis3", swbuild.USER_OTHER, 0, (("user", "Sprocket-1"), ("layout", "")), ("",))])
-    told = swbuild.judge_user_work(work, ("",), {"Sun", "Planet"}, trains=[("Sun", "Planet")], mated=("Sun", "Planet"))
+    told = swbuild.judge_user_work(work, ("",), {"Sun", "Planet"}, trains=[("Sun", "Planet")], mated=("Sun", "Planet"),
+                                   branches={})                      # every body on S0's measured branch
     assert told.problems == [] and told.carried == {"Sun": [("Sprocket-1", ("Lock3",))]}
     assert told.unread_ties == [(("Sun", "Planet"), ("Lock3", "Axis3"))] and told.on_train["Planet"] == ("Lock3", "Axis3")
     nothing = swbuild.judge_user_work(work, ("",), set())
     assert nothing.carried == {} and nothing.problems == []
+
+
+
+# -- the re-check of the fix round (W9A-REVIEW-A.md, "The fix round, re-checked"; the coordinator's rulings) ----------
+
+
+def _work_with(*mates, components=()):
+    return swbuild.UserWork(components=list(components) or [swbuild.UserComponent("Sprocket-1", SPROCKET)],
+                            mates=list(mates))
+
+
+def test_the_judgement_given_no_branches_takes_nothing_as_measured():
+    """N6: a caller that gives no ``branches`` is never told a carry goes through."""
+    work = _work_with(swbuild.UserMate("Lock3", swbuild.USER_LOCK, 16, (("app", "Sun"), ("user", "Sprocket-1")),
+                                       ("",)))
+    told = swbuild.judge_user_work(work, ("",), {"Sun"})
+    assert told.carried == {} and [(p.kind, p.mates) for p in told.problems] == [(PROBLEM_UNSETTLED, ("Lock3",))]
+    assert "how Sun is put was not said to this judgement" in told.problems[0].sentence
+    other = _work_with(swbuild.UserMate("Angle1", swbuild.USER_OTHER, 6, (("app", "Sun"), ("layout", "")), ("",)))
+    (said,) = swbuild.judge_user_work(other, ("",), {"Sun"}).problems
+    assert "lock your component to Sun instead" not in said.sentence                 # no lock promised either
+    assert swbuild.judge_user_work(work, ("",), {"Sun"}, branches={}).carried == {"Sun": [("Sprocket-1", ("Lock3",))]}
+
+
+@pytest.mark.parametrize("entities", [(), ("gear1-1",)])
+def test_a_mate_read_whole_with_fewer_than_two_entities_is_not_described_and_refuses(entities):
+    """N2: a lock that read its type and a count of 0 or 1 is not taken as described: it refuses as an unreadable
+    mate does when anything is put, with no garbled sentence."""
+    assert not swcom.MateInfo("Lock1", 16, entities).whole
+    fake = _built_train()
+    _sprocket_on_g1(fake, axis="")
+    real = fake.mate_info
+    fake.mate_info = lambda handle: swcom.MateInfo("UserLock1", 16, entities) if fake.mate_handles[handle] == \
+        "UserLock1" else real(handle)
+    with pytest.raises(UserWorkRefused) as raised:
+        _moving(fake)
+    (problem,) = raised.value.problems
+    assert problem.kind == swbuild.PROBLEM_UNREAD and problem.sentence.startswith(
+        "SolidWorks would not say what UserLock1 in T.SLDASM holds")
+    assert "your  with" not in str(raised.value)
+
+
+def test_with_a_mate_not_wholly_read_every_body_counts_as_the_users_for_the_bind(monkeypatch):
+    """N3: on a quiet press an unreadable mate is not refused (nothing is put); should the change phase then put a
+    body after all, the bind stops it, since the unread mate could be on any body."""
+    fake = _built_train()
+    fake.user_component(T_ASM, "Housing-1", HOUSING, (IDENTITY9, (0.0, 0.0, -40.0)), fixed=True)
+    fake.user_mate(T_ASM, "Mystery1", kind="coincident", a=("Housing-1", "plane1"), b=("gear4-1", "plane1"))
+    fake.unread_mates = {"Mystery1": "type"}
+    monkeypatch.setattr(swbuild, "_may_put", lambda *args, **kwargs: set())
+    result = _moving(fake)
+    assert not result.ok and result.placed == []
+    assert any("which its check before any change found it would not put, and your work is on" in text
+               for _, text in result.failures), result.failures
+
+
+def test_a_carried_component_whose_file_did_not_read_takes_the_sub_assembly_branch():
+    """N4: a component whose path SolidWorks would not name is not assumed to be a part: it is gated as a
+    sub-assembly, not measured."""
+    fake = _built_train()
+    _sprocket_on_g1(fake)
+    fake.component_paths["Sprocket-1"] = ""
+    with pytest.raises(UserWorkRefused) as raised:
+        _moving(fake)
+    (problem,) = raised.value.problems
+    assert problem.kind == PROBLEM_UNSETTLED and "(findings.USER_MATE_PUT_SUBASSEMBLY_ON_2026 is None)" in \
+        problem.sentence
+    assert "putting a component of yours whose file SolidWorks would not name, taken for a sub-assembly, with" in \
+        problem.sentence
+
+
+def test_a_value_on_a_document_marked_unsaved_is_refused_saying_both_readings():
+    """N1 (the coordinator's ruling): Update 1 left the part unsaved; it was reopened from its file and touched, so it
+    reads modified; the refusal stands, and says it may be the user's edit or that Update lost."""
+    fake = _built_train()
+    key = _key(P17)
+    fake.touched.add(key)              # the file's own Face Width 10, reopened and then touched: it reads modified
+    recorded = tuple((n, "12" if n == "Face Width" else x) for n, x in _recorded(S17))     # Update 1 set 12
+    doc = swbuild.DocumentValues(P17, _values(S17.with_values(face_width="12")), recorded=recorded,
+                                 cells=(("Face Width", "Gears!I3"),), mark=swbuild.MARK_UNSAVED)
+    with pytest.raises(UserWorkRefused) as raised:
+        _update_train(fake, parts=[doc])
+    (problem,) = raised.value.problems
+    assert problem.values[0].unsaved and problem.values[0].recorded == "12"
+    assert problem.sentence == (
+        "Face Width in Gear_m1.5_N17 is 10 in SolidWorks and 12 in the workbook, where Update SolidWorks last set 12 "
+        "and left Gear_m1.5_N17 unsaved: either it was changed in SolidWorks since, or SolidWorks closed without "
+        "saving that Update and Gear_m1.5_N17 was changed after it was opened again. If it was changed, type 10 in "
+        "Gears!I3, or set it back to 12 in SolidWorks; if that Update was lost, set it to 12 in SolidWorks. Then press "
+        "Update SolidWorks again.")
+    unmarked = replace(doc, mark="")
+    with pytest.raises(UserWorkRefused, match=r"^Face Width in Gear_m1.5_N17 is 10 in SolidWorks and 12 in the "
+                                              r"workbook: type 10 in Gears!I3"):
+        _update_train(fake, parts=[unmarked])
+
+
+def test_a_face_z_on_an_assembly_marked_unsaved_is_refused_saying_both_readings():
+    fake = _built_train()
+    _edit(fake, T_ASM, "G4 Face Z", "22")
+    motion = _motion(face_globals=(("G4", GlobalVariable("G4 Face Z", "25")),), record_holds=True,
+                     recorded_faces=(("G4", "20"),), assembly_mark=swbuild.MARK_UNSAVED)
+    fake.touched.add(_key(T_ASM))                                           # open and modified since that Update
+    with pytest.raises(UserWorkRefused) as raised:
+        _update_train(fake, placements=_train_placements(_train_frames(z4=25.0)), motion=motion)
+    assert str(raised.value).startswith("G4 Face Z in T is 22 mm in SolidWorks, where Update SolidWorks last set it "
+                                        "to 20 mm and left T unsaved, and the workbook now asks 25 mm: either it was "
+                                        "changed in SolidWorks since, or SolidWorks closed without saving that Update")
