@@ -625,10 +625,31 @@ def test_with_the_finding_the_fakes_assembly_rebuild_fails_on_a_feature_in_error
     assert {c.name: c.code for c in fake.components()}["Sprocket-1"] == 0
 
 
-def test_the_assembly_rebuild_findings_settle_2026_and_leave_2024_unmeasured():
-    assert swbuild.assembly_rebuild_settled((34, 1, 1)) == {"mate": True, "feature": False, "whats_wrong": False}
-    assert swbuild.assembly_rebuild_settled((32, 5, 0)) is None
+def test_the_assembly_rebuild_findings_settle_2026_and_2024(monkeypatch):
+    """Re-pinned at the coordinator's ruling on 2024's What's Wrong box: the gate turns on the box not blocking
+    (WHATS_WRONG_IN_UPDATE_BLOCKS_ON_<year> False), not on no window opening, so 2024 is settled as 2026 is."""
+    settled = {"mate": True, "feature": False, "blocks": False}
+    assert swbuild.assembly_rebuild_settled((34, 1, 1)) == settled
+    assert swbuild.assembly_rebuild_settled((32, 5, 0)) == settled
     assert swbuild.assembly_rebuild_settled(()) is None
+    for value in (None, True):
+        monkeypatch.setattr(findings, "WHATS_WRONG_IN_UPDATE_BLOCKS_ON_2024", value)
+        assert swbuild.assembly_rebuild_settled((32, 5, 0)) is None
+    monkeypatch.setattr(findings, "WHATS_WRONG_IN_UPDATE_BLOCKS_ON_2024", False)
+    monkeypatch.setattr(findings, "ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_2024", None)
+    assert swbuild.assembly_rebuild_settled((32, 5, 0)) is None
+
+
+def test_whats_wrong_shows_in_update_answers_true_false_or_unmeasured(monkeypatch):
+    """The helper for package B's sentence."""
+    assert swbuild.whats_wrong_shows_in_update((32, 5, 0)) is True
+    assert swbuild.whats_wrong_shows_in_update((34, 1, 1)) is False
+    assert swbuild.whats_wrong_shows_in_update(()) is None
+    monkeypatch.setattr(findings, "WHATS_WRONG_OPENS_IN_UPDATE_WITH_PART_FEATURE_IN_ERROR_ON_2026", None)
+    assert swbuild.whats_wrong_shows_in_update((34, 1, 1)) is None              # one False, one unmeasured
+    monkeypatch.setattr(findings, "WHATS_WRONG_OPENS_IN_UPDATE_WITH_USER_MATE_IN_ERROR_ON_2024", None)
+    assert swbuild.whats_wrong_shows_in_update((32, 5, 0)) is True              # either True is enough
+    assert swbuild.whats_wrong_shows_in_update((30, 0, 0)) is None              # a version with no findings
 
 
 def test_an_update_with_only_the_users_own_part_in_error_goes_on_and_names_it_as_already_in_error():
@@ -703,6 +724,64 @@ def test_the_same_with_an_app_feature_in_error_in_another_part_stays_a_failure_n
     assert [(v.name, v.was, v.now) for v in result.values_under(keyway)] == [("Face Width", "10", "12")]
 
 
+# -- SolidWorks 2024, after the ruling on its What's Wrong box: it goes ahead as on 2026 ------------------------------
+
+
+def test_on_2024_an_update_with_only_the_users_own_part_in_error_goes_ahead_as_on_2026():
+    fake = _built_train()
+    fake.revision = (32, 5, 0)
+    _sprocket_part_in_error(fake)
+    result = _update_train(fake, parts=_every_t_part())
+    assert result.ok, result.failures
+    assert not result.rebuilt and result.rebuild_from_user_alone == ["Sprocket-1"]
+
+
+def test_on_2024_k3_goes_ahead_naming_the_keyway_newly_in_error_as_on_2026():
+    fake = _built_train()
+    fake.revision = (32, 5, 0)
+    fake.user_feature(P17, "User Keyway")
+    fake.breaks_on_set[_key(P17)] = [("User Keyway", 71)]
+    result = _update_train(fake, parts=_every_t_part(_p17_update(cells=(("Face Width", "Gears!I2"),))))
+    assert result.ok, result.failures
+    assert result.rebuild_from_user_alone == ["User Keyway in Gear_m1.5_N17.SLDPRT"]
+    (keyway,) = result.user_features_in_error
+    assert result.user_feature_was_in_error(keyway) is False
+    assert result.values_under(keyway) == [swbuild.ValueSet(P17, "Face Width", "10", "12", "Gears!I2")]
+
+
+@pytest.mark.parametrize("value", [None, True])
+def test_on_2024_with_the_box_not_known_not_to_block_the_failure_stands(monkeypatch, value):
+    monkeypatch.setattr(findings, "WHATS_WRONG_IN_UPDATE_BLOCKS_ON_2024", value)
+    fake = _built_train()
+    fake.revision = (32, 5, 0)
+    fake.user_feature(P17, "User Keyway")
+    fake.breaks_on_set[_key(P17)] = [("User Keyway", 71)]
+    result = _update_train(fake, parts=_every_t_part())
+    assert ("T.SLDASM", "SolidWorks reported an error rebuilding T.") in result.failures
+    assert result.rebuild_from_user_alone == [] and [f.name for f in result.user_features_in_error] == ["User Keyway"]
+
+
+def test_on_2024_with_modes_the_users_part_in_error_is_laid_to_them_as_on_2026(tc_built):
+    fake, built = tc_built
+    fake.revision = (32, 5, 0)
+    fake.user_component(TC_ASM, "Sprocket-1", SPROCKET, (IDENTITY9, (0.0, 0.0, 400.0)))
+    fake.feature_codes[(_key(SPROCKET), "User Keyway")] = 71
+    done = _tc_update_parts(fake, built, wanted_turn=6.0)
+    assert done.ok, done.log_lines()
+    assert done.rebuild_from_user_alone == ["Sprocket-1"]
+
+
+def test_on_2024_with_modes_and_the_box_not_known_not_to_block_the_failure_stands(tc_built, monkeypatch):
+    monkeypatch.setattr(findings, "WHATS_WRONG_IN_UPDATE_BLOCKS_ON_2024", None)
+    fake, built = tc_built
+    fake.revision = (32, 5, 0)
+    fake.user_component(TC_ASM, "Sprocket-1", SPROCKET, (IDENTITY9, (0.0, 0.0, 400.0)))
+    fake.feature_codes[(_key(SPROCKET), "User Keyway")] = 71
+    done = _tc_update_parts(fake, built, wanted_turn=6.0)
+    assert any(why.startswith("SolidWorks reported an error rebuilding TransferCase in ") and
+               why.endswith(". Your Sprocket-1 was already in error before this Update.") for _, why in done.failures)
+
+
 def test_a_false_rebuild_with_nothing_of_the_users_in_error_stays_a_failure():
     """The review's condition 1: the assembly's rebuild returns False and nothing at all reads in error."""
     fake = _built_train()
@@ -759,10 +838,10 @@ def test_a_press_that_would_carry_a_component_whose_error_code_is_unread_refuses
 
 def test_a_failed_update_without_modes_still_carries_the_users_feature_newly_in_error_and_the_value_under_it(
         monkeypatch):
-    """The close review's must-fix 2, the worker's half: k3 on a version whose findings are None (2024 today) stays a
-    failure, and its result still holds what package B names — the keyway newly in error, and what was set under
-    it."""
-    monkeypatch.setattr(findings, "WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_2026", None, raising=False)
+    """The close review's must-fix 2, the worker's half: k3 on a version whose findings are None (2024 until the box
+    ruling) stays a failure, and its result still holds what package B names — the keyway newly in error, and what
+    was set under it."""
+    monkeypatch.setattr(findings, "WHATS_WRONG_IN_UPDATE_BLOCKS_ON_2026", None, raising=False)
     fake = _built_train()
     fake.user_feature(P17, "User Keyway")
     fake.breaks_on_set[_key(P17)] = [("User Keyway", 71)]
@@ -779,7 +858,7 @@ def test_a_failed_update_with_modes_still_carries_the_users_feature_newly_in_err
         tc_built, monkeypatch):
     """The same on the path with modes: the TransferCase's Sleeve part set (Face Width 10 -> 12), the user's keyway in
     it rebuilt into error, the finding unset, so the first rebuild in the active mode stops the Update."""
-    monkeypatch.setattr(findings, "WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_2026", None, raising=False)
+    monkeypatch.setattr(findings, "WHATS_WRONG_IN_UPDATE_BLOCKS_ON_2026", None, raising=False)
     fake, built = tc_built
     fake.user_feature(TC_SLEEVE, "User Keyway")
     fake.breaks_on_set[_key(TC_SLEEVE)] = [("User Keyway", 71)]
@@ -822,10 +901,13 @@ def test_errors_that_cannot_be_read_keep_it_a_failure():
     assert any(why.startswith("SolidWorks reported an error rebuilding T.") for _, why in result.failures)
 
 
-@pytest.mark.parametrize("name", ["ASSEMBLY_REBUILD_WITH_USER_MATE_IN_ERROR_ON_2026",
-                                  "WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_2026"])
-def test_on_a_version_whose_finding_is_none_a_failed_assembly_rebuild_stays_todays_failure(monkeypatch, name):
-    monkeypatch.setattr(findings, name, None, raising=False)
+@pytest.mark.parametrize("name, value", [("ASSEMBLY_REBUILD_WITH_USER_MATE_IN_ERROR_ON_2026", None),
+                                         ("WHATS_WRONG_IN_UPDATE_BLOCKS_ON_2026", None),
+                                         ("WHATS_WRONG_IN_UPDATE_BLOCKS_ON_2026", True)])
+def test_on_a_version_whose_finding_is_none_a_failed_assembly_rebuild_stays_todays_failure(monkeypatch, name, value):
+    """Re-pinned at the ruling on 2024's box: the gate's What's Wrong finding is now whether the box blocks; unset or
+    True, the failure stands."""
+    monkeypatch.setattr(findings, name, value, raising=False)
     fake = _built_train()
     _sprocket_part_in_error(fake)
     result = _update_train(fake, parts=_every_t_part())
@@ -876,7 +958,7 @@ def test_with_modes_the_users_part_in_error_is_laid_to_them_in_every_mode_shown(
 
 
 def test_with_modes_and_the_finding_unset_the_failure_names_the_mode_and_the_users_part(tc_built, monkeypatch):
-    monkeypatch.setattr(findings, "WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_2026", None, raising=False)
+    monkeypatch.setattr(findings, "WHATS_WRONG_IN_UPDATE_BLOCKS_ON_2026", None, raising=False)
     fake, built = tc_built
     fake.user_component(TC_ASM, "Sprocket-1", SPROCKET, (IDENTITY9, (0.0, 0.0, 400.0)))
     fake.feature_codes[(_key(SPROCKET), "User Keyway")] = 71

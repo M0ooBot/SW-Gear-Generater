@@ -5162,17 +5162,39 @@ def user_branch_settled(branch: str, revision: Sequence[int]) -> Tuple[bool, str
 
 
 def assembly_rebuild_settled(revision: Sequence[int]) -> Optional[Dict[str, bool]]:
-    """The demonstration's ruling (M3): what an assembly's rebuild does with the user's work in error on the
-    SolidWorks in use — ``{"mate": findings.ASSEMBLY_REBUILD_WITH_USER_MATE_IN_ERROR_ON_<year>, "feature":
-    …_WITH_PART_FEATURE_IN_ERROR_ON_<year>, "whats_wrong": findings.WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_<year>}``
-    — or None when the version is not known or any of the three is None (not measured there)."""
+    """The demonstration's ruling (M3), as the coordinator's ruling on SolidWorks 2024's What's Wrong box leaves it:
+    what an assembly's rebuild does with the user's work in error on the SolidWorks in use, and whether the box an
+    Update may show blocks it — ``{"mate": findings.ASSEMBLY_REBUILD_WITH_USER_MATE_IN_ERROR_ON_<year>, "feature":
+    …_WITH_PART_FEATURE_IN_ERROR_ON_<year>, "blocks": findings.WHATS_WRONG_IN_UPDATE_BLOCKS_ON_<year>}`` — or None
+    when the version is not known, either rebuild finding is None (not measured there), or the box is not known not
+    to block (``blocks`` None or True). Whether a window opens no longer decides it: on 2024 What's Wrong shows for
+    some seconds during such an Update and goes by itself (findings.py)."""
     year = release_year(int(revision[0])) if revision else None
     if year is None:
         return None
     read = {"mate": getattr(findings, f"ASSEMBLY_REBUILD_WITH_USER_MATE_IN_ERROR_ON_{year}", None),
             "feature": getattr(findings, f"ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_{year}", None),
-            "whats_wrong": getattr(findings, f"WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_{year}", None)}
-    return None if any(v is None for v in read.values()) else read
+            "blocks": getattr(findings, f"WHATS_WRONG_IN_UPDATE_BLOCKS_ON_{year}", None)}
+    if read["mate"] is None or read["feature"] is None or read["blocks"] is not False:
+        return None
+    return read
+
+
+def whats_wrong_shows_in_update(revision: Sequence[int]) -> Optional[bool]:
+    """For package B's sentence: whether SolidWorks shows its What's Wrong box during an Update with the user's work
+    in error on the version in use — True where either findings.WHATS_WRONG_OPENS_IN_UPDATE_WITH_USER_MATE_IN_ERROR_
+    ON_<year> or …_WITH_PART_FEATURE_IN_ERROR_ON_<year> is True (2024), False where both are False (2026), None
+    where it is not measured (a version not known, or either finding None with neither True). Pure."""
+    year = release_year(int(revision[0])) if revision else None
+    if year is None:
+        return None
+    read = [getattr(findings, f"WHATS_WRONG_OPENS_IN_UPDATE_WITH_{what}_IN_ERROR_ON_{year}", None)
+            for what in ("USER_MATE", "PART_FEATURE")]
+    if any(value is True for value in read):
+        return True
+    if all(value is False for value in read):
+        return False
+    return None
 
 
 @dataclass
@@ -6340,8 +6362,9 @@ def _rebuild_laid_to_user(sw: SolidWorks, result: GearboxUpdate, user: Optional[
     (W9A-RUN-2026-REVIEW.md, finding 1), the assembly active, after its rebuild returned False: what of the user's is
     in error, when nothing of the app's is — else ``[]``, and the rebuild stays a failure, as before.
 
-    4. Only where :func:`assembly_rebuild_settled` has all three findings for the version, What's Wrong not opening
-       on an assembly's rebuild and a part's feature in error making it False.
+    4. Only where :func:`assembly_rebuild_settled` is settled for the version: the two rebuild findings set, a
+       part's feature in error making the rebuild False, and What's Wrong, where it shows in an Update, not blocking
+       it (``findings.WHATS_WRONG_IN_UPDATE_BLOCKS_ON_<year>`` False; the coordinator's ruling on 2024's box).
     2. Nothing of the app's in error, read whole: every mate now (``mate_states``) — a recorded one on and in error
        is the app's (a warning is not, as in the post-check); every top-level component now (``components``) —
        every one not the user's is the app's (the layout and the carriers included), and its part must have been
@@ -6355,7 +6378,7 @@ def _rebuild_laid_to_user(sw: SolidWorks, result: GearboxUpdate, user: Optional[
        version's finding says a mate in error makes the rebuild False (on 2026 it does not, so a False with nothing
        of the user's in error but a mate is not explained by it)."""
     settled = assembly_rebuild_settled(sw.revision)
-    if user is None or settled is None or settled["whats_wrong"] is not False or settled["feature"] is not False:
+    if user is None or settled is None or settled["blocks"] is not False or settled["feature"] is not False:
         return []
     try:
         mates = list(sw.mate_states())
