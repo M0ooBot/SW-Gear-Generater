@@ -70,7 +70,7 @@ J22's bridging warning (it fires only when `length > gap`), and ruling 9.16 (a g
 not made again).
 
 **Where W9 stands (resumed on the user's word, 2026-11-16 afternoon).** **W9a is closed (2026-11-17, early
-morning):** measured, written, reviewed and shown on SolidWorks 2026 and 2024. W9b is closed on SolidWorks 2026 (item 9); W9c is next; none of W9c or W9d is written. How W9a went, in order, and what it leaves open:
+morning):** measured, written, reviewed and shown on SolidWorks 2026 and 2024. W9b is closed on both versions (item 9); W9c is in hand (item 10); W9d is not written. How W9a went, in order, and what it leaves open:
 
 1. **S0's readings** are in `notes-workbook/W9-S0.md`, from `probe/w9_user_work_check.py` on the issue's RangeBox
    (`tests/workbook_fixtures.range_box`). In short: when Update puts a gear back to its built frame, a component of
@@ -162,8 +162,15 @@ morning):** measured, written, reviewed and shown on SolidWorks 2026 and 2024. W
    before stopping (time, not safety); `PROBLEM_COMPONENT` and `PROBLEM_UNSETTLED` can say one thing twice; the
    assembly's own feature tree is not read for the user's features. **Agent runs in W9a: far over the plan's 11**;
    the user was told and said to keep going without asking (2026-11-16).
-9. **W9b is closed on SolidWorks 2026 (2026-11-17, morning); its SolidWorks 2024 build is owed in W9c's 2024
-   session, as the plan has it.** One implementer wrote it against the fake: the interface note
+9. **W9b is closed on SolidWorks 2026 and 2024 (2026-11-17, morning).** *2024:* the demonstration ran there in a
+   fresh session from `529f939` (`probe/results/sw2024/w9b-demo-sw2024-20261117.log`, `9e77303`): build, update
+   and old 0 failed, every mode as §3; in part the relief reads exact and the coarse volume guard failed at 1.3e-4
+   against a fixed 1e-4. The review's 2024 addendum (`W9B-REVIEW.md`, `9b85411`) lays that to SolidWorks 2024's
+   mass properties (the unbanded sleeve reads 2.2e-4 over its own section there, the geometry the same on both
+   versions) and rules the guard's allowance be taken from that control in the same session (factor 1.0, floor
+   1e-4, cap 5e-4); with it both versions' readings replay clean (`6bdf802`), and no 2024 rerun is owed. The step
+   faces are one planar face each on both versions; the next run of `part` integrates their edges. *How it went
+   on 2026:* One implementer wrote it against the fake: the interface note
    `notes-workbook/W9B-INTERFACES.md` (`42dff4d`), package B (`fcbf70b`, `baee8bd`; the Gears columns Start band and
    End band after Slides, the banded sleeve's part as the internal ring plus three globals, two planes, a circle on
    each and a loft cut named Relief, the `hub` kind built and made its shaft's anchor, record schema 8, sidecar
@@ -186,14 +193,32 @@ morning):** measured, written, reviewed and shown on SolidWorks 2026 and 2024. W
    thin-wall warning over the relief (the review's N4) is not added. **Left open:** `de0a470`'s message says "the
    exact form's to 3.8e-5": against the true section (the end face's area) it is 9.0e-5, inside the 1e-4 allowed
    but with little room, and its ratios are the app's report, not measured by turning; the script (`203ce86`, not
-   yet run on SolidWorks) now takes the section from the face; **the two step faces' `GetArea` read 114.30 mm²
-   where the geometry gives 114.558** (the volumes side with 114.558; why the area reads low is not known; printed,
-   not judged; look at it in the 2024 run). The code after `b15450f` (`fca29a2`) has not been on SolidWorks: the
-   2024 run and W9c's demonstration carry it. Not measured: a banded sleeve on a Z− shaft, unequal bands from
+   run on 2024 only) takes the section from the face; **the two step faces' `GetArea` read 114.30 mm²
+   where the geometry gives 114.558**, the same to nine figures on both versions (the volumes side with 114.558;
+   why the area reads low is not known; printed, not judged). `fca29a2` was in 2024's snapshot. Not measured: a banded sleeve on a Z− shaft, unequal bands from
    scratch, a hub with a bore, a typed Rim on a banded sleeve.
-10. **Next: W9c** (plan §5 and §2.1: Update adds, removes and re-mates, and adds and removes modes). Its first step
-   is on SolidWorks: P1 (deleting a component, a dialog probe), then S5 and P2 (W9d's spike), with M1's unread kinds
-   from W9a, on 2026 then 2024, reviewed before any package. The printed-gears plan (`docs/PLAN-PRINTED.md`) waits
+10. **W9c is in hand** (plan §5 and §2.1: Update adds, removes and re-mates, and adds and removes modes).
+   *Its probes are run and reviewed on both versions* (`probe/w9c_probes.py`, note `notes-workbook/W9C-PROBES.md`;
+   2026 `probe/results/w9c-probes-sw2026-20261117-2.log`, 2024 `sw2024/w9c-probes-sw2024-20261117.log`; review
+   `notes-workbook/W9C-PROBES-REVIEW.md`, `88a251e`, 2024 addendum `9b85411`): deleting a component raises no
+   dialog and takes its mates (P1); concentric, limit, width, a user gear mate on an app gear and a mate to a
+   sub-assembly's leaf are read (M1's leftovers); ten user mates on axes, planes and whole components remade equal
+   in a second assembly (S5); a read-only open and a sub-assembly with a missing part raise no dialog (P2).
+   2026's findings are set (`c8da5bb`); 2024's are being set by package A's author. *Owed for W9d only, on both
+   versions:* a face's persistent reference (not measured); **no route reads a component's state per configuration
+   without marking the assembly** (`GetRootComponent3(False)` untried; the plan's show-and-restore fallback cannot
+   leave the save flag as it was, macro database assemblies/13), which needs a ruling when W9d is designed; whether
+   opening a healthy user sub-assembly marks it. *The packages:* the interface is
+   `notes-workbook/W9C-INTERFACES.md` (`ad9a52f`; its §10 choices C1 to C12 ruled by the coordinator, the user's
+   to overrule: each new kind of write gated by a per-version finding that is None until the full build reads it
+   clean; a removal refuses while any user component is present until the external-references read is measured);
+   package A (the worker; `2ffca52` the shapes, more in hand) and package B (classify, the sentences, the footer;
+   in hand) are being written against the fake by two implementers in one checkout. Then: the whole suite, one
+   review of both packages, the demonstration script (the plan's Done-when: RangeBox with the user's work edited
+   to RangeBox_Fixed and one Update adds Hub and the bands in place; then a mode added and one removed), its run
+   on 2026 and 2024, their review. *A question for the user:* every path in the committed logs holds the Windows
+   account's folder name, as the logs have since September and this handoff does; redact from now on, and rewrite
+   the old logs? The printed-gears plan (`docs/PLAN-PRINTED.md`) waits
    behind W9 on the user's word.
 
 Run folders kept on this device under `C:\Users\M0obo\Documents\GearGeneratorProbe\`: `w9-s0-20261116-045513`
@@ -213,7 +238,7 @@ the user*.
 | W6 right-angle | **closed 2026-11-15, but for the person's drag**: planned, reviewed and revised; probe tier 9 (a turned gear mate's sense, on cylinders, SolidWorks 2026) run and reviewed; packages A to E written and each reviewed; the full build run on SolidWorks 2026 and the confirming build on 2024, both from one snapshot (`931fe1a`), every check passing, each run reviewed. Left for the user: drag G1 in the built right-angle gearbox. Details below. |
 | W7 planetary | **closed 2026-11-15, but for the person's drag**: planned, reviewed and revised; the spike on SolidWorks 2026 (`W7-SPIKE.md`); packages A to E written and each reviewed; the demonstration run on SolidWorks 2026 — its first run found one app fault (a turned planetary's put did not hold), the probe `planetary_put_back` measured the route that does, the fix `9f21d99` was reviewed, and every section then passed, the planetary sections and the W5/W6 Update sections once more on the final code; the confirming build on 2024 passed; the run's evidence reviewed. Left for the user: drag Sun in the built planetary. Details below. |
 | W8 sleeves and modes | **closed 2026-11-16, but for three things: the built footer on a screen shorter than the window asks (cut off; open as K12 of W9), the person's step `s6`, and the two hand drags of W6 and W7**: planned, reviewed and revised to the spike (`W8-PLAN.md`, `W8-PLAN-REVIEW.md`, `W8-SPIKE.md`); the interface commit with its rulings (`W8-INTERFACES.md` §9); the findings set and reviewed (`ea7a46f`); packages A to D written and each reviewed; probe tier 11, and the one app fault the first build found, fixed and reviewed; package E's demonstration run on SolidWorks 2026 (34.0.0 on the second host, 34.1.1 here); the closing run from one snapshot of the final source (`c583f48`, 34.1.1): `s0` to `s5` and `s7` and the W5 to W7 sections r1, r2, r3, m5, m8, p1 and p3, every check passing (`c351b1f` to `aff9bfe`), and the full window check 1 failed, the built footer's height (`fb85bcc`); the confirming build on 2024 (32.5.0): `s0`, `s1`, `s2`, `s3`, `s7` 0 failed, its window stage the same one failure (`c3ed9b6`); each run reviewed (`W8-REVIEW-SW2024-CONFIRM.md`, `W8-REVIEW-CLOSING-RUN.md`). The ruling on the footer, the steps for the user and what is left are under *How W8 closed* below. |
-| W9 the user's work in a built assembly, and dog-clutch sleeves (issue #1) | **W9a closed 2026-11-17: the user's work is kept by Update or refused by name before any write; measured, written, reviewed, shown on SolidWorks 2026 (final full run, all sections 0 failed, K12 on the real screen) and confirmed on 2024 under the coordinator's ruling that its What's Wrong box is left alone. W9b (sleeve checks, bands with a relief, the hub) closed on SolidWorks 2026 the same morning, its 2024 build owed in W9c's 2024 session. W9c is next, then W9d.** See *Where W9 stands* above. Planned, reviewed, approved by the user (2026-11-16). The plan is `notes-workbook/ISSUE-1-PLAN.md` (stages W9a to W9d), reviewed in `ISSUE-1-PLAN-REVIEW.md` and revised to its second review (`ISSUE-1-PLAN-REVIEW-2.md`). See the dated paragraph of 2026-11-15/16 above. |
+| W9 the user's work in a built assembly, and dog-clutch sleeves (issue #1) | **W9a closed 2026-11-17: the user's work is kept by Update or refused by name before any write; measured, written, reviewed, shown on SolidWorks 2026 (final full run, all sections 0 failed, K12 on the real screen) and confirmed on 2024 under the coordinator's ruling that its What's Wrong box is left alone. W9b (sleeve checks, bands with a relief, the hub) closed on SolidWorks 2026 and 2024 the same morning. W9c's probes are run and reviewed on both versions and its two packages are being written; then W9d.** See *Where W9 stands* above. Planned, reviewed, approved by the user (2026-11-16). The plan is `notes-workbook/ISSUE-1-PLAN.md` (stages W9a to W9d), reviewed in `ISSUE-1-PLAN-REVIEW.md` and revised to its second review (`ISSUE-1-PLAN-REVIEW-2.md`). See the dated paragraph of 2026-11-15/16 above. |
 | Printed gears (FDM, PLA): stages F1 to F4 | **planned, waiting behind W9; nothing built and nothing to be built yet (the user, 2026-11-16).** The plan is `docs/PLAN-PRINTED.md`, reviewed once in `docs/PLAN-PRINTED-REVIEW.md` and revised to that review and to the user's answers (Printed the default everywhere, D-flat first, STEP for Bambu Studio, the first layer left to the slicer, printed parts named `_P`, W9 first). Its D3, D6 and D7 stand as assumed. The revision is not reviewed: when it is taken up, after W9 closes, it is read against the code as W9 left it and reviewed again before any code. |
 | How the user's absence is handled | the user said on 2026-11-14 to carry on, in order, until W8 is done. Judgement calls are taken at each plan's recommended reading and listed for the user as readings to overrule. |
 | The small-pinion tip cap | `fix/small-pinion-cap` merged at `0f5a121` (the user's instruction): 6- and 7-tooth pinions build with an arc on the tip cap, version 0.3.2. Built on SolidWorks 2024 by the branch; the 2026 build and the merge's review are in hand. |
