@@ -1112,6 +1112,9 @@ def test_a_component_a_carried_mate_holds_is_not_said_to_stand_still_in_every_mo
     said = _status(_done(free, remade=[("Lock5", "Lock5", ("H",))]))
     assert ("Your components were placed where they stood in H, the mode RangeBox.SLDASM showed; one no mate holds "
             "stands there in every mode.") in said
+    fell = _done(free, remade=[("Lock5", "Lock5", ("H",))], fixed=[swbuild.CarryFallback(("Chain-1",), (), (),
+                                                                                         swbuild.FELL_TIE, ("Sun",))])
+    assert "one no mate holds" not in _status(fell)                   # fixed by its fallback: not floating
 
 
 def test_the_files_changed_are_kept_by_name_and_the_stop_alone_is_the_stop():

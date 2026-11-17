@@ -5651,7 +5651,9 @@ def carried_status(result, again, old_path: str = "", anchors: Optional[Mapping[
         # sliding gear follows it).
         remade = {o for o, _, _ in done.remade}
         held_by = {e.owner for m in work.mates if m.name in remade for e in m.entities if e.what == sb.USER}
-        free = [c for c in work.components if c.name in new_of and not c.fixed and c.name not in held_by]
+        fallen = {n for f in done.fixed for n in f.components}
+        free = [c for c in work.components if c.name in new_of and not c.fixed and c.name not in held_by
+                and new_of[c.name] not in fallen]
         texts.append(f"Your components were placed where they stood in {work.active}, the mode {old} showed"
                      + ("; one no mate holds stands there in every mode." if free else "."))
     if modes and done.inserted and not work.states_route and work.active:
