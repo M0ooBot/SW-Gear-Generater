@@ -1,0 +1,98 @@
+{
+ "sections": {
+  "reducer": {
+   "seconds": 87,
+   "failed": []
+  },
+  "k3": {
+   "update": {
+    "ok": true,
+    "failures": [],
+    "user_in_error": [],
+    "user_features_in_error": [
+     [
+      "User Keyway",
+      "Gear_m1.5_N17.SLDPRT",
+      51
+     ]
+    ],
+    "in_error_before": [],
+    "sentence": "Updated SolidWorks: changed 1 variable in Gear_m1.5_N17; no interference between the gears where they stand. SolidWorks reports an error rebuilding Reducer_12to1.SLDASM, from your own work alone: nothing of the app's is in error, so the Update was made. Your User Keyway in Gear_m1.5_N17 is in error in SolidWorks now, after this Update set Bore Diameter 8 to 14 (Gears!J2) in that part: change your User Keyway to fit, or type 8 in Gears!J2 again. SolidWorks may have shown its What's Wrong box for a few seconds during the Update; nothing in it needed answering. Save Gear_m1.5_N17 in SolidWorks to keep it.",
+    "whats_wrong": {
+     "finding": "WHATS_WRONG_OPENS_IN_UPDATE_WITH_PART_FEATURE_IN_ERROR_ON_2024",
+     "expected": true,
+     "seen": [
+      {
+       "hwnd": 10687910,
+       "seconds": 17.12,
+       "call_in_progress": "GetComponentByName"
+      }
+     ],
+     "gone": [
+      {
+       "hwnd": 10687910,
+       "seconds": 20.13,
+       "call_in_progress": "GetTypeName2"
+      }
+     ]
+    }
+   },
+   "components": [
+    [
+     "OutputGear-1",
+     0
+    ],
+    [
+     "Reducer_12to1_Layout-1",
+     0
+    ],
+    [
+     "Gear_m1.5_N17-1",
+     51
+    ],
+    [
+     "Gear_m1.5_N68-1",
+     0
+    ],
+    [
+     "Gear_m2_N17-1",
+     0
+    ]
+   ],
+   "seconds": 74,
+   "failed": []
+  }
+ },
+ "stops": [],
+ "proposal": {
+  "M3_app_part": {
+   "update_ok": true,
+   "expected_to_go_ahead": true,
+   "failures": [],
+   "named_in_result": true,
+   "named_in_sentence": [
+    "Your User Keyway in Gear_m1.5_N17 is in error in SolidWorks now, after this Update set Bore Diameter 8 to 14 (Gears!J2) in that part: change your User Keyway to fit, or type 8 in Gears!J2 again."
+   ],
+   "g1_component_code": 51,
+   "laid_to_user_alone": [
+    "User Keyway in Gear_m1.5_N17.SLDPRT"
+   ]
+  }
+ },
+ "revision": [
+  32,
+  5,
+  0
+ ],
+ "snapshot": "10a6a08",
+ "whats_wrong_rule": {
+  "helper_present": true,
+  "shows_in_update": true,
+  "allowance_seconds": 60.0
+ },
+ "fails": [],
+ "notes": [
+  "SolidWorks' notification box came up while no SolidWorks call was in progress (exempt by the coordinator's ruling; nothing answers it)",
+  "a SolidWorks window \"What's Wrong\" ['Show &errors', 'Show &warnings', \"&Display What's Wrong during rebuild\", '&FeatureXpert', '&Close', '&Help', 'Custom1', '* Select FeatureXpert to attempt repair of the highlighted error(s).    '] came up while ActivateDoc3 was in progress, before this run made any configuration"
+ ]
+}

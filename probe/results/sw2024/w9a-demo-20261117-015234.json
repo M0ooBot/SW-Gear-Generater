@@ -1,0 +1,358 @@
+{
+ "sections": {
+  "m3": {
+   "show_errors_every_rebuild": true,
+   "placed": {
+    "sprocket_z": -100.0,
+    "housing_z": 60.0,
+    "gap": 160.0
+   },
+   "baseline": {
+    "rebuilt": true,
+    "whats_wrong": 0,
+    "mates": {
+     "Sun on Input Axis": [
+      0,
+      false
+     ],
+     "Sun along Input": [
+      0,
+      false
+     ],
+     "HighDog locked to Sun": [
+      0,
+      false
+     ],
+     "Carrier carrier on Carrier Axis": [
+      0,
+      false
+     ],
+     "Carrier carrier along Carrier": [
+      0,
+      false
+     ],
+     "LowDog locked to Carrier carrier": [
+      0,
+      false
+     ],
+     "Planet copy 1 on Planet copy 1 Axis": [
+      0,
+      false
+     ],
+     "Planet copy 1 along Planet copy 1": [
+      0,
+      false
+     ],
+     "Planet copy 2 on Planet copy 2 Axis": [
+      0,
+      false
+     ],
+     "Planet copy 2 along Planet copy 2": [
+      0,
+      false
+     ],
+     "Planet copy 3 on Planet copy 3 Axis": [
+      0,
+      false
+     ],
+     "Planet copy 3 along Planet copy 3": [
+      0,
+      false
+     ],
+     "RangeSlv on Output Axis": [
+      0,
+      false
+     ],
+     "RangeSlv along Output": [
+      0,
+      false
+     ],
+     "Sun meshes Planet copy 1": [
+      0,
+      false
+     ],
+     "Sun meshes Planet copy 2": [
+      0,
+      false
+     ],
+     "Sun meshes Planet copy 3": [
+      0,
+      false
+     ],
+     "Planet copy 1 meshes Ring": [
+      0,
+      false
+     ],
+     "RangeSlv engages HighDog": [
+      0,
+      false
+     ],
+     "RangeSlv engages LowDog": [
+      0,
+      true
+     ],
+     "UserAxis": [
+      0,
+      false
+     ],
+     "UserFront": [
+      0,
+      false
+     ]
+    },
+    "components": {
+     "Dog_m1.25_N17-2": 0,
+     "Sleeve_m1.25_N17-1": 0,
+     "Housing-1": 0,
+     "Gear_m1.25_N29-1": 0,
+     "Dog_m1.25_N17-1": 0,
+     "RangeBox_Carrier_Carrier-1": 0,
+     "RangeBox_Layout-1": 0,
+     "Gear_m1.25_N13-1": 0,
+     "Gear_m1.25_N13-2": 0,
+     "Gear_m1.25_N13-3": 0,
+     "Ring_m1.25_N55-1": 0,
+     "Sprocket-1": 0
+    },
+    "flags": {
+     "RangeBox_Layout.SLDPRT": false,
+     "RangeBox_Carrier_Carrier.SLDPRT": false,
+     "Gear_m1.25_N29.SLDPRT": false,
+     "Gear_m1.25_N13.SLDPRT": false,
+     "Ring_m1.25_N55.SLDPRT": false,
+     "Dog_m1.25_N17.SLDPRT": false,
+     "Sleeve_m1.25_N17.SLDPRT": false,
+     "Housing.SLDPRT": false,
+     "Sprocket.SLDPRT": false,
+     "RangeBox.SLDASM": true
+    },
+    "windows_new": [],
+    "windows_counted": []
+   },
+   "mate_error": {
+    "rebuilt": true,
+    "whats_wrong": 3,
+    "mates": {
+     "Sun on Input Axis": [
+      0,
+      false
+     ],
+     "Sun along Input": [
+      0,
+      false
+     ],
+     "HighDog locked to Sun": [
+      0,
+      false
+     ],
+     "Carrier carrier on Carrier Axis": [
+      0,
+      false
+     ],
+     "Carrier carrier along Carrier": [
+      0,
+      false
+     ],
+     "LowDog locked to Carrier carrier": [
+      0,
+      false
+     ],
+     "Planet copy 1 on Planet copy 1 Axis": [
+      0,
+      false
+     ],
+     "Planet copy 1 along Planet copy 1": [
+      0,
+      false
+     ],
+     "Planet copy 2 on Planet copy 2 Axis": [
+      0,
+      false
+     ],
+     "Planet copy 2 along Planet copy 2": [
+      0,
+      false
+     ],
+     "Planet copy 3 on Planet copy 3 Axis": [
+      0,
+      false
+     ],
+     "Planet copy 3 along Planet copy 3": [
+      0,
+      false
+     ],
+     "RangeSlv on Output Axis": [
+      0,
+      false
+     ],
+     "RangeSlv along Output": [
+      0,
+      false
+     ],
+     "Sun meshes Planet copy 1": [
+      0,
+      false
+     ],
+     "Sun meshes Planet copy 2": [
+      0,
+      false
+     ],
+     "Sun meshes Planet copy 3": [
+      0,
+      false
+     ],
+     "Planet copy 1 meshes Ring": [
+      0,
+      false
+     ],
+     "RangeSlv engages HighDog": [
+      0,
+      false
+     ],
+     "RangeSlv engages LowDog": [
+      0,
+      true
+     ],
+     "UserAxis": [
+      0,
+      false
+     ],
+     "UserFront": [
+      51,
+      false
+     ],
+     "UserGap": [
+      51,
+      false
+     ]
+    },
+    "components": {
+     "Dog_m1.25_N17-2": 0,
+     "Sleeve_m1.25_N17-1": 0,
+     "Housing-1": 0,
+     "Gear_m1.25_N29-1": 0,
+     "Dog_m1.25_N17-1": 0,
+     "RangeBox_Carrier_Carrier-1": 0,
+     "RangeBox_Layout-1": 0,
+     "Gear_m1.25_N13-1": 0,
+     "Gear_m1.25_N13-2": 0,
+     "Gear_m1.25_N13-3": 0,
+     "Ring_m1.25_N55-1": 0,
+     "Sprocket-1": 0
+    },
+    "flags": {
+     "RangeBox_Layout.SLDPRT": false,
+     "RangeBox_Carrier_Carrier.SLDPRT": false,
+     "Gear_m1.25_N29.SLDPRT": false,
+     "Gear_m1.25_N13.SLDPRT": false,
+     "Ring_m1.25_N55.SLDPRT": false,
+     "Dog_m1.25_N17.SLDPRT": false,
+     "Sleeve_m1.25_N17.SLDPRT": false,
+     "Housing.SLDPRT": false,
+     "Sprocket.SLDPRT": false,
+     "RangeBox.SLDASM": true
+    },
+    "windows_new": [],
+    "windows_counted": [],
+    "add_mate_status": 5
+   },
+   "update_mate_error": {
+    "ok": true,
+    "failures": [],
+    "user_in_error": [
+     [
+      "N",
+      "UserFront"
+     ],
+     [
+      "N",
+      "UserGap"
+     ],
+     [
+      "L",
+      "UserFront"
+     ],
+     [
+      "L",
+      "UserGap"
+     ],
+     [
+      "H",
+      "UserFront"
+     ],
+     [
+      "H",
+      "UserGap"
+     ]
+    ],
+    "user_features_in_error": [],
+    "in_error_before": [
+     "UserFront",
+     "UserGap"
+    ],
+    "sentence": "Updated SolidWorks: changed 1 variable in Gear_m1.25_N29, re-placed Carrier (the carrier), Sun, Planet (3 copies), HighDog, LowDog and RangeSlv in every mode; no interference between the gears in any mode, where they stand. It worked in H, the configuration that was active, then showed and checked N and L and left the assembly in H. Your UserFront and UserGap were in error in SolidWorks in the mode showing before this Update changed anything; after it, UserFront in N, L and H and UserGap in N, L and H are in error. SolidWorks may have shown its What's Wrong box for a few seconds during the Update; nothing in it needed answering. Save Gear_m1.25_N29 and RangeBox in SolidWorks to keep them.",
+    "windows_new": [],
+    "whats_wrong": {
+     "finding": "WHATS_WRONG_OPENS_IN_UPDATE_WITH_USER_MATE_IN_ERROR_ON_2024",
+     "expected": true,
+     "seen": [
+      {
+       "hwnd": 60559192,
+       "seconds": 90.41,
+       "call_in_progress": "ActivateDoc3"
+      }
+     ],
+     "gone": [
+      {
+       "hwnd": 60559192,
+       "seconds": 112.51,
+       "call_in_progress": "ConfigurationManager"
+      }
+     ]
+    }
+   },
+   "part_rebuild": {
+    "rebuilt": false,
+    "whats_wrong": 1,
+    "errors": [
+     [
+      "User Keyway",
+      51
+     ]
+    ],
+    "windows_new": []
+   },
+   "cut": "WorkerHung: the SolidWorks worker is hung from an earlier job, so nothing more is asked of it",
+   "seconds": 580,
+   "seconds_after_the_dialog_not_counted": 0,
+   "failed": [
+    "m3 a user feature in error: the assembly rebuild: a SolidWorks dialog came up while it ran, and nothing here answers it: ['a SolidWorks window \"What\\'s Wrong\" [\\'Show &errors\\', \\'Show &warnings\\', \"&Display What\\'s Wrong during rebuild\", \\'&FeatureXpert\\', \\'&Close\\', \\'&Help\\', \\'Custom1\\', \\'* Select FeatureXpert to attempt repair of the highlighted error(s).    \\'] came up while ActivateDoc3 was in progress, before this run made any configuration'] (\u00a70.3: any dialog); the worker is left alone and nothing more is asked of SolidWorks",
+    "cut: WorkerHung: the SolidWorks worker is hung from an earlier job, so nothing more is asked of it"
+   ]
+  }
+ },
+ "stops": [
+  "m3 a user feature in error: the assembly rebuild: a SolidWorks dialog came up while it ran, and nothing here answers it: ['a SolidWorks window \"What\\'s Wrong\" [\\'Show &errors\\', \\'Show &warnings\\', \"&Display What\\'s Wrong during rebuild\", \\'&FeatureXpert\\', \\'&Close\\', \\'&Help\\', \\'Custom1\\', \\'* Select FeatureXpert to attempt repair of the highlighted error(s).    \\'] came up while ActivateDoc3 was in progress, before this run made any configuration'] (\u00a70.3: any dialog); the worker is left alone and nothing more is asked of SolidWorks",
+  "the SolidWorks worker is hung from an earlier job, so nothing more is asked of it"
+ ],
+ "proposal": {},
+ "revision": [
+  32,
+  5,
+  0
+ ],
+ "snapshot": "0a60fd3",
+ "whats_wrong_rule": {
+  "helper_present": true,
+  "shows_in_update": true
+ },
+ "fails": [
+  "m3 a user feature in error: the assembly rebuild: a SolidWorks dialog came up while it ran, and nothing here answers it: ['a SolidWorks window \"What\\'s Wrong\" [\\'Show &errors\\', \\'Show &warnings\\', \"&Display What\\'s Wrong during rebuild\", \\'&FeatureXpert\\', \\'&Close\\', \\'&Help\\', \\'Custom1\\', \\'* Select FeatureXpert to attempt repair of the highlighted error(s).    \\'] came up while ActivateDoc3 was in progress, before this run made any configuration'] (\u00a70.3: any dialog); the worker is left alone and nothing more is asked of SolidWorks",
+  "W9a: WorkerHung: the SolidWorks worker is hung from an earlier job, so nothing more is asked of it; the run ends here, nothing more is asked of SolidWorks"
+ ],
+ "notes": [
+  "SolidWorks' notification box came up while no SolidWorks call was in progress (exempt by the coordinator's ruling; nothing answers it)",
+  "a SolidWorks window \"What's Wrong\" ['Show &errors', 'Show &warnings', \"&Display What's Wrong during rebuild\", '&FeatureXpert', '&Close', '&Help', 'Custom1', '* Select FeatureXpert to attempt repair of the highlighted error(s).    '] came up while ActivateDoc3 was in progress, before this run made any configuration",
+  "a SolidWorks window \"What's Wrong\" ['Show &errors', 'Show &warnings', \"&Display What's Wrong during rebuild\", '&FeatureXpert', '&Close', '&Help', 'Custom1', '* Select FeatureXpert to attempt repair of the highlighted error(s).    '] came up while ActivateDoc3 was in progress, before this run made any configuration"
+ ]
+}
