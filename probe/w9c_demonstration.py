@@ -373,8 +373,16 @@ LANDING_CASES = (
 )
 # Cases checked clean with no target built (no volume held to one): the review's unrouted ones, to keep the time.
 LANDING_NO_TARGET = {"ring-m1-27-25", "spur-m1-15-14", "spur-m1-14-13", "ring-m1-44-42", "ringB-55-54"}
-USER_CUT = "User Cut Outside"      # the user's feature put in error: a cut through all whose circle misses the ring
-USER_CUT_AT = (200.0, 0.0)          # mm, far outside any ring here (the m1.25 55's rim is Ø78.5)
+# The user's feature put in error (the review's M1). The eighth run (64bec58) found that SolidWorks will not make a cut
+# that removes nothing: FeatureCut4 on a Ø3 circle at x = 200 mm handed back no feature. So the cut is made as W9a's
+# keyway was, valid when made and put in error after: a circle on the ring's centre, Ø69 when cut (it takes the m1.25
+# 55's tooth tips, Ø66.25, short of its root, Ø71.9), its diameter dimension then linked to Ø3 by an equation (the
+# app's own Dimension and LinkDimension calls), which leaves it wholly in the ring's hollow centre: it removes nothing
+# and reads in error, as W9a's keyway did inside its Bore 14. The link is a user's dimension equation, not a global,
+# and none of recipe B's names, so the app's foresight leaves it out.
+USER_CUT = "User Cut In Bore"
+USER_CUT_MADE_D, USER_CUT_D = 69.0, 3.0   # mm: its diameter when cut, and as the user's equation then sets it
+USER_CUT_DIM = "UserCutD"
 LANDING_LEFTOVER = "ring-55-54-straight"      # 5: closed unsaved after its failure, reopened: clean at 55
 LANDING_MASTER_FILES = {("fixture", "1.25", 55): "Ring_m1.25_N55.SLDPRT", ("sun", "1.25", 29): "Gear_m1.25_N29.SLDPRT"}
 def landing_builds():
@@ -2751,24 +2759,36 @@ def landing_case_job(path, variables, straight, line=None, enums=None):
 
 
 def user_error_job(path, variables):
-    """The review's M1: the part opened, the user's own cut made through all with its circle outside the ring (the
-    session's own sketch and cut calls, as W9a's keyway), so it reads in error, rebuilt; what is in error then; then the
-    app's own ``update_variables`` as it stands, every rebuild's return counted as in ``landing_case_job``. Nothing
-    saved."""
+    """The review's M1: the part opened, the user's own cut made through all on a circle on the ring's centre that
+    takes its tooth tips (the session's own sketch, dimension and cut calls, as W9a's keyway), rebuilt clean; then its
+    diameter linked by the user's equation to one inside the ring's hollow centre, so it removes nothing and reads in
+    error, rebuilt; what is in error then, and the cut sketch's dimensions; then the app's own ``update_variables`` as
+    it stands, every rebuild's return counted as in ``landing_case_job``. Nothing saved."""
+    sketch = f"{USER_CUT} Sketch"
+
     def work(s):
         s.begin_build()
         try:
             s.open_document(path)
             s.open_sketch("uc", 1)
-            s.sketch_circle("ucc", USER_CUT_AT, 1.5)
-            s.close_sketch("uc", f"{USER_CUT} Sketch")
+            s.sketch_circle("ucc", (0.0, 0.0), USER_CUT_MADE_D / 2.0)
+            s.dimension(USER_CUT_DIM, ("ucc",), (USER_CUT_MADE_D * 0.6, USER_CUT_MADE_D * 0.1))
+            s.close_sketch("uc", sketch)
             s.cut_extrude("uccut", "uc", USER_CUT)
         finally:
             s.end_build()
         made = bool(s.rebuild())
+        made_states = [(f.name, f.code) for f in s.feature_states() if f.code]
+        s.link_dimension(f"{USER_CUT_DIM}@{sketch}", f"{USER_CUT_D:g}")
+        linked = bool(s.rebuild())
         before = [(f.name, f.code) for f in s.feature_states() if f.code]
+        try:
+            dims = s.feature_dimensions(sketch)
+        except Exception as exc:  # noqa: BLE001 - said in its place
+            dims = f"unread: {type(exc).__name__}: {exc}"
         out = landing_case_job(path, variables, False)(_Reopened(s))
-        out.update({"made_rebuilt": made, "in_error_before": before})
+        out.update({"made_rebuilt": made, "made_in_error": made_states, "linked_rebuilt": linked,
+                    "in_error_before": before, "user_cut_dims": dims})
         return out
     return work
 
@@ -2950,8 +2970,12 @@ def section_landing(out):
         if how == "user-error":
             mine = [n for n, _ in got.get("in_error_before", [])]
             after_names = [n for n, _ in got["in_error"]]
-            say(f"fact    landing {case_id}: the user's {USER_CUT} made, rebuilt {got.get('made_rebuilt')}; in error "
-                f"before the set {got.get('in_error_before')}")
+            say(f"fact    landing {case_id}: the user's {USER_CUT} made at Ø{USER_CUT_MADE_D:g}, rebuilt "
+                f"{got.get('made_rebuilt')}, in error then {got.get('made_in_error')}; its diameter linked to "
+                f"Ø{USER_CUT_D:g} by the user's equation, rebuilt {got.get('linked_rebuilt')}, its sketch's dimensions "
+                f"{got.get('user_cut_dims')}; in error before the set {got.get('in_error_before')}")
+            check(not got.get("made_in_error"), f"landing {case_id}: the user's {USER_CUT} made clean at "
+                  f"Ø{USER_CUT_MADE_D:g} ({got.get('made_in_error')}), before its equation puts it in error")
             check(mine == [USER_CUT] and after_names == [USER_CUT] and got["by_way_of"] == (TEETH_NAME, str(via))
                   and len(got["rebuilds"]) == 2 and got["teeth"] is not None and abs(got["teeth"] - after[1]) < 1e-9
                   and not got["failures"],
