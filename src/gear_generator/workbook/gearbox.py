@@ -1517,10 +1517,14 @@ def finish_build(plan: GearboxPlan, result: GearboxResult, record: Optional[Link
 
 
 def carry_anchors(carry: Any, result: Any, revision: Sequence[int]) -> Dict[str, str]:
-    """Each carried component's anchor (``CarryPlanItem.anchor``) by its old Name2. ``CarryResult`` does not hand it
-    back, so it is worked again by ``swbuild.plan_carry`` on what was read (pure; the anchor rests on the mates, never
-    on the frames); ``{}`` when that cannot be done."""
+    """Each carried component's anchor by its old Name2: the worker's own (``CarryResult.anchors``, as placed) when it
+    hands them back; else worked again by ``swbuild.plan_carry`` on what was read (pure, but without the new frames,
+    so it may name an anchor the worker passed over); ``{}`` when neither can be had."""
     from .. import swbuild
+    given = getattr(result, "anchors", None)
+    if given:                               # the worker's own, as placed (the review's S4), by the new Name2
+        was = {str(new): str(old) for old, new in getattr(result, "inserted", []) or []}
+        return {was.get(str(new), str(new)): str(anchor) for new, anchor in given}
     work = getattr(result, "work", None)
     if carry is None or work is None:
         return {}
@@ -1544,7 +1548,9 @@ def carry_entry(plan: GearboxPlan, result: Any, carry: Any, *, stamp: str, revis
     the new modes it reads suppressed in, its anchor), each mate made again (its type, the new modes it reads on in,
     its code before, and after: the error it was carried in, else 0, since a new error falls its cluster back), each
     item named with its sentence (``ui_text.carry_named_clause``), each fallback, a stop; ``unsaved_at`` the new
-    assembly's file time when anything was written into it (``result.unsaved``)."""
+    assembly's file time when anything was written into it (``result.unsaved``). What the worker says (a stop, a
+    reason's subjects) is kept with every path reduced to its file's name (``ui_text.bare_files``): the record keeps
+    no folder of the user's."""
     from .. import swbuild, ui_text
     work = result.work
     old_path = (work.assembly if work is not None else "") or (carry.old.path if carry is not None else "")
@@ -1557,7 +1563,7 @@ def carry_entry(plan: GearboxPlan, result: Any, carry: Any, *, stamp: str, revis
         assembly=old_path, read_at=work.read_at if work is not None else "",
         how=work.how if work is not None else swbuild.OLD_UNREAD, carried_at=stamp,
         revision=[int(n) for n in revision], states_read=bool(work is not None and work.states_route),
-        stopped=result.stopped)
+        stopped=ui_text.bare_files(result.stopped))
     for was, name in result.inserted:
         old = components.get(was)
         entry.components.append(store.CarriedComponentEntry(
@@ -1574,11 +1580,11 @@ def carry_entry(plan: GearboxPlan, result: Any, carry: Any, *, stamp: str, revis
     new_name, old_name = plan.name, os.path.basename(old_path.replace("\\", "/"))
     for n in result.named:
         entry.named.append(store.CarryNamedEntry(item=n.item, what=n.what, why=n.why,
-                                                 subjects=[str(s) for s in n.subjects],
+                                                 subjects=[ui_text.bare_files(str(s)) for s in n.subjects],
                                                  sentence=ui_text.carry_named_clause(n, name=new_name, old=old_name)))
     for f in result.fixed:
         entry.fixed.append(store.CarryFallbackEntry(list(f.components), list(f.deleted), list(f.kept), f.why,
-                                                    [str(s) for s in f.subjects]))
+                                                    [ui_text.bare_files(str(s)) for s in f.subjects]))
     if result.unsaved:
         try:
             entry.unsaved_at = float(mtime(assembly))

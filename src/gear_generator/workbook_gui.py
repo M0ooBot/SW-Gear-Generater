@@ -1560,9 +1560,15 @@ class WorkbookWindow(tk.Toplevel):
             text, ok = ui_text.gearbox_status(job.plan, result, again=_had_assembly(job.record))
             if job.before is not None and getattr(getattr(result, "assembly", None), "saved", ""):
                 if getattr(result, "carry", None) is not None:
-                    # W9d (§9.2): what was carried into the new revision, made again and named, after the build's own.
-                    anchors = wb_gearbox.carry_anchors(job.carry, result.carry, job.revision)
-                    behind = ui_text.carried_status(result, job.plan, job.before.path, anchors, job.revision)
+                    # W9d (§9.2): what was carried into the new revision, made again and named, after the build's own;
+                    # a fault in these words never takes the build's own sentence with it (the review's note).
+                    try:
+                        anchors = wb_gearbox.carry_anchors(job.carry, result.carry, job.revision)
+                        behind = ui_text.carried_status(result, job.plan, job.before.path, anchors, job.revision,
+                                                        carry=job.carry,
+                                                        stays=wb_update.stays_behind(job.record, job.plan))
+                    except Exception as exc:  # noqa: BLE001
+                        behind = ui_text.collect_failed(exc)
                 else:
                     # W9a: what of the user's stayed in the old assembly, as the job read it first (or the record
                     # held), once the new revision's assembly is saved (a build that made nothing leaves nothing).

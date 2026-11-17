@@ -272,12 +272,37 @@ def test_an_updates_inventory_keeps_each_mates_entities():
 # -- the question (§9.1) ---------------------------------------------------------------------------------------------
 
 SUN_FLANK = dict(Sun=dict(flank="arcs"))
-OPEN_FIRST = ("open RangeBox.SLDASM in SolidWorks before you press, and it is read as it stands there.")
+CLOSED_UNREAD = "If RangeBox.SLDASM is closed when you press, nothing is carried: open it in SolidWorks first."
+CLOSED_FINDINGS = ("findings.FILE_VERSION_READ_ON_2026, findings.DEPENDENCIES_READ_ON_2026 and "
+                   "findings.OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN_ON_2026")
+STATES = ("Each component takes, in every mode of RangeBox_r2, its state in the mode RangeBox.SLDASM shows; its other "
+          "states cannot be read without changing it.")
+FEATURES = ("Your Keyway stays in Gear_m1.25_N29, which Sun's new part replaces (its Flank changed); your Groove comes "
+            "with Sleeve_m1.25_N17.")
+
+
+# The reads the 2026 probes measured (W9D-INTERFACES §8.1), as the findings set them; each test says its own state.
+PROBE_READS = {"COMPONENT_STATE_PER_CONFIGURATION_ROUTE": "IConfiguration.GetComponentSuppressionState(Name2)",
+               "COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED": True, "FILE_VERSION_READ": "VersionHistory",
+               "DEPENDENCIES_READ": "GetDocumentDependencies2", "OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS": True,
+               "OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN": True, "SUBASSEMBLY_OPEN_MARKS": False,
+               "SUBASSEMBLY_READ_ONLY_INSERT": True, "SUBASSEMBLY_OPEN_MARKS_WHEN_LOADED": False,
+               "PERSIST_REFERENCE_ROUTE_FOR_FACES": "r3", "PERSIST_REFERENCE_ROUTE_FOR_EDGES": "r3",
+               "PERSIST_REFERENCE_SURVIVES_RELOAD": True, "COAXIAL_FACE_READ": True,
+               "CARRY_INSERT_MARKS_USER_DOCUMENTS": False}
+
+
+def _reads(monkeypatch, value=None, **chosen):
+    """Every probe read on 2026 at ``value`` (None: not yet measured), those in ``chosen`` at theirs."""
+    for name, measured in PROBE_READS.items():
+        monkeypatch.setattr(findings, f"{name}_ON_2026", chosen.get(name, measured if value == "measured" else value))
 
 
 @pytest.fixture
 def carrying(monkeypatch):
-    """The W9d gates a plain carry of RangeBox's user work needs, as if M9 had set them on the fake's 2026."""
+    """The W9d gates a plain carry of RangeBox's user work needs, as if M9 had set them on the fake's 2026, and every
+    probe read None (the state these sentences are pinned in; a test sets the reads it needs)."""
+    _reads(monkeypatch)
     for name, value in (("CARRY_INSERTS", True), ("CARRY_REMAKE_KINDS", ("lock", "coincident", "distance")),
                         ("REFERENCED_CONFIGURATION_READ", True), ("CARRY_INSERTS_IN_A_CONFIGURATION", True)):
         monkeypatch.setattr(findings, f"{name}_ON_2026", value)
@@ -319,32 +344,46 @@ def test_with_no_version_on_record_the_question_says_the_mixed_form(desk, monkey
                     "whatever it cannot carry.")
 
 
-def test_the_question_says_what_is_carried_and_what_is_named_as_read_with_its_time(desk, carrying, monkeypatch):
+def test_the_question_says_what_is_carried_and_what_is_not_short_with_the_findings_once_at_the_end(desk, carrying,
+                                                                                                   monkeypatch):
     said = _said(desk)
-    at = _at(desk)
-    assert "carried only if" not in said                    # both configuration findings set: nothing to say
-    assert said.startswith(
-        f"As read at {at}, RangeBox_r2 takes your Sprocket-1 and Housing-1, each where it stands, against the gear it "
-        "is mated to where it has one, and makes your Lock3 again on what it joins, on in the modes it was on in. "
-        "Your Keyway stays in Gear_m1.25_N29, which Sun's new part replaces because its Flank changed; "
-        "RangeBox.SLDASM and that file keep it. Your Groove in Sleeve_m1.25_N17 comes with that part, which "
-        "RangeBox_r2 reuses."), said
-    assert said.endswith(
-        "RangeBox_r2 is saved as built, and holds what it carries unsaved: save it in SolidWorks to keep them. The "
-        "press reads RangeBox.SLDASM again first, and says whatever it cannot carry. " + ui_text.CARRY_STANDING)
-    # A kind not yet shown: its mates named with the finding, grouped (§9.1's gate clause).
+    assert said == (
+        f"As read at {_at(desk)}, RangeBox_r2 takes your Sprocket-1 and Housing-1 and makes your Lock3 again in the "
+        f"modes it was on in. {FEATURES} RangeBox_r2 holds what it carries unsaved. {CLOSED_UNREAD} {STATES} "
+        f"{ui_text.CARRY_STANDING} (Not yet shown on SolidWorks 2026: {CLOSED_FINDINGS}.)"), said
+    assert len(said.split()) < 120                        # 180 words before the review's S3
+    # A kind not yet shown: its mates named in one sentence, the finding said once at the end (S3).
     monkeypatch.setattr(findings, "CARRY_REMAKE_KINDS_ON_2026", ("coincident",))
     said = _said(desk)
-    assert ("Gear Generator has not yet been shown to make lock mates again in a new revision on SolidWorks 2026 "
-            "(findings.CARRY_REMAKE_KINDS_ON_2026), so Lock3 is not made again.") in said
-    assert "makes your Lock3" not in said
+    assert said.startswith(f"As read at {_at(desk)}, RangeBox_r2 takes your Sprocket-1 and Housing-1. Gear Generator "
+                           "has not yet been shown to make lock mates again in a new revision on SolidWorks 2026, so "
+                           "Lock3 is not made again. "), said
+    assert said.endswith("(Not yet shown on SolidWorks 2026: findings.CARRY_REMAKE_KINDS_ON_2026, "
+                         f"{CLOSED_FINDINGS}.)")
+    assert said.count("findings.CARRY_REMAKE_KINDS_ON_2026") == 1
+
+
+def test_with_every_2026_probe_finding_set_the_closed_clause_says_its_conditions(desk, carrying, monkeypatch):
+    for name, value in (("FILE_VERSION_READ", "VersionHistory"), ("DEPENDENCIES_READ", "GetDocumentDependencies2"),
+                        ("OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN", True),
+                        ("COMPONENT_STATE_PER_CONFIGURATION_ROUTE", "GetComponentSuppressionState")):
+        monkeypatch.setattr(findings, f"{name}_ON_2026", value)
+    said = _said(desk)
+    assert ("If RangeBox.SLDASM is closed, open it first unless this SolidWorks last saved it and its files and nothing "
+            "else is open.") in said, said
+    assert said.endswith("(Not yet shown on SolidWorks 2026: findings.OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS_ON_2026.)")
+    assert STATES not in said                              # the states route is clean: nothing to say (§9.1)
+    monkeypatch.setattr(findings, "OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS_ON_2026", True)
+    said = _said(desk)
+    assert ("If RangeBox.SLDASM is closed, open it first unless this SolidWorks last saved it and its files and nothing "
+            "of yours is open.") in said and "Not yet shown" not in said
 
 
 def test_a_file_whose_configurations_the_record_does_not_keep_is_said_as_may(desk, carrying, monkeypatch):
     monkeypatch.setattr(findings, "CARRY_INSERTS_IN_A_CONFIGURATION_ON_2026", None)
-    assert ("Sprocket-1 and Housing-1 are carried only if each one's file has a single configuration: Gear Generator "
-            "has not yet been shown to insert a component in one of several on SolidWorks 2026 "
-            "(findings.CARRY_INSERTS_IN_A_CONFIGURATION_ON_2026), and the press reads which.") in _said(desk)
+    said = _said(desk)
+    assert "Sprocket-1 and Housing-1 are carried only if each file has one configuration." in said
+    assert "findings.CARRY_INSERTS_IN_A_CONFIGURATION_ON_2026" in said.rsplit("(Not yet shown", 1)[1]
 
 
 def _plan(components=(), mates=(), named=()):
@@ -361,24 +400,33 @@ def _mate_item(name):
     return swbuild.CarryMateItem(swbuild.OldMate(name, 16, "MateLock", 0, False, (), ()), 0, ())
 
 
-def test_the_question_names_each_item_by_its_reason_and_groups_a_finding_not_yet_set(desk, carrying):
+def test_the_question_says_each_kind_of_reason_once(desk, carrying):
     named = [swbuild.CarryNamed("Concentric5", "mate", swbuild.WHY_PART_NEW, ("Sun", "its Flank changed", "face",
                                                                               "bore")),
              swbuild.CarryNamed("Concentric8", "mate", swbuild.WHY_UNMEASURED,
                                 ("concentric", "CARRY_REMAKE_KINDS_ON_2026", "2026")),
              swbuild.CarryNamed("Concentric9", "mate", swbuild.WHY_UNMEASURED,
                                 ("concentric", "CARRY_REMAKE_KINDS_ON_2026", "2026")),
-             swbuild.CarryNamed("Width1", "mate", swbuild.WHY_KIND, ("width",))]
+             swbuild.CarryNamed("Width1", "mate", swbuild.WHY_KIND, ("width",)),
+             swbuild.CarryNamed("Lock6", "mate", swbuild.WHY_NOT_CARRIED, ("Bracket-1",)),
+             swbuild.CarryNamed("Lock7", "mate", swbuild.WHY_NOT_CARRIED, ("Bracket-1",))]
     plan = _plan([_item("Sprocket-1"), _item("Sprocket-2"), _item("Chain-1"), _item("Housing-1")],
                  [_mate_item(f"Lock{k}") for k in range(8)], named)
     said = _said(desk, plan=plan)
     assert said.startswith(
-        f"As read at {_at(desk)}, RangeBox_r2 takes your Sprocket-1, Sprocket-2, Chain-1 and 1 other component, each "
-        "where it stands against the gear it is mated to, and makes your 8 mates again on what they join, each on in "
-        "the modes it was on in. Gear Generator has not yet been shown to make concentric mates again in a new "
-        "revision on SolidWorks 2026 (findings.CARRY_REMAKE_KINDS_ON_2026), so Concentric8 and Concentric9 are not "
-        "made again. Concentric5 was on Sun's bore, and Sun's part is new because its Flank changed, so it is not "
-        "made again. Width1 is a width mate, which Gear Generator does not make again. "), said
+        f"As read at {_at(desk)}, RangeBox_r2 takes your Sprocket-1, Sprocket-2, Chain-1 and Housing-1 and makes your "
+        "8 mates again in the modes each was on in. Gear Generator has not yet been shown to make concentric mates "
+        "again in a new revision on SolidWorks 2026, so Concentric8 and Concentric9 are not made again. Lock6 and "
+        "Lock7 join Bracket-1, which is not carried, so they are not made again. Concentric5 was on Sun's bore, and "
+        "Sun's part is new because its Flank changed, so it is not made again. Width1 is a width mate, which Gear "
+        "Generator does not make again. "), said
+    five = _plan([_item(n) for n in ("A-1", "B-1", "C-1", "D-1", "E-1")])
+    assert "takes your A-1, B-1, C-1 and 2 other components." in _said(desk, plan=five)
+    # Foreseeing nothing carried: no save to ask for, no closed-assembly clause (S2).
+    nothing = _said(desk, plan=_plan(named=named[:1]))
+    assert nothing.startswith(f"As read at {_at(desk)}, nothing of yours in RangeBox.SLDASM would be carried into "
+                              "RangeBox_r2.")
+    assert "unsaved" not in nothing and "closed" not in nothing and ui_text.CARRY_STANDING not in nothing
 
 
 def test_a_part_made_new_only_because_of_the_user_says_how_to_reuse_it(desk, carrying):
@@ -395,15 +443,15 @@ def test_a_part_made_new_only_because_of_the_user_says_how_to_reuse_it(desk, car
         "Gear_m1.25_N29.SLDPRT", "Bore Diameter", "12", "10", "10", "", "Gears!J2")])]
     fore = update.carry_foresight(record, mismatched, read_sidecar=desk.disk.read_sidecar)
     said = ui_text.carry_sentence(fore, mismatched)
-    assert ("Your Keyway stays in Gear_m1.25_N29, which Sun's new part replaces because it did not hold what the "
-            "record says, as the last job in SolidWorks found; RangeBox.SLDASM and that file keep it. "
-            "Gear_m1.25_N29 is new only because it holds Bore Diameter 12 where the workbook asks 10: answer No, type "
-            "12 in Gears!J2, and Build again… reuses that part with your Keyway.") in said, said
+    assert ("Your Keyway stays in Gear_m1.25_N29, which Sun's new part replaces (it did not hold what the record says, "
+            "as the last job in SolidWorks found); your Groove comes with Sleeve_m1.25_N17. Gear_m1.25_N29 is new only "
+            "because it holds Bore Diameter 12 where the workbook asks 10: answer No, type 12 in Gears!J2, and Build "
+            "again… reuses that part with your Keyway.") in said, said
     unsaved = replace(again, made_new=(gearbox.MadeNew(("Sun",), sun_part, again.part_of["Sun"], gearbox.UNSAVED),))
     fore = update.carry_foresight(desk.record, unsaved, read_sidecar=desk.disk.read_sidecar)
-    assert ("which Sun's new part replaces because it had changes from Update SolidWorks that were not saved; "
-            "RangeBox.SLDASM and that file keep it. Gear_m1.25_N29 is new only because Update SolidWorks left it "
-            "unsaved: answer No and save it in SolidWorks first, and Build again… reuses it with your Keyway."
+    assert ("which Sun's new part replaces (it had changes from Update SolidWorks that were not saved); your Groove "
+            "comes with Sleeve_m1.25_N17. Gear_m1.25_N29 is new only because Update SolidWorks left it unsaved: answer "
+            "No and save it in SolidWorks first, and Build again… reuses it with your Keyway."
             ) in ui_text.carry_sentence(fore, unsaved)
 
 
@@ -420,92 +468,61 @@ def test_a_schema_9_inventory_says_may_for_a_mate_whose_entities_it_never_kept(d
     assert "would not describe UserAxis4" not in said and "would not describe Dist2" not in said
 
 
-def test_a_lightweight_or_suppressed_component_as_read_is_said_with_what_to_do(desk, carrying):
+def test_a_lightweight_component_is_said_once_as_the_condition_it_is(desk, carrying):
+    """M5: plan_carry names the lightweight component's mate WHY_LIGHTWEIGHT; the question says it once, as what the
+    user can still change, never also as final."""
     record = copy.deepcopy(desk.record)
     record.gearbox.user_work.components[0].state = 1
     record.gearbox.user_work.components[1].state = 0
     said = _said(desk, record=record)
-    assert ("Sprocket-1 was lightweight as read, so its mate cannot be read through it: set it resolved in SolidWorks "
-            "before you press, or it is not made again.") in said, said
-    assert ("Housing-1 was suppressed in the mode RangeBox.SLDASM showed, as read; if SolidWorks cannot say where it "
-            "stands there, it is not carried: show a mode where it is resolved before you press.") in said
-
-
-@pytest.mark.parametrize("settled, clause", [
-    ((), "it is not read: Gear Generator has not yet been shown to read which SolidWorks last saved a file "
-         "(findings.FILE_VERSION_READ_ON_2026), read which SolidWorks last saved each file it uses "
-         "(findings.DEPENDENCIES_READ_ON_2026) and close it unchanged after reading it "
-         "(findings.OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN_ON_2026), so nothing of yours would be carried: "),
-    (("FILE_VERSION_READ",), "it is not read: Gear Generator has not yet been shown to read which SolidWorks last "
-                             "saved each file it uses (findings.DEPENDENCIES_READ_ON_2026) and close it unchanged "
-                             "after reading it (findings.OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN_ON_2026), so nothing of "
-                             "yours would be carried: "),
-    (("FILE_VERSION_READ", "DEPENDENCIES_READ"),
-     "it is not read: Gear Generator has not yet been shown to close it unchanged after reading it "
-     "(findings.OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN_ON_2026), so nothing of yours would be carried: "),
-    (("FILE_VERSION_READ", "DEPENDENCIES_READ", "OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN"),
-     "Gear Generator reads it then only when it and every file it uses were last saved by this SolidWorks (a file "
-     "saved since on another SolidWorks is not read) and nothing else is open in SolidWorks "
-     "(findings.OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS_ON_2026); otherwise nothing of yours would be carried: "),
-    (("FILE_VERSION_READ", "DEPENDENCIES_READ", "OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN", "OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS"),
-     "Gear Generator reads it then only when it and every file it uses were last saved by this SolidWorks (a file "
-     "saved since on another SolidWorks is not read) and nothing but Gear Generator's own files is open in "
-     "SolidWorks; otherwise nothing of yours would be carried: "),
-])
-def test_the_not_open_clause_names_the_condition_that_holds_a_closed_old_assembly_unread(desk, carrying, monkeypatch,
-                                                                                          settled, clause):
-    for name in settled:
-        monkeypatch.setattr(findings, f"{name}_ON_2026", "a route" if "READ" in name and "ONLY" not in name else True)
-    assert f"If RangeBox.SLDASM is not open in SolidWorks when you press, {clause}{OPEN_FIRST}" in _said(desk)
+    assert ("Sprocket-1 was lightweight as read: its Lock3 is made again only if you set it resolved in SolidWorks "
+            "before you press.") in said, said
+    assert "Lock3 is on Sprocket-1" not in said and said.count("Lock3") == 1
+    assert ("Housing-1 was suppressed in the mode RangeBox.SLDASM showed, as read: show a mode where it is resolved "
+            "before you press, or it may not be carried.") in said
 
 
 def test_the_states_clause_goes_once_a_clean_route_reads_them(desk, carrying, monkeypatch):
-    states = ("Your components take, in every mode of RangeBox_r2, the state they have in the mode RangeBox.SLDASM "
-              "shows when you press: whether you suppressed one in another mode cannot be read without changing "
-              "RangeBox.SLDASM.")
-    assert states in _said(desk)
+    assert STATES in _said(desk)
     monkeypatch.setattr(findings, "COMPONENT_STATE_PER_CONFIGURATION_ROUTE_ON_2026", "GetComponentSuppressionState")
-    assert states not in _said(desk)
+    assert STATES not in _said(desk)
 
 
 def test_a_mode_renamed_says_what_stays_and_what_the_new_mode_takes(desk, carrying):
-    from gear_generator.workbook.model import Mode
     spec = gears(range_box(), **SUN_FLANK)
     spec = replace(spec, modes=tuple(replace(m, name="Low") if m.name == "L" else m for m in spec.modes))
     said = _said(desk, spec=spec)
     assert ("RangeBox_r2 has no mode L: what your items were in L stays in RangeBox.SLDASM. Its new mode Low takes "
             "what they were in H.") in said, said
-    assert Mode                                               # the Modes row is the model's
 
 
 def test_with_nothing_of_the_users_on_record_the_question_says_the_press_reads_first(desk, carrying):
     record = copy.deepcopy(desk.record)
     record.gearbox.user_work = None
-    said = _said(desk, record=record)
-    assert said.startswith("Anything you added to RangeBox.SLDASM in SolidWorks the press reads first and carries "
-                           "into RangeBox_r2 where it can, saying whatever it cannot. If RangeBox.SLDASM is not open "
-                           "in SolidWorks when you press, it is not read:"), said
+    assert _said(desk, record=record) == (
+        "Anything you added to RangeBox.SLDASM in SolidWorks the press reads first and carries into RangeBox_r2 where "
+        f"it can, saying whatever it cannot. {CLOSED_UNREAD} (Not yet shown on SolidWorks 2026: {CLOSED_FINDINGS}.)")
 
 
 def test_a_foresight_that_raises_says_only_that_the_press_reads_and_carries_what_it_can(desk, carrying):
     def boom(*a, **k):
         raise RuntimeError("no")
-    fore = update.carry_foresight(desk.record, _again(desk, gears(range_box(), **SUN_FLANK)), plan_carry=boom,
-                                  read_sidecar=desk.disk.read_sidecar)
+    again = _again(desk, gears(range_box(), **SUN_FLANK))
+    fore = update.carry_foresight(desk.record, again, plan_carry=boom, read_sidecar=desk.disk.read_sidecar)
     assert fore.plan is None
-    assert ui_text.carry_sentence(fore, _again(desk, gears(range_box(), **SUN_FLANK))).startswith(
+    assert ui_text.carry_sentence(fore, again).startswith(
         f"As read at {_at(desk)}, RangeBox.SLDASM held your Sprocket-1, Housing-1 and Lock3: the press reads it again "
         "first and carries into RangeBox_r2 what it can, saying whatever it cannot.")
 
 
-def test_the_whole_question_carries_the_clause_after_the_builds_own(desk, carrying):
+def test_the_whole_question_is_a_length_a_person_reads(desk, carrying):
     spec = gears(range_box(), **SUN_FLANK)
     up = update.classify(desk.record, desk.a(spec), exists=desk.disk.exists, read_sidecar=desk.disk.read_sidecar)
     again = _again(desk, spec)
     question = ui_text.build_again_question(up, again, record=desk.record)
     assert question.startswith("Gear_m1.25_N29 (Sun): Flank changed from involute to arcs")
     assert f" As read at {_at(desk)}, RangeBox_r2 takes your Sprocket-1 and Housing-1" in question
-    assert question.endswith(ui_text.CARRY_STANDING)
+    assert len(question.split()) < 200, len(question.split())       # 326 words before the review's S3
 
 
 # -- the result (§9.2) and each reason (§9.3) --------------------------------------------------------------------------
@@ -540,57 +557,85 @@ class _Again:
         steps = tuple(type("Step", (), {"name": m})() for m in ("H", "N", "L"))
 
 
-def _status(done, anchors=None, revision=()):
-    return ui_text.carried_status(type("R", (), {"carry": done})(), _Again(), OLD, anchors, revision)
+def _stays(left=(), kept=(), assembly=OLD):
+    from gear_generator.workbook.update import StaysBehind
+    entry = store.UserWorkEntry(read_at="2026-11-17T14:02:00Z", assembly=assembly,
+                                components=[store.UserComponentEntry("Sprocket-1", "part")])
+    return StaysBehind(entry, assembly, ("Sprocket-1",), ("M0",), tuple(left), tuple(kept))
 
 
-def test_the_result_says_what_was_carried_unsaved_and_to_save_it():
+def _status(done, anchors=None, revision=(), carry=None, stays=None, result=None):
+    result = result or type("R", (), {"carry": done, "old_user_work": None, "old_read": ""})()
+    return ui_text.carried_status(result, _Again(), OLD, anchors, revision, carry=carry, stays=stays)
+
+
+def _carry_stub(why_new=None, modes=("H", "N", "L"), first="H"):
+    bodies = tuple(swbuild.CarryBody(g, f"{g}-1", "gear1", False, why) for g, why in (why_new or {}).items())
+    return swbuild.Carry(swbuild.OldAssembly(OLD), bodies, modes, first)
+
+
+def test_the_result_says_what_was_carried_unsaved_and_the_feature_left_and_to_save_it():
     anchors = {"Sprocket-1": "Sun", "Sprocket-2": "Sun", "Chain-1": "Sun", "Housing-1": "RangeSlv"}
     named = [swbuild.CarryNamed("M7", "mate", swbuild.WHY_PART_NEW, ("Sun", "its Flank changed", "face", "bore"))]
-    said = _status(_done(named=named), anchors)
-    assert said.startswith(
-        "Carried into RangeBox_r2, unsaved: your Sprocket-1, Sprocket-2, Chain-1 and 1 other component, each where it "
-        "stood against the gear it is mated to, and 7 of your 8 mates, each on in the modes it was on in. M7 was on "
-        "Sun's bore, and Sun's part is new because its Flank changed, so it is not made again. Your components were "
-        "placed where they stood in H, the mode RangeBox.SLDASM showed; a floating one that stood elsewhere in "
-        "another mode stands, in RangeBox_r2, where it stood in H. Your components take in every mode the state they "
-        "had in H, the mode RangeBox.SLDASM showed: their states in N and L could not be read without changing it. "
-        + ui_text.CARRY_STANDING + " A part of yours made in context of RangeBox.SLDASM still refers to its parts."), said
-    assert said.endswith(" Save RangeBox_r2 in SolidWorks to keep what was carried.")
+    stays = _stays(left=[("Keyway", r"C:\Out\Gear_m1.25_N29.SLDPRT", ("Sun",))])
+    said = _status(_done(named=named), anchors, carry=_carry_stub({"Sun": "its Flank changed"}), stays=stays)
+    assert said == (
+        "Carried into RangeBox_r2, unsaved: your Sprocket-1, Sprocket-2, Chain-1 and Housing-1, each where it stood "
+        "against its gear, and 7 of your 8 mates, each on in the modes it was on in. M7 was on Sun's bore, and Sun's "
+        "part is new because its Flank changed, so it is not made again. Your Keyway stays in Gear_m1.25_N29, which "
+        "Sun's new part replaces because its Flank changed (RangeBox.SLDASM and that file keep it). Your components "
+        "stand in every mode of RangeBox_r2 where they stood in H, the mode RangeBox.SLDASM showed. Your components "
+        "take in every mode the state they had in H, the mode RangeBox.SLDASM showed: their states in N and L could "
+        f"not be read without changing it. {ui_text.CARRY_STANDING} If a part of yours was made in context of "
+        "RangeBox.SLDASM, it still refers to that assembly's parts. Save RangeBox_r2 in SolidWorks to keep what was "
+        "carried."), said
     every = _done(remade=[(m.name, m.name, ("H",)) for m in _work().mates])
     assert "and your 8 mates, each on in the modes it was on in." in _status(every)
+    assert "against its gear or carrier" in _status(_done(), {"Sprocket-1": "Sun", "Sprocket-2": "Carrier carrier",
+                                                              "Chain-1": "Sun", "Housing-1": "Sun"})
     assert _status(None) == ""
+
+
+def test_the_result_says_a_mode_gone_and_what_a_new_mode_took():
+    said = _status(_done(), carry=_carry_stub(modes=("H", "N", "Low")))
+    assert ("RangeBox_r2 has no mode L: what your items were in L stays in RangeBox.SLDASM. Its new mode Low takes "
+            "what they were in H.") in said, said
 
 
 @pytest.mark.parametrize("why, subjects, clause", [
     (swbuild.WHY_KIND, ("width",), "M1 is a width mate, which Gear Generator does not make again"),
     (swbuild.WHY_UNMEASURED, ("concentric", "CARRY_REMAKE_KINDS_ON_2024", "2024"),
-     "M1 is a concentric mate, which Gear Generator has not yet been shown to make again in a new revision on "
+     "M1 is not made again: Gear Generator has not yet been shown to make concentric mates again in a new revision on "
      "SolidWorks 2024 (findings.CARRY_REMAKE_KINDS_ON_2024)"),
     (swbuild.WHY_UNMEASURED, ("face", "PERSIST_REFERENCE_ROUTE_FOR_FACES_ON_2024", "2024"),
-     "M1 is on a face, which Gear Generator has not yet been shown to find again in a new revision on SolidWorks "
-     "2024 (findings.PERSIST_REFERENCE_ROUTE_FOR_FACES_ON_2024)"),
+     "M1 is not made again: Gear Generator has not yet been shown to find a mate's face again in a new revision on "
+     "SolidWorks 2024 (findings.PERSIST_REFERENCE_ROUTE_FOR_FACES_ON_2024)"),
+    (swbuild.WHY_UNMEASURED, ("face", "PERSIST_REFERENCE_ROUTE_FOR_FACES_ON_2024", "2024", "Sprocket-1"),
+     "M1 is not made again: Gear Generator has not yet been shown to find a mate's face of Sprocket-1 again in a new "
+     "revision on SolidWorks 2024 (findings.PERSIST_REFERENCE_ROUTE_FOR_FACES_ON_2024)"),
     (swbuild.WHY_UNMEASURED, ("edge", "PERSIST_REFERENCE_SURVIVES_RELOAD_ON_2026", "2026"),
-     "M1 is on an edge, which Gear Generator has not yet been shown to find again in a new revision, after its part "
-     "is closed and opened again, on SolidWorks 2026 "
-     "(findings.PERSIST_REFERENCE_SURVIVES_RELOAD_ON_2026)"),
+     "M1 is not made again: Gear Generator has not yet been shown to find a mate's edge again after its part is "
+     "closed and opened again on SolidWorks 2026 (findings.PERSIST_REFERENCE_SURVIVES_RELOAD_ON_2026)"),
     (swbuild.WHY_UNMEASURED, ("origin", "ORIGIN_ENTITY_READ_ON_2026", "2026"),
-     "M1 is on an origin, which Gear Generator has not yet been shown to read an origin as a mate's entity on "
-     "SolidWorks 2026 (findings.ORIGIN_ENTITY_READ_ON_2026)"),
+     "M1 is not made again: Gear Generator has not yet been shown to read an origin as a mate's entity on SolidWorks "
+     "2026 (findings.ORIGIN_ENTITY_READ_ON_2026)"),
     (swbuild.WHY_UNMEASURED, ("gear mate on an app gear", "CARRY_GEAR_MATE_ON_AN_APP_GEAR_ON_2026", ""),
-     "M1 is not made again, which Gear Generator has not yet been shown to make a gear mate on an app gear again in "
-     "a new revision on the SolidWorks it runs on (findings.CARRY_GEAR_MATE_ON_AN_APP_GEAR_ON_2026)"),
+     "M1 is not made again: Gear Generator has not yet been shown to make a gear mate on an app gear again in a new "
+     "revision on the SolidWorks it runs on (findings.CARRY_GEAR_MATE_ON_AN_APP_GEAR_ON_2026)"),
     (swbuild.WHY_UNMEASURED, ("leaf", "CARRY_REMAKES_ON_A_LEAF_ON_2026", "2026"),
-     "M1 is not made again, which Gear Generator has not yet been shown to make a mate on a part inside a "
-     "sub-assembly of yours again on SolidWorks 2026 (findings.CARRY_REMAKES_ON_A_LEAF_ON_2026)"),
+     "M1 is not made again: Gear Generator has not yet been shown to make a mate on a part inside a sub-assembly of "
+     "yours again on SolidWorks 2026 (findings.CARRY_REMAKES_ON_A_LEAF_ON_2026)"),
     (swbuild.WHY_PART_NEW, ("Sun", "its Flank changed", "face", "bore"),
      "M1 was on Sun's bore, and Sun's part is new because its Flank changed"),
+    (swbuild.WHY_PART_NEW, ("Sun", "its Flank changed", "face", "axis"),
+     "M1 was on a face of Sun on its axis, and Sun's part is new because its Flank changed"),
     (swbuild.WHY_PART_NEW, ("Sun", "its Flank changed", "edge", ""),
      "M1 was on an edge of Sun, and Sun's part is new because its Flank changed"),
     (swbuild.WHY_GONE, ("gear", "G5"), "M1 was on G5, which RangeBox_r2 does not have"),
     (swbuild.WHY_GONE, ("shaft", "Output"), "M1 was on the layout's Output Axis, and RangeBox_r2 has no shaft Output"),
     (swbuild.WHY_GONE, ("feature", "Mid Plane"),
      "M1 was on Mid Plane in an app part, which that part in RangeBox_r2 does not have"),
+    (swbuild.WHY_GONE, ("feature", "Mid Plane", "Sun"), "M1 was on Sun's Mid Plane, which Sun's new part does not have"),
     (swbuild.WHY_ASSEMBLY_FEATURE, ("Plane1",),
      "M1 is on Plane1, a feature you made in RangeBox.SLDASM, which is not carried"),
     (swbuild.WHY_NOT_CARRIED, ("Bracket-1",), "M1 joins Bracket-1, which is not carried"),
@@ -601,14 +646,40 @@ def test_the_result_says_what_was_carried_unsaved_and_to_save_it():
      "M1 is on a part inside your sub-assembly Drive-1, which Gear Generator does not make again"),
     (swbuild.WHY_NOT_FOUND, ("face", "Sprocket-1", "Sprocket.SLDPRT"),
      "M1's face of Sprocket-1 could not be found again in Sprocket.SLDPRT"),
+    ("too long", ("face", "Sprocket-5", "Sprocket.SLDPRT", "candidates"),
+     "M1 is on a face of Sprocket-5 that Gear Generator did not look for, since finding it among Sprocket.SLDPRT's "
+     "faces would have taken too long"),
+    ("too long", ("edge", "Sun", "Gear_m1.25_N29.SLDPRT", "seconds"),
+     "M1 is on an edge of Sun that Gear Generator did not look for, since finding it among Gear_m1.25_N29.SLDPRT's "
+     "edges would have taken too long"),
     (swbuild.WHY_DIFFERS, ("entities",), "M1 made again read otherwise than it was (its entities), so it was taken out "
                                          "again"),
     (swbuild.WHY_OLD_UNREAD, ("it was not open in SolidWorks",),
-     "RangeBox.SLDASM was not read (it was not open in SolidWorks)"),
+     "RangeBox.SLDASM was not read: it was not open in SolidWorks"),
 ])
 def test_each_reason_a_mate_is_not_carried_has_its_clause(why, subjects, clause):
     named = swbuild.CarryNamed("M1", "mate", why, subjects)
     assert ui_text.carry_named_clause(named, name="RangeBox_r2", old="RangeBox.SLDASM") == clause
+
+
+@pytest.mark.parametrize("why, subjects, sentence", [
+    (swbuild.WHY_NOT_CARRIED, ("Bracket-1",), "M1 joins Bracket-1, which is not carried, so it is not made again."),
+    (swbuild.WHY_ASSEMBLY_FEATURE, ("Plane1",),
+     "M1 is on Plane1, a feature you made in RangeBox.SLDASM, which is not carried, so it is not made again."),
+    (swbuild.WHY_LIGHTWEIGHT, ("Sprocket-4",), "M1 is on Sprocket-4, which was lightweight in RangeBox.SLDASM, so what "
+                                               "it joins could not be read, and it is not made again."),
+    (swbuild.WHY_UNMEASURED, ("leaf", "CARRY_REMAKES_ON_A_LEAF_ON_2026", "2026"),
+     "Gear Generator has not yet been shown to make a mate on a part inside a sub-assembly of yours again on "
+     "SolidWorks 2026 (findings.CARRY_REMAKES_ON_A_LEAF_ON_2026), so M1 is not made again."),
+    ("too long", ("face", "Sprocket-5", "Sprocket.SLDPRT", "candidates"),
+     "M1 is on a face of Sprocket-5 that Gear Generator did not look for, since finding it among Sprocket.SLDPRT's "
+     "faces would have taken too long."),
+])
+def test_a_mate_is_always_told_it_is_not_made_again(why, subjects, sentence):
+    """S1: the verdict follows what the item is: a mate whose clause ends *which is not carried* (its component, or
+    its feature) is still told it is not made again."""
+    named = swbuild.CarryNamed("M1", "mate", why, subjects)
+    assert ui_text._named_sentences([named], name="RangeBox_r2", old="RangeBox.SLDASM") == [sentence]
 
 
 @pytest.mark.parametrize("why, subjects, clause", [
@@ -626,14 +697,14 @@ def test_each_reason_a_mate_is_not_carried_has_its_clause(why, subjects, clause)
      "Sprocket-7 is suppressed in H, the mode RangeBox.SLDASM showed, and SolidWorks would not say where it stands, so "
      "it is not carried"),
     (swbuild.WHY_UNMEASURED, ("insert", "CARRY_INSERTS_ON_2024", "2024"),
-     "Part1^RangeBox-1 is not carried, which Gear Generator has not yet been shown to carry your work into a new "
-     "revision on SolidWorks 2024 (findings.CARRY_INSERTS_ON_2024)"),
+     "Part1^RangeBox-1 is not carried: Gear Generator has not yet been shown to carry your work into a new revision "
+     "on SolidWorks 2024 (findings.CARRY_INSERTS_ON_2024)"),
     (swbuild.WHY_UNMEASURED, ("sub-assembly", "SUBASSEMBLY_READ_ONLY_INSERT_ON_2026", "2026"),
-     "Part1^RangeBox-1 is not carried, which Gear Generator has not yet been shown to insert a sub-assembly of yours "
-     "into a new revision on SolidWorks 2026 (findings.SUBASSEMBLY_READ_ONLY_INSERT_ON_2026)"),
+     "Part1^RangeBox-1 is not carried: Gear Generator has not yet been shown to insert a sub-assembly of yours into a "
+     "new revision on SolidWorks 2026 (findings.SUBASSEMBLY_READ_ONLY_INSERT_ON_2026)"),
     (swbuild.WHY_UNMEASURED, ("configuration", "CARRY_INSERTS_IN_A_CONFIGURATION_ON_2026", "2026"),
-     "Part1^RangeBox-1 is not carried, which Gear Generator has not yet been shown to insert a component in a "
-     "configuration of its file's several on SolidWorks 2026 (findings.CARRY_INSERTS_IN_A_CONFIGURATION_ON_2026)"),
+     "Part1^RangeBox-1 is not carried: Gear Generator has not yet been shown to insert a component in one of its "
+     "file's several configurations on SolidWorks 2026 (findings.CARRY_INSERTS_IN_A_CONFIGURATION_ON_2026)"),
 ])
 def test_each_reason_a_component_is_not_carried_has_its_clause(why, subjects, clause):
     named = swbuild.CarryNamed("Part1^RangeBox-1", "component", why, subjects)
@@ -653,13 +724,13 @@ def test_a_sub_assembly_whose_open_marks_it_is_said_so(monkeypatch):
     (swbuild.CarryFallback(("Sprocket-8",), ("Lock8", "Lock9"), ("Coincident7",), swbuild.FELL_TIE, ("Sun", "H")),
      "Sprocket-8 is fixed where it stood in RangeBox_r2: with your Lock8 and Lock9 made again SolidWorks reads Sun "
      "unable to turn, so those two were not kept; Coincident7 beside them was."),
-    (swbuild.CarryFallback(("Sprocket-8",), ("Lock8",), (), swbuild.FELL_TIE, ("Sun", "L")),
+    (swbuild.CarryFallback(("Sprocket-8",), ("Lock8",), ("Lock9",), swbuild.FELL_TIE, ("Sun", "L")),
      "Sprocket-8 is fixed where it stood in RangeBox_r2: with your Lock8 made again SolidWorks reads Sun unable to "
-     "turn in L, so it was not kept."),
+     "turn in L, so it was not kept; Lock9 beside it was."),
     (swbuild.CarryFallback(("Sprocket-3", "Chain-1"), ("Lock3",), ("Dist1", "Dist2"), swbuild.FELL_NEW_ERROR,
                            ("Lock3", "46", "0", "L")),
      "Sprocket-3 and Chain-1 are fixed where they stood in RangeBox_r2: with your Lock3 made again it reads error 46 "
-     "in L, which it did not in H, the mode RangeBox.SLDASM showed, so it was not kept; Dist1 and Dist2 beside them "
+     "in L, which it did not in H, the mode RangeBox.SLDASM showed, so it was not kept; Dist1 and Dist2 beside it "
      "were."),
     (swbuild.CarryFallback(("Sprocket-3",), ("Lock3", "Lock4", "Lock5"), (), swbuild.FELL_OVER_DEFINED, ("Lock3",)),
      "Sprocket-3 is fixed where it stood in RangeBox_r2: your Lock3 made again over-defines it, so those 3 were not "
@@ -676,13 +747,13 @@ def test_the_results_other_sentences_each_as_they_apply(monkeypatch):
     work = _work(components=("Sprocket-2", "Drive-1"), mates=2)
     work.components[1] = replace(work.components[1], kind="assembly", path="C:\\Parts\\Drive.SLDASM")
     clash = swbuild.Clash(("Sprocket-2", "gear6-1"), ("Sprocket-2", "RangeSlv"), 12.3)
-    done = _done(work, same_error=[("M0", 46)], moved=[("Sprocket-2", "L", 2.04)], clashes=[("L", clash)],
-                 marked_user=[r"C:\Parts\Sprocket.SLDPRT"])
+    done = _done(work, same_error=[("M0", 46)], moved=[("Sprocket-2", "N", 2.04), ("Sprocket-2", "L", 2.04)],
+                 clashes=[("L", clash)], marked_user=[r"C:\Parts\Sprocket.SLDPRT"])
     monkeypatch.setattr(findings, "CARRY_INSERT_MARKS_USER_DOCUMENTS_ON_2026", True)
-    said = _status(done, revision=(34, 0, 0))
+    said = _status(done, anchors={"Sprocket-2": "Sun"}, revision=(34, 0, 0))
     for sentence in ("Your M0 was in error in RangeBox.SLDASM and is in RangeBox_r2 too, as it was.",
-                     "In L, SolidWorks moved Sprocket-2 2.0 mm from where it was placed when your mates were made "
-                     "again.",
+                     "SolidWorks moved Sprocket-2 off where it stood against Sun when your mates were made again: "
+                     "2.0 mm in N and L.",
                      "In mode L, your Sprocket-2 interferes with RangeSlv (12.3 mm³).",
                      "Your sub-assembly Drive-1 comes over rigid: set it flexible in SolidWorks again if it was.",
                      "SolidWorks reads Sprocket.SLDPRT as changed since it was inserted into RangeBox_r2, though "
@@ -695,28 +766,76 @@ def test_the_results_other_sentences_each_as_they_apply(monkeypatch):
     # With the states read per mode, nothing is said of them; a fixed component is not said to float.
     read = _work(components=("Housing-1",), mates=0, states_route="GetComponentSuppressionState")
     said = _status(_done(read))
-    assert "could not be read without changing it" not in said and "a floating one" not in said
+    assert "could not be read without changing it" not in said and "stand in every mode" not in said
 
 
-def test_a_carry_that_stopped_says_what_it_did_not_get_to():
-    done = _done(stopped="SolidWorks would not make UserDist4 again (SolidWorks: AddMate5 answered 2)",
-                 skipped="making Sprocket-4's other mates again and checking the assembly")
+def test_a_carry_that_stopped_says_the_workers_sentence_and_what_it_did_not_get_to():
+    stopped = "SolidWorks stopped the carry while making UserDist4 again: AddMate5 answered 2."
+    done = _done(stopped=stopped, skipped="making Sprocket-4's other mates again and checking the assembly")
     said = _status(done)
-    assert ("Carrying your work stopped: SolidWorks would not make UserDist4 again (SolidWorks: AddMate5 answered 2), "
-            "so it did not get to making Sprocket-4's other mates again and checking the assembly; what was carried "
-            "before it is in RangeBox_r2, unsaved, and RangeBox_r2 as built is saved.") in said
-    assert "Save RangeBox_r2 in SolidWorks" not in said
+    assert (f"{stopped} It did not get to making Sprocket-4's other mates again and checking the assembly. What was "
+            "carried before it is in RangeBox_r2, unsaved, and RangeBox_r2 as built is saved.") in said, said
+    assert "Carrying your work stopped" not in said and "Save RangeBox_r2 in SolidWorks" not in said
+    # M4: a stop before anything was made says nothing was carried, and W9a's sentence of what stays.
+    early = swbuild.CarryResult(_work(), stopped="SolidWorks would not read RangeBox_r2's frames (Sun not found).",
+                                skipped="inserting your components")
+    result = type("R", (), {"carry": early, "old_user_work": swbuild.UserWork(
+        components=[swbuild.UserComponent("Sprocket-1")]), "old_read": ""})()
+    said = _status(early, result=result, stays=_stays())
+    assert said == ("SolidWorks would not read RangeBox_r2's frames (Sun not found). It did not get to inserting your "
+                    "components. Nothing of yours was carried, and RangeBox_r2 as built is saved. Your Sprocket-1 stays "
+                    "in RangeBox.SLDASM, as read when this build began; RangeBox_r2 has none of it."), said
 
 
-def test_nothing_read_a_read_that_marked_and_a_document_left_open_each_say_nothing_was_carried():
-    unread = _work(how=swbuild.OLD_UNREAD, unread=["it was not open in SolidWorks, and FILE_VERSION_READ is not set"])
-    assert _status(swbuild.CarryResult(unread)) == (
-        "RangeBox.SLDASM was not read (it was not open in SolidWorks, and FILE_VERSION_READ is not set), so nothing of "
-        "yours was carried; it and your files are as they were. Open RangeBox.SLDASM in SolidWorks before you press "
-        "Build again… to carry it.")
-    assert _status(swbuild.CarryResult(None, stopped="SolidWorks stopped answering.")) == (
-        "RangeBox.SLDASM was not read (SolidWorks stopped answering), so nothing of yours was carried; it and your "
-        "files are as they were.")
+def test_a_files_change_found_after_the_carry_is_said_as_what_it_is_not_as_a_stop():
+    after = ("Sprocket.SLDPRT changed on disk while Build again… carried your work, which Gear Generator never does; "
+             "look at it in SolidWorks.")
+    said = _status(_done(stopped=after))
+    assert said.endswith(f"{after} Save RangeBox_r2 in SolidWorks to keep what was carried."), said
+    assert "did not get to" not in said and "What was carried before it" not in said
+
+
+def test_nothing_carried_today_leads_w9as_sentence_with_the_finding(desk):
+    """M1: every finding None, the result is W9a's sentence led by the finding, as the question is."""
+    done = swbuild.CarryResult(_work(components=("Sprocket-1", "Housing-1"), mates=1), named=[
+        swbuild.CarryNamed("Sprocket-1", "component", swbuild.WHY_UNMEASURED, ("insert", "CARRY_INSERTS_ON_2026",
+                                                                               "2026")),
+        swbuild.CarryNamed("Housing-1", "component", swbuild.WHY_UNMEASURED, ("insert", "CARRY_INSERTS_ON_2026",
+                                                                              "2026")),
+        swbuild.CarryNamed("M0", "mate", swbuild.WHY_NOT_CARRIED, ("Sprocket-1",))])
+    work = swbuild.UserWork(components=[swbuild.UserComponent("Sprocket-1"), swbuild.UserComponent("Housing-1")],
+                            mates=[swbuild.UserMate("Lock3")])
+    result = type("R", (), {"carry": done, "old_user_work": work, "old_read": ""})()
+    stays = _stays(left=[("Keyway", r"C:\Out\Gear_m1.25_N29.SLDPRT", ("Sun",))])
+    said = _status(done, result=result, stays=stays)
+    at = ui_text.read_time("2026-11-17T14:02:00Z")
+    assert said == ("Gear Generator has not yet been shown to carry your work into a new revision on SolidWorks 2026 "
+                    "(findings.CARRY_INSERTS_ON_2026), so your Sprocket-1, Housing-1 and Lock3 stay in "
+                    "RangeBox.SLDASM, as read when this build began; RangeBox_r2 has none of them. As read at "
+                    f"{at}, your Keyway stays in Gear_m1.25_N29, which RangeBox_r2 does not use; RangeBox_r2 has none "
+                    "of it, nor anything added since."), said
+
+
+def test_an_old_assembly_not_read_says_why_and_what_the_record_holds_and_no_press_again():
+    """M3: A's reason as a clause, then the record's sentence; never advice to press again (D11)."""
+    unread = _work(how=swbuild.OLD_UNREAD, unread=[
+        "RangeBox.SLDASM is not open in SolidWorks, and Gear Generator reads it then only when its close has been "
+        "shown clean (findings.OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN_ON_2026)."])
+    said = _status(swbuild.CarryResult(unread), stays=_stays())
+    at = ui_text.read_time("2026-11-17T14:02:00Z")
+    assert said == ("RangeBox.SLDASM is not open in SolidWorks, and Gear Generator reads it then only when its close "
+                    "has been shown clean (findings.OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN_ON_2026), so nothing of yours "
+                    f"was carried; as read at {at}, your Sprocket-1 and M0 stay in RangeBox.SLDASM; RangeBox_r2 has "
+                    "none of them, nor anything added since."), said
+    assert "press" not in said and "((" not in said and "))" not in said
+
+
+def test_a_read_that_raised_a_read_that_marked_and_a_document_left_open_each_say_nothing_was_carried():
+    said = _status(swbuild.CarryResult(None, stopped=r"SolidWorks did not answer the read of RangeBox.SLDASM: "
+                                                     r"C:\Users\Mo Zhou\RPC_E_CALL_FAILED."), stays=_stays())
+    assert said.startswith("SolidWorks did not answer the read of RangeBox.SLDASM: RPC_E_CALL_FAILED, so nothing of "
+                           "yours was carried; RangeBox.SLDASM and your files are as they were on disk. As read at"), said
+    assert "Mo Zhou" not in said
     marked = _work(marked=[r"C:\Parts\Sprocket.SLDPRT"])
     assert _status(swbuild.CarryResult(marked, stopped="x")) == (
         "Reading RangeBox.SLDASM marked Sprocket.SLDPRT as changed in SolidWorks, which Gear Generator never does on "
@@ -726,6 +845,15 @@ def test_nothing_read_a_read_that_marked_and_a_document_left_open_each_say_nothi
     assert _status(swbuild.CarryResult(left, stopped="x")) == (
         "Reading RangeBox.SLDASM left Sprocket.SLDPRT open in SolidWorks, so nothing of yours was carried; close it "
         "without saving.")
+
+
+def test_a_path_in_the_workers_words_is_said_and_kept_by_its_file_name_only():
+    text = (r"SolidWorks stopped the carry while inserting C:\Users\Mo Zhou\Parts\Sprocket.SLDPRT: "
+            r"\\server\share\x\Housing.SLDPRT is read-only.")
+    assert ui_text.bare_files(text) == ("SolidWorks stopped the carry while inserting Sprocket.SLDPRT: Housing.SLDPRT "
+                                        "is read-only.")
+    said = _status(_done(stopped=text))
+    assert "Users" not in said and "Mo Zhou" not in said and "server" not in said
 
 
 def test_the_carry_kind_words_are_the_workers():
@@ -759,7 +887,8 @@ def _all_carried(work):
         states=[("Sprocket-1", ("L",)), ("Housing-2", ())], remade=[("Lock3", "Lock3", ("H", "N"))],
         named=[swbuild.CarryNamed("Concentric5", "mate", swbuild.WHY_PART_NEW,
                                   ("Sun", "its Flank changed", "face", "bore"))],
-        fixed=[swbuild.CarryFallback(("Housing-2",), ("Lock9",), (), swbuild.FELL_TIE, ("Sun", "H"))], unsaved=True)
+        fixed=[swbuild.CarryFallback(("Housing-2",), ("Lock9",), (), swbuild.FELL_TIE, ("Sun", "H"))], unsaved=True,
+        anchors=[("Sprocket-1", "Sun"), ("Housing-2", "")])
 
 
 def test_the_finish_keeps_the_carry_on_the_new_revision_and_its_inventory_from_what_was_carried(desk, carrying):
@@ -795,7 +924,9 @@ def test_with_nothing_carried_the_new_revision_holds_no_inventory_and_nothing_un
     _, _, finished, _ = _carried_build(desk, none_carried)
     box = finished.record.gearbox
     assert box.user_work is None and box.carry.unsaved_at == 0.0 and box.carry.components == []
-    assert box.carry.named[0].sentence.startswith("Lock3 is a lock mate, which Gear Generator has not yet been shown")
+    assert box.carry.named[0].sentence == ("Lock3 is not made again: Gear Generator has not yet been shown to make lock "
+                                           "mates again in a new revision on SolidWorks 2026 "
+                                           "(findings.CARRY_REMAKE_KINDS_ON_2026)")
     assert store.carry_unsaved(finished.record) is None and ui_text.carry_footer_line(finished.record) == ""
 
 
@@ -842,52 +973,77 @@ def test_a_later_update_that_finds_the_new_assembly_loaded_from_its_file_says_th
 
 # -- the round trip on the fake (A's worker) ---------------------------------------------------------------------------
 
-def test_the_round_trip_classify_question_build_with_carry_finish_record_footer(desk, carrying, monkeypatch):
+def _desk(entity_kinds):
+    """RangeBox on the fake with W9a's user work read by a quiet press, the fake reading each mate's entity kinds
+    (schema 10's inventory) or not (a schema 9 one); the user's files on the fake's disk."""
+    d = Desk()
+    d.sw.read_entity_kinds = entity_kinds
+    d.build(range_box())
+    users_work(d)
+    d.disk.files |= {"c:\\parts\\sprocket.sldprt", "c:\\parts\\housing.sldprt"}
+    return d
+
+
+def _carry_job(desk, spec):
+    """A Build again… of ``spec`` as the window runs it: carry_for from the old assembly passed as before, A's worker
+    on the fake, the finish (its mtime the new assembly's, once); (again, carry, result, the record read back)."""
+    again = _again(desk, spec)
+    old = update.old_assembly(desk.record, again)
+    carry = update.carry_for(desk.record, again, old, read_sidecar=desk.disk.read_sidecar)
+    result = swbuild.build_gearbox(desk.sw, **again.build_kwargs(), exists=desk.disk.exists, before=old, carry=carry)
+    times = {}
+    finished = gearbox.finish_build(again, result, desk.record, workbook=r"C:\B\RangeBox.xlsx", digest="d9",
+                                    written_by="test", read_sidecar=desk.disk.read_sidecar, exists=desk.disk.exists,
+                                    stamp="2026-11-17T14:12:00Z", revision=desk.sw.revision,
+                                    mtime=lambda p: times.setdefault(p, 1763400000.5), carry=carry)
+    return again, carry, result, store.link_record_from_json(store.link_record_to_json(finished.record))
+
+
+def _status_of(desk, again, carry, result):
+    return ui_text.carried_status(result, again, carry.old.path, gearbox.carry_anchors(carry, result.carry,
+                                                                                         desk.sw.revision),
+                                  desk.sw.revision, carry=carry, stays=update.stays_behind(desk.record, again))
+
+
+@pytest.mark.parametrize("entity_kinds", [False, True])
+def test_the_round_trip_classify_question_build_with_carry_finish_record_footer(carrying, entity_kinds):
     """The window's path, without the window (its own test drives ``_start_build`` / ``_finish_build`` under Tk):
     classify needs a new revision; the question foresees the carry from the record's inventory with its time; the
     job is given ``carry`` from the very old assembly it passes as ``before``; the worker (package A's, on the fake)
     reads the old assembly first and carries; the finish records it at schema 10 with the new revision's inventory
-    and ``unsaved_at``; the footer asks for the save until the new assembly's file is newer."""
-    import os
-    real = os.path.isfile
-    monkeypatch.setattr(os.path, "isfile", lambda p: desk.disk.exists(p) or real(p))
-    desk.disk.files |= {"c:\\parts\\sprocket.sldprt", "c:\\parts\\housing.sldprt"}
+    and ``unsaved_at``; the footer asks for the save until the new assembly's file is newer. With the fake reading
+    entity kinds (S9) the inventory is schema 10's, its mates' entities through classify, the question and the
+    finish."""
+    desk = _desk(entity_kinds)
+    entities = desk.record.gearbox.user_work.mates[0].entities
+    assert bool(entities) is entity_kinds and all(e[2] == "whole" for e in entities)
     spec = gears(range_box(), **SUN_FLANK)
     up = update.classify(desk.record, desk.a(spec), exists=desk.disk.exists, read_sidecar=desk.disk.read_sidecar)
     assert up.needs_new_revision
-    again = _again(desk, spec)
-    question = ui_text.build_again_question(up, again, record=desk.record)
-    assert (f"As read at {_at(desk)}, RangeBox_r2 takes your Sprocket-1 and Housing-1, each where it stands, against "
-            "the gear it is mated to where it has one, and makes your Lock3 again on what it joins, on in the modes it "
-            "was on in.") in question, question
-    old = update.old_assembly(desk.record, again)
-    carry = update.carry_for(desk.record, again, old, read_sidecar=desk.disk.read_sidecar)
+    question = ui_text.build_again_question(up, _again(desk, spec), record=desk.record)
+    assert (f"As read at {_at(desk)}, RangeBox_r2 takes your Sprocket-1 and Housing-1 and makes your Lock3 again in "
+            "the modes it was on in.") in question, question
     old_mates = {k: copy.deepcopy(v) for k, v in desk.sw.memory_mates.items()}
-    result = swbuild.build_gearbox(desk.sw, **again.build_kwargs(), exists=desk.disk.exists, before=old, carry=carry)
+    again, carry, result, record = _carry_job(desk, spec)
     assert result.ok and result.carry is not None and result.carry.work.how == swbuild.OLD_OPEN
-    key = old.path.replace("/", "\\").lower()
+    key = carry.old.path.replace("/", "\\").lower()
     assert desk.sw.memory_mates[key] == old_mates[key]           # nothing written to the old assembly's mates
     done = result.carry
     assert [o for o, _ in done.inserted] == ["Sprocket-1", "Housing-1"] and [m for m, _, _ in done.remade] == ["Lock3"]
-    said = ui_text.carried_status(result, again, old.path, gearbox.carry_anchors(carry, done, desk.sw.revision),
-                                  desk.sw.revision)
+    said = _status_of(desk, again, carry, result)
     assert said.startswith("Carried into RangeBox_r2, unsaved: your ") and "and your Lock3, on in the modes it was " \
         "on in." in said, said
+    assert ("Your Keyway stays in Gear_m1.25_N29, which Sun's new part replaces because its Flank changed "
+            "(RangeBox.SLDASM and that file keep it).") in said                # M2
     assert said.endswith("Save RangeBox_r2 in SolidWorks to keep what was carried.")
-    times = {}
-
-    def mtime(path):
-        return times.setdefault(path, 1763400000.5)
-    finished = gearbox.finish_build(again, result, desk.record, workbook=r"C:\B\RangeBox.xlsx", digest="d9",
-                                    written_by="test", read_sidecar=desk.disk.read_sidecar, exists=desk.disk.exists,
-                                    stamp="2026-11-17T14:12:00Z", revision=desk.sw.revision, mtime=mtime, carry=carry)
-    record = store.link_record_from_json(store.link_record_to_json(finished.record))
     assert json.loads(store.link_record_to_json(record))["link_schema_version"] == 10
     box = record.gearbox
     assert box.carry.how == "open" and [c.was for c in box.carry.components] == ["Sprocket-1", "Housing-1"]
-    assert {c.was: c.anchor for c in box.carry.components} == {"Sprocket-1": "Sun", "Housing-1": ""}
+    assert {c.was: c.anchor for c in box.carry.components} == dict(gearbox.carry_anchors(carry, done, ()))
+    assert box.carry.components[0].anchor == "Sun"
     assert [m.was for m in box.carry.mates] == ["Lock3"] and box.carry.unsaved_at == 1763400000.5
     assert [c.name for c in box.user_work.components] == [n for _, n in done.inserted]
+    assert [len(m.entities) for m in box.user_work.mates] == [2]   # the carry's own read keeps them either way
     assert record.unsaved == {}
     line = "RangeBox_r2 holds what Build again… carried of yours, not saved: save it in SolidWorks to keep it."
     a = desk.a(spec)
@@ -895,6 +1051,24 @@ def test_the_round_trip_classify_question_build_with_carry_finish_record_footer(
     assert line in footer.text, footer.text
     store.clear_saved(record, mtime=lambda p: 1763400900.0)
     assert line not in ui_text.workbook_footer(a, record=record, digest="d9", folder="C:\\Out\\").text
+
+
+def test_the_round_trip_today_with_every_w9d_finding_unset_says_w9as_sentence_led(monkeypatch):
+    """M1, end to end: every W9d finding None (today, but for the probe reads the tree may hold), A's worker on the
+    fake reads and carries nothing; the result is W9a's sentence led by the finding, as the question is."""
+    _reads(monkeypatch)
+    desk = _desk(True)
+    spec = gears(range_box(), **SUN_FLANK)
+    again, carry, result, record = _carry_job(desk, spec)
+    said = _status_of(desk, again, carry, result)
+    at = _at(desk)
+    assert said == ("Gear Generator has not yet been shown to carry your work into a new revision on SolidWorks 2026 "
+                    "(findings.CARRY_INSERTS_ON_2026), so your Sprocket-1, Housing-1 and Lock3 stay in "
+                    "RangeBox.SLDASM, as read when this build began; RangeBox_r2 has none of them. As read at "
+                    f"{at}, your Keyway stays in Gear_m1.25_N29, which Sun's new part replaces; RangeBox_r2 has none "
+                    "of it, nor anything added since."), said
+    assert record.gearbox.user_work is None and record.gearbox.carry.unsaved_at == 0.0
+    assert ui_text.carry_footer_line(record) == ""
 
 
 def test_once_pattern_instances_are_read_the_result_says_each_and_the_standing_list_drops_the_clause(monkeypatch):

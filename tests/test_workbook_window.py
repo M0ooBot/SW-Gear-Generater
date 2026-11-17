@@ -2995,32 +2995,48 @@ def test_an_update_refused_over_the_users_work_is_recorded_and_the_footer_says_i
 # -- W9d: Build again… carries the user's work (W9D-INTERFACES §2.1, §7, §9.2, §9.4; package B) ----------------------
 
 
+def _users_sprocket(desk, window):
+    """A sprocket of the user's locked to G1 in the built assembly, its file on disk (the worker reads it there)."""
+    from test_swbuild import IDENTITY9
+    record = record_of(window)
+    part = desk.tmp / "Sprocket.SLDPRT"
+    part.write_bytes(b"the user's part")
+    desk.sw.user_component(record.gearbox.assembly, "Sprocket-1", str(part), (IDENTITY9, (0.0, 0.0, 40.0)))
+    desk.sw.user_lock(record.gearbox.assembly, "Lock3", name2(window, "G1"), "Sprocket-1")
+    return part
+
+
+def _carrying_findings(monkeypatch, carry=True):
+    """Every W9d finding None on the fake's 2026 (today's state), or the write gates a plain carry needs patched in."""
+    names = [n for n in dir(findings) if n.endswith("_ON_2026") and any(n.startswith(p) for p in (
+        "CARRY_", "REFERENCED_CONFIGURATION_READ", "FILE_VERSION_READ", "DEPENDENCIES_READ", "OPEN_READ_ONLY_SHOWN",
+        "OPEN_READ_ONLY_KEEPS", "COMPONENT_STATE_PER_CONFIGURATION"))]
+    for name in names:
+        monkeypatch.setattr(findings, name, None)
+    if carry:
+        for name, value in (("CARRY_INSERTS", True), ("CARRY_REMAKE_KINDS", ("lock",)),
+                            ("REFERENCED_CONFIGURATION_READ", True), ("CARRY_INSERTS_IN_A_CONFIGURATION", True)):
+            monkeypatch.setattr(findings, f"{name}_ON_2026", value)
+
+
 def test_a_build_again_hands_the_worker_its_carry_says_what_was_carried_and_the_footer_asks_for_the_save(desk,
                                                                                                         monkeypatch):
-    """The window's path for a carrying Build again…: ``_start_build`` passes ``carry`` (from the very old assembly it
-    passes as ``before``), ``_finish_build`` says ``carried_status`` after the build's own sentence and records the
-    carry, and the footer says the new assembly holds it unsaved until its file is newer. The worker's carry is A's:
-    here a hand-made ``CarryResult`` stands in on the real build's result."""
+    """The window's path for a carrying Build again…, on A's worker on the fake: ``_start_build`` passes ``carry``
+    (from the very old assembly it passes as ``before``), ``_finish_build`` says ``carried_status`` after the build's
+    own sentence and records the carry, and the footer says the new assembly holds it unsaved until its file is
+    newer."""
     from gear_generator import workbook_gui
+    _carrying_findings(monkeypatch)
     window = built(desk)
+    _users_sprocket(desk, window)
     save_in_excel(window, {"Gears": {"K2": "arcs"}})
     monkeypatch.setattr(workbook_gui, "ask_yes_no", lambda parent, title, text: True)
     given = {}
     real = swbuild.build_gearbox
-    frame = ((1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0), (0.0, 0.0, 40.0))
 
     def build(session, **kwargs):
         given.update(kwargs)
-        result = real(session, **kwargs)
-        work = swbuild.OldWork("2026-11-17T14:02:00Z", kwargs["before"].path, swbuild.OLD_OPEN, "", (),
-                               [swbuild.OldComponent("Sprocket-1", "C:\\Parts\\Sprocket.SLDPRT", "part", False, 0, 2,
-                                                     frame, configurations=("Default",))],
-                               [swbuild.OldMate("Lock3", 16, "MateLock", 0, False, (),
-                                                (swbuild.OldEntity("app", "G1", "whole"),
-                                                 swbuild.OldEntity("user", "Sprocket-1", "whole")), on=("",))], ())
-        result.carry = swbuild.CarryResult(work, inserted=[("Sprocket-1", "Sprocket-1")],
-                                           remade=[("Lock3", "Lock3", ("",))], unsaved=True)
-        return result
+        return real(session, **kwargs)
     monkeypatch.setattr(workbook_gui.swbuild, "build_gearbox", build)
     window.press_update()
     desk.finish(window)
@@ -3029,12 +3045,14 @@ def test_a_build_again_hands_the_worker_its_carry_says_what_was_carried_and_the_
     assert [b.old for b in carry.bodies][:1] == ["layout"] and "G1" in [b.old for b in carry.bodies]
     status = window.status.get()
     assert status.startswith(f"Built 1 part, {NAME}_r2_Layout and {NAME}_r2.SLDASM"), status
-    assert (f"Carried into {NAME}_r2, unsaved: your Sprocket-1, each where it stood, and your Lock3, on in the "
-            "modes it was on in.") in status, status
+    assert f"Carried into {NAME}_r2, unsaved: your " in status and "and your Lock3, on in the modes it was on in." \
+        in status, status
+    assert status.endswith(f"Save {NAME}_r2 in SolidWorks to keep what was carried."), status
     record = record_of(window)
     assert record.gearbox.name == f"{NAME}_r2" and record.unsaved == {}
     assert record.gearbox.carry.unsaved_at == os.path.getmtime(record.gearbox.assembly)
-    assert [c.name for c in record.gearbox.user_work.components] == ["Sprocket-1"]
+    assert [c.was for c in record.gearbox.carry.components] == ["Sprocket-1"]
+    assert "Users" not in json.dumps(json.loads(record_bytes(window))["gearbox"]["carry"])     # no folder kept
     line = f"{NAME}_r2 holds what Build again… carried of yours, not saved: save it in SolidWorks to keep it."
     window.note = None
     window._plan()
@@ -3042,3 +3060,23 @@ def test_a_build_again_hands_the_worker_its_carry_says_what_was_carried_and_the_
     touch_later(record.gearbox.assembly)                       # saved in SolidWorks
     window._tick()
     assert line not in window.footer().text
+
+
+def test_a_build_again_today_says_what_stays_led_by_the_finding_as_the_question_does(desk, monkeypatch):
+    """M1 through the window, on A's worker: with every W9d finding None the result is W9a's sentence of what stays in
+    the old assembly, led by the finding that holds the carry back; nothing is recorded unsaved, and no footer line."""
+    from gear_generator import workbook_gui
+    _carrying_findings(monkeypatch, carry=False)
+    window = built(desk)
+    _users_sprocket(desk, window)
+    save_in_excel(window, {"Gears": {"K2": "arcs"}})
+    monkeypatch.setattr(workbook_gui, "ask_yes_no", lambda parent, title, text: True)
+    window.press_update()
+    desk.finish(window)
+    status = window.status.get()
+    assert ("Gear Generator has not yet been shown to carry your work into a new revision on SolidWorks 2026 "
+            f"(findings.CARRY_INSERTS_ON_2026), so your Sprocket-1 and Lock3 stay in {NAME}.SLDASM, as read when this "
+            f"build began; {NAME}_r2 has none of them.") in status, status
+    record = record_of(window)
+    assert record.gearbox.carry is not None and record.gearbox.carry.unsaved_at == 0.0
+    assert record.gearbox.user_work is None and "holds what Build again… carried" not in window.footer().text

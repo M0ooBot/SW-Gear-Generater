@@ -3211,6 +3211,18 @@ def _old_carrier_names(entry: store.CarrierEntry) -> Tuple[str, ...]:
     return layout.layout_features((layout._local_axis(entry.shaft, 0.0, 0.0, 0.0),) + tuple(entry.axes))
 
 
+def _bore_mm(entry: Optional[PartEntry]) -> Optional[float]:
+    """The OLD gear part's bore in mm, from its spec on record (what its Bore Diameter global was written from:
+    §2.1's ``CarryBody.bore_mm``, the coordinator's ruling); None with no bore (blank or 0) or when not known (the
+    layout, a carrier, a part with no spec on record). §4.4's "bore" rests on it."""
+    text = str((entry.spec or {}).get("bore", "") if entry is not None else "").strip()
+    try:
+        value = float(text) if text else 0.0
+    except ValueError:
+        return None
+    return value if value > 0 and math.isfinite(value) else None
+
+
 def carry_for(record: Optional[LinkRecord], again: Any, old: Optional[swbuild.OldAssembly], *,
               read_sidecar: Callable[[str], Optional[Sidecar]] = store.read_sidecar) -> Optional[swbuild.Carry]:
     """What a carrying Build again… is given (W9D-INTERFACES §2.1): every app body on record in ``old`` (the layout
@@ -3219,7 +3231,8 @@ def carry_for(record: Optional[LinkRecord], again: Any, old: Optional[swbuild.Ol
     plan reuses the very file the old component was; ``why_new`` from ``again.made_new`` and the Gears columns that
     changed; ``names`` the app's own features in the new file (``plan_features`` of a part made new, the sidecar's of
     one reused, ``layout_features`` of the layout and each carrier) and ``old_names`` in the old (its sidecar's, the
-    recorded shafts'). ``modes`` the new revision's in Modes-sheet order, ``first`` the old record's first mode,
+    recorded shafts'); ``bore_mm`` a gear's OLD part's bore (its spec on record), for §4.4's "bore". ``modes`` the new
+    revision's in Modes-sheet order, ``first`` the old record's first mode,
     ``written_on`` the SolidWorks the last job on record ran on, ``app_files`` every file the record names as the app's.
     None when ``old`` is None (not a Build again…). Pure but for ``read_sidecar``."""
     box = getattr(record, "gearbox", None)
@@ -3264,7 +3277,7 @@ def carry_for(record: Optional[LinkRecord], again: Any, old: Optional[swbuild.Ol
         bodies.append(swbuild.CarryBody(
             old=c.gear, old_name=c.name, handle=handle, same_file=same,
             why_new="" if same or not handle else _why_part_new(entry, c.gear, again),
-            names=tuple(names), old_names=old_names))
+            names=tuple(names), old_names=old_names, bore_mm=_bore_mm(entry)))
     modes_plan = getattr(again, "modes_plan", None)
     modes = tuple(step.name for step in modes_plan.steps) if modes_plan is not None else ()
     files: List[str] = [p.path for p in record.parts]
