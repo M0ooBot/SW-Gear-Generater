@@ -227,3 +227,28 @@ def test_with_no_modes_rows_the_clearance_warning_is_at_the_sleeves_cell():
     found = [m for m in warnings(one) if "which it does not engage there" in m]
     assert found == ["Gears row 7: RangeSlv stands 0 mm from HighDog and 0 mm from LowDog, which it does not engage "
                      "there: leave at least 0.625 mm (0.5 × module) each side."]
+
+
+def test_one_gear_that_spans_both_points_is_named_once():
+    """The review's should-fix 2: P, one 40 mm dog on In over 0…40, is present across both of S's points (15 and 25)
+    and reaches past each: one gear, said once with its span."""
+    shafts = (Shaft("In", "frame", "0", "0", "0", "Z+", "input", "", "1500", "", row=2),
+              Shaft("Out", "frame", "0", "0", "0", "Z+", "output", row=3))
+    gears = (Gear("P", "In", "20", "dog", "", "17", "1.25", "", "40", "", row=2),
+             Gear("S", "Out", "20", "sleeve", "", "17", "1.25", "", "10", "", row=3))
+    spec = GearboxSpec(box=Box(name="Long", pressure_angle="20", efficiency="98"), shafts=shafts, gears=gears)
+    said = modes.reach_warnings(spec, checks.check(spec).layout.placed)
+    assert [d.message for d in said] == ["Gears row 3: Out cannot reach S: In runs through S's travel at P (0 to 40), "
+                                         "so Out would have to pass P, on In."]
+
+
+def test_reach_with_a_hub_is_judged_at_the_hubs_points_not_the_bands():
+    """The review's N1. Extra, a gear on Input over −55…−51, holds both of the start band's points (−40.5 and
+    −50.5) but not the hub's start (−55.5): with Hub the sleeve is reached from Z−; without it every band is blocked."""
+    extra = Gear("Extra", "Input", "-53", "dog", "", "17", "1.25", "", "4", "", row=9)
+    with_hub = replace(range_box_fixed(), gears=range_box_fixed().gears + (extra,))
+    no_hub = without(with_hub, "Hub")
+    for spec, warned in ((with_hub, False), (no_hub, True)):
+        report = checks.check(spec)
+        said = [d.message for d in modes.reach_warnings(spec, report.layout.placed)]
+        assert bool(said) is warned, said

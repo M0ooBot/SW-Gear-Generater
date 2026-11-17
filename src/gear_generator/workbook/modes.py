@@ -151,7 +151,7 @@ def bands(gear: Gear) -> Optional[Tuple[float, float]]:
         face = float(gear.face_width)
     except ValueError:
         return None
-    if b1 <= 0 or b2 <= 0 or b1 + b2 >= face:
+    if b1 <= 0 or b2 <= 0 or b1 + b2 >= face - 1e-9:      # SleeveKind._band_errors' own rule for "no relief"
         return None
     return b1, b2
 
@@ -180,26 +180,46 @@ def _between(a: Tuple[float, float], b: Tuple[float, float]) -> float:
     return min(a[1], b[1]) - max(a[0], b[0])
 
 
+def _rides(sleeve: Gear, hub: Gear) -> bool:
+    """Whether a band of ``sleeve`` (its whole face, unbanded) overlaps ``hub`` at any of its positions, both on one
+    shaft, measured along the shaft from its point (the start band at the low end of the face, whichever way the
+    shaft's Axis runs)."""
+    try:
+        h_at, h_face = float(hub.at or 0), float(hub.face_width)
+        offsets = list(sleeve.positions().values()) or [0.0]
+        at, face = float(sleeve.at or 0), float(sleeve.face_width)
+    except ValueError:
+        return False
+    held = bands(sleeve)
+    under = (h_at - h_face / 2.0, h_at + h_face / 2.0)
+    for offset in offsets:
+        lo, hi = at + offset - face / 2.0, at + offset + face / 2.0
+        spans = [(lo, hi)] if held is None else [(lo, lo + held[0]), (hi - held[1], hi)]
+        if any(_between(span, under) > COVER_TOLERANCE for span in spans):
+            return True
+    return False
+
+
 def hub_sleeve(spec: GearboxSpec, hub: Gear) -> Optional[Gear]:
-    """The sleeve a hub carries (W9B-INTERFACES §3): the sleeve on its shaft whose bands, over its positions, overlap
-    the hub; the first sleeve on that shaft when none does; None with no sleeve there."""
+    """The sleeve a hub keys (W9B-INTERFACES §3; one hub, one sleeve, the coordinator's ruling): the first sleeve on
+    its shaft, in Gears-sheet order, a band of which rides the hub at one of its positions; the first sleeve on that
+    shaft when none does; None with no sleeve there."""
     on = [g for g in spec.gears if g.kind_word() == SLEEVE and g.shaft == hub.shaft and g.id]
     if not on:
         return None
-    try:
-        h_at, h_face = float(hub.at or 0), float(hub.face_width)
-    except ValueError:
-        return on[0]
-    for s in on:
-        try:
-            offsets = list(s.positions().values()) or [0.0]
-            at, face = float(s.at or 0), float(s.face_width)
-        except ValueError:
+    return next((s for s in on if _rides(s, hub)), on[0])
+
+
+def shared_hub(spec: GearboxSpec, sleeve: Gear) -> Optional[Gear]:
+    """A hub on ``sleeve``'s shaft that a band of it rides but that keys another sleeve (:func:`hub_sleeve`), or None:
+    a hub keys one sleeve, so this one is an error (``row_errors``), never built as shared."""
+    for hub in spec.gears:
+        if hub.kind_word() != HUB or hub.shaft != sleeve.shaft or hub.slides.strip():
             continue
-        lo, hi = at - face / 2.0 + min(offsets), at + face / 2.0 + max(offsets)
-        if min(hi, h_at + h_face / 2.0) - max(lo, h_at - h_face / 2.0) > COVER_TOLERANCE:
-            return s
-    return on[0]
+        keyed = hub_sleeve(spec, hub)
+        if keyed is not None and keyed.id != sleeve.id and _rides(sleeve, hub):
+            return hub
+    return None
 
 
 @dataclass
@@ -228,6 +248,24 @@ def engagement(spec: GearboxSpec, placed: Dict[str, Placed], picks: Picks) -> En
     sleeves = [p for p in placed.values() if gears.get(p.row or p.gear) is not None
                and gears[p.row or p.gear].kind_word() == SLEEVE]
     dogs = [p for g in spec.gears if g.kind_word() == DOG for p in [placed.get(g.id)] if p is not None]
+    hubs = [p for g in spec.gears if g.kind_word() == HUB for p in [placed.get(g.id)] if p is not None]
+    for h in hubs:                  # W9b (the coordinator's ruling on the review's must-fix 1): a hub engages nothing
+        for s in sleeves:
+            if s.shaft == h.shaft or not _coaxial(s, h):
+                continue
+            for word, lo, hi in band_spans(gears[s.gear], s):
+                share = _between((lo, hi), _span(h))
+                if share <= COVER_TOLERANCE:
+                    continue
+                cell = where or spec.cell("Gears", gears[s.gear].row, "id")
+                how = (f"covers {h.gear}" if share >= h.face - COVER_TOLERANCE
+                       else f"covers {_n(share)} mm of {h.gear}'s {_n(h.face)} mm face")
+                out.diagnostics.append(Diagnostic(ERROR, f"{cell}: {label}{_band_owner(s.gear, word)} {how}, the hub "
+                                                         f"on {h.shaft}: a hub keys only a sleeve on its own shaft and "
+                                                         f"engages nothing, so this is a clash, not a coupling; move "
+                                                         f"{h.gear} or {s.gear}'s position off it, or make {h.gear} a "
+                                                         f"dog if {s.gear} is to engage it.", cell))
+                break
     for d in dogs:
         for s in sleeves:
             if not _coaxial(s, d):
@@ -342,6 +380,15 @@ def row_errors(spec: GearboxSpec) -> List[Diagnostic]:
             out.append(Diagnostic(ERROR, f"{where}: {g.id} carries {sleeve.id} on its teeth, so it has {sleeve.id}'s "
                                          f"teeth, module and pressure angle ({sleeve.teeth} teeth, module "
                                          f"{sleeve.module}).", where))
+    for g in spec.gears:                                           # W9b: a hub keys one sleeve (coordinator's ruling)
+        if g.kind_word() != SLEEVE or not g.id:
+            continue
+        hub = shared_hub(spec, g)
+        if hub is not None:
+            where = spec.cell("Gears", g.row, "id")
+            keyed = hub_sleeve(spec, hub)
+            out.append(Diagnostic(ERROR, f"{where}: {g.id} rides {hub.id}, which keys {keyed.id}: a hub keys one "
+                                         f"sleeve, so give {g.id} a hub row of its own.", where))
     for g in spec.gears:
         kind = g.kind_word()
         moving = bool(g.slides.strip())
@@ -495,13 +542,14 @@ def hub_errors(spec: GearboxSpec, placed: Dict[str, Placed], reports) -> List[Di
         if sleeve is None or sleeve.id not in placed:
             continue
         under = _span(placed[hub.id])
-        for m in reports or ():
-            here = m.placed.get(sleeve.id, placed[sleeve.id])
+        # With no mode worked out (a sleeve with no Slides and no slider), the sleeve's one place is its one mode.
+        for m in reports or (None,):
+            here = placed[sleeve.id] if m is None else m.placed.get(sleeve.id, placed[sleeve.id])
             spans = band_spans(sleeve, here)
             if any(_covers((lo, hi), under) or _covers(under, (lo, hi)) for _, lo, hi in spans):
                 continue
-            cell = spec.cell("Modes", m.row, "name") if m.row else spec.cell("Gears", hub.row, "id")
-            label = f"in {m.name} " if m.name else ""
+            cell = spec.cell("Modes", m.row, "name") if m is not None and m.row else spec.cell("Gears", hub.row, "id")
+            label = f"in {m.name} " if m is not None and m.name else ""
             if spans[0][0]:
                 said = (f"{label}{hub.id} is under no band of {sleeve.id}: in every mode a band of the sleeve covers "
                         f"its hub whole, or the hub the band; move {hub.id}, or the bands.")
@@ -533,6 +581,11 @@ def _signed(value: float) -> str:
     if abs(value) < 1e-12:
         return "0"
     return ("+" if value > 0 else "\u2212") + _n(abs(value))
+
+
+def _signed_at(value: float) -> str:
+    """``−55.5``, ``10.5``: a place along z as the sentences write it (U+2212 for minus)."""
+    return "\u2212" + _n(-value) if value < 0 else _n(value)
 
 
 def _at_text(gear: Gear) -> str:
@@ -658,12 +711,17 @@ def reach_warnings(spec: GearboxSpec, placed: Dict[str, Placed]) -> List[Diagnos
         if both:
             shaft = both[0]
             low, high = dict(minus)[shaft], dict(plus)[shaft]
-            rows = {g.id: i for i, g in enumerate(spec.gears)}
-            first, second = sorted({low.id: low, high.id: high}.values(), key=lambda g: rows[g.id]) + \
-                ([] if low.id != high.id else [high])
-            said = (f"{sleeve.shaft} cannot reach {sleeve.id}: {shaft} runs through {sleeve.id}'s travel (from "
-                    f"{first.id} at {_at_text(first)} to {second.id} at {_at_text(second)}), so {sleeve.shaft} would "
-                    f"have to pass {low.id} toward Z\u2212 or {high.id} toward Z+, each on {shaft}.")
+            if low.id == high.id:                   # one gear spans the points on both sides (the review's point 2)
+                lo, hi = next((g_lo, g_hi) for g, g_lo, g_hi in owners[shaft] if g.id == low.id)
+                said = (f"{sleeve.shaft} cannot reach {sleeve.id}: {shaft} runs through {sleeve.id}'s travel at "
+                        f"{low.id} ({_signed_at(lo)} to {_signed_at(hi)}), so {sleeve.shaft} would have to pass "
+                        f"{low.id}, on {shaft}.")
+            else:
+                rows = {g.id: i for i, g in enumerate(spec.gears)}
+                first, second = sorted((low, high), key=lambda g: rows[g.id])
+                said = (f"{sleeve.shaft} cannot reach {sleeve.id}: {shaft} runs through {sleeve.id}'s travel (from "
+                        f"{first.id} at {_at_text(first)} to {second.id} at {_at_text(second)}), so {sleeve.shaft} "
+                        f"would have to pass {low.id} toward Z\u2212 or {high.id} toward Z+, each on {shaft}.")
         else:
             (s_low, low), (s_high, high) = minus[0], plus[0]
             said = (f"{sleeve.shaft} cannot reach {sleeve.id}: {s_low} and {s_high} run through {sleeve.id}'s travel, "
@@ -694,6 +752,8 @@ def hub_warnings(spec: GearboxSpec, placed: Dict[str, Placed]) -> List[Diagnosti
     for sleeve in spec.gears:
         if sleeve.kind_word() != SLEEVE or sleeve.id not in placed or _hubs_of(spec, sleeve):
             continue
+        if shared_hub(spec, sleeve) is not None:
+            continue                         # its error says so (row_errors): a hub keys one sleeve
         line = _frame_line(spec, sleeve.shaft)
         taken = [(lo, hi) for sid, present in owners.items() if sid != sleeve.shaft
                  and _on_line(line, _frame_line(spec, sid)) for _, lo, hi in present]

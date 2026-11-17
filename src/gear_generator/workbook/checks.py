@@ -550,13 +550,14 @@ def _check_clearances(report: Report, spec: GearboxSpec, placed: Dict[str, Place
     an error); ``only`` limits the pairs to those with one of its gears (another mode's sliders), and a sentence in
     ``said`` is not said twice."""
     gears = {g.id: g for g in spec.gears}
-    clutch = {g.id: g.kind_word() for g in spec.gears if g.kind_word() in (modes_mod.SLEEVE, modes_mod.DOG)}
+    clutch = {g.id: g.kind_word() for g in spec.gears if g.kind_word() in modes_mod.CLUTCH_KINDS}
     start = len(report.diagnostics)
     for a, b in combinations(placed.values(), 2):
         if only is not None and a.gear not in only and b.gear not in only:
             continue
-        if {clutch.get(a.gear), clutch.get(b.gear)} == {modes_mod.SLEEVE, modes_mod.DOG}:
-            continue
+        if {clutch.get(a.gear), clutch.get(b.gear)} in ({modes_mod.SLEEVE, modes_mod.DOG},
+                                                         {modes_mod.SLEEVE, modes_mod.HUB}):
+            continue                                   # W9b: a sleeve over a hub is engagement's to judge too
         if a.shaft == b.shaft or frozenset((a.gear, b.gear)) in listed or not geometry.parallel(a, b):
             continue                                   # across an angle: _check_turned_clearances
         if a.carrier and a.row == b.row and a.carrier == b.carrier:
