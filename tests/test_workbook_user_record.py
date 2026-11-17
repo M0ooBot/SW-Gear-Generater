@@ -360,7 +360,8 @@ def test_after_update_the_sentence_says_what_went_with_its_gear_and_what_of_the_
     result.user_in_error = [("", "Lock3")]
     text, ok = ui_text.gearbox_update_status(plan, result, finished.dragged, finished=finished)
     assert "Your Sprocket-1 went with G1, which your locks hold it to." in text
-    assert "SolidWorks rebuilt your Keyway in Gear_m1.5_N17 after the app's features, and it is in error." in text
+    assert ("Your Keyway in Gear_m1.5_N17 is in error in SolidWorks now, rebuilt after the app's features: change "
+            "your Keyway to fit it.") in text
     assert "Your Lock3 is in error in SolidWorks now." in text
     result.user_work.mates = [swbuild.UserMate(m.name, m.kind, m.type, m.touches, m.on, 7, True, m.whole)
                               for m in result.user_work.mates]          # Lock3 in error before anything changed
@@ -469,3 +470,96 @@ def test_features_in_a_longer_list_and_a_long_tie_read_once(on_fake):
     tie = update.UserWorkAhead(entry, unread_ties=((("G1", "G2"), tuple(f"M{i}" for i in range(8))),))
     text, ok = ui_text.user_work_line(tie)
     assert "whether the 8 mates of yours on G1's train leave it free to turn" in text and "M7" not in text, text
+
+
+# -- the demonstration's ruling: a rebuild in error from the user's work alone (K3; W9A-INTERFACES §4 item 11) ----------
+
+
+def _status(plan, result, finished):
+    return ui_text.gearbox_update_status(plan, result, finished.dragged, finished=finished)
+
+
+def test_k3_a_value_update_that_rebuilds_the_users_keyway_into_error_is_made_and_names_it_as_theirs(on_fake,
+                                                                                                     tmp_path):
+    """k3 end to end through classify, the worker and the status: the user's keyway in G1's part, fine before; the
+    workbook moves G1's Bore 8 -> 14, the part's and the assembly's rebuilds report an error from the keyway alone.
+    The Update is made (ok), nothing is said as the app's error, and the keyway is named as the user's, newly in
+    error, with the Bore's change and its cell."""
+    sw, record = on_fake
+    part = next(p.path for p in record.current_parts() if "G1" in p.gears)
+    sw.user_feature(part, "User Keyway")
+    sw.breaks_on_set[part.replace("/", "\\").lower()] = [("User Keyway", 71)]
+    from test_workbook_model import read, write
+    spec, diagnostics = read(write(tmp_path, gears(reducer(), G1=dict(bore="14"))))   # read back: rows and cells
+    assert diagnostics == []
+    plan, result, finished = press(sw, record, spec)
+    assert result.ok, result.failures
+    assert result.rebuild_from_user_alone == ["User Keyway in Gear_m1.5_N17.SLDPRT"]
+    assert [p.rebuilt for p in result.parts if p.changed] == [False]       # the part's own rebuild in error too
+    text, ok = _status(plan, result, finished)
+    cell = spec.cell("Gears", spec.gear("G1").row, "bore")
+    assert cell.startswith("Gears!")
+    assert ok and "error rebuilding it" not in text and "SolidWorks reported an error" not in text, text
+    assert ("Your User Keyway in Gear_m1.5_N17 is in error in SolidWorks now, after this Update set Bore Diameter 8 "
+            f"to 14 ({cell}) in that part: change your User Keyway to fit, or type 8 in {cell} again.") in text, text
+    sentence = next(x for x in text.split(". ") if "User Keyway in Gear_m1.5_N17 is in error" in x)
+    assert "before" not in sentence                          # the demonstration's rough test: newly in error
+    if not result.rebuilt:
+        assert ("SolidWorks reports an error rebuilding Reducer_12to1.SLDASM, from your own work alone: nothing of "
+                "the app's is in error, so the Update was made.") in text
+
+
+def test_m3_the_users_own_part_in_error_before_is_said_as_before_and_the_update_is_ok(on_fake):
+    from test_swbuild import IDENTITY9
+    sw, record = on_fake
+    asm = record.gearbox.assembly
+    sw.user_component(asm, "Sprocket-1", r"C:\Parts\Sprocket.SLDPRT", (IDENTITY9, (0.0, 0.0, 40.0)))
+    sw.feature_codes[(r"c:\parts\sprocket.sldprt", "User Keyway")] = 71
+    plan, result, finished = press(sw, record, gears(reducer(), G4=dict(at="30")))
+    assert result.ok, result.failures
+    assert not result.rebuilt and result.rebuild_from_user_alone == ["Sprocket-1"]
+    text, ok = _status(plan, result, finished)
+    assert ok and "look at it before saving" not in text, text
+    assert ("SolidWorks reports an error rebuilding Reducer_12to1.SLDASM, from your own work alone: nothing of the "
+            "app's is in error, so the Update was made.") in text, text
+    sentence = next(x for x in text.split(". ") if "Sprocket-1 was in error" in x)
+    assert sentence.index("in error") < sentence.index("before")      # the demonstration's rough test
+
+
+def test_an_app_feature_also_in_error_keeps_the_failure_as_today(on_fake):
+    sw, record = on_fake
+    part = next(p.path for p in record.current_parts() if "G1" in p.gears)
+    sw.user_feature(part, "User Keyway")
+    sw.breaks_on_set[part.replace("/", "\\").lower()] = [("User Keyway", 71)]
+    other = next(p for p in record.current_parts() if "G4" in p.gears)
+    app = update.classify(record, assessed(reducer()), exists=lambda p: True)
+    made = next(d for d in app.parts if d.path == other.path).made
+    sw.feature_codes[(other.path.replace("/", "\\").lower(), made[-1])] = 1
+    plan, result, finished = press(sw, record, gears(reducer(), G1=dict(bore="14")))
+    text, ok = _status(plan, result, finished)
+    assert not ok and result.rebuild_from_user_alone == [] and "error rebuilding" in text, text
+
+
+def test_where_the_rebuild_findings_are_unset_a_false_rebuild_stays_todays_failure(on_fake, monkeypatch):
+    for name in ("ASSEMBLY_REBUILD_WITH_USER_MATE_IN_ERROR_ON_2026", "WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_2026"):
+        monkeypatch.setattr(findings, name, None, raising=False)
+    sw, record = on_fake
+    part = next(p.path for p in record.current_parts() if "G1" in p.gears)
+    sw.user_feature(part, "User Keyway")
+    sw.breaks_on_set[part.replace("/", "\\").lower()] = [("User Keyway", 71)]
+    plan, result, finished = press(sw, record, gears(reducer(), G1=dict(bore="14")))
+    text, ok = _status(plan, result, finished)
+    assert result.rebuild_from_user_alone == []
+    assert not ok and "SolidWorks reported an error rebuilding" in text, text
+
+
+def test_planning_gives_the_worker_every_app_part_the_layout_and_the_carriers_with_their_features(on_fake):
+    """The worker counts an app part it was not given, or could not read, as in error (W9A-INTERFACES §4 item 11):
+    classify hands it every part of the current revision, the layout part and every carrier part, each with the
+    features the app made."""
+    sw, record = on_fake
+    plan = update.classify(record, assessed(gears(reducer(), G1=dict(bore="14"))), exists=lambda p: True)
+    kwargs = plan.update_kwargs()
+    assert sorted(d.path for d in kwargs["parts"]) == sorted(p.path for p in record.current_parts())
+    assert all(d.made for d in kwargs["parts"]) and kwargs["layout"].made
+    assert kwargs["layout"].path == record.gearbox.layout

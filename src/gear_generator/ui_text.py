@@ -1897,7 +1897,7 @@ def gearbox_update_status(update, result, dragged: Sequence[str] = (), *, meshes
         pieces.append(f"changed {_plural(len(part.changed), 'variable')} in {name}"
                       + _kept_name(planned.path if planned is not None else part.document,
                                    getattr(planned, "spec", None)))
-        if not part.rebuilt:
+        if not part.rebuilt and not _users_alone(planned.path if planned is not None else part.document, result):
             pieces[-1] += " (SolidWorks reported an error rebuilding it)"
             ok = False
     if result.layout is not None and result.layout.changed:
@@ -1939,7 +1939,8 @@ def gearbox_update_status(update, result, dragged: Sequence[str] = (), *, meshes
         told = _earlier_update_sentence(update, result if motion else None, earlier, off_after, pairs_after,
                                         changed=not nothing)
         after = ([told] if told else []) + after
-    after = after + _user_after(update, result)          # W9a: what it did with and found of the user's work
+    # W9a: what it did with and found of the user's work, after the assembly's rebuild laid to that work alone.
+    after = after + _rebuild_from_user(update, result) + _user_after(update, result)
     if nothing:
         text = ALREADY_MATCHES
         if assembly and getattr(result, "modes", None) and any(m.clashes or m.interference_error
@@ -1957,7 +1958,7 @@ def gearbox_update_status(update, result, dragged: Sequence[str] = (), *, meshes
                     f"{'it' if one else 'them'}")
     text = "Updated SolidWorks: " + (", ".join(pieces) if pieces else put_back)
     if assembly:
-        if not result.rebuilt:
+        if not result.rebuilt and not getattr(result, "rebuild_from_user_alone", None):
             text += f". SolidWorks reported an error rebuilding {assembly}, so look at it before saving."
             ok = False
         elif getattr(result, "modes", None):         # W8: each configuration it post-checked
@@ -4449,6 +4450,77 @@ def stayed_behind_status(stays, result, again, old_path: str = "") -> str:
     return _joined(_sentence(why) if why else "", _stays_text(stays, again))
 
 
+def _users_alone(path: str, result) -> bool:
+    """Whether a part whose rebuild SolidWorks reported in error is in error through the user's own features alone:
+    the Update went on (no failure names it, or the status would have said it as stopped) and a user feature in that
+    part reads in error after it (``result.user_features_in_error``), so the error is not laid to the app (K3, the
+    demonstration's ruling)."""
+    from . import store
+    if getattr(result, "failures", None):
+        return False
+    return any(store.same_path(f.path, path) or _file(f.path).lower() == _file(path).lower()
+               for f in getattr(result, "user_features_in_error", ()) or ())
+
+
+def _rebuild_from_user(update, result) -> List[str]:
+    """The assembly's rebuild reported in error from the user's own work alone (``result.rebuild_from_user_alone``;
+    the worker went on, ``rebuilt`` staying False as SolidWorks answered): *SolidWorks reports an error rebuilding
+    RangeBox.SLDASM, from your own work alone: nothing of the app's is in error, so the Update was made.* What of the
+    user's is in error is named by the sentences after it; anything they do not name, here."""
+    alone = [str(n) for n in getattr(result, "rebuild_from_user_alone", ()) or () if n]
+    if not alone or getattr(result, "rebuilt", True):
+        return []
+    assembly = _file(update.assembly) if getattr(update, "assembly", "") else "the assembly"
+    named = {name for _, name in getattr(result, "user_in_error", ()) or ()}
+    named |= {f"{f.name} in {_file(f.path)}".lower() for f in getattr(result, "user_features_in_error", ()) or ()}
+    rest = []
+    for item in alone:
+        if item in named or item.lower() in named:
+            continue
+        head, sep, tail = item.rpartition(" in ")
+        rest.append(f"{head} in {_stem(tail)}" if sep else item)
+    yours = f" (your {_and(rest)})" if rest else ""
+    return [f"SolidWorks reports an error rebuilding {assembly}, from your own work alone{yours}: nothing of the "
+            "app's is in error, so the Update was made."]
+
+
+def _user_feature_sentences(result) -> List[str]:
+    """K3 after the demonstration's ruling: each user feature SolidWorks rebuilt in error, named as the user's.
+    One already in error before this Update changed anything, *Your Keyway in Gear_m1.25_N17 was in error in
+    SolidWorks before this Update changed anything, and still is.*; one newly in error with what this Update set in
+    its part (``result.values_under``) and what the user can do: *Your Keyway in Gear_m1.25_N17 is in error in
+    SolidWorks now, after this Update set Bore Diameter 8 to 14 (Gears!J2) in that part: change your Keyway to fit,
+    or type 8 in Gears!J2 again.* Features of one part with the same story are said together."""
+    features = list(getattr(result, "user_features_in_error", ()) or ())
+    was = getattr(result, "user_feature_was_in_error", None)
+    under = getattr(result, "values_under", None)
+    groups: Dict[Tuple[str, bool, tuple], List[str]] = {}
+    for f in features:
+        before = bool(was(f)) if callable(was) else False
+        values = tuple(under(f)) if callable(under) and not before else ()
+        groups.setdefault((_stem(f.path), before, values), []).append(f.name)
+    out = []
+    for (stem, before, values), names in groups.items():
+        one = len(names) == 1
+        yours = f"{_and(names)} in {stem}"
+        if before:
+            out.append(f"Your {yours} {'was' if one else 'were'} in error in SolidWorks before this Update changed "
+                       f"anything, and still {'is' if one else 'are'}.")
+            continue
+        text = f"Your {yours} {'is' if one else 'are'} in error in SolidWorks now"
+        if values:
+            set_ = _and((f"{v.name} {v.was} to {v.now}" if v.was else f"{v.name} to {v.now}")
+                        + (f" ({v.cell})" if v.cell else "") for v in values)
+            back = _and(f"{v.was} in {v.cell}" for v in values if v.was and v.cell)
+            text += (f", after this Update set {set_} in that part: change your {_and(names)} to fit"
+                     + (f", or type {back} again" if back else "") + ".")
+        else:
+            text += (f", rebuilt after the app's features: change your {_and(names)} to fit "
+                     f"{'it' if one else 'them'}.")
+        out.append(text)
+    return out
+
+
 def _user_after(update, result) -> List[str]:
     """After an Update, what it did with and found of the user's work (K2, K3; W9A-INTERFACES §2.1), each a whole
     sentence: each of the user's components it put with its gear by route (c1) (*Your Sprocket-1 went with Sun in H,
@@ -4472,11 +4544,7 @@ def _user_after(update, result) -> List[str]:
     for gear, before, found in getattr(result, "renamed", ()) or ():
         out.append(f"{gear}'s component {before} is named {found} in SolidWorks now; it was found by its part, and the "
                    "record names it so.")
-    features = list(getattr(result, "user_features_in_error", ()) or ())
-    if features:
-        one = len(features) == 1
-        out.append(f"SolidWorks rebuilt your {_and(_feature_words(features))} after the app's features, and "
-                   f"{'it is' if one else 'they are'} in error.")
+    out.extend(_user_feature_sentences(result))
     work = getattr(result, "user_work", None)
     before = set(work.in_error) if work is not None else set()
     named: Dict[str, List[str]] = {}
