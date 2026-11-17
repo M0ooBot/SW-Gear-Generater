@@ -1242,9 +1242,23 @@ sees is words, each from `ui_text`, each with the time the work was read:
   and a feature of the user's in the layout or a carrier part is said to be left
   as it is even when that part's globals change.
 - **After Update** its sentence adds what it did with the user's work: *Your
-  Sprocket-1 went with Sun in every mode, which your locks hold it to.*,
-  *SolidWorks rebuilt your Keyway in Gear_m1.25_N17 after the app's features,
-  and it is in error.*, *Your Lock3 in L is in error in SolidWorks now.* — or,
+  Sprocket-1 went with Sun in every mode, which your locks hold it to.*; a
+  feature of the user's newly in error, with what this Update set under it and
+  what the user can do, *Your Keyway in Gear_m1.25_N17 is in error in
+  SolidWorks now, after this Update set Bore Diameter 8 to 14 (Gears!J2) in
+  that part: change your Keyway to fit, or type 8 in Gears!J2 again.*, and one
+  already in error before, *Your Keyway in Gear_m1.25_N17 was in error in
+  SolidWorks before this Update changed anything, and still is.* **A rebuild in
+  error from the user's work alone is not the app's** (the demonstration on
+  SolidWorks 2026 and its ruling; `GearboxUpdate.rebuild_from_user_alone`, on a
+  version whose findings say how its rebuilds report the user's errors): the
+  Update is made and the status stays green, a part's *(SolidWorks reported an
+  error rebuilding it)* is not said when only the user's features in it are in
+  error, and the assembly's is said as *SolidWorks reports an error rebuilding
+  RangeBox.SLDASM, from your own work alone: nothing of the app's is in error,
+  so the Update was made.* With anything of the app's in error, or on a version
+  whose findings are not set, it stays the failure it was. Then *Your Lock3 in L
+  is in error in SolidWorks now.* — or,
   for one already in error before it changed anything, *Your Lock7 was in error
   in SolidWorks in the mode showing before this Update changed anything; after
   it, Lock7 in L is in error.* (before the change only the mode showing is

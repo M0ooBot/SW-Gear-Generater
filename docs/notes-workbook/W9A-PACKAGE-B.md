@@ -124,6 +124,31 @@ so the fix round changed it freely (ruling 6: a component's kind, not its path; 
   of the user's mates counts them. The repetition left (each sprocket's lightweight refusal in full, each gear's
   no-carrier refusal in full, the tie naming nine mates twice) is in the worker's own sentences, package A's.
 
+## After the demonstration's ruling (a rebuild in error from the user's work alone)
+
+Package A's worker goes on when the assembly's rebuild returns False from the user's work alone
+(`GearboxUpdate.rebuild_from_user_alone`, `rebuilt` still False; W9A-INTERFACES §4 item 11). `ui_text` says it:
+
+- `gearbox_update_status`: with `rebuild_from_user_alone`, the assembly's *SolidWorks reported an error rebuilding …,
+  so look at it before saving* is not said and the status stays ok; instead *SolidWorks reports an error rebuilding
+  …, from your own work alone: nothing of the app's is in error, so the Update was made.* (`_rebuild_from_user`),
+  naming there only what no later sentence names. A part whose rebuild is False with a user feature of its in error
+  and no failure gets no *(SolidWorks reported an error rebuilding it)* (`_users_alone`).
+- `_user_after`'s feature sentence splits on `result.user_feature_was_in_error(f)`: already in error, *was in error in
+  SolidWorks before this Update changed anything, and still is*; newly, *is in error in SolidWorks now, after this
+  Update set Bore Diameter 8 to 14 (Gears!J2) in that part: change your Keyway to fit, or type 8 in Gears!J2 again*
+  (`result.values_under(f)`; with nothing set there, *rebuilt after the app's features: change your Keyway to fit
+  it*). The demonstration's rough tests hold: "in error" then "before" for one already in error; no "before" for one
+  newly in error.
+- Planning gives the worker every app part of the current revision, the layout part and every carrier part, each with
+  the features the app made (`made`: the `.gear.json` list, else the plan's; the layout's and carriers' planes and
+  axes); a part all of whose gears are gone, or a carrier no longer one, is structural, never an Update. A test pins
+  the parts and the layout.
+- Tests: k3 through `classify` and the status (ok, the keyway named as the user's, newly in error, the Bore's change
+  and its cell, the part's own rebuild False said as nothing of the app's); m3 (the user's own part in error before:
+  ok, said as before); an app feature also in error (not ok, as today); the 2026 rebuild findings unset (not ok,
+  today's sentence).
+
 ## What the demonstration on SolidWorks must show for package B
 
 - After a value Update and a slide-offset Update on S0's master with the user's work: the record beside the workbook
