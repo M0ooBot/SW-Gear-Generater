@@ -655,6 +655,14 @@ def propose(name, value, evidence):
 M3_CHANGED_BY_STEP_1 = ("Sun", "Planet", "Ring")
 
 
+def files_of(components, gears):
+    """The part files (by name) of the components whose gear is one of ``gears`` or a copy of one ("Planet copy 2" is
+    Planet's): step 1's changed parts, read off the record's components (the final run at 3a9e592 found Planet on
+    record only as its copies)."""
+    return tuple(sorted({os.path.basename(str(c.part).replace("\\", "/")) for c in components
+                         if str(c.gear).split(" copy ")[0] in gears}))
+
+
 def footer_says_close(text, stem):
     """§6.1: the footer after step 2 says to close the part without saving, by either sentence. The script's footer
     carries the press's note, which is now the still-in-error sentence alone, and never offers to keep anything."""
@@ -1208,6 +1216,11 @@ def self_check():
         args.update(kw)
         return wrote_nothing(**args)
     ok(wrote() == [], "M3 step 2: a press that stopped before any write wrote nothing")
+    comps = [types.SimpleNamespace(gear=g, part=f"C:\\copy\\{f}") for g, f in (
+        ("Sun", "Gear_m1.25_N29.SLDPRT"), ("Planet copy 1", "Gear_m1.25_N13.SLDPRT"),
+        ("Planet copy 2", "Gear_m1.25_N13.SLDPRT"), ("Ring", "Ring_m1.25_N55.SLDPRT"), ("HighDog", "Dog_m1.25_N17.SLDPRT"))]
+    ok(files_of(comps, M3_CHANGED_BY_STEP_1) == tuple(sorted(files)),
+       "M3 step 2: step 1's parts read off the record, Planet by its copies, the dogs left out")
     ok(wrote(changing=[("AddMate5",), ("ForceRebuild3",)]) != [], "M3 step 2: run 8's AddMate5 and rebuild are said")
     ok(wrote(globals_after={ring_file: {"No. of Teeth": 53.0}}) != [], "M3 step 2: a global set (untraced) is said")
     ok(wrote(states_after=dict(states, flags=dict(flags, **{"RangeBox.SLDASM": True}))) != [],
@@ -2470,7 +2483,7 @@ def remake_again(out):
             pairs = A.pairs_of(box, A.rb_users())
             parts = sorted({c.part for c in box.components} | {box.layout} | {c.path for c in box.carriers})
             ring_file = os.path.basename(ring_part)
-            step_1_files = tuple(os.path.basename(gear_entry(box, g).part) for g in M3_CHANGED_BY_STEP_1)
+            step_1_files = files_of(box.components, M3_CHANGED_BY_STEP_1)
 
             def gear_ratios(s):
                 got = {}
