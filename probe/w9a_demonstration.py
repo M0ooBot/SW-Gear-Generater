@@ -63,6 +63,7 @@ again section and a window in k3 end their section only; any other raise of the 
 Under 2 GB of free memory, on any version, the run stops before the next section.
 """
 
+import calendar
 import copy as _copy
 import dataclasses
 import json
@@ -1834,6 +1835,45 @@ def old_changes(before, after, mine):
     return changes
 
 
+def local_clock(stamp):
+    """A record's UTC stamp (``store.now()``) as the local clock reads it, *HH:MM*, and its local date: what any way
+    of saying the time read must hold (the app adds the date on another day: ``ui_text.read_time``)."""
+    then = time.localtime(calendar.timegm(time.strptime(stamp, "%Y-%m-%dT%H:%M:%SZ")))
+    return time.strftime("%H:%M", then), time.strftime("%Y-%m-%d", then)
+
+
+def stays_said(label, text, components, mates, features, stamp=None, since=True):
+    """That ``text`` says what of the user's stays behind, without pinning the app's wording (package B names the
+    first components and counts the rest, names one mate and counts more): every component either named or covered
+    by an "N other component(s)" that adds up, none named that is not one; the mates by name (one) or by their count;
+    each feature in ``features`` (name, path, …) named with its part's file stem; with ``stamp``, the time the
+    inventory was read (and its date, if a date is said); with ``since``, "nor anything added since"."""
+    text = text or ""
+    components = list(dict.fromkeys(components))
+    named = [c for c in components if re.search(rf"(?<![\w-]){re.escape(c)}(?![\w-])", text)]
+    counted = re.search(r"\b(\d+) other components?\b", text)
+    others = int(counted.group(1)) if counted else 0
+    comps_ok = (len(named) + others == len(components)) and (bool(named) or not components)
+    if len(mates) == 1:
+        mates_ok = re.search(rf"(?<![\w-]){re.escape(mates[0])}(?![\w-])", text) is not None
+    else:
+        mates_ok = not mates or re.search(rf"\b{len(mates)} mates\b", text) is not None
+    feats_missing = [(f[0], os.path.splitext(os.path.basename(f[1]))[0]) for f in features
+                     if f[0] not in text or os.path.splitext(os.path.basename(f[1]))[0] not in text]
+    time_ok, when = True, None
+    if stamp:
+        clock, day = local_clock(stamp)
+        dates = re.findall(r"\b\d{4}-\d{2}-\d{2}\b", text)
+        time_ok = clock in text and all(d == day for d in dates)
+        when = f"{clock} ({day})"
+    since_ok = not since or "nor anything added since" in text
+    check(comps_ok and mates_ok and not feats_missing and time_ok and since_ok,
+          f"{label}: says what stays behind: components {len(components)}, named {named} and {others} counted; "
+          f"mates {len(mates)} {'said' if mates_ok else 'NOT said'}; features not said {feats_missing or 'none'}; "
+          f"the time read {when or 'not asked'} {'said' if time_ok else 'NOT said'}; \"nor anything added since\" "
+          f"{'said' if since_ok else 'NOT said'}")
+
+
 def section_again(out, variant="open"):
     name = {"open": "again", "dirty": "again-dirty", "closed": "again-closed"}[variant]
     say(f"== {name}  Build again… (Sun's Part name changed): the question names what stays behind with its time; the "
@@ -1855,10 +1895,12 @@ def section_again(out, variant="open"):
         question = ui_text.build_again_question(u, plan, record=desk.record)
         say(f"question {question}")
         check(stays is not None and stays.entry is not None and set(rb_users()) <= set(stays.components)
-              and any(f == "User Keyway" for f, _, _ in stays.left) and ui_text.read_time(entry.read_at) in question
-              and "Sprocket-1" in question and "User Keyway" in question,
-              f"{name}: the question says what stays behind, with the time read ({ui_text.read_time(entry.read_at)}): "
-              f"components {stays and list(stays.components)}, features left {stays and list(stays.left)}")
+              and set(RB_USER_MATES) <= set(stays.mates) and any(f == "User Keyway" for f, _, _ in stays.left),
+              f"{name}: what stays behind, from the record: components {stays and list(stays.components)}, mates "
+              f"{stays and len(stays.mates)}, features left {stays and [(f, os.path.basename(p)) for f, p, _ in stays.left]}")
+        if stays is not None:
+            stays_said(f"{name}: the question", question, stays.components, stays.mates, stays.left,
+                       stamp=entry.read_at)
         f = desk.say_footer(f"{name}, before the build")
         check(f.build_enabled and f.build_action == ui_text.BUILD_AGAIN,
               f"{name}: the footer offers Build again… ({f.build_label!r}, enabled {f.build_enabled})")
@@ -1938,17 +1980,28 @@ def section_again(out, variant="open"):
         out["old_read"], out["old_user_work"] = why, None if work is None else {
             "components": [c.name for c in work.components], "mates": [m.name for m in work.mates]}
         if variant == "closed":
-            check(work is None and why == swbuild.OLD_NOT_OPEN and "was not open" in desk.note[0]
-                  and "Sprocket-1" in desk.note[0],
-                  f"{name}: the old assembly not open, so not read; the window's sentence gives the record's inventory: "
-                  f"old_read {why!r}")
+            check(work is None and why == swbuild.OLD_NOT_OPEN,
+                  f"{name}: the old assembly not open, so not read: old_user_work {out['old_user_work']}, old_read "
+                  f"{why!r}")
+            say(f"status  ({name}, after the build) {desk.note[0]}")
+            if stays is not None:
+                stays_said(f"{name}: the result's sentence gives the record's inventory", desk.note[0],
+                           stays.components, stays.mates, stays.left, stamp=entry.read_at)
             still = run("open names", W.open_names)
             check(os.path.basename(old) not in still, f"{name}: the build did not open the old assembly")
         else:
             check(work is not None and not why and {c.name for c in work.components} == set(rb_users())
-                  and set(RB_USER_MATES) <= {m.name for m in work.mates} and "Sprocket-1" in desk.note[0],
-                  f"{name}: the build job read the old assembly first and the window's sentence lists what stayed "
-                  f"behind: {out['old_user_work']}")
+                  and set(RB_USER_MATES) <= {m.name for m in work.mates},
+                  f"{name}: the build job read the old assembly first: {out['old_user_work']}")
+            say(f"status  ({name}, after the build) {desk.note[0]}")
+            if work is not None:
+                # What the build read is said as read when it began (no time); the features left in a part made new
+                # come from the record, with its time and "nor anything added since".
+                stays_said(f"{name}: the result's sentence lists what stayed behind, as the build read it",
+                           desk.note[0], [c.name for c in work.components], [m.name for m in work.mates],
+                           stays.left if stays is not None else (),
+                           stamp=entry.read_at if stays is not None and stays.left else None,
+                           since=bool(stays is not None and stays.left))
             after = read_now(f"{name} the old assembly after the build", old, folder, pairs, modes, activate=False,
                              entities=RB_USER_MATES)
             say(f"fact    {name}: GetSaveFlag of the folder's documents before the build "
