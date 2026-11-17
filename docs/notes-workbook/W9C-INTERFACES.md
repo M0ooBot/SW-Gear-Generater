@@ -734,17 +734,24 @@ record's problems by kind, so the second `unsettled` overwrites the first's subj
   error when it stopped: close it in SolidWorks without saving (the file on disk is as before that Update), then press
   Update SolidWorks again.* With several documents it says *close them all*.
 - **When the mark goes:** it is dropped with the unsaved marks themselves (saved, or found closed by the next job),
-  and cleared by a press that ends with no failure. A record without it reads as before.
+  and otherwise only as the fixes review's M3 below says (no longer by a press that merely ends with no failure, since
+  `ff98d5a`). A record without it reads as before.
 
 ### From B (the fixes review): M3, S6, S7
 
 - **M3. The in-error mark is no longer cleared by a press that merely ends clean.** It goes only when the document
-  leaves `unsaved` (saved, or found closed by the next job), or when this press changed and rebuilt that very document
-  with no failure naming it. A press that set nothing in it proves nothing. Such a press says so
-  (`Finished.still_in_error`) instead of *already matches*: *Gear_m1.25_N29 is still open in SolidWorks as an earlier
-  Update SolidWorks left it, in error and holding the new values, so this press set nothing in it: close it in
-  SolidWorks without saving (the file on disk is as before that Update), then press Update SolidWorks again.* Nothing
-  new is needed from the worker.
+  leaves `unsaved` (saved, or found closed by the next job), or when this press changed that very document, by its
+  values or by a sleeve's bands alone, with no failure naming it (`update._documents_changed_clean`). Its rebuild may
+  still read false from the user's own features alone, which the worker never makes a failure; the band step raises on
+  any feature of the app's in error. (As first written it also asked the document's rebuild to read true, so a part put
+  right beside the user's own feature in error kept its mark for good: the second reading's N1, `8792512`; the sleeve
+  given only its bands, `7787f0d`.) A press that set nothing in it proves nothing. Such a press says so
+  (`Finished.still_in_error`, never a document this press changed): *Gear_m1.25_N29 is still open in SolidWorks as an
+  earlier Update SolidWorks left it, in error and holding the new values, so this press set nothing in it: close it in
+  SolidWorks without saving (the file on disk is as before that Update), then press Update SolidWorks again.* That
+  sentence takes the place of the claim *SolidWorks already matches the workbook: nothing was changed.* alone; what the
+  status said after the claim stays (N4, `ef4b8f2`), except that after an earlier Update lost with its assembly it no
+  longer says SolidWorks already holds the workbook as it now is (`09a1183`). Nothing new is needed from the worker.
 - **S6. `UserWorkEntry.modes` lists only the modes a read covered:** the plan's configurations less those it adds
   (`update.modes_read`), plus each added mode on record whose flags the worker read (`took_active_state`). A mode a
   stopped press failed to delete is not named there, so the footer judges it as a copy.

@@ -587,6 +587,19 @@ def test_an_update_that_changed_nothing_says_so():
         "their mesh in Reducer_12to1.SLDASM.", False)
 
 
+def test_a_quiet_press_on_a_part_still_in_error_replaces_only_the_claim_and_keeps_what_follows():
+    """The second reading of the fixes review, N4: the still-in-error sentence takes the place of *already matches*
+    alone; the interference the press found after it is still said."""
+    from types import SimpleNamespace
+    nothing = _updated(parts=[swbuild.UpdateResult(document="Gear_m1.5_N68.SLDPRT", unchanged=["No. of Teeth"],
+                                                   rebuilt=True)], layout=None, placed=[], changed=[])
+    nothing.clashes = [swbuild.Clash(("a-1", "b-1"), ("G1", "G2"), 1.0)]
+    finished = SimpleNamespace(still_in_error=["C:\\Out\\Gear_m1.5_N68.SLDPRT"])
+    assert ui_text.gearbox_update_status(_update(), nothing, finished=finished) == (
+        ui_text.still_in_error_sentence(finished.still_in_error) + " Check: G1 and G2 interfere, 1 mm³; look at their "
+        "mesh in Reducer_12to1.SLDASM.", False)
+
+
 def test_an_update_that_stops_says_what_it_had_changed_unsaved():
     stopped = _updated(failures=[("Reducer_12to1_Layout", "S2 X could not be set: the value was refused")],
                        changed=[_path("Gear_m1.5_N68")])
@@ -2307,6 +2320,18 @@ def test_after_a_lost_update_that_needed_nothing_making_again_it_never_says_made
     changed = _moved(placed=["G4"], changed=[ASM])
     assert "so its changes were made again" in ui_text.gearbox_update_status(
         _motion_update(), changed, finished=_finished(UPDATE_LOST))[0]
+
+
+def test_after_a_lost_update_with_a_part_still_in_error_it_never_says_solidworks_holds_the_workbook():
+    """The re-check's note under N4: a press that changed nothing, beside a part an earlier stop left in error, says
+    the part is still in error and never also that SolidWorks holds the workbook as it now is."""
+    from dataclasses import replace
+    from gear_generator.workbook.gearbox import UPDATE_LOST
+    finished = replace(_finished(UPDATE_LOST), still_in_error=["C:\\Out\\Gear_m1.5_N68.SLDPRT"])
+    text, ok = ui_text.gearbox_update_status(_motion_update(), _moved(), finished=finished)
+    assert not ok and text == (
+        ui_text.still_in_error_sentence(finished.still_in_error) + " The last Update SolidWorks was not saved before "
+        "Reducer_12to1.SLDASM was closed."), text
 
 
 def test_a_gear_mate_ratio_that_cannot_be_given_refuses_the_update_in_the_workers_own_words():

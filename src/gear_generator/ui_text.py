@@ -1888,8 +1888,10 @@ def gearbox_update_status(update, result, dragged: Sequence[str] = (), **kwargs)
     if not still or result.failures:
         return text, ok
     said = still_in_error_sentence(still)
-    if text.startswith(ALREADY_MATCHES[:30]):
-        return said, False
+    if text.startswith(ALREADY_MATCHES):
+        # Only the claim is replaced; what follows it (the interference, the user's work, the modes, the leftovers)
+        # stays (the second reading of the fixes review, N4).
+        return said + text[len(ALREADY_MATCHES):], False
     return f"{text} {said}", False
 
 
@@ -2031,7 +2033,8 @@ def _gearbox_update_status(update, result, dragged: Sequence[str] = (), *, meshe
         after = after + _mode_after(update, result, changed=not nothing, earlier=earlier)
     if earlier:
         told = _earlier_update_sentence(update, result if motion else None, earlier, off_after, pairs_after,
-                                        changed=not nothing)
+                                        changed=not nothing,
+                                        still_in_error=bool(getattr(finished, "still_in_error", ()) or ()))
         after = ([told] if told else []) + after
     # W9a: what it did with and found of the user's work, after the assembly's rebuild laid to that work alone.
     after = after + _rebuild_from_user(update, result) + _user_after(update, result)
@@ -3537,7 +3540,8 @@ def _pairs_text(pairs: Sequence[Tuple[str, str]]) -> str:
 
 
 def _earlier_update_sentence(update, result, earlier: str, off: Sequence[str],
-                             pairs: Sequence[Tuple[str, str]], changed: bool = True) -> str:
+                             pairs: Sequence[Tuple[str, str]], changed: bool = True,
+                             still_in_error: bool = False) -> str:
     """What an Update says when an earlier one's changes to the assembly were never saved (``Finished
     .earlier_update``): the frames on record are that Update's, so a gear found off them, or a relation out of
     step, is never said to be the user's doing.
@@ -3552,7 +3556,9 @@ def _earlier_update_sentence(update, result, earlier: str, off: Sequence[str],
     Update has them on record either; they are in step again.* The gears
     named are ``off`` (``Finished.off_after_update``) and, on the motion
     path, those a put turned back (``result.restored``); the relations are
-    ``pairs`` (``Finished.out_of_step_after_update``)."""
+    ``pairs`` (``Finished.out_of_step_after_update``). ``still_in_error`` (``Finished.still_in_error`` not empty):
+    a document an earlier stop left in error is still open, so a press that changed nothing never also says
+    SolidWorks holds the workbook (the re-check's note under N4)."""
     from .workbook.gearbox import UPDATE_LOST
     gears: List[str] = []
     for gear in list(off) + [g for train in getattr(result, "restored", ()) or () for g in train]:
@@ -3564,6 +3570,8 @@ def _earlier_update_sentence(update, result, earlier: str, off: Sequence[str],
     one = len(gears) == 1
     if earlier == UPDATE_LOST:
         asm = _file(update.assembly) if update.assembly else "the assembly"
+        if not changed and still_in_error:
+            return f"The last Update SolidWorks was not saved before {asm} was closed."
         if not changed:
             # This Update changed nothing: the workbook as it now is was already what SolidWorks holds.
             return (f"The last Update SolidWorks was not saved before {asm} was closed; SolidWorks already holds the "

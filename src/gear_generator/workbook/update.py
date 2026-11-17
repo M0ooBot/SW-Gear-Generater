@@ -2251,9 +2251,11 @@ def finish_update(plan: UpdatePlan, result: GearboxUpdate, record: LinkRecord, *
         rec.digest = digest
     # The runs review's should-fix: a stop that left a part in error is marked on the unsaved documents, so the footer
     # says to close them without saving. The mark goes only when the document leaves ``unsaved`` (saved, or found
-    # closed: store.keep_in_error) or this press changed and rebuilt that very document clean (the fixes review's M3:
-    # a press that set nothing in it proves nothing, the part still holding the new values in error).
-    clean = _documents_rebuilt_clean(plan, result)
+    # closed: store.keep_in_error) or this press changed that very document, by its values or its bands, with no
+    # failure naming it (the fixes review's M3: a press that set nothing in it proves nothing, the part still holding
+    # the new values in error; its second reading's N1: a rebuild that read false from the user's own features alone
+    # is no failure, and clears it).
+    clean = _documents_changed_clean(plan, result)
     rec.unsaved_in_error = [p for p in rec.unsaved_in_error if not any(store.same_path(p, q) for q in clean)]
     if result.failures:
         failed = _documents_left_in_error(plan, result)
@@ -2261,7 +2263,8 @@ def finish_update(plan: UpdatePlan, result: GearboxUpdate, record: LinkRecord, *
             rec.unsaved_in_error = list(dict.fromkeys(list(rec.unsaved_in_error) + failed))
     store.keep_in_error(rec)
     if not result.failures:
-        out.still_in_error = list(rec.unsaved_in_error)
+        # A document this press changed is never one it set nothing in (N1), so it is never said as one.
+        out.still_in_error = [p for p in rec.unsaved_in_error if not _in(p, getattr(result, "changed", []) or [])]
     return out
 
 
@@ -2283,15 +2286,36 @@ def names_document(what: str, document: str) -> bool:
     return bool(stem) and text.startswith(stem) and (len(text) == len(stem) or text[len(stem)] in ". ")
 
 
-def documents_left_in_error(result: Any) -> List[Any]:
-    """The documents (``swbuild.UpdateResult``) an Update changed whose rebuild reported an error: a change set, not
-    rebuilt, and a failure of the job naming it (a rebuild in error from the user's features alone is no failure).
-    The parts, the layout and the carriers. One rule for the stop's sentence and the record's mark."""
-    named = [str(what) for what, _why in getattr(result, "failures", []) or []]
+def _value_documents(result: Any) -> List[Any]:
+    """The parts', the layout's and the carriers' ``swbuild.UpdateResult`` of an Update."""
     docs = list(getattr(result, "parts", []) or []) + [getattr(result, "layout", None)] + \
         list(getattr(result, "carriers", []) or [])
-    return [d for d in docs if d is not None and getattr(d, "document", "") and getattr(d, "changed", None)
-            and not getattr(d, "rebuilt", True) and any(names_document(w, d.document) for w in named)]
+    return [d for d in docs if d is not None and getattr(d, "document", "")]
+
+
+def changed_documents(result: Any) -> List[str]:
+    """Every document an Update changed, by name or path: a value set (its ``UpdateResult.changed``) or anything else
+    it changed there (``GearboxUpdate.changed``: a sleeve given or relieved of its bands alone). One rule for the stop's
+    "left in error" and for the mark's clearing, so the two never disagree about a document (the third re-check)."""
+    return [d.document for d in _value_documents(result) if getattr(d, "changed", None)] + \
+        [str(p) for p in getattr(result, "changed", []) or []]
+
+
+def documents_left_in_error(result: Any) -> List[Any]:
+    """The documents (``swbuild.UpdateResult``) an Update changed (:func:`changed_documents`) and left in error: a
+    failure of the job names it, and either its values' rebuild reported an error, or the worker lists it changed in
+    SolidWorks (``GearboxUpdate.changed``) and the failure names the document as a whole (a sleeve's band step: the
+    app's own feature in error, after its values rebuilt clean or with none to set). A rebuild in error from the
+    user's features alone is no failure; a single global refused beside a clean rebuild names the global, and is not
+    this. The parts, the layout and the carriers. One rule for the stop's sentence and the record's mark."""
+    named = [str(what) for what, _why in getattr(result, "failures", []) or []]
+    changed = {document_stem(c) for c in changed_documents(result)}
+    listed = {document_stem(str(p)) for p in getattr(result, "changed", []) or []}
+    return [d for d in _value_documents(result) if document_stem(d.document) in changed
+            and any(names_document(w, d.document) for w in named)
+            and (not getattr(d, "rebuilt", True) or (document_stem(d.document) in listed
+                                                       and any(document_stem(w) == document_stem(d.document)
+                                                               for w in named)))]
 
 
 def _plan_paths(plan: UpdatePlan) -> List[str]:
@@ -2305,13 +2329,16 @@ def _documents_left_in_error(plan: UpdatePlan, result: GearboxUpdate) -> List[st
     return [p for p in _plan_paths(plan) if document_stem(p) in stems]
 
 
-def _documents_rebuilt_clean(plan: UpdatePlan, result: GearboxUpdate) -> List[str]:
-    """The paths of the documents this Update changed and rebuilt with no failure naming them."""
+def _documents_changed_clean(plan: UpdatePlan, result: GearboxUpdate) -> List[str]:
+    """The paths of the documents this Update changed with no failure naming them: the app's features rebuilt clean.
+    Their rebuild may still read false, from the user's own features alone (P0), which the worker never makes a
+    failure (``swbuild._update_document``'s ``theirs_alone``); such a document is put right as much as this press
+    can, and keeping its mark would tell the user, press after press, to close it without saving (the second reading
+    of the fixes review, N1). Changed means a value set (its ``UpdateResult``) or anything else the press changed in
+    it (``result.changed``: a sleeve given its bands alone, whose band step raises on any feature of the app's in
+    error), so the mark and the status's save offer never disagree about it (the re-check's note under N1)."""
     named = [str(what) for what, _why in getattr(result, "failures", []) or []]
-    docs = list(getattr(result, "parts", []) or []) + [getattr(result, "layout", None)] + \
-        list(getattr(result, "carriers", []) or [])
-    stems = {document_stem(d.document) for d in docs if d is not None and getattr(d, "document", "")
-             and d.changed and d.rebuilt and not any(names_document(w, d.document) for w in named)}
+    stems = {document_stem(c) for c in changed_documents(result) if not any(names_document(w, c) for w in named)}
     return [p for p in _plan_paths(plan) if document_stem(p) in stems]
 
 

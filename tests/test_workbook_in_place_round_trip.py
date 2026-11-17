@@ -1070,7 +1070,8 @@ def test_pressing_again_without_closing_keeps_the_mark_and_says_close_without_sa
     assert not again.ok and again.after == (
         "Gear_m1.25_N29 is still open in SolidWorks as an earlier Update SolidWorks left it, in error and holding the "
         "new values, so this press set nothing in it: close it in SolidWorks without saving (the file on disk is as "
-        "before that Update), then press Update SolidWorks again.")
+        "before that Update), then press Update SolidWorks again. It worked in H, the configuration that was active; "
+        "it did not show the other modes, since nothing in H needed changing.")      # the rest is kept (N4)
     text, _ = d.footer(_sun_backlash(range_box()))
     assert "was left in error when it stopped: close it in SolidWorks without saving" in text
     assert "in SolidWorks to keep" not in text
@@ -1106,3 +1107,103 @@ def test_a_press_that_stops_before_deleting_a_mode_records_only_the_modes_its_re
     desk.sw.fail_on = {}
     text, ok = desk.footer(_sun_backlash(fixed()))          # N back in the workbook: judged as a copy, not as read
     assert ok and "suppressed in N" not in text, text
+
+
+# -- the fixes review's second reading: N1 (a part put right beside the user's own feature in error sheds its mark) --
+
+def test_a_part_left_in_error_then_put_right_beside_the_users_own_feature_in_error_sheds_its_mark():
+    """Closed without saving as told, the part is changed again; its rebuild reads false from the user's Keyway alone
+    (P0), which is no failure. The mark goes: the press says to save it, never also to close it without saving, and
+    the footer no longer says it was left in error."""
+    d = Desk()
+    d.build(range_box())
+    d.sw.rebuild_ok = False
+    d.press(_sun_backlash(range_box()))
+    part = next(p.path for p in d.record.parts if "Sun" in p.gears)
+    assert [store.same_path(p, part) for p in d.record.unsaved_in_error] == [True]
+    d.sw.close_all()
+    d.sw.rebuild_ok = True
+    d.sw.user_feature(part, "Keyway", code=41)
+    again = d.press(_sun_backlash(range_box()))
+    sun = next(p for p in again.result.parts if p.document == "Gear_m1.25_N29.SLDPRT")
+    assert again.result.failures == [] and sun.changed == ["Backlash"] and not sun.rebuilt
+    assert d.record.unsaved_in_error == [] and again.finished.still_in_error == []
+    assert "Save Gear_m1.25_N29 and RangeBox in SolidWorks to keep them." in again.after, again.after
+    assert "without saving" not in again.after and "still open in SolidWorks" not in again.after, again.after
+    text, _ = d.footer(_sun_backlash(range_box()))
+    assert "was left in error when it stopped" not in text and "save them in SolidWorks to keep them" in text, text
+
+
+def test_a_sleeve_left_in_error_then_given_only_its_bands_clean_sheds_its_mark(measured):
+    """The re-check's note under N1: the sleeve holds its new face width from the stopped press, so the next press
+    sets no value in it and changes it only by its bands, which read clean. The status says to save it; the footer
+    must not still say it was left in error and to close it without saving."""
+    d = Desk()
+    d.build(range_box())
+    d.sw.rebuild_ok = False
+    stopped = d.press(fixed())
+    sleeve = _part(d.record, "RangeSlv")
+    assert "Sleeve_m1.25_N17 is left in error" in stopped.after
+    assert [store.same_path(p, sleeve) for p in d.record.unsaved_in_error] == [True]
+    d.sw.rebuild_ok = True
+    again = d.press(fixed())                                  # not closed: only the bands are left to give
+    assert again.result.ok and again.result.bands_added == ["RangeSlv"]
+    assert not next(p for p in again.result.parts if p.document == "Sleeve_m1.25_N17.SLDPRT").changed
+    assert "Save Sleeve_m1.25_N17 and RangeBox in SolidWorks to keep them." in again.after, again.after
+    assert d.record.unsaved_in_error == []
+    text, _ = d.footer(fixed())
+    assert "left in error" not in text and "save them in SolidWorks to keep them" in text, text
+
+
+# -- the third re-check: a sleeve's band step that fails on the app's own feature is left in error -------------------
+
+def _relief_comes_out_in_error(desk, sleeve):
+    """The fake makes the sleeve's relief, then reads it in error (an app feature: the band step raises)."""
+    made = desk.sw.loft_cut
+
+    def loft_cut(handle, name, profiles):
+        out = made(handle, name, profiles)
+        desk.sw.feature_codes[(_key(sleeve), name)] = 41
+        return out
+
+    desk.sw.loft_cut = loft_cut
+
+
+def _says_close_without_saving(press, footer):
+    assert "Sleeve_m1.25_N17 is left in error: close it in SolidWorks without saving" in press.after, press.after
+    assert "save it in SolidWorks to keep" not in press.after, press.after
+    assert "Sleeve_m1.25_N17 was left in error when it stopped: close it in SolidWorks without saving" in footer, \
+        footer
+    assert "save it in SolidWorks to keep" not in footer, footer
+
+
+def test_a_relief_in_error_the_first_time_bands_are_given_leaves_the_sleeve_in_error_never_offered_for_saving(
+        measured):
+    """Its values (the face width) rebuilt clean, then its band step fails on the relief: the stop and the footer
+    both say to close it without saving, and the mark is written."""
+    d = Desk()
+    d.build(range_box())
+    sleeve = _part(d.record, "RangeSlv")
+    _relief_comes_out_in_error(d, sleeve)
+    press = d.press(fixed())
+    assert press.result.failures == [("Sleeve_m1.25_N17.SLDPRT", "SolidWorks reported Relief in error in "
+                                                                 "Sleeve_m1.25_N17.")]
+    assert [store.same_path(p, sleeve) for p in d.record.unsaved_in_error] == [True]
+    _says_close_without_saving(press, d.footer(fixed())[0])
+
+
+def test_a_sleeve_marked_earlier_whose_bands_alone_fail_on_the_relief_keeps_its_mark_and_no_save_offer(measured):
+    """Stopped in the sleeve's values, pressed again without closing: no value is set in it, its band step fails on
+    the relief. The status no longer offers to save it while the footer says to close it without saving."""
+    d = Desk()
+    d.build(range_box())
+    sleeve = _part(d.record, "RangeSlv")
+    d.sw.rebuild_ok = False
+    d.press(fixed())
+    d.sw.rebuild_ok = True
+    _relief_comes_out_in_error(d, sleeve)
+    press = d.press(fixed())
+    assert not next(p for p in press.result.parts if p.document == "Sleeve_m1.25_N17.SLDPRT").changed
+    assert [what for what, _ in press.result.failures] == ["Sleeve_m1.25_N17.SLDPRT"]
+    assert [store.same_path(p, sleeve) for p in d.record.unsaved_in_error] == [True]
+    _says_close_without_saving(press, d.footer(fixed())[0])

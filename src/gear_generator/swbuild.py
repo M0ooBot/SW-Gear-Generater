@@ -35,6 +35,8 @@ from .gears.equations import DEGREES, RADIANS, EquationError, evaluate, evaluate
 from .gears.landing import line_landings
 from .gears.spur import TEETH as TEETH_GLOBAL
 from .gears.spur import AXIS_NAME, BORE as BORE_GLOBAL
+from .gears.spur import SPACE_SKETCH
+from .gears.bevel import HEEL_SKETCH, TOE_SKETCH
 from .store import CARRIER_ID_SUFFIX, GEARBOX_MOTION, GEARBOX_STATIC, now, same_path
 from .swcom import (ASSEMBLY_PAIR, ASSEMBLY_STATIC, ASSEMBLY_TRAIN, COMPONENT_FIND_ROUTES, CONFIGURATION_FINDINGS,
                     COMPONENT_LIGHTWEIGHT, COMPONENT_SUPPRESSED, DOC_ASSEMBLY, MINIMUM_MAJOR, configuration_finding,
@@ -257,6 +259,20 @@ class UpdateResult:
     @property
     def ok(self) -> bool:
         return not self.failures
+
+    @property
+    def stopped_before_the_way(self) -> bool:
+        """The count would not set to its intermediate (``by_way_of``): the route was not taken, the count is as it
+        was, and any other global set beside it leaves the part at neither (the re-check's leg-one note)."""
+        return bool(self.by_way_of) and self.by_way_of[0] not in self.changed and \
+            any(what == f'"{self.by_way_of[0]}"' for what, _ in self.failures)
+
+    @property
+    def left_on_the_way(self) -> bool:
+        """The count was set to its intermediate (``by_way_of``) and the workbook's value then would not set: the part
+        holds the intermediate (the second reading of the fixes review, N3)."""
+        return bool(self.by_way_of) and self.by_way_of[0] in self.changed and \
+            any(what == f'"{self.by_way_of[0]}"' for what, _ in self.failures)
 
 
 def _mate_line(mate: MateState) -> str:
@@ -1366,16 +1382,21 @@ def _caps_with_arc(values: Mapping[str, str]) -> Optional[bool]:
         return None
 
 
+def _held_expressions(current: Sequence[Tuple[str, float]]) -> List[Tuple[str, str]]:
+    """``(name, expression)`` of each equation the part holds that reads as one."""
+    out: List[Tuple[str, str]] = []
+    for text, _ in current:
+        try:
+            out.append(split_equation(text))
+        except (ValueError, EquationError):
+            continue
+    return out
+
+
 def planned_changes(current: Sequence[Tuple[str, float]], variables: Sequence[GlobalVariable],
                     trig: str) -> List[Tuple[str, str]]:
     """The globals whose text differs from what the part holds, as (name, expression)."""
-    held: Dict[str, str] = {}
-    for text, _ in current:
-        try:
-            name, expression = split_equation(text)
-        except (ValueError, EquationError):
-            continue
-        held[name] = expression
+    held: Dict[str, str] = dict(_held_expressions(current))
     out = []
     for variable in variables:
         expression = variable.expression_for(trig)
@@ -1392,7 +1413,9 @@ def _squash(text: str) -> str:
 
 
 def update_variables(sw: SolidWorks, variables: Sequence[GlobalVariable], expected_path: str) -> UpdateResult:
-    """Set a built part's globals from the form, in one suppressed batch, and rebuild once.
+    """Set a built part's globals from the form, in one suppressed batch, and rebuild once; or, where a sketch line
+    would land on itself (:func:`_landing_route`), in two: every global with the tooth count at a safe intermediate,
+    rebuilt, then the count at the workbook's value, rebuilt again.
 
     Refuses unless the active document is the part the record describes: a
     wrong document would take the values silently where names happened to match.
@@ -1448,11 +1471,37 @@ def update_variables(sw: SolidWorks, variables: Sequence[GlobalVariable], expect
             apply(first)
             # The final count is set and rebuilt whatever leg one's rebuild returned (a part's rebuild reads False
             # for any feature in error, the user's own included: the fixes' review, M1); only where the count's own
-            # set failed does the route stop, at the intermediate, said by that failure.
-            if any(what == f'"{name}"' for what, _ in result.failures):
-                return result
+            # set failed does the route stop, said by that failure.
             final = next(v for v in variables if v.name == name)
+            if any(what == f'"{name}"' for what, _ in result.failures):
+                # The count would not set to the intermediate (the re-check's leg-one note): the route was not taken
+                # and the count is as it was. Any other global set in the same batch leaves the part at neither its
+                # old values nor the workbook's, so the failure says what it holds; like ``left_on_the_way`` it reads
+                # as not rebuilt (``stopped_before_the_way``), with no rebuild error laid to it.
+                if result.changed:
+                    at = next(i for i, (what, _) in enumerate(result.failures) if what == f'"{name}"')
+                    what, why = result.failures[at]
+                    was = dict(_held_expressions(current)).get(name, "?")
+                    others = _and([f'"{n}"' for n in result.changed])
+                    result.failures[at] = (what, f'{why} {_stem_of(result.document)} holds "{name}" = {was} as before, '
+                                                 f"beside the workbook's {others}: neither as it was nor as the "
+                                                 "workbook has it.")
+                return result
+            before_final = len(result.failures)
             result.rebuilt = apply([(name, final.expression_for(result.trig))])
+            if len(result.failures) > before_final:
+                # The final count would not set (the second reading of the fixes review, N3): the part holds the
+                # intermediate, neither the count it held nor the workbook's. The count stays changed, the part
+                # reads as not rebuilt (left in error: the stop says to close it without saving), and the failure
+                # says what it holds.
+                what, why = result.failures[-1]
+                result.failures[-1] = (what, f'{why} {_stem_of(result.document)} holds "{name}" = '
+                                             f"{result.by_way_of[1]}, the count this Update went by way of, not the "
+                                             f"workbook's {final.expression_for(result.trig)}.")
+                result.rebuilt = False
+                if name in result.unchanged:
+                    result.unchanged.remove(name)
+                return result
             held = dict(planned_changes(current, variables, result.trig))
             if name not in held and name in result.changed:
                 # A change that left the count as it was (a module alone, say) went by way of another and back: the
@@ -1469,8 +1518,12 @@ def update_variables(sw: SolidWorks, variables: Sequence[GlobalVariable], expect
 # 55 -> 53 -> 54).
 LANDING_STEPS = (-1, 1, -2, 2, -3, 3, -4, 4)
 # Recipe B's tooth-space sketch links these dimensions by name (spur._space_ops_arcs, internal._space_ops_arcs), and
-# recipe A's none of them: read from the equations update_variables already reads, they tell a part's recipe.
+# recipe A's none of them: read from the equations update_variables already reads, they tell a part's recipe. Only
+# in the app's own tooth-space sketches, a spur's, helical's, ring's or sleeve's and a bevel's heel and toe sections
+# (``spur._framed`` renames them): a user's dimension named Pitch in a sketch of theirs says nothing of the recipe
+# (the second reading of the fixes review, N2).
 ARC_RECIPE_DIMENSIONS = ("HalfSpace", "Flank", "Base", "Pitch")
+ARC_RECIPE_SKETCHES = (SPACE_SKETCH, HEEL_SKETCH, TOE_SKETCH)
 
 
 def _global_values(pairs: Sequence[Tuple[str, str]], trig: str) -> Dict[str, float]:
@@ -1491,6 +1544,14 @@ def _global_values(pairs: Sequence[Tuple[str, str]], trig: str) -> Dict[str, flo
     return scope
 
 
+def _arc_recipe_link(name: str) -> bool:
+    """Whether an equation's name is one recipe B links in the app's tooth-space sketch: ``"Pitch@Tooth Space
+    Sketch"``, never ``"Pitch@Sketch9"`` (SolidWorks' names are matched case aside)."""
+    dimension, at, sketch = name.partition("@")
+    return bool(at) and dimension.strip().casefold() in {d.casefold() for d in ARC_RECIPE_DIMENSIONS} and \
+        sketch.strip().casefold() in {s.casefold() for s in ARC_RECIPE_SKETCHES}
+
+
 def _landing_route(current: Sequence[Tuple[str, float]], variables: Sequence[GlobalVariable],
                    trig: str) -> Tuple[List[Tuple[str, float, float]], Optional[Tuple[str, GlobalVariable]]]:
     """Pure: the landings :func:`gears.landing.line_landings` foresees from what the part holds now (its equations,
@@ -1504,7 +1565,7 @@ def _landing_route(current: Sequence[Tuple[str, float]], variables: Sequence[Glo
             held.append(split_equation(text))
         except (ValueError, EquationError):
             continue
-    if any(name.split("@", 1)[0] in ARC_RECIPE_DIMENSIONS for name, _ in held if "@" in name):
+    if any(_arc_recipe_link(name) for name, _ in held):
         return [], None              # recipe B's sketch (the fixes' review, S5): no line from the involute's start
     before = _global_values(held, trig)
     after = _global_values([(v.name, v.expression_for(trig)) for v in variables], trig)
@@ -3787,7 +3848,13 @@ class GearboxUpdate:
             lines.append(f"update  {result.document or '(no document)'} · trig {result.trig or '?'}")
             if result.changed:
                 lines.append("ok      set " + ", ".join(f'"{n}"' for n in result.changed))
-                if result.by_way_of and result.by_way_of[0] in result.changed:
+                if result.left_on_the_way:
+                    lines.append(f'FAIL    set "{result.by_way_of[0]}" to {result.by_way_of[1]} on the way, and the '
+                                 f"workbook's value would not set: it holds {result.by_way_of[1]}")
+                elif result.stopped_before_the_way:
+                    lines.append(f'FAIL    "{result.by_way_of[0]}" would not set to {result.by_way_of[1]} on the way, '
+                                 "so the route was not taken: the count is as it was, beside the values set")
+                elif result.by_way_of and result.by_way_of[0] in result.changed:
                     lines.append(f'ok      set "{result.by_way_of[0]}" by way of {result.by_way_of[1]} first, rebuilt '
                                  "there, then the workbook's value (a sketch line would have landed on itself)")
                 elif result.by_way_of:
@@ -3800,7 +3867,9 @@ class GearboxUpdate:
                 lines.append("ok      already holds the workbook's values")
             if result.changed:
                 theirs = [f.name for f in self.user_features_in_error if _file(f.path) == result.document]
-                if result.rebuilt:
+                if result.left_on_the_way or result.stopped_before_the_way:
+                    pass                    # said above: not rebuilt at the workbook's value, whatever it read
+                elif result.rebuilt:
                     lines.append("ok      rebuilt twice" if result.by_way_of else "ok      rebuilt once")
                 elif theirs and not any(what == result.document for what, _ in self.failures):
                     lines.append("CHECK   the rebuild reported an error, from your features alone: " + ", ".join(theirs))
@@ -4014,7 +4083,8 @@ def _update_document(sw: SolidWorks, doc: DocumentValues,
                 read[doc.path] = bool(ours)
             theirs_alone = bool(theirs) and not ours and \
                 getattr(findings, "WHATS_WRONG_OPENS_ON_PART_REBUILD", None) is False
-    if result.changed and not result.rebuilt and not theirs_alone:
+    if result.changed and not result.rebuilt and not theirs_alone and not result.left_on_the_way \
+            and not result.stopped_before_the_way:
         failures.append((name, f"SolidWorks reported an error rebuilding {_stem(doc.path)}."))
     return result, failures
 

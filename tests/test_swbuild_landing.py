@@ -192,6 +192,15 @@ def test_an_internal_bevel_ring_is_never_read_as_an_external_gear():
     assert landing.line_landings(ring, after, fraction=float("inf")) == []
 
 
+def test_a_users_global_whose_name_holds_inner_diameter_never_hides_an_external_gear():
+    """The second reading of the fixes review, note 4: only the internal bevel's own name keeps a part unclassified."""
+    before, after = dict(_values(SPUR, 18, "1")), dict(_values(SPUR, 17, "1"))
+    found = landing.line_landings(before, after)
+    assert found and found[0][0] == "L+"
+    before["Shaft Inner Diameter"] = after["Shaft Inner Diameter"] = 8.0
+    assert landing.line_landings(before, after) == found
+
+
 def test_a_module_alone_that_lands_goes_by_way_of_another_count_and_back_and_says_so_truly():
     """The fixes' review, S4: ring 55 at m1.25 to m1.225 lands (0.04): routed, but the count is not one it changed."""
     fake = _built(RING, 55, RING_PATH)
@@ -213,6 +222,38 @@ def test_a_part_of_recipe_b_is_never_routed():
     assert swbuild._landing_route(_held(fake), _variables(RING, 54), "degrees")[1] is not None   # noqa: SLF001
 
 
+@pytest.mark.parametrize("theirs", ['"Pitch@Sketch9"= 12', '"Base@Sketch9"= 10', '"HalfSpace@Keyway Sketch"= 3'])
+def test_a_users_own_dimension_named_as_recipe_bs_never_hides_a_recipe_a_ring_from_the_route(theirs):
+    """The second reading of the fixes review, N2: only the app's own tooth-space sketches tell recipe B. A recipe A
+    ring whose user named a dimension of theirs Pitch is still routed, and lands clean."""
+    fake = _built(RING, 55, RING_PATH)
+    fake.equations_text.append(theirs)
+    assert swbuild._landing_route(_held(fake), _variables(RING, 54), "degrees")[1] is not None   # noqa: SLF001
+    result = swbuild.update_variables(fake, _variables(RING, 54), RING_PATH)
+    assert result.ok and result.rebuilt and result.by_way_of == (spur.TEETH, "53")
+    assert fake.feature_codes.get((_key(RING_PATH), "Tooth Space")) != 72
+
+
+def test_recipe_b_is_told_by_the_links_in_the_apps_own_tooth_space_sketches_of_every_kind_it_routes():
+    """Every dimension the app's recipe B plans link in a tooth-space sketch (a spur's, a ring's, an external bevel's
+    heel and toe sections) tells recipe B; none a recipe A plan links does."""
+    from gear_generator.gears import KINDS
+    from gear_generator.gears.base import LinkDimension
+    from test_bevel_forms import spec as bevel_spec
+
+    def links(kind, spec, recipe):
+        plan = kind.plan(spec, kind.derive(spec), recipe, "", "C:\\W\\Part.SLDPRT")
+        return [op.dimension for op in plan.ops if isinstance(op, LinkDimension)]
+
+    bevel = KINDS["bevel"]
+    for kind, spec in ((SPUR, _spec(SPUR, 29)), (RING, _spec(RING, 55)), (bevel, bevel_spec("20", "40", "90"))):
+        b = [name for name in links(kind, spec, "B") if swbuild._arc_recipe_link(name)]     # noqa: SLF001
+        assert b, kind
+        assert not [name for name in links(kind, spec, "A") if swbuild._arc_recipe_link(name)], kind  # noqa: SLF001
+        if kind is bevel:
+            assert {name.split("@", 1)[1] for name in b} == {"Heel Section Sketch", "Toe Section Sketch"}
+
+
 def test_an_update_gives_the_route_through_its_part_step_and_says_it(monkeypatch):
     """The value step of an Update (``_update_document``) goes through update_variables: the route is taken there,
     the part reads rebuilt, and the log says the intermediate; nothing else in the step changes."""
@@ -223,3 +264,78 @@ def test_an_update_gives_the_route_through_its_part_step_and_says_it(monkeypatch
     lines = swbuild.GearboxUpdate(parts=[done]).log_lines()
     assert (f'ok      set "{spur.TEETH}" by way of 53 first, rebuilt there, then the workbook\'s value (a sketch line '
             "would have landed on itself)") in lines and "ok      rebuilt twice" in lines
+
+
+# -- the fixes review's second reading: N3 (the count's second set fails) ---------------------------------------------
+
+def _second_count_set_fails(fake):
+    """The fake refuses the count's second set only: leg one goes through, the workbook's value does not."""
+    original, sets = fake.set_global_variable, []
+
+    def set_global_variable(name, expression):
+        if name == spur.TEETH:
+            sets.append(expression)
+            if len(sets) == 2:
+                raise RuntimeError("SolidWorks would not set the count.")
+        return original(name, expression)
+
+    fake.set_global_variable = set_global_variable
+    return fake
+
+
+@pytest.mark.parametrize("n, module, held, changed", [(54, "1.25", 53.0, [spur.TEETH]),
+                                                      (55, "1.225", 54.0, [spur.TEETH, "Module"])])
+def test_a_route_whose_second_count_set_fails_says_the_part_holds_the_intermediate_and_never_offers_to_save(
+        n, module, held, changed):
+    """The part is left at the intermediate: the count stays changed (for a module alone too, never also unchanged),
+    the part reads as not rebuilt and so left in error, the failure and the log say what it holds, and the stop says
+    to close it without saving, never to save it."""
+    from gear_generator import ui_text
+    from gear_generator.workbook import update
+    fake = _second_count_set_fails(_built(RING, 55, RING_PATH))
+    doc = swbuild.DocumentValues(RING_PATH, tuple(_variables(RING, n, module)), made=("Tooth Space",))
+    done, failures = swbuild._update_document(fake, doc)                         # noqa: SLF001
+    middle = done.by_way_of[1]
+    assert fake.equation_values()[spur.TEETH] == held and middle == f"{held:.0f}"
+    assert done.changed == changed and spur.TEETH not in done.unchanged and not done.rebuilt
+    assert failures == [(f'Ring_m1.25_N55.SLDPRT "{spur.TEETH}"',
+                         f'it stopped on an unexpected RuntimeError: SolidWorks would not set the count. '
+                         f'Ring_m1.25_N55 holds "{spur.TEETH}" = {middle}, the count this Update went by way of, not '
+                         f"the workbook's {n}.")]
+    result = swbuild.GearboxUpdate(parts=[done], failures=failures, changed=[RING_PATH])
+    lines = result.log_lines()
+    assert (f'FAIL    set "{spur.TEETH}" to {middle} on the way, and the workbook\'s value would not set: it holds '
+            f"{middle}") in lines
+    assert not [line for line in lines if "rebuilt twice" in line or "then the workbook's value" in line
+                or "and back" in line or "the rebuild reported" in line], lines
+    assert [d.document for d in update.documents_left_in_error(result)] == ["Ring_m1.25_N55.SLDPRT"]
+    text, ok = ui_text.gearbox_update_status(update.UpdatePlan(), result, [])
+    assert not ok and f'Ring_m1.25_N55 holds "{spur.TEETH}" = {middle}' in text, text
+    assert "close it in SolidWorks without saving" in text and "save it in SolidWorks to keep" not in text, text
+
+
+def test_a_route_whose_first_count_set_fails_beside_another_global_is_not_taken_and_says_what_the_part_holds():
+    """The re-check's leg-one note: ring m1.25 40 to m1.5 32 goes by way of 31; the count's first set fails, the
+    module's goes through. The part holds 40 teeth at m1.5: the log never says it went by way of 31 and back, no
+    rebuild error is laid to it, the failure says what it holds, and the stop says to close it without saving."""
+    from gear_generator import ui_text
+    from gear_generator.workbook import update
+    path = "C:\\W\\Ring_m1.25_N40.SLDPRT"
+    fake = _built(RING, 40, path)
+    fake.fail_on = {"set_global_variable": (spur.TEETH, "SolidWorks would not set the count.")}
+    doc = swbuild.DocumentValues(path, tuple(_variables(RING, 32, "1.5")), made=("Tooth Space",))
+    done, failures = swbuild._update_document(fake, doc)                         # noqa: SLF001
+    assert done.by_way_of == (spur.TEETH, "31") and done.stopped_before_the_way and not done.left_on_the_way
+    assert fake.equation_values()[spur.TEETH] == 40.0 and fake.equation_values()["Module"] == 1.5
+    assert done.changed == ["Module"] and not done.rebuilt
+    assert failures == [(f'Ring_m1.25_N40.SLDPRT "{spur.TEETH}"',
+                         f'SolidWorks would not set the count. Ring_m1.25_N40 holds "{spur.TEETH}" = 40 as before, '
+                         "beside the workbook's \"Module\": neither as it was nor as the workbook has it.")]
+    result = swbuild.GearboxUpdate(parts=[done], failures=failures, changed=[path])
+    lines = result.log_lines()
+    assert (f'FAIL    "{spur.TEETH}" would not set to 31 on the way, so the route was not taken: the count is as it '
+            "was, beside the values set") in lines
+    assert not [line for line in lines if "and back" in line or "rebuilt twice" in line
+                or "the rebuild reported" in line], lines
+    text, ok = ui_text.gearbox_update_status(update.UpdatePlan(), result, [])
+    assert not ok and "close it in SolidWorks without saving" in text and "save it in SolidWorks to keep" not in text
