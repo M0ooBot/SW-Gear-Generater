@@ -71,6 +71,10 @@ would be read on. B calls it on the recorded inventory with `put` the bodies a p
 the gearbox for a gearbox with modes, which ruling 9.18 puts whole whenever it changes anything), `branches =
 user_carry_branches(plan.motion, plan.placements)` and the revision last seen, and says `carried` (gear -> [(component,
 locks)]) and `problems` before the press. `user_carry_branches` and `user_branch_settled` are pure too.
+**`branches` defaults to the safe reading** (re-check N6): `None` means nothing measured, every carry refused as a
+fault ("how Sun is put was not said to this judgement"), and no lock is offered in an other-kind sentence; `{}`
+means every body on S0's measured branch. Package B's one call (`update.user_work_ahead`) passes
+`user_carry_branches(...)` explicitly and is unchanged.
 
 **The build job's read of the old assembly** (§2.1 item 8) is W9a's, package B's (the coordinator's correction of
 an earlier ruling that put it in W9d): `swbuild.read_old_assembly(sw, OldAssembly)` reads, with `_read_user_work`
@@ -125,6 +129,18 @@ kept, with its time. Carrying anything over stays W9d's. (`W9A-PACKAGE-B.md`.)
 14. K1 on the motion path only; the layout renamed in SolidWorks is still the app's, by its part.
 15. A mate's kind is `findings.MATE_LOCK` / `MATE_GEAR` against `IMate2.Type`, plus the motion types; anything else is
     "other". **A mate not wholly read refuses whenever anything is put** (ruling 2); a quiet press puts nothing.
+    A mate read with fewer than two entities is not wholly read (re-check N2). While any mate on in some mode is not
+    wholly read, every body counts as touched by the user's work for `_bind` (re-check N3), so a quiet press that
+    the change phase finds it must put after all stops before the put.
+17. **A carried component whose file did not read** (`ComponentInfo.path` `""`) takes the sub-assembly branch,
+    gated by `USER_MATE_PUT_SUBASSEMBLY_ON_<year>` (re-check N4): the smaller change than a new refusal, and the
+    same answer until measured (the sentence says the file was not named and it is taken for a sub-assembly).
+18. **K11 on a document the record marks unsaved** (re-check N1, the coordinator's ruling): `_vouches` cannot tell a
+    document open since the Update that marked it from one reopened from its file and then touched, so an honest
+    lost Update can refuse. The refusal stands (the safe side), and the sentence (`ValueEdit.unsaved`) says both
+    readings: the value differs from what Update SolidWorks last set and left unsaved, either because it was changed
+    in SolidWorks since or because SolidWorks closed without saving that Update and the document was changed after;
+    and what to do in each case. Nothing is added to the record's schema: the sentence is what is kept.
 16. A component's state per mode is not read (S5's); a carried component suppressed or lightweight in the active
     configuration refuses.
 
@@ -136,6 +152,15 @@ kept, with its time. Carrying anything over stays W9d's. (`W9A-PACKAGE-B.md`.)
   assembly rebuild failure they cause is said as the app's, but for the "already in error" clause. The inventory is
   not complete.
 - **Per mode**, only the active configuration's component states and user mate errors are read before (point 17).
+- **The branch labels join trains over every mesh** (re-check N5): `user_carry_branches` joins a train over every
+  mode's meshes, where the no-modes change phase joins through a held gear only by its gear-mated meshes. A train
+  with no carrier meeting a carrier train only through an unmated mesh to a held gear would be labelled S0's branch
+  while put with its gear mates on. No fixture has such a train; left as a note.
+- **A document marked mismatched is never vouched for** (re-check N8): a user's edit made in it after the mark is
+  set back silently, as the record cannot say what that file holds. Narrow: a later job found the earlier Update lost
+  and did not put it right.
+- **The other-kind sentence for a gear mate between two of the user's components** (re-check N9), one of them carried,
+  says the mate is "on G1", the carrying gear, though it is on the user's components. Left as a note.
 
 ## 6. Pins moved at the fix round, deliberately (the coordinator's rulings 5 and 8)
 
