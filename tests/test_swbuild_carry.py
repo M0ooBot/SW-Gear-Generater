@@ -72,6 +72,21 @@ def work(components=(), mates=(), how=swbuild.OLD_OPEN, **kw):
                    kw.pop("app_frames", (("Sun", (I9, (0.0, 0.0, 10.0))), ("Ring", (I9, (0.0, 0.0, 0.0))))), **kw)
 
 
+W9D_SET_ON_2026 = ("COMPONENT_STATE_PER_CONFIGURATION_ROUTE", "COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED",
+                   "FILE_VERSION_READ", "DEPENDENCIES_READ", "OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS",
+                   "OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN", "SUBASSEMBLY_OPEN_MARKS", "SUBASSEMBLY_READ_ONLY_INSERT",
+                   "SUBASSEMBLY_OPEN_MARKS_WHEN_LOADED", "PERSIST_REFERENCE_ROUTE_FOR_FACES",
+                   "PERSIST_REFERENCE_ROUTE_FOR_EDGES", "PERSIST_REFERENCE_SURVIVES_RELOAD", "COAXIAL_FACE_READ",
+                   "CARRY_INSERT_MARKS_USER_DOCUMENTS")
+
+
+@pytest.fixture
+def none_on_2026(monkeypatch):
+    """Every W9d finding None on 2026 (the fake's version), as before W9d's probes set §8.1's."""
+    for name in W9D_SET_ON_2026:
+        monkeypatch.setattr(findings, f"{name}_ON_2026", None)
+
+
 @pytest.fixture
 def every_gate(monkeypatch):
     """Every W9d gate patched to its settled value on 2026, as M9 patches them in its own process."""
@@ -79,7 +94,8 @@ def every_gate(monkeypatch):
         values = dict(CARRY_INSERTS=True, CARRY_INSERTS_IN_A_CONFIGURATION=True, CARRY_INSERTS_A_SUBASSEMBLY=True,
                       REFERENCED_CONFIGURATION_READ=True, SUBASSEMBLY_OPEN_MARKS=False,
                       SUBASSEMBLY_OPEN_MARKS_WHEN_LOADED=False, SUBASSEMBLY_READ_ONLY_INSERT=True,
-                      PERSIST_REFERENCE_ROUTE_FOR_FACES="route", PERSIST_REFERENCE_ROUTE_FOR_EDGES="route",
+                      PERSIST_REFERENCE_ROUTE_FOR_FACES=swcom.PERSIST_ROUTE_R3,
+                      PERSIST_REFERENCE_ROUTE_FOR_EDGES=swcom.PERSIST_ROUTE_R3,
                       PERSIST_REFERENCE_ROUTE_FOR_VERTICES="route", PERSIST_REFERENCE_SURVIVES_RELOAD=True,
                       COAXIAL_FACE_READ=True, CARRY_REMAKE_KINDS=swbuild.CARRY_KIND_WORDS,
                       CARRY_GEAR_MATE_ON_AN_APP_GEAR=True, COMPONENT_STATE_PER_CONFIGURATION_ROUTE="route",
@@ -274,7 +290,7 @@ def test_the_not_open_path_names_tier_one_until_a_reference_is_shown_to_survive_
     assert plan.mates[0].targets == ("gear1:Gear Axis", "ref:carried1:feature:384a0001")
 
 
-def test_an_old_assembly_not_read_names_everything_with_the_reason(every_gate):
+def test_an_old_assembly_not_read_names_everything_with_the_reason(every_gate, none_on_2026):
     w = work([comp()], [lock("Lock1", SUN_WHOLE, ent(USER, "Sprocket-1", ENTITY_WHOLE))], how=swbuild.OLD_UNREAD,
              unread=["RangeBox.SLDASM is not open in SolidWorks"])
     plan = swbuild.plan_carry(w, _carry(), REVISION)
@@ -493,7 +509,8 @@ def test_build_again_refuses_a_carry_whose_old_assembly_is_not_the_one_left_behi
     assert fake.calls == []
 
 
-def test_with_every_gate_none_the_old_assembly_is_read_nothing_is_carried_and_the_build_stands(monkeypatch):
+def test_with_every_gate_none_the_old_assembly_is_read_nothing_is_carried_and_the_build_stands(monkeypatch,
+                                                                                               none_on_2026):
     fake = _old_train()
     _isfile(monkeypatch, fake)
     result = _build_again(fake)
@@ -739,10 +756,24 @@ def test_a_remade_mate_read_back_otherwise_is_deleted_again_and_named(monkeypatc
     every_gate()
     fake = _old_train()
     _isfile(monkeypatch, fake)
-    fake.kind_swap = {"Lock1"}
+    fake.readback_alignment = {"Lock1": 1}                     # it reads back anti-aligned, however made
     cr = _build_again(fake).carry
-    assert {n.item: (n.why, n.subjects) for n in cr.named} == {"Lock1": ("differs", ("entities",))}
+    assert {n.item: (n.why, n.subjects) for n in cr.named} == {"Lock1": ("differs", ("alignment",))}
     assert cr.remade == [] and fake.mate("Lock1", R2[T_ASM]) is None
+    assert len([a for n, a in fake.calls if n == "remake_mate"]) == 1           # not retried: not a swap or a sense
+
+
+def test_a_remade_mate_read_back_with_its_entities_swapped_is_made_once_more_reversed(monkeypatch, every_gate):
+    every_gate()
+    fake = _old_train()
+    _isfile(monkeypatch, fake)
+    fake.kind_swap = {"Lock1"}                                  # SolidWorks keeps the selection the other way
+    cr = _build_again(fake).carry
+    assert cr.named == [] and [r[0] for r in cr.remade] == ["Lock1"]
+    tried = [a[1] for n, a in fake.calls if n == "remake_mate"]
+    assert tried == [("gear1", "carried1"), ("carried1", "gear1")]
+    lock = fake.mate("Lock1", R2[T_ASM])
+    assert (lock.a[0], lock.b[0]) == ("gear1-1", "carried1-1")
 
 
 def test_a_lightweight_user_component_is_carried_resolved_and_its_mates_named(monkeypatch, every_gate):
@@ -839,3 +870,253 @@ def test_a_user_gear_mate_on_g1s_gear_axis_is_made_again_with_its_ratio_and_sens
     made = fake.mate("Gear6", R2[T_ASM])
     assert (made.a, made.b) == (("carried1-1", "Sprocket Axis"), ("gear1-1", "Gear Axis"))
     assert made.ratio == (20.0, 17.0) and made.flip is True               # read back as the old one reads
+
+
+# -- the review's fixes (W9D-REVIEW-A.md), each a test that failed before ---------------------------------------------
+
+
+def test_a_gear_not_free_before_the_carry_never_stops_it_after_a_tied_cluster_falls_back(monkeypatch, every_gate):
+    """M2: the tie is judged only on gears free before, after every fallback too; here G1 reads fully defined from
+    the start (held, as RangeBox's Ring is), and the carry goes on after the tied cluster falls back."""
+    every_gate()
+    fake = _two_clusters(_old_train())
+    _isfile(monkeypatch, fake)
+    fake.locks["Lock3"] = ("gear3", "gear4", "gear3-1", "gear4-1", "gear2", "gear2-1")
+    fake.held_after_save = {"gear1-1"}             # held, as RangeBox's Ring is, once the build has checked its own
+    cr = _build_again(fake).carry
+    assert cr.stopped == "", cr.stopped
+    assert [f.why for f in cr.fixed] == [swbuild.FELL_TIE] and cr.fixed[0].subjects[0] in ("G2", "G3", "G4"), (cr.named, cr.remade, cr.stopped)
+
+
+def test_a_cluster_with_only_mates_between_app_bodies_leaves_the_new_assembly_unsaved(monkeypatch, every_gate):
+    """S1: a cluster −1 mate alone, no component carried: the new assembly holds it unsaved."""
+    every_gate()
+    fake = _built_train()
+    fake.read_entity_kinds = True
+    fake.user_mate(T_ASM, "Angle9", kind="angle", a=("gear1-1", "plane1"), b=("gear4-1", "plane1"))
+    fake._w9d()
+    fake.protected = {_key(T_ASM)}
+    cr = _build_again(fake).carry
+    assert [r[0] for r in cr.remade] == ["Angle9"] and cr.inserted == [] and cr.unsaved
+
+
+def test_the_carry_reads_the_new_assembly_even_when_the_build_bracket_drops_the_document(monkeypatch, every_gate):
+    """S4: the Session's begin_build falls back to no build document; the carry opens the new assembly first."""
+    every_gate()
+    fake = _old_train()
+    _isfile(monkeypatch, fake)
+    fake.begin_drops_document = True
+    cr = _build_again(fake).carry
+    assert cr.stopped == "" and cr.inserted == [("Sprocket-1", "carried1-1")]
+    names = [(n, a) for n, a in fake.calls]
+    first_read = next(i for i, (n, a) in enumerate(names) if n == "component_frame" and a[0] == "gear1"
+                      and i > [k for k, (m, _) in enumerate(names) if m == "save_as"][-1])
+    assert ("open_document", (R2[T_ASM],)) in names[:first_read][-6:]
+
+
+def test_a_reference_found_again_as_another_kind_stops_the_carry(monkeypatch, every_gate):
+    every_gate()
+    fake = _old_train()
+    fake.user_mate(T_ASM, "Coincident2", kind="coincident", a=("Sprocket-1", "plane1"), b=("gear1-1", "plane1"))
+    _isfile(monkeypatch, fake)
+    fake.resolve_other_kind = {"plane1"}
+    cr = _build_again(fake).carry
+    assert "found again is a face" in cr.stopped and "Coincident2" in cr.stopped
+
+
+def test_a_build_that_did_not_finish_says_the_carry_was_skipped(monkeypatch, every_gate):
+    """S12."""
+    every_gate()
+    fake = _old_train()
+    _isfile(monkeypatch, fake)
+    fake.fail_on = {"new_assembly": "SolidWorks would not make an assembly."}
+    result = _build_again(fake)
+    assert not result.ok and result.carry.skipped.startswith("carrying your work, because the")
+    assert result.carry.inserted == []
+
+
+def test_the_read_only_documents_own_flag_after_its_open_is_not_a_mark(monkeypatch, every_gate):
+    """R.6: modified straight after OpenDoc6 (NeedsRegen, as 2026 read it) is logged, not a mark."""
+    every_gate()
+    fake = _closed(_old_train())
+    _isfile(monkeypatch, fake)
+    fake.read_only_needs_regen = True
+    cr = _build_again(fake).carry
+    assert cr.work.how == swbuild.OLD_READ_ONLY and cr.work.marked == [] and cr.inserted
+
+
+def test_a_sub_assembly_dependency_refuses_the_not_open_read(monkeypatch, every_gate):
+    every_gate()
+    fake = _closed(_old_train())
+    _isfile(monkeypatch, fake)
+    fake.saved[_key(W + "Drive.SLDASM")] = ([], [])
+    fake.dependencies_of[_key(T_ASM)] = [SPROCKET, W + "Drive.SLDASM"]
+    cr = _build_again(fake).carry
+    assert cr.work.how == swbuild.OLD_UNREAD and "a sub-assembly's own files are not" in cr.work.unread[0]
+    fake = _closed(_old_train())
+    _isfile(monkeypatch, fake)
+    fake.dependencies_of[_key(T_ASM)] = [W + "Gone.SLDPRT"]          # not on disk
+    assert _build_again(fake).carry.work.how == swbuild.OLD_UNREAD
+
+
+@pytest.mark.parametrize("case", ["unique", "none", "several", "candidates", "seconds", "not ok"])
+def test_faces_by_r3_one_walk_per_component_exactly_one_match_capped(monkeypatch, every_gate, case):
+    """M1: §10's walk on the fake — one walk per component for its faces, exactly one match, the cap, the resolve's
+    code; a face on a part made new is never walked unless a gear mate needs its coaxial read."""
+    every_gate()
+    fake = _old_train()
+    fake.user_mate(T_ASM, "Coincident2", kind="coincident", a=("Sprocket-1", "face:3"), b=("gear1-1", "plane1"))
+    fake.user_mate(T_ASM, "Coincident3", kind="coincident", a=("Sprocket-1", "face:4"), b=("gear1-1", "face:9"))
+    _isfile(monkeypatch, fake)
+    fake._w9d()
+    key = (_key(SPROCKET), "face:3")
+    fake.r3_filtered = {key: 250} if case == "candidates" else {}
+    fake.r3_seconds = {key: 30.0} if case == "seconds" else {}
+    fake.r3_matches = {key: {"none": 0, "several": 2}[case]} if case in ("none", "several") else {}
+    fake.r3_resolve = {key: 2} if case == "not ok" else {}
+    cr = _build_again(fake).carry
+    walks = [items for _, items in fake.walks]
+    assert len(walks) == 1 and [i[1:] for i in walks[0]] == [(0, "face"), (0, "face")]     # Sprocket-1's two faces
+    named = {n.item: (n.why, n.subjects) for n in cr.named}
+    # Coincident3's other face is on G1's part, made new: never walked, named part new — unless the cap took
+    # Sprocket-1's later face too (every later item of the component is not searched).
+    third = named.pop("Coincident3")
+    if case in ("candidates", "seconds"):
+        assert third == ("too long", ("face", "Sprocket-1", "Sprocket.SLDPRT", case))
+    else:
+        assert third == ("part new", ("G1", "its Part name changed", "face", ""))
+    if case == "unique":
+        assert named == {} and "Coincident2" in {r[0] for r in cr.remade}
+    elif case in ("candidates", "seconds"):
+        assert named == {"Coincident2": ("too long", ("face", "Sprocket-1", "Sprocket.SLDPRT", case))}
+    else:
+        assert named["Coincident2"][0] == "unread"
+
+
+def test_bore_is_said_only_where_the_radius_is_half_the_bore(every_gate):
+    every_gate()
+    sun = CarryBody("Sun", "gear1-1", "gear1", False, "its Flank changed", GEAR_NAMES, GEAR_NAMES, bore_mm=10.0)
+    carry = Carry(OLD, _bodies()[:2] + (sun,) + _bodies()[3:], ("H", "L"), "H")
+    face = dict(coaxial=True)
+    w = work([comp()], [mate("C1", 0, ent(APP, "Sun", ENTITY_FACE, radius_mm=5.0, **face),
+                             ent(USER, "Sprocket-1", ENTITY_PLANE, "plane1")),
+                        mate("C2", 0, ent(APP, "Sun", ENTITY_FACE, radius_mm=12.0, **face),
+                             ent(USER, "Sprocket-1", ENTITY_PLANE, "plane1")),
+                        mate("C3", 0, ent(APP, "Sun", ENTITY_FACE, radius_mm=5.0, coaxial=False),
+                             ent(USER, "Sprocket-1", ENTITY_PLANE, "plane1"))])
+    where = {n.item: n.subjects[3] for n in swbuild.plan_carry(w, carry, REVISION).named}
+    assert where == {"C1": "bore", "C2": "axis", "C3": ""}
+
+
+def test_a_component_suppressed_in_the_mode_showing_is_read_and_its_mate_named_not_a_stop(monkeypatch, every_gate):
+    """M4: R finds it for reads (its frame read, so it is not named for its configuration), it is carried suppressed,
+    and its lock, with no mode where it is resolved, is named; the carry goes on."""
+    every_gate()
+    fake = _old_train()
+    _isfile(monkeypatch, fake)
+    fake.component_states["Sprocket-1"] = 0
+    cr = _build_again(fake).carry
+    assert cr.work.components[0].frame is not None and cr.work.components[0].configurations == ("Default",)
+    assert cr.inserted == [("Sprocket-1", "carried1-1")] and cr.stopped == ""
+    assert {n.item: n.why for n in cr.named} == {"Lock1": "unread"}
+
+
+def test_a_lightweight_component_is_carried_resolved_its_configurations_read_from_its_file(monkeypatch, every_gate):
+    """M7 (D10): no document, so its file's configurations are read closed; carried resolved, its mates named."""
+    every_gate()
+    fake = _old_train()
+    _isfile(monkeypatch, fake)
+    fake.lightweight.add("Sprocket-1")
+    cr = _build_again(fake).carry
+    assert ("file_configurations", (SPROCKET,)) in fake.calls
+    assert cr.inserted == [("Sprocket-1", "carried1-1")] and cr.work.components[0].active_configuration == ""
+
+
+def test_the_gear_mate_read_turning_the_wrong_way_is_made_once_more_with_the_other_flip(monkeypatch, every_gate):
+    every_gate()
+    fake = _old_train()
+    _isfile(monkeypatch, fake)
+    gear = fake.user_mate(T_ASM, "Gear6", kind="gear", a=("Sprocket-1", "Sprocket Axis"), b=("gear1-1", "Gear Axis"))
+    gear.ratio, gear.flip = (20.0, 17.0), True
+    cr = _build_again(fake).carry
+    flips = [a[3] for n, a in fake.calls if n == "remake_mate" and a[2] == "Gear6"]
+    assert flips == [None, True] and "Gear6" in {r[0] for r in cr.remade}
+    # Wrong both ways: named, never kept.
+    fake = _old_train()
+    _isfile(monkeypatch, fake)
+    gear = fake.user_mate(T_ASM, "Gear6", kind="gear", a=("Sprocket-1", "Sprocket Axis"), b=("gear1-1", "Gear Axis"))
+    gear.ratio, gear.flip = (20.0, 17.0), True
+    fake.readback_alignment = {"Gear6": 1}
+    cr = _build_again(fake).carry
+    assert {n.item: n.why for n in cr.named} == {"Gear6": "differs"} and fake.mate("Gear6", R2[T_ASM]) is None
+
+
+def _tc_again(monkeypatch, flags, tweak=lambda fake: None, anchor="gear2-1"):
+    """The TransferCase built with modes, Sprocket-1 locked to ``anchor`` with its lock's ``flags`` per mode, built
+    again with its carry; ``tweak`` doctors the fake before the build again."""
+    fake, built, _ = _tc_gearbox(FakeSolidWorks())
+    assert built.ok
+    fake._w9d()
+    fake.read_entity_kinds = True
+    fake.user_component(TC_ASM, "Sprocket-1", SPROCKET, (I9, (0.0, 0.0, 200.0)))
+    fake.user_lock(TC_ASM, "Lock1", anchor, "Sprocket-1", flags=flags)
+    fake.saved[_key(SPROCKET)] = ([], [])
+    fake.protected = {_key(TC_ASM), _key(SPROCKET)}
+    fake.no_save_after = _key(TC2[TC_ASM])
+    _isfile(monkeypatch, fake)
+    recorded = tuple(m.name for m in fake.memory_mates[_key(TC_ASM)] if not m.user)
+    old = swbuild.OldAssembly(TC_ASM, tuple((n, f"{h}-1") for h, n in TC_NAMES.items()), "layout-1", TC_LAYOUT,
+                              recorded, TC_MODES)
+    bodies = (CarryBody("layout", "layout-1", "layout", False, "new", ("Rear Axis",), ("Rear Axis",)),) + tuple(
+        CarryBody(n, f"{h}-1", h, False, "its Part name changed", GEAR_NAMES, GEAR_NAMES) for h, n in TC_NAMES.items())
+    carry = Carry(old, bodies, TC_MODES, "2H", (34,), tuple(TC2) + tuple(TC2.values()))
+
+    def moved(op):
+        return _replace(op, path=TC2.get(op.path, op.path)) if isinstance(op, (ops.AddComponent, ops.SaveAs)) else op
+    assembly = _tc_plan()
+    assembly = _replace(assembly, ops=tuple(moved(op) for op in assembly.ops), path=TC2[TC_ASM])
+    layout = BuildPlan("layout", "", (ops.NewPart(""), ops.Rebuild(), ops.SaveAs(TC2[TC_LAYOUT])), TC2[TC_LAYOUT])
+    parts = [part_plan(path=TC2[p]) for p in (TC_SLEEVE, TC_DOG)]
+    tweak(fake)
+    result = swbuild.build_gearbox(fake, parts, layout=layout, assembly=assembly,
+                                   gears={h: n for h, n in TC_NAMES.items()} | {"layout": "layout"}, senses=TC_SENSES,
+                                   modes=_tc_modes(), exists=fake.exists, before=old, carry=carry,
+                                   mtime=lambda p: 1.0)
+    assert result.ok, result.log_lines()
+    return result.carry, fake
+
+
+ALL_ON = {"2H": False, "4H": False, "N": False, "4L": False}
+
+
+def test_a_remade_mate_in_error_in_one_mode_only_falls_its_cluster_back_there(monkeypatch, every_gate, mode_findings):
+    """M3: the post-check reads each remade mate's code in every mode where it is on."""
+    every_gate()
+
+    def tweak(fake):
+        fake.remake_codes_in = {"Lock1": {"4L": (46, True)}}
+    cr, fake = _tc_again(monkeypatch, ALL_ON, tweak)
+    assert [(f.why, f.subjects) for f in cr.fixed] == [(swbuild.FELL_NEW_ERROR, ("Lock1", "46", "0", "4L"))]
+    assert cr.remade == [] and cr.stopped == ""
+
+
+def test_a_cluster_tying_in_some_modes_only_falls_back_once_in_the_first_of_them(monkeypatch, every_gate,
+                                                                                 mode_findings):
+    """S3, §6: flags that differ by mode are judged in each mode where they differ; the cluster falls back once."""
+    every_gate()
+
+    def tweak(fake):
+        fake.locks["Lock1"] = ("gear2", "gear2-1")                 # on, it ties InDog's train
+    cr, fake = _tc_again(monkeypatch, {"2H": True, "4H": True, "N": False, "4L": False}, tweak)
+    assert [(f.why, f.subjects[1]) for f in cr.fixed] == [(swbuild.FELL_TIE, "N")], cr.stopped
+    assert cr.stopped == ""
+
+
+def test_a_carried_component_off_its_pose_in_a_mode_is_said_moved_in_its_anchors_frame(monkeypatch, every_gate,
+                                                                                    mode_findings):
+    every_gate()
+
+    def tweak(fake):
+        fake.drift_in = {"N": {"carried1-1": (0.0, 0.0, 2.0)}}
+    cr, fake = _tc_again(monkeypatch, ALL_ON, tweak)
+    assert cr.moved == [("carried1-1", "N", pytest.approx(2.0))]

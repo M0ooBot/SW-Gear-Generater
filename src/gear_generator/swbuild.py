@@ -8072,7 +8072,8 @@ def _train_of(c: _Carrying, handles: Sequence[str]) -> List[str]:
     """M2: the app's gears meant to turn (``_mated_handles``) on the trains ``handles`` are on; never a held gear, a
     carrier held still, or the layout."""
     out: List[str] = []
-    for train in c.trains:
+    trains = list(c.trains) + [{h} for h in handles if not any(h in t for t in c.trains)]   # a body alone is its own
+    for train in trains:
         if set(handles) & train:
             out.extend(h for h in sorted(train) if h in c.mated and h not in out)
     return out
@@ -8161,7 +8162,7 @@ def _remake(c: _Carrying, item: CarryMateItem) -> Optional[Tuple[str, str, int]]
                 cr.named.append(CarryNamed(item.mate.name, "mate", WHY_REFUSED, (said,)))
             return None
         cr.unsaved = True
-        differs = _read_back(c, handle, item, targets)
+        differs = _read_back(c, handle, item)
         if not differs:
             return handle, kept, status
         sw.delete_mate(handle)
@@ -8187,14 +8188,14 @@ def _not_found_subjects(c: _Carrying, item: CarryMateItem) -> Tuple[str, ...]:
     return ("entity", "", "")
 
 
-def _read_back(c: _Carrying, handle: str, item: CarryMateItem, targets: Sequence[str]) -> str:
+def _read_back(c: _Carrying, handle: str, item: CarryMateItem) -> str:
     """§10's read-back against the old mate: "" when equal; "swapped" when only its two entities read the other way;
     else what differs ("entities", "alignment", "ratio", "values", "sense"). A gear mate's sense not read is
     "sense" (M5: never taken as right)."""
     definition = c.sw.mate_definition(handle)
     old = item.mate
-    wanted = []
-    for target in targets:
+    wanted = []                         # the old mate's entities in MateEntity order, whatever order was selected
+    for target in item.targets:
         head = _head(target)
         wanted.append("" if head == "asm" else c.kept_of.get(c.plan_handle.get(head, ""), "") or
                       c.result.components.get(head, head))

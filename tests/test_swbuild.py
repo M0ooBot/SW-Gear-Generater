@@ -918,6 +918,10 @@ class FakeSolidWorks:
         self._log("component_frame", handle)
         identity = ((1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0), (0.0, 0.0, 0.0))
         name = self.found.get(handle) or self.component_names.get(handle)
+        drift = getattr(self, "drift_in", {}).get(self.config, {}).get(name)
+        if drift is not None and name in self.frames:   # W9d: SolidWorks moved it in this configuration (made up)
+            rotation, at = self.frames[name]
+            return rotation, tuple(a + d for a, d in zip(at, drift))
         if name in self.frames:                    # a component's frame by its Name2 first: the solve moves those
             return self.frames[name]
         return self.frames.get(handle, identity)
@@ -1304,6 +1308,8 @@ class FakeSolidWorks:
     def constrained_status(self, handle):
         self._log("constrained_status", handle)
         name = self._name2(handle)
+        if getattr(self, "saved_after", False) and name in getattr(self, "held_after_save", ()):
+            return findings.COMPONENT_FULLY_DEFINED      # W9d: held once the new assembly is saved (a held gear)
         for key in (name, handle):
             if key in self.constrained:
                 return self.constrained[key]
@@ -1894,6 +1900,8 @@ class FakeSolidWorks:
         self.current = path
         self.open_docs.append(info)
         self.read_only_opened.add(_key(path))
+        if getattr(self, "read_only_needs_regen", False):
+            self.touched.add(_key(path))          # as 2026 read it: modified straight after the open (NeedsRegen)
         self.epoch += 1
         return info
 
@@ -1976,7 +1984,9 @@ class FakeSolidWorks:
         entities = tuple(swcom.MateEntityRead(c, 5 if k == "feature" and f.endswith("Axis") else
                                               select.get(k, 4 if k == "feature" else -1), k, f, (0, 0, 0, 0, 0, 1))
                          for c, (k, f) in zip(info.components, kinds))
-        return swcom.MateDefinition(mate.name, self.DEF_TYPES.get(mate.kind, info.type), mate.kind, mate.alignment,
+        alignment = mate.alignment if mate.user else getattr(self, "readback_alignment", {}).get(mate.name,
+                                                                                                  mate.alignment)
+        return swcom.MateDefinition(mate.name, self.DEF_TYPES.get(mate.kind, info.type), mate.kind, alignment,
                                     bool(mate.flip and mate.kind != "gear"), tuple(values), entities, info.whole)
 
     def entity_reference(self, mate_handle, index):
