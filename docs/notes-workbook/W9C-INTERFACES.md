@@ -751,7 +751,15 @@ record's problems by kind, so the second `unsettled` overwrites the first's subj
   SolidWorks without saving (the file on disk is as before that Update), then press Update SolidWorks again.* That
   sentence takes the place of the claim *SolidWorks already matches the workbook: nothing was changed.* alone; what the
   status said after the claim stays (N4, `ef4b8f2`), except that after an earlier Update lost with its assembly it no
-  longer says SolidWorks already holds the workbook as it now is (`09a1183`). Nothing new is needed from the worker.
+  longer says SolidWorks already holds the workbook as it now is (`09a1183`).
+- **The eighth run on 2026 (remake's M3, pressed again without closing).** On SolidWorks the part left in error makes
+  the assembly's rebuild read false, so a press that set nothing in it went on into the assembly, remade a gear mate
+  and stopped there, offering to save RangeBox. Now the record's mark goes to the worker
+  (`DocumentValues.left_in_error`, from `LinkRecord.unsaved_in_error`), and a document so marked that still holds the
+  workbook's values with a feature of the app's in error, read in the check phase, stops the press before any write
+  (`swbuild._held_in_error`): a failure naming the file as a whole, `skipped` naming what was not done. The user's own
+  features in error never stop it. `Finished.still_in_error` is now given whether or not the press failed, and a
+  stop on such a part alone is said by the still-in-error sentence and nothing else.
 - **S6. `UserWorkEntry.modes` lists only the modes a read covered:** the plan's configurations less those it adds
   (`update.modes_read`), plus each added mode on record whose flags the worker read (`took_active_state`). A mode a
   stopped press failed to delete is not named there, so the footer judges it as a copy.

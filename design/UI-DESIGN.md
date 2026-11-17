@@ -1416,7 +1416,10 @@ found closed or saved, or a later press changes the failed part again (its value
 or a sleeve's bands) with nothing of the app's in error there; the user's own
 features in error do not keep the warning. A press made without closing them sets
 nothing in them, and says so in place of *SolidWorks already matches the workbook*,
-keeping whatever the status says after it: *Gear_m1.25_N29 is still open
+keeping whatever the status says after it; where SolidWorks still reads a feature of
+the app's in error there, the press stops before writing anything at all (the
+assembly's rebuild would fail on that part) and this sentence is the whole status:
+*Gear_m1.25_N29 is still open
 in SolidWorks as an earlier Update SolidWorks left it, in error and holding the new
 values, so this press set nothing in it: close it in SolidWorks without saving (the
 file on disk is as before that Update), then press Update SolidWorks again.* The
