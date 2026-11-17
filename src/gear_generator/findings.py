@@ -1971,10 +1971,10 @@ SUBASSEMBLY_MISSING_PART_READS_ON_2024 = SUBASSEMBLY_MISSING_PART_READS_ON_2026
 # - UPDATE_INSERTS_A_GEAR (M5, M6): a gear's part inserted into a saved, reopened assembly (with modes or without),
 #   placed and mated as the build mates it, every new mate's flag and the component's state read back in every
 #   configuration.
-# - UPDATE_MAKES_MATES_WITH_MODES (M6): a coupling or sliding mesh made by Update between components on record, and a
-#   gear mate of a gearbox with modes made again (lifting ruling 9.16), flags set and read back in every configuration.
+# - UPDATE_MAKES_MATES_WITH_MODES (M6): a gear mate of a gearbox with modes made again (lifting ruling 9.16), its flags
+#   set and read back in every configuration.
 # - UPDATE_BANDS_IN_PLACE (M8): band globals and the relief features added to a built sleeve's part after the user's
-#   features, and the relief suppressed when the bands are taken away (IFeature.SetSuppression2 on a part feature).
+#   features.
 # - UPDATE_ADDS_A_MODE, UPDATE_REMOVES_A_MODE (M10): a configuration added by Update (copied from the active one, every
 #   app mate's flag and slide value set and read back there) and one deleted, in a reopened assembly with the user's
 #   items.
@@ -1990,3 +1990,18 @@ UPDATE_ADDS_A_MODE_ON_2026 = None
 UPDATE_ADDS_A_MODE_ON_2024 = None
 UPDATE_REMOVES_A_MODE_ON_2026 = None
 UPDATE_REMOVES_A_MODE_ON_2024 = None
+#
+# Split from the two above at the demonstration's ruling (2026-11-17: a finding gates only what was measured, and no
+# legal edit of the demonstration's fixtures reaches these):
+# - UPDATE_MAKES_A_NEW_COUPLING: a coupling or sliding mesh newly made by Update between components on record
+#   (InPlace.new_mates), made in the first mode it is on in and its flag set and read back in every configuration.
+#   UPDATE_MAKES_MATES_WITH_MODES keeps the remake of a gear mate of a gearbox with modes (ruling 9.16 lifted); an
+#   added gear's own mates are UPDATE_INSERTS_A_GEAR's.
+# - UPDATE_SUPPRESSES_THE_RELIEF: a built sleeve's bands taken away (the Relief loft cut suppressed, a part feature's
+#   IFeature.SetSuppression2 through Session.suppress_feature) and bands given back (the relief turned back on, the
+#   band globals set, no second relief). UPDATE_BANDS_IN_PLACE keeps bands given (the globals and the relief made
+#   after the user's features).
+UPDATE_MAKES_A_NEW_COUPLING_ON_2026 = None
+UPDATE_MAKES_A_NEW_COUPLING_ON_2024 = None
+UPDATE_SUPPRESSES_THE_RELIEF_ON_2026 = None
+UPDATE_SUPPRESSES_THE_RELIEF_ON_2024 = None

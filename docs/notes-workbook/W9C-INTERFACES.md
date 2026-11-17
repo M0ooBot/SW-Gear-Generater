@@ -261,8 +261,10 @@ W8's finish writes frames and on-sets.
 | remove a gear | `COMPONENT_DELETE_ROUTE_ON_<year>` = `"select4-editdelete"`; `COMPONENT_DELETE_TAKES_ITS_MATES_ON_<year>` True; `COMPONENT_DELETE_DIALOG_ON_<year>` False; with modes `COMPONENT_DELETE_ROUTE_IN_EVERY_CONFIGURATION_ON_<year>` True | set (P1) | set (P1 on 2024, `6ca42da`) |
 | remove a gear with any user component present | `EXTERNAL_REFERENCES_READ_ON_<year>` (new, M4) | None (refuses) | None |
 | add a gear (insert and mate in a reopened assembly) | `UPDATE_INSERTS_A_GEAR_ON_<year>` (new, M5 and M6) | None until the full build reads it clean ⟨C7⟩ | None |
-| a coupling or sliding mesh made by Update; a gear mate remade with modes | `UPDATE_MAKES_MATES_WITH_MODES_ON_<year>` (new, M6); the remake also `GEAR_MATE_RATIO_ROUTE` "remake" | None ⟨C7⟩ | None |
-| bands in place | `UPDATE_BANDS_IN_PLACE_ON_<year>` (new, M8) | None ⟨C7⟩ | None |
+| a gear mate remade with modes (ruling 9.16 lifted) | `UPDATE_MAKES_MATES_WITH_MODES_ON_<year>` (new, M6); the remake also `GEAR_MATE_RATIO_ROUTE` "remake" | None ⟨C7⟩ | None |
+| a coupling or sliding mesh newly made between components on record (`NewMate`) | `UPDATE_MAKES_A_NEW_COUPLING_ON_<year>` (split at the demonstration's ruling) | None | None |
+| bands given (globals and the relief made after the user's features) | `UPDATE_BANDS_IN_PLACE_ON_<year>` (new, M8) | None ⟨C7⟩ | None |
+| bands taken away (the Relief suppressed) or given back (`BandChange.back`: turned back on, no second relief) | `UPDATE_SUPPRESSES_THE_RELIEF_ON_<year>` (split at the demonstration's ruling) | None | None |
 | a mode added; a mode removed | `UPDATE_ADDS_A_MODE_ON_<year>`, `UPDATE_REMOVES_A_MODE_ON_<year>` (new, M10) | None ⟨C7⟩ | None |
 | the assembly's own entity | `ASSEMBLY_ENTITY_COMPONENT_IS_ROOT_ON_<year>` (read through `root_component`, `7e0d095`; nothing gates on it) | True | True (`6ca42da`) |
 
@@ -271,7 +273,9 @@ mode added and one removed), patched True in the demonstration's own process for
 `nocarrier` was, and set in `findings.py` from its reviewed log. `swbuild.in_place_gates(in_place, revision, *,
 modes=False, remakes=False) -> List[Tuple[str, str]]` (pure) returns `(step, finding)` for each gate not settled, for
 A's refusal and B's footer; `step` is one of `STEP_REMOVE`, `STEP_ADD`, `STEP_MATES`, `STEP_BANDS`,
-`STEP_MODE_ADD`, `STEP_MODE_REMOVE`.
+`STEP_MODE_ADD`, `STEP_MODE_REMOVE`, and, since the split, `STEP_COUPLING` and `STEP_RELIEF`. An added gear's own
+mates (its axis, along, lock or spline, and its per-mode couplings in `AddedGear.ops`) read `UPDATE_INSERTS_A_GEAR`
+alone, as they always did: the Done-when's Hub measures them there.
 
 **What the full build must measure, per gate** (each read on the user's SolidWorks, every write read back by the
 worker's own calls, a watch on dialogs throughout; patched True only in that run's process):
@@ -280,14 +284,18 @@ worker's own calls, a watch on dialogs throughout; patched True only in that run
   (a gear mate's sense read straight after, as the build's), `LinkDimension` on its Face Z; then every new mate's flag
   set and read back in every configuration, and the component's `GetSuppression2` read resolved in every mode shown
   (C9); the save flag of the parts and the user's components unmarked by the insert; no dialog.
-- `UPDATE_MAKES_MATES_WITH_MODES`: a coupling made between components on record in the first mode it is on in (shown),
-  its sense read, its flags set elsewhere and read back; and a gear mate of a gearbox with modes given a new ratio by
-  the remake route in a mode it is on in, its flags in every other configuration set and read back, its sense read in
-  each mode shown; the user's mates' flags unchanged (read before and after).
+- `UPDATE_MAKES_MATES_WITH_MODES`: a gear mate of a gearbox with modes given a new ratio by the remake route in a mode
+  it is on in, its flags in every other configuration set and read back, its sense read in each mode shown; the
+  user's mates' flags unchanged (read before and after).
+- `UPDATE_MAKES_A_NEW_COUPLING` (no legal edit of the demonstration's fixtures reaches it; None after it unless a later
+  run measures it through an Update): a coupling made between components on record in the first mode it is on in
+  (shown), its sense read, its flags set elsewhere and read back.
 - `UPDATE_BANDS_IN_PLACE`: on a built sleeve with a user feature after the app's, the band globals added and the
-  relief's planes, sketches and loft cut made after it, the part rebuilt clean, the user's feature unchanged; then the
-  relief suppressed by `suppress_feature` (`SetSuppression2` on a part feature, read back), the part rebuilt, the
-  assembly's mates on that sleeve without error.
+  relief's planes, sketches and loft cut made after it, the part rebuilt clean, the user's feature unchanged.
+- `UPDATE_SUPPRESSES_THE_RELIEF` (the demonstration probes the suppression script-side; None after it unless a later
+  run measures it through an Update): the relief suppressed by `suppress_feature` (`SetSuppression2` on a part
+  feature, read back), the part rebuilt, the assembly's mates on that sleeve without error; and given back, the relief
+  turned back on and the band globals set, no second relief.
 - `UPDATE_ADDS_A_MODE`: `AddConfiguration2` from the mode showing in the reopened assembly, the handle rule (every
   handle fetched again), one top-only rebuild before any flag, every app mate's flag and slide value set there and
   read back, the user's mates' flags and components' states there read (they copy the active mode's); the mode
@@ -512,3 +520,18 @@ before any write:
 no modes, *"reading Hub back"*); a mode added becomes *"setting every mate and slide in the configuration R"*; a new
 coupling made, *"setting … on in its modes"*; a gear mate remade, the same. The last entry stays *"putting the gears
 back and checking the assembly"*.
+
+### From A (the demonstration's ruling): two gates split, and bands given back
+
+- **Two more gate names for B's footer to word** (`in_place_gates` returns them with their steps):
+  `UPDATE_MAKES_A_NEW_COUPLING_ON_<year>` (`STEP_COUPLING`, any `NewMate`) and `UPDATE_SUPPRESSES_THE_RELIEF_ON_<year>`
+  (`STEP_RELIEF`, a `BandChange` taking bands away, or giving them back). Both None on both versions.
+  `UPDATE_MAKES_MATES_WITH_MODES` now covers only a gear mate remade with modes; `UPDATE_BANDS_IN_PLACE` only bands
+  given. The worker's own refusal sentence for each (`judge_in_place`'s `unsettled`) uses the step's words.
+- **New: `BandChange.back: bool = False`** (with `add`): bands given back to a sleeve an earlier Update relieved of them.
+  B sets it where the record shows the sleeve's relief made and then suppressed (its features hold the relief, its
+  spec no bands). The worker then turns the relief's features back on (`suppress_feature(name, False)`), sets the band
+  globals it finds (adds one that is gone), and makes no second relief; a relief no longer in the part refuses by name.
+  A give that is not `back` finding the relief there still refuses by name (F1). **B's tests** that patch only the five
+  gates before the split (`GATES` in `test_workbook_in_place_round_trip.py`) need the two new names where a coupling is
+  made or bands are taken away.

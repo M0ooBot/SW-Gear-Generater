@@ -9,7 +9,7 @@ from gear_generator.swbuild import (PROBLEM_REFERENCES, PROBLEM_REMOVED, PROBLEM
                                     RemovedGear, UserComponent, UserMate, UserWork)
 
 GATES = ("UPDATE_INSERTS_A_GEAR", "UPDATE_MAKES_MATES_WITH_MODES", "UPDATE_BANDS_IN_PLACE", "UPDATE_ADDS_A_MODE",
-         "UPDATE_REMOVES_A_MODE")
+         "UPDATE_REMOVES_A_MODE", "UPDATE_MAKES_A_NEW_COUPLING", "UPDATE_SUPPRESSES_THE_RELIEF")
 Y26, Y24 = (34, 1, 1), (32, 5, 0)
 
 
@@ -36,13 +36,24 @@ def test_each_step_reads_its_own_gate_none_on_both_versions_as_committed():
                     modes_added=("X",), modes_removed=("L",))
     assert swbuild.in_place_gates(every, Y26, modes=True) == [
         (swbuild.STEP_ADD, "UPDATE_INSERTS_A_GEAR_ON_2026"),
-        (swbuild.STEP_MATES, "UPDATE_MAKES_MATES_WITH_MODES_ON_2026"),
+        (swbuild.STEP_COUPLING, "UPDATE_MAKES_A_NEW_COUPLING_ON_2026"),
         (swbuild.STEP_BANDS, "UPDATE_BANDS_IN_PLACE_ON_2026"),
         (swbuild.STEP_MODE_ADD, "UPDATE_ADDS_A_MODE_ON_2026"),
         (swbuild.STEP_MODE_REMOVE, "UPDATE_REMOVES_A_MODE_ON_2026")]       # the delete route is set on 2026
     assert [f for _, f in swbuild.in_place_gates(every, Y24, modes=True)] == [
-        "UPDATE_INSERTS_A_GEAR_ON_2024", "UPDATE_MAKES_MATES_WITH_MODES_ON_2024", "UPDATE_BANDS_IN_PLACE_ON_2024",
+        "UPDATE_INSERTS_A_GEAR_ON_2024", "UPDATE_MAKES_A_NEW_COUPLING_ON_2024", "UPDATE_BANDS_IN_PLACE_ON_2024",
         "UPDATE_ADDS_A_MODE_ON_2024", "UPDATE_REMOVES_A_MODE_ON_2024"]         # the delete route is set on 2024 too
+    # The demonstration's ruling: each gate covers only what it measures.
+    assert swbuild.in_place_gates(every, Y26, modes=True, remakes=True)[2] == (
+        swbuild.STEP_MATES, "UPDATE_MAKES_MATES_WITH_MODES_ON_2026")             # the remake with modes, apart
+    taken = swbuild.BandChange("RangeSlv", "C:\\W\\Sleeve.SLDPRT", False, (), ("Relief",))
+    back = swbuild.BandChange("RangeSlv", "C:\\W\\Sleeve.SLDPRT", True, (ops_global(),), ("Relief",), back=True)
+    for band in (taken, back):
+        assert swbuild.in_place_gates(InPlace(bands=(band,)), Y26) == [
+            (swbuild.STEP_RELIEF, "UPDATE_SUPPRESSES_THE_RELIEF_ON_2026")]
+    assert [f for _, f in swbuild.in_place_gates(InPlace(added=(swbuild.AddedGear("Hub", "gear9", "C:\\W\\Hub.SLDPRT",
+        ops=(base.Mate("m", "gear", "gear9:Gear Axis", "gear2:Gear Axis"),)),)), Y26, modes=True)] == [
+        "UPDATE_INSERTS_A_GEAR_ON_2026"]                                          # an added gear's own mates
     assert all(f.endswith("_ON_?") for _, f in swbuild.in_place_gates(every, ()))
 
 
@@ -53,6 +64,10 @@ def test_a_removal_reads_the_delete_findings_as_measured(monkeypatch):
         (swbuild.STEP_REMOVE, "COMPONENT_DELETE_ROUTE_ON_2024"),
         (swbuild.STEP_REMOVE, "COMPONENT_DELETE_DIALOG_ON_2024")]
     assert swbuild.in_place_gates(InPlace(removed=(REMOVE_G4,)), Y26, modes=True) == []
+
+
+def ops_global():
+    return base.AddGlobal("Start Band", "5")
 
 
 def test_a_remake_reads_the_mates_gate_only_with_modes(monkeypatch):
@@ -523,7 +538,7 @@ def test_bands_on_a_part_that_fails_stop_the_job_before_the_assembly_saying_so(m
 # -- every gate None refuses before any write, by name ---------------------------------------------------------------
 
 @pytest.mark.parametrize("gate, step", [("UPDATE_ADDS_A_MODE", "add"), ("UPDATE_REMOVES_A_MODE", "remove"),
-                                         ("UPDATE_MAKES_MATES_WITH_MODES", "mate")])
+                                         ("UPDATE_MAKES_A_NEW_COUPLING", "mate")])
 def test_with_modes_each_gate_not_measured_refuses_before_any_write_naming_its_finding(tc_built, measured, monkeypatch,
                                                                                       gate, step):
     monkeypatch.setattr(findings, f"{gate}_ON_2026", None)
@@ -815,3 +830,42 @@ def test_f3_a_flag_that_fails_after_the_mates_are_made_names_what_is_left(tc_bui
     assert result.skipped.startswith("setting Hub's mates on in their modes and reading Hub back and putting")
     assert {n for n, _ in result.mates_made} == {"Hub on Rear Axis", "Hub along Rear", "RangeSlv splined to Hub"}
 
+
+# -- the demonstration's ruling: the relief's suppression has its own gate; bands given back turn it back on ----------
+
+def test_bands_taken_away_refuse_by_their_own_gate_while_bands_given_are_measured(measured, monkeypatch):
+    monkeypatch.setattr(findings, "UPDATE_SUPPRESSES_THE_RELIEF_ON_2026", None)
+    fake = _built_train()
+    for kept in (fake.saved, fake.memory):
+        kept[_key(P17)][1].extend(f for f in RELIEF_FEATURES if f not in kept[_key(P17)][1])
+    taken = swbuild.BandChange("G3", P17, False, (), (clutch.RELIEF,))
+    with pytest.raises(UserWorkRefused) as raised:
+        _update_train(fake, parts=[_p17(RELIEF_FEATURES)], in_place=InPlace(bands=(taken,)))
+    assert [p.subjects for p in raised.value.problems] == [("UPDATE_SUPPRESSES_THE_RELIEF_ON_2026",)]
+    assert _writes(fake) == []
+
+
+def test_bands_given_back_turn_the_relief_back_on_and_set_the_globals_making_no_second_relief(measured):
+    fake = _built_train()
+    fake.open_document(P17)
+    fake.made.extend(RELIEF_FEATURES)
+    for v in clutch.relief_globals((4.0, 4.0)):                      # the first bands' values, before they were taken
+        fake.add_global_variable(v.name, v.expression)
+    fake.suppressed_features[(_key(P17), clutch.RELIEF)] = True
+    fake.calls.clear()
+    back = replace(_bands_given(), back=True)
+    result = _update_train(fake, parts=[_p17(RELIEF_FEATURES)], in_place=InPlace(bands=(back,)))
+    assert result.ok, (result.failures, result.skipped)
+    assert result.bands_added == ["G3"] and fake.suppressed_features[(_key(P17), clutch.RELIEF)] is False
+    called = names(fake)
+    assert "loft_cut" not in called and "ref_plane" not in called and "add_global_variable" not in called
+    assert [a[0] for n, a in fake.calls if n == "set_global_variable"] == ["Start Band", "End Band"]
+    assert fake.memory[_key(P17)][1].count(clutch.RELIEF) == 1
+
+
+def test_bands_given_back_where_the_relief_is_gone_refuse_by_name(measured):
+    fake = _built_train()
+    with pytest.raises(swbuild.BuildError, match="no longer holds Relief Start Plane, .*the relief an earlier Update"):
+        _update_train(fake, parts=[_p17(RELIEF_FEATURES)],
+                      in_place=InPlace(bands=(replace(_bands_given(), back=True),)))
+    assert _writes(fake) == []

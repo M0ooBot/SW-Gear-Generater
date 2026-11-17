@@ -2479,13 +2479,16 @@ class BandChange:
     """A built sleeve given bands, or relieved of them, in place (§2.4). ``part`` the sleeve's part path (kept: its
     file, the user's groove and every mate); ``add`` True when bands are given; ``ops`` (given) the band globals and
     ``gears.clutch.relief_ops`` as the banded plan has them after the teeth; ``features`` the relief's feature names
-    (given: those the ops make; taken away: the ``Relief`` loft cut suppressed, ruling C8)."""
+    (given: those the ops make; taken away: the ``Relief`` loft cut suppressed, ruling C8). ``back`` (with ``add``;
+    added in the demonstration's round): bands given back to a sleeve an earlier Update relieved of them — the relief
+    is in its part, suppressed, so it is turned back on and the band globals set, never made a second time."""
 
     gear: str
     part: str
     add: bool
     ops: Tuple[base.Op, ...] = ()
     features: Tuple[str, ...] = ()
+    back: bool = False
 
 
 @dataclass(frozen=True)
@@ -2514,6 +2517,9 @@ class InPlace:
 # The steps an InPlace can carry, as in_place_gates names them (W9C-INTERFACES §8).
 STEP_REMOVE, STEP_ADD, STEP_MATES, STEP_BANDS, STEP_MODE_ADD, STEP_MODE_REMOVE = (
     "remove a gear", "add a gear", "make a mate", "bands in place", "add a mode", "remove a mode")
+# The demonstration's ruling (2026-11-17): a coupling made between components on record, and the relief suppressed or
+# turned back on, each have their own gate, apart from the remake with modes and the bands given.
+STEP_COUPLING, STEP_RELIEF = "make a coupling", "suppress the relief"
 
 
 # -- W9a: the user's work in a built assembly (ISSUE-1-PLAN §2.1, K1-K4, K11; W9A-INTERFACES.md) ----------------
@@ -5746,8 +5752,11 @@ def judge_user_work(work: UserWork, modes: Sequence[str], put: Collection[str], 
 
 _STEP_WORDS = {STEP_REMOVE: "take a gear out of the assembly",
                STEP_ADD: "insert a gear into the assembly and mate it",
-               STEP_MATES: "make a gear mate in an assembly with modes and set its flag in each mode",
-               STEP_BANDS: "give a built sleeve its bands, or take them away, in its own part",
+               STEP_MATES: "make a gear mate of a gearbox with modes again and set its flag in each mode",
+               STEP_COUPLING: ("make a coupling or sliding mesh between gears already in the assembly and set its "
+                               "flag in each mode"),
+               STEP_BANDS: "give a built sleeve its bands in its own part",
+               STEP_RELIEF: "suppress a sleeve's relief to take its bands away, or turn it back on to give them back",
                STEP_MODE_ADD: "add a mode's configuration to the assembly",
                STEP_MODE_REMOVE: "delete a mode's configuration from the assembly"}
 
@@ -5761,7 +5770,10 @@ def in_place_gates(in_place: InPlace, revision: Sequence[int], *, modes: bool = 
     """Pure: ``(step, finding)`` for each step ``in_place`` carries whose finding is not settled on the SolidWorks in
     use (W9C-INTERFACES §8; a version not known settles none). ``modes``: the gearbox has modes (a removal there also
     reads ``COMPONENT_DELETE_ROUTE_IN_EVERY_CONFIGURATION``); ``remakes``: a gear mate of a gearbox with modes is made
-    again (``motion.ratios`` with modes), which reads ``UPDATE_MAKES_MATES_WITH_MODES``. Each finding is settled when
+    again (``motion.ratios`` with modes), which reads ``UPDATE_MAKES_MATES_WITH_MODES``. An added gear's own mates
+    read ``UPDATE_INSERTS_A_GEAR`` alone; a new coupling or sliding mesh ``UPDATE_MAKES_A_NEW_COUPLING``; bands given
+    ``UPDATE_BANDS_IN_PLACE``; bands taken away or given back (the relief suppressed or turned back on)
+    ``UPDATE_SUPPRESSES_THE_RELIEF``. Each finding is settled when
     it holds the value measured: the delete route its route, a dialog False, every other True."""
     year = _finding_year(revision)
     out: List[Tuple[str, str]] = []
@@ -5779,10 +5791,14 @@ def in_place_gates(in_place: InPlace, revision: Sequence[int], *, modes: bool = 
             need(STEP_REMOVE, "COMPONENT_DELETE_ROUTE_IN_EVERY_CONFIGURATION")
     if in_place.added:
         need(STEP_ADD, "UPDATE_INSERTS_A_GEAR")
-    if in_place.new_mates or (modes and remakes):
+    if in_place.new_mates:
+        need(STEP_COUPLING, "UPDATE_MAKES_A_NEW_COUPLING")
+    if modes and remakes:
         need(STEP_MATES, "UPDATE_MAKES_MATES_WITH_MODES")
-    if in_place.bands:
+    if any(b.add and not b.back for b in in_place.bands):
         need(STEP_BANDS, "UPDATE_BANDS_IN_PLACE")
+    if any(not b.add or b.back for b in in_place.bands):
+        need(STEP_RELIEF, "UPDATE_SUPPRESSES_THE_RELIEF")
     if in_place.modes_added:
         need(STEP_MODE_ADD, "UPDATE_ADDS_A_MODE")
     if in_place.modes_removed:
@@ -5911,6 +5927,8 @@ def _in_place_faults(in_place: InPlace, motion: MotionUpdate, placements: Sequen
             raise fault(f"bands to change on {_file(band.part)}, which is not a part of the gearbox")
         if not band.features or (band.add and not band.ops):
             raise fault(f"bands to change on {_file(band.part)} with nothing to make or suppress")
+        if band.back and not band.add:
+            raise fault(f"bands both taken from and given back to {_file(band.part)}")
     after = {c.casefold() for c in motion.configurations}
     for mode in in_place.modes_added:
         if mode.casefold() not in after:
@@ -5992,7 +6010,19 @@ def _in_place_bands(sw: SolidWorks, result: GearboxUpdate, in_place: InPlace, do
         made = set(band.features) | (set(doc.made) | set(doc.features) if doc is not None else set())
         try:
             sw.open_document(band.part)
-            if band.add:
+            if band.back:
+                # Given back: the band globals set (or added, if gone), the relief turned back on; none made again.
+                there = dict((globals_plan or {}).get(doc.path if doc is not None else band.part, {}))
+                trig = sw.detect_trig_units()
+                for op in band.ops:
+                    if isinstance(op, base.AddGlobal) and there.get(op.name) == "set":
+                        sw.set_global_variable(op.name, op.expression_for(trig))
+                    elif isinstance(op, base.AddGlobal) and op.name not in there:
+                        sw.add_global_variable(op.name, op.expression_for(trig))
+                        result.globals_added.append((band.part, op.name))
+                for name in band.features:
+                    sw.suppress_feature(name, False)
+            elif band.add:
                 # F1: a band global a press that stopped left there is taken as done, or set (the check's plan).
                 there = dict((globals_plan or {}).get(doc.path if doc is not None else band.part, {}))
                 trig = sw.detect_trig_units()
@@ -6016,7 +6046,7 @@ def _in_place_bands(sw: SolidWorks, result: GearboxUpdate, in_place: InPlace, do
             states = list(sw.feature_states())
             listed = {s.name for s in states}
             ours = [s.name for s in states if s.name in made and _in_error(s.code)]
-            missing = [n for n in band.features if band.add and n not in listed]
+            missing = [n for n in band.features if band.add and not band.back and n not in listed]
             theirs = [f for f in _user_features(band.part, states, made) if _in_error(f.code)]
             result.user_features_in_error.extend(theirs)
             if ours or missing:
@@ -6860,10 +6890,19 @@ def _update_motion(sw: SolidWorks, parts: Sequence[DocumentValues], layout: Opti
         held_before[doc.path] = {name: _number_text(values.get(name), held[name]) for name in held}
         band = bands_of.get(doc.path.casefold())
         if band is not None:
-            band_globals[doc.path], found_here = _globals_plan(band.ops, held, in_place.left, _file(doc.path))
+            # Given back: the band globals the first giving added are the app's, set to the values now wanted.
+            theirs_too = [op.name for op in band.ops if isinstance(op, base.AddGlobal)] if band.back else []
+            band_globals[doc.path], found_here = _globals_plan(band.ops, held, tuple(in_place.left) + tuple(theirs_too),
+                                                               _file(doc.path))
             left_problems.extend(found_here)
             made_already = [s.name for s in (read_states or []) if s.name in band.features]
-            if made_already:
+            if band.back:
+                missing = [n for n in band.features if n not in made_already]
+                if missing:
+                    raise BuildError(f"{_file(doc.path)} no longer holds {_and(missing)}, the relief an earlier "
+                                     "Update SolidWorks suppressed to take its bands away, so the bands cannot be "
+                                     "given back and nothing is changed; build the gearbox again.")
+            elif made_already:
                 raise BuildError(f"{_file(doc.path)} already holds {_and(made_already)}, the relief of bands an "
                                  "Update SolidWorks that stopped part way began to give it, so nothing is changed; "
                                  f"delete {'it' if len(made_already) == 1 else 'them'} in SolidWorks and press Update "
