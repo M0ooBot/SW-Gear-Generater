@@ -269,7 +269,8 @@ def test_a_coupling_newly_needed_between_gears_on_record_is_made_in_place(parall
     assert "make ModeSlv engages LoDog, on in 2H" in ui_text.update_summary(up)
 
 
-def test_a_tooth_change_on_a_gearbox_with_modes_is_a_remake_gated_before_the_press(parallel_record):
+def test_a_tooth_change_on_a_gearbox_with_modes_is_a_remake_gated_before_the_press(parallel_record,
+                                                                                    w9c_unmeasured):
     _, record = parallel_record
     on_disk(record)
     spec = with_gear(with_gear(with_gear(transfer_case_parallel(), "FDrive", teeth="31"), "FIdler", teeth="19"),
@@ -327,7 +328,7 @@ def test_the_footer_foresees_a_removal_refused_over_the_users_mate_and_the_unmea
     assert "Sprocket-1" in text
 
 
-def test_the_footer_says_each_gate_not_settled_with_the_version_on_record(range_box_record):
+def test_the_footer_says_each_gate_not_settled_with_the_version_on_record(range_box_record, w9c_unmeasured):
     _, record = range_box_record
     on_disk(record)
     up = classify(record, renamed(range_box_fixed()))

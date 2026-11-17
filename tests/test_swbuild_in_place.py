@@ -28,7 +28,7 @@ def test_an_empty_in_place_is_nothing_to_do_and_gates_nothing():
     assert InPlace(modes_removed=("L",))
 
 
-def test_each_step_reads_its_own_gate_none_on_both_versions_as_committed():
+def test_each_step_reads_its_own_gate_while_it_is_none_on_either_version(w9c_unmeasured):
     every = InPlace(added=(swbuild.AddedGear("Hub", "gear9", "C:\\W\\Hub.SLDPRT"),), removed=(REMOVE_G4,),
                     new_mates=(swbuild.NewMate(base.Mate("m1", "gear", "gear7:Gear Axis", "gear2:Gear Axis"),
                                                on=("H",)),),
@@ -70,7 +70,7 @@ def ops_global():
     return base.AddGlobal("Start Band", "5")
 
 
-def test_a_remake_reads_the_mates_gate_only_with_modes(monkeypatch):
+def test_a_remake_reads_the_mates_gate_only_with_modes(monkeypatch, w9c_unmeasured):
     assert swbuild.in_place_gates(InPlace(), Y26, modes=True, remakes=True) == [
         (swbuild.STEP_MATES, "UPDATE_MAKES_MATES_WITH_MODES_ON_2026")]
     assert swbuild.in_place_gates(InPlace(), Y26, modes=False, remakes=True) == []
@@ -78,7 +78,7 @@ def test_a_remake_reads_the_mates_gate_only_with_modes(monkeypatch):
     assert swbuild.in_place_gates(InPlace(), Y26, modes=True, remakes=True) == []
 
 
-def test_a_gate_not_settled_refuses_by_name():
+def test_a_gate_not_settled_refuses_by_name(w9c_unmeasured):
     (problem,) = swbuild.judge_in_place(UserWork(), InPlace(modes_added=("X",)), file="RangeBox.SLDASM", revision=Y26)
     assert problem.kind == PROBLEM_UNSETTLED and problem.subjects == ("UPDATE_ADDS_A_MODE_ON_2026",)
     assert problem.sentence == ("Update SolidWorks would add a mode's configuration to the assembly, which has not been "
@@ -196,7 +196,7 @@ def test_a_gear_added_on_a_shaft_on_record_is_inserted_mated_and_put_with_its_tr
     assert "gear5-1" not in fake.fixed                       # fixed as placed, then let go, as the build's plan has it
 
 
-def test_a_gear_added_is_refused_by_name_while_its_gate_is_not_measured():
+def test_a_gear_added_is_refused_by_name_while_its_gate_is_not_measured(w9c_unmeasured):
     fake = _built_train()
     with pytest.raises(UserWorkRefused) as raised:
         _update_train(fake, in_place=InPlace(added=(ADD_G5,)), **_with_g5())
@@ -458,7 +458,8 @@ def t_with_modes(mode_findings, monkeypatch):
     return fake
 
 
-def test_a_tooth_change_with_modes_is_refused_by_name_until_its_gate_is_measured(t_with_modes):
+def test_a_tooth_change_with_modes_is_refused_by_name_until_its_gate_is_measured(t_with_modes,
+                                                                                  w9c_unmeasured):
     """As every gate: a UserWorkRefused with the finding as its subject, the user's work read, so the refusal is
     recorded and said after the press as the footer foresaw it (B's second joining round)."""
     fake = t_with_modes
@@ -566,7 +567,7 @@ def test_with_modes_each_gate_not_measured_refuses_before_any_write_naming_its_f
     assert _writes(fake) == []
 
 
-def test_bands_refuse_before_any_write_while_their_gate_is_not_measured():
+def test_bands_refuse_before_any_write_while_their_gate_is_not_measured(w9c_unmeasured):
     fake = _built_train()
     with pytest.raises(UserWorkRefused) as raised:
         _update_train(fake, parts=[_p17(RELIEF_FEATURES)], in_place=InPlace(bands=(_bands_given(),)))
@@ -1058,7 +1059,7 @@ def test_a_hub_built_and_inserted_in_place_runs_every_op_inside_a_bracket(tc_bui
     assert fake.dim_dialog_on and fake.dim_dialog_kept is None
 
 
-def test_two_gates_unmeasured_refuse_as_two_problems_each_with_its_finding_as_its_subject():
+def test_two_gates_unmeasured_refuse_as_two_problems_each_with_its_finding_as_its_subject(w9c_unmeasured):
     """The demonstration's second run (log line 180) saw one subject kept for two problems of one kind: the worker
     gives each its own; the merging was in the script's check, which keyed the record's problems by kind."""
     fake = _built_train()

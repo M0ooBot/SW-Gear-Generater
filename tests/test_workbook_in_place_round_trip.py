@@ -289,7 +289,8 @@ def test_the_record_differs_from_a_fresh_builds_only_where_the_plan_says(desk, m
 
 # -- each gate None refuses before any write, said before the press and recorded after ------------------------------
 
-def test_with_its_gates_unmeasured_the_done_when_edit_is_foreseen_refused_before_any_write_and_recorded(desk):
+def test_with_its_gates_unmeasured_the_done_when_edit_is_foreseen_refused_before_any_write_and_recorded(
+        desk, w9c_unmeasured):
     press = desk.press(fixed())
     text, ok = press.before
     assert not ok and text.startswith("Update SolidWorks would add Hub on Output (a new part, Hub_m1.25_N17)")

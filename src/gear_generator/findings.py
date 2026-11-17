@@ -1978,17 +1978,51 @@ SUBASSEMBLY_MISSING_PART_READS_ON_2024 = SUBASSEMBLY_MISSING_PART_READS_ON_2026
 # - UPDATE_ADDS_A_MODE, UPDATE_REMOVES_A_MODE (M10): a configuration added by Update (copied from the active one, every
 #   app mate's flag and slide value set and read back there) and one deleted, in a reopened assembly with the user's
 #   items.
+#
+# Measured on SolidWorks 2026 (W9C-RUNS-REVIEW.md, its first part and its addendum "The final runs on SolidWorks 2026
+# (34.0.0), and 007b3aa"), on two revisions with nothing measured differing between them: 34.1.1 in the morning's
+# runs 5 and 6 (app code 887916b; w9c-demo-sw2026-20261117-5-fixed-modes-bands-off-clean.log with
+# w9c-demo-20261117-094223.json, snapshot 9efcb2c; …-6-remake-clean-ring-cause.log with w9c-demo-20261117-111036.json,
+# snapshot 30bf0e9), and 34.0.0 in the final runs 10 and 11 (app code 3a9e592, the same in every gated write as at
+# head; …-10-final-whole-remake-script-fault.log with w9c-demo-20261117-143454.json, …-11-final-remake-step2-assembly-
+# flag.log with w9c-demo-20261117-153629.json; run 8, …-8-whole-remake-m3-again-fails.log at 64bec58, read the same).
+# Each _ON_2024 stays None until the 2024 run.
+# - UPDATE_INSERTS_A_GEAR_ON_2026 True. fixed: Hub built, inserted, mated and resolved in every mode, every user item
+#   kept, each mode §3's, the second press quiet with every save flag False (log 5:344; log 10:382, 384, 401, 446,
+#   453; log 8:1311). Caveats: measured on a hub (a spline to its sleeve); a plain gear added, with a lock or a new
+#   mesh, is measured on the fake only. An added gear can land in a user component: the app names the interference
+#   after the press, in red; the footer before it is silent.
+# - UPDATE_BANDS_IN_PLACE_ON_2026 True. fixed: RangeSlv's bands given in place after the user's groove, the groove
+#   kept and the step faces where they belong (log 5:345; log 10:385, 454; log 8:1312). Caveat: giving bands only;
+#   taking them away is UPDATE_SUPPRESSES_THE_RELIEF.
+# - UPDATE_ADDS_A_MODE_ON_2026 True. modes: H2 added from the mode showing, every flag and slide value read back as
+#   the record, the user's items there said as read, and the record's inventory naming H2 where SolidWorks reads each
+#   user mate on (log 5:546; log 10:639, 661; log 8:1518).
+# - UPDATE_REMOVES_A_MODE_ON_2026 True. modes: N deleted unshown with the user's lost flag said, the mode showing
+#   refused by name, the first mode deleted and the next made the record's first (log 5:852; log 10:687, 983; log
+#   8:1840).
+# - UPDATE_MAKES_MATES_WITH_MODES_ON_2026 True. remake: the four gear mates of 28/14/56 remade with modes, flags and
+#   senses read in every mode, the user's items kept (log 6:280; log 10:1373; log 11:200; log 8:2761). Caveats:
+#   measured on 28/14/56; a one-tooth-down ring is routed by way of a safe count (landing); set straight, it stops in
+#   the part, and the next press made without closing stops before any write (remake M3, log 11:316, 359). A removal
+#   through Update on a gearbox with modes is measured end to end on the fake only.
+# - EXTERNAL_REFERENCES_READ_ON_2026 stays None. m4: no positive case (a user part holding an in-context reference to
+#   a gear) could be made by proven calls, so the read is not measured and C4's refusal stands (log 10:1633). As facts,
+#   not a route: these five answered on every user part and Sun without an error and marked nothing (log 10:1632),
+#   IComponent2.ListExternalFileReferencesCount, IComponent2.ListExternalFileReferences2,
+#   IModelDocExtension.ListExternalFileReferencesCount, IModelDocExtension.ListExternalFileReferences and
+#   ISldWorks.GetDocumentDependencies2; none was held to a part with a reference.
 EXTERNAL_REFERENCES_READ_ON_2026 = None
 EXTERNAL_REFERENCES_READ_ON_2024 = None
-UPDATE_INSERTS_A_GEAR_ON_2026 = None
+UPDATE_INSERTS_A_GEAR_ON_2026 = True
 UPDATE_INSERTS_A_GEAR_ON_2024 = None
-UPDATE_MAKES_MATES_WITH_MODES_ON_2026 = None
+UPDATE_MAKES_MATES_WITH_MODES_ON_2026 = True
 UPDATE_MAKES_MATES_WITH_MODES_ON_2024 = None
-UPDATE_BANDS_IN_PLACE_ON_2026 = None
+UPDATE_BANDS_IN_PLACE_ON_2026 = True
 UPDATE_BANDS_IN_PLACE_ON_2024 = None
-UPDATE_ADDS_A_MODE_ON_2026 = None
+UPDATE_ADDS_A_MODE_ON_2026 = True
 UPDATE_ADDS_A_MODE_ON_2024 = None
-UPDATE_REMOVES_A_MODE_ON_2026 = None
+UPDATE_REMOVES_A_MODE_ON_2026 = True
 UPDATE_REMOVES_A_MODE_ON_2024 = None
 #
 # Split from the two above at the demonstration's ruling (2026-11-17: a finding gates only what was measured, and no
@@ -2001,6 +2035,10 @@ UPDATE_REMOVES_A_MODE_ON_2024 = None
 #   IFeature.SetSuppression2 through Session.suppress_feature) and bands given back (the relief turned back on, the
 #   band globals set, no second relief). UPDATE_BANDS_IN_PLACE keeps bands given (the globals and the relief made
 #   after the user's features).
+# On 2026 both stay None (W9C-RUNS-REVIEW.md, the addendum's §4): no legal edit of the demonstration's fixtures reaches
+# UPDATE_MAKES_A_NEW_COUPLING, so nothing was measured; UPDATE_SUPPRESSES_THE_RELIEF's call was made script-side only,
+# on the copy's sleeve, and read clean (the relief suppressed and on again, no second relief, its facts in the JSON's
+# proposal under _facts), but no Update made it (log 5:1081, log 10:1572).
 UPDATE_MAKES_A_NEW_COUPLING_ON_2026 = None
 UPDATE_MAKES_A_NEW_COUPLING_ON_2024 = None
 UPDATE_SUPPRESSES_THE_RELIEF_ON_2026 = None
