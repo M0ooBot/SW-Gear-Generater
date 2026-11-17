@@ -120,7 +120,8 @@ stays behind. Carrying anything over stays W9d's. (`W9A-PACKAGE-B.md`.)
 ## 4. Judgement calls where the plan left room (as revised)
 
 1. **Route (c1) only where measured**: S0's train with a carrier, and since the demonstration a train with no
-   carrier on a gearbox with no modes on 2026 (`USER_MATE_PUT_NO_CARRIER_ON_2026` True, section `nocarrier`). Every
+   carrier on a gearbox with no modes on 2026 and 2024 (`USER_MATE_PUT_NO_CARRIER_ON_<year>` True, section
+   `nocarrier`). Every
    other branch is its own finding, `findings.USER_MATE_PUT_<NO_CARRIER|NO_CARRIER_MODES|HELD_GEAR|FIXED_GEAR|
    SUBASSEMBLY>_ON_<year>`, None, and refuses naming the user's lock until set True (ruling 4; the sub-assembly
    branch is mine, and so is `NO_CARRIER_MODES`, split off at the demonstration's ruling because the run put a
@@ -155,10 +156,13 @@ stays behind. Carrying anything over stays W9d's. (`W9A-PACKAGE-B.md`.)
        anything unread counts as in error;
     3. an app component's own error code is not judged (a user feature in its part sets it: m3's Sprocket-1 read 1);
        its part's features and its mates are;
-    4. `assembly_rebuild_settled(revision)`: `ASSEMBLY_REBUILD_WITH_USER_MATE_IN_ERROR_ON_<year>`,
-       `ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_<year>` (False) and `WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_
-       <year>` (False) all set; on 2024 the mate finding is True (v24:51) but the other two are None, so there it stays
-       today's failure.
+    4. `assembly_rebuild_settled(revision)` (as the coordinator's ruling on 2024's What's Wrong box, 2026-11-17,
+       leaves it): `ASSEMBLY_REBUILD_WITH_USER_MATE_IN_ERROR_ON_<year>` and `ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_
+       ERROR_ON_<year>` set (the latter False), and `WHATS_WRONG_IN_UPDATE_BLOCKS_ON_<year>` False. It returns
+       `{"mate", "feature", "blocks"}` or None. It no longer turns on "no What's Wrong window ever opens"
+       (`WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_<year>`, which nothing reads now) but on "no window that blocks".
+       Settled on 2026 and on 2024; a version where `…_BLOCKS` is None or True, or either rebuild finding None,
+       keeps today's failure.
     Then `rebuild_from_user_alone` names the user's items and the log says "CHECK   the assembly's rebuild reported
     an error, from your work alone: …"; the post-checks run as after any rebuild. Otherwise the failure is as
     before, naming what of the user's was already in error. The static path reads no mate or component, so an
@@ -217,10 +221,17 @@ stays behind. Carrying anything over stays W9d's. (`W9A-PACKAGE-B.md`.)
   measured (which of them reads in error when a component does is not known), so the worker does not add it. An app
   equation in error beside a user component in error would be laid to the user. Rare; said in
   `ASSEMBLY_REBUILD_…`'s comment in `findings.py` too.
-- **What's Wrong during an Update on 2024** (`WHATS_WRONG_OPENS_IN_UPDATE_WITH_USER_MATE_IN_ERROR_ON_2024` True, 2026
-  False): SolidWorks 2024 opened the box during the app's value Update with only the user's mates in error. No app
-  behaviour reads the finding; what the app does waits on the user's answer to that §0.3 STOP. On 2024 today the
-  Update goes ahead over the user's mates in error, as on 2026.
+- **What's Wrong during an Update on 2024: the ruling** (the coordinator's, 2026-11-17, put to the user as the
+  default they may change). On SolidWorks 2024 the box shows for some seconds during an Update when something of the
+  user's is in error, a mate (`WHATS_WRONG_OPENS_IN_UPDATE_WITH_USER_MATE_IN_ERROR_ON_2024` True) or a feature
+  rebuilt into error (`…_WITH_PART_FEATURE_IN_ERROR_ON_2024` True); it blocks nothing and goes by itself, and the
+  Update completes (`WHATS_WRONG_IN_UPDATE_BLOCKS_ON_2024` False, the box runs `w9a-box-sw2024-20261117-*`). The
+  app does not suppress it, does not change SolidWorks' setting ("show errors every rebuild") and does not refuse
+  because of it: on 2024 it behaves as on 2026 (both `_ON_2026` findings False, no box at all). Measured with the
+  toggle on only; a person pressing the box's FeatureXpert during the job is not accounted for.
+  **`swbuild.whats_wrong_shows_in_update(revision)`**, for B's sentence: True where either
+  `WHATS_WRONG_OPENS_IN_UPDATE_WITH_<USER_MATE|PART_FEATURE>_IN_ERROR_ON_<year>` is True, False where both are
+  False, None where unmeasured. Pure.
 
 ## 6. Pins moved deliberately
 
@@ -256,3 +267,19 @@ At the round after the closing run (the close review's should-fix points, findin
 - `tests/test_findings.py::test_w9a_m3_an_assembly_rebuild_with_only_user_mates_in_error_returned_true_on_2026` no
   longer asserts `ASSEMBLY_REBUILD_WITH_USER_MATE_IN_ERROR_ON_2024` None: it is True from 2024's m3 (v24:51), pinned
   by its own test.
+
+At the coordinator's ruling on SolidWorks 2024's What's Wrong box (findings set from the box runs; the gate turns on
+the box not blocking):
+
+- `tests/test_swbuild_user_work.py`: `test_the_assembly_rebuild_findings_settle_2026_and_leave_2024_unmeasured`
+  becomes `test_the_assembly_rebuild_findings_settle_2026_and_2024` (the gate's dict key `whats_wrong` is now
+  `blocks`; 2024 settled). The tests that shut the gate by patching `WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_2026`
+  None now patch `WHATS_WRONG_IN_UPDATE_BLOCKS_ON_2026` (None, and True in the parametrized one):
+  `test_on_a_version_whose_finding_is_none_a_failed_assembly_rebuild_stays_todays_failure`,
+  `test_with_modes_and_the_finding_unset_the_failure_names_the_mode_and_the_users_part`, and both
+  `test_a_failed_update_…_still_carries_the_users_feature_newly_in_error_and_the_value_under_it`.
+- `tests/test_findings.py`: the 2024 assertions that pinned `USER_MATE_PUT_NO_CARRIER_ON_2024`,
+  `ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_2024` and `WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_2024` None are
+  taken out of the earlier tests (route (c1)'s branches, nocarrier on 2026 and its closing run, m3 and k3, m3's
+  window, 2024's mate rebuild); the "no app behaviour reads it" assertion on `WHATS_WRONG_OPENS_IN_UPDATE_…` goes,
+  as the helper reads it. Each new value is pinned by its own test.
