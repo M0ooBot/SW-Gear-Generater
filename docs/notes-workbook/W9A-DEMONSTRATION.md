@@ -31,7 +31,7 @@ The times are estimates, not measurements. They are scaled from S0 (a case took 
 
 | # | Section | What it does and proves | Answers | 2026 | 2024 |
 |---|---|---|---|---|---|
-| 1 | `m3` | On a copy of S0's master: a user sprocket held by two distance mates, and a fixed housing. (1) An assembly rebuild by the app's route with a user mate in error (UserGap 40 → 41, against UserFront), then the app's value Update with it. (2) A keyway in the user's own Sprocket part, put in error by its Bore 10 → 14 (S0's P0 mechanism); the part's and the assembly's rebuild, then a value Update. Each is read for the rebuild's return, What's Wrong count, the codes and any new window. | **M3** for the assembly rebuild, first, because a dialog there is a STOP | 12 min | 24 min |
+| 1 | `m3` | On a copy of S0's master: a user sprocket on Input Axis held by one distance to the layout's Front plane (UserFront), and a fixed housing. The baseline is clean by construction; the distance it leaves to the housing is read. (1) A second mate, UserGap, to the housing at that distance plus 1 mm, which no side can satisfy; an assembly rebuild by the app's route with it in error, then the app's value Update with it; then UserGap suppressed and the assembly clean again. (2) A keyway in the user's own Sprocket part, put in error by its Bore 10 → 14 (S0's P0 mechanism); the part's and the assembly's rebuild, then a value Update. Each is read for the rebuild's return, What's Wrong count, the codes and any new window. | **M3** for the assembly rebuild, first, because a dialog there is a STOP | 12 min | 24 min |
 | 2 | `setup` | On a copy of S0's master, the user's work (below), saved in place, closed and reopened. The app's reads (`components`, `mate_info`, `feature_states`) with GetSaveFlag around them. A quiet Update that records the inventory, with the footer before and after. The pure judgement showing each unmeasured branch refusing. Kept as `setup.master`. | **M1** (coincident, distance, angle and lock; user–user, user–layout and user–gear; marks nothing), **M2** (the inventory must list the keyway in Sun's part and nothing of the app's), the record's revision | 7 min | 13 min |
 | 3 | `go` | On a copy of setup.master, two presses, each after the user's turn of +37° in the mode it puts (H, then L): a value Update (Sun's Backlash 0.4) and a slide-offset Update (RangeSlv `L=+5.5`). Before each press: the footer's prediction and every user mate's entities. After: the checks listed below. | ***Done when*: both Updates go ahead, the sprockets found on their gears, every user mate on in its modes and in no error, the keyway rebuilt; the inventory and the footer before and after; review B's item 3 (the carry foreseen is the carry done)** | 18 min | 35 min |
 | 4 | `m1` | On a copy of setup.master: a user gear mate, and a distance mate suppressed in H (asserted to be the active mode) but on in N and L. Read by `mate_info` and by a quiet Update's inventory. | **M1**: the gear kind, and a mate suppressed in the active mode. Whether the latter reads whole is proposed, not asserted. | 5 min | — |
@@ -43,12 +43,29 @@ The times are estimates, not measurements. They are scaled from S0 (a case took 
 | 10 | `k3` | On a copy of reducer.master: a user keyway in G1's part. A quiet press must list it (M2 on the 12 : 1). Then G1's Bore 8 → 14 in the workbook, an ordinary value Update, rebuilds the keyway into error. The footer must say the keyway follows. The Update must name it as the user's (`user_features_in_error`, its sentence), and G1's app features must read no error. A window here ends this section only. | **K3 in an app part, and M3 as the app meets it** (review point 6) | 6 min | 11 min |
 | 11 | `nocarrier` | On a copy of reducer.master, three sprockets: locked to the driving G1 (S0's A), to the driven G4 (B), and one locked to the first (E, a chain). The user's turn and G4 At 27 → 30, first with `USER_MATE_PUT_NO_CARRIER_ON_<year>` None: the app's refusal, foreseen by the footer and judged by its trace. Then the finding patched True in this process only, the press, the reads. A further rebuild, a second turn, and G4 At 30 → 27. Every put must be an app body or a locked sprocket. | **The coordinator's measurement**: proposes the finding True only if both presses and every read are clean | 11 min | 19 min |
 
+**m3's first run** (2026-11-16, snapshot `2920a09`) failed in its own set-up, and this is why m3 is built as above.
+
+- UserFront (100 mm to the layout's Front) and UserGap (40 mm to the housing's Front) agreed in value but not in side.
+  A plane-to-plane distance mate's side is AddMate5's Flip, which the app's `distance` leaves False, and no finding
+  says which side that is.
+- So UserGap came back status 5, with codes 46 and 47 (`findings.MATE_ERROR_OVER_DEFINED` / `MATE_ERROR_ILL_DEFINED`),
+  before the step meant to make the contradiction.
+- That step set UserGap's value in every mode in one `set_dimension_in` call, and it read 0 in N and L. The app sets a
+  distance one configuration per call, and a configuration never set reads 0 (`findings.VALUE_UNSET_READS_ZERO`).
+- Kept as a fact: with those two user mates in error, the assembly rebuild returned True, GetWhatsWrongCount read 3,
+  and no window came up.
+
+For the same reason, setup's Sprocket-4 now stands 90 mm from Sprocket-3, inserted at z 130. Either side SolidWorks
+takes (130 or −50) is clear of every body. setup reads which side it took and checks that no user component
+interferes, and go holds Sprocket-4 to the distance as copied. m1's per-mode distance is to the layout's Front (±160).
+`again-dirty` changes UserDist4 in the active mode only, by one `set_dimension_in` call, from the value read.
+
 **setup's user work:**
 
 - Sprocket-1 on Input Axis, locked to Sun;
 - Sprocket-2 on Output Axis, locked to RangeSlv;
 - Sprocket-3 locked to Sprocket-1;
-- Sprocket-4 on Input Axis, held by a distance to Sprocket-3 (user–user) and an angle to the layout;
+- Sprocket-4 on Input Axis, held by a 90 mm distance to Sprocket-3 (user–user) and an angle to the layout;
 - Housing-1, fixed;
 - a keyway in Sun's part.
 

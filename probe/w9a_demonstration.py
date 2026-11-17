@@ -119,10 +119,14 @@ SUN_PART_NAME = "SunGear"  # the again sections' Part name for Sun: its file mus
 RB_INSERTS = (("u1", "Sprocket.SLDPRT", (0.0, 0.0, 30.0), "Sprocket-1"),
               ("u2", "Sprocket.SLDPRT", (0.0, 0.0, -70.0), "Sprocket-2"),
               ("u3", "Sprocket.SLDPRT", (0.0, 0.0, 40.0), "Sprocket-3"),
-              ("u4", "Sprocket.SLDPRT", (0.0, 0.0, 80.0), "Sprocket-4"),
+              ("u4", "Sprocket.SLDPRT", (0.0, 0.0, 130.0), "Sprocket-4"),
               ("uh", "Housing.SLDPRT", (0.0, 0.0, 60.0), "Housing-1"))
 RB_LOCKED = {"Sprocket-1": "Sun", "Sprocket-3": "Sun", "Sprocket-2": "RangeSlv"}   # each locked sprocket's gear
-RB_GAP = 40.0              # Sprocket-4's Front plane from Sprocket-3's (UserDist4)
+# Sprocket-4's Front plane from Sprocket-3's (UserDist4). A plane-to-plane distance mate's side is AddMate5's Flip,
+# which the app's "distance" leaves False and no finding settles (m3's first run, 2920a09), so Sprocket-4 may stand at
+# 40 + 90 = 130, where it is inserted, or at 40 - 90 = -50: both are clear of every body on the axis (Sun 5.5 to 15.5,
+# RangeSlv and the dogs -34.5 to -14.5, Sprocket-2 about -76 to -64). setup reads which, and go holds it to that.
+RB_GAP = 90.0
 
 RESULT = {"sections": {}, "stops": [], "proposal": {}}
 CTX = {"worker": None, "excel": None, "parts": ""}
@@ -781,33 +785,68 @@ def section_m3(out):
         box = desk.record.gearbox
         asm, modes = box.assembly, list(box.modes)
         axes = {s.shaft: s.axis_name for s in wb_layout.shaft_layouts(desk.a.spec)}
+        # The first run (2920a09) made two distance mates agree in value only: UserFront 100 to the layout's Front and
+        # UserGap 40 to the housing's. A plane-to-plane distance mate's side is AddMate5's Flip, which the app's
+        # "distance" leaves False and no finding says which side that is, so UserGap came back over-defining (status
+        # 5, codes 46 and 47, findings.MATE_ERROR_OVER_DEFINED / ILL_DEFINED) before anything was meant to be wrong.
+        # Now the baseline holds one axial mate only, clean by construction whichever side SolidWorks takes, and the
+        # distance it leaves is read, not assumed; the contradiction is then a second mate to the housing at that
+        # distance plus 1 mm, which no side can satisfy. (The value change through set_dimension_in, every mode in one
+        # call, also read 0 in N and L: the app sets one configuration per call, and a configuration never set reads
+        # 0, findings.VALUE_UNSET_READS_ZERO; nothing here sets a distance any more.)
         inserts = (("u1", "Sprocket.SLDPRT", (0.0, 0.0, 100.0), "Sprocket-1"),
                    ("uh", "Housing.SLDPRT", (0.0, 0.0, 60.0), "Housing-1"))
         mates = (("ua", "coincident", "u1:Gear Axis", f"lay:{axes['Input']}", 0.0, "UserAxis", {}),
-                 ("uf", "distance", "u1:plane1", "lay:plane1", 100.0, "UserFront", {}),
-                 ("ug", "distance", "u1:plane1", "uh:plane1", 40.0, "UserGap", {}))
-        add_user_work("m3", desk, folder, inserts, mates, fixed=("uh",), refs={"lay": box.layout_component})
+                 ("uf", "distance", "u1:plane1", "lay:plane1", 100.0, "UserFront", {}))
+        _, made = add_user_work("m3", desk, folder, inserts, mates, fixed=("uh",), refs={"lay": box.layout_component})
+        check(all(m.get("status") == findings.ADD_MATE_NO_ERROR for m in made["mates"].values()),
+              f"m3: the baseline's mates were made sound (AddMate5 status {findings.ADD_MATE_NO_ERROR}): "
+              f"{ {n: m.get('status') for n, m in made['mates'].items()} }")
+
+        def where(s):
+            s.find_component("u1", "Sprocket-1")
+            s.find_component("uh", "Housing-1")
+            return s.component_frame("u1"), s.component_frame("uh")
+        sprocket_at, housing_at = run("m3: where the sprocket stands", job(asm, where))
+        z_s, z_h = float(sprocket_at[1][2]), float(housing_at[1][2])
+        gap = abs(z_s - z_h)
+        out["placed"] = {"sprocket_z": z_s, "housing_z": z_h, "gap": gap}
+        say(f"fact    m3: UserFront left Sprocket-1's origin at z {z_s:.6f} (inserted at 100: the side AddMate5's "
+            f"Flip False took); Housing-1 at z {z_h:.6f}; their Front planes {gap:.6f} mm apart")
         save_user(folder, "the user's sprocket and housing")
         out["baseline"] = assembly_rebuild("m3 baseline", asm, folder)
-        check(out["baseline"]["rebuilt"] and not any(c for c, sup in out["baseline"]["mates"].values() if not sup),
-              "m3: with nothing in error the assembly rebuild returns True and no mate is in error")
+        if not out["baseline"]["rebuilt"] or any(c for c, sup in out["baseline"]["mates"].values() if not sup):
+            raise AssertionError(f"m3: the baseline is not clean, so nothing after it would answer M3: rebuild "
+                                 f"{out['baseline']['rebuilt']}, mates {out['baseline']['mates']}")
+        check(True, "m3: with nothing in error the assembly rebuild returns True and no mate is in error")
 
-        say("-- m3  a user mate in error: UserGap 40 -> 41 mm in every mode, which UserFront contradicts")
+        say(f"-- m3  a user mate in error: UserGap, Sprocket-1's Front plane {gap + 1.0:.6f} mm from Housing-1's (the "
+            f"distance read plus 1 mm), which UserFront contradicts on either side")
 
-        def gap(value):
-            def work(s):
-                s.find_mate("ug", "UserGap")
-                s.set_dimension_in("ug", value, modes)
-                return True
-            return work
-        run("m3: UserGap 41", job(asm, gap(41.0)))
+        def contradiction(s):
+            s.find_component("u1", "Sprocket-1")
+            s.find_component("uh", "Housing-1")
+            kept, _ = s.add_mate("ug", "distance", "u1:plane1", "uh:plane1", gap + 1.0, "UserGap")
+            status = s.mate_status(kept)
+            flags = s.mate_suppression("ug", modes)
+            return kept, status, flags
+        before = S0.sw_windows()
+        kept, status, flags = run("m3: UserGap made", job(asm, contradiction))
+        new, counted = windows_new(before)
+        watch_check("m3: UserGap made")
+        if counted:
+            stop(f"m3: a window came up when the over-defining mate was made: {counted} (§0.3: any dialog)")
+        say(f"fact    m3: {kept} made: AddMate5 status {status} (over-defining is {findings.ADD_MATE_OVER_DEFINED}); "
+            f"flags {flags}")
         got = out["mate_error"] = assembly_rebuild("m3 a user mate in error", asm, folder)
-        users_bad = {n for n, (c, sup) in got["mates"].items() if c and not sup and n.startswith("User")}
-        app_bad = {n for n, (c, sup) in got["mates"].items() if c and not sup and not n.startswith("User")}
-        check(bool(users_bad), f"m3: a user mate reads in error, so the reading answers M3: user {sorted(users_bad)}, "
-                               f"the app's {sorted(app_bad)}")
+        got["add_mate_status"] = status
+        users_bad = {n: c for n, (c, sup) in got["mates"].items() if c and not sup and n.startswith("User")}
+        app_bad = {n: c for n, (c, sup) in got["mates"].items() if c and not sup and not n.startswith("User")}
+        check(bool(users_bad) and not app_bad,
+              f"m3: only the user's mates read in error, so the reading answers M3: user {users_bad} "
+              f"(46 over defined, 47 ill defined), the app's {app_bad or 'none'}")
         say(f"answer  M3 (assembly, a user mate in error): the rebuild returned {got['rebuilt']}, What's Wrong "
-            f"{got['whats_wrong']}, no window; the app's mates also read in error: {sorted(app_bad) or 'none'}")
+            f"{got['whats_wrong']}, codes {users_bad}, no window")
         save_user(folder, "the mate in error, as the user leaves it")
 
         say("-- m3  the app's value Update (Sun's Backlash 0.4) with only that user mate in error")
@@ -827,11 +866,19 @@ def section_m3(out):
                                                                           "UserGap" in result.user_work.in_error),
                   f"m3: the Update lists UserGap among the user's items in error: {result.user_in_error}")
 
-        say("-- m3  UserGap back to 40: nothing in error again")
-        run("m3: UserGap 40", job(asm, gap(40.0)))
-        got = assembly_rebuild("m3 the mate set back", asm, folder)
-        check(not any(c for n, (c, sup) in got["mates"].items() if not sup and n.startswith("User")),
-              "m3: with UserGap back at 40 no user mate is in error")
+        say("-- m3  UserGap suppressed in every mode, as the user would: nothing in error again")
+
+        def suppress(s):
+            s.find_mate("ug", "UserGap")
+            s.set_mate_suppressed_in("ug", True, modes)
+            s.rebuild(kind=swcom.ASSEMBLY_TRAIN)
+            return s.mate_suppression("ug", modes)
+        flags = run("m3: UserGap suppressed", job(asm, suppress))
+        if not all(flags.values()):
+            stop(f"m3: UserGap did not read back suppressed in every mode: {flags} (§0.3)")
+        got = assembly_rebuild("m3 the mate suppressed", asm, folder)
+        check(not any(c for n, (c, sup) in got["mates"].items() if not sup),
+              f"m3: with UserGap suppressed no mate is in error: {got['mates']}")
 
         say("-- m3  a user feature in error: a keyway in the user's Sprocket part, then its own Bore Diameter 10 -> 14 "
             "(S0's P0 mechanism: the keyway left inside the bore)")
@@ -873,6 +920,11 @@ def section_m3(out):
                   f"failures {result.failures})")
         RESULT["proposal"]["M3"] = {
             "assembly_rebuild_with_user_mate_in_error": out["mate_error"]["rebuilt"],
+            "whats_wrong_count_with_user_mate_in_error": out["mate_error"]["whats_wrong"],
+            "user_mate_codes": {n: c for n, (c, sup) in out["mate_error"]["mates"].items()
+                                if c and not sup and n.startswith("User")},
+            "over_defining_mate_made_with_status": out["mate_error"].get("add_mate_status"),
+            "whats_wrong_count_with_user_feature_in_error": out["feature_error"]["whats_wrong"],
             "assembly_rebuild_with_user_feature_in_error": out["feature_error"]["rebuilt"],
             "part_rebuild_with_user_feature_in_error": out["part_rebuild"]["rebuilt"],
             "whats_wrong_window": False,
@@ -926,6 +978,16 @@ def _setup(out, parts, folder, desk):
     for mode in modes:
         bad = {n: c for n, (c, sup) in every["mates"][mode].items() if c and not sup}
         check(not bad, f"setup: in {mode} (shown) every mate on there reads error code 0: {bad or 'none'}")
+        frames = every["frames"][mode]
+        dz = float(frames["Sprocket-4"][1][2]) - float(frames["Sprocket-3"][1][2])
+        out.setdefault("sprocket4_dz", {})[mode] = dz
+        check(abs(abs(dz) - RB_GAP) <= TOL, f"setup: in {mode} Sprocket-4 stands {dz:+.6f} mm from Sprocket-3 along the "
+                                            f"axis, UserDist4's {RB_GAP:g} on the side AddMate5 took (a fact)")
+    clashes = run("setup: interference", lambda s: W.live_interferences(s, asm))
+    users = set(rb_users())
+    ours = [(names, round(volume, 3)) for names, volume in clashes if set(names) & users]
+    out["user_clashes"] = ours
+    check(not ours, f"setup: no component of the user's interferes with anything: {ours or 'none'} (all: {clashes})")
     save_user(folder, "the user's work")
     left = run("close", W.quit_in(folder))
     check(not left, f"setup: closed after the save: left {left}")
@@ -1090,9 +1152,10 @@ def section_m1(out):
         made = {}
         for mate in (("ua5", "coincident", "u5:Gear Axis", f"lay:{axes['Input']}", 0.0, "UserAxis5", {}),
                      ("ug5", "gear", "u5:Gear Axis", "u4:Gear Axis", 0.0, "UserGear5", {"ratio": (20.0, 20.0)}),
-                     ("ud5", "distance", "u5:plane1", "u4:plane1", 30.0, "UserDist5", {})):
+                     # to the layout's Front, so either side AddMate5's Flip takes (+-160) is clear of every body
+                     ("ud5", "distance", "u5:plane1", "lay:plane1", 160.0, "UserDist5", {})):
             first = not made
-            inserts = (("u5", "Sprocket.SLDPRT", (0.0, 0.0, 110.0), "Sprocket-5"),) if first else ()
+            inserts = (("u5", "Sprocket.SLDPRT", (0.0, 0.0, 160.0), "Sprocket-5"),) if first else ()
             try:
                 if first:
                     _, got = add_user_work("m1", desk, folder, inserts, (mate,),
@@ -1106,7 +1169,7 @@ def section_m1(out):
                 check(False, f"m1: {mate[5]} could not be made: {exc}")
         save_user(folder, "the user's gear and per-mode mates")
         expected = {"UserAxis5": {"Sprocket-5", box.layout_component}, "UserGear5": {"Sprocket-5", "Sprocket-4"},
-                    "UserDist5": {"Sprocket-5", "Sprocket-4"}}
+                    "UserDist5": {"Sprocket-5", box.layout_component}}
 
         def m1(s):
             r = {"flags_before": W.folder_flags(s, folder), "active": s.active_configuration(), "mates": {}}
@@ -1153,7 +1216,7 @@ def section_m1(out):
 RB_USER_MATES = ("UserAxis1", "UserAxis2", "UserLock1", "UserLock2", "UserLock3", "UserAxis4", "UserDist4", "UserAngle4")
 
 
-def go_judge(label, desk, every, rel_orig, flags_set, out):
+def go_judge(label, desk, every, rel_orig, flags_set, out, dz_set):
     """After a press, every mode shown: each app body at its frame on record, each locked sprocket at its pose on its
     gear as set up, every user mate on where it was and in no error, Sprocket-4 at its distance from Sprocket-3."""
     box = desk.record.gearbox
@@ -1167,11 +1230,12 @@ def go_judge(label, desk, every, rel_orig, flags_set, out):
         dz = float(frames["Sprocket-4"][1][2]) - float(frames["Sprocket-3"][1][2])
         free = {g: v for g, v in every["status"][mode].items()
                 if g in dict(W.bodies(box)) and g not in box.fixed and v != findings.COMPONENT_UNDER_DEFINED}
-        ok = gap <= TOL and all(v <= TOL for v in gaps.values()) and not errors and abs(dz - RB_GAP) <= TOL and not free
+        ok = gap <= TOL and all(v <= TOL for v in gaps.values()) and not errors and abs(dz - dz_set[mode]) <= TOL \
+            and not free
         clean = clean and ok
         check(ok, f"{label}, {mode} shown: every app body at its frame on record ({gap:.1e} at {at or '-'}); each locked "
                   f"sprocket on its gear as set up {fmt(gaps)}; mates in error {errors or 'none'}; Sprocket-4 "
-                  f"{dz:.9f} mm from Sprocket-3 (set {RB_GAP:g}); the train free {not free}")
+                  f"{dz:.9f} mm from Sprocket-3 (as set up {dz_set[mode]:.9f}); the train free {not free}")
     flags = {n: f for n, f in every["by_mode"].items() if n in flags_set}
     check(flags == flags_set, f"{label}: every user mate is on in the modes it was on in: "
                               f"{ {n: (flags_set[n], flags.get(n)) for n in flags_set if flags.get(n) != flags_set[n]} or 'as set'}")
@@ -1186,7 +1250,7 @@ def entities_of(label, desk, folder):
                     list(box.modes), entities=RB_USER_MATES)["entities"]
 
 
-def go_press(label, desk, folder, book, cells, out, rel_orig, flags_set):
+def go_press(label, desk, folder, book, cells, out, rel_orig, flags_set, dz_set):
     W.edit(desk, book, *cells)
     u = desk.update
     check(u is not None and not u.needs_new_revision and not u.refusal,
@@ -1229,7 +1293,7 @@ def go_press(label, desk, folder, book, cells, out, rel_orig, flags_set):
     check(entities_after == entities_before, f"{label}: every user mate joins what it joined before the press (§0.3): "
           f"{ {n: (entities_before.get(n), v) for n, v in entities_after.items() if entities_before.get(n) != v} or 'the same'}")
     every = read_every(f"{label}, after", box.assembly, pairs_of(box, rb_users()), list(box.modes))
-    go_judge(label, desk, every, rel_orig, flags_set, out)
+    go_judge(label, desk, every, rel_orig, flags_set, out, dz_set)
     feats = feature_list(sun_part(box))
     key = [f for f in feats if f[0] == "User Keyway"]
     check(bool(key) and not key[0][2], f"{label}: the user's keyway rebuilt in Sun's part after the app's features, code "
@@ -1278,16 +1342,21 @@ def section_go(out):
         flags_set = {n: f for n, f in every["by_mode"].items() if n in RB_USER_MATES}
         check(all(not any(f.values()) for f in flags_set.values()) and set(flags_set) == set(RB_USER_MATES),
               f"go: the user's 8 mates on in every mode as set up: {sorted(flags_set)}")
-        go_judge("go as copied", desk, every, rel_orig, flags_set, out)
+        dz_set = {m: float(every["frames"][m]["Sprocket-4"][1][2]) - float(every["frames"][m]["Sprocket-3"][1][2])
+                  for m in modes}
+        check(all(abs(abs(v) - abs(dz_set[modes[0]])) <= TOL for v in dz_set.values()),
+              f"go: Sprocket-4 stands the same distance from Sprocket-3 in every mode as copied: {dz_set}")
+        go_judge("go as copied", desk, every, rel_orig, flags_set, out, dz_set)
         go_turn("the user's turn +37° in H", desk, modes[0])
         out["value"] = bool(go_press("go value Update (Sun's Backlash 0.4)", desk, folder, book,
-                                     [("Gears", W.cell(book, "Gears", "Backlash", "Sun"), 0.4)], out, rel_orig, flags_set))
+                                     [("Gears", W.cell(book, "Gears", "Backlash", "Sun"), 0.4)], out, rel_orig, flags_set,
+                                     dz_set))
         live = run("Sun's globals", lambda s: W.live_globals(s, sun_part(desk.record.gearbox)))
         check(abs(float(live.get(spur.BACKLASH, 0.0)) - 0.4) < 1e-9, f"go: Sun's Backlash reads {live.get(spur.BACKLASH)}")
         go_turn("the user's turn +37° in L", desk, modes[-1])
         out["slide"] = bool(go_press("go slide-offset Update (RangeSlv L=+5.5)", desk, folder, book,
                                      [("Gears", W.cell(book, "Gears", "Slides", "RangeSlv"), "H=-5, N=0, L=+5.5")],
-                                     out, rel_orig, flags_set))
+                                     out, rel_orig, flags_set, dz_set))
     finally:
         W.end_copy(CTX["worker"], folder, "go")
 
@@ -1586,10 +1655,16 @@ def section_again(out, variant="open"):
             run(f"{name}: the old assembly opened", job(old, lambda s: s.active_configuration()))
             if variant == "dirty":
                 def dirty(s):
+                    # The user's edit, not rebuilt: UserDist4 0.5 mm longer in the active mode, one configuration per
+                    # call as the app sets a distance (set_dimension_in; m3's first run read 0 in the modes not set
+                    # when it was given every mode at once: findings.VALUE_UNSET_READS_ZERO), from the value read.
+                    active = s.active_configuration()
                     s.find_mate("ud4", "UserDist4")
-                    s.set_dimension_in("ud4", RB_GAP + 0.5, modes)        # the user's edit, not rebuilt yet
-                    return True
-                run(f"{name}: UserDist4 changed, no rebuild", job(old, dirty))
+                    was = s.dimension_values("ud4", [active])[active]
+                    s.set_dimension_in("ud4", was + 0.5, [active])
+                    return active, was
+                active, was = run(f"{name}: UserDist4 changed, no rebuild", job(old, dirty))
+                say(f"person  {name}: UserDist4 {was:.6f} -> {was + 0.5:.6f} mm in {active}, not rebuilt")
             housing = os.path.join(folder, "Housing.SLDPRT")
             front = run(f"{name}: another document brought forward",
                         job(housing, lambda s: os.path.basename((s.active_document() or swcom.DocInfo("", "", 0)).path)))
