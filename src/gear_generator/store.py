@@ -655,6 +655,9 @@ class UserProblemEntry:
     sentence: str = ""
     mates: List[str] = field(default_factory=list)
     values: List[ValueEditEntry] = field(default_factory=list)
+    # W9c: what the sentence names (``swbuild.UserProblem.subjects``: the gear, the user's components, the mode, the
+    # configuration, the finding). Additive: a reader of schema 8 that does not know it leaves it out.
+    subjects: List[str] = field(default_factory=list)
 
 
 @dataclass
@@ -744,6 +747,11 @@ class GearboxRecord:
     # Schema 7 (W9a): what the last Update read of the user's work in ``assembly`` (UserWorkEntry); None = nothing read
     # yet (every record before schema 7, and a new revision's assembly until its first Update).
     user_work: Optional[UserWorkEntry] = None
+    # W9c (F1, the joining round): what an Update that stopped part way added by name and the record keeps as the
+    # app's — each global an in-place step added (``GearboxUpdate.globals_added``' names) and each configuration it
+    # added for a mode — handed back as ``swbuild.InPlace.left`` on the next press; [] once a press runs to its end.
+    # Additive: a reader of schema 8 that does not know it leaves it out.
+    left: List[str] = field(default_factory=list)
 
 
 @dataclass

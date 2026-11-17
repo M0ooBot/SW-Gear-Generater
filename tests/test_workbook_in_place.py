@@ -281,9 +281,9 @@ def test_a_tooth_change_on_a_gearbox_with_modes_is_a_remake_gated_before_the_pre
     text, ok = ui_text.in_place_line((problem,), record)
     assert not ok and text == (
         "The next press would stop before changing anything: Update SolidWorks would make a gear mate in an assembly "
-        "with modes and set its flag in each mode, which Gear Generator has not yet been shown to do on the SolidWorks "
-        "it runs on (findings.UPDATE_MAKES_MATES_WITH_MODES_ON_<year>), so the press changes nothing; Build again… "
-        "makes the new revision instead.")
+        "with modes again and set its flag in each mode, which Gear Generator has not yet been shown to do on the "
+        "SolidWorks it runs on (findings.UPDATE_MAKES_MATES_WITH_MODES_ON_<year>), so the press changes nothing; Build "
+        "again… makes the new revision instead.")
 
 
 # -- still Build again…, and a mixed edit ----------------------------------------------------------------------------
@@ -337,7 +337,7 @@ def test_the_footer_says_each_gate_not_settled_with_the_version_on_record(range_
     text, ok = ui_text.in_place_line(update.in_place_ahead(up, rec), rec)
     assert not ok and text == (
         "The next press would stop before changing anything: Update SolidWorks would insert a gear into the assembly "
-        "and mate it and give a built sleeve its bands, or take them away, in its own part, which Gear Generator has "
+        "and mate it and give a built sleeve its bands in its own part, which Gear Generator has "
         "not yet been shown to do on SolidWorks 2026 (findings.UPDATE_INSERTS_A_GEAR_ON_2026 and "
         "findings.UPDATE_BANDS_IN_PLACE_ON_2026), so the press changes nothing; Build again… makes the new revision "
         "instead.")

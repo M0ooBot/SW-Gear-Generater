@@ -21,7 +21,8 @@ from test_swbuild_in_place import WRITES
 
 BOOK = "C:\\B\\RangeBox.xlsx"
 GATES = ("UPDATE_INSERTS_A_GEAR", "UPDATE_MAKES_MATES_WITH_MODES", "UPDATE_BANDS_IN_PLACE", "UPDATE_ADDS_A_MODE",
-         "UPDATE_REMOVES_A_MODE")
+         "UPDATE_REMOVES_A_MODE", "UPDATE_MAKES_A_NEW_COUPLING", "UPDATE_SUPPRESSES_THE_RELIEF")
+STAMP = "2026-11-17T09:00:00Z"        # every finish's stamp, so no record differs by the second it was written in
 
 
 def _key(path):
@@ -97,7 +98,8 @@ class Desk:
         result = swbuild.build_gearbox(self.sw, **plan.build_kwargs(), exists=self.disk.exists)
         assert result.ok, result.failures
         done = gearbox.finish_build(plan, result, self.record, workbook=BOOK, digest=self.digest(spec),
-                                    written_by="test", read_sidecar=self.disk.read_sidecar, exists=self.disk.exists)
+                                    written_by="test", read_sidecar=self.disk.read_sidecar, exists=self.disk.exists,
+                                    stamp=STAMP)
         self.disk.write(done)
         self.record = store.link_record_from_json(store.link_record_to_json(done.record))
         return self.record
@@ -137,7 +139,7 @@ class Desk:
             return press
         done = update.finish_update(up, result, self.record, digest=self.digest(spec),
                                     read_sidecar=self.disk.read_sidecar, mtime=lambda _p: 0.0,
-                                    revision=self.sw.revision, written_by="test")
+                                    revision=self.sw.revision, written_by="test", stamp=STAMP)
         self.disk.write(done)
         self.record = store.link_record_from_json(store.link_record_to_json(done.record))
         press.result, press.finished = result, done
@@ -189,15 +191,6 @@ def desk():
     return d
 
 
-def _user_state(desk):
-    sw, rec = desk.sw, desk.record
-    asm = rec.gearbox.assembly
-    mates = sorted((m.name, m.suppressed) for m in sw.memory_mates[_key(asm)] if m.name == "Lock3")
-    features = {p: sorted(f.name for f in sw.part_features(p)) for p in (_part(rec, "Sun"), _part(rec, "RangeSlv"))} \
-        if hasattr(sw, "part_features") else {}
-    return mates, features
-
-
 # -- the plan's Done-when edit ---------------------------------------------------------------------------------------
 
 def test_range_box_to_range_box_fixed_is_one_update_keeping_every_user_item(desk, measured):
@@ -207,9 +200,9 @@ def test_range_box_to_range_box_fixed_is_one_update_keeping_every_user_item(desk
     up = press.up
     assert up.structural == () and [g.gear for g in up.in_place.added] == ["Hub"]
     text, ok = press.before
-    assert ok and "would stop" not in text and text.startswith("Update SolidWorks will add Hub on Output (a new part, Hub_m1.25_N17), as its "
-                                  "shaft's anchor with RangeSlv splined to it, give RangeSlv its bands in "
-                                  "Sleeve_m1.25_N17")
+    assert ok and "would stop" not in text
+    assert text.startswith("Update SolidWorks will add Hub on Output (a new part, Hub_m1.25_N17), as its shaft's "
+                           "anchor with RangeSlv splined to it, give RangeSlv its bands in Sleeve_m1.25_N17")
     assert press.refused is None and press.result.ok, (press.result.failures, press.result.skipped)
     r = press.result
     assert [g for g, _ in r.inserted] == ["Hub"] and r.bands_added == ["RangeSlv"]
@@ -303,7 +296,7 @@ def test_with_its_gates_unmeasured_the_done_when_edit_is_foreseen_refused_before
     assert "Update SolidWorks will " not in text
     assert text.endswith(
         "The next press would stop before changing anything: Update SolidWorks would insert a gear into the assembly "
-        "and mate it and give a built sleeve its bands, or take them away, in its own part, which Gear Generator has "
+        "and mate it and give a built sleeve its bands in its own part, which Gear Generator has "
         "not yet been shown to do on SolidWorks 2026 (findings.UPDATE_INSERTS_A_GEAR_ON_2026 and "
         "findings.UPDATE_BANDS_IN_PLACE_ON_2026), so the press changes nothing; Build again… makes the new revision "
         "instead.")
@@ -353,14 +346,7 @@ def fixed_desk_with_work(desk, measured):
     return desk
 
 
-A_PUTS_UNJUDGED = ("A's side (W9C-INTERFACES §11 From B): with a mode added or removed and nothing else changing, the "
-                   "check phase judges no put (may_put empty), then the change phase puts every train in every mode, "
-                   "Sun among them with the user's Sprocket-1 locked to it, and stops half way 'would now put Sun, "
-                   "which its check before any change found it would not put' after the configuration is changed")
-
-
-@pytest.mark.parametrize("with_work", [False, pytest.param(True, marks=pytest.mark.xfail(strict=True,
-                                                                                         reason=A_PUTS_UNJUDGED))])
+@pytest.mark.parametrize("with_work", [False, True])
 def test_a_mode_added_on_the_result_is_one_update_and_a_second_press_quiet(request, with_work):
     desk = request.getfixturevalue("fixed_desk_with_work" if with_work else "fixed_desk")
     press = desk.press(_fixed_with_mode())
@@ -376,8 +362,7 @@ def test_a_mode_added_on_the_result_is_one_update_and_a_second_press_quiet(reque
     assert not again.up.in_place and again.result.ok and again.after.startswith(ui_text.ALREADY_MATCHES[:30])
 
 
-@pytest.mark.parametrize("with_work", [False, pytest.param(True, marks=pytest.mark.xfail(strict=True,
-                                                                                         reason=A_PUTS_UNJUDGED))])
+@pytest.mark.parametrize("with_work", [False, True])
 def test_a_mode_removed_on_the_result_is_one_update_and_a_second_press_quiet(request, with_work):
     desk = request.getfixturevalue("fixed_desk_with_work" if with_work else "fixed_desk")
     press = desk.press(_fixed_without_mode())
@@ -413,9 +398,6 @@ def test_a_mode_whose_name_is_a_configuration_of_the_users_refuses_and_is_record
 
 
 # -- a gear removed, a coupling made, a tooth change with modes, on the parallel transfer case -----------------------
-
-PARALLEL_BOOK = BOOK
-
 
 @pytest.fixture
 def parallel(measured):
@@ -462,7 +444,9 @@ def test_the_mode_showing_removed_refuses_with_nothing_read_and_the_inventory_ke
     assert parallel.writes(press.mark) == []
     kept = parallel.record.gearbox.user_work
     assert [c.name for c in kept.components] == [c.name for c in inventory.components] == ["Housing-1"]
-    assert kept.read_at == inventory.read_at and kept.problems
+    assert [m.name for m in kept.mates] == [m.name for m in inventory.mates]
+    assert [(p.kind, p.subjects) for p in kept.problems] == [(swbuild.PROBLEM_MODE_SHOWING, ["2H"])]
+    assert kept.revision == list(parallel.sw.revision) and kept.digest == parallel.digest(spec)
     text, ok = parallel.footer(spec)
     assert not ok and ("Update SolidWorks would delete the configuration 2H from TransferCase_Parallel.SLDASM, and it "
                        "is the configuration showing in SolidWorks, so nothing is changed; show another mode in "
@@ -471,6 +455,19 @@ def test_the_mode_showing_removed_refuses_with_nothing_read_and_the_inventory_ke
     again = parallel.press(spec)
     assert again.result is not None and again.result.ok, again.after
     assert parallel.record.gearbox.modes[0] == "4H" and "2H" not in parallel.sw.configs
+
+
+def test_the_mode_showing_refused_with_no_inventory_on_record_is_recorded_with_an_empty_one(parallel):
+    spec = transfer_case_parallel()
+    spec = replace(spec, modes=spec.modes[1:])
+    assert parallel.record.gearbox.user_work is None
+    press = parallel.press(spec)
+    assert press.refused.user_work is None
+    kept = parallel.record.gearbox.user_work
+    assert (kept.components, kept.mates, kept.features, kept.carried) == ([], [], [], [])
+    assert [(p.kind, p.subjects) for p in kept.problems] == [(swbuild.PROBLEM_MODE_SHOWING, ["2H"])]
+    text = parallel.footer(spec)[0]
+    assert "Update SolidWorks refused at " in text and "the configuration showing in SolidWorks" in text
 
 
 def test_a_removal_with_the_users_components_present_refuses_while_m4_is_unread(parallel):
@@ -530,9 +527,67 @@ def test_a_tooth_change_with_modes_refuses_by_name_while_its_gate_is_unmeasured(
     assert parallel.writes(mark) == []
 
 
+@pytest.mark.xfail(strict=True, reason="A's side (W9C-INTERFACES §11, From B, the second joining round): the gate "
+                   "refusal of a gear mate remade with modes is a BuildError, so the record keeps no refusal of it; "
+                   "B asks the worker to raise it as UserWorkRefused (PROBLEM_UNSETTLED, its finding the subject), "
+                   "as every other in-place gate")
+def test_a_tooth_change_refused_by_its_gate_is_recorded_as_every_other_refusal_before_a_write(parallel, monkeypatch):
+    monkeypatch.setattr(findings, "UPDATE_MAKES_MATES_WITH_MODES_ON_2026", None)
+    press = parallel.press(_teeth())
+    assert [p.subjects for p in press.refused.problems] == [("UPDATE_MAKES_MATES_WITH_MODES_ON_2026",)]
+    kept = parallel.record.gearbox.user_work
+    assert [(p.kind, p.subjects) for p in kept.problems] == [(swbuild.PROBLEM_UNSETTLED,
+                                                              ["UPDATE_MAKES_MATES_WITH_MODES_ON_2026"])]
+
+
+# -- bands given back: a sleeve whose record holds the relief an earlier Update suppressed --------------------------
+
+def _relief_on_record(desk, made_in_part=False):
+    """RangeBox's sleeve as an Update that took its bands away leaves it on record: no bands in its spec, its relief
+    still among its features (C8 suppresses it, never deletes it). ``made_in_part``: the fake's part holds them too."""
+    sleeve = next(p for p in desk.record.parts if "RangeSlv" in p.gears)
+    car = desk.disk.read_sidecar(store.sidecar_path(sleeve.path))
+    car.record.features = list(car.record.features) + list(update._RELIEF_FEATURES)
+    return sleeve
+
+
+def test_bands_given_to_a_sleeve_whose_relief_is_on_record_are_given_back_never_made_twice(monkeypatch):
+    for name in GATES:
+        monkeypatch.setattr(findings, f"{name}_ON_2026", True, raising=False)
+    d = Desk()
+    d.build(range_box())
+    sleeve = _relief_on_record(d)
+    up = update.classify(d.record, d.a(fixed()), exists=d.disk.exists, read_sidecar=d.disk.read_sidecar)
+    (band,) = up.in_place.bands
+    assert (band.gear, band.add, band.back, band.features) == ("RangeSlv", True, True, ("Relief",))
+    assert {type(op).__name__ for op in band.ops} == {"AddGlobal"}               # the globals only: no second relief
+    assert "give RangeSlv its bands back in Sleeve_m1.25_N17 (its Relief turned back on)" in ui_text.update_summary(up)
+    # The fake's part holds no relief: the worker refuses by name, before any write.
+    mark = len(d.sw.calls)
+    with pytest.raises(swbuild.BuildError, match="no longer holds .*Relief.*so the bands cannot be given back"):
+        d.press(fixed())
+    assert d.writes(mark) == [] and sleeve.spec.get("start_band", "") == ""
+
+
+def test_bands_given_back_read_their_own_gate_in_the_footer(monkeypatch):
+    for name in GATES:
+        monkeypatch.setattr(findings, f"{name}_ON_2026", name != "UPDATE_SUPPRESSES_THE_RELIEF", raising=False)
+    d = Desk()
+    d.build(range_box())
+    users_work(d)
+    _relief_on_record(d)
+    text, ok = d.footer(fixed())
+    assert not ok and ("Update SolidWorks would suppress a sleeve's relief to take its bands away, or turn it back on "
+                       "to give them back, which Gear Generator has not yet been shown to do on SolidWorks 2026 "
+                       "(findings.UPDATE_SUPPRESSES_THE_RELIEF_ON_2026)") in text
+
+
 # -- a failure half way: what was done and what was not, said and recorded; the next press goes on or refuses -------
 
-def test_an_insert_that_fails_says_the_part_built_and_bands_given_and_the_next_press_names_the_file(desk, measured):
+def test_an_insert_that_fails_records_the_part_built_and_the_next_press_goes_on_with_it(desk, measured):
+    """The coordinator's ruling: the part a failed press built and saved is on record, with its .gear.json, so the
+    next press inserts it (an AddedGear with build None) without the user moving anything; the global the failed
+    press added is handed back as the app's (InPlace.left)."""
     desk.sw.fail_on = {"add_component": "SolidWorks would not insert Hub_m1.25_N17.SLDPRT."}
     press = desk.press(fixed())
     assert not press.ok and press.after == (
@@ -543,27 +598,47 @@ def test_an_insert_that_fails_says_the_part_built_and_bands_given_and_the_next_p
         "in SolidWorks to keep what it did.")
     rec = desk.record
     assert "Hub" not in {c.gear for c in rec.gearbox.components}
+    hub = next(p for p in rec.parts if p.path.endswith("Hub_m1.25_N17.SLDPRT"))
+    assert hub.gears == ["Hub"] and desk.disk.read_sidecar(store.sidecar_path(hub.path)) is not None
     assert next(p for p in rec.parts if "RangeSlv" in p.gears).spec["start_band"] == "5"     # the bands, done
+    assert rec.gearbox.left == ["Start Band", "End Band", "Relief Diameter", "Hub Face Z"]     # the app's, left
     desk.sw.fail_on = {}
+    text, ok = desk.footer(fixed())
+    assert "already on disk" not in text and text.startswith("Update SolidWorks will add Hub on Output "
+                                                             "(Hub_m1.25_N17), as its"), text
+    again = desk.press(fixed())
+    (added,) = again.up.in_place.added
+    assert added.build is None and "Hub Face Z" in again.up.in_place.left and again.up.in_place.bands == ()
+    assert again.result.ok, again.after
+    assert [g for g, _ in again.result.inserted] == ["Hub"] and again.result.built == []
+    assert desk.record.gearbox.left == [] and "Hub" in {c.gear for c in desk.record.gearbox.components}
+    assert desk.press(fixed()).result.ok and not desk.press(fixed()).up.in_place
+
+
+def test_a_new_parts_file_on_disk_that_no_record_holds_still_refuses_by_its_sentence(desk, measured):
+    desk.disk.files.add(_key("C:\\Out\\/Hub_m1.25_N17.SLDPRT"))
     text, ok = desk.footer(fixed())
     assert not ok and (
         "Hub_m1.25_N17.SLDPRT is already on disk though nothing on record holds it (a press that stopped part way "
         "may have built it), so Update SolidWorks would not build Hub's new part over it: move that file away or "
         "delete it, then press Update SolidWorks again.") in text
+    mark = len(desk.sw.calls)
     with pytest.raises(swbuild.BuildError, match="is already on disk, so Update SolidWorks would not build Hub"):
         desk.press(fixed())
+    assert desk.writes(mark) == []
 
 
-@pytest.mark.xfail(strict=True, reason="A's side (W9C-INTERFACES §11 From B): after an insert that failed, the "
-                   "assembly global the failed press added (Hub Face Z) is added again by the next press, which stops "
-                   "on 'Hub Face Z is defined twice' instead of setting it or refusing by name")
-def test_after_an_insert_that_failed_and_the_part_moved_away_the_next_press_goes_on(desk, measured):
+def test_a_global_a_stopped_press_left_at_another_value_is_set_as_the_apps(desk, measured):
     desk.sw.fail_on = {"add_component": "SolidWorks would not insert Hub_m1.25_N17.SLDPRT."}
     desk.press(fixed())
     desk.sw.fail_on = {}
-    desk.disk.files -= {f for f in desk.disk.files if f.endswith("hub_m1.25_n17.sldprt")}
-    press = desk.press(fixed())
-    assert press.up.in_place.bands == () and press.result.ok, press.after
+    desk.sw.open_document(desk.record.gearbox.assembly)
+    desk.sw.set_global_variable("Hub Face Z", "12")               # left at another value (the user dragged it, say)
+    again = desk.press(fixed())
+    assert "Hub Face Z" in again.up.in_place.left
+    assert again.result.ok, again.after
+    sets = [a for n, a in desk.sw.calls[again.mark:] if n == "set_global_variable" and a[0] == "Hub Face Z"]
+    assert sets and sets[-1][1] != "12"
 
 
 def test_a_mate_that_fails_after_the_insert_is_recorded_and_the_next_press_names_the_mates(desk, measured):
@@ -656,8 +731,23 @@ def test_a_gear_added_behind_its_anchor_round_trips_and_a_second_press_is_quiet(
 
 
 def test_a_new_coupling_with_its_gate_unmeasured_refuses_before_any_write(parallel, monkeypatch):
-    monkeypatch.setattr(findings, "UPDATE_MAKES_MATES_WITH_MODES_ON_2026", None)
+    monkeypatch.setattr(findings, "UPDATE_MAKES_A_NEW_COUPLING_ON_2026", None)
     press = parallel.press(_new_coupling())
-    assert not press.before[1] and "UPDATE_MAKES_MATES_WITH_MODES_ON_" in press.before[0]
-    assert press.refused.problems[0].subjects == ("UPDATE_MAKES_MATES_WITH_MODES_ON_2026",)
+    assert not press.before[1] and "UPDATE_MAKES_A_NEW_COUPLING_ON_" in press.before[0]
+    assert "make a coupling or sliding mesh between gears already in the assembly" in press.before[0]
+    assert press.refused.problems[0].subjects == ("UPDATE_MAKES_A_NEW_COUPLING_ON_2026",)
     assert parallel.writes(press.mark) == []
+
+
+def test_a_press_that_stopped_after_adding_a_configuration_leaves_it_to_the_next_which_goes_on(fixed_desk):
+    desk = fixed_desk
+    desk.sw.fail_on = {"set_mate_suppressed_in": "SolidWorks would not set the flag."}
+    press = desk.press(_fixed_with_mode())
+    assert not press.ok and press.result.modes_added == ["R"] and "R" in desk.sw.configs
+    assert desk.record.gearbox.modes == ["H", "N", "L"] and desk.record.gearbox.left == ["R"]
+    desk.sw.fail_on = {}
+    again = desk.press(_fixed_with_mode())
+    assert again.up.in_place.modes_added == ("R",) and again.up.in_place.left == ("R",)
+    assert again.result.ok, again.after
+    assert desk.record.gearbox.modes == ["H", "N", "L", "R"] and desk.record.gearbox.left == []
+    assert desk.sw.configs.count("R") == 1

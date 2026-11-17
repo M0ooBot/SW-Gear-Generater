@@ -542,7 +542,8 @@ def classify(record: Optional[LinkRecord], a: Assessment, *,
                 update = replace(update, spec=jobs[0].spec, changed=True,
                                  recorded=tuple((str(p[0]), str(p[1])) for p in entry.variables if len(p) == 2)
                                  or None)
-                band_changes.append(_band_change(entry, jobs[0], toggle))
+                band_changes.append(_band_change(entry, jobs[0], toggle,
+                                                 _recorded_features(entry.path, read_sidecar) or ()))
         if why:
             structural.append(why)
         made = _recorded_features(entry.path, read_sidecar) or update.made
@@ -603,8 +604,14 @@ def classify(record: Optional[LinkRecord], a: Assessment, *,
         structural.extend(turn.structural)
         modal = _modes(box, a, turn, placements, added_gears=in_added)
         structural.extend(modal.structural)
-        in_place, why, in_place_record = _in_place(whole_box, box, a, entries, in_added, in_removed, job_of, modal,
+        # A part a stopped press built for a gear it did not insert is on record though no component names it yet
+        # (the coordinator's ruling): the added gear takes it as a part on record.
+        held = list(entries) + [p for p in record.parts if p.revision == box.revision and p.gears
+                                and not any(p is e for e in entries)]
+        in_place, why, in_place_record = _in_place(whole_box, box, a, held, in_added, in_removed, job_of, modal,
                                                    band_changes)
+        if in_place and whole_box.left:
+            in_place = replace(in_place, left=tuple(whole_box.left))         # F1: a stopped press's leftovers
         structural.extend(why)
         if in_place_record is not None and (modal.motion or turn.motion) is not None:
             links = _new_links(in_place_record.mates, a, modal.configurations or tuple(box.modes))
@@ -1682,9 +1689,12 @@ def _without_bands(entry: PartEntry, job: PartJob) -> Tuple[PartEntry, PartJob]:
     return replace(entry, spec=kept, variables=variables), replace(job, spec=spec, plan=plan)
 
 
-def _band_change(entry: PartEntry, job: PartJob, add: bool) -> Any:
+def _band_change(entry: PartEntry, job: PartJob, add: bool, made: Sequence[str] = ()) -> Any:
     """The ``swbuild.BandChange`` for a sleeve given bands (its band globals and relief ops, as the banded plan has
-    them after the teeth) or relieved of them (its ``Relief`` loft cut suppressed: the coordinator's ruling C8)."""
+    them after the teeth) or relieved of them (its ``Relief`` loft cut suppressed: the coordinator's ruling C8).
+    ``made``: the part's features on record. A sleeve whose record holds the relief while its spec has no bands (an
+    earlier Update suppressed it) is given its bands back (``back``): the band globals, and the ``Relief`` turned back
+    on, never made a second time."""
     gear = entry.gears[0] if entry.gears else job.gear_ids[0]
     if not add:
         return swbuild.BandChange(gear, entry.path, False, (), (clutch.RELIEF,))
@@ -1692,6 +1702,8 @@ def _band_change(entry: PartEntry, job: PartJob, add: bool) -> Any:
     d = job.derived
     ops = tuple(base.AddGlobal(v.name, v.expression, v.radian_expression)
                 for v in clutch.relief_globals(bands))
+    if clutch.RELIEF in made:
+        return swbuild.BandChange(gear, entry.path, True, ops, (clutch.RELIEF,), back=True)
     ops += tuple(clutch.relief_ops(d.face_width, bands, clutch.relief_diameter(d.module, d.teeth)))
     return swbuild.BandChange(gear, entry.path, True, ops, _RELIEF_FEATURES)
 
@@ -1807,7 +1819,8 @@ def _mates_never_made(kept: GearboxRecord, plan: motion.MotionPlan) -> List[str]
         names = [m.name for m in plan.mates if c.gear in m.gears and not m.modes]
         if names:
             said.append(f"{c.gear} is in the assembly, inserted by an Update SolidWorks that stopped before making its "
-                        f"mates {_names(names)}, and Update SolidWorks makes a gear's own mates only as it adds the gear, "
+                        f"mates {_names(names)}, and Update SolidWorks makes a gear's own mates only as it adds the "
+                        "gear, "
                         f"{_REBUILD}.")
     return said
 
@@ -2262,28 +2275,24 @@ def _follow_in_place(rec: LinkRecord, box: GearboxRecord, plan: UpdatePlan, resu
                 m.z_front = float(m.values[box.modes[0]])
         for c in box.components:
             c.frames = {k: f for k, f in c.frames.items() if k not in removed}
-    box.modes = list(box.modes) + [c for c in getattr(result, "modes_added", []) or [] if c not in box.modes]
+    # A press that stopped keeps the configurations it added, and the globals, as the app's leftovers (F1), handed back
+    # as InPlace.left so the next press goes on from them; its modes are on record once a press runs to its end.
+    added_modes = [c for c in getattr(result, "modes_added", []) or [] if c not in box.modes]
+    if result.ok:
+        box.modes = list(box.modes) + added_modes
+        box.left = []
+    else:
+        names = [name for _doc, name in getattr(result, "globals_added", []) or []] + added_modes
+        box.left = list(dict.fromkeys(list(box.left) + names))
     # Gears inserted: each by the Name2 SolidWorks kept, its frame from the plan (the trains' rule writes it after).
     placed = {p.gear: p for p in plan.placements}
     jobs = dict(extra.jobs)
     built = {store.sidecar_path(b.saved).lower(): b for b in getattr(result, "built", []) or [] if b.ok and b.saved}
-    for gear, name in getattr(result, "inserted", []) or []:
-        p = placed.get(gear)
-        job = jobs.get(gear)
-        part = job.path if job is not None else (p.part if p is not None else "")
-        box.components.append(store.ComponentEntry(gear=gear, part=part, name=name,
-                                                   rotation=list(p.rotation) if p is not None else [],
-                                                   at=list(p.at) if p is not None else []))
-        if gear in extra.fixed and gear not in box.fixed:
-            box.fixed.append(gear)
-        entry = next((e for e in rec.current_parts() if store.same_path(e.path, part)), None)
-        if entry is not None:
-            entry.gears = list(entry.gears) + ([gear] if gear not in entry.gears else [])
-            continue
-        if job is None:
-            continue
+    # Each new part built and saved is on record, whatever happened after (the coordinator's ruling on a press that
+    # failed after building it): the next press hands it as an AddedGear with build None, never builds over it.
+    for gear, job in jobs.items():
         b = built.get(store.sidecar_path(job.path).lower())
-        if b is None:
+        if b is None or any(store.same_path(e.path, job.path) for e in rec.parts if e.revision == box.revision):
             continue
         kind = kind_for(job.spec)
         variables = [[v.name, v.expression_for(b.trig)] for v in kind.variables(job.spec, job.derived)]
@@ -2296,6 +2305,18 @@ def _follow_in_place(rec: LinkRecord, box: GearboxRecord, plan: UpdatePlan, resu
             template=gearbox._template_of(job.plan), trig=b.trig, written_by=written_by,
             previous=read_sidecar(store.sidecar_path(job.path)), stamp=stamp, workbook=rec.workbook,
             workbook_gears=[gear])))
+    for gear, name in getattr(result, "inserted", []) or []:
+        p = placed.get(gear)
+        job = jobs.get(gear)
+        part = job.path if job is not None else (p.part if p is not None else "")
+        box.components.append(store.ComponentEntry(gear=gear, part=part, name=name,
+                                                   rotation=list(p.rotation) if p is not None else [],
+                                                   at=list(p.at) if p is not None else []))
+        if gear in extra.fixed and gear not in box.fixed:
+            box.fixed.append(gear)
+        entry = next((e for e in rec.parts if e.revision == box.revision and store.same_path(e.path, part)), None)
+        if entry is not None:
+            entry.gears = list(entry.gears) + ([gear] if gear not in entry.gears else [])
     # Mates made: as the plan has them, on in the configurations each reads on in.
     made = {name: tuple(on) for name, on in getattr(result, "mates_made", []) or []}
     plans = {m.name: m for m in extra.mates}
@@ -2565,7 +2586,8 @@ def user_work_entry(work: swbuild.UserWork, *, assembly: str, digest: str = "", 
         carried=[store.UserCarriedEntry(c, g, list(locks)) for c, g, locks in work.carried],
         problems=[store.UserProblemEntry(p.kind, p.sentence, list(p.mates),
                                          [store.ValueEditEntry(v.document, v.name, v.live, v.wanted, v.recorded,
-                                                               v.mode, v.cell, bool(v.unsaved)) for v in p.values])
+                                                               v.mode, v.cell, bool(v.unsaved)) for v in p.values],
+                                         [str(s) for s in getattr(p, "subjects", ()) or ()])
                   for p in problems])
 
 
@@ -2608,13 +2630,15 @@ def record_user_work(record: LinkRecord, work: Optional[swbuild.UserWork], *, as
     if work is None:
         if not problems:
             return False
-        # W9c (§5): a refusal read before the user's work (the mode showing) keeps the inventory on record as it was,
-        # with the problems said, so the footer says them until the next press.
+        # W9c (§5): a refusal read before the user's work (the mode showing) keeps the inventory on record as it was
+        # (its components, mates, features and carries), with the refusal's time, workbook, SolidWorks and problems,
+        # so the footer says them as any refusal's until the next press reads again. With none on record, an empty
+        # inventory carries them: nothing of the user's is claimed, and the next press reads it all.
+        said = user_work_entry(swbuild.UserWork(), assembly=assembly, digest=digest, revision=revision,
+                               problems=problems)
         kept = box.user_work
-        if kept is None:
-            kept = user_work_entry(swbuild.UserWork(), assembly=assembly, digest=digest, revision=revision)
-        box.user_work = replace(kept, digest=digest, problems=user_work_entry(
-            swbuild.UserWork(), assembly=assembly, problems=problems).problems)
+        box.user_work = said if kept is None else replace(kept, read_at=said.read_at, digest=digest,
+                                                          revision=said.revision, problems=said.problems)
         return True
     box.user_work = user_work_entry(work, assembly=assembly, digest=digest, revision=revision, problems=problems)
     return True
@@ -2732,6 +2756,10 @@ def user_work_ahead(plan: Optional[UpdatePlan], record: Optional[LinkRecord],
     if m is None:                                    # W4's static path reads the user's features only
         return UserWorkAhead(entry, refused=refused, changed_since=changed_since, still=still, followed=followed)
     mated, trains = _judged_trains(plan)
+    if plan.in_place.modes_added and m.configurations:
+        # F2: an added mode is a copy of the mode showing, so the user's mates on there are on in it too (the worker's
+        # own judgement, swbuild.work_in_added_modes). The mode the press copies: the one the inventory was read in.
+        work = swbuild.work_in_added_modes(work, plan.in_place.modes_added, _copied_mode(entry, m.configurations))
     judgement = swbuild.judge_user_work(
         work, tuple(m.configurations) or ("",), bodies_put(plan), file=os.path.basename(plan.assembly.replace("\\",
                                                                                                              "/")),
@@ -2741,6 +2769,13 @@ def user_work_ahead(plan: Optional[UpdatePlan], record: Optional[LinkRecord],
                          carried=tuple((g, tuple(held)) for g, held in judgement.carried.items()),
                          problems=tuple(judgement.problems), unread_ties=tuple(judgement.unread_ties),
                          followed=followed)
+
+
+def _copied_mode(entry: Any, configurations: Sequence[str]) -> str:
+    """The mode an added configuration copies (the mode showing at the press), as the footer can know it: the record
+    holds no mode showing, so the gearbox's first mode, the one it was built and saved in and every Update leaves
+    showing again. A user who shows another mode first is judged at the press by the mode then showing."""
+    return configurations[0] if configurations else ""
 
 
 def in_place_ahead(plan: Optional[UpdatePlan], record: Optional[LinkRecord]) -> Tuple[swbuild.UserProblem, ...]:

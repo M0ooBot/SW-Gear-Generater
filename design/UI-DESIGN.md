@@ -1392,8 +1392,14 @@ before it stopped and what it did not get to: *Before it stopped it built
 Hub_m1.25_N17 and gave RangeSlv its bands. It did not get to inserting Hub and
 putting the gears back and checking the assembly, because the job stopped in
 RangeBox.SLDASM.*, then W4's unsaved sentence. The record holds what was done
-(the bands, a gear inserted, each mate made). A gear inserted whose own mates were
-not made is then Build again…, by name: *Hub is in the assembly, inserted by an
+(a new part built and saved, the bands, a gear inserted, each mate made) and, as
+the app's leftovers, each global and configuration the stopped press added. The
+next press goes on from there without the user moving anything: it inserts the
+part already built, and sets a leftover global rather than refusing it as the
+user's. A sleeve whose relief an Update suppressed is given its bands back the
+same way: *give RangeSlv its bands back in Sleeve_m1.25_N17 (its Relief turned
+back on)*. A gear inserted whose own mates were not made is then Build again…, by
+name: *Hub is in the assembly, inserted by an
 Update SolidWorks that stopped before making its mates …, and Update SolidWorks
 makes a gear's own mates only as it adds the gear, so the gearbox needs building
 again.*

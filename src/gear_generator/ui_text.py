@@ -4691,8 +4691,11 @@ def _user_after(update, result) -> List[str]:
 IN_PLACE_STEP_WORDS = {
     "remove a gear": "take a gear out of the assembly",
     "add a gear": "insert a gear into the assembly and mate it",
-    "make a mate": "make a gear mate in an assembly with modes and set its flag in each mode",
-    "bands in place": "give a built sleeve its bands, or take them away, in its own part",
+    "make a mate": "make a gear mate in an assembly with modes again and set its flag in each mode",
+    "make a coupling": "make a coupling or sliding mesh between gears already in the assembly and set its flag in "
+                       "each mode",
+    "bands in place": "give a built sleeve its bands in its own part",
+    "suppress the relief": "suppress a sleeve's relief to take its bands away, or turn it back on to give them back",
     "add a mode": "add a mode's configuration to the assembly",
     "remove a mode": "delete a mode's configuration from the assembly",
 }
@@ -4700,8 +4703,10 @@ IN_PLACE_STEP_WORDS = {
 
 # Each in-place finding's step, by the finding's name less its ``_ON_<year>`` (W9C-INTERFACES §8).
 _STEP_OF_FINDING = (("COMPONENT_DELETE", "remove a gear"), ("UPDATE_INSERTS_A_GEAR", "add a gear"),
-                    ("UPDATE_MAKES_MATES_WITH_MODES", "make a mate"), ("UPDATE_BANDS_IN_PLACE", "bands in place"),
-                    ("UPDATE_ADDS_A_MODE", "add a mode"), ("UPDATE_REMOVES_A_MODE", "remove a mode"))
+                    ("UPDATE_MAKES_MATES_WITH_MODES", "make a mate"),
+                    ("UPDATE_MAKES_A_NEW_COUPLING", "make a coupling"), ("UPDATE_BANDS_IN_PLACE", "bands in place"),
+                    ("UPDATE_SUPPRESSES_THE_RELIEF", "suppress the relief"), ("UPDATE_ADDS_A_MODE", "add a mode"),
+                    ("UPDATE_REMOVES_A_MODE", "remove a mode"))
 
 
 def _step_of(finding: str) -> str:
@@ -4752,7 +4757,9 @@ def in_place_pieces(update) -> List[str]:
             text += f", as its shaft's anchor with {_and(sleeves)} splined to it"
         pieces.append(text)
     for band in ip.bands:
-        if band.add:
+        if band.add and getattr(band, "back", False):
+            pieces.append(f"give {band.gear} its bands back in {_stem(band.part)} (its Relief turned back on)")
+        elif band.add:
             pieces.append(f"give {band.gear} its bands in {_stem(band.part)}")
         else:
             pieces.append(f"take {band.gear}'s bands away in {_stem(band.part)} (its Relief suppressed)")
