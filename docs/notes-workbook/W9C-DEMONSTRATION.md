@@ -269,8 +269,9 @@ than W9c, which `ring` reads on its own; it is not what `remake` is here to show
 **Then the fixes review's M3** (B's ff98d5a), on its own copy of `setup.master`, with the gate patched as above:
 
 1. Sun 30, Planet 12, Ring 55 → 54 is pressed with `swbuild.LANDING_STEPS = ()` for that press only, so it stops in
-   the ring. The status names the ring, left in error, to close without saving; the record marks the ring
-   (`unsaved_in_error`); the patch is restored.
+   the ring. The status names the ring, left in error, to close without saving; since f4eabf5 (should-fix A of
+   W9C-RUNS-REVIEW.md's addendum on the final runs) it also names RangeBox and says to answer No when SolidWorks asks
+   to save (`says_close_with_assembly`); the record marks the ring (`unsaved_in_error`); the patch is restored.
 2. Pressed again without closing. Since 89615aa the app stops this press after its check phase and before any write
    (the eighth run found it writing a gear mate and rebuilding the assembly here). Checked, as the fixes review's
    addendum §6 asks (3a6013d):
@@ -279,20 +280,29 @@ than W9c, which `ring` reads on its own; it is not what `remake` is here to show
      or keep anything. The mark stays, and nothing is set in a part.
    - **Nothing was written** (`wrote_nothing`):
      - No traced call that changes or shows anything (`nothing_changed_calls`), and no `AddComponent5` or `SaveAs3`.
-     - Every part's, the layout's and the carrier's globals the same before and after (`live_globals`; equation writes
-       are not traced).
-     - Every document of the copy with the same save flag and file time just before and just after the press, and
-       none modified but the three parts step 1 changed (Sun, Planet, Ring). The flags and times are read last before
-       the press and first after it.
+     - Every part's, the layout's, the carrier's and the assembly's own globals the same before and after
+       (`live_globals`; equation writes are not traced, and the assembly's flag is already set by step 1).
+     - Every document of the copy with the same save flag and file time just before and just after the press. The
+       flags and times are read last before the press and first after it. Which documents read modified beyond the
+       three parts step 1 changed is a printed fact (`beyond_step_1`), not a check: run 11 on 34.0.0 read RangeBox.SLDASM
+       modified after step 1, SolidWorks marking the open assembly when a part of it is changed and rebuilt.
      - The result's `changed`, `mates_made`, `remade_in_modes` and `placed` empty, `skipped` said, and its failures
        naming the ring's file alone.
      - The ring still reading Tooth Space at 72 and 54 teeth.
      - The assembly read by W9a's `read_now` before and after, `written` empty (frames, mates' codes and flags per
        mode), and the four gear mates' ratios (`Session.gear_mate_ratio`) the same.
    - **The footer** says the ring is to be closed without saving: either "left in error when it stopped" or "still
-     open in SolidWorks". The script's footer carries the press's note, which is now the still-in-error sentence alone.
-     It must offer to keep nothing. The self-check holds both judgements to the app's own
-     `ui_text.still_in_error_sentence`, and to the eighth run's status.
+     open in SolidWorks", with RangeBox named and "answering No when SolidWorks asks to save". The script's footer
+     carries the press's note, which is now the still-in-error sentence alone. It must offer to keep nothing. The
+     self-check holds the judgements to the app's own `ui_text.still_in_error_sentence`, to its stop and footer
+     wording, and to the eighth and eleventh runs' statuses (which they reject).
+2b. **Only the parts' windows closed** (the addendum's §6.2: should-fix A's premise, measured). Sun's, Planet's and
+   Ring's own windows are closed without saving (`QuitDoc` by title), RangeBox left open, as a user who closed only the
+   parts would. Facts: what SolidWorks still holds (`documents()`), every save flag, and the ring's codes where it is
+   still held (no read opens a part SolidWorks let go). Then one press: whether it stops again on the ring held in
+   error (`stopped_again`) is a fact; if it does, it is checked to have written nothing (`wrote_in_press`: no traced
+   call that changes or shows anything, every flag and file time as before, nothing changed, made, remade or placed)
+   and to say to close the ring and RangeBox without saving, answering No.
 3. Every document of the copy is closed without saving, as the sentences say, and it is pressed again. It goes
    through routed (the ring by way of 53), the ring at 54 with nothing in error, the mark gone, the stage's gear mates
    remade and the footer quiet.
