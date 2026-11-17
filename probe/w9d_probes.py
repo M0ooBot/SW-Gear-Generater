@@ -6,11 +6,14 @@ packages would make, and propose findings in the log without setting any. The no
 
 python.exe probe/w9d_probes.py <repo src> <output folder under C:\> --pid PID [--log FILE]
                                [--sections faces,state,sub|all] [--user-master DIR] [--master DIR] [--redo]
+                               [--other-version-file FILE]
 python probe/w9d_probes.py --self-check      (no SolidWorks: the pure judgements, on made-up readings)
 python probe/w9d_probes.py --help
 
 ``--user-master``: W9a's ``setup.master`` for this SolidWorks version (RangeBox with the user's work); ``--master``:
 S0's ``rangebox.master`` (needed only when setup.master must be built here first, by W9a's own builders).
+``--other-version-file``: a SolidWorks file the OTHER version last saved (on 2026, a 2024-built assembly; on 2024, a
+2026-built one), read closed by ``VersionHistory`` only, never opened: ``FILE_VERSION_READ``'s negative control (S-b).
 
 Sections, in this order (each runs alone; ``sub``, whose insert of a read-only document is the likeliest to raise a
 dialog, goes last):
@@ -166,19 +169,63 @@ def persist_proposal(entities, kind, routes, start_marked):
     return None if start_marked else route_for(entities, kind, routes)
 
 
+def where_of(kind, params):
+    """Where a face or an edge lies in its part (S-c), comparable across a reload: a plane's unit normal and its offset
+    along it (``PlaneParams``: normal x, y, z, root x, y, z), a cylinder's ``CylinderParams`` (origin, axis, radius), a
+    circular edge's ``CircleParams`` (centre, axis, radius); None when nothing was read."""
+    if not params:
+        return None
+    v = [float(x) for x in params]
+    if kind == "plane" and len(v) >= 6:
+        n = v[:3]
+        return tuple(round(c, 9) for c in n + [sum(a * b for a, b in zip(n, v[3:6]))])
+    return tuple(round(c, 9) for c in v[:7])
+
+
+def same_where(a, b, tol=AXIS_TOL):
+    """Two ``where_of`` readings the same, to ``tol``."""
+    return a is not None and b is not None and len(a) == len(b) and all(abs(x - y) <= tol for x, y in zip(a, b))
+
+
 def reload_verdict(entities):
-    """P12: every face and edge reference resolved again after the copy was closed and its parts opened alone, to its
-    own kind (and a face to its own area). ``entities``: each with ``kind``, ``area`` and ``reload`` (``{"kind",
-    "area", "error"}``)."""
+    """P12 and S-c: every face and edge reference resolved again after the copy was closed and its parts opened alone,
+    to its own kind and its own place in the part (``where``: a plane's offset, a cylinder's or a circle's axis and
+    radius; a face's area too), the part's save flag unmarked by the resolve. ``entities``: each with ``kind``,
+    ``area``, ``where`` and ``reload`` (``{"kind", "area", "where", "marked", "error"}``)."""
     bad = []
     for e in entities:
         r = e.get("reload") or {}
         if r.get("error") or r.get("kind") != e.get("kind"):
-            bad.append((e.get("component"), e.get("kind"), r))
+            bad.append((e.get("mate"), e.get("index"), e.get("kind"), r))
+        elif not same_where(r.get("where"), e.get("where")):
+            bad.append((e.get("mate"), e.get("index"), "where", r.get("where"), e.get("where")))
         elif e.get("kind") == "face" and (r.get("area") is None or e.get("area") is None
                                           or abs(r["area"] - e["area"]) > AREA_TOL):
-            bad.append((e.get("component"), "face area", r.get("area"), e.get("area")))
+            bad.append((e.get("mate"), e.get("index"), "face area", r.get("area"), e.get("area")))
+        elif r.get("marked"):
+            bad.append((e.get("mate"), e.get("index"), "the resolve marked", r.get("marked")))
     return bool(entities) and not bad, bad
+
+
+def version_proposal(same, other, latest):
+    """S-b: ``FILE_VERSION_READ`` is proposed only when the copy this SolidWorks saved reads ``latest`` last AND a file
+    the other SolidWorks saved reads otherwise (both ``last_saved`` answers); None when either is missing."""
+    if same is None or other is None or latest is None:
+        return False if same is not None and latest is not None and same[0] != latest else None
+    return same[0] == latest and other[0] != latest
+
+
+def dependency_paths(flat):
+    """``GetDocumentDependencies2``'s answer, a flat array alternating name and path (reading/01): the paths."""
+    items = list(flat) if isinstance(flat, (list, tuple)) else []
+    return [str(items[i + 1]) for i in range(0, len(items) - 1, 2)]
+
+
+def coaxial_verdict(bore, others, keyway):
+    """S-d: ``COAXIAL_FACE_READ`` holds when the sprocket's bore reads coaxial by every route read, every planar face
+    reads not, and Sun's User Keyway (an off-axis Ø3 cylinder, the control the narrowing exists for) reads not."""
+    return (bool(bore) and all(c is True for c in bore if c is not None) and any(c is True for c in bore)
+            and all(c is False for c in others) and bool(keyway) and all(c is False for c in keyway))
 
 
 def same_definition(read, remade, tol=1e-9):
@@ -300,11 +347,29 @@ def self_check():
     ok(route_for(entities, "edge", ["r1", "r2"]) == "r2", "P10: the edge's route is its own")
     ok(route_for(entities, "vertex", ["r1"]) is None, "no vertex read: None")
     ok(persist_proposal(entities, "face", ["r1"], start_marked=True) is None, "P1: a marked start proposes nothing")
-    rel = [{"component": "S-5", "kind": "face", "area": 1e-4, "reload": {"kind": "face", "area": 1e-4}},
-           {"component": "S-6", "kind": "edge", "reload": {"kind": "edge"}}]
-    ok(reload_verdict(rel)[0], "P12: references resolved again after a reload")
+    rel = [{"mate": "M1", "index": 0, "kind": "face", "area": 1e-4, "where": (0, 0, 1, 0.205),
+            "reload": {"kind": "face", "area": 1e-4, "where": (0, 0, 1, 0.205), "marked": []}},
+           {"mate": "M3", "index": 0, "kind": "edge", "where": (0, 0, 0.205, 0, 0, 1, 0.005),
+            "reload": {"kind": "edge", "where": (0, 0, 0.205, 0, 0, 1, 0.005)}}]
+    ok(reload_verdict(rel)[0], "P12: references resolved again after a reload, in the same place")
     ok(not reload_verdict([dict(rel[0], reload={"error": "None"})])[0] and not reload_verdict([])[0],
        "P12: one not resolved, or nothing read, is not clean")
+    ok(not reload_verdict([dict(rel[0], reload=dict(rel[0]["reload"], where=(0, 0, 1, 0.199)))])[0],
+       "S-c: the other end face of the same area is not clean")
+    ok(not reload_verdict([dict(rel[0], reload=dict(rel[0]["reload"], marked=["Sprocket.SLDPRT"]))])[0],
+       "S-c: a resolve that marked the part is not clean")
+    ok(where_of("plane", [0, 0, 1, 0.003, 0.002, 0.205]) == (0, 0, 1, 0.205) and where_of("plane", []) is None,
+       "where_of: a plane by its normal and offset")
+    ok(version_proposal((15000, 2026), (14000, 2024), 15000) is True, "S-b: same reads latest, other older: True")
+    ok(version_proposal((15000, 2026), (15000, 2026), 15000) is False, "S-b: the other reading latest too: False")
+    ok(version_proposal((15000, 2026), None, 15000) is None, "S-b: no other-version file: None")
+    ok(version_proposal((14000, 2024), None, 15000) is False, "S-b: the copy itself not latest: False")
+    ok(dependency_paths(["Sprocket", "C:\\x\\Sprocket.SLDPRT", "Housing", "C:\\x\\Housing.SLDPRT"]) ==
+       ["C:\\x\\Sprocket.SLDPRT", "C:\\x\\Housing.SLDPRT"] and dependency_paths(None) == [],
+       "S-f: GetDocumentDependencies2's flat name, path array")
+    ok(coaxial_verdict([True, True], [False, False], [False]), "S-d: bore coaxial, planes and keyway not")
+    ok(not coaxial_verdict([True], [False], [True]), "S-d: a keyway read coaxial is not clean")
+    ok(not coaxial_verdict([True], [False], []), "S-d: no keyway control read is not clean")
     read = {"type_name": "MateConcentric", "type": 1, "alignment": 0, "flipped": False, "values": {"MateAlignment": 0}}
     ok(same_definition(read, dict(read)) == [], "a definition remade the same compares equal")
     ok(same_definition(read, dict(read, flipped=True)) == ["flipped False -> True"], "a flip remade otherwise is said")
@@ -433,6 +498,35 @@ def kind_of(obj):
                         "point": _try(obj, "GetPoint") is not None})
 
 
+def where_in_part(obj):
+    """S-c: a part-level face's or edge's place (``where_of``) and, for a cylinder, whether it is coaxial with the
+    part's Z axis (``coaxial``; a plane or another surface False, nothing read None)."""
+    surface = _try(obj, "GetSurface")
+    if surface is not None:
+        if raw(surface, "IsPlane"):
+            return where_of("plane", raw(surface, "PlaneParams")), False
+        if raw(surface, "IsCylinder"):
+            params = [float(v) for v in raw(surface, "CylinderParams")]
+            return where_of("cylinder", params), coaxial(params)
+        return None, False
+    curve = _try(obj, "GetCurve")
+    if curve is not None and raw(curve, "IsCircle"):
+        return where_of("circle", raw(curve, "CircleParams")), None
+    return None, None
+
+
+def cylinders_of(component):
+    """Every cylindrical face of a component's part: (radius mm, coaxial with the part's Z axis), part coordinates."""
+    out = []
+    for body in list(raw(call(component, "GetModelDoc2"), "GetBodies2", 0, True) or []):
+        for face in list(raw(body, "GetFaces") or []):
+            surface = raw(face, "GetSurface")
+            if raw(surface, "IsCylinder"):
+                p = [float(v) for v in raw(surface, "CylinderParams")]
+                out.append((round(p[6] * 1000.0, 6), coaxial(p)))
+    return out
+
+
 # -- faces: a face's and an edge's persistent reference (§11.4), the referenced configuration, the reload --------------
 
 FACE_INSERTS = (("f5", "Sprocket.SLDPRT", (0.0, 0.0, 200.0), "Sprocket-5"),
@@ -520,6 +614,7 @@ def faces_read(folder, app_names, users):
                 entity = call(mate, "MateEntity", i)
                 ref = _try(entity, "Reference")
                 e["kind"] = kind_of(ref)
+                e["mate"], e["index"] = name, i
                 owner = _try(ref, "GetComponent")
                 e["entity_component"] = _plain(_try(owner, "Name2")) if owner is not None else None
                 e["area"] = _plain(_try(ref, "GetArea")) if e["kind"] == "face" else None
@@ -532,13 +627,9 @@ def faces_read(folder, app_names, users):
                 ext = call(part_doc, "Extension")
                 try:
                     part_entity = raw(call(doc, "Extension"), "GetCorrespondingEntity2", ref)
-                    surface = _try(part_entity, "GetSurface") if e["kind"] == "face" else None
-                    if surface is not None and raw(surface, "IsCylinder"):
-                        e["coaxial"] = coaxial([float(v) for v in raw(surface, "CylinderParams")])
-                    elif surface is not None:
-                        e["coaxial"] = False
-                except Exception as exc:  # noqa: BLE001 - the coaxial read's failure is its reading
-                    e["coaxial"] = f"{type(exc).__name__}: {exc}"
+                    e["where"], e["coaxial"] = where_in_part(part_entity)
+                except Exception as exc:  # noqa: BLE001 - the coaxial and place read's failure is its reading
+                    e["where"], e["coaxial"] = None, f"{type(exc).__name__}: {exc}"
 
                 def route(get_ref):
                     out = {"kind": e["kind"], "same_value": same_value}
@@ -555,6 +646,7 @@ def faces_read(folder, app_names, users):
                             got, code = got[0], (got[1] if len(got) > 1 else code)
                         out["resolve_code"] = by_ref(code)
                         out["resolved_kind"] = kind_of(got)
+                        out["where"], out["coaxial"] = where_in_part(got)        # S-d: on this route's entity too
                         back = call(component, "GetCorresponding", got)
                         try:
                             out["same"] = int(raw(app, "IsSame", ref, back))
@@ -573,6 +665,10 @@ def faces_read(folder, app_names, users):
                 except Exception as exc:  # noqa: BLE001
                     e["assembly_context_length"] = f"{type(exc).__name__}: {exc}"
             mates[name] = d
+        try:
+            sun_cylinders = cylinders_of(comp(doc, app_names[1]))      # S-d: Sun's User Keyway, the negative control
+        except Exception as exc:  # noqa: BLE001
+            sun_cylinders = f"{type(exc).__name__}: {exc}"
         components = {}
         for n in users:
             c = comp(doc, n)
@@ -581,7 +677,9 @@ def faces_read(folder, app_names, users):
                 continue
             model = _try(c, "GetModelDoc2")
             active = _try(_try(model, "GetActiveConfiguration"), "Name") if model is not None else None
+            names = _try(model, "GetConfigurationNames") if model is not None else None
             components[n] = {"referenced": _plain(_try(c, "ReferencedConfiguration")), "active": _plain(active),
+                             "configurations": _plain(names),
                              "virtual": _plain(_try(c, "IsVirtual")), "pattern": _plain(_try(c, "IsPatternInstance")),
                              "path": os.path.basename(str(_try(c, "GetPathName") or ""))}
         frames, paths = {}, {}
@@ -590,6 +688,7 @@ def faces_read(folder, app_names, users):
             frames[n] = s.component_frame(f"t{i}")
             paths[n] = s.component_path(f"t{i}")
         return {"mates": mates, "components": components, "frames": frames, "paths": paths, "flags_before": before,
+                "sun_cylinders": sun_cylinders,
                 "flags_after": W.folder_flags(s, folder)}
     return work
 
@@ -667,9 +766,10 @@ def faces_remake(read, second, folder, layout, sun, routes):
     return work
 
 
-def faces_reload(entities, paths):
-    """P12: the copy closed; each part an entity is on opened alone (its own document, freshly loaded) and each face
-    and edge reference resolved there again: its kind and a face's area."""
+def faces_reload(entities, paths, folder):
+    """P12 and S-c: the copy closed; each part an entity is on opened alone (its own document, freshly loaded) and each
+    face and edge reference resolved there again, with every document's save flag read around the resolve (the
+    not-open path makes this resolve in the user's own parts): its kind, its place in the part and a face's area."""
     def work(s):
         out = {}
         for e in entities:
@@ -679,17 +779,24 @@ def faces_reload(entities, paths):
                 if got.get("read") and got.get("reference"):
                     r = got["reference"]
                     break
-            key = f"{e.get('component')}:{e.get('kind')}:{(r or '')[:16]}"
+            key = f"{e.get('mate')}:{e.get('index')}"
             if not r:
-                out[key] = {"error": "no reference read in (b)"}
+                out[key] = e["reload"] = {"error": "no reference read in (b)"}
                 continue
             try:
                 s.open_document(paths[e["component"]])
+                before = W.folder_flags(s, folder)
                 ext = call(s._doc(), "Extension")  # noqa: SLF001
                 got = raw(ext, "GetObjectByPersistReference3", bytes.fromhex(r), swcom._out_long())  # noqa: SLF001
                 got = got[0] if isinstance(got, tuple) else got
-                out[key] = {"error": "resolved to nothing"} if got is None else {
-                    "kind": kind_of(got), "area": _plain(_try(got, "GetArea")) if e.get("kind") == "face" else None}
+                if got is None:
+                    out[key] = {"error": "resolved to nothing"}
+                else:
+                    where, _ = where_in_part(got)
+                    out[key] = {"kind": kind_of(got), "where": where,
+                                "area": _plain(_try(got, "GetArea")) if e.get("kind") == "face" else None}
+                out[key]["marked"] = flags_changed(before, W.folder_flags(s, folder))
+                out[key]["marked_before"] = marked_at_start(before)
             except Exception as exc:  # noqa: BLE001
                 out[key] = {"error": f"{type(exc).__name__}: {exc}"}
             e["reload"] = out[key]
@@ -779,18 +886,18 @@ def section_faces(out):
             say(f"fact    faces (b): ReferenceType2's kind agrees with the members' on every geometry entity: "
                 f"{kinds_agree}")
             faces = [e for e in entities if e.get("kind") == "face"]
-            bore = [e.get("coaxial") for e in faces if e.get("component") == "Sprocket-5"]
-            others = [e.get("coaxial") for e in faces if e.get("component") != "Sprocket-5"]
-            say(propose("COAXIAL_FACE_READ", (True in bore and all(c is False for c in others))
-                        if not (marked or start) else None,
-                        f"faces (b): the bore read coaxial {bore}, the end faces {others}; marked "
-                        f"{marked or 'nothing'}"))
-            comps = [v for v in read["components"].values() if isinstance(v, dict)]
-            say(propose("REFERENCED_CONFIGURATION_READ",
-                        bool(comps) and all(isinstance(v["referenced"], str) and v["referenced"] for v in comps)
-                        and not (marked or start) or None,
-                        f"faces (b): each user component's referenced and active configuration "
-                        f"{ {n: (v['referenced'], v['active']) for n, v in read['components'].items() if isinstance(v, dict)} }"))
+            bore = [v for e in faces if e.get("mate") == "UserFaceConc"
+                    for v in [e.get("coaxial")] + [((e.get("routes") or {}).get("r2") or {}).get("coaxial")]]
+            others = [e.get("coaxial") for e in faces if e.get("mate") != "UserFaceConc"]
+            keyway = ([c for r, c in read["sun_cylinders"] if abs(r - 1.5) < 1e-6]
+                      if isinstance(read["sun_cylinders"], list) else [])
+            say(f"fact    faces (b): Sun's cylinders (radius mm, coaxial) {read['sun_cylinders']}")
+            say(propose("COAXIAL_FACE_READ", coaxial_verdict(bore, others, keyway) if not (marked or start) else None,
+                        f"faces (b): the bore read coaxial by r1 and r2 {bore}, the planar faces {others}, Sun's User "
+                        f"Keyway (the negative control, S-d) {keyway}; marked {marked or 'nothing'}"))
+            say(f"fact    faces (b): each user component's referenced configuration, its document's active one and its "
+                f"configurations: { {n: (v['referenced'], v['active'], v['configurations']) for n, v in read['components'].items() if isinstance(v, dict)} }"
+                "; REFERENCED_CONFIGURATION_READ is M9's to set, on a component whose configuration differs (R2)")
             say(f"fact    faces (b): IsVirtual and IsPatternInstance answered on non-virtual, non-pattern components "
                 f"only: { {n: (v['virtual'], v['pattern']) for n, v in read['components'].items() if isinstance(v, dict)} }"
                 "; VIRTUAL_READ and PATTERN_INSTANCE_READ stay None until a run meets a positive case")
@@ -839,8 +946,7 @@ def section_faces(out):
             if left:
                 raise AssertionError(f"the copy did not close: left {left}")
             paths = {n: read["paths"].get(n) for n in {e.get("component") for e in read["entities"]}}
-            got = run("faces (d): the references resolved after a reload", C.in_build(faces_reload(read["entities"],
-                                                                                                paths)), 600)
+            got = run("faces (d): the references resolved after a reload", C.in_build(faces_reload(read["entities"], paths, folder)), 600)
             verdict = reload_verdict(read["entities"])
             say(f"fact    faces (d): resolved again in freshly loaded parts: {got}; {verdict}")
             say(propose("PERSIST_REFERENCE_SURVIVES_RELOAD", verdict[0] or None,
@@ -1027,13 +1133,26 @@ def state_lightweight(name):
     return work
 
 
-def state_version(path):
-    """The closed assembly's ``ISldWorks.VersionHistory`` (the ledger: verified on 2026 SP1.1 for a closed file, never
-    by the app) and ``GetLatestSupportedFileVersion``: what last saved it, against what this SolidWorks writes."""
+def state_version(path, other):
+    """Closed-file reads only, nothing opened: the closed assembly's ``ISldWorks.VersionHistory`` (the ledger: verified
+    on 2026 SP1.1 for a closed file, never by the app) and ``GetLatestSupportedFileVersion``; S-b's negative control,
+    ``other``, a file the other SolidWorks saved, read the same way when given; S-f's ``GetDocumentDependencies2(path,
+    False, False, False)`` (the ledger: verified, never by the app) and each dependency's ``VersionHistory``."""
     def work(s):
-        history = raw(s._app, "VersionHistory", path)  # noqa: SLF001
-        latest = raw(s._app, "GetLatestSupportedFileVersion")  # noqa: SLF001
-        return {"history": _plain(history), "latest": _plain(latest), "revision": list(s.revision)}
+        app = s._app  # noqa: SLF001
+        out = {"history": _plain(raw(app, "VersionHistory", path)), "latest": _plain(raw(app, "GetLatestSupportedFileVersion")),
+               "revision": list(s.revision)}
+        if other:
+            try:
+                out["other"] = _plain(raw(app, "VersionHistory", other))
+            except Exception as exc:  # noqa: BLE001 - its failure is the reading
+                out["other"] = f"{type(exc).__name__}: {exc}"
+        try:
+            deps = dependency_paths(_plain(raw(app, "GetDocumentDependencies2", path, False, False, False)))
+            out["dependencies"] = {os.path.basename(d): _plain(raw(app, "VersionHistory", d)) for d in deps}
+        except Exception as exc:  # noqa: BLE001
+            out["dependencies"] = f"{type(exc).__name__}: {exc}"
+        return out
     return work
 
 
@@ -1172,14 +1291,27 @@ def section_state(out):
         part(out, "closed", "state: the copy closed", close_copy)
 
         def version():
-            got = run("state (v): the closed file's last saved version", C.in_build(state_version(box.assembly)), 120)
-            last = last_saved(got.get("history"))
-            agrees = last is not None and last[0] == got.get("latest")
+            other = A._arg("--other-version-file")                  # noqa: SLF001
+            got = run("state (v): closed-file reads: the last saved version, the dependencies", C.in_build(
+                state_version(box.assembly, other)), 120)
+            last, latest = last_saved(got.get("history")), got.get("latest")
+            other_last = last_saved(got.get("other")) if other and not str(got.get("other", "")).count("Error") else None
             say(f"fact    state (v): VersionHistory {got.get('history')}, last {last}; GetLatestSupportedFileVersion "
-                f"{got.get('latest')}; the copy was last saved by this SolidWorks in (a): {agrees}")
+                f"{latest}; the other version's file ({os.path.basename(other) if other else 'not given'}) "
+                f"{got.get('other')}, last {other_last}")
             say(propose("FILE_VERSION_READ", "ISldWorks.VersionHistory(path), its last entry against "
-                        "GetLatestSupportedFileVersion" if agrees else None,
-                        f"state (v): the closed copy, saved in (a) by this SolidWorks, reads last {last}"))
+                        "GetLatestSupportedFileVersion" if version_proposal(last, other_last, latest) else None,
+                        f"state (v): the copy this SolidWorks saved in (a) reads last {last}; the other version's file "
+                        f"reads last {other_last} (S-b: proposed only with both, the second older or newer)"))
+            deps = got.get("dependencies")
+            names = set(deps) if isinstance(deps, dict) else set()
+            wanted = {"Sprocket.SLDPRT", "Housing.SLDPRT", os.path.basename(box.layout)}
+            say(f"fact    state (v): GetDocumentDependencies2 of the closed copy and each one's last saved version "
+                f"{ {n: last_saved(h) for n, h in deps.items()} if isinstance(deps, dict) else deps}")
+            say(propose("DEPENDENCIES_READ", "ISldWorks.GetDocumentDependencies2(path, False, False, False), each one's "
+                        "VersionHistory" if wanted <= names and all(last_saved(h) for h in deps.values()) else None,
+                        f"state (v): named {sorted(names)}; the user's parts and the layout among them "
+                        f"{wanted <= names}"))
             return got
         part(out, "version", "state (v)", version, needs=("closed",))
 

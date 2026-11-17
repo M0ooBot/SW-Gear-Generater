@@ -106,7 +106,7 @@ class OldEntity:
     leaf: str = ""              # inside a user sub-assembly: the leaf's Name2 path ("UserSub-1/P2Sprocket-1")
     reference: str = ""         # the part-level persistent reference, hex (tier 1); "" when not read or not needed
     select_type: int = UNREAD   # IMateEntity2.ReferenceType2 as read
-    coaxial: Optional[bool] = None  # a face on an app gear: a cylinder or cone whose axis is the part's Gear Axis
+    coaxial: Optional[bool] = None  # a face on an app gear: a CYLINDER whose axis is the part's Gear Axis
                                 # (CylinderParams of the part-level face, in part coordinates, against the line through
                                 # the origin along Z, which every recipe's Gear Axis is: spur.py:804's Axis on planes 2
                                 # and 3); None when not read (COAXIAL_FACE_READ unset, or not a face on an app gear)
@@ -305,10 +305,15 @@ still said when `carry` is None). `log_lines()` gains a line per item (`ok      
       another mode. *Not open*: opened `OpenDoc6(path, assembly, Silent | ReadOnly)` only when **all** of these hold
       (must-fix 2, as ruled), else `how = OLD_UNREAD` and nothing is read (§9.1 says so before the press):
       - the record says the old assembly was last written by a job on the running major version (`Carry.written_on`,
-        `GearboxRecord.solidworks`); and, once `FILE_VERSION_READ_ON_<year>` is set, the file's own last saved version
-        (`ISldWorks.VersionHistory(path)`, read closed) is the running one too (a save on the other SolidWorks after
-        the last job is otherwise not seen; §11.2);
-      - no document is open in the session but those `Carry.app_files` names;
+        `GearboxRecord.solidworks`), **and** `FILE_VERSION_READ_ON_<year>` is set **and** the file's own last saved
+        version (`ISldWorks.VersionHistory(path)`, read closed: its last entry) is the one the running SolidWorks
+        writes (`GetLatestSupportedFileVersion`). **While that finding is None the job never opens a closed old
+        assembly** (the re-check's R1: the record cannot see a save on the other SolidWorks after the last job);
+      - `DEPENDENCIES_READ_ON_<year>` is set **and** every file the old assembly references
+        (`ISldWorks.GetDocumentDependencies2(path, False, False, False)`, read closed) was last saved by the running
+        version too (S-f, §11.2: so a part of the user's that another SolidWorks saved is never loaded by the job);
+      - no document is open in the session but those `Carry.app_files` names, **and**, when any is open,
+        `OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS_ON_<year>` is True (S-e);
       - `OPEN_READ_ONLY_ROUTE_WHEN_NOT_OPEN_ON_<year>` is that route (set on both) and
         `OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN_ON_<year>` is True (the close of a read-only document, shown or not, under no
         dialog: GOTCHAS §100's CAM box follows the file's version);
@@ -338,10 +343,11 @@ still said when `carry` is None). `log_lines()` gains a line per item (`ok      
    2. the gates: a step whose finding is not set leaves its items named (`WHY_UNMEASURED`), never refuses the build;
    3. each carried component's file opened (`open_document`; a sub-assembly by `SUBASSEMBLY_INSERT_ROUTE`, §11.3),
       then the new assembly made the build document again by the route W9c's `AddedGear` insert uses;
-   4. each inserted (`add_component` at its frame's origin; in its referenced configuration where it differs from its
-      document's active one, D13: `AddComponent5(path, 0, "", True, configuration, …)`), its referenced configuration
-      read back (another is not carried: the component deleted again by `delete_component`, the job's own, and named
-      `WHY_CONFIGURATION`), placed (`place_component`), fixed where it was fixed (`fix_component`); first mode showing;
+   4. each inserted (`add_component` at its frame's origin, its configuration as §5.1 rules: passed explicitly,
+      `AddComponent5(path, 0, "", True, configuration, …)`, whenever `CARRY_INSERTS_IN_A_CONFIGURATION` is set; a file
+      of one configuration by the app's insert today), its referenced configuration read back (another is not carried:
+      the component deleted again by `delete_component`, the job's own, and named `WHY_CONFIGURATION`), placed
+      (`place_component`), fixed where it was fixed (`fix_component`); first mode showing;
    5. **the states, in every mode** (should-fix 4): each mode shown in turn, every carried component set to its wanted
       state there (`set_component_suppressed(handle, suppressed)`, suppressed or resolved) and read back; the first
       mode shown again; a state that does not read back as set is a failure (§0.3: "a new component … whose
@@ -440,11 +446,12 @@ data, the app's lock route). A body with no handle is `WHY_GONE`.
 **A user gear mate's entity on an app gear** (contradiction 1 †, ruled): a gear mate takes rotational entities only (an
 axis, a cylindrical or conical face, a circular edge; m1's read two axes, ReferenceType2 5, `Gear Axis`,
 `w9c…-2.log:156`). Its entity on an app gear is taken as that gear's `Gear Axis` in the new part (by name, tier 2),
-whether the old entity was the gear's `Gear Axis` or a face or edge of it, **provided it is coaxial**: every rotational
-face the app makes on a gear (a bore, a relief) is coaxial with `Gear Axis` by construction, but a face of a feature
-the user cut into the gear part (W9a's keyway is an off-axis Ø 3 hole) is not. So: an axis named `Gear Axis`, or a
-face or edge with `coaxial` True, is taken as `Gear Axis`; `coaxial` False or None is `WHY_PART_NEW` on a part made new
-and tier 1 on a same file. The other side goes by its own tier. This keeps K5's "a gear mate is found through the
+whether the old entity was the gear's `Gear Axis` or a cylindrical face of it, **provided the face is coaxial**: every
+cylindrical face the app makes on a gear (a bore, a relief) is coaxial with `Gear Axis` by construction, but a face of a
+feature the user cut into the gear part (W9a's keyway is an off-axis Ø 3 hole) is not. So, **narrowed to what the
+probe reads** (S-d): an axis named `Gear Axis`, or a **cylindrical face** with `coaxial` True, is taken as `Gear Axis`;
+a cylindrical face with `coaxial` False or None, and **every conical face and circular edge** (not read), is
+`WHY_PART_NEW` on a part made new and tier 1 on a same file. The other side goes by its own tier. This keeps K5's "a gear mate is found through the
 component". Behind `CARRY_GEAR_MATE_ON_AN_APP_GEAR_ON_<year>`, which M9 sets only with the remade mate's ratio and sense
 read back right (§10).
 
@@ -487,12 +494,19 @@ in a configured assembly. For a mate remade from a user's definition it is M9's 
   sub-assembly, with its file, **its referenced configuration** (must-fix 4, D13 ruled), fixed or floating, and its
   state per mode.
 - **Its referenced configuration**: read as `IComponent2.ReferencedConfiguration` (a get; gated
-  `REFERENCED_CONFIGURATION_READ`, the probe's `faces` (b)). Where it equals its document's active configuration, the
-  insert the app has today carries it. Where it differs, the insert passes it (`AddComponent5`'s
-  `UseConfigForPartReferences` True and `ExistingConfigName`: the same member, arguments the app has not passed) while
-  `CARRY_INSERTS_IN_A_CONFIGURATION_ON_<year>` is True; else, or where it would not read, the component is named
-  (`WHY_CONFIGURATION`), never carried in another. After the insert it is read back; another is deleted again and
-  named.
+  `REFERENCED_CONFIGURATION_READ`, **set by M9** on Sprocket-11, whose referenced configuration differs from its
+  document's active one: the probe's components all reference their file's only configuration, so it can log the read
+  but not show it right, the re-check's R2), beside its file's configurations (`IModelDoc2.GetConfigurationNames` on
+  its document, verified). `AddComponent5`'s option 0 inserts a file's **last saved** configuration
+  (`swAddComponentConfigOptions_e`), not its document's active one (S-a), so:
+  - a file with **one configuration** is carried by the insert the app has today: there is nothing else it could be
+    (no gate beyond `CARRY_INSERTS`);
+  - a file with several is carried only while `REFERENCED_CONFIGURATION_READ` and
+    `CARRY_INSERTS_IN_A_CONFIGURATION_ON_<year>` are True, and then the referenced configuration is **always** passed
+    explicitly (`UseConfigForPartReferences` True, `ExistingConfigName`: the same member, arguments the app has not
+    passed), whatever the document's active one is;
+  - otherwise, or where it would not read, the component is named (`WHY_CONFIGURATION`), never carried in another.
+  After the insert it is read back; another is deleted again (`delete_component`, the job's own) and named.
 - **Named**: a file not on disk (`WHY_NO_FILE`); a **virtual component** (`WHY_NO_FILE`, "virtual"), told by a `^` in
   its file name (should-fix 7): the macro database has a virtual part's path in the session's temporary folder
   (assemblies/12, "a virtual part (whose path is in the session's temporary folder)"), so `os.path.isfile` reads True
@@ -655,22 +669,25 @@ its items from being carried, named with the finding (`WHY_UNMEASURED`), and nev
 the W9d probe's reviewed logs; writes from M9's, patched in that run's process for the measurement only (as W9a's
 `nocarrier` and W9c's gates): a True one patched True; `CARRY_REMAKE_KINDS` patched to every carried kind word
 (`coincident`, `concentric`, `parallel`, `perpendicular`, `tangent`, `distance`, `angle`, `limit distance`,
-`limit angle`, `lock`, `gear`), and set to the words whose mates M9 remade clean.
+`limit angle`, `lock`, `gear`), and set to the words whose mates M9 remade clean. `REFERENCED_CONFIGURATION_READ`, a
+read with no positive case in the probe, is patched True in M9's process and set from M9's reading of Sprocket-11
+(the re-check's R2).
 
 | Finding (`_ON_<year>`) | Kind | Settled when | What it gates | Set by |
 |---|---|---|---|---|
 | `OPEN_READ_ONLY_ROUTE_WHEN_NOT_OPEN` | read (set, both) | its route string | the not-open read's open | W9c probes s5 (d) |
 | `OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN` (new) | read | True | the not-open read at all (its close), and its per-mode show | W9d probe `state` (h) |
 | `OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS` (new) | read | True | the not-open read with app documents open (one changed) | W9d probe `state` (g) |
-| `FILE_VERSION_READ` (new) | read | its route string | R.2's file-version condition (else the record's alone) | W9d probe `state` (v) |
+| `FILE_VERSION_READ` (new) | read | its route string | the not-open read at all: unset, a closed old assembly is never opened (R1) | W9d probe `state` (v), only with its negative control: a file the other version saved, read closed (S-b) |
+| `DEPENDENCIES_READ` (new) | read | its route string | the not-open read at all: every referenced file read closed, each last saved by the running version (S-f) | W9d probe `state` (v) |
 | `COMPONENT_STATE_PER_CONFIGURATION_ROUTE` (exists, None) | read | its route string | per-mode states read unshown | W9d probe `state` (b)–(d) |
 | `COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED` (new) | read | True | that route on an open old assembly with unsaved changes | W9d probe `state` (e) |
 | `PERSIST_REFERENCE_ROUTE_FOR_REFERENCE_FEATURES` | read (set, both) | its route string | tier 1 on axes and planes | W9c probes s5 (b) |
 | `PERSIST_REFERENCE_ROUTE_FOR_FACES`, `_FOR_EDGES` (new) | read | a route string | tier 1 on faces, edges | W9d probe `faces` (b) |
 | `PERSIST_REFERENCE_ROUTE_FOR_VERTICES` (new) | read | a route string | tier 1 on vertices | nothing in W9d: None |
-| `PERSIST_REFERENCE_SURVIVES_RELOAD` (new) | read | True | tier 1 on the not-open path | W9d probe `faces` (d) |
-| `COAXIAL_FACE_READ` (new) | read | True | `OldEntity.coaxial`: "bore" in sentences, §4.3's gear-mate rule on a face | W9d probe `faces` (b) |
-| `REFERENCED_CONFIGURATION_READ` (new) | read | True | the referenced configuration read; unset, every component whose configuration cannot be told is named | W9d probe `faces` (b) |
+| `PERSIST_REFERENCE_SURVIVES_RELOAD` (new) | read | True | tier 1 on the not-open path | W9d probe `faces` (d): the kind, the place in the part (a plane's offset, a cylinder's or circle's axis) and a face's area, the part unmarked by the resolve (S-c) |
+| `COAXIAL_FACE_READ` (new) | read | True | `OldEntity.coaxial` on a cylindrical face: "bore" in sentences, §4.3's gear-mate rule on a face | W9d probe `faces` (b): the bore True by both routes, every plane False, **Sun's User Keyway (off-axis) False** (S-d) |
+| `REFERENCED_CONFIGURATION_READ` (new) | read | True | the referenced configuration read on a file of several configurations; unset, such a component is named | **M9** (Sprocket-11, whose configuration differs; the re-check's R2). The probe logs the read as a fact and proposes nothing |
 | `VIRTUAL_READ` (new) | read | True | `IsVirtual` instead of the `^` rule | probe reads it negative only: None until a run meets a virtual component |
 | `PATTERN_INSTANCE_READ` (new) | read | True | `IsPatternInstance`: the per-instance sentence (D12) | probe reads it negative only: None until a run meets a pattern |
 | `ORIGIN_ENTITY_READ` (new) | read | True | an origin as a mate entity | nothing in W9d: None |
@@ -731,10 +748,13 @@ added as they apply, each in the result too:
   Gear Generator cannot yet carry on SolidWorks 2024 (findings.CARRY_INSERTS_IN_A_CONFIGURATION_ON_2024), so it is not
   carried, nor are its 3 mates.*;
 - the old assembly **not open**, and R.2's conditions not all met: *RangeBox.SLDASM is not open in SolidWorks, and
-  Gear Generator reads it then only when …* the condition that fails, one of: *it was last written on this SolidWorks*
-  (*a file saved since on another SolidWorks is not read*), *nothing else is open in SolidWorks*, *(findings.OPEN_READ_
-  ONLY_SHOWN_CLOSES_CLEAN_ON_2026)* — then *, so nothing of yours would be carried: open RangeBox.SLDASM in SolidWorks
-  before you press, and it is read as it stands there.*;
+  Gear Generator reads it then only when …* the condition that fails, one of: *it and every file it uses were last saved
+  by this SolidWorks* (*a file saved since on another SolidWorks is not read*), *Gear Generator has been shown to read
+  which SolidWorks last saved a file (findings.FILE_VERSION_READ_ON_2026)* (or `DEPENDENCIES_READ`), *nothing else is
+  open in SolidWorks*, *(findings.OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN_ON_2026)*, *(findings.OPEN_READ_ONLY_KEEPS_OPEN_
+  DOCUMENTS_ON_2026)* — then *, so nothing of yours would be carried: open RangeBox.SLDASM in SolidWorks before you
+  press, and it is read as it stands there.* While `FILE_VERSION_READ` is None this clause is said whenever the old
+  assembly is not open (R1);
 - states per mode not readable (D2 †): *Your components take, in every mode of RangeBox_r2, the state they have in the
   mode RangeBox.SLDASM shows when you press: whether you suppressed one in another mode cannot be read without changing
   RangeBox.SLDASM.*;
@@ -832,7 +852,8 @@ carried your work into it, so it does not hold it; RangeBox.SLDASM still does.* 
   the latter refusing a document this session did not open.
 - `select_by_reference(handle, kind, hex, append)` — tier 1's resolve, `GetCorresponding`, kind checked, `Select4`.
 - `add_component(handle, path, at, configuration="")` — `configuration` given: `AddComponent5(path, 0, "", True,
-  configuration, x, y, z)` (gated `CARRY_INSERTS_IN_A_CONFIGURATION`); unchanged otherwise.
+  configuration, x, y, z)` (gated `CARRY_INSERTS_IN_A_CONFIGURATION`); the carry passes it for every component of a
+  file with several configurations once that is set (§5.1, S-a); unchanged otherwise.
 - `set_component_suppressed(handle, suppressed)` — `IComponent2.SetSuppression2` in the mode showing, read back
   (measured as the probes' own call: W9c's s5 (e), W9a's `lightweight`; never the app's).
 - **`remake_mate(handle, definition, targets, name) -> (name kept, status)`** — `AddMate5` from the definition on the
@@ -895,12 +916,26 @@ the session holds what the user had open. Measured: the read-only open of an ass
 closed, reads read-only with its flag False (`OPEN_READ_ONLY_ROUTE_WHEN_NOT_OPEN`). Not measured: what it does to
 documents already open (made read-only? their changes kept? marked?), closing it after its modes were shown, and
 `QuitDoc` on a file another SolidWorks saved (GOTCHAS §100: on 2026 the CAM add-in's modal "Save changes to …?" for a
-2024 file, which ignores `WM_CLOSE` and Escape; the app has no dialog watch). Must-fix 2's conditions (R.2) keep the
-open off those cases: the record's `solidworks` is the version the last *job* wrote the file on; a save by the user on
-another version since is not in the record, so once `FILE_VERSION_READ` is set the file's own `VersionHistory` (a
-closed-file read, verified on 2026 in the ledger, `API-LEDGER.md:115`, never by the app) is required to agree too. With
-it unset the record's word alone stands, and a file saved on the other version since remains the one residual way to
-reach the CAM box; said in §13.
+2024 file, which ignores `WM_CLOSE` and Escape; the app has no dialog watch). R.2's conditions keep the
+open off those cases:
+- **the file's own version** (R1): the record's `solidworks` is the version the last *job* wrote the file on, which
+  cannot see a save by the user on the other version since; so the not-open read also requires `FILE_VERSION_READ` set
+  and the file's `VersionHistory` (a closed-file read, verified on 2026 in the ledger, `API-LEDGER.md:115`, never by the
+  app) to name the running version last. **While `FILE_VERSION_READ` is None the job never opens a closed old
+  assembly**: `OLD_UNREAD`, and the question says to open it in SolidWorks first (§9.1). The probe sets the finding
+  only with a negative control, a file the other version saved, read closed (S-b);
+- **the files it references** (S-f): the user's own parts may have been saved by the other version (a 2026 RangeBox
+  holding a sprocket part saved on 2024 is plausible), and whether `QuitDoc` of a same-version assembly raises the CAM
+  box for such a component is **unmeasured** (GOTCHAS §100 was seen on 2024-saved assemblies). The contract does not
+  find out: the not-open read also requires `DEPENDENCIES_READ` set and every file `GetDocumentDependencies2` names to
+  have been last saved by the running version. **So a part of the user's that is not loaded in the session is never
+  opened by the job unless the closed-file reads have shown it and every file beside it saved by the running
+  SolidWorks.** Where they have, it is opened twice: inside the read-only open (and closed with it, R.7 checking it is
+  gone), and again by C.3 to insert it into the new revision, where it then stays loaded as a component of the new,
+  unsaved assembly, as every part the build inserts does. On the open path nothing new is opened: the user's parts are
+  already loaded with their assembly;
+- **the documents already open** (S-e): the open goes ahead beside the app's own documents only when
+  `OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS` is True.
 
 ### 11.3 Whether opening a healthy user sub-assembly marks it
 
@@ -967,6 +1002,9 @@ by the route the probe proposes for its kind, set per version; unset, `WHY_UNMEA
   revision dropped; the sentence plain (§9.1).
 - **D15 — ruled**: remade mates keep their old names.
 - **D16 — ruled against the draft**: `CarryEntry.unsaved_at`, not `LinkRecord.unsaved` (§7).
+- **The plan's "bore mate on Sun" (the coordinator's ruling, the re-check)**: RangeBox's Sun has no bore
+  (`tests/workbook_fixtures.py:84`, no Bore), so M9 shows it as a mate on Sun's front end face — the same test of the
+  rule: a face of an app part made new is named (`WHY_PART_NEW`), not re-found. Not a silent change of the Done-when.
 - **D17, D18, D19, D21 — ruled as recommended** (D18 verified, §15: a mixed-flank mesh is legal in the code now; D19's
   origin is now any origin, unmeasured, §4.2).
 - **D20 — ruled with the review's change**: each component takes its own lock to an app body first, then its cluster's
@@ -992,10 +1030,11 @@ by the route the probe proposes for its kind, set per version; unset, `WHY_UNMEA
 6. **"Frames read in the active mode only" and "placed once, in the first mode"**: may differ. Resolved in §5.3
    (placement relative to the anchor's frame in each) and §6 (`moved` compared in the anchor's frame per mode).
 7. **"No `Save3` … *RangeBox_r2 holds them unsaved*"**: true; nothing changes in what is saved.
-8. **The not-open read's residual risk** (§11.2): the record knows the version of the last *job*, not of a user's save
-   since; until `FILE_VERSION_READ` is set, a file the user saved on the other SolidWorks after the last job can still
-   reach GOTCHAS §100's CAM box on the close. The coordinator's ruling stands on the record; the probe reads
-   `VersionHistory` so the gap can close.
+8. **The not-open read's residual risk** (§11.2): **closed** (the re-check's R1). The record knows the version of the last
+   *job*, not of a user's save since, so the not-open read now requires `FILE_VERSION_READ` and the file's own last
+   saved version, and the same of every file it references (`DEPENDENCIES_READ`, S-f); while either finding is None the
+   job never opens a closed old assembly. What stays unmeasured, and is never reached by that rule: whether `QuitDoc` of
+   a same-version assembly raises SOLIDWORKS CAM's box for a component another version saved.
 
 ## 14. Tests each package owes against the fake
 
@@ -1028,8 +1067,11 @@ by the route the probe proposes for its kind, set per version; unset, `WHY_UNMEA
   show of it, any `close_unsaved` of a document the job did not open); nothing saved after the new assembly's first
   `save_as`; every user file's saved state and time unchanged; `open_before` is R.1's list; a read that leaves a
   document open does nothing more, said.
-- **The not-open path**: refused (`OLD_UNREAD`, said) when the record's version is not the running one, when a document
-  the record does not name is open, or when `OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN` is None; otherwise opened read-only,
+- **The not-open path**: refused (`OLD_UNREAD`, said, the assembly never opened) when the record's version is not the
+  running one, when `FILE_VERSION_READ` or `DEPENDENCIES_READ` is None (R1, S-f), when the file or any file it references
+  reads last saved by another version, when a document the record does not name is open, when app documents are open
+  and `OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS` is None, or when `OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN` is None; otherwise
+  opened read-only,
   shown and closed, and tier 1 named `WHY_UNMEASURED` while `PERSIST_REFERENCE_SURVIVES_RELOAD` is None.
 - A mode new in the revision takes the old first mode's states and flags; an old mode not in it is said.
 - Every gate None: nothing carried, every item named with its finding, the build's result and record unchanged from
@@ -1097,7 +1139,9 @@ saved as the run's own copy:
 - a user gear mate from Sprocket-6's `Gear Axis` to Sun's `Gear Axis` (§4.3, `CARRY_GEAR_MATE_ON_AN_APP_GEAR`, ratio
   and sense read back; the face variant is shown on the fake only, since no face of Sun is coaxial);
 - Sprocket-7 suppressed in L (states per mode);
-- Sprocket-9 lightweight in the mode showing, with a mate (D10);
+- Sprocket-9 with a mate, **set lightweight in the session after the fixture is saved, in the `carry` section only**
+  (D10; never saved lightweight: saving an assembly with a lightweight component meets SOLIDWORKS CAM's box, the
+  re-check's S-g);
 - Sprocket-10 suppressed in the mode showing, with a mate (should-fix 3, and what R reads of its mate);
 - a mate to the assembly's own Front plane (tree order);
 - Sprocket-11 with a configuration of its own (its part given a second configuration, the component set to it):
@@ -1116,7 +1160,8 @@ W8's `edit`.
 
 **Sections**: `carry-gates` (every W9d write gate None: the question and the result name everything with its finding,
 the build as W9c's; ~10 min); `carry` (the gates patched in the process, the old assembly open with H showing: the
-Done-when below; ~40 min); `carry-closed` (the old assembly **saved with L showing**, then closed: read read-only under
+Done-when below; ~40 min); `carry-closed` (the old assembly **saved with L showing** and **no lightweight component**
+(Sprocket-9 resolved before that save), then closed: read read-only under
 R.2's conditions, RangeSlv's train read in L and placed in H, contradiction 6 shown with the sliding RangeSlv; the
 states by the route or the read-only show; ~20 min); a 2024 run of `carry` alone in a fresh session (~80 min).
 
@@ -1186,3 +1231,8 @@ temporary folder, so `on_disk` reads True). 8 → §3 R.1, R.7. 9 → §4.1, `PE
 reader → §7; `moved`'s tolerance → §6. Probe P1–P13 → `probe/w9d_probes.py` and `W9D-PROBES.md` (P12's third bullet,
 another version's file, not taken: the ruling keeps the not-open read to a file the record says the running version
 wrote, and `FILE_VERSION_READ` covers the rest without opening one).
+
+**The re-check (`W9D-INTERFACES-REVIEW.md`, *Re-check of the revision*, `8d3695b`).** R1 → §3 R.2, §11.2, §13 item 8
+(closed), §9.1, §14.1. R2 → §5.1, §8. S-a → §5.1, §3 C.4, §10. S-b → §8, the probe's `state` (v) with
+`--other-version-file`. S-c → §8, the probe's `faces` (d). S-d → §2.2, §4.3, §8, the probe's `faces` (b). S-e → §3
+R.2, §11.2, §9.1. S-f → §3 R.2, §11.2, §13 item 8, `DEPENDENCIES_READ`. S-g → §15. The bore mate's equivalence → §12.

@@ -4,7 +4,8 @@ The script is `probe/w9d_probes.py`. It measures what `W9D-INTERFACES.md` §11 o
 the three things the plan's last section names, plus the calls W9d adds that the app has never made and that could
 raise a dialog or change a document. It proposes findings in the log (`propose NAME = value  # evidence`) and sets
 none; each is set per version (`_ON_2026`, `_ON_2024`) from the reviewed log. **Revised** to the review
-(`W9D-INTERFACES-REVIEW.md`, `f0eb516`): every probe fault P1–P13 is taken (the table at the end).
+(`W9D-INTERFACES-REVIEW.md`, `f0eb516`): every probe fault P1–P13 is taken (the table at the end); then to its re-check (`8d3695b`): R2, S-b, S-c and S-d
+are in the script, R1, S-a, S-e, S-f and S-g in the contract.
 
 **How it runs.** As W9c's probes do: it runs W9a's script's `main` with its own three sections, through
 `probe/w9c_probes.py` (imported for the watch, `swconst`, `mate_definition`, `select_face`, `raw_mate`, `open_doc6`,
@@ -15,17 +16,18 @@ folder or one the script makes, closed unsaved at its section's end; the only sa
 (`Save3`, so the reads start unmarked, as W9c's s5 (e)) and of assemblies the script makes (the app's `save_as`).
 
 **Masters:** `--user-master` (W9a's `setup.master` for this version; built here first through W9a's builders when not
-given, which needs `--master`, S0's `rangebox.master`).
+given, which needs `--master`, S0's `rangebox.master`). **`--other-version-file`**: a file the *other* SolidWorks last
+saved, read closed by `VersionHistory` only, never opened — `FILE_VERSION_READ`'s negative control (S-b).
 
 ## Sections, in order
 
 | Section | What it asks | Proposes | 2026 (estimate) |
 |---|---|---|---|
-| `faces` | (a) On a copy of setup.master, Sprocket-5, -6 and -7 inserted and four mates made through `GetCorresponding` (m1's route): a concentric on Sprocket-5's bore face to Input Axis; a coincident between Sprocket-5's and Sprocket-6's end faces; a concentric on Sprocket-6's circular bore edge; a **parallel** (a kind never made or read before) between Sprocket-7's end face and Sun's; the copy then saved and read unmarked (P1). (b) Each face or edge entity: its `ReferenceType2` and the kind it gives, against which of `GetSurface`, `GetCurve`, `GetPoint` answer; what `IEntity.GetComponent` names; its coaxial read (`CylinderParams` of the part-level face against the part's Z axis); two routes to its part-level reference — **r1** `GetCorrespondingEntity2` in the assembly then the part's `GetPersistReference3`, **r2** the mate's entity straight to the part's `GetPersistReference3` — each resolved in the part, carried back through the component and held to the original by `ISldWorks.IsSame` (else the face's area); the assembly-context reference's length (read only); each user component's `ReferencedConfiguration`, its document's active configuration, `IsVirtual` and `IsPatternInstance`; GetSaveFlag of every document around, and which were already marked at the start. (c) The four made again in a second assembly, each entity by its own kind's clean route (P10), layout and Sun fixed, definitions and frames compared; the copy's documents' flags read before the inserts, after them and after the mates. (d) The second assembly and the copy closed, each part opened alone, every face and edge reference resolved there again (P12, the not-open path's resolve). | `PERSIST_REFERENCE_ROUTE_FOR_FACES`, `_FOR_EDGES`, `COAXIAL_FACE_READ`, `REFERENCED_CONFIGURATION_READ`, `CARRY_INSERT_MARKS_USER_DOCUMENTS`, `PERSIST_REFERENCE_SURVIVES_RELOAD` | 6 min |
-| `state` | (a) On a copy of setup.master, Housing-1 suppressed in H (the mode showing) and Sprocket-4 in L, saved and read unmarked; Sprocket-4's mates' flags read unshown (a fact). (b–d) With nothing shown, GetSaveFlag of every document around each, the start's flags kept (P4): **candidate 1** `IConfiguration.GetComponentSuppressionState(Name2)` per mode; **candidate 2** `GetRootComponent3(False)` per mode; **candidate 3**, W9c's marking route taken apart call by call for each mode not showing, naming the first call that marks (P5); then the truth, each mode shown. (e) Sprocket-2 suppressed in N and **not saved**: candidate 1 again (proposed only when (b–d) chose it, P6). (f) Sprocket-1 set lightweight: candidate 1, the active configuration's `GetRootComponent3(False)` and `(True)`, every state after each — facts only (P7); all resolved again. Then the copy closed. (v) The closed file's `ISldWorks.VersionHistory` against `GetLatestSupportedFileVersion`. (g) The Housing part opened unchanged and the Sprocket part opened and changed (a global added); the assembly opened `Silent | ReadOnly` beside them under the watch; what became of each part (open, flag, read-only; the global read back, P2); candidate 1 there; its modes shown. (h) That read-only document closed unsaved (`QuitDoc`) under the watch, 3 s waited inside the job; every document it loaded checked gone (P3), both parts as they were after the open, the shows and the close, every file's time unchanged. | `COMPONENT_STATE_PER_CONFIGURATION_ROUTE`, `COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED`, `FILE_VERSION_READ`, `OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS`, `OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN` | 8 min |
+| `faces` | (a) On a copy of setup.master, Sprocket-5, -6 and -7 inserted and four mates made through `GetCorresponding` (m1's route): a concentric on Sprocket-5's bore face to Input Axis; a coincident between Sprocket-5's and Sprocket-6's end faces; a concentric on Sprocket-6's circular bore edge; a **parallel** (a kind never made or read before) between Sprocket-7's end face and Sun's; the copy then saved and read unmarked (P1). (b) Each face or edge entity: its `ReferenceType2` and the kind it gives, against which of `GetSurface`, `GetCurve`, `GetPoint` answer; what `IEntity.GetComponent` names; its coaxial read (`CylinderParams` of the part-level face against the part's Z axis); two routes to its part-level reference — **r1** `GetCorrespondingEntity2` in the assembly then the part's `GetPersistReference3`, **r2** the mate's entity straight to the part's `GetPersistReference3` — each resolved in the part, carried back through the component and held to the original by `ISldWorks.IsSame` (else the face's area); the assembly-context reference's length (read only); Sun's cylindrical faces, its off-axis User Keyway among them, read for coaxial (the negative control, S-d), and the coaxial read taken on r2's resolved entity too; each face's and edge's place in its part (a plane's offset, a cylinder's or circle's axis); each user component's `ReferencedConfiguration`, its document's active configuration and configuration names, `IsVirtual` and `IsPatternInstance` (facts, R2); GetSaveFlag of every document around, and which were already marked at the start. (c) The four made again in a second assembly, each entity by its own kind's clean route (P10), layout and Sun fixed, definitions and frames compared; the copy's documents' flags read before the inserts, after them and after the mates. (d) The second assembly and the copy closed, each part opened alone, every face and edge reference resolved there again and held to its kind, its place in the part and a face's area, the save flags read around each resolve (P12, S-c; the not-open path's resolve). | `PERSIST_REFERENCE_ROUTE_FOR_FACES`, `_FOR_EDGES`, `COAXIAL_FACE_READ`, `CARRY_INSERT_MARKS_USER_DOCUMENTS`, `PERSIST_REFERENCE_SURVIVES_RELOAD` | 6 min |
+| `state` | (a) On a copy of setup.master, Housing-1 suppressed in H (the mode showing) and Sprocket-4 in L, saved and read unmarked; Sprocket-4's mates' flags read unshown (a fact). (b–d) With nothing shown, GetSaveFlag of every document around each, the start's flags kept (P4): **candidate 1** `IConfiguration.GetComponentSuppressionState(Name2)` per mode; **candidate 2** `GetRootComponent3(False)` per mode; **candidate 3**, W9c's marking route taken apart call by call for each mode not showing, naming the first call that marks (P5); then the truth, each mode shown. (e) Sprocket-2 suppressed in N and **not saved**: candidate 1 again (proposed only when (b–d) chose it, P6). (f) Sprocket-1 set lightweight: candidate 1, the active configuration's `GetRootComponent3(False)` and `(True)`, every state after each — facts only (P7); all resolved again. Then the copy closed. (v) Closed-file reads only: the copy's `ISldWorks.VersionHistory` against `GetLatestSupportedFileVersion`, the other version's file's `VersionHistory` (S-b), and the copy's `GetDocumentDependencies2` with each dependency's `VersionHistory` (S-f). (g) The Housing part opened unchanged and the Sprocket part opened and changed (a global added); the assembly opened `Silent | ReadOnly` beside them under the watch; what became of each part (open, flag, read-only; the global read back, P2); candidate 1 there; its modes shown. (h) That read-only document closed unsaved (`QuitDoc`) under the watch, 3 s waited inside the job; every document it loaded checked gone (P3), both parts as they were after the open, the shows and the close, every file's time unchanged. | `COMPONENT_STATE_PER_CONFIGURATION_ROUTE`, `COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED`, `FILE_VERSION_READ`, `DEPENDENCIES_READ`, `OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS`, `OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN` | 8 min |
 | `sub` | A healthy sub-assembly made from a copy of the sprocket. (a) Not loaded: `OpenDoc6` Silent, its flag straight after and after 5 s. (b) Opened `Silent | ReadOnly`, a new assembly saved, the sub-assembly inserted by `AddComponent5` (of a read-only document: new): inserted, its children, its flag and read-only state. (c) A host holding it made in `p2_make_sub`'s order and saved by the app's `save_as` only (P8), reopened so the sub-assembly is loaded as a component only; `OpenDoc6` of it (the warning, its flag), then inserted into another new assembly (its flag). Every step under the watch; a dialog that comes and goes ends that step with a STOP line and its finding proposed None (P9). | `SUBASSEMBLY_OPEN_MARKS`, `SUBASSEMBLY_READ_ONLY_INSERT`, `SUBASSEMBLY_OPEN_MARKS_WHEN_LOADED` | 3 min |
 
-**About 18 minutes on 2026** with the harness's start (attach, Excel) and setup.master given; **about 35 minutes on
+**About 19 minutes on 2026** with the harness's start (attach, Excel) and setup.master given; **about 37 minutes on
 2024** (S5 ran 1.6–2× slower there), in one fresh session or each section in its own.
 
 **Which answer sets which finding** (each per version; *settled when* as `W9D-INTERFACES.md` §8):
@@ -36,8 +38,12 @@ given, which needs `--master`, S0's `rangebox.master`).
   `IConfiguration.GetComponentSuppressionState(Name2)`. None if neither 1 nor 2 does.
 - `COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED`: proposed only when candidate 1 was chosen; True when it reads
   Sprocket-2 suppressed in N after the unsaved change.
-- `FILE_VERSION_READ`: the route string when the closed copy's last `VersionHistory` entry is the version
-  `GetLatestSupportedFileVersion` gives (the copy was saved by this SolidWorks in (a)); else None.
+- `FILE_VERSION_READ`: the route string only when **both** hold: the closed copy's last `VersionHistory` entry is the
+  version `GetLatestSupportedFileVersion` gives (the copy was saved by this SolidWorks in (a)), and the other version's
+  file reads a different one (S-b); None without `--other-version-file` or when either read fails. It gates the
+  not-open read at all (the contract's R1), so it is never set from the same-version control alone.
+- `DEPENDENCIES_READ`: the route string when `GetDocumentDependencies2` of the closed copy names Sprocket.SLDPRT,
+  Housing.SLDPRT and the layout part, and every dependency's `VersionHistory` answers.
 - `OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS`: True when, after the read-only open, the Housing part is still open, unmarked
   and not read-only, and the Sprocket part still open, changed (its global read back) and not read-only; None when the
   Housing part was not unmarked before the open.
@@ -47,13 +53,16 @@ given, which needs `--master`, S0's `rangebox.master`).
 - `PERSIST_REFERENCE_ROUTE_FOR_FACES` / `_FOR_EDGES`: the first route (r1, then r2) clean on every face (five) or the
   one edge — read, resolved to its own kind, the round trip the same object — from a bracket that started unmarked and
   marked nothing. A resolve to another kind is §0.3's STOP for W9d and is said in the log as such.
-- `PERSIST_REFERENCE_SURVIVES_RELOAD`: True when every face and edge reference resolves again, to its own kind (a face
-  to its own area), in its part opened alone after the copy closed; None otherwise.
-- `COAXIAL_FACE_READ`: True when Sprocket-5's bore reads coaxial and every end face reads not, from an unmarked start
-  marking nothing.
-- `REFERENCED_CONFIGURATION_READ`: True when every user component answers a referenced configuration name, from an
-  unmarked start marking nothing. (`IsVirtual` and `IsPatternInstance` are read and logged as facts: no fixture holds a
-  virtual component or a pattern, so `VIRTUAL_READ` and `PATTERN_INSTANCE_READ` stay None.)
+- `PERSIST_REFERENCE_SURVIVES_RELOAD`: True when every face and edge reference resolves again, in its part opened alone
+  after the copy closed, to its own kind, **its own place in the part** (a sprocket's two end faces have the same area,
+  S-c) and a face's own area, and the resolve marks nothing; None otherwise.
+- `COAXIAL_FACE_READ`: True when Sprocket-5's bore reads coaxial by r1's entity and r2's, every planar face reads
+  not, and **Sun's User Keyway** (an off-axis Ø3 cylinder in Sun's part, which setup.master holds) reads not — the
+  control the rule exists for (S-d) — from an unmarked start marking nothing. No keyway read: not proposed True.
+- `REFERENCED_CONFIGURATION_READ`: **not proposed** (the re-check's R2). Every component here references its file's
+  only configuration, so a read that answered the active one whatever was referenced would look right: the read is
+  logged as a fact, and M9 sets the finding on Sprocket-11, whose configuration differs. `IsVirtual` and
+  `IsPatternInstance` are likewise facts: `VIRTUAL_READ` and `PATTERN_INSTANCE_READ` stay None.
 - `CARRY_INSERT_MARKS_USER_DOCUMENTS`: True when inserting the user's parts into the second assembly turned any of the
   copy's documents on; None when one was already on before (P11).
 - `SUBASSEMBLY_OPEN_MARKS` / `_WHEN_LOADED`: True when that open turned the sub-assembly's flag on (settled when
@@ -76,10 +85,18 @@ a fresh `<out>`, or the same with `--redo`.
 python.exe RUN\snap\probe\w9d_probes.py RUN\snap\src RUN\out --pid PID --log RUN\w9d-probes-sw2026.log ^
     --sections faces,state,sub ^
     --user-master <probe folder>\w9c-whole-sw2026-20261117-123612\out\setup.master ^
-    --master <probe folder>\w9c-whole-sw2026-20261117-123612\out\rangebox.master
+    --master <probe folder>\w9c-whole-sw2026-20261117-123612\out\rangebox.master ^
+    --other-version-file <probe folder>\w4-demo-sw2024-20261113-200555\run\a\Reducer_12to1.SLDASM
 python.exe RUN\snap\probe\w9d_probes.py RUN\snap\src RUN\out24 --pid PID --log RUN\w9d-probes-sw2024.log ^
-    --sections faces,state,sub --user-master <2024's setup.master> --master <2024's rangebox.master>
+    --sections faces,state,sub --user-master <2024's setup.master> --master <2024's rangebox.master> ^
+    --other-version-file <probe folder>\w9c-whole-sw2026-20261117-123612\out\RangeBox.SLDASM
 ```
+
+The 2026 control is a 12 : 1 assembly in a folder a 2024 run made on 2026-11-13 (its folder name says so; that 2024
+last saved it is what the read itself shows, and if it reads otherwise the finding is simply not proposed). The 2024
+control is the 2026 whole run's RangeBox. Both files are only read closed, never opened, so neither version's CAM box
+can come up; whether 2024's `VersionHistory` reads a newer version's file at all is itself unknown, and a failure there
+leaves the finding unproposed on 2024.
 
 Commit the logs as `probe/results/w9d-probes-sw2026-<date>.log` and `probe/results/sw2024/w9d-probes-sw2024-<date>.log`
 with their JSON.
@@ -87,7 +104,7 @@ with their JSON.
 ## What is untested
 
 Only `--self-check` and `--help` have run (the Linux venv, no SolidWorks): the pure judgements on made-up readings
-(41 checks, 0 failed). Nothing that talks to SolidWorks has run, so expect script faults first, as every probe script
+(52 checks, 0 failed). Nothing that talks to SolidWorks has run, so expect script faults first, as every probe script
 here has met. In particular, unverified and resting on the API help or on reading other scripts:
 
 - that `GetComponentSuppressionState` takes the top-level `Name2` (its example passes `IComponent2.Name`) and answers a
@@ -99,6 +116,8 @@ here has met. In particular, unverified and resting on the API help or on readin
 - the sprocket's geometry as m1 read it (a bore of radius 5 mm, end faces at −1 and +5 mm in its own coordinates),
   the circular-edge filter (`CircleParams` index 6 the radius, index 2 the centre's z), Sun's last planar face being an
   end face, and `CylinderParams`' layout (origin, axis, radius) for the coaxial read;
+- `GetDocumentDependencies2`'s flat name, path array through late binding, `PlaneParams` and `CylinderParams`'
+  layouts as `where_of` reads them, Sun's keyway being its only cylinder of radius 1.5 mm;
 - that a read-only document can be shown mode by mode and found again by its path for `QuitDoc`;
 - `equation_values` naming the added global `W9dProbe` as such;
 - `AddComponent5` of a sub-assembly opened read-only;
