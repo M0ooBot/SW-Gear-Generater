@@ -3513,7 +3513,28 @@ def build_gearbox(sw: SolidWorks, parts: Sequence[BuildPlan], reuse: Sequence[Do
             senses = _sense_gate(assembly, senses)
     # W9a (ISSUE-1-PLAN §2.1 item 8): a Build again… reads what of the user's stays behind in the old assembly first,
     # read-only, before anything is made; the read never stops the build.
-    old_work, old_read = (None, "") if before is None else _read_before(sw, before)
+    carried: Optional[CarryResult] = None
+    r1_docs: Optional[List[str]] = None
+    times: Dict[str, float] = {}
+    if carry is not None:
+        # W9d (§3 R): the old assembly read before anything is made, in its own bracket; it never stops the build.
+        try:
+            read, documents, _ = read_old_work(sw, carry)
+            carried = CarryResult(read)
+            r1_docs = [d.path for d in documents if d.path]
+            for path in [carry.old.path] + [c.path for c in read.components if c.path and c.on_disk]:
+                try:
+                    times[path] = float(mtime(path))
+                except (OSError, ValueError, TypeError):
+                    continue
+            old_work = read.user_work() if read.how != OLD_UNREAD else None
+            old_read = "" if read.how != OLD_UNREAD else (OLD_NOT_OPEN if read.unread else "")
+        except Exception as exc:  # noqa: BLE001 - the read never stops the build (§1)
+            carried = CarryResult(None, stopped=f"SolidWorks did not answer the read of {_file(carry.old.path)}: "
+                                                 f"{_said(exc)}")
+            old_work, old_read = None, carried.stopped
+    else:
+        old_work, old_read = (None, "") if before is None else _read_before(sw, before)
     plans = list(parts) + ([layout_plan] if layout_plan is not None else []) + carrier_plans + \
         ([assembly] if assembly is not None else [])
     for plan in plans:
@@ -3532,6 +3553,8 @@ def build_gearbox(sw: SolidWorks, parts: Sequence[BuildPlan], reuse: Sequence[Do
             raise BuildError(f"{path} is no longer there, so it cannot be reused: it was moved, renamed or deleted "
                              "since it was built.")
     open_before = _refuse_paths(sw, made, reused, "make", "reuse")
+    if r1_docs is not None:
+        open_before = r1_docs              # W9d (D1): R.1's list, so nothing R opened counts as open before
     inserted = [op.path for op in assembly.ops if isinstance(op, base.AddComponent)] if assembly is not None else []
     for path in inserted:
         if not any(same_path(path, p) for p in made + reused):
@@ -3543,7 +3566,7 @@ def build_gearbox(sw: SolidWorks, parts: Sequence[BuildPlan], reuse: Sequence[Do
                          f"yet (findings.REUSE_ADD_ROUTE is {route!r}), so this build, which reuses "
                          f"{_file(reused_in_assembly[0])}, cannot start; run probe tier 7 first.")
 
-    result = GearboxResult(open_before=list(open_before), old_user_work=old_work, old_read=old_read)
+    result = GearboxResult(open_before=list(open_before), old_user_work=old_work, old_read=old_read, carry=carried)
     if modes is not None:
         result.positions_per_configuration = positions_per_configuration(sw.revision)
     for index, doc in enumerate(reused_docs, 1):
@@ -3576,6 +3599,8 @@ def build_gearbox(sw: SolidWorks, parts: Sequence[BuildPlan], reuse: Sequence[Do
     except Exception as exc:  # noqa: BLE001 - see above
         if stage[0] == "the interference check":
             result.interference_error = _said(exc)        # a clash check that cannot run is a CHECK, not a failure
+            if carry is not None and result.carry is not None and result.carry.work is not None:
+                _carry_in_job(sw, result, carry, assembly, say, mtime, times)
             return result
         result.failures.append((stage[0], _said(exc)))
         rest = {"the parts": [p for p, planned in (("the layout part", layout_plan is not None),
@@ -3587,7 +3612,20 @@ def build_gearbox(sw: SolidWorks, parts: Sequence[BuildPlan], reuse: Sequence[Do
                 }.get(stage[0], [])
         if rest and not result.skipped:
             result.skipped = f"{' and '.join(rest)}, because the job stopped during {stage[0]}"
+        return result
+    if carry is not None and result.carry is not None and result.carry.work is not None:
+        _carry_in_job(sw, result, carry, assembly, say, mtime, times)
     return result
+
+
+def _carry_in_job(sw: SolidWorks, result: GearboxResult, carry: "Carry", assembly: Optional[BuildPlan],
+                  say: Callable[[Step], None], mtime: Callable[[str], float], times: Mapping[str, float]) -> None:
+    """W9d's carry C in its own bracket (begin_build / end_build), after the new assembly's save (§3 C)."""
+    sw.begin_build()
+    try:
+        _carry(sw, result, carry, result.carry.work, assembly, say, mtime, times)
+    finally:
+        sw.end_build()
 
 
 def _build_gearbox_body(sw: SolidWorks, result: GearboxResult, parts: Sequence[BuildPlan],
@@ -7459,6 +7497,671 @@ def carry_gates(work: OldWork, carry: Carry, revision: Sequence[int]) -> List[Tu
     """Pure (W9D-INTERFACES §8): ``(step, finding)`` for each gate not settled that something in ``work`` needs, in
     the order :func:`plan_carry` meets them, for the worker's naming and B's question (as :func:`in_place_gates`)."""
     return list(plan_carry(work, carry, revision).gates)
+
+# -- W9d: the read R and the carry C (W9D-INTERFACES §3) --------------------------------------------------------------
+
+STATES_SHOWN_READ_ONLY = "shown read-only"     # OldWork.states_route: the job's read-only document shown mode by mode
+_TIER1_KINDS = (ENTITY_FEATURE, ENTITY_PLANE, ENTITY_FACE, ENTITY_EDGE, ENTITY_VERTEX)
+
+
+def _not_open_refusal(sw: SolidWorks, carry: Carry, docs: Sequence[DocInfo]) -> str:
+    """§3 R.2: why a closed old assembly is not opened read-only (the clause after "… reads it then only when"), or
+    "" when every condition holds. Closed-file reads only (VersionHistory, GetDocumentDependencies2); nothing is
+    opened here."""
+    fs = _Findings(sw.revision)
+    file = _file(carry.old.path)
+    lead = f"{file} is not open in SolidWorks, and Gear Generator reads it then only when "
+    if not fs.settled("OPEN_READ_ONLY_ROUTE_WHEN_NOT_OPEN", OPEN_READ_ONLY_ROUTE):
+        return lead + f"its read-only open has been shown (findings.{fs.full('OPEN_READ_ONLY_ROUTE_WHEN_NOT_OPEN')})"
+    if not fs.settled("OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN"):
+        return lead + f"its close has been shown clean (findings.{fs.full('OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN')})"
+    for name in ("FILE_VERSION_READ", "DEPENDENCIES_READ"):
+        if not fs.settled(name, _SET):
+            return lead + (f"Gear Generator has been shown to read which SolidWorks last saved a file "
+                           f"(findings.{fs.full(name)})")
+    if not carry.written_on or not sw.revision or int(carry.written_on[0]) != int(sw.revision[0]):
+        return lead + "it was last written on this SolidWorks"
+    running = sw.running_file_version()
+    files = [carry.old.path] + list(sw.dependencies(carry.old.path))
+    if running is None or any(sw.file_version(path) != running for path in files):
+        return lead + "it and every file it uses were last saved by this SolidWorks (a file saved since on another " \
+                      "SolidWorks is not read)"
+    if any(not d.path or not any(same_path(d.path, a) for a in carry.app_files) for d in docs):
+        return lead + "nothing else is open in SolidWorks"
+    if docs and not fs.settled("OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS"):
+        return lead + (f"opening it read-only has been shown to leave the documents already open as they are "
+                       f"(findings.{fs.full('OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS')})")
+    return ""
+
+
+def read_old_work(sw: SolidWorks, carry: Carry, *,
+                  isfile: Optional[Callable[[str], bool]] = None) -> Tuple[OldWork, List[DocInfo], Dict[str, bool]]:
+    """§3 R: the old assembly read before anything is made, as an :class:`OldWork`, with R.1's documents (the job's
+    ``open_before``) and their save flags. Open in the session: read as it stands, never activated, never shown in
+    another mode. Closed: opened read-only only under R.2's conditions (:func:`_not_open_refusal`), read, shown mode
+    by mode when no unshown state route is set, and closed unsaved; else ``OLD_UNREAD`` with the reason. Nothing is
+    written to it. A document a read turned modified is ``marked``; one left open by the read-only close ``left``."""
+    old = carry.old
+    work = OldWork(now(), old.path, OLD_UNREAD, "", (), [], [], ())
+    opened = False
+    sw.begin_build()
+    try:
+        docs = list(sw.documents())
+        flags_before = dict(sw.save_flags())
+        if sw.use_open_document(old.path) is not None:
+            work.how = OLD_OPEN
+        else:
+            why = _not_open_refusal(sw, carry, docs)
+            if why:
+                work.unread.append(why)
+                return work, docs, flags_before
+            if sw.open_read_only(old.path) is None:
+                work.unread.append(f"SolidWorks would not open {_file(old.path)} read-only")
+                return work, docs, flags_before
+            opened, work.how = True, OLD_READ_ONLY
+        unsaved = any(same_path(p, old.path) and f for p, f in flags_before.items())
+        _read_old_contents(sw, carry, work, isfile or os.path.isfile, unsaved)
+        work.marked = [p for p, f in sw.save_flags().items()
+                       if f and not flags_before.get(p, False) and not (opened and same_path(p, old.path))]
+    finally:
+        try:
+            if opened:
+                sw.close_unsaved(old.path)
+        finally:
+            sw.end_build()
+    if opened:
+        work.left = [d.path or d.title for d in sw.documents()
+                     if not any(same_path(d.path, b.path) if d.path else d.title == b.title for b in docs)]
+    return work, docs, flags_before
+
+
+def _read_old_contents(sw: SolidWorks, carry: Carry, work: OldWork, isfile: Callable[[str], bool],
+                       unsaved: bool) -> None:
+    """R.3–R.5 on the document R made the one read."""
+    old = carry.old
+    fs = _Findings(sw.revision)
+    configurations: Dict[str, str] = {}
+    names = list(sw.configurations()) if old.modes else []
+    for mode in old.modes:
+        found = next((n for n in names if n.casefold() == mode.casefold()), None)
+        if found is not None:
+            configurations[mode] = found
+    work.modes = tuple(configurations)
+    active = sw.active_configuration() if configurations else ""
+    work.active = next((m for m, c in configurations.items() if c == active), active)
+    comps = list(sw.components())
+    app_names = {name for _, name in old.components}
+    layout_names = {old.layout_component} if any(c.name == old.layout_component for c in comps) else \
+        {c.name for c in comps if c.path and old.layout_path and same_path(c.path, old.layout_path)}
+    users = [c for c in comps if c.name not in app_names and c.name not in layout_names]
+    for index, c in enumerate(users, 1):
+        handle = f"old{index}"
+        frame: Optional[Frame9] = None
+        try:
+            sw.find_component(handle, c.name, lightweight_ok=True)
+            frame = sw.component_frame(handle)
+        except Exception:  # noqa: BLE001 - no frame: named WHY_NO_FRAME, never guessed
+            frame = None
+        referenced, active_configuration, file_configurations = "", "", None
+        try:
+            referenced, active_configuration, read = sw.component_configurations(handle)
+            file_configurations = tuple(read)
+        except Exception:  # noqa: BLE001 - not read: §5.1 names it
+            pass
+        kind = "assembly" if c.path.lower().endswith(".sldasm") else "part" if c.path else ""
+        work.components.append(OldComponent(
+            c.name, c.path, kind, c.fixed, c.code, c.state, frame, referenced, active_configuration,
+            virtual="^" in _file(c.path), on_disk=bool(c.path) and bool(isfile(c.path)),
+            configurations=file_configurations))
+    _read_old_states(sw, work, configurations, fs, unsaved)
+    frames: List[Tuple[str, Frame9]] = []
+    for index, (body, name) in enumerate(list(old.components) + [("layout", old.layout_component)], 1):
+        try:
+            sw.find_component(f"oldapp{index}", name, lightweight_ok=True)
+            frames.append((body, sw.component_frame(f"oldapp{index}")))
+        except Exception:  # noqa: BLE001 - an app body not read anchors nothing
+            continue
+    work.app_frames = tuple(frames)
+    _read_old_mates(sw, carry, work, configurations, comps, layout_names)
+
+
+def _read_old_states(sw: SolidWorks, work: OldWork, configurations: Mapping[str, str], fs: _Findings,
+                     unsaved: bool) -> None:
+    """R.4: each user component's state per old mode, by the unshown route where it is set (on an open assembly with
+    unsaved changes only if it reads them), else by showing each mode in the job's own read-only document, else not
+    read (D2: each takes the mode showing's state)."""
+    if len(configurations) < 2 or not work.components:
+        return
+    route = fs.value("COMPONENT_STATE_PER_CONFIGURATION_ROUTE")
+    names = [c.name for c in work.components]
+    read: Optional[Dict[str, Tuple[str, ...]]] = None
+    if route is not None and (work.how == OLD_READ_ONLY or not unsaved or
+                              fs.settled("COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED")):
+        states = sw.component_states(names, list(configurations.values()))
+        read = {n: tuple(m for m, c in configurations.items() if states.get(n, {}).get(c)) for n in names}
+        work.states_route = str(route)
+    elif work.how == OLD_READ_ONLY:
+        showing = configurations.get(work.active, "")
+        by_mode: Dict[str, Dict[str, int]] = {}
+        for mode, configuration in configurations.items():
+            sw.show_configuration(configuration)
+            by_mode[mode] = {c.name: c.state for c in sw.components()}
+        if showing:
+            sw.show_configuration(showing)
+        read = {n: tuple(m for m in configurations if by_mode[m].get(n) == COMPONENT_SUPPRESSED) for n in names}
+        work.states_route = STATES_SHOWN_READ_ONLY
+    if read is not None:
+        work.components = [replace(c, suppressed_in=read.get(c.name, ())) for c in work.components]
+
+
+def _read_old_mates(sw: SolidWorks, carry: Carry, work: OldWork, configurations: Mapping[str, str],
+                    comps: Sequence[ComponentInfo], layout_names: Collection[str]) -> None:
+    """R.5: every user mate's definition, its entities classified and tier 1's references read where they are
+    needed; the root read as :func:`_read_user_work` has it."""
+    old = carry.old
+    app_of = {name: body for body, name in old.components}
+    bodies = {b.old: b for b in carry.bodies}
+    top_names = {c.name for c in comps}
+    lightweight = any(c.state in _LIGHTWEIGHT_STATES for c in comps)
+    root_read: List[Optional[str]] = []
+
+    def root() -> Optional[str]:
+        if not root_read:
+            try:
+                root_read.append(None if lightweight else sw.root_component(True))
+            except Exception:  # noqa: BLE001
+                root_read.append(None)
+        return root_read[0]
+
+    def owner(name: Optional[str]) -> Tuple[str, str]:
+        if name is None:
+            return UNREAD_ENTITY, ""
+        if not name:
+            return ASSEMBLY, ""
+        top = name.split("/")[0]
+        for key in (name, top):
+            if key in app_of:
+                return APP, app_of[key]
+            if key in layout_names:
+                return LAYOUT, ""
+        if top in top_names:
+            return USER, top
+        if name == root() and root_read[0] is not None:
+            return ASSEMBLY, ""
+        return UNREAD_ENTITY, ""
+
+    states = {s.name: s for s in sw.mate_states(others=[])}
+    recorded = set(old.mates)
+    for index, name in enumerate([n for n in states if n not in recorded], 1):
+        handle = f"oldmate{index}"
+        sw.find_mate(handle, name)
+        definition = sw.mate_definition(handle)
+        state = states[name]
+        if configurations:
+            flags = sw.mate_suppression(handle, list(configurations.values()))
+            on = tuple(m for m, c in configurations.items() if not flags[c])
+        else:
+            on = () if state.suppressed else ("",)
+        entities: List[OldEntity] = []
+        for i, e in enumerate(definition.entities):
+            what, who = owner(e.component)
+            leaf = e.component if e.component and "/" in e.component and what == USER else ""
+            reference, coaxial, unread = "", None, ""
+            body = bodies.get(who) if what == APP else None
+            needs = e.kind in _TIER1_KINDS and (what == USER or (body is not None and (
+                e.kind in (ENTITY_FACE, ENTITY_EDGE, ENTITY_VERTEX) or e.feature not in body.old_names)))
+            if needs and not leaf:
+                kind, reference, coaxial, why = sw.entity_reference(handle, i)
+                if kind != e.kind:
+                    unread = f"its {e.kind} read as a {kind}"
+                elif why and not reference and e.kind in (ENTITY_FEATURE, ENTITY_PLANE):
+                    unread = why
+            entities.append(OldEntity(what, who, e.kind if what != UNREAD_ENTITY else ENTITY_UNREAD, e.feature,
+                                      leaf, reference, e.select_type, coaxial, unread))
+        work.mates.append(OldMate(name, definition.type, definition.type_name, definition.alignment,
+                                  definition.flipped, definition.values, tuple(entities),
+                                  tuple(e.params for e in definition.entities), on, state.code,
+                                  state.warning if state.code else True, definition.whole))
+
+
+def _old_mode(mode: str, old_modes: Sequence[str]) -> Optional[str]:
+    return next((m for m in old_modes if m.casefold() == mode.casefold()), None)
+
+
+def _wanted_suppressed(c: OldComponent, mode: str, work: OldWork, carry: Carry) -> bool:
+    """§5.2: the state a carried component takes in a new mode — its old mode's by name; a mode new in the revision
+    takes the old record's first mode's (D14); unread per mode, the mode showing's in every mode (D2)."""
+    old = _old_mode(mode, work.modes) or _old_mode(carry.first, work.modes)
+    if c.suppressed_in is not None and old is not None:
+        return old in c.suppressed_in
+    return c.state == COMPONENT_SUPPRESSED
+
+
+def _mate_on(mate: OldMate, mode: str, work: OldWork, carry: Carry) -> bool:
+    if not mode:
+        return bool(mate.on)
+    old = _old_mode(mode, work.modes) or _old_mode(carry.first, work.modes)
+    return old is not None and old in mate.on if work.modes else bool(mate.on)
+
+
+def _trains_of(assembly: Optional[BuildPlan]) -> List[set]:
+    """The assembly plan's bodies joined by its gear and lock mates (the build's trains), by handle."""
+    parent: Dict[str, str] = {}
+
+    def root(h: str) -> str:
+        parent.setdefault(h, h)
+        while parent[h] != h:
+            h = parent[h]
+        return h
+
+    for op in (assembly.ops if assembly is not None else ()):
+        if isinstance(op, base.Mate) and op.kind in ("gear", "lock"):
+            a, b = op.a.split(":")[0], op.b.split(":")[0]
+            parent[root(b)] = root(a)
+    groups: Dict[str, set] = {}
+    for h in list(parent):
+        groups.setdefault(root(h), set()).add(h)
+    return list(groups.values())
+
+
+class _CarryStop(Exception):
+    """The carry stops part way: its sentence (§3 C: ``stopped``)."""
+
+
+def _carry(sw: SolidWorks, result: GearboxResult, carry: Carry, work: OldWork, assembly: Optional[BuildPlan],
+           say: Callable[[Step], None], mtime: Callable[[str], float], times: Mapping[str, float]) -> None:
+    """§3 C: the carry, after the new assembly's save; never saves, never writes the old assembly or a user file.
+    Whatever it meets, the build's own result stands (D21)."""
+    cr = result.carry
+    file = _file(carry.old.path)
+    if work.marked:
+        cr.stopped = (f"Reading {file} marked {_and([_file(p) or p for p in work.marked])} as changed in SolidWorks, "
+                      "so nothing of yours was carried; the build stands.")
+        return
+    if work.left:
+        cr.stopped = (f"Reading {file} left {_and([_file(p) or p for p in work.left])} open in SolidWorks, so nothing "
+                      "of yours was carried; the build stands.")
+        return
+    built = result.assembly
+    if built is None or not built.ok or not built.saved:
+        cr.skipped = "carrying your work, because the new assembly was not saved"
+        return
+    asm = str(built.saved)
+    done = ["reading the new revision"]
+    try:
+        _carry_steps(sw, result, carry, work, assembly, say, asm, done)
+        _carry_after(sw, result, carry, work, mtime, times)
+    except _CarryStop as stop:
+        cr.stopped = str(stop)
+        cr.skipped = done[-1]
+    except Exception as exc:  # noqa: BLE001 - the carry never stops the build
+        cr.stopped = f"SolidWorks stopped the carry while {done[-1]}: {_said(exc)}"
+        cr.skipped = f"{done[-1]} and everything after it"
+
+
+def _carry_steps(sw: SolidWorks, result: GearboxResult, carry: Carry, work: OldWork, assembly: Optional[BuildPlan],
+                 say: Callable[[Step], None], asm: str, done: List[str]) -> None:
+    cr = result.carry
+    say(Step(STAGE_CARRY, _stem(asm)))
+    new_frames: Dict[str, Frame9] = {}
+    for body in carry.bodies:
+        if body.handle and body.handle in result.components:
+            sw.find_component(body.handle, result.components[body.handle])
+            new_frames[body.old] = sw.component_frame(body.handle)
+    plan = plan_carry(work, carry, sw.revision, new_frames=new_frames)
+    cr.named.extend(plan.named)
+    cr.gates = list(plan.gates)
+    if not plan.components and not plan.mates:
+        return
+    # C.3: each carried file opened, then the new assembly made the build document again (W9c's AddedGear route).
+    done.append("opening your parts to insert them")
+    for item in plan.components:
+        sw.open_document(item.component.path)
+    sw.open_document(asm)
+    # C.4: inserted, the configuration read back, placed, fixed.
+    handle_of: Dict[str, str] = {}
+    kept_of: Dict[str, str] = {}
+    removed: set = set()
+    for index, item in enumerate(plan.components, 1):
+        c, handle = item.component, f"carried{index}"
+        done.append(f"inserting {c.name}")
+        at = tuple(float(v) for v in item.frame[1])
+        several = c.configurations is not None and len(c.configurations) != 1
+        kept = sw.add_component_in(handle, c.path, at, c.configuration) if several else \
+            sw.add_component(handle, c.path, at)
+        cr.unsaved = True
+        if several:
+            referenced = sw.component_configurations(handle)[0]
+            if referenced != c.configuration:
+                sw.delete_component(handle)
+                removed.add(handle)
+                cr.named.append(CarryNamed(c.name, "component", WHY_CONFIGURATION,
+                                           (c.name, c.configuration, c.active_configuration)))
+                continue
+        sw.place_component(handle, item.frame[0], at, kind=ASSEMBLY_TRAIN)
+        if c.fixed:
+            sw.fix_component(handle)
+        handle_of[c.name], kept_of[c.name] = handle, kept
+        cr.inserted.append((c.name, kept))
+    # C.5: the states, in every mode, read back.
+    done.append("setting your components' states in each mode")
+    configs = list(sw.configurations()) if carry.modes else []
+    config_of = {m: next((c for c in configs if c.casefold() == m.casefold()), m) for m in carry.modes}
+    by_name = {item.component.name: item.component for item in plan.components}
+    suppressed_in: Dict[str, List[str]] = {n: [] for n in handle_of}
+    for mode in (carry.modes or ("",)):
+        if mode:
+            sw.show_configuration(config_of[mode])
+        for name, handle in handle_of.items():
+            wanted = _wanted_suppressed(by_name[name], mode, work, carry)
+            if not mode and not wanted and by_name[name].state not in _LIGHTWEIGHT_STATES:
+                continue
+            sw.set_component_suppressed(handle, wanted)
+            state = next((x.state for x in sw.components() if x.name == kept_of[name]), UNREAD)
+            if (state == COMPONENT_SUPPRESSED) != wanted:
+                raise _CarryStop(f"{kept_of[name]} does not read {'suppressed' if wanted else 'resolved'} in "
+                                 f"{mode or 'the assembly'} as it was set, so the carry stopped there.")
+            if wanted:
+                suppressed_in[name].append(mode)
+    if carry.modes:
+        sw.show_configuration(config_of[carry.modes[0]])
+    cr.states = [(kept_of[n], tuple(m for m in modes if m)) for n, modes in suppressed_in.items()]
+    # C.6: the mates, cluster by cluster.
+    trains = _trains_of(assembly)
+    plan_handle = {f"carried{i}": item.component.name for i, item in enumerate(plan.components, 1)}
+    per_mode: List[Tuple[int, List[Tuple[CarryMateItem, str, str]]]] = []
+    order = [(i, [m for m in plan.mates if m.cluster == i]) for i in range(len(plan.clusters))]
+    order += [(-1, [m]) for m in plan.mates if m.cluster == -1]
+    counter = [0]
+    for cluster, items in order:
+        if not items:
+            continue
+        made = _carry_cluster(sw, result, carry, work, cluster, items, plan, plan_handle, handle_of, kept_of,
+                              removed, trains, config_of, counter, done)
+        if made and carry.modes and len({tuple(_mate_on(i.mate, m, work, carry) for m in carry.modes)
+                                         for i, _, _ in made}) > 1:
+            per_mode.append((cluster, made))
+        elif made and carry.modes and any(not _mate_on(i.mate, m, work, carry) for i, _, _ in made
+                                          for m in carry.modes):
+            per_mode.append((cluster, made))
+    # C.7: the post-check with the carried mates on, every mode.
+    done.append("checking every mode with your mates on")
+    _carry_post_check(sw, result, carry, work, plan, handle_of, kept_of, per_mode, trains, config_of, new_frames)
+
+
+def _app_handles(targets: Sequence[str], handle_of: Mapping[str, str]) -> List[str]:
+    out = []
+    for target in targets:
+        head = target.split(":")[1] if target.startswith("ref:") else target.split(":")[0]
+        if head != "asm" and not head.startswith("carried"):
+            out.append(head)
+    return out
+
+
+def _train_of(handles: Sequence[str], trains: Sequence[set]) -> List[str]:
+    out: List[str] = []
+    for train in trains:
+        if set(handles) & train:
+            out.extend(sorted(train))
+    return out
+
+
+def _free(sw: SolidWorks, handles: Sequence[str]) -> Dict[str, bool]:
+    return {h: sw.constrained_status(h) == findings.COMPONENT_UNDER_DEFINED for h in handles}
+
+
+def _carry_cluster(sw: SolidWorks, result: GearboxResult, carry: Carry, work: OldWork, cluster: int,
+                   items: Sequence[CarryMateItem], plan: CarryPlan, plan_handle: Mapping[str, str],
+                   handle_of: Mapping[str, str], kept_of: Mapping[str, str], removed: Collection[str],
+                   trains: Sequence[set], config_of: Mapping[str, str], counter: List[int],
+                   done: List[str]) -> List[Tuple[CarryMateItem, str, str]]:
+    """C.6.1–C.6.3 for one cluster: its mates made, flagged per mode and read back; one top-only rebuild; judged in
+    the mode showing; fallen back alone in the plan's three cases (§6)."""
+    cr = result.carry
+    gear_of = {b.handle: b.old for b in carry.bodies if b.handle}
+    touched = sorted({h for i in items for h in _app_handles(i.targets, handle_of)})
+    train = [h for h in _train_of(touched, trains) if h in gear_of and not gear_of[h].endswith(CARRIER_ID_SUFFIX)
+             and gear_of[h] != "layout"]
+    before = _free(sw, train)
+    made: List[Tuple[CarryMateItem, str, str]] = []
+    fell: Optional[Tuple[str, Tuple[str, ...]]] = None
+    for item in items:
+        counter[0] += 1
+        handle = f"carrymate{counter[0]}"
+        name = item.mate.name
+        users = [plan_handle[t.split(":")[1] if t.startswith("ref:") else t.split(":")[0]]
+                 for t in item.targets if (t.split(":")[1] if t.startswith("ref:") else t.split(":")[0])
+                 in plan_handle]
+        gone = [u for u in users if u not in handle_of]
+        if gone:
+            cr.named.append(CarryNamed(name, "mate", WHY_NOT_CARRIED, (gone[0],)))
+            continue
+        done.append(f"making {name} again")
+        try:
+            kept, status = sw.remake_mate(handle, item.mate, item.targets, name, item.ratio)
+        except MateRefused:
+            cr.named.append(CarryNamed(name, "mate", WHY_NOT_FOUND, _not_found_subjects(item, plan, plan_handle)))
+            continue
+        except SolidWorksError as exc:
+            if "could not be found again" in str(exc):
+                cr.named.append(CarryNamed(name, "mate", WHY_NOT_FOUND, _not_found_subjects(item, plan, plan_handle)))
+                continue
+            raise
+        differs = _read_back(sw, handle, item, kept_of, plan_handle, result)
+        if differs:
+            sw.delete_mate(handle)
+            cr.named.append(CarryNamed(name, "mate", WHY_DIFFERS, (differs,)))
+            continue
+        on = _set_flags(sw, handle, kept, item.mate, work, carry, config_of)
+        made.append((item, handle, kept))
+        cr.remade.append((name, kept, on))
+        if status == findings.ADD_MATE_OVER_DEFINED and fell is None:
+            fell = (FELL_OVER_DEFINED, (name,))
+    if not made:
+        return made
+    sw.rebuild(kind=ASSEMBLY_TRAIN)
+    mode = carry.modes[0] if carry.modes else ""
+    if fell is None:
+        fell = _judge(sw, result, carry, work, made, kept_of, handle_of, train, before, mode)
+    if fell is not None:
+        _fall_back(sw, result, plan, cluster, made, handle_of, kept_of, fell, train)
+        return []
+    return made
+
+
+def _not_found_subjects(item: CarryMateItem, plan: CarryPlan, plan_handle: Mapping[str, str]) -> Tuple[str, ...]:
+    for target, entity in zip(item.targets, item.mate.entities):
+        if target.startswith("ref:"):
+            _, handle, kind, _ = target.split(":", 3)
+            name = plan_handle.get(handle, handle)
+            path = next((i.component.path for i in plan.components if i.component.name == name), "")
+            return kind, name, _file(path)
+    return ("entity", "", "")
+
+
+def _read_back(sw: SolidWorks, handle: str, item: CarryMateItem, kept_of: Mapping[str, str],
+               plan_handle: Mapping[str, str], result: GearboxResult) -> str:
+    """§10's read-back: the remade mate's entities' components, alignment, flipped, values and (a gear mate) ratio
+    and sense against the old; what differs, or ""."""
+    definition = sw.mate_definition(handle)
+    old = item.mate
+    wanted = []
+    for target in item.targets:
+        head = target.split(":")[1] if target.startswith("ref:") else target.split(":")[0]
+        wanted.append("" if head == "asm" else kept_of.get(plan_handle.get(head, ""), "") or
+                      result.components.get(head, head))
+    if selection_reversed(carry_kind(old), old.entities):
+        wanted.reverse()
+    got = [e.component or "" for e in definition.entities]
+    if [w for w in wanted if w] != [g for g in got if g]:
+        return "entities"
+    if definition.alignment != old.alignment or definition.flipped != old.flipped:
+        return "alignment"
+    values, read = dict(old.values), dict(definition.values)
+    for key in ("GearRatioNumerator", "GearRatioDenominator"):
+        if key in values and abs(read.get(key, math.nan) - values[key]) > VALUE_TOLERANCE:
+            return "ratio"
+    for key in ("Distance", "Angle", "MaximumDistance", "MinimumDistance", "MaximumAngle", "MinimumAngle"):
+        if key in values and abs(read.get(key, math.nan) - values[key]) > VALUE_TOLERANCE:
+            return "values"
+    if item.sense:
+        sense = gear_sense(definition.values, tuple(e.params for e in definition.entities))
+        if sense and sense != item.sense:
+            return "sense"
+    return ""
+
+
+def _set_flags(sw: SolidWorks, handle: str, kept: str, mate: OldMate, work: OldWork, carry: Carry,
+               config_of: Mapping[str, str]) -> Tuple[str, ...]:
+    """C.6.1: the remade mate's flag in every new mode from its old ``on`` by name, read back."""
+    if not carry.modes:
+        if not mate.on:
+            sw.set_mate_suppressed(handle, True)
+        return ("",) if mate.on else ()
+    on = [m for m in carry.modes if _mate_on(mate, m, work, carry)]
+    off = [m for m in carry.modes if m not in on]
+    for suppressed, modes in ((False, on), (True, off)):
+        if modes:
+            sw.set_mate_suppressed_in(handle, suppressed, [config_of[m] for m in modes])
+    flags = sw.mate_suppression(handle, [config_of[m] for m in carry.modes])
+    read_on = tuple(m for m in carry.modes if not flags[config_of[m]])
+    if set(read_on) != set(on):
+        raise _CarryStop(f"{kept} does not read on in {_and(on) or 'no mode'} as it was set, so the carry stopped "
+                         "there.")
+    return read_on
+
+
+def _judge(sw: SolidWorks, result: GearboxResult, carry: Carry, work: OldWork,
+           made: Sequence[Tuple[CarryMateItem, str, str]], kept_of: Mapping[str, str], handle_of: Mapping[str, str],
+           train: Sequence[str], before: Mapping[str, bool], mode: str) -> Optional[Tuple[str, Tuple[str, ...]]]:
+    """C.6.3 / §6: a new error, an over-definition or a tie, read in the mode showing; the same error as before is
+    carried as it was (``same_error``)."""
+    cr = result.carry
+    states = {s.name: s for s in sw.mate_states()}
+    for item, _, kept in made:
+        state = states.get(kept)
+        if state is None or state.suppressed or not state.code:
+            continue
+        if state.code == item.mate.code:
+            if (item.mate.name, state.code) not in cr.same_error:
+                cr.same_error.append((item.mate.name, state.code))
+            continue
+        return FELL_NEW_ERROR, (item.mate.name, str(state.code), str(item.mate.code), mode)
+    users = {h for item, _, _ in made for h in _user_targets(item)}
+    for handle in sorted(users):
+        if handle in handle_of.values() and sw.constrained_status(handle) == findings.COMPONENT_OVER_DEFINED:
+            return FELL_OVER_DEFINED, ("",)
+    after = _free(sw, train)
+    gear_of = {b.handle: b.old for b in carry.bodies if b.handle}
+    tied = [h for h in train if before.get(h) and not after.get(h)]
+    if tied:
+        return FELL_TIE, (gear_of.get(tied[0], tied[0]), mode)
+    return None
+
+
+def _user_targets(item: CarryMateItem) -> List[str]:
+    out = []
+    for target in item.targets:
+        head = target.split(":")[1] if target.startswith("ref:") else target.split(":")[0]
+        if head.startswith("carried"):
+            out.append(head)
+    return out
+
+
+def _fall_back(sw: SolidWorks, result: GearboxResult, plan: CarryPlan, cluster: int,
+               made: Sequence[Tuple[CarryMateItem, str, str]], handle_of: Mapping[str, str],
+               kept_of: Mapping[str, str], fell: Tuple[str, Tuple[str, ...]], train: Sequence[str]) -> None:
+    """§6's fallback (D9): the cluster's remade mates to app bodies, the layout, carriers and the assembly deleted
+    again; its user-to-user mates kept; each of its components put back where it was placed and fixed. The train
+    read again; still not free, the carry stops."""
+    cr = result.carry
+    deleted, kept = [], []
+    for item, handle, name in made:
+        if _app_handles(item.targets, handle_of) or any(t.startswith("asm:") for t in item.targets) or \
+                len(_user_targets(item)) < 2:
+            sw.delete_mate(handle)
+            deleted.append(item.mate.name)
+            cr.remade = [r for r in cr.remade if r[0] != item.mate.name]
+        else:
+            kept.append(item.mate.name)
+    components = []
+    for item in plan.components:
+        if item.cluster == cluster and cluster >= 0 and item.component.name in handle_of:
+            handle = handle_of[item.component.name]
+            sw.place_component(handle, item.frame[0], tuple(float(v) for v in item.frame[1]), kind=ASSEMBLY_TRAIN)
+            sw.fix_component(handle)
+            components.append(kept_of[item.component.name])
+    cr.fixed.append(CarryFallback(tuple(components), tuple(deleted), tuple(kept), fell[0], fell[1]))
+    sw.rebuild(kind=ASSEMBLY_TRAIN)
+    still = [h for h in train if sw.constrained_status(h) != findings.COMPONENT_UNDER_DEFINED]
+    if fell[0] == FELL_TIE and still:
+        raise _CarryStop(f"After the fallback, {_and(still)} still {'reads' if len(still) == 1 else 'read'} unable to "
+                         f"turn{' in ' + fell[1][1] if len(fell[1]) > 1 and fell[1][1] else ''}, so the carry stopped; "
+                         "the new assembly is left as it is, unsaved.")
+
+
+def _carry_post_check(sw: SolidWorks, result: GearboxResult, carry: Carry, work: OldWork, plan: CarryPlan,
+                      handle_of: Mapping[str, str], kept_of: Mapping[str, str],
+                      per_mode: Sequence[Tuple[int, List[Tuple[CarryMateItem, str, str]]]], trains: Sequence[set],
+                      config_of: Mapping[str, str], new_frames: Mapping[str, Frame9]) -> None:
+    """C.7: every mode shown in turn (then the first again): each remade mate's code, each carried component's pose
+    in its anchor's frame against where it was placed (``moved``, D7), the clusters whose flags differ by mode
+    judged there, the interference with clashes naming a carried component (D8)."""
+    cr = result.carry
+    body_handle = {b.old: b.handle for b in carry.bodies if b.handle}
+    gear_of = {h: g for h, g in body_handle.items()}
+    carried = set(kept_of.values())
+    modes = list(carry.modes) or [""]
+    for mode in modes:
+        if mode:
+            sw.show_configuration(config_of[mode])
+        for item in plan.components:
+            name = item.component.name
+            if name not in handle_of or not item.anchor or item.anchor not in body_handle:
+                continue
+            anchor = sw.component_frame(body_handle[item.anchor])
+            now_rel = _relative(anchor, sw.component_frame(handle_of[name]))
+            placed = _relative(new_frames.get(item.anchor, anchor), item.frame)
+            off = max(abs(a - b) for a, b in zip(tuple(now_rel[0]) + tuple(now_rel[1]),
+                                                   tuple(placed[0]) + tuple(placed[1])))
+            if off > POSE_TOLERANCE:
+                cr.moved.append((kept_of[name], mode, off))
+        for cluster, made in per_mode:
+            if not mode or all(_mate_on(i.mate, mode, work, carry) == _mate_on(i.mate, modes[0], work, carry)
+                               for i, _, _ in made):
+                continue
+            touched = sorted({h for i, _, _ in made for h in _app_handles(i.targets, handle_of)})
+            train = [h for h in _train_of(touched, trains) if h in {v: k for k, v in body_handle.items()}]
+            not_free = [h for h in train if sw.constrained_status(h) != findings.COMPONENT_UNDER_DEFINED]
+            if not_free:
+                _fall_back(sw, result, plan, cluster, made, handle_of, kept_of, (FELL_TIE, (
+                    {v: k for k, v in body_handle.items()}.get(not_free[0], not_free[0]), mode)), [])
+        if getattr(findings, "INTERFERENCE_CHECKED", False):
+            for clash in _clashes(sw.interferences(), {h: g for g, h in body_handle.items()}):
+                if set(clash.components) & carried:
+                    cr.clashes.append((mode, clash))
+    if carry.modes:
+        sw.show_configuration(config_of[carry.modes[0]])
+
+
+def _carry_after(sw: SolidWorks, result: GearboxResult, carry: Carry, work: OldWork,
+                 mtime: Callable[[str], float], times: Mapping[str, float]) -> None:
+    """C.8: the user's documents' flags read (said), and the old and the user's files' times read again: a change is
+    §0.3's STOP, said, never "fixed"."""
+    cr = result.carry
+    paths = [c.path for c in work.components if c.path]
+    flags = sw.save_flags()
+    cr.marked_user = [p for p, f in flags.items() if f and any(same_path(p, u) for u in paths)]
+    changed = []
+    for path, before in times.items():
+        try:
+            if float(mtime(path)) != before:
+                changed.append(path)
+        except (OSError, ValueError, TypeError):
+            continue
+    if changed:
+        cr.stopped = (f"{_and([_file(p) for p in changed])} changed on disk while Build again… carried your work, "
+                      "which Gear Generator never does; look at it in SolidWorks.")
 
 
 def _find_by_part(sw: SolidWorks, handle: str, placement: Placement, placements: Sequence[Placement],

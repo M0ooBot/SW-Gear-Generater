@@ -414,3 +414,122 @@ def test_an_updates_inventory_keeps_each_mates_entity_kinds_and_features():
     fake.user_component(T_ASM, "Housing-1", W + "Housing.SLDPRT", (IDENTITY9, (0.0, 0.0, -40.0)), fixed=True)
     fake.user_mate(T_ASM, "Distance9", kind="distance", a=("Housing-1", "plane2"), b=("asm", "plane2"))
     assert _moving(fake).user_work.mates[0].entities == ()
+
+
+# -- the worker against the fake: a Build again… of the T train that carries the user's work --------------------------
+
+from dataclasses import replace as _replace                                       # noqa: E402
+
+from test_swbuild import (FakeSolidWorks, P17, P51, P68, S17, S51, S68, T_ASM, T_LAYOUT, TRAIN_GEARS, TRAIN_MATES,  # noqa: E402,E501
+                          W, _built_train, _key, _train_layout_plan, _train_plan, plan as part_plan)
+from gear_generator.gears import base as ops                                      # noqa: E402
+
+R2 = {P17: W + "Gear_m1.5_N17_r2.SLDPRT", P68: W + "Gear_m1.5_N68_r2.SLDPRT", P51: W + "Gear_m1.5_N51_r2.SLDPRT",
+      T_LAYOUT: W + "T_r2_Layout.SLDPRT", T_ASM: W + "T_r2.SLDASM"}
+SPROCKET, HOUSING = W + "Sprocket.SLDPRT", W + "Housing.SLDPRT"
+T_OLD = swbuild.OldAssembly(T_ASM, tuple((g, f"{h}-1") for h, g in TRAIN_GEARS.items()), "layout-1", T_LAYOUT,
+                            tuple(TRAIN_MATES), ())
+T_LAYOUT_NAMES = ("S2 X Plane", "S3 X Plane", "S3 Y Plane", "S1 Axis", "S2 Axis", "S3 Axis")
+
+
+def _t_carry(written_on=(34,), app_files=None):
+    bodies = (CarryBody("layout", "layout-1", "layout", False, "its layout part is new with every revision",
+                        T_LAYOUT_NAMES, T_LAYOUT_NAMES),) + tuple(
+        CarryBody(g, f"{h}-1", h, False, "its Part name changed", GEAR_NAMES, GEAR_NAMES)
+        for h, g in TRAIN_GEARS.items())
+    files = app_files if app_files is not None else (T_ASM, T_LAYOUT, P17, P68, P51) + tuple(R2.values())
+    return Carry(T_OLD, bodies, (), "", written_on, files)
+
+
+def _again_kwargs():
+    def moved(op):
+        return _replace(op, path=R2.get(op.path, op.path)) if isinstance(op, (ops.AddComponent, ops.SaveAs)) else op
+    assembly = _train_plan()
+    assembly = _replace(assembly, ops=tuple(moved(op) for op in assembly.ops), path=R2[T_ASM])
+    layout = _train_layout_plan(path=R2[T_LAYOUT])
+    parts = [part_plan(S17, path=R2[P17]), part_plan(S68, path=R2[P68]), part_plan(S51, path=R2[P51])]
+    return dict(parts=parts, layout=layout, assembly=assembly, gears=TRAIN_GEARS)
+
+
+def _old_train(**user):
+    """The T train built, the user's Sprocket-1 locked to G1 in T.SLDASM (open, unsaved), and the fake guarding the
+    old assembly and the user's files."""
+    fake = _built_train()
+    fake.read_entity_kinds = True
+    fake.user_component(T_ASM, "Sprocket-1", SPROCKET, (I9, (0.0, 0.0, 30.0)))
+    fake.user_lock(T_ASM, "Lock1", "gear1-1", "Sprocket-1")
+    fake._w9d()
+    fake.protected = {_key(T_ASM), _key(SPROCKET), _key(HOUSING)}
+    fake.no_save_after = _key(R2[T_ASM])
+    fake.saved[_key(SPROCKET)] = ([], [])                     # the user's part on disk
+    fake.saved[_key(HOUSING)] = ([], [])
+    return fake
+
+
+def _build_again(fake, carry=None, **kwargs):
+    carry = carry or _t_carry()
+    kwargs.setdefault("mtime", lambda path: 1.0)
+    return swbuild.build_gearbox(fake, **_again_kwargs(), exists=fake.exists, before=carry.old, carry=carry,
+                                 **kwargs)
+
+
+def _isfile(monkeypatch, fake):
+    monkeypatch.setattr(swbuild.os.path, "isfile", lambda path: _key(path) in fake.saved)
+
+
+def test_build_again_refuses_a_carry_whose_old_assembly_is_not_the_one_left_behind():
+    fake = _built_train()
+    carry = _t_carry()
+    with pytest.raises(swbuild.BuildError, match="fault in Gear Generator"):
+        swbuild.build_gearbox(fake, **_again_kwargs(), exists=fake.exists, carry=carry)
+    with pytest.raises(swbuild.BuildError, match="fault in Gear Generator"):
+        swbuild.build_gearbox(fake, **_again_kwargs(), exists=fake.exists, before=_replace(T_OLD), carry=carry)
+    assert fake.calls == []
+
+
+def test_with_every_gate_none_the_old_assembly_is_read_nothing_is_carried_and_the_build_stands(monkeypatch):
+    fake = _old_train()
+    _isfile(monkeypatch, fake)
+    result = _build_again(fake)
+    assert result.ok, result.log_lines()
+    cr = result.carry
+    assert cr.work.how == swbuild.OLD_OPEN and [c.name for c in cr.work.components] == ["Sprocket-1"]
+    assert [m.name for m in cr.work.mates] == ["Lock1"]
+    assert cr.inserted == [] and cr.remade == [] and not cr.unsaved and cr.stopped == ""
+    assert {n.item: n.why for n in cr.named} == {"Sprocket-1": "unmeasured", "Lock1": "component not carried"}
+    assert result.old_user_work is not None and [c.name for c in result.old_user_work.components] == ["Sprocket-1"]
+    names = [n for n, *_ in fake.calls]
+    assert "open_document" not in names[:names.index("new_part")]        # the old assembly never opened
+    # Not open, every gate None: unread, never opened.
+    fake = _old_train()
+    fake.open_docs = [d for d in fake.open_docs if _key(d.path) != _key(T_ASM)]
+    result = _build_again(fake)
+    assert result.ok and result.carry.work.how == swbuild.OLD_UNREAD
+    assert "open_read_only" not in [n for n, *_ in fake.calls]
+    assert result.carry.work.unread[0].startswith("T.SLDASM is not open in SolidWorks, and Gear Generator reads it "
+                                                  "then only when")
+
+
+def test_a_user_part_locked_to_g1_is_carried_placed_against_g1_and_its_lock_made_again(monkeypatch, every_gate):
+    every_gate()
+    fake = _old_train()
+    _isfile(monkeypatch, fake)
+    fake.turn("gear1-1", 37.0)                                       # the user turned G1 in the old assembly
+    old_g1, old_sprocket = fake.frames["gear1-1"], fake.frames["Sprocket-1"]
+    import copy
+    old_mates, touched = copy.deepcopy(fake.memory_mates[_key(T_ASM)]), set(fake.touched)
+    result = _build_again(fake)
+    assert result.ok, result.log_lines()
+    cr = result.carry
+    assert cr.stopped == "", cr.stopped
+    assert cr.named == [] and cr.inserted == [("Sprocket-1", "carried1-1")]
+    assert [(r[0], r[1]) for r in cr.remade] == [("Lock1", "Lock1")] and cr.unsaved
+    new_g1, new_sprocket = fake.frames["gear1-1"], fake.frames["carried1-1"]
+    old_rel, new_rel = swbuild._relative(old_g1, old_sprocket), swbuild._relative(new_g1, new_sprocket)
+    assert all(abs(a - b) < 1e-9 for a, b in zip(old_rel[0] + old_rel[1], new_rel[0] + new_rel[1]))
+    lock = fake.mate("Lock1", R2[T_ASM])
+    assert lock is not None and (lock.a[0], lock.b[0]) == ("gear1-1", "carried1-1") and not lock.user
+    # Nothing written to the old assembly, nothing saved after the new one's first save (the fake guards both).
+    assert fake.memory_mates[_key(T_ASM)] == old_mates and (_key(T_ASM) in fake.touched) == (_key(T_ASM) in touched)
+    assert [p for n, (p, *_) in ((n, a) for n, a in fake.calls if n == "save_as")][-1] == R2[T_ASM]
+    assert cr.moved == [] and cr.fixed == []
