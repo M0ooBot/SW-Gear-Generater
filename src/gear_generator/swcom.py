@@ -2553,6 +2553,18 @@ class Session:
                 components.append(None)
         return MateInfo(name, kind, tuple(components))
 
+    def root_component(self) -> Optional[str]:
+        """The ``Name2`` of the build assembly's active configuration's root component (``GetActiveConfiguration`` →
+        ``GetRootComponent3(True)`` → ``Name2``, :data:`COMPONENT_FIND_ROUTES`' third route's first two calls), or None
+        when it will not answer. On SolidWorks 2026 a mate entity on the assembly's own plane gives this component
+        through ``ReferenceComponent`` (``findings.ASSEMBLY_ENTITY_COMPONENT_IS_ROOT_ON_2026``; W9c probes' s5 (a),
+        which read it so and marked nothing), so the user-work read maps it to the assembly's own. Marks nothing."""
+        try:
+            root = call(_read(self._doc(), "GetActiveConfiguration"), "GetRootComponent3", True)
+            return None if root is None else str(call(root, "Name2"))
+        except Exception:  # noqa: BLE001 - unread: an entity naming it is then said as not wholly read
+            return None
+
     def feature_states(self) -> List[FeatureState]:
         """Every top-level feature of the build document in tree order (``FirstFeature`` / ``GetNextFeature``, the
         walk :meth:`features_of_build` makes), each with its type and ``GetErrorCode2``: what tells the user's

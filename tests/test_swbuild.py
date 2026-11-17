@@ -337,6 +337,12 @@ class FakeSolidWorks:
         # ``unread_mates``: mate name -> "type", "count" or "entity", what mate_info will not give for it.
         self.step_puts = set()
         self.unread_mates = {}
+        # W9c (the probes' review, must-fix 1): what a mate entity on the assembly's own plane names. "none": no
+        # component, "" (SolidWorks 2024, the macro database); "root": the active configuration's root component,
+        # named as the assembly (2026, findings.ASSEMBLY_ENTITY_COMPONENT_IS_ROOT_ON_2026). ``root_unread``: the
+        # session's root read (root_component) answers nothing.
+        self.assembly_entity = "none"
+        self.root_unread = False
 
     def _log(self, name, *args):
         self.calls.append((name, args))
@@ -985,11 +991,22 @@ class FakeSolidWorks:
         unread = self.unread_mates.get(mate.name)
         if unread == "count":
             return swcom.MateInfo(mate.name, self.MATE_TYPES.get(mate.kind, 7), (), counted=False)
-        ends = tuple("" if end[0] == "asm" else end[0] for end in (mate.a, mate.b))
+        own = self._root_name() if self.assembly_entity == "root" else ""
+        ends = tuple(own if end[0] == "asm" else end[0] for end in (mate.a, mate.b))
         if unread == "entity":
             ends = (ends[0], None)
         kind = swcom.UNREAD if unread == "type" else self.MATE_TYPES.get(mate.kind, 7)
         return swcom.MateInfo(mate.name, kind, ends)
+
+    def _root_name(self):
+        """The root component's Name2 as SolidWorks gives it: the open assembly's title, without its extension."""
+        path = self.current or ""
+        return path.replace("/", "\\").rsplit("\\", 1)[-1].rsplit(".", 1)[0]
+
+    def root_component(self):
+        """``Session.root_component``: the active configuration's root component's Name2, or None unread."""
+        self._log("root_component")
+        return None if self.root_unread else self._root_name()
 
     def feature_states(self):
         """``Session.feature_states``: the template's planes and origin, then every feature the app made in the
@@ -7110,9 +7127,10 @@ def test_with_its_gear_mates_on_a_planetary_put_does_not_hold_in_the_fake(turned
 W7_PUT_BACK_LOG = "c0e98c21b97164fb77e9963594dee9ea91eb0b63d8aa4e9b5684a47534676cd1"
 # W9a (re-pinned at package A's fix round): the same log with W9a's reads of the user's work in it — one
 # feature_states per part document read with its features, one components for the assembly. With those reads taken
-# out, the log still hashes to W7_PUT_BACK_LOG.
-W9A_PUT_BACK_LOG = "69d45d4cb956703b5bfa9cd4555b284fbf4f093d487794bdee8fa7d0ec3be5b4"
-W9A_READS = ("components", "mate_info", "feature_states")
+# out, the log still hashes to W7_PUT_BACK_LOG. Re-pinned at W9c (the probes' review, must-fix 1): the user-work read
+# also reads the active configuration's root component once (root_component), to tell the assembly's own entity.
+W9A_PUT_BACK_LOG = "30a06c580acfa0f5dd4365972dfcfa41d07a6460bf418a30c74ca762e8ddf514"
+W9A_READS = ("components", "mate_info", "feature_states", "root_component")
 
 
 def test_the_w7_put_back_calls_are_pinned_whole(turned_findings, monkeypatch):
@@ -7122,8 +7140,8 @@ def test_the_w7_put_back_calls_are_pinned_whole(turned_findings, monkeypatch):
     sw, pressed, _ = _planetary_turned_and_pressed(monkeypatch, "gear mates off around the puts")
     swbuild.update_gearbox(sw, **pressed.update_kwargs(), exists=lambda _p: True, mtime=lambda _p: 5.0)
     every = [(n, a) for n, a in sw.calls]
-    assert len(every) == 149 and hashlib.sha256(repr(every).encode()).hexdigest() == W9A_PUT_BACK_LOG
-    assert [n for n, _ in every if n in W9A_READS] == ["feature_states"] * 6 + ["components"]
+    assert len(every) == 150 and hashlib.sha256(repr(every).encode()).hexdigest() == W9A_PUT_BACK_LOG
+    assert [n for n, _ in every if n in W9A_READS] == ["feature_states"] * 6 + ["components", "root_component"]
     calls = [(n, a) for n, a in every if n not in W9A_READS]
     assert len(calls) == 142
     put = [n for n, _ in calls[calls.index(("set_global_variable", calls[[n for n, _ in calls].index(

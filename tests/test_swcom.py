@@ -1686,6 +1686,32 @@ def test_mate_info_reads_the_type_and_each_entitys_component_the_assemblys_own_a
     assert not any(e[0] in ("SetSuppression2", "Select2", "AddMate5") for e in doc.log)
 
 
+def test_root_component_reads_the_active_configurations_root_name_and_none_when_it_will_not_answer(mated):
+    """W9c (the probes' review, must-fix 1): GetActiveConfiguration → GetRootComponent3(True) → Name2, read only."""
+    session, doc = mated
+
+    class Configuration:
+        def __init__(self, root):
+            self.root, self.asked = root, []
+
+        def GetRootComponent3(self, resolve):
+            self.asked.append(resolve)
+            return self.root
+
+    configuration = Configuration(MatedComponent(doc, "RangeBox"))
+    doc.GetActiveConfiguration = configuration
+    assert session.root_component() == "RangeBox" and configuration.asked == [True]
+    doc.GetActiveConfiguration = Configuration(None)
+    assert session.root_component() is None
+
+    class Broken:
+        def GetRootComponent3(self, resolve):
+            raise RuntimeError("no answer")
+    doc.GetActiveConfiguration = Broken()
+    assert session.root_component() is None
+    assert not any(e[0].startswith(("SetSuppression2", "Select", "ForceRebuild", "ShowConfiguration")) for e in doc.log)
+
+
 def test_mate_info_says_what_solidworks_would_not_describe_and_never_reads_it_as_the_assemblys_own(mated):
     """W9a review point 2: an entity that will not answer is None (not "", the assembly's own); a count that will not
     answer leaves the list uncounted; either, or an unread type, makes the mate not whole."""

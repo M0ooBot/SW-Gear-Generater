@@ -103,6 +103,66 @@ def test_a_mate_of_the_users_suppressed_everywhere_is_listed_as_before():
     assert result.user_work.mates[0].on == ()
 
 
+# -- the assembly's own entity (W9c probes' review, must-fix 1) -----------------------------------------------------
+
+
+@pytest.mark.parametrize("answer", ["none", "root"])
+def test_a_mate_to_the_assemblys_own_plane_reads_user_to_assembly_whichever_way_solidworks_names_it(answer):
+    """SolidWorks 2024 gives the assembly's own entity no component; 2026 gives the active configuration's root
+    component, named "T" here (findings.ASSEMBLY_ENTITY_COMPONENT_IS_ROOT_ON_2026). Either way the mate reads
+    user-to-assembly, and the inventory never lists the assembly as a component of the user's."""
+    fake = _built_train()
+    fake.assembly_entity = answer
+    fake.user_component(T_ASM, "Housing-1", HOUSING, (IDENTITY9, (0.0, 0.0, -40.0)), fixed=True)
+    fake.user_mate(T_ASM, "Distance9", kind="distance", a=("Housing-1", "plane2"), b=("asm", "plane2"))
+    result = _moving(fake)
+    assert result.ok, result.failures
+    (mate,) = result.user_work.mates
+    assert mate.touches == (("user", "Housing-1"), ("assembly", "")) and mate.whole
+    assert [c.name for c in result.user_work.components] == ["Housing-1"]
+    assert "root_component" in names(fake)
+
+
+def _refusals(answer, build):
+    fake = _built_train()
+    fake.assembly_entity = answer
+    build(fake)
+    with pytest.raises(UserWorkRefused) as raised:
+        _moving(fake)
+    return [(p.kind, p.mates, p.sentence) for p in raised.value.problems], _no_changes(fake)
+
+
+@pytest.mark.parametrize("build", ["other kind", "ground"])
+def test_todays_refusals_over_the_assemblys_own_plane_are_the_same_whichever_way_it_is_named(build):
+    """A user angle from G1 to the assembly's plane (another kind on a put gear), and a sprocket locked to G1 and
+    held to the assembly's plane by a user lock (a chain to the ground): refused alike either way."""
+    def other_kind(fake):
+        fake.user_mate(T_ASM, "Angle1", kind="angle", a=("gear1-1", "plane2"), b=("asm", "plane2"))
+
+    def ground(fake):
+        fake.user_component(T_ASM, "Sprocket-1", SPROCKET, (IDENTITY9, (0.0, 0.0, 30.0)))
+        fake.user_lock(T_ASM, "UserLock1", "gear1-1", "Sprocket-1")
+        fake.user_mate(T_ASM, "UserLock9", kind="lock", a=("Sprocket-1", ""), b=("asm", ""))
+    made = {"other kind": other_kind, "ground": ground}[build]
+    none, none_clean = _refusals("none", made)
+    root, root_clean = _refusals("root", made)
+    assert none == root and none and none_clean and root_clean
+    assert "T is" not in " ".join(sentence for _, _, sentence in root)
+
+
+def test_with_the_root_unread_a_name_that_is_no_component_is_said_as_unread_never_a_users_component():
+    fake = _built_train()
+    fake.assembly_entity, fake.root_unread = "root", True
+    fake.user_component(T_ASM, "Housing-1", HOUSING, (IDENTITY9, (0.0, 0.0, -40.0)), fixed=True)
+    fake.user_mate(T_ASM, "Distance9", kind="distance", a=("Housing-1", "plane2"), b=("asm", "plane2"))
+    with pytest.raises(UserWorkRefused) as raised:
+        _moving(fake)
+    (mate,) = raised.value.user_work.mates
+    assert mate.touches == (("user", "Housing-1"), (swbuild.UNREAD_ENTITY, "")) and not mate.whole
+    assert [c.name for c in raised.value.user_work.components] == ["Housing-1"]
+    assert [p.kind for p in raised.value.problems] == [swbuild.PROBLEM_UNREAD]
+
+
 # -- route (c1): a component the user locked to a gear Update puts goes with it ---------------------------------------
 
 

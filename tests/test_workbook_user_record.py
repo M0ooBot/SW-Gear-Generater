@@ -265,7 +265,8 @@ def _calls_from(sw, start):
 
 
 READS = {"documents", "begin_build", "end_build", "use_open_document", "mate_states", "configurations", "components",
-         "find_mate", "mate_info", "mate_suppression"}
+         "find_mate", "mate_info", "mate_suppression",
+         "root_component"}          # W9c (the probes' review, must-fix 1): the assembly's own entity told by its root
 
 
 def test_the_build_job_reads_the_old_assemblys_user_work_first_and_writes_nothing_to_it(on_fake):

@@ -143,6 +143,7 @@ class SolidWorks(Protocol):
     def components(self) -> List[ComponentInfo]: ...
     def mate_info(self, handle: str) -> MateInfo: ...
     def feature_states(self) -> List[FeatureState]: ...
+    def root_component(self) -> Optional[str]: ...                         # W9c: the assembly's own entity
 
 
 class BuildError(SolidWorksError):
@@ -5604,10 +5605,21 @@ def _read_user_work(sw: SolidWorks, motion: MotionUpdate, placements: Sequence[P
     mode -> its configuration (empty for a gearbox with no modes, whose flag is the one read). The layout is its
     recorded Name2, or, when no component answers to it (renamed), the components of the layout part's file. An
     entity SolidWorks would not describe is ``(UNREAD_ENTITY, "")``, never the assembly's own. Names are read all at
-    once: nothing here refuses."""
+    once: nothing here refuses.
+
+    The assembly's own entity (W9c probes' review, must-fix 1): SolidWorks 2024 gives no component for it (``""``),
+    2026 the active configuration's root component, named as the assembly
+    (``findings.ASSEMBLY_ENTITY_COMPONENT_IS_ROOT_ON_2026``). Both are the assembly's own: the root's ``Name2`` is
+    read once here from the session (``root_component``), never guessed from a file name. An entity naming neither a
+    top-level component (a leaf by its top level) nor that root is said as not wholly read (``UNREAD_ENTITY``, the mate
+    not ``whole``), never taken for a component of the user's."""
     app_of = {p.component: p.gear for p in placements}
     comps = list(sw.components())
     names = {c.name for c in comps}
+    try:
+        root: Optional[str] = sw.root_component()
+    except Exception:  # noqa: BLE001 - unread: a name that is no component is then not wholly read
+        root = None
     layout_names = {motion.layout_component} if motion.layout_component in names else set()
     if not layout_names and layout_path:
         layout_names = {c.name for c in comps if c.path and same_path(c.path, layout_path) and c.name not in app_of}
@@ -5620,12 +5632,17 @@ def _read_user_work(sw: SolidWorks, motion: MotionUpdate, placements: Sequence[P
             return UNREAD_ENTITY, ""
         if not name:
             return ASSEMBLY, ""
-        for key in (name, name.split("/")[0]):
+        top = name.split("/")[0]
+        for key in (name, top):
             if key in app_of:
                 return APP, app_of[key]
             if key in layout_names:
                 return LAYOUT, ""
-        return USER, name.split("/")[0]
+        if top in names:
+            return USER, top
+        if root is not None and name == root:
+            return ASSEMBLY, ""
+        return UNREAD_ENTITY, ""
 
     states = {s.name: s for s in result.mates}
     for index, name in enumerate(unknown, 1):
@@ -5638,10 +5655,11 @@ def _read_user_work(sw: SolidWorks, motion: MotionUpdate, placements: Sequence[P
                        if not sw.mate_suppression(handle, [configuration])[configuration])
         else:
             on = () if state is None or state.suppressed else ("",)
-        work.mates.append(UserMate(name, _mate_kind(info.type), info.type,
-                                   tuple(owner(c) for c in info.components), on,
+        touches = tuple(owner(c) for c in info.components)
+        work.mates.append(UserMate(name, _mate_kind(info.type), info.type, touches, on,
                                    state.code if state is not None else 0,
-                                   state.warning if state is not None else True, whole=info.whole))
+                                   state.warning if state is not None else True,
+                                   whole=info.whole and all(what != UNREAD_ENTITY for what, _ in touches)))
     return work
 
 
