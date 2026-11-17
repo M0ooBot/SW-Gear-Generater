@@ -1554,7 +1554,8 @@ def carry_entry(plan: GearboxPlan, result: Any, carry: Any, *, stamp: str, revis
         how=work.how if work is not None else swbuild.OLD_UNREAD, carried_at=stamp,
         revision=[int(n) for n in revision], states_read=bool(work is not None and work.states_route),
         stopped=ui_text._split_stop(result)[0],
-        changed_files=[ui_text.bare_files(str(f)) for f in getattr(result, "changed_files", ()) or ()])
+        changed_files=[ui_text.bare_files(str(f)) for f in getattr(result, "changed_files", ()) or ()],
+        after_unread=ui_text.bare_files(getattr(result, "after_unread", "") or ""))
     for was, name in result.inserted:
         old = components.get(was)
         entry.components.append(store.CarriedComponentEntry(

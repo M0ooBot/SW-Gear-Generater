@@ -5332,7 +5332,8 @@ def _not_open_clause(fore, old: str, refs: List[str]) -> str:
         others = "nothing else is open"
     else:
         others = "nothing of yours is open"
-    return (f"If {old} is closed, open it first unless this SolidWorks last saved it and its files and {others}.")
+    return (f"If {old} is closed, open it first unless this SolidWorks last saved it and its files, those files are "
+            f"where it says, and {others}.")
 
 
 def _placement_words(anchors: Sequence[str], past: bool = False) -> str:
@@ -5483,13 +5484,15 @@ def _component_states(entry, old: str) -> List[str]:
     for c in entry.components:
         mates = [m.name for m in entry.mates if any(w == "user" and n == c.name for w, n in m.touches)]
         if c.state in (1, 4):
+            # A's third round (D10's fact, ruled): loading its part to carry it resolves it in the old assembly too.
+            too = f"carrying it resolves it in {old} too, if that is open"
             if mates:
                 one = len(mates) == 1
                 its = f"its {mates[0]}" if one else f"its {len(mates)} mates"
-                out.append(f"{c.name} was lightweight as read: {its} {'is' if one else 'are'} made again only if you "
-                           "set it resolved in SolidWorks before you press.")
+                out.append(f"{c.name} was lightweight as read: {too}, and {its} {'is' if one else 'are'} made again "
+                           "only if you set it resolved in SolidWorks before you press.")
             else:
-                out.append(f"{c.name} was lightweight as read: it is carried resolved.")
+                out.append(f"{c.name} was lightweight as read: it is carried resolved, and {too}.")
         elif c.state == 0:
             out.append(f"{c.name} was suppressed in the mode {old} showed, as read: show a mode where it is resolved "
                        "before you press, or it may not be carried.")
@@ -5610,7 +5613,7 @@ def carried_status(result, again, old_path: str = "", anchors: Optional[Mapping[
     skipped = _stop_tail(stop, done.skipped)
     if not done.inserted and not done.remade:
         return " ".join(t for t in _nothing_carried(done, result, again, path, stays, name, old, stop, skipped)
-                        + [after] if t)
+                        + [after, _resolved_in_old(done, old), _after_unread(done)] if t)
     texts: List[str] = []
     new_of = dict(done.inserted)
     old_of = {n: o for o, n in done.inserted}
@@ -5697,9 +5700,28 @@ def carried_status(result, again, old_path: str = "", anchors: Optional[Mapping[
     if any(c.kind == "part" for c in work.components if c.name in new_of):
         texts.append(CARRY_IN_CONTEXT.format(old=old))
     texts.append(after)
+    texts.append(_resolved_in_old(done, old))
+    texts.append(_after_unread(done))
     if done.unsaved and not stop:
         texts.append(f"Save {name} in SolidWorks to keep what was carried.")
     return " ".join(t for t in texts if t)
+
+
+def _resolved_in_old(done, old: str) -> str:
+    """A's third round (D10's fact, ruled: not a stop, not undone, said): *Sprocket-9 was lightweight in RangeBox.SLDASM
+    and is resolved there now: SolidWorks loaded its part to carry it.*"""
+    names = [str(n) for n in getattr(done, "resolved_in_old", ()) or () if n]
+    if not names:
+        return ""
+    one = len(names) == 1
+    return (f"{_and(names)} {'was' if one else 'were'} lightweight in {old} and {'is' if one else 'are'} resolved "
+            f"there now: SolidWorks loaded {'its part' if one else 'their parts'} to carry {'it' if one else 'them'}.")
+
+
+def _after_unread(done) -> str:
+    """A's third round: why the user's files' times and flags could not be read after the carry
+    (``CarryResult.after_unread``), the fact it is, through :func:`bare_files`; never a stop."""
+    return _sentence(bare_files(getattr(done, "after_unread", "") or "").strip())
 
 
 def _nothing_carried(done, result, again, path: str, stays, name: str, old: str, stop: str,

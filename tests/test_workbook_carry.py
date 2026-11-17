@@ -370,14 +370,14 @@ def test_with_every_2026_probe_finding_set_the_closed_clause_says_its_conditions
                         ("COMPONENT_STATE_PER_CONFIGURATION_ROUTE", "GetComponentSuppressionState")):
         monkeypatch.setattr(findings, f"{name}_ON_2026", value)
     said = _said(desk)
-    assert ("If RangeBox.SLDASM is closed, open it first unless this SolidWorks last saved it and its files and nothing "
-            "else is open.") in said, said
+    assert ("If RangeBox.SLDASM is closed, open it first unless this SolidWorks last saved it and its files, those "
+            "files are where it says, and nothing else is open.") in said, said
     assert said.endswith("(Not yet shown on SolidWorks 2026: findings.OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS_ON_2026.)")
     assert STATES not in said                              # the states route is clean: nothing to say (§9.1)
     monkeypatch.setattr(findings, "OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS_ON_2026", True)
     said = _said(desk)
-    assert ("If RangeBox.SLDASM is closed, open it first unless this SolidWorks last saved it and its files and nothing "
-            "of yours is open.") in said and "Not yet shown" not in said
+    assert ("If RangeBox.SLDASM is closed, open it first unless this SolidWorks last saved it and its files, those "
+            "files are where it says, and nothing of yours is open.") in said and "Not yet shown" not in said
 
 
 def test_a_file_whose_configurations_the_record_does_not_keep_is_said_as_may(desk, carrying, monkeypatch):
@@ -476,8 +476,9 @@ def test_a_lightweight_component_is_said_once_as_the_condition_it_is(desk, carry
     record.gearbox.user_work.components[0].state = 1
     record.gearbox.user_work.components[1].state = 0
     said = _said(desk, record=record)
-    assert ("Sprocket-1 was lightweight as read: its Lock3 is made again only if you set it resolved in SolidWorks "
-            "before you press.") in said, said
+    assert ("Sprocket-1 was lightweight as read: carrying it resolves it in RangeBox.SLDASM too, if that is open, and "
+            "its Lock3 is made again only if you set it resolved in SolidWorks before you press.") in said, said
+    assert said.count("Sprocket-1 was lightweight") == 1
     assert "Lock3 is on Sprocket-1" not in said and said.count("Lock3") == 1
     assert ("Housing-1 was suppressed in the mode RangeBox.SLDASM showed, as read: show a mode where it is resolved "
             "before you press, or it may not be carried.") in said
@@ -1185,3 +1186,48 @@ def test_an_old_assembly_unread_because_nothing_can_be_carried_is_w9as_sentence_
                     "(findings.CARRY_INSERTS_ON_2026). RangeBox.SLDASM was not open in SolidWorks, so it was not read "
                     f"again; as read at {at}, your Sprocket-1 and M0 stay in RangeBox.SLDASM; RangeBox_r2 has none of "
                     "them, nor anything added since."), said
+
+
+# -- package A's third round (9837c73) -------------------------------------------------------------------------------
+
+def test_files_unread_after_the_carry_are_said_as_the_fact_they_are_and_kept():
+    text = r"Whether your files changed could not be read after the carry: C:\Users\x\Parts\Sprocket.SLDPRT is locked"
+    done = _done(after_unread=text)
+    said = _status(done)
+    assert said.endswith("Whether your files changed could not be read after the carry: Sprocket.SLDPRT is locked. "
+                         "Save RangeBox_r2 in SolidWorks to keep what was carried."), said
+    assert "did not get to" not in said and "What was carried before it" not in said
+    entry = gearbox.carry_entry(_Again(), done, None, stamp="s", revision=(34, 0, 0), assembly=OLD, mtime=lambda p: 1.0)
+    assert entry.after_unread == "Whether your files changed could not be read after the carry: Sprocket.SLDPRT is locked"
+    assert entry.stopped == ""
+    back = store.link_record_from_json(store.link_record_to_json(_record(entry)))
+    assert back.gearbox.carry.after_unread == entry.after_unread
+
+
+def test_a_component_resolved_in_the_old_assembly_by_the_carry_is_said_grouped():
+    said = _status(_done(resolved_in_old=("Sprocket-9",)))
+    assert ("Sprocket-9 was lightweight in RangeBox.SLDASM and is resolved there now: SolidWorks loaded its part to "
+            "carry it.") in said, said
+    two = _status(_done(resolved_in_old=("Sprocket-9", "Sprocket-10")))
+    assert ("Sprocket-9 and Sprocket-10 were lightweight in RangeBox.SLDASM and are resolved there now: SolidWorks "
+            "loaded their parts to carry them.") in two
+    assert "resolved there now" not in _status(_done())
+
+
+def test_a_fixed_component_placed_by_its_world_frame_is_never_said_to_stand_against_a_gear():
+    work = _work(components=("Sprocket-1", "Housing-1"), mates=2)
+    said = _status(_done(work), {"Sprocket-1": "Sun", "Housing-1": ""})
+    assert said.startswith("Carried into RangeBox_r2, unsaved: your Sprocket-1 and Housing-1, each where it stood, "), said
+    assert "against" not in said.split(".")[0]
+
+
+def test_an_old_assembly_whose_files_were_moved_is_said_with_the_workers_reason_and_no_advice():
+    """R.2's third-round refusal (a stored dependency outside the assembly's folder with a same-named file beside it):
+    the result says A's clause and the record's sentence, never what to do; the question's clause keeps its advice."""
+    reason = ("RangeBox.SLDASM is not open in SolidWorks, and Gear Generator reads it then only when the files it uses "
+              "are where it says they are (Sprocket.SLDPRT is stored in another folder, and a file of the same name "
+              "sits beside RangeBox.SLDASM)")
+    done = swbuild.CarryResult(_work(how=swbuild.OLD_UNREAD, unread=[reason]))
+    said = _status(done, stays=_stays())
+    assert said.startswith(reason + ", so nothing of yours was carried; as read at "), said
+    assert "open it" not in said.lower() and "press" not in said
