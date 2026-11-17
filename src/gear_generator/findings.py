@@ -1694,7 +1694,9 @@ USER_MATE_PUT_SUBASSEMBLY_ON_2024 = None
 #   ForceRebuild3 calls in its trace (r3:1435); k3 read no component code and no What's Wrong count. As facts of the
 #   run: both Updates stopped (r1:112; r3:1434).
 # - WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_<year>: False. "windows new none" after each of m3's rebuilds read
-#   (r1:45, 49, 84, 90); no "NOTE a SolidWorks window" line in r1 or r3, and k3's watch stopped nothing.
+#   (r1:45, 49, 84, 90); no "NOTE a SolidWorks window" line in r1 or r3, and k3's watch stopped nothing. Since the
+#   2024 review it covers the mate case only (r1:49); the feature case is its own finding below, as on 2024 a box
+#   came and went within the activate-and-rebuild step, too briefly for these after-the-step window lists.
 # Scope of all three: two user mates of one kind (distance), over-defined; one feature kind (a cut swallowed by the
 # bore, code 71), in one part at a time; RangeBox in H, and the 12 : 1 without modes. Not measured: a user mate in
 # error of another kind or on an app gear, several parts in error, an app feature in error. They do not say
@@ -1717,50 +1719,68 @@ USER_MATE_PUT_SUBASSEMBLY_ON_2024 = None
 # user's work in error and no window, with the rule above in force: m3's with the mates in error (c1:91-105), m3's
 # with Sprocket-1 in error, laid to the user (c1:148-161, 160), and k3's with the keyway newly in error in G1's part,
 # laid to the user, G1's own component reading code 1 (c1:786-800, 798, 800).
-# SolidWorks 2024 (32.5.0, snapshot 19651ee; v24 is probe/results/sw2024/w9a-confirm-sw2024-20261117-1-m3-stopped-by-
-# whats-wrong.log with sw2024/w9a-demo-20261117-002344.json), toggle 77 read True (v24:37): with UserGap over-defining
-# (v24:50) the script's own rebuild returned True, What's Wrong 3, codes 51 and 51, no new window (v24:51), so
-# ASSEMBLY_REBUILD_WITH_USER_MATE_IN_ERROR_ON_2024 is True, with 2026's scope. The box run (b1 below) read the same
-# (b1:53-54: UserGap status 5, the rebuild True, What's Wrong 3, codes 51 and 51, windows new none).
-# The box runs on 2024 (32.5.0, snapshot b985cab, each section last in a fresh session, under a watch that only logs:
-# nothing set, answered, closed or saved once a box was seen; b1 is probe/results/sw2024/w9a-box-sw2024-20261117-1-
-# box.log with sw2024/w9a-demo-20261117-013103.json, b2 is w9a-box-sw2024-20261117-2-reducer-box-k3.log with
-# sw2024/w9a-demo-20261117-014251.json):
-# - ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_2024: False, from box-k3 (the 12 : 1 without modes, the user's
-#   keyway in G1's part rebuilt into error, code 51, by the Update's Bore 8 -> 14; toggle 77 True, b2:592). The
-#   Update's failures were the assembly's rebuild alone, "SolidWorks reported an error rebuilding Reducer_12to1.", with
-#   the keyway the only user feature in error and no part failure (b2:605, 607), and two ForceRebuild3 calls in its
-#   trace (b2:608): G1's part rebuild was laid to the keyway alone (WHATS_WRONG_OPENS_ON_PART_REBUILD False, the app's
-#   features read clean), so the False came from the assembly's rebuild. That is all it rests on: no explicit
-#   assembly rebuild was read with a feature in error on 2024, and no component code or What's Wrong count.
-# - WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_2024: False, scoped to the explicit assembly rebuild call only (the
-#   script's own ForceRebuild, the app's train route): with the two user mates in error it opened no window (v24:51;
-#   b1:54). The Update as a whole does show the box on 2024 (WHATS_WRONG_OPENS_IN_UPDATE_… below); no app behaviour
-#   reads this finding any more.
+# SolidWorks 2024 (32.5.0), every run in a fresh session, all under probe/results/sw2024/ and checked by the 2024
+# review (docs/notes-workbook/W9A-CLOSE-2024-REVIEW.md). v24 is w9a-confirm-sw2024-20261117-1-m3-stopped-by-whats-
+# wrong.log (snapshot 19651ee, JSON w9a-demo-20261117-002344.json); b1 and b2 the box runs, under a watch that only
+# logs (nothing set, answered, closed or saved once a box was seen): w9a-box-sw2024-20261117-1-box.log (b985cab,
+# w9a-demo-20261117-013103.json) and w9a-box-sw2024-20261117-2-reducer-box-k3.log (b985cab, w9a-demo-20261117-
+# 014251.json); s3, s4 and s5 the confirming set: w9a-confirm-sw2024-20261117-3-m3-stopped-by-the-scripts-rule.log
+# (0a60fd3, w9a-demo-20261117-015234.json), w9a-confirm-sw2024-20261117-4-m3.log (10a6a08, w9a-demo-20261117-
+# 020629.json, 0 failed) and w9a-confirm-sw2024-20261117-5-reducer-k3.log (10a6a08, w9a-demo-20261117-023110.json,
+# 0 failed), whose watch logs a box owned by SolidWorks' frame as a fact, waits the job, and at its end wants the box
+# gone within 60 s and the frame enabled (s4:7). "Show errors every rebuild" (toggle 77) read True in every run that
+# read it (v24:37, b1:39, s3:39, s4:37; b2:592); s5 did not read it.
+# - ASSEMBLY_REBUILD_WITH_USER_MATE_IN_ERROR_ON_2024: True, with 2026's scope. UserGap over-defining (status 5), the
+#   script's own rebuild True, What's Wrong 3, codes 51 and 51, no new window: v24:50-51, b1:53-54, s3:52-53,
+#   s4:51-52.
+# - ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_2024: False. Read directly in s4: the user's keyway in the user's
+#   own Sprocket.SLDPRT left inside the bore (code 51; the part's rebuild False, s4:113), then the script's own
+#   assembly rebuild (ForceRebuild3, the app's train route) returned False, What's Wrong 1, no mate in error,
+#   Sprocket-1 reading code 51 (s4:119-120). The app's two Updates laid their False rebuilds to the user under the
+#   rule: m3's, the feature in the user's own part (s4:172-173, ['Sprocket-1']), and k3's, the keyway in G1's part
+#   rebuilt into error by the Update's Bore 8 -> 14 (s5:600, 611-612, ['User Keyway in Gear_m1.5_N17.SLDPRT']; G1's
+#   component read 51, s5:613). (box-k3's stop before the ruling, b2:605-608, said the same.)
+# - WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_<year>, scoped to the MATE case and the rebuild call: False on 2024 —
+#   with the two user mates in error the script's own activate-and-rebuild step showed no box (s4:54, "What's Wrong
+#   box during the step none", under s4's watch; v24:51, b1:54, s3:53 by the window lists after it). Nothing in the
+#   app reads it any more.
+# - WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_<year>, the FEATURE case: True on 2024. With
+#   the keyway in error in the user's part, the same step showed the box: up 0.53 s in with the worker in
+#   ActivateDoc3, gone 1.05 s in during ForceRebuild3, nothing closing it, the frame enabled at the end (s4:115-118,
+#   120); at 0a60fd3 the same box stopped the run under the script's earlier rule (s3:116-119). It is the box a
+#   person meets doing the same (activate the assembly, rebuild). On 2026: None. The 2026 runs' watch polled every
+#   2 s and their window lists read after the step (r1:90, c1:113 "windows new none"), so a box as short as 2024's
+#   here could have been missed; the final 2026 run, with s4's watch, is the read that settles it. Nothing in the
+#   app reads it.
 ASSEMBLY_REBUILD_WITH_USER_MATE_IN_ERROR_ON_2026 = True
 ASSEMBLY_REBUILD_WITH_USER_MATE_IN_ERROR_ON_2024 = True
 ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_2026 = False
 ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_2024 = False
 WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_2026 = False
 WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_2024 = False
+WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_2026 = None
+WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_2024 = True
 #
-# What's Wrong during the app's own Update with only user mates in error (the close review, "The 2024 fact and the
-# options"). RangeBox in H, toggle 77 read True, two user distance mates on Sprocket-1 over-defined (UserFront to the
-# layout's Front plane, UserGap to the user's fixed Housing-1), the app's value Update (Sun's Backlash):
-# - 2024: True. The footer named both mates in error before the press (v24:82); during the press SolidWorks opened
-#   its "What's Wrong" box (#32770: Show errors, Show warnings, "Display What's Wrong during rebuild", FeatureXpert,
-#   Close, Help; v24:88-89), and the script stopped on sight and marked the worker hung (v24:90-96). The quiet press
-#   before it made the same reads with no box (v24:56-66).
-# - 2026: False. The same Update went ahead with no window (c1:41, 91-105; the first run's r1:53-82 the same, the
-#   toggle unread there).
-#   The box run repeated it: the box came up 97 s into the same Update (b1:103, 105-106) and went by itself (b1:110).
-# - The same with a user feature in error, WHATS_WRONG_OPENS_IN_UPDATE_WITH_PART_FEATURE_IN_ERROR_ON_<year>: 2024
-#   True, box-k3's Update (the keyway in G1's part rebuilt into error) showed the box 17.6 s in (b2:597, 599-600);
-#   2026 False, the closing run's two Updates with a feature in error, m3's in the user's own part and k3's in G1's,
-#   ran with no window (c1:148-161, 786-800).
-# Not known: which call raises the box (the watch saw it with the worker in ActivateDoc3, b1:103 and b2:597; the
-# first run's in GetNextSubFeature, v24:89), and anything with the toggle off. swbuild.whats_wrong_shows_in_update
-# reads these two for package B's sentence (True where either is True, False where both are False, None unmeasured).
+# What's Wrong during the app's own Update with the user's work in error (the close review, "The 2024 fact and the
+# options"; the 2024 review). The mate case, WHATS_WRONG_OPENS_IN_UPDATE_WITH_USER_MATE_IN_ERROR_ON_<year>: RangeBox
+# in H, two user distance mates on Sprocket-1 over-defined (UserFront to the layout's Front plane, UserGap to the
+# user's fixed Housing-1), the app's value Update (Sun's Backlash):
+# - 2024: True. The footer named both mates in error before the press (v24:82); the box came up during the press
+#   (#32770: Show errors, Show warnings, "Display What's Wrong during rebuild", FeatureXpert, Close, Help; v24:88-89)
+#   and the script, under its rule then, stopped (v24:90-96); the quiet press before it made the same reads with no
+#   box (v24:56-66). Then in every run: b1:103, 105-106, 110; s3:90-94; s4:89-93, each time the Update going ahead
+#   (b1:141; s3:95-98; s4:94-97, 106-107).
+# - 2026: False. The same Update went ahead with no window (c1:41, 91-105; the first run's r1:53-82 the same).
+# The feature case, WHATS_WRONG_OPENS_IN_UPDATE_WITH_PART_FEATURE_IN_ERROR_ON_<year>:
+# - 2024: True. The Update over a feature in error in the user's own part (s4:155-159, going ahead, s4:160-163,
+#   172-173), and the Update rebuilding the user's keyway in G1's part into error (b2:597, 599-600; s5:594-598,
+#   going ahead, s5:599-603, 611-612).
+# - 2026: False, the closing run's two such Updates with no window (c1:148-161, 786-800).
+# The 2026 values rest on a watch that polled every 2 s; every Update box seen on 2024 stayed 3 s or more.
+# Not known: which call raises the box (the worker was in ActivateDoc3 when it was seen in b1, b2, s3 and s4's
+# Updates, in GetComponentByName in s5:596, in GetNextSubFeature in v24:89), and anything with the toggle off.
+# swbuild.whats_wrong_shows_in_update reads these two for package B's sentence (True where either is True, False
+# where both are False, None unmeasured).
 WHATS_WRONG_OPENS_IN_UPDATE_WITH_USER_MATE_IN_ERROR_ON_2026 = False
 WHATS_WRONG_OPENS_IN_UPDATE_WITH_USER_MATE_IN_ERROR_ON_2024 = True
 WHATS_WRONG_OPENS_IN_UPDATE_WITH_PART_FEATURE_IN_ERROR_ON_2026 = False
@@ -1770,17 +1790,33 @@ WHATS_WRONG_OPENS_IN_UPDATE_WITH_PART_FEATURE_IN_ERROR_ON_2024 = True
 # change: the box is left alone, and the app behaves on 2024 as on 2026 — it does not suppress the box, change
 # SolidWorks' setting or refuse because of it). WHATS_WRONG_IN_UPDATE_BLOCKS_ON_<year>; it gates
 # swbuild.assembly_rebuild_settled.
-# - 2024: False. b1, two user mates in error, RangeBox in H, the app's value Update (Sun's Backlash 0.4): the box, a
-#   #32770 popup owned by SolidWorks' frame, came up 97.45 s in, the frame enabled, and a read on a second connection
-#   answered in 0.5 s with it up (b1:103-104); it was gone at 120.08 s with nothing closing it, the worker then in
-#   ShowConfiguration2 (b1:110), and the calls went on growing (b1:142); the Update returned ok after 306 s (b1:141;
-#   status b1:133), then the app's bodies 6.6e-10 from their frames on record, the user's components unmoved, the
-#   user's mates' codes and flags as before (b1:145), the toggle True before and after (b1:39, 143). b2, the keyway
-#   rebuilt into error on the 12 : 1: the box came up 17.57 s in and was gone at 22.59 s, nothing closing it (b2:597,
-#   603); the job returned in 22.6 s, not ok as the rebuild findings then were None, naming the keyway as the user's,
-#   newly in error (b2:605-607, 612). Scope: "show errors every rebuild" on; one press each, a user mate in error with
-#   modes and a user feature rebuilt into error without; never answered. Not measured: anything with the toggle off,
-#   other kinds of error, the box's FeatureXpert or Close pressed by a person during the job.
+# - 2024: False. In every Update run with something of the user's in error the box came up, went while the job went
+#   on, nothing closing it, and the job returned, its results as they should be:
+#   - b1, the mates in error with modes: up 97.45 to 120.08 s, a #32770 popup owned by SolidWorks' frame, the frame
+#     enabled and a read on a second connection answering in 0.5 s while it was up, the calls growing (b1:103-104,
+#     110, 142); the Update ok after 306 s (b1:133, 141), the app's bodies 6.6e-10 from their frames on record, the
+#     user's components unmoved, the user's mates' codes and flags as before (b1:145), what it wrote read raw before
+#     and after, the toggle True before and after (b1:143);
+#   - b2, k3 before the ruling: up 17.57 to 22.59 s, the frame enabled and the second connection answering
+#     (b2:597-598, 603); the job returned in 22.6 s, a failure then as the rebuild findings were None, naming the
+#     keyway newly in error (b2:605-607, 612-614); it went as the job ended, so b2 alone does not tell "went by
+#     itself" from "went with the job";
+#   - s3, the mates in error: up 90.41 to 112.51 s, the Update ok at 300.9 s (s3:92-98);
+#   - s4, the mates in error: up 99.92 to 123.01 s, ok at 314.4 s (s4:89-97, 105-107);
+#   - s4, a feature in error in the user's own part: up 98.02 to 120.63 s, ok at 352.8 s, the False rebuilds laid to
+#     the user (s4:155-163, 171-173);
+#   - s5, k3 under the ruling: up 17.12 to 20.13 s, the job on until 22.7 s and ok, the keyway named the user's,
+#     newly in error (s5:596-603, 607, 611-612);
+#   and in each confirming run 0 up at the job's end and SolidWorks' frame enabled (s3:94, s4:93, 117, 159, s5:598).
+#   A carried component in error was refused before any write as the rule says, foreseen by the footer (s4:174, 206,
+#   211-212, 220-223).
+#   Lifetimes 3 to 23 s in Updates; 0.5 s at the script's own activate-and-rebuild step (above).
+#   Only b1 and b2 checked the frame and a second connection's read WHILE the box was up; the confirming runs check
+#   the frame at the job's end. Not run: a person pressing FeatureXpert, or the "Display What's Wrong during rebuild"
+#   box, during the job; a box that outlives its job (none did); a Build with the user's work in error (the again
+#   sections never ran on 2024); the mate case on a gearbox without modes; an Update that puts by route (c1) with
+#   the user's work in error and a lock carried; mate errors of other kinds than two over-defined distance mates;
+#   any box longer than the 23 s seen; "show errors every rebuild" off.
 # - 2026: False. No box opened at all in the closing run's Updates with the user's work in error (c1:91-105,
 #   148-161, 786-800).
 WHATS_WRONG_IN_UPDATE_BLOCKS_ON_2026 = False

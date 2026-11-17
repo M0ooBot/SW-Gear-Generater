@@ -2208,3 +2208,99 @@ def test_w9a_2024s_confirming_session_read_nocarrier_clean():
                       "[True, True])")
     assert findings.USER_MATE_PUT_NO_CARRIER_ON_2024 is True
     assert findings.USER_MATE_PUT_NO_CARRIER_MODES_ON_2024 is None
+
+
+W9A_2024_S3 = LATEST.parent / "sw2024" / "w9a-demo-20261117-015234.json"
+W9A_2024_S3_LOG = LATEST.parent / "sw2024" / "w9a-confirm-sw2024-20261117-3-m3-stopped-by-the-scripts-rule.log"
+W9A_2024_S4 = LATEST.parent / "sw2024" / "w9a-demo-20261117-020629.json"
+W9A_2024_S4_LOG = LATEST.parent / "sw2024" / "w9a-confirm-sw2024-20261117-4-m3.log"
+W9A_2024_S5 = LATEST.parent / "sw2024" / "w9a-demo-20261117-023110.json"
+W9A_2024_S5_LOG = LATEST.parent / "sw2024" / "w9a-confirm-sw2024-20261117-5-reducer-k3.log"
+
+
+def _w9a_2024_confirming():
+    """s3, s4 and s5: their JSONs and logs, checked for snapshot and version."""
+    return (_w9a_run(W9A_2024_S3, W9A_2024_S3_LOG, "0a60fd3", (32, 5, 0)),
+            _w9a_run(W9A_2024_S4, W9A_2024_S4_LOG, "10a6a08", (32, 5, 0)),
+            _w9a_run(W9A_2024_S5, W9A_2024_S5_LOG, "10a6a08", (32, 5, 0)))
+
+
+def test_w9a_2024_confirming_set_reads_each_rebuild_directly():
+    """findings.py, the M3 rebuild findings on 2024 (the 2024 review, finding 1): the mate case True with no box at the
+    step (s3:53, s4:52, 54); the feature case read directly, the assembly's rebuild False, What's Wrong 1, Sprocket-1
+    51 (s4:119-120), the box shown at the step's ActivateDoc3 and gone during ForceRebuild3 (s4:115-118; s3:116-119)."""
+    (s3data, s3), (s4data, s4), _ = _w9a_2024_confirming()
+    for lines, at in ((s3, 53), (s4, 52)):
+        assert lines[at] == ("fact    m3 a user mate in error: ForceRebuild (the app's train route) returned True; "
+                             "GetWhatsWrongCount 3; mates in error {'UserFront': 51, 'UserGap': 51}; components in "
+                             "error none; windows new none")
+    assert s4[54].endswith("What's Wrong box during the step none, windows left standing none")
+    m3 = s4data["sections"]["m3"]
+    assert m3["show_errors_every_rebuild"] is True and s3data["sections"]["m3"]["show_errors_every_rebuild"] is True
+    assert (m3["mate_error"]["rebuilt"], m3["mate_error"]["whats_wrong"]) == (True, 3)
+    assert (m3["feature_error"]["rebuilt"], m3["feature_error"]["whats_wrong"]) == (False, 1)
+    assert {n: c for n, c in m3["feature_error"]["components"].items() if c} == {"Sprocket-1": 51}
+    assert s4[113].startswith("fact    m3: the Sprocket part's rebuild returned False; What's Wrong 1; features in "
+                              "error [('User Keyway', 51)]")
+    assert s4[115].startswith("fact    m3 a user feature in error: the assembly rebuild: What's Wrong came up 0.53 s "
+                              "into the job, the worker in ActivateDoc3, owned by SolidWorks' frame")
+    assert s4[116].startswith("fact    m3 a user feature in error: the assembly rebuild: What's Wrong gone 1.05 s into "
+                              "the job, the worker in ForceRebuild3; nothing here closed it")
+    assert s4[117].endswith("0 up at the end, SolidWorks' frame enabled True")
+    assert s4[119] == ("fact    m3 a user feature in error: ForceRebuild (the app's train route) returned False; "
+                       "GetWhatsWrongCount 1; mates in error none; components in error {'Sprocket-1': 51}; windows new "
+                       "none")
+    assert s4[120] == ("answer  M3 (assembly, a user feature in error in a component's part): the rebuild returned "
+                       "False, What's Wrong 1, What's Wrong box during the step ['ActivateDoc3'], windows left "
+                       "standing none")
+    assert s3[116].startswith("DIALOG  SolidWorks shows \"What's Wrong\"")
+    assert s3[118].startswith("FAIL    m3 a user feature in error: the assembly rebuild: a SolidWorks dialog came up")
+    assert s3[119].startswith("STOP    ")
+    assert "came up while ActivateDoc3 was in progress" in s3data["fails"][0]
+    assert findings.ASSEMBLY_REBUILD_WITH_USER_MATE_IN_ERROR_ON_2024 is True
+    assert findings.ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_2024 is False
+    assert findings.WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_2024 is False                     # the mate case only
+    assert findings.WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_2024 is True
+    assert findings.WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_2026 is None
+
+
+def test_w9a_2024_confirming_updates_go_ahead_with_the_box_coming_and_going():
+    """findings.py WHATS_WRONG_OPENS_IN_UPDATE_… and WHATS_WRONG_IN_UPDATE_BLOCKS_ON_2024: each Update with the user's
+    work in error went ahead, the box up and gone while the job went on, 0 up and the frame enabled at the end; the
+    two False rebuilds laid to the user (s4:172, s5:611); the carried component in error refused before any write."""
+    (s3data, s3), (s4data, s4), (s5data, s5) = _w9a_2024_confirming()
+    boxes = ((s3, 92, 93, 94, "90.41", "112.51"), (s4, 89, 92, 93, "99.92", "123.01"),
+             (s4, 155, 158, 159, "98.02", "120.63"), (s5, 596, 597, 598, "17.12", "20.13"))
+    for lines, came, went, summary, up, gone in boxes:
+        assert lines[came].startswith(f"fact    Update SolidWorks: What's Wrong came up {up} s into the job")
+        assert lines[went].startswith(f"fact    Update SolidWorks: What's Wrong gone {gone} s into the job") and \
+            lines[went].endswith("nothing here closed it")
+        assert lines[summary].endswith("SolidWorks' frame enabled True")
+    assert s3[96].endswith("user features in error []; inventory read yes; failures []")
+    assert s3[98].startswith("status  [green] Updated SolidWorks: changed 1 variable in Gear_m1.25_N29")
+    assert s4[106].startswith("fact    m3 Update with a user mate in error: ok True; failures []")
+    assert s4[172].startswith("fact    m3 Update with a user feature in error: ok True; failures []; laid to the "
+                              "user's work alone ['Sprocket-1']")
+    assert s5[602].startswith("status  [green] Updated SolidWorks: changed 1 variable in Gear_m1.5_N17")
+    assert s5[611].startswith("fact    k3 Update rebuilding the user's keyway into error: ok True; failures []; "
+                              "laid to the user's work alone ['User Keyway in Gear_m1.5_N17.SLDPRT']; User Keyway in "
+                              "error before False, after True")
+    assert s5[613].startswith("fact    k3: component error codes after the Update: {'Gear_m1.5_N17-1': 51}")
+    m3 = s4data["sections"]["m3"]
+    assert m3["update_mate_error"]["ok"] is True and m3["update_feature_error"]["ok"] is True
+    assert s3data["sections"]["m3"]["update_mate_error"]["ok"] is True
+    assert s5data["sections"]["k3"]["update"]["ok"] is True
+    assert s5data["sections"]["k3"]["update"]["user_features_in_error"] == [["User Keyway", "Gear_m1.5_N17.SLDPRT", 51]]
+    # The carried component in error, refused before any write and foreseen.
+    assert [k for k, _ in m3["carried_in_error"]] == ["component"]
+    assert s4[206].startswith("ok      m3: the footer foresees the refusal of Sprocket-1, carried and in error")
+    assert s4[220].startswith("ok      m3 carried component with its part in error: refused before any write as "
+                              "['component'], naming ['UserLockSun']")
+    assert s4[221].endswith("none") and "made no call that changes or shows anything" in s4[221]
+    assert s4[222].startswith("ok      m3 carried component with its part in error: nothing written")
+    for data, lines in ((s4data, s4), (s5data, s5)):
+        assert data["fails"] == [] and data["stops"] == []
+    assert s4[242].startswith("done    0 failed") and s5[625].startswith("done    0 failed")
+    assert findings.WHATS_WRONG_OPENS_IN_UPDATE_WITH_USER_MATE_IN_ERROR_ON_2024 is True
+    assert findings.WHATS_WRONG_OPENS_IN_UPDATE_WITH_PART_FEATURE_IN_ERROR_ON_2024 is True
+    assert findings.WHATS_WRONG_IN_UPDATE_BLOCKS_ON_2024 is False
