@@ -882,3 +882,177 @@ The next run reaches this:
   modelled, not COM's.
 - The reversed retry, the fallback and the post-check now read only handles the carry's bracket holds. I found no
   further place that would have met fault 2.
+
+---
+
+## Re-check of package A's fifth round (`a366938`, `2bab5db`), before the second SolidWorks run
+
+*Independent, 2026-11-17.* I read the two commits' diffs against my addendum (`eb66f22`) and the coordinator's M3.
+Scratch tests in the scratchpad drove A's worker on the fake, once with the fake's entity read made as SolidWorks
+read it in run 2. No SolidWorks was started.
+
+**Suite** at head: **2 failed, 3904 passed, 10 skipped**. The two failures are the known tkinter tests.
+
+### Verdict
+
+Package A's head is **fit for the two-hour run**:
+- M1 and M2 are fixed as asked.
+- M3 is the right line.
+- S1 to S4 are done.
+- The fake's `strict_handles` now refuses wherever the carry's Session members refuse.
+
+Two things remain, neither a reason to hold the run:
+- **UserAxis9 still has no why on SolidWorks.** The why-field A added for it is reached only on the fake (A1 below).
+- **No worker test still shows a same-error mate carried.** M3 changed the only one (A2).
+
+### M1, M2, M3
+
+**M1 is fixed** (`swcom.py:766`). The call goes through `_guarded(name, value)`, so a COM error from the invocation is
+a `ComError`:
+- `_guarded` sets `CONNECTION.lost` when the error says the session has gone;
+- `_remake`'s `except ComError: raise` now meets it;
+- `_carry_said` says it as SolidWorks' own sentence.
+
+It is pinned by `test_a_member_handed_back_uncalled_is_called_under_the_com_error_guard`.
+
+**M2 is fixed** (`swbuild.py:8343-8356`).
+- The flag is set in every mode as recorded and read back.
+- A mode counts as one "where a component of the mate is suppressed" by `_wanted_suppressed`. That is the state C.5
+  set in that mode and **read back from SolidWorks** before any mate was made: `_carry_states` stops if a state does
+  not read as set. So the decision rests on what SolidWorks reported.
+- Those modes' reads become a fact. Every other mode is compared exactly as before, and a mismatch there still stops
+  the carry.
+- The post-check skips the same modes (`hidden`), so nothing is blamed there.
+
+**M3 is the right line** (`swbuild.py:8388`, `W9D-INTERFACES.md` §6).
+- `tied` no longer subtracts `excused`. A gear on the cluster's train that was free before it and is not free after it
+  falls the cluster back (`FELL_TIE`), whatever codes its mates read. So no gear free before and tied after can be
+  excused any more.
+- The excuse still covers what §6 now says, and only that:
+  - the mate's own code (`same_error`);
+  - a user body's over-definition, only where every remade mate of the cluster on that body is back in its old error.
+- A cluster that read over-defined in the old assembly and ties no gear still comes over as before: its codes are
+  `same_error`, its bodies are excused, and `_free` finds no gear newly held.
+- The changed expectation in `test_a_new_error_or_an_over_definition_falls_back_and_the_same_error_is_carried` ("same
+  error") follows from K2 and from §6 as written. There Lock1 alone holds Sprocket-1 to G1, comes back in 46, and G1,
+  free before, reads held after. Under K2 the user's work never keeps a gear from turning, so the cluster falls back
+  `FELL_TIE ("G1", "")`. The new §6 sentence says exactly that.
+
+### S1 to S4
+
+- **S1 is done.**
+  - A fault of ours reads *"The carry stopped while making the mates of … again: a fault in Gear Generator, not in
+    SolidWorks."* and *"The read of RangeBox.SLDASM stopped: …"*.
+  - SolidWorks is the subject only of a `SolidWorksError`.
+- **S2 is done.**
+  - A walk's `faults` go to its logged walk line.
+  - `entity_reference`'s fault text goes to `Session.reference_faults`, which `_read_old_mates` copies into
+    `work.walks` (printed as `fact    reference read fault: …`) and then clears.
+- **S3 is done.**
+  - The r3 stand-in now has `GetModelDoc2` and `Extension` as attributes, so the old code fails at `GetFaces`, where
+    SolidWorks failed.
+  - A Session-level test pins both reference reads with no part document.
+  - The fake's `_strict` is now in `fix_component`, `unfix_component`, `place_component`, `is_fixed`,
+    `component_path`, `component_frame`, `delete_component`, `constrained_status`, `component_resolved`,
+    `component_configurations`, `set_component_suppressed` and `entity_references`. It is also in the target
+    resolution `remake_mate` uses: a whole component, `"<handle>:<feature>"`, and `select_by_reference`'s handle.
+  - **Against the Session**, whose `_component` is reached from `_component_ref`, `_lock_mate`, `_remake`,
+    `_select_target`, `component_configurations`, `component_frame`, `component_path`, `component_resolved`,
+    `component_translation`, `constrained_status`, `delete_component`, `entity_references`, `fix_component`,
+    `is_fixed`, `place_component`, `raw_component`, `select_by_reference`, `set_component_suppressed` and
+    `unfix_component`. Every member the carry calls is covered. The four the fake leaves lenient
+    (`component_translation`, `_lock_mate`, W5's `_remake`, `raw_component`) are the build's and Update's, never the
+    carry's.
+  - The two carry tests built without strictness now have it.
+- **S4 is done.** `entity_references` with no part document says *"its part is not loaded in SolidWorks (lightweight
+  or suppressed)"*.
+- The note is taken too: C.1 skips an empty `Name2`.
+
+### A1 (should-fix). The why for UserAxis9 is reached only on the fake
+
+A's note says a feature on a suppressed component now carries the Session's *"its part is not loaded …"*. That
+happens only when the entity's kind reads `feature`, which sends it to `entity_reference`.
+
+On SolidWorks it did not read so. Run 2 read UserAxis9's Sprocket-9 entity as `('user', 'Sprocket-9', 'unread', '', …)`
+(`-2-carry-app-faults.log:621`): `ReferenceType2` gives nothing through a component suppressed in the mode showing.
+So:
+- the kind is `unread`;
+- no reference read is made;
+- the new `UNREAD_ENTITY` why does not apply, since `what` is `USER`;
+- the entity's `unread` stays `""`.
+
+Two scratch runs on A's worker:
+- **The fake as it is** (its `_entity_kind` answers `feature`): *"SolidWorks would not describe UserAxis9 wholly (its
+  part is not loaded in SolidWorks (lightweight or suppressed)), so it is not made again."*
+- **The fake's `_entity_kind` answering `unread` for that component, as SolidWorks did:** *"SolidWorks would not
+  describe UserAxis9 wholly, so it is not made again."* That is no why, the run's sentence again.
+
+**Fix:**
+- In `_read_old_mates`, when an entity's kind is `unread` and its owner is a user component whose state in the mode
+  showing is suppressed, set `unread` to *"{who} is suppressed in {work.active}, the mode {old} showed"*. B's clause
+  already says the slot.
+- Make the fake's `_entity_kind` answer `unread` for a component suppressed in the mode showing, as run 2 measured.
+
+The run is not hurt by this: UserAxis9 is named unread either way, as the script now expects. Only the sentence lacks
+its why.
+
+### A2 (should-fix). No worker test shows a same-error mate carried any more
+
+The parametrised test's "same error" case now falls back, so `same_error` non-empty is shown only by B's hand-made
+results.
+
+Add one case where a mate between two user components (no app gear on its train) reads its old code again and is
+carried in `same_error`, its cluster kept. The test's name still says "the same error is carried", which it no longer
+shows.
+
+### A3 (note). The UserAsm6 why is SolidWorks-shaped only by reasoning
+
+The new why for an `UNREAD_ENTITY` beside a lightweight component reads *"the assembly's own plane is not told while
+a component of it is lightweight"*.
+- **Whether the code path is reached is unproven on the fake.** The fake names the assembly's own entity `""` (taken
+  as `ASSEMBLY` with no root read). So on the fake a mate to `asm:plane1` beside a lightweight component is simply
+  carried (scratch run: `named` empty).
+- **On SolidWorks it is reached.** There the entity names the root (`ASSEMBLY_ENTITY_COMPONENT_IS_ROOT`), the root is
+  not read beside a lightweight component, and the entity is `UNREAD_ENTITY`. That is run 2's UserAsm6, and this why
+  then applies.
+- **The words are wrong for the user.** *"is not told"* is not English for "cannot be told", and it is Gear
+  Generator's own rule, not something SolidWorks withheld. Yet B's clause frames every `WHY_UNREAD` as *"SolidWorks
+  would not describe … wholly (…)"*. Shared with B in `W9D-REVIEW-B.md`.
+
+### What the second run meets for the first time
+
+The run's reviewer should look at each of these. Each so far has been shown only on the fake, or only by the probe's
+own code.
+- **C.1**: every app component found again by `Name2` after the build's bracket, a gear new in the revision included.
+- **The r3 walk through the Session's own code**:
+  - grouped per component;
+  - the area or radius prefilter, part entity against assembly entity;
+  - the cap's two numbers;
+  - seconds per component as the session ages;
+  - `IEntity.GetType` on the resolved entity.
+- **Tier 1's resolve and select on a carried component** (`select_by_reference`: `GetObjectByPersistReference3`,
+  `GetCorresponding`, `Select4` with mark 1).
+- **`remake_mate` for each kind the app has never remade**: concentric on a face, parallel, limit distance (`AddMate5`'s
+  limit arguments) and gear (the ratio swap). Coincident, distance, angle and lock on features were remade by S5 (c);
+  on faces and edges only by the probe.
+- **The read-back**:
+  - entities by `ReferenceComponent`, the assembly's own read as `""`;
+  - alignment;
+  - values;
+  - a gear's sense from real `EntityParams` (the fake's are identical);
+  - the reversed retry;
+  - the Flip retry.
+- **The rename of a remade mate** to its old name, and SolidWorks' name kept when the old one is taken.
+- **`set_mate_suppressed_in` and `mate_suppression` on a user mate the app remade**, including a mode where its
+  component is suppressed (M2's fact; UserAxis7 in L).
+- **`_judge`**:
+  - mate codes after one top-only rebuild;
+  - `GetConstrainedStatus` on the new assembly's gears for the tie;
+  - the tie now never excused (M3).
+- **The fallback**: `delete_mate` (`Select2` then `EditDelete`) of a mate just made, then the cluster's components
+  placed and fixed again.
+- **The post-check per mode**:
+  - each carried component's pose against its anchor (`moved`);
+  - the app's own mates' codes against before (`_app_mates_check`, `find_mate` on an app mate);
+  - the interference naming a carried component.
+- **A record whose carry holds remade mates** (run 2's held none), and the footer's line after it.
