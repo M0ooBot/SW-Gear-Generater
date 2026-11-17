@@ -2990,3 +2990,55 @@ def test_an_update_refused_over_the_users_work_is_recorded_and_the_footer_says_i
     assert (f"Update SolidWorks refused at {ui_text.read_time(entry.read_at)}, before changing anything: "
             f"{entry.problems[0].sentence}") in window.status.get()
     assert window.footer().update_enabled
+
+
+# -- W9d: Build again… carries the user's work (W9D-INTERFACES §2.1, §7, §9.2, §9.4; package B) ----------------------
+
+
+def test_a_build_again_hands_the_worker_its_carry_says_what_was_carried_and_the_footer_asks_for_the_save(desk,
+                                                                                                        monkeypatch):
+    """The window's path for a carrying Build again…: ``_start_build`` passes ``carry`` (from the very old assembly it
+    passes as ``before``), ``_finish_build`` says ``carried_status`` after the build's own sentence and records the
+    carry, and the footer says the new assembly holds it unsaved until its file is newer. The worker's carry is A's:
+    here a hand-made ``CarryResult`` stands in on the real build's result."""
+    from gear_generator import workbook_gui
+    window = built(desk)
+    save_in_excel(window, {"Gears": {"K2": "arcs"}})
+    monkeypatch.setattr(workbook_gui, "ask_yes_no", lambda parent, title, text: True)
+    given = {}
+    real = swbuild.build_gearbox
+    frame = ((1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0), (0.0, 0.0, 40.0))
+
+    def build(session, **kwargs):
+        given.update(kwargs)
+        result = real(session, **kwargs)
+        work = swbuild.OldWork("2026-11-17T14:02:00Z", kwargs["before"].path, swbuild.OLD_OPEN, "", (),
+                               [swbuild.OldComponent("Sprocket-1", "C:\\Parts\\Sprocket.SLDPRT", "part", False, 0, 2,
+                                                     frame, configurations=("Default",))],
+                               [swbuild.OldMate("Lock3", 16, "MateLock", 0, False, (),
+                                                (swbuild.OldEntity("app", "G1", "whole"),
+                                                 swbuild.OldEntity("user", "Sprocket-1", "whole")), on=("",))], ())
+        result.carry = swbuild.CarryResult(work, inserted=[("Sprocket-1", "Sprocket-1")],
+                                           remade=[("Lock3", "Lock3", ("",))], unsaved=True)
+        return result
+    monkeypatch.setattr(workbook_gui.swbuild, "build_gearbox", build)
+    window.press_update()
+    desk.finish(window)
+    carry = given.get("carry")
+    assert carry is not None and carry.old is given["before"]
+    assert [b.old for b in carry.bodies][:1] == ["layout"] and "G1" in [b.old for b in carry.bodies]
+    status = window.status.get()
+    assert status.startswith(f"Built 1 part, {NAME}_r2_Layout and {NAME}_r2.SLDASM"), status
+    assert (f"Carried into {NAME}_r2, unsaved: your Sprocket-1, each where it stood, and your Lock3, on in the "
+            "modes it was on in.") in status, status
+    record = record_of(window)
+    assert record.gearbox.name == f"{NAME}_r2" and record.unsaved == {}
+    assert record.gearbox.carry.unsaved_at == os.path.getmtime(record.gearbox.assembly)
+    assert [c.name for c in record.gearbox.user_work.components] == ["Sprocket-1"]
+    line = f"{NAME}_r2 holds what Build again… carried of yours, not saved: save it in SolidWorks to keep it."
+    window.note = None
+    window._plan()
+    assert line in window.footer().text, window.footer().text
+    touch_later(record.gearbox.assembly)                       # saved in SolidWorks
+    window._tick()
+    assert line not in window.footer().text
