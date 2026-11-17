@@ -5,11 +5,13 @@ SolidWorks, through the Workbook window's own path (W9a's Desk9: the window's pl
     python w9c_demonstration.py <src> <out> --pid PID [--log FILE] [--sections fixed,modes,...] [--redo]
         [--master <S0's rangebox.master>] [--user-master <W9a's setup.master>]
         [--reducer-master <W9a's reducer.master>] [--fixed-master <this script's fixed-updated.master>]
+        [--m4-part <a part with an in-context reference, made by hand>]
     python w9c_demonstration.py --self-check      (no SolidWorks, no Excel)
 
 Every new kind of write is behind a per-version finding that is None (``UPDATE_INSERTS_A_GEAR``,
 ``UPDATE_MAKES_MATES_WITH_MODES``, ``UPDATE_BANDS_IN_PLACE``, ``UPDATE_ADDS_A_MODE``, ``UPDATE_REMOVES_A_MODE``,
-``EXTERNAL_REFERENCES_READ``, each ``_ON_<year>``). As W9a's ``nocarrier`` did, each section first shows the app's
+``EXTERNAL_REFERENCES_READ``, and since 957b7c0 ``UPDATE_MAKES_A_NEW_COUPLING`` and ``UPDATE_SUPPRESSES_THE_RELIEF``,
+each ``_ON_<year>``). As W9a's ``nocarrier`` did, each section first shows the app's
 refusal with the finding as it stands (the footer's sentence before the press; the press refused before any write,
 judged by its traced calls, the reads before and after, every document's save flag and every file's time), then
 patches the finding True in this process only, says so (``PATCH``), and measures. Each section proposes its finding
@@ -30,15 +32,18 @@ Sections (each can run alone from a kept master; ``fixed`` keeps ``fixed-updated
 - ``remove``    G4 taken out of a copy of the 12 : 1 (no user component); HighDog taken out of a copy of
                 ``setup.master`` refused before any write (C4: the external-references read is unmeasured), then
                 with a user lock on HighDog refused naming that lock too.
-- ``remake``    Sun 29 -> 30, Planet 13 -> 12, Ring 55 -> 54 on a copy of ``fixed-updated.master`` (the centre distance
-                and the planets' even spacing kept): four gear mates of a gearbox with modes made again (ruling 9.16
-                lifted), flags and senses read in every mode, the user's mates unchanged.
+- ``remake``    Sun 29 -> 30, Planet 13 -> 12, Ring 55 -> 54 on a copy of ``setup.master`` (RangeBox with the user's
+                work; it needs nothing of ``fixed``'s; the centre distance and the planets' even spacing kept): four
+                gear mates of a gearbox with modes made again (ruling 9.16 lifted), flags and senses read in every
+                mode, the user's mates unchanged.
 - ``bands-off`` no legal edit takes the bands off RangeBox_Fixed's sleeve in place (the self-check searches): the
                 refusals said, nothing written; then, script-side only, the app's ``Session.suppress_feature`` on the
                 copy's Relief read back with the sleeve's mates per mode, and turned back on.
 - ``m4``        a probe (no app code makes it yet): the external-references reads the installed API help documents,
                 on the user's parts (none has a reference; one with an in-context reference cannot be made by proven
-                calls), with a positive control and GetSaveFlag around each.
+                calls), with a positive control and GetSaveFlag around each. ``--m4-part <path>``: also on a part the
+                user made by hand with an in-context reference to an app gear (W9C-DEMONSTRATION.md, m4), read-only,
+                and the route proposed from it.
 - ``w9b-part``  W9b's ``part`` section again (88 s on 2026), so its step-face read runs on SolidWorks in this session.
 
 Time on 2026, estimated: fixed 30 min, modes 30, remove 15, remake 15, bands-off 8, m4 5, w9b-part 2: about 1 h 45
@@ -76,7 +81,9 @@ GROOVE_TOL = 1e-6          # mm
 TOL = 1e-6                 # mm, rotation entries: a frame against another
 RESOLVED = (2, 3)          # GetSuppression2: swComponentFullyResolved, swComponentResolved (W9a's setup reads these)
 GATES = {"fixed": ("UPDATE_INSERTS_A_GEAR", "UPDATE_BANDS_IN_PLACE"), "add": ("UPDATE_ADDS_A_MODE",),
-         "remove a mode": ("UPDATE_REMOVES_A_MODE",), "remake": ("UPDATE_MAKES_MATES_WITH_MODES",)}
+         "remove a mode": ("UPDATE_REMOVES_A_MODE",), "remake": ("UPDATE_MAKES_MATES_WITH_MODES",),
+         # 957b7c0 split these two off: no legal edit of the plan's fixtures reaches either through the window
+         "relief": ("UPDATE_SUPPRESSES_THE_RELIEF",), "coupling": ("UPDATE_MAKES_A_NEW_COUPLING",)}
 SHEETS = ("Gears", "Meshes", "Modes")
 HUB_OPS = ("Hub on Output Axis", "Hub along Output", "RangeSlv splined to Hub")
 RELIEF_FEATURES = ("Relief Start Plane", "Relief End Plane", "Relief Start Sketch", "Relief End Sketch", "Relief")
@@ -170,6 +177,53 @@ def put_back(cleared, row):
     """The cells a row's clearing emptied, written back with the row's values (``row``: the sheet's row as it was, its
     blank cells left out, in the order ``row_edits`` cleared them)."""
     return [(sheet, ref, value) for (sheet, ref, _), value in zip(cleared, [v for v in row if not _blank(v)])]
+
+
+M4_ORDER = ("IModelDocExtension.ListExternalFileReferences", "IModelDocExtension.ListExternalFileReferencesCount",
+            "ISldWorks.GetDocumentDependencies2")
+
+
+def m4_route(reads, own):
+    """The first of ``M4_ORDER`` whose answer names a reference: a count above 0, or a SolidWorks file other than the
+    part itself among what it gave; None when none does."""
+    own_name = os.path.basename(str(own).replace("\\", "/")).lower()
+
+    def names_one(answer):
+        if isinstance(answer, int) and not isinstance(answer, bool):
+            return answer > 0
+        found = []
+
+        def walk(v):
+            if isinstance(v, (list, tuple)):
+                for x in v:
+                    walk(x)
+            elif isinstance(v, dict):
+                for x in v.values():
+                    walk(x)
+            elif isinstance(v, str) and v.lower().endswith((".sldprt", ".sldasm")):
+                found.append(os.path.basename(v.replace("\\", "/")).lower())
+        walk(answer)
+        return any(n != own_name for n in found)
+    return next((label for label in M4_ORDER if label in reads and names_one(reads[label]["answer"])), None)
+
+
+def headers_to_insert(heads, titles, bands):
+    """Where a person inserts the columns an edit needs and a workbook lacks (row 1's ``heads``; a header found by its
+    start, as W8's ``cell`` finds it): only the band columns (``bands``, the app's titles in its order), just after
+    Slides, where the app's ``write_new`` puts them. Returns ``(the first new column, 1-based; the titles in order)``,
+    ``(None, [])`` with nothing missing; raises ValueError naming any other header missing."""
+    missing = [t for t in dict.fromkeys(titles) if not any(str(h).startswith(t) for h in heads)]
+    if not missing:
+        return None, []
+    if any(t not in bands for t in missing) or "Slides" not in heads:
+        raise ValueError(missing)
+    return list(heads).index("Slides") + 2, [t for t in bands if t in missing]
+
+
+def insert_columns(rows, at, titles):
+    """``rows`` (a sheet's, row 1 its headers) with empty columns inserted at ``at`` (1-based), headed ``titles``."""
+    return [list(r[:at - 1]) + (list(titles) if i == 0 else [""] * len(titles)) + list(r[at - 1:])
+            for i, r in enumerate(rows)]
 
 
 def gap_of(a, b):
@@ -367,6 +421,32 @@ def _w9b_pure():
     return module
 
 
+FIRST_CONTACT = "probe/results/w9c-demo-sw2026-20261117-1-first-contact.log"
+
+
+def replay_first_contact(ok):
+    """The first 2026 run's footer before HighDog's removal on setup (e47d114), against the window's W9c rule the
+    script now holds it to: the C4 stop foreseen is said, red, in place of W9a's prediction, which the script's old
+    check wanted in the footer (its FAIL there was the script's, not the window's)."""
+    path = os.path.join(REPO, FIRST_CONTACT)
+    if not os.path.isfile(path):
+        print(f"skip    the first run's log is not here: {FIRST_CONTACT}")
+        return
+    lines = open(path, encoding="utf-8").read().splitlines()
+    tag = "footer  (remove, HighDog, the user's components there) "
+    at = next((i for i, x in enumerate(lines) if x.startswith(tag)), None)
+    if at is None:
+        ok(False, "replay first contact: the footer line is in the log")
+        return
+    footer = lines[at][len(tag):]
+    line = next(x for x in lines[at:] if x.startswith("line    "))[len("line    [green] "):]
+    stop = next(x for x in lines[at:] if x.startswith("        foreseen references")).split("]: ", 1)[1]
+    head = stop.split(" whether your ")[0]
+    ok(footer.startswith("[red]") and line not in footer and head in footer,
+       "replay first contact: the footer is red and says the foreseen C4 stop, not W9a's prediction "
+       f"(the window is right; the old expectation was stale): {head[:70]!r}")
+
+
 def self_check():
     import time as _time
     fake = _fake()
@@ -486,16 +566,16 @@ def self_check():
                    f"remove, {label}: no gate unsettled on 2026 (P1's findings set): {gates(ip, modes=bool(old.modes))}")
 
         # remake: a tooth change of three gears with modes
-        teeth = fx
+        teeth = rb
         for gear, n in GEARS_TEETH.items():
             teeth = with_gear(teeth, gear, teeth=n)
-        (spec, _), = _offline(fx, [row_edits(fx, teeth)], folder)
-        a, up, errors = classify(records["fx"], spec)
+        (spec, _), = _offline(rb, [row_edits(rb, teeth)], folder)
+        a, up, errors = classify(records["rb"], spec)
         ratio = next((m.ratio for m in a.report.modes if m.name == "L"), None)
         ok(up is not None and not up.structural and not up.in_place and len(up.ratios) == 4
            and gates(swbuild.InPlace(), modes=True, remakes=True) == [f"UPDATE_MAKES_MATES_WITH_MODES_ON_{year_}"]
            and ratio is not None and abs(ratio - REMAKE_RATIO_L) < 1e-9,
-           f"remake: Sun 30, Planet 12, Ring 54 legal, four gear mates remade, gated on UPDATE_MAKES_MATES_WITH_MODES, "
+           f"remake: on RangeBox, Sun 30, Planet 12, Ring 54 legal, four gear mates remade, gated on UPDATE_MAKES_MATES_WITH_MODES, "
            f"L's ratio {ratio} (1 + 54/30): {errors or (up and (list(up.structural), list(up.ratios)))}")
 
         # bands-off: every candidate edit illegal, or Build again
@@ -521,6 +601,31 @@ def self_check():
                   f": {said}")
         ok(not legal_in_place, f"bands-off: no candidate takes the bands off in place, so the section is a refusal "
                                f"check and the take-away is measured script-side: {legal_in_place or 'none'}")
+
+    # a workbook written before W9b: no band columns; inserted where the app's writer puts them
+    from gear_generator.workbook import schema
+    bands = [c.title for c in schema.GEARS.columns if c.key in ("start_band", "end_band")]
+    full = sheet_rows(rb)["Gears"]
+    keep = [i for i, t in enumerate(full[0]) if t not in bands]
+    old_rows = [[r[i] for i in keep] for r in full]
+    at, titles = headers_to_insert(old_rows[0], [t for _, t, _, _ in row_edits(rb, fx)], bands)
+    ok(titles == bands and insert_columns(old_rows, at, titles) == full,
+       f"pre-W9b workbook: the two band columns inserted after Slides, headed as write_new heads them, give the app's "
+       f"own layout: at {at}, {titles}")
+    try:
+        headers_to_insert(old_rows[0], ["Groove (mm)", "Nonesuch"], bands)
+        ok(False, "pre-W9b workbook: a missing header other than the bands is refused")
+    except ValueError as exc:
+        ok(str(exc) == "['Nonesuch']", f"pre-W9b workbook: a missing header other than the bands is named: {exc}")
+    replay_first_contact(ok)
+    reads = {"IModelDocExtension.ListExternalFileReferences": {"answer": {"returned": None, "outs": [
+                 ["C:\\U\\Bracket.SLDPRT"], ["Assem1.SLDASM"], ["Sketch1"], [], [0], [], [], 0, ""]}},
+             "ISldWorks.GetDocumentDependencies2": {"answer": ["Bracket", "C:\\U\\Bracket.SLDPRT"]}}
+    ok(m4_route(reads, "C:\\U\\Bracket.SLDPRT") == "IModelDocExtension.ListExternalFileReferences"
+       and m4_route({"ISldWorks.GetDocumentDependencies2": {"answer": ["Bracket", "C:\\U\\Bracket.SLDPRT"]}},
+                    "C:\\U\\Bracket.SLDPRT") is None
+       and m4_route({"IModelDocExtension.ListExternalFileReferencesCount": {"answer": 0}}, "x.SLDPRT") is None,
+       "m4: a route names another document, never the part itself or a count of 0")
 
     # the pure judgements on made-up readings
     rot = (1.0, 0, 0, 0, 1.0, 0, 0, 0, 1.0)
@@ -574,6 +679,7 @@ import w9b_demonstration as B  # noqa: E402  (§3's table, the per-mode read and
 W, S0 = A.W, A.S0
 from gear_generator import findings, store, swbuild, swcom, ui_text  # noqa: E402
 from gear_generator.swcom import call  # noqa: E402
+from gear_generator.workbook import schema as wb_schema  # noqa: E402
 from gear_generator.workbook import update as wb_update  # noqa: E402
 from gear_generator.workbook.model import Mode  # noqa: E402
 
@@ -627,14 +733,112 @@ def same_sheets(label, desk, spec):
               if got[s] != want[s]}
     if differ:
         A.section_stop(f"{label}: the copy's workbook is not the fixture's: {differ}")
-    check(True, f"{label}: the copy's workbook holds the fixture's Gears, Meshes and Modes rows")
+    check(True, f"{label}: the copy's workbook holds the fixture's Gears, Meshes and Modes rows (as the app reads them)")
+
+
+def headers_fact(label, book):
+    """Which of the app's Gears columns the workbook's own header row lacks (a workbook written before W9b has no band
+    columns): said, so an edit that needs one shows why it types it."""
+    heads = headers_of(book, "Gears")
+    lacking = [c.title for c in wb_schema.GEARS.columns if not any(h.startswith(c.title) for h in heads)]
+    say(f"fact    {label}: the workbook's Gears headers lack {lacking or 'nothing'} of the app's")
+    return lacking
+
+
+def record_json(desk):
+    import json
+    text = store.link_record_to_json(desk.record)
+    return json.loads(text) if isinstance(text, str) else text
+
+
+def record_on_disk(desk):
+    """The record's file as written (the link schema it carries)."""
+    import json
+    with open(store.link_record_path(desk.path), encoding="utf-8") as handle:
+        return json.load(handle)
+
+
+def record_brought_forward(label, desk):
+    """After the window's first finish on a copy of a master written by an earlier app: the record on disk at this
+    app's link schema."""
+    got = record_on_disk(desk).get(store.LINK_SCHEMA_KEY)
+    check(got == store.LINK_SCHEMA_VERSION, f"{label}: the record on disk now at link schema {got} "
+                                            f"(this app's {store.LINK_SCHEMA_VERSION})")
+
+
+def without_user_work(record):
+    box = dict(record.get("gearbox") or {})
+    box.pop("user_work", None)
+    return dict(record, gearbox=box)
+
+
+def footer_ahead(desk, label):
+    """The footer before a press, held to the window's W9c rule (``ui_text.workbook_footer``): where an in-place stop
+    is foreseen and no refusal is on record, the stop is said in place of W9a's prediction of what the press does
+    with the user's work (a press that changes nothing does nothing with it); otherwise W9a's ``ahead_of``."""
+    ahead = wb_update.user_work_ahead(desk.update, desk.record, desk.reading.digest)
+    recorded = ahead is not None and bool(ahead.refused)
+    stops = () if recorded else wb_update.in_place_ahead(desk.update, desk.record)
+    if not stops:
+        return A.ahead_of(desk, label)
+    f = desk.say_footer(label)
+    line, _ = ui_text.user_work_line(ahead)
+    stop, _ = ui_text.in_place_line(stops, desk.record, known=line,
+                                    on_disk=getattr(desk.update, "new_parts_on_disk", ()))
+    say(f"line    (W9a's prediction, not said beside a foreseen stop) {line or '(none)'}")
+    check(bool(stop) and stop in f.text and not f.ok and (not line or line not in f.text),
+          f"{label}: the footer says the foreseen stop, red, in place of W9a's prediction: {stop[:120]!r}…")
+    return ahead
+
+
+def band_titles():
+    """The two band columns' headers exactly as the app's own ``write_new`` heads them (``schema.GEARS``)."""
+    return [c.title for c in wb_schema.GEARS.columns if c.key in ("start_band", "end_band")]
+
+
+def headers_of(book, sheet):
+    ws = book.wb.Worksheets(sheet)
+    return [str(ws.Cells(1, c).Value or "") for c in range(1, 60)]
+
+
+def ensure_headers(book, sheet, titles, label):
+    """The headers an edit types under, each found in row 1 (as W8's ``cell`` finds it, by its start). A workbook
+    written before W9b has no band columns: a person inserts the two after Slides and types their headers exactly as
+    the app's ``write_new`` heads them, saved, and it is said. Any other header missing is a sentence naming it."""
+    heads = headers_of(book, sheet)
+    try:
+        at, inserted = headers_to_insert(heads, titles, band_titles() if sheet == "Gears" else [])
+    except ValueError as exc:
+        raise AssertionError(f"{label}: the workbook's {sheet} sheet has no column headed {exc} (its headers "
+                             f"{[h for h in heads if h]}), so the edit cannot be typed") from None
+    if not inserted:
+        return []
+    ws = book.wb.Worksheets(sheet)
+    typed = []
+    for i, title in enumerate(inserted):
+        ws.Columns(at + i).Insert()
+        book.set(sheet, f"{column_letter(at + i)}1", title)
+        typed.append(f"{column_letter(at + i)}1 {title!r}")
+    book.save()
+    say(f"person  {label}: the workbook was written before W9b and has no band columns; two columns inserted after "
+        f"Slides and headed as the app's write_new heads them: {typed}")
+    return typed
 
 
 def edit_live(desk, book, edits, label, cells=()):
     """A person's edit in Excel: each ``(sheet, title, key, value)`` at its cell (W8's ``cell``, every address found
-    before anything is written) and ``cells`` at known addresses, saved; the window's poll reads, plans and
-    classifies (W8's ``edit``). Returns the cells written."""
-    found = [(sheet, W.cell(book, sheet, title, key), value) for sheet, title, key, value in edits]
+    before anything is written; a header the workbook lacks put in first by ``ensure_headers``) and ``cells`` at
+    known addresses, saved; the window's poll reads, plans and classifies (W8's ``edit``). Returns the cells
+    written."""
+    for sheet in dict.fromkeys(s_ for s_, _, _, _ in edits):
+        ensure_headers(book, sheet, [t for s_, t, _, _ in edits if s_ == sheet], label)
+    found = []
+    for sheet, title, key, value in edits:
+        try:
+            found.append((sheet, W.cell(book, sheet, title, key), value))
+        except StopIteration:
+            raise AssertionError(f"{label}: no cell for {title!r} in {sheet}'s row {key or '(the first empty)'}: "
+                                 f"the headers are {[h for h in headers_of(book, sheet) if h]}") from None
     written = list(cells) + found
     say(f"edit    {label}: {written}")
     W.edit(desk, book, *written)
@@ -690,15 +894,15 @@ def states_by_mode(label, desk, names):
     return run(f"{label}: the components' states per mode", job(box.assembly, work), 900)
 
 
-def judged_modes(label, desk, out, section3=True, against=None):
+def judged_modes(label, desk, out, section3=True, against=None, banded=True, engaged=None):
     """W9b's per-mode read and judgement on the gearbox as recorded now (frames, flags, slide values, interference,
     every gear free, the bands and dogs where the app's read puts them; §3's table where ``section3``), and each mode
-    of ``against`` (mode -> §3's row to hold it to) by W9b's ``judge_mode``. A mode reading other than §3's is a
-    STOP."""
-    gears = ("RangeSlv", "HighDog", "LowDog", "Hub")
-    globals_ = B.part_globals(desk, gears)
+    of ``against`` (mode -> §3's row to hold it to) by W9b's ``judge_mode``. ``banded`` False: a sleeve without bands
+    (RangeBox as built), each mode held to ``engaged`` (mode -> the dogs engaged) instead of §3's RangeBox_Fixed
+    rows. A mode reading other than the record and §3 say is a STOP."""
+    globals_ = B.part_globals(desk, ("RangeSlv", "HighDog", "LowDog", "Hub"))
     every = B.mode_read(label, desk)
-    clean = B.judge_every(label, desk, every, globals_, against_section3=section3, out=out)
+    clean = B.judge_every(label, desk, every, globals_, banded=banded, against_section3=section3, out=out)
     differ = {}
     for mode, row in (against or {}).items():
         bands, dogs, _ = B.measured(every["frames"][mode], globals_)
@@ -708,6 +912,13 @@ def judged_modes(label, desk, out, section3=True, against=None):
             differ[mode] = wrong
         check(not wrong, f"{label}, {mode}: as §3's {row} row: {wrong or 'the bands, the relief, engaged '}"
                          f"{judged['engaged']}")
+    for mode, dogs_engaged in (engaged or {}).items():
+        bands, dogs, _ = B.measured(every["frames"][mode], globals_, banded=banded)
+        judged = B.judge_mode(bands, dogs)
+        if judged["engaged"] != dogs_engaged:
+            differ[mode] = f"engaged {judged['engaged']}, not {dogs_engaged}"
+        check(judged["engaged"] == dogs_engaged, f"{label}, {mode}: engaged {judged['engaged']} as §3's RangeBox "
+                                                 f"({dogs_engaged}); least running gap {judged['least']}")
     if not clean or differ:
         A.stop(f"{label}: a mode reads other than the record and §3 say: {differ or 'see the FAILs above'} (§0.3)")
     return every, globals_
@@ -752,7 +963,7 @@ def gated_refusal(label, desk, folder, stems, part, users=None):
         say(f"fact    {label}: {standing} already True in findings.py, so the app refuses nothing here")
         return {"findings": standing}
     unsettled = [n for n, v in standing.items() if v is not True]
-    A.ahead_of(desk, f"{label}, the findings as they stand {standing}")
+    footer_ahead(desk, f"{label}, the findings as they stand {standing}")
     foreseen = foreseen_names(desk)
     said = " ".join(p.sentence + " " + " ".join(p.subjects) for p in foreseen)
     check(any(p.kind == swbuild.PROBLEM_UNSETTLED for p in foreseen) and all(n in said for n in unsettled),
@@ -760,10 +971,28 @@ def gated_refusal(label, desk, folder, stems, part, users=None):
           f"{[(p.kind, list(p.subjects)) for p in foreseen]}")
     A.save_user(folder, f"before {label}")
     files = B.documents_state(label, desk, folder)
+    rest = without_user_work(record_json(desk))
     problems = A.refuse_press(label, desk, folder, {swbuild.PROBLEM_UNSETTLED}, (), tuple(unsettled), users=users,
                               part=part, save=False)
     B.nothing_written(f"{label}, by file times and save flags", files, B.documents_state(label, desk, folder))
+    refusal_on_record(label, desk, rest, {swbuild.PROBLEM_UNSETTLED: unsettled})
     return {"findings": standing, "refusal": [p.sentence for p in problems]}
+
+
+def refusal_on_record(label, desk, rest, subjects):
+    """W9C-INTERFACES §11 (B's second joining round): after a refusal before any write, the record's inventory holds
+    the press's workbook digest and SolidWorks and every problem with its subjects (``subjects``: kind -> the names
+    each must carry), and nothing else on the record changed (``rest``: the record without its inventory before)."""
+    entry = desk.record.gearbox.user_work
+    kept = {p.kind: list(getattr(p, "subjects", []) or []) for p in (entry.problems if entry is not None else [])}
+    missing = {k: [n for n in names if n not in kept.get(k, [])] for k, names in subjects.items()}
+    missing = {k: v for k, v in missing.items() if v or k not in kept}
+    same = without_user_work(record_json(desk)) == rest
+    check(entry is not None and not missing and same and list(entry.revision) == list(W.TAG["revision"])
+          and entry.digest == desk.reading.digest,
+          f"{label}: the record keeps the refusal with its subjects {kept}, the press's digest and SolidWorks "
+          f"{list(entry.revision) if entry is not None else None}, and nothing else on it changed ({same}); missing "
+          f"{missing or 'none'}")
 
 
 def refused_without_writing(label, desk, folder, part, judge, users=None):
@@ -908,9 +1137,11 @@ def section_fixed(out):
         check(quiet is not None and quiet.placed == [] and any(f.name == GROOVE["name"] for f in (
             desk.record.gearbox.user_work.features if desk.record.gearbox.user_work is not None else ())),
             f"fixed: the quiet press recorded the user's groove: {desk.error if quiet is None else 'ok'}")
+        record_brought_forward("fixed, after the quiet press", desk)
         A.save_user(folder, "after the quiet press")
 
         say("-- fixed  the workbook edited to RangeBox_Fixed in Excel: RangeSlv's cells and Hub's row, the fixture's own")
+        headers_fact("fixed", book)
         edit_live(desk, book, row_edits(rb, fx), "RangeBox -> RangeBox_Fixed")
         u = desk.update
         ip = u.in_place if u is not None else None
@@ -924,7 +1155,7 @@ def section_fixed(out):
 
         with patched(stems):
             desk.plan_solidworks()
-            A.ahead_of(desk, "fixed, the findings patched, before the press")
+            footer_ahead(desk, "fixed, the findings patched, before the press")
             foreseen = foreseen_names(desk)
             check(not foreseen, f"fixed: with the findings patched the footer foresees nothing stopping the press: "
                                 f"{[(p.kind, list(p.subjects)) for p in foreseen]}")
@@ -962,6 +1193,11 @@ def section_fixed(out):
                   f"fixed: the record holds Hub as {entries.get('Hub') and entries['Hub'].name}; RangeSlv keeps its "
                   f"component {sleeve.name} and its file {os.path.basename(sleeve.part)}")
             B.hub_mates("fixed", desk, desk.plan)
+            hub_entry = next((p for p in desk.record.parts if "Hub" in p.gears), None)
+            check(hub_entry is not None and store.same_path(hub_entry.path, hub_part)
+                  and store.read_sidecar(store.sidecar_path(hub_part)) is not None and not pressed.left,
+                  f"fixed: the record holds Hub's part ({hub_entry and os.path.basename(hub_entry.path)}) with its "
+                  f".gear.json, and nothing left over (left {pressed.left})")
             sidecar = store.read_sidecar(store.sidecar_path(sleeve.part))
             check(sidecar is not None and sidecar.schema_version == 2 and "Relief" in sidecar.record.features,
                   f"fixed: the sleeve's sidecar at schema 2 with Relief among its features: "
@@ -1003,7 +1239,7 @@ def section_fixed(out):
                                                                                          "Housing.SLDPRT")}},
                 {"flags": {}, "times": {n: t for n, t in B.documents_state("fixed", desk, folder)["times"].items()
                                         if n in ("Sprocket.SLDPRT", "Housing.SLDPRT")}})
-            A.ahead_of(desk, "fixed, after the press")
+            footer_ahead(desk, "fixed, after the press")
             check(not foreseen_names(desk), "fixed: after the press the footer foresees nothing in place")
 
             say("-- fixed  saved as the user would; a second press is quiet")
@@ -1029,7 +1265,8 @@ def section_fixed(out):
                  f"§3's, the second press quiet: {clean}")
         proposed(finding_name("UPDATE_BANDS_IN_PLACE"), True if bool(clean) and all(
             clean.get(k) for k in ("bands", "m8", "quiet")) else None,
-            f"fixed, giving bands only (the taking away has no legal edit on RangeBox_Fixed; see bands-off): {clean}")
+            f"fixed: bands given in place (the gate gives only; taking away is UPDATE_SUPPRESSES_THE_RELIEF, see "
+            f"bands-off): {clean}")
 
 
 # -- modes: M10 -------------------------------------------------------------------------------------------------------
@@ -1101,7 +1338,7 @@ def section_modes(out):
                                            sleeve)
         with patched(add_stems):
             desk.plan_solidworks()
-            A.ahead_of(desk, f"modes, {ADDED_MODE}, the finding patched")
+            footer_ahead(desk, f"modes, {ADDED_MODE}, the finding patched")
             before = every_mode(f"modes, before {ADDED_MODE}", desk, users)
             shown = active_now(desk)
             result, _ = A.press(desk, f"modes: {ADDED_MODE} added")
@@ -1114,6 +1351,7 @@ def section_modes(out):
             flags, states = took_active_read("modes", desk, ADDED_MODE, mates, users)
             differ = took_active_differs(result.took_active_state, ADDED_MODE, flags, states, swbuild._STATE_WORDS)  # noqa: SLF001
             clean["add"] = check(ok and result.modes_added == [ADDED_MODE] and ADDED_MODE in names
+                                 and not desk.record.gearbox.left
                                  and after_shown == shown and not differ
                                  and list(desk.record.gearbox.modes) == list(MODES) + [ADDED_MODE],
                                  f"modes: {ADDED_MODE} made ({names}), the record's modes "
@@ -1137,7 +1375,7 @@ def section_modes(out):
                                               rm_stems, sleeve)
         with patched(rm_stems):
             desk.plan_solidworks()
-            A.ahead_of(desk, f"modes, {REMOVED_MODE} removed, the finding patched")
+            footer_ahead(desk, f"modes, {REMOVED_MODE} removed, the finding patched")
             before = every_mode(f"modes, before {REMOVED_MODE} goes", desk, users)
             every_before = B.mode_read(f"modes, before {REMOVED_MODE} goes", desk)
             shown = active_now(desk)
@@ -1158,6 +1396,7 @@ def section_modes(out):
                               if {m: x for m, x in (every_before["values"].get(n) or {}).items() if m in remaining} != v})
             clean["remove"] = check(
                 ok and result.modes_removed == [REMOVED_MODE] and REMOVED_MODE not in names
+                and not desk.record.gearbox.left
                 and remaining == ["H", "L", ADDED_MODE] and sorted(result.flags_lost) == lost and not unchanged
                 and after_shown == shown,
                 f"modes: {REMOVED_MODE} deleted ({names}), the record's modes {remaining}; the user's flags lost said "
@@ -1189,8 +1428,23 @@ def section_modes(out):
                         and getattr(error, "user_work", "unread") is None,
                         f"refused before any write as the mode showing, naming {ADDED_MODE}, the user's work unread "
                         f"(C12): {[(p.kind, list(p.subjects)) for p in problems]}")
+            held = desk.record.gearbox.user_work
+            held = None if held is None else {k: [dict(vars(x)) if hasattr(x, "__dict__") else x
+                                                  for x in getattr(held, k)]
+                                              for k in ("components", "mates", "features", "carried")}
             error = refused_without_writing(f"modes, {ADDED_MODE} removed while it shows", desk, folder, sleeve,
                                             showing)
+            entry = desk.record.gearbox.user_work
+            now = None if entry is None else {k: [dict(vars(x)) if hasattr(x, "__dict__") else x
+                                                  for x in getattr(entry, k)]
+                                              for k in ("components", "mates", "features", "carried")}
+            problems = list(entry.problems) if entry is not None else []
+            check(entry is not None and now == held and [p.kind for p in problems] == [swbuild.PROBLEM_MODE_SHOWING]
+                  and list(getattr(problems[0], "subjects", []) or []) == [ADDED_MODE]
+                  and list(entry.revision) == list(W.TAG["revision"]),
+                  f"modes: the record keeps the inventory as it was ({now == held}) and the refusal, one problem "
+                  f"{[(p.kind, list(getattr(p, 'subjects', []) or [])) for p in problems]}, read at {entry and entry.read_at} "
+                  "(W9C-INTERFACES §11)")
             out["showing_refusal"] = str(error)
             clean["showing"] = isinstance(error, swbuild.UserWorkRefused)
 
@@ -1202,7 +1456,7 @@ def section_modes(out):
                   and u.in_place.first_mode == NEXT_FIRST,
                   f"modes: classify removes {FIRST_MODE}, {NEXT_FIRST} the record's first: "
                   f"{u and (list(u.structural), u.in_place.modes_removed, u.in_place.first_mode)}")
-            A.ahead_of(desk, f"modes, {FIRST_MODE} removed")
+            footer_ahead(desk, f"modes, {FIRST_MODE} removed")
             before = every_mode(f"modes, before {FIRST_MODE} goes", desk, users)
             person_shows(desk, folder, ADDED_MODE)       # the every-mode read leaves the first mode showing
             result, _ = A.press(desk, f"modes: {FIRST_MODE} removed")
@@ -1214,6 +1468,7 @@ def section_modes(out):
             names = configurations_now(desk)
             clean["first"] = check(
                 ok and result.modes_removed == [FIRST_MODE] and FIRST_MODE not in names
+                and not desk.record.gearbox.left
                 and list(desk.record.gearbox.modes) == [NEXT_FIRST, ADDED_MODE] and after_shown == ADDED_MODE,
                 f"modes: {FIRST_MODE} deleted ({names}); the record's modes {list(desk.record.gearbox.modes)}, "
                 f"{NEXT_FIRST} first; {ADDED_MODE} showing before and after")
@@ -1255,7 +1510,7 @@ def remove_reducer(out):
         removed = u.in_place.removed if u is not None else ()
         check(u is not None and not u.structural and [r.gear for r in removed] == [REMOVED_REDUCER],
               f"remove: classify takes {REMOVED_REDUCER} out in place: {u and (list(u.structural), removed)}")
-        A.ahead_of(desk, f"remove, {REMOVED_REDUCER}")
+        footer_ahead(desk, f"remove, {REMOVED_REDUCER}")
         foreseen = foreseen_names(desk)
         check(not foreseen, f"remove: the footer foresees nothing stopping it: {[(p.kind, list(p.subjects)) for p in foreseen]}")
         before = A.read_now(f"remove, before {REMOVED_REDUCER} goes", box.assembly, folder, others, [])
@@ -1279,6 +1534,12 @@ def remove_reducer(out):
                    f"(each read gone by name), every other mate there, nothing else moved ({moved:.1e} at {at or '-'}), "
                    f"the record without it, its part's file still on disk ({os.path.basename(gone.part)}); record parts "
                    f"{[os.path.basename(p.path) for p in desk.record.parts]}")
+        part_kept = [os.path.basename(p.path) for p in desk.record.parts if store.same_path(p.path, gone.part)]
+        others_use = [c.gear for c in rec.components if store.same_path(c.part, gone.part)]
+        check(bool(others_use) or not part_kept, f"remove: {REMOVED_REDUCER}'s part entry left the record's parts, no "
+                                                 f"gear using its file now (C6; the file stays on disk): kept "
+                                                 f"{part_kept or 'none'}, other gears on it {others_use or 'none'}")
+        check(not rec.left, f"remove: nothing left over on the record (left {rec.left})")
     finally:
         if not W.HUNG["on"]:
             A.w8_step(W.end_copy, CTX["worker"], folder, "remove-reducer")
@@ -1302,7 +1563,7 @@ def remove_setup(out):
         u = desk.update
         check(u is not None and not u.structural and [r.gear for r in u.in_place.removed] == [gear],
               f"remove: classify takes {gear} out in place: {u and (list(u.structural), u.in_place.removed)}")
-        A.ahead_of(desk, f"remove, {gear}, the user's components there")
+        footer_ahead(desk, f"remove, {gear}, the user's components there")
         foreseen = foreseen_names(desk)
         check({p.kind for p in foreseen} == {swbuild.PROBLEM_REFERENCES}, f"remove: the footer foresees the "
               f"references refusal (C4): {[(p.kind, list(p.subjects)) for p in foreseen]}")
@@ -1322,7 +1583,7 @@ def remove_setup(out):
                          ("ul5", "lock", "hd", "u5", 0.0, "UserLock5", {})),
                         refs={"lay": box.layout_component, "hd": hd.name})
         A.save_user(folder, f"the user's lock on {gear}")
-        A.ahead_of(desk, f"remove, {gear}, with the user's lock on it")
+        footer_ahead(desk, f"remove, {gear}, with the user's lock on it")
         files = B.documents_state("remove", desk, folder)
         problems = A.refuse_press(f"remove {gear}, the user's lock on it", desk, folder,
                                   {swbuild.PROBLEM_REMOVED, swbuild.PROBLEM_REFERENCES}, ("UserLock5",), (references,),
@@ -1351,58 +1612,52 @@ def section_remove(out):
 # -- remake: a tooth change with modes --------------------------------------------------------------------------------
 
 
+RANGEBOX_ENGAGED = {"H": ["HighDog"], "N": [], "L": ["LowDog"]}   # §3, RangeBox before W9b: what each mode engages
+
+
 def section_remake(out):
     stems = GATES["remake"]
     say(f"== remake  Sun 29 -> {GEARS_TEETH['Sun']}, Planet 13 -> {GEARS_TEETH['Planet']}, Ring 55 -> "
-        f"{GEARS_TEETH['Ring']} on a copy of fixed-updated.master (the centre distance and the planets' spacing kept): "
-        "the gear mates of a gearbox with modes made again (ruling 9.16 lifted), first refused with "
-        f"findings.{finding_name(stems[0])} as it stands")
-    _, fx, _ = specs()
-    teeth = with_teeth(fx)
-    folder, path, book, desk = A.copy_desk(fixed_master(), "remake", "RangeBox.xlsx")
+        f"{GEARS_TEETH['Ring']} on a copy of setup.master, RangeBox with the user's work (the centre distance and the "
+        "planets' spacing kept; it needs nothing of fixed's): the gear mates of a gearbox with modes made again "
+        f"(ruling 9.16 lifted), first refused with findings.{finding_name(stems[0])} as it stands")
+    rb, _, _ = specs()
+    teeth = with_teeth(rb)
+    folder, path, book, desk = A.copy_desk(A.user_master(), "remake", "RangeBox.xlsx")
     clean = False
     try:
-        same_sheets("remake", desk, fx)
+        same_sheets("remake", desk, rb)
+        headers_fact("remake", book)
         box = desk.record.gearbox
         users, mates = A.rb_users(), list(A.RB_USER_MATES)
         sun = gear_entry(box, "Sun").part
-        edit_live(desk, book, row_edits(fx, teeth), "the teeth")
+        edit_live(desk, book, row_edits(rb, teeth), "the teeth")
         u = desk.update
         ratios = list(u.ratios) if u is not None else []
         check(u is not None and not u.structural and not u.needs_new_revision and not u.in_place and ratios,
               f"remake: classify makes it a value Update remaking {ratios}: {u and list(u.structural)}")
-        finding = finding_name(stems[0])
-        if getattr(findings, finding, None) is not True:
-            A.ahead_of(desk, f"remake, findings.{finding} {getattr(findings, finding, None)!r}")
-            foreseen = foreseen_names(desk)
-            check(any(finding in " ".join(p.subjects) + p.sentence for p in foreseen),
-                  f"remake: the footer foresees the press refused naming {finding}")
-
-            def build_error(result, error):
-                return (result is None and isinstance(error, swbuild.BuildError)
-                        and not isinstance(error, swbuild.UserWorkRefused) and finding in str(error),
-                        f"refused before any write, naming {finding}: {type(error).__name__}: {error}")
-            out["refusal"] = str(refused_without_writing("remake, the gate as it stands", desk, folder, sun,
-                                                         build_error))
+        out["refusal"] = gated_refusal("remake, the gate as it stands", desk, folder, stems, sun)
         with patched(stems):
             desk.plan_solidworks()
-            A.ahead_of(desk, "remake, the finding patched")
+            footer_ahead(desk, "remake, the finding patched")
             before = every_mode("remake, before", desk, users)
             result, _ = A.press(desk, "remake: the teeth")
             out["press"], out["in_place"] = A._update_fact(desk, result), in_place_fact(result)  # noqa: SLF001
             if result is None:
                 A.section_stop(f"remake: the press with the finding patched raised: {desk.error}")
             ok = done_said(result, "remake")
+            record_brought_forward("remake", desk)
             remade = set(result.remade_in_modes)
             clean = check(ok and set(ratios) <= set(result.ratios) and set(ratios) <= remade
-                          and not (remade & set(result.senses_unread)) and not result.user_features_in_error,
+                          and not (remade & set(result.senses_unread)) and not result.user_features_in_error
+                          and not desk.record.gearbox.left,
                           f"remake: every gear mate {ratios} made again with modes ({sorted(remade)}), each one's sense "
                           f"read (unread {result.senses_unread}), the user's keyway in Sun's part not in error "
-                          f"{[f.name for f in result.user_features_in_error]}")
+                          f"{[f.name for f in result.user_features_in_error]}, nothing left over on the record")
             after = every_mode("remake, after", desk, users)
             users_unchanged("remake", before, after, users, mates)
-            judged_modes("remake", desk, out.setdefault("judged", {}), section3=False,
-                         against={m: m for m in MODES})
+            judged_modes("remake", desk, out.setdefault("judged", {}), section3=False, banded=False,
+                         engaged=RANGEBOX_ENGAGED)
             l_ratio = next((m.ratio for m in desk.a.report.modes if m.name == "L"), None)
             check(l_ratio is not None and abs(l_ratio - REMAKE_RATIO_L) < 1e-9,
                   f"remake: the app's read gives L {l_ratio} (1 + 54/30 = {REMAKE_RATIO_L})")
@@ -1410,8 +1665,7 @@ def section_remake(out):
         if not W.HUNG["on"]:
             A.w8_step(W.end_copy, CTX["worker"], folder, "remake")
         proposed(finding_name("UPDATE_MAKES_MATES_WITH_MODES"), True if clean else None,
-                 "remake: gear mates of a gearbox with modes remade, flags and senses read in every mode; a coupling or "
-                 f"sliding mesh newly made by Update is not exercised by any legal edit of these fixtures: {clean}")
+                 f"remake: gear mates of a gearbox with modes remade, flags and senses read in every mode: {clean}")
 
 
 # -- bands-off: the take-away side ------------------------------------------------------------------------------------
@@ -1478,9 +1732,14 @@ def section_bands_off(out):
         if not W.HUNG["on"]:
             A.w8_step(W.end_copy, CTX["worker"], folder, "bands-off", save=False)
         out["clean"] = clean
-        RESULT["proposal"]["UPDATE_BANDS_IN_PLACE_taking_away_script_side"] = clean
-        say(f"fact    bands-off: the taking away, script-side (not the window's path, no legal edit reaches it): "
-            f"{clean}; {finding_name('UPDATE_BANDS_IN_PLACE')} is proposed by fixed from the giving alone")
+        facts = {"suppressed": out.get("suppressed"), "on_again": out.get("unsuppressed"), "clean": clean,
+                 "route": "Session.suppress_feature('Relief', True/False) on the part, called by the script, not by an "
+                          "Update (no legal edit takes bands off RangeBox_Fixed in place)"}
+        RESULT["proposal"][f"{finding_name(GATES['relief'][0])}_facts"] = facts
+        proposed(finding_name(GATES["relief"][0]), None,
+                 f"bands-off: not measured through Update (no legal edit reaches it); the call the worker makes, made "
+                 f"script-side on the copy's sleeve, read clean {clean}: the relief suppressed and on again, no second "
+                 "relief, RangeSlv's mates in no error in every mode. Its facts are in the JSON under _facts")
 
 
 # -- m4: the external-references read, a probe ------------------------------------------------------------------------
@@ -1493,30 +1752,40 @@ M4_CALLS = ("IComponent2.ListExternalFileReferencesCount() and ListExternalFileR
             "ledger for a closed file's references), with the assembly's own as its positive control")
 
 
+def outs(kinds):
+    """By-reference out arguments for late binding: ``v`` a VARIANT, ``i`` a long, ``s`` a string."""
+    import pythoncom
+    from win32com.client import VARIANT
+    made = {"v": lambda: VARIANT(pythoncom.VT_BYREF | pythoncom.VT_VARIANT, None),
+            "i": lambda: VARIANT(pythoncom.VT_BYREF | pythoncom.VT_I4, 0),
+            "s": lambda: VARIANT(pythoncom.VT_BYREF | pythoncom.VT_BSTR, "")}
+    return [made[k]() for k in kinds]
+
+
+def plain(v):
+    v = getattr(v, "value", v)
+    if isinstance(v, (bool, int, float, str)) or v is None:
+        return v
+    if isinstance(v, (list, tuple)):
+        return [plain(x) for x in v]
+    return repr(v)
+
+
+def member(obj, name, *args):
+    """``call``, and a member late binding hands back uncalled (a bound method) called."""
+    value = call(obj, name, *args)
+    return swcom._guarded(name, value) if type(value).__name__ == "method" else value  # noqa: SLF001
+
+
+def listed(obj, member_name, kinds):
+    holders = outs(kinds)
+    back = call(obj, member_name, *holders)
+    return {"returned": plain(back), "outs": [plain(h) for h in holders]}
+
+
 def m4_read(folder, targets, asm):
     """Each of ``targets`` (component Name2s) read by every candidate, GetSaveFlag of the copy's documents around each;
     the assembly's dependencies as the control. A candidate that raises is its exact error."""
-    import pythoncom
-    from win32com.client import VARIANT
-
-    def outs(kinds):
-        made = {"v": lambda: VARIANT(pythoncom.VT_BYREF | pythoncom.VT_VARIANT, None),
-                "i": lambda: VARIANT(pythoncom.VT_BYREF | pythoncom.VT_I4, 0),
-                "s": lambda: VARIANT(pythoncom.VT_BYREF | pythoncom.VT_BSTR, "")}
-        return [made[k]() for k in kinds]
-
-    def plain(v):
-        v = getattr(v, "value", v)
-        if isinstance(v, (bool, int, float, str)) or v is None:
-            return v
-        if isinstance(v, (list, tuple)):
-            return [plain(x) for x in v]
-        return repr(v)
-
-    def member(obj, name, *args):
-        value = call(obj, name, *args)
-        return swcom._guarded(name, value) if type(value).__name__ == "method" else value  # noqa: SLF001
-
     def work(s):
         out = {}
 
@@ -1535,11 +1804,6 @@ def m4_read(folder, targets, asm):
             comp = s.raw_component(f"m4{i}")
             part = s.component_path(f"m4{i}")
             doc = call(comp, "GetModelDoc2")
-
-            def listed(obj, member_name, kinds):
-                holders = outs(kinds)
-                back = call(obj, member_name, *holders)
-                return {"returned": plain(back), "outs": [plain(h) for h in holders]}
             attempt(name, "IComponent2.ListExternalFileReferencesCount",
                     lambda: plain(member(comp, "ListExternalFileReferencesCount")))
             attempt(name, "IComponent2.ListExternalFileReferences2",
@@ -1554,6 +1818,59 @@ def m4_read(folder, targets, asm):
                 lambda: plain(member(app, "GetDocumentDependencies2", asm, False, True, False)))
         return out
     return work
+
+
+M4_PART = A._arg("--m4-part")  # noqa: SLF001  (a part the user made with an in-context reference to an app gear)
+
+
+def m4_part_read(path):
+    """The candidates that read a part's own document, on a part the user made, read-only: its dependencies first
+    (``GetDocumentDependencies2``, closed), then the part opened by ``OpenDoc6(path, part, Silent | ReadOnly)`` (the
+    w9c probes' route for an assembly, options 3; NEW for a part) unless it was open already, its
+    ``IModelDocExtension`` counts and lists, its GetSaveFlag around each; closed again if this run opened it, never
+    saved. Nothing of the part is logged but its file name."""
+    def work(s):
+        app, out = s._app, {"reads": {}}  # noqa: SLF001
+        was_open = any(store.same_path(str(call(d, "GetPathName") or ""), path)
+                       for d in s._open_documents())  # noqa: SLF001
+        out["was_open"] = was_open
+
+        def attempt(label, fn, doc=None):
+            before = bool(call(doc, "GetSaveFlag")) if doc is not None else None
+            try:
+                value = fn()
+            except Exception as exc:  # noqa: BLE001 - the exact error is the finding
+                value = f"raised {type(exc).__name__}: {exc}"
+            after = bool(call(doc, "GetSaveFlag")) if doc is not None else None
+            out["reads"][label] = {"answer": value, "marked": bool(after and not before)}
+        if not was_open:
+            attempt("ISldWorks.GetDocumentDependencies2",
+                    lambda: plain(member(app, "GetDocumentDependencies2", path, False, True, False)))
+        errors, warnings = swcom._out_long(), swcom._out_long()  # noqa: SLF001
+        got = call(app, "OpenDoc6", path, swcom.DOC_PART, 3, "", errors, warnings)
+        doc = got[0] if isinstance(got, tuple) else got
+        out["open"] = {"returned": doc is not None, "errors": plain(errors), "warnings": plain(warnings)}
+        if doc is None:
+            return out
+        out["open"].update(read_only=plain(_try_member(doc, "IsOpenedReadOnly")), flag=bool(call(doc, "GetSaveFlag")))
+        ext = call(doc, "Extension")
+        attempt("IModelDocExtension.ListExternalFileReferencesCount",
+                lambda: plain(member(ext, "ListExternalFileReferencesCount")), doc)
+        attempt("IModelDocExtension.ListExternalFileReferences",
+                lambda: listed(ext, "ListExternalFileReferences", "vvvvvvvis"), doc)
+        out["flag_after"] = bool(call(doc, "GetSaveFlag"))
+        if not was_open:
+            call(app, "CloseDoc", call(doc, "GetTitle"))
+            out["closed"] = True
+        return out
+    return work
+
+
+def _try_member(obj, name):
+    try:
+        return member(obj, name)
+    except Exception as exc:  # noqa: BLE001
+        return f"unread: {type(exc).__name__}"
 
 
 def section_m4(out):
@@ -1590,8 +1907,24 @@ def section_m4(out):
         say(propose(f"EXTERNAL_REFERENCES_READ_ROUTE_CANDIDATES_{year()}", clean,
                     "m4: every candidate that answered on every user part and Sun without an error and marked nothing; "
                     "none is held to a part with a reference, which this probe cannot make"))
-        proposed(references, None, "m4: no positive case could be made by proven calls, so the read is not measured; "
-                                   f"C4's refusal stands. Answered without error: {clean}")
+        if not M4_PART:
+            proposed(references, None, "m4: no positive case could be made by proven calls, so the read is not "
+                                       f"measured; C4's refusal stands. Answered without error: {clean}")
+        else:
+            say(f"-- m4  the part the user made with an in-context reference: {os.path.basename(M4_PART)}, read-only")
+            read = out["user_part"] = run("m4: the user's part", m4_part_read(M4_PART), 600)
+            for label, r in read.get("reads", {}).items():
+                say(f"fact    m4 {os.path.basename(M4_PART)}: {label}: {r['answer']}; marked {r['marked']}")
+            say(f"fact    m4 {os.path.basename(M4_PART)}: opened {read.get('open')}; was open {read.get('was_open')}; "
+                f"closed again {read.get('closed', False)}; its flag after {read.get('flag_after')}")
+            if any(r["marked"] for r in read.get("reads", {}).values()) or read.get("flag_after"):
+                A.stop(f"m4: a read marked the user's part modified (§0.3)")
+            route = m4_route(read.get("reads", {}), M4_PART)
+            say(propose(f"EXTERNAL_REFERENCES_READ_ROUTE_{year()}", route,
+                        f"m4: the first candidate whose answer names another document of the user's part "
+                        f"{os.path.basename(M4_PART)} (a count above 0, or a path), read-only, marking nothing"))
+            proposed(references, None, f"m4: a route found on the user's part ({route}); the finding gates the app's "
+                                       "own read, which is not written yet, so it stays None until it is and is run")
     finally:
         if not W.HUNG["on"]:
             A.w8_step(W.end_copy, CTX["worker"], folder, "m4")
