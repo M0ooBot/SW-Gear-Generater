@@ -1211,16 +1211,25 @@ sees is words, each from `ui_text`, each with the time the work was read:
   in Sleeve_m1.25_N17 as they are.* (`WorkbookUserWork`); with a part it
   changes, *rebuilds your Keyway in Gear_m1.25_N17 after the app's features*
   (several features in one part named once with it, *Keyway and Groove in …*);
-  a mate or component already in error then is named. One it foresees refusing
-  is red: *As read at 14:02, Update SolidWorks would stop before changing
-  anything: … It reads your work in SolidWorks again when pressed.* A press that
+  a mate or component already in error then is named; a train with more than
+  three of the user's mates on it has them counted (*the 8 mates of yours on
+  Sun's train*); several features of one part in a longer list get a clause of
+  their own (*…, and your Keyway and Groove in Gear_m1.25_N17 too*). One it
+  foresees refusing is red: *As read at 14:02, the next press would stop before
+  changing anything: … It reads your work in SolidWorks again when pressed.* A press that
   refused is said as recorded, red, *Update SolidWorks refused at 14:02, before
   changing anything: … The next press reads your work in SolidWorks again, and
   refuses again unless that has been dealt with.*; once the workbook has changed
   since, *… The workbook has changed since, and the next press reads your work
   in SolidWorks again.* followed by what the next press would do, in that
   prediction's colour (it may foresee a refusal the recorded press never reached,
-  as of a mate on a gear that press did not put). Update stays enabled
+  as of a mate on a gear that press did not put; one it shares with the recorded
+  refusal is said only as *for the same reason*). A value the user typed in
+  SolidWorks that the changed workbook still does not ask keeps the line red:
+  *The workbook has changed since, but it still asks 12 for Bore Diameter in
+  Gear_m1.5_N68, where SolidWorks held 14, so that refusal stands unless it has
+  been set in SolidWorks since.*, then the prediction; once the workbook asks
+  what SolidWorks held, or no longer sets it, that refusal gives way. Update stays enabled
   throughout: the press reads again, and the user may have dealt with it in
   SolidWorks since. The line follows the state as the save line does (not after a
   job's own sentence, which says it already). Nothing is said when nothing of
@@ -1237,7 +1246,9 @@ sees is words, each from `ui_text`, each with the time the work was read:
   *SolidWorks rebuilt your Keyway in Gear_m1.25_N17 after the app's features,
   and it is in error.*, *Your Lock3 in L is in error in SolidWorks now.* — or,
   for one already in error before it changed anything, *Your Lock7 was in error
-  in SolidWorks before this Update changed anything, and still is.* — and a
+  in SolidWorks in the mode showing before this Update changed anything; after
+  it, Lock7 in L is in error.* (before the change only the mode showing is
+  read) — and a
   component found by its part under a new name. Each refusal of the worker's (a
   value the user changed, a mate of another kind on a gear it puts, a tie) is
   its own sentence, said as the job's.

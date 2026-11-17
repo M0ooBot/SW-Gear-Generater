@@ -105,6 +105,25 @@ so the fix round changed it freely (ruling 6: a component's kind, not its path; 
 | 8 | The Windows failure: a withdrawn window's geometry (point 10 above), not the app |
 | 9-14 (notes) | Said in UI-DESIGN's section (the quiet press, layout and carrier features) and above (the fresh read not kept, the renamed component) |
 
+## The second fix round (the re-check's R1 to R4, and the demonstration's footer lines)
+
+- **R1.** After a K11 refusal, a changed workbook keeps the line red while it still does not ask the value SolidWorks
+  held (`update._asked_now`: a part's, the layout's or a carrier's global against the plan's globals; on the
+  assembly a Face Z, a slide's value and a mate's flag in their mode against the plan's motion; what it cannot find
+  stands), saying what the workbook asks now; then the prediction (ruling 5). Once the workbook asks the held value,
+  or no longer sets it, the refusal gives way.
+- **R2.** Several features of one part in a longer list get a clause of their own (*…, and your Keyway and Groove in
+  Gear_m1.5_N17 too*); one feature per part stays in the list.
+- **R3.** An item already in error before the change is said *in error in the mode showing before this Update
+  changed anything; after it, Lock3 in L is in error*: before, only the mode showing was read.
+- **R4 (note).** `recorded_user_work` gives each component a made-up path (its name and its kind's extension), right
+  for the judgement's sub-assembly branch, which reads the extension, and never a file: said at the function.
+- **The demonstration's footer lines** (`probe/results/w9a-demo-sw2026-20261116-*.log`, `footer`/`line`): a
+  prediction that repeats a recorded refusal is said only as *for the same reason*; *Update SolidWorks would stop
+  … Update SolidWorks would put …* is now *the next press would stop …*; a tie read on a train with more than three
+  of the user's mates counts them. The repetition left (each sprocket's lightweight refusal in full, each gear's
+  no-carrier refusal in full, the tie naming nine mates twice) is in the worker's own sentences, package A's.
+
 ## What the demonstration on SolidWorks must show for package B
 
 - After a value Update and a slide-offset Update on S0's master with the user's work: the record beside the workbook
