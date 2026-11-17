@@ -3052,7 +3052,9 @@ def test_a_build_again_hands_the_worker_its_carry_says_what_was_carried_and_the_
     assert record.gearbox.name == f"{NAME}_r2" and record.unsaved == {}
     assert record.gearbox.carry.unsaved_at == os.path.getmtime(record.gearbox.assembly)
     assert [c.was for c in record.gearbox.carry.components] == ["Sprocket-1"]
-    assert "Users" not in json.dumps(json.loads(record_bytes(window))["gearbox"]["carry"])     # no folder kept
+    kept = dict(json.loads(record_bytes(window))["gearbox"]["carry"])
+    assert store.same_path(kept.pop("assembly"), desk.part(NAME, ".SLDASM"))   # the app's own file, as gearbox's
+    assert str(desk.tmp) not in json.dumps(kept) and "Sprocket.SLDPRT" not in json.dumps(kept)   # no user path
     line = f"{NAME}_r2 holds what Build again… carried of yours, not saved: save it in SolidWorks to keep it."
     window.note = None
     window._plan()
