@@ -1885,6 +1885,14 @@ def gearbox_update_status(update, result, dragged: Sequence[str] = (), *, meshes
                      f"that is put right, or save {'it' if one else 'them'} in SolidWorks to keep what it did.")
         else:
             text += " Nothing was changed."
+        # K3 on the failure path too (the close review's must-fix 2): what of the user's features this Update rebuilt
+        # into error is named as theirs, with what it set under them, after the stop, which stays as it is; one
+        # already in error before is said here only when the stop's own sentence has not named it.
+        for sentence in _user_feature_sentences(result, update):
+            if " was in error in SolidWorks before this Update" in sentence and \
+                    sentence.split(" in ", 1)[0].replace("Your ", "", 1) in text:
+                continue
+            text += " " + sentence
         return text, False
 
     pieces: List[str] = []
@@ -4484,13 +4492,54 @@ def _rebuild_from_user(update, result) -> List[str]:
             "app's is in error, so the Update was made."]
 
 
-def _user_feature_sentences(result) -> List[str]:
+def _expression_words(name: str, expression: str, evaluated: str) -> Tuple[str, bool]:
+    """A part global's value as the workbook shows it, and whether its cell is blank, in package A's
+    ``ValueEdit.blank`` wording (``swbuild._blank_meaning``): a Bore of 0 is *no bore*; an expression that is no number
+    is the default a blank cell means, *0.375 (from its blank cell, 0.3 × Module)* — its evaluation where known, never
+    the raw equation; a number as it is. ``evaluated``: what SolidWorks evaluated it to (``ValueSet.was``/``now``)."""
+    from .gears.spur import BORE as BORE_GLOBAL
+    from .swbuild import _literal
+    literal = _literal(expression) if expression else _literal(evaluated)
+    if name == BORE_GLOBAL and literal == 0.0:
+        return "no bore", True
+    if expression and literal is None:
+        default = expression.replace('"', "").replace(" * ", " × ")
+        number = evaluated if _literal(evaluated) is not None else ""
+        return (f"{number} (from its blank cell, {default})" if number else f"the default of its blank cell, "
+                f"{default}"), True
+    text = evaluated if evaluated and _literal(evaluated) is not None else (
+        f"{float(literal):.6g}" if literal is not None else evaluated)
+    return text, False
+
+
+def _value_under(update, value) -> Tuple[str, str, str]:
+    """``(what it was, what it is, how to have it back)`` for one global this Update set under a user feature
+    (``swbuild.ValueSet``), as the workbook shows it: the expressions from the plan's document (what the record says
+    the file held, and what it sets now), so a blank cell is said as blank — *clear Gears!J2 again* — and an
+    equation never raw. ``how`` is ``""`` with no cell."""
+    from . import store
+    docs = list(getattr(update, "parts", ()) or ()) + [d for d in [getattr(update, "layout", None)] if d is not None] \
+        + list(getattr(update, "carriers", ()) or ())
+    doc = next((d for d in docs if store.same_path(d.path, value.path)), None)
+    old = dict(getattr(doc, "recorded", None) or ()).get(value.name, "") if doc is not None else ""
+    new = next((v.expression_for("degrees") for v in getattr(doc, "variables", ()) or () if v.name == value.name),
+               "") if doc is not None else ""
+    was, was_blank = _expression_words(value.name, old, value.was)
+    now, _ = _expression_words(value.name, new, value.now)
+    how = ""
+    if value.cell and (was_blank or value.was):
+        how = f"clear {value.cell} again" if was_blank else f"type {was} in {value.cell} again"
+    return was, now, how
+
+
+def _user_feature_sentences(result, update=None) -> List[str]:
     """K3 after the demonstration's ruling: each user feature SolidWorks rebuilt in error, named as the user's.
     One already in error before this Update changed anything, *Your Keyway in Gear_m1.25_N17 was in error in
     SolidWorks before this Update changed anything, and still is.*; one newly in error with what this Update set in
     its part (``result.values_under``) and what the user can do: *Your Keyway in Gear_m1.25_N17 is in error in
     SolidWorks now, after this Update set Bore Diameter 8 to 14 (Gears!J2) in that part: change your Keyway to fit,
-    or type 8 in Gears!J2 again.* Features of one part with the same story are said together."""
+    or type 8 in Gears!J2 again.* (*clear Gears!J2 again* for a cell that was blank; a value said as the workbook shows
+    it, ``update``'s documents given). Features of one part with the same story are said together."""
     features = list(getattr(result, "user_features_in_error", ()) or ())
     was = getattr(result, "user_feature_was_in_error", None)
     under = getattr(result, "values_under", None)
@@ -4509,11 +4558,12 @@ def _user_feature_sentences(result) -> List[str]:
             continue
         text = f"Your {yours} {'is' if one else 'are'} in error in SolidWorks now"
         if values:
-            set_ = _and((f"{v.name} {v.was} to {v.now}" if v.was else f"{v.name} to {v.now}")
-                        + (f" ({v.cell})" if v.cell else "") for v in values)
-            back = _and(f"{v.was} in {v.cell}" for v in values if v.was and v.cell)
+            said = [(v, *_value_under(update, v)) for v in values]
+            set_ = _and((f"{v.name} {w} to {n}" if w else f"{v.name} to {n}") + (f" ({v.cell})" if v.cell else "")
+                        for v, w, n, _ in said)
+            back = _and(how for _, _, _, how in said if how)
             text += (f", after this Update set {set_} in that part: change your {_and(names)} to fit"
-                     + (f", or type {back} again" if back else "") + ".")
+                     + (f", or {back}" if back else "") + ".")
         else:
             text += (f", rebuilt after the app's features: change your {_and(names)} to fit "
                      f"{'it' if one else 'them'}.")
@@ -4544,7 +4594,7 @@ def _user_after(update, result) -> List[str]:
     for gear, before, found in getattr(result, "renamed", ()) or ():
         out.append(f"{gear}'s component {before} is named {found} in SolidWorks now; it was found by its part, and the "
                    "record names it so.")
-    out.extend(_user_feature_sentences(result))
+    out.extend(_user_feature_sentences(result, update))
     work = getattr(result, "user_work", None)
     before = set(work.in_error) if work is not None else set()
     named: Dict[str, List[str]] = {}

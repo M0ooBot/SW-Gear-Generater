@@ -1257,7 +1257,14 @@ sees is words, each from `ui_text`, each with the time the work was read:
   error, and the assembly's is said as *SolidWorks reports an error rebuilding
   RangeBox.SLDASM, from your own work alone: nothing of the app's is in error,
   so the Update was made.* With anything of the app's in error, or on a version
-  whose findings are not set, it stays the failure it was. Then *Your Lock3 in L
+  whose findings are not set, it stays the failure it was, and the stop's
+  sentence — what failed, and what it had already changed — is followed by the
+  user's features this Update rebuilt into error, named as theirs as above (K3
+  holds on the failure path too: SolidWorks 2024 today). A value under a feature
+  is said as the workbook shows it, never a raw equation: *Backlash 0.45 (from
+  its blank cell, 0.3 × Module) to 0.6 (Gears!P2)*, *no bore*, and a cell that
+  was blank is to be *cleared again*, not retyped (package A's
+  `ValueEdit.blank` wording). Then *Your Lock3 in L
   is in error in SolidWorks now.* — or,
   for one already in error before it changed anything, *Your Lock7 was in error
   in SolidWorks in the mode showing before this Update changed anything; after

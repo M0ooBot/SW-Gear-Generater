@@ -149,6 +149,20 @@ Package A's worker goes on when the assembly's rebuild returns False from the us
   ok, said as before); an app feature also in error (not ok, as today); the 2026 rebuild findings unset (not ok,
   today's sentence).
 
+## After the close review (`W9A-CLOSE-2026-REVIEW.md`, must-fix 2 and should-fix 7)
+
+- **K3 on the failure path.** A stopped Update's status keeps its stop sentence (what failed, what it had already
+  changed, or that nothing was), then names the user's features this Update rebuilt into error, newly, with what it
+  set under them and their cells; one already in error before is said there only when the stop's own sentence
+  (package A's `_rebuild_sentence`) has not named it. Tests: k3 on a version whose rebuild findings are None (not
+  ok, the stop, then the keyway as the user's with Bore Diameter 8 to 14 and its cell); the same keyway already in
+  error before (said once, as before).
+- **A value under a feature as the workbook shows it** (`ui_text._value_under`, from the plan's document: the
+  record's expression before, the plan's now): a Bore of 0 is *no bore*; a blank cell's default *0.45 (from its blank
+  cell, 0.3 × Module)*, or *the default of its blank cell, 0.3 × Module* where no number is known, never the raw
+  equation; a cell that was blank is to be *cleared again*. The words are package A's `ValueEdit.blank`'s. Test: a
+  blank Backlash typed 0.6.
+
 ## What the demonstration on SolidWorks must show for package B
 
 - After a value Update and a slide-offset Update on S0's master with the user's work: the record beside the workbook

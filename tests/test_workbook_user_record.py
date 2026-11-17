@@ -540,17 +540,72 @@ def test_an_app_feature_also_in_error_keeps_the_failure_as_today(on_fake):
     assert not ok and result.rebuild_from_user_alone == [] and "error rebuilding" in text, text
 
 
-def test_where_the_rebuild_findings_are_unset_a_false_rebuild_stays_todays_failure(on_fake, monkeypatch):
+def _unmeasured(monkeypatch):
+    """A version whose assembly-rebuild findings are not set (SolidWorks 2024 today), the fake's rebuild still
+    failing on a part's feature in error."""
     for name in ("ASSEMBLY_REBUILD_WITH_USER_MATE_IN_ERROR_ON_2026", "WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_2026"):
         monkeypatch.setattr(findings, name, None, raising=False)
-    sw, record = on_fake
+
+
+def _k3(sw, record, tmp_path, spec_changes, code=0):
+    from test_workbook_model import read, write
     part = next(p.path for p in record.current_parts() if "G1" in p.gears)
-    sw.user_feature(part, "User Keyway")
-    sw.breaks_on_set[part.replace("/", "\\").lower()] = [("User Keyway", 71)]
-    plan, result, finished = press(sw, record, gears(reducer(), G1=dict(bore="14")))
+    sw.user_feature(part, "User Keyway", code=code)
+    if not code:
+        sw.breaks_on_set[part.replace("/", "\\").lower()] = [("User Keyway", 71)]
+    spec, diagnostics = read(write(tmp_path, gears(reducer(), G1=spec_changes)))
+    assert diagnostics == []
+    plan = update.classify(record, assessed(spec), exists=lambda p: True)
+    result = swbuild.update_gearbox(sw, **plan.update_kwargs(), exists=lambda p: True, mtime=lambda p: 5.0)
+    finished = update.finish_update(plan, result, record, digest="d2", read_sidecar=lambda p: None,
+                                    mtime=lambda p: 5.0)
+    return spec, plan, result, finished
+
+
+def test_where_the_rebuild_findings_are_unset_the_stop_names_the_keyway_it_broke_as_the_users(on_fake, monkeypatch,
+                                                                                                  tmp_path):
+    """The close review's must-fix 2: on a version whose rebuild findings are None the Update stops as before, and
+    the stop's sentence is followed by the user's keyway this Update rebuilt into error, named as theirs, newly in
+    error, with Bore Diameter's change and its cell — K3 on the failure path."""
+    _unmeasured(monkeypatch)
+    sw, record = on_fake
+    spec, plan, result, finished = _k3(sw, record, tmp_path, dict(bore="14"))
+    assert result.failures and result.rebuild_from_user_alone == []
+    assert [f.name for f in result.user_features_in_error] == ["User Keyway"]
     text, ok = _status(plan, result, finished)
-    assert result.rebuild_from_user_alone == []
-    assert not ok and "SolidWorks reported an error rebuilding" in text, text
+    cell = spec.cell("Gears", spec.gear("G1").row, "bore")
+    assert not ok and text.startswith("Update SolidWorks stopped. ") and "SolidWorks reported an error" in text
+    assert "It had already changed Gear_m1.5_N17" in text, text
+    sentence = (f"Your User Keyway in Gear_m1.5_N17 is in error in SolidWorks now, after this Update set Bore "
+                f"Diameter 8 to 14 ({cell}) in that part: change your User Keyway to fit, or type 8 in {cell} again.")
+    assert text.index("It had already changed") < text.index(sentence), text
+    assert "before" not in sentence                          # the demonstration's rough test: newly in error
+
+
+def test_where_the_rebuild_findings_are_unset_a_keyway_already_in_error_is_said_as_before(on_fake, monkeypatch,
+                                                                                             tmp_path):
+    _unmeasured(monkeypatch)
+    sw, record = on_fake
+    spec, plan, result, finished = _k3(sw, record, tmp_path, dict(bore="14"), code=71)
+    text, ok = _status(plan, result, finished)
+    assert not ok and text.startswith("Update SolidWorks stopped. "), text
+    said = [x for x in text.split(". ") if "User Keyway" in x]
+    assert said and all(x.index("in error") < x.index("before") for x in said), said   # said as before, once
+    assert sum("User Keyway" in x for x in said) == 1, said
+
+
+def test_a_blank_cell_under_a_keyway_is_said_blank_and_an_equation_never_raw(on_fake, monkeypatch, tmp_path):
+    """The close review's should-fix 7: the Backlash cell was blank (its default, 0.3 × Module) and is now typed
+    0.6: the sentence says what it was as the workbook shows it, never the raw equation, and to clear the cell
+    again; set the other way, the default is said by its equation, never quoted."""
+    sw, record = on_fake
+    spec, plan, result, finished = _k3(sw, record, tmp_path, dict(backlash="0.6"))
+    assert result.ok, result.failures
+    text, ok = _status(plan, result, finished)
+    cell = spec.cell("Gears", spec.gear("G1").row, "backlash")
+    assert (f"after this Update set Backlash 0.45 (from its blank cell, 0.3 × Module) to 0.6 ({cell}) in that part: "
+            f"change your User Keyway to fit, or clear {cell} again.") in text, text
+    assert '"' not in text.split("after this Update set")[1].split(" in that part")[0]
 
 
 def test_planning_gives_the_worker_every_app_part_the_layout_and_the_carriers_with_their_features(on_fake):
