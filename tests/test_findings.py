@@ -1860,9 +1860,143 @@ def test_s0_d_a_users_plane_mate_on_the_sliding_rangeslv_followed_it_in_every_mo
 
 def test_route_c1s_branches_s0_did_not_measure_are_not_measured_on_either_version():
     """Ruling 4 after W9a package A's review: each branch of route (c1) S0 did not read — a train with no carrier,
-    a held gear, a fixed gear re-placed W4's way, a user sub-assembly — is its own finding, None (not measured) on
-    2026 and 2024, until a run reads it clean (swbuild.user_branch_settled refuses it meanwhile)."""
-    for branch in ("NO_CARRIER", "HELD_GEAR", "FIXED_GEAR", "SUBASSEMBLY"):
+    the same on a gearbox with modes, a held gear, a fixed gear re-placed W4's way, a user sub-assembly — is its own
+    finding, None (not measured) on 2026 and 2024, until a run reads it clean (swbuild.user_branch_settled refuses it
+    meanwhile). The one since measured, NO_CARRIER on 2026, is pinned by the next test."""
+    for branch in ("NO_CARRIER_MODES", "HELD_GEAR", "FIXED_GEAR", "SUBASSEMBLY"):
         for year in (2026, 2024):
             name = f"USER_MATE_PUT_{branch}_ON_{year}"
             assert hasattr(findings, name) and getattr(findings, name) is None, name
+    assert findings.USER_MATE_PUT_NO_CARRIER_ON_2024 is None
+
+
+W9A_DEMO_R1 = LATEST.parent / "w9a-demo-20261116-204840.json"
+W9A_DEMO_R1_LOG = LATEST.parent / "w9a-demo-sw2026-20261116-1-m3-setup-go.log"
+W9A_DEMO_R2_LOG = LATEST.parent / "w9a-demo-sw2026-20261116-2-m1-refuse-stopped-by-a-dialog.log"
+W9A_DEMO_R3 = LATEST.parent / "w9a-demo-20261116-215415.json"
+W9A_DEMO_R3_LOG = LATEST.parent / "w9a-demo-sw2026-20261116-3-again-reducer-k3-nocarrier.log"
+
+
+def _w9a_demo_log(path):
+    """One of W9a's demonstration logs on SolidWorks 2026 34.1.1 at 9dded70, by line number from 1 (index 0 unused)."""
+    lines = _w9_log(path)
+    assert "(snapshot: 9dded70)" in lines[1] and "SolidWorks 2026 (revision 34.1.1)" in lines[3]
+    return [""] + lines
+
+
+def test_w9a_nocarrier_put_a_locked_sprocket_with_each_gear_of_a_train_with_no_carrier_clean_on_2026():
+    """findings.py USER_MATE_PUT_NO_CARRIER_ON_2026 (the run's review, "How each proposed finding may be set"): the
+    12 : 1 with no modes, sprockets locked to G1 and G4 and one chained to Sprocket-1, two presses each putting the
+    whole train back with its gear mates on, read clean; 2024 and the same with modes stay unmeasured."""
+    data = _w9_json(W9A_DEMO_R3, "9dded70")
+    assert data["proposal"]["USER_MATE_PUT_NO_CARRIER_ON_2026"] is True
+    assert data["proposal"]["USER_MATE_PUT_NO_CARRIER_ON_2026_evidence"]["presses_clean"] == [True, True]
+    assert data["sections"]["nocarrier"]["branches"] == {g: "NO_CARRIER" for g in ("G1", "G2", "G3", "G4")}
+    r3 = _w9a_demo_log(W9A_DEMO_R3_LOG)
+    assert r3[1445].startswith("== nocarrier ")
+    assert r3[1463] == ("fact    nocarrier: inserted ['Sprocket-1', 'Sprocket-2', 'Sprocket-3'] with Default active; "
+                        "mates {'UserAxis1': 1, 'UserLock1': 1, 'UserAxis2': 1, 'UserLock2': 1, 'UserLock3': 1} "
+                        "(AddMate5 status)")
+    assert r3[1533].startswith("PATCH   findings.USER_MATE_PUT_NO_CARRIER_ON_2026 = True in this process, for this "
+                               "measurement only")
+    assert r3[1596] == "PATCH   findings.USER_MATE_PUT_NO_CARRIER_ON_2026 back to None"
+    carried = ("ok True, carried [('Sprocket-1', 'G1', ''), ('Sprocket-3', 'G1', ''), ('Sprocket-2', 'G4', '')], "
+               "placed ['G1', 'G2', 'G3', 'G4'], failures []")
+    for at, move in ((1548, "27 -> 30"), (1591, "30 -> 27")):
+        assert r3[at].startswith(f"ok      nocarrier G4 At {move}: the Update went ahead") and r3[at].endswith(carried)
+    for at in (1551, 1552, 1594, 1595):
+        assert r3[at].startswith("ok      nocarrier after G4 At ") and \
+            r3[at].endswith("mates in error none; every gear free True")
+    assert r3[1598] == ("propose USER_MATE_PUT_NO_CARRIER_ON_2026: True (both presses and their reads clean: "
+                        "[True, True])")
+    assert findings.USER_MATE_PUT_NO_CARRIER_ON_2026 is True and findings.USER_MATE_PUT_NO_CARRIER_ON_2024 is None
+    assert findings.USER_MATE_PUT_NO_CARRIER_MODES_ON_2026 is None
+
+
+def test_w9a_m3_an_assembly_rebuild_with_only_user_mates_in_error_returned_true_on_2026():
+    """findings.py ASSEMBLY_REBUILD_WITH_USER_MATE_IN_ERROR_ON_<year>: two user distance mates on Sprocket-1, one to
+    the layout's Front plane and one to the user's fixed housing, over-defined; the rebuild True, What's Wrong 3, no
+    window, and every code 0 again with UserGap suppressed."""
+    m3 = _w9_json(W9A_DEMO_R1, "9dded70")["sections"]["m3"]
+    mate_error = m3["mate_error"]
+    assert mate_error["rebuilt"] is True and mate_error["whats_wrong"] == 3 and mate_error["add_mate_status"] == 5
+    assert {n: c for n, c in mate_error["mates"].items() if n.startswith("User")} == {
+        "UserAxis": [0, False], "UserFront": [46, False], "UserGap": [47, False]}
+    assert not any(c for n, c in mate_error["mates"].items() if not n.startswith("User") and c[0])
+    assert not any(mate_error["components"].values()) and mate_error["windows_new"] == []
+    assert _w9_json(W9A_DEMO_R1, "9dded70")["proposal"]["M3"]["assembly_rebuild_with_user_mate_in_error"] is True
+    r1 = _w9a_demo_log(W9A_DEMO_R1_LOG)
+    assert r1[48].startswith("fact    m3: UserGap made: AddMate5 status 5")
+    assert r1[49] == ("fact    m3 a user mate in error: ForceRebuild (the app's train route) returned True; "
+                      "GetWhatsWrongCount 3; mates in error {'UserFront': 46, 'UserGap': 47}; components in error "
+                      "none; windows new none")
+    assert r1[51] == ("answer  M3 (assembly, a user mate in error): the rebuild returned True, What's Wrong 3, codes "
+                      "{'UserFront': 46, 'UserGap': 47}, no window")
+    assert r1[84].startswith("fact    m3 the mate suppressed: ForceRebuild (the app's train route) returned True; "
+                             "GetWhatsWrongCount 0; mates in error none")
+    assert r1[73].startswith("status  [green] Updated SolidWorks: changed 1 variable in Gear_m1.25_N29")
+    assert findings.ASSEMBLY_REBUILD_WITH_USER_MATE_IN_ERROR_ON_2026 is True
+    assert findings.ASSEMBLY_REBUILD_WITH_USER_MATE_IN_ERROR_ON_2024 is None
+
+
+def test_w9a_m3_and_k3_an_assembly_rebuild_with_a_feature_in_error_in_a_part_returned_false_on_2026():
+    """findings.py ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_<year>: the user's keyway in error in the user's own
+    part (m3, RangeBox in H) and in G1's part (k3, the 12 : 1 without modes, by a value Update): the assembly's rebuild
+    False, nothing of the app's in error; both Updates stopped."""
+    m3 = _w9_json(W9A_DEMO_R1, "9dded70")["sections"]["m3"]
+    assert m3["part_rebuild"]["rebuilt"] is False and m3["part_rebuild"]["errors"] == [["User Keyway", 71]]
+    feature = m3["feature_error"]
+    assert feature["rebuilt"] is False and feature["whats_wrong"] == 1 and feature["windows_new"] == []
+    assert {n: c for n, c in feature["components"].items() if c} == {"Sprocket-1": 1}
+    assert not any(c[0] for c in feature["mates"].values())
+    r1 = _w9a_demo_log(W9A_DEMO_R1_LOG)
+    assert r1[88].startswith("fact    m3: the Sprocket part's rebuild returned False; What's Wrong 1; features in "
+                             "error [('User Keyway', 71)]")
+    assert r1[90] == ("fact    m3 a user feature in error: ForceRebuild (the app's train route) returned False; "
+                      "GetWhatsWrongCount 1; mates in error none; components in error {'Sprocket-1': 1}; windows new "
+                      "none")
+    assert r1[112].startswith("status  [red] Update SolidWorks stopped. RangeBox.SLDASM: SolidWorks reported an error "
+                              "rebuilding RangeBox in H. Your Sprocket-1 was already in error before this Update.")
+    k3 = _w9_json(W9A_DEMO_R3, "9dded70")["sections"]["k3"]["update"]
+    assert k3["failures"] == [["Reducer_12to1.SLDASM", "SolidWorks reported an error rebuilding Reducer_12to1."]]
+    assert k3["user_features_in_error"] == [["User Keyway", "Gear_m1.5_N17.SLDPRT", 71]]
+    assert k3["in_error_before"] == []
+    r3 = _w9a_demo_log(W9A_DEMO_R3_LOG)
+    assert r3[1382].startswith("== k3 ")
+    assert "failures [('Reducer_12to1.SLDASM', 'SolidWorks reported an error rebuilding Reducer_12to1.')]" in r3[1432]
+    assert r3[1434].startswith("status  [red] Update SolidWorks stopped. Reducer_12to1.SLDASM: SolidWorks reported an "
+                               "error rebuilding Reducer_12to1.")
+    assert r3[1435].endswith("{'OpenDoc6': 8, 'IsSuppressed2': 9, 'ForceRebuild3': 2}")
+    assert r3[1439].endswith("the app's in error none")
+    assert r3[1440] == "ok      k3: the bore change left only the user's keyway in error in G1's part"
+    assert findings.ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_2026 is False
+    assert findings.ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_2024 is None
+
+
+def test_w9a_m3_no_whats_wrong_window_came_up_on_an_assembly_rebuild_on_2026():
+    """findings.py WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_<year>: "windows new none" after each of m3's rebuilds,
+    no "NOTE a SolidWorks window" line in r1 or r3, and k3's watch stopped nothing."""
+    m3 = _w9_json(W9A_DEMO_R1, "9dded70")["sections"]["m3"]
+    assert all(m3[k]["windows_new"] == [] for k in ("baseline", "mate_error", "feature_error"))
+    r1 = _w9a_demo_log(W9A_DEMO_R1_LOG)
+    for at in (45, 49, 84, 90):
+        assert "ForceRebuild (the app's train route) returned" in r1[at] and r1[at].endswith("windows new none")
+    r3 = _w9a_demo_log(W9A_DEMO_R3_LOG)
+    for lines in (r1, r3):
+        assert not [line for line in lines if line.startswith("NOTE    a SolidWorks window")]
+    assert not [line for line in r3[1382:1445] if line.startswith(("STOP", "DIALOG", "NOTE"))]
+    assert _w9_json(W9A_DEMO_R3, "9dded70")["stops"] == []
+    assert findings.WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_2026 is False
+    assert findings.WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_2024 is None
+
+
+def test_w9a_the_cam_add_in_boxed_a_save_of_an_assembly_holding_a_lightweight_component_on_2026():
+    """findings.py LIGHTWEIGHT_SAVE_RAISES_AN_ADDIN_DIALOG_ON_<year>: the script's own SaveAs3, once, never answered."""
+    r2 = _w9a_demo_log(W9A_DEMO_R2_LOG)
+    assert r2[354].startswith("DIALOG  SolidWorks shows 'SOLIDWORKS CAM Warning': ['&Yes', '&No', 'SOLIDWORKS CAM data "
+                              "cannot be stored as lightweight parts have been detected.")
+    assert r2[355].startswith("NOTE    a SolidWorks window 'SOLIDWORKS CAM Warning'") and \
+        "came up while SaveAs3 was in progress" in r2[355]
+    assert r2[359].startswith("FAIL    W9a: WorkerHung")
+    assert findings.LIGHTWEIGHT_SAVE_RAISES_AN_ADDIN_DIALOG_ON_2026 is True
+    assert findings.LIGHTWEIGHT_SAVE_RAISES_AN_ADDIN_DIALOG_ON_2024 is None

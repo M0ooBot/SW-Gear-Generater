@@ -150,7 +150,11 @@ class FakeSolidWorks:
     (a new one, or a saved ``.sldasm``) it marks the assembly, and a FULL
     rebuild (``ForceRebuild3(False)``) marks every component document too
     (``assembly_components`` keeps each saved assembly's inserted paths); any
-    component in ``failed_documents`` makes it return False, top-only or not.
+    component in ``failed_documents`` makes it return False, top-only or not,
+    and so does a part of it with a feature in error (``feature_codes``),
+    where findings.ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_<year> is
+    False for the fake's revision (W9a's m3 and k3 on 2026); there such a
+    part's components read code 1 (m3's Sprocket-1).
     A put alone marks nothing (``findings.PUT_MARKS_ASSEMBLY_MODIFIED``).
     Running interference detection marks the assembly (the probe saw the
     reads after a put mark it, frame reads and the check together; which of
@@ -415,7 +419,24 @@ class FakeSolidWorks:
             self._solve()
         if any(_key(p) in self.failed_documents for p in components):
             return False
+        if self._feature_rule() is False and any(self._part_in_error(p) for p in self._parts_in(components)):
+            # W9a, M3 (2026, the demonstration's m3 and k3): an assembly's rebuild with a feature in error in a part
+            # of it returns False, where findings.ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_<year> says so.
+            return False
         return self.rebuild_ok
+
+    def _feature_rule(self):
+        """findings.ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_<year> for the fake's revision."""
+        year = swcom.release_year(self.revision[0])
+        return getattr(findings, f"ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_{year}", None)
+
+    def _part_in_error(self, path):
+        return bool(path) and any(code for (key, _), code in self.feature_codes.items() if key == _key(path))
+
+    def _parts_in(self, components):
+        """Every part of the open assembly: its saved components and the user's put in it."""
+        names = self._assembly_names(self.current) if self.current else list(self.adding_names)
+        return list(components) + [self.component_paths.get(n, "") for n in names]
 
     def save_as(self, path):
         self._log("save_as", path)
@@ -946,8 +967,13 @@ class FakeSolidWorks:
         user's, each with its file, fixed state, ``GetSuppression2`` and error code."""
         self._log("components")
         names = self._assembly_names(self.current) if self.current else list(self.adding_names)
+        # W9a, M3: a component whose part has a feature in error reads in error (code 1, as m3's Sprocket-1 read on
+        # 2026), where the finding says such a part fails the assembly's rebuild; ``component_codes`` overrides.
+        derived = self._feature_rule() is False
         return [swcom.ComponentInfo(n, self.component_paths.get(n, ""), n in self.fixed,
-                                    self.component_states.get(n, 2), self.component_codes.get(n, 0)) for n in names]
+                                    self.component_states.get(n, 2),
+                                    self.component_codes.get(n, 1 if derived and self._part_in_error(
+                                        self.component_paths.get(n, "")) else 0)) for n in names]
 
     MATE_TYPES = {"coincident": 0, "point": 0, "distance": 5, "point distance": 5, "angle": 6, "axis angle": 6,
                   "gear": 10, "lock": 16, "rack and pinion": 13, "screw": 17}
@@ -3882,13 +3908,12 @@ def test_an_unsuppressed_mate_the_record_does_not_know_refuses_the_update_naming
                       placements=_train_placements(_train_frames(s3=(64.5, 51.0))))
     assert not isinstance(raised.value, swbuild.NotAsBuilt)
     # Re-pinned at W9a's fix round (ruling 5): the sentence names the gear and the way through, a lock, which on a
-    # train with no carrier goes with its gear once that branch of route (c1) is measured.
+    # train with no carrier goes with its gear once that branch of route (c1) is measured; re-pinned again at the
+    # demonstration's ruling, which measured that branch on 2026 (findings.USER_MATE_PUT_NO_CARRIER_ON_2026 True).
     assert str(raised.value) == ("Angle1 is a mate in T.SLDASM that Gear Generator did not make, on G1, which Update "
                                  "SolidWorks puts back, and a mate of that kind is not moved with its gear, so nothing "
-                                 "is changed; suppress Angle1 in SolidWorks and press Update SolidWorks again (a lock "
-                                 "of your component to G1 will go with it once Update SolidWorks has been measured "
-                                 "putting a component of yours with a gear on a train with no carrier, its gear mates "
-                                 "left on around the put).")
+                                 "is changed; lock your component to G1 instead, and Update SolidWorks puts it with "
+                                 "G1, or suppress Angle1 in SolidWorks, and press Update SolidWorks again.")
     assert not any(n in CHANGING for n in names(fake))
 
 

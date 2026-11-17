@@ -413,11 +413,14 @@ def test_after_a_refusal_the_workbook_changed_runs_the_prediction_too(on_fake):
     assert not footer.ok and footer.update_enabled
 
 
-def test_a_value_refusal_stands_in_the_footer_until_the_workbook_asks_what_solidworks_holds(on_fake):
+def test_a_value_refusal_stands_in_the_footer_until_the_workbook_asks_what_solidworks_holds(on_fake, monkeypatch):
     """Package B's re-check R1: a Bore of 14 typed in SolidWorks refuses; the user then moves G4 only. The footer stays
     red, saying the workbook still asks 12 where SolidWorks held 14, then what else the next press would do; once the
     workbook asks 14 too, the refusal no longer stands."""
     from test_workbook_user_work import _edit
+    # Written while the reducer's branch was unmeasured on 2026; kept so (the demonstration's ruling set
+    # findings.USER_MATE_PUT_NO_CARRIER_ON_2026 True), so the next press still stops over the sprocket on G1.
+    monkeypatch.setattr(findings, "USER_MATE_PUT_NO_CARRIER_ON_2026", None)
     sw, record = on_fake
     _sprocket(sw, record)
     _edit(sw, next(p.path for p in record.current_parts() if "G2" in p.gears), "Bore Diameter", "14")

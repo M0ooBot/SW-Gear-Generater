@@ -930,6 +930,14 @@ LIGHTWEIGHT_RESOLVED_BY = "the first drive"
 COMPONENT_RESOLVED_ROUTE = "GetSuppression2"
 COMPONENT_FULLY_RESOLVED_STATES = (2,)
 LIGHTWEIGHT_OPEN_RAISES_AN_ADDIN_DIALOG = True  # SOLIDWORKS CAM, modal, on this machine's install
+# The same add-in boxes a save: in W9a's demonstration on 2026 (34.1.1, snapshot 9dded70), the script's own SaveAs3
+# of an assembly holding a lightweight component raised the modal Yes/No "SOLIDWORKS CAM Warning" ("SOLIDWORKS CAM
+# data cannot be stored as lightweight parts have been detected"), and the session hung behind it
+# (probe/results/w9a-demo-sw2026-20261116-2-m1-refuse-stopped-by-a-dialog.log lines 354-355, the hang 358-362).
+# One occurrence, never answered: what Yes or No does, and whether the save completes, were not seen. No app code
+# reads it: the Update never saves, and Build again saves only a new revision, which holds none of the user's work.
+LIGHTWEIGHT_SAVE_RAISES_AN_ADDIN_DIALOG_ON_2026 = True
+LIGHTWEIGHT_SAVE_RAISES_AN_ADDIN_DIALOG_ON_2024 = None
 
 # second_assembly_beside_unsaved: a new assembly left open and unsaved ("Assem20"), holding a
 # component of a saved part with its mate. A second new assembly ("Assem21") from the same part
@@ -1609,17 +1617,76 @@ USER_PLANE_MATE_ON_SLIDER_FOLLOWS = True
 # other sequences, and each is gated by its own finding here, None (not measured) on both versions, so a user
 # component locked to such a gear refuses before any write until a run reads the branch clean and sets it True:
 # - NO_CARRIER: a train with no carrier, put with its gear mates left on (swbuild._put_train), the commonest case
-#   (a plain parallel gearbox); W9a's demonstration is to measure it.
+#   (a plain parallel gearbox); measured on 2026 by W9a's demonstration (below).
 # - HELD_GEAR: a held gear of a train, re-placed first by REPLACE_FIXED_ROUTE (swbuild._put_train).
 # - FIXED_GEAR: a fixed gear re-placed W4's way, unfixed, put and fixed again with the user's lock on
 #   (swbuild._motion_assembly, swbuild._modes_put).
 # - SUBASSEMBLY: a user sub-assembly put as one top-level component (Transform2 on an assembly component).
-# Nothing measured them; no probe or run is cited.
-USER_MATE_PUT_NO_CARRIER_ON_2026 = None
+# Nothing measured HELD_GEAR, FIXED_GEAR or SUBASSEMBLY; no probe or run is cited for them.
+# NO_CARRIER on 2026: True, from W9a's demonstration, section nocarrier (SolidWorks 2026 revision 34.1.1, snapshot
+# 9dded70; probe/results/w9a-demo-sw2026-20261116-3-again-reducer-k3-nocarrier.log, r3 below, lines 1445-1598, and
+# w9a-demo-20261116-215415.json, "sections" "nocarrier" and "proposal" "USER_MATE_PUT_NO_CARRIER_ON_2026"), as the
+# run's review accepts it (docs/notes-workbook/W9A-RUN-2026-REVIEW.md). The 12 : 1 (G1 on S1 drives G2, G3 locked to
+# G2 drives G4 on S3; no carrier, one configuration, no modes), with the user's Sprocket-1 locked to the driving G1
+# (UserLock1, its axis on S1 Axis by UserAxis1), Sprocket-2 locked to the driven G4 (UserLock2, on S3 Axis by
+# UserAxis2) and Sprocket-3 locked to Sprocket-1 (UserLock3, a chain of one; r3:1463); every gear labelled the
+# no-carrier branch (r3:1480); the default refusal with the finding None, writing nothing (r3:1503-1532). With the
+# finding patched True for the measurement only (r3:1533, 1596), two presses, each after the user turned G1 by +37
+# degrees (r3:1481, 1553), the whole train put back to its built turn and G4 moved 3 mm along S3 and back (At 27 ->
+# 30, then 30 -> 27): seven puts each, the gear mates left on as _put_train puts such a train (the trace's two
+# SetSuppression2 calls a press are not named in the log; r3:1544, 1587), ok True (r3:1548, 1591); read after, and
+# after a further rebuild, every gear at its frame on record (worst 1.1e-14), each sprocket on its gear as set up
+# (worst 2.8e-15), no mate in error, every gear free (r3:1541-1552, 1584-1595); the proposal True, both presses clean
+# (r3:1598). Not measured: a train with no carrier on a gearbox with modes (its own branch, NO_CARRIER_MODES below),
+# a user lock to G2 or G3 (the gears the app's own lock joins), an idler, the turn the other way, 2024.
+USER_MATE_PUT_NO_CARRIER_ON_2026 = True
 USER_MATE_PUT_NO_CARRIER_ON_2024 = None
+# - NO_CARRIER_MODES: the same on a gearbox with modes (swbuild._modes_put, each mode shown and put), kept apart from
+#   NO_CARRIER because the demonstration put a train with no carrier on a gearbox with no modes only. Not measured.
+USER_MATE_PUT_NO_CARRIER_MODES_ON_2026 = None
+USER_MATE_PUT_NO_CARRIER_MODES_ON_2024 = None
 USER_MATE_PUT_HELD_GEAR_ON_2026 = None
 USER_MATE_PUT_HELD_GEAR_ON_2024 = None
 USER_MATE_PUT_FIXED_GEAR_ON_2026 = None
 USER_MATE_PUT_FIXED_GEAR_ON_2024 = None
 USER_MATE_PUT_SUBASSEMBLY_ON_2026 = None
 USER_MATE_PUT_SUBASSEMBLY_ON_2024 = None
+#
+# An assembly's rebuild with the user's work in error (the plan's M3), measured in W9a's demonstration on SolidWorks
+# 2026 (revision 34.1.1, snapshot 9dded70) and checked by the run's review (docs/notes-workbook/W9A-RUN-2026-REVIEW.md,
+# finding 2). r1 is probe/results/w9a-demo-sw2026-20261116-1-m3-setup-go.log, section m3, with its JSON
+# w9a-demo-20261116-204840.json ("sections" "m3", "proposal" "M3"); r3 is
+# w9a-demo-sw2026-20261116-3-again-reducer-k3-nocarrier.log, section k3, with w9a-demo-20261116-215415.json
+# ("sections" "k3"). Each rebuild was the app's train route (swcom.rebuild_call for ASSEMBLY_TRAIN), the assembly
+# active. "Show errors every rebuild" was not read in this run (it was last read on in S0's P0, another session of
+# the same install, w9-s0-sw2026-20261116-050200.log line 9). Three findings, written apart, each None on 2024 until
+# its confirming m3 and k3 run:
+# - ASSEMBLY_REBUILD_WITH_USER_MATE_IN_ERROR_ON_<year>, what the rebuild returns with only user mates in error: True.
+#   RangeBox in H, two user mates on one user component, Sprocket-1: UserFront, a distance mate to the layout's Front
+#   plane, and UserGap, a distance mate to the user's fixed Housing-1 at the distance UserFront left plus 1 mm (AddMate5
+#   status 5, r1:48). Both read in error (46 and 47) and nothing of the app's; the rebuild returned True,
+#   GetWhatsWrongCount 3, no window (r1:49-51; JSON "mate_error"); with UserGap suppressed every code read 0 again
+#   (r1:84). As a fact of that run, not a rule: the app's value Update with the mates in error went ahead and named
+#   both as the user's, in error before (r1:71, 73).
+# - ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_<year>, what the rebuild returns with a feature in error in a
+#   part: False. RangeBox in H: the user's keyway in the user's own Sprocket.SLDPRT, left inside the bore by its Bore
+#   Diameter 10 -> 14 (code 71); the part's rebuild returned False, and the assembly's returned False with
+#   GetWhatsWrongCount 1, no mate in error and the component Sprocket-1 reading code 1 (r1:88-91; JSON "part_rebuild",
+#   "feature_error"). The 12 : 1 with no modes: the user's keyway in G1's part rebuilt into error (code 71) by a value
+#   Update setting G1's Bore 8 -> 14, G1's app features reading no error (r3:1439-1440); that Update's assembly
+#   rebuild reported failure, "SolidWorks reported an error rebuilding Reducer_12to1." (r3:1432, 1434), with two
+#   ForceRebuild3 calls in its trace (r3:1435); k3 read no component code and no What's Wrong count. As facts of the
+#   run: both Updates stopped (r1:112; r3:1434).
+# - WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_<year>: False. "windows new none" after each of m3's rebuilds read
+#   (r1:45, 49, 84, 90); no "NOTE a SolidWorks window" line in r1 or r3, and k3's watch stopped nothing.
+# Scope of all three: two user mates of one kind (distance), over-defined; one feature kind (a cut swallowed by the
+# bore, code 71), in one part at a time; RangeBox in H, and the 12 : 1 without modes. Not measured: a user mate in
+# error of another kind or on an app gear, several parts in error, an app feature in error, 2024. They do not say
+# the app may go on after a False rebuild: swbuild._rebuild_laid_to_user decides that, gated on all three being
+# settled for the version in use (swbuild.assembly_rebuild_settled); with any None a False rebuild stays a failure.
+ASSEMBLY_REBUILD_WITH_USER_MATE_IN_ERROR_ON_2026 = True
+ASSEMBLY_REBUILD_WITH_USER_MATE_IN_ERROR_ON_2024 = None
+ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_2026 = False
+ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_2024 = None
+WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_2026 = False
+WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_2024 = None

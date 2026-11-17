@@ -13,21 +13,25 @@ import pytest
 from gear_generator import findings, swbuild, swcom
 from gear_generator.gears.base import GlobalVariable
 from gear_generator.gears.equations import DEGREES, split_equation
+from gear_generator.spec import GearSpec
 from gear_generator.swbuild import (PROBLEM_LOCK_BY_MODE, PROBLEM_OTHER_KIND, PROBLEM_TIE, PROBLEM_TWO_BODIES,
                                     PROBLEM_UNSETTLED, PROBLEM_VALUE, UserWorkRefused)
 
-from test_swbuild import (CHANGING, IDENTITY9, P17, P51, S17, T_ASM, TC_ASM, W, _close, _compose, _frame_off,
-                          _inverse, _key, _motion, _rot_z, _tc_update, _train_frames, _train_layout_values,
-                          _train_placements, _train_routes_agree, _update_train, _values, _built_train, mode_findings,
-                          names, plan, tc_built)  # noqa: F401
+from test_swbuild import (CHANGING, IDENTITY9, P17, P51, P68, S17, S51, S68, TC_DOG, TC_MODES, TC_SLEEVE, T_ASM, TC_ASM,
+                          W, _close, _compose,
+                          _frame_off, _inverse, _key, _motion, _rot_z, _tc_motion, _tc_update, _train_frames,
+                          _train_layout_values, _train_placements, _train_routes_agree, _update_train, _values,
+                          _built_train, mode_findings, names, plan, tc_built)  # noqa: F401
 
 @pytest.fixture(autouse=True)
 def no_carrier_measured(monkeypatch):
-    """Route (c1) on a train with no carrier (the T train's, the TransferCase's) as if a run had read it clean on both
-    versions (findings.USER_MATE_PUT_NO_CARRIER_ON_<year> True), so the tests below reach what they are about; the
-    committed None, and the other branches, are tested where a test unsets or sets them itself."""
+    """Route (c1) on a train with no carrier (the T train's, the TransferCase's, with modes) as if a run had read it
+    clean on both versions (findings.USER_MATE_PUT_NO_CARRIER_ON_<year> and …_NO_CARRIER_MODES_ON_<year> True), so
+    the tests below reach what they are about; the committed values, and the other branches, are tested where a test
+    unsets or sets them itself."""
     for year in (2026, 2024):
         monkeypatch.setattr(findings, f"USER_MATE_PUT_NO_CARRIER_ON_{year}", True, raising=False)
+        monkeypatch.setattr(findings, f"USER_MATE_PUT_NO_CARRIER_MODES_ON_{year}", True, raising=False)
 
 
 SPROCKET = W + "Sprocket.SLDPRT"
@@ -241,10 +245,11 @@ def test_a_grounded_tie_refuses_before_any_write_naming_every_user_mate_on_the_t
     (problem,) = raised.value.problems
     assert problem.kind == PROBLEM_TIE and problem.mates == ("UserLock1", "UserAxis1", "UserTie")
     assert "SolidWorks reads it as unable to turn" in problem.sentence
+    # Re-pinned at the coordinator's addendum: each mate named once, in what to suppress.
     assert problem.sentence == (
-        "Update SolidWorks must turn G1's train back to its built place, and with your mates on SolidWorks reads it as "
-        "unable to turn: your UserLock1, UserAxis1 and UserTie are on that train, so nothing is changed; suppress "
-        "UserLock1, UserAxis1 and UserTie in SolidWorks and press Update SolidWorks again.")
+        "Update SolidWorks must turn G1's train back to its built place, and SolidWorks reads it as unable to turn "
+        "with your mates on it, so nothing is changed; suppress UserLock1, UserAxis1 and UserTie in SolidWorks and "
+        "press Update SolidWorks again.")
     assert [a[0] for n, a in fake.calls if n == "constrained_status"]          # read, the user's mates on
     assert _no_changes(fake)
 
@@ -414,6 +419,43 @@ def test_a_part_global_the_user_changed_refuses_naming_both_values_and_the_cell(
     assert _no_changes(fake)
 
 
+def test_a_blank_bore_in_the_workbook_is_said_as_no_bore_never_as_0():
+    """The coordinator's addendum: the workbook's Bore cell blank stands for no bore (the global reads 0)."""
+    fake = _built_train()
+    _edit(fake, P17, "Bore Diameter", "12")
+    doc = swbuild.DocumentValues(P17, _values(S17.with_values(bore="")), recorded=_recorded(S17),
+                                 cells=(("Bore Diameter", "Gears!J2"),))
+    with pytest.raises(UserWorkRefused) as raised:
+        _update_train(fake, parts=[doc])
+    (problem,) = raised.value.problems
+    assert problem.values[0].wanted == "0" and problem.values[0].blank == "no bore"
+    assert str(raised.value) == ("Bore Diameter in Gear_m1.5_N17 is 12 in SolidWorks and no bore (its Bore blank or 0) "
+                                 "in the workbook: type 12 in Gears!J2, or set it back to 0 in SolidWorks, and press "
+                                 "Update SolidWorks again.")
+
+
+def test_a_blank_backlash_or_fillet_is_said_as_the_equation_it_stands_for():
+    """A blank Backlash is the 0.3 × Module equation, a blank Fillet 0.38 × Module (spec backlash_mm / fillet_mm):
+    said with its value, and what to set back is the equation, not the number."""
+    fake = _built_train()
+    _edit(fake, P17, "Backlash", "0.2")
+    _edit(fake, P17, "Fillet Radius", "0.5")
+    doc = swbuild.DocumentValues(P17, _values(S17), recorded=_recorded(S17),
+                                 cells=(("Backlash", "Gears!P2"), ("Fillet Radius", "Gears!Q2")))
+    with pytest.raises(UserWorkRefused) as raised:
+        _update_train(fake, parts=[doc])
+    said = [p.sentence for p in raised.value.problems]
+    assert said == [
+        "Backlash in Gear_m1.5_N17 is 0.2 in SolidWorks and 0.45 (from its blank cell, 0.3 × Module) in the workbook: "
+        "type 0.2 in Gears!P2, or set it back to the equation 0.3 × Module in SolidWorks, and press Update SolidWorks "
+        "again.",
+        "Fillet Radius in Gear_m1.5_N17 is 0.5 in SolidWorks and 0.57 (from its blank cell, 0.38 × Module) in the "
+        "workbook: type 0.5 in Gears!Q2, or set it back to the equation 0.38 × Module in SolidWorks, and press Update "
+        "SolidWorks again."]
+    assert swbuild._blank_meaning(GlobalVariable("Backlash", "0.2")) == ""          # typed: said as it is
+    assert swbuild._blank_meaning(GlobalVariable("Bore Diameter", "10")) == ""
+
+
 def test_every_value_and_every_mate_in_the_way_is_named_at_once():
     fake = _built_train()
     _edit(fake, P17, "Face Width", "14")
@@ -512,13 +554,17 @@ def test_a_user_feature_the_rebuild_put_in_error_is_named_as_theirs_and_does_not
     fake = _built_train()
     fake.user_feature(P17, "Keyway")
     fake.breaks_on_set[_key(P17)] = [("Keyway", 71)]
-    result = _update_train(fake, parts=[_p17_update()])
+    # Every part passed (the demonstration's ruling): the assembly's rebuild then returns False too, and the review's
+    # condition 2 reads every app part's features before laying it to the keyway.
+    result = _update_train(fake, parts=_every_t_part())
     assert result.ok, result.failures
     assert [(f.name, f.code) for f in result.user_features_in_error] == [("Keyway", 71)]
     assert not result.parts[0].rebuilt and result.parts[0].changed == ["Face Width"]
     lines = result.log_lines()
     assert "CHECK   the rebuild reported an error, from your features alone: Keyway" in lines
-    assert "CHECK   your Keyway in Gear_m1.5_N17.SLDPRT is in error after the rebuild" in lines
+    # The demonstration's ruling (k3): newly in error, said with the value set under it.
+    assert "CHECK   your Keyway in Gear_m1.5_N17.SLDPRT is in error after the rebuild, which set Face Width 10 -> 12" \
+        in lines
 
 
 def test_a_rebuild_error_on_the_apps_own_feature_is_still_a_failure():
@@ -537,6 +583,248 @@ def test_without_the_part_rebuild_finding_a_rebuild_error_stays_a_failure(monkey
     fake.breaks_on_set[_key(P17)] = [("Keyway", 71)]
     result = _update_train(fake, parts=[_p17_update()])
     assert not result.ok and [f.name for f in result.user_features_in_error] == ["Keyway"]
+
+
+# -- M3, measured on 2026 (the demonstration's ruling; W9A-INTERFACES §4, item 11) -------------------------------------
+
+
+def _still(spec, path):
+    """A part as the workbook asks it, holding its values already (so not written), its features read."""
+    return swbuild.DocumentValues(path, _values(spec), made=swbuild.plan_features(plan(spec, path=path)))
+
+
+def _every_t_part(first=None):
+    """Every app part of the T train, as the workbook passes them all: G1's and G3's (changed by ``first``), G2's and
+    G4's holding their values. The review's condition 2 reads every app part's features."""
+    return [first or _p17_update(), _still(S68, P68), _still(S51, P51)]
+
+
+def _tc_update_parts(fake, built, **changes):
+    """The TransferCase's Update with both its parts passed, as the workbook does, holding their values."""
+    motion, placements = _tc_motion(built, "2H", **changes)
+    parts = [_still(GearSpec(), p) for p in (TC_SLEEVE, TC_DOG)]
+    return swbuild.update_gearbox(fake, parts=parts, assembly=TC_ASM, placements=placements, motion=motion,
+                                  exists=fake.exists, mtime=lambda _p: 0.0)
+
+
+def _sprocket_part_in_error(fake, name="Sprocket-1"):
+    """The user's Sprocket-1 in T, its own part holding a keyway in error (the demonstration's m3)."""
+    fake.user_component(T_ASM, name, SPROCKET, (IDENTITY9, (0.0, 0.0, 30.0)))
+    fake.feature_codes[(_key(SPROCKET), "User Keyway")] = 71
+
+
+def test_with_the_finding_the_fakes_assembly_rebuild_fails_on_a_feature_in_error_in_a_part(monkeypatch):
+    fake = _built_train()
+    fake.open_document(T_ASM)
+    assert fake.rebuild(kind=swcom.ASSEMBLY_TRAIN) is True
+    _sprocket_part_in_error(fake)
+    assert fake.rebuild(kind=swcom.ASSEMBLY_TRAIN) is False
+    assert {c.name: c.code for c in fake.components()}["Sprocket-1"] == 1
+    monkeypatch.setattr(findings, "ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_2026", None, raising=False)
+    assert fake.rebuild(kind=swcom.ASSEMBLY_TRAIN) is True                  # nothing modelled where unmeasured
+    assert {c.name: c.code for c in fake.components()}["Sprocket-1"] == 0
+
+
+def test_the_assembly_rebuild_findings_settle_2026_and_leave_2024_unmeasured():
+    assert swbuild.assembly_rebuild_settled((34, 1, 1)) == {"mate": True, "feature": False, "whats_wrong": False}
+    assert swbuild.assembly_rebuild_settled((32, 5, 0)) is None
+    assert swbuild.assembly_rebuild_settled(()) is None
+
+
+def test_an_update_with_only_the_users_own_part_in_error_goes_on_and_names_it_as_already_in_error():
+    """m3 on the fake: the user's Sprocket-1 in error from its own part before the press; the assembly's rebuild
+    returns False, nothing of the app's is in error, so the Update finishes and says Sprocket-1 was already in
+    error (nothing saved, as any Update)."""
+    fake = _built_train()
+    _sprocket_part_in_error(fake)
+    result = _update_train(fake, parts=_every_t_part())
+    assert result.ok, result.failures
+    assert not result.rebuilt and result.rebuild_from_user_alone == ["Sprocket-1"]
+    assert result.user_work.in_error == ["Sprocket-1"] and result.user_in_error == [("", "Sprocket-1")]
+    assert result.user_features_in_error == []
+    lines = result.log_lines()
+    assert "CHECK   the assembly's rebuild reported an error, from your work alone: Sprocket-1" in lines
+    assert "CHECK   yours, in error before this Update: Sprocket-1" in lines
+    assert not [n for n, _ in fake.calls if n == "save_as"]
+
+
+def test_an_update_that_rebuilds_a_users_keyway_in_an_app_part_into_error_goes_on_and_says_the_value_set_under_it():
+    """k3 on the fake: the user's keyway in G1's part, fine before; the Update sets the part's Face Width, the part's
+    rebuild and the assembly's both return False, only the keyway in error: the Update goes on, naming the keyway as
+    the user's, newly in error, and what was set under it."""
+    fake = _built_train()
+    fake.user_feature(P17, "User Keyway")
+    fake.breaks_on_set[_key(P17)] = [("User Keyway", 71)]
+    doc = _p17_update(cells=(("Face Width", "Gears!I2"),))
+    result = _update_train(fake, parts=_every_t_part(doc))
+    assert result.ok, result.failures
+    assert not result.rebuilt and result.rebuild_from_user_alone == ["User Keyway in Gear_m1.5_N17.SLDPRT"]
+    (keyway,) = result.user_features_in_error
+    assert (keyway.name, keyway.code) == ("User Keyway", 71)
+    assert result.user_feature_was_in_error(keyway) is False
+    assert result.values_under(keyway) == [swbuild.ValueSet(P17, "Face Width", "10", "12", "Gears!I2")]
+    assert [(f.name, f.code) for f in result.user_work.features] == [("User Keyway", 0)]
+    assert "CHECK   your User Keyway in Gear_m1.5_N17.SLDPRT is in error after the rebuild, which set Face Width " \
+           "10 -> 12 (Gears!I2)" in result.log_lines()
+    # The review's condition 3: G1's and G3's components read in error from the keyway in their part, and that
+    # code is not laid to the app.
+    fake.open_document(T_ASM)
+    assert {c.name: c.code for c in fake.components()}["gear1-1"] == 1
+
+
+def test_a_users_feature_already_in_error_in_an_app_part_is_said_as_before_and_still():
+    fake = _built_train()
+    fake.user_feature(P17, "User Keyway", code=71)
+    result = _update_train(fake, parts=_every_t_part())
+    assert result.ok, result.failures
+    (keyway,) = result.user_features_in_error
+    assert result.user_feature_was_in_error(keyway) is True
+    assert result.rebuild_from_user_alone == ["User Keyway in Gear_m1.5_N17.SLDPRT"]
+    assert "CHECK   your User Keyway in Gear_m1.5_N17.SLDPRT was in error before this Update, and still is" \
+        in result.log_lines()
+
+
+def test_the_same_with_an_app_feature_in_error_in_another_part_stays_a_failure_naming_the_users_before():
+    """An app feature in error, read in the check phase in a part this Update leaves alone: something of the app's
+    is in error, so the False rebuild is the failure it was, its sentence naming what of the user's was in error."""
+    fake = _built_train()
+    _sprocket_part_in_error(fake)
+    fake.user_feature(P17, "User Keyway")
+    fake.breaks_on_set[_key(P17)] = [("User Keyway", 71)]
+    app51 = swbuild.plan_features(plan(S51, path=P51))[-1]
+    fake.feature_codes[(_key(P51), app51)] = 1
+    result = _update_train(fake, parts=_every_t_part())
+    assert ("T.SLDASM", "SolidWorks reported an error rebuilding T. Your Sprocket-1 was already in error before this "
+                        "Update.") in result.failures
+    assert result.rebuild_from_user_alone == []
+    assert [f.name for f in result.user_features_in_error] == ["User Keyway"]
+
+
+def test_a_false_rebuild_with_nothing_of_the_users_in_error_stays_a_failure():
+    """The review's condition 1: the assembly's rebuild returns False and nothing at all reads in error."""
+    fake = _built_train()
+    fake.failed_documents = {_key(P51)}
+    result = _update_train(fake, parts=_every_t_part())
+    assert ("T.SLDASM", "SolidWorks reported an error rebuilding T.") in result.failures
+    assert result.rebuild_from_user_alone == []
+
+
+def test_an_app_feature_that_cannot_be_read_counts_as_in_error():
+    """The review's condition 2: an app feature whose error code is unread, in a part read whole."""
+    fake = _built_train()
+    _sprocket_part_in_error(fake)
+    fake.feature_codes[(_key(P51), swbuild.plan_features(plan(S51, path=P51))[-1])] = swcom.UNREAD
+    result = _update_train(fake, parts=_every_t_part())
+    assert any(why.startswith("SolidWorks reported an error rebuilding T.") for _, why in result.failures)
+    assert result.rebuild_from_user_alone == []
+
+
+def test_a_press_that_would_carry_a_component_in_error_refuses_before_any_write():
+    """Not measured (the run's review, finding 1): putting by route (c1) a component of the user's that reads in
+    error, its own part holding a feature in error. Refused with the other component problems, nothing written."""
+    fake = _built_train()
+    _sprocket_on_g1(fake)
+    fake.feature_codes[(_key(SPROCKET), "User Keyway")] = 71
+    with pytest.raises(UserWorkRefused) as raised:
+        _moving(fake)
+    (problem,) = raised.value.problems
+    assert problem.kind == swbuild.PROBLEM_COMPONENT and problem.mates == ("UserLock1",)
+    assert problem.sentence == (
+        "Update SolidWorks would put your Sprocket-1 with G1, which your UserLock1 holds it to, and Sprocket-1 is in "
+        "error in T.SLDASM; putting a component of yours that is in error with its gear has not been measured, so "
+        "nothing is changed; in SolidWorks, put right what is in error in Sprocket-1, or suppress UserLock1, and press "
+        "Update SolidWorks again.")
+    assert _no_changes(fake) and fake.user_puts == []
+
+
+def test_an_app_component_in_error_whose_part_was_not_read_stays_a_failure():
+    fake = _built_train()
+    fake.user_feature(P17, "User Keyway")
+    fake.breaks_on_set[_key(P17)] = [("User Keyway", 71)]
+    fake.feature_codes[(_key(P51), "Extrude9")] = 1                      # G4's part, not read by this press
+    result = _update_train(fake, parts=[_p17_update()])
+    assert ("T.SLDASM", "SolidWorks reported an error rebuilding T.") in result.failures
+    assert result.rebuild_from_user_alone == []
+
+
+def test_an_app_mate_in_error_after_the_rebuild_keeps_it_a_failure():
+    fake = _built_train()
+    _sprocket_part_in_error(fake)
+    fake.mate_codes["G1 meshes G2"] = (47, False)
+    result = _update_train(fake, parts=_every_t_part())
+    assert any(why.startswith("SolidWorks reported an error rebuilding T.") for _, why in result.failures)
+    assert result.rebuild_from_user_alone == []
+
+
+def test_errors_that_cannot_be_read_keep_it_a_failure():
+    fake = _built_train()
+    _sprocket_part_in_error(fake)
+    fake.component_codes["Sprocket-1"] = swcom.UNREAD
+    result = _update_train(fake, parts=_every_t_part())
+    assert any(why.startswith("SolidWorks reported an error rebuilding T.") for _, why in result.failures)
+
+
+@pytest.mark.parametrize("name", ["ASSEMBLY_REBUILD_WITH_USER_MATE_IN_ERROR_ON_2026",
+                                  "WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_2026"])
+def test_on_a_version_whose_finding_is_none_a_failed_assembly_rebuild_stays_todays_failure(monkeypatch, name):
+    monkeypatch.setattr(findings, name, None, raising=False)
+    fake = _built_train()
+    _sprocket_part_in_error(fake)
+    result = _update_train(fake, parts=_every_t_part())
+    assert ("T.SLDASM", "SolidWorks reported an error rebuilding T. Your Sprocket-1 was already in error before this "
+                        "Update.") in result.failures
+    assert result.rebuild_from_user_alone == []
+
+
+def test_a_user_mate_in_error_alone_does_not_make_a_failure():
+    """m3's first half on the fake: the user's mate in error before the press, the assembly's rebuild True (as on
+    2026): the Update goes on and lists the mate as the user's."""
+    fake = _built_train()
+    fake.user_component(T_ASM, "Housing-1", HOUSING, (IDENTITY9, (0.0, 0.0, -40.0)), fixed=True)
+    fake.user_component(T_ASM, "Chain-1", SPROCKET, (IDENTITY9, (0.0, 0.0, 60.0)))
+    fake.user_mate(T_ASM, "UserGap", kind="distance", a=("Chain-1", "plane1"), b=("Housing-1", "plane1"))
+    fake.mate_codes["UserGap"] = (47, False)
+    result = _update_train(fake, parts=_every_t_part())
+    assert result.ok, result.failures
+    assert result.rebuilt and result.rebuild_from_user_alone == []
+    assert result.user_in_error == [("", "UserGap")] and result.user_work.in_error == ["UserGap"]
+
+
+def test_a_false_rebuild_with_only_a_user_mate_in_error_is_not_laid_to_it_on_2026():
+    """On 2026 a mate in error alone leaves the rebuild True
+    (findings.ASSEMBLY_REBUILD_WITH_USER_MATE_IN_ERROR_ON_2026), so a False with nothing but a user mate in error is
+    unexplained, and stays a failure."""
+    fake = _built_train()
+    fake.user_component(T_ASM, "Housing-1", HOUSING, (IDENTITY9, (0.0, 0.0, -40.0)), fixed=True)
+    fake.user_component(T_ASM, "Chain-1", SPROCKET, (IDENTITY9, (0.0, 0.0, 60.0)))
+    fake.user_mate(T_ASM, "UserGap", kind="distance", a=("Chain-1", "plane1"), b=("Housing-1", "plane1"))
+    fake.mate_codes["UserGap"] = (47, False)
+    fake.failed_documents = {_key(P51)}            # the assembly's rebuild False, with no component read in error
+    result = _update_train(fake, parts=_every_t_part())
+    assert ("T.SLDASM", "SolidWorks reported an error rebuilding T. Your UserGap was already in error before this "
+                        "Update.") in result.failures
+    assert result.rebuild_from_user_alone == []
+
+
+def test_with_modes_the_users_part_in_error_is_laid_to_them_in_every_mode_shown(tc_built):
+    """m3's second half on the fake, with modes: every mode's rebuild returns False from the user's part alone."""
+    fake, built = tc_built
+    fake.user_component(TC_ASM, "Sprocket-1", SPROCKET, (IDENTITY9, (0.0, 0.0, 400.0)))
+    fake.feature_codes[(_key(SPROCKET), "User Keyway")] = 71
+    done = _tc_update_parts(fake, built, wanted_turn=6.0)
+    assert done.ok, done.log_lines()
+    assert done.rebuild_from_user_alone == ["Sprocket-1"]
+    assert {mode for mode, name in done.user_in_error if name == "Sprocket-1"} == set(TC_MODES)
+
+
+def test_with_modes_and_the_finding_unset_the_failure_names_the_mode_and_the_users_part(tc_built, monkeypatch):
+    monkeypatch.setattr(findings, "WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_2026", None, raising=False)
+    fake, built = tc_built
+    fake.user_component(TC_ASM, "Sprocket-1", SPROCKET, (IDENTITY9, (0.0, 0.0, 400.0)))
+    fake.feature_codes[(_key(SPROCKET), "User Keyway")] = 71
+    done = _tc_update_parts(fake, built, wanted_turn=6.0)
+    assert any(why.startswith("SolidWorks reported an error rebuilding TransferCase in ") and
+               why.endswith(". Your Sprocket-1 was already in error before this Update.") for _, why in done.failures)
 
 
 def test_a_feature_before_the_apps_first_is_the_templates_and_nobodys():
@@ -621,8 +909,9 @@ def test_with_modes_a_tie_on_only_in_another_mode_stops_the_job_when_that_mode_i
     assert not done.ok
     (failure,) = done.failures
     assert failure[1].startswith("In mode 4L, Update SolidWorks must turn ")
-    assert "your UserLock2 and UserTie are on that train" in failure[1]
-    assert "suppress UserLock2 and UserTie in 4L" in failure[1]
+    assert "SolidWorks reads it as unable to turn with your mates on it, so nothing is changed; suppress UserLock2 " \
+           "and UserTie in 4L and press Update SolidWorks again." in failure[1]
+    assert failure[1].count("UserTie") == 1
     assert "4L" not in done.put_in and "4H" in done.put_in and fake.config == "2H"
     assert TC_ASM in done.changed
 
@@ -838,6 +1127,24 @@ def test_a_train_with_no_carrier_carries_the_users_component_only_once_measured(
     monkeypatch.setattr(findings, "USER_MATE_PUT_NO_CARRIER_ON_2026", True)      # measured on 2026 only: 2024 refuses
     with pytest.raises(UserWorkRefused, match=r"USER_MATE_PUT_NO_CARRIER_ON_2024 is None"):
         _moving(fake)
+
+
+def test_a_train_with_no_carrier_on_a_gearbox_with_modes_is_its_own_branch_unmeasured_as_committed(tc_built,
+                                                                                                    monkeypatch):
+    """The demonstration measured NO_CARRIER on a gearbox with no modes (the 12 : 1) only: with modes, the committed
+    NO_CARRIER_MODES (None on both versions) refuses a carry, whatever NO_CARRIER says."""
+    fake, built = tc_built
+    for year in (2026, 2024):
+        monkeypatch.setattr(findings, f"USER_MATE_PUT_NO_CARRIER_MODES_ON_{year}", None)
+    assert findings.USER_MATE_PUT_NO_CARRIER_ON_2026 is True
+    _tc_sprocket(fake)
+    with pytest.raises(UserWorkRefused) as raised:
+        _tc_update(fake, built, wanted_turn=6.0)
+    assert "with a gear on a train with no carrier, in each mode of a gearbox with modes, its gear mates left on " \
+           "around the put has not been measured on this SolidWorks (findings.USER_MATE_PUT_NO_CARRIER_MODES_ON_2026 " \
+           "is None)" in str(raised.value)
+    motion, placements = _tc_motion(built)
+    assert swbuild.user_carry_branches(motion, placements)["InDog"] == swbuild.BRANCH_NO_CARRIER_MODES
 
 
 def test_a_user_sub_assembly_is_carried_only_once_measured_its_leaf_naming_its_top_level(monkeypatch):

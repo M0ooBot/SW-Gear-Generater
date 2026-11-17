@@ -305,11 +305,13 @@ def _user_mate(fake, flags):
 
 
 # Re-pinned at W9a's fix round (ruling 5): the sentence names the gear (the fake's user mate is on InDog's plane) and
-# the way through, a lock, which on the TransferCase's trains (no carrier) goes with its gear once measured.
+# the way through, a lock, which on the TransferCase's trains (no carrier) goes with its gear once measured. Re-pinned
+# again at the demonstration's ruling: NO_CARRIER was measured on a gearbox with no modes only, so the TransferCase's
+# trains are the branch NO_CARRIER_MODES, still unmeasured, and the sentence says that branch's words.
 _TAIL = ("which Update SolidWorks puts back, and a mate of that kind is not moved with its gear, so nothing is changed; "
          "in SolidWorks, suppress Distance3 in {} and press Update SolidWorks again (a lock of your component to "
          "InDog will go with it once Update SolidWorks has been measured putting a component of yours with a gear on "
-         "a train with no carrier, its gear mates left on around the put).")
+         "a train with no carrier, in each mode of a gearbox with modes, its gear mates left on around the put).")
 
 
 @pytest.mark.parametrize("on, said", [
