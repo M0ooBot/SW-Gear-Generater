@@ -1103,6 +1103,12 @@ class FakeSolidWorks:
         user's, each with its file, fixed state, ``GetSuppression2`` and error code."""
         self._log("components")
         names = self._assembly_names(self.current) if self.current else list(self.adding_names)
+        # W9d audit: GetComponents(True) does not list in tree order on SolidWorks (the first M9 run's R listed Chain-2
+        # before Chain-1 and Sprocket-6 before Sprocket-2; the probe's state (f) the user's parts before the app's).
+        # Which order it gives was not measured, so the fake lists in tree order unless ``listing_order`` (Name2s)
+        # says otherwise: those first, in that order.
+        listed = [n for n in getattr(self, "listing_order", ()) if n in names]
+        names = listed + [n for n in names if n not in listed]
         # W9a, M3: a component whose part has a feature in error reads in error (code 1, as m3's Sprocket-1 read on
         # 2026), where the finding says such a part fails the assembly's rebuild; ``component_codes`` overrides.
         derived = self._feature_rule() is False
@@ -1125,12 +1131,35 @@ class FakeSolidWorks:
         if unread == "count":
             return swcom.MateInfo(mate.name, self.MATE_TYPES.get(mate.kind, 7), (), counted=False)
         own = self._root_name() if self.assembly_entity == "root" else ""
-        ends = tuple(own if end[0] == "asm" else end[0] for end in (mate.a, mate.b))
+        ends = tuple(own if end[0] == "asm" else end[0] for end in self._read_ends(mate))
         if unread == "entity":
             ends = (ends[0], None)
         kind = swcom.UNREAD if unread == "type" else self.MATE_TYPES.get(mate.kind, 7)
-        kinds = tuple(self._entity_kind(mate, end) for end in (mate.a, mate.b))
+        kinds = tuple(self._entity_kind(mate, end) for end in self._read_ends(mate))
         return swcom.MateInfo(mate.name, kind, ends, entities=kinds if self.read_entity_kinds else ())
+
+    ORDERLESS_KINDS = ("coincident", "concentric", "parallel")
+
+    def _read_ends(self, mate):
+        """A mate's entities in ``MateEntity(i)`` order. For a coincident, concentric or parallel mate SolidWorks gives
+        them in its components' tree order, whatever order they were selected in (the W9d audit, 2026-11-17: the
+        probe's UserFaceCoin, Sprocket-5's face selected first, read Sprocket-5 first; the M9 fixture's, Chain-2's
+        face selected first, read Chain-1 first; every concentric and parallel and every app axis or along coincident
+        read the earlier component first, the assembly's own plane and the layout before any); a distance, angle,
+        gear or lock in its selection order (UserChainDist read Chain-1 before the earlier Sprocket-1, UserGear6 its
+        Sprocket before Sun). Kept to the user's mates and those the carry made again (``remade``), read by W9d's
+        Session (``read_entity_kinds``); the app's own, and the suites before W9d, read them as selected (as they were
+        written). ``tree_order_entities`` False: as selected."""
+        ends = (mate.a, mate.b)
+        if not (getattr(self, "tree_order_entities", True) and self.read_entity_kinds) or \
+                mate.kind not in self.ORDERLESS_KINDS or not (mate.user or getattr(mate, "remade", False)):
+            return ends
+        order = self._assembly_names(self.current) if self.current else list(self.adding_names)
+
+        def at(end):
+            top = end[0].split("/")[0]
+            return -1 if end[0] == "asm" else order.index(top) if top in order else len(order)
+        return (ends[1], ends[0]) if at(ends[1]) < at(ends[0]) else ends
 
     def _entity_kind(self, mate, end):
         """W9d: an entity's (kind, feature) as ``Session.mate_info`` reads it from ReferenceType2: a lock's end whole,
@@ -2038,7 +2067,7 @@ class FakeSolidWorks:
             self.touched.add(_key(self.current))            # a read that marks (doctored)
         mate = self.mate(self.mate_handles[handle])
         info = self.mate_info(handle)
-        kinds = info.entities or tuple(self._entity_kind(mate, e) for e in (mate.a, mate.b))
+        kinds = info.entities or tuple(self._entity_kind(mate, e) for e in self._read_ends(mate))
         values = []
         if mate.kind in ("distance", "point distance", "limit distance"):
             values.append(("Distance", abs(mate.value) / 1000.0))
@@ -2057,7 +2086,7 @@ class FakeSolidWorks:
             values += [("GearRatioNumerator", float(mate.ratio[1])), ("GearRatioDenominator", float(mate.ratio[0])),
                        ("Reverse", 1.0 if mate.flip else 0.0)]
         entities = tuple(swcom.MateEntityRead(c, self._entity_select(mate, end), k, f, self._entity_params(mate, end))
-                         for c, (k, f), end in zip(info.components, kinds, (mate.a, mate.b)))
+                         for c, (k, f), end in zip(info.components, kinds, self._read_ends(mate)))
         alignment = mate.alignment if mate.user else getattr(self, "readback_alignment", {}).get(mate.name,
                                                                                                   mate.alignment)
         return swcom.MateDefinition(mate.name, self.DEF_TYPES.get(mate.kind, info.type),
@@ -2096,7 +2125,7 @@ class FakeSolidWorks:
     def entity_reference(self, mate_handle, index):
         self._log("entity_reference", mate_handle, index)
         mate = self.mate(self.mate_handles[mate_handle])
-        end = (mate.a, mate.b)[index]
+        end = self._read_ends(mate)[index]
         kind, _ = self._entity_kind(mate, end)
         finding = {"feature": "PERSIST_REFERENCE_ROUTE_FOR_REFERENCE_FEATURES",
                    "plane": "PERSIST_REFERENCE_ROUTE_FOR_REFERENCE_FEATURES", "face": "PERSIST_REFERENCE_ROUTE_FOR_FACES",
@@ -2139,7 +2168,7 @@ class FakeSolidWorks:
                 out.append((kind, "", None, None, "", f"no measured route for a {kind} here"))
                 continue
             mate = self.mate(self.mate_handles[mate_handle])
-            end = (mate.a, mate.b)[index]
+            end = self._read_ends(mate)[index]
             key = (part, end[1])
             filtered = [(key, i) for i in range(self.r3_filtered.get(key, 2))]
             stats.append((kind, len(filtered), len(filtered), ("area", None), self.r3_matches.get(key, 1)))
@@ -2241,6 +2270,7 @@ class FakeSolidWorks:
         self._keep_mate(handle, kept, word, "x", "x", value, tuple(ratio), flipped)
         mate = self.mates[-1]
         mate.a, mate.b = ends[0], ends[1]
+        mate.remade = True
         mate.alignment = definition.alignment
         if word.startswith("limit"):
             mate.limits = tuple((k, v) for k, v in values.items() if k.startswith(("Maximum", "Minimum")))

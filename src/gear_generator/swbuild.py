@@ -8355,6 +8355,15 @@ def _not_found_subjects(c: _Carrying, item: CarryMateItem) -> Tuple[str, ...]:
     return ("entity", "", "")
 
 
+# Kinds whose two entities play the same part, so a remade one is the same mate whichever SolidWorks lists first. For
+# coincident, concentric and parallel SolidWorks lists them in its components' tree order, not the selection's (the W9d
+# audit, 2026-11-17: the probe's UserFaceCoin read its first selection first, the M9 fixture's its second, each the
+# earlier component), and R inserts the carried components in GetComponents' order, which is not the tree's (the first
+# M9 run listed Chain-2 before Chain-1): so such a mate between two carried components can read back the other way
+# round however it is selected. Perpendicular and tangent are as symmetric (their order unmeasured).
+_ORDERLESS_KINDS = ("coincident", "concentric", "parallel", "perpendicular", "tangent")
+
+
 def _read_back(c: _Carrying, handle: str, item: CarryMateItem) -> str:
     """§10's read-back against the old mate: "" when equal; "swapped" when only its two entities read the other way;
     else what differs ("entities", "alignment", "ratio", "values", "sense"). A gear mate's sense not read is
@@ -8369,7 +8378,9 @@ def _read_back(c: _Carrying, handle: str, item: CarryMateItem) -> str:
     if selection_reversed(carry_kind(old), old.entities):
         wanted.reverse()
     got = ["" if (e.component or "") == c.root and c.root else (e.component or "") for e in definition.entities]
-    if [w for w in wanted if w] != [g for g in got if g]:
+    if carry_kind(old) in _ORDERLESS_KINDS and sorted(w for w in wanted if w) == sorted(g for g in got if g):
+        pass                    # the same mate whichever entity SolidWorks lists first (_ORDERLESS_KINDS)
+    elif [w for w in wanted if w] != [g for g in got if g]:
         return "swapped" if len(wanted) == 2 and [w for w in wanted[::-1] if w] == [g for g in got if g] else \
             "entities"
     if definition.alignment != old.alignment:

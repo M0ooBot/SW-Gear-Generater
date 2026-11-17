@@ -426,9 +426,11 @@ def test_an_updates_inventory_keeps_each_mates_entity_kinds_and_features():
     fake.user_lock(T_ASM, "Lock1", "Housing-1", "Chain-1")
     result = _moving(fake)
     assert result.ok, result.log_lines()
+    # A coincident reads its entities in its components' tree order, whatever was selected first (the W9d audit:
+    # the probe's UserFaceCoin and M9's): Housing-1 was inserted before Chain-1, the layout before both.
     assert {m.name: m.entities for m in result.user_work.mates} == {
-        "Coincident7": (("user", "Chain-1", "face", ""), ("user", "Housing-1", "plane", "plane1")),
-        "Concentric8": (("user", "Chain-1", "feature", "Gear Axis"), ("layout", "", "feature", "S1 Axis")),
+        "Coincident7": (("user", "Housing-1", "plane", "plane1"), ("user", "Chain-1", "face", "")),
+        "Concentric8": (("layout", "", "feature", "S1 Axis"), ("user", "Chain-1", "feature", "Gear Axis")),
         "Distance9": (("user", "Housing-1", "origin", "origin"), ("assembly", "", "plane", "plane2")),
         "Lock1": (("user", "Housing-1", "whole", ""), ("user", "Chain-1", "whole", ""))}
     # A session that gives no kinds (an inventory read before W9d): no entities, as before.
@@ -988,15 +990,13 @@ def test_faces_by_r3_one_walk_per_component_exactly_one_match_capped(monkeypatch
     fake.r3_resolve = {key: 2} if case == "not ok" else {}
     cr = _build_again(fake).carry
     walks = [items for _, items in fake.walks]
-    assert len(walks) == 1 and [i[1:] for i in walks[0]] == [(0, "face"), (0, "face")]     # Sprocket-1's two faces
+    # Sprocket-1's two faces, each its coincident's second entity: SolidWorks reads a coincident in tree order (the
+    # audit), and G1 stands before Sprocket-1 in the tree whichever was selected first.
+    assert len(walks) == 1 and [i[1:] for i in walks[0]] == [(1, "face"), (1, "face")]
     named = {n.item: (n.why, n.subjects) for n in cr.named}
-    # Coincident3's other face is on G1's part, made new: never walked, named part new — unless the cap took
-    # Sprocket-1's later face too (every later item of the component is not searched).
-    third = named.pop("Coincident3")
-    if case in ("candidates", "seconds"):
-        assert third == ("too long", ("face", "Sprocket-1", "Sprocket.SLDPRT", case))
-    else:
-        assert third == ("part new", ("G1", "its Part name changed", "face", ""))
+    # Coincident3's other face is on G1's part, made new: never walked, named part new — its first entity in tree order
+    # (the audit), so named so even where the cap took Sprocket-1's later face too.
+    assert named.pop("Coincident3") == ("part new", ("G1", "its Part name changed", "face", ""))
     if case == "unique":
         assert named == {} and "Coincident2" in {r[0] for r in cr.remade}
     elif case in ("candidates", "seconds"):
@@ -1485,7 +1485,8 @@ def test_a_mate_on_a_component_suppressed_in_the_mode_showing_hands_its_cause_as
     named = {n.item: n for n in cr.named}
     assert named["UserAxis9"].why == swbuild.WHY_UNREAD
     assert named["UserAxis9"].subjects[1:] == (swbuild.CAUSE_SUPPRESSED, "Sprocket-1", "")
-    entity = next(m for m in cr.work.mates if m.name == "UserAxis9").entities[0]
+    # The second entity: a coincident reads in tree order (the audit), G1 before Sprocket-1.
+    entity = next(m for m in cr.work.mates if m.name == "UserAxis9").entities[1]
     assert (entity.kind, entity.cause, entity.cause_parts) == ("unread", "suppressed", ("Sprocket-1", ""))
 
 
@@ -1664,3 +1665,25 @@ def test_the_closed_assemblys_dependencies_are_every_file_it_holds_as_solidworks
     fake.file_versions[_key(P68)] = 32                      # one app part last saved by 2024: not read
     cr = _build_again(fake).carry
     assert cr.work.how == swbuild.OLD_UNREAD and "last saved by this SolidWorks" in cr.work.unread[0]
+
+
+@pytest.mark.parametrize("listed", [("Chain-1", "Chain-2"), ("Chain-2", "Chain-1")])
+def test_a_coincident_between_two_carried_components_inserted_in_another_order_is_kept(monkeypatch, every_gate,
+                                                                                      listed):
+    """The audit: SolidWorks reads a coincident's entities in its components' tree order, and R inserts the carried
+    components in GetComponents' order, which is not the tree's (the first M9 run listed Chain-2 before Chain-1). So a
+    coincident between two of them can read back the other way round however it is selected; it is the same mate (a
+    coincident, concentric, parallel, perpendicular or tangent mate is one whichever entity comes first), kept."""
+    every_gate()
+    fake = _old_train()
+    _isfile(monkeypatch, fake)
+    fake.user_component(T_ASM, "Chain-1", SPROCKET, (I9, (0.0, 0.0, 60.0)))
+    fake.user_component(T_ASM, "Chain-2", SPROCKET, (I9, (0.0, 0.0, 60.0)))
+    fake.user_lock(T_ASM, "Lock2", "gear1-1", "Chain-1")
+    fake.user_mate(T_ASM, "UserFaceCoin", kind="coincident", a=("Chain-2", "plane1"), b=("Chain-1", "plane1"))
+    fake.listing_order = list(listed)
+    cr = _build_again(fake).carry
+    old = next(m for m in cr.work.mates if m.name == "UserFaceCoin")
+    assert [e.owner for e in old.entities] == ["Chain-1", "Chain-2"]           # tree order, not the selection's
+    assert cr.stopped == "" and "UserFaceCoin" in {r[0] for r in cr.remade}, cr.named
+    assert [a[2] for n, a in fake.calls if n == "remake_mate"].count("UserFaceCoin") == 1    # made once, no retry
