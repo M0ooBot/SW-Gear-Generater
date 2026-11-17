@@ -101,6 +101,67 @@ leaves the finding unproposed on 2024.
 Commit the logs as `probe/results/w9d-probes-sw2026-<date>.log` and `probe/results/sw2024/w9d-probes-sw2024-<date>.log`
 with their JSON.
 
+## The run on SolidWorks 2026 (2026-11-17, from 23ed8c5)
+
+**Setup.**
+- Run folder `C:\Users\M0obo\Documents\GearGeneratorProbe\w9d-probes-sw2026-20261117-140201`, on the second Windows
+  host.
+- SolidWorks 2026 revision **34.0.0**, PID 41968, started for the run and exited after.
+- Masters: the W9c whole run's `setup.master` and `rangebox.master`, both unchanged by the run (their files' sizes,
+  times and md5 compared before and after).
+- The command as above.
+
+**Result.** `probe/results/w9d-probes-sw2026-20261117-1-face-routes-none.log` and `w9d-probes-20261117-140231.json`.
+
+| Section | Time | Failed |
+|---|---|---|
+| faces | 79 s | 1 |
+| state | 40 s | 0 |
+| sub | 39 s | 0 |
+
+There was no STOP, and no dialog but the progress boxes and the exempt notification box. No script change was
+made.
+
+- **faces: neither route reads a part-level reference, on any face or the edge.**
+  - **r1:** `GetCorrespondingEntity2` on the assembly's extension hands back nothing for a mate entity's `Reference`.
+    Its help gives the call exactly as made, and says it returns null if none is found. So r1's
+    `GetPersistReference3` then meets a type mismatch.
+  - **r2:** the part's `GetPersistReference3` on the assembly entity gives a 70- or 82-byte reference. In the part it
+    resolves to nothing, with code 1 (`swPersistReferencedObject_Invalid`). The "GetCorresponding: Type mismatch" in
+    the log is the script carrying that nothing back.
+  - So both `PERSIST_REFERENCE_ROUTE_FOR_*` are proposed None, (c) has nothing to make again (its FAIL), and (d)
+    resolves nothing.
+  - `COAXIAL_FACE_READ` is proposed False: the part-level entity it needs came only from r1. Sun's User Keyway read
+    not coaxial on its own read.
+  - The reads marked nothing.
+- **A hand diagnostic after the run (not this script; its code and output are in the run folder, `diag_r1.py`).** It
+  ran on the run's own `d-faces` copy: opened silently, read, closed by `QuitDoc`, every flag unmarked throughout.
+  - `GetCorrespondingEntity2` gave `None` for UserFaceConc's, UserEdgeConc's and UserFaceCoin's entities.
+  - A third route did work for each: the part's faces (or edges) each carried by `IComponent2.GetCorresponding`, and
+    the one `ISldWorks.IsSame` as the mate's entity taken. Its part-level `GetPersistReference3` (583, 599 and 8096
+    bytes) resolved in the part to an object.
+  - Its kind, place and round trip were not checked. A route for the probe to take up, not a measurement.
+- **state:**
+  - Candidate 1, `GetComponentSuppressionState(Name2)`, agreed with the shown truth on every component and mode and
+    marked nothing. Candidate 2, `GetRootComponent3(False)`, gave no root in N, the mode not showing. Candidate 3's
+    calls marked nothing either.
+  - The unsaved suppression read right.
+  - The lightweight Sprocket-1 read state 1, as the other sprockets did, through every read.
+  - `VersionHistory`: the copy last (19000, 2025) against `GetLatestSupportedFileVersion` 19000. The 2024-built
+    control read last (17000, 2024).
+  - `GetDocumentDependencies2` named all nine parts, each one's `VersionHistory` answering.
+  - The read-only open beside the open Housing (unchanged) and Sprocket (changed) answered warning 32
+    (`swFileLoadWarning_NeedsRegen`). Both parts stayed open, not read-only, as they were. The read-only
+    `RangeBox.SLDASM` itself read **flag True straight after the open**, its referenced Sprocket part being changed.
+    It was shown mode by mode and closed by `QuitDoc` with no dialog. Every document it loaded was gone after, and no
+    file's time changed.
+- **sub:**
+  - Opening a healthy sub-assembly marked nothing, not loaded or loaded as a component (warning 128,
+    `swFileLoadWarning_AlreadyOpen`).
+  - Opened read-only, it inserted with its child, its flag off.
+- RAM fell to 1.84 GB free at `sub`'s end (WSL's page cache had grown), under the 2 GB floor. Dropping that cache gave
+  back 4.8 GB.
+
 ## What is untested
 
 Only `--self-check` and `--help` have run (the Linux venv, no SolidWorks): the pure judgements on made-up readings
