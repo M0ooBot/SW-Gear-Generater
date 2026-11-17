@@ -596,7 +596,8 @@ def test_a_quiet_press_on_a_part_still_in_error_replaces_only_the_claim_and_keep
     nothing.clashes = [swbuild.Clash(("a-1", "b-1"), ("G1", "G2"), 1.0)]
     finished = SimpleNamespace(still_in_error=["C:\\Out\\Gear_m1.5_N68.SLDPRT"])
     assert ui_text.gearbox_update_status(_update(), nothing, finished=finished) == (
-        ui_text.still_in_error_sentence(finished.still_in_error) + " Check: G1 and G2 interfere, 1 mm³; look at their "
+        ui_text.still_in_error_sentence(finished.still_in_error, "C:\\Out\\Reducer_12to1.SLDASM") + " Check: G1 and G2 "
+        "interfere, 1 mm³; look at their "
         "mesh in Reducer_12to1.SLDASM.", False)
 
 

@@ -2330,6 +2330,25 @@ def documents_left_in_error(result: Any) -> List[Any]:
                                                                for w in named)))]
 
 
+def assembly_holding(holder: Any, documents: Sequence[str]) -> str:
+    """The assembly on record (an ``UpdatePlan``'s or a ``LinkRecord``'s gearbox) when one of ``documents`` (paths
+    or stems) is a component of it, a gear's part, the layout or a carrier part; else ``""``. Should-fix A of
+    W9C-RUNS-REVIEW.md's addendum on the final runs: SolidWorks marks the open assembly modified when a part of it is
+    changed and rebuilt in its own window (run 11 on 34.0.0), and a part whose window is closed while its assembly
+    stays open stays loaded with its changes, so the advice to close a part without saving names the assembly too."""
+    box = getattr(holder, "gearbox", None)
+    if box is not None:
+        assembly = getattr(box, "assembly", "") or ""
+        parts = [c.part for c in getattr(box, "components", []) or [] if getattr(c, "part", "")]
+        parts += [box.layout] if getattr(box, "layout", "") else []
+        parts += [c.path for c in getattr(box, "carriers", []) or [] if getattr(c, "path", "")]
+    else:
+        assembly = getattr(holder, "assembly", "") or ""
+        parts = _plan_paths(holder) if holder is not None and hasattr(holder, "parts") else []
+    stems = {document_stem(p) for p in parts}
+    return assembly if assembly and any(document_stem(d) in stems for d in documents) else ""
+
+
 def _plan_paths(plan: UpdatePlan) -> List[str]:
     return [p.path for p in plan.parts] + ([plan.layout.path] if plan.layout is not None else []) + \
         [c.path for c in getattr(plan, "carriers", ()) or () if getattr(c, "path", "")]

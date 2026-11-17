@@ -1887,7 +1887,8 @@ def gearbox_update_status(update, result, dragged: Sequence[str] = (), **kwargs)
     still = list(getattr(finished, "still_in_error", ()) or ()) if finished is not None else []
     if not still:
         return text, ok
-    said = still_in_error_sentence(still)
+    from .workbook.update import assembly_holding
+    said = still_in_error_sentence(still, assembly_holding(update, still))
     if result.failures:
         from .workbook.update import document_stem
         stems = {document_stem(p) for p in still}
@@ -1903,16 +1904,34 @@ def gearbox_update_status(update, result, dragged: Sequence[str] = (), **kwargs)
     return f"{text} {said}", False
 
 
-def still_in_error_sentence(paths: Sequence[str]) -> str:
+def _close_unsaved(named: Sequence[str], whom: str, assembly: str, which: str) -> str:
+    """*close it in SolidWorks without saving (the file on disk is as before that Update), then press Update
+    SolidWorks again.* ``whom`` is *it*, *them* or *them all* for the documents ``named`` (stems). With ``assembly``
+    (a path, :func:`workbook.update.assembly_holding`): *close it and RangeBox in SolidWorks without saving,
+    answering No when SolidWorks asks to save them (the files on disk are as before that Update), then press Update
+    SolidWorks again.*, the assembly not named twice when it is among them (should-fix A: SolidWorks marks the open assembly modified when a part of it is changed,
+    and keeps a part loaded with its changes while the assembly stays open). ``which``: *this* or *that* Update."""
+    asm = _stem(assembly) if assembly else ""
+    if asm:
+        also = f" and {asm}" if asm.casefold() not in {n.casefold() for n in named} else ""
+        return (f"close {whom}{also} in SolidWorks without saving, answering No when SolidWorks asks to save "
+                f"them (the files on disk are as before {which} Update), then press Update SolidWorks again.")
+    one = whom == "it"
+    return (f"close {whom} in SolidWorks without saving (the {'file' if one else 'files'} on disk "
+            f"{'is' if one else 'are'} as before {which} Update), then press Update SolidWorks again.")
+
+
+def still_in_error_sentence(paths: Sequence[str], assembly: str = "") -> str:
     """*Gear_m1.25_N29 is still open in SolidWorks as an earlier Update SolidWorks left it, in error and holding the
     new values, so this press set nothing in it: close it in SolidWorks without saving (the file on disk is as before
-    that Update), then press Update SolidWorks again.*"""
+    that Update), then press Update SolidWorks again.* With ``assembly`` (the record's, holding the part): *… close it
+    and RangeBox in SolidWorks without saving, answering No when SolidWorks asks to save them (the files on disk are
+    as before that Update), then press Update SolidWorks again.*"""
     one = len(paths) == 1
-    return (f"{_and(_stem(p) for p in paths)} {'is' if one else 'are'} still open in SolidWorks as an earlier Update "
+    stems = [_stem(p) for p in paths]
+    return (f"{_and(stems)} {'is' if one else 'are'} still open in SolidWorks as an earlier Update "
             f"SolidWorks left {'it' if one else 'them'}, in error and holding the new values, so this press set "
-            f"nothing in {'it' if one else 'them'}: close {'it' if one else 'them'} in SolidWorks without saving (the "
-            f"{'file' if one else 'files'} on disk {'is' if one else 'are'} as before that Update), then press Update "
-            "SolidWorks again.")
+            f"nothing in {'it' if one else 'them'}: " + _close_unsaved(stems, 'it' if one else 'them', assembly, "that"))
 
 
 def _gearbox_update_status(update, result, dragged: Sequence[str] = (), *, meshes=None,
@@ -1973,10 +1992,11 @@ def _gearbox_update_status(update, result, dragged: Sequence[str] = (), *, meshe
             # it, saved beside it closed, would leave gears at their new values against it as it was. So every
             # document changed is closed without saving, and saving is never offered.
             one = len(list(dict.fromkeys(s.casefold() for s in changed_docs + in_error))) == 1
+            from .workbook.update import assembly_holding
             text += (f" It had already changed {_and(changed_docs)}, not saved, and {_and(in_error)} "
-                     f"{'is' if len(in_error) == 1 else 'are'} left in error: close {'it' if one else 'them all'} in "
-                     f"SolidWorks without saving (the {'file' if one else 'files'} on disk {'is' if one else 'are'} as "
-                     "before this Update), then press Update SolidWorks again.")
+                     f"{'is' if len(in_error) == 1 else 'are'} left in error: "
+                     + _close_unsaved(changed_docs + in_error, 'it' if one else 'them all',
+                                      assembly_holding(update, in_error), "this"))
         elif changed_docs:
             one = len(changed_docs) == 1
             text += (f" It had already changed {_and(changed_docs)}, not saved: press Update SolidWorks again once "
@@ -2401,7 +2421,8 @@ def _ready_parts(assessment, plan, folder: str, superseded: Sequence[str] = (), 
     return text, True
 
 
-def _unsaved_line(paths: Sequence[str], update_puts_back: bool = False, in_error: Sequence[str] = ()) -> str:
+def _unsaved_line(paths: Sequence[str], update_puts_back: bool = False, in_error: Sequence[str] = (),
+                  assembly: str = "") -> str:
     """The save asked for once, naming every document of the current revision Update changed and that is not
     saved: parts first, the assembly last, as Update changed them. Nothing here can know whether SolidWorks has
     them open still, so the sentence is true either way (second review N2): if SolidWorks closed them without
@@ -2417,9 +2438,8 @@ def _unsaved_line(paths: Sequence[str], update_puts_back: bool = False, in_error
         failed = [p for p in paths if any(same_path(p, e) for e in in_error)] or list(in_error)
         return (f"{_and(_stem(p) for p in paths)} {'has' if one else 'have'} changes from Update SolidWorks that are "
                 f"not saved, and {_and(_stem(p) for p in failed)} {'was' if len(failed) == 1 else 'were'} left in "
-                f"error when it stopped: close {'it' if one else 'them all'} in SolidWorks without saving (the "
-                f"{'file' if one else 'files'} on disk {'is' if one else 'are'} as before that Update), then press "
-                "Update SolidWorks again.")
+                "error when it stopped: " + _close_unsaved([_stem(p) for p in paths], 'it' if one else 'them all',
+                                                          assembly, "that"))
     then = (" press Update SolidWorks to make them again." if update_puts_back else " those changes are gone.")
     return (f"{_and(_stem(p) for p in paths)} {'has' if one else 'have'} changes from Update SolidWorks that are not "
             f"saved: save {them} in SolidWorks to keep {them}. If SolidWorks closed {them} without saving,{then}")
@@ -2637,7 +2657,10 @@ def workbook_footer(assessment, *, record=None, record_problem: str = "", plan=N
                 if said:
                     text, ok = f"{text} {said}", ok and said_ok
         if unsaved:
-            text += " " + _unsaved_line(unsaved, puts_back, getattr(record, "unsaved_in_error", ()) or ())
+            in_error = getattr(record, "unsaved_in_error", ()) or ()
+            from .workbook.update import assembly_holding
+            text += " " + _unsaved_line(unsaved, puts_back, in_error, assembly_holding(record, in_error) if in_error
+                                        else "")
         if subject and plan is not None and not plan.refusal:
             back = _held_back(plan, subject, after_unsaved_line=bool(unsaved))
             if back:

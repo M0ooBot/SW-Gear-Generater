@@ -765,6 +765,13 @@ record's problems by kind, so the second `unsettled` overwrites the first's subj
   `finish_update` drops its mark, so it is never called still in error; an empty or unread read keeps the mark. A stop
   beside a document still in error counts it as left in error where it words what was not saved, so it says to close
   them all without saving, never to save.
+- **Should-fix A of W9C-RUNS-REVIEW.md's addendum on the final runs: the assembly in the advice.** SolidWorks marks
+  the open assembly modified when a part of it is changed and rebuilt in its own window (run 11 on 34.0.0, before
+  step 2), and a part closed while its assembly stays open stays loaded with its changes. So wherever a part left in
+  error (or still in error) is a component of the record's assembly (`update.assembly_holding`: a gear's part, the
+  layout or a carrier), the stop's unsaved sentence, the footer's and the still-in-error sentence say *close it (them
+  all) and RangeBox in SolidWorks without saving, answering No when SolidWorks asks to save them (the files on disk are
+  as before this/that Update)*, the assembly not named twice when it is among the documents changed. Tk-side only.
 - **Known caveat, for after W9c: an unmarked part with an app feature in error, which the press leaves alone.** It
   is older behaviour, pinned by W9a's tests, and in no demonstrated path: the press writes into the assembly and fails
   there, on the assembly's rebuild, with a save offer. The later fix: where
