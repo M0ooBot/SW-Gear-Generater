@@ -1066,5 +1066,6 @@ def test_two_gates_unmeasured_refuse_as_two_problems_each_with_its_finding_as_it
         _update_train(fake, parts=[_p17(RELIEF_FEATURES)],
                       in_place=InPlace(added=(ADD_G5,), bands=(_bands_given(),)), **_with_g5())
     assert [(p.kind, p.subjects) for p in raised.value.problems] == [
-        (PROBLEM_UNSETTLED, ("UPDATE_INSERTS_A_GEAR_ON_2026",)), (PROBLEM_UNSETTLED, ("UPDATE_BANDS_IN_PLACE_ON_2026",))]
+        (PROBLEM_UNSETTLED, ("UPDATE_INSERTS_A_GEAR_ON_2026",)),
+        (PROBLEM_UNSETTLED, ("UPDATE_BANDS_IN_PLACE_ON_2026",))]
     assert _writes(fake) == []
