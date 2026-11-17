@@ -129,8 +129,29 @@ again and lightweight; `box` and `box-k3` are new and run on 2024 only by name.
 
 **SolidWorks 2024's confirming set** (`--sections confirm`) follows *Rules carried over*: one full turning build with
 its edits, plus the sections where the versions may differ. That is m3, setup, go, reducer, k3 and nocarrier. setup,
-go, reducer and nocarrier ran 0 failed in 36 min (`sw2024/w9a-confirm-sw2024-20261117-2-*.log`); m3 stopped at What's
-Wrong (Found on SolidWorks, item 4), so m3 and k3 wait on the user's decision, which `box` and `box-k3` inform.
+go, reducer and nocarrier ran 0 failed in 36 min (`sw2024/w9a-confirm-sw2024-20261117-2-*.log`). m3 stopped there at
+What's Wrong (Found on SolidWorks, item 4); under the coordinator's ruling below, m3 and k3 now run on 2024 with
+*the What's Wrong rule*:
+
+- **The rule.** The script reads `swbuild.whats_wrong_shows_in_update(revision)` by `getattr` once a session, and the
+  log's `rule` line says which rule is in force. Where it is True (2024), a #32770 box titled "What's Wrong" owned by
+  SolidWorks' frame, during an Update or a Build of the app's, is logged as a fact: when it came, the call in
+  progress, when it went. The job is waited for as usual. At the job's end the box must be gone (2 s allowed for one
+  closing as the job returns) and SolidWorks' frame enabled; a box still up, a frame disabled, or a What's Wrong the
+  watch never read as owned by the frame is the STOP. Where the helper is False, None or missing, What's Wrong during
+  a job stays a STOP, as any dialog. Every other window is judged as before. W8's watch is kept from calling the box
+  its own STOP by a wrapper on the set of boxes it treats as known (its file is not changed).
+- **Where the box is expected.** After m3's two Updates and k3's, where
+  `WHATS_WRONG_OPENS_IN_UPDATE_WITH_USER_MATE_IN_ERROR_ON_<year>` or `…_WITH_PART_FEATURE_IN_ERROR_ON_<year>` is True
+  and the rule is in force, the section asserts that What's Wrong showed and went by itself: a fact a user will see,
+  so the 2024 logs say it plainly, not a failure of the app. Elsewhere what the watch saw is said.
+- **The gate.** m3's and k3's judgement of whether an Update goes ahead follows the app's own gate,
+  `swbuild.assembly_rebuild_settled(revision)`, as it stands, so it stays right as the gate changes; the check that
+  the three findings it names exist is kept.
+- **The waits.** Every Update and Build is waited for 2400 s (`Desk9.update_solidworks`, `Desk9.build`). 2024's
+  longest was go's value Update at 351 s, and `box`'s Update with modes took 306 s. The other jobs: read every mode
+  1200 s, the user's work 900 s, a save 600 s, the user's turn 600 s, an explicit assembly rebuild 300 s (m3's on
+  2024 took well under a minute), any other job 900 s.
 
 - `setup` and `go` are the build with its edits.
 - `m3` and `k3` are rebuilds that can raise a dialog there.
@@ -139,7 +160,8 @@ Wrong (Found on SolidWorks, item 4), so m3 and k3 wait on the user's decision, w
   2024 by name (about 40 min); whether to run it there is the user's call. So does `lightweight` (about 14 min);
   2024 is the version said to open components lightweight, so it is the cheap one to add. The plan's *Done when*
   ("2024 confirms the assembly sections") reads broader than the rule, and the note follows the rule.
-- Run it as two fresh sessions: `m3,setup,go`, then `reducer,k3,nocarrier`.
+- setup, go, reducer and nocarrier have run (above). What remains is m3 in one fresh session and reducer,k3 in another
+  (the command lines below).
 
 ## Command lines
 
@@ -282,9 +304,32 @@ components.
    What's Wrong during rebuild", FeatureXpert, Close, Help) while the worker was in `GetNextSubFeature`
    (`probe/results/sw2024/w9a-confirm-sw2024-20261117-1-m3-stopped-by-whats-wrong.log`, lines 37, 53, 88-91). 2026
    opened nothing in the same Updates. The watch stopped on sight, so which call raised it, whether it is modal and
-   what had been written are not known: `box` and `box-k3` below measure them.
+   what had been written are not known: `box` and `box-k3` below measured them, and the coordinator ruled on them.
 
 ## `box` and `box-k3`: SolidWorks 2024's What's Wrong box, measured
+
+**What they read** on SolidWorks 2024 (32.5.0) at `b985cab`, each in a fresh session, "show errors every rebuild" on
+(`probe/results/sw2024/w9a-box-sw2024-20261117-1-box.log` line 39):
+
+| | `box` (two user mates in error, value Update with modes) | `box-k3` (the Update rebuilds the user's keyway into error, no modes) |
+|---|---|---|
+| the box came | 97.45 s into the press, the worker in `ActivateDoc3` (box:103) | 17.57 s in, in `ActivateDoc3` (k3:597) |
+| what it is | a #32770 popup owned by SolidWorks' frame, not topmost; the frame enabled (box:103) | the same (k3:597) |
+| a read with it up | the open documents on a second connection, answered in 0.5 s (box:104) | the same, 0.5 s (k3:598) |
+| it went | by itself at 120.08 s, last seen 119.57 s, the worker then in `ShowConfiguration2` (box:110) | by itself at 22.59 s (k3:603) |
+| the job | returned at 306.49 s, `ok` True (box:141); the calls grew after the box came and after it went (box:142) | returned at 22.59 s, stopped as failed, the findings being None then; its sentence names the keyway as the user's, newly in error, with the cell to retype (k3:612) |
+| after it | the app's bodies 6.6e-10 from their frames on record, the user's components not moved, the user's mates as before (box:145) | the app's bodies at their frames, nothing of the user's moved (k3:616) |
+| written | Sun's Backlash 0.4, Sun's part and the assembly marked (box:143) | G1's Bore 14, G1's part marked (k3:614) |
+
+(box: `probe/results/sw2024/w9a-box-sw2024-20261117-1-box.log`; k3: `probe/results/sw2024/w9a-box-sw2024-20261117-2-reducer-box-k3.log`.) Nothing closed the box; no frame title is in either log.
+
+**The coordinator's ruling.** On SolidWorks 2024 the box is left alone: the app changes no setting and does not
+refuse for it. It opens during the app's Update when the user's work is in error, blocks nothing, and goes by itself.
+Package A sets the findings (`WHATS_WRONG_IN_UPDATE_BLOCKS_ON_<year>` False on both versions;
+`WHATS_WRONG_OPENS_IN_UPDATE_WITH_USER_MATE_IN_ERROR_ON_<year>` and `…_WITH_PART_FEATURE_IN_ERROR_ON_<year>` True on
+2024, False on 2026; `ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_2024` and
+`WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_2024` False) and the helper `swbuild.whats_wrong_shows_in_update`. The
+confirming m3 and k3 run under *the What's Wrong rule* above.
 
 Two sections, run by name only (never in `all` or `confirm`), so the user decides on facts what the app does on 2024
 (W9A-CLOSE-2026-REVIEW, *The 2024 fact and the options*). Neither sets a SolidWorks setting, answers a box, or closes
@@ -335,8 +380,23 @@ during a configuration call is its FAIL and STOP); what it logged during the pre
 job does not return in the wait, the worker is left alone and the section says so. With no box, the section ends as any
 copy section does.
 
-**Command lines, SolidWorks 2024.** Each in a fresh session, as the last thing asked of it; `RUN` holds `snap\` and
-`out\`.
+**Command lines, SolidWorks 2024: the confirming m3 and k3** under the What's Wrong rule, each in a fresh session,
+with `RUN\snap` archived at a commit holding package A's 2024 findings and helper:
+
+```
+python.exe RUN\snap\probe\w9a_demonstration.py RUN\snap\src RUN\out --pid PID --log RUN\w9a-confirm-sw2024-3-m3.log ^
+    --sections m3 ^
+    --master C:\Users\M0obo\Documents\GearGeneratorProbe\w9-s0-sw2024-20261116-064725\out\rangebox.master
+
+python.exe RUN\snap\probe\w9a_demonstration.py RUN\snap\src RUN\out --pid PID2 --log RUN\w9a-confirm-sw2024-4-reducer-k3.log ^
+    --sections reducer,k3
+```
+
+In a `RUN\out` that already holds `reducer.master`, `reducer` is skipped and the master used. `--redo` runs every named
+section again, `reducer` included, so add it only when that is wanted.
+
+**Command lines, SolidWorks 2024: `box` and `box-k3`.** Each in a fresh session, as the last thing asked of it; `RUN`
+holds `snap\` and `out\`.
 
 ```
 rem box: first, alone in a fresh session
