@@ -5,64 +5,57 @@ Build again… as the Workbook window runs them. The sections, their order and t
 
 python.exe probe/w9a_demonstration.py <repo src> <output folder under C:\> --pid PID [--log FILE]
                                       [--sections m3,setup,go,...|all|confirm] [--master DIR]
-                                      [--user-master DIR] [--reducer-master DIR]
+                                      [--user-master DIR] [--reducer-master DIR] [--redo]
 
 ``--master``: S0's kept ``rangebox.master`` for this SolidWorks version (``probe/w9_user_work_check.py`` built it);
 without it a section that needs RangeBox builds it here first through S0's own ``build_master``.
-``--user-master``: a ``setup.master`` an earlier run of this script kept (RangeBox with the user's work, its record
-holding the inventory); without it, and with none in this run's folder, the section that needs it runs ``setup``
-first. ``--reducer-master``: a ``reducer.master`` (the 12 : 1 built to turn) an earlier run kept; likewise.
+``--user-master``: a ``setup.master`` an earlier run kept (RangeBox with the user's work, its record holding the
+inventory); without it, and with none in this <out>, the section that needs it runs ``setup`` first.
+``--reducer-master``: a ``reducer.master`` (the 12 : 1 built to turn) an earlier run kept; likewise.
+A section this <out> already holds (its folder, or a builder's master) is skipped, so a run can be resumed into the
+same <out>; ``--redo`` sets the earlier folder aside (``<name>.prev-<time>``) and runs it again.
 
 It imports ``probe/workbook_assembly_check.py`` (W8's demonstration: the attach, the dialog watch, the log, Excel, the
-fixtures written and built through the app's own Build, ``keep_master`` / ``copy_built`` / ``end_copy``, the drive
-and the user's turn) and ``probe/w9_user_work_check.py`` (S0: the user's parts, the relative pose, the window list,
-the request to stay awake). Nothing in either is changed. The Workbook window's own W9a path (``_plan_solidworks_pass``
-with ``classify(..., read_sidecar=...)``, ``press_update`` with the session's revision and ``_record_refusal``,
-``_start_build`` with ``before=`` and ``_finish_build`` with the stayed-behind sentence) is played by ``Desk9``, W8's
-``Desk`` with those calls as the window now makes them; every Update and Build is the app's own
-``swbuild.update_gearbox`` / ``build_gearbox``, never a re-implementation.
+fixtures written and built through the app's own Build, ``keep_master`` / ``copy_built`` / ``end_copy``, the drive,
+the user's turn and the call trace) and ``probe/w9_user_work_check.py`` (S0: the user's parts, the relative pose, the
+window list, the request to stay awake). Nothing in either is changed. ``Desk9`` carries the Workbook window's own
+code: its ``_plan_solidworks_pass``, ``_open_record``, ``_write``, ``_finish_update``, ``_finish_build``,
+``_record_refusal`` and ``_mark_not_as_built`` are the functions of ``WorkbookWindow`` themselves, run on Desk9;
+only ``press_update``'s job (the session's revision, then ``update_gearbox``) and ``_start_build``'s (``old_assembly``
+as ``before``) are restated, and every press first asserts the footer offers it. The app's Recent list (APPDATA) is
+pointed into <out> before anything of the app is imported, and checked.
 
 Sections (each runs alone by name; each copy section starts from a kept master and ends with its copy closed):
 
-- ``m3``      ISSUE-1-PLAN §4 M3, first, under the dialog watch: a copy of RangeBox with a user sprocket and housing; an
-              assembly rebuild with a user mate in error, and the app's value Update with it; then a user feature in
-              error (in the user's own part) and the same. Any window is a STOP.
-- ``setup``   RangeBox with the user's work (Sprocket-1 on Input Axis locked to Sun, Sprocket-2 on Output Axis locked
-              to RangeSlv, Sprocket-3 locked to Sprocket-1, Sprocket-4 on Input Axis held by a distance to Sprocket-3
-              and an angle to the layout, Housing-1 fixed, a keyway in Sun's part), saved in place as a person would;
-              closed and reopened; M1's and M2's reads by the app's own calls with GetSaveFlag around them; a quiet
-              Update that records the inventory (the footer before and after); the pure judgement shown refusing the
-              branches not measured; kept as ``setup.master``.
-- ``m1``      a copy of setup.master: a user gear mate and a distance mate suppressed in the active mode but on in the
-              others, read by ``mate_info`` and by a quiet Update's inventory.
-- ``go``      a copy of setup.master: the user's turn in H, a value Update (Sun's Backlash) and, after a turn in L, a
-              slide-offset Update (RangeSlv L=+5.5): before each, the footer's prediction; after, every mode shown:
-              each app body at its frame on record, each locked sprocket at its pose on its gear, every user mate on
-              in the modes it was on in and in no error, the keyway rebuilt, the record's inventory and revision; the
-              prediction against what the press did.
-- ``refuse``  a copy of setup.master: Sprocket-1 lightweight (refused, foreseen), a lock to the fixed Housing-1
-              (refused naming it, foreseen, then green once the workbook changes), the solver's tie, two app bodies
-              locked together, a Bore Diameter typed in SolidWorks (refused naming the cell), and all at once; each
-              press checked to have written nothing.
-- ``again``, ``again-dirty``, ``again-closed``  a copy of setup.master, Sun's Part name changed so Build again…:
-              the question names what stays behind with its time; the build job's read of the old assembly open (and,
-              in ``again-dirty``, open and needing a rebuild): its save flag, active configuration, rebuild state,
-              mates' flags and codes and components' frames before and after, and no dialog (a change is a STOP of
-              the section); once more with it closed.
-- ``reducer`` the 12 : 1 written by the app's write_new and built to turn, kept as ``reducer.master``.
-- ``nocarrier`` a copy of reducer.master: the no-carrier branch of route (c1), the coordinator's measurement. Sprockets
-              locked to G1 (driving), to G4 (driven) and one to the other (a chain); the user's turn; G4 At 27 -> 30:
-              the app's default refusal with ``findings.USER_MATE_PUT_NO_CARRIER_ON_<year>`` None (foreseen by the
-              footer), then the finding patched True in this process only, the press, the reads; a further rebuild;
-              a second turn and G4 At 30 -> 27; proposed from what was read.
+- ``m3``      M3, first, under the dialog watch: a user mate in error, then a user feature in error in the user's own
+              part; the app's assembly rebuild and its value Update with each. Any window is a STOP of the run.
+- ``setup``   RangeBox with the user's work, saved in place, reopened; M1 and M2 by the app's own reads; a quiet Update
+              records the inventory (the keyway listed: M2); the unmeasured branches shown refusing (pure); kept as
+              ``setup.master``.
+- ``m1``      a user gear mate, and a mate suppressed in the active mode but on in the others.
+- ``go``      a value Update and a slide-offset Update after the user's turns: the carry foreseen and done, every put an
+              app body or a locked sprocket, every user mate's flags, codes and entities as before, the keyway rebuilt.
+- ``refuse``  each refusal step under its own net: the lock to the fixed housing (foreseen; then, the workbook changed,
+              "has changed since" and the same refusal foreseen), a mate of another kind on Sun, the solver's tie,
+              two app bodies, the Bore typed in SolidWorks, all at once, and last a lightweight carried sprocket; each
+              judged by its traced calls and reads.
+- ``again``, ``again-dirty``, ``again-closed``  Build again…: the old assembly open behind another document (and,
+              dirty, needing a rebuild): the app's ``read_old_assembly`` run alone, then the build; its front-document
+              state, save flag, rebuild state, configuration, mates and frames before and after (a change ends the
+              section only); once more with it closed.
+- ``reducer`` the 12 : 1, kept as ``reducer.master``.
+- ``k3``      K3 and M3 in an app part: a user keyway in G1's part, G1's Bore 8 -> 14 in the workbook, the Update
+              rebuilding the keyway into error; a window ends this section only.
+- ``nocarrier`` the no-carrier branch of route (c1) measured, its finding patched for the measurement only; proposed.
 
-``--sections confirm`` is SolidWorks 2024's confirming set: m3, setup, go, refuse, reducer, nocarrier.
+``--sections confirm`` is SolidWorks 2024's confirming set: m3, setup, go, reducer, k3, nocarrier (``refuse`` by name).
 
 Robustness (as S0's at d086705): Windows is asked to keep the display and system awake; the JSON is written after
 every section and first in the ``finally``; any exception around the close is caught; the head logs SolidWorks'
 revision and the snapshot; a document of the user's is ``<user document N>`` (W8's ``open_titles``). A STOP of the
-plan's §0.3 or §4 ends the run; a change to the old assembly in an ``again`` section ends that section only (the
-coordinator's ruling, W9A-REVIEW-B). Under 2 GB of free memory, on any version, the run stops before the next section.
+plan's §0.3 or §4 (a dialog, a read marking a document, a stray put) ends the run; a change to the old assembly in an
+again section and a window in k3 end their section only; any other raise of the script's own fails its section.
+Under 2 GB of free memory, on any version, the run stops before the next section.
 """
 
 import copy as _copy
@@ -77,17 +70,24 @@ import traceback
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
+# Before anything of the app is imported or called: the app's own settings and Recent list (``store.recent_path``,
+# the one file the app keeps outside a gearbox's folder) go into this run's output folder, never the user's
+# (the coordinator's ruling 2 on the review; ``workbook_window_check.py`` does the same).
+APPDATA_HERE = os.path.join(os.path.abspath(sys.argv[2]), "appdata") if len(sys.argv) > 2 else ""
+if APPDATA_HERE:
+    os.makedirs(APPDATA_HERE, exist_ok=True)
+    os.environ["APPDATA"] = APPDATA_HERE
+
 import workbook_assembly_check as W  # noqa: E402  (parses <src> <out> --pid PID [--log FILE])
 import w9_user_work_check as S0  # noqa: E402  (its own options are absent here and so at their defaults)
 
 from gear_generator import findings, store, swbuild, swcom, ui_text  # noqa: E402
 from gear_generator.gears import spur  # noqa: E402
 from gear_generator.swcom import call  # noqa: E402
-from gear_generator.workbook import gearbox as wb_gearbox  # noqa: E402
 from gear_generator.workbook import layout as wb_layout  # noqa: E402
 from gear_generator.workbook import link as wb_link  # noqa: E402
 from gear_generator.workbook import update as wb_update  # noqa: E402
-from gear_generator.workbook_gui import _had_assembly, _update_gate  # noqa: E402  (the window's own helpers)
+from gear_generator import workbook_gui  # noqa: E402  (the window's own code, called on Desk9)
 
 say, check, note = W.say, W.check, W.note
 OUT, PID = W.OUT, W.PID
@@ -98,12 +98,16 @@ def _arg(name):
     return ARGS[ARGS.index(name) + 1] if name in ARGS else ""
 
 
-ORDER = ["m3", "setup", "m1", "go", "refuse", "again", "again-dirty", "again-closed", "reducer", "nocarrier"]
-CONFIRM = ["m3", "setup", "go", "refuse", "reducer", "nocarrier"]
+ORDER = ["m3", "setup", "m1", "go", "refuse", "again", "again-dirty", "again-closed", "reducer", "k3", "nocarrier"]
+# SolidWorks 2024's confirming set (HANDOFF, Rules carried over; the coordinator's ruling 4): the turning build with its
+# edits (setup, go), the rebuilds that can raise a dialog there (m3, k3), and the user-lock put (reducer, nocarrier).
+# refuse runs on 2024 by name.
+CONFIRM = ["m3", "setup", "go", "reducer", "k3", "nocarrier"]
 _given = _arg("--sections")
 CHOSEN = (ORDER if _given in ("", "all") else CONFIRM if _given == "confirm"
           else [s.strip() for s in _given.split(",") if s.strip()])
 MASTER = {"rangebox": _arg("--master"), "setup": _arg("--user-master"), "reducer": _arg("--reducer-master")}
+REDO = "--redo" in ARGS     # a section whose folder this <out> already holds is run again (its folder set aside)
 
 TOL = 1e-6                 # rotation entries and origin coordinates (mm), as S0
 SAME = 1e-9                # a read twice of what nothing moved
@@ -129,7 +133,12 @@ class DemoStop(Exception):
 
 
 class SectionStop(Exception):
-    """A STOP that ends its section only (a change to the old assembly during a Build again…, W9A-REVIEW-B)."""
+    """A STOP that ends its section only, never the run: a change to the old assembly in an again section, a window
+    in k3 (the coordinator's rulings 1 and 3 on the review)."""
+
+
+RUN_ENDERS = (DemoStop, W.WorkerHung, swcom.NotRunning, W.Stopped, W.Halt)   # what one section may not swallow
+SEEN = {"notes": 0}          # W8's watch notes already judged: a section-only window is not judged again by the run
 
 
 def stop(what):
@@ -139,15 +148,23 @@ def stop(what):
 
 
 def section_stop(what):
-    W.stop_check(False, what)
+    """A failed check and the JSON's stops, never ``W.STOPS`` (which ends the run at the next watch_check)."""
+    check(False, f"STOP (this section only): {what}")
     RESULT["stops"].append(f"(section) {what}")
     raise SectionStop(what)
+
+
+def watch_windows():
+    """The windows W8's watch logged since the last judgement (a #32770 or a titled window outside a progress box)."""
+    windows = [n for n in W.NOTES[SEEN["notes"]:] if n.startswith("a SolidWorks window")]
+    SEEN["notes"] = len(W.NOTES)
+    return windows
 
 
 def watch_check(where):
     """Plan §0.3, any dialog: a window W8's watch logged, or a STOP its helpers raised, ends the run. SolidWorks'
     notification box and its balloon tips are not dialogs (the coordinator's ruling)."""
-    windows = [n for n in W.NOTES if n.startswith("a SolidWorks window")]
+    windows = watch_windows()
     if windows or W.STOPS:
         stop(f"{where}: {windows or W.STOPS}")
 
@@ -182,148 +199,137 @@ def fmt(gaps):
 # -- the Workbook window's W9a path, without Tk ---------------------------------------------------------------------
 
 
+_WINDOW = workbook_gui.WorkbookWindow
+
+
 class Desk9(W.Desk):
-    """W8's Desk with the calls the Workbook window makes since W9a (``workbook_gui``): ``classify`` given the
-    sidecar reader; Update with the session's revision for the record, a ``UserWorkRefused`` kept in the record
-    (``_record_refusal``); a Build again… that reads the old assembly first (``before=``) and says what stayed behind."""
+    """W8's Desk carrying the Workbook window's OWN code (the coordinator's ruling 2 on the review): the window's
+    ``_plan_solidworks_pass``, ``_settled``, ``_strip``, ``_open_record``, ``_write``, ``_finish_update``,
+    ``_finish_build``, ``_record_refusal`` and ``_mark_not_as_built`` are its methods here, the functions themselves
+    taken from ``WorkbookWindow``, run on this stand-in, which has what they read (``link``, ``state``, ``app``,
+    ``recalc``, ``record``, ``update_plan``…). Copied are only ``press_update``'s two-line job (the session's revision
+    taken in it, then ``update_gearbox``) and ``_start_build``'s three (``old_assembly`` as ``before``), with
+    ``_collect_job``'s dispatch of a raise; the footer gate is asserted before every press, as ``press_update`` makes
+    it. The app's Recent list is written into this run's folder (APPDATA, set before any import)."""
+
+    _plan_solidworks_pass = _WINDOW._plan_solidworks_pass
+    _settled = _WINDOW._settled
+    _strip = _WINDOW._strip
+    _open_record = _WINDOW._open_record
+    _write = _WINDOW._write
+    _finish_update = _WINDOW._finish_update
+    _finish_build = _WINDOW._finish_build
+    _record_refusal = _WINDOW._record_refusal
+    _mark_not_as_built = _WINDOW._mark_not_as_built
 
     def __init__(self, path, worker, strip=""):
+        self.update_plan = None
+        self.plan_trouble = ""
+        self.recalc = False
+        # The strip as the window reads it: its Recent list (in this run's APPDATA), no templates set.
+        self.app = type("Strip", (), {"recent": store.load_recent()})()
         super().__init__(path, worker, strip)
         self.revision = ()
         self.before = None
 
+    # W8's Desk says ``update`` and ``a`` where the window says ``update_plan`` and ``state``.
+    @property
+    def update(self):
+        return self.update_plan
+
+    @update.setter
+    def update(self, value):
+        self.update_plan = value
+
+    @property
+    def state(self):
+        return self.a
+
+    def after(self, _ms, _fn, *args):
+        """The window's ``after``: called by its planning only for a record whose workbook is gone, never here."""
+        check(False, f"the window's planning asked whether this workbook was moved ({args}): a copy's record must be "
+                     "its own")
+
     def plan_solidworks(self):
-        """``WorkbookWindow._plan_solidworks_pass`` inside ``store.one_pass()``; the record is this workbook's."""
+        """``WorkbookWindow._plan_solidworks`` itself: its pass inside ``store.one_pass()``."""
         with store.one_pass():
-            newer = False
-            try:
-                record, problem = store.read_link_record(self.path), ""
-            except store.UnknownSchema as exc:
-                record, problem, newer = None, str(exc), True
-            except store.StoreError as exc:
-                record, problem = None, str(exc)
-            if record is not None:
-                store.clear_saved(record)
-            self.record, self.record_problem = record, problem
-            self.plan = self.update = None
-            a = self.a
-            if a is None or newer:
-                return
-            gearbox = record.gearbox if record is not None else None
-            has_assembly = gearbox is not None and bool(gearbox.assembly)
-            parts_only = not has_assembly and bool(a.parts.refused or a.turned_refusal())
-            gate = a.build_refusal() if parts_only else a.lay_out_refusal()
-            if not gate:
-                self.plan = wb_gearbox.plan_gearbox(a, record, parts_only=parts_only)
-            if record is not None and (record.parts or gearbox is not None) and not _update_gate(a, record):
-                self.update = wb_update.classify(record, a, read_sidecar=store.read_sidecar)
+            self._plan_solidworks_pass()
+        if self.plan_trouble:
+            check(False, f"the window's planning raised: {self.plan_trouble}")
+
+    def _note(self, note):
+        """The window's Note kept as W8's Desk keeps it, ``(text, ok)``."""
+        self.note = (note.text, note.ok)
+        say(f"status  [{'green' if note.ok else 'red'}] {note.text}")
 
     def update_solidworks(self):
-        """``press_update`` (the session's revision taken in the job, as ``Job.revision``) and ``_collect_job``:
-        ``_finish_update`` with that revision, or ``job_failed`` and, for a refusal over the user's work,
-        ``_record_refusal``."""
-        update = self.update
-        steps, held = [], {"revision": ()}
+        """``press_update``'s job (the session's revision taken in it), then ``_collect_job``: the window's own
+        ``_finish_update``, or ``job_failed`` and, for a refusal over the user's work, its own ``_record_refusal``
+        (``_mark_not_as_built`` for a part not as built)."""
+        update = self.update_plan
+        if update is None:
+            raise AssertionError("Update SolidWorks pressed with nothing to update (the window would not offer it)")
+        job = workbook_gui.Job(workbook_gui.JOB_UPDATE, self.reading.digest, update=update, record=self.record)
         kwargs = update.update_kwargs()
+        steps = []
 
         def work(s):
-            held["revision"] = tuple(getattr(s, "revision", ()) or ())
+            job.revision = tuple(getattr(s, "revision", ()) or ())
             return swbuild.update_gearbox(s, **kwargs, progress=steps.append)
         started = time.monotonic()
         say(f"update  {W.memory()}")
         result, self.error = W.wait_job(self.worker.submit(work), 2400, "Update SolidWorks")
-        self.revision = held["revision"]
+        self.revision = job.revision
         seconds = time.monotonic() - started
         if self.error is not None:
             say(f"        raised {type(self.error).__name__} in {seconds:.1f} s: {self.error}")
-            self.note = (ui_text.job_failed(self.error, True), False)
-            say(f"status  [red] {self.note[0]}")
-            if isinstance(self.error, swbuild.UserWorkRefused):
-                self._record_refusal(update, self.error)
+            self._note(ui_text.Note(ui_text.job_failed(self.error, True), False))
+            if isinstance(self.error, swbuild.NotAsBuilt):
+                self._mark_not_as_built(self.error)
+            elif isinstance(self.error, swbuild.UserWorkRefused):
+                self._record_refusal(job, self.error)
+                say("record  the window's _record_refusal ran")
             self.plan_solidworks()
             return update, None, None
         self.positions_per_configuration = getattr(result, "positions_per_configuration", None)
-        for line in result.log_lines():
-            say("        " + line)
         say(f"        in {seconds:.1f} s; {W.memory()}; loaded from disk {[os.path.basename(p) for p in result.opened]}")
         say(f"        W9a: carried {result.carried}; renamed {result.renamed}; user in error {result.user_in_error}; "
             f"user features in error {[(f.name, os.path.basename(f.path), f.code) for f in result.user_features_in_error]}"
-            f"; inventory read {'yes' if result.user_work is not None else 'no'}")
+            f"; inventory read {'yes' if result.user_work is not None else 'no'}; failures {result.failures}")
         wrong = list(getattr(result, "sense_found_wrong", []) or [])
         check(not wrong, f"the Update's check phase found no gear mate turning against its mesh: {wrong}")
-        record, may_write, notes = self._open_record()
-        base = record if record is not None else self.record
-        finished = wb_update.finish_update(update, result, base, digest=self.reading.digest, workbook=self.path,
-                                           revision=self.revision)
-        gearbox = self.record.gearbox if self.record is not None else None
-        text, ok = ui_text.gearbox_update_status(update, result, finished.dragged,
-                                                 meshes=gearbox.meshes if gearbox is not None else None,
-                                                 finished=finished)
-        faults = self._write(finished, may_write)
-        if not may_write:
-            faults, notes = notes + faults, []
-        self.note = (" ".join([text] + notes + faults), ok and not faults)
-        say(f"status  [{'green' if self.note[1] else 'red'}] {self.note[0]}")
+        self._note(self._finish_update(job, result))
         self.plan_solidworks()
-        return update, result, finished
-
-    def _record_refusal(self, update, error):
-        """``WorkbookWindow._record_refusal``: the record keeps what the refused press read and every problem said."""
-        try:
-            record = store.open_link_record(self.path)
-        except (store.StoreError, OSError) as exc:
-            say(f"record  the refusal not kept: {exc}")
-            return
-        if record is None:
-            return
-        try:
-            refused = wb_update.refused_update(record, update, error, digest=self.reading.digest,
-                                               revision=self.revision)
-            if refused.gearbox is not None and refused.gearbox.user_work != getattr(record.gearbox, "user_work", None):
-                store.save_link_record(refused, store.link_record_path(self.path))
-                say(f"record  the refusal kept with the inventory read ({len(error.problems)} problem(s))")
-        except (store.StoreError, OSError) as exc:
-            say(f"record  the refusal not kept: {exc}")
+        return update, result, None
 
     def build(self, plan=None):
-        """``_start_build`` (the old assembly given as ``before`` for a Build again…, its journal first) and
-        ``_finish_build`` with the stayed-behind sentence."""
+        """``_start_build``'s job (``old_assembly`` given as ``before`` for a Build again…, its journal first), then the
+        window's own ``_finish_build``."""
         plan = plan or self.plan
-        before_record = self.record
-        steps = self.steps = []
+        job = workbook_gui.Job(workbook_gui.JOB_BUILD, self.reading.digest, plan=plan, record=self.record)
         kwargs = plan.build_kwargs()
-        self.before = wb_update.old_assembly(self.record, plan)
-        if self.before is not None:
-            kwargs["before"] = self.before
-        say(f"journal {'written' if self.write_journal(plan) else 'NOT written'}; the old assembly read first: "
-            f"{os.path.basename(self.before.path) if self.before is not None else 'none'}")
+        job.before = self.before = wb_update.old_assembly(self.record, plan)
+        if job.before is not None:
+            kwargs["before"] = job.before
+        job.journaled = self.write_journal(plan)
+        steps = self.steps = []
+        say(f"journal {'written' if job.journaled else 'NOT written'}; the old assembly read first: "
+            f"{os.path.basename(job.before.path) if job.before is not None else 'none'}")
         started = time.monotonic()
         result, self.error = W.wait_job(self.worker.submit(
             lambda s: swbuild.build_gearbox(s, **kwargs, progress=steps.append)), 2400, "the build")
         if self.error is not None:
             say(f"        raised {type(self.error).__name__}: {self.error}")
-            self.note = (ui_text.job_failed(self.error, False), False)
-            say(f"status  [red] {self.note[0]}")
+            self._note(ui_text.Note(ui_text.job_failed(self.error, False), False))
             self.plan_solidworks()
             return plan, None
+        self.positions_per_configuration = getattr(result, "positions_per_configuration", None)
         for line in result.log_lines():
             say("        " + line)
         work = getattr(result, "old_user_work", None)
         say(f"        in {time.monotonic() - started:.1f} s; {W.memory()}; old read {getattr(result, 'old_read', '')!r}; "
             f"old user work {None if work is None else ([c.name for c in work.components], [m.name for m in work.mates])}")
-        text, ok = ui_text.gearbox_status(plan, result, again=_had_assembly(before_record))
-        if self.before is not None:
-            behind = ui_text.stayed_behind_status(wb_update.stays_behind(before_record, plan), result, plan)
-            if behind:
-                text = f"{text} {behind}"
-        record, may_write, notes = self._open_record()
-        finished = wb_gearbox.finish_build(plan, result, record, workbook=self.path, digest=self.reading.digest,
-                                           written_by=W.WRITTEN_BY)
-        faults = self._write(finished, may_write)
-        if not may_write:
-            faults, notes = notes + faults, []
-        self.note = (" ".join([text] + notes + faults), ok and not faults)
-        say(f"status  [{'green' if self.note[1] else 'red'}] {self.note[0]}")
+        self._note(self._finish_build(job, result))
         self.plan_solidworks()
         return plan, result
 
@@ -337,7 +343,8 @@ def ahead_of(desk, label):
     if ahead is not None:
         say(f"        predicted: carried {[(g, list(h)) for g, h in ahead.carried]}; problems "
             f"{[(p.kind, list(p.mates)) for p in ahead.problems]}; refused (recorded) "
-            f"{[(p.kind, list(p.mates)) for p in ahead.refused]}; unread ties {list(ahead.unread_ties)}")
+            f"{[(p.kind, list(p.mates)) for p in ahead.refused]}; changed since {ahead.changed_since}; unread ties "
+            f"{list(ahead.unread_ties)}")
     if line and desk.note is None:
         check(line in f.text, f"{label}: the footer says the user-work line as the window would: {line[:80]!r}…")
     return ahead
@@ -348,52 +355,64 @@ def predicted_carry(ahead):
 
 
 def press(desk, label):
-    """Update SolidWorks pressed (W8's traced press, through Desk9): the result, or None and ``desk.error``."""
-    result, _, seconds = W.w8_update(CTX["worker"], desk, label)
+    """Update SolidWorks pressed as the window would: the footer must offer it (``update_shown`` and
+    ``update_enabled``, ``press_update``'s gate) and it must be an Update, not Build again…; then W8's traced press
+    through Desk9. Returns (the result, or None and ``desk.error``; the traced calls)."""
+    f = desk.footer()
+    offered = f.update_shown and f.update_enabled and desk.update is not None and not desk.update.needs_new_revision
+    check(offered, f"{label}: the footer offers Update SolidWorks (shown {f.update_shown}, enabled {f.update_enabled}, "
+                   f"Build again… needed {desk.update is not None and desk.update.needs_new_revision})")
+    if not offered:
+        raise AssertionError(f"{label}: the window would not run this press")
+    result, calls, seconds = W.w8_update(CTX["worker"], desk, label)
     say(f"fact    {label}: the press took {seconds:.0f} s")
-    return result
+    return result, calls
 
 
 # -- reads ---------------------------------------------------------------------------------------------------------
 
 
 def use_open(s, path):
-    """The document made the build document WITHOUT opening or activating it (package B's ``use_open_document``
-    when the source has it; else the same: found in SolidWorks' list, kept as the build document)."""
-    if hasattr(s, "use_open_document"):
-        return s.use_open_document(path)
-    for doc in W.documents(s._app):  # noqa: SLF001
-        if store.same_path(str(call(doc, "GetPathName") or ""), path):
-            s._build_doc = doc  # noqa: SLF001
-            s._raise_epoch()  # noqa: SLF001
-            return True
-    return None
+    """The document made the build document WITHOUT opening or activating it: the app's own
+    ``Session.use_open_document`` (package B)."""
+    return s.use_open_document(path)
 
 
-def read_now(label, asm, folder, pairs, modes, *, activate=True):
-    """In the active configuration, nothing shown or rebuilt: each body's frame and GetConstrainedStatus, every mate's
-    code and flag in every mode, the documents' GetSaveFlag before and after (a read marking one is a STOP, §0.3).
-    ``activate`` False: the assembly is read where it stands without being opened or activated (the old assembly)."""
+def read_now(label, asm, folder, pairs, modes, *, activate=True, entities=()):
+    """In the active configuration, nothing shown or rebuilt: each body's frame and GetConstrainedStatus (a user's
+    component found with ``lightweight_ok``, so one the user set lightweight is still read), every mate's code and flag
+    in every mode, each of ``entities``' mates' entities (``Session.mate_info``: §0.3 compares every user item's
+    entities before and after), the active document, the documents' GetSaveFlag before and after (a read marking one
+    is a STOP, §0.3). ``activate`` False: the assembly is read where it stands without being opened or activated
+    (the old assembly, through the app's ``use_open_document``)."""
     def work(s):
+        active_doc = s.active_document()
         if not activate:
             if use_open(s, asm) is None:
                 raise swcom.SolidWorksError(f"{os.path.basename(asm)} is not open")
         out = {"flags_before": W.folder_flags(s, folder), "active": s.active_configuration(), "frames": {},
-               "status": {}, "mates": {}, "by_mode": {}}
+               "status": {}, "mates": {}, "by_mode": {}, "entities": {},
+               "active_doc": os.path.basename(active_doc.path or active_doc.title) if active_doc else ""}
         try:            # IModelDocExtension.NeedsRebuild2 (swModelRebuildStatus_e), a read new to this repo: a fact
             out["needs_rebuild"] = int(swcom._read(call(s._doc(), "Extension"), "NeedsRebuild2"))  # noqa: SLF001
         except Exception as exc:  # noqa: BLE001 - a fact, read for the again sections
             out["needs_rebuild"] = f"unread: {type(exc).__name__}"
         for i, (g, n) in enumerate(pairs):
-            s.find_component(f"rn{i}", n)
+            s.find_component(f"rn{i}", n, lightweight_ok=(g == n))      # (g, g): a user's component
             out["frames"][g] = s.component_frame(f"rn{i}")
             out["status"][g] = s.constrained_status(f"rn{i}")
         for i, m in enumerate(s.mate_states()):
             out["mates"][m.name] = (m.code, m.suppressed)
-            if modes:
+            if modes or m.name in entities:
                 s.find_mate(f"rm{i}", m.name)
+            if modes:
                 out["by_mode"][m.name] = s.mate_suppression(f"rm{i}", modes)
+            if m.name in entities:
+                info = s.mate_info(f"rm{i}")
+                out["entities"][m.name] = (info.type, sorted(str(c) for c in info.components), info.whole)
         out["flags_after"] = W.folder_flags(s, folder)
+        after_doc = s.active_document()
+        out["active_doc_after"] = os.path.basename(after_doc.path or after_doc.title) if after_doc else ""
         return out
     if activate:
         got = run(f"read {label}", job(asm, work))
@@ -409,7 +428,8 @@ def read_now(label, asm, folder, pairs, modes, *, activate=True):
     if dirtied:
         stop(f"{label}: a read marked {dirtied} modified (ISSUE-1-PLAN §0.3)")
     errors = {n: c for n, (c, sup) in got["mates"].items() if c and not sup}
-    say(f"read    {label} (active {got['active']}): mates in error {errors or 'none'}; not free "
+    say(f"read    {label} (active {got['active']}; front document {got['active_doc']}): mates in error "
+        f"{errors or 'none'}; not free "
         f"{ {g: v for g, v in got['status'].items() if v != findings.COMPONENT_UNDER_DEFINED} or 'none'}; "
         f"marked {W.marked(got['flags_after']) or 'none'}; rebuild state {got['needs_rebuild']}")
     got["errors"] = errors
@@ -427,7 +447,7 @@ def read_every(label, asm, pairs, modes):
             s.rebuild(kind=swcom.ASSEMBLY_TRAIN)
             here, status = {}, {}
             for i, (g, n) in enumerate(pairs):
-                s.find_component(f"re{i}", n)
+                s.find_component(f"re{i}", n, lightweight_ok=(g == n))
                 here[g] = s.component_frame(f"re{i}")
                 status[g] = s.constrained_status(f"re{i}")
             out["frames"][mode], out["status"][mode] = here, status
@@ -467,6 +487,8 @@ def written(before, after, marks_of=None):
         out.append(f"marked {marked}")
     if after["active"] != before["active"]:
         out.append(f"active {before['active']} -> {after['active']}")
+    if after.get("entities") != before.get("entities"):
+        out.append(f"entities {[(n, before['entities'].get(n), v) for n, v in after['entities'].items() if before['entities'].get(n) != v]}")
     return out
 
 
@@ -478,7 +500,9 @@ def feature_list(path):
 
 def windows_new(before, seconds=8):
     """S0's P0 watch: the windows of SolidWorks' process new since ``before``, polled ``seconds`` s; those that count
-    (a #32770 or a titled window, not the exempt notification box)."""
+    (a #32770 or a titled window), less what the note exempts, each said as a fact: SolidWorks' notification box, its
+    balloon tips (class ``swBalloonTip``, the "Over Defined" one m3 brings, titled or not) and its progress boxes that
+    close themselves (W8's ``PROGRESS`` titles, an "Elapsed time" box)."""
     seen, new = {h for h, _, _ in before}, []
     for _ in range(seconds):
         for h, c, t in S0.sw_windows():
@@ -486,7 +510,13 @@ def windows_new(before, seconds=8):
                 seen.add(h)
                 new.append((c, t, tuple(S0.xlhelp.child_texts(h)[:8])))
         time.sleep(1.0)
-    counted = [w for w in new if (w[0] == "#32770" or w[1]) and not (not w[1] and w[2] == W.NOTIFICATION_TEXTS)]
+    def exempt(w):
+        return (w[0] == "swBalloonTip" or (not w[1] and w[2] == W.NOTIFICATION_TEXTS) or w[1] in W.PROGRESS
+                or any(str(t).startswith("Elapsed time") for t in w[2]))
+    for w in new:
+        if exempt(w):
+            say(f"fact    a window of SolidWorks' process came and is exempt (balloon, notification or progress): {w}")
+    counted = [w for w in new if (w[0] == "#32770" or w[1]) and not exempt(w)]
     return new, counted
 
 
@@ -502,7 +532,12 @@ def save_user(folder, why):
 def user_parts():
     """S0's Sprocket and Housing, built by the strip once a run."""
     if not CTX["parts"]:
-        CTX["parts"] = S0.build_user_parts(CTX["worker"])
+        kept = os.path.join(OUT, "user-parts")
+        if all(os.path.isfile(os.path.join(kept, n)) for n in ("Sprocket.SLDPRT", "Housing.SLDPRT")):
+            say(f"fact    the user's parts built earlier into this <out> are used: {kept}")
+            CTX["parts"] = kept
+        else:
+            CTX["parts"] = S0.build_user_parts(CTX["worker"])
     return CTX["parts"]
 
 
@@ -627,10 +662,19 @@ def pairs_of(box, users):
 # -- masters ---------------------------------------------------------------------------------------------------------
 
 
+def done_here(name):
+    """What of a section this <out> holds already: its copy folder, and a builder's master."""
+    paths = [os.path.join(OUT, name)] + ([os.path.join(OUT, name + W.MASTER_SUFFIX)] if name in ("setup", "reducer")
+                                         else [])
+    return [p for p in paths if os.path.exists(p)]
+
+
 def rangebox_master():
     if MASTER["rangebox"]:
         return MASTER["rangebox"]
     here = os.path.join(OUT, "rangebox" + W.MASTER_SUFFIX)
+    if not os.path.isdir(here) and os.path.exists(os.path.join(OUT, "rangebox")):
+        raise AssertionError("a RangeBox build earlier into this <out> kept no master; give --master")
     if not os.path.isdir(here):
         say("fresh   no --master: RangeBox built here through S0's own build_master (the app's own Build)")
         try:
@@ -769,7 +813,7 @@ def section_m3(out):
         say("-- m3  the app's value Update (Sun's Backlash 0.4) with only that user mate in error")
         W.edit(desk, book, ("Gears", W.cell(book, "Gears", "Backlash", "Sun"), 0.4))
         before = S0.sw_windows()
-        result = press(desk, "m3 Update with a user mate in error")
+        result, _ = press(desk, "m3 Update with a user mate in error")
         new, counted = windows_new(before)
         watch_check("m3 Update with a user mate in error")
         if counted:
@@ -817,7 +861,7 @@ def section_m3(out):
         say("-- m3  the app's value Update (Sun's Backlash 0.42) with only the user's feature in error")
         W.edit(desk, book, ("Gears", W.cell(book, "Gears", "Backlash", "Sun"), 0.42))
         before = S0.sw_windows()
-        result = press(desk, "m3 Update with a user feature in error")
+        result, _ = press(desk, "m3 Update with a user feature in error")
         new, counted = windows_new(before)
         watch_check("m3 Update with a user feature in error")
         if counted:
@@ -929,7 +973,7 @@ def _setup(out, parts, folder, desk):
     desk.plan_solidworks()
     ahead_of(desk, "setup, before the quiet press")
     frames_before, flags_before = W.gear_frames(CTX["worker"], desk), W.gearbox_flags(CTX["worker"], desk)
-    result = press(desk, "setup quiet press")
+    result, _ = press(desk, "setup quiet press")
     if result is None:
         raise AssertionError(f"setup: the quiet press refused: {desk.error}")
     W.check_quiet_update(CTX["worker"], desk, result, "setup quiet press", frames_before, flags_before)
@@ -970,8 +1014,14 @@ def _inventory_checks(label, desk, result, expected, box):
                                            f"{list(m.touches)} ({'whole' if m.whole else 'NOT whole'})")
         check(not any(c.name in by_name or c.name == box.layout_component for c in work.components),
               f"{label}: no app component listed as the user's")
-        check(all(f.name.startswith("User") for f in work.features),
-              f"{label}: every feature listed as the user's is the user's (M2): {[f.name for f in work.features]}")
+        # M2 (review point 7): the keyway must be listed, in Sun's part, and nothing of the app's. Its sketch is listed
+        # too only when SolidWorks keeps it top-level (an absorbed sketch is a sub-feature of the cut): either is right.
+        sun = sun_part(box)
+        keyway = [f for f in work.features if f.name == "User Keyway" and store.same_path(f.path, sun)]
+        names_listed = sorted(f.name for f in work.features)
+        check(bool(keyway) and set(names_listed) <= {"User Keyway", "User Keyway Sketch"},
+              f"{label}: M2: the app tells its features from the user's: the inventory lists the User Keyway in Sun's "
+              f"part and nothing else: {[(f.name, os.path.basename(f.path)) for f in work.features]}")
     check(entry is not None and list(entry.revision) == list(W.TAG["revision"]) and bool(entry.read_at),
           f"{label}: the record's user_work holds the inventory with revision {list(entry.revision) if entry else None} "
           f"(this SolidWorks {list(W.TAG['revision'])}) read at {entry.read_at if entry else None}")
@@ -1070,6 +1120,8 @@ def section_m1(out):
             return r
         r = out["m1"] = run("m1: the reads", job(asm, m1))
         _no_new_marks(r, "m1 read")
+        check(r["active"] == modes[0], f"m1: the mode active at the read is {r['active']}, the one UserDist5 is "
+                                       f"suppressed in ({modes[0]})")
         for name, want in expected.items():
             info = r["mates"].get(name)
             say(f"answer  M1 {name} with {r['active']} active: {info}")
@@ -1077,7 +1129,7 @@ def section_m1(out):
                 continue                     # suppressed in the active mode: what it reads is the answer, not a check
             check(info is not None and info["whole"] and set(info["components"]) == want,
                   f"m1: {name} read whole as joining {sorted(want)}")
-        result = press(desk, "m1 quiet press")
+        result, _ = press(desk, "m1 quiet press")
         if result is not None and result.user_work is not None:
             for m in result.user_work.mates:
                 if m.name in expected:
@@ -1097,6 +1149,8 @@ def section_m1(out):
 
 
 # -- go: the value and slide-offset Updates ---------------------------------------------------------------------------
+
+RB_USER_MATES = ("UserAxis1", "UserAxis2", "UserLock1", "UserLock2", "UserLock3", "UserAxis4", "UserDist4", "UserAngle4")
 
 
 def go_judge(label, desk, every, rel_orig, flags_set, out):
@@ -1125,7 +1179,14 @@ def go_judge(label, desk, every, rel_orig, flags_set, out):
     return clean
 
 
-def go_press(label, desk, book, cells, out, rel_orig, flags_set):
+def entities_of(label, desk, folder):
+    """Every user mate's entities (``Session.mate_info``), read in the active mode with nothing shown (§0.3)."""
+    box = desk.record.gearbox
+    return read_now(f"{label}: the user's mates' entities", box.assembly, folder, pairs_of(box, rb_users()),
+                    list(box.modes), entities=RB_USER_MATES)["entities"]
+
+
+def go_press(label, desk, folder, book, cells, out, rel_orig, flags_set):
     W.edit(desk, book, *cells)
     u = desk.update
     check(u is not None and not u.needs_new_revision and not u.refusal,
@@ -1135,7 +1196,8 @@ def go_press(label, desk, book, cells, out, rel_orig, flags_set):
     check(predicted_carry(ahead) == want and ahead is not None and not ahead.problems,
           f"{label}: the footer foresees each locked sprocket put with its gear and no refusal: "
           f"{sorted(predicted_carry(ahead))}")
-    result = press(desk, label)
+    entities_before = entities_of(f"{label}, before", desk, folder)
+    result, calls = press(desk, label)
     if result is None:
         raise AssertionError(f"{label}: the press refused: {desk.error}")
     done = {(c, g) for c, g, _ in result.carried}
@@ -1144,18 +1206,28 @@ def go_press(label, desk, book, cells, out, rel_orig, flags_set):
           f"({result.put_in}): ok {result.ok}, carried {result.carried}, failures {result.failures}")
     check(done == predicted_carry(ahead), f"{label}: what the footer said before the press is what the press carried "
                                           f"(said {sorted(predicted_carry(ahead))}, did {sorted(done)})")
+    box = desk.record.gearbox
+    allowed = {n for _, n in W.bodies(box)} | set(RB_LOCKED)
+    stray = sorted({c[1] for c in calls if c[0] == "put" and c[1] not in allowed})
+    if stray:
+        stop(f"{label}: the Update put {stray}, which is neither an app body nor a sprocket locked to one (§0.3)")
+    check(True, f"{label}: every put the press made was an app body or a locked sprocket: "
+                f"{sorted({c[1] for c in calls if c[0] == 'put'})}")
     check(not result.user_in_error and not result.user_features_in_error,
           f"{label}: nothing of the user's in error after: {result.user_in_error} "
           f"{[f.name for f in result.user_features_in_error]}")
     check(all(c in desk.note[0] for c in ("Sprocket-1", "Sprocket-2")),
           f"{label}: the Update's sentence names the sprockets it put with their gears")
-    entry = desk.record.gearbox.user_work
+    entry = box.user_work
     check(entry is not None and {(c.component, c.gear) for c in entry.carried} == want
-          and list(entry.revision) == list(W.TAG["revision"]),
-          f"{label}: the record's inventory holds the carried sprockets and revision "
+          and list(entry.revision) == list(W.TAG["revision"])
+          and any(f.name == "User Keyway" and store.same_path(f.path, sun_part(box)) for f in entry.features),
+          f"{label}: the record's inventory holds the carried sprockets, the keyway in Sun's part and revision "
           f"{list(entry.revision) if entry else None}, read at {entry.read_at if entry else None}")
     ahead_of(desk, f"{label}, after the press")
-    box = desk.record.gearbox
+    entities_after = entities_of(f"{label}, after", desk, folder)
+    check(entities_after == entities_before, f"{label}: every user mate joins what it joined before the press (§0.3): "
+          f"{ {n: (entities_before.get(n), v) for n, v in entities_after.items() if entities_before.get(n) != v} or 'the same'}")
     every = read_every(f"{label}, after", box.assembly, pairs_of(box, rb_users()), list(box.modes))
     go_judge(label, desk, every, rel_orig, flags_set, out)
     feats = feature_list(sun_part(box))
@@ -1165,20 +1237,30 @@ def go_press(label, desk, book, cells, out, rel_orig, flags_set):
     return result
 
 
-def go_turn(label, desk, mode, rel_before):
+def go_turn(label, desk, mode):
+    """The user's turn in ``mode`` (W8 s7's drive): Sun's turn from the drive job's own reads, both made with ``mode``
+    shown; each locked sprocket's pose on its gear from reads in ``mode`` before and after."""
     box = desk.record.gearbox
     sun = box.drag[0]
     plane, _ = W.drive_assumptions(desk, sun, label)
     built_sun = W.wanted(desk)[sun]
     pairs = pairs_of(box, rb_users())
-    before = read_now(f"before {label}", box.assembly, os.path.dirname(box.assembly), pairs, list(box.modes))
+    folder = os.path.dirname(box.assembly)
+
+    def show(s):
+        s.show_configuration(mode)
+        return bool(s.rebuild(kind=swcom.ASSEMBLY_TRAIN))
+    run(f"{mode} shown", job(box.assembly, show))
+    before = read_now(f"before {label}", box.assembly, folder, pairs, list(box.modes))
     got = run(label, W.s7_drive_job(box, mode, TURN, plane, built_sun), 600)
-    after = read_now(f"after {label}", box.assembly, os.path.dirname(box.assembly), pairs, list(box.modes))
-    turned = W.turn_degrees(before["frames"][sun][0], after["frames"][sun][0])
+    after = read_now(f"after {label}", box.assembly, folder, pairs, list(box.modes))
+    turned = (W.turn_degrees(got["before"][sun][0], got["after"][sun][0])
+              if "before" in got and "after" in got else None)
     carried = rel_gaps(rel_of(after["frames"], RB_LOCKED), rel_of(before["frames"], RB_LOCKED))
-    check(not got["errors"] and not got["cleanup"] and turned is not None and abs(turned - TURN) <= 1e-6 * TURN
-          and all(v <= TOL for v in carried.values()),
-          f"{label}: the user's turn: {sun} turned {turned}° and each locked sprocket went with its gear {fmt(carried)}")
+    check(before["active"] == after["active"] == mode and not got["errors"] and not got["cleanup"]
+          and turned is not None and abs(turned - TURN) <= 1e-6 * TURN and all(v <= TOL for v in carried.values()),
+          f"{label}: the user's turn in {mode}: {sun} turned {turned}° and each locked sprocket went with its gear "
+          f"{fmt(carried)}")
 
 
 def section_go(out):
@@ -1193,17 +1275,17 @@ def section_go(out):
         check(desk.record.gearbox.user_work is not None, "go: the record holds setup's inventory")
         every = read_every("go, as copied", box.assembly, pairs_of(box, rb_users()), modes)
         rel_orig = rel_of(every["frames"][modes[0]], RB_LOCKED)
-        flags_set = {n: f for n, f in every["by_mode"].items() if n.startswith("User")}
-        check(all(not any(f.values()) for f in flags_set.values()) and len(flags_set) == 8,
+        flags_set = {n: f for n, f in every["by_mode"].items() if n in RB_USER_MATES}
+        check(all(not any(f.values()) for f in flags_set.values()) and set(flags_set) == set(RB_USER_MATES),
               f"go: the user's 8 mates on in every mode as set up: {sorted(flags_set)}")
         go_judge("go as copied", desk, every, rel_orig, flags_set, out)
-        go_turn("the user's turn +37° in H", desk, modes[0], rel_orig)
-        out["value"] = bool(go_press("go value Update (Sun's Backlash 0.4)", desk, book,
+        go_turn("the user's turn +37° in H", desk, modes[0])
+        out["value"] = bool(go_press("go value Update (Sun's Backlash 0.4)", desk, folder, book,
                                      [("Gears", W.cell(book, "Gears", "Backlash", "Sun"), 0.4)], out, rel_orig, flags_set))
         live = run("Sun's globals", lambda s: W.live_globals(s, sun_part(desk.record.gearbox)))
         check(abs(float(live.get(spur.BACKLASH, 0.0)) - 0.4) < 1e-9, f"go: Sun's Backlash reads {live.get(spur.BACKLASH)}")
-        go_turn("the user's turn +37° in L", desk, modes[-1], rel_orig)
-        out["slide"] = bool(go_press("go slide-offset Update (RangeSlv L=+5.5)", desk, book,
+        go_turn("the user's turn +37° in L", desk, modes[-1])
+        out["slide"] = bool(go_press("go slide-offset Update (RangeSlv L=+5.5)", desk, folder, book,
                                      [("Gears", W.cell(book, "Gears", "Slides", "RangeSlv"), "H=-5, N=0, L=+5.5")],
                                      out, rel_orig, flags_set))
     finally:
@@ -1215,24 +1297,30 @@ def section_go(out):
 
 def refuse_press(label, desk, folder, kinds, mates_named=(), text=(), ahead=None, users=None, part=None):
     """The user saves, every user item and document read, Update pressed: it must refuse before any write with
-    ``kinds`` among its problems, naming ``mates_named`` and saying ``text``; read again, nothing written (frames,
-    mates' codes and flags, documents' marks, and ``part``'s globals: Sun's by default). ``ahead``: the footer's
-    prediction before the press, held against what the press refused."""
+    ``kinds`` among its problems, naming ``mates_named`` and saying ``text``. Judged by the press's own traced calls
+    (W8 s3's ``nothing_changed_calls``: no show, flag, value, rebuild, put or mate made), then read again: frames,
+    mates' codes, flags and entities, and ``part``'s globals (Sun's by default) as before; a document marked by the
+    refused press is a STOP (§0.3). ``ahead``: the footer's prediction before the press, held against the refusal."""
     save_user(folder, f"before {label}")
     box = desk.record.gearbox
     pairs = pairs_of(box, rb_users() if users is None else users)
-    before = read_now(f"before {label}", box.assembly, folder, pairs, list(box.modes))
+    mates = RB_USER_MATES if users is None else ()
+    before = read_now(f"before {label}", box.assembly, folder, pairs, list(box.modes), entities=mates)
     sun = part or sun_part(box)
-    globals_before = run("Sun's globals", lambda s: W.live_globals(s, sun))
-    result = press(desk, label)
+    globals_before = run("the part's globals", lambda s: W.live_globals(s, sun))
+    result, calls = press(desk, label)
     error = desk.error
     problems = list(getattr(error, "problems", ()) or ())
     say(f"fact    {label}: problems {[(p.kind, list(p.mates)) for p in problems]}")
     for p in problems:
         say(f"        {p.kind}: {p.sentence}")
-    after = read_now(f"after {label}", box.assembly, folder, pairs, list(box.modes))
-    globals_after = run("Sun's globals", lambda s: W.live_globals(s, sun))
-    diff = written(before, after) + ([f"Sun's globals {globals_before} -> {globals_after}"]
+    changing = W.nothing_changed_calls(calls)
+    after = read_now(f"after {label}", box.assembly, folder, pairs, list(box.modes), entities=mates)
+    globals_after = run("the part's globals", lambda s: W.live_globals(s, sun))
+    marked = sorted(n for n, v in after["flags_after"].items() if v and not before["flags_after"].get(n))
+    if marked:
+        stop(f"{label}: the refused press left {marked} marked modified (§0.3: a read W9 adds marking a document)")
+    diff = written(before, after) + ([f"the part's globals {globals_before} -> {globals_after}"]
                                      if globals_after != globals_before else [])
     got = {p.kind for p in problems}
     named = {m for p in problems for m in p.mates}
@@ -1241,14 +1329,16 @@ def refuse_press(label, desk, folder, kinds, mates_named=(), text=(), ahead=None
           and set(mates_named) <= named and all(t in said for t in text),
           f"{label}: refused before any write as {sorted(kinds)}, naming {sorted(mates_named)} and saying {list(text)}: "
           f"got {sorted(got)}, named {sorted(named)}")
-    check(not diff, f"{label}: nothing written: {diff or 'frames, mates, flags, marks and Sun globals as before'}")
+    check(not changing, f"{label}: the refused press made no call that changes or shows anything (its trace): "
+                        f"{changing or 'none'}")
+    check(not diff, f"{label}: nothing written: {diff or 'frames, mates, flags, entities, marks and globals as before'}")
     entry = desk.record.gearbox.user_work
     check(entry is not None and {p.kind for p in entry.problems} == got,
           f"{label}: the record keeps the refusal with its time {entry.read_at if entry else None}: "
           f"{[p.kind for p in entry.problems] if entry else None}")
     f = ahead_of(desk, f"{label}, after the refusal")
     if f is not None:
-        check(bool(f.refused) and not ui_text.user_work_line(f)[1],
+        check(bool(f.refused) and not f.changed_since and not ui_text.user_work_line(f)[1],
               f"{label}: the footer says the refusal as recorded, red, until the workbook changes")
     if ahead is not None:
         foreseen = {p.kind for p in ahead.problems}
@@ -1264,13 +1354,13 @@ def mates_job(desk, changes):
     in every mode (``("off"|"on", name)``); read back."""
     box = desk.record.gearbox
     modes = list(box.modes)
-    refs = dict(rb_refs(box), u1="Sprocket-1", uh="Housing-1")
+    refs = dict(rb_refs(box), u1="Sprocket-1", u4="Sprocket-4", uh="Housing-1")
     want = {change[-1]: change[0] == "off" for change in changes}
 
     def work(s):
         out = {"status": {}, "flags": {}}
         for handle, name in refs.items():
-            s.find_component(handle, name)
+            s.find_component(handle, name, lightweight_ok=handle.startswith("u"))
         for change in changes:
             if change[0] == "add":
                 _, handle, kind, a, b, value, name = change
@@ -1320,77 +1410,119 @@ def quiet_then_edit(label, desk, book, backlash):
     ref = W.cell(book, "Gears", "Backlash", "Sun")
     if desk.update is not None and not desk.update.record_matches:
         W.edit(desk, book, ("Gears", ref, None))
-    result = press(desk, f"{label}: the quiet press")
+    result, _ = press(desk, f"{label}: the quiet press")
     check(result is not None and result.placed == [] and result.changed == [],
           f"{label}: the quiet press read the user's work and changed nothing: {desk.error if result is None else 'ok'}")
     W.edit(desk, book, ("Gears", ref, backlash))
     return ahead_of(desk, f"{label}, before the press")
 
 
+def refuse_step(out, name, steps):
+    """One refusal step under its own net: a failed check or a raise of the script's own is said and the next step
+    runs; a STOP or a lost session ends as everywhere."""
+    say(f"-- refuse  {name}")
+    try:
+        steps()
+    except RUN_ENDERS + (SectionStop,):
+        raise
+    except Exception as exc:  # noqa: BLE001 - one step's surprise must not take the rest
+        check(False, f"refuse {name}: {type(exc).__name__}: {exc}")
+        for line in traceback.format_exc().splitlines()[-6:]:
+            say("        " + line)
+        out.setdefault("steps_failed", []).append(name)
+
+
 def section_refuse(out):
     say("== refuse  W9a's Done when: a lock to a fixed housing refuses naming it, a Bore Diameter typed in SolidWorks "
-        "refuses naming the cell; with them a lightweight carried sprocket, the solver's tie, two app bodies locked "
-        "together, and all at once; each foreseen or recorded in the footer, each writing nothing")
+        "refuses naming the cell; with them a mate of another kind on Sun, the solver's tie, two app bodies locked "
+        "together, all at once, and last a lightweight carried sprocket; each foreseen or recorded in the footer, each "
+        "writing nothing")
     folder, path, book, desk = copy_desk(user_master(), "refuse", "RangeBox.xlsx")
+    says = out.setdefault("problems", {})
+    backlash = W.cell(book, "Gears", "Backlash", "Sun")
+    cell = "Gears!" + W.cell(book, "Gears", "Bore", "Sun")
     try:
         box = desk.record.gearbox
         users_in_copy("refuse", desk, folder, rb_users())
-        says = out.setdefault("problems", {})
 
-        say("-- refuse  Sprocket-1 loaded lightweight (W9A-REVIEW-B 3 and the coordinator's item 4)")
-        state = set_state(desk, "Sprocket-1", 1)
-        if state not in (1, 4):
-            check(False, f"refuse: Sprocket-1 did not read lightweight after SetSuppression2(1): {state}")
-        else:
+        def housing():
+            mates_job(desk, [("add", "uhl", "lock", "uh", "u1", 0.0, "UserHousingLock")])
+            ahead = quiet_then_edit("refuse housing lock", desk, book, 0.4)
+            says["housing lock"] = [p.sentence for p in refuse_press(
+                "refuse housing lock", desk, folder, {swbuild.PROBLEM_TIE}, ("UserHousingLock",), ("Housing-1",),
+                ahead=ahead)]
+            # Ruling 5 on package B's review: once the workbook changes, the recorded refusal is said with "has changed
+            # since" and the prediction runs again on the inventory as last read, which still holds the lock: red.
+            W.edit(desk, book, ("Gears", backlash, 0.41))
+            a = ahead_of(desk, "refuse, the workbook changed since the refusal")
+            line, ok = ui_text.user_work_line(a)
+            ties = [p for p in (a.problems if a is not None else ()) if p.kind == swbuild.PROBLEM_TIE]
+            check(a is not None and "has changed since" in line and not ok and len(a.problems) == 1 and len(ties) == 1
+                  and "UserHousingLock" in ties[0].mates and "Housing-1" in ties[0].sentence,
+                  f"refuse: once the workbook changed, the footer says the refusal \"has changed since\" and foresees "
+                  f"the same refusal, red, naming the lock: ok {ok}; foreseen "
+                  f"{[(p.kind, list(p.mates)) for p in (a.problems if a else ())]}")
+        refuse_step(out, "a user lock from Sprocket-1 to the fixed Housing-1", housing)
+
+        def other():
+            mates_job(desk, [("off", "UserHousingLock"),
+                             ("add", "uo", "coincident", "u4:Gear Axis", "sun:Gear Axis", 0.0, "UserOnSun")])
+            says["other kind"] = [p.sentence for p in refuse_press(
+                "refuse other kind", desk, folder, {swbuild.PROBLEM_OTHER_KIND}, ("UserOnSun",), ("UserOnSun",))]
+            mates_job(desk, [("off", "UserOnSun")])
+        refuse_step(out, "a mate of another kind on Sun: Sprocket-4's axis on Sun's own axis", other)
+
+        def tie():
+            mates_job(desk, [("off", "UserHousingLock"),
+                             ("add", "ut", "coincident", "u1:plane2", "uh:plane2", 0.0, "UserTie")])
+            says["tie"] = [p.sentence for p in refuse_press(
+                "refuse tie read", desk, folder, {swbuild.PROBLEM_TIE}, ("UserTie",), ("unable to turn",))]
+        refuse_step(out, "the solver's tie: Sprocket-1's Top plane on Housing-1's", tie)
+
+        def two():
+            mates_job(desk, [("off", "UserTie"), ("add", "u2b", "lock", "sun", "slv", 0.0, "UserTwoBodies")])
+            says["two bodies"] = [p.sentence for p in refuse_press(
+                "refuse two bodies", desk, folder, {swbuild.PROBLEM_TWO_BODIES}, ("UserTwoBodies",))]
+        refuse_step(out, "two app bodies locked together: a user lock from Sun to RangeSlv", two)
+
+        def bore():
+            mates_job(desk, [("off", "UserTwoBodies")])
+            run("Sun's bore 12", job(sun_part(box), lambda s: (s.set_global_variable(spur.BORE, "12"),
+                                                               bool(s.rebuild()))))
+            problems = refuse_press("refuse bore typed", desk, folder, {swbuild.PROBLEM_VALUE}, (), (cell,))
+            says["bore"] = [p.sentence for p in problems]
+            values = [v for p in problems for v in p.values]
+            check(any(v.name == spur.BORE and v.cell == cell and float(v.live) == 12.0 for v in values),
+                  f"refuse bore typed: the value named with its cell {cell}: "
+                  f"{[(v.name, v.live, v.wanted, v.cell) for v in values]}")
+        refuse_step(out, "a Bore Diameter typed in SolidWorks: Sun's Bore Diameter 12", bore)
+
+        def together():
+            mates_job(desk, [("on", "UserHousingLock"), ("on", "UserTwoBodies")])
+            # One cluster then holds Sun, RangeSlv and the housing: judge_user_work refuses it as two bodies (naming
+            # both locks) and reads no ground for it; whether the solver's tie is read and said beside it is logged.
+            problems = refuse_press("refuse all at once", desk, folder,
+                                    {swbuild.PROBLEM_VALUE, swbuild.PROBLEM_TWO_BODIES},
+                                    ("UserHousingLock", "UserTwoBodies"), (cell,))
+            says["all"] = [p.sentence for p in problems]
+            check(bool(problems) and problems[0].kind == swbuild.PROBLEM_VALUE,
+                  f"refuse all at once: every problem in one press, the values first: {[p.kind for p in problems]}")
+            mates_job(desk, [("off", "UserHousingLock"), ("off", "UserTwoBodies")])
+            run("Sun's bore back to 0", job(sun_part(box), lambda s: (s.set_global_variable(spur.BORE, "0"),
+                                                                       bool(s.rebuild()))))
+        refuse_step(out, "all at once: the housing lock and the two-body lock on again, the bore still 12", together)
+
+        def lightweight():
+            state = set_state(desk, "Sprocket-1", 1)
+            if state not in (1, 4):
+                check(False, f"refuse: Sprocket-1 did not read lightweight after SetSuppression2(1): {state}")
+                return
             ahead = quiet_then_edit("refuse lightweight", desk, book, 0.4)
             check(ahead is not None and any(p.kind == swbuild.PROBLEM_COMPONENT for p in ahead.problems),
                   "refuse lightweight: the footer foresees the refusal of a carried component loaded lightweight")
             says["lightweight"] = [p.sentence for p in refuse_press(
                 "refuse lightweight", desk, folder, {swbuild.PROBLEM_COMPONENT}, (), ("Sprocket-1",), ahead=ahead)]
-        set_state(desk, "Sprocket-1", 2)
-
-        say("-- refuse  a user lock from Sprocket-1 to the fixed Housing-1")
-        mates_job(desk, [("add", "uhl", "lock", "uh", "u1", 0.0, "UserHousingLock")])
-        ahead = quiet_then_edit("refuse housing lock", desk, book, 0.4)
-        says["housing lock"] = [p.sentence for p in refuse_press(
-            "refuse housing lock", desk, folder, {swbuild.PROBLEM_TIE}, ("UserHousingLock",), ("Housing-1",),
-            ahead=ahead)]
-        W.edit(desk, book, ("Gears", W.cell(book, "Gears", "Backlash", "Sun"), 0.41))
-        a = ahead_of(desk, "refuse, the workbook changed since the refusal")
-        line, ok = ui_text.user_work_line(a)
-        check(ok and "has changed since" in line, f"refuse: once the workbook changed the recorded refusal is said "
-                                                  f"green with \"the workbook has changed since\": {line[:100]!r}")
-
-        say("-- refuse  the solver's tie: the lock to the housing off, Sprocket-1's Top plane on Housing-1's")
-        mates_job(desk, [("off", "UserHousingLock"), ("add", "ut", "coincident", "u1:plane2", "uh:plane2", 0.0, "UserTie")])
-        says["tie"] = [p.sentence for p in refuse_press(
-            "refuse tie read", desk, folder, {swbuild.PROBLEM_TIE}, ("UserTie",), ("unable to turn",))]
-
-        say("-- refuse  two app bodies locked together: the tie off, a user lock from Sun to RangeSlv")
-        mates_job(desk, [("off", "UserTie"), ("add", "u2b", "lock", "sun", "slv", 0.0, "UserTwoBodies")])
-        says["two bodies"] = [p.sentence for p in refuse_press(
-            "refuse two bodies", desk, folder, {swbuild.PROBLEM_TWO_BODIES}, ("UserTwoBodies",))]
-
-        say("-- refuse  a Bore Diameter typed in SolidWorks: UserTwoBodies off; Sun's Bore Diameter 12")
-        mates_job(desk, [("off", "UserTwoBodies")])
-        run("Sun's bore 12", job(sun_part(box), lambda s: (s.set_global_variable(spur.BORE, "12"), bool(s.rebuild()))))
-        cell = "Gears!" + W.cell(book, "Gears", "Bore", "Sun")
-        problems = refuse_press("refuse bore typed", desk, folder, {swbuild.PROBLEM_VALUE}, (), (cell,))
-        says["bore"] = [p.sentence for p in problems]
-        values = [v for p in problems for v in p.values]
-        check(any(v.name == spur.BORE and v.cell == cell and float(v.live) == 12.0 for v in values),
-              f"refuse bore typed: the value named with its cell {cell}: {[(v.name, v.live, v.wanted, v.cell) for v in values]}")
-
-        say("-- refuse  all at once: the housing lock and the two-body lock on again, the bore still 12")
-        mates_job(desk, [("on", "UserHousingLock"), ("on", "UserTwoBodies")])
-        # One cluster now holds Sun, RangeSlv and the housing: judge_user_work refuses it as two bodies (naming both
-        # locks) and reads no ground for it; whether the solver's tie is read and said beside it is logged.
-        problems = refuse_press("refuse all at once", desk, folder,
-                                {swbuild.PROBLEM_VALUE, swbuild.PROBLEM_TWO_BODIES},
-                                ("UserHousingLock", "UserTwoBodies"), (cell,))
-        says["all"] = [p.sentence for p in problems]
-        check(bool(problems) and problems[0].kind == swbuild.PROBLEM_VALUE,
-              f"refuse all at once: every problem in one press, the values first: {[p.kind for p in problems]}")
+        refuse_step(out, "last: Sprocket-1 loaded lightweight (W9A-REVIEW-B 3; the coordinator's item 4)", lightweight)
     finally:
         W.end_copy(CTX["worker"], folder, "refuse")
 
@@ -1402,11 +1534,25 @@ def stamps_of(paths):
     return {os.path.basename(p): os.path.getmtime(p) for p in paths if os.path.exists(p)}
 
 
+def old_changes(before, after, mine):
+    """What differs on the old assembly between two reads made without activating it: frames, mate codes, flags and
+    entities, its active configuration, its rebuild state, its own save flag and the user's files' marks."""
+    changes = written(before, after, marks_of=mine)
+    flips = {n: (before["flags_after"].get(n), after["flags_after"].get(n)) for n in mine
+             if before["flags_after"].get(n) != after["flags_after"].get(n)}
+    if flips:
+        changes.append(f"save flags {flips}")
+    if after["needs_rebuild"] != before["needs_rebuild"]:
+        changes.append(f"rebuild state {before['needs_rebuild']} -> {after['needs_rebuild']}")
+    return changes
+
+
 def section_again(out, variant="open"):
     name = {"open": "again", "dirty": "again-dirty", "closed": "again-closed"}[variant]
     say(f"== {name}  Build again… (Sun's Part name changed): the question names what stays behind with its time; the "
         f"build job reads the old assembly first, which is "
-        + {"open": "open in the session", "dirty": "open and needs a rebuild", "closed": "closed"}[variant])
+        + {"open": "open in the session, behind another document",
+           "dirty": "open, behind another document, and needs a rebuild", "closed": "closed"}[variant])
     folder, path, book, desk = copy_desk(user_master(), name, "RangeBox.xlsx")
     try:
         box = desk.record.gearbox
@@ -1421,16 +1567,18 @@ def section_again(out, variant="open"):
         stays = wb_update.stays_behind(desk.record, plan)
         question = ui_text.build_again_question(u, plan, record=desk.record)
         say(f"question {question}")
-        sentence = ui_text.stays_behind_sentence(stays, plan) if stays is not None else ""
-        check(stays is not None and set(rb_users()) <= set(stays.components) and any(f == "User Keyway" for f, _, _ in stays.left)
-              and sentence and sentence in question and ui_text.read_time(entry.read_at) in question,
+        check(stays is not None and stays.entry is not None and set(rb_users()) <= set(stays.components)
+              and any(f == "User Keyway" for f, _, _ in stays.left) and ui_text.read_time(entry.read_at) in question
+              and "Sprocket-1" in question and "User Keyway" in question,
               f"{name}: the question says what stays behind, with the time read ({ui_text.read_time(entry.read_at)}): "
               f"components {stays and list(stays.components)}, features left {stays and list(stays.left)}")
-        desk.say_footer(f"{name}, before the build")
+        f = desk.say_footer(f"{name}, before the build")
+        check(f.build_enabled and f.build_action == ui_text.BUILD_AGAIN,
+              f"{name}: the footer offers Build again… ({f.build_label!r}, enabled {f.build_enabled})")
         user_files = [old, sun_part(box), os.path.join(folder, "Sprocket.SLDPRT"), os.path.join(folder, "Housing.SLDPRT")]
+        mine = {os.path.basename(p) for p in user_files}
         times = stamps_of(user_files)
         pairs = pairs_of(box, rb_users())
-        state_before = None
         if variant == "closed":
             left = run("close", W.quit_in(folder))
             check(not left, f"{name}: the old assembly closed before the build: left {left}")
@@ -1442,53 +1590,82 @@ def section_again(out, variant="open"):
                     s.set_dimension_in("ud4", RB_GAP + 0.5, modes)        # the user's edit, not rebuilt yet
                     return True
                 run(f"{name}: UserDist4 changed, no rebuild", job(old, dirty))
-            state_before = read_now(f"{name} the old assembly before", old, folder, pairs, modes, activate=False)
-            out["before"] = {k: v for k, v in state_before.items() if k != "frames"}
+            housing = os.path.join(folder, "Housing.SLDPRT")
+            front = run(f"{name}: another document brought forward",
+                        job(housing, lambda s: os.path.basename((s.active_document() or swcom.DocInfo("", "", 0)).path)))
+            check(front == "Housing.SLDPRT", f"{name}: Housing.SLDPRT is the front document, the old assembly behind "
+                                             f"it: {front}")
+            before = read_now(f"{name} the old assembly before its read", old, folder, pairs, modes, activate=False,
+                              entities=RB_USER_MATES)
+            out["before"] = {k: v for k, v in before.items() if k != "frames"}
             if variant == "dirty":
-                needs = state_before["needs_rebuild"]
-                check(isinstance(needs, int) and needs != 0, f"{name}: the old assembly needs a rebuild before the "
-                                                             f"build (NeedsRebuild2 {needs})")
+                needs = before["needs_rebuild"]
+                check(isinstance(needs, int) and needs != 0, f"{name}: the old assembly needs a rebuild before its read "
+                                                             f"(NeedsRebuild2 {needs})")
+
+            say(f"-- {name}  the app's own swbuild.read_old_assembly, alone, the old assembly behind Housing.SLDPRT")
+            windows = S0.sw_windows()
+            old_spec = wb_update.old_assembly(desk.record, plan)
+            alone = run(f"{name}: read_old_assembly alone", lambda s: swbuild.read_old_assembly(s, old_spec))
+            new, counted = windows_new(windows)
+            watch_check(f"{name}: read_old_assembly alone")
+            if counted:
+                stop(f"{name}: a window came up while the app read the old assembly: {counted} (§0.3: any dialog)")
+            after = read_now(f"{name} the old assembly after its read", old, folder, pairs, modes, activate=False,
+                             entities=RB_USER_MATES)
+            out["read_alone"] = None if alone is None else {
+                "components": [c.name for c in alone.components], "mates": [m.name for m in alone.mates]}
+            check(alone is not None and {c.name for c in alone.components} == set(rb_users())
+                  and set(RB_USER_MATES) <= {m.name for m in alone.mates},
+                  f"{name}: the app's read found the user's work in the old assembly behind another document: "
+                  f"{out['read_alone']}")
+            changes = old_changes(before, after, mine)
+            if after["active_doc"] != before["active_doc"]:
+                changes.append(f"the front document {before['active_doc']} -> {after['active_doc']} (the old assembly "
+                               "brought forward)")
+            if changes:
+                section_stop(f"{name}: the app's read of the old assembly changed it: {changes} (W9A-REVIEW-B 6)")
+            check(True, f"{name}: the read left the old assembly behind ({after['active_doc']} in front), unrebuilt "
+                        f"(rebuild state {after['needs_rebuild']}), its save flag, active configuration "
+                        f"({after['active']}), mates' codes, flags and entities and components' frames as before; no "
+                        "window")
+            before = after
+
+        say(f"-- {name}  the build, as the window runs it")
         windows = S0.sw_windows()
         _, result = desk.build()
         new, counted = windows_new(windows)
         watch_check(f"{name} build")
+        if counted:
+            stop(f"{name}: a window came up during the Build again…: {counted} (§0.3: any dialog)")
         if result is None:
             raise AssertionError(f"{name}: the build refused: {desk.error}")
         check(result.ok and desk.record.gearbox.revision == 2, f"{name}: RangeBox_r2 built: ok {result.ok}")
         work, why = getattr(result, "old_user_work", None), getattr(result, "old_read", "")
         out["old_read"], out["old_user_work"] = why, None if work is None else {
             "components": [c.name for c in work.components], "mates": [m.name for m in work.mates]}
-        expected = ui_text.stayed_behind_status(stays, result, plan)
         if variant == "closed":
-            check(work is None and why == swbuild.OLD_NOT_OPEN and expected and expected in desk.note[0]
-                  and "was not open" in desk.note[0],
-                  f"{name}: the old assembly not open, so not read; the sentence gives the record's inventory: "
+            check(work is None and why == swbuild.OLD_NOT_OPEN and "was not open" in desk.note[0]
+                  and "Sprocket-1" in desk.note[0],
+                  f"{name}: the old assembly not open, so not read; the window's sentence gives the record's inventory: "
                   f"old_read {why!r}")
             still = run("open names", W.open_names)
             check(os.path.basename(old) not in still, f"{name}: the build did not open the old assembly")
         else:
             check(work is not None and not why and {c.name for c in work.components} == set(rb_users())
-                  and {m.name for m in work.mates} >= set(rb_expected(box)) and expected and expected in desk.note[0],
-                  f"{name}: the build job read the old assembly first and its sentence lists what stayed behind: "
-                  f"{out['old_user_work']}")
-            state_after = read_now(f"{name} the old assembly after", old, folder, pairs, modes, activate=False)
-            mine = {os.path.basename(p) for p in user_files}
-            changes = written(state_before, state_after, marks_of=mine)
+                  and set(RB_USER_MATES) <= {m.name for m in work.mates} and "Sprocket-1" in desk.note[0],
+                  f"{name}: the build job read the old assembly first and the window's sentence lists what stayed "
+                  f"behind: {out['old_user_work']}")
+            after = read_now(f"{name} the old assembly after the build", old, folder, pairs, modes, activate=False,
+                             entities=RB_USER_MATES)
             say(f"fact    {name}: GetSaveFlag of the folder's documents before the build "
-                f"{W.marked(state_before['flags_after']) or 'none'}, after {W.marked(state_after['flags_after']) or 'none'}"
-                " (the new revision's and the shared parts' as facts; the old assembly's and the user's files judged)")
-            if state_after["needs_rebuild"] != state_before["needs_rebuild"]:
-                changes.append(f"rebuild state {state_before['needs_rebuild']} -> {state_after['needs_rebuild']}")
-            if state_after["flags_after"].get(os.path.basename(old)) != state_before["flags_after"].get(os.path.basename(old)):
-                changes.append("the old assembly's save flag")
-            if counted:
-                changes.append(f"a window {counted}")
+                f"{W.marked(before['flags_after']) or 'none'}, after {W.marked(after['flags_after']) or 'none'} (the "
+                "new revision's and the shared parts' as facts; the old assembly's and the user's files judged)")
+            changes = old_changes(before, after, mine)
             if changes:
-                section_stop(f"{name}: the build job's read changed the old assembly: {changes} (W9A-REVIEW-B 6)")
-            check(True, f"{name}: the old assembly's save flag, active configuration ({state_after['active']}), rebuild "
-                        f"state, mates' flags and codes and components' frames as before; no window")
-        if counted:
-            section_stop(f"{name}: a window came up during the build: {counted}")
+                section_stop(f"{name}: the Build again… changed the old assembly: {changes} (W9A-REVIEW-B 6, §0.3)")
+            check(True, f"{name}: after the build the old assembly's save flag, active configuration ({after['active']}),"
+                        f" rebuild state, mates' codes, flags and entities and components' frames as before")
         moved = {n: (t, stamps_of(user_files).get(n)) for n, t in times.items() if stamps_of(user_files).get(n) != t}
         if moved:
             section_stop(f"{name}: a user document's file time changed during the Build again…: {moved} (§0.3, W9d's STOP)")
@@ -1520,6 +1697,62 @@ def section_reducer(out):
     MASTER["reducer"] = W.keep_master(CTX["worker"], folder, "reducer")
     if not MASTER["reducer"]:
         raise AssertionError("reducer: reducer.master was not kept")
+
+
+def section_k3(out):
+    say("== k3  K3 and M3 in an app part (review point 6): on the 12 : 1, a user keyway in G1's part, then G1's Bore "
+        "8 -> 14 in the workbook, so an ordinary value Update rebuilds the user's feature into error (S0's P0 failure, "
+        "reached through the app). Does the Update's part rebuild report it, does the job go on, is the keyway named as "
+        "the user's; a window here ends this section only")
+    folder, path, book, desk = copy_desk(reducer_master(), "k3", "Reducer_12to1.xlsx")
+    try:
+        box = desk.record.gearbox
+        g1 = next(c.part for c in box.components if c.gear == "G1")
+        keyway("k3", g1)
+        save_user(folder, "the user's keyway in G1's part")
+        quiet, _ = press(desk, "k3 quiet press (the inventory recorded)")
+        work = quiet.user_work if quiet is not None else None
+        listed = [(f.name, os.path.basename(f.path), f.code) for f in (work.features if work else [])]
+        check(any(f.name == "User Keyway" and store.same_path(f.path, g1) for f in (work.features if work else []))
+              and all(n.startswith("User") for n, _, _ in listed),
+              f"k3: M2 on the 12 : 1: the inventory lists the User Keyway in G1's part and nothing of the app's: {listed}")
+        W.edit(desk, book, ("Gears", W.cell(book, "Gears", "Bore", "G1"), 14))
+        u = desk.update
+        check(u is not None and not u.needs_new_revision and any("G1" in p.gear_ids for p in u.changed_parts),
+              f"k3: classify makes G1's bore an Update of G1's part: structural {u and list(u.structural)}")
+        ahead = ahead_of(desk, "k3, G1 Bore 14, before the press")
+        check(ahead is not None and any(f.name == "User Keyway" for f in ahead.followed),
+              f"k3: the footer says the user's keyway follows the app's features in G1's part: "
+              f"{[f.name for f in ahead.followed] if ahead else None}")
+        windows = S0.sw_windows()
+        result, calls = press(desk, "k3 Update rebuilding the user's keyway into error")
+        new, counted = windows_new(windows)
+        seen = watch_windows()
+        if counted or seen:
+            section_stop(f"k3: a window came up during the Update that rebuilt the user's keyway into error: "
+                         f"{counted or seen} (§0.3: any dialog; this section only, the coordinator's ruling 3)")
+        out["update"] = _update_fact(desk, result)
+        if result is None:
+            raise AssertionError(f"k3: the press refused: {desk.error}")
+        feats = feature_list(g1)
+        mine = [f for f in feats if f[0].startswith("User")]
+        theirs = [f for f in feats if not f[0].startswith("User") and f[2]]
+        say(f"answer  M3 (an app part's rebuild in the Update, only the user's feature in error): ok {result.ok}; "
+            f"failures {result.failures}; user features in error "
+            f"{[(f.name, os.path.basename(f.path), f.code) for f in result.user_features_in_error]}; the user's "
+            f"features {mine}; the app's in error {theirs or 'none'}")
+        check(any(f[0] == "User Keyway" and f[2] for f in mine) and not theirs,
+              "k3: the bore change left only the user's keyway in error in G1's part")
+        named = [f for f in result.user_features_in_error if f.name == "User Keyway" and store.same_path(f.path, g1)]
+        check(bool(named) and "User Keyway" in desk.note[0],
+              f"k3: the Update names the keyway as the user's, in error after the rebuild (K3): "
+              f"{[f.name for f in result.user_features_in_error]}; the sentence {desk.note[0][:200]!r}")
+        live = run("G1's globals", lambda s: W.live_globals(s, g1))
+        check(abs(float(live.get(spur.BORE, 0.0)) - 14.0) < 1e-9, f"k3: G1's Bore Diameter reads {live.get(spur.BORE)}")
+        RESULT["proposal"]["M3_app_part"] = {"update_ok": result.ok, "failures": [list(f) for f in result.failures],
+                                             "named_as_users": bool(named)}
+    finally:
+        W.end_copy(CTX["worker"], folder, "k3")
 
 
 NC_LOCKED = {"Sprocket-1": "G1", "Sprocket-3": "G1", "Sprocket-2": "G4"}
@@ -1578,7 +1811,7 @@ def section_nocarrier(out):
         save_user(folder, "the user's sprockets")
         r = read_now("as set up", box.assembly, folder, pairs_of(box, list(NC_LOCKED)), [])
         rel_orig = rel_of(r["frames"], NC_LOCKED)
-        quiet = press(desk, "nocarrier quiet press (the inventory recorded)")
+        quiet, _ = press(desk, "nocarrier quiet press (the inventory recorded)")
         check(quiet is not None and quiet.placed == [] and desk.record.gearbox.user_work is not None,
               f"nocarrier: the quiet press read and recorded the user's work: {desk.error if quiet is None else 'ok'}")
         out["branches"] = swbuild.user_carry_branches(desk.update.motion, desk.update.placements)
@@ -1603,12 +1836,16 @@ def section_nocarrier(out):
                 W.user_turn(CTX["worker"], desk, f"nocarrier, second turn", TURN)
                 W.edit(desk, book, ("Gears", W.cell(book, "Gears", "At", "G4"), at))
             ahead = ahead_of(desk, f"nocarrier {label}, before the press (the finding patched)")
-            result = press(desk, f"nocarrier {label}")
+            result, calls = press(desk, f"nocarrier {label}")
             if result is None:
                 check(False, f"nocarrier {label}: the press refused with the finding patched: {desk.error}")
                 held["clean"].append(False)
                 break
             done = {(c, g) for c, g, _ in result.carried}
+            allowed = {n for _, n in W.bodies(desk.record.gearbox)} | set(NC_LOCKED)
+            stray = sorted({c[1] for c in calls if c[0] == "put" and c[1] not in allowed})
+            if stray:
+                stop(f"nocarrier {label}: the Update put {stray}, neither an app body nor a locked sprocket (§0.3)")
             ok = result.ok and done == set(NC_LOCKED.items()) and not result.user_in_error
             check(ok, f"nocarrier {label}: the Update went ahead and put each locked sprocket with its gear, its gear "
                       f"mates on: ok {result.ok}, carried {result.carried}, placed {result.placed}, failures "
@@ -1647,7 +1884,7 @@ def refuse_like(desk, folder, label, ahead, locks, finding):
 
 SECTIONS = {"m3": section_m3, "setup": section_setup, "m1": section_m1, "go": section_go, "refuse": section_refuse,
             "again": lambda out: section_again(out, "open"), "again-dirty": lambda out: section_again(out, "dirty"),
-            "again-closed": lambda out: section_again(out, "closed"), "reducer": section_reducer,
+            "again-closed": lambda out: section_again(out, "closed"), "reducer": section_reducer, "k3": section_k3,
             "nocarrier": section_nocarrier}
 
 
@@ -1663,7 +1900,12 @@ def main():
 
     say(f"awake   {S0.keep_awake(True)}")
     say(f"run     {time.strftime('%Y-%m-%d %H:%M:%S')}; W9a demonstration from {W.SRC}{W.snapshot()}; sections "
-        f"{CHOSEN}; masters {MASTER}")
+        f"{CHOSEN}; masters {MASTER}; redo {REDO}")
+    recent = store.recent_path()
+    if not (APPDATA_HERE and W.under(recent, OUT)):
+        say(f"STOP    the app's Recent list would be written outside this run's folder ({recent}), so nothing runs")
+        return 2
+    check(True, f"the app's settings and Recent list go into this run's folder, not the user's: {recent}")
     unknown = [n for n in CHOSEN if n not in SECTIONS]
     if unknown:
         say(f"STOP    no such section {unknown}; there are {list(SECTIONS)}")
@@ -1696,15 +1938,27 @@ def main():
                 fails = len(W.FAILS)
                 began = time.monotonic()
                 try:
-                    if name in ("setup", "reducer") and os.path.isdir(os.path.join(OUT, name + W.MASTER_SUFFIX)):
-                        say(f"skip    {name}: its master was kept earlier in this run")
+                    held = done_here(name)
+                    if held and not REDO:
+                        say(f"skip    {name}: this <out> holds it already ({[os.path.basename(p) for p in held]}); "
+                            "--redo runs it again")
+                        out["skipped"] = True
                     else:
+                        for p in held:
+                            aside = f"{p}.prev-{started}"
+                            os.rename(p, aside)
+                            say(f"redo    {name}: {os.path.basename(p)} set aside as {os.path.basename(aside)}")
+                            for key, kept in MASTER.items():
+                                if kept and os.path.normcase(os.path.abspath(kept)) == os.path.normcase(os.path.abspath(p)):
+                                    MASTER[key] = ""
                         SECTIONS[name](out)
                 except SectionStop as exc:
                     out["stop"] = str(exc)
                     say(f"STOP    the section {name} ends at its STOP: {exc}")
-                except AssertionError as exc:
-                    check(False, f"{name}: {exc}")
+                except RUN_ENDERS:
+                    raise
+                except Exception as exc:  # noqa: BLE001 - the script's own fault costs its section, not the run
+                    check(False, f"{name}: {type(exc).__name__}: {exc}")
                     for line in traceback.format_exc().splitlines()[-8:]:
                         say("        " + line)
                 finally:
@@ -1715,8 +1969,8 @@ def main():
                 watch_check(name)
         except DemoStop as exc:
             say(f"STOP    the run ends at its STOP: {exc}")
-        except W.WorkerHung as exc:
-            check(False, f"W9a: {exc}; the run ends here, nothing more is asked of SolidWorks")
+        except (W.WorkerHung, swcom.NotRunning, W.Stopped, W.Halt) as exc:
+            check(False, f"W9a: {type(exc).__name__}: {exc}; the run ends here, nothing more is asked of SolidWorks")
             RESULT["stops"].append(str(exc))
         except Exception as exc:  # noqa: BLE001
             check(False, f"W9a raised {type(exc).__name__}: {exc}")

@@ -734,6 +734,7 @@ def w8_set_status_whole():
                                              "reach; start SolidWorks, wait for it to finish loading, and press again.",
                                              False), ok=False)  # noqa: SLF001
     w8_footer_whole("a sentence set alone (SolidWorks out of reach)")
+    w8_k12("a sentence set alone (SolidWorks out of reach)")     # the buttons beside it whole too (review 15)
     win._refresh_state()  # noqa: SLF001
 
 
