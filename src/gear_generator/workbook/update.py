@@ -2262,8 +2262,11 @@ def finish_update(plan: UpdatePlan, result: GearboxUpdate, record: LinkRecord, *
     # the new values in error; its second reading's N1: a rebuild that read false from the user's own features alone
     # is no failure, and clears it).
     # The review of the M3 fix, (ii): a marked document the worker read with nothing of the app's in error or unread
-    # (repaired in SolidWorks, say) is in error no longer, and its mark goes too.
-    clean = _documents_changed_clean(plan, result) + [str(p) for p in getattr(result, "read_clean", []) or []]
+    # (repaired in SolidWorks, say) is in error no longer, and its mark goes too, unless a failure of this press names
+    # it (its re-check: a rebuild that raised comes back with nothing changed, so nothing would mark it again).
+    named = [str(what) for what, _why in getattr(result, "failures", []) or []]
+    clean = _documents_changed_clean(plan, result) + [
+        str(p) for p in getattr(result, "read_clean", []) or [] if not any(names_document(w, str(p)) for w in named)]
     rec.unsaved_in_error = [p for p in rec.unsaved_in_error if not any(store.same_path(p, q) for q in clean)]
     if result.failures:
         failed = _documents_left_in_error(plan, result)

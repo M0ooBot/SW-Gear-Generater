@@ -1347,3 +1347,28 @@ def test_a_mark_goes_on_a_read_only_when_it_was_made_whole():
         result = swbuild.GearboxUpdate()
         swbuild._read_clean(document, states, result)                                           # noqa: SLF001
         assert result.read_clean == ([document.path] if noted else []), (states, document.left_in_error)
+
+
+def test_a_marked_part_read_clean_whose_rebuild_then_raises_keeps_its_mark_and_no_save_offer(measured):
+    """The re-check of (ii): the ring left in error is repaired in SolidWorks but not closed, so it reads clean ((ii)
+    would drop its mark), and the workbook then asks another count (Sun 28, Planet 14, Ring 56). The ring is set to
+    56 and its rebuild raises; the raise path returns a fresh result with nothing changed, so nothing marks it again.
+    Its mark must stay, and the stop must not offer to save the parts beside it. (Closed instead, the ring is found
+    closed and its mark goes with its unsaved mark, as before (ii): the file holds what it did before that Update.)"""
+    d, ring = _m3_stopped()
+    _ring_codes(d, ring, 0)
+    real = d.sw.rebuild
+
+    def rebuild(kind=None):
+        if d.sw.current and _key(d.sw.current) == _key(ring):
+            raise RuntimeError("SolidWorks stopped responding.")
+        return real(kind)
+
+    d.sw.rebuild = rebuild
+    stage = _with(_with(_with(range_box(), "Sun", teeth="28"), "Planet", teeth="14"), "Ring", teeth="56")
+    again = d.press(stage)
+    assert [store.same_path(p, ring) for p in again.result.read_clean] == [True]
+    assert [w for w, _ in again.result.failures] == ["Ring_m1.25_N55.SLDPRT"], again.result.failures
+    assert [store.same_path(p, ring) for p in d.record.unsaved_in_error] == [True]
+    assert "to keep" not in again.after, again.after
+    assert "Ring_m1.25_N55 is left in error: close them all in SolidWorks without saving" in again.after, again.after
