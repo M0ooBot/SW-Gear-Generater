@@ -2746,6 +2746,10 @@ class UserMate:
     code: int = 0
     warning: bool = True
     whole: bool = True         # False: SolidWorks would not give its type, its entity count or an entity
+    # W9d (W9D-INTERFACES §2.2, D5): per entity ``(what, name, kind, feature)`` — ``touches``' what and name, the
+    # entity's kind (``ENTITY_*``, by ``IMateEntity2.ReferenceType2``) and its feature (a reference feature's name,
+    # ``"plane<n>"``, ``"origin"``, else ``""``); ``()`` where not read (an inventory before W9d).
+    entities: Tuple[Tuple[str, str, str, str], ...] = ()
 
     def gears(self) -> Tuple[str, ...]:
         """The app's bodies (gear or carrier ids) its entities are on, each once, in entity order."""
@@ -3298,6 +3302,10 @@ class GearboxResult:
     # assembly was not open in this SolidWorks session, else the read's own trouble as a sentence, ``""`` when read.
     old_user_work: Optional[UserWork] = None
     old_read: str = ""
+    # W9d (W9D-INTERFACES §2.4): a Build again… given ``carry`` (:class:`Carry`) reads the old assembly first and
+    # carries the user's work into the new revision after its save; what it did and named. None without ``carry``.
+    # Never counted in :attr:`ok` (D21: the build's result is the build's alone).
+    carry: Optional["CarryResult"] = None
 
     @property
     def ok(self) -> bool:
@@ -3378,7 +3386,8 @@ def build_gearbox(sw: SolidWorks, parts: Sequence[BuildPlan], reuse: Sequence[Do
                   senses: Optional[Mapping[str, bool]] = None,
                   lines: Optional[Mapping[str, Tuple[Vec3, Vec3]]] = None,
                   carriers: Sequence[Union[BuildPlan, DocumentValues]] = (),
-                  modes: Optional[ModesPlan] = None, before: Optional["OldAssembly"] = None) -> GearboxResult:
+                  modes: Optional[ModesPlan] = None, before: Optional["OldAssembly"] = None,
+                  carry: Optional["Carry"] = None) -> GearboxResult:
     """A workbook's parts, its layout part and its static assembly, in one worker job (PLAN-WORKBOOK §4.2–§4.3).
 
     ``parts`` are the new parts' plans; ``reuse`` the parts already built and
@@ -3472,8 +3481,15 @@ def build_gearbox(sw: SolidWorks, parts: Sequence[BuildPlan], reuse: Sequence[Do
     work is read first by :func:`read_old_assembly` — only when it is open in this session, as it stands there, never
     shown in another mode, never saved or changed — into :attr:`GearboxResult.old_user_work` and ``old_read``.
     None is W8's call.
+
+    W9d (W9D-INTERFACES §1, §3): ``carry`` (keyword), for a Build again… that carries the user's work: its ``old`` is
+    the very :class:`OldAssembly` passed as ``before`` (else a fault, refused before anything is made). None is
+    W9a's call, call for call.
     """
     say = progress or _quiet
+    if carry is not None and (before is None or carry.old is not before):
+        raise BuildError("Build again… was asked to carry your work from an old assembly other than the one it leaves "
+                         "behind, so nothing is made; that is a fault in Gear Generator.")
     _gate(sw)
     gear_of_handle = dict(gears or {})
     layout_plan = layout if isinstance(layout, BuildPlan) else None
@@ -6786,6 +6802,280 @@ def _read_before(sw: SolidWorks, old: OldAssembly) -> Tuple[Optional[UserWork], 
     except Exception as exc:  # noqa: BLE001 - a read of what stays behind never stops the build
         return None, f"SolidWorks did not answer the read of {_file(old.path)}: {exc}"
     return (work, "") if work is not None else (None, OLD_NOT_OPEN)
+
+
+# -- W9d: Build again… carries the user's work (ISSUE-1-PLAN §2.5; W9D-INTERFACES.md) ----------------------------
+#
+# The shapes package B and package A share (W9D-INTERFACES §2). B builds a Carry from the record and the plan; A reads
+# the old assembly into an OldWork, decides a CarryPlan (plan_carry, pure, shared with B's foresight) and hands back a
+# CarryResult on GearboxResult.carry.
+
+STAGE_CARRY = "carry"         # W9d: carrying the user's work into the new revision (Step.name: the new assembly's stem)
+
+# The steps a carry can be gated on, as carry_gates names them (W9D-INTERFACES §8).
+STEP_CARRY_OPEN = "read the old assembly not open"
+STEP_CARRY_STATES = "read the states per mode"
+STEP_CARRY_INSERT = "insert a component"
+STEP_CARRY_CONFIGURATION = "insert a component in its configuration"
+STEP_CARRY_SUBASSEMBLY = "insert a sub-assembly"
+STEP_CARRY_FACES = "find a face again"
+STEP_CARRY_EDGES = "find an edge again"
+STEP_CARRY_VERTICES = "find a vertex again"
+STEP_CARRY_RELOAD = "find an entity again after a reload"
+STEP_CARRY_ORIGIN = "find an origin"
+STEP_CARRY_KIND = "make a kind of mate again"
+STEP_CARRY_GEAR_MATE = "make a gear mate on an app gear again"
+STEP_CARRY_LEAF = "make a mate on a leaf again"
+STEP_CARRY_STEPS = (STEP_CARRY_OPEN, STEP_CARRY_STATES, STEP_CARRY_INSERT, STEP_CARRY_CONFIGURATION,
+                    STEP_CARRY_SUBASSEMBLY, STEP_CARRY_FACES, STEP_CARRY_EDGES, STEP_CARRY_VERTICES, STEP_CARRY_RELOAD,
+                    STEP_CARRY_ORIGIN, STEP_CARRY_KIND, STEP_CARRY_GEAR_MATE, STEP_CARRY_LEAF)
+
+
+@dataclass(frozen=True)
+class CarryBody:
+    """One body on record in the old assembly, and what stands for it in the new revision (plan §2.5, "Components map
+    first"; W9D-INTERFACES §2.1). ``old``: the gear or carrier id on record, or ``"layout"``; ``old_name`` its Name2 in
+    the old assembly; ``handle`` the new plan's handle for it (``""``: the new revision has no such body);
+    ``same_file`` the new component is an instance of the very file the old one was; ``why_new`` B's phrase for why
+    its file is new; ``names`` / ``old_names`` the app's own feature names in the new and the old file."""
+
+    old: str
+    old_name: str
+    handle: str
+    same_file: bool
+    why_new: str = ""
+    names: Tuple[str, ...] = ()
+    old_names: Tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class Carry:
+    """What a carrying Build again… is given (W9D-INTERFACES §2.1): ``old`` the very :class:`OldAssembly` passed as
+    ``before``; every app body on record (the layout first, carriers, then gears); the new revision's modes in
+    Modes-sheet order; the old record's first mode; the SolidWorks the last job that wrote the old assembly ran on
+    (``()`` not known); every file the record names as the app's."""
+
+    old: "OldAssembly"
+    bodies: Tuple[CarryBody, ...]
+    modes: Tuple[str, ...] = ()
+    first: str = ""
+    written_on: Tuple[int, ...] = ()
+    app_files: Tuple[str, ...] = ()
+
+
+ENTITY_WHOLE = "whole"        # a whole component (a lock's entity; ReferenceType2 0 or swSelCOMPONENTS)
+ENTITY_FEATURE = "feature"    # a reference feature by name (an axis, a plane that is not a base plane)
+ENTITY_PLANE = "plane"        # a base plane, by tree order ("plane1".."plane3"), never by its English name
+ENTITY_ORIGIN = "origin"      # an origin point: never read as a mate entity by any run (WHY_UNMEASURED)
+ENTITY_FACE, ENTITY_EDGE, ENTITY_VERTEX = "face", "edge", "vertex"
+ENTITY_UNREAD = "unread"
+ENTITY_KINDS = (ENTITY_WHOLE, ENTITY_FEATURE, ENTITY_PLANE, ENTITY_ORIGIN, ENTITY_FACE, ENTITY_EDGE, ENTITY_VERTEX,
+                ENTITY_UNREAD)
+
+
+@dataclass(frozen=True)
+class OldEntity:
+    """One entity of a user mate in the old assembly (W9D-INTERFACES §2.2): what it is on (``APP``, ``LAYOUT``,
+    ``ASSEMBLY``, ``USER`` or ``UNREAD_ENTITY``) and whose (the gear or carrier id, the top-level Name2, or ``""``); its
+    ``kind`` (``ENTITY_*``, by ``ReferenceType2``); its feature name (``"plane<n>"``, ``"origin"``); the leaf's Name2
+    path inside a user sub-assembly; the part-level persistent reference (hex) for tier 1; ``ReferenceType2`` as read;
+    ``coaxial`` for a face on an app gear (None not read); ``unread`` why it could not be read."""
+
+    what: str
+    owner: str
+    kind: str
+    feature: str = ""
+    leaf: str = ""
+    reference: str = ""
+    select_type: int = UNREAD
+    coaxial: Optional[bool] = None
+    unread: str = ""
+
+
+@dataclass(frozen=True)
+class OldMate:
+    """A user mate in the old assembly, as read for making it again (W9D-INTERFACES §2.2): its name, ``swMateType_e``,
+    ``GetTypeName2``, alignment, flipped, the definition's numbers (metres, radians, flags as 0/1), its entities in
+    ``MateEntity(i)`` order, each entity's ``EntityParams``, the old modes it is on in, ``GetErrorCode2`` in the mode
+    showing, and whether SolidWorks described it wholly."""
+
+    name: str
+    type: int
+    type_name: str
+    alignment: int
+    flipped: bool
+    values: Tuple[Tuple[str, float], ...]
+    entities: Tuple[OldEntity, ...]
+    params: Tuple[Tuple[float, ...], ...] = ()
+    on: Tuple[str, ...] = ()
+    code: int = 0
+    warning: bool = True
+    whole: bool = True
+
+
+@dataclass(frozen=True)
+class OldComponent:
+    """A top-level user component in the old assembly (W9D-INTERFACES §2.2): Name2, file, kind (``"part"``,
+    ``"assembly"``, ``""``), fixed, error code, state in the mode showing, frame there (None unread), its referenced
+    configuration and its document's active one (``""`` unread), the old modes it is suppressed in (None: not read per
+    mode, D2), virtual, pattern instance (None unread), and whether its file is on disk."""
+
+    name: str
+    path: str
+    kind: str
+    fixed: bool
+    code: int
+    state: int
+    frame: Optional[Frame9]
+    configuration: str = ""
+    active_configuration: str = ""
+    suppressed_in: Optional[Tuple[str, ...]] = None
+    virtual: bool = False
+    pattern_instance: Optional[bool] = None
+    on_disk: bool = True
+
+
+OLD_OPEN = "open"             # OldWork.how: read as it stands in the session
+OLD_READ_ONLY = "read-only"   # opened read-only by this job and closed unsaved after the read
+OLD_UNREAD = "unread"         # not read: OldWork.unread says why
+
+
+@dataclass
+class OldWork:
+    """What the read R found in the old assembly (W9D-INTERFACES §2.2, §3 R): when, which file, how (``OLD_*``), the
+    mode showing, the old modes found by name, the user's components and mates, each app body's frame in the mode
+    showing (by ``CarryBody.old``), what the per-mode states were read by, the documents a read marked (§0.3's STOP),
+    the documents left open by the read (R.7), and what could not be read."""
+
+    read_at: str
+    assembly: str
+    how: str
+    active: str
+    modes: Tuple[str, ...]
+    components: List[OldComponent]
+    mates: List[OldMate]
+    app_frames: Tuple[Tuple[str, Frame9], ...]
+    states_route: str = ""
+    marked: List[str] = field(default_factory=list)
+    left: List[str] = field(default_factory=list)
+    unread: List[str] = field(default_factory=list)
+
+    def user_work(self) -> UserWork:
+        """W9a's view of it, for :attr:`GearboxResult.old_user_work` as today: each component's Name2, file, fixed,
+        code and state; each mate's kind, type, touches (and W9d's entities), modes on, code and wholeness."""
+        work = UserWork(read_at=self.read_at)
+        work.components = [UserComponent(c.name, c.path, c.fixed, c.code, c.state) for c in self.components]
+        work.mates = [UserMate(m.name, _mate_kind(m.type), m.type, tuple((e.what, e.owner) for e in m.entities), m.on,
+                               m.code, m.warning, whole=m.whole,
+                               entities=tuple((e.what, e.owner, e.kind, e.feature) for e in m.entities))
+                      for m in self.mates]
+        return work
+
+
+CARRY_PART, CARRY_SUBASSEMBLY = "part", "sub-assembly"
+WHY_KIND, WHY_UNMEASURED, WHY_PART_NEW, WHY_GONE = "kind", "unmeasured", "part new", "gone"
+WHY_ASSEMBLY_FEATURE, WHY_NOT_CARRIED, WHY_UNREAD = "assembly feature", "component not carried", "unread"
+WHY_LIGHTWEIGHT, WHY_NO_FILE, WHY_LEAF, WHY_NOT_FOUND = "lightweight", "no file", "leaf", "not found"
+WHY_CONFIGURATION = "configuration"   # a component whose referenced configuration cannot be carried (D13)
+WHY_NO_FRAME = "no frame"             # a component suppressed in the mode showing whose frame would not read (§5.3)
+WHY_DIFFERS = "differs"               # made again, it read otherwise than it was (§10), so it was taken out again
+WHY_OLD_UNREAD = "old unread"         # the old assembly was not read (§3 R.2): every item
+FELL_NEW_ERROR, FELL_OVER_DEFINED, FELL_TIE = "new error", "over-defined", "tie"
+
+
+@dataclass(frozen=True)
+class CarryNamed:
+    """One thing not carried (W9D-INTERFACES §2.3): the mate's or component's name in the old assembly, ``"mate"`` or
+    ``"component"``, why (``WHY_*``), and the subjects in §2.3's slots for that why."""
+
+    item: str
+    what: str
+    why: str
+    subjects: Tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class CarryPlanItem:
+    """One component to insert: the old component, the ``CarryBody.old`` it is placed against (``""`` the world
+    frame), where it goes in the new revision's first mode, and its cluster."""
+
+    component: OldComponent
+    anchor: str
+    frame: Frame9
+    cluster: int
+
+
+@dataclass(frozen=True)
+class CarryMateItem:
+    """One mate to make again: the old mate, its cluster (-1: no user component), per entity in selection order how it
+    is found (the session's reference grammar), a gear mate's ``AddMate5`` ratio (first selection's first), and a gear
+    mate's sense to read back (+1 same way, -1 opposite, 0 no gear mate)."""
+
+    mate: OldMate
+    cluster: int
+    targets: Tuple[str, ...]
+    ratio: Tuple[float, float] = (1.0, 1.0)
+    sense: int = 0
+
+
+@dataclass(frozen=True)
+class CarryPlan:
+    """What :func:`plan_carry` decided: the components to insert, the mates to make again, everything named, each
+    cluster's components (old Name2s, in first-mate order), and ``(step, finding)`` for every gate not set."""
+
+    components: Tuple[CarryPlanItem, ...]
+    mates: Tuple[CarryMateItem, ...]
+    named: Tuple[CarryNamed, ...]
+    clusters: Tuple[Tuple[str, ...], ...]
+    gates: Tuple[Tuple[str, str], ...]
+
+
+@dataclass(frozen=True)
+class CarryFallback:
+    """A cluster that fell back (W9D-INTERFACES §6): its components (new Name2s) fixed where placed, the mates made
+    again and deleted again (old names), its user-to-user mates kept, why (``FELL_*``) and §2.3's subjects."""
+
+    components: Tuple[str, ...]
+    deleted: Tuple[str, ...]
+    kept: Tuple[str, ...]
+    why: str
+    subjects: Tuple[str, ...] = ()
+
+
+@dataclass
+class CarryResult:
+    """What the carry did (W9D-INTERFACES §2.4): what was read (None only when the read raised), each component
+    inserted (old Name2, Name2 kept), each one's modes read suppressed in, each mate made again (old name, name kept,
+    modes on in), the mates back in the error they had, everything named, the clusters that fell back, the components
+    off their pose (new Name2, mode, mm), clashes naming a carried component, user documents read modified after, a
+    stop's sentence, what it did not get to, the gates that kept something back, and whether anything was written
+    into the new assembly (then unsaved)."""
+
+    work: Optional[OldWork]
+    inserted: List[Tuple[str, str]] = field(default_factory=list)
+    states: List[Tuple[str, Tuple[str, ...]]] = field(default_factory=list)
+    remade: List[Tuple[str, str, Tuple[str, ...]]] = field(default_factory=list)
+    same_error: List[Tuple[str, int]] = field(default_factory=list)
+    named: List[CarryNamed] = field(default_factory=list)
+    fixed: List[CarryFallback] = field(default_factory=list)
+    moved: List[Tuple[str, str, float]] = field(default_factory=list)
+    clashes: List[Tuple[str, Clash]] = field(default_factory=list)
+    marked_user: List[str] = field(default_factory=list)
+    stopped: str = ""
+    skipped: str = ""
+    gates: List[Tuple[str, str]] = field(default_factory=list)
+    unsaved: bool = False
+
+
+def plan_carry(work: OldWork, carry: Carry, revision: Sequence[int], *,
+               new_frames: Mapping[str, Frame9] = {}) -> CarryPlan:   # noqa: B006 - read only
+    """Pure (W9D-INTERFACES §2.3): what of ``work`` is carried and how, and everything named with its reason."""
+    raise NotImplementedError("plan_carry: package A's W9d worker has not landed yet")
+
+
+def carry_gates(work: OldWork, carry: Carry, revision: Sequence[int]) -> List[Tuple[str, str]]:
+    """Pure (W9D-INTERFACES §8): ``(step, finding)`` for each gate not settled that something in ``work`` needs."""
+    raise NotImplementedError("carry_gates: package A's W9d worker has not landed yet")
 
 
 def _find_by_part(sw: SolidWorks, handle: str, placement: Placement, placements: Sequence[Placement],

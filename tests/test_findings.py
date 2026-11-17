@@ -2498,3 +2498,22 @@ def test_w9c_gates_are_not_measured_until_the_full_build_reads_them():
                  "UPDATE_MAKES_A_NEW_COUPLING", "UPDATE_SUPPRESSES_THE_RELIEF"):
         for year in (2026, 2024):
             assert hasattr(findings, f"{name}_ON_{year}") and getattr(findings, f"{name}_ON_{year}") is None, name
+
+
+W9D_FINDINGS = ("OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN", "OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS", "FILE_VERSION_READ",
+                "COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED", "PERSIST_REFERENCE_ROUTE_FOR_FACES",
+                "PERSIST_REFERENCE_ROUTE_FOR_EDGES", "PERSIST_REFERENCE_ROUTE_FOR_VERTICES",
+                "PERSIST_REFERENCE_SURVIVES_RELOAD", "COAXIAL_FACE_READ", "REFERENCED_CONFIGURATION_READ",
+                "VIRTUAL_READ", "PATTERN_INSTANCE_READ", "ORIGIN_ENTITY_READ", "SUBASSEMBLY_OPEN_MARKS",
+                "SUBASSEMBLY_OPEN_MARKS_WHEN_LOADED", "SUBASSEMBLY_READ_ONLY_INSERT",
+                "CARRY_INSERT_MARKS_USER_DOCUMENTS", "CARRY_INSERTS", "CARRY_INSERTS_IN_A_CONFIGURATION",
+                "CARRY_INSERTS_A_SUBASSEMBLY", "CARRY_REMAKE_KINDS", "CARRY_GEAR_MATE_ON_AN_APP_GEAR",
+                "CARRY_REMAKES_ON_A_LEAF")
+
+
+def test_w9d_findings_are_not_measured_until_a_reviewed_log_sets_them():
+    """W9D-INTERFACES.md §8: every new name W9d reads is in findings.py, None on both versions, until W9d's probe or
+    M9 reads it on that version and a review sets it; the per-mode state route stays None as W9c's probes left it."""
+    for name in W9D_FINDINGS + ("COMPONENT_STATE_PER_CONFIGURATION_ROUTE",):
+        for year in (2026, 2024):
+            assert hasattr(findings, f"{name}_ON_{year}") and getattr(findings, f"{name}_ON_{year}") is None, name

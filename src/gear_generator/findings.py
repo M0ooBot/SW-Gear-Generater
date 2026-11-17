@@ -2005,3 +2005,83 @@ UPDATE_MAKES_A_NEW_COUPLING_ON_2026 = None
 UPDATE_MAKES_A_NEW_COUPLING_ON_2024 = None
 UPDATE_SUPPRESSES_THE_RELIEF_ON_2026 = None
 UPDATE_SUPPRESSES_THE_RELIEF_ON_2024 = None
+#
+# ---------------------------------------------------------------------------------------------------------------------
+# W9d: Build again… carries the user's work (W9D-INTERFACES.md §8). Every name below is None on both versions until a
+# reviewed SolidWorks log sets it: the reads from W9d's probe (probe/w9d_probes.py, W9D-PROBES.md), the writes from
+# the demonstration M9 (patched in that run's process for the measurement only, as W9a's nocarrier and W9c's gates
+# were). Nothing measured them; no run is cited. One not settled keeps its items from being carried, named with the
+# finding, and never stops the build.
+# - OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN (True): the close of a read-only document, shown or not, under no dialog; gates
+#   the not-open read at all and its per-mode show (probe state (h)).
+# - OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS (True): the read-only open leaves the app's documents already open as they
+#   were, one with changes included; gates the not-open read when any document is open (probe state (g)).
+# - FILE_VERSION_READ (a route string): the closed file's last saved version (ISldWorks.VersionHistory); the not-open
+#   read opens only when it is set and reads the running version (probe state (v)).
+# - COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED (True): the per-mode state route reads an open assembly's unsaved
+#   change (probe state (e)).
+# - PERSIST_REFERENCE_ROUTE_FOR_FACES / _FOR_EDGES / _FOR_VERTICES (a route string): tier 1 on faces, edges, vertices
+#   (probe faces (b); vertices: nothing in W9d).
+# - PERSIST_REFERENCE_SURVIVES_RELOAD (True): a part-level reference resolved after its part is closed and opened
+#   again; tier 1 on the not-open path (probe faces (d)).
+# - COAXIAL_FACE_READ (True): a face on an app gear read coaxial with its Gear Axis (probe faces (b)).
+# - REFERENCED_CONFIGURATION_READ (True): IComponent2.ReferencedConfiguration read right (M9's Sprocket-11 sets it).
+# - VIRTUAL_READ, PATTERN_INSTANCE_READ (True): IComponent2.IsVirtual, IsPatternInstance (read negative only).
+# - ORIGIN_ENTITY_READ (True): an origin as a mate entity (nothing in W9d).
+# - SUBASSEMBLY_OPEN_MARKS, SUBASSEMBLY_OPEN_MARKS_WHEN_LOADED (settled False): opening a healthy user sub-assembly,
+#   not loaded or loaded as a component, marks nothing (probe sub (a), (c)).
+# - SUBASSEMBLY_READ_ONLY_INSERT (True): a sub-assembly opened read-only, then inserted (probe sub (b)).
+# - CARRY_INSERT_MARKS_USER_DOCUMENTS (a fact, True or False): an insert marks the user's documents; True adds a
+#   sentence (probe faces (c)).
+# - CARRY_INSERTS (True): user parts inserted, placed, fixed, their states set in every mode and read back (M9).
+# - CARRY_INSERTS_IN_A_CONFIGURATION (True): an insert in a referenced configuration (M9).
+# - CARRY_INSERTS_A_SUBASSEMBLY (True): a user sub-assembly inserted by its file (M9, if its fixture holds one).
+# - CARRY_REMAKE_KINDS (a tuple of kind words): the kinds of mate M9 made again clean (D4).
+# - CARRY_GEAR_MATE_ON_AN_APP_GEAR (True): a user gear mate on an app gear's Gear Axis, ratio and sense read back (M9).
+# - CARRY_REMAKES_ON_A_LEAF (True): a mate on a leaf of a user sub-assembly (nothing in W9d).
+OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN_ON_2026 = None
+OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN_ON_2024 = None
+OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS_ON_2026 = None
+OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS_ON_2024 = None
+FILE_VERSION_READ_ON_2026 = None
+FILE_VERSION_READ_ON_2024 = None
+COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED_ON_2026 = None
+COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED_ON_2024 = None
+PERSIST_REFERENCE_ROUTE_FOR_FACES_ON_2026 = None
+PERSIST_REFERENCE_ROUTE_FOR_FACES_ON_2024 = None
+PERSIST_REFERENCE_ROUTE_FOR_EDGES_ON_2026 = None
+PERSIST_REFERENCE_ROUTE_FOR_EDGES_ON_2024 = None
+PERSIST_REFERENCE_ROUTE_FOR_VERTICES_ON_2026 = None
+PERSIST_REFERENCE_ROUTE_FOR_VERTICES_ON_2024 = None
+PERSIST_REFERENCE_SURVIVES_RELOAD_ON_2026 = None
+PERSIST_REFERENCE_SURVIVES_RELOAD_ON_2024 = None
+COAXIAL_FACE_READ_ON_2026 = None
+COAXIAL_FACE_READ_ON_2024 = None
+REFERENCED_CONFIGURATION_READ_ON_2026 = None
+REFERENCED_CONFIGURATION_READ_ON_2024 = None
+VIRTUAL_READ_ON_2026 = None
+VIRTUAL_READ_ON_2024 = None
+PATTERN_INSTANCE_READ_ON_2026 = None
+PATTERN_INSTANCE_READ_ON_2024 = None
+ORIGIN_ENTITY_READ_ON_2026 = None
+ORIGIN_ENTITY_READ_ON_2024 = None
+SUBASSEMBLY_OPEN_MARKS_ON_2026 = None
+SUBASSEMBLY_OPEN_MARKS_ON_2024 = None
+SUBASSEMBLY_OPEN_MARKS_WHEN_LOADED_ON_2026 = None
+SUBASSEMBLY_OPEN_MARKS_WHEN_LOADED_ON_2024 = None
+SUBASSEMBLY_READ_ONLY_INSERT_ON_2026 = None
+SUBASSEMBLY_READ_ONLY_INSERT_ON_2024 = None
+CARRY_INSERT_MARKS_USER_DOCUMENTS_ON_2026 = None
+CARRY_INSERT_MARKS_USER_DOCUMENTS_ON_2024 = None
+CARRY_INSERTS_ON_2026 = None
+CARRY_INSERTS_ON_2024 = None
+CARRY_INSERTS_IN_A_CONFIGURATION_ON_2026 = None
+CARRY_INSERTS_IN_A_CONFIGURATION_ON_2024 = None
+CARRY_INSERTS_A_SUBASSEMBLY_ON_2026 = None
+CARRY_INSERTS_A_SUBASSEMBLY_ON_2024 = None
+CARRY_REMAKE_KINDS_ON_2026 = None
+CARRY_REMAKE_KINDS_ON_2024 = None
+CARRY_GEAR_MATE_ON_AN_APP_GEAR_ON_2026 = None
+CARRY_GEAR_MATE_ON_AN_APP_GEAR_ON_2024 = None
+CARRY_REMAKES_ON_A_LEAF_ON_2026 = None
+CARRY_REMAKES_ON_A_LEAF_ON_2024 = None
