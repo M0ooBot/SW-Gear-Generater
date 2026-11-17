@@ -1,0 +1,1823 @@
+awake   display and system held awake for the run (previous state -0x80000000)
+run     2026-11-17 05:11:22; W9b demonstration from C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\snap\src (snapshot: b15450f); sections ['part', 'build', 'update', 'old']; masters {'rangebox': '', 'setup': '', 'reducer': ''}; redo False
+ok      the app's settings and Recent list go into this run's folder, not the user's: C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\appdata\Gear Generator\recent.json
+attach  SolidWorks 2026 (revision 34.1.1) (revision 34.1.1), PID 18872; SolidWorks 0.67 GB private, 10.64 GB free
+open    before: []
+findings USER_MATE_PUT_ROUTE "put along, the user's locks left on", USER_TIE_RULE 'not COMPONENT_UNDER_DEFINED', WHATS_WRONG_OPENS_ON_PART_REBUILD False, the branches {'USER_MATE_PUT_FIXED_GEAR_ON_2024': None, 'USER_MATE_PUT_FIXED_GEAR_ON_2026': None, 'USER_MATE_PUT_HELD_GEAR_ON_2024': None, 'USER_MATE_PUT_HELD_GEAR_ON_2026': None, 'USER_MATE_PUT_NO_CARRIER_MODES_ON_2024': None, 'USER_MATE_PUT_NO_CARRIER_MODES_ON_2026': None, 'USER_MATE_PUT_NO_CARRIER_ON_2024': True, 'USER_MATE_PUT_NO_CARRIER_ON_2026': True, 'USER_MATE_PUT_SUBASSEMBLY_ON_2024': None, 'USER_MATE_PUT_SUBASSEMBLY_ON_2026': None}
+rule    What's Wrong: swbuild.whats_wrong_shows_in_update reads False; What's Wrong during a job is a STOP, as any dialog
+fact    a SolidWorks balloon tip ['Check1', 'Simplified Interface', 'The Simplified Interface provides a minimalist layout for quick and basic modeling. It can be customized similarly to the standard interface.\n\nShow how to turn off the Simplified Interface.'] came up while no SolidWorks call was in progress (left standing, never answered)
+DIALOG  SolidWorks shows '': ['Title', 'Description', 'Button1', 'Button2', 'Hyperlink Text 1', 'Hyperlink Text 2']
+NOTE    SolidWorks' notification box came up while no SolidWorks call was in progress (exempt by the coordinator's ruling; nothing answers it)
+excel   started our own Excel, PID 48808, 16.0 build 20527.0
+== part  the banded RangeSlv of RangeBox_Fixed and the same sleeve unbanded, by the strip's own plan_for and swbuild.build, read back from SolidWorks; the volumes; a band changed by the strip's value route; the Hub part
+ok      part unbanded: the strip's plan checks clean: []
+ok      part unbanded: Sleeve_m1.25_N17.SLDPRT built and saved by swbuild.build: ok True, failures []
+fact    part unbanded: volume 11455.543866 mm³; features 23, in error none; globals {'Face Width': 26.0}
+ok      part unbanded: no feature in error and no relief feature: ['Comments', 'Favorites', 'History', 'Selection Sets', 'Sensors', 'Design Binder', 'Annotations', 'Surface Bodies', 'Solid Bodies', 'Lights and Cameras', 'Markups', 'Equations', 'Material <not specified>', 'Front Plane', 'Top Plane', 'Right Plane', 'Origin', 'Gear Axis', 'Blank Sketch', 'Blank', 'Tooth Space Sketch', 'Tooth Space', 'Teeth']
+ok      part unbanded: closed, nothing left open under its folder: []
+ok      part banded: the strip's plan checks clean: []
+ok      part banded: Sleeve_m1.25_N17.SLDPRT built and saved by swbuild.build: ok True, failures []
+fact    part banded: volume 9622.168784 mm³; features 28, in error none; globals {'Face Width': 26.0, 'Start Band': 5.0, 'End Band': 5.0, 'Relief Diameter': 25.0}
+ok      part banded: the three globals read Start Band 5, End Band 5, Relief Diameter 25.0: {'Face Width': 26.0, 'Start Band': 5.0, 'End Band': 5.0, 'Relief Diameter': 25.0}
+ok      part banded: Relief Start Plane and Relief End Plane offset (5.0, 21.0): [[5.0], [21.0]]
+ok      part banded: each plane's offset and each relief sketch's diameter linked to its globals: not linked none (equations ['"Relief Diameter"= ( "No. of Teeth" + 3 ) * "Module"', '"Offset@Relief Start Plane"= "Start Band"', '"Offset@Relief End Plane"= "Face Width" - "End Band"', '"Relief@Relief Start Sketch"= "Relief Diameter"', '"Relief@Relief End Sketch"= "Relief Diameter"'])
+ok      part banded: each relief sketch's circle is Ø 25.0: [[5.0, 25.0], [21.0, 25.0]]
+ok      part banded: the Relief feature present by name and in no error, nothing in error: {'Relief Start Plane': 0, 'Relief End Plane': 0, 'Relief Start Sketch': 0, 'Relief End Sketch': 0, 'Relief': 0}
+ok      part banded: the bore over the relief is one cylinder of radius 12.5 along the part's axis, its ends the two step faces at z (5.0, 21.0) to 1e-06 mm (PlaneParams): {'cylinders': 1, 'r': [12.5], 'ends': [5.0, 21.0], 'box_z': (4.759716, 21.240284), 'padding': (0.240284, 0.240284)}
+fact    part banded: SolidWorks padded the bore's GetBox by (0.240284, 0.240284) mm at its two ends (box z (4.759716, 21.240284), the planes [5.0, 21.0])
+ok      part banded: the two relief sketches sit under Relief in the tree, absorbed by the loft cut: ['Relief Start Sketch', 'Relief End Sketch']
+-- part  a band changed through the strip's value route: Start Band 5 -> 4 (swbuild.update_variables, the part active), read back as the start plane's offset
+ok      part banded: the value route set Start Band alone and rebuilt: changed ['Start Band'], rebuilt True, failures []
+fact    part banded, Start Band 4: volume 9507.530458 mm³; features 28, in error none; globals {'Face Width': 26.0, 'Start Band': 4.0, 'End Band': 5.0, 'Relief Diameter': 25.0}
+ok      part banded: Start Band reads 4, the planes [[4.0], [21.0]], rebuilt in no error
+ok      part banded: closed, nothing left open under its folder: []
+fact    part: volumes unbanded 11455.543866, banded 9622.168784, Start Band 4 9507.530458 mm³; one more mm of relief removed 114.638326 mm³ (a difference of two mass-property volumes, a fact only)
+ok      part: the area one more mm of relief removes, 114.638326 mm², lies between the ring outside the roots (9.768) and the ring outside the tips (214.757)
+ok      part: the banded part's volume (5/5) is the unbanded section F0 = V/26 = 440.597841 mm² over the bands and the ring π(Ro² − r²), Ro 16.125 and r 12.5 from the faces, over the relief: 9622.168784 against 9621.807613 mm³, 0.361171 apart (3.8e-05 of it; 0.0001 allowed)
+ok      part: the banded part's volume (4/5) is the unbanded section F0 = V/26 = 440.597841 mm² over the bands and the ring π(Ro² − r²), Ro 16.125 and r 12.5 from the faces, over the relief: 9507.530458 against 9507.199097 mm³, 0.331361 apart (3.5e-05 of it; 0.0001 allowed)
+fact    part: F0 two ways: the unbanded volume over its face 440.597841 mm², its front end face's area (IFace2.GetArea) 440.547728 mm² (1.1e-04 apart)
+ok      part hub: the strip's plan checks clean: []
+ok      part hub: Hub_m1.25_N17.SLDPRT built and saved by swbuild.build: ok True, failures []
+fact    part hub: volume 6448.726023 mm³; features 23, in error none; globals {'Face Width': 20.0}
+ok      part hub: Hub_m1.25_N17 built, 17 teeth, face 20, no feature in error
+ok      part hub: closed, nothing left open under its folder: []
+time    part: 88 s; 0 failed; SolidWorks 0.94 GB private, 10.31 GB free
+== build  RangeBox_Fixed written by the app's write_new and built from scratch by the app's own Build, kept as fixed.master; per mode, §3's engagement, slides, interference and bands measured from the model (M7)
+write   RangeBox_Fixed.xlsx by the app's own write_new, its Output folder blank (the strip's is C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\fixed)
+ok      Excel opened RangeBox_Fixed.xlsx with no dialog or repair: []
+excel   saved RangeBox_Fixed.xlsx
+ok      read RangeBox_Fixed.xlsx: ok
+        warning Gears!F3: Planet: 13 teeth at 20° is below the undercut limit of 17: a generated gear would lose the bottom of its flanks, which this profile does not show. A profile shift of 0.24 or more would clear it.
+        warning Gears!F3: Planet: The tooth tip is 0.36 mm thick, under 0.3 × module (0.375 mm).
+        warning Gears!F7: RangeSlv: The teeth's tips, at 18.75 mm, are inside the base circle of 19.968 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!A3: Planet (13 teeth) is below the undercut limit, which is not modelled, and meshes Sun (29 teeth): the build checks interference only where the gears stand, so check Planet with Sun turning in SolidWorks.
+        5 shafts · 7 gears · 2 meshes; gate ''
+ok      build: the read's warnings are the fixture's own (4), no error: extra [], missing [], errors []
+ok      build: none from W9b's three checks (reach, hub, running clearance) and no stroke warning: []
+footer  (build, read) [green] Ready: Build makes 6 parts, RangeBox_Fixed_Layout, RangeBox_Fixed_Carrier_Carrier and RangeBox_Fixed.SLDASM in C:\…\w9b-demo-sw2026-20261117-051055\out\fixed. Its turning gears are mated to their shafts and, as each mode engages them, to each other, so they turn together in SolidWorks. It has 3 modes, H, N and L: each becomes a configuration of the assembly, and it opens in H. Carrier is built as a carrier of axes and planes only, turning with the 3 copies of Planet on it. Ring stays fixed where it is placed: its shaft does not turn.
+        button 'Build' on primary; Update SolidWorks hidden
+plan    revision 0 RangeBox_Fixed: refusal ''; reason ''; turning True; static reason ''
+        layout C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\fixed\RangeBox_Fixed_Layout.SLDPRT; assembly C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\fixed\RangeBox_Fixed.SLDASM
+        build Gear_m1.25_N29 for Sun at C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\fixed\Gear_m1.25_N29.SLDPRT (76 ops)
+        build Gear_m1.25_N13 for Planet at C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\fixed\Gear_m1.25_N13.SLDPRT (76 ops)
+        build Ring_m1.25_N55 for Ring at C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\fixed\Ring_m1.25_N55.SLDPRT (93 ops)
+        build Dog_m1.25_N17 for HighDog, LowDog at C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\fixed\Dog_m1.25_N17.SLDPRT (76 ops)
+        build Sleeve_m1.25_N17 for RangeSlv at C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\fixed\Sleeve_m1.25_N17.SLDPRT (113 ops)
+        build Hub_m1.25_N17 for Hub at C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\fixed\Hub_m1.25_N17.SLDPRT (76 ops)
+        shaft Input: (0, 0, 0) axis Z+ (0.0, 0.0, 1.0) sigma +1; X base '', Y base '', Z  ''; line ''; Input Axis
+        shaft Carrier: (0, 0, 0) axis Z+ (0.0, 0.0, 1.0) sigma +1; X base '', Y base '', Z  ''; line ''; Carrier Axis
+        shaft Ring: (0, 0, 0) axis Z+ (0.0, 0.0, 1.0) sigma +1; X base '', Y base '', Z  ''; line ''; Ring Axis
+        shaft Output: (0, 0, 0) axis Z+ (0.0, 0.0, 1.0) sigma +1; X base '', Y base '', Z  ''; line ''; Output Axis
+        frame Sun: R [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0] at [0.0, 0.0, 5.5]
+        frame Planet copy 1: R [1.0, -0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0] at [26.25, 0.0, 5.5]
+        frame Planet copy 2: R [0.885456026, -0.464723172, 0.0, 0.464723172, 0.885456026, 0.0, 0.0, 0.0, 1.0] at [-13.125, 22.733166849, 5.5]
+        frame Planet copy 3: R [1.0, -0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0] at [-13.125, -22.733166849, 5.5]
+        frame Ring: R [0.998369104, -0.057088811, 0.0, 0.057088811, 0.998369104, 0.0, 0.0, 0.0, 1.0] at [0.0, 0.0, 5.5]
+        frame HighDog: R [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0] at [0.0, 0.0, -34.5]
+        frame LowDog: R [0.932472229, -0.361241666, 0.0, 0.361241666, 0.932472229, 0.0, 0.0, 0.0, 1.0] at [0.0, 0.0, -19.5]
+        frame RangeSlv: R [0.9829731, -0.183749518, 0.0, 0.183749518, 0.9829731, 0.0, 0.0, 0.0, 1.0] at [0.0, 0.0, -55.5]
+        frame Hub: R [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0] at [0.0, 0.0, -55.5]
+        motion: trains [('Input', 'Carrier', 'Planet copy 1', 'Planet copy 2', 'Planet copy 3', 'Ring')]; drag ['Sun']; fixed ['Ring']; unmated [('Planet copy 2', 'Ring'), ('Planet copy 3', 'Ring')]
+        mate 'Sun on Input Axis': axis ['Sun'] Input ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'Sun along Input': along ['Sun'] Input ratio [] face 'Sun Face Z' z_front 5.5 plane 'front' sense 0
+        mate 'HighDog locked to Sun': lock ['Sun', 'HighDog']  ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'Carrier carrier on Carrier Axis': axis ['Carrier carrier'] Carrier ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'Carrier carrier along Carrier': along ['Carrier carrier'] Carrier ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'LowDog locked to Carrier carrier': lock ['Carrier carrier', 'LowDog']  ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'Planet copy 1 on Planet copy 1 Axis': axis ['Planet copy 1'] Planet copy 1 ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'Planet copy 1 along Planet copy 1': along ['Planet copy 1'] Planet copy 1 ratio [] face 'Planet Face Z' z_front 5.5 plane 'front' sense 0
+        mate 'Planet copy 2 on Planet copy 2 Axis': axis ['Planet copy 2'] Planet copy 2 ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'Planet copy 2 along Planet copy 2': along ['Planet copy 2'] Planet copy 2 ratio [] face 'Planet Face Z' z_front 5.5 plane 'front' sense 0
+        mate 'Planet copy 3 on Planet copy 3 Axis': axis ['Planet copy 3'] Planet copy 3 ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'Planet copy 3 along Planet copy 3': along ['Planet copy 3'] Planet copy 3 ratio [] face 'Planet Face Z' z_front 5.5 plane 'front' sense 0
+        mate 'Hub on Output Axis': axis ['Hub'] Output ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'Hub along Output': along ['Hub'] Output ratio [] face 'Hub Face Z' z_front -55.5 plane 'front' sense 0
+        mate 'RangeSlv on Output Axis': axis ['RangeSlv'] Output ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'RangeSlv along Output': slide ['RangeSlv'] Output ratio [] face '' z_front -55.5 plane 'front' sense 0
+        mate 'RangeSlv splined to Hub': spline ['Hub', 'RangeSlv']  ratio [1, 1] face '' z_front 0 plane 'front' sense -1
+        mate 'Sun meshes Planet copy 1': mesh ['Sun', 'Planet copy 1']  ratio [29, 13] face '' z_front 0 plane 'front' sense 1
+        mate 'Sun meshes Planet copy 2': mesh ['Sun', 'Planet copy 2']  ratio [29, 13] face '' z_front 0 plane 'front' sense 1
+        mate 'Sun meshes Planet copy 3': mesh ['Sun', 'Planet copy 3']  ratio [29, 13] face '' z_front 0 plane 'front' sense 1
+        mate 'Planet copy 1 meshes Ring': mesh ['Planet copy 1', 'Ring']  ratio [13, 55] face '' z_front 0 plane 'front' sense -1
+        mate 'RangeSlv engages HighDog': couple ['RangeSlv', 'HighDog']  ratio [1, 1] face '' z_front 0 plane 'front' sense -1
+        mate 'RangeSlv engages LowDog': couple ['RangeSlv', 'LowDog']  ratio [1, 1] face '' z_front 0 plane 'front' sense -1
+        ops of RangeBox_Fixed_Layout.SLDPRT:
+          new     NewPart from (default template)
+          axis    'Input Axis' through planes 2 and 3
+          axis    'Carrier Axis' through planes 2 and 3
+          axis    'Ring Axis' through planes 2 and 3
+          axis    'Output Axis' through planes 2 and 3
+          rebuild once
+          save    C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\fixed\RangeBox_Fixed_Layout.SLDPRT
+        ops of RangeBox_Fixed.SLDASM:
+          new     NewAssembly from (default template)
+          global  "Sun Face Z"= 5.5
+          global  "Planet Face Z"= 5.5
+          global  "Hub Face Z"= 55.5
+          insert  layout C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\fixed\RangeBox_Fixed_Layout.SLDPRT at (0, 0, 0)
+          place   layout at (0, 0, 0) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     layout
+          insert  carrier1 C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\fixed\RangeBox_Fixed_Carrier_Carrier.SLDPRT at (0, 0, 0)
+          place   carrier1 at (0, 0, 0) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     carrier1
+          insert  gear1 C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\fixed\Gear_m1.25_N29.SLDPRT at (0, 0, 5.5)
+          place   gear1 at (0, 0, 5.5) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     gear1
+          insert  gear2c1 C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\fixed\Gear_m1.25_N13.SLDPRT at (26.25, 0, 5.5)
+          place   gear2c1 at (26.25, 0, 5.5) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     gear2c1
+          insert  gear2c2 C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\fixed\Gear_m1.25_N13.SLDPRT at (-13.125, 22.733167, 5.5)
+          place   gear2c2 at (-13.125, 22.733167, 5.5) turned (0.885456, -0.464723, 0, 0.464723, 0.885456, 0, 0, 0, 1)
+          fix     gear2c2
+          insert  gear2c3 C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\fixed\Gear_m1.25_N13.SLDPRT at (-13.125, -22.733167, 5.5)
+          place   gear2c3 at (-13.125, -22.733167, 5.5) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     gear2c3
+          insert  gear3 C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\fixed\Ring_m1.25_N55.SLDPRT at (0, 0, 5.5)
+          place   gear3 at (0, 0, 5.5) turned (0.998369, -0.057089, 0, 0.057089, 0.998369, 0, 0, 0, 1)
+          fix     gear3
+          insert  gear4 C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\fixed\Dog_m1.25_N17.SLDPRT at (0, 0, -34.5)
+          place   gear4 at (0, 0, -34.5) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     gear4
+          insert  gear5 C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\fixed\Dog_m1.25_N17.SLDPRT at (0, 0, -19.5)
+          place   gear5 at (0, 0, -19.5) turned (0.932472, -0.361242, 0, 0.361242, 0.932472, 0, 0, 0, 1)
+          fix     gear5
+          insert  gear6 C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\fixed\Sleeve_m1.25_N17.SLDPRT at (0, 0, -55.5)
+          place   gear6 at (0, 0, -55.5) turned (0.982973, -0.18375, 0, 0.18375, 0.982973, 0, 0, 0, 1)
+          fix     gear6
+          insert  gear7 C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\fixed\Hub_m1.25_N17.SLDPRT at (0, 0, -55.5)
+          place   gear7 at (0, 0, -55.5) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     gear7
+          unfix   gear1
+          mate    coincident gear1:Gear Axis ~ layout:Input Axis as 'Sun on Input Axis'
+          mate    point distance 5.5 gear1:origin ~ layout:plane1 as 'Sun along Input'
+          link    "D1@Sun along Input"= "Sun Face Z"
+          unfix   gear4
+          mate    lock gear1 ~ gear4 as 'HighDog locked to Sun'
+          unfix   carrier1
+          mate    coincident carrier1:Carrier Axis ~ layout:Carrier Axis as 'Carrier carrier on Carrier Axis'
+          mate    point carrier1:origin ~ layout:plane1 as 'Carrier carrier along Carrier'
+          unfix   gear5
+          mate    lock carrier1 ~ gear5 as 'LowDog locked to Carrier carrier'
+          unfix   gear2c1
+          mate    coincident gear2c1:Gear Axis ~ carrier1:Planet copy 1 Axis as 'Planet copy 1 on Planet copy 1 Axis'
+          mate    point distance 5.5 gear2c1:origin ~ layout:plane1 as 'Planet copy 1 along Planet copy 1'
+          link    "D1@Planet copy 1 along Planet copy 1"= "Planet Face Z"
+          unfix   gear2c2
+          mate    coincident gear2c2:Gear Axis ~ carrier1:Planet copy 2 Axis as 'Planet copy 2 on Planet copy 2 Axis'
+          mate    point distance 5.5 gear2c2:origin ~ layout:plane1 as 'Planet copy 2 along Planet copy 2'
+          link    "D1@Planet copy 2 along Planet copy 2"= "Planet Face Z"
+          unfix   gear2c3
+          mate    coincident gear2c3:Gear Axis ~ carrier1:Planet copy 3 Axis as 'Planet copy 3 on Planet copy 3 Axis'
+          mate    point distance 5.5 gear2c3:origin ~ layout:plane1 as 'Planet copy 3 along Planet copy 3'
+          link    "D1@Planet copy 3 along Planet copy 3"= "Planet Face Z"
+          unfix   gear7
+          mate    coincident gear7:Gear Axis ~ layout:Output Axis as 'Hub on Output Axis'
+          mate    point distance -55.5 gear7:origin ~ layout:plane1 as 'Hub along Output'
+          link    "D1@Hub along Output"= "Hub Face Z"
+          unfix   gear6
+          mate    coincident gear6:Gear Axis ~ layout:Output Axis as 'RangeSlv on Output Axis'
+          mate    point distance -55.5 gear6:origin ~ layout:plane1 as 'RangeSlv along Output'
+          mate    gear 1:1 gear7:Gear Axis ~ gear6:Gear Axis as 'RangeSlv splined to Hub'
+          mate    gear 29:13 gear1:Gear Axis ~ gear2c1:Gear Axis as 'Sun meshes Planet copy 1'
+          mate    gear 29:13 gear1:Gear Axis ~ gear2c2:Gear Axis as 'Sun meshes Planet copy 2'
+          mate    gear 29:13 gear1:Gear Axis ~ gear2c3:Gear Axis as 'Sun meshes Planet copy 3'
+          mate    gear 13:55 gear2c1:Gear Axis ~ gear3:Gear Axis as 'Planet copy 1 meshes Ring'
+          rebuild once
+          save    C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\fixed\RangeBox_Fixed.SLDASM
+ok      build: the plan turns (W5): static reason ''
+journal written: 9 paths
+build   RangeBox_Fixed: SolidWorks 0.88 GB private, 10.29 GB free
+fact    a SolidWorks balloon tip ['Check1', 'The sketch is no longer over defined.'] came up while SketchAddConstraints was in progress (left standing, never answered)
+DIALOG  SolidWorks shows 'Calculating Interference Detection': ['Cancel', 'Calculating Interference Detection'] (a progress box that closes itself; not logged again)
+        build   Part4 · spur · recipe A · trig degrees
+        ok      new part Part4
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 29
+        ok      link "Count@Teeth"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Gear_m1.25_N29; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\fixed\Gear_m1.25_N29.SLDPRT
+        build   Part5 · spur · recipe A · trig degrees
+        ok      new part Part5
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 13
+        ok      link "Count@Teeth"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Gear_m1.25_N13; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\fixed\Gear_m1.25_N13.SLDPRT
+        build   Part6 · internal spur · recipe A · trig degrees
+        ok      new part Part6
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Pressure Angle"
+        ok      global "Inner Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Rim Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Flank End Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle rim
+        ok      circle tip
+        ok      coincident rim.centre origin
+        ok      coincident tip.centre origin
+        ok      dimension Rim
+        ok      dimension Tip
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "Rim@Blank Sketch"
+        ok      link "Tip@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      circle cap
+        ok      line Li+
+        ok      line Li-
+        ok      line T
+        ok      line Lo+
+        ok      line Lo-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident cap.centre origin
+        ok      coincident Li+.start I+.start (already one point)
+        ok      coincident Li-.start I-.start (already one point)
+        ok      coincident origin Li+
+        ok      coincident origin Li-
+        ok      coincident Li+.end cap
+        ok      coincident Li-.end cap
+        ok      coincident T.start Li+.end (already one point)
+        ok      coincident T.end Li-.end (already one point)
+        ok      coincident Lo+.start I+.end (already one point)
+        ok      coincident Lo-.start I-.end (already one point)
+        ok      coincident origin Lo+
+        ok      coincident origin Lo-
+        ok      coincident F+.end Lo+.end (already one point)
+        ok      coincident F-.start Lo-.end (already one point)
+        ok      coincident F+.start R.end (already one point)
+        ok      coincident F-.end R.start (already one point)
+        ok      tangent F+ Lo+
+        ok      tangent F- Lo-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      dimension Cap
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      link "Cap@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 55
+        ok      link "Count@Teeth"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      25 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Ring_m1.25_N55; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\fixed\Ring_m1.25_N55.SLDPRT
+        build   Part7 · spur · recipe A · trig degrees
+        ok      new part Part7
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 17
+        ok      link "Count@Teeth"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Dog_m1.25_N17; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\fixed\Dog_m1.25_N17.SLDPRT
+        build   Part8 · internal spur · recipe A · trig degrees
+        ok      new part Part8
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Pressure Angle"
+        ok      global "Inner Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Rim Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Flank End Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      global "Start Band"
+        ok      global "End Band"
+        ok      global "Relief Diameter"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle rim
+        ok      circle tip
+        ok      coincident rim.centre origin
+        ok      coincident tip.centre origin
+        ok      dimension Rim
+        ok      dimension Tip
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "Rim@Blank Sketch"
+        ok      link "Tip@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      circle cap
+        ok      line Li+
+        ok      line Li-
+        ok      line T
+        ok      line Lo+
+        ok      line Lo-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident cap.centre origin
+        ok      coincident Li+.start I+.start (already one point)
+        ok      coincident Li-.start I-.start (already one point)
+        ok      coincident origin Li+
+        ok      coincident origin Li-
+        ok      coincident Li+.end cap
+        ok      coincident Li-.end cap
+        ok      coincident T.start Li+.end (already one point)
+        ok      coincident T.end Li-.end (already one point)
+        ok      coincident Lo+.start I+.end (already one point)
+        ok      coincident Lo-.start I-.end (already one point)
+        ok      coincident origin Lo+
+        ok      coincident origin Lo-
+        ok      coincident F+.end Lo+.end (already one point)
+        ok      coincident F-.start Lo-.end (already one point)
+        ok      coincident F+.start R.end (already one point)
+        ok      coincident F-.end R.start (already one point)
+        ok      tangent F+ Lo+
+        ok      tangent F- Lo-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      dimension Cap
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      link "Cap@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 17
+        ok      link "Count@Teeth"
+        ok      plane Relief Start Plane
+        ok      link "Offset@Relief Start Plane"
+        ok      plane Relief End Plane
+        ok      link "Offset@Relief End Plane"
+        ok      sketch relief_start opened on plane relief_start_plane
+        ok      circle relief_start_circle
+        ok      coincident relief_start_circle.centre origin
+        ok      dimension Relief
+        ok      sketch Relief Start Sketch
+        ok      link "Relief@Relief Start Sketch"
+        ok      sketch relief_end opened on plane relief_end_plane
+        ok      circle relief_end_circle
+        ok      coincident relief_end_circle.centre origin
+        ok      dimension Relief
+        ok      sketch Relief End Sketch
+        ok      link "Relief@Relief End Sketch"
+        ok      loft Relief
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      28 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Relief Start Sketch is fully defined
+        ok      Relief End Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Sleeve_m1.25_N17; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\fixed\Sleeve_m1.25_N17.SLDPRT
+        build   Part9 · spur · recipe A · trig degrees
+        ok      new part Part9
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 17
+        ok      link "Count@Teeth"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Hub_m1.25_N17; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\fixed\Hub_m1.25_N17.SLDPRT
+        build   Part10 · layout · recipe  · trig degrees
+        ok      new part Part10
+        ok      trig units measured: degrees
+        ok      axis Input Axis
+        ok      axis Carrier Axis
+        ok      axis Ring Axis
+        ok      axis Output Axis
+        ok      rebuilt once
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\fixed\RangeBox_Fixed_Layout.SLDPRT
+        build   Part11 · carrier · recipe  · trig degrees
+        ok      new part Part11
+        ok      trig units measured: degrees
+        ok      global "Planet copy 1 X"
+        ok      global "Planet copy 2 X"
+        ok      global "Planet copy 2 Y"
+        ok      global "Planet copy 3 X"
+        ok      global "Planet copy 3 Y"
+        ok      axis Carrier Axis
+        ok      plane Planet copy 1 X Plane
+        ok      link "Offset@Planet copy 1 X Plane"
+        ok      axis Planet copy 1 Axis
+        ok      plane Planet copy 2 X Plane
+        ok      link "Offset@Planet copy 2 X Plane"
+        ok      plane Planet copy 2 Y Plane
+        ok      link "Offset@Planet copy 2 Y Plane"
+        ok      axis Planet copy 2 Axis
+        ok      plane Planet copy 3 X Plane
+        ok      link "Offset@Planet copy 3 X Plane"
+        ok      plane Planet copy 3 Y Plane
+        ok      link "Offset@Planet copy 3 Y Plane"
+        ok      axis Planet copy 3 Axis
+        ok      5 globals read back and match the maths
+        ok      rebuilt once
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\fixed\RangeBox_Fixed_Carrier_Carrier.SLDPRT
+        build   Assem1 · assembly · recipe  · trig degrees
+        ok      new assembly Assem1
+        ok      trig units measured: degrees
+        ok      global "Sun Face Z"
+        ok      global "Planet Face Z"
+        ok      global "Hub Face Z"
+        ok      component RangeBox_Fixed_Layout-1
+        ok      placed layout
+        ok      fixed layout
+        ok      component RangeBox_Fixed_Carrier_Carrier-1
+        ok      placed carrier1
+        ok      fixed carrier1
+        ok      component Gear_m1.25_N29-1
+        ok      placed gear1
+        ok      fixed gear1
+        ok      component Gear_m1.25_N13-1
+        ok      placed gear2c1
+        ok      fixed gear2c1
+        ok      component Gear_m1.25_N13-2
+        ok      placed gear2c2
+        ok      fixed gear2c2
+        ok      component Gear_m1.25_N13-3
+        ok      placed gear2c3
+        ok      fixed gear2c3
+        ok      component Ring_m1.25_N55-1
+        ok      placed gear3
+        ok      fixed gear3
+        ok      component Dog_m1.25_N17-1
+        ok      placed gear4
+        ok      fixed gear4
+        ok      component Dog_m1.25_N17-2
+        ok      placed gear5
+        ok      fixed gear5
+        ok      component Sleeve_m1.25_N17-1
+        ok      placed gear6
+        ok      fixed gear6
+        ok      component Hub_m1.25_N17-1
+        ok      placed gear7
+        ok      fixed gear7
+        ok      unfixed gear1
+        ok      mate coincident gear1:Gear Axis ~ layout:Input Axis as Sun on Input Axis
+        ok      mate point distance gear1:origin ~ layout:plane1 as Sun along Input
+        ok      link "D1@Sun along Input"
+        ok      unfixed gear4
+        ok      mate lock gear1 ~ gear4 as HighDog locked to Sun
+        ok      unfixed carrier1
+        ok      mate coincident carrier1:Carrier Axis ~ layout:Carrier Axis as Carrier carrier on Carrier Axis
+        ok      mate point carrier1:origin ~ layout:plane1 as Carrier carrier along Carrier
+        ok      unfixed gear5
+        ok      mate lock carrier1 ~ gear5 as LowDog locked to Carrier carrier
+        ok      unfixed gear2c1
+        ok      mate coincident gear2c1:Gear Axis ~ carrier1:Planet copy 1 Axis as Planet copy 1 on Planet copy 1 Axis
+        ok      mate point distance gear2c1:origin ~ layout:plane1 as Planet copy 1 along Planet copy 1
+        ok      link "D1@Planet copy 1 along Planet copy 1"
+        ok      unfixed gear2c2
+        ok      mate coincident gear2c2:Gear Axis ~ carrier1:Planet copy 2 Axis as Planet copy 2 on Planet copy 2 Axis
+        ok      mate point distance gear2c2:origin ~ layout:plane1 as Planet copy 2 along Planet copy 2
+        ok      link "D1@Planet copy 2 along Planet copy 2"
+        ok      unfixed gear2c3
+        ok      mate coincident gear2c3:Gear Axis ~ carrier1:Planet copy 3 Axis as Planet copy 3 on Planet copy 3 Axis
+        ok      mate point distance gear2c3:origin ~ layout:plane1 as Planet copy 3 along Planet copy 3
+        ok      link "D1@Planet copy 3 along Planet copy 3"
+        ok      unfixed gear7
+        ok      mate coincident gear7:Gear Axis ~ layout:Output Axis as Hub on Output Axis
+        ok      mate point distance gear7:origin ~ layout:plane1 as Hub along Output
+        ok      link "D1@Hub along Output"
+        ok      unfixed gear6
+        ok      mate coincident gear6:Gear Axis ~ layout:Output Axis as RangeSlv on Output Axis
+        ok      mate point distance gear6:origin ~ layout:plane1 as RangeSlv along Output
+        ok      mate gear gear7:Gear Axis ~ gear6:Gear Axis as RangeSlv splined to Hub
+        ok      mate gear gear1:Gear Axis ~ gear2c1:Gear Axis as Sun meshes Planet copy 1
+        ok      mate gear gear1:Gear Axis ~ gear2c2:Gear Axis as Sun meshes Planet copy 2
+        ok      mate gear gear1:Gear Axis ~ gear2c3:Gear Axis as Sun meshes Planet copy 3
+        ok      mate gear gear2c1:Gear Axis ~ gear3:Gear Axis as Planet copy 1 meshes Ring
+        ok      3 globals read back and match the maths
+        ok      every mate sound, every gear free to turn
+        ok      configuration H made
+        ok      configuration N made
+        ok      configuration L made
+        ok      1 slide value(s) set and read back in 3 configurations
+        ok      mate gear gear6:Gear Axis ~ gear4:Gear Axis as RangeSlv engages HighDog
+        ok      mate gear gear6:Gear Axis ~ gear5:Gear Axis as RangeSlv engages LowDog
+        ok      every mode checked: H, N, L
+        ok      configuration Default deleted
+        mate    Sun on Input Axis
+        mate    Sun along Input
+        mate    HighDog locked to Sun
+        mate    Carrier carrier on Carrier Axis
+        mate    Carrier carrier along Carrier
+        mate    LowDog locked to Carrier carrier
+        mate    Planet copy 1 on Planet copy 1 Axis
+        mate    Planet copy 1 along Planet copy 1
+        mate    Planet copy 2 on Planet copy 2 Axis
+        mate    Planet copy 2 along Planet copy 2
+        mate    Planet copy 3 on Planet copy 3 Axis
+        mate    Planet copy 3 along Planet copy 3
+        mate    Hub on Output Axis
+        mate    Hub along Output
+        mate    RangeSlv on Output Axis
+        mate    RangeSlv along Output
+        mate    RangeSlv splined to Hub
+        mate    Sun meshes Planet copy 1
+        mate    Sun meshes Planet copy 2
+        mate    Sun meshes Planet copy 3
+        mate    Planet copy 1 meshes Ring
+        ok      read turning against their mesh, so made again with the other Flip: Planet copy 1 meshes Ring
+        ok      rebuilt once
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\fixed\RangeBox_Fixed.SLDASM
+        config  H: 22 mates as planned, 1 off
+        mode    H: every mate sound, every gear free to turn, no interference
+        config  N: 21 mates as planned, 2 off
+        mode    N: every mate sound, every gear free to turn, no interference
+        config  L: 22 mates as planned, 1 off
+        mode    L: every mate sound, every gear free to turn, no interference
+        in 174.1 s; SolidWorks 1.71 GB private, 9.78 GB free; kind 'motion'; turned round (made again with the other Flip) ['Planet copy 1 meshes Ring']
+        steps [('part', 'Gear_m1.25_N29', 1, 6), ('part', 'Gear_m1.25_N13', 2, 6), ('part', 'Ring_m1.25_N55', 3, 6), ('part', 'Dog_m1.25_N17', 4, 6), ('part', 'Sleeve_m1.25_N17', 5, 6), ('part', 'Hub_m1.25_N17', 6, 6), ('layout', 'RangeBox_Fixed_Layout', 0, 0), ('carrier', 'RangeBox_Fixed_Carrier_Carrier', 0, 0), ('assembly', 'RangeBox_Fixed', 0, 0), ('mode', 'H', 1, 3), ('mode', 'N', 2, 3), ('mode', 'L', 3, 3), ('mode', 'H', 1, 3), ('mode', 'N', 2, 3), ('mode', 'L', 3, 3), ('mode', 'H', 1, 3), ('mode', 'N', 2, 3), ('mode', 'L', 3, 3), ('interference', 'RangeBox_Fixed', 0, 0)]
+        progress words ['Building in SolidWorks: part 1 of 6, Gear_m1.25_N29…', 'Building in SolidWorks: checking interference…']
+record  6 sidecar(s) written; record written; notes []
+status  [green] Built 6 parts, RangeBox_Fixed_Layout, RangeBox_Fixed_Carrier_Carrier and RangeBox_Fixed.SLDASM; no interference between the gears in any mode, where they stand. Its turning gears are mated to turn in each of its 3 modes, one configuration each (H, N and L), and SolidWorks reports no mate in error in any of them: it opens in H; to switch mode, double-click another mode's configuration in SolidWorks' ConfigurationManager. Drag Sun in SolidWorks and the rest of its train follow. RangeSlv slides along Output, to its place in each mode. The 3 copies of Planet turn on Carrier, and RangeBox_Fixed_Carrier_Carrier holds Carrier's axes and planes only: a plate and pins are yours to add. Ring stays fixed where it is placed: its shaft does not turn. A turn you give the gears in one mode can show in other modes, so a dog can stand across its sleeve in another; to put the gears back there, press Update SolidWorks with that mode showing. 1 thing to do by hand: Assign a material to each of the 6 parts; the build leaves it unset.
+ok      build: every part(s), the layout part and the assembly built and saved, turning: ok True, parts built 6, kind 'motion'
+ok      build: no interference: []
+fact    build: the build's sense read made again with the other Flip: ['Planet copy 1 meshes Ring']
+ok      build: the record holds a turning gearbox built from this read
+ok      build: the record's mates are the plan's: ['Sun on Input Axis', 'Sun along Input', 'HighDog locked to Sun', 'Carrier carrier on Carrier Axis', 'Carrier carrier along Carrier', 'LowDog locked to Carrier carrier', 'Planet copy 1 on Planet copy 1 Axis', 'Planet copy 1 along Planet copy 1', 'Planet copy 2 on Planet copy 2 Axis', 'Planet copy 2 along Planet copy 2', 'Planet copy 3 on Planet copy 3 Axis', 'Planet copy 3 along Planet copy 3', 'Hub on Output Axis', 'Hub along Output', 'RangeSlv on Output Axis', 'RangeSlv along Output', 'RangeSlv splined to Hub', 'Sun meshes Planet copy 1', 'Sun meshes Planet copy 2', 'Sun meshes Planet copy 3', 'Planet copy 1 meshes Ring', 'RangeSlv engages HighDog', 'RangeSlv engages LowDog']
+ok      build: the build's sentence says how to turn it: 'drag Sun in SolidWorks and the rest of its train follow'
+footer  (build, built) [green] Built 6 parts, RangeBox_Fixed_Layout, RangeBox_Fixed_Carrier_Carrier and RangeBox_Fixed.SLDASM; no interference between the gears in any mode, where they stand. Its turning gears are mated to turn in each of its 3 modes, one configuration each (H, N and L), and SolidWorks reports no mate in error in any of them: it opens in H; to switch mode, double-click another mode's configuration in SolidWorks' ConfigurationManager. Drag Sun in SolidWorks and the rest of its train follow. RangeSlv slides along Output, to its place in each mode. The 3 copies of Planet turn on Carrier, and RangeBox_Fixed_Carrier_Carrier holds Carrier's axes and planes only: a plate and pins are yours to add. Ring stays fixed where it is placed: its shaft does not turn. A turn you give the gears in one mode can show in other modes, so a dog can stand across its sleeve in another; to put the gears back there, press Update SolidWorks with that mode showing. 1 thing to do by hand: Assign a material to each of the 6 parts; the build leaves it unset.
+        button 'Build again…' on; Update SolidWorks shown on primary
+ok      build: the footer says how to turn it: 'drag Sun in SolidWorks and the rest of its train follow'
+tag     ' · built from this version'
+ok      build: 9 files on disk
+        marked modified in SolidWorks right after the build: {'Gear_m1.25_N29.SLDPRT': False, 'Gear_m1.25_N13.SLDPRT': False, 'Ring_m1.25_N55.SLDPRT': False, 'Dog_m1.25_N17.SLDPRT': False, 'Sleeve_m1.25_N17.SLDPRT': False, 'Hub_m1.25_N17.SLDPRT': False, 'RangeBox_Fixed_Layout.SLDPRT': False, 'RangeBox_Fixed_Carrier_Carrier.SLDPRT': False, 'RangeBox_Fixed.SLDASM': True}
+ok      build: the assembly is marked after the build (a read after its save)
+ok      build, right after the build and its saves: SolidWorks marks modified exactly ['RangeBox_Fixed.SLDASM']
+ok      build: the Build ended ok with no interference: ok True, clashes []
+fact    build: the build's per-mode checks [ModeCheck(name='H', mates=[MateState(name='Sun on Input Axis', code=0, warning=True, suppressed=False), MateState(name='Sun along Input', code=0, warning=True, suppressed=False), MateState(name='HighDog locked to Sun', code=0, warning=True, suppressed=False), MateState(name='Carrier carrier on Carrier Axis', code=0, warning=True, suppressed=False), MateState(name='Carrier carrier along Carrier', code=0, warning=True, suppressed=False), MateState(name='LowDog locked to Carrier carrier', code=0, warning=True, suppressed=False), MateState(name='Planet copy 1 on Planet copy 1 Axis', code=0, warning=True, suppressed=False), MateState(name='Planet copy 1 along Planet copy 1', code=0, warning=True, suppressed=False), MateState(name='Planet copy 2 on Planet copy 2 Axis', code=0, warning=True, suppressed=False), MateState(name='Planet copy 2 along Planet copy 2', code=0, warning=True, suppressed=False), MateState(name='Planet copy 3 on Planet copy 3 Axis', code=0, warning=True, suppressed=False), MateState(name='Planet copy 3 along Planet copy 3', code=0, warning=True, suppressed=False), MateState(name='Hub on Output Axis', code=0, warning=True, suppressed=False), MateState(name='Hub along Output', code=0, warning=True, suppressed=False), MateState(name='RangeSlv on Output Axis', code=0, warning=True, suppressed=False), MateState(name='RangeSlv along Output', code=0, warning=True, suppressed=False), MateState(name='RangeSlv splined to Hub', code=0, warning=True, suppressed=False), MateState(name='Sun meshes Planet copy 1', code=0, warning=True, suppressed=False), MateState(name='Sun meshes Planet copy 2', code=0, warning=True, suppressed=False), MateState(name='Sun meshes Planet copy 3', code=0, warning=True, suppressed=False), MateState(name='Planet copy 1 meshes Ring', code=0, warning=True, suppressed=False), MateState(name='RangeSlv engages HighDog', code=0, warning=True, suppressed=False), MateState(name='RangeSlv engages LowDog', code=0, warning=True, suppressed=True)], suppressed={'RangeSlv engages HighDog': False, 'RangeSlv engages LowDog': True}, values={'RangeSlv along Output': 55.5}, clashes=[], interference_error='', out_of_step=[], off_axis=[], turned=False), ModeCheck(name='N', mates=[MateState(name='Sun on Input Axis', code=0, warning=True, suppressed=False), MateState(name='Sun along Input', code=0, warning=True, suppressed=False), MateState(name='HighDog locked to Sun', code=0, warning=True, suppressed=False), MateState(name='Carrier carrier on Carrier Axis', code=0, warning=True, suppressed=False), MateState(name='Carrier carrier along Carrier', code=0, warning=True, suppressed=False), MateState(name='LowDog locked to Carrier carrier', code=0, warning=True, suppressed=False), MateState(name='Planet copy 1 on Planet copy 1 Axis', code=0, warning=True, suppressed=False), MateState(name='Planet copy 1 along Planet copy 1', code=0, warning=True, suppressed=False), MateState(name='Planet copy 2 on Planet copy 2 Axis', code=0, warning=True, suppressed=False), MateState(name='Planet copy 2 along Planet copy 2', code=0, warning=True, suppressed=False), MateState(name='Planet copy 3 on Planet copy 3 Axis', code=0, warning=True, suppressed=False), MateState(name='Planet copy 3 along Planet copy 3', code=0, warning=True, suppressed=False), MateState(name='Hub on Output Axis', code=0, warning=True, suppressed=False), MateState(name='Hub along Output', code=0, warning=True, suppressed=False), MateState(name='RangeSlv on Output Axis', code=0, warning=True, suppressed=False), MateState(name='RangeSlv along Output', code=0, warning=True, suppressed=False), MateState(name='RangeSlv splined to Hub', code=0, warning=True, suppressed=False), MateState(name='Sun meshes Planet copy 1', code=0, warning=True, suppressed=False), MateState(name='Sun meshes Planet copy 2', code=0, warning=True, suppressed=False), MateState(name='Sun meshes Planet copy 3', code=0, warning=True, suppressed=False), MateState(name='Planet copy 1 meshes Ring', code=0, warning=True, suppressed=False), MateState(name='RangeSlv engages HighDog', code=0, warning=True, suppressed=True), MateState(name='RangeSlv engages LowDog', code=0, warning=True, suppressed=True)], suppressed={'RangeSlv engages HighDog': True, 'RangeSlv engages LowDog': True}, values={'RangeSlv along Output': 48.0}, clashes=[], interference_error='', out_of_step=[], off_axis=[], turned=False), ModeCheck(name='L', mates=[MateState(name='Sun on Input Axis', code=0, warning=True, suppressed=False), MateState(name='Sun along Input', code=0, warning=True, suppressed=False), MateState(name='HighDog locked to Sun', code=0, warning=True, suppressed=False), MateState(name='Carrier carrier on Carrier Axis', code=0, warning=True, suppressed=False), MateState(name='Carrier carrier along Carrier', code=0, warning=True, suppressed=False), MateState(name='LowDog locked to Carrier carrier', code=0, warning=True, suppressed=False), MateState(name='Planet copy 1 on Planet copy 1 Axis', code=0, warning=True, suppressed=False), MateState(name='Planet copy 1 along Planet copy 1', code=0, warning=True, suppressed=False), MateState(name='Planet copy 2 on Planet copy 2 Axis', code=0, warning=True, suppressed=False), MateState(name='Planet copy 2 along Planet copy 2', code=0, warning=True, suppressed=False), MateState(name='Planet copy 3 on Planet copy 3 Axis', code=0, warning=True, suppressed=False), MateState(name='Planet copy 3 along Planet copy 3', code=0, warning=True, suppressed=False), MateState(name='Hub on Output Axis', code=0, warning=True, suppressed=False), MateState(name='Hub along Output', code=0, warning=True, suppressed=False), MateState(name='RangeSlv on Output Axis', code=0, warning=True, suppressed=False), MateState(name='RangeSlv along Output', code=0, warning=True, suppressed=False), MateState(name='RangeSlv splined to Hub', code=0, warning=True, suppressed=False), MateState(name='Sun meshes Planet copy 1', code=0, warning=True, suppressed=False), MateState(name='Sun meshes Planet copy 2', code=0, warning=True, suppressed=False), MateState(name='Sun meshes Planet copy 3', code=0, warning=True, suppressed=False), MateState(name='Planet copy 1 meshes Ring', code=0, warning=True, suppressed=False), MateState(name='RangeSlv engages HighDog', code=0, warning=True, suppressed=True), MateState(name='RangeSlv engages LowDog', code=0, warning=True, suppressed=False)], suppressed={'RangeSlv engages HighDog': True, 'RangeSlv engages LowDog': False}, values={'RangeSlv along Output': 40.5}, clashes=[], interference_error='', out_of_step=[], off_axis=[], turned=False)]
+ok      build: no warning after the build beyond the fixture's own: []
+ok      build: Hub is Output's anchor (Hub) and the record holds ['Hub along Output', 'Hub on Output Axis', 'RangeSlv along Output', 'RangeSlv engages HighDog', 'RangeSlv engages LowDog', 'RangeSlv splined to Hub']: {'Hub on Output Axis': 'axis', 'Hub along Output': 'along', 'RangeSlv splined to Hub': 'spline', 'RangeSlv along Output': 'slide', 'RangeSlv engages HighDog': 'couple', 'RangeSlv engages LowDog': 'couple'}
+ok      build: the sleeve's sidecar at schema 2 and its features holding Relief: 2
+fact    build: the parts' globals {'HighDog': {'Face Width': 5.0}, 'LowDog': {'Face Width': 5.0}, 'RangeSlv': {'Face Width': 26.0, 'Start Band': 5.0, 'End Band': 5.0, 'Relief Diameter': 25.0}, 'Hub': {'Face Width': 20.0}}
+ok      build, H shown: every body at its frame on record (6.6e-10 at Planet copy 2); no mate in error ; every app gear free True ; no interference ; RangeSlv along Output reads 55.500000 mm, the record -55.500000 (SolidWorks gives a distance without its sign), RangeSlv's Front plane at z -55.500000: agree; bands and dogs where the app's read puts them to 0.0001 mm ; engaged ['HighDog'] as the app's ['HighDog']
+fact    build, H: measured bands {'start': (-55.5, -50.5), 'end': (-34.5, -29.5)}, dogs {'HighDog': (-34.5, -29.5), 'LowDog': (-19.5, -14.5)}, hub (-55.5, -35.5); RangeSlv moved -7.500000 mm from N; least running gap 10.0 at [('end', 'LowDog')]; relief holds []
+ok      build, H: §3's table: slide -7.5 (moved -7.500000), bands, relief, engaged ['HighDog'], least gap 10.0 at [('end', 'LowDog')], ratio 1.0 (1.0, ''): differs nothing
+ok      build, H: Hub (-55.5, -35.5) (§3 (-55.5, -35.5)), 1.000000 mm from HighDog (§3 1.0)
+ok      build, N shown: every body at its frame on record (6.6e-10 at Planet copy 2); no mate in error ; every app gear free True ; no interference ; RangeSlv along Output reads 48.000000 mm, the record -48.000000 (SolidWorks gives a distance without its sign), RangeSlv's Front plane at z -48.000000: agree; bands and dogs where the app's read puts them to 0.0001 mm ; engaged [] as the app's []
+fact    build, N: measured bands {'start': (-48.0, -43.0), 'end': (-27.0, -22.0)}, dogs {'HighDog': (-34.5, -29.5), 'LowDog': (-19.5, -14.5)}, hub (-55.5, -35.5); RangeSlv moved +0.000000 mm from N; least running gap 2.5 at [('end', 'HighDog'), ('end', 'LowDog')]; relief holds ['HighDog']
+ok      build, N: §3's table: slide +0.0 (moved +0.000000), bands, relief, engaged [], least gap 2.5 at [('end', 'HighDog'), ('end', 'LowDog')], ratio neutral (None, 'neutral'): differs nothing
+ok      build, N: Hub (-55.5, -35.5) (§3 (-55.5, -35.5)), 1.000000 mm from HighDog (§3 1.0)
+ok      build, L shown: every body at its frame on record (6.6e-10 at Planet copy 2); no mate in error ; every app gear free True ; no interference ; RangeSlv along Output reads 40.500000 mm, the record -40.500000 (SolidWorks gives a distance without its sign), RangeSlv's Front plane at z -40.500000: agree; bands and dogs where the app's read puts them to 0.0001 mm ; engaged ['LowDog'] as the app's ['LowDog']
+fact    build, L: measured bands {'start': (-40.5, -35.5), 'end': (-19.5, -14.5)}, dogs {'HighDog': (-34.5, -29.5), 'LowDog': (-19.5, -14.5)}, hub (-55.5, -35.5); RangeSlv moved +7.500000 mm from N; least running gap 1.0 at [('start', 'HighDog')]; relief holds ['HighDog']
+ok      build, L: §3's table: slide +7.5 (moved +7.500000), bands, relief, engaged ['LowDog'], least gap 1.0 at [('start', 'HighDog')], ratio 2.896552 (2.896551724137931, ''): differs nothing
+ok      build, L: Hub (-55.5, -35.5) (§3 (-55.5, -35.5)), 1.000000 mm from HighDog (§3 1.0)
+ok      build: every mate's flag in every mode as on record, the couplings on only in their modes: wrong none
+ok      fixed, the builder's end: fixed ends clean: every document of it closed in SolidWorks (left []), Excel's workbook closed (['RangeBox_Fixed.xlsx']), no open document by a file name it holds ([])
+master  fixed renamed fixed.master: it stays so for the rest of the run
+ok      build: kept as fixed.master: C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\fixed.master
+time    build: 229 s; 0 failed; SolidWorks 1.25 GB private, 10.11 GB free
+== update  a copy of fixed.master: Start band 5 -> 4 as a value Update, read back in the part and per mode; then the bands taken off, alone (refused at the workbook) and as the smallest legal edit (Build again… in a sentence), neither writing anything to SolidWorks
+copy    fixed.master -> update: 17 files, mtimes kept
+        RangeBox_Fixed.xlsx's record: 20 path(s) put onto the copy: ['record.workbook', 'record.parts[0].path', 'record.parts[1].path', 'record.parts[2].path', 'record.parts[3].path', 'record.parts[4].path', 'record.parts[5].path', 'record.assembly', 'record.gearbox.layout', 'record.gearbox.assembly', 'record.gearbox.components[0].part', 'record.gearbox.components[1].part', 'record.gearbox.components[2].part', 'record.gearbox.components[3].part', 'record.gearbox.components[4].part', 'record.gearbox.components[5].part', 'record.gearbox.components[6].part', 'record.gearbox.components[7].part', 'record.gearbox.components[8].part', 'record.gearbox.carriers[0].path']
+        Dog_m1.25_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.25_N13.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.25_N29.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Hub_m1.25_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Ring_m1.25_N55.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Sleeve_m1.25_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+ok      update: the copy's record is valid: owner ('ours', ''); left on the master []; missing in the copy []; clear_saved dropped nothing (unsaved, mismatched ([], [])); the read's digest equals the record's
+probe   W6-PLAN §7.1: RangeBox_Fixed.SLDASM of update, whose stored references name a folder that is gone, opened under the dialog watch (120 s at most)
+fact    update: the copy's assembly opened in 3.0 s; marked modified straight after the open: {'RangeBox_Fixed_Layout.SLDPRT': False, 'RangeBox_Fixed_Carrier_Carrier.SLDPRT': False, 'Gear_m1.25_N29.SLDPRT': False, 'Gear_m1.25_N13.SLDPRT': False, 'Ring_m1.25_N55.SLDPRT': False, 'Dog_m1.25_N17.SLDPRT': False, 'Sleeve_m1.25_N17.SLDPRT': False, 'Hub_m1.25_N17.SLDPRT': False, 'RangeBox_Fixed.SLDASM': False}
+fact    W6-PLAN §7.1: dialogs while the copied assembly opened: none
+ok      update: SolidWorks found all 10 components and the layout in the copy, and the copy closed without saving (left []): elsewhere none
+ok      read RangeBox_Fixed.xlsx: ok
+        warning Gears!F3: Planet: 13 teeth at 20° is below the undercut limit of 17: a generated gear would lose the bottom of its flanks, which this profile does not show. A profile shift of 0.24 or more would clear it.
+        warning Gears!F3: Planet: The tooth tip is 0.36 mm thick, under 0.3 × module (0.375 mm).
+        warning Gears!F7: RangeSlv: The teeth's tips, at 18.75 mm, are inside the base circle of 19.968 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!A3: Planet (13 teeth) is below the undercut limit, which is not modelled, and meshes Sun (29 teeth): the build checks interference only where the gears stand, so check Planet with Sun turning in SolidWorks.
+        5 shafts · 7 gears · 2 meshes; gate ''
+ok      update: the copy reads as built from this workbook, its assembly in the copy
+ok      Excel opened RangeBox_Fixed.xlsx with no dialog or repair: []
+excel   Gears!T7 := 4
+excel   saved RangeBox_Fixed.xlsx
+poll    a new read 0.0 s after asking; changes:
+          Gears!T7 RangeSlv Start band 5 → 4
+ok      read RangeBox_Fixed.xlsx: ok
+        warning Gears!F3: Planet: 13 teeth at 20° is below the undercut limit of 17: a generated gear would lose the bottom of its flanks, which this profile does not show. A profile shift of 0.24 or more would clear it.
+        warning Gears!F3: Planet: The tooth tip is 0.36 mm thick, under 0.3 × module (0.375 mm).
+        warning Gears!F7: RangeSlv: The teeth's tips, at 18.75 mm, are inside the base circle of 19.968 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!A3: Planet (13 teeth) is below the undercut limit, which is not modelled, and meshes Sun (29 teeth): the build checks interference only where the gears stand, so check Planet with Sun turning in SolidWorks.
+        5 shafts · 7 gears · 2 meshes; gate ''
+classify parts changed ['Sleeve_m1.25_N17.SLDPRT']; moved []; re-place []; structural []; missing []; unsaved []; refusal ''; turning True; axial []; ratios []
+        layout globals wanted []
+summary Update SolidWorks will change RangeSlv's values (Sleeve_m1.25_N17).
+ok      update: classify makes Start band 4 a value Update of the sleeve's part: structural [], parts ['Sleeve_m1.25_N17.SLDPRT']
+ok      update: the read's warnings are the fixture's own (4), no error: extra [], missing [], errors []
+ok      update: none from W9b's three checks (reach, hub, running clearance) and no stroke warning: []
+ok      update Start band 4: the footer offers Update SolidWorks (shown True, enabled True, Build again… needed False)
+update  SolidWorks 1.01 GB private, 10.12 GB free
+DIALOG  SolidWorks shows '': ['Close', 'Open\nComponents', 'Update\nAssembly', 'Update\nGraphics', 'Post load updating', 'Elapsed time: 0s', 'This file was last opened in 38 seconds.', 'For more information, view: ']
+        in 226.2 s; SolidWorks 1.75 GB private, 9.82 GB free; loaded from disk ['Gear_m1.25_N29.SLDPRT', 'Gear_m1.25_N13.SLDPRT', 'Ring_m1.25_N55.SLDPRT', 'Dog_m1.25_N17.SLDPRT', 'Sleeve_m1.25_N17.SLDPRT', 'Hub_m1.25_N17.SLDPRT', 'RangeBox_Fixed_Layout.SLDPRT', 'RangeBox_Fixed_Carrier_Carrier.SLDPRT', 'RangeBox_Fixed.SLDASM']
+        W9a: carried []; renamed []; user in error []; user features in error []; inventory read yes; failures []
+ok      the Update's check phase found no gear mate turning against its mesh: []
+status  [green] Updated SolidWorks: changed 1 variable in Sleeve_m1.25_N17, re-placed Carrier (the carrier), Sun, Planet (3 copies), HighDog, LowDog, RangeSlv and Hub in every mode; no interference between the gears in any mode, where they stand. It worked in H, the configuration that was active, then showed and checked N and L and left the assembly in H. Save Sleeve_m1.25_N17 and RangeBox_Fixed in SolidWorks to keep them.
+fact    update Start band 4: the press took 226.3 s; SolidWorks calls by member {'OpenDoc6': 11, 'IsSuppressed2': 236, 'GetSystemValue3': 4, 'ForceRebuild3': 41, 'ShowConfiguration2': 3, 'SetSuppression2': 46, 'put': 27}
+        shows and puts in order: [('ShowConfiguration2', 'N'), ('put', 'RangeBox_Fixed_Carrier_Carrier-1'), ('put', 'Gear_m1.25_N29-1'), ('put', 'Gear_m1.25_N13-1'), ('put', 'Gear_m1.25_N13-2'), ('put', 'Gear_m1.25_N13-3'), ('put', 'Dog_m1.25_N17-1'), ('put', 'Dog_m1.25_N17-2'), ('put', 'Sleeve_m1.25_N17-1'), ('put', 'Hub_m1.25_N17-1'), ('ShowConfiguration2', 'L'), ('put', 'RangeBox_Fixed_Carrier_Carrier-1'), ('put', 'Gear_m1.25_N29-1'), ('put', 'Gear_m1.25_N13-1'), ('put', 'Gear_m1.25_N13-2'), ('put', 'Gear_m1.25_N13-3'), ('put', 'Dog_m1.25_N17-1'), ('put', 'Dog_m1.25_N17-2'), ('put', 'Sleeve_m1.25_N17-1'), ('put', 'Hub_m1.25_N17-1'), ('ShowConfiguration2', 'H'), ('put', 'RangeBox_Fixed_Carrier_Carrier-1'), ('put', 'Gear_m1.25_N29-1'), ('put', 'Gear_m1.25_N13-1'), ('put', 'Gear_m1.25_N13-2'), ('put', 'Gear_m1.25_N13-3'), ('put', 'Dog_m1.25_N17-1'), ('put', 'Dog_m1.25_N17-2'), ('put', 'Sleeve_m1.25_N17-1'), ('put', 'Hub_m1.25_N17-1')]
+        configuration 'H'; visited ['N', 'L']; put_in ['N', 'L', 'H']; placed ['Carrier carrier', 'Sun', 'Planet copy 1', 'Planet copy 2', 'Planet copy 3', 'HighDog', 'LowDog', 'RangeSlv', 'Hub']; unsuppressed_in []; suppressed_in []; slid []; values_restored []; extra configurations []; extra mates []; senses unread []; positions per configuration False; failures []
+        post-check of N: turned False; out of step []; off axis []; clashes []; interference error ''
+        post-check of L: turned False; out of step []; off axis []; clashes []; interference error ''
+        post-check of H: turned False; out of step []; off axis []; clashes []; interference error ''
+fact    update Start band 4: the press took 226 s
+ok      update: the Update went ahead and ended ok: Updated SolidWorks: changed 1 variable in Sleeve_m1.25_N17, re-placed Carrier (the carrier), Sun, Planet (3 copies), HighDog, LowDog, RangeSlv and Hub in every mode; no interference between the gears in any mode, where they stand. It worked in H, the configuration that was active, then showed and checked N and L and left the assembly in H. Save Sleeve_m1.25_N17 and RangeBox_Fixed in SolidWorks to keep them.
+ok      update: the part reads Start Band 4, its planes {'Relief Start Plane': [4.0], 'Relief End Plane': [21.0]}, no feature in error 
+ok      update, H shown: every body at its frame on record (6.6e-10 at Planet copy 2); no mate in error ; every app gear free True ; no interference ; RangeSlv along Output reads 55.500000 mm, the record -55.500000 (SolidWorks gives a distance without its sign), RangeSlv's Front plane at z -55.500000: agree; bands and dogs where the app's read puts them to 0.0001 mm ; engaged ['HighDog'] as the app's ['HighDog']
+fact    update, H: measured bands {'start': (-55.5, -51.5), 'end': (-34.5, -29.5)}, dogs {'HighDog': (-34.5, -29.5), 'LowDog': (-19.5, -14.5)}, hub (-55.5, -35.5); RangeSlv moved -7.500000 mm from N; least running gap 10.0 at [('end', 'LowDog')]; relief holds []
+ok      update, N shown: every body at its frame on record (6.6e-10 at Planet copy 2); no mate in error ; every app gear free True ; no interference ; RangeSlv along Output reads 48.000000 mm, the record -48.000000 (SolidWorks gives a distance without its sign), RangeSlv's Front plane at z -48.000000: agree; bands and dogs where the app's read puts them to 0.0001 mm ; engaged [] as the app's []
+fact    update, N: measured bands {'start': (-48.0, -44.0), 'end': (-27.0, -22.0)}, dogs {'HighDog': (-34.5, -29.5), 'LowDog': (-19.5, -14.5)}, hub (-55.5, -35.5); RangeSlv moved +0.000000 mm from N; least running gap 2.5 at [('end', 'HighDog'), ('end', 'LowDog')]; relief holds ['HighDog']
+ok      update, L shown: every body at its frame on record (6.6e-10 at Planet copy 2); no mate in error ; every app gear free True ; no interference ; RangeSlv along Output reads 40.500000 mm, the record -40.500000 (SolidWorks gives a distance without its sign), RangeSlv's Front plane at z -40.500000: agree; bands and dogs where the app's read puts them to 0.0001 mm ; engaged ['LowDog'] as the app's ['LowDog']
+fact    update, L: measured bands {'start': (-40.5, -36.5), 'end': (-19.5, -14.5)}, dogs {'HighDog': (-34.5, -29.5), 'LowDog': (-19.5, -14.5)}, hub (-55.5, -35.5); RangeSlv moved +7.500000 mm from N; least running gap 2.0 at [('start', 'HighDog')]; relief holds ['HighDog']
+ok      update: every mate's flag in every mode as on record, the couplings on only in their modes: wrong none
+ok      update, H: the end band and what is engaged as §3 ((-34.5, -29.5), ['HighDog']); the start band now (-55.5, -51.5)
+ok      update, N: the end band and what is engaged as §3 ((-27.0, -22.0), []); the start band now (-48.0, -44.0)
+ok      update, L: the end band and what is engaged as §3 ((-19.5, -14.5), ['LowDog']); the start band now (-40.5, -36.5)
+-- update  the bands taken off alone: the read refuses it before anything (the 26 mm sleeve jams L)
+excel   Gears!T7 := None
+excel   Gears!U7 := None
+excel   saved RangeBox_Fixed.xlsx
+poll    a new read 0.0 s after asking; changes:
+          Gears!T7 RangeSlv Start band 4 → blank
+          Gears!U7 RangeSlv End band 5 → blank
+ok      read RangeBox_Fixed.xlsx: ok
+        warning Gears!F3: Planet: 13 teeth at 20° is below the undercut limit of 17: a generated gear would lose the bottom of its flanks, which this profile does not show. A profile shift of 0.24 or more would clear it.
+        warning Gears!F3: Planet: The tooth tip is 0.36 mm thick, under 0.3 × module (0.375 mm).
+        warning Gears!F7: RangeSlv: The teeth's tips, at 18.75 mm, are inside the base circle of 19.968 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!A3: Planet (13 teeth) is below the undercut limit, which is not modelled, and meshes Sun (29 teeth): the build checks interference only where the gears stand, so check Planet with Sun turning in SolidWorks.
+        error   Modes!A4: in L RangeSlv engages HighDog and LowDog at once, which joins Input to Carrier: as written the box is jammed in this mode.
+        warning Gears!S7: RangeSlv is 26 mm long and HighDog and LowDog are 10 mm apart: on its way from H to L it would hold both at once.
+        warning Modes!A3: H and N engage the same: they are one mode twice.
+        error   Modes!A3: in N RangeSlv and Hub do not cover one another: in every mode a sleeve covers its hub whole, or the hub the sleeve; move Hub.
+        error   Modes!A4: in L RangeSlv and Hub do not cover one another: in every mode a sleeve covers its hub whole, or the hub the sleeve; move Hub.
+        5 shafts · 7 gears · 2 meshes; gate 'Fix the workbook before building: Modes!A4: in L RangeSlv engages HighDog and LowDog at once, which joins Input to Carrier: as written the box is jammed in this mode. (2 more under Checks)'
+update  none
+footer  (update, the bands off alone) [red] Fix the workbook before building: Modes!A4: in L RangeSlv engages HighDog and LowDog at once, which joins Input to Carrier: as written the box is jammed in this mode. (2 more under Checks) Sleeve_m1.25_N17 and RangeBox_Fixed have changes from Update SolidWorks that are not saved: save them in SolidWorks to keep them. If SolidWorks closed them without saving, those changes are gone.
+        button 'Build again…' off; Update SolidWorks shown off primary
+ok      update: the bands off alone are refused at the workbook, nothing offered: 'Fix the workbook before building: Modes!A4: in L RangeSlv engages HighDog and LowDog at once, which joins Input to Carrier: as written the box is jammed in this mode. (2 more under Checks)'
+ok      update, the bands off alone: nothing written to SolidWorks: files changed none, documents newly marked none
+-- update  the smallest legal edit that takes the bands off: RangeSlv as RangeBox has it, Hub's row cleared; Build again… in a sentence
+excel   Gears!C7 := -24.5
+excel   Gears!I7 := 10
+excel   Gears!S7 := 'H=-5, N=0, L=+5'
+excel   Gears!T7 := None
+excel   Gears!U7 := None
+excel   Gears!A8 := None
+excel   Gears!B8 := None
+excel   Gears!C8 := None
+excel   Gears!D8 := None
+excel   Gears!E8 := None
+excel   Gears!F8 := None
+excel   Gears!G8 := None
+excel   Gears!H8 := None
+excel   Gears!I8 := None
+excel   Gears!J8 := None
+excel   Gears!K8 := None
+excel   Gears!L8 := None
+excel   Gears!M8 := None
+excel   Gears!N8 := None
+excel   Gears!O8 := None
+excel   Gears!P8 := None
+excel   Gears!Q8 := None
+excel   Gears!R8 := None
+excel   Gears!S8 := None
+excel   Gears!T8 := None
+excel   Gears!U8 := None
+excel   Gears!V8 := None
+excel   Gears!W8 := None
+excel   saved RangeBox_Fixed.xlsx
+poll    a new read 0.0 s after asking; changes:
+          Gears!C7 RangeSlv At -35 → -24.5
+          Gears!I7 RangeSlv Face width 26 → 10
+          Gears!S7 RangeSlv Slides H=-7.5, N=0, L=+7.5 → H=-5, N=0, L=+5
+          gear Hub removed
+ok      read RangeBox_Fixed.xlsx: ok
+        warning Gears!F3: Planet: 13 teeth at 20° is below the undercut limit of 17: a generated gear would lose the bottom of its flanks, which this profile does not show. A profile shift of 0.24 or more would clear it.
+        warning Gears!F3: Planet: The tooth tip is 0.36 mm thick, under 0.3 × module (0.375 mm).
+        warning Gears!F7: RangeSlv: The teeth's tips, at 18.75 mm, are inside the base circle of 19.968 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!A3: Planet (13 teeth) is below the undercut limit, which is not modelled, and meshes Sun (29 teeth): the build checks interference only where the gears stand, so check Planet with Sun turning in SolidWorks.
+        warning Gears!A7: Output cannot reach RangeSlv: Input runs through RangeSlv's travel (from Sun at 10.5 to HighDog at −32), so Output would have to pass HighDog toward Z− or Sun toward Z+, each on Input.
+        warning Gears!A7: nothing keys RangeSlv to Output: its whole bore is teeth and no hub row is under it; add a hub on Output that a band of RangeSlv covers in every mode; as laid out none can, since its 10 mm face slides 10 mm (H −5 to L +5) and its places share no length.
+        warning Modes!A3: in N RangeSlv stands 0 mm from HighDog and 0 mm from LowDog, which it does not engage there: leave at least 0.625 mm (0.5 × module) each side.
+        5 shafts · 6 gears · 2 meshes; gate ''
+classify parts changed ['Sleeve_m1.25_N17.SLDPRT']; moved []; re-place []; structural ['Hub is no longer in the workbook, and Update SolidWorks cannot take a part out of what was built.', 'Sleeve_m1.25_N17 (RangeSlv): Bands cannot be given to or taken from a built sleeve through its values; build it again as a new part.']; missing []; unsaved ['RangeBox_Fixed.SLDASM', 'Sleeve_m1.25_N17.SLDPRT']; refusal ''; turning False; axial []; ratios []
+        layout globals wanted []
+summary Hub is no longer in the workbook, and Update SolidWorks cannot take a part out of what was built (and 1 other change Update SolidWorks cannot carry). Update SolidWorks offers to build again as a new revision.
+ok      update: classify sends it to Build again…, the bands named: ['Hub is no longer in the workbook, and Update SolidWorks cannot take a part out of what was built.', 'Sleeve_m1.25_N17 (RangeSlv): Bands cannot be given to or taken from a built sleeve through its values; build it again as a new part.']
+footer  (update, the bands off as RangeBox) [green] Hub is no longer in the workbook, and Update SolidWorks cannot take a part out of what was built (and 1 other change Update SolidWorks cannot carry). Update SolidWorks offers to build again as RangeBox_Fixed_r2. It was built with a configuration per mode (H, N and L), each named as its mode, and saved in H; to switch mode, double-click another mode's configuration in SolidWorks' ConfigurationManager. Drag Sun in SolidWorks and the rest of its train follow. A turn you give the gears in one mode can show in other modes, so a dog can stand across its sleeve in another; to put the gears back there, press Update SolidWorks with that mode showing. Carrier (the carrier) is axes and planes only, so it has nothing to drag. Sleeve_m1.25_N17 and RangeBox_Fixed have changes from Update SolidWorks that are not saved: save them in SolidWorks to keep them. If SolidWorks closed them without saving, those changes are gone.
+        button 'Build again…' on; Update SolidWorks shown on primary
+question Hub is no longer in the workbook, and Update SolidWorks cannot take a part out of what was built. Sleeve_m1.25_N17 (RangeSlv): Bands cannot be given to or taken from a built sleeve through its values, so it needs a new part. Build again as RangeBox_Fixed_r2? That makes a new part for RangeSlv (Sleeve_m1.25_N17_r2), reuses 4 parts that have not changed and makes a new layout part, carrier part and assembly (RangeBox_Fixed_r2_Layout, RangeBox_Fixed_r2_Carrier_Carrier and RangeBox_Fixed_r2.SLDASM). Nothing is overwritten, and RangeBox_Fixed.SLDASM stays as it is on disk, but it shares the 4 reused parts: a later Update SolidWorks that changes one of them changes RangeBox_Fixed.SLDASM too. Anything you added to RangeBox_Fixed.SLDASM in SolidWorks (components, mates, and features in parts this revision makes new) stays there, and RangeBox_Fixed_r2 has none of it.
+ok      update: the footer offers Build again… ('Build again…') and its question says 'Bands cannot be given to or taken from a built sleeve'
+ok      update, the bands off as RangeBox: nothing written to SolidWorks: files changed none, documents newly marked none
+ok      update, the copy's end: update ends clean: every document of it closed in SolidWorks (left []), Excel's workbook closed (['RangeBox_Fixed.xlsx']), no open document by a file name it holds ([])
+time    update: 287 s; 0 failed; SolidWorks 1.04 GB private, 10.11 GB free
+== old  RangeBox (no bands, no hub) built by today's app as before W9b: seven warnings (§3's four and W9b's three), §3's engagement and speeds, the unbanded sleeve as before; per mode as build, without bands. Not S0's rangebox.master: that was built by an app before W9b, which changed the anchor rule and engagement
+write   RangeBox.xlsx by the app's own write_new, its Output folder blank (the strip's is C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\old)
+ok      Excel opened RangeBox.xlsx with no dialog or repair: []
+excel   saved RangeBox.xlsx
+ok      read RangeBox.xlsx: ok
+        warning Gears!F3: Planet: 13 teeth at 20° is below the undercut limit of 17: a generated gear would lose the bottom of its flanks, which this profile does not show. A profile shift of 0.24 or more would clear it.
+        warning Gears!F3: Planet: The tooth tip is 0.36 mm thick, under 0.3 × module (0.375 mm).
+        warning Gears!F7: RangeSlv: The teeth's tips, at 18.75 mm, are inside the base circle of 19.968 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!A3: Planet (13 teeth) is below the undercut limit, which is not modelled, and meshes Sun (29 teeth): the build checks interference only where the gears stand, so check Planet with Sun turning in SolidWorks.
+        warning Gears!A7: Output cannot reach RangeSlv: Input runs through RangeSlv's travel (from Sun at 10.5 to HighDog at −32), so Output would have to pass HighDog toward Z− or Sun toward Z+, each on Input.
+        warning Gears!A7: nothing keys RangeSlv to Output: its whole bore is teeth and no hub row is under it; add a hub on Output that a band of RangeSlv covers in every mode; as laid out none can, since its 10 mm face slides 10 mm (H −5 to L +5) and its places share no length.
+        warning Modes!A3: in N RangeSlv stands 0 mm from HighDog and 0 mm from LowDog, which it does not engage there: leave at least 0.625 mm (0.5 × module) each side.
+        5 shafts · 6 gears · 2 meshes; gate ''
+ok      old: seven warnings, W9b's three among them (reach, hub, the N clearance): ["Output cannot reach RangeSlv: Input runs through RangeSlv's travel (fr", 'nothing keys RangeSlv to Output: its whole bore is teeth and no hub ro', 'in N RangeSlv stands 0 mm from HighDog and 0 mm from LowDog, which it ']
+ok      old: §3's engagement, ratios and speeds: [('H', (('RangeSlv', 'HighDog'),), 1.0), ('N', (), None), ('L', (('RangeSlv', 'LowDog'),), 2.896551724137931)], {'Input': 1500.0, 'Carrier': 517.857, 'Planet': -1673.077, 'Ring': 0.0, 'Output': 1500.0}
+footer  (old, read) [green] Ready: Build makes 5 parts, RangeBox_Layout, RangeBox_Carrier_Carrier and RangeBox.SLDASM in C:\…\w9b-demo-sw2026-20261117-051055\out\old. Its turning gears are mated to their shafts and, as each mode engages them, to each other, so they turn together in SolidWorks. It has 3 modes, H, N and L: each becomes a configuration of the assembly, and it opens in H. Carrier is built as a carrier of axes and planes only, turning with the 3 copies of Planet on it. Ring stays fixed where it is placed: its shaft does not turn.
+        button 'Build' on primary; Update SolidWorks hidden
+plan    revision 0 RangeBox: refusal ''; reason ''; turning True; static reason ''
+        layout C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\old\RangeBox_Layout.SLDPRT; assembly C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\old\RangeBox.SLDASM
+        build Gear_m1.25_N29 for Sun at C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\old\Gear_m1.25_N29.SLDPRT (76 ops)
+        build Gear_m1.25_N13 for Planet at C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\old\Gear_m1.25_N13.SLDPRT (76 ops)
+        build Ring_m1.25_N55 for Ring at C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\old\Ring_m1.25_N55.SLDPRT (93 ops)
+        build Dog_m1.25_N17 for HighDog, LowDog at C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\old\Dog_m1.25_N17.SLDPRT (76 ops)
+        build Sleeve_m1.25_N17 for RangeSlv at C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\old\Sleeve_m1.25_N17.SLDPRT (93 ops)
+        shaft Input: (0, 0, 0) axis Z+ (0.0, 0.0, 1.0) sigma +1; X base '', Y base '', Z  ''; line ''; Input Axis
+        shaft Carrier: (0, 0, 0) axis Z+ (0.0, 0.0, 1.0) sigma +1; X base '', Y base '', Z  ''; line ''; Carrier Axis
+        shaft Ring: (0, 0, 0) axis Z+ (0.0, 0.0, 1.0) sigma +1; X base '', Y base '', Z  ''; line ''; Ring Axis
+        shaft Output: (0, 0, 0) axis Z+ (0.0, 0.0, 1.0) sigma +1; X base '', Y base '', Z  ''; line ''; Output Axis
+        frame Sun: R [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0] at [0.0, 0.0, 5.5]
+        frame Planet copy 1: R [1.0, -0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0] at [26.25, 0.0, 5.5]
+        frame Planet copy 2: R [0.885456026, -0.464723172, 0.0, 0.464723172, 0.885456026, 0.0, 0.0, 0.0, 1.0] at [-13.125, 22.733166849, 5.5]
+        frame Planet copy 3: R [1.0, -0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0] at [-13.125, -22.733166849, 5.5]
+        frame Ring: R [0.998369104, -0.057088811, 0.0, 0.057088811, 0.998369104, 0.0, 0.0, 0.0, 1.0] at [0.0, 0.0, 5.5]
+        frame HighDog: R [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0] at [0.0, 0.0, -34.5]
+        frame LowDog: R [0.932472229, -0.361241666, 0.0, 0.361241666, 0.932472229, 0.0, 0.0, 0.0, 1.0] at [0.0, 0.0, -19.5]
+        frame RangeSlv: R [0.9829731, -0.183749518, 0.0, 0.183749518, 0.9829731, 0.0, 0.0, 0.0, 1.0] at [0.0, 0.0, -34.5]
+        motion: trains [('Input', 'Carrier', 'Planet copy 1', 'Planet copy 2', 'Planet copy 3', 'Ring')]; drag ['Sun']; fixed ['Ring']; unmated [('Planet copy 2', 'Ring'), ('Planet copy 3', 'Ring')]
+        mate 'Sun on Input Axis': axis ['Sun'] Input ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'Sun along Input': along ['Sun'] Input ratio [] face 'Sun Face Z' z_front 5.5 plane 'front' sense 0
+        mate 'HighDog locked to Sun': lock ['Sun', 'HighDog']  ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'Carrier carrier on Carrier Axis': axis ['Carrier carrier'] Carrier ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'Carrier carrier along Carrier': along ['Carrier carrier'] Carrier ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'LowDog locked to Carrier carrier': lock ['Carrier carrier', 'LowDog']  ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'Planet copy 1 on Planet copy 1 Axis': axis ['Planet copy 1'] Planet copy 1 ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'Planet copy 1 along Planet copy 1': along ['Planet copy 1'] Planet copy 1 ratio [] face 'Planet Face Z' z_front 5.5 plane 'front' sense 0
+        mate 'Planet copy 2 on Planet copy 2 Axis': axis ['Planet copy 2'] Planet copy 2 ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'Planet copy 2 along Planet copy 2': along ['Planet copy 2'] Planet copy 2 ratio [] face 'Planet Face Z' z_front 5.5 plane 'front' sense 0
+        mate 'Planet copy 3 on Planet copy 3 Axis': axis ['Planet copy 3'] Planet copy 3 ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'Planet copy 3 along Planet copy 3': along ['Planet copy 3'] Planet copy 3 ratio [] face 'Planet Face Z' z_front 5.5 plane 'front' sense 0
+        mate 'RangeSlv on Output Axis': axis ['RangeSlv'] Output ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'RangeSlv along Output': slide ['RangeSlv'] Output ratio [] face '' z_front -34.5 plane 'front' sense 0
+        mate 'Sun meshes Planet copy 1': mesh ['Sun', 'Planet copy 1']  ratio [29, 13] face '' z_front 0 plane 'front' sense 1
+        mate 'Sun meshes Planet copy 2': mesh ['Sun', 'Planet copy 2']  ratio [29, 13] face '' z_front 0 plane 'front' sense 1
+        mate 'Sun meshes Planet copy 3': mesh ['Sun', 'Planet copy 3']  ratio [29, 13] face '' z_front 0 plane 'front' sense 1
+        mate 'Planet copy 1 meshes Ring': mesh ['Planet copy 1', 'Ring']  ratio [13, 55] face '' z_front 0 plane 'front' sense -1
+        mate 'RangeSlv engages HighDog': couple ['RangeSlv', 'HighDog']  ratio [1, 1] face '' z_front 0 plane 'front' sense -1
+        mate 'RangeSlv engages LowDog': couple ['RangeSlv', 'LowDog']  ratio [1, 1] face '' z_front 0 plane 'front' sense -1
+        ops of RangeBox_Layout.SLDPRT:
+          new     NewPart from (default template)
+          axis    'Input Axis' through planes 2 and 3
+          axis    'Carrier Axis' through planes 2 and 3
+          axis    'Ring Axis' through planes 2 and 3
+          axis    'Output Axis' through planes 2 and 3
+          rebuild once
+          save    C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\old\RangeBox_Layout.SLDPRT
+        ops of RangeBox.SLDASM:
+          new     NewAssembly from (default template)
+          global  "Sun Face Z"= 5.5
+          global  "Planet Face Z"= 5.5
+          insert  layout C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\old\RangeBox_Layout.SLDPRT at (0, 0, 0)
+          place   layout at (0, 0, 0) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     layout
+          insert  carrier1 C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\old\RangeBox_Carrier_Carrier.SLDPRT at (0, 0, 0)
+          place   carrier1 at (0, 0, 0) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     carrier1
+          insert  gear1 C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\old\Gear_m1.25_N29.SLDPRT at (0, 0, 5.5)
+          place   gear1 at (0, 0, 5.5) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     gear1
+          insert  gear2c1 C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\old\Gear_m1.25_N13.SLDPRT at (26.25, 0, 5.5)
+          place   gear2c1 at (26.25, 0, 5.5) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     gear2c1
+          insert  gear2c2 C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\old\Gear_m1.25_N13.SLDPRT at (-13.125, 22.733167, 5.5)
+          place   gear2c2 at (-13.125, 22.733167, 5.5) turned (0.885456, -0.464723, 0, 0.464723, 0.885456, 0, 0, 0, 1)
+          fix     gear2c2
+          insert  gear2c3 C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\old\Gear_m1.25_N13.SLDPRT at (-13.125, -22.733167, 5.5)
+          place   gear2c3 at (-13.125, -22.733167, 5.5) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     gear2c3
+          insert  gear3 C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\old\Ring_m1.25_N55.SLDPRT at (0, 0, 5.5)
+          place   gear3 at (0, 0, 5.5) turned (0.998369, -0.057089, 0, 0.057089, 0.998369, 0, 0, 0, 1)
+          fix     gear3
+          insert  gear4 C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\old\Dog_m1.25_N17.SLDPRT at (0, 0, -34.5)
+          place   gear4 at (0, 0, -34.5) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     gear4
+          insert  gear5 C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\old\Dog_m1.25_N17.SLDPRT at (0, 0, -19.5)
+          place   gear5 at (0, 0, -19.5) turned (0.932472, -0.361242, 0, 0.361242, 0.932472, 0, 0, 0, 1)
+          fix     gear5
+          insert  gear6 C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\old\Sleeve_m1.25_N17.SLDPRT at (0, 0, -34.5)
+          place   gear6 at (0, 0, -34.5) turned (0.982973, -0.18375, 0, 0.18375, 0.982973, 0, 0, 0, 1)
+          fix     gear6
+          unfix   gear1
+          mate    coincident gear1:Gear Axis ~ layout:Input Axis as 'Sun on Input Axis'
+          mate    point distance 5.5 gear1:origin ~ layout:plane1 as 'Sun along Input'
+          link    "D1@Sun along Input"= "Sun Face Z"
+          unfix   gear4
+          mate    lock gear1 ~ gear4 as 'HighDog locked to Sun'
+          unfix   carrier1
+          mate    coincident carrier1:Carrier Axis ~ layout:Carrier Axis as 'Carrier carrier on Carrier Axis'
+          mate    point carrier1:origin ~ layout:plane1 as 'Carrier carrier along Carrier'
+          unfix   gear5
+          mate    lock carrier1 ~ gear5 as 'LowDog locked to Carrier carrier'
+          unfix   gear2c1
+          mate    coincident gear2c1:Gear Axis ~ carrier1:Planet copy 1 Axis as 'Planet copy 1 on Planet copy 1 Axis'
+          mate    point distance 5.5 gear2c1:origin ~ layout:plane1 as 'Planet copy 1 along Planet copy 1'
+          link    "D1@Planet copy 1 along Planet copy 1"= "Planet Face Z"
+          unfix   gear2c2
+          mate    coincident gear2c2:Gear Axis ~ carrier1:Planet copy 2 Axis as 'Planet copy 2 on Planet copy 2 Axis'
+          mate    point distance 5.5 gear2c2:origin ~ layout:plane1 as 'Planet copy 2 along Planet copy 2'
+          link    "D1@Planet copy 2 along Planet copy 2"= "Planet Face Z"
+          unfix   gear2c3
+          mate    coincident gear2c3:Gear Axis ~ carrier1:Planet copy 3 Axis as 'Planet copy 3 on Planet copy 3 Axis'
+          mate    point distance 5.5 gear2c3:origin ~ layout:plane1 as 'Planet copy 3 along Planet copy 3'
+          link    "D1@Planet copy 3 along Planet copy 3"= "Planet Face Z"
+          unfix   gear6
+          mate    coincident gear6:Gear Axis ~ layout:Output Axis as 'RangeSlv on Output Axis'
+          mate    point distance -34.5 gear6:origin ~ layout:plane1 as 'RangeSlv along Output'
+          mate    gear 29:13 gear1:Gear Axis ~ gear2c1:Gear Axis as 'Sun meshes Planet copy 1'
+          mate    gear 29:13 gear1:Gear Axis ~ gear2c2:Gear Axis as 'Sun meshes Planet copy 2'
+          mate    gear 29:13 gear1:Gear Axis ~ gear2c3:Gear Axis as 'Sun meshes Planet copy 3'
+          mate    gear 13:55 gear2c1:Gear Axis ~ gear3:Gear Axis as 'Planet copy 1 meshes Ring'
+          rebuild once
+          save    C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\old\RangeBox.SLDASM
+ok      old: the plan turns (W5): static reason ''
+journal written: 8 paths
+build   RangeBox: SolidWorks 1.04 GB private, 10.11 GB free
+DIALOG  SolidWorks shows 'Loading...': ['Cancel'] (a progress box that closes itself; not logged again)
+        build   Part12 · spur · recipe A · trig degrees
+        ok      new part Part12
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 29
+        ok      link "Count@Teeth"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Gear_m1.25_N29; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\old\Gear_m1.25_N29.SLDPRT
+        build   Part13 · spur · recipe A · trig degrees
+        ok      new part Part13
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 13
+        ok      link "Count@Teeth"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Gear_m1.25_N13; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\old\Gear_m1.25_N13.SLDPRT
+        build   Part14 · internal spur · recipe A · trig degrees
+        ok      new part Part14
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Pressure Angle"
+        ok      global "Inner Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Rim Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Flank End Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle rim
+        ok      circle tip
+        ok      coincident rim.centre origin
+        ok      coincident tip.centre origin
+        ok      dimension Rim
+        ok      dimension Tip
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "Rim@Blank Sketch"
+        ok      link "Tip@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      circle cap
+        ok      line Li+
+        ok      line Li-
+        ok      line T
+        ok      line Lo+
+        ok      line Lo-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident cap.centre origin
+        ok      coincident Li+.start I+.start (already one point)
+        ok      coincident Li-.start I-.start (already one point)
+        ok      coincident origin Li+
+        ok      coincident origin Li-
+        ok      coincident Li+.end cap
+        ok      coincident Li-.end cap
+        ok      coincident T.start Li+.end (already one point)
+        ok      coincident T.end Li-.end (already one point)
+        ok      coincident Lo+.start I+.end (already one point)
+        ok      coincident Lo-.start I-.end (already one point)
+        ok      coincident origin Lo+
+        ok      coincident origin Lo-
+        ok      coincident F+.end Lo+.end (already one point)
+        ok      coincident F-.start Lo-.end (already one point)
+        ok      coincident F+.start R.end (already one point)
+        ok      coincident F-.end R.start (already one point)
+        ok      tangent F+ Lo+
+        ok      tangent F- Lo-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      dimension Cap
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      link "Cap@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 55
+        ok      link "Count@Teeth"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      25 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Ring_m1.25_N55; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\old\Ring_m1.25_N55.SLDPRT
+        build   Part15 · spur · recipe A · trig degrees
+        ok      new part Part15
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 17
+        ok      link "Count@Teeth"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Dog_m1.25_N17; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\old\Dog_m1.25_N17.SLDPRT
+        build   Part16 · internal spur · recipe A · trig degrees
+        ok      new part Part16
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Pressure Angle"
+        ok      global "Inner Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Rim Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Flank End Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle rim
+        ok      circle tip
+        ok      coincident rim.centre origin
+        ok      coincident tip.centre origin
+        ok      dimension Rim
+        ok      dimension Tip
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "Rim@Blank Sketch"
+        ok      link "Tip@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      circle cap
+        ok      line Li+
+        ok      line Li-
+        ok      line T
+        ok      line Lo+
+        ok      line Lo-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident cap.centre origin
+        ok      coincident Li+.start I+.start (already one point)
+        ok      coincident Li-.start I-.start (already one point)
+        ok      coincident origin Li+
+        ok      coincident origin Li-
+        ok      coincident Li+.end cap
+        ok      coincident Li-.end cap
+        ok      coincident T.start Li+.end (already one point)
+        ok      coincident T.end Li-.end (already one point)
+        ok      coincident Lo+.start I+.end (already one point)
+        ok      coincident Lo-.start I-.end (already one point)
+        ok      coincident origin Lo+
+        ok      coincident origin Lo-
+        ok      coincident F+.end Lo+.end (already one point)
+        ok      coincident F-.start Lo-.end (already one point)
+        ok      coincident F+.start R.end (already one point)
+        ok      coincident F-.end R.start (already one point)
+        ok      tangent F+ Lo+
+        ok      tangent F- Lo-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      dimension Cap
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      link "Cap@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 17
+        ok      link "Count@Teeth"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      25 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Sleeve_m1.25_N17; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\old\Sleeve_m1.25_N17.SLDPRT
+        build   Part17 · layout · recipe  · trig degrees
+        ok      new part Part17
+        ok      trig units measured: degrees
+        ok      axis Input Axis
+        ok      axis Carrier Axis
+        ok      axis Ring Axis
+        ok      axis Output Axis
+        ok      rebuilt once
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\old\RangeBox_Layout.SLDPRT
+        build   Part18 · carrier · recipe  · trig degrees
+        ok      new part Part18
+        ok      trig units measured: degrees
+        ok      global "Planet copy 1 X"
+        ok      global "Planet copy 2 X"
+        ok      global "Planet copy 2 Y"
+        ok      global "Planet copy 3 X"
+        ok      global "Planet copy 3 Y"
+        ok      axis Carrier Axis
+        ok      plane Planet copy 1 X Plane
+        ok      link "Offset@Planet copy 1 X Plane"
+        ok      axis Planet copy 1 Axis
+        ok      plane Planet copy 2 X Plane
+        ok      link "Offset@Planet copy 2 X Plane"
+        ok      plane Planet copy 2 Y Plane
+        ok      link "Offset@Planet copy 2 Y Plane"
+        ok      axis Planet copy 2 Axis
+        ok      plane Planet copy 3 X Plane
+        ok      link "Offset@Planet copy 3 X Plane"
+        ok      plane Planet copy 3 Y Plane
+        ok      link "Offset@Planet copy 3 Y Plane"
+        ok      axis Planet copy 3 Axis
+        ok      5 globals read back and match the maths
+        ok      rebuilt once
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\old\RangeBox_Carrier_Carrier.SLDPRT
+        build   Assem2 · assembly · recipe  · trig degrees
+        ok      new assembly Assem2
+        ok      trig units measured: degrees
+        ok      global "Sun Face Z"
+        ok      global "Planet Face Z"
+        ok      component RangeBox_Layout-1
+        ok      placed layout
+        ok      fixed layout
+        ok      component RangeBox_Carrier_Carrier-1
+        ok      placed carrier1
+        ok      fixed carrier1
+        ok      component Gear_m1.25_N29-1
+        ok      placed gear1
+        ok      fixed gear1
+        ok      component Gear_m1.25_N13-1
+        ok      placed gear2c1
+        ok      fixed gear2c1
+        ok      component Gear_m1.25_N13-2
+        ok      placed gear2c2
+        ok      fixed gear2c2
+        ok      component Gear_m1.25_N13-3
+        ok      placed gear2c3
+        ok      fixed gear2c3
+        ok      component Ring_m1.25_N55-1
+        ok      placed gear3
+        ok      fixed gear3
+        ok      component Dog_m1.25_N17-1
+        ok      placed gear4
+        ok      fixed gear4
+        ok      component Dog_m1.25_N17-2
+        ok      placed gear5
+        ok      fixed gear5
+        ok      component Sleeve_m1.25_N17-1
+        ok      placed gear6
+        ok      fixed gear6
+        ok      unfixed gear1
+        ok      mate coincident gear1:Gear Axis ~ layout:Input Axis as Sun on Input Axis
+        ok      mate point distance gear1:origin ~ layout:plane1 as Sun along Input
+        ok      link "D1@Sun along Input"
+        ok      unfixed gear4
+        ok      mate lock gear1 ~ gear4 as HighDog locked to Sun
+        ok      unfixed carrier1
+        ok      mate coincident carrier1:Carrier Axis ~ layout:Carrier Axis as Carrier carrier on Carrier Axis
+        ok      mate point carrier1:origin ~ layout:plane1 as Carrier carrier along Carrier
+        ok      unfixed gear5
+        ok      mate lock carrier1 ~ gear5 as LowDog locked to Carrier carrier
+        ok      unfixed gear2c1
+        ok      mate coincident gear2c1:Gear Axis ~ carrier1:Planet copy 1 Axis as Planet copy 1 on Planet copy 1 Axis
+        ok      mate point distance gear2c1:origin ~ layout:plane1 as Planet copy 1 along Planet copy 1
+        ok      link "D1@Planet copy 1 along Planet copy 1"
+        ok      unfixed gear2c2
+        ok      mate coincident gear2c2:Gear Axis ~ carrier1:Planet copy 2 Axis as Planet copy 2 on Planet copy 2 Axis
+        ok      mate point distance gear2c2:origin ~ layout:plane1 as Planet copy 2 along Planet copy 2
+        ok      link "D1@Planet copy 2 along Planet copy 2"
+        ok      unfixed gear2c3
+        ok      mate coincident gear2c3:Gear Axis ~ carrier1:Planet copy 3 Axis as Planet copy 3 on Planet copy 3 Axis
+        ok      mate point distance gear2c3:origin ~ layout:plane1 as Planet copy 3 along Planet copy 3
+        ok      link "D1@Planet copy 3 along Planet copy 3"
+        ok      unfixed gear6
+        ok      mate coincident gear6:Gear Axis ~ layout:Output Axis as RangeSlv on Output Axis
+        ok      mate point distance gear6:origin ~ layout:plane1 as RangeSlv along Output
+        ok      mate gear gear1:Gear Axis ~ gear2c1:Gear Axis as Sun meshes Planet copy 1
+        ok      mate gear gear1:Gear Axis ~ gear2c2:Gear Axis as Sun meshes Planet copy 2
+        ok      mate gear gear1:Gear Axis ~ gear2c3:Gear Axis as Sun meshes Planet copy 3
+        ok      mate gear gear2c1:Gear Axis ~ gear3:Gear Axis as Planet copy 1 meshes Ring
+        ok      2 globals read back and match the maths
+        ok      every mate sound, every gear free to turn
+        ok      configuration H made
+        ok      configuration N made
+        ok      configuration L made
+        ok      1 slide value(s) set and read back in 3 configurations
+        ok      mate gear gear6:Gear Axis ~ gear4:Gear Axis as RangeSlv engages HighDog
+        ok      mate gear gear6:Gear Axis ~ gear5:Gear Axis as RangeSlv engages LowDog
+        ok      every mode checked: H, N, L
+        ok      configuration Default deleted
+        mate    Sun on Input Axis
+        mate    Sun along Input
+        mate    HighDog locked to Sun
+        mate    Carrier carrier on Carrier Axis
+        mate    Carrier carrier along Carrier
+        mate    LowDog locked to Carrier carrier
+        mate    Planet copy 1 on Planet copy 1 Axis
+        mate    Planet copy 1 along Planet copy 1
+        mate    Planet copy 2 on Planet copy 2 Axis
+        mate    Planet copy 2 along Planet copy 2
+        mate    Planet copy 3 on Planet copy 3 Axis
+        mate    Planet copy 3 along Planet copy 3
+        mate    RangeSlv on Output Axis
+        mate    RangeSlv along Output
+        mate    Sun meshes Planet copy 1
+        mate    Sun meshes Planet copy 2
+        mate    Sun meshes Planet copy 3
+        mate    Planet copy 1 meshes Ring
+        ok      read turning against their mesh, so made again with the other Flip: Planet copy 1 meshes Ring
+        ok      rebuilt once
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\out\old\RangeBox.SLDASM
+        config  H: 19 mates as planned, 1 off
+        mode    H: every mate sound, every gear free to turn, no interference
+        config  N: 18 mates as planned, 2 off
+        mode    N: every mate sound, every gear free to turn, no interference
+        config  L: 19 mates as planned, 1 off
+        mode    L: every mate sound, every gear free to turn, no interference
+        in 140.5 s; SolidWorks 1.68 GB private, 9.84 GB free; kind 'motion'; turned round (made again with the other Flip) ['Planet copy 1 meshes Ring']
+        steps [('part', 'Gear_m1.25_N29', 1, 5), ('part', 'Gear_m1.25_N13', 2, 5), ('part', 'Ring_m1.25_N55', 3, 5), ('part', 'Dog_m1.25_N17', 4, 5), ('part', 'Sleeve_m1.25_N17', 5, 5), ('layout', 'RangeBox_Layout', 0, 0), ('carrier', 'RangeBox_Carrier_Carrier', 0, 0), ('assembly', 'RangeBox', 0, 0), ('mode', 'H', 1, 3), ('mode', 'N', 2, 3), ('mode', 'L', 3, 3), ('mode', 'H', 1, 3), ('mode', 'N', 2, 3), ('mode', 'L', 3, 3), ('mode', 'H', 1, 3), ('mode', 'N', 2, 3), ('mode', 'L', 3, 3), ('interference', 'RangeBox', 0, 0)]
+        progress words ['Building in SolidWorks: part 1 of 5, Gear_m1.25_N29…', 'Building in SolidWorks: checking interference…']
+record  5 sidecar(s) written; record written; notes []
+status  [green] Built 5 parts, RangeBox_Layout, RangeBox_Carrier_Carrier and RangeBox.SLDASM; no interference between the gears in any mode, where they stand. Its turning gears are mated to turn in each of its 3 modes, one configuration each (H, N and L), and SolidWorks reports no mate in error in any of them: it opens in H; to switch mode, double-click another mode's configuration in SolidWorks' ConfigurationManager. Drag Sun in SolidWorks and the rest of its train follow. RangeSlv slides along Output, to its place in each mode. The 3 copies of Planet turn on Carrier, and RangeBox_Carrier_Carrier holds Carrier's axes and planes only: a plate and pins are yours to add. Ring stays fixed where it is placed: its shaft does not turn. A turn you give the gears in one mode can show in other modes, so a dog can stand across its sleeve in another; to put the gears back there, press Update SolidWorks with that mode showing. 1 thing to do by hand: Assign a material to each of the 5 parts; the build leaves it unset.
+ok      old: every part(s), the layout part and the assembly built and saved, turning: ok True, parts built 5, kind 'motion'
+ok      old: no interference: []
+fact    old: the build's sense read made again with the other Flip: ['Planet copy 1 meshes Ring']
+ok      old: the record holds a turning gearbox built from this read
+ok      old: the record's mates are the plan's: ['Sun on Input Axis', 'Sun along Input', 'HighDog locked to Sun', 'Carrier carrier on Carrier Axis', 'Carrier carrier along Carrier', 'LowDog locked to Carrier carrier', 'Planet copy 1 on Planet copy 1 Axis', 'Planet copy 1 along Planet copy 1', 'Planet copy 2 on Planet copy 2 Axis', 'Planet copy 2 along Planet copy 2', 'Planet copy 3 on Planet copy 3 Axis', 'Planet copy 3 along Planet copy 3', 'RangeSlv on Output Axis', 'RangeSlv along Output', 'Sun meshes Planet copy 1', 'Sun meshes Planet copy 2', 'Sun meshes Planet copy 3', 'Planet copy 1 meshes Ring', 'RangeSlv engages HighDog', 'RangeSlv engages LowDog']
+ok      old: the build's sentence says how to turn it: 'drag Sun in SolidWorks and the rest of its train follow'
+footer  (old, built) [green] Built 5 parts, RangeBox_Layout, RangeBox_Carrier_Carrier and RangeBox.SLDASM; no interference between the gears in any mode, where they stand. Its turning gears are mated to turn in each of its 3 modes, one configuration each (H, N and L), and SolidWorks reports no mate in error in any of them: it opens in H; to switch mode, double-click another mode's configuration in SolidWorks' ConfigurationManager. Drag Sun in SolidWorks and the rest of its train follow. RangeSlv slides along Output, to its place in each mode. The 3 copies of Planet turn on Carrier, and RangeBox_Carrier_Carrier holds Carrier's axes and planes only: a plate and pins are yours to add. Ring stays fixed where it is placed: its shaft does not turn. A turn you give the gears in one mode can show in other modes, so a dog can stand across its sleeve in another; to put the gears back there, press Update SolidWorks with that mode showing. 1 thing to do by hand: Assign a material to each of the 5 parts; the build leaves it unset.
+        button 'Build again…' on; Update SolidWorks shown on primary
+ok      old: the footer says how to turn it: 'drag Sun in SolidWorks and the rest of its train follow'
+tag     ' · built from this version'
+ok      old: 8 files on disk
+        marked modified in SolidWorks right after the build: {'Gear_m1.25_N29.SLDPRT': False, 'Gear_m1.25_N13.SLDPRT': False, 'Ring_m1.25_N55.SLDPRT': False, 'Dog_m1.25_N17.SLDPRT': False, 'Sleeve_m1.25_N17.SLDPRT': False, 'RangeBox_Layout.SLDPRT': False, 'RangeBox_Carrier_Carrier.SLDPRT': False, 'RangeBox.SLDASM': True}
+ok      old: the assembly is marked after the build (a read after its save)
+ok      old, right after the build and its saves: SolidWorks marks modified exactly ['RangeBox.SLDASM']
+ok      old: RangeSlv still Output's anchor (RangeSlv); the sleeve unbanded as before W9b, its sidecar at schema 1, no Relief
+ok      old, H shown: every body at its frame on record (6.6e-10 at Planet copy 2); no mate in error ; every app gear free True ; no interference ; RangeSlv along Output reads 34.500000 mm, the record -34.500000 (SolidWorks gives a distance without its sign), RangeSlv's Front plane at z -34.500000: agree; bands and dogs where the app's read puts them to 0.0001 mm ; engaged ['HighDog'] as the app's ['HighDog']
+fact    old, H: measured bands {'whole': (-34.5, -24.5)}, dogs {'HighDog': (-34.5, -29.5), 'LowDog': (-19.5, -14.5)}, hub None; RangeSlv moved -5.000000 mm from N; least running gap 5.0 at [('whole', 'LowDog')]; relief holds []
+ok      old, N shown: every body at its frame on record (6.6e-10 at Planet copy 2); no mate in error ; every app gear free True ; no interference ; RangeSlv along Output reads 29.500000 mm, the record -29.500000 (SolidWorks gives a distance without its sign), RangeSlv's Front plane at z -29.500000: agree; bands and dogs where the app's read puts them to 0.0001 mm ; engaged [] as the app's []
+fact    old, N: measured bands {'whole': (-29.5, -19.5)}, dogs {'HighDog': (-34.5, -29.5), 'LowDog': (-19.5, -14.5)}, hub None; RangeSlv moved +0.000000 mm from N; least running gap 0.0 at [('whole', 'HighDog'), ('whole', 'LowDog')]; relief holds []
+ok      old, L shown: every body at its frame on record (6.6e-10 at Planet copy 2); no mate in error ; every app gear free True ; no interference ; RangeSlv along Output reads 24.500000 mm, the record -24.500000 (SolidWorks gives a distance without its sign), RangeSlv's Front plane at z -24.500000: agree; bands and dogs where the app's read puts them to 0.0001 mm ; engaged ['LowDog'] as the app's ['LowDog']
+fact    old, L: measured bands {'whole': (-24.5, -14.5)}, dogs {'HighDog': (-34.5, -29.5), 'LowDog': (-19.5, -14.5)}, hub None; RangeSlv moved +5.000000 mm from N; least running gap 5.0 at [('whole', 'HighDog')]; relief holds []
+ok      old: every mate's flag in every mode as on record, the couplings on only in their modes: wrong none
+ok      old, the builder's end: old ends clean: every document of it closed in SolidWorks (left []), Excel's workbook closed (['RangeBox.xlsx']), no open document by a file name it holds ([])
+master  old renamed old.master: it stays so for the rest of the run
+time    old: 185 s; 0 failed; SolidWorks 1.11 GB private, 10.15 GB free
+excel   quit our own Excel
+close   left of ours []; stray []; lost []; SolidWorks 1.06 GB private, 10.29 GB free
+dialogs progress boxes seen {'Calculating Interference Detection': 10, 'Updating...': 0, 'Opening': 0, 'Loading...': 1}; other windows the watch logged: 1
+awake   display and system released (previous state -0x7ffffffd)
+result  written to C:\Users\M0obo\Documents\GearGeneratorProbe\w9b-demo-sw2026-20261117-051055\w9b-demo-20261117-051122.json; masters kept {'rangebox': '', 'setup': '', 'reducer': ''}
+noted   SolidWorks' notification box came up while no SolidWorks call was in progress (exempt by the coordinator's ruling; nothing answers it)
+done    0 failed: []; 1 noted; 0 STOP(s), a hung worker included: []
