@@ -578,8 +578,8 @@ def chosen_row(pair, test):
 # would for the same file. Nothing is saved anywhere real: the board's "disk"
 # is a set of paths, as the gearbox tests' is.
 
-import copy as copying, dataclasses, hashlib, shutil, tempfile
-from gear_generator import __version__, store, swbuild, workbook_gui as wb_gui
+import copy as copying, dataclasses, hashlib, shutil, tempfile, time
+from gear_generator import __version__, store, swbuild, theme, workbook_gui as wb_gui
 from gear_generator.workbook import assess as wb_assess, gearbox as wb_gearbox, geometry as wb_geometry, \
     link as wb_link, model as wb_model, motion as wb_motion, update as wb_update, xlsx as wb_xlsx
 sys.path.insert(0, os.path.join(HERE, "..", "..", "tests"))
@@ -588,6 +588,12 @@ from test_swbuild import FakeSolidWorks          # the fake SolidWorks swbuild's
 WINDOW_WIDTH = wb_gui.WINDOW_WIDTH
 MONO_TINY = f"font-family: {MONO}; font-size: 11.5px; color: {INK}; line-height: 20px; white-space: nowrap;"
 STAMP = "2026-11-13T14:02:31Z"
+# W9a: when an Update read the user's work (store.UserWorkEntry.read_at), said as the local clock reads it today
+# (ui_text.read_time). The boards are drawn in UTC, the read stamped 14:02 today, so every board says "14:02".
+os.environ["TZ"] = "UTC"
+if hasattr(time, "tzset"):
+    time.tzset()
+READ_STAMP = time.strftime("%Y-%m-%dT14:02:00Z", time.gmtime())
 _reads = {}
 
 
@@ -700,7 +706,7 @@ def planned(a, record, disk):                                           # Workbo
                                                      read_sidecar=disk.read_sidecar)
     update = None
     if ours is not None and (ours.parts or gearbox is not None) and not wb_gui._update_gate(a, ours):
-        update = wb_update.classify(ours, a, exists=disk.exists)
+        update = wb_update.classify(ours, a, exists=disk.exists, read_sidecar=disk.read_sidecar)
     return plan, update, ours
 
 
@@ -725,9 +731,12 @@ def press_update(desk, spec):
     path, read_spec, diagnostics, digest = read_workbook(spec)
     _, update, _ = planned(assessed(read_spec, diagnostics), desk.record, desk.disk)
     result = swbuild.update_gearbox(desk.sw, **update.update_kwargs(), exists=desk.disk.exists)
+    if result.user_work is not None:
+        result.user_work.read_at = READ_STAMP          # the read's time, fixed for the boards (above)
     meshes = desk.record.gearbox.meshes
     finished = wb_update.finish_update(update, result, desk.record, digest=digest,
-                                       read_sidecar=desk.disk.read_sidecar, mtime=lambda _path: 0.0, stamp=STAMP)
+                                       read_sidecar=desk.disk.read_sidecar, mtime=lambda _path: 0.0, stamp=STAMP,
+                                       revision=desk.sw.revision)
     desk.disk.write(finished)
     desk.record = finished.record or desk.record
     text, ok = ui_text.gearbox_update_status(update, result, finished.dragged, meshes=meshes,
@@ -855,9 +864,33 @@ def question_dialog(title, text):
             f'{yes}{no}</div></div></div>')
 
 
+def short_window(header, columns, foot, screen):
+    """K12 (ISSUE-1-PLAN §2.6): the window ``screen`` px tall at most: the header and the footer fixed, the two
+    columns between them a page that scrolls (drawn at its end, so its last line shows), never shorter than
+    ``workbook_gui.BODY_LEAST``; the scroll bar (12 px, theme's trough and thumb) in the lane the window's right
+    padding keeps, so the columns keep their width whether it shows or not. The thumb is sized and placed from the
+    page as the browser lays it out, as Tk's scroll bar is from the canvas."""
+    pad, lane = wb_gui.BODY_PAD, wb_gui.SCROLL_LANE
+    script = ("<script>(function(){var p=document.getElementById('k12-page'),t=document.getElementById('k12-thumb');"
+              "p.scrollTop=p.scrollHeight;var h=p.clientHeight,s=p.scrollHeight;"
+              "t.style.height=Math.max(24,Math.round(h*h/s))+'px';"
+              "t.style.top=Math.round((h-Math.max(24,Math.round(h*h/s)))*p.scrollTop/Math.max(1,s-h))+'px';})();"
+              "</script>")
+    return (f'<div style="width: {WINDOW_WIDTH}px; height: {screen}px; flex-shrink: 0; box-sizing: border-box; '
+            f'background: #f0f0f0; color: {INK}; font-family: {SANS}; font-size: 13px; line-height: 1.3; display: '
+            f'flex; flex-direction: column; gap: 8px; padding: {pad}px 0 {pad}px {pad}px;">\n'
+            f'<div style="padding-right: {pad}px;">{header}</div>'
+            f'<div style="flex: 1 1 0; min-height: {wb_gui.BODY_LEAST}px; display: flex;">'
+            f'<div id="k12-page" style="flex: 1 1 0; overflow: hidden;">{columns}</div>'
+            f'<div style="width: {lane}px; flex-shrink: 0; position: relative; background: {theme.HEADER_BG};">'
+            f'<div id="k12-thumb" style="position: absolute; left: 1px; right: 1px; background: {theme.SECONDARY_BG}; '
+            f'border: 1px solid {theme.RULE}; box-sizing: border-box;"></div></div></div>'
+            f'<div style="padding-right: {pad}px;">{foot}</div>\n</div>' + script)
+
+
 def workbook_board(spec, *, clock="14:02:31", open_in_excel=True, before=None, choose=None, desk=None, note=None,
                    ask=False, copy=False, where="", dialog=None, building=None, mode=None,
-                   positions_per_configuration=None):
+                   positions_per_configuration=None, screen=None):
     """The window after reading ``spec`` (changes listed against ``before``); ``choose`` picks offered fixes
     (``(field, index)``) as if their buttons were pressed; ``desk`` is what has been built before (its record and
     disk), and ``note`` the last job's sentence; ``ask`` draws the Build again? question the build button asks,
@@ -865,7 +898,10 @@ def workbook_board(spec, *, clock="14:02:31", open_in_excel=True, before=None, c
     shown at ``C:\\<where>`` (``Copy`` unless given); ``building`` is a job's last ``swbuild.Step``, with the window
     closed once (WorkbookWindow.close: it stays, and says it closes once the job is on record). W8: ``mode`` is
     the mode chosen in the Speeds panel's chooser (the first when None), and ``positions_per_configuration`` the last
-    job's answer, as the window passes it to the footer."""
+    job's answer, as the window passes it to the footer. W9a (K12): ``screen`` is the most height, px at 100 %, the
+    screen gives the window inside its frame; the window stops there, and its two columns scroll as one page between
+    the fixed header and footer, drawn scrolled to the end (the body's last line reachable), the scroll bar in the
+    lane the body's right padding keeps for it (WorkbookWindow._layout)."""
     path, read_spec, read_diagnostics, digest = read_workbook(spec, copy)
     folder = read_spec.box.output_folder
     desk = desk or Desk()
@@ -979,8 +1015,11 @@ def workbook_board(spec, *, clock="14:02:31", open_in_excel=True, before=None, c
     left = (f'<div style="width: {wb_gui.LEFT_WIDTH}px; flex-grow: 1; display: flex; flex-direction: column; gap: 8px;">'
             + "".join([box, gears, checks, since]) + '</div>')
     right = (f'<div style="flex-shrink: 0; display: flex; flex-direction: column; gap: 8px;">' + view + speeds + '</div>')
-    body = (header + f'<div style="display: flex; gap: 8px; align-items: flex-start;">{left}{right}</div>' + foot)
-    window = column(body, width=WINDOW_WIDTH, pad=wb_gui.BODY_PAD)
+    columns = f'<div style="display: flex; gap: 8px; align-items: flex-start;">{left}{right}</div>'
+    if screen is None:
+        window = column(header + columns + foot, width=WINDOW_WIDTH, pad=wb_gui.BODY_PAD)
+    else:
+        window = short_window(header, columns, foot, screen)
     if ask:
         dialog = (ui_text.BUILD_AGAIN_TITLE, ui_text.build_again_question(update, build_plan, record=record))
     if dialog is not None:
@@ -1238,6 +1277,41 @@ boards["WorkbookModesUpdated"] = ("Workbook · TransferCase_Parallel after a qui
                                   workbook_board(parallel, desk=parallel_desk, note=updated_note,
                                                  positions_per_configuration=parallel_desk.positions),
                                   WINDOW_WIDTH)
+
+# W9a (ISSUE-1-PLAN §2.6, K12). The E4 transfer case built, on this device's 2560 × 1600 screen at 150 %, where
+# Windows holds the window to 1570 px inside (W8's window check, fb85bcc): 1047 px at 100 %. The window stops there;
+# the header and the footer, all eight of its sentences, stay whole, and the two columns scroll between them as one
+# page, drawn at its end.
+SHORT_SCREEN = round(1570 / 1.5)
+e4_desk = Desk()
+e4_note = press_build(e4_desk, e4)
+boards["WorkbookShortScreen"] = ("Workbook · the E4 built on a short screen: the columns scroll, the footer whole",
+                                 workbook_board(e4, desk=e4_desk, note=e4_note,
+                                                positions_per_configuration=e4_desk.positions, screen=SHORT_SCREEN),
+                                 WINDOW_WIDTH)
+# W9a (ISSUE-1-PLAN §2.1 item 6, K4). The issue's RangeBox built, then the user's work added in SolidWorks: a sprocket
+# locked to Sun (the fake's user_lock, on in every mode), a housing of theirs fixed and unmated, and a keyway in
+# RangeSlv's part. A quiet Update read it (the record's schema 7 keeps it, with the time); then RangeSlv's place in H
+# moved 1 mm: before the press the footer says, from the record and with its time, that Update moves the sprocket
+# with Sun (route (c1): Sun's train has a carrier) and leaves the rest as it is.
+from workbook_fixtures import range_box  # noqa: E402
+
+rangebox = with_folder(range_box())
+user_desk = Desk()
+press_build(user_desk, rangebox)
+_asm = user_desk.record.gearbox.assembly
+_sun = next(c.name for c in user_desk.record.gearbox.components if c.gear == "Sun")
+user_desk.sw.user_component(_asm, "Sprocket-1", "C:\\Parts\\Sprocket.SLDPRT",
+                            ((1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0), (0.0, 0.0, 30.0)))
+user_desk.sw.user_component(_asm, "Housing-1", "C:\\Parts\\Housing.SLDPRT", fixed=True)
+user_desk.sw.user_lock(_asm, "Lock3", _sun, "Sprocket-1")
+user_desk.sw.user_feature(next(p.path for p in user_desk.record.current_parts() if "RangeSlv" in p.gears), "Keyway")
+press_update(user_desk, rangebox)
+slid = wb_model.replace(rangebox, gears=tuple(wb_model.replace(g, slides="H=-6, N=0, L=+5") if g.id == "RangeSlv"
+                                              else g for g in rangebox.gears))
+boards["WorkbookUserWork"] = ("Workbook · your work in the assembly, said before Update SolidWorks",
+                              workbook_board(slid, before=rangebox, desk=user_desk,
+                                             positions_per_configuration=user_desk.positions), WINDOW_WIDTH)
 
 layout = []
 x = 0

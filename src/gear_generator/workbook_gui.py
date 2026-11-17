@@ -131,6 +131,16 @@ PATH_CHARS = 52     # a path longer than this is shortened in the middle, so the
 FOOTER_COLUMNS = {"build_button": 4, "update_button": 5}    # Export, Export as…, then these two
 BODY_PAD = 12               # around the window's body, px
 STATUS_MIN_WRAP = 400       # the footer's sentence wraps in the room the buttons leave, never narrower than this
+# W9a, K12 (ISSUE-1-PLAN §2.6): the window fits its screen. It never grows past the primary screen's work area less
+# FRAME px for its title bar and borders (as the strip's main() keeps 40); between the fixed header and footer the two
+# columns scroll as one page, never shorter than BODY_LEAST px (the Checks panel's header and first lines); the
+# footer takes at most 1/FOOTER_SHARE of the work area, its sentence scrolling in itself above that, so its buttons
+# are always whole. The page's scroll bar sits in SCROLL_LANE, the body's right padding, which is kept for it whether
+# it shows or not, so a bar appearing never narrows the columns (theme's bar is px(12) wide, as BODY_PAD).
+FRAME = 40
+BODY_LEAST = 160
+FOOTER_SHARE = 3
+SCROLL_LANE = BODY_PAD
 
 
 def open_in_excel(path: str) -> None:

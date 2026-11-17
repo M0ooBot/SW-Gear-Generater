@@ -4220,6 +4220,15 @@ def _yours(components: Sequence[str], mates: int = 0, features: Sequence[str] = 
     return out + list(features)
 
 
+def _mate_words(names: Sequence[str], other: bool = False) -> List[str]:
+    """The user's mates in a list of their work: one by its name, more counted (*6 mates*, *2 other mates* after
+    some were named)."""
+    names = [n for n in names if n]
+    if len(names) == 1:
+        return names
+    return [_plural(len(names), "other mate" if other else "mate")] if names else []
+
+
 def _feature_words(features) -> List[str]:
     """*Keyway in Gear_m1.25_N17* for each ``swbuild.UserFeature`` / ``store.UserFeatureEntry``."""
     return [f"{f.name} in {_stem(f.path)}" for f in features]
@@ -4257,25 +4266,36 @@ def user_work_line(ahead) -> Tuple[str, bool]:
     followed = list(ahead.followed)
     if followed:
         clauses.append(f"rebuilds your {_and(_feature_words(followed))} after the app's features")
-    carried = []
+    carried: List[str] = []
+    said: List[str] = []                             # the user's mates already named
     for gear, held in ahead.carried:
         components = [c for c, _ in held]
         locks = list(dict.fromkeys(lock for _, ls in held for lock in ls))
         carried += components
+        said += locks
         body = _and(_bodies([gear], {}))
         clauses.append(f"moves your {_and(components)} with {body}, which your {_and(locks)} "
                        f"{'holds' if len(locks) == 1 else 'hold'} {'it' if len(components) == 1 else 'them'} to")
+    touched = {name: [n for w, n in m.touches if w == "app"] for m in entry.mates for name in [m.name]}
     for bodies, mates in ahead.unread_ties:
-        body = _and(_bodies(list(bodies)[:1], {}))
+        # The train is named by the first of its bodies the user's mates are on, as the worker's tie sentence is.
+        on = [b for b in bodies if any(b in touched.get(m, ()) for m in mates)] or list(bodies)
+        said += list(mates)
         clauses.append(f"asks SolidWorks, when pressed, whether your {_and(mates)} "
-                       f"{'leaves' if len(mates) == 1 else 'leave'} {body}'s train free to turn")
-    rest = _yours([c.name for c in entry.components if c.name not in carried], len(entry.mates),
-                  _feature_words([f for f in entry.features
-                                  if not any(f.path == g.path and f.name == g.name for g in followed)]))
+                       f"{'leaves' if len(mates) == 1 else 'leave'} {_and(_bodies(on[:1], {}))}'s train free to turn")
+    others = [m.name for m in entry.mates if m.name not in said]
+    mates_words = _mate_words(others, other=bool(said))
+    rest = _yours([c.name for c in entry.components if c.name not in carried], 0,
+                  mates_words + _feature_words([f for f in entry.features
+                                                if not any(f.path == g.path and f.name == g.name for g in followed)]))
     if rest:
-        one = len(rest) == 1 and not entry.mates and len(entry.components) - len(carried) <= USER_NAMED
+        one = len(rest) == 1 and len(others) < 2
         clauses.append(f"leaves your {_and(rest)} {'as it is' if one else 'as they are'}")
-    text = f"As read at {at}, Update SolidWorks {_and(clauses)}." if clauses else ""
+    if len(clauses) > 2:                              # long clauses: the last one after a comma
+        joined = ", ".join(clauses[:-1]) + ", and " + clauses[-1]
+    else:
+        joined = " and ".join(clauses)
+    text = f"As read at {at}, Update SolidWorks {joined}." if clauses else ""
     work_errors = ([m.name for m in entry.mates if m.code and m.code != -1]
                    + [c.name for c in entry.components if c.code and c.code != -1]
                    + _feature_words([f for f in entry.features if f.code and f.code != -1]))
@@ -4298,10 +4318,10 @@ def stays_behind_sentence(stays, again) -> str:
     part_of = dict(getattr(again, "part_of", {}) or {})
     from . import store
     pieces = []
-    items = _yours(stays.components, len(stays.mates))
+    items = _yours(stays.components, 0, _mate_words(stays.mates))
     if items:
-        pieces.append(f"your {_and(items)} {'stays' if len(items) == 1 and not stays.mates else 'stay'} in "
-                      f"{_file(stays.assembly)}")
+        one = len(items) == 1 and len(stays.mates) < 2
+        pieces.append(f"your {_and(items)} {'stays' if one else 'stay'} in {_file(stays.assembly)}")
     by_part: Dict[str, Tuple[List[str], Tuple[str, ...]]] = {}
     for feature, path, gears in stays.left:
         by_part.setdefault(path, ([], gears))[0].append(feature)
@@ -4338,12 +4358,13 @@ def stayed_behind_status(stays, result, again) -> str:
     if stays is not None and stays.left:
         features = stays_behind_sentence(type(stays)(stays.entry, stays.assembly, (), (), stays.left, ()), again)
     if work is not None:
-        items = _yours([c.name for c in work.components], len(work.mates))
+        items = _yours([c.name for c in work.components], 0, _mate_words([m.name for m in work.mates]))
         if not items:
             return features
         old = old or "the old assembly"
-        lead = (f"Your {_and(items)} {'stays' if len(items) == 1 and not work.mates else 'stay'} in {old}, as read "
-                f"when this build began; {name} has none of them.")
+        one = len(items) == 1 and len(work.mates) < 2
+        lead = (f"Your {_and(items)} {'stays' if one else 'stay'} in {old}, as read when this build began; {name} "
+                f"has none of {'it' if one else 'them'}.")
         return _joined(lead, features)
     if stays is None:
         return f"{_sentence(why)}" if why and why != OLD_NOT_OPEN else ""

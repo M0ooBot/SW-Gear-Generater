@@ -183,7 +183,7 @@ def test_the_inventory_reaches_the_footer_before_the_press_with_its_time(on_fake
     # A quiet press puts nothing: the user's work is left as it is.
     footer, upd = _footer(record, reducer())
     assert update.bodies_put(upd) == set()
-    assert f"As read at {at}, Update SolidWorks leaves your Sprocket-1, 1 mate and Keyway in Gear_m1.5_N17 as they " \
+    assert f"As read at {at}, Update SolidWorks leaves your Sprocket-1, Lock3 and Keyway in Gear_m1.5_N17 as they " \
            "are." in footer.text, footer.text
 
 
@@ -244,7 +244,7 @@ def test_the_build_again_question_names_what_stays_behind_with_its_time(on_fake)
     assert upd.needs_new_revision and again.refusal == ""
     question = ui_text.build_again_question(upd, again, record=record)
     assert question.endswith(
-        f" As read at {at}, your Sprocket-1 and 1 mate stay in Reducer_12to1.SLDASM, and your Keyway stays in "
+        f" As read at {at}, your Sprocket-1 and Lock3 stay in Reducer_12to1.SLDASM, and your Keyway stays in "
         f"Gear_m1.5_N17, which G1's new part replaces; {again.name} has none of them. Your Groove in OutputGear "
         f"comes with that part, which {again.name} reuses."), question
     # With nothing on record the question is as it was.
@@ -299,7 +299,7 @@ def test_a_build_again_reads_what_stays_behind_first_and_says_it_after(on_fake):
     assert built.old_read == "" and [c.name for c in built.old_user_work.components] == ["Sprocket-1"]
     stays = update.stays_behind(record, again)
     said = ui_text.stayed_behind_status(stays, built, again)
-    assert said.startswith(f"Your Sprocket-1 and 1 mate stay in Reducer_12to1.SLDASM, as read when this build "
+    assert said.startswith(f"Your Sprocket-1 and Lock3 stay in Reducer_12to1.SLDASM, as read when this build "
                            f"began; {again.name} has none of them."), said
     assert "your Keyway stays in Gear_m1.5_N17, which G1's new part replaces" in said
     # The old assembly closed: the record's inventory, with its time.
@@ -307,7 +307,7 @@ def test_a_build_again_reads_what_stays_behind_first_and_says_it_after(on_fake):
     gone.old_user_work, gone.old_read = None, swbuild.OLD_NOT_OPEN
     said = ui_text.stayed_behind_status(stays, gone, again)
     assert said.startswith("Reducer_12to1.SLDASM was not open in SolidWorks, so it was not read again: As read at "
-                           f"{ui_text.read_time(record.gearbox.user_work.read_at)}, your Sprocket-1 and 1 mate stay "
+                           f"{ui_text.read_time(record.gearbox.user_work.read_at)}, your Sprocket-1 and Lock3 stay "
                            "in Reducer_12to1.SLDASM"), said
 
 

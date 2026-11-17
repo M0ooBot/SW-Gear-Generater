@@ -216,6 +216,20 @@
       "x": 29436,
       "y": 0,
       "w": 1080
+    },
+    {
+      "file": "WorkbookShortScreen.dc.html",
+      "title": "Workbook · the E4 built on a short screen: the columns scroll, the footer whole",
+      "x": 30596,
+      "y": 0,
+      "w": 1080
+    },
+    {
+      "file": "WorkbookUserWork.dc.html",
+      "title": "Workbook · your work in the assembly, said before Update SolidWorks",
+      "x": 31756,
+      "y": 0,
+      "w": 1080
     }
   ],
   "annotations": [
