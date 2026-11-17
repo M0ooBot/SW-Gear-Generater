@@ -1617,7 +1617,7 @@ USER_PLANE_MATE_ON_SLIDER_FOLLOWS = True
 # other sequences, and each is gated by its own finding here, None (not measured) on both versions, so a user
 # component locked to such a gear refuses before any write until a run reads the branch clean and sets it True:
 # - NO_CARRIER: a train with no carrier, put with its gear mates left on (swbuild._put_train), the commonest case
-#   (a plain parallel gearbox); measured on 2026 by W9a's demonstration (below).
+#   (a plain parallel gearbox); measured on 2026 and 2024 by W9a's demonstration (below).
 # - HELD_GEAR: a held gear of a train, re-placed first by REPLACE_FIXED_ROUTE (swbuild._put_train).
 # - FIXED_GEAR: a fixed gear re-placed W4's way, unfixed, put and fixed again with the user's lock on
 #   (swbuild._motion_assembly, swbuild._modes_put).
@@ -1638,17 +1638,25 @@ USER_PLANE_MATE_ON_SLIDER_FOLLOWS = True
 # after a further rebuild, every gear at its frame on record (worst 1.1e-14), each sprocket on its gear as set up
 # (worst 2.8e-15), no mate in error, every gear free (r3:1541-1552, 1584-1595); the proposal True, both presses clean
 # (r3:1598). Not measured: a train with no carrier on a gearbox with modes (its own branch, NO_CARRIER_MODES below),
-# a user lock to G2 or G3 (the gears the app's own lock joins), an idler, the turn the other way, 2024.
+# a user lock to G2 or G3 (the gears the app's own lock joins), an idler, the turn the other way.
 # The closing run (c2 is probe/results/w9a-close-sw2026-20261116-2-go-m1-refuse-again-nocarrier.log, snapshot 6f3d6fb,
 # with w9a-demo-20261116-232221.json) ran nocarrier again with the finding committed True (the patch a no-op, "was
 # True", c2:1350, 1412): both presses read clean and the footer's carry was the press's (c2:1366-1370, 1407-1411;
 # the proposal, c2:1414).
 # What it opens, which is wider than the evidence: user_carry_branches labels every train with no carrier on a
-# gearbox without modes NO_CARRIER, so on 2026 route (c1) now carries a user's locked component on any such train —
-# crossed-axis trains, ring trains, idlers, several trains, compound pairs — where only the parallel 12 : 1 was run.
+# gearbox without modes NO_CARRIER, so on 2026 and 2024 route (c1) now carries a user's locked component on any such
+# train — crossed-axis trains, ring trains, idlers, several trains, compound pairs — where only the parallel 12 : 1
+# was run.
 # The risk is bounded: route (c1) reads every carried pose back after the put (swbuild._carried_problems).
+# NO_CARRIER on 2024: True, scoped as 2026's, from W9a's confirming session on 2024 (32.5.0, snapshot 19651ee;
+# probe/results/sw2024/w9a-confirm-sw2024-20261117-2-setup-go-reducer-nocarrier.log, section nocarrier from line 799,
+# with sw2024/w9a-demo-20261117-003040.json, "sections" "nocarrier" "clean" [true, true]): the same 12 : 1 and
+# sprockets (line 817), every gear labelled the no-carrier branch (834), the default refusal naming the 2024 finding
+# (877); with the finding patched True for the measurement only (887, 948), both presses went ahead and put each
+# locked sprocket with its gear, its gear mates on (902, 943), the footer's carry the press's (944), and read clean,
+# and again after a further rebuild (905-906, 946-947; worst 1.1e-14 gear, 1.4e-14 sprocket); the proposal (951).
 USER_MATE_PUT_NO_CARRIER_ON_2026 = True
-USER_MATE_PUT_NO_CARRIER_ON_2024 = None
+USER_MATE_PUT_NO_CARRIER_ON_2024 = True
 # - NO_CARRIER_MODES: the same on a gearbox with modes (swbuild._modes_put, each mode shown and put), kept apart from
 #   NO_CARRIER because the demonstration put a train with no carrier on a gearbox with no modes only. Not measured.
 USER_MATE_PUT_NO_CARRIER_MODES_ON_2026 = None
@@ -1690,8 +1698,10 @@ USER_MATE_PUT_SUBASSEMBLY_ON_2024 = None
 # Scope of all three: two user mates of one kind (distance), over-defined; one feature kind (a cut swallowed by the
 # bore, code 71), in one part at a time; RangeBox in H, and the 12 : 1 without modes. Not measured: a user mate in
 # error of another kind or on an app gear, several parts in error, an app feature in error. They do not say
-# the app may go on after a False rebuild: swbuild._rebuild_laid_to_user decides that, gated on all three being
-# settled for the version in use (swbuild.assembly_rebuild_settled); with any None a False rebuild stays a failure.
+# the app may go on after a False rebuild: swbuild._rebuild_laid_to_user decides that, gated per version by
+# swbuild.assembly_rebuild_settled — since the coordinator's ruling on 2024's box (below), on the two rebuild
+# findings being set and WHATS_WRONG_IN_UPDATE_BLOCKS_ON_<year> False, no longer on WHATS_WRONG_OPENS_ON_ASSEMBLY_
+# REBUILD_ON_<year>; with any of them None (or the box blocking) a False rebuild stays a failure.
 # What that rule does not read (the close review, docs/notes-workbook/W9A-CLOSE-2026-REVIEW.md, finding 4): the
 # assembly's own feature tree beyond its mates and components, its equations (the Face Z globals) and any
 # assembly-level feature, the app's or the user's. Reading it would take GetErrorCode2 on top-level assembly features
@@ -1710,16 +1720,29 @@ USER_MATE_PUT_SUBASSEMBLY_ON_2024 = None
 # SolidWorks 2024 (32.5.0, snapshot 19651ee; v24 is probe/results/sw2024/w9a-confirm-sw2024-20261117-1-m3-stopped-by-
 # whats-wrong.log with sw2024/w9a-demo-20261117-002344.json), toggle 77 read True (v24:37): with UserGap over-defining
 # (v24:50) the script's own rebuild returned True, What's Wrong 3, codes 51 and 51, no new window (v24:51), so
-# ASSEMBLY_REBUILD_WITH_USER_MATE_IN_ERROR_ON_2024 is True, with 2026's scope; it changes no behaviour while the other
-# two 2024 findings are None. The feature case was not reached on 2024, and
-# WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_2024 stays None: the script's rebuild opened no window, but the app's
-# Update below did.
+# ASSEMBLY_REBUILD_WITH_USER_MATE_IN_ERROR_ON_2024 is True, with 2026's scope. The box run (b1 below) read the same
+# (b1:53-54: UserGap status 5, the rebuild True, What's Wrong 3, codes 51 and 51, windows new none).
+# The box runs on 2024 (32.5.0, snapshot b985cab, each section last in a fresh session, under a watch that only logs:
+# nothing set, answered, closed or saved once a box was seen; b1 is probe/results/sw2024/w9a-box-sw2024-20261117-1-
+# box.log with sw2024/w9a-demo-20261117-013103.json, b2 is w9a-box-sw2024-20261117-2-reducer-box-k3.log with
+# sw2024/w9a-demo-20261117-014251.json):
+# - ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_2024: False, from box-k3 (the 12 : 1 without modes, the user's
+#   keyway in G1's part rebuilt into error, code 51, by the Update's Bore 8 -> 14; toggle 77 True, b2:592). The
+#   Update's failures were the assembly's rebuild alone, "SolidWorks reported an error rebuilding Reducer_12to1.", with
+#   the keyway the only user feature in error and no part failure (b2:605, 607), and two ForceRebuild3 calls in its
+#   trace (b2:608): G1's part rebuild was laid to the keyway alone (WHATS_WRONG_OPENS_ON_PART_REBUILD False, the app's
+#   features read clean), so the False came from the assembly's rebuild. That is all it rests on: no explicit
+#   assembly rebuild was read with a feature in error on 2024, and no component code or What's Wrong count.
+# - WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_2024: False, scoped to the explicit assembly rebuild call only (the
+#   script's own ForceRebuild, the app's train route): with the two user mates in error it opened no window (v24:51;
+#   b1:54). The Update as a whole does show the box on 2024 (WHATS_WRONG_OPENS_IN_UPDATE_… below); no app behaviour
+#   reads this finding any more.
 ASSEMBLY_REBUILD_WITH_USER_MATE_IN_ERROR_ON_2026 = True
 ASSEMBLY_REBUILD_WITH_USER_MATE_IN_ERROR_ON_2024 = True
 ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_2026 = False
-ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_2024 = None
+ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_2024 = False
 WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_2026 = False
-WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_2024 = None
+WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_2024 = False
 #
 # What's Wrong during the app's own Update with only user mates in error (the close review, "The 2024 fact and the
 # options"). RangeBox in H, toggle 77 read True, two user distance mates on Sprocket-1 over-defined (UserFront to the
@@ -1730,10 +1753,35 @@ WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_2024 = None
 #   before it made the same reads with no box (v24:56-66).
 # - 2026: False. The same Update went ahead with no window (c1:41, 91-105; the first run's r1:53-82 the same, the
 #   toggle unread there).
-# Not known: which call raised the box (the watch, polling every 2 s, saw it while GetNextSubFeature was in progress,
-# most likely after the call that raised it had returned), what the Update had written by then, whether the box
-# blocks the job or the Update would complete, and anything with the toggle off or a feature in error. It was never
-# answered. No app behaviour reads this finding yet: what the app does about it waits on the user's answer to the
-# section 0.3 STOP it raised.
+#   The box run repeated it: the box came up 97 s into the same Update (b1:103, 105-106) and went by itself (b1:110).
+# - The same with a user feature in error, WHATS_WRONG_OPENS_IN_UPDATE_WITH_PART_FEATURE_IN_ERROR_ON_<year>: 2024
+#   True, box-k3's Update (the keyway in G1's part rebuilt into error) showed the box 17.6 s in (b2:597, 599-600);
+#   2026 False, the closing run's two Updates with a feature in error, m3's in the user's own part and k3's in G1's,
+#   ran with no window (c1:148-161, 786-800).
+# Not known: which call raises the box (the watch saw it with the worker in ActivateDoc3, b1:103 and b2:597; the
+# first run's in GetNextSubFeature, v24:89), and anything with the toggle off. swbuild.whats_wrong_shows_in_update
+# reads these two for package B's sentence (True where either is True, False where both are False, None unmeasured).
 WHATS_WRONG_OPENS_IN_UPDATE_WITH_USER_MATE_IN_ERROR_ON_2026 = False
 WHATS_WRONG_OPENS_IN_UPDATE_WITH_USER_MATE_IN_ERROR_ON_2024 = True
+WHATS_WRONG_OPENS_IN_UPDATE_WITH_PART_FEATURE_IN_ERROR_ON_2026 = False
+WHATS_WRONG_OPENS_IN_UPDATE_WITH_PART_FEATURE_IN_ERROR_ON_2024 = True
+#
+# Whether that box blocks the Update (the coordinator's ruling, 2026-11-17, put to the user as the default they may
+# change: the box is left alone, and the app behaves on 2024 as on 2026 — it does not suppress the box, change
+# SolidWorks' setting or refuse because of it). WHATS_WRONG_IN_UPDATE_BLOCKS_ON_<year>; it gates
+# swbuild.assembly_rebuild_settled.
+# - 2024: False. b1, two user mates in error, RangeBox in H, the app's value Update (Sun's Backlash 0.4): the box, a
+#   #32770 popup owned by SolidWorks' frame, came up 97.45 s in, the frame enabled, and a read on a second connection
+#   answered in 0.5 s with it up (b1:103-104); it was gone at 120.08 s with nothing closing it, the worker then in
+#   ShowConfiguration2 (b1:110), and the calls went on growing (b1:142); the Update returned ok after 306 s (b1:141;
+#   status b1:133), then the app's bodies 6.6e-10 from their frames on record, the user's components unmoved, the
+#   user's mates' codes and flags as before (b1:145), the toggle True before and after (b1:39, 143). b2, the keyway
+#   rebuilt into error on the 12 : 1: the box came up 17.57 s in and was gone at 22.59 s, nothing closing it (b2:597,
+#   603); the job returned in 22.6 s, not ok as the rebuild findings then were None, naming the keyway as the user's,
+#   newly in error (b2:605-607, 612). Scope: "show errors every rebuild" on; one press each, a user mate in error with
+#   modes and a user feature rebuilt into error without; never answered. Not measured: anything with the toggle off,
+#   other kinds of error, the box's FeatureXpert or Close pressed by a person during the job.
+# - 2026: False. No box opened at all in the closing run's Updates with the user's work in error (c1:91-105,
+#   148-161, 786-800).
+WHATS_WRONG_IN_UPDATE_BLOCKS_ON_2026 = False
+WHATS_WRONG_IN_UPDATE_BLOCKS_ON_2024 = False

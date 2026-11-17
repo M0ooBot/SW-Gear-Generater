@@ -1867,7 +1867,7 @@ def test_route_c1s_branches_s0_did_not_measure_are_not_measured_on_either_versio
         for year in (2026, 2024):
             name = f"USER_MATE_PUT_{branch}_ON_{year}"
             assert hasattr(findings, name) and getattr(findings, name) is None, name
-    assert findings.USER_MATE_PUT_NO_CARRIER_ON_2024 is None
+    # NO_CARRIER on 2024 since measured too (the ruling on 2024's box): pinned with its run below.
 
 
 W9A_DEMO_R1 = LATEST.parent / "w9a-demo-20261116-204840.json"
@@ -1909,7 +1909,7 @@ def test_w9a_nocarrier_put_a_locked_sprocket_with_each_gear_of_a_train_with_no_c
             r3[at].endswith("mates in error none; every gear free True")
     assert r3[1598] == ("propose USER_MATE_PUT_NO_CARRIER_ON_2026: True (both presses and their reads clean: "
                         "[True, True])")
-    assert findings.USER_MATE_PUT_NO_CARRIER_ON_2026 is True and findings.USER_MATE_PUT_NO_CARRIER_ON_2024 is None
+    assert findings.USER_MATE_PUT_NO_CARRIER_ON_2026 is True
     assert findings.USER_MATE_PUT_NO_CARRIER_MODES_ON_2026 is None
 
 
@@ -1969,7 +1969,6 @@ def test_w9a_m3_and_k3_an_assembly_rebuild_with_a_feature_in_error_in_a_part_ret
     assert r3[1439].endswith("the app's in error none")
     assert r3[1440] == "ok      k3: the bore change left only the user's keyway in error in G1's part"
     assert findings.ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_2026 is False
-    assert findings.ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_2024 is None
 
 
 def test_w9a_m3_no_whats_wrong_window_came_up_on_an_assembly_rebuild_on_2026():
@@ -1986,7 +1985,6 @@ def test_w9a_m3_no_whats_wrong_window_came_up_on_an_assembly_rebuild_on_2026():
     assert not [line for line in r3[1382:1445] if line.startswith(("STOP", "DIALOG", "NOTE"))]
     assert _w9_json(W9A_DEMO_R3, "9dded70")["stops"] == []
     assert findings.WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_2026 is False
-    assert findings.WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_2024 is None
 
 
 def test_w9a_the_cam_add_in_boxed_a_save_of_an_assembly_holding_a_lightweight_component_on_2026():
@@ -2060,8 +2058,7 @@ def test_w9a_closing_run_repeats_m3s_readings_with_the_toggle_on_and_the_updates
 
 def test_w9a_on_2024_an_assembly_rebuild_with_only_user_mates_in_error_returned_true():
     """findings.py ASSEMBLY_REBUILD_WITH_USER_MATE_IN_ERROR_ON_2024 (the close review, "What 2024's findings may say"):
-    the script's own rebuild with UserGap over-defining returned True, What's Wrong 3, codes 51, no new window. The
-    other two 2024 findings stay None, so the gate stays shut on 2024."""
+    the script's own rebuild with UserGap over-defining returned True, What's Wrong 3, codes 51, no new window."""
     data, v24 = _w9a_run(W9A_2024_V24, W9A_2024_V24_LOG, "19651ee", (32, 5, 0))
     m3 = data["sections"]["m3"]
     assert m3["show_errors_every_rebuild"] is True
@@ -2074,14 +2071,12 @@ def test_w9a_on_2024_an_assembly_rebuild_with_only_user_mates_in_error_returned_
                        "GetWhatsWrongCount 3; mates in error {'UserFront': 51, 'UserGap': 51}; components in error "
                        "none; windows new none")
     assert findings.ASSEMBLY_REBUILD_WITH_USER_MATE_IN_ERROR_ON_2024 is True
-    assert findings.ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_2024 is None
-    assert findings.WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_2024 is None
 
 
 def test_w9a_whats_wrong_opened_during_the_apps_update_with_user_mates_in_error_on_2024_and_not_on_2026():
     """findings.py WHATS_WRONG_OPENS_IN_UPDATE_WITH_USER_MATE_IN_ERROR_ON_<year>: on 2024 the box came up during the
     app's value Update, the quiet press before it raising none; on 2026 the same Update went ahead with no window.
-    Which call raised it, and whether it blocks, are not known; no app behaviour reads it."""
+    Which call raises it is not known; package B's sentence reads it through swbuild.whats_wrong_shows_in_update."""
     data, v24 = _w9a_run(W9A_2024_V24, W9A_2024_V24_LOG, "19651ee", (32, 5, 0))
     assert v24[82].startswith("line    [green] As read at ") and \
         v24[82].endswith("Your UserFront and UserGap were already in error in SolidWorks then.")
@@ -2100,13 +2095,11 @@ def test_w9a_whats_wrong_opened_during_the_apps_update_with_user_mates_in_error_
                if line.startswith(("DIALOG", "NOTE", "STOP")))
     assert findings.WHATS_WRONG_OPENS_IN_UPDATE_WITH_USER_MATE_IN_ERROR_ON_2024 is True
     assert findings.WHATS_WRONG_OPENS_IN_UPDATE_WITH_USER_MATE_IN_ERROR_ON_2026 is False
-    assert "WHATS_WRONG_OPENS_IN_UPDATE" not in (Path(findings.__file__).parent / "swbuild.py").read_text(
-        encoding="utf-8")                                     # no app behaviour reads it yet
 
 
 def test_w9a_closing_run_read_nocarrier_clean_with_the_finding_committed_true():
     """findings.py USER_MATE_PUT_NO_CARRIER_ON_2026, the closing run: the patch a no-op, both presses clean, the
-    footer's carry the press's. 2024 stays None: its run is not reviewed."""
+    footer's carry the press's."""
     data, c2 = _w9a_run(W9A_CLOSE_C2, W9A_CLOSE_C2_LOG, "6f3d6fb", (34, 1, 1))
     assert data["sections"]["nocarrier"]["clean"] == [True, True]
     assert data["proposal"]["USER_MATE_PUT_NO_CARRIER_ON_2026"] is True
@@ -2119,4 +2112,99 @@ def test_w9a_closing_run_read_nocarrier_clean_with_the_finding_committed_true():
         assert "the Update went ahead" in c2[at] and "failures []" in c2[at]
     assert c2[1414] == ("propose USER_MATE_PUT_NO_CARRIER_ON_2026: True (both presses and their reads clean: "
                         "[True, True])")
-    assert findings.USER_MATE_PUT_NO_CARRIER_ON_2026 is True and findings.USER_MATE_PUT_NO_CARRIER_ON_2024 is None
+    assert findings.USER_MATE_PUT_NO_CARRIER_ON_2026 is True
+
+
+W9A_BOX_B1 = LATEST.parent / "sw2024" / "w9a-demo-20261117-013103.json"
+W9A_BOX_B1_LOG = LATEST.parent / "sw2024" / "w9a-box-sw2024-20261117-1-box.log"
+W9A_BOX_B2 = LATEST.parent / "sw2024" / "w9a-demo-20261117-014251.json"
+W9A_BOX_B2_LOG = LATEST.parent / "sw2024" / "w9a-box-sw2024-20261117-2-reducer-box-k3.log"
+W9A_2024_CONFIRM = LATEST.parent / "sw2024" / "w9a-demo-20261117-003040.json"
+W9A_2024_CONFIRM_LOG = LATEST.parent / "sw2024" / "w9a-confirm-sw2024-20261117-2-setup-go-reducer-nocarrier.log"
+
+
+def test_w9a_box_on_2024_whats_wrong_in_an_update_with_user_mates_in_error_comes_up_and_goes_by_itself():
+    """findings.py WHATS_WRONG_IN_UPDATE_BLOCKS_ON_2024 (b1): the box, a popup owned by SolidWorks' frame, the frame
+    enabled and a second connection answering while it was up, gone 22 s later with nothing closing it; the Update
+    returned ok after 306 s, everything as it should stand; toggle 77 True before and after."""
+    data, b1 = _w9a_run(W9A_BOX_B1, W9A_BOX_B1_LOG, "b985cab", (32, 5, 0))
+    box = data["proposal"]["box"]
+    assert box["facts_only"] is True and box["job"] == "returned"
+    seen = box["box_seen"]
+    assert seen["seconds"] == 97.45 and seen["call_in_progress"] == "ActivateDoc3" and seen["frame_enabled"] is True
+    (shown,) = seen["boxes"]
+    assert shown["class"] == "#32770" and shown["title"] == "What's Wrong" and shown["popup"] is True
+    assert shown["owner_is_frame"] is True
+    assert box["read_with_box_up"]["answered"] is True and box["read_with_box_up"]["seconds"] == 0.5
+    assert box["box_gone"]["seconds"] == 120.08 and box["box_gone"]["call_in_progress"] == "ShowConfiguration2"
+    assert box["returned"]["seconds"] == 306.49 and box["returned"]["box_up"] is False
+    assert box["calls_grew"] == {"after_the_box_was_seen": True, "after_it_went": True, "calls_at_the_end": 38021}
+    assert box["written"]["show_errors_every_rebuild"] == {"before": True, "after": True}
+    after = box["after_reads"]
+    assert after["user_components_moved"] == [0.0, ""] and after["app_bodies_gap_to_record"][0] < 1e-9
+    assert all(b == a for b, a in after["user_mates_code_suppressed_before_after"].values())
+    assert b1[39] == "fact    box: SolidWorks' \"show errors every rebuild\" (toggle 77) reads True"
+    assert b1[54] == ("fact    box a user mate in error: ForceRebuild (the app's train route) returned True; "
+                      "GetWhatsWrongCount 3; mates in error {'UserFront': 51, 'UserGap': 51}; components in error "
+                      "none; windows new none")
+    assert b1[103].startswith("fact    box: a box came up 97.45 s into the press, the worker in ActivateDoc3")
+    assert b1[104].startswith("fact    box: the harmless read (the open documents, a second connection) with the box "
+                              "up: {'answered': True, 'seconds': 0.5")
+    assert b1[110].startswith("fact    box: the box was gone 120.08 s into the press (last seen at 119.57 s), the "
+                              "worker then in ShowConfiguration2") and b1[110].endswith("nothing here closed it")
+    assert b1[133].startswith("status  [green] Updated SolidWorks: changed 1 variable in Gear_m1.25_N29")
+    assert b1[141].startswith("fact    box: the press returned after 306.49 s, a box not up when it did; ok True")
+    assert b1[145].startswith("fact    box: after the press, in H: the app bodies 6.6e-10 from their frames on record")
+    assert data["stops"] == [] and data["fails"] == []
+    assert findings.WHATS_WRONG_IN_UPDATE_BLOCKS_ON_2024 is False
+    assert findings.WHATS_WRONG_OPENS_IN_UPDATE_WITH_USER_MATE_IN_ERROR_ON_2024 is True
+    assert findings.WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_2024 is False      # the explicit rebuild only (b1:54)
+
+
+def test_w9a_box_k3_on_2024_the_box_comes_and_goes_and_the_assembly_rebuild_fails_on_the_users_keyway():
+    """findings.py ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_2024 and WHATS_WRONG_OPENS_IN_UPDATE_WITH_PART_
+    FEATURE_IN_ERROR_ON_2024 (b2): the keyway rebuilt into error by G1's Bore 8 -> 14; the box up 17.6 s in, gone 5 s
+    later, nothing closing it; the job returned, not ok, its failure the assembly's rebuild alone, the keyway the
+    user's, newly in error."""
+    data, b2 = _w9a_run(W9A_BOX_B2, W9A_BOX_B2_LOG, "b985cab", (32, 5, 0))
+    box = data["proposal"]["box-k3"]
+    assert box["job"] == "returned" and box["box_seen"]["seconds"] == 17.57
+    assert box["box_seen"]["boxes"][0]["title"] == "What's Wrong" and box["box_gone"]["seconds"] == 22.59
+    assert box["returned"]["box_up"] is False and box["result_ok"] is False
+    assert box["written"]["show_errors_every_rebuild"] == {"before": True, "after": True}
+    assert b2[597].startswith("fact    box-k3: a box came up 17.57 s into the press, the worker in ActivateDoc3")
+    assert b2[603].startswith("fact    box-k3: the box was gone 22.59 s into the press") and \
+        b2[603].endswith("nothing here closed it")
+    assert b2[605] == ("        W9a: carried []; renamed []; user in error []; user features in error [('User Keyway', "
+                       "'Gear_m1.5_N17.SLDPRT', 51)]; inventory read yes; failures [('Reducer_12to1.SLDASM', "
+                       "'SolidWorks reported an error rebuilding Reducer_12to1.')]")
+    assert b2[607].startswith("status  [red] Update SolidWorks stopped. Reducer_12to1.SLDASM: SolidWorks reported an "
+                              "error rebuilding Reducer_12to1.")
+    assert "Your User Keyway in Gear_m1.5_N17 is in error" in b2[607]
+    assert b2[608].endswith("{'OpenDoc6': 8, 'IsSuppressed2': 9, 'ForceRebuild3': 2}")
+    assert data["stops"] == [] and data["fails"] == []
+    assert findings.ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_2024 is False
+    assert findings.WHATS_WRONG_OPENS_IN_UPDATE_WITH_PART_FEATURE_IN_ERROR_ON_2024 is True
+    assert findings.WHATS_WRONG_OPENS_IN_UPDATE_WITH_PART_FEATURE_IN_ERROR_ON_2026 is False
+    assert findings.WHATS_WRONG_IN_UPDATE_BLOCKS_ON_2026 is False
+
+
+def test_w9a_2024s_confirming_session_read_nocarrier_clean():
+    """findings.py USER_MATE_PUT_NO_CARRIER_ON_2024, scoped as 2026's."""
+    data, c = _w9a_run(W9A_2024_CONFIRM, W9A_2024_CONFIRM_LOG, "19651ee", (32, 5, 0))
+    assert data["sections"]["nocarrier"]["clean"] == [True, True]
+    assert data["proposal"]["USER_MATE_PUT_NO_CARRIER_ON_2024"] is True
+    assert c[799].startswith("== nocarrier ")
+    assert c[834].endswith("{'G1': 'NO_CARRIER', 'G2': 'NO_CARRIER', 'G3': 'NO_CARRIER', 'G4': 'NO_CARRIER'}")
+    assert "saying ['USER_MATE_PUT_NO_CARRIER_ON_2024']" in c[877]
+    assert c[887].startswith("PATCH   findings.USER_MATE_PUT_NO_CARRIER_ON_2024 = True in this process") and \
+        c[887].endswith("(was None)")
+    assert c[948] == "PATCH   findings.USER_MATE_PUT_NO_CARRIER_ON_2024 back to None"
+    for at in (902, 943):
+        assert "the Update went ahead" in c[at] and "ok True" in c[at]
+    for at in (905, 906, 946, 947):
+        assert c[at].startswith("ok      nocarrier after G4 At ") and "mates in error none" in c[at]
+    assert c[951] == ("propose USER_MATE_PUT_NO_CARRIER_ON_2024: True (both presses and their reads clean: "
+                      "[True, True])")
+    assert findings.USER_MATE_PUT_NO_CARRIER_ON_2024 is True
+    assert findings.USER_MATE_PUT_NO_CARRIER_MODES_ON_2024 is None
