@@ -53,7 +53,7 @@ A copy of `setup.master`, to which the script adds, all by the session's own cal
 | s5 | Sprocket-5 | a face of a part made new | UserAxis5, UserSunFace (its end face on Sun's end face) |
 | s6 | Sprocket-6 | a gear mate on Sun's Gear Axis; the assembly's own Front plane | UserAxis6, UserGear6 (20 : 29), UserAsm6 (distance to `asm:plane1`) |
 | s7 | Sprocket-7 | suppressed in L | UserAxis7 |
-| s8 | Sprocket-8 | the tie | UserLock8a (to Sun), UserLock8b (to the fixed Housing-1) |
+| s8 | Sprocket-8 | the tie | UserLock8a (to Sun), then UserAngle8b (90° from its Top plane to the fixed Housing-1's Right plane: one freedom) |
 | s9 | Sprocket-9 | suppressed in H, the mode showing | UserAxis9 |
 | s10 | Sprocket-10 | a gear mate on a root cylinder of Sun (coaxial) | UserAxis10, UserGearRoot, UserLimit10 (limit distance 20, 10–30, to Sprocket-11) |
 | s11 | Sprocket-11 | a gear mate on a root fillet of Sun (off-axis) | UserAxis11, UserGearFillet |
@@ -150,7 +150,7 @@ part's mate.
      `lightweight` (D10); UserLock8a fallen back. On 2024 the face mates `unmeasured`, UserGearRoot `part new`,
      UserAxis9 `unread` (D2: Sprocket-9 takes H's state, suppressed, in every mode);
    - every component carried, or Sprocket-9 named `no frame`, which is a reading, not a failure;
-   - **the tied cluster alone fell back**: `FELL_TIE`, UserLock8a deleted, UserLock8b kept, Sprocket-8 and Housing-1
+   - **the tied cluster alone fell back**: `FELL_TIE`, UserLock8a deleted, UserAngle8b kept, Sprocket-8 and Housing-1
      fixed;
    - no `same_error`, nothing `moved`, no stop, unsaved;
    - the anchors (`CarryResult.anchors`) held to the fixture's (D20 **as ruled 2026-11-17**: a component fixed in the
@@ -190,8 +190,11 @@ part's mate.
    as not shown. Saved, the window's read drops the footer's line. The copy is closed unsaved.
 
 **M1 (b), ruled 2026-11-17.** Carrying SprocketLight-1 opens its file (C.3), and lightweight is per file in the
-session, so the old assembly's lightweight instance may come out resolved. That change, and only that (its own state,
-frame, fixed and referenced reads, and its mates' entity reads), is set apart by `old_diff` and is not a STOP: its
+session, so the old assembly's lightweight instance may come out resolved. That change, and only that, is set apart by
+`old_diff` and is not a STOP (narrowed by ruling 4 after the first run): its state; its frame going from unread to
+read; a mate's entity on it going from unread to read, everything else of that mate equal; its file going from not
+open to open and unmarked (`10426c5`). Its moving, its fixed state, its referenced configuration or any mate's value
+changing is a STOP. Its
 state before and after is a fact and `propose CARRY_RESOLVES_A_LIGHTWEIGHT_COMPONENT_IN_THE_OLD_ASSEMBLY_ON_<y>` says
 which. Anything else changed in the old assembly or a user file remains a STOP.
 
@@ -423,6 +426,43 @@ Run 2's `carry-closed` (401 s, 8 failed) is superseded by run 3: its closed read
 - **B's last wording round** (`1ab1029`, `9a21c6d`): every fragment the script matches is in `ui_text` at head
   (*Carried into RangeBox_r2, unsaved*, *has not yet been shown to carry your work*, *As read at*, *fixed where*, *was
   closed without saving after Build again… carried your work into it*); the self-check's fake runs say them.
+
+## The revision after the first 2026 run (the review's addendum, `e2207d9`; the coordinator's rulings)
+
+1. **The tie replaced.** UserLock8b (a lock from Sprocket-8 to the fixed Housing-1) over-defined the old assembly
+   (status 5, 46), and the same-error rule would have excused it. It is now **UserAngle8b**, an angle of 90° from
+   Sprocket-8's Top plane to Housing-1's Right plane, made after UserLock8a: one freedom, so the old assembly reads
+   every mate 0 while Sun cannot turn. Both components stand at identity rotations, so Top's normal (Y) and Right's
+   (X) are at 90°, both across Sun's axis; the fixture checks this from their frames before making the mate
+   (`angle_pair`) and takes another Top/Right pair that is if they stand turned, saying which. **The fixture STOPs**
+   when any mate on in H reads a code other than 0, or Sun does not read fully defined (the tie the carry must find
+   again) (`fixture_problems`). Expected: UserLock8a made and deleted by `FELL_TIE`'s fallback, UserAngle8b made and
+   kept, Sprocket-8 and Housing-1 fixed. §15 of W9D-INTERFACES says so.
+2. **No check passes with nothing to judge.** Each check over remade mates (definitions and entities, flags per mode)
+   takes its population from `expected_outcome` and FAILs naming every mate not reached ("not reached: nothing was
+   remade (the carry stopped at …)", `not_reached`); a mate whose outcome is not the expected one counts as unclean
+   for its kind. The post-check's two claims (every app gear free with the carried mates on; the interference the
+   carry named) are judged only when the carry did not stop and remade something, else FAIL as not reached.
+   Contradiction 6 requires Sprocket-2's pose against RangeSlv in N and L. The states check FAILs when Sprocket-7 or
+   -9 was not carried, the "every other component resolved" check when none was, the anchors when nothing was
+   inserted, the record check when nothing was left unsaved in a section that expects it. Every key feeding a proposal
+   is False when not reached, and the proposals are a pure `proposal_values`, self-checked with a carry that remade
+   nothing (every write gate None, the configuration insert standing).
+3. **The measured reading on a suppressed component** is the contract's (§11.5): `expected_outcome` takes `unread`
+   for UserAxis9 on the open path and UserAxis7 on the closed one, exactly; the fixture-shaped read the self-check
+   gives `plan_carry` has those entities unread, so plan and expectation agree.
+4. **The light set-apart narrowed** (above, M1 (b)).
+5. **Poses and components named by old and new Name2** (*Sprocket-2 as Sprocket-5*): SolidWorks numbers inserted
+   instances in insertion order, so the first run's "Sprocket-5" and "Sprocket-4" were both the old Sprocket-2.
+6. **The footer.** The first run's record check FAILed on the footer after the build. Reading `ui_text.workbook_footer`:
+   while the job's note stands (the build's own sentence) the footer is that sentence, and the idle footer's lines,
+   §9.4's among them, are added only when there is no note or the note is an answer. So straight after the build a
+   user sees the build's sentence, which asks for the save itself; §9.4's line appears once the note goes (the
+   workbook read again with a change, or the window opened again). `desk.read()` does not clear the note, as the
+   window's read does not. `record_judged` now reads the footer after `desk.read()` both ways: with the note standing
+   (it must ask for the save) and with it set aside (it must say §9.4's line). The window may be right; whether a
+   finished carry should keep §9.4's line visible beside the build's sentence is package B's to say.
+7. **UserAxisLight** is expected `lightweight` (named, never read), and the self-check's `plan_carry` agrees.
 
 ## Command lines
 

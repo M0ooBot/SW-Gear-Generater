@@ -1225,7 +1225,11 @@ component, the prefilter, the count, the cap). The growth is measured in the 202
   unknown.
 - **A mate on a component suppressed in a mode**: read by the probe as a fact (its flags there), so §3 C.6.1's "a mode
   where one of its components is suppressed left as SolidWorks has it" rests on a reading; M9 holds one in the mode
-  showing (what R reads of such a mate's definition is not measured).
+  showing. *Read on 2026 (M9's first run, 34.0.0; ruled the contract's, 2026-11-17)*: on the open path, a mate on a
+  component suppressed in the mode showing reads **unread** (UserAxis9, Sprocket-9 suppressed in H; on the closed path
+  UserAxis7, Sprocket-7 suppressed in L as saved), so it is named `WHY_UNREAD` and "made in a mode where its
+  components are resolved" is not reached there; the suppressed component's own frame **does** read, and it is
+  carried.
 
 ## 12. The choices, as ruled (the coordinator, 2026-11-17; † the user's to overrule)
 
@@ -1436,7 +1440,9 @@ saved as the run's own copy (`w9d-fixture.master`):
   re-check's S-g);
 - **SprocketConf-1** (`SprocketConf.SLDPRT`, its part given a second configuration Z20, the component set to it):
   `CARRY_INSERTS_IN_A_CONFIGURATION`, `REFERENCED_CONFIGURATION_READ`;
-- the tied cluster, Sprocket-8 locked to Sun and to the fixed Housing-1 (`FELL_TIE`);
+- the tied cluster, Sprocket-8 locked to Sun and held at 90° to the fixed Housing-1 by an angle mate: one freedom,
+  so the old assembly reads every mate 0 while Sun cannot turn (`FELL_TIE`) (the coordinator's ruling after the first
+  2026 run: a lock to the fixed housing over-defined, 46, and the same-error rule would have excused it);
 - no user sub-assembly: package A inserts one by `open_document` + `add_component`, not by the measured read-only
   insert, so `CARRY_INSERTS_A_SUBASSEMBLY` and every leaf finding stay None (W9D-REVIEW-A).
 
@@ -1481,7 +1487,7 @@ carried, each component at its pose against its own anchor to the post-check's t
 definition equal to the old one and on in the modes it was on in, code 0; the face mates carried or named as their
 finding says; the mate on Sun's face (UserSunFace) named `WHY_PART_NEW` in the result; the keyway named in the question
 and the result with why;
-the tied cluster alone fixed, its user–user mate kept, Sun free to turn in every mode, every other cluster on Sun's
+the tied cluster alone fixed, its angle mate kept, Sun free to turn in every mode, every other cluster on Sun's
 train carried; **Sprocket-7 suppressed in L alone where the states route is clean, and resolved everywhere, said, where
 it is not** (D2); SprocketLight-1's mate named `WHY_LIGHTWEIGHT`, it carried resolved, and whether its old instance
 was resolved by the carry read before and after and said (D10 †, a fact); UserAsm6 `unread` in `carry` and made again in `carry-closed`; Sprocket-9 placed or named as its

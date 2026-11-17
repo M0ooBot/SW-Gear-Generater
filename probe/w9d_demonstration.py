@@ -125,7 +125,7 @@ MATES = (("UserChainAxis", "app", "coincident", "c1:Gear Axis", "lay:Input Axis"
          ("UserAsm6", "app", "distance", "s6:plane1", "asm:plane1", 230.0),
          ("UserAxis7", "app", "coincident", "s7:Gear Axis", "lay:Input Axis", 0.0),
          ("UserLock8a", "app", "lock", "sun", "s8", 0.0),
-         ("UserLock8b", "app", "lock", "uh", "s8", 0.0),
+         ("UserAngle8b", "app", "angle", "s8:plane2", "uh:plane3", 90.0),   # after the lock: one freedom (the tie)
          ("UserAxis9", "app", "coincident", "s9:Gear Axis", "lay:Input Axis", 0.0),
          ("UserAxis10", "app", "coincident", "s10:Gear Axis", "lay:Input Axis", 0.0),
          ("UserGearRoot", "raw", 10, "s10:Gear Axis", ("root", "sun"), None),
@@ -142,7 +142,7 @@ SETUP_SPEC = (("UserAxis1", "coincident", "u1:Gear Axis", "lay:Input Axis"),
               ("UserAxis4", "coincident", "u4:Gear Axis", "lay:Input Axis"),
               ("UserDist4", "distance", "u4:plane1", "u3:plane1"), ("UserAngle4", "angle", "u4:plane2", "lay:plane3"))
 RAW_KINDS = {0: "coincident", 1: "concentric", 3: "parallel", 5: "limit distance", 10: "gear"}
-TIED = ("s8", "uh")                                  # falls back: UserLock8a deleted, UserLock8b kept, both fixed
+TIED = ("s8", "uh")                                  # falls back: UserLock8a deleted, UserAngle8b kept, both fixed
 # Each carried component's anchor (CarryResult.anchors' CarryBody.old), by D20 as ruled 2026-11-17: a component fixed
 # in the old assembly by its world frame (""); a floating one by its own lock to an app body, else its cluster's, else
 # any mate to an app body, else the world ("" or the layout, which stands at the world's frame).
@@ -204,12 +204,16 @@ def expected_outcome(fs, made_mates, closed=False, light=False, no_frame=()):
     if light:
         out["UserAsm6"] = {"unread"}                 # no root read beside a lightweight component (§4.2, §11.5)
         out["UserAxisLight"] = {"lightweight"}       # D10
-    if not (fs.get("states") or closed):
-        out["UserAxis9"] = {"unread"}                # D2: Sprocket-9 takes H's state (suppressed) in every mode
-    out["UserLock8a"] = {"fell"}
+    # Measured (the first 2026 run, ruled into §11.5): a mate on a component suppressed in the mode showing reads
+    # unread, so it is named so — Sprocket-9 in H on the open path, Sprocket-7 in L on the closed one.
+    out["UserAxis7" if closed else "UserAxis9"] = {"unread"}
+    # The tie: UserLock8a made, Sun reads tied once UserAngle8b is on too, and the fallback deletes the lock and keeps
+    # the angle (user–user). Where the angle is not made again (tier 1 waiting for the reload finding), nothing ties.
+    out["UserLock8a"] = {"fell"} if out.get("UserAngle8b", {"remade"}) == {"remade"} else {"remade"}
     for handle in no_frame:
         for name in mates_of(handle):
-            out[name] = set(out.get(name, {"remade"})) | {"component not carried"}
+            # its mates read unread already (the component is suppressed where read), and plan_carry says that first
+            out[name] = out[name] if out.get(name) == {"unread"} else {"component not carried"}
     return {m: v for m, v in out.items() if m in made_mates}
 
 
@@ -394,21 +398,26 @@ def old_diff(before, after, mine, light="", light_file=""):
     STOP, 90cdf20). The file marked, or any other document's flag changing, is still a change. Returns (sentences, the
     set-apart sentences)."""
     out, apart = [], []
-    involved = {n for n, d in (before.get("definitions") or {}).items()
-                if any(e.get("component") == light for e in d.get("entities", ()))} if light else set()
     went = bool(light) and (before.get("states") or {}).get(light) in (1, 4) and \
         (after.get("states") or {}).get(light) in (2, 3)
     for g in sorted(set(before["frames"]) | set(after["frames"])):
         a, b = before["frames"].get(g), after["frames"].get(g)
-        if (a is None) != (b is None) or (a is not None and pose_gap(a, b) > 1e-9):
-            (apart if went and g == light else out).append(f"{g} moved")
+        if went and g == light and a is None and b is not None:
+            apart.append(f"{g}'s frame: not read -> read")        # read now; never a move
+        elif (a is None) != (b is None) or (a is not None and pose_gap(a, b) > 1e-9):
+            out.append(f"{g} moved")
     for key in ("mates", "by_mode", "entities", "states", "fixed", "referenced", "definitions"):
         x, y = before.get(key) or {}, after.get(key) or {}
         for n in sorted(set(x) | set(y)):
-            if x.get(n) != y.get(n):
-                said = f"{key} of {n}: {x.get(n)} -> {y.get(n)}"
-                (apart if went and (n == light or (key in ("definitions", "entities") and n in involved)) else
-                 out).append(said)
+            if x.get(n) == y.get(n):
+                continue
+            said = f"{key} of {n}: {x.get(n)} -> {y.get(n)}"
+            if went and key == "states" and n == light:
+                apart.append(said)
+            elif went and key in ("definitions", "entities") and _only_light_reads(x.get(n), y.get(n), light, key):
+                apart.append(said + " (only its entity on the light component, unread before, read after)")
+            else:
+                out.append(said)
     if before["active"] != after["active"]:
         out.append(f"the mode showing {before['active']} -> {after['active']}")
     if before.get("needs_rebuild") != after.get("needs_rebuild"):
@@ -421,6 +430,92 @@ def old_diff(before, after, mine, light="", light_file=""):
     if flips:
         out.append(f"save flags {flips}")
     return out, apart
+
+
+def _only_light_reads(before, after, light, key):
+    """Whether a mate's two reads differ only in what its entity on ``light`` (a component lightweight before, resolved
+    after) answers: for a definition, every entity on ``light`` that read nothing before (no reference, no
+    ``EntityParams``) and every other field equal; for ``mate_info``'s (type, components, whole), its components gaining
+    ``light`` and ``whole`` going True. A value, another entity, or that entity read before and otherwise after is not
+    (ruling 4 on the first run's review)."""
+    if before is None or after is None:
+        return False
+    if key == "entities":
+        (t0, c0, w0), (t1, c1, w1) = before, after
+        return t0 == t1 and set(c1) - set(c0) <= {light} and set(c0) <= set(c1) and (w0 == w1 or (not w0 and w1))
+    e0, e1 = before.get("entities") or [], after.get("entities") or []
+    rest = lambda d: {k: v for k, v in d.items() if k != "entities"}      # noqa: E731
+    if rest(before) != rest(after) or len(e0) != len(e1):
+        return False
+    for a, b in zip(e0, e1):
+        if a == b:
+            continue
+        unread = a.get("component") in (light, None) and not a.get("params") and not a.get("reference")
+        if not (unread and b.get("component") == light):
+            return False
+    return True
+
+
+PLANE_AXIS = {"plane1": 2, "plane2": 1, "plane3": 0}   # a part's Front, Top, Right planes: their normals Z, Y, X
+
+
+def angle_pair(rot_a, rot_b, wanted=("plane2", "plane3")):
+    """The fixture's tie (ruling 1): a pair of base planes, one of each component (rotations by rows, part to
+    assembly), whose normals are at 90° to each other and both across the assembly's Z (Sun's axis), so an angle mate
+    of 90° between them holds as made and removes one freedom only. ``wanted`` first, then the other pairs of Top and
+    Right; None when none is."""
+    def normal(rot, plane):
+        j = PLANE_AXIS[plane]
+        return tuple(float(rot[i * 3 + j]) for i in range(3))
+    for pair in (wanted, ("plane3", "plane2"), ("plane2", "plane2"), ("plane3", "plane3")):
+        a, b = normal(rot_a, pair[0]), normal(rot_b, pair[1])
+        if abs(sum(x * y for x, y in zip(a, b))) < 1e-9 and abs(a[2]) < 1e-9 and abs(b[2]) < 1e-9:
+            return pair
+    return None
+
+
+def fixture_problems(codes, sun_status, fully_defined):
+    """The fixture as built (ruling 1, a STOP otherwise): every mate on in the mode showing reads code 0, the app's
+    and the user's (a user's working assembly does not stand in error), and Sun cannot turn (it reads fully defined:
+    the tie the carry must find again)."""
+    out = [f"{n} reads code {c}" for n, (c, sup) in sorted(codes.items()) if c and not sup]
+    if sun_status != fully_defined:
+        out.append(f"Sun reads constrained status {sun_status}, not fully defined: it can turn, so there is no tie")
+    return out
+
+
+def not_reached(expected, reached, stopped="", ways=("remade",)):
+    """Ruling 2 (no check may pass with nothing to judge): the mates a check over remade mates must cover, from
+    ``expected_outcome`` (those expected as one of ``ways``), against those it ``reached``; a sentence for each not
+    reached, one for nothing at all, and one when nothing is expected (a fixture that cannot show the check)."""
+    want = sorted(m for m, w in expected.items() if set(w) & set(ways))
+    if not want:
+        return ["not reached: no mate of the fixture is expected to be made again here"]
+    missing = [m for m in want if m not in reached]
+    if missing and not reached:
+        return [f"not reached: nothing was remade (the carry stopped at {stopped or 'nothing it said'}): {missing}"]
+    return [f"not reached: {m}" for m in missing]
+
+
+def proposal_values(clean, unclean, kind_of, outcome, mates):
+    """What ``carry`` proposes for each gate, from what its checks held (``clean``: a key False or missing when its
+    check failed or was not reached, ruling 2), the mates read back otherwise (``unclean``) and each mate's outcome:
+    None for every gate whose evidence is not all there."""
+    inserts = bool(clean) and all(clean.get(k) for k in (
+        "outcome", "components", "states", "poses", "anchors", "unsaved", "fallback", "same_error", "free",
+        "definitions", "flags"))
+    kinds = kinds_clean({n: kind_of.get(n, "") for n in mates if n in kind_of}, outcome, set(unclean))
+    gear = outcome.get("UserGear6") == "remade" and "UserGear6" not in unclean and bool(clean.get("definitions"))
+    return {"CARRY_INSERTS": True if inserts else None,
+            "CARRY_INSERTS_IN_A_CONFIGURATION": True if clean.get("configuration") else None,
+            "REFERENCED_CONFIGURATION_READ": True if clean.get("referenced_read") else None,
+            "CARRY_REMAKE_KINDS": kinds or None, "CARRY_GEAR_MATE_ON_AN_APP_GEAR": True if gear else None}
+
+
+def as_new(old, old_of):
+    """A component named by its old and new Name2 (ruling 5: SolidWorks renumbers the inserted instances)."""
+    new = old_of.get(old, "")
+    return f"{old} as {new}" if new and new != old else old
 
 
 def pose_gap(rel_a, rel_b):
@@ -522,7 +617,7 @@ def _fake_desk(c9, entity_kinds=True):
     sw.user_component(asm, "Sprocket-8", "C:\\Parts\\Sprocket.SLDPRT", (I9, (0.0, 0.0, 270.0)))
     sw.user_component(asm, "Chain-1", "C:\\Parts\\Chain.SLDPRT", (I9, (0.0, 0.0, 180.0)))
     sw.user_lock(asm, "UserLock8a", _component(rec, "Sun"), "Sprocket-8")
-    sw.user_lock(asm, "UserLock8b", "Housing-1", "Sprocket-8")
+    sw.user_mate(asm, "UserAngle8b", kind="angle", a=("Sprocket-8", "plane2"), b=("Housing-1", "plane3"))
     sw.user_mate(asm, "UserChainAxis", kind="coincident", a=("Chain-1", "Gear Axis"),
                  b=(rec.gearbox.layout_component, "Input Axis"))
     desk.disk.files |= {"c:\\parts\\chain.sldprt"}
@@ -586,6 +681,8 @@ def fixture_work(fs, closed=False, light=False, no_frame=()):
             return sb.OldEntity(sb.ASSEMBLY, "", sb.ENTITY_PLANE, feature, select_type=sb.SEL_DATUMPLANES)
         what, owner = ((sb.LAYOUT, "") if h == "lay" else (sb.APP, gear_owner[h]) if h in gear_owner
                        else (sb.USER, names[h]))
+        if (h, showing) in SUPPRESS:                  # measured: unread through a component suppressed where read
+            return sb.OldEntity(what, owner, sb.ENTITY_UNREAD, unread="suppressed in the mode showing")
         if not feature:
             return sb.OldEntity(what, owner, sb.ENTITY_WHOLE, select_type=sb.SEL_COMPONENTS)
         plane = feature.startswith("plane")
@@ -621,7 +718,7 @@ def plan_parity(ok, made):
     (a fallback, D2's unread for a component suppressed in every mode) are the worker's, not the plan's: there the
     plan says it is made again."""
     from gear_generator import swbuild as sb
-    later = {"fell", "unread"}
+    later = {"fell"}
     reads = {"faces": "PERSIST_REFERENCE_ROUTE_FOR_FACES", "coaxial": "COAXIAL_FACE_READ",
              "states": "COMPONENT_STATE_PER_CONFIGURATION_ROUTE", "reload": "PERSIST_REFERENCE_SURVIVES_RELOAD"}
     from gear_generator import swcom
@@ -647,10 +744,7 @@ def plan_parity(ok, made):
         got = {m.mate.name: "remade" for m in plan.mates}
         got.update({n.item: n.why for n in plan.named if n.what == "mate"})
         want = expected_outcome(fs, made, closed=closed, light=light, no_frame=no_frame)
-        if not (fs["states"] or closed):
-            want["UserAxis9"] = {"remade"}            # D2's unread is the carry's (no mode where it is resolved)
-        want = {m: (w - later) | ({"remade"} if "fell" in w else set()) | (w & {"unread"} if m == "UserAsm6" else set())
-                for m, w in want.items()}
+        want = {m: (w - later) | ({"remade"} if "fell" in w else set()) for m, w in want.items()}
         wrong = outcome_problems(want, got)
         named_c = {n.item: n.why for n in plan.named if n.what == "component"}
         ok(not wrong and set(named_c) == {SETUP.get(h, h) for h in ()} | {
@@ -774,14 +868,14 @@ def self_check():
     olds = [o for o, _ in cr.inserted]
     fell = cr.fixed[0] if cr.fixed else None
     ok(result.ok and cr.stopped == "" and {"Sprocket-1", "Housing-1", "Sprocket-8", "Chain-1"} <= set(olds)
-       and {"Lock3", "UserChainAxis", "UserLock8b"} <= {r[0] for r in cr.remade} and fell is not None
-       and fell.why == swbuild.FELL_TIE and fell.deleted == ("UserLock8a",) and fell.kept == ("UserLock8b",)
+       and {"Lock3", "UserChainAxis", "UserAngle8b"} <= {r[0] for r in cr.remade} and fell is not None
+       and fell.why == swbuild.FELL_TIE and fell.deleted == ("UserLock8a",) and fell.kept == ("UserAngle8b",)
        and cr.unsaved,
-       f"carry on the fake: every component carried, Lock3, UserChainAxis and UserLock8b made again, the tied cluster "
-       f"fallen back alone (UserLock8a deleted, UserLock8b kept): {cr.fixed}")
+       f"carry on the fake: every component carried, Lock3, UserChainAxis and UserAngle8b made again, the tied "
+       f"cluster fallen back alone (UserLock8a deleted, UserAngle8b kept): {cr.fixed}")
     got = outcome_of([r[0] for r in cr.remade], [(n.item, n.what, n.why) for n in cr.named],
                      [f.deleted for f in cr.fixed])
-    want = {"Lock3": {"remade"}, "UserChainAxis": {"remade"}, "UserLock8b": {"remade"}, "UserLock8a": {"fell"}}
+    want = {"Lock3": {"remade"}, "UserChainAxis": {"remade"}, "UserAngle8b": {"remade"}, "UserLock8a": {"fell"}}
     ok(outcome_problems(want, got) == [], f"carry on the fake: the outcomes as judged live: {got}")
     ok(status.startswith("Carried into RangeBox_r2, unsaved") and "fixed where" in status
        and "Keyway" in status, "carry on the fake: the result says what was carried unsaved, the fallback, the Keyway")
@@ -810,22 +904,25 @@ def self_check():
     ok(set(expected_outcome(fs24, made, closed=True)["UserLock1"]) == {"old unread"},
        "expected, closed on 2024 (the closed-file reads None): the old assembly not read, every item old unread")
     e = expected_outcome(fs26, made, no_frame=("s9",))
-    ok(e["UserAxis9"] == {"remade", "component not carried"} and e["UserAxis7"] == {"remade"},
+    ok(e["UserAxis9"] == {"unread"} and e["UserAxis7"] == {"remade"}
+       and expected_outcome(fs26, made, closed=True, no_frame=("s9",))["UserAxis9"] == {"component not carried"},
        "expected: a component named no frame lets its mates name it not carried (the review's false FAIL)")
     plan_parity(ok, made)
     window_parity(ok)
     e = expected_outcome(fs26, made, light=True)
     ok(e["UserFaceConc"] == {"remade"} and e["UserGearRoot"] == {"remade"} and e["UserAsm6"] == {"unread"}
        and e["UserAxisLight"] == {"lightweight"} and e["UserSunFace"] == {"part new"} and e["UserLock8a"] == {"fell"}
-       and e["UserAxis9"] == {"remade"},
+       and e["UserAxis9"] == {"unread"} and e["UserAxis7"] == {"remade"} and e["UserAngle8b"] == {"remade"},
        "expected, 2026 open with SprocketLight lightweight: faces and the root gear made again, the asm-plane mate "
-       "unread, the light one's mate named, Sun's face part new, the tie fallen back")
+       "unread, the light one's mate named lightweight, Sun's face part new, the tie fallen back and its angle kept, "
+       "the mate on Sprocket-9 (suppressed in H, showing) unread as measured")
     e = expected_outcome(fs24, made)
     ok(e["UserFaceConc"] == {"unmeasured"} and e["UserGearRoot"] == {"part new"} and e["UserAxis9"] == {"unread"}
        and e["UserAsm6"] == {"remade"}, "expected, 2024 open: faces unmeasured, the root gear part new, D2's unread")
     e = expected_outcome(fs26, made, closed=True)
-    ok(e["UserAsm6"] == {"remade"} and e["UserAxisLight"] == {"remade"} and e["UserAxis9"] == {"remade"},
-       "expected, closed: no lightweight, every state read")
+    ok(e["UserAsm6"] == {"remade"} and e["UserAxisLight"] == {"remade"} and e["UserAxis9"] == {"remade"}
+       and e["UserAxis7"] == {"unread"},
+       "expected, closed (L showing): no lightweight; the mate on Sprocket-7, suppressed in L, unread as measured")
     ok(expected_outcome(dict(fs26, reload=False), made, closed=True)["UserFaceCoin"] == {"unmeasured"},
        "expected, closed without the reload finding: face mates unmeasured")
     ok(expected_states(fs26) == {"s7": {"L"}, "s9": {"H"}} and expected_states(fs24) == {"s7": set(), "s9": set(MODES)}
@@ -922,6 +1019,20 @@ def self_check():
        and len(old_diff(lit, stays, set(), light="SprocketLight-1")[0]) == 1,
        "M1 (b): the light component going to resolved, and its mate's entity read, set apart; another mate's value "
        "changed beside it, or that component fixed without being resolved, still a change")
+    light_frame = dict(lit, frames=dict(lit["frames"], **{"SprocketLight-1": None}))
+    read_frame = dict(resolved, frames=dict(resolved["frames"], **{"SprocketLight-1": (I9, (0.0, 0.0, 350.0))}))
+    framed = dict(lit, frames=dict(lit["frames"], **{"SprocketLight-1": (I9, (0.0, 0.0, 350.0))}))
+    shifted = dict(resolved, frames=dict(resolved["frames"], **{"SprocketLight-1": (I9, (0.0, 0.0, 351.0))}))
+    fixed_too = dict(resolved, fixed={"SprocketLight-1": True})
+    conf_too = dict(resolved, referenced={"SprocketLight-1": "Z20"})
+    value_too = dict(resolved, definitions=dict(resolved["definitions"], UserAxisLight={
+        "values": {"Distance": 0.5}, "entities": [{"component": "SprocketLight-1", "params": [0, 0, 0.35, 0, 0, 1]}]}))
+    narrow = [old_diff(light_frame, read_frame, set(), light="SprocketLight-1")]
+    narrow += [old_diff(base, x, set(), light="SprocketLight-1")
+               for base, x in ((framed, shifted), (lit, fixed_too), (lit, conf_too), (lit, value_too))]
+    ok(narrow[0][0] == [] and len(narrow[0][1]) == 3 and all(len(d[0]) == 1 for d in narrow[1:]),
+       "ruling 4: the light component's frame going from unread to read is set apart; its moving, its fixed state, "
+       "its referenced configuration or its mate's value changing beside its going resolved each STOP")
     lf = "SprocketLight.SLDPRT"
     loaded = dict(resolved, flags_after={"RangeBox.SLDASM": False, lf: False})
     ok(old_diff(lit, loaded, {"RangeBox.SLDASM", lf}, light="SprocketLight-1", light_file=lf)[0] == []
@@ -937,6 +1048,39 @@ def self_check():
                     {"RangeBox.SLDASM", "Chain.SLDPRT"}, light="SprocketLight-1", light_file=lf)[0] != [],
        "M1 (b): the light file marked, loaded while its component stays lightweight, the old assembly marked beside "
        "it, or another user file loaded: still a change")
+    turned = (0.0, -1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0)          # 90° about Z
+    tipped = (1.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 1.0, 0.0)          # 90° about X: Top's normal along Z
+    ok(angle_pair(I9, I9) == ("plane2", "plane3") and angle_pair(I9, turned) == ("plane2", "plane2")
+       and angle_pair(tipped, tipped) is None,
+       "ruling 1: the tie's planes are Sprocket-8's Top and Housing-1's Right at identity; another pair where the "
+       "housing stands turned; none where a normal lies along Sun's axis")
+    codes = {"UserLock8a": (0, False), "UserAngle8b": (0, False), "Sun along Input": (0, False), "Off": (46, True)}
+    ok(fixture_problems(codes, 3, 3) == []
+       and fixture_problems(dict(codes, UserLock8a=(46, False), **{"Sun along Input": (46, False)}), 3, 3) != []
+       and len(fixture_problems(codes, 2, 3)) == 1,
+       "ruling 1: the fixture STOPs on a tie that reads 46 (the first run's over-definition) and on a Sun that can "
+       "still turn; a mate in error only where suppressed is not one")
+    want = expected_outcome(fs26, made, light=True)
+    stopped = "making UserAxis1 again"
+    ok(not_reached(want, set(), stopped)[0].startswith("not reached: nothing was remade (the carry stopped at making")
+       and not_reached(want, {m for m, w in want.items() if "remade" in w}) == []
+       and not_reached(want, {m for m, w in want.items() if "remade" in w} - {"UserGear6"}) == ["not reached: UserGear6"]
+       and not_reached({"A": {"unread"}}, set())[0].startswith("not reached: no mate"),
+       "ruling 2: a remade-mate check with nothing remade, one mate short, or nothing to judge is not reached")
+    nothing = {"outcome": False, "components": True, "states": True, "poses": False, "anchors": True,
+               "unsaved": False, "fallback": False, "same_error": False, "free": False, "definitions": False,
+               "flags": False, "interference": False, "configuration": True, "referenced_read": True}
+    values = proposal_values(nothing, {"UserGear6": ["not reached"]}, {n: k for n, k, _, _ in mate_specs()}, {},
+                             made)
+    full = proposal_values(dict(nothing, **{k: True for k in nothing}), {}, {n: k for n, k, _, _ in mate_specs()},
+                           {m: "remade" for m in made}, made)
+    ok(values["CARRY_INSERTS"] is None and values["CARRY_REMAKE_KINDS"] is None
+       and values["CARRY_GEAR_MATE_ON_AN_APP_GEAR"] is None and values["CARRY_INSERTS_IN_A_CONFIGURATION"] is True
+       and full["CARRY_INSERTS"] is True and "angle" in full["CARRY_REMAKE_KINDS"],
+       "ruling 2: a carry that remade nothing proposes CARRY_INSERTS, CARRY_REMAKE_KINDS and the gear-mate gate None "
+       "(the configuration insert, before any mate, still stands); with everything held each is proposed")
+    ok(as_new("Sprocket-2", {"Sprocket-2": "Sprocket-5"}) == "Sprocket-2 as Sprocket-5"
+       and as_new("Sprocket-1", {"Sprocket-1": "Sprocket-1"}) == "Sprocket-1", "ruling 5: old and new Name2 said")
     rel = (I9, (0.0, 0.0, 10.0))
     ok(pose_gap(rel, rel) == 0.0 and abs(pose_gap(rel, (I9, (0.0, 0.0, 10.5))) - 0.5) < 1e-12, "pose gap")
     ok(tuple(swbuild.CARRY_KIND_WORDS) == KIND_WORDS and set(WRITE_GATES) | set(STAY_NONE) <= {
@@ -1474,6 +1618,13 @@ def fixture_job(asm, folder, refs, modes):
 
         made = []
         for i, (name, how, kind, a, b, value) in enumerate(MATES):
+            if name == "UserAngle8b":                 # the tie's angle: the planes at 90° as they stand (ruling 1)
+                pair = angle_pair(s.component_frame("s8")[0], s.component_frame("uh")[0])
+                out["angle_pair"] = pair
+                if pair is None:
+                    out["tries"][name] = "no Top/Right pair of Sprocket-8 and Housing-1 stands at 90° across Z"
+                    continue
+                a, b = f"s8:{pair[0]}", f"uh:{pair[1]}"
             try:
                 if how == "app":
                     if kind == "gear":
@@ -1498,6 +1649,7 @@ def fixture_job(asm, folder, refs, modes):
             out["mates"][kept] = s.mate_suppression(handle, list(modes))
         s.rebuild(kind=swcom.ASSEMBLY_TRAIN)
         out["codes"] = {m.name: (m.code, m.suppressed) for m in s.mate_states()}
+        out["sun_status"] = s.constrained_status("sun")
         return out
     return work
 
@@ -1569,7 +1721,13 @@ def section_fixture(out):
         if wrong:
             A.stop(f"fixture: a new mate's flag did not read back on in every mode: {wrong} (§0.3)")
         bad = {n: c for n, (c, sup) in got["codes"].items() if c and not sup}
-        check(not bad, f"fixture: every mate on in {modes[0]} reads code 0: {bad or 'none'}")
+        say(f"fact    fixture: the tie's angle between Sprocket-8's and Housing-1's {got.get('angle_pair')} (both at "
+            f"90° across Sun's axis as they stand); Sun reads constrained status {got.get('sun_status')}")
+        wrong_fixture = fixture_problems(got["codes"], got.get("sun_status"), findings.COMPONENT_FULLY_DEFINED)
+        if wrong_fixture:
+            A.stop(f"fixture: as built it is not M9's fixture: {wrong_fixture} (ruling 1: every mate on in "
+                   f"{modes[0]} reads code 0, and Sun cannot turn)")
+        check(True, f"fixture: every mate on in {modes[0]} reads code 0 and Sun cannot turn (the tie): {bad or 'none'}")
         comp_names = dict(SETUP, **got["components"])
         st = out["states"] = run("fixture: states and configuration", job(asm, states_job(
             asm, comp_names, modes)), 900)
@@ -1784,17 +1942,18 @@ def judge_carry(label, desk, fx, result, closed, light, out, old_before, old_box
     tied = {names[h] for h in TIED}
     fell = list(cr.fixed)
     clean["fallback"] = check(len(fell) == 1 and fell[0].why == swbuild.FELL_TIE
-                              and set(fell[0].deleted) == {"UserLock8a"} and set(fell[0].kept) == {"UserLock8b"}
+                              and set(fell[0].deleted) == {"UserLock8a"} and set(fell[0].kept) == {"UserAngle8b"}
                               and set(fell[0].components) == {old_of.get(t, t) for t in tied},
-                              f"{label}: the tied cluster alone fell back, UserLock8a deleted, UserLock8b kept, "
-                              f"{sorted(tied)} fixed: {fell}")
+                              f"{label}: the tied cluster alone fell back, UserLock8a deleted, UserAngle8b kept, "
+                              f"{sorted(as_new(t, old_of) for t in tied)} fixed: {fell}")
     clean["same_error"] = check(not cr.same_error and not cr.moved and not cr.stopped and cr.unsaved,
                                 f"{label}: no mate back in an old error {cr.same_error}, nothing moved {cr.moved}, no "
                                 f"stop {cr.stopped!r} {cr.skipped!r}, the new assembly unsaved {cr.unsaved}")
     anchors = dict(cr.anchors)
-    off_anchor = {o: (anchors.get(n), sorted(EXPECTED_ANCHORS.get(handle_of.get(o), {"?"})))
+    off_anchor = {as_new(o, old_of): (anchors.get(n), sorted(EXPECTED_ANCHORS.get(handle_of.get(o), {"?"})))
                   for o, n in old_of.items() if anchors.get(n, "?") not in EXPECTED_ANCHORS.get(handle_of.get(o), set())}
-    clean["anchors"] = check(not off_anchor, f"{label}: each carried component placed against the fixture's anchor "
+    clean["anchors"] = check(bool(old_of) and not off_anchor, f"{label}: each carried component placed against the "
+                                                              f"fixture's anchor "
                                              f"(D20 as ruled 2026-11-17; a fixed one by the world): "
                                              f"{off_anchor or 'all'}")
 
@@ -1808,13 +1967,16 @@ def judge_carry(label, desk, fx, result, closed, light, out, old_before, old_box
     own = {h: {m for m in modes if every["states"][m].get(old_of.get(names[h], "")) == SUPPRESSED}
            for h in want_states if names[h] in old_of}
     worker = {h: set(dict(cr.states).get(old_of[names[h]], ())) for h in own}
-    clean["states"] = check(all(own[h] == want_states[h] == worker[h] for h in own),
-                            f"{label}: Sprocket-7 and Sprocket-9 read suppressed in {own} (shown and read), as the "
-                            f"route says {want_states} and the carry said {worker}")
+    missing_states = [f"not reached: {names[h]} not carried" for h in want_states if h not in own]
+    clean["states"] = check(not missing_states and all(own[h] == want_states[h] == worker[h] for h in own),
+                            f"{label}: Sprocket-7 and Sprocket-9 read suppressed in "
+                            f"{ {as_new(names[h], old_of): sorted(v) for h, v in own.items()} } (shown and read), as "
+                            f"the route says {want_states} and the carry said {worker}; {missing_states or ''}")
     others = {n: [m for m in modes if every["states"][m].get(n) == SUPPRESSED] for n in carried
               if n not in {old_of.get(names[h]) for h in want_states}}
-    check(not any(others.values()), f"{label}: every other carried component resolved in every mode: "
-                                    f"{ {n: v for n, v in others.items() if v} or 'all'}")
+    check(bool(others) and not any(others.values()),
+          f"{label}: every other carried component resolved in every mode: "
+          f"{ {n: v for n, v in others.items() if v} or ('all' if others else 'not reached: none carried')}")
     # M2: each remade mate against the script's own read of the old one, entities mapped old -> new.
     kind_of = {n: k for n, k, _, _ in mate_specs()}
     old_names = dict(W.bodies(old_box))                 # gear id -> old Name2
@@ -1823,8 +1985,9 @@ def judge_carry(label, desk, fx, result, closed, light, out, old_before, old_box
     mapping.update({o: (n, False) for o, n in old_of.items()})
     mapping[_stem(old_box.assembly)] = (os.path.splitext(os.path.basename(new_asm))[0], False)
     mapping[os.path.splitext(os.path.basename(old_box.assembly))[0]] = mapping[_stem(old_box.assembly)]
-    new_defs = out["definitions"] = definitions_in(new_asm, [r[1] for r in cr.remade])
-    unclean = {}
+    new_defs = out["definitions"] = definitions_in(new_asm, [r[1] for r in cr.remade]) if cr.remade else {}
+    reached = not_reached(want, {r[0] for r in cr.remade}, cr.stopped)
+    unclean = {m: [f"outcome {got.get(m, 'none')} where {sorted(w)}"] for m, w in want.items() if got.get(m) not in w}
     for old_name, kept, _ in cr.remade:
         o, n = (old_before.get("definitions") or {}).get(old_name), new_defs.get(kept, {})
         if o is None or "unread" in o or "unread" in n:
@@ -1835,8 +1998,10 @@ def judge_carry(label, desk, fx, result, closed, light, out, old_before, old_box
                                                                  gear=kind == "gear")
         if diff:
             unclean[old_name] = diff
-    clean["definitions"] = check(not unclean, f"{label}: every remade mate's definition and entities in RangeBox_r2 "
-                                              f"as the old one's, by the script's own reads: {unclean or 'all'}")
+    clean["definitions"] = check(not unclean and not reached,
+                                 f"{label}: every mate expected to be made again was, its definition and entities in "
+                                 f"RangeBox_r2 as the old one's, by the script's own reads: {unclean or 'all'}; "
+                                 f"{reached or 'every one reached'}")
     remade_on = {r[0]: set(r[2]) for r in cr.remade}
     old_on = {n: {m for m in modes if not (old_before.get("by_mode") or {}).get(n, {}).get(m, True)}
               for n in remade_on} if old_before.get("by_mode") else {m.name: set(m.on) for m in cr.work.mates}
@@ -1846,16 +2011,19 @@ def judge_carry(label, desk, fx, result, closed, light, out, old_before, old_box
                    if not (flags[o] == remade_on[o] == (old_on.get(o, set()) & set(modes)))}
     for o, why in flags_wrong.items():
         unclean.setdefault(o, []).append(f"flags (old, read, said) {why}")
-    clean["flags"] = check(not flags_wrong, f"{label}: every remade mate on in the modes it was on in, read again: "
-                                            f"{flags_wrong or 'all'}")
+    clean["flags"] = check(not flags_wrong and not reached,
+                           f"{label}: every mate expected to be made again on in the modes it was on in, read again: "
+                           f"{flags_wrong or 'all'}; {reached or 'every one reached'}")
+    post = "" if (not cr.stopped and cr.remade) else \
+        f"not reached: {'the carry stopped: ' + cr.stopped if cr.stopped else 'nothing was remade'}"
     gear_ids = {g for g, _ in W.bodies(new_box)}
     status = every["status"]
     not_free = {m: {g: v for g, v in status[m].items() if g in gear_ids and v != findings.COMPONENT_UNDER_DEFINED
                     and g not in set(new_box.fixed)} for m in modes}
     not_free = {m: v for m, v in not_free.items() if v}
     say(f"fact    {label}: GetConstrainedStatus per mode of the app's bodies {status}")
-    clean["free"] = check(not not_free, f"{label}: every app gear free to turn in every mode with the carried mates "
-                                        f"on: {not_free or 'all'}")
+    clean["free"] = check(not post and not not_free, f"{label}: every app gear free to turn in every mode with the "
+                                                     f"carried mates on: {post or not_free or 'all'}")
     say(f"fact    {label}: Sun's frame in the old assembly ({old_before.get('active')}) "
         f"{old_before['frames'].get('Sun')}; in RangeBox_r2 per mode "
         f"{ {m: every['frames'][m].get('Sun') for m in modes} }")
@@ -1879,10 +2047,10 @@ def judge_carry(label, desk, fx, result, closed, light, out, old_before, old_box
     out["interference"] = judged
     say(f"fact    {label}: interference with the carried components per mode: SolidWorks {judged['volumes']}; the "
         f"carry named {named_clashes or 'none'}")
-    check(not judged["unnamed"] and not judged["unseen"], f"{label}: every interference SolidWorks reports with a "
-                                                          f"carried component the carry named, and none other: "
-                                                          f"unnamed {judged['unnamed'] or 'none'}, unseen "
-                                                          f"{judged['unseen'] or 'none'}")
+    clean["interference"] = check(not post and not judged["unnamed"] and not judged["unseen"],
+                                  f"{label}: every interference SolidWorks reports with a carried component the "
+                                  f"carry's post-check named, and none other: {post or ''} unnamed "
+                                  f"{judged['unnamed'] or 'none'}, unseen {judged['unseen'] or 'none'}")
     return clean, unclean, kind_of, got
 
 
@@ -1903,29 +2071,47 @@ def poses_judged(label, before, every_new, anchors, old_mode, out):
                 continue
             was, now = rel(before, anchor, old), rel(frames, anchor, new)
             if was is None or now is None:
-                missing.append(f"{new} in {mode} ({'old' if was is None else 'new'} frame not read)")
+                missing.append(f"{old} as {new} in {mode} ({'old' if was is None else 'new'} frame not read)")
             else:
-                gaps[(new, mode)] = pose_gap(was, now)
-    off = {f"{n} in {m}": round(g, 9) for (n, m), g in gaps.items() if g > POSE_TOL}
-    out["poses"] = {f"{n} in {m}": g for (n, m), g in gaps.items()}
+                gaps[(old, new, mode)] = pose_gap(was, now)
+    off = {f"{o} as {n} in {m}": round(g, 9) for (o, n, m), g in gaps.items() if g > POSE_TOL}
+    out["poses"] = {f"{o} as {n} in {m}": g for (o, n, m), g in gaps.items()}
     return check(bool(gaps) and not off and not missing,
                  f"{label}: each carried component at its pose against its anchor, as it stood in {old_mode} of the "
                  f"old assembly, in every mode of RangeBox_r2 where it is resolved ({len(gaps)} reads): off "
                  f"{off or 'none'}; not read {missing or 'none'}")
 
 
-def record_judged(label, desk, result):
+def record_judged(label, desk, result, unsaved=True):
     """Schema 10 on disk after the finish; the carry on the new revision's gearbox block; ``unsaved_at`` the new
-    assembly's file time; the footer's line while it stands."""
+    assembly's file time; the footer's line while it stands. ``unsaved``: the section expects something carried
+    unsaved (a carry that left nothing unsaved is then not reached, never a pass).
+
+    The footer is read as a user sees it (ruling 6, the first run's FAIL): straight after the build the window shows
+    the finish's sentence in its place (``workbook_footer`` with the job's note: the idle footer's lines, §9.4's among
+    them, are said only with no note or an answer), and that sentence asks for the save itself; once the note goes
+    (the workbook read again with a change, the window opened again) the idle footer must say §9.4's line. Both are
+    read, after ``desk.read()``, the note kept as the window keeps it for the first and set aside for the second."""
     on_disk = C9.record_on_disk(desk)
+    desk.read()
     box = desk.record.gearbox
     carry = box.carry
     mtime = os.path.getmtime(box.assembly)
     line = ui_text.carry_footer_line(desk.record)
-    f = desk.say_footer(f"{label}, after the build")
-    ok = check(on_disk.get(store.LINK_SCHEMA_KEY) == 10 and carry is not None
-               and (not result.carry.unsaved or abs(carry.unsaved_at - mtime) < 1e-6)
-               and (not result.carry.unsaved or (line and line in f.text)),
+    f = desk.say_footer(f"{label}, after the build, the finish's sentence standing")
+    note, desk.note = desk.note, None
+    try:
+        idle = desk.say_footer(f"{label}, after the build, the finish's sentence gone")
+    finally:
+        desk.note = note
+    asks = "Save RangeBox_r2 in SolidWorks to keep what was carried" in f.text
+    say(f"fact    {label}: the footer with the finish's sentence standing {'asks' if asks else 'does NOT ask'} for "
+        f"the save; §9.4's line {'is' if line and line in f.text else 'is not'} in it; with the sentence gone it "
+        f"{'says' if line and line in idle.text else 'does NOT say'} §9.4's line")
+    reached = (not unsaved) or bool(result.carry and result.carry.unsaved)
+    ok = check(reached and on_disk.get(store.LINK_SCHEMA_KEY) == 10 and carry is not None
+               and (not unsaved or abs(carry.unsaved_at - mtime) < 1e-6)
+               and (not unsaved or (bool(line) and line in idle.text and asks)),
                f"{label}: the record on disk at schema {on_disk.get(store.LINK_SCHEMA_KEY)} holds the carry (how "
                f"{carry and carry.how}, {len(carry.components) if carry else 0} components, "
                f"{len(carry.mates) if carry else 0} mates, {len(carry.named) if carry else 0} named), unsaved_at "
@@ -1973,7 +2159,7 @@ def section_gates(out):
         status = out["status"]
         check(not unset or (status.find("has not yet been shown to carry your work") > 0 and "Keyway" in status),
               "carry-gates: the result says W9a's sentence led by CARRY_INSERTS, and the Keyway")
-        record_judged("carry-gates", desk, result)
+        record_judged("carry-gates", desk, result, unsaved=False)
         check(desk.record.gearbox.user_work is None and ui_text.carry_footer_line(desk.record) == "",
               "carry-gates: with nothing carried the new revision holds no inventory and the footer no carry line")
 
@@ -2117,21 +2303,18 @@ def save_one(path):
 
 
 def _propose(clean, unclean, kind_of, outcome, fx):
-    inserts = bool(clean) and all(clean.get(k) for k in ("outcome", "components", "states", "poses", "anchors",
-                                                         "unsaved", "fallback", "same_error", "free"))
-    proposed(finding_name("CARRY_INSERTS"), True if inserts else None,
+    values = proposal_values(clean, unclean, kind_of, outcome, fx["mates"])
+    proposed(finding_name("CARRY_INSERTS"), values["CARRY_INSERTS"],
              f"carry: every user part inserted, placed against its anchor in every mode, fixed or floating, its state "
              f"set and read back per mode, the tied cluster fixed, nothing written to the old: {clean}")
-    proposed(finding_name("CARRY_INSERTS_IN_A_CONFIGURATION"), True if clean.get("configuration") else None,
+    proposed(finding_name("CARRY_INSERTS_IN_A_CONFIGURATION"), values["CARRY_INSERTS_IN_A_CONFIGURATION"],
              "carry: SprocketConf-1 inserted in Z20 by AddComponent5 with its configuration, read back in every mode")
-    proposed(finding_name("REFERENCED_CONFIGURATION_READ"), True if clean.get("referenced_read") else None,
+    proposed(finding_name("REFERENCED_CONFIGURATION_READ"), values["REFERENCED_CONFIGURATION_READ"],
              "carry: ReferencedConfiguration read Z20 on SprocketConf-1 beside its document's Default (R2)")
-    kinds = kinds_clean({n: kind_of.get(n, "") for n in fx["mates"] if n in kind_of}, outcome, set(unclean))
-    proposed(finding_name("CARRY_REMAKE_KINDS"), kinds or None,
-             "carry: the kinds whose every mate was made again, read back equal and on in the modes it was on in "
-             "(perpendicular, tangent and limit angle are not in the fixture)")
-    gear_ok = outcome.get("UserGear6") == "remade" and "UserGear6" not in unclean
-    proposed(finding_name("CARRY_GEAR_MATE_ON_AN_APP_GEAR"), True if gear_ok else None,
+    proposed(finding_name("CARRY_REMAKE_KINDS"), values["CARRY_REMAKE_KINDS"],
+             "carry: the kinds whose every mate was made again as expected, read back equal and on in the modes it was "
+             "on in (perpendicular, tangent and limit angle are not in the fixture)")
+    proposed(finding_name("CARRY_GEAR_MATE_ON_AN_APP_GEAR"), values["CARRY_GEAR_MATE_ON_AN_APP_GEAR"],
              f"carry: UserGear6 made again on the new Sun's Gear Axis with its ratio and sense read back "
              f"({outcome.get('UserGear6')}); UserGearRoot on a root cylinder {outcome.get('UserGearRoot')}")
     for name, why in STAY_NONE.items():
@@ -2210,8 +2393,13 @@ def section_closed(out):
             clean, unclean, kind_of, got = judge_carry("carry-closed", desk, fx, result, True, False, out,
                                                        old_before, box)
             s2 = names["u2"]
-            check(dict(cr.anchors).get(dict(cr.inserted).get(s2, ""), "") == "RangeSlv",
-                  "carry-closed: Sprocket-2 placed against RangeSlv, read in L and placed in H (contradiction 6)")
+            new2 = dict(cr.inserted).get(s2, "")
+            gaps2 = {m: out.get("poses", {}).get(f"{s2} as {new2} in {m}") for m in modes}
+            check(bool(new2) and dict(cr.anchors).get(new2, "") == "RangeSlv"
+                  and all(g is not None and g <= POSE_TOL for g in gaps2.values()),
+                  f"carry-closed: {s2} as {new2 or '(not carried)'} placed against RangeSlv, read in L and placed in "
+                  f"H, and at its pose against RangeSlv in every mode, N and L with RangeSlv slid (contradiction 6): "
+                  f"{gaps2}")
             record_judged("carry-closed", desk, result)
             out["clean"] = clean
 
