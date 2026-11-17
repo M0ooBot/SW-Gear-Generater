@@ -560,11 +560,12 @@ class MateEntry:
 @dataclass
 class UserComponentEntry:
     """Schema 7 (W9a): a top-level component of the user's as an Update read it (``swbuild.UserComponent``): its
-    ``Name2``, file, whether fixed, its error code and its suppression state in the configuration active then (-1:
-    not read, ``swcom.UNREAD``)."""
+    ``Name2``; ``kind`` ``part`` or ``assembly`` by its file's extension, ``""`` when SolidWorks would not name its
+    file (the file is the user's own and is not kept: only what kind it is is ever used); whether fixed, its error
+    code and its suppression state in the configuration active then (-1: not read, ``swcom.UNREAD``)."""
 
     name: str = ""
-    path: str = ""
+    kind: str = ""
     fixed: bool = False
     code: int = 0
     state: int = -1
@@ -622,6 +623,7 @@ class ValueEditEntry:
     recorded: str = ""
     mode: str = ""
     cell: str = ""
+    unsaved: bool = False          # the document carried the record's unsaved mark (swbuild.ValueEdit.unsaved)
 
 
 @dataclass
@@ -1215,6 +1217,10 @@ def _user_work_read(raw: Any) -> Optional[UserWorkEntry]:
         raise TypeError("gearbox.user_work is not an object")
     entry = _checked(UserWorkEntry(**_known(UserWorkEntry, raw)))
     entry.components = [_checked(c) for c in _entries(UserComponentEntry, raw.get("components", []) or [])]
+    for index, component in enumerate(entry.components):
+        if component.kind not in ("", "part", "assembly"):
+            raise ValueError(f"gearbox.user_work.components[{index}] ({component.name!r}) is of kind "
+                             f"{component.kind!r}, not part or assembly")
     entry.mates = [_checked(m) for m in _entries(UserMateEntry, raw.get("mates", []) or [])]
     for index, mate in enumerate(entry.mates):
         for touch in mate.touches:

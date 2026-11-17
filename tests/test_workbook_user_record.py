@@ -21,8 +21,8 @@ from test_workbook_update import FOLDER, WORKBOOK, assessed, fake_build, gears, 
 def _entry(**changes):
     entry = store.UserWorkEntry(
         read_at="2026-11-16T14:02:00Z", assembly=r"C:\P\R.SLDASM", digest="d1", revision=[34, 1, 1],
-        components=[store.UserComponentEntry("Sprocket-1", r"C:\P\Sprocket.SLDPRT", False, 0, 2),
-                    store.UserComponentEntry("Housing-1", r"C:\P\Housing.SLDPRT", True, 0, 2)],
+        components=[store.UserComponentEntry("Sprocket-1", "part", False, 0, 2),
+                    store.UserComponentEntry("Housing-1", "assembly", True, 0, 2)],
         mates=[store.UserMateEntry("Lock3", "lock", 16, [["app", "G1"], ["user", "Sprocket-1"]], ["H", "L"], 0, True,
                                    True),
                store.UserMateEntry("Weird", "other", -1, [["unread", ""]], [], 0, True, False)],
@@ -94,6 +94,7 @@ def test_a_record_newer_than_schema_7_is_refused_and_left_alone(tmp_path):
     (lambda w: w.__setitem__("mates", [{"name": "M", "touches": [["gear", "G1"]]}]), r"user_work\.mates\[0\]"),
     (lambda w: w.__setitem__("mates", [{"name": "M", "touches": [["app"]]}]), r"not a pair"),
     (lambda w: w.__setitem__("components", [{"name": 3}]), r"UserComponentEntry\.name"),
+    (lambda w: w.__setitem__("components", [{"name": "S", "kind": "C:\\x.SLDPRT"}]), r"not part or assembly"),
     (lambda w: w.__setitem__("problems", ["x"]), r"problems are not a list of objects"),
     (lambda w: w.__setitem__("revision", ["34"]), r"UserWorkEntry\.revision"),
 ])
@@ -171,7 +172,7 @@ def test_the_inventory_reaches_the_footer_before_the_press_with_its_time(on_fake
     at = ui_text.read_time(record.gearbox.user_work.read_at)
     moved = gears(reducer(), G1=dict(backlash="0.1"), G4=dict(at="30"))
     footer, upd = _footer(record, moved)
-    assert footer.update_enabled and footer.ok
+    assert footer.update_enabled and footer.ok, footer.text
     assert f"As read at {at}, Update SolidWorks rebuilds your Keyway in Gear_m1.5_N17 after the app's features, " \
            "moves your Sprocket-1 with G1, which your Lock3 holds it to" in footer.text, footer.text
     assert "G1" in update.bodies_put(upd)
@@ -245,19 +246,23 @@ def test_the_build_again_question_names_what_stays_behind_with_its_time(on_fake)
     question = ui_text.build_again_question(upd, again, record=record)
     assert question.endswith(
         f" As read at {at}, your Sprocket-1 and Lock3 stay in Reducer_12to1.SLDASM, and your Keyway stays in "
-        f"Gear_m1.5_N17, which G1's new part replaces; {again.name} has none of them. Your Groove in OutputGear "
-        f"comes with that part, which {again.name} reuses."), question
-    # With nothing on record the question is as it was.
-    bare = copy.deepcopy(record)
-    bare.gearbox.user_work = None
-    assert ui_text.build_again_question(upd, again, record=bare) == question[:question.index(" As read at")]
+        f"Gear_m1.5_N17, which G1's new part replaces; {again.name} has none of them, nor anything added since. Your "
+        f"Groove in OutputGear comes with that part, which {again.name} reuses."), question
+    # With nothing on record (or nothing of the user's read), a clause with no time (the coordinator's ruling 4).
+    timeless = (" Anything you added to Reducer_12to1.SLDASM in SolidWorks (components, mates, and features in parts "
+                f"this revision makes new) stays there, and {again.name} has none of it.")
+    for empty in (None, store.UserWorkEntry(read_at="2026-11-16T14:02:00Z", assembly=record.gearbox.assembly)):
+        bare = copy.deepcopy(record)
+        bare.gearbox.user_work = empty
+        assert ui_text.build_again_question(upd, again, record=bare) == \
+            question[:question.index(" As read at")] + timeless
 
 
 def _calls_from(sw, start):
     return [name for name, *_ in sw.calls[start:]]
 
 
-READS = {"documents", "begin_build", "end_build", "open_document", "mate_states", "configurations", "components",
+READS = {"documents", "begin_build", "end_build", "use_open_document", "mate_states", "configurations", "components",
          "find_mate", "mate_info", "mate_suppression"}
 
 
@@ -270,16 +275,19 @@ def test_the_build_job_reads_the_old_assemblys_user_work_first_and_writes_nothin
     key = asm.replace("/", "\\").lower()
     mates_before = copy.deepcopy(sw.memory_mates[key])
     frames_before = copy.deepcopy(sw.frames)
+    active, config, configs, touched = sw.active, sw.config, list(sw.configs), set(sw.touched)
     start = len(sw.calls)
     work = swbuild.read_old_assembly(sw, old)
-    assert set(_calls_from(sw, start)) <= READS, _calls_from(sw, start)
+    assert set(_calls_from(sw, start)) <= READS, _calls_from(sw, start)     # never opened nor activated
     assert sw.memory_mates[key] == mates_before and sw.frames == frames_before
+    assert (sw.active, sw.config, sw.configs, sw.touched) == (active, config, configs, touched)
     assert [c.name for c in work.components] == ["Sprocket-1"]
     assert [(m.name, m.touches) for m in work.mates] == [("Lock3", (("app", "G1"), ("user", "Sprocket-1")))]
     # Not open in the session: not read, not opened.
     sw.open_docs = [d for d in sw.open_docs if d.path.lower() != asm.lower()]
     start = len(sw.calls)
-    assert swbuild.read_old_assembly(sw, old) is None and "open_document" not in _calls_from(sw, start)
+    assert swbuild.read_old_assembly(sw, old) is None
+    assert set(_calls_from(sw, start)) <= {"begin_build", "end_build", "use_open_document"}
 
 
 def test_a_build_again_reads_what_stays_behind_first_and_says_it_after(on_fake):
@@ -298,17 +306,45 @@ def test_a_build_again_reads_what_stays_behind_first_and_says_it_after(on_fake):
     assert "mate_info" in names[:first_write]               # the read came first, before anything was made
     assert built.old_read == "" and [c.name for c in built.old_user_work.components] == ["Sprocket-1"]
     stays = update.stays_behind(record, again)
-    said = ui_text.stayed_behind_status(stays, built, again)
-    assert said.startswith(f"Your Sprocket-1 and Lock3 stay in Reducer_12to1.SLDASM, as read when this build "
-                           f"began; {again.name} has none of them."), said
-    assert "your Keyway stays in Gear_m1.5_N17, which G1's new part replaces" in said
+    said = ui_text.stayed_behind_status(stays, built, again, old.path)
+    at = ui_text.read_time(record.gearbox.user_work.read_at)
+    assert said == (f"Your Sprocket-1 and Lock3 stay in Reducer_12to1.SLDASM, as read when this build began; "
+                    f"{again.name} has none of them. As read at {at}, your Keyway stays in Gear_m1.5_N17, which G1's "
+                    f"new part replaces; {again.name} has none of it, nor anything added since."), said
     # The old assembly closed: the record's inventory, with its time.
     gone = copy.deepcopy(built)
     gone.old_user_work, gone.old_read = None, swbuild.OLD_NOT_OPEN
-    said = ui_text.stayed_behind_status(stays, gone, again)
-    assert said.startswith("Reducer_12to1.SLDASM was not open in SolidWorks, so it was not read again: As read at "
-                           f"{ui_text.read_time(record.gearbox.user_work.read_at)}, your Sprocket-1 and Lock3 stay "
-                           "in Reducer_12to1.SLDASM"), said
+    said = ui_text.stayed_behind_status(stays, gone, again, old.path)
+    assert said.startswith("Reducer_12to1.SLDASM was not open in SolidWorks, so it was not read again; as read at "
+                           f"{at}, your Sprocket-1 and Lock3 stay in Reducer_12to1.SLDASM"), said
+    # Closed, and nothing on record: the old assembly named, no time.
+    assert ui_text.stayed_behind_status(None, gone, again, old.path) == (
+        "Reducer_12to1.SLDASM was not open in SolidWorks, so it was not read again; anything you added to "
+        "Reducer_12to1.SLDASM in SolidWorks (components, mates, and features in parts this revision makes new) "
+        f"stays there, and {again.name} has none of it.")
+
+
+def test_an_old_assembly_read_that_raises_never_stops_the_build_and_is_said(on_fake, monkeypatch):
+    """Package B's review, point 6: the build job's read of the old assembly meets SolidWorks failing; the build goes
+    ahead whole, and its sentence says why it was not read, then what the record holds with its time."""
+    sw, record = on_fake
+    _sprocket(sw, record)
+    plan, result, finished = press(sw, record, reducer())
+    record = finished.record
+    again = gearbox.plan_gearbox(assessed(gears(reducer(), G1=dict(flank="arcs"))), record, exists=sw.exists,
+                                 read_sidecar=lambda p: None)
+    old = update.old_assembly(record, again)
+
+    def boom(handle):
+        raise swbuild.SolidWorksError("SolidWorks stopped answering.")
+    monkeypatch.setattr(sw, "mate_info", boom)
+    built = swbuild.build_gearbox(sw, **again.build_kwargs(), exists=sw.exists, before=old)
+    assert built.ok and built.old_user_work is None
+    assert built.old_read == "SolidWorks did not answer the read of Reducer_12to1.SLDASM: SolidWorks stopped answering."
+    said = ui_text.stayed_behind_status(update.stays_behind(record, again), built, again, old.path)
+    assert said.startswith("SolidWorks did not answer the read of Reducer_12to1.SLDASM: SolidWorks stopped "
+                           f"answering. As read at {ui_text.read_time(record.gearbox.user_work.read_at)}, your "
+                           "Sprocket-1 and Lock3 stay in Reducer_12to1.SLDASM"), said
 
 
 def test_after_update_the_sentence_says_what_went_with_its_gear_and_what_of_the_users_is_in_error(on_fake,
@@ -325,4 +361,51 @@ def test_after_update_the_sentence_says_what_went_with_its_gear_and_what_of_the_
     text, ok = ui_text.gearbox_update_status(plan, result, finished.dragged, finished=finished)
     assert "Your Sprocket-1 went with G1, which your locks hold it to." in text
     assert "SolidWorks rebuilt your Keyway in Gear_m1.5_N17 after the app's features, and it is in error." in text
-    assert "Your Lock3 is in error in SolidWorks after it." in text
+    assert "Your Lock3 is in error in SolidWorks now." in text
+    result.user_work.mates = [swbuild.UserMate(m.name, m.kind, m.type, m.touches, m.on, 7, True, m.whole)
+                              for m in result.user_work.mates]          # Lock3 in error before anything changed
+    text, ok = ui_text.gearbox_update_status(plan, result, finished.dragged, finished=finished)
+    assert "Your Lock3 was in error in SolidWorks before this Update changed anything, and still is." in text
+
+
+def test_a_carried_component_loaded_lightweight_is_foreseen_refused_as_the_press_refuses_it(on_fake, monkeypatch):
+    """Package B's review, point 3: the check of a carried component suppressed or lightweight is in the shared pure
+    judgement, so the footer foresees the refusal the press makes, from the state recorded."""
+    monkeypatch.setattr(findings, "USER_MATE_PUT_NO_CARRIER_ON_2026", True)
+    sw, record = on_fake
+    _sprocket(sw, record)
+    sw.component_states["Sprocket-1"] = 1                       # loaded lightweight
+    plan, result, finished = press(sw, record, reducer())
+    record = update.finish_update(plan, result, record, digest="d2", read_sidecar=lambda p: None,
+                                  mtime=lambda p: 5.0, revision=(34, 1, 1)).record
+    assert [(c.name, c.kind, c.state) for c in record.gearbox.user_work.components] == [("Sprocket-1", "part", 1)]
+    moved = gears(reducer(), G4=dict(at="30"))
+    footer, upd = _footer(record, moved)
+    assert "would stop before changing anything: Update SolidWorks would put your Sprocket-1 with G1, which your " \
+           "mates hold it to, and Sprocket-1 is loaded lightweight" in footer.text and not footer.ok, footer.text
+    with pytest.raises(UserWorkRefused) as raised:
+        swbuild.update_gearbox(sw, **upd.update_kwargs(), exists=lambda p: True, mtime=lambda p: 5.0)
+    assert swbuild.PROBLEM_COMPONENT in [p.kind for p in raised.value.problems]
+
+
+def test_after_a_refusal_the_workbook_changed_runs_the_prediction_too(on_fake):
+    """The coordinator's ruling on package B's review, point 5: a quiet press refuses on a Bore the user typed alone
+    (nothing is put, so the user's coincident mate on G1 is not judged); the workbook then takes the Bore and moves
+    G4, and the footer says the old refusal, that the workbook has changed, and what the next press would do: stop
+    over the mate on G1, which it now puts."""
+    from test_workbook_user_work import _edit
+    sw, record = on_fake
+    asm = record.gearbox.assembly
+    sw.user_component(asm, "Sprocket-1", r"C:\Parts\Sprocket.SLDPRT")
+    sw.user_mate(asm, "Coinc7", kind="coincident", a=(name2(record, "G1"), "plane2"), b=("Sprocket-1", "plane1"))
+    _edit(sw, next(p.path for p in record.current_parts() if "G2" in p.gears), "Bore Diameter", "14")
+    plan = update.classify(record, assessed(reducer()), exists=lambda p: True)
+    with pytest.raises(UserWorkRefused) as raised:
+        swbuild.update_gearbox(sw, **plan.update_kwargs(), exists=lambda p: True, mtime=lambda p: 5.0)
+    assert [p.kind for p in raised.value.problems] == [swbuild.PROBLEM_VALUE]
+    refused = update.refused_update(record, plan, raised.value, digest="d2", revision=(34, 1, 1))
+    footer, _ = _footer(refused, gears(reducer(), G2=dict(bore="14"), G4=dict(at="30")), digest="d3")
+    at = ui_text.read_time(refused.gearbox.user_work.read_at)
+    assert "The workbook has changed since, and the next press reads your work in SolidWorks again. As read at " \
+           f"{at}, Update SolidWorks would stop before changing anything: Coinc7 is a mate" in footer.text, footer.text
+    assert not footer.ok and footer.update_enabled

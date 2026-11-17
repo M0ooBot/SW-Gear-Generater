@@ -3267,6 +3267,19 @@ class Session:
     def _open_documents(self) -> List[Any]:
         return self._walk_documents()
 
+    def use_open_document(self, path: str) -> Optional[DocInfo]:
+        """W9a package B (the build job's read of the assembly a Build again… leaves behind): make a document already
+        open in this session the build document, for reads, without opening or activating it — no ``OpenDoc6``, no
+        ``ActivateDoc3``, so the user's window is not brought forward and nothing is rebuilt on activation. Found by
+        the walk :meth:`documents` makes (``GetFirstDocument`` / ``GetNext`` / ``GetPathName``); None when it is not
+        open. Raises the epoch, as an open does, since handles taken in another document no longer hold."""
+        for doc in self._open_documents():
+            if same_path(str(call(doc, "GetPathName") or ""), path):
+                self._build_doc = doc
+                self._raise_epoch()
+                return self._describe(doc)
+        return None
+
     def open_document(self, path: str) -> DocInfo:
         """Open a saved part or assembly by path, make it the active document and this session's build document.
 

@@ -569,6 +569,18 @@ def test_a_closed_part_is_opened_silently_then_activated_and_becomes_the_build_d
     assert session._doc() is part
 
 
+def test_an_assembly_already_open_is_read_without_being_opened_or_activated(com):
+    """W9a package B: the build job's read of the assembly a Build again… leaves behind makes it the document read
+    without OpenDoc6 or ActivateDoc3, so the user's window stays in front; not open, it is not opened."""
+    old = com.opened(W + "R.SLDASM", doc_type=2)
+    front = com.opened(W + "Other.SLDPRT")
+    session = _session(com)
+    info = session.use_open_document(W + "r.sldasm")
+    assert info == swcom.DocInfo("R.SLDASM", W + "R.SLDASM", 2) and session._doc() is old and com.active is front
+    assert com.log == []
+    assert session.use_open_document(W + "Gone.SLDASM") is None and com.log == []
+
+
 def test_a_part_already_open_behind_another_is_still_brought_forward(com):
     part = com.opened(W + "Gear_m1.5_N68.SLDPRT")
     com.opened(W + "Other.SLDPRT")

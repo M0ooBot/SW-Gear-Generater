@@ -4230,34 +4230,26 @@ def _mate_words(names: Sequence[str], other: bool = False) -> List[str]:
 
 
 def _feature_words(features) -> List[str]:
-    """*Keyway in Gear_m1.25_N17* for each ``swbuild.UserFeature`` / ``store.UserFeatureEntry``."""
-    return [f"{f.name} in {_stem(f.path)}" for f in features]
+    """*Keyway in Gear_m1.25_N17*, or *Keyway and Groove in Gear_m1.25_N17* for several in one part, for
+    ``swbuild.UserFeature`` / ``store.UserFeatureEntry`` items, parts in the order first met."""
+    by: Dict[str, List[str]] = {}
+    for f in features:
+        by.setdefault(_stem(f.path), []).append(f.name)
+    return [f"{_and(names)} in {stem}" for stem, names in by.items()]
 
 
-def user_work_line(ahead) -> Tuple[str, bool]:
-    """The footer's sentence before the press on what Update would do with the user's work on record
-    (``workbook.update.UserWorkAhead``; K4), and whether all is well; ``("", True)`` with nothing to say.
+def _clauses(clauses: Sequence[str]) -> str:
+    """Clauses of one sentence: *a and b*, or *a, b, and c* (long clauses, the last after a comma)."""
+    clauses = list(clauses)
+    if len(clauses) > 2:
+        return ", ".join(clauses[:-1]) + ", and " + clauses[-1]
+    return " and ".join(clauses)
 
-    A press that refused over the user's work is said as recorded, with its time: *Update SolidWorks refused at
-    14:02, before changing anything: … The next press reads your work in SolidWorks again, and refuses again unless
-    that has been dealt with.* (red), or, once the workbook has changed since, *… The workbook has changed since,
-    and the next press reads your work in SolidWorks again.* Otherwise the worker's own judgement on the inventory:
-    a refusal it foresees, red, *As read at 14:02, Update SolidWorks would stop before changing anything: …*; else
-    *As read at 14:02, Update SolidWorks rebuilds your Keyway in Gear_m1.25_N17 after the app's features, moves your
-    Sprocket-1 with Sun, which your Lock3 holds it to, and leaves your Chain-1 and 6 mates as they are.*, and
-    what of the user's was already in error then."""
-    if ahead is None:
-        return "", True
+
+def _prediction(ahead, at: str) -> Tuple[str, bool]:
+    """What the worker's judgement on the recorded inventory says the next press does with it (or, red, that it
+    would refuse), with the time read; ``("", True)`` with nothing to say."""
     entry = ahead.entry
-    at = read_time(entry.read_at)
-    if ahead.refused:
-        said = " ".join(_sentence(p.sentence) for p in ahead.refused if p.sentence)
-        text = f"Update SolidWorks refused at {at}, before changing anything: {said}"
-        if ahead.changed_since:
-            return text + " The workbook has changed since, and the next press reads your work in SolidWorks again.", \
-                True
-        return (text + " The next press reads your work in SolidWorks again, and refuses again unless that has been "
-                       "dealt with."), False
     if ahead.problems:
         said = " ".join(_sentence(p.sentence) for p in ahead.problems if p.sentence)
         return (f"As read at {at}, Update SolidWorks would stop before changing anything: {said} It reads your work "
@@ -4276,26 +4268,23 @@ def user_work_line(ahead) -> Tuple[str, bool]:
         body = _and(_bodies([gear], {}))
         clauses.append(f"moves your {_and(components)} with {body}, which your {_and(locks)} "
                        f"{'holds' if len(locks) == 1 else 'hold'} {'it' if len(components) == 1 else 'them'} to")
-    touched = {name: [n for w, n in m.touches if w == "app"] for m in entry.mates for name in [m.name]}
+    touched = {m.name: [n for w, n in m.touches if w == "app"] for m in entry.mates}
     for bodies, mates in ahead.unread_ties:
         # The train is named by the first of its bodies the user's mates are on, as the worker's tie sentence is.
         on = [b for b in bodies if any(b in touched.get(m, ()) for m in mates)] or list(bodies)
         said += list(mates)
         clauses.append(f"asks SolidWorks, when pressed, whether your {_and(mates)} "
-                       f"{'leaves' if len(mates) == 1 else 'leave'} {_and(_bodies(on[:1], {}))}'s train free to turn")
+                       f"{'leaves' if len(mates) == 1 else 'leave'} {_and(_bodies(on[:1], {}))}'s train free to turn "
+                       "(if not, it changes nothing and names the mates to suppress)")
     others = [m.name for m in entry.mates if m.name not in said]
-    mates_words = _mate_words(others, other=bool(said))
     rest = _yours([c.name for c in entry.components if c.name not in carried], 0,
-                  mates_words + _feature_words([f for f in entry.features
-                                                if not any(f.path == g.path and f.name == g.name for g in followed)]))
+                  _mate_words(others, other=bool(said))
+                  + _feature_words([f for f in entry.features
+                                    if not any(f.path == g.path and f.name == g.name for g in followed)]))
     if rest:
         one = len(rest) == 1 and len(others) < 2
         clauses.append(f"leaves your {_and(rest)} {'as it is' if one else 'as they are'}")
-    if len(clauses) > 2:                              # long clauses: the last one after a comma
-        joined = ", ".join(clauses[:-1]) + ", and " + clauses[-1]
-    else:
-        joined = " and ".join(clauses)
-    text = f"As read at {at}, Update SolidWorks {joined}." if clauses else ""
+    text = f"As read at {at}, Update SolidWorks {_clauses(clauses)}." if clauses else ""
     work_errors = ([m.name for m in entry.mates if m.code and m.code != -1]
                    + [c.name for c in entry.components if c.code and c.code != -1]
                    + _feature_words([f for f in entry.features if f.code and f.code != -1]))
@@ -4306,22 +4295,50 @@ def user_work_line(ahead) -> Tuple[str, bool]:
     return text, True
 
 
-def stays_behind_sentence(stays, again) -> str:
-    """The Build again? question's clause on what of the user's stays behind (K5 until W9d), from the record's
-    inventory with its time (``workbook.update.StaysBehind``): *As read at 14:02, your Sprocket-1, Chain-1 and 6
-    mates stay in RangeBox.SLDASM, and your Keyway stays in Gear_m1.25_N17, which Sun's new part replaces;
-    RangeBox_r2 has none of them.* A feature in a part the new revision reuses comes with it: *Your Groove in
-    Sleeve_m1.25_N17 comes with that part, which RangeBox_r2 reuses.* ``""`` with nothing on record."""
-    if stays is None:
-        return ""
+def user_work_line(ahead) -> Tuple[str, bool]:
+    """The footer's sentence before the press on what Update would do with the user's work in the assembly as it was
+    last read (``workbook.update.UserWorkAhead``; K4), and whether all is well; ``("", True)`` with nothing to say.
+
+    A press that refused over the user's work is said as recorded, with its time: *Update SolidWorks refused at
+    14:02, before changing anything: … The next press reads your work in SolidWorks again, and refuses again unless
+    that has been dealt with.* (red). Once the workbook has changed since, *… The workbook has changed since, and the
+    next press reads your work in SolidWorks again.*, then the prediction, in its own colour. The prediction is the
+    worker's own judgement on the inventory: a refusal it foresees, red, *As read at 14:02, Update SolidWorks would
+    stop before changing anything: …*; else *As read at 14:02, Update SolidWorks rebuilds your Keyway in
+    Gear_m1.25_N17 after the app's features, moves your Sprocket-1 with Sun, which your Lock3 holds it to, and leaves
+    your Chain-1 and 6 mates as they are.*, and what of the user's was already in error then."""
+    if ahead is None:
+        return "", True
+    at = read_time(ahead.entry.read_at)
+    if ahead.refused:
+        said = " ".join(_sentence(p.sentence) for p in ahead.refused if p.sentence)
+        text = f"Update SolidWorks refused at {at}, before changing anything: {said}"
+        if not ahead.changed_since:
+            return (text + " The next press reads your work in SolidWorks again, and refuses again unless that has "
+                           "been dealt with."), False
+        text += " The workbook has changed since, and the next press reads your work in SolidWorks again."
+        then, ok = _prediction(ahead, at)
+        return _joined(text, then), ok
+    return _prediction(ahead, at)
+
+
+def _stays_text(stays, again, lead: str = "As read at") -> str:
+    """The clause of what stays behind: from the record's inventory, with its time and *nor anything added since*;
+    with nothing on record, the same without a time. ``lead`` capitalised or not, as it follows."""
     name = getattr(again, "name", "") or "the new revision"
+    old = _file(stays.assembly) if stays.assembly else "the old assembly"
+    entry = stays.entry
+    if entry is None or not (stays.components or stays.mates or stays.left or stays.kept):
+        start = "Anything" if lead[:1].isupper() else "anything"
+        return (f"{start} you added to {old} in SolidWorks (components, mates, and features in parts this revision "
+                f"makes new) stays there, and {name} has none of it.")
     part_of = dict(getattr(again, "part_of", {}) or {})
     from . import store
     pieces = []
     items = _yours(stays.components, 0, _mate_words(stays.mates))
     if items:
         one = len(items) == 1 and len(stays.mates) < 2
-        pieces.append(f"your {_and(items)} {'stays' if one else 'stay'} in {_file(stays.assembly)}")
+        pieces.append(f"your {_and(items)} {'stays' if one else 'stay'} in {old}")
     by_part: Dict[str, Tuple[List[str], Tuple[str, ...]]] = {}
     for feature, path, gears in stays.left:
         by_part.setdefault(path, ([], gears))[0].append(feature)
@@ -4332,8 +4349,14 @@ def stays_behind_sentence(stays, again) -> str:
         pieces.append(f"your {_and(features)} {'stays' if len(features) == 1 else 'stay'} in {_stem(path)}, {why}")
     text = ""
     if pieces:
+        single = len(pieces) == 1 and ((items and len(items) == 1 and len(stays.mates) < 2)
+                                       or (not items and len(stays.left) == 1))
         joined = pieces[0] if len(pieces) == 1 else f"{', '.join(pieces[:-1])}, and {pieces[-1]}"
-        text = f"As read at {read_time(stays.entry.read_at)}, {joined}; {name} has none of them."
+        text = (f"{lead} {read_time(entry.read_at)}, {joined}; {name} has none of {'it' if single else 'them'}, nor "
+                "anything added since.")
+    else:
+        text = f"{'Anything' if lead[:1].isupper() else 'anything'} added to {old} since {read_time(entry.read_at)} " \
+               f"stays there, and {name} has none of it."
     kept: Dict[str, List[str]] = {}
     for feature, path in stays.kept:
         kept.setdefault(path, []).append(feature)
@@ -4344,33 +4367,47 @@ def stays_behind_sentence(stays, again) -> str:
     return text
 
 
-def stayed_behind_status(stays, result, again) -> str:
+def stays_behind_sentence(stays, again) -> str:
+    """The Build again? question's clause on what of the user's stays behind (K5 until W9d; the coordinator's ruling
+    on package B's review, point 4), from ``workbook.update.StaysBehind``: with an inventory on record, its items
+    with its time, *As read at 14:02, your Sprocket-1, Chain-1 and 6 mates stay in RangeBox.SLDASM, and your Keyway
+    stays in Gear_m1.25_N17, which Sun's new part replaces; RangeBox_r2 has none of them, nor anything added
+    since.*, and a feature in a part the new revision reuses comes with it, *Your Groove in Sleeve_m1.25_N17 comes
+    with that part, which RangeBox_r2 reuses.*; with none, without a time, *Anything you added to RangeBox.SLDASM in
+    SolidWorks (components, mates, and features in parts this revision makes new) stays there, and RangeBox_r2 has
+    none of it.* ``""`` with no assembly on record."""
+    return "" if stays is None else _stays_text(stays, again)
+
+
+def stayed_behind_status(stays, result, again, old_path: str = "") -> str:
     """After a Build again…: what of the user's stayed in the old assembly, as the build job read it first
-    (``GearboxResult.old_user_work``) — *Your Sprocket-1, Chain-1 and 6 mates stayed in RangeBox.SLDASM, as read when
-    this build began; RangeBox_r2 has none of them.* — or, when that assembly was not open in SolidWorks, what the
-    record held with its time; the features left in parts made new as the record has them."""
+    (``GearboxResult.old_user_work``) — *Your Sprocket-1, Chain-1 and 6 mates stay in RangeBox.SLDASM, as read when
+    this build began; RangeBox_r2 has none of them.* — with the features the record says stay in parts made new; or,
+    when that assembly was not open in SolidWorks, or the read raised, what the record held with its time (or, with
+    nothing on record, that anything added there stays there). ``old_path`` the old assembly (``OldAssembly.path``)."""
     from .swbuild import OLD_NOT_OPEN
     name = getattr(again, "name", "") or "the new revision"
-    old = _file(stays.assembly) if stays is not None else ""
+    path = (stays.assembly if stays is not None else "") or old_path
+    old = _file(path) if path else "the old assembly"
     work = getattr(result, "old_user_work", None)
     why = getattr(result, "old_read", "") or ""
-    features = ""
-    if stays is not None and stays.left:
-        features = stays_behind_sentence(type(stays)(stays.entry, stays.assembly, (), (), stays.left, ()), again)
+    if stays is None:
+        from .workbook.update import StaysBehind
+        stays = StaysBehind(None, path)
     if work is not None:
         items = _yours([c.name for c in work.components], 0, _mate_words([m.name for m in work.mates]))
+        features = ""
+        if stays.entry is not None and stays.left:
+            features = _stays_text(type(stays)(stays.entry, path, (), (), stays.left, ()), again)
         if not items:
             return features
-        old = old or "the old assembly"
         one = len(items) == 1 and len(work.mates) < 2
         lead = (f"Your {_and(items)} {'stays' if one else 'stay'} in {old}, as read when this build began; {name} "
                 f"has none of {'it' if one else 'them'}.")
         return _joined(lead, features)
-    if stays is None:
-        return f"{_sentence(why)}" if why and why != OLD_NOT_OPEN else ""
-    first = (f"{old} was not open in SolidWorks, so it was not read again" if why == OLD_NOT_OPEN
-             else f"{old} could not be read again ({why.rstrip('.')})")
-    return f"{first}: {stays_behind_sentence(stays, again)}"
+    if why == OLD_NOT_OPEN:
+        return f"{old} was not open in SolidWorks, so it was not read again; {_stays_text(stays, again, 'as read at')}"
+    return _joined(_sentence(why) if why else "", _stays_text(stays, again))
 
 
 def _user_after(update, result) -> List[str]:
@@ -4378,7 +4415,9 @@ def _user_after(update, result) -> List[str]:
     sentence: each of the user's components it put with its gear by route (c1) (*Your Sprocket-1 went with Sun in H,
     N and L, which your locks hold it to.*), each component found by its part under another name (K1), each user
     feature SolidWorks rebuilt into an error (*SolidWorks rebuilt your Keyway in Gear_m1.25_N17 after the app's
-    features, and it is in error.*), and each mate or component of the user's in error after it, with its mode."""
+    features, and it is in error.*), and each mate or component of the user's in error after it, with its mode —
+    those already in error before it changed anything told apart, so nothing is laid to the Update that it did not
+    do."""
     out: List[str] = []
     every = [str(c) for c in getattr(getattr(update, "motion", None), "configurations", ()) or ()]
     by: Dict[Tuple[str, str], List[str]] = {}
@@ -4399,13 +4438,22 @@ def _user_after(update, result) -> List[str]:
         one = len(features) == 1
         out.append(f"SolidWorks rebuilt your {_and(_feature_words(features))} after the app's features, and "
                    f"{'it is' if one else 'they are'} in error.")
+    work = getattr(result, "user_work", None)
+    before = set(work.in_error) if work is not None else set()
     named: Dict[str, List[str]] = {}
     for mode, name in getattr(result, "user_in_error", ()) or ():
         modes = named.setdefault(name, [])
         if mode and mode not in modes:
             modes.append(mode)
-    if named:
-        parts = [f"{name} in {_and(modes)}" if modes else name for name, modes in named.items()]
+    for already in (True, False):
+        parts = [f"{name} in {_and(modes)}" if modes else name for name, modes in named.items()
+                 if (name in before) == already]
+        if not parts:
+            continue
         one = len(parts) == 1
-        out.append(f"Your {_and(parts)} {'is' if one else 'are'} in error in SolidWorks after it.")
+        if already:
+            out.append(f"Your {_and(parts)} {'was' if one else 'were'} in error in SolidWorks before this Update "
+                       f"changed anything, and still {'is' if one else 'are'}.")
+        else:
+            out.append(f"Your {_and(parts)} {'is' if one else 'are'} in error in SolidWorks now.")
     return out

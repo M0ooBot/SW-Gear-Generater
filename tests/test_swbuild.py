@@ -727,6 +727,20 @@ class FakeSolidWorks:
         self.active = info
         return info
 
+    def use_open_document(self, path):
+        """``Session.use_open_document``: a document already open made the one read, nothing loaded, nothing
+        activated (``active`` unchanged); None when it is not open."""
+        self._log("use_open_document", path)
+        info = next((d for d in self.open_docs if _key(d.path) == _key(path)), None)
+        if info is None or _key(path) not in self.memory:
+            return None
+        self.equations_text, self.made = self.memory[_key(path)]
+        self.mates = self.memory_mates.setdefault(_key(path), copy.deepcopy(self.saved_mates.get(_key(path), [])))
+        self.axis_defs = self.memory_axes.setdefault(_key(path), dict(self.saved_axes.get(_key(path), {})))
+        self.current = path
+        self.epoch += 1
+        return info
+
     def has_unsaved_changes(self):
         """``GetSaveFlag`` on the document just opened: True when what it holds in memory is not what was saved,
         or a call has modified it since (``touched``)."""

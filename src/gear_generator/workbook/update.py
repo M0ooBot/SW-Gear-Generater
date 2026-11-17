@@ -1979,7 +1979,7 @@ def user_work_entry(work: swbuild.UserWork, *, assembly: str, digest: str = "", 
     return store.UserWorkEntry(
         read_at=work.read_at or store.now(), assembly=assembly, digest=digest,
         revision=[int(n) for n in revision],
-        components=[store.UserComponentEntry(c.name, c.path, bool(c.fixed), int(c.code), int(c.state))
+        components=[store.UserComponentEntry(c.name, _component_kind(c.path), bool(c.fixed), int(c.code), int(c.state))
                     for c in work.components],
         mates=[store.UserMateEntry(m.name, m.kind, int(m.type), [[w, n] for w, n in m.touches], list(m.on),
                                    int(m.code), bool(m.warning), bool(m.whole)) for m in work.mates],
@@ -1988,15 +1988,29 @@ def user_work_entry(work: swbuild.UserWork, *, assembly: str, digest: str = "", 
         carried=[store.UserCarriedEntry(c, g, list(locks)) for c, g, locks in work.carried],
         problems=[store.UserProblemEntry(p.kind, p.sentence, list(p.mates),
                                          [store.ValueEditEntry(v.document, v.name, v.live, v.wanted, v.recorded,
-                                                               v.mode, v.cell) for v in p.values])
+                                                               v.mode, v.cell, bool(v.unsaved)) for v in p.values])
                   for p in problems])
+
+
+_KIND_EXTENSION = {"part": ".SLDPRT", "assembly": ".SLDASM"}
+
+
+def _component_kind(path: str) -> str:
+    """A user component's kind for the record, by its file's extension: ``assembly``, ``part``, or ``""`` when
+    SolidWorks would not name the file."""
+    if not path:
+        return ""
+    return "assembly" if path.lower().endswith(".sldasm") else "part"
 
 
 def recorded_user_work(entry: store.UserWorkEntry) -> swbuild.UserWork:
     """The record's inventory back as the worker's :class:`swbuild.UserWork`, for its pure judgement."""
     return swbuild.UserWork(
         read_at=entry.read_at,
-        components=[swbuild.UserComponent(c.name, c.path, c.fixed, c.code, c.state) for c in entry.components],
+        # The record keeps no user file path, only its kind, so each component is given a path by its name with the
+        # extension the worker's judgement reads (its sub-assembly branch); one whose file was not named, none.
+        components=[swbuild.UserComponent(c.name, _KIND_EXTENSION.get(c.kind, "") and c.name + _KIND_EXTENSION[c.kind],
+                                          c.fixed, c.code, c.state) for c in entry.components],
         mates=[swbuild.UserMate(m.name, m.kind, m.type, tuple((w, n) for w, n in m.touches), tuple(m.on), m.code,
                                 m.warning, m.whole) for m in entry.mates],
         features=[swbuild.UserFeature(f.path, f.name, f.type_name, f.code, f.warning) for f in entry.features],
@@ -2110,19 +2124,23 @@ def user_work_ahead(plan: Optional[UpdatePlan], record: Optional[LinkRecord],
         return None
     work = recorded_user_work(entry)
     followed = tuple(f for f in work.features if any(store.same_path(f.path, p.path) for p in plan.changed_parts))
-    if entry.problems:
-        return UserWorkAhead(entry, refused=tuple(entry.problems), followed=followed,
-                             changed_since=bool(digest) and bool(entry.digest) and entry.digest != digest)
+    refused = tuple(entry.problems)
+    changed_since = bool(refused) and bool(digest) and bool(entry.digest) and entry.digest != digest
+    if refused and not changed_since:
+        return UserWorkAhead(entry, refused=refused, followed=followed)
+    # A press that went ahead, or a refused one the workbook has changed since (the coordinator's ruling on package
+    # B's review, point 5): the prediction, on the inventory as last read.
     m = plan.motion
     if m is None:                                    # W4's static path reads the user's features only
-        return UserWorkAhead(entry, followed=followed)
+        return UserWorkAhead(entry, refused=refused, changed_since=changed_since, followed=followed)
     mated, trains = _judged_trains(plan)
     judgement = swbuild.judge_user_work(
         work, tuple(m.configurations) or ("",), bodies_put(plan), file=os.path.basename(plan.assembly.replace("\\",
                                                                                                              "/")),
         trains=trains, mated=mated, read_tie=None, branches=swbuild.user_carry_branches(m, plan.placements),
         revision=tuple(entry.revision))
-    return UserWorkAhead(entry, carried=tuple((g, tuple(held)) for g, held in judgement.carried.items()),
+    return UserWorkAhead(entry, refused=refused, changed_since=changed_since,
+                         carried=tuple((g, tuple(held)) for g, held in judgement.carried.items()),
                          problems=tuple(judgement.problems), unread_ties=tuple(judgement.unread_ties),
                          followed=followed)
 
@@ -2133,9 +2151,10 @@ class StaysBehind:
     its time (``entry.read_at``): ``assembly`` the old assembly; ``components`` and ``mates`` (names) in it;
     ``left`` (feature, old part path, the gears whose new part replaces it) for each user feature in a part the new
     revision makes new; ``kept`` (feature, part path) for each in a part it reuses, which comes along with the part.
-    None from :func:`stays_behind` when nothing is on record."""
+    ``entry`` None when the record holds no inventory, or one with nothing in it: then only that anything added
+    there stays there is said (the coordinator's ruling on package B's review, point 4)."""
 
-    entry: store.UserWorkEntry
+    entry: Optional[store.UserWorkEntry]
     assembly: str
     components: Tuple[str, ...] = ()
     mates: Tuple[str, ...] = ()
@@ -2145,10 +2164,14 @@ class StaysBehind:
 
 def stays_behind(record: Optional[LinkRecord], again: Any) -> Optional[StaysBehind]:
     """What :class:`StaysBehind` says for a Build again… of ``again`` (``gearbox.GearboxPlan``) from ``record``; None
-    when the record holds no inventory of its assembly, or one with nothing of the user's in it."""
-    entry = _on_record(record)
-    if entry is None or not entry or again is None:
+    when the record has no assembly; with no inventory of it on record, or one with nothing of the user's in it, a
+    :class:`StaysBehind` with no ``entry``."""
+    box = getattr(record, "gearbox", None)
+    if box is None or not box.assembly or again is None:
         return None
+    entry = _on_record(record)
+    if entry is None or not entry:
+        return StaysBehind(None, box.assembly)
     reused = [r.path for r in getattr(again, "reuse", ()) or ()]
     gears_of = {p.path: p.gears for p in record.parts}
     left, kept = [], []

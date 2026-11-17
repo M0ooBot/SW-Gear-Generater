@@ -102,6 +102,7 @@ class SolidWorks(Protocol):
     def documents(self) -> List[DocInfo]: ...
     def feature_names(self) -> List[str]: ...
     def open_document(self, path: str) -> DocInfo: ...
+    def use_open_document(self, path: str) -> Optional[DocInfo]: ...
     def has_unsaved_changes(self) -> bool: ...
     def find_component(self, handle: str, name: str, *, lightweight_ok: bool = False) -> str: ...
     def component_frame(self, handle: str) -> Tuple[Tuple[float, ...], Tuple[float, float, float]]: ...
@@ -5177,7 +5178,9 @@ def judge_user_work(work: UserWork, modes: Sequence[str], put: Collection[str], 
     - Any other kind of user mate with an entity on a put body refuses, a gear mate above all; so does a user gear
       mate (or a cam, rack-and-pinion, screw or linear-coupler mate) on a component route (c1) would put.
     - Each train with a put body and the user's mates on it is read for a tie; a tie refuses, naming every user mate
-      on that train. A train whose user mates' flags differ by mode is also read in each other mode when shown."""
+      on that train. A train whose user mates' flags differ by mode is also read in each other mode when shown.
+    - A component route (c1) would put that was suppressed or loaded lightweight when read refuses
+      (:data:`PROBLEM_COMPONENT`), last."""
     judgement = UserJudgement()
     problems = judgement.problems
     every = set(modes)
@@ -5374,6 +5377,19 @@ def judge_user_work(work: UserWork, modes: Sequence[str], put: Collection[str], 
         if gear in put and gear not in told:          # a gear on no train read here (a fixed gear re-placed)
             problems.append(UserProblem(PROBLEM_TIE, _ground_sentence(gear, locks, grounds, named),
                                         tuple(m.name for m in locks)))
+    # A component route (c1) would put that is suppressed or loaded lightweight in the configuration read refuses
+    # (W9a package B review point 3: judged here, so the worker and the footer's prediction cannot differ).
+    states = {c.name: c.state for c in work.components}
+    for gear, held_here in judgement.carried.items():
+        for user, _locks in held_here:
+            state = states.get(user, UNREAD)
+            if state == COMPONENT_SUPPRESSED or state in COMPONENT_LIGHTWEIGHT:
+                how = "suppressed" if state == COMPONENT_SUPPRESSED else "loaded lightweight"
+                fix = "unsuppress it" if state == COMPONENT_SUPPRESSED else "set it to Resolved"
+                problems.append(UserProblem(PROBLEM_COMPONENT, (
+                    f"Update SolidWorks would put your {user} with {_body_name(gear)}, which your mates hold it to, "
+                    f"and {user} is {how} in {file}, so nothing is changed; in SolidWorks, {fix} and press Update "
+                    "SolidWorks again.")))
     return judgement
 
 
@@ -5478,15 +5494,14 @@ class OldAssembly:
 def read_old_assembly(sw: SolidWorks, old: OldAssembly) -> Optional[UserWork]:
     """The user's work in the assembly a Build again… leaves behind, read by package A's own inventory read
     (:func:`_read_user_work`), or None when that assembly is not open in this session (it is never opened from its
-    file here). Read as it stands in the session: it is made the active document (``open_document`` on a document
-    already open loads nothing), its mates and components read, each user mate's flag read per mode without showing
-    one (``mate_suppression``). Nothing is written, shown in another mode or saved; the user's features are not read
-    here (the record's inventory holds them)."""
-    if not any(d.path and same_path(d.path, old.path) for d in sw.documents()):
-        return None
+    file here). Read as it stands in the session, never activated: ``use_open_document`` makes it the document read
+    without ``OpenDoc6`` or ``ActivateDoc3``; its mates and components are read, each user mate's flag per mode
+    without showing one (``mate_suppression``). Nothing is written, shown in another mode or saved; the user's
+    features are not read here (the record's inventory holds them)."""
     sw.begin_build()
     try:
-        sw.open_document(old.path)
+        if sw.use_open_document(old.path) is None:
+            return None
         result = GearboxUpdate()
         result.mates = list(sw.mate_states(others=[]))
         recorded = set(old.mates)
@@ -5651,18 +5666,7 @@ def _user_check(sw: SolidWorks, assembly: str, motion: MotionUpdate, placements:
     judgement = judge_user_work(work, modes, may_put, file=file, trains=trains, mated=mated,
                                 read_tie=lambda train: _not_free(sw, [handle[g] for g in train]),
                                 branches=user_carry_branches(motion, placements), revision=sw.revision)
-    states = {c.name: c.state for c in work.components}
-    problems = list(judgement.problems)
-    for gear, held_here in judgement.carried.items():
-        for user, _locks in held_here:
-            state = states.get(user, UNREAD)
-            if state == COMPONENT_SUPPRESSED or state in COMPONENT_LIGHTWEIGHT:
-                how = "suppressed" if state == COMPONENT_SUPPRESSED else "loaded lightweight"
-                fix = "unsuppress it" if state == COMPONENT_SUPPRESSED else "set it to Resolved"
-                problems.append(UserProblem(PROBLEM_COMPONENT, (
-                    f"Update SolidWorks would put your {user} with {_body_name(gear)}, which your mates hold it to, "
-                    f"and {user} is {how} in {file}, so nothing is changed; in SolidWorks, {fix} and press Update "
-                    "SolidWorks again.")))
+    problems = list(judgement.problems)          # a carried component suppressed or lightweight among them
     work.carried = [(user, gear, locks) for gear, held_here in judgement.carried.items() for user, locks in held_here]
     values = [UserProblem(PROBLEM_VALUE, _value_sentence(e), values=(e,)) for e in edits]
     if values or problems:
