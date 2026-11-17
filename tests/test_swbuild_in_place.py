@@ -993,3 +993,19 @@ def test_a_lock_on_in_every_mode_left_is_firm_even_with_a_removed_mode_still_in_
                                             mated=["Sun"], branches={"Sun": swbuild.BRANCH_NO_CARRIER_MODES},
                                             revision=Y26)
         assert judgement.problems == [] and [c for c, _ in judgement.carried["Sun"]] == ["Sprocket-1"]
+
+
+def test_a_leftover_configuration_no_mode_names_is_taken_away_by_the_mode_removal_route(tc_built, measured):
+    """B's third ask (§11, the review's round): a configuration a stopped press added (InPlace.left) that the workbook
+    no longer wants comes as a mode removed though it is not among the record's modes; it is deleted behind
+    UPDATE_REMOVES_A_MODE as any mode removed, the user's flags there said."""
+    fake, built = tc_built
+    _housing(fake)
+    fake.add_configuration("R")
+    fake.rebuild(kind=swcom.ASSEMBLY_TRAIN)
+    fake.show_configuration("2H")
+    fake.calls.clear()
+    result = _tc_in_place(fake, built, InPlace(modes_removed=("R",), left=("R",)))
+    assert result.ok, (result.failures, result.skipped)
+    assert result.modes_removed == ["R"] and "R" not in fake.configs and result.extra_configurations == []
+    assert result.flags_lost == []

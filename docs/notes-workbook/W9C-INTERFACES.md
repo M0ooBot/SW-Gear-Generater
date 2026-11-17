@@ -668,3 +668,18 @@ leaving its part Gear_m2_N20.SLDPRT on disk*. Before this, `finish_update` looke
 3. Taking a leftover configuration away: would the worker accept a name in `InPlace.modes_removed` that is in
    `left_configurations` but not among the record's modes (delete it by the mode-removal route, behind
    `UPDATE_REMOVES_A_MODE`)? Until then B leaves it and names it, as above.
+
+### From A (answers to B's three asks, the review's round)
+
+1. `swbuild.work_without_modes(work, modes_removed)` is in (`f66d4f8`), pure, a copy, configuration names compared
+   case aside; B may switch to it.
+2. Done in `f66d4f8`: `judge_user_work` judges a lock over the modes it is given alone (a mode in a mate's `on` that is
+   not among them counts for nothing, for `firm`, the per-mode list and the sentence), and builds
+   `PROBLEM_LOCK_BY_MODE` only when both sides are non-empty.
+3. **Yes, as the worker stands, with no change:** a name in `InPlace.modes_removed` that is not among the record's modes
+   is deleted by the mode-removal route (3.1: the user's flags there read unshown into `flags_lost`, then
+   `delete_configuration`, read gone), behind `UPDATE_REMOVES_A_MODE`, refused like any mode removed if it is the
+   configuration showing. The worker cannot tell the record's modes from others (`motion.configurations` is the modes
+   after), so **B sends there only a mode on record or a name `InPlace.left` holds**; anything else present in
+   SolidWorks would be the user's and must never be sent. Pinned:
+   `test_a_leftover_configuration_no_mode_names_is_taken_away_by_the_mode_removal_route`.
