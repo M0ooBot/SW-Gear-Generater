@@ -541,3 +541,51 @@ def test_a_hub_under_a_sleeve_with_no_slides_is_judged_at_its_one_place():
     far = with_gear(still, "Hub", at="-105.5")
     assert ("Gears row 8: Hub is under no band of RangeSlv: in every mode a band of the sleeve covers its hub whole, "
             "or the hub the band; move Hub, or the bands." in errors(assessed(far)))
+
+
+def _unpicked_position():
+    """The closing review's C1: on Out, S1 with its hub H1 under it in A and N, and S2 with its own hub H2. S1's
+    Slides have a third place X (33…43, over H2) that no mode picks."""
+    shafts = (model.Shaft("Out", "frame", "0", "0", "0", "Z+", "output", row=2),)
+    gears = (model.Gear("S1", "Out", "0", "sleeve", "", "17", "1.25", "", "10", "", slides="A=-7.5, N=0, X=+38", row=2),
+             model.Gear("H1", "Out", "-3.75", "hub", "", "17", "1.25", "", "2.5", "", part_name="H1", row=3),
+             model.Gear("S2", "Out", "40", "sleeve", "", "17", "1.25", "", "10", "", slides="B=0", part_name="S2",
+                        row=4),
+             model.Gear("H2", "Out", "40", "hub", "", "17", "1.25", "", "6", "", part_name="H2", row=5))
+    modes_ = (model.Mode("M1", (("S1", "A"), ("S2", "B")), row=2), model.Mode("M2", (("S1", "N"), ("S2", "B")), row=3))
+    return model.GearboxSpec(box=model.Box(name="Unpicked", pressure_angle="20", efficiency="98"), shafts=shafts,
+                             gears=gears, modes=modes_, sliders=("S1", "S2"))
+
+
+def test_a_position_no_mode_picks_keys_no_hub():
+    """C1: H2 is S2's, which covers it in every mode; S1's unpicked X over it makes S1 ride nothing. The read is legal,
+    and neither sleeve is told it has no hub."""
+    spec = _unpicked_position()
+    a = legal(spec)
+    assert modes.hub_sleeve(spec, spec.gear("H2")).id == "S2" and modes.hub_sleeve(spec, spec.gear("H1")).id == "S1"
+    assert not any("nothing keys" in d.message for d in a.diagnostics)
+
+
+def test_a_sleeve_covering_another_sleeves_hub_in_a_picked_mode_is_still_the_second_sleeve_error():
+    """The real case after C1: S1's M2 place is X, over H2, which S2 covers in every mode: H2 stays S2's, and S1,
+    riding it in a mode, is told to have its own."""
+    spec = _unpicked_position()
+    spec = replace(spec, modes=(spec.modes[0], replace(spec.modes[1], positions=(("S1", "X"), ("S2", "B")))))
+    assert modes.hub_sleeve(spec, spec.gear("H2")).id == "S2"
+    assert ("Gears row 2: S1 rides H2, which keys S2: a hub keys one sleeve, so give S1 a hub row of its own."
+            in errors(assessed(spec)))
+
+
+def test_a_hub_no_sleeve_covers_in_every_mode_keeps_its_error_and_another_sleeve_its_warning():
+    """H1 moved where S1 covers it in A only: H1 still goes to S1 (it rides it in a mode) and its rule errs in N, as
+    before C1; S2, with no hub of its own once H2 is taken out, is warned that nothing keys it."""
+    spec = without_gear(with_gear(_unpicked_position(), "H1", at="-11.25"), "H2")      # H1 −12.5…−10: A only
+    a = assessed(spec)
+    assert modes.hub_sleeve(spec, spec.gear("H1")).id == "S1"
+    assert ("Modes row 3: in M2 S1 and H1 do not cover one another: in every mode a sleeve covers its hub whole, or "
+            "the hub the sleeve; move H1." in errors(a))
+    assert any(d.message.startswith("Gears row 4: nothing keys S2 to Out:") for d in a.diagnostics)
+
+
+def without_gear(spec, gid):
+    return replace(spec, gears=tuple(g for g in spec.gears if g.id != gid))

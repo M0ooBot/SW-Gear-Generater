@@ -180,34 +180,71 @@ def _between(a: Tuple[float, float], b: Tuple[float, float]) -> float:
     return min(a[1], b[1]) - max(a[0], b[0])
 
 
-def _rides(sleeve: Gear, hub: Gear) -> bool:
-    """Whether a band of ``sleeve`` (its whole face, unbanded) overlaps ``hub`` at any of its positions, both on one
-    shaft, measured along the shaft from its point (the start band at the low end of the face, whichever way the
-    shaft's Axis runs)."""
+def _picked_offsets(spec: GearboxSpec, sleeve: Gear) -> List[float]:
+    """The offsets the modes put ``sleeve`` at (the closing review's C1: a Slides position no mode picks keys nothing):
+    each mode's pick (the implicit mode's 0 with Slides and no Modes rows), its At with no Slides; every Slides
+    position only when no mode could be worked out (the read's own errors say why)."""
+    if not sleeve.slides.strip():
+        return [0.0]
+    picks, _ = mode_picks(spec)
+    picked = [p.positions[sleeve.id][1] for p in picks if sleeve.id in p.positions]
+    if picked:
+        return picked
     try:
-        h_at, h_face = float(hub.at or 0), float(hub.face_width)
-        offsets = list(sleeve.positions().values()) or [0.0]
+        return list(sleeve.positions().values())
+    except ValueError:
+        return []
+
+
+def _band_places(sleeve: Gear, offsets: List[float]) -> List[List[Tuple[float, float]]]:
+    """Per offset, ``sleeve``'s bands (its whole face, unbanded) measured along its shaft from the shaft's point (the
+    start band at the low end of the face, whichever way the shaft's Axis runs)."""
+    try:
         at, face = float(sleeve.at or 0), float(sleeve.face_width)
     except ValueError:
-        return False
+        return []
     held = bands(sleeve)
-    under = (h_at - h_face / 2.0, h_at + h_face / 2.0)
+    out = []
     for offset in offsets:
         lo, hi = at + offset - face / 2.0, at + offset + face / 2.0
-        spans = [(lo, hi)] if held is None else [(lo, lo + held[0]), (hi - held[1], hi)]
-        if any(_between(span, under) > COVER_TOLERANCE for span in spans):
-            return True
-    return False
+        out.append([(lo, hi)] if held is None else [(lo, lo + held[0]), (hi - held[1], hi)])
+    return out
+
+
+def _hub_span(hub: Gear) -> Optional[Tuple[float, float]]:
+    try:
+        at, face = float(hub.at or 0), float(hub.face_width)
+    except ValueError:
+        return None
+    return at - face / 2.0, at + face / 2.0
+
+
+def _rides(spec: GearboxSpec, sleeve: Gear, hub: Gear) -> bool:
+    """Whether a band of ``sleeve`` overlaps ``hub`` in a mode (at an offset a mode picks), both on one shaft."""
+    under = _hub_span(hub)
+    return under is not None and any(_between(span, under) > COVER_TOLERANCE
+                                     for spans in _band_places(sleeve, _picked_offsets(spec, sleeve)) for span in spans)
+
+
+def _keys_in_every_mode(spec: GearboxSpec, sleeve: Gear, hub: Gear) -> bool:
+    """Whether in every mode a band of ``sleeve`` covers ``hub`` whole, or the hub the band (the hub rule's own test,
+    :func:`hub_errors`)."""
+    under = _hub_span(hub)
+    places = _band_places(sleeve, _picked_offsets(spec, sleeve))
+    return under is not None and bool(places) and all(
+        any(_covers(span, under) or _covers(under, span) for span in spans) for spans in places)
 
 
 def hub_sleeve(spec: GearboxSpec, hub: Gear) -> Optional[Gear]:
-    """The sleeve a hub keys (W9B-INTERFACES §3; one hub, one sleeve, the coordinator's ruling): the first sleeve on
-    its shaft, in Gears-sheet order, a band of which rides the hub at one of its positions; the first sleeve on that
-    shaft when none does; None with no sleeve there."""
+    """The sleeve a hub keys (W9B-INTERFACES §3, §7; one hub, one sleeve, the coordinator's ruling): the sleeve on its
+    shaft that covers it in every mode (the hub rule's own test), the first in Gears-sheet order when more than one
+    does; with none, the first a band of which rides the hub in a mode; else the first sleeve on that shaft; None with
+    no sleeve there. A Slides position no mode picks makes no sleeve ride a hub (the closing review's C1)."""
     on = [g for g in spec.gears if g.kind_word() == SLEEVE and g.shaft == hub.shaft and g.id]
     if not on:
         return None
-    return next((s for s in on if _rides(s, hub)), on[0])
+    return (next((s for s in on if _keys_in_every_mode(spec, s, hub)), None)
+            or next((s for s in on if _rides(spec, s, hub)), on[0]))
 
 
 def shared_hub(spec: GearboxSpec, sleeve: Gear) -> Optional[Gear]:
@@ -217,7 +254,7 @@ def shared_hub(spec: GearboxSpec, sleeve: Gear) -> Optional[Gear]:
         if hub.kind_word() != HUB or hub.shaft != sleeve.shaft or hub.slides.strip():
             continue
         keyed = hub_sleeve(spec, hub)
-        if keyed is not None and keyed.id != sleeve.id and _rides(sleeve, hub):
+        if keyed is not None and keyed.id != sleeve.id and _rides(spec, sleeve, hub):
             return hub
     return None
 
