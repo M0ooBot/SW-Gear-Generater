@@ -1001,3 +1001,36 @@ change lists above keep what was planned before S0 ran.
   rests on the per-mode reading of case C2, which is still owed on SolidWorks 2024: a mode whose user flags differ is
   read when shown on every version.
 - The review's S1 to S6 touch S0's script, the note, the handoff, PLAN-WORKBOOK and `findings.py`, not this plan.
+
+## Changes after W9a's demonstration on SolidWorks 2026 and its review
+
+2026-11-16. Against the demonstration's run on SolidWorks 2026 34.1.1 (`W9A-DEMONSTRATION.md`; logs
+`probe/results/w9a-demo-sw2026-20261116-*.log`) and its review (`W9A-RUN-2026-REVIEW.md`, `6700505`). The text above
+this section keeps what was planned before the run.
+
+- **M3 is answered on 2026, and the answer changes the worker** (the coordinating session's ruling, on the review's
+  conditions). With only a user's mate in error an assembly's rebuild returns True and the Update goes ahead. With a
+  feature in error in a part, the user's own part or the user's feature in an app part, the rebuild returns False; no
+  window opens in either case. So an Update whose rebuild returns False is not a failure when something of the
+  user's is found in error and nothing of the app's own is (every app mate and every app-made feature read, an
+  unread one counting as an error, an app component's error code that comes only from a user's feature in its part
+  not counting): it goes ahead and names the user's items, those in error before told apart from those newly in
+  error, which is what K3 asks. Gated per version by `findings.py`; where the findings are None (2024 until its
+  confirming run) the Update stops as before. A press that would put, by route (c1), a user's component whose own
+  part has a feature in error refuses before any write: that put is not measured.
+- **M1 is answered in part, and the rest moves to S5 in W9c** (the coordinating session's ruling). Read on 2026 by the
+  app's own reads: a user's coincident, distance, angle and lock mates, a gear mate between two of the user's
+  components, and a mate suppressed in the active mode. Not read: concentric, width, limit and path mates, a user's
+  gear mate on an app gear, and a leaf inside a user's sub-assembly (the app has no verified route to make the first
+  four, and inserting a sub-assembly is P2's dialog-risk probe). S5 reads every standard mate kind's definition and
+  takes these with it. Until then nothing rests on them: a user mate the app cannot read wholly refuses when anything
+  is put, every mate of another kind on a gear Update would put refuses, and a user's sub-assembly locked to a put
+  gear refuses as not measured. W9a's "M1–M3 answered" is read with this.
+- **Route (c1) on a train with no carrier is measured on 2026** (the 12 : 1, no modes, gear mates left on during the
+  put: locks to the driving and the driven gear and a chain, two presses): `USER_MATE_PUT_NO_CARRIER_ON_2026` True.
+  The held-gear, fixed-gear and sub-assembly branches stay not measured and refuse.
+- **Found on SolidWorks, for W9d:** with the SOLIDWORKS CAM add-in loaded, saving an assembly that has a lightweight
+  component raises a modal Yes/No box and the save does not return. W9a's own paths make no such save. W9d, which
+  will save an assembly holding the user's components, must resolve or refuse lightweight components before it
+  saves.
+
