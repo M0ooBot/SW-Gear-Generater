@@ -156,6 +156,9 @@ RB_LOCKED = {"Sprocket-1": "Sun", "Sprocket-3": "Sun", "Sprocket-2": "RangeSlv"}
 RB_GAP = 90.0
 
 RESULT = {"sections": {}, "stops": [], "proposal": {}}
+# What ``main`` calls this run in its log and its JSON's name; W9b's demonstration (``w9b_demonstration.py``) runs
+# this ``main`` with its own sections and sets these to its own.
+RUN_TITLE, JSON_STEM = "W9a demonstration", "w9a-demo"
 CTX = {"worker": None, "excel": None, "parts": ""}
 
 
@@ -3071,7 +3074,7 @@ SECTIONS = {"m3": section_m3, "setup": section_setup, "m1": section_m1, "go": se
 def main():
     os.makedirs(OUT, exist_ok=True)
     started = time.strftime("%Y%m%d-%H%M%S")
-    json_path = os.path.join(os.path.dirname(os.path.abspath(W.LOG_PATH)), f"w9a-demo-{started}.json")
+    json_path = os.path.join(os.path.dirname(os.path.abspath(W.LOG_PATH)), f"{JSON_STEM}-{started}.json")
 
     def write_json():
         RESULT["fails"], RESULT["notes"] = list(W.FAILS), list(W.NOTES)
@@ -3079,7 +3082,7 @@ def main():
             json.dump(RESULT, handle, indent=1, default=str)
 
     say(f"awake   {S0.keep_awake(True)}")
-    say(f"run     {time.strftime('%Y-%m-%d %H:%M:%S')}; W9a demonstration from {W.SRC}{W.snapshot()}; sections "
+    say(f"run     {time.strftime('%Y-%m-%d %H:%M:%S')}; {RUN_TITLE} from {W.SRC}{W.snapshot()}; sections "
         f"{CHOSEN}; masters {MASTER}; redo {REDO}")
     recent = store.recent_path()
     if not (APPDATA_HERE and W.under(recent, OUT)):
