@@ -5104,10 +5104,13 @@ def _subjects(named, n: int = 5) -> List[str]:
     return [bare_files(str(x)) for x in named.subjects] + [""] * n
 
 
-def carry_named_clause(named, *, name: str = "the new revision", old: str = "the old assembly") -> str:
+def carry_named_clause(named, *, name: str = "the new revision", old: str = "the old assembly",
+                       resolved: Sequence[str] = ()) -> str:
     """One item not carried, in §9.3's words, from its ``why`` and §2.3's subjects (``swbuild.CarryNamed``):
     *Concentric5 was on Sun's bore, and Sun's part is new because its Flank changed*. ``name`` the new revision,
-    ``old`` the old assembly's file name. No full stop: the caller ends it (:func:`_with_verdict`)."""
+    ``old`` the old assembly's file name; ``resolved`` the components the carry left resolved in it
+    (``CarryResult.resolved_in_old``), whose lightweight state is then said in the past. No full stop: the caller ends
+    it (:func:`_with_verdict`)."""
     from . import swbuild as sb
     item, why = named.item, named.why
     s = _subjects(named)
@@ -5148,9 +5151,15 @@ def carry_named_clause(named, *, name: str = "the new revision", old: str = "the
         if cause == sb.CAUSE_SUPPRESSED:
             return f"{item} is on {_suppressed_where(s[2], s[3], old)}, so it could not be read and is not made again"
         if cause == sb.CAUSE_BESIDE_LIGHTWEIGHT:
-            return (f"{item} is on a plane of {old} itself, which Gear Generator does not read while {s[2]} is "
-                    "lightweight in it, so it is not made again")
-        return f"SolidWorks would not describe {item} wholly" + (f" ({s[0]})" if s[0] else "")
+            return f"{item} is on a plane of {old} itself, {_beside_light(s[2], resolved)}, so it is not made again"
+        if cause == sb.CAUSE_TYPE_NOT_TAKEN:
+            # The re-check of b67cdc5, item 2: SolidWorks answered; it is Gear Generator that does not take the type.
+            # The type's number stays in the record, unshown: the contract names only the types the app takes.
+            return f"{item} is on a kind of entity Gear Generator does not make mates on again"
+        if s[0] == KIND_UNANSWERED:
+            return f"SolidWorks would not say what kind of entity {item} is on"
+        # SolidWorks the subject once, and only in the worker's clause where it is the one not answering.
+        return f"{item} could not be read wholly" + (f" ({s[0]})" if s[0] else "")
     if why == sb.WHY_LIGHTWEIGHT:
         return f"{item} is on {s[0]}, which was lightweight in {old}, so what it joins could not be read"
     if why == sb.WHY_NO_FILE:
@@ -5207,7 +5216,8 @@ def _with_verdict(clause: str, what: str) -> str:
     return _sentence(clause[:1].upper() + clause[1:])
 
 
-def _named_sentences(named, *, name: str, old: str, refs: Optional[List[str]] = None) -> List[str]:
+def _named_sentences(named, *, name: str, old: str, refs: Optional[List[str]] = None,
+                     resolved: Sequence[str] = ()) -> List[str]:
     """Every item not carried as sentences, one per kind of reason: those a finding not yet set holds back grouped by
     what and finding (*Gear Generator has not yet been shown to make concentric mates again in a new revision on
     SolidWorks 2024 (findings.CARRY_REMAKE_KINDS_ON_2024), so Concentric5 and Concentric8 are not made again.*), the
@@ -5228,7 +5238,7 @@ def _named_sentences(named, *, name: str, old: str, refs: Optional[List[str]] = 
                                                  sb.CAUSE_BESIDE_LIGHTWEIGHT):
             causes.setdefault((s[1], s[2], s[3]), []).append(n.item)
         elif n.why != sb.WHY_OLD_UNREAD:                     # said once, by the sentence for nothing read
-            out.append(_with_verdict(carry_named_clause(n, name=name, old=old), n.what))
+            out.append(_with_verdict(carry_named_clause(n, name=name, old=old, resolved=resolved), n.what))
     lead: List[str] = []
     for (what, finding, version, owner), items in groups.items():
         names = [n.item for n in items]
@@ -5252,10 +5262,21 @@ def _named_sentences(named, *, name: str, old: str, refs: Optional[List[str]] = 
             lead.append(f"{_and(mates)} {'is' if one else 'are'} on {_suppressed_where(component, mode, old)}, so "
                         f"{'it' if one else 'they'} could not be read and {'is' if one else 'are'} not made again.")
         else:
-            lead.append(f"{_and(mates)} {'is' if one else 'are'} on a plane of {old} itself, which Gear Generator "
-                        f"does not read while {component} is lightweight in it, so {'it is' if one else 'they are'} "
-                        "not made again.")
+            lead.append(f"{_and(mates)} {'is' if one else 'are'} on a plane of {old} itself, "
+                        f"{_beside_light(component, resolved)}, so {'it is' if one else 'they are'} not made "
+                        "again.")
     return lead + out
+
+
+KIND_UNANSWERED = "SolidWorks would not say what kind of entity it is"     # the worker's clause, no cause
+
+
+def _beside_light(component: str, resolved: Sequence[str] = ()) -> str:
+    """*which Gear Generator does not read while Sprocket-1 is lightweight in it*; in the past where the carry left it
+    resolved there (the re-check of b67cdc5, item 1: beside D10's *… is resolved there now*)."""
+    if component in set(resolved or ()):
+        return f"which Gear Generator did not read while {component} was lightweight in it"
+    return f"which Gear Generator does not read while {component} is lightweight in it"
 
 
 def _suppressed_where(component: str, mode: str, old: str) -> str:
@@ -5775,7 +5796,7 @@ def carried_status(result, again, old_path: str = "", anchors: Optional[Mapping[
         else:
             clauses.append(f"{made} of your {_plural(total, 'mate')}, each on in the modes it was on in")
     texts.append(f"Carried into {name}, unsaved: {', and '.join(clauses)}.")
-    texts += _named_sentences(done.named, name=name, old=old)
+    texts += _named_sentences(done.named, name=name, old=old, resolved=getattr(done, "resolved_in_old", ()) or ())
     texts.append(_features_left_sentence(stays, name, old, why_new, past=True))
     for fallback in done.fixed:
         texts.append(_fallback_sentence(fallback, name, old, work.active, getattr(again, "modes_plan", None)))
@@ -5894,7 +5915,7 @@ def _nothing_carried(done, result, again, path: str, stays, name: str, old: str,
     else:
         texts.append(behind)
     others = [n for n in done.named if n.why not in (sb.WHY_UNMEASURED, sb.WHY_NOT_CARRIED, sb.WHY_OLD_UNREAD)]
-    texts += _named_sentences(others, name=name, old=old)
+    texts += _named_sentences(others, name=name, old=old, resolved=getattr(done, "resolved_in_old", ()) or ())
     return texts
 
 

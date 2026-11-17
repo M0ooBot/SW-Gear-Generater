@@ -266,7 +266,7 @@ The seven printed states below are unchanged by this round.
   SprocketLight-1 is lightweight in it, so it is not made again.* Mates of one cause, component and mode group into
   one sentence (*Lock1 and UserAxis9 are on Sprocket-1, which is suppressed in 2H, …, so they could not be read and are
   not made again.*), as a component not carried groups its mates. No cause: *SolidWorks would not describe … wholly
-  (…)* stands. The worker's clause is not shown where the cause is worded.
+  (…)* stood (reworded in the next round, below). The worker's clause is not shown where the cause is worded.
 - **The question.** `recorded_old_work` gives a recorded entity the worker's cause where the inventory knows it: on a
   component of the user's suppressed as read (state 0) with its kind unread or empty, `CAUSE_SUPPRESSED` with mode
   `""` (the inventory does not keep the mode showing); the assembly's own entity while a component read lightweight,
@@ -283,6 +283,30 @@ The seven printed states below are unchanged by this round.
   suppressed in 2H with Lock1 and UserAxis9), two on the question's.
 
 The seven printed states below are unchanged by B3 (none has a suppressed component or a plane of the assembly).
+
+## The re-check of `b67cdc5` (`W9D-REVIEW-B.md`, `8164a3d`) and A's seventh round (`6211143`)
+
+- **Item 1, the tense beside D10.** Where the carry left the lightweight component resolved in the old assembly
+  (`CarryResult.resolved_in_old`), the plane's reason is said in the past, beside D10's sentence: *UserAsm6 is on a
+  plane of T.SLDASM itself, which Gear Generator did not read while Sprocket-1 was lightweight in it, so it is not made
+  again. … Sprocket-1 was lightweight in T.SLDASM and is resolved there now: SolidWorks loaded its part to carry it.*
+  Where it is still lightweight the present stays. The record's per-item sentence (`carry_entry`) follows the same
+  field.
+- **Item 2, SolidWorks once.** No type read (the worker's clause *SolidWorks would not say what kind of entity it
+  is*): *SolidWorks would not say what kind of entity Coincident8 is on, so it is not made again.* A type read that the
+  app does not take (`CAUSE_TYPE_NOT_TAKEN`): *Coincident8 is on a kind of entity Gear Generator does not make mates on
+  again, so it is not made again.* The type's number stays in the record's subjects and is not shown: the contract
+  names only the types the app takes. Any other clause with no cause: *M1 could not be read wholly (SolidWorks would
+  not say what it is on)*, SolidWorks only inside the worker's own clause; with no clause, *M1 could not be read
+  wholly*. The question's inventory cannot tell the two kinds apart (it keeps the kind, not the type), so it says the
+  last.
+- **Item 3, B1's check over every shape.** `_each_mate_once` runs the exactly-one-sentence check on any record; it
+  now runs on the demonstration's shape, the suppressed shape, the beside-lightweight shape and both together. The
+  escape is tightened: a mate may be named nowhere only if the plan makes it again among several and the lead says
+  *makes your N mates again* with N the plan's own count.
+- **Fragments.** None the demonstration script matches changed.
+
+The seven printed states below are unchanged by this round.
 
 ## The strings, in full
 

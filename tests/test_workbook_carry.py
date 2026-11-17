@@ -646,7 +646,9 @@ def test_the_result_says_a_mode_gone_and_what_a_new_mode_took():
     (swbuild.WHY_ASSEMBLY_FEATURE, ("Plane1",),
      "M1 is on Plane1, a feature you made in RangeBox.SLDASM, which is not carried"),
     (swbuild.WHY_NOT_CARRIED, ("Bracket-1",), "M1 joins Bracket-1, which is not carried"),
-    (swbuild.WHY_UNREAD, ("",), "SolidWorks would not describe M1 wholly"),
+    (swbuild.WHY_UNREAD, ("",), "M1 could not be read wholly"),
+    (swbuild.WHY_UNREAD, ("SolidWorks would not say what it is on",),
+     "M1 could not be read wholly (SolidWorks would not say what it is on)"),
     (swbuild.WHY_LIGHTWEIGHT, ("Sprocket-4",),
      "M1 is on Sprocket-4, which was lightweight in RangeBox.SLDASM, so what it joins could not be read"),
     (swbuild.WHY_LEAF, ("Drive-1",),
@@ -1318,7 +1320,6 @@ def test_the_demonstrations_question_names_each_mate_in_exactly_one_sentence(des
     """B1, for every mate: the question's shape on the demonstration's 2026 (the probe reads measured, the write gates
     patched, the coaxial read shown), with a ratio's *may*, an axis's *may*, a face of a part made new, a mate in error
     and a lock: each mate's name is in exactly one sentence of the question."""
-    import re
     _reads(monkeypatch, "measured")
     for gate, value in (("CARRY_GEAR_MATE_ON_AN_APP_GEAR", True),
                         ("CARRY_REMAKE_KINDS", tuple(swbuild.CARRY_KIND_WORDS))):
@@ -1333,13 +1334,24 @@ def test_the_demonstrations_question_names_each_mate_in_exactly_one_sentence(des
                                     entities=[["user", "Sprocket-1", "feature", "Gear Axis"], ["app", "Sun", "face", ""]]),
                 store.UserMateEntry("UserSunFace", "other", 0, [["user", "Sprocket-1"], ["app", "Sun"]], ["H"],
                                     entities=[["user", "Sprocket-1", "face", ""], ["app", "Sun", "face", ""]]))
-    said = _said(desk, record=record)
+    said = _each_mate_once(desk, record)
     assert "made again if the press reads" in said and "proves to be on Sun's axis" in said, said
+
+
+def _each_mate_once(desk, record):
+    """B1's check, for any record (the re-check of b67cdc5, item 3): each of the inventory's mates is named in exactly
+    one sentence of the question, or, only if the plan makes it again among several, named nowhere and counted in the
+    lead's *makes your N mates again* with N the plan's own count. Returns the question."""
+    import re
+    fore, again = _fore(desk, record=record)
+    said = ui_text.carry_sentence(fore, again)
+    made = [m.mate.name for m in fore.plan.mates]
     sentences = re.split(r"(?<=[.)])\s+(?=[A-Z(])", said)
     for mate in [m.name for m in record.gearbox.user_work.mates]:
         found = [x for x in sentences if re.search(rf"\b{re.escape(mate)}\b", x)]
-        # Each mate named once: in its own sentence, or counted in "makes your N mates again" and named nowhere.
-        assert len(found) == 1 or (not found and "mates again" in said), (mate, found)
+        counted = mate in made and len(made) > 1 and f"makes your {len(made)} mates again" in said
+        assert len(found) == 1 or (not found and counted), (mate, found, said)
+    return said
 
 
 # -- B3: the unread reasons' coded causes (package A's 5d51640) ------------------------------------------------------
@@ -1374,10 +1386,46 @@ def test_a_plane_of_the_assembly_beside_a_lightweight_component_is_gear_generato
     assert "SolidWorks" not in said.split("UserAsm6", 1)[1].split(".")[0]
 
 
-def test_an_unread_reason_with_no_cause_stays_as_it_was():
+def test_an_entity_whose_kind_solidworks_would_not_say_names_solidworks_once():
+    """The re-check of b67cdc5, item 2: the kind not answered, SolidWorks the subject once."""
     said = _status(_done(named=[_unread("UserOdd", "SolidWorks would not say what kind of entity it is")]))
-    assert ("SolidWorks would not describe UserOdd wholly (SolidWorks would not say what kind of entity it is), so it "
-            "is not made again.") in said, said
+    assert "SolidWorks would not say what kind of entity UserOdd is on, so it is not made again." in said, said
+    assert said.count("SolidWorks would not") == 1 and "would not describe" not in said
+
+
+def test_an_entity_of_a_type_gear_generator_does_not_take_is_gear_generators_not_solidworks():
+    """Item 2's other case (A's CAUSE_TYPE_NOT_TAKEN, parts (its selection type,)): SolidWorks answered."""
+    said = _status(_done(named=[_unread("Coincident8", "it is on a kind of entity Gear Generator does not make mates "
+                                        "on again", swbuild.CAUSE_TYPE_NOT_TAKEN, "11")]))
+    assert ("Coincident8 is on a kind of entity Gear Generator does not make mates on again, so it is not made again."
+            ) in said, said
+    assert "SolidWorks would" not in said and "SolidWorks did" not in said and "11" not in said
+
+
+def test_the_no_cause_and_type_not_taken_cases_on_package_as_worker(monkeypatch, every_gate):
+    """Item 2 end to end on A's seventh round: a type read that the app does not take, and no type read at all."""
+    import test_swbuild_carry as a
+    every_gate()
+    for type_read, sentence in (
+            (11, "Coincident8 is on a kind of entity Gear Generator does not make mates on again, so it is not made "
+                 "again."),
+            (None, "SolidWorks would not say what kind of entity Coincident8 is on, so it is not made again.")):
+        fake = a._old_train()
+        a._isfile(monkeypatch, fake)
+        fake.user_mate(a.T_ASM, "Coincident8", kind="coincident", a=("Sprocket-1", "Point1"), b=("gear1-1", "plane1"))
+        original = fake.mate_definition
+
+        def definition(handle, original=original, type_read=type_read):
+            d = original(handle)
+            if d.name != "Coincident8":
+                return d
+            first = swcom.MateEntityRead(d.entities[0].component, swcom.UNREAD if type_read is None else type_read,
+                                         "unread", "", d.entities[0].params)
+            return replace(d, entities=(first,) + d.entities[1:])
+        monkeypatch.setattr(fake, "mate_definition", definition)
+        said = _status(a._build_again(fake).carry)
+        assert sentence in said, said
+        assert said.count("SolidWorks would") <= 1 and "would not describe" not in said
 
 
 def test_the_causes_from_package_as_worker_on_the_fake_are_worded(monkeypatch, every_gate, mode_findings):
@@ -1400,25 +1448,22 @@ def test_the_causes_from_package_as_worker_on_the_fake_are_worded(monkeypatch, e
 def test_the_question_says_a_mate_on_a_suppressed_component_with_that_component_as_one_thought(desk, carrying):
     """B3 in the question: the inventory knows the component suppressed as read and the mate's entity on it read
     unread, so the mate goes into the component's own advice, named once; the mode showing is not on record."""
-    import re
     record = copy.deepcopy(desk.record)
     entry = record.gearbox.user_work
     entry.components[1].state = 0
     entry.mates.append(store.UserMateEntry("UserAxis9", "other", 0, [["user", "Housing-1"], ["app", "Sun"]], ["H"],
                                            entities=[["user", "Housing-1", "unread", ""],
                                                      ["app", "Sun", "feature", "Gear Axis"]]))
-    said = _said(desk, record=record)
+    said = _each_mate_once(desk, record)
     assert ("Housing-1 was suppressed in the mode RangeBox.SLDASM showed, as read, so UserAxis9 on it could not be "
             "read: show a mode where Housing-1 is resolved before you press, or Housing-1 may not be carried and "
             "UserAxis9 is not made again.") in said, said
-    sentences = re.split(r"(?<=[.)])\s+(?=[A-Z(])", said)
-    assert len([x for x in sentences if "UserAxis9" in x]) == 1
     assert "would not describe" not in said and said.count("Housing-1 was") == 1
     entry.mates.append(store.UserMateEntry("UserDist9", "other", 5, [["user", "Housing-1"], ["app", "Sun"]], ["H"],
                                            entities=[["user", "Housing-1", "", ""], ["app", "Sun", "plane", "plane1"]]))
     assert ("Housing-1 was suppressed in the mode RangeBox.SLDASM showed, as read, so UserAxis9 and UserDist9 on it "
             "could not be read: show a mode where Housing-1 is resolved before you press, or Housing-1 may not be "
-            "carried and they are not made again.") in _said(desk, record=record)
+            "carried and they are not made again.") in _each_mate_once(desk, record)
 
 
 def test_the_question_says_a_plane_of_the_assembly_beside_a_lightweight_component_and_what_lets_it_be_read(
@@ -1429,8 +1474,55 @@ def test_the_question_says_a_plane_of_the_assembly_beside_a_lightweight_componen
     entry.mates.append(store.UserMateEntry("UserAsm6", "other", 5, [["unread", ""], ["user", "Housing-1"]], ["H"],
                                            entities=[["unread", "", "unread", ""],
                                                      ["user", "Housing-1", "plane", "plane1"]]))
-    said = _said(desk, record=record)
+    said = _each_mate_once(desk, record)
     assert ("UserAsm6 is on a plane of RangeBox.SLDASM itself, which Gear Generator does not read while Sprocket-1 is "
             "lightweight in it: it is made again only if you set Sprocket-1 resolved in SolidWorks before you press."
             ) in said, said
     assert said.count("UserAsm6") == 1 and "would not describe" not in said
+
+
+def test_every_mate_once_with_a_suppressed_component_and_a_plane_beside_a_lightweight_one_together(desk, carrying):
+    """The re-check of b67cdc5, item 3: both B3 shapes and the lightweight component's own mate in one question."""
+    record = copy.deepcopy(desk.record)
+    entry = record.gearbox.user_work
+    entry.components[0].state, entry.components[1].state = 1, 0
+    entry.mates += [store.UserMateEntry("UserAxis9", "other", 0, [["user", "Housing-1"], ["app", "Sun"]], ["H"],
+                                        entities=[["user", "Housing-1", "unread", ""],
+                                                  ["app", "Sun", "feature", "Gear Axis"]]),
+                    store.UserMateEntry("UserAsm6", "other", 5, [["unread", ""], ["app", "Sun"]], ["H"],
+                                        entities=[["unread", "", "unread", ""], ["app", "Sun", "plane", "plane1"]])]
+    said = _each_mate_once(desk, record)
+    assert "its Lock3 is made again only if you set it resolved" in said and "UserAxis9 on it" in said, said
+    assert "while Sprocket-1 is lightweight in it: it is made again only if" in said
+
+
+# -- the re-check of b67cdc5 (W9D-REVIEW-B.md, 8164a3d) ---------------------------------------------------------------
+
+def test_beside_a_component_the_carry_left_resolved_the_lightweight_rule_is_said_in_the_past():
+    """Item 1: beside D10's *… is resolved there now*, the plane's reason says *was lightweight*."""
+    named = [_unread("UserAsm6", "the assembly's own plane is not read while a component of it is lightweight",
+                     swbuild.CAUSE_BESIDE_LIGHTWEIGHT, "Sprocket-1")]
+    said = _status(_done(named=named, resolved_in_old=("Sprocket-1",)))
+    assert ("UserAsm6 is on a plane of RangeBox.SLDASM itself, which Gear Generator did not read while Sprocket-1 was "
+            "lightweight in it, so it is not made again.") in said, said
+    assert "Sprocket-1 was lightweight in RangeBox.SLDASM and is resolved there now" in said
+    assert "is lightweight in it" not in said
+
+
+def test_on_package_as_worker_the_plane_beside_a_component_resolved_by_the_carry_is_said_in_the_past(
+        monkeypatch, every_gate):
+    import test_swbuild_carry as a
+    every_gate()
+    for resolves, words in ((True, "did not read while Sprocket-1 was"), (False, "does not read while Sprocket-1 is")):
+        fake = a._old_train()
+        a._isfile(monkeypatch, fake)
+        fake.assembly_entity = "root"
+        fake.user_component(a.T_ASM, "Housing-1", a.HOUSING, (a.I9, (0.0, 0.0, -40.0)), fixed=True)
+        fake.user_mate(a.T_ASM, "UserAsm6", kind="distance", a=("Housing-1", "plane1"), b=("asm", "plane1"))
+        fake.lightweight.add("Sprocket-1")
+        fake.open_resolves_lightweight = resolves
+        done = a._build_again(fake).carry
+        assert done.resolved_in_old == (("Sprocket-1",) if resolves else ())
+        said = _status(done)
+        assert (f"UserAsm6 is on a plane of T.SLDASM itself, which Gear Generator {words} lightweight in it, so it is "
+                "not made again.") in said, said

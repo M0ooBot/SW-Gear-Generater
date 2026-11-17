@@ -1573,7 +1573,9 @@ def carry_entry(plan: GearboxPlan, result: Any, carry: Any, *, stamp: str, revis
     for n in result.named:
         entry.named.append(store.CarryNamedEntry(item=n.item, what=n.what, why=n.why,
                                                  subjects=[ui_text.bare_files(str(s)) for s in n.subjects],
-                                                 sentence=ui_text.carry_named_clause(n, name=new_name, old=old_name)))
+                                                 sentence=ui_text.carry_named_clause(
+                                                     n, name=new_name, old=old_name,
+                                                     resolved=getattr(result, "resolved_in_old", ()) or ())))
     for f in result.fixed:
         entry.fixed.append(store.CarryFallbackEntry(list(f.components), list(f.deleted), list(f.kept), f.why,
                                                     [ui_text.bare_files(str(s)) for s in f.subjects]))
