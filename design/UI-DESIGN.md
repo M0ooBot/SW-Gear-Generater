@@ -395,23 +395,33 @@ span the width: on the left (at least 610 px, taking any spare width)
 **End view, from your origin** and **Speeds**. The window keeps that width —
 paths are shortened in the middle (`ui_text.short_path`, 52 characters, the
 folder 32) so nothing pushes it wider — and grows taller when a save brings
-more lines, never shrinking below what the user dragged it to. Grown, it moves
-left or up rather than off the screen.
+more lines, up to the screen's work area and never past it, never shrinking
+below what the user dragged it to. Grown, it moves left or up rather than off
+the work area.
 
-*On a screen shorter than the window asks (2026-11-16), it does not fit.*
-`WorkbookWindow._fit` asks the height the contents need, with no cap, and keeps
-the window's top on the whole screen's height, not its work area; Windows then
-holds the window at the most the screen gives, and **the footer's last lines
-are cut off below it**. Measured on a 2560 × 1600 screen at 150 % (the window
-1618 px wide): the built E4 transfer case's footer asks 281 px, its bottom at
-1657 where the window is held to 1570 inside, so its last sentences (the turn
-sentence and the material to-do) are not on screen; the same on SolidWorks 2026
-and 2024 (W8's window checks, `c3ed9b6`, `fb85bcc`). By the arithmetic a 1920 ×
-1080 screen at 100 % would cut it too; that is inferred, not measured. Ruled by
-the coordinating session for the user to overrule: W8 leaves the layout as it is,
-and the next phase changes it (K12 of `docs/notes-workbook/ISSUE-1-PLAN.md`: the
-window stops at the screen's work area and its two columns scroll between a
-fixed header and footer, the footer always whole).
+*On a screen shorter than the window asks (W9a, K12 of
+`docs/notes-workbook/ISSUE-1-PLAN.md`, ruled by the coordinating session for the
+user to overrule).* The window never grows past the **primary** screen's work
+area (`gui._work_area`; a second monitor is not followed) less 40 px for its
+title bar and borders (`workbook_gui.FRAME`, as the strip keeps), and is placed
+inside it. The header and the footer stay fixed; between them **the two columns
+scroll as one page** (a canvas, as the strip's page is), never shorter than 160
+px (`BODY_LEAST`: the Checks panel's header and first lines). The page's scroll
+bar, 12 px, sits in the window's right padding, a lane kept for it whether it
+shows or not (`SCROLL_LANE`), so a bar appearing never narrows or re-wraps the
+columns. The footer takes at most a third of the work area (`FOOTER_SHARE`);
+above that its sentence scrolls in a box of its own, with its own bar beside it
+(the sentence wrapped again for the bar's room), so the buttons are always
+whole. The mouse wheel scrolls, in this window only, the footer's sentence when
+the pointer is over one that scrolls, else the page; the strip's wheel acts only
+in the strip. Why the page and not the Checks panel, nor the whole window: the
+right column (the end view and Speeds) can be the taller one, and the whole
+window scrolling would take the footer and its buttons out of sight. Before W9a,
+`_fit` had no cap and kept the window on the whole screen's height: on this
+device's 2560 × 1600 screen at 150 % the built E4 transfer case's footer stood at
+1657 where Windows holds the window to 1570 inside, its last sentences cut off
+(W8's window checks, `c3ed9b6`, `fb85bcc`). Board: `WorkbookShortScreen` (that
+E4, 1570 px inside at 150 %: 1047 px as drawn).
 
 - **Header.** The file's name in bold (13 px; the artboards draw it at 15);
   under it a dot and `linked · read 14:02:31 · open in Excel`
@@ -571,7 +581,9 @@ fixed header and footer, the footer always whole).
   `… · — (past a split)`.
 - **Footer.** A dot and one sentence, green when all is well, wrapped in the
   room the dot and the buttons showing leave (never narrower than 400 px), so
-  the window keeps its 1080 px with all four buttons and grows taller instead;
+  the window keeps its 1080 px with all four buttons and grows taller instead,
+  up to the screen's work area, past a third of which the sentence scrolls in
+  itself (*The layout*, K12);
   then **Export**, **Export as…**, the build button and, once anything is
   on record, **Update SolidWorks**. The build button is one button whose label
   follows the record and the read: **Build** (primary), **Build parts**
@@ -1142,8 +1154,9 @@ every mode (`a87c1c5`), the active mode last (ruling 9.18); *It worked in 4H, �
 modes, since nothing in 4H needed changing.* after a quiet Update that put
 nothing) is C's and A's sentences; the window shows them in full and adds
 nothing. The footer holds the longest of them, 2026's turn sentence after Build,
-wrapped beside the buttons: the window keeps its 1080 px and grows taller (a test
-pins it).
+wrapped beside the buttons: the window keeps its 1080 px and grows taller, up to
+the screen's work area, where the columns scroll and the footer stays whole (K12;
+a test pins each).
 
 *How W8 ended (2026-11-16).* On SolidWorks 2026 (34.0.0 and 34.1.1) and 2024
 (32.5.0) the turn finding is False, so on both versions the window says a turn
@@ -1157,13 +1170,11 @@ than the window then asks, its last lines are cut off**: on a 2560 × 1600 scree
 at 150 % the footer asks 281 px and its bottom stands at 1657 of the 1570 the
 window is held to, so the turn sentence and the material to-do are off screen
 (*The layout* above; by arithmetic also a 1920 × 1080 screen at 100 %, not
-measured). The window does not yet show its footer whole on such a screen; K12
-of `docs/notes-workbook/ISSUE-1-PLAN.md`, the next phase, makes it, and its
-window check asserts the footer whole on that screen. The three mode boards
-are not redrawn at W8's close: their words are the app's today for the states
-they draw (the one sentence change since they were drawn, `0ff56d3`, is said
-only after an earlier unsaved Update, which no board draws), and the next phase
-redraws them with K12 and its footer's new words.
+measured). W9a's K12 makes the window stop at the work area with its footer
+whole (*The layout*; board `WorkbookShortScreen`); its window check asserts that
+on that screen. The three mode boards were not redrawn at W8's close; at W9a they
+regenerate byte for byte: no state they draw has the user's work on record, and
+they are drawn at their full height, which K12 does not change.
 
 ### Planetary stages (W7)
 

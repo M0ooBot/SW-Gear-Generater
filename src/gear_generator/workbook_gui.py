@@ -90,7 +90,7 @@ import subprocess
 import sys
 import time
 import tkinter as tk
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, messagebox, ttk
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from . import __version__, store, swbuild, swcom, theme, ui_text, widgets
@@ -141,6 +141,13 @@ FRAME = 40
 BODY_LEAST = 160
 FOOTER_SHARE = 3
 SCROLL_LANE = BODY_PAD
+
+
+def work_area(widget: tk.Misc) -> Tuple[int, int, int]:
+    """``(left, top, height)`` of the primary screen's work area, as the strip reads it (``gui._work_area``; a
+    second monitor is not followed). Tests force one here."""
+    from .gui import _work_area
+    return _work_area(widget)
 
 
 def open_in_excel(path: str) -> None:
@@ -376,11 +383,33 @@ class WorkbookWindow(tk.Toplevel):
 
     def _layout(self) -> None:
         f = self.fonts
-        body = tk.Frame(self, bg=theme.WINDOW)
-        body.pack(fill="both", expand=True, padx=px(BODY_PAD), pady=px(BODY_PAD))
+        # K12 (ISSUE-1-PLAN §2.6): a fixed header and footer, and between them the two columns as one page that
+        # scrolls when the window is shorter than they ask (a canvas holding ``body``, as the strip's page is built).
+        # The window's right padding is the page's scroll-bar lane (SCROLL_LANE), kept whether the bar shows or not.
+        outer = tk.Frame(self, bg=theme.WINDOW)
+        outer.pack(fill="both", expand=True, padx=(px(BODY_PAD), 0), pady=px(BODY_PAD))
+        outer.columnconfigure(0, weight=1)
+        outer.columnconfigure(1, minsize=px(SCROLL_LANE))
+        outer.rowconfigure(1, weight=1)
+        self._page = tk.Canvas(outer, bg=theme.WINDOW, highlightthickness=0, bd=0, width=1, height=1)
+        self._page.grid(row=1, column=0, sticky="nsew")
+        lane = tk.Frame(outer, bg=theme.WINDOW, width=px(SCROLL_LANE))     # never wider than the lane, whatever
+        lane.grid(row=1, column=1, sticky="ns")                            # width the theme gives a bar
+        lane.pack_propagate(False)
+        self._page_bar = ttk.Scrollbar(lane, orient="vertical", style="Af.Vertical.TScrollbar",
+                                       command=self._page.yview)
+        self._page.configure(yscrollcommand=self._page_bar.set)
+        body = tk.Frame(self._page, bg=theme.WINDOW)
+        self._body = body
+        self._page_window = self._page.create_window((0, 0), window=body, anchor="nw")
+        body.bind("<Configure>", self._fit_page, add="+")
+        self._page.bind("<Configure>", self._fit_page, add="+")
+        for sequence in ("<MouseWheel>", "<Button-4>", "<Button-5>"):
+            self.bind(sequence, self._on_wheel, add="+")
         body.columnconfigure(0, weight=1)
 
-        head = tk.Frame(body, bg=theme.WINDOW)
+        head = tk.Frame(outer, bg=theme.WINDOW)
+        self._head = head
         head.grid(row=0, column=0, sticky="ew", pady=(0, px(8)))
         head.columnconfigure(0, weight=1)
         self.name_label = tk.Label(head, text=os.path.basename(self.link.path), bg=theme.WINDOW, fg=theme.INK,
@@ -400,7 +429,6 @@ class WorkbookWindow(tk.Toplevel):
             side="left", padx=(0, px(8)))
         widgets.Button(buttons, "Re-read", command=self.reread, bg=theme.WINDOW).pack(side="left")
 
-        head.grid_configure(columnspan=2)
         body.columnconfigure(0, weight=1, minsize=px(LEFT_WIDTH))
         body.columnconfigure(1, weight=0)
         right = tk.Frame(body, bg=theme.WINDOW)
@@ -464,14 +492,25 @@ class WorkbookWindow(tk.Toplevel):
 
         body.rowconfigure(5, weight=1)
         tk.Frame(body, bg=theme.WINDOW).grid(row=5, column=0, sticky="nsew")
-        foot = tk.Frame(body, bg=theme.WINDOW)
-        foot.grid(row=6, column=0, columnspan=2, sticky="ew")
+        foot = tk.Frame(outer, bg=theme.WINDOW)
+        foot.grid(row=2, column=0, sticky="ew")
         foot.columnconfigure(1, weight=1)
         self.status_dot = widgets.Dot(foot, theme.OK, size=8, bg=theme.WINDOW)
         self.status_dot.grid(row=0, column=0, sticky="n", pady=(px(5), 0), padx=(0, px(8)))
-        self.status_label = tk.Label(foot, textvariable=self.status, bg=theme.WINDOW, fg=theme.OK, font=f.label,
-                                     anchor="w", justify="left", wraplength=px(STATUS_MIN_WRAP))
-        self.status_label.grid(row=0, column=1, sticky="w")
+        # K12: the sentence sits in a box of its own, which scrolls it, with a bar beside it, only above the footer's
+        # ceiling (FOOTER_SHARE), so the buttons are always whole.
+        holder = tk.Frame(foot, bg=theme.WINDOW)
+        holder.grid(row=0, column=1, sticky="w")
+        self._status_holder = holder
+        self._status_box = tk.Canvas(holder, bg=theme.WINDOW, highlightthickness=0, bd=0, width=1, height=1)
+        self._status_box.grid(row=0, column=0, sticky="w")
+        self._status_bar = ttk.Scrollbar(holder, orient="vertical", style="Af.Vertical.TScrollbar",
+                                         command=self._status_box.yview)
+        self._status_box.configure(yscrollcommand=self._status_bar.set)
+        self._status_scrolls = False
+        self.status_label = tk.Label(self._status_box, textvariable=self.status, bg=theme.WINDOW, fg=theme.OK,
+                                     font=f.label, anchor="w", justify="left", wraplength=px(STATUS_MIN_WRAP))
+        self._status_box.create_window((0, 0), window=self.status_label, anchor="nw")
         self.export_button = widgets.Button(foot, "Export", command=self.export, height=32, bg=theme.WINDOW)
         self.export_button.grid(row=0, column=2, sticky="e", padx=(px(12), 0))
         self.export_as_button = widgets.Button(foot, "Export as…", command=self.export_as, height=32,
@@ -490,7 +529,7 @@ class WorkbookWindow(tk.Toplevel):
         self._foot.update_idletasks()
         used = 0
         for child in self._foot.grid_slaves(row=0):
-            if child is self.status_label:
+            if child is self._status_holder:
                 continue
             pads = child.grid_info().get("padx", 0)
             pads = pads if isinstance(pads, (tuple, list)) else str(pads).split()
@@ -500,6 +539,8 @@ class WorkbookWindow(tk.Toplevel):
         label = 2 * sum(int(float(str(self.status_label.cget(k)))) for k in ("padx", "borderwidth",
                                                                               "highlightthickness"))
         room = px(WINDOW_WIDTH) - 2 * px(BODY_PAD) - used - label - px(2)     # the body's padding either side
+        if self._status_scrolls:                     # K12: the sentence's own bar, beside it, above the ceiling
+            room -= self._status_bar.winfo_reqwidth() + px(4)
         wrap = max(px(STATUS_MIN_WRAP), room)
         if int(float(str(self.status_label.cget("wraplength")))) != wrap:
             self.status_label.configure(wraplength=wrap)
@@ -811,6 +852,7 @@ class WorkbookWindow(tk.Toplevel):
         self._shape_button("update_button", "Update SolidWorks", footer.update_primary, footer.update_enabled,
                            shown=footer.update_shown)
         self._wrap_status()
+        self._fit_status(work_area(self)[2] // FOOTER_SHARE)       # K12: the sentence's box follows the sentence
         # Not from a provisional read either: anything written from Excel's old formula values would be wrong.
         can_export = self.reading is not None and not self.error and self._pending is None and not self.recalc
         self.export_button.configure(state="normal" if can_export else "disabled")
@@ -1174,14 +1216,73 @@ class WorkbookWindow(tk.Toplevel):
 
     def _fit(self) -> None:
         """The designed width, always (paths are shortened so nothing pushes it wider), and tall enough for what
-        it now holds — grown when a save brings more errors or changes, never shrunk below what the user chose."""
+        it now holds — grown when a save brings more errors or changes, never shrunk below what the user chose —
+        but never past the primary screen's work area less its frame (K12, ISSUE-1-PLAN §2.6): there the header and
+        footer stay whole and the two columns scroll between them as one page, never shorter than
+        :data:`BODY_LEAST`; a footer above a :data:`FOOTER_SHARE` of the work area scrolls its sentence in itself.
+        Placed inside the work area."""
         self.update_idletasks()
-        height = max(self.winfo_reqheight(), self.winfo_height() if self.winfo_ismapped() else 0)
+        left, top, area = work_area(self)
+        cap = area - px(FRAME)
+        self._fit_status(area // FOOTER_SHARE)
+        self.update_idletasks()
+        fixed = 2 * px(BODY_PAD) + self._head.winfo_reqheight() + px(8) + self._foot.winfo_reqheight()
+        page = min(self._body.winfo_reqheight(), max(px(BODY_LEAST), cap - fixed))
+        self._page.configure(width=self._body.winfo_reqwidth(), height=page)
+        self.update_idletasks()
+        want = self.winfo_reqheight()
+        height = min(max(want, self.winfo_height() if self.winfo_ismapped() else 0), max(cap, want))
         width = max(px(WINDOW_WIDTH), self.winfo_reqwidth())     # never narrower than what it holds
         # Kept on the screen: grown wider or taller, it moves left or up rather than off the edge.
         x = max(0, min(self.winfo_x(), self.winfo_screenwidth() - width))
-        y = max(0, min(self.winfo_y(), self.winfo_screenheight() - height))
+        y = max(top, min(self.winfo_y(), top + area - px(FRAME) - height))
         self.geometry(f"{width}x{height}+{x}+{y}")
+
+    def _fit_status(self, ceiling: int) -> None:
+        """K12: the footer's sentence whole up to ``ceiling`` px; above it, a box that tall which scrolls it, its bar
+        beside it (the sentence wrapped again for the bar's room)."""
+        scrolls = self.status_label.winfo_reqheight() > ceiling
+        if scrolls != self._status_scrolls:
+            self._status_scrolls = scrolls
+            self._wrap_status()
+            self.update_idletasks()
+            scrolls = self.status_label.winfo_reqheight() > ceiling
+        label = self.status_label
+        self._status_box.configure(width=label.winfo_reqwidth(), height=min(label.winfo_reqheight(), ceiling))
+        self._status_box.configure(scrollregion=(0, 0, label.winfo_reqwidth(), label.winfo_reqheight()))
+        if scrolls:
+            self._status_bar.grid(row=0, column=1, sticky="ns", padx=(px(4), 0))
+        else:
+            self._status_bar.grid_remove()
+            self._status_box.yview_moveto(0)
+
+    def _fit_page(self, _event: Optional[tk.Event] = None) -> None:
+        """K12: the page as wide as the canvas and at least as tall, its scroll region what the columns ask, and
+        the bar in its lane only while they ask more than the window shows."""
+        wanted = self._body.winfo_reqheight()
+        visible = self._page.winfo_height()
+        self._page.itemconfigure(self._page_window, width=self._page.winfo_width(), height=max(wanted, visible))
+        self._page.configure(scrollregion=(0, 0, self._page.winfo_width(), max(wanted, visible)))
+        if wanted > visible > 1:
+            if not self._page_bar.winfo_manager():
+                self._page_bar.pack(fill="both", expand=True)
+        else:
+            if self._page_bar.winfo_manager():
+                self._page_bar.pack_forget()
+            self._page.yview_moveto(0)
+
+    def _on_wheel(self, event: tk.Event) -> None:
+        """K12: the mouse wheel in this window (the strip's own acts only for the strip): over a footer sentence
+        that scrolls, that; elsewhere the page, while it scrolls."""
+        step = -1 if (getattr(event, "num", 0) == 4 or getattr(event, "delta", 0) > 0) else 1
+        over = self.winfo_containing(event.x_root, event.y_root)
+        while over is not None:
+            if over is self._status_holder and self._status_scrolls:
+                self._status_box.yview_scroll(step, "units")
+                return
+            over = getattr(over, "master", None)
+        if self._page_bar.winfo_manager():                # shown in its lane: the page scrolls
+            self._page.yview_scroll(step, "units")
 
     def _set_status(self, text: str, ok: bool = True) -> None:
         colour = theme.OK if ok else theme.ERROR

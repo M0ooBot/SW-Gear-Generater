@@ -319,6 +319,8 @@ class GearApp(ttk.Frame):
         if not self._page_bar.winfo_ismapped():
             return
         over = self.winfo_containing(event.x_root, event.y_root)
+        if over is not None and over.winfo_toplevel() is not self.winfo_toplevel():
+            return                    # K12: another window's wheel (a Workbook window scrolls its own page)
         while over is not None:
             if over is self.flyout:
                 return

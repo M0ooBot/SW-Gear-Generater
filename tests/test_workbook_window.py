@@ -761,11 +761,90 @@ def test_the_window_keeps_its_width_with_update_shown_and_a_long_sentence(desk):
 
     assert fresh_size[0] == size[0] == px(workbook_gui.WINDOW_WIDTH)
     assert window.winfo_reqwidth() <= px(workbook_gui.WINDOW_WIDTH)
-    # With less room beside the buttons the sentence wraps sooner, and the window grows taller to hold it all.
+    # With less room beside the buttons the sentence wraps sooner, and the window grows taller to hold it all — up
+    # to the screen's work area less its frame (K12, ISSUE-1-PLAN §2.6: rewritten from "height == reqheight").
     assert int(str(window.status_label.cget("wraplength"))) < int(str(fresh.status_label.cget("wraplength")))
     lines = window.status_label.winfo_reqheight() // window.fonts.label.metrics("linespace")
     assert lines >= 3                                          # the long update-and-clash sentence, wrapped
-    assert size[1] == window.winfo_reqheight() > short_height
+    cap = workbook_gui.work_area(window)[2] - px(workbook_gui.FRAME)
+    assert size[1] == min(window.winfo_reqheight(), cap) and size[1] > short_height
+
+
+def _short_screen(monkeypatch, height):
+    """A primary screen whose work area is ``height`` px tall (K12's test forces one)."""
+    from gear_generator import workbook_gui
+    monkeypatch.setattr(workbook_gui, "work_area", lambda widget: (0, 0, height))
+
+
+def test_on_a_short_screen_the_window_stops_at_the_work_area_the_footer_whole_and_the_body_scrolls(desk, mode_findings,
+                                                                                                   monkeypatch):
+    """K12 (ISSUE-1-PLAN §2.6): the built E4 transfer case on a screen whose work area is shorter than the window
+    asks (as on a 2560 × 1600 screen at 150 %, where W8's window check found the footer cut): the window stops at the
+    work area less its frame, inside it; the header and footer stay whole, with every button; the two columns scroll
+    as one page between them, its scroll bar in the lane the body's right padding keeps, so the columns keep their
+    width; and the page's last line can be scrolled into view, by its bar and by the wheel."""
+    from gear_generator import workbook_gui
+    from gear_generator.theme import px
+    from workbook_fixtures import e4_transfer_case
+    window = desk.open(e4_transfer_case(), name="TransferCase_E4.xlsx")
+    window.press_build()
+    desk.finish(window)
+    status = window.status.get()
+    assert status.startswith("Built 6 parts") and status.endswith("the build leaves it unset.")
+    tall = window.winfo_reqheight()
+    area = tall - px(200)                                       # a work area 200 px shorter than the window asks
+    _short_screen(monkeypatch, area)
+    width, height = width_and_height(window)
+    window.geometry(f"{width}x{height}+0+0")
+    window.update_idletasks()
+    cap = area - px(workbook_gui.FRAME)
+    assert height <= cap and width == px(workbook_gui.WINDOW_WIDTH)
+    outer = window._foot.master
+    foot_bottom = outer.winfo_y() + window._foot.winfo_y() + window._foot.winfo_height()
+    assert window._foot.winfo_height() == window._foot.winfo_reqheight() and foot_bottom <= height
+    assert window.status_label.winfo_height() == window.status_label.winfo_reqheight()     # the sentence whole
+    for button in (window.export_button, window.export_as_button, window.build_button, window.update_button):
+        assert button.winfo_height() == button.winfo_reqheight()
+    page, body = window._page, window._body
+    assert page.winfo_height() < body.winfo_reqheight() and window._page_bar.winfo_manager()  # withdrawn: shown
+    assert page.winfo_height() >= px(workbook_gui.BODY_LEAST)
+    lane = window._page_bar.master
+    assert lane.winfo_width() == px(workbook_gui.SCROLL_LANE)    # the bar never widens the window or narrows the columns
+    page.yview_moveto(1.0)
+    window.update_idletasks()
+    assert page.canvasy(page.winfo_height()) >= body.winfo_reqheight() - 1        # the last line reachable
+    page.yview_moveto(0.0)
+
+    class Wheel:
+        x_root, y_root, delta, num = page.winfo_rootx() + 20, page.winfo_rooty() + 20, -120, 5
+    monkeypatch.setattr(window, "winfo_containing", lambda x, y: body)
+    window._on_wheel(Wheel())
+    assert page.yview()[0] > 0
+
+
+def test_a_footer_above_its_ceiling_scrolls_its_sentence_and_keeps_its_buttons_whole(desk, monkeypatch):
+    """K12: the footer takes at most a third of the work area; a longer sentence scrolls in a box of its own, with
+    its bar beside it, and wraps in the room the bar leaves; the buttons stay whole. Under the ceiling it is shown
+    whole, with no bar."""
+    from gear_generator import workbook_gui
+    from gear_generator.theme import px
+    window = built(desk)
+    _short_screen(monkeypatch, px(600))
+    window.note = (" ".join([LONG] * 6), False)
+    window._refresh_state()
+    width, height = width_and_height(window)
+    window.geometry(f"{width}x{height}+0+0")
+    window.update_idletasks()
+    ceiling = px(600) // workbook_gui.FOOTER_SHARE
+    assert window._status_scrolls and window._status_bar.winfo_manager()
+    assert window._status_box.winfo_height() <= ceiling < window.status_label.winfo_reqheight()
+    assert width == px(workbook_gui.WINDOW_WIDTH) and window.winfo_reqwidth() <= px(workbook_gui.WINDOW_WIDTH)
+    for button in (window.export_button, window.export_as_button, window.build_button, window.update_button):
+        assert button.winfo_height() == button.winfo_reqheight()
+    window.note = ("Built.", True)
+    window._refresh_state()
+    window.update_idletasks()
+    assert not window._status_scrolls and not window._status_bar.winfo_manager()
 
 
 # -- notes that answer rather than report a job join the state plainly ---------------------------------------------
@@ -2789,3 +2868,30 @@ def test_the_strip_refuses_a_sleeves_part_record_and_keeps_its_form(desk, tmp_pa
     assert app.status.get().startswith("Opened Gear_m2_N40.gear.json.")
     assert app._loaded is not None and app.gear_vars["a"]["teeth"].get() == "40"
 
+
+
+# -- W9a package B: the user's work through the window ---------------------------------------------------------------
+
+
+def test_an_update_refused_over_the_users_work_is_recorded_and_the_footer_says_it_with_its_time(desk, monkeypatch):
+    """K4 through the window: a Bore the user typed in SolidWorks refuses the press before anything changes (K11,
+    package A); the window records the refusal (schema 7) and, once the job's sentence has gone, the footer says it
+    with its time until the workbook changes. The window plans with the parts' .gear.json (read_sidecar)."""
+    from gear_generator.workbook import update as wb_update
+    from test_workbook_user_work import _edit
+    seen = []
+    real = wb_update.classify
+    monkeypatch.setattr(wb_update, "classify", lambda *a, **k: seen.append(k.get("read_sidecar")) or real(*a, **k))
+    window = built(desk)
+    _edit(desk.sw, desk.part("Gear_m1.5_N68"), "Bore Diameter", "14")
+    window.press_update()
+    desk.finish(window)
+    assert window.status.get().startswith("Bore Diameter in Gear_m1.5_N68 is 14 in SolidWorks") and not window.footer().ok
+    entry = record_of(window).gearbox.user_work
+    assert [p.kind for p in entry.problems] == [swbuild.PROBLEM_VALUE] and entry.digest == window.reading.digest
+    assert seen and all(r is store.read_sidecar for r in seen)
+    window.note = None
+    window._refresh_state()
+    assert (f"Update SolidWorks refused at {ui_text.read_time(entry.read_at)}, before changing anything: "
+            f"{entry.problems[0].sentence}") in window.status.get()
+    assert window.footer().update_enabled
