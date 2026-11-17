@@ -1276,6 +1276,8 @@ class WorkbookWindow(tk.Toplevel):
         that scrolls, that; elsewhere the page, while it scrolls."""
         step = -1 if (getattr(event, "num", 0) == 4 or getattr(event, "delta", 0) > 0) else 1
         over = self.winfo_containing(event.x_root, event.y_root)
+        if over is None or over.winfo_toplevel() is not self:
+            return                       # §2.6 item 5: only for this window (another, or none, under the pointer)
         while over is not None:
             if over is self._status_holder and self._status_scrolls:
                 self._status_box.yview_scroll(step, "units")
@@ -1285,10 +1287,15 @@ class WorkbookWindow(tk.Toplevel):
             self._page.yview_scroll(step, "units")
 
     def _set_status(self, text: str, ok: bool = True) -> None:
+        """The footer's sentence and colour, wrapped and its box fitted to it (K12, package B's review point 1: a
+        sentence set here alone — SolidWorks unreachable, the strip busy, an Export refused — is shown whole, never in
+        the box the sentence before it left)."""
         colour = theme.OK if ok else theme.ERROR
         self.status.set(text)
         self.status_label.configure(fg=colour)
         self.status_dot.set_color(colour)
+        self._wrap_status()
+        self._fit_status(work_area(self)[2] // FOOTER_SHARE)
 
     # ---------------------------------------------------------------- building and updating
 
@@ -1531,9 +1538,11 @@ class WorkbookWindow(tk.Toplevel):
             pass
         try:
             text, ok = ui_text.gearbox_status(job.plan, result, again=_had_assembly(job.record))
-            if job.before is not None:
-                # W9a: what of the user's stayed in the old assembly, as the job read it first (or the record held).
-                behind = ui_text.stayed_behind_status(wb_update.stays_behind(job.record, job.plan), result, job.plan)
+            if job.before is not None and getattr(getattr(result, "assembly", None), "saved", ""):
+                # W9a: what of the user's stayed in the old assembly, as the job read it first (or the record held),
+                # once the new revision's assembly is saved (a build that made nothing leaves nothing behind).
+                behind = ui_text.stayed_behind_status(wb_update.stays_behind(job.record, job.plan), result, job.plan,
+                                                      job.before.path)
                 if behind:
                     text = f"{text} {behind}"
         except Exception as exc:  # noqa: BLE001

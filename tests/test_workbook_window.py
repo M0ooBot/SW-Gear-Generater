@@ -728,6 +728,12 @@ LONG = ("Updated SolidWorks: changed 1 variable in Gear_m1.5_N68 (it now has 69 
         "G2 and G3 interfere, 0.5 mm³; look where they meet in Reducer_12to1.SLDASM. Save in SolidWorks to keep it.")
 
 
+# W9a (the coordinator's ruling 4 on package B's review): the Build again? question's clause on the user's work when
+# the record holds no inventory of the assembly it leaves behind (ui_text.stays_behind_sentence).
+TIMELESS = (f"Anything you added to {NAME}.SLDASM in SolidWorks (components, mates, and features in parts this "
+            f"revision makes new) stays there, and {NAME}_r2 has none of it.")
+
+
 def width_and_height(window):
     """The size :meth:`WorkbookWindow._fit` gives the window (a withdrawn window does not report one back)."""
     asked = []
@@ -776,13 +782,31 @@ def _short_screen(monkeypatch, height):
     monkeypatch.setattr(workbook_gui, "work_area", lambda widget: (0, 0, height))
 
 
+def _shown(window, width, height):
+    """The window mapped at the size ``_fit`` gave it, as a user sees it. Tk on Windows keeps a withdrawn toplevel at
+    its requested size whatever geometry it is given, until it is mapped (Linux applies it at once), so the geometry
+    of a short screen is measured on the window shown, then withdrawn again."""
+    window.geometry(f"{width}x{height}+0+0")
+    window.deiconify()
+    window.update()
+
+
+def _box_whole(window):
+    """The footer's sentence as the user sees it: the box that shows it as tall and as wide as the sentence asks,
+    and no bar (package B's review, point 2: the label is always drawn whole inside its box, so it shows nothing)."""
+    box, label = window._status_box, window.status_label
+    return ((box.winfo_height(), box.winfo_width()) == (label.winfo_reqheight(), label.winfo_reqwidth())
+            and not window._status_bar.winfo_manager())
+
+
 def test_on_a_short_screen_the_window_stops_at_the_work_area_the_footer_whole_and_the_body_scrolls(desk, mode_findings,
                                                                                                    monkeypatch):
     """K12 (ISSUE-1-PLAN §2.6): the built E4 transfer case on a screen whose work area is shorter than the window
     asks (as on a 2560 × 1600 screen at 150 %, where W8's window check found the footer cut): the window stops at the
-    work area less its frame, inside it; the header and footer stay whole, with every button; the two columns scroll
-    as one page between them, its scroll bar in the lane the body's right padding keeps, so the columns keep their
-    width; and the page's last line can be scrolled into view, by its bar and by the wheel."""
+    work area less its frame, inside it; the header and footer stay whole, with every button and the sentence's box
+    as tall as the sentence; the two columns scroll as one page between them, its scroll bar in the lane the body's
+    right padding keeps, so the columns keep their width; and the page's last line can be scrolled into view, by its
+    bar and by the wheel, which acts only for this window."""
     from gear_generator import workbook_gui
     from gear_generator.theme import px
     from workbook_fixtures import e4_transfer_case
@@ -795,37 +819,68 @@ def test_on_a_short_screen_the_window_stops_at_the_work_area_the_footer_whole_an
     area = tall - px(200)                                       # a work area 200 px shorter than the window asks
     _short_screen(monkeypatch, area)
     width, height = width_and_height(window)
-    window.geometry(f"{width}x{height}+0+0")
-    window.update_idletasks()
     cap = area - px(workbook_gui.FRAME)
-    assert height <= cap and width == px(workbook_gui.WINDOW_WIDTH)
-    outer = window._foot.master
-    foot_bottom = outer.winfo_y() + window._foot.winfo_y() + window._foot.winfo_height()
-    assert window._foot.winfo_height() == window._foot.winfo_reqheight() and foot_bottom <= height
-    assert window.status_label.winfo_height() == window.status_label.winfo_reqheight()     # the sentence whole
-    for button in (window.export_button, window.export_as_button, window.build_button, window.update_button):
-        assert button.winfo_height() == button.winfo_reqheight()
-    page, body = window._page, window._body
-    assert page.winfo_height() < body.winfo_reqheight() and window._page_bar.winfo_manager()  # withdrawn: shown
-    assert page.winfo_height() >= px(workbook_gui.BODY_LEAST)
-    lane = window._page_bar.master
-    assert lane.winfo_width() == px(workbook_gui.SCROLL_LANE)    # the bar never widens the window or narrows the columns
-    page.yview_moveto(1.0)
-    window.update_idletasks()
-    assert page.canvasy(page.winfo_height()) >= body.winfo_reqheight() - 1        # the last line reachable
-    page.yview_moveto(0.0)
+    assert height <= cap and width == px(workbook_gui.WINDOW_WIDTH) and window.winfo_reqheight() <= cap
+    _shown(window, width, height)
+    try:
+        assert window.winfo_height() == height
+        outer = window._foot.master
+        foot_bottom = outer.winfo_y() + window._foot.winfo_y() + window._foot.winfo_height()
+        assert window._foot.winfo_height() == window._foot.winfo_reqheight() and foot_bottom <= height
+        assert _box_whole(window)                                # the sentence whole, in its box
+        for button in (window.export_button, window.export_as_button, window.build_button, window.update_button):
+            assert button.winfo_height() == button.winfo_reqheight()
+        page, body = window._page, window._body
+        assert page.winfo_height() < body.winfo_reqheight() and window._page_bar.winfo_ismapped()
+        assert page.winfo_height() >= px(workbook_gui.BODY_LEAST)
+        lane = window._page_bar.master
+        assert lane.winfo_width() == px(workbook_gui.SCROLL_LANE)    # the bar never widens the window or narrows
+        page.yview_moveto(1.0)
+        window.update_idletasks()
+        assert page.canvasy(page.winfo_height()) >= body.winfo_reqheight() - 1        # the last line reachable
+        page.yview_moveto(0.0)
+
+        class Wheel:
+            x_root, y_root, delta, num = page.winfo_rootx() + 20, page.winfo_rooty() + 20, -120, 5
+        other = tk.Toplevel(desk.root)                          # another window under the pointer: not this one's
+        try:
+            monkeypatch.setattr(window, "winfo_containing", lambda x, y: other)
+            window._on_wheel(Wheel())
+            monkeypatch.setattr(window, "winfo_containing", lambda x, y: None)
+            window._on_wheel(Wheel())
+            assert page.yview()[0] == 0.0
+        finally:
+            other.destroy()
+        monkeypatch.setattr(window, "winfo_containing", lambda x, y: body)
+        window._on_wheel(Wheel())
+        assert page.yview()[0] > 0
+    finally:
+        window.withdraw()
+
+
+def test_the_strips_wheel_never_scrolls_its_page_from_a_workbook_window(desk, monkeypatch):
+    """§2.6 item 5: the strip's wheel handler acts only for the strip's own toplevel."""
+    from gear_generator import gui
+    app = gui.GearApp(desk.root)
+    window = desk.open()
+    scrolled = []
+    monkeypatch.setattr(app._page_bar, "winfo_ismapped", lambda: True)
+    monkeypatch.setattr(app._page, "yview_scroll", lambda *a: scrolled.append(a))
 
     class Wheel:
-        x_root, y_root, delta, num = page.winfo_rootx() + 20, page.winfo_rooty() + 20, -120, 5
-    monkeypatch.setattr(window, "winfo_containing", lambda x, y: body)
-    window._on_wheel(Wheel())
-    assert page.yview()[0] > 0
+        x_root, y_root, delta = 10, 10, -120
+    monkeypatch.setattr(app, "winfo_containing", lambda x, y: window._body)
+    app._on_wheel(Wheel())
+    assert scrolled == []
+    monkeypatch.setattr(app, "winfo_containing", lambda x, y: app._page)
+    app._on_wheel(Wheel())
+    assert scrolled == [(1, "units")]
 
 
 def test_a_footer_above_its_ceiling_scrolls_its_sentence_and_keeps_its_buttons_whole(desk, monkeypatch):
-    """K12: the footer takes at most a third of the work area; a longer sentence scrolls in a box of its own, with
-    its bar beside it, and wraps in the room the bar leaves; the buttons stay whole. Under the ceiling it is shown
-    whole, with no bar."""
+    """K12: the footer takes at most a third of the work area; a longer sentence scrolls in a box of its own, at the
+    ceiling, with its bar beside it, and wraps in the room the bar leaves; the buttons stay whole. Under the ceiling
+    it is shown whole, with no bar."""
     from gear_generator import workbook_gui
     from gear_generator.theme import px
     window = built(desk)
@@ -833,18 +888,48 @@ def test_a_footer_above_its_ceiling_scrolls_its_sentence_and_keeps_its_buttons_w
     window.note = (" ".join([LONG] * 6), False)
     window._refresh_state()
     width, height = width_and_height(window)
-    window.geometry(f"{width}x{height}+0+0")
-    window.update_idletasks()
-    ceiling = px(600) // workbook_gui.FOOTER_SHARE
-    assert window._status_scrolls and window._status_bar.winfo_manager()
-    assert window._status_box.winfo_height() <= ceiling < window.status_label.winfo_reqheight()
-    assert width == px(workbook_gui.WINDOW_WIDTH) and window.winfo_reqwidth() <= px(workbook_gui.WINDOW_WIDTH)
-    for button in (window.export_button, window.export_as_button, window.build_button, window.update_button):
-        assert button.winfo_height() == button.winfo_reqheight()
-    window.note = ("Built.", True)
-    window._refresh_state()
-    window.update_idletasks()
-    assert not window._status_scrolls and not window._status_bar.winfo_manager()
+    _shown(window, width, height)
+    try:
+        ceiling = px(600) // workbook_gui.FOOTER_SHARE
+        assert window._status_scrolls and window._status_bar.winfo_ismapped()
+        assert window._status_box.winfo_height() == ceiling < window.status_label.winfo_reqheight()
+        assert width == px(workbook_gui.WINDOW_WIDTH) and window.winfo_reqwidth() <= px(workbook_gui.WINDOW_WIDTH)
+        for button in (window.export_button, window.export_as_button, window.build_button, window.update_button):
+            assert button.winfo_height() == button.winfo_reqheight()
+        window.note = ("Built.", True)
+        window._refresh_state()
+        window.update()
+        assert not window._status_scrolls and _box_whole(window)
+    finally:
+        window.withdraw()
+
+
+def test_a_sentence_set_alone_after_a_short_one_is_shown_whole(desk, monkeypatch):
+    """Package B's review, point 1: every sentence the window sets outside its refresh — SolidWorks unreachable, the
+    strip busy, a job left running, a poll that failed, an Export refused, a workbook that would not open — is shown
+    in a box as big as it asks, not the box the short sentence before it left."""
+    from gear_generator import workbook_gui
+    window = built(desk)
+    sentences = [ui_text.job_unreachable("SolidWorks is not running on this computer.", True),
+                 ui_text.strip_busy(True), ui_text.unowned_job_busy(True),
+                 ui_text.collect_failed(RuntimeError("the poll failed"), True),
+                 "Nothing was exported: the workbook's formulas still hold Excel's old values; open and save it in "
+                 "Excel first, so what is exported is worked out from what they now give.",
+                 "The workbook could not be opened: " + "it is not a workbook this version reads. " * 3]
+    width, height = width_and_height(window)
+    _shown(window, width, height)
+    try:
+        for sentence in sentences:
+            window.note = ("Built.", True)
+            window._refresh_state()
+            window.update()
+            short = window._status_box.winfo_height()
+            window._set_status(sentence, ok=False)
+            window.update()
+            assert window.status.get() == sentence and _box_whole(window), sentence
+            assert window._status_box.winfo_width() > workbook_gui.px(60) and window._status_box.winfo_height() >= short
+    finally:
+        window.withdraw()
 
 
 # -- notes that answer rather than report a job join the state plainly ---------------------------------------------
@@ -1668,7 +1753,8 @@ def test_a_gearbox_w4_built_stays_static_and_is_offered_a_turning_revision(desk,
         f"{NAME}.SLDASM was built static; the new revision's gears are mated to turn. Build again as {NAME}_r2? That "
         f"reuses 4 parts that have not changed and makes a new layout part and assembly ({NAME}_r2_Layout and "
         f"{NAME}_r2.SLDASM). Nothing is overwritten, and {NAME}.SLDASM stays as it is on disk, but it shares the 4 "
-        f"reused parts: a later Update SolidWorks that changes one of them changes {NAME}.SLDASM too."]
+        f"reused parts: a later Update SolidWorks that changes one of them changes {NAME}.SLDASM too. "
+        + TIMELESS]                                            # W9a (ruling 4 on B's review): nothing read is on record
     window.press_update()                                      # Update carries on as W4: nothing differs, no question
     desk.finish(window)
     assert len(asked) == 1 and record_of(window).gearbox.kind == store.GEARBOX_STATIC
@@ -1701,7 +1787,7 @@ def test_a_recorded_mate_update_cannot_read_still_offers_build_again(desk, monke
     assert title == "Build again?" and question == (
         f"{refusal} Build again as {NAME}_r2? That reuses 4 parts that have not changed and makes a new layout part "
         f"and assembly ({NAME}_r2_Layout and {NAME}_r2.SLDASM). Nothing is overwritten, and what is already built is "
-        "left as it is.")
+        "left as it is. " + TIMELESS)                          # W9a (ruling 4 on B's review): nothing read on record
     assert window.status.get() == f"{ui_text.NOTHING_CHANGED} {refusal}"
 
 
