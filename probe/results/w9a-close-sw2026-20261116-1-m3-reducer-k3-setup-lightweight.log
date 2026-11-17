@@ -1,0 +1,1014 @@
+awake   display and system held awake for the run (previous state -0x80000000)
+run     2026-11-16 22:56:59; W9a demonstration from C:\Users\M0obo\Documents\GearGeneratorProbe\w9a-close-sw2026-20261116-225631\snap\src (snapshot: 6f3d6fb); sections ['m3', 'reducer', 'k3', 'setup', 'lightweight']; masters {'rangebox': 'C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9-s0-20261116-045513\\out\\rangebox.master', 'setup': '', 'reducer': ''}; redo False
+ok      the app's settings and Recent list go into this run's folder, not the user's: C:\Users\M0obo\Documents\GearGeneratorProbe\w9a-close-sw2026-20261116-225631\out\appdata\Gear Generator\recent.json
+attach  SolidWorks 2026 (revision 34.1.1) (revision 34.1.1), PID 6328; SolidWorks 0.68 GB private, 10.48 GB free
+open    before: []
+findings USER_MATE_PUT_ROUTE "put along, the user's locks left on", USER_TIE_RULE 'not COMPONENT_UNDER_DEFINED', WHATS_WRONG_OPENS_ON_PART_REBUILD False, the branches {'USER_MATE_PUT_FIXED_GEAR_ON_2024': None, 'USER_MATE_PUT_FIXED_GEAR_ON_2026': None, 'USER_MATE_PUT_HELD_GEAR_ON_2024': None, 'USER_MATE_PUT_HELD_GEAR_ON_2026': None, 'USER_MATE_PUT_NO_CARRIER_MODES_ON_2024': None, 'USER_MATE_PUT_NO_CARRIER_MODES_ON_2026': None, 'USER_MATE_PUT_NO_CARRIER_ON_2024': None, 'USER_MATE_PUT_NO_CARRIER_ON_2026': True, 'USER_MATE_PUT_SUBASSEMBLY_ON_2024': None, 'USER_MATE_PUT_SUBASSEMBLY_ON_2026': None}
+fact    a SolidWorks balloon tip ['Check1', 'Simplified Interface', 'The Simplified Interface provides a minimalist layout for quick and basic modeling. It can be customized similarly to the standard interface.\n\nShow how to turn off the Simplified Interface.'] came up while no SolidWorks call was in progress (left standing, never answered)
+DIALOG  SolidWorks shows '': ['Title', 'Description', 'Button1', 'Button2', 'Hyperlink Text 1', 'Hyperlink Text 2']
+NOTE    SolidWorks' notification box came up while no SolidWorks call was in progress (exempt by the coordinator's ruling; nothing answers it)
+excel   started our own Excel, PID 53368, 16.0 build 20527.0
+== m3  ISSUE-1-PLAN §4 M3: an assembly rebuild, and the app's Update, with only a user mate and then only a user feature in error, under the dialog watch, ahead of anything that depends on it
+== user parts  Sprocket (spur 20 teeth, module 1.25, face 6, bore 10) and Housing (spur 40, module 1.25, face 4, bore 30, standing in) built by the strip's own plan_for and swbuild.build
+ok      user parts: Sprocket.SLDPRT built and saved: ok True, failures []
+fact    a SolidWorks balloon tip ['Check1', 'The sketch is no longer over defined.'] came up while AddDimension2 was in progress (left standing, never answered)
+ok      user parts: Housing.SLDPRT built and saved: ok True, failures []
+ok      user parts: closed: left []
+copy    rangebox.master -> m3: 15 files, mtimes kept
+        RangeBox.xlsx's record: 18 path(s) put onto the copy: ['record.workbook', 'record.parts[0].path', 'record.parts[1].path', 'record.parts[2].path', 'record.parts[3].path', 'record.parts[4].path', 'record.assembly', 'record.gearbox.layout', 'record.gearbox.assembly', 'record.gearbox.components[0].part', 'record.gearbox.components[1].part', 'record.gearbox.components[2].part', 'record.gearbox.components[3].part', 'record.gearbox.components[4].part', 'record.gearbox.components[5].part', 'record.gearbox.components[6].part', 'record.gearbox.components[7].part', 'record.gearbox.carriers[0].path']
+        Dog_m1.25_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.25_N13.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.25_N29.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Ring_m1.25_N55.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Sleeve_m1.25_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+ok      m3: the copy's record is valid: owner ('ours', ''); left on the master []; missing in the copy []; clear_saved dropped nothing (unsaved, mismatched ([], [])); the read's digest equals the record's
+probe   W6-PLAN §7.1: RangeBox.SLDASM of m3, whose stored references name a folder that is gone, opened under the dialog watch (120 s at most)
+DIALOG  SolidWorks shows '': ['Close', 'Opened 10\nComponents', 'Updating\nAssembly', 'Update\nGraphics', 'Post load updating', 'Elapsed time: 0s', 'This file was last opened in 27 seconds.', 'For more information, view: ']
+fact    m3: the copy's assembly opened in 3.1 s; marked modified straight after the open: {'RangeBox_Layout.SLDPRT': False, 'RangeBox_Carrier_Carrier.SLDPRT': False, 'Gear_m1.25_N29.SLDPRT': False, 'Gear_m1.25_N13.SLDPRT': False, 'Ring_m1.25_N55.SLDPRT': False, 'Dog_m1.25_N17.SLDPRT': False, 'Sleeve_m1.25_N17.SLDPRT': False, 'RangeBox.SLDASM': False}
+fact    W6-PLAN §7.1: dialogs while the copied assembly opened: none
+ok      m3: SolidWorks found all 9 components and the layout in the copy, and the copy closed without saving (left []): elsewhere none
+ok      read RangeBox.xlsx: ok
+        warning Gears!F3: Planet: 13 teeth at 20° is below the undercut limit of 17: a generated gear would lose the bottom of its flanks, which this profile does not show. A profile shift of 0.24 or more would clear it.
+        warning Gears!F3: Planet: The tooth tip is 0.36 mm thick, under 0.3 × module (0.375 mm).
+        warning Gears!F7: RangeSlv: The teeth's tips, at 18.75 mm, are inside the base circle of 19.968 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!A3: Planet (13 teeth) is below the undercut limit, which is not modelled, and meshes Sun (29 teeth): the build checks interference only where the gears stand, so check Planet with Sun turning in SolidWorks.
+        5 shafts · 6 gears · 2 meshes; gate ''
+ok      m3: the copy reads as built from this workbook, its assembly in the copy
+ok      Excel opened RangeBox.xlsx with no dialog or repair: []
+ok      the M3 findings the app reads are in findings.py: missing none
+ok      the app reads the M3 findings as this script does: {'mate': True, 'feature': False, 'whats_wrong': False} / {'mate': True, 'feature': False, 'whats_wrong': False}
+fact    the M3 findings for 2026: {'ASSEMBLY_REBUILD_WITH_USER_MATE_IN_ERROR_ON_2026': True, 'ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_2026': False, 'WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_2026': False}
+fact    m3: SolidWorks' "show errors every rebuild" (toggle 77) reads True
+fact    m3: inserted ['Sprocket-1', 'Housing-1'] with H active; mates {'UserAxis': 1, 'UserFront': 1} (AddMate5 status)
+        UserAxis: as made {'H': False, 'N': False, 'L': False}; set {'H': False, 'N': False, 'L': False}
+        UserFront: as made {'H': False, 'N': False, 'L': False}; set {'H': False, 'N': False, 'L': False}
+ok      m3: the components are named ['Sprocket-1', 'Housing-1']
+ok      m3: every new mate's flag reads back as set in every mode
+ok      m3: every mate on in H reads error code 0 after the user's work: []
+ok      m3: the baseline's mates were made sound (AddMate5 status 1): {'UserAxis': 1, 'UserFront': 1}
+fact    m3: UserFront left Sprocket-1's origin at z -100.000000 (inserted at 100: the side AddMate5's Flip False took); Housing-1 at z 60.000000; their Front planes 160.000000 mm apart
+person  saved in SolidWorks (the user's sprocket and housing): ['RangeBox.SLDASM']
+fact    m3 baseline: ForceRebuild (the app's train route) returned True; GetWhatsWrongCount 0; mates in error none; components in error none; windows new none
+ok      m3: with nothing in error the assembly rebuild returns True and no mate is in error
+-- m3  a user mate in error: UserGap, Sprocket-1's Front plane 161.000000 mm from Housing-1's (the distance read plus 1 mm), which UserFront contradicts on either side
+fact    m3: UserGap made: AddMate5 status 5 (over-defining is 5); flags {'H': False, 'N': False, 'L': False}
+fact    m3 a user mate in error: ForceRebuild (the app's train route) returned True; GetWhatsWrongCount 3; mates in error {'UserFront': 46, 'UserGap': 47}; components in error none; windows new none
+ok      m3: only the user's mates read in error, so the reading answers M3: user {'UserFront': 46, 'UserGap': 47} (46 over defined, 47 ill defined), the app's none
+answer  M3 (assembly, a user mate in error): the rebuild returned True, What's Wrong 3, codes {'UserFront': 46, 'UserGap': 47}, no window
+person  saved in SolidWorks (the mate in error, as the user leaves it): ['RangeBox.SLDASM']
+-- m3  the app's value Update (Sun's Backlash 0.4) with only that user mate in error; a quiet press first records the inventory, so the footer can say before the press what of the user's is in error
+ok      m3 mate in error: the quiet press: the footer offers Update SolidWorks (shown True, enabled True, Build again… needed False)
+update  SolidWorks 1.15 GB private, 9.92 GB free
+        in 89.1 s; SolidWorks 1.54 GB private, 9.85 GB free; loaded from disk []
+        W9a: carried []; renamed []; user in error []; user features in error []; inventory read yes; failures []
+ok      the Update's check phase found no gear mate turning against its mesh: []
+status  [green] SolidWorks already matches the workbook: nothing was changed. It worked in H, the configuration that was active; it did not show the other modes, since nothing in H needed changing.
+fact    m3 mate in error: the quiet press: the press took 89.2 s; SolidWorks calls by member {'OpenDoc6': 9, 'IsSuppressed2': 92, 'GetSystemValue3': 1}
+        shows and puts in order: []
+        configuration 'H'; visited []; put_in []; placed []; unsuppressed_in []; suppressed_in []; slid []; values_restored []; extra configurations []; extra mates []; senses unread []; positions per configuration False; failures []
+fact    m3 mate in error: the quiet press: the press took 89 s
+ok      m3 mate in error: the quiet press read the user's work and changed nothing: ok
+excel   Gears!P2 := 0.4
+excel   saved RangeBox.xlsx
+poll    a new read 0.0 s after asking; changes:
+          Gears!P2 Sun Backlash blank → 0.4
+ok      read RangeBox.xlsx: ok
+        warning Gears!F3: Planet: 13 teeth at 20° is below the undercut limit of 17: a generated gear would lose the bottom of its flanks, which this profile does not show. A profile shift of 0.24 or more would clear it.
+        warning Gears!F3: Planet: The tooth tip is 0.36 mm thick, under 0.3 × module (0.375 mm).
+        warning Gears!F7: RangeSlv: The teeth's tips, at 18.75 mm, are inside the base circle of 19.968 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!A3: Planet (13 teeth) is below the undercut limit, which is not modelled, and meshes Sun (29 teeth): the build checks interference only where the gears stand, so check Planet with Sun turning in SolidWorks.
+        5 shafts · 6 gears · 2 meshes; gate ''
+classify parts changed ['Gear_m1.25_N29.SLDPRT']; moved []; re-place []; structural []; missing []; unsaved []; refusal ''; turning True; axial []; ratios []
+        layout globals wanted []
+summary Update SolidWorks will change Sun's values (Gear_m1.25_N29).
+footer  (m3 mate in error, before the press) [green] Update SolidWorks will change Sun's values (Gear_m1.25_N29). It was built with a configuration per mode (H, N and L), each named as its mode, and saved in H; to switch mode, double-click another mode's configuration in SolidWorks' ConfigurationManager. Drag Sun in SolidWorks and the rest of its train follow. A turn you give the gears in one mode can show in other modes, so a dog can stand across its sleeve in another; to put the gears back there, press Update SolidWorks with that mode showing. Carrier (the carrier) is axes and planes only, so it has nothing to drag. As read at 22:59, Update SolidWorks leaves your Sprocket-1, Housing-1 and 3 mates as they are. Your UserFront and UserGap were already in error in SolidWorks then.
+        button 'Build again…' on; Update SolidWorks shown on primary
+line    [green] As read at 22:59, Update SolidWorks leaves your Sprocket-1, Housing-1 and 3 mates as they are. Your UserFront and UserGap were already in error in SolidWorks then.
+        predicted: carried []; problems []; refused (recorded) []; changed since False; unread ties []
+ok      m3 mate in error, before the press: the footer says the user-work line as the window would: 'As read at 22:59, Update SolidWorks leaves your Sprocket-1, Housing-1 and 3 mate'…
+ok      m3: the footer says before the press that UserGap is in error: 'As read at 22:59, Update SolidWorks leaves your Sprocket-1, Housing-1 and 3 mates as they are. Your UserFront and UserGap were already in error in SolidWorks th'
+ok      m3 Update with a user mate in error: the footer offers Update SolidWorks (shown True, enabled True, Build again… needed False)
+update  SolidWorks 1.54 GB private, 9.85 GB free
+DIALOG  SolidWorks shows 'Calculating Interference Detection': ['Cancel', 'Calculating Interference Detection'] (a progress box that closes itself; not logged again)
+        in 229.2 s; SolidWorks 1.59 GB private, 10.38 GB free; loaded from disk []
+        W9a: carried []; renamed []; user in error [('N', 'UserFront'), ('N', 'UserGap'), ('L', 'UserFront'), ('L', 'UserGap'), ('H', 'UserFront'), ('H', 'UserGap')]; user features in error []; inventory read yes; failures []
+ok      the Update's check phase found no gear mate turning against its mesh: []
+status  [green] Updated SolidWorks: changed 1 variable in Gear_m1.25_N29, re-placed Carrier (the carrier), Sun, Planet (3 copies), HighDog, LowDog and RangeSlv in every mode; no interference between the gears in any mode, where they stand. It worked in H, the configuration that was active, then showed and checked N and L and left the assembly in H. Your UserFront and UserGap were in error in SolidWorks in the mode showing before this Update changed anything; after it, UserFront in N, L and H and UserGap in N, L and H are in error. Save Gear_m1.25_N29 and RangeBox in SolidWorks to keep them.
+fact    m3 Update with a user mate in error: the press took 229.3 s; SolidWorks calls by member {'OpenDoc6': 10, 'IsSuppressed2': 227, 'GetSystemValue3': 4, 'ForceRebuild3': 38, 'ShowConfiguration2': 3, 'SetSuppression2': 40, 'put': 24}
+        shows and puts in order: [('ShowConfiguration2', 'N'), ('put', 'RangeBox_Carrier_Carrier-1'), ('put', 'Gear_m1.25_N29-1'), ('put', 'Gear_m1.25_N13-1'), ('put', 'Gear_m1.25_N13-2'), ('put', 'Gear_m1.25_N13-3'), ('put', 'Dog_m1.25_N17-1'), ('put', 'Dog_m1.25_N17-2'), ('put', 'Sleeve_m1.25_N17-1'), ('ShowConfiguration2', 'L'), ('put', 'RangeBox_Carrier_Carrier-1'), ('put', 'Gear_m1.25_N29-1'), ('put', 'Gear_m1.25_N13-1'), ('put', 'Gear_m1.25_N13-2'), ('put', 'Gear_m1.25_N13-3'), ('put', 'Dog_m1.25_N17-1'), ('put', 'Dog_m1.25_N17-2'), ('put', 'Sleeve_m1.25_N17-1'), ('ShowConfiguration2', 'H'), ('put', 'RangeBox_Carrier_Carrier-1'), ('put', 'Gear_m1.25_N29-1'), ('put', 'Gear_m1.25_N13-1'), ('put', 'Gear_m1.25_N13-2'), ('put', 'Gear_m1.25_N13-3'), ('put', 'Dog_m1.25_N17-1'), ('put', 'Dog_m1.25_N17-2'), ('put', 'Sleeve_m1.25_N17-1')]
+        configuration 'H'; visited ['N', 'L']; put_in ['N', 'L', 'H']; placed ['Carrier carrier', 'Sun', 'Planet copy 1', 'Planet copy 2', 'Planet copy 3', 'HighDog', 'LowDog', 'RangeSlv']; unsuppressed_in []; suppressed_in []; slid []; values_restored []; extra configurations []; extra mates []; senses unread []; positions per configuration False; failures []
+        post-check of N: turned False; out of step []; off axis []; clashes []; interference error ''
+        post-check of L: turned False; out of step []; off axis []; clashes []; interference error ''
+        post-check of H: turned False; out of step []; off axis []; clashes []; interference error ''
+fact    m3 Update with a user mate in error: the press took 229 s
+fact    m3 Update with a user mate in error: ok True; failures []; laid to the user's work alone []; UserGap in error before True, after True; the sentence's words on it ['Your UserFront and UserGap were in error in SolidWorks in the mode showing before this Update changed anything; after it, UserFront in N, L and H and UserGap in N, L and H are in error.']
+ok      m3 Update with a user mate in error: the Update went ahead (rebuild True, findings {'mate': True, 'feature': False, 'whats_wrong': False}) and its result and sentence name UserGap as the user's, already in error before the Update
+-- m3  UserGap suppressed in every mode, as the user would: nothing in error again
+fact    m3 the mate suppressed: ForceRebuild (the app's train route) returned True; GetWhatsWrongCount 0; mates in error none; components in error none; windows new none
+ok      m3: with UserGap suppressed no mate is in error: {'Sun on Input Axis': (0, False), 'Sun along Input': (0, False), 'HighDog locked to Sun': (0, False), 'Carrier carrier on Carrier Axis': (0, False), 'Carrier carrier along Carrier': (0, False), 'LowDog locked to Carrier carrier': (0, False), 'Planet copy 1 on Planet copy 1 Axis': (0, False), 'Planet copy 1 along Planet copy 1': (0, False), 'Planet copy 2 on Planet copy 2 Axis': (0, False), 'Planet copy 2 along Planet copy 2': (0, False), 'Planet copy 3 on Planet copy 3 Axis': (0, False), 'Planet copy 3 along Planet copy 3': (0, False), 'RangeSlv on Output Axis': (0, False), 'RangeSlv along Output': (0, False), 'Sun meshes Planet copy 1': (0, False), 'Sun meshes Planet copy 2': (0, False), 'Sun meshes Planet copy 3': (0, False), 'Planet copy 1 meshes Ring': (0, False), 'RangeSlv engages HighDog': (0, False), 'RangeSlv engages LowDog': (0, True), 'UserAxis': (0, False), 'UserFront': (0, False), 'UserGap': (0, True)}
+-- m3  a user feature in error: a keyway in the user's Sprocket part, then its own Bore Diameter 10 -> 14 (S0's P0 mechanism: the keyway left inside the bore)
+ok      m3: User Keyway made in Sprocket.SLDPRT, rebuilt True, its code 0
+fact    m3: the Sprocket part's rebuild returned False; What's Wrong 1; features in error [('User Keyway', 71)]; windows new none
+ok      m3: only the user's keyway is in error in the user's part: [('User Keyway', 71)]
+fact    m3 a user feature in error: ForceRebuild (the app's train route) returned False; GetWhatsWrongCount 1; mates in error none; components in error {'Sprocket-1': 1}; windows new none
+answer  M3 (assembly, a user feature in error in a component's part): the rebuild returned False, What's Wrong 1, no window
+person  saved in SolidWorks (the user's part in error, as the user leaves it): ['Gear_m1.25_N29.SLDPRT', 'Sprocket.SLDPRT', 'RangeBox.SLDASM']
+-- m3  the app's value Update (Sun's Backlash 0.42) with only the user's feature in error, in the part of Sprocket-1, which nothing would carry (no lock); the footer first, from a quiet press's inventory
+ok      m3 feature in error: the quiet press: the footer offers Update SolidWorks (shown True, enabled True, Build again… needed False)
+update  SolidWorks 1.60 GB private, 10.37 GB free
+        in 86.6 s; SolidWorks 1.60 GB private, 10.40 GB free; loaded from disk []
+        W9a: carried []; renamed []; user in error []; user features in error []; inventory read yes; failures []
+ok      the Update's check phase found no gear mate turning against its mesh: []
+status  [green] SolidWorks already matches the workbook: nothing was changed. RangeBox.SLDASM also has a mate the app did not make, UserGap, suppressed in every mode; Update SolidWorks left it as it is. It worked in H, the configuration that was active; it did not show the other modes, since nothing in H needed changing.
+fact    m3 feature in error: the quiet press: the press took 86.6 s; SolidWorks calls by member {'OpenDoc6': 9, 'IsSuppressed2': 92, 'GetSystemValue3': 1}
+        shows and puts in order: []
+        configuration 'H'; visited []; put_in []; placed []; unsuppressed_in []; suppressed_in []; slid []; values_restored []; extra configurations []; extra mates ['UserGap']; senses unread []; positions per configuration False; failures []
+fact    m3 feature in error: the quiet press: the press took 87 s
+ok      m3 feature in error: the quiet press read the user's work and changed nothing: ok
+excel   Gears!P2 := 0.42
+excel   saved RangeBox.xlsx
+poll    a new read 0.0 s after asking; changes:
+          Gears!P2 Sun Backlash 0.4 → 0.42
+ok      read RangeBox.xlsx: ok
+        warning Gears!F3: Planet: 13 teeth at 20° is below the undercut limit of 17: a generated gear would lose the bottom of its flanks, which this profile does not show. A profile shift of 0.24 or more would clear it.
+        warning Gears!F3: Planet: The tooth tip is 0.36 mm thick, under 0.3 × module (0.375 mm).
+        warning Gears!F7: RangeSlv: The teeth's tips, at 18.75 mm, are inside the base circle of 19.968 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!A3: Planet (13 teeth) is below the undercut limit, which is not modelled, and meshes Sun (29 teeth): the build checks interference only where the gears stand, so check Planet with Sun turning in SolidWorks.
+        5 shafts · 6 gears · 2 meshes; gate ''
+classify parts changed ['Gear_m1.25_N29.SLDPRT']; moved []; re-place []; structural []; missing []; unsaved []; refusal ''; turning True; axial []; ratios []
+        layout globals wanted []
+summary Update SolidWorks will change Sun's values (Gear_m1.25_N29).
+footer  (m3 feature in error, before the press) [green] Update SolidWorks will change Sun's values (Gear_m1.25_N29). It was built with a configuration per mode (H, N and L), each named as its mode, and saved in H; to switch mode, double-click another mode's configuration in SolidWorks' ConfigurationManager. Drag Sun in SolidWorks and the rest of its train follow. A turn you give the gears in one mode can show in other modes, so a dog can stand across its sleeve in another; to put the gears back there, press Update SolidWorks with that mode showing. Carrier (the carrier) is axes and planes only, so it has nothing to drag. As read at 23:05, Update SolidWorks leaves your Sprocket-1, Housing-1 and 3 mates as they are. Your Sprocket-1 was already in error in SolidWorks then.
+        button 'Build again…' on; Update SolidWorks shown on primary
+line    [green] As read at 23:05, Update SolidWorks leaves your Sprocket-1, Housing-1 and 3 mates as they are. Your Sprocket-1 was already in error in SolidWorks then.
+        predicted: carried []; problems []; refused (recorded) []; changed since False; unread ties []
+ok      m3 feature in error, before the press: the footer says the user-work line as the window would: 'As read at 23:05, Update SolidWorks leaves your Sprocket-1, Housing-1 and 3 mate'…
+ok      m3: the footer says before the press that Sprocket-1 is in error: 'As read at 23:05, Update SolidWorks leaves your Sprocket-1, Housing-1 and 3 mates as they are. Your Sprocket-1 was already in error in SolidWorks then.'
+ok      m3 Update with a user feature in error: the footer offers Update SolidWorks (shown True, enabled True, Build again… needed False)
+update  SolidWorks 1.60 GB private, 10.40 GB free
+        in 260.7 s; SolidWorks 1.65 GB private, 10.37 GB free; loaded from disk []
+        W9a: carried []; renamed []; user in error [('N', 'Sprocket-1'), ('L', 'Sprocket-1'), ('H', 'Sprocket-1')]; user features in error []; inventory read yes; failures []
+ok      the Update's check phase found no gear mate turning against its mesh: []
+status  [green] Updated SolidWorks: changed 1 variable in Gear_m1.25_N29, re-placed Carrier (the carrier), Sun, Planet (3 copies), HighDog, LowDog and RangeSlv in every mode; no interference between the gears in any mode, where they stand. RangeBox.SLDASM also has a mate the app did not make, UserGap, suppressed in every mode; Update SolidWorks left it as it is. It worked in H, the configuration that was active, then showed and checked N and L and left the assembly in H. SolidWorks reports an error rebuilding RangeBox.SLDASM, from your own work alone: nothing of the app's is in error, so the Update was made. Your Sprocket-1 was in error in SolidWorks in the mode showing before this Update changed anything; after it, Sprocket-1 in N, L and H is in error. Save Gear_m1.25_N29 and RangeBox in SolidWorks to keep them.
+fact    m3 Update with a user feature in error: the press took 260.8 s; SolidWorks calls by member {'OpenDoc6': 10, 'IsSuppressed2': 526, 'GetSystemValue3': 4, 'ForceRebuild3': 38, 'ShowConfiguration2': 3, 'SetSuppression2': 40, 'put': 24}
+        shows and puts in order: [('ShowConfiguration2', 'N'), ('put', 'RangeBox_Carrier_Carrier-1'), ('put', 'Gear_m1.25_N29-1'), ('put', 'Gear_m1.25_N13-1'), ('put', 'Gear_m1.25_N13-2'), ('put', 'Gear_m1.25_N13-3'), ('put', 'Dog_m1.25_N17-1'), ('put', 'Dog_m1.25_N17-2'), ('put', 'Sleeve_m1.25_N17-1'), ('ShowConfiguration2', 'L'), ('put', 'RangeBox_Carrier_Carrier-1'), ('put', 'Gear_m1.25_N29-1'), ('put', 'Gear_m1.25_N13-1'), ('put', 'Gear_m1.25_N13-2'), ('put', 'Gear_m1.25_N13-3'), ('put', 'Dog_m1.25_N17-1'), ('put', 'Dog_m1.25_N17-2'), ('put', 'Sleeve_m1.25_N17-1'), ('ShowConfiguration2', 'H'), ('put', 'RangeBox_Carrier_Carrier-1'), ('put', 'Gear_m1.25_N29-1'), ('put', 'Gear_m1.25_N13-1'), ('put', 'Gear_m1.25_N13-2'), ('put', 'Gear_m1.25_N13-3'), ('put', 'Dog_m1.25_N17-1'), ('put', 'Dog_m1.25_N17-2'), ('put', 'Sleeve_m1.25_N17-1')]
+        configuration 'H'; visited ['N', 'L']; put_in ['N', 'L', 'H']; placed ['Carrier carrier', 'Sun', 'Planet copy 1', 'Planet copy 2', 'Planet copy 3', 'HighDog', 'LowDog', 'RangeSlv']; unsuppressed_in []; suppressed_in []; slid []; values_restored []; extra configurations []; extra mates ['UserGap']; senses unread []; positions per configuration False; failures []
+        post-check of N: turned False; out of step []; off axis []; clashes []; interference error ''
+        post-check of L: turned False; out of step []; off axis []; clashes []; interference error ''
+        post-check of H: turned False; out of step []; off axis []; clashes []; interference error ''
+fact    m3 Update with a user feature in error: the press took 261 s
+fact    m3 Update with a user feature in error: ok True; failures []; laid to the user's work alone ['Sprocket-1']; Sprocket-1 in error before True, after True; the sentence's words on it ['Your Sprocket-1 was in error in SolidWorks in the mode showing before this Update changed anything; after it, Sprocket-1 in N, L and H is in error.']
+ok      m3 Update with a user feature in error: the Update went ahead (rebuild False, findings {'mate': True, 'feature': False, 'whats_wrong': False}) and its result and sentence name Sprocket-1 as the user's, already in error before the Update
+-- m3  the same Sprocket-1, its part still in error, now carried: UserFront suppressed, a user lock to Sun (the app's new rule: a press that would put, by route (c1), a component whose own part has a feature in error refuses before any write)
+person  m3: UserFront suppressed {'H': True, 'N': True, 'L': True}; UserLockSun made (AddMate5 status 1), flags {'H': False, 'N': False, 'L': False}
+excel   Gears!P2 := 0.44
+excel   saved RangeBox.xlsx
+poll    a new read 0.0 s after asking; changes:
+          Gears!P2 Sun Backlash 0.42 → 0.44
+ok      read RangeBox.xlsx: ok
+        warning Gears!F3: Planet: 13 teeth at 20° is below the undercut limit of 17: a generated gear would lose the bottom of its flanks, which this profile does not show. A profile shift of 0.24 or more would clear it.
+        warning Gears!F3: Planet: The tooth tip is 0.36 mm thick, under 0.3 × module (0.375 mm).
+        warning Gears!F7: RangeSlv: The teeth's tips, at 18.75 mm, are inside the base circle of 19.968 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!A3: Planet (13 teeth) is below the undercut limit, which is not modelled, and meshes Sun (29 teeth): the build checks interference only where the gears stand, so check Planet with Sun turning in SolidWorks.
+        5 shafts · 6 gears · 2 meshes; gate ''
+classify parts changed ['Gear_m1.25_N29.SLDPRT']; moved []; re-place []; structural []; missing []; unsaved ['Gear_m1.25_N29.SLDPRT', 'RangeBox.SLDASM']; refusal ''; turning True; axial []; ratios []
+        layout globals wanted []
+summary Update SolidWorks will change Sun's values (Gear_m1.25_N29).
+footer  (m3, the carried sprocket in error, before the press) [green] Update SolidWorks will change Sun's values (Gear_m1.25_N29). It was built with a configuration per mode (H, N and L), each named as its mode, and saved in H; to switch mode, double-click another mode's configuration in SolidWorks' ConfigurationManager. Drag Sun in SolidWorks and the rest of its train follow. A turn you give the gears in one mode can show in other modes, so a dog can stand across its sleeve in another; to put the gears back there, press Update SolidWorks with that mode showing. Carrier (the carrier) is axes and planes only, so it has nothing to drag. As read at 23:06, Update SolidWorks leaves your Sprocket-1, Housing-1 and 3 mates as they are. Your Sprocket-1 was already in error in SolidWorks then. Gear_m1.25_N29 and RangeBox have changes from Update SolidWorks that are not saved: save them in SolidWorks to keep them. If SolidWorks closed them without saving, press Update SolidWorks to make them again.
+        button 'Build again…' on; Update SolidWorks shown on primary
+line    [green] As read at 23:06, Update SolidWorks leaves your Sprocket-1, Housing-1 and 3 mates as they are. Your Sprocket-1 was already in error in SolidWorks then.
+        predicted: carried []; problems []; refused (recorded) []; changed since False; unread ties []
+ok      m3, the carried sprocket in error, before the press: the footer says the user-work line as the window would: 'As read at 23:06, Update SolidWorks leaves your Sprocket-1, Housing-1 and 3 mate'…
+person  saved in SolidWorks (before m3 carried component with its part in error): ['Gear_m1.25_N29.SLDPRT', 'RangeBox.SLDASM']
+read    before m3 carried component with its part in error (active H; front document RangeBox.SLDASM): mates in error none; not free {'Ring': 3, 'Housing-1': 3}; marked none; rebuild state 0
+ok      m3 carried component with its part in error: the footer offers Update SolidWorks (shown True, enabled True, Build again… needed False)
+update  SolidWorks 1.67 GB private, 10.34 GB free
+        raised UserWorkRefused in 63.6 s: Update SolidWorks would put your Sprocket-1 with Sun, which your UserLockSun holds it to, and Sprocket-1 is in error in RangeBox.SLDASM; putting a component of yours that is in error with its gear has not been measured, so nothing is changed; in SolidWorks, put right what is in error in Sprocket-1, or suppress UserLockSun, and press Update SolidWorks again.
+status  [red] Update SolidWorks would put your Sprocket-1 with Sun, which your UserLockSun holds it to, and Sprocket-1 is in error in RangeBox.SLDASM; putting a component of yours that is in error with its gear has not been measured, so nothing is changed; in SolidWorks, put right what is in error in Sprocket-1, or suppress UserLockSun, and press Update SolidWorks again.
+record  the window's _record_refusal ran
+fact    m3 carried component with its part in error: the press took 63.6 s; SolidWorks calls by member {'OpenDoc6': 8, 'IsSuppressed2': 96, 'GetSystemValue3': 1}
+        shows and puts in order: []
+fact    m3 carried component with its part in error: the press took 64 s
+fact    m3 carried component with its part in error: problems [('component', ['UserLockSun'])]
+        component: Update SolidWorks would put your Sprocket-1 with Sun, which your UserLockSun holds it to, and Sprocket-1 is in error in RangeBox.SLDASM; putting a component of yours that is in error with its gear has not been measured, so nothing is changed; in SolidWorks, put right what is in error in Sprocket-1, or suppress UserLockSun, and press Update SolidWorks again.
+read    after m3 carried component with its part in error (active H; front document RangeBox.SLDASM): mates in error none; not free {'Ring': 3, 'Housing-1': 3}; marked none; rebuild state 0
+ok      m3 carried component with its part in error: refused before any write as ['component'], naming ['UserLockSun'] and saying ['Sprocket-1']: got ['component'], named ['UserLockSun']
+ok      m3 carried component with its part in error: the refused press made no call that changes or shows anything (its trace): none
+ok      m3 carried component with its part in error: nothing written: frames, mates, flags, entities, marks and globals as before
+ok      m3 carried component with its part in error: the record keeps the refusal with its time 2026-11-17T04:12:15Z: ['component']
+footer  (m3 carried component with its part in error, after the refusal) [red] Update SolidWorks would put your Sprocket-1 with Sun, which your UserLockSun holds it to, and Sprocket-1 is in error in RangeBox.SLDASM; putting a component of yours that is in error with its gear has not been measured, so nothing is changed; in SolidWorks, put right what is in error in Sprocket-1, or suppress UserLockSun, and press Update SolidWorks again.
+        button 'Build again…' on; Update SolidWorks shown on primary
+line    [red] Update SolidWorks refused at 23:12, before changing anything: Update SolidWorks would put your Sprocket-1 with Sun, which your UserLockSun holds it to, and Sprocket-1 is in error in RangeBox.SLDASM; putting a component of yours that is in error with its gear has not been measured, so nothing is changed; in SolidWorks, put right what is in error in Sprocket-1, or suppress UserLockSun, and press Update SolidWorks again. The next press reads your work in SolidWorks again, and refuses again unless that has been dealt with.
+        predicted: carried []; problems []; refused (recorded) [('component', ['UserLockSun'])]; changed since False; unread ties []
+ok      m3 carried component with its part in error: the footer says the refusal as recorded, red, until the workbook changes
+propose M3: {'assembly_rebuild_with_user_mate_in_error': True, 'whats_wrong_count_with_user_mate_in_error': 3, 'user_mate_codes': {'UserFront': 46, 'UserGap': 47}, 'over_defining_mate_made_with_status': 5, 'whats_wrong_count_with_user_feature_in_error': 1, 'assembly_rebuild_with_user_feature_in_error': False, 'part_rebuild_with_user_feature_in_error': False, 'windows_new_after_each': {'baseline': [], 'mate_error': [], 'feature_error': [], 'update_mate_error': [], 'update_feature_error': []}, 'show_errors_every_rebuild': True, 'update_ok_with_user_mate_in_error': True, 'update_ok_with_user_feature_in_error': True}
+ok      m3, the copy's end: m3 ends clean: every document of it closed in SolidWorks (left []), Excel's workbook closed (['RangeBox.xlsx']), no open document by a file name it holds ([])
+time    m3: 942 s; 0 failed; SolidWorks 1.02 GB private, 10.52 GB free
+== reducer  the 12 : 1 (G1 on S1 drives G2, G3 locked to G2 drives G4 on S3; no carrier) written by the app's write_new and built to turn through the app's own Build; kept as reducer.master
+write   Reducer_12to1.xlsx by the app's own write_new, its Output folder blank (the strip's is C:\Users\M0obo\Documents\GearGeneratorProbe\w9a-close-sw2026-20261116-225631\out\reducer)
+ok      Excel opened Reducer_12to1.xlsx with no dialog or repair: []
+excel   saved Reducer_12to1.xlsx
+ok      read Reducer_12to1.xlsx: ok
+        warning Gears!Q3: G2: The involute starts at 99.96 mm, above the form diameter of 99.343 mm, so the bottom of the working flank is a straight line.
+        warning Gears!Q5: G4: The involute starts at 99.28 mm, above the form diameter of 98.614 mm, so the bottom of the working flank is a straight line.
+        3 shafts · 4 gears · 2 meshes; gate ''
+footer  (reducer, read) [green] Ready: Build makes 4 parts, Reducer_12to1_Layout and Reducer_12to1.SLDASM in C:\…\out\reducer. Its gears are mated to their shafts and to each other, so they turn together in SolidWorks.
+        button 'Build' on primary; Update SolidWorks hidden
+plan    revision 0 Reducer_12to1: refusal ''; reason ''; turning True; static reason ''
+        layout C:\Users\M0obo\Documents\GearGeneratorProbe\w9a-close-sw2026-20261116-225631\out\reducer\Reducer_12to1_Layout.SLDPRT; assembly C:\Users\M0obo\Documents\GearGeneratorProbe\w9a-close-sw2026-20261116-225631\out\reducer\Reducer_12to1.SLDASM
+        build Gear_m1.5_N17 for G1 at C:\Users\M0obo\Documents\GearGeneratorProbe\w9a-close-sw2026-20261116-225631\out\reducer\Gear_m1.5_N17.SLDPRT (83 ops)
+        build Gear_m1.5_N68 for G2 at C:\Users\M0obo\Documents\GearGeneratorProbe\w9a-close-sw2026-20261116-225631\out\reducer\Gear_m1.5_N68.SLDPRT (83 ops)
+        build Gear_m2_N17 for G3 at C:\Users\M0obo\Documents\GearGeneratorProbe\w9a-close-sw2026-20261116-225631\out\reducer\Gear_m2_N17.SLDPRT (83 ops)
+        build OutputGear for G4 at C:\Users\M0obo\Documents\GearGeneratorProbe\w9a-close-sw2026-20261116-225631\out\reducer\OutputGear.SLDPRT (83 ops)
+        shaft S1: (0, 0, 0) axis Z+ (0.0, 0.0, 1.0) sigma +1; X base '', Y base '', Z  ''; line ''; S1 Axis
+        shaft S2: (63.75, 0, 0) axis Z+ (0.0, 0.0, 1.0) sigma +1; X plus 'S2 X', Y base '', Z  ''; line ''; S2 Axis
+        shaft S3: (131.75, 0, 0) axis Z+ (0.0, 0.0, 1.0) sigma +1; X plus 'S3 X', Y base '', Z  ''; line ''; S3 Axis
+        frame G1: R [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0] at [0.0, 0.0, 0.0]
+        frame G2: R [0.998932975, -0.046183459, 0.0, 0.046183459, 0.998932975, 0.0, 0.0, 0.0, 1.0] at [63.75, 0.0, 0.0]
+        frame G3: R [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0] at [63.75, 0.0, 17.0]
+        frame G4: R [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0] at [131.75, 0.0, 17.0]
+        motion: trains [('S1', 'S2', 'S3')]; drag ['G1']; fixed []; unmated []
+        mate 'G1 on S1 Axis': axis ['G1'] S1 ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'G1 along S1': along ['G1'] S1 ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'G2 on S2 Axis': axis ['G2'] S2 ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'G2 along S2': along ['G2'] S2 ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'G3 locked to G2': lock ['G2', 'G3']  ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'G4 on S3 Axis': axis ['G4'] S3 ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'G4 along S3': along ['G4'] S3 ratio [] face 'G4 Face Z' z_front 17 plane 'front' sense 0
+        mate 'G1 meshes G2': mesh ['G1', 'G2']  ratio [17, 68] face '' z_front 0 plane 'front' sense 1
+        mate 'G3 meshes G4': mesh ['G3', 'G4']  ratio [17, 51] face '' z_front 0 plane 'front' sense 1
+        ops of Reducer_12to1_Layout.SLDPRT:
+          new     NewPart from (default template)
+          global  "S2 X"= 63.75
+          global  "S3 X"= 131.75
+          axis    'S1 Axis' through planes 2 and 3
+          plane   'S2 X Plane' 63.75 mm from plane 3 (Offset)
+          link    "Offset@S2 X Plane"= "S2 X"
+          axis    'S2 Axis' through plane 2 and x2
+          plane   'S3 X Plane' 131.75 mm from plane 3 (Offset)
+          link    "Offset@S3 X Plane"= "S3 X"
+          axis    'S3 Axis' through plane 2 and x3
+          rebuild once
+          save    C:\Users\M0obo\Documents\GearGeneratorProbe\w9a-close-sw2026-20261116-225631\out\reducer\Reducer_12to1_Layout.SLDPRT
+        ops of Reducer_12to1.SLDASM:
+          new     NewAssembly from (default template)
+          global  "G4 Face Z"= 17
+          insert  layout C:\Users\M0obo\Documents\GearGeneratorProbe\w9a-close-sw2026-20261116-225631\out\reducer\Reducer_12to1_Layout.SLDPRT at (0, 0, 0)
+          place   layout at (0, 0, 0) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     layout
+          insert  gear1 C:\Users\M0obo\Documents\GearGeneratorProbe\w9a-close-sw2026-20261116-225631\out\reducer\Gear_m1.5_N17.SLDPRT at (0, 0, 0)
+          place   gear1 at (0, 0, 0) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     gear1
+          insert  gear2 C:\Users\M0obo\Documents\GearGeneratorProbe\w9a-close-sw2026-20261116-225631\out\reducer\Gear_m1.5_N68.SLDPRT at (63.75, 0, 0)
+          place   gear2 at (63.75, 0, 0) turned (0.998933, -0.046183, 0, 0.046183, 0.998933, 0, 0, 0, 1)
+          fix     gear2
+          insert  gear3 C:\Users\M0obo\Documents\GearGeneratorProbe\w9a-close-sw2026-20261116-225631\out\reducer\Gear_m2_N17.SLDPRT at (63.75, 0, 17)
+          place   gear3 at (63.75, 0, 17) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     gear3
+          insert  gear4 C:\Users\M0obo\Documents\GearGeneratorProbe\w9a-close-sw2026-20261116-225631\out\reducer\OutputGear.SLDPRT at (131.75, 0, 17)
+          place   gear4 at (131.75, 0, 17) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     gear4
+          unfix   gear1
+          mate    coincident gear1:Gear Axis ~ layout:S1 Axis as 'G1 on S1 Axis'
+          mate    point gear1:origin ~ layout:plane1 as 'G1 along S1'
+          unfix   gear2
+          mate    coincident gear2:Gear Axis ~ layout:S2 Axis as 'G2 on S2 Axis'
+          mate    point gear2:origin ~ layout:plane1 as 'G2 along S2'
+          unfix   gear3
+          mate    lock gear2 ~ gear3 as 'G3 locked to G2'
+          unfix   gear4
+          mate    coincident gear4:Gear Axis ~ layout:S3 Axis as 'G4 on S3 Axis'
+          mate    point distance 17 gear4:origin ~ layout:plane1 as 'G4 along S3'
+          link    "D1@G4 along S3"= "G4 Face Z"
+          mate    gear 17:68 gear1:Gear Axis ~ gear2:Gear Axis as 'G1 meshes G2'
+          mate    gear 17:51 gear3:Gear Axis ~ gear4:Gear Axis as 'G3 meshes G4'
+          rebuild once
+          save    C:\Users\M0obo\Documents\GearGeneratorProbe\w9a-close-sw2026-20261116-225631\out\reducer\Reducer_12to1.SLDASM
+ok      reducer: the plan turns (W5): static reason ''
+journal written: 6 paths
+build   Reducer_12to1: SolidWorks 1.02 GB private, 10.54 GB free
+        build   Part3 · spur · recipe A · trig degrees
+        ok      new part Part3
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 17
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Gear_m1.5_N17; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w9a-close-sw2026-20261116-225631\out\reducer\Gear_m1.5_N17.SLDPRT
+        build   Part4 · spur · recipe A · trig degrees
+        ok      new part Part4
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 68
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Gear_m1.5_N68; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w9a-close-sw2026-20261116-225631\out\reducer\Gear_m1.5_N68.SLDPRT
+        build   Part5 · spur · recipe A · trig degrees
+        ok      new part Part5
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 17
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Gear_m2_N17; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w9a-close-sw2026-20261116-225631\out\reducer\Gear_m2_N17.SLDPRT
+        build   Part6 · spur · recipe A · trig degrees
+        ok      new part Part6
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 51
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to OutputGear; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w9a-close-sw2026-20261116-225631\out\reducer\OutputGear.SLDPRT
+        build   Part7 · layout · recipe  · trig degrees
+        ok      new part Part7
+        ok      trig units measured: degrees
+        ok      global "S2 X"
+        ok      global "S3 X"
+        ok      axis S1 Axis
+        ok      plane S2 X Plane
+        ok      link "Offset@S2 X Plane"
+        ok      axis S2 Axis
+        ok      plane S3 X Plane
+        ok      link "Offset@S3 X Plane"
+        ok      axis S3 Axis
+        ok      2 globals read back and match the maths
+        ok      rebuilt once
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w9a-close-sw2026-20261116-225631\out\reducer\Reducer_12to1_Layout.SLDPRT
+        build   Assem1 · assembly · recipe  · trig degrees
+        ok      new assembly Assem1
+        ok      trig units measured: degrees
+        ok      global "G4 Face Z"
+        ok      component Reducer_12to1_Layout-1
+        ok      placed layout
+        ok      fixed layout
+        ok      component Gear_m1.5_N17-1
+        ok      placed gear1
+        ok      fixed gear1
+        ok      component Gear_m1.5_N68-1
+        ok      placed gear2
+        ok      fixed gear2
+        ok      component Gear_m2_N17-1
+        ok      placed gear3
+        ok      fixed gear3
+        ok      component OutputGear-1
+        ok      placed gear4
+        ok      fixed gear4
+        ok      unfixed gear1
+        ok      mate coincident gear1:Gear Axis ~ layout:S1 Axis as G1 on S1 Axis
+        ok      mate point gear1:origin ~ layout:plane1 as G1 along S1
+        ok      unfixed gear2
+        ok      mate coincident gear2:Gear Axis ~ layout:S2 Axis as G2 on S2 Axis
+        ok      mate point gear2:origin ~ layout:plane1 as G2 along S2
+        ok      unfixed gear3
+        ok      mate lock gear2 ~ gear3 as G3 locked to G2
+        ok      unfixed gear4
+        ok      mate coincident gear4:Gear Axis ~ layout:S3 Axis as G4 on S3 Axis
+        ok      mate point distance gear4:origin ~ layout:plane1 as G4 along S3
+        ok      link "D1@G4 along S3"
+        ok      mate gear gear1:Gear Axis ~ gear2:Gear Axis as G1 meshes G2
+        ok      mate gear gear3:Gear Axis ~ gear4:Gear Axis as G3 meshes G4
+        ok      1 globals read back and match the maths
+        ok      every mate sound, every gear free to turn
+        mate    G1 on S1 Axis
+        mate    G1 along S1
+        mate    G2 on S2 Axis
+        mate    G2 along S2
+        mate    G3 locked to G2
+        mate    G4 on S3 Axis
+        mate    G4 along S3
+        mate    G1 meshes G2
+        mate    G3 meshes G4
+        ok      rebuilt once
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w9a-close-sw2026-20261116-225631\out\reducer\Reducer_12to1.SLDASM
+        ok      no interference between the gears
+        in 81.2 s; SolidWorks 1.50 GB private, 10.21 GB free; kind 'motion'; turned round (made again with the other Flip) []
+        steps [('part', 'Gear_m1.5_N17', 1, 4), ('part', 'Gear_m1.5_N68', 2, 4), ('part', 'Gear_m2_N17', 3, 4), ('part', 'OutputGear', 4, 4), ('layout', 'Reducer_12to1_Layout', 0, 0), ('assembly', 'Reducer_12to1', 0, 0), ('interference', 'Reducer_12to1', 0, 0)]
+        progress words ['Building in SolidWorks: part 1 of 4, Gear_m1.5_N17…', 'Building in SolidWorks: checking interference…']
+record  4 sidecar(s) written; record written; notes []
+status  [green] Built 4 parts, Reducer_12to1_Layout and Reducer_12to1.SLDASM; no interference between the gears where they stand. Its gears are mated to turn together, and SolidWorks reports no mate in error: drag G1 in SolidWorks and the rest of its train follow. 1 thing to do by hand: Assign a material to each of the 4 parts; the build leaves it unset.
+ok      reducer: 4 part(s), the layout part and the assembly built and saved, turning: ok True, parts built 4, kind 'motion'
+ok      reducer: no interference: []
+ok      reducer: the build's sense read made again with the other Flip exactly [] on SolidWorks 2026: turned round []
+ok      reducer: the record holds a turning gearbox built from this read
+ok      reducer: the record's mates are the plan's: ['G1 on S1 Axis', 'G1 along S1', 'G2 on S2 Axis', 'G2 along S2', 'G3 locked to G2', 'G4 on S3 Axis', 'G4 along S3', 'G1 meshes G2', 'G3 meshes G4']
+ok      reducer: the build's sentence says how to turn it: 'drag G1 in SolidWorks and the rest of its train follow'
+footer  (reducer, built) [green] Built 4 parts, Reducer_12to1_Layout and Reducer_12to1.SLDASM; no interference between the gears where they stand. Its gears are mated to turn together, and SolidWorks reports no mate in error: drag G1 in SolidWorks and the rest of its train follow. 1 thing to do by hand: Assign a material to each of the 4 parts; the build leaves it unset.
+        button 'Build again…' on; Update SolidWorks shown on primary
+ok      reducer: the footer says how to turn it: 'drag G1 in SolidWorks and the rest of its train follow'
+tag     ' · built from this version'
+ok      reducer: 6 files on disk
+        marked modified in SolidWorks right after the build: {'Gear_m1.5_N17.SLDPRT': False, 'Gear_m1.5_N68.SLDPRT': False, 'Gear_m2_N17.SLDPRT': False, 'OutputGear.SLDPRT': False, 'Reducer_12to1_Layout.SLDPRT': False, 'Reducer_12to1.SLDASM': True}
+ok      reducer: the assembly is marked after the build (a read after its save)
+ok      reducer, right after the build and its saves: SolidWorks marks modified exactly ['Reducer_12to1.SLDASM']
+ok      reducer, the builder's end: reducer ends clean: every document of it closed in SolidWorks (left []), Excel's workbook closed (['Reducer_12to1.xlsx']), no open document by a file name it holds ([])
+master  reducer renamed reducer.master: it stays so for the rest of the run
+time    reducer: 85 s; 0 failed; SolidWorks 1.12 GB private, 10.41 GB free
+== k3  K3 and M3 in an app part (review point 6): on the 12 : 1, a user keyway in G1's part, then G1's Bore 8 -> 14 in the workbook, so an ordinary value Update rebuilds the user's feature into error (S0's P0 failure, reached through the app). Does the Update's part rebuild report it, does the job go on, is the keyway named as the user's; a window here ends this section only
+copy    reducer.master -> k3: 12 files, mtimes kept
+        Reducer_12to1.xlsx's record: 12 path(s) put onto the copy: ['record.workbook', 'record.parts[0].path', 'record.parts[1].path', 'record.parts[2].path', 'record.parts[3].path', 'record.assembly', 'record.gearbox.layout', 'record.gearbox.assembly', 'record.gearbox.components[0].part', 'record.gearbox.components[1].part', 'record.gearbox.components[2].part', 'record.gearbox.components[3].part']
+        Gear_m1.5_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.5_N68.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m2_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        OutputGear.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+ok      k3: the copy's record is valid: owner ('ours', ''); left on the master []; missing in the copy []; clear_saved dropped nothing (unsaved, mismatched ([], [])); the read's digest equals the record's
+DIALOG  SolidWorks shows 'Opening': ['Close', 'Opening Component 2 of 5', 'Update\nAssembly', 'Update\nGraphics', 'Opening File: C:\\Use...31\\out\\k3\\Gear_m1.5_N68.SLDPRT', 'Elapsed time: 0s', 'This file was last opened in 1 seconds.', 'For more information, view: '] (a progress box that closes itself; not logged again)
+fact    k3: the copy's assembly opened in 2.6 s; marked modified straight after the open: {'Reducer_12to1_Layout.SLDPRT': False, 'Gear_m1.5_N17.SLDPRT': False, 'Gear_m1.5_N68.SLDPRT': False, 'Gear_m2_N17.SLDPRT': False, 'OutputGear.SLDPRT': False, 'Reducer_12to1.SLDASM': False}
+ok      k3: SolidWorks found all 5 components and the layout in the copy, and the copy closed without saving (left []): elsewhere none
+ok      read Reducer_12to1.xlsx: ok
+        warning Gears!Q3: G2: The involute starts at 99.96 mm, above the form diameter of 99.343 mm, so the bottom of the working flank is a straight line.
+        warning Gears!Q5: G4: The involute starts at 99.28 mm, above the form diameter of 98.614 mm, so the bottom of the working flank is a straight line.
+        3 shafts · 4 gears · 2 meshes; gate ''
+ok      k3: the copy reads as built from this workbook, its assembly in the copy
+ok      Excel opened Reducer_12to1.xlsx with no dialog or repair: []
+ok      the M3 findings the app reads are in findings.py: missing none
+ok      the app reads the M3 findings as this script does: {'mate': True, 'feature': False, 'whats_wrong': False} / {'mate': True, 'feature': False, 'whats_wrong': False}
+fact    the M3 findings for 2026: {'ASSEMBLY_REBUILD_WITH_USER_MATE_IN_ERROR_ON_2026': True, 'ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_2026': False, 'WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_2026': False}
+ok      k3: User Keyway made in Gear_m1.5_N17.SLDPRT, rebuilt True, its code 0
+person  saved in SolidWorks (the user's keyway in G1's part): ['Gear_m1.5_N17.SLDPRT']
+ok      k3 quiet press (the inventory recorded): the footer offers Update SolidWorks (shown True, enabled True, Build again… needed False)
+update  SolidWorks 1.16 GB private, 10.40 GB free
+        in 12.0 s; SolidWorks 1.52 GB private, 10.26 GB free; loaded from disk ['Gear_m1.5_N68.SLDPRT', 'Gear_m2_N17.SLDPRT', 'OutputGear.SLDPRT', 'Reducer_12to1_Layout.SLDPRT', 'Reducer_12to1.SLDASM']
+        W9a: carried []; renamed []; user in error []; user features in error []; inventory read yes; failures []
+ok      the Update's check phase found no gear mate turning against its mesh: []
+status  [green] SolidWorks already matches the workbook: nothing was changed.
+fact    k3 quiet press (the inventory recorded): the press took 12.0 s; SolidWorks calls by member {'OpenDoc6': 7, 'IsSuppressed2': 9}
+        shows and puts in order: []
+        configuration ''; visited []; put_in []; placed []; unsuppressed_in []; suppressed_in []; slid []; values_restored []; extra configurations []; extra mates []; senses unread []; positions per configuration None; failures []
+fact    k3 quiet press (the inventory recorded): the press took 12 s
+ok      k3: M2 on the 12 : 1: the inventory lists the User Keyway in G1's part and nothing of the app's: [('User Keyway Sketch', 'Gear_m1.5_N17.SLDPRT', 0), ('User Keyway', 'Gear_m1.5_N17.SLDPRT', 0)]
+excel   Gears!J2 := 14
+excel   saved Reducer_12to1.xlsx
+poll    a new read 0.0 s after asking; changes:
+          Gears!J2 G1 Bore 8 → 14
+ok      read Reducer_12to1.xlsx: ok
+        warning Gears!Q3: G2: The involute starts at 99.96 mm, above the form diameter of 99.343 mm, so the bottom of the working flank is a straight line.
+        warning Gears!Q5: G4: The involute starts at 99.28 mm, above the form diameter of 98.614 mm, so the bottom of the working flank is a straight line.
+        3 shafts · 4 gears · 2 meshes; gate ''
+classify parts changed ['Gear_m1.5_N17.SLDPRT']; moved []; re-place []; structural []; missing []; unsaved []; refusal ''; turning True; axial []; ratios []
+        layout globals wanted ['S2 X = 63.75', 'S3 X = 131.75']
+summary Update SolidWorks will change G1's values (Gear_m1.5_N17).
+ok      k3: classify makes G1's bore an Update of G1's part: structural []
+footer  (k3, G1 Bore 14, before the press) [green] Update SolidWorks will change G1's values (Gear_m1.5_N17). It was built with its gears mated to turn: drag G1 in SolidWorks and the rest of its train follow. As read at 23:14, Update SolidWorks rebuilds your User Keyway Sketch and User Keyway in Gear_m1.5_N17 after the app's features.
+        button 'Build again…' on; Update SolidWorks shown on primary
+line    [green] As read at 23:14, Update SolidWorks rebuilds your User Keyway Sketch and User Keyway in Gear_m1.5_N17 after the app's features.
+        predicted: carried []; problems []; refused (recorded) []; changed since False; unread ties []
+ok      k3, G1 Bore 14, before the press: the footer says the user-work line as the window would: 'As read at 23:14, Update SolidWorks rebuilds your User Keyway Sketch and User Ke'…
+ok      k3: the footer says the user's keyway follows the app's features in G1's part: ['User Keyway Sketch', 'User Keyway']
+ok      k3 Update rebuilding the user's keyway into error: the footer offers Update SolidWorks (shown True, enabled True, Build again… needed False)
+update  SolidWorks 1.52 GB private, 10.26 GB free
+        in 7.5 s; SolidWorks 1.54 GB private, 10.19 GB free; loaded from disk []
+        W9a: carried []; renamed []; user in error []; user features in error [('User Keyway', 'Gear_m1.5_N17.SLDPRT', 71)]; inventory read yes; failures []
+ok      the Update's check phase found no gear mate turning against its mesh: []
+status  [green] Updated SolidWorks: changed 1 variable in Gear_m1.5_N17; no interference between the gears where they stand. SolidWorks reports an error rebuilding Reducer_12to1.SLDASM, from your own work alone: nothing of the app's is in error, so the Update was made. Your User Keyway in Gear_m1.5_N17 is in error in SolidWorks now, after this Update set Bore Diameter 8 to 14 (Gears!J2) in that part: change your User Keyway to fit, or type 8 in Gears!J2 again. Save Gear_m1.5_N17 in SolidWorks to keep it.
+fact    k3 Update rebuilding the user's keyway into error: the press took 7.6 s; SolidWorks calls by member {'OpenDoc6': 8, 'IsSuppressed2': 27, 'ForceRebuild3': 2}
+        shows and puts in order: []
+        configuration ''; visited []; put_in []; placed []; unsuppressed_in []; suppressed_in []; slid []; values_restored []; extra configurations []; extra mates []; senses unread []; positions per configuration None; failures []
+fact    k3 Update rebuilding the user's keyway into error: the press took 8 s
+answer  M3 (an app part's rebuild in the Update, only the user's feature in error): ok True; failures []; user features in error [('User Keyway', 'Gear_m1.5_N17.SLDPRT', 71)]; the user's features [('User Keyway Sketch', 'ProfileFeature', 0), ('User Keyway', 'ICE', 71)]; the app's in error none
+ok      k3: the bore change left only the user's keyway in error in G1's part
+ok      k3: the result lists the keyway among the user's features in error after the rebuild: ['User Keyway']
+fact    k3 Update rebuilding the user's keyway into error: ok True; failures []; laid to the user's work alone ['User Keyway in Gear_m1.5_N17.SLDPRT']; User Keyway in error before False, after True; the sentence's words on it ['Your User Keyway in Gear_m1.5_N17 is in error in SolidWorks now, after this Update set Bore Diameter 8 to 14 (Gears!J2) in that part: change your User Keyway to fit, or type 8 in Gears!J2 again.']
+ok      k3 Update rebuilding the user's keyway into error: the Update went ahead (rebuild None, findings {'mate': True, 'feature': False, 'whats_wrong': False}) and its result and sentence name User Keyway as the user's, newly in error the Update
+fact    k3: component error codes after the Update: {'Gear_m1.5_N17-1': 1}; G1's component Gear_m1.5_N17-1 reads 1 (a user's feature in error in its part, not counted against the app)
+ok      k3: G1's Bore Diameter reads 14.0
+ok      k3, the copy's end: k3 ends clean: every document of it closed in SolidWorks (left []), Excel's workbook closed (['Reducer_12to1.xlsx']), no open document by a file name it holds ([])
+time    k3: 41 s; 0 failed; SolidWorks 1.32 GB private, 10.41 GB free
+== setup  RangeBox with the user's work, saved in place as a person would, reopened; M1 and M2 by the app's own reads; a quiet Update records the inventory; kept as setup.master
+copy    rangebox.master -> setup: 15 files, mtimes kept
+        RangeBox.xlsx's record: 18 path(s) put onto the copy: ['record.workbook', 'record.parts[0].path', 'record.parts[1].path', 'record.parts[2].path', 'record.parts[3].path', 'record.parts[4].path', 'record.assembly', 'record.gearbox.layout', 'record.gearbox.assembly', 'record.gearbox.components[0].part', 'record.gearbox.components[1].part', 'record.gearbox.components[2].part', 'record.gearbox.components[3].part', 'record.gearbox.components[4].part', 'record.gearbox.components[5].part', 'record.gearbox.components[6].part', 'record.gearbox.components[7].part', 'record.gearbox.carriers[0].path']
+        Dog_m1.25_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.25_N13.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.25_N29.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Ring_m1.25_N55.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Sleeve_m1.25_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+ok      setup: the copy's record is valid: owner ('ours', ''); left on the master []; missing in the copy []; clear_saved dropped nothing (unsaved, mismatched ([], [])); the read's digest equals the record's
+fact    setup: the copy's assembly opened in 2.9 s; marked modified straight after the open: {'RangeBox_Layout.SLDPRT': False, 'RangeBox_Carrier_Carrier.SLDPRT': False, 'Gear_m1.25_N29.SLDPRT': False, 'Gear_m1.25_N13.SLDPRT': False, 'Ring_m1.25_N55.SLDPRT': False, 'Dog_m1.25_N17.SLDPRT': False, 'Sleeve_m1.25_N17.SLDPRT': False, 'RangeBox.SLDASM': False}
+ok      setup: SolidWorks found all 9 components and the layout in the copy, and the copy closed without saving (left []): elsewhere none
+ok      read RangeBox.xlsx: ok
+        warning Gears!F3: Planet: 13 teeth at 20° is below the undercut limit of 17: a generated gear would lose the bottom of its flanks, which this profile does not show. A profile shift of 0.24 or more would clear it.
+        warning Gears!F3: Planet: The tooth tip is 0.36 mm thick, under 0.3 × module (0.375 mm).
+        warning Gears!F7: RangeSlv: The teeth's tips, at 18.75 mm, are inside the base circle of 19.968 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!A3: Planet (13 teeth) is below the undercut limit, which is not modelled, and meshes Sun (29 teeth): the build checks interference only where the gears stand, so check Planet with Sun turning in SolidWorks.
+        5 shafts · 6 gears · 2 meshes; gate ''
+ok      setup: the copy reads as built from this workbook, its assembly in the copy
+ok      Excel opened RangeBox.xlsx with no dialog or repair: []
+footer  (setup, before the user's work (nothing of the user's on record)) [green] SolidWorks already matches the workbook on record; Update SolidWorks checks it live and puts right anything changed there; gears turned in SolidWorks stay where they are unless something must move. It was built with a configuration per mode (H, N and L), each named as its mode, and saved in H; to switch mode, double-click another mode's configuration in SolidWorks' ConfigurationManager. Drag Sun in SolidWorks and the rest of its train follow. Carrier (the carrier) is axes and planes only, so it has nothing to drag.
+        button 'Build again…' on; Update SolidWorks shown on primary
+line    [green] (nothing of the user’s on record)
+step    setup: the user's components go in by AddComponent5 into the reopened assembly with H, N and L
+DIALOG  SolidWorks shows '': ['Close', 'Opened 10\nComponents', 'Updating\nAssembly', 'Update\nGraphics', 'Post load updating', 'Elapsed time: 0s', 'This file was last opened in 27 seconds.', 'For more information, view: ']
+fact    setup: inserted ['Sprocket-1', 'Sprocket-2', 'Sprocket-3', 'Sprocket-4', 'Housing-1'] with H active; mates {'UserAxis1': 1, 'UserAxis2': 1, 'UserLock1': 1, 'UserLock2': 1, 'UserLock3': 1, 'UserAxis4': 1, 'UserDist4': 1, 'UserAngle4': 1} (AddMate5 status)
+        UserAxis1: as made {'H': False, 'N': False, 'L': False}; set {'H': False, 'N': False, 'L': False}
+        UserAxis2: as made {'H': False, 'N': False, 'L': False}; set {'H': False, 'N': False, 'L': False}
+        UserLock1: as made {'H': False, 'N': False, 'L': False}; set {'H': False, 'N': False, 'L': False}
+        UserLock2: as made {'H': False, 'N': False, 'L': False}; set {'H': False, 'N': False, 'L': False}
+        UserLock3: as made {'H': False, 'N': False, 'L': False}; set {'H': False, 'N': False, 'L': False}
+        UserAxis4: as made {'H': False, 'N': False, 'L': False}; set {'H': False, 'N': False, 'L': False}
+        UserDist4: as made {'H': False, 'N': False, 'L': False}; set {'H': False, 'N': False, 'L': False}
+        UserAngle4: as made {'H': False, 'N': False, 'L': False}; set {'H': False, 'N': False, 'L': False}
+ok      setup: the components are named ['Sprocket-1', 'Sprocket-2', 'Sprocket-3', 'Sprocket-4', 'Housing-1']
+ok      setup: every new mate's flag reads back as set in every mode
+ok      setup: every mate on in H reads error code 0 after the user's work: []
+ok      setup: User Keyway made in Gear_m1.25_N29.SLDPRT, rebuilt True, its code 0
+ok      setup: in H (shown) every mate on there reads error code 0: none
+ok      setup: in H Sprocket-4 stands -90.000000 mm from Sprocket-3 along the axis, UserDist4's 90 on the side AddMate5 took (a fact)
+ok      setup: in N (shown) every mate on there reads error code 0: none
+ok      setup: in N Sprocket-4 stands -90.000000 mm from Sprocket-3 along the axis, UserDist4's 90 on the side AddMate5 took (a fact)
+ok      setup: in L (shown) every mate on there reads error code 0: none
+ok      setup: in L Sprocket-4 stands -90.000000 mm from Sprocket-3 along the axis, UserDist4's 90 on the side AddMate5 took (a fact)
+ok      setup: no component of the user's interferes with anything: none (all: [])
+person  saved in SolidWorks (the user's work): ['Gear_m1.25_N29.SLDPRT', 'RangeBox.SLDASM']
+ok      setup: closed after the save: left []
+-- setup  M1 and M2: reopened from its file; every user mate's entities by Session.mate_info, the components by Session.components, Sun's part's features by Session.feature_states; GetSaveFlag around each read
+ok      setup M1 read: marked nothing (before none)
+ok      setup M1: UserAxis1 read whole as joining ['RangeBox_Layout-1', 'Sprocket-1']: {'type': 0, 'components': ['RangeBox_Layout-1', 'Sprocket-1'], 'whole': True, 'code': 0}
+ok      setup M1: UserAxis2 read whole as joining ['RangeBox_Layout-1', 'Sprocket-2']: {'type': 0, 'components': ['RangeBox_Layout-1', 'Sprocket-2'], 'whole': True, 'code': 0}
+ok      setup M1: UserLock1 read whole as joining ['Gear_m1.25_N29-1', 'Sprocket-1']: {'type': 16, 'components': ['Gear_m1.25_N29-1', 'Sprocket-1'], 'whole': True, 'code': 0}
+ok      setup M1: UserLock2 read whole as joining ['Sleeve_m1.25_N17-1', 'Sprocket-2']: {'type': 16, 'components': ['Sleeve_m1.25_N17-1', 'Sprocket-2'], 'whole': True, 'code': 0}
+ok      setup M1: UserLock3 read whole as joining ['Sprocket-1', 'Sprocket-3']: {'type': 16, 'components': ['Sprocket-1', 'Sprocket-3'], 'whole': True, 'code': 0}
+ok      setup M1: UserAxis4 read whole as joining ['RangeBox_Layout-1', 'Sprocket-4']: {'type': 0, 'components': ['RangeBox_Layout-1', 'Sprocket-4'], 'whole': True, 'code': 0}
+ok      setup M1: UserDist4 read whole as joining ['Sprocket-3', 'Sprocket-4']: {'type': 5, 'components': ['Sprocket-4', 'Sprocket-3'], 'whole': True, 'code': 0}
+ok      setup M1: UserAngle4 read whole as joining ['RangeBox_Layout-1', 'Sprocket-4']: {'type': 6, 'components': ['Sprocket-4', 'RangeBox_Layout-1'], 'whole': True, 'code': 0}
+ok      setup: reopened, each user component resolved and Housing-1 fixed: {'Sprocket-1': ('Sprocket.SLDPRT', False, 2, 0), 'Sprocket-2': ('Sprocket.SLDPRT', False, 2, 0), 'Sprocket-3': ('Sprocket.SLDPRT', False, 2, 0), 'Sprocket-4': ('Sprocket.SLDPRT', False, 2, 0), 'Housing-1': ('Housing.SLDPRT', True, 2, 0)}
+ok      setup M2 read: marked nothing (before none)
+fact    setup M2: Sun's part's features in tree order [('Comments', 'CommentsFolder', 0), ('Favorites', 'FavoriteFolder', 0), ('History', 'HistoryFolder', 0), ('Selection Sets', 'SelectionSetFolder', 0), ('Sensors', 'SensorFolder', 0), ('Design Binder', 'DocsFolder', 0), ('Annotations', 'DetailCabinet', 0), ('Surface Bodies', 'SurfaceBodyFolder', 0), ('Solid Bodies', 'SolidBodyFolder', 0), ('Lights and Cameras', 'EnvFolder', 0), ('Markups', 'InkMarkupFolder', 0), ('Equations', 'EqnFolder', 0), ('Material <not specified>', 'MaterialFolder', 0), ('Front Plane', 'RefPlane', 0), ('Top Plane', 'RefPlane', 0), ('Right Plane', 'RefPlane', 0), ('Origin', 'OriginProfileFeature', 0), ('Gear Axis', 'RefAxis', 0), ('Blank Sketch', 'ProfileFeature', 0), ('Blank', 'Extrusion', 0), ('Tooth Space Sketch', 'ProfileFeature', 0), ('Tooth Space', 'ICE', 0), ('Teeth', 'CirPattern', 0), ('User Keyway Sketch', 'ProfileFeature', 0), ('User Keyway', 'ICE', 0)]
+ok      setup M2: the user's keyway is in Sun's part, code 0
+-- setup  a quiet Update: the inventory read and recorded (K4); the footer before and after
+footer  (setup, before the quiet press) [green] SolidWorks already matches the workbook on record; Update SolidWorks checks it live and puts right anything changed there; gears turned in SolidWorks stay where they are unless something must move. It was built with a configuration per mode (H, N and L), each named as its mode, and saved in H; to switch mode, double-click another mode's configuration in SolidWorks' ConfigurationManager. Drag Sun in SolidWorks and the rest of its train follow. Carrier (the carrier) is axes and planes only, so it has nothing to drag.
+        button 'Build again…' on; Update SolidWorks shown on primary
+line    [green] (nothing of the user’s on record)
+ok      setup quiet press: the footer offers Update SolidWorks (shown True, enabled True, Build again… needed False)
+update  SolidWorks 1.22 GB private, 10.34 GB free
+        in 74.6 s; SolidWorks 1.54 GB private, 10.40 GB free; loaded from disk []
+        W9a: carried []; renamed []; user in error []; user features in error []; inventory read yes; failures []
+ok      the Update's check phase found no gear mate turning against its mesh: []
+status  [green] SolidWorks already matches the workbook: nothing was changed. It worked in H, the configuration that was active; it did not show the other modes, since nothing in H needed changing.
+fact    setup quiet press: the press took 74.6 s; SolidWorks calls by member {'OpenDoc6': 9, 'IsSuppressed2': 112, 'GetSystemValue3': 1}
+        shows and puts in order: []
+        configuration 'H'; visited []; put_in []; placed []; unsuppressed_in []; suppressed_in []; slid []; values_restored []; extra configurations []; extra mates []; senses unread []; positions per configuration False; failures []
+fact    setup quiet press: the press took 75 s
+ok      setup quiet press: read from SolidWorks, every gear stands where it stood before the press (largest 0.0e+00 at -)
+fact    setup quiet press: GetSaveFlag before the press {'RangeBox_Layout.SLDPRT': False, 'RangeBox_Carrier_Carrier.SLDPRT': False, 'Gear_m1.25_N29.SLDPRT': False, 'Gear_m1.25_N13.SLDPRT': False, 'Ring_m1.25_N55.SLDPRT': False, 'Dog_m1.25_N17.SLDPRT': False, 'Sleeve_m1.25_N17.SLDPRT': False, 'RangeBox.SLDASM': False}, after it {'RangeBox_Layout.SLDPRT': False, 'RangeBox_Carrier_Carrier.SLDPRT': False, 'Gear_m1.25_N29.SLDPRT': False, 'Gear_m1.25_N13.SLDPRT': False, 'Ring_m1.25_N55.SLDPRT': False, 'Dog_m1.25_N17.SLDPRT': False, 'Sleeve_m1.25_N17.SLDPRT': False, 'RangeBox.SLDASM': False}
+ok      setup quiet press: every document reads GetSaveFlag False before and after an Update that changed nothing (GEAR_MATE_DEFINITION_READ_MARKS 'nothing'): marked before [], after []
+fact    setup: inventory read at 2026-11-17T04:17:18Z: components [('Sprocket-2', 'Sprocket.SLDPRT', False, 2, 0), ('Housing-1', 'Housing.SLDPRT', True, 2, 0), ('Sprocket-4', 'Sprocket.SLDPRT', False, 2, 0), ('Sprocket-1', 'Sprocket.SLDPRT', False, 2, 0), ('Sprocket-3', 'Sprocket.SLDPRT', False, 2, 0)]
+        mate UserAxis1: other type 0 touches [('layout', ''), ('user', 'Sprocket-1')] on ['H', 'N', 'L'] code 0 whole True
+        mate UserAxis2: other type 0 touches [('layout', ''), ('user', 'Sprocket-2')] on ['H', 'N', 'L'] code 0 whole True
+        mate UserLock1: lock type 16 touches [('app', 'Sun'), ('user', 'Sprocket-1')] on ['H', 'N', 'L'] code 0 whole True
+        mate UserLock2: lock type 16 touches [('app', 'RangeSlv'), ('user', 'Sprocket-2')] on ['H', 'N', 'L'] code 0 whole True
+        mate UserLock3: lock type 16 touches [('user', 'Sprocket-1'), ('user', 'Sprocket-3')] on ['H', 'N', 'L'] code 0 whole True
+        mate UserAxis4: other type 0 touches [('layout', ''), ('user', 'Sprocket-4')] on ['H', 'N', 'L'] code 0 whole True
+        mate UserDist4: other type 5 touches [('user', 'Sprocket-4'), ('user', 'Sprocket-3')] on ['H', 'N', 'L'] code 0 whole True
+        mate UserAngle4: other type 6 touches [('user', 'Sprocket-4'), ('layout', '')] on ['H', 'N', 'L'] code 0 whole True
+        features [('User Keyway Sketch', 'Gear_m1.25_N29.SLDPRT', 'ProfileFeature', 0), ('User Keyway', 'Gear_m1.25_N29.SLDPRT', 'ICE', 0)]
+ok      setup: the inventory names exactly the user's components: ['Sprocket-2', 'Housing-1', 'Sprocket-4', 'Sprocket-1', 'Sprocket-3']
+ok      setup: the inventory's UserAxis1 touches ['RangeBox_Layout-1', 'Sprocket-1']: [('layout', ''), ('user', 'Sprocket-1')] (whole)
+ok      setup: the inventory's UserAxis2 touches ['RangeBox_Layout-1', 'Sprocket-2']: [('layout', ''), ('user', 'Sprocket-2')] (whole)
+ok      setup: the inventory's UserLock1 touches ['Gear_m1.25_N29-1', 'Sprocket-1']: [('app', 'Sun'), ('user', 'Sprocket-1')] (whole)
+ok      setup: the inventory's UserLock2 touches ['Sleeve_m1.25_N17-1', 'Sprocket-2']: [('app', 'RangeSlv'), ('user', 'Sprocket-2')] (whole)
+ok      setup: the inventory's UserLock3 touches ['Sprocket-1', 'Sprocket-3']: [('user', 'Sprocket-1'), ('user', 'Sprocket-3')] (whole)
+ok      setup: the inventory's UserAxis4 touches ['RangeBox_Layout-1', 'Sprocket-4']: [('layout', ''), ('user', 'Sprocket-4')] (whole)
+ok      setup: the inventory's UserDist4 touches ['Sprocket-3', 'Sprocket-4']: [('user', 'Sprocket-4'), ('user', 'Sprocket-3')] (whole)
+ok      setup: the inventory's UserAngle4 touches ['RangeBox_Layout-1', 'Sprocket-4']: [('user', 'Sprocket-4'), ('layout', '')] (whole)
+ok      setup: no app component listed as the user's
+ok      setup: M2: the app tells its features from the user's: the inventory lists the User Keyway in Sun's part and nothing else: [('User Keyway Sketch', 'Gear_m1.25_N29.SLDPRT'), ('User Keyway', 'Gear_m1.25_N29.SLDPRT')]
+ok      setup: the record's user_work holds the inventory with revision [34, 1, 1] (this SolidWorks [34, 1, 1]) read at 2026-11-17T04:17:18Z
+footer  (setup, after the quiet press) [green] SolidWorks already matches the workbook: nothing was changed. It worked in H, the configuration that was active; it did not show the other modes, since nothing in H needed changing.
+        button 'Build again…' on; Update SolidWorks shown on primary
+line    [green] As read at 23:17, Update SolidWorks leaves your Sprocket-2, Housing-1, Sprocket-4, 2 other components and 8 mates as they are, and your User Keyway Sketch and User Keyway in Gear_m1.25_N29 too.
+        predicted: carried []; problems []; refused (recorded) []; changed since False; unread ties []
+fact    setup: route (c1)'s branches on RangeBox as the app labels them: {'Ring': 'HELD_GEAR'}
+ok      setup: on S0's branch the judgement carries every locked sprocket with its gear and refuses nothing: {'Sun': [('Sprocket-1', ('UserLock1', 'UserLock3')), ('Sprocket-3', ('UserLock1', 'UserLock3'))], 'RangeSlv': [('Sprocket-2', ('UserLock2',))]} []
+ok      setup: a lock on a gear put by the HELD_GEAR branch refuses while findings.USER_MATE_PUT_HELD_GEAR_ON_2026 is None: ['Update SolidWorks would put your Sprocket-1 and Sprocket-3 with Sun, which your UserLock1 and UserLock3 hold to it, and ', 'Update SolidWorks would put your Sprocket-2 with RangeSlv, which your UserLock2 holds to it, and putting a component of ']
+ok      setup: a lock on a gear put by the FIXED_GEAR branch refuses while findings.USER_MATE_PUT_FIXED_GEAR_ON_2026 is None: ['Update SolidWorks would put your Sprocket-1 and Sprocket-3 with Sun, which your UserLock1 and UserLock3 hold to it, and ', 'Update SolidWorks would put your Sprocket-2 with RangeSlv, which your UserLock2 holds to it, and putting a component of ']
+ok      setup: a lock on a gear put by the NO_CARRIER branch refuses while findings.USER_MATE_PUT_NO_CARRIER_ON_2026 is True: []
+ok      setup: Sprocket-1 taken for a sub-assembly refuses while findings.USER_MATE_PUT_SUBASSEMBLY_ON_2026 is None: ['Update SolidWorks would put your Sprocket-1 and Sprocket-3 with Sun, which your UserLock1 and UserLock3 hold to it, and ']
+ok      setup, the builder's end: setup ends clean: every document of it closed in SolidWorks (left []), Excel's workbook closed (['RangeBox.xlsx']), no open document by a file name it holds ([])
+master  setup renamed setup.master: it stays so for the rest of the run
+time    setup: 190 s; 0 failed; SolidWorks 1.34 GB private, 10.44 GB free
+== lightweight  a carried user component loaded lightweight refuses (W9A-REVIEW-B 3; the coordinator's item 4): on a copy of setup.master, Sprocket-1 set lightweight, a quiet press records it from the live session, the footer foresees the refusal, and the press refuses, all on the assembly as it stands, never saved while a component is lightweight (SOLIDWORKS CAM's modal box under SaveAs3, found at 9dded70); Sprocket-1 resolved again before anything is saved or closed
+copy    setup.master -> lightweight: 17 files, mtimes kept
+        RangeBox.xlsx's record: 21 path(s) put onto the copy: ['record.workbook', 'record.parts[0].path', 'record.parts[1].path', 'record.parts[2].path', 'record.parts[3].path', 'record.parts[4].path', 'record.assembly', 'record.gearbox.layout', 'record.gearbox.assembly', 'record.gearbox.components[0].part', 'record.gearbox.components[1].part', 'record.gearbox.components[2].part', 'record.gearbox.components[3].part', 'record.gearbox.components[4].part', 'record.gearbox.components[5].part', 'record.gearbox.components[6].part', 'record.gearbox.components[7].part', 'record.gearbox.carriers[0].path', 'record.gearbox.user_work.assembly', 'record.gearbox.user_work.features[0].path', 'record.gearbox.user_work.features[1].path']
+        Dog_m1.25_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.25_N13.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.25_N29.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Ring_m1.25_N55.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Sleeve_m1.25_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+ok      lightweight: the copy's record is valid: owner ('ours', ''); left on the master []; missing in the copy []; clear_saved dropped nothing (unsaved, mismatched ([], [])); the read's digest equals the record's
+fact    lightweight: the copy's assembly opened in 3.2 s; marked modified straight after the open: {'RangeBox_Layout.SLDPRT': False, 'RangeBox_Carrier_Carrier.SLDPRT': False, 'Gear_m1.25_N29.SLDPRT': False, 'Gear_m1.25_N13.SLDPRT': False, 'Ring_m1.25_N55.SLDPRT': False, 'Dog_m1.25_N17.SLDPRT': False, 'Sleeve_m1.25_N17.SLDPRT': False, 'Sprocket.SLDPRT': False, 'Housing.SLDPRT': False, 'RangeBox.SLDASM': False}
+ok      lightweight: SolidWorks found all 9 components and the layout in the copy, and the copy closed without saving (left []): elsewhere none
+ok      read RangeBox.xlsx: ok
+        warning Gears!F3: Planet: 13 teeth at 20° is below the undercut limit of 17: a generated gear would lose the bottom of its flanks, which this profile does not show. A profile shift of 0.24 or more would clear it.
+        warning Gears!F3: Planet: The tooth tip is 0.36 mm thick, under 0.3 × module (0.375 mm).
+        warning Gears!F7: RangeSlv: The teeth's tips, at 18.75 mm, are inside the base circle of 19.968 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!A3: Planet (13 teeth) is below the undercut limit, which is not modelled, and meshes Sun (29 teeth): the build checks interference only where the gears stand, so check Planet with Sun turning in SolidWorks.
+        5 shafts · 6 gears · 2 meshes; gate ''
+ok      lightweight: the copy reads as built from this workbook, its assembly in the copy
+ok      Excel opened RangeBox.xlsx with no dialog or repair: []
+ok      lightweight: the user's components ['Housing-1', 'Sprocket-1', 'Sprocket-2', 'Sprocket-3', 'Sprocket-4'] are there, each loaded from the copy ({'Sprocket-3': 'Sprocket.SLDPRT', 'Sprocket-4': 'Sprocket.SLDPRT', 'Housing-1': 'Housing.SLDPRT', 'Sprocket-1': 'Sprocket.SLDPRT', 'Sprocket-2': 'Sprocket.SLDPRT'})
+fact    lightweight: GetSuppression2 before the set: {'Sprocket-1': 2, 'Sprocket-2': 2, 'Sprocket-3': 2, 'Sprocket-4': 2, 'Housing-1': 2}
+person  Sprocket-1 set to state 1: reads 1
+fact    lightweight: GetSuppression2 after Sprocket-1 alone was set lightweight: {'Sprocket-1': 1, 'Sprocket-2': 1, 'Sprocket-3': 1, 'Sprocket-4': 1, 'Housing-1': 2}
+fact    lightweight: SetSuppression2(1) on Sprocket-1 alone; the instances of Sprocket.SLDPRT then read lightweight by the script's own GetSuppression2: ['Sprocket-1', 'Sprocket-2', 'Sprocket-3', 'Sprocket-4'] (W9A-RUN-2026-REVIEW finding 3: whether SolidWorks makes every instance lightweight, or the app's read is wrong)
+ok      lightweight: the quiet press: the footer offers Update SolidWorks (shown True, enabled True, Build again… needed False)
+update  SolidWorks 1.20 GB private, 10.45 GB free
+        in 76.6 s; SolidWorks 1.52 GB private, 10.44 GB free; loaded from disk []
+        W9a: carried []; renamed []; user in error []; user features in error []; inventory read yes; failures []
+ok      the Update's check phase found no gear mate turning against its mesh: []
+status  [green] SolidWorks already matches the workbook: nothing was changed. It worked in H, the configuration that was active; it did not show the other modes, since nothing in H needed changing.
+fact    lightweight: the quiet press: the press took 76.6 s; SolidWorks calls by member {'OpenDoc6': 9, 'IsSuppressed2': 112, 'GetSystemValue3': 1}
+        shows and puts in order: []
+        configuration 'H'; visited []; put_in []; placed []; unsuppressed_in []; suppressed_in []; slid []; values_restored []; extra configurations []; extra mates []; senses unread []; positions per configuration False; failures []
+fact    lightweight: the quiet press: the press took 77 s
+ok      lightweight: the quiet press read the user's work and changed nothing: ok
+excel   Gears!P2 := 0.4
+excel   saved RangeBox.xlsx
+poll    a new read 0.0 s after asking; changes:
+          Gears!P2 Sun Backlash blank → 0.4
+ok      read RangeBox.xlsx: ok
+        warning Gears!F3: Planet: 13 teeth at 20° is below the undercut limit of 17: a generated gear would lose the bottom of its flanks, which this profile does not show. A profile shift of 0.24 or more would clear it.
+        warning Gears!F3: Planet: The tooth tip is 0.36 mm thick, under 0.3 × module (0.375 mm).
+        warning Gears!F7: RangeSlv: The teeth's tips, at 18.75 mm, are inside the base circle of 19.968 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!A3: Planet (13 teeth) is below the undercut limit, which is not modelled, and meshes Sun (29 teeth): the build checks interference only where the gears stand, so check Planet with Sun turning in SolidWorks.
+        5 shafts · 6 gears · 2 meshes; gate ''
+classify parts changed ['Gear_m1.25_N29.SLDPRT']; moved []; re-place []; structural []; missing []; unsaved []; refusal ''; turning True; axial []; ratios []
+        layout globals wanted []
+summary Update SolidWorks will change Sun's values (Gear_m1.25_N29).
+footer  (lightweight, before the press) [red] Update SolidWorks will change Sun's values (Gear_m1.25_N29). It was built with a configuration per mode (H, N and L), each named as its mode, and saved in H; to switch mode, double-click another mode's configuration in SolidWorks' ConfigurationManager. Drag Sun in SolidWorks and the rest of its train follow. A turn you give the gears in one mode can show in other modes, so a dog can stand across its sleeve in another; to put the gears back there, press Update SolidWorks with that mode showing. Carrier (the carrier) is axes and planes only, so it has nothing to drag. As read at 23:18, the next press would stop before changing anything: Update SolidWorks would put your Sprocket-1 with Sun, which your mates hold it to, and Sprocket-1 is loaded lightweight in RangeBox.SLDASM, so nothing is changed; in SolidWorks, set it to Resolved and press Update SolidWorks again. Update SolidWorks would put your Sprocket-3 with Sun, which your mates hold it to, and Sprocket-3 is loaded lightweight in RangeBox.SLDASM, so nothing is changed; in SolidWorks, set it to Resolved and press Update SolidWorks again. Update SolidWorks would put your Sprocket-2 with RangeSlv, which your mates hold it to, and Sprocket-2 is loaded lightweight in RangeBox.SLDASM, so nothing is changed; in SolidWorks, set it to Resolved and press Update SolidWorks again. It reads your work in SolidWorks again when pressed.
+        button 'Build again…' on; Update SolidWorks shown on primary
+line    [red] As read at 23:18, the next press would stop before changing anything: Update SolidWorks would put your Sprocket-1 with Sun, which your mates hold it to, and Sprocket-1 is loaded lightweight in RangeBox.SLDASM, so nothing is changed; in SolidWorks, set it to Resolved and press Update SolidWorks again. Update SolidWorks would put your Sprocket-3 with Sun, which your mates hold it to, and Sprocket-3 is loaded lightweight in RangeBox.SLDASM, so nothing is changed; in SolidWorks, set it to Resolved and press Update SolidWorks again. Update SolidWorks would put your Sprocket-2 with RangeSlv, which your mates hold it to, and Sprocket-2 is loaded lightweight in RangeBox.SLDASM, so nothing is changed; in SolidWorks, set it to Resolved and press Update SolidWorks again. It reads your work in SolidWorks again when pressed.
+        predicted: carried [('Sun', [('Sprocket-1', ('UserLock1', 'UserLock3')), ('Sprocket-3', ('UserLock1', 'UserLock3'))]), ('RangeSlv', [('Sprocket-2', ('UserLock2',))])]; problems [('component', []), ('component', []), ('component', [])]; refused (recorded) []; changed since False; unread ties [(('Carrier carrier', 'Sun', 'Planet copy 1', 'Planet copy 2', 'Planet copy 3', 'HighDog', 'LowDog', 'RangeSlv'), ('UserLock1', 'UserLock2', 'UserLock3', 'UserDist4', 'UserAngle4', 'UserAxis1', 'UserAxis2', 'UserAxis4'))]
+ok      lightweight, before the press: the footer says the user-work line as the window would: 'As read at 23:18, the next press would stop before changing anything: Update Sol'…
+fact    lightweight: the app's inventory reads the states {'Sprocket-3': 1, 'Sprocket-4': 1, 'Housing-1': 2, 'Sprocket-1': 1, 'Sprocket-2': 1}
+ok      lightweight: the footer foresees the refusal of a carried component loaded lightweight
+person  lightweight: nothing saved first; the press reads the assembly as it stands in the session
+read    before lightweight (active H; front document RangeBox.SLDASM): mates in error none; not free {'Ring': 3, 'Sprocket-4': 3, 'Housing-1': 3}; marked none; rebuild state 0
+ok      lightweight: the footer offers Update SolidWorks (shown True, enabled True, Build again… needed False)
+update  SolidWorks 1.54 GB private, 10.43 GB free
+        raised UserWorkRefused in 65.1 s: Update SolidWorks would put your Sprocket-1 with Sun, which your mates hold it to, and Sprocket-1 is loaded lightweight in RangeBox.SLDASM, so nothing is changed; in SolidWorks, set it to Resolved and press Update SolidWorks again. Update SolidWorks would put your Sprocket-3 with Sun, which your mates hold it to, and Sprocket-3 is loaded lightweight in RangeBox.SLDASM, so nothing is changed; in SolidWorks, set it to Resolved and press Update SolidWorks again. Update SolidWorks would put your Sprocket-2 with RangeSlv, which your mates hold it to, and Sprocket-2 is loaded lightweight in RangeBox.SLDASM, so nothing is changed; in SolidWorks, set it to Resolved and press Update SolidWorks again.
+status  [red] Update SolidWorks would put your Sprocket-1 with Sun, which your mates hold it to, and Sprocket-1 is loaded lightweight in RangeBox.SLDASM, so nothing is changed; in SolidWorks, set it to Resolved and press Update SolidWorks again. Update SolidWorks would put your Sprocket-3 with Sun, which your mates hold it to, and Sprocket-3 is loaded lightweight in RangeBox.SLDASM, so nothing is changed; in SolidWorks, set it to Resolved and press Update SolidWorks again. Update SolidWorks would put your Sprocket-2 with RangeSlv, which your mates hold it to, and Sprocket-2 is loaded lightweight in RangeBox.SLDASM, so nothing is changed; in SolidWorks, set it to Resolved and press Update SolidWorks again.
+record  the window's _record_refusal ran
+fact    lightweight: the press took 65.1 s; SolidWorks calls by member {'OpenDoc6': 8, 'IsSuppressed2': 112, 'GetSystemValue3': 1}
+        shows and puts in order: []
+fact    lightweight: the press took 65 s
+fact    lightweight: problems [('component', []), ('component', []), ('component', [])]
+        component: Update SolidWorks would put your Sprocket-1 with Sun, which your mates hold it to, and Sprocket-1 is loaded lightweight in RangeBox.SLDASM, so nothing is changed; in SolidWorks, set it to Resolved and press Update SolidWorks again.
+        component: Update SolidWorks would put your Sprocket-3 with Sun, which your mates hold it to, and Sprocket-3 is loaded lightweight in RangeBox.SLDASM, so nothing is changed; in SolidWorks, set it to Resolved and press Update SolidWorks again.
+        component: Update SolidWorks would put your Sprocket-2 with RangeSlv, which your mates hold it to, and Sprocket-2 is loaded lightweight in RangeBox.SLDASM, so nothing is changed; in SolidWorks, set it to Resolved and press Update SolidWorks again.
+read    after lightweight (active H; front document RangeBox.SLDASM): mates in error none; not free {'Ring': 3, 'Sprocket-4': 3, 'Housing-1': 3}; marked none; rebuild state 0
+ok      lightweight: refused before any write as ['component'], naming [] and saying ['Sprocket-1']: got ['component'], named []
+ok      lightweight: the refused press made no call that changes or shows anything (its trace): none
+ok      lightweight: nothing written: frames, mates, flags, entities, marks and globals as before
+ok      lightweight: the record keeps the refusal with its time 2026-11-17T04:20:40Z: ['component', 'component', 'component']
+footer  (lightweight, after the refusal) [red] Update SolidWorks would put your Sprocket-1 with Sun, which your mates hold it to, and Sprocket-1 is loaded lightweight in RangeBox.SLDASM, so nothing is changed; in SolidWorks, set it to Resolved and press Update SolidWorks again. Update SolidWorks would put your Sprocket-3 with Sun, which your mates hold it to, and Sprocket-3 is loaded lightweight in RangeBox.SLDASM, so nothing is changed; in SolidWorks, set it to Resolved and press Update SolidWorks again. Update SolidWorks would put your Sprocket-2 with RangeSlv, which your mates hold it to, and Sprocket-2 is loaded lightweight in RangeBox.SLDASM, so nothing is changed; in SolidWorks, set it to Resolved and press Update SolidWorks again.
+        button 'Build again…' on; Update SolidWorks shown on primary
+line    [red] Update SolidWorks refused at 23:20, before changing anything: Update SolidWorks would put your Sprocket-1 with Sun, which your mates hold it to, and Sprocket-1 is loaded lightweight in RangeBox.SLDASM, so nothing is changed; in SolidWorks, set it to Resolved and press Update SolidWorks again. Update SolidWorks would put your Sprocket-3 with Sun, which your mates hold it to, and Sprocket-3 is loaded lightweight in RangeBox.SLDASM, so nothing is changed; in SolidWorks, set it to Resolved and press Update SolidWorks again. Update SolidWorks would put your Sprocket-2 with RangeSlv, which your mates hold it to, and Sprocket-2 is loaded lightweight in RangeBox.SLDASM, so nothing is changed; in SolidWorks, set it to Resolved and press Update SolidWorks again. The next press reads your work in SolidWorks again, and refuses again unless that has been dealt with.
+        predicted: carried []; problems []; refused (recorded) [('component', []), ('component', []), ('component', [])]; changed since False; unread ties []
+ok      lightweight: the footer says the refusal as recorded, red, until the workbook changes
+ok      lightweight: what the footer foresaw before the press is what the press refused: foreseen ['component'] [], refused ['component'] []
+ok      lightweight: the refusal names exactly the carried instances the raw read shows lightweight: named ['Sprocket-1', 'Sprocket-2', 'Sprocket-3'], lightweight and carried ['Sprocket-1', 'Sprocket-2', 'Sprocket-3']
+person  Sprocket-1 set to state 2: reads 2
+ok      lightweight: Sprocket-1 resolved again before anything is saved or closed: 2
+person  Sprocket-2 set to state 2: reads 2
+ok      lightweight: Sprocket-2 resolved again before anything is saved or closed: 2
+person  Sprocket-3 set to state 2: reads 2
+ok      lightweight: Sprocket-3 resolved again before anything is saved or closed: 2
+person  Sprocket-4 set to state 2: reads 2
+ok      lightweight: Sprocket-4 resolved again before anything is saved or closed: 2
+fact    lightweight: GetSuppression2 after the reset: {'Sprocket-1': 2, 'Sprocket-2': 2, 'Sprocket-3': 2, 'Sprocket-4': 2, 'Housing-1': 2}
+ok      lightweight, the copy's end: lightweight ends clean: every document of it closed in SolidWorks (left []), Excel's workbook closed (['RangeBox.xlsx']), no open document by a file name it holds ([])
+time    lightweight: 244 s; 0 failed; SolidWorks 1.10 GB private, 10.46 GB free
+excel   quit our own Excel
+close   left of ours []; stray []; lost []; SolidWorks 1.10 GB private, 10.62 GB free
+dialogs progress boxes seen {'Calculating Interference Detection': 3, 'Updating...': 0, 'Opening': 2, 'Loading...': 0}; other windows the watch logged: 1
+awake   display and system released (previous state -0x7ffffffd)
+result  written to C:\Users\M0obo\Documents\GearGeneratorProbe\w9a-close-sw2026-20261116-225631\w9a-demo-20261116-225659.json; masters kept {'rangebox': 'C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9-s0-20261116-045513\\out\\rangebox.master', 'setup': 'C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9a-close-sw2026-20261116-225631\\out\\setup.master', 'reducer': 'C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9a-close-sw2026-20261116-225631\\out\\reducer.master'}
+noted   SolidWorks' notification box came up while no SolidWorks call was in progress (exempt by the coordinator's ruling; nothing answers it)
+done    0 failed: []; 1 noted; 0 STOP(s), a hung worker included: []
