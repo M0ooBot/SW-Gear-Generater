@@ -125,11 +125,92 @@ def test_with_no_safe_intermediate_the_change_goes_as_before_and_the_stop_names_
     assert _sets(fake) == [(spur.TEETH, "54")]
 
 
-def test_a_route_whose_first_leg_fails_stops_there():
+def test_a_first_leg_whose_rebuild_reads_false_still_goes_on_to_the_workbooks_count():
+    """The fixes' review, M1: a part's rebuild reads False for any feature in error, the user's own included; the
+    route then still sets the final count, so the part never stays at the intermediate unsaid."""
     fake = _built(RING, 55, RING_PATH)
-    fake.breaks_on_set[_key(RING_PATH)] = [("Tooth Space", 72)]
+    fake.user_feature(RING_PATH, "Keyway", code=41)
     result = swbuild.update_variables(fake, _variables(RING, 54), RING_PATH)
-    assert not result.rebuilt and result.by_way_of == (spur.TEETH, "53") and _sets(fake) == [(spur.TEETH, "53")]
+    assert _sets(fake) == [(spur.TEETH, "53"), (spur.TEETH, "54")] and not result.rebuilt
+    assert fake.equation_values()[spur.TEETH] == 54.0 and result.by_way_of == (spur.TEETH, "53")
+    doc = swbuild.DocumentValues(RING_PATH, tuple(_variables(RING, 53)), made=("Tooth Space",))
+    fake2 = _built(RING, 55, RING_PATH)
+    fake2.user_feature(RING_PATH, "Keyway", code=41)
+    done, failures = swbuild._update_document(fake2, replace_variables(doc, _variables(RING, 54)))  # noqa: SLF001
+    assert fake2.equation_values()[spur.TEETH] == 54.0 and done.by_way_of == (spur.TEETH, "53")
+
+
+def replace_variables(doc, variables):
+    from dataclasses import replace
+    return replace(doc, variables=tuple(variables))
+
+
+def test_a_route_whose_count_will_not_set_stops_at_the_intermediate_and_says_so():
+    """Only where the count's own set fails does the route stop (M1, and S8 with it)."""
+    fake = _built(RING, 55, RING_PATH)
+    fake.fail_on = {"set_global_variable": (spur.TEETH, "SolidWorks would not set the count.")}
+    result = swbuild.update_variables(fake, _variables(RING, 54), RING_PATH)
+    assert result.failures == [(f'"{spur.TEETH}"', "SolidWorks would not set the count.")]
+    assert result.by_way_of == (spur.TEETH, "53") and not result.ok
+
+
+def test_a_changed_parts_log_does_not_also_say_it_already_held_its_values():
+    """The fixes' review, M2."""
+    for kind, n, m, path in ((SPUR, 30, 29, SUN_PATH), (RING, 54, 55, RING_PATH)):
+        fake = _built(kind, m, path)
+        doc = swbuild.DocumentValues(path, tuple(_variables(kind, n)))
+        done, failures = swbuild._update_document(fake, doc)                    # noqa: SLF001
+        lines = swbuild.GearboxUpdate(parts=[done]).log_lines()
+        assert failures == [] and "ok      already holds the workbook's values" not in lines, lines
+        assert lines[1] == f'ok      set "{spur.TEETH}"'
+
+
+def _held(fake):
+    return [(text, 0.0) for text in fake.equations_text]
+
+
+def test_a_users_own_equation_never_blinds_the_foresight_nor_fails_the_document():
+    """The fixes' review, S1: an equation naming a dimension, one the evaluator lacks a function for, one with a
+    complex value and one that overflows, all in the ring's part: the landing is still foreseen and routed."""
+    fake = _built(RING, 55, RING_PATH)
+    for text in ('"D1@Sketch9"= "D2@Sketch9" * 2', '"Odd"= frobnicate ( 2 )', '"Root of less"= ( 1 - 4 ) ^ 0.5',
+                 '"Huge"= 10 ^ 400'):
+        fake.equations_text.append(text)
+    lands, route = swbuild._landing_route(_held(fake), _variables(RING, 54), "degrees")   # noqa: SLF001
+    assert lands and route is not None and route[1].expression == "53"
+    result = swbuild.update_variables(fake, _variables(RING, 54), RING_PATH)
+    assert result.ok and result.rebuilt and result.by_way_of == (spur.TEETH, "53")
+
+
+def test_an_internal_bevel_ring_is_never_read_as_an_external_gear():
+    """The fixes' review, S2: its globals name "Back Cone Inner Diameter" and also carry the root and fillet; unbuilt
+    as yet, it is not classified, so nothing is foreseen from a line it does not have."""
+    ring = dict(_values(SPUR, 47))
+    ring["Back Cone Inner Diameter"] = 40.0
+    after = dict(_values(SPUR, 46))
+    after["Back Cone Inner Diameter"] = 39.0
+    assert landing.line_landings(ring, after, fraction=float("inf")) == []
+
+
+def test_a_module_alone_that_lands_goes_by_way_of_another_count_and_back_and_says_so_truly():
+    """The fixes' review, S4: ring 55 at m1.25 to m1.225 lands (0.04): routed, but the count is not one it changed."""
+    fake = _built(RING, 55, RING_PATH)
+    result = swbuild.update_variables(fake, _variables(RING, 55, "1.225"), RING_PATH)
+    assert result.ok and result.rebuilt and result.by_way_of == (spur.TEETH, "54")
+    assert result.changed == ["Module"] and spur.TEETH in result.unchanged
+    assert _sets(fake) == [(spur.TEETH, "54"), (spur.TEETH, "55")]
+    lines = swbuild.GearboxUpdate(parts=[result]).log_lines()
+    assert 'ok      went by way of "No. of Teeth" = 54 and back, rebuilt there first (a sketch line would have ' \
+           "landed on itself)" in lines and 'ok      set "Module"' in lines
+
+
+def test_a_part_of_recipe_b_is_never_routed():
+    """The fixes' review, S5: recipe B's sketch links HalfSpace, Flank, Base and Pitch dimensions, read from the
+    equations already read; its globals are recipe A's, but it has no line from the involute's start."""
+    fake = _built(RING, 55, RING_PATH)
+    held = _held(fake) + [('"HalfSpace@Tooth Space Sketch"= "Half Space Angle"', 0.0)]
+    assert swbuild._landing_route(held, _variables(RING, 54), "degrees") == ([], None)   # noqa: SLF001
+    assert swbuild._landing_route(_held(fake), _variables(RING, 54), "degrees")[1] is not None   # noqa: SLF001
 
 
 def test_an_update_gives_the_route_through_its_part_step_and_says_it(monkeypatch):

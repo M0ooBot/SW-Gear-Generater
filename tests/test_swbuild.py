@@ -463,11 +463,20 @@ class FakeSolidWorks:
         return self.rebuild_ok
 
     def _evaluated(self):
-        from gear_generator.gears.equations import evaluate_all
-        try:
-            return evaluate_all([split_equation(t) for t in self.equations_text], self.trig)
-        except Exception:  # noqa: BLE001 - not a part of this tool's: nothing modelled
-            return {}
+        """Each global's value, as the worker's foresight reads them: a dimension's equation passed by, and one that
+        will not evaluate left out with nothing else lost (the fixes' review, S1)."""
+        from gear_generator.gears.equations import evaluate
+        scope = {}
+        for text in self.equations_text:
+            try:
+                name, expression = split_equation(text)
+                if "@" not in name:
+                    value = evaluate(expression, scope, self.trig)
+                    if not isinstance(value, complex) and math.isfinite(float(value)):
+                        scope[name] = float(value)
+            except Exception:  # noqa: BLE001 - see the docstring
+                continue
+        return scope
 
     def _ring_landing(self):
         """At a part's rebuild: a ring set across the landing goes to the far branch, and stays there."""
