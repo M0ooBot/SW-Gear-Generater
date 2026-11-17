@@ -1,0 +1,24 @@
+{
+ "sections": {
+  "lightweight": {
+   "state": 1,
+   "problems": [
+    "Update SolidWorks would put your Sprocket-1 with Sun, which your mates hold it to, and Sprocket-1 is loaded lightweight in RangeBox.SLDASM, so nothing is changed; in SolidWorks, set it to Resolved and press Update SolidWorks again.",
+    "Update SolidWorks would put your Sprocket-3 with Sun, which your mates hold it to, and Sprocket-3 is loaded lightweight in RangeBox.SLDASM, so nothing is changed; in SolidWorks, set it to Resolved and press Update SolidWorks again.",
+    "Update SolidWorks would put your Sprocket-2 with RangeSlv, which your mates hold it to, and Sprocket-2 is loaded lightweight in RangeBox.SLDASM, so nothing is changed; in SolidWorks, set it to Resolved and press Update SolidWorks again."
+   ],
+   "seconds": 435,
+   "failed": []
+  }
+ },
+ "stops": [],
+ "proposal": {},
+ "revision": [
+  34,
+  1,
+  1
+ ],
+ "snapshot": "311ce5a",
+ "fails": [],
+ "notes": []
+}

@@ -1,0 +1,114 @@
+{
+ "sections": {
+  "m1": {
+   "m1": {
+    "flags_before": {
+     "RangeBox_Layout.SLDPRT": false,
+     "RangeBox_Carrier_Carrier.SLDPRT": false,
+     "Gear_m1.25_N29.SLDPRT": false,
+     "Gear_m1.25_N13.SLDPRT": false,
+     "Ring_m1.25_N55.SLDPRT": false,
+     "Dog_m1.25_N17.SLDPRT": false,
+     "Sleeve_m1.25_N17.SLDPRT": false,
+     "Sprocket.SLDPRT": false,
+     "Housing.SLDPRT": false,
+     "RangeBox.SLDASM": false
+    },
+    "active": "H",
+    "mates": {
+     "UserAxis5": {
+      "type": 0,
+      "components": [
+       "RangeBox_Layout-1",
+       "Sprocket-5"
+      ],
+      "whole": true,
+      "suppressed_here": false
+     },
+     "UserGear5": {
+      "type": 10,
+      "components": [
+       "Sprocket-5",
+       "Sprocket-4"
+      ],
+      "whole": true,
+      "suppressed_here": false
+     },
+     "UserDist5": {
+      "type": 5,
+      "components": [
+       "Sprocket-5",
+       "RangeBox_Layout-1"
+      ],
+      "whole": true,
+      "suppressed_here": true
+     }
+    },
+    "flags_after": {
+     "RangeBox_Layout.SLDPRT": false,
+     "RangeBox_Carrier_Carrier.SLDPRT": false,
+     "Gear_m1.25_N29.SLDPRT": false,
+     "Gear_m1.25_N13.SLDPRT": false,
+     "Ring_m1.25_N55.SLDPRT": false,
+     "Dog_m1.25_N17.SLDPRT": false,
+     "Sleeve_m1.25_N17.SLDPRT": false,
+     "Sprocket.SLDPRT": false,
+     "Housing.SLDPRT": false,
+     "RangeBox.SLDASM": false
+    }
+   },
+   "seconds": 191,
+   "failed": []
+  },
+  "refuse": {
+   "problems": {
+    "housing lock": [
+     "Your UserLock1, UserLock3 and UserHousingLock hold Sun to Housing-1, which does not move, and Update SolidWorks must put Sun back, so nothing is changed; suppress UserLock1, UserLock3 and UserHousingLock in H, N and L and press Update SolidWorks again."
+    ],
+    "other kind": [
+     "In modes H, N and L, UserOnSun is a mate in RangeBox.SLDASM that Gear Generator did not make, on Sun, which Update SolidWorks puts back, and a mate of that kind is not moved with its gear, so nothing is changed; in SolidWorks, lock your component to Sun instead, and Update SolidWorks puts it with Sun, or suppress UserOnSun in H, N and L, and press Update SolidWorks again."
+    ],
+    "tie": [
+     "Update SolidWorks must turn Sun's train back to its built place, and with your mates on SolidWorks reads it as unable to turn: your UserLock1, UserLock2, UserLock3, UserDist4, UserAngle4, UserTie, UserAxis1, UserAxis2 and UserAxis4 are on that train, so nothing is changed; suppress UserLock1, UserLock2, UserLock3, UserDist4, UserAngle4, UserTie, UserAxis1, UserAxis2 and UserAxis4 in H, N and L and press Update SolidWorks again."
+    ],
+    "two bodies": [
+     "Your UserLock1, UserLock2, UserLock3 and UserTwoBodies hold RangeSlv and Sun together through Sprocket-1, Sprocket-2 and Sprocket-3, and no put of Update SolidWorks can keep them, since it puts each of them back to its own built place, so nothing is changed; suppress UserLock1, UserLock2, UserLock3 and UserTwoBodies in H, N and L and press Update SolidWorks again.",
+     "Update SolidWorks must turn Sun's train back to its built place, and with your mates on SolidWorks reads it as unable to turn: your UserLock1, UserLock2, UserLock3, UserDist4, UserAngle4, UserTwoBodies, UserAxis1, UserAxis2 and UserAxis4 are on that train, so nothing is changed; suppress UserLock1, UserLock2, UserLock3, UserDist4, UserAngle4, UserTwoBodies, UserAxis1, UserAxis2 and UserAxis4 in H, N and L and press Update SolidWorks again."
+    ],
+    "bore": [
+     "Bore Diameter in Gear_m1.25_N29 is 12 in SolidWorks and 0 in the workbook: type 12 in Gears!J2, or set it back to 0 in SolidWorks, and press Update SolidWorks again."
+    ],
+    "all": [
+     "Bore Diameter in Gear_m1.25_N29 is 12 in SolidWorks and 0 in the workbook: type 12 in Gears!J2, or set it back to 0 in SolidWorks, and press Update SolidWorks again.",
+     "Your UserLock1, UserLock2, UserLock3, UserHousingLock and UserTwoBodies hold RangeSlv and Sun together through Sprocket-1, Sprocket-2 and Sprocket-3, and no put of Update SolidWorks can keep them, since it puts each of them back to its own built place, so nothing is changed; suppress UserLock1, UserLock2, UserLock3, UserHousingLock and UserTwoBodies in H, N and L and press Update SolidWorks again.",
+     "Update SolidWorks must turn Sun's train back to its built place, and with your mates on SolidWorks reads it as unable to turn: your UserLock1, UserLock2, UserLock3, UserDist4, UserAngle4, UserHousingLock, UserTwoBodies, UserAxis1, UserAxis2 and UserAxis4 are on that train, so nothing is changed; suppress UserLock1, UserLock2, UserLock3, UserDist4, UserAngle4, UserHousingLock, UserTwoBodies, UserAxis1, UserAxis2 and UserAxis4 in H, N and L and press Update SolidWorks again."
+    ]
+   },
+   "seconds": 1932,
+   "failed": []
+  }
+ },
+ "stops": [
+  "the SolidWorks worker is hung from an earlier job, so nothing more is asked of it"
+ ],
+ "proposal": {
+  "M1_suppressed_in_active_read_whole": true
+ },
+ "revision": [
+  34,
+  1,
+  1
+ ],
+ "snapshot": "9dded70",
+ "fails": [
+  "W9a: WorkerHung: the SolidWorks worker is hung from an earlier job, so nothing more is asked of it; the run ends here, nothing more is asked of SolidWorks"
+ ],
+ "notes": [
+  "a SolidWorks balloon tip ['Check1', 'Over Defined', 'The assembly is over defined. Click here to view mate errors.'] came up while ForceRebuild3 was in progress (left standing, never answered)",
+  "SolidWorks' notification box came up while Name was in progress (exempt by the coordinator's ruling; nothing answers it)",
+  "SolidWorks' notification box came up while GetFirstSubFeature was in progress (exempt by the coordinator's ruling; nothing answers it)",
+  "SolidWorks' notification box came up while SetUserPreferenceToggle was in progress (exempt by the coordinator's ruling; nothing answers it)",
+  "a SolidWorks window 'SOLIDWORKS CAM Warning' ['&Yes', '&No', 'SOLIDWORKS CAM data cannot be stored as lightweight parts have been detected.\\nProceeding with save operation will result in loss of previous SOLIDWORKS CAM data.\\nDo you want to continue?'] came up while SaveAs3 was in progress, before this run made any configuration",
+  "SolidWorks' notification box came up while SaveAs3 was in progress (exempt by the coordinator's ruling; nothing answers it)"
+ ]
+}

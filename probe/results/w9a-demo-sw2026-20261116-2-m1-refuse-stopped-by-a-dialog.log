@@ -1,0 +1,372 @@
+awake   display and system held awake for the run (previous state -0x80000000)
+run     2026-11-16 21:17:35; W9a demonstration from C:\Users\M0obo\Documents\GearGeneratorProbe\w9a-demo-sw2026-20261116-204824\snap\src (snapshot: 9dded70); sections ['m1', 'refuse', 'again', 'again-dirty', 'again-closed', 'reducer', 'k3', 'nocarrier']; masters {'rangebox': 'C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9-s0-20261116-045513\\out\\rangebox.master', 'setup': '', 'reducer': ''}; redo False
+ok      the app's settings and Recent list go into this run's folder, not the user's: C:\Users\M0obo\Documents\GearGeneratorProbe\w9a-demo-sw2026-20261116-204824\out\appdata\Gear Generator\recent.json
+attach  SolidWorks 2026 (revision 34.1.1) (revision 34.1.1), PID 6628; SolidWorks 1.16 GB private, 10.62 GB free
+open    before: []
+findings USER_MATE_PUT_ROUTE "put along, the user's locks left on", USER_TIE_RULE 'not COMPONENT_UNDER_DEFINED', WHATS_WRONG_OPENS_ON_PART_REBUILD False, the branches {'USER_MATE_PUT_FIXED_GEAR_ON_2024': None, 'USER_MATE_PUT_FIXED_GEAR_ON_2026': None, 'USER_MATE_PUT_HELD_GEAR_ON_2024': None, 'USER_MATE_PUT_HELD_GEAR_ON_2026': None, 'USER_MATE_PUT_NO_CARRIER_ON_2024': None, 'USER_MATE_PUT_NO_CARRIER_ON_2026': None, 'USER_MATE_PUT_SUBASSEMBLY_ON_2024': None, 'USER_MATE_PUT_SUBASSEMBLY_ON_2026': None}
+excel   started our own Excel, PID 43376, 16.0 build 20527.0
+== m1  ISSUE-1-PLAN §4 M1's remaining kinds: a user gear mate (user–user) and a distance mate suppressed in the active mode but on in the others, read by mate_info and by a quiet Update's inventory
+copy    setup.master -> m1: 17 files, mtimes kept
+        RangeBox.xlsx's record: 21 path(s) put onto the copy: ['record.workbook', 'record.parts[0].path', 'record.parts[1].path', 'record.parts[2].path', 'record.parts[3].path', 'record.parts[4].path', 'record.assembly', 'record.gearbox.layout', 'record.gearbox.assembly', 'record.gearbox.components[0].part', 'record.gearbox.components[1].part', 'record.gearbox.components[2].part', 'record.gearbox.components[3].part', 'record.gearbox.components[4].part', 'record.gearbox.components[5].part', 'record.gearbox.components[6].part', 'record.gearbox.components[7].part', 'record.gearbox.carriers[0].path', 'record.gearbox.user_work.assembly', 'record.gearbox.user_work.features[0].path', 'record.gearbox.user_work.features[1].path']
+        Dog_m1.25_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.25_N13.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.25_N29.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Ring_m1.25_N55.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Sleeve_m1.25_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+ok      m1: the copy's record is valid: owner ('ours', ''); left on the master []; missing in the copy []; clear_saved dropped nothing (unsaved, mismatched ([], [])); the read's digest equals the record's
+probe   W6-PLAN §7.1: RangeBox.SLDASM of m1, whose stored references name a folder that is gone, opened under the dialog watch (120 s at most)
+DIALOG  SolidWorks shows '': ['Close', 'Open\nComponents', 'Update\nAssembly', 'Update\nGraphics', ' ', 'Elapsed time: 0s', 'This file was last opened in 2 seconds.', 'For more information, view: ']
+fact    m1: the copy's assembly opened in 3.4 s; marked modified straight after the open: {'RangeBox_Layout.SLDPRT': False, 'RangeBox_Carrier_Carrier.SLDPRT': False, 'Gear_m1.25_N29.SLDPRT': False, 'Gear_m1.25_N13.SLDPRT': False, 'Ring_m1.25_N55.SLDPRT': False, 'Dog_m1.25_N17.SLDPRT': False, 'Sleeve_m1.25_N17.SLDPRT': False, 'Sprocket.SLDPRT': False, 'Housing.SLDPRT': False, 'RangeBox.SLDASM': False}
+fact    W6-PLAN §7.1: dialogs while the copied assembly opened: none
+ok      m1: SolidWorks found all 9 components and the layout in the copy, and the copy closed without saving (left []): elsewhere none
+ok      read RangeBox.xlsx: ok
+        warning Gears!F3: Planet: 13 teeth at 20° is below the undercut limit of 17: a generated gear would lose the bottom of its flanks, which this profile does not show. A profile shift of 0.24 or more would clear it.
+        warning Gears!F3: Planet: The tooth tip is 0.36 mm thick, under 0.3 × module (0.375 mm).
+        warning Gears!F7: RangeSlv: The teeth's tips, at 18.75 mm, are inside the base circle of 19.968 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!A3: Planet (13 teeth) is below the undercut limit, which is not modelled, and meshes Sun (29 teeth): the build checks interference only where the gears stand, so check Planet with Sun turning in SolidWorks.
+        5 shafts · 6 gears · 2 meshes; gate ''
+ok      m1: the copy reads as built from this workbook, its assembly in the copy
+ok      Excel opened RangeBox.xlsx with no dialog or repair: []
+DIALOG  SolidWorks shows 'Opening': ['Close', 'Opening Component 2 of 15', 'Update\nAssembly', 'Update\nGraphics', 'Opening File: C:\\Use...24\\out\\m1\\Dog_m1.25_N17.SLDPRT', 'Elapsed time: 0s', 'This file was last opened in 2 seconds.', 'For more information, view: '] (a progress box that closes itself; not logged again)
+ok      m1: the user's components ['Housing-1', 'Sprocket-1', 'Sprocket-2', 'Sprocket-3', 'Sprocket-4'] are there, each loaded from the copy ({'Sprocket-1': 'Sprocket.SLDPRT', 'Sprocket-2': 'Sprocket.SLDPRT', 'Sprocket-3': 'Sprocket.SLDPRT', 'Sprocket-4': 'Sprocket.SLDPRT', 'Housing-1': 'Housing.SLDPRT'})
+fact    m1: inserted ['Sprocket-5'] with H active; mates {'UserAxis5': 1} (AddMate5 status)
+        UserAxis5: as made {'H': False, 'N': False, 'L': False}; set {'H': False, 'N': False, 'L': False}
+ok      m1: the components are named ['Sprocket-5']
+ok      m1: every new mate's flag reads back as set in every mode
+ok      m1: every mate on in H reads error code 0 after the user's work: []
+fact    m1: inserted [] with H active; mates {'UserGear5': 1} (AddMate5 status)
+        UserGear5: as made {'H': False, 'N': False, 'L': False}; set {'H': False, 'N': False, 'L': False}
+ok      m1: the components are named []
+ok      m1: every new mate's flag reads back as set in every mode
+ok      m1: every mate on in H reads error code 0 after the user's work: []
+fact    m1: inserted [] with H active; mates {'UserDist5': 1} (AddMate5 status)
+        UserDist5: as made {'H': False, 'N': False, 'L': False}; set {'H': True, 'N': False, 'L': False}
+ok      m1: the components are named []
+ok      m1: every new mate's flag reads back as set in every mode
+ok      m1: every mate on in H reads error code 0 after the user's work: []
+person  saved in SolidWorks (the user's gear and per-mode mates): ['RangeBox.SLDASM']
+ok      m1 read: marked nothing (before none)
+ok      m1: the mode active at the read is H, the one UserDist5 is suppressed in (H)
+answer  M1 UserAxis5 with H active: {'type': 0, 'components': ['RangeBox_Layout-1', 'Sprocket-5'], 'whole': True, 'suppressed_here': False}
+ok      m1: UserAxis5 read whole as joining ['RangeBox_Layout-1', 'Sprocket-5']
+answer  M1 UserGear5 with H active: {'type': 10, 'components': ['Sprocket-5', 'Sprocket-4'], 'whole': True, 'suppressed_here': False}
+ok      m1: UserGear5 read whole as joining ['Sprocket-4', 'Sprocket-5']
+answer  M1 UserDist5 with H active: {'type': 5, 'components': ['Sprocket-5', 'RangeBox_Layout-1'], 'whole': True, 'suppressed_here': True}
+ok      m1 quiet press: the footer offers Update SolidWorks (shown True, enabled True, Build again… needed False)
+update  SolidWorks 1.30 GB private, 10.40 GB free
+        in 149.1 s; SolidWorks 1.64 GB private, 10.36 GB free; loaded from disk []
+        W9a: carried []; renamed []; user in error []; user features in error []; inventory read yes; failures []
+ok      the Update's check phase found no gear mate turning against its mesh: []
+status  [green] SolidWorks already matches the workbook: nothing was changed. It worked in H, the configuration that was active; it did not show the other modes, since nothing in H needed changing.
+fact    m1 quiet press: the press took 149.2 s; SolidWorks calls by member {'OpenDoc6': 9, 'IsSuppressed2': 124, 'GetSystemValue3': 1}
+        shows and puts in order: []
+        configuration 'H'; visited []; put_in []; placed []; unsuppressed_in []; suppressed_in []; slid []; values_restored []; extra configurations []; extra mates []; senses unread []; positions per configuration False; failures []
+fact    m1 quiet press: the press took 149 s
+answer  M1 inventory UserAxis5: other type 0 touches [('layout', ''), ('user', 'Sprocket-5')] on ['H', 'N', 'L'] whole True
+answer  M1 inventory UserGear5: gear type 10 touches [('user', 'Sprocket-5'), ('user', 'Sprocket-4')] on ['H', 'N', 'L'] whole True
+answer  M1 inventory UserDist5: other type 5 touches [('user', 'Sprocket-5'), ('layout', '')] on ['N', 'L'] whole True
+ok      m1: the user's gear mate is judged a gear mate: gear
+ok      m1: UserDist5 is on in ['N', 'L'] only: ['N', 'L']
+ok      m1, the copy's end: m1 ends clean: every document of it closed in SolidWorks (left []), Excel's workbook closed (['RangeBox.xlsx']), no open document by a file name it holds ([])
+time    m1: 191 s; 0 failed; SolidWorks 1.27 GB private, 10.39 GB free
+== refuse  W9a's Done when: a lock to a fixed housing refuses naming it, a Bore Diameter typed in SolidWorks refuses naming the cell; with them a mate of another kind on Sun, the solver's tie, two app bodies locked together, all at once, and last a lightweight carried sprocket; each foreseen or recorded in the footer, each writing nothing
+copy    setup.master -> refuse: 17 files, mtimes kept
+        RangeBox.xlsx's record: 21 path(s) put onto the copy: ['record.workbook', 'record.parts[0].path', 'record.parts[1].path', 'record.parts[2].path', 'record.parts[3].path', 'record.parts[4].path', 'record.assembly', 'record.gearbox.layout', 'record.gearbox.assembly', 'record.gearbox.components[0].part', 'record.gearbox.components[1].part', 'record.gearbox.components[2].part', 'record.gearbox.components[3].part', 'record.gearbox.components[4].part', 'record.gearbox.components[5].part', 'record.gearbox.components[6].part', 'record.gearbox.components[7].part', 'record.gearbox.carriers[0].path', 'record.gearbox.user_work.assembly', 'record.gearbox.user_work.features[0].path', 'record.gearbox.user_work.features[1].path']
+        Dog_m1.25_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.25_N13.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.25_N29.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Ring_m1.25_N55.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Sleeve_m1.25_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+ok      refuse: the copy's record is valid: owner ('ours', ''); left on the master []; missing in the copy []; clear_saved dropped nothing (unsaved, mismatched ([], [])); the read's digest equals the record's
+DIALOG  SolidWorks shows '': ['Close', 'Opened 15\nComponents', 'Updating\nAssembly', 'Update\nGraphics', 'Post load updating', 'Elapsed time: 2 seconds', 'This file was last opened in 2 seconds.', 'For more information, view: ']
+fact    refuse: the copy's assembly opened in 3.3 s; marked modified straight after the open: {'RangeBox_Layout.SLDPRT': False, 'RangeBox_Carrier_Carrier.SLDPRT': False, 'Gear_m1.25_N29.SLDPRT': False, 'Gear_m1.25_N13.SLDPRT': False, 'Ring_m1.25_N55.SLDPRT': False, 'Dog_m1.25_N17.SLDPRT': False, 'Sleeve_m1.25_N17.SLDPRT': False, 'Sprocket.SLDPRT': False, 'Housing.SLDPRT': False, 'RangeBox.SLDASM': False}
+ok      refuse: SolidWorks found all 9 components and the layout in the copy, and the copy closed without saving (left []): elsewhere none
+ok      read RangeBox.xlsx: ok
+        warning Gears!F3: Planet: 13 teeth at 20° is below the undercut limit of 17: a generated gear would lose the bottom of its flanks, which this profile does not show. A profile shift of 0.24 or more would clear it.
+        warning Gears!F3: Planet: The tooth tip is 0.36 mm thick, under 0.3 × module (0.375 mm).
+        warning Gears!F7: RangeSlv: The teeth's tips, at 18.75 mm, are inside the base circle of 19.968 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!A3: Planet (13 teeth) is below the undercut limit, which is not modelled, and meshes Sun (29 teeth): the build checks interference only where the gears stand, so check Planet with Sun turning in SolidWorks.
+        5 shafts · 6 gears · 2 meshes; gate ''
+ok      refuse: the copy reads as built from this workbook, its assembly in the copy
+ok      Excel opened RangeBox.xlsx with no dialog or repair: []
+ok      refuse: the user's components ['Housing-1', 'Sprocket-1', 'Sprocket-2', 'Sprocket-3', 'Sprocket-4'] are there, each loaded from the copy ({'Sprocket-3': 'Sprocket.SLDPRT', 'Sprocket-2': 'Sprocket.SLDPRT', 'Sprocket-4': 'Sprocket.SLDPRT', 'Sprocket-1': 'Sprocket.SLDPRT', 'Housing-1': 'Housing.SLDPRT'})
+-- refuse  a user lock from Sprocket-1 to the fixed Housing-1
+NOTE    a SolidWorks balloon tip ['Check1', 'Over Defined', 'The assembly is over defined. Click here to view mate errors.'] came up while ForceRebuild3 was in progress (left standing, never answered)
+person  [('add', 'uhl', 'lock', 'uh', 'u1', 0.0, 'UserHousingLock')]: AddMate5 status {'UserHousingLock': 5}; flags {'UserHousingLock': {'H': False, 'N': False, 'L': False}}; codes here {'UserHousingLock': (0, False)}
+ok      the user's mates read back as set in every mode: ['UserHousingLock']
+ok      refuse housing lock: the quiet press: the footer offers Update SolidWorks (shown True, enabled True, Build again… needed False)
+update  SolidWorks 1.26 GB private, 10.35 GB free
+DIALOG  SolidWorks shows '': ['Title', 'Description', 'Button1', 'Button2', 'Hyperlink Text 1', 'Hyperlink Text 2']
+NOTE    SolidWorks' notification box came up while Name was in progress (exempt by the coordinator's ruling; nothing answers it)
+        in 119.2 s; SolidWorks 1.60 GB private, 10.37 GB free; loaded from disk []
+        W9a: carried []; renamed []; user in error []; user features in error []; inventory read yes; failures []
+ok      the Update's check phase found no gear mate turning against its mesh: []
+status  [green] SolidWorks already matches the workbook: nothing was changed. It worked in H, the configuration that was active; it did not show the other modes, since nothing in H needed changing.
+fact    refuse housing lock: the quiet press: the press took 119.3 s; SolidWorks calls by member {'OpenDoc6': 9, 'IsSuppressed2': 116, 'GetSystemValue3': 1}
+        shows and puts in order: []
+        configuration 'H'; visited []; put_in []; placed []; unsuppressed_in []; suppressed_in []; slid []; values_restored []; extra configurations []; extra mates []; senses unread []; positions per configuration False; failures []
+fact    refuse housing lock: the quiet press: the press took 119 s
+ok      refuse housing lock: the quiet press read the user's work and changed nothing: ok
+excel   Gears!P2 := 0.4
+excel   saved RangeBox.xlsx
+poll    a new read 0.0 s after asking; changes:
+          Gears!P2 Sun Backlash blank → 0.4
+ok      read RangeBox.xlsx: ok
+        warning Gears!F3: Planet: 13 teeth at 20° is below the undercut limit of 17: a generated gear would lose the bottom of its flanks, which this profile does not show. A profile shift of 0.24 or more would clear it.
+        warning Gears!F3: Planet: The tooth tip is 0.36 mm thick, under 0.3 × module (0.375 mm).
+        warning Gears!F7: RangeSlv: The teeth's tips, at 18.75 mm, are inside the base circle of 19.968 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!A3: Planet (13 teeth) is below the undercut limit, which is not modelled, and meshes Sun (29 teeth): the build checks interference only where the gears stand, so check Planet with Sun turning in SolidWorks.
+        5 shafts · 6 gears · 2 meshes; gate ''
+classify parts changed ['Gear_m1.25_N29.SLDPRT']; moved []; re-place []; structural []; missing []; unsaved []; refusal ''; turning True; axial []; ratios []
+        layout globals wanted []
+summary Update SolidWorks will change Sun's values (Gear_m1.25_N29).
+footer  (refuse housing lock, before the press) [red] Update SolidWorks will change Sun's values (Gear_m1.25_N29). It was built with a configuration per mode (H, N and L), each named as its mode, and saved in H; to switch mode, double-click another mode's configuration in SolidWorks' ConfigurationManager. Drag Sun in SolidWorks and the rest of its train follow. A turn you give the gears in one mode can show in other modes, so a dog can stand across its sleeve in another; to put the gears back there, press Update SolidWorks with that mode showing. Carrier (the carrier) is axes and planes only, so it has nothing to drag. As read at 21:22, Update SolidWorks would stop before changing anything: Your UserLock1, UserLock3 and UserHousingLock hold Sun to Housing-1, which does not move, and Update SolidWorks must put Sun back, so nothing is changed; suppress UserLock1, UserLock3 and UserHousingLock in H, N and L and press Update SolidWorks again. It reads your work in SolidWorks again when pressed.
+        button 'Build again…' on; Update SolidWorks shown on primary
+line    [red] As read at 21:22, Update SolidWorks would stop before changing anything: Your UserLock1, UserLock3 and UserHousingLock hold Sun to Housing-1, which does not move, and Update SolidWorks must put Sun back, so nothing is changed; suppress UserLock1, UserLock3 and UserHousingLock in H, N and L and press Update SolidWorks again. It reads your work in SolidWorks again when pressed.
+        predicted: carried [('RangeSlv', [('Sprocket-2', ('UserLock2',))])]; problems [('tie', ['UserLock1', 'UserLock3', 'UserHousingLock'])]; refused (recorded) []; changed since False; unread ties []
+ok      refuse housing lock, before the press: the footer says the user-work line as the window would: 'As read at 21:22, Update SolidWorks would stop before changing anything: Your Us'…
+person  saved in SolidWorks (before refuse housing lock): ['RangeBox.SLDASM']
+read    before refuse housing lock (active H; front document RangeBox.SLDASM): mates in error {'Sun along Input': 46, 'UserLock1': 46}; not free {'Sun': 4, 'Planet copy 1': 3, 'Planet copy 2': 3, 'Planet copy 3': 3, 'Ring': 3, 'HighDog': 3, 'LowDog': 3, 'RangeSlv': 3, 'Carrier carrier': 3, 'Sprocket-1': 3, 'Sprocket-2': 3, 'Sprocket-3': 3, 'Sprocket-4': 3, 'Housing-1': 3}; marked none; rebuild state 0
+ok      refuse housing lock: the footer offers Update SolidWorks (shown True, enabled True, Build again… needed False)
+update  SolidWorks 1.64 GB private, 10.45 GB free
+        raised UserWorkRefused in 96.0 s: Your UserLock1, UserLock3 and UserHousingLock hold Sun to Housing-1, which does not move, and Update SolidWorks must put Sun back, so nothing is changed; suppress UserLock1, UserLock3 and UserHousingLock in H, N and L and press Update SolidWorks again.
+status  [red] Your UserLock1, UserLock3 and UserHousingLock hold Sun to Housing-1, which does not move, and Update SolidWorks must put Sun back, so nothing is changed; suppress UserLock1, UserLock3 and UserHousingLock in H, N and L and press Update SolidWorks again.
+record  the window's _record_refusal ran
+fact    refuse housing lock: the press took 96.0 s; SolidWorks calls by member {'OpenDoc6': 8, 'IsSuppressed2': 116, 'GetSystemValue3': 1}
+        shows and puts in order: []
+fact    refuse housing lock: the press took 96 s
+fact    refuse housing lock: problems [('tie', ['UserLock1', 'UserLock3', 'UserHousingLock'])]
+        tie: Your UserLock1, UserLock3 and UserHousingLock hold Sun to Housing-1, which does not move, and Update SolidWorks must put Sun back, so nothing is changed; suppress UserLock1, UserLock3 and UserHousingLock in H, N and L and press Update SolidWorks again.
+read    after refuse housing lock (active H; front document RangeBox.SLDASM): mates in error {'Sun along Input': 46, 'UserLock1': 46}; not free {'Sun': 4, 'Planet copy 1': 3, 'Planet copy 2': 3, 'Planet copy 3': 3, 'Ring': 3, 'HighDog': 3, 'LowDog': 3, 'RangeSlv': 3, 'Carrier carrier': 3, 'Sprocket-1': 3, 'Sprocket-2': 3, 'Sprocket-3': 3, 'Sprocket-4': 3, 'Housing-1': 3}; marked none; rebuild state 0
+ok      refuse housing lock: refused before any write as ['tie'], naming ['UserHousingLock'] and saying ['Housing-1']: got ['tie'], named ['UserHousingLock', 'UserLock1', 'UserLock3']
+ok      refuse housing lock: the refused press made no call that changes or shows anything (its trace): none
+ok      refuse housing lock: nothing written: frames, mates, flags, entities, marks and globals as before
+ok      refuse housing lock: the record keeps the refusal with its time 2026-11-17T02:24:57Z: ['tie']
+footer  (refuse housing lock, after the refusal) [red] Your UserLock1, UserLock3 and UserHousingLock hold Sun to Housing-1, which does not move, and Update SolidWorks must put Sun back, so nothing is changed; suppress UserLock1, UserLock3 and UserHousingLock in H, N and L and press Update SolidWorks again.
+        button 'Build again…' on; Update SolidWorks shown on primary
+line    [red] Update SolidWorks refused at 21:24, before changing anything: Your UserLock1, UserLock3 and UserHousingLock hold Sun to Housing-1, which does not move, and Update SolidWorks must put Sun back, so nothing is changed; suppress UserLock1, UserLock3 and UserHousingLock in H, N and L and press Update SolidWorks again. The next press reads your work in SolidWorks again, and refuses again unless that has been dealt with.
+        predicted: carried []; problems []; refused (recorded) [('tie', ['UserLock1', 'UserLock3', 'UserHousingLock'])]; changed since False; unread ties []
+ok      refuse housing lock: the footer says the refusal as recorded, red, until the workbook changes
+ok      refuse housing lock: what the footer foresaw before the press is what the press refused: foreseen ['tie'] ['UserHousingLock', 'UserLock1', 'UserLock3'], refused ['tie'] ['UserHousingLock', 'UserLock1', 'UserLock3']
+excel   Gears!P2 := 0.41
+excel   saved RangeBox.xlsx
+poll    a new read 0.0 s after asking; changes:
+          Gears!P2 Sun Backlash 0.4 → 0.41
+ok      read RangeBox.xlsx: ok
+        warning Gears!F3: Planet: 13 teeth at 20° is below the undercut limit of 17: a generated gear would lose the bottom of its flanks, which this profile does not show. A profile shift of 0.24 or more would clear it.
+        warning Gears!F3: Planet: The tooth tip is 0.36 mm thick, under 0.3 × module (0.375 mm).
+        warning Gears!F7: RangeSlv: The teeth's tips, at 18.75 mm, are inside the base circle of 19.968 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!A3: Planet (13 teeth) is below the undercut limit, which is not modelled, and meshes Sun (29 teeth): the build checks interference only where the gears stand, so check Planet with Sun turning in SolidWorks.
+        5 shafts · 6 gears · 2 meshes; gate ''
+classify parts changed ['Gear_m1.25_N29.SLDPRT']; moved []; re-place []; structural []; missing []; unsaved []; refusal ''; turning True; axial []; ratios []
+        layout globals wanted []
+summary Update SolidWorks will change Sun's values (Gear_m1.25_N29).
+footer  (refuse, the workbook changed since the refusal) [red] Update SolidWorks will change Sun's values (Gear_m1.25_N29). It was built with a configuration per mode (H, N and L), each named as its mode, and saved in H; to switch mode, double-click another mode's configuration in SolidWorks' ConfigurationManager. Drag Sun in SolidWorks and the rest of its train follow. A turn you give the gears in one mode can show in other modes, so a dog can stand across its sleeve in another; to put the gears back there, press Update SolidWorks with that mode showing. Carrier (the carrier) is axes and planes only, so it has nothing to drag. Update SolidWorks refused at 21:24, before changing anything: Your UserLock1, UserLock3 and UserHousingLock hold Sun to Housing-1, which does not move, and Update SolidWorks must put Sun back, so nothing is changed; suppress UserLock1, UserLock3 and UserHousingLock in H, N and L and press Update SolidWorks again. The workbook has changed since, and the next press reads your work in SolidWorks again. As read at 21:24, Update SolidWorks would stop before changing anything: Your UserLock1, UserLock3 and UserHousingLock hold Sun to Housing-1, which does not move, and Update SolidWorks must put Sun back, so nothing is changed; suppress UserLock1, UserLock3 and UserHousingLock in H, N and L and press Update SolidWorks again. It reads your work in SolidWorks again when pressed.
+        button 'Build again…' on; Update SolidWorks shown on primary
+line    [red] Update SolidWorks refused at 21:24, before changing anything: Your UserLock1, UserLock3 and UserHousingLock hold Sun to Housing-1, which does not move, and Update SolidWorks must put Sun back, so nothing is changed; suppress UserLock1, UserLock3 and UserHousingLock in H, N and L and press Update SolidWorks again. The workbook has changed since, and the next press reads your work in SolidWorks again. As read at 21:24, Update SolidWorks would stop before changing anything: Your UserLock1, UserLock3 and UserHousingLock hold Sun to Housing-1, which does not move, and Update SolidWorks must put Sun back, so nothing is changed; suppress UserLock1, UserLock3 and UserHousingLock in H, N and L and press Update SolidWorks again. It reads your work in SolidWorks again when pressed.
+        predicted: carried [('RangeSlv', [('Sprocket-2', ('UserLock2',))])]; problems [('tie', ['UserLock1', 'UserLock3', 'UserHousingLock'])]; refused (recorded) [('tie', ['UserLock1', 'UserLock3', 'UserHousingLock'])]; changed since True; unread ties []
+ok      refuse, the workbook changed since the refusal: the footer says the user-work line as the window would: 'Update SolidWorks refused at 21:24, before changing anything: Your UserLock1, Us'…
+ok      refuse: once the workbook changed, the footer says the refusal "has changed since" and foresees the same refusal, red, naming the lock: ok False; foreseen [('tie', ['UserLock1', 'UserLock3', 'UserHousingLock'])]
+-- refuse  a mate of another kind on Sun: Sprocket-4's axis on Sun's own axis
+person  [('off', 'UserHousingLock'), ('add', 'uo', 'coincident', 'u4:Gear Axis', 'sun:Gear Axis', 0.0, 'UserOnSun')]: AddMate5 status {'UserOnSun': 1}; flags {'UserHousingLock': {'H': True, 'N': True, 'L': True}, 'UserOnSun': {'H': False, 'N': False, 'L': False}}; codes here {'UserHousingLock': (0, True), 'UserOnSun': (0, False)}
+ok      the user's mates read back as set in every mode: ['UserHousingLock', 'UserOnSun']
+person  saved in SolidWorks (before refuse other kind): ['RangeBox.SLDASM']
+read    before refuse other kind (active H; front document RangeBox.SLDASM): mates in error none; not free {'Ring': 3, 'Sprocket-4': 3, 'Housing-1': 3}; marked none; rebuild state 0
+ok      refuse other kind: the footer offers Update SolidWorks (shown True, enabled True, Build again… needed False)
+update  SolidWorks 1.69 GB private, 10.31 GB free
+        raised UserWorkRefused in 73.8 s: In modes H, N and L, UserOnSun is a mate in RangeBox.SLDASM that Gear Generator did not make, on Sun, which Update SolidWorks puts back, and a mate of that kind is not moved with its gear, so nothing is changed; in SolidWorks, lock your component to Sun instead, and Update SolidWorks puts it with Sun, or suppress UserOnSun in H, N and L, and press Update SolidWorks again.
+status  [red] In modes H, N and L, UserOnSun is a mate in RangeBox.SLDASM that Gear Generator did not make, on Sun, which Update SolidWorks puts back, and a mate of that kind is not moved with its gear, so nothing is changed; in SolidWorks, lock your component to Sun instead, and Update SolidWorks puts it with Sun, or suppress UserOnSun in H, N and L, and press Update SolidWorks again.
+record  the window's _record_refusal ran
+fact    refuse other kind: the press took 73.8 s; SolidWorks calls by member {'OpenDoc6': 8, 'IsSuppressed2': 120, 'GetSystemValue3': 1}
+        shows and puts in order: []
+fact    refuse other kind: the press took 74 s
+fact    refuse other kind: problems [('other kind', ['UserOnSun'])]
+        other kind: In modes H, N and L, UserOnSun is a mate in RangeBox.SLDASM that Gear Generator did not make, on Sun, which Update SolidWorks puts back, and a mate of that kind is not moved with its gear, so nothing is changed; in SolidWorks, lock your component to Sun instead, and Update SolidWorks puts it with Sun, or suppress UserOnSun in H, N and L, and press Update SolidWorks again.
+read    after refuse other kind (active H; front document RangeBox.SLDASM): mates in error none; not free {'Ring': 3, 'Sprocket-4': 3, 'Housing-1': 3}; marked none; rebuild state 0
+ok      refuse other kind: refused before any write as ['other kind'], naming ['UserOnSun'] and saying ['UserOnSun']: got ['other kind'], named ['UserOnSun']
+ok      refuse other kind: the refused press made no call that changes or shows anything (its trace): none
+ok      refuse other kind: nothing written: frames, mates, flags, entities, marks and globals as before
+ok      refuse other kind: the record keeps the refusal with its time 2026-11-17T02:27:46Z: ['other kind']
+footer  (refuse other kind, after the refusal) [red] In modes H, N and L, UserOnSun is a mate in RangeBox.SLDASM that Gear Generator did not make, on Sun, which Update SolidWorks puts back, and a mate of that kind is not moved with its gear, so nothing is changed; in SolidWorks, lock your component to Sun instead, and Update SolidWorks puts it with Sun, or suppress UserOnSun in H, N and L, and press Update SolidWorks again.
+        button 'Build again…' on; Update SolidWorks shown on primary
+line    [red] Update SolidWorks refused at 21:27, before changing anything: In modes H, N and L, UserOnSun is a mate in RangeBox.SLDASM that Gear Generator did not make, on Sun, which Update SolidWorks puts back, and a mate of that kind is not moved with its gear, so nothing is changed; in SolidWorks, lock your component to Sun instead, and Update SolidWorks puts it with Sun, or suppress UserOnSun in H, N and L, and press Update SolidWorks again. The next press reads your work in SolidWorks again, and refuses again unless that has been dealt with.
+        predicted: carried []; problems []; refused (recorded) [('other kind', ['UserOnSun'])]; changed since False; unread ties []
+ok      refuse other kind: the footer says the refusal as recorded, red, until the workbook changes
+person  [('off', 'UserOnSun')]: AddMate5 status {}; flags {'UserOnSun': {'H': True, 'N': True, 'L': True}}; codes here {'UserOnSun': (0, True)}
+ok      the user's mates read back as set in every mode: ['UserOnSun']
+-- refuse  the solver's tie: Sprocket-1's Top plane on Housing-1's
+person  [('off', 'UserHousingLock'), ('add', 'ut', 'coincident', 'u1:plane2', 'uh:plane2', 0.0, 'UserTie')]: AddMate5 status {'UserTie': 1}; flags {'UserHousingLock': {'H': True, 'N': True, 'L': True}, 'UserTie': {'H': False, 'N': False, 'L': False}}; codes here {'UserHousingLock': (0, True), 'UserTie': (0, False)}
+ok      the user's mates read back as set in every mode: ['UserHousingLock', 'UserTie']
+person  saved in SolidWorks (before refuse tie read): ['RangeBox.SLDASM']
+read    before refuse tie read (active H; front document RangeBox.SLDASM): mates in error none; not free {'Sun': 3, 'Planet copy 1': 3, 'Planet copy 2': 3, 'Planet copy 3': 3, 'Ring': 3, 'HighDog': 3, 'LowDog': 3, 'RangeSlv': 3, 'Carrier carrier': 3, 'Sprocket-1': 3, 'Sprocket-2': 3, 'Sprocket-3': 3, 'Sprocket-4': 3, 'Housing-1': 3}; marked none; rebuild state 0
+ok      refuse tie read: the footer offers Update SolidWorks (shown True, enabled True, Build again… needed False)
+update  SolidWorks 1.69 GB private, 10.28 GB free
+        raised UserWorkRefused in 79.7 s: Update SolidWorks must turn Sun's train back to its built place, and with your mates on SolidWorks reads it as unable to turn: your UserLock1, UserLock2, UserLock3, UserDist4, UserAngle4, UserTie, UserAxis1, UserAxis2 and UserAxis4 are on that train, so nothing is changed; suppress UserLock1, UserLock2, UserLock3, UserDist4, UserAngle4, UserTie, UserAxis1, UserAxis2 and UserAxis4 in H, N and L and press Update SolidWorks again.
+status  [red] Update SolidWorks must turn Sun's train back to its built place, and with your mates on SolidWorks reads it as unable to turn: your UserLock1, UserLock2, UserLock3, UserDist4, UserAngle4, UserTie, UserAxis1, UserAxis2 and UserAxis4 are on that train, so nothing is changed; suppress UserLock1, UserLock2, UserLock3, UserDist4, UserAngle4, UserTie, UserAxis1, UserAxis2 and UserAxis4 in H, N and L and press Update SolidWorks again.
+record  the window's _record_refusal ran
+fact    refuse tie read: the press took 79.7 s; SolidWorks calls by member {'OpenDoc6': 8, 'IsSuppressed2': 124, 'GetSystemValue3': 1}
+        shows and puts in order: []
+fact    refuse tie read: the press took 80 s
+fact    refuse tie read: problems [('tie', ['UserLock1', 'UserLock2', 'UserLock3', 'UserDist4', 'UserAngle4', 'UserTie', 'UserAxis1', 'UserAxis2', 'UserAxis4'])]
+        tie: Update SolidWorks must turn Sun's train back to its built place, and with your mates on SolidWorks reads it as unable to turn: your UserLock1, UserLock2, UserLock3, UserDist4, UserAngle4, UserTie, UserAxis1, UserAxis2 and UserAxis4 are on that train, so nothing is changed; suppress UserLock1, UserLock2, UserLock3, UserDist4, UserAngle4, UserTie, UserAxis1, UserAxis2 and UserAxis4 in H, N and L and press Update SolidWorks again.
+read    after refuse tie read (active H; front document RangeBox.SLDASM): mates in error none; not free {'Sun': 3, 'Planet copy 1': 3, 'Planet copy 2': 3, 'Planet copy 3': 3, 'Ring': 3, 'HighDog': 3, 'LowDog': 3, 'RangeSlv': 3, 'Carrier carrier': 3, 'Sprocket-1': 3, 'Sprocket-2': 3, 'Sprocket-3': 3, 'Sprocket-4': 3, 'Housing-1': 3}; marked none; rebuild state 0
+ok      refuse tie read: refused before any write as ['tie'], naming ['UserTie'] and saying ['unable to turn']: got ['tie'], named ['UserAngle4', 'UserAxis1', 'UserAxis2', 'UserAxis4', 'UserDist4', 'UserLock1', 'UserLock2', 'UserLock3', 'UserTie']
+ok      refuse tie read: the refused press made no call that changes or shows anything (its trace): none
+ok      refuse tie read: nothing written: frames, mates, flags, entities, marks and globals as before
+ok      refuse tie read: the record keeps the refusal with its time 2026-11-17T02:30:30Z: ['tie']
+footer  (refuse tie read, after the refusal) [red] Update SolidWorks must turn Sun's train back to its built place, and with your mates on SolidWorks reads it as unable to turn: your UserLock1, UserLock2, UserLock3, UserDist4, UserAngle4, UserTie, UserAxis1, UserAxis2 and UserAxis4 are on that train, so nothing is changed; suppress UserLock1, UserLock2, UserLock3, UserDist4, UserAngle4, UserTie, UserAxis1, UserAxis2 and UserAxis4 in H, N and L and press Update SolidWorks again.
+        button 'Build again…' on; Update SolidWorks shown on primary
+line    [red] Update SolidWorks refused at 21:30, before changing anything: Update SolidWorks must turn Sun's train back to its built place, and with your mates on SolidWorks reads it as unable to turn: your UserLock1, UserLock2, UserLock3, UserDist4, UserAngle4, UserTie, UserAxis1, UserAxis2 and UserAxis4 are on that train, so nothing is changed; suppress UserLock1, UserLock2, UserLock3, UserDist4, UserAngle4, UserTie, UserAxis1, UserAxis2 and UserAxis4 in H, N and L and press Update SolidWorks again. The next press reads your work in SolidWorks again, and refuses again unless that has been dealt with.
+        predicted: carried []; problems []; refused (recorded) [('tie', ['UserLock1', 'UserLock2', 'UserLock3', 'UserDist4', 'UserAngle4', 'UserTie', 'UserAxis1', 'UserAxis2', 'UserAxis4'])]; changed since False; unread ties []
+ok      refuse tie read: the footer says the refusal as recorded, red, until the workbook changes
+-- refuse  two app bodies locked together: a user lock from Sun to RangeSlv
+person  [('off', 'UserTie'), ('add', 'u2b', 'lock', 'sun', 'slv', 0.0, 'UserTwoBodies')]: AddMate5 status {'UserTwoBodies': 1}; flags {'UserTie': {'H': True, 'N': True, 'L': True}, 'UserTwoBodies': {'H': False, 'N': False, 'L': False}}; codes here {'UserTie': (0, True), 'UserTwoBodies': (0, False)}
+ok      the user's mates read back as set in every mode: ['UserTie', 'UserTwoBodies']
+person  saved in SolidWorks (before refuse two bodies): ['RangeBox.SLDASM']
+read    before refuse two bodies (active H; front document RangeBox.SLDASM): mates in error {'Sun along Input': 46, 'Carrier carrier on Carrier Axis': 1, 'Planet copy 1 on Planet copy 1 Axis': 1, 'RangeSlv on Output Axis': 1, 'RangeSlv along Output': 46, 'Sun meshes Planet copy 1': 46, 'Planet copy 1 meshes Ring': 46, 'RangeSlv engages HighDog': 46}; not free {'Sun': 4, 'Planet copy 1': 6, 'Planet copy 2': 3, 'Planet copy 3': 3, 'Ring': 3, 'HighDog': 4, 'LowDog': 3, 'RangeSlv': 4, 'Carrier carrier': 4, 'Sprocket-1': 3, 'Sprocket-2': 3, 'Sprocket-3': 3, 'Sprocket-4': 3, 'Housing-1': 3}; marked none; rebuild state 0
+ok      refuse two bodies: the footer offers Update SolidWorks (shown True, enabled True, Build again… needed False)
+update  SolidWorks 1.69 GB private, 10.28 GB free
+        raised UserWorkRefused in 85.2 s: Your UserLock1, UserLock2, UserLock3 and UserTwoBodies hold RangeSlv and Sun together through Sprocket-1, Sprocket-2 and Sprocket-3, and no put of Update SolidWorks can keep them, since it puts each of them back to its own built place, so nothing is changed; suppress UserLock1, UserLock2, UserLock3 and UserTwoBodies in H, N and L and press Update SolidWorks again. Update SolidWorks must turn Sun's train back to its built place, and with your mates on SolidWorks reads it as unable to turn: your UserLock1, UserLock2, UserLock3, UserDist4, UserAngle4, UserTwoBodies, UserAxis1, UserAxis2 and UserAxis4 are on that train, so nothing is changed; suppress UserLock1, UserLock2, UserLock3, UserDist4, UserAngle4, UserTwoBodies, UserAxis1, UserAxis2 and UserAxis4 in H, N and L and press Update SolidWorks again.
+status  [red] Your UserLock1, UserLock2, UserLock3 and UserTwoBodies hold RangeSlv and Sun together through Sprocket-1, Sprocket-2 and Sprocket-3, and no put of Update SolidWorks can keep them, since it puts each of them back to its own built place, so nothing is changed; suppress UserLock1, UserLock2, UserLock3 and UserTwoBodies in H, N and L and press Update SolidWorks again. Update SolidWorks must turn Sun's train back to its built place, and with your mates on SolidWorks reads it as unable to turn: your UserLock1, UserLock2, UserLock3, UserDist4, UserAngle4, UserTwoBodies, UserAxis1, UserAxis2 and UserAxis4 are on that train, so nothing is changed; suppress UserLock1, UserLock2, UserLock3, UserDist4, UserAngle4, UserTwoBodies, UserAxis1, UserAxis2 and UserAxis4 in H, N and L and press Update SolidWorks again.
+record  the window's _record_refusal ran
+fact    refuse two bodies: the press took 85.3 s; SolidWorks calls by member {'OpenDoc6': 8, 'IsSuppressed2': 128, 'GetSystemValue3': 1}
+        shows and puts in order: []
+fact    refuse two bodies: the press took 85 s
+fact    refuse two bodies: problems [('two bodies', ['UserLock1', 'UserLock2', 'UserLock3', 'UserTwoBodies']), ('tie', ['UserLock1', 'UserLock2', 'UserLock3', 'UserDist4', 'UserAngle4', 'UserTwoBodies', 'UserAxis1', 'UserAxis2', 'UserAxis4'])]
+        two bodies: Your UserLock1, UserLock2, UserLock3 and UserTwoBodies hold RangeSlv and Sun together through Sprocket-1, Sprocket-2 and Sprocket-3, and no put of Update SolidWorks can keep them, since it puts each of them back to its own built place, so nothing is changed; suppress UserLock1, UserLock2, UserLock3 and UserTwoBodies in H, N and L and press Update SolidWorks again.
+        tie: Update SolidWorks must turn Sun's train back to its built place, and with your mates on SolidWorks reads it as unable to turn: your UserLock1, UserLock2, UserLock3, UserDist4, UserAngle4, UserTwoBodies, UserAxis1, UserAxis2 and UserAxis4 are on that train, so nothing is changed; suppress UserLock1, UserLock2, UserLock3, UserDist4, UserAngle4, UserTwoBodies, UserAxis1, UserAxis2 and UserAxis4 in H, N and L and press Update SolidWorks again.
+read    after refuse two bodies (active H; front document RangeBox.SLDASM): mates in error {'Sun along Input': 46, 'Carrier carrier on Carrier Axis': 1, 'Planet copy 1 on Planet copy 1 Axis': 1, 'RangeSlv on Output Axis': 1, 'RangeSlv along Output': 46, 'Sun meshes Planet copy 1': 46, 'Planet copy 1 meshes Ring': 46, 'RangeSlv engages HighDog': 46}; not free {'Sun': 4, 'Planet copy 1': 6, 'Planet copy 2': 3, 'Planet copy 3': 3, 'Ring': 3, 'HighDog': 4, 'LowDog': 3, 'RangeSlv': 4, 'Carrier carrier': 4, 'Sprocket-1': 3, 'Sprocket-2': 3, 'Sprocket-3': 3, 'Sprocket-4': 3, 'Housing-1': 3}; marked none; rebuild state 0
+ok      refuse two bodies: refused before any write as ['two bodies'], naming ['UserTwoBodies'] and saying []: got ['tie', 'two bodies'], named ['UserAngle4', 'UserAxis1', 'UserAxis2', 'UserAxis4', 'UserDist4', 'UserLock1', 'UserLock2', 'UserLock3', 'UserTwoBodies']
+ok      refuse two bodies: the refused press made no call that changes or shows anything (its trace): none
+ok      refuse two bodies: nothing written: frames, mates, flags, entities, marks and globals as before
+ok      refuse two bodies: the record keeps the refusal with its time 2026-11-17T02:33:30Z: ['two bodies', 'tie']
+footer  (refuse two bodies, after the refusal) [red] Your UserLock1, UserLock2, UserLock3 and UserTwoBodies hold RangeSlv and Sun together through Sprocket-1, Sprocket-2 and Sprocket-3, and no put of Update SolidWorks can keep them, since it puts each of them back to its own built place, so nothing is changed; suppress UserLock1, UserLock2, UserLock3 and UserTwoBodies in H, N and L and press Update SolidWorks again. Update SolidWorks must turn Sun's train back to its built place, and with your mates on SolidWorks reads it as unable to turn: your UserLock1, UserLock2, UserLock3, UserDist4, UserAngle4, UserTwoBodies, UserAxis1, UserAxis2 and UserAxis4 are on that train, so nothing is changed; suppress UserLock1, UserLock2, UserLock3, UserDist4, UserAngle4, UserTwoBodies, UserAxis1, UserAxis2 and UserAxis4 in H, N and L and press Update SolidWorks again.
+        button 'Build again…' on; Update SolidWorks shown on primary
+line    [red] Update SolidWorks refused at 21:33, before changing anything: Your UserLock1, UserLock2, UserLock3 and UserTwoBodies hold RangeSlv and Sun together through Sprocket-1, Sprocket-2 and Sprocket-3, and no put of Update SolidWorks can keep them, since it puts each of them back to its own built place, so nothing is changed; suppress UserLock1, UserLock2, UserLock3 and UserTwoBodies in H, N and L and press Update SolidWorks again. Update SolidWorks must turn Sun's train back to its built place, and with your mates on SolidWorks reads it as unable to turn: your UserLock1, UserLock2, UserLock3, UserDist4, UserAngle4, UserTwoBodies, UserAxis1, UserAxis2 and UserAxis4 are on that train, so nothing is changed; suppress UserLock1, UserLock2, UserLock3, UserDist4, UserAngle4, UserTwoBodies, UserAxis1, UserAxis2 and UserAxis4 in H, N and L and press Update SolidWorks again. The next press reads your work in SolidWorks again, and refuses again unless that has been dealt with.
+        predicted: carried []; problems []; refused (recorded) [('two bodies', ['UserLock1', 'UserLock2', 'UserLock3', 'UserTwoBodies']), ('tie', ['UserLock1', 'UserLock2', 'UserLock3', 'UserDist4', 'UserAngle4', 'UserTwoBodies', 'UserAxis1', 'UserAxis2', 'UserAxis4'])]; changed since False; unread ties []
+ok      refuse two bodies: the footer says the refusal as recorded, red, until the workbook changes
+-- refuse  a Bore Diameter typed in SolidWorks: Sun's Bore Diameter 12
+person  [('off', 'UserTwoBodies')]: AddMate5 status {}; flags {'UserTwoBodies': {'H': True, 'N': True, 'L': True}}; codes here {'UserTwoBodies': (0, True)}
+ok      the user's mates read back as set in every mode: ['UserTwoBodies']
+person  saved in SolidWorks (before refuse bore typed): ['Gear_m1.25_N29.SLDPRT', 'RangeBox.SLDASM']
+DIALOG  SolidWorks shows 'Updating...': ['Cancel', 'Component(s) have been modified.  Updating assembly.'] (a progress box that closes itself; not logged again)
+read    before refuse bore typed (active H; front document RangeBox.SLDASM): mates in error none; not free {'Ring': 3, 'Sprocket-4': 3, 'Housing-1': 3}; marked ['RangeBox.SLDASM']; rebuild state 0
+ok      refuse bore typed: the footer offers Update SolidWorks (shown True, enabled True, Build again… needed False)
+update  SolidWorks 1.68 GB private, 10.36 GB free
+DIALOG  SolidWorks shows '': ['Title', 'Description', 'Button1', 'Button2', 'Hyperlink Text 1', 'Hyperlink Text 2']
+NOTE    SolidWorks' notification box came up while GetFirstSubFeature was in progress (exempt by the coordinator's ruling; nothing answers it)
+        raised UserWorkRefused in 85.5 s: Bore Diameter in Gear_m1.25_N29 is 12 in SolidWorks and 0 in the workbook: type 12 in Gears!J2, or set it back to 0 in SolidWorks, and press Update SolidWorks again.
+status  [red] Bore Diameter in Gear_m1.25_N29 is 12 in SolidWorks and 0 in the workbook: type 12 in Gears!J2, or set it back to 0 in SolidWorks, and press Update SolidWorks again.
+record  the window's _record_refusal ran
+fact    refuse bore typed: the press took 85.5 s; SolidWorks calls by member {'OpenDoc6': 8, 'IsSuppressed2': 128, 'GetSystemValue3': 1}
+        shows and puts in order: []
+fact    refuse bore typed: the press took 85 s
+fact    refuse bore typed: problems [('value', [])]
+        value: Bore Diameter in Gear_m1.25_N29 is 12 in SolidWorks and 0 in the workbook: type 12 in Gears!J2, or set it back to 0 in SolidWorks, and press Update SolidWorks again.
+read    after refuse bore typed (active H; front document RangeBox.SLDASM): mates in error none; not free {'Ring': 3, 'Sprocket-4': 3, 'Housing-1': 3}; marked ['RangeBox.SLDASM']; rebuild state 0
+ok      refuse bore typed: refused before any write as ['value'], naming [] and saying ['Gears!J2']: got ['value'], named []
+ok      refuse bore typed: the refused press made no call that changes or shows anything (its trace): none
+ok      refuse bore typed: nothing written: frames, mates, flags, entities, marks and globals as before
+ok      refuse bore typed: the record keeps the refusal with its time 2026-11-17T02:36:33Z: ['value']
+footer  (refuse bore typed, after the refusal) [red] Bore Diameter in Gear_m1.25_N29 is 12 in SolidWorks and 0 in the workbook: type 12 in Gears!J2, or set it back to 0 in SolidWorks, and press Update SolidWorks again.
+        button 'Build again…' on; Update SolidWorks shown on primary
+line    [red] Update SolidWorks refused at 21:36, before changing anything: Bore Diameter in Gear_m1.25_N29 is 12 in SolidWorks and 0 in the workbook: type 12 in Gears!J2, or set it back to 0 in SolidWorks, and press Update SolidWorks again. The next press reads your work in SolidWorks again, and refuses again unless that has been dealt with.
+        predicted: carried []; problems []; refused (recorded) [('value', [])]; changed since False; unread ties []
+ok      refuse bore typed: the footer says the refusal as recorded, red, until the workbook changes
+ok      refuse bore typed: the value named with its cell Gears!J2: [('Bore Diameter', '12', '0', 'Gears!J2')]
+-- refuse  all at once: the housing lock and the two-body lock on again, the bore still 12
+person  [('on', 'UserHousingLock'), ('on', 'UserTwoBodies')]: AddMate5 status {}; flags {'UserHousingLock': {'H': False, 'N': False, 'L': False}, 'UserTwoBodies': {'H': False, 'N': False, 'L': False}}; codes here {'UserHousingLock': (0, False), 'UserTwoBodies': (0, False)}
+ok      the user's mates read back as set in every mode: ['UserHousingLock', 'UserTwoBodies']
+person  saved in SolidWorks (before refuse all at once): ['RangeBox.SLDASM']
+read    before refuse all at once (active H; front document RangeBox.SLDASM): mates in error {'Sun on Input Axis': 1, 'Sun along Input': 46, 'Carrier carrier on Carrier Axis': 1, 'Planet copy 1 on Planet copy 1 Axis': 1, 'RangeSlv on Output Axis': 1, 'RangeSlv along Output': 46, 'Sun meshes Planet copy 1': 46, 'Planet copy 1 meshes Ring': 46, 'UserAxis2': 1, 'UserLock1': 1}; not free {'Sun': 4, 'Planet copy 1': 6, 'Planet copy 2': 3, 'Planet copy 3': 3, 'Ring': 3, 'HighDog': 4, 'LowDog': 3, 'RangeSlv': 4, 'Carrier carrier': 4, 'Sprocket-1': 4, 'Sprocket-2': 3, 'Sprocket-3': 3, 'Sprocket-4': 3, 'Housing-1': 3}; marked none; rebuild state 0
+ok      refuse all at once: the footer offers Update SolidWorks (shown True, enabled True, Build again… needed False)
+update  SolidWorks 1.67 GB private, 10.32 GB free
+        raised UserWorkRefused in 85.6 s: Bore Diameter in Gear_m1.25_N29 is 12 in SolidWorks and 0 in the workbook: type 12 in Gears!J2, or set it back to 0 in SolidWorks, and press Update SolidWorks again. Your UserLock1, UserLock2, UserLock3, UserHousingLock and UserTwoBodies hold RangeSlv and Sun together through Sprocket-1, Sprocket-2 and Sprocket-3, and no put of Update SolidWorks can keep them, since it puts each of them back to its own built place, so nothing is changed; suppress UserLock1, UserLock2, UserLock3, UserHousingLock and UserTwoBodies in H, N and L and press Update SolidWorks again. Update SolidWorks must turn Sun's train back to its built place, and with your mates on SolidWorks reads it as unable to turn: your UserLock1, UserLock2, UserLock3, UserDist4, UserAngle4, UserHousingLock, UserTwoBodies, UserAxis1, UserAxis2 and UserAxis4 are on that train, so nothing is changed; suppress UserLock1, UserLock2, UserLock3, UserDist4, UserAngle4, UserHousingLock, UserTwoBodies, UserAxis1, UserAxis2 and UserAxis4 in H, N and L and press Update SolidWorks again.
+status  [red] Bore Diameter in Gear_m1.25_N29 is 12 in SolidWorks and 0 in the workbook: type 12 in Gears!J2, or set it back to 0 in SolidWorks, and press Update SolidWorks again. Your UserLock1, UserLock2, UserLock3, UserHousingLock and UserTwoBodies hold RangeSlv and Sun together through Sprocket-1, Sprocket-2 and Sprocket-3, and no put of Update SolidWorks can keep them, since it puts each of them back to its own built place, so nothing is changed; suppress UserLock1, UserLock2, UserLock3, UserHousingLock and UserTwoBodies in H, N and L and press Update SolidWorks again. Update SolidWorks must turn Sun's train back to its built place, and with your mates on SolidWorks reads it as unable to turn: your UserLock1, UserLock2, UserLock3, UserDist4, UserAngle4, UserHousingLock, UserTwoBodies, UserAxis1, UserAxis2 and UserAxis4 are on that train, so nothing is changed; suppress UserLock1, UserLock2, UserLock3, UserDist4, UserAngle4, UserHousingLock, UserTwoBodies, UserAxis1, UserAxis2 and UserAxis4 in H, N and L and press Update SolidWorks again.
+record  the window's _record_refusal ran
+fact    refuse all at once: the press took 85.6 s; SolidWorks calls by member {'OpenDoc6': 8, 'IsSuppressed2': 128, 'GetSystemValue3': 1}
+        shows and puts in order: []
+fact    refuse all at once: the press took 86 s
+fact    refuse all at once: problems [('value', []), ('two bodies', ['UserLock1', 'UserLock2', 'UserLock3', 'UserHousingLock', 'UserTwoBodies']), ('tie', ['UserLock1', 'UserLock2', 'UserLock3', 'UserDist4', 'UserAngle4', 'UserHousingLock', 'UserTwoBodies', 'UserAxis1', 'UserAxis2', 'UserAxis4'])]
+        value: Bore Diameter in Gear_m1.25_N29 is 12 in SolidWorks and 0 in the workbook: type 12 in Gears!J2, or set it back to 0 in SolidWorks, and press Update SolidWorks again.
+        two bodies: Your UserLock1, UserLock2, UserLock3, UserHousingLock and UserTwoBodies hold RangeSlv and Sun together through Sprocket-1, Sprocket-2 and Sprocket-3, and no put of Update SolidWorks can keep them, since it puts each of them back to its own built place, so nothing is changed; suppress UserLock1, UserLock2, UserLock3, UserHousingLock and UserTwoBodies in H, N and L and press Update SolidWorks again.
+        tie: Update SolidWorks must turn Sun's train back to its built place, and with your mates on SolidWorks reads it as unable to turn: your UserLock1, UserLock2, UserLock3, UserDist4, UserAngle4, UserHousingLock, UserTwoBodies, UserAxis1, UserAxis2 and UserAxis4 are on that train, so nothing is changed; suppress UserLock1, UserLock2, UserLock3, UserDist4, UserAngle4, UserHousingLock, UserTwoBodies, UserAxis1, UserAxis2 and UserAxis4 in H, N and L and press Update SolidWorks again.
+read    after refuse all at once (active H; front document RangeBox.SLDASM): mates in error {'Sun on Input Axis': 1, 'Sun along Input': 46, 'Carrier carrier on Carrier Axis': 1, 'Planet copy 1 on Planet copy 1 Axis': 1, 'RangeSlv on Output Axis': 1, 'RangeSlv along Output': 46, 'Sun meshes Planet copy 1': 46, 'Planet copy 1 meshes Ring': 46, 'UserAxis2': 1, 'UserLock1': 1}; not free {'Sun': 4, 'Planet copy 1': 6, 'Planet copy 2': 3, 'Planet copy 3': 3, 'Ring': 3, 'HighDog': 4, 'LowDog': 3, 'RangeSlv': 4, 'Carrier carrier': 4, 'Sprocket-1': 4, 'Sprocket-2': 3, 'Sprocket-3': 3, 'Sprocket-4': 3, 'Housing-1': 3}; marked none; rebuild state 0
+ok      refuse all at once: refused before any write as ['two bodies', 'value'], naming ['UserHousingLock', 'UserTwoBodies'] and saying ['Gears!J2']: got ['tie', 'two bodies', 'value'], named ['UserAngle4', 'UserAxis1', 'UserAxis2', 'UserAxis4', 'UserDist4', 'UserHousingLock', 'UserLock1', 'UserLock2', 'UserLock3', 'UserTwoBodies']
+ok      refuse all at once: the refused press made no call that changes or shows anything (its trace): none
+ok      refuse all at once: nothing written: frames, mates, flags, entities, marks and globals as before
+ok      refuse all at once: the record keeps the refusal with its time 2026-11-17T02:39:47Z: ['value', 'two bodies', 'tie']
+footer  (refuse all at once, after the refusal) [red] Bore Diameter in Gear_m1.25_N29 is 12 in SolidWorks and 0 in the workbook: type 12 in Gears!J2, or set it back to 0 in SolidWorks, and press Update SolidWorks again. Your UserLock1, UserLock2, UserLock3, UserHousingLock and UserTwoBodies hold RangeSlv and Sun together through Sprocket-1, Sprocket-2 and Sprocket-3, and no put of Update SolidWorks can keep them, since it puts each of them back to its own built place, so nothing is changed; suppress UserLock1, UserLock2, UserLock3, UserHousingLock and UserTwoBodies in H, N and L and press Update SolidWorks again. Update SolidWorks must turn Sun's train back to its built place, and with your mates on SolidWorks reads it as unable to turn: your UserLock1, UserLock2, UserLock3, UserDist4, UserAngle4, UserHousingLock, UserTwoBodies, UserAxis1, UserAxis2 and UserAxis4 are on that train, so nothing is changed; suppress UserLock1, UserLock2, UserLock3, UserDist4, UserAngle4, UserHousingLock, UserTwoBodies, UserAxis1, UserAxis2 and UserAxis4 in H, N and L and press Update SolidWorks again.
+        button 'Build again…' on; Update SolidWorks shown on primary
+line    [red] Update SolidWorks refused at 21:39, before changing anything: Bore Diameter in Gear_m1.25_N29 is 12 in SolidWorks and 0 in the workbook: type 12 in Gears!J2, or set it back to 0 in SolidWorks, and press Update SolidWorks again. Your UserLock1, UserLock2, UserLock3, UserHousingLock and UserTwoBodies hold RangeSlv and Sun together through Sprocket-1, Sprocket-2 and Sprocket-3, and no put of Update SolidWorks can keep them, since it puts each of them back to its own built place, so nothing is changed; suppress UserLock1, UserLock2, UserLock3, UserHousingLock and UserTwoBodies in H, N and L and press Update SolidWorks again. Update SolidWorks must turn Sun's train back to its built place, and with your mates on SolidWorks reads it as unable to turn: your UserLock1, UserLock2, UserLock3, UserDist4, UserAngle4, UserHousingLock, UserTwoBodies, UserAxis1, UserAxis2 and UserAxis4 are on that train, so nothing is changed; suppress UserLock1, UserLock2, UserLock3, UserDist4, UserAngle4, UserHousingLock, UserTwoBodies, UserAxis1, UserAxis2 and UserAxis4 in H, N and L and press Update SolidWorks again. The next press reads your work in SolidWorks again, and refuses again unless that has been dealt with.
+        predicted: carried []; problems []; refused (recorded) [('value', []), ('two bodies', ['UserLock1', 'UserLock2', 'UserLock3', 'UserHousingLock', 'UserTwoBodies']), ('tie', ['UserLock1', 'UserLock2', 'UserLock3', 'UserDist4', 'UserAngle4', 'UserHousingLock', 'UserTwoBodies', 'UserAxis1', 'UserAxis2', 'UserAxis4'])]; changed since False; unread ties []
+ok      refuse all at once: the footer says the refusal as recorded, red, until the workbook changes
+ok      refuse all at once: every problem in one press, the values first: ['value', 'two bodies', 'tie']
+person  [('off', 'UserHousingLock'), ('off', 'UserTwoBodies')]: AddMate5 status {}; flags {'UserHousingLock': {'H': True, 'N': True, 'L': True}, 'UserTwoBodies': {'H': True, 'N': True, 'L': True}}; codes here {'UserHousingLock': (0, True), 'UserTwoBodies': (0, True)}
+ok      the user's mates read back as set in every mode: ['UserHousingLock', 'UserTwoBodies']
+DIALOG  SolidWorks shows '': ['Title', 'Description', 'Button1', 'Button2', 'Hyperlink Text 1', 'Hyperlink Text 2']
+NOTE    SolidWorks' notification box came up while SetUserPreferenceToggle was in progress (exempt by the coordinator's ruling; nothing answers it)
+-- refuse  last: Sprocket-1 loaded lightweight (W9A-REVIEW-B 3; the coordinator's item 4)
+person  Sprocket-1 set to state 1: reads 1
+excel   Gears!P2 := None
+excel   saved RangeBox.xlsx
+poll    a new read 0.0 s after asking; changes:
+          Gears!P2 Sun Backlash 0.41 → blank
+ok      read RangeBox.xlsx: ok
+        warning Gears!F3: Planet: 13 teeth at 20° is below the undercut limit of 17: a generated gear would lose the bottom of its flanks, which this profile does not show. A profile shift of 0.24 or more would clear it.
+        warning Gears!F3: Planet: The tooth tip is 0.36 mm thick, under 0.3 × module (0.375 mm).
+        warning Gears!F7: RangeSlv: The teeth's tips, at 18.75 mm, are inside the base circle of 19.968 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!A3: Planet (13 teeth) is below the undercut limit, which is not modelled, and meshes Sun (29 teeth): the build checks interference only where the gears stand, so check Planet with Sun turning in SolidWorks.
+        5 shafts · 6 gears · 2 meshes; gate ''
+classify parts changed []; moved []; re-place []; structural []; missing []; unsaved []; refusal ''; turning True; axial []; ratios []
+        layout globals wanted []
+summary SolidWorks already matches the workbook on record; Update SolidWorks checks it live and puts right anything changed there; gears turned in SolidWorks stay where they are unless something must move.
+ok      refuse lightweight: the quiet press: the footer offers Update SolidWorks (shown True, enabled True, Build again… needed False)
+update  SolidWorks 1.67 GB private, 10.36 GB free
+        in 88.0 s; SolidWorks 1.67 GB private, 10.40 GB free; loaded from disk []
+        W9a: carried []; renamed []; user in error []; user features in error []; inventory read yes; failures []
+ok      the Update's check phase found no gear mate turning against its mesh: []
+status  [green] SolidWorks already matches the workbook: nothing was changed. RangeBox.SLDASM also has mates the app did not make, UserHousingLock, UserOnSun, UserTie and UserTwoBodies, suppressed in every mode; Update SolidWorks left them as they are. It worked in H, the configuration that was active; it did not show the other modes, since nothing in H needed changing.
+fact    refuse lightweight: the quiet press: the press took 88.0 s; SolidWorks calls by member {'OpenDoc6': 9, 'IsSuppressed2': 128, 'GetSystemValue3': 1}
+        shows and puts in order: []
+        configuration 'H'; visited []; put_in []; placed []; unsuppressed_in []; suppressed_in []; slid []; values_restored []; extra configurations []; extra mates ['UserHousingLock', 'UserOnSun', 'UserTie', 'UserTwoBodies']; senses unread []; positions per configuration False; failures []
+fact    refuse lightweight: the quiet press: the press took 88 s
+ok      refuse lightweight: the quiet press read the user's work and changed nothing: ok
+excel   Gears!P2 := 0.4
+excel   saved RangeBox.xlsx
+poll    a new read 0.0 s after asking; changes:
+          Gears!P2 Sun Backlash blank → 0.4
+ok      read RangeBox.xlsx: ok
+        warning Gears!F3: Planet: 13 teeth at 20° is below the undercut limit of 17: a generated gear would lose the bottom of its flanks, which this profile does not show. A profile shift of 0.24 or more would clear it.
+        warning Gears!F3: Planet: The tooth tip is 0.36 mm thick, under 0.3 × module (0.375 mm).
+        warning Gears!F7: RangeSlv: The teeth's tips, at 18.75 mm, are inside the base circle of 19.968 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!A3: Planet (13 teeth) is below the undercut limit, which is not modelled, and meshes Sun (29 teeth): the build checks interference only where the gears stand, so check Planet with Sun turning in SolidWorks.
+        5 shafts · 6 gears · 2 meshes; gate ''
+classify parts changed ['Gear_m1.25_N29.SLDPRT']; moved []; re-place []; structural []; missing []; unsaved []; refusal ''; turning True; axial []; ratios []
+        layout globals wanted []
+summary Update SolidWorks will change Sun's values (Gear_m1.25_N29).
+footer  (refuse lightweight, before the press) [red] Update SolidWorks will change Sun's values (Gear_m1.25_N29). It was built with a configuration per mode (H, N and L), each named as its mode, and saved in H; to switch mode, double-click another mode's configuration in SolidWorks' ConfigurationManager. Drag Sun in SolidWorks and the rest of its train follow. A turn you give the gears in one mode can show in other modes, so a dog can stand across its sleeve in another; to put the gears back there, press Update SolidWorks with that mode showing. Carrier (the carrier) is axes and planes only, so it has nothing to drag. As read at 21:42, Update SolidWorks would stop before changing anything: Update SolidWorks would put your Sprocket-1 with Sun, which your mates hold it to, and Sprocket-1 is loaded lightweight in RangeBox.SLDASM, so nothing is changed; in SolidWorks, set it to Resolved and press Update SolidWorks again. Update SolidWorks would put your Sprocket-3 with Sun, which your mates hold it to, and Sprocket-3 is loaded lightweight in RangeBox.SLDASM, so nothing is changed; in SolidWorks, set it to Resolved and press Update SolidWorks again. Update SolidWorks would put your Sprocket-2 with RangeSlv, which your mates hold it to, and Sprocket-2 is loaded lightweight in RangeBox.SLDASM, so nothing is changed; in SolidWorks, set it to Resolved and press Update SolidWorks again. It reads your work in SolidWorks again when pressed.
+        button 'Build again…' on; Update SolidWorks shown on primary
+line    [red] As read at 21:42, Update SolidWorks would stop before changing anything: Update SolidWorks would put your Sprocket-1 with Sun, which your mates hold it to, and Sprocket-1 is loaded lightweight in RangeBox.SLDASM, so nothing is changed; in SolidWorks, set it to Resolved and press Update SolidWorks again. Update SolidWorks would put your Sprocket-3 with Sun, which your mates hold it to, and Sprocket-3 is loaded lightweight in RangeBox.SLDASM, so nothing is changed; in SolidWorks, set it to Resolved and press Update SolidWorks again. Update SolidWorks would put your Sprocket-2 with RangeSlv, which your mates hold it to, and Sprocket-2 is loaded lightweight in RangeBox.SLDASM, so nothing is changed; in SolidWorks, set it to Resolved and press Update SolidWorks again. It reads your work in SolidWorks again when pressed.
+        predicted: carried [('Sun', [('Sprocket-1', ('UserLock1', 'UserLock3')), ('Sprocket-3', ('UserLock1', 'UserLock3'))]), ('RangeSlv', [('Sprocket-2', ('UserLock2',))])]; problems [('component', []), ('component', []), ('component', [])]; refused (recorded) []; changed since False; unread ties [(('Carrier carrier', 'Sun', 'Planet copy 1', 'Planet copy 2', 'Planet copy 3', 'HighDog', 'LowDog', 'RangeSlv'), ('UserLock1', 'UserLock2', 'UserLock3', 'UserDist4', 'UserAngle4', 'UserAxis1', 'UserAxis2', 'UserAxis4'))]
+ok      refuse lightweight, before the press: the footer says the user-work line as the window would: 'As read at 21:42, Update SolidWorks would stop before changing anything: Update '…
+ok      refuse lightweight: the footer foresees the refusal of a carried component loaded lightweight
+DIALOG  SolidWorks shows 'SOLIDWORKS CAM Warning': ['&Yes', '&No', 'SOLIDWORKS CAM data cannot be stored as lightweight parts have been detected.\nProceeding with save operation will result in loss of previous SOLIDWORKS CAM data.\nDo you want to continue?']
+NOTE    a SolidWorks window 'SOLIDWORKS CAM Warning' ['&Yes', '&No', 'SOLIDWORKS CAM data cannot be stored as lightweight parts have been detected.\nProceeding with save operation will result in loss of previous SOLIDWORKS CAM data.\nDo you want to continue?'] came up while SaveAs3 was in progress, before this run made any configuration
+DIALOG  SolidWorks shows '': ['Title', 'Description', 'Button1', 'Button2', 'Hyperlink Text 1', 'Hyperlink Text 2']
+NOTE    SolidWorks' notification box came up while SaveAs3 was in progress (exempt by the coordinator's ruling; nothing answers it)
+time    refuse: 1932 s; 0 failed; SolidWorks 1.67 GB private, 10.39 GB free
+FAIL    W9a: WorkerHung: the SolidWorks worker is hung from an earlier job, so nothing more is asked of it; the run ends here, nothing more is asked of SolidWorks
+excel   left open: ['RangeBox.xlsx'], closed without saving
+excel   quit our own Excel
+close   the SolidWorks worker is hung: nothing closed at the end; SolidWorks is left as it is
+dialogs progress boxes seen {'Calculating Interference Detection': 0, 'Updating...': 1, 'Opening': 1, 'Loading...': 0}; other windows the watch logged: 5
+awake   display and system released (previous state -0x7ffffffd)
+result  written to C:\Users\M0obo\Documents\GearGeneratorProbe\w9a-demo-sw2026-20261116-204824\w9a-demo-20261116-211735.json; masters kept {'rangebox': 'C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9-s0-20261116-045513\\out\\rangebox.master', 'setup': 'C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9a-demo-sw2026-20261116-204824\\out\\setup.master', 'reducer': ''}
+noted   a SolidWorks balloon tip ['Check1', 'Over Defined', 'The assembly is over defined. Click here to view mate errors.'] came up while ForceRebuild3 was in progress (left standing, never answered)
+noted   SolidWorks' notification box came up while Name was in progress (exempt by the coordinator's ruling; nothing answers it)
+noted   SolidWorks' notification box came up while GetFirstSubFeature was in progress (exempt by the coordinator's ruling; nothing answers it)
+noted   SolidWorks' notification box came up while SetUserPreferenceToggle was in progress (exempt by the coordinator's ruling; nothing answers it)
+noted   a SolidWorks window 'SOLIDWORKS CAM Warning' ['&Yes', '&No', 'SOLIDWORKS CAM data cannot be stored as lightweight parts have been detected.\nProceeding with save operation will result in loss of previous SOLIDWORKS CAM data.\nDo you want to continue?'] came up while SaveAs3 was in progress, before this run made any configuration
+noted   SolidWorks' notification box came up while SaveAs3 was in progress (exempt by the coordinator's ruling; nothing answers it)
+done    1 failed: ['W9a: WorkerHung: the SolidWorks worker is hung from an earlier job, so nothing more is asked of it; the run ends here, nothing more is asked of SolidWorks']; 6 noted; 0 STOP(s)

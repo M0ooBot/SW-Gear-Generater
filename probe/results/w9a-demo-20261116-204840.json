@@ -1,0 +1,1364 @@
+{
+ "sections": {
+  "m3": {
+   "placed": {
+    "sprocket_z": -100.0,
+    "housing_z": 60.0,
+    "gap": 160.0
+   },
+   "baseline": {
+    "rebuilt": true,
+    "whats_wrong": 0,
+    "mates": {
+     "Sun on Input Axis": [
+      0,
+      false
+     ],
+     "Sun along Input": [
+      0,
+      false
+     ],
+     "HighDog locked to Sun": [
+      0,
+      false
+     ],
+     "Carrier carrier on Carrier Axis": [
+      0,
+      false
+     ],
+     "Carrier carrier along Carrier": [
+      0,
+      false
+     ],
+     "LowDog locked to Carrier carrier": [
+      0,
+      false
+     ],
+     "Planet copy 1 on Planet copy 1 Axis": [
+      0,
+      false
+     ],
+     "Planet copy 1 along Planet copy 1": [
+      0,
+      false
+     ],
+     "Planet copy 2 on Planet copy 2 Axis": [
+      0,
+      false
+     ],
+     "Planet copy 2 along Planet copy 2": [
+      0,
+      false
+     ],
+     "Planet copy 3 on Planet copy 3 Axis": [
+      0,
+      false
+     ],
+     "Planet copy 3 along Planet copy 3": [
+      0,
+      false
+     ],
+     "RangeSlv on Output Axis": [
+      0,
+      false
+     ],
+     "RangeSlv along Output": [
+      0,
+      false
+     ],
+     "Sun meshes Planet copy 1": [
+      0,
+      false
+     ],
+     "Sun meshes Planet copy 2": [
+      0,
+      false
+     ],
+     "Sun meshes Planet copy 3": [
+      0,
+      false
+     ],
+     "Planet copy 1 meshes Ring": [
+      0,
+      false
+     ],
+     "RangeSlv engages HighDog": [
+      0,
+      false
+     ],
+     "RangeSlv engages LowDog": [
+      0,
+      true
+     ],
+     "UserAxis": [
+      0,
+      false
+     ],
+     "UserFront": [
+      0,
+      false
+     ]
+    },
+    "components": {
+     "Dog_m1.25_N17-2": 0,
+     "Sleeve_m1.25_N17-1": 0,
+     "Sprocket-1": 0,
+     "Gear_m1.25_N29-1": 0,
+     "Ring_m1.25_N55-1": 0,
+     "RangeBox_Carrier_Carrier-1": 0,
+     "Gear_m1.25_N13-1": 0,
+     "RangeBox_Layout-1": 0,
+     "Gear_m1.25_N13-3": 0,
+     "Gear_m1.25_N13-2": 0,
+     "Dog_m1.25_N17-1": 0,
+     "Housing-1": 0
+    },
+    "flags": {
+     "RangeBox_Layout.SLDPRT": false,
+     "RangeBox_Carrier_Carrier.SLDPRT": false,
+     "Gear_m1.25_N29.SLDPRT": false,
+     "Gear_m1.25_N13.SLDPRT": false,
+     "Ring_m1.25_N55.SLDPRT": false,
+     "Dog_m1.25_N17.SLDPRT": false,
+     "Sleeve_m1.25_N17.SLDPRT": false,
+     "Housing.SLDPRT": false,
+     "Sprocket.SLDPRT": false,
+     "RangeBox.SLDASM": true
+    },
+    "windows_new": [],
+    "windows_counted": []
+   },
+   "mate_error": {
+    "rebuilt": true,
+    "whats_wrong": 3,
+    "mates": {
+     "Sun on Input Axis": [
+      0,
+      false
+     ],
+     "Sun along Input": [
+      0,
+      false
+     ],
+     "HighDog locked to Sun": [
+      0,
+      false
+     ],
+     "Carrier carrier on Carrier Axis": [
+      0,
+      false
+     ],
+     "Carrier carrier along Carrier": [
+      0,
+      false
+     ],
+     "LowDog locked to Carrier carrier": [
+      0,
+      false
+     ],
+     "Planet copy 1 on Planet copy 1 Axis": [
+      0,
+      false
+     ],
+     "Planet copy 1 along Planet copy 1": [
+      0,
+      false
+     ],
+     "Planet copy 2 on Planet copy 2 Axis": [
+      0,
+      false
+     ],
+     "Planet copy 2 along Planet copy 2": [
+      0,
+      false
+     ],
+     "Planet copy 3 on Planet copy 3 Axis": [
+      0,
+      false
+     ],
+     "Planet copy 3 along Planet copy 3": [
+      0,
+      false
+     ],
+     "RangeSlv on Output Axis": [
+      0,
+      false
+     ],
+     "RangeSlv along Output": [
+      0,
+      false
+     ],
+     "Sun meshes Planet copy 1": [
+      0,
+      false
+     ],
+     "Sun meshes Planet copy 2": [
+      0,
+      false
+     ],
+     "Sun meshes Planet copy 3": [
+      0,
+      false
+     ],
+     "Planet copy 1 meshes Ring": [
+      0,
+      false
+     ],
+     "RangeSlv engages HighDog": [
+      0,
+      false
+     ],
+     "RangeSlv engages LowDog": [
+      0,
+      true
+     ],
+     "UserAxis": [
+      0,
+      false
+     ],
+     "UserFront": [
+      46,
+      false
+     ],
+     "UserGap": [
+      47,
+      false
+     ]
+    },
+    "components": {
+     "Dog_m1.25_N17-2": 0,
+     "Sleeve_m1.25_N17-1": 0,
+     "Sprocket-1": 0,
+     "Gear_m1.25_N29-1": 0,
+     "Ring_m1.25_N55-1": 0,
+     "RangeBox_Carrier_Carrier-1": 0,
+     "Gear_m1.25_N13-1": 0,
+     "RangeBox_Layout-1": 0,
+     "Gear_m1.25_N13-3": 0,
+     "Gear_m1.25_N13-2": 0,
+     "Dog_m1.25_N17-1": 0,
+     "Housing-1": 0
+    },
+    "flags": {
+     "RangeBox_Layout.SLDPRT": false,
+     "RangeBox_Carrier_Carrier.SLDPRT": false,
+     "Gear_m1.25_N29.SLDPRT": false,
+     "Gear_m1.25_N13.SLDPRT": false,
+     "Ring_m1.25_N55.SLDPRT": false,
+     "Dog_m1.25_N17.SLDPRT": false,
+     "Sleeve_m1.25_N17.SLDPRT": false,
+     "Housing.SLDPRT": false,
+     "Sprocket.SLDPRT": false,
+     "RangeBox.SLDASM": true
+    },
+    "windows_new": [],
+    "windows_counted": [],
+    "add_mate_status": 5
+   },
+   "update_mate_error": {
+    "ok": true,
+    "failures": [],
+    "user_in_error": [
+     [
+      "N",
+      "UserFront"
+     ],
+     [
+      "N",
+      "UserGap"
+     ],
+     [
+      "L",
+      "UserFront"
+     ],
+     [
+      "L",
+      "UserGap"
+     ],
+     [
+      "H",
+      "UserFront"
+     ],
+     [
+      "H",
+      "UserGap"
+     ]
+    ],
+    "user_features_in_error": [],
+    "in_error_before": [
+     "UserFront",
+     "UserGap"
+    ],
+    "sentence": "Updated SolidWorks: changed 1 variable in Gear_m1.25_N29, re-placed Carrier (the carrier), Sun, Planet (3 copies), HighDog, LowDog and RangeSlv in every mode; no interference between the gears in any mode, where they stand. It worked in H, the configuration that was active, then showed and checked N and L and left the assembly in H. Your UserFront in N, L and H and UserGap in N, L and H were in error in SolidWorks before this Update changed anything, and still are. Save Gear_m1.25_N29 and RangeBox in SolidWorks to keep them."
+   },
+   "part_rebuild": {
+    "rebuilt": false,
+    "whats_wrong": 1,
+    "errors": [
+     [
+      "User Keyway",
+      71
+     ]
+    ],
+    "windows_new": [
+     [
+      "tooltips_class32",
+      "",
+      []
+     ],
+     [
+      "SysShadow",
+      "",
+      []
+     ]
+    ]
+   },
+   "feature_error": {
+    "rebuilt": false,
+    "whats_wrong": 1,
+    "mates": {
+     "Sun on Input Axis": [
+      0,
+      false
+     ],
+     "Sun along Input": [
+      0,
+      false
+     ],
+     "HighDog locked to Sun": [
+      0,
+      false
+     ],
+     "Carrier carrier on Carrier Axis": [
+      0,
+      false
+     ],
+     "Carrier carrier along Carrier": [
+      0,
+      false
+     ],
+     "LowDog locked to Carrier carrier": [
+      0,
+      false
+     ],
+     "Planet copy 1 on Planet copy 1 Axis": [
+      0,
+      false
+     ],
+     "Planet copy 1 along Planet copy 1": [
+      0,
+      false
+     ],
+     "Planet copy 2 on Planet copy 2 Axis": [
+      0,
+      false
+     ],
+     "Planet copy 2 along Planet copy 2": [
+      0,
+      false
+     ],
+     "Planet copy 3 on Planet copy 3 Axis": [
+      0,
+      false
+     ],
+     "Planet copy 3 along Planet copy 3": [
+      0,
+      false
+     ],
+     "RangeSlv on Output Axis": [
+      0,
+      false
+     ],
+     "RangeSlv along Output": [
+      0,
+      false
+     ],
+     "Sun meshes Planet copy 1": [
+      0,
+      false
+     ],
+     "Sun meshes Planet copy 2": [
+      0,
+      false
+     ],
+     "Sun meshes Planet copy 3": [
+      0,
+      false
+     ],
+     "Planet copy 1 meshes Ring": [
+      0,
+      false
+     ],
+     "RangeSlv engages HighDog": [
+      0,
+      false
+     ],
+     "RangeSlv engages LowDog": [
+      0,
+      true
+     ],
+     "UserAxis": [
+      0,
+      false
+     ],
+     "UserFront": [
+      0,
+      false
+     ],
+     "UserGap": [
+      0,
+      true
+     ]
+    },
+    "components": {
+     "Dog_m1.25_N17-2": 0,
+     "Sleeve_m1.25_N17-1": 0,
+     "Sprocket-1": 1,
+     "Gear_m1.25_N29-1": 0,
+     "Ring_m1.25_N55-1": 0,
+     "RangeBox_Carrier_Carrier-1": 0,
+     "Gear_m1.25_N13-1": 0,
+     "RangeBox_Layout-1": 0,
+     "Gear_m1.25_N13-3": 0,
+     "Gear_m1.25_N13-2": 0,
+     "Dog_m1.25_N17-1": 0,
+     "Housing-1": 0
+    },
+    "flags": {
+     "RangeBox_Layout.SLDPRT": false,
+     "RangeBox_Carrier_Carrier.SLDPRT": false,
+     "Gear_m1.25_N29.SLDPRT": true,
+     "Gear_m1.25_N13.SLDPRT": false,
+     "Ring_m1.25_N55.SLDPRT": false,
+     "Dog_m1.25_N17.SLDPRT": false,
+     "Sleeve_m1.25_N17.SLDPRT": false,
+     "Housing.SLDPRT": false,
+     "Sprocket.SLDPRT": true,
+     "RangeBox.SLDASM": true
+    },
+    "windows_new": [],
+    "windows_counted": []
+   },
+   "update_feature_error": {
+    "ok": false,
+    "failures": [
+     [
+      "RangeBox.SLDASM",
+      "SolidWorks reported an error rebuilding RangeBox in H. Your Sprocket-1 was already in error before this Update."
+     ]
+    ],
+    "user_in_error": [],
+    "user_features_in_error": [],
+    "in_error_before": [
+     "Sprocket-1"
+    ],
+    "sentence": "Update SolidWorks stopped. RangeBox.SLDASM: SolidWorks reported an error rebuilding RangeBox in H. Your Sprocket-1 was already in error before this Update. It had already changed Gear_m1.25_N29, not saved: press Update SolidWorks again once that is put right, or save it in SolidWorks to keep what it did."
+   },
+   "seconds": 442,
+   "failed": []
+  },
+  "setup": {
+   "made": {
+    "components": {
+     "u1": "Sprocket-1",
+     "u2": "Sprocket-2",
+     "u3": "Sprocket-3",
+     "u4": "Sprocket-4",
+     "uh": "Housing-1"
+    },
+    "mates": {
+     "UserAxis1": {
+      "status": 1,
+      "as_made": {
+       "H": false,
+       "N": false,
+       "L": false
+      },
+      "set": {
+       "H": false,
+       "N": false,
+       "L": false
+      }
+     },
+     "UserAxis2": {
+      "status": 1,
+      "as_made": {
+       "H": false,
+       "N": false,
+       "L": false
+      },
+      "set": {
+       "H": false,
+       "N": false,
+       "L": false
+      }
+     },
+     "UserLock1": {
+      "status": 1,
+      "as_made": {
+       "H": false,
+       "N": false,
+       "L": false
+      },
+      "set": {
+       "H": false,
+       "N": false,
+       "L": false
+      }
+     },
+     "UserLock2": {
+      "status": 1,
+      "as_made": {
+       "H": false,
+       "N": false,
+       "L": false
+      },
+      "set": {
+       "H": false,
+       "N": false,
+       "L": false
+      }
+     },
+     "UserLock3": {
+      "status": 1,
+      "as_made": {
+       "H": false,
+       "N": false,
+       "L": false
+      },
+      "set": {
+       "H": false,
+       "N": false,
+       "L": false
+      }
+     },
+     "UserAxis4": {
+      "status": 1,
+      "as_made": {
+       "H": false,
+       "N": false,
+       "L": false
+      },
+      "set": {
+       "H": false,
+       "N": false,
+       "L": false
+      }
+     },
+     "UserDist4": {
+      "status": 1,
+      "as_made": {
+       "H": false,
+       "N": false,
+       "L": false
+      },
+      "set": {
+       "H": false,
+       "N": false,
+       "L": false
+      }
+     },
+     "UserAngle4": {
+      "status": 1,
+      "as_made": {
+       "H": false,
+       "N": false,
+       "L": false
+      },
+      "set": {
+       "H": false,
+       "N": false,
+       "L": false
+      }
+     }
+    },
+    "active": "H",
+    "states": [
+     [
+      "Sun on Input Axis",
+      0,
+      false
+     ],
+     [
+      "Sun along Input",
+      0,
+      false
+     ],
+     [
+      "HighDog locked to Sun",
+      0,
+      false
+     ],
+     [
+      "Carrier carrier on Carrier Axis",
+      0,
+      false
+     ],
+     [
+      "Carrier carrier along Carrier",
+      0,
+      false
+     ],
+     [
+      "LowDog locked to Carrier carrier",
+      0,
+      false
+     ],
+     [
+      "Planet copy 1 on Planet copy 1 Axis",
+      0,
+      false
+     ],
+     [
+      "Planet copy 1 along Planet copy 1",
+      0,
+      false
+     ],
+     [
+      "Planet copy 2 on Planet copy 2 Axis",
+      0,
+      false
+     ],
+     [
+      "Planet copy 2 along Planet copy 2",
+      0,
+      false
+     ],
+     [
+      "Planet copy 3 on Planet copy 3 Axis",
+      0,
+      false
+     ],
+     [
+      "Planet copy 3 along Planet copy 3",
+      0,
+      false
+     ],
+     [
+      "RangeSlv on Output Axis",
+      0,
+      false
+     ],
+     [
+      "RangeSlv along Output",
+      0,
+      false
+     ],
+     [
+      "Sun meshes Planet copy 1",
+      0,
+      false
+     ],
+     [
+      "Sun meshes Planet copy 2",
+      0,
+      false
+     ],
+     [
+      "Sun meshes Planet copy 3",
+      0,
+      false
+     ],
+     [
+      "Planet copy 1 meshes Ring",
+      0,
+      false
+     ],
+     [
+      "RangeSlv engages HighDog",
+      0,
+      false
+     ],
+     [
+      "RangeSlv engages LowDog",
+      0,
+      true
+     ],
+     [
+      "UserAxis1",
+      0,
+      false
+     ],
+     [
+      "UserAxis2",
+      0,
+      false
+     ],
+     [
+      "UserLock1",
+      0,
+      false
+     ],
+     [
+      "UserLock2",
+      0,
+      false
+     ],
+     [
+      "UserLock3",
+      0,
+      false
+     ],
+     [
+      "UserAxis4",
+      0,
+      false
+     ],
+     [
+      "UserDist4",
+      0,
+      false
+     ],
+     [
+      "UserAngle4",
+      0,
+      false
+     ]
+    ]
+   },
+   "sprocket4_dz": {
+    "H": -89.99999999999999,
+    "N": -89.99999999999999,
+    "L": -89.99999999999999
+   },
+   "user_clashes": [],
+   "m1": {
+    "flags_before": {
+     "RangeBox_Layout.SLDPRT": false,
+     "RangeBox_Carrier_Carrier.SLDPRT": false,
+     "Gear_m1.25_N29.SLDPRT": false,
+     "Gear_m1.25_N13.SLDPRT": false,
+     "Ring_m1.25_N55.SLDPRT": false,
+     "Dog_m1.25_N17.SLDPRT": false,
+     "Sleeve_m1.25_N17.SLDPRT": false,
+     "Sprocket.SLDPRT": false,
+     "Housing.SLDPRT": false,
+     "RangeBox.SLDASM": false
+    },
+    "components": [
+     [
+      "Sleeve_m1.25_N17-1",
+      "Sleeve_m1.25_N17.SLDPRT",
+      false,
+      2,
+      0
+     ],
+     [
+      "RangeBox_Carrier_Carrier-1",
+      "RangeBox_Carrier_Carrier.SLDPRT",
+      false,
+      2,
+      0
+     ],
+     [
+      "Sprocket-3",
+      "Sprocket.SLDPRT",
+      false,
+      2,
+      0
+     ],
+     [
+      "Gear_m1.25_N29-1",
+      "Gear_m1.25_N29.SLDPRT",
+      false,
+      2,
+      0
+     ],
+     [
+      "Gear_m1.25_N13-3",
+      "Gear_m1.25_N13.SLDPRT",
+      false,
+      2,
+      0
+     ],
+     [
+      "Ring_m1.25_N55-1",
+      "Ring_m1.25_N55.SLDPRT",
+      true,
+      2,
+      0
+     ],
+     [
+      "Dog_m1.25_N17-1",
+      "Dog_m1.25_N17.SLDPRT",
+      false,
+      2,
+      0
+     ],
+     [
+      "Gear_m1.25_N13-1",
+      "Gear_m1.25_N13.SLDPRT",
+      false,
+      2,
+      0
+     ],
+     [
+      "Gear_m1.25_N13-2",
+      "Gear_m1.25_N13.SLDPRT",
+      false,
+      2,
+      0
+     ],
+     [
+      "Dog_m1.25_N17-2",
+      "Dog_m1.25_N17.SLDPRT",
+      false,
+      2,
+      0
+     ],
+     [
+      "RangeBox_Layout-1",
+      "RangeBox_Layout.SLDPRT",
+      true,
+      2,
+      0
+     ],
+     [
+      "Sprocket-1",
+      "Sprocket.SLDPRT",
+      false,
+      2,
+      0
+     ],
+     [
+      "Sprocket-2",
+      "Sprocket.SLDPRT",
+      false,
+      2,
+      0
+     ],
+     [
+      "Sprocket-4",
+      "Sprocket.SLDPRT",
+      false,
+      2,
+      0
+     ],
+     [
+      "Housing-1",
+      "Housing.SLDPRT",
+      true,
+      2,
+      0
+     ]
+    ],
+    "mates": {
+     "UserAxis1": {
+      "type": 0,
+      "components": [
+       "RangeBox_Layout-1",
+       "Sprocket-1"
+      ],
+      "whole": true,
+      "code": 0
+     },
+     "UserAxis2": {
+      "type": 0,
+      "components": [
+       "RangeBox_Layout-1",
+       "Sprocket-2"
+      ],
+      "whole": true,
+      "code": 0
+     },
+     "UserLock1": {
+      "type": 16,
+      "components": [
+       "Gear_m1.25_N29-1",
+       "Sprocket-1"
+      ],
+      "whole": true,
+      "code": 0
+     },
+     "UserLock2": {
+      "type": 16,
+      "components": [
+       "Sleeve_m1.25_N17-1",
+       "Sprocket-2"
+      ],
+      "whole": true,
+      "code": 0
+     },
+     "UserLock3": {
+      "type": 16,
+      "components": [
+       "Sprocket-1",
+       "Sprocket-3"
+      ],
+      "whole": true,
+      "code": 0
+     },
+     "UserAxis4": {
+      "type": 0,
+      "components": [
+       "RangeBox_Layout-1",
+       "Sprocket-4"
+      ],
+      "whole": true,
+      "code": 0
+     },
+     "UserDist4": {
+      "type": 5,
+      "components": [
+       "Sprocket-4",
+       "Sprocket-3"
+      ],
+      "whole": true,
+      "code": 0
+     },
+     "UserAngle4": {
+      "type": 6,
+      "components": [
+       "Sprocket-4",
+       "RangeBox_Layout-1"
+      ],
+      "whole": true,
+      "code": 0
+     }
+    },
+    "flags_after": {
+     "RangeBox_Layout.SLDPRT": false,
+     "RangeBox_Carrier_Carrier.SLDPRT": false,
+     "Gear_m1.25_N29.SLDPRT": false,
+     "Gear_m1.25_N13.SLDPRT": false,
+     "Ring_m1.25_N55.SLDPRT": false,
+     "Dog_m1.25_N17.SLDPRT": false,
+     "Sleeve_m1.25_N17.SLDPRT": false,
+     "Sprocket.SLDPRT": false,
+     "Housing.SLDPRT": false,
+     "RangeBox.SLDASM": false
+    }
+   },
+   "m2": {
+    "flags_before": {
+     "RangeBox_Layout.SLDPRT": false,
+     "RangeBox_Carrier_Carrier.SLDPRT": false,
+     "Gear_m1.25_N29.SLDPRT": false,
+     "Gear_m1.25_N13.SLDPRT": false,
+     "Ring_m1.25_N55.SLDPRT": false,
+     "Dog_m1.25_N17.SLDPRT": false,
+     "Sleeve_m1.25_N17.SLDPRT": false,
+     "Sprocket.SLDPRT": false,
+     "Housing.SLDPRT": false,
+     "RangeBox.SLDASM": false
+    },
+    "features": [
+     [
+      "Comments",
+      "CommentsFolder",
+      0
+     ],
+     [
+      "Favorites",
+      "FavoriteFolder",
+      0
+     ],
+     [
+      "History",
+      "HistoryFolder",
+      0
+     ],
+     [
+      "Selection Sets",
+      "SelectionSetFolder",
+      0
+     ],
+     [
+      "Sensors",
+      "SensorFolder",
+      0
+     ],
+     [
+      "Design Binder",
+      "DocsFolder",
+      0
+     ],
+     [
+      "Annotations",
+      "DetailCabinet",
+      0
+     ],
+     [
+      "Surface Bodies",
+      "SurfaceBodyFolder",
+      0
+     ],
+     [
+      "Solid Bodies",
+      "SolidBodyFolder",
+      0
+     ],
+     [
+      "Lights and Cameras",
+      "EnvFolder",
+      0
+     ],
+     [
+      "Markups",
+      "InkMarkupFolder",
+      0
+     ],
+     [
+      "Equations",
+      "EqnFolder",
+      0
+     ],
+     [
+      "Material <not specified>",
+      "MaterialFolder",
+      0
+     ],
+     [
+      "Front Plane",
+      "RefPlane",
+      0
+     ],
+     [
+      "Top Plane",
+      "RefPlane",
+      0
+     ],
+     [
+      "Right Plane",
+      "RefPlane",
+      0
+     ],
+     [
+      "Origin",
+      "OriginProfileFeature",
+      0
+     ],
+     [
+      "Gear Axis",
+      "RefAxis",
+      0
+     ],
+     [
+      "Blank Sketch",
+      "ProfileFeature",
+      0
+     ],
+     [
+      "Blank",
+      "Extrusion",
+      0
+     ],
+     [
+      "Tooth Space Sketch",
+      "ProfileFeature",
+      0
+     ],
+     [
+      "Tooth Space",
+      "ICE",
+      0
+     ],
+     [
+      "Teeth",
+      "CirPattern",
+      0
+     ],
+     [
+      "User Keyway Sketch",
+      "ProfileFeature",
+      0
+     ],
+     [
+      "User Keyway",
+      "ICE",
+      0
+     ]
+    ],
+    "flags_after": {
+     "RangeBox_Layout.SLDPRT": false,
+     "RangeBox_Carrier_Carrier.SLDPRT": false,
+     "Gear_m1.25_N29.SLDPRT": false,
+     "Gear_m1.25_N13.SLDPRT": false,
+     "Ring_m1.25_N55.SLDPRT": false,
+     "Dog_m1.25_N17.SLDPRT": false,
+     "Sleeve_m1.25_N17.SLDPRT": false,
+     "Sprocket.SLDPRT": false,
+     "Housing.SLDPRT": false,
+     "RangeBox.SLDASM": false
+    }
+   },
+   "inventory": {
+    "read_at": "2026-11-17T01:59:08Z",
+    "components": [
+     "Sprocket-3",
+     "Sprocket-1",
+     "Sprocket-2",
+     "Sprocket-4",
+     "Housing-1"
+    ],
+    "mates": {
+     "UserAxis1": {
+      "kind": "other",
+      "type": 0,
+      "touches": [
+       [
+        "layout",
+        ""
+       ],
+       [
+        "user",
+        "Sprocket-1"
+       ]
+      ],
+      "on": [
+       "H",
+       "N",
+       "L"
+      ],
+      "code": 0,
+      "whole": true
+     },
+     "UserAxis2": {
+      "kind": "other",
+      "type": 0,
+      "touches": [
+       [
+        "layout",
+        ""
+       ],
+       [
+        "user",
+        "Sprocket-2"
+       ]
+      ],
+      "on": [
+       "H",
+       "N",
+       "L"
+      ],
+      "code": 0,
+      "whole": true
+     },
+     "UserLock1": {
+      "kind": "lock",
+      "type": 16,
+      "touches": [
+       [
+        "app",
+        "Sun"
+       ],
+       [
+        "user",
+        "Sprocket-1"
+       ]
+      ],
+      "on": [
+       "H",
+       "N",
+       "L"
+      ],
+      "code": 0,
+      "whole": true
+     },
+     "UserLock2": {
+      "kind": "lock",
+      "type": 16,
+      "touches": [
+       [
+        "app",
+        "RangeSlv"
+       ],
+       [
+        "user",
+        "Sprocket-2"
+       ]
+      ],
+      "on": [
+       "H",
+       "N",
+       "L"
+      ],
+      "code": 0,
+      "whole": true
+     },
+     "UserLock3": {
+      "kind": "lock",
+      "type": 16,
+      "touches": [
+       [
+        "user",
+        "Sprocket-1"
+       ],
+       [
+        "user",
+        "Sprocket-3"
+       ]
+      ],
+      "on": [
+       "H",
+       "N",
+       "L"
+      ],
+      "code": 0,
+      "whole": true
+     },
+     "UserAxis4": {
+      "kind": "other",
+      "type": 0,
+      "touches": [
+       [
+        "layout",
+        ""
+       ],
+       [
+        "user",
+        "Sprocket-4"
+       ]
+      ],
+      "on": [
+       "H",
+       "N",
+       "L"
+      ],
+      "code": 0,
+      "whole": true
+     },
+     "UserDist4": {
+      "kind": "other",
+      "type": 5,
+      "touches": [
+       [
+        "user",
+        "Sprocket-4"
+       ],
+       [
+        "user",
+        "Sprocket-3"
+       ]
+      ],
+      "on": [
+       "H",
+       "N",
+       "L"
+      ],
+      "code": 0,
+      "whole": true
+     },
+     "UserAngle4": {
+      "kind": "other",
+      "type": 6,
+      "touches": [
+       [
+        "user",
+        "Sprocket-4"
+       ],
+       [
+        "layout",
+        ""
+       ]
+      ],
+      "on": [
+       "H",
+       "N",
+       "L"
+      ],
+      "code": 0,
+      "whole": true
+     }
+    },
+    "features": [
+     [
+      "User Keyway Sketch",
+      "Gear_m1.25_N29.SLDPRT",
+      0
+     ],
+     [
+      "User Keyway",
+      "Gear_m1.25_N29.SLDPRT",
+      0
+     ]
+    ]
+   },
+   "branches": {
+    "real": {
+     "Ring": "HELD_GEAR"
+    },
+    "S0": [
+     [
+      "Sun",
+      [
+       "Sprocket-1",
+       "Sprocket-3"
+      ]
+     ],
+     [
+      "RangeSlv",
+      [
+       "Sprocket-2"
+      ]
+     ]
+    ],
+    "HELD_GEAR": [
+     "Update SolidWorks would put your Sprocket-1 and Sprocket-3 with Sun, which your UserLock1 and UserLock3 hold to it, and putting a component of yours with a gear held still and put back first has not been measured on this SolidWorks (findings.USER_MATE_PUT_HELD_GEAR_ON_2026 is None), so nothing is changed; suppress UserLock1 and UserLock3 in H, N and L and press Update SolidWorks again.",
+     "Update SolidWorks would put your Sprocket-2 with RangeSlv, which your UserLock2 holds to it, and putting a component of yours with a gear held still and put back first has not been measured on this SolidWorks (findings.USER_MATE_PUT_HELD_GEAR_ON_2026 is None), so nothing is changed; suppress UserLock2 in H, N and L and press Update SolidWorks again."
+    ],
+    "FIXED_GEAR": [
+     "Update SolidWorks would put your Sprocket-1 and Sprocket-3 with Sun, which your UserLock1 and UserLock3 hold to it, and putting a component of yours with a fixed gear, unfixed, put and fixed again has not been measured on this SolidWorks (findings.USER_MATE_PUT_FIXED_GEAR_ON_2026 is None), so nothing is changed; suppress UserLock1 and UserLock3 in H, N and L and press Update SolidWorks again.",
+     "Update SolidWorks would put your Sprocket-2 with RangeSlv, which your UserLock2 holds to it, and putting a component of yours with a fixed gear, unfixed, put and fixed again has not been measured on this SolidWorks (findings.USER_MATE_PUT_FIXED_GEAR_ON_2026 is None), so nothing is changed; suppress UserLock2 in H, N and L and press Update SolidWorks again."
+    ],
+    "NO_CARRIER": [
+     "Update SolidWorks would put your Sprocket-1 and Sprocket-3 with Sun, which your UserLock1 and UserLock3 hold to it, and putting a component of yours with a gear on a train with no carrier, its gear mates left on around the put has not been measured on this SolidWorks (findings.USER_MATE_PUT_NO_CARRIER_ON_2026 is None), so nothing is changed; suppress UserLock1 and UserLock3 in H, N and L and press Update SolidWorks again.",
+     "Update SolidWorks would put your Sprocket-2 with RangeSlv, which your UserLock2 holds to it, and putting a component of yours with a gear on a train with no carrier, its gear mates left on around the put has not been measured on this SolidWorks (findings.USER_MATE_PUT_NO_CARRIER_ON_2026 is None), so nothing is changed; suppress UserLock2 in H, N and L and press Update SolidWorks again."
+    ],
+    "SUBASSEMBLY": [
+     "Update SolidWorks would put your Sprocket-1 and Sprocket-3 with Sun, which your UserLock1 and UserLock3 hold to it, and putting a sub-assembly of yours with a gear when the component is a sub-assembly has not been measured on this SolidWorks (findings.USER_MATE_PUT_SUBASSEMBLY_ON_2026 is None), so nothing is changed; suppress UserLock1 and UserLock3 in H, N and L and press Update SolidWorks again."
+    ]
+   },
+   "seconds": 241,
+   "failed": []
+  },
+  "go": {
+   "judged": [
+    {
+     "label": "go as copied",
+     "clean": true
+    },
+    {
+     "label": "go value Update (Sun's Backlash 0.4)",
+     "clean": true
+    },
+    {
+     "label": "go slide-offset Update (RangeSlv L=+5.5)",
+     "clean": true
+    }
+   ],
+   "value": true,
+   "slide": true,
+   "seconds": 1030,
+   "failed": []
+  }
+ },
+ "stops": [],
+ "proposal": {
+  "M3": {
+   "assembly_rebuild_with_user_mate_in_error": true,
+   "whats_wrong_count_with_user_mate_in_error": 3,
+   "user_mate_codes": {
+    "UserFront": 46,
+    "UserGap": 47
+   },
+   "over_defining_mate_made_with_status": 5,
+   "whats_wrong_count_with_user_feature_in_error": 1,
+   "assembly_rebuild_with_user_feature_in_error": false,
+   "part_rebuild_with_user_feature_in_error": false,
+   "whats_wrong_window": false,
+   "update_ok_with_user_mate_in_error": true,
+   "update_ok_with_user_feature_in_error": false
+  }
+ },
+ "revision": [
+  34,
+  1,
+  1
+ ],
+ "snapshot": "9dded70",
+ "fails": [],
+ "notes": [
+  "SolidWorks' notification box came up while GetTypeName2 was in progress (exempt by the coordinator's ruling; nothing answers it)"
+ ]
+}

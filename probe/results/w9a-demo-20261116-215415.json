@@ -1,0 +1,914 @@
+{
+ "sections": {
+  "again": {
+   "before": {
+    "flags_before": {
+     "RangeBox_Layout.SLDPRT": false,
+     "RangeBox_Carrier_Carrier.SLDPRT": false,
+     "Gear_m1.25_N29.SLDPRT": false,
+     "Gear_m1.25_N13.SLDPRT": false,
+     "Ring_m1.25_N55.SLDPRT": false,
+     "Dog_m1.25_N17.SLDPRT": false,
+     "Sleeve_m1.25_N17.SLDPRT": false,
+     "Sprocket.SLDPRT": false,
+     "Housing.SLDPRT": false,
+     "RangeBox.SLDASM": false
+    },
+    "active": "H",
+    "status": {
+     "Sun": 2,
+     "Planet copy 1": 2,
+     "Planet copy 2": 2,
+     "Planet copy 3": 2,
+     "Ring": 3,
+     "HighDog": 2,
+     "LowDog": 2,
+     "RangeSlv": 2,
+     "Carrier carrier": 2,
+     "Sprocket-1": 2,
+     "Sprocket-2": 2,
+     "Sprocket-3": 2,
+     "Sprocket-4": 3,
+     "Housing-1": 3
+    },
+    "mates": {
+     "Sun on Input Axis": [
+      0,
+      false
+     ],
+     "Sun along Input": [
+      0,
+      false
+     ],
+     "HighDog locked to Sun": [
+      0,
+      false
+     ],
+     "Carrier carrier on Carrier Axis": [
+      0,
+      false
+     ],
+     "Carrier carrier along Carrier": [
+      0,
+      false
+     ],
+     "LowDog locked to Carrier carrier": [
+      0,
+      false
+     ],
+     "Planet copy 1 on Planet copy 1 Axis": [
+      0,
+      false
+     ],
+     "Planet copy 1 along Planet copy 1": [
+      0,
+      false
+     ],
+     "Planet copy 2 on Planet copy 2 Axis": [
+      0,
+      false
+     ],
+     "Planet copy 2 along Planet copy 2": [
+      0,
+      false
+     ],
+     "Planet copy 3 on Planet copy 3 Axis": [
+      0,
+      false
+     ],
+     "Planet copy 3 along Planet copy 3": [
+      0,
+      false
+     ],
+     "RangeSlv on Output Axis": [
+      0,
+      false
+     ],
+     "RangeSlv along Output": [
+      0,
+      false
+     ],
+     "Sun meshes Planet copy 1": [
+      0,
+      false
+     ],
+     "Sun meshes Planet copy 2": [
+      0,
+      false
+     ],
+     "Sun meshes Planet copy 3": [
+      0,
+      false
+     ],
+     "Planet copy 1 meshes Ring": [
+      0,
+      false
+     ],
+     "RangeSlv engages HighDog": [
+      0,
+      false
+     ],
+     "RangeSlv engages LowDog": [
+      0,
+      true
+     ],
+     "UserAxis1": [
+      0,
+      false
+     ],
+     "UserAxis2": [
+      0,
+      false
+     ],
+     "UserLock1": [
+      0,
+      false
+     ],
+     "UserLock2": [
+      0,
+      false
+     ],
+     "UserLock3": [
+      0,
+      false
+     ],
+     "UserAxis4": [
+      0,
+      false
+     ],
+     "UserDist4": [
+      0,
+      false
+     ],
+     "UserAngle4": [
+      0,
+      false
+     ]
+    },
+    "by_mode": {
+     "Sun on Input Axis": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "Sun along Input": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "HighDog locked to Sun": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "Carrier carrier on Carrier Axis": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "Carrier carrier along Carrier": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "LowDog locked to Carrier carrier": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "Planet copy 1 on Planet copy 1 Axis": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "Planet copy 1 along Planet copy 1": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "Planet copy 2 on Planet copy 2 Axis": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "Planet copy 2 along Planet copy 2": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "Planet copy 3 on Planet copy 3 Axis": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "Planet copy 3 along Planet copy 3": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "RangeSlv on Output Axis": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "RangeSlv along Output": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "Sun meshes Planet copy 1": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "Sun meshes Planet copy 2": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "Sun meshes Planet copy 3": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "Planet copy 1 meshes Ring": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "RangeSlv engages HighDog": {
+      "H": false,
+      "N": true,
+      "L": true
+     },
+     "RangeSlv engages LowDog": {
+      "H": true,
+      "N": true,
+      "L": false
+     },
+     "UserAxis1": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "UserAxis2": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "UserLock1": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "UserLock2": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "UserLock3": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "UserAxis4": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "UserDist4": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "UserAngle4": {
+      "H": false,
+      "N": false,
+      "L": false
+     }
+    },
+    "entities": {
+     "UserAxis1": [
+      0,
+      [
+       "RangeBox_Layout-1",
+       "Sprocket-1"
+      ],
+      true
+     ],
+     "UserAxis2": [
+      0,
+      [
+       "RangeBox_Layout-1",
+       "Sprocket-2"
+      ],
+      true
+     ],
+     "UserLock1": [
+      16,
+      [
+       "Gear_m1.25_N29-1",
+       "Sprocket-1"
+      ],
+      true
+     ],
+     "UserLock2": [
+      16,
+      [
+       "Sleeve_m1.25_N17-1",
+       "Sprocket-2"
+      ],
+      true
+     ],
+     "UserLock3": [
+      16,
+      [
+       "Sprocket-1",
+       "Sprocket-3"
+      ],
+      true
+     ],
+     "UserAxis4": [
+      0,
+      [
+       "RangeBox_Layout-1",
+       "Sprocket-4"
+      ],
+      true
+     ],
+     "UserDist4": [
+      5,
+      [
+       "Sprocket-3",
+       "Sprocket-4"
+      ],
+      true
+     ],
+     "UserAngle4": [
+      6,
+      [
+       "RangeBox_Layout-1",
+       "Sprocket-4"
+      ],
+      true
+     ]
+    },
+    "active_doc": "Housing.SLDPRT",
+    "needs_rebuild": 0,
+    "flags_after": {
+     "RangeBox_Layout.SLDPRT": false,
+     "RangeBox_Carrier_Carrier.SLDPRT": false,
+     "Gear_m1.25_N29.SLDPRT": false,
+     "Gear_m1.25_N13.SLDPRT": false,
+     "Ring_m1.25_N55.SLDPRT": false,
+     "Dog_m1.25_N17.SLDPRT": false,
+     "Sleeve_m1.25_N17.SLDPRT": false,
+     "Sprocket.SLDPRT": false,
+     "Housing.SLDPRT": false,
+     "RangeBox.SLDASM": false
+    },
+    "active_doc_after": "Housing.SLDPRT",
+    "errors": {}
+   },
+   "read_alone": {
+    "components": [
+     "Sprocket-2",
+     "Sprocket-1",
+     "Sprocket-3",
+     "Sprocket-4",
+     "Housing-1"
+    ],
+    "mates": [
+     "UserAxis1",
+     "UserAxis2",
+     "UserLock1",
+     "UserLock2",
+     "UserLock3",
+     "UserAxis4",
+     "UserDist4",
+     "UserAngle4"
+    ]
+   },
+   "old_read": "",
+   "old_user_work": {
+    "components": [
+     "Sprocket-2",
+     "Sprocket-1",
+     "Sprocket-3",
+     "Sprocket-4",
+     "Housing-1"
+    ],
+    "mates": [
+     "UserAxis1",
+     "UserAxis2",
+     "UserLock1",
+     "UserLock2",
+     "UserLock3",
+     "UserAxis4",
+     "UserDist4",
+     "UserAngle4"
+    ]
+   },
+   "seconds": 395,
+   "failed": []
+  },
+  "again-dirty": {
+   "before": {
+    "flags_before": {
+     "RangeBox_Layout.SLDPRT": false,
+     "RangeBox_Carrier_Carrier.SLDPRT": false,
+     "Gear_m1.25_N29.SLDPRT": false,
+     "Gear_m1.25_N13.SLDPRT": false,
+     "Ring_m1.25_N55.SLDPRT": false,
+     "Dog_m1.25_N17.SLDPRT": false,
+     "Sleeve_m1.25_N17.SLDPRT": false,
+     "Sprocket.SLDPRT": false,
+     "Housing.SLDPRT": false,
+     "RangeBox.SLDASM": true
+    },
+    "active": "H",
+    "status": {
+     "Sun": 2,
+     "Planet copy 1": 2,
+     "Planet copy 2": 2,
+     "Planet copy 3": 2,
+     "Ring": 3,
+     "HighDog": 2,
+     "LowDog": 2,
+     "RangeSlv": 2,
+     "Carrier carrier": 2,
+     "Sprocket-1": 2,
+     "Sprocket-2": 2,
+     "Sprocket-3": 2,
+     "Sprocket-4": 3,
+     "Housing-1": 3
+    },
+    "mates": {
+     "Sun on Input Axis": [
+      0,
+      false
+     ],
+     "Sun along Input": [
+      0,
+      false
+     ],
+     "HighDog locked to Sun": [
+      0,
+      false
+     ],
+     "Carrier carrier on Carrier Axis": [
+      0,
+      false
+     ],
+     "Carrier carrier along Carrier": [
+      0,
+      false
+     ],
+     "LowDog locked to Carrier carrier": [
+      0,
+      false
+     ],
+     "Planet copy 1 on Planet copy 1 Axis": [
+      0,
+      false
+     ],
+     "Planet copy 1 along Planet copy 1": [
+      0,
+      false
+     ],
+     "Planet copy 2 on Planet copy 2 Axis": [
+      0,
+      false
+     ],
+     "Planet copy 2 along Planet copy 2": [
+      0,
+      false
+     ],
+     "Planet copy 3 on Planet copy 3 Axis": [
+      0,
+      false
+     ],
+     "Planet copy 3 along Planet copy 3": [
+      0,
+      false
+     ],
+     "RangeSlv on Output Axis": [
+      0,
+      false
+     ],
+     "RangeSlv along Output": [
+      0,
+      false
+     ],
+     "Sun meshes Planet copy 1": [
+      0,
+      false
+     ],
+     "Sun meshes Planet copy 2": [
+      0,
+      false
+     ],
+     "Sun meshes Planet copy 3": [
+      0,
+      false
+     ],
+     "Planet copy 1 meshes Ring": [
+      0,
+      false
+     ],
+     "RangeSlv engages HighDog": [
+      0,
+      false
+     ],
+     "RangeSlv engages LowDog": [
+      0,
+      true
+     ],
+     "UserAxis1": [
+      0,
+      false
+     ],
+     "UserAxis2": [
+      0,
+      false
+     ],
+     "UserLock1": [
+      0,
+      false
+     ],
+     "UserLock2": [
+      0,
+      false
+     ],
+     "UserLock3": [
+      0,
+      false
+     ],
+     "UserAxis4": [
+      0,
+      false
+     ],
+     "UserDist4": [
+      0,
+      false
+     ],
+     "UserAngle4": [
+      0,
+      false
+     ]
+    },
+    "by_mode": {
+     "Sun on Input Axis": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "Sun along Input": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "HighDog locked to Sun": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "Carrier carrier on Carrier Axis": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "Carrier carrier along Carrier": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "LowDog locked to Carrier carrier": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "Planet copy 1 on Planet copy 1 Axis": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "Planet copy 1 along Planet copy 1": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "Planet copy 2 on Planet copy 2 Axis": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "Planet copy 2 along Planet copy 2": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "Planet copy 3 on Planet copy 3 Axis": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "Planet copy 3 along Planet copy 3": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "RangeSlv on Output Axis": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "RangeSlv along Output": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "Sun meshes Planet copy 1": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "Sun meshes Planet copy 2": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "Sun meshes Planet copy 3": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "Planet copy 1 meshes Ring": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "RangeSlv engages HighDog": {
+      "H": false,
+      "N": true,
+      "L": true
+     },
+     "RangeSlv engages LowDog": {
+      "H": true,
+      "N": true,
+      "L": false
+     },
+     "UserAxis1": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "UserAxis2": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "UserLock1": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "UserLock2": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "UserLock3": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "UserAxis4": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "UserDist4": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "UserAngle4": {
+      "H": false,
+      "N": false,
+      "L": false
+     }
+    },
+    "entities": {
+     "UserAxis1": [
+      0,
+      [
+       "RangeBox_Layout-1",
+       "Sprocket-1"
+      ],
+      true
+     ],
+     "UserAxis2": [
+      0,
+      [
+       "RangeBox_Layout-1",
+       "Sprocket-2"
+      ],
+      true
+     ],
+     "UserLock1": [
+      16,
+      [
+       "Gear_m1.25_N29-1",
+       "Sprocket-1"
+      ],
+      true
+     ],
+     "UserLock2": [
+      16,
+      [
+       "Sleeve_m1.25_N17-1",
+       "Sprocket-2"
+      ],
+      true
+     ],
+     "UserLock3": [
+      16,
+      [
+       "Sprocket-1",
+       "Sprocket-3"
+      ],
+      true
+     ],
+     "UserAxis4": [
+      0,
+      [
+       "RangeBox_Layout-1",
+       "Sprocket-4"
+      ],
+      true
+     ],
+     "UserDist4": [
+      5,
+      [
+       "Sprocket-3",
+       "Sprocket-4"
+      ],
+      true
+     ],
+     "UserAngle4": [
+      6,
+      [
+       "RangeBox_Layout-1",
+       "Sprocket-4"
+      ],
+      true
+     ]
+    },
+    "active_doc": "Housing.SLDPRT",
+    "needs_rebuild": 1,
+    "flags_after": {
+     "RangeBox_Layout.SLDPRT": false,
+     "RangeBox_Carrier_Carrier.SLDPRT": false,
+     "Gear_m1.25_N29.SLDPRT": false,
+     "Gear_m1.25_N13.SLDPRT": false,
+     "Ring_m1.25_N55.SLDPRT": false,
+     "Dog_m1.25_N17.SLDPRT": false,
+     "Sleeve_m1.25_N17.SLDPRT": false,
+     "Sprocket.SLDPRT": false,
+     "Housing.SLDPRT": false,
+     "RangeBox.SLDASM": true
+    },
+    "active_doc_after": "Housing.SLDPRT",
+    "errors": {}
+   },
+   "read_alone": {
+    "components": [
+     "Housing-1",
+     "Sprocket-3",
+     "Sprocket-1",
+     "Sprocket-4",
+     "Sprocket-2"
+    ],
+    "mates": [
+     "UserAxis1",
+     "UserAxis2",
+     "UserLock1",
+     "UserLock2",
+     "UserLock3",
+     "UserAxis4",
+     "UserDist4",
+     "UserAngle4"
+    ]
+   },
+   "old_read": "",
+   "old_user_work": {
+    "components": [
+     "Housing-1",
+     "Sprocket-3",
+     "Sprocket-1",
+     "Sprocket-4",
+     "Sprocket-2"
+    ],
+    "mates": [
+     "UserAxis1",
+     "UserAxis2",
+     "UserLock1",
+     "UserLock2",
+     "UserLock3",
+     "UserAxis4",
+     "UserDist4",
+     "UserAngle4"
+    ]
+   },
+   "seconds": 391,
+   "failed": []
+  },
+  "again-closed": {
+   "old_read": "not open",
+   "old_user_work": null,
+   "seconds": 100,
+   "failed": []
+  },
+  "reducer": {
+   "seconds": 88,
+   "failed": []
+  },
+  "k3": {
+   "update": {
+    "ok": false,
+    "failures": [
+     [
+      "Reducer_12to1.SLDASM",
+      "SolidWorks reported an error rebuilding Reducer_12to1."
+     ]
+    ],
+    "user_in_error": [],
+    "user_features_in_error": [
+     [
+      "User Keyway",
+      "Gear_m1.5_N17.SLDPRT",
+      71
+     ]
+    ],
+    "in_error_before": [],
+    "sentence": "Update SolidWorks stopped. Reducer_12to1.SLDASM: SolidWorks reported an error rebuilding Reducer_12to1. It had already changed Gear_m1.5_N17, not saved: press Update SolidWorks again once that is put right, or save it in SolidWorks to keep what it did."
+   },
+   "seconds": 59,
+   "failed": [
+    "k3: the Update names the keyway as the user's, in error after the rebuild (K3): ['User Keyway']; the sentence 'Update SolidWorks stopped. Reducer_12to1.SLDASM: SolidWorks reported an error rebuilding Reducer_12to1. It had already changed Gear_m1.5_N17, not saved: press Update SolidWorks again once that is put '"
+   ]
+  },
+  "nocarrier": {
+   "branches": {
+    "G1": "NO_CARRIER",
+    "G2": "NO_CARRIER",
+    "G3": "NO_CARRIER",
+    "G4": "NO_CARRIER"
+   },
+   "default_refusal": [
+    "Update SolidWorks would put your Sprocket-1 and Sprocket-3 with G1, which your UserLock1 and UserLock3 hold to it, and putting a component of yours with a gear on a train with no carrier, its gear mates left on around the put has not been measured on this SolidWorks (findings.USER_MATE_PUT_NO_CARRIER_ON_2026 is None), so nothing is changed; suppress UserLock1 and UserLock3 in SolidWorks and press Update SolidWorks again.",
+    "Update SolidWorks would put your Sprocket-2 with G4, which your UserLock2 holds to it, and putting a component of yours with a gear on a train with no carrier, its gear mates left on around the put has not been measured on this SolidWorks (findings.USER_MATE_PUT_NO_CARRIER_ON_2026 is None), so nothing is changed; suppress UserLock2 in SolidWorks and press Update SolidWorks again."
+   ],
+   "clean": [
+    true,
+    true
+   ],
+   "seconds": 159,
+   "failed": []
+  }
+ },
+ "stops": [],
+ "proposal": {
+  "M3_app_part": {
+   "update_ok": false,
+   "failures": [
+    [
+     "Reducer_12to1.SLDASM",
+     "SolidWorks reported an error rebuilding Reducer_12to1."
+    ]
+   ],
+   "named_as_users": true
+  },
+  "USER_MATE_PUT_NO_CARRIER_ON_2026": true,
+  "USER_MATE_PUT_NO_CARRIER_ON_2026_evidence": {
+   "presses_clean": [
+    true,
+    true
+   ],
+   "shapes": "A: lock to the driving G1; B: lock to the driven G4; E: Sprocket-3 locked to Sprocket-1 (a chain)"
+  }
+ },
+ "revision": [
+  34,
+  1,
+  1
+ ],
+ "snapshot": "9dded70",
+ "fails": [
+  "k3: the Update names the keyway as the user's, in error after the rebuild (K3): ['User Keyway']; the sentence 'Update SolidWorks stopped. Reducer_12to1.SLDASM: SolidWorks reported an error rebuilding Reducer_12to1. It had already changed Gear_m1.5_N17, not saved: press Update SolidWorks again once that is put '"
+ ],
+ "notes": [
+  "SolidWorks' notification box came up while GetNextFeature was in progress (exempt by the coordinator's ruling; nothing answers it)"
+ ]
+}
