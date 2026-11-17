@@ -21,8 +21,10 @@ dialog, goes last):
 - ``faces``  a face's and an edge's persistent reference (W9D-INTERFACES §11.4): on a copy of setup.master, three more
              sprockets and four mates on faces and an edge (a concentric on a bore face, a coincident face to face, a
              concentric on a circular edge, a parallel to a face of Sun), the copy then saved so the reads start
-             unmarked (P1); (b) each entity's ReferenceType2 and kind, its component, its coaxial read, and two routes
-             to the part-level reference, each resolved and carried back and compared, with each user component's
+             unmarked (P1); (b) each entity's ReferenceType2 and kind, its component, its coaxial read, and three routes
+             to the part-level reference (r3, the follow-up round's: the part's faces or edges each carried into the
+             assembly by GetCorresponding, the one IsSame as the mate's entity, exactly one), each resolved and carried
+             back and compared, with each user component's
              referenced configuration, IsVirtual and IsPatternInstance; (c) the four made again in a second assembly,
              the route per entity kind (P10), the copy's documents' flags read around the inserts; (d) the copy
              closed, the parts opened alone and every reference resolved again (the reload, P12).
@@ -139,11 +141,28 @@ def coaxial(params):
 def persist_verdict(route):
     """One route's read of one geometry entity: ``{"read": bool, "resolved_kind": str, "kind": str, "same": int|None,
     "same_value": int, "area": (a, b) or None, "error": str}``. Clean when the reference was read, resolved to the
-    entity's own kind, and the round trip is the same object (IsSame) or, where IsSame did not answer, the same area."""
+    entity's own kind, and the round trip is the same object (IsSame) or, where IsSame did not answer, the same area.
+
+    r3 (the follow-up round) carries more, each held where present: ``matches``, how many of the part's faces or edges
+    carried back IsSame as the mate's entity, exactly one; ``same_part``, the resolved object IsSame as that part-level
+    entity (and then the carried-back IsSame must answer: no area fallback); ``marked_before`` and ``marked``, its own
+    bracket started unmarked and marked nothing."""
+    if route and route.get("marked_before"):
+        return False, f"its bracket started with {route['marked_before']} marked, so a mark could not show"
+    if route and route.get("marked"):
+        return False, f"the read marked {route['marked']}"
+    if route and "matches" in route and route["matches"] != 1:
+        return False, f"{route['matches']} part-level entities matched, where exactly one is wanted"
     if not route or route.get("error") or not route.get("read"):
         return False, (route or {}).get("error") or "no reference read"
     if route.get("resolved_kind") != route.get("kind"):
         return False, f"resolved to a {route.get('resolved_kind')} where a {route.get('kind')} was read (§0.3 STOP)"
+    if "same_part" in route:
+        if route.get("same_value") is None or route["same_part"] != route["same_value"]:
+            return False, f"the resolved object IsSame {route['same_part']} as the part-level entity"
+        if route.get("same") != route["same_value"]:
+            return False, f"carried back, IsSame {route.get('same')} as the mate's entity"
+        return True, f"IsSame {route['same']} both ways"
     same = route.get("same")
     if same is not None and route.get("same_value") is not None:
         return (same == route.get("same_value"), f"IsSame {same}")
@@ -204,6 +223,8 @@ def reload_verdict(entities):
             bad.append((e.get("mate"), e.get("index"), "face area", r.get("area"), e.get("area")))
         elif r.get("marked"):
             bad.append((e.get("mate"), e.get("index"), "the resolve marked", r.get("marked")))
+        elif r.get("marked_before"):
+            bad.append((e.get("mate"), e.get("index"), "its bracket started marked", r.get("marked_before")))
     return bool(entities) and not bad, bad
 
 
@@ -219,6 +240,28 @@ def dependency_paths(flat):
     """``GetDocumentDependencies2``'s answer, a flat array alternating name and path (reading/01): the paths."""
     items = list(flat) if isinstance(flat, (list, tuple)) else []
     return [str(items[i + 1]) for i in range(0, len(items) - 1, 2)]
+
+
+def coaxial_reads(faces, bore_mate="UserFaceConc"):
+    """The coaxial reads ``coaxial_verdict`` judges, from each face entity: the read on r1's part-level entity
+    (``coaxial``) and on r2's and r3's (each route's own ``coaxial``), booleans only (an error string or None is no
+    read). The bore's every read; every other face's reads, or a None where none read, which the verdict holds
+    unclean."""
+    bore, others = [], []
+    for e in faces:
+        reads = [e.get("coaxial")] + [((e.get("routes") or {}).get(r) or {}).get("coaxial") for r in ("r2", "r3")]
+        reads = [v for v in reads if isinstance(v, bool)]
+        if e.get("mate") == bore_mate:
+            bore += reads
+        else:
+            others += reads or [None]
+    return bore, others
+
+
+def code_name(code, states):
+    """``swPersistReferencedObjectStates_e``'s name for a resolve's code (``states`` as read from swconst.tlb)."""
+    names = {v: k for k, v in (states or {}).items()}
+    return names.get(code, f"code {code}")
 
 
 def coaxial_verdict(bore, others, keyway):
@@ -347,6 +390,30 @@ def self_check():
     ok(route_for(entities, "edge", ["r1", "r2"]) == "r2", "P10: the edge's route is its own")
     ok(route_for(entities, "vertex", ["r1"]) is None, "no vertex read: None")
     ok(persist_proposal(entities, "face", ["r1"], start_marked=True) is None, "P1: a marked start proposes nothing")
+    r3 = dict(good, matches=1, same_part=1, marked=[], marked_before=[], walked=120)
+    ok(persist_verdict(r3)[0], "r3: one match, the resolve IsSame the part entity and carried back the mate's: clean")
+    ok(not persist_verdict(dict(r3, matches=0))[0] and not persist_verdict(dict(r3, matches=2))[0],
+       "r3: no match, or two, is not clean")
+    ok(not persist_verdict(dict(r3, same_part=0))[0], "r3: the resolve another entity of the part: not clean")
+    ok(not persist_verdict(dict(r3, same=0))[0] and not persist_verdict(dict(r3, same=None, area=(1e-4, 1e-4)))[0],
+       "r3: carried back not the mate's entity, or IsSame unanswered: not clean (no area fallback)")
+    ok(not persist_verdict(dict(r3, marked=["Sprocket.SLDPRT"]))[0]
+       and not persist_verdict(dict(r3, marked_before=["RangeBox.SLDASM"]))[0],
+       "r3: a read that marked, or a bracket that started marked: not clean")
+    ok(not persist_verdict(dict(r3, resolved_kind="edge"))[0], "r3: resolved to another kind: not clean")
+    fail = {"read": False, "error": "GetCorrespondingEntity2 gave nothing"}
+    three = [{"kind": "face", "routes": {"r1": fail, "r2": dict(good, same=None), "r3": r3}},
+             {"kind": "edge", "routes": {"r1": fail, "r2": fail, "r3": dict(r3, kind="edge", resolved_kind="edge")}}]
+    ok(route_for(three, "face", ["r1", "r2", "r3"]) == "r3" and route_for(three, "edge", ["r1", "r2", "r3"]) == "r3",
+       "r3 proposed where r1 and r2 fail")
+    faces = [{"mate": "UserFaceConc", "coaxial": None, "routes": {"r3": {"coaxial": True}}},
+             {"mate": "UserFaceCoin", "coaxial": "ComError: x", "routes": {"r3": {"coaxial": False}}},
+             {"mate": "UserSunPar", "coaxial": None, "routes": {}}]
+    ok(coaxial_reads(faces) == ([True], [False, None]), "coaxial reads: r3's taken, a face with none read is None")
+    ok(not coaxial_verdict(*coaxial_reads(faces), [False]) and coaxial_verdict(*coaxial_reads(faces[:2]), [False]),
+       "coaxial: a face unread is not clean; the bore by r3 and a plane by r3 are")
+    ok(code_name(1, {"swPersistReferencedObject_Ok": 0, "swPersistReferencedObject_Invalid": 1})
+       == "swPersistReferencedObject_Invalid" and code_name(9, {}) == "code 9", "a resolve's code by name")
     rel = [{"mate": "M1", "index": 0, "kind": "face", "area": 1e-4, "where": (0, 0, 1, 0.205),
             "reload": {"kind": "face", "area": 1e-4, "where": (0, 0, 1, 0.205), "marked": []}},
            {"mate": "M3", "index": 0, "kind": "edge", "where": (0, 0, 0.205, 0, 0, 1, 0.005),
@@ -358,6 +425,8 @@ def self_check():
        "S-c: the other end face of the same area is not clean")
     ok(not reload_verdict([dict(rel[0], reload=dict(rel[0]["reload"], marked=["Sprocket.SLDPRT"]))])[0],
        "S-c: a resolve that marked the part is not clean")
+    ok(not reload_verdict([dict(rel[0], reload=dict(rel[0]["reload"], marked_before=["Sprocket.SLDPRT"]))])[0],
+       "S-c: a resolve whose bracket started marked is not clean")
     ok(where_of("plane", [0, 0, 1, 0.003, 0.002, 0.205]) == (0, 0, 1, 0.205) and where_of("plane", []) is None,
        "where_of: a plane by its normal and offset")
     ok(version_proposal((15000, 2026), (14000, 2024), 15000) is True, "S-b: same reads latest, other older: True")
@@ -535,7 +604,75 @@ FACE_INSERTS = (("f5", "Sprocket.SLDPRT", (0.0, 0.0, 200.0), "Sprocket-5"),
 FACE_MATES = ("UserFaceConc", "UserFaceCoin", "UserEdgeConc", "UserSunPar")
 ROUTES = {"r1": "IModelDocExtension.GetCorrespondingEntity2 on the mate's entity in the assembly, then the part's "
                 "GetPersistReference3 (NEW)",
-          "r2": "the mate's entity handed straight to the part's GetPersistReference3 (NEW)"}
+          "r2": "the mate's entity handed straight to the part's GetPersistReference3 (NEW)",
+          "r3": "each face (or edge) of the component's part carried into the assembly by IComponent2.GetCorresponding, "
+                "the one ISldWorks.IsSame as the mate's entity (exactly one), then the part's GetPersistReference3, "
+                "resolved by its GetObjectByPersistReference3"}
+ROUTE_ORDER = ["r1", "r2", "r3"]
+
+
+def route_r3(s, app, component, part_doc, ref, kind, same_value, folder):
+    """r3 (the follow-up round, from the first 2026 run's hand diagnostic): every face (or, for an edge, every edge) of
+    the component's part carried into the assembly by ``IComponent2.GetCorresponding`` and compared with the mate's
+    entity by ``ISldWorks.IsSame``, all of them walked so the matches are counted (exactly one wanted); that part-level
+    entity's place and coaxial read; its ``GetPersistReference3`` in the part, resolved by
+    ``GetObjectByPersistReference3`` (the code by name); the round trip: the resolved object of the same kind and
+    IsSame as the part-level entity, and carried back through the component IsSame as the mate's entity. Its own
+    bracket: every document under ``folder`` (the assembly and its parts) read before and after; the walk's count and
+    its seconds, and the whole route's."""
+    out = {"kind": kind, "same_value": same_value}
+    before = W.folder_flags(s, folder)
+    out["marked_before"] = marked_at_start(before)
+    started = time.monotonic()
+    try:
+        if same_value is None:
+            raise swcom.SolidWorksError("swObjectEquality was not read, so IsSame cannot be judged")
+        member = "GetFaces" if kind == "face" else "GetEdges"
+        candidates = []
+        for body in list(raw(part_doc, "GetBodies2", 0, True) or []):
+            candidates += list(raw(body, member) or [])
+        out["walked"] = len(candidates)
+        matches = []
+        for candidate in candidates:
+            carried = call(component, "GetCorresponding", candidate)
+            if carried is not None and int(raw(app, "IsSame", carried, ref)) == same_value:
+                matches.append(candidate)
+        out["matches"] = len(matches)
+        out["seconds_to_find"] = round(time.monotonic() - started, 3)
+        if len(matches) != 1:
+            out.update(read=False, error=f"{len(matches)} of the part's {len(candidates)} "
+                                         f"{'faces' if kind == 'face' else 'edges'} carried back IsSame as the mate's "
+                                         "entity, where exactly one is wanted")
+            return out
+        entity = matches[0]
+        out["part_kind"] = kind_of(entity)
+        out["where"], out["coaxial"] = where_in_part(entity)
+        ext = call(part_doc, "Extension")
+        r = bytes(raw(ext, "GetPersistReference3", entity))
+        out.update(read=True, length=len(r), reference=r.hex())
+        holder = swcom._out_long()  # noqa: SLF001
+        got = raw(ext, "GetObjectByPersistReference3", r, holder)
+        code = holder
+        if isinstance(got, tuple):
+            got, code = got[0], (got[1] if len(got) > 1 else holder)
+        out["resolve_code"] = by_ref(code)
+        out["resolve_code_name"] = code_name(out["resolve_code"], EXTRA.get("swPersistReferencedObjectStates_e"))
+        if got is None:
+            out["error"] = f"resolved to nothing ({out['resolve_code_name']})"
+            return out
+        out["resolved_kind"] = kind_of(got)
+        out["resolved_where"], _ = where_in_part(got)
+        out["same_part"] = int(raw(app, "IsSame", got, entity))
+        back = call(component, "GetCorresponding", got)
+        out["same"] = int(raw(app, "IsSame", back, ref)) if back is not None else None
+        if kind == "face":
+            out["area"] = (_plain(_try(ref, "GetArea")), _plain(_try(back, "GetArea")) if back is not None else None)
+    except Exception as exc:  # noqa: BLE001 - this route's failure is its reading
+        out["error"] = f"{type(exc).__name__}: {exc}"
+    finally:
+        out["seconds"] = round(time.monotonic() - started, 3)
+        out["marked"] = flags_changed(before, W.folder_flags(s, folder))
+    return out
 
 
 def faces_make(modes, folder):
@@ -660,6 +797,9 @@ def faces_read(folder, app_names, users):
                 e["routes"]["r1"] = route(lambda: raw(ext, "GetPersistReference3",
                                                       raw(call(doc, "Extension"), "GetCorrespondingEntity2", ref)))
                 e["routes"]["r2"] = route(lambda: raw(ext, "GetPersistReference3", ref))
+                e["routes"]["r3"] = route_r3(s, app, component, part_doc, ref, e["kind"], same_value, folder)
+                if e.get("where") is None and e["routes"]["r3"].get("where") is not None:
+                    e["where"], e["where_by"] = e["routes"]["r3"]["where"], "r3"   # the reload's place (S-c)
                 try:
                     e["assembly_context_length"] = len(bytes(raw(call(doc, "Extension"), "GetPersistReference3", ref)))
                 except Exception as exc:  # noqa: BLE001
@@ -766,39 +906,41 @@ def faces_remake(read, second, folder, layout, sun, routes):
     return work
 
 
-def faces_reload(entities, paths, folder):
+def faces_reload(entities, paths, folder, routes):
     """P12 and S-c: the copy closed; each part an entity is on opened alone (its own document, freshly loaded) and each
     face and edge reference resolved there again, with every document's save flag read around the resolve (the
-    not-open path makes this resolve in the user's own parts): its kind, its place in the part and a face's area."""
+    not-open path makes this resolve in the user's own parts): its kind, its place in the part and a face's area. The
+    reference is the one (b) proposed for the entity's kind (``routes``: kind -> route); none proposed, none resolved."""
     def work(s):
         out = {}
         for e in entities:
-            r = None
-            for route in ("r1", "r2"):
-                got = (e.get("routes") or {}).get(route) or {}
-                if got.get("read") and got.get("reference"):
-                    r = got["reference"]
-                    break
+            route = routes.get(e.get("kind"))
+            r = (((e.get("routes") or {}).get(route) or {}).get("reference")) if route else None
             key = f"{e.get('mate')}:{e.get('index')}"
             if not r:
-                out[key] = e["reload"] = {"error": "no reference read in (b)"}
+                out[key] = e["reload"] = {"error": f"no clean route for a {e.get('kind')} in (b)"}
                 continue
             try:
                 s.open_document(paths[e["component"]])
                 before = W.folder_flags(s, folder)
                 ext = call(s._doc(), "Extension")  # noqa: SLF001
-                got = raw(ext, "GetObjectByPersistReference3", bytes.fromhex(r), swcom._out_long())  # noqa: SLF001
-                got = got[0] if isinstance(got, tuple) else got
+                holder = swcom._out_long()  # noqa: SLF001
+                got = raw(ext, "GetObjectByPersistReference3", bytes.fromhex(r), holder)
+                code = holder
+                if isinstance(got, tuple):
+                    got, code = got[0], (got[1] if len(got) > 1 else holder)
+                said = code_name(by_ref(code), EXTRA.get("swPersistReferencedObjectStates_e"))
                 if got is None:
-                    out[key] = {"error": "resolved to nothing"}
+                    out[key] = {"error": f"resolved to nothing ({said})"}
                 else:
                     where, _ = where_in_part(got)
-                    out[key] = {"kind": kind_of(got), "where": where,
+                    out[key] = {"kind": kind_of(got), "where": where, "code": said,
                                 "area": _plain(_try(got, "GetArea")) if e.get("kind") == "face" else None}
                 out[key]["marked"] = flags_changed(before, W.folder_flags(s, folder))
                 out[key]["marked_before"] = marked_at_start(before)
             except Exception as exc:  # noqa: BLE001
                 out[key] = {"error": f"{type(exc).__name__}: {exc}"}
+            out[key]["route"] = route
             e["reload"] = out[key]
         return out
     return work
@@ -806,7 +948,7 @@ def faces_reload(entities, paths, folder):
 
 def section_faces(out):
     say("== faces  a face's and an edge's persistent reference (W9D-INTERFACES §11.4): four mates on faces and an "
-        "edge on a copy of setup.master, saved; each entity read by two routes to its part-level reference, resolved "
+        "edge on a copy of setup.master, saved; each entity read by three routes to its part-level reference, resolved "
         "and carried back; each user component's referenced configuration; then made again in a second assembly; "
         "then every reference resolved after a reload; GetSaveFlag around every read and the inserts")
     C.swconst(C.ENUM_NAMES)
@@ -817,7 +959,8 @@ def section_faces(out):
         "feature only; the W9c probes on reference features through a component, in session); IEntity.GetComponent, "
         "ISldWorks.IsSame, ISurface.CylinderParams on a mate's face, IComponent2.ReferencedConfiguration (a get), "
         "IsVirtual and IsPatternInstance (no entry); AddMate5 swMatePARALLEL (never made or read by the app or a "
-        "probe); Save3 on the probe's own copy (as W9c's s5 (e))")
+        "probe); Save3 on the probe's own copy (as W9c's s5 (e)); r3: IComponent2.GetCorresponding on every face and "
+        "edge of a part and ISldWorks.IsSame against a mate's entity (the first run's hand diagnostic only)")
     folder, path, book, desk = A.copy_desk(A.user_master(), "d-faces", "RangeBox.xlsx")
     second_folder = os.path.join(OUT, "d-faces-second")
     try:
@@ -875,9 +1018,20 @@ def section_faces(out):
             marked = flags_changed(read["flags_before"], read["flags_after"])
             check(not marked, f"faces (b): the reads marked no document: {marked or 'none'}; already marked at the "
                               f"start {start or 'none'}")
+            for e in entities:
+                r3 = (e.get("routes") or {}).get("r3") or {}
+                say(f"fact    faces (b) r3 {e.get('mate')}:{e.get('index')} ({e.get('kind')} on {e.get('component')!r}): "
+                    f"walked {r3.get('walked')} {'faces' if e.get('kind') == 'face' else 'edges'}, matched "
+                    f"{r3.get('matches')}, found in {r3.get('seconds_to_find')} s, the route in {r3.get('seconds')} s; "
+                    f"reference {r3.get('length')} bytes, resolved {r3.get('resolve_code_name')} to a "
+                    f"{r3.get('resolved_kind')}, IsSame the part entity {r3.get('same_part')}, carried back IsSame the "
+                    f"mate's {r3.get('same')}; marked {r3.get('marked')}, at its start {r3.get('marked_before')}; "
+                    f"verdict {persist_verdict(r3)}")
+            read["routes"] = {}
             for kind, finding in (("face", "PERSIST_REFERENCE_ROUTE_FOR_FACES"),
                                   ("edge", "PERSIST_REFERENCE_ROUTE_FOR_EDGES")):
-                chosen = persist_proposal(entities, kind, ["r1", "r2"], bool(start)) if not marked else None
+                chosen = persist_proposal(entities, kind, ROUTE_ORDER, bool(start)) if not marked else None
+                read["routes"][kind] = chosen
                 say(propose(finding, ROUTES[chosen] if chosen else None,
                             f"faces (b): {sum(1 for e in entities if e.get('kind') == kind)} {kind} entities; clean by "
                             f"{chosen or 'no route'}; marked {marked or 'nothing'}; marked at the start "
@@ -886,15 +1040,19 @@ def section_faces(out):
             say(f"fact    faces (b): ReferenceType2's kind agrees with the members' on every geometry entity: "
                 f"{kinds_agree}")
             faces = [e for e in entities if e.get("kind") == "face"]
-            bore = [v for e in faces if e.get("mate") == "UserFaceConc"
-                    for v in [e.get("coaxial")] + [((e.get("routes") or {}).get("r2") or {}).get("coaxial")]]
-            others = [e.get("coaxial") for e in faces if e.get("mate") != "UserFaceConc"]
+            bore, others = coaxial_reads(faces)
             keyway = ([c for r, c in read["sun_cylinders"] if abs(r - 1.5) < 1e-6]
                       if isinstance(read["sun_cylinders"], list) else [])
-            say(f"fact    faces (b): Sun's cylinders (radius mm, coaxial) {read['sun_cylinders']}")
+            if isinstance(read["sun_cylinders"], list):
+                tally = {}
+                for r, c in read["sun_cylinders"]:
+                    tally[(r, c)] = tally.get((r, c), 0) + 1
+                say(f"fact    faces (b): Sun's cylindrical faces, (radius mm, coaxial): count {tally}")
+            else:
+                say(f"fact    faces (b): Sun's cylindrical faces not read: {read['sun_cylinders']}")
             say(propose("COAXIAL_FACE_READ", coaxial_verdict(bore, others, keyway) if not (marked or start) else None,
-                        f"faces (b): the bore read coaxial by r1 and r2 {bore}, the planar faces {others}, Sun's User "
-                        f"Keyway (the negative control, S-d) {keyway}; marked {marked or 'nothing'}"))
+                        f"faces (b): the bore read coaxial by r1, r2 and r3 {bore}, the other faces {others}, Sun's "
+                        f"User Keyway (the negative control, S-d) {keyway}; marked {marked or 'nothing'}"))
             say(f"fact    faces (b): each user component's referenced configuration, its document's active one and its "
                 f"configurations: { {n: (v['referenced'], v['active'], v['configurations']) for n, v in read['components'].items() if isinstance(v, dict)} }"
                 "; REFERENCED_CONFIGURATION_READ is M9's to set, on a component whose configuration differs (R2)")
@@ -910,7 +1068,7 @@ def section_faces(out):
         second = os.path.join(second_folder, "D9Second.SLDASM")
 
         def remake_part():
-            routes = {k: route_for(read["entities"], k, ["r1", "r2"]) for k in ("face", "edge")}
+            routes = {k: route_for(read["entities"], k, ROUTE_ORDER) for k in ("face", "edge")}
             if not any(routes.values()):
                 raise AssertionError("no route read any face or edge clean, so nothing is made again")
             remade = run("faces (c): made again in a second assembly",
@@ -946,7 +1104,8 @@ def section_faces(out):
             if left:
                 raise AssertionError(f"the copy did not close: left {left}")
             paths = {n: read["paths"].get(n) for n in {e.get("component") for e in read["entities"]}}
-            got = run("faces (d): the references resolved after a reload", C.in_build(faces_reload(read["entities"], paths, folder)), 600)
+            got = run("faces (d): the references resolved after a reload",
+                      C.in_build(faces_reload(read["entities"], paths, folder, read.get("routes") or {})), 600)
             verdict = reload_verdict(read["entities"])
             say(f"fact    faces (d): resolved again in freshly loaded parts: {got}; {verdict}")
             say(propose("PERSIST_REFERENCE_SURVIVES_RELOAD", verdict[0] or None,
