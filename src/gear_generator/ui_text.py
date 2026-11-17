@@ -1773,14 +1773,15 @@ def update_summary(update) -> str:
     axial = [g for g in getattr(update, "axial", ()) if g]
     ratios = [n for n in getattr(update, "ratios", ()) if n]
     modal = _mode_summary_pieces(update)             # W8: slide values and flags per configuration
+    in_place = in_place_pieces(update)               # W9c: what it adds, takes out, makes and remakes in place
     if update.record_matches and not (axial or ratios or getattr(update, "resensed", ())
-                                      or getattr(update, "carriers_moved", ()) or modal):
+                                      or getattr(update, "carriers_moved", ()) or modal or in_place):
         text = ("SolidWorks already matches the workbook on record; Update SolidWorks checks it live and puts right "
                 "anything changed there")
         if getattr(update, "motion", None) is not None:
             text += "; gears turned in SolidWorks stay where they are unless something must move"
         return text + "."
-    pieces = []
+    pieces = list(in_place)
     changed = update.changed_parts
     if len(changed) == 1 and len(changed[0].gear_ids) == 1:
         pieces.append(f"change {changed[0].gear_ids[0]}'s values ({_stem(changed[0].path)})")
@@ -1797,7 +1798,10 @@ def update_summary(update) -> str:
     resensed = [n for n in getattr(update, "resensed", ()) or () if n]
     plain = [n for n in ratios if n not in resensed]
     if plain:                                  # W5: only once a gear mate's ratio can be changed (D7)
-        pieces.append(f"set {_gear_mates(update, plain)}")
+        with_modes = bool(_configurations_of(update))
+        pieces.append(f"set {_gear_mates(update, plain)}"
+                      + (" (made again, with its flag set in every mode)" if with_modes and len(plain) == 1 else
+                         " (made again, with their flags set in every mode)" if with_modes else ""))
     for name in resensed:                      # W6 (M4, D17): a crossed mesh's sense changed with a move
         at = f" at {_asked_ratio(update, name)}" if name in ratios and _asked_ratio(update, name) else ""
         pieces.append(f"remake the gear mate {name}{at} {_resense_why(update, name)}")
@@ -1935,6 +1939,7 @@ def gearbox_update_status(update, result, dragged: Sequence[str] = (), *, meshes
             pieces[-1] += " (SolidWorks reported an error rebuilding it)"
             ok = False
     if motion:
+        pieces = in_place_done_pieces(update, result) + pieces     # W9c: what it built, added and took out first
         pieces.extend(_motion_pieces(update, result))
         pieces.extend(_mode_pieces(update, result))   # W8: slide values and flags, per configuration
     after = _motion_after(update, result, earlier) if motion else []
@@ -1954,6 +1959,8 @@ def gearbox_update_status(update, result, dragged: Sequence[str] = (), *, meshes
         after = ([told] if told else []) + after
     # W9a: what it did with and found of the user's work, after the assembly's rebuild laid to that work alone.
     after = after + _rebuild_from_user(update, result) + _user_after(update, result)
+    after = after + in_place_after(update, result)                   # W9c: the modes' consequences for the user
+
     if not nothing and _users_in_error(result) and whats_wrong_shows(revision):
         # W9a: SolidWorks 2024's box, once, after an Update that changed or put something (never a quiet press,
         # which rebuilds nothing: the close review on 2024 found it said after such presses, where no box came).
@@ -2506,10 +2513,18 @@ def workbook_footer(assessment, *, record=None, record_problem: str = "", plan=N
         # Build again? the reason it answered is kept, and these with it).
         if puts_back:
             # W9a (K4): what this press would do with the user's work the record holds, with the time it was read.
-            from .workbook.update import user_work_ahead
-            line, line_ok = user_work_line(user_work_ahead(update, record, digest))
-            if line:
-                text, ok = f"{text} {line}", ok and line_ok
+            from .workbook.update import in_place_ahead, user_work_ahead
+            ahead = user_work_ahead(update, record, digest)
+            line, line_ok = user_work_line(ahead)
+            # W9c (K4): what would stop an in-place change, foreseen (an unmeasured step, the user's work on a gear to
+            # be taken out). When it would, it is said in place of W9a's prediction of what the press does with the
+            # user's work (a press that changes nothing does nothing with it); a recorded refusal is still said.
+            stop, stop_ok = in_place_line(in_place_ahead(update, record), record, known=line)
+            if stop and not (ahead is not None and ahead.refused):
+                line, line_ok = "", True
+            for said, said_ok in ((line, line_ok), (stop, stop_ok)):
+                if said:
+                    text, ok = f"{text} {said}", ok and said_ok
         if unsaved:
             text += " " + _unsaved_line(unsaved, puts_back)
         if subject and plan is not None and not plan.refusal:
@@ -4657,4 +4672,183 @@ def _user_after(update, result) -> List[str]:
                        "error.")
         else:
             out.append(f"Your {_and(parts)} {'is' if one else 'are'} in error in SolidWorks now.")
+    return out
+
+
+# -- W9c: Update adds, removes and re-mates in place (ISSUE-1-PLAN §2.1 "W9c", K6, §2.4; W9C-INTERFACES §5, §6) ----
+
+# What each in-place step does, as the sentences name a step a finding gates (``swbuild.in_place_gates``).
+IN_PLACE_STEP_WORDS = {
+    "remove a gear": "take a gear out of the assembly",
+    "add a gear": "insert a gear into the assembly and mate it",
+    "make a mate": "make a gear mate in an assembly with modes and set its flag in each mode",
+    "bands in place": "give a built sleeve its bands, or take them away, in its own part",
+    "add a mode": "add a mode's configuration to the assembly",
+    "remove a mode": "delete a mode's configuration from the assembly",
+}
+
+
+# Each in-place finding's step, by the finding's name less its ``_ON_<year>`` (W9C-INTERFACES §8).
+_STEP_OF_FINDING = (("COMPONENT_DELETE", "remove a gear"), ("UPDATE_INSERTS_A_GEAR", "add a gear"),
+                    ("UPDATE_MAKES_MATES_WITH_MODES", "make a mate"), ("UPDATE_BANDS_IN_PLACE", "bands in place"),
+                    ("UPDATE_ADDS_A_MODE", "add a mode"), ("UPDATE_REMOVES_A_MODE", "remove a mode"))
+
+
+def _step_of(finding: str) -> str:
+    return next((step for prefix, step in _STEP_OF_FINDING if finding.startswith(prefix)), "")
+
+
+def _version_of(finding: str) -> str:
+    """``SolidWorks 2026`` from ``UPDATE_INSERTS_A_GEAR_ON_2026``; ``the SolidWorks it runs on`` when the version is
+    not known (``…_ON_?``)."""
+    year = finding.rsplit("_ON_", 1)[-1] if "_ON_" in finding else ""
+    return f"SolidWorks {year}" if year.isdigit() else "the SolidWorks it runs on"
+
+
+def in_place_gate_sentence(steps: Sequence[str], findings_: Sequence[str]) -> str:
+    """The steps a finding gates that are not settled, in one sentence: *Update SolidWorks would insert a gear into
+    the assembly and mate it, which Gear Generator has not yet been shown to do on SolidWorks 2026
+    (findings.UPDATE_INSERTS_A_GEAR_ON_2026), so the press changes nothing; Build again… makes the new revision
+    instead.* A version not known is said *the SolidWorks it runs on*, the finding ``…_ON_<year>``."""
+    names = [n.replace("_ON_?", "_ON_<year>") for n in dict.fromkeys(findings_)]
+    what = _and(IN_PLACE_STEP_WORDS.get(step, step) for step in dict.fromkeys(steps))
+    return (f"Update SolidWorks would {what}, which Gear Generator has not yet been shown to do on "
+            f"{_version_of(list(findings_)[0])} ({_and('findings.' + n for n in names)}), so the press changes "
+            "nothing; Build again… makes the new revision instead.")
+
+
+def in_place_pieces(update) -> List[str]:
+    """What an Update will make or take away in place, before the press (``UpdatePlan.in_place``; W9c), each a piece
+    of :func:`update_summary`'s sentence: *add Hub on Output (a new part, Hub_m1.25_N17), as its anchor with RangeSlv
+    splined to it*, *take G4 out with its 3 mates*, *give RangeSlv its bands in Sleeve_m1.25_N17*, *take RangeSlv's
+    bands away (its Relief suppressed)*, *make ModeSlv engages LoDog, on in 2H*, *add the mode 4X*, *delete the mode L*
+    (*…, so M becomes the first mode on record*)."""
+    ip = getattr(update, "in_place", None)
+    if not ip:
+        return []
+    pieces: List[str] = []
+    for gone in ip.removed:
+        n = len(gone.mates)
+        pieces.append(f"take {gone.gear} out with its {_plural(n, 'mate')}" if n else f"take {gone.gear} out")
+    for added in ip.added:
+        mates = [op for op in added.ops if type(op).__name__ == "Mate"]
+        anchor = next((m for m in mates if m.kind == "coincident"), None)
+        shaft = anchor.b.split(":", 1)[-1][:-len(" Axis")] if anchor is not None and anchor.b.endswith(" Axis") else ""
+        part = f"a new part, {_stem(added.part)}" if added.build is not None else _stem(added.part)
+        text = f"add {added.gear}{' on ' + shaft if shaft else ''} ({part})"
+        splined = [m.name for m in mates if m.kind == "gear" and m.name.endswith(f" splined to {added.gear}")]
+        if splined:
+            sleeves = [m.split(" splined to ", 1)[0] for m in splined]
+            text += f", as its shaft's anchor with {_and(sleeves)} splined to it"
+        pieces.append(text)
+    for band in ip.bands:
+        if band.add:
+            pieces.append(f"give {band.gear} its bands in {_stem(band.part)}")
+        else:
+            pieces.append(f"take {band.gear}'s bands away in {_stem(band.part)} (its Relief suppressed)")
+    for new in ip.new_mates:
+        pieces.append(f"make {new.op.name}, on in {_and(list(new.on))}")
+    if ip.modes_added:
+        pieces.append(f"add the {'mode' if len(ip.modes_added) == 1 else 'modes'} {_and(list(ip.modes_added))}")
+    if ip.modes_removed:
+        text = f"delete the {'mode' if len(ip.modes_removed) == 1 else 'modes'} {_and(list(ip.modes_removed))}"
+        if ip.first_mode:
+            text += f", so {ip.first_mode} becomes the first mode on record"
+        pieces.append(text)
+    return pieces
+
+
+def in_place_line(problems, record=None, known: str = "") -> Tuple[str, bool]:
+    """The footer's sentence before the press on what would stop an in-place change (``workbook.update.
+    in_place_ahead``; K4, no question before an Update), red; ``("", True)`` with nothing to say. Each step a finding
+    gates and that is not settled for the SolidWorks the record last read (:func:`in_place_gate_sentence`), then the
+    user's work on a gear to be taken out, as the worker words it, each once (``known``: the line already said)."""
+    if not problems:
+        return "", True
+    gates: Dict[str, List[str]] = {}
+    said: List[str] = []
+    from .swbuild import PROBLEM_UNSETTLED
+    for p in problems:
+        subjects = tuple(getattr(p, "subjects", ()) or ())
+        if p.kind == PROBLEM_UNSETTLED and subjects and _step_of(subjects[0]):
+            gates.setdefault(_step_of(subjects[0]), []).append(subjects[0])
+        elif p.sentence and p.sentence not in known and p.sentence not in said:
+            said.append(p.sentence)
+    sentences = ([in_place_gate_sentence(list(gates), [n for names in gates.values() for n in names])] if gates
+                 else []) + [_sentence(s) for s in said]
+    if not sentences:
+        return "", True
+    entry = getattr(getattr(record, "gearbox", None), "user_work", None)
+    lead = f"As read at {read_time(entry.read_at)}, the" if entry is not None and said else "The"
+    return f"{lead} next press would stop before changing anything: " + " ".join(sentences), False
+
+
+def in_place_done_pieces(update, result) -> List[str]:
+    """What an Update made or took away in place, after the press (``swbuild.GearboxUpdate``'s W9c fields), each a
+    piece of :func:`gearbox_update_status`'s sentence: *built Hub_m1.25_N17*, *inserted Hub as Hub-1 and mated it
+    (Hub on Output Axis, Hub along Output, RangeSlv splined to Hub)*, *took G4 out (G4-1) with its 3 mates*, *gave
+    RangeSlv its bands*, *took RangeSlv's bands away*, *made ModeSlv engages LoDog, on in 2H*, *made the gear mate
+    G1 meshes G2 again in every mode it is on in*, *added the mode 4X*, *deleted the mode L*."""
+    pieces: List[str] = []
+    built = [b.saved for b in getattr(result, "built", []) or [] if getattr(b, "saved", "")]
+    if built:
+        pieces.append(f"built {_and(_stem(p) for p in built)}")
+    deleted = list(getattr(result, "deleted", []) or [])
+    if deleted:
+        n = len(getattr(result, "mates_deleted", []) or [])
+        what = _and(f"{g} ({name})" for g, name in deleted)
+        pieces.append(f"took {what} out" + (f" with {_plural(n, 'mate')}" if n else ""))
+    made = dict((name, tuple(on)) for name, on in getattr(result, "mates_made", []) or [])
+    ip = getattr(update, "in_place", None)
+    for gear, name in getattr(result, "inserted", []) or []:
+        own = [op.name for a in (ip.added if ip else ()) if a.gear == gear for op in a.ops
+               if type(op).__name__ == "Mate" and op.name in made]
+        pieces.append(f"inserted {gear} as {name}" + (f" and mated it ({_and(own)})" if own else ""))
+    coupled = [m.op.name for m in (ip.new_mates if ip else ()) if m.op.name in made]
+    for name in coupled:
+        on = made[name]
+        pieces.append(f"made {name}" + (f", on in {_and(list(on))}" if on else ""))
+    remade = list(getattr(result, "remade_in_modes", []) or [])
+    if remade:
+        pieces.append(f"made {_and(remade)} again, with {'its flag' if len(remade) == 1 else 'their flags'} set in "
+                      "every mode")
+    given = list(getattr(result, "bands_added", []) or [])
+    if given:
+        pieces.append(f"gave {_and(given)} {'its' if len(given) == 1 else 'their'} bands")
+    taken = list(getattr(result, "bands_removed", []) or [])
+    if taken:
+        pieces.append(f"took {_and(f'{g}' + chr(39) + 's' for g in taken)} bands away")
+    added = list(getattr(result, "modes_added", []) or [])
+    if added:
+        pieces.append(f"added the {'mode' if len(added) == 1 else 'modes'} {_and(added)}")
+    removed = list(getattr(result, "modes_removed", []) or [])
+    if removed:
+        pieces.append(f"deleted the {'mode' if len(removed) == 1 else 'modes'} {_and(removed)}")
+    return pieces
+
+
+def in_place_after(update, result) -> List[str]:
+    """The sentences after an in-place Update on the user's own states (C5) and the record's first mode (C11): *The
+    new mode 4X copied the mode showing, so your Lock3 is on and your Sprocket-1 resolved there, as they are in the
+    mode showing; change them in 4X if they should differ.* *Your own states in L went with it: your Lock3 was
+    suppressed there, and any state of your components particular to it.* *L was the first mode on record; M is now.*"""
+    out: List[str] = []
+    took: Dict[str, List[str]] = {}
+    for mode, item, state in getattr(result, "took_active_state", []) or []:
+        took.setdefault(mode, []).append(f"your {item} {state}")
+    for mode, items in took.items():
+        out.append(f"The new mode {mode} copied the mode showing, so {_and(items)} there, as in the mode showing; "
+                   f"change {'it' if len(items) == 1 else 'them'} in {mode} if {'it' if len(items) == 1 else 'they'} "
+                   "should differ.")
+    lost: Dict[str, List[str]] = {}
+    for mode, mate, flag in getattr(result, "flags_lost", []) or []:
+        lost.setdefault(mode, []).append(f"your {mate} was {flag} there")
+    for mode in getattr(result, "modes_removed", []) or []:
+        items = lost.get(mode, [])
+        said = f"{_and(items)}, and so was " if items else ""
+        out.append(f"Your own states in {mode} went with it: {said}any state of your components particular to it.")
+    ip = getattr(update, "in_place", None)
+    removed = list(getattr(result, "modes_removed", []) or [])
+    if ip and ip.first_mode and removed:
+        out.append(f"{removed[0]} was the first mode on record; {ip.first_mode} is now.")
     return out

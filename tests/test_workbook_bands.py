@@ -402,17 +402,18 @@ def test_update_carries_a_band_changed_on_a_built_banded_sleeve_through_its_glob
                                                                                          "End Band": "5"}
 
 
-def test_bands_taken_from_a_built_sleeve_need_build_again_until_w9c():
+def test_bands_taken_from_a_built_sleeve_go_in_place_and_the_hub_that_anchors_it_stays_build_again():
     """RangeBox_Fixed made RangeBox again (RangeSlv 10 mm at −24.5, sliding ±5, no bands; Hub's row cleared): a legal
-    workbook, which Update hands to Build again… for the bands and for the hub taken out."""
+    workbook. Since W9c the bands are taken away in place (the relief suppressed), but Hub anchors RangeSlv, so taking
+    it out is still Build again…."""
     from gear_generator.workbook import update
     _, record = _built_record()
     plain = replace(range_box(), box=replace(range_box().box, name="RangeBox_Fixed"))
     up = update.classify(record, legal(plain), exists=lambda p: True)
     assert up.needs_new_revision and up.structural == (
-        "Hub is no longer in the workbook, and Update SolidWorks cannot take a part out of what was built.",
-        "Sleeve_m1.25_N17 (RangeSlv): Bands cannot be given to or taken from a built sleeve through its values; build "
-        "it again as a new part.")
+        "Hub is no longer in the workbook, and it anchors RangeSlv (the mate RangeSlv splined to Hub): Update "
+        "SolidWorks takes out only a gear that anchors none, so the gearbox needs building again.",)
+    assert [(b.gear, b.add, b.features) for b in up.in_place.bands] == [("RangeSlv", False, ("Relief",))]
 
 
 def test_the_bands_taken_off_alone_are_refused_at_the_workbook():

@@ -50,6 +50,7 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from .. import findings, store, swbuild
 from ..gears import bevel, clutch, equations, kind_for, spur
+from ..gears import base
 from ..gears.base import GlobalVariable
 from ..spec import GearSpec, InputError
 from ..store import GearboxRecord, LinkRecord, MateEntry, PartEntry, ShaftEntry, Sidecar
@@ -147,6 +148,11 @@ class UpdatePlan:
     # on-set, the workbook now changes (J14) — so ``record_matches`` is False; the sentence reads
     # ``motion.slide_values`` and ``on_sets`` against the record's mates.
     modes_changed: Tuple[str, ...] = ()
+    # W9c (B; W9C-INTERFACES §2, §3): what the Update makes or takes away in place (K6, §2.4); empty: W9a's Update.
+    in_place: Any = field(default_factory=lambda: swbuild.InPlace())
+    # W9c (B's own, for ``finish_update``, §7): what the record takes from the read when the Update makes or takes
+    # away in place — None when it does neither.
+    in_place_record: Optional["InPlaceRecord"] = None
 
     @property
     def changed_parts(self) -> Tuple[PartUpdate, ...]:
@@ -161,7 +167,7 @@ class UpdatePlan:
     def record_matches(self) -> bool:
         """Nothing on record differs from the workbook (the worker still compares live)."""
         return not (self.changed_parts or self.moved_shafts or self.replaced or self.needs_new_revision
-                    or self.modes_changed)
+                    or self.modes_changed or bool(self.in_place))
 
     def update_kwargs(self) -> Dict[str, Any]:
         """The arguments of ``swbuild.update_gearbox(session, **plan.update_kwargs())``. Never called on a plan
@@ -184,6 +190,8 @@ class UpdatePlan:
             kwargs["lines"] = {name: (point, direction) for name, point, direction in lines}
         if self.carriers:                             # W7: only with a planetary stage
             kwargs["carriers"] = list(self.carriers)
+        if self.in_place:                             # W9c: only when something is made or taken away in place
+            kwargs["in_place"] = self.in_place
         return kwargs
 
 
@@ -416,11 +424,24 @@ def classify(record: Optional[LinkRecord], a: Assessment, *,
         current = [g.id for g in spec.gears if g.id in job_of]
     gone = [g for g in recorded if g not in current]
     new = [g for g in current if g not in recorded]
-    if gone:
-        structural.append(f"{_names(gone)} {_is(gone)} no longer in the workbook, and Update SolidWorks cannot take "
-                          f"a part out of what was built.")
-    if new:
-        structural.append(f"{_names(new)} {_is(new)} new, and Update SolidWorks cannot add a part to what was built.")
+    # W9c (K6; W9C-INTERFACES §3): on a gearbox built to turn, a gear added on a frame shaft on record along Z± and
+    # one taken out that anchors no other gear are carried in place; every other is said, each by its own sentence.
+    in_added: List[str] = []
+    in_removed: List[str] = []
+    if turning and (gone or new):
+        in_added, in_removed, said = _in_place_gears(box, a, gone, new, job_of, entries, exists)
+        structural.extend(said)
+    else:
+        if gone:
+            structural.append(f"{_names(gone)} {_is(gone)} no longer in the workbook, and Update SolidWorks cannot "
+                              f"take a part out of what was built.")
+        if new:
+            structural.append(f"{_names(new)} {_is(new)} new, and Update SolidWorks cannot add a part to what was "
+                              "built.")
+    whole_box = box
+    if in_removed:
+        box = _kept_box(box, in_removed)
+    sliding_now = set(_slider_ids(a)) if turning else set()
 
     shafts: Tuple[ShaftLayout, ...] = ()
     moved: List[str] = []
@@ -459,9 +480,14 @@ def classify(record: Optional[LinkRecord], a: Assessment, *,
                 moved.append(shaft.shaft)
         listed = lambda pairs: {frozenset(p) for p in pairs}           # noqa: E731
         was_meshed, meshed = listed(tuple(m) for m in box.meshes), listed((m.a, m.b) for m in spec.meshes)
+        was_meshed = listed(tuple(m) for m in whole_box.meshes)
         for pair in sorted(meshed - was_meshed, key=sorted):
+            if pair & set(in_added) or pair & sliding_now:
+                continue                    # W9c: an added gear's own mesh, or a sliding mesh (``_modes``)
             structural.append(f"The mesh {'–'.join(sorted(pair))} is new, and Update SolidWorks cannot add one.")
         for pair in sorted(was_meshed - meshed, key=sorted):
+            if pair & set(in_removed):
+                continue                    # W9c: it goes with the gear taken out
             structural.append(f"The mesh {'–'.join(sorted(pair))} is no longer listed, and Update SolidWorks cannot "
                               "take one out.")
         try:
@@ -483,6 +509,7 @@ def classify(record: Optional[LinkRecord], a: Assessment, *,
 
     # The parts, each against the part its gears now want.
     parts: List[PartUpdate] = []
+    band_changes: List[Any] = []
     for entry in entries:
         if not exists(entry.path):
             missing.append(entry.path)
@@ -500,11 +527,24 @@ def classify(record: Optional[LinkRecord], a: Assessment, *,
                               f"now {'differs' if len(others) == 1 else 'differ'} from {first}, so they need parts "
                               "of their own.")
             continue
-        update, why = _part(entry, jobs[0], exists)
+        toggle = _band_toggle(entry, jobs[0]) if turning else None
+        if toggle is None:
+            update, why = _part(entry, jobs[0], exists)
+        else:
+            # W9c (§2.4): bands given to or taken from a built sleeve go in place; the rest of the part is judged as
+            # if neither had bands, and its values carry no band global until the bands' own step adds them.
+            update, why = _part(*_without_bands(entry, jobs[0]), exists)
+            if not why:
+                update = replace(update, spec=jobs[0].spec, changed=True,
+                                 recorded=tuple((str(p[0]), str(p[1])) for p in entry.variables if len(p) == 2)
+                                 or None)
+                band_changes.append(_band_change(entry, jobs[0], toggle))
         if why:
             structural.append(why)
-        parts.append(replace(update, cells=_gear_cells(spec, entry.gears),
-                             made=_recorded_features(entry.path, read_sidecar) or update.made))
+        made = _recorded_features(entry.path, read_sidecar) or update.made
+        if toggle:
+            made = tuple(made) + tuple(f for f in _RELIEF_FEATURES if f not in made)      # C2: the relief is the app's
+        parts.append(replace(update, cells=_gear_cells(spec, entry.gears), made=made))
 
     # The assembly: every gear's wanted frame, by the Name2 on record.
     placements: List[Placement] = []
@@ -518,7 +558,9 @@ def classify(record: Optional[LinkRecord], a: Assessment, *,
         # W8: with modes, the frames wanted in the configuration the assembly was saved in (the record's first mode,
         # found ignoring case), which is what ``ComponentEntry.rotation`` / ``at`` hold; else the one layout's.
         by_mode = _wanted_by_mode(box, a)
-        wanted = by_mode[box.modes[0]] if box.modes and box.modes[0] in by_mode else layout.frames(a.report)
+        # W9c (C11): with the record's first mode taken out, the next one on record is the mode the record opens in.
+        first = next((c for c in box.modes if c in by_mode), None)
+        wanted = by_mode[first] if first is not None else layout.frames(a.report)
         sliding = _recorded_sliders(box)
         # W7 (W7-INTERFACES §6.4): each carrier is a placement too, pitch 0, its frame as the carrier part goes now.
         carrier_frames = _carrier_frames(a)
@@ -542,14 +584,24 @@ def classify(record: Optional[LinkRecord], a: Assessment, *,
                 at[2] = f.at[2]
             if not (c.rotation and c.at and same_frame(c.rotation, at, f.rotation, f.at, step)):
                 replaced.append(c.gear)
+        for gear in in_added:              # W9c (C1): its Name2 is the worker's to fill once inserted
+            if gear in wanted:
+                f = wanted[gear]
+                placements.append(Placement(gear, "", f.rotation, f.at, layout.pitch(placed[gear]),
+                                            part=job_of[gear].path))
 
     turn = _Turning()
     modal = _Modes()
+    in_place = swbuild.InPlace()
+    in_place_record: Optional[InPlaceRecord] = None
     if turning:
         turn = _turning(box, entries, a, shafts)
         structural.extend(turn.structural)
-        modal = _modes(box, a, turn, placements)
+        modal = _modes(box, a, turn, placements, added_gears=in_added)
         structural.extend(modal.structural)
+        in_place, why, in_place_record = _in_place(whole_box, box, a, entries, in_added, in_removed, job_of, modal,
+                                                   band_changes)
+        structural.extend(why)
     elif box is not None and (spec.modes or _slider_ids(a)):
         structural.append(_STATIC_MODES)
 
@@ -572,7 +624,8 @@ def classify(record: Optional[LinkRecord], a: Assessment, *,
                       shafts=shafts, motion=moving, axial=turn.axial, ratios=turn.ratios,
                       drag=turn.drag, modes_changed=modal.changed,
                       resensed=turn.resensed, carriers=tuple(carrier_values), carriers_moved=tuple(carriers_moved),
-                      carrier_layouts=_carrier_layouts_on_record(box, a))
+                      carrier_layouts=_carrier_layouts_on_record(box, a), in_place=in_place,
+                      in_place_record=in_place_record if in_place else None)
 
 
 # -- W9a: what the worker needs to tell the user's work from the app's (ISSUE-1-PLAN K1, K11; W9A-INTERFACES.md) ------
@@ -1388,18 +1441,30 @@ class _Modes:
     structural: List[str] = field(default_factory=list)
     motion: Optional[MotionUpdate] = None
     changed: Tuple[str, ...] = ()
+    # W9c (K6; W9C-INTERFACES §2, §3): the Modes rows added (the read's names, Modes-sheet order) and removed (the
+    # record's spelling), the configurations after the Update (the record's order, the added after them), the
+    # record's first mode when a removal changes it (C11), and the per-mode mates the read needs between gears on
+    # record that are not on record (made in place as ``NewMate``s).
+    modes_added: Tuple[str, ...] = ()
+    modes_removed: Tuple[str, ...] = ()
+    configurations: Tuple[str, ...] = ()
+    first_mode: str = ""
+    new_mates: Tuple[Any, ...] = ()
 
 
-def _modes(box: GearboxRecord, a: Assessment, turn: _Turning, placements: Sequence[Placement]) -> _Modes:
+def _modes(box: GearboxRecord, a: Assessment, turn: _Turning, placements: Sequence[Placement],
+           added_gears: Sequence[str] = ()) -> _Modes:
     """J14 on a gearbox built to turn: are all the mates the new read's modes need already on record? One SLIDE per
     slider, and each coupling and sliding mesh some mode engages, with the same gears (the new plan's own, from
     ``motion.motion_plan``: one home for which mate each mode needs, J15's loop-closers included).
 
-    **Structural**: Modes rows added, removed or renamed; a gear that slides now or no longer does; a mode whose
-    slide value would reach or cross the Front plane (J27, naming the position); a coupling or sliding mesh some mode
-    needs that is not on record; one on record that would be on in no mode (§9.1: never written as ``[]``); with no
-    Modes rows, a slider's place moving. **An Update**: a slide value per configuration, an on-set changed between
-    mates on record. The Modes rows reordered change nothing (§9.9): configurations stay in the record's order and
+    **Structural**: a Modes row renamed (W9c: a row taken out and another added in one edit is read so), the first
+    Modes rows on a gearbox built with none, or every row taken out; a gear that slides now or no longer does; a mode
+    whose slide value would reach or cross the Front plane (J27, naming the position); one on record that would be on
+    in no mode (§9.1: never written as ``[]``), a Modes row removed that leaves one so included; with no Modes rows, a
+    slider's place moving. **An Update**: a slide value per configuration, an on-set changed between mates on record;
+    W9c (K6) a Modes row added or removed, and a coupling or sliding mesh some mode needs between gears on record that
+    is not on record (``new_mates``). A per-mode mate touching a gear Update adds (``added_gears``) is that gear's. The Modes rows reordered change nothing (§9.9): configurations stay in the record's order and
     spelling, and names compare through ``swbuild.on_in`` (§9.6)."""
     out = _Modes()
     spec, report = a.spec, a.report
@@ -1411,14 +1476,25 @@ def _modes(box: GearboxRecord, a: Assessment, turn: _Turning, placements: Sequen
     names = [m.name for m in report.modes if m.name]
     added = [n for n in names if _conf(box.modes, n) is None]
     gone = [c for c in box.modes if _conf(names, c) is None]
-    if added:
+    if added and gone:
+        out.structural.append(f"The Modes sheet has {_names(added)} where the assembly has {_names(gone)}: a mode "
+                              "renamed, or one taken out and another added in one edit, keeps nothing of the user's "
+                              "own states in that configuration when it is deleted and made again, and a "
+                              f"configuration is not renamed in place, {_NEW_REVISION}.")
+    elif added and not box.modes:
         out.structural.append(f"The Modes sheet has {'a new mode' if len(added) == 1 else 'new modes'}, "
-                              f"{_names(added)}, and each mode's configuration is made when the assembly is built, "
+                              f"{_names(added)}, and the assembly was built with no configuration per mode, "
                               f"{_NEW_REVISION}.")
-    if gone:
+    elif gone and not names:
         out.structural.append(f"The {_plural(gone, 'mode', 'modes')} {_names(gone)} {_is(gone)} no longer on the Modes "
-                              f"sheet, and a configuration is not taken out of the assembly that was built, "
+                              f"sheet and no mode is left, and the assembly keeps a configuration per mode, "
                               f"{_NEW_REVISION}.")
+    else:
+        out.modes_added, out.modes_removed = tuple(added), tuple(gone)
+    confs = [c for c in box.modes if c not in gone] + added
+    out.configurations = tuple(confs)
+    if gone and box.modes and box.modes[0] in gone and confs:
+        out.first_mode = confs[0]
     ids = {g.id for g in spec.gears}
     recorded = _recorded_sliders(box)
     new_s = [g for g in now_sliders if g not in recorded]
@@ -1467,18 +1543,11 @@ def _modes(box: GearboxRecord, a: Assessment, turn: _Turning, placements: Sequen
 
     def key(m: Any) -> Tuple[str, frozenset]:
         return m.kind, frozenset(m.gears)
-    wanted = {key(m): m for m in _per_mode(plan.mates)}
+    new_gears = set(added_gears)
+    wanted = {key(m): m for m in _per_mode(plan.mates) if not new_gears & set(m.gears)}
     on_record = {key(m) for m in per_mode}
-    for k, m in wanted.items():
-        if k in on_record:
-            continue
-        first, (x, y) = m.modes[0] if m.modes else "", m.gears
-        if m.kind == motion.COUPLE:
-            out.structural.append(f"In {first} {x} would now cover {y}, which no mode engaged when the assembly was "
-                                  f"built, {_NEW_REVISION}.")
-        else:
-            out.structural.append(f"In {first} {x} would now mesh with {y}, which no mode meshed when the assembly "
-                                  f"was built, {_NEW_REVISION}.")
+    # W9c (K6): a coupling or sliding mesh newly needed between gears on record is made in place.
+    out.new_mates = tuple(m for k, m in wanted.items() if k not in on_record)
     on_sets: List[Tuple[str, Tuple[str, ...]]] = []
     changed: List[str] = []
     for m in per_mode:
@@ -1486,10 +1555,16 @@ def _modes(box: GearboxRecord, a: Assessment, turn: _Turning, placements: Sequen
         if now is None:                            # §9.1: never on in no mode
             x, y = m.gears
             verb = "engages" if m.kind == motion.COUPLE else "meshes"
-            out.structural.append(f"No mode {verb} {y} with {x} now, and the mate {m.name}, made to be on in some "
-                                  f"modes, is never left on in none, {_NEW_REVISION}.")
+            only = [c for c in box.modes if on_in(tuple(m.modes), c)]
+            if gone and only and all(c in gone for c in only):
+                out.structural.append(f"The {_plural(only, 'mode', 'modes')} {_names(only)} {_is(only)} no longer on "
+                                      f"the Modes sheet, and the mate {m.name} is on there alone: a mate made to be on "
+                                      f"in some modes is never left on in none, {_NEW_REVISION}.")
+            else:
+                out.structural.append(f"No mode {verb} {y} with {x} now, and the mate {m.name}, made to be on in some "
+                                      f"modes, is never left on in none, {_NEW_REVISION}.")
             continue
-        want = tuple(c for c in box.modes if any(on_in((c,), n) for n in now.modes))
+        want = tuple(c for c in confs if any(on_in((c,), n) for n in now.modes))
         on_sets.append((m.name, want))
         if set(want) != {c for c in box.modes if on_in(tuple(m.modes), c)}:
             changed.append(m.name)
@@ -1499,7 +1574,7 @@ def _modes(box: GearboxRecord, a: Assessment, turn: _Turning, placements: Sequen
     for m in slides:
         held = {k: abs(float(v)) for k, v in m.values.items()}
         moved = False
-        for conf in box.modes:
+        for conf in confs:
             z = abs(next(v for mode, v in places[m.gears[0]] if on_in((conf,), mode)))
             slide_values.append((m.name, conf, z))
             had = next((v for k, v in held.items() if on_in((conf,), k)), None)
@@ -1525,6 +1600,9 @@ def _modes(box: GearboxRecord, a: Assessment, turn: _Turning, placements: Sequen
     splines = tuple(LockLink(m.gears[0], m.gears[1], layout.pitch(placed[m.gears[1]]))
                     for m in box.mates if m.kind == motion.SPLINE)
     by_mode = _wanted_by_mode(box, a)
+    for name, frames in layout.frames_by_mode(report).items():      # W9c: a mode added, by the read's name
+        if name in added:
+            by_mode[name] = frames
     components = {c.gear: c for c in box.components}
 
     def recorded_in(conf: str, p: Placement) -> Placement:
@@ -1538,22 +1616,337 @@ def _modes(box: GearboxRecord, a: Assessment, turn: _Turning, placements: Sequen
         meshes=with_modes(turn.motion.meshes, want_of) + couple_links(want_of),
         recorded_meshes=with_modes(turn.motion.recorded_meshes, had_of) + couple_links(had_of),
         locks=turn.motion.locks + splines,
-        configurations=tuple(box.modes),
+        configurations=tuple(confs),
         mode_placements=tuple((conf, tuple(replace(p, rotation=by_mode[conf][p.gear].rotation,
                                                    at=by_mode[conf][p.gear].at) if p.gear in by_mode[conf] else p
-                                           for p in placements)) for conf in box.modes),
-        recorded_by_mode=tuple((conf, tuple(recorded_in(conf, p) for p in turn.motion.recorded))
-                               for conf in box.modes),
+                                           for p in placements)) for conf in confs),
+        # W9c: a mode added has nothing on record; it is recorded as wanted (its frames are set, not judged).
+        recorded_by_mode=tuple((conf, tuple(recorded_in(conf, p) if conf in box.modes else
+                                            (replace(p, rotation=by_mode[conf][p.gear].rotation,
+                                                     at=by_mode[conf][p.gear].at) if p.gear in by_mode[conf] else p)
+                                            for p in turn.motion.recorded)) for conf in confs),
         slide_values=tuple(slide_values),
         on_sets=tuple(on_sets))
     out.changed = tuple(changed)
     return out
 
 
+# -- W9c: Update adds, removes and re-mates in place (ISSUE-1-PLAN §2.1 "W9c", K6, §2.4; W9C-INTERFACES.md) ----------
+
+_Z_AXES = ((0.0, 0.0, 1.0), (0.0, 0.0, -1.0))
+
+
+def _band_toggle(entry: PartEntry, job: PartJob) -> Optional[bool]:
+    """Bands given to a built sleeve (True) or taken from it (False), the part's spec on record against the read's;
+    None when neither (or the record holds no form). A sleeve's part only."""
+    if not entry.spec or job.spec.kind != clutch.SLEEVE:
+        return None
+    try:
+        built = GearSpec.from_dict(dict(entry.spec))
+    except (TypeError, ValueError, AttributeError):
+        return None
+    if built.kind != clutch.SLEEVE or built.has_bands() == job.spec.has_bands():
+        return None
+    return job.spec.has_bands()
+
+
+_BAND_GLOBALS = (clutch.START_BAND, clutch.END_BAND, clutch.RELIEF_DIAMETER)
+_RELIEF_FEATURES = (clutch.RELIEF_START_PLANE, clutch.RELIEF_END_PLANE, clutch.RELIEF_START_SKETCH,
+                    clutch.RELIEF_END_SKETCH, clutch.RELIEF)
+
+
+def _without_bands(entry: PartEntry, job: PartJob) -> Tuple[PartEntry, PartJob]:
+    """The part on record and the part the read asks for, each with no bands: what :func:`_part` judges when only the
+    bands come or go (W9c: they are given or taken in place, §2.4)."""
+    from ..gears import plan_for
+    spec = replace(job.spec, start_band="", end_band="")
+    plan = job.plan
+    if job.plan is not None:
+        plan = plan_for(spec, job.derived, gearbox._template_of(job.plan), job.path)
+    kept = {k: v for k, v in dict(entry.spec).items() if k not in ("start_band", "end_band")}
+    variables = [list(pair) for pair in entry.variables if not (pair and str(pair[0]) in _BAND_GLOBALS)]
+    return replace(entry, spec=kept, variables=variables), replace(job, spec=spec, plan=plan)
+
+
+def _band_change(entry: PartEntry, job: PartJob, add: bool) -> Any:
+    """The ``swbuild.BandChange`` for a sleeve given bands (its band globals and relief ops, as the banded plan has
+    them after the teeth) or relieved of them (its ``Relief`` loft cut suppressed: the coordinator's ruling C8)."""
+    gear = entry.gears[0] if entry.gears else job.gear_ids[0]
+    if not add:
+        return swbuild.BandChange(gear, entry.path, False, (), (clutch.RELIEF,))
+    bands = job.spec.bands_mm()
+    d = job.derived
+    ops = tuple(base.AddGlobal(v.name, v.expression, v.radian_expression)
+                for v in clutch.relief_globals(bands))
+    ops += tuple(clutch.relief_ops(d.face_width, bands, clutch.relief_diameter(d.module, d.teeth)))
+    return swbuild.BandChange(gear, entry.path, True, ops, _RELIEF_FEATURES)
+
+
+def _frame_shaft_on_z(spec: Any, shaft_id: str) -> bool:
+    shaft = spec.shaft(shaft_id)
+    if shaft is None or shaft.mount() != "frame":
+        return False
+    try:
+        return geometry.axis_vector(shaft.axis) in _Z_AXES
+    except ValueError:
+        return False
+
+
+def _in_place_gears(box: GearboxRecord, a: Assessment, gone: Sequence[str], new: Sequence[str],
+                    job_of: Mapping[str, PartJob], entries: Sequence[PartEntry],
+                    exists: Callable[[str], bool]) -> Tuple[List[str], List[str], List[str]]:
+    """K6 (W9C-INTERFACES §3): of the gears new in the read and those gone from it, which Update adds and removes in
+    place, and a sentence for each it cannot. Added: a gear on a frame shaft on record along Z+ or Z−, not a
+    planet's copy, whose part is on record or a file not yet on disk. Removed: one that anchors no other gear (no
+    lock or spline on record has it first) and is no planet's copy. Whether a recorded mate would change is
+    :func:`_mate_changes`'."""
+    spec, placed = a.spec, a.report.layout.placed
+    on_record = {s.shaft for s in box.shafts}
+    paths = {p.path.lower() for p in entries}
+    added: List[str] = []
+    removed: List[str] = []
+    said: List[str] = []
+    for g in new:
+        gear = spec.gear(g)
+        shaft = gear.shaft if gear is not None else ""
+        job = job_of.get(g)
+        if gear is None or g not in placed or job is None:
+            said.append(f"{g} is new, and Update SolidWorks cannot add a part to what was built.")
+        elif shaft not in on_record:
+            said.append(f"{g} is new on {shaft}, which is new too, and Update SolidWorks adds a gear only on a shaft "
+                        f"the layout part has, {_REBUILD}.")
+        elif placed[g].carrier or spec.shaft(shaft).mount() != "frame":
+            said.append(f"{g} is new on {shaft}, which rides a carrier, and Update SolidWorks adds a gear only on a "
+                        f"shaft on the frame, {_REBUILD}.")
+        elif not _frame_shaft_on_z(spec, shaft):
+            said.append(f"{g} is new on {shaft}, whose axis is {spec.shaft(shaft).axis}, and Update SolidWorks adds a "
+                        f"gear only on a shaft along Z+ or Z-, {_REBUILD}.")
+        elif job.path.lower() not in paths and exists(job.path):
+            said.append(f"{g} is new, and its part {os.path.basename(job.path)} is already a file the record does not "
+                        f"hold, which Update SolidWorks never overwrites, {_REBUILD}.")
+        else:
+            added.append(g)
+    copies = {c.of for c in box.components if c.of}
+    for g in gone:
+        holds = [m for m in box.mates if m.kind in (motion.LOCK, motion.SPLINE) and m.gears and m.gears[0] == g]
+        if g in copies:
+            said.append(f"{g} is no longer in the workbook, and it is a planet whose copies ride a carrier, which "
+                        f"Update SolidWorks does not take out, {_REBUILD}.")
+        elif not any(c.gear == g for c in box.components):
+            said.append(f"{g} is no longer in the workbook, and Update SolidWorks cannot take a part out of what was "
+                        "built.")
+        elif holds:
+            followers = [m.gears[1] for m in holds]
+            names = [m.name for m in holds]
+            said.append(f"{g} is no longer in the workbook, and it anchors {_names(followers)} (the "
+                        f"{_plural(names, 'mate', 'mates')} {_names(names)}): Update SolidWorks takes out only a gear "
+                        f"that anchors none, {_REBUILD}.")
+        else:
+            removed.append(g)
+    return added, removed, said
+
+
+def _kept_box(box: GearboxRecord, removed: Sequence[str]) -> GearboxRecord:
+    """The gearbox on record less the gears Update takes out and every mate touching them: what stays (§1)."""
+    if not removed:
+        return box
+    gone = set(removed)
+    return replace(box, components=[c for c in box.components if c.gear not in gone],
+                   mates=[m for m in box.mates if not gone & set(m.gears)],
+                   fixed=[g for g in box.fixed if g not in gone],
+                   unmated=[pair for pair in box.unmated if not gone & set(pair)],
+                   drag=[g for g in box.drag if g not in gone])
+
+
+def _mate_changes(kept: GearboxRecord, plan: motion.MotionPlan, added: Sequence[str]) -> List[str]:
+    """§3's "still structural when a recorded mate would change": each mate that stays on record (less the per-mode
+    ones, :func:`_modes`') that the read's plan no longer makes as it was — its name gone, or its kind or gears
+    another (an anchor that is no longer the first gear that does not slide, a lock that becomes a spline) — and each
+    mate the plan would now make between gears on record that is not on record. A mate touching a gear added is the
+    added gear's own (``AddedGear.ops``)."""
+    new = set(added)
+    per_mode = {m.name for m in _per_mode(kept.mates)}
+    wanted = {m.name: m for m in plan.mates if not m.modes and not new & set(m.gears)}
+    said: List[str] = []
+    for m in kept.mates:
+        if m.name in per_mode:
+            continue
+        now = wanted.get(m.name)
+        if now is None or now.kind != m.kind or tuple(now.gears) != tuple(m.gears):
+            said.append(f"With the gears added or taken out, the mate {m.name} on record would not be made as it was, "
+                        f"and Update SolidWorks does not make a gear's own mates again in place, {_REBUILD}.")
+    recorded = {m.name for m in kept.mates}
+    for name, m in wanted.items():
+        if name not in recorded:
+            said.append(f"With the gears added or taken out, {_names(list(m.gears))} would need the new mate {name}, "
+                        f"and Update SolidWorks makes new mates in place only for a gear it adds, a coupling or a "
+                        f"sliding mesh, {_REBUILD}.")
+    return said
+
+
+def _components_for(box: GearboxRecord, a: Assessment, added: Mapping[str, PartJob]) -> Tuple[
+        List[Tuple[str, str, Any]], Dict[str, str], Dict[str, str]]:
+    """The assembly plan's components as a build of this read would insert them (carriers ``carrier<i>`` first, then
+    each gear ``gear<index>`` with its copies, as ``gearbox.plan_gearbox`` numbers them), each with its part's path —
+    the record's for a gear on record, the new part's for one added; ``handle_of`` gear (or carrier id) -> handle;
+    and ``name_of`` handle -> the ``Name2`` on record (the layout's, every gear's and carrier's)."""
+    spec, report = a.spec, a.report
+    frames = layout.frames(report)
+    components: List[Tuple[str, str, Any]] = []
+    handle_of: Dict[str, str] = {}
+    name_of: Dict[str, str] = {layout.LAYOUT_HANDLE: box.layout_component}
+    carrier_frames = _carrier_frames(a)
+    for i, entry in enumerate(box.carriers, 1):
+        handle = f"{layout.CARRIER_HANDLE}{i}"
+        cid = layout.carrier_id(entry.shaft)
+        handle_of[cid] = handle
+        name_of[handle] = entry.component
+        f = carrier_frames.get(entry.shaft)
+        if f is not None:
+            components.append((handle, entry.path, f))
+    recorded = {c.gear: c for c in box.components}
+    copies_of: Dict[str, List[str]] = {}
+    for p in report.layout.placed.values():
+        if p.carrier:
+            copies_of.setdefault(p.row, []).append(p.gear)
+    for index, gear in enumerate(spec.gears, 1):
+        ids = copies_of.get(gear.id, [gear.id])
+        for gear_id in ids:
+            if gear_id not in frames:
+                continue
+            k = planetary.copy_of(gear_id)[1] if gear.id in copies_of and len(ids) > 1 else 0
+            handle = f"{layout.GEAR_HANDLE}{index}" + (f"c{k}" if k else "")
+            if gear_id in recorded:
+                part = recorded[gear_id].part
+                name_of[handle] = recorded[gear_id].name
+            elif gear_id in added:
+                part = added[gear_id].path
+            else:
+                continue
+            handle_of[gear_id] = handle
+            components.append((handle, part, frames[gear_id]))
+    return components, handle_of, name_of
+
+
+def _touches(op: Any, handle: str) -> bool:
+    refs = [getattr(op, k, "") for k in ("a", "b", "component", "id")] if isinstance(op, base.Mate) else \
+        [getattr(op, "component", ""), getattr(op, "id", "")]
+    return any(str(r).split(":", 1)[0] == handle for r in refs if r)
+
+
+def _added_gears(box: GearboxRecord, a: Assessment, plan: motion.MotionPlan, added: Mapping[str, PartJob],
+                 entries: Sequence[PartEntry], configurations: Sequence[str]) -> Tuple[Tuple[Any, ...], Any]:
+    """Each ``swbuild.AddedGear`` (W9C-INTERFACES §2), its ops taken from the assembly plan a build of this read
+    makes (``motion.motion_assembly_plan``, and ``motion.modes_plan`` for its mates on in some modes only), in plan
+    order; and the modes plan (or None), from which :func:`_new_mates` takes a new coupling's op."""
+    components, handle_of, name_of = _components_for(box, a, added)
+    assembly = motion.motion_assembly_plan(box.layout, components, handle_of, plan, "", box.assembly)
+    modes = motion.modes_plan(plan, handle_of, layout.frames_by_mode(a.report))
+    step_ops = [op for step in (modes.steps if modes is not None else ()) for op in step.ops]
+    mates = {m.name: m for m in plan.mates}
+    on_record = {p.path.lower() for p in entries}
+    out = []
+    for gear, job in added.items():
+        handle = handle_of[gear]
+        touching = {m.name for m in plan.mates if gear in m.gears}
+        faces = {m.face_global for m in plan.mates if m.name in touching and m.face_global}
+        ops: List[Any] = []
+        for op in assembly.ops:
+            if isinstance(op, base.AddGlobal) and op.name in faces:
+                ops.append(op)
+            elif isinstance(op, (base.AddComponent, base.Place, base.Fix,
+                                 base.Unfix)) and _touches(op, handle):
+                ops.append(op)
+            elif isinstance(op, base.Mate) and op.name in touching:
+                ops.append(op)
+            elif isinstance(op, base.LinkDimension) and op.dimension.split("@", 1)[-1] in touching:
+                ops.append(op)
+        ops += [op for op in step_ops if op.name in touching]
+        named = {str(r).split(":", 1)[0] for op in ops if isinstance(op, base.Mate) for r in (op.a, op.b)}
+        others = tuple((h, name_of[h]) for h in sorted(named) if h != handle and h in name_of)
+        senses = tuple((n, mates[n].sense == -1) for n in sorted(touching)
+                       if mates[n].kind in (motion.MESH, motion.SPLINE, motion.COUPLE))
+        on_sets = tuple((n, tuple(c for c in configurations if on_in(tuple(mates[n].modes), c)))
+                        for n in sorted(touching) if mates[n].modes)
+        build = None if job.path.lower() in on_record else job.plan
+        out.append(swbuild.AddedGear(gear, handle, job.path, build, tuple(ops), others, senses, on_sets))
+    return tuple(out), (modes, handle_of, name_of)
+
+
+def _new_mates(wanted: Sequence[Any], modes: Any, handle_of: Mapping[str, str], name_of: Mapping[str, str],
+               configurations: Sequence[str]) -> Tuple[Any, ...]:
+    """Each ``swbuild.NewMate``: a coupling or sliding mesh the read's modes need between gears on record (K6), its op
+    as the build makes it in the first mode it is on in, on in the configurations its modes are."""
+    if modes is None:
+        return ()
+    ops = {op.name: op for step in modes.steps for op in step.ops}
+    out = []
+    for m in wanted:
+        op = ops.get(m.name)
+        if op is None:
+            continue
+        handles = tuple((handle_of[g], name_of[handle_of[g]]) for g in m.gears
+                        if g in handle_of and handle_of[g] in name_of)
+        on = tuple(c for c in configurations if on_in(tuple(m.modes), c))
+        out.append(swbuild.NewMate(op, handles, on, m.name in modes.same_way))
+    return tuple(out)
+
+
+@dataclass(frozen=True)
+class InPlaceRecord:
+    """What ``finish_update`` writes for an in-place Update (W9C-INTERFACES §7), from the read: ``mates`` every mate
+    the Update makes (an added gear's, a new coupling or sliding mesh), as the plan has them; ``jobs`` each added
+    gear's part job (a new part's record and ``.gear.json``); ``fixed`` the gears that stand still after it;
+    ``meshes`` the listed meshes and ``unmated`` those closing a loop, as a build of the read records them."""
+
+    mates: Tuple[Any, ...] = ()
+    jobs: Tuple[Tuple[str, PartJob], ...] = ()
+    fixed: Tuple[str, ...] = ()
+    meshes: Tuple[Tuple[str, str], ...] = ()
+    unmated: Tuple[Tuple[str, str], ...] = ()
+
+
+def _in_place(whole: GearboxRecord, kept: GearboxRecord, a: Assessment, entries: Sequence[PartEntry],
+              added: Sequence[str], removed: Sequence[str], job_of: Mapping[str, PartJob], modal: "_Modes",
+              band_changes: Sequence[Any]) -> Tuple[Any, List[str]]:
+    """The ``swbuild.InPlace`` for a gearbox built to turn (W9C-INTERFACES §2, §3), and the sentences of what stops it
+    being carried in place (a recorded mate that would change, :func:`_mate_changes`). ``whole``: the record's gearbox;
+    ``kept``: it less the gears taken out."""
+    why: List[str] = []
+    added_gears: Tuple[Any, ...] = ()
+    new_mates: Tuple[Any, ...] = ()
+    record: Optional[InPlaceRecord] = None
+    if added or removed or modal.new_mates:
+        try:
+            plan = motion.motion_plan(a.spec, a.report, layout.frames(a.report))
+        except ValueError as exc:
+            return swbuild.InPlace(), [str(exc)], None
+        new = set(added)
+        made = tuple(m for m in plan.mates if new & set(m.gears)) + tuple(modal.new_mates)
+        record = InPlaceRecord(mates=made, jobs=tuple((g, job_of[g]) for g in added), fixed=tuple(plan.fixed),
+                               meshes=tuple((m.a, m.b) for m in a.spec.meshes), unmated=tuple(plan.unmated))
+        if added or removed:
+            why.extend(_mate_changes(kept, plan, added))
+        if not why and (added or modal.new_mates):
+            try:
+                added_gears, (modes, handle_of, name_of) = _added_gears(
+                    kept, a, plan, {g: job_of[g] for g in added}, entries, modal.configurations or tuple(kept.modes))
+                new_mates = _new_mates(modal.new_mates, modes, handle_of, name_of, modal.configurations)
+            except ValueError as exc:
+                why.append(str(exc))
+    components = {c.gear: c for c in whole.components}
+    gone = tuple(swbuild.RemovedGear(g, components[g].name, components[g].part,
+                                     tuple(m.name for m in whole.mates if g in m.gears)) for g in removed)
+    return swbuild.InPlace(added=added_gears, removed=gone, new_mates=new_mates, bands=tuple(band_changes),
+                           modes_added=modal.modes_added, modes_removed=modal.modes_removed,
+                           first_mode=modal.first_mode), why, record
+
+
 def finish_update(plan: UpdatePlan, result: GearboxUpdate, record: LinkRecord, *, digest: str,
                   read_sidecar: Callable[[str], Optional[Sidecar]] = store.read_sidecar,
                   mtime: Callable[[str], float] = os.path.getmtime,
-                  stamp: Optional[str] = None, workbook: str = "", revision: Sequence[int] = ()) -> Finished:
+                  stamp: Optional[str] = None, workbook: str = "", revision: Sequence[int] = (),
+                  written_by: str = "") -> Finished:
     """The sidecars and record an update leaves (Tk thread, after the worker).
 
     ``record`` is the record as read just before writing
@@ -1579,6 +1972,14 @@ def finish_update(plan: UpdatePlan, result: GearboxUpdate, record: LinkRecord, *
     (``result.user_work``) goes on record as the gearbox's ``user_work``, with the read of the workbook the press
     came from (``digest``) and the SolidWorks it ran on (``revision``, the session's), whatever the press then did;
     a press that read nothing leaves what is on record.
+
+    W9c (W9C-INTERFACES §7; schema 8 gains nothing): what the Update made or took away in place, as the worker
+    reports it done (:func:`_follow_in_place`): each gear inserted a ``ComponentEntry`` by the ``Name2`` kept, each
+    mate made a ``MateEntry`` on in the configurations it reads on in, a new part a ``PartEntry`` and its
+    ``.gear.json`` (``written_by``); each gear deleted, its entry and its mates gone, and its part's entry too when no
+    gear of the revision uses that file (the file stays: C6); the modes added and removed in ``modes``, the record's
+    order with the added after it; a sleeve's bands in its spec (sidecar schema 2) with the relief's features among
+    its features, only once the worker reports them given or taken.
 
     A gearbox built to turn (``plan.motion`` set): a mated gear is dragged
     only when the worker found it off its axis (a turn is never a drag),
@@ -1637,6 +2038,17 @@ def finish_update(plan: UpdatePlan, result: GearboxUpdate, record: LinkRecord, *
         trig = done.trig or (entry.trig if entry is not None else "")
         variables = [[v.name, v.expression_for(trig)] for v in update.variables]
         spec = update.spec.to_dict()
+        band = next((b for b in plan.in_place.bands if store.same_path(b.part, update.path)), None)
+        band_done = band is not None and band.gear in (getattr(result, "bands_added", []) or []) + \
+            (getattr(result, "bands_removed", []) or [])
+        if band is not None and not band_done and entry_spec_of(rec, update.path) is not None:
+            # W9c: the values were set but the bands were not given or taken: the spec keeps the bands it had.
+            had = entry_spec_of(rec, update.path)
+            spec = {k: v for k, v in spec.items() if k not in ("start_band", "end_band")}
+            spec.update({k: had[k] for k in ("start_band", "end_band") if k in had})
+        if band_done and band.add:
+            variables += [[v.name, v.expression_for(trig)] for v in clutch.relief_globals(update.spec.bands_mm())
+                          if all(v.name != pair[0] for pair in variables)]
         if entry is not None and entry.spec == spec and entry.variables == variables and not done.changed:
             continue
         if entry is not None:
@@ -1651,8 +2063,11 @@ def finish_update(plan: UpdatePlan, result: GearboxUpdate, record: LinkRecord, *
             mark = next((t for p, t in marks.items() if store.same_path(p, update.path)), None)
         else:
             mark = 0.0 if _in(update.path, settled) else None
-        out.sidecars.append((sidecar_path, store.updated_sidecar(sidecar, spec, update.derived.to_dict(), variables,
-                                                                 stamp, unsaved_since=mark)))
+        renewed = store.updated_sidecar(sidecar, spec, update.derived.to_dict(), variables, stamp, unsaved_since=mark)
+        if band_done and band.add:                  # W9c: the relief is the app's, after the user's features (C2)
+            renewed.record.features = list(renewed.record.features) + [
+                f for f in band.features if f not in renewed.record.features]
+        out.sidecars.append((sidecar_path, renewed))
         written.append(update.path)
 
     box = rec.gearbox
@@ -1667,6 +2082,8 @@ def finish_update(plan: UpdatePlan, result: GearboxUpdate, record: LinkRecord, *
             for carrier in box.carriers:
                 if carrier.component == before and layout.carrier_id(carrier.shaft) == gear:
                     carrier.component = found_name
+        if plan.in_place:                           # W9c (§7): before the frames, so an added gear's are written
+            _follow_in_place(rec, box, plan, result, read_sidecar, stamp, out, written_by)
         wanted = {p.gear: p for p in plan.placements}
         turning = plan.motion is not None
         held = set(plan.motion.fixed) if turning else set()
@@ -1737,6 +2154,93 @@ def finish_update(plan: UpdatePlan, result: GearboxUpdate, record: LinkRecord, *
     if not (result.failures or result.skipped):
         rec.digest = digest
     return out
+
+
+def entry_spec_of(rec: LinkRecord, path: str) -> Optional[Dict[str, Any]]:
+    entry = next((p for p in rec.parts if store.same_path(p.path, path)), None)
+    return dict(entry.spec) if entry is not None and entry.spec else None
+
+
+def _follow_in_place(rec: LinkRecord, box: GearboxRecord, plan: UpdatePlan, result: GearboxUpdate,
+                     read_sidecar: Callable[[str], Optional[Sidecar]], stamp: str, out: Finished,
+                     written_by: str) -> None:
+    """W9c (W9C-INTERFACES §7): the record follows what the worker reports done in place, and only that."""
+    extra = plan.in_place_record or InPlaceRecord()
+    # Gears taken out: their components and every mate touching them; their part's entry when no gear uses it (C6).
+    for gear, _name in getattr(result, "deleted", []) or []:
+        box.components = [c for c in box.components if c.gear != gear]
+        box.mates = [m for m in box.mates if gear not in m.gears]
+        box.fixed = [g for g in box.fixed if g != gear]
+        box.unmated = [pair for pair in box.unmated if gear not in pair]
+        box.meshes = [pair for pair in box.meshes if gear not in pair]
+        for entry in rec.current_parts():
+            if gear in entry.gears:
+                entry.gears = [g for g in entry.gears if g != gear]
+        rec.parts = [p for p in rec.parts if p.gears or p.revision != box.revision]
+    gone = set(getattr(result, "mates_deleted", []) or [])
+    box.mates = [m for m in box.mates if m.name not in gone]
+    # Modes taken out and added: the record's order, the added after it.
+    removed = list(getattr(result, "modes_removed", []) or [])
+    if removed:
+        box.modes = [c for c in box.modes if c not in removed]
+        for m in box.mates:
+            m.values = {k: v for k, v in m.values.items() if k not in removed}
+            m.modes = [c for c in m.modes if c not in removed]
+            if m.kind == motion.SLIDE and box.modes and box.modes[0] in m.values:
+                m.z_front = float(m.values[box.modes[0]])
+        for c in box.components:
+            c.frames = {k: f for k, f in c.frames.items() if k not in removed}
+    box.modes = list(box.modes) + [c for c in getattr(result, "modes_added", []) or [] if c not in box.modes]
+    # Gears inserted: each by the Name2 SolidWorks kept, its frame from the plan (the trains' rule writes it after).
+    placed = {p.gear: p for p in plan.placements}
+    jobs = dict(extra.jobs)
+    built = {store.sidecar_path(b.saved).lower(): b for b in getattr(result, "built", []) or [] if b.ok and b.saved}
+    for gear, name in getattr(result, "inserted", []) or []:
+        p = placed.get(gear)
+        job = jobs.get(gear)
+        part = job.path if job is not None else (p.part if p is not None else "")
+        box.components.append(store.ComponentEntry(gear=gear, part=part, name=name,
+                                                   rotation=list(p.rotation) if p is not None else [],
+                                                   at=list(p.at) if p is not None else []))
+        if gear in extra.fixed and gear not in box.fixed:
+            box.fixed.append(gear)
+        entry = next((e for e in rec.current_parts() if store.same_path(e.path, part)), None)
+        if entry is not None:
+            entry.gears = list(entry.gears) + ([gear] if gear not in entry.gears else [])
+            continue
+        if job is None:
+            continue
+        b = built.get(store.sidecar_path(job.path).lower())
+        if b is None:
+            continue
+        kind = kind_for(job.spec)
+        variables = [[v.name, v.expression_for(b.trig)] for v in kind.variables(job.spec, job.derived)]
+        rec.parts.append(PartEntry(path=job.path, gears=[gear], revision=box.revision, kind=job.spec.kind,
+                                   spec=job.spec.to_dict(), variables=variables, trig=b.trig))
+        out.sidecars.append((store.sidecar_path(job.path), store.built_sidecar(
+            job.path, os.path.basename(job.path), kind=job.spec.kind, recipe=job.plan.recipe,
+            spec=job.spec.to_dict(), derived=job.derived.to_dict(), variables=variables, features=list(b.features),
+            dimensions=sorted(b.dimensions.values()), manual_steps=list(b.manual),
+            template=gearbox._template_of(job.plan), trig=b.trig, written_by=written_by,
+            previous=read_sidecar(store.sidecar_path(job.path)), stamp=stamp, workbook=rec.workbook,
+            workbook_gears=[gear])))
+    # Mates made: as the plan has them, on in the configurations each reads on in.
+    made = {name: tuple(on) for name, on in getattr(result, "mates_made", []) or []}
+    plans = {m.name: m for m in extra.mates}
+    for name, on in made.items():
+        m = plans.get(name)
+        if m is None or any(e.name == name for e in box.mates):
+            continue
+        entry = motion.mate_entry(m)
+        if m.modes:
+            entry.modes = [c for c in box.modes if c in on or on_in(tuple(m.modes), c)]
+        if entry.values:
+            entry.values = {(_conf(box.modes, k) or k): v for k, v in entry.values.items()}
+        box.mates.append(entry)
+    if getattr(result, "inserted", None) or getattr(result, "deleted", None):
+        box.meshes = [list(pair) for pair in extra.meshes]
+        names = {c.gear for c in box.components}
+        box.unmated = [list(pair) for pair in extra.unmated if set(pair) <= names]
 
 
 def _earlier_update(record: LinkRecord, plan: UpdatePlan, result: GearboxUpdate,
@@ -2154,6 +2658,26 @@ def user_work_ahead(plan: Optional[UpdatePlan], record: Optional[LinkRecord],
                          carried=tuple((g, tuple(held)) for g, held in judgement.carried.items()),
                          problems=tuple(judgement.problems), unread_ties=tuple(judgement.unread_ties),
                          followed=followed)
+
+
+def in_place_ahead(plan: Optional[UpdatePlan], record: Optional[LinkRecord]) -> Tuple[swbuild.UserProblem, ...]:
+    """W9c (K4; W9C-INTERFACES §5, §8): what would stop a press of ``plan``'s in-place change, foreseen as the worker
+    judges it (``swbuild.judge_in_place``), from the record: each step whose finding is not settled for the
+    SolidWorks the record's inventory was read on (unknown with none: every gated step then reads unsettled), the
+    user's mates on a gear to be taken out, and a removal while any component of the user's is there and the
+    external-references read is unmeasured (C4). ``()`` when the plan changes nothing in place, is refused or needs a
+    new revision. The mode showing (C12) and an added mode's name taken are read live, at the press, never here."""
+    if plan is None or plan.refusal or plan.needs_new_revision:
+        return ()
+    modes = tuple(plan.motion.configurations) if plan.motion is not None else ()
+    if not plan.in_place and not (modes and plan.ratios):        # a gear mate made again with modes is gated too
+        return ()
+    entry = _on_record(record)
+    work = recorded_user_work(entry) if entry is not None else None
+    return tuple(swbuild.judge_in_place(
+        work, plan.in_place, file=os.path.basename(plan.assembly.replace("\\", "/")) or "the assembly",
+        revision=tuple(entry.revision) if entry is not None else (), modes=modes,
+        remakes=bool(modes) and bool(plan.ratios)))
 
 
 def _same_value(live: str, wanted: str) -> bool:

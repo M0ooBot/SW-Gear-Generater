@@ -642,20 +642,16 @@ def test_a_record_spelt_in_another_case_than_the_workbook_updates_and_reads_back
     assert all(set(m.modes) <= set(box.modes) for m in box.mates)
 
 
+# W9c (K6): a Modes row added, and a coupling newly needed between gears on record (ModeSlv over LoDog in 2H), are
+# carried in place now (``test_workbook_in_place``); a row removed is in place unless it leaves a coupling on in no mode
+# (ruling 9.1), as removing 4L does here.
 @pytest.mark.parametrize("change, said", [
-    (lambda s: replace(s, modes=s.modes + (Mode("4X", (("RangeSlv", "L"), ("ModeSlv", "2WD")), row=6),)),
-     "The Modes sheet has a new mode, 4X, and each mode's configuration is made when the assembly is built, so it "
-     "needs a new revision."),
     (lambda s: replace(s, modes=s.modes[:3]),
-     "The mode 4L is no longer on the Modes sheet, and a configuration is not taken out of the assembly that was "
-     "built, so it needs a new revision."),
+     "The mode 4L is no longer on the Modes sheet, and the mate RangeSlv engages LoDog is on there alone: a mate made "
+     "to be on in some modes is never left on in none, so it needs a new revision."),
     (lambda s: with_mode(s, 3, positions=(("RangeSlv", "N"), ("ModeSlv", "4WD"))),
      "No mode engages LoDog with RangeSlv now, and the mate RangeSlv engages LoDog, made to be on in some modes, is "
      "never left on in none, so it needs a new revision."),
-    (lambda s: with_mode(with_gear(s, "ModeSlv", slides="2WD=0, 4WD=+10, X=-30"), 0,
-                         positions=(("RangeSlv", "N"), ("ModeSlv", "X"))),
-     "In 2H ModeSlv would now cover LoDog, which no mode engaged when the assembly was built, so it needs a new "
-     "revision."),
     (lambda s: with_gear(with_gear(with_gear(s, "InPin", at="-20"), "LayGear", at="-20"), "RangeSlv",
                          slides="H=-56, N=0, L=+10"),
      "RangeSlv at its position H (-56 mm) in 2H would stand with its front face onto the Front plane (z 46 → 0), "
