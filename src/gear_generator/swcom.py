@@ -715,6 +715,21 @@ def _null_dispatch() -> Any:
     return VARIANT(pythoncom.VT_DISPATCH, None)
 
 
+def _out_unwritten() -> Any:
+    """A by-reference integer for a status out parameter, -1 before the call: no swPersistReferencedObjectStates_e
+    value is -1, so a code SolidWorks does not write reads as not Ok (the re-check's item 8)."""
+    return VARIANT(pythoncom.VT_BYREF | pythoncom.VT_I4, -1)
+
+
+def _by_ref_status(value: Any) -> int:
+    """A status out parameter as written, -1 when nothing (or nothing readable) was written."""
+    value = getattr(value, "value", value)
+    try:
+        return -1 if value is None else int(value)
+    except (TypeError, ValueError):
+        return -1
+
+
 def _out_long() -> Any:
     """A by-reference integer for an out parameter SolidWorks insists on."""
     return VARIANT(pythoncom.VT_BYREF | pythoncom.VT_I4, 0)
@@ -925,7 +940,10 @@ OBJECT_SAME = 1                 # swObjectEquality.swObjectSame, as the W9d prob
 PERSIST_ROUTE_R3 = ("each face (or edge) of the component's part carried into the assembly by IComponent2."
                     "GetCorresponding, the one ISldWorks.IsSame as the mate's entity (exactly one), then the part's "
                     "GetPersistReference3, resolved by its GetObjectByPersistReference3")
-_WALK_RELATIVE = 1e-9
+# The prefilter's match, relative. 1e-9 held for pairs both read in the assembly; a part face has never been compared
+# with its assembly face, and IsSame decides anyway (a candidate the filter loses is only a mate named, never a wrong
+# one), so it is loosened to 1e-6 until the demonstration logs part against assembly (the re-check's item 6).
+_WALK_RELATIVE = 1e-6
 
 
 def _walk_key(entity: Any, kind: str) -> Tuple[str, Optional[float]]:
@@ -3900,6 +3918,8 @@ class Session:
         Each kind's finding must be :data:`PERSIST_ROUTE_R3` exactly; else nothing is read. UNMEASURED as written
         here: the probe's route, grouped, filtered and capped as the contract rules it."""
         out: List[Tuple[str, str, Optional[bool], Optional[float], str, str]] = []
+        stats: List[Tuple[str, int, int, Any, int]] = []     # per item: kind, listed, after the prefilter, key, matches
+        self.last_walk = {"component": self._component_name(component_handle), "items": stats}
         component = self._component(component_handle)
         part = call(component, "GetModelDoc2")
         coaxial_read = self._w9d_finding("COAXIAL_FACE_READ") is True
@@ -3923,6 +3943,7 @@ class Session:
                                    for x in list(call(body, member) or ())]
                 key = _walk_key(entity, kind)
                 filtered = [i for i, x in enumerate(lists[kind]) if _walk_matches(x, kind, key)]
+                stats.append((kind, len(lists[kind]), len(filtered), key, 0))
                 fresh = [i for i in filtered if (kind, i) not in carried]
                 if len(carried) + len(fresh) > candidates:
                     capped = "candidates"
@@ -3944,6 +3965,7 @@ class Session:
                 if capped:
                     out.append((kind, "", None, None, capped, ""))
                     continue
+                stats[-1] = stats[-1][:4] + (len(matches),)
                 if len(matches) != 1:
                     out.append((kind, "", None, None, "", f"SolidWorks did not say which one {kind} of "
                                 f"{self._component_name(component_handle)} it is on ({len(matches)} matched)"))
@@ -3951,9 +3973,9 @@ class Session:
                 part_entity = matches[0]
                 ext = call(part, "Extension")
                 raw = bytes(bytearray(int(b) & 0xFF for b in call(ext, "GetPersistReference3", part_entity)))
-                code = _out_long()
+                code = _out_unwritten()
                 got = call(ext, "GetObjectByPersistReference3", raw, code)
-                status = _by_ref(got[1]) if isinstance(got, tuple) and len(got) > 1 else _by_ref(code)
+                status = _by_ref_status(got[1]) if isinstance(got, tuple) and len(got) > 1 else _by_ref_status(code)
                 got = got[0] if isinstance(got, tuple) else got
                 if got is None or status != PERSIST_REFERENCED_OK:
                     out.append((kind, "", None, None, "", f"its reference resolved {status}, not Ok"))
@@ -3966,6 +3988,7 @@ class Session:
                 out.append((kind, raw.hex(), coaxial, radius, "", ""))
             except Exception as exc:  # noqa: BLE001 - said, never guessed
                 out.append((kind, "", None, None, "", f"its reference could not be read ({exc})"))
+        self.last_walk.update(carried=len(carried), seconds=round(time.monotonic() - started, 3), capped=capped)
         return out
 
     def component_configurations(self, handle: str) -> Tuple[str, str, Tuple[str, ...]]:
@@ -4148,10 +4171,10 @@ class Session:
             raise SolidWorksError(f"There is no reference to find again in {self._component_name(handle)}.")
         component = self._component(handle)
         part = call(component, "GetModelDoc2")
-        code = _out_long()
+        code = _out_unwritten()
         found = call(call(part, "Extension"), "GetObjectByPersistReference3", bytes.fromhex(hexed), code)
         entity = found[0] if isinstance(found, tuple) else found
-        status = _by_ref(found[1]) if isinstance(found, tuple) and len(found) > 1 else _by_ref(code)
+        status = _by_ref_status(found[1]) if isinstance(found, tuple) and len(found) > 1 else _by_ref_status(code)
         if entity is None or status != PERSIST_REFERENCED_OK:
             raise SolidWorksError(f"The {kind} could not be found again in {self._component_name(handle)} "
                                   f"(its reference resolved {status}).")

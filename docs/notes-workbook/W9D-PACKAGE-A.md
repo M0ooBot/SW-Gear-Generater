@@ -237,3 +237,48 @@ document marked by its own open, and the build bracket dropping the build docume
 `ISldWorks.GetConfigurationNames(path)`; `find_component` with `suppressed_ok` and `component_frame` of a suppressed
 component; `remake_mate` with a Flip given; `set_component_suppressed`'s rebuild; whether selecting a suppressed
 component's entity fails (inferred).
+
+## After the re-check of the fix round (W9D-REVIEW-A.md, fd599f8)
+
+- **N1**: the post-check judges a cluster's tie again only in a mode where its flags differ from the mode it was made
+  in (K2's rule); one cluster's fallback never stops the carry (ruled): what still reads unable to turn after it is a
+  fact, and the post-check's check of the app's gears in every mode stops the carry when nothing of the user's
+  explains it. The fallback no longer raises.
+- **N2**: in a mode where one of a cluster's components is suppressed, its mates' codes and its tie are not judged;
+  what was read there goes into `CarryResult.facts` ("Lock1 in N, where Sprocket-1 is suppressed: on, code 46; not
+  judged") and the log as `fact    …`.
+- **N3, ruled**: while `CARRY_INSERTS_ON_<year>` is None, R makes no r3 walk and never opens a closed old assembly
+  (`OLD_UNREAD`, its clause naming that finding; `carry_gates` gives `CARRY_INSERTS` for it). The open path reads as
+  before.
+- **M3's rest**: each app mate's code is read in every mode in C.5 (before any user mate is made) and again in the
+  post-check; a new one falls back, by `FELL_NEW_ERROR` with subjects `(app mate, code, code before, mode)`, the first
+  cluster on in that mode with a mate on the app's bodies and its components resolved, until it clears; none left, a
+  stop.
+- **Item 5**: the 2026 pin test compares every boolean with its log line (a flipped `COAXIAL_FACE_READ_ON_2026` or a
+  None `OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN_ON_2026` now fails it: checked by hand). The comment on a reference resolving
+  to another kind says it stops the carry.
+- **Item 6**: the prefilter's relative match is 1e-6 (comment in `swcom`); each walk is a line in `OldWork.walks`
+  (logged `fact    walk Sprocket-1: face of 163: 2 after the prefilter (key ('area', …)), 1 matched; 2 carried,
+  0.41 s, cap not reached`), from `Session.last_walk`.
+- **Item 7**: `CarryResult.changed_files` (base names), the sentence in `stopped` unchanged.
+- **Item 8**: a stop part way shows the first mode again (`finally`); a retry whose read-back or delete raises names
+  the mate `WHY_DIFFERS` with subjects `("left", name in the new assembly)` and a fact; a `ComError` (a lost session
+  above all) in a remake stops the carry, never "refused". The resolve's out code starts at -1
+  (`swcom._out_unwritten`, `_by_ref_status`): a code SolidWorks does not write reads as not Ok. Whether pywin32 hands
+  the written code back in the return tuple or the VARIANT is still for the demonstration to log.
+
+**New fields, all at the end:** `CarryResult.facts`, `CarryResult.changed_files`, `OldWork.walks`. Nothing renamed.
+**Changed for readers:** `WHY_DIFFERS` gains a 2nd slot only in the "left" case (`("left", name)`); a fallback no
+longer stops the carry (its fact says what still reads wrong); `FELL_NEW_ERROR`'s first slot may now be an app mate's
+name.
+
+**For the demonstration's author to log, since none of it is measured as written** (the re-check, verbatim):
+- the walk grouped per component (shared candidates carried once);
+- the area and radius prefilter, part against assembly;
+- seconds per candidate under the app, with the growth;
+- `IEntity.GetType` on a resolved face or edge;
+- whether the out code of `GetObjectByPersistReference3` is written. `_by_ref` reads an unwritten code as 0, which
+  is Ok (`swcom.py:764`); the probe had the same blind spot;
+- the cap's two numbers.
+
+(On the fifth point: the app now reads an unwritten code as -1, not Ok; the probe's own blind spot stands.)

@@ -2023,6 +2023,8 @@ class FakeSolidWorks:
         self.walks.append((component, tuple(items)))
         out, carried, clock, capped = [], set(), 0.0, ""
         name = self._name2(component)
+        stats = []
+        self.last_walk = {"component": name, "items": stats}
         part = _key(self.component_paths.get(name, ""))
         for mate_handle, index, kind in items:
             finding = "PERSIST_REFERENCE_ROUTE_FOR_FACES" if kind == "face" else "PERSIST_REFERENCE_ROUTE_FOR_EDGES"
@@ -2033,6 +2035,7 @@ class FakeSolidWorks:
             end = (mate.a, mate.b)[index]
             key = (part, end[1])
             filtered = [(key, i) for i in range(self.r3_filtered.get(key, 2))]
+            stats.append((kind, len(filtered), len(filtered), ("area", None), self.r3_matches.get(key, 1)))
             fresh = [f for f in filtered if f not in carried]
             if not capped and len(carried) + len(fresh) > candidates:
                 capped = "candidates"
@@ -2060,6 +2063,7 @@ class FakeSolidWorks:
             out.append((kind, f"{part}|{end[1]}".encode().hex(), coaxial, radius, "", ""))
             if self.current and _key(self.current) in self.read_only_opened:
                 self.refs_read_only.add(out[-1][1])
+        self.last_walk.update(carried=len(carried), seconds=clock, capped=capped)
         return out
 
     def _resolve(self, target):

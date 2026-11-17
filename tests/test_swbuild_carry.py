@@ -298,7 +298,7 @@ def test_an_old_assembly_not_read_names_everything_with_the_reason(every_gate, n
     assert _named(plan) == {"Sprocket-1": ("old unread", ("RangeBox.SLDASM is not open in SolidWorks",)),
                             "Lock1": ("old unread", ("RangeBox.SLDASM is not open in SolidWorks",))}
     assert [f for _, f in plan.gates] == ["FILE_VERSION_READ_ON_2026", "DEPENDENCIES_READ_ON_2026",
-                                          "OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN_ON_2026"]
+                                          "OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN_ON_2026", "CARRY_INSERTS_ON_2026"]
     every_gate()
     assert swbuild.carry_gates(w, _carry(), REVISION) == []
 
@@ -1120,3 +1120,119 @@ def test_a_carried_component_off_its_pose_in_a_mode_is_said_moved_in_its_anchors
         fake.drift_in = {"N": {"carried1-1": (0.0, 0.0, 2.0)}}
     cr, fake = _tc_again(monkeypatch, ALL_ON, tweak)
     assert cr.moved == [("carried1-1", "N", pytest.approx(2.0))]
+
+
+# -- the re-check of the fix round (W9D-REVIEW-A.md, fd599f8), each a test that failed before ------------------------
+
+
+def test_while_nothing_can_be_carried_there_is_no_walk_and_no_not_open_read(monkeypatch, every_gate):
+    """N3, ruled: with CARRY_INSERTS None, no r3 walk and a closed old assembly never opened; named by that finding."""
+    every_gate(CARRY_INSERTS=None)
+    fake = _old_train()
+    fake.user_mate(T_ASM, "Coincident2", kind="coincident", a=("Sprocket-1", "face:3"), b=("gear1-1", "plane1"))
+    _isfile(monkeypatch, fake)
+    cr = _build_again(fake).carry
+    assert "entity_references" not in [n for n, *_ in fake.calls] and cr.work.how == swbuild.OLD_OPEN
+    assert {n.item: n.subjects for n in cr.named}["Sprocket-1"] == ("insert", "CARRY_INSERTS_ON_2026", Y)
+    fake = _closed(_old_train())
+    _isfile(monkeypatch, fake)
+    cr = _build_again(fake).carry
+    assert "open_read_only" not in [n for n, *_ in fake.calls] and cr.work.how == swbuild.OLD_UNREAD
+    assert "findings.CARRY_INSERTS_ON_2026" in cr.work.unread[0]
+
+
+def test_a_cluster_on_in_every_mode_is_not_blamed_for_another_clusters_tie(monkeypatch, every_gate, mode_findings):
+    """N1 (the re-check's reproduction): cluster A (Sprocket-2 locked to InDog, on everywhere) is judged clean; cluster
+    B (Lock1, on in N and 4L only) ties InDog there. B falls back in N, A is never fallen back, the carry goes on."""
+    every_gate()
+
+    def tweak(fake):
+        fake.user_component(TC_ASM, "Sprocket-2", SPROCKET, (I9, (0.0, 0.0, 210.0)))
+        fake.user_lock(TC_ASM, "Lock0", "gear2-1", "Sprocket-2", flags=ALL_ON)
+        fake.locks["Lock1"] = ("gear2", "gear2-1")
+    cr, fake = _tc_again(monkeypatch, {"2H": True, "4H": True, "N": False, "4L": False}, tweak)
+    assert [(f.deleted, f.why, f.subjects) for f in cr.fixed] == [(("Lock1",), swbuild.FELL_TIE, ("InDog", "N"))]
+    assert cr.stopped == "" and "Lock0" in {r[0] for r in cr.remade}
+
+
+def test_a_mode_where_a_clusters_component_is_suppressed_is_not_judged_and_is_said_as_a_fact(
+        monkeypatch, every_gate, mode_findings):
+    """N2: Sprocket-1 suppressed in N; Lock1 reads error 46 there (made up): not judged, logged."""
+    every_gate()
+
+    def tweak(fake):
+        fake.states_by.setdefault("N", {})["Sprocket-1"] = 0
+        fake.remake_codes_in = {"Lock1": {"N": (46, True)}}
+    cr, fake = _tc_again(monkeypatch, ALL_ON, tweak)
+    assert cr.fixed == [] and cr.stopped == "" and [r[0] for r in cr.remade] == ["Lock1"]
+    assert any(f.startswith("Lock1 in N, where Sprocket-1 is suppressed: on, code 46; not judged") for f in cr.facts)
+    assert any(line.startswith("fact    Lock1 in N, where") for line in cr.log_lines())
+
+
+def test_an_app_mate_put_in_error_in_one_mode_falls_the_cluster_back_there(monkeypatch, every_gate, mode_findings):
+    """M3's remaining part: the app's own mates' codes are read in every mode after the carry."""
+    every_gate()
+
+    def tweak(fake):
+        fake.remake_codes_in = {"Lock1": {}}
+        original = fake.mate_states
+
+        def states(*, others=None):
+            out = original(others=others)
+            broken = fake.config == "4L" and any(m.name == "Lock1" and not m.user and not m.suppressed
+                                                for m in fake.mates)
+            return [swcom.MateState(x.name, 46, True, x.suppressed) if broken and x.name == "InDog on Rear Axis"
+                    else x for x in out]
+        monkeypatch.setattr(fake, "mate_states", states)
+    cr, fake = _tc_again(monkeypatch, ALL_ON, tweak)
+    assert [(f.why, f.subjects) for f in cr.fixed] == [(swbuild.FELL_NEW_ERROR, ("InDog on Rear Axis", "46", "0",
+                                                                                   "4L"))]
+    assert cr.stopped == ""
+
+
+def test_the_files_changed_after_the_carry_have_a_field_and_the_sentence_stays(monkeypatch, every_gate):
+    """Item 7."""
+    every_gate()
+    fake = _old_train()
+    _isfile(monkeypatch, fake)
+    times = iter([1.0, 1.0] + [2.0] * 10)
+    cr = _build_again(fake, mtime=lambda p: next(times)).carry
+    assert cr.changed_files == ["T.SLDASM", "Sprocket.SLDPRT"]
+    assert "changed on disk while Build again" in cr.stopped
+
+
+def test_a_stop_in_another_mode_shows_the_first_again_and_a_com_failure_stops(monkeypatch, every_gate, mode_findings):
+    """Item 8: a lost connection in a remake is a stop, not a refusal; the first mode is shown again."""
+    every_gate()
+
+    def tweak(fake):
+        fake.states_by.setdefault("2H", {})["Sprocket-1"] = 0                 # made in 4H, not the first mode
+        error = swcom.ComError("AddMate5", Exception(-2147023174, "The RPC server is unavailable.", None, None))
+        fake.raises["remake_mate"] = (1, error)
+    cr, fake = _tc_again(monkeypatch, ALL_ON, tweak)
+    assert cr.stopped.startswith("SolidWorks stopped the carry while making the mates of Sprocket-1 again")
+    assert fake.config == "2H" and cr.named == []
+
+
+def test_a_retry_whose_delete_raises_says_the_mate_was_left_in_place(monkeypatch, every_gate):
+    """Item 8: never silent."""
+    every_gate()
+    fake = _old_train()
+    _isfile(monkeypatch, fake)
+    fake.readback_alignment = {"Lock1": 1}
+    fake.fail_on = {"delete_mate": "SolidWorks would not delete the mate Lock1."}
+    cr = _build_again(fake).carry
+    assert {n.item: n.subjects for n in cr.named} == {"Lock1": ("left", "Lock1")}
+    assert cr.facts == ["Lock1 is left in the new assembly as Lock1: SolidWorks would not delete the mate Lock1."]
+
+
+def test_each_walk_is_logged_with_its_counts_seconds_and_cap(monkeypatch, every_gate):
+    """Item 6: the first measurement of the route as written comes from these lines."""
+    every_gate()
+    fake = _old_train()
+    fake.user_mate(T_ASM, "Coincident2", kind="coincident", a=("Sprocket-1", "face:3"), b=("gear1-1", "plane1"))
+    _isfile(monkeypatch, fake)
+    cr = _build_again(fake).carry
+    (walk,) = cr.work.walks
+    assert walk.startswith("walk Sprocket-1: face of 2: 2 after the prefilter") and "cap not reached" in walk
+    assert f"fact    {walk}" in cr.log_lines()

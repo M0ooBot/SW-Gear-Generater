@@ -3310,3 +3310,13 @@ def test_suppress_feature_sets_the_parts_feature_this_configuration_and_reads_it
     doc.suppression_takes = False
     with pytest.raises(swcom.SolidWorksError, match="would not turn back on Relief"):
         session.suppress_feature("Relief", False)
+
+
+def test_a_status_out_parameter_not_written_reads_as_no_status():
+    """W9d (the re-check, item 8): the resolve's code starts at -1, no swPersistReferencedObjectStates_e value, so a code
+    SolidWorks does not write is never read as Ok (0)."""
+    class Holder:
+        def __init__(self, value):
+            self.value = value
+    assert swcom._by_ref_status(Holder(-1)) == -1 and swcom._by_ref_status(Holder(0)) == 0
+    assert swcom._by_ref_status(None) == -1 and swcom._by_ref_status(Holder("x")) == -1 and swcom._by_ref_status(2) == 2
