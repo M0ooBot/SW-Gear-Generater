@@ -6,7 +6,7 @@ packages would make, and propose findings in the log without setting any. The no
 
 python.exe probe/w9d_probes.py <repo src> <output folder under C:\> --pid PID [--log FILE]
                                [--sections faces,state,sub|all] [--user-master DIR] [--master DIR] [--redo]
-                               [--other-version-file FILE]
+                               [--other-version-file FILE] [--faces-parts made,read,growth,remade,reload]
 python probe/w9d_probes.py --self-check      (no SolidWorks: the pure judgements, on made-up readings)
 python probe/w9d_probes.py --help
 
@@ -14,6 +14,8 @@ python probe/w9d_probes.py --help
 S0's ``rangebox.master`` (needed only when setup.master must be built here first, by W9a's own builders).
 ``--other-version-file``: a SolidWorks file the OTHER version last saved (on 2026, a 2024-built assembly; on 2024, a
 2026-built one), read closed by ``VersionHistory`` only, never opened: ``FILE_VERSION_READ``'s negative control (S-b).
+``--faces-parts``: which of ``faces``' parts run (all when not given); ``made,read,growth`` is the short rerun of (b)
+with the growth measurement alone.
 
 Sections, in this order (each runs alone; ``sub``, whose insert of a read-only document is the likeliest to raise a
 dialog, goes last):
@@ -27,7 +29,9 @@ dialog, goes last):
              back and compared, with each user component's
              referenced configuration, IsVirtual and IsPatternInstance; (c) the four made again in a second assembly,
              the route per entity kind (P10), the copy's documents' flags read around the inserts; (d) the copy
-             closed, the parts opened alone and every reference resolved again (the reload, P12).
+             closed, the parts opened alone and every reference resolved again (the reload, P12). (b) growth, after
+             (b): r3's walk on one face repeated five times, the area-prefiltered walk beside a full one (a circle's
+             radius for the edge), a cheap call timed before and after, SolidWorks' memory (W9D-PROBES-REVIEW 3 (b)).
 - ``state``  a component's state per configuration without marking the assembly (§11.1), the file's last saved
              version read closed, and the read-only open of an assembly whose documents are open (§11.2): on a copy of
              setup.master, Housing-1 suppressed in H and Sprocket-4 in L, saved (the probe's own copy); three candidate
@@ -35,10 +39,11 @@ dialog, goes last):
              truth by showing; an unsaved change read (P6); the root read with a lightweight component, as facts (P7);
              then the copy closed, VersionHistory read, a sprocket part opened and changed and the housing part opened
              unchanged (P2), the assembly opened read-only beside them, read, its modes shown, and closed unsaved under
-             the watch, what it loaded checked gone (P3).
+             the watch, what it loaded checked gone (P3). (v) logs each dependency by its place relative to the run
+             folder and under the copy or not, and reads Traverse True beside Traverse False.
 - ``sub``    whether opening a healthy user sub-assembly marks it (§11.3): not loaded, opened read-only then inserted,
              and loaded as a component of an open assembly; each step's dialog caught and said (P9); the host made by
-             the app's own save route only (P8).
+             the app's own save route only (P8); (t) the closed host's dependencies, Traverse False and True.
 
 **A dialog is a finding, not a failure.** Every call that may raise one runs under W9c's watch (W9c probes'
 ``watched``: logs class, caption, buttons and texts, never SolidWorks' frame title, never answers). A job that does
@@ -242,6 +247,61 @@ def dependency_paths(flat):
     return [str(items[i + 1]) for i in range(0, len(items) - 1, 2)]
 
 
+def dependency_place(path, run_folder, copy_folder, master=""):
+    """The 2024 run's ask (W9D-PROBES-REVIEW, point 5): where a stored dependency path lies, without logging the
+    account's folders. Its path relative to the run folder (or to ``--user-master``, or only its file name when it is
+    outside both), and whether it lies under the copy. Windows paths, read by ``ntpath`` so the self-check runs
+    anywhere."""
+    import ntpath
+
+    def inside(p, folder):
+        if not p or not folder:
+            return False
+        root = ntpath.normcase(ntpath.normpath(folder)).rstrip("\\/")
+        return ntpath.normcase(ntpath.normpath(p)).startswith(root + "\\")
+    if inside(path, run_folder):
+        where = ntpath.relpath(path, run_folder)
+    elif inside(path, master):
+        where = "in --user-master: " + ntpath.relpath(path, master)
+    else:
+        where = "outside the run folder: " + ntpath.basename(str(path))
+    return where, inside(path, copy_folder)
+
+
+def prefilter(target, candidates, rel=1e-9):
+    """Must-fix 1's prefilter, before any ``GetCorresponding``: the indices of ``candidates`` that may be ``target``.
+    Each is ``(key, value)`` read in the part: ``("area", m²)`` for a face, ``("circle", radius)`` or ``("line", None)``
+    for an edge. A face keeps an equal area (relative ``rel``), a circle an equal radius, a line every line. A
+    candidate or a target whose key was not read is kept: the filter may cost time, never a true match."""
+    key, value = target if target else (None, None)
+    kept = []
+    for i, cand in enumerate(candidates):
+        ck, cv = cand if cand else (None, None)
+        if key is None or ck is None:
+            kept.append(i)
+        elif ck != key:
+            continue
+        elif value is None or cv is None:
+            kept.append(i)
+        elif abs(cv - value) <= rel * max(abs(value), abs(cv)):
+            kept.append(i)
+    return kept
+
+
+def growth_reading(walks, cheap_before, cheap_after):
+    """The growth measurement's reading (facts, nothing proposed): the same walk timed ``walks`` (seconds, in order) and
+    a fixed cheap call timed before and after them. ``("flat", …)`` when the last walk is under 1.5× the first;
+    ``("per call", …)`` when the walks grew but the cheap call did not (under 1.5×); ``("session", …)`` when both grew;
+    ``("unread", …)`` with too little to say."""
+    if len(walks) < 2 or not walks[0] or not cheap_before or cheap_after is None:
+        return "unread", {}
+    w, c = walks[-1] / walks[0], cheap_after / cheap_before
+    ratios = {"walks": round(w, 2), "cheap": round(c, 2)}
+    if w < 1.5:
+        return "flat", ratios
+    return ("per call" if c < 1.5 else "session"), ratios
+
+
 def coaxial_reads(faces, bore_mate="UserFaceConc"):
     """The coaxial reads ``coaxial_verdict`` judges, from each face entity: the read on r1's part-level entity
     (``coaxial``) and on r2's and r3's (each route's own ``coaxial``), booleans only (an error string or None is no
@@ -436,6 +496,25 @@ def self_check():
     ok(dependency_paths(["Sprocket", "C:\\x\\Sprocket.SLDPRT", "Housing", "C:\\x\\Housing.SLDPRT"]) ==
        ["C:\\x\\Sprocket.SLDPRT", "C:\\x\\Housing.SLDPRT"] and dependency_paths(None) == [],
        "S-f: GetDocumentDependencies2's flat name, path array")
+    run_f, copy_f, master_f = "C:\\P\\run\\out", "C:\\P\\run\\out\\d-state", "C:\\P\\w9c\\out\\setup.master"
+    ok(dependency_place("C:\\P\\run\\out\\d-state\\Sprocket.SLDPRT", run_f, copy_f, master_f)
+       == ("d-state\\Sprocket.SLDPRT", True), "a dependency under the copy: relative to the run folder, under it")
+    ok(dependency_place("c:\\p\\RUN\\out\\d-state2\\X.SLDPRT", run_f, copy_f, master_f)
+       == ("d-state2\\X.SLDPRT", False), "a sibling folder whose name starts alike is not under the copy")
+    ok(dependency_place("C:\\P\\w9c\\out\\setup.master\\Housing.SLDPRT", run_f, copy_f, master_f)
+       == ("in --user-master: Housing.SLDPRT", False), "a dependency still in the master is said so")
+    ok(dependency_place("D:\\Users\\Someone\\Parts\\Bolt.SLDPRT", run_f, copy_f, master_f)
+       == ("outside the run folder: Bolt.SLDPRT", False), "outside both: the file name only, no account folders")
+    ok(prefilter(("area", 2.0e-4), [("area", 2.0e-4), ("area", 2.1e-4), ("area", 2.0e-4 * (1 + 1e-12)), None])
+       == [0, 2, 3], "a face: equal areas kept, another dropped, an unread candidate kept")
+    ok(prefilter(("circle", 0.005), [("circle", 0.005), ("circle", 0.006), ("line", None)]) == [0],
+       "an edge: a circle of the same radius only")
+    ok(prefilter(("line", None), [("line", None), ("circle", 0.005)]) == [0] and prefilter(None, [("area", 1.0)]) == [0],
+       "a line keeps lines; a target not read keeps everything")
+    ok(growth_reading([0.26, 2.1, 3.7, 8.2, 8.1], 0.5, 0.55)[0] == "per call"
+       and growth_reading([0.26, 2.1, 3.7, 8.2, 8.1], 0.5, 4.0)[0] == "session"
+       and growth_reading([1.0, 1.1, 1.2], 0.5, 0.5)[0] == "flat" and growth_reading([1.0], 0.5, 0.5)[0] == "unread",
+       "growth: per-call growth told from a slower session")
     ok(coaxial_verdict([True, True], [False, False], [False]), "S-d: bore coaxial, planes and keyway not")
     ok(not coaxial_verdict([True], [False], [True]), "S-d: a keyway read coaxial is not clean")
     ok(not coaxial_verdict([True], [False], []), "S-d: no keyway control read is not clean")
@@ -609,6 +688,17 @@ ROUTES = {"r1": "IModelDocExtension.GetCorrespondingEntity2 on the mate's entity
                 "the one ISldWorks.IsSame as the mate's entity (exactly one), then the part's GetPersistReference3, "
                 "resolved by its GetObjectByPersistReference3"}
 ROUTE_ORDER = ["r1", "r2", "r3"]
+FACES_PARTS = ("made", "read", "growth", "remade", "reload")
+
+
+def wanted(name):
+    """``--faces-parts`` (a comma list of ``FACES_PARTS``; all when not given): which of faces' parts run, so the
+    growth measurement can be rerun with (a) and (b) alone. A part left out is said, and what needs it is skipped."""
+    given = [p.strip() for p in A._arg("--faces-parts").split(",") if p.strip()]  # noqa: SLF001
+    if given and name not in given:
+        say(f"skip    faces {name}: not in --faces-parts {given}")
+        return False
+    return True
 
 
 def route_r3(s, app, component, part_doc, ref, kind, same_value, folder):
@@ -833,6 +923,102 @@ def faces_read(folder, app_names, users):
     return work
 
 
+GROWTH_REPEATS = 5         # the same full walk, timed each time (W9D-PROBES-REVIEW 3 (b))
+GROWTH_CHEAP = 100         # component_frame calls: the fixed cheap call timed before and after the walks
+
+
+def _walk(app, component, candidates, ref, same_value):
+    """r3's walk: each candidate carried by ``GetCorresponding``, compared by ``IsSame``; every one walked. The matches
+    (part-level entities) and the seconds."""
+    started = time.monotonic()
+    matches = []
+    for candidate in candidates:
+        carried = call(component, "GetCorresponding", candidate)
+        if carried is not None and int(raw(app, "IsSame", carried, ref)) == same_value:
+            matches.append(candidate)
+    return matches, round(time.monotonic() - started, 3)
+
+
+def _filter_key(obj, kind):
+    """The prefilter's key of a face or an edge, read where it is (``prefilter``): a face's area, a circle's radius,
+    a line; None when it would not read."""
+    try:
+        if kind == "face":
+            return ("area", float(_plain(raw(obj, "GetArea"))))
+        curve = raw(obj, "GetCurve")
+        if raw(curve, "IsCircle"):
+            return ("circle", float([float(v) for v in raw(curve, "CircleParams")][6]))
+        if raw(curve, "IsLine"):
+            return ("line", None)
+    except Exception:  # noqa: BLE001 - a key not read keeps the candidate
+        return None
+    return None
+
+
+def faces_growth(read, folder):
+    """W9D-PROBES-REVIEW 3 (b), the 2024 run and a short 2026 rerun: why r3's walk grew (0.26 s to 8.1 s for one
+    163-face walk on 2026). On one face entity (UserFaceCoin's first, a sprocket end face) the same full walk
+    ``GROWTH_REPEATS`` times, each timed; ``component_frame`` × ``GROWTH_CHEAP`` timed before and after, to tell
+    per-call growth from a slower session; the area-prefiltered walk (must-fix 1's rule 2: the part's ``GetArea``
+    against the mate entity's, relative 1e-9) timed beside a full one, its match IsSame the full walk's; the same for
+    the edge (circle radius). SolidWorks' private memory before and after. GetSaveFlag of the copy's documents around."""
+    def work(s):
+        doc, app = s._doc(), s._app  # noqa: SLF001
+        same_value = (EXTRA.get("swObjectEquality") or {}).get(SAME)
+        if same_value is None:
+            raise swcom.SolidWorksError("swObjectEquality was not read, so IsSame cannot be judged")
+        picks = {"face": next((e for e in read["entities"] if e.get("mate") == "UserFaceCoin"
+                               and e.get("kind") == "face"), None),
+                 "edge": next((e for e in read["entities"] if e.get("kind") == "edge"), None)}
+        before = W.folder_flags(s, folder)
+        out = {"memory_before_gb": round(W.sw_private_gb(), 3), "flags_before": before}
+        first = next(e for e in picks.values() if e is not None)
+        s.find_component("gw", first["component"])
+
+        def cheap():
+            started = time.monotonic()
+            for _ in range(GROWTH_CHEAP):
+                s.component_frame("gw")
+            return round(time.monotonic() - started, 3)
+        out["cheap_before"] = cheap()
+        for kind, e in picks.items():
+            if e is None:
+                out[kind] = {"error": f"no {kind} entity was read in (b)"}
+                continue
+            mate = _try(s._mate_feature(e["mate"]), "GetSpecificFeature2")  # noqa: SLF001
+            ref = _try(call(mate, "MateEntity", e["index"]), "Reference")
+            component = comp(doc, e["component"])
+            part_doc = call(component, "GetModelDoc2")
+            member = "GetFaces" if kind == "face" else "GetEdges"
+            candidates = []
+            for body in list(raw(part_doc, "GetBodies2", 0, True) or []):
+                candidates += list(raw(body, member) or [])
+            got = {"entity": f"{e['mate']}:{e['index']} on {e['component']!r}", "walked": len(candidates),
+                   "full": []}
+            full = None
+            for _ in range(GROWTH_REPEATS if kind == "face" else 1):
+                matches, seconds = _walk(app, component, candidates, ref, same_value)
+                got["full"].append({"seconds": seconds, "matches": len(matches)})
+                full = matches
+            started = time.monotonic()
+            target = _filter_key(ref, kind)
+            keys = [_filter_key(c, kind) for c in candidates]
+            kept = prefilter(target, keys)
+            got["filter_seconds"] = round(time.monotonic() - started, 3)
+            got["target"], got["kept"] = target, len(kept)
+            matches, seconds = _walk(app, component, [candidates[i] for i in kept], ref, same_value)
+            got["filtered"] = {"seconds": seconds, "matches": len(matches)}
+            got["same_as_full"] = (int(raw(app, "IsSame", matches[0], full[0])) == same_value
+                                   if len(matches) == 1 and full and len(full) == 1 else None)
+            out[kind] = got
+        out["cheap_after"] = cheap()
+        out["memory_after_gb"] = round(W.sw_private_gb(), 3)
+        out["marked"] = flags_changed(before, W.folder_flags(s, folder))
+        out["marked_before"] = marked_at_start(before)
+        return out
+    return work
+
+
 def faces_remake(read, second, folder, layout, sun, routes):
     """The four mates made again in a second assembly (S5 (c)'s way): the layout, Sun and the three sprockets inserted
     from the same files at their frames, the layout and Sun fixed; each geometry entity found by its kind's route
@@ -987,7 +1173,8 @@ def section_faces(out):
             still = marked_at_start(got["after_save"])
             check(not still, f"faces (a): the copy reads unmarked after its save: {still or 'every document'}")
             return got
-        part(out, "made", "faces (a) the mates made", make_part)
+        if wanted("made"):
+            part(out, "made", "faces (a) the mates made", make_part)
 
         def read_part():
             read = run("faces (b): the entities read",
@@ -1062,7 +1249,36 @@ def section_faces(out):
             read["entities"] = entities
             read["start_marked"] = start
             return read
-        read = part(out, "read", "faces (b) the entities read", read_part, needs=("made",))
+        read = part(out, "read", "faces (b) the entities read", read_part, needs=("made",)) if wanted("read") else None
+
+        def growth_part():
+            got = run("faces (b) growth: r3's walk repeated, prefiltered, a cheap call around",
+                      job(box.assembly, faces_growth(read, folder)), 1800)
+            for kind in ("face", "edge"):
+                g = got.get(kind) or {}
+                if g.get("error"):
+                    say(f"fact    faces (b) growth {kind}: {g['error']}")
+                    continue
+                say(f"fact    faces (b) growth {kind} {g['entity']}: walked {g['walked']}; full walks "
+                    f"{[w['seconds'] for w in g['full']]} s, matches {[w['matches'] for w in g['full']]}; prefilter "
+                    f"{g['target']} kept {g['kept']} in {g['filter_seconds']} s, its walk {g['filtered']['seconds']} s,"
+                    f" matches {g['filtered']['matches']}, IsSame the full walk's match {g['same_as_full']}")
+            walks = [w["seconds"] for w in (got.get("face") or {}).get("full", [])]
+            reading = growth_reading(walks, got["cheap_before"], got["cheap_after"])
+            say(f"fact    faces (b) growth: component_frame x{GROWTH_CHEAP} {got['cheap_before']} s before the walks, "
+                f"{got['cheap_after']} s after; SolidWorks {got['memory_before_gb']} GB private before, "
+                f"{got['memory_after_gb']} GB after; reading {reading[0]} {reading[1]} (a fact: the cap is the "
+                f"contract's answer, W9D-INTERFACES §10)")
+            check(not got["marked"] and not got["marked_before"],
+                  f"faces (b) growth: the walks marked no document: {got['marked'] or 'none'}; already marked at the "
+                  f"start {got['marked_before'] or 'none'}")
+            filtered_ok = all((got.get(k) or {}).get("same_as_full") is True for k in ("face", "edge")
+                              if not (got.get(k) or {}).get("error"))
+            check(filtered_ok, "faces (b) growth: the prefiltered walk found the full walk's one match, for each kind "
+                               "read (must-fix 1's rule 2 loses no true match)")
+            return got
+        if wanted("growth"):
+            part(out, "growth", "faces (b) growth", growth_part, needs=("read",))
 
         os.makedirs(second_folder, exist_ok=True)
         second = os.path.join(second_folder, "D9Second.SLDASM")
@@ -1094,7 +1310,8 @@ def section_faces(out):
                         f"faces (c): a user part loaded as a component of the open assembly, inserted into another: "
                         f"marked {inserted or 'nothing'}; already marked before {start or 'nothing'}"))
             return remade
-        part(out, "remade", "faces (c) made again", remake_part, needs=("read",))
+        if wanted("remade"):
+            part(out, "remade", "faces (c) made again", remake_part, needs=("read",))
 
         def reload_part():
             left = []
@@ -1112,7 +1329,8 @@ def section_faces(out):
                         f"faces (d): {len(read['entities'])} face and edge references; not resolved {verdict[1] or 'none'}"))
             run("faces (d): the parts closed", W.quit_in(folder))
             return got
-        part(out, "reload", "faces (d) the reload", reload_part, needs=("read",))
+        if wanted("reload"):
+            part(out, "reload", "faces (d) the reload", reload_part, needs=("read",))
     finally:
         C.end(folder, "d-faces")
         if os.path.isdir(second_folder) and not W.HUNG["on"]:
@@ -1292,11 +1510,13 @@ def state_lightweight(name):
     return work
 
 
-def state_version(path, other):
+def state_version(path, other, folder, master=""):
     """Closed-file reads only, nothing opened: the closed assembly's ``ISldWorks.VersionHistory`` (the ledger: verified
     on 2026 SP1.1 for a closed file, never by the app) and ``GetLatestSupportedFileVersion``; S-b's negative control,
     ``other``, a file the other SolidWorks saved, read the same way when given; S-f's ``GetDocumentDependencies2(path,
-    False, False, False)`` (the ledger: verified, never by the app) and each dependency's ``VersionHistory``."""
+    False, False, False)`` (the ledger: verified, never by the app) and each dependency's ``VersionHistory``. For the
+    2024 run (W9D-PROBES-REVIEW, point 5): each dependency by its place (``dependency_place``: relative to the run
+    folder, under the copy ``folder`` or not, on disk), and the same read with Traverse True beside it (a fact)."""
     def work(s):
         app = s._app  # noqa: SLF001
         out = {"history": _plain(raw(app, "VersionHistory", path)), "latest": _plain(raw(app, "GetLatestSupportedFileVersion")),
@@ -1306,11 +1526,17 @@ def state_version(path, other):
                 out["other"] = _plain(raw(app, "VersionHistory", other))
             except Exception as exc:  # noqa: BLE001 - its failure is the reading
                 out["other"] = f"{type(exc).__name__}: {exc}"
-        try:
-            deps = dependency_paths(_plain(raw(app, "GetDocumentDependencies2", path, False, False, False)))
-            out["dependencies"] = {os.path.basename(d): _plain(raw(app, "VersionHistory", d)) for d in deps}
-        except Exception as exc:  # noqa: BLE001
-            out["dependencies"] = f"{type(exc).__name__}: {exc}"
+        for key, traverse in (("dependencies", False), ("dependencies_traverse", True)):
+            try:
+                deps = dependency_paths(_plain(raw(app, "GetDocumentDependencies2", path, traverse, False, False)))
+                got = {}
+                for d in deps:
+                    where, under_copy = dependency_place(d, OUT, folder, master)
+                    got[where] = {"under_copy": under_copy, "on_disk": os.path.isfile(d),
+                                  "history": _plain(raw(app, "VersionHistory", d)) if key == "dependencies" else None}
+                out[key] = got
+            except Exception as exc:  # noqa: BLE001
+                out[key] = f"{type(exc).__name__}: {exc}"
         return out
     return work
 
@@ -1452,7 +1678,7 @@ def section_state(out):
         def version():
             other = A._arg("--other-version-file")                  # noqa: SLF001
             got = run("state (v): closed-file reads: the last saved version, the dependencies", C.in_build(
-                state_version(box.assembly, other)), 120)
+                state_version(box.assembly, other, folder, A.user_master())), 120)
             last, latest = last_saved(got.get("history")), got.get("latest")
             other_last = last_saved(got.get("other")) if other and not str(got.get("other", "")).count("Error") else None
             say(f"fact    state (v): VersionHistory {got.get('history')}, last {last}; GetLatestSupportedFileVersion "
@@ -1463,14 +1689,22 @@ def section_state(out):
                         f"state (v): the copy this SolidWorks saved in (a) reads last {last}; the other version's file "
                         f"reads last {other_last} (S-b: proposed only with both, the second older or newer)"))
             deps = got.get("dependencies")
-            names = set(deps) if isinstance(deps, dict) else set()
-            wanted = {"Sprocket.SLDPRT", "Housing.SLDPRT", os.path.basename(box.layout)}
-            say(f"fact    state (v): GetDocumentDependencies2 of the closed copy and each one's last saved version "
-                f"{ {n: last_saved(h) for n, h in deps.items()} if isinstance(deps, dict) else deps}")
+            names = {n.replace("/", "\\").split("\\")[-1] for n in deps} if isinstance(deps, dict) else set()
+            wanted_names = {"Sprocket.SLDPRT", "Housing.SLDPRT", os.path.basename(box.layout)}
+            say(f"fact    state (v): GetDocumentDependencies2 (Traverse False) of the closed copy, each by its place "
+                f"(relative to the run folder), under the copy, on disk, and its last saved version "
+                f"{ {n: (d['under_copy'], d['on_disk'], last_saved(d['history'])) for n, d in deps.items()} if isinstance(deps, dict) else deps}")
+            trav = got.get("dependencies_traverse")
+            say(f"fact    state (v): the same with Traverse True (a fact; a sub-assembly's files are read in sub (t)) "
+                f"{ {n: (d['under_copy'], d['on_disk']) for n, d in trav.items()} if isinstance(trav, dict) else trav}; "
+                f"the same set as Traverse False "
+                f"{set(trav) == set(deps) if isinstance(trav, dict) and isinstance(deps, dict) else None}")
+            all_read = isinstance(deps, dict) and all(last_saved(d["history"]) for d in deps.values())
             say(propose("DEPENDENCIES_READ", "ISldWorks.GetDocumentDependencies2(path, False, False, False), each one's "
-                        "VersionHistory" if wanted <= names and all(last_saved(h) for h in deps.values()) else None,
+                        "VersionHistory" if wanted_names <= names and all_read else None,
                         f"state (v): named {sorted(names)}; the user's parts and the layout among them "
-                        f"{wanted <= names}"))
+                        f"{wanted_names <= names}; every one under the copy "
+                        f"{all(d['under_copy'] for d in deps.values()) if isinstance(deps, dict) else None}"))
             return got
         part(out, "version", "state (v)", version, needs=("closed",))
 
@@ -1666,6 +1900,30 @@ def section_sub(out):
                             f"{got['after_open'].get(sub_name)}, after the insert {got['after_insert'].get(sub_name)}"))
             return got or {"dialog": True}
         part(out, "when_loaded", "sub (c)", when_loaded)
+
+        def traverse():
+            host = os.path.join(folder, "DSubHost2.SLDASM")
+            run("sub: closed", W.quit_in(folder))
+            if not os.path.exists(host):
+                raise AssertionError("sub (c)'s host was not saved, so there is no closed assembly holding a "
+                                     "sub-assembly to read")
+
+            def work(s):
+                got = {}
+                for traverse_flag in (False, True):
+                    flat = _plain(raw(s._app, "GetDocumentDependencies2", host, traverse_flag, False, False))  # noqa: SLF001
+                    got[traverse_flag] = {dependency_place(d, OUT, folder)[0]: os.path.isfile(d)
+                                          for d in dependency_paths(flat)}
+                return got
+            got = run("sub (t): the closed host's dependencies, Traverse False and True", C.in_build(work), 120)
+            top, deep = set(got[False]), set(got[True])
+            say(f"fact    sub (t): GetDocumentDependencies2 of the closed DSubHost2.SLDASM (holding DSub.SLDASM, which "
+                f"holds DSubPart.SLDPRT), each by its place and on disk: Traverse False {got[False]}; Traverse True "
+                f"{got[True]}; the sub-assembly's part listed only with Traverse True "
+                f"{any(n.endswith('DSubPart.SLDPRT') for n in deep - top)} (a fact: R.2 refuses a sub-assembly "
+                f"dependency until a reviewed run says Traverse True lists its files, W9D-INTERFACES §3 R.2)")
+            return {str(k): v for k, v in got.items()}
+        part(out, "traverse", "sub (t)", traverse, needs=("when_loaded",))
     finally:
         if not W.HUNG["on"]:
             run("sub: everything closed", W.quit_in(folder))
