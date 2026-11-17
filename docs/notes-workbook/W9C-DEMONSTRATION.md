@@ -89,16 +89,16 @@ Times are estimates for SolidWorks 2026, from W9a's and W9b's measured runs. An 
 | # | Section | What it does | 2026 |
 |---|---|---|---|
 | – | `ring` | By name only. The ring's Tooth Space sketch dumped as built at 55, set to 54 and built at 54, the last two compared; routes to 54 and 56 → 55; Sun at 30: a diagnostic, facts only. Details under the fifth run, below. | 2 min |
-| – | `landing` | By name only. A's fix (63bbc33) measured. Details below. | 6 min |
+| – | `landing` | By name only. A's fix (63bbc33, c997e85) measured, with the fixes review's cases. Details below. | 9 min |
 | 1 | `fixed` | **The Done-when.** Details below. Kept as `fixed-updated.master`. | 20 min (run 5) |
 | 2 | `modes` | **M10.** Four edits, three presses and three refusals. Details below. | 48 min (run 5) |
 | 3 | `remove` | G4 out of the 12 : 1; HighDog out of setup refused, twice. Details below. | 15 min |
-| 4 | `remake` | Sun 29 → 28, Planet 13 → 14, Ring 55 → 56 with modes, on a copy of `setup.master` (it needs nothing of `fixed`'s). Details below. | 14 min |
+| 4 | `remake` | Sun 29 → 28, Planet 13 → 14, Ring 55 → 56 with modes, on a copy of `setup.master` (it needs nothing of `fixed`'s); then the fixes review's M3 on its own copy. Details below. | 30 min |
 | 5 | `bands-off` | The take-away side. Details below. | 8 min |
 | 6 | `m4` | The external-references read, a probe. Details below. | 5 min |
 | 7 | `w9b-part` | W9b's `part` section again, so its step-face read runs on SolidWorks in this session. | 2 min |
 
-**About 1 h 50 min on 2026**, inside the plan's 2 h 20 min. Add 5 min if `setup.master`, and 4 min if the 12 : 1's
+**About 2 h 10 min on 2026**, inside the plan's 2 h 20 min. Add 5 min if `setup.master`, and 4 min if the 12 : 1's
 master, must be built first. On 2024, at about twice the time per press, about 3 h 30 min against the plan's
 3 h 35 min, each section in a fresh session as before. **I would cut first** `w9b-part` (its question rides along),
 then `bands-off`'s script-side probe, then `m4`'s comparison read on Sun.
@@ -266,6 +266,20 @@ than W9c, which `ring` reads on its own; it is not what `remake` is here to show
   - the record brought forward to this app's schema and nothing left over (`left` empty);
   - the app's read of L at 1 + 56/28 = 3.
 
+**Then the fixes review's M3** (B's ff98d5a), on its own copy of `setup.master`, with the gate patched as above:
+
+1. Sun 30, Planet 12, Ring 55 → 54 is pressed with `swbuild.LANDING_STEPS = ()` for that press only, so it stops in
+   the ring. The status names the ring, left in error, to close without saving; the record marks the ring
+   (`unsaved_in_error`); the patch is restored.
+2. Pressed again without closing: the status says the ring is still open in SolidWorks, in error, that this press
+   set nothing in it, and to close it without saving, and never that SolidWorks already matches. The mark stays,
+   nothing is set in a part, and the footer keeps its "left in error when it stopped … without saving" sentence.
+3. Every document of the copy is closed without saving, as the sentences say, and it is pressed again. It goes
+   through routed (the ring by way of 53), the ring at 54 with nothing in error, the mark gone, the stage's gear mates
+   remade and the footer quiet.
+
+Sentences are matched by their distinctive parts, not whole strings.
+
 ### `bands-off`
 
 The self-check searched for an edit that takes the bands off RangeBox_Fixed's sleeve in place and leaves the gearbox
@@ -323,6 +337,31 @@ counted by wrapping the session's `rebuild` on its instance for the one call onl
    straight.
 5. **The leftover:** the straight 55 → 54's file, closed without saving after its failure and reopened, read at 55
    teeth with no feature in error, against 55 built from scratch.
+
+**The fixes review's cases** (`W9C-FIXES-REVIEW.md`, 8407159; the app as c997e85 has it):
+
+6. **Just above 0.2, unrouted by the app:** ring m1 27 → 25 (0.204), spur m1 15 → 14 (0.203) and 14 → 13 (0.239).
+   Each is checked: one rebuild, nothing foreseen, clean. No target is built for these.
+7. **The old end past the new start, away from the cap:** ring m1 36 → 34 (0.056), a fact set straight and checked
+   routed by way of 33; and ring m1 44 → 42 (0.367), unrouted and checked clean.
+8. **Recipe B** ring 55 → 54: set straight, a fact; then by the app, checked one rebuild with no route and clean
+   (c997e85 tells recipe B by its sketch's dimension links and never routes it). The dimension links among the
+   equations, as the app reads them, are printed for it, and for the recipe A ring 55 → 54 (none of `HalfSpace`,
+   `Flank`, `Base`, `Pitch` expected there).
+9. **A module-only landing:** S0's ring 55, m1.25 → 1.225 (0.041), set straight as a fact. Routed, it is checked to go
+   by way of 54 and back with both rebuilds true; clean, at 55 teeth and module 1.225; the volume of a from-scratch
+   build; and the count reported unchanged (in `unchanged`, not `changed`).
+10. **A user's own feature in error on a routed part** (the review's M1): on S0's ring 55, a cut through all is made
+    whose circle (Ø3 at x = 200 mm) misses the ring, so it reads in error. The ring is then set to 54 by the app. It
+    must end at 54 teeth with both legs taken, Tooth Space and Teeth clean, and the user's cut the only feature in
+    error before and after.
+
+For every straight case, the short solved line (`Li+` or `L+`) is found in the Tooth Space sketch by its ends, as the
+sketch's maths put them before the set. That segment's ends are read before and after the set, beside where the maths
+put them after, with whether the solved end went past the origin. Recipe B draws no such line, and it is said so.
+
+The self-check also holds each recipe B plan to the app foreseeing nothing once the dimension links its plan makes
+are among the equations.
 
 Every case also checks that it closed unsaved (the file's time and size unchanged) with nothing left open, and that
 `LANDING_STEPS` is as it was. The section proposes nothing; there is no gate. It ends with one line saying whether the
@@ -456,6 +495,12 @@ At this commit it passes, 0 failed. `--help` imports nothing of SolidWorks.
   SolidWorks.
 - **On 2024,** the What's Wrong box may come in `fixed` (a user feature rebuilt after the relief), and is handled by
   W9a's rule. Nothing here is version-specific beyond the `_ON_<year>` names.
+
+## The seventh run on 2026 (from 71d8510): `landing`
+
+`landing` passed: 0 failed, 305 s, and "the fix is shown" True. Set straight, 0.0379 and 0.0378 failed; 0.0996 and
+0.1276 (external), and 0.1438 and 0.1730 (rings), rebuilt clean. Since then, the fixes review's cases were added on
+A's c997e85 (above), and its M3 on B's ff98d5a, in `remake`.
 
 ## The sixth run on 2026 (from 30bf0e9), and what changed
 
