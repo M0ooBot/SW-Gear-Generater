@@ -1059,9 +1059,17 @@ def test_the_gear_mate_read_turning_the_wrong_way_is_made_once_more_with_the_oth
     _isfile(monkeypatch, fake)
     gear = fake.user_mate(T_ASM, "Gear6", kind="gear", a=("Sprocket-1", "Sprocket Axis"), b=("gear1-1", "Gear Axis"))
     gear.ratio, gear.flip = (20.0, 17.0), True
-    fake.readback_alignment = {"Gear6": 1}
+    fake.readback_reverse = {"Gear6": 0.0}                     # read turning the other way, whatever its Flip
     cr = _build_again(fake).carry
     assert {n.item: n.why for n in cr.named} == {"Gear6": "differs"} and fake.mate("Gear6", R2[T_ASM]) is None
+    # The audit: its alignment read otherwise is not a difference, AddMate5 ignoring it for a gear mate (GOTCHAS §96).
+    fake = _old_train()
+    _isfile(monkeypatch, fake)
+    gear = fake.user_mate(T_ASM, "Gear6", kind="gear", a=("Sprocket-1", "Sprocket Axis"), b=("gear1-1", "Gear Axis"))
+    gear.ratio, gear.flip = (20.0, 17.0), True
+    fake.readback_alignment = {"Gear6": 1}
+    cr = _build_again(fake).carry
+    assert "Gear6" in {r[0] for r in cr.remade} and cr.named == [], cr.named
 
 
 def test_a_gear_mate_on_a_face_read_against_its_gears_axis_is_made_on_the_gear_axis_with_the_flip_that_keeps_its_sense(

@@ -2098,6 +2098,9 @@ class FakeSolidWorks:
                          for c, (k, f), end in zip(info.components, kinds, self._read_ends(mate)))
         alignment = mate.alignment if mate.user else getattr(self, "readback_alignment", {}).get(mate.name,
                                                                                                   mate.alignment)
+        if not mate.user and mate.name in getattr(self, "readback_reverse", {}):
+            # A remade gear mate's Reverse read otherwise, whatever Flip it was made with (a test's knob).
+            values = [(k, float(self.readback_reverse[mate.name])) if k == "Reverse" else (k, v) for k, v in values]
         return swcom.MateDefinition(mate.name, self.DEF_TYPES.get(mate.kind, info.type),
                                     self.TYPE_NAMES.get(mate.kind, mate.kind), alignment,
                                     bool(mate.flip and mate.kind != "gear"), tuple(values), entities, info.whole)

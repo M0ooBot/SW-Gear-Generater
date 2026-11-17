@@ -8383,7 +8383,9 @@ def _read_back(c: _Carrying, handle: str, item: CarryMateItem) -> str:
     elif [w for w in wanted if w] != [g for g in got if g]:
         return "swapped" if len(wanted) == 2 and [w for w in wanted[::-1] if w] == [g for g in got if g] else \
             "entities"
-    if definition.alignment != old.alignment:
+    # A gear mate's alignment is not compared: AddMate5 ignores it for a gear mate (API-LEDGER.md:526, GOTCHAS §96, both
+    # versions), so what it reads back says nothing of the mate, whose sense is compared instead.
+    if definition.alignment != old.alignment and old.type != findings.MATE_GEAR:
         return "alignment"
     values, read = dict(old.values), dict(definition.values)
     for key in ("GearRatioNumerator", "GearRatioDenominator"):
