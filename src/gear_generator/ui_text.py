@@ -1885,9 +1885,17 @@ def gearbox_update_status(update, result, dragged: Sequence[str] = (), **kwargs)
     text, ok = _gearbox_update_status(update, result, dragged, **kwargs)
     finished = kwargs.get("finished")
     still = list(getattr(finished, "still_in_error", ()) or ()) if finished is not None else []
-    if not still or result.failures:
+    if not still:
         return text, ok
     said = still_in_error_sentence(still)
+    if result.failures:
+        from .workbook.update import document_stem
+        stems = {document_stem(p) for p in still}
+        if all(document_stem(what) in stems for what, _ in result.failures) and not result.changed:
+            # The worker stopped on such a part before writing anything (swbuild._held_in_error: the eighth run on
+            # 2026, remake's M3 pressed again without closing): the still-in-error sentence is the whole answer.
+            return said, False
+        return f"{text} {said}", False
     if text.startswith(ALREADY_MATCHES):
         # Only the claim is replaced; what follows it (the interference, the user's work, the modes, the leftovers)
         # stays (the second reading of the fixes review, N4).

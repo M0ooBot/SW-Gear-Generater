@@ -534,6 +534,12 @@ class FakeSolidWorks:
         self.memory_axes = {}
         self.touched.clear()
         self.frames = dict(getattr(self, "saved_frames", self.frames))
+        # A ring left on the far branch, closed unsaved, reopens from its file clean (run 7 on 2026: the straight
+        # failure's file reopened clean at 55): its landing's errors go with what it held in memory.
+        for key in self.wrong_branch:
+            self.feature_codes.pop((key, "Tooth Space"), None)
+            self.feature_codes.pop((key, "Teeth"), None)
+        self.wrong_branch.clear()
 
     def detect_trig_units(self):
         self._log("detect_trig_units")

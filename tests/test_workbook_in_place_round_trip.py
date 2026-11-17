@@ -1207,3 +1207,70 @@ def test_a_sleeve_marked_earlier_whose_bands_alone_fail_on_the_relief_keeps_its_
     assert [what for what, _ in press.result.failures] == ["Sleeve_m1.25_N17.SLDPRT"]
     assert [store.same_path(p, sleeve) for p in d.record.unsaved_in_error] == [True]
     _says_close_without_saving(press, d.footer(fixed())[0])
+
+
+# -- the eighth run on SolidWorks 2026, remake's M3: pressed again without closing, the ring still open in error ------
+
+def _m3_stage():
+    """remake's M3 stage on RangeBox: Sun 30, Planet 12, Ring 55 -> 54 (a landing), its gear mates remade."""
+    return _with(_with(_with(range_box(), "Sun", teeth="30"), "Planet", teeth="12"), "Ring", teeth="54")
+
+
+def test_pressed_again_with_the_ring_still_open_in_error_the_press_writes_nothing_and_says_close_without_saving(
+        measured):
+    """The fake as SolidWorks: the ring set straight lands on the far branch (Tooth Space 72), and an assembly's
+    rebuild reads false while a part of it has a feature in error (ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR). The
+    second press, without closing, used to go on into the assembly, remake a gear mate and stop on the assembly's
+    rebuild, offering to save RangeBox. Now it stops before any write, on the ring, and says what step 2 says."""
+    d = Desk()
+    d.build(range_box())
+    ring = _part(d.record, "Ring")
+    steps, swbuild.LANDING_STEPS = swbuild.LANDING_STEPS, ()
+    try:
+        first = d.press(_m3_stage())                         # set straight: stops in the ring
+    finally:
+        swbuild.LANDING_STEPS = steps
+    assert [w for w, _ in first.result.failures] == ["Ring_m1.25_N55.SLDPRT"]
+    assert "Ring_m1.25_N55 is left in error" in first.after
+    mark = len(d.sw.calls)
+    again = d.press(_m3_stage())                             # not closed: the ring holds 54, in error
+    assert d.writes(mark) == [], d.writes(mark)
+    assert [w for w, _ in again.result.failures] == ["Ring_m1.25_N55.SLDPRT"]
+    assert not again.result.changed and not again.result.remade_in_modes
+    assert [store.same_path(p, ring) for p in d.record.unsaved_in_error] == [True]
+    assert not again.ok and again.after == (
+        "Ring_m1.25_N55 is still open in SolidWorks as an earlier Update SolidWorks left it, in error and holding the "
+        "new values, so this press set nothing in it: close it in SolidWorks without saving (the file on disk is as "
+        "before that Update), then press Update SolidWorks again."), again.after
+    text, _ = d.footer(_m3_stage())
+    assert "Ring_m1.25_N55 was left in error when it stopped: close them all in SolidWorks without saving" in text
+    assert "to keep" not in text and "already matches" not in text, text
+    d.sw.close_all()                                         # closed without saving, as told: the third press goes
+    third = d.press(_m3_stage())
+    # The ring is loaded from its file at 55, so it does not hold the workbook's values and is never stopped on: it
+    # goes by way of 53 and rebuilds clean, and its mark goes. (The fake then fails this stage's put of a planet,
+    # "did not take its frame", which SolidWorks did not: a limit of the fake's planetary put, not of this rule.)
+    ring_done = next(p for p in third.result.parts if p.document == "Ring_m1.25_N55.SLDPRT")
+    assert ring_done.by_way_of == ("No. of Teeth", "53") and ring_done.rebuilt
+    assert not [w for w, _ in third.result.failures if update.names_document(w, ring)], third.result.failures
+    assert d.record.unsaved_in_error == []
+
+
+def test_only_a_part_marked_left_in_error_holding_its_values_with_the_apps_own_feature_in_error_stops_a_press():
+    """swbuild._held_in_error, the rule alone: the mark, the values held (this press would set nothing there) and a
+    feature the app made read in error, all three. The user's own features in error, and a code SolidWorks would not
+    give, never count (K3: theirs alone never stop an Update)."""
+    from gear_generator import swcom
+    doc = swbuild.DocumentValues("C:\\Out\\Ring_m1.25_N55.SLDPRT", made=("Tooth Space", "Teeth"), left_in_error=True)
+    states = [swcom.FeatureState("Tooth Space", "Cut", 72, False), swcom.FeatureState("Teeth", "?", swcom.UNREAD, False),
+              swcom.FeatureState("Keyway", "ICE", 41, False)]
+    assert swbuild._app_features_in_error(doc, states) == ["Tooth Space"]                   # noqa: SLF001
+    for document, held, names, stops in ((doc, "degrees", ["Tooth Space"], True),
+                                         (replace(doc, left_in_error=False), "degrees", ["Tooth Space"], False),
+                                         (doc, "", ["Tooth Space"], False),
+                                         (doc, "degrees", [], False)):
+        result = swbuild.GearboxUpdate()
+        assert swbuild._held_in_error([document], [held], {document.path: names}, result,       # noqa: SLF001
+                                      ["the assembly"]) is stops
+        assert [w for w, _ in result.failures] == (["Ring_m1.25_N55.SLDPRT"] if stops else [])
+        assert result.skipped == ("the assembly, because Ring_m1.25_N55.SLDPRT is in error" if stops else "")

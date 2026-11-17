@@ -85,6 +85,7 @@ class PartUpdate:
     cells: Tuple[Tuple[str, str], ...] = ()
     made: Tuple[str, ...] = ()
     mark: str = ""                  # the record's mark on the file: "unsaved", "mismatched" or ""
+    left_in_error: bool = False     # the record marks it left in error by a stopped Update (``unsaved_in_error``)
 
 
 @dataclass(frozen=True)
@@ -187,7 +188,7 @@ class UpdatePlan:
                              + " ".join((self.refusal,) + self.structural + self.missing).strip())
         kwargs: Dict[str, Any] = {
             "parts": [DocumentValues(p.path, tuple(p.variables), recorded=p.recorded, cells=p.cells, made=p.made,
-                                     mark=p.mark) for p in self.parts],
+                                     mark=p.mark, left_in_error=p.left_in_error) for p in self.parts],
             "layout": self.layout,
             "assembly": self.assembly,
             "placements": list(self.placements),
@@ -637,10 +638,15 @@ def classify(record: Optional[LinkRecord], a: Assessment, *,
     # holds; the worker vouches for a marked file only when it stayed open, modified, since the Update that marked
     # it (swbuild._vouches), and a lost Update keeps W8's set-back.
     mark_of = lambda path: _mark(record, path)                                       # noqa: E731
-    parts = [replace(p, mark=mark_of(p.path)) for p in parts]
+    # The eighth run on 2026 (remake's M3): the record's in-error mark goes to the worker too, which stops before any
+    # write on such a part still open in the app's own error (swbuild._held_in_error).
+    in_error_of = lambda path: any(store.same_path(path, m)                         # noqa: E731
+                                   for m in getattr(record, "unsaved_in_error", []) or [])
+    parts = [replace(p, mark=mark_of(p.path), left_in_error=in_error_of(p.path)) for p in parts]
     if layout_values is not None:
-        layout_values = replace(layout_values, mark=mark_of(layout_values.path))
-    carrier_values = [replace(c, mark=mark_of(c.path)) for c in carrier_values]
+        layout_values = replace(layout_values, mark=mark_of(layout_values.path),
+                                left_in_error=in_error_of(layout_values.path))
+    carrier_values = [replace(c, mark=mark_of(c.path), left_in_error=in_error_of(c.path)) for c in carrier_values]
     moving = modal.motion or turn.motion
     if moving is not None and box is not None:
         moving = _with_user_work(moving, box, spec, mark_of(box.assembly))
@@ -2262,9 +2268,10 @@ def finish_update(plan: UpdatePlan, result: GearboxUpdate, record: LinkRecord, *
         if failed:
             rec.unsaved_in_error = list(dict.fromkeys(list(rec.unsaved_in_error) + failed))
     store.keep_in_error(rec)
-    if not result.failures:
-        # A document this press changed is never one it set nothing in (N1), so it is never said as one.
-        out.still_in_error = [p for p in rec.unsaved_in_error if not _in(p, getattr(result, "changed", []) or [])]
+    # A document this press changed is never one it set nothing in (N1), so it is never said as one. Said whether or
+    # not the press failed: on SolidWorks the press that finds such a part open stops on it (swbuild._held_in_error,
+    # the eighth run's remake M3), and a failure never hides it.
+    out.still_in_error = [p for p in rec.unsaved_in_error if not _in(p, getattr(result, "changed", []) or [])]
     return out
 
 
