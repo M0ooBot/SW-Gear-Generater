@@ -355,7 +355,8 @@ def build_master(worker, excel):
     a = desk.a
     modes = {m.name: m for m in a.report.modes}
     warnings = [d.message for d in a.diagnostics if d.level == "warning"]
-    check(len(warnings) == 4 and list(modes) == ["H", "N", "L"]
+    # §3: four warnings before W9, and W9b's three more (reach, no hub, N's running clearance): seven.
+    check(len(warnings) == 4 + 3 and list(modes) == ["H", "N", "L"]
           and modes["H"].engaged == (("RangeSlv", "HighDog"),) and modes["N"].engaged == ()
           and modes["L"].engaged == (("RangeSlv", "LowDog"),)
           and abs(modes["L"].ratio - (1 + 55 / 29)) < 1e-9 and abs(modes["H"].ratio - 1.0) < 1e-9,
