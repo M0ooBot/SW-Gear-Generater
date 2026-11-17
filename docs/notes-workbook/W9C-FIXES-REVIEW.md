@@ -192,3 +192,172 @@ The planned cases (routed: ring m1.25 55→54 and 56→55, ring m1 30→28; the 
    the part stays at code 72 and the press says it matches.
 7. **A dump for each straight case:** `Li+` / `L+` endpoints before and after, and whether the end went to the far
    side. That gives the along/across picture, not just pass or fail.
+
+## Second reading: `c997e85` and `ff98d5a` (2026-11-17)
+
+Independent review of the two commits that answer the review above, read at head `64bec58` on Linux against the
+fake, with no SolidWorks. Line numbers are at `64bec58`. The whole suite ran once: 3682 passed, 10 skipped, 2 failed.
+Both failures, and 8 of the skips, are this Linux venv lacking `tkinter`, not the code:
+`test_gears_clutch.py::test_the_strip_never_offers_them` imports `gui`, and
+`test_ui_text.py::test_the_end_view_readout_always_fits_and_lists_up_to_four_heights` imports `workbook_gui`.
+`test_workbook_window.py` is skipped whole, which is why the known font-width failure does not show and the counts
+are lower than the other device's. The ninth skip is the bevel recipe B ring, which is refused. `test_swbuild_landing.py`,
+`test_workbook_in_place_round_trip.py` and `test_swbuild.py` pass (550).
+Every finding marked **shown** was run with a throwaway test outside the repo.
+
+### The earlier findings at head
+
+- **M1: answered.** `swbuild.py:1448-1455` sets the final count and rebuilds whatever leg one's rebuild returned. It
+  stops at the intermediate only where the count's own set failed (`:1452`). That stop leaves `changed` empty for a
+  count-only change, so nothing is called changed. Pinned by
+  `test_a_first_leg_whose_rebuild_reads_false_still_goes_on_to_the_workbooks_count`.
+- **M2: answered.** At `swbuild.py:3788-3800` the landing lines are nested under `if result.changed:`, and
+  `elif not result.failures` is that `if`'s again. Pinned for a spur and a ring.
+- **M3: partly.** `update.py:2256-2264` no longer clears the mark because a press ended clean, and a press that set
+  nothing now says so (`ui_text.py:1880-1892`). But the mark goes only through `_documents_rebuilt_clean`
+  (`update.py:2308-2314`), which needs `d.rebuilt`. A part's rebuild reads False whenever the user's own feature is in
+  error (P0), so a part the press did put right can never clear its mark. See N1.
+- **S1: answered.** `_global_values` (`swbuild.py:1476-1491`) evaluates only names without `@`, in order. It leaves
+  out a value that is refused, complex or not finite, and `:1439-1442` catches the foresight as a whole. The fake
+  reads globals the same way. The test covers a dimension equation, an unknown function, a complex value and an
+  overflow.
+- **S2: answered** (`landing.py:64-69`). A part with any global whose name contains `Inner Diameter`, other than the
+  ring's own, is not classified. Only a user's global could trip this on an external gear (note 3).
+- **S3: answered** (`landing.py:7-21`, `:36-39`). The figures now match the seventh run's log line for line
+  (0.0379/0.0378 failed; 0.0996, 0.1276, 0.1438, 0.1730 clean), the Sun figures are 3.57 and 1.57, and the
+  `Li+` length nit is fixed.
+- **S4: answered** (`swbuild.py:1456-1460`). A module alone that lands goes via 54 and back. `changed` is
+  `["Module"]`, the count stays in `unchanged`, and the log says "went by way of … and back". This is not so when
+  leg two's set fails (N3).
+- **S5: answered, by a weaker test than asked** (`swbuild.py:1507-1508`). The recipe is told by any dimension
+  equation whose name before the `@` is `HalfSpace`, `Flank`, `Base` or `Pitch`, in any sketch. A user's own
+  dimension named one of those blinds a recipe A part (N2).
+- **S6: answered** (`update.py:2734-2740`, `:2771`, `:2996-3006`). `modes_read` is the plan's configurations less
+  `in_place.modes_added`, which is `box.modes` less the modes the plan removes, in the record's spelling.
+  `follow_modes_added` adds only the added modes on record that appear in `took_active_state`. `refused_update` uses
+  the same rule. Records without `modes` read `[]` through `_known` and take the old fallback. Records written by
+  `0eb0768`–`5c02c6a` keep their `box.modes` value until the next read, which is harmless for the demonstration's
+  fresh snapshots.
+- **S7: answered** (`update.py:2268-2298`). `document_stem` and `names_document` (stem, then end, `.` or space) are
+  shared by `ui_text._parts_left_in_error` and the record mark. `Gear_m1.25_N2` never names `Gear_m1.25_N29`.
+- **S8: answered for leg one only.** If the count's set fails in leg two, the part is left at the intermediate count
+  (N3).
+
+### New findings
+
+**N1 (must-fix). After a stop, a part whose rebuild reads False only because of the user's own feature keeps its
+in-error mark for good. Each later press then says it "set nothing in it" and to close it without saving, in a
+loop.** `update.py:2314` clears the mark only for `d.changed and d.rebuilt`. `_update_document`
+(`swbuild.py:4015-4018`) already makes a False rebuild a failure unless the user's features alone are in error
+(`theirs_alone`). So a document this press changed, with no failure naming it, has the app's features clean, yet its
+mark is kept. `out.still_in_error` (`update.py:2263-2264`) is then everything still marked, including documents this
+press did change.
+*Shown:* `Desk`, `range_box`, `rebuild_ok = False`, Sun backlash pressed. The stop marks Sun. Then:
+1. `close_all()` (as told), `rebuild_ok = True`, and a user feature `Keyway` at code 41 in Sun's part. Pressed
+   again: `failures == []`, and Sun is `changed == ["Backlash"]`, `rebuilt False`.
+2. The status says both "Save Gear_m1.25_N29 and RangeBox in SolidWorks to keep them" and "Gear_m1.25_N29 is still
+   open … so this press set nothing in it: close it in SolidWorks without saving". The mark stays, and the footer
+   says "was left in error when it stopped: close them all … without saving".
+3. Closing without saving and pressing a third time gives the same status and the same mark, every time.
+
+Real cases look like this: a K3 user fillet that errors at the new count, or a keyway already in error before the
+Update. The user is told never to save, which is the only thing that would clear the mark.
+*Fix:* in `_documents_rebuilt_clean`, drop `d.rebuilt`: changed, and no failure names it. Make `still_in_error`
+leave out any document this press changed. The remake section's M3 steps run the same either way: step 2 changes
+nothing, and step 3's ring rebuilds True.
+
+**N2 (should-fix). A recipe A part whose user named a dimension `Pitch`, `Base`, `Flank` or `HalfSpace` is taken for
+recipe B, and its landing goes straight** (`swbuild.py:1473`, `:1507`).
+*Shown:* ring m1.25 55 with `"Pitch@Sketch9"= 12` among its equations. `_landing_route` returns `([], None)`; set to
+54 on the fake, it lands on the far branch (Tooth Space 72).
+*Fix:* match only the tooth space's own sketches: the name after `@` is `spur.SPACE_SKETCH`, or a bevel's heel or toe
+section sketch. Better still, take the recipe from the record onto `DocumentValues`, as the first review suggested.
+Neither changes a demonstrated path: the recipe B case's links are on `Tooth Space Sketch`, and the recipe A cases
+have none.
+
+**N3 (should-fix, rare: the second set has to fail after the first succeeded). If the count's set fails in leg two,
+the part is left at the intermediate, and the result says otherwise** (`swbuild.py:1455-1460`).
+*Shown* with a fake that refuses only the second set of `No. of Teeth`:
+- Ring 55 to 54 holds 53, with `rebuilt True`. The log says "set … by way of 53 first, rebuilt there, then the
+  workbook's value" and "rebuilt twice". The part is not "left in error", so the stop offers to save a ring at a
+  count that is neither the old one nor the workbook's.
+- A module alone (m1.225) holds 54. `changed == ["Module"]` and the count is in `unchanged`, though it was changed
+  and never set back.
+
+The failure itself is reported, and `finish_update` records nothing for a part with failures.
+*Fix:* if the final set fails, keep the count in `changed` (skip the S4 removal) and set `result.rebuilt = False`.
+The part then reads as left in error and the stop says to close it without saving.
+
+**N4 (should-fix). The status after a press that set nothing loses the rest of its sentence**
+(`ui_text.py:1891-1892`). When the text starts with `ALREADY_MATCHES`, the wrapper returns the still-in-error
+sentence alone. `_gearbox_update_status` adds more after `ALREADY_MATCHES`: the interference ending when a mode's or
+the assembly's check found clashes, the user-work sentences, `in_place_after`, and the leftovers sentence. All of
+these are dropped.
+*Shown:* the M3 press on `Desk` builds "SolidWorks already matches the workbook: nothing was changed. It worked in H,
+… since nothing in H needed changing." It says only the still-in-error sentence. A clash found by a quiet press would
+be dropped the same way.
+*Fix:* replace only the prefix: `said + text[len(ALREADY_MATCHES):]`. The demonstration matches sentences by their
+distinctive parts, so its remake step 2 still matches.
+
+### Notes
+
+1. **The maths is right for the lines it claims, profile shift included.** For spur (z 12–80) and ring (z 25–80), at
+   x 0, 0.3, −0.2 and 0.5 and m 1, 1.25 and 2.5, `landing._line` equals `spur.involute_flank` (`start`,
+   `line_inner`) and `internal.involute_flank` (`start`, `cap`) to 0 mm. A ring refuses a shift. Helical, sleeve and
+   dog draw the same sketch at the origin from the same globals. A module change and a count change together are
+   foreseen from the globals as they would be set, and the route keeps the new module for both legs (40 m1.25 → 32
+   m1.5 via 31 at m1.5, as measured).
+2. **Intermediates are safe in practice.**
+   - Every routed ring (m 0.5–3, z 20–150, one to four down: 620 cases) and every routed sleeve takes `wanted − 1`.
+     That is smaller, so it is safe against a typed rim.
+   - Spur intermediates are 14–18 at m ≤ 1.25 and 9–13 at m ≥ 2. None reaches 6 or 7, where `caps_with_arc` would
+     want an arc for a chord-built part.
+   - The `n < 5` floor is below the spur's minimum of 6. That is harmless today, but `n < 6` (or the kind's own
+     minimum) would be truer.
+   - Both legs are foreseen (`swbuild.py:1524-1525`). The intermediate is never the count held or wanted.
+   - Leg one sets every other global at its final value. The foresight's `mid` models exactly that hybrid.
+   - Nothing is saved.
+3. **The external bevel gear is foreseen in a frame its sketch does not have.** Its globals are the spur's
+   (`spur.profile_variables` on the back cone), so `_line` reads it as `L+`. Its sketches are the heel and toe
+   sections, moved by `Heel/Toe Virtual Radius` and scaled by `Heel/Toe Scale` (`bevel.py:1065-1080`,
+   `spur._framed`), and both of those move with the count. In sketch coordinates the fraction differs. For example,
+   m1 mate 20 at 90°, 20 → 19, is 4.09 by the foresight and 1.21 (heel) and 0.83 (toe) in the sketch.
+   A sweep was run: m 1 and 2; shaft 60, 90 and 120°; mate 10–60; z 8–69; −1 to −3 and +1; 6532 cases. Nothing
+   below 0.2 in either sketch was missed, and 14 cases were routed needlessly (shaft 120°, z 9–11). That is harmless
+   today, but the docstring's "the sketch's geometry is a function of [the globals]" is not true of a bevel. The fix
+   is to leave a part with a `Heel Scale` global unclassified, or to measure in the section's frame.
+4. **Small items.**
+   - The S2 guard also blinds an external gear that carries a user global whose name contains `Inner Diameter`.
+   - At head, 0.2 routes the externals measured clean straight at 0.0996 and 0.1276 (m ≤ 1.25, 16→15 to 20→19). They
+     cost one more rebuild each, which is known and acceptable.
+   - The run-7 note "each with the old end toward the cap" is a ring's words. For `L+` the line runs toward the
+     root.
+5. **Records.** Schema 9 records written by `0eb0768` to `5c02c6a` read at head:
+   - `unsaved_in_error` and `UserWorkEntry.modes` default to `[]` through `_known`;
+   - `store.clear_saved` and `keep_in_error` drop the mark when the file is saved, missing, or found closed;
+   - a stale mark cannot outlive its `unsaved` entry.
+
+   A user who saves the part in error against the advice clears both. The next press then says "already matches"
+   for a part still in error, which is the first review's "note for later" and is unchanged.
+
+### Tests that matter and are missing
+
+- N1: a re-press after a stop where the marked part changes clean but reads False from a user feature.
+- N3: a route whose second set fails, for a count change and for a module alone.
+- N2: a recipe A part with a user dimension named `Pitch` (or `Base`).
+- N4: the still-in-error status keeping what follows `ALREADY_MATCHES`.
+- A bevel external's landing pinned to whatever rule note 3 settles.
+
+The happy paths and each first-review item are pinned. The fake's 0.05 threshold still means nothing between 0.05
+and 0.2 fails there, which is fair to the evidence.
+
+### Must the SolidWorks demonstration be run again?
+
+**No.** N1, N4 and N2's record-side fix are Tk-thread code, and they change no call the worker makes:
+- **N1:** the remake section's M3 step 2 changes nothing, and step 3's ring rebuilds True, so they come out the same.
+- **N2:** the narrower fix (a sketch-name match) changes what the worker routes only for a part carrying a user
+  dimension named `Pitch`, `Base`, `Flank` or `HalfSpace`, and no demonstrated part has one.
+- **N3:** it touches only a failed second set, which no run provokes.
+
+The running 2026 run, on head's `src/`, stays valid evidence for these fixes. Its status text for remake step 2 will
+read as N4 describes, without what follows "already matches". That is a wording fact, not a worker one.
