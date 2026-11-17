@@ -31,7 +31,9 @@ from typing import Callable, Collection, Dict, List, Mapping, Optional, Protocol
 from . import findings
 from .gears import base
 from .gears.base import BuildPlan, GlobalVariable
-from .gears.equations import DEGREES, RADIANS, EquationError, evaluate_all, split_equation
+from .gears.equations import DEGREES, RADIANS, EquationError, evaluate_all, literal, split_equation
+from .gears.landing import line_landings
+from .gears.spur import TEETH as TEETH_GLOBAL
 from .gears.spur import AXIS_NAME, BORE as BORE_GLOBAL
 from .store import CARRIER_ID_SUFFIX, GEARBOX_MOTION, GEARBOX_STATIC, now, same_path
 from .swcom import (ASSEMBLY_PAIR, ASSEMBLY_STATIC, ASSEMBLY_TRAIN, COMPONENT_FIND_ROUTES, CONFIGURATION_FINDINGS,
@@ -246,6 +248,11 @@ class UpdateResult:
     failures: List[Tuple[str, str]] = field(default_factory=list)
     rebuilt: bool = False
     trig: str = ""
+    # W9c's demonstration, run 6 (gears.landing): ``by_way_of`` ``(global, the intermediate expression)`` when the
+    # change was set by way of a safe intermediate and rebuilt there first; ``landing`` each landing foreseen,
+    # ``(line, mm from its old end, its length)``, routed or (no safe intermediate found) not.
+    by_way_of: Tuple[str, str] = ()
+    landing: Tuple[Tuple[str, float, float], ...] = ()
 
     @property
     def ok(self) -> bool:
@@ -1401,7 +1408,8 @@ def update_variables(sw: SolidWorks, variables: Sequence[GlobalVariable], expect
     sw.begin_build()
     try:
         result.trig = sw.detect_trig_units()
-        changes = planned_changes(sw.equations(), variables, result.trig)
+        current = sw.equations()
+        changes = planned_changes(current, variables, result.trig)
         names = {name for name, _ in changes}
         result.unchanged = [v.name for v in variables if v.name not in names]
         try:
@@ -1410,20 +1418,86 @@ def update_variables(sw: SolidWorks, variables: Sequence[GlobalVariable], expect
             raise BuildError(f"The new values do not evaluate: {exc}") from None
         if not changes:
             return result
-        sw.set_rebuild_suppressed(True)
-        try:
-            for name, expression in changes:
-                try:
-                    sw.set_global_variable(name, expression)
-                    result.changed.append(name)
-                except Exception as exc:  # noqa: BLE001 - what was set stays listed in ``changed`` (B1)
-                    result.failures.append((f"\"{name}\"", _said(exc)))
-        finally:
-            sw.set_rebuild_suppressed(False)
-        result.rebuilt = bool(sw.rebuild())
+
+        def apply(batch: Sequence[Tuple[str, str]]) -> bool:
+            sw.set_rebuild_suppressed(True)
+            try:
+                for name, expression in batch:
+                    try:
+                        sw.set_global_variable(name, expression)
+                        if name not in result.changed:
+                            result.changed.append(name)
+                    except Exception as exc:  # noqa: BLE001 - what was set stays listed in ``changed`` (B1)
+                        result.failures.append((f"\"{name}\"", _said(exc)))
+            finally:
+                sw.set_rebuild_suppressed(False)
+            return bool(sw.rebuild())
+
+        # W9c's demonstration, run 6: a change whose new flank start lands on where the sketch's short solved line
+        # ends now leaves the part on the wrong branch for good, so it is set by way of a safe intermediate, rebuilt
+        # there first, then set to the workbook's value: two rebuilds only where the landing is foreseen.
+        landing, by_way = _landing_route(current, variables, result.trig)
+        result.landing = tuple(landing)
+        if by_way is not None:
+            name, middle = by_way
+            result.by_way_of = (name, middle.expression_for(result.trig))
+            first = planned_changes(current, [middle if v.name == name else v for v in variables], result.trig)
+            result.rebuilt = apply(first)
+            if not result.rebuilt or result.failures:
+                return result
+            final = next(v for v in variables if v.name == name)
+            result.rebuilt = apply([(name, final.expression_for(result.trig))])
+        else:
+            result.rebuilt = apply(changes)
     finally:
         sw.end_build()
     return result
+
+
+# How far from the workbook's tooth count an intermediate is looked for, nearest first (one below first: the measured
+# 55 -> 53 -> 54).
+LANDING_STEPS = (-1, 1, -2, 2, -3, 3, -4, 4)
+
+
+def _landing_route(current: Sequence[Tuple[str, float]], variables: Sequence[GlobalVariable],
+                   trig: str) -> Tuple[List[Tuple[str, float, float]], Optional[Tuple[str, GlobalVariable]]]:
+    """Pure: the landings :func:`gears.landing.line_landings` foresees from what the part holds now (its equations,
+    evaluated) to ``variables``, and, when there is one, ``(the tooth count's global, its intermediate)``: the
+    nearest count to the workbook's (``LANDING_STEPS``), neither the count held nor the one wanted, whose legs from
+    now and on to the wanted values both foresee no landing. ``(landings, None)`` when none is safe, or the change is
+    not one to route (no tooth count among the globals); ``([], None)`` with no landing."""
+    held: List[Tuple[str, str]] = []
+    for text, _ in current:
+        try:
+            held.append(split_equation(text))
+        except (ValueError, EquationError):
+            continue
+    try:
+        before = evaluate_all(held, trig)
+        after = evaluate_all([(v.name, v.expression_for(trig)) for v in variables], trig)
+    except EquationError:
+        return [], None
+    landing = line_landings(before, after)
+    if not landing:
+        return [], None
+    count = next((v for v in variables if v.name == TEETH_GLOBAL), None)
+    if count is None or TEETH_GLOBAL not in before:
+        return landing, None
+    wanted, now = int(round(after[TEETH_GLOBAL])), int(round(before[TEETH_GLOBAL]))
+    for step in LANDING_STEPS:
+        n = wanted + step
+        if n in (wanted, now) or n < 5:
+            continue
+        middle = replace(count, expression=literal(n), radian_expression="")
+        try:
+            mid = evaluate_all([(v.name, (middle if v is count else v).expression_for(trig)) for v in variables],
+                               trig)
+        except EquationError:
+            continue
+        if not line_landings(before, mid) and not line_landings(mid, after) and line_landings(
+                before, mid, fraction=float("inf")) and line_landings(mid, after, fraction=float("inf")):
+            return landing, (count.name, middle)
+    return landing, None
 
 
 # -- a workbook's gearbox: parts, layout part and static assembly (phase W4) ---------
@@ -3686,12 +3760,18 @@ class GearboxUpdate:
             lines.append(f"update  {result.document or '(no document)'} · trig {result.trig or '?'}")
             if result.changed:
                 lines.append("ok      set " + ", ".join(f'"{n}"' for n in result.changed))
+            if result.by_way_of:
+                lines.append(f'ok      set "{result.by_way_of[0]}" by way of {result.by_way_of[1]} first, rebuilt '
+                             "there, then the workbook's value (a sketch line would have landed on itself)")
+            elif result.landing:
+                lines.append("CHECK   a sketch line lands on itself with this change, and no safe intermediate was "
+                             f"found: {', '.join(name for name, _, _ in result.landing)}")
             elif not result.failures:
                 lines.append("ok      already holds the workbook's values")
             if result.changed:
                 theirs = [f.name for f in self.user_features_in_error if _file(f.path) == result.document]
                 if result.rebuilt:
-                    lines.append("ok      rebuilt once")
+                    lines.append("ok      rebuilt twice" if result.by_way_of else "ok      rebuilt once")
                 elif theirs and not any(what == result.document for what, _ in self.failures):
                     lines.append("CHECK   the rebuild reported an error, from your features alone: " + ", ".join(theirs))
                 else:

@@ -354,6 +354,12 @@ class FakeSolidWorks:
         # demonstration; begin_build turns it off and end_build puts back what it found.
         self.dim_dialog_on = True
         self.dim_dialog_kept = None
+        # W9c's demonstration, run 6 on 2026: a ring whose globals are set so its new flank start lands on where Li+
+        # ends now (0.038 of its length measured failing, one tooth down) rebuilds with Tooth Space at code 72 and
+        # Teeth at 1, and stays so in this session whatever is set after (a forced rebuild, the old count again).
+        # Modelled from the ring's own geometry (gears.internal), not from gears.landing's foresight.
+        self.values_before_set = {}        # lower-cased path -> its globals before the first set since a rebuild
+        self.wrong_branch = set()          # lower-cased paths of rings left on the far branch
 
     def _log(self, name, *args):
         self.calls.append((name, args))
@@ -439,6 +445,7 @@ class FakeSolidWorks:
             self.assembly_kinds.append(kind)
         self._touch()
         if not self._is_assembly():
+            self._ring_landing()
             # W9a, P0 (2026 and 2024): a part's rebuild with a feature in error returns False.
             return self.rebuild_ok and not any(code for (key, _), code in self.feature_codes.items()
                                                if self.current and key == _key(self.current))
@@ -454,6 +461,25 @@ class FakeSolidWorks:
             # of it returns False, where findings.ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_<year> says so.
             return False
         return self.rebuild_ok
+
+    def _evaluated(self):
+        from gear_generator.gears.equations import evaluate_all
+        try:
+            return evaluate_all([split_equation(t) for t in self.equations_text], self.trig)
+        except Exception:  # noqa: BLE001 - not a part of this tool's: nothing modelled
+            return {}
+
+    def _ring_landing(self):
+        """At a part's rebuild: a ring set across the landing goes to the far branch, and stays there."""
+        key = _key(self.current) if self.current else ""
+        before = self.values_before_set.pop(key, None)
+        if key and key not in self.wrong_branch and before:
+            after = self._evaluated()
+            if _ring_lands(before, after):
+                self.wrong_branch.add(key)
+        if key in self.wrong_branch:
+            self.feature_codes[(key, "Tooth Space")] = 72
+            self.feature_codes[(key, "Teeth")] = 1
 
     def _feature_rule(self):
         """findings.ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_<year> for the fake's revision."""
@@ -513,6 +539,8 @@ class FakeSolidWorks:
     def set_global_variable(self, name, expression):
         self._log("set_global_variable", name, expression)
         self._touch()
+        if self.current and _key(self.current) not in self.values_before_set:
+            self.values_before_set[_key(self.current)] = self._evaluated()
         for feature, code in self.breaks_on_set.pop(_key(self.current), []) if self.current else []:
             self.feature_codes[(_key(self.current), feature)] = code
         for i, text in enumerate(self.equations_text):
@@ -1764,6 +1792,26 @@ def plan(spec=None, recipe="A", path=PATH):
 
 def names(fake):
     return [name for name, _ in fake.calls]
+
+
+def _ring_lands(before, after, measured=0.05):
+    """Whether a ring's globals set from ``before`` to ``after`` land its new flank start on where Li+ ends now, by
+    the ring's own maths (``internal.section`` and ``involute_flank``): closer than ``measured`` of Li+'s length (run 6
+    failed at 0.038 and rebuilt at 1.0 and above)."""
+    from gear_generator.gears import internal
+
+    def flank(values):
+        g = internal.section(int(round(values["No. of Teeth"])), values["Module"], values["Pressure Angle"],
+                             values.get("Face Width", 10.0), None, values["Backlash"], values["Fillet Radius"])
+        return internal.involute_flank(g)
+    if "Inner Diameter" not in before or "Inner Diameter" not in after:
+        return False
+    try:
+        old, new = flank(before), flank(after)
+    except Exception:  # noqa: BLE001 - not a ring the maths makes: nothing modelled
+        return False
+    import math
+    return math.dist(old.cap, new.start) < measured * math.dist(new.start, new.cap)
 
 
 def never_exists(_path):
