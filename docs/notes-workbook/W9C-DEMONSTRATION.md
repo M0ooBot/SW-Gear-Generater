@@ -88,16 +88,17 @@ Times are estimates for SolidWorks 2026, from W9a's and W9b's measured runs. An 
 
 | # | Section | What it does | 2026 |
 |---|---|---|---|
-| 0 | `ring` | The ring's Tooth Space sketch dumped as built at 55, set to 54 and built at 54, the last two compared; routes to 54 and 56 → 55; Sun at 30: a diagnostic, facts only. Details under the fifth run, below. | 2 min |
-| 1 | `fixed` | **The Done-when.** Details below. Kept as `fixed-updated.master`. | 30 min |
-| 2 | `modes` | **M10.** Four edits, three presses and three refusals. Details below. | 30 min |
+| – | `ring` | By name only. The ring's Tooth Space sketch dumped as built at 55, set to 54 and built at 54, the last two compared; routes to 54 and 56 → 55; Sun at 30: a diagnostic, facts only. Details under the fifth run, below. | 2 min |
+| – | `landing` | By name only. A's fix (63bbc33) measured. Details below. | 6 min |
+| 1 | `fixed` | **The Done-when.** Details below. Kept as `fixed-updated.master`. | 20 min (run 5) |
+| 2 | `modes` | **M10.** Four edits, three presses and three refusals. Details below. | 48 min (run 5) |
 | 3 | `remove` | G4 out of the 12 : 1; HighDog out of setup refused, twice. Details below. | 15 min |
-| 4 | `remake` | Sun 29 → 28, Planet 13 → 14, Ring 55 → 56 with modes, on a copy of `setup.master` (it needs nothing of `fixed`'s). Details below. | 12 min |
+| 4 | `remake` | Sun 29 → 28, Planet 13 → 14, Ring 55 → 56 with modes, on a copy of `setup.master` (it needs nothing of `fixed`'s). Details below. | 14 min |
 | 5 | `bands-off` | The take-away side. Details below. | 8 min |
 | 6 | `m4` | The external-references read, a probe. Details below. | 5 min |
 | 7 | `w9b-part` | W9b's `part` section again, so its step-face read runs on SolidWorks in this session. | 2 min |
 
-**About 1 h 45 min on 2026**, inside the plan's 2 h 20 min. Add 5 min if `setup.master`, and 4 min if the 12 : 1's
+**About 1 h 50 min on 2026**, inside the plan's 2 h 20 min. Add 5 min if `setup.master`, and 4 min if the 12 : 1's
 master, must be built first. On 2024, at about twice the time per press, about 3 h 30 min against the plan's
 3 h 35 min, each section in a fresh session as before. **I would cut first** `w9b-part` (its question rides along),
 then `bands-off`'s script-side probe, then `m4`'s comparison read on Sun.
@@ -192,9 +193,17 @@ On a copy of `fixed-updated.master`:
    - **Each user mate's flag and each user component's state in H2** is read (the flag unshown, the state shown) and
      held to the result's `took_active_state`, item by item.
    - **Every mode is judged:** H2 against §3's H row, the others their own.
+   - **The inventory follows the add** (B's 0eb0768, the runs review's must-fix 1). In memory and on disk, the
+     record's inventory names H2 in its `modes`, and in each user mate's on-list exactly where SolidWorks' own flag
+     in H2 (read unshown) reads on, and nowhere it reads suppressed. A FAIL otherwise.
 2. **The user suppresses UserAngle4 in N alone** and saves.
-3. **N's row is cleared** while H shows, first refused with `UPDATE_REMOVES_A_MODE`. The user's flags are read before:
-   UserAngle4's in N differs from H's.
+3. **N's row is cleared** while H shows.
+   - **First, with the gate patched and before its refusal is on record,** the footer is read. Either the gate's own
+     stop or a recorded refusal is said in place of the prediction, so either would hide it, as in run 5 (log line
+     569). It must name no user mate as suppressed in H2 (a FAIL otherwise). Every problem it foresees is kept, and
+     the press that later goes through must meet none of them (a FAIL otherwise).
+   - **Then it is refused** with `UPDATE_REMOVES_A_MODE` as it stands. The user's flags are read before: UserAngle4's
+     in N differs from H's.
    - **The press:** `modes_removed` `["N"]`, N gone from the configurations, the record's modes H, L, H2.
      `flags_lost` equals what was read: `[("N", "UserAngle4", "suppressed")]`.
    - **Every remaining configuration's** app flags and slide values are as before (W9b's `mode_read`), and the mode
@@ -210,6 +219,9 @@ On a copy of `fixed-updated.master`:
    - **The press:** H deleted, the record's modes L, H2, and H2 still showing.
    - **Every mode is judged:** L as §3's L, H2 as §3's H.
    - **The user items are as before.**
+
+**The link record's JSON, as the store wrote it to disk,** goes into the run JSON (`records`) after each press and
+each refusal, so a later replay can stand on the real record.
 
 H's coupling to HighDog stays on in H2. That is why H2 is added first: removing H from RangeBox_Fixed alone is
 *Build again…* by ruling 9.1, and the self-check shows it.
@@ -283,6 +295,40 @@ on the copy's sleeve (C8's call, on a part's feature):
 The copy ends unsaved. These are proposed as the facts of `UPDATE_SUPPRESSES_THE_RELIEF_ON_<year>` (957b7c0's
 split), the finding itself proposed None: no Update made that write.
 
+### `landing` (by name only)
+
+A's fix (63bbc33), measured. `gears.landing` foresees from the part's globals, before and after, that the new flank
+start lands within 0.2 of the short solved line's new length of where it ends now. The ring's line is `Li+` to the tip
+cap; the external gear's is `L+` to the root fillet. `swbuild.update_variables` then sets the change by way of the
+nearest safe tooth count, with two rebuilds.
+
+Twelve parts are built from scratch, `landing_builds`: every start that S0's master does not hold, and every routed
+case's target. Each case then runs on a fresh copy, nothing is saved, and every document is closed. The rebuilds are
+counted by wrapping the session's `rebuild` on its instance for the one call only.
+
+1. **Routed by the app as it stands:**
+   - ring m1.25 55 → 54, by way of 53 (foreseen at 0.038), from S0's master;
+   - ring m1.25 56 → 55, by way of 54 (0.038);
+   - ring m1 30 → 28, by way of 27 (0.144).
+
+   Each is checked: `by_way_of` as foreseen, both rebuilds true, no feature in error, the target's tooth count, and the
+   volume within 1e-4 (W9b's volume floor) of the target built from scratch.
+2. **The threshold.** With `swbuild.LANDING_STEPS` patched to `()` in this process, the same three are set straight,
+   plus spur m1 18 → 17 (0.10) and 17 → 16 (0.128); then the two externals are routed (by way of 16 and of 15). The
+   straight outcomes are facts beside the foresight's fraction, for setting the threshold. The routed ones are checked
+   as in 1.
+3. **Unhazardous:** ring 55 → 53 and 55 → 56, and Sun 29 → 30, from the master. Each is checked: nothing foreseen,
+   `by_way_of` empty, one rebuild, clean, the volume of the target built from scratch.
+4. **A module change with a tooth change:** ring m1.25 40 → m1.5 32 (0.173, by way of 31), checked routed, and as a fact
+   straight.
+5. **The leftover:** the straight 55 → 54's file, closed without saving after its failure and reopened, read at 55
+   teeth with no feature in error, against 55 built from scratch.
+
+Every case also checks that it closed unsaved (the file's time and size unchanged) with nothing left open, and that
+`LANDING_STEPS` is as it was. The section proposes nothing; there is no gate. It ends with one line saying whether the
+fix is shown: every foreseen change routed clean as foreseen, every unforeseen one set straight clean, and the leftover
+clean.
+
 ### `m4`
 
 A probe, since no app code makes the read yet. On a copy of `setup.master`, each user component (and Sun, for
@@ -332,6 +378,17 @@ GetSaveFlag around each, and it is closed again if the run opened it, never save
 above 0, or a path other than the part's own. `m4_route` is pure and self-checked. `EXTERNAL_REFERENCES_READ_ON_<year>`
 stays None: it gates the app's own read, which is not written yet.
 
+## A footer's foresight held to the press (every section)
+
+Every press in the script goes through `press`, which wraps W9a's. Just before the press, `foresight_unmasked` reads
+what the footer foresees would stop it:
+- the user-work problems `user_work_ahead` predicts, on a copy of the record whose inventory holds no refusal (a
+  recorded refusal is said in place of the prediction until the workbook changes);
+- the in-place stops `in_place_ahead` foresees, with the findings as they stand in this process.
+
+When the press then goes through, any problem foreseen is one it did not meet, a FAIL naming each. A press that
+refuses is judged by its section, as before. This is cheap: it costs no SolidWorks call.
+
 ## STOPs
 
 As W9a's, plus the plan's W9c:
@@ -369,6 +426,11 @@ find, reads it back with the app's own reader, and classifies it against a recor
 - **The first run's footer before HighDog's removal** (`w9c-demo-sw2026-20261117-1-first-contact.log`), replayed
   against the window's W9c rule: red, and the C4 stop said, not W9a's prediction.
 
+- **landing's plan:** each case's foresight by the app's own `_landing_route` and `gears.landing` on the part's
+  equations as SolidWorks writes them, against A's numbers (to 0.0015), and against `line_gap`, the sketches' own
+  maths (`internal`/`spur.involute_flank`; `start_lands_on_cap` is that for the ring), to 1e-9. Also the count each
+  goes by way of, and the unhazardous ones foreseeing nothing at 1.0 and above.
+
 At this commit it passes, 0 failed. `--help` imports nothing of SolidWorks.
 
 ## What the packages could not be driven to, and what is not a measurement here
@@ -394,6 +456,24 @@ At this commit it passes, 0 failed. `--help` imports nothing of SolidWorks.
   SolidWorks.
 - **On 2024,** the What's Wrong box may come in `fixed` (a user feature rebuilt after the relief), and is handled by
   W9a's rule. Nothing here is version-specific beyond the `_ON_<year>` names.
+
+## The sixth run on 2026 (from 30bf0e9), and what changed
+
+`probe/results/w9c-demo-sw2026-20261117-6-remake-clean-ring-cause.log` (6cdc709). **`remake`, on 28/14/56, passed
+with 0 failed.** `ring` confirmed the hypothesis:
+
+- in the 54 set from 55, against the 54 built from scratch, lines #4–#6 end 62.4 mm off;
+- 56 → 55 fails too;
+- through 56 or 53 to 54 is clean;
+- a forced rebuild does not mend it, and 54 → 55 does not recover.
+
+A fixed it in the app (63bbc33), measured by the new `landing` section above. `ring` and `landing` leave the default
+order and run by name.
+
+- **The spline reads in `sketch_dump` failed** (`GetStartPoint2`/`GetEndPoint2`: AttributeError; `GetPoints2` handed
+  back objects, not doubles). As the macro database's API-LEDGER records, `ISketchSpline.GetPoints2` gives sketch
+  point objects, and a spline has no `GetStartPoint2`. The dump now reads each point's X and Y, and takes the first
+  and last as the spline's ends.
 
 ## The fifth run on 2026 (from 9efcb2c), and what changed
 

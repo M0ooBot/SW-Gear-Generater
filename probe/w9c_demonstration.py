@@ -17,13 +17,20 @@ judged by its traced calls, the reads before and after, every document's save fl
 patches the finding True in this process only, says so (``PATCH``), and measures. Each section proposes its finding
 from what it read (``propose``); none is set here.
 
-Sections (each can run alone from a kept master; ``fixed`` keeps ``fixed-updated.master`` for the next four):
+Sections (each can run alone from a kept master; ``fixed`` keeps ``fixed-updated.master`` for the next four).
+``ring`` and ``landing`` run by name only (``--sections landing``), outside the default order and its time:
 
 - ``ring``      a diagnostic, facts only: why the ring's part from S0's master does not rebuild set from 55 to 54 teeth
-                (code 72 on Tooth Space, 2026's fifth run). On fresh copies, nothing saved: the Tooth Space sketch's
-                segments, dimensions and relation kinds as built at 55, set to 54, and built from scratch at 54, the
-                last two compared; routes to 54 (a forced rebuild after; through 56; through 53; 54 then 55) and 56
-                then 55, each clean or not and the volume; Sun 29 -> 30 for comparison.
+                (code 72 on Tooth Space, 2026's fifth run; run 6 confirmed the cause). On fresh copies, nothing saved:
+                the Tooth Space sketch's segments, dimensions and relation kinds as built at 55, set to 54, and built
+                from scratch at 54, the last two compared; routes to 54 (a forced rebuild after; through 56; through
+                53; 54 then 55) and 56 then 55, each clean or not and the volume; Sun 29 -> 30 for comparison. 2 min.
+- ``landing``   A's fix (63bbc33) measured: twelve parts built from scratch and fifteen cases on fresh copies, nothing
+                saved, every document closed. Changes the app foresees landing a sketch line on itself, routed by its
+                own update_variables (by way of the count it names, two rebuilds, clean, the volume of the target
+                built from scratch); the same and two external gears set straight (LANDING_STEPS patched to ()), the
+                threshold's facts beside the foresight's fraction; changes that land nothing, one rebuild; a module
+                change with a tooth change; the straight failure's file reopened, clean at 55. About 6 min.
 - ``fixed``     the plan's Done-when. A copy of ``setup.master`` (RangeBox with the user's work: the sprockets locked to
                 Sun and RangeSlv, the housing, their mates, the keyway in Sun's part), with a user groove cut in
                 RangeSlv's part; a quiet press records it; the workbook edited in Excel to RangeBox_Fixed (the
@@ -52,7 +59,7 @@ Sections (each can run alone from a kept master; ``fixed`` keeps ``fixed-updated
                 and the route proposed from it.
 - ``w9b-part``  W9b's ``part`` section again (88 s on 2026), so its step-face read runs on SolidWorks in this session.
 
-Time on 2026, estimated: ring 2 min, fixed 30 min, modes 30, remove 15, remake 12, bands-off 8, m4 5, w9b-part 2: about 1 h 45
+Time on 2026 (fixed and modes as run 5 measured): fixed 20 min, modes 48, remove 15, remake 14, bands-off 8, m4 5, w9b-part 2: about 1 h 50
 min (the plan's budget 2 h 20 min); add 5 min if setup.master and 4 if the 12 : 1's master must be built first.
 """
 
@@ -260,16 +267,110 @@ RING_ROUTES = {"54, then a forced rebuild": (54, "force"), "56, then 54": (56, 5
                "56, then 55 (the hypothesis's test: one tooth down from another count)": (56, 55)}
 
 
-def start_lands_on_cap(before, after, module=1.25, pressure_angle=20.0, backlash=0.375, fillet=0.1875):
+def line_gap(before, after):
+    """By the sketches' own maths (``internal.involute_flank``, ``spur.involute_flank``, not ``gears.landing``), a gear
+    set from the GearSpec ``before`` to ``after``: how far the new flank start (``I+.start``) lands from where the
+    short solved line ends now, and that line's new length (mm). The ring's line is ``Li+`` to the tip cap
+    (``cap``); the external gear's ``L+`` to the root fillet (``line_inner``)."""
+    from gear_generator.gears import internal, kind_for, spur
+    kind = kind_for(before)
+    flank = internal.involute_flank if getattr(kind, "internal", False) else spur.involute_flank
+    end = "cap" if getattr(kind, "internal", False) else "line_inner"
+    old, new = flank(kind.derive(before)), flank(kind_for(after).derive(after))
+    return math.dist(getattr(old, end), new.start), math.dist(new.start, getattr(new, end))
+
+
+def plain_spec(gear, module, teeth):
+    """A gear of the strip's defaults (face width, backlash, fillet), as A's tests make one: ``gear`` "ring" or
+    "spur"."""
+    from gear_generator.spec import GearSpec
+    return GearSpec().with_values(teeth=str(teeth), module=str(module),
+                                  teeth_side="internal" if gear == "ring" else "external")
+
+
+def start_lands_on_cap(before, after, module=1.25):
     """The ring's involute Tooth Space sketch (gears.internal._space_ops_involute) set from ``before`` to ``after``
     teeth: how far the new flank start (``I+.start``, where ``Li+`` must begin) lands from where ``Li+`` ends now (on
     the old tip-cap circle), against ``Li+``'s length (mm), by the app's own maths. For n >= 51 at these sizes, n's
     tip cap (nm - 4m) is (n - 1)'s flank start (da - m), so one tooth down puts the new start 0.024 mm from the old
-    end and ``Li+`` nearly collapses: the hypothesis the ring section's dump tests."""
-    from gear_generator.gears.internal import involute_flank, section
-    g, h = (section(n, module, pressure_angle, 10.0, None, backlash, fillet) for n in (before, after))
-    old, new = involute_flank(g), involute_flank(h)
-    return math.dist(old.cap, new.start), math.dist(new.start, new.cap)
+    end and ``Li+`` nearly collapses: run 6 confirmed it."""
+    return line_gap(plain_spec("ring", module, before), plain_spec("ring", module, after))
+
+
+# landing (A's 63bbc33: gears.landing foresees, swbuild.update_variables routes by way of a safe count). Each case:
+# (id, gear, (module, teeth) before, (module, teeth) after, how, the foresight's fraction as A gave it, the count it
+# goes by way of, group). gear: "fixture" is RangeBox's Ring and "sun" its Sun (their parts copied from S0's master);
+# "ring" and "spur" the strip's defaults, built from scratch. how: "routed" by update_variables as it stands;
+# "straight" with swbuild.LANDING_STEPS patched to () in this process (the threshold's facts). Groups as A's list:
+# 1 routed, 2 the threshold, 3 unhazardous, 4 a module change with a tooth change, 5 (the leftover) rides on the
+# first straight case.
+LANDING_CASES = (
+    ("ring-55-54", "fixture", ("1.25", 55), ("1.25", 54), "routed", 0.038, 53, 1),
+    ("ring-56-55", "fixture", ("1.25", 56), ("1.25", 55), "routed", 0.038, 54, 1),
+    ("ring-m1-30-28", "ring", ("1", 30), ("1", 28), "routed", 0.144, 27, 1),
+    ("ring-55-54-straight", "fixture", ("1.25", 55), ("1.25", 54), "straight", 0.038, 53, 2),
+    ("ring-56-55-straight", "fixture", ("1.25", 56), ("1.25", 55), "straight", 0.038, 54, 2),
+    ("ring-m1-30-28-straight", "ring", ("1", 30), ("1", 28), "straight", 0.144, 27, 2),
+    ("spur-m1-18-17-straight", "spur", ("1", 18), ("1", 17), "straight", 0.10, 16, 2),
+    ("spur-m1-17-16-straight", "spur", ("1", 17), ("1", 16), "straight", 0.128, 15, 2),
+    ("spur-m1-18-17", "spur", ("1", 18), ("1", 17), "routed", 0.10, 16, 2),
+    ("spur-m1-17-16", "spur", ("1", 17), ("1", 16), "routed", 0.128, 15, 2),
+    ("ring-55-53", "fixture", ("1.25", 55), ("1.25", 53), "routed", None, None, 3),
+    ("ring-55-56", "fixture", ("1.25", 55), ("1.25", 56), "routed", None, None, 3),
+    ("sun-29-30", "sun", ("1.25", 29), ("1.25", 30), "routed", None, None, 3),
+    ("ring-m1.25-40-m1.5-32", "ring", ("1.25", 40), ("1.5", 32), "routed", 0.173, 31, 4),
+    ("ring-m1.25-40-m1.5-32-straight", "ring", ("1.25", 40), ("1.5", 32), "straight", 0.173, 31, 4),
+)
+LANDING_LEFTOVER = "ring-55-54-straight"      # 5: closed unsaved after its failure, reopened: clean at 55
+LANDING_MASTER_FILES = {("fixture", "1.25", 55): "Ring_m1.25_N55.SLDPRT", ("sun", "1.25", 29): "Gear_m1.25_N29.SLDPRT"}
+def landing_builds():
+    """The parts the landing section builds from scratch, ``(gear, module, teeth)``, each once: every start not in S0's
+    master, and every routed case's target (its volume the routed result is held to), in the cases' order."""
+    out = []
+    for _, gear, before, after, how, _, _, _ in LANDING_CASES:
+        wanted = [] if (gear, *before) in LANDING_MASTER_FILES else [(gear, *before)]
+        wanted += [(gear, *after)] if how == "routed" and after else []
+        out += [k for k in wanted if k not in out]
+    return out
+
+
+LANDING_VOLUME_TOL = 1e-4     # relative: W9b's volume floor (VOLUME_FLOOR); one part routed against it built from scratch
+
+
+def landing_spec(gear, module, teeth, rb):
+    """The GearSpec of one side of a landing case (``rb``: RangeBox as the fixtures hold it)."""
+    if gear in ("fixture", "sun"):
+        gid = "Ring" if gear == "fixture" else "Sun"
+        spec = dataclasses.replace(rb, gears=tuple(dataclasses.replace(g, teeth=str(teeth)) if g.id == gid else g
+                                                   for g in rb.gears))
+        return spec.gear(gid).gear_spec(spec.box)
+    return plain_spec(gear, module, teeth)
+
+
+def landing_variables(spec):
+    from gear_generator.gears import kind_for
+    kind = kind_for(spec)
+    return kind.variables(spec, kind.derive(spec))
+
+
+def landing_foresight(before, after):
+    """What ``swbuild.update_variables`` will foresee for a part built from ``before`` set to ``after`` (GearSpecs):
+    ``(landings, the count it goes by way of or None, the fraction)``, by the app's own ``_landing_route`` on the
+    equations the part holds (written as SolidWorks gives them back) and ``gears.landing.line_landings`` with no
+    threshold for the fraction (None where the globals are no involute tooth space's)."""
+    from gear_generator import swbuild
+    from gear_generator.gears.equations import DEGREES, evaluate_all
+    from gear_generator.gears.landing import line_landings
+    held = [(f'"{v.name}" = {v.expression_for(DEGREES)}', 0.0) for v in landing_variables(before)]
+    wanted = landing_variables(after)
+    landing, way = swbuild._landing_route(held, wanted, DEGREES)  # noqa: SLF001
+    every = line_landings(evaluate_all([(t.split('" = ')[0][1:], t.split('" = ', 1)[1]) for t, _ in held], DEGREES),
+                          evaluate_all([(v.name, v.expression_for(DEGREES)) for v in wanted], DEGREES),
+                          fraction=float("inf"))
+    fraction = every[0][1] / every[0][2] if every else None
+    return landing, (int(way[1].expression) if way else None), fraction
+
+
 SKETCH_TOL = 1e-6             # mm: a sketch point or radius the same in two states
 
 
@@ -826,6 +927,25 @@ def self_check():
        f"ring: one tooth down (55 -> 54, 56 -> 55) puts the new flank start within 0.03 mm of where Li+ ends now, "
        f"Li+ 0.625 mm long; 55 -> 53, 55 -> 56, 53 -> 54 do not: "
        f"{ {k: (round(v[0], 4), round(v[1], 4)) for k, v in gaps.items()} }")
+    for case_id, gear, (m0, n0), (m1, n1), how, said, via, group in LANDING_CASES:
+        before, after = landing_spec(gear, m0, n0, rb), landing_spec(gear, m1, n1, rb)
+        landing, way, fraction = landing_foresight(before, after)
+        gap, length = line_gap(before, after)
+        same = fraction is not None and abs(fraction - gap / length) < 1e-9
+        if said is None:
+            ok(not landing and way is None and same and fraction >= 0.2,
+               f"landing plan {case_id}: nothing foreseen, no route (fraction {fraction:.4f}, the sketch's maths "
+               f"{gap / length:.4f})")
+        else:
+            ok(bool(landing) and way == via and same and abs(fraction - said) < 0.0015,
+               f"landing plan {case_id} ({how}): foreseen at {fraction:.4f} (A's {said}; the sketch's maths "
+               f"{gap:.4f} of {length:.4f} mm = {gap / length:.4f}), by way of {way} (planned {via})")
+    ok([c[0] for c in LANDING_CASES if c[0] == LANDING_LEFTOVER and c[4] == "straight"] == [LANDING_LEFTOVER]
+       and [(c[1], c[2][0], c[2][1]) in LANDING_MASTER_FILES for c in LANDING_CASES if c[0] == LANDING_LEFTOVER]
+       == [True] and len({c[0] for c in LANDING_CASES}) == len(LANDING_CASES)
+       and sorted(landing_builds()) == sorted(set(landing_builds())),
+       f"landing plan: the leftover rides on a straight case from S0's master's 55-tooth ring; ids unique; built from "
+       f"scratch: {landing_builds()}")
     ok(abs(arc_sweep((0, 0), (1, 0), (0, 1), 1) - 90.0) < 1e-9 and abs(arc_sweep((0, 0), (1, 0), (0, 1), -1) - 270.0)
        < 1e-9 and abs(arc_sweep((0, 0), (0, 1), (1, 0), 1) - 270.0) < 1e-9,
        "ring: an arc's sweep runs from its start to its end, counter-clockwise for direction 1, clockwise for -1")
@@ -1040,6 +1160,38 @@ def footer_ahead(desk, label):
     check(bool(stop) and stop in f.text and not f.ok and (not line or line not in f.text),
           f"{label}: the footer says the foreseen stop, red, in place of W9a's prediction: {stop[:120]!r}…")
     return ahead
+
+
+def foresight_unmasked(desk):
+    """What the footer foresees would stop the press now, with any refusal the record holds set aside (a recorded
+    refusal is said in place of the prediction until the workbook changes, so it would hide one): the user-work
+    problems ``user_work_ahead`` predicts on a copy of the record whose inventory holds no refusal, and the in-place
+    stops ``in_place_ahead`` foresees with the findings as they stand in this process. ``[(kind, names, sentence)]``."""
+    import copy
+    record = desk.record
+    entry = record.gearbox.user_work if record is not None and record.gearbox is not None else None
+    if entry is not None and entry.problems:
+        record = copy.deepcopy(record)
+        record.gearbox.user_work.problems = []
+        record.gearbox.user_work.refused_at = ""
+    ahead = wb_update.user_work_ahead(desk.update, record, desk.reading.digest)
+    stops = wb_update.in_place_ahead(desk.update, desk.record)
+    return [(p.kind, list(getattr(p, "mates", ()) or ()) + list(getattr(p, "subjects", ()) or ()), p.sentence)
+            for p in list(getattr(ahead, "problems", ()) or ()) + list(stops or ())]
+
+
+def press(desk, label):
+    """W9a's ``press``, and the runs review's rule: where the press then goes through, any problem the footer foresaw
+    for it (``foresight_unmasked``, read just before) is one it did not meet, a FAIL. A press that refuses is judged
+    by its section, as before."""
+    foreseen = foresight_unmasked(desk)
+    result, calls = A.press(desk, label)
+    if result is not None:
+        check(not foreseen, f"{label}: the press went through, and the footer foresaw no problem it did not meet: "
+                            f"{[(k, n) for k, n, _ in foreseen] or 'none'}")
+        for kind, names, sentence in foreseen:
+            say(f"        foreseen and not met: {kind} {names}: {sentence}")
+    return result, calls
 
 
 def band_titles():
@@ -1314,7 +1466,7 @@ def refused_without_writing(label, desk, folder, part, judge, users=None):
     files = B.documents_state(label, desk, folder)
     before = A.read_now(f"before {label}", box.assembly, folder, pairs, list(box.modes))
     globals_before = run("the part's globals", lambda s: W.live_globals(s, part))
-    result, calls = A.press(desk, label)
+    result, calls = press(desk, label)
     error = desk.error
     ok, sentence = judge(result, error)
     check(ok, f"{label}: {sentence}")
@@ -1442,7 +1594,7 @@ def section_fixed(out):
         groove_before = out["groove_before"] = sleeve_read("fixed, the groove made", sleeve.part)
         check(bool(groove_faces(groove_before["faces"])), f"fixed: the groove's faces are in RangeSlv's part: "
                                                           f"{groove_faces(groove_before['faces'])}")
-        quiet, _ = A.press(desk, "fixed: a quiet press (the inventory read again, the groove in it)")
+        quiet, _ = press(desk, "fixed: a quiet press (the inventory read again, the groove in it)")
         check(quiet is not None and quiet.placed == [] and any(f.name == GROOVE["name"] for f in (
             desk.record.gearbox.user_work.features if desk.record.gearbox.user_work is not None else ())),
             f"fixed: the quiet press recorded the user's groove: {desk.error if quiet is None else 'ok'}")
@@ -1471,7 +1623,7 @@ def section_fixed(out):
             before = every_mode("fixed, before the press", desk, users)
             shown = active_now(desk)            # after the every-mode read, which leaves the first mode showing
             files = B.documents_state("fixed", desk, folder)
-            result, calls = A.press(desk, "fixed: RangeBox -> RangeBox_Fixed, one Update")
+            result, calls = press(desk, "fixed: RangeBox -> RangeBox_Fixed, one Update")
             out["press"], out["in_place"] = A._update_fact(desk, result), in_place_fact(result)  # noqa: SLF001
             if result is None:
                 A.section_stop(f"fixed: the press with the findings patched raised: {desk.error}")
@@ -1570,7 +1722,7 @@ def section_fixed(out):
             left_open = run("fixed: closed as the user closes it", W.quit_in(folder))
             check(not left_open, f"fixed: everything of the copy closed after the save: left {left_open}")
             desk.plan_solidworks()
-            second, _ = A.press(desk, "fixed: a second press")
+            second, _ = press(desk, "fixed: a second press")
             clean["quiet"] = check(second is not None and second.placed == [] and not second.changed and second.ok
                                    and not second.inserted and not second.bands_added,
                                    f"fixed: the second press does nothing: {desk.error if second is None else 'ok'}")
@@ -1641,6 +1793,43 @@ def configurations_now(desk):
     return run("the configurations", job(desk.record.gearbox.assembly, lambda s: list(s.configurations())), 300)
 
 
+def keep_record(out, when, desk):
+    """The link record's JSON as the store wrote it to disk, kept in the run JSON (``records``: [when, record]) so a
+    later replay can stand on the real record; said in one line."""
+    try:
+        got = record_on_disk(desk)
+    except (OSError, ValueError) as exc:
+        got = f"unread: {type(exc).__name__}: {exc}"
+    out.setdefault("records", []).append([when, got])
+    entry = (got.get("gearbox") or {}).get("user_work") if isinstance(got, dict) else None
+    say(f"fact    modes: the record on disk {when} kept in the run JSON; its inventory covers "
+        f"{entry.get('modes') if isinstance(entry, dict) else entry}")
+
+
+def inventory_follows_add(label, desk, mode, suppressed, out):
+    """B's 0eb0768 (the runs review's must-fix 1): after a press that added ``mode``, the record's inventory, in memory
+    and on disk, names ``mode`` in its ``modes``, and in each user mate's on-list exactly where SolidWorks' own flag
+    there (``suppressed``: name -> True for suppressed, read unshown) reads on. A FAIL otherwise."""
+    entry = desk.record.gearbox.user_work
+    disk = record_on_disk(desk)
+    on_disk = (disk.get("gearbox") or {}).get("user_work") or {}
+    held = {m.name: list(m.on) for m in (entry.mates if entry is not None else [])}
+    held_disk = {m.get("name"): list(m.get("on") or []) for m in on_disk.get("mates") or []}
+    read = [n for n in suppressed if n in held]
+    wrong = {n: {"SolidWorks": "suppressed" if suppressed[n] else "on", "record": held[n], "on disk": held_disk.get(n)}
+             for n in read if (mode in held[n]) == suppressed[n] or (mode in (held_disk.get(n) or [])) == suppressed[n]}
+    covers = list(entry.modes) if entry is not None else None
+    out["inventory_after_add"] = {"modes": covers, "modes_on_disk": on_disk.get("modes"), "on": held,
+                                  "suppressed_read": suppressed, "wrong": wrong}
+    say(f"fact    {label}: the inventory after {mode}'s add covers {covers} (on disk {on_disk.get('modes')}); each "
+        f"user mate's on-list {held}; SolidWorks reads suppressed in {mode} {suppressed}; user mates not in the "
+        f"inventory {[n for n in suppressed if n not in held]}")
+    return check(entry is not None and mode in covers and mode in (on_disk.get("modes") or []) and bool(read)
+                 and not wrong,
+                 f"{label}: the record's inventory names {mode} in its modes and in every user mate's on-list where "
+                 f"SolidWorks reads it on there, and nowhere it reads suppressed ({len(read)} mates): {wrong or 'yes'}")
+
+
 def section_modes(out):
     add_stems, rm_stems = GATES["add"], GATES["remove a mode"]
     say(f"== modes  M10 on a copy of fixed-updated.master: a Modes row {ADDED_MODE} (RangeSlv at {ADDED_AT}) added; "
@@ -1667,13 +1856,15 @@ def section_modes(out):
               f"modes: classify adds {ADDED_MODE} in place: {u and (list(u.structural), u.in_place.modes_added)}")
         out["add_refusal"] = gated_refusal(f"modes, {ADDED_MODE} added, the gate as it stands", desk, folder, add_stems,
                                            sleeve)
+        keep_record(out, f"after the refusal of {ADDED_MODE}'s add", desk)
         with patched(add_stems):
             desk.plan_solidworks()
             footer_ahead(desk, f"modes, {ADDED_MODE}, the finding patched")
             before = every_mode(f"modes, before {ADDED_MODE}", desk, users)
             shown = active_now(desk)
-            result, _ = A.press(desk, f"modes: {ADDED_MODE} added")
+            result, _ = press(desk, f"modes: {ADDED_MODE} added")
             out["add"] = in_place_fact(result)
+            keep_record(out, "after the add", desk)
             if result is None:
                 A.section_stop(f"modes: the press adding {ADDED_MODE} raised: {desk.error}")
             ok = done_said(result, f"modes, {ADDED_MODE}")
@@ -1681,6 +1872,7 @@ def section_modes(out):
             names = configurations_now(desk)
             flags, states = took_active_read("modes", desk, ADDED_MODE, mates, users)
             differ = took_active_differs(result.took_active_state, ADDED_MODE, flags, states, swbuild._STATE_WORDS)  # noqa: SLF001
+            inventory_follows_add("modes", desk, ADDED_MODE, flags, out)
             clean["add"] = check(ok and result.modes_added == [ADDED_MODE] and ADDED_MODE in names
                                  and not desk.record.gearbox.left
                                  and after_shown == shown and not differ
@@ -1702,8 +1894,20 @@ def section_modes(out):
         u = desk.update
         check(u is not None and not u.structural and u.in_place.modes_removed == (REMOVED_MODE,),
               f"modes: classify removes {REMOVED_MODE} in place: {u and (list(u.structural), u.in_place.modes_removed)}")
+        with patched(rm_stems):
+            # The runs review's must-fix 1 (B's 0eb0768): the footer for this edit, read with the gate patched and
+            # before its refusal is on record (either would hide the prediction), foresees nothing of the user's.
+            desk.plan_solidworks()
+            footer_ahead(desk, f"modes, {REMOVED_MODE} removed, the gate patched, before its refusal (must-fix 1)")
+            foreseen_n = foresight_unmasked(desk)
+            in_added = [(k, n) for k, n, text in foreseen_n if ADDED_MODE in n or ADDED_MODE in text]
+            check(not in_added, f"modes: after {ADDED_MODE}'s add, the footer for the next edit names no user mate as "
+                                f"suppressed in {ADDED_MODE} (the runs review's must-fix 1): {in_added or 'none'}")
+            out["foreseen_before_n"] = foreseen_n
+        desk.plan_solidworks()
         out["remove_refusal"] = gated_refusal(f"modes, {REMOVED_MODE} removed, the gate as it stands", desk, folder,
                                               rm_stems, sleeve)
+        keep_record(out, f"after the refusal of {REMOVED_MODE}'s removal", desk)
         with patched(rm_stems):
             desk.plan_solidworks()
             footer_ahead(desk, f"modes, {REMOVED_MODE} removed, the finding patched")
@@ -1712,10 +1916,14 @@ def section_modes(out):
             shown = active_now(desk)
             lost = flags_lost_expected(before["by_mode"], mates, shown, REMOVED_MODE)
             say(f"fact    modes: the user's flags in {REMOVED_MODE} that differ from {shown}'s, read before: {lost}")
-            result, _ = A.press(desk, f"modes: {REMOVED_MODE} removed")
+            result, _ = press(desk, f"modes: {REMOVED_MODE} removed")
             out["remove"] = in_place_fact(result)
+            keep_record(out, f"after {REMOVED_MODE}'s removal", desk)
             if result is None:
                 A.section_stop(f"modes: the press removing {REMOVED_MODE} raised: {desk.error}")
+            check(not foreseen_n, f"modes: the press removing {REMOVED_MODE} went through, and the footer read before "
+                                  f"the gate's refusal foresaw nothing it did not meet: "
+                                  f"{[(k, n) for k, n, _ in foreseen_n] or 'none'}")
             ok = done_said(result, f"modes, {REMOVED_MODE}")
             after_shown = active_now(desk)
             names = configurations_now(desk)
@@ -1777,6 +1985,7 @@ def section_modes(out):
                   f"{[(p.kind, list(getattr(p, 'subjects', []) or [])) for p in problems]}, read at {entry and entry.read_at} "
                   "(W9C-INTERFACES §11)")
             out["showing_refusal"] = str(error)
+            keep_record(out, f"after the refusal of {ADDED_MODE}'s removal while it shows", desk)
             clean["showing"] = isinstance(error, swbuild.UserWorkRefused)
 
             say(f"-- modes  {ADDED_MODE}'s row put back, the first mode {FIRST_MODE} removed while {ADDED_MODE} shows")
@@ -1790,8 +1999,9 @@ def section_modes(out):
             footer_ahead(desk, f"modes, {FIRST_MODE} removed")
             before = every_mode(f"modes, before {FIRST_MODE} goes", desk, users)
             person_shows(desk, folder, ADDED_MODE)       # the every-mode read leaves the first mode showing
-            result, _ = A.press(desk, f"modes: {FIRST_MODE} removed")
+            result, _ = press(desk, f"modes: {FIRST_MODE} removed")
             out["remove_first"] = in_place_fact(result)
+            keep_record(out, f"after {FIRST_MODE}'s removal", desk)
             if result is None:
                 A.section_stop(f"modes: the press removing {FIRST_MODE} raised: {desk.error}")
             ok = done_said(result, f"modes, {FIRST_MODE}")
@@ -1845,7 +2055,7 @@ def remove_reducer(out):
         foreseen = foreseen_names(desk)
         check(not foreseen, f"remove: the footer foresees nothing stopping it: {[(p.kind, list(p.subjects)) for p in foreseen]}")
         before = A.read_now(f"remove, before {REMOVED_REDUCER} goes", box.assembly, folder, others, [])
-        result, _ = A.press(desk, f"remove: {REMOVED_REDUCER} taken out")
+        result, _ = press(desk, f"remove: {REMOVED_REDUCER} taken out")
         out["reducer"] = in_place_fact(result)
         if result is None:
             A.section_stop(f"remove: the press taking {REMOVED_REDUCER} out raised: {desk.error}")
@@ -1974,7 +2184,7 @@ def section_remake(out):
             desk.plan_solidworks()
             footer_ahead(desk, "remake, the finding patched")
             before = every_mode("remake, before", desk, users)
-            result, _ = A.press(desk, "remake: the teeth")
+            result, _ = press(desk, "remake: the teeth")
             out["press"], out["in_place"] = A._update_fact(desk, result), in_place_fact(result)  # noqa: SLF001
             if result is None:
                 A.section_stop(f"remake: the press with the finding patched raised: {desk.error}")
@@ -2120,7 +2330,7 @@ def sketch_dump(s, enums, name=SPACE_SKETCH_NAME):
     """The sketch ``name`` of the build part as SolidWorks holds it, in sketch coordinates (mm, to 1e-6): every
     segment in ``GetSketchSegments`` order, its type (``swSketchSegments_e``), its construction flag, its end points,
     and for an arc its centre, radius, direction (``GetRotationDir``) and sweep; a spline or equation curve its point
-    count and first and last points; the dimensions (``Session.feature_dimensions``: names and SystemValue, in
+    count, its ends its first and last points (``GetPoints2``: sketch point objects); the dimensions (``Session.feature_dimensions``: names and SystemValue, in
     metres or radians as SolidWorks holds them, so 1e-9 there is 1e-6 mm); the
     relations' kinds (``swConstraintType_e``). Every member that returns an array is called if late binding hands it
     back uncalled (``member``); each read guarded."""
@@ -2147,7 +2357,8 @@ def sketch_dump(s, enums, name=SPACE_SKETCH_NAME):
     for seg in list(member(sketch, "GetSketchSegments") or []):
         kind = guarded(lambda: int(member(seg, "GetType")))
         row = {"type": seg_words.get(kind, kind), "construction": guarded(lambda: bool(call(seg, "ConstructionGeometry")))}
-        for key, getter in (("start", "GetStartPoint2"), ("end", "GetEndPoint2")):
+        is_spline = row["type"] in ("swSketchSPLINE",) or kind == 3
+        for key, getter in () if is_spline else (("start", "GetStartPoint2"), ("end", "GetEndPoint2")):
             got = guarded(lambda g=getter: mm(member(seg, g)))
             row[key] = got if isinstance(got, tuple) else None
             if not isinstance(got, tuple):
@@ -2161,12 +2372,19 @@ def sketch_dump(s, enums, name=SPACE_SKETCH_NAME):
             row["direction"] = direction if isinstance(direction, int) else None
             if row["centre"] and row["start"] and row["end"] and row["direction"] is not None:
                 row["sweep"] = round(arc_sweep(row["centre"], row["start"], row["end"], row["direction"]), 6)
-        if row["type"] in ("swSketchSPLINE",) or kind == 3:
+        if is_spline:
+            # ISketchSpline.GetPoints2 hands back sketch point objects (API-LEDGER, ISketchSegment: verified 2026), and
+            # a spline has no GetStartPoint2 (run 6: AttributeError): its ends are its first and last points.
             def spline_points():
-                flat = [float(v) * 1000.0 for v in (member(seg, "GetPoints2") or [])]
-                pts = [(round(flat[i], 6), round(flat[i + 1], 6)) for i in range(0, len(flat) - 2, 3)]
+                pts = [mm(p) for p in list(member(seg, "GetPoints2") or [])]
                 return {"count": len(pts), "first": pts[0] if pts else None, "last": pts[-1] if pts else None}
-            row["points"] = guarded(spline_points)
+            got = guarded(spline_points)
+            row["points"] = got if isinstance(got, dict) else None
+            if isinstance(got, dict):
+                row["start"], row["end"] = got["first"], got["last"]
+            else:
+                row["start"] = row["end"] = None
+                row["points_read"] = got
         segments.append(row)
 
     def relations():
@@ -2314,6 +2532,192 @@ def section_ring(out):
         closed("sun-30", folder)
     diagnosis_said("ring sun-30", got)
     out["sun_30"] = {"in_error": got.get("in_error"), "volume": got.get("volume")}
+
+
+def landing_case_job(path, variables, straight):
+    """One part set to ``variables`` by the app's own ``swbuild.update_variables`` as it stands, or with
+    ``swbuild.LANDING_STEPS`` patched to ``()`` (``straight``) and restored in a finally: what the result says
+    (``by_way_of``, ``landing``, ``rebuilt``, ``failures``), every rebuild's own return in order (the session's
+    ``rebuild`` wrapped on this instance only, and unwrapped after), the features in error after, the tooth count the
+    part holds, the volume. Nothing saved."""
+    def work(s):
+        s.open_document(path)
+        rebuilds = []
+        original = s.rebuild
+
+        def counted(*args, **kwargs):
+            got = original(*args, **kwargs)
+            rebuilds.append(bool(got))
+            return got
+        steps = swbuild.LANDING_STEPS
+        s.rebuild = counted
+        try:
+            if straight:
+                swbuild.LANDING_STEPS = ()
+            r = swbuild.update_variables(s, variables, path)
+        finally:
+            swbuild.LANDING_STEPS = steps
+            del s.rebuild
+        out = {"by_way_of": tuple(r.by_way_of), "landing": [tuple(x) for x in r.landing], "rebuilt": r.rebuilt,
+               "failures": list(r.failures), "changed": list(r.changed), "rebuilds": rebuilds,
+               "steps_restored": swbuild.LANDING_STEPS == steps}
+        out.update(landing_state(s))
+        return out
+    return work
+
+
+def landing_state(s):
+    """The build part's features in error, its tooth count, its volume (guarded: a part in error may have no body)."""
+    out = {"in_error": [(f.name, f.code) for f in s.feature_states() if f.code]}
+    teeth = [v for t, v in s.equations() if t.strip().startswith(f'"{TEETH_NAME}"')]
+    out["teeth"] = teeth[0] if teeth else None
+    try:
+        out["volume"] = s.volume_mm3()
+    except Exception as exc:  # noqa: BLE001 - no body: said in its place
+        out["volume"] = None
+        out["volume_read"] = f"{type(exc).__name__}: {exc}"
+    return out
+
+
+TEETH_NAME = "No. of Teeth"     # gears.spur.TEETH, the global LANDING_STEPS moves
+
+
+def section_landing(out):
+    say("== landing  A's fix (63bbc33), measured, facts and checks, no proposal (no gate): gears.landing foresees a "
+        "landing from the part's globals before and after, and swbuild.update_variables sets the change by way of the "
+        "nearest safe tooth count, two rebuilds. On fresh copies of S0's master's parts or of parts built here from "
+        "scratch, nothing saved, every document closed: (1) routed as the app stands; (2) the threshold: the same set "
+        "straight (swbuild.LANDING_STEPS patched to () in this process, restored), with two external gears, then the "
+        "externals routed; (3) changes that land nothing, one rebuild; (4) a module change with a tooth change; (5) "
+        "the straight failure closed unsaved and reopened. A FAIL only where a routed result is not clean or not as "
+        "foreseen, or a document is left open or saved")
+    import shutil
+    from gear_generator.gears import kind_for, plan_for
+    check(TEETH_NAME == swbuild.TEETH_GLOBAL, f"landing: the tooth count's global is {swbuild.TEETH_GLOBAL!r}")
+    rb, _, _ = specs()
+    master = A.rangebox_master()
+    root = W.fresh_folder("landing")
+
+    def label(key):
+        gear, module, teeth = key
+        return f"{gear}-m{module}-{teeth}"
+
+    say("-- landing  the parts built from scratch: every start not in S0's master and every routed case's target")
+    built = {}
+    for key in landing_builds():
+        spec = landing_spec(*key, rb)
+        kind = kind_for(spec)
+        folder = os.path.join(root, "built", label(key))
+        os.makedirs(folder, exist_ok=True)
+        path = os.path.join(folder, spec.stem() + ".SLDPRT")
+        plan = plan_for(spec, kind.derive(spec), "", path)
+        checks = plan.check()
+
+        def build(s, plan=plan):
+            r = swbuild.build(s, plan)
+            return r, (landing_state(s) if r.ok else None)
+        try:
+            result, state = run(f"landing build {label(key)}", build, 900)
+        finally:
+            left = run(f"landing build {label(key)}: closed", W.quit_in(folder))
+        ok_ = result.ok and state is not None and not state["in_error"]
+        say(f"fact    landing build {label(key)}: the plan's checks {checks}; built ok {result.ok}, failures "
+            f"{list(result.failures)}; {state}; left open {left}")
+        check(not left, f"landing build {label(key)}: closed, nothing of it left open")
+        if ok_:
+            built[key] = (path, state["volume"])
+
+    def source(gear, module, teeth):
+        name = LANDING_MASTER_FILES.get((gear, module, teeth))
+        if name:
+            return os.path.join(master, name)
+        got = built.get((gear, module, teeth))
+        return got[0] if got else None
+
+    def stamp(path):
+        st = os.stat(path)
+        return st.st_mtime_ns, st.st_size
+
+    out["cases"] = {}
+    straight_outcomes = []
+    for case_id, gear, before, after, how, said, via, group in LANDING_CASES:
+        b_spec, a_spec = landing_spec(gear, *before, rb), landing_spec(gear, *after, rb)
+        landing, way, fraction = landing_foresight(b_spec, a_spec)
+        head = (f"landing {case_id} ({how}, group {group}): {gear} m{before[0]} {before[1]} -> m{after[0]} {after[1]}; "
+                f"foreseen at {'%.4f' % fraction if fraction is not None else None} of the line's length "
+                f"({'a landing' if landing else 'no landing'}{f', by way of {way}' if way else ''})")
+        src = source(gear, *before)
+        target = built.get((gear, *after))
+        if src is None:
+            say(f"fact    {head}: not run, its start did not build")
+            out["cases"][case_id] = {"run": False}
+            continue
+        folder = os.path.join(root, case_id)
+        os.makedirs(folder, exist_ok=True)
+        path = os.path.join(folder, os.path.basename(src))
+        shutil.copy2(src, path)
+        before_stamp = stamp(path)
+        try:
+            got = run(f"landing {case_id}", landing_case_job(path, landing_variables(a_spec), how == "straight"), 900)
+        finally:
+            left = run(f"landing {case_id}: closed unsaved", W.quit_in(folder))
+        saved = stamp(path) != before_stamp
+        clean = got["rebuilt"] and not got["in_error"] and not got["failures"]
+        vol, ref = got.get("volume"), (target[1] if target else None)
+        rel = abs(vol - ref) / ref if vol is not None and ref else None
+        got.update({"foreseen": fraction, "planned_via": via, "target_volume": ref, "volume_rel": rel, "left": left,
+                    "saved": saved, "clean": clean})
+        out["cases"][case_id] = got
+        say(f"fact    {head}: by_way_of {got['by_way_of']}, landing {got['landing']}; rebuilds {got['rebuilds']}; "
+            f"rebuilt {got['rebuilt']}, failures {got['failures']}; in error {got['in_error']}; teeth {got['teeth']}; "
+            f"volume {vol} against {ref} built from scratch (relative {rel}); left open {left}, saved {saved}")
+        check(not left and not saved, f"landing {case_id}: closed without saving, nothing left open")
+        check(got["steps_restored"], f"landing {case_id}: swbuild.LANDING_STEPS as it was after the case")
+        if how == "routed" and via is not None:
+            check(clean and got["by_way_of"] == (TEETH_NAME, str(via)) and bool(got["landing"])
+                  and got["rebuilds"] == [True, True] and rel is not None and rel <= LANDING_VOLUME_TOL
+                  and got["teeth"] is not None and abs(got["teeth"] - after[1]) < 1e-9,
+                  f"landing {case_id}: routed by way of {via} as foreseen, both rebuilds true, no feature in error, "
+                  f"{after[1]} teeth, the volume within {LANDING_VOLUME_TOL:g} of the from-scratch build's")
+        elif how == "routed":
+            check(clean and got["by_way_of"] == () and not got["landing"] and got["rebuilds"] == [True]
+                  and rel is not None and rel <= LANDING_VOLUME_TOL,
+                  f"landing {case_id}: nothing foreseen, set straight with one rebuild, no feature in error, the "
+                  f"volume within {LANDING_VOLUME_TOL:g} of the from-scratch build's")
+        else:
+            straight_outcomes.append((case_id, round(fraction, 4) if fraction is not None else None, clean,
+                                      [c for _, c in got["in_error"]]))
+        if case_id == LANDING_LEFTOVER:
+            say(f"-- landing  the leftover: {case_id}'s file, closed without saving after the set, reopened")
+
+            def reopened(s, path=path):
+                s.open_document(path)
+                return landing_state(s)
+            try:
+                again = run(f"landing {case_id}: reopened", reopened, 600)
+            finally:
+                left = run(f"landing {case_id}: reopened, closed", W.quit_in(folder))
+            ref55 = built.get(("fixture", "1.25", 55))
+            rel55 = (abs(again["volume"] - ref55[1]) / ref55[1]) if again.get("volume") is not None and ref55 else None
+            again.update({"left": left, "saved": stamp(path) != before_stamp, "volume_rel_55": rel55,
+                          "clean": not again["in_error"] and again["teeth"] == 55.0})
+            out["leftover"] = again
+            say(f"fact    landing leftover: reopened, in error {again['in_error']}, teeth {again['teeth']}, volume "
+                f"{again.get('volume')} against 55 built from scratch (relative {rel55}); left open {left}, saved "
+                f"{again['saved']}")
+            check(not left and not again["saved"], "landing leftover: closed without saving, nothing left open")
+    say(f"fact    landing: set straight (the threshold's facts: case, the foresight's fraction, clean, codes in error): "
+        f"{straight_outcomes}")
+    cases = out["cases"]
+    routed_ok = all(cases.get(c[0], {}).get("clean") and cases[c[0]].get("by_way_of") == (TEETH_NAME, str(c[6]))
+                    for c in LANDING_CASES if c[4] == "routed" and c[6] is not None)
+    plain_ok = all(cases.get(c[0], {}).get("clean") and cases[c[0]].get("by_way_of") == ()
+                   for c in LANDING_CASES if c[4] == "routed" and c[6] is None)
+    leftover_ok = bool((out.get("leftover") or {}).get("clean"))
+    out["shown"] = routed_ok and plain_ok and leftover_ok
+    say(f"fact    landing: the fix is {'shown' if out['shown'] else 'NOT shown'}: every foreseen change routed clean "
+        f"as foreseen {routed_ok}; every unforeseen one set straight clean {plain_ok}; the straight failure's file "
+        f"clean at 55 when reopened {leftover_ok}")
 
 
 def with_gear_spec(spec, gid, **changes):
@@ -2594,10 +2998,10 @@ def section_w9b_part(out):
 
 # -- the run -------------------------------------------------------------------------------------------------------------
 
-ORDER = ["ring", "fixed", "modes", "remove", "remake", "bands-off", "m4", "w9b-part"]
-SECTIONS = {"ring": section_ring, "fixed": section_fixed, "modes": section_modes, "remove": section_remove, "remake": section_remake,
+ORDER = ["fixed", "modes", "remove", "remake", "bands-off", "m4", "w9b-part"]   # ring and landing: by name only
+SECTIONS = {"ring": section_ring, "landing": section_landing, "fixed": section_fixed, "modes": section_modes, "remove": section_remove, "remake": section_remake,
             "bands-off": section_bands_off, "m4": section_m4, "w9b-part": section_w9b_part}
-FOLDERS = {"ring": ["ring"], "fixed": ["fixed-updated", "fixed-updated" + W.MASTER_SUFFIX], "modes": ["modes"],
+FOLDERS = {"ring": ["ring"], "landing": ["landing"], "fixed": ["fixed-updated", "fixed-updated" + W.MASTER_SUFFIX], "modes": ["modes"],
            "remove": ["remove-reducer", "remove-setup"], "remake": ["remake"], "bands-off": ["bands-off"],
            "m4": ["m4"], "w9b-part": ["part"]}
 
