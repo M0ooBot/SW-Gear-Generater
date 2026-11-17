@@ -1106,3 +1106,28 @@ def test_a_press_that_stops_before_deleting_a_mode_records_only_the_modes_its_re
     desk.sw.fail_on = {}
     text, ok = desk.footer(_sun_backlash(fixed()))          # N back in the workbook: judged as a copy, not as read
     assert ok and "suppressed in N" not in text, text
+
+
+# -- the fixes review's second reading: N1 (a part put right beside the user's own feature in error sheds its mark) --
+
+def test_a_part_left_in_error_then_put_right_beside_the_users_own_feature_in_error_sheds_its_mark():
+    """Closed without saving as told, the part is changed again; its rebuild reads false from the user's Keyway alone
+    (P0), which is no failure. The mark goes: the press says to save it, never also to close it without saving, and
+    the footer no longer says it was left in error."""
+    d = Desk()
+    d.build(range_box())
+    d.sw.rebuild_ok = False
+    d.press(_sun_backlash(range_box()))
+    part = next(p.path for p in d.record.parts if "Sun" in p.gears)
+    assert [store.same_path(p, part) for p in d.record.unsaved_in_error] == [True]
+    d.sw.close_all()
+    d.sw.rebuild_ok = True
+    d.sw.user_feature(part, "Keyway", code=41)
+    again = d.press(_sun_backlash(range_box()))
+    sun = next(p for p in again.result.parts if p.document == "Gear_m1.25_N29.SLDPRT")
+    assert again.result.failures == [] and sun.changed == ["Backlash"] and not sun.rebuilt
+    assert d.record.unsaved_in_error == [] and again.finished.still_in_error == []
+    assert "Save Gear_m1.25_N29 and RangeBox in SolidWorks to keep them." in again.after, again.after
+    assert "without saving" not in again.after and "still open in SolidWorks" not in again.after, again.after
+    text, _ = d.footer(_sun_backlash(range_box()))
+    assert "was left in error when it stopped" not in text and "save them in SolidWorks to keep them" in text, text

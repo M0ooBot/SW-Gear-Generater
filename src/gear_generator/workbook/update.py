@@ -2251,8 +2251,9 @@ def finish_update(plan: UpdatePlan, result: GearboxUpdate, record: LinkRecord, *
         rec.digest = digest
     # The runs review's should-fix: a stop that left a part in error is marked on the unsaved documents, so the footer
     # says to close them without saving. The mark goes only when the document leaves ``unsaved`` (saved, or found
-    # closed: store.keep_in_error) or this press changed and rebuilt that very document clean (the fixes review's M3:
-    # a press that set nothing in it proves nothing, the part still holding the new values in error).
+    # closed: store.keep_in_error) or this press changed that very document with no failure naming it (the fixes
+    # review's M3: a press that set nothing in it proves nothing, the part still holding the new values in error; its
+    # second reading's N1: a rebuild that read false from the user's own features alone is no failure, and clears it).
     clean = _documents_rebuilt_clean(plan, result)
     rec.unsaved_in_error = [p for p in rec.unsaved_in_error if not any(store.same_path(p, q) for q in clean)]
     if result.failures:
@@ -2261,7 +2262,8 @@ def finish_update(plan: UpdatePlan, result: GearboxUpdate, record: LinkRecord, *
             rec.unsaved_in_error = list(dict.fromkeys(list(rec.unsaved_in_error) + failed))
     store.keep_in_error(rec)
     if not result.failures:
-        out.still_in_error = list(rec.unsaved_in_error)
+        # A document this press changed is never one it set nothing in (N1), so it is never said as one.
+        out.still_in_error = [p for p in rec.unsaved_in_error if not _in(p, getattr(result, "changed", []) or [])]
     return out
 
 
@@ -2306,12 +2308,16 @@ def _documents_left_in_error(plan: UpdatePlan, result: GearboxUpdate) -> List[st
 
 
 def _documents_rebuilt_clean(plan: UpdatePlan, result: GearboxUpdate) -> List[str]:
-    """The paths of the documents this Update changed and rebuilt with no failure naming them."""
+    """The paths of the documents this Update changed with no failure naming them: the app's features rebuilt clean.
+    Their rebuild may still read false, from the user's own features alone (P0), which the worker never makes a
+    failure (``swbuild._update_document``'s ``theirs_alone``); such a document is put right as much as this press
+    can, and keeping its mark would tell the user, press after press, to close it without saving (the second reading
+    of the fixes review, N1)."""
     named = [str(what) for what, _why in getattr(result, "failures", []) or []]
     docs = list(getattr(result, "parts", []) or []) + [getattr(result, "layout", None)] + \
         list(getattr(result, "carriers", []) or [])
     stems = {document_stem(d.document) for d in docs if d is not None and getattr(d, "document", "")
-             and d.changed and d.rebuilt and not any(names_document(w, d.document) for w in named)}
+             and d.changed and not any(names_document(w, d.document) for w in named)}
     return [p for p in _plan_paths(plan) if document_stem(p) in stems]
 
 
