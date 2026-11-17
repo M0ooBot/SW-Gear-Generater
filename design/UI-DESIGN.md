@@ -1377,7 +1377,26 @@ so the press changes nothing; Build again… makes the new revision instead.*), 
 mate of the user's on a gear to be taken out, and — while the read of in-context
 references is unmeasured — a removal with any component of the user's in the
 assembly. A Modes row taken out that is the mode showing is read only at the
-press; its refusal is then recorded and said as W9a's are.
+press; its refusal is then recorded and said as W9a's are (the inventory on record
+kept as it was, nothing having been read), as is a mode whose name is already a
+configuration of the user's. While any of these would stop the press the Update
+line says *Update SolidWorks would …*, never *will*. Once a refusal is recorded
+it is said in place of the foresight, until the workbook changes. A new part whose
+file is already on disk and on no record (a press that stopped part way may have
+built it) is said too: *Hub_m1.25_N17.SLDPRT is already on disk though nothing on
+record holds it (…), so Update SolidWorks would not build Hub's new part over it:
+move that file away or delete it, then press Update SolidWorks again.*
+
+**A press that stops part way** says, after the worker's reason, what it did
+before it stopped and what it did not get to: *Before it stopped it built
+Hub_m1.25_N17 and gave RangeSlv its bands. It did not get to inserting Hub and
+putting the gears back and checking the assembly, because the job stopped in
+RangeBox.SLDASM.*, then W4's unsaved sentence. The record holds what was done
+(the bands, a gear inserted, each mate made). A gear inserted whose own mates were
+not made is then Build again…, by name: *Hub is in the assembly, inserted by an
+Update SolidWorks that stopped before making its mates …, and Update SolidWorks
+makes a gear's own mates only as it adds the gear, so the gearbox needs building
+again.*
 
 **After the press** the sentence leads with what was made and taken away
 (*built Hub_m1.25_N17, inserted Hub as Hub_m1.25_N17-1 and mated it (…), gave

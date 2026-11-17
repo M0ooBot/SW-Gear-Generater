@@ -1886,11 +1886,16 @@ def gearbox_update_status(update, result, dragged: Sequence[str] = (), *, meshes
                 else:
                     groups.append((what.strip(), [_sentence(why)]))
             text = "Update SolidWorks stopped. " + " ".join(f"{w}: {' '.join(ys)}" for w, ys in groups)
+        done_in_place = in_place_done_pieces(update, result) if motion else []
+        if done_in_place:                  # W9c: what it made or took away before it stopped, and what it did not
+            text += f" Before it stopped it {_and(done_in_place)}."
+        if motion and result.skipped and getattr(update, "in_place", None):
+            text += f" It did not get to {str(result.skipped).rstrip('.')}."
         if changed_docs:
             one = len(changed_docs) == 1
             text += (f" It had already changed {_and(changed_docs)}, not saved: press Update SolidWorks again once "
                      f"that is put right, or save {'it' if one else 'them'} in SolidWorks to keep what it did.")
-        else:
+        elif not done_in_place:
             text += " Nothing was changed."
         # K3 on the failure path too (the close review's must-fix 2): what of the user's features this Update rebuilt
         # into error is named as theirs, with what it set under them, after the stop, which stays as it is; one
@@ -2518,10 +2523,15 @@ def workbook_footer(assessment, *, record=None, record_problem: str = "", plan=N
             line, line_ok = user_work_line(ahead)
             # W9c (K4): what would stop an in-place change, foreseen (an unmeasured step, the user's work on a gear to
             # be taken out). When it would, it is said in place of W9a's prediction of what the press does with the
-            # user's work (a press that changes nothing does nothing with it); a recorded refusal is still said.
-            stop, stop_ok = in_place_line(in_place_ahead(update, record), record, known=line)
-            if stop and not (ahead is not None and ahead.refused):
+            # user's work (a press that changes nothing does nothing with it). A refusal on record is said instead of
+            # foreseeing the same again (a new part's file on disk, never part of a refusal recorded, is still said).
+            recorded = ahead is not None and bool(ahead.refused)
+            stop, stop_ok = in_place_line(() if recorded else in_place_ahead(update, record), record, known=line,
+                                          on_disk=getattr(update, "new_parts_on_disk", ()))
+            if stop and not recorded:
                 line, line_ok = "", True
+            if stop:                       # never "will" for a press the same footer says would change nothing
+                text = text.replace("Update SolidWorks will ", "Update SolidWorks would ", 1)
             for said, said_ok in ((line, line_ok), (stop, stop_ok)):
                 if said:
                     text, ok = f"{text} {said}", ok and said_ok
@@ -4758,24 +4768,34 @@ def in_place_pieces(update) -> List[str]:
     return pieces
 
 
-def in_place_line(problems, record=None, known: str = "") -> Tuple[str, bool]:
+def new_part_on_disk_sentence(gear: str, path: str) -> str:
+    """An added gear's new part whose file is already on disk and on no record (W9c; the worker refuses rather than
+    build over it): *Hub_m1.25_N17.SLDPRT is already on disk though nothing on record holds it (a press that stopped
+    part way may have built it), so Update SolidWorks would not build Hub's new part over it: move that file away or
+    delete it, then press Update SolidWorks again.*"""
+    return (f"{_file(path)} is already on disk though nothing on record holds it (a press that stopped part way may "
+            f"have built it), so Update SolidWorks would not build {gear}'s new part over it: move that file away or "
+            "delete it, then press Update SolidWorks again.")
+
+
+def in_place_line(problems, record=None, known: str = "", on_disk=()) -> Tuple[str, bool]:
     """The footer's sentence before the press on what would stop an in-place change (``workbook.update.
     in_place_ahead``; K4, no question before an Update), red; ``("", True)`` with nothing to say. Each step a finding
     gates and that is not settled for the SolidWorks the record last read (:func:`in_place_gate_sentence`), then the
     user's work on a gear to be taken out, as the worker words it, each once (``known``: the line already said)."""
-    if not problems:
+    if not problems and not on_disk:
         return "", True
     gates: Dict[str, List[str]] = {}
     said: List[str] = []
     from .swbuild import PROBLEM_UNSETTLED
-    for p in problems:
+    for p in problems or ():
         subjects = tuple(getattr(p, "subjects", ()) or ())
         if p.kind == PROBLEM_UNSETTLED and subjects and _step_of(subjects[0]):
             gates.setdefault(_step_of(subjects[0]), []).append(subjects[0])
         elif p.sentence and p.sentence not in known and p.sentence not in said:
             said.append(p.sentence)
     sentences = ([in_place_gate_sentence(list(gates), [n for names in gates.values() for n in names])] if gates
-                 else []) + [_sentence(s) for s in said]
+                 else []) + [_sentence(s) for s in said] + [new_part_on_disk_sentence(g, p) for g, p in on_disk]
     if not sentences:
         return "", True
     entry = getattr(getattr(record, "gearbox", None), "user_work", None)

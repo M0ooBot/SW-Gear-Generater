@@ -54,7 +54,7 @@ from ..gears import base
 from ..gears.base import GlobalVariable
 from ..spec import GearSpec, InputError
 from ..store import GearboxRecord, LinkRecord, MateEntry, PartEntry, ShaftEntry, Sidecar
-from ..swbuild import (MARK_MISMATCHED, MARK_UNSAVED, POSE_TOLERANCE, DocumentValues, GearboxUpdate, LockLink, MeshLink, MotionUpdate, Placement,
+from ..swbuild import (MARK_MISMATCHED, MARK_UNSAVED, POSE_TOLERANCE, DocumentValues, GearboxUpdate, LockLink, MateRef, MeshLink, MotionUpdate, Placement,
                        _caps_with_arc, on_in, plan_features, same_frame, structural_change)
 from . import gearbox, geometry, layout, motion, planetary, schema
 from .assess import Assessment
@@ -153,6 +153,10 @@ class UpdatePlan:
     # W9c (B's own, for ``finish_update``, §7): what the record takes from the read when the Update makes or takes
     # away in place — None when it does neither.
     in_place_record: Optional["InPlaceRecord"] = None
+    # W9c: ``(gear, path)`` of each added gear's new part whose file is already on disk though the record does not hold
+    # it (a press that stopped after building it, or a file of the user's): the worker refuses rather than build over
+    # it, and the footer says so before the press.
+    new_parts_on_disk: Tuple[Tuple[str, str], ...] = ()
 
     @property
     def changed_parts(self) -> Tuple[PartUpdate, ...]:
@@ -602,6 +606,14 @@ def classify(record: Optional[LinkRecord], a: Assessment, *,
         in_place, why, in_place_record = _in_place(whole_box, box, a, entries, in_added, in_removed, job_of, modal,
                                                    band_changes)
         structural.extend(why)
+        if in_place_record is not None and (modal.motion or turn.motion) is not None:
+            links = _new_links(in_place_record.mates, a, modal.configurations or tuple(box.modes))
+            target = modal.motion or turn.motion
+            target = replace(target, meshes=target.meshes + links[0], locks=target.locks + links[1])
+            if modal.motion is not None:
+                modal.motion = target
+            else:
+                turn.motion = target
     elif box is not None and (spec.modes or _slider_ids(a)):
         structural.append(_STATIC_MODES)
 
@@ -625,7 +637,9 @@ def classify(record: Optional[LinkRecord], a: Assessment, *,
                       drag=turn.drag, modes_changed=modal.changed,
                       resensed=turn.resensed, carriers=tuple(carrier_values), carriers_moved=tuple(carriers_moved),
                       carrier_layouts=_carrier_layouts_on_record(box, a), in_place=in_place,
-                      in_place_record=in_place_record if in_place else None)
+                      in_place_record=in_place_record if in_place else None,
+                      new_parts_on_disk=tuple((g.gear, g.part) for g in in_place.added
+                                              if g.build is not None and exists(g.part)))
 
 
 # -- W9a: what the worker needs to tell the user's work from the app's (ISSUE-1-PLAN K1, K11; W9A-INTERFACES.md) ------
@@ -1721,9 +1735,6 @@ def _in_place_gears(box: GearboxRecord, a: Assessment, gone: Sequence[str], new:
         elif not _frame_shaft_on_z(spec, shaft):
             said.append(f"{g} is new on {shaft}, whose axis is {spec.shaft(shaft).axis}, and Update SolidWorks adds a "
                         f"gear only on a shaft along Z+ or Z-, {_REBUILD}.")
-        elif job.path.lower() not in paths and exists(job.path):
-            said.append(f"{g} is new, and its part {os.path.basename(job.path)} is already a file the record does not "
-                        f"hold, which Update SolidWorks never overwrites, {_REBUILD}.")
         else:
             added.append(g)
     copies = {c.of for c in box.components if c.of}
@@ -1781,6 +1792,23 @@ def _mate_changes(kept: GearboxRecord, plan: motion.MotionPlan, added: Sequence[
             said.append(f"With the gears added or taken out, {_names(list(m.gears))} would need the new mate {name}, "
                         f"and Update SolidWorks makes new mates in place only for a gear it adds, a coupling or a "
                         f"sliding mesh, {_REBUILD}.")
+    return said
+
+
+def _mates_never_made(kept: GearboxRecord, plan: motion.MotionPlan) -> List[str]:
+    """Each gear on record with none of its own mates on record, that the read's plan mates (an Update that inserted
+    it stopped before making them): *Hub is in the assembly, inserted by an Update SolidWorks that stopped before
+    making its mates Hub on Output Axis, Hub along Output and RangeSlv splined to Hub, and Update SolidWorks makes a
+    gear's own mates only as it adds the gear, so the gearbox needs building again.*"""
+    said: List[str] = []
+    for c in kept.components:
+        if c.gear in kept.fixed or any(c.gear in m.gears for m in kept.mates):
+            continue
+        names = [m.name for m in plan.mates if c.gear in m.gears and not m.modes]
+        if names:
+            said.append(f"{c.gear} is in the assembly, inserted by an Update SolidWorks that stopped before making its "
+                        f"mates {_names(names)}, and Update SolidWorks makes a gear's own mates only as it adds the gear, "
+                        f"{_REBUILD}.")
     return said
 
 
@@ -1869,8 +1897,18 @@ def _added_gears(box: GearboxRecord, a: Assessment, plan: motion.MotionPlan, add
         on_sets = tuple((n, tuple(c for c in configurations if on_in(tuple(mates[n].modes), c)))
                         for n in sorted(touching) if mates[n].modes)
         build = None if job.path.lower() in on_record else job.plan
-        out.append(swbuild.AddedGear(gear, handle, job.path, build, tuple(ops), others, senses, on_sets))
+        refs = tuple(_ref_of(mates[n], configurations) for n in [m.name for m in plan.mates if m.name in touching])
+        out.append(swbuild.AddedGear(gear, handle, job.path, build, tuple(ops), others, senses, on_sets, refs))
     return tuple(out), (modes, handle_of, name_of)
+
+
+def _ref_of(m: Any, configurations: Sequence[str]) -> MateRef:
+    """The ``MateRef`` the record will hold for a mate the Update makes (``motion.mate_entry`` as recorded): a mate on
+    in some modes only carries the configurations (the record's spelling) its modes are."""
+    entry = motion.mate_entry(m)
+    if m.modes:
+        entry.modes = [c for c in configurations if on_in(tuple(m.modes), c)]
+    return motion.mate_ref(entry)
 
 
 def _new_mates(wanted: Sequence[Any], modes: Any, handle_of: Mapping[str, str], name_of: Mapping[str, str],
@@ -1888,7 +1926,7 @@ def _new_mates(wanted: Sequence[Any], modes: Any, handle_of: Mapping[str, str], 
         handles = tuple((handle_of[g], name_of[handle_of[g]]) for g in m.gears
                         if g in handle_of and handle_of[g] in name_of)
         on = tuple(c for c in configurations if on_in(tuple(m.modes), c))
-        out.append(swbuild.NewMate(op, handles, on, m.name in modes.same_way))
+        out.append(swbuild.NewMate(op, handles, on, m.name in modes.same_way, _ref_of(m, configurations)))
     return tuple(out)
 
 
@@ -1904,6 +1942,32 @@ class InPlaceRecord:
     fixed: Tuple[str, ...] = ()
     meshes: Tuple[Tuple[str, str], ...] = ()
     unmated: Tuple[Tuple[str, str], ...] = ()
+
+
+def _new_links(mates: Sequence[Any], a: Assessment, configurations: Sequence[str]) -> Tuple[
+        Tuple[MeshLink, ...], Tuple[LockLink, ...]]:
+    """The links of the mates an Update makes in place (W9C-INTERFACES §11 "From A": ``motion.meshes`` and ``locks``
+    hold the gearbox's links after the Update): a gear mate's ``MeshLink`` from its teeth and sense, a coupling's
+    with ``k = σ_S·σ_D`` and its on-set (as :func:`_modes` links one on record), a lock's or spline's ``LockLink``."""
+    placed = a.report.layout.placed
+    teeth = {g: int(p.teeth) for g, p in placed.items()}
+    meshes: List[MeshLink] = []
+    locks: List[LockLink] = []
+    for m in mates:
+        if not all(g in placed for g in m.gears):
+            continue
+        on = tuple(c for c in configurations if on_in(tuple(m.modes), c)) if m.modes else ()
+        if m.kind == motion.MESH:
+            link = motion.mesh_links([tuple(m.gears)], teeth, {tuple(m.gears): int(m.sense) or
+                                                              motion._parallel_sense_of(placed[m.gears[0]],
+                                                                                        placed[m.gears[1]])})[0]
+            meshes.append(replace(link, modes=on) if on else link)
+        elif m.kind == motion.COUPLE:
+            s, d = m.gears
+            meshes.append(MeshLink(s, d, float(placed[s].sigma * placed[d].sigma), layout.pitch(placed[d]), modes=on))
+        elif m.kind in (motion.LOCK, motion.SPLINE):
+            locks.append(LockLink(m.gears[0], m.gears[1], layout.pitch(placed[m.gears[1]])))
+    return tuple(meshes), tuple(locks)
 
 
 def _in_place(whole: GearboxRecord, kept: GearboxRecord, a: Assessment, entries: Sequence[PartEntry],
@@ -1934,6 +1998,14 @@ def _in_place(whole: GearboxRecord, kept: GearboxRecord, a: Assessment, entries:
                 new_mates = _new_mates(modal.new_mates, modes, handle_of, name_of, modal.configurations)
             except ValueError as exc:
                 why.append(str(exc))
+    elif any(not any(c.gear in m.gears for m in kept.mates) for c in kept.components if c.gear not in kept.fixed):
+        # A gear on record with no mate on record: an Update that inserted it stopped before making its mates (the
+        # record says what was done). Nothing here makes a gear's own mates for a gear already in, so it is said.
+        try:
+            plan = motion.motion_plan(a.spec, a.report, layout.frames(a.report))
+        except ValueError as exc:
+            return swbuild.InPlace(), [str(exc)], None
+        why.extend(_mates_never_made(kept, plan))
     components = {c.gear: c for c in whole.components}
     gone = tuple(swbuild.RemovedGear(g, components[g].name, components[g].part,
                                      tuple(m.name for m in whole.mates if g in m.gears)) for g in removed)
@@ -2531,8 +2603,19 @@ def record_user_work(record: LinkRecord, work: Optional[swbuild.UserWork], *, as
     record's assembly is the one read (a record whose current revision has moved on is left alone). Whether it was
     written. ``work`` None (the assembly was not read) leaves what is on record as it was."""
     box = record.gearbox
-    if work is None or box is None or not box.assembly or not store.same_path(box.assembly, assembly):
+    if box is None or not box.assembly or not store.same_path(box.assembly, assembly):
         return False
+    if work is None:
+        if not problems:
+            return False
+        # W9c (§5): a refusal read before the user's work (the mode showing) keeps the inventory on record as it was,
+        # with the problems said, so the footer says them until the next press.
+        kept = box.user_work
+        if kept is None:
+            kept = user_work_entry(swbuild.UserWork(), assembly=assembly, digest=digest, revision=revision)
+        box.user_work = replace(kept, digest=digest, problems=user_work_entry(
+            swbuild.UserWork(), assembly=assembly, problems=problems).problems)
+        return True
     box.user_work = user_work_entry(work, assembly=assembly, digest=digest, revision=revision, problems=problems)
     return True
 
