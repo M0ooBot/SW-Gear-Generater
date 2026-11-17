@@ -1,0 +1,178 @@
+awake   display and system held awake for the run (previous state -0x80000000)
+run     2026-11-17 13:48:21; W9c demonstration from C:\Users\M0obo\Documents\GearGeneratorProbe\w9c-whole-sw2026-20261117-123612\snap3\src (snapshot: 64bec58 with probe/w9c_demonstration.py from 550767c); sections ['landing']; masters {'rangebox': '', 'setup': '', 'reducer': ''}; redo True
+ok      the app's settings and Recent list go into this run's folder, not the user's: C:\Users\M0obo\Documents\GearGeneratorProbe\w9c-whole-sw2026-20261117-123612\out\appdata\Gear Generator\recent.json
+attach  SolidWorks 2026 (revision 34.0.0) (revision 34.0.0), PID 74488; SolidWorks 1.43 GB private, 5.42 GB free
+open    before: []
+findings USER_MATE_PUT_ROUTE "put along, the user's locks left on", USER_TIE_RULE 'not COMPONENT_UNDER_DEFINED', WHATS_WRONG_OPENS_ON_PART_REBUILD False, the branches {'USER_MATE_PUT_FIXED_GEAR_ON_2024': None, 'USER_MATE_PUT_FIXED_GEAR_ON_2026': None, 'USER_MATE_PUT_HELD_GEAR_ON_2024': None, 'USER_MATE_PUT_HELD_GEAR_ON_2026': None, 'USER_MATE_PUT_NO_CARRIER_MODES_ON_2024': None, 'USER_MATE_PUT_NO_CARRIER_MODES_ON_2026': None, 'USER_MATE_PUT_NO_CARRIER_ON_2024': True, 'USER_MATE_PUT_NO_CARRIER_ON_2026': True, 'USER_MATE_PUT_SUBASSEMBLY_ON_2024': None, 'USER_MATE_PUT_SUBASSEMBLY_ON_2026': None}
+rule    What's Wrong: swbuild.whats_wrong_shows_in_update reads False; What's Wrong during a job is a STOP, as any dialog
+excel   started our own Excel, PID 51536, 16.0 build 20430.0
+redo    landing: landing set aside as landing.prev-20261117-134821
+== landing  A's fix (63bbc33), measured, facts and checks, no proposal (no gate): gears.landing foresees a landing from the part's globals before and after, and swbuild.update_variables sets the change by way of the nearest safe tooth count, two rebuilds. On fresh copies of S0's master's parts or of parts built here from scratch, nothing saved, every document closed: (1) routed as the app stands; (2) the threshold: the same set straight (swbuild.LANDING_STEPS patched to () in this process, restored), with two external gears, then the externals routed; (3) changes that land nothing, one rebuild; (4) a module change with a tooth change; (5) the straight failure closed unsaved and reopened; and the fixes review's cases (c997e85): (6) just above 0.2, unrouted and clean; (7) the old end past the new start (ring m1 36 -> 34) and one well clear; (8) recipe B, never routed, its dimension links read; (9) a module-only landing, by way of 54 and back; (10) a user's own feature in error on a routed part. Each straight case reads the short solved line's ends before and after. A FAIL only where a routed result is not clean or not as foreseen, or a document is left open or saved
+ok      landing: the tooth count's global is 'No. of Teeth'
+-- landing  the parts built from scratch: every start not in S0's master and every routed case's target
+fact    a SolidWorks balloon tip ['Check1', 'The sketch is no longer over defined.'] came up while SketchAddConstraints was in progress (left standing, never answered)
+fact    landing build fixture-m1.25-54: the plan's checks []; built ok True, failures []; {'in_error': [], 'teeth': 54.0, 'module': 1.25, 'volume': 11805.159175004832}; left open []
+ok      landing build fixture-m1.25-54: closed, nothing of it left open
+fact    landing build fixture-m1.25-56: the plan's checks []; built ok True, failures []; {'in_error': [], 'teeth': 56.0, 'module': 1.25, 'volume': 12202.870295028193}; left open []
+ok      landing build fixture-m1.25-56: closed, nothing of it left open
+fact    landing build fixture-m1.25-55: the plan's checks []; built ok True, failures []; {'in_error': [], 'teeth': 55.0, 'module': 1.25, 'volume': 12005.017395150748}; left open []
+ok      landing build fixture-m1.25-55: closed, nothing of it left open
+fact    landing build ring-m1-30: the plan's checks []; built ok True, failures []; {'in_error': [], 'teeth': 30.0, 'module': 1.0, 'volume': 4486.4852917745775}; left open []
+ok      landing build ring-m1-30: closed, nothing of it left open
+fact    landing build ring-m1-28: the plan's checks []; built ok True, failures []; {'in_error': [], 'teeth': 28.0, 'module': 1.0, 'volume': 4230.59869887312}; left open []
+ok      landing build ring-m1-28: closed, nothing of it left open
+fact    landing build spur-m1-18: the plan's checks []; built ok True, failures []; {'in_error': [], 'teeth': 18.0, 'module': 1.0, 'volume': 1541.587440092095}; left open []
+ok      landing build spur-m1-18: closed, nothing of it left open
+fact    landing build spur-m1-17: the plan's checks []; built ok True, failures []; {'in_error': [], 'teeth': 17.0, 'module': 1.0, 'volume': 1278.195653557989}; left open []
+ok      landing build spur-m1-17: closed, nothing of it left open
+fact    landing build spur-m1-16: the plan's checks []; built ok True, failures []; {'in_error': [], 'teeth': 16.0, 'module': 1.0, 'volume': 1030.5002308129808}; left open []
+ok      landing build spur-m1-16: closed, nothing of it left open
+fact    landing build fixture-m1.25-53: the plan's checks []; built ok True, failures []; {'in_error': [], 'teeth': 53.0, 'module': 1.25, 'volume': 11605.270875532478}; left open []
+ok      landing build fixture-m1.25-53: closed, nothing of it left open
+fact    landing build sun-m1.25-30: the plan's checks []; built ok True, failures []; {'in_error': [], 'teeth': 30.0, 'module': 1.25, 'volume': 10517.660975777366}; left open []
+ok      landing build sun-m1.25-30: closed, nothing of it left open
+fact    landing build ring-m1.25-40: the plan's checks []; built ok True, failures []; {'in_error': [], 'teeth': 40.0, 'module': 1.25, 'volume': 9009.718130106803}; left open []
+ok      landing build ring-m1.25-40: closed, nothing of it left open
+fact    landing build ring-m1.5-32: the plan's checks []; built ok True, failures []; {'in_error': [], 'teeth': 32.0, 'module': 1.5, 'volume': 10317.680960034622}; left open []
+ok      landing build ring-m1.5-32: closed, nothing of it left open
+fact    landing build ring-m1-27: the plan's checks []; built ok True, failures []; {'in_error': [], 'teeth': 27.0, 'module': 1.0, 'volume': 4102.555313531075}; left open []
+ok      landing build ring-m1-27: closed, nothing of it left open
+fact    landing build spur-m1-15: the plan's checks []; built ok True, failures []; {'in_error': [], 'teeth': 15.0, 'module': 1.0, 'volume': 798.805128973766}; left open []
+ok      landing build spur-m1-15: closed, nothing of it left open
+fact    landing build spur-m1-14: the plan's checks []; built ok True, failures []; {'in_error': [], 'teeth': 14.0, 'module': 1.0, 'volume': 583.0243971323646}; left open []
+ok      landing build spur-m1-14: closed, nothing of it left open
+fact    landing build ring-m1-36: the plan's checks []; built ok True, failures []; {'in_error': [], 'teeth': 36.0, 'module': 1.0, 'volume': 5252.438518859051}; left open []
+ok      landing build ring-m1-36: closed, nothing of it left open
+fact    landing build ring-m1-34: the plan's checks []; built ok True, failures []; {'in_error': [], 'teeth': 34.0, 'module': 1.0, 'volume': 4996.814322651124}; left open []
+ok      landing build ring-m1-34: closed, nothing of it left open
+fact    landing build ring-m1-44: the plan's checks []; built ok True, failures []; {'in_error': [], 'teeth': 44.0, 'module': 1.0, 'volume': 6277.520138968303}; left open []
+ok      landing build ring-m1-44: closed, nothing of it left open
+DIALOG  SolidWorks shows '': ['Title', 'Description', 'Button1', 'Button2', 'Hyperlink Text 1', 'Hyperlink Text 2']
+NOTE    SolidWorks' notification box came up while InsertSketch was in progress (exempt by the coordinator's ruling; nothing answers it)
+fact    landing build ringB-m1.25-55: the plan's checks []; built ok True, failures []; {'in_error': [], 'teeth': 55.0, 'module': 1.25, 'volume': 12034.163394244559}; left open []
+ok      landing build ringB-m1.25-55: closed, nothing of it left open
+fact    landing build fixture-m1.225-55: the plan's checks []; built ok True, failures []; {'in_error': [], 'teeth': 55.0, 'module': 1.2249999999999999, 'volume': 11529.618698973192}; left open []
+ok      landing build fixture-m1.225-55: closed, nothing of it left open
+fact    swconst.tlb beside the running sldworks.exe; read ['swConstrainedStatus_e', 'swConstraintType_e', 'swFeatureError_e', 'swMateType_e', 'swSketchRelationFilterType_e', 'swSketchSegments_e']; the positive control (mate types findings.py holds) agrees
+fact    landing ring-55-54 (routed, group 1): fixture m1.25 55 -> m1.25 54; foreseen at 0.0379 of the line's length (a landing, by way of 53): by_way_of ('No. of Teeth', '53'), landing [('Li+', 0.02368567619243794, 0.6250000000000041)]; rebuilds [True, True]; rebuilt True, failures []; in error []; teeth 54.0; volume 11805.159175005743 against 11805.159175004832 built from scratch (relative 7.719622223358129e-14); left open [], saved False
+ok      landing ring-55-54: closed without saving, nothing left open
+ok      landing ring-55-54: swbuild.LANDING_STEPS as it was after the case
+fact    landing ring-55-54: the dimension links among the equations as the app reads them ['Cap@Tooth Space Sketch', 'Count@Teeth', 'Fillet@Tooth Space Sketch', 'Rim@Blank Sketch', 'Root@Tooth Space Sketch', 'Tip@Blank Sketch', 'Width@Blank']; of recipe B's (['HalfSpace', 'Flank', 'Base', 'Pitch']) none
+ok      landing ring-55-54: routed by way of 53 as foreseen, both rebuilds true, no feature in error, 54 teeth, the volume within 0.0001 of the from-scratch build's
+fact    landing ring-56-55 (routed, group 1): fixture m1.25 56 -> m1.25 55; foreseen at 0.0378 of the line's length (a landing, by way of 54): by_way_of ('No. of Teeth', '54'), landing [('Li+', 0.0236053128222586, 0.624999999999998)]; rebuilds [True, True]; rebuilt True, failures []; in error []; teeth 55.0; volume 12005.017395147957 against 12005.017395150748 built from scratch (relative 2.3243029586666463e-13); left open [], saved False
+ok      landing ring-56-55: closed without saving, nothing left open
+ok      landing ring-56-55: swbuild.LANDING_STEPS as it was after the case
+ok      landing ring-56-55: routed by way of 54 as foreseen, both rebuilds true, no feature in error, 55 teeth, the volume within 0.0001 of the from-scratch build's
+fact    landing ring-m1-30-28 (routed, group 1): ring m1 30 -> m1 28; foreseen at 0.1438 of the line's length (a landing, by way of 27): by_way_of ('No. of Teeth', '27'), landing [('Li+', 0.1662367920466264, 1.1556966910027187)]; rebuilds [True, True]; rebuilt True, failures []; in error []; teeth 28.0; volume 4230.59869887325 against 4230.59869887312 built from scratch (relative 3.0742160060743046e-14); left open [], saved False
+ok      landing ring-m1-30-28: closed without saving, nothing left open
+ok      landing ring-m1-30-28: swbuild.LANDING_STEPS as it was after the case
+ok      landing ring-m1-30-28: routed by way of 27 as foreseen, both rebuilds true, no feature in error, 28 teeth, the volume within 0.0001 of the from-scratch build's
+fact    landing ring-55-54-straight (straight, group 2): fixture m1.25 55 -> m1.25 54; foreseen at 0.0379 of the line's length (a landing, by way of 53): by_way_of (), landing [('Li+', 0.02368567619243794, 0.6250000000000041)]; rebuilds [False]; rebuilt False, failures []; in error [('Tooth Space', 72), ('Teeth', 1)]; teeth 54.0; volume 15215.125920417064 against 11805.159175004832 built from scratch (relative 0.28885394045615115); left open [], saved False
+ok      landing ring-55-54-straight: closed without saving, nothing left open
+ok      landing ring-55-54-straight: swbuild.LANDING_STEPS as it was after the case
+fact    landing ring-55-54-straight: the short solved line in Tooth Space Sketch (segment #4): before ((32.461835, 1.574575), (31.837569, 1.544294)), after ((31.836412, 1.567952), (-31.212169, -1.537208)); the maths put it at ((31.836412, 1.567952), (31.212169, 1.537208)); its solved end 62.5 mm from there, past the origin True
+-- landing  the leftover: ring-55-54-straight's file, closed without saving after the set, reopened
+fact    landing leftover: reopened, in error [], teeth 55.0, volume 12005.017395150748 against 55 built from scratch (relative 0.0); left open [], saved False
+ok      landing leftover: closed without saving, nothing left open
+fact    landing ring-56-55-straight (straight, group 2): fixture m1.25 56 -> m1.25 55; foreseen at 0.0378 of the line's length (a landing, by way of 54): by_way_of (), landing [('Li+', 0.0236053128222586, 0.624999999999998)]; rebuilds [False]; rebuilt False, failures []; in error [('Tooth Space', 72), ('Teeth', 1)]; teeth 55.0; volume 15480.197800563692 against 12005.017395150748 built from scratch (relative 0.2894773319376191); left open [], saved False
+ok      landing ring-56-55-straight: closed without saving, nothing left open
+ok      landing ring-56-55-straight: swbuild.LANDING_STEPS as it was after the case
+fact    landing ring-56-55-straight: the short solved line in Tooth Space Sketch (segment #4): before ((33.087258, 1.580823), (32.46297, 1.550997)), after ((32.461835, 1.574575), (-31.837569, -1.544294)); the maths put it at ((32.461835, 1.574575), (31.837569, 1.544294)); its solved end 63.75 mm from there, past the origin True
+fact    landing ring-m1-30-28-straight (straight, group 2): ring m1 30 -> m1 28; foreseen at 0.1438 of the line's length (a landing, by way of 27): by_way_of (), landing [('Li+', 0.1662367920466264, 1.1556966910027187)]; rebuilds [True]; rebuilt True, failures []; in error []; teeth 28.0; volume 4230.598698873247 against 4230.59869887312 built from scratch (relative 2.9882239499603385e-14); left open [], saved False
+ok      landing ring-m1-30-28-straight: closed without saving, nothing left open
+ok      landing ring-m1-30-28-straight: swbuild.LANDING_STEPS as it was after the case
+fact    landing ring-m1-30-28-straight: the short solved line in Tooth Space Sketch (segment #4): before ((14.053337, 1.087987), (12.961216, 1.003436)), after ((13.111795, 1.073868), (11.959955, 0.979531)); the maths put it at ((13.111795, 1.073868), (11.959955, 0.979531)); its solved end 0.0 mm from there, past the origin False
+fact    landing spur-m1-18-17-straight (straight, group 2): spur m1 18 -> m1 17; foreseen at 0.0996 of the line's length (a landing, by way of 16): by_way_of (), landing [('L+', 0.05147797205754254, 0.5170459190179093)]; rebuilds [True]; rebuilt True, failures []; in error []; teeth 17.0; volume 1278.1956535579923 against 1278.195653557989 built from scratch (relative 2.4904101710441566e-15); left open [], saved False
+ok      landing spur-m1-18-17-straight: closed without saving, nothing left open
+ok      landing spur-m1-18-17-straight: swbuild.LANDING_STEPS as it was after the case
+fact    landing spur-m1-18-17-straight: the short solved line in Tooth Space Sketch (segment #3): before ((8.423739, 0.751943), (7.939379, 0.708706)), after ((7.951263, 0.758794), (7.436556, 0.709675)); the maths put it at ((7.951263, 0.758794), (7.436556, 0.709675)); its solved end 0.0 mm from there, past the origin False
+fact    landing spur-m1-17-16-straight (straight, group 2): spur m1 17 -> m1 16; foreseen at 0.1276 of the line's length (a landing, by way of 15): by_way_of (), landing [('L+', 0.06988866109722572, 0.5478924816074271)]; rebuilds [True]; rebuilt True, failures []; in error []; teeth 16.0; volume 1030.5002308129797 against 1030.5002308129808 built from scratch (relative 1.1032199151661166e-15); left open [], saved False
+ok      landing spur-m1-17-16-straight: closed without saving, nothing left open
+ok      landing spur-m1-17-16-straight: swbuild.LANDING_STEPS as it was after the case
+fact    landing spur-m1-17-16-straight: the short solved line in Tooth Space Sketch (segment #3): before ((7.951263, 0.758794), (7.436556, 0.709675)), after ((7.478453, 0.765613), (6.933409, 0.709813)); the maths put it at ((7.478453, 0.765613), (6.933409, 0.709813)); its solved end 1e-06 mm from there, past the origin False
+fact    landing spur-m1-18-17 (routed, group 2): spur m1 18 -> m1 17; foreseen at 0.0996 of the line's length (a landing, by way of 16): by_way_of ('No. of Teeth', '16'), landing [('L+', 0.05147797205754254, 0.5170459190179093)]; rebuilds [True, True]; rebuilt True, failures []; in error []; teeth 17.0; volume 1278.1956535579914 against 1278.195653557989 built from scratch (relative 1.778864407888683e-15); left open [], saved False
+ok      landing spur-m1-18-17: closed without saving, nothing left open
+ok      landing spur-m1-18-17: swbuild.LANDING_STEPS as it was after the case
+ok      landing spur-m1-18-17: routed by way of 16 as foreseen, both rebuilds true, no feature in error, 17 teeth, the volume within 0.0001 of the from-scratch build's
+fact    landing spur-m1-17-16 (routed, group 2): spur m1 17 -> m1 16; foreseen at 0.1276 of the line's length (a landing, by way of 15): by_way_of ('No. of Teeth', '15'), landing [('L+', 0.06988866109722572, 0.5478924816074271)]; rebuilds [True, True]; rebuilt True, failures []; in error []; teeth 16.0; volume 1030.5002308129801 against 1030.5002308129808 built from scratch (relative 6.619319490996699e-16); left open [], saved False
+ok      landing spur-m1-17-16: closed without saving, nothing left open
+ok      landing spur-m1-17-16: swbuild.LANDING_STEPS as it was after the case
+ok      landing spur-m1-17-16: routed by way of 15 as foreseen, both rebuilds true, no feature in error, 16 teeth, the volume within 0.0001 of the from-scratch build's
+fact    landing ring-55-53 (routed, group 3): fixture m1.25 55 -> m1.25 53; foreseen at 1.0029 of the line's length (no landing): by_way_of (), landing []; rebuilds [True]; rebuilt True, failures []; in error []; teeth 53.0; volume 11605.270875531445 against 11605.270875532478 built from scratch (relative 8.90273042564068e-14); left open [], saved False
+ok      landing ring-55-53: closed without saving, nothing left open
+ok      landing ring-55-53: swbuild.LANDING_STEPS as it was after the case
+ok      landing ring-55-53: nothing foreseen, set straight with one rebuild, no feature in error, the volume within 0.0001 of the from-scratch build's
+fact    landing ring-55-56 (routed, group 3): fixture m1.25 55 -> m1.25 56; foreseen at 2.0004 of the line's length (no landing): by_way_of (), landing []; rebuilds [True]; rebuilt True, failures []; in error []; teeth 56.0; volume 12202.870295026281 against 12202.870295028193 built from scratch (relative 1.566646056957273e-13); left open [], saved False
+ok      landing ring-55-56: closed without saving, nothing left open
+ok      landing ring-55-56: swbuild.LANDING_STEPS as it was after the case
+ok      landing ring-55-56: nothing foreseen, set straight with one rebuild, no feature in error, the volume within 0.0001 of the from-scratch build's
+fact    landing sun-29-30 (routed, group 3): sun m1.25 29 -> m1.25 30; foreseen at 3.5656 of the line's length (no landing): by_way_of (), landing []; rebuilds [True]; rebuilt True, failures []; in error []; teeth 30.0; volume 10517.660975777353 against 10517.660975777366 built from scratch (relative 1.2106233367043757e-15); left open [], saved False
+ok      landing sun-29-30: closed without saving, nothing left open
+ok      landing sun-29-30: swbuild.LANDING_STEPS as it was after the case
+ok      landing sun-29-30: nothing foreseen, set straight with one rebuild, no feature in error, the volume within 0.0001 of the from-scratch build's
+fact    landing ring-m1.25-40-m1.5-32 (routed, group 4): ring m1.25 40 -> m1.5 32; foreseen at 0.1730 of the line's length (a landing, by way of 31): by_way_of ('No. of Teeth', '31'), landing [('Li+', 0.2685921125517466, 1.5526228988618016)]; rebuilds [True, True]; rebuilt True, failures []; in error []; teeth 32.0; volume 10317.68096003463 against 10317.680960034622 built from scratch (relative 7.051931187218073e-16); left open [], saved False
+ok      landing ring-m1.25-40-m1.5-32: closed without saving, nothing left open
+ok      landing ring-m1.25-40-m1.5-32: swbuild.LANDING_STEPS as it was after the case
+ok      landing ring-m1.25-40-m1.5-32: routed by way of 31 as foreseen, both rebuilds true, no feature in error, 32 teeth, the volume within 0.0001 of the from-scratch build's
+fact    landing ring-m1.25-40-m1.5-32-straight (straight, group 4): ring m1.25 40 -> m1.5 32; foreseen at 0.1730 of the line's length (a landing, by way of 31): by_way_of (), landing [('Li+', 0.2685921125517466, 1.5526228988618016)]; rebuilds [True]; rebuilt True, failures []; in error []; teeth 32.0; volume 10317.680960034626 against 10317.680960034622 built from scratch (relative 3.5259655936090363e-16); left open [], saved False
+ok      landing ring-m1.25-40-m1.5-32-straight: closed without saving, nothing left open
+ok      landing ring-m1.25-40-m1.5-32-straight: swbuild.LANDING_STEPS as it was after the case
+fact    landing ring-m1.25-40-m1.5-32-straight: the short solved line in Tooth Space Sketch (segment #4): before ((23.447651, 1.447954), (22.457222, 1.386792)), after ((22.491953, 1.653129), (20.943507, 1.53932)); the maths put it at ((22.491953, 1.653129), (20.943507, 1.53932)); its solved end 0.0 mm from there, past the origin False
+fact    landing ring-m1-27-25 (routed, group 6): ring m1 27 -> m1 25; foreseen at 0.2042 of the line's length (no landing): by_way_of (), landing []; rebuilds [True]; rebuilt True, failures []; in error []; teeth 25.0; volume 3846.4468141931834 against None built from scratch (relative None); left open [], saved False
+ok      landing ring-m1-27-25: closed without saving, nothing left open
+ok      landing ring-m1-27-25: swbuild.LANDING_STEPS as it was after the case
+ok      landing ring-m1-27-25: nothing foreseen, set straight with one rebuild, no feature in error (no target built)
+fact    landing spur-m1-15-14 (routed, group 6): spur m1 15 -> m1 14; foreseen at 0.2025 of the line's length (no landing): by_way_of (), landing []; rebuilds [True]; rebuilt True, failures []; in error []; teeth 14.0; volume 583.0243971323646 against 583.0243971323646 built from scratch (relative 0.0); left open [], saved False
+ok      landing spur-m1-15-14: closed without saving, nothing left open
+ok      landing spur-m1-15-14: swbuild.LANDING_STEPS as it was after the case
+ok      landing spur-m1-15-14: nothing foreseen, set straight with one rebuild, no feature in error (no target built)
+fact    landing spur-m1-14-13 (routed, group 6): spur m1 14 -> m1 13; foreseen at 0.2390 of the line's length (no landing): by_way_of (), landing []; rebuilds [True]; rebuilt True, failures []; in error []; teeth 13.0; volume 383.2635711096777 against None built from scratch (relative None); left open [], saved False
+ok      landing spur-m1-14-13: closed without saving, nothing left open
+ok      landing spur-m1-14-13: swbuild.LANDING_STEPS as it was after the case
+ok      landing spur-m1-14-13: nothing foreseen, set straight with one rebuild, no feature in error (no target built)
+fact    landing ring-m1-36-34-straight (straight, group 7): ring m1 36 -> m1 34; foreseen at 0.0564 of the line's length (a landing, by way of 33): by_way_of (), landing [('Li+', 0.05499735783148919, 0.9747745533604434)]; rebuilds [True]; rebuilt True, failures []; in error []; teeth 34.0; volume 4996.814322651122 against 4996.814322651124 built from scratch (relative 3.6402981701764903e-16); left open [], saved False
+ok      landing ring-m1-36-34-straight: closed without saving, nothing left open
+ok      landing ring-m1-36-34-straight: swbuild.LANDING_STEPS as it was after the case
+fact    landing ring-m1-36-34-straight: the short solved line in Tooth Space Sketch (segment #4): before ((16.876663, 1.130244), (15.96424, 1.069138)), after ((15.935733, 1.116171), (14.963341, 1.048062)); the maths put it at ((15.935733, 1.116171), (14.963341, 1.048062)); its solved end 1e-06 mm from there, past the origin False
+fact    landing ring-m1-36-34 (routed, group 7): ring m1 36 -> m1 34; foreseen at 0.0564 of the line's length (a landing, by way of 33): by_way_of ('No. of Teeth', '33'), landing [('Li+', 0.05499735783148919, 0.9747745533604434)]; rebuilds [True, True]; rebuilt True, failures []; in error []; teeth 34.0; volume 4996.814322651127 against 4996.814322651124 built from scratch (relative 7.280596340352981e-16); left open [], saved False
+ok      landing ring-m1-36-34: closed without saving, nothing left open
+ok      landing ring-m1-36-34: swbuild.LANDING_STEPS as it was after the case
+ok      landing ring-m1-36-34: routed by way of 33 as foreseen, both rebuilds true, no feature in error, 34 teeth, the volume within 0.0001 of the from-scratch build's
+fact    landing ring-m1-44-42 (routed, group 7): ring m1 44 -> m1 42; foreseen at 0.3674 of the line's length (no landing): by_way_of (), landing []; rebuilds [True]; rebuilt True, failures []; in error []; teeth 42.0; volume 6020.844440416233 against None built from scratch (relative None); left open [], saved False
+ok      landing ring-m1-44-42: closed without saving, nothing left open
+ok      landing ring-m1-44-42: swbuild.LANDING_STEPS as it was after the case
+ok      landing ring-m1-44-42: nothing foreseen, set straight with one rebuild, no feature in error (no target built)
+fact    landing ringB-55-54-straight (straight, group 8): ringB m1.25 55 -> m1.25 54; foreseen at 0.0379 of the line's length (no landing): by_way_of (), landing []; rebuilds [True]; rebuilt True, failures []; in error []; teeth 54.0; volume 11833.767417609599 against None built from scratch (relative None); left open [], saved False
+ok      landing ringB-55-54-straight: closed without saving, nothing left open
+ok      landing ringB-55-54-straight: swbuild.LANDING_STEPS as it was after the case
+fact    landing ringB-55-54-straight: the dimension links among the equations as the app reads them ['Base@Tooth Space Sketch', 'Cap@Tooth Space Sketch', 'Count@Teeth', 'Fillet@Tooth Space Sketch', 'Flank@Tooth Space Sketch', 'HalfSpace@Tooth Space Sketch', 'Pitch@Tooth Space Sketch', 'Rim@Blank Sketch', 'Root@Tooth Space Sketch', 'Tip@Blank Sketch', 'Width@Blank']; of recipe B's (['HalfSpace', 'Flank', 'Base', 'Pitch']) ['Base@Tooth Space Sketch', 'Flank@Tooth Space Sketch', 'HalfSpace@Tooth Space Sketch', 'Pitch@Tooth Space Sketch']
+fact    landing ringB-55-54-straight: the short solved line in Tooth Space Sketch not found by its ends (recipe B draws none)
+fact    landing ringB-55-54 (routed, group 8): ringB m1.25 55 -> m1.25 54; foreseen at 0.0379 of the line's length (no landing): by_way_of (), landing []; rebuilds [True]; rebuilt True, failures []; in error []; teeth 54.0; volume 11833.7674176096 against None built from scratch (relative None); left open [], saved False
+ok      landing ringB-55-54: closed without saving, nothing left open
+ok      landing ringB-55-54: swbuild.LANDING_STEPS as it was after the case
+fact    landing ringB-55-54: the dimension links among the equations as the app reads them ['Base@Tooth Space Sketch', 'Cap@Tooth Space Sketch', 'Count@Teeth', 'Fillet@Tooth Space Sketch', 'Flank@Tooth Space Sketch', 'HalfSpace@Tooth Space Sketch', 'Pitch@Tooth Space Sketch', 'Rim@Blank Sketch', 'Root@Tooth Space Sketch', 'Tip@Blank Sketch', 'Width@Blank']; of recipe B's (['HalfSpace', 'Flank', 'Base', 'Pitch']) ['Base@Tooth Space Sketch', 'Flank@Tooth Space Sketch', 'HalfSpace@Tooth Space Sketch', 'Pitch@Tooth Space Sketch']
+ok      landing ringB-55-54: nothing foreseen, set straight with one rebuild, no feature in error (no target built)
+fact    landing ring-55-m1.225-straight (straight, group 9): fixture m1.25 55 -> m1.225 55; foreseen at 0.0408 of the line's length (a landing, by way of 54): by_way_of (), landing [('Li+', 0.024999999999997965, 0.612499999999999)]; rebuilds [True]; rebuilt True, failures []; in error []; teeth 55.0; volume 11529.618698971695 against 11529.618698973192 built from scratch (relative 1.2984195906249378e-13); left open [], saved False
+ok      landing ring-55-m1.225-straight: closed without saving, nothing left open
+ok      landing ring-55-m1.225-straight: swbuild.LANDING_STEPS as it was after the case
+fact    landing ring-55-m1.225-straight: the short solved line in Tooth Space Sketch (segment #4): before ((32.461835, 1.574575), (31.837569, 1.544294)), after ((31.812598, 1.543083), (31.200817, 1.513408)); the maths put it at ((31.812598, 1.543083), (31.200817, 1.513408)); its solved end 0.0 mm from there, past the origin False
+fact    landing ring-55-m1.225 (routed, group 9): fixture m1.25 55 -> m1.225 55; foreseen at 0.0408 of the line's length (a landing, by way of 54): by_way_of ('No. of Teeth', '54'), landing [('Li+', 0.024999999999997965, 0.612499999999999)]; rebuilds [True, True]; rebuilt True, failures []; in error []; teeth 55.0; volume 11529.618698971675 against 11529.618698973192 built from scratch (relative 1.3157739229419175e-13); left open [], saved False
+ok      landing ring-55-m1.225: closed without saving, nothing left open
+ok      landing ring-55-m1.225: swbuild.LANDING_STEPS as it was after the case
+ok      landing ring-55-m1.225: a module-only landing routed by way of 54 and back, both rebuilds true, no feature in error, 55 teeth and module 1.2249999999999999, the volume within 0.0001 of the from-scratch build's, the count reported unchanged (changed ['Module'], unchanged ['No. of Teeth', 'Pressure Angle', 'Inner Diameter', 'Pitch Diameter', 'Backlash', 'Arc Length', 'Fillet Radius', 'Tooth Depth', 'Face Width', 'Root Diameter', 'Rim Diameter', 'Base Diameter', 'Base Radius', 'Tooth Thickness', 'Half Space Angle', 'Involute Fn', 'Flank Offset', 'Tip Cap Diameter', 'Flank Start Diameter', 'Flank End Diameter', 'Involute t1', 'Involute t2', 'Flank Arc Radius', 'Flank Centre Angle'])
+fact    landing ring-55-54-user-error (user-error, group 10): fixture m1.25 55 -> m1.25 54; foreseen at 0.0379 of the line's length (a landing, by way of 53): by_way_of ('No. of Teeth', '53'), landing [('Li+', 0.02368567619243794, 0.6250000000000041)]; rebuilds [False, False]; rebuilt False, failures []; in error [('User Cut In Bore', 71)]; teeth 54.0; volume 11805.159175005747 against 11805.159175004832 built from scratch (relative 7.750439078541194e-14); left open [], saved False
+ok      landing ring-55-54-user-error: closed without saving, nothing left open
+ok      landing ring-55-54-user-error: swbuild.LANDING_STEPS as it was after the case
+fact    landing ring-55-54-user-error: the user's User Cut In Bore made at Ø69, rebuilt True, in error then []; its diameter linked to Ø3 by the user's equation, rebuilt False, its sketch's dimensions [('UserCutD', 0.003)]; in error before the set [('User Cut In Bore', 71)]
+ok      landing ring-55-54-user-error: the user's User Cut In Bore made clean at Ø69 ([]), before its equation puts it in error
+ok      landing ring-55-54-user-error (the review's M1): with the user's own feature in error, routed by way of 53 (both legs: rebuilds [False, False]), ends at 54 teeth (54.0), Tooth Space and Teeth clean, the user's feature the only one in error before (['User Cut In Bore']) and after (['User Cut In Bore'])
+fact    landing: set straight (the threshold's facts: case, the foresight's fraction, clean, codes in error): [('ring-55-54-straight', 0.0379, False, [72, 1]), ('ring-56-55-straight', 0.0378, False, [72, 1]), ('ring-m1-30-28-straight', 0.1438, True, []), ('spur-m1-18-17-straight', 0.0996, True, []), ('spur-m1-17-16-straight', 0.1276, True, []), ('ring-m1.25-40-m1.5-32-straight', 0.173, True, []), ('ring-m1-36-34-straight', 0.0564, True, []), ('ringB-55-54-straight', 0.0379, True, []), ('ring-55-m1.225-straight', 0.0408, True, [])]
+fact    landing: the fix is shown: every foreseen change routed clean as foreseen True; every unforeseen one set straight clean True; the straight failure's file clean at 55 when reopened True
+time    landing: 571 s; 0 failed; SolidWorks 1.64 GB private, 4.96 GB free
+excel   quit our own Excel
+close   left of ours []; stray []; lost []; SolidWorks 1.63 GB private, 5.08 GB free
+dialogs progress boxes seen {'Calculating Interference Detection': 0, 'Updating...': 0, 'Opening': 0, 'Loading...': 0}; other windows the watch logged: 1
+awake   display and system released (previous state -0x7ffffffd)
+result  written to C:\Users\M0obo\Documents\GearGeneratorProbe\w9c-whole-sw2026-20261117-123612\w9c-demo-20261117-134821.json; masters kept {'rangebox': 'C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9c-whole-sw2026-20261117-123612\\out\\rangebox.master', 'setup': '', 'reducer': ''}
+noted   SolidWorks' notification box came up while InsertSketch was in progress (exempt by the coordinator's ruling; nothing answers it)
+done    0 failed: []; 1 noted; 0 STOP(s), a hung worker included: []
