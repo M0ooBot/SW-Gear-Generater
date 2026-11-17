@@ -30,6 +30,7 @@ from __future__ import annotations
 import math
 from typing import List, Mapping, Optional, Tuple
 
+from .bevel import BACK_INNER     # only an internal bevel's globals hold it
 from .internal import INNER       # only a ring's globals hold it
 from .spur import BASE_RADIUS, FILLET, FLANK_OFFSET, ROOT, T1, TIP_CAP
 
@@ -61,11 +62,12 @@ def _line(values: Mapping[str, float]) -> Optional[Tuple[str, Point, Point]]:
     an involute tooth space's."""
     if any(name not in values for name in (BASE_RADIUS, FLANK_OFFSET, T1)):
         return None
-    if any("Inner Diameter" in name for name in values) and INNER not in values:
+    if BACK_INNER in values and INNER not in values:
         # An internal bevel gear's ring names its tip circle "Back Cone Inner Diameter" (bevel.BACK_INNER) and draws
         # internal.space_ops on its back cone; internal bevels are not built yet. When they are, this must learn that
         # name as a ring's (its Li+ to the tip cap of the back cone's section). Until then: say nothing, never misread
-        # it as an external gear's L+ (the fixes' review, S2).
+        # it as an external gear's L+ (the fixes' review, S2). By that name alone: a user's own global whose name
+        # merely contains "Inner Diameter" leaves an external gear foreseen (the second reading, note 4).
         return None
     if INNER in values and TIP_CAP in values:              # a ring: Li+ to the tip cap, on the start's radial
         start = _start(values, lower=True)

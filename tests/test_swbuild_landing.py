@@ -192,6 +192,15 @@ def test_an_internal_bevel_ring_is_never_read_as_an_external_gear():
     assert landing.line_landings(ring, after, fraction=float("inf")) == []
 
 
+def test_a_users_global_whose_name_holds_inner_diameter_never_hides_an_external_gear():
+    """The second reading of the fixes review, note 4: only the internal bevel's own name keeps a part unclassified."""
+    before, after = dict(_values(SPUR, 18, "1")), dict(_values(SPUR, 17, "1"))
+    found = landing.line_landings(before, after)
+    assert found and found[0][0] == "L+"
+    before["Shaft Inner Diameter"] = after["Shaft Inner Diameter"] = 8.0
+    assert landing.line_landings(before, after) == found
+
+
 def test_a_module_alone_that_lands_goes_by_way_of_another_count_and_back_and_says_so_truly():
     """The fixes' review, S4: ring 55 at m1.25 to m1.225 lands (0.04): routed, but the count is not one it changed."""
     fake = _built(RING, 55, RING_PATH)
