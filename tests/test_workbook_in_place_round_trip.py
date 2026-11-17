@@ -1070,7 +1070,8 @@ def test_pressing_again_without_closing_keeps_the_mark_and_says_close_without_sa
     assert not again.ok and again.after == (
         "Gear_m1.25_N29 is still open in SolidWorks as an earlier Update SolidWorks left it, in error and holding the "
         "new values, so this press set nothing in it: close it in SolidWorks without saving (the file on disk is as "
-        "before that Update), then press Update SolidWorks again.")
+        "before that Update), then press Update SolidWorks again. It worked in H, the configuration that was active; "
+        "it did not show the other modes, since nothing in H needed changing.")      # the rest is kept (N4)
     text, _ = d.footer(_sun_backlash(range_box()))
     assert "was left in error when it stopped: close it in SolidWorks without saving" in text
     assert "in SolidWorks to keep" not in text

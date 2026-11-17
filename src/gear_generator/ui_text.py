@@ -1888,8 +1888,10 @@ def gearbox_update_status(update, result, dragged: Sequence[str] = (), **kwargs)
     if not still or result.failures:
         return text, ok
     said = still_in_error_sentence(still)
-    if text.startswith(ALREADY_MATCHES[:30]):
-        return said, False
+    if text.startswith(ALREADY_MATCHES):
+        # Only the claim is replaced; what follows it (the interference, the user's work, the modes, the leftovers)
+        # stays (the second reading of the fixes review, N4).
+        return said + text[len(ALREADY_MATCHES):], False
     return f"{text} {said}", False
 
 
