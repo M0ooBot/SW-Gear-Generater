@@ -1119,10 +1119,13 @@ def measured(frames, globals_, banded=True):
     return bands, dogs, hub
 
 
-def judge_every(label, desk, every, globals_, banded=True, against_section3=True, out=None):
+def judge_every(label, desk, every, globals_, banded=True, against_section3=True, out=None, users=()):
     """Per mode, the read against the app's record and its own read of the workbook, and (``against_section3``) §3's
-    table: the frames on record, the flags, the slide's value, the gears free, no mate in error, no interference, the
-    bands and dogs where the app says, what is engaged and the least running gaps."""
+    table: the frames on record, the flags, the slide's value, the gears free, no mate in error, no interference
+    between two of the app's bodies, the bands and dogs where the app says, what is engaged and the least running
+    gaps. ``users``: the user's components (their Name2s): an interference with one of them is not judged here (W9c's
+    demonstration holds it to what the app's result named); every interference is still kept in ``out``. A record
+    without the mode N (a W9c Modes row removed) has no N to measure the slide from, so ``moved`` is not said."""
     box = desk.record.gearbox
     a = desk.a
     reports = {m.name: m for m in a.report.modes}
@@ -1130,7 +1133,7 @@ def judge_every(label, desk, every, globals_, banded=True, against_section3=True
     ids = dict(W.bodies(box))
     slide = next(m for m in box.mates if m.kind == "slide")
     recorded = dict(slide.values)
-    n_origin = every["frames"]["N"]["RangeSlv"][1][2]
+    n_origin = every["frames"]["N"]["RangeSlv"][1][2] if "N" in every["frames"] else None
     clean = True
     for mode in box.modes:
         frames = every["frames"][mode]
@@ -1138,9 +1141,9 @@ def judge_every(label, desk, every, globals_, banded=True, against_section3=True
         errors = {n: c for n, (c, sup) in every["mates"][mode].items() if c and not sup}
         free = {g: v for g, v in every["status"][mode].items()
                 if g in ids and g not in fixed and v != findings.COMPONENT_UNDER_DEFINED}
-        clashes = every["interferences"][mode]
+        clashes = [c for c in every["interferences"][mode] if not set(c[0]) & set(users)]
         value = every["values"][slide.name][mode]
-        moved = frames["RangeSlv"][1][2] - n_origin
+        moved = frames["RangeSlv"][1][2] - n_origin if n_origin is not None else float("nan")
         bands, dogs, hub = measured(frames, globals_, banded)
         app_bands, app_dogs, app_hub = app_spans(a, mode)
         off = [f"{k} {v} not {app_bands.get(k)}" for k, v in bands.items()

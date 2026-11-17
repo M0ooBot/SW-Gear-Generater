@@ -327,6 +327,54 @@ def groove_kept(before, after, groove=GROOVE):
     return out
 
 
+STEP_TOL_ = 1e-4          # relative: W9b's step-face landing (its STEP_TOL)
+W9B_F0 = 440.547728       # mm²: the unbanded sleeve's front end face (GetArea), W9b's part on 2026 (final run, and this
+# demonstration's w9b-part); 2024 read 440.548068. The section without the user's groove, which pierces the in-place
+# sleeve's own end face (by π × 1² = 3.1416 mm²), so the in-place sleeve's end face is not F0.
+CLASH_TOL = 1e-3           # relative: SolidWorks' volumes summed per pair against the app's, a fact
+
+
+def clash_pairs(read, gear_of):
+    """SolidWorks' interferences in one mode, ``[(Name2s, volume)]``, as pairs by the names the app's result uses (a
+    gear id for an app body, the Name2 for the user's), each pair's volumes summed."""
+    out = {}
+    for names, volume in read:
+        key = tuple(sorted(gear_of.get(n, n) for n in names))
+        out[key] = out.get(key, 0.0) + float(volume)
+    return out
+
+
+def interference_judged(read_by_mode, app_by_mode, gear_of, users):
+    """The interference judgement for a gearbox with the user's components (the coordinator's ruling on W9c's third
+    run): (a) ``app_app``, an interference between two app bodies in any mode (a FAIL and a STOP); (b) in each mode
+    the app checked (``app_by_mode``: mode -> the result's clashes, ``[(gears, volume)]``), ``unnamed``, an
+    interference with a user's component SolidWorks reports and the result does not name, and ``unseen``, a clash the
+    result names that SolidWorks does not report; (c) ``unchecked``, the user clashes in modes the app did not check,
+    and ``volumes``, each pair's summed volume read against the app's."""
+    users = set(users)
+    out = {"app_app": {}, "unnamed": {}, "unseen": {}, "unchecked": {}, "volumes": {}}
+    for mode, read in read_by_mode.items():
+        pairs = clash_pairs(read, gear_of)
+        mine = {p: v for p, v in pairs.items() if set(p) & users}
+        theirs = [p for p in pairs if not set(p) & users]
+        if theirs:
+            out["app_app"][mode] = theirs
+        if mode not in app_by_mode:
+            if mine:
+                out["unchecked"][mode] = sorted(mine)
+            continue
+        named = {tuple(sorted(g)): float(v) for g, v in app_by_mode[mode]}
+        missing = sorted(p for p in mine if p not in named)
+        extra = sorted(p for p in named if p not in pairs)
+        if missing:
+            out["unnamed"][mode] = missing
+        if extra:
+            out["unseen"][mode] = extra
+        out["volumes"][mode] = {" & ".join(p): (round(v, 3), round(named[p], 3) if p in named else None)
+                                for p, v in mine.items()}
+    return out
+
+
 def propose(name, value, evidence):
     return f"propose {name} = {value!r}  # {evidence}"
 
@@ -422,6 +470,45 @@ def _w9b_pure():
 
 
 FIRST_CONTACT = "probe/results/w9c-demo-sw2026-20261117-1-first-contact.log"
+THIRD_RUN = ("probe/results/w9c-demo-20261117-083343.json",
+             "probe/results/w9c-demo-sw2026-20261117-3-fixed-updated-in-place.log")
+
+
+def replay_third_run(ok, b9):
+    """W9c's third run on 2026 (the Done-when's Update through; ``fixed`` cut on the script's interference judgement):
+    SolidWorks' interferences per mode (JSON) against the clashes the app's post-checks named per mode (log), by the
+    new judgement; and the step faces against W9b's unbanded F0 in place of the grooved end face."""
+    import ast
+    import json
+    import re
+    paths = [os.path.join(REPO, p) for p in THIRD_RUN]
+    if not all(os.path.isfile(p) for p in paths):
+        print(f"skip    the third run's readings are not here: {THIRD_RUN}")
+        return
+    fixed = json.load(open(paths[0], encoding="utf-8"))["sections"]["fixed"]
+    log = open(paths[1], encoding="utf-8").read()
+    named = {m: [(tuple(g), v) for g, v in ast.literal_eval(c)] for m, c in
+             re.findall(r"post-check of (\w+): .*?clashes (\[.*?\]); interference error", log)}
+    gear_of = {n: g for g, n in fixed["in_place"]["inserted"]}
+    gear_of[re.search(r"RangeSlv keeps its component (\S+) and", log).group(1)] = "RangeSlv"
+    users = ["Sprocket-1", "Sprocket-2", "Sprocket-3", "Sprocket-4", "Housing-1"]
+    read = {m: v["interferences"] for m, v in fixed["modes"].items()}
+    judged = interference_judged(read, named, gear_of, users)
+    close = all(app is not None and abs(r - app) <= CLASH_TOL * app for v in judged["volumes"].values()
+                for r, app in v.values())
+    ok(set(named) == {"H", "N", "L"} and not judged["app_app"] and not judged["unnamed"] and not judged["unseen"]
+       and close and any(read.values()),
+       f"replay third run: SolidWorks reported interferences in every mode ({ {m: len(v) for m, v in read.items()} }), "
+       f"none between two app bodies, each with Sprocket-4 named by the app's post-check of that mode, none named that "
+       f"SolidWorks did not report, the volumes summed as the app's: {judged['volumes']}")
+    outer = b9.outer_radius(fixed["sleeve_after"]["faces"], 26.0)
+    want = b9.step_area(W9B_F0, outer, b9.RELIEF_D / 2)
+    face0 = b9.end_areas(fixed["sleeve_after"]["faces"], 26.0).get(0.0)
+    old = b9.step_area(face0, outer, b9.RELIEF_D / 2)
+    got = {r["z"]: (r["integrated"], r["area"]) for r in fixed["step_faces"]}
+    ok(all(abs(i - want) <= STEP_TOL_ * want for i, _ in got.values()) and abs(old - 111.41681) < 1e-4,
+       f"replay third run: the step faces integrated {got} land on W9b's F0 − π(Ro² − r²) = {want:.6f} to "
+       f"{STEP_TOL_:g}; the grooved end face's ({face0}) gave {old:.6f}, which is why it is not the reference")
 
 
 def replay_first_contact(ok):
@@ -618,6 +705,19 @@ def self_check():
     except ValueError as exc:
         ok(str(exc) == "['Nonesuch']", f"pre-W9b workbook: a missing header other than the bands is named: {exc}")
     replay_first_contact(ok)
+    replay_third_run(ok, b9)
+    gear_of = {"Hub_m1.25_N17-1": "Hub", "Sleeve_m1.25_N17-1": "RangeSlv", "Gear_m1.25_N29-1": "Sun"}
+    read = {"H": [(["Sprocket-4", "Hub_m1.25_N17-1"], 1.0), (["Sleeve_m1.25_N17-1", "Gear_m1.25_N29-1"], 0.5)],
+            "N": [(["Sprocket-4", "Hub_m1.25_N17-1"], 1.0)], "L": [(["Sprocket-1", "Hub_m1.25_N17-1"], 2.0)]}
+    j = interference_judged(read, {"H": [(("Sprocket-4", "Hub"), 1.0)], "N": [(("Hub", "Sprocket-4"), 1.0),
+                                                                              (("RangeSlv", "Sprocket-2"), 3.0)]},
+                            gear_of, ["Sprocket-1", "Sprocket-2", "Sprocket-4"])
+    ok(j["app_app"] == {"H": [("RangeSlv", "Sun")]} and j["unseen"] == {"N": [("RangeSlv", "Sprocket-2")]}
+       and j["unchecked"] == {"L": [("Hub", "Sprocket-1")]} and not j["unnamed"],
+       f"interference: two app bodies, a clash the app named that SolidWorks did not report, and one in a mode the app "
+       f"did not check are told apart: {j}")
+    j = interference_judged({"H": [(["Sprocket-4", "Hub_m1.25_N17-1"], 1.0)]}, {"H": []}, gear_of, ["Sprocket-4"])
+    ok(j["unnamed"] == {"H": [("Hub", "Sprocket-4")]}, "interference: a user clash the app did not name is said")
     reads = {"IModelDocExtension.ListExternalFileReferences": {"answer": {"returned": None, "outs": [
                  ["C:\\U\\Bracket.SLDPRT"], ["Assem1.SLDASM"], ["Sketch1"], [], [0], [], [], 0, ""]}},
              "ISldWorks.GetDocumentDependencies2": {"answer": ["Bracket", "C:\\U\\Bracket.SLDPRT"]}}
@@ -894,15 +994,66 @@ def states_by_mode(label, desk, names):
     return run(f"{label}: the components' states per mode", job(box.assembly, work), 900)
 
 
-def judged_modes(label, desk, out, section3=True, against=None, banded=True, engaged=None):
-    """W9b's per-mode read and judgement on the gearbox as recorded now (frames, flags, slide values, interference,
-    every gear free, the bands and dogs where the app's read puts them; §3's table where ``section3``), and each mode
-    of ``against`` (mode -> §3's row to hold it to) by W9b's ``judge_mode``. ``banded`` False: a sleeve without bands
-    (RangeBox as built), each mode held to ``engaged`` (mode -> the dogs engaged) instead of §3's RangeBox_Fixed
-    rows. A mode reading other than the record and §3 say is a STOP."""
+def app_clashes(result):
+    """The clashes the app's result names, by mode: each post-check's (``GearboxUpdate.modes``), else the result's
+    own for a gearbox without modes, ``[(gears, volume)]`` as the result words them."""
+    if result is None:
+        return {}
+    if result.modes:
+        return {m.name: [(tuple(c.gears), float(c.volume)) for c in m.clashes] for m in result.modes}
+    return {result.configuration or "": [(tuple(c.gears), float(c.volume)) for c in result.clashes]}
+
+
+def interference_said(label, desk, every, result, users, out):
+    """The ruling on W9c's third run: no interference between two app bodies in any mode (judged by W9b's
+    ``judge_every`` with the user's components left out, a STOP there); every interference SolidWorks reports with a
+    user's component is one the app's result named, by pair, in each mode the app checked, and the app names none
+    SolidWorks does not report (a check); what the result's status and the footer say of it, and which modes the
+    app checked, said as facts."""
+    box = desk.record.gearbox
+    gear_of = {n: g for g, n in W.bodies(box)}
+    named = app_clashes(result)
+    judged = interference_judged(every["interferences"], named, gear_of, users)
+    out["interference"] = dict(judged, app=named)
+    checked = sorted(named)
+    say(f"fact    {label}: the app checked interference in {checked or 'no mode'} of {list(box.modes) or ['(one)']}"
+        f"{' (every mode)' if set(checked) >= set(box.modes) else ''}; its log's CHECK lines carry "
+        f"{result.configuration or 'the one configuration'!r}'s clashes "
+        f"{[(list(c.gears), round(c.volume, 3)) for c in result.clashes]}; each pair with the user's, SolidWorks' "
+        f"volumes summed against the app's: {judged['volumes']}")
+    status = desk.note[0] if desk.note else ""
+    said = status[status.find("Check:"):].split(" It worked")[0] if "Check:" in status else ""
+    say(f"fact    {label}: the result's status says of it: {said or '(nothing)'}")
+    desk.say_footer(f"{label}, after the press, with the user's interference")
+    if judged["unchecked"]:
+        say(f"fact    {label}: interferences with the user's components in modes the app did not check: "
+            f"{judged['unchecked']}")
+    off = {m: v for m, v in judged["volumes"].items()
+           if any(app is not None and abs(r - app) > CLASH_TOL * max(app, 1.0) for r, app in v.values())}
+    if off:
+        say(f"fact    {label}: summed volumes differ from the app's by more than {CLASH_TOL:g}: {off}")
+    check(not judged["unnamed"] and not judged["unseen"],
+          f"{label}: every interference SolidWorks reports with the user's components is one the app's result named, in "
+          f"each mode it checked, and it named none SolidWorks did not report: unnamed {judged['unnamed'] or 'none'}, "
+          f"unseen {judged['unseen'] or 'none'}")
+    return judged
+
+
+def judged_modes(label, desk, out, section3=True, against=None, banded=True, engaged=None, result=None, users=None):
+    """W9b's per-mode read and judgement on the gearbox as recorded now (frames, flags, slide values, interference
+    between app bodies, every gear free, the bands and dogs where the app's read puts them; §3's table where
+    ``section3``), and each mode of ``against`` (mode -> §3's row to hold it to) by W9b's ``judge_mode``. ``banded``
+    False: a sleeve without bands (RangeBox as built), each mode held to ``engaged`` (mode -> the dogs engaged)
+    instead of §3's RangeBox_Fixed rows. An interference with one of ``users`` (the user's components) is held to the
+    app's ``result`` (``interference_said``), not to §3. A mode reading other than the record and §3 say, or two app
+    bodies interfering, is a STOP."""
+    users = list(A.rb_users() if users is None else users)
     globals_ = B.part_globals(desk, ("RangeSlv", "HighDog", "LowDog", "Hub"))
     every = B.mode_read(label, desk)
-    clean = B.judge_every(label, desk, every, globals_, banded=banded, against_section3=section3, out=out)
+    clean = B.judge_every(label, desk, every, globals_, banded=banded, against_section3=section3, out=out,
+                          users=users)
+    if result is not None:
+        interference_said(label, desk, every, result, users, out)
     differ = {}
     for mode, row in (against or {}).items():
         bands, dogs, _ = B.measured(every["frames"][mode], globals_)
@@ -1050,7 +1201,8 @@ def in_place_fact(result):
     return {k: getattr(result, k) for k in ("inserted", "deleted", "mates_deleted", "mates_made", "remade_in_modes",
                                             "bands_added", "bands_removed", "modes_added", "modes_removed",
                                             "took_active_state", "flags_lost", "not_resolved", "ratios",
-                                            "senses_unread", "turned_round", "failures", "skipped")}
+                                            "senses_unread", "turned_round", "failures", "skipped")} | {
+        "clashes_by_mode": app_clashes(result)}
 
 
 def sleeve_read(label, path, steps=()):
@@ -1222,12 +1374,19 @@ def section_fixed(out):
             if kept_groove:
                 A.stop(f"fixed: the user's groove changed: {kept_groove} (§0.3)")
             faces = sleeve_after["faces"]
-            f0 = B.end_areas(faces, 26.0).get(0.0)
+            face0 = B.end_areas(faces, 26.0).get(0.0)
             outer = B.outer_radius(faces, 26.0)
-            if f0 and outer:
-                B.step_report(out, sleeve_after.get("steps"), B.step_area(f0, outer, B.RELIEF_D / 2))
+            groove_hole = math.pi * GROOVE["radius"] ** 2
+            say(f"fact    fixed: the in-place sleeve's front end face reads {face0} mm², the user's groove through it "
+                f"(π × {GROOVE['radius']:g}² = {groove_hole:.4f}): {face0 + groove_hole if face0 else None} with the "
+                f"hole, against W9b's unbanded section {W9B_F0}; so the step faces are held to W9b's F0, not this face")
+            if outer:
+                B.step_report(out, sleeve_after.get("steps"), B.step_area(W9B_F0, outer, B.RELIEF_D / 2))
+                outline = [(r["z"], round(r["loop_areas"][0] - sum(r["loop_areas"][1:]), 6))
+                           for r in (sleeve_after.get("steps") or []) if isinstance(r, dict) and r.get("loop_areas")]
+                say(f"fact    fixed: the tooth outline's own loops, outer less inner, per step face: {outline}")
             else:
-                say(f"fact    fixed: the step faces not judged: F0 {f0}, Ro {outer} not read from the faces")
+                say("fact    fixed: the step faces not judged: Ro not read from the faces")
 
             say("-- fixed  M5: Hub's state in every mode; every user item; each mode as §3")
             states = out["hub_states"] = states_by_mode("fixed", desk, [hub])
@@ -1235,7 +1394,7 @@ def section_fixed(out):
                                 f"fixed: Hub ({hub}) reads resolved in every mode (M5): {states}")
             after = every_mode("fixed, after the press", desk, users)
             users_unchanged("fixed", before, after, users, mates)
-            judged_modes("fixed", desk, out)
+            judged_modes("fixed", desk, out, result=result)
             B.nothing_written("fixed: nothing of the user's own files (Sprocket, Housing) written", {
                 "flags": {}, "times": {n: t for n, t in files["times"].items() if n in ("Sprocket.SLDPRT",
                                                                                          "Housing.SLDPRT")}},
@@ -1362,7 +1521,7 @@ def section_modes(out):
             after = every_mode(f"modes, after {ADDED_MODE}", desk, users)
             users_unchanged(f"modes, {ADDED_MODE}", before, after, users, mates)
             judged_modes(f"modes, {ADDED_MODE}", desk, out.setdefault("judged_add", {}), section3=False,
-                         against={"H": "H", "N": "N", "L": "L", ADDED_MODE: ADDED_AT})
+                         against={"H": "H", "N": "N", "L": "L", ADDED_MODE: ADDED_AT}, result=result)
         proposed(finding_name("UPDATE_ADDS_A_MODE"), True if clean.get("add") else None,
                  f"modes: {ADDED_MODE} added from the mode showing, every flag and slide value read back as the record, "
                  f"the user's items there said as read: {clean.get('add')}")
@@ -1477,7 +1636,7 @@ def section_modes(out):
             after = every_mode(f"modes, after {FIRST_MODE} went", desk, users)
             users_unchanged(f"modes, {FIRST_MODE} gone", before, after, users, mates)
             judged_modes(f"modes, {FIRST_MODE} gone", desk, out.setdefault("judged_first", {}), section3=False,
-                         against={NEXT_FIRST: NEXT_FIRST, ADDED_MODE: ADDED_AT})
+                         against={NEXT_FIRST: NEXT_FIRST, ADDED_MODE: ADDED_AT}, result=result)
     finally:
         if not W.HUNG["on"]:
             A.w8_step(W.end_copy, CTX["worker"], folder, "modes")
@@ -1659,7 +1818,7 @@ def section_remake(out):
             after = every_mode("remake, after", desk, users)
             users_unchanged("remake", before, after, users, mates)
             judged_modes("remake", desk, out.setdefault("judged", {}), section3=False, banded=False,
-                         engaged=RANGEBOX_ENGAGED)
+                         engaged=RANGEBOX_ENGAGED, result=result)
             l_ratio = next((m.ratio for m in desk.a.report.modes if m.name == "L"), None)
             check(l_ratio is not None and abs(l_ratio - REMAKE_RATIO_L) < 1e-9,
                   f"remake: the app's read gives L {l_ratio} (1 + 54/30 = {REMAKE_RATIO_L})")

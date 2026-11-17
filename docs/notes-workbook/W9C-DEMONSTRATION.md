@@ -142,7 +142,10 @@ then `bands-off`'s script-side probe, then `m4`'s comparison read on Sun.
    - the groove kept (`groove_kept`): present, in no error, before the relief's first feature, its dimensions and
      its cut faces as before.
 
-   W9b's step-face read rides along here.
+   W9b's step-face read rides along here. **Its reference is W9b's unbanded F0, 440.547728 mm²** (the unbanded
+   part's front end face, 2026). The in-place sleeve's own end face is pierced by the user's groove (π × 1² less), and
+   gave 111.4168 in the third run. The tooth outline's own loops, outer less inner (490.873329 − 376.314987 =
+   114.558342), are said beside it as a fact.
 7. **M5.** Hub read resolved in every mode, each shown (`Session.components`).
 8. **Every user item** (`user_items_judged`, every mode shown and rebuilt, before and after), each holding:
    - Sprocket-1, -2 and -3 where they were relative to Sun or RangeSlv (route (c1)'s carry);
@@ -155,9 +158,26 @@ then `bands-off`'s script-side probe, then `m4`'s comparison read on Sun.
    - every mate's flag as recorded;
    - the slide's value and side;
    - every app gear free;
-   - no interference;
+   - no interference between two of the app's bodies (a FAIL and a STOP);
    - the bands, relief, engagement and least running gaps as §3;
    - Hub at −55.5…−35.5, 1.0 from HighDog.
+
+   **The user's components and interference** (the coordinator's ruling on the third run). W9a's set-up stands
+   Sprocket-4 on the Output axis behind the old sleeve, exactly where RangeBox_Fixed puts Hub and the longer sleeve.
+   This clash is kept as it stands: a hub landing on the user's part is a real case, and the app naming it is the
+   behaviour to show. Every interference SolidWorks reports with a user's component must be one the app's result
+   named:
+   - by pair, in each mode the app checked (its post-checks, `GearboxUpdate.modes`), with SolidWorks' Name2s mapped
+     to the result's gear ids;
+   - with none named that SolidWorks does not report.
+
+   That is a check, not a STOP (`interference_judged`, `interference_said`). Said as facts:
+   - the modes the app checked;
+   - that the result's log CHECK lines carry the active mode's clashes only, while its status names every mode's;
+   - each pair's volume, summed over SolidWorks' many small interferences, against the app's;
+   - the status sentence and the footer after the press.
+
+   The same holds in `modes` and `remake`, after each press that goes through.
 10. **Saved as the user would, then a second press:** quiet, by W8's `check_quiet_update`.
 11. Kept as `fixed-updated.master`, with the record also holding Hub's part entry and its `.gear.json`.
 
@@ -366,6 +386,29 @@ At this commit it passes, 0 failed. `--help` imports nothing of SolidWorks.
   SolidWorks.
 - **On 2024,** the What's Wrong box may come in `fixed` (a user feature rebuilt after the relief), and is handled by
   W9a's rule. Nothing here is version-specific beyond the `_ON_<year>` names.
+
+## The third run on 2026 (from ad2bcd9), and what changed
+
+`probe/results/w9c-demo-sw2026-20261117-3-fixed-updated-in-place.log`. The Done-when's Update went through:
+- Hub built, inserted, mated and resolved in every mode;
+- the bands given in place, the relief exact and the user's groove kept;
+- every user component and mate as it was;
+- H, N and L as §3.
+
+Then `fixed` stopped itself on the script's judgement, not the app: it counted Sprocket-4's interference with Hub and
+the sleeve as "a mode other than §3". The judgement is now as above. The self-check replays it on that run's JSON
+and log:
+- SolidWorks reported interferences in H (21), N (20) and L (1), none between two app bodies;
+- each pair with Sprocket-4 was named by the app's post-check of that mode, and none named was unreported;
+- SolidWorks' volumes summed per pair equal the app's (H: 1408.364 and 160.785; N: 1408.364 and 392.233; L: 1408.364).
+
+**Elsewhere after the cut, on the same or a neighbouring ground:**
+- **The second press, the kept master and `bands-off`** judge no interference, so nothing there would have failed.
+- **`modes` would have failed after N's removal.** W9b's `judge_every` measured the slide from N's frame, and a
+  record without N has none. It now leaves `moved` unsaid there. The §3 rows are held through `section3_of`, which
+  needs no N.
+- **The step faces** are now held to W9b's F0 (above). The replay shows the in-place integrated area, 114.558342,
+  lands on 114.558403 to 1e-4.
 
 ## The first run on 2026 (e47d114, from 957b7c0), and what changed
 
