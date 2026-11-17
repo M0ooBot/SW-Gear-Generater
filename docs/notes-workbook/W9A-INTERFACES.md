@@ -38,7 +38,7 @@ stop-and-ask, as at W8.
 | `carried: [(component, gear, configuration)]` | Each put of a user component with its gear (route (c1)), in the order put; configuration `""` with no modes. |
 | `renamed: [(gear, Name2 on record, Name2 found)]` | K1. `finish_update` already records the found name; no schema change. |
 | `user_in_error: [(mode, name)]` | Each user mate or component read in error after the change, those in error before included. A mate the Update put in error in a mode other than the one active at the check is listed here only (its state before was never read): B shows it with its mode. |
-| `user_features_in_error: [UserFeature]` | Each user feature read in error once its document was rebuilt (K3): the user's, never a failure. `user_feature_was_in_error(f)` is True for one already in error when the check phase read it, before anything changed ("was in error … before this Update changed anything, and still is"), False for one newly in error ("is in error … now"); `values_under(f)` is what this Update set in that feature's document, `[ValueSet(path, name, was, now, cell)]` (k3: G1's Bore 8 -> 14, `Gears!J2`). |
+| `user_features_in_error: [UserFeature]` | Each user feature read in error once its document was rebuilt (K3): the user's, never a failure. **Filled on a failed Update too** (the close review's must-fix 2), on both paths, as are `user_work`, `values_set` and so both methods below: B can name the user's features newly in error after "Update SolidWorks stopped". `user_feature_was_in_error(f)` is True for one already in error when the check phase read it, before anything changed ("was in error … before this Update changed anything, and still is"), False for one newly in error ("is in error … now"); `values_under(f)` is what this Update set in that feature's document, `[ValueSet(path, name, was, now, cell)]` (k3: G1's Bore 8 -> 14, `Gears!J2`). |
 | `rebuild_from_user_alone: [str]` | §4 item 11: an assembly rebuild returned False and was laid to the user's work alone; what of the user's was in error then, by name (a feature as `"Keyway in Gear_m1.25_N17.SLDPRT"`). The Update went on: no failure, nothing saved, as any Update. `rebuilt` stays as SolidWorks answered (False), so B must not say the app's "error rebuilding" when this is non-empty, and the same for a part whose `rebuilt` is False while only the user's features in it are in error (no failure names it). Empty otherwise. |
 | `values_set: [ValueSet]`, `features_read: {path: bool}` | Each global the Update set, per document, with what it held before; each document whose features were read after its change, True where a feature the app made read in error. |
 | `extra_mates` | Unchanged: the user's mates suppressed in every mode. `user_work.mates` holds every user mate, suppressed or not; `on` says where each is on. |
@@ -62,8 +62,9 @@ equation of a blank Backlash or Fillet, `"0.3 × Module"`; the sentence says it 
 `PROBLEM_OTHER_KIND`,
 `PROBLEM_LOCK_BY_MODE`, `PROBLEM_TWO_BODIES`, `PROBLEM_TIE` (read by SolidWorks, or a lock chain to the ground: its
 sentence says which), `PROBLEM_UNSETTLED` (a finding route (c1), one of its branches, or the tie read rests on is
-missing), `PROBLEM_COMPONENT` (a component route (c1) would put is suppressed, lightweight, or reads in error — the
-last since the run review's finding 1, unmeasured, its own part most likely holding a feature in error: judged inside
+missing), `PROBLEM_COMPONENT` (a component route (c1) would put is suppressed, lightweight, reads in error, or its
+error code could not be read — the last two since the run reviews (finding 1 of the first, finding 5 of the close
+review: unread counts as in error), unmeasured, its own part most likely holding a feature in error: judged inside
 `judge_user_work` since package B's fix round, so the footer's prediction foresees it), `PROBLEM_UNREAD` (a user mate
 SolidWorks would not describe).
 
@@ -156,7 +157,8 @@ stays behind. Carrying anything over stays W9d's. (`W9A-PACKAGE-B.md`.)
        its part's features and its mates are;
     4. `assembly_rebuild_settled(revision)`: `ASSEMBLY_REBUILD_WITH_USER_MATE_IN_ERROR_ON_<year>`,
        `ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_<year>` (False) and `WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_
-       <year>` (False) all set; 2024's are None, so there it stays today's failure.
+       <year>` (False) all set; on 2024 the mate finding is True (v24:51) but the other two are None, so there it stays
+       today's failure.
     Then `rebuild_from_user_alone` names the user's items and the log says "CHECK   the assembly's rebuild reported
     an error, from your work alone: …"; the post-checks run as after any rebuild. Otherwise the failure is as
     before, naming what of the user's was already in error. The static path reads no mate or component, so an
@@ -205,7 +207,20 @@ stays behind. Carrying anything over stays W9d's. (`W9A-PACKAGE-B.md`.)
   `PROBLEM_COMPONENT` is one problem per component, so three sprockets loaded lightweight say the same refusal three
   times in full (it should become one problem per reason naming the components together); `PROBLEM_UNSETTLED` for
   an unmeasured branch is one problem per gear, repeating the whole reason (it should become one per branch).
-- **A False assembly rebuild on the static path** stays a failure (no mate or component read there, item 11).
+- **The static (W4) path: a False assembly rebuild there stays a failure** (item 11). That path reads no mate and no
+  component of the assembly, only the documents' values and features, so nothing could tell the user's error from the
+  app's; and its user locks are not judged (above).
+- **The assembly's own feature tree is not read for errors** (the close review's finding 4): item 11's "nothing of the
+  app's in error" reads every mate, every top-level component and every app part's features, not the assembly's
+  equations (the Face Z globals) or any other assembly-level feature, the app's or the user's. Reading them would take
+  `GetErrorCode2` on top-level assembly features other than components, a read the app has never made and no run has
+  measured (which of them reads in error when a component does is not known), so the worker does not add it. An app
+  equation in error beside a user component in error would be laid to the user. Rare; said in
+  `ASSEMBLY_REBUILD_…`'s comment in `findings.py` too.
+- **What's Wrong during an Update on 2024** (`WHATS_WRONG_OPENS_IN_UPDATE_WITH_USER_MATE_IN_ERROR_ON_2024` True, 2026
+  False): SolidWorks 2024 opened the box during the app's value Update with only the user's mates in error. No app
+  behaviour reads the finding; what the app does waits on the user's answer to that §0.3 STOP. On 2024 today the
+  Update goes ahead over the user's mates in error, as on 2026.
 
 ## 6. Pins moved deliberately
 
@@ -235,3 +250,9 @@ At the demonstration's ruling (M3 and `nocarrier` on 2026) and its addendum:
 - `tests/test_workbook_user_record.py::test_a_value_refusal_stands_in_the_footer_until_the_workbook_asks_what_
   solidworks_holds` (package B's): its premise patched, `USER_MATE_PUT_NO_CARRIER_ON_2026` None as when it was
   written; every assertion as written.
+
+At the round after the closing run (the close review's should-fix points, findings only):
+
+- `tests/test_findings.py::test_w9a_m3_an_assembly_rebuild_with_only_user_mates_in_error_returned_true_on_2026` no
+  longer asserts `ASSEMBLY_REBUILD_WITH_USER_MATE_IN_ERROR_ON_2024` None: it is True from 2024's m3 (v24:51), pinned
+  by its own test.
