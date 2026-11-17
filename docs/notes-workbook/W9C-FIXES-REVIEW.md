@@ -361,3 +361,174 @@ and 0.2 fails there, which is fair to the evidence.
 
 The running 2026 run, on head's `src/`, stays valid evidence for these fixes. Its status text for remake step 2 will
 read as N4 describes, without what follows "already matches". That is a wording fact, not a worker one.
+
+## Re-check of the second reading's fixes, 2026-11-17
+
+This is a re-check of the builder's `8792512` (N1), `ef4b8f2` (N4), `6585f6d` (N2), `535a019` (N3) and `6aacc90`
+(the note-4 guard). It reads head `550767c`, whose `src/` and `tests/` are `6aacc90`'s. Line numbers are at that head.
+`550767c` itself is the run agent's and touches `probe/` only.
+- **Suite:** 3691 passed, 10 skipped, 2 failed. The two failures are the `tkinter`-only pair named above.
+- **Repros:** the second reading's throwaway repros were re-run against head. Each new regression test was run in a
+  scratch copy of `src/` and `tests/`, once against head and once with the fixed file put back as it was before its
+  fix. All 9 new tests pass at head, and every one fails on its pre-fix file.
+
+### Per finding
+
+- **N1: fixed.**
+  - `update.py:2310-2320`: `_documents_rebuilt_clean` now asks only `d.changed` and no failure naming the document.
+  - `update.py:2266`: `still_in_error` leaves out every path in `result.changed`.
+  - *Repro:* the second reading's case, closed and changed again beside the user's keyway at code 41. The mark goes,
+    the status says only "Save Gear_m1.25_N29 and RangeBox in SolidWorks to keep them", and the footer's unsaved line
+    is the ordinary save offer. The third press is the same.
+  - *Test:* `test_a_part_left_in_error_then_put_right_beside_the_users_own_feature_in_error_sheds_its_mark` fails on
+    `23dfa01`'s `update.py`.
+  - *Can the mark now go while the app's own feature is still in error?* Not through any path the code has.
+    - In `_update_document` (`swbuild.py:4038-4058`), a changed document with a False rebuild gets the failure
+      `(name, "SolidWorks reported an error rebuilding …")`. The only exceptions are `theirs_alone` and N3's
+      `left_on_the_way`.
+    - `left_on_the_way` carries its own failure, `"<file> \"No. of Teeth\""`, so it is never cleared.
+    - `theirs_alone` needs three things: features read (a raise or an empty read makes it False); every feature in
+      `doc.made | doc.features` read neither in error nor `UNREAD`; and `WHATS_WRONG_OPENS_ON_PART_REBUILD is False`.
+      An empty `doc.made` also makes it False.
+    - The band step (`swbuild.py:6230-6245`) raises on any app feature in error.
+    - So no failure naming the document means the app's features read clean.
+  - *What names a document in a failure:*
+    - every failure a document's own step makes is `_file(doc.path)`, alone or followed by a space;
+    - `UpdateResult.document` is `GetTitle`;
+    - `names_document` compares stems, case aside.
+
+    The match could miss only if `GetTitle` ever differed from the file name by more than the extension. No log shows
+    that, so this is a note.
+  - *Can leaving every changed path out of `still_in_error` hide a part still in error?* Only when a path is in
+    `result.changed` but has no changed `UpdateResult`. That happens to a sleeve whose bands alone this press gave. Its
+    mark is not cleared, and the band step raises if the app's features are in error, so it is never hidden in error.
+    What remains is the reverse, a stale mark: the footer keeps "left in error … without saving" while the status
+    says to save. That is a note: it needs a sleeve marked by an earlier stop that healed in a band step.
+- **N4: fixed** (`ui_text.py:1891`). It now replaces `ALREADY_MATCHES` exactly and keeps the rest.
+  - *Repro:* the status keeps "It worked in H … nothing in H needed changing".
+  - *Tests:* `test_a_quiet_press_on_a_part_still_in_error_replaces_only_the_claim_and_keeps_what_follows`, and the
+    round trip's amended check, fail on `23dfa01`'s `ui_text.py`.
+  - *What can follow the claim:*
+    - the interference ending;
+    - `_mode_after`;
+    - `_earlier_update_sentence`, put after the claim by `_joined`;
+    - `_rebuild_from_user`, `_user_after`, `in_place_after` and the leftovers.
+
+    `save_to_keep` and `WHATS_WRONG_AFTER` are never added on that branch. One can contradict:
+    `_earlier_update_sentence` with `UPDATE_LOST` and nothing changed says "SolidWorks already holds the workbook as it
+    now is, so nothing needed making again" (`ui_text.py:3571`).
+    - This happens when an earlier clean Update's assembly change was lost (the assembly was closed unsaved) while a
+      part a later stop left in error is still open. The status would then say the part is in error and also that
+      SolidWorks holds the workbook.
+    - *Not reproduced:* closing only the assembly on the fake left `open_before` holding it, and the press read
+      "not saved".
+    - A note, with an easy fix: pass `still_in_error` to `_earlier_update_sentence`, or drop that clause when it is
+      non-empty.
+- **N2: fixed** (`swbuild.py:1500`, `:1521-1526`). Recipe B is told only by `HalfSpace`, `Flank`, `Base` or `Pitch` at
+  `Tooth Space Sketch`, `Heel Section Sketch` or `Toe Section Sketch`, case aside.
+  - *Repro:* the ring with a user's `"Pitch@Sketch9"` is routed via 53 and rebuilds clean.
+  - *Tests:* both new tests fail on `6585f6d^`'s `swbuild.py`. One fails as an `AttributeError`, since
+    `_arc_recipe_link` is new.
+  - *Every kind, from the plans the code generates* (scratch script over `kind.plan` for each spec):
+    - spur, helical and herringbone, external and internal, sleeve, dog, hub and the external bevel: recipe B links
+      `Pitch`, `Base`, `HalfSpace` and `Flank` in `Tooth Space Sketch`, or in the bevel's `Heel/Toe Section Sketch`.
+      All are told.
+    - Recipe A of all of these links none. This includes the 6–7-tooth arc-cap spur, which is refused for recipe B,
+      as are the shifted 14-tooth spur and the 12-tooth bevel pinion at 60°.
+    - The internal bevel (signs stubbed) is told for B, and has no line anyway.
+    - One mismatch: the crown gear's **recipe A** links `Flank@Heel/Toe Section Sketch` (`_rack_ops`), so it reads as
+      recipe B. That is harmless: a crown has no `Base Radius`, so `_line` foresees nothing either way.
+    - Crossed helicals are helical parts; there is no separate kind.
+  - *On SolidWorks:* the equation names read back as `"Root@Tooth Space Sketch"`, with no document suffix. These are
+    the keys of `equation_values` in the run 6 and run 7 logs, so the exact sketch match holds there.
+  - Left over (a note): a user's own `Pitch`, `Base`, `Flank` or `HalfSpace` dimension added *inside* the app's tooth
+    space sketch still blinds a recipe A part.
+- **N3: fixed.**
+  - *What the code does:*
+    - `swbuild.py:1463-1478`: on a failed second set, the count stays in `changed`, leaves `unchanged`, and
+      `rebuilt = False`. The failure now says the count it holds.
+    - `UpdateResult.left_on_the_way` (`:264-268`) drives the log's `FAIL … it holds 53` and the suppression of the
+      rebuild-error failure (`:4057`).
+    - It needs `by_way_of[0] in changed`, so a count that never left its value cannot trip it.
+  - *Repro:* the count case holds 53 with `changed ["No. of Teeth"]` and `rebuilt False`. The module alone holds 54
+    with `changed ["No. of Teeth", "Module"]` and the count not in `unchanged`.
+  - *Test:* the parametrised test fails on `6585f6d`'s `swbuild.py`.
+  - *Every consumer, read and run:*
+    - `documents_left_in_error`: changed, not rebuilt, and the count's failure (prefixed `"<file> "`) names it. The
+      stop says to close it without saving and never to save it (the test asserts both).
+    - `finish_update` (`update.py:2128`): skips the entry, since `done.failures` is set.
+    - `marks`: the part is unsaved and marked in error, and N1 never clears it, because a failure names it.
+    - The strip's single-part Update (`gui.py:1671`, `ui_text.update_status`): says `failures[0]`, which now carries
+      "holds … = 53, … not the workbook's 54". It writes no sidecar.
+    - The workbook status's changed pieces (`ui_text.py:1995`) are not reached on a stop.
+  - *Suppressing the rebuild-error failure is right:* the rebuild that ran was asked only for the intermediate. The
+    count's own failure already names the document, so nothing depends on the extra one.
+- **The note-4 guard: fixed** (`landing.py:65`, by `bevel.BACK_INNER` exactly).
+  - *Test:* `test_a_users_global_whose_name_holds_inner_diameter_never_hides_an_external_gear` fails on
+    `23dfa01`'s `landing.py`.
+  - `landing` now imports `bevel`. The import cycle is fine: the suite imports every module.
+
+### The neighbouring case the builder left alone (note, reproduced)
+
+Ring m1.25 40 → m1.5 32, routed via 31, where the count's first set fails: the part holds 40 teeth at m1.5, and
+`by_way_of == ("No. of Teeth", "31")`.
+- The log says `ok went by way of "No. of Teeth" = 31 and back, rebuilt there first`, which is false.
+- `_update_document` adds `SolidWorks reported an error rebuilding Ring…`, though the rebuild of that hybrid read
+  clean on the fake.
+- The user-facing stop is right: it leads with the count's failure, calls the part left in error, and says to close
+  it without saving, which is the right advice for a part at neither the old values nor the workbook's.
+
+So this is wrong only in the log and in a second failure line. It needs a set to fail after another global set in the
+same batch. A note.
+*Fix:* at `swbuild.py:1461`, before the early return, mark the route as not taken, either by clearing `by_way_of` or
+with a flag that `log_lines` reads. Treat it like `left_on_the_way` for the rebuild-error failure.
+
+### The demonstration (point 3)
+
+`probe/w9c_demonstration.py` was read at head. The marks and `still_in_error` exist only in `remake_again` (`:2308-2400`);
+no other section stops a part in error. Section by section, against the run in progress on `64bec58`'s `src/`:
+- **`landing`:** the worker is the same on every case.
+  - Cases 1–7 and 9 have no dimension links outside the app's sketch.
+  - Case 8 (recipe B) links at `Tooth Space Sketch`, which head tells the same as before.
+  - Case 10's user equation is `UserCutD@…` (`:385`, `:2767`), neither rule's name.
+  - No case fails a second set, and no part has a `… Inner Diameter` global or a bevel.
+  - One thing to check in the run's log: case 8 prints the dimension links as the app reads them. If they read
+    exactly `…@Tooth Space Sketch`, head's rule is confirmed on SolidWorks. If they carry anything else, head would
+    route recipe B (one needless rebuild), and only case 8 would need running again.
+- **`remake`, M3:**
+  - Step 1 is unchanged.
+  - Step 2 sets nothing in the ring, so N1 changes nothing. Under N4, the status keeps what followed "already matches"
+    only if the press changed nothing at all. If it remade the stage's mates, the status is `text + said` on both
+    commits. The check (`:2364-2366`) passes either way.
+  - Step 3's ring rebuilds True, so its mark goes on both commits.
+- **`fixed`, `modes`, `remove`, `remake` (main), `bands-off`, `m4`, `w9b-part`:** none has an in-error mark, a routed
+  landing with a failing set, or a user dimension of those names, so the worker and the record are the same.
+
+**Verdict:** the 2026 whole run on `64bec58` stands as evidence for head in every section. Nothing needs rerunning
+on 2026, unless case 8's printed links show a name other than `…@Tooth Space Sketch`.
+
+### Documents that now misdescribe the code (point 4)
+
+- `W9C-INTERFACES.md:741-743` (§11, "From B (the fixes review)", M3): "changed and rebuilt that very document". This
+  is now "changed with no failure naming it". Also:
+  - `:744` says the sentence comes "instead of *already matches*"; it now replaces only the claim and keeps what
+    followed.
+  - `:736-737` (the bullet before it), "cleared by a press that ends with no failure", has been stale since
+    `ff98d5a`.
+- `swbuild.update_variables`' docstring (`swbuild.py:1404`), "in one suppressed batch, and rebuild once", has been
+  stale since `63bbc33`. A routed change is two batches and two rebuilds.
+- `update._documents_rebuilt_clean`: the name still says "rebuilt clean", although its docstring is now right.
+- `HANDOFF-WORKBOOK.md`:
+  - `:86-89` say `c997e85` and `ff98d5a` have not been read by a reviewer, and do not mention the second reading
+    (`23dfa01`) or these five fixes.
+  - `:100` says the last whole run was at `0eb0768`, 3786 passed.
+- `W9C-DEMONSTRATION.md:348` ("c997e85 tells recipe B by its sketch's dimension links") is still true in substance.
+  Since `6585f6d` it is links in the app's own tooth-space sketch.
+- `design/UI-DESIGN.md:1414-1420` is accurate for a press that set nothing. It does not say that a press which changes
+  the part clean, beside the user's own error, sheds the warning. Omitted, not wrong.
+
+### New must-fix or should-fix
+
+None. The four notes above — N1's stale-mark reverse, the `UPDATE_LOST` clause after the still-in-error sentence,
+the leg-one log, and the user's dimension inside the app's sketch — are all narrow and none is user-facing advice in
+error.
