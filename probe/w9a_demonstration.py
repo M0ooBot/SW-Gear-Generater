@@ -189,6 +189,19 @@ WHATS_WRONG = "What's Wrong"
 WW_ALLOWANCE = 60.0          # box stayed 22 s after it came (box: 97.45 -> 120.08 s); the end check allows 60
 WW = {"rule": None, "read": False, "job": False, "last": None, "job_last": None}
 WW_WORDS = {"app": "as the app's Update shows it", "script": "as SolidWorks shows it when a person does this"}
+WW_STALL = 120.0             # a box up this long with no SolidWorks call made since it came is taken as blocking
+# Every SolidWorks call any job makes, counted (W8's TRACE counts only while an Update is traced): the stall test's
+# measure of the worker going on while a box is up. A one-line wrapper over swcom.call as W8 left it.
+CALLS_MADE = {"n": 0}
+_TRACED_CALL = swcom.call
+
+
+def _counted_call(obj, name, *args):
+    CALLS_MADE["n"] += 1
+    return _TRACED_CALL(obj, name, *args)
+
+
+swcom.call = _counted_call
 
 
 class _WhatsWrongTolerated(set):
@@ -288,14 +301,18 @@ def ww_record(what, kind):
 
 
 def ww_poll(record, frame, began):
-    """One look for What's Wrong during a ruled job: each box owned by the frame when it came (and the call in
-    progress), each when it went; a What's Wrong not owned by the frame kept for the STOP. Returns the boxes up."""
+    """One look for What's Wrong during a ruled job: each box owned by the frame when it came (the call in progress,
+    the calls made so far), each when it went and how long it stayed; a What's Wrong not owned by the frame kept for
+    the STOP. While a box is up, a blocking one is named at once (W9A-CLOSE-2024-REVIEW finding 5) in
+    ``record["blocking"]``: SolidWorks' frame disabled, or the box up longer than WW_STALL s with no SolidWorks call made
+    since it came. Returns the boxes up."""
     elapsed = round(time.monotonic() - began, 2)
     now = whats_wrong_boxes(frame)
     words = WW_WORDS[record["kind"]]
     for h, owned in now:
         if owned and h not in [e["hwnd"] for e in record["seen"]]:
-            record["seen"].append({"hwnd": h, "seconds": elapsed, "call_in_progress": W.CALLS["now"] or None})
+            record["seen"].append({"hwnd": h, "seconds": elapsed, "call_in_progress": W.CALLS["now"] or None,
+                                   "calls_made": CALLS_MADE["n"]})
             say(f"fact    {record['what']}: What's Wrong came up {elapsed:.2f} s into the job, the worker in "
                 f"{W.CALLS['now'] or None}, owned by SolidWorks' frame: {words} (the ruling: a fact, not a STOP)")
         elif not owned and h not in record["unowned"]:
@@ -304,10 +321,30 @@ def ww_poll(record, frame, began):
     up = {h for h, _ in now}
     for e in record["seen"]:
         if e["hwnd"] not in up and e["hwnd"] not in [g["hwnd"] for g in record["gone"]]:
-            record["gone"].append({"hwnd": e["hwnd"], "seconds": elapsed, "call_in_progress": W.CALLS["now"] or None})
-            say(f"fact    {record['what']}: What's Wrong gone {elapsed:.2f} s into the job, the worker in "
-                f"{W.CALLS['now'] or None}; nothing here closed it")
+            stayed = round(elapsed - e["seconds"], 2)
+            record["gone"].append({"hwnd": e["hwnd"], "seconds": elapsed, "stayed": stayed,
+                                   "call_in_progress": W.CALLS["now"] or None})
+            say(f"fact    {record['what']}: What's Wrong gone {elapsed:.2f} s into the job after staying {stayed:.2f} s, "
+                f"the worker in {W.CALLS['now'] or None}; nothing here closed it")
+    standing = [e for e in record["seen"] if e["hwnd"] in up]
+    if standing and not record.get("blocking"):
+        enabled = frame_enabled(frame)
+        stalled = [e for e in standing if elapsed - e["seconds"] > WW_STALL and CALLS_MADE["n"] == e["calls_made"]]
+        if enabled is False or stalled:
+            record["blocking"] = (
+                f"{record['what']}: What's Wrong is up and "
+                + ("SolidWorks' frame is disabled (a modal box)" if enabled is False else
+                   f"has stood {elapsed - stalled[0]['seconds']:.0f} s with no SolidWorks call made since it came")
+                + f", {elapsed:.2f} s into the job: the ruling allows only a box that blocks nothing")
     return [h for h, _ in now]
+
+
+def ww_blocked(record):
+    """A blocking What's Wrong named by ``ww_poll``: the STOP at once, the worker marked hung and left alone."""
+    if record.get("blocking"):
+        W.HUNG["on"] = True
+        SEEN["dialog_at"] = time.monotonic()
+        stop(record["blocking"])
 
 
 def whats_wrong_end(record, frame, began):
@@ -317,17 +354,24 @@ def whats_wrong_end(record, frame, began):
     STOP. The record said as a fact."""
     ended = time.monotonic()
     up = ww_poll(record, frame, began)
+    ww_blocked(record)
     while up and time.monotonic() - ended < WW_ALLOWANCE:
         time.sleep(0.25)
         up = ww_poll(record, frame, began)
+        ww_blocked(record)
     waited_for = round(time.monotonic() - ended, 2)
     enabled = frame_enabled(frame)
     record.update(up_at_the_end=len(up), frame_enabled_at_the_end=enabled, waited_after_the_job=waited_for)
     what = record["what"]
     if record["seen"]:
-        say(f"fact    {what}: What's Wrong showed during the job, {WW_WORDS[record['kind']]}: {record['seen']}; gone "
-            f"{record['gone']}; after the job it took {waited_for:.2f} s to go (allowed {WW_ALLOWANCE:g}); "
-            f"{len(up)} up at the end, SolidWorks' frame enabled {enabled}")
+        record["lifetimes"] = [g["stayed"] for g in record["gone"]]
+        RESULT.setdefault("whats_wrong_lifetimes", []).append(
+            {"job": what, "kind": record["kind"], "came": [e["seconds"] for e in record["seen"]],
+             "stayed": record["lifetimes"], "still_up": len(up)})
+        say(f"fact    {what}: What's Wrong showed during the job, {WW_WORDS[record['kind']]}: came at "
+            f"{[e['seconds'] for e in record['seen']]} s, stayed {record['lifetimes']} s; after the job it took "
+            f"{waited_for:.2f} s to go (allowed {WW_ALLOWANCE:g}); {len(up)} up at the end, SolidWorks' frame enabled "
+            f"{enabled}")
     if up or enabled is False or record["unowned"]:
         W.HUNG["on"] = True
         stop(f"{what}: at the job's end What's Wrong is still up after {WW_ALLOWANCE:g} s ({len(up)}), or SolidWorks' "
@@ -357,6 +401,13 @@ def w8_step(fn, *args, _label=None, **kwargs):
                 ww_poll(record, frame, began)
             except Exception:  # noqa: BLE001 - a look that failed is retried; the end check reads again
                 pass
+            if record.get("blocking") and not record.get("said"):
+                # Named at once from here; the main thread is inside W8's own wait, which raises at its timeout, and
+                # the STOP is raised when it returns. The worker is marked hung so nothing more is asked of it.
+                record["said"] = True
+                W.HUNG["on"] = True
+                RESULT["stops"].append(record["blocking"])
+                say(f"STOP    {record['blocking']}; the worker is left alone (W8's own wait ends this step)")
             done.wait(0.25)
     looker = threading.Thread(target=look, daemon=True)
     WW["job"] = True
@@ -370,6 +421,8 @@ def w8_step(fn, *args, _label=None, **kwargs):
     done.set()
     looker.join(2.0)
     try:
+        if record.get("blocking"):
+            raise DemoStop(record["blocking"])
         if not W.HUNG["on"]:
             whats_wrong_end(record, frame, began)
     finally:
@@ -399,6 +452,7 @@ def watched_wait(pending, timeout, what, app_job=False):
                 BOX["tick"](time.monotonic() - began, answer is not None)
             if ruled:
                 ww_poll(record, frame, began)
+                ww_blocked(record)
             if answer is not None:
                 if ruled:
                     whats_wrong_end(record, frame, began)
