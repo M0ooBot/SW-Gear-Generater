@@ -731,3 +731,110 @@ comes back clean. It does not contradict M3, which only adds the tie.
   is named.
 - **The axis *may*.** It needs B1 and B2's gate condition.
 - **Grammar.** Both stay within §9.1's grammar.
+
+---
+
+## Last re-check before the second run: package B's `4b899e9` (B1, B2) and `b67cdc5` (B3), and the script against them
+
+*Independent, 2026-11-17.* The strings below are from A's worker on the fake at head (`b67cdc5`), and from hand-made
+inventories for the question. **Suite: 2 failed (tkinter), 3915 passed, 10 skipped.** I ran the script's
+`--self-check`, which ends `done 0 failed`. Beyond it I read `question_problems`, the result checks and
+`expected_outcome` against B's actual sentences.
+
+### Verdict
+
+**Package B is fit for the run, and the script holds against B's new sentences.** No fragment the script matches has
+moved.
+
+What stands between head and the run is package A's read-back fault (`W9D-REVIEW-A.md`, last re-check, N1). It will
+make `carry-closed` FAIL UserAsm6, though the script's expectation there is right.
+
+Two should-fixes for B:
+- a tense that contradicts the D10 fact;
+- *SolidWorks* twice in the no-cause sentence.
+
+### B1 and B2: done
+
+- **B1, as a test.** `test_the_demonstrations_question_names_each_mate_in_exactly_one_sentence` checks every mate of
+  one realistic record. That record has a ratio *may*, an axis *may*, a face of a part made new, a mate in error and
+  a lock, on 2026's reads with the gates patched.
+  - It is general in its check, but it covers one shape: suppressed and beside-lightweight causes are not in it.
+  - Its escape clause, *named nowhere if "mates again" is in the text*, is loose.
+  - The fault itself is fixed: the filter is by mate (`axis_items`).
+- **B2, the axis *may*.** It is now said only while `COAXIAL_FACE_READ`, `CARRY_GEAR_MATE_ON_AN_APP_GEAR` and `gear`
+  in `CARRY_REMAKE_KINDS` all hold, which are the gates that would let the mate be made.
+- **B2, the in-error wording.** *"…made again, it is carried if it reads no error or the one it had, and not if it
+  keeps a gear from turning."* That is true by `_judge` (a code of 0 is carried) and in step with M3. The single-mate
+  case is joined to the lead, so the mate is said once.
+
+### B3: the sentences by cause
+
+The result, printed from A's worker:
+- **Suppressed in the mode showing (modes):** *"Lock1 and UserAxis9 are on Sprocket-1, which is suppressed in 2H, the
+  mode TransferCase.SLDASM showed, so they could not be read and are not made again."* True.
+- **Without modes:** *"… which is suppressed in T.SLDASM …"*.
+- **Beside lightweight:** *"UserAsm6 is on a plane of T.SLDASM itself, which Gear Generator does not read while
+  Sprocket-1 is lightweight in it, so it is not made again."* True as the rule.
+  - But on the demonstration's open path the result also says D10's fact, *"SprocketLight-1 was lightweight in
+    RangeBox.SLDASM and is resolved there now: SolidWorks loaded its part to carry it."* (run 2's measured case).
+  - Together the two say *is lightweight* and *is resolved now* of the same component.
+  - **Should-fix:** *"…while Sprocket-1 was lightweight in it, so it is not made again."*
+- **No cause:** *"SolidWorks would not describe UserOdd wholly (SolidWorks would not say what kind of entity it is),
+  so it is not made again."*
+  - SolidWorks is said twice.
+  - The inner clause can be untrue (A's S6).
+  - **Should-fix (B):** with no cause, say the clause alone: *"UserOdd is not made again: SolidWorks would not say what
+    kind of entity it is on."*
+
+The question, from hand-made inventories on RangeBox (the gates patched):
+- **Suppressed** (Sprocket-1 state 0, Lock3's entity on it unread):
+  > *"As read at 18:00, RangeBox_r2 takes your Sprocket-1 and Housing-1. Sprocket-1 was suppressed in the mode
+  > RangeBox.SLDASM showed, as read, so Lock3 on it could not be read: show a mode where Sprocket-1 is resolved before
+  > you press, or Sprocket-1 may not be carried and Lock3 is not made again."*
+  - True.
+  - The empty mode never shows: the question names *the mode RangeBox.SLDASM showed*, not a mode by name.
+  - It reads as one thought, not odd.
+- **Beside lightweight** (Housing-1 lightweight, UserAsm6 to the assembly's plane):
+  > *"UserAsm6 is on a plane of RangeBox.SLDASM itself, which Gear Generator does not read while Housing-1 is
+  > lightweight in it: it is made again only if you set Housing-1 resolved in SolidWorks before you press."*
+  - By the worker's code, a resolved Housing-1 lets R read the root, place the entity as `ASSEMBLY`, plan the mate on
+    `asm:plane1` and make it.
+  - On SolidWorks today it is then deleted again by A's N1. So the clause is true as a necessary condition, and it
+    becomes true as a promise once N1 is fixed.
+  - With two lightweight components it names only the first. It is still true (*only if*), but incomplete.
+
+### The script against these rounds (`probe/w9d_demonstration.py` at `20080c3`)
+
+**The question.** `question_problems` (`:530-542`) matches three things:
+- *"UserGear6 … made again if the press reads"*;
+- *"UserGearRoot … proves to be on Sun's axis"*;
+- the absence of *"in error in RangeBox.SLDASM as read"*.
+
+All three still hold for the fixture:
+- UserGear6 is held whole, with its kinds known, and named for its unread ratio, so its *may* is said.
+- UserGearRoot's *may* is said with the three gates patched, and is no longer also said as definite.
+- No mate of the fixture is in error as read. The new lead clause names a single made mate only if it is in error, and
+  UserAxis9's code, if any, does not count: it is not a mate made again.
+
+**Sprocket-9's advice.** The script matches no fragment of it (`grep` finds none), so its new shape, joined with
+UserAxis9, costs nothing.
+
+Lines `:2286` (*Keyway*, *As read at*, *Flank*) and `:2216` (the finding and *Keyway* in `carry-gates`) still hold.
+
+**The result.**
+- `:2312` (*Carried into RangeBox_r2, unsaved*, *Keyway*, *UserSunFace*) holds. UserSunFace is named in its own
+  part-new sentence.
+- `:2237` (`carry-gates`: W9a's lead and *Keyway*) holds.
+- `:2515`'s lost line is unchanged.
+
+**`expected_outcome` against the worker.**
+- The script compares by `why` word only, so the new trailing subjects do not matter.
+- `carry-gates` reads the subjects only for gate names (`:2230`, `:2250`), which the cause subjects do not contain.
+- UserAxis9 (`carry`, open) and UserAxis7 (`carry-closed`) are `{"unread"}`, and the worker names both `WHY_UNREAD`
+  with `CAUSE_SUPPRESSED`.
+- UserAsm6 (`carry`, lightweight) is `{"unread"}`: `CAUSE_BESIDE_LIGHTWEIGHT`.
+- UserAxisLight is `{"lightweight"}`, which agrees.
+- **One mismatch, and it is A's, not the script's:** UserAsm6 in `carry-closed` is expected `{"remade"}`, but the
+  worker will name it `differs` (A's N1). Do not change the script for it; fix A.
+
+**No must-fix for the script.**
