@@ -500,16 +500,46 @@ def not_reached(expected, reached, stopped="", ways=("remade",)):
 def proposal_values(clean, unclean, kind_of, outcome, mates):
     """What ``carry`` proposes for each gate, from what its checks held (``clean``: a key False or missing when its
     check failed or was not reached, ruling 2), the mates read back otherwise (``unclean``) and each mate's outcome:
-    None for every gate whose evidence is not all there."""
+    None for every gate whose evidence is not all there. ``CARRY_INSERTS`` rests on the inserts' own lines (the
+    coordinator's ruling after b44594d: every component inserted, placed against its anchor in every mode, its states
+    set and read back, the carry not stopped and nothing moved, nothing written to the old (a STOP otherwise), the
+    tied cluster's components fixed); the mates' definitions and flags feed CARRY_REMAKE_KINDS and the gear-mate
+    gate, never the insert gate."""
     inserts = bool(clean) and all(clean.get(k) for k in (
-        "outcome", "components", "states", "poses", "anchors", "unsaved", "fallback", "same_error", "free",
-        "definitions", "flags"))
+        "components", "states", "poses", "anchors", "unsaved", "fallback_fixed", "same_error"))
     kinds = kinds_clean({n: kind_of.get(n, "") for n in mates if n in kind_of}, outcome, set(unclean))
     gear = outcome.get("UserGear6") == "remade" and "UserGear6" not in unclean and bool(clean.get("definitions"))
     return {"CARRY_INSERTS": True if inserts else None,
             "CARRY_INSERTS_IN_A_CONFIGURATION": True if clean.get("configuration") else None,
             "REFERENCED_CONFIGURATION_READ": True if clean.get("referenced_read") else None,
             "CARRY_REMAKE_KINDS": kinds or None, "CARRY_GEAR_MATE_ON_AN_APP_GEAR": True if gear else None}
+
+
+def flags_judged(old_on, worker_on, read_on, hidden):
+    """A remade mate's flags (a366938, §3 C.6.1): judged only in the modes where every carried component it joins is
+    resolved (``hidden``: the modes where one is suppressed), where what the script reads again, what the worker
+    said and the old mate's on-modes must agree; in a hidden mode what SolidWorks reads is a fact, never judged.
+    Returns (the disagreement or None, {hidden mode: "on" or "suppressed" as read})."""
+    def seen(x):
+        return {m for m in x if m not in hidden}
+    wrong = None if seen(read_on) == seen(worker_on) == seen(old_on) else \
+        (sorted(seen(old_on)), sorted(seen(read_on)), sorted(seen(worker_on)))
+    return wrong, {m: ("on" if m in read_on else "suppressed") for m in sorted(hidden)}
+
+
+def question_problems(question, old="RangeBox.SLDASM"):
+    """The Build again? question with the gates patched, after B's round (5f52913): the *may* for UserGear6's ratio and
+    sense and for UserGearRoot's face on Sun's axis said, each in its sentence; no mate of the user's said in error
+    (the fixture's mates all read 0 since ruling 1). Sentences."""
+    parts = [p for p in question.replace("? ", ". ").split(". ")]
+    out = []
+    if not any("UserGear6" in p and "made again if the press reads" in p for p in parts):
+        out.append("UserGear6's ratio and sense not said as may")
+    if not any("UserGearRoot" in p and "proves to be on Sun's axis" in p for p in parts):
+        out.append("UserGearRoot's face on Sun's axis not said as may")
+    if f"in error in {old} as read" in question:
+        out.append("a mate of the user's said in error, which the fixture has none of")
+    return out
 
 
 def as_new(old, old_of):
@@ -1069,16 +1099,34 @@ def self_check():
        "ruling 2: a remade-mate check with nothing remade, one mate short, or nothing to judge is not reached")
     nothing = {"outcome": False, "components": True, "states": True, "poses": False, "anchors": True,
                "unsaved": False, "fallback": False, "same_error": False, "free": False, "definitions": False,
-               "flags": False, "interference": False, "configuration": True, "referenced_read": True}
+               "flags": False, "interference": False, "configuration": True, "referenced_read": True,
+               "fallback_fixed": False}
     values = proposal_values(nothing, {"UserGear6": ["not reached"]}, {n: k for n, k, _, _ in mate_specs()}, {},
                              made)
     full = proposal_values(dict(nothing, **{k: True for k in nothing}), {}, {n: k for n, k, _, _ in mate_specs()},
                            {m: "remade" for m in made}, made)
     ok(values["CARRY_INSERTS"] is None and values["CARRY_REMAKE_KINDS"] is None
        and values["CARRY_GEAR_MATE_ON_AN_APP_GEAR"] is None and values["CARRY_INSERTS_IN_A_CONFIGURATION"] is True
-       and full["CARRY_INSERTS"] is True and "angle" in full["CARRY_REMAKE_KINDS"],
+       and full["CARRY_INSERTS"] is True and "angle" in full["CARRY_REMAKE_KINDS"]
+       and proposal_values(dict(full_clean := dict(nothing, **{k: True for k in nothing}), definitions=False,
+                                flags=False, free=False, outcome=False), {"UserGear6": ["differs"]},
+                           {n: k for n, k, _, _ in mate_specs()}, {m: "remade" for m in made}, made)
+       == {**full, "CARRY_REMAKE_KINDS": tuple(k for k in full["CARRY_REMAKE_KINDS"] if k != "gear"),
+           "CARRY_GEAR_MATE_ON_AN_APP_GEAR": None} and bool(full_clean),
        "ruling 2: a carry that remade nothing proposes CARRY_INSERTS, CARRY_REMAKE_KINDS and the gear-mate gate None "
        "(the configuration insert, before any mate, still stands); with everything held each is proposed")
+    ok(flags_judged({"H", "N", "L"}, ("H", "N", "L"), {"H", "N"}, {"L"}) == (None, {"L": "suppressed"})
+       and flags_judged({"H", "N", "L"}, ("H", "N", "L"), {"H", "L"}, {"L"})[0] is not None
+       and flags_judged({"H", "N", "L"}, ("H", "N"), {"H", "N", "L"}, set())[0] is not None,
+       "a366938: a mate's flags judged only where its components are resolved; what reads where one is suppressed "
+       "is a fact")
+    q_ok = ("Build again as RangeBox_r2? Your UserGear6 and UserGearRoot are made again if the press reads their gear "
+            "ratios and which way they turn. Your UserGearRoot is made again only if the face of Sun it is on proves "
+            "to be on Sun's axis, since Sun's part is new.")
+    ok(question_problems(q_ok) == []
+       and len(question_problems(q_ok + " UserLock8a was in error in RangeBox.SLDASM as read; made again, …")) == 1
+       and len(question_problems("Build again as RangeBox_r2? Nothing of yours.")) == 2,
+       "5f52913: the question's two may sentences held, its in-error clause held absent")
     ok(as_new("Sprocket-2", {"Sprocket-2": "Sprocket-5"}) == "Sprocket-2 as Sprocket-5"
        and as_new("Sprocket-1", {"Sprocket-1": "Sprocket-1"}) == "Sprocket-1", "ruling 5: old and new Name2 said")
     rel = (I9, (0.0, 0.0, 10.0))
@@ -1941,11 +1989,18 @@ def judge_carry(label, desk, fx, result, closed, light, out, old_before, old_box
                                 f"suppressed in the mode showing may be: {not_carried or 'none'}; wrongly {bad or 'none'}")
     tied = {names[h] for h in TIED}
     fell = list(cr.fixed)
-    clean["fallback"] = check(len(fell) == 1 and fell[0].why == swbuild.FELL_TIE
-                              and set(fell[0].deleted) == {"UserLock8a"} and set(fell[0].kept) == {"UserAngle8b"}
-                              and set(fell[0].components) == {old_of.get(t, t) for t in tied},
-                              f"{label}: the tied cluster alone fell back, UserLock8a deleted, UserAngle8b kept, "
-                              f"{sorted(as_new(t, old_of) for t in tied)} fixed: {fell}")
+    if want.get("UserLock8a") == {"fell"}:
+        clean["fallback"] = check(len(fell) == 1 and fell[0].why == swbuild.FELL_TIE
+                                  and set(fell[0].deleted) == {"UserLock8a"} and set(fell[0].kept) == {"UserAngle8b"}
+                                  and set(fell[0].components) == {old_of.get(t, t) for t in tied},
+                                  f"{label}: the tied cluster alone fell back, UserLock8a deleted, UserAngle8b kept, "
+                                  f"{sorted(as_new(t, old_of) for t in tied)} fixed: {fell}")
+        clean["fallback_fixed"] = len(fell) == 1 and set(fell[0].components) == {old_of.get(t, t) for t in tied}
+    else:
+        # The closed path without the reload finding: UserAngle8b is not made again, so nothing ties and nothing falls
+        # back (no run meets it: 2026 holds the finding, and 2024's closed path is not read at all).
+        clean["fallback"] = clean["fallback_fixed"] = check(
+            not fell, f"{label}: UserAngle8b not made again here, so nothing ties and no cluster falls back: {fell}")
     clean["same_error"] = check(not cr.same_error and not cr.moved and not cr.stopped and cr.unsaved,
                                 f"{label}: no mate back in an old error {cr.same_error}, nothing moved {cr.moved}, no "
                                 f"stop {cr.stopped!r} {cr.skipped!r}, the new assembly unsaved {cr.unsaved}")
@@ -2007,13 +2062,29 @@ def judge_carry(label, desk, fx, result, closed, light, out, old_before, old_box
               for n in remade_on} if old_before.get("by_mode") else {m.name: set(m.on) for m in cr.work.mates}
     by_mode = every["by_mode"]
     flags = {o: {m for m in modes if not by_mode.get(k, {}).get(m, True)} for o, k, _ in cr.remade}
-    flags_wrong = {o: (sorted(old_on.get(o, set())), sorted(flags[o]), sorted(remade_on[o])) for o in remade_on
-                   if not (flags[o] == remade_on[o] == (old_on.get(o, set()) & set(modes)))}
+    joins = {n: [names[_handle(x)] for x in (a, b) if _handle(x) in names] for n, _, a, b in mate_specs()}
+    flags_wrong = {}
+    for o, k, _ in cr.remade:
+        hidden = {m for m in modes if any(every["states"][m].get(old_of.get(c, "")) == SUPPRESSED
+                                          for c in joins.get(o, ()))}
+        wrong, there = flags_judged(old_on.get(o, set()) & set(modes), remade_on[o], flags[o], hidden)
+        if wrong:
+            flags_wrong[o] = wrong
+        for m, read in there.items():
+            worker_fact = [f for f in cr.facts if f.startswith(f"{k} ") and f" in {m}," in f]
+            say(f"fact    {label}: {k} in {m}, where a component it joins ({', '.join(as_new(c, old_of) for c in joins[o])}) "
+                f"is suppressed: set {'on' if m in old_on.get(o, set()) else 'off'} as recorded, SolidWorks reads it "
+                f"{read} (the script's read); the worker's fact {worker_fact or 'none (it read as set)'}; not judged "
+                "(§3 C.6.1)")
     for o, why in flags_wrong.items():
         unclean.setdefault(o, []).append(f"flags (old, read, said) {why}")
     clean["flags"] = check(not flags_wrong and not reached,
                            f"{label}: every mate expected to be made again on in the modes it was on in, read again: "
                            f"{flags_wrong or 'all'}; {reached or 'every one reached'}")
+    kept_angle = next((k for o, k, _ in cr.remade if o == "UserAngle8b"), "")
+    if kept_angle:
+        say(f"fact    {label}: {kept_angle}, joining two components fixed by the fallback, reads code per mode "
+            f"{ {m: every['mates'][m].get(kept_angle) for m in modes} }")
     post = "" if (not cr.stopped and cr.remade) else \
         f"not reached: {'the carry stopped: ' + cr.stopped if cr.stopped else 'nothing was remade'}"
     gear_ids = {g for g, _ in W.bodies(new_box)}
@@ -2105,13 +2176,19 @@ def record_judged(label, desk, result, unsaved=True):
     finally:
         desk.note = note
     asks = "Save RangeBox_r2 in SolidWorks to keep what was carried" in f.text
+    has_line = bool(line) and line in f.text
+    stopped = bool(result.carry and result.carry.stopped)
     say(f"fact    {label}: the footer with the finish's sentence standing {'asks' if asks else 'does NOT ask'} for "
-        f"the save; §9.4's line {'is' if line and line in f.text else 'is not'} in it; with the sentence gone it "
-        f"{'says' if line and line in idle.text else 'does NOT say'} §9.4's line")
+        f"the save; §9.4's line {'is' if has_line else 'is not'} in it; with the sentence gone it "
+        f"{'says' if line and line in idle.text else 'does NOT say'} §9.4's line; the carry "
+        f"{'stopped' if stopped else 'finished'}")
+    # B's 5f52913: §9.4's line follows a job's sentence unless that sentence asks for the save itself: a carry that
+    # finished asks in the build's own phrase (and §9.4's line is not repeated), one that stopped does not (§9.4's).
+    standing = (has_line and not asks) if stopped else (asks and not has_line)
     reached = (not unsaved) or bool(result.carry and result.carry.unsaved)
     ok = check(reached and on_disk.get(store.LINK_SCHEMA_KEY) == 10 and carry is not None
                and (not unsaved or abs(carry.unsaved_at - mtime) < 1e-6)
-               and (not unsaved or (bool(line) and line in idle.text and asks)),
+               and (not unsaved or (bool(line) and line in idle.text and standing)),
                f"{label}: the record on disk at schema {on_disk.get(store.LINK_SCHEMA_KEY)} holds the carry (how "
                f"{carry and carry.how}, {len(carry.components) if carry else 0} components, "
                f"{len(carry.mates) if carry else 0} mates, {len(carry.named) if carry else 0} named), unsaved_at "
@@ -2209,6 +2286,9 @@ def section_carry(out):
             check("Keyway" in q and "As read at" in q and "Flank" in q,
                   "carry: the question, gates patched, names the Keyway in Sun's part made new because its Flank "
                   "changed, with the time read")
+            qp = question_problems(q)
+            check(not qp, f"carry: the question says UserGear6's ratio and sense and UserGearRoot's face on Sun's axis "
+                          f"as may, and no mate of the user's in error: {qp or 'as said'}")
             say(f"fact    carry: the question names UserSunFace (on Sun's face, not made again) "
                 f"{'by name' if 'UserSunFace' in q else 'only within a count'}")
             out["question"] = q
@@ -2305,8 +2385,9 @@ def save_one(path):
 def _propose(clean, unclean, kind_of, outcome, fx):
     values = proposal_values(clean, unclean, kind_of, outcome, fx["mates"])
     proposed(finding_name("CARRY_INSERTS"), values["CARRY_INSERTS"],
-             f"carry: every user part inserted, placed against its anchor in every mode, fixed or floating, its state "
-             f"set and read back per mode, the tied cluster fixed, nothing written to the old: {clean}")
+             f"carry: the inserts' own lines (components, states, poses, anchors, unsaved, fallback_fixed, "
+             f"same_error: not stopped, nothing moved), the old untouched (a STOP otherwise); the mates' lines feed the "
+             f"kinds and the gear-mate gate; every condition: {clean}")
     proposed(finding_name("CARRY_INSERTS_IN_A_CONFIGURATION"), values["CARRY_INSERTS_IN_A_CONFIGURATION"],
              "carry: SprocketConf-1 inserted in Z20 by AddComponent5 with its configuration, read back in every mode")
     proposed(finding_name("REFERENCED_CONFIGURATION_READ"), values["REFERENCED_CONFIGURATION_READ"],

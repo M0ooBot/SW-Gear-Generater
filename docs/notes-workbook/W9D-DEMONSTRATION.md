@@ -464,6 +464,33 @@ Run 2's `carry-closed` (401 s, 8 failed) is superseded by run 3: its closed read
    finished carry should keep §9.4's line visible beside the build's sentence is package B's to say.
 7. **UserAxisLight** is expected `lightweight` (named, never read), and the self-check's `plan_carry` agrees.
 
+## Following A's fifth round (`a366938`) and B's round (`5f52913`), after the re-check (`b44594d`)
+
+- **Flags in a mode where a component is suppressed** (a366938, §3 C.6.1): the worker sets the flag as recorded there,
+  keeps what SolidWorks reads back as a fact, and judges nothing. The script's flags check (`flags_judged`) now judges
+  only the modes where every carried component the mate joins reads resolved (the script's own shown read); in the
+  others it prints what SolidWorks read beside the worker's own fact (`fact    … UserAxis7 in L, where a component it
+  joins (Sprocket-7 as …) is suppressed: set on as recorded, SolidWorks reads it …`). That is UserAxis7 on the open
+  path and UserAxis9 on the closed one, never measured before. `_judge` no longer excuses a gear's tie by the
+  same-error rule; the fixture's tie has no same error, and the self-check's fake carry still falls back by
+  `FELL_TIE`.
+- **The footer** (5f52913): §9.4's line now follows a job's sentence unless that sentence asks for the save itself.
+  `record_judged` takes exactly what fits what the carry did: finished, the build's phrase "Save RangeBox_r2 in
+  SolidWorks to keep what was carried" with the note standing, and not §9.4's line beside it; stopped, §9.4's line;
+  the idle footer (note gone) says §9.4's line either way.
+- **The question** (5f52913): with the gates patched it must say UserGear6 as *made again if the press reads its gear
+  ratio and which way it turns* and UserGearRoot as *made again only if the face of Sun it is on proves to be on Sun's
+  axis*, each in its sentence, and say no mate of the user's in error (`question_problems`).
+- **The fallback check** follows the closed path without the reload finding (UserAngle8b not made again, so nothing
+  ties and nothing falls back); no run meets that path (2026 holds the finding; 2024's closed path is not read).
+  After the fallback, the code SolidWorks reads for UserAngle8b, joining two components the fallback fixed, is printed
+  per mode as a fact.
+- **`CARRY_INSERTS`, ruled**: proposed from the inserts' own lines (every component inserted, placed against its
+  anchor in every mode, its states set and read back, the carry not stopped and nothing moved, nothing written to the
+  old assembly, the tied cluster's components fixed). The mates' definitions and flags feed `CARRY_REMAKE_KINDS` and
+  the gear-mate gate only. The proposal line prints every condition. The self-check shows the insert gate proposed
+  with the mates' checks failed, and the gear kind and gate then withheld.
+
 ## Command lines
 
 2026 (fresh session; `RUN` the run folder with `snap` the repo snapshot):
