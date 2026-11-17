@@ -424,3 +424,118 @@ Gear Generator, not in SolidWorks" instead of Python text.
   `swbuild.CAUSE_TYPE_NOT_TAKEN = "type not taken"` with parts `(the number as read,)`, and the clause "it is on a kind
   of entity Gear Generator does not make mates on again". "SolidWorks would not say what kind…" now covers only a
   type not read. Pin: `test_an_entity_of_a_type_the_app_does_not_take_says_so_as_structure`.
+
+## The audit of the fake against SolidWorks as measured (2026-11-17, after 6211143)
+
+Every default of `FakeSolidWorks` (and of the COM doubles in `tests/test_swcom.py`) that stands for something SolidWorks
+was measured to do, held to its measurement: the `*_ON_2026` findings the carry reads, `W9D-PROBES.md`'s runs
+(`-1.log` is `w9d-probes-sw2026-20261117-1-…`, `-2.log` `…-2-…`), and the first M9 run (`demo-2` is
+`w9d-demo-sw2026-20261117-2-carry-app-faults.log`). No SolidWorks was run. Commits `ee78ee3`, `51426e1`, `a209dc1`,
+`1f0639b`, `4af84d2`.
+
+### The defaults, one by one
+
+| What | Measured (source) | The fake before | Now |
+|---|---|---|---|
+| A plain distance's or angle's definition | its range too, each end its value, and FlipDimension 0 (W9c S5 (a); demo-2 :604-605) | `Distance` or `Angle` alone | as measured |
+| GetTypeName2 | MateCoincident, MateConcentric, MateParallel, MateDistanceDim, MatePlanarAngleDim, MateLimitDistanceDim, MateLimitPlanarAngleDim, MateGearDim, MateLock (demo-2; W9c m1) | the kind word | as measured (perpendicular, tangent: their word, unmeasured) |
+| IMate2.Type of a limit mate | 5, 6 (`M1_READS_LIMIT_*`) | 7 | 5, 6 |
+| IMate2.Type through mate_info of a concentric or parallel | 1, 3 (`M1_READS_CONCENTRIC`; S5, the probe) | 7 (mate_definition gave 1, 3) | 1, 3 |
+| Which AddMate5 makes a limit mate | one whose range ends differ (m1); equal ends make the plain kind (add_mate, S5 (c)) | any range | as measured |
+| Lightweight | per file in the session: one Sprocket set, every Sprocket.SLDPRT read 1 (`-1.log`:121) | per component | per file (`_light`) |
+| Opening a lightweight component's part | resolves the old assembly's instance (demo-2 :566, :570; proposed `CARRY_RESOLVES_A_LIGHTWEIGHT_COMPONENT_IN_THE_OLD_ASSEMBLY`) | did not (knob default False) | does; False where a test asks |
+| A plane on a lightweight component | ReferenceType2 answers 4; its tree order needs the part's document, which it has not (W9c: GetModelDoc2 None), so Session says unread; a feature keeps its name (demo-2 :634) | "plane" | unread, select type 4 |
+| EntityParams | a point, then the entity's own direction in the assembly (W5 ring_mate_sense, W6 tier 9) | (0,0,0,0,0,1) for every entity | the direction turned by its component's frame; `entity_axes` for a face read against its part's Z |
+| MateEntity order of a coincident, concentric, parallel | the components' tree order, whatever was selected first: the probe's UserFaceCoin (S5 selected first) read S5 first, the fixture's (Chain-2 first) read Chain-1 first; every concentric, parallel and app coincident the earlier component first (`-2.log`:51-79, demo-2 :589-635) | as selected (the ledger's three cases reversed) | tree order, for the user's and the carry's mates read by W9d's Session (`read_entity_kinds`); `tree_order_entities` False as selected |
+| MateEntity order of a distance, angle, limit, gear, lock | as selected (UserChainDist, UserHousingDist, UserGear6 read their first selection first though it stood later) | as selected | unchanged |
+| GetComponents(True) order | not tree order (demo-2: Chain-2 before Chain-1; `-1.log`:121 the user's parts before the app's) | tree order | tree order unless `listing_order` (which order SolidWorks gives is not measured) |
+| A gear mate's counts read | GearRatioNumerator is MateEntity(1)'s count (GOTCHAS §96 citing §75) | by selection | by the mate's own entities, so a mate read swapped reads its counts swapped |
+| A closed assembly's dependencies | every part it holds, top level (`DEPENDENCIES_READ`, `-1.log`:124) | [] unless a test listed them | every file inserted in it, the app's and the user's |
+| A reference read in a read-only load, after the reload | resolves Ok (`PERSIST_REFERENCE_SURVIVES_RELOAD_ON_2026`, `-2.log`:103-104) | never (`reload_ok` False) | as the finding the test patches says; True or False where a test asks |
+| strict handles | Session._component knows only the handles it kept | a Name2 passed for a handle accepted | refused too (still opt-in: with it on by default, every failing test in the suite failed in its own look at the fake after a job, none in the app's code) |
+| Agreeing already | the root's Name2 for the assembly's own entity (`ASSEMBLY_ENTITY_COMPONENT_IS_ROOT`); a suppressed component found for reads, its frame read, its entities unread (demo-2 :621), no document; `GetConfigurationNames(path)` for a lightweight or suppressed component (demo-2 :594-596); states unshown by `GetComponentSuppressionState`, a lightweight one False, marking nothing, an unsaved change read; a mate's own flag read unshown; the read-only open's flag False with nothing changed beside it (W9c s5 (d)), True by knob; QuitDoc clean; reads marking nothing; an insert in a configuration kept; the r3 walk's one match and Ok; AddMate5 status 1 and code 0 on a clean remake; a new component standing where put in every mode (demo-2: off by RangeSlv's slide in N and L); file versions by number | — | unchanged |
+
+### The faults the old defaults hid, fixed and pinned
+
+1. **Every plain distance and angle read as a limit mate** (`carry_kind`): SolidWorks reads their range too, so the
+   range alone named and gated each as `limit distance` / `limit angle`. A limit mate is now told by its type name,
+   and by a range that is one only where the type name was not read. Pins:
+   `test_a_plain_distance_or_angle_reading_its_range_is_no_limit_mate`,
+   `test_a_plain_distance_as_solidworks_reads_it_is_made_again_under_the_distance_word`.
+2. **A coincident, concentric or parallel between two carried components came back the other way round** and was
+   deleted and named `differs`: SolidWorks lists such a mate's entities in tree order, and the carry inserts in
+   GetComponents' order, which is not the tree's. The fixture's UserFaceCoin (Chain-1, Chain-2; R listed Chain-2
+   first) would have met it in the next run. `_read_back` takes a symmetric kind (`_ORDERLESS_KINDS`: coincident,
+   concentric, parallel, perpendicular, tangent) read either way round as the same mate. Pin:
+   `test_a_coincident_between_two_carried_components_inserted_in_another_order_is_kept`.
+3. **A gear mate read back swapped was made once more with its counts the old way round**, so with the selections
+   reversed each count went with the other gear. The ratio is now reversed with the targets. Pin:
+   `test_a_gear_mate_read_back_swapped_is_made_once_more_with_its_counts_swapped_too`. (Every gear mate measured kept
+   its first selection as MateEntity(0), so this needs SolidWorks to answer otherwise first.)
+4. **A plane unread for want of a document was said to be a kind the app does not take** (S6's cause): the cause is
+   now given only for a type `entity_kind` does not know. Pin:
+   `test_a_plane_on_a_lightweight_component_is_unread_for_no_document_not_for_its_type`.
+5. **The carry's selections trusted Select4's return** (`select_by_reference`, a whole component in `_select_target`);
+   the probes that measured these selections judged by the selection count, and Select4 has answered False with
+   nothing selected just after a document was made. Now `_select_by_count`, retried as `_retry_select` is. Pin:
+   `test_a_carry_selection_is_judged_by_the_selection_count_as_the_probes_judged_it`.
+6. **A remade gear mate's alignment was compared**, though AddMate5 ignores it for a gear mate (ledger :526, GOTCHAS
+   §96); a gear mate the user made with another alignment would have been deleted. It is no longer compared; its
+   sense is. Pin: the second half of `test_the_gear_mate_read_turning_the_wrong_way_is_made_once_more_with_the_other_flip`.
+
+Tests that were wrong, corrected: the lightweight test asserted nothing resolved in the old assembly (SolidWorks
+resolves it, demo-2); three carry tests held a coincident's entities in selection order; the r3 walk test's
+Coincident3 is now named by its first entity in tree order (G1's face, part new) whatever the cap did; the not-open
+tier-1 test asks for the reference not surviving the reload by name; two W5 lightweight-gear tests now set G4, alone
+in its file (G3 shares G1's, which per file would read lightweight too); the tied-cluster test looks at the fake by
+Name2 with strictness off, after the job. New: the gear Flip retry driven by geometry
+(`test_a_gear_mate_on_a_face_read_against_its_gears_axis_…`), the closed-file reads and the unshown states on the
+shapes 2026 answered (`test_swcom.py`), the dependencies default.
+
+### What the code would do on SolidWorks, not measured and not changed
+
+- **The fallback in a mode other than the first** (the post-check's per-mode tie or new error): `place_component` and
+  `fix_component` act in the mode showing. Positions are per configuration (`POSITIONS_PER_CONFIGURATION`), and
+  whether FixComponent fixes in every configuration is not measured (the fake fixes in all). In the other modes the
+  fallen cluster's components may be left floating where the solver left them, while the record says them fixed.
+- **The fallback's put with a kept user–user mate**: `Session.place_component` raises when a mate pulls the component
+  off its frame after the rebuild; a put held by a kept coincident or angle was never measured (only a lock's,
+  W5-DECISIONS). The fake never pulls a user component. Such a raise stops the carry with SolidWorks' sentence.
+- **A distance mate's FlipDimension** is read (0 on every mate measured) but neither passed to AddMate5 nor compared:
+  a user mate on the other side would be made on the default side, kept, and said `moved` at most.
+- **A remade mate's rename** puts `Name`; a name SolidWorks refuses (taken by a feature that is no mate) would raise a
+  ComError and stop the carry. Not met in any fixture.
+- **A gear mate's IMate2.Flipped** is not as passed: the fixture's UserGearFillet, made with Flip False, read Flipped
+  True and Reverse 0 (demo-2 :633). The carry passes the old Flipped first and its opposite on the sense retry, so
+  either way one try has each Flip; the fake reads a gear mate's Flipped False always.
+
+### Unmeasured, the fake answering by assumption
+
+- The order GetComponents lists (tree order unless `listing_order`); a perpendicular's or tangent's MateEntity order
+  and type name; a lock's MateEntity order where selection and tree disagree.
+- A remade mate's flag, code and Flip read in a mode where a component it joins is suppressed (as set; the remade
+  code); a whole-component (lock) entity on a suppressed component (unread, as a feature's was).
+- The root read `GetRootComponent3(True)` beside a lightweight component: the fake resolves it and marks the assembly;
+  2026 34.0.0 read it resolving nothing, whether it marks is unknown. Not changed: the code never makes that call
+  there, and `tests/test_swbuild_user_work.py` pins the fake's answer.
+- A carried component's Name2: the fake gives `<handle>-1`; SolidWorks gives `<file stem>-<n>` in insertion order
+  (demo-2). Not changed: the fake keys frames, fixed state and the user's components by Name2 across documents, so the
+  same Name2 in the old and the new assembly would collide in it; no code path was found to depend on the form.
+- FixComponent's scope per configuration (all); the solver (nothing solved for a user mate on a show; a remade lock
+  carries its follower in every mode); `constrained_status` of a carried component (over-defined only beside a mate
+  in error).
+- The prefilter's part-against-assembly area or radius (the fake keeps every candidate); the walk's seconds (0 by
+  default); the r3 walk and tier-1 resolve inside the job's read-only document (run 3 never walked one).
+- A face's coaxial read: None (unread) unless a test sets it, where SolidWorks reads False for a plane; the plan ends
+  the same way for both (`WHY_PART_NEW`, no "where").
+- Select4's return through late binding on a face or feature carried by GetCorresponding (the probes never read it;
+  the Session now judges by the count).
+
+### For `test_workbook_carry.py` and the demonstration
+
+Neither needed a change: `tests/test_workbook_carry.py` passes as it stands, and `probe/w9d_demonstration.py
+--self-check` ends with 0 failed. The script's `entity_problems` already takes either order, so fault 2's remake of
+UserFaceCoin, kept now, passes it; its own kind words were never `carry_kind`'s for the fixture's plain distances,
+but the worker's `CARRY_REMAKE_KINDS` gate now asks `distance` and `angle` of UserDist4, UserAngle4, UserChainDist,
+UserHousingDist, UserAsm6 and UserAngle8b, where it asked `limit distance` and `limit angle` before (M9 patches every
+word, so the run is not changed by it; the finding set from it now means what it says).
