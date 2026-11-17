@@ -836,12 +836,28 @@ def _why_none(sleeve: Gear, places, banded: bool) -> str:
             f"to {high} {_signed(positions[high])}) and {tail}")
 
 
+# A workbook written before W9b has no band columns, and nothing else in the window says they exist: the first
+# clearance warning on an unbanded sleeve, the one bands answer (a relief over the dog), says so once.
+BAND_COLUMNS_HINT = ("This workbook's Gears sheet has no Start band (mm) and End band (mm) columns, which give a "
+                     "sleeve toothed bands with a relief between them: type both headers on row 1 of the Gears sheet "
+                     "(after Slides, as a new workbook has them) and save.")
+
+
+def band_columns_absent(spec: GearboxSpec) -> bool:
+    """Whether the Gears sheet was read from a workbook and has no Start band or no End band column (one written
+    before W9b). A spec not read from a sheet (no columns known) is not judged."""
+    found = spec.columns.get("Gears") if spec.columns else None
+    return bool(found) and not {"start_band", "end_band"} <= set(found)
+
+
 def clearance_warnings(spec: GearboxSpec, placed: Dict[str, Placed], reports) -> List[Diagnostic]:
     """K9 (§2.3): in every mode, every dog or hub on another shaft on a sleeve's line that no band of it engages there,
     standing less than c (:func:`running_clearance`) from a band (0 ≤ gap < c), one warning per mode and sleeve at the
     mode's Modes cell (the sleeve's Gears cell for the implicit mode); and, once, a hub less than c from a dog on
-    another shaft, at the hub's Gears cell. A gap of exactly c is clean."""
+    another shaft, at the hub's Gears cell. A gap of exactly c is clean. A workbook with no band columns hears of them
+    once, in the first such warning on an unbanded sleeve (:data:`BAND_COLUMNS_HINT`)."""
     out: List[Diagnostic] = []
+    hinted = False
     gears = {g.id: g for g in spec.gears}
     near = [g for g in spec.gears if g.kind_word() in (DOG, HUB) and g.id in placed and not g.slides.strip()]
     for m in reports or ():
@@ -876,6 +892,9 @@ def clearance_warnings(spec: GearboxSpec, placed: Dict[str, Placed], reports) ->
                 pieces.append(f"{what} {' and '.join(these)}")
             said = (f"{label}{', and '.join(pieces)}, which it does not engage there: leave at least {_n(c)} mm "
                     f"({_why_clearance(here.module)}) each side.")
+            if not spans[0][0] and not hinted and band_columns_absent(spec):
+                said += " " + BAND_COLUMNS_HINT                 # once a read: a workbook from before W9b
+                hinted = True
             out.append(Diagnostic(WARNING, f"{cell}: {said}", cell))
     for hub in spec.gears:
         if hub.kind_word() != HUB or hub.id not in placed or hub.slides.strip():

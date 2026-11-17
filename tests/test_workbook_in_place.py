@@ -400,9 +400,12 @@ def test_finish_takes_a_gear_out_with_its_mates_and_its_part_entry(parallel_reco
     result, _, rec = _finished(up, record, deleted=[("FIdler", name)], mates_deleted=list(up.in_place.removed[0].mates))
     box = rec.gearbox
     assert all(c.gear != "FIdler" for c in box.components) and all("FIdler" not in m.gears for m in box.mates)
-    assert all("FIdler" not in p.gears for p in rec.current_parts())
+    part = up.in_place.removed[0].part
+    assert all("FIdler" not in p.gears for p in rec.parts)                 # ruling C6: no entry names it
+    assert not any(store.same_path(p.path, part) for p in rec.parts)      # the part no gear uses leaves the record
     assert all("FIdler" not in pair for pair in box.meshes)
-    assert ui_text.in_place_done_pieces(up, result) == [f"took FIdler ({name}) out with 4 mates"]
+    assert ui_text.in_place_done_pieces(up, result) == [
+        f"took FIdler ({name}) out with 4 mates, leaving its part Gear_m2_N20.SLDPRT on disk"]
 
 
 def test_finish_adds_and_deletes_modes_and_says_what_the_users_states_did(parallel_record):

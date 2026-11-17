@@ -1329,7 +1329,13 @@ blank text come from `schema.GEARS` like every column's; a band on another
 kind, a band not more than 0, one band alone, a band as long as the face, two
 that leave no relief, and a typed Rim inside the relief are errors at the cell.
 A new workbook's Part name and Notes columns are two to the right of where they
-were (V and W).
+were (V and W). A workbook written before W9b has neither column, and Export adds a
+column header only for a fix it writes (none writes a band), so the first
+clearance warning on an unbanded sleeve says so once: *This workbook's Gears sheet
+has no Start band (mm) and End band (mm) columns, which give a sleeve toothed bands
+with a relief between them: type both headers on row 1 of the Gears sheet (after
+Slides, as a new workbook has them) and save.* The read finds a header by its name
+anywhere on row 1, so the two typed after Notes read the same.
 
 **The hub** is a Kind word, `hub`: a dog ring on the sleeve's own shaft that
 carries it. The Gears table says *Hub* in its Kind column and the end view
@@ -1376,8 +1382,14 @@ not yet been shown to do on SolidWorks 2026 (findings.UPDATE_INSERTS_A_GEAR_ON_2
 so the press changes nothing; Build again… makes the new revision instead.*), a
 mate of the user's on a gear to be taken out, and — while the read of in-context
 references is unmeasured — a removal with any component of the user's in the
-assembly. A Modes row taken out that is the mode showing is read only at the
-press; its refusal is then recorded and said as W9a's are (the inventory on record
+assembly. With no SolidWorks version on record yet (a record from before the
+Build kept one), a step shown on some versions and not others is said, neither red
+nor offering Build again…: *Whether Update SolidWorks can take a gear out of the
+assembly depends on the SolidWorks in use: Gear Generator has been shown to do so on
+SolidWorks 2026, not yet on SolidWorks 2024 (…), and the press reads which it runs
+on before it changes anything.* A mode added is *a copy of the mode showing in
+SolidWorks when you press (your items there take that mode's state)*. A Modes row
+taken out that is the mode showing is read only at the press; its refusal is then recorded and said as W9a's are (the inventory on record
 kept as it was, nothing having been read), as is a mode whose name is already a
 configuration of the user's. While any of these would stop the press the Update
 line says *Update SolidWorks would …*, never *will*. Once a refusal is recorded
@@ -1393,7 +1405,14 @@ Hub_m1.25_N17 and gave RangeSlv its bands. It did not get to inserting Hub and
 putting the gears back and checking the assembly, because the job stopped in
 RangeBox.SLDASM.*, then W4's unsaved sentence. The record holds what was done
 (a new part built and saved, the bands, a gear inserted, each mate made) and, as
-the app's leftovers, each global and configuration the stopped press added. The
+the app's leftovers, each global and configuration the stopped press added, until
+a press uses them. While the workbook does not use them, the footer and the result
+say them as the app's own: *An Update SolidWorks that stopped part way left the
+global Hub Face Z and the part Hub_m1.25_N17.SLDPRT, which the workbook no longer
+uses: Update SolidWorks leaves them as they are and keeps them on record as its
+own, so a later press can use them again; delete them in SolidWorks if you no
+longer want them.* A gear taken out whose part no gear left uses: *took FIdler
+(gear11-1) out with 4 mates, leaving its part Gear_m2_N20.SLDPRT on disk*. The
 next press goes on from there without the user moving anything: it inserts the
 part already built, and sets a leftover global rather than refusing it as the
 user's. A sleeve whose relief an Update suppressed is given its bands back the

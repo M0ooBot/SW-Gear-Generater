@@ -99,7 +99,7 @@ class Desk:
         assert result.ok, result.failures
         done = gearbox.finish_build(plan, result, self.record, workbook=BOOK, digest=self.digest(spec),
                                     written_by="test", read_sidecar=self.disk.read_sidecar, exists=self.disk.exists,
-                                    stamp=STAMP)
+                                    stamp=STAMP, revision=self.sw.revision)
         self.disk.write(done)
         self.record = store.link_record_from_json(store.link_record_to_json(done.record))
         return self.record
@@ -351,7 +351,10 @@ def test_a_mode_added_on_the_result_is_one_update_and_a_second_press_quiet(reque
     desk = request.getfixturevalue("fixed_desk_with_work" if with_work else "fixed_desk")
     press = desk.press(_fixed_with_mode())
     assert press.up.structural == () and press.up.in_place.modes_added == ("R",)
-    assert press.before[1] and "add the mode R" in press.before[0]
+    text, ok = press.before
+    assert ok and "would stop" not in text and text.startswith(
+        "Update SolidWorks will add the mode R, a copy of the mode showing in SolidWorks when you press (your items "
+        "there take that mode's state)"), text
     assert press.result.ok, (press.result.failures, press.result.skipped)
     assert press.result.modes_added == ["R"] and "R" in desk.sw.configs
     assert "added the mode R" in press.after and press.ok
@@ -366,6 +369,9 @@ def test_a_mode_added_on_the_result_is_one_update_and_a_second_press_quiet(reque
 def test_a_mode_removed_on_the_result_is_one_update_and_a_second_press_quiet(request, with_work):
     desk = request.getfixturevalue("fixed_desk_with_work" if with_work else "fixed_desk")
     press = desk.press(_fixed_without_mode())
+    text, ok = press.before                            # the review's must-fix 1: no refusal foreseen
+    assert ok and "would stop" not in text and "suppressed in ," not in text, text
+    assert text.startswith("Update SolidWorks will delete the mode N"), text
     assert press.up.structural == () and press.up.in_place.modes_removed == ("N",)
     assert press.result.ok, (press.result.failures, press.result.skipped)
     assert press.result.modes_removed == ["N"] and "N" not in desk.sw.configs
@@ -447,6 +453,7 @@ def test_the_mode_showing_removed_refuses_with_nothing_read_and_the_inventory_ke
     assert [m.name for m in kept.mates] == [m.name for m in inventory.mates]
     assert [(p.kind, p.subjects) for p in kept.problems] == [(swbuild.PROBLEM_MODE_SHOWING, ["2H"])]
     assert kept.revision == list(parallel.sw.revision) and kept.digest == parallel.digest(spec)
+    assert kept.read_at == inventory.read_at and kept.refused_at and not kept.unread   # the read's own time kept
     text, ok = parallel.footer(spec)
     assert not ok and ("Update SolidWorks would delete the configuration 2H from TransferCase_Parallel.SLDASM, and it "
                        "is the configuration showing in SolidWorks, so nothing is changed; show another mode in "
@@ -465,6 +472,7 @@ def test_the_mode_showing_refused_with_no_inventory_on_record_is_recorded_with_a
     assert press.refused.user_work is None
     kept = parallel.record.gearbox.user_work
     assert (kept.components, kept.mates, kept.features, kept.carried) == ([], [], [], [])
+    assert kept.unread and kept.read_at == "" and kept.refused_at          # never an empty inventory as a read
     assert [(p.kind, p.subjects) for p in kept.problems] == [(swbuild.PROBLEM_MODE_SHOWING, ["2H"])]
     text = parallel.footer(spec)[0]
     assert "Update SolidWorks refused at " in text and "the configuration showing in SolidWorks" in text
@@ -518,8 +526,8 @@ def test_a_tooth_change_with_modes_needs_no_in_place_and_is_remade_in_every_mode
 def test_a_tooth_change_with_modes_refuses_by_name_while_its_gate_is_unmeasured(parallel, monkeypatch):
     monkeypatch.setattr(findings, "UPDATE_MAKES_MATES_WITH_MODES_ON_2026", None)
     text, ok = parallel.footer(_teeth())
-    # No press has read this SolidWorks' version onto the record yet, so the footer names the finding by its year.
-    assert "(findings.UPDATE_MAKES_MATES_WITH_MODES_ON_<year>)" in text and not ok
+    # The Build recorded the SolidWorks it ran on (schema 9), so the footer names the finding on that version.
+    assert "(findings.UPDATE_MAKES_MATES_WITH_MODES_ON_2026)" in text and not ok
     mark = len(parallel.sw.calls)
     # Refused as every other in-place gate is (the worker's 816c261): a UserWorkRefused naming the finding, which the
     # press records, and no write.
@@ -598,11 +606,11 @@ def test_an_insert_that_fails_records_the_part_built_and_the_next_press_goes_on_
     hub = next(p for p in rec.parts if p.path.endswith("Hub_m1.25_N17.SLDPRT"))
     assert hub.gears == ["Hub"] and desk.disk.read_sidecar(store.sidecar_path(hub.path)) is not None
     assert next(p for p in rec.parts if "RangeSlv" in p.gears).spec["start_band"] == "5"     # the bands, done
-    assert rec.gearbox.left == ["Start Band", "End Band", "Relief Diameter", "Hub Face Z"]     # the app's, left
+    assert rec.gearbox.left == ["Hub Face Z"]          # the app's, left (the band globals were used: bands given)
     desk.sw.fail_on = {}
     text, ok = desk.footer(fixed())
     assert "already on disk" not in text and text.startswith("Update SolidWorks will add Hub on Output "
-                                                             "(Hub_m1.25_N17), as its"), text
+                                                             "(its part Hub_m1.25_N17), as its"), text
     again = desk.press(fixed())
     (added,) = again.up.in_place.added
     assert added.build is None and "Hub Face Z" in again.up.in_place.left and again.up.in_place.bands == ()
@@ -748,3 +756,152 @@ def test_a_press_that_stopped_after_adding_a_configuration_leaves_it_to_the_next
     assert again.result.ok, again.after
     assert desk.record.gearbox.modes == ["H", "N", "L", "R"] and desk.record.gearbox.left == []
     assert desk.sw.configs.count("R") == 1
+
+
+# -- no SolidWorks version on record yet: each gate judged over every version the findings know -------------------
+
+def _route_on(monkeypatch, y2024, y2026, desk=None):
+    monkeypatch.setattr(findings, "COMPONENT_DELETE_ROUTE_ON_2024", y2024)
+    monkeypatch.setattr(findings, "COMPONENT_DELETE_ROUTE_ON_2026", y2026)
+    if desk is not None:
+        desk.record.gearbox.solidworks = []            # a record from before schema 9: no SolidWorks version on it
+
+
+def test_with_no_version_on_record_a_gate_set_on_every_known_version_foresees_nothing(parallel, monkeypatch):
+    """The demonstration's first contact: the 12 : 1's master, no inventory yet, a gear taken out. The delete findings
+    are set on 2024 and 2026, so nothing is foreseen stopping it, and the press takes the gear out."""
+    _route_on(monkeypatch, "select4-editdelete", "select4-editdelete", parallel)
+    assert parallel.record.gearbox.user_work is None
+    spec = _without(transfer_case_parallel(), "FIdler")
+    text, ok = parallel.footer(spec)
+    assert ok and "would stop" not in text and "depends on the SolidWorks" not in text
+    assert text.startswith("Update SolidWorks will take FIdler out with its 4 mates.")
+    assert parallel.press(spec).result.ok
+
+
+def test_with_no_version_on_record_a_gate_none_on_every_known_version_foresees_the_refusal(parallel, monkeypatch):
+    _route_on(monkeypatch, None, None, parallel)
+    spec = _without(transfer_case_parallel(), "FIdler")
+    text, ok = parallel.footer(spec)
+    assert not ok and text.startswith("Update SolidWorks would take FIdler out with its 4 mates.")
+    assert text.endswith(
+        "The next press would stop before changing anything: Update SolidWorks would take a gear out of the assembly, "
+        "which Gear Generator has not yet been shown to do on the SolidWorks it runs on "
+        "(findings.COMPONENT_DELETE_ROUTE_ON_<year>), so the press changes nothing; Build again… makes the new "
+        "revision instead.")
+
+
+def test_with_no_version_on_record_a_gate_set_on_some_versions_says_it_depends_neither_red_nor_build_again(
+        parallel, monkeypatch):
+    _route_on(monkeypatch, None, "select4-editdelete", parallel)
+    spec = _without(transfer_case_parallel(), "FIdler")
+    text, ok = parallel.footer(spec)
+    assert ok and "would stop" not in text and "Build again" not in text.split("4 mates.", 1)[1]
+    assert text.endswith(
+        "Whether Update SolidWorks can take a gear out of the assembly depends on the SolidWorks in use: Gear "
+        "Generator has been shown to do so on SolidWorks 2026, not yet on SolidWorks 2024 "
+        "(findings.COMPONENT_DELETE_ROUTE_ON_2024), and the press reads which it runs on before it changes anything.")
+    assert parallel.press(spec).result.ok                                # the fake is 2026: it goes ahead
+
+
+def test_the_build_records_the_solidworks_it_ran_on_and_a_gate_is_judged_on_it(parallel, monkeypatch):
+    box = parallel.record.gearbox
+    assert box.solidworks == list(parallel.sw.revision) and box.user_work is None
+    _route_on(monkeypatch, None, "select4-editdelete")
+    text, ok = parallel.footer(_without(transfer_case_parallel(), "FIdler"))
+    assert ok and "depends on the SolidWorks" not in text and "would stop" not in text
+
+
+def test_with_a_version_on_record_a_gate_is_judged_on_that_version_alone(parallel, monkeypatch):
+    assert parallel.press(transfer_case_parallel()).result.ok          # a quiet press reads 2026 onto the record
+    parallel.record.gearbox.solidworks = []                            # the inventory's alone
+    _route_on(monkeypatch, None, "select4-editdelete")
+    text, ok = parallel.footer(_without(transfer_case_parallel(), "FIdler"))
+    assert ok and "depends on the SolidWorks" not in text and "would stop" not in text
+    _route_on(monkeypatch, "select4-editdelete", None)
+    text, ok = parallel.footer(_without(transfer_case_parallel(), "FIdler"))
+    assert not ok and "(findings.COMPONENT_DELETE_ROUTE_ON_2026)" in text
+
+
+# -- the review's must-fix 2: the app's leftovers kept until a press uses them or takes them away -------------------
+
+def test_a_global_and_a_part_left_by_a_stopped_press_stay_the_apps_through_an_abandon_and_a_re_add(desk, measured):
+    """RangeBox -> RangeBox_Fixed stops at the insert (Hub's part built, Hub Face Z added); the workbook goes back to
+    RangeBox (a press that runs to its end, which does not use them); then Hub comes back. The leftovers are said as
+    the app's while unused, and the re-add uses them: the part inserted, the global set though it was moved."""
+    desk.sw.fail_on = {"add_component": "SolidWorks would not insert Hub_m1.25_N17.SLDPRT."}
+    desk.press(fixed())
+    desk.sw.fail_on = {}
+    hub_part = next(p.path for p in desk.record.parts if "Hub" in p.gears)
+    back = desk.press(range_box())
+    assert back.result.ok, back.after
+    said = ("An Update SolidWorks that stopped part way left the global Hub Face Z and the part Hub_m1.25_N17.SLDPRT, "
+            "which the workbook no longer uses: Update SolidWorks leaves them as they are and keeps them on record as "
+            "its own, so a later press can use them again; delete them in SolidWorks if you no longer want them.")
+    assert said in back.before[0] and said in back.after
+    assert desk.record.gearbox.left == ["Hub Face Z"]
+    assert any(store.same_path(p.path, hub_part) and p.gears == ["Hub"] for p in desk.record.parts)
+    desk.sw.open_document(desk.record.gearbox.assembly)
+    desk.sw.set_global_variable("Hub Face Z", "12")
+    again = desk.press(fixed())
+    assert again.before[1] and "left" not in again.before[0].split(". It was built")[0]
+    assert again.up.in_place.added[0].build is None and "Hub Face Z" in again.up.in_place.left
+    assert again.result.ok, again.after
+    assert "Gear Generator did not add" not in again.after and desk.record.gearbox.left == []
+
+
+def test_a_configuration_left_by_a_stopped_press_is_never_called_the_users_and_a_re_add_uses_it(fixed_desk):
+    desk = fixed_desk
+    desk.sw.fail_on = {"set_mate_suppressed_in": "SolidWorks would not set the flag."}
+    desk.press(_fixed_with_mode())
+    desk.sw.fail_on = {}
+    assert desk.record.gearbox.left_configurations == ["R"]
+    back = desk.press(fixed())
+    assert back.result.ok, back.after
+    assert "the app did not make" not in back.after
+    said = ("An Update SolidWorks that stopped part way left the configuration R, which the workbook no longer uses: "
+            "Update SolidWorks leaves it as it is and keeps it on record as its own, so a later press can use it "
+            "again; delete it in SolidWorks if you no longer want it.")
+    assert said in back.before[0] and said in back.after
+    assert desk.record.gearbox.left_configurations == ["R"]                # kept: not used, not taken away
+    again = desk.press(_fixed_with_mode())
+    assert again.up.in_place.left == ("R",) and again.result.ok, again.after
+    assert desk.record.gearbox.modes == ["H", "N", "L", "R"] and desk.record.gearbox.left == []
+
+
+# -- ruling C6: a removed gear's part entry leaves the record when no gear uses it; the file stays on disk ------------
+
+def test_a_gear_taken_out_takes_its_part_entry_with_it_when_no_gear_uses_it_and_says_the_file_stays(parallel):
+    part = next(p.path for p in parallel.record.parts if "FIdler" in p.gears)
+    press = parallel.press(_without(transfer_case_parallel(), "FIdler"))
+    assert press.result.ok, press.after
+    assert not any(store.same_path(p.path, part) for p in parallel.record.parts)
+    assert ", leaving its part Gear_m2_N20.SLDPRT on disk" in press.after
+    assert parallel.disk.exists(part)
+
+
+def test_a_gear_taken_out_that_shares_its_part_leaves_the_entry_to_the_gear_that_keeps_it(measured):
+    d = Desk()
+    d.build(range_box())
+    part = next(p for p in d.record.parts if "LowDog" in p.gears)
+    assert sorted(part.gears) == ["HighDog", "LowDog"]
+    press = d.press(_without(range_box(), "LowDog"))
+    assert press.result.ok, press.after
+    kept = next(p for p in d.record.parts if store.same_path(p.path, part.path))
+    assert kept.gears == ["HighDog"] and "leaving" not in press.after
+
+
+def test_a_refusal_carried_with_nothing_read_never_hides_the_users_components_from_a_later_footer(parallel):
+    """The review's should-fix 3: after the mode-showing refusal on a record with no inventory, a removal with the
+    user's components in SolidWorks is foreseen as with no inventory (nothing claimed), and the press reads them."""
+    from gear_generator.workbook import update as wb_update
+    spec = transfer_case_parallel()
+    parallel.press(replace(spec, modes=spec.modes[1:]))
+    assert parallel.record.gearbox.user_work.unread
+    up = update.classify(parallel.record, parallel.a(_without(spec, "FIdler")), exists=parallel.disk.exists,
+                         read_sidecar=parallel.disk.read_sidecar)
+    assert wb_update.user_work_ahead(up, parallel.record, parallel.digest(_without(spec, "FIdler"))) is None
+    assert wb_update.recorded_user_work(parallel.record.gearbox.user_work).components == []
+    parallel.sw.user_component(parallel.record.gearbox.assembly, "Housing-1", "C:\\Parts\\Housing.SLDPRT", fixed=True)
+    press = parallel.press(_without(spec, "FIdler"))
+    assert [p.kind for p in press.refused.problems] == [swbuild.PROBLEM_REFERENCES]

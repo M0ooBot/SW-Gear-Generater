@@ -1780,7 +1780,7 @@ def update_summary(update) -> str:
                 "anything changed there")
         if getattr(update, "motion", None) is not None:
             text += "; gears turned in SolidWorks stay where they are unless something must move"
-        return text + "."
+        return _with_leftovers(text + ".", update)
     pieces = list(in_place)
     changed = update.changed_parts
     if len(changed) == 1 and len(changed[0].gear_ids) == 1:
@@ -1811,7 +1811,31 @@ def update_summary(update) -> str:
         pieces.append(f"re-place {_and(_bodies(replaced, _mated_copies(update)))}")
     if len(pieces) > 1:
         pieces[-1] = "and " + pieces[-1]
-    return "Update SolidWorks will " + ", ".join(pieces) + "."
+    return _with_leftovers("Update SolidWorks will " + ", ".join(pieces) + ".", update)
+
+
+def _with_leftovers(text: str, update) -> str:
+    said = leftovers_sentence(update)
+    return f"{text} {said}" if said else text
+
+
+def leftovers_sentence(update) -> str:
+    """W9c (the review's must-fix 2): what an Update that stopped part way made that this read no longer uses
+    (``UpdatePlan.leftovers``), said as the app's own, before the press and after it: *An Update SolidWorks that
+    stopped part way left the global Hub Face Z, the configuration R and the part Hub_m1.25_N17.SLDPRT, which the
+    workbook no longer uses: Update SolidWorks leaves them as they are and keeps them on record as its own, so a
+    later press can use them again; delete them in SolidWorks if you no longer want them.*"""
+    from .workbook.update import LEFT_CONFIGURATION, LEFT_GLOBAL
+    left = list(getattr(update, "leftovers", ()) or ())
+    if not left:
+        return ""
+    words = [f"the global {name}" if what == LEFT_GLOBAL else f"the configuration {name}"
+             if what == LEFT_CONFIGURATION else f"the part {_file(name)}" for what, name in left]
+    one = len(words) == 1
+    return (f"An Update SolidWorks that stopped part way left {_and(words)}, which the workbook no longer uses: "
+            f"Update SolidWorks leaves {'it' if one else 'them'} as {'it is' if one else 'they are'} and keeps "
+            f"{'it' if one else 'them'} on record as its own, so a later press can use {'it' if one else 'them'} "
+            f"again; delete {'it' if one else 'them'} in SolidWorks if you no longer want {'it' if one else 'them'}.")
 
 
 def _kept_name(path: str, spec) -> str:
@@ -1965,6 +1989,8 @@ def gearbox_update_status(update, result, dragged: Sequence[str] = (), *, meshes
     # W9a: what it did with and found of the user's work, after the assembly's rebuild laid to that work alone.
     after = after + _rebuild_from_user(update, result) + _user_after(update, result)
     after = after + in_place_after(update, result)                   # W9c: the modes' consequences for the user
+    if leftovers_sentence(update):
+        after = after + [leftovers_sentence(update)]                 # W9c: the app's leftovers, said as its own
 
     if not nothing and _users_in_error(result) and whats_wrong_shows(revision):
         # W9a: SolidWorks 2024's box, once, after an Update that changed or put something (never a quiet press,
@@ -2528,9 +2554,11 @@ def workbook_footer(assessment, *, record=None, record_problem: str = "", plan=N
             recorded = ahead is not None and bool(ahead.refused)
             stop, stop_ok = in_place_line(() if recorded else in_place_ahead(update, record), record, known=line,
                                           on_disk=getattr(update, "new_parts_on_disk", ()))
-            if stop and not recorded:
+            if stop and not stop_ok and not recorded:
                 line, line_ok = "", True
-            if stop:                       # never "will" for a press the same footer says would change nothing
+            # Never "will" for a press the same footer says would change nothing (the gates' line, or W9a's foresight
+            # of the user's work, red: the review's should-fix 2).
+            if (stop and not stop_ok) or (line and not line_ok and "would stop" in line):
                 text = text.replace("Update SolidWorks will ", "Update SolidWorks would ", 1)
             for said, said_ok in ((line, line_ok), (stop, stop_ok)):
                 if said:
@@ -4105,7 +4133,9 @@ def _mode_after(update, result, *, changed: bool, earlier: str = "") -> List[str
     unread = _senses_unread_sentence(update, result)
     if unread:
         out.append(unread)
-    extra = [str(c) for c in getattr(result, "extra_configurations", ()) or () if str(c)]
+    ours = {str(name).casefold() for what, name in getattr(update, "leftovers", ()) or () if what == "configuration"}
+    extra = [str(c) for c in getattr(result, "extra_configurations", ()) or ()
+             if str(c) and str(c).casefold() not in ours]
     if extra:
         one = len(extra) == 1
         out.append(f"{asm[:1].upper()}{asm[1:]} also has {'a configuration' if one else 'configurations'} the app did "
@@ -4418,7 +4448,8 @@ def user_work_line(ahead) -> Tuple[str, bool]:
     if ahead.refused:
         recorded = [p.sentence for p in ahead.refused if p.sentence]
         said = " ".join(_sentence(s) for s in recorded)
-        text = f"Update SolidWorks refused at {at}, before changing anything: {said}"
+        when = read_time(getattr(ahead.entry, "refused_at", "") or ahead.entry.read_at)
+        text = f"Update SolidWorks refused at {when}, before changing anything: {said}"
         if not ahead.changed_since:
             return (text + " The next press reads your work in SolidWorks again, and refuses again unless that has "
                            "been dealt with."), False
@@ -4749,7 +4780,7 @@ def in_place_pieces(update) -> List[str]:
         mates = [op for op in added.ops if type(op).__name__ == "Mate"]
         anchor = next((m for m in mates if m.kind == "coincident"), None)
         shaft = anchor.b.split(":", 1)[-1][:-len(" Axis")] if anchor is not None and anchor.b.endswith(" Axis") else ""
-        part = f"a new part, {_stem(added.part)}" if added.build is not None else _stem(added.part)
+        part = f"a new part, {_stem(added.part)}" if added.build is not None else f"its part {_stem(added.part)}"
         text = f"add {added.gear}{' on ' + shaft if shaft else ''} ({part})"
         splined = [m.name for m in mates if m.kind == "gear" and m.name.endswith(f" splined to {added.gear}")]
         if splined:
@@ -4766,7 +4797,10 @@ def in_place_pieces(update) -> List[str]:
     for new in ip.new_mates:
         pieces.append(f"make {new.op.name}, on in {_and(list(new.on))}")
     if ip.modes_added:
-        pieces.append(f"add the {'mode' if len(ip.modes_added) == 1 else 'modes'} {_and(list(ip.modes_added))}")
+        one = len(ip.modes_added) == 1
+        pieces.append(f"add the {'mode' if one else 'modes'} {_and(list(ip.modes_added))}, "
+                      f"{'a copy' if one else 'each a copy'} of the mode showing in SolidWorks when you press (your "
+                      "items there take that mode's state)")
     if ip.modes_removed:
         text = f"delete the {'mode' if len(ip.modes_removed) == 1 else 'modes'} {_and(list(ip.modes_removed))}"
         if ip.first_mode:
@@ -4793,21 +4827,45 @@ def in_place_line(problems, record=None, known: str = "", on_disk=()) -> Tuple[s
     if not problems and not on_disk:
         return "", True
     gates: Dict[str, List[str]] = {}
+    depends: Dict[Tuple[str, ...], List[Tuple[str, str]]] = {}
     said: List[str] = []
     from .swbuild import PROBLEM_UNSETTLED
+    from .workbook.update import PROBLEM_DEPENDS
     for p in problems or ():
         subjects = tuple(getattr(p, "subjects", ()) or ())
         if p.kind == PROBLEM_UNSETTLED and subjects and _step_of(subjects[0]):
             gates.setdefault(_step_of(subjects[0]), []).append(subjects[0])
+        elif p.kind == PROBLEM_DEPENDS:
+            unshown = tuple(sorted({_version_of(s) for s in subjects}))
+            for s in subjects:
+                depends.setdefault(unshown, []).append((_step_of(s) or "", s))
         elif p.sentence and p.sentence not in known and p.sentence not in said:
             said.append(p.sentence)
     sentences = ([in_place_gate_sentence(list(gates), [n for names in gates.values() for n in names])] if gates
                  else []) + [_sentence(s) for s in said] + [new_part_on_disk_sentence(g, p) for g, p in on_disk]
+    maybe = [in_place_depends_sentence(found) for found in depends.values()]
     if not sentences:
-        return "", True
+        return " ".join(maybe), True
     entry = getattr(getattr(record, "gearbox", None), "user_work", None)
-    lead = f"As read at {read_time(entry.read_at)}, the" if entry is not None and said else "The"
-    return f"{lead} next press would stop before changing anything: " + " ".join(sentences), False
+    read = entry is not None and not getattr(entry, "unread", False) and entry.read_at
+    lead = f"As read at {read_time(entry.read_at)}, the" if read and said else "The"
+    return " ".join([f"{lead} next press would stop before changing anything: " + " ".join(sentences)] + maybe), False
+
+
+def in_place_depends_sentence(found: Sequence[Tuple[str, str]]) -> str:
+    """With no SolidWorks version on record, steps shown on some versions the findings know and not yet on others, in
+    one sentence, neither red nor a refusal (the press reads the version first): *Whether Update SolidWorks can take a
+    gear out of the assembly depends on the SolidWorks in use: Gear Generator has been shown to do so on SolidWorks
+    2026, not yet on SolidWorks 2024 (findings.COMPONENT_DELETE_ROUTE_ON_2024), and the press reads which it runs on
+    before it changes anything.*"""
+    from .workbook.update import known_finding_revisions
+    names = list(dict.fromkeys(name for _, name in found))
+    unshown = sorted({_version_of(n) for n in names})
+    shown = [f"SolidWorks {year}" for year, _ in known_finding_revisions() if f"SolidWorks {year}" not in unshown]
+    what = _and(IN_PLACE_STEP_WORDS.get(step, step) for step in dict.fromkeys(s for s, _ in found if s))
+    return (f"Whether Update SolidWorks can {what} depends on the SolidWorks in use: Gear Generator has been shown to "
+            f"do so on {_and(shown)}, not yet on {_and(unshown)} ({_and('findings.' + n for n in names)}), and the "
+            "press reads which it runs on before it changes anything.")
 
 
 def in_place_done_pieces(update, result) -> List[str]:
@@ -4824,7 +4882,15 @@ def in_place_done_pieces(update, result) -> List[str]:
     if deleted:
         n = len(getattr(result, "mates_deleted", []) or [])
         what = _and(f"{g} ({name})" for g, name in deleted)
-        pieces.append(f"took {what} out" + (f" with {_plural(n, 'mate')}" if n else ""))
+        # Ruling C6: a part no gear left uses leaves the record; its file is never deleted.
+        used = {str(getattr(p, "part", "") or "").replace("/", "\\").casefold()
+                for p in getattr(update, "placements", ()) or ()}
+        gone = [r.part for r in getattr(getattr(update, "in_place", None), "removed", ()) or ()
+                if r.gear in {g for g, _ in deleted} and r.part and r.part.replace("/", "\\").casefold() not in used]
+        files = list(dict.fromkeys(_file(p) for p in gone))
+        pieces.append(f"took {what} out" + (f" with {_plural(n, 'mate')}" if n else "")
+                      + (f", leaving {'its part' if len(files) == 1 else 'their parts'} {_and(files)} on disk"
+                         if files else ""))
     made = dict((name, tuple(on)) for name, on in getattr(result, "mates_made", []) or [])
     ip = getattr(update, "in_place", None)
     for gear, name in getattr(result, "inserted", []) or []:

@@ -344,34 +344,36 @@ def test_the_updated_sidecar_keeps_a_banded_parts_schema_and_an_unbanded_ones():
         assert again.schema_version == s.schema_version
 
 
-def test_the_link_record_is_schema_8_and_carries_the_bands():
+def test_the_link_record_carries_the_bands_at_schema_8_and_after():
+    """W9b set schema 8 for the bands; W9c's 9 writes them unchanged (the coordinator's ruling on the W9c review)."""
     _, _, done = _built()
     raw = json.loads(store.link_record_to_json(done.record))
-    assert store.LINK_SCHEMA_VERSION == 8 == store._W9A_LINK_SCHEMA + 1 and raw["link_schema_version"] == 8
+    assert store._W9B_LINK_SCHEMA == 8 == store._W9A_LINK_SCHEMA + 1
+    assert raw["link_schema_version"] == store.LINK_SCHEMA_VERSION == 9
     back = store.link_record_from_json(json.dumps(raw))
     assert back == store.link_record_from_json(store.link_record_to_json(done.record))
     assert next(p for p in back.parts if "RangeSlv" in p.gears).spec["start_band"] == "5"
 
 
-@pytest.mark.parametrize("version", [6, 7])
-def test_a_schema_6_or_7_record_reads_as_before(tmp_path, version):
+@pytest.mark.parametrize("version", [6, 7, 8])
+def test_a_schema_6_7_or_8_record_reads_as_before(tmp_path, version):
     _, _, done = _built()
     raw = json.loads(store.link_record_to_json(done.record))
     raw["link_schema_version"] = version
     target = tmp_path / "R.workbook.json"
     target.write_text(json.dumps(raw))
     first = store.link_record_from_json(target.read_text())
-    assert first.schema_version == 8 and first == store.link_record_from_json(store.link_record_to_json(done.record))
+    assert first.schema_version == 9 and first == store.link_record_from_json(store.link_record_to_json(done.record))
 
 
-def test_an_older_reader_refuses_schema_8_and_leaves_it_byte_identical(tmp_path, monkeypatch):
+def test_an_older_reader_refuses_the_schema_written_and_leaves_it_byte_identical(tmp_path, monkeypatch):
     _, _, done = _built()
     done.record.workbook = str(tmp_path / "R.xlsx")
     text = store.link_record_to_json(done.record)
     target = tmp_path / "R.workbook.json"
     target.write_text(text)
-    monkeypatch.setattr(store, "LINK_SCHEMA_VERSION", 7)
-    with pytest.raises(store.UnknownSchema, match=r"schema 8, this one reads 7"):
+    monkeypatch.setattr(store, "LINK_SCHEMA_VERSION", 8)                 # a W9b-era reader
+    with pytest.raises(store.UnknownSchema, match=r"schema 9, this one reads 8"):
         store.read_link_record(str(tmp_path / "R.xlsx"))
     assert target.read_text() == text and sorted(p.name for p in tmp_path.iterdir()) == ["R.workbook.json"]
 
@@ -590,3 +592,43 @@ def test_a_hub_no_sleeve_covers_in_every_mode_keeps_its_error_and_another_sleeve
 
 def without_gear(spec, gid):
     return replace(spec, gears=tuple(g for g in spec.gears if g.id != gid))
+
+
+# -- a workbook written before W9b: no band columns (the demonstration's question) ----------------------------------
+
+def _pre_w9b_workbook(path, spec, extra_headers=(), extra=None):
+    """``spec`` written as a workbook from before W9b would hold it: the Gears sheet with no Start band and End band
+    columns; ``extra_headers`` typed by hand at the end of row 1, ``extra`` their cells by gear id."""
+    from gear_generator.workbook import link
+    sheets = model.to_sheets(spec)
+    gears_sheet = next(s for s in sheets if s.name == "Gears")
+    keep = [i for i, title in enumerate(gears_sheet.rows[0]) if not str(title).startswith(("Start band", "End band"))]
+    ids = [g.id for g in spec.gears]
+    rows = [[row[i] for i in keep] + (list(extra_headers) if n == 0 else list((extra or {}).get(ids[n - 1], ())))
+            for n, row in enumerate(gears_sheet.rows)]
+    sheets[sheets.index(gears_sheet)] = replace(gears_sheet, rows=rows, widths=(), lists={})
+    xlsx.write_new(str(path), sheets)
+    return link.Link(str(path)).read()
+
+
+def test_a_workbook_without_band_columns_hears_of_them_once_in_the_first_clearance_warning_on_a_sleeve(tmp_path):
+    reading = _pre_w9b_workbook(tmp_path / "RangeBox.xlsx", range_box())
+    assert reading.spec is not None and modes.band_columns_absent(reading.spec)
+    a = assess.assess(reading.spec, reading.diagnostics, "C:\\Out\\")
+    said = [d.message for d in a.diagnostics if modes.BAND_COLUMNS_HINT in d.message]
+    assert len(said) == 1 and said[0].endswith(
+        "This workbook's Gears sheet has no Start band (mm) and End band (mm) columns, which give a sleeve toothed "
+        "bands with a relief between them: type both headers on row 1 of the Gears sheet (after Slides, as a new "
+        "workbook has them) and save.")
+    # A new workbook has the columns, and a spec built in code is never judged.
+    assert not modes.band_columns_absent(range_box())
+
+
+def test_band_headers_typed_by_hand_at_the_end_of_row_1_are_read_as_the_columns(tmp_path):
+    fixed = range_box_fixed()
+    reading = _pre_w9b_workbook(tmp_path / "RangeBox_Fixed.xlsx", fixed, ("Start band (mm)", "End band (mm)"),
+                                {g.id: (g.start_band, g.end_band) for g in fixed.gears})
+    assert not [d.message for d in reading.diagnostics if d.is_error]
+    assert not modes.band_columns_absent(reading.spec)
+    sleeve = next(g for g in reading.spec.gears if g.id == "RangeSlv")
+    assert (sleeve.start_band, sleeve.end_band) == ("5", "5")

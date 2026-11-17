@@ -1237,8 +1237,11 @@ def finish_build(plan: GearboxPlan, result: GearboxResult, record: Optional[Link
                  read_sidecar: Callable[[str], Optional[Sidecar]] = store.read_sidecar,
                  stamp: Optional[str] = None,
                  mtime: Callable[[str], float] = os.path.getmtime,
-                 exists: Callable[[str], bool] = os.path.exists) -> Finished:
+                 exists: Callable[[str], bool] = os.path.exists, revision: Sequence[int] = ()) -> Finished:
     """The sidecars and record a build leaves, from what actually saved (Tk thread, after the worker).
+
+    ``revision``: the SolidWorks revision the build ran on (the window's ``Job.revision``), kept on the gearbox
+    record (schema 9, ``GearboxRecord.solidworks``) so the footer judges W9c's gates on it before any Update.
 
     ``record`` is the record as read just before writing
     (``store.open_link_record``), or None for a fresh one. For each new part
@@ -1425,10 +1428,14 @@ def finish_build(plan: GearboxPlan, result: GearboxResult, record: Optional[Link
         gearbox.shafts = [ShaftEntry(**asdict(s)) for s in plan.shafts]
         gearbox.meshes = [list(m) for m in plan.meshes]
         gearbox.built = stamp
+        if revision:
+            gearbox.solidworks = [int(n) for n in revision]
         _record_carriers(gearbox, plan, result)
         if assembly_path:
             if gearbox.user_work is not None and not store.same_path(gearbox.user_work.assembly, assembly_path):
                 gearbox.user_work = None          # W9a: an inventory read in another assembly is not this one's
+            if gearbox.assembly and not store.same_path(gearbox.assembly, assembly_path):
+                gearbox.left_globals, gearbox.left_configurations = [], []   # W9c: another assembly's leftovers
             gearbox.assembly = assembly_path
             # Plain names, as the record's JSON holds them: a worker's own name object never reaches the record.
             gearbox.layout_component = str(result.components.get(layout.LAYOUT_HANDLE, ""))

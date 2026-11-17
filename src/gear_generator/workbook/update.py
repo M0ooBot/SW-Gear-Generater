@@ -45,6 +45,7 @@ from __future__ import annotations
 import copy
 import math
 import os
+import re
 from dataclasses import asdict, dataclass, field, replace
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
@@ -157,6 +158,10 @@ class UpdatePlan:
     # it (a press that stopped after building it, or a file of the user's): the worker refuses rather than build over
     # it, and the footer says so before the press.
     new_parts_on_disk: Tuple[Tuple[str, str], ...] = ()
+    # W9c (the review's must-fix 2): what a press that stopped part way left of the app's that this read no longer
+    # uses, ``(what, name)`` with ``what`` one of LEFT_GLOBAL, LEFT_CONFIGURATION, LEFT_PART (the part's path): the
+    # footer and the result say each as the app's own leftover, left as it is and kept on record.
+    leftovers: Tuple[Tuple[str, str], ...] = ()
 
     @property
     def changed_parts(self) -> Tuple[PartUpdate, ...]:
@@ -599,6 +604,7 @@ def classify(record: Optional[LinkRecord], a: Assessment, *,
     modal = _Modes()
     in_place = swbuild.InPlace()
     in_place_record: Optional[InPlaceRecord] = None
+    leftovers: Tuple[Tuple[str, str], ...] = ()
     if turning:
         turn = _turning(box, entries, a, shafts)
         structural.extend(turn.structural)
@@ -607,11 +613,12 @@ def classify(record: Optional[LinkRecord], a: Assessment, *,
         # A part a stopped press built for a gear it did not insert is on record though no component names it yet
         # (the coordinator's ruling): the added gear takes it as a part on record.
         held = list(entries) + [p for p in record.parts if p.revision == box.revision and p.gears
-                                and not any(p is e for e in entries)]
+                                and not any(p is e for e in entries) and exists(p.path)]
         in_place, why, in_place_record = _in_place(whole_box, box, a, held, in_added, in_removed, job_of, modal,
                                                    band_changes)
         if in_place and whole_box.left:
             in_place = replace(in_place, left=tuple(whole_box.left))         # F1: a stopped press's leftovers
+        leftovers = _leftovers_unwanted(record, whole_box, a, in_place)
         structural.extend(why)
         if in_place_record is not None and (modal.motion or turn.motion) is not None:
             links = _new_links(in_place_record.mates, a, modal.configurations or tuple(box.modes))
@@ -646,7 +653,8 @@ def classify(record: Optional[LinkRecord], a: Assessment, *,
                       carrier_layouts=_carrier_layouts_on_record(box, a), in_place=in_place,
                       in_place_record=in_place_record if in_place else None,
                       new_parts_on_disk=tuple((g.gear, g.part) for g in in_place.added
-                                              if g.build is not None and exists(g.part)))
+                                              if g.build is not None and exists(g.part)),
+                      leftovers=leftovers)
 
 
 # -- W9a: what the worker needs to tell the user's work from the app's (ISSUE-1-PLAN K1, K11; W9A-INTERFACES.md) ------
@@ -2200,6 +2208,8 @@ def finish_update(plan: UpdatePlan, result: GearboxUpdate, record: LinkRecord, *
         _follow_carriers(box, plan, result)
         record_user_work(rec, getattr(result, "user_work", None), assembly=plan.assembly, digest=digest,
                          revision=revision)
+        if revision:
+            box.solidworks = [int(n) for n in revision]       # schema 9: the SolidWorks this press ran on
         out.earlier_update = _earlier_update(record, plan, result, mtime)
         if out.earlier_update:
             out.off_after_update, out.dragged = out.dragged, []
@@ -2246,6 +2256,38 @@ def entry_spec_of(rec: LinkRecord, path: str) -> Optional[Dict[str, Any]]:
     return dict(entry.spec) if entry is not None and entry.spec else None
 
 
+LEFT_GLOBAL, LEFT_CONFIGURATION, LEFT_PART = "global", "configuration", "part"
+
+
+def _leftovers_unwanted(record: LinkRecord, box: GearboxRecord, a: Assessment, in_place: Any) -> Tuple[
+        Tuple[str, str], ...]:
+    """The app's leftovers this read does not use (:attr:`UpdatePlan.leftovers`): a global no step of ``in_place``
+    adds, a configuration that is not one of the read's modes, a part built for a gear no component names whose gear
+    is not added by ``in_place`` (its part entry stays on record, with no component)."""
+    named = {op.name for g in in_place.added for op in g.ops if isinstance(op, base.AddGlobal)}
+    named |= {op.name for b in in_place.bands for op in b.ops if isinstance(op, base.AddGlobal)}
+    modes = {m.name.casefold() for m in a.spec.modes}
+    adding = {g.gear for g in in_place.added}
+    components = {c.gear for c in box.components} | {c.of for c in box.components if c.of}
+    out: List[Tuple[str, str]] = [(LEFT_GLOBAL, name) for _doc, name in box.left_globals if name not in named]
+    out += [(LEFT_CONFIGURATION, c) for c in box.left_configurations if c.casefold() not in modes]
+    out += [(LEFT_PART, p.path) for p in record.parts if p.revision == box.revision and p.gears
+            and not set(p.gears) & components and not set(p.gears) & adding]
+    return tuple(out)
+
+
+def _global_used(name: str, plan: UpdatePlan, result: GearboxUpdate) -> bool:
+    """Whether a global of the app's was used by this press: an op of its in-place steps names it, and that step was
+    done (the added gear inserted, the sleeve given its bands), so the record holds it as part of what was made."""
+    for g in plan.in_place.added:
+        if any(isinstance(op, base.AddGlobal) and op.name == name for op in g.ops):
+            return g.gear in [gear for gear, _ in getattr(result, "inserted", []) or []]
+    for b in plan.in_place.bands:
+        if any(isinstance(op, base.AddGlobal) and op.name == name for op in b.ops):
+            return b.gear in (getattr(result, "bands_added", []) or [])
+    return False
+
+
 def _follow_in_place(rec: LinkRecord, box: GearboxRecord, plan: UpdatePlan, result: GearboxUpdate,
                      read_sidecar: Callable[[str], Optional[Sidecar]], stamp: str, out: Finished,
                      written_by: str) -> None:
@@ -2258,8 +2300,8 @@ def _follow_in_place(rec: LinkRecord, box: GearboxRecord, plan: UpdatePlan, resu
         box.fixed = [g for g in box.fixed if g != gear]
         box.unmated = [pair for pair in box.unmated if gear not in pair]
         box.meshes = [pair for pair in box.meshes if gear not in pair]
-        for entry in rec.current_parts():
-            if gear in entry.gears:
+        for entry in rec.parts:              # ruling C6 (current_parts() no longer names it: its component is gone)
+            if entry.revision == box.revision and gear in entry.gears:
                 entry.gears = [g for g in entry.gears if g != gear]
         rec.parts = [p for p in rec.parts if p.gears or p.revision != box.revision]
     gone = set(getattr(result, "mates_deleted", []) or [])
@@ -2280,10 +2322,16 @@ def _follow_in_place(rec: LinkRecord, box: GearboxRecord, plan: UpdatePlan, resu
     added_modes = [c for c in getattr(result, "modes_added", []) or [] if c not in box.modes]
     if result.ok:
         box.modes = list(box.modes) + added_modes
-        box.left = []
-    else:
-        names = [name for _doc, name in getattr(result, "globals_added", []) or []] + added_modes
-        box.left = list(dict.fromkeys(list(box.left) + names))
+    # The review's must-fix 2: each leftover stays until a press uses it (its step done) or takes it away, never
+    # cleared because a press ran to its end; a configuration added is the app's leftover until a press that ran to its
+    # end puts it on record as a mode.
+    box.left_configurations = [c for c in dict.fromkeys(list(box.left_configurations) + added_modes)
+                               if not (result.ok and c in added_modes)]
+    kept: Dict[str, List[str]] = {}
+    for doc, name in list(box.left_globals) + [list(g) for g in getattr(result, "globals_added", []) or []]:
+        if not _global_used(name, plan, result):
+            kept.setdefault(name, [doc, name])
+    box.left_globals = list(kept.values())
     # Gears inserted: each by the Name2 SolidWorks kept, its frame from the plan (the trains' rule writes it after).
     placed = {p.gear: p for p in plan.placements}
     jobs = dict(extra.jobs)
@@ -2637,8 +2685,13 @@ def record_user_work(record: LinkRecord, work: Optional[swbuild.UserWork], *, as
         said = user_work_entry(swbuild.UserWork(), assembly=assembly, digest=digest, revision=revision,
                                problems=problems)
         kept = box.user_work
-        box.user_work = said if kept is None else replace(kept, read_at=said.read_at, digest=digest,
-                                                          revision=said.revision, problems=said.problems)
+        if kept is None:
+            # Nothing ever read: an entry that carries the refusal alone, marked unread, which the foresight takes as
+            # no inventory at all (the review's should-fix 3: never an empty inventory as if it were a read).
+            box.user_work = replace(said, read_at="", refused_at=said.read_at, unread=True)
+        else:
+            # The inventory keeps its own read time; the refusal's time is kept beside it.
+            box.user_work = replace(kept, digest=digest, refused_at=said.read_at, problems=said.problems)
         return True
     box.user_work = user_work_entry(work, assembly=assembly, digest=digest, revision=revision, problems=problems)
     return True
@@ -2651,6 +2704,8 @@ def refused_update(record: LinkRecord, plan: UpdatePlan, error: swbuild.UserWork
     rec = copy.deepcopy(record)
     record_user_work(rec, error.user_work, assembly=plan.assembly, digest=digest, revision=revision,
                      problems=error.problems)
+    if rec.gearbox is not None and revision:
+        rec.gearbox.solidworks = [int(n) for n in revision]
     return rec
 
 
@@ -2746,6 +2801,8 @@ def user_work_ahead(plan: Optional[UpdatePlan], record: Optional[LinkRecord],
     changed_since = bool(refused) and bool(digest) and bool(entry.digest) and entry.digest != digest
     if refused and not changed_since:
         return UserWorkAhead(entry, refused=refused, followed=followed)
+    if entry.unread:
+        return None                       # a refusal carried with nothing read: nothing of the user's to foresee
     still: Tuple[Tuple[store.ValueEditEntry, str], ...] = ()
     if changed_since:
         still = tuple((v, now) for p in refused if p.kind == swbuild.PROBLEM_VALUE for v in p.values
@@ -2756,26 +2813,41 @@ def user_work_ahead(plan: Optional[UpdatePlan], record: Optional[LinkRecord],
     if m is None:                                    # W4's static path reads the user's features only
         return UserWorkAhead(entry, refused=refused, changed_since=changed_since, still=still, followed=followed)
     mated, trains = _judged_trains(plan)
-    if plan.in_place.modes_added and m.configurations:
-        # F2: an added mode is a copy of the mode showing, so the user's mates on there are on in it too (the worker's
-        # own judgement, swbuild.work_in_added_modes). The mode the press copies: the one the inventory was read in.
-        work = swbuild.work_in_added_modes(work, plan.in_place.modes_added, _copied_mode(entry, m.configurations))
-    judgement = swbuild.judge_user_work(
-        work, tuple(m.configurations) or ("",), bodies_put(plan), file=os.path.basename(plan.assembly.replace("\\",
-                                                                                                             "/")),
-        trains=trains, mated=mated, read_tie=None, branches=swbuild.user_carry_branches(m, plan.placements),
-        revision=tuple(entry.revision))
+    if plan.in_place.modes_removed:
+        # The review's must-fix 1: the worker reads the user's flags over the modes after the Update only, so the modes
+        # removed leave each recorded mate's on-list first (the mirror of swbuild.work_in_added_modes).
+        work = work_without_modes(work, plan.in_place.modes_removed)
+
+    def judge(copied: str) -> Any:
+        judged = work
+        if plan.in_place.modes_added and copied:
+            # F2: an added mode is a copy of the mode showing at the press: the user's mates on there are on in it too.
+            judged = swbuild.work_in_added_modes(work, plan.in_place.modes_added, copied)
+        return swbuild.judge_user_work(
+            judged, tuple(m.configurations) or ("",), bodies_put(plan),
+            file=os.path.basename(plan.assembly.replace("\\", "/")), trains=trains, mated=mated, read_tie=None,
+            branches=swbuild.user_carry_branches(m, plan.placements), revision=tuple(entry.revision))
+
+    # The mode showing at the press is not known here (the review's should-fix 4): an added mode is judged as a copy of
+    # each mode on record in turn, and only what every one of them foresees is foreseen.
+    shown = [c for c in m.configurations if c not in plan.in_place.modes_added] if plan.in_place.modes_added else []
+    judgements = [judge(c) for c in shown] or [judge("")]
+    judgement = judgements[0]
+    problems = [p for p in judgement.problems
+                if all(any(_problem_key(p) == _problem_key(q) for q in other.problems) for other in judgements[1:])]
     return UserWorkAhead(entry, refused=refused, changed_since=changed_since, still=still,
                          carried=tuple((g, tuple(held)) for g, held in judgement.carried.items()),
-                         problems=tuple(judgement.problems), unread_ties=tuple(judgement.unread_ties),
+                         problems=tuple(problems), unread_ties=tuple(judgement.unread_ties),
                          followed=followed)
 
 
-def _copied_mode(entry: Any, configurations: Sequence[str]) -> str:
-    """The mode an added configuration copies (the mode showing at the press), as the footer can know it: the record
-    holds no mode showing, so the gearbox's first mode, the one it was built and saved in and every Update leaves
-    showing again. A user who shows another mode first is judged at the press by the mode then showing."""
-    return configurations[0] if configurations else ""
+def work_without_modes(work: swbuild.UserWork, modes_removed: Sequence[str]) -> swbuild.UserWork:
+    """Pure (the review's must-fix 1; the mirror of ``swbuild.work_in_added_modes``, asked of A under §11 "From B"):
+    the user's work as the worker will read it once ``modes_removed`` are gone: each mate's on-list without them. The
+    inventory is not changed (a copy is returned)."""
+    gone = {c.casefold() for c in modes_removed}
+    return replace(work, mates=[replace(m, on=tuple(c for c in m.on if str(c).casefold() not in gone))
+                                for m in work.mates])
 
 
 def in_place_ahead(plan: Optional[UpdatePlan], record: Optional[LinkRecord]) -> Tuple[swbuild.UserProblem, ...]:
@@ -2791,11 +2863,65 @@ def in_place_ahead(plan: Optional[UpdatePlan], record: Optional[LinkRecord]) -> 
     if not plan.in_place and not (modes and plan.ratios):        # a gear mate made again with modes is gated too
         return ()
     entry = _on_record(record)
-    work = recorded_user_work(entry) if entry is not None else None
-    return tuple(swbuild.judge_in_place(
-        work, plan.in_place, file=os.path.basename(plan.assembly.replace("\\", "/")) or "the assembly",
-        revision=tuple(entry.revision) if entry is not None else (), modes=modes,
-        remakes=bool(modes) and bool(plan.ratios)))
+    work = recorded_user_work(entry) if entry is not None and not entry.unread else None
+
+    def judge(revision: Sequence[int]) -> List[swbuild.UserProblem]:
+        return swbuild.judge_in_place(
+            work, plan.in_place, file=os.path.basename(plan.assembly.replace("\\", "/")) or "the assembly",
+            revision=revision, modes=modes, remakes=bool(modes) and bool(plan.ratios))
+
+    revision = solidworks_on_record(record)
+    if revision:
+        return tuple(judge(revision))
+    # No SolidWorks version on record (no press has read one yet): judged over every version the findings know
+    # (the demonstration's first contact). Stopped on every one, foreseen as stopping; on none, nothing foreseen; on
+    # some, a PROBLEM_DEPENDS naming the findings not yet shown, said as depending on the SolidWorks in use.
+    known = [(year, judge(rev)) for year, rev in known_finding_revisions()]
+    if not known:
+        return tuple(judge(()))
+    out: List[swbuild.UserProblem] = []
+    for problem in judge(()):
+        key = _problem_key(problem)
+        stopped = [(year, q) for year, found in known for q in found if _problem_key(q) == key]
+        if len(stopped) == len(known):
+            out.append(problem)
+        elif stopped:
+            unshown = tuple(s for _, q in stopped for s in q.subjects if _FINDING_YEAR.search(s))
+            # A problem naming no finding (none such yet) is foreseen as it stands rather than left unsaid.
+            out.append(swbuild.UserProblem(PROBLEM_DEPENDS, problem.sentence, mates=tuple(problem.mates),
+                                           subjects=unshown) if unshown else problem)
+    return tuple(out)
+
+
+# W9c (the demonstration's first contact): a step that stops a press on some SolidWorks versions the findings know and
+# not on others, foreseen with no version on record. ``subjects``: the findings not yet shown, each on its year.
+PROBLEM_DEPENDS = "depends on the version"
+_FINDING_YEAR = re.compile(r"_ON_(\d{4}|\?)$")
+
+
+def solidworks_on_record(record: Optional[LinkRecord]) -> Tuple[int, ...]:
+    """The SolidWorks revision the record last saw: its user-work inventory's (the last Update's read), else the one
+    its last Build or Update ran on (``GearboxRecord.solidworks``, schema 9), else ``()`` (an older record)."""
+    entry = _on_record(record)
+    if entry is not None and entry.revision:
+        return tuple(entry.revision)
+    box = getattr(record, "gearbox", None)
+    return tuple(getattr(box, "solidworks", ()) or ())
+
+
+def known_finding_revisions() -> List[Tuple[int, Tuple[int, ...]]]:
+    """``(year, revision)`` for each SolidWorks release the findings hold values for (a ``…_ON_<year>`` name), oldest
+    first; the revision is the major one ``swcom.release_year`` names that year by."""
+    from .. import findings, swcom
+    years = sorted({int(m.group(1)) for name in dir(findings) for m in [_FINDING_YEAR.search(name)]
+                    if m is not None and m.group(1).isdigit()})
+    base = swcom.release_year(0)
+    return [(year, (year - base,)) for year in years]
+
+
+def _problem_key(problem: swbuild.UserProblem) -> Tuple[Any, ...]:
+    """A problem as the same whatever version it was judged on: its kind, its mates and its subjects less the year."""
+    return (problem.kind, tuple(problem.mates), tuple(_FINDING_YEAR.sub("", s) for s in problem.subjects))
 
 
 def _same_value(live: str, wanted: str) -> bool:

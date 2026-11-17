@@ -1393,7 +1393,12 @@ class WorkbookWindow(tk.Toplevel):
         if job.before is not None:
             kwargs["before"] = job.before
         job.journaled = self._write_journal(plan)
-        self._submit(job, lambda session: swbuild.build_gearbox(session, **kwargs, progress=job.progress.say))
+
+        def work(session: Any) -> Any:
+            job.revision = tuple(getattr(session, "revision", ()) or ())     # W9c: kept on the gearbox record
+            return swbuild.build_gearbox(session, **kwargs, progress=job.progress.say)
+
+        self._submit(job, work)
 
     def _write_journal(self, plan: wb_gearbox.GearboxPlan) -> bool:
         """Before the worker starts: what this build is about to make, in the record beside the workbook
@@ -1550,7 +1555,8 @@ class WorkbookWindow(tk.Toplevel):
         try:
             record, may_write, notes = self._open_record()
             finished = wb_gearbox.finish_build(job.plan, result, record, workbook=self.link.path,
-                                               digest=job.digest, written_by=f"gear-generator {__version__}")
+                                               digest=job.digest, written_by=f"gear-generator {__version__}",
+                                               revision=job.revision)
             if record is None and finished.record is not None:
                 # A fresh record: keep what this session knows of its own last Export.
                 finished.record.own_digest, finished.record.recalc = self.link.own_digest, self.recalc

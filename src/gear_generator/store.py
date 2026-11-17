@@ -421,7 +421,15 @@ def link_record_path(workbook_path: str) -> str:
 _W7_LINK_SCHEMA = 5               # the schema W7 left (W8-PLAN §1.11: W8's is one past it, written from it)
 _W8_LINK_SCHEMA = _W7_LINK_SCHEMA + 1        # the schema W8 left (ISSUE-1-PLAN §2.4: W9a's is one past it)
 _W9A_LINK_SCHEMA = _W8_LINK_SCHEMA + 1       # the schema W9a left (ISSUE-1-PLAN §2.4: W9b's is one past it)
-LINK_SCHEMA_VERSION = _W9A_LINK_SCHEMA + 1   # the link record's own schema, apart from the .gear.json's SCHEMA_VERSION
+_W9B_LINK_SCHEMA = _W9A_LINK_SCHEMA + 1      # the schema W9b left (the coordinator's ruling: W9c's is one past it)
+LINK_SCHEMA_VERSION = _W9B_LINK_SCHEMA + 1   # the link record's own schema, apart from the .gear.json's SCHEMA_VERSION
+# Schema 9 (W9c, the coordinator's ruling on the review; W9C-INTERFACES §7): the gearbox keeps what an Update that
+# stopped part way left of the app's (``left_globals``, ``left_configurations``) and the SolidWorks revision its last
+# Build or Update ran on (``solidworks``); a user-work inventory keeps a refusal's own time (``refused_at``) and says
+# when it was never read (``unread``); a problem keeps its ``subjects``. ``left_*`` decides whether something in
+# SolidWorks is the app's or the user's, so a W9b-era app, which would drop it on write-back, refuses a schema 9 record
+# and leaves it byte-identical. A v1-v8 record reads as v9 as it read as v8 (none of these fields: nothing left, no
+# revision known) and is written forward as v9. W9d's carried items will be schema 10.
 # Schema 8 (W9b, ISSUE-1-PLAN §2.4, K10; W9B-INTERFACES §5): no new field. A sleeve's bands ride in its part entry's
 # ``spec`` (``GearSpec.to_dict``), so a W9a-era app, which would read them away and rebuild the sleeve without its
 # relief, refuses a schema 8 record and leaves it byte-identical. A v1-v7 record reads as v8 as it read as v7, and a
@@ -655,8 +663,8 @@ class UserProblemEntry:
     sentence: str = ""
     mates: List[str] = field(default_factory=list)
     values: List[ValueEditEntry] = field(default_factory=list)
-    # W9c: what the sentence names (``swbuild.UserProblem.subjects``: the gear, the user's components, the mode, the
-    # configuration, the finding). Additive: a reader of schema 8 that does not know it leaves it out.
+    # Schema 9 (W9c): what the sentence names (``swbuild.UserProblem.subjects``: the gear, the user's components, the
+    # mode, the configuration, the finding).
     subjects: List[str] = field(default_factory=list)
 
 
@@ -679,6 +687,11 @@ class UserWorkEntry:
     features: List[UserFeatureEntry] = field(default_factory=list)
     carried: List[UserCarriedEntry] = field(default_factory=list)
     problems: List[UserProblemEntry] = field(default_factory=list)
+    # Schema 9 (W9c, the review's should-fix 3): ``refused_at`` the time of a refusal said with this inventory when it
+    # is not the read's own (a refusal read before the user's work, the mode showing); ``unread`` True for an entry
+    # that carries such a refusal with no inventory ever read, which the foresight treats as no inventory at all.
+    refused_at: str = ""
+    unread: bool = False
 
     @property
     def refused(self) -> bool:
@@ -747,11 +760,20 @@ class GearboxRecord:
     # Schema 7 (W9a): what the last Update read of the user's work in ``assembly`` (UserWorkEntry); None = nothing read
     # yet (every record before schema 7, and a new revision's assembly until its first Update).
     user_work: Optional[UserWorkEntry] = None
-    # W9c (F1, the joining round): what an Update that stopped part way added by name and the record keeps as the
-    # app's — each global an in-place step added (``GearboxUpdate.globals_added``' names) and each configuration it
-    # added for a mode — handed back as ``swbuild.InPlace.left`` on the next press; [] once a press runs to its end.
-    # Additive: a reader of schema 8 that does not know it leaves it out.
-    left: List[str] = field(default_factory=list)
+    # Schema 9 (W9c, F1 and the review's must-fix 2): what an Update that stopped part way added and the record keeps
+    # as the app's until a press uses it or takes it away — each global an in-place step added, ``[document path,
+    # name]`` (``GearboxUpdate.globals_added``), and each configuration it added for a mode — handed back by name as
+    # ``swbuild.InPlace.left``. (A new part it built is a ``PartEntry`` no component names.)
+    left_globals: List[List[str]] = field(default_factory=list)
+    left_configurations: List[str] = field(default_factory=list)
+    # Schema 9: the SolidWorks revision the last Build or Update of this gearbox ran on (``Session.revision``), so the
+    # footer judges a finding's gate on it before any Update has read the user's work; [] = not known (older records).
+    solidworks: List[int] = field(default_factory=list)
+
+    @property
+    def left(self) -> List[str]:
+        """Every leftover's name, globals first: what ``swbuild.InPlace.left`` is handed."""
+        return [name for _doc, name in self.left_globals] + list(self.left_configurations)
 
 
 @dataclass
