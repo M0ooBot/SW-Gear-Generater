@@ -282,3 +282,23 @@ name.
 - the cap's two numbers.
 
 (On the fifth point: the app now reads an unwritten code as -1, not Ok; the probe's own blind spot stands.)
+
+## Third round (W9D-DEMONSTRATION-REVIEW.md, 6f67791)
+
+Each test below was checked to fail with its fix undone (by hand, on a backup).
+1. The N1 test puts the innocent cluster (Lock0) first in the tree, as the reviewer's reproduction did.
+2. `_app_mates_check` blames only a cluster with a mate on the bodies of the app mate in error (`mate_info` of that
+   mate) or on their train. Test: `test_an_app_mate_in_error_blames_only_a_cluster_on_its_bodies` (Lock0 on LoDog first
+   in the tree, not blamed for InDog's axis mate).
+3. Ruled: R.2 refuses when a stored dependency path lies outside the old assembly's folder while a same-named file sits
+   in that folder (SolidWorks loads the one beside the assembly first); the clause names base file names only. Tests:
+   refused; own folder not refused; legitimately elsewhere with nothing beside not refused.
+4. Ruled (D20): a component fixed in the old assembly is placed by its world frame with no app anchor; `anchors` says
+   "" for it. Tests: pure (a fixed housing in a cluster locked to a turned Sun) and end to end.
+5. `CarryResult.after_unread` (at the end): why C.8 could not read; no longer appended to `stopped`.
+6. D10's fact: on the open path, the old assembly's lightweight instances of each carried part are read before and
+   after their parts are opened (`use_open_document`, read only); those that went to resolved are in
+   `CarryResult.resolved_in_old` (at the end) and a fact; never a stop, never set back. Inferred: the fake's
+   `open_resolves_lightweight` models it. Not read on the not-open path (the old assembly is closed then).
+
+New fields, at the end: `CarryResult.after_unread: str = ""`, `CarryResult.resolved_in_old: Tuple[str, ...] = ()`.

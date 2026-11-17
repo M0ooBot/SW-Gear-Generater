@@ -819,6 +819,12 @@ class FakeSolidWorks:
 
     def open_document(self, path):
         self._log("open_document", path)
+        if getattr(self, "open_resolves_lightweight", False):
+            # W9d (D10, inferred): lightweight is per file in the session, so opening a part resolves its instances.
+            for name in [n for n in self.lightweight if _key(self.component_paths.get(n, "")) == _key(path)]:
+                self.lightweight.discard(name)
+                if self.component_states.get(name) in (1, 4):
+                    self.component_states[name] = 2
         self._stash()
         self.step_puts = set()
         doc_type = 2 if path.lower().endswith(".sldasm") else 1

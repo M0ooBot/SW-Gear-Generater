@@ -1149,6 +1149,7 @@ def test_a_cluster_on_in_every_mode_is_not_blamed_for_another_clusters_tie(monke
     def tweak(fake):
         fake.user_component(TC_ASM, "Sprocket-2", SPROCKET, (I9, (0.0, 0.0, 210.0)))
         fake.user_lock(TC_ASM, "Lock0", "gear2-1", "Sprocket-2", flags=ALL_ON)
+        _first_in_tree(fake, "Lock0")                  # the innocent cluster first, as the reproduction has it
         fake.locks["Lock1"] = ("gear2", "gear2-1")
     cr, fake = _tc_again(monkeypatch, {"2H": True, "4H": True, "N": False, "4L": False}, tweak)
     assert [(f.deleted, f.why, f.subjects) for f in cr.fixed] == [(("Lock1",), swbuild.FELL_TIE, ("InDog", "N"))]
@@ -1236,3 +1237,111 @@ def test_each_walk_is_logged_with_its_counts_seconds_and_cap(monkeypatch, every_
     (walk,) = cr.work.walks
     assert walk.startswith("walk Sprocket-1: face of 2: 2 after the prefilter") and "cap not reached" in walk
     assert f"fact    {walk}" in cr.log_lines()
+
+
+# -- the demonstration review's third round (W9D-DEMONSTRATION-REVIEW.md, 6f67791) -----------------------------------
+
+
+def _first_in_tree(fake, name):
+    mates = fake.memory_mates[_key(TC_ASM)]
+    mates.insert(0, mates.pop(next(i for i, m in enumerate(mates) if m.name == name)))
+
+
+def test_an_app_mate_in_error_blames_only_a_cluster_on_its_bodies(monkeypatch, every_gate, mode_findings):
+    """Item 2: InDog's axis mate errs in 4L once Lock1 (Sprocket-1 to InDog) is on; Lock0 (Sprocket-2 to LoDog), first
+    in the tree, is not on InDog's bodies and is not blamed."""
+    every_gate()
+
+    def tweak(fake):
+        fake.user_component(TC_ASM, "Sprocket-2", SPROCKET, (I9, (0.0, 0.0, 210.0)))
+        fake.user_lock(TC_ASM, "Lock0", "gear6-1", "Sprocket-2", flags=ALL_ON)
+        _first_in_tree(fake, "Lock0")
+        original = fake.mate_states
+
+        def states(*, others=None):
+            out = original(others=others)
+            broken = fake.config == "4L" and any(m.name == "Lock1" and not m.user and not m.suppressed
+                                                for m in fake.mates)
+            return [swcom.MateState(x.name, 46, True, x.suppressed) if broken and x.name == "InDog on Rear Axis"
+                    else x for x in out]
+        monkeypatch.setattr(fake, "mate_states", states)
+    cr, fake = _tc_again(monkeypatch, ALL_ON, tweak)
+    assert [(f.deleted, f.why) for f in cr.fixed] == [(("Lock1",), swbuild.FELL_NEW_ERROR)], cr.fixed
+    assert "Lock0" in {r[0] for r in cr.remade} and cr.stopped == ""
+
+
+@pytest.mark.parametrize("stored, beside, refused", [
+    ("D:\\Elsewhere\\Sprocket.SLDPRT", True, True),     # copied: a same-named file sits beside the assembly
+    (SPROCKET, True, False),                                # stored in the assembly's own folder
+    ("D:\\Lib\\Bolt.SLDPRT", False, False),               # legitimately elsewhere, nothing beside
+])
+def test_a_dependency_stored_elsewhere_with_a_same_named_file_beside_refuses_the_not_open_read(
+        monkeypatch, every_gate, stored, beside, refused):
+    """Item 3, ruled: SolidWorks loads the file beside the assembly first, so the stored path's version is not it."""
+    every_gate()
+    fake = _closed(_old_train())
+    _isfile(monkeypatch, fake)
+    fake.saved[_key(stored)] = ([], [])
+    if not beside:
+        fake.saved.pop(_key(W + _file_name(stored)), None)
+    fake.dependencies_of[_key(T_ASM)] = [stored]
+    cr = _build_again(fake).carry
+    if refused:
+        assert cr.work.how == swbuild.OLD_UNREAD and "Sprocket.SLDPRT is stored in another folder" in cr.work.unread[0]
+        assert "Elsewhere" not in cr.work.unread[0]                           # base file names only
+    else:
+        assert cr.work.how == swbuild.OLD_READ_ONLY, cr.work.unread
+
+
+def _file_name(path):
+    return path.replace("/", "\\").rsplit("\\", 1)[-1]
+
+
+def test_a_fixed_component_stands_by_its_world_frame_with_no_app_anchor(every_gate):
+    """Item 4, ruled (D20): a fixed housing in a cluster locked to a turned Sun keeps its world frame; the floating
+    sprocket of the same cluster is placed against Sun."""
+    every_gate()
+    c, s_ = math.cos(math.radians(37.0)), math.sin(math.radians(37.0))
+    old_sun = ((c, -s_, 0.0, s_, c, 0.0, 0.0, 0.0, 1.0), (0.0, 0.0, 10.0))
+    housing = comp("Housing-1", HOUSING, frame=(I9, (0.0, 0.0, -40.0)), fixed=True)
+    w = work([comp(), housing], [lock("Lock1", SUN_WHOLE, ent(USER, "Sprocket-1", ENTITY_WHOLE)),
+                                 lock("Lock2", ent(USER, "Housing-1", ENTITY_WHOLE), ent(USER, "Sprocket-1",
+                                                                                          ENTITY_WHOLE))],
+             app_frames=(("Sun", old_sun),))
+    plan = swbuild.plan_carry(w, _carry(), REVISION, new_frames={"Sun": (I9, (0.0, 0.0, 10.0))})
+    items = {i.component.name: i for i in plan.components}
+    assert items["Housing-1"].anchor == "" and items["Housing-1"].frame == housing.frame
+    assert items["Sprocket-1"].anchor == "Sun" and items["Sprocket-1"].cluster == items["Housing-1"].cluster
+
+
+def test_a_fixed_component_reads_world_in_the_results_anchors(monkeypatch, every_gate):
+    every_gate()
+    fake = _old_train()
+    _isfile(monkeypatch, fake)
+    fake.fixed.add("Sprocket-1")
+    cr = _build_again(fake).carry
+    assert cr.anchors == [("carried1-1", "")]
+
+
+def test_the_files_after_the_carry_not_read_is_its_own_field_not_a_stop(monkeypatch, every_gate):
+    """Item 5."""
+    every_gate()
+    fake = _old_train()
+    _isfile(monkeypatch, fake)
+    fake.raises["save_flags"] = (3, SolidWorksError("SolidWorks stopped answering."))   # R reads it twice first
+    cr = _build_again(fake).carry
+    assert cr.stopped == "" and cr.after_unread.startswith("Whether your files changed could not be read")
+
+
+@pytest.mark.parametrize("resolves", [True, False])
+def test_a_lightweight_instance_resolved_in_the_old_assembly_by_the_insert_is_said(monkeypatch, every_gate, resolves):
+    """Item 6 (D10): read before and after the parts are opened; a fact and a field, never a stop, never set back."""
+    every_gate()
+    fake = _old_train()
+    _isfile(monkeypatch, fake)
+    fake.lightweight.add("Sprocket-1")
+    fake.open_resolves_lightweight = resolves
+    cr = _build_again(fake).carry
+    assert cr.inserted == [("Sprocket-1", "carried1-1")] and cr.stopped == ""
+    assert cr.resolved_in_old == (("Sprocket-1",) if resolves else ())
+    assert any("Sprocket-1 in T.SLDASM was lightweight and read resolved" in f for f in cr.facts) == resolves

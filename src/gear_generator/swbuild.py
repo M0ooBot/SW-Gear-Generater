@@ -7143,6 +7143,11 @@ class CarryResult:
     # the sentence in ``stopped`` stays as it was).
     facts: List[str] = field(default_factory=list)
     changed_files: List[str] = field(default_factory=list)
+    # The demonstration review's third round, at the end: why C.8 (the files' times and the user documents' flags after
+    # the carry) could not be read ("" read; never in ``stopped``); and the old assembly's components that went from
+    # lightweight to resolved while the carry opened their parts (D10's fact; never a stop, never set back).
+    after_unread: str = ""
+    resolved_in_old: Tuple[str, ...] = ()
 
     def log_lines(self) -> List[str]:
         """§2.4: a line per item — ``ok      carried Sprocket-1 as Sprocket-1``, ``ok      made Lock1 again, on in H
@@ -7562,7 +7567,9 @@ def plan_carry(work: OldWork, carry: Carry, revision: Sequence[int], *,
     items: List[CarryPlanItem] = []
     for c in carried:
         group = clusters[cluster_of[c.name]]
-        anchor = _anchor(c.name, group, work.mates, bodies, framed)
+        # Ruled (D20, the third round): a component fixed in the old assembly stands where it stood in the world, with
+        # no app anchor, whatever its cluster reaches; a floating one keeps D20's order.
+        anchor = "" if c.fixed else _anchor(c.name, group, work.mates, bodies, framed)
         frame: Frame9 = c.frame
         if anchor and new_frames:
             frame = _carry_frame(old_frames[anchor], new_frames[anchor], c.frame)
@@ -7612,6 +7619,17 @@ def _not_open_refusal(sw: SolidWorks, carry: Carry, docs: Sequence[DocInfo],
     if running is None or any(not p or not isfile(p) or sw.file_version(p) != running for p in files):
         return lead + "it and every file it uses were last saved by this SolidWorks (a file saved since on another " \
                       "SolidWorks, or one not found or not read, is not read)"
+    def folder_of(path: str) -> str:
+        return str(path).replace("\\", "/").rsplit("/", 1)[0] if "/" in str(path).replace("\\", "/") else ""
+    folder = folder_of(carry.old.path)
+    elsewhere = [p for p in dependencies if folder_of(p).lower() != folder.lower()
+                 and isfile(f"{folder}/{_file(str(p))}" if folder else _file(str(p)))]
+    if elsewhere:
+        # Ruled (the third round): the stored paths are not what SolidWorks loads when a same-named file sits beside the
+        # assembly (it searches the assembly's own folder first), so the versions read are not the files it would load.
+        return lead + (f"the files it uses are where it says they are ({_and([_file(str(p)) for p in elsewhere])} "
+                       f"{'is' if len(elsewhere) == 1 else 'are'} stored in another folder, and a file of the same name "
+                       f"sits beside {_file(carry.old.path)})")
     if any(not d.path or not any(same_path(d.path, a) for a in carry.app_files) for d in docs):
         return lead + "nothing else is open in SolidWorks"
     if docs and not fs.settled("OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS"):
@@ -7984,9 +8002,8 @@ def _carry(sw: SolidWorks, result: GearboxResult, carry: Carry, work: OldWork, a
     finally:
         try:
             _carry_after(sw, result, carry, work, mtime, times)
-        except Exception as exc:  # noqa: BLE001
-            cr.stopped = (cr.stopped + " " if cr.stopped else "") + \
-                f"Whether your files changed could not be read after the carry: {_said(exc)}"
+        except Exception as exc:  # noqa: BLE001 - said in its own field, not a stop (the third round, item 5)
+            cr.after_unread = f"Whether your files changed could not be read after the carry: {_said(exc)}"
 
 
 def _cluster_phrase(c: _Carrying, cluster: int, items: Sequence[CarryMateItem]) -> str:
@@ -8022,8 +8039,19 @@ def _carry_steps(c: _Carrying, say: Callable[[Step], None]) -> None:
               + [_cluster_phrase(c, i, items) for i, items in order] + ["checking every mode with your mates on"])
     # C.3: each carried file opened, then the new assembly made the build document again (W9c's AddedGear route).
     c.start("opening your parts to insert them")
+    light = [i.component.name for i in plan.components if i.component.state in _LIGHTWEIGHT_STATES]
+    before = _old_states(sw, c, light)
     for item in plan.components:
         sw.open_document(item.component.path)
+    after = _old_states(sw, c, light)
+    resolved = tuple(n for n in light if before.get(n) in _LIGHTWEIGHT_STATES and after.get(n) in _RESOLVED_STATES)
+    if resolved:
+        # D10's fact (lightweight is per file in the session: measured for the set, inferred for the resolve).
+        cr.resolved_in_old = resolved
+        cr.facts.append(f"{_and(list(resolved))} in {_file(carry.old.path)} "
+                        f"{'was' if len(resolved) == 1 else 'were'} lightweight and read resolved once "
+                        f"{'its part was' if len(resolved) == 1 else 'their parts were'} opened to insert "
+                        f"{'it' if len(resolved) == 1 else 'them'}; left so")
     sw.open_document(c.asm)
     c.show(c.first())
     _carry_inserts(c)
@@ -8035,6 +8063,14 @@ def _carry_steps(c: _Carrying, say: Callable[[Step], None]) -> None:
         _carry_cluster(c, cluster, items)
     c.start("checking every mode with your mates on")
     _carry_post_check(c)
+
+
+def _old_states(sw: SolidWorks, c: _Carrying, names: Sequence[str]) -> Dict[str, int]:
+    """The old assembly's components' states, read as it stands in the session (open path only, never activated):
+    for D10's fact. Empty when there is nothing to read or the old assembly is not open."""
+    if not names or c.work.how != OLD_OPEN or sw.use_open_document(c.carry.old.path) is None:
+        return {}
+    return {x.name: x.state for x in sw.components() if x.name in names}
 
 
 def _carry_inserts(c: _Carrying) -> None:
@@ -8449,9 +8485,16 @@ def _app_mates_check(c: _Carrying, mode: str, by_name: Mapping[str, OldComponent
                and x.code != before[n]]
         if not new:
             return
+        # The third round: only a cluster on the bodies of the mate in error, or on their train, is blamed.
+        handle_of_name = {v: k for k, v in c.result.components.items()}
+        c.counter += 1
+        sw.find_mate(f"appmate{c.counter}", new[0][0])
+        bodies = {handle_of_name[n] for n in sw.mate_info(f"appmate{c.counter}").components
+                  if n and n in handle_of_name}
+        reach = set(bodies).union(*[t for t in c.trains if t & bodies]) if bodies else set()
         blame = None
         for cluster, made in c.made.items():
-            if cluster in c.fallen or not any(_app_handles(i.targets) for i, _, _ in made):
+            if cluster in c.fallen or not reach & {h for i, _, _ in made for h in _app_handles(i.targets)}:
                 continue
             if not any(_mate_on(i.mate, mode, c.work, carry) for i, _, _ in made):
                 continue
