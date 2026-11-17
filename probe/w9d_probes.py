@@ -40,7 +40,8 @@ dialog, goes last):
              then the copy closed, VersionHistory read, a sprocket part opened and changed and the housing part opened
              unchanged (P2), the assembly opened read-only beside them, read, its modes shown, and closed unsaved under
              the watch, what it loaded checked gone (P3). (v) logs each dependency by its place relative to the run
-             folder and under the copy or not, and reads Traverse True beside Traverse False.
+             folder and under the copy or not, and reads Traverse True beside Traverse False, and Searchflag True
+             beside False on the copy and on a plain copy of the master's folder (R.2's copied-folder rule).
 - ``sub``    whether opening a healthy user sub-assembly marks it (§11.3): not loaded, opened read-only then inserted,
              and loaded as a component of an open assembly; each step's dialog caught and said (P9); the host made by
              the app's own save route only (P8); (t) the closed host's dependencies, Traverse False and True.
@@ -266,6 +267,22 @@ def dependency_place(path, run_folder, copy_folder, master=""):
     else:
         where = "outside the run folder: " + ntpath.basename(str(path))
     return where, inside(path, copy_folder)
+
+
+def copied_folder_refusals(stored, assembly_folder, names_in_folder):
+    """W9D-INTERFACES §3 R.2's copied-or-moved-folder refusal (the demonstration's review, §5, ruled): the stored
+    dependency paths that lie outside the old assembly's own folder while a file of the same name sits in that folder
+    (``names_in_folder``, compared case aside). Any one refuses the not-open read; a library part referenced in place,
+    with no namesake beside the assembly, does not. Windows paths, by ``ntpath``."""
+    import ntpath
+    root = ntpath.normcase(ntpath.normpath(assembly_folder)).rstrip("\\/")
+    here = {ntpath.normcase(n) for n in names_in_folder}
+    out = []
+    for p in stored:
+        inside = ntpath.normcase(ntpath.normpath(p)).startswith(root + "\\")
+        if not inside and ntpath.normcase(ntpath.basename(p)) in here:
+            out.append(p)
+    return out
 
 
 def prefilter(target, candidates, rel=1e-9):
@@ -505,6 +522,13 @@ def self_check():
        == ("in --user-master: Housing.SLDPRT", False), "a dependency still in the master is said so")
     ok(dependency_place("D:\\Users\\Someone\\Parts\\Bolt.SLDPRT", run_f, copy_f, master_f)
        == ("outside the run folder: Bolt.SLDPRT", False), "outside both: the file name only, no account folders")
+    names = ["RangeBox.SLDASM", "Sprocket.SLDPRT", "Housing.SLDPRT"]
+    ok(copied_folder_refusals(["C:\\M\\setup.master\\Sprocket.SLDPRT", "C:\\Lib\\Bolt.SLDPRT",
+                               "C:\\R\\out\\d-state\\housing.sldprt"], "C:\\R\\out\\d-state", names)
+       == ["C:\\M\\setup.master\\Sprocket.SLDPRT"],
+       "R.2: a stored path elsewhere with a namesake beside the assembly refuses; a library part or one in place does not")
+    ok(copied_folder_refusals(["C:\\R\\out\\d-state2\\Sprocket.SLDPRT"], "C:\\R\\out\\d-state", names)
+       == ["C:\\R\\out\\d-state2\\Sprocket.SLDPRT"], "R.2: a sibling folder whose name starts alike is outside")
     ok(prefilter(("area", 2.0e-4), [("area", 2.0e-4), ("area", 2.1e-4), ("area", 2.0e-4 * (1 + 1e-12)), None])
        == [0, 2, 3], "a face: equal areas kept, another dropped, an unread candidate kept")
     ok(prefilter(("circle", 0.005), [("circle", 0.005), ("circle", 0.006), ("line", None)]) == [0],
@@ -1510,13 +1534,17 @@ def state_lightweight(name):
     return work
 
 
-def state_version(path, other, folder, master=""):
+def state_version(path, other, folder, master="", moved=""):
     """Closed-file reads only, nothing opened: the closed assembly's ``ISldWorks.VersionHistory`` (the ledger: verified
     on 2026 SP1.1 for a closed file, never by the app) and ``GetLatestSupportedFileVersion``; S-b's negative control,
     ``other``, a file the other SolidWorks saved, read the same way when given; S-f's ``GetDocumentDependencies2(path,
     False, False, False)`` (the ledger: verified, never by the app) and each dependency's ``VersionHistory``. For the
     2024 run (W9D-PROBES-REVIEW, point 5): each dependency by its place (``dependency_place``: relative to the run
-    folder, under the copy ``folder`` or not, on disk), and the same read with Traverse True beside it (a fact)."""
+    folder, under the copy ``folder`` or not, on disk), and the same read with Traverse True beside it (a fact). For R.2's
+    copied-folder rule (the demonstration's review, §5): ``GetDocumentDependencies2(path, False, True, False)``
+    (Searchflag True) beside Searchflag False, on the copy and on ``moved``, a plain file copy of the master's folder
+    that SolidWorks never opened or saved (so its stored paths are the master's), each path by its place, on disk, and
+    whether a file of its name sits beside that assembly (facts, proposing nothing)."""
     def work(s):
         app = s._app  # noqa: SLF001
         out = {"history": _plain(raw(app, "VersionHistory", path)), "latest": _plain(raw(app, "GetLatestSupportedFileVersion")),
@@ -1537,6 +1565,26 @@ def state_version(path, other, folder, master=""):
                 out[key] = got
             except Exception as exc:  # noqa: BLE001
                 out[key] = f"{type(exc).__name__}: {exc}"
+        out["searched"] = {}
+        for label, asm in (("copy", path), ("moved", moved)):
+            if not asm or not os.path.isfile(asm):
+                out["searched"][label] = "not made"
+                continue
+            beside = os.listdir(os.path.dirname(asm))
+            got = {}
+            for searchflag in (False, True):
+                try:
+                    paths = dependency_paths(_plain(raw(app, "GetDocumentDependencies2", asm, False, searchflag, False)))
+                    got[str(searchflag)] = {
+                        "paths": {dependency_place(d, OUT, os.path.dirname(asm), master)[0]: os.path.isfile(d)
+                                  for d in paths},
+                        "refused": [dependency_place(d, OUT, os.path.dirname(asm), master)[0]
+                                    for d in copied_folder_refusals(paths, os.path.dirname(asm), beside)],
+                        "all_beside": bool(paths) and all(dependency_place(d, OUT, os.path.dirname(asm))[1]
+                                                          for d in paths)}
+                except Exception as exc:  # noqa: BLE001
+                    got[str(searchflag)] = f"{type(exc).__name__}: {exc}"
+            out["searched"][label] = got
         return out
     return work
 
@@ -1677,8 +1725,24 @@ def section_state(out):
 
         def version():
             other = A._arg("--other-version-file")                  # noqa: SLF001
+            moved = os.path.join(OUT, "d-state-moved")
+            try:
+                import shutil
+                if not os.path.isdir(moved):
+                    shutil.copytree(A.user_master(), moved)            # a plain copy, never opened or saved
+                moved_asm = os.path.join(moved, os.path.basename(box.assembly))
+            except OSError as exc:
+                say(f"fact    state (v): the master's folder could not be copied for the Searchflag read: {exc}")
+                moved_asm = ""
             got = run("state (v): closed-file reads: the last saved version, the dependencies", C.in_build(
-                state_version(box.assembly, other, folder, A.user_master())), 120)
+                state_version(box.assembly, other, folder, A.user_master(), moved_asm)), 180)
+            for label, reading in (got.get("searched") or {}).items():
+                say(f"fact    state (v) Searchflag, the {label} ({'the saved d-state copy' if label == 'copy' else 'a plain copy of the master folder, never opened'}): "
+                    f"{reading}; R.2's copied-folder rule refuses on Searchflag False's paths "
+                    f"{(reading.get('False') or {}).get('refused') if isinstance(reading, dict) and isinstance(reading.get('False'), dict) else None}; "
+                    f"Searchflag True gives only files beside the assembly "
+                    f"{(reading.get('True') or {}).get('all_beside') if isinstance(reading, dict) and isinstance(reading.get('True'), dict) else None} "
+                    "(a fact: whether Searchflag True gives the paths SolidWorks would load, W9D-INTERFACES §3 R.2)")
             last, latest = last_saved(got.get("history")), got.get("latest")
             other_last = last_saved(got.get("other")) if other and not str(got.get("other", "")).count("Error") else None
             say(f"fact    state (v): VersionHistory {got.get('history')}, last {last}; GetLatestSupportedFileVersion "
@@ -1933,7 +1997,7 @@ def section_sub(out):
 
 ORDER = ["faces", "state", "sub"]
 SECTIONS = {"faces": section_faces, "state": section_state, "sub": section_sub}
-FOLDERS = {"faces": ["d-faces", "d-faces-second"], "state": ["d-state"], "sub": ["d-sub"]}
+FOLDERS = {"faces": ["d-faces", "d-faces-second"], "state": ["d-state", "d-state-moved"], "sub": ["d-sub"]}
 
 
 def done_here(name):
