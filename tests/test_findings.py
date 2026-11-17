@@ -4,6 +4,7 @@
 tool's constants drifting from it.
 """
 
+import ast
 import json
 import math
 from pathlib import Path
@@ -2304,3 +2305,131 @@ def test_w9a_2024_confirming_updates_go_ahead_with_the_box_coming_and_going():
     assert findings.WHATS_WRONG_OPENS_IN_UPDATE_WITH_USER_MATE_IN_ERROR_ON_2024 is True
     assert findings.WHATS_WRONG_OPENS_IN_UPDATE_WITH_PART_FEATURE_IN_ERROR_ON_2024 is True
     assert findings.WHATS_WRONG_IN_UPDATE_BLOCKS_ON_2024 is False
+
+
+W9C_PROBES = LATEST.parent / "w9c-probes-20261117-061130.json"
+W9C_PROBES_LOG = LATEST.parent / "w9c-probes-sw2026-20261117-2.log"
+
+
+def _w9c_probes():
+    """W9c's probes on 2026, the second run: its JSON and log by line number from 1."""
+    return _w9a_run(W9C_PROBES, W9C_PROBES_LOG, "37eee43", (34, 1, 1))
+
+
+def test_w9c_p1_deleting_a_component_by_select4_and_editdelete_on_2026():
+    """findings.py COMPONENT_DELETE_*_ON_2026 (the probes' review): four clean cases, the route on RangeBox's three
+    modes, the touching mates gone and every other kept, handles held in their epoch answering, no dialog."""
+    data, w9c = _w9c_probes()
+    cases = data["sections"]["p1"]["cases"]
+    assert [c["route"] for c in cases.values()] == ["select4-editdelete", "feature-editdelete", "deleteselection2",
+                                                     "select4-editdelete"]
+    for case in cases.values():
+        verdict = case["verdict"]
+        assert verdict["clean"] and verdict["gone_everywhere"] and verdict["touching_read"]
+        assert verdict["mates_left"] == {} and verdict["other_mates_lost"] == [] and verdict["errors_after"] == {}
+        assert verdict["handles_stale"] == [] and verdict["handles_untested"] is False
+        assert case["read"]["epoch_kept"] == case["read"]["epoch_held_read"]
+    box = cases["p1-4-select4-editdelete"]
+    assert box["box"] == "rangebox" and box["verdict"]["mates_removed"] == ["HighDog locked to Sun",
+                                                                            "RangeSlv engages HighDog"]
+    by_mode = box["read"]["components_by_configuration"]
+    assert sorted(by_mode) == ["H", "L", "N"] and not any("Dog_m1.25_N17-1" in names for names in by_mode.values())
+    for at, n in ((35, 1), (56, 2), (76, 3), (102, 4)):
+        assert w9c[at].startswith(f"ok      p1 case {n} (") and w9c[at].endswith("measured, no dialog; clean True")
+    assert w9c[33].startswith("fact    p1 case 1: selected [True, 1]; the call returned None")
+    assert w9c[104].startswith("propose COMPONENT_DELETE_ROUTE = 'select4-editdelete'")
+    assert w9c[108].startswith("propose COMPONENT_DELETE_DIALOG = False")
+    assert not [line for line in w9c if line.startswith(("STOP", "NOTE    a SolidWorks window"))]
+    assert findings.COMPONENT_DELETE_ROUTE_ON_2026 == "select4-editdelete"
+    for name in ("ROUTE_IN_EVERY_CONFIGURATION", "TAKES_ITS_MATES", "KEEPS_OTHER_HANDLES"):
+        assert getattr(findings, f"COMPONENT_DELETE_{name}_ON_2026") is True
+    assert findings.COMPONENT_DELETE_DIALOG_ON_2026 is False
+    for name in ("ROUTE", "ROUTE_IN_EVERY_CONFIGURATION", "TAKES_ITS_MATES", "KEEPS_OTHER_HANDLES", "DIALOG"):
+        assert getattr(findings, f"COMPONENT_DELETE_{name}_ON_2024") is None
+
+
+def test_w9c_m1_reads_the_kinds_w9a_left_unread_and_a_sub_assemblys_leaf_on_2026():
+    """findings.py M1_READS_*_ON_2026: mate_info's type and every entity's component, whole, nothing marked."""
+    data, w9c = _w9c_probes()
+    mates = data["sections"]["m1"]["read"]["mates"]
+    expected = {"UserConcentric": (1, ["RangeBox_Layout-1", "Sprocket-1"]),
+                "UserLimitDistance": (5, ["Sprocket-2", "RangeBox_Layout-1"]),
+                "UserLimitAngle": (6, ["Sprocket-3", "RangeBox_Layout-1"]),
+                "UserWidth": (11, ["Sprocket-4", "Sprocket-4", "Housing-1", "Housing-1"]),
+                "UserGearOnSun": (10, ["Sprocket-5", "Gear_m1.25_N29-1"])}
+    for name, (kind, components) in expected.items():
+        assert mates[name]["mate_info"] == {"type": kind, "components": components, "whole": True}
+    assert w9c[142] == "ok      m1: every new mate's flag reads back as set in every mode"
+    assert w9c[151] == "ok      m1: the reads (mate_info, flags, definition, codes) marked no document: none"
+    assert w9c[149] == ("fact    m1 width (NEW: width faces mark 1, tab faces mark 16 (the API help's marks)): made")
+    judged = data["sections"]["m1"]["judged"]
+    assert all(j["in_inventory"] for j in judged.values())
+    assert [k for k, j in judged.items() if j["named_by_judgement"]] == ["gear on an app gear"]
+    leaf = data["sections"]["p2"]["insert"]["mate"]["info"]
+    assert leaf == {"type": 0, "components": ["RangeBox_Layout-1", "UserSub-1/P2Sprocket-1"]}
+    assert w9c[324].startswith("propose M1_READS_SUBASSEMBLY_LEAF = True")
+    for name in ("CONCENTRIC", "LIMIT_DISTANCE", "LIMIT_ANGLE", "WIDTH", "GEAR_ON_AN_APP_GEAR", "SUBASSEMBLY_LEAF"):
+        assert getattr(findings, f"M1_READS_{name}_ON_2026") is True
+        assert getattr(findings, f"M1_READS_{name}_ON_2024") is None
+
+
+def test_w9c_s5_the_assemblys_own_plane_names_the_root_component_on_2026():
+    """findings.py ASSEMBLY_ENTITY_COMPONENT_IS_ROOT_ON_2026 (the probes' review, must-fix 1)."""
+    data, w9c = _w9c_probes()
+    assert "its root component reads 'RangeBox'" in w9c[232]
+    assert w9c[260].startswith("fact    s5 (a) UserAsm6: MateDistanceDim type 5")
+    assert w9c[262].strip().startswith("entity 1: assembly: the assembly's own (the root component); tree order 1; "
+                                       "component 'RangeBox'")
+    entity = data["sections"]["s5"]["read"]["mates"]["UserAsm6"]["entities"][1]
+    assert entity["component"] == "RangeBox" and entity["kind"] == "assembly"
+    assert findings.ASSEMBLY_ENTITY_COMPONENT_IS_ROOT_ON_2026 is True
+    assert findings.ASSEMBLY_ENTITY_COMPONENT_IS_ROOT_ON_2024 is None
+
+
+def test_w9c_s5_and_p2_readings_for_w9d_set_as_narrow_as_shown_on_2026():
+    """findings.py, W9d's readings: the persistent reference on reference features only, the remake on axes, planes and
+    locks, no unshown per-configuration state read, the read-only open when not open, the sub-assembly insert and its
+    missing part under a Silent open."""
+    data, w9c = _w9c_probes()
+    s5 = data["sections"]["s5"]
+    assert w9c[265].startswith("fact    s5 (b): 13 feature entities; part-level reference read on 13")
+    resolved = w9c[265].split("resolved in their part to ")[1]
+    features = set(ast.literal_eval(resolved.split("]")[0] + "]"))
+    assert features == {"Input Axis", "Gear Axis", "Output Axis", "Front Plane", "Top Plane",
+                        "Right Plane"}                                                     # reference features only
+    remade = [line for line in w9c[267:279] if line.startswith("fact    s5 (c) User")]
+    assert len(remade) == 10 and all(line.endswith("definition differs nowhere") for line in remade)
+    assert w9c[278].startswith("fact    s5 (c): each component in the second assembly against where it stood")
+    assert set(ast.literal_eval(w9c[278].split("first: ")[1]).values()) == {0.0}
+    states = s5["states"]
+    assert states["truth"] == {"H": 2, "N": 2, "L": 0}
+    assert [v["agrees"] for v in states["verdicts"].values()] == [False, True]
+    assert list(states["flags"].values()) == [[], ["RangeBox.SLDASM"]]
+    assert w9c[284].startswith("propose COMPONENT_STATE_PER_CONFIGURATION_ROUTE = None")
+    read_only = s5["read_only"]
+    assert (read_only["not_open"]["read_only"], read_only["not_open"]["save_flag"], read_only["not_open"]["errors"]) \
+        == (True, False, 0)
+    assert (read_only["already_open"]["read_only"], read_only["already_open"]["warnings"]) == (False, 128)
+    p2 = data["sections"]["p2"]
+    assert p2["insert"]["children"] == ["UserSub-1/P2Sprocket-1"] and p2["insert"]["mate"]["status"] == 1
+    opened = p2["missing"]["open"]
+    assert (opened["errors"], opened["warnings"], opened["save_flag"], opened["save_flag_after_settle"]) == \
+        (2, 0, True, True)
+    (child,) = opened["components"]
+    assert child["suppression"] == 0 and child["document"] is None and child["path"].endswith("P2Missing.SLDPRT")
+    assert w9c[328].startswith("propose SUBASSEMBLY_MISSING_REFERENCE_DIALOG = False")
+    assert findings.PERSIST_REFERENCE_ROUTE_FOR_REFERENCE_FEATURES_ON_2026.startswith("GetPersistReference3")
+    assert findings.MATE_REMAKE_ON_AXES_PLANES_AND_LOCKS_ROUTE_ON_2026.startswith("AddMate5")
+    assert findings.COMPONENT_STATE_PER_CONFIGURATION_ROUTE_ON_2026 is None
+    assert findings.OPEN_READ_ONLY_ROUTE_WHEN_NOT_OPEN_ON_2026 == "OpenDoc6(path, assembly, Silent | ReadOnly)"
+    assert findings.OPEN_READ_ONLY_DIALOG_ON_2026 is False
+    assert findings.SUBASSEMBLY_INSERT_ROUTE_ON_2026 == "OpenDoc6 the sub-assembly, then AddComponent5"
+    assert findings.SUBASSEMBLY_MISSING_REFERENCE_DIALOG_ON_2026 is False
+    for name in ("PERSIST_REFERENCE_ROUTE_FOR_REFERENCE_FEATURES", "MATE_REMAKE_ON_AXES_PLANES_AND_LOCKS_ROUTE",
+                 "COMPONENT_STATE_PER_CONFIGURATION_ROUTE", "OPEN_READ_ONLY_ROUTE_WHEN_NOT_OPEN",
+                 "OPEN_READ_ONLY_DIALOG", "SUBASSEMBLY_INSERT_ROUTE", "SUBASSEMBLY_MISSING_REFERENCE_DIALOG",
+                 "SUBASSEMBLY_MISSING_PART_READS"):
+        assert getattr(findings, f"{name}_ON_2024") is None, name
+    for name in ("COMPONENT_DELETE_ROUTE", "PERSIST_REFERENCE_ROUTE", "MATE_REMAKE_FROM_DEFINITION_ROUTE",
+                 "OPEN_READ_ONLY_ROUTE", "COMPONENT_DELETE_IN_EVERY_CONFIGURATION"):
+        assert not hasattr(findings, name), name                  # set narrower, by the narrower name

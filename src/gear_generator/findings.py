@@ -1821,3 +1821,123 @@ WHATS_WRONG_OPENS_IN_UPDATE_WITH_PART_FEATURE_IN_ERROR_ON_2024 = True
 #   148-161, 786-800).
 WHATS_WRONG_IN_UPDATE_BLOCKS_ON_2026 = False
 WHATS_WRONG_IN_UPDATE_BLOCKS_ON_2024 = False
+
+# ---------------------------------------------------------------------------------------------------------------------
+# W9c's probes (ISSUE-1-PLAN §4 P1, M1's leftovers, S5 and P2) on SolidWorks 2026 34.1.1, as their review sets them
+# (docs/notes-workbook/W9C-PROBES-REVIEW.md, 88a251e). w9c is probe/results/w9c-probes-sw2026-20261117-2.log (snapshot
+# 37eee43) with w9c-probes-20261117-061130.json, the second run, which repeats the first run's p1, m1 and p2 and runs
+# s5 whole. Every case under a watch that logs a dialog and answers none; none came but progress boxes and the
+# notification box (w9c:9, 23, 53, 126, 212, 290, 320-321, 325). 2026 only: each _ON_2024 is None until the 2024 run
+# is reviewed, and a path gated on one of these refuses on 2024 meanwhile.
+#
+# Deleting a component (P1). Four cases, each on its own fresh copy, the assembly reopened from disk: G4 out of the
+# 12 : 1 by three routes (w9c:14-35, 37-56, 58-76) and HighDog out of RangeBox with its three modes by the first
+# (w9c:78-102). Judged by the reads, not the calls' returns (EditDelete returns None, w9c:33, 54, 100).
+# - COMPONENT_DELETE_ROUTE: IComponent2.Select4(False, null, False), then IModelDoc2.EditDelete(). Clean on every
+#   case (the component gone, every mate touching it gone by the MateGroup walk and by FeatureByName, every other mate
+#   still there, nothing else moved, no error after; w9c:34, 55, 75, 101). The other two routes (the component's
+#   feature selected, MATE_DELETE_ROUTE's form; DeleteSelection2(0)) were equally clean on the 12 : 1. Shown on a
+#   gear with app mates only, alone in its file (G4) and sharing its file with another instance (HighDog beside
+#   LowDog, all of whose mates stayed). Not shown: a component with a user mate or an in-context reference on it;
+#   W9c refuses those before any delete (ISSUE-1-PLAN §2.1).
+# - COMPONENT_DELETE_ROUTE_IN_EVERY_CONFIGURATION: True for that route only, on RangeBox's three modes, the assembly
+#   reopened from disk, each mode shown and its components listed after the delete (the JSON's case 4
+#   components_by_configuration). The other routes were not run with configurations, and the mates' error codes were
+#   read in the active mode only (the review's should-fix 2 and 4).
+# - COMPONENT_DELETE_TAKES_ITS_MATES: True. Covered: a coupling on in one mode only (RangeSlv engages HighDog), a
+#   lock, a mesh, an axis and an along (w9c:34, 101).
+# - COMPONENT_DELETE_KEEPS_OTHER_HANDLES: True within one epoch only: no configuration shown and no open between
+#   keeping a handle and using it (epoch_kept equal to epoch_held_read, every held handle answering Name2 and
+#   Transform2). After a show handles go stale anyway (ruling 9.4).
+# - COMPONENT_DELETE_DIALOG: False, on every route (w9c:35, 56, 76, 102, 108).
+COMPONENT_DELETE_ROUTE_ON_2026 = "select4-editdelete"
+COMPONENT_DELETE_ROUTE_ON_2024 = None
+COMPONENT_DELETE_ROUTE_IN_EVERY_CONFIGURATION_ON_2026 = True
+COMPONENT_DELETE_ROUTE_IN_EVERY_CONFIGURATION_ON_2024 = None
+COMPONENT_DELETE_TAKES_ITS_MATES_ON_2026 = True
+COMPONENT_DELETE_TAKES_ITS_MATES_ON_2024 = None
+COMPONENT_DELETE_KEEPS_OTHER_HANDLES_ON_2026 = True
+COMPONENT_DELETE_KEEPS_OTHER_HANDLES_ON_2024 = None
+COMPONENT_DELETE_DIALOG_ON_2026 = False
+COMPONENT_DELETE_DIALOG_ON_2024 = None
+#
+# M1's leftovers: the user-mate kinds W9a left unread, each made on its own user component in a copy of RangeBox with
+# H active (every flag read back as set in every mode, w9c:142) and read by the app's own swcom.mate_info and a quiet
+# press, GetSaveFlag around every read (nothing marked, w9c:151). mate_info gave each one's swMateType_e and every
+# entity's component, whole True (w9c:152-156), and each went into the recorded inventory (w9c:190-194):
+# - M1_READS_CONCENTRIC (type 1, a face of a user part and the layout's axis), _LIMIT_DISTANCE (type 5) and
+#   _LIMIT_ANGLE (type 6, plane to plane; their range in the definition's MaximumDistance/MinimumDistance and
+#   MaximumAngle/MinimumAngle), _WIDTH (type 11, four faces; made only with the tab faces at mark 16, w9c:147-149),
+#   _GEAR_ON_AN_APP_GEAR (type 10, a user component's axis to Sun's; the footer's judgement refuses it by name,
+#   w9c:187). Read, not judged: concentric, both limits and width touched only the layout and user components, so
+#   no put body was involved and the judgement could not have named them (the review's should-fix 3). What stays
+#   refused is unchanged: any kind but a lock with an entity on a body Update puts.
+# - M1_READS_SUBASSEMBLY_LEAF: True. A coincident to a leaf of a user sub-assembly reads the leaf's Name2 as the path
+#   "UserSub-1/P2Sprocket-1" (w9c:322, 324), which swbuild's owner already splits to its top-level component. One
+#   leaf, one coincident, the sub-assembly with no configurations of its own.
+M1_READS_CONCENTRIC_ON_2026 = True
+M1_READS_CONCENTRIC_ON_2024 = None
+M1_READS_LIMIT_DISTANCE_ON_2026 = True
+M1_READS_LIMIT_DISTANCE_ON_2024 = None
+M1_READS_LIMIT_ANGLE_ON_2026 = True
+M1_READS_LIMIT_ANGLE_ON_2024 = None
+M1_READS_WIDTH_ON_2026 = True
+M1_READS_WIDTH_ON_2024 = None
+M1_READS_GEAR_ON_AN_APP_GEAR_ON_2026 = True
+M1_READS_GEAR_ON_AN_APP_GEAR_ON_2024 = None
+M1_READS_SUBASSEMBLY_LEAF_ON_2026 = True
+M1_READS_SUBASSEMBLY_LEAF_ON_2024 = None
+#
+# ASSEMBLY_ENTITY_COMPONENT_IS_ROOT: a mate entity on the assembly's own plane names, through ReferenceComponent, the
+# active configuration's root component (Name2 the assembly's title, "RangeBox"), not None. s5 (a) read UserAsm6's
+# second entity, a distance to the assembly's own Front Plane, so (w9c:232, 260-262). swbuild's user-work read maps
+# that root to the assembly's own (the review's must-fix 1); W9a's read before took it for a user component.
+ASSEMBLY_ENTITY_COMPONENT_IS_ROOT_ON_2026 = True
+ASSEMBLY_ENTITY_COMPONENT_IS_ROOT_ON_2024 = None
+#
+# For W9d (S5 and P2), on record now; nothing may rest on one that is None.
+# - PERSIST_REFERENCE_ROUTE_FOR_REFERENCE_FEATURES: GetPersistReference3 on the part-level feature, reached through
+#   the component's GetModelDoc2, and GetObjectByPersistReference3 in that part: 13 entities read and each resolved to
+#   its own feature (w9c:265). Reference features only: the axes and planes of user parts and the layout. Not shown: a
+#   face, an edge or a vertex (the review's must-fix 3), the assembly-context route (read only), 2024.
+# - MATE_REMAKE_ON_AXES_PLANES_AND_LOCKS_ROUTE: AddMate5 from IMate2's Type, Alignment and Flipped and the
+#   definition's values, on entities found by part-level reference, the layout's name, the assembly's plane by tree
+#   order or the whole component: ten mates remade with equal definitions and frames, coincident x5 (axis to axis),
+#   lock x3 (whole components), distance x2 (plane to plane, one to the assembly's own Front Plane by tree order) and
+#   angle x1, all at alignment 0 or 2, none flipped, into a one-configuration assembly (w9c:267-279). Not covered:
+#   concentric, parallel, perpendicular, tangent, limit distance and angle, gear, any face, edge or vertex, a flipped
+#   mate, a leaf inside a sub-assembly, a mate's flag set per configuration.
+# - COMPONENT_STATE_PER_CONFIGURATION_ROUTE: None. IsSuppressed2 on the component's feature read L wrong; each
+#   configuration's GetRootComponent3(True) read right, the configuration not shown included, and marked the
+#   assembly (w9c:281-284; the review's must-fix 2). GetRootComponent3(False) is not tried.
+# - OPEN_READ_ONLY_ROUTE_WHEN_NOT_OPEN: OpenDoc6(path, assembly, Silent | ReadOnly) on an assembly not open: the
+#   document read-only, its flag False, errors 0, components opened (a progress box only; w9c:290-291). On one already
+#   open it returns that document, warning 128, not read-only, and its effect on the flag is not shown (w9c:288).
+# - OPEN_READ_ONLY_DIALOG: False, both opens (w9c:288, 291).
+# - SUBASSEMBLY_INSERT_ROUTE: OpenDoc6 the sub-assembly, then AddComponent5, into an assembly with modes; its children
+#   under the path "UserSub-1/P2Sprocket-1", the leaf mate's flags off in every mode (w9c:322-323). Not read: the
+#   opened sub-assembly's own save flag, the inserted one's state per mode.
+# - SUBASSEMBLY_MISSING_REFERENCE_DIALOG: False, for a Silent open (OpenDoc6 with swOpenDocOptions_Silent) of a
+#   sub-assembly whose part file is gone, and for its insert: no dialog in either, nor 10 s after (w9c:326-328).
+# - SUBASSEMBLY_MISSING_PART_READS: what that open read: errors 2, warnings 0; the missing child GetSuppression2 0,
+#   its stored path kept, no document; the sub-assembly modified (save flag True) straight after the open and after
+#   the settle; inserted, the child the same under "UserSubMissing-1/P2Missing-1" (w9c:326-327).
+PERSIST_REFERENCE_ROUTE_FOR_REFERENCE_FEATURES_ON_2026 = (
+    "GetPersistReference3 on the part-level feature, through the component's GetModelDoc2")
+PERSIST_REFERENCE_ROUTE_FOR_REFERENCE_FEATURES_ON_2024 = None
+MATE_REMAKE_ON_AXES_PLANES_AND_LOCKS_ROUTE_ON_2026 = (
+    "AddMate5 from IMate2 Type, Alignment, Flipped and the definition's values")
+MATE_REMAKE_ON_AXES_PLANES_AND_LOCKS_ROUTE_ON_2024 = None
+COMPONENT_STATE_PER_CONFIGURATION_ROUTE_ON_2026 = None
+COMPONENT_STATE_PER_CONFIGURATION_ROUTE_ON_2024 = None
+OPEN_READ_ONLY_ROUTE_WHEN_NOT_OPEN_ON_2026 = "OpenDoc6(path, assembly, Silent | ReadOnly)"
+OPEN_READ_ONLY_ROUTE_WHEN_NOT_OPEN_ON_2024 = None
+OPEN_READ_ONLY_DIALOG_ON_2026 = False
+OPEN_READ_ONLY_DIALOG_ON_2024 = None
+SUBASSEMBLY_INSERT_ROUTE_ON_2026 = "OpenDoc6 the sub-assembly, then AddComponent5"
+SUBASSEMBLY_INSERT_ROUTE_ON_2024 = None
+SUBASSEMBLY_MISSING_REFERENCE_DIALOG_ON_2026 = False
+SUBASSEMBLY_MISSING_REFERENCE_DIALOG_ON_2024 = None
+SUBASSEMBLY_MISSING_PART_READS_ON_2026 = (
+    "the open's errors 2; the child suppressed (0), its path kept, no document; the sub-assembly marked modified")
+SUBASSEMBLY_MISSING_PART_READS_ON_2024 = None
