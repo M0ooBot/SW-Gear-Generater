@@ -1,0 +1,4175 @@
+{
+ "sections": {
+  "p1": {
+   "cases": {
+    "p1-1-select4-editdelete": {
+     "box": "reducer",
+     "route": "select4-editdelete",
+     "read": {
+      "active": "Default",
+      "flag_before": false,
+      "components_before": [
+       "Reducer_12to1_Layout-1",
+       "Gear_m1.5_N68-1",
+       "Gear_m2_N17-1",
+       "OutputGear-1",
+       "Gear_m1.5_N17-1"
+      ],
+      "frames_before": {
+       "Reducer_12to1_Layout-1": [
+        [
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         0.0,
+         0.0,
+         0.0
+        ]
+       ],
+       "Gear_m1.5_N68-1": [
+        [
+         0.9989329748023724,
+         -0.04618345864573946,
+         0.0,
+         0.04618345864573946,
+         0.9989329748023724,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         63.75,
+         0.0,
+         0.0
+        ]
+       ],
+       "Gear_m2_N17-1": [
+        [
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         63.75,
+         0.0,
+         17.0
+        ]
+       ],
+       "Gear_m1.5_N17-1": [
+        [
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         0.0,
+         0.0,
+         0.0
+        ]
+       ]
+      },
+      "mates_before": {
+       "G1 on S1 Axis": [
+        0,
+        false
+       ],
+       "G1 along S1": [
+        0,
+        false
+       ],
+       "G2 on S2 Axis": [
+        0,
+        false
+       ],
+       "G2 along S2": [
+        0,
+        false
+       ],
+       "G3 locked to G2": [
+        0,
+        false
+       ],
+       "G4 on S3 Axis": [
+        0,
+        false
+       ],
+       "G4 along S3": [
+        0,
+        false
+       ],
+       "G1 meshes G2": [
+        0,
+        false
+       ],
+       "G3 meshes G4": [
+        0,
+        false
+       ]
+      },
+      "touching": [
+       "G4 on S3 Axis",
+       "G4 along S3",
+       "G3 meshes G4"
+      ],
+      "selected": [
+       true,
+       1
+      ],
+      "returned": "None",
+      "flag_after_delete": true,
+      "held_after": {
+       "Reducer_12to1_Layout-1": [
+        [
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         0.0,
+         0.0,
+         0.0
+        ]
+       ],
+       "Gear_m1.5_N68-1": [
+        [
+         0.9989329748023724,
+         -0.04618345864573946,
+         0.0,
+         0.04618345864573946,
+         0.9989329748023724,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         63.75,
+         0.0,
+         0.0
+        ]
+       ],
+       "Gear_m2_N17-1": [
+        [
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         63.75,
+         0.0,
+         17.0
+        ]
+       ],
+       "Gear_m1.5_N17-1": [
+        [
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         0.0,
+         0.0,
+         0.0
+        ]
+       ]
+      },
+      "rebuilt": true,
+      "components_after": [
+       "Reducer_12to1_Layout-1",
+       "Gear_m1.5_N68-1",
+       "Gear_m2_N17-1",
+       "Gear_m1.5_N17-1"
+      ],
+      "mates_after": {
+       "G1 on S1 Axis": [
+        0,
+        false
+       ],
+       "G1 along S1": [
+        0,
+        false
+       ],
+       "G2 on S2 Axis": [
+        0,
+        false
+       ],
+       "G2 along S2": [
+        0,
+        false
+       ],
+       "G3 locked to G2": [
+        0,
+        false
+       ],
+       "G1 meshes G2": [
+        0,
+        false
+       ]
+      },
+      "info_after": {},
+      "components_by_configuration": {
+       "(one)": [
+        "Reducer_12to1_Layout-1",
+        "Gear_m1.5_N68-1",
+        "Gear_m2_N17-1",
+        "Gear_m1.5_N17-1"
+       ]
+      },
+      "frames_after": {
+       "Reducer_12to1_Layout-1": [
+        [
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         0.0,
+         0.0,
+         0.0
+        ]
+       ],
+       "Gear_m1.5_N68-1": [
+        [
+         0.9989329748023724,
+         -0.04618345864573946,
+         0.0,
+         0.04618345864573946,
+         0.9989329748023724,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         63.75,
+         0.0,
+         0.0
+        ]
+       ],
+       "Gear_m2_N17-1": [
+        [
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         63.75,
+         0.0,
+         17.0
+        ]
+       ],
+       "Gear_m1.5_N17-1": [
+        [
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         0.0,
+         0.0,
+         0.0
+        ]
+       ]
+      }
+     },
+     "verdict": {
+      "gone_everywhere": true,
+      "mates_removed": [
+       "G3 meshes G4",
+       "G4 along S3",
+       "G4 on S3 Axis"
+      ],
+      "mates_left": {},
+      "dangling": {},
+      "errors_after": {},
+      "others_moved": {},
+      "handles_stale": [],
+      "dirty": true,
+      "clean": true
+     }
+    },
+    "p1-2-feature-editdelete": {
+     "box": "reducer",
+     "route": "feature-editdelete",
+     "read": {
+      "active": "Default",
+      "flag_before": false,
+      "components_before": [
+       "OutputGear-1",
+       "Gear_m1.5_N68-1",
+       "Reducer_12to1_Layout-1",
+       "Gear_m2_N17-1",
+       "Gear_m1.5_N17-1"
+      ],
+      "frames_before": {
+       "Gear_m1.5_N68-1": [
+        [
+         0.9989329748023724,
+         -0.04618345864573946,
+         0.0,
+         0.04618345864573946,
+         0.9989329748023724,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         63.75,
+         0.0,
+         0.0
+        ]
+       ],
+       "Reducer_12to1_Layout-1": [
+        [
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         0.0,
+         0.0,
+         0.0
+        ]
+       ],
+       "Gear_m2_N17-1": [
+        [
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         63.75,
+         0.0,
+         17.0
+        ]
+       ],
+       "Gear_m1.5_N17-1": [
+        [
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         0.0,
+         0.0,
+         0.0
+        ]
+       ]
+      },
+      "mates_before": {
+       "G1 on S1 Axis": [
+        0,
+        false
+       ],
+       "G1 along S1": [
+        0,
+        false
+       ],
+       "G2 on S2 Axis": [
+        0,
+        false
+       ],
+       "G2 along S2": [
+        0,
+        false
+       ],
+       "G3 locked to G2": [
+        0,
+        false
+       ],
+       "G4 on S3 Axis": [
+        0,
+        false
+       ],
+       "G4 along S3": [
+        0,
+        false
+       ],
+       "G1 meshes G2": [
+        0,
+        false
+       ],
+       "G3 meshes G4": [
+        0,
+        false
+       ]
+      },
+      "touching": [
+       "G4 on S3 Axis",
+       "G4 along S3",
+       "G3 meshes G4"
+      ],
+      "selected": [
+       true,
+       1
+      ],
+      "returned": "None",
+      "flag_after_delete": true,
+      "held_after": {
+       "Gear_m1.5_N68-1": [
+        [
+         0.9989329748023724,
+         -0.04618345864573946,
+         0.0,
+         0.04618345864573946,
+         0.9989329748023724,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         63.75,
+         0.0,
+         0.0
+        ]
+       ],
+       "Reducer_12to1_Layout-1": [
+        [
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         0.0,
+         0.0,
+         0.0
+        ]
+       ],
+       "Gear_m2_N17-1": [
+        [
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         63.75,
+         0.0,
+         17.0
+        ]
+       ],
+       "Gear_m1.5_N17-1": [
+        [
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         0.0,
+         0.0,
+         0.0
+        ]
+       ]
+      },
+      "rebuilt": true,
+      "components_after": [
+       "Gear_m1.5_N68-1",
+       "Reducer_12to1_Layout-1",
+       "Gear_m2_N17-1",
+       "Gear_m1.5_N17-1"
+      ],
+      "mates_after": {
+       "G1 on S1 Axis": [
+        0,
+        false
+       ],
+       "G1 along S1": [
+        0,
+        false
+       ],
+       "G2 on S2 Axis": [
+        0,
+        false
+       ],
+       "G2 along S2": [
+        0,
+        false
+       ],
+       "G3 locked to G2": [
+        0,
+        false
+       ],
+       "G1 meshes G2": [
+        0,
+        false
+       ]
+      },
+      "info_after": {},
+      "components_by_configuration": {
+       "(one)": [
+        "Gear_m1.5_N68-1",
+        "Reducer_12to1_Layout-1",
+        "Gear_m2_N17-1",
+        "Gear_m1.5_N17-1"
+       ]
+      },
+      "frames_after": {
+       "Gear_m1.5_N68-1": [
+        [
+         0.9989329748023724,
+         -0.04618345864573946,
+         0.0,
+         0.04618345864573946,
+         0.9989329748023724,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         63.75,
+         0.0,
+         0.0
+        ]
+       ],
+       "Reducer_12to1_Layout-1": [
+        [
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         0.0,
+         0.0,
+         0.0
+        ]
+       ],
+       "Gear_m2_N17-1": [
+        [
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         63.75,
+         0.0,
+         17.0
+        ]
+       ],
+       "Gear_m1.5_N17-1": [
+        [
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         0.0,
+         0.0,
+         0.0
+        ]
+       ]
+      }
+     },
+     "verdict": {
+      "gone_everywhere": true,
+      "mates_removed": [
+       "G3 meshes G4",
+       "G4 along S3",
+       "G4 on S3 Axis"
+      ],
+      "mates_left": {},
+      "dangling": {},
+      "errors_after": {},
+      "others_moved": {},
+      "handles_stale": [],
+      "dirty": true,
+      "clean": true
+     }
+    },
+    "p1-3-deleteselection2": {
+     "box": "reducer",
+     "route": "deleteselection2",
+     "read": {
+      "active": "Default",
+      "flag_before": false,
+      "components_before": [
+       "OutputGear-1",
+       "Reducer_12to1_Layout-1",
+       "Gear_m1.5_N17-1",
+       "Gear_m2_N17-1",
+       "Gear_m1.5_N68-1"
+      ],
+      "frames_before": {
+       "Reducer_12to1_Layout-1": [
+        [
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         0.0,
+         0.0,
+         0.0
+        ]
+       ],
+       "Gear_m1.5_N17-1": [
+        [
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         0.0,
+         0.0,
+         0.0
+        ]
+       ],
+       "Gear_m2_N17-1": [
+        [
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         63.75,
+         0.0,
+         17.0
+        ]
+       ],
+       "Gear_m1.5_N68-1": [
+        [
+         0.9989329748023724,
+         -0.04618345864573946,
+         0.0,
+         0.04618345864573946,
+         0.9989329748023724,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         63.75,
+         0.0,
+         0.0
+        ]
+       ]
+      },
+      "mates_before": {
+       "G1 on S1 Axis": [
+        0,
+        false
+       ],
+       "G1 along S1": [
+        0,
+        false
+       ],
+       "G2 on S2 Axis": [
+        0,
+        false
+       ],
+       "G2 along S2": [
+        0,
+        false
+       ],
+       "G3 locked to G2": [
+        0,
+        false
+       ],
+       "G4 on S3 Axis": [
+        0,
+        false
+       ],
+       "G4 along S3": [
+        0,
+        false
+       ],
+       "G1 meshes G2": [
+        0,
+        false
+       ],
+       "G3 meshes G4": [
+        0,
+        false
+       ]
+      },
+      "touching": [
+       "G4 on S3 Axis",
+       "G4 along S3",
+       "G3 meshes G4"
+      ],
+      "selected": [
+       true,
+       1
+      ],
+      "returned": "True",
+      "flag_after_delete": true,
+      "held_after": {
+       "Reducer_12to1_Layout-1": [
+        [
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         0.0,
+         0.0,
+         0.0
+        ]
+       ],
+       "Gear_m1.5_N17-1": [
+        [
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         0.0,
+         0.0,
+         0.0
+        ]
+       ],
+       "Gear_m2_N17-1": [
+        [
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         63.75,
+         0.0,
+         17.0
+        ]
+       ],
+       "Gear_m1.5_N68-1": [
+        [
+         0.9989329748023724,
+         -0.04618345864573946,
+         0.0,
+         0.04618345864573946,
+         0.9989329748023724,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         63.75,
+         0.0,
+         0.0
+        ]
+       ]
+      },
+      "rebuilt": true,
+      "components_after": [
+       "Reducer_12to1_Layout-1",
+       "Gear_m1.5_N17-1",
+       "Gear_m2_N17-1",
+       "Gear_m1.5_N68-1"
+      ],
+      "mates_after": {
+       "G1 on S1 Axis": [
+        0,
+        false
+       ],
+       "G1 along S1": [
+        0,
+        false
+       ],
+       "G2 on S2 Axis": [
+        0,
+        false
+       ],
+       "G2 along S2": [
+        0,
+        false
+       ],
+       "G3 locked to G2": [
+        0,
+        false
+       ],
+       "G1 meshes G2": [
+        0,
+        false
+       ]
+      },
+      "info_after": {},
+      "components_by_configuration": {
+       "(one)": [
+        "Reducer_12to1_Layout-1",
+        "Gear_m1.5_N17-1",
+        "Gear_m2_N17-1",
+        "Gear_m1.5_N68-1"
+       ]
+      },
+      "frames_after": {
+       "Reducer_12to1_Layout-1": [
+        [
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         0.0,
+         0.0,
+         0.0
+        ]
+       ],
+       "Gear_m1.5_N17-1": [
+        [
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         0.0,
+         0.0,
+         0.0
+        ]
+       ],
+       "Gear_m2_N17-1": [
+        [
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         63.75,
+         0.0,
+         17.0
+        ]
+       ],
+       "Gear_m1.5_N68-1": [
+        [
+         0.9989329748023724,
+         -0.04618345864573946,
+         0.0,
+         0.04618345864573946,
+         0.9989329748023724,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         63.75,
+         0.0,
+         0.0
+        ]
+       ]
+      }
+     },
+     "verdict": {
+      "gone_everywhere": true,
+      "mates_removed": [
+       "G3 meshes G4",
+       "G4 along S3",
+       "G4 on S3 Axis"
+      ],
+      "mates_left": {},
+      "dangling": {},
+      "errors_after": {},
+      "others_moved": {},
+      "handles_stale": [],
+      "dirty": true,
+      "clean": true
+     }
+    },
+    "p1-4-select4-editdelete": {
+     "box": "rangebox",
+     "route": "select4-editdelete",
+     "read": {
+      "active": "H",
+      "flag_before": false,
+      "components_before": [
+       "RangeBox_Layout-1",
+       "RangeBox_Carrier_Carrier-1",
+       "Sleeve_m1.25_N17-1",
+       "Dog_m1.25_N17-2",
+       "Gear_m1.25_N29-1",
+       "Ring_m1.25_N55-1",
+       "Gear_m1.25_N13-1",
+       "Dog_m1.25_N17-1",
+       "Gear_m1.25_N13-2",
+       "Gear_m1.25_N13-3"
+      ],
+      "frames_before": {
+       "RangeBox_Layout-1": [
+        [
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         0.0,
+         0.0,
+         0.0
+        ]
+       ],
+       "RangeBox_Carrier_Carrier-1": [
+        [
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         0.0,
+         0.0,
+         0.0
+        ]
+       ],
+       "Sleeve_m1.25_N17-1": [
+        [
+         0.9829730996839018,
+         -0.18374951781657034,
+         0.0,
+         0.18374951781657034,
+         0.9829730996839018,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         0.0,
+         0.0,
+         -34.5
+        ]
+       ],
+       "Dog_m1.25_N17-2": [
+        [
+         0.9324722294043558,
+         -0.3612416661871529,
+         0.0,
+         0.3612416661871529,
+         0.9324722294043558,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         0.0,
+         0.0,
+         -19.5
+        ]
+       ],
+       "Gear_m1.25_N29-1": [
+        [
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         0.0,
+         0.0,
+         5.5
+        ]
+       ],
+       "Ring_m1.25_N55-1": [
+        [
+         0.9983691039261356,
+         -0.05708881086276809,
+         0.0,
+         0.05708881086276809,
+         0.9983691039261356,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         0.0,
+         0.0,
+         5.5
+        ]
+       ],
+       "Gear_m1.25_N13-1": [
+        [
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         26.25,
+         0.0,
+         5.5
+        ]
+       ],
+       "Gear_m1.25_N13-2": [
+        [
+         0.8854560256532233,
+         -0.46472317204374297,
+         0.0,
+         0.46472317204374297,
+         0.8854560256532233,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         -13.125,
+         22.73316685,
+         5.499999999999995
+        ]
+       ],
+       "Gear_m1.25_N13-3": [
+        [
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         -13.125,
+         -22.73316685,
+         5.499999999999995
+        ]
+       ]
+      },
+      "mates_before": {
+       "Sun on Input Axis": [
+        0,
+        false
+       ],
+       "Sun along Input": [
+        0,
+        false
+       ],
+       "HighDog locked to Sun": [
+        0,
+        false
+       ],
+       "Carrier carrier on Carrier Axis": [
+        0,
+        false
+       ],
+       "Carrier carrier along Carrier": [
+        0,
+        false
+       ],
+       "LowDog locked to Carrier carrier": [
+        0,
+        false
+       ],
+       "Planet copy 1 on Planet copy 1 Axis": [
+        0,
+        false
+       ],
+       "Planet copy 1 along Planet copy 1": [
+        0,
+        false
+       ],
+       "Planet copy 2 on Planet copy 2 Axis": [
+        0,
+        false
+       ],
+       "Planet copy 2 along Planet copy 2": [
+        0,
+        false
+       ],
+       "Planet copy 3 on Planet copy 3 Axis": [
+        0,
+        false
+       ],
+       "Planet copy 3 along Planet copy 3": [
+        0,
+        false
+       ],
+       "RangeSlv on Output Axis": [
+        0,
+        false
+       ],
+       "RangeSlv along Output": [
+        0,
+        false
+       ],
+       "Sun meshes Planet copy 1": [
+        0,
+        false
+       ],
+       "Sun meshes Planet copy 2": [
+        0,
+        false
+       ],
+       "Sun meshes Planet copy 3": [
+        0,
+        false
+       ],
+       "Planet copy 1 meshes Ring": [
+        0,
+        false
+       ],
+       "RangeSlv engages HighDog": [
+        0,
+        false
+       ],
+       "RangeSlv engages LowDog": [
+        0,
+        true
+       ]
+      },
+      "touching": [
+       "HighDog locked to Sun",
+       "RangeSlv engages HighDog"
+      ],
+      "selected": [
+       true,
+       1
+      ],
+      "returned": "None",
+      "flag_after_delete": true,
+      "held_after": {
+       "RangeBox_Layout-1": [
+        [
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         0.0,
+         0.0,
+         0.0
+        ]
+       ],
+       "RangeBox_Carrier_Carrier-1": [
+        [
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         0.0,
+         0.0,
+         0.0
+        ]
+       ],
+       "Sleeve_m1.25_N17-1": [
+        [
+         0.9829730996839018,
+         -0.18374951781657034,
+         0.0,
+         0.18374951781657034,
+         0.9829730996839018,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         0.0,
+         0.0,
+         -34.5
+        ]
+       ],
+       "Dog_m1.25_N17-2": [
+        [
+         0.9324722294043558,
+         -0.3612416661871529,
+         0.0,
+         0.3612416661871529,
+         0.9324722294043558,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         0.0,
+         0.0,
+         -19.5
+        ]
+       ],
+       "Gear_m1.25_N29-1": [
+        [
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         0.0,
+         0.0,
+         5.5
+        ]
+       ],
+       "Ring_m1.25_N55-1": [
+        [
+         0.9983691039261356,
+         -0.05708881086276809,
+         0.0,
+         0.05708881086276809,
+         0.9983691039261356,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         0.0,
+         0.0,
+         5.5
+        ]
+       ],
+       "Gear_m1.25_N13-1": [
+        [
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         26.25,
+         0.0,
+         5.5
+        ]
+       ],
+       "Gear_m1.25_N13-2": [
+        [
+         0.8854560256532233,
+         -0.46472317204374297,
+         0.0,
+         0.46472317204374297,
+         0.8854560256532233,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         -13.125,
+         22.73316685,
+         5.499999999999995
+        ]
+       ],
+       "Gear_m1.25_N13-3": [
+        [
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         -13.125,
+         -22.73316685,
+         5.499999999999995
+        ]
+       ]
+      },
+      "rebuilt": true,
+      "components_after": [
+       "RangeBox_Layout-1",
+       "RangeBox_Carrier_Carrier-1",
+       "Sleeve_m1.25_N17-1",
+       "Dog_m1.25_N17-2",
+       "Gear_m1.25_N29-1",
+       "Ring_m1.25_N55-1",
+       "Gear_m1.25_N13-1",
+       "Gear_m1.25_N13-2",
+       "Gear_m1.25_N13-3"
+      ],
+      "mates_after": {
+       "Sun on Input Axis": [
+        0,
+        false
+       ],
+       "Sun along Input": [
+        0,
+        false
+       ],
+       "Carrier carrier on Carrier Axis": [
+        0,
+        false
+       ],
+       "Carrier carrier along Carrier": [
+        0,
+        false
+       ],
+       "LowDog locked to Carrier carrier": [
+        0,
+        false
+       ],
+       "Planet copy 1 on Planet copy 1 Axis": [
+        0,
+        false
+       ],
+       "Planet copy 1 along Planet copy 1": [
+        0,
+        false
+       ],
+       "Planet copy 2 on Planet copy 2 Axis": [
+        0,
+        false
+       ],
+       "Planet copy 2 along Planet copy 2": [
+        0,
+        false
+       ],
+       "Planet copy 3 on Planet copy 3 Axis": [
+        0,
+        false
+       ],
+       "Planet copy 3 along Planet copy 3": [
+        0,
+        false
+       ],
+       "RangeSlv on Output Axis": [
+        0,
+        false
+       ],
+       "RangeSlv along Output": [
+        0,
+        false
+       ],
+       "Sun meshes Planet copy 1": [
+        0,
+        false
+       ],
+       "Sun meshes Planet copy 2": [
+        0,
+        false
+       ],
+       "Sun meshes Planet copy 3": [
+        0,
+        false
+       ],
+       "Planet copy 1 meshes Ring": [
+        0,
+        false
+       ],
+       "RangeSlv engages LowDog": [
+        0,
+        true
+       ]
+      },
+      "info_after": {},
+      "components_by_configuration": {
+       "H": [
+        "RangeBox_Layout-1",
+        "RangeBox_Carrier_Carrier-1",
+        "Sleeve_m1.25_N17-1",
+        "Dog_m1.25_N17-2",
+        "Gear_m1.25_N29-1",
+        "Ring_m1.25_N55-1",
+        "Gear_m1.25_N13-1",
+        "Gear_m1.25_N13-2",
+        "Gear_m1.25_N13-3"
+       ],
+       "N": [
+        "RangeBox_Carrier_Carrier-1",
+        "Dog_m1.25_N17-2",
+        "Sleeve_m1.25_N17-1",
+        "Gear_m1.25_N13-2",
+        "Gear_m1.25_N13-3",
+        "Gear_m1.25_N29-1",
+        "RangeBox_Layout-1",
+        "Gear_m1.25_N13-1",
+        "Ring_m1.25_N55-1"
+       ],
+       "L": [
+        "Ring_m1.25_N55-1",
+        "Sleeve_m1.25_N17-1",
+        "RangeBox_Layout-1",
+        "Gear_m1.25_N29-1",
+        "RangeBox_Carrier_Carrier-1",
+        "Gear_m1.25_N13-1",
+        "Gear_m1.25_N13-2",
+        "Gear_m1.25_N13-3",
+        "Dog_m1.25_N17-2"
+       ]
+      },
+      "frames_after": {
+       "RangeBox_Layout-1": [
+        [
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         0.0,
+         0.0,
+         0.0
+        ]
+       ],
+       "RangeBox_Carrier_Carrier-1": [
+        [
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         0.0,
+         0.0,
+         0.0
+        ]
+       ],
+       "Sleeve_m1.25_N17-1": [
+        [
+         0.9829730996839018,
+         -0.18374951781657034,
+         0.0,
+         0.18374951781657034,
+         0.9829730996839018,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         0.0,
+         0.0,
+         -34.5
+        ]
+       ],
+       "Dog_m1.25_N17-2": [
+        [
+         0.9324722294043558,
+         -0.3612416661871529,
+         0.0,
+         0.3612416661871529,
+         0.9324722294043558,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         0.0,
+         0.0,
+         -19.5
+        ]
+       ],
+       "Gear_m1.25_N29-1": [
+        [
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         0.0,
+         0.0,
+         5.5
+        ]
+       ],
+       "Ring_m1.25_N55-1": [
+        [
+         0.9983691039261356,
+         -0.05708881086276809,
+         0.0,
+         0.05708881086276809,
+         0.9983691039261356,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         0.0,
+         0.0,
+         5.5
+        ]
+       ],
+       "Gear_m1.25_N13-1": [
+        [
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         26.25,
+         0.0,
+         5.5
+        ]
+       ],
+       "Gear_m1.25_N13-2": [
+        [
+         0.8854560256532233,
+         -0.46472317204374297,
+         0.0,
+         0.46472317204374297,
+         0.8854560256532233,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         -13.125,
+         22.73316685,
+         5.499999999999995
+        ]
+       ],
+       "Gear_m1.25_N13-3": [
+        [
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0,
+         0.0,
+         0.0,
+         0.0,
+         1.0
+        ],
+        [
+         -13.125,
+         -22.73316685,
+         5.499999999999995
+        ]
+       ]
+      }
+     },
+     "verdict": {
+      "gone_everywhere": true,
+      "mates_removed": [
+       "HighDog locked to Sun",
+       "RangeSlv engages HighDog"
+      ],
+      "mates_left": {},
+      "dangling": {},
+      "errors_after": {},
+      "others_moved": {},
+      "handles_stale": [],
+      "dirty": true,
+      "clean": true
+     }
+    }
+   },
+   "seconds": 93,
+   "failed": []
+  },
+  "m1": {
+   "made": {
+    "made": {
+     "concentric": [
+      "UserConcentric",
+      1
+     ],
+     "limit distance": [
+      "UserLimitDistance",
+      1
+     ],
+     "limit angle": [
+      "UserLimitAngle",
+      1
+     ],
+     "gear on an app gear": [
+      "UserGearOnSun",
+      1
+     ]
+    },
+    "tries": {
+     "concentric": "made",
+     "limit distance": "made",
+     "limit angle": "made",
+     "width (width faces mark 1, tab faces mark 2)": "SolidWorksError: AddMate5 made no mate (status 0, 0 new)",
+     "width (all four at mark 1)": "SolidWorksError: AddMate5 made no mate (status 0, 0 new)",
+     "gear on an app gear": "made"
+    },
+    "faces": {
+     "ua": [
+      [
+       "cylinder",
+       13.75
+      ],
+      [
+       "cylinder",
+       13.75
+      ],
+      [
+       "cylinder",
+       13.75
+      ],
+      [
+       "cylinder",
+       13.75
+      ],
+      [
+       "cylinder",
+       13.75
+      ],
+      [
+       "cylinder",
+       13.75
+      ],
+      [
+       "cylinder",
+       13.75
+      ],
+      [
+       "cylinder",
+       13.75
+      ],
+      [
+       "cylinder",
+       13.75
+      ],
+      [
+       "cylinder",
+       13.75
+      ],
+      [
+       "cylinder",
+       13.75
+      ],
+      [
+       "cylinder",
+       13.75
+      ],
+      [
+       "cylinder",
+       13.75
+      ],
+      [
+       "cylinder",
+       13.75
+      ],
+      [
+       "cylinder",
+       13.75
+      ],
+      [
+       "cylinder",
+       13.75
+      ],
+      [
+       "cylinder",
+       13.75
+      ],
+      [
+       "cylinder",
+       13.75
+      ],
+      [
+       "cylinder",
+       13.75
+      ],
+      [
+       "cylinder",
+       13.75
+      ],
+      [
+       "plane",
+       6.0
+      ],
+      [
+       "plane",
+       0.0
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       10.75
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       10.75
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       10.75
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       10.75
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       10.75
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       10.75
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       10.75
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       10.75
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       10.75
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       10.75
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       10.75
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       10.75
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       10.75
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       10.75
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       10.75
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       10.75
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       10.75
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       10.75
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       10.75
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       10.75
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       5.0
+      ]
+     ],
+     "ud": [
+      [
+       "cylinder",
+       13.75
+      ],
+      [
+       "cylinder",
+       13.75
+      ],
+      [
+       "cylinder",
+       13.75
+      ],
+      [
+       "cylinder",
+       13.75
+      ],
+      [
+       "cylinder",
+       13.75
+      ],
+      [
+       "cylinder",
+       13.75
+      ],
+      [
+       "cylinder",
+       13.75
+      ],
+      [
+       "cylinder",
+       13.75
+      ],
+      [
+       "cylinder",
+       13.75
+      ],
+      [
+       "cylinder",
+       13.75
+      ],
+      [
+       "cylinder",
+       13.75
+      ],
+      [
+       "cylinder",
+       13.75
+      ],
+      [
+       "cylinder",
+       13.75
+      ],
+      [
+       "cylinder",
+       13.75
+      ],
+      [
+       "cylinder",
+       13.75
+      ],
+      [
+       "cylinder",
+       13.75
+      ],
+      [
+       "cylinder",
+       13.75
+      ],
+      [
+       "cylinder",
+       13.75
+      ],
+      [
+       "cylinder",
+       13.75
+      ],
+      [
+       "cylinder",
+       13.75
+      ],
+      [
+       "plane",
+       6.0
+      ],
+      [
+       "plane",
+       0.0
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       10.75
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       10.75
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       10.75
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       10.75
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       10.75
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       10.75
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       10.75
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       10.75
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       10.75
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       10.75
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       10.75
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       10.75
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       10.75
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       10.75
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       10.75
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       10.75
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       10.75
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       10.75
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       10.75
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       10.75
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       5.0
+      ]
+     ],
+     "uh": [
+      [
+       "cylinder",
+       26.25
+      ],
+      [
+       "cylinder",
+       26.25
+      ],
+      [
+       "cylinder",
+       26.25
+      ],
+      [
+       "cylinder",
+       26.25
+      ],
+      [
+       "cylinder",
+       26.25
+      ],
+      [
+       "cylinder",
+       26.25
+      ],
+      [
+       "cylinder",
+       26.25
+      ],
+      [
+       "cylinder",
+       26.25
+      ],
+      [
+       "cylinder",
+       26.25
+      ],
+      [
+       "cylinder",
+       26.25
+      ],
+      [
+       "cylinder",
+       26.25
+      ],
+      [
+       "cylinder",
+       26.25
+      ],
+      [
+       "cylinder",
+       26.25
+      ],
+      [
+       "cylinder",
+       26.25
+      ],
+      [
+       "cylinder",
+       26.25
+      ],
+      [
+       "cylinder",
+       26.25
+      ],
+      [
+       "cylinder",
+       26.25
+      ],
+      [
+       "cylinder",
+       26.25
+      ],
+      [
+       "cylinder",
+       26.25
+      ],
+      [
+       "cylinder",
+       26.25
+      ],
+      [
+       "cylinder",
+       26.25
+      ],
+      [
+       "cylinder",
+       26.25
+      ],
+      [
+       "cylinder",
+       26.25
+      ],
+      [
+       "cylinder",
+       26.25
+      ],
+      [
+       "cylinder",
+       26.25
+      ],
+      [
+       "cylinder",
+       26.25
+      ],
+      [
+       "cylinder",
+       26.25
+      ],
+      [
+       "cylinder",
+       26.25
+      ],
+      [
+       "cylinder",
+       26.25
+      ],
+      [
+       "cylinder",
+       26.25
+      ],
+      [
+       "cylinder",
+       26.25
+      ],
+      [
+       "cylinder",
+       26.25
+      ],
+      [
+       "cylinder",
+       26.25
+      ],
+      [
+       "cylinder",
+       26.25
+      ],
+      [
+       "cylinder",
+       26.25
+      ],
+      [
+       "cylinder",
+       26.25
+      ],
+      [
+       "cylinder",
+       26.25
+      ],
+      [
+       "cylinder",
+       26.25
+      ],
+      [
+       "cylinder",
+       26.25
+      ],
+      [
+       "cylinder",
+       26.25
+      ],
+      [
+       "plane",
+       4.0
+      ],
+      [
+       "plane",
+       0.0
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       23.25
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       23.25
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       23.25
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       23.25
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       23.25
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       23.25
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       23.25
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       23.25
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       23.25
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       23.25
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       23.25
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       23.25
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       23.25
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       23.25
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       23.25
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       23.25
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       23.25
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       23.25
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       23.25
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       23.25
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       23.25
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       23.25
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       23.25
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       23.25
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       23.25
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       23.25
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       23.25
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       23.25
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       23.25
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       23.25
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       23.25
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       23.25
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       23.25
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       23.25
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       23.25
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       23.25
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       23.25
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       23.25
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       23.25
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "cylinder",
+       23.25
+      ],
+      [
+       "cylinder",
+       0.475
+      ],
+      [
+       "plane",
+       null
+      ],
+      [
+       "cylinder",
+       15.0
+      ]
+     ]
+    }
+   },
+   "read": {
+    "mates": {
+     "UserConcentric": {
+      "mate_info": {
+       "type": 1,
+       "components": [
+        "RangeBox_Layout-1",
+        "Sprocket-1"
+       ],
+       "whole": true
+      },
+      "flags": {
+       "H": false,
+       "N": false,
+       "L": false
+      },
+      "code": [
+       0,
+       false
+      ],
+      "definition": {
+       "type_name": "MateConcentric",
+       "suppressed": false,
+       "type": 1,
+       "alignment": 0,
+       "flipped": false,
+       "variation": [
+        0.0,
+        0.0
+       ],
+       "entities": [
+        {
+         "component": "RangeBox_Layout-1",
+         "reference_type": 5,
+         "params": [
+          0.0,
+          0.0,
+          -0.08899,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0
+         ],
+         "feature": "Input Axis"
+        },
+        {
+         "component": "Sprocket-1",
+         "reference_type": 2,
+         "params": [
+          0.0,
+          0.0,
+          0.05993641526092376,
+          -0.0,
+          -0.0,
+          1.0,
+          0.005,
+          0.0
+         ],
+         "feature": null
+        }
+       ],
+       "values": {
+        "MateAlignment": 0
+       },
+       "dimensions": []
+      }
+     },
+     "UserLimitDistance": {
+      "mate_info": {
+       "type": 5,
+       "components": [
+        "Sprocket-2",
+        "RangeBox_Layout-1"
+       ],
+       "whole": true
+      },
+      "flags": {
+       "H": false,
+       "N": false,
+       "L": false
+      },
+      "code": [
+       0,
+       false
+      ],
+      "definition": {
+       "type_name": "MateLimitDistanceDim",
+       "suppressed": false,
+       "type": 5,
+       "alignment": 0,
+       "flipped": false,
+       "variation": [
+        0.0050000000000000044,
+        -0.0050000000000000044
+       ],
+       "entities": [
+        {
+         "component": "Sprocket-2",
+         "reference_type": 4,
+         "params": [
+          0.0,
+          0.0,
+          -0.08,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0
+         ],
+         "feature": "Front Plane"
+        },
+        {
+         "component": "RangeBox_Layout-1",
+         "reference_type": 4,
+         "params": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0
+         ],
+         "feature": "Front Plane"
+        }
+       ],
+       "values": {
+        "Distance": 0.08,
+        "MateAlignment": 0,
+        "FlipDimension": false,
+        "MaximumDistance": 0.085,
+        "MinimumDistance": 0.075
+       },
+       "dimensions": [
+        [
+         "D1",
+         0.08
+        ]
+       ]
+      }
+     },
+     "UserLimitAngle": {
+      "mate_info": {
+       "type": 6,
+       "components": [
+        "Sprocket-3",
+        "RangeBox_Layout-1"
+       ],
+       "whole": true
+      },
+      "flags": {
+       "H": false,
+       "N": false,
+       "L": false
+      },
+      "code": [
+       0,
+       false
+      ],
+      "definition": {
+       "type_name": "MateLimitPlanarAngleDim",
+       "suppressed": false,
+       "type": 6,
+       "alignment": 0,
+       "flipped": false,
+       "variation": [
+        0.5235987755982988,
+        -0.17453292519943295
+       ],
+       "entities": [
+        {
+         "component": "Sprocket-3",
+         "reference_type": 4,
+         "params": [
+          0.0,
+          0.0,
+          0.1,
+          0.17364817766693036,
+          0.9848077530122081,
+          0.0,
+          0.0,
+          0.0
+         ],
+         "feature": "Top Plane"
+        },
+        {
+         "component": "RangeBox_Layout-1",
+         "reference_type": 4,
+         "params": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0
+         ],
+         "feature": "Top Plane"
+        }
+       ],
+       "values": {
+        "Angle": 0.17453292519943295,
+        "MateAlignment": 0,
+        "FlipDimension": false,
+        "MaximumAngle": 0.6981317007977318,
+        "MinimumAngle": 0.0
+       },
+       "dimensions": [
+        [
+         "D1",
+         0.17453292519943295
+        ]
+       ]
+      }
+     },
+     "UserGearOnSun": {
+      "mate_info": {
+       "type": 10,
+       "components": [
+        "Sprocket-5",
+        "Gear_m1.25_N29-1"
+       ],
+       "whole": true
+      },
+      "flags": {
+       "H": false,
+       "N": false,
+       "L": false
+      },
+      "code": [
+       0,
+       false
+      ],
+      "definition": {
+       "type_name": "MateGearDim",
+       "suppressed": false,
+       "type": 10,
+       "alignment": 2,
+       "flipped": false,
+       "variation": [
+        0.0,
+        0.0
+       ],
+       "entities": [
+        {
+         "component": "Sprocket-5",
+         "reference_type": 5,
+         "params": [
+          0.0,
+          0.0,
+          0.15963004517981985,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0
+         ],
+         "feature": "Gear Axis"
+        },
+        {
+         "component": "Gear_m1.25_N29-1",
+         "reference_type": 5,
+         "params": [
+          0.0,
+          0.0,
+          0.004931645631857944,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0
+         ],
+         "feature": "Gear Axis"
+        }
+       ],
+       "values": {
+        "GearRatioNumerator": 29.0,
+        "GearRatioDenominator": 20.0,
+        "Reverse": true
+       },
+       "dimensions": [
+        [
+         "D1",
+         29.0
+        ],
+        [
+         "D2",
+         20.0
+        ]
+       ]
+      }
+     }
+    },
+    "flags_before": {
+     "RangeBox_Layout.SLDPRT": false,
+     "RangeBox_Carrier_Carrier.SLDPRT": false,
+     "Gear_m1.25_N29.SLDPRT": false,
+     "Gear_m1.25_N13.SLDPRT": false,
+     "Ring_m1.25_N55.SLDPRT": false,
+     "Dog_m1.25_N17.SLDPRT": false,
+     "Sleeve_m1.25_N17.SLDPRT": false,
+     "Housing.SLDPRT": false,
+     "Sprocket.SLDPRT": false,
+     "RangeBox.SLDASM": true
+    },
+    "flags_after": {
+     "RangeBox_Layout.SLDPRT": false,
+     "RangeBox_Carrier_Carrier.SLDPRT": false,
+     "Gear_m1.25_N29.SLDPRT": false,
+     "Gear_m1.25_N13.SLDPRT": false,
+     "Ring_m1.25_N55.SLDPRT": false,
+     "Dog_m1.25_N17.SLDPRT": false,
+     "Sleeve_m1.25_N17.SLDPRT": false,
+     "Housing.SLDPRT": false,
+     "Sprocket.SLDPRT": false,
+     "RangeBox.SLDASM": true
+    }
+   },
+   "judged": {
+    "concentric": {
+     "in_inventory": true,
+     "named_by_judgement": []
+    },
+    "limit distance": {
+     "in_inventory": true,
+     "named_by_judgement": []
+    },
+    "limit angle": {
+     "in_inventory": true,
+     "named_by_judgement": []
+    },
+    "gear on an app gear": {
+     "in_inventory": true,
+     "named_by_judgement": [
+      "In modes H, N and L, UserGearOnSun is a mate in RangeBox.SLDASM that Gear Generator did not make, on Sun, which Update SolidWorks puts back, and a mate of that kind is not moved with its gear, so nothing is changed; in SolidWorks, lock your component to Sun instead, and Update SolidWorks puts it with Sun, or suppress UserGearOnSun in H, N and L, and press Update SolidWorks again."
+     ]
+    }
+   },
+   "seconds": 303,
+   "failed": []
+  },
+  "s5": {
+   "seconds": 39,
+   "failed": [
+    "s5: AssertionError: s5 (a-c): the user mates read: AttributeError: 'NoneType' object has no attribute 'GetModelDoc2'"
+   ]
+  },
+  "p2": {
+   "insert": {
+    "inserted": "UserSub-1",
+    "children": [
+     "UserSub-1/P2Sprocket-1"
+    ],
+    "flag": true,
+    "mate": {
+     "status": 1,
+     "made": [
+      "Coincident1"
+     ],
+     "info": {
+      "type": 0,
+      "components": [
+       "RangeBox_Layout-1",
+       "UserSub-1/P2Sprocket-1"
+      ]
+     },
+     "flags": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "code": 0
+    }
+   },
+   "missing": {
+    "returned": "a document",
+    "extra": null
+   },
+   "seconds": 29,
+   "failed": []
+  }
+ },
+ "stops": [],
+ "proposal": {},
+ "revision": [
+  34,
+  1,
+  1
+ ],
+ "snapshot": "3e11f2b",
+ "whats_wrong_rule": {
+  "helper_present": true,
+  "shows_in_update": false,
+  "allowance_seconds": 60.0
+ },
+ "fails": [
+  "s5: AssertionError: s5 (a-c): the user mates read: AttributeError: 'NoneType' object has no attribute 'GetModelDoc2'"
+ ],
+ "notes": [
+  "SolidWorks' notification box came up while no SolidWorks call was in progress (exempt by the coordinator's ruling; nothing answers it)"
+ ]
+}
