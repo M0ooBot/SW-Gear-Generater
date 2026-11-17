@@ -673,3 +673,52 @@ def test_after_an_update_with_nothing_of_the_users_in_error_whats_wrong_is_not_s
     plan, result, finished = press(sw, record, gears(reducer(), G4=dict(at="30")))
     text, ok = ui_text.gearbox_update_status(plan, result, finished.dragged, finished=finished, revision=(32, 5, 0))
     assert ok and "What's Wrong" not in text
+
+
+def test_the_whats_wrong_sentences_say_a_true_length_and_to_leave_the_box_alone():
+    """The close review on 2024: the box stayed 22 to 23 s on a gearbox with modes and 3 to 5 s on a plain one, and
+    what pressing its buttons mid-Update does was not measured."""
+    assert ui_text.WHATS_WRONG_AHEAD == ("SolidWorks may show its What's Wrong box for up to half a minute during the "
+                                         "Update: leave it alone, it closes by itself, and the Update carries on.")
+    assert ui_text.WHATS_WRONG_AFTER == ("SolidWorks may have shown its What's Wrong box for up to half a minute "
+                                         "during the Update; nothing in it needed answering.")
+
+
+def test_a_quiet_press_or_a_stop_before_writing_never_says_the_box_may_have_shown(on_fake, monkeypatch):
+    """The close review on 2024 (s3:63, s4:62): 'may have shown' after a press that found nothing to do, where no box
+    came. Said only after an Update that changed or put something, or stopped after writing."""
+    from test_swbuild import IDENTITY9
+    _box(monkeypatch)
+    sw, record = on_fake
+    asm = record.gearbox.assembly
+    sw.user_component(asm, "Sprocket-1", r"C:\Parts\Sprocket.SLDPRT", (IDENTITY9, (0.0, 0.0, 40.0)))
+    sw.feature_codes[(r"c:\parts\sprocket.sldprt", "User Keyway")] = 71
+    plan, result, finished = press(sw, record, reducer())          # quiet: the user's part in error, nothing to do
+    assert result.user_work.in_error == ["Sprocket-1"] and not result.changed and not result.placed
+    text, ok = ui_text.gearbox_update_status(plan, result, finished.dragged, finished=finished, revision=(32, 5, 0))
+    assert text.startswith("SolidWorks already matches the workbook") and "What's Wrong" not in text, text
+    stopped = copy.deepcopy(result)
+    stopped.failures = [("Reducer_12to1.SLDASM", "SolidWorks did not answer.")]
+    text, ok = ui_text.gearbox_update_status(plan, stopped, (), revision=(32, 5, 0))
+    assert not ok and "Nothing was changed." in text and "What's Wrong" not in text, text
+
+
+def test_the_footer_after_a_press_never_says_both_box_sentences(on_fake, monkeypatch, tmp_path):
+    """The close review on 2024, point 4: after a press the footer shows the job's status, which may say the box may
+    have shown, and not the prediction's 'may show' beside it; once the job's sentence has gone the prediction says
+    'may show' alone."""
+    _box(monkeypatch)
+    sw, record = on_fake
+    spec, plan, result, finished = _k3(sw, record, tmp_path, dict(bore="14"), code=71)     # the keyway in error
+    status, ok = ui_text.gearbox_update_status(plan, result, finished.dragged, finished=finished, revision=(32, 5, 0))
+    assert status.count(ui_text.WHATS_WRONG_AFTER) == 1
+    after = copy.deepcopy(finished.record)
+    after.gearbox.user_work.revision = [32, 5, 0]
+    moved = gears(reducer(), G1=dict(bore="14"), G4=dict(at="30"))
+    upd = update.classify(after, assessed(moved), exists=lambda p: True)
+    footer = ui_text.workbook_footer(assessed(moved), record=after, update=upd, folder=FOLDER, digest="d3",
+                                     note=ui_text.Note(status, ok))
+    assert footer.text.count(ui_text.WHATS_WRONG_AFTER) == 1 and ui_text.WHATS_WRONG_AHEAD not in footer.text
+    footer = ui_text.workbook_footer(assessed(moved), record=after, update=upd, folder=FOLDER, digest="d3")
+    assert footer.text.count(ui_text.WHATS_WRONG_AHEAD) == 1 and ui_text.WHATS_WRONG_AFTER not in footer.text, \
+        footer.text

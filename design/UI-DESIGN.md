@@ -1270,10 +1270,15 @@ sees is words, each from `ui_text`, each with the time the work was read:
   leaves it alone and changes no setting). Where the version is measured to
   show it (`swbuild.whats_wrong_shows_in_update`), the footer's line on the
   user's work, after the items already in error, adds *SolidWorks may show its
-  What's Wrong box for a few seconds during the Update; it closes by itself, and
-  the Update carries on.*, and an Update's status (made or stopped) with the
-  user's work in error adds, once, *SolidWorks may have shown its What's Wrong
-  box for a few seconds during the Update; nothing in it needed answering.*
+  What's Wrong box for up to half a minute during the Update: leave it alone, it
+  closes by itself, and the Update carries on.* (measured 22 to 23 s on a
+  gearbox with modes, 3 to 5 s on a plain one; pressing its buttons mid-Update
+  was not measured), and the status of an Update that changed or put something,
+  or stopped after writing, with the user's work in error adds, once, *SolidWorks
+  may have shown its What's Wrong box for up to half a minute during the Update;
+  nothing in it needed answering.* — never after a press that found nothing to
+  do, and never beside the footer's *may show*, which the job's sentence
+  replaces until it has gone.
   Then *Your Lock3 in L
   is in error in SolidWorks now.* — or,
   for one already in error before it changed anything, *Your Lock7 was in error

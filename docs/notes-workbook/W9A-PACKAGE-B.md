@@ -170,6 +170,11 @@ Package A's worker goes on when the assembly's rebuild returns False from the us
   made or stopped, with anything of the user's in error, the status adds `WHATS_WRONG_AFTER` once, from the job's
   revision (`Job.revision`, now passed to `gearbox_update_status`). Nothing where the helper is False or None, or
   with nothing of the user's in error. The tests patch the helper only while package A's is not in the tree.
+- After the close review on 2024 (`W9A-CLOSE-2024-REVIEW.md`): the length is *up to half a minute* (22 to 23 s
+  with modes, 3 to 5 s without); the sentence before the press says to leave the box alone; the sentence after is
+  said only after an Update that changed or put something, or stopped after writing (not after a quiet press, where
+  the 2024 runs said it with no box); and the footer after a press shows the job's sentence, never the prediction's
+  *may show* beside it (tested).
 
 ## What the demonstration on SolidWorks must show for package B
 

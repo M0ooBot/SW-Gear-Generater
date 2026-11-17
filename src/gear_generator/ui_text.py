@@ -1896,8 +1896,8 @@ def gearbox_update_status(update, result, dragged: Sequence[str] = (), *, meshes
                     sentence.split(" in ", 1)[0].replace("Your ", "", 1) in text:
                 continue
             text += " " + sentence
-        if _users_in_error(result) and whats_wrong_shows(revision):
-            text += " " + WHATS_WRONG_AFTER         # W9a: SolidWorks 2024's What's Wrong box, said once
+        if (changed_docs or result.placed) and _users_in_error(result) and whats_wrong_shows(revision):
+            text += " " + WHATS_WRONG_AFTER         # W9a: SolidWorks 2024's box, once, after a stop that wrote
         return text, False
 
     pieces: List[str] = []
@@ -1954,8 +1954,10 @@ def gearbox_update_status(update, result, dragged: Sequence[str] = (), *, meshes
         after = ([told] if told else []) + after
     # W9a: what it did with and found of the user's work, after the assembly's rebuild laid to that work alone.
     after = after + _rebuild_from_user(update, result) + _user_after(update, result)
-    if _users_in_error(result) and whats_wrong_shows(revision):
-        after.append(WHATS_WRONG_AFTER)                # W9a: SolidWorks 2024's What's Wrong box, said once
+    if not nothing and _users_in_error(result) and whats_wrong_shows(revision):
+        # W9a: SolidWorks 2024's box, once, after an Update that changed or put something (never a quiet press,
+        # which rebuilds nothing: the close review on 2024 found it said after such presses, where no box came).
+        after.append(WHATS_WRONG_AFTER)
     if nothing:
         text = ALREADY_MATCHES
         if assembly and getattr(result, "modes", None) and any(m.clashes or m.interference_error
@@ -4280,10 +4282,12 @@ def _clauses(clauses: Sequence[str]) -> str:
 # shows for some seconds, blocks nothing and goes by itself, and the Update completes; 2026 shows none. The app leaves
 # it alone and changes no setting (the coordinator's ruling); these say so, once, where the version is measured to
 # show it (``swbuild.whats_wrong_shows_in_update``), so the user is not surprised.
-WHATS_WRONG_AHEAD = ("SolidWorks may show its What's Wrong box for a few seconds during the Update; it closes by "
-                     "itself, and the Update carries on.")
-WHATS_WRONG_AFTER = ("SolidWorks may have shown its What's Wrong box for a few seconds during the Update; nothing in "
-                     "it needed answering.")
+WHATS_WRONG_AHEAD = ("SolidWorks may show its What's Wrong box for up to half a minute during the Update: leave it "
+                     "alone, it closes by itself, and the Update carries on.")
+WHATS_WRONG_AFTER = ("SolidWorks may have shown its What's Wrong box for up to half a minute during the Update; nothing "
+                     "in it needed answering.")
+# Measured on 2024: 22 to 23 s on a gearbox with modes, 3 to 5 s on a plain one (W9A-CLOSE-2024-REVIEW.md); what a
+# person pressing its buttons mid-Update does was not measured, so the sentence asks them to leave it.
 
 
 def whats_wrong_shows(revision: Sequence[int]) -> bool:
