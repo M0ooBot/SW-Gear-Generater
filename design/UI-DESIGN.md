@@ -379,7 +379,11 @@ the Speeds panel seen from each shaft's + end); for W7, `WorkbookPlanetary`
 (W7-PLAN §4.1's 4 : 1 built: three planet copies, the carrier a dashed circle
 through them, the footer naming the gear to drag and the carrier part as axes
 and planes only) and `WorkbookPlanetaryCopies` (the same with Copies 5, read:
-the assembly condition fails, an error at the Copies cell). `gen.py` draws them from a real workbook written, read and worked
+the assembly condition fails, an error at the Copies cell); for W9a, `WorkbookShortScreen` (the
+E4 transfer case built, on a screen shorter than it asks: the columns scroll, the footer whole) and
+`WorkbookUserWork` (the issue's RangeBox with a sprocket the user locked to Sun, a housing of
+theirs and a keyway in RangeSlv's part, read by an Update, then a slide edit: the footer says before
+the press what Update does with them). `gen.py` draws them from a real workbook written, read and worked
 through by the app, with the window's own sizes and colours from
 `workbook_gui`, the end view from `preview.layout_gearbox` and every line from
 `ui_text` — the footer is `workbook_footer` whole. The built boards run
@@ -1176,6 +1180,65 @@ on that screen. The three mode boards were not redrawn at W8's close; at W9a the
 regenerate byte for byte: no state they draw has the user's work on record, and
 they are drawn at their full height, which K12 does not change.
 
+### The user's work in a built assembly (W9a)
+
+GitHub issue #1: once the user has added their own parts, mates and features to
+an assembly the app built, Update must leave that work alone or refuse with a
+sentence naming what is in the way (`docs/notes-workbook/ISSUE-1-PLAN.md` §2.1;
+the worker's side is `W9A-INTERFACES.md`). **No new control.** What the user
+sees is words, each from `ui_text`, each with the time the work was read:
+
+- **The record keeps what was read** (schema 7, below): every Update reads the
+  user's components, mates (what each joins, the modes it is on in, its error)
+  and the features in the app's parts before it changes anything, and its
+  finish keeps that with the time, the read of the workbook it came from and the
+  SolidWorks it ran on. A press that refuses over the user's work keeps every
+  problem it said.
+- **Before the press** the footer, after what Update will change, says what it
+  would do with that work (`workbook.update.user_work_ahead`: the worker's own
+  pure judgement, `swbuild.judge_user_work`, on the recorded inventory, with the
+  bodies the press would put and every unmeasured branch of putting a component
+  with its gear given, so it never promises what the worker would refuse): *As
+  read at 14:02, Update SolidWorks moves your Sprocket-1 with Sun, which your
+  Lock3 holds it to, asks SolidWorks, when pressed, whether your Lock3 leaves
+  Sun's train free to turn, and leaves your Housing-1 and Keyway in
+  Sleeve_m1.25_N17 as they are.* (`WorkbookUserWork`); with a part it changes,
+  *rebuilds your Keyway in Gear_m1.25_N17 after the app's features*; a mate or
+  component already in error then is named. One it foresees refusing is red:
+  *As read at 14:02, Update SolidWorks would stop before changing anything: …
+  It reads your work in SolidWorks again when pressed.* A press that refused is
+  said as recorded, red, *Update SolidWorks refused at 14:02, before changing
+  anything: … The next press reads your work in SolidWorks again, and refuses
+  again unless that has been dealt with.*, and once the workbook has changed
+  since, green, *… The workbook has changed since, and the next press reads your
+  work in SolidWorks again.* Update stays enabled throughout: the press reads
+  again, and the user may have dealt with it in SolidWorks since. The line
+  follows the state as the save line does (not after a job's own sentence,
+  which says it already). Nothing is said when nothing of the user's was read.
+  The inventory is never called all of the user's work: assembly features (a
+  cut, a pattern) are not read, a gearbox W4 built static reads only the
+  features, and per mode only the active configuration's states are read.
+- **After Update** its sentence adds what it did with the user's work: *Your
+  Sprocket-1 went with Sun in every mode, which your locks hold it to.*,
+  *SolidWorks rebuilt your Keyway in Gear_m1.25_N17 after the app's features,
+  and it is in error.*, *Your Lock7 in L is in error in SolidWorks after it.*,
+  and a component found by its part under a new name. Each refusal of the
+  worker's (a value the user changed, a mate of another kind on a gear it puts,
+  a tie) is its own sentence, said as the job's.
+- **Build again?** ends, from the record, with what stays behind (K5 until W9d
+  carries it): *As read at 14:02, your Sprocket-1, Chain-1 and 6 mates stay in
+  RangeBox.SLDASM, and your Keyway stays in Gear_m1.25_N17, which Sun's new part
+  replaces; RangeBox_r2 has none of them.*, and *Your Groove in Sleeve_m1.25_N17
+  comes with that part, which RangeBox_r2 reuses.* for a feature in a part the
+  new revision reuses. With nothing on record the question is as before. The
+  build job then reads the old assembly first, read-only, as it stands in the
+  session when it is open there (never shown in another mode, nothing written
+  or saved; `swbuild.read_old_assembly`), and its sentence says what stayed
+  behind as found, *Your Sprocket-1 and Lock3 stay in RangeBox.SLDASM, as read
+  when this build began; RangeBox_r2 has none of them.*, or, when it was not
+  open, *RangeBox.SLDASM was not open in SolidWorks, so it was not read again:*
+  and the record's sentence with its time.
+
 ### Planetary stages (W7)
 
 No new control (checked in `workbook_gui.py`: the only changes for W7 are the
@@ -1310,7 +1373,8 @@ frame; earlier revisions (paths only); the documents Update left unsaved, with
 their times; the documents found not as recorded — by a live check, or
 marked unsaved and found closed — (`mismatched`, with their times); the
 workbook's earlier paths (`moved_from`); a build's journal (`pending`, and `pending_for`, the workbook whose build wrote
-it); and the app's own last Export (`own_digest`, `recalc`). Each
+it); the app's own last Export (`own_digest`, `recalc`); and, since W9a (schema 7), what the last Update read of the
+user's work in the assembly, with its time, and a refused press's problems (`gearbox.user_work`). Each
 part also gets its `.gear.json`, naming the workbook and the rows it serves;
 Update marks the one of a part it changed `unsaved_since`, so it never claims
 values the file may not hold.
@@ -1323,7 +1387,7 @@ job's finish writes it, it is read again, and written atomically. A record
 from a newer Gear Generator is left byte for byte as it is (both buttons wait);
 one that cannot be read is set aside as `.bad-<stamp>` by the next build, never
 deleted. On disk `schema_version` stays 1, with the real schema in
-`link_schema_version` (2), so a build from before W4 that rewrites the file
+`link_schema_version` (7 since W9a; 2 when this was first written), so a build from before W4 that rewrites the file
 keeps its parts (it reads only the keys it knows, so the new ones are dropped,
 never a fault). **Locate…** carries the record: a copy is written beside the
 workbook's new place with its `workbook` updated, unless one is already there,
