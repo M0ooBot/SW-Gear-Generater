@@ -1946,7 +1946,7 @@ PERSIST_REFERENCE_ROUTE_FOR_REFERENCE_FEATURES_ON_2024 = PERSIST_REFERENCE_ROUTE
 MATE_REMAKE_ON_AXES_PLANES_AND_LOCKS_ROUTE_ON_2026 = (
     "AddMate5 from IMate2 Type, Alignment, Flipped and the definition's values")
 MATE_REMAKE_ON_AXES_PLANES_AND_LOCKS_ROUTE_ON_2024 = MATE_REMAKE_ON_AXES_PLANES_AND_LOCKS_ROUTE_ON_2026
-COMPONENT_STATE_PER_CONFIGURATION_ROUTE_ON_2026 = None
+COMPONENT_STATE_PER_CONFIGURATION_ROUTE_ON_2026 = "IConfiguration.GetComponentSuppressionState(Name2)"
 COMPONENT_STATE_PER_CONFIGURATION_ROUTE_ON_2024 = None
 OPEN_READ_ONLY_ROUTE_WHEN_NOT_OPEN_ON_2026 = "OpenDoc6(path, assembly, Silent | ReadOnly)"
 OPEN_READ_ONLY_ROUTE_WHEN_NOT_OPEN_ON_2024 = "OpenDoc6(path, assembly, Silent | ReadOnly)"
@@ -2044,25 +2044,28 @@ UPDATE_SUPPRESSES_THE_RELIEF_ON_2024 = None
 # - CARRY_REMAKE_KINDS (a tuple of kind words): the kinds of mate M9 made again clean (D4).
 # - CARRY_GEAR_MATE_ON_AN_APP_GEAR (True): a user gear mate on an app gear's Gear Axis, ratio and sense read back (M9).
 # - CARRY_REMAKES_ON_A_LEAF (True): a mate on a leaf of a user sub-assembly (nothing in W9d).
-OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN_ON_2026 = None
+OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN_ON_2026 = True
 OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN_ON_2024 = None
-OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS_ON_2026 = None
+OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS_ON_2026 = True
 OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS_ON_2024 = None
-FILE_VERSION_READ_ON_2026 = None
+FILE_VERSION_READ_ON_2026 = "ISldWorks.VersionHistory(path), its last entry against GetLatestSupportedFileVersion"
 FILE_VERSION_READ_ON_2024 = None
-DEPENDENCIES_READ_ON_2026 = None
+DEPENDENCIES_READ_ON_2026 = "ISldWorks.GetDocumentDependencies2(path, False, False, False), each one's VersionHistory"
 DEPENDENCIES_READ_ON_2024 = None
-COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED_ON_2026 = None
+COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED_ON_2026 = True
 COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED_ON_2024 = None
-PERSIST_REFERENCE_ROUTE_FOR_FACES_ON_2026 = None
+PERSIST_REFERENCE_ROUTE_FOR_FACES_ON_2026 = (
+    "each face (or edge) of the component's part carried into the assembly by IComponent2.GetCorresponding, the one "
+    "ISldWorks.IsSame as the mate's entity (exactly one), then the part's GetPersistReference3, resolved by its "
+    "GetObjectByPersistReference3")
 PERSIST_REFERENCE_ROUTE_FOR_FACES_ON_2024 = None
-PERSIST_REFERENCE_ROUTE_FOR_EDGES_ON_2026 = None
+PERSIST_REFERENCE_ROUTE_FOR_EDGES_ON_2026 = PERSIST_REFERENCE_ROUTE_FOR_FACES_ON_2026
 PERSIST_REFERENCE_ROUTE_FOR_EDGES_ON_2024 = None
 PERSIST_REFERENCE_ROUTE_FOR_VERTICES_ON_2026 = None
 PERSIST_REFERENCE_ROUTE_FOR_VERTICES_ON_2024 = None
-PERSIST_REFERENCE_SURVIVES_RELOAD_ON_2026 = None
+PERSIST_REFERENCE_SURVIVES_RELOAD_ON_2026 = True
 PERSIST_REFERENCE_SURVIVES_RELOAD_ON_2024 = None
-COAXIAL_FACE_READ_ON_2026 = None
+COAXIAL_FACE_READ_ON_2026 = True
 COAXIAL_FACE_READ_ON_2024 = None
 REFERENCED_CONFIGURATION_READ_ON_2026 = None
 REFERENCED_CONFIGURATION_READ_ON_2024 = None
@@ -2072,13 +2075,13 @@ PATTERN_INSTANCE_READ_ON_2026 = None
 PATTERN_INSTANCE_READ_ON_2024 = None
 ORIGIN_ENTITY_READ_ON_2026 = None
 ORIGIN_ENTITY_READ_ON_2024 = None
-SUBASSEMBLY_OPEN_MARKS_ON_2026 = None
+SUBASSEMBLY_OPEN_MARKS_ON_2026 = False
 SUBASSEMBLY_OPEN_MARKS_ON_2024 = None
-SUBASSEMBLY_OPEN_MARKS_WHEN_LOADED_ON_2026 = None
+SUBASSEMBLY_OPEN_MARKS_WHEN_LOADED_ON_2026 = False
 SUBASSEMBLY_OPEN_MARKS_WHEN_LOADED_ON_2024 = None
-SUBASSEMBLY_READ_ONLY_INSERT_ON_2026 = None
+SUBASSEMBLY_READ_ONLY_INSERT_ON_2026 = True
 SUBASSEMBLY_READ_ONLY_INSERT_ON_2024 = None
-CARRY_INSERT_MARKS_USER_DOCUMENTS_ON_2026 = None
+CARRY_INSERT_MARKS_USER_DOCUMENTS_ON_2026 = False
 CARRY_INSERT_MARKS_USER_DOCUMENTS_ON_2024 = None
 CARRY_INSERTS_ON_2026 = None
 CARRY_INSERTS_ON_2024 = None
@@ -2092,3 +2095,49 @@ CARRY_GEAR_MATE_ON_AN_APP_GEAR_ON_2026 = None
 CARRY_GEAR_MATE_ON_AN_APP_GEAR_ON_2024 = None
 CARRY_REMAKES_ON_A_LEAF_ON_2026 = None
 CARRY_REMAKES_ON_A_LEAF_ON_2024 = None
+#
+# W9d's probes on SolidWorks 2026 (34.0.0), set as W9D-PROBES-REVIEW.md (94fbebf) and W9D-INTERFACES §8.1 give them.
+# -1.log is probe/results/w9d-probes-sw2026-20261117-1-face-routes-none.log (snapshot 23ed8c5), -2.log is
+# …-2-faces-r3-clean.log (snapshot c86ad54). _ON_2024 stays None for every one until the 2024 run is reviewed; the
+# reads M9 sets (REFERENCED_CONFIGURATION_READ, VIRTUAL_READ, PATTERN_INSTANCE_READ) and every CARRY_* write stay None.
+# - COMPONENT_STATE_PER_CONFIGURATION_ROUTE (set above, in W9c's block): agreed with the shown truth on 3 components x
+#   3 modes, from an unmarked start, marking nothing (-1.log:114-118), suppressed in the mode showing and in another
+#   covered; it reads a lightweight component False (not suppressed) (:121); top-level Name2 only. On 34.0.0
+#   GetRootComponent3(True) per configuration marked nothing (:117) where W9c measured it marking on 34.1.1
+#   (w9c…-2.log:282): marking can differ by revision or state, so R.6's check after the read stays the guard.
+# - COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED: one component suppressed in one mode, unsaved, read right
+#   (-1.log:119-120).
+# - FILE_VERSION_READ: the copy just saved read last 19000[2025/260] against latest 19000; the negative control, a
+#   2024-saved assembly, read 17000[2024/282] (-1.log:122-123). Compare the number, never the year label (2026
+#   labels itself 2025); take the last entry (a 2026 file's history begins with its template's 17000).
+# - DEPENDENCIES_READ: named all nine parts (-1.log:124-125). Traverse False: top level only, so a referenced
+#   sub-assembly's own files are not listed (the read refuses one). The paths are the stored ones (Searchflag False);
+#   that they were the copy's own is the reviewer's inference (the JSON keeps file names only). A path not on disk,
+#   or a history that does not read, is not the running version.
+# - OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS: two user parts stood in for the app documents R.2 allows, one changed, one
+#   not; each open, its flag the same and not read-only after the open and the shows, the change kept (-1.log:126-127).
+#   The read-only assembly itself read modified straight after its open (warning 32, NeedsRegen): R.6 judges it from
+#   that flag.
+# - OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN: files saved by this version only; closed by QuitDoc with its flag True (shown,
+#   NeedsRegen), no dialog, every document it loaded gone, no file time changed, the open parts as they were
+#   (-1.log:128-129).
+# - SUBASSEMBLY_OPEN_MARKS: False for a healthy one-part sub-assembly with no configurations of its own, opened Silent,
+#   not loaded: flag False straight after and 5 s later (-1.log:135-136). One with a missing part marks (W9c).
+# - SUBASSEMBLY_READ_ONLY_INSERT: inserted with its child; it read flag False and read-only after, the host modified
+#   as the job's own (-1.log:138-139).
+# - SUBASSEMBLY_OPEN_MARKS_WHEN_LOADED: False, loaded as a component of an open host: OpenDoc6 warning 128, flag False
+#   before, after the open and after the insert (-1.log:141-142).
+# - PERSIST_REFERENCE_ROUTE_FOR_FACES / _FOR_EDGES: r3 (-2.log:89-90): 5 faces on two files (a bore, three sprocket end
+#   planes, a Sun end plane) and one circular edge (482 edges walked in 8.2 s). r1 (GetCorrespondingEntity2) gives
+#   nothing for a mate's entity and r2 resolves swPersistReferencedObject_Invalid (-1.log). The walk's cost grew
+#   through the session (0.26 s to 8.1 s for the same 163 faces), so the app walks once per component, prefiltered,
+#   capped (W9D-INTERFACES §10; swbuild.CARRY_WALK_CANDIDATES, CARRY_WALK_SECONDS).
+# - PERSIST_REFERENCE_SURVIVES_RELOAD: 6 references (5 faces, 1 edge) resolved Ok in their parts reopened alone and
+#   unchanged on disk, kind, place and area as read, nothing marked (-2.log:103-104). A part edited and saved since may
+#   resolve otherwise: any code but Ok, or another kind, is WHY_NOT_FOUND.
+# - COAXIAL_FACE_READ: cylinders only, by CylinderParams of r3's part-level entity, in part coordinates
+#   (-2.log:92-93). Positives: the sprocket's bore, Sun's 29 tip and 29 root cylinders (so coaxial is not "bore");
+#   negatives: Sun's User Keyway, Sun's 58 root-fillet cylinders (r 0.475, app-made, off-axis), every plane.
+# - CARRY_INSERT_MARKS_USER_DOCUMENTS: False in one case: user parts loaded as components of the open old assembly,
+#   unchanged, opened and inserted into a second assembly, marking none of them (-2.log:101-102). A user part open in
+#   its own window with unsaved edits is not measured.

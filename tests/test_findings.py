@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from gear_generator import findings
+from gear_generator import findings, swcom
 from gear_generator.probe import decide
 from gear_generator.probe import p8_motion as p8
 
@@ -2416,7 +2416,8 @@ def test_w9c_s5_and_p2_readings_for_w9d_set_as_narrow_as_shown_on_2026():
     assert w9c[328].startswith("propose SUBASSEMBLY_MISSING_REFERENCE_DIALOG = False")
     assert findings.PERSIST_REFERENCE_ROUTE_FOR_REFERENCE_FEATURES_ON_2026.startswith("GetPersistReference3")
     assert findings.MATE_REMAKE_ON_AXES_PLANES_AND_LOCKS_ROUTE_ON_2026.startswith("AddMate5")
-    assert findings.COMPONENT_STATE_PER_CONFIGURATION_ROUTE_ON_2026 is None
+    # Set since from W9d's probes on 34.0.0 (test_w9d_2026_findings_rest_on_the_probes_two_runs).
+    assert findings.COMPONENT_STATE_PER_CONFIGURATION_ROUTE_ON_2026 == "IConfiguration.GetComponentSuppressionState(Name2)"
     assert findings.OPEN_READ_ONLY_ROUTE_WHEN_NOT_OPEN_ON_2026 == "OpenDoc6(path, assembly, Silent | ReadOnly)"
     assert findings.OPEN_READ_ONLY_DIALOG_ON_2026 is False
     assert findings.SUBASSEMBLY_INSERT_ROUTE_ON_2026 == "OpenDoc6 the sub-assembly, then AddComponent5"
@@ -2429,13 +2430,14 @@ def test_w9c_s5_and_p2_readings_for_w9d_set_as_narrow_as_shown_on_2026():
 W9C_PROBES_2024 = LATEST.parent / "sw2024" / "w9c-probes-20261117-062201.json"
 W9C_PROBES_2024_LOG = LATEST.parent / "sw2024" / "w9c-probes-sw2024-20261117.log"
 
-# Every W9c probe finding the 2024 run sets as its 2026 twin (the review's addendum, 9b85411).
+# Every W9c probe finding the 2024 run sets as its 2026 twin (the review's addendum, 9b85411). The per-mode state
+# route, None on both after W9c, is since set on 2026 alone by W9d's probes (34.0.0); 2024 waits for its run.
 W9C_TWINS = ("COMPONENT_DELETE_ROUTE", "COMPONENT_DELETE_ROUTE_IN_EVERY_CONFIGURATION",
              "COMPONENT_DELETE_TAKES_ITS_MATES", "COMPONENT_DELETE_KEEPS_OTHER_HANDLES", "COMPONENT_DELETE_DIALOG",
              "M1_READS_CONCENTRIC", "M1_READS_LIMIT_DISTANCE", "M1_READS_LIMIT_ANGLE", "M1_READS_WIDTH",
              "M1_READS_GEAR_ON_AN_APP_GEAR", "M1_READS_SUBASSEMBLY_LEAF", "ASSEMBLY_ENTITY_COMPONENT_IS_ROOT",
              "PERSIST_REFERENCE_ROUTE_FOR_REFERENCE_FEATURES", "MATE_REMAKE_ON_AXES_PLANES_AND_LOCKS_ROUTE",
-             "COMPONENT_STATE_PER_CONFIGURATION_ROUTE", "OPEN_READ_ONLY_ROUTE_WHEN_NOT_OPEN", "OPEN_READ_ONLY_DIALOG",
+             "OPEN_READ_ONLY_ROUTE_WHEN_NOT_OPEN", "OPEN_READ_ONLY_DIALOG",
              "SUBASSEMBLY_INSERT_ROUTE", "SUBASSEMBLY_MISSING_REFERENCE_DIALOG", "SUBASSEMBLY_MISSING_PART_READS")
 
 
@@ -2512,9 +2514,61 @@ W9D_FINDINGS = ("OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN", "OPEN_READ_ONLY_KEEPS_OPEN_
                 "CARRY_REMAKES_ON_A_LEAF")
 
 
+W9D_SET_ON_2026 = ("COMPONENT_STATE_PER_CONFIGURATION_ROUTE", "COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED",
+                   "FILE_VERSION_READ", "DEPENDENCIES_READ", "OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS",
+                   "OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN", "SUBASSEMBLY_OPEN_MARKS", "SUBASSEMBLY_READ_ONLY_INSERT",
+                   "SUBASSEMBLY_OPEN_MARKS_WHEN_LOADED", "PERSIST_REFERENCE_ROUTE_FOR_FACES",
+                   "PERSIST_REFERENCE_ROUTE_FOR_EDGES", "PERSIST_REFERENCE_SURVIVES_RELOAD", "COAXIAL_FACE_READ",
+                   "CARRY_INSERT_MARKS_USER_DOCUMENTS")
+
+
 def test_w9d_findings_are_not_measured_until_a_reviewed_log_sets_them():
-    """W9D-INTERFACES.md §8: every new name W9d reads is in findings.py, None on both versions, until W9d's probe or
-    M9 reads it on that version and a review sets it; the per-mode state route stays None as W9c's probes left it."""
+    """W9D-INTERFACES.md §8: every name W9d reads is in findings.py, None on both versions until a reviewed run sets
+    it: on 2026 the probes' two runs set §8.1's (pinned below); every one on 2024, and on 2026 the reads M9 sets and
+    every CARRY_* write, stay None."""
     for name in W9D_FINDINGS + ("COMPONENT_STATE_PER_CONFIGURATION_ROUTE",):
         for year in (2026, 2024):
+            if year == 2026 and name in W9D_SET_ON_2026:
+                continue
             assert hasattr(findings, f"{name}_ON_{year}") and getattr(findings, f"{name}_ON_{year}") is None, name
+
+
+W9D_RUN1 = LATEST.parent / "w9d-probes-20261117-140231.json"
+W9D_RUN1_LOG = LATEST.parent / "w9d-probes-sw2026-20261117-1-face-routes-none.log"
+W9D_RUN2 = LATEST.parent / "w9d-probes-20261117-141450.json"
+W9D_RUN2_LOG = LATEST.parent / "w9d-probes-sw2026-20261117-2-faces-r3-clean.log"
+
+
+def test_w9d_2026_findings_rest_on_the_probes_two_runs():
+    """W9D-INTERFACES §8.1 (W9D-PROBES-REVIEW.md, 94fbebf): each _ON_2026 value is its run's proposal on 34.0.0."""
+    _, one = _w9a_run(W9D_RUN1, W9D_RUN1_LOG, "23ed8c5", (34, 0, 0))
+    _, two = _w9a_run(W9D_RUN2, W9D_RUN2_LOG, "c86ad54", (34, 0, 0))
+
+    def proposed(lines, number, name):
+        line = lines[number]
+        assert line.startswith(f"propose {name} = "), line
+        return line[len(f"propose {name} = "):].split("  #")[0]
+    assert proposed(one, 118, "COMPONENT_STATE_PER_CONFIGURATION_ROUTE") == \
+        repr(findings.COMPONENT_STATE_PER_CONFIGURATION_ROUTE_ON_2026)
+    assert proposed(one, 120, "COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED") == "True"
+    assert proposed(one, 123, "FILE_VERSION_READ") == repr(findings.FILE_VERSION_READ_ON_2026)
+    assert "'17000[2024/282]', '19000[2025/260]'" in one[122] and "GetLatestSupportedFileVersion 19000" in one[122]
+    assert proposed(one, 125, "DEPENDENCIES_READ") == f'"{findings.DEPENDENCIES_READ_ON_2026}"'
+    assert proposed(one, 127, "OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS") == "True"
+    assert proposed(one, 129, "OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN") == "True"
+    assert proposed(one, 136, "SUBASSEMBLY_OPEN_MARKS") == "False"
+    assert proposed(one, 139, "SUBASSEMBLY_READ_ONLY_INSERT") == "True"
+    assert proposed(one, 142, "SUBASSEMBLY_OPEN_MARKS_WHEN_LOADED") == "False"
+    assert proposed(two, 89, "PERSIST_REFERENCE_ROUTE_FOR_FACES") == f'"{findings.PERSIST_REFERENCE_ROUTE_FOR_FACES_ON_2026}"'
+    assert proposed(two, 90, "PERSIST_REFERENCE_ROUTE_FOR_EDGES") == f'"{findings.PERSIST_REFERENCE_ROUTE_FOR_EDGES_ON_2026}"'
+    assert findings.PERSIST_REFERENCE_ROUTE_FOR_FACES_ON_2026 == swcom.PERSIST_ROUTE_R3      # the route the app takes
+    assert proposed(two, 93, "COAXIAL_FACE_READ") == "True"
+    assert "(0.475, False): 58" in two[92] and "(19.375, True): 29" in two[92]   # the fillets off-axis, tips coaxial
+    assert proposed(two, 102, "CARRY_INSERT_MARKS_USER_DOCUMENTS") == "False"
+    assert proposed(two, 104, "PERSIST_REFERENCE_SURVIVES_RELOAD") == "True"
+    for name in W9D_SET_ON_2026:
+        assert getattr(findings, f"{name}_ON_2024") is None, name
+    for name in ("REFERENCED_CONFIGURATION_READ", "VIRTUAL_READ", "PATTERN_INSTANCE_READ", "CARRY_INSERTS",
+                 "CARRY_INSERTS_IN_A_CONFIGURATION", "CARRY_INSERTS_A_SUBASSEMBLY", "CARRY_REMAKE_KINDS",
+                 "CARRY_GEAR_MATE_ON_AN_APP_GEAR", "CARRY_REMAKES_ON_A_LEAF"):
+        assert getattr(findings, f"{name}_ON_2026") is None, name
