@@ -5,7 +5,9 @@
 - *The suite, run once:* 1 failed (the known Tk font-width test), 3725 passed, 1 skipped, 1 xfailed. That is B's
   count.
 - *Scratch tests:* a handful, in the scratchpad, built on B's round-trip desk (`tests/test_workbook_in_place_round_trip.py`'s
-  `Desk` on the suite's fake). They are deleted.
+  `Desk` on the suite's fake). The shared checkout holds other agents' uncommitted edits, and HEAD has moved past
+  `61766a9`. So every reproduction below was run again on a clean extract of `61766a9` (`git archive`), and every
+  line number is that commit's. The extract and the tests are deleted.
 - *What I read:*
   - `W9C-INTERFACES.md` whole, §10's rulings and §11's rounds included;
   - the plan's §2.1 (W9c), §2.4 (*In place*), §4 (M4, M5, M6, M8, M10), §5 (W9c), K6 and §0.3;
@@ -50,7 +52,7 @@ press does not make, in a broken sentence.**
     inventory, whose mates' `on` still lists the mode being removed. It passes the configurations **after** the
     Update as `modes`.
   - `judge_user_work` then sees a lock whose `set(on)` is not `every` (`swbuild.py`, the `PROBLEM_LOCK_BY_MODE`
-    branch, `if set(mate.on) != every and reaches_put(mate)`). It refuses with an empty list in the sentence.
+    branch, `swbuild.py:5644`). It refuses with an empty list in the sentence.
   - The worker reads the user's flags only over the configurations after the Update, so it never sees the removed
     mode. It goes ahead.
 - *Reproduced* on B's own desk: `fixed_desk_with_work` (RangeBox_Fixed with the user's Lock3 on in H, N and L),
@@ -108,10 +110,13 @@ gated step refused, even once the findings are set.**
 
 - `in_place_ahead` passes the inventory's revision, or `()` with none (`update.py:2795-2799`).
 - `in_place_gates` with no year marks every gate unsettled (`swbuild.py:5781-5784`).
-- *Reproduced* on the transfer case just built, with the gates patched True: the footer is red, *"The next press
-  would stop … has not yet been shown to do on the SolidWorks it runs on …"*, and the press went ahead. In my case it
-  stopped later, only on a failure I injected.
-- After the full build sets the findings, this is the footer of the first in-place edit after every Build.
+- *Reproduced today, with the findings as committed* (the delete gates are set on both versions). On the transfer
+  case just built, FIdler is taken off the Gears sheet. The footer is red: *"The next press would stop before
+  changing anything: Update SolidWorks would take a gear out of the assembly, which Gear Generator has not yet been
+  shown to do on the SolidWorks it runs on (findings.COMPONENT_DELETE_ROUTE_ON_<year>, …)"*. The press then goes
+  through: *"Updated SolidWorks: took FIdler (gear11-1) out with 4 mates, …"*.
+- So every first in-place edit after a Build gets this false footer, and once the full build sets the other
+  findings, every kind of in-place edit does.
 - *Fix.* Record the SolidWorks revision a Build ran on (the build knows it) and use it when no inventory is on
   record. Or word the line as conditional on a version not yet known.
 
@@ -196,8 +201,8 @@ None of these hides a fault I found, but each is where the demonstration must lo
 - **N4 — the record equals a fresh build's.** B's claim holds on the fake
   (`test_the_record_differs_from_a_fresh_builds_only_where_the_plan_says`): `gearbox.updated`, `gearbox.user_work`,
   `last_updated` and `unsaved`. It cannot speak for `Name2`s on SolidWorks.
-- **N5 — the remake gate's `BuildError`** (A's pending change) is the one gate not recorded as a refusal. B's xfail
-  is right to want it a `UserWorkRefused`.
+- **N5 — the remake gate's `BuildError`** was the one gate not recorded as a refusal at `61766a9`. HEAD's `b01e55a`
+  makes it a recorded refusal; I have not reviewed that commit.
 
 ## The record (schema)
 
@@ -227,7 +232,7 @@ None of these hides a fault I found, but each is where the demonstration must lo
   | Hub as anchor | Its spline in `AddedGear.ops`, under `UPDATE_INSERTS_A_GEAR` by ruling, judged as above |
   | A gear removed | C4, `PROBLEM_REMOVED` and unread mates, from the live read |
   | A new coupling | Its own gate |
-  | A remake with modes | Its gate (as `BuildError`, N5) |
+  | A remake with modes | Its gate (a `BuildError` at `61766a9`, N5) |
   | Bands given | Their gate; F1's globals and an existing relief, in the check |
   | Bands back | A missing relief refused in the check |
   | Bands taken away | `UPDATE_SUPPRESSES_THE_RELIEF` |
