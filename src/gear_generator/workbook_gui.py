@@ -1587,7 +1587,7 @@ class WorkbookWindow(tk.Toplevel):
         try:
             # The finish says when an earlier Update's changes to the assembly were never saved, so the sentence never
             # lays to the user what that Update left (Finished.earlier_update; None when the finish raised).
-            text, ok = ui_text.gearbox_update_status(job.update, result, dragged,
+            text, ok = ui_text.gearbox_update_status(job.update, result, dragged, revision=job.revision,
                                                      meshes=gearbox.meshes if gearbox is not None else None,
                                                      finished=finished)
         except Exception as exc:  # noqa: BLE001

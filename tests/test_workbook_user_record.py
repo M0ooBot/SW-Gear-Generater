@@ -618,3 +618,58 @@ def test_planning_gives_the_worker_every_app_part_the_layout_and_the_carriers_wi
     assert sorted(d.path for d in kwargs["parts"]) == sorted(p.path for p in record.current_parts())
     assert all(d.made for d in kwargs["parts"]) and kwargs["layout"].made
     assert kwargs["layout"].path == record.gearbox.layout
+
+
+# -- SolidWorks 2024's What's Wrong box in the app's Update (measured, d7cbcda; the coordinator's ruling) --------------
+
+
+def _box(monkeypatch):
+    """``swbuild.whats_wrong_shows_in_update`` as package A gives it: True on 2024 (measured to show), False on 2026
+    (measured not to), None elsewhere; patched here only where the helper is not in the tree yet."""
+    def shows(revision):
+        return {32: True, 34: False}.get(int(revision[0])) if revision else None
+    if not hasattr(swbuild, "whats_wrong_shows_in_update"):
+        monkeypatch.setattr(swbuild, "whats_wrong_shows_in_update", shows, raising=False)
+
+
+@pytest.mark.parametrize("revision, said", [([32, 5, 0], True), ([34, 1, 1], False), ([30, 0, 0], False), ([], False)])
+def test_the_footer_says_whats_wrong_may_show_where_the_version_shows_it_with_the_users_work_in_error(monkeypatch,
+                                                                                                    revision, said):
+    _box(monkeypatch)
+    broken = [store.UserMateEntry("Lock3", "lock", 16, [["app", "G1"], ["user", "Sprocket-1"]], [""], 46, False)]
+    entry = _entry(problems=[], revision=revision, mates=broken)
+    text, ok = ui_text.user_work_line(update.UserWorkAhead(entry))
+    assert text.count(ui_text.WHATS_WRONG_AHEAD) == (1 if said else 0), text
+    if said:
+        assert text.index("already in error in SolidWorks then.") < text.index(ui_text.WHATS_WRONG_AHEAD)
+    clean = _entry(problems=[], revision=revision)                # nothing of the user's in error
+    assert ui_text.WHATS_WRONG_AHEAD not in ui_text.user_work_line(update.UserWorkAhead(clean))[0]
+
+
+@pytest.mark.parametrize("revision, said", [((32, 5, 0), True), ((34, 1, 1), False), ((30, 0, 0), False), ((), False)])
+def test_after_an_update_whats_wrong_is_said_once_where_the_version_shows_it(on_fake, monkeypatch, tmp_path,
+                                                                             revision, said):
+    """Made (the rebuild laid to the user's keyway alone) and stopped (the findings unset): the same fact once, in the
+    past tense, where the version shows the box and something of the user's is in error; never otherwise."""
+    _box(monkeypatch)
+    sw, record = on_fake
+    spec, plan, result, finished = _k3(sw, record, tmp_path, dict(bore="14"))
+    assert result.ok and result.user_features_in_error
+    text, ok = ui_text.gearbox_update_status(plan, result, finished.dragged, finished=finished, revision=revision)
+    assert text.count(ui_text.WHATS_WRONG_AFTER) == (1 if said else 0), text
+    _unmeasured(monkeypatch)
+    sw2, _, _, record2 = fake_build(reducer())
+    second = tmp_path / "stopped"
+    second.mkdir()
+    spec, plan, result, finished = _k3(sw2, record2, second, dict(bore="14"))
+    assert result.failures
+    text, ok = ui_text.gearbox_update_status(plan, result, finished.dragged, finished=finished, revision=revision)
+    assert not ok and text.count(ui_text.WHATS_WRONG_AFTER) == (1 if said else 0), text
+
+
+def test_after_an_update_with_nothing_of_the_users_in_error_whats_wrong_is_not_said(on_fake, monkeypatch):
+    _box(monkeypatch)
+    sw, record = on_fake
+    plan, result, finished = press(sw, record, gears(reducer(), G4=dict(at="30")))
+    text, ok = ui_text.gearbox_update_status(plan, result, finished.dragged, finished=finished, revision=(32, 5, 0))
+    assert ok and "What's Wrong" not in text

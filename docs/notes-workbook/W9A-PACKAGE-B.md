@@ -163,6 +163,14 @@ Package A's worker goes on when the assembly's rebuild returns False from the us
   equation; a cell that was blank is to be *cleared again*. The words are package A's `ValueEdit.blank`'s. Test: a
   blank Backlash typed 0.6.
 
+## SolidWorks 2024's What's Wrong box (measured, `d7cbcda`; the coordinator's ruling)
+
+- Before the press, the footer's user-work line, after the items already in error, adds `ui_text.WHATS_WRONG_AHEAD`
+  where `swbuild.whats_wrong_shows_in_update(entry.revision)` is True (the inventory's revision); after an Update,
+  made or stopped, with anything of the user's in error, the status adds `WHATS_WRONG_AFTER` once, from the job's
+  revision (`Job.revision`, now passed to `gearbox_update_status`). Nothing where the helper is False or None, or
+  with nothing of the user's in error. The tests patch the helper only while package A's is not in the tree.
+
 ## What the demonstration on SolidWorks must show for package B
 
 - After a value Update and a slide-offset Update on S0's master with the user's work: the record beside the workbook

@@ -1842,7 +1842,7 @@ def _layout_shafts(names: Sequence[str]) -> List[str]:
 
 
 def gearbox_update_status(update, result, dragged: Sequence[str] = (), *, meshes=None,
-                          finished=None) -> Tuple[str, bool]:
+                          finished=None, revision: Sequence[int] = ()) -> Tuple[str, bool]:
     """A finished update's sentence (``UpdatePlan``, ``swbuild.GearboxUpdate``, ``Finished.dragged``), ending
     with :func:`save_to_keep` naming the documents whenever ``result.changed`` is not empty; *SolidWorks already
     matches the workbook: nothing was changed.* when nothing was. ``meshes``: the record's listed meshes (pairs of
@@ -1855,6 +1855,9 @@ def gearbox_update_status(update, result, dragged: Sequence[str] = (), *, meshes
     turned back on after a put that failed is a failure of its own, naming
     the compound gears left unlocked (review M8), and must not be hidden
     behind the put's. W4's static path reads as it always has.
+
+    ``revision`` (W9a): the SolidWorks the job ran on (the window's ``Job.revision``), for
+    :data:`WHATS_WRONG_AFTER` where that version shows What's Wrong with the user's work in error.
 
     ``finished`` (``workbook.gearbox.Finished``, the window passes it): when
     its ``earlier_update`` is set — an earlier Update's changes to the
@@ -1893,6 +1896,8 @@ def gearbox_update_status(update, result, dragged: Sequence[str] = (), *, meshes
                     sentence.split(" in ", 1)[0].replace("Your ", "", 1) in text:
                 continue
             text += " " + sentence
+        if _users_in_error(result) and whats_wrong_shows(revision):
+            text += " " + WHATS_WRONG_AFTER         # W9a: SolidWorks 2024's What's Wrong box, said once
         return text, False
 
     pieces: List[str] = []
@@ -1949,6 +1954,8 @@ def gearbox_update_status(update, result, dragged: Sequence[str] = (), *, meshes
         after = ([told] if told else []) + after
     # W9a: what it did with and found of the user's work, after the assembly's rebuild laid to that work alone.
     after = after + _rebuild_from_user(update, result) + _user_after(update, result)
+    if _users_in_error(result) and whats_wrong_shows(revision):
+        after.append(WHATS_WRONG_AFTER)                # W9a: SolidWorks 2024's What's Wrong box, said once
     if nothing:
         text = ALREADY_MATCHES
         if assembly and getattr(result, "modes", None) and any(m.clashes or m.interference_error
@@ -4269,6 +4276,34 @@ def _clauses(clauses: Sequence[str]) -> str:
     return " and ".join(clauses)
 
 
+# SolidWorks 2024's What's Wrong box in the app's Update (measured, d7cbcda): with something of the user's in error it
+# shows for some seconds, blocks nothing and goes by itself, and the Update completes; 2026 shows none. The app leaves
+# it alone and changes no setting (the coordinator's ruling); these say so, once, where the version is measured to
+# show it (``swbuild.whats_wrong_shows_in_update``), so the user is not surprised.
+WHATS_WRONG_AHEAD = ("SolidWorks may show its What's Wrong box for a few seconds during the Update; it closes by "
+                     "itself, and the Update carries on.")
+WHATS_WRONG_AFTER = ("SolidWorks may have shown its What's Wrong box for a few seconds during the Update; nothing in "
+                     "it needed answering.")
+
+
+def whats_wrong_shows(revision: Sequence[int]) -> bool:
+    """Whether the SolidWorks of ``revision`` is measured to show What's Wrong during the app's Update when something
+    of the user's is in error (``swbuild.whats_wrong_shows_in_update`` True); False where it does not, or where
+    unmeasured, or the revision is not known."""
+    from . import swbuild
+    shows = getattr(swbuild, "whats_wrong_shows_in_update", None)
+    if shows is None or not revision:
+        return False
+    return shows(tuple(int(n) for n in revision)) is True
+
+
+def _users_in_error(result) -> bool:
+    """Whether an Update's result has something of the user's in error, before or after it changed anything."""
+    work = getattr(result, "user_work", None)
+    return bool(getattr(result, "user_in_error", None) or getattr(result, "user_features_in_error", None)
+                or getattr(result, "rebuild_from_user_alone", None) or (work is not None and work.in_error))
+
+
 def _prediction(ahead, at: str, known: Sequence[str] = ()) -> Tuple[str, bool]:
     """What the worker's judgement on the recorded inventory says the next press does with it (or, red, that it
     would refuse), with the time read; ``("", True)`` with nothing to say. ``known``: refusal sentences already said
@@ -4331,6 +4366,8 @@ def _prediction(ahead, at: str, known: Sequence[str] = ()) -> Tuple[str, bool]:
         one = len(work_errors) == 1
         text = _joined(text, f"Your {_and(work_errors)} {'was' if one else 'were'} already in error in SolidWorks "
                              "then.")
+        if whats_wrong_shows(entry.revision):
+            text = _joined(text, WHATS_WRONG_AHEAD)
     return text, True
 
 

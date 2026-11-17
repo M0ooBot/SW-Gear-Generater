@@ -739,7 +739,7 @@ def press_update(desk, spec):
                                        revision=desk.sw.revision)
     desk.disk.write(finished)
     desk.record = finished.record or desk.record
-    text, ok = ui_text.gearbox_update_status(update, result, finished.dragged, meshes=meshes,
+    text, ok = ui_text.gearbox_update_status(update, result, finished.dragged, meshes=meshes, revision=desk.sw.revision,
                                              finished=finished)               # as WorkbookWindow._finish_update
     desk.positions = getattr(result, "positions_per_configuration", None)
     return ui_text.Note(" ".join([text] + finished.notes), ok)

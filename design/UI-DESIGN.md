@@ -1264,7 +1264,17 @@ sees is words, each from `ui_text`, each with the time the work was read:
   is said as the workbook shows it, never a raw equation: *Backlash 0.45 (from
   its blank cell, 0.3 × Module) to 0.6 (Gears!P2)*, *no bore*, and a cell that
   was blank is to be *cleared again*, not retyped (package A's
-  `ValueEdit.blank` wording). Then *Your Lock3 in L
+  `ValueEdit.blank` wording). **SolidWorks 2024's What's Wrong box**: measured
+  there to show for some seconds during an Update when something of the user's
+  is in error, blocking nothing and going by itself (2026 shows none; the app
+  leaves it alone and changes no setting). Where the version is measured to
+  show it (`swbuild.whats_wrong_shows_in_update`), the footer's line on the
+  user's work, after the items already in error, adds *SolidWorks may show its
+  What's Wrong box for a few seconds during the Update; it closes by itself, and
+  the Update carries on.*, and an Update's status (made or stopped) with the
+  user's work in error adds, once, *SolidWorks may have shown its What's Wrong
+  box for a few seconds during the Update; nothing in it needed answering.*
+  Then *Your Lock3 in L
   is in error in SolidWorks now.* — or,
   for one already in error before it changed anything, *Your Lock7 was in error
   in SolidWorks in the mode showing before this Update changed anything; after
