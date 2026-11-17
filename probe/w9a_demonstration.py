@@ -98,7 +98,7 @@ def _arg(name):
     return ARGS[ARGS.index(name) + 1] if name in ARGS else ""
 
 
-ORDER = ["m3", "setup", "m1", "go", "refuse", "again", "again-dirty", "again-closed", "reducer", "k3", "nocarrier"]
+ORDER = ["m3", "setup", "go", "m1", "refuse", "again", "again-dirty", "again-closed", "reducer", "k3", "nocarrier"]
 # SolidWorks 2024's confirming set (HANDOFF, Rules carried over; the coordinator's ruling 4): the turning build with its
 # edits (setup, go), the rebuilds that can raise a dialog there (m3, k3), and the user-lock put (reducer, nocarrier).
 # refuse runs on 2024 by name.
