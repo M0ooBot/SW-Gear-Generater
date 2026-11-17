@@ -74,10 +74,10 @@ def test_two_gears_one_name_is_caught(tmp_path):
     spec = model.replace(spec, gears=spec.gears + (wider,))
     parts = build.plan_parts(from_file(write(tmp_path, spec)), FOLDER)
     # Build waits for the error...
-    assert assess.build_refusal(parts, parts.diagnostics, FOLDER).startswith("Fix the workbook before building: Gears!T6")
+    assert assess.build_refusal(parts, parts.diagnostics, FOLDER).startswith("Fix the workbook before building: Gears!V6")
     assert [j.gear_ids for j in parts.jobs] == [("G1",), ("G2",), ("G3",), ("G4",)]   # ...the good gears still plan
     (error,) = parts.errors
-    assert error.field == "Gears!T6"
+    assert error.field == "Gears!V6"                 # Part name, after the two bands (W9b)
     assert "G5 and G1 would both be Gear_m1.5_N17.SLDPRT" in error.message and "Part name" in error.message
 
 
@@ -771,7 +771,8 @@ def test_problems_follow_their_rows_when_a_row_is_inserted(tmp_path):
     old, new = assessed(tmp_path, before, "b.xlsx"), assessed(tmp_path, after, "c.xlsx")
     did = link.consequence(old, new)
     changes = link.describe_changes(old.read, new.read)
-    assert ui_text.workbook_change_lines(changes, did) == ["gear G5 added (Gears row 3) · 1 new error (Gears!T3)"]
+    # Part name is column V since W9b's two bands came before it.
+    assert ui_text.workbook_change_lines(changes, did) == ["gear G5 added (Gears row 3) · 1 new error (Gears!V3)"]
 
 
 def test_a_mesh_the_chosen_fix_puts_right_says_so(tmp_path):

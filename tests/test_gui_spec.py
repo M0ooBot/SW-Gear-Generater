@@ -47,7 +47,9 @@ def _self_attributes(node, store=False):
 def test_the_gear_table_covers_every_field_of_the_gear_spec():
     """A field added to GearSpec and forgotten here would be silently dropped."""
     mapped = {field for field, _ in _constant("GEAR_VARS")} | set(_constant("GEAR_COMPOUND"))
-    assert mapped == {f.name for f in dataclasses.fields(GearSpec)}
+    workbook_only = set(_constant("GEAR_WORKBOOK_ONLY"))          # W9b: a sleeve's bands, never on the strip's form
+    assert workbook_only == {"start_band", "end_band"} and not workbook_only & mapped
+    assert mapped | workbook_only == {f.name for f in dataclasses.fields(GearSpec)}
 
 
 def test_the_pair_table_covers_every_field_of_the_pair_spec():

@@ -538,6 +538,9 @@ def _sliding_shaft(shaft: str, on: Sequence[str], placed, frames: Mapping[str, F
     too). A SLIDE carries its signed z_front per mode (``values``), ``z_front`` the first mode's."""
     moving = {g for g in on if report.layout.placed[g].spec is not None and _is_slider(report, g)}
     still_gears = [g for g in on if g not in moving]
+    # W9b (ISSUE-1-PLAN K8): a hub is its shaft's anchor, before any other gear that does not slide, so the sleeve it
+    # carries is splined to it.
+    still_gears.sort(key=lambda g: getattr(report.layout.placed[g].spec, "kind", "") != "hub")
     anchor = still_gears[0] if still_gears else on[0]
     if anchor not in frames:
         raise ValueError(f"{anchor} is placed but has no frame, so it cannot be mated to {shaft}.")

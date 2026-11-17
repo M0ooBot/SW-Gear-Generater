@@ -85,6 +85,10 @@ class Gear:
     slides: str = ""
     part_name: str = ""
     notes: str = ""
+    # W9b (ISSUE-1-PLAN §2.4, K10): a sleeve's toothed bands, mm as typed ("" both: teeth over the whole face). After
+    # ``notes`` so every positional use of the fields before stays as it is.
+    start_band: str = ""
+    end_band: str = ""
     row: int = 0
 
     def kind_word(self) -> str:
@@ -128,6 +132,8 @@ class Gear:
             shaft_angle="90",
             mate_teeth="",
             name=self.part_name,
+            start_band=self.start_band,
+            end_band=self.end_band,
         )
 
     def positions(self) -> Dict[str, float]:

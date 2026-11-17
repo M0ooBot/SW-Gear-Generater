@@ -1,7 +1,7 @@
 """Gear kinds: the maths of each, and the SolidWorks recipe that builds it."""
 
 from .bevel import BevelGear
-from .clutch import DogKind, SleeveKind
+from .clutch import DogKind, HubKind, SleeveKind
 from .helical import HelicalGear, HerringboneGear
 from .internal import InternalHelicalGear, InternalHerringboneGear, InternalSpurGear
 from .spur import SpurGear
@@ -18,7 +18,7 @@ PLANNED_KINDS: tuple = ()
 
 
 # W8: the workbook's own kinds (W8-PLAN §1.1), never offered by the strip (``gui.KIND_VALUES`` reads ``KINDS``).
-WORKBOOK_KINDS = {"sleeve": SleeveKind(), "dog": DogKind()}
+WORKBOOK_KINDS = {"sleeve": SleeveKind(), "dog": DogKind(), "hub": HubKind()}      # W9b: the hub
 
 
 def kind_for(spec):

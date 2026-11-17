@@ -51,6 +51,9 @@ MODE_PAIR = "pair"
 MODES = (MODE_SINGLE, MODE_PAIR)
 
 
+BAND_FIELDS = ("start_band", "end_band")     # W9b: GearSpec.to_dict leaves them out while both are blank
+
+
 class InputError(Exception):
     """A field on the form could not be read."""
 
@@ -150,9 +153,18 @@ class GearSpec:
     shaft_angle: str = "90"       # bevel only: degrees between the two shafts
     mate_teeth: str = ""          # bevel only: the other gear's teeth, which set the pitch cone
     name: str = ""                # "" = default_stem()
+    # W9b (ISSUE-1-PLAN §2.4, K10; W9B-INTERFACES §2): a workbook sleeve's two toothed bands, mm; "" both = teeth over
+    # the whole face. Never on the strip's form.
+    start_band: str = ""
+    end_band: str = ""
 
     def to_dict(self) -> Dict[str, Any]:
-        return asdict(self)
+        """Every field, but the bands left out while both are blank: an unbanded part's record is what it was."""
+        values = asdict(self)
+        if not str(self.start_band).strip() and not str(self.end_band).strip():
+            for key in BAND_FIELDS:
+                values.pop(key, None)
+        return values
 
     @classmethod
     def from_dict(cls, raw: Dict[str, Any]) -> "GearSpec":
@@ -225,6 +237,19 @@ class GearSpec:
     def is_internal(self) -> bool:
         return str(self.teeth_side).strip().lower() == TEETH_INTERNAL
 
+    def has_bands(self) -> bool:
+        """Whether either band is typed (W9b): the part is then a banded sleeve's, with a relief between."""
+        return bool(str(self.start_band).strip() or str(self.end_band).strip())
+
+    def bands_mm(self) -> Optional[Tuple[float, float]]:
+        """``(start band, end band)`` in mm, or None when both are blank. A band that does not read is an
+        InputError naming it; one blank beside a typed one reads as 0 (the kind's check says it)."""
+        if not self.has_bands():
+            return None
+        start = str(self.start_band).strip()
+        end = str(self.end_band).strip()
+        return (parse_float(start, "Start band") if start else 0.0, parse_float(end, "End band") if end else 0.0)
+
     def rim_mm(self) -> Optional[float]:
         """None when blank, which means the root diameter plus six modules."""
         text = self.rim.strip()
@@ -254,7 +279,7 @@ class GearSpec:
         return GearSpec(**values)
 
 
-CLUTCH_WORDS = {"sleeve": "Sleeve", "dog": "Dog"}   # a workbook sleeve's and dog's stem word, never Gear or Ring
+CLUTCH_WORDS = {"sleeve": "Sleeve", "dog": "Dog", "hub": "Hub"}   # a workbook sleeve's, dog's and hub's stem word
 
 
 def default_stem(spec: GearSpec, prefix: str = "") -> str:

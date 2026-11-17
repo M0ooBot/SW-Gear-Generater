@@ -224,7 +224,7 @@ def test_a_link_record_round_trips(tmp_path):
     assert store.read_link_record(workbook) == record
     assert store.open_link_record(workbook) == record
     raw = json.loads((tmp_path / "R.workbook.json").read_text())
-    assert raw["link_schema_version"] == store.LINK_SCHEMA_VERSION == 7
+    assert raw["link_schema_version"] == store.LINK_SCHEMA_VERSION == 8          # W9b's
     assert raw["schema_version"] == 1          # what a build from before schema 2 checks: see the next test
     assert raw["parts"][0]["revision"] == 0 and raw["gearbox"]["components"][0]["name"] == "Gear_m1.5_N17_r2-1"
 
@@ -1120,7 +1120,7 @@ def test_a_record_the_app_wrote_before_schema_5_reads_writes_and_reads_again(tmp
     target = tmp_path / "R.workbook.json"
     target.write_text(json.dumps(raw))
     first = store.read_link_record(str(tmp_path / "R.xlsx"))
-    assert first.schema_version == store.LINK_SCHEMA_VERSION == 7 and first.gearbox.carriers == []
+    assert first.schema_version == store.LINK_SCHEMA_VERSION == 8 and first.gearbox.carriers == []
     assert all(c.of == "" for c in first.gearbox.components) and all(m.on == "" for m in first.gearbox.mates)
     store.save_link_record(first)
     assert json.loads(target.read_text())["link_schema_version"] == store.LINK_SCHEMA_VERSION
@@ -1416,13 +1416,13 @@ def test_a_w8_field_of_the_wrong_shape_is_refused_with_a_sentence(change, match)
 
 
 def test_a_record_newer_than_schema_6_is_refused_and_left_byte_identical(tmp_path):
-    """W8's reader (schema 6) refused schema 7; since W9a reads 7, the first schema it refuses is 8 (W9b's)."""
+    """W8's reader (schema 6) refused schema 7; since W9b reads 8, the first schema it refuses is 9 (W9d's)."""
     raw = json.loads(store.link_record_to_json(modes_record("R.xlsx")))
-    raw["link_schema_version"] = 8
+    raw["link_schema_version"] = 9
     target = tmp_path / "R.workbook.json"
     text = json.dumps(raw)
     target.write_text(text)
-    with pytest.raises(store.UnknownSchema, match=r"schema 8, this one reads 7"):
+    with pytest.raises(store.UnknownSchema, match=r"schema 9, this one reads 8"):
         store.read_link_record(str(tmp_path / "R.xlsx"))
     assert target.read_text() == text and sorted(p.name for p in tmp_path.iterdir()) == ["R.workbook.json"]
 

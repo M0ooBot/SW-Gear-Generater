@@ -1311,6 +1311,15 @@ def structural_change(built: Mapping[str, str], wanted: Mapping[str, str]) -> st
     if has_groove(built) != has_groove(wanted):
         return ("A centre groove cannot be added to or taken out of a built part through its values; "
                 "build it again as a new part.")
+
+    def has_bands(values: Mapping[str, str]) -> bool:
+        return any(str(values.get(key, "") or "").strip() for key in ("start_band", "end_band"))
+
+    # W9b (ISSUE-1-PLAN §2.4): a banded sleeve's relief is features, not values; its bands' values are globals. Bands
+    # added to a built sleeve in place are W9c's; until then a new part.
+    if has_bands(built) != has_bands(wanted):
+        return ("Bands cannot be given to or taken from a built sleeve through its values; build it again as a new "
+                "part.")
     # An arc built for a small pinion still closes the space at more teeth (SolidWorks 2024
     # rebuilt 6 → 7 → 12 → 6 through the values); a chord does not at fewer. The record
     # holds the last values, not the build's, so an arc part taken up to 12 and back to 6

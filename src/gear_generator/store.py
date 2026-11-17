@@ -27,7 +27,12 @@ import uuid
 from dataclasses import asdict, dataclass, field, fields
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
-SCHEMA_VERSION = 1
+# The .gear.json's schema: the newest this app reads. W9b (ISSUE-1-PLAN §2.4; W9B-INTERFACES §5): a part with bands is
+# written at 2, since ``GearSpec.from_dict`` drops keys it does not know and an older app would reuse a banded sleeve
+# as an unbanded one; a part without bands stays at 1 (:func:`sidecar_schema`), byte for byte as before.
+PLAIN_SCHEMA = 1
+BANDED_SCHEMA = 2
+SCHEMA_VERSION = BANDED_SCHEMA
 SIDECAR_SUFFIX = ".gear.json"
 RECENT_LIMIT = 10
 
@@ -78,6 +83,13 @@ class Sidecar:
     schema_version: int = SCHEMA_VERSION
     written_by: str = ""
     record: GearRecord = field(default_factory=GearRecord)
+
+
+def sidecar_schema(spec: Dict[str, Any]) -> int:
+    """The schema a part's ``.gear.json`` is written at: :data:`BANDED_SCHEMA` when its form has a band, else
+    :data:`PLAIN_SCHEMA` (W9b)."""
+    return BANDED_SCHEMA if any(str((spec or {}).get(k, "") or "").strip() for k in ("start_band", "end_band")) \
+        else PLAIN_SCHEMA
 
 
 def new_record_id() -> str:
@@ -367,7 +379,8 @@ def built_sidecar(
         created=kept.created if kept and kept.created else stamp, last_built=stamp,
         last_updated=kept.last_updated if kept else "",
     )
-    return Sidecar(part_path=part_path, part_title=part_title, written_by=written_by, record=record)
+    return Sidecar(part_path=part_path, part_title=part_title, schema_version=sidecar_schema(record.spec),
+                   written_by=written_by, record=record)
 
 
 def updated_sidecar(sidecar: Sidecar, spec: Dict[str, Any], derived: Dict[str, Any],
@@ -382,7 +395,8 @@ def updated_sidecar(sidecar: Sidecar, spec: Dict[str, Any], derived: Dict[str, A
         changes["unsaved_since"] = float(unsaved_since)
     record = GearRecord(**{**asdict(sidecar.record), **changes})
     return Sidecar(part_path=sidecar.part_path, part_title=sidecar.part_title,
-                   schema_version=sidecar.schema_version, written_by=sidecar.written_by, record=record)
+                   schema_version=sidecar_schema(record.spec),
+                   written_by=sidecar.written_by, record=record)
 
 
 def unmarked(sidecar: Sidecar) -> Sidecar:
@@ -406,13 +420,19 @@ def link_record_path(workbook_path: str) -> str:
 
 _W7_LINK_SCHEMA = 5               # the schema W7 left (W8-PLAN §1.11: W8's is one past it, written from it)
 _W8_LINK_SCHEMA = _W7_LINK_SCHEMA + 1        # the schema W8 left (ISSUE-1-PLAN §2.4: W9a's is one past it)
-LINK_SCHEMA_VERSION = _W8_LINK_SCHEMA + 1    # the link record's own schema, apart from the .gear.json's SCHEMA_VERSION
+_W9A_LINK_SCHEMA = _W8_LINK_SCHEMA + 1       # the schema W9a left (ISSUE-1-PLAN §2.4: W9b's is one past it)
+LINK_SCHEMA_VERSION = _W9A_LINK_SCHEMA + 1   # the link record's own schema, apart from the .gear.json's SCHEMA_VERSION
+# Schema 8 (W9b, ISSUE-1-PLAN §2.4, K10; W9B-INTERFACES §5): no new field. A sleeve's bands ride in its part entry's
+# ``spec`` (``GearSpec.to_dict``), so a W9a-era app, which would read them away and rebuild the sleeve without its
+# relief, refuses a schema 8 record and leaves it byte-identical. A v1-v7 record reads as v8 as it read as v7, and a
+# v8 written from it reads back the same. A record of any newer schema (W9d sets 9) is refused and left
+# byte-identical.
 # Schema 7 (W9a, ISSUE-1-PLAN §2.1 item 6, K4; W9A-INTERFACES.md §2.2): the gearbox keeps what the last Update read of
 # the user's work in its assembly (GearboxRecord.user_work, a UserWorkEntry): when, from which read of the workbook, on
 # which SolidWorks, the user's components, mates and features as read, what that press put with its gears, and — for a
 # press that refused over the user's work — every problem it said. A v1-v6 record reads as v7 with no user work —
-# nothing read yet — and a v7 written from it reads back the same. A record of any newer schema (W9b sets 8) is refused
-# and left byte-identical.
+# nothing read yet — and a v7 written from it reads back the same. A record of any newer schema (W9b set 8) was refused
+# by W9a's reader and left byte-identical.
 # Schema 6 (W8, every record: W8-PLAN §1.11, W8-INTERFACES.md §5): the gearbox keeps its configurations
 # (GearboxRecord.modes), a SLIDE mate its value per configuration (MateEntry.values), a coupling or sliding mesh the
 # configurations it is on in (MateEntry.modes), and a component its frame per configuration (ComponentEntry.frames);
@@ -1241,7 +1261,7 @@ def _user_work_read(raw: Any) -> Optional[UserWorkEntry]:
 
 
 def link_record_from_json(text: str) -> LinkRecord:
-    """Parse a link record of any schema up to :data:`LINK_SCHEMA_VERSION`; a v1–v6 record is read as v7, and a
+    """Parse a link record of any schema up to :data:`LINK_SCHEMA_VERSION`; a v1–v7 record is read as v8, and a
     record of any newer schema is refused (:class:`UnknownSchema`) and left alone.
 
     The schema is ``link_schema_version`` when the file has it, else

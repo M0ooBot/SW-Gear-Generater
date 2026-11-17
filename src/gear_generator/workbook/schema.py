@@ -75,7 +75,7 @@ for _letter in "xyz":
     _AXIS_ALIASES[_letter] = _letter.upper() + "+"
 
 ROLES = ("input", "output", "fixed")
-KINDS = ("spur", "helical", "herringbone", "bevel", "sleeve", "dog")
+KINDS = ("spur", "helical", "herringbone", "bevel", "sleeve", "dog", "hub")
 SIDES = ("external", "internal")
 HANDS = ("right", "left")
 FLANKS = ("involute", "arcs")
@@ -156,6 +156,12 @@ GEARS = SheetDef("Gears", (
     Column("fillet", "Fillet", "mm", blank="0.38 × module", numeric=True, width=12),
     Column("rim", "Rim", "mm", blank="root + 6 × module", numeric=True, width=10),
     Column("slides", "Slides", blank="doesn't slide", width=20, help="Named positions from At: H=-10, N=0, L=+10."),
+    # W9b (ISSUE-1-PLAN §2.4, K10; W9B-INTERFACES §1): a sleeve's two toothed bands; the span between is a relief bore.
+    Column("start_band", "Start band", "mm", blank="teeth over the whole face", numeric=True, width=15,
+           help="A sleeve only: its toothed length at the start of its face, the end toward its shaft's Axis minus "
+                "side. With End band, the span between is a relief bore."),
+    Column("end_band", "End band", "mm", blank="teeth over the whole face", numeric=True, width=14,
+           help="A sleeve only: its toothed length at the end of its face."),
     Column("part_name", "Part name", blank="as the strip names it", width=20),
     Column("notes", "Notes", width=30),
 ))

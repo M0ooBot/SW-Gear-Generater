@@ -14,9 +14,10 @@ def clutch(kind, side="external"):
 
 
 def test_the_two_kinds_are_the_workbooks_only():
-    assert set(gears.WORKBOOK_KINDS) == {SLEEVE, DOG} == {"sleeve", "dog"}
+    """W9b adds the hub (``test_workbook_bands``), a workbook kind as these two are."""
+    assert set(gears.WORKBOOK_KINDS) == {SLEEVE, DOG, "hub"} == {"sleeve", "dog", "hub"}
     assert isinstance(gears.WORKBOOK_KINDS["sleeve"], SleeveKind) and isinstance(gears.WORKBOOK_KINDS["dog"], DogKind)
-    assert not set(gears.KINDS) & {"sleeve", "dog"} and not set(gears.INTERNAL_KINDS) & {"sleeve", "dog"}
+    assert not set(gears.KINDS) & {"sleeve", "dog", "hub"} and not set(gears.INTERNAL_KINDS) & {"sleeve", "dog", "hub"}
 
 
 def test_kind_for_finds_them_first_an_internal_sleeve_included():

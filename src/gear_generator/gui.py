@@ -81,6 +81,8 @@ GEAR_VARS = (
 )
 # Shared by both gears.
 GEAR_COMPOUND = ("kind", "recipe")
+# W9b: GearSpec fields only a workbook row fills (a sleeve's bands); the strip leaves them blank, as GearSpec() does.
+GEAR_WORKBOOK_ONLY = ("start_band", "end_band")
 
 # Every PairSpec field, and the app attribute holding it.
 PAIR_VARS = (

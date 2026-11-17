@@ -139,7 +139,7 @@ def check(spec: GearboxSpec, skip_gears=()) -> Report:
     listed = {frozenset(pair) for pair in expanded} | {frozenset((m.a, m.b)) for m in spec.meshes}
     report.stages = planetary.stages(spec) if any(p.carrier for p in placed.values()) else ()
     unfit: List[Tuple[str, str]] = []              # Meshes rows that fit no carrier: their consequences are not said
-    clutches = {g.id for g in spec.gears if g.kind_word() in (modes_mod.SLEEVE, modes_mod.DOG)}
+    clutches = {g.id for g in spec.gears if g.kind_word() in modes_mod.CLUTCH_KINDS}
     for mesh in spec.meshes:
         a, b = first.get(mesh.a), first.get(mesh.b)
         if a is None or b is None or mesh.a in clutches or mesh.b in clutches:
@@ -188,6 +188,8 @@ def check(spec: GearboxSpec, skip_gears=()) -> Report:
         here.update(m.placed)
         _check_clearances(report, spec, here, listed, only=set(m.placed), said={d.message for d in report.diagnostics})
     report.diagnostics.extend(d for d in modes_mod.mode_checks(spec, placed, report.modes)
+                              if d not in report.diagnostics)
+    report.diagnostics.extend(d for d in modes_mod.hub_errors(spec, placed, report.modes)     # W9b: K8
                               if d not in report.diagnostics)
     _check_shafts(report, spec, placed, upset)
     _check_turned_clearances(report, spec, placed, listed)
