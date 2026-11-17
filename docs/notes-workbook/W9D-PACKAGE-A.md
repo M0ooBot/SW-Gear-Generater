@@ -406,3 +406,21 @@ Gear Generator, not in SolidWorks" instead of Python text.
   component suppressed in the mode showing (Sprocket-10's) named `WHY_UNREAD` with subjects
   `(clause, "suppressed", "Sprocket-10", <mode showing>)`. I have not read whether its fake desk reads that entity's
   kind unread.
+
+## Seventh round (W9D-REVIEW-A.md 0d45c9a)
+
+- **N1.** `_read_back` takes a remade mate's entity named by the new assembly's root component as the assembly's own.
+  The root is read from SolidWorks once in C.1 (`root_component(True)`; the new assembly holds no lightweight
+  component, since carried ones go in resolved), never from a title. The fake's `assembly_entity` default is now
+  `"root"`, as 2026 and 2024 measured; `"none"` only where a test asks. Pin:
+  `test_a_mate_to_the_assemblys_own_plane_is_made_again_and_kept`, first mode and per mode; both cases fail without
+  the fix. Changing the default broke one test: the lightweight test asserted no `root_component(True)` anywhere. The
+  test was wrong (its rule is "never in the old assembly beside its lightweight component"), so it now checks R only.
+- **The wider audit of the fake's defaults was not done this round**: only `assembly_entity` was changed. Still owed: go
+  through every default standing for a measured `*_ON_2026` finding or a W9D-PROBES.md behaviour.
+- **S5.** `test_a_carry_that_stops_in_a_later_mode_leaves_the_first_mode_showing` fails with the `finally`'s show
+  removed.
+- **S6.** When `ReferenceType2` answered a type the app does not take, the cause is
+  `swbuild.CAUSE_TYPE_NOT_TAKEN = "type not taken"` with parts `(the number as read,)`, and the clause "it is on a kind
+  of entity Gear Generator does not make mates on again". "SolidWorks would not say what kind…" now covers only a
+  type not read. Pin: `test_an_entity_of_a_type_the_app_does_not_take_says_so_as_structure`.

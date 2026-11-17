@@ -7009,6 +7009,7 @@ class OldComponent:
 
 CAUSE_SUPPRESSED = "suppressed"                  # OldEntity.cause: its component suppressed in the mode showing
 CAUSE_BESIDE_LIGHTWEIGHT = "beside lightweight"  # the assembly's own entity, not told beside a lightweight component
+CAUSE_TYPE_NOT_TAKEN = "type not taken"          # ReferenceType2 answered a type the app does not take: (its number,)
 OLD_OPEN = "open"             # OldWork.how: read as it stands in the session
 OLD_READ_ONLY = "read-only"   # opened read-only by this job and closed unsaved after the read
 OLD_UNREAD = "unread"         # not read: OldWork.unread says why
@@ -7903,6 +7904,10 @@ def _read_old_mates(sw: SolidWorks, carry: Carry, work: OldWork, configurations:
                 unread = unread or "a component it joins is suppressed in the mode the old assembly showed"
             elif what == UNREAD_ENTITY and not unread:
                 unread = "SolidWorks would not say what it is on"
+            elif e.kind in (ENTITY_UNREAD, "") and not unread and e.select_type not in (UNREAD, None):
+                # S6: ReferenceType2 answered, with a type the app does not take (a sketch point, say).
+                cause, parts = CAUSE_TYPE_NOT_TAKEN, (str(e.select_type),)
+                unread = "it is on a kind of entity Gear Generator does not make mates on again"
             elif e.kind in (ENTITY_UNREAD, "") and not unread:
                 unread = "SolidWorks would not say what kind of entity it is"
             entities.append(OldEntity(what, who, e.kind if what != UNREAD_ENTITY else ENTITY_UNREAD, e.feature,
@@ -7987,6 +7992,7 @@ class _Carrying:
     free_before: Dict[str, bool] = field(default_factory=dict)
     app_codes: Dict[str, Dict[str, int]] = field(default_factory=dict)   # mode -> each app mate's code before C.6
     new_frames: Dict[str, Frame9] = field(default_factory=dict)
+    root: str = ""                               # N1: the new assembly's root component's Name2, as SolidWorks gives it
     doing: str = "reading the new revision"
     left: List[str] = field(default_factory=list)
     counter: int = 0
@@ -8070,6 +8076,12 @@ def _carry_steps(c: _Carrying, say: Callable[[Step], None]) -> None:
     say(Step(STAGE_CARRY, _stem(c.asm)))
     # S4: the new assembly made the build document and its first mode shown before anything of it is read.
     sw.open_document(c.asm)
+    try:
+        # N1: SolidWorks names a mate's entity on the assembly's own plane by the root component's Name2 (2026 and
+        # 2024, ASSEMBLY_ENTITY_COMPONENT_IS_ROOT); read it from SolidWorks, never from a title.
+        c.root = sw.root_component(True) or ""
+    except Exception:  # noqa: BLE001 - unread: only "" is then the assembly's own
+        c.root = ""
     configs = list(sw.configurations()) if carry.modes else []
     c.config_of = {m: next((x for x in configs if x.casefold() == m.casefold()), m) for m in carry.modes}
     c.show(c.first())
@@ -8334,7 +8346,7 @@ def _read_back(c: _Carrying, handle: str, item: CarryMateItem) -> str:
                       c.result.components.get(head, head))
     if selection_reversed(carry_kind(old), old.entities):
         wanted.reverse()
-    got = [e.component or "" for e in definition.entities]
+    got = ["" if (e.component or "") == c.root and c.root else (e.component or "") for e in definition.entities]
     if [w for w in wanted if w] != [g for g in got if g]:
         return "swapped" if len(wanted) == 2 and [w for w in wanted[::-1] if w] == [g for g in got if g] else \
             "entities"

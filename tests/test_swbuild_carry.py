@@ -789,7 +789,8 @@ def test_a_lightweight_user_component_is_carried_resolved_and_its_mates_named(mo
     assert cr.inserted == [("Sprocket-1", "carried1-1")]
     assert {n.item: n.why for n in cr.named} == {"Lock1": "lightweight"}
     assert "Sprocket-1" in fake.lightweight                         # nothing resolved in the old assembly
-    assert ("root_component", (True,)) not in fake.calls
+    read = fake.calls[:[n for n, *_ in fake.calls].index("new_part")]
+    assert ("root_component", (True,)) not in read      # never in the old assembly beside its lightweight component
 
 
 # -- a gearbox with modes: states and flags per mode, a mode the old assembly has not ---------------------------------
@@ -1485,3 +1486,63 @@ def test_a_same_error_mate_that_ties_no_gear_is_carried(monkeypatch, every_gate)
     fake.remake_codes["Lock2"] = (46, True)
     cr = _build_again(fake).carry
     assert cr.fixed == [] and cr.same_error == [("Lock2", 46)] and "Lock2" in {r[0] for r in cr.remade}
+
+
+
+# -- the seventh round (W9D-REVIEW-A.md 0d45c9a) ------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("modes", [False, True])
+def test_a_mate_to_the_assemblys_own_plane_is_made_again_and_kept(monkeypatch, every_gate, mode_findings, modes):
+    """N1: SolidWorks names the assembly's own entity by its root's Name2 (the fake's default now); the remade mate
+    reads back equal and is kept, in the first mode and per mode."""
+    every_gate()
+    if modes:
+        def tweak(fake):
+            fake.user_mate(TC_ASM, "UserAsm6", kind="distance", a=("Sprocket-1", "plane1"), b=("asm", "plane1"))
+            fake.memory_mates[_key(TC_ASM)][-1].flags = dict(ALL_ON)
+        cr, fake = _tc_again(monkeypatch, ALL_ON, tweak)
+    else:
+        fake = _old_train()
+        _isfile(monkeypatch, fake)
+        fake.user_mate(T_ASM, "UserAsm6", kind="distance", a=("Sprocket-1", "plane1"), b=("asm", "plane1"))
+        cr = _build_again(fake).carry
+    assert "UserAsm6" in {r[0] for r in cr.remade}, cr.named
+    assert "UserAsm6" not in {n.item for n in cr.named}
+
+
+def test_a_carry_that_stops_in_a_later_mode_leaves_the_first_mode_showing(monkeypatch, every_gate, mode_findings):
+    """S5: the finally's show of the first mode, pinned."""
+    every_gate()
+
+    def tweak(fake):
+        original = fake.mate_states
+
+        def states(*, others=None):
+            if fake.config == "N" and getattr(fake, "saved_after", False) and fake.mate("Lock1") is not None \
+                    and not fake.mate("Lock1").user:
+                raise RuntimeError("SolidWorks stopped answering.")
+            return original(others=others)
+        monkeypatch.setattr(fake, "mate_states", states)
+    cr, fake = _tc_again(monkeypatch, ALL_ON, tweak)
+    assert cr.stopped and fake.config == "2H"
+
+
+def test_an_entity_of_a_type_the_app_does_not_take_says_so_as_structure(monkeypatch, every_gate):
+    """S6: ReferenceType2 answered (a sketch point, 11 say); the cause is the type, not SolidWorks declining."""
+    every_gate()
+    fake = _old_train()
+    _isfile(monkeypatch, fake)
+    fake.user_mate(T_ASM, "Coincident8", kind="coincident", a=("Sprocket-1", "Point1"), b=("gear1-1", "plane1"))
+    original = fake.mate_definition
+
+    def definition(handle):
+        d = original(handle)
+        if d.name != "Coincident8":
+            return d
+        first = swcom.MateEntityRead(d.entities[0].component, 11, "unread", "", d.entities[0].params)
+        return _replace(d, entities=(first,) + d.entities[1:])
+    monkeypatch.setattr(fake, "mate_definition", definition)
+    cr = _build_again(fake).carry
+    named = {n.item: n.subjects for n in cr.named}
+    assert named["Coincident8"][1:] == (swbuild.CAUSE_TYPE_NOT_TAKEN, "11")

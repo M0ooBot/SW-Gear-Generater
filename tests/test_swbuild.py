@@ -344,7 +344,7 @@ class FakeSolidWorks:
         # component, "" (SolidWorks 2024, the macro database); "root": the active configuration's root component,
         # named as the assembly (2026, findings.ASSEMBLY_ENTITY_COMPONENT_IS_ROOT_ON_2026). ``root_unread``: the
         # session's root read (root_component) answers nothing.
-        self.assembly_entity = "none"
+        self.assembly_entity = "root"      # as 2026 and 2024 measured (ASSEMBLY_ENTITY_COMPONENT_IS_ROOT); "none" only where a test asks
         self.root_unread = False
         # W9d (D5): mate_info gives each entity's kind and feature (Session.mate_info reads ReferenceType2); False, the
         # read before W9d (no kinds), which the suites before W9d were written against.
