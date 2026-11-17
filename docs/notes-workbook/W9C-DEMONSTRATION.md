@@ -271,9 +271,28 @@ than W9c, which `ring` reads on its own; it is not what `remake` is here to show
 1. Sun 30, Planet 12, Ring 55 → 54 is pressed with `swbuild.LANDING_STEPS = ()` for that press only, so it stops in
    the ring. The status names the ring, left in error, to close without saving; the record marks the ring
    (`unsaved_in_error`); the patch is restored.
-2. Pressed again without closing: the status says the ring is still open in SolidWorks, in error, that this press
-   set nothing in it, and to close it without saving, and never that SolidWorks already matches. The mark stays,
-   nothing is set in a part, and the footer keeps its "left in error when it stopped … without saving" sentence.
+2. Pressed again without closing. Since 89615aa the app stops this press after its check phase and before any write
+   (the eighth run found it writing a gear mate and rebuilding the assembly here). Checked, as the fixes review's
+   addendum §6 asks (3a6013d):
+   - **The status** says the ring is still open in SolidWorks, in error, that this press set nothing in it, and to
+     close it without saving. That sentence stands alone: never that SolidWorks already matches, and no offer to save
+     or keep anything. The mark stays, and nothing is set in a part.
+   - **Nothing was written** (`wrote_nothing`):
+     - No traced call that changes or shows anything (`nothing_changed_calls`), and no `AddComponent5` or `SaveAs3`.
+     - Every part's, the layout's and the carrier's globals the same before and after (`live_globals`; equation writes
+       are not traced).
+     - Every document of the copy with the same save flag and file time just before and just after the press, and
+       none modified but the three parts step 1 changed (Sun, Planet, Ring). The flags and times are read last before
+       the press and first after it.
+     - The result's `changed`, `mates_made`, `remade_in_modes` and `placed` empty, `skipped` said, and its failures
+       naming the ring's file alone.
+     - The ring still reading Tooth Space at 72 and 54 teeth.
+     - The assembly read by W9a's `read_now` before and after, `written` empty (frames, mates' codes and flags per
+       mode), and the four gear mates' ratios (`Session.gear_mate_ratio`) the same.
+   - **The footer** says the ring is to be closed without saving: either "left in error when it stopped" or "still
+     open in SolidWorks". The script's footer carries the press's note, which is now the still-in-error sentence alone.
+     It must offer to keep nothing. The self-check holds both judgements to the app's own
+     `ui_text.still_in_error_sentence`, and to the eighth run's status.
 3. Every document of the copy is closed without saving, as the sentences say, and it is pressed again. It goes
    through routed (the ring by way of 53), the ring at 54 with nothing in error, the mark gone, the stage's gear mates
    remade and the footer quiet.
