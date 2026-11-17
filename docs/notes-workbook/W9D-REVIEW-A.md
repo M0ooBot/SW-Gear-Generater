@@ -406,3 +406,259 @@ All acceptable as additions.
   Bring it to the probes review's rule.
 - `component_states_in` and `add_component_in` instead of §10's names: fine.
 - The carry still runs when the interference check raised: right by §3, with S4 and S5.
+
+---
+
+## Re-check of the fix round
+
+*Independent, 2026-11-17, at `6441e34`. Package A's commits are `98ed62e` (the code), `e5c1978` (the tests),
+`013c14c` (the 2026 findings) and `0c0e5be` (the note). The contract was read at `d3bb9e7`: §3 R.2 and R.6, §4.1,
+§8.1, §10 and §17.1. As before, I started no SolidWorks or Excel and changed nothing but this file. Package B's
+uncommitted edits (`gearbox.py`, `test_workbook_carry.py`, the UI-DESIGN and its note) are left alone; every run
+below that matters is on a clean `git archive HEAD` in the scratchpad.*
+
+- *The suite at HEAD:* 2 failed, 3859 passed, 10 skipped.
+  - The same counts hold on a clean extract of HEAD and on the worktree with B's uncommitted edits in it.
+  - The two failures are the known tkinter-only tests (`test_gears_clutch.py::test_the_strip_never_offers_them`,
+    `test_ui_text.py::test_the_end_view_readout_always_fits_and_lists_up_to_four_heights`).
+  - None fails in B's files or in A's.
+
+**Verdict.**
+
+- **Every must-fix and should-fix is in.** I undid each must-fix by hand in a scratch copy of HEAD, and each one
+  failed its own new test (below). My three reproductions from the first round now pass.
+- **The r3 code as written matches the probe's route call for call.** I ran it over COM doubles. It finds the one
+  match, reads the coaxial read and the radius, carries each shared candidate once, and caps.
+- **Three new faults should be fixed** (N1–N3), one of them reproduced. None stands in the demonstration's way as
+  planned: M9 has no tie that happens in one mode only, and N2 can be logged in its run.
+- **One gap in the findings test:** a boolean 2026 value can change and the whole suite still passes.
+- **Package A is fit for M9's script to be written and run against.**
+
+### Each review item at HEAD
+
+| Item | At HEAD | Undone in scratch, its test fails |
+|---|---|---|
+| M1 r3 | **Fixed.** `Session.entity_references` (`swcom.py:3887`); R groups the face and edge items per component (`swbuild.py:7807`). | yes, all six `test_faces_by_r3_…` cases |
+| M2 held gear | **Fixed.** Only `_mated_handles` gears, and only against what was free before, everywhere. A body on no train is its own. | yes, `test_a_gear_not_free_before_…`; my first-round reproduction passes |
+| M3 per-mode codes | **Partly.** Each remade mate's code in every mode where it is on, and the app's gears free in every mode. The app's own mates' codes per mode (the rest of the build's per-mode check) are still not read. | yes, `test_a_remade_mate_in_error_in_one_mode_only_…` |
+| M4 suppressed | **Fixed.** (a) `find_component(suppressed_ok=True)` for R's reads, and the frame judged before the configurations. (b) The mates made in the first mode where the cluster's components are resolved, else named; a failed selection names the mate. | yes, each half alone fails `test_a_component_suppressed_in_the_mode_showing_…` |
+| M5 Flip | **Fixed.** The other Flip once; the first, wrong mate is deleted before the retry. An unread ratio or sense is named. | yes, two tests |
+| M6 reversed | **Fixed.** The read-back compares against the old `MateEntity` order whatever order was selected. | yes, `test_a_remade_mate_read_back_with_its_entities_swapped_…` |
+| M7 lightweight | **Fixed**, see 4 below. | yes, three tests, when the fake's closed read is made to fail |
+| S1 `unsaved` after mates alone | Fixed; my reproduction passes. | |
+| S2 `same_error` after a fallback | Fixed; my reproduction passes. | |
+| S3 a cluster falling back twice | Fixed (`c.fallen`). | |
+| S4 C.1's reads | Fixed: the new assembly is opened and its first mode shown before C.1. | |
+| S5 the carry's own clash check | Fixed: caught. | |
+| S6 `skipped`, C.8 | Fixed: `skipped` comes from what is left, and C.8 runs in a `finally`. | |
+| S7 untrue reasons | Fixed. `WHY_UNREAD` with R's own clause; `WHY_REFUSED`; a stray mate deleted. | |
+| S8 resolve checks | Fixed: the resolve's code, the kind (`ReferenceKindError`, a stop) and `GetCorresponding`'s None. | |
+| S9 `QuitDoc` | Fixed: by the title read at the open, with a still-open check after it. | |
+| S10 a plane with no document | Fixed: unread. | |
+| S11 a suppressed pose | Fixed: no pose read where the component is suppressed; a world-anchored component is checked. | |
+| S12 a build that did not finish | Fixed: `skipped` is set. | |
+
+*Notes on the fixes:*
+
+- **S2's stricter excuse is conservative.** A mate back in its old error excuses only bodies that no other mate of its
+  cluster touches. So a same-error mate that shares a component with another mate of its cluster now falls that
+  cluster back as over-defined. My first-round reproduction now reads exactly that. I accept it.
+- **A gear mate between perpendicular axes is now always named "unread".** `gear_sense` gives 0 when the two directions
+  are perpendicular. The ledger's rule for axes that are not parallel is `Reverse` alone. This is rare, and it is named
+  rather than guessed.
+- **`_remake` names any `SolidWorksError` as `WHY_REFUSED` and goes on** (`swbuild.py:8156`). That includes an RPC
+  failure, because `call` turns it into `ComError`. If SolidWorks dies part way, each remaining mate is named
+  "refused" until a call outside `_remake` stops the carry. That is a note: the stop comes, but the earlier names
+  overstate.
+
+### r3 as written, against `probe/w9d_probes.py:route_r3` and `-2.log`
+
+**The calls and their arguments match the probe.**
+- `GetBodies2(0, True)`, then `GetFaces` / `GetEdges`.
+- `component.GetCorresponding(candidate)`.
+- `app.IsSame(carried, mate entity)`, in the probe's order, against `swObjectSame` 1 (the JSON's `same_value`).
+- The part's `GetPersistReference3(part entity)` as bytes, and `GetObjectByPersistReference3(bytes, out long)`, with
+  a tuple or the out code read as the probe did. The code must be 0, `swPersistReferencedObject_Ok`; all six read 0
+  in the JSON.
+- The round trip `IsSame(got, part entity)`.
+- `CylinderParams` with the probe's coaxial test, the same 1e-9 tolerances (`AXIS_TOL`).
+
+**What r3 adds that the probe did not do:**
+- a kind check by `IEntity.GetType` (only edge, face or vertex can refuse, so a feature or an unread type passes);
+- for an edge, the radius read from `CircleParams[6]`.
+
+**Run on COM doubles** (scratch, `Session.entity_references` itself, not the fake):
+- Two face items on one component, sharing 10 look-alike candidates by area: each candidate was carried once (10
+  `GetCorresponding` calls for both). The bore came back coaxial with radius 5 mm, the plane not coaxial.
+- 250 faces of one area: capped "candidates" before any `GetCorresponding`.
+- No test in the suite runs this code: the fake replaces it with a model of its own. That is the place where a
+  slip would show only on SolidWorks.
+
+**The prefilter.**
+- *It can lose the true match, never pick a wrong one.* `IsSame` still decides. A lost match comes out as "0 matched",
+  which is `WHY_UNREAD`.
+- *Faces.* The key is the face's `GetArea` read in the part against the mate's assembly-context `GetArea`, relative
+  1e-9, both in m². Shown on doubles: an assembly area off by 2e-9 relative loses the match.
+  - The contract's ground for 1e-9 is that "every entity of both runs read equal pairs". Those pairs were the mate's
+    entity against the **carried-back** entity: both in the assembly (JSON `area`).
+  - A part face against its assembly correspondent was never compared. It is plausible, but unmeasured until the
+    2024 run or the short 2026 rerun (`51e489a`'s growth section checks that the filtered walk finds the same match).
+- *Edges.* A circle is matched by its radius. A line is matched against lines. Any other curve, or a key that does not
+  read, keeps every candidate. A spline edge on a 482-edge part is therefore capped "candidates" (`WHY_TOO_LONG`) at
+  once. Safe.
+- *The cost.* Every item recomputes every candidate's key (`swcom.py:3925`): items × candidates part-level reads,
+  never cached. A filter pass cannot be interrupted, and the 20 s clock is read only before and inside the walk. That
+  is a note while the part-level reads stay cheap. Cache the keys per component when convenient.
+
+**"Exactly one" is counted inside the filtered set.** That is enough, since `IsSame` decides.
+
+**The cap matches §10.** It counts fresh candidates past 200 or 20 s per component, then caps that item and every later
+one of the component, and never stops the carry.
+
+**A made-new part is walked only for a gear mate's face.** Its hex is dropped; only the coaxial read and the radius
+are kept. This is right: it is the only read on a made-new part that can change an outcome (§4.3). The cost is that
+"on its axis" and "bore" are said only for gear mates there; any other face of a made-new part is said as "a face
+of Sun". That is never wrong.
+
+**For the demonstration's author to log, since none of it is measured as written:**
+- the walk grouped per component (shared candidates carried once);
+- the area and radius prefilter, part against assembly;
+- seconds per candidate under the app, with the growth;
+- `IEntity.GetType` on a resolved face or edge;
+- whether the out code of `GetObjectByPersistReference3` is written. `_by_ref` reads an unwritten code as 0, which
+  is Ok (`swcom.py:764`); the probe had the same blind spot;
+- the cap's two numbers.
+
+### The 2026 findings (`013c14c`)
+
+- **The values match §8.1 and the logs' proposals.** The route strings are byte for byte the proposed ones, and
+  `PERSIST_REFERENCE_ROUTE_FOR_FACES_ON_2026 == swcom.PERSIST_ROUTE_R3` is asserted.
+- **The comments carry §8.1's caveats with their log lines.**
+- **One contradiction, the contract's own:** `findings.py:2137` (from §8.1's row) says *"another kind, is
+  WHY_NOT_FOUND"*. §4.1 makes it §0.3's STOP, and the code stops (`ReferenceKindError`). Fix the comment and §8.1
+  to §4.1.
+- **Nothing that should stay None is set.**
+  - Every `_ON_2024` is None.
+  - On 2026, `REFERENCED_CONFIGURATION_READ`, `VIRTUAL_READ`, `PATTERN_INSTANCE_READ`, `ORIGIN_ENTITY_READ`, the
+    vertices route and every `CARRY_*` write stay None.
+  - The test asserts each of these.
+- **The pin test is half a pin** (`test_w9d_2026_findings_rest_on_the_probes_two_runs`).
+  - It fails when a log line changes. Verified: the r3 log's `COAXIAL_FACE_READ = True` edited to False fails it.
+  - It compares the **string** findings to their proposals.
+  - For the **booleans** it checks only the log's text ("True", "False"), never the value in `findings.py`. Verified:
+    `COAXIAL_FACE_READ_ON_2026 = False`, and separately `OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN_ON_2026 = None`, each pass
+    the **whole suite** (2 failed, 3859 passed, the usual two).
+  - *Fix:* `assert proposed(...) == repr(findings.<NAME>_ON_2026)` for each boolean too. That is eight lines.
+
+**What a real user's Build again… does at this HEAD.**
+
+*On SolidWorks 2026:*
+- *R reads the old assembly before anything is made.*
+  - Open: read as it stands, its states per mode by `GetComponentSuppressionState`.
+  - Closed: now opened read-only and closed by `QuitDoc`, since every condition of R.2 can now hold (all measured
+    clean for files saved by this version).
+  - Either way, every user component's face and edge mates are walked by r3, up to 20 s per component.
+- The build runs as W9c's.
+- C then opens the new assembly and shows its first mode, which was already showing (the build's own post-save shows
+  already marked it).
+- C reads the app frames and plans. Because `CARRY_INSERTS` and `CARRY_REMAKE_KINDS` are None, every component is
+  named `WHY_UNMEASURED` ("insert") and every mate is named (its component not carried, or its kind unmeasured).
+- So nothing is inserted, no mate is made, and no state or fallback is written.
+
+*On SolidWorks 2024:*
+- A closed old assembly is never opened (`FILE_VERSION_READ` None).
+- An open one is read with no per-mode states (D2) and no walk (the face and edge routes are None).
+- The same C names everything.
+
+*The two-sentence answer:*
+- Every write of W9d (insert, state, mate, fallback) is still behind a `CARRY_*` gate that is None on both versions,
+  so today a Build again… carries nothing and names everything with its finding.
+- On 2026 the reads now set do run on a real user's session before M9: the read-only open of a closed old assembly,
+  and r3's walk, whose grouped and filtered form is not yet measured. See N3.
+
+### New faults from the fix round
+
+**N1 (should-fix, reproduced): the post-check's per-mode tie blames the first cluster on the train.**
+
+- *What the code does:* `_carry_post_check` (`swbuild.py:8316-8350`) now re-reads ties for **every** cluster in
+  every mode it was not made in, in cluster order, against `free_before`. The first round's code did this only for
+  clusters whose flags differ by mode, which is K2's rule (`USER_TIE_READ_PER_MODE`).
+- *Reproduced on the fake* (scratch `test_review_tie_blame.py`, `_tc_again`'s TransferCase):
+  - cluster A, Sprocket-2 locked to InDog, on in every mode and judged clean;
+  - cluster B, Sprocket-1's Lock1, on in N and 4L only, which ties InDog when on.
+  - In N, A is checked first and falls back: `FIXED (('carried2-1',), ('Lock0',), 'tie', ('InDog', 'N'))`.
+  - Then the carry stops: *"After the fallback, InDog still reads unable to turn in N"*.
+  - B's Lock1 stays made, and the user's fine cluster is fixed and blamed.
+- *Fix:* in the post-check, re-judge a tie only for clusters whose mates' flags in that mode differ from their
+  `made_in` mode, as K2 rules. Leave a tie no such cluster explains to the existing "no cluster of yours explains it"
+  stop.
+
+**N2 (should-fix; do it before M9 judges Sprocket-7): a cluster's mates are judged in modes where one of its
+components is suppressed.**
+
+- *What the contract says:* §3 C.6.1 says such a mode is left as SolidWorks has it and not judged.
+- *What the code does:* the post-check reads each made mate's code and the train's ties in every mode
+  (`swbuild.py:8339-8345`), including modes where a carried component of the cluster is suppressed.
+- *What is measured:* the probe read only those mates' flags there (on, `-1.log:113`), never their codes. The fake
+  gives the remade code whatever the component's state.
+- *Why it matters:* if SolidWorks gives a mate on a suppressed component a code, M9's Sprocket-7, suppressed in L,
+  falls back in L: its mates are deleted and it is fixed.
+- *Fix:* skip a cluster in a mode where `_wanted_suppressed` holds for any of its components. At the least, M9 logs
+  those mates' codes in L.
+
+**N3 (should-fix): on 2026, R does r3's walk for real users although nothing can be carried yet.**
+
+- *What happens:* with `CARRY_INSERTS_ON_2026` None, every user component is named in any case. Yet
+  `_read_old_mates` walks every face and edge mate's component, up to 20 s each, before the build.
+- *Why it matters:*
+  - the walk's grouped and filtered form is unmeasured;
+  - its cost grew through the measured session;
+  - its only use today would be "on its axis" wording, which needs a gear mate on a made-new part, and that is behind
+    `CARRY_GEAR_MATE_ON_AN_APP_GEAR`, also None.
+- *Fix:* walk only when `CARRY_INSERTS` is settled (and, for an app part, the gear-mate gate). M9 patches both, so
+  the demonstration is unaffected.
+- *The not-open read-only open is different:* it feeds W9a's stays-behind sentence, and it is measured clean. It may
+  stay.
+
+**Notes:**
+- *Making a cluster's mates in a mode other than the first.*
+  - This is consistent with C.5 and C.7, which already show modes in the new assembly, and the old assembly is never
+    shown. But §3 C.6.3 still says "judged in the first mode": record the deviation there.
+  - The mode is restored at the end of the cluster, not on a stop part way, which leaves the unsaved new assembly in
+    that mode.
+  - The cluster's `made_in` mode is skipped in the post-check, so a later cluster putting an earlier one's mate into
+    error in that mode is caught only by the global gear check.
+- *The fallback's place.* A fallback in the post-check (mode L) places the components in L. Puts are per configuration
+  on 2024 (`positions_per_configuration`), so they may stand elsewhere in the other modes. That is unmeasured;
+  M9 shows only a fallback in the first mode.
+- *`close_unsaved`'s still-open check runs straight after `QuitDoc`*, where the probe waited 3 s. A slow close would
+  read as still open, which is safe (nothing is carried) but alarming.
+- *M7's `ISldWorks.GetConfigurationNames(path)`.*
+  - It is in the ledger as verified for a closed file on 2026 SP1.1 (`API-LEDGER.md:114`, beside `VersionHistory`).
+    It opens nothing, so by the ledger it raises no dialog.
+  - Unmeasured: the app calling it, a file loaded lightweight in the session, and 2024.
+  - It needs no probe first, but M9 should log it on Sprocket-9.
+- *`WHY_REFUSED` and `remake_mate(flip=)`* are sound as written. `find_component(suppressed_ok=)` is used only for
+  R's reads, and its handles go with R's `end_build`.
+
+### The fake, against the probe logs now
+
+**Now as unkind as SolidWorks** (each from my first list):
+- a suppressed component's find and selection are refused;
+- there is no document for a lightweight or suppressed component;
+- the build bracket can drop the document (`begin_drops_document`, off by default, so only one test sees it);
+- a face or edge route other than r3's exact string reads nothing;
+- per-mode remake codes;
+- a Flip read wrong;
+- a gear held after the save;
+- the read-only document marked by its own open (also a knob).
+
+**Still kinder:**
+- `entity_references` is a model, not the Session's COM code; the prefilter's part-against-assembly area is never
+  exercised;
+- `_entity_kind` still names a plane on a lightweight component "plane", where the Session now says unread (S10);
+- a mate's code in a mode where its component is suppressed is the remade code (N2);
+- `EntityParams` are still the same for every entity, so `gear_sense`'s geometry, and a perpendicular pair, are
+  never exercised;
+- `place_component` seeds every configuration, where 2024 puts per configuration;
+- an unwritten out code reads Ok, here as in the Session.
