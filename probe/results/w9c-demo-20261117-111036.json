@@ -1,0 +1,1097 @@
+{
+ "sections": {
+  "ring": {
+   "states": {
+    "built-55": {
+     "in_error": [],
+     "volume": 12005.017395150748,
+     "sketch": {
+      "segments": [
+       {
+        "type": "swSketchARC",
+        "construction": true,
+        "start": [
+         31.875,
+         0.0
+        ],
+        "end": [
+         31.875,
+         0.0
+        ],
+        "centre": [
+         0.0,
+         0.0
+        ],
+        "radius": 31.875,
+        "direction": 1,
+        "sweep": 0.0
+       },
+       {
+        "type": "swSketchARC",
+        "construction": false,
+        "start": [
+         36.122798,
+         0.398901
+        ],
+        "end": [
+         35.93226,
+         0.584306
+        ],
+        "centre": [
+         35.935309,
+         0.396831
+        ],
+        "radius": 0.1875,
+        "direction": 1,
+        "sweep": 90.299191
+       },
+       {
+        "type": "swSketchARC",
+        "construction": false,
+        "start": [
+         35.93226,
+         -0.584306
+        ],
+        "end": [
+         36.122798,
+         -0.398901
+        ],
+        "centre": [
+         35.935309,
+         -0.396831
+        ],
+        "radius": 0.1875,
+        "direction": 1,
+        "sweep": 90.299191
+       },
+       {
+        "type": "swSketchARC",
+        "construction": false,
+        "start": [
+         36.122798,
+         -0.398901
+        ],
+        "end": [
+         36.122798,
+         0.398901
+        ],
+        "centre": [
+         0.0,
+         0.0
+        ],
+        "radius": 36.125,
+        "direction": 1,
+        "sweep": 1.265373
+       },
+       {
+        "type": "swSketchLINE",
+        "construction": false,
+        "start": [
+         32.461835,
+         1.574575
+        ],
+        "end": [
+         31.837569,
+         1.544294
+        ]
+       },
+       {
+        "type": "swSketchLINE",
+        "construction": false,
+        "start": [
+         32.461835,
+         -1.574575
+        ],
+        "end": [
+         31.837569,
+         -1.544294
+        ]
+       },
+       {
+        "type": "swSketchLINE",
+        "construction": false,
+        "start": [
+         31.837569,
+         1.544294
+        ],
+        "end": [
+         31.837569,
+         -1.544294
+        ]
+       },
+       {
+        "type": "swSketchLINE",
+        "construction": false,
+        "start": [
+         35.839012,
+         0.582789
+        ],
+        "end": [
+         35.93226,
+         0.584306
+        ]
+       },
+       {
+        "type": "swSketchLINE",
+        "construction": false,
+        "start": [
+         35.839012,
+         -0.582789
+        ],
+        "end": [
+         35.93226,
+         -0.584306
+        ]
+       },
+       {
+        "type": "swSketchSPLINE",
+        "construction": false,
+        "start": null,
+        "start_read": "unread: AttributeError: <unknown>.GetStartPoint2",
+        "end": null,
+        "end_read": "unread: AttributeError: <unknown>.GetEndPoint2",
+        "points": "unread: TypeError: float() argument must be a string or a real number, not 'CDispatch'"
+       },
+       {
+        "type": "swSketchSPLINE",
+        "construction": false,
+        "start": null,
+        "start_read": "unread: AttributeError: <unknown>.GetStartPoint2",
+        "end": null,
+        "end_read": "unread: AttributeError: <unknown>.GetEndPoint2",
+        "points": "unread: TypeError: float() argument must be a string or a real number, not 'CDispatch'"
+       }
+      ],
+      "dimensions": [
+       [
+        "Root",
+        0.036125
+       ],
+       [
+        "Fillet",
+        0.0001875
+       ],
+       [
+        "Cap",
+        0.06375
+       ]
+      ],
+      "dimensions_read": null,
+      "relations": [
+       "swConstraintType_COINCIDENT",
+       "swConstraintType_COINCIDENT",
+       "swConstraintType_COINCIDENT",
+       "swConstraintType_COINCIDENT",
+       "swConstraintType_COINCIDENT",
+       "swConstraintType_COINCIDENT",
+       "swConstraintType_COINCIDENT",
+       "swConstraintType_DIAMETER",
+       "swConstraintType_FIXED",
+       "swConstraintType_FIXED",
+       "swConstraintType_RADIUS",
+       "swConstraintType_RADIUS",
+       "swConstraintType_SAMELENGTH",
+       "swConstraintType_TANGENT",
+       "swConstraintType_TANGENT",
+       "swConstraintType_TANGENT",
+       "swConstraintType_TANGENT",
+       "swConstraintType_USEEDGE",
+       "swConstraintType_USEEDGE"
+      ]
+     }
+    },
+    "set-54": {
+     "in_error": [
+      {
+       "name": "Tooth Space",
+       "type": "ICE",
+       "code": 72,
+       "word": "swFeatureErrorSketchContainsSelfIntersectingContour",
+       "warning": false,
+       "GetErrorCode2": {
+        "returned": 72,
+        "is_warning": false
+       }
+      },
+      {
+       "name": "Teeth",
+       "type": "CirPattern",
+       "code": 1,
+       "word": "swFeatureErrorUnknown",
+       "warning": false,
+       "GetErrorCode2": {
+        "returned": 1,
+        "is_warning": false
+       }
+      }
+     ],
+     "volume": 15215.125920417064,
+     "sketch": {
+      "segments": [
+       {
+        "type": "swSketchARC",
+        "construction": true,
+        "start": [
+         29.884524,
+         9.136616
+        ],
+        "end": [
+         29.884524,
+         9.136616
+        ],
+        "centre": [
+         0.0,
+         0.0
+        ],
+        "radius": 31.25,
+        "direction": 1,
+        "sweep": 0.0
+       },
+       {
+        "type": "swSketchARC",
+        "construction": false,
+        "start": [
+         35.497768,
+         0.398105
+        ],
+        "end": [
+         35.307181,
+         0.583477
+        ],
+        "centre": [
+         35.310279,
+         0.396002
+        ],
+        "radius": 0.1875,
+        "direction": 1,
+        "sweep": 90.304079
+       },
+       {
+        "type": "swSketchARC",
+        "construction": false,
+        "start": [
+         35.307181,
+         -0.583477
+        ],
+        "end": [
+         35.497768,
+         -0.398105
+        ],
+        "centre": [
+         35.310279,
+         -0.396002
+        ],
+        "radius": 0.1875,
+        "direction": 1,
+        "sweep": 90.304079
+       },
+       {
+        "type": "swSketchARC",
+        "construction": false,
+        "start": [
+         35.497768,
+         -0.398105
+        ],
+        "end": [
+         35.497768,
+         0.398105
+        ],
+        "centre": [
+         0.0,
+         0.0
+        ],
+        "radius": 35.5,
+        "direction": 1,
+        "sweep": 1.285082
+       },
+       {
+        "type": "swSketchLINE",
+        "construction": false,
+        "start": [
+         31.836412,
+         1.567952
+        ],
+        "end": [
+         -31.212169,
+         -1.537208
+        ]
+       },
+       {
+        "type": "swSketchLINE",
+        "construction": false,
+        "start": [
+         31.836412,
+         -1.567952
+        ],
+        "end": [
+         -31.212169,
+         1.537208
+        ]
+       },
+       {
+        "type": "swSketchLINE",
+        "construction": false,
+        "start": [
+         -31.212169,
+         -1.537208
+        ],
+        "end": [
+         -31.212169,
+         1.537208
+        ]
+       },
+       {
+        "type": "swSketchLINE",
+        "construction": false,
+        "start": [
+         35.213942,
+         0.581936
+        ],
+        "end": [
+         35.307181,
+         0.583477
+        ]
+       },
+       {
+        "type": "swSketchLINE",
+        "construction": false,
+        "start": [
+         35.213942,
+         -0.581936
+        ],
+        "end": [
+         35.307181,
+         -0.583477
+        ]
+       },
+       {
+        "type": "swSketchSPLINE",
+        "construction": false,
+        "start": null,
+        "start_read": "unread: AttributeError: <unknown>.GetStartPoint2",
+        "end": null,
+        "end_read": "unread: AttributeError: <unknown>.GetEndPoint2",
+        "points": "unread: TypeError: float() argument must be a string or a real number, not 'CDispatch'"
+       },
+       {
+        "type": "swSketchSPLINE",
+        "construction": false,
+        "start": null,
+        "start_read": "unread: AttributeError: <unknown>.GetStartPoint2",
+        "end": null,
+        "end_read": "unread: AttributeError: <unknown>.GetEndPoint2",
+        "points": "unread: TypeError: float() argument must be a string or a real number, not 'CDispatch'"
+       }
+      ],
+      "dimensions": [
+       [
+        "Root",
+        0.0355
+       ],
+       [
+        "Fillet",
+        0.0001875
+       ],
+       [
+        "Cap",
+        0.0625
+       ]
+      ],
+      "dimensions_read": null,
+      "relations": [
+       "swConstraintType_COINCIDENT",
+       "swConstraintType_COINCIDENT",
+       "swConstraintType_COINCIDENT",
+       "swConstraintType_COINCIDENT",
+       "swConstraintType_COINCIDENT",
+       "swConstraintType_COINCIDENT",
+       "swConstraintType_COINCIDENT",
+       "swConstraintType_DIAMETER",
+       "swConstraintType_FIXED",
+       "swConstraintType_FIXED",
+       "swConstraintType_RADIUS",
+       "swConstraintType_RADIUS",
+       "swConstraintType_SAMELENGTH",
+       "swConstraintType_TANGENT",
+       "swConstraintType_TANGENT",
+       "swConstraintType_TANGENT",
+       "swConstraintType_TANGENT",
+       "swConstraintType_USEEDGE",
+       "swConstraintType_USEEDGE"
+      ]
+     }
+    },
+    "build-54": {
+     "in_error": [],
+     "volume": 11805.159175004837,
+     "sketch": {
+      "segments": [
+       {
+        "type": "swSketchARC",
+        "construction": true,
+        "start": [
+         31.25,
+         0.0
+        ],
+        "end": [
+         31.25,
+         0.0
+        ],
+        "centre": [
+         0.0,
+         0.0
+        ],
+        "radius": 31.25,
+        "direction": 1,
+        "sweep": 0.0
+       },
+       {
+        "type": "swSketchARC",
+        "construction": false,
+        "start": [
+         35.497768,
+         0.398105
+        ],
+        "end": [
+         35.307181,
+         0.583477
+        ],
+        "centre": [
+         35.310279,
+         0.396002
+        ],
+        "radius": 0.1875,
+        "direction": 1,
+        "sweep": 90.304079
+       },
+       {
+        "type": "swSketchARC",
+        "construction": false,
+        "start": [
+         35.307181,
+         -0.583477
+        ],
+        "end": [
+         35.497768,
+         -0.398105
+        ],
+        "centre": [
+         35.310279,
+         -0.396002
+        ],
+        "radius": 0.1875,
+        "direction": 1,
+        "sweep": 90.304079
+       },
+       {
+        "type": "swSketchARC",
+        "construction": false,
+        "start": [
+         35.497768,
+         -0.398105
+        ],
+        "end": [
+         35.497768,
+         0.398105
+        ],
+        "centre": [
+         0.0,
+         0.0
+        ],
+        "radius": 35.5,
+        "direction": 1,
+        "sweep": 1.285082
+       },
+       {
+        "type": "swSketchLINE",
+        "construction": false,
+        "start": [
+         31.836412,
+         1.567952
+        ],
+        "end": [
+         31.212169,
+         1.537208
+        ]
+       },
+       {
+        "type": "swSketchLINE",
+        "construction": false,
+        "start": [
+         31.836412,
+         -1.567952
+        ],
+        "end": [
+         31.212169,
+         -1.537208
+        ]
+       },
+       {
+        "type": "swSketchLINE",
+        "construction": false,
+        "start": [
+         31.212169,
+         1.537208
+        ],
+        "end": [
+         31.212169,
+         -1.537208
+        ]
+       },
+       {
+        "type": "swSketchLINE",
+        "construction": false,
+        "start": [
+         35.213942,
+         0.581936
+        ],
+        "end": [
+         35.307181,
+         0.583477
+        ]
+       },
+       {
+        "type": "swSketchLINE",
+        "construction": false,
+        "start": [
+         35.213942,
+         -0.581936
+        ],
+        "end": [
+         35.307181,
+         -0.583477
+        ]
+       },
+       {
+        "type": "swSketchSPLINE",
+        "construction": false,
+        "start": null,
+        "start_read": "unread: AttributeError: <unknown>.GetStartPoint2",
+        "end": null,
+        "end_read": "unread: AttributeError: <unknown>.GetEndPoint2",
+        "points": "unread: TypeError: float() argument must be a string or a real number, not 'CDispatch'"
+       },
+       {
+        "type": "swSketchSPLINE",
+        "construction": false,
+        "start": null,
+        "start_read": "unread: AttributeError: <unknown>.GetStartPoint2",
+        "end": null,
+        "end_read": "unread: AttributeError: <unknown>.GetEndPoint2",
+        "points": "unread: TypeError: float() argument must be a string or a real number, not 'CDispatch'"
+       }
+      ],
+      "dimensions": [
+       [
+        "Root",
+        0.0355
+       ],
+       [
+        "Fillet",
+        0.0001875
+       ],
+       [
+        "Cap",
+        0.0625
+       ]
+      ],
+      "dimensions_read": null,
+      "relations": [
+       "swConstraintType_COINCIDENT",
+       "swConstraintType_COINCIDENT",
+       "swConstraintType_COINCIDENT",
+       "swConstraintType_COINCIDENT",
+       "swConstraintType_COINCIDENT",
+       "swConstraintType_COINCIDENT",
+       "swConstraintType_COINCIDENT",
+       "swConstraintType_DIAMETER",
+       "swConstraintType_FIXED",
+       "swConstraintType_FIXED",
+       "swConstraintType_RADIUS",
+       "swConstraintType_RADIUS",
+       "swConstraintType_SAMELENGTH",
+       "swConstraintType_TANGENT",
+       "swConstraintType_TANGENT",
+       "swConstraintType_TANGENT",
+       "swConstraintType_TANGENT",
+       "swConstraintType_USEEDGE",
+       "swConstraintType_USEEDGE"
+      ]
+     }
+    }
+   },
+   "diff_set_vs_scratch": {
+    "segments": [
+     [
+      0,
+      "swSketchARC",
+      {
+       "start": 9.136616,
+       "end": 9.136616
+      }
+     ],
+     [
+      4,
+      "swSketchLINE",
+      {
+       "end": 62.424338
+      }
+     ],
+     [
+      5,
+      "swSketchLINE",
+      {
+       "end": 62.424338
+      }
+     ],
+     [
+      6,
+      "swSketchLINE",
+      {
+       "start": 62.424338,
+       "end": 62.424338
+      }
+     ]
+    ],
+    "dimensions": [],
+    "relations": null,
+    "count": null
+   },
+   "diff_55_vs_set": {
+    "segments": [
+     [
+      0,
+      "swSketchARC",
+      {
+       "start": 9.136616,
+       "end": 9.136616,
+       "radius": [
+        31.875,
+        31.25
+       ]
+      }
+     ],
+     [
+      1,
+      "swSketchARC",
+      {
+       "start": 0.62503,
+       "end": 0.625079,
+       "centre": 0.62503,
+       "sweep": [
+        90.299191,
+        90.304079
+       ]
+      }
+     ],
+     [
+      2,
+      "swSketchARC",
+      {
+       "start": 0.625079,
+       "end": 0.62503,
+       "centre": 0.62503,
+       "sweep": [
+        90.299191,
+        90.304079
+       ]
+      }
+     ],
+     [
+      3,
+      "swSketchARC",
+      {
+       "start": 0.62503,
+       "end": 0.62503,
+       "radius": [
+        36.125,
+        35.5
+       ],
+       "sweep": [
+        1.265373,
+        1.285082
+       ]
+      }
+     ],
+     [
+      4,
+      "swSketchLINE",
+      {
+       "start": 0.625423,
+       "end": 63.049738
+      }
+     ],
+     [
+      5,
+      "swSketchLINE",
+      {
+       "start": 0.625423,
+       "end": 63.049738
+      }
+     ],
+     [
+      6,
+      "swSketchLINE",
+      {
+       "start": 63.049738,
+       "end": 63.049738
+      }
+     ],
+     [
+      7,
+      "swSketchLINE",
+      {
+       "start": 0.62507,
+       "end": 0.625079
+      }
+     ],
+     [
+      8,
+      "swSketchLINE",
+      {
+       "start": 0.62507,
+       "end": 0.625079
+      }
+     ]
+    ],
+    "dimensions": [
+     [
+      "Cap",
+      0.06375,
+      0.0625
+     ],
+     [
+      "Root",
+      0.036125,
+      0.0355
+     ]
+    ],
+    "relations": null,
+    "count": null
+   },
+   "routes": {
+    "54, then a forced rebuild": {
+     "steps": [
+      {
+       "set": 54,
+       "rebuilt": false,
+       "failures": [],
+       "in_error": [
+        [
+         "Tooth Space",
+         72
+        ],
+        [
+         "Teeth",
+         1
+        ]
+       ]
+      },
+      {
+       "forced": false,
+       "in_error": [
+        [
+         "Tooth Space",
+         72
+        ],
+        [
+         "Teeth",
+         1
+        ]
+       ]
+      }
+     ],
+     "clean": false,
+     "volume": 15215.125920417064
+    },
+    "56, then 54": {
+     "steps": [
+      {
+       "set": 56,
+       "rebuilt": true,
+       "failures": [],
+       "in_error": []
+      },
+      {
+       "set": 54,
+       "rebuilt": true,
+       "failures": [],
+       "in_error": []
+      }
+     ],
+     "clean": true,
+     "volume": 11805.15917500577
+    },
+    "53, then 54": {
+     "steps": [
+      {
+       "set": 53,
+       "rebuilt": true,
+       "failures": [],
+       "in_error": []
+      },
+      {
+       "set": 54,
+       "rebuilt": true,
+       "failures": [],
+       "in_error": []
+      }
+     ],
+     "clean": true,
+     "volume": 11805.159175005749
+    },
+    "54, then 55 again": {
+     "steps": [
+      {
+       "set": 54,
+       "rebuilt": false,
+       "failures": [],
+       "in_error": [
+        [
+         "Tooth Space",
+         72
+        ],
+        [
+         "Teeth",
+         1
+        ]
+       ]
+      },
+      {
+       "set": 55,
+       "rebuilt": false,
+       "failures": [],
+       "in_error": [
+        [
+         "Tooth Space",
+         72
+        ],
+        [
+         "Teeth",
+         1
+        ]
+       ]
+      }
+     ],
+     "clean": false,
+     "volume": 15480.197800563692
+    },
+    "56, then 55 (the hypothesis's test: one tooth down from another count)": {
+     "steps": [
+      {
+       "set": 56,
+       "rebuilt": true,
+       "failures": [],
+       "in_error": []
+      },
+      {
+       "set": 55,
+       "rebuilt": false,
+       "failures": [],
+       "in_error": [
+        [
+         "Tooth Space",
+         72
+        ],
+        [
+         "Teeth",
+         1
+        ]
+       ]
+      }
+     ],
+     "clean": false,
+     "volume": 15480.19780056369
+    }
+   },
+   "sun_30": {
+    "in_error": [],
+    "volume": 10517.660975777353
+   },
+   "seconds": 82,
+   "failed": []
+  },
+  "remake": {
+   "refusal": {
+    "findings": {
+     "UPDATE_MAKES_MATES_WITH_MODES_ON_2026": null
+    },
+    "refusal": [
+     "Update SolidWorks would make a gear mate of a gearbox with modes again and set its flag in each mode, which has not been measured on this SolidWorks (findings.UPDATE_MAKES_MATES_WITH_MODES_ON_2026 is None), so nothing is changed; build the gearbox again instead."
+    ]
+   },
+   "press": {
+    "ok": true,
+    "failures": [],
+    "user_in_error": [],
+    "user_features_in_error": [],
+    "in_error_before": [],
+    "sentence": "Updated SolidWorks: made Sun meshes Planet copy 1, Sun meshes Planet copy 2, Sun meshes Planet copy 3 and Planet copy 1 meshes Ring again, with their flags set in every mode, changed 1 variable in Gear_m1.25_N29 (it now has 28 teeth; its file keeps its name), changed 1 variable in Gear_m1.25_N13 (it now has 14 teeth; its file keeps its name), changed 1 variable in Ring_m1.25_N55 (it now has 56 teeth; its file keeps its name), set the gear mates Sun meshes Planet copy 1 to 28 : 14, Sun meshes Planet copy 2 to 28 : 14, Sun meshes Planet copy 3 to 28 : 14 and Planet copy 1 meshes Ring to 14 : 56, re-placed Ring, Carrier (the carrier), Sun, Planet (3 copies), HighDog, LowDog and RangeSlv in every mode; no interference between the gears in any mode, where they stand. It worked in H, the configuration that was active, then showed and checked N and L and left the assembly in H. Your Sprocket-1 went with Sun in every mode, which your locks hold it to. Your Sprocket-3 went with Sun in every mode, which your locks hold it to. Your Sprocket-2 went with RangeSlv in every mode, which your locks hold it to. Save Gear_m1.25_N29, Gear_m1.25_N13, Ring_m1.25_N55 and RangeBox in SolidWorks to keep them."
+   },
+   "in_place": {
+    "inserted": [],
+    "deleted": [],
+    "mates_deleted": [],
+    "mates_made": [],
+    "remade_in_modes": [
+     "Sun meshes Planet copy 1",
+     "Sun meshes Planet copy 2",
+     "Sun meshes Planet copy 3",
+     "Planet copy 1 meshes Ring"
+    ],
+    "bands_added": [],
+    "bands_removed": [],
+    "modes_added": [],
+    "modes_removed": [],
+    "took_active_state": [],
+    "flags_lost": [],
+    "not_resolved": [],
+    "ratios": [
+     "Sun meshes Planet copy 1",
+     "Sun meshes Planet copy 2",
+     "Sun meshes Planet copy 3",
+     "Planet copy 1 meshes Ring"
+    ],
+    "senses_unread": [],
+    "turned_round": [],
+    "failures": [],
+    "skipped": "",
+    "clashes_by_mode": {
+     "N": [],
+     "L": [],
+     "H": []
+    }
+   },
+   "judged": {
+    "modes": {
+     "H": {
+      "slide_read": 34.5,
+      "slide_recorded": -34.5,
+      "origin_z": -34.5,
+      "frame_gap": 6.580016531643196e-10,
+      "bands": {
+       "whole": [
+        -34.5,
+        -24.5
+       ]
+      },
+      "dogs": {
+       "HighDog": [
+        -34.5,
+        -29.5
+       ],
+       "LowDog": [
+        -19.5,
+        -14.5
+       ]
+      },
+      "hub": null,
+      "interferences": [],
+      "errors": {},
+      "not_free": {},
+      "engaged": [
+       "HighDog"
+      ],
+      "least": 5.0
+     },
+     "N": {
+      "slide_read": 29.5,
+      "slide_recorded": -29.5,
+      "origin_z": -29.5,
+      "frame_gap": 6.580016531643196e-10,
+      "bands": {
+       "whole": [
+        -29.5,
+        -19.5
+       ]
+      },
+      "dogs": {
+       "HighDog": [
+        -34.5,
+        -29.5
+       ],
+       "LowDog": [
+        -19.5,
+        -14.5
+       ]
+      },
+      "hub": null,
+      "interferences": [],
+      "errors": {},
+      "not_free": {},
+      "engaged": [],
+      "least": 0.0
+     },
+     "L": {
+      "slide_read": 24.5,
+      "slide_recorded": -24.5,
+      "origin_z": -24.5,
+      "frame_gap": 6.580016531643196e-10,
+      "bands": {
+       "whole": [
+        -24.5,
+        -14.5
+       ]
+      },
+      "dogs": {
+       "HighDog": [
+        -34.5,
+        -29.5
+       ],
+       "LowDog": [
+        -19.5,
+        -14.5
+       ]
+      },
+      "hub": null,
+      "interferences": [],
+      "errors": {},
+      "not_free": {},
+      "engaged": [
+       "LowDog"
+      ],
+      "least": 5.0
+     }
+    },
+    "interference": {
+     "app_app": {},
+     "unnamed": {},
+     "unseen": {},
+     "unchecked": {},
+     "volumes": {
+      "H": {},
+      "N": {},
+      "L": {}
+     },
+     "app": {
+      "N": [],
+      "L": [],
+      "H": []
+     }
+    }
+   },
+   "seconds": 803,
+   "failed": []
+  }
+ },
+ "stops": [],
+ "proposal": {
+  "UPDATE_MAKES_MATES_WITH_MODES_ON_2026": true,
+  "UPDATE_MAKES_MATES_WITH_MODES_ON_2026_evidence": "remake: gear mates of a gearbox with modes remade, flags and senses read in every mode: True"
+ },
+ "revision": [
+  34,
+  1,
+  1
+ ],
+ "snapshot": "30bf0e9",
+ "whats_wrong_rule": {
+  "helper_present": true,
+  "shows_in_update": false,
+  "allowance_seconds": 60.0
+ },
+ "fails": [],
+ "notes": [
+  "SolidWorks' notification box came up while no SolidWorks call was in progress (exempt by the coordinator's ruling; nothing answers it)"
+ ]
+}

@@ -1,0 +1,288 @@
+awake   display and system held awake for the run (previous state -0x80000000)
+run     2026-11-17 11:10:36; W9c demonstration from C:\Users\M0obo\Documents\GearGeneratorProbe\w9c-demo-sw2026-20261117-111013\snap\src (snapshot: 30bf0e9); sections ['ring', 'remake']; masters {'rangebox': 'C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9-s0-20261116-045513\\out\\rangebox.master', 'setup': 'C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9a-final-sw2026-20261117-023433\\out\\setup.master', 'reducer': 'C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9a-final-sw2026-20261117-023433\\out\\reducer.master'}; redo False
+ok      the app's settings and Recent list go into this run's folder, not the user's: C:\Users\M0obo\Documents\GearGeneratorProbe\w9c-demo-sw2026-20261117-111013\out\appdata\Gear Generator\recent.json
+attach  SolidWorks 2026 (revision 34.1.1) (revision 34.1.1), PID 54624; SolidWorks 0.68 GB private, 10.21 GB free
+open    before: []
+findings USER_MATE_PUT_ROUTE "put along, the user's locks left on", USER_TIE_RULE 'not COMPONENT_UNDER_DEFINED', WHATS_WRONG_OPENS_ON_PART_REBUILD False, the branches {'USER_MATE_PUT_FIXED_GEAR_ON_2024': None, 'USER_MATE_PUT_FIXED_GEAR_ON_2026': None, 'USER_MATE_PUT_HELD_GEAR_ON_2024': None, 'USER_MATE_PUT_HELD_GEAR_ON_2026': None, 'USER_MATE_PUT_NO_CARRIER_MODES_ON_2024': None, 'USER_MATE_PUT_NO_CARRIER_MODES_ON_2026': None, 'USER_MATE_PUT_NO_CARRIER_ON_2024': True, 'USER_MATE_PUT_NO_CARRIER_ON_2026': True, 'USER_MATE_PUT_SUBASSEMBLY_ON_2024': None, 'USER_MATE_PUT_SUBASSEMBLY_ON_2026': None}
+rule    What's Wrong: swbuild.whats_wrong_shows_in_update reads False; What's Wrong during a job is a STOP, as any dialog
+fact    a SolidWorks balloon tip ['Check1', 'Simplified Interface', 'The Simplified Interface provides a minimalist layout for quick and basic modeling. It can be customized similarly to the standard interface.\n\nShow how to turn off the Simplified Interface.'] came up while no SolidWorks call was in progress (left standing, never answered)
+DIALOG  SolidWorks shows '': ['Title', 'Description', 'Button1', 'Button2', 'Hyperlink Text 1', 'Hyperlink Text 2']
+NOTE    SolidWorks' notification box came up while no SolidWorks call was in progress (exempt by the coordinator's ruling; nothing answers it)
+excel   started our own Excel, PID 51268, 16.0 build 20527.0
+== ring  a diagnostic, script-side and facts only (no proposal): why the ring's part from S0's master does not rebuild set from 55 to 54 teeth (run 5: its Tooth Space cut reads code 72, a self-intersecting contour; 56, 53, 50 and 60 rebuild, so does a 54-tooth ring from scratch). On fresh copies, nothing saved: the Tooth Space sketch dumped as built at 55, after the set to 54, and built from scratch at 54, the last two compared; then routes to 54 (a forced rebuild after; through 56; through 53; and 54 then back to 55) and 56 then 55; Sun at 30 for comparison. update_variables already runs inside begin_build and end_build, so no bracket is added
+fact    swconst.tlb beside the running sldworks.exe; read ['swConstrainedStatus_e', 'swConstraintType_e', 'swFeatureError_e', 'swMateType_e', 'swSketchRelationFilterType_e', 'swSketchSegments_e']; the positive control (mate types findings.py holds) agrees
+NEW     ISketch.GetSketchSegments, ISketchSegment.GetType and ConstructionGeometry, GetStartPoint2, GetEndPoint2, ISketchArc.GetCenterPoint2, GetRadius and GetRotationDir, ISketchSpline.GetPoints2, ISketchRelationManager.GetRelations(swAll) and ISketchRelation.GetRelationType, each read only
+fact    ring: by the app's own maths, the new flank start's distance from where Li+ (0.625 mm, flank start to tip cap) ends before the set, mm: {'55 -> 54': 0.0237, '56 -> 55': 0.0236, '55 -> 53': 0.6268, '55 -> 56': 1.2502, '53 -> 54': 1.2502}
+fact    ring built-55: closed without saving, left []
+fact    ring built-55: set (nothing set); bodies 1, volume 12005.017395150748; globals {'No. of Teeth': 55.0, 'Module': 1.25, 'Pressure Angle': 20.0, 'Inner Diameter': 66.25, 'Pitch Diameter': 68.75, 'Backlash': 0.375, 'Arc Length': 2.3384954084936207, 'Fillet Radius': 0.1875, 'Tooth Depth': 3.0, 'Face Width': 10.0, 'Root Diameter': 72.25, 'Rim Diameter': 79.75, 'Base Diameter': 64.60386767903121, 'Base Radius': 32.301933839515605, 'Tooth Thickness': 1.5884954084936203, 'Half Space Angle': 1.9488860700713588, 'Involute Fn': 0.014904383867336446, 'Flank Offset': -0.04891886253633413, 'Tip Cap Diameter': 63.75, 'Flank Start Diameter': 65.0, 'Flank End Diameter': 71.6875, 'Involute t1': 0.11090997345635512, 'Involute t2': 0.48095413322374203, 'Flank Arc Radius': 11.756942426819862, 'Flank Centre Angle': -18.05111392992864, 'Rim@Blank Sketch': 79.75, 'Tip@Blank Sketch': 66.25, 'Width@Blank': 10.0, 'Root@Tooth Space Sketch': 36.125, 'Fillet@Tooth Space Sketch': 0.1875, 'Cap@Tooth Space Sketch': 63.75, 'Count@Teeth': 55.0}
+fact    ring built-55: no feature in error
+fact    ring built-55: sketches not fully defined, or unread: none
+fact    ring built-55: equations reading in error or unread: none; What's Wrong {'returned': True, 'features': [], 'codes': None, 'warnings': None}
+        built-55 #0: {'type': 'swSketchARC', 'construction': True, 'start': (31.875, 0.0), 'end': (31.875, 0.0), 'centre': (0.0, 0.0), 'radius': 31.875, 'direction': 1, 'sweep': 0.0}
+        built-55 #1: {'type': 'swSketchARC', 'construction': False, 'start': (36.122798, 0.398901), 'end': (35.93226, 0.584306), 'centre': (35.935309, 0.396831), 'radius': 0.1875, 'direction': 1, 'sweep': 90.299191}
+        built-55 #2: {'type': 'swSketchARC', 'construction': False, 'start': (35.93226, -0.584306), 'end': (36.122798, -0.398901), 'centre': (35.935309, -0.396831), 'radius': 0.1875, 'direction': 1, 'sweep': 90.299191}
+        built-55 #3: {'type': 'swSketchARC', 'construction': False, 'start': (36.122798, -0.398901), 'end': (36.122798, 0.398901), 'centre': (0.0, 0.0), 'radius': 36.125, 'direction': 1, 'sweep': 1.265373}
+        built-55 #4: {'type': 'swSketchLINE', 'construction': False, 'start': (32.461835, 1.574575), 'end': (31.837569, 1.544294)}
+        built-55 #5: {'type': 'swSketchLINE', 'construction': False, 'start': (32.461835, -1.574575), 'end': (31.837569, -1.544294)}
+        built-55 #6: {'type': 'swSketchLINE', 'construction': False, 'start': (31.837569, 1.544294), 'end': (31.837569, -1.544294)}
+        built-55 #7: {'type': 'swSketchLINE', 'construction': False, 'start': (35.839012, 0.582789), 'end': (35.93226, 0.584306)}
+        built-55 #8: {'type': 'swSketchLINE', 'construction': False, 'start': (35.839012, -0.582789), 'end': (35.93226, -0.584306)}
+        built-55 #9: {'type': 'swSketchSPLINE', 'construction': False, 'start': None, 'start_read': 'unread: AttributeError: <unknown>.GetStartPoint2', 'end': None, 'end_read': 'unread: AttributeError: <unknown>.GetEndPoint2', 'points': "unread: TypeError: float() argument must be a string or a real number, not 'CDispatch'"}
+        built-55 #10: {'type': 'swSketchSPLINE', 'construction': False, 'start': None, 'start_read': 'unread: AttributeError: <unknown>.GetStartPoint2', 'end': None, 'end_read': 'unread: AttributeError: <unknown>.GetEndPoint2', 'points': "unread: TypeError: float() argument must be a string or a real number, not 'CDispatch'"}
+        built-55 dimensions [('Root', 0.036125), ('Fillet', 0.0001875), ('Cap', 0.06375)] ; relations ['swConstraintType_COINCIDENT', 'swConstraintType_COINCIDENT', 'swConstraintType_COINCIDENT', 'swConstraintType_COINCIDENT', 'swConstraintType_COINCIDENT', 'swConstraintType_COINCIDENT', 'swConstraintType_COINCIDENT', 'swConstraintType_DIAMETER', 'swConstraintType_FIXED', 'swConstraintType_FIXED', 'swConstraintType_RADIUS', 'swConstraintType_RADIUS', 'swConstraintType_SAMELENGTH', 'swConstraintType_TANGENT', 'swConstraintType_TANGENT', 'swConstraintType_TANGENT', 'swConstraintType_TANGENT', 'swConstraintType_USEEDGE', 'swConstraintType_USEEDGE']
+fact    ring set-54: closed without saving, left []
+fact    ring set-54: set {'changed': ['No. of Teeth'], 'rebuilt': False, 'failures': []}; bodies 1, volume 15215.125920417064; globals {'No. of Teeth': 54.0, 'Module': 1.25, 'Pressure Angle': 20.0, 'Inner Diameter': 65.0, 'Pitch Diameter': 67.5, 'Backlash': 0.375, 'Arc Length': 2.3384954084936207, 'Fillet Radius': 0.1875, 'Tooth Depth': 3.0, 'Face Width': 10.0, 'Root Diameter': 71.0, 'Rim Diameter': 78.5, 'Base Diameter': 63.42925190304882, 'Base Radius': 31.71462595152441, 'Tooth Thickness': 1.5884954084936203, 'Half Space Angle': 1.9849765528504577, 'Involute Fn': 0.014904383867336446, 'Flank Offset': -0.04954876028946372, 'Tip Cap Diameter': 62.5, 'Flank Start Diameter': 63.75, 'Flank End Diameter': 70.4375, 'Involute t1': 0.10069330319335645, 'Involute t2': 0.48289366453093246, 'Flank Arc Radius': 11.543179837241318, 'Flank Centre Angle': -18.01502344714954, 'Rim@Blank Sketch': 78.5, 'Tip@Blank Sketch': 65.0, 'Width@Blank': 10.0, 'Root@Tooth Space Sketch': 35.5, 'Fillet@Tooth Space Sketch': 0.1875, 'Cap@Tooth Space Sketch': 62.5, 'Count@Teeth': 54.0}
+fact    ring set-54: in error: Tooth Space (ICE) code 72 swFeatureErrorSketchContainsSelfIntersectingContour, warning False; GetErrorCode2 {'returned': 72, 'is_warning': False}
+fact    ring set-54: in error: Teeth (CirPattern) code 1 swFeatureErrorUnknown, warning False; GetErrorCode2 {'returned': 1, 'is_warning': False}
+fact    ring set-54: sketches not fully defined, or unread: none
+fact    ring set-54: equations reading in error or unread: none; What's Wrong {'returned': True, 'features': ['Tooth Space', 'Teeth'], 'codes': [72, 1], 'warnings': [False, False]}
+        set-54 #0: {'type': 'swSketchARC', 'construction': True, 'start': (29.884524, 9.136616), 'end': (29.884524, 9.136616), 'centre': (0.0, 0.0), 'radius': 31.25, 'direction': 1, 'sweep': 0.0}
+        set-54 #1: {'type': 'swSketchARC', 'construction': False, 'start': (35.497768, 0.398105), 'end': (35.307181, 0.583477), 'centre': (35.310279, 0.396002), 'radius': 0.1875, 'direction': 1, 'sweep': 90.304079}
+        set-54 #2: {'type': 'swSketchARC', 'construction': False, 'start': (35.307181, -0.583477), 'end': (35.497768, -0.398105), 'centre': (35.310279, -0.396002), 'radius': 0.1875, 'direction': 1, 'sweep': 90.304079}
+        set-54 #3: {'type': 'swSketchARC', 'construction': False, 'start': (35.497768, -0.398105), 'end': (35.497768, 0.398105), 'centre': (0.0, 0.0), 'radius': 35.5, 'direction': 1, 'sweep': 1.285082}
+        set-54 #4: {'type': 'swSketchLINE', 'construction': False, 'start': (31.836412, 1.567952), 'end': (-31.212169, -1.537208)}
+        set-54 #5: {'type': 'swSketchLINE', 'construction': False, 'start': (31.836412, -1.567952), 'end': (-31.212169, 1.537208)}
+        set-54 #6: {'type': 'swSketchLINE', 'construction': False, 'start': (-31.212169, -1.537208), 'end': (-31.212169, 1.537208)}
+        set-54 #7: {'type': 'swSketchLINE', 'construction': False, 'start': (35.213942, 0.581936), 'end': (35.307181, 0.583477)}
+        set-54 #8: {'type': 'swSketchLINE', 'construction': False, 'start': (35.213942, -0.581936), 'end': (35.307181, -0.583477)}
+        set-54 #9: {'type': 'swSketchSPLINE', 'construction': False, 'start': None, 'start_read': 'unread: AttributeError: <unknown>.GetStartPoint2', 'end': None, 'end_read': 'unread: AttributeError: <unknown>.GetEndPoint2', 'points': "unread: TypeError: float() argument must be a string or a real number, not 'CDispatch'"}
+        set-54 #10: {'type': 'swSketchSPLINE', 'construction': False, 'start': None, 'start_read': 'unread: AttributeError: <unknown>.GetStartPoint2', 'end': None, 'end_read': 'unread: AttributeError: <unknown>.GetEndPoint2', 'points': "unread: TypeError: float() argument must be a string or a real number, not 'CDispatch'"}
+        set-54 dimensions [('Root', 0.0355), ('Fillet', 0.0001875), ('Cap', 0.0625)] ; relations ['swConstraintType_COINCIDENT', 'swConstraintType_COINCIDENT', 'swConstraintType_COINCIDENT', 'swConstraintType_COINCIDENT', 'swConstraintType_COINCIDENT', 'swConstraintType_COINCIDENT', 'swConstraintType_COINCIDENT', 'swConstraintType_DIAMETER', 'swConstraintType_FIXED', 'swConstraintType_FIXED', 'swConstraintType_RADIUS', 'swConstraintType_RADIUS', 'swConstraintType_SAMELENGTH', 'swConstraintType_TANGENT', 'swConstraintType_TANGENT', 'swConstraintType_TANGENT', 'swConstraintType_TANGENT', 'swConstraintType_USEEDGE', 'swConstraintType_USEEDGE']
+-- ring  a 54-tooth ring built from scratch by the strip's own plan_for and swbuild.build
+fact    ring build-54: the plan's checks []
+fact    a SolidWorks balloon tip ['Check1', 'The sketch is no longer over defined.'] came up while SketchAddConstraints was in progress (left standing, never answered)
+fact    ring build-54: built ok True, failures []
+fact    ring build-54: set (nothing set); bodies 1, volume 11805.159175004837; globals {'No. of Teeth': 54.0, 'Module': 1.25, 'Pressure Angle': 20.0, 'Inner Diameter': 65.0, 'Pitch Diameter': 67.5, 'Backlash': 0.375, 'Arc Length': 2.3384954084936207, 'Fillet Radius': 0.1875, 'Tooth Depth': 3.0, 'Face Width': 10.0, 'Root Diameter': 71.0, 'Rim Diameter': 78.5, 'Base Diameter': 63.42925190304882, 'Base Radius': 31.71462595152441, 'Tooth Thickness': 1.5884954084936203, 'Half Space Angle': 1.9849765528504577, 'Involute Fn': 0.014904383867336446, 'Flank Offset': -0.04954876028946372, 'Tip Cap Diameter': 62.5, 'Flank Start Diameter': 63.75, 'Flank End Diameter': 70.4375, 'Involute t1': 0.10069330319335645, 'Involute t2': 0.48289366453093246, 'Flank Arc Radius': 11.543179837241318, 'Flank Centre Angle': -18.01502344714954, 'Rim@Blank Sketch': 78.5, 'Tip@Blank Sketch': 65.0, 'Width@Blank': 10.0, 'Root@Tooth Space Sketch': 35.5, 'Fillet@Tooth Space Sketch': 0.1875, 'Cap@Tooth Space Sketch': 62.5, 'Count@Teeth': 54.0}
+fact    ring build-54: no feature in error
+fact    ring build-54: sketches not fully defined, or unread: none
+fact    ring build-54: equations reading in error or unread: none; What's Wrong {'returned': True, 'features': [], 'codes': None, 'warnings': None}
+        build-54 #0: {'type': 'swSketchARC', 'construction': True, 'start': (31.25, 0.0), 'end': (31.25, 0.0), 'centre': (0.0, 0.0), 'radius': 31.25, 'direction': 1, 'sweep': 0.0}
+        build-54 #1: {'type': 'swSketchARC', 'construction': False, 'start': (35.497768, 0.398105), 'end': (35.307181, 0.583477), 'centre': (35.310279, 0.396002), 'radius': 0.1875, 'direction': 1, 'sweep': 90.304079}
+        build-54 #2: {'type': 'swSketchARC', 'construction': False, 'start': (35.307181, -0.583477), 'end': (35.497768, -0.398105), 'centre': (35.310279, -0.396002), 'radius': 0.1875, 'direction': 1, 'sweep': 90.304079}
+        build-54 #3: {'type': 'swSketchARC', 'construction': False, 'start': (35.497768, -0.398105), 'end': (35.497768, 0.398105), 'centre': (0.0, 0.0), 'radius': 35.5, 'direction': 1, 'sweep': 1.285082}
+        build-54 #4: {'type': 'swSketchLINE', 'construction': False, 'start': (31.836412, 1.567952), 'end': (31.212169, 1.537208)}
+        build-54 #5: {'type': 'swSketchLINE', 'construction': False, 'start': (31.836412, -1.567952), 'end': (31.212169, -1.537208)}
+        build-54 #6: {'type': 'swSketchLINE', 'construction': False, 'start': (31.212169, 1.537208), 'end': (31.212169, -1.537208)}
+        build-54 #7: {'type': 'swSketchLINE', 'construction': False, 'start': (35.213942, 0.581936), 'end': (35.307181, 0.583477)}
+        build-54 #8: {'type': 'swSketchLINE', 'construction': False, 'start': (35.213942, -0.581936), 'end': (35.307181, -0.583477)}
+        build-54 #9: {'type': 'swSketchSPLINE', 'construction': False, 'start': None, 'start_read': 'unread: AttributeError: <unknown>.GetStartPoint2', 'end': None, 'end_read': 'unread: AttributeError: <unknown>.GetEndPoint2', 'points': "unread: TypeError: float() argument must be a string or a real number, not 'CDispatch'"}
+        build-54 #10: {'type': 'swSketchSPLINE', 'construction': False, 'start': None, 'start_read': 'unread: AttributeError: <unknown>.GetStartPoint2', 'end': None, 'end_read': 'unread: AttributeError: <unknown>.GetEndPoint2', 'points': "unread: TypeError: float() argument must be a string or a real number, not 'CDispatch'"}
+        build-54 dimensions [('Root', 0.0355), ('Fillet', 0.0001875), ('Cap', 0.0625)] ; relations ['swConstraintType_COINCIDENT', 'swConstraintType_COINCIDENT', 'swConstraintType_COINCIDENT', 'swConstraintType_COINCIDENT', 'swConstraintType_COINCIDENT', 'swConstraintType_COINCIDENT', 'swConstraintType_COINCIDENT', 'swConstraintType_DIAMETER', 'swConstraintType_FIXED', 'swConstraintType_FIXED', 'swConstraintType_RADIUS', 'swConstraintType_RADIUS', 'swConstraintType_SAMELENGTH', 'swConstraintType_TANGENT', 'swConstraintType_TANGENT', 'swConstraintType_TANGENT', 'swConstraintType_TANGENT', 'swConstraintType_USEEDGE', 'swConstraintType_USEEDGE']
+fact    ring build-54: closed without saving, left []
+fact    ring: the Tooth Space sketch set to 54 against the one built at 54: segments that differ [(0, 'swSketchARC', {'start': 9.136616, 'end': 9.136616}), (4, 'swSketchLINE', {'end': 62.424338}), (5, 'swSketchLINE', {'end': 62.424338}), (6, 'swSketchLINE', {'start': 62.424338, 'end': 62.424338})]; dimensions the same; relation kinds the same; count the same
+fact    ring: from 55 to the set 54, the segments whose direction or sweep changed: [(1, 'swSketchARC', {'start': 0.62503, 'end': 0.625079, 'centre': 0.62503, 'sweep': (90.299191, 90.304079)}), (2, 'swSketchARC', {'start': 0.625079, 'end': 0.62503, 'centre': 0.62503, 'sweep': (90.299191, 90.304079)}), (3, 'swSketchARC', {'start': 0.62503, 'end': 0.62503, 'radius': (36.125, 35.5), 'sweep': (1.265373, 1.285082)})]
+-- ring  routes to 54 on fresh copies: whether every feature ends clean, and the volume
+fact    ring route-54-force: closed without saving, left []
+fact    ring 54, then a forced rebuild: each step [{'set': 54, 'rebuilt': False, 'failures': [], 'in_error': [('Tooth Space', 72), ('Teeth', 1)]}, {'forced': False, 'in_error': [('Tooth Space', 72), ('Teeth', 1)]}]; clean at the end False, volume 15215.125920 mm³
+fact    ring route-56-54: closed without saving, left []
+fact    ring 56, then 54: each step [{'set': 56, 'rebuilt': True, 'failures': [], 'in_error': []}, {'set': 54, 'rebuilt': True, 'failures': [], 'in_error': []}]; clean at the end True, volume 11805.159175 mm³
+fact    ring route-53-54: closed without saving, left []
+fact    ring 53, then 54: each step [{'set': 53, 'rebuilt': True, 'failures': [], 'in_error': []}, {'set': 54, 'rebuilt': True, 'failures': [], 'in_error': []}]; clean at the end True, volume 11805.159175 mm³
+fact    ring route-54-55: closed without saving, left []
+fact    ring 54, then 55 again: each step [{'set': 54, 'rebuilt': False, 'failures': [], 'in_error': [('Tooth Space', 72), ('Teeth', 1)]}, {'set': 55, 'rebuilt': False, 'failures': [], 'in_error': [('Tooth Space', 72), ('Teeth', 1)]}]; clean at the end False, volume 15480.197801 mm³
+fact    ring route-56-55: closed without saving, left []
+fact    ring 56, then 55 (the hypothesis's test: one tooth down from another count): each step [{'set': 56, 'rebuilt': True, 'failures': [], 'in_error': []}, {'set': 55, 'rebuilt': False, 'failures': [], 'in_error': [('Tooth Space', 72), ('Teeth', 1)]}]; clean at the end False, volume 15480.197801 mm³
+-- ring  for comparison: Sun 29 -> 30 on a copy of Sun's part (it rebuilt in run 4's remake)
+fact    ring sun-30: closed without saving, left []
+fact    ring sun-30: set {'changed': ['No. of Teeth'], 'rebuilt': True, 'failures': []}; bodies 1, volume 10517.660975777353; globals {'No. of Teeth': 30.0, 'Module': 1.25, 'Bore Diameter': 0.0, 'Pressure Angle': 20.0, 'Outer Diameter': 40.0, 'Pitch Diameter': 37.5, 'Backlash': 0.375, 'Arc Length': 2.3384954084936207, 'Fillet Radius': 0.475, 'Tooth Depth': 3.0, 'Face Width': 10.0, 'Root Diameter': 34.0, 'Base Diameter': 35.23847327947156, 'Base Radius': 17.61923663973578, 'Tooth Thickness': 1.5884954084936203, 'Half Space Angle': 3.572957795130824, 'Involute Fn': 0.014904383867336446, 'Flank Offset': 0.0474554936924939, 'Tip Cap Diameter': 42.5, 'Flank Start Diameter': 35.425, 'Involute t1': 0.103026971364576, 'Involute t2': 0.6742405827918582, 'Flank Arc Radius': 6.412877687356288, 'Flank Centre Angle': 23.572957795130826, 'OD@Blank Sketch': 40.0, 'Width@Blank': 10.0, 'Root@Tooth Space Sketch': 17.0, 'Fillet@Tooth Space Sketch': 0.475, 'Count@Teeth': 30.0}
+fact    ring sun-30: no feature in error
+fact    ring sun-30: sketches not fully defined, or unread: none
+fact    ring sun-30: equations reading in error or unread: none; What's Wrong {'returned': True, 'features': [], 'codes': None, 'warnings': None}
+time    ring: 82 s; 0 failed; SolidWorks 0.95 GB private, 9.85 GB free
+== remake  Sun 29 -> 28, Planet 13 -> 14, Ring 55 -> 56 (not 30/12/54: the ring's part does not rebuild set from 55 to 54, a part-level fault the ring section reads; 56 rebuilds) on a copy of setup.master, RangeBox with the user's work (the centre distance and the planets' spacing kept; it needs nothing of fixed's): the gear mates of a gearbox with modes made again (ruling 9.16 lifted), first refused with findings.UPDATE_MAKES_MATES_WITH_MODES_ON_2026 as it stands
+copy    setup.master -> remake: 17 files, mtimes kept
+        RangeBox.xlsx's record: 21 path(s) put onto the copy: ['record.workbook', 'record.parts[0].path', 'record.parts[1].path', 'record.parts[2].path', 'record.parts[3].path', 'record.parts[4].path', 'record.assembly', 'record.gearbox.layout', 'record.gearbox.assembly', 'record.gearbox.components[0].part', 'record.gearbox.components[1].part', 'record.gearbox.components[2].part', 'record.gearbox.components[3].part', 'record.gearbox.components[4].part', 'record.gearbox.components[5].part', 'record.gearbox.components[6].part', 'record.gearbox.components[7].part', 'record.gearbox.carriers[0].path', 'record.gearbox.user_work.assembly', 'record.gearbox.user_work.features[0].path', 'record.gearbox.user_work.features[1].path']
+        Dog_m1.25_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.25_N13.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.25_N29.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Ring_m1.25_N55.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Sleeve_m1.25_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+ok      remake: the copy's record is valid: owner ('ours', ''); left on the master []; missing in the copy []; clear_saved dropped nothing (unsaved, mismatched ([], [])); the read's digest equals the record's
+probe   W6-PLAN §7.1: RangeBox.SLDASM of remake, whose stored references name a folder that is gone, opened under the dialog watch (120 s at most)
+DIALOG  SolidWorks shows 'Opening': ['Close', 'Opening Component 2 of 15', 'Update\nAssembly', 'Update\nGraphics', 'Opening File: C:\\Use...t\\remake\\Ring_m1.25_N55.SLDPRT', 'Elapsed time: 0s', 'This file was last opened in 2 seconds.', 'For more information, view: '] (a progress box that closes itself; not logged again)
+fact    remake: the copy's assembly opened in 3.5 s; marked modified straight after the open: {'RangeBox_Layout.SLDPRT': False, 'RangeBox_Carrier_Carrier.SLDPRT': False, 'Gear_m1.25_N29.SLDPRT': False, 'Gear_m1.25_N13.SLDPRT': False, 'Ring_m1.25_N55.SLDPRT': False, 'Dog_m1.25_N17.SLDPRT': False, 'Sleeve_m1.25_N17.SLDPRT': False, 'Sprocket.SLDPRT': False, 'Housing.SLDPRT': False, 'RangeBox.SLDASM': False}
+fact    W6-PLAN §7.1: dialogs while the copied assembly opened: none
+ok      remake: SolidWorks found all 9 components and the layout in the copy, and the copy closed without saving (left []): elsewhere none
+ok      read RangeBox.xlsx: ok
+        warning Gears!F3: Planet: 13 teeth at 20° is below the undercut limit of 17: a generated gear would lose the bottom of its flanks, which this profile does not show. A profile shift of 0.24 or more would clear it.
+        warning Gears!F3: Planet: The tooth tip is 0.36 mm thick, under 0.3 × module (0.375 mm).
+        warning Gears!F7: RangeSlv: The teeth's tips, at 18.75 mm, are inside the base circle of 19.968 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!A3: Planet (13 teeth) is below the undercut limit, which is not modelled, and meshes Sun (29 teeth): the build checks interference only where the gears stand, so check Planet with Sun turning in SolidWorks.
+        warning Gears!A7: Output cannot reach RangeSlv: Input runs through RangeSlv's travel (from Sun at 10.5 to HighDog at −32), so Output would have to pass HighDog toward Z− or Sun toward Z+, each on Input.
+        warning Gears!A7: nothing keys RangeSlv to Output: its whole bore is teeth and no hub row is under it; add a hub on Output that a band of RangeSlv covers in every mode; as laid out none can, since its 10 mm face slides 10 mm (H −5 to L +5) and its places share no length.
+        warning Modes!A3: in N RangeSlv stands 0 mm from HighDog and 0 mm from LowDog, which it does not engage there: leave at least 0.625 mm (0.5 × module) each side. This workbook's Gears sheet has no Start band (mm) and End band (mm) columns, which give a sleeve toothed bands with a relief between them: type both headers on row 1 of the Gears sheet (after Slides, as a new workbook has them) and save.
+        5 shafts · 6 gears · 2 meshes; gate ''
+ok      remake: the copy reads as built from this workbook, its assembly in the copy
+ok      Excel opened RangeBox.xlsx with no dialog or repair: []
+ok      remake: the copy's workbook holds the fixture's Gears, Meshes and Modes rows (as the app reads them)
+fact    remake: the workbook's Gears headers lack ['Start band (mm)', 'End band (mm)'] of the app's
+edit    the teeth: [('Gears', 'F2', 28), ('Gears', 'F3', 14), ('Gears', 'F4', 56)]
+excel   Gears!F2 := 28
+excel   Gears!F3 := 14
+excel   Gears!F4 := 56
+excel   saved RangeBox.xlsx
+poll    a new read 0.0 s after asking; changes:
+          Gears!F2 Sun Teeth 29 → 28
+          Gears!F3 Planet Teeth 13 → 14
+          Gears!F4 Ring Teeth 55 → 56
+ok      read RangeBox.xlsx: ok
+        warning Gears!F3: Planet: 14 teeth at 20° is below the undercut limit of 17: a generated gear would lose the bottom of its flanks, which this profile does not show. A profile shift of 0.18 or more would clear it.
+        warning Gears!F7: RangeSlv: The teeth's tips, at 18.75 mm, are inside the base circle of 19.968 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!A3: Planet (14 teeth) is below the undercut limit, which is not modelled, and meshes Sun (28 teeth): the build checks interference only where the gears stand, so check Planet with Sun turning in SolidWorks.
+        warning Gears!A7: Output cannot reach RangeSlv: Input runs through RangeSlv's travel (from Sun at 10.5 to HighDog at −32), so Output would have to pass HighDog toward Z− or Sun toward Z+, each on Input.
+        warning Gears!A7: nothing keys RangeSlv to Output: its whole bore is teeth and no hub row is under it; add a hub on Output that a band of RangeSlv covers in every mode; as laid out none can, since its 10 mm face slides 10 mm (H −5 to L +5) and its places share no length.
+        warning Modes!A3: in N RangeSlv stands 0 mm from HighDog and 0 mm from LowDog, which it does not engage there: leave at least 0.625 mm (0.5 × module) each side. This workbook's Gears sheet has no Start band (mm) and End band (mm) columns, which give a sleeve toothed bands with a relief between them: type both headers on row 1 of the Gears sheet (after Slides, as a new workbook has them) and save.
+        5 shafts · 6 gears · 2 meshes; gate ''
+classify parts changed ['Gear_m1.25_N29.SLDPRT', 'Gear_m1.25_N13.SLDPRT', 'Ring_m1.25_N55.SLDPRT']; moved []; re-place ['Planet copy 1', 'Planet copy 2', 'Planet copy 3', 'Ring']; structural []; missing []; unsaved []; refusal ''; turning True; axial []; ratios ['Sun meshes Planet copy 1', 'Sun meshes Planet copy 2', 'Sun meshes Planet copy 3', 'Planet copy 1 meshes Ring']
+        layout globals wanted []
+summary Update SolidWorks will change the values in Gear_m1.25_N29 (Sun), Gear_m1.25_N13 (Planet) and Ring_m1.25_N55 (Ring), set the gear mates Sun meshes Planet copy 1 to 28 : 14, Sun meshes Planet copy 2 to 28 : 14, Sun meshes Planet copy 3 to 28 : 14 and Planet copy 1 meshes Ring to 14 : 56 (made again, with their flags set in every mode), and re-place Ring, Carrier (the carrier), Sun, Planet (3 copies), HighDog, LowDog and RangeSlv.
+ok      remake: classify makes it a value Update remaking ['Sun meshes Planet copy 1', 'Sun meshes Planet copy 2', 'Sun meshes Planet copy 3', 'Planet copy 1 meshes Ring']: []
+footer  (remake, the gate as it stands, the findings as they stand {'UPDATE_MAKES_MATES_WITH_MODES_ON_2026': None}) [red] Update SolidWorks would change the values in Gear_m1.25_N29 (Sun), Gear_m1.25_N13 (Planet) and Ring_m1.25_N55 (Ring), set the gear mates Sun meshes Planet copy 1 to 28 : 14, Sun meshes Planet copy 2 to 28 : 14, Sun meshes Planet copy 3 to 28 : 14 and Planet copy 1 meshes Ring to 14 : 56 (made again, with their flags set in every mode), and re-place Ring, Carrier (the carrier), Sun, Planet (3 copies), HighDog, LowDog and RangeSlv. It was built with a configuration per mode (H, N and L), each named as its mode, and saved in H; to switch mode, double-click another mode's configuration in SolidWorks' ConfigurationManager. Drag Sun in SolidWorks and the rest of its train follow. Carrier (the carrier) is axes and planes only, so it has nothing to drag. The next press would stop before changing anything: Update SolidWorks would make a gear mate in an assembly with modes again and set its flag in each mode, which Gear Generator has not yet been shown to do on SolidWorks 2026 (findings.UPDATE_MAKES_MATES_WITH_MODES_ON_2026), so the press changes nothing; Build again… makes the new revision instead.
+        button 'Build again…' on; Update SolidWorks shown on primary
+line    (W9a's prediction, not said beside a foreseen stop) As read at 02:52, Update SolidWorks rebuilds your User Keyway Sketch and User Keyway in Gear_m1.25_N29 after the app's features, moves your Sprocket-1 and Sprocket-3 with Sun, which your UserLock1 and UserLock3 hold them to, moves your Sprocket-2 with RangeSlv, which your UserLock2 holds it to, asks SolidWorks, when pressed, whether the 8 mates of yours on Sun's train leave it free to turn (if not, it changes nothing and names the mates to suppress), and leaves your Sprocket-4 and Housing-1 as they are.
+ok      remake, the gate as it stands, the findings as they stand {'UPDATE_MAKES_MATES_WITH_MODES_ON_2026': None}: the footer says the foreseen stop, red, in place of W9a's prediction: 'The next press would stop before changing anything: Update SolidWorks would make a gear mate in an assembly with modes a'…
+        foreseen unsettled ['UPDATE_MAKES_MATES_WITH_MODES_ON_2026'] []: Update SolidWorks would make a gear mate of a gearbox with modes again and set its flag in each mode, which has not been measured on this SolidWorks (findings.UPDATE_MAKES_MATES_WITH_MODES_ON_2026 is None), so nothing is changed; build the gearbox again instead.
+ok      remake, the gate as it stands: the footer foresees the press refused, naming ['UPDATE_MAKES_MATES_WITH_MODES_ON_2026']: [('unsettled', ['UPDATE_MAKES_MATES_WITH_MODES_ON_2026'])]
+person  saved in SolidWorks (before remake, the gate as it stands): []
+person  remake, the gate as it stands: nothing saved first; the press reads the assembly as it stands in the session
+read    before remake, the gate as it stands (active H; front document RangeBox.SLDASM): mates in error none; not free {'Ring': 3, 'Sprocket-4': 3, 'Housing-1': 3}; marked none; rebuild state 0
+ok      remake, the gate as it stands: the footer offers Update SolidWorks (shown True, enabled True, Build again… needed False)
+update  SolidWorks 1.07 GB private, 9.81 GB free
+        raised UserWorkRefused in 122.1 s: Update SolidWorks would make a gear mate of a gearbox with modes again and set its flag in each mode, which has not been measured on this SolidWorks (findings.UPDATE_MAKES_MATES_WITH_MODES_ON_2026 is None), so nothing is changed; build the gearbox again instead.
+status  [red] Update SolidWorks would make a gear mate of a gearbox with modes again and set its flag in each mode, which has not been measured on this SolidWorks (findings.UPDATE_MAKES_MATES_WITH_MODES_ON_2026 is None), so nothing is changed; build the gearbox again instead.
+record  the window's _record_refusal ran
+fact    remake, the gate as it stands: the press took 122.2 s; SolidWorks calls by member {'OpenDoc6': 8, 'IsSuppressed2': 112, 'GetSystemValue3': 1}
+        shows and puts in order: []
+fact    remake, the gate as it stands: the press took 122 s
+fact    remake, the gate as it stands: problems [('unsettled', [])]
+        unsettled: Update SolidWorks would make a gear mate of a gearbox with modes again and set its flag in each mode, which has not been measured on this SolidWorks (findings.UPDATE_MAKES_MATES_WITH_MODES_ON_2026 is None), so nothing is changed; build the gearbox again instead.
+read    after remake, the gate as it stands (active H; front document RangeBox.SLDASM): mates in error none; not free {'Ring': 3, 'Sprocket-4': 3, 'Housing-1': 3}; marked none; rebuild state 0
+ok      remake, the gate as it stands: refused before any write as ['unsettled'], naming [] and saying ['UPDATE_MAKES_MATES_WITH_MODES_ON_2026']: got ['unsettled'], named []
+ok      remake, the gate as it stands: the refused press made no call that changes or shows anything (its trace): none
+ok      remake, the gate as it stands: nothing written: frames, mates, flags, entities, marks and globals as before
+ok      remake, the gate as it stands: the record keeps the refusal with its time 2026-11-17T16:14:09Z: ['unsettled']
+footer  (remake, the gate as it stands, after the refusal) [red] Update SolidWorks would make a gear mate of a gearbox with modes again and set its flag in each mode, which has not been measured on this SolidWorks (findings.UPDATE_MAKES_MATES_WITH_MODES_ON_2026 is None), so nothing is changed; build the gearbox again instead.
+        button 'Build again…' on; Update SolidWorks shown on primary
+line    [red] Update SolidWorks refused at 11:14, before changing anything: Update SolidWorks would make a gear mate of a gearbox with modes again and set its flag in each mode, which has not been measured on this SolidWorks (findings.UPDATE_MAKES_MATES_WITH_MODES_ON_2026 is None), so nothing is changed; build the gearbox again instead. The next press reads your work in SolidWorks again, and refuses again unless that has been dealt with.
+        predicted: carried []; problems []; refused (recorded) [('unsettled', [])]; changed since False; unread ties []
+ok      remake, the gate as it stands: the footer says the refusal as recorded, red, until the workbook changes
+ok      remake, the gate as it stands, by file times and save flags: nothing written to SolidWorks: files changed none, documents newly marked none
+fact    remake, the gate as it stands: the refused press wrote the SolidWorks it read onto a record that had none (gearbox.solidworks [34, 1, 1]; refused_update does so by design, schema 9): allowed
+ok      remake, the gate as it stands: the record keeps the refusal with its subjects {'unsettled': ['UPDATE_MAKES_MATES_WITH_MODES_ON_2026']}, the press's digest and SolidWorks [34, 1, 1], and nothing else on it changed: nothing; missing none
+PATCH   findings.UPDATE_MAKES_MATES_WITH_MODES_ON_2026 = True in this process, for this measurement only (was None)
+footer  (remake, the finding patched) [red] Update SolidWorks would make a gear mate of a gearbox with modes again and set its flag in each mode, which has not been measured on this SolidWorks (findings.UPDATE_MAKES_MATES_WITH_MODES_ON_2026 is None), so nothing is changed; build the gearbox again instead.
+        button 'Build again…' on; Update SolidWorks shown on primary
+line    [red] Update SolidWorks refused at 11:14, before changing anything: Update SolidWorks would make a gear mate of a gearbox with modes again and set its flag in each mode, which has not been measured on this SolidWorks (findings.UPDATE_MAKES_MATES_WITH_MODES_ON_2026 is None), so nothing is changed; build the gearbox again instead. The next press reads your work in SolidWorks again, and refuses again unless that has been dealt with.
+        predicted: carried []; problems []; refused (recorded) [('unsettled', [])]; changed since False; unread ties []
+ok      remake: the teeth: the footer offers Update SolidWorks (shown True, enabled True, Build again… needed False)
+update  SolidWorks 1.42 GB private, 9.78 GB free
+DIALOG  SolidWorks shows 'Calculating Interference Detection': ['Cancel', 'Calculating interferences between components...'] (a progress box that closes itself; not logged again)
+        in 344.3 s; SolidWorks 1.53 GB private, 9.58 GB free; loaded from disk []
+        W9a: carried [('Sprocket-1', 'Sun', 'N'), ('Sprocket-3', 'Sun', 'N'), ('Sprocket-2', 'RangeSlv', 'N'), ('Sprocket-1', 'Sun', 'L'), ('Sprocket-3', 'Sun', 'L'), ('Sprocket-2', 'RangeSlv', 'L'), ('Sprocket-1', 'Sun', 'H'), ('Sprocket-3', 'Sun', 'H'), ('Sprocket-2', 'RangeSlv', 'H')]; renamed []; user in error []; user features in error []; inventory read yes; failures []
+ok      the Update's check phase found no gear mate turning against its mesh: []
+status  [green] Updated SolidWorks: made Sun meshes Planet copy 1, Sun meshes Planet copy 2, Sun meshes Planet copy 3 and Planet copy 1 meshes Ring again, with their flags set in every mode, changed 1 variable in Gear_m1.25_N29 (it now has 28 teeth; its file keeps its name), changed 1 variable in Gear_m1.25_N13 (it now has 14 teeth; its file keeps its name), changed 1 variable in Ring_m1.25_N55 (it now has 56 teeth; its file keeps its name), set the gear mates Sun meshes Planet copy 1 to 28 : 14, Sun meshes Planet copy 2 to 28 : 14, Sun meshes Planet copy 3 to 28 : 14 and Planet copy 1 meshes Ring to 14 : 56, re-placed Ring, Carrier (the carrier), Sun, Planet (3 copies), HighDog, LowDog and RangeSlv in every mode; no interference between the gears in any mode, where they stand. It worked in H, the configuration that was active, then showed and checked N and L and left the assembly in H. Your Sprocket-1 went with Sun in every mode, which your locks hold it to. Your Sprocket-3 went with Sun in every mode, which your locks hold it to. Your Sprocket-2 went with RangeSlv in every mode, which your locks hold it to. Save Gear_m1.25_N29, Gear_m1.25_N13, Ring_m1.25_N55 and RangeBox in SolidWorks to keep them.
+fact    remake: the teeth: the press took 344.5 s; SolidWorks calls by member {'OpenDoc6': 13, 'IsSuppressed2': 286, 'GetSystemValue3': 4, 'ForceRebuild3': 57, 'AddMate5': 4, 'ShowConfiguration2': 3, 'SetSuppression2': 40, 'put': 37}
+        shows and puts in order: [('ShowConfiguration2', 'N'), ('put', 'Ring_m1.25_N55-1'), ('put', 'RangeBox_Carrier_Carrier-1'), ('put', 'Gear_m1.25_N29-1'), ('put', 'Gear_m1.25_N13-1'), ('put', 'Gear_m1.25_N13-2'), ('put', 'Gear_m1.25_N13-3'), ('put', 'Dog_m1.25_N17-1'), ('put', 'Dog_m1.25_N17-2'), ('put', 'Sleeve_m1.25_N17-1'), ('put', 'Sprocket-1'), ('put', 'Sprocket-3'), ('put', 'Sprocket-2'), ('put', 'Ring_m1.25_N55-1'), ('ShowConfiguration2', 'L'), ('put', 'RangeBox_Carrier_Carrier-1'), ('put', 'Gear_m1.25_N29-1'), ('put', 'Gear_m1.25_N13-1'), ('put', 'Gear_m1.25_N13-2'), ('put', 'Gear_m1.25_N13-3'), ('put', 'Dog_m1.25_N17-1'), ('put', 'Dog_m1.25_N17-2'), ('put', 'Sleeve_m1.25_N17-1'), ('put', 'Sprocket-1'), ('put', 'Sprocket-3'), ('put', 'Sprocket-2'), ('ShowConfiguration2', 'H'), ('put', 'Ring_m1.25_N55-1'), ('put', 'RangeBox_Carrier_Carrier-1'), ('put', 'Gear_m1.25_N29-1'), ('put', 'Gear_m1.25_N13-1'), ('put', 'Gear_m1.25_N13-2'), ('put', 'Gear_m1.25_N13-3'), ('put', 'Dog_m1.25_N17-1'), ('put', 'Dog_m1.25_N17-2'), ('put', 'Sleeve_m1.25_N17-1'), ('put', 'Sprocket-1'), ('put', 'Sprocket-3'), ('put', 'Sprocket-2'), ('put', 'Ring_m1.25_N55-1')]
+        configuration 'H'; visited ['N', 'L']; put_in ['N', 'L', 'H']; placed ['Ring', 'Carrier carrier', 'Sun', 'Planet copy 1', 'Planet copy 2', 'Planet copy 3', 'HighDog', 'LowDog', 'RangeSlv']; unsuppressed_in []; suppressed_in []; slid []; values_restored []; extra configurations []; extra mates []; senses unread []; positions per configuration False; failures []
+        post-check of N: turned False; out of step [('Sun', 'Planet copy 1'), ('Sun', 'Planet copy 2'), ('Sun', 'Planet copy 3')]; off axis ['Ring']; clashes []; interference error ''
+        post-check of L: turned False; out of step []; off axis []; clashes []; interference error ''
+        post-check of H: turned False; out of step [('Sun', 'Planet copy 1'), ('Sun', 'Planet copy 2'), ('Sun', 'Planet copy 3')]; off axis ['Ring']; clashes []; interference error ''
+fact    remake: the teeth: the press took 344 s
+        update  Gear_m1.25_N29.SLDPRT · trig degrees
+        ok      set "No. of Teeth"
+        ok      rebuilt once
+        update  Gear_m1.25_N13.SLDPRT · trig degrees
+        ok      set "No. of Teeth"
+        ok      rebuilt once
+        update  Ring_m1.25_N55.SLDPRT · trig degrees
+        ok      set "No. of Teeth"
+        ok      rebuilt once
+        update  Dog_m1.25_N17.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Sleeve_m1.25_N17.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  RangeBox_Layout.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  RangeBox_Carrier_Carrier.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        ok      made again in a mode, its flags set in every mode: Sun meshes Planet copy 1, Sun meshes Planet copy 2, Sun meshes Planet copy 3, Planet copy 1 meshes Ring
+        ok      re-placed Ring, Carrier carrier, Sun, Planet copy 1, Planet copy 2, Planet copy 3, HighDog, LowDog, RangeSlv
+        ok      given their new ratio: Sun meshes Planet copy 1, Sun meshes Planet copy 2, Sun meshes Planet copy 3, Planet copy 1 meshes Ring
+        ok      worked in H, the configuration that was active, and showed N, L too
+        ok      gears put in N, L, H
+        ok      found in mode N: Ring off its axis, Sun with Planet copy 1 out of step, Sun with Planet copy 2 out of step, Sun with Planet copy 3 out of step
+        ok      found in mode H: Ring off its axis, Sun with Planet copy 1 out of step, Sun with Planet copy 2 out of step, Sun with Planet copy 3 out of step
+        CHECK   your components, left as they are but where put with a gear: Sprocket-3, Housing-1, Sprocket-4, Sprocket-1, Sprocket-2
+        CHECK   your mates, left on as they are: UserAxis1, UserAxis2, UserLock1, UserLock2, UserLock3, UserAxis4, UserDist4, UserAngle4
+        CHECK   your features in Gear_m1.25_N29.SLDPRT, kept: User Keyway Sketch, User Keyway
+        ok      put Sprocket-1 with Sun in N
+        ok      put Sprocket-3 with Sun in N
+        ok      put Sprocket-2 with RangeSlv in N
+        ok      put Sprocket-1 with Sun in L
+        ok      put Sprocket-3 with Sun in L
+        ok      put Sprocket-2 with RangeSlv in L
+        ok      put Sprocket-1 with Sun in H
+        ok      put Sprocket-3 with Sun in H
+        ok      put Sprocket-2 with RangeSlv in H
+        mate    Sun on Input Axis
+        mate    Sun along Input
+        mate    HighDog locked to Sun
+        mate    Carrier carrier on Carrier Axis
+        mate    Carrier carrier along Carrier
+        mate    LowDog locked to Carrier carrier
+        mate    Planet copy 1 on Planet copy 1 Axis
+        mate    Planet copy 1 along Planet copy 1
+        mate    Planet copy 2 on Planet copy 2 Axis
+        mate    Planet copy 2 along Planet copy 2
+        mate    Planet copy 3 on Planet copy 3 Axis
+        mate    Planet copy 3 along Planet copy 3
+        mate    RangeSlv on Output Axis
+        mate    RangeSlv along Output
+        mate    Sun meshes Planet copy 1
+        mate    Sun meshes Planet copy 2
+        mate    Sun meshes Planet copy 3
+        mate    Planet copy 1 meshes Ring
+        mate    RangeSlv engages HighDog
+        mate    RangeSlv engages LowDog · suppressed
+        mate    UserAxis1
+        mate    UserAxis2
+        mate    UserLock1
+        mate    UserLock2
+        mate    UserLock3
+        mate    UserAxis4
+        mate    UserDist4
+        mate    UserAngle4
+        ok      assembly rebuilt once
+        ok      no interference between the gears
+        not saved: Gear_m1.25_N29.SLDPRT, Gear_m1.25_N13.SLDPRT, Ring_m1.25_N55.SLDPRT, RangeBox.SLDASM changed in SolidWorks; save there to keep it
+        W9c: built []; inserted []; deleted []; mates deleted []; mates made []; remade in modes ['Sun meshes Planet copy 1', 'Sun meshes Planet copy 2', 'Sun meshes Planet copy 3', 'Planet copy 1 meshes Ring']; bands added [], removed []; modes added [], removed []; took the active mode's state []; flags lost []; not resolved []
+ok      remake: the record on disk now at link schema 9 (this app's 9)
+ok      remake: every gear mate ['Sun meshes Planet copy 1', 'Sun meshes Planet copy 2', 'Sun meshes Planet copy 3', 'Planet copy 1 meshes Ring'] made again with modes (['Planet copy 1 meshes Ring', 'Sun meshes Planet copy 1', 'Sun meshes Planet copy 2', 'Sun meshes Planet copy 3']), each one's sense read (unread []), the user's keyway in Sun's part not in error [], nothing left over on the record
+ok      remake: every user component where it was (['Sprocket-1', 'Sprocket-2', 'Sprocket-3'] relative to their gears, ['Sprocket-4', 'Housing-1'] still), every user mate on in the modes it was on in and in no error (8 mates)
+ok      remake, H shown: every body at its frame on record (6.6e-10 at Planet copy 2); no mate in error ; every app gear free True ; no interference ; RangeSlv along Output reads 34.500000 mm, the record -34.500000 (SolidWorks gives a distance without its sign), RangeSlv's Front plane at z -34.500000: agree; bands and dogs where the app's read puts them to 0.0001 mm ; engaged ['HighDog'] as the app's ['HighDog']
+fact    remake, H: measured bands {'whole': (-34.5, -24.5)}, dogs {'HighDog': (-34.5, -29.5), 'LowDog': (-19.5, -14.5)}, hub None; RangeSlv moved -5.000000 mm from N; least running gap 5.0 at [('whole', 'LowDog')]; relief holds []
+ok      remake, N shown: every body at its frame on record (6.6e-10 at Planet copy 2); no mate in error ; every app gear free True ; no interference ; RangeSlv along Output reads 29.500000 mm, the record -29.500000 (SolidWorks gives a distance without its sign), RangeSlv's Front plane at z -29.500000: agree; bands and dogs where the app's read puts them to 0.0001 mm ; engaged [] as the app's []
+fact    remake, N: measured bands {'whole': (-29.5, -19.5)}, dogs {'HighDog': (-34.5, -29.5), 'LowDog': (-19.5, -14.5)}, hub None; RangeSlv moved +0.000000 mm from N; least running gap 0.0 at [('whole', 'HighDog'), ('whole', 'LowDog')]; relief holds []
+ok      remake, L shown: every body at its frame on record (6.6e-10 at Planet copy 2); no mate in error ; every app gear free True ; no interference ; RangeSlv along Output reads 24.500000 mm, the record -24.500000 (SolidWorks gives a distance without its sign), RangeSlv's Front plane at z -24.500000: agree; bands and dogs where the app's read puts them to 0.0001 mm ; engaged ['LowDog'] as the app's ['LowDog']
+fact    remake, L: measured bands {'whole': (-24.5, -14.5)}, dogs {'HighDog': (-34.5, -29.5), 'LowDog': (-19.5, -14.5)}, hub None; RangeSlv moved +5.000000 mm from N; least running gap 5.0 at [('whole', 'HighDog')]; relief holds []
+ok      remake: every mate's flag in every mode as on record, the couplings on only in their modes: wrong none
+fact    remake: the app checked interference in ['H', 'L', 'N'] of ['H', 'N', 'L'] (every mode); its log's CHECK lines carry 'H''s clashes []; each pair with the user's, SolidWorks' volumes summed against the app's: {'H': {}, 'N': {}, 'L': {}}
+fact    remake: the result's status says of it: (nothing)
+footer  (remake, after the press, with the user's interference) [green] Updated SolidWorks: made Sun meshes Planet copy 1, Sun meshes Planet copy 2, Sun meshes Planet copy 3 and Planet copy 1 meshes Ring again, with their flags set in every mode, changed 1 variable in Gear_m1.25_N29 (it now has 28 teeth; its file keeps its name), changed 1 variable in Gear_m1.25_N13 (it now has 14 teeth; its file keeps its name), changed 1 variable in Ring_m1.25_N55 (it now has 56 teeth; its file keeps its name), set the gear mates Sun meshes Planet copy 1 to 28 : 14, Sun meshes Planet copy 2 to 28 : 14, Sun meshes Planet copy 3 to 28 : 14 and Planet copy 1 meshes Ring to 14 : 56, re-placed Ring, Carrier (the carrier), Sun, Planet (3 copies), HighDog, LowDog and RangeSlv in every mode; no interference between the gears in any mode, where they stand. It worked in H, the configuration that was active, then showed and checked N and L and left the assembly in H. Your Sprocket-1 went with Sun in every mode, which your locks hold it to. Your Sprocket-3 went with Sun in every mode, which your locks hold it to. Your Sprocket-2 went with RangeSlv in every mode, which your locks hold it to. Save Gear_m1.25_N29, Gear_m1.25_N13, Ring_m1.25_N55 and RangeBox in SolidWorks to keep them.
+        button 'Build again…' on; Update SolidWorks shown on primary
+ok      remake: every interference SolidWorks reports with the user's components is one the app's result named, in each mode it checked, and it named none SolidWorks did not report: unnamed none, unseen none
+ok      remake, H: engaged ['HighDog'] as §3's RangeBox (['HighDog']); least running gap 5.0
+ok      remake, N: engaged [] as §3's RangeBox ([]); least running gap 0.0
+ok      remake, L: engaged ['LowDog'] as §3's RangeBox (['LowDog']); least running gap 5.0
+ok      remake: the app's read gives L 3.0 (1 + 56/28 = 3.0)
+PATCH   findings.UPDATE_MAKES_MATES_WITH_MODES_ON_2026 back to None
+ok      remake, the copy's end: remake ends clean: every document of it closed in SolidWorks (left []), Excel's workbook closed (['RangeBox.xlsx']), no open document by a file name it holds ([])
+propose UPDATE_MAKES_MATES_WITH_MODES_ON_2026 = True  # remake: gear mates of a gearbox with modes remade, flags and senses read in every mode: True
+time    remake: 803 s; 0 failed; SolidWorks 1.24 GB private, 9.78 GB free
+excel   quit our own Excel
+close   left of ours []; stray []; lost []; SolidWorks 1.01 GB private, 9.95 GB free
+dialogs progress boxes seen {'Calculating Interference Detection': 5, 'Updating...': 0, 'Opening': 2, 'Loading...': 0}; other windows the watch logged: 1
+awake   display and system released (previous state -0x7ffffffd)
+result  written to C:\Users\M0obo\Documents\GearGeneratorProbe\w9c-demo-sw2026-20261117-111013\w9c-demo-20261117-111036.json; masters kept {'rangebox': 'C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9-s0-20261116-045513\\out\\rangebox.master', 'setup': 'C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9a-final-sw2026-20261117-023433\\out\\setup.master', 'reducer': 'C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9a-final-sw2026-20261117-023433\\out\\reducer.master'}
+noted   SolidWorks' notification box came up while no SolidWorks call was in progress (exempt by the coordinator's ruling; nothing answers it)
+done    0 failed: []; 1 noted; 0 STOP(s), a hung worker included: []
