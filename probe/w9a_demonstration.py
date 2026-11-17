@@ -37,8 +37,9 @@ Sections (each runs alone by name; each copy section starts from a kept master a
               app body or a locked sprocket, every user mate's flags, codes and entities as before, the keyway rebuilt.
 - ``refuse``  each refusal step under its own net: the lock to the fixed housing (foreseen; then, the workbook changed,
               "has changed since" and the same refusal foreseen), a mate of another kind on Sun, the solver's tie,
-              two app bodies, the Bore typed in SolidWorks, all at once, and last a lightweight carried sprocket; each
-              judged by its traced calls and reads.
+              two app bodies, the Bore typed in SolidWorks, and all at once; each judged by its traced calls and reads.
+- ``lightweight`` a carried sprocket set lightweight: recorded by a quiet press, foreseen, refused by a press on the
+              assembly as it stands, never saved while lightweight; resolved again before the copy is closed.
 - ``again``, ``again-dirty``, ``again-closed``  Build again…: the old assembly open behind another document (and,
               dirty, needing a rebuild): the app's ``read_old_assembly`` run alone, then the build; its front-document
               state, save flag, rebuild state, configuration, mates and frames before and after (a change ends the
@@ -98,7 +99,7 @@ def _arg(name):
     return ARGS[ARGS.index(name) + 1] if name in ARGS else ""
 
 
-ORDER = ["m3", "setup", "go", "m1", "refuse", "again", "again-dirty", "again-closed", "reducer", "k3", "nocarrier"]
+ORDER = ["m3", "setup", "go", "m1", "refuse", "lightweight", "again", "again-dirty", "again-closed", "reducer", "k3", "nocarrier"]
 # SolidWorks 2024's confirming set (HANDOFF, Rules carried over; the coordinator's ruling 4): the turning build with its
 # edits (setup, go), the rebuilds that can raise a dialog there (m3, k3), and the user-lock put (reducer, nocarrier).
 # refuse runs on 2024 by name.
@@ -180,10 +181,39 @@ def guard(where):
         stop(f"{where}: {W.memory()}: under 2 GB of free memory (HANDOFF, Rules carried over)")
 
 
+def watched_wait(pending, timeout, what):
+    """W8's ``wait_job``, watching while the job runs: a SolidWorks window W8's watch logs (a dialog with buttons
+    that is not the notification box, a balloon or a progress box) is a §0.3 STOP at once, the dialog named, the
+    worker marked hung and left alone (nothing is asked of SolidWorks after it) — never a NOTE the run waits behind
+    until the job's timeout (refuse's lightweight step at 9dded70: SOLIDWORKS CAM's Yes/No warning under SaveAs3)."""
+    if W.HUNG["on"]:
+        raise W.WorkerHung("the SolidWorks worker is hung from an earlier job, so nothing more is asked of it")
+    began = time.monotonic()
+    deadline = began + timeout
+    while True:
+        answer = pending.poll()
+        if answer is not None:
+            return answer
+        windows = [n for n in W.NOTES[SEEN["notes"]:] if n.startswith("a SolidWorks window")]
+        if windows:
+            W.HUNG["on"] = True
+            SEEN["notes"] = len(W.NOTES)
+            stop(f"{what}: a SolidWorks dialog came up while it ran, and nothing here answers it: {windows} "
+                 "(§0.3: any dialog); the worker is left alone and nothing more is asked of SolidWorks")
+        if time.monotonic() > deadline:
+            W.HUNG["on"] = True
+            raise W.WorkerHung(f"{what} did not answer in {timeout:g} s")
+        time.sleep(0.05 if time.monotonic() - began < 2.0 else 0.5)      # short jobs are not slowed
+
+
 def run(what, fn, timeout=900):
-    """A worker job; a raise other than a hung worker or a STOP fails the section with its sentence."""
+    """A worker job, watched (``watched_wait``); a raise other than a hung worker or a STOP fails the section with
+    its sentence."""
     try:
-        return W.run(CTX["worker"], fn, timeout)
+        value, error = watched_wait(CTX["worker"].submit(fn), timeout, what)
+        if error is not None:
+            raise error
+        return value
     except (W.WorkerHung, DemoStop, SectionStop, swcom.NotRunning):
         raise
     except Exception as exc:  # noqa: BLE001
@@ -282,7 +312,7 @@ class Desk9(W.Desk):
             return swbuild.update_gearbox(s, **kwargs, progress=steps.append)
         started = time.monotonic()
         say(f"update  {W.memory()}")
-        result, self.error = W.wait_job(self.worker.submit(work), 2400, "Update SolidWorks")
+        result, self.error = watched_wait(self.worker.submit(work), 2400, "Update SolidWorks")
         self.revision = job.revision
         seconds = time.monotonic() - started
         if self.error is not None:
@@ -320,7 +350,7 @@ class Desk9(W.Desk):
         say(f"journal {'written' if job.journaled else 'NOT written'}; the old assembly read first: "
             f"{os.path.basename(job.before.path) if job.before is not None else 'none'}")
         started = time.monotonic()
-        result, self.error = W.wait_job(self.worker.submit(
+        result, self.error = watched_wait(self.worker.submit(
             lambda s: swbuild.build_gearbox(s, **kwargs, progress=steps.append)), 2400, "the build")
         if self.error is not None:
             say(f"        raised {type(self.error).__name__}: {self.error}")
@@ -1364,13 +1394,19 @@ def section_go(out):
 # -- refuse ----------------------------------------------------------------------------------------------------------
 
 
-def refuse_press(label, desk, folder, kinds, mates_named=(), text=(), ahead=None, users=None, part=None):
+def refuse_press(label, desk, folder, kinds, mates_named=(), text=(), ahead=None, users=None, part=None,
+                 save=True):
     """The user saves, every user item and document read, Update pressed: it must refuse before any write with
     ``kinds`` among its problems, naming ``mates_named`` and saying ``text``. Judged by the press's own traced calls
     (W8 s3's ``nothing_changed_calls``: no show, flag, value, rebuild, put or mate made), then read again: frames,
     mates' codes, flags and entities, and ``part``'s globals (Sun's by default) as before; a document marked by the
-    refused press is a STOP (§0.3). ``ahead``: the footer's prediction before the press, held against the refusal."""
-    save_user(folder, f"before {label}")
+    refused press is a STOP (§0.3). ``ahead``: the footer's prediction before the press, held against the refusal.
+    ``save`` False: pressed on the assembly as it stands, unsaved (an assembly holding a lightweight component is never
+    saved: with SOLIDWORKS CAM loaded the save raises a modal Yes/No box, found at 9dded70)."""
+    if save:
+        save_user(folder, f"before {label}")
+    else:
+        say(f"person  {label}: nothing saved first; the press reads the assembly as it stands in the session")
     box = desk.record.gearbox
     pairs = pairs_of(box, rb_users() if users is None else users)
     mates = RB_USER_MATES if users is None else ()
@@ -1504,8 +1540,8 @@ def refuse_step(out, name, steps):
 def section_refuse(out):
     say("== refuse  W9a's Done when: a lock to a fixed housing refuses naming it, a Bore Diameter typed in SolidWorks "
         "refuses naming the cell; with them a mate of another kind on Sun, the solver's tie, two app bodies locked "
-        "together, all at once, and last a lightweight carried sprocket; each foreseen or recorded in the footer, each "
-        "writing nothing")
+        "together, and all at once; each foreseen or recorded in the footer, each writing nothing (the lightweight "
+        "carried sprocket is its own section, lightweight)")
     folder, path, book, desk = copy_desk(user_master(), "refuse", "RangeBox.xlsx")
     says = out.setdefault("problems", {})
     backlash = W.cell(book, "Gears", "Backlash", "Sun")
@@ -1581,19 +1617,41 @@ def section_refuse(out):
                                                                        bool(s.rebuild()))))
         refuse_step(out, "all at once: the housing lock and the two-body lock on again, the bore still 12", together)
 
-        def lightweight():
-            state = set_state(desk, "Sprocket-1", 1)
-            if state not in (1, 4):
-                check(False, f"refuse: Sprocket-1 did not read lightweight after SetSuppression2(1): {state}")
-                return
-            ahead = quiet_then_edit("refuse lightweight", desk, book, 0.4)
-            check(ahead is not None and any(p.kind == swbuild.PROBLEM_COMPONENT for p in ahead.problems),
-                  "refuse lightweight: the footer foresees the refusal of a carried component loaded lightweight")
-            says["lightweight"] = [p.sentence for p in refuse_press(
-                "refuse lightweight", desk, folder, {swbuild.PROBLEM_COMPONENT}, (), ("Sprocket-1",), ahead=ahead)]
-        refuse_step(out, "last: Sprocket-1 loaded lightweight (W9A-REVIEW-B 3; the coordinator's item 4)", lightweight)
     finally:
         W.end_copy(CTX["worker"], folder, "refuse")
+
+
+def section_lightweight(out):
+    say("== lightweight  a carried user component loaded lightweight refuses (W9A-REVIEW-B 3; the coordinator's item "
+        "4): on a copy of setup.master, Sprocket-1 set lightweight, a quiet press records it from the live session, "
+        "the footer foresees the refusal, and the press refuses, all on the assembly as it stands, never saved while "
+        "a component is lightweight (SOLIDWORKS CAM's modal box under SaveAs3, found at 9dded70); Sprocket-1 resolved "
+        "again before anything is saved or closed")
+    folder, path, book, desk = copy_desk(user_master(), "lightweight", "RangeBox.xlsx")
+    light = False
+    try:
+        users_in_copy("lightweight", desk, folder, rb_users())
+        state = set_state(desk, "Sprocket-1", 1)
+        light = state in (1, 4)
+        out["state"] = state
+        if not light:
+            raise AssertionError(f"lightweight: Sprocket-1 did not read lightweight after SetSuppression2(1): {state}")
+        ahead = quiet_then_edit("lightweight", desk, book, 0.4)
+        check(ahead is not None and any(p.kind == swbuild.PROBLEM_COMPONENT for p in ahead.problems),
+              "lightweight: the footer foresees the refusal of a carried component loaded lightweight")
+        out["problems"] = [p.sentence for p in refuse_press(
+            "lightweight", desk, folder, {swbuild.PROBLEM_COMPONENT}, (), ("Sprocket-1",), ahead=ahead, save=False)]
+    finally:
+        if light and not W.HUNG["on"]:
+            try:
+                back = set_state(desk, "Sprocket-1", 2)
+                check(back in (2, 3), f"lightweight: Sprocket-1 resolved again before anything is saved or closed: {back}")
+            except Exception as exc:  # noqa: BLE001 - said; the copy is then closed unsaved on every version
+                check(False, f"lightweight: Sprocket-1 could not be resolved again: {type(exc).__name__}: {exc}")
+                light = None
+        if not W.HUNG["on"]:
+            # Saved before the close only on 2024 (W8's end_clean), and only once nothing is lightweight.
+            W.end_copy(CTX["worker"], folder, "lightweight", save=light is not None)
 
 
 # -- again: the Build again… job's read of the old assembly ------------------------------------------------------------
@@ -1958,6 +2016,7 @@ def refuse_like(desk, folder, label, ahead, locks, finding):
 
 
 SECTIONS = {"m3": section_m3, "setup": section_setup, "m1": section_m1, "go": section_go, "refuse": section_refuse,
+            "lightweight": section_lightweight,
             "again": lambda out: section_again(out, "open"), "again-dirty": lambda out: section_again(out, "dirty"),
             "again-closed": lambda out: section_again(out, "closed"), "reducer": section_reducer, "k3": section_k3,
             "nocarrier": section_nocarrier}
