@@ -748,7 +748,7 @@ def _out_bool() -> Any:
 def _type_name(obj: Any) -> str:
     """``GetTypeName2`` first, defaulting to ``?``: naming a failure must not fail."""
     try:
-        return str(call(obj, "GetTypeName2"))
+        return str(_read(obj, "GetTypeName2"))
     except Exception:  # noqa: BLE001
         return "?"
 
@@ -951,11 +951,11 @@ def _walk_key(entity: Any, kind: str) -> Tuple[str, Optional[float]]:
     ("other", None); ("", None) when it does not read (every candidate kept)."""
     try:
         if kind == "face":
-            return "area", float(call(entity, "GetArea"))
-        curve = call(entity, "GetCurve")
-        if call(curve, "IsCircle"):
-            return "circle", float(list(call(curve, "CircleParams"))[6])
-        return ("line", None) if call(curve, "IsLine") else ("other", None)
+            return "area", float(_read(entity, "GetArea"))
+        curve = _read(entity, "GetCurve")
+        if _read(curve, "IsCircle"):
+            return "circle", float(list(_read(curve, "CircleParams"))[6])
+        return ("line", None) if _read(curve, "IsLine") else ("other", None)
     except Exception:  # noqa: BLE001
         return "", None
 
@@ -978,15 +978,15 @@ def _coaxial_read(entity: Any, kind: str) -> Tuple[Optional[bool], Optional[floa
     (False, None) for a face that is no cylinder; (None, None) unread."""
     try:
         if kind == "face":
-            surface = call(entity, "GetSurface")
-            if not call(surface, "IsCylinder"):
+            surface = _read(entity, "GetSurface")
+            if not _read(surface, "IsCylinder"):
                 return False, None
-            p = [float(v) for v in call(surface, "CylinderParams")]
+            p = [float(v) for v in _read(surface, "CylinderParams")]
         else:
-            curve = call(entity, "GetCurve")
-            if not call(curve, "IsCircle"):
+            curve = _read(entity, "GetCurve")
+            if not _read(curve, "IsCircle"):
                 return None, None
-            p = [float(v) for v in call(curve, "CircleParams")]
+            p = [float(v) for v in _read(curve, "CircleParams")]
         along = abs(p[3]) <= 1e-9 and abs(p[4]) <= 1e-9 and abs(abs(p[5]) - 1.0) <= 1e-9
         return along and abs(p[0]) <= 1e-9 and abs(p[1]) <= 1e-9, p[6] * MM_PER_METRE
     except Exception:  # noqa: BLE001
@@ -1001,10 +1001,10 @@ def _entity_kind_of(entity: Any) -> str:
     """An entity's kind by ``IEntity.GetType`` (swSelectType_e: 1 edge, 2 face, 3 vertex), "feature" for a feature
     (``GetTypeName2`` answers), "" when it will not say."""
     try:
-        return {1: "edge", 2: "face", 3: "vertex"}.get(int(call(entity, "GetType")), "")
+        return {1: "edge", 2: "face", 3: "vertex"}.get(int(_read(entity, "GetType")), "")
     except Exception:  # noqa: BLE001
         try:
-            call(entity, "GetTypeName2")
+            _read(entity, "GetTypeName2")
             return "feature"
         except Exception:  # noqa: BLE001
             return ""
@@ -1163,14 +1163,14 @@ class Session:
         ``IModelDoc2.GetSaveFlag`` (probe close_document, tier 0: True on a part modified and never saved, 2026
         and 2024). A job counts a document it opened as loaded from its file only when this is False, so a
         document holding unsaved changes never has its unsaved mark cleared (third W4 review, item 1)."""
-        return bool(call(self._doc(), "GetSaveFlag"))
+        return bool(_read(self._doc(), "GetSaveFlag"))
 
     @staticmethod
     def _describe(doc: Any) -> DocInfo:
         return DocInfo(
             title=call(doc, "GetTitle"),
             path=call(doc, "GetPathName"),
-            doc_type=int(call(doc, "GetType")),
+            doc_type=int(_read(doc, "GetType")),
         )
 
     def _active(self) -> Any:
@@ -1198,7 +1198,7 @@ class Session:
         while feature is not None and guard < 5000:
             guard += 1
             try:
-                type_name = str(call(feature, "GetTypeName2"))
+                type_name = str(_read(feature, "GetTypeName2"))
             except Exception:  # noqa: BLE001 - a feature that will not describe itself
                 type_name = "?"
             out.append(FeatureInfo(name=str(call(feature, "Name")), type_name=type_name))
@@ -1259,7 +1259,7 @@ class Session:
         not change as it was.
         """
         doc = self._doc()
-        member, args = rebuild_call(int(call(doc, "GetType")), kind)
+        member, args = rebuild_call(int(_read(doc, "GetType")), kind)
         return bool(call(doc, member, *args))
 
 
@@ -2016,7 +2016,7 @@ class Session:
         kept = self._rename(feature, name)
         dim = self._name_dimension_by_value(feature, angle, twist_dim, "twist")
         if reverse:
-            data = call(feature, "GetDefinition")
+            data = _read(feature, "GetDefinition")
             if data is None or not call(data, "AccessSelections", doc, _null_dispatch()):
                 raise SolidWorksError(f"The definition of {kept} ({_type_name(feature)}) could not be opened to "
                                       "reverse its twist.")
@@ -2211,7 +2211,7 @@ class Session:
         lightweight component has yet reached this fallback.
         """
         try:
-            model = call(component, "GetModelDoc2")
+            model = _read(component, "GetModelDoc2")
         except Exception:  # noqa: BLE001 - fall through to the component's own path
             model = None
         if model is not None:
@@ -2284,7 +2284,7 @@ class Session:
             self._select_component_origin(handle, component, append)
             return
         if target.startswith("plane") and target[5:].isdigit():
-            planes = self._planes(call(component, "GetModelDoc2"))
+            planes = self._planes(_read(component, "GetModelDoc2"))
             name, kind = str(call(planes[int(target[5:]) - 1], "Name")), "PLANE"
         else:
             # The tool names its axis "Gear Axis" and its planes "Mid Plane" and "Profile Plane".
@@ -2313,7 +2313,7 @@ class Session:
         entry = self._handles[handle]
         origin = entry.get("origin", "") if isinstance(entry, dict) else ""
         if not origin:
-            part = call(component, "GetModelDoc2")
+            part = _read(component, "GetModelDoc2")
             feature = call(part, "FirstFeature") if part is not None else None
             while feature is not None and not origin:
                 if _type_name(feature) == "OriginProfileFeature":
@@ -2353,7 +2353,7 @@ class Session:
         component = self._component(handle)
         doc = self._doc()
         # Settled before the put, so a rebuild that cannot be made refuses with nothing moved.
-        member, args = rebuild_call(int(call(doc, "GetType")), kind)
+        member, args = rebuild_call(int(_read(doc, "GetType")), kind)
         m = MM_PER_METRE
         columns = [float(rotation[i * 3 + j]) for j in range(3) for i in range(3)]
         data = columns + [at[0] / m, at[1] / m, at[2] / m, 1.0, 0.0, 0.0, 0.0]
@@ -2728,7 +2728,7 @@ class Session:
         if select_type != 4:                                # swSelDATUMPLANES: only a plane needs its tree order
             return "feature", name
         try:
-            doc = call(component, "GetModelDoc2") if component is not None else self._doc()
+            doc = _read(component, "GetModelDoc2") if component is not None else self._doc()
             if doc is None:                                   # lightweight or suppressed: no tree to order it by
                 return "unread", ""
             planes = [str(call(p, "Name")) for p in self._first_planes(doc, 3)]
@@ -3302,7 +3302,7 @@ class Session:
     def configurations(self) -> List[str]:
         """The build document's configuration names (``IModelDoc2.GetConfigurationNames``), in SolidWorks' order.
         Marks nothing."""
-        names = call(self._doc(), "GetConfigurationNames")
+        names = _read(self._doc(), "GetConfigurationNames")
         return [str(n) for n in (names or ())]
 
     def active_configuration(self) -> str:
@@ -3828,7 +3828,7 @@ class Session:
         out: Dict[str, bool] = {}
         for doc in self._walk_documents():
             key = str(call(doc, "GetPathName") or "") or str(call(doc, "GetTitle") or "")
-            out[key] = bool(call(doc, "GetSaveFlag"))
+            out[key] = bool(_read(doc, "GetSaveFlag"))
         return out
 
     def mate_definition(self, handle: str) -> MateDefinition:
@@ -3839,7 +3839,7 @@ class Session:
         ``EntityParams``."""
         name, feature = self._kept_mate(handle)
         try:
-            type_name = str(call(feature, "GetTypeName2"))
+            type_name = str(_read(feature, "GetTypeName2"))
         except Exception:  # noqa: BLE001
             type_name = ""
         info = self.mate_info(handle)
@@ -3850,7 +3850,7 @@ class Session:
             return MateDefinition(name, info.type, type_name, UNREAD, False, (), (), whole=False)
         values: List[Tuple[str, float]] = []
         try:
-            definition = call(feature, "GetDefinition")
+            definition = _read(feature, "GetDefinition")
             for key in MATE_DEFINITION_VALUES:
                 try:
                     value = _read(definition, key)
@@ -3895,12 +3895,16 @@ class Session:
             mate = _read(mate_feature, "GetSpecificFeature2")
             reference = _read(call(mate, "MateEntity", index), "Reference")
             component = _read(call(mate, "MateEntity", index), "ReferenceComponent")
-            part = call(component, "GetModelDoc2")
+            part = _read(component, "GetModelDoc2")
+            if part is None:                      # lightweight or suppressed: no part document to read it in
+                return entity.kind, "", None, "its part is not loaded in SolidWorks (lightweight or suppressed)"
             reference = call(part, "FeatureByName", str(_read(reference, "Name")))
             raw = call(call(part, "Extension"), "GetPersistReference3", reference)
             return entity.kind, bytes(bytearray(int(b) & 0xFF for b in raw)).hex(), None, ""
-        except Exception as exc:  # noqa: BLE001 - said, never guessed
-            return entity.kind, "", None, f"its reference could not be read ({exc})"
+        except SolidWorksError as exc:
+            return entity.kind, "", None, f"its reference could not be read: {exc}"
+        except Exception:  # noqa: BLE001 - a fault of ours: no Python text in a sentence
+            return entity.kind, "", None, "its reference could not be read (a fault in Gear Generator)"
 
     def entity_references(self, component_handle: str, items: Sequence[Tuple[str, int, str]], *,
                           candidates: int = 200, seconds: float = 20.0
@@ -3921,7 +3925,7 @@ class Session:
         stats: List[Tuple[str, int, int, Any, int]] = []     # per item: kind, listed, after the prefilter, key, matches
         self.last_walk = {"component": self._component_name(component_handle), "items": stats}
         component = self._component(component_handle)
-        part = call(component, "GetModelDoc2")
+        part = _read(component, "GetModelDoc2")
         coaxial_read = self._w9d_finding("COAXIAL_FACE_READ") is True
         lists: Dict[str, List[Any]] = {}
         carried: Dict[Tuple[str, int], Any] = {}
@@ -3940,7 +3944,7 @@ class Session:
                 if kind not in lists:
                     member = "GetFaces" if kind == "face" else "GetEdges"
                     lists[kind] = [x for body in list(call(part, "GetBodies2", 0, True) or ())
-                                   for x in list(call(body, member) or ())]
+                                   for x in list(_read(body, member) or ())]
                 key = _walk_key(entity, kind)
                 filtered = [i for i, x in enumerate(lists[kind]) if _walk_matches(x, kind, key)]
                 stats.append((kind, len(lists[kind]), len(filtered), key, 0))
@@ -3986,8 +3990,11 @@ class Session:
                     continue
                 coaxial, radius = _coaxial_read(part_entity, kind) if coaxial_read else (None, None)
                 out.append((kind, raw.hex(), coaxial, radius, "", ""))
-            except Exception as exc:  # noqa: BLE001 - said, never guessed
-                out.append((kind, "", None, None, "", f"its reference could not be read ({exc})"))
+            except SolidWorksError as exc:  # SolidWorks' own sentence
+                out.append((kind, "", None, None, "", f"its reference could not be read: {exc}"))
+            except Exception as exc:  # noqa: BLE001 - a fault of ours: no Python text in a sentence
+                self.last_walk.setdefault("faults", []).append(f"{type(exc).__name__}: {exc}")
+                out.append((kind, "", None, None, "", "its reference could not be read (a fault in Gear Generator)"))
         self.last_walk.update(carried=len(carried), seconds=round(time.monotonic() - started, 3), capped=capped)
         return out
 
@@ -3996,7 +4003,7 @@ class Session:
         only while ``REFERENCED_CONFIGURATION_READ`` is True (else ``""``), ``GetActiveConfiguration``'s Name and
         ``GetConfigurationNames`` on the component's document (verified members, never run by the app)."""
         component = self._component(handle)
-        doc = call(component, "GetModelDoc2")
+        doc = _read(component, "GetModelDoc2")
         if doc is None:
             # Lightweight or suppressed: no document (W9C-PROBES.md:75). The file's configurations are read closed,
             # ISldWorks.GetConfigurationNames(path) (documented; UNMEASURED: M9 logs it), and no active one is known.
@@ -4004,8 +4011,8 @@ class Session:
             names = tuple(str(n) for n in (call(self._app, "GetConfigurationNames", path) or ()))
             active = ""
         else:
-            names = tuple(str(n) for n in (call(doc, "GetConfigurationNames") or ()))
-            active = str(call(call(doc, "GetActiveConfiguration"), "Name"))
+            names = tuple(str(n) for n in (_read(doc, "GetConfigurationNames") or ()))
+            active = str(_read(_read(doc, "GetActiveConfiguration"), "Name"))
         referenced = str(_read(component, "ReferencedConfiguration")) \
             if self._w9d_finding("REFERENCED_CONFIGURATION_READ") is True else ""
         return referenced, active, names
@@ -4106,7 +4113,7 @@ class Session:
         component = self._component(handle)
         call(component, "SetSuppression2", 0 if suppressed else 2)
         self.rebuild(ASSEMBLY_TRAIN)                       # as the probes did before reading it back
-        state = int(call(component, "GetSuppression2"))
+        state = int(_read(component, "GetSuppression2"))
         if (state == 0) != bool(suppressed):
             raise SolidWorksError(f"SolidWorks would not {'suppress' if suppressed else 'resolve'} "
                                   f"{self._component_name(handle)}: it reads state {state}.")
@@ -4170,7 +4177,7 @@ class Session:
         if not hexed:
             raise SolidWorksError(f"There is no reference to find again in {self._component_name(handle)}.")
         component = self._component(handle)
-        part = call(component, "GetModelDoc2")
+        part = _read(component, "GetModelDoc2")
         code = _out_unwritten()
         found = call(call(part, "Extension"), "GetObjectByPersistReference3", bytes.fromhex(hexed), code)
         entity = found[0] if isinstance(found, tuple) else found

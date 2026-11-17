@@ -302,3 +302,45 @@ Each test below was checked to fail with its fix undone (by hand, on a backup).
    `open_resolves_lightweight` models it. Not read on the not-open path (the old assembly is closed then).
 
 New fields, at the end: `CarryResult.after_unread: str = ""`, `CarryResult.resolved_in_old: Tuple[str, ...] = ()`.
+
+## Fourth round: the first M9 run on SolidWorks 2026 (50a8e54)
+
+1. **The r3 walk read nothing.** True cause, confirmed: `call(body, member)` with the member name in a variable
+   (`GetFaces` / `GetEdges`). Through late binding those come back as a bound method, uncalled (GOTCHAS §55), and
+   `list()` of that raised; the probes' r3 used `raw()`, which calls it. Fix: `_read` (call when a method comes back)
+   for every zero-argument member the W9d code reads: `GetFaces`, `GetEdges`, `GetSurface`, `GetCurve`, `GetArea`,
+   `IsCircle`, `IsLine`, `IsCylinder`, `CircleParams`, `CylinderParams`, `GetType`, `GetDefinition`,
+   `GetConfigurationNames`, `GetTypeName2`, `GetModelDoc2`, `GetSuppression2`, `GetSaveFlag`,
+   `GetActiveConfiguration` (34 call sites changed file-wide; `_read` is a no-op for a property get). Test:
+   `tests/test_swcom.py::test_the_r3_walk_calls_the_members_late_binding_hands_back_uncalled`, COM doubles whose
+   members are methods, run through the real `Session.entity_references`; fails with the old `call`.
+2. **The carry stopped after the states: "No component is kept as 'gear7'".** True cause: `Session.end_build`
+   forgets every handle, so the build's handles are gone in the carry's bracket; C.1 found again only the bodies on
+   record (`Carry.bodies`), and gear7 is the Aux gear new in this revision. Fix: C.1 finds again every component the
+   build placed (`GearboxResult.components`, by Name2) before anything reads by handle. Fake: `strict_handles` (on in
+   every carry test): `end_build` forgets the handles and `constrained_status` / `component_frame` refuse one not found
+   or added since. Test: `test_a_gear_new_in_the_revision_is_found_again_before_its_tie_is_read` (fails on the old C.1).
+3. **Python text in sentences.** Causes: `entity_reference(s)` formatted any exception into its clause; for
+   UserAxisLight the lightweight component has no part document (`GetModelDoc2` None) and R read it anyway. Fixes: a
+   fault of Gear Generator's never reaches a sentence (`_carry_said`: SolidWorks' own refusal as it came, else "a
+   fault in Gear Generator, not in SolidWorks", the Python text kept as a log fact); a part not loaded says so.
+   **Choice for UserAxisLight, for you to rule:** D10 carries a lightweight component resolved and names its mates
+   `WHY_LIGHTWEIGHT` ("what it joins could not be read"); the contract is silent on reading such a mate's entity, so R
+   now reads nothing of a lightweight component's entities (no reference, no walk) and `plan_carry` names the mate
+   `WHY_LIGHTWEIGHT` before any unread check. Resolving the component in the old assembly to read it would change the
+   user's document, which §0.3 forbids. Fake: `entity_reference` on a lightweight or suppressed component answers as
+   the Session now does. Tests: `test_a_mate_on_a_lightweight_components_feature_is_named_lightweight_and_never_read`,
+   `test_a_fault_of_ours_never_reaches_a_sentence_as_python_text`.
+
+**Audit.** (a) Zero-argument members through `call`: the list in 1, all now `_read`. `GetTitle`, `GetPathName`,
+`Name` stay `call` (property gets, read so in this run's log). (b) Reads by a build handle: C.1 (fixed); the
+post-check's anchors and the mated gears (now found in C.1); carried components' handles are the carry's own
+(`add_component` in its bracket); the app mate in `_app_mates_check` is found by its own new handle. (c) Exception
+text formatted into a reason: `entity_reference`, `entity_references` (fixed), `stopped` and `after_unread` and the
+read's failure (now `_carry_said`); `WHY_REFUSED` and the "left" fact take only `SolidWorksError` sentences.
+(d) After the states, read again with this run's eyes: `remake_mate`'s selection by `_component_ref` and whole
+`Select4` use handles C.1 now keeps; `select_by_reference` passes `bytes` as the probe did; `mate_definition` reads
+through `_read`. Nothing else found that only the fake's kindness made pass; all of it is still unrun on SolidWorks.
+
+**For B:** nothing in B's files must change for these; a sentence B builds from `stopped` may now end in "a fault in
+Gear Generator, not in SolidWorks" instead of Python text.

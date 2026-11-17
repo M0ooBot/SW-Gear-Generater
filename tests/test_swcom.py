@@ -3320,3 +3320,94 @@ def test_a_status_out_parameter_not_written_reads_as_no_status():
             self.value = value
     assert swcom._by_ref_status(Holder(-1)) == -1 and swcom._by_ref_status(Holder(0)) == 0
     assert swcom._by_ref_status(None) == -1 and swcom._by_ref_status(Holder("x")) == -1 and swcom._by_ref_status(2) == 2
+
+
+def test_the_r3_walk_calls_the_members_late_binding_hands_back_uncalled(monkeypatch):
+    """W9d, the fourth round (the first M9 run on 2026: every face read "'method' object is not iterable"): through
+    late binding IBody2.GetFaces, IFace2.GetArea, GetSurface and GetType come back as bound methods, uncalled; the walk
+    calls them, as the probe's raw() did, and finds the one face."""
+    monkeypatch.setattr(findings, "PERSIST_REFERENCE_ROUTE_FOR_FACES_ON_2026", swcom.PERSIST_ROUTE_R3)
+    monkeypatch.setattr(findings, "COAXIAL_FACE_READ_ON_2026", True)
+    monkeypatch.setattr(swcom, "_out_unwritten", lambda: None)          # no pythoncom here; the code comes back
+
+    class Surface:
+        def IsCylinder(self):
+            return False
+
+    class Face:
+        def __init__(self, area):
+            self.area = area
+
+        def GetArea(self):
+            return self.area
+
+        def GetSurface(self):
+            return Surface()
+
+        def GetType(self):
+            return 2
+
+    wanted, other = Face(100.0), Face(100.0)
+    in_assembly = {id(wanted): object(), id(other): object()}
+
+    class Body:
+        def GetFaces(self):
+            return [other, wanted]
+
+    class PartExtension:
+        def GetPersistReference3(self, entity):
+            assert entity is wanted
+            return [1, 2]
+
+        def GetObjectByPersistReference3(self, raw, code):
+            return wanted, 0
+
+    extension = PartExtension()
+
+    class Part:
+        Extension = extension
+
+        def GetBodies2(self, kind, visible):
+            return [Body()]
+
+    class Component:
+        def GetModelDoc2(self):
+            return Part()
+
+        def GetCorresponding(self, face):
+            return in_assembly[id(face)]
+
+    mate_entity = in_assembly[id(wanted)]
+
+    class AssemblyFace:
+        def GetArea(self):
+            return 100.0
+
+    class App:
+        def IsSame(self, a, b):
+            return 1 if (a is b or (a is mate_entity and isinstance(b, AssemblyFace)) or
+                         (b is mate_entity and isinstance(a, AssemblyFace))) else 0
+
+    reference = AssemblyFace()
+    mate_entity = reference
+    in_assembly[id(wanted)] = reference
+
+    class Entity:
+        Reference = reference
+
+    class Mate:
+        def MateEntity(self, index):
+            return Entity()
+
+    class Feature:
+        def GetSpecificFeature2(self):
+            return Mate()
+
+    session = swcom.Session.__new__(swcom.Session)
+    session.revision, session._app = (34, 0, 0), App()
+    monkeypatch.setattr(session, "_component", lambda handle: Component(), raising=False)
+    monkeypatch.setattr(session, "_kept_mate", lambda handle: ("UserFaceConc", Feature()), raising=False)
+    monkeypatch.setattr(session, "_component_name", lambda handle: "Sprocket-1", raising=False)
+    (answer,) = session.entity_references("old1", [("oldmate1", 0, "face")])
+    assert answer[1] == "0102" and answer[4] == "" and answer[2] is False, answer
+    assert session.last_walk["items"] == [("face", 2, 2, ("area", 100.0), 1)]

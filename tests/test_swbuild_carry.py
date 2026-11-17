@@ -478,6 +478,7 @@ def _old_train(**user):
     old assembly and the user's files."""
     fake = _built_train()
     fake.read_entity_kinds = True
+    fake.strict_handles = True                 # the fourth round: a handle is kept only within its bracket
     fake.user_component(T_ASM, "Sprocket-1", SPROCKET, (I9, (0.0, 0.0, 30.0)))
     fake.user_lock(T_ASM, "Lock1", "gear1-1", "Sprocket-1")
     fake._w9d()
@@ -693,7 +694,7 @@ def test_a_tied_cluster_falls_back_alone_while_the_other_is_carried_with_every_m
     assert {r[0] for r in cr.remade} == {"Lock1", "Lock2"}
     assert fake.mate("Lock3", R2[T_ASM]) is None and fake.mate("Lock1", R2[T_ASM]) is not None
     assert {"carried2-1", "carried3-1"} <= fake.fixed
-    assert all(fake.constrained_status(h) == findings.COMPONENT_UNDER_DEFINED for h in ("gear1", "gear4"))
+    assert all(fake.constrained_status(h) == findings.COMPONENT_UNDER_DEFINED for h in ("gear1-1", "gear4-1"))
 
 
 @pytest.mark.parametrize("case", ["new error", "over-defined", "same error"])
@@ -911,7 +912,8 @@ def test_the_carry_reads_the_new_assembly_even_when_the_build_bracket_drops_the_
     names = [(n, a) for n, a in fake.calls]
     first_read = next(i for i, (n, a) in enumerate(names) if n == "component_frame" and a[0] == "gear1"
                       and i > [k for k, (m, _) in enumerate(names) if m == "save_as"][-1])
-    assert ("open_document", (R2[T_ASM],)) in names[:first_read][-6:]
+    saved = [k for k, (m, _) in enumerate(names) if m == "save_as"][-1]
+    assert ("open_document", (R2[T_ASM],)) in names[saved:first_read]
 
 
 def test_a_reference_found_again_as_another_kind_stops_the_carry(monkeypatch, every_gate):
@@ -1058,6 +1060,7 @@ def _tc_again(monkeypatch, flags, tweak=lambda fake: None, anchor="gear2-1"):
     assert built.ok
     fake._w9d()
     fake.read_entity_kinds = True
+    fake.strict_handles = True
     fake.user_component(TC_ASM, "Sprocket-1", SPROCKET, (I9, (0.0, 0.0, 200.0)))
     fake.user_lock(TC_ASM, "Lock1", anchor, "Sprocket-1", flags=flags)
     fake.saved[_key(SPROCKET)] = ([], [])
@@ -1345,3 +1348,44 @@ def test_a_lightweight_instance_resolved_in_the_old_assembly_by_the_insert_is_sa
     assert cr.inserted == [("Sprocket-1", "carried1-1")] and cr.stopped == ""
     assert cr.resolved_in_old == (("Sprocket-1",) if resolves else ())
     assert any("Sprocket-1 in T.SLDASM was lightweight and read resolved" in f for f in cr.facts) == resolves
+
+
+# -- the fourth round: the first M9 run on SolidWorks 2026 (probe/results/w9d-demo-sw2026-20261117-2-…) --------------
+
+
+def test_a_gear_new_in_the_revision_is_found_again_before_its_tie_is_read(monkeypatch, every_gate):
+    """Fault 2: the build's handles end with its bracket; G4 is new here (no CarryBody), and the carry reads every
+    mated gear free before the mates; it is found again by its Name2 first, so the carry goes on."""
+    every_gate()
+    fake = _old_train()
+    _isfile(monkeypatch, fake)
+    carry = _t_carry()
+    carry = _replace(carry, bodies=tuple(b for b in carry.bodies if b.old != "G4"))
+    cr = _build_again(fake, carry).carry
+    assert cr.stopped == "" and [r[0] for r in cr.remade] == ["Lock1"]
+
+
+def test_a_mate_on_a_lightweight_components_feature_is_named_lightweight_and_never_read(monkeypatch, every_gate):
+    """Fault 3 (UserAxisLight): no part document, so nothing of it is read; named WHY_LIGHTWEIGHT (D10), and no
+    sentence carries Python text."""
+    every_gate()
+    fake = _old_train()
+    _isfile(monkeypatch, fake)
+    fake.user_mate(T_ASM, "UserAxisLight", kind="coincident", a=("Sprocket-1", "Sprocket Axis"),
+                   b=("gear1-1", "Gear Axis"))
+    fake.lightweight.add("Sprocket-1")
+    cr = _build_again(fake).carry
+    named = {n.item: n for n in cr.named}
+    assert named["UserAxisLight"].why == swbuild.WHY_LIGHTWEIGHT
+    assert not [a for n, a in fake.calls if n == "entity_reference"]
+    assert not any("object" in str(n.subjects) for n in cr.named)
+
+
+def test_a_fault_of_ours_never_reaches_a_sentence_as_python_text(monkeypatch, every_gate):
+    every_gate()
+    fake = _old_train()
+    _isfile(monkeypatch, fake)
+    fake.raises["remake_mate"] = (1, TypeError("'method' object is not iterable"))
+    cr = _build_again(fake).carry
+    assert cr.stopped.endswith("a fault in Gear Generator, not in SolidWorks") and "method" not in cr.stopped
+    assert any("TypeError" in f for f in cr.facts)

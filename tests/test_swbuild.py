@@ -391,6 +391,7 @@ class FakeSolidWorks:
     def end_build(self):
         """As ``Session.end_build``: the user's swInputDimValOnCreate put back."""
         self._log("end_build")
+        self.kept_handles = set()          # W9d, fourth round: as Session.end_build, every handle forgotten
         if self.dim_dialog_kept is not None:
             self.dim_dialog_on, self.dim_dialog_kept = self.dim_dialog_kept, None
 
@@ -718,8 +719,17 @@ class FakeSolidWorks:
         self._log("loft_cut", name, *profiles)
         return self._made(name)
 
+    def _strict(self, handle):
+        """W9d, fourth round (``strict_handles``): as the Session, a handle not found or added since the last
+        end_build is not kept (the first M9 run: the build's gear7, never found again by the carry)."""
+        if getattr(self, "strict_handles", False) and handle not in getattr(self, "kept_handles", set()) \
+                and handle not in self.component_paths:
+            raise SolidWorksError(f"No component is kept as {handle!r}, so it cannot be read or changed; that is a "
+                                  "fault in Gear Generator, not in SolidWorks.")
+
     def add_component(self, handle, path, at):
         self._log("add_component", handle, path)
+        self.kept_handles = getattr(self, "kept_handles", set()) | {handle}
         self.adding.append(path)
         self.adding_names.append(f"{handle}-1")
         if self.current and _key(self.current) in self.assembly_names:      # W9c: inserted into a saved assembly
@@ -879,6 +889,7 @@ class FakeSolidWorks:
 
     def find_component(self, handle, name, lightweight_ok=False, suppressed_ok=False):
         self._log("find_component", handle, name)
+        self.kept_handles = getattr(self, "kept_handles", set()) | {handle}
         title = self.active.title if self.active else "the assembly"
         if name in self.missing_components:
             raise ComponentGone(f"{name} is not in {title} any more: it was renamed or deleted in SolidWorks.")
@@ -922,6 +933,7 @@ class FakeSolidWorks:
 
     def component_frame(self, handle):
         self._log("component_frame", handle)
+        self._strict(handle)
         identity = ((1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0), (0.0, 0.0, 0.0))
         name = self.found.get(handle) or self.component_names.get(handle)
         drift = getattr(self, "drift_in", {}).get(self.config, {}).get(name)
@@ -1313,6 +1325,7 @@ class FakeSolidWorks:
 
     def constrained_status(self, handle):
         self._log("constrained_status", handle)
+        self._strict(handle)
         name = self._name2(handle)
         if getattr(self, "saved_after", False) and name in getattr(self, "held_after_save", ()):
             return findings.COMPONENT_FULLY_DEFINED      # W9d: held once the new assembly is saved (a held gear)
@@ -2008,6 +2021,8 @@ class FakeSolidWorks:
             coaxial = self._w9d().coaxial.get((_key(self.component_paths.get(end[0], "")), end[1]))
         if kind not in ("feature", "plane") or self._finding(finding[kind]) is None:
             return kind, "", coaxial, "no measured route"           # a face or an edge is entity_references'
+        if end[0] in self.lightweight or self._state_in(end[0], self.config) in (0, 1, 4):
+            return kind, "", None, "its part is not loaded in SolidWorks (lightweight or suppressed)"   # as the Session
 
         part = self.component_paths.get(end[0], "")
         hexed = f"{_key(part)}|{end[1]}".encode().hex()

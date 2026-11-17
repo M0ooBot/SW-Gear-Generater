@@ -3534,8 +3534,9 @@ def build_gearbox(sw: SolidWorks, parts: Sequence[BuildPlan], reuse: Sequence[Do
             old_work = read.user_work() if read.how != OLD_UNREAD else None
             old_read = "" if read.how != OLD_UNREAD else (OLD_NOT_OPEN if read.unread else "")
         except Exception as exc:  # noqa: BLE001 - the read never stops the build (§1)
-            carried = CarryResult(None, stopped=f"SolidWorks did not answer the read of {_file(carry.old.path)}: "
-                                                 f"{_said(exc)}")
+            carried = CarryResult(None)
+            carried.stopped = (f"SolidWorks did not answer the read of {_file(carry.old.path)}: "
+                               f"{_carry_said(exc, carried.facts)}")
             old_work, old_read = None, carried.stopped
     else:
         old_work, old_read = (None, "") if before is None else _read_before(sw, before)
@@ -7499,14 +7500,14 @@ def plan_carry(work: OldWork, carry: Carry, revision: Sequence[int], *,
             named.append(CarryNamed(mate.name, "mate", why, tuple(subjects)))
 
         kind = carry_kind(mate)
+        users = list(dict.fromkeys(e.owner for e in mate.entities if e.what == USER))
+        light = [u for u in users if u in by_name and by_name[u].state in _LIGHTWEIGHT_STATES]
+        if light:                               # D10, before anything read of it: its entities are not read
+            name_it(WHY_LIGHTWEIGHT, light[0])
+            continue
         unread = [e for e in mate.entities if e.what == UNREAD_ENTITY or e.kind in (ENTITY_UNREAD, "") or e.unread]
         if not mate.whole or unread or not mate.entities:
             name_it(WHY_UNREAD, next((e.unread for e in unread if e.unread), ""))
-            continue
-        users = list(dict.fromkeys(e.owner for e in mate.entities if e.what == USER))
-        light = [u for u in users if u in by_name and by_name[u].state in _LIGHTWEIGHT_STATES]
-        if light:
-            name_it(WHY_LIGHTWEIGHT, light[0])
             continue
         if kind not in CARRY_KIND_WORDS:
             name_it(WHY_KIND, kind)
@@ -7812,6 +7813,8 @@ def _read_old_mates(sw: SolidWorks, carry: Carry, work: OldWork, configurations:
     states = {s.name: s for s in sw.mate_states(others=[])}
     recorded = set(old.mates)
     fs = _Findings(sw.revision)
+    # D10: a lightweight component's entities are not read (no part document; its mates are WHY_LIGHTWEIGHT).
+    light = {c.name for c in comps if c.state in _LIGHTWEIGHT_STATES}
     read: List[Tuple[str, str, Any, Tuple[str, ...], Any]] = []
     walks: Dict[str, List[Tuple[str, int, str]]] = {}         # component handle -> its faces and edges, mate order
     for index, name in enumerate([n for n in states if n not in recorded], 1):
@@ -7828,7 +7831,7 @@ def _read_old_mates(sw: SolidWorks, carry: Carry, work: OldWork, configurations:
         gear = definition.type == findings.MATE_GEAR
         for i, e in enumerate(definition.entities):
             what, who = owner(e.component)
-            if e.kind not in (ENTITY_FACE, ENTITY_EDGE) or (e.component and "/" in e.component):
+            if e.kind not in (ENTITY_FACE, ENTITY_EDGE) or (e.component and "/" in e.component) or who in light:
                 continue
             body = bodies.get(who) if what == APP else None
             # M1: read only what can be carried — a user component's, an app part's on the very same file — and, on
@@ -7864,7 +7867,7 @@ def _read_old_mates(sw: SolidWorks, carry: Carry, work: OldWork, configurations:
                     unread = f"its {e.kind} read as a {kind}"
                 elif not reference and not capped:
                     unread = why or f"SolidWorks did not say which one {e.kind} of {who} it is on"
-            elif e.kind in (ENTITY_FEATURE, ENTITY_PLANE) and not leaf and (what == USER or (
+            elif e.kind in (ENTITY_FEATURE, ENTITY_PLANE) and not leaf and who not in light and (what == USER or (
                     body is not None and e.feature not in body.old_names)):
                 kind, reference, coaxial, why = sw.entity_reference(handle, i)
                 if kind != e.kind:
@@ -7997,13 +8000,23 @@ def _carry(sw: SolidWorks, result: GearboxResult, carry: Carry, work: OldWork, a
     except _CarryStop as stop:
         cr.stopped, cr.skipped = str(stop), _and(c.left)
     except Exception as exc:  # noqa: BLE001 - the carry never stops the build
-        cr.stopped = f"SolidWorks stopped the carry while {c.doing}: {_said(exc)}"
+        cr.stopped = f"SolidWorks stopped the carry while {c.doing}: {_carry_said(exc, cr.facts)}"
         cr.skipped = _and(c.left)
     finally:
         try:
             _carry_after(sw, result, carry, work, mtime, times)
         except Exception as exc:  # noqa: BLE001 - said in its own field, not a stop (the third round, item 5)
-            cr.after_unread = f"Whether your files changed could not be read after the carry: {_said(exc)}"
+            cr.after_unread = f"Whether your files changed could not be read after the carry: {_carry_said(exc, cr.facts)}"
+
+
+def _carry_said(exc: BaseException, facts: Optional[List[str]] = None) -> str:
+    """The fourth round: what a raise says in a sentence the user reads. SolidWorks' own refusal as it came; a fault of
+    Gear Generator's never as Python text (that goes to the log's facts)."""
+    if isinstance(exc, SolidWorksError):
+        return _said(exc)
+    if facts is not None:
+        facts.append(f"a fault in Gear Generator: {type(exc).__name__}: {exc}")
+    return "a fault in Gear Generator, not in SolidWorks"
 
 
 def _cluster_phrase(c: _Carrying, cluster: int, items: Sequence[CarryMateItem]) -> str:
@@ -8020,9 +8033,12 @@ def _carry_steps(c: _Carrying, say: Callable[[Step], None]) -> None:
     configs = list(sw.configurations()) if carry.modes else []
     c.config_of = {m: next((x for x in configs if x.casefold() == m.casefold()), m) for m in carry.modes}
     c.show(c.first())
+    # The fourth round: the build's handles end with its bracket (Session.end_build forgets them), so every app body of
+    # the new assembly is found again by its Name2 here, a gear new in this revision (no CarryBody) included.
+    for handle, name in c.result.components.items():
+        sw.find_component(handle, name)
     for body in carry.bodies:
         if body.handle and body.handle in c.result.components:
-            sw.find_component(body.handle, c.result.components[body.handle])
             c.new_frames[body.old] = sw.component_frame(body.handle)
     plan = c.plan = plan_carry(work, carry, sw.revision, new_frames=c.new_frames)
     cr.named.extend(plan.named)
