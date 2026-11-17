@@ -1324,6 +1324,15 @@ fixed_box = with_folder(range_box_fixed())
 boards["WorkbookBands"] = ("Workbook · RangeBox_Fixed read: a banded sleeve on its hub, on L",
                            workbook_board(fixed_box, mode="L"), WINDOW_WIDTH)
 
+# W9c (ISSUE-1-PLAN §2.1 "W9c", K6, §2.4; W9C-INTERFACES). The issue's RangeBox built with the user's work (the board
+# above's desk), then its workbook edited to RangeBox_Fixed's rows: before the press the footer says Update adds Hub
+# as Output's anchor and gives RangeSlv its bands in place, and — the insert and the bands in place not yet measured on
+# the SolidWorks the record was read on — that the press would change nothing, Build again… making the new revision.
+fixed_in_place = wb_model.replace(fixed_box, box=wb_model.replace(fixed_box.box, name=rangebox.box.name))
+boards["WorkbookInPlace"] = ("Workbook · RangeBox edited to RangeBox_Fixed: one Update, said before the press",
+                             workbook_board(fixed_in_place, before=rangebox, desk=user_desk,
+                                            positions_per_configuration=user_desk.positions), WINDOW_WIDTH)
+
 layout = []
 x = 0
 for name, value in boards.items():

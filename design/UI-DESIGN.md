@@ -1352,6 +1352,53 @@ with the three warnings each gains (the Checks count three higher: the E4's 7
 becomes 10). No PNG is rendered on this host, which has no Chrome; `render.py`
 makes `WorkbookBands.png` and redraws those five where one is.
 
+### Update adds, removes and re-mates in place (W9c)
+
+Issue #1's last problem: an edit that adds a part sent the user to Build again…,
+leaving their work behind. Since W9c **Update SolidWorks** carries these in place
+(`workbook.update.classify` builds `swbuild.InPlace`; `W9C-INTERFACES.md`): a gear
+added on a shaft on record along Z+ or Z− (a hub that becomes its shaft's anchor
+too, with its sleeve's spline); a gear that anchors none taken out with its
+mates; a coupling or sliding mesh newly needed between gears on record; a tooth
+change on a gearbox with modes (its gear mate made again); bands given to or
+taken from a built sleeve, in its own part; a Modes row added or removed. **No new
+control.** The footer's Update line names each before the press, in the sentence
+it already has: *Update SolidWorks will add Hub on Output (a new part,
+Hub_m1.25_N17), as its shaft's anchor with RangeSlv splined to it, give RangeSlv
+its bands in Sleeve_m1.25_N17, …*, *take FIdler out with its 4 mates*, *make
+ModeSlv engages LoDog, on in 2H*, *add the mode 4X*, *delete the mode 2H, so 4H
+becomes the first mode on record*.
+
+**What would stop it is said before the press (K4), red**, in place of the line
+on what the press does with the user's work: each step the app has not yet been
+shown to do on the SolidWorks the record last read (*… which Gear Generator has
+not yet been shown to do on SolidWorks 2026 (findings.UPDATE_INSERTS_A_GEAR_ON_2026),
+so the press changes nothing; Build again… makes the new revision instead.*), a
+mate of the user's on a gear to be taken out, and — while the read of in-context
+references is unmeasured — a removal with any component of the user's in the
+assembly. A Modes row taken out that is the mode showing is read only at the
+press; its refusal is then recorded and said as W9a's are.
+
+**After the press** the sentence leads with what was made and taken away
+(*built Hub_m1.25_N17, inserted Hub as Hub_m1.25_N17-1 and mated it (…), gave
+RangeSlv its bands*; *took FIdler (…) out with 4 mates*; *added the mode 4X*), and
+ends with what the user's own states did: *The new mode 4X copied the mode
+showing, so your Lock3 is on there, as in the mode showing; change it in 4X if it
+should differ.*; *Your own states in 2H went with it: …*; *2H was the first mode
+on record; 4H is now.*
+
+**Still Build again…**, each in the question by its own sentence: a gear on a new
+shaft, a carrier's or one off Z; a gear that anchors others taken out (*… it anchors
+FDrive (the mate FDrive locked to FrontDog): Update SolidWorks takes out only a
+gear that anchors none …*); a gear added or taken out that would change a mate on
+record (an anchor no longer first); a Modes row renamed (or one taken out and
+another added in one edit), or one taken out that leaves a coupling on in no mode
+(ruling 9.1); and everything W5 to W9a already sent there. One such edit beside an
+in-place one makes the whole press Build again…, and nothing is written.
+
+Board: `WorkbookInPlace` (RangeBox with the user's work, its workbook edited to
+RangeBox_Fixed's rows, before the press). Its PNG is owed, as the W9b ones are.
+
 ### Planetary stages (W7)
 
 No new control (checked in `workbook_gui.py`: the only changes for W7 are the

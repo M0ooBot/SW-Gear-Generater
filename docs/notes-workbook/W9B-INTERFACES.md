@@ -79,7 +79,8 @@ Each plane's flip is `helical._flip_for` of its side, `findings.EXTRUDE_Z_SIGN` 
 mid-plane and the helical gear's profile plane are made. So **the banded plan equals the sleeve's unbanded plan
 plus those three globals and those relief ops**, and the bands are globals: a band changed on a banded sleeve is a
 value Update; bands given to or taken from a built sleeve are a structural change (`swbuild.structural_change`
-says so: *Build again…*, until W9c adds them in place).
+says so: *Build again…*, until W9c adds them in place). *Since W9c* (`W9C-INTERFACES.md` §3): `classify` gives or
+takes them in place (`swbuild.BandChange`), and `structural_change`'s sentence is no longer reached by Update.
 
 *Why this route.* Every call it makes has run on SolidWorks 2026 and 2024 in a built part: `InsertRefPlane` offset
 from the Front plane with the flip finding (the helical and herringbone gears, the layout part); a sketch opened on
