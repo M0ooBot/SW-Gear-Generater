@@ -1413,7 +1413,9 @@ def _squash(text: str) -> str:
 
 
 def update_variables(sw: SolidWorks, variables: Sequence[GlobalVariable], expected_path: str) -> UpdateResult:
-    """Set a built part's globals from the form, in one suppressed batch, and rebuild once.
+    """Set a built part's globals from the form, in one suppressed batch, and rebuild once; or, where a sketch line
+    would land on itself (:func:`_landing_route`), in two: every global with the tooth count at a safe intermediate,
+    rebuilt, then the count at the workbook's value, rebuilt again.
 
     Refuses unless the active document is the part the record describes: a
     wrong document would take the values silently where names happened to match.
