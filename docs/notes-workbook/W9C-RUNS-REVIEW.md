@@ -463,3 +463,108 @@ same at all three.
 
 **Must-fix:** none, for setting the 2026 findings or for the 2024 run, once the script changes in 1 are made.
 Should-fix A should land before W9c closes.
+
+### Re-check of `74024a1`, `f4eabf5` and `15bd445` (2026-11-17)
+
+*Read at head `15bd445`. I started no SolidWorks and changed no code.*
+
+- **Suite:** 3705 passed, 10 skipped, 2 failed (the `tkinter`-only pair).
+- **The script's self-check:** `probe/w9c_demonstration.py --self-check` reads "0 failed" in a scratch copy.
+
+**`74024a1`: right.**
+- *Values:* the five gates are True `_ON_2026`, as my table has them. `UPDATE_MAKES_A_NEW_COUPLING`,
+  `UPDATE_SUPPRESSES_THE_RELIEF` and `EXTERNAL_REFERENCES_READ` stay None on 2026, with why. Every `_ON_2024` is
+  None.
+- *Comments:* each names its log lines on both revisions and carries the caveats from §4: a hub only; Hub's
+  interference said after the press; giving bands only; the first mode included; 28/14/56, with M3; removal with
+  modes fake-only. The five external-reference calls are recorded as facts, not as a route.
+- *The pins really pin.* In a scratch copy I flipped two things:
+  - `UPDATE_ADDS_A_MODE_ON_2026` to None: three tests fail, the values test and both log tests;
+  - one byte of log 11:316 (`'OpenDoc6': 8` → 9): the 34.0.0 test fails.
+- *The `w9c_unmeasured` fixture.* In the eleven tests only the signature changed; every body is as it was, so none
+  asserts less about what it tests. The one renamed (`test_each_step_reads_its_own_gate_…`) used to pin "None as
+  committed". That pin now lives in `test_findings.py`, against the new values.
+- *The open-gate path on 2026, as committed.*
+  - The round trips take the `measured` fixture, which patches the 2026 gates True. That is now exactly the committed
+    state, so those tests run the real 2026 configuration.
+  - Nothing yet asserts the committed gate list itself. Note: add one test, without any fixture, that
+    `swbuild.in_place_gates(every, Y26, modes=True, remakes=True)` is `[(STEP_COUPLING,
+    "UPDATE_MAKES_A_NEW_COUPLING_ON_2026")]` and Y24's is the six. I ran it: it is so today.
+
+**`f4eabf5`: right, Tk-side only.** The diff touches `ui_text.py` (`_close_unsaved`, `still_in_error_sentence`, the
+stop's and the footer's wording) and adds `update.assembly_holding`. No worker call changes. The sentences read
+correctly in the states that make them:
+- step 1's stop: "close them all and RangeBox … answering No …";
+- step 2's still-in-error sentence: "close it and RangeBox …";
+- the footer's unsaved line.
+
+The assembly is not named twice when it is among the documents changed. A part outside the record's assembly is told
+as before. The edge states:
+- *The assembly not open in SolidWorks.* Telling the user to close it is harmless ("when SolidWorks asks" is
+  conditional), so nothing is untrue.
+- *A part in two gearboxes' assemblies.* Only the record's own assembly is named. If the other assembly is also open,
+  it too keeps the part loaded. Note: rare, and the next press would stop again and say so.
+- *The user's own unsaved work in the assembly (or a part) from before the Update.* Closing without saving loses it,
+  and nothing says so. "The files on disk are as before this Update" is true but does not warn. Nothing elsewhere
+  warns either: the app reads no save flag of an unmarked document at a press's start.
+  - This is older: the parts' sentence always had it. `f4eabf5` widens it to the assembly, where a user's unsaved
+    mates are more likely.
+  - *Should-fix, low:* add "(anything you changed there yourself and did not save is lost too)". Or, better, read
+    the assembly's `GetSaveFlag` in the check phase and say it only when the assembly was already modified before the
+    press. It is not needed for the 2024 run.
+
+**`15bd445`: right, with one ordering advice for the 2024 run.**
+- **"Beyond step 1"** is now a printed fact (`beyond_step_1`). The strict check is the comparison across the press
+  (`wrote_in_press`), which now includes the assembly's own globals. That closes the one gap I named.
+- **Step 2b:**
+  - *How it closes.* `quit_named_in` closes exactly Sun's, Planet's and Ring's documents, by file name under the
+    copy's folder, with `QuitDoc` by title. It cannot close the assembly or the user's parts.
+  - *The macro database's record:* `QuitDoc` closed modified parts and assemblies with no dialog on 2026 and 2024
+    (`documents/02`). The CAM add-in's Yes/No box came only for 2024-saved assemblies opened in 2026, which 2024's run
+    does not do.
+  - *What is unmeasured.* `QuitDoc` on a part loaded as a component of an open assembly is not measured anywhere,
+    which is the point of the step. It runs as a worker job under the run's dialog watch. A box there would be the
+    §0.3 STOP, and that would end the run there.
+  - *Ordering advice:* in the 2024 run, put `remake` last, after `bands-off` and `m4`. A STOP in 2b then costs only
+    step 3, which is not gate evidence.
+- **The step tells the outcomes apart.** It records three things before its press:
+  - `held` (`documents()` under the folder);
+  - every save flag;
+  - the ring's codes and teeth, where it is still held.
+
+  Then its press is either `stopped_again` (failures naming the ring alone, `skipped` said), in which case it must
+  have written nothing (`wrote_in_press`), or it is a fact. So "the part stayed loaded in error and the press stopped
+  again" and "SolidWorks dropped the part's changes" read differently: in the first, `held` lists the ring at 72/54;
+  in the second, it does not, or the ring reads 55 and clean.
+- **It cannot spoil steps 2 and 3.**
+  - Step 2's data and checks are taken before it.
+  - If its press goes through, because the ring was dropped, it routes and remakes in memory. Step 3 then closes
+    everything unsaved and presses again on the files at their old values, as before, so step 3's checks hold either
+    way.
+- **The self-check** patches the 2026 gates to None in its own process to judge the refusal steps as 2024 meets them.
+  That is right. The run itself handles a gate already True: `gated_refusal` prints "already True in findings.py, so
+  the app refuses nothing here" as a fact. Note: that branch is not self-checked; a one-line case would cover it.
+
+**4. Does the 2026 evidence stand for head `15bd445`? Yes.**
+- `src` changed since the runs only in:
+  - `findings.py` values;
+  - Tk-side wording (`f4eabf5`);
+  - `007b3aa` (Tk-side, reviewed).
+
+  No worker call changed.
+- **"Patched True in the script's process" and "set True in `findings.py`" behave the same for every reader.** Every
+  reader of these gates (`swbuild.in_place_gates`, the ruling 9.16 lift, the footer's `in_place_ahead`, and
+  `ui_text`'s step names) reads `getattr(findings, f"{name}_ON_{year}")` at the time of the call. None copies a value
+  at import, so a patch is seen exactly as a committed value would be. The years map from the revision, 34.x to 2026,
+  so 34.0.0 and 34.1.1 alike.
+- **What the runs did differently from a real user:**
+  - Each measured press ran with only its own step's gates patched. A real 2026 press has all five open at once. No
+    measured press needed a gate it did not have patched, so the same writes run. The footer's foresight with all
+    five open is what the round trips' `measured` fixture exercises on the fake.
+  - Each measured press followed a recorded refusal (the gates as they stood) on the same record. A real user's
+    record has none, which is a simpler state: the refusal on record is said only until the workbook changes, and the
+    press replaces it.
+
+  Neither difference is a code path the runs missed.
+
+**No must-fix before the 2024 run.** Run `remake` last there.
