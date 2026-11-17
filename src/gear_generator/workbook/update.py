@@ -49,7 +49,7 @@ from dataclasses import asdict, dataclass, field, replace
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from .. import findings, store, swbuild
-from ..gears import bevel, equations, kind_for, spur
+from ..gears import bevel, clutch, equations, kind_for, spur
 from ..gears.base import GlobalVariable
 from ..spec import GearSpec, InputError
 from ..store import GearboxRecord, LinkRecord, MateEntry, PartEntry, ShaftEntry, Sidecar
@@ -581,7 +581,8 @@ def classify(record: Optional[LinkRecord], a: Assessment, *,
 # through a formula (Pitch Diameter, Backlash's default) has no cell, and its sentence names none.
 _GLOBAL_COLUMN = {spur.TEETH: "teeth", spur.MODULE: "module", spur.BORE: "bore", spur.PRESSURE_ANGLE: "pressure_angle",
                   spur.FACE_WIDTH: "face_width", spur.BACKLASH: "backlash", spur.FILLET: "fillet",
-                  spur.PROFILE_SHIFT: "profile_shift"}
+                  spur.PROFILE_SHIFT: "profile_shift",
+                  clutch.START_BAND: "start_band", clutch.END_BAND: "end_band"}      # W9b: a banded sleeve's bands
 
 
 def _mark(record: LinkRecord, path: str) -> str:

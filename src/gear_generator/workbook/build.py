@@ -152,9 +152,14 @@ def plan_parts(spec: GearboxSpec, folder: str, part_template: str = "", skip_row
             if plan_for(gear_spec, derived, template, first.path) != first.plan:
                 where = _where(spec, gear, "name")
                 same = "" if stem == first.stem else f" ({first.stem} and {stem} are one name to Windows)"
+                # W9b (the coordinator's ruling on the review's should-fix 5): no band mark in a file name, since W9c
+                # gives a built sleeve its bands in place and it keeps its file; so say why the two differ.
+                banded = [g for g, s in ((gear.id, gear_spec), (first.gear_ids[0], first.spec)) if s.has_bands()]
+                why = (f" ({banded[0]} has bands and {gear.id if banded[0] != gear.id else first.gear_ids[0]} has "
+                       "none, and a file name does not say so)" if len(banded) == 1 else "")
                 out.diagnostics.append(Diagnostic(
                     ERROR, f"{where}: {gear.id} and {first.gear_ids[0]} would both be {first.stem}{PART_SUFFIX}"
-                           f"{same}, but they are not the same gear; give one of them a Part name.", where))
+                           f"{same}, but they are not the same gear{why}; give one of them a Part name.", where))
                 continue
             jobs[key] = PartJob(first.stem, first.path, first.gear_ids + (gear.id,), first.spec, first.derived,
                                 first.plan)

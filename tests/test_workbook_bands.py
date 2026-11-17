@@ -376,25 +376,168 @@ def test_an_older_reader_refuses_schema_8_and_leaves_it_byte_identical(tmp_path,
     assert target.read_text() == text and sorted(p.name for p in tmp_path.iterdir()) == ["R.workbook.json"]
 
 
+def legal(spec):
+    """The read the window would press Update on: no error anywhere (a read with one is refused at the workbook and
+    never reaches Update or Build again…)."""
+    a = assessed(spec)
+    assert errors(a) == [], errors(a)
+    return a
+
+
+def _built_record():
+    sw, _, done = _built()
+    return sw, store.link_record_from_json(store.link_record_to_json(done.record))
+
+
 def test_update_carries_a_band_changed_on_a_built_banded_sleeve_through_its_globals():
+    """Start band 4 is a legal edit: the same four warnings, L's least gap 2.0 (start band to HighDog)."""
     from gear_generator.workbook import update
-    _, _, done = _built()
-    record = store.link_record_from_json(store.link_record_to_json(done.record))
-    up = update.classify(record, assessed(with_gear(range_box_fixed(), "RangeSlv", start_band="6")),
+    _, record = _built_record()
+    up = update.classify(record, legal(with_gear(range_box_fixed(), "RangeSlv", start_band="4")),
                          exists=lambda p: True)
     assert up.refusal == "" and not up.needs_new_revision and up.structural == ()
     changed = [p for p in up.parts if p.changed]
     assert [p.path.replace("\\", "/").rsplit("/", 1)[-1] for p in changed] == ["Sleeve_m1.25_N17.SLDPRT"]
-    assert {v.name: v.expression for v in changed[0].variables if "Band" in v.name} == {"Start Band": "6",
+    assert {v.name: v.expression for v in changed[0].variables if "Band" in v.name} == {"Start Band": "4",
                                                                                          "End Band": "5"}
 
 
 def test_bands_taken_from_a_built_sleeve_need_build_again_until_w9c():
+    """RangeBox_Fixed made RangeBox again (RangeSlv 10 mm at −24.5, sliding ±5, no bands; Hub's row cleared): a legal
+    workbook, which Update hands to Build again… for the bands and for the hub taken out."""
     from gear_generator.workbook import update
-    _, _, done = _built()
-    record = store.link_record_from_json(store.link_record_to_json(done.record))
-    plain = with_gear(range_box_fixed(), "RangeSlv", start_band="", end_band="")
-    up = update.classify(record, assessed(plain), exists=lambda p: True)
+    _, record = _built_record()
+    plain = replace(range_box(), box=replace(range_box().box, name="RangeBox_Fixed"))
+    up = update.classify(record, legal(plain), exists=lambda p: True)
     assert up.needs_new_revision and up.structural == (
+        "Hub is no longer in the workbook, and Update SolidWorks cannot take a part out of what was built.",
         "Sleeve_m1.25_N17 (RangeSlv): Bands cannot be given to or taken from a built sleeve through its values; build "
-        "it again as a new part.",)
+        "it again as a new part.")
+
+
+def test_the_bands_taken_off_alone_are_refused_at_the_workbook():
+    """The 26 mm sleeve with no bands jams L and leaves Hub uncovered in N and L: the read is refused at the workbook
+    ("Fix the workbook"), before Update or Build again… is asked."""
+    a = assessed(with_gear(range_box_fixed(), "RangeSlv", start_band="", end_band=""))
+    assert errors(a) == [
+        "Modes row 4: in L RangeSlv engages HighDog and LowDog at once, which joins Input to Carrier: as written the box "
+        "is jammed in this mode.",
+        "Modes row 3: in N RangeSlv and Hub do not cover one another: in every mode a sleeve covers its hub whole, or "
+        "the hub the sleeve; move Hub.",
+        "Modes row 4: in L RangeSlv and Hub do not cover one another: in every mode a sleeve covers its hub whole, or "
+        "the hub the sleeve; move Hub."]
+    assert a.lay_out_refusal().startswith("Fix the workbook before building: Modes row 4: in L RangeSlv engages")
+
+
+def test_a_band_the_user_typed_in_solidworks_is_refused_naming_its_cell():
+    """The review's should-fix 4 (K11): Start Band typed 4 in SolidWorks, the workbook still 5: refused, naming
+    Start band's cell; once the workbook says 4 the Update goes ahead."""
+    from gear_generator.gears.equations import split_equation
+    from gear_generator.workbook import update
+    sw, record = _built_record()
+    part = next(p.path for p in record.current_parts() if "RangeSlv" in p.gears)
+    key = part.replace("/", "\\").lower()
+    for texts in (sw.memory[key][0], sw.saved[key][0]):
+        for i, text in enumerate(texts):
+            if split_equation(text)[0] == "Start Band":
+                texts[i] = '"Start Band"= 4'
+    up = update.classify(record, legal(range_box_fixed()), exists=lambda p: True)
+    assert dict(next(p for p in up.parts if p.path == part).cells)["Start Band"] == "Gears row 7"
+    with pytest.raises(swbuild.UserWorkRefused) as raised:
+        swbuild.update_gearbox(sw, **up.update_kwargs(), exists=lambda p: True, mtime=lambda p: 5.0)
+    (problem,) = raised.value.problems
+    assert problem.kind == swbuild.PROBLEM_VALUE
+    assert [(v.name, v.live, v.wanted, v.recorded, v.cell) for v in problem.values] == [
+        ("Start Band", "4", "5", "5", "Gears row 7")]
+    agreed = update.classify(record, legal(with_gear(range_box_fixed(), "RangeSlv", start_band="4")),
+                             exists=lambda p: True)
+    result = swbuild.update_gearbox(sw, **agreed.update_kwargs(), exists=lambda p: True, mtime=lambda p: 5.0)
+    assert result.ok, result.failures
+
+
+# -- the review's must-fix 1: a band over another shaft's hub is a clash ---------------------------------------------
+
+def _with_aux(at, face="5"):
+    """RangeBox_Fixed with Aux, a frame shaft on Output's line carrying AuxSlv and its hub AuxHub at ``at``."""
+    spec = range_box_fixed()
+    aux = model.Shaft("Aux", "frame", "0", "0", "0", "Z+", "", row=7)
+    hub = replace(spec.gear("Hub"), id="AuxHub", shaft="Aux", at=at, face_width=face, part_name="AuxHub", row=9)
+    sleeve = replace(spec.gear("RangeSlv"), id="AuxSlv", shaft="Aux", at=at, face_width=face, slides="",
+                     start_band="", end_band="", part_name="AuxSlv", row=10)
+    return replace(spec, shafts=spec.shafts + (aux,), gears=spec.gears + (hub, sleeve))
+
+
+def _about_aux_hub(spec):
+    return [d for d in assessed(spec).diagnostics if "AuxHub" in d.message]
+
+
+CLASH = ("the hub on Aux: a hub keys only a sleeve on its own shaft and engages nothing, so this is a clash, not a "
+         "coupling; move AuxHub or RangeSlv's position off it, or make AuxHub a dog if RangeSlv is to engage it.")
+
+
+def test_a_band_wholly_over_another_shafts_hub_is_an_error_at_the_modes_cell():
+    said = _about_aux_hub(_with_aux("-24.5"))                          # AuxHub −27…−22: N's end band, whole
+    assert [(d.level, d.message) for d in said] == [
+        ("error", f"Modes row 3: in N RangeSlv's end band covers AuxHub, {CLASH}")]
+
+
+def test_a_band_over_part_of_another_shafts_hub_is_the_same_error():
+    said = _about_aux_hub(_with_aux("-23.5"))                          # AuxHub −26…−21: 4 mm under N's end band
+    assert [(d.level, d.message) for d in said] == [
+        ("error", f"Modes row 3: in N RangeSlv's end band covers 4 mm of AuxHub's 5 mm face, {CLASH}")]
+    assert not any("list them on Meshes" in d.message for d in assessed(_with_aux("-23.5")).diagnostics)
+
+
+def test_another_shafts_hub_under_the_relief_is_clean_but_held_to_the_running_clearance():
+    """In L the relief (−35.5…−19.5) holds AuxHub whole; 0.3 mm from the end band it is warned as a dog would be."""
+    near = [d for d in _about_aux_hub(_with_aux("-22.3")) if d.message.startswith("Modes row 4")]   # −24.8…−19.8
+    assert [(d.level, d.message) for d in near] == [
+        ("warning", "Modes row 4: in L RangeSlv's end band stands 0.3 mm from AuxHub, which it does not engage there: "
+                    "leave at least 0.625 mm (0.5 × module) each side.")]
+    clear = [d for d in _about_aux_hub(_with_aux("-27.5", face="4")) if d.message.startswith("Modes row 4")]
+    assert clear == []                                                   # −29.5…−25.5: well inside L's relief
+
+
+# -- the review's should-fix 3, 5 and 6 ---------------------------------------------------------------------------
+
+def _two_sleeves_one_hub():
+    """The review's case: S1 and S2 on Out, each 20 mm with 4 mm bands, one hub H (18.5…41.5) under S1's end band and
+    S2's start band in both modes."""
+    shafts = (model.Shaft("In", "frame", "0", "0", "0", "Z+", "input", "", "1500", "", row=2),
+              model.Shaft("Out", "frame", "0", "0", "0", "Z+", "output", row=3))
+    gears = (model.Gear("S1", "Out", "20", "sleeve", "", "17", "1.25", "", "20", "", slides="A=0, B=-7.5",
+                        start_band="4", end_band="4", row=2),
+             model.Gear("S2", "Out", "40", "sleeve", "", "17", "1.25", "", "20", "", slides="A=0, B=+7.5",
+                        start_band="4", end_band="4", row=3),
+             model.Gear("H", "Out", "30", "hub", "", "17", "1.25", "", "23", "", row=4))
+    modes_ = (model.Mode("A", (("S1", "A"), ("S2", "A")), row=2), model.Mode("B", (("S1", "B"), ("S2", "B")), row=3))
+    return model.GearboxSpec(box=model.Box(name="Shared", pressure_angle="20", efficiency="98"), shafts=shafts,
+                             gears=gears, modes=modes_, sliders=("S1", "S2"))
+
+
+def test_a_hub_keys_one_sleeve_and_a_second_riding_it_is_an_error_not_warned_unkeyed():
+    a = assessed(_two_sleeves_one_hub())
+    assert "Gears row 3: S2 rides H, which keys S1: a hub keys one sleeve, so give S2 a hub row of its own." in errors(a)
+    assert not any("nothing keys S2" in d.message for d in a.diagnostics)
+    assert modes.hub_sleeve(a.spec, a.spec.gear("H")).id == "S1"
+
+
+def test_a_banded_and_a_plain_sleeve_of_one_size_need_a_part_name_and_the_sentence_says_why():
+    from workbook_fixtures import transfer_case_parallel
+    spec = transfer_case_parallel()
+    banded = replace(spec, gears=tuple(replace(g, face_width="20", start_band="4", end_band="4") if g.id == "RangeSlv"
+                                       else g for g in spec.gears))
+    assert ("Gears row 10: ModeSlv and RangeSlv would both be Sleeve_m1.5_N30.SLDPRT, but they are not the same gear "
+            "(RangeSlv has bands and ModeSlv has none, and a file name does not say so); give one of them a Part name."
+            in errors(assessed(banded)))
+
+
+def test_a_hub_under_a_sleeve_with_no_slides_is_judged_at_its_one_place():
+    """No Slides and no Modes rows: no mode is worked out, and the sleeve's one place is its one mode."""
+    spec = range_box_fixed()
+    still = replace(spec, modes=(), sliders=(), gears=tuple(replace(g, slides="") if g.id == "RangeSlv" else g
+                                                              for g in spec.gears))
+    assert not any("Hub" in m for m in errors(assessed(still)))        # its start band −48…−43 under Hub
+    far = with_gear(still, "Hub", at="-105.5")
+    assert ("Gears row 8: Hub is under no band of RangeSlv: in every mode a band of the sleeve covers its hub whole, "
+            "or the hub the band; move Hub, or the bands." in errors(assessed(far)))
