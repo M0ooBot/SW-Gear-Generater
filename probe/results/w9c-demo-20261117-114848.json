@@ -1,0 +1,498 @@
+{
+ "sections": {
+  "landing": {
+   "cases": {
+    "ring-55-54": {
+     "by_way_of": [
+      "No. of Teeth",
+      "53"
+     ],
+     "landing": [
+      [
+       "Li+",
+       0.02368567619243794,
+       0.6250000000000041
+      ]
+     ],
+     "rebuilt": true,
+     "failures": [],
+     "changed": [
+      "No. of Teeth"
+     ],
+     "rebuilds": [
+      true,
+      true
+     ],
+     "steps_restored": true,
+     "in_error": [],
+     "teeth": 54.0,
+     "volume": 11805.159175005749,
+     "foreseen": 0.037897081907900455,
+     "planned_via": 53,
+     "target_volume": 11805.159175004837,
+     "volume_rel": 7.719622223358125e-14,
+     "left": [],
+     "saved": false,
+     "clean": true
+    },
+    "ring-56-55": {
+     "by_way_of": [
+      "No. of Teeth",
+      "54"
+     ],
+     "landing": [
+      [
+       "Li+",
+       0.0236053128222586,
+       0.624999999999998
+      ]
+     ],
+     "rebuilt": true,
+     "failures": [],
+     "changed": [
+      "No. of Teeth"
+     ],
+     "rebuilds": [
+      true,
+      true
+     ],
+     "steps_restored": true,
+     "in_error": [],
+     "teeth": 55.0,
+     "volume": 12005.017395147957,
+     "foreseen": 0.03776850051561388,
+     "planned_via": 54,
+     "target_volume": 12005.017395150757,
+     "volume_rel": 2.3318789135514773e-13,
+     "left": [],
+     "saved": false,
+     "clean": true
+    },
+    "ring-m1-30-28": {
+     "by_way_of": [
+      "No. of Teeth",
+      "27"
+     ],
+     "landing": [
+      [
+       "Li+",
+       0.1662367920466264,
+       1.1556966910027187
+      ]
+     ],
+     "rebuilt": true,
+     "failures": [],
+     "changed": [
+      "No. of Teeth"
+     ],
+     "rebuilds": [
+      true,
+      true
+     ],
+     "steps_restored": true,
+     "in_error": [],
+     "teeth": 28.0,
+     "volume": 4230.598698873247,
+     "foreseen": 0.1438411940959995,
+     "planned_via": 27,
+     "target_volume": 4230.598698873121,
+     "volume_rel": 2.966725935931846e-14,
+     "left": [],
+     "saved": false,
+     "clean": true
+    },
+    "ring-55-54-straight": {
+     "by_way_of": [],
+     "landing": [
+      [
+       "Li+",
+       0.02368567619243794,
+       0.6250000000000041
+      ]
+     ],
+     "rebuilt": false,
+     "failures": [],
+     "changed": [
+      "No. of Teeth"
+     ],
+     "rebuilds": [
+      false
+     ],
+     "steps_restored": true,
+     "in_error": [
+      [
+       "Tooth Space",
+       72
+      ],
+      [
+       "Teeth",
+       1
+      ]
+     ],
+     "teeth": 54.0,
+     "volume": 15215.125920417064,
+     "foreseen": 0.037897081907900455,
+     "planned_via": 53,
+     "target_volume": 11805.159175004837,
+     "volume_rel": 0.28885394045615054,
+     "left": [],
+     "saved": false,
+     "clean": false
+    },
+    "ring-56-55-straight": {
+     "by_way_of": [],
+     "landing": [
+      [
+       "Li+",
+       0.0236053128222586,
+       0.624999999999998
+      ]
+     ],
+     "rebuilt": false,
+     "failures": [],
+     "changed": [
+      "No. of Teeth"
+     ],
+     "rebuilds": [
+      false
+     ],
+     "steps_restored": true,
+     "in_error": [
+      [
+       "Tooth Space",
+       72
+      ],
+      [
+       "Teeth",
+       1
+      ]
+     ],
+     "teeth": 55.0,
+     "volume": 15480.197800563692,
+     "foreseen": 0.03776850051561388,
+     "planned_via": 54,
+     "target_volume": 12005.017395150757,
+     "volume_rel": 0.2894773319376181,
+     "left": [],
+     "saved": false,
+     "clean": false
+    },
+    "ring-m1-30-28-straight": {
+     "by_way_of": [],
+     "landing": [
+      [
+       "Li+",
+       0.1662367920466264,
+       1.1556966910027187
+      ]
+     ],
+     "rebuilt": true,
+     "failures": [],
+     "changed": [
+      "No. of Teeth"
+     ],
+     "rebuilds": [
+      true
+     ],
+     "steps_restored": true,
+     "in_error": [],
+     "teeth": 28.0,
+     "volume": 4230.598698873247,
+     "foreseen": 0.1438411940959995,
+     "planned_via": 27,
+     "target_volume": 4230.598698873121,
+     "volume_rel": 2.966725935931846e-14,
+     "left": [],
+     "saved": false,
+     "clean": true
+    },
+    "spur-m1-18-17-straight": {
+     "by_way_of": [],
+     "landing": [
+      [
+       "L+",
+       0.05147797205754254,
+       0.5170459190179093
+      ]
+     ],
+     "rebuilt": true,
+     "failures": [],
+     "changed": [
+      "No. of Teeth"
+     ],
+     "rebuilds": [
+      true
+     ],
+     "steps_restored": true,
+     "in_error": [],
+     "teeth": 17.0,
+     "volume": 1278.1956535579916,
+     "foreseen": 0.09956170267298727,
+     "planned_via": 16,
+     "target_volume": 1278.195653557989,
+     "volume_rel": 1.9567508486775515e-15,
+     "left": [],
+     "saved": false,
+     "clean": true
+    },
+    "spur-m1-17-16-straight": {
+     "by_way_of": [],
+     "landing": [
+      [
+       "L+",
+       0.06988866109722572,
+       0.5478924816074271
+      ]
+     ],
+     "rebuilt": true,
+     "failures": [],
+     "changed": [
+      "No. of Teeth"
+     ],
+     "rebuilds": [
+      true
+     ],
+     "steps_restored": true,
+     "in_error": [],
+     "teeth": 16.0,
+     "volume": 1030.500230812979,
+     "foreseen": 0.12755908037318525,
+     "planned_via": 15,
+     "target_volume": 1030.5002308129808,
+     "volume_rel": 1.7651518642657866e-15,
+     "left": [],
+     "saved": false,
+     "clean": true
+    },
+    "spur-m1-18-17": {
+     "by_way_of": [
+      "No. of Teeth",
+      "16"
+     ],
+     "landing": [
+      [
+       "L+",
+       0.05147797205754254,
+       0.5170459190179093
+      ]
+     ],
+     "rebuilt": true,
+     "failures": [],
+     "changed": [
+      "No. of Teeth"
+     ],
+     "rebuilds": [
+      true,
+      true
+     ],
+     "steps_restored": true,
+     "in_error": [],
+     "teeth": 17.0,
+     "volume": 1278.1956535579911,
+     "foreseen": 0.09956170267298727,
+     "planned_via": 16,
+     "target_volume": 1278.195653557989,
+     "volume_rel": 1.6009779670998148e-15,
+     "left": [],
+     "saved": false,
+     "clean": true
+    },
+    "spur-m1-17-16": {
+     "by_way_of": [
+      "No. of Teeth",
+      "15"
+     ],
+     "landing": [
+      [
+       "L+",
+       0.06988866109722572,
+       0.5478924816074271
+      ]
+     ],
+     "rebuilt": true,
+     "failures": [],
+     "changed": [
+      "No. of Teeth"
+     ],
+     "rebuilds": [
+      true,
+      true
+     ],
+     "steps_restored": true,
+     "in_error": [],
+     "teeth": 16.0,
+     "volume": 1030.5002308129801,
+     "foreseen": 0.12755908037318525,
+     "planned_via": 15,
+     "target_volume": 1030.5002308129808,
+     "volume_rel": 6.619319490996699e-16,
+     "left": [],
+     "saved": false,
+     "clean": true
+    },
+    "ring-55-53": {
+     "by_way_of": [],
+     "landing": [],
+     "rebuilt": true,
+     "failures": [],
+     "changed": [
+      "No. of Teeth"
+     ],
+     "rebuilds": [
+      true
+     ],
+     "steps_restored": true,
+     "in_error": [],
+     "teeth": 53.0,
+     "volume": 11605.270875531442,
+     "foreseen": 1.0028728020892888,
+     "planned_via": null,
+     "target_volume": 11605.270875532482,
+     "volume_rel": 8.965425710328288e-14,
+     "left": [],
+     "saved": false,
+     "clean": true
+    },
+    "ring-55-56": {
+     "by_way_of": [],
+     "landing": [],
+     "rebuilt": true,
+     "failures": [],
+     "changed": [
+      "No. of Teeth"
+     ],
+     "rebuilds": [
+      true
+     ],
+     "steps_restored": true,
+     "in_error": [],
+     "teeth": 56.0,
+     "volume": 12202.870295026281,
+     "foreseen": 2.0003564512592256,
+     "planned_via": null,
+     "target_volume": 12202.870295028197,
+     "volume_rel": 1.5696273054005783e-13,
+     "left": [],
+     "saved": false,
+     "clean": true
+    },
+    "sun-29-30": {
+     "by_way_of": [],
+     "landing": [],
+     "rebuilt": true,
+     "failures": [],
+     "changed": [
+      "No. of Teeth"
+     ],
+     "rebuilds": [
+      true
+     ],
+     "steps_restored": true,
+     "in_error": [],
+     "teeth": 30.0,
+     "volume": 10517.660975777355,
+     "foreseen": 3.5656219195317327,
+     "planned_via": null,
+     "target_volume": 10517.660975777366,
+     "volume_rel": 1.0376771457466078e-15,
+     "left": [],
+     "saved": false,
+     "clean": true
+    },
+    "ring-m1.25-40-m1.5-32": {
+     "by_way_of": [
+      "No. of Teeth",
+      "31"
+     ],
+     "landing": [
+      [
+       "Li+",
+       0.2685921125517466,
+       1.5526228988618016
+      ]
+     ],
+     "rebuilt": true,
+     "failures": [],
+     "changed": [
+      "No. of Teeth",
+      "Module"
+     ],
+     "rebuilds": [
+      true,
+      true
+     ],
+     "steps_restored": true,
+     "in_error": [],
+     "teeth": 32.0,
+     "volume": 10317.680960034633,
+     "foreseen": 0.17299249724362972,
+     "planned_via": 31,
+     "target_volume": 10317.680960034622,
+     "volume_rel": 1.0577896780827109e-15,
+     "left": [],
+     "saved": false,
+     "clean": true
+    },
+    "ring-m1.25-40-m1.5-32-straight": {
+     "by_way_of": [],
+     "landing": [
+      [
+       "Li+",
+       0.2685921125517466,
+       1.5526228988618016
+      ]
+     ],
+     "rebuilt": true,
+     "failures": [],
+     "changed": [
+      "No. of Teeth",
+      "Module"
+     ],
+     "rebuilds": [
+      true
+     ],
+     "steps_restored": true,
+     "in_error": [],
+     "teeth": 32.0,
+     "volume": 10317.68096003463,
+     "foreseen": 0.17299249724362972,
+     "planned_via": 31,
+     "target_volume": 10317.680960034622,
+     "volume_rel": 7.051931187218073e-16,
+     "left": [],
+     "saved": false,
+     "clean": true
+    }
+   },
+   "leftover": {
+    "in_error": [],
+    "teeth": 55.0,
+    "volume": 12005.017395150751,
+    "left": [],
+    "saved": false,
+    "volume_rel_55": 4.545572930899566e-16,
+    "clean": true
+   },
+   "shown": true,
+   "seconds": 305,
+   "failed": []
+  }
+ },
+ "stops": [],
+ "proposal": {},
+ "revision": [
+  34,
+  1,
+  1
+ ],
+ "snapshot": "71d8510",
+ "whats_wrong_rule": {
+  "helper_present": true,
+  "shows_in_update": false,
+  "allowance_seconds": 60.0
+ },
+ "fails": [],
+ "notes": [
+  "SolidWorks' notification box came up while no SolidWorks call was in progress (exempt by the coordinator's ruling; nothing answers it)"
+ ]
+}

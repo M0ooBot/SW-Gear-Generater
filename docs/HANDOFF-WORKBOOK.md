@@ -69,6 +69,45 @@ issue overturns stay as W8 built them until W9 changes them, and are marked *und
 J22's bridging warning (it fires only when `length > gap`), and ruling 9.16 (a gear mate of a gearbox with modes is
 not made again).
 
+**W9c at the session's close, 2026-11-17 midday (read this first; items 1 to 10 below are older).** Nothing is
+running: no SolidWorks, no Excel, no agent. Head is pushed. W9c is written, reviewed and shown on SolidWorks 2026,
+but **not closed**: its gate findings are still None on both versions and the 2024 confirming run has not been made.
+- *Shown on 2026 (app code `887916b`), reviewed in `notes-workbook/W9C-RUNS-REVIEW.md` (`6e023e7`):* `fixed` (the
+  plan's Done-when: Hub built, inserted and mated, bands given in place, every user item kept), `modes`, `bands-off`
+  (run 5, `probe/results/w9c-demo-sw2026-20261117-5-…log`), `remove` (run 4), `remake` with 28/14/56 (run 6). The
+  review allows `UPDATE_INSERTS_A_GEAR`, `UPDATE_BANDS_IN_PLACE`, `UPDATE_ADDS_A_MODE`, `UPDATE_REMOVES_A_MODE` and
+  `UPDATE_MAKES_MATES_WITH_MODES` True for 2026 once its must-fix is in (it is, below); `UPDATE_MAKES_A_NEW_COUPLING`,
+  `UPDATE_SUPPRESSES_THE_RELIEF` and `EXTERNAL_REFERENCES_READ` stay None. **None is set yet.**
+- *App code changed after those runs* (so the final evidence must be run again): the footer's false refusal after a
+  mode is added and the save advice after a stop in a part left in error (B: `0eb0768`, `d432846`, `5c02c6a`,
+  `ff98d5a`; the record gains `UserWorkEntry.modes` and `LinkRecord.unsaved_in_error`, schema still 9); **the ring
+  fault** (an older one the demonstration found: a ring set one tooth down, 55 to 54, lands the new flank start where
+  the Tooth Space sketch's short line `Li+` ended, SolidWorks solves it to the far side, code 72, and the part does
+  not recover) fixed by routing through a safe tooth count (A: `63bbc33`, `c997e85`; `gears/landing.py`,
+  `swbuild.update_variables`, threshold 0.2 of the line's length). The fixes were reviewed in
+  `notes-workbook/W9C-FIXES-REVIEW.md` (`8407159`); its three must-fixes and S1 to S7 are answered in `c997e85` and
+  `ff98d5a`, which **no reviewer has read yet** and **no SolidWorks run has exercised**.
+- *The landing fix as first written (`63bbc33`) measured clean on 2026* (run 7, stopped by the coordinator after
+  `landing`: `…-7-landing-measured-then-stopped.log` and `w9c-demo-20261117-114848.json`; the commit message of
+  `d88096c` wrongly says no JSON was written): routed cases clean to the from-scratch volume; set straight, a ring
+  fails at 0.038 and is clean at 0.144 and 0.173, an external gear is clean at 0.100 and 0.128.
+- *Next, in order:* (1) a whole run on SolidWorks 2026 from head, `landing,fixed,modes,remove,remake,bands-off,m4,
+  w9b-part` (about 2 h 20; the script is `probe/w9c_demonstration.py` at `96a0835`, its note
+  `notes-workbook/W9C-DEMONSTRATION.md` has the command; the new `landing` cases and `remake`'s press-again step have
+  never run on SolidWorks, so expect script faults first); (2) the same on 2024 (about 4 h); (3) one independent
+  review of both runs and of `c997e85`/`ff98d5a` (addendum to `W9C-RUNS-REVIEW.md`); (4) set the findings the review
+  allows, per version, in `findings.py` with `tests/test_findings.py` pinned to the committed logs; (5) the whole
+  suite (last whole run, at `0eb0768`: the one known font-width failure, 3786 passed); (6) rewrite item 10 and the
+  phase table, close W9c; then W9d.
+- *Two 2024 runs and one 2026 run were stopped by the coordinator, not by a fault:* a 2024 whole run 21 minutes in
+  and 2026's run 7 during `fixed`, both because fixes landed after their snapshots.
+- *For the user, defaults standing:* an Update that adds a gear into one of their components adds it and names the
+  interference in red afterwards (the footer before the press is silent); a removal refuses while any of their
+  components is present, until the in-context-reference read (M4) is measured with a part made by hand; plain gear
+  added and removal on a gearbox with modes are measured on the fake only; the sketch itself is not changed (a
+  construction that removes the ambiguity for new builds is described in A's hand-back, unmeasured); the earlier
+  open questions in this file still stand.
+
 **Where W9 stands (resumed on the user's word, 2026-11-16 afternoon).** **W9a is closed (2026-11-17, early
 morning):** measured, written, reviewed and shown on SolidWorks 2026 and 2024. W9b is closed on both versions (item 9); W9c is in hand (item 10); W9d is not written. How W9a went, in order, and what it leaves open:
 
