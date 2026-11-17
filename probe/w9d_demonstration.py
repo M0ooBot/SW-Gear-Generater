@@ -104,6 +104,7 @@ INSERTS = (("c1", "Chain.SLDPRT", (0.0, 0.0, 180.0)), ("c2", "Chain.SLDPRT", (0.
            ("s8", "Sprocket.SLDPRT", (0.0, 0.0, 270.0)), ("s9", "Sprocket.SLDPRT", (0.0, 0.0, 290.0)),
            ("s10", "Sprocket.SLDPRT", (0.0, 0.0, 310.0)), ("s11", "Sprocket.SLDPRT", (0.0, 0.0, 330.0)),
            ("lt", "SprocketLight.SLDPRT", (0.0, 0.0, 350.0)), ("cf", "SprocketConf.SLDPRT", (0.0, 0.0, 370.0)))
+LIGHT_FILE = dict((h, f) for h, f, _ in INSERTS)["lt"]          # the file SprocketLight-1 is an instance of
 OWN_PARTS = ("Chain.SLDPRT", "SprocketLight.SLDPRT", "SprocketConf.SLDPRT")   # built by the strip, as S0's sprocket
 SUPPRESS = (("s7", "L"), ("s9", "H"))               # suppressed in L only; in H (the mode showing) only
 # (name, kind, a, b, value): an "app" mate by the app's own add_mate on named axes and planes or whole components; a
@@ -382,12 +383,15 @@ def definition_problems(old, new, kind):
     return out
 
 
-def old_diff(before, after, mine, light=""):
+def old_diff(before, after, mine, light="", light_file=""):
     """What differs on the old assembly between two reads made where it stands: a frame (to 1e-9), a mate's code, flag
     per mode, entities, definition (values, entities and their places), the mode showing, its rebuild state, a
     component's state, fixed or floating and referenced configuration, and the save flag of a document of ``mine``.
     ``light``: a component the user set lightweight, whose going to resolved (and what that alone changes: its own
-    reads, and its mates' entity reads) is set apart (the coordinator's ruling on M1 (b)). Returns (sentences, the
+    reads, and its mates' entity reads) is set apart (the coordinator's ruling on M1 (b)). ``light_file``: that
+    component's file, which a lightweight component leaves unloaded as a document: its going resolved loads it, so its
+    save flag reads None before and False (open, unmarked) after; that alone is set apart too (the first 2026 run's
+    STOP, 90cdf20). The file marked, or any other document's flag changing, is still a change. Returns (sentences, the
     set-apart sentences)."""
     out, apart = [], []
     involved = {n for n, d in (before.get("definitions") or {}).items()
@@ -411,6 +415,9 @@ def old_diff(before, after, mine, light=""):
         out.append(f"rebuild state {before.get('needs_rebuild')} -> {after.get('needs_rebuild')}")
     flips = {n: (before["flags_after"].get(n), after["flags_after"].get(n)) for n in mine
              if before["flags_after"].get(n) != after["flags_after"].get(n)}
+    if went and light_file and flips.get(light_file) == (None, False):
+        apart.append(f"save flag of {light_file}: not open -> open, unmarked")
+        del flips[light_file]
     if flips:
         out.append(f"save flags {flips}")
     return out, apart
@@ -915,6 +922,21 @@ def self_check():
        and len(old_diff(lit, stays, set(), light="SprocketLight-1")[0]) == 1,
        "M1 (b): the light component going to resolved, and its mate's entity read, set apart; another mate's value "
        "changed beside it, or that component fixed without being resolved, still a change")
+    lf = "SprocketLight.SLDPRT"
+    loaded = dict(resolved, flags_after={"RangeBox.SLDASM": False, lf: False})
+    ok(old_diff(lit, loaded, {"RangeBox.SLDASM", lf}, light="SprocketLight-1", light_file=lf)[0] == []
+       and len(old_diff(lit, loaded, {"RangeBox.SLDASM", lf}, light="SprocketLight-1", light_file=lf)[1]) == 3,
+       "M1 (b): the light file loaded unmarked as its component resolves, set apart")
+    ok(old_diff(lit, dict(resolved, flags_after={"RangeBox.SLDASM": False, lf: True}), {"RangeBox.SLDASM", lf},
+                light="SprocketLight-1", light_file=lf)[0] != []
+       and old_diff(lit, dict(stays, flags_after={"RangeBox.SLDASM": False, lf: False}), {"RangeBox.SLDASM", lf},
+                    light="SprocketLight-1", light_file=lf)[0] != []
+       and old_diff(lit, dict(resolved, flags_after={"RangeBox.SLDASM": True, lf: False}), {"RangeBox.SLDASM", lf},
+                    light="SprocketLight-1", light_file=lf)[0] != []
+       and old_diff(lit, dict(resolved, flags_after={"RangeBox.SLDASM": False, "Chain.SLDPRT": False}),
+                    {"RangeBox.SLDASM", "Chain.SLDPRT"}, light="SprocketLight-1", light_file=lf)[0] != [],
+       "M1 (b): the light file marked, loaded while its component stays lightweight, the old assembly marked beside "
+       "it, or another user file loaded: still a change")
     rel = (I9, (0.0, 0.0, 10.0))
     ok(pose_gap(rel, rel) == 0.0 and abs(pose_gap(rel, (I9, (0.0, 0.0, 10.5))) - 0.5) < 1e-12, "pose gap")
     ok(tuple(swbuild.CARRY_KIND_WORDS) == KIND_WORDS and set(WRITE_GATES) | set(STAY_NONE) <= {
@@ -1665,7 +1687,8 @@ def press_build(label, desk, folder, fx, old_open=True, shows_ok=False, light=""
         A.stop(f"{label}: the Build again… marked {turned} modified (§0.3)")
     if old_open:
         after = old_read(f"{label}: the old assembly after", old, folder, pairs, modes, fx["mates"])
-        changes, apart = old_diff(before, after, mine, light=light)
+        changes, apart = old_diff(before, after, mine, light=light,
+                                  light_file=LIGHT_FILE if light == fx["names"].get("lt") else "")
         out["old_after"] = after
         if light:
             was, now = before["states"].get(light), after["states"].get(light)
