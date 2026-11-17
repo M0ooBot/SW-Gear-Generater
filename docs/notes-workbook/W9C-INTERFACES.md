@@ -581,3 +581,28 @@ reading). B records and says it then with no change. The other refusals before a
 can stay so. A new part's file already on disk is foreseen from the record and said before the press every time. A
 relief already made, or one no longer in the part, is a state of the part the footer cannot read, and Build again…
 is what its sentence offers.
+
+### From A (the review's fix round, `W9C-REVIEW.md`)
+
+- **The root read (should-fix 5).** `_read_user_work` now reads the root's `Name2` only when a mate entity names no
+  top-level component (a mate on the assembly's own planes on 2026), once per press, and **never on an assembly with a
+  lightweight component** (`GetSuppression2` 1 or 4 read by `components()`): there such an entity reads
+  `UNREAD_ENTITY` (not wholly read; it refuses only where something is put, as W9a refuses an unread mate). W9a's
+  call log is back to its own (`W9A_PUT_BACK_LOG` as before `7e0d095`, 149 calls). `Session.root_component(resolve)`
+  takes the argument; the worker passes `True`, the only one measured (s5 (a), an all-resolved assembly, nothing
+  marked); `False` was never called. **The demonstration must measure:** the root read on an assembly holding a
+  lightweight user component, with each document's save flag and every component's `GetSuppression2` read before and
+  after it, for `True` and for `False`; until then the worker never calls it there.
+- **The fake as strict as measured (should-fix 8):** `delete_component` raises the epoch and a handle to the
+  component deleted answers no more (found again by name, `ComponentGone`); `root_component(True)` on an assembly with
+  a lightweight component resolves it and marks the assembly (`False` marks nothing); `delete_configuration` marks
+  the assembly. Nothing in the worker failed under it.
+- **Failures pinned (should-fix 6):** at `delete_configuration`, at `delete_component` (with a mode removed in the same
+  press: the mode said done, the gear left for the next press, which takes it out alone), at `suppress_feature` (the
+  job stops before the assembly), and at the remake with modes (`set_gear_ratio`); each with `skipped` and the next
+  press.
+- **Must-fix 1, the worker's half:** `swbuild.work_without_modes(work, modes_removed)` (pure) is the mirror of
+  `work_in_added_modes`, for B's footer. `judge_user_work` judges a lock over the modes it is given alone, so a mode in
+  a mate's `on` that is not among them (one being removed) counts for nothing, and `PROBLEM_LOCK_BY_MODE` can no longer
+  be said with an empty side.
+- **Schema:** no worker test pins the record's schema; nothing to change for 9.

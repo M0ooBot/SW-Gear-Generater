@@ -143,7 +143,7 @@ class SolidWorks(Protocol):
     def components(self) -> List[ComponentInfo]: ...
     def mate_info(self, handle: str) -> MateInfo: ...
     def feature_states(self) -> List[FeatureState]: ...
-    def root_component(self) -> Optional[str]: ...                         # W9c: the assembly's own entity
+    def root_component(self, resolve: bool = True) -> Optional[str]: ...   # W9c: the assembly's own entity
     def delete_component(self, handle: str) -> None: ...                    # W9c: a gear taken out (P1's route)
     def suppress_feature(self, name: str, suppressed: bool) -> None: ...    # W9c: a sleeve's relief taken away
 
@@ -5553,7 +5553,7 @@ def judge_user_work(work: UserWork, modes: Sequence[str], put: Collection[str], 
         label = touch[1] if touch[0] == USER else "the layout" if touch[0] == LAYOUT else "the assembly"
         return GROUND, f"{label}@{lock.name}"
 
-    firm = [m for m in whole if m.kind == USER_LOCK and set(m.on) == every]
+    firm = [m for m in whole if m.kind == USER_LOCK and set(m.on) & every == every]       # a mode not judged aside
     for lock in firm:
         nodes = [node(t, lock) for t in lock.touches]
         for one in nodes:
@@ -5641,9 +5641,11 @@ def judge_user_work(work: UserWork, modes: Sequence[str], put: Collection[str], 
     for mate in whole:
         judgement.touched.update(mate.gears())
         if mate.kind == USER_LOCK:
-            if set(mate.on) != every and reaches_put(mate):
-                on = [m for m in modes if m in mate.on]
-                off = [m for m in modes if m not in mate.on]
+            # Judged over ``modes`` alone (the W9c review's must-fix 1): a mode in ``on`` that is not among them (one
+            # being removed) counts for nothing, so neither side of the sentence is ever empty.
+            on = [m for m in modes if m in mate.on]
+            off = [m for m in modes if m not in mate.on]
+            if on and off and reaches_put(mate):
                 problems.append(UserProblem(PROBLEM_LOCK_BY_MODE, (
                     f"Your lock {mate.name} is on in {_and(on)} and suppressed in {_and(off)}, and putting a "
                     "component of yours with its gear has been settled only for a lock that is on in every mode, so "
@@ -5687,7 +5689,7 @@ def judge_user_work(work: UserWork, modes: Sequence[str], put: Collection[str], 
         judgement.touched.update(train)
         touched = [g for g in train if any((APP, g) in m.touches for m in on_train)]
         anchor = touched[0] if touched else train[0]
-        if any(set(m.on) != every for m in on_train):
+        if any(set(m.on) & every != every for m in on_train):
             judgement.per_mode.append((bodies, names))
         ground_here = [g for g in train if g in grounded and g in put]
         if ground_here:
@@ -5864,6 +5866,7 @@ _IN_PLACE_OPS = (base.AddGlobal, base.AddComponent, base.Place, base.Fix, base.U
 # IComponent2.GetSuppression2 (swComponentSuppressionState_e): the words a sentence says it in.
 _STATE_WORDS = {0: "suppressed", 1: "lightweight", 2: "resolved", 3: "resolved", 4: "lightweight"}
 _RESOLVED_STATES = (2, 3)
+_LIGHTWEIGHT_STATES = (1, 4)
 
 
 def _op_handles(op: base.Op) -> List[str]:
@@ -5941,6 +5944,15 @@ def _in_place_faults(in_place: InPlace, motion: MotionUpdate, placements: Sequen
                    and not any(on_in(_on_set(motion, m), mode) for mode in motion.configurations)]
         if nowhere:
             raise fault(f"{_and(nowhere)} to keep on in no mode once a mode is deleted (ruling 9.1)")
+
+
+def work_without_modes(work: UserWork, modes_removed: Sequence[str]) -> UserWork:
+    """Pure (the W9c review's must-fix 1, for the footer's foresight; the worker reads only the modes after the
+    Update): the user's work as it will stand once each mode of ``modes_removed`` is deleted — each user mate's ``on``
+    without them (matched as configuration names are, case aside). The mirror of :func:`work_in_added_modes`; the
+    inventory read is not changed (a copy is returned)."""
+    gone = {m.casefold() for m in modes_removed}
+    return replace(work, mates=[replace(m, on=tuple(c for c in m.on if c.casefold() not in gone)) for m in work.mates])
 
 
 def work_in_added_modes(work: UserWork, modes_added: Sequence[str], copied_from: str) -> UserWork:
@@ -6457,10 +6469,20 @@ def _read_user_work(sw: SolidWorks, motion: MotionUpdate, placements: Sequence[P
     app_of = {p.component: p.gear for p in placements}
     comps = list(sw.components())
     names = {c.name for c in comps}
-    try:
-        root: Optional[str] = sw.root_component()
-    except Exception:  # noqa: BLE001 - unread: a name that is no component is then not wholly read
-        root = None
+    # The root's Name2 is read only when an entity names no top-level component (the W9c review's should-fix 5), and
+    # never on an assembly with a lightweight component: GetRootComponent3(True) was measured marking nothing only on
+    # an assembly all resolved (s5 (a)), and the same call per configuration marked one (s5 (e)). Unread, such an
+    # entity is said as not wholly read, which refuses only where something is put.
+    lightweight = any(c.state in _LIGHTWEIGHT_STATES for c in comps)
+    root_read: List[Optional[str]] = []
+
+    def root() -> Optional[str]:
+        if not root_read:
+            try:
+                root_read.append(None if lightweight else sw.root_component(True))
+            except Exception:  # noqa: BLE001 - unread: a name that is no component is then not wholly read
+                root_read.append(None)
+        return root_read[0]
     layout_names = {motion.layout_component} if motion.layout_component in names else set()
     if not layout_names and layout_path:
         layout_names = {c.name for c in comps if c.path and same_path(c.path, layout_path) and c.name not in app_of}
@@ -6481,7 +6503,7 @@ def _read_user_work(sw: SolidWorks, motion: MotionUpdate, placements: Sequence[P
                 return LAYOUT, ""
         if top in names:
             return USER, top
-        if root is not None and name == root:
+        if name == root() and root_read[0] is not None:
             return ASSEMBLY, ""
         return UNREAD_ENTITY, ""
 

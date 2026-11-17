@@ -511,6 +511,7 @@ def test_bands_given_in_place_land_after_the_users_feature_which_is_kept(measure
     result = _update_train(fake, parts=[_p17(RELIEF_FEATURES)], in_place=InPlace(bands=(_bands_given(),)))
     assert result.ok, (result.failures, result.skipped)
     assert result.bands_added == ["G3"] and P17 in result.changed
+    assert result.globals_added == [(P17, "Start Band"), (P17, "End Band"), (P17, "Relief Diameter")]   # for left
     held = fake.memory[_key(P17)][1]
     assert held[-len(RELIEF_FEATURES):] == list(RELIEF_FEATURES)
     assert [f.name for f in result.user_work.features] == ["Groove"] and fake.user_features[_key(P17)] == [
@@ -876,3 +877,119 @@ def test_bands_given_back_where_the_relief_is_gone_refuse_by_name(measured):
         _update_train(fake, parts=[_p17(RELIEF_FEATURES)],
                       in_place=InPlace(bands=(replace(_bands_given(), back=True),)))
     assert _writes(fake) == []
+
+
+# -- the review's should-fix 6: a failure at each write not yet pinned, and what the next press finds ---------------
+
+def _fail_next(fake, call, sentence):
+    fake.raises = {call: (fake.counts.get(call, 0) + 1, swcom.SolidWorksError(sentence))}
+
+
+def test_a_configuration_that_will_not_delete_says_so_and_the_next_press_deletes_it(tc_built, measured):
+    fake, built = tc_built
+    _fail_next(fake, "delete_configuration", "SolidWorks would not delete the configuration N.")
+    result = _tc_in_place(fake, built, InPlace(modes_removed=("N",)), **_without_n(built))
+    assert result.failures == [("TransferCase.SLDASM", "SolidWorks would not delete the configuration N.")]
+    assert result.modes_removed == [] and result.globals_added == [] and "N" in fake.configs
+    assert result.skipped == ("deleting the configuration N and putting the gears back and checking the assembly, "
+                              "because the job stopped in TransferCase.SLDASM")
+    assert fake.config == "2H"
+    again = _tc_in_place(fake, built, InPlace(modes_removed=("N",)), **_without_n(built))
+    assert again.ok and again.modes_removed == ["N"] and "N" not in fake.configs
+
+
+def _without_front_dog(built, **more):
+    motion, placements = _tc_motion(built, "2H")
+    gone = RemovedGear("FrontDog", "gear9-1", "C:\\TC\\Dog_m1.5_N30.SLDPRT",
+                       ("FrontDog on Rear Axis", "FrontDog along Rear", "ModeSlv engages FrontDog"))
+    keep = lambda frames: tuple(p for p in frames if p.gear != "FrontDog")         # noqa: E731
+    motion = replace(motion, layout_component="layout-1",
+                     mates=tuple(m for m in motion.mates if m.name not in gone.mates),
+                     meshes=tuple(m for m in motion.meshes if "FrontDog" not in (m.a, m.b)),
+                     recorded_meshes=tuple(m for m in motion.recorded_meshes if "FrontDog" not in (m.a, m.b)),
+                     recorded=keep(motion.recorded),
+                     mode_placements=tuple((m, keep(f)) for m, f in motion.mode_placements),
+                     recorded_by_mode=tuple((m, keep(f)) for m, f in motion.recorded_by_mode))
+    motion = replace(motion, **{k: tuple(x for x in getattr(motion, k) if x[0] in more.get("modes", TC_MODES))
+                                for k in ("mode_placements", "recorded_by_mode")},
+                     configurations=tuple(m for m in TC_MODES if m in more.get("modes", TC_MODES)))
+    return gone, list(keep(placements)), motion
+
+
+def test_a_mode_and_a_gear_removed_with_the_delete_failing_says_the_mode_done_and_the_next_press_takes_the_gear(
+        tc_built, measured):
+    """The reviewer's probe, pinned: N deleted, FrontDog's delete failing; the next press takes FrontDog out alone."""
+    fake, built = tc_built
+    gone, placements, motion = _without_front_dog(built, modes=("2H", "4H", "4L"))
+    _fail_next(fake, "delete_component", "SolidWorks would not delete gear9-1.")
+    result = swbuild.update_gearbox(fake, assembly=TC_ASM, placements=placements, motion=motion, exists=fake.exists,
+                                    mtime=lambda _p: 0.0, in_place=InPlace(removed=(gone,), modes_removed=("N",)))
+    assert result.modes_removed == ["N"] and result.deleted == [] and result.mates_deleted == []
+    assert result.failures == [("TransferCase.SLDASM", "SolidWorks would not delete gear9-1.")]
+    assert result.skipped == ("taking FrontDog out and putting the gears back and checking the assembly, because the "
+                              "job stopped in TransferCase.SLDASM")
+    assert "N" not in fake.configs and "gear9-1" in fake.assembly_names[_key(TC_ASM)] and fake.config == "2H"
+    again = swbuild.update_gearbox(fake, assembly=TC_ASM, placements=placements, motion=motion, exists=fake.exists,
+                                   mtime=lambda _p: 0.0, in_place=InPlace(removed=(gone,)))
+    assert again.ok, (again.failures, again.skipped)
+    assert again.deleted == [("FrontDog", "gear9-1")] and again.modes_removed == []
+
+
+def test_a_component_deleted_raises_the_epoch_and_answers_no_more_as_the_session_does(tc_built, measured):
+    fake, built = tc_built
+    gone, placements, motion = _without_front_dog(built)
+    epoch = fake.epoch
+    result = swbuild.update_gearbox(fake, assembly=TC_ASM, placements=placements, motion=motion, exists=fake.exists,
+                                    mtime=lambda _p: 0.0, in_place=InPlace(removed=(gone,)))
+    assert result.ok and fake.epoch > epoch and "gear9-1" in fake.missing_components
+    with pytest.raises(swbuild.ComponentGone):
+        fake.find_component("again", "gear9-1")
+
+
+def test_a_relief_that_will_not_suppress_stops_before_the_assembly_and_the_next_press_takes_the_bands(measured):
+    fake = _built_train()
+    for kept in (fake.saved, fake.memory):
+        kept[_key(P17)][1].extend(f for f in RELIEF_FEATURES if f not in kept[_key(P17)][1])
+    taken = swbuild.BandChange("G3", P17, False, (), (clutch.RELIEF,))
+    _fail_next(fake, "suppress_feature", "SolidWorks would not suppress Relief in Gear_m1.5_N17.")
+    result = _update_train(fake, parts=[_p17(RELIEF_FEATURES)], in_place=InPlace(bands=(taken,)))
+    assert result.failures == [("Gear_m1.5_N17.SLDPRT", "SolidWorks would not suppress Relief in Gear_m1.5_N17.")]
+    assert result.bands_removed == [] and result.skipped == "the assembly, because Gear_m1.5_N17.SLDPRT failed"
+    assert T_ASM not in result.changed and fake.suppressed_features == {}
+    again = _update_train(fake, parts=[_p17(RELIEF_FEATURES)], in_place=InPlace(bands=(taken,)))
+    assert again.ok and again.bands_removed == ["G3"]
+
+
+def test_a_remake_with_modes_that_fails_says_what_is_left_and_the_next_press_remakes_it(t_with_modes, measured):
+    fake = t_with_modes
+    motion = _motion(configurations=("Default", "L"), ratios=(("G3 meshes G4", 18, 50),))
+    _fail_next(fake, "set_gear_ratio", "SolidWorks would not make the gear mate G3 meshes G4 again.")
+    result = _update_train(fake, motion=motion)
+    assert result.failures == [("T.SLDASM", "SolidWorks would not make the gear mate G3 meshes G4 again.")]
+    assert result.remade_in_modes == [] and result.ratios == []
+    assert result.skipped == ("making the gear mate G3 meshes G4 again and putting the gears back and checking the "
+                              "assembly, because the job stopped in T.SLDASM")
+    again = _update_train(fake, motion=motion)
+    assert again.ok and again.remade_in_modes == ["G3 meshes G4"]
+    assert fake.mate("G3 meshes G4", T_ASM).ratio == (18.0, 50.0)
+
+
+# -- the review's must-fix 1, the worker's half: the removed modes out of the inventory, and no empty side ------------
+
+def test_work_without_modes_takes_the_removed_modes_out_of_each_mates_on_set_as_a_copy():
+    lock = UserMate("Lock3", swbuild.USER_LOCK, 16, (("app", "Sun"), ("user", "Sprocket-1")), ("H", "N", "L"))
+    work = UserWork(mates=[lock])
+    assert swbuild.work_without_modes(work, ("n",)).mates[0].on == ("H", "L") and work.mates[0].on == ("H", "N", "L")
+    assert swbuild.work_without_modes(work, ()).mates[0].on == ("H", "N", "L")
+
+
+def test_a_lock_on_in_every_mode_left_is_firm_even_with_a_removed_mode_still_in_its_on_set(carry):
+    """judge_user_work given a recorded inventory still listing N, over the modes after (H and L): no refusal with an
+    empty side; the lock is carried."""
+    lock = UserMate("Lock3", swbuild.USER_LOCK, 16, (("app", "Sun"), ("user", "Sprocket-1")), ("H", "N", "L"))
+    work = UserWork(components=[UserComponent("Sprocket-1", "C:\\U\\Sprocket.SLDPRT")], mates=[lock])
+    for judged in (work, swbuild.work_without_modes(work, ("N",))):
+        judgement = swbuild.judge_user_work(judged, ("H", "L"), {"Sun"}, file="RangeBox.SLDASM", trains=[("Sun",)],
+                                            mated=["Sun"], branches={"Sun": swbuild.BRANCH_NO_CARRIER_MODES},
+                                            revision=Y26)
+        assert judgement.problems == [] and [c for c, _ in judgement.carried["Sun"]] == ["Sprocket-1"]

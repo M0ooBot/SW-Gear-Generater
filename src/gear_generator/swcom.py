@@ -2597,14 +2597,20 @@ class Session:
             raise SolidWorksError(f"SolidWorks would not {'suppress' if suppressed else 'turn back on'} {name} in "
                                   f"{call(doc, 'GetTitle')}.")
 
-    def root_component(self) -> Optional[str]:
+    def root_component(self, resolve: bool = True) -> Optional[str]:
         """The ``Name2`` of the build assembly's active configuration's root component (``GetActiveConfiguration`` →
-        ``GetRootComponent3(True)`` → ``Name2``, :data:`COMPONENT_FIND_ROUTES`' third route's first two calls), or None
-        when it will not answer. On SolidWorks 2026 a mate entity on the assembly's own plane gives this component
-        through ``ReferenceComponent`` (``findings.ASSEMBLY_ENTITY_COMPONENT_IS_ROOT_ON_2026``; W9c probes' s5 (a),
-        which read it so and marked nothing), so the user-work read maps it to the assembly's own. Marks nothing."""
+        ``GetRootComponent3(resolve)`` → ``Name2``, :data:`COMPONENT_FIND_ROUTES`' third route's first two calls), or
+        None when it will not answer. On SolidWorks 2026 and 2024 a mate entity on the assembly's own plane gives this
+        component through ``ReferenceComponent`` (``findings.ASSEMBLY_ENTITY_COMPONENT_IS_ROOT_ON_<year>``), so the
+        user-work read maps it to the assembly's own.
+
+        What was measured (the W9c review's should-fix 5): only ``resolve=True``, on an assembly whose components were
+        all resolved (the probes' s5 (a), both versions), marking nothing there. The same call per configuration
+        marked the assembly in s5 (e), likely by resolving; ``resolve=False`` was never called. So the worker reads it
+        only when a mate entity names no top-level component, and never on an assembly with a lightweight component
+        (``swbuild._read_user_work``)."""
         try:
-            root = call(_read(self._doc(), "GetActiveConfiguration"), "GetRootComponent3", True)
+            root = call(_read(self._doc(), "GetActiveConfiguration"), "GetRootComponent3", bool(resolve))
             return None if root is None else str(call(root, "Name2"))
         except Exception:  # noqa: BLE001 - unread: an entity naming it is then said as not wholly read
             return None

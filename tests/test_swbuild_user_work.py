@@ -120,7 +120,39 @@ def test_a_mate_to_the_assemblys_own_plane_reads_user_to_assembly_whichever_way_
     (mate,) = result.user_work.mates
     assert mate.touches == (("user", "Housing-1"), ("assembly", "")) and mate.whole
     assert [c.name for c in result.user_work.components] == ["Housing-1"]
-    assert "root_component" in names(fake)
+    # The root is read only where an entity names no top-level component (2026's answer), resolved as measured.
+    assert [a for n, a in fake.calls if n == "root_component"] == ([(True,)] if answer == "root" else [])
+
+
+@pytest.mark.parametrize("answer", ["none", "root"])
+def test_the_root_is_never_read_on_an_assembly_with_a_lightweight_component(answer):
+    """The W9c review's should-fix 5: GetRootComponent3(True) was measured marking nothing only on an assembly all
+    resolved; on one with a lightweight component it is not called, and an entity that needed it reads as not wholly
+    read (it refuses only where something is put, as W9a refuses an unread mate)."""
+    fake = _built_train()
+    fake.assembly_entity = answer
+    fake.user_component(T_ASM, "Housing-1", HOUSING, (IDENTITY9, (0.0, 0.0, -40.0)), fixed=True)
+    fake.lightweight.add("Housing-1")
+    fake.user_mate(T_ASM, "Distance9", kind="distance", a=("Housing-1", "plane2"), b=("asm", "plane2"))
+    result = _update_train(fake)                       # nothing moves: nothing is put
+    assert result.ok, result.failures
+    (mate,) = result.user_work.mates
+    if answer == "root":
+        assert mate.touches[1] == (swbuild.UNREAD_ENTITY, "") and not mate.whole
+    else:
+        assert mate.touches[1] == ("assembly", "") and mate.whole
+    assert "root_component" not in names(fake) and "Housing-1" in fake.lightweight     # nothing resolved
+    assert {c.name: c.state for c in result.user_work.components}["Housing-1"] == 1
+
+
+def test_the_fake_resolves_and_marks_on_a_lightweight_assembly_as_the_measurement_suggests():
+    fake = _built_train()
+    fake.open_document(T_ASM)
+    fake.user_component(T_ASM, "Housing-1", HOUSING)
+    fake.lightweight.add("Housing-1")
+    fake.touched.clear()
+    assert fake.root_component(False) == "T" and "Housing-1" in fake.lightweight and not fake.touched
+    assert fake.root_component(True) == "T" and "Housing-1" not in fake.lightweight and fake.touched
 
 
 @pytest.mark.parametrize("answer", ["none", "root"])

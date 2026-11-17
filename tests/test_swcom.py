@@ -1701,6 +1701,7 @@ def test_root_component_reads_the_active_configurations_root_name_and_none_when_
     configuration = Configuration(MatedComponent(doc, "RangeBox"))
     doc.GetActiveConfiguration = configuration
     assert session.root_component() == "RangeBox" and configuration.asked == [True]
+    assert session.root_component(False) == "RangeBox" and configuration.asked == [True, False]   # never measured
     doc.GetActiveConfiguration = Configuration(None)
     assert session.root_component() is None
 

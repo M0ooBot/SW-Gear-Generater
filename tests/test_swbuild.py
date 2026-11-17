@@ -997,7 +997,7 @@ class FakeSolidWorks:
         # 2026), where the finding says such a part fails the assembly's rebuild; ``component_codes`` overrides.
         derived = self._feature_rule() is False
         return [swcom.ComponentInfo(n, self.component_paths.get(n, ""), n in self.fixed,
-                                    self.component_states.get(n, 2),
+                                    self.component_states.get(n, 1 if n in self.lightweight else 2),
                                     self.component_codes.get(n, 1 if derived and self._part_in_error(
                                         self.component_paths.get(n, "")) else 0)) for n in names]
 
@@ -1023,9 +1023,20 @@ class FakeSolidWorks:
         path = self.current or ""
         return path.replace("/", "\\").rsplit("\\", 1)[-1].rsplit(".", 1)[0]
 
-    def root_component(self):
-        """``Session.root_component``: the active configuration's root component's Name2, or None unread."""
-        self._log("root_component")
+    def root_component(self, resolve=True):
+        """``Session.root_component``: the active configuration's root component's Name2, or None unread. As strict
+        as measured (the W9c review's should-fix 8): with ``resolve`` on an assembly holding a lightweight component
+        it resolves them and marks the assembly (what s5 (e)'s marking most likely was; only an all-resolved assembly
+        was measured marking nothing); ``resolve=False`` (never measured) answers the name and marks nothing."""
+        self._log("root_component", resolve)
+        if resolve:
+            names = self._assembly_names(self.current) if self.current else list(self.adding_names)
+            heavy = [n for n in names if n in self.lightweight or self.component_states.get(n) in (1, 4)]
+            if heavy:
+                for name in heavy:
+                    self.lightweight.discard(name)
+                    self.component_states[name] = 2
+                self._touch()
         return None if self.root_unread else self._root_name()
 
     def delete_component(self, handle):
@@ -1049,6 +1060,13 @@ class FakeSolidWorks:
             frames.pop(name, None)
         self.fixed.discard(name)
         self.deleted.append(name)
+        # As the Session: the epoch raised (P1: other handles held only within one epoch), and a handle to the
+        # component deleted answers no more (found again by name, nothing answers).
+        self.epoch += 1
+        for kept in (self.found, self.component_names):
+            for h in [h for h, n in kept.items() if n == name]:
+                del kept[h]
+        self.missing_components.add(name)
         self._touch()
 
     def suppress_feature(self, name, suppressed):
@@ -1495,6 +1513,7 @@ class FakeSolidWorks:
             raise SolidWorksError(f"The configuration {name} is the active one in {title}, and the active "
                                   "configuration is never deleted.")
         if found is not None:
+            self._touch()                  # as SolidWorks: a configuration deleted marks the assembly modified
             self.configs.remove(found)
             self.frames_by.pop(found, None)
             for mate in self.mates:
@@ -7184,7 +7203,9 @@ W7_PUT_BACK_LOG = "c0e98c21b97164fb77e9963594dee9ea91eb0b63d8aa4e9b5684a47534676
 # feature_states per part document read with its features, one components for the assembly. With those reads taken
 # out, the log still hashes to W7_PUT_BACK_LOG. Re-pinned at W9c (the probes' review, must-fix 1): the user-work read
 # also reads the active configuration's root component once (root_component), to tell the assembly's own entity.
-W9A_PUT_BACK_LOG = "30a06c580acfa0f5dd4365972dfcfa41d07a6460bf418a30c74ca762e8ddf514"
+# Back to W9a's own log (before 7e0d095): the root is read only when a mate entity names no top-level component
+# (the W9c review's should-fix 5), and this press has no mate of the user's.
+W9A_PUT_BACK_LOG = "69d45d4cb956703b5bfa9cd4555b284fbf4f093d487794bdee8fa7d0ec3be5b4"
 W9A_READS = ("components", "mate_info", "feature_states", "root_component")
 
 
@@ -7195,8 +7216,8 @@ def test_the_w7_put_back_calls_are_pinned_whole(turned_findings, monkeypatch):
     sw, pressed, _ = _planetary_turned_and_pressed(monkeypatch, "gear mates off around the puts")
     swbuild.update_gearbox(sw, **pressed.update_kwargs(), exists=lambda _p: True, mtime=lambda _p: 5.0)
     every = [(n, a) for n, a in sw.calls]
-    assert len(every) == 150 and hashlib.sha256(repr(every).encode()).hexdigest() == W9A_PUT_BACK_LOG
-    assert [n for n, _ in every if n in W9A_READS] == ["feature_states"] * 6 + ["components", "root_component"]
+    assert len(every) == 149 and hashlib.sha256(repr(every).encode()).hexdigest() == W9A_PUT_BACK_LOG
+    assert [n for n, _ in every if n in W9A_READS] == ["feature_states"] * 6 + ["components"]
     calls = [(n, a) for n, a in every if n not in W9A_READS]
     assert len(calls) == 142
     put = [n for n, _ in calls[calls.index(("set_global_variable", calls[[n for n, _ in calls].index(
