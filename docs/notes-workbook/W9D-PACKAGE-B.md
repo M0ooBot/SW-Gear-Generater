@@ -209,6 +209,37 @@ Committed as `73db554`. Tests at the end of `tests/test_workbook_carry.py`.
   `test_an_old_assembly_whose_files_were_moved_…`.
 - B's earlier ask of A (an `after_unread` field) is met; the after-carry sentence is no longer in `stopped`.
 
+## After the first SolidWorks 2026 run (`W9D-DEMONSTRATION-REVIEW.md` addendum, `e2207d9`)
+
+1. **The question foresees only what the inventory knows.** A gear mate the inventory holds whole, every entity's kind
+   known, that `plan_carry` names unread (its ratio and sense are never kept) is said as *may*: *Your UserGear6 is made
+   again if the press reads its gear ratio and which way it turns.* A gear mate on a face of a gear whose part is new,
+   while `COAXIAL_FACE_READ` is set (the coaxial read is never kept): *Your UserGearRoot is made again only if the face
+   of Sun it is on proves to be on Sun's axis, since Sun's part is new.* Every other reason stays a fact.
+   `test_what_only_the_inventorys_silence_names_is_said_as_may`. **For A** (not needed for the sentences, but
+   cleaner): a way for `plan_carry` to know it is foreseeing, e.g. `OldWork.recorded: bool` (or `OldMate.values_known`
+   False), so it says a ratio, a sense or a face's axis as not known rather than as missing; B would then read that
+   instead of telling silence from the inventory itself.
+2. **Reasons with no why** (UserAxis9 on a component suppressed in the mode showing; UserAsm6 beside a lightweight
+   component). A's fields do not carry it: both entities come back `UNREAD_ENTITY` with `OldEntity.unread` "". **For A**:
+   set `unread` to the clause, e.g. *"Sprocket-9 is suppressed in H, the mode RangeBox.SLDASM showed"* and *"the
+   assembly's own planes are not read while a component is lightweight"*; B's clause already says it: *SolidWorks would
+   not describe UserAxis9 wholly (Sprocket-9 is suppressed in H, the mode RangeBox.SLDASM showed), so it is not made
+   again.*
+3. **The footer after the build.** By design (W9a's rule 3) a job's own sentence stands in place of the state's lines
+   until the workbook's next save, so §9.4's line was hidden behind the build's note; the build's sentence itself ends
+   *Save RangeBox_r2 in SolidWorks to keep what was carried.* when the carry is unsaved. Now §9.4's line is said after a
+   job's sentence too, unless that sentence asks the save itself (a stop's does not). **For the script**: after the
+   build, read the footer (`desk.say_footer`, with the build's note) and accept either *Save RangeBox_r2 in SolidWorks
+   to keep what was carried.* (the build finished its carry) or `ui_text.carry_footer_line(record)` (it did not say
+   the save); with the note gone (`desk.note = None` and the footer read again), the line itself.
+   `test_the_footer_after_a_build_…`; under Tk `test_a_build_again_hands_the_worker_its_carry_…`.
+4. **A mate in error as read.** The inventory holds each mate's code, so: *Lock3 was in error in RangeBox.SLDASM as
+   read; made again, it is carried only if it reads the same error, and it never keeps a gear from turning.*, for the
+   mates the plan makes again. `test_a_mate_in_error_as_read_…`.
+
+The seven printed states below are unchanged by this round.
+
 ## The strings, in full
 
 Made by A's worker on the fake (`Desk`'s RangeBox, W9a's user work: Sprocket-1 locked to Sun, Housing-1 fixed, a

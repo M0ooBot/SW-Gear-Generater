@@ -1231,3 +1231,69 @@ def test_an_old_assembly_whose_files_were_moved_is_said_with_the_workers_reason_
     said = _status(done, stays=_stays())
     assert said.startswith(reason + ", so nothing of yours was carried; as read at "), said
     assert "open it" not in said.lower() and "press" not in said
+
+
+# -- the first SolidWorks 2026 run's review (W9D-DEMONSTRATION-REVIEW.md, e2207d9) --------------------------------
+
+def _gear_mates(record, *mates):
+    record.gearbox.user_work.mates += list(mates)
+    return record
+
+
+def test_what_only_the_inventorys_silence_names_is_said_as_may(desk, carrying, monkeypatch):
+    """Item 1: a gear mate held whole with its entities known is named unread by the foresight only because the
+    inventory keeps no ratio; it is said as *may*. With the coaxial read shown, a gear mate on a face of a gear made
+    new may be on its axis: *may* too. Any other reason stays a fact."""
+    monkeypatch.setattr(findings, "CARRY_GEAR_MATE_ON_AN_APP_GEAR_ON_2026", True)
+    monkeypatch.setattr(findings, "CARRY_REMAKE_KINDS_ON_2026", ("lock", "gear"))
+    record = _gear_mates(copy.deepcopy(desk.record), store.UserMateEntry(
+        "UserGear6", "gear", 10, [["user", "Sprocket-1"], ["app", "Sun"]], ["H", "N", "L"],
+        entities=[["user", "Sprocket-1", "feature", "Gear Axis"], ["app", "Sun", "feature", "Gear Axis"]]))
+    said = _said(desk, record=record)
+    assert "Your UserGear6 is made again if the press reads its gear ratio and which way it turns." in said, said
+    assert "would not describe UserGear6" not in said
+    named = [swbuild.CarryNamed("UserGearRoot", "mate", swbuild.WHY_PART_NEW, ("Sun", "its Flank changed", "face", "")),
+             swbuild.CarryNamed("UserFace", "mate", swbuild.WHY_PART_NEW, ("Sun", "its Flank changed", "face", ""))]
+    record = _gear_mates(copy.deepcopy(desk.record), store.UserMateEntry(
+        "UserGearRoot", "gear", 10, [["user", "Sprocket-1"], ["app", "Sun"]], ["H"],
+        entities=[["user", "Sprocket-1", "feature", "Gear Axis"], ["app", "Sun", "face", ""]]),
+        store.UserMateEntry("UserFace", "other", 0, [["user", "Sprocket-1"], ["app", "Sun"]], ["H"],
+                            entities=[["user", "Sprocket-1", "face", ""], ["app", "Sun", "face", ""]]))
+    monkeypatch.setattr(findings, "COAXIAL_FACE_READ_ON_2026", True)
+    said = _said(desk, record=record, plan=_plan([_item("Sprocket-1")], named=named))
+    assert ("Your UserGearRoot is made again only if the face of Sun it is on proves to be on Sun's axis, since Sun's "
+            "part is new.") in said, said
+    assert ("UserFace was on a face of Sun, and Sun's part is new because its Flank changed, so it is not made again."
+            ) in said
+    monkeypatch.setattr(findings, "COAXIAL_FACE_READ_ON_2026", None)                # not read: the fact stands
+    said = _said(desk, record=record, plan=_plan([_item("Sprocket-1")], named=named))
+    assert "UserGearRoot was on a face of Sun" in said and "proves to be on" not in said
+
+
+def test_a_mate_in_error_as_read_is_carried_only_with_the_same_error(desk, carrying):
+    """Item 4: the inventory holds the user's mate in error, and the plan makes it again."""
+    record = copy.deepcopy(desk.record)
+    record.gearbox.user_work.mates[0].code = 46
+    said = _said(desk, record=record)
+    assert ("Lock3 was in error in RangeBox.SLDASM as read; made again, it is carried only if it reads the same error, "
+            "and it never keeps a gear from turning.") in said, said
+    assert "was in error in RangeBox.SLDASM as read" not in _said(desk)
+
+
+def test_the_footer_after_a_build_says_the_carrys_line_unless_the_builds_sentence_asks_the_save():
+    """Item 3: a job's sentence hides the state's lines (W9a's rule 3); §9.4's line is said after it unless that
+    sentence already asks the save (a stop's does not)."""
+    record = _record(_carry_entry())
+    record.gearbox.assembly = r"C:\\P\\RangeBox_r2.SLDASM"
+    line = "RangeBox_r2 holds what Build again… carried of yours, not saved: save it in SolidWorks to keep it."
+    from gear_generator.workbook import assess
+    from test_workbook_in_place_round_trip import BOOK
+    a = assess.assess(replace(range_box(), source_path=BOOK), [], "C:\\\\Out\\\\")
+    asks = ui_text.Note("Built 1 part. Carried into RangeBox_r2, unsaved: … Save RangeBox_r2 in SolidWorks to keep what "
+                        "was carried.", True, ui_text.NOTE_JOB)
+    text = ui_text.workbook_footer(a, record=record, note=asks, folder="C:\\\\Out\\\\").text
+    assert line not in text and text.count("Save RangeBox_r2 in SolidWorks") == 1
+    stopped = ui_text.Note("Built 1 part. … What was carried before it is in RangeBox_r2, unsaved, and RangeBox_r2 as "
+                           "built is saved.", True, ui_text.NOTE_JOB)
+    assert ui_text.workbook_footer(a, record=record, note=stopped, folder="C:\\\\Out\\\\").text.endswith(line)
+    assert line in ui_text.workbook_footer(a, record=record, folder="C:\\\\Out\\\\").text       # the note gone

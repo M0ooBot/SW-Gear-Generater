@@ -2639,6 +2639,9 @@ def workbook_footer(assessment, *, record=None, record_problem: str = "", plan=N
             if back:
                 text += " " + back
     if note is not None:
+        carried = carry_footer_line(record)
+        if carried and note.kind == NOTE_JOB and _asks_carry_save(note.text, record):
+            carried = ""                       # the build's own sentence asks the save already (W9a's rule 3)
         if refused_shown and note.kind == NOTE_JOB:
             text, ok = note.text, note.ok      # the refusing build's own sentence already says all of it
         elif note.kind == NOTE_ANSWER:
@@ -2647,9 +2650,20 @@ def workbook_footer(assessment, *, record=None, record_problem: str = "", plan=N
             text, ok = note.text + _left_for_later(a.parts), note.ok
         else:
             text = _after_note(note, text)
+        if carried and note.kind == NOTE_JOB:
+            # §9.4 (the demonstration's record check): while the carry stands unsaved the footer says so after a job's
+            # own sentence too, unless that sentence asks the save itself.
+            text += " " + carried
     if held:
         text += " " + held
     return footer(text + due, ok, build_on, update_on)
+
+
+def _asks_carry_save(text: str, record) -> bool:
+    """Whether a job's sentence already asks the carry's save (``carried_status``' last sentence)."""
+    box = getattr(record, "gearbox", None)
+    name = _stem(box.assembly) if box is not None and box.assembly else ""
+    return bool(name) and f"Save {name} in SolidWorks to keep what was carried." in text
 
 
 # -- W4: what the Workbook window itself says around a job (the window wiring) ----------------------------------
@@ -5412,10 +5426,15 @@ def carry_sentence(fore, again) -> str:
         texts.append(f"As read at {at}, {name} {' and '.join(clauses)}." if clauses else
                      f"As read at {at}, nothing of yours in {old} would be carried into {name}.")
         # M5: a lightweight component's mates are said once, by its own sentence below, as the condition they are.
-        named = [n for n in plan.named if n.item not in unknown
+        # The demonstration's review (item 1): what only the inventory's silence names is said as *may*, never as fact.
+        silent_ratio, silent_axis = _foresight_silences(fore, entry, plan)
+        named = [n for n in plan.named if n.item not in unknown and n.item not in silent_ratio
+                 and n.item not in silent_axis
                  and not (n.why == sb.WHY_LIGHTWEIGHT and n.subjects and str(n.subjects[0]) in light)]
         texts += _named_sentences(named, name=name, old=old, refs=refs)
         texts += _unknown_entities(fore, entry, unknown)
+        texts += _may_sentences(silent_ratio, silent_axis)
+        texts += _in_error_before(entry, plan, old)
         if fore.assumed and fore.configuration:
             one = len(fore.assumed) == 1
             refs.extend(_finding_ref(f) for f in fore.configuration if _finding_ref(f) not in refs)
@@ -5434,6 +5453,65 @@ def carry_sentence(fore, again) -> str:
         texts += _modes_said(fore, name, old)
         texts.append(_standing())
     return " ".join([t for t in texts if t] + _findings_sentence(refs, fore.year))
+
+
+def _foresight_silences(fore, entry, plan) -> Tuple[List[str], Dict[str, List[str]]]:
+    """What the question's foresight names only because the record's inventory is silent (the demonstration's review,
+    item 1): ``(gear mates named unread though the inventory holds them whole, with every entity's kind known — their
+    ratio and sense, never kept, are what plan_carry missed; gear id -> gear mates on a face of a gear whose part is
+    new while the coaxial read is shown: whether the face is on its axis, never kept)``."""
+    from . import swbuild as sb
+    by = {m.name: m for m in entry.mates}
+    ratio: List[str] = []
+    axis: Dict[str, List[str]] = {}
+    coaxial = fore.year != "?" and _finding_value("COAXIAL_FACE_READ", fore.year) is True
+    for n in plan.named:
+        m = by.get(n.item)
+        if m is None or m.kind != "gear":
+            continue
+        known = bool(m.entities) and m.whole and all(len(e) == 4 and e[2] not in ("unread", "") for e in m.entities)
+        s = [str(x) for x in n.subjects] + ["", "", "", ""]
+        if n.why == sb.WHY_UNREAD and known:
+            ratio.append(n.item)
+        elif n.why == sb.WHY_PART_NEW and s[2] == "face" and coaxial:
+            axis.setdefault(s[0], []).append(n.item)
+    return ratio, axis
+
+
+def _finding_value(name: str, year: str):
+    from . import findings
+    return getattr(findings, f"{name}_ON_{year}", None)
+
+
+def _may_sentences(ratio: Sequence[str], axis: Mapping[str, Sequence[str]]) -> List[str]:
+    """The *may* for what the inventory cannot know: a gear mate's ratio and sense (*Your UserGear6 is made again if
+    the press reads its gear ratio and which way it turns.*), and whether a gear mate's face of a gear made new is on
+    its axis (*Your UserGearRoot is made again only if the face of Sun it is on proves to be on Sun's axis, since
+    Sun's part is new.*)."""
+    out = []
+    if ratio:
+        one = len(ratio) == 1
+        out.append(f"Your {_and(ratio)} {'is' if one else 'are'} made again if the press reads "
+                   f"{'its gear ratio and which way it turns' if one else 'their gear ratios and which way they turn'}.")
+    for gear, mates in axis.items():
+        one = len(mates) == 1
+        out.append(f"Your {_and(mates)} {'is' if one else 'are'} made again only if the face of {gear} "
+                   f"{'it is' if one else 'each is'} on proves to be on {gear}'s axis, since {gear}'s part is new.")
+    return out
+
+
+def _in_error_before(entry, plan, old: str) -> List[str]:
+    """The demonstration's review (§6): a mate of the user's the inventory holds in error, which the plan makes again:
+    *UserLock8a was in error in RangeBox.SLDASM as read; made again, it is carried only if it reads the same error,
+    and it never keeps a gear from turning.*"""
+    made = {m.mate.name for m in plan.mates}
+    bad = [m.name for m in entry.mates if m.name in made and m.code and m.code != -1]
+    if not bad:
+        return []
+    one = len(bad) == 1
+    return [f"{_and(bad)} {'was' if one else 'were'} in error in {old} as read; made again, "
+            f"{'it is' if one else 'each is'} carried only if {'it reads' if one else 'it reads'} the same error, and "
+            f"{'it never keeps' if one else 'none keeps'} a gear from turning."]
 
 
 def _findings_sentence(refs: Sequence[str], year: str) -> List[str]:

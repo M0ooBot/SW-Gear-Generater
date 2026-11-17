@@ -3056,6 +3056,11 @@ def test_a_build_again_hands_the_worker_its_carry_says_what_was_carried_and_the_
     assert store.same_path(kept.pop("assembly"), desk.part(NAME, ".SLDASM"))   # the app's own file, as gearbox's
     assert str(desk.tmp) not in json.dumps(kept) and "Sprocket.SLDPRT" not in json.dumps(kept)   # no user path
     line = f"{NAME}_r2 holds what Build again… carried of yours, not saved: save it in SolidWorks to keep it."
+    # Straight after the build the footer is the build's own sentence, which asks the save itself; §9.4's line follows
+    # it only when that sentence does not (a stop), and stands alone once the sentence is gone (the workbook's next
+    # save, here set aside by hand) — the demonstration's record check reads one or the other.
+    after = window.footer().text
+    assert after.count(f"Save {NAME}_r2 in SolidWorks to keep what was carried.") == 1 and line not in after, after
     window.note = None
     window._plan()
     assert line in window.footer().text, window.footer().text
