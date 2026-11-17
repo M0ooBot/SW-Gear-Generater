@@ -18,10 +18,6 @@ def _all_measured(monkeypatch, year=2026):
         monkeypatch.setattr(findings, f"{name}_ON_{year}", True, raising=False)
 
 
-def _in_place(**kwargs):
-    return InPlace(**kwargs)
-
-
 REMOVE_G4 = RemovedGear("G4", "gear4-1", "C:\\W\\Gear_m1.5_N51.SLDPRT", ("G3 meshes G4", "G4 on S3 Axis",
                                                                         "G4 along S3"))
 
@@ -135,7 +131,7 @@ from gear_generator.swbuild import (PROBLEM_CONFIGURATION, PROBLEM_MODE_SHOWING,
                                     MateRef, NewMate, Placement, UserWorkRefused)
 
 from test_swbuild import (IDENTITY9, LOCKS, MATE_REFS, MESHES, P17, P51, T_ASM, TC_ASM, TC_MODES,  # noqa: E402,F401
-                          _built_train, _key, _motion, _rot_z, _tc_motion, _train_frames, _train_placements,
+                          _built_train, _key, _motion, _tc_motion, _train_frames, _train_placements,
                           _update_train, mode_findings, names, tc_built)
 
 WRITES = ("set_global_variable", "add_global_variable", "place_component", "rebuild", "set_mate_suppressed",
@@ -352,3 +348,263 @@ def test_ruling_9_1_a_new_coupling_on_in_no_mode_is_a_fault(tc_built, measured):
     with pytest.raises(swbuild.BuildError, match=r"on in no configuration \(ruling 9.1\)"):
         _tc_in_place(fake, built, InPlace(new_mates=(new,)))
     assert fake.calls == []
+
+
+TC_HUB = "C:\\TC\\Hub_m1.5_N30.SLDPRT"
+HUB_OPS = (ops.AddComponent("gear10", TC_HUB, (0.0, 0.0, 30.0)), ops.Place("gear10", IDENTITY9, (0.0, 0.0, 30.0)),
+           ops.Mate("axis10", "coincident", "gear10:Gear Axis", "layout:Rear Axis", name="Hub on Rear Axis"),
+           ops.Mate("along10", "point distance", "gear10:origin", "layout:plane1", 30.0, name="Hub along Rear"),
+           ops.Mate("spline10", "gear", "gear7:Gear Axis", "gear10:Gear Axis", name="RangeSlv splined to Hub"))
+HUB_REFS = (MateRef("Hub on Rear Axis", "axis", ("Hub",), "Rear"), MateRef("Hub along Rear", "along", ("Hub",), "Rear"),
+            MateRef("RangeSlv splined to Hub", "spline", ("RangeSlv", "Hub")))
+
+
+def _with_hub(built):
+    """The worker's side of a hub that becomes its shaft's anchor (J9, motion._sliding_shaft): its part new, its axis
+    and along, and RangeSlv's spline to it, on in every mode."""
+    from test_swbuild import plan
+    motion, placements = _tc_motion(built, "2H")
+    hub = Placement("Hub", "", IDENTITY9, (0.0, 0.0, 30.0), 12.0)
+    added = AddedGear("Hub", "gear10", TC_HUB, build=plan(path=TC_HUB), ops=HUB_OPS,
+                      handles=(("layout", "layout-1"), ("gear7", "gear7-1")),
+                      senses=(("RangeSlv splined to Hub", True),), refs=HUB_REFS)
+    changes = dict(locks=motion.locks + (LockLink("Hub", "RangeSlv", 12.0),),
+                   mode_placements=tuple((m, frames + (hub,)) for m, frames in motion.mode_placements))
+    return added, list(placements) + [hub], changes
+
+
+def test_a_hub_with_its_new_part_is_built_first_inserted_in_the_active_mode_and_on_in_every_mode(tc_built, measured):
+    fake, built = tc_built
+    added, placements, changes = _with_hub(built)
+    motion, _ = _tc_motion(built, "2H")
+    result = swbuild.update_gearbox(fake, assembly=TC_ASM, placements=placements,
+                                    motion=replace(motion, layout_component="layout-1", **changes), exists=fake.exists,
+                                    mtime=lambda _p: 0.0, in_place=InPlace(added=(added,)))
+    assert result.ok, (result.failures, result.skipped)
+    assert [b.saved for b in result.built] == [TC_HUB] and result.inserted == [("Hub", "gear10-1")]
+    assert result.mates_made == [(name, TC_MODES) for name in ("Hub on Rear Axis", "Hub along Rear",
+                                                                "RangeSlv splined to Hub")]
+    assert all(not f for f in fake.mate("RangeSlv splined to Hub", TC_ASM).flags.values())
+    assert result.not_resolved == [] and [m.name for m in result.modes] == ["4H", "N", "4L", "2H"]
+    called = names(fake)
+    assert called.index("save_as") < called.index("add_component")      # built and saved before the insert
+    opened = [a[0] for n, a in fake.calls[:called.index("add_component")] if n == "open_document"]
+    assert opened[-2:] == [TC_HUB, TC_ASM]           # the part open, as an insert takes it, then the assembly again
+
+
+def test_a_component_inserted_that_reads_lightweight_in_a_mode_is_a_failure_with_its_facts(tc_built, measured):
+    fake, built = tc_built
+    added, placements, changes = _with_hub(built)
+    fake.component_states["gear10-1"] = 1
+    motion, _ = _tc_motion(built, "2H")
+    result = swbuild.update_gearbox(fake, assembly=TC_ASM, placements=placements,
+                                    motion=replace(motion, layout_component="layout-1", **changes), exists=fake.exists,
+                                    mtime=lambda _p: 0.0, in_place=InPlace(added=(added,)))
+    assert not result.ok and result.not_resolved == [("Hub", "2H", 1)]
+    assert result.inserted == [("Hub", "gear10-1")]                       # done, and said
+    assert "making the mate" not in result.skipped and "putting the gears back" in result.skipped
+
+
+ENGAGE = NewMate(ops.Mate("c9", "gear", "gear8:Gear Axis", "gear2:Gear Axis", name="ModeSlv engages InDog"),
+                 (("gear8", "gear8-1"), ("gear2", "gear2-1")), ("N",), True,
+                 MateRef("ModeSlv engages InDog", "couple", ("ModeSlv", "InDog"), modes=("N",)))
+
+
+def test_a_new_coupling_is_made_in_the_first_mode_it_is_on_in_with_its_flag_set_in_every_mode(tc_built, measured):
+    fake, built = tc_built
+    motion, _ = _tc_motion(built, "2H")
+    link = swbuild.MeshLink("ModeSlv", "InDog", 1.0, 12.0, modes=("N",))
+    result = _tc_in_place(fake, built, InPlace(new_mates=(ENGAGE,)), meshes=motion.meshes + (link,))
+    assert result.ok, (result.failures, result.skipped)
+    assert result.mates_made == [("ModeSlv engages InDog", ("N",))]
+    assert fake.mate("ModeSlv engages InDog", TC_ASM).flags == {"2H": True, "4H": True, "N": False, "4L": True}
+    called = fake.calls
+    made = next(i for i, (n, _) in enumerate(called) if n == "add_mate")
+    shown = [a[0] for n, a in called[:made] if n == "show_configuration"]
+    assert shown == ["N"] and fake.config == "2H"
+
+
+# -- a tooth change on a gearbox with modes (lifting ruling 9.16 behind its gate) ----------------------------------------
+
+@pytest.fixture
+def t_with_modes(mode_findings, monkeypatch):
+    """The 12 : 1 with a second configuration L beside Default, both modes, the remake's findings as measured."""
+    for name, value in (("GEAR_MATE_RATIO_ROUTE", "remake"), ("GEAR_MATE_RATIO_REMAKE_WORKS", True),
+                        ("GEAR_MATE_DEFINITION_READS_NUMERATOR_SECOND", True)):
+        monkeypatch.setattr(findings, name, value, raising=False)
+    fake = _built_train()
+    fake.open_document(T_ASM)
+    fake.add_configuration("L")
+    fake.rebuild(kind=swcom.ASSEMBLY_TRAIN)
+    fake.show_configuration("Default")
+    fake.calls.clear()
+    return fake
+
+
+def test_a_tooth_change_with_modes_is_refused_by_name_until_its_gate_is_measured(t_with_modes):
+    fake = t_with_modes
+    with pytest.raises(swbuild.BuildError) as raised:
+        _update_train(fake, motion=_motion(configurations=("Default", "L"), ratios=(("G3 meshes G4", 18, 50),)))
+    assert "(findings.UPDATE_MAKES_MATES_WITH_MODES_ON_2026 is None), so nothing is changed" in str(raised.value)
+    assert _writes(fake) == []
+    assert swbuild.in_place_gates(InPlace(), Y26, modes=True, remakes=True)[0][1] == \
+        "UPDATE_MAKES_MATES_WITH_MODES_ON_2026"                         # the footer foresees it the same way
+
+
+def test_a_tooth_change_with_modes_is_remade_in_a_mode_and_read_back_in_every_configuration(t_with_modes, measured):
+    fake = t_with_modes
+    result = _update_train(fake, motion=_motion(configurations=("Default", "L"), ratios=(("G3 meshes G4", 18, 50),)))
+    assert result.ok, (result.failures, result.skipped)
+    assert result.remade_in_modes == ["G3 meshes G4"] and result.ratios == ["G3 meshes G4"]
+    mate = fake.mate("G3 meshes G4", T_ASM)
+    assert mate.ratio == (18.0, 50.0) and mate.flags == {"Default": False, "L": False}
+    assert [m.name for m in result.modes] == ["L", "Default"] and result.senses_unread == []
+
+
+# -- bands in place (§2.4; ruling C8) ---------------------------------------------------------------------------------
+
+from gear_generator.gears import clutch  # noqa: E402
+
+RELIEF_FEATURES = (clutch.RELIEF_START_PLANE, clutch.RELIEF_END_PLANE, clutch.RELIEF_START_SKETCH,
+                   clutch.RELIEF_END_SKETCH, clutch.RELIEF)
+
+
+def _p17(made_extra=()):
+    from test_swbuild import S17, _values, plan
+    made = tuple(swbuild.plan_features(plan(S17, path=P17))) + tuple(made_extra)
+    return swbuild.DocumentValues(P17, _values(S17), made=made)
+
+
+def _bands_given():
+    globals_ = [ops.AddGlobal(v.name, v.expression) for v in clutch.relief_globals((3.0, 2.0))]
+    return swbuild.BandChange("G3", P17, True, tuple(globals_) + tuple(clutch.relief_ops(10.0, (3.0, 2.0), 28.5)),
+                              RELIEF_FEATURES)
+
+
+def test_bands_given_in_place_land_after_the_users_feature_which_is_kept(measured):
+    fake = _built_train()
+    fake.user_feature(P17, "Groove")
+    result = _update_train(fake, parts=[_p17(RELIEF_FEATURES)], in_place=InPlace(bands=(_bands_given(),)))
+    assert result.ok, (result.failures, result.skipped)
+    assert result.bands_added == ["G3"] and P17 in result.changed
+    held = fake.memory[_key(P17)][1]
+    assert held[-len(RELIEF_FEATURES):] == list(RELIEF_FEATURES)
+    assert [f.name for f in result.user_work.features] == ["Groove"] and fake.user_features[_key(P17)] == [
+        ("Groove", "ICE")]
+    assert any(v.startswith('"Start Band"') for v in fake.memory[_key(P17)][0])
+    called = names(fake)
+    assert called.index("loft_cut") < called.index("open_document", called.index("loft_cut"))   # before the assembly
+    assert "save_as" not in called                                      # an Update saves nothing
+
+
+def test_bands_taken_away_in_place_suppress_the_relief_and_keep_the_users_feature(measured):
+    fake = _built_train()
+    for kept in (fake.saved, fake.memory):                     # bands given before, so the relief is in the part
+        kept[_key(P17)][1].extend(f for f in RELIEF_FEATURES if f not in kept[_key(P17)][1])
+    fake.user_feature(P17, "Groove")
+    taken = swbuild.BandChange("G3", P17, False, (), (clutch.RELIEF,))
+    result = _update_train(fake, parts=[_p17(RELIEF_FEATURES)], in_place=InPlace(bands=(taken,)))
+    assert result.ok, (result.failures, result.skipped)
+    assert result.bands_removed == ["G3"] and fake.suppressed_features == {(_key(P17), clutch.RELIEF): True}
+    assert fake.user_features[_key(P17)] == [("Groove", "ICE")]
+
+
+def test_bands_on_a_part_that_fails_stop_the_job_before_the_assembly_saying_so(measured):
+    fake = _built_train(fail_on={"loft_cut": "SolidWorks would not make the loft cut Relief."})
+    result = _update_train(fake, parts=[_p17(RELIEF_FEATURES)], in_place=InPlace(bands=(_bands_given(),)))
+    assert not result.ok and result.bands_added == []
+    assert result.failures[0][0] == "Gear_m1.5_N17.SLDPRT" and "Relief" in result.failures[0][1]
+    assert result.skipped == "the assembly, because Gear_m1.5_N17.SLDPRT failed"
+    assert "add_component" not in names(fake) and T_ASM not in result.changed
+
+
+# -- every gate None refuses before any write, by name ---------------------------------------------------------------
+
+@pytest.mark.parametrize("gate, step", [("UPDATE_ADDS_A_MODE", "add"), ("UPDATE_REMOVES_A_MODE", "remove"),
+                                         ("UPDATE_MAKES_MATES_WITH_MODES", "mate")])
+def test_with_modes_each_gate_not_measured_refuses_before_any_write_naming_its_finding(tc_built, measured, monkeypatch,
+                                                                                      gate, step):
+    monkeypatch.setattr(findings, f"{gate}_ON_2026", None)
+    fake, built = tc_built
+    motion, _ = _tc_motion(built, "2H")
+    if step == "add":
+        in_place, changes = InPlace(modes_added=("2L",)), _with_2l(built)
+    elif step == "remove":
+        in_place, changes = InPlace(modes_removed=("N",)), _without_n(built)
+    else:
+        link = swbuild.MeshLink("ModeSlv", "InDog", 1.0, 12.0, modes=("N",))
+        in_place, changes = InPlace(new_mates=(ENGAGE,)), dict(meshes=motion.meshes + (link,))
+    with pytest.raises(UserWorkRefused) as raised:
+        _tc_in_place(fake, built, in_place, **changes)
+    assert [(p.kind, p.subjects) for p in raised.value.problems] == [(PROBLEM_UNSETTLED, (f"{gate}_ON_2026",))]
+    assert f"(findings.{gate}_ON_2026 is None)" in raised.value.problems[0].sentence
+    assert _writes(fake) == []
+
+
+def test_bands_refuse_before_any_write_while_their_gate_is_not_measured():
+    fake = _built_train()
+    with pytest.raises(UserWorkRefused) as raised:
+        _update_train(fake, parts=[_p17(RELIEF_FEATURES)], in_place=InPlace(bands=(_bands_given(),)))
+    assert [p.subjects for p in raised.value.problems] == [("UPDATE_BANDS_IN_PLACE_ON_2026",)]
+    assert _writes(fake) == []
+
+
+def test_on_2024_a_removal_reads_only_its_update_gates_none_while_the_delete_route_is_set(measured, monkeypatch):
+    fake = _built_train()
+    fake.revision = (32, 5, 0)
+    monkeypatch.setattr(findings, "EXTERNAL_REFERENCES_READ_ON_2024", True)
+    result = _update_train(fake, in_place=InPlace(removed=(REMOVE_T_G4,)), **_without_g4())
+    assert result.ok and result.deleted == [("G4", "gear4-1")]                  # P1 read the same on 2024
+
+
+# -- a failure half-way says exactly what was and was not done ----------------------------------------------------------
+
+def test_a_failure_half_way_says_what_was_done_and_what_was_not(tc_built, measured):
+    fake, built = tc_built
+    fake.raises = {"add_configuration": (fake.counts.get("add_configuration", 0) + 1,
+                                         swcom.SolidWorksError("SolidWorks would not add the configuration 2L."))}
+    changes = _with_2l(built)
+    changes["configurations"] = tuple(m for m in changes["configurations"] if m != "N")
+    changes["mode_placements"] = tuple(x for x in changes["mode_placements"] if x[0] != "N")
+    result = _tc_in_place(fake, built, InPlace(modes_removed=("N",), modes_added=("2L",)), **changes)
+    assert not result.ok
+    assert result.modes_removed == ["N"] and result.modes_added == []
+    assert result.failures == [("TransferCase.SLDASM", "SolidWorks would not add the configuration 2L.")]
+    assert result.skipped == ("adding the configuration 2L and putting the gears back and checking the assembly, "
+                              "because the job stopped in TransferCase.SLDASM")
+    assert TC_ASM in result.changed and fake.config == "2H"
+
+
+# -- nothing of the user's is written (W9a's fake fails a test on any write to a user item) ----------------------------
+
+def test_nothing_of_the_users_is_written_while_a_gear_is_inserted_and_a_mode_added(tc_built, measured):
+    fake, built = tc_built
+    _housing(fake)
+    fake.user_component(TC_ASM, "Sprocket-9", "C:\\U\\Sprocket.SLDPRT", (IDENTITY9, (0.0, 0.0, 200.0)))
+    fake.user_lock(TC_ASM, "UserLock9", "Housing-1", "Sprocket-9")
+    added, placements, changes = _with_hub(built)
+    two_l = _with_2l(built)
+    hub = placements[-1]
+    two_l["mode_placements"] = tuple((m, frames + ((hub,) if m == "2L" else ()))
+                                     for m, frames in two_l["mode_placements"])
+    changes.update(configurations=two_l["configurations"], slide_values=two_l["slide_values"],
+                   mode_placements=tuple((m, f + ((hub,) if m != "2L" else ())) for m, f in two_l["mode_placements"]))
+    motion, _ = _tc_motion(built, "2H")
+    result = swbuild.update_gearbox(fake, assembly=TC_ASM, placements=placements,
+                                    motion=replace(motion, layout_component="layout-1", **changes), exists=fake.exists,
+                                    mtime=lambda _p: 0.0, in_place=InPlace(added=(added,), modes_added=("2L",)))
+    assert result.ok, (result.failures, result.skipped)
+    assert fake.user_puts == [] and {"UserFlush", "UserLock9"} <= {m.name for m in fake.memory_mates[_key(TC_ASM)]}
+    assert result.mates_made == [(name, TC_MODES + ("2L",)) for name in ("Hub on Rear Axis", "Hub along Rear",
+                                                                          "RangeSlv splined to Hub")]
+
+
+def test_a_failure_in_another_mode_shows_the_active_mode_again(tc_built, measured):
+    fake, built = tc_built
+    motion, _ = _tc_motion(built, "2H")
+    link = swbuild.MeshLink("ModeSlv", "InDog", 1.0, 12.0, modes=("N",))
+    fake.fail_on = {"add_mate": "SolidWorks would not make the mate ModeSlv engages InDog."}
+    result = _tc_in_place(fake, built, InPlace(new_mates=(ENGAGE,)), meshes=motion.meshes + (link,))
+    assert result.failures == [("TransferCase.SLDASM", "SolidWorks would not make the mate ModeSlv engages InDog.")]
+    assert result.mates_made == [] and fake.config == "2H"
+    assert result.skipped.startswith("making the mate ModeSlv engages InDog and putting the gears back")

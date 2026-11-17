@@ -6034,12 +6034,14 @@ def _in_place_assembly(sw: SolidWorks, result: GearboxUpdate, assembly: str, in_
 
     gear_of_name = {p.component: p.gear for p in placements if p.component}
     planned = {p.gear: p for p in placements}
+    pending: List[str] = []                  # mates made whose flags are not yet set and read back
 
     def make(op: base.Mate, gear_of: Mapping[str, str], same: Optional[bool]) -> Tuple[str, Dict[str, str]]:
         """One mate made as the build makes it (``add_mate``), a gear mate's sense read straight after where it is
         settled and made again with the other Flip when wrong (the build's :func:`_settle_sense`)."""
         extra = {"ratio": op.ratio, "flip": op.flip} if op.kind == "gear" else {}
         kept, dim = sw.add_mate(op.id, op.kind, op.a, op.b, op.value, op.name, **extra)
+        pending.append(kept)
         dims = {f"D1@{op.name or op.id}": f"{dim}@{kept}"} if op.kind in base.VALUED_MATES and dim else {}
         if op.kind == "gear" and same is not None and _senses_readable():
             ga, gb = gear_of.get(op.a.partition(":")[0], ""), gear_of.get(op.b.partition(":")[0], "")
@@ -6180,12 +6182,13 @@ def _in_place_assembly(sw: SolidWorks, result: GearboxUpdate, assembly: str, in_
                     dims.update(more)
                     made.append((kept, op.id, op))
             rebuild()
-            resolved_here([(gear.gear, inserted)], active)
             for kept, h, op in made:
                 on = tuple(on_sets.get(op.name, on_sets.get(kept, ())))
                 reads_on = flags(h, kept, on)
                 result.mates_made.append((kept, reads_on))
+                pending.remove(kept)
                 mates.append(_in_place_mate_ref(op, kept, gears_named(op, gear_of), gear.refs, on))
+            resolved_here([(gear.gear, inserted)], active)
             todo.remove(f"inserting {gear.gear}")
         # 3.5 new couplings and sliding meshes, each made in the first mode it is on in, shown
         for new in in_place.new_mates:
@@ -6198,6 +6201,7 @@ def _in_place_assembly(sw: SolidWorks, result: GearboxUpdate, assembly: str, in_
             kept, _ = make(new.op, gear_of, new.same_way)
             rebuild()
             result.mates_made.append((kept, flags(new.op.id, kept, tuple(new.on))))
+            pending.remove(kept)
             given = (new.ref,) if new.ref is not None else ()
             mates.append(_in_place_mate_ref(new.op, kept, gears_named(new.op, gear_of), given, tuple(new.on)))
             todo.remove(f"making the mate {new.op.name or new.op.id}")
@@ -6243,7 +6247,17 @@ def _in_place_assembly(sw: SolidWorks, result: GearboxUpdate, assembly: str, in_
                 todo.remove(f"making the gear mate {name} again")
             show(active)
     except Exception:
+        # No half-change unsaid (the plan's rule from W8): a mate made before its flags were set is listed with no
+        # configuration read, and everything not reached is said.
+        result.mates_made.extend((name, ()) for name in pending)
         result.skipped = f"{_and(todo)}, because the job stopped in {file}"
+        if state is not None:            # the mode that was active shown again, as W8's path ends whatever happened
+            try:
+                if not on_in((active,), str(sw.active_configuration())):
+                    sw.show_configuration(active)
+                    sw.rebuild(kind=ASSEMBLY_TRAIN)
+            except Exception as exc:  # noqa: BLE001 - said: which configuration is left active
+                result.failures.append((file, f"Update SolidWorks could not show {active} again ({_said(exc)})"))
         raise
     return placements, replace(motion, mates=tuple(mates))
 
