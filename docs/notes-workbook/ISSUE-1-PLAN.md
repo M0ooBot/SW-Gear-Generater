@@ -1034,3 +1034,32 @@ this section keeps what was planned before the run.
   will save an assembly holding the user's components, must resolve or refuse lightweight components before it
   saves.
 
+## Changes after SolidWorks 2024's confirming runs and their review
+
+2026-11-17. Against 2024's confirming set and the two measurements of its What's Wrong box
+(`probe/results/sw2024/w9a-confirm-sw2024-20261117-*.log`, `w9a-box-sw2024-20261117-*.log`) and their review
+(`W9A-CLOSE-2024-REVIEW.md`, `8e984e2`). This supersedes, for SolidWorks 2024, the sentence in the section above
+that says the Update stops there as before.
+
+- **SolidWorks 2024 shows What's Wrong during an Update when something of the user's is in error; the app leaves
+  it alone** (the coordinating session's ruling, on the measurements, put to the user as the default they may
+  change). With "show errors every rebuild" on, as found, the box came up in every such Update run on 2024 and in
+  the steps where the script did what a person does (activating the assembly with a feature in error in a part);
+  on 2026 none opens. Watched without being answered: a popup owned by SolidWorks' frame, the frame enabled, a read
+  on a second connection answering with it up, the box gone by itself after 3 to 23 s, every job returning with its
+  results as they should be. So the app does not suppress it, changes no SolidWorks setting and does not refuse for
+  it; it says, before the press and after one that changed something, that the box may show and needs no answer.
+  §0.3's STOP on any dialog stands for every other window, and for a What's Wrong that blocks: the gate reads
+  `WHATS_WRONG_IN_UPDATE_BLOCKS_ON_<year>`, False on both versions, and a version where it is unmeasured keeps the
+  failure.
+- **M3 is answered on 2024 as on 2026**, and the worker's rule of the section above holds there: an Update goes
+  ahead over the user's mates in error, over a feature in error in the user's own part, and over the user's
+  feature in an app part rebuilt into error, naming them; a carried component in error refuses before any write.
+- **Not measured on 2024, and so not relied on:** a person pressing FeatureXpert or the box's own checkbox while an
+  Update runs; a box that outlives its job (never seen); a Build with the user's work in error; the mate case on a
+  gearbox without modes; other kinds of mate error; a box longer than 23 s; "show errors every rebuild" off. The
+  alternative ruling, the app turning that setting off for its job and setting it back, was not measured either and
+  would need the user's word, since a session that ends mid-job would leave their setting changed.
+- **Route (c1) on a train with no carrier is measured on 2024 too** (`USER_MATE_PUT_NO_CARRIER_ON_2024` True, the
+  12 : 1 without modes).
+
