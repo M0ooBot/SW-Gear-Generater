@@ -535,3 +535,49 @@ back and checking the assembly"*.
   A give that is not `back` finding the relief there still refuses by name (F1). **B's tests** that patch only the five
   gates before the split (`GATES` in `test_workbook_in_place_round_trip.py`) need the two new names where a coupling is
   made or bands are taken away.
+
+### From B (the second joining round): what the record holds after each refusal and each stop, and one ask of A
+
+**What B now sends.** The footer's foresight judges an added mode as the press does: `swbuild.work_in_added_modes` on
+the recorded inventory, copying the gearbox's first mode (the record holds no mode showing; it is the mode the
+assembly was built and saved in, and every Update shows it again). The gate sentence words the two new steps: *make a
+coupling or sliding mesh between gears already in the assembly and set its flag in each mode*
+(`UPDATE_MAKES_A_NEW_COUPLING`) and *suppress a sleeve's relief to take its bands away, or turn it back on to give them
+back* (`UPDATE_SUPPRESSES_THE_RELIEF`). `make a mate` now reads *make a gear mate in an assembly with modes again …*,
+and `bands in place` reads *give a built sleeve its bands in its own part*. `BandChange.back` is set where bands are
+given to a sleeve whose `.gear.json` lists `Relief` (an earlier Update took the bands away, ruling C8). Its `ops` are
+then the band globals alone, and its `features` are `("Relief",)`. `InPlace.left` is `GearboxRecord.left` (below).
+
+**What the record holds, for the demonstration script to check:**
+- **A refusal before any write raised as `UserWorkRefused`** (W9a's kinds, `unsettled` from an in-place gate,
+  `removed`, `references`, `configuration`, `global`): `gearbox.user_work` is the inventory the press read, with
+  `digest` the press's workbook, `revision` its SolidWorks, and `problems` every problem said. Each problem keeps its
+  `kind`, `sentence`, `mates`, `values` and now `subjects` (`UserProblemEntry.subjects`, additive). Nothing else on
+  the record changes. The footer says *Update SolidWorks refused at hh:mm, before changing anything: …* until the
+  workbook changes or the next press reads again.
+- **The mode-showing refusal** (`user_work` None, nothing of the user's read): the inventory on record is kept as it
+  was (its `components`, `mates`, `features`, `carried`). Its `read_at` becomes the refusal's time, and `digest`,
+  `revision` and `problems` (one, kind `mode showing`, `subjects` `["2H"]`) are the refusal's. With no inventory on
+  record, an empty one carries them: `components`, `mates`, `features` and `carried` all `[]`, which claims nothing
+  of the user's, and the next press reads it all. Either way it is said as every other refusal is.
+- **A press that stopped part way**: the record holds what was done. Each new part built and saved (`result.built`)
+  is a `PartEntry` (`gears` the gear it was built for) with its `.gear.json`, whether or not it was inserted.
+  Bands given or taken are in the sleeve's spec. A gear inserted is a `ComponentEntry`, and each mate made is on
+  record with its on-set. `gearbox.left` holds the names of each global the press added (`globals_added`) and each
+  configuration it added (`modes_added`), as the app's leftovers. A configuration added by a press that stopped is
+  not in `gearbox.modes` (it is in `left`); the next press adds it again and the worker goes on from it. The next
+  press hands `left` as `InPlace.left` and the part as an `AddedGear` with `build` None. `left` is `[]` once a press
+  runs to its end. A new part's file on disk that no record holds still refuses, with the footer's sentence before
+  the press.
+- **A gear inserted whose mates were not made** is Build again…, by name (B's sentence, as before).
+
+**One ask of A (xfail `test_a_tooth_change_refused_by_its_gate_is_recorded_as_every_other_refusal_before_a_write`).**
+The refusal of a gear mate remade with modes while `UPDATE_MAKES_MATES_WITH_MODES_ON_<year>` is not True is raised as
+a `BuildError`. So the window shows it as a failure, the record keeps no refusal of it, and after the press it is said
+differently from every other gate. Every other in-place gate is a `UserWorkRefused` with `PROBLEM_UNSETTLED`. B asks
+the worker to raise this one the same way: `UserWorkRefused([UserProblem(PROBLEM_UNSETTLED, <its sentence>,
+subjects=("UPDATE_MAKES_MATES_WITH_MODES_ON_2026",))], work)`, with the work it read (or None if raised before
+reading). B records and says it then with no change. The other refusals before a write that are still `BuildError`s
+can stay so. A new part's file already on disk is foreseen from the record and said before the press every time. A
+relief already made, or one no longer in the part, is a state of the part the footer cannot read, and Build again…
+is what its sentence offers.
