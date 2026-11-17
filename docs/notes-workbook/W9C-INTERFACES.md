@@ -760,6 +760,19 @@ record's problems by kind, so the second `unsettled` overwrites the first's subj
   (`swbuild._held_in_error`): a failure naming the file as a whole, `skipped` naming what was not done. The user's own
   features in error never stop it. `Finished.still_in_error` is now given whether or not the press failed, and a
   stop on such a part alone is said by the still-in-error sentence and nothing else.
+- **The review of the M3 fix, (ii) and (iii).** A marked document whose check-phase read was made and found nothing
+  of the app's in error and nothing unread (repaired in SolidWorks, say) is returned in `GearboxUpdate.read_clean`, and
+  `finish_update` drops its mark, so it is never called still in error; an empty or unread read keeps the mark. A stop
+  beside a document still in error counts it as left in error where it words what was not saved, so it says to close
+  them all without saving, never to save.
+- **Known caveat, for after W9c: an unmarked part with an app feature in error, which the press leaves alone.** It
+  is older behaviour, pinned by W9a's tests, and in no demonstrated path: the press writes into the assembly and fails
+  there, on the assembly's rebuild, with a save offer. The later fix: where
+  `ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_<year>` is False (the assembly's rebuild then reads false, as on
+  2026 and 2024), stop before any write on any document whose
+  check-phase read has an app feature in error, with a sentence that names the part and the feature and says to put
+  it right, or to close it without saving if an Update did it; never "close without saving" alone, since no record
+  vouches that the file is good.
 - **S6. `UserWorkEntry.modes` lists only the modes a read covered:** the plan's configurations less those it adds
   (`update.modes_read`), plus each added mode on record whose flags the worker read (`took_active_state`). A mode a
   stopped press failed to delete is not named there, so the footer judges it as a copy.

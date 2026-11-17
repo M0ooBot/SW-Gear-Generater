@@ -1413,8 +1413,10 @@ documents not saved says the same (*… and Gear_m1.25_N29 was left in error whe
 stopped: close it in SolidWorks without saving (the file on disk is as before that
 Update), then press Update SolidWorks again.*), never to save them, until they are
 found closed or saved, or a later press changes the failed part again (its values,
-or a sleeve's bands) with nothing of the app's in error there; the user's own
-features in error do not keep the warning. A press made without closing them sets
+or a sleeve's bands) with nothing of the app's in error there, or reads it repaired
+(nothing of the app's in error and nothing unread); the user's own features in error
+do not keep the warning. A stop that comes while such a part is still open says to
+close it with everything the press changed, never to save them. A press made without closing them sets
 nothing in them, and says so in place of *SolidWorks already matches the workbook*,
 keeping whatever the status says after it; where SolidWorks still reads a feature of
 the app's in error there, the press stops before writing anything at all (the
