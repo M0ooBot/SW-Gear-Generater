@@ -1,0 +1,5024 @@
+{
+ "sections": {
+  "carry-closed": {
+   "copy_refusal": "RangeBox.SLDASM is not open in SolidWorks, and Gear Generator reads it then only when it and every file it uses were last saved by this SolidWorks (a file saved since on another SolidWorks, or one not found or not read, is not read)",
+   "question": "Aux is new on Aux, which is new too, and Update SolidWorks adds a gear only on a shaft the layout part has, so the gearbox needs building again. Shaft Aux is new, and the layout part has no axis for it. Gear_m1.25_N29 (Sun): Flank changed from involute to arcs, which its values cannot carry, so it needs a new part. Build again as RangeBox_r2? That makes new parts for Sun (Gear_m1.25_N29_r2) and Aux (Gear_m1.25_N20), reuses 4 parts that have not changed and makes a new layout part, carrier part and assembly (RangeBox_r2_Layout, RangeBox_r2_Carrier_Carrier and RangeBox_r2.SLDASM). Nothing is overwritten, and RangeBox.SLDASM stays as it is on disk, but it shares the 4 reused parts: a later Update SolidWorks that changes one of them changes RangeBox.SLDASM too. As read at 15:56, RangeBox_r2 takes your Chain-1, Sprocket-3, Sprocket-4 and 14 other components and makes your 26 mates again in the modes each was on in. UserSunFace was on a face of Sun, and Sun's part is new because its Flank changed, so it is not made again. SolidWorks would not describe UserGear6 wholly (its gear ratio could not be read), so it is not made again. SolidWorks would not describe UserAxis9 wholly, so it is not made again. UserGearRoot was on a face of Sun, and Sun's part is new because its Flank changed, so it is not made again. UserGearFillet was on a face of Sun, and Sun's part is new because its Flank changed, so it is not made again. Sprocket-9 was suppressed in the mode RangeBox.SLDASM showed, as read: show a mode where it is resolved before you press, or it may not be carried. Your User Keyway Sketch and User Keyway stay in Gear_m1.25_N29, which Sun's new part replaces (its Flank changed). RangeBox_r2 holds what it carries unsaved. If RangeBox.SLDASM is closed, open it first unless this SolidWorks last saved it and its files, those files are where it says, and nothing of yours is open. Assembly features, display states and appearances stay behind; sub-assemblies come over rigid, pattern instances as components of their own.",
+   "seconds": 763,
+   "calls": [
+    [
+     "OpenDoc6",
+     "RangeBox.SLDASM"
+    ],
+    [
+     "QuitDoc",
+     "RangeBox.SLDASM"
+    ],
+    [
+     "OpenDoc6",
+     "Gear_m1.25_N13.SLDPRT"
+    ],
+    [
+     "ActivateDoc3",
+     "Gear_m1.25_N13.SLDPRT"
+    ],
+    [
+     "OpenDoc6",
+     "Ring_m1.25_N55.SLDPRT"
+    ],
+    [
+     "ActivateDoc3",
+     "Ring_m1.25_N55.SLDPRT"
+    ],
+    [
+     "OpenDoc6",
+     "Dog_m1.25_N17.SLDPRT"
+    ],
+    [
+     "ActivateDoc3",
+     "Dog_m1.25_N17.SLDPRT"
+    ],
+    [
+     "OpenDoc6",
+     "Sleeve_m1.25_N17.SLDPRT"
+    ],
+    [
+     "ActivateDoc3",
+     "Sleeve_m1.25_N17.SLDPRT"
+    ],
+    [
+     "ForceRebuild3",
+     "?"
+    ],
+    [
+     "SaveAs3",
+     "Gear_m1.25_N29_r2.SLDPRT"
+    ],
+    [
+     "ForceRebuild3",
+     "?"
+    ],
+    [
+     "SaveAs3",
+     "Gear_m1.25_N20.SLDPRT"
+    ],
+    [
+     "ForceRebuild3",
+     "?"
+    ],
+    [
+     "SaveAs3",
+     "RangeBox_r2_Layout.SLDPRT"
+    ],
+    [
+     "ForceRebuild3",
+     "?"
+    ],
+    [
+     "SaveAs3",
+     "RangeBox_r2_Carrier_Carrier.SLDPRT"
+    ],
+    [
+     "AddComponent5",
+     "?"
+    ],
+    [
+     "Transform2",
+     "?"
+    ],
+    [
+     "ForceRebuild3",
+     "?"
+    ],
+    [
+     "FixComponent",
+     "?"
+    ],
+    [
+     "AddComponent5",
+     "?"
+    ],
+    [
+     "Transform2",
+     "?"
+    ],
+    [
+     "ForceRebuild3",
+     "?"
+    ],
+    [
+     "FixComponent",
+     "?"
+    ],
+    [
+     "AddComponent5",
+     "?"
+    ],
+    [
+     "Transform2",
+     "?"
+    ],
+    [
+     "ForceRebuild3",
+     "?"
+    ],
+    [
+     "FixComponent",
+     "?"
+    ],
+    [
+     "AddComponent5",
+     "?"
+    ],
+    [
+     "Transform2",
+     "?"
+    ],
+    [
+     "ForceRebuild3",
+     "?"
+    ],
+    [
+     "FixComponent",
+     "?"
+    ],
+    [
+     "AddComponent5",
+     "?"
+    ],
+    [
+     "Transform2",
+     "?"
+    ],
+    [
+     "ForceRebuild3",
+     "?"
+    ],
+    [
+     "FixComponent",
+     "?"
+    ],
+    [
+     "AddComponent5",
+     "?"
+    ],
+    [
+     "Transform2",
+     "?"
+    ],
+    [
+     "ForceRebuild3",
+     "?"
+    ],
+    [
+     "FixComponent",
+     "?"
+    ],
+    [
+     "AddComponent5",
+     "?"
+    ],
+    [
+     "Transform2",
+     "?"
+    ],
+    [
+     "ForceRebuild3",
+     "?"
+    ],
+    [
+     "FixComponent",
+     "?"
+    ],
+    [
+     "AddComponent5",
+     "?"
+    ],
+    [
+     "Transform2",
+     "?"
+    ],
+    [
+     "ForceRebuild3",
+     "?"
+    ],
+    [
+     "FixComponent",
+     "?"
+    ],
+    [
+     "AddComponent5",
+     "?"
+    ],
+    [
+     "Transform2",
+     "?"
+    ],
+    [
+     "ForceRebuild3",
+     "?"
+    ],
+    [
+     "FixComponent",
+     "?"
+    ],
+    [
+     "AddComponent5",
+     "?"
+    ],
+    [
+     "Transform2",
+     "?"
+    ],
+    [
+     "ForceRebuild3",
+     "?"
+    ],
+    [
+     "FixComponent",
+     "?"
+    ],
+    [
+     "AddComponent5",
+     "?"
+    ],
+    [
+     "Transform2",
+     "?"
+    ],
+    [
+     "ForceRebuild3",
+     "?"
+    ],
+    [
+     "FixComponent",
+     "?"
+    ],
+    [
+     "UnfixComponent",
+     "?"
+    ],
+    [
+     "AddMate5",
+     "?"
+    ],
+    [
+     "AddMate5",
+     "?"
+    ],
+    [
+     "UnfixComponent",
+     "?"
+    ],
+    [
+     "AddMate5",
+     "?"
+    ],
+    [
+     "UnfixComponent",
+     "?"
+    ],
+    [
+     "AddMate5",
+     "?"
+    ],
+    [
+     "AddMate5",
+     "?"
+    ],
+    [
+     "UnfixComponent",
+     "?"
+    ],
+    [
+     "AddMate5",
+     "?"
+    ],
+    [
+     "UnfixComponent",
+     "?"
+    ],
+    [
+     "AddMate5",
+     "?"
+    ],
+    [
+     "AddMate5",
+     "?"
+    ],
+    [
+     "UnfixComponent",
+     "?"
+    ],
+    [
+     "AddMate5",
+     "?"
+    ],
+    [
+     "AddMate5",
+     "?"
+    ],
+    [
+     "UnfixComponent",
+     "?"
+    ],
+    [
+     "AddMate5",
+     "?"
+    ],
+    [
+     "AddMate5",
+     "?"
+    ],
+    [
+     "UnfixComponent",
+     "?"
+    ],
+    [
+     "AddMate5",
+     "?"
+    ],
+    [
+     "AddMate5",
+     "?"
+    ],
+    [
+     "UnfixComponent",
+     "?"
+    ],
+    [
+     "AddMate5",
+     "?"
+    ],
+    [
+     "AddMate5",
+     "?"
+    ],
+    [
+     "AddMate5",
+     "?"
+    ],
+    [
+     "AddMate5",
+     "?"
+    ],
+    [
+     "AddMate5",
+     "?"
+    ],
+    [
+     "AddMate5",
+     "?"
+    ],
+    [
+     "AddMate5",
+     "?"
+    ],
+    [
+     "ForceRebuild3",
+     "?"
+    ],
+    [
+     "ForceRebuild3",
+     "?"
+    ],
+    [
+     "ShowConfiguration2",
+     "?"
+    ],
+    [
+     "ForceRebuild3",
+     "?"
+    ],
+    [
+     "AddMate5",
+     "?"
+    ],
+    [
+     "SetSuppression2",
+     "?"
+    ],
+    [
+     "SetSuppression2",
+     "?"
+    ],
+    [
+     "ShowConfiguration2",
+     "?"
+    ],
+    [
+     "ForceRebuild3",
+     "?"
+    ],
+    [
+     "ShowConfiguration2",
+     "?"
+    ],
+    [
+     "ForceRebuild3",
+     "?"
+    ],
+    [
+     "AddMate5",
+     "?"
+    ],
+    [
+     "SetSuppression2",
+     "?"
+    ],
+    [
+     "SetSuppression2",
+     "?"
+    ],
+    [
+     "ShowConfiguration2",
+     "?"
+    ],
+    [
+     "ForceRebuild3",
+     "?"
+    ],
+    [
+     "ShowConfiguration2",
+     "?"
+    ],
+    [
+     "ForceRebuild3",
+     "?"
+    ],
+    [
+     "ShowConfiguration2",
+     "?"
+    ],
+    [
+     "ForceRebuild3",
+     "?"
+    ],
+    [
+     "ShowConfiguration2",
+     "?"
+    ],
+    [
+     "ForceRebuild3",
+     "?"
+    ],
+    [
+     "SaveAs3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ShowConfiguration2",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ShowConfiguration2",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ShowConfiguration2",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ShowConfiguration2",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "OpenDoc6",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ActivateDoc3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ShowConfiguration2",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "OpenDoc6",
+     "Sprocket.SLDPRT"
+    ],
+    [
+     "ActivateDoc3",
+     "Sprocket.SLDPRT"
+    ],
+    [
+     "OpenDoc6",
+     "Housing.SLDPRT"
+    ],
+    [
+     "ActivateDoc3",
+     "Housing.SLDPRT"
+    ],
+    [
+     "OpenDoc6",
+     "Sprocket.SLDPRT"
+    ],
+    [
+     "ActivateDoc3",
+     "Sprocket.SLDPRT"
+    ],
+    [
+     "OpenDoc6",
+     "Sprocket.SLDPRT"
+    ],
+    [
+     "ActivateDoc3",
+     "Sprocket.SLDPRT"
+    ],
+    [
+     "OpenDoc6",
+     "Chain.SLDPRT"
+    ],
+    [
+     "ActivateDoc3",
+     "Chain.SLDPRT"
+    ],
+    [
+     "OpenDoc6",
+     "Sprocket.SLDPRT"
+    ],
+    [
+     "ActivateDoc3",
+     "Sprocket.SLDPRT"
+    ],
+    [
+     "OpenDoc6",
+     "Sprocket.SLDPRT"
+    ],
+    [
+     "ActivateDoc3",
+     "Sprocket.SLDPRT"
+    ],
+    [
+     "OpenDoc6",
+     "Sprocket.SLDPRT"
+    ],
+    [
+     "ActivateDoc3",
+     "Sprocket.SLDPRT"
+    ],
+    [
+     "OpenDoc6",
+     "Housing.SLDPRT"
+    ],
+    [
+     "ActivateDoc3",
+     "Housing.SLDPRT"
+    ],
+    [
+     "OpenDoc6",
+     "Sprocket.SLDPRT"
+    ],
+    [
+     "ActivateDoc3",
+     "Sprocket.SLDPRT"
+    ],
+    [
+     "OpenDoc6",
+     "Sprocket.SLDPRT"
+    ],
+    [
+     "ActivateDoc3",
+     "Sprocket.SLDPRT"
+    ],
+    [
+     "OpenDoc6",
+     "Sprocket.SLDPRT"
+    ],
+    [
+     "ActivateDoc3",
+     "Sprocket.SLDPRT"
+    ],
+    [
+     "OpenDoc6",
+     "SprocketLight.SLDPRT"
+    ],
+    [
+     "ActivateDoc3",
+     "SprocketLight.SLDPRT"
+    ],
+    [
+     "OpenDoc6",
+     "SprocketConf.SLDPRT"
+    ],
+    [
+     "ActivateDoc3",
+     "SprocketConf.SLDPRT"
+    ],
+    [
+     "OpenDoc6",
+     "Chain.SLDPRT"
+    ],
+    [
+     "ActivateDoc3",
+     "Chain.SLDPRT"
+    ],
+    [
+     "OpenDoc6",
+     "Sprocket.SLDPRT"
+    ],
+    [
+     "ActivateDoc3",
+     "Sprocket.SLDPRT"
+    ],
+    [
+     "OpenDoc6",
+     "Sprocket.SLDPRT"
+    ],
+    [
+     "ActivateDoc3",
+     "Sprocket.SLDPRT"
+    ],
+    [
+     "OpenDoc6",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ActivateDoc3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ShowConfiguration2",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "AddComponent5",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "Transform2",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "AddComponent5",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "Transform2",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "FixComponent",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "AddComponent5",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "Transform2",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "AddComponent5",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "Transform2",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "AddComponent5",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "Transform2",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "AddComponent5",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "Transform2",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "AddComponent5",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "Transform2",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "AddComponent5",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "Transform2",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "AddComponent5",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "Transform2",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "AddComponent5",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "Transform2",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "AddComponent5",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "Transform2",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "AddComponent5",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "Transform2",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "AddComponent5",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "Transform2",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "AddComponent5",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "Transform2",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "AddComponent5",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "Transform2",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "AddComponent5",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "Transform2",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "AddComponent5",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "Transform2",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ShowConfiguration2",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ShowConfiguration2",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ShowConfiguration2",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ForceRebuild3",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ShowConfiguration2",
+     "RangeBox_r2.SLDASM"
+    ],
+    [
+     "ShowConfiguration2",
+     "RangeBox_r2.SLDASM"
+    ]
+   ],
+   "flags_before": {},
+   "flags_after": {
+    "Gear_m1.25_N13.SLDPRT": false,
+    "Ring_m1.25_N55.SLDPRT": false,
+    "Dog_m1.25_N17.SLDPRT": false,
+    "Sleeve_m1.25_N17.SLDPRT": false,
+    "Gear_m1.25_N29_r2.SLDPRT": false,
+    "Gear_m1.25_N20.SLDPRT": false,
+    "RangeBox_r2_Layout.SLDPRT": false,
+    "RangeBox_r2_Carrier_Carrier.SLDPRT": false,
+    "Sprocket.SLDPRT": false,
+    "Housing.SLDPRT": false,
+    "Chain.SLDPRT": false,
+    "SprocketLight.SLDPRT": false,
+    "SprocketConf.SLDPRT": false,
+    "RangeBox_r2.SLDASM": true
+   },
+   "old_before": null,
+   "status": "Built 2 parts, RangeBox_r2_Layout, RangeBox_r2_Carrier_Carrier and RangeBox_r2.SLDASM, reusing the 4 parts already built; no interference between the gears in any mode, where they stand. Its turning gears are mated to turn in each of its 3 modes, one configuration each (H, N and L), and SolidWorks reports no mate in error in any of them: it opens in H; to switch mode, double-click another mode's configuration in SolidWorks' ConfigurationManager. Drag Sun in SolidWorks and the rest of its train follow. RangeSlv slides along Output, to its place in each mode. The 3 copies of Planet turn on Carrier, and RangeBox_r2_Carrier_Carrier holds Carrier's axes and planes only: a plate and pins are yours to add. Ring stays fixed where it is placed: its shaft does not turn. A turn you give the gears in one mode can show in other modes, so a dog can stand across its sleeve in another; to put the gears back there, press Update SolidWorks with that mode showing. 1 thing to do by hand: Assign a material to each of the 2 parts; the build leaves it unset. Carried into RangeBox_r2, unsaved: your Sprocket-1, Housing-1, Sprocket-2 (was Sprocket-4) and 14 other components, each where it stood. SolidWorks would not describe UserFaceConc wholly (its reference could not be read ('method' object is not iterable)), so it is not made again. SolidWorks would not describe UserFaceCoin wholly (its reference could not be read ('method' object is not iterable)), so it is not made again. SolidWorks would not describe UserSunFace wholly (its reference could not be read ('method' object is not iterable)), so it is not made again. SolidWorks would not describe UserAxis7 wholly, so it is not made again. UserGearRoot was on a face of Sun, and Sun's part is new because its Flank changed, so it is not made again. UserGearFillet was on a face of Sun, and Sun's part is new because its Flank changed, so it is not made again. Your User Keyway Sketch and User Keyway stay in Gear_m1.25_N29, which Sun's new part replaces because its Flank changed (RangeBox.SLDASM and that file keep them). Your components were placed where they stood in L, the mode RangeBox.SLDASM showed; one no mate holds stands there in every mode. SolidWorks stopped the carry while setting your components' states in each mode: No component is kept as 'gear7', so whether it is free to turn cannot be read; that is a fault in Gear Generator, not in SolidWorks. It did not get to making the mates of Sprocket-1, Sprocket-3, Sprocket-4 and Chain-1 again, making the mates of Sprocket-2 again, making the mates of Housing-2 again, making the mates of Sprocket-5 again, making the mates of Sprocket-6 again, making the mates of Sprocket-8 and Housing-1 again, making the mates of Sprocket-9 again, making the mates of Sprocket-10 and Sprocket-11 again, making the mates of SprocketLight-1 again, making the mates of SprocketConf-1 again and checking every mode with your mates on. What was carried before it is in RangeBox_r2, unsaved, and RangeBox_r2 as built is saved. Assembly features, display states and appearances stay behind; sub-assemblies come over rigid, pattern instances as components of their own. If a part of yours was made in context of RangeBox.SLDASM, it still refers to that assembly's parts.",
+   "facts": [],
+   "changed_files": [],
+   "work": {
+    "how": "read-only",
+    "active": "L",
+    "modes": [
+     "H",
+     "N",
+     "L"
+    ],
+    "states_route": "IConfiguration.GetComponentSuppressionState(Name2)",
+    "marked": [],
+    "left": [],
+    "unread": [],
+    "walks": [
+     "walk Chain-2: ; 0 carried, 1.925 s, cap not reached",
+     "walk Chain-1: ; 0 carried, 0.979 s, cap not reached",
+     "walk Sprocket-5: ; 0 carried, 0.938 s, cap not reached",
+     "walk Gear_m1.25_N29-1: ; 0 carried, 2.006 s, cap not reached"
+    ],
+    "components": {
+     "Sprocket-1": {
+      "kind": "part",
+      "fixed": false,
+      "state": 2,
+      "frame": true,
+      "configuration": "Default",
+      "active": "Default",
+      "configurations": [
+       "Default"
+      ],
+      "suppressed_in": []
+     },
+     "Housing-1": {
+      "kind": "part",
+      "fixed": true,
+      "state": 2,
+      "frame": true,
+      "configuration": "Default",
+      "active": "Default",
+      "configurations": [
+       "Default"
+      ],
+      "suppressed_in": []
+     },
+     "Sprocket-4": {
+      "kind": "part",
+      "fixed": false,
+      "state": 2,
+      "frame": true,
+      "configuration": "Default",
+      "active": "Default",
+      "configurations": [
+       "Default"
+      ],
+      "suppressed_in": []
+     },
+     "Sprocket-3": {
+      "kind": "part",
+      "fixed": false,
+      "state": 2,
+      "frame": true,
+      "configuration": "Default",
+      "active": "Default",
+      "configurations": [
+       "Default"
+      ],
+      "suppressed_in": []
+     },
+     "Chain-1": {
+      "kind": "part",
+      "fixed": false,
+      "state": 2,
+      "frame": true,
+      "configuration": "Default",
+      "active": "Default",
+      "configurations": [
+       "Default"
+      ],
+      "suppressed_in": []
+     },
+     "Sprocket-2": {
+      "kind": "part",
+      "fixed": false,
+      "state": 2,
+      "frame": true,
+      "configuration": "Default",
+      "active": "Default",
+      "configurations": [
+       "Default"
+      ],
+      "suppressed_in": []
+     },
+     "Sprocket-10": {
+      "kind": "part",
+      "fixed": false,
+      "state": 2,
+      "frame": true,
+      "configuration": "Default",
+      "active": "Default",
+      "configurations": [
+       "Default"
+      ],
+      "suppressed_in": []
+     },
+     "Sprocket-11": {
+      "kind": "part",
+      "fixed": false,
+      "state": 2,
+      "frame": true,
+      "configuration": "Default",
+      "active": "Default",
+      "configurations": [
+       "Default"
+      ],
+      "suppressed_in": []
+     },
+     "Housing-2": {
+      "kind": "part",
+      "fixed": false,
+      "state": 2,
+      "frame": true,
+      "configuration": "Default",
+      "active": "Default",
+      "configurations": [
+       "Default"
+      ],
+      "suppressed_in": []
+     },
+     "Sprocket-6": {
+      "kind": "part",
+      "fixed": false,
+      "state": 2,
+      "frame": true,
+      "configuration": "Default",
+      "active": "Default",
+      "configurations": [
+       "Default"
+      ],
+      "suppressed_in": []
+     },
+     "Sprocket-5": {
+      "kind": "part",
+      "fixed": false,
+      "state": 2,
+      "frame": true,
+      "configuration": "Default",
+      "active": "Default",
+      "configurations": [
+       "Default"
+      ],
+      "suppressed_in": []
+     },
+     "Sprocket-9": {
+      "kind": "part",
+      "fixed": false,
+      "state": 2,
+      "frame": true,
+      "configuration": "Default",
+      "active": "Default",
+      "configurations": [
+       "Default"
+      ],
+      "suppressed_in": [
+       "H"
+      ]
+     },
+     "SprocketLight-1": {
+      "kind": "part",
+      "fixed": false,
+      "state": 2,
+      "frame": true,
+      "configuration": "Default",
+      "active": "Default",
+      "configurations": [
+       "Default"
+      ],
+      "suppressed_in": []
+     },
+     "SprocketConf-1": {
+      "kind": "part",
+      "fixed": false,
+      "state": 2,
+      "frame": true,
+      "configuration": "Z20",
+      "active": "Default",
+      "configurations": [
+       "Default",
+       "Z20"
+      ],
+      "suppressed_in": []
+     },
+     "Chain-2": {
+      "kind": "part",
+      "fixed": false,
+      "state": 2,
+      "frame": true,
+      "configuration": "Default",
+      "active": "Default",
+      "configurations": [
+       "Default"
+      ],
+      "suppressed_in": []
+     },
+     "Sprocket-8": {
+      "kind": "part",
+      "fixed": false,
+      "state": 2,
+      "frame": true,
+      "configuration": "Default",
+      "active": "Default",
+      "configurations": [
+       "Default"
+      ],
+      "suppressed_in": []
+     },
+     "Sprocket-7": {
+      "kind": "part",
+      "fixed": false,
+      "state": 0,
+      "frame": true,
+      "configuration": "Default",
+      "active": "",
+      "configurations": [
+       "Default"
+      ],
+      "suppressed_in": [
+       "L"
+      ]
+     }
+    },
+    "mates": {
+     "UserAxis1": {
+      "type": 0,
+      "type_name": "MateCoincident",
+      "alignment": 0,
+      "flipped": false,
+      "values": [],
+      "on": [
+       "H",
+       "N",
+       "L"
+      ],
+      "code": 0,
+      "whole": true,
+      "entities": [
+       [
+        "layout",
+        "",
+        "feature",
+        "Input Axis",
+        false,
+        null,
+        null,
+        "",
+        ""
+       ],
+       [
+        "user",
+        "Sprocket-1",
+        "feature",
+        "Gear Axis",
+        true,
+        null,
+        null,
+        "",
+        ""
+       ]
+      ]
+     },
+     "UserAxis2": {
+      "type": 0,
+      "type_name": "MateCoincident",
+      "alignment": 0,
+      "flipped": false,
+      "values": [],
+      "on": [
+       "H",
+       "N",
+       "L"
+      ],
+      "code": 0,
+      "whole": true,
+      "entities": [
+       [
+        "layout",
+        "",
+        "feature",
+        "Output Axis",
+        false,
+        null,
+        null,
+        "",
+        ""
+       ],
+       [
+        "user",
+        "Sprocket-2",
+        "feature",
+        "Gear Axis",
+        true,
+        null,
+        null,
+        "",
+        ""
+       ]
+      ]
+     },
+     "UserLock1": {
+      "type": 16,
+      "type_name": "MateLock",
+      "alignment": 2,
+      "flipped": false,
+      "values": [],
+      "on": [
+       "H",
+       "N",
+       "L"
+      ],
+      "code": 0,
+      "whole": true,
+      "entities": [
+       [
+        "app",
+        "Sun",
+        "whole",
+        "",
+        false,
+        null,
+        null,
+        "",
+        ""
+       ],
+       [
+        "user",
+        "Sprocket-1",
+        "whole",
+        "",
+        false,
+        null,
+        null,
+        "",
+        ""
+       ]
+      ]
+     },
+     "UserLock2": {
+      "type": 16,
+      "type_name": "MateLock",
+      "alignment": 2,
+      "flipped": false,
+      "values": [],
+      "on": [
+       "H",
+       "N",
+       "L"
+      ],
+      "code": 0,
+      "whole": true,
+      "entities": [
+       [
+        "app",
+        "RangeSlv",
+        "whole",
+        "",
+        false,
+        null,
+        null,
+        "",
+        ""
+       ],
+       [
+        "user",
+        "Sprocket-2",
+        "whole",
+        "",
+        false,
+        null,
+        null,
+        "",
+        ""
+       ]
+      ]
+     },
+     "UserLock3": {
+      "type": 16,
+      "type_name": "MateLock",
+      "alignment": 2,
+      "flipped": false,
+      "values": [],
+      "on": [
+       "H",
+       "N",
+       "L"
+      ],
+      "code": 0,
+      "whole": true,
+      "entities": [
+       [
+        "user",
+        "Sprocket-1",
+        "whole",
+        "",
+        false,
+        null,
+        null,
+        "",
+        ""
+       ],
+       [
+        "user",
+        "Sprocket-3",
+        "whole",
+        "",
+        false,
+        null,
+        null,
+        "",
+        ""
+       ]
+      ]
+     },
+     "UserAxis4": {
+      "type": 0,
+      "type_name": "MateCoincident",
+      "alignment": 0,
+      "flipped": false,
+      "values": [],
+      "on": [
+       "H",
+       "N",
+       "L"
+      ],
+      "code": 0,
+      "whole": true,
+      "entities": [
+       [
+        "layout",
+        "",
+        "feature",
+        "Input Axis",
+        false,
+        null,
+        null,
+        "",
+        ""
+       ],
+       [
+        "user",
+        "Sprocket-4",
+        "feature",
+        "Gear Axis",
+        true,
+        null,
+        null,
+        "",
+        ""
+       ]
+      ]
+     },
+     "UserDist4": {
+      "type": 5,
+      "type_name": "MateDistanceDim",
+      "alignment": 0,
+      "flipped": false,
+      "values": [
+       [
+        "Distance",
+        0.09
+       ],
+       [
+        "MaximumDistance",
+        0.09
+       ],
+       [
+        "MinimumDistance",
+        0.09
+       ],
+       [
+        "FlipDimension",
+        0.0
+       ]
+      ],
+      "on": [
+       "H",
+       "N",
+       "L"
+      ],
+      "code": 0,
+      "whole": true,
+      "entities": [
+       [
+        "user",
+        "Sprocket-4",
+        "plane",
+        "plane1",
+        true,
+        null,
+        null,
+        "",
+        ""
+       ],
+       [
+        "user",
+        "Sprocket-3",
+        "plane",
+        "plane1",
+        true,
+        null,
+        null,
+        "",
+        ""
+       ]
+      ]
+     },
+     "UserAngle4": {
+      "type": 6,
+      "type_name": "MatePlanarAngleDim",
+      "alignment": 0,
+      "flipped": false,
+      "values": [
+       [
+        "Angle",
+        1.5707963267948966
+       ],
+       [
+        "MaximumAngle",
+        1.5707963267948966
+       ],
+       [
+        "MinimumAngle",
+        1.5707963267948966
+       ],
+       [
+        "FlipDimension",
+        0.0
+       ]
+      ],
+      "on": [
+       "H",
+       "N",
+       "L"
+      ],
+      "code": 0,
+      "whole": true,
+      "entities": [
+       [
+        "user",
+        "Sprocket-4",
+        "plane",
+        "plane2",
+        true,
+        null,
+        null,
+        "",
+        ""
+       ],
+       [
+        "layout",
+        "",
+        "plane",
+        "plane3",
+        false,
+        null,
+        null,
+        "",
+        ""
+       ]
+      ]
+     },
+     "UserChainAxis": {
+      "type": 0,
+      "type_name": "MateCoincident",
+      "alignment": 0,
+      "flipped": false,
+      "values": [],
+      "on": [
+       "H",
+       "N",
+       "L"
+      ],
+      "code": 0,
+      "whole": true,
+      "entities": [
+       [
+        "layout",
+        "",
+        "feature",
+        "Input Axis",
+        false,
+        null,
+        null,
+        "",
+        ""
+       ],
+       [
+        "user",
+        "Chain-1",
+        "feature",
+        "Gear Axis",
+        true,
+        null,
+        null,
+        "",
+        ""
+       ]
+      ]
+     },
+     "UserChainDist": {
+      "type": 5,
+      "type_name": "MateDistanceDim",
+      "alignment": 0,
+      "flipped": false,
+      "values": [
+       [
+        "Distance",
+        0.15
+       ],
+       [
+        "MaximumDistance",
+        0.15
+       ],
+       [
+        "MinimumDistance",
+        0.15
+       ],
+       [
+        "FlipDimension",
+        0.0
+       ]
+      ],
+      "on": [
+       "H",
+       "N",
+       "L"
+      ],
+      "code": 0,
+      "whole": true,
+      "entities": [
+       [
+        "user",
+        "Chain-1",
+        "plane",
+        "plane1",
+        true,
+        null,
+        null,
+        "",
+        ""
+       ],
+       [
+        "user",
+        "Sprocket-1",
+        "plane",
+        "plane1",
+        true,
+        null,
+        null,
+        "",
+        ""
+       ]
+      ]
+     },
+     "UserFaceConc": {
+      "type": 1,
+      "type_name": "MateConcentric",
+      "alignment": 0,
+      "flipped": false,
+      "values": [],
+      "on": [
+       "H",
+       "N",
+       "L"
+      ],
+      "code": 0,
+      "whole": true,
+      "entities": [
+       [
+        "layout",
+        "",
+        "feature",
+        "Input Axis",
+        false,
+        null,
+        null,
+        "",
+        ""
+       ],
+       [
+        "user",
+        "Chain-2",
+        "face",
+        "",
+        false,
+        null,
+        null,
+        "",
+        "its reference could not be read ('method' object is not iterable)"
+       ]
+      ]
+     },
+     "UserFaceCoin": {
+      "type": 0,
+      "type_name": "MateCoincident",
+      "alignment": 1,
+      "flipped": false,
+      "values": [],
+      "on": [
+       "H",
+       "N",
+       "L"
+      ],
+      "code": 0,
+      "whole": true,
+      "entities": [
+       [
+        "user",
+        "Chain-1",
+        "face",
+        "",
+        false,
+        null,
+        null,
+        "",
+        "its reference could not be read ('method' object is not iterable)"
+       ],
+       [
+        "user",
+        "Chain-2",
+        "face",
+        "",
+        false,
+        null,
+        null,
+        "",
+        "its reference could not be read ('method' object is not iterable)"
+       ]
+      ]
+     },
+     "UserHousingRight": {
+      "type": 0,
+      "type_name": "MateCoincident",
+      "alignment": 0,
+      "flipped": false,
+      "values": [],
+      "on": [
+       "H",
+       "N",
+       "L"
+      ],
+      "code": 0,
+      "whole": true,
+      "entities": [
+       [
+        "layout",
+        "",
+        "plane",
+        "plane3",
+        false,
+        null,
+        null,
+        "",
+        ""
+       ],
+       [
+        "user",
+        "Housing-2",
+        "plane",
+        "plane3",
+        true,
+        null,
+        null,
+        "",
+        ""
+       ]
+      ]
+     },
+     "UserHousingDist": {
+      "type": 5,
+      "type_name": "MateDistanceDim",
+      "alignment": 0,
+      "flipped": false,
+      "values": [
+       [
+        "Distance",
+        0.42
+       ],
+       [
+        "MaximumDistance",
+        0.42
+       ],
+       [
+        "MinimumDistance",
+        0.42
+       ],
+       [
+        "FlipDimension",
+        0.0
+       ]
+      ],
+      "on": [
+       "H",
+       "N",
+       "L"
+      ],
+      "code": 0,
+      "whole": true,
+      "entities": [
+       [
+        "user",
+        "Housing-2",
+        "plane",
+        "plane1",
+        true,
+        null,
+        null,
+        "",
+        ""
+       ],
+       [
+        "layout",
+        "",
+        "plane",
+        "plane1",
+        false,
+        null,
+        null,
+        "",
+        ""
+       ]
+      ]
+     },
+     "UserHousingPar": {
+      "type": 3,
+      "type_name": "MateParallel",
+      "alignment": 0,
+      "flipped": false,
+      "values": [],
+      "on": [
+       "H",
+       "N",
+       "L"
+      ],
+      "code": 0,
+      "whole": true,
+      "entities": [
+       [
+        "layout",
+        "",
+        "plane",
+        "plane2",
+        false,
+        null,
+        null,
+        "",
+        ""
+       ],
+       [
+        "user",
+        "Housing-2",
+        "plane",
+        "plane2",
+        true,
+        null,
+        null,
+        "",
+        ""
+       ]
+      ]
+     },
+     "UserAxis5": {
+      "type": 0,
+      "type_name": "MateCoincident",
+      "alignment": 0,
+      "flipped": false,
+      "values": [],
+      "on": [
+       "H",
+       "N",
+       "L"
+      ],
+      "code": 0,
+      "whole": true,
+      "entities": [
+       [
+        "layout",
+        "",
+        "feature",
+        "Input Axis",
+        false,
+        null,
+        null,
+        "",
+        ""
+       ],
+       [
+        "user",
+        "Sprocket-5",
+        "feature",
+        "Gear Axis",
+        true,
+        null,
+        null,
+        "",
+        ""
+       ]
+      ]
+     },
+     "UserSunFace": {
+      "type": 0,
+      "type_name": "MateCoincident",
+      "alignment": 1,
+      "flipped": false,
+      "values": [],
+      "on": [
+       "H",
+       "N",
+       "L"
+      ],
+      "code": 0,
+      "whole": true,
+      "entities": [
+       [
+        "app",
+        "Sun",
+        "face",
+        "",
+        false,
+        null,
+        null,
+        "",
+        ""
+       ],
+       [
+        "user",
+        "Sprocket-5",
+        "face",
+        "",
+        false,
+        null,
+        null,
+        "",
+        "its reference could not be read ('method' object is not iterable)"
+       ]
+      ]
+     },
+     "UserAxis6": {
+      "type": 0,
+      "type_name": "MateCoincident",
+      "alignment": 0,
+      "flipped": false,
+      "values": [],
+      "on": [
+       "H",
+       "N",
+       "L"
+      ],
+      "code": 0,
+      "whole": true,
+      "entities": [
+       [
+        "layout",
+        "",
+        "feature",
+        "Input Axis",
+        false,
+        null,
+        null,
+        "",
+        ""
+       ],
+       [
+        "user",
+        "Sprocket-6",
+        "feature",
+        "Gear Axis",
+        true,
+        null,
+        null,
+        "",
+        ""
+       ]
+      ]
+     },
+     "UserGear6": {
+      "type": 10,
+      "type_name": "MateGearDim",
+      "alignment": 2,
+      "flipped": false,
+      "values": [
+       [
+        "GearRatioNumerator",
+        29.0
+       ],
+       [
+        "GearRatioDenominator",
+        20.0
+       ],
+       [
+        "Reverse",
+        1.0
+       ]
+      ],
+      "on": [
+       "H",
+       "N",
+       "L"
+      ],
+      "code": 0,
+      "whole": true,
+      "entities": [
+       [
+        "user",
+        "Sprocket-6",
+        "feature",
+        "Gear Axis",
+        true,
+        null,
+        null,
+        "",
+        ""
+       ],
+       [
+        "app",
+        "Sun",
+        "feature",
+        "Gear Axis",
+        false,
+        null,
+        null,
+        "",
+        ""
+       ]
+      ]
+     },
+     "UserAsm6": {
+      "type": 5,
+      "type_name": "MateDistanceDim",
+      "alignment": 0,
+      "flipped": false,
+      "values": [
+       [
+        "Distance",
+        0.23
+       ],
+       [
+        "MaximumDistance",
+        0.23
+       ],
+       [
+        "MinimumDistance",
+        0.23
+       ],
+       [
+        "FlipDimension",
+        0.0
+       ]
+      ],
+      "on": [
+       "H",
+       "N",
+       "L"
+      ],
+      "code": 0,
+      "whole": true,
+      "entities": [
+       [
+        "user",
+        "Sprocket-6",
+        "plane",
+        "plane1",
+        true,
+        null,
+        null,
+        "",
+        ""
+       ],
+       [
+        "assembly",
+        "",
+        "plane",
+        "plane1",
+        false,
+        null,
+        null,
+        "",
+        ""
+       ]
+      ]
+     },
+     "UserAxis7": {
+      "type": 0,
+      "type_name": "MateCoincident",
+      "alignment": 0,
+      "flipped": false,
+      "values": [],
+      "on": [
+       "H",
+       "N",
+       "L"
+      ],
+      "code": 0,
+      "whole": true,
+      "entities": [
+       [
+        "layout",
+        "",
+        "feature",
+        "Input Axis",
+        false,
+        null,
+        null,
+        "",
+        ""
+       ],
+       [
+        "user",
+        "Sprocket-7",
+        "unread",
+        "",
+        false,
+        null,
+        null,
+        "",
+        ""
+       ]
+      ]
+     },
+     "UserLock8a": {
+      "type": 16,
+      "type_name": "MateLock",
+      "alignment": 2,
+      "flipped": false,
+      "values": [],
+      "on": [
+       "H",
+       "N",
+       "L"
+      ],
+      "code": 46,
+      "whole": true,
+      "entities": [
+       [
+        "app",
+        "Sun",
+        "whole",
+        "",
+        false,
+        null,
+        null,
+        "",
+        ""
+       ],
+       [
+        "user",
+        "Sprocket-8",
+        "whole",
+        "",
+        false,
+        null,
+        null,
+        "",
+        ""
+       ]
+      ]
+     },
+     "UserLock8b": {
+      "type": 16,
+      "type_name": "MateLock",
+      "alignment": 2,
+      "flipped": false,
+      "values": [],
+      "on": [
+       "H",
+       "N",
+       "L"
+      ],
+      "code": 0,
+      "whole": true,
+      "entities": [
+       [
+        "user",
+        "Housing-1",
+        "whole",
+        "",
+        false,
+        null,
+        null,
+        "",
+        ""
+       ],
+       [
+        "user",
+        "Sprocket-8",
+        "whole",
+        "",
+        false,
+        null,
+        null,
+        "",
+        ""
+       ]
+      ]
+     },
+     "UserAxis9": {
+      "type": 0,
+      "type_name": "MateCoincident",
+      "alignment": 0,
+      "flipped": false,
+      "values": [],
+      "on": [
+       "H",
+       "N",
+       "L"
+      ],
+      "code": 0,
+      "whole": true,
+      "entities": [
+       [
+        "layout",
+        "",
+        "feature",
+        "Input Axis",
+        false,
+        null,
+        null,
+        "",
+        ""
+       ],
+       [
+        "user",
+        "Sprocket-9",
+        "feature",
+        "Gear Axis",
+        true,
+        null,
+        null,
+        "",
+        ""
+       ]
+      ]
+     },
+     "UserAxis10": {
+      "type": 0,
+      "type_name": "MateCoincident",
+      "alignment": 0,
+      "flipped": false,
+      "values": [],
+      "on": [
+       "H",
+       "N",
+       "L"
+      ],
+      "code": 0,
+      "whole": true,
+      "entities": [
+       [
+        "layout",
+        "",
+        "feature",
+        "Input Axis",
+        false,
+        null,
+        null,
+        "",
+        ""
+       ],
+       [
+        "user",
+        "Sprocket-10",
+        "feature",
+        "Gear Axis",
+        true,
+        null,
+        null,
+        "",
+        ""
+       ]
+      ]
+     },
+     "UserGearRoot": {
+      "type": 10,
+      "type_name": "MateGearDim",
+      "alignment": 2,
+      "flipped": false,
+      "values": [
+       [
+        "GearRatioNumerator",
+        1.0
+       ],
+       [
+        "GearRatioDenominator",
+        1.0
+       ],
+       [
+        "Reverse",
+        1.0
+       ]
+      ],
+      "on": [
+       "H",
+       "N",
+       "L"
+      ],
+      "code": 0,
+      "whole": true,
+      "entities": [
+       [
+        "user",
+        "Sprocket-10",
+        "feature",
+        "Gear Axis",
+        true,
+        null,
+        null,
+        "",
+        ""
+       ],
+       [
+        "app",
+        "Sun",
+        "face",
+        "",
+        false,
+        null,
+        null,
+        "",
+        ""
+       ]
+      ]
+     },
+     "UserAxis11": {
+      "type": 0,
+      "type_name": "MateCoincident",
+      "alignment": 0,
+      "flipped": false,
+      "values": [],
+      "on": [
+       "H",
+       "N",
+       "L"
+      ],
+      "code": 0,
+      "whole": true,
+      "entities": [
+       [
+        "layout",
+        "",
+        "feature",
+        "Input Axis",
+        false,
+        null,
+        null,
+        "",
+        ""
+       ],
+       [
+        "user",
+        "Sprocket-11",
+        "feature",
+        "Gear Axis",
+        true,
+        null,
+        null,
+        "",
+        ""
+       ]
+      ]
+     },
+     "UserGearFillet": {
+      "type": 10,
+      "type_name": "MateGearDim",
+      "alignment": 2,
+      "flipped": true,
+      "values": [
+       [
+        "GearRatioNumerator",
+        1.0
+       ],
+       [
+        "GearRatioDenominator",
+        1.0
+       ],
+       [
+        "Reverse",
+        0.0
+       ]
+      ],
+      "on": [
+       "H",
+       "N",
+       "L"
+      ],
+      "code": 0,
+      "whole": true,
+      "entities": [
+       [
+        "user",
+        "Sprocket-11",
+        "feature",
+        "Gear Axis",
+        true,
+        null,
+        null,
+        "",
+        ""
+       ],
+       [
+        "app",
+        "Sun",
+        "face",
+        "",
+        false,
+        null,
+        null,
+        "",
+        ""
+       ]
+      ]
+     },
+     "UserLimit10": {
+      "type": 5,
+      "type_name": "MateLimitDistanceDim",
+      "alignment": 0,
+      "flipped": false,
+      "values": [
+       [
+        "Distance",
+        0.02
+       ],
+       [
+        "MaximumDistance",
+        0.03
+       ],
+       [
+        "MinimumDistance",
+        0.01
+       ],
+       [
+        "FlipDimension",
+        0.0
+       ]
+      ],
+      "on": [
+       "H",
+       "N",
+       "L"
+      ],
+      "code": 0,
+      "whole": true,
+      "entities": [
+       [
+        "user",
+        "Sprocket-10",
+        "plane",
+        "plane1",
+        true,
+        null,
+        null,
+        "",
+        ""
+       ],
+       [
+        "user",
+        "Sprocket-11",
+        "plane",
+        "plane1",
+        true,
+        null,
+        null,
+        "",
+        ""
+       ]
+      ]
+     },
+     "UserAxisLight": {
+      "type": 0,
+      "type_name": "MateCoincident",
+      "alignment": 0,
+      "flipped": false,
+      "values": [],
+      "on": [
+       "H",
+       "N",
+       "L"
+      ],
+      "code": 0,
+      "whole": true,
+      "entities": [
+       [
+        "layout",
+        "",
+        "feature",
+        "Input Axis",
+        false,
+        null,
+        null,
+        "",
+        ""
+       ],
+       [
+        "user",
+        "SprocketLight-1",
+        "feature",
+        "Gear Axis",
+        true,
+        null,
+        null,
+        "",
+        ""
+       ]
+      ]
+     },
+     "UserAxisConf": {
+      "type": 0,
+      "type_name": "MateCoincident",
+      "alignment": 0,
+      "flipped": false,
+      "values": [],
+      "on": [
+       "H",
+       "N",
+       "L"
+      ],
+      "code": 0,
+      "whole": true,
+      "entities": [
+       [
+        "layout",
+        "",
+        "feature",
+        "Input Axis",
+        false,
+        null,
+        null,
+        "",
+        ""
+       ],
+       [
+        "user",
+        "SprocketConf-1",
+        "feature",
+        "Gear Axis",
+        true,
+        null,
+        null,
+        "",
+        ""
+       ]
+      ]
+     }
+    }
+   },
+   "outcome": {
+    "UserFaceConc": "unread",
+    "UserFaceCoin": "unread",
+    "UserSunFace": "unread",
+    "UserAxis7": "unread",
+    "UserGearRoot": "part new",
+    "UserGearFillet": "part new"
+   },
+   "expected": {
+    "UserChainAxis": [
+     "remade"
+    ],
+    "UserChainDist": [
+     "remade"
+    ],
+    "UserFaceConc": [
+     "remade"
+    ],
+    "UserFaceCoin": [
+     "remade"
+    ],
+    "UserHousingRight": [
+     "remade"
+    ],
+    "UserHousingDist": [
+     "remade"
+    ],
+    "UserHousingPar": [
+     "remade"
+    ],
+    "UserAxis5": [
+     "remade"
+    ],
+    "UserSunFace": [
+     "part new"
+    ],
+    "UserAxis6": [
+     "remade"
+    ],
+    "UserGear6": [
+     "remade"
+    ],
+    "UserAsm6": [
+     "remade"
+    ],
+    "UserAxis7": [
+     "remade"
+    ],
+    "UserLock8a": [
+     "fell"
+    ],
+    "UserLock8b": [
+     "remade"
+    ],
+    "UserAxis9": [
+     "remade"
+    ],
+    "UserAxis10": [
+     "remade"
+    ],
+    "UserGearRoot": [
+     "remade"
+    ],
+    "UserAxis11": [
+     "remade"
+    ],
+    "UserGearFillet": [
+     "part new"
+    ],
+    "UserLimit10": [
+     "remade"
+    ],
+    "UserAxisLight": [
+     "remade"
+    ],
+    "UserAxisConf": [
+     "remade"
+    ],
+    "UserAxis1": [
+     "remade"
+    ],
+    "UserAxis2": [
+     "remade"
+    ],
+    "UserLock1": [
+     "remade"
+    ],
+    "UserLock2": [
+     "remade"
+    ],
+    "UserLock3": [
+     "remade"
+    ],
+    "UserAxis4": [
+     "remade"
+    ],
+    "UserDist4": [
+     "remade"
+    ],
+    "UserAngle4": [
+     "remade"
+    ]
+   },
+   "every": {
+    "frames": {
+     "H": {
+      "Sun": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        5.5
+       ]
+      ],
+      "Planet copy 1": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        26.25,
+        0.0,
+        5.5
+       ]
+      ],
+      "Planet copy 2": [
+       [
+        0.8854560256532233,
+        -0.46472317204374297,
+        0.0,
+        0.46472317204374297,
+        0.8854560256532233,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        -13.125,
+        22.73316685,
+        5.499999999999995
+       ]
+      ],
+      "Planet copy 3": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        -13.125,
+        -22.73316685,
+        5.499999999999995
+       ]
+      ],
+      "Ring": [
+       [
+        0.9983691039261356,
+        -0.05708881086276809,
+        0.0,
+        0.05708881086276809,
+        0.9983691039261356,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        5.5
+       ]
+      ],
+      "HighDog": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        -34.5
+       ]
+      ],
+      "LowDog": [
+       [
+        0.9324722294043558,
+        -0.3612416661871529,
+        0.0,
+        0.3612416661871529,
+        0.9324722294043558,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        -19.5
+       ]
+      ],
+      "RangeSlv": [
+       [
+        0.9829730996839018,
+        -0.18374951781657034,
+        0.0,
+        0.18374951781657034,
+        0.9829730996839018,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        -34.5
+       ]
+      ],
+      "Aux": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        80.0,
+        0.0,
+        7.5
+       ]
+      ],
+      "Carrier carrier": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        0.0
+       ]
+      ],
+      "layout": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        0.0
+       ]
+      ],
+      "Sprocket-1": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        30.0
+       ]
+      ],
+      "Housing-1": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        60.0
+       ]
+      ],
+      "Sprocket-2": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        -49.999999999999986
+       ]
+      ],
+      "Sprocket-3": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        40.0
+       ]
+      ],
+      "Chain-1": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        -120.0
+       ]
+      ],
+      "Sprocket-4": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        -70.0
+       ]
+      ],
+      "Sprocket-5": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        310.0
+       ]
+      ],
+      "Sprocket-6": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        330.0
+       ]
+      ],
+      "Housing-2": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        -420.0
+       ]
+      ],
+      "Sprocket-7": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        -229.99999999999994
+       ]
+      ],
+      "Sprocket-8": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        15.5
+       ]
+      ],
+      "Sprocket-9": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        290.0
+       ]
+      ],
+      "SprocketLight-1": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        350.0
+       ]
+      ],
+      "SprocketConf-1": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        370.0
+       ]
+      ],
+      "Chain-2": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        -113.99999999999999
+       ]
+      ],
+      "Sprocket-10": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        270.0
+       ]
+      ],
+      "Sprocket-11": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        250.0
+       ]
+      ]
+     },
+     "N": {
+      "Sun": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        5.5
+       ]
+      ],
+      "Planet copy 1": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        26.25,
+        0.0,
+        5.5
+       ]
+      ],
+      "Planet copy 2": [
+       [
+        0.8854560256532233,
+        -0.46472317204374297,
+        0.0,
+        0.46472317204374297,
+        0.8854560256532233,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        -13.125,
+        22.73316685,
+        5.499999999999995
+       ]
+      ],
+      "Planet copy 3": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        -13.125,
+        -22.73316685,
+        5.499999999999995
+       ]
+      ],
+      "Ring": [
+       [
+        0.9983691039261356,
+        -0.05708881086276809,
+        0.0,
+        0.05708881086276809,
+        0.9983691039261356,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        5.5
+       ]
+      ],
+      "HighDog": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        -34.5
+       ]
+      ],
+      "LowDog": [
+       [
+        0.9324722294043558,
+        -0.3612416661871529,
+        0.0,
+        0.3612416661871529,
+        0.9324722294043558,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        -19.5
+       ]
+      ],
+      "RangeSlv": [
+       [
+        0.9829730996839018,
+        -0.18374951781657034,
+        0.0,
+        0.18374951781657034,
+        0.9829730996839018,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        -29.5
+       ]
+      ],
+      "Aux": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        80.0,
+        0.0,
+        7.5
+       ]
+      ],
+      "Carrier carrier": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        0.0
+       ]
+      ],
+      "layout": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        0.0
+       ]
+      ],
+      "Sprocket-1": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        30.0
+       ]
+      ],
+      "Housing-1": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        60.0
+       ]
+      ],
+      "Sprocket-2": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        -49.999999999999986
+       ]
+      ],
+      "Sprocket-3": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        40.0
+       ]
+      ],
+      "Chain-1": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        -120.0
+       ]
+      ],
+      "Sprocket-4": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        -70.0
+       ]
+      ],
+      "Sprocket-5": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        310.0
+       ]
+      ],
+      "Sprocket-6": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        330.0
+       ]
+      ],
+      "Housing-2": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        -420.0
+       ]
+      ],
+      "Sprocket-7": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        -229.99999999999994
+       ]
+      ],
+      "Sprocket-8": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        15.5
+       ]
+      ],
+      "Sprocket-9": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        290.0
+       ]
+      ],
+      "SprocketLight-1": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        350.0
+       ]
+      ],
+      "SprocketConf-1": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        370.0
+       ]
+      ],
+      "Chain-2": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        -113.99999999999999
+       ]
+      ],
+      "Sprocket-10": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        270.0
+       ]
+      ],
+      "Sprocket-11": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        250.0
+       ]
+      ]
+     },
+     "L": {
+      "Sun": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        5.5
+       ]
+      ],
+      "Planet copy 1": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        26.25,
+        0.0,
+        5.5
+       ]
+      ],
+      "Planet copy 2": [
+       [
+        0.8854560256532233,
+        -0.46472317204374297,
+        0.0,
+        0.46472317204374297,
+        0.8854560256532233,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        -13.125,
+        22.73316685,
+        5.499999999999995
+       ]
+      ],
+      "Planet copy 3": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        -13.125,
+        -22.73316685,
+        5.499999999999995
+       ]
+      ],
+      "Ring": [
+       [
+        0.9983691039261356,
+        -0.05708881086276809,
+        0.0,
+        0.05708881086276809,
+        0.9983691039261356,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        5.5
+       ]
+      ],
+      "HighDog": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        -34.5
+       ]
+      ],
+      "LowDog": [
+       [
+        0.9324722294043558,
+        -0.3612416661871529,
+        0.0,
+        0.3612416661871529,
+        0.9324722294043558,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        -19.5
+       ]
+      ],
+      "RangeSlv": [
+       [
+        0.9829730996839018,
+        -0.18374951781657034,
+        0.0,
+        0.18374951781657034,
+        0.9829730996839018,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        -24.5
+       ]
+      ],
+      "Aux": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        80.0,
+        0.0,
+        7.5
+       ]
+      ],
+      "Carrier carrier": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        0.0
+       ]
+      ],
+      "layout": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        0.0
+       ]
+      ],
+      "Sprocket-1": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        30.0
+       ]
+      ],
+      "Housing-1": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        60.0
+       ]
+      ],
+      "Sprocket-2": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        -49.999999999999986
+       ]
+      ],
+      "Sprocket-3": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        40.0
+       ]
+      ],
+      "Chain-1": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        -120.0
+       ]
+      ],
+      "Sprocket-4": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        -70.0
+       ]
+      ],
+      "Sprocket-5": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        310.0
+       ]
+      ],
+      "Sprocket-6": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        330.0
+       ]
+      ],
+      "Housing-2": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        -420.0
+       ]
+      ],
+      "Sprocket-7": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        -229.99999999999994
+       ]
+      ],
+      "Sprocket-8": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        15.5
+       ]
+      ],
+      "Sprocket-9": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        290.0
+       ]
+      ],
+      "SprocketLight-1": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        350.0
+       ]
+      ],
+      "SprocketConf-1": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        370.0
+       ]
+      ],
+      "Chain-2": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        -113.99999999999999
+       ]
+      ],
+      "Sprocket-10": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        270.0
+       ]
+      ],
+      "Sprocket-11": [
+       [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+       ],
+       [
+        0.0,
+        0.0,
+        250.0
+       ]
+      ]
+     }
+    },
+    "status": {
+     "H": {
+      "Sun": 2,
+      "Planet copy 1": 2,
+      "Planet copy 2": 2,
+      "Planet copy 3": 2,
+      "Ring": 3,
+      "HighDog": 2,
+      "LowDog": 2,
+      "RangeSlv": 2,
+      "Aux": 2,
+      "Carrier carrier": 2,
+      "layout": 3,
+      "Sprocket-1": 2,
+      "Housing-1": 3,
+      "Sprocket-2": 2,
+      "Sprocket-3": 2,
+      "Chain-1": 2,
+      "Sprocket-4": 2,
+      "Sprocket-5": 2,
+      "Sprocket-6": 2,
+      "Housing-2": 2,
+      "Sprocket-7": 2,
+      "Sprocket-8": 2,
+      "Sprocket-9": 2,
+      "SprocketLight-1": 2,
+      "SprocketConf-1": 2,
+      "Chain-2": 2,
+      "Sprocket-10": 2,
+      "Sprocket-11": 2
+     },
+     "N": {
+      "Sun": 2,
+      "Planet copy 1": 2,
+      "Planet copy 2": 2,
+      "Planet copy 3": 2,
+      "Ring": 3,
+      "HighDog": 2,
+      "LowDog": 2,
+      "RangeSlv": 2,
+      "Aux": 2,
+      "Carrier carrier": 2,
+      "layout": 3,
+      "Sprocket-1": 2,
+      "Housing-1": 3,
+      "Sprocket-2": 2,
+      "Sprocket-3": 2,
+      "Chain-1": 2,
+      "Sprocket-4": 2,
+      "Sprocket-5": 2,
+      "Sprocket-6": 2,
+      "Housing-2": 2,
+      "Sprocket-7": 2,
+      "Sprocket-8": 2,
+      "Sprocket-9": 2,
+      "SprocketLight-1": 2,
+      "SprocketConf-1": 2,
+      "Chain-2": 2,
+      "Sprocket-10": 2,
+      "Sprocket-11": 2
+     },
+     "L": {
+      "Sun": 2,
+      "Planet copy 1": 2,
+      "Planet copy 2": 2,
+      "Planet copy 3": 2,
+      "Ring": 3,
+      "HighDog": 2,
+      "LowDog": 2,
+      "RangeSlv": 2,
+      "Aux": 2,
+      "Carrier carrier": 2,
+      "layout": 3,
+      "Sprocket-1": 2,
+      "Housing-1": 3,
+      "Sprocket-2": 2,
+      "Sprocket-3": 2,
+      "Chain-1": 2,
+      "Sprocket-4": 2,
+      "Sprocket-5": 2,
+      "Sprocket-6": 2,
+      "Housing-2": 2,
+      "Sprocket-7": 2,
+      "Sprocket-8": 2,
+      "Sprocket-9": 2,
+      "SprocketLight-1": 2,
+      "SprocketConf-1": 2,
+      "Chain-2": 2,
+      "Sprocket-10": 2,
+      "Sprocket-11": 5
+     }
+    },
+    "states": {
+     "H": {
+      "Sprocket-1": 2,
+      "Housing-1": 2,
+      "Sprocket-2": 2,
+      "Sprocket-3": 2,
+      "Chain-1": 2,
+      "Sprocket-4": 2,
+      "Sprocket-5": 2,
+      "Sprocket-6": 2,
+      "Housing-2": 2,
+      "Sprocket-7": 2,
+      "Sprocket-8": 2,
+      "Sprocket-9": 0,
+      "SprocketLight-1": 2,
+      "SprocketConf-1": 2,
+      "Chain-2": 2,
+      "Sprocket-10": 2,
+      "Sprocket-11": 2
+     },
+     "N": {
+      "Sprocket-1": 2,
+      "Housing-1": 2,
+      "Sprocket-2": 2,
+      "Sprocket-3": 2,
+      "Chain-1": 2,
+      "Sprocket-4": 2,
+      "Sprocket-5": 2,
+      "Sprocket-6": 2,
+      "Housing-2": 2,
+      "Sprocket-7": 2,
+      "Sprocket-8": 2,
+      "Sprocket-9": 2,
+      "SprocketLight-1": 2,
+      "SprocketConf-1": 2,
+      "Chain-2": 2,
+      "Sprocket-10": 2,
+      "Sprocket-11": 2
+     },
+     "L": {
+      "Sprocket-1": 2,
+      "Housing-1": 2,
+      "Sprocket-2": 2,
+      "Sprocket-3": 2,
+      "Chain-1": 2,
+      "Sprocket-4": 2,
+      "Sprocket-5": 2,
+      "Sprocket-6": 2,
+      "Housing-2": 2,
+      "Sprocket-7": 2,
+      "Sprocket-8": 2,
+      "Sprocket-9": 2,
+      "SprocketLight-1": 2,
+      "SprocketConf-1": 2,
+      "Chain-2": 2,
+      "Sprocket-10": 2,
+      "Sprocket-11": 0
+     }
+    },
+    "mates": {
+     "H": {
+      "Sun on Input Axis": [
+       0,
+       false
+      ],
+      "Sun along Input": [
+       0,
+       false
+      ],
+      "HighDog locked to Sun": [
+       0,
+       false
+      ],
+      "Carrier carrier on Carrier Axis": [
+       0,
+       false
+      ],
+      "Carrier carrier along Carrier": [
+       0,
+       false
+      ],
+      "LowDog locked to Carrier carrier": [
+       0,
+       false
+      ],
+      "Planet copy 1 on Planet copy 1 Axis": [
+       0,
+       false
+      ],
+      "Planet copy 1 along Planet copy 1": [
+       0,
+       false
+      ],
+      "Planet copy 2 on Planet copy 2 Axis": [
+       0,
+       false
+      ],
+      "Planet copy 2 along Planet copy 2": [
+       0,
+       false
+      ],
+      "Planet copy 3 on Planet copy 3 Axis": [
+       0,
+       false
+      ],
+      "Planet copy 3 along Planet copy 3": [
+       0,
+       false
+      ],
+      "RangeSlv on Output Axis": [
+       0,
+       false
+      ],
+      "RangeSlv along Output": [
+       0,
+       false
+      ],
+      "Aux on Aux Axis": [
+       0,
+       false
+      ],
+      "Aux along Aux": [
+       0,
+       false
+      ],
+      "Sun meshes Planet copy 1": [
+       0,
+       false
+      ],
+      "Sun meshes Planet copy 2": [
+       0,
+       false
+      ],
+      "Sun meshes Planet copy 3": [
+       0,
+       false
+      ],
+      "Planet copy 1 meshes Ring": [
+       0,
+       false
+      ],
+      "RangeSlv engages HighDog": [
+       0,
+       false
+      ],
+      "RangeSlv engages LowDog": [
+       0,
+       true
+      ]
+     },
+     "N": {
+      "Sun on Input Axis": [
+       0,
+       false
+      ],
+      "Sun along Input": [
+       0,
+       false
+      ],
+      "HighDog locked to Sun": [
+       0,
+       false
+      ],
+      "Carrier carrier on Carrier Axis": [
+       0,
+       false
+      ],
+      "Carrier carrier along Carrier": [
+       0,
+       false
+      ],
+      "LowDog locked to Carrier carrier": [
+       0,
+       false
+      ],
+      "Planet copy 1 on Planet copy 1 Axis": [
+       0,
+       false
+      ],
+      "Planet copy 1 along Planet copy 1": [
+       0,
+       false
+      ],
+      "Planet copy 2 on Planet copy 2 Axis": [
+       0,
+       false
+      ],
+      "Planet copy 2 along Planet copy 2": [
+       0,
+       false
+      ],
+      "Planet copy 3 on Planet copy 3 Axis": [
+       0,
+       false
+      ],
+      "Planet copy 3 along Planet copy 3": [
+       0,
+       false
+      ],
+      "RangeSlv on Output Axis": [
+       0,
+       false
+      ],
+      "RangeSlv along Output": [
+       0,
+       false
+      ],
+      "Aux on Aux Axis": [
+       0,
+       false
+      ],
+      "Aux along Aux": [
+       0,
+       false
+      ],
+      "Sun meshes Planet copy 1": [
+       0,
+       false
+      ],
+      "Sun meshes Planet copy 2": [
+       0,
+       false
+      ],
+      "Sun meshes Planet copy 3": [
+       0,
+       false
+      ],
+      "Planet copy 1 meshes Ring": [
+       0,
+       false
+      ],
+      "RangeSlv engages HighDog": [
+       0,
+       true
+      ],
+      "RangeSlv engages LowDog": [
+       0,
+       true
+      ]
+     },
+     "L": {
+      "Sun on Input Axis": [
+       0,
+       false
+      ],
+      "Sun along Input": [
+       0,
+       false
+      ],
+      "HighDog locked to Sun": [
+       0,
+       false
+      ],
+      "Carrier carrier on Carrier Axis": [
+       0,
+       false
+      ],
+      "Carrier carrier along Carrier": [
+       0,
+       false
+      ],
+      "LowDog locked to Carrier carrier": [
+       0,
+       false
+      ],
+      "Planet copy 1 on Planet copy 1 Axis": [
+       0,
+       false
+      ],
+      "Planet copy 1 along Planet copy 1": [
+       0,
+       false
+      ],
+      "Planet copy 2 on Planet copy 2 Axis": [
+       0,
+       false
+      ],
+      "Planet copy 2 along Planet copy 2": [
+       0,
+       false
+      ],
+      "Planet copy 3 on Planet copy 3 Axis": [
+       0,
+       false
+      ],
+      "Planet copy 3 along Planet copy 3": [
+       0,
+       false
+      ],
+      "RangeSlv on Output Axis": [
+       0,
+       false
+      ],
+      "RangeSlv along Output": [
+       0,
+       false
+      ],
+      "Aux on Aux Axis": [
+       0,
+       false
+      ],
+      "Aux along Aux": [
+       0,
+       false
+      ],
+      "Sun meshes Planet copy 1": [
+       0,
+       false
+      ],
+      "Sun meshes Planet copy 2": [
+       0,
+       false
+      ],
+      "Sun meshes Planet copy 3": [
+       0,
+       false
+      ],
+      "Planet copy 1 meshes Ring": [
+       0,
+       false
+      ],
+      "RangeSlv engages HighDog": [
+       0,
+       true
+      ],
+      "RangeSlv engages LowDog": [
+       0,
+       false
+      ]
+     }
+    },
+    "by_mode": {
+     "Sun on Input Axis": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "Sun along Input": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "HighDog locked to Sun": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "Carrier carrier on Carrier Axis": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "Carrier carrier along Carrier": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "LowDog locked to Carrier carrier": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "Planet copy 1 on Planet copy 1 Axis": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "Planet copy 1 along Planet copy 1": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "Planet copy 2 on Planet copy 2 Axis": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "Planet copy 2 along Planet copy 2": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "Planet copy 3 on Planet copy 3 Axis": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "Planet copy 3 along Planet copy 3": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "RangeSlv on Output Axis": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "RangeSlv along Output": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "Aux on Aux Axis": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "Aux along Aux": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "Sun meshes Planet copy 1": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "Sun meshes Planet copy 2": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "Sun meshes Planet copy 3": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "Planet copy 1 meshes Ring": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "RangeSlv engages HighDog": {
+      "H": false,
+      "N": true,
+      "L": true
+     },
+     "RangeSlv engages LowDog": {
+      "H": true,
+      "N": true,
+      "L": false
+     }
+    }
+   },
+   "definitions": {},
+   "poses": {
+    "Sprocket-1 in H": 0.0,
+    "Housing-1 in H": 0.0,
+    "Sprocket-2 in H": 0.0,
+    "Sprocket-3 in H": 0.0,
+    "Chain-1 in H": 0.0,
+    "Sprocket-4 in H": 7.105427357601002e-15,
+    "Sprocket-5 in H": 0.0,
+    "Sprocket-6 in H": 0.0,
+    "Housing-2 in H": 0.0,
+    "Sprocket-7 in H": 0.0,
+    "Sprocket-8 in H": 0.0,
+    "SprocketLight-1 in H": 0.0,
+    "SprocketConf-1 in H": 0.0,
+    "Chain-2 in H": 0.0,
+    "Sprocket-10 in H": 0.0,
+    "Sprocket-11 in H": 0.0,
+    "Sprocket-1 in N": 0.0,
+    "Housing-1 in N": 0.0,
+    "Sprocket-2 in N": 0.0,
+    "Sprocket-3 in N": 0.0,
+    "Chain-1 in N": 0.0,
+    "Sprocket-4 in N": 4.999999999999993,
+    "Sprocket-5 in N": 0.0,
+    "Sprocket-6 in N": 0.0,
+    "Housing-2 in N": 0.0,
+    "Sprocket-7 in N": 0.0,
+    "Sprocket-8 in N": 0.0,
+    "Sprocket-9 in N": 0.0,
+    "SprocketLight-1 in N": 0.0,
+    "SprocketConf-1 in N": 0.0,
+    "Chain-2 in N": 0.0,
+    "Sprocket-10 in N": 0.0,
+    "Sprocket-11 in N": 0.0,
+    "Sprocket-1 in L": 0.0,
+    "Housing-1 in L": 0.0,
+    "Sprocket-2 in L": 0.0,
+    "Sprocket-3 in L": 0.0,
+    "Chain-1 in L": 0.0,
+    "Sprocket-4 in L": 9.999999999999993,
+    "Sprocket-5 in L": 0.0,
+    "Sprocket-6 in L": 0.0,
+    "Housing-2 in L": 0.0,
+    "Sprocket-7 in L": 0.0,
+    "Sprocket-8 in L": 0.0,
+    "Sprocket-9 in L": 0.0,
+    "SprocketLight-1 in L": 0.0,
+    "SprocketConf-1 in L": 0.0,
+    "Chain-2 in L": 0.0,
+    "Sprocket-10 in L": 0.0
+   },
+   "w9b": {
+    "modes": {
+     "H": {
+      "slide_read": 34.5,
+      "slide_recorded": -34.5,
+      "origin_z": -34.5,
+      "frame_gap": 6.580016531643196e-10,
+      "bands": {
+       "whole": [
+        -34.5,
+        -24.5
+       ]
+      },
+      "dogs": {
+       "HighDog": [
+        -34.5,
+        -29.5
+       ],
+       "LowDog": [
+        -19.5,
+        -14.5
+       ]
+      },
+      "hub": null,
+      "interferences": [],
+      "errors": {},
+      "not_free": {},
+      "engaged": [
+       "HighDog"
+      ],
+      "least": 5.0
+     },
+     "N": {
+      "slide_read": 29.5,
+      "slide_recorded": -29.5,
+      "origin_z": -29.5,
+      "frame_gap": 6.580016531643196e-10,
+      "bands": {
+       "whole": [
+        -29.5,
+        -19.5
+       ]
+      },
+      "dogs": {
+       "HighDog": [
+        -34.5,
+        -29.5
+       ],
+       "LowDog": [
+        -19.5,
+        -14.5
+       ]
+      },
+      "hub": null,
+      "interferences": [],
+      "errors": {},
+      "not_free": {},
+      "engaged": [],
+      "least": 0.0
+     },
+     "L": {
+      "slide_read": 24.5,
+      "slide_recorded": -24.5,
+      "origin_z": -24.5,
+      "frame_gap": 6.580016531643196e-10,
+      "bands": {
+       "whole": [
+        -24.5,
+        -14.5
+       ]
+      },
+      "dogs": {
+       "HighDog": [
+        -34.5,
+        -29.5
+       ],
+       "LowDog": [
+        -19.5,
+        -14.5
+       ]
+      },
+      "hub": null,
+      "interferences": [],
+      "errors": {},
+      "not_free": {},
+      "engaged": [
+       "LowDog"
+      ],
+      "least": 5.0
+     }
+    }
+   },
+   "interference": {
+    "app_app": {},
+    "unnamed": {},
+    "unseen": {},
+    "unchecked": {},
+    "volumes": {}
+   },
+   "clean": {
+    "outcome": false,
+    "components": true,
+    "fallback": false,
+    "same_error": false,
+    "anchors": true,
+    "states": true,
+    "definitions": true,
+    "flags": true,
+    "free": true,
+    "poses": false
+   },
+   "refusals": {
+    "written": "RangeBox.SLDASM is not open in SolidWorks, and Gear Generator reads it then only when it was last written on this SolidWorks",
+    "other_file": "Reducer_12to1.SLDASM is not open in SolidWorks, and Gear Generator reads it then only when it and every file it uses were last saved by this SolidWorks (a file saved since on another SolidWorks, or one not found or not read, is not read)"
+   },
+   "failed": [
+    "carry-closed: every mate made again, named or fallen back as the findings say ({'faces': True, 'coaxial': True, 'states': True, 'unsaved': True, 'reload': True, 'closed_read': True}): [\"UserAngle4: not accounted for where ['remade']\", \"UserAsm6: not accounted for where ['remade']\", \"UserAxis1: not accounted for where ['remade']\", \"UserAxis10: not accounted for where ['remade']\", \"UserAxis11: not accounted for where ['remade']\", \"UserAxis2: not accounted for where ['remade']\", \"UserAxis4: not accounted for where ['remade']\", \"UserAxis5: not accounted for where ['remade']\", \"UserAxis6: not accounted for where ['remade']\", \"UserAxis7: unread where ['remade']\", \"UserAxis9: not accounted for where ['remade']\", \"UserAxisConf: not accounted for where ['remade']\", \"UserAxisLight: not accounted for where ['remade']\", \"UserChainAxis: not accounted for where ['remade']\", \"UserChainDist: not accounted for where ['remade']\", \"UserDist4: not accounted for where ['remade']\", \"UserFaceCoin: unread where ['remade']\", \"UserFaceConc: unread where ['remade']\", \"UserGear6: not accounted for where ['remade']\", \"UserGearRoot: part new where ['remade']\", \"UserHousingDist: not accounted for where ['remade']\", \"UserHousingPar: not accounted for where ['remade']\", \"UserHousingRight: not accounted for where ['remade']\", \"UserLimit10: not accounted for where ['remade']\", \"UserLock1: not accounted for where ['remade']\", \"UserLock2: not accounted for where ['remade']\", \"UserLock3: not accounted for where ['remade']\", \"UserLock8a: not accounted for where ['fell']\", \"UserLock8b: not accounted for where ['remade']\", \"UserSunFace: unread where ['part new']\"]",
+    "carry-closed: the tied cluster alone fell back, UserLock8a deleted, UserLock8b kept, ['Housing-1', 'Sprocket-8'] fixed: []",
+    "carry-closed: no mate back in an old error [], nothing moved [], no stop \"SolidWorks stopped the carry while setting your components' states in each mode: No component is kept as 'gear7', so whether it is free to turn cannot be read; that is a fault in Gear Generator, not in SolidWorks.\" 'making the mates of Sprocket-1, Sprocket-3, Sprocket-4 and Chain-1 again, making the mates of Sprocket-2 again, making the mates of Housing-2 again, making the mates of Sprocket-5 again, making the mates of Sprocket-6 again, making the mates of Sprocket-8 and Housing-1 again, making the mates of Sprocket-9 again, making the mates of Sprocket-10 and Sprocket-11 again, making the mates of SprocketLight-1 again, making the mates of SprocketConf-1 again and checking every mode with your mates on', the new assembly unsaved True",
+    "carry-closed: each carried component at its pose against its anchor, as it stood in L of the old assembly, in every mode of RangeBox_r2 where it is resolved (49 reads): off {'Sprocket-4 in N': 5.0, 'Sprocket-4 in L': 10.0}; not read none",
+    "carry-closed: the record on disk at schema 10 holds the carry (how read-only, 17 components, 0 mates, 6 named), unsaved_at 1794953452.6251004 against the file's 1794953452.6251004; the footer says 'RangeBox_r2 holds what Build again\u2026 carried of yours, not saved: save it in SolidWorks to keep it.'"
+   ]
+  }
+ },
+ "stops": [],
+ "proposal": {},
+ "revision": [
+  34,
+  0,
+  0
+ ],
+ "snapshot": "2fb3946",
+ "whats_wrong_rule": {
+  "helper_present": true,
+  "shows_in_update": false,
+  "allowance_seconds": 60.0
+ },
+ "fails": [
+  "carry-closed: every mate made again, named or fallen back as the findings say ({'faces': True, 'coaxial': True, 'states': True, 'unsaved': True, 'reload': True, 'closed_read': True}): [\"UserAngle4: not accounted for where ['remade']\", \"UserAsm6: not accounted for where ['remade']\", \"UserAxis1: not accounted for where ['remade']\", \"UserAxis10: not accounted for where ['remade']\", \"UserAxis11: not accounted for where ['remade']\", \"UserAxis2: not accounted for where ['remade']\", \"UserAxis4: not accounted for where ['remade']\", \"UserAxis5: not accounted for where ['remade']\", \"UserAxis6: not accounted for where ['remade']\", \"UserAxis7: unread where ['remade']\", \"UserAxis9: not accounted for where ['remade']\", \"UserAxisConf: not accounted for where ['remade']\", \"UserAxisLight: not accounted for where ['remade']\", \"UserChainAxis: not accounted for where ['remade']\", \"UserChainDist: not accounted for where ['remade']\", \"UserDist4: not accounted for where ['remade']\", \"UserFaceCoin: unread where ['remade']\", \"UserFaceConc: unread where ['remade']\", \"UserGear6: not accounted for where ['remade']\", \"UserGearRoot: part new where ['remade']\", \"UserHousingDist: not accounted for where ['remade']\", \"UserHousingPar: not accounted for where ['remade']\", \"UserHousingRight: not accounted for where ['remade']\", \"UserLimit10: not accounted for where ['remade']\", \"UserLock1: not accounted for where ['remade']\", \"UserLock2: not accounted for where ['remade']\", \"UserLock3: not accounted for where ['remade']\", \"UserLock8a: not accounted for where ['fell']\", \"UserLock8b: not accounted for where ['remade']\", \"UserSunFace: unread where ['part new']\"]",
+  "carry-closed: the tied cluster alone fell back, UserLock8a deleted, UserLock8b kept, ['Housing-1', 'Sprocket-8'] fixed: []",
+  "carry-closed: no mate back in an old error [], nothing moved [], no stop \"SolidWorks stopped the carry while setting your components' states in each mode: No component is kept as 'gear7', so whether it is free to turn cannot be read; that is a fault in Gear Generator, not in SolidWorks.\" 'making the mates of Sprocket-1, Sprocket-3, Sprocket-4 and Chain-1 again, making the mates of Sprocket-2 again, making the mates of Housing-2 again, making the mates of Sprocket-5 again, making the mates of Sprocket-6 again, making the mates of Sprocket-8 and Housing-1 again, making the mates of Sprocket-9 again, making the mates of Sprocket-10 and Sprocket-11 again, making the mates of SprocketLight-1 again, making the mates of SprocketConf-1 again and checking every mode with your mates on', the new assembly unsaved True",
+  "carry-closed: each carried component at its pose against its anchor, as it stood in L of the old assembly, in every mode of RangeBox_r2 where it is resolved (49 reads): off {'Sprocket-4 in N': 5.0, 'Sprocket-4 in L': 10.0}; not read none",
+  "carry-closed: the record on disk at schema 10 holds the carry (how read-only, 17 components, 0 mates, 6 named), unsaved_at 1794953452.6251004 against the file's 1794953452.6251004; the footer says 'RangeBox_r2 holds what Build again\u2026 carried of yours, not saved: save it in SolidWorks to keep it.'"
+ ],
+ "notes": [
+  "SolidWorks' notification box came up while no SolidWorks call was in progress (exempt by the coordinator's ruling; nothing answers it)"
+ ]
+}

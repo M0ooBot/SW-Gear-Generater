@@ -333,6 +333,76 @@ At this commit: 44 ok, 0 failed. `--help` imports nothing of SolidWorks.
 - Every judgement of "unchanged" is by reads, file fingerprints and traced document calls; a component-level
   `SetSuppression2` is not mapped to its assembly in the trace, so the old assembly's states are compared by reads.
 
+## The first run on SolidWorks 2026 (2026-11-17, `src` at 90cdf20, SolidWorks 2026 34.0.0)
+
+**Setup.**
+- Run folder `<probe folder>\w9d-demo-sw2026-20261117-155112`.
+- One session, PID 9768, started for the run and exited after.
+- Masters: the W9c whole run's `rangebox.master` and `setup.master`, which the script only copies (`copy_built`'s
+  `copytree`, the sprocket's `copy2`). Their files' sizes, times and md5 were the same before and after.
+- `--other-version-file`: the 2024-built `Reducer_12to1.SLDASM`, read closed only, its file unchanged.
+- Three invocations, each snapshot holding 90cdf20's `src`:
+  - 90cdf20: every section;
+  - 10426c5: `carry` and `carry-closed` with `--redo`;
+  - 2fb3946: `carry-closed` with `--redo`.
+- Logs `probe/results/w9d-demo-sw2026-20261117-1-first-contact-light-flag-stop.log`, `-2-carry-app-faults.log` and
+  `-3-carry-closed-read-only.log`, with their JSON.
+
+| Section | Run | Time | ok | FAIL | STOP |
+|---|---|---|---|---|---|
+| fixture | 1 | 485 s | 19 | 1 | 0 |
+| carry-gates | 1 | 1080 s | 26 | 0 | 0 |
+| carry | 1 | 933 s (cut) | 13 | 1 | the script's (below) |
+| carry | 2 | 1152 s | 36 | 5 | 0 |
+| carry-closed | 3 | 763 s | 38 | 5 | 0 |
+
+Run 2's `carry-closed` (401 s, 8 failed) is superseded by run 3: its closed read never ran (below).
+
+**The script's faults, fixed:**
+- **`old_diff`'s save flags (10426c5).** In run 1, `carry` stopped on `save flags {'SprocketLight.SLDPRT': (None,
+  False)}`. SprocketLight-1, set lightweight by the user, came out resolved in the old assembly (M1 (b), ruled), and
+  that loads its file as a document, open and unmarked, where before it was not open. The ruled change is now set
+  apart with it, and only it; anything else in the flags is still a STOP.
+- **`carry-closed`'s save (2fb3946).** W9a's `save_user` saves only what SolidWorks reads modified, and showing L does
+  not mark the assembly. So run 2 saved nothing there, and R.2 refused the closed read, the copy's stored paths still
+  being the master's. The assembly is now saved itself, by W8's `SaveAs3` route, and its file being written is checked.
+
+**The app's faults, not fixed here:**
+- **The r3 walk reads nothing.** Every face or edge item reads "its reference could not be read ('method' object is
+  not iterable)", in 0.8–1.8 s per component with 0 candidates carried.
+  - The cause: `src/gear_generator/swcom.py:3942-3943` lists the part's faces by `list(call(body, member) or ())`.
+    Through late binding `IBody2.GetFaces`/`GetEdges` come back as a bound method, uncalled. The probe's r3 went
+    through `raw()`, which calls it.
+  - So UserFaceConc, UserFaceCoin and UserSunFace are named unread, and the sentence the user reads carries the Python
+    error.
+- **The carry stops at its states.** In both `carry` and `carry-closed` the carry stopped after setting the states:
+  "No component is kept as 'gear7', so whether it is free to turn cannot be read; that is a fault in Gear Generator,
+  not in SolidWorks".
+  - This is `swbuild.py:8060`, `c.free_before = _free(sw, c.mated)`, and `swcom.py:2630`. `gear7` is the new Aux
+    gear: its handle from the build is not kept in the session when the carry reads it. Why is not traced.
+  - So no mate was made again and the tie never fell back. The carried components stand where they were placed,
+    which is why Sprocket-5 (`carry`) and Sprocket-4 (`carry-closed`) are off in N and L. The record holds 17
+    components and 0 mates.
+  - Several `ok` lines about remade mates hold vacuously: nothing was remade.
+
+**What SolidWorks did, measured:**
+- All 17 components were inserted and placed against the fixture's anchors.
+- SprocketConf-1 went in by `AddComponent5` with `Z20`, reading `Z20` in every mode. R read `Z20` beside its
+  document's `Default`.
+- The states were set per mode: Sprocket-7 suppressed in L alone and Sprocket-9 in H alone, by the script's own shown
+  read as by the route.
+- SprocketLight-1 read 1 before the press and 2 after in the open old assembly, its file then open and unmarked.
+- R's old-entity reads (`entity_reference`) took 2.4–3.3 s each.
+- In `carry-closed`, R.2 refused the unsaved copy (closed-file reads only). After the save, R opened the old assembly
+  read-only (5.0 s), with L showing as saved, and closed it (`close_unsaved`, 0.3 s). Nothing was left open or
+  marked, and no file changed.
+- The record another version wrote and the 2024 `Reducer_12to1.SLDASM` (17000) were refused by closed reads.
+- The later Update said the carry was lost.
+- **The fixture's tie over-defines** (§15's tie: Sprocket-8 locked to Sun and to the fixed Housing-1). `UserLock8b`
+  was made with status 5, and `Sun along Input` and `UserLock8a` read 46 (`swFeatureErrorMateOverdefined`) in the old
+  assembly. The fixture's own "code 0" check FAILs on it. That is the script's expectation against §15's design, left
+  for review, not changed. The quiet press read nothing of the user's in error there.
+
 ## The revision after the review (`W9D-DEMONSTRATION-REVIEW.md`, 6f67791)
 
 - **M1 (a)** RangeBox_r2 is saved by the user only when none of its components reads lightweight (above, `carry` 6).
