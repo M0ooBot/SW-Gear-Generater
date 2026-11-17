@@ -403,3 +403,183 @@ names which call marks, which is already known to mark. It is cheap and it was t
 make the proposals sharper, but none gives a wrong answer that a reviewer reading the log would miss: each FAIL or
 None shows. Nothing in the script saves a file outside the run's folders, closes a document it did not open, or logs a
 title but its own.
+
+## Re-check of the revision (2026-11-17, at `6fddfa4`)
+
+*Read:* `W9D-INTERFACES.md` whole at `7e13344`, and `probe/w9d_probes.py` and `W9D-PROBES.md` at `6fddfa4`. *Run:*
+`--self-check`, 41 checks, 0 failed. *Checked against:* the code, the ledger (`VersionHistory` `:115`, `AddMate5` and
+the gear ratio `:552`, `:612`, `:618-623`), and the decompiled help for `AddComponent5` and
+`swAddComponentConfigOptions_e`. As before, I started no SolidWorks or Excel.
+
+### What the first review asked, and whether it is done
+
+- **Must-fix 1 (D6): fixed.**
+  - §3 C.6 makes and judges cluster by cluster in the first mode.
+  - §6 gives the three cases, and only the tying cluster falls back. K2's rule decides when one read stands for every
+    mode.
+  - §14.1's test is the RangeBox case, with every other cluster on the train carried.
+- **Must-fix 2 (the not-open read): fixed, but with one hole** (remaining must-fix R1 below). R.2's three conditions are
+  in place. `app_files` and `written_on` are on `Carry`. The question's clause names the condition that fails and says
+  to open the assembly first.
+- **Must-fix 3 (subjects): fixed.**
+  - §2.3 has a slot table for every `why` and `FELL_*`.
+  - `OldEntity.coaxial` exists.
+  - `UserMate.entities` is in §2.2.
+- **Must-fix 4 (referenced configuration): fixed in the contract**, with two weaknesses (R2 and S-a below).
+  - The configuration is read, then inserted by `AddComponent5(path, 0, "", True, config, …)` behind
+    `CARRY_INSERTS_IN_A_CONFIGURATION`. The help says `UseConfigForPartReferences` True takes `ExistingConfigName`.
+  - The result is read back after the insert; a different one is deleted again and named `WHY_CONFIGURATION`.
+- **Must-fix 5 / P1: fixed.** `faces` (a) saves the probe's copy (`save_copy`) and checks it reads unmarked. (b) and
+  (c) record what was marked at the start (`marked_at_start`), and every proposal is None if anything was.
+- **P2: fixed.**
+  - (g) opens `Housing.SLDPRT` unchanged beside the changed `Sprocket.SLDPRT`.
+  - The proposal requires the housing unmarked before the open, and the sprocket's global read back (`global_kept`).
+  - (h) judges both parts after the open, after the shows and after `QuitDoc`.
+- **P8: fixed.** `sub_make_host` now opens, inserts, then `save_as` (no `Save3`), and runs under `watched_or_none`.
+- **The other points, spot-checked:**
+  - Taken:
+    - every should-fix 1–15;
+    - P3 (`loaded_left`);
+    - P4 (`clean_start`);
+    - P5 (`first_marking` set once);
+    - P6 (gated on the chosen route);
+    - P7 (facts only);
+    - P9 (`watched_or_none`);
+    - P10 (`route_for` per kind);
+    - P11 (None when marked);
+    - P13 (dropped).
+  - The 37° wording and test are right now (`_relative(new Sun, sprocket) == _relative(old Sun, old sprocket)`).
+  - The gear ratio swap matches the ledger: `GearRatioNumerator` belongs to `MateEntity(1)`, and `AddMate5`'s
+    numerator goes with the first selection.
+  - I found no "taken" that is not taken, with one partial exception. P12's reload is in, but with a weak control
+    (S-c below).
+- **P12's third bullet, not taken: acceptable for the probe**, since opening the other version's file would end the
+  session. But it is acceptable **only if** the contract requires `FILE_VERSION_READ` rather than falling back to the
+  record (R1).
+
+### Remaining must-fix
+
+**R1. Contradiction 8's window still opens the file, so the hang can still happen.**
+
+R.2's first condition takes "the record's word alone" while `FILE_VERSION_READ_ON_<year>` is None (§3 R.2 bullet 1;
+§11.2 "With it unset the record's word alone stands"). Scenario: a RangeBox last written by a 2026 job, then opened and
+saved by the user on 2024, then a Build again… on 2026 with it closed and `FILE_VERSION_READ` unset. The record says
+2026, so R opens the file read-only, and `QuitDoc` meets the CAM box. The worker never returns.
+
+Probes are uncertain: `VersionHistory` is verified on 2026 only, and the probe has no negative control (S-b), so this
+window is real on 2024 and possibly on 2026.
+
+*Smallest change:* make it a condition, not a refinement. The not-open read opens only when
+`FILE_VERSION_READ_ON_<year>` is set **and** the file's last saved version is the running one; unset, the assembly is
+`OLD_UNREAD` with the existing "open it in SolidWorks first" clause. That is one sentence in R.2 and §11.2, and §13 item
+8 becomes "closed". It costs nothing once the probe sets the finding, and until then the open path still carries
+everything.
+
+**R2. `REFERENCED_CONFIGURATION_READ` has no positive control, so the probe cannot set it.**
+
+Every component in `faces` (b) references its part's only configuration. A read that returned the document's active
+configuration, or "Default", whatever the component references, would read "right". The contract's read-back after the
+insert uses the same read, so it would not catch a wrong one. That brings back must-fix 4's silent wrong shape.
+
+*Smallest change:* in §8, "Set by" becomes M9 (Sprocket-11, whose referenced configuration differs from its document's
+active one), and the probe logs the read as a fact without a proposal. This does not block the packages or the probe
+run: the code reads None.
+
+### Should fix
+
+- **S-a.** `AddComponent5`'s option 0 is "add … in its **last saved** configuration" (`swAddComponentConfigOptions_e`),
+  not the document's active one, which is what §5.1 and `OldComponent.active_configuration` assume the default insert
+  takes. The read-back keeps this safe (given R2), but it names components that could be carried. Once
+  `CARRY_INSERTS_IN_A_CONFIGURATION` is set, always pass the referenced configuration explicitly.
+- **S-b.** `FILE_VERSION_READ` has only the same-version control: the copy just saved in (a). Add one closed-file read
+  of a file the other version saved, such as the other version's `rangebox.master` assembly, passed by an optional
+  argument. `VersionHistory` reads a closed file without opening it, so there is no CAM risk. Propose only if it reads
+  that file's older version.
+- **S-c.** `faces` (d)'s reload compares a face by kind and area only. A sprocket's two end faces are equal annuli, so
+  a reference resolving to the wrong end face passes. Compare the plane's position too (`PlaneParams` z, or
+  `CylinderParams` for the bore) in part coordinates. Also read the reopened parts' `GetSaveFlag` around the resolve:
+  the not-open path does this resolve in the user's parts. The log's key (`component:kind:` plus the first 16 hex
+  characters) collides, because every reference starts `384a000001000000`; the verdict uses `e["reload"]`, so only the
+  log line loses entries.
+- **S-d. `COAXIAL_FACE_READ` lacks the one control the narrowing exists for.** The narrowing exists for an off-axis
+  cylinder. The probe's negatives are all planes, so they read False trivially. A `coaxial()` that said True for every
+  cylinder would still be proposed True. Add Sun's User Keyway (setup.master has it: a Ø3 cylinder at (5, 0)) as a
+  negative through `part_faces_of`, required False. Also:
+  - The coaxial read is taken only on r1's part entity, so read it on r2's resolved entity too.
+  - §4.3 says "a face **or edge**" and §2.2 "a cylinder **or cone**", but only cylinders are read. Narrow §4.3 to an
+    axis named `Gear Axis` or a cylindrical face with `coaxial` True. Edges and cones are named, unless probed.
+- **S-e. R.2 omits `OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS`.** §8 says it gates "the not-open read with app documents open
+  (one changed)", but R.2's list lets the open go ahead with app documents open without it. Add "and, when any document
+  is open, `OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS` True" to R.2, or A will miss it.
+- **S-f. A further residual for §13 item 8 (my inference, not measured):** the user's own *parts* may have been saved
+  by the other version. A 2026 RangeBox holding a sprocket part saved on 2024 is plausible. GOTCHAS §100 was seen on
+  2024-saved assemblies, and whether `QuitDoc` of a same-version assembly raises the CAM box for a 2024-saved component
+  is unknown. Nothing in R.2 sees component files before the open. Say it in §13. If the coordinator wants it closed,
+  `faces`/`state` could put the other version's `Sprocket.SLDPRT` into a copy, run last under the watch.
+- **S-g. M9's fixture would hang its own save.** §15 adds "Sprocket-9 lightweight in the mode showing" to the fixture
+  "saved as the run's own copy". Saving an assembly with a lightweight component meets the CAM box (the plan's *Changes
+  after W9a's demonstration*). Set Sprocket-9 lightweight in the session after the save, in the `carry` section only,
+  and keep `carry-closed`'s file (saved with L showing) free of lightweight components. This is for M9's script, not
+  for the packages.
+
+### What the revision added
+
+- **`COAXIAL_FACE_READ` and the narrowed gear-mate rule:** sound in principle. Every recipe's `Gear Axis` is the Top ∩
+  Right line, which is the part's Z axis (`spur.py:804`, `internal.py:922`, `helical.py:522`, `bevel.py:1131`). An
+  off-axis user feature is correctly excluded. The control is S-d.
+- **`FILE_VERSION_READ` and contradiction 8:** the read is the right tool. The window is R1.
+- **The referenced configuration** by `AddComponent5(path, 0, "", True, config, x, y, z)` matches the help. See R2 and
+  S-a. Deleting the job's own just-inserted component uses `COMPONENT_DELETE_ROUTE`, measured.
+- **`CarryEntry.unsaved_at`:** right. It is read only by §9.4's lines, and `LinkRecord.unsaved` is untouched.
+- **M9's outline** meets the plan's Done-when, with two things to note:
+  - The plan's "the bore mate on Sun named" is now a mate on Sun's end face. RangeBox's Sun has no Bore
+    (`tests/workbook_fixtures.py:84`, no bore column), so a bore mate cannot be made. A face of a part made new, named
+    `WHY_PART_NEW`, is the same test of the rule. Record it as the coordinator's equivalence, not a silent change.
+  - The two Done-when clusters are now on feature mates, so they hold whatever the face findings say.
+  
+  It exercises:
+  - a cluster that falls back (Sprocket-8, `FELL_TIE`);
+  - a second configuration (Sprocket-11);
+  - the gear-mate finding (Sprocket-6's `Gear Axis` to Sun's; the face variant on the fake only, since Sun has no
+    coaxial face);
+  - lightweight (but S-g);
+  - suppressed in the mode showing;
+  - the per-mode states, both ways;
+  - L showing in `carry-closed`.
+- **New probe steps:**
+  - `state` (v) (`VersionHistory`, `GetLatestSupportedFileVersion`) is a closed-file read, not watched, which is fine.
+  - `faces` (d) opens parts alone, an ordinary open. It is unbracketed (S-c).
+  - No new step saves anything but the probe's own copies, by the measured `Save3` on a copy with no lightweight
+    component, or by `save_as`.
+  - Every dialog-risk step in `state` (g), (h) and `sub` is watched.
+  - The only bracket that still cannot see what it claims is S-c's reload. The `REFERENCED_CONFIGURATION_READ` and
+    `COAXIAL_FACE_READ` proposals have wrong answers they cannot detect (R2, S-d).
+
+### §17, the package split
+
+One shapes commit by A (every §2 dataclass and constant, `UserMate.entities`, the `STEP_CARRY_*` names,
+`GearboxResult.carry`, the `carry` keyword checked against `before` and ignored, stubs of `plan_carry` and
+`carry_gates`, the §8 names at None). After it:
+
+- **A owns:** `swbuild.py`, `swcom.py`, `findings.py`, `tests/test_swbuild.py`'s fake, `tests/test_swbuild_carry.py`.
+- **B owns:** `workbook/update.py`, `workbook/gearbox.py`, `store.py`, `ui_text.py`, `workbook_gui.py`, `UI-DESIGN.md`
+  §9, `tests/test_workbook_carry.py`, and "edits to the record and question tests".
+
+I found **no file owned by both**. The joins are imports only: B constructs `OldWork` and `OldMate` in
+`recorded_old_work`, and reads `WHY_*` and `carry_gates`. Two dependencies to keep in mind, neither an overlap:
+
+- B's round trip needs the fake's carry knobs, which only A writes. So B's last step waits for A's worker, as §17's
+  order already says.
+- "Edits to the record and question tests" should name the files (`tests/test_store*.py`, `tests/test_ui_text.py`, the
+  W9a round-trip test), so A's `UserMate.entities` default `()` is the only change A makes there, which is none.
+
+### Verdicts
+
+- **May the shapes commit and the two packages start now? Yes.** Every finding reads None, and the contract names
+  rather than guesses wherever one is unset. R1 is a one-sentence change to R.2 that A needs before writing the
+  not-open path, A's third step. Fold it in at the shapes commit.
+- **May the probes run on SolidWorks 2026 as the script stands? Yes.** Nothing in it can hang or raise an unwatched
+  dialog that the first version could not, and P1, P2 and P8 are fixed. Two of its proposals must not be set from this
+  run as they stand: `REFERENCED_CONFIGURATION_READ` (R2: M9's to set) and `COAXIAL_FACE_READ` (S-d: only once the
+  keyway control is added, or as provisional). S-b and S-c sharpen `FILE_VERSION_READ` and
+  `PERSIST_REFERENCE_SURVIVES_RELOAD`. If they are added first, the run costs one more minute.
