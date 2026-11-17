@@ -723,5 +723,8 @@ record's problems by kind, so the second `unsettled` overwrites the first's subj
 - **What SolidWorks is asked to do is unchanged.** What the record says after a mode is added is changed.
 - **A stop in a part whose rebuild reported an error never offers saving.** *It had already changed Gear_m1.25_N29,
   not saved, and Gear_m1.25_N29 is left in error: close it in SolidWorks without saving (the file on disk is as before
-  this Update), then press Update SolidWorks again once that is put right.* Every other stop keeps W4's offer.
+  this Update), then press Update SolidWorks again.* There is no "once that is put right": the failed part is open
+  holding the new value, so a press on it would set nothing and it would never mend. With several documents changed,
+  it says *close them all*. Saving the good ones beside the failed one closed would leave gears at their new values
+  against it as it was. Every other stop keeps W4's offer.
 - **B now uses `swbuild.work_without_modes`.** Its own copy is gone.
