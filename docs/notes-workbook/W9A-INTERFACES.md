@@ -1,7 +1,9 @@
 # W9a package A (the worker side of issue #1): what package B may call and rely on
 
 Package A of `ISSUE-1-PLAN.md` §5's W9a, written against the fake from `a648e0a`, reviewed in `W9A-REVIEW-A.md`
-(`51b398b`) and revised in one fix round under the coordinator's rulings 1 to 8 on that review (§6 below). Authority:
+(`51b398b`) and revised in one fix round under the coordinator's rulings 1 to 8 on that review (§6 below), then
+under the demonstration's ruling on SolidWorks 2026 with the run review's conditions (`W9A-RUN-2026-REVIEW.md`,
+finding 1; §4 item 11). Authority:
 the plan as amended by *Changes after S0 and its review* (route (c1) is K2's route; every other kind of user mate on a
 put gear refuses), then `W9-S0.md` and the W9 findings in `findings.py`. Nothing here touches the window,
 `ui_text.py`, `gui.py`, the record's schema or the boards: those are package B's. A change to a shape below is a
@@ -21,7 +23,8 @@ stop-and-ask, as at W8.
   `_update_motion` and `_modes_check`, `_find_by_part` (K1). Change phase: `_put_train(..., carried=, user=)` and
   `_put_carried` (route (c1)), `_bind` (a put the check did not judge, where the user's work is, stops the job),
   `_modes_tie_read`, `_mate_problems(..., user_before=, user_found=)`, `_components_after`, `_carried_problems`
-  (each carried pose read again), `_free_to_turn(..., mates_on=)`, `_update_document` (K3).
+  (each carried pose read again), `_free_to_turn(..., mates_on=)`, `_update_document` (K3), and, at each assembly
+  rebuild that returns False, `_rebuild_laid_to_user` (§4 item 11, gated by `assembly_rebuild_settled`).
 - **`workbook/update.py`**: `classify(..., read_sidecar=None)` fills what the worker needs (§3); `finish_update`
   writes a component found by its part into the record by the name found.
 
@@ -35,7 +38,9 @@ stop-and-ask, as at W8.
 | `carried: [(component, gear, configuration)]` | Each put of a user component with its gear (route (c1)), in the order put; configuration `""` with no modes. |
 | `renamed: [(gear, Name2 on record, Name2 found)]` | K1. `finish_update` already records the found name; no schema change. |
 | `user_in_error: [(mode, name)]` | Each user mate or component read in error after the change, those in error before included. A mate the Update put in error in a mode other than the one active at the check is listed here only (its state before was never read): B shows it with its mode. |
-| `user_features_in_error: [UserFeature]` | Each user feature read in error once its document was rebuilt (K3): the user's, never a failure. |
+| `user_features_in_error: [UserFeature]` | Each user feature read in error once its document was rebuilt (K3): the user's, never a failure. `user_feature_was_in_error(f)` is True for one already in error when the check phase read it, before anything changed ("was in error … before this Update changed anything, and still is"), False for one newly in error ("is in error … now"); `values_under(f)` is what this Update set in that feature's document, `[ValueSet(path, name, was, now, cell)]` (k3: G1's Bore 8 -> 14, `Gears!J2`). |
+| `rebuild_from_user_alone: [str]` | §4 item 11: an assembly rebuild returned False and was laid to the user's work alone; what of the user's was in error then, by name (a feature as `"Keyway in Gear_m1.25_N17.SLDPRT"`). The Update went on: no failure, nothing saved, as any Update. `rebuilt` stays as SolidWorks answered (False), so B must not say the app's "error rebuilding" when this is non-empty, and the same for a part whose `rebuilt` is False while only the user's features in it are in error (no failure names it). Empty otherwise. |
+| `values_set: [ValueSet]`, `features_read: {path: bool}` | Each global the Update set, per document, with what it held before; each document whose features were read after its change, True where a feature the app made read in error. |
 | `extra_mates` | Unchanged: the user's mates suppressed in every mode. `user_work.mates` holds every user mate, suppressed or not; `on` says where each is on. |
 
 `UserWork(read_at, components, mates, features, carried)`; `read_at` is `store.now()`'s UTC stamp; `in_error` names
@@ -51,10 +56,14 @@ it. `UserFeature(path, name, type_name, code, warning)`.
 
 `UserWorkRefused(BuildError)`, raised before any write; `str()` is every sentence joined; `.problems` is a tuple of
 `UserProblem(kind, sentence, mates, values)`, values first, then mates; `.user_work` the inventory as read. Kinds:
-`PROBLEM_VALUE` (K11, with `ValueEdit(document, name, live, wanted, recorded, mode, cell)`), `PROBLEM_OTHER_KIND`,
+`PROBLEM_VALUE` (K11, with `ValueEdit(document, name, live, wanted, recorded, mode, cell, unsaved, blank)`; `blank`
+says what the workbook's value stands for where its cell can be blank: `"no bore"` for a Bore of 0, or the default
+equation of a blank Backlash or Fillet, `"0.3 × Module"`; the sentence says it so, never "0 in the workbook"),
+`PROBLEM_OTHER_KIND`,
 `PROBLEM_LOCK_BY_MODE`, `PROBLEM_TWO_BODIES`, `PROBLEM_TIE` (read by SolidWorks, or a lock chain to the ground: its
 sentence says which), `PROBLEM_UNSETTLED` (a finding route (c1), one of its branches, or the tie read rests on is
-missing), `PROBLEM_COMPONENT` (a component route (c1) would put is suppressed or lightweight: judged inside
+missing), `PROBLEM_COMPONENT` (a component route (c1) would put is suppressed, lightweight, or reads in error — the
+last since the run review's finding 1, unmeasured, its own part most likely holding a feature in error: judged inside
 `judge_user_work` since package B's fix round, so the footer's prediction foresees it), `PROBLEM_UNREAD` (a user mate
 SolidWorks would not describe).
 
@@ -109,10 +118,13 @@ stays behind. Carrying anything over stays W9d's. (`W9A-PACKAGE-B.md`.)
 
 ## 4. Judgement calls where the plan left room (as revised)
 
-1. **Route (c1) only where S0 measured it**, on a train with a carrier. Every other branch is its own finding,
-   `findings.USER_MATE_PUT_<NO_CARRIER|HELD_GEAR|FIXED_GEAR|SUBASSEMBLY>_ON_<year>`, None on both versions, and
-   refuses naming the user's lock until set True (ruling 4; the sub-assembly branch is mine, beside the three the
-   ruling names). The rigid motion is read after the app's locks (and a carrier train's gear mates) are off and the
+1. **Route (c1) only where measured**: S0's train with a carrier, and since the demonstration a train with no
+   carrier on a gearbox with no modes on 2026 (`USER_MATE_PUT_NO_CARRIER_ON_2026` True, section `nocarrier`). Every
+   other branch is its own finding, `findings.USER_MATE_PUT_<NO_CARRIER|NO_CARRIER_MODES|HELD_GEAR|FIXED_GEAR|
+   SUBASSEMBLY>_ON_<year>`, None, and refuses naming the user's lock until set True (ruling 4; the sub-assembly
+   branch is mine, and so is `NO_CARRIER_MODES`, split off at the demonstration's ruling because the run put a
+   train with no carrier on a gearbox with no modes only, while `user_carry_branches` would have labelled the
+   TransferCase's trains `NO_CARRIER` too). The rigid motion is read after the app's locks (and a carrier train's gear mates) are off and the
    assembly rebuilt; components are put after every app body of the step, before the app's mates go back on.
 2. **"May put", before any change.** No modes: a train out of step or off its axis against the wanted frames, one
    whose Face Z changes or whose gear mate is remade, every train when the layout or a carrier changes; with modes,
@@ -128,10 +140,30 @@ stays behind. Carrying anything over stays W9d's. (`W9A-PACKAGE-B.md`.)
    (c1) on that gear is not yet measured, will once it is — or suppress the mate.
 9. **K11 by the record's word and its mark** (ruling 3, above).
 10. **The user's features** are those after the app's first that the record (else today's plan) does not list.
-11. A part rebuild failing only on the user's features is not a failure while
-    `findings.WHATS_WRONG_OPENS_ON_PART_REBUILD` is False; an assembly rebuild failure stays one, naming what of the
-    user's was in error before (M3 unmeasured).
-12. A user item newly in error is a failure as the user's in the mode active at the check; elsewhere listed only.
+11. **A rebuild that fails on the user's work alone is not a failure** (the coordinator calls this judgement call
+    12). A part's: while `findings.WHATS_WRONG_OPENS_ON_PART_REBUILD` is False, when only the user's features read in
+    error and the app's none. An assembly's (the demonstration's ruling, M3 measured on 2026, with the run review's
+    four conditions; motion path, with modes and without), at every rebuild that returns False,
+    `_rebuild_laid_to_user` reads, and the Update goes on only when all hold:
+    1. something of the user's is found in error — a component of theirs, a feature of theirs in an app part, or a
+       mate of theirs, a mate alone only where `ASSEMBLY_REBUILD_WITH_USER_MATE_IN_ERROR_ON_<year>` is False (on 2026
+       it is True: a mate in error alone leaves the rebuild True, so it does not explain a False);
+    2. nothing of the app's is in error, read whole: every recorded mate on and in error (not a warning, as the
+       post-check), every feature the app made in every app part (the parts, the layout, the carriers: each app
+       component's part must have been read, after its change where this Update set it, else in the check phase);
+       anything unread counts as in error;
+    3. an app component's own error code is not judged (a user feature in its part sets it: m3's Sprocket-1 read 1);
+       its part's features and its mates are;
+    4. `assembly_rebuild_settled(revision)`: `ASSEMBLY_REBUILD_WITH_USER_MATE_IN_ERROR_ON_<year>`,
+       `ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_<year>` (False) and `WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_
+       <year>` (False) all set; 2024's are None, so there it stays today's failure.
+    Then `rebuild_from_user_alone` names the user's items and the log says "CHECK   the assembly's rebuild reported
+    an error, from your work alone: …"; the post-checks run as after any rebuild. Otherwise the failure is as
+    before, naming what of the user's was already in error. The static path reads no mate or component, so an
+    assembly rebuild failure there stays one. Not measured, so refused before any write: a press that would put by
+    route (c1) a component of the user's that reads in error (`PROBLEM_COMPONENT`).
+12. A user mate or component newly in error is a failure as the user's in the mode active at the check; elsewhere
+    listed only. A user feature newly in error never is (K3, item 11).
 13. "The app's own mates leave it free" is taken from the record.
 14. K1 on the motion path only; the layout renamed in SolidWorks is still the app's, by its part.
 15. A mate's kind is `findings.MATE_LOCK` / `MATE_GEAR` against `IMate2.Type`, plus the motion types; anything else is
@@ -148,8 +180,8 @@ stays behind. Carrying anything over stays W9d's. (`W9A-PACKAGE-B.md`.)
     readings: the value differs from what Update SolidWorks last set and left unsaved, either because it was changed
     in SolidWorks since or because SolidWorks closed without saving that Update and the document was changed after;
     and what to do in each case. Nothing is added to the record's schema: the sentence is what is kept.
-16. A component's state per mode is not read (S5's); a carried component suppressed or lightweight in the active
-    configuration refuses.
+16. A component's state per mode is not read (S5's); a carried component suppressed, lightweight or in error in the
+    active configuration refuses.
 
 ## 5. Gaps package B must say, not hide
 
@@ -168,8 +200,16 @@ stays behind. Carrying anything over stays W9d's. (`W9A-PACKAGE-B.md`.)
   and did not put it right.
 - **The other-kind sentence for a gear mate between two of the user's components** (re-check N9), one of them carried,
   says the mate is "on G1", the carrying gear, though it is on the user's components. Left as a note.
+- **Known and left for a later stage** (the coordinator's addendum; changing them would change how many problems a
+  refusal carries, which B's footer, the record and the demonstration's expected problem lists all count):
+  `PROBLEM_COMPONENT` is one problem per component, so three sprockets loaded lightweight say the same refusal three
+  times in full (it should become one problem per reason naming the components together); `PROBLEM_UNSETTLED` for
+  an unmeasured branch is one problem per gear, repeating the whole reason (it should become one per branch).
+- **A False assembly rebuild on the static path** stays a failure (no mate or component read there, item 11).
 
-## 6. Pins moved at the fix round, deliberately (the coordinator's rulings 5 and 8)
+## 6. Pins moved deliberately
+
+At the fix round (the coordinator's rulings 5 and 8):
 
 - `tests/test_swbuild.py::test_an_unsuppressed_mate_the_record_does_not_know_refuses_the_update_naming_it` (W5's M7
   sentence) and the three cases of `tests/test_swbuild_modes.py::test_a_mate_not_on_record_on_in_a_mode_not_active_
@@ -179,3 +219,19 @@ stays behind. Carrying anything over stays W9d's. (`W9A-PACKAGE-B.md`.)
 - The five E4 tests of `tests/test_workbook_modes.py`: each is now the lost-Update case (the assembly marked unsaved
   in the record and loaded from its file, `_lost_update`), every assertion as written; beside them
   `test_e4_a_flag_or_value_the_user_changed_refuses_where_the_record_vouches` asserts K11's refusal.
+
+At the demonstration's ruling (M3 and `nocarrier` on 2026) and its addendum:
+
+- `test_an_unsuppressed_mate_the_record_does_not_know_refuses_the_update_naming_it` (W5): `NO_CARRIER` measured on
+  2026, so the sentence now offers the lock as it stands ("lock your component to G1 instead, and Update SolidWorks
+  puts it with G1, or suppress Angle1").
+- The three cases of W8's `test_a_mate_not_on_record_on_in_a_mode_not_active_refuses_before_anything_is_shown`: the
+  TransferCase's trains are the new `NO_CARRIER_MODES` branch, still unmeasured; the sentence says its words.
+- `tests/test_findings.py::test_route_c1s_branches_s0_did_not_measure_are_not_measured_on_either_version`: no longer
+  lists `NO_CARRIER` on 2026; adds `NO_CARRIER_MODES`.
+- W9a's own: the tie sentence names each mate once (addendum); the K3 log line adds the value set under the feature;
+  `test_a_user_feature_the_rebuild_put_in_error_is_named_as_theirs_and_does_not_stop_the_job` passes every part (the
+  review's condition 2 reads them all).
+- `tests/test_workbook_user_record.py::test_a_value_refusal_stands_in_the_footer_until_the_workbook_asks_what_
+  solidworks_holds` (package B's): its premise patched, `USER_MATE_PUT_NO_CARRIER_ON_2026` None as when it was
+  written; every assertion as written.
