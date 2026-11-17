@@ -99,7 +99,7 @@ but **not closed**: its gate findings are still None on both versions and the 20
   allows, per version, in `findings.py` with `tests/test_findings.py` pinned to the committed logs; (5) the whole
   suite (last whole run, at `0eb0768`: the one known font-width failure, 3786 passed); (6) rewrite item 10 and the
   phase table, close W9c; then W9d.
-- *Two 2024 runs and one 2026 run were stopped by the coordinator, not by a fault:* a 2024 whole run 21 minutes in
+- *One 2024 run and one 2026 run were stopped by the coordinator, not by a fault:* a 2024 whole run 21 minutes in
   and 2026's run 7 during `fixed`, both because fixes landed after their snapshots.
 - *For the user, defaults standing:* an Update that adds a gear into one of their components adds it and names the
   interference in red afterwards (the footer before the press is silent); a removal refuses while any of their
