@@ -54,7 +54,11 @@ and the footer, read line and gear table are logged.
    with its Output folder blank and saved once by Excel; read (shot 17); the Speeds panel with the mode chooser on 4L
    (shot 18) and on N (shot 19), each panel cut out; then built (shot 20): the built footer's sentences logged
    verbatim (their turn sentence is not asserted: it may change after s7), the footer whole, the window 1080 px wide
-   in every state. ``--only w8`` runs this stage alone.
+   in every state. ``--only w8`` runs this stage alone. Since W9a (K12, ISSUE-1-PLAN §2.6; W9A-REVIEW-B point 2), read
+   and built: the footer measured on its box (``_status_box``), not its label; the window frame's bottom
+   (``GetWindowRect``) inside the screen's work area; the window's real height as Windows has it; the footer and
+   every button whole; the body's last line scrolled into view (``_page`` to its end); and, built, a sentence set by
+   ``_set_status`` alone shown whole.
 
 Afterwards the window is closed, Excel quit, and this run's SolidWorks documents saved and closed. Any exception in a
 Tk callback ends the run as failed (``report_callback_exception``), a watchdog ends it when no step has completed for
@@ -93,6 +97,7 @@ open(LOG_PATH, "w", encoding="utf-8").close()       # log() appends each line as
 import tkinter as tk  # noqa: E402
 
 import pythoncom  # noqa: E402
+import win32api  # noqa: E402
 import win32gui  # noqa: E402
 import win32ui  # noqa: E402
 from PIL import Image  # noqa: E402
@@ -628,15 +633,108 @@ def w8_width(name):
 
 
 def w8_footer_whole(name):
-    """The footer whole: a status said, its label drawn at least as tall as it asks (no line cut off), inside the
-    window."""
-    label = win.status_label
+    """The footer whole (K12, W9A-REVIEW-B point 2): since W9a the sentence's label sits in a canvas, the box
+    ``_status_box``, and a label in a canvas is always drawn at its asked size however little the box shows, so the
+    BOX is measured: as tall as the label asks (the sentence whole), or, when the sentence scrolls in itself above the
+    footer's ceiling (``_status_scrolls``), at the ceiling with its bar ``_status_bar`` mapped; the box's bottom inside
+    the window either way."""
+    win.update_idletasks()
+    win.update()
+    label, box = win.status_label, win._status_box  # noqa: SLF001 - the K12 box (W9A-PACKAGE-B)
     text = win.status.get()
-    bottom = label.winfo_rooty() + label.winfo_height() - win.winfo_rooty()
-    check(bool(text) and label.winfo_height() >= label.winfo_reqheight() and bottom <= win.winfo_height(),
-          f"W8 {name}: the footer whole, drawn {label.winfo_height()} px for the {label.winfo_reqheight()} it asks, "
-          f"its bottom at {bottom} of {win.winfo_height()}")
+    scrolls = bool(getattr(win, "_status_scrolls", False))
+    ceiling = workbook_gui.work_area(win)[2] // workbook_gui.FOOTER_SHARE
+    bottom = box.winfo_rooty() + box.winfo_height() - win.winfo_rooty()
+    if scrolls:
+        whole = (win._status_bar.winfo_ismapped() and box.winfo_height() >= min(ceiling, label.winfo_reqheight()) - 1  # noqa: SLF001
+                 and label.winfo_reqheight() > ceiling)
+    else:
+        whole = box.winfo_height() >= label.winfo_reqheight() and box.winfo_width() >= label.winfo_reqwidth()
+    check(bool(text) and whole and bottom <= win.winfo_height(),
+          f"W8 {name}: the footer whole, its box {box.winfo_width()} × {box.winfo_height()} px for the label's "
+          f"{label.winfo_reqwidth()} × {label.winfo_reqheight()}, {'scrolling at the ceiling ' + str(ceiling) if scrolls else 'not scrolling'}"
+          f", its bottom at {bottom} of {win.winfo_height()}")
     log("W8 footer sentences", state=name, sentences=[t.strip() + "." for t in text.split(". ") if t.strip()])
+
+
+def _rect(hwnd):
+    left, top, right, bottom = win32gui.GetWindowRect(hwnd)
+    return {"left": left, "top": top, "right": right, "bottom": bottom, "height": bottom - top}
+
+
+def w8_k12(name):
+    """K12 (ISSUE-1-PLAN §2.6 *Done when*; W9A-REVIEW-B point 2 and the coordinator's additions), on the real screen:
+
+    - the window's frame (``GetWindowRect`` of ``wm_frame``) inside the primary screen's work area, as the app reads it
+      (``workbook_gui.work_area``: ``SPI_GETWORKAREA``) and as Windows' monitor reports it (``GetMonitorInfo``);
+    - the window's REAL height, read from Windows (the client window's ``GetWindowRect``), not what was asked
+      (a Tk test under Windows Python saw the window keep its requested height after a shorter geometry): the client
+      bottom inside the frame and the work area, and Tk's own height agreeing with it;
+    - the footer frame and every footer button whole and inside the real client area;
+    - the body's last line reachable: the page (``_page``) scrolled to its end, the lowest label of the body
+      (``_body``) inside the page, then the page put back at its top."""
+    win.update_idletasks()
+    win.update()
+    frame = int(win.wm_frame(), 16)
+    client = int(win.winfo_id())
+    outer, inner = _rect(frame), _rect(client)
+    left, top, height = workbook_gui.work_area(win)
+    try:
+        monitor = win32api.GetMonitorInfo(win32api.MonitorFromPoint((0, 0), 1))     # the primary monitor
+        work = monitor["Work"]
+    except Exception as exc:  # noqa: BLE001
+        work = None
+        log("W8 K12", what=f"GetMonitorInfo unread: {type(exc).__name__}: {exc}")
+    log("W8 K12 geometry", state=name, frame=outer, client=inner, tk_height=win.winfo_height(),
+        tk_reqheight=win.winfo_reqheight(), geometry=win.geometry(), app_work_area=(left, top, height),
+        monitor_work=work, page_scrolls=bool(win._page_bar.winfo_manager()),  # noqa: SLF001
+        status_scrolls=bool(getattr(win, "_status_scrolls", False)))
+    check(outer["top"] >= top and outer["bottom"] <= top + height,
+          f"W8 {name}: the window's frame {outer['top']}…{outer['bottom']} is inside the work area {top}…{top + height}")
+    if work is not None:
+        check(outer["top"] >= work[1] and outer["bottom"] <= work[3],
+              f"W8 {name}: the frame inside Windows' own work area {work[1]}…{work[3]}")
+    check(inner["top"] >= outer["top"] and inner["bottom"] <= outer["bottom"] and abs(inner["height"]
+                                                                                       - win.winfo_height()) <= 2,
+          f"W8 {name}: the window's real height {inner['height']} px (Windows) is what Tk says it is "
+          f"({win.winfo_height()}), its client {inner['top']}…{inner['bottom']} inside the frame")
+    foot = win._foot  # noqa: SLF001
+    parts = [("footer", foot)] + [(n, getattr(win, n)) for n in ("export_button", "export_as_button", "build_button",
+                                                                 "update_button") if getattr(win, n).winfo_manager()]
+    cut = []
+    for label, w in parts:
+        bottom = w.winfo_rooty() + w.winfo_height()
+        if not w.winfo_ismapped() or w.winfo_height() < w.winfo_reqheight() or bottom > inner["bottom"]:
+            cut.append((label, w.winfo_height(), w.winfo_reqheight(), bottom))
+    check(not cut, f"W8 {name}: the footer and every button whole inside the real window (bottom {inner['bottom']}): "
+                   f"{cut or [n for n, _ in parts]}")
+    page, body = win._page, win._body  # noqa: SLF001
+    page.yview_moveto(1.0)
+    win.update_idletasks()
+    win.update()
+    labels, stack = [], list(body.winfo_children())
+    while stack:
+        w = stack.pop()
+        stack.extend(w.winfo_children())
+        if isinstance(w, tk.Label) and w.winfo_ismapped() and str(w.cget("text")).strip():
+            labels.append((w.winfo_rooty() + w.winfo_height(), str(w.cget("text"))[:40]))
+    last = max(labels) if labels else (None, "")
+    shown = (page.winfo_rooty(), page.winfo_rooty() + page.winfo_height())
+    check(last[0] is not None and shown[0] <= last[0] <= shown[1] + 1 and shown[1] <= inner["bottom"],
+          f"W8 {name}: the body's last line ({last[1]!r}, its bottom at {last[0]}) scrolled into view in the page "
+          f"{shown[0]}…{shown[1]}")
+    page.yview_moveto(0.0)
+    win.update_idletasks()
+
+
+def w8_set_status_whole():
+    """W9A-REVIEW-B point 1: a sentence set by ``_set_status`` alone (here the one for SolidWorks out of reach), after
+    the footer's own, shown whole in its box; then the footer's state put back."""
+    win._set_status(ui_text.job_unreachable("No SolidWorks session is running on this computer that Gear Generator can "
+                                             "reach; start SolidWorks, wait for it to finish loading, and press again.",
+                                             False), ok=False)  # noqa: SLF001
+    w8_footer_whole("a sentence set alone (SolidWorks out of reach)")
+    win._refresh_state()  # noqa: SLF001
 
 
 def w8_choose(name):
@@ -692,6 +790,8 @@ def w8_built_check():
     for sentence in W8_BUILT:
         check(sentence in text, f"W8 built: the footer says {sentence!r}")
     w8_footer_whole("built")
+    w8_k12("built")
+    w8_set_status_whole()
     w8_width("built")
 
 
@@ -947,6 +1047,7 @@ W8_STEPS = ([] if ONLY == "w8" else [
     ("do", lambda: speeds_panel("17-transfer-case-read")),
     ("do", lambda: w8_mode_check(win.mode.get() or "2H")),
     ("do", lambda: w8_footer_whole("read")),
+    ("do", lambda: w8_k12("read")),
     ("do", lambda: w8_choose("4L")),
     ("pause", 1.0),
     ("do", lambda: shoot("18-transfer-case-4L")),
