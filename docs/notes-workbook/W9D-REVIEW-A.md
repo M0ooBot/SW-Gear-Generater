@@ -1056,3 +1056,105 @@ own code.
   - the app's own mates' codes against before (`_app_mates_check`, `find_mate` on an app mate);
   - the interference naming a carried component.
 - **A record whose carry holds remade mates** (run 2's held none), and the footer's line after it.
+
+---
+
+## Last re-check before the second run: package A's sixth round (`5d51640`)
+
+*Independent, 2026-11-17.* I read the diff and ran scratch tests on A's worker and the fake at head (`b67cdc5`). As
+before, I ran the fake once more as SolidWorks reads, where the fake is kinder. I also removed one line in a scratch
+copy (below).
+
+**Suite:** **2 failed, 3915 passed, 10 skipped**. The two failures are the known tkinter tests.
+
+### Verdict
+
+**Not yet.** One must-fix stands between head and the two-hour run. It is an older fault the sixth round did not
+touch, and the run will meet it.
+
+**A mate to a plane of the assembly itself is made again, then read back as "differing", deleted and named `differs`
+on SolidWorks** (N1 below).
+- The fixture's UserAsm6 meets it in `carry-closed`, where the script rightly expects `remade`. That will be a FAIL.
+- In that section, `kinds_clean` would then leave `distance` out of the `CARRY_REMAKE_KINDS` proposal.
+
+The sixth round itself is sound: A1, A2 and A3 are done. Two should-fixes remain:
+- the first-mode restore after a stop is no longer pinned by any test;
+- the default clause can be untrue for an entity type the app does not know.
+
+### N1 (must-fix). `_read_back` takes the assembly's own entity for a component
+
+Where it is: `swbuild._read_back` (`swbuild.py`, the `wanted` and `got` lists).
+
+How the comparison is built:
+- `wanted` is built from the mate's targets with `"asm"` read as `""`, then filtered.
+- `got` is each remade entity's `ReferenceComponent` `Name2`, read through `mate_definition` / `mate_info`.
+
+Why they disagree:
+- On both versions, SolidWorks names an entity on the assembly's own plane by the root component's `Name2`
+  (`ASSEMBLY_ENTITY_COMPONENT_IS_ROOT_ON_2026` and `_ON_2024` True; `W9C-PROBES-REVIEW.md:46-61`, `:290`). R maps it
+  to `ASSEMBLY` by reading the root. The read-back does not.
+- So `got` holds `"RangeBox_r2"` where `wanted` holds nothing, the lists differ, and the result is `"entities"`. The
+  mate is deleted again and named `WHY_DIFFERS`.
+
+The fake hides this. Its default `assembly_entity = "none"` gives `""`, which is kinder than either version. Only one
+carry test sets `"root"`, and that test names the mate unread before any remake.
+
+Reproduced on A's worker, `_old_train` plus a fixed Housing-1 with a distance to `asm:plane1`:
+- `assembly_entity = "none"`: UserAsm6 is remade;
+- `assembly_entity = "root"`: `named [('UserAsm6', 'differs', ('entities',))]`.
+
+The run will meet it:
+- In `carry-closed` there is no lightweight component, so the root is read, UserAsm6 is planned and made, and then
+  it is deleted again.
+- `expected_outcome` says `{"remade"}`: a FAIL. The proposal of `CARRY_REMAKE_KINDS` from that section would drop
+  `distance` (`kinds_clean`).
+- The user would lose every mate of theirs to the assembly's own planes, said as "read otherwise than it was".
+
+**Fix:** in `_read_back`, read `got`'s entries as `""` where they name the new assembly's root component. The new
+assembly's root `Name2` is its title without the extension, read once by `root_component` after C.1. Also set the
+fake's `assembly_entity` default to `"root"` (or set it in `_old_train` and `_tc_again`), and pin the remake of an
+`asm:` mate.
+
+### The sixth round
+
+**A1: done.**
+- The fake reads an entity on a component suppressed in the mode showing as `unread`, as SolidWorks did in run 2.
+- R hands the cause over as structure: `OldEntity.cause`/`cause_parts`, with `WHY_UNREAD`'s subjects `(clause,
+  cause, *parts)`. These are `CAUSE_SUPPRESSED` (the component and the old mode showing) and
+  `CAUSE_BESIDE_LIGHTWEIGHT` (the first lightweight component).
+- Printed from A's worker on the fake with modes (Sprocket-1 suppressed in 2H, the mode showing, with a lock and an
+  axis mate on it): *"Lock1 and UserAxis9 are on Sprocket-1, which is suppressed in 2H, the mode TransferCase.SLDASM
+  showed, so they could not be read and are not made again."*
+- The lock's entity reads unread too in the fake now. Run 2 measured only a feature entity there. A whole-component
+  entity is likely the same, but it is the fake's guess.
+
+**A3: done.**
+- The beside-lightweight cause is reached on SolidWorks' shape (`assembly_entity = "root"`).
+- It is said by B as Gear Generator's rule (`W9D-REVIEW-B.md`).
+- `CAUSE_BESIDE_LIGHTWEIGHT` assumes that any entity with a component name R cannot place, beside a lightweight
+  component, is the assembly's own. That is right for every case met so far.
+
+**A2: done, with one gap left.** `test_a_same_error_mate_that_ties_no_gear_is_carried` shows Lock2 (Housing-1 to
+Chain-1) back in 46, carried, with no fallback. That restores the coverage M3 took away.
+
+### Should-fix
+
+**S5. The first-mode restore after a stop is pinned by nothing.**
+- `test_a_stop_in_another_mode_shows_the_first_again_…` now suppresses Sprocket-1 in N only. So its cluster is made
+  in 2H, the first mode, and the stop happens there. `fake.config == "2H"` holds without the restore.
+- In a scratch copy of head I removed the `finally`'s `c.show(c.first())` in `_carry`, the line that leaves the new
+  assembly in its first mode after a stop. `test_swbuild_carry.py` and `test_workbook_carry.py` all still pass, 213
+  tests.
+- Pin it again with a stop raised while a cluster is made in another mode. For example, suppress Sprocket-1 in 2H and
+  make it in 4H, with a mode showing where its entities read: that needs the old assembly to show 4H. Or raise in the
+  post-check's show of a later mode.
+
+**S6. The no-cause clause can be untrue.**
+- *"SolidWorks would not say what kind of entity it is"* is said for every entity whose kind reads `unread` with no
+  other cause.
+- `swcom.entity_kind` gives `unread` both when `ReferenceType2` does not answer and when it answers a type outside
+  `ENTITY_KIND_OF_SELECT_TYPE` (a sketch point or segment, say). In the second case SolidWorks did say, and the
+  app does not take that kind.
+- `OldEntity.select_type` keeps what was read. Use it to tell the two apart, for example *"it is on a kind of entity
+  Gear Generator does not make mates again on"*.
+- B's wording of this reason also says SolidWorks twice (`W9D-REVIEW-B.md`).
