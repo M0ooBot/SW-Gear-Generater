@@ -283,3 +283,79 @@ The pins in `tests/test_findings.py` cover v24, b1, b2 and s2, not s3, s4 or s5.
 - Whether What's Wrong is ever modal in an Update, and what FeatureXpert, Close or the check box would do mid-job.
 - The footer as a whole after a 2024 press (finding 4).
 - The final 2026 run, still running when this was written.
+
+---
+
+## Addendum: the fix rounds and the final run on SolidWorks 2026
+
+*2026-11-17, at `f0c5ff7`.* I read three commits:
+
+- `9280433`, the script;
+- `633fd83`, `ui_text` and its tests;
+- `ebc33f3`, `findings.py` and its pins.
+
+I also read the final run's logs: `probe/results/w9a-final-sw2026-20261117.log` ("f:N") with its JSON, and
+`w9a-final-window-sw2026-20261117.log`. `tests/test_findings.py` passes (145). I did not run the suite again.
+
+**1. The fix commits against this review's points.**
+
+- *Finding 1, the 2024 comments:* answered.
+  - `WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD` is now scoped to the mate case.
+  - The feature case is its own finding: True on 2024 from s4:115-118, and None on 2026. That None is fair: a box
+    of half a second could have slipped past the 2 s watch there.
+  - `ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_2024` now rests on s4:119-120 and the two Updates' False
+    rebuilds laid to the user.
+  - The s3, s4 and s5 logs are pinned.
+- *Finding 4, the sentences:* answered.
+  - Both now say "up to half a minute".
+  - The sentence before the press says "leave it alone".
+  - The sentence after the press follows only a press that changed or put something, or a stop after a write.
+  - A test shows the footer after a press carrying one sentence and never both.
+  - The k3 case (a feature newly broken, so nothing to warn of beforehand) still gets only the sentence after. That
+    was a note, not a request.
+- *Finding 5, a blocking box named late:* answered for the app's own jobs and the script's steps.
+  - On every poll, the frame must be enabled while a box is up.
+  - A box standing 120 s with no SolidWorks call made since it came is taken as blocking. Either way the STOP comes
+    at once.
+  - *Only partly answered* under a W8 helper (`w8_step`). The block is named at once in the log and the worker is
+    marked hung, but the run still waits out W8's own timeout before it stops. This costs time, not safety.
+  - None of it acts on 2026, where the helper is False.
+
+**2. The final 2026 log, from `91d40f5`.**
+
+- *The run.* It bears out the summary:
+  - one fresh session (PID 27592, 0.68 GB at attach, f:4);
+  - the rule read False, so any dialog is a STOP (f:7);
+  - all twelve sections 0 failed (the `time` lines f:221 to f:2427);
+  - `done 0 failed … 0 STOP(s)` (f:2435);
+  - the two noted items are the notification box and the over-defined balloon (f:2433-2434).
+- *The window check* ran in the same session at the same snapshot. Its frame stood at 0…1524 in read, built and
+  sentence-alone, and it ended `done {"fails": []}`.
+- *The `ok` counts per section* match the closing run's, or exceed them, except two:
+  - *k3, one fewer.* The cross-check "the app reads the M3 findings as this script does" is now a fact line
+    (f:2249), because the app's gate now has another shape. The value it gives still drives the judgement that k3
+    went ahead, and k3 asserted that (f:2295-2296). A check turned into a fact; nothing is skipped.
+  - *lightweight, three fewer.* Setting Sprocket-1 back to resolved now reads every instance resolved (f:85), so the
+    other three resets are no longer needed. That also answers what my close review left open: setting one instance
+    lightweight, or back, changes all instances of the part.
+- *Shown as before:*
+  - m3's two Updates went ahead (f:105, 162; the second laid to Sprocket-1);
+  - the carried component in error was refused, foreseen (f:195, 218);
+  - k3 went ahead naming the keyway (f:2295-2296).
+
+  The final run is no weaker than the closing run it replaces.
+
+**3. The claim that nothing after `91d40f5` changes the worker on 2026 holds.**
+
+- `git diff 91d40f5 HEAD -- src` touches only `findings.py` (comments, and the new pair) and `ui_text.py` (the
+  sentences).
+- No code in `src` reads `WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_WITH_PART_FEATURE_IN_ERROR_ON_<year>`, or the
+  mate-case `WHATS_WRONG_OPENS_ON_ASSEMBLY_REBUILD_ON_<year>` (`grep`). So nothing refuses on the new 2026 None. The
+  probe reads only the second, and only into a fact line.
+- The `ui_text` changes all sit behind `whats_wrong_shows(revision)`, which is False on 2026, so 2026's text is
+  unchanged.
+- `9280433` is the script, and acts only where the helper is True.
+- Nothing needs running again.
+
+**4. W9a is closed on the evidence.** One thing stays open, by design and not as a blocker: the user's answer on the
+2024 What's Wrong ruling, put to them as a default they may change.
