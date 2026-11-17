@@ -66,6 +66,7 @@ SUN_WHOLE = ent(APP, "Sun", ENTITY_WHOLE)
 
 
 def work(components=(), mates=(), how=swbuild.OLD_OPEN, **kw):
+    kw.setdefault("states_route", "route")              # read per mode, unless a test says otherwise
     return OldWork("2026-11-17T10:00:00Z", OLD.path, how, kw.pop("active", "H"), kw.pop("modes", ("H", "L")),
                    list(components), list(mates),
                    kw.pop("app_frames", (("Sun", (I9, (0.0, 0.0, 10.0))), ("Ring", (I9, (0.0, 0.0, 0.0))))), **kw)
@@ -366,12 +367,16 @@ def test_a_version_not_known_settles_nothing():
 
 def test_the_states_route_is_a_gate_when_the_gearbox_has_modes(every_gate):
     every_gate(COMPONENT_STATE_PER_CONFIGURATION_ROUTE=None)
-    w = work([comp()], [])
+    w = work([comp()], [], states_route="")
     assert swbuild.carry_gates(w, _carry(), REVISION) == [
         (swbuild.STEP_CARRY_STATES, "COMPONENT_STATE_PER_CONFIGURATION_ROUTE_ON_2026")]
     shown = work([comp()], [], states_route="shown read-only")
     assert swbuild.carry_gates(shown, _carry(), REVISION) == []
-    assert swbuild.carry_gates(work([comp()], [], modes=()), _carry(), REVISION) == []
+    assert swbuild.carry_gates(work([comp()], [], modes=(), states_route=""), _carry(), REVISION) == []
+    # The route set but not read (an open assembly with unsaved changes, the unsaved read not shown): that is why.
+    every_gate(COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED=None)
+    assert swbuild.carry_gates(w, _carry(), REVISION) == [
+        (swbuild.STEP_CARRY_STATES, "COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED_ON_2026")]
 
 
 def test_the_selection_order_follows_the_ledger():
@@ -745,3 +750,87 @@ def test_a_lightweight_user_component_is_carried_resolved_and_its_mates_named(mo
     assert {n.item: n.why for n in cr.named} == {"Lock1": "lightweight"}
     assert "Sprocket-1" in fake.lightweight                         # nothing resolved in the old assembly
     assert ("root_component", (True,)) not in fake.calls
+
+
+# -- a gearbox with modes: states and flags per mode, a mode the old assembly has not ---------------------------------
+
+from test_swbuild import (TC_ASM, TC_DOG, TC_LAYOUT, TC_MODES, TC_NAMES, TC_SENSES, TC_SLEEVE, _tc_gearbox,  # noqa: E402
+                          _tc_modes, _tc_plan, mode_findings)  # noqa: F401
+from gear_generator.gears.base import BuildPlan                                     # noqa: E402
+
+TC2 = {TC_ASM: TC_ASM.replace("TransferCase", "TransferCase_r2"),
+       TC_LAYOUT: TC_LAYOUT.replace("TransferCase", "TransferCase_r2"),
+       TC_SLEEVE: TC_SLEEVE.replace(".SLDPRT", "_r2.SLDPRT"), TC_DOG: TC_DOG.replace(".SLDPRT", "_r2.SLDPRT")}
+TC_GEAR_IDS = {h: n for h, n in TC_NAMES.items()}
+
+
+@pytest.mark.parametrize("unsaved_read", [True, None])
+def test_states_and_flags_are_set_in_every_mode_and_a_mode_the_old_assembly_has_not_takes_the_first(
+        monkeypatch, every_gate, mode_findings, unsaved_read):
+    # The old assembly is open with unsaved changes (the build's interference read marked it): the unshown state
+    # route is used only once it is shown to read them; else each component takes the mode showing's state (D2).
+    every_gate(COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED=unsaved_read)
+    fake, built, _ = _tc_gearbox(FakeSolidWorks())
+    assert built.ok
+    fake._w9d()
+    fake.read_entity_kinds = True
+    fake.user_component(TC_ASM, "Sprocket-1", SPROCKET, (I9, (0.0, 0.0, 200.0)))
+    fake.states_by.setdefault("N", {})["Sprocket-1"] = 0                       # suppressed in N
+    # Locked to InDog, which stands still in every mode (the fake solves no lock on a show: a sleeve's slide carrying
+    # a locked component along, contradiction 6, is M9's to show).
+    fake.user_lock(TC_ASM, "Lock1", "gear2-1", "Sprocket-1", flags={"2H": False, "4H": False, "N": True, "4L": False})
+    fake.saved[_key(SPROCKET)] = ([], [])
+    fake.protected = {_key(TC_ASM), _key(SPROCKET)}
+    fake.no_save_after = _key(TC2[TC_ASM])
+    _isfile(monkeypatch, fake)
+    recorded = tuple(m.name for m in fake.memory_mates[_key(TC_ASM)] if not m.user)
+    old = swbuild.OldAssembly(TC_ASM, tuple((n, f"{h}-1") for h, n in TC_NAMES.items()), "layout-1", TC_LAYOUT,
+                              recorded, ("2H", "4H", "N"))              # 4L is new in this revision, say
+    bodies = (CarryBody("layout", "layout-1", "layout", False, "new", ("Rear Axis",), ("Rear Axis",)),) + tuple(
+        CarryBody(n, f"{h}-1", h, False, "its Part name changed", GEAR_NAMES, GEAR_NAMES) for h, n in TC_NAMES.items())
+    carry = Carry(old, bodies, TC_MODES, "2H", (34,), tuple(TC2) + tuple(TC2.values()))
+
+    def moved(op):
+        return _replace(op, path=TC2.get(op.path, op.path)) if isinstance(op, (ops.AddComponent, ops.SaveAs)) else op
+    assembly = _tc_plan()
+    assembly = _replace(assembly, ops=tuple(moved(op) for op in assembly.ops), path=TC2[TC_ASM])
+    layout = BuildPlan("layout", "", (ops.NewPart(""), ops.Rebuild(), ops.SaveAs(TC2[TC_LAYOUT])), TC2[TC_LAYOUT])
+    parts = [part_plan(path=TC2[p]) for p in (TC_SLEEVE, TC_DOG)]
+    result = swbuild.build_gearbox(fake, parts, layout=layout, assembly=assembly,
+                                   gears={h: n for h, n in TC_NAMES.items()} | {"layout": "layout"}, senses=TC_SENSES,
+                                   modes=_tc_modes(), exists=fake.exists, before=old, carry=carry,
+                                   mtime=lambda p: 1.0)
+    assert result.ok, result.log_lines()
+    cr = result.carry
+    assert cr.stopped == "", cr.stopped
+    assert cr.inserted == [("Sprocket-1", "carried1-1")]
+    if unsaved_read is None:
+        assert cr.work.states_route == "" and cr.work.components[0].suppressed_in is None
+        assert cr.states == [("carried1-1", ())]                          # 2H's state, showing, in every mode
+        assert (swbuild.STEP_CARRY_STATES, "COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED_ON_2026") in cr.gates
+    else:
+        assert cr.work.states_route == "route" and cr.work.components[0].suppressed_in == ("N",)
+        assert cr.states == [("carried1-1", ("N",))]                      # 4L took 2H's: resolved
+    assert [(r[0], set(r[2])) for r in cr.remade] == [("Lock1", {"2H", "4H", "4L"})]
+    shown = [a[0] for n, a in fake.calls if n == "show_configuration"]
+    assert shown[-1] == "2H"
+    assert cr.moved == []
+
+
+@pytest.mark.parametrize("gate", [True, None])
+def test_a_user_gear_mate_on_g1s_gear_axis_is_made_again_with_its_ratio_and_sense_read_back(monkeypatch, every_gate,
+                                                                                            gate):
+    every_gate(CARRY_GEAR_MATE_ON_AN_APP_GEAR=gate)
+    fake = _old_train()
+    _isfile(monkeypatch, fake)
+    gear = fake.user_mate(T_ASM, "Gear6", kind="gear", a=("Sprocket-1", "Sprocket Axis"), b=("gear1-1", "Gear Axis"))
+    gear.ratio, gear.flip = (20.0, 17.0), True
+    cr = _build_again(fake).carry
+    if gate is None:
+        assert {n.item: n.subjects for n in cr.named} == {
+            "Gear6": ("gear mate on an app gear", "CARRY_GEAR_MATE_ON_AN_APP_GEAR_ON_2026", Y)}
+        return
+    assert cr.named == [] and {r[0] for r in cr.remade} == {"Lock1", "Gear6"}
+    made = fake.mate("Gear6", R2[T_ASM])
+    assert (made.a, made.b) == (("carried1-1", "Sprocket Axis"), ("gear1-1", "Gear Axis"))
+    assert made.ratio == (20.0, 17.0) and made.flip is True               # read back as the old one reads

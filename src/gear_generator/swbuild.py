@@ -7410,7 +7410,10 @@ def plan_carry(work: OldWork, carry: Carry, revision: Sequence[int], *,
         else:
             named.append(reason)
     if carried and len(work.modes) > 1 and not work.states_route:
-        fs.need(STEP_CARRY_STATES, "COMPONENT_STATE_PER_CONFIGURATION_ROUTE", _SET)
+        # Not read per mode: the unshown route is unset, or set but not shown to read an open assembly's unsaved
+        # changes (R.4), which is then why.
+        if not fs.need(STEP_CARRY_STATES, "COMPONENT_STATE_PER_CONFIGURATION_ROUTE", _SET):
+            fs.need(STEP_CARRY_STATES, "COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED")
     by_name = {c.name: c for c in work.components}
     user_handle = {c.name: f"carried{i}" for i, c in enumerate(carried, 1)}
     not_open = work.how == OLD_READ_ONLY
@@ -7637,7 +7640,7 @@ def _read_old_states(sw: SolidWorks, work: OldWork, configurations: Mapping[str,
     read: Optional[Dict[str, Tuple[str, ...]]] = None
     if route is not None and (work.how == OLD_READ_ONLY or not unsaved or
                               fs.settled("COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED")):
-        states = sw.component_states(names, list(configurations.values()))
+        states = sw.component_states_in(names, list(configurations.values()))
         read = {n: tuple(m for m, c in configurations.items() if states.get(n, {}).get(c)) for n in names}
         work.states_route = str(route)
     elif work.how == OLD_READ_ONLY:

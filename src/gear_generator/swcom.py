@@ -3808,7 +3808,7 @@ class Session:
             if self._w9d_finding("REFERENCED_CONFIGURATION_READ") is True else ""
         return referenced, active, names
 
-    def component_states(self, names: Sequence[str], configurations: Sequence[str]) -> Dict[str, Dict[str, bool]]:
+    def component_states_in(self, names: Sequence[str], configurations: Sequence[str]) -> Dict[str, Dict[str, bool]]:
         """Each named component's suppressed state in each configuration, unshown, by the route
         ``COMPONENT_STATE_PER_CONFIGURATION_ROUTE_ON_<year>`` names (§11.1's candidate 1,
         ``IConfiguration.GetComponentSuppressionState``); refused while that finding is None."""

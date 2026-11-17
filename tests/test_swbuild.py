@@ -772,6 +772,8 @@ class FakeSolidWorks:
         self.frames[name] = put
         if handle in self.found:
             self.frames[self.found[handle]] = put
+        for frames in self.frames_by.values():         # W9d: a component new to the assembly stands in every
+            frames.setdefault(name, put)               # configuration where it was put, until put there itself
         self._rebuilt(kind)            # Session.place_component's rebuild of its own, after the put
         if self.mates:
             # Session.place_component reads the frame back after that rebuild.
@@ -1909,8 +1911,8 @@ class FakeSolidWorks:
                                                                       ("Default", "Default", ("Default",)))
         return (referenced if self._finding("REFERENCED_CONFIGURATION_READ") is True else ""), active, tuple(names)
 
-    def component_states(self, names, configurations):
-        self._log("component_states", tuple(names), tuple(configurations))
+    def component_states_in(self, names, configurations):
+        self._log("component_states_in", tuple(names), tuple(configurations))
         self._gate("COMPONENT_STATE_PER_CONFIGURATION_ROUTE", "Reading states per mode")
         if self._w9d().states_mark:
             self._touch()
