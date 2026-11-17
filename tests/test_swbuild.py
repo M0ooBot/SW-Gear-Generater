@@ -1176,7 +1176,7 @@ class FakeSolidWorks:
             if end[0] != "asm" and self._light(end[0]):
                 # As Session.mate_info reads it: ReferenceType2 answers a plane, but its tree order needs the part's
                 # document, which a lightweight component has not (W9c probes: GetModelDoc2 None), so unread. A
-                # feature's own name still reads (the first M9 run, :634: SprocketLight-1's Gear Axis).
+                # feature's own name still reads (the first M9 run, :627: SprocketLight-1's Gear Axis).
                 return ("unread", "")
             return ("plane", target)
         if target == "origin":
@@ -1934,7 +1934,7 @@ class FakeSolidWorks:
     DEF_TYPES = dict(MATE_TYPES, concentric=1, perpendicular=2, parallel=3, tangent=4, width=11, slot=21)
     _TYPE_WORDS = {0: "coincident", 1: "concentric", 2: "perpendicular", 3: "parallel", 4: "tangent", 5: "distance",
                    6: "angle", 10: "gear", 16: "lock"}
-    # GetTypeName2 as SolidWorks 2026 read each (the first M9 run, w9d-demo-sw2026-…-2 :589-635; W9c's m1 for the limit
+    # GetTypeName2 as SolidWorks 2026 read each (the first M9 run, w9d-demo-sw2026-…-2 :597-628; W9c's m1 for the limit
     # angle). A kind no run read keeps its word (perpendicular, tangent: unmeasured).
     TYPE_NAMES = {"coincident": "MateCoincident", "concentric": "MateConcentric", "parallel": "MateParallel",
                   "distance": "MateDistanceDim", "angle": "MatePlanarAngleDim", "limit distance": "MateLimitDistanceDim",

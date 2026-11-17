@@ -444,9 +444,9 @@ was measured to do, held to its measurement: the `*_ON_2026` findings the carry 
 | Which AddMate5 makes a limit mate | one whose range ends differ (m1); equal ends make the plain kind (add_mate, S5 (c)) | any range | as measured |
 | Lightweight | per file in the session: one Sprocket set, every Sprocket.SLDPRT read 1 (`-1.log`:121) | per component | per file (`_light`) |
 | Opening a lightweight component's part | resolves the old assembly's instance (demo-2 :566, :570; proposed `CARRY_RESOLVES_A_LIGHTWEIGHT_COMPONENT_IN_THE_OLD_ASSEMBLY`) | did not (knob default False) | does; False where a test asks |
-| A plane on a lightweight component | ReferenceType2 answers 4; its tree order needs the part's document, which it has not (W9c: GetModelDoc2 None), so Session says unread; a feature keeps its name (demo-2 :634) | "plane" | unread, select type 4 |
+| A plane on a lightweight component | ReferenceType2 answers 4; its tree order needs the part's document, which it has not (W9c: GetModelDoc2 None), so Session says unread; a feature keeps its name (demo-2 :627) | "plane" | unread, select type 4 |
 | EntityParams | a point, then the entity's own direction in the assembly (W5 ring_mate_sense, W6 tier 9) | (0,0,0,0,0,1) for every entity | the direction turned by its component's frame; `entity_axes` for a face read against its part's Z |
-| MateEntity order of a coincident, concentric, parallel | the components' tree order, whatever was selected first: the probe's UserFaceCoin (S5 selected first) read S5 first, the fixture's (Chain-2 first) read Chain-1 first; every concentric, parallel and app coincident the earlier component first (`-2.log`:51-79, demo-2 :589-635) | as selected (the ledger's three cases reversed) | tree order, for the user's and the carry's mates read by W9d's Session (`read_entity_kinds`); `tree_order_entities` False as selected |
+| MateEntity order of a coincident, concentric, parallel | the components' tree order, whatever was selected first: the probe's UserFaceCoin (S5 selected first) read S5 first, the fixture's (Chain-2 first) read Chain-1 first; every concentric, parallel and app coincident the earlier component first (`-2.log`:51-79, demo-2 :597-628) | as selected (the ledger's three cases reversed) | tree order, for the user's and the carry's mates read by W9d's Session (`read_entity_kinds`); `tree_order_entities` False as selected |
 | MateEntity order of a distance, angle, limit, gear, lock | as selected (UserChainDist, UserHousingDist, UserGear6 read their first selection first though it stood later) | as selected | unchanged |
 | GetComponents(True) order | not tree order (demo-2: Chain-2 before Chain-1; `-1.log`:121 the user's parts before the app's) | tree order | tree order unless `listing_order` (which order SolidWorks gives is not measured) |
 | A gear mate's counts read | GearRatioNumerator is MateEntity(1)'s count (GOTCHAS §96 citing §75) | by selection | by the mate's own entities, so a mate read swapped reads its counts swapped |
@@ -506,7 +506,7 @@ shapes 2026 answered (`test_swcom.py`), the dependencies default.
 - **A remade mate's rename** puts `Name`; a name SolidWorks refuses (taken by a feature that is no mate) would raise a
   ComError and stop the carry. Not met in any fixture.
 - **A gear mate's IMate2.Flipped** is not as passed: the fixture's UserGearFillet, made with Flip False, read Flipped
-  True and Reverse 0 (demo-2 :633). The carry passes the old Flipped first and its opposite on the sense retry, so
+  True and Reverse 0 (demo-2 :625). The carry passes the old Flipped first and its opposite on the sense retry, so
   either way one try has each Flip; the fake reads a gear mate's Flipped False always.
 
 ### Unmeasured, the fake answering by assumption
