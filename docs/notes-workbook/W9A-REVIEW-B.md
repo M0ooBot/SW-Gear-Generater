@@ -345,3 +345,183 @@ part, so an app component the user renamed in the old assembly is listed as the 
 - The renders: taken with Windows' Chrome from WSL. I looked at both PNGs; the short-screen board's bar thumb is
   barely visible.
 - The suite against `dac5c7e` alone: the tree moved under me (above).
+
+---
+
+## The fix round, re-checked (2026-11-16)
+
+*Narrow, against the points above.* Under review: `git diff 6056d71..dc7b4e1`, the three commits `2c59e9c`, `c74986a`
+and `dc7b4e1`. I left out `probe/`, which belongs to the demonstration's author, and package A's `f2feac0`/`5610795`.
+I re-ran my own reproductions from the scratchpad against the repo's fake. I ran the K12 tests against five
+deliberate breakages, injected by a pytest plugin in the scratchpad, never in the repo. I regenerated every board with
+the writes redirected, and ran the whole suite once: **1 failed** (the known font-width test), **3424 passed,
+1 skipped**. Nothing under `src`, `tests` or `design` changed after `dc7b4e1` (`dd9e13b` and `a05911c` touch the
+demonstration's files).
+
+**Verdict.**
+
+- **All three must-fix points are closed.** Every should-fix point is closed or said where the plan wants it said.
+- **The fix is sound.** It brings one new should-fix (R1) and three notes (R2–R4), none of which stands before the
+  demonstration.
+- **Only the two named question pins moved.** Among the boards, only `WorkbookAgain` and `WorkbookUserWork` changed,
+  and every board regenerates byte for byte from `dc7b4e1`.
+
+### The points of the review
+
+**1 (must): closed.**
+
+- *The fix.* `_set_status` now wraps the sentence and fits its box (`workbook_gui.py:1289-1298`).
+- *My reproduction again.* After "Built.", the "SolidWorks cannot be reached" sentence asks 586 × 30 px and the box
+  is now 586 × 30 px.
+- *The new test.* `test_a_sentence_set_alone_after_a_short_one_is_shown_whole` sets six such sentences after a short
+  one and measures the box. With `_set_status` put back as it was, it fails.
+- Every caller of `_set_status` is in a constructed window, so the new `work_area` call always has one.
+
+**2 (must): closed for the Tk tests.**
+
+- *The measure.* `_box_whole` compares `_status_box` with the label's request, and the ceiling test asserts the box
+  at the ceiling with its bar mapped.
+- *The window check under `probe/`.* Ruled the demonstration's author's. Their script, `a05911c`, says it now
+  measures the box and asserts K12's two new checks. I did not review it: it is outside this range.
+
+**3 (must): closed.**
+
+- *The fix.* The suppressed or lightweight check moved whole into `judge_user_work` (`swbuild.py:5380-5392`), and
+  `_user_check` now takes it from there. Nothing it refuses changed.
+- *My reproduction again.* With the lightweight sprocket, the footer now says, red, *"As read at …, Update
+  SolidWorks would stop before changing anything: Update SolidWorks would put your Sprocket-1 with G1, …, and
+  Sprocket-1 is loaded lightweight …"*. The press makes that refusal.
+- *The claim.* UI-DESIGN and the note now say the footer tells what the worker would do with the assembly *as it was
+  last read*. That is true.
+
+**4 (ruling 4): closed.**
+
+- *With nothing on record, or an inventory with nothing in it,* the question ends with *"Anything you added to
+  Reducer_12to1.SLDASM in SolidWorks (components, mates, and features in parts this revision makes new) stays
+  there, and Reducer_12to1_r2 has none of it."*
+- *With an inventory,* it ends *"…; Reducer_12to1_r2 has none of them, nor anything added since."*
+- *Parts only.* A record with no assembly still gets no clause, which is right for a revision that makes parts only.
+- *The build's sentence* is said only once the new assembly is saved.
+- *Pins.* Only `test_a_gearbox_w4_built_stays_static_and_is_offered_a_turning_revision` and
+  `test_a_recorded_mate_update_cannot_read_still_offers_build_again` moved, each by the timeless clause. The other
+  test changes are package B's own new tests, or the K12 tests it wrote.
+
+**5 (ruling 5): closed, with one case left (R1 below).**
+
+- *My reproduction again.* A K11 refusal is followed by the Bore typed and G4 moved. The footer now says the old
+  refusal, *"The workbook has changed since …"*, then, red, the foreseen refusal over `Coinc7` on G1. The press makes
+  that refusal.
+- *Can it now promise wrongly?* The prediction is the same judgement on the same kind of inventory, so it predicts
+  no worse than after a press that went ahead, with one exception: the recorded K11 values are not re-judged (R1).
+
+**6: closed.**
+
+- *No activation.* The old assembly is read without `OpenDoc6` or `ActivateDoc3`, through
+  `Session.use_open_document` (`swcom.py:3270-3281`). That method walks the open documents, makes the match the
+  build document, and raises the epoch.
+  - *Every read the job then makes takes `_doc()`, never `ActiveDoc`:* `mate_states`/`_mate_group`, `components`,
+    `configurations`, `find_mate`/`_kept_mate`, `mate_info`, `mate_suppression`.
+  - *Tested:* `test_swcom.py` shows nothing logged and the front document unchanged.
+- *The wrong document for the rest of the build?* After `end_build`, `_build_doc` stays the old assembly, as it did
+  with `open_document`. Nothing between the read and the next `begin_build` acts on it:
+  - `_refuse_paths` uses only the `documents()` walk;
+  - `_check_live`/`_read_live`, every `_build_in_job` and `build_many` begin with `begin_build` and an open or new
+    document.
+- *What `begin_build` now falls back to.* It sets `_build_doc` to None, so `_doc()` falls back to the active
+  document, which is now the user's front document rather than the old assembly. That is the state every job
+  already starts in, so it is not new.
+- *Closed mid-read.* A closed old assembly makes a call on its dead pointer raise. `_read_before` catches that, and
+  the pointer is dropped at the next `begin_build`.
+- *On the fake's own logic.* `use_open_document` changes neither `active` nor the configuration, and touches nothing.
+  The read test now asserts `(active, config, configs, touched)` unchanged.
+- *A read that raises* now has a repo test.
+- *The preference toggle* now happens even when the assembly is not open. It is restored and harmless.
+
+**7: closed.**
+
+- `_on_wheel` returns unless the pointer is over this toplevel.
+- Both guards are tested, and each test fails against its guard removed.
+
+**8: closed.**
+
+- Fixed: one item now says "none of it"; no capital follows a colon; the file is named once; the old assembly is
+  named when nothing is on record.
+- The tie clause now ends *"(if not, it changes nothing and names the mates to suppress)"*.
+- After an Update, items already in error before are told apart: *"… was in error in SolidWorks before this Update
+  changed anything, and still is."*, and *"… is in error in SolidWorks now."*
+- Several features in one part are named once.
+
+**9: closed.** `README.md:550` and the test docstring are rewritten.
+
+**Notes 10–14.**
+
+- 10 (the quiet press; features in the layout and carrier parts) is said in UI-DESIGN's new section.
+- 11 (the revision) stands as noted.
+- 12 is taken by ruling 6 (below).
+- 13 and 14 are said in the note as known limits.
+
+### Schema 7 as it now stands (it becomes permanent once released)
+
+- *A component* is `{name, kind: part|assembly|"", fixed, code, state}`. A `kind` outside the three is refused with a
+  sentence (tested).
+  - `state` is the suppression state read in the configuration active then, used by the shared check.
+- *A value edit* gains `unsaved: bool`, default False, so a W9a entry written without it reads False.
+  - Nothing in package B reads it. It records package A's own mark and costs one bool; keep it or drop it before
+    release, the coordinator's choice.
+- *The refusal's problems* are `{kind, sentence, mates, values}`, as before.
+- *No path of the user's own files is written any more.*
+  - The paths left are the app's: the assembly, and the documents a feature or value is in.
+  - The sentences name components by `Name2` and documents by the app's file names.
+- *Older records.* A schema 6 record still reads with `user_work` None (the v3–v6 test passes), and a newer one is
+  refused and left alone.
+
+### New in the fix round
+
+**R1. Should fix: after a K11 refusal, any change to the workbook turns the footer green, even when the refused value
+still differs.**
+
+- *Reproduced.* A Bore of 14 typed in SolidWorks refuses. The user then moves G4 and leaves the Bore cell as it was.
+- *What the footer says.* The old refusal, *"The workbook has changed since …"*, and a green prediction.
+- *What the press does.* It refuses on the same value again.
+- *Why it can be fixed.* `changed_since` is any change of the digest. But the recorded `ValueEditEntry` holds `name`,
+  `live`, `wanted` and `cell`, enough to tell whether the workbook now asks the live value.
+- *What to do.* Keep a recorded value refusal red until the plan's value for that global equals the recorded live
+  value, and let only the other problems give way to the prediction. Without this, the footer can be green before a
+  press it could know refuses.
+
+**R2. Note: features grouped by part, inside a longer list, read with a doubled "and".** For example: *"leaves your
+Sprocket-1, Part0-1, Part1-1, 2 other components, 3 mates and Keyway and Groove in Gear_m1.5_N17 as they are"*.
+Wording only.
+
+**R3. Note: the "already in error" sentence can claim more than was read.** An item read in error before, in the
+active mode, which the Update puts in error in another mode, is said *"Your Lock3 in L was in error … before this
+Update changed anything, and still is"*. Before the change only the active mode was read (`W9A-INTERFACES` §5). Rare;
+the words could say "in the mode showing".
+
+**R4. Note: the inventory read back gives each component a made-up path.** `recorded_user_work` gives each component
+`name + extension` (for example `Sprocket-1.SLDPRT`), so the judgement's sub-assembly branch still reads the
+extension. It is correct for that one use. A later reader of `UserComponent.path` from a recorded inventory would get
+a made-up file. Say so at the field, or pass the kind instead.
+
+### Mapping the window in the K12 tests
+
+- *What changed.* `_shown` gives the window `_fit`'s own size, maps it, and measures it as the user sees it. The
+  windows are withdrawn again in `finally`.
+- *Nothing weaker.* The short-screen test still asserts `_fit`'s size against the cap, and now also
+  `winfo_reqheight() <= cap` and `winfo_height() == height`. The page's bar is now asserted mapped, not just
+  managed.
+- *What it does not test,* as before: `_fit`'s own placement (`y`), since the test places the window at +0+0.
+- *The tests still fail when they should.* Each breakage made exactly the tests it should fail:
+  - `_fit` uncapped: the short-screen and ceiling tests (955 ≤ 715);
+  - the ceiling removed: the ceiling test;
+  - `_set_status` as before the fix: the new sentence test;
+  - the Workbook wheel unguarded: the short-screen test;
+  - the strip's guard removed: the strip's wheel test.
+
+### What the demonstration must add for the fix round
+
+- *The old-assembly reads on a document that is not the active one.* Every read the job makes there must answer:
+  the mate group walk, `IsSuppressed2` by configuration name, `GetComponents`, `MateEntity`.
+- *The old assembly behind another document.* Its window stays behind, nothing rebuilds, `GetSaveFlag` is unchanged,
+  and no dialog opens.
+- *The demonstration's note lists both*, as well as the lightweight sprocket.
