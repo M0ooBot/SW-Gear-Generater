@@ -5,7 +5,7 @@ Build again… as the Workbook window runs them. The sections, their order and t
 
 python.exe probe/w9a_demonstration.py <repo src> <output folder under C:\> --pid PID [--log FILE]
                                       [--sections m3,setup,go,...|all|confirm] [--master DIR]
-                                      [--user-master DIR] [--reducer-master DIR] [--redo]
+                                      [--user-master DIR] [--reducer-master DIR] [--redo] [--box-wait SECONDS]
 
 ``--master``: S0's kept ``rangebox.master`` for this SolidWorks version (``probe/w9_user_work_check.py`` built it);
 without it a section that needs RangeBox builds it here first through S0's own ``build_master``.
@@ -54,10 +54,14 @@ Sections (each runs alone by name; each copy section starts from a kept master a
 - ``nocarrier`` the no-carrier branch of route (c1) measured, its finding patched for the measurement only; proposed.
 - ``box``, ``box-k3`` (by name only, never in ``all`` or ``confirm``; each last in a fresh session) SolidWorks 2024's
               What's Wrong box measured: m3's set-up to its mate Update, or k3's to its bore Update, then the press
-              waited for up to 300 s under a watch that only logs: when the box came, at which call, SolidWorks'
-              frame enabled or not, the box's class, style and owner, whether a raw read answers with it up, whether
-              the job returns, what was written, "show errors every rebuild" read before and after. Nothing is set,
-              answered, closed or saved once a box is seen; the run then ends, SolidWorks left as it stands.
+              waited for up to ``--box-wait`` s (1800 by default) under a watch that only logs: when the box came, at
+              which call, SolidWorks' frame enabled or not, the box's class, style and owner, whether a raw read
+              answers with it up, the call in progress and the calls made every 10 s, when the box went, whether the
+              job returns, what was written, "show errors every rebuild" read before and after, and, if the job
+              returned with no box up, the user's mates, components and the app bodies read as the other sections
+              read them. Nothing is set, answered, closed or saved once a box is seen; the run then ends, SolidWorks
+              left as it stands. SolidWorks' frame and any owner are logged by class, and their titles only as present
+              or not and holding the document's name or not (a frame's title can hold the licence edition).
 
 ``--sections confirm`` is SolidWorks 2024's confirming set: m3, setup, go, reducer, k3, nocarrier (``refuse`` by name).
 
@@ -122,6 +126,7 @@ _given = _arg("--sections")
 CHOSEN = (ORDER if _given in ("", "all") else CONFIRM if _given == "confirm"
           else [s.strip() for s in _given.split(",") if s.strip()])
 MASTER = {"rangebox": _arg("--master"), "setup": _arg("--user-master"), "reducer": _arg("--reducer-master")}
+BOX_WAIT = float(_arg("--box-wait") or 1800)   # box, box-k3: how long the press is waited for, in seconds
 REDO = "--redo" in ARGS     # a section whose folder this <out> already holds is run again (its folder set aside)
 
 TOL = 1e-6                 # rotation entries and origin coordinates (mm), as S0
@@ -164,7 +169,7 @@ class BoxSeen(DemoStop):
 RUN_ENDERS = (DemoStop, W.WorkerHung, swcom.NotRunning, W.Stopped, W.Halt)   # what one section may not swallow
 # ``box`` and ``box-k3`` only: while "on", ``watched_wait`` logs a window instead of stopping on it, calls ``tick``
 # (seconds since the job began, whether it has returned) every poll, and gives the job ``timeout`` seconds.
-BOX = {"on": False, "tick": None, "timeout": 300.0}
+BOX = {"on": False, "tick": None, "timeout": BOX_WAIT}
 SEEN = {"notes": 0}          # W8's watch notes already judged: a section-only window is not judged again by the run
 
 
@@ -571,7 +576,10 @@ def windows_new(before, seconds=8):
         for h, c, t in S0.sw_windows():
             if h not in seen:
                 seen.add(h)
-                new.append((c, t, tuple(S0.xlhelp.child_texts(h)[:8])))
+                # A box's own title is SolidWorks' words; any other window's title (a frame's can hold the licence
+                # edition, kept out of this repo's logs) is said only as present or not.
+                new.append((c, t if c == "#32770" else ("<titled>" if t else ""),
+                            tuple(S0.xlhelp.child_texts(h)[:8])))
         time.sleep(1.0)
     def exempt(w):
         return (w[0] == "swBalloonTip" or (not w[1] and w[2] == W.NOTIFICATION_TEXTS) or w[1] in W.PROGRESS
@@ -2121,9 +2129,15 @@ def _win32():
     return win32con, win32gui, win32process
 
 
-def sw_frame():
-    """SolidWorks' main frame: the largest visible unowned top-level window of its process, one titled SOLIDWORKS
-    first. ``{"hwnd", "class", "title"}``, or None."""
+def title_facts(title, document):
+    """A SolidWorks window's title said without its text (it can hold the licence edition, which this repo keeps out
+    of its logs; S0's P0 lists windows by class only): whether it has one, and whether it holds ``document``."""
+    return {"title_present": bool(title), "title_has_document": bool(document) and document.lower() in (title or "").lower()}
+
+
+def sw_frame(document=""):
+    """SolidWorks' main frame: the largest visible unowned top-level window of its process, one whose title holds
+    SOLIDWORKS first. ``{"hwnd", "class", "title_present", "title_has_document"}`` (never the title's text), or None."""
     win32con, win32gui, win32process = _win32()
     found = []
 
@@ -2139,7 +2153,7 @@ def sw_frame():
     win32gui.EnumWindows(each, None)
     titled = [f for f in found if "SOLIDWORKS" in f[3].upper()]
     pick = max(titled or found, default=None)
-    return None if pick is None else {"hwnd": pick[1], "class": pick[2], "title": pick[3]}
+    return None if pick is None else {"hwnd": pick[1], "class": pick[2], **title_facts(pick[3], document)}
 
 
 def frame_enabled(frame):
@@ -2153,22 +2167,26 @@ def frame_enabled(frame):
         return None
 
 
-def window_facts(h, frame=None):
-    """A box as Win32 reports it: class, title, texts, style and extended style, its owner (and whether that is
-    SolidWorks' frame), visible, enabled."""
+def window_facts(h, frame=None, document=""):
+    """A box as Win32 reports it: class, its own title and texts (a box's are SolidWorks' words, not the frame's),
+    style and extended style, its owner by class and title facts only (and whether that is SolidWorks' frame),
+    visible, enabled."""
     win32con, win32gui, _ = _win32()
     out = {"hwnd": h}
     try:
         style = win32gui.GetWindowLong(h, win32con.GWL_STYLE) & 0xFFFFFFFF
         ex = win32gui.GetWindowLong(h, win32con.GWL_EXSTYLE) & 0xFFFFFFFF
         owner = win32gui.GetWindow(h, win32con.GW_OWNER)
+        kind = win32gui.GetClassName(h)
+        title = win32gui.GetWindowText(h)
         out.update({
-            "class": win32gui.GetClassName(h), "title": win32gui.GetWindowText(h),
+            "class": kind, **({"title": title} if kind == "#32770" else title_facts(title, document)),
             "texts": list(S0.xlhelp.child_texts(h)[:10]), "style": hex(style), "exstyle": hex(ex),
             "popup": bool(style & win32con.WS_POPUP), "child": bool(style & win32con.WS_CHILD),
             "dlg_modal_frame": bool(ex & win32con.WS_EX_DLGMODALFRAME), "topmost": bool(ex & win32con.WS_EX_TOPMOST),
             "owner": owner, "owner_class": win32gui.GetClassName(owner) if owner else None,
-            "owner_title": win32gui.GetWindowText(owner) if owner else None,
+            **({f"owner_{k}": v for k, v in title_facts(win32gui.GetWindowText(owner), document).items()}
+               if owner else {}),
             "owner_is_frame": bool(frame) and owner == frame["hwnd"],
             "visible": bool(win32gui.IsWindowVisible(h)), "enabled": bool(win32gui.IsWindowEnabled(h))})
     except Exception as exc:  # noqa: BLE001 - a box that closed while read
@@ -2267,18 +2285,46 @@ def waited(worker, fn, timeout):
     return out
 
 
-def box_press(out, tag, desk, folder, part, value_name, label):
-    """The press waited for under a watch that only logs (``BOX``), up to 300 s; the facts the coordinator asked for,
-    recorded as read. Returns whether a box was seen (then SolidWorks is asked nothing more: W.HUNG is set, so
-    nothing is closed or saved at the end)."""
-    facts = out["box"] = {}
+def box_compare(tag, desk, pre, post, users, user_mates):
+    """After a press that returned with no box up, against the same read before it, in the active mode, nothing
+    shown: every app body at its frame on record; each user component's frame as before; each user mate's code and
+    flags as before. Facts, said and returned."""
+    box = desk.record.gearbox
+    mode = post["active"] if box.modes else ""
+    app_gap, app_at = W.frames_gap(post["frames"], W.mode_record_frames(desk, mode))
+    user_gap, user_at = W.frames_gap({u: post["frames"][u] for u in users if u in post["frames"]},
+                                     {u: pre["frames"][u] for u in users if u in pre["frames"]})
+    codes = {n: (pre["mates"].get(n), post["mates"].get(n)) for n in user_mates}
+    flags = {n: (pre["by_mode"].get(n), post["by_mode"].get(n)) for n in user_mates
+             if pre["by_mode"].get(n) != post["by_mode"].get(n)}
+    got = {"mode": mode, "app_bodies_gap_to_record": [app_gap, app_at], "user_components_moved": [user_gap, user_at],
+           "user_mates_code_suppressed_before_after": codes, "user_mate_flags_changed": flags,
+           "mates_in_error_after": post["errors"]}
+    say(f"fact    {tag}: after the press, in {mode or 'its one configuration'}: the app bodies {app_gap:.1e} from their "
+        f"frames on record (at {app_at or '-'}); the user's components moved {user_gap:.1e} (at {user_at or '-'}); "
+        f"the user's mates (code, suppressed) before -> after {codes}; flags changed {flags or 'none'}; mates in error "
+        f"{post['errors'] or 'none'}")
+    return got
+
+
+def box_press(out, tag, desk, folder, part, value_name, label, users=(), user_mates=()):
+    """The press waited for under a watch that only logs (``BOX``), up to ``--box-wait`` s (1800 by default); the
+    facts the coordinator asked for, recorded as read, with the job's progress sampled every 10 s so a slow job is
+    told from a stuck one. Returns whether a box was seen (then SolidWorks is asked nothing that changes it, and
+    nothing is closed or saved at the end: W.HUNG is set once the reads are done)."""
+    facts = out["box"] = {"wait": BOX_WAIT}
+    box = desk.record.gearbox
+    asm, modes = box.assembly, list(box.modes)
+    document = os.path.splitext(os.path.basename(asm))[0]
+    pairs = pairs_of(box, list(users))
+    pre = read_now(f"{tag} before the press", asm, folder, pairs, modes, entities=tuple(user_mates))
     side = swcom.Worker(W.connect_pid)
     CTX["side"] = side
     first = waited(side, lambda s: tuple(s.revision), 120)
     if not first["answered"] or "error" in first:
         raise AssertionError(f"{tag}: the second connection did not attach: {first}")
-    frame = sw_frame()
-    facts["frame"] = frame
+    frame = sw_frame(document)
+    facts["frame"] = {k: v for k, v in (frame or {}).items() if k != "hwnd"} or None
     before = waited(side, raw_written(folder, part, value_name), 120)
     facts["before"] = before
     if not before["answered"] or "error" in before:
@@ -2286,28 +2332,58 @@ def box_press(out, tag, desk, folder, part, value_name, label):
     say(f"fact    {tag}: before the press, by raw reads on a second connection: {value_name} in "
         f"{os.path.basename(part)} {before['value'][value_name]}; save flags {before['value']['flags']}; "
         f"\"show errors every rebuild\" {before['value']['show_errors_every_rebuild']}; SolidWorks' frame "
-        f"{frame and (frame['class'], frame['title'])} enabled {frame_enabled(frame)}")
+        f"{facts['frame']} enabled {frame_enabled(frame)}; the press waited for up to {BOX_WAIT:g} s")
     skip = set(box_windows(set()))
     if skip:
-        facts["boxes_before"] = [window_facts(h, frame) for h in skip]
+        facts["boxes_before"] = [window_facts(h, frame, document) for h in skip]
         say(f"fact    {tag}: boxes already up before the press, left out of the watch: {facts['boxes_before']}")
-    state = {"first": None, "pending": None, "read": None, "handles": [], "returned": None}
+    state = {"first": None, "more": [], "pending": None, "read": None, "handles": [], "returned": None,
+             "last_seen": None, "gone": None, "progress": [], "sample": -10.0, "count": 0}
+
+    def progress(elapsed):
+        now, count, traced = W.CALLS["now"] or None, W.TRACE.get("count", 0), len(W.TRACE["calls"])
+        state["count"] = count
+        if elapsed - state["sample"] >= 10.0:
+            state["sample"] = elapsed
+            last = state["progress"][-1] if state["progress"] else None
+            if last is None or (last[1], last[2]) != (now, count):
+                state["progress"].append((round(elapsed, 1), now, count, traced))
+                say(f"        {tag} +{elapsed:7.1f} s: in {now}; {count} calls, {traced} traced")
+        return now, count, traced
 
     def tick(elapsed, returned):
+        now, count, traced = progress(elapsed)
         if state["first"] is None:
             boxes = box_windows(skip)
             if boxes:
                 calls = W.TRACE["calls"]
                 state["handles"] = list(boxes)
+                state["last_seen"] = round(elapsed, 2)
                 state["first"] = {
-                    "seconds": round(elapsed, 2), "call_in_progress": W.CALLS["now"] or None,
-                    "last_traced_call": list(calls[-1]) if calls else None, "traced_calls_so_far": len(calls),
-                    "frame_enabled": frame_enabled(frame), "boxes": [window_facts(h, frame) for h in boxes]}
-                say(f"fact    {tag}: a box came up {elapsed:.2f} s into the press, the worker in "
-                    f"{state['first']['call_in_progress']} (last traced {state['first']['last_traced_call']}, "
-                    f"{len(calls)} traced so far); SolidWorks' frame enabled {state['first']['frame_enabled']}; "
-                    f"the box {state['first']['boxes']}")
+                    "seconds": round(elapsed, 2), "call_in_progress": now, "calls_so_far": count,
+                    "last_traced_call": list(calls[-1]) if calls else None, "traced_calls_so_far": traced,
+                    "frame_enabled": frame_enabled(frame), "boxes": [window_facts(h, frame, document) for h in boxes]}
+                say(f"fact    {tag}: a box came up {elapsed:.2f} s into the press, the worker in {now} (last traced "
+                    f"{state['first']['last_traced_call']}, {count} calls, {traced} traced so far); SolidWorks' frame "
+                    f"enabled {state['first']['frame_enabled']}; the box {state['first']['boxes']}")
                 state["pending"] = (side.submit(raw_open_names), time.monotonic())
+        else:
+            if visible_now(state["handles"]):
+                state["last_seen"] = round(elapsed, 2)
+            elif state["gone"] is None:
+                state["gone"] = {"seconds": round(elapsed, 2), "last_seen": state["last_seen"],
+                                 "call_in_progress": now, "calls_so_far": count, "traced_so_far": traced,
+                                 "frame_enabled": frame_enabled(frame)}
+                say(f"fact    {tag}: the box was gone {elapsed:.2f} s into the press (last seen at {state['last_seen']} "
+                    f"s), the worker then in {now}, {count} calls so far; nothing here closed it")
+            more = box_windows(skip | set(state["handles"]))
+            if more:
+                state["handles"] += more
+                seen_more = {"seconds": round(elapsed, 2), "call_in_progress": now, "calls_so_far": count,
+                             "boxes": [window_facts(h, frame, document) for h in more]}
+                state["more"].append(seen_more)
+                say(f"fact    {tag}: another box came up {elapsed:.2f} s into the press, the worker in {now}: "
+                    f"{seen_more['boxes']}")
         if state["pending"] is not None and state["read"] is None:
             pending, began = state["pending"]
             answer = pending.poll()
@@ -2324,31 +2400,39 @@ def box_press(out, tag, desk, folder, part, value_name, label):
                     "alone")
         if returned and state["returned"] is None:
             state["returned"] = {"seconds": round(elapsed, 2), "box_up": bool(visible_now(state["handles"])),
-                                 "frame_enabled": frame_enabled(frame)}
+                                 "frame_enabled": frame_enabled(frame), "calls": count}
 
     fails_before, stops_before = len(W.FAILS), len(W.STOPS)
-    BOX.update(on=True, tick=tick, timeout=300.0)
+    BOX.update(on=True, tick=tick, timeout=BOX_WAIT)
     result, raised = None, None
     try:
         result, _ = press(desk, label)
     except W.WorkerHung as exc:
         raised = exc
     finally:
-        BOX.update(on=False, tick=None)
+        BOX.update(on=True, tick=None)          # still on: a window logged during the reads below is not a STOP
     seen = state["first"] is not None
-    if seen:
-        W.HUNG["on"] = True          # nothing more is asked of the main worker, nothing closed or saved at the end
     facts["box_seen"] = state["first"]
+    facts["more_boxes"] = state["more"]
+    facts["box_last_seen"] = state["last_seen"]
+    facts["box_gone"] = state["gone"]
     facts["read_with_box_up"] = state["read"]
     facts["returned"] = state["returned"]
+    facts["progress"] = state["progress"]
+    end_count = state["count"]
+    facts["calls_grew"] = {
+        "after_the_box_was_seen": None if not seen else end_count > state["first"]["calls_so_far"],
+        "after_it_went": None if state["gone"] is None else end_count > state["gone"]["calls_so_far"],
+        "calls_at_the_end": end_count}
     calls = W.TRACE["calls"]
+    up = visible_now(state["handles"])
     facts["at_the_end"] = {"call_in_progress": W.CALLS["now"] or None,
                            "last_traced_call": list(calls[-1]) if calls else None,
                            "frame_enabled": frame_enabled(frame),
-                           "boxes_up": [window_facts(h, frame) for h in visible_now(state["handles"])]}
+                           "boxes_up": [window_facts(h, frame, document) for h in up]}
     if raised is not None:
-        facts["job"] = f"did not return in 300 s ({raised}); the worker is left alone"
-        say(f"fact    {tag}: the press did not return in 300 s; the worker is left alone")
+        facts["job"] = f"did not return in {BOX_WAIT:g} s ({raised}); the worker is left alone"
+        say(f"fact    {tag}: the press did not return in {BOX_WAIT:g} s; the worker is left alone")
     else:
         facts["job"] = "returned"
         facts["result"] = _update_fact(desk, result)
@@ -2356,7 +2440,8 @@ def box_press(out, tag, desk, folder, part, value_name, label):
             f"{'up' if state['returned'] and state['returned']['box_up'] else 'not up'} when it did; ok "
             f"{result.ok if result is not None else None}; the status: {desk.note[0] if desk.note else None}")
     say(f"fact    {tag}: at the end, the worker in {facts['at_the_end']['call_in_progress']}; SolidWorks' frame "
-        f"enabled {facts['at_the_end']['frame_enabled']}; boxes still up {len(facts['at_the_end']['boxes_up'])}")
+        f"enabled {facts['at_the_end']['frame_enabled']}; boxes still up {len(up)}; calls grew after the box was "
+        f"seen {facts['calls_grew']['after_the_box_was_seen']}, after it went {facts['calls_grew']['after_it_went']}")
     # What was written, read raw: on the main worker when its job returned (nothing else waits on it), else on the
     # second connection if its read with the box up answered; never by anything that sets, saves or closes.
     reader = CTX["worker"] if raised is None else (side if not seen or (state["read"] or {}).get("answered") else None)
@@ -2377,11 +2462,26 @@ def box_press(out, tag, desk, folder, part, value_name, label):
         say(f"fact    {tag}: written, raw reads before and after the press: {facts['written']}")
     else:
         say(f"fact    {tag}: what was written could not be read after the press: {facts['after']}")
+    # Whether an Update that ran through the box did its work: the reads the other sections make, in the active mode
+    # and nothing shown, only when the job returned and no box is up (else nothing is asked of the main worker).
+    if raised is None and not up and not W.HUNG["on"]:
+        try:
+            post = read_now(f"{tag} after the press", asm, folder, pairs, modes, entities=tuple(user_mates))
+            facts["after_reads"] = box_compare(tag, desk, pre, post, list(users), list(user_mates))
+        except RUN_ENDERS:
+            raise
+        except Exception as exc:  # noqa: BLE001 - a fact
+            facts["after_reads"] = f"unread: {type(exc).__name__}: {exc}"
+            say(f"fact    {tag}: the reads after the press raised: {facts['after_reads']}")
+    BOX.update(on=False, tick=None)
+    if seen:
+        W.HUNG["on"] = True          # nothing more is asked of the main worker, nothing closed or saved at the end
     # W8's own watch keeps its rule (a box during a configuration call is its FAIL and STOP); said here as what it
     # logged during the press, beside the facts.
     facts["w8_watch"] = {"fails_during_the_press": list(W.FAILS[fails_before:]), "stops": list(W.STOPS[stops_before:])}
     RESULT["proposal"][tag] = {"facts_only": True, **{k: facts.get(k) for k in (
-        "box_seen", "read_with_box_up", "returned", "job", "at_the_end", "written")},
+        "wait", "box_seen", "more_boxes", "box_last_seen", "box_gone", "read_with_box_up", "returned", "job",
+        "calls_grew", "at_the_end", "written", "after_reads")},
         "result_ok": (facts.get("result") or {}).get("ok"), "status": (facts.get("result") or {}).get("sentence")}
     say(f"propose {tag} (facts only, no finding's value): {RESULT['proposal'][tag]}")
     if raised is not None and not seen:
@@ -2391,8 +2491,8 @@ def box_press(out, tag, desk, folder, part, value_name, label):
 
 def section_box(out):
     say("== box  SolidWorks' What's Wrong box in the app's value Update with two user mates in error (2024's m3 STOP), "
-        "measured: m3's set-up to just before that Update, then the press waited for up to 300 s under a watch that "
-        "only logs; nothing set, answered, closed or saved once a box is seen. Run by name, last in a fresh session")
+        f"measured: m3's set-up to just before that Update, then the press waited for up to {BOX_WAIT:g} s under a watch "
+        "that only logs; nothing set, answered, closed or saved once a box is seen. Run by name, last in a fresh session")
     folder, path, book, desk = copy_desk(rangebox_master(), "box", "RangeBox.xlsx")
     seen = False
     try:
@@ -2402,7 +2502,8 @@ def section_box(out):
         line = ui_text.user_work_line(ahead)[0] if ahead is not None else ""
         say(f"fact    box: the footer before the press: {line}")
         seen = box_press(out, "box", desk, folder, sun_part(box), spur.BACKLASH,
-                         "box: the app's value Update (Sun's Backlash 0.4) with the user's two mates in error")
+                         "box: the app's value Update (Sun's Backlash 0.4) with the user's two mates in error",
+                         users=("Sprocket-1", "Housing-1"), user_mates=("UserAxis", "UserFront", "UserGap"))
     finally:
         if not seen and not W.HUNG["on"]:
             W.end_copy(CTX["worker"], folder, "box")

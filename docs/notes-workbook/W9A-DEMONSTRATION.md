@@ -296,7 +296,9 @@ or saves anything once a box has been seen; neither proposes a finding's value.
   Then the app's Update, which rebuilds the keyway into error; with 2024's findings None it is expected to stop as
   failed.
 
-**How the press is watched.** The press is waited for up to 300 s under a watch that only logs (`BOX`). A second
+**How the press is watched.** The press is waited for up to `--box-wait` seconds (1800 by default) under a watch that
+only logs (`BOX`). The first `box` run (`73805d2`, its log not committed) waited 300 s, which was too short to see the
+Update finish on 2024, where its quiet press alone took 131 s. A second
 connection to the same SolidWorks is made before the press, and every read is a raw call (`W._RAW_CALL`, so W8's "call
 in progress" is never moved by the script's own reads). Recorded, as read:
 
@@ -307,16 +309,30 @@ in progress" is never moved by the script's own reads). Recorded, as read:
   texts, style, extended style, owner and whether the owner is the frame;
 - with the box up: whether a harmless raw read (the open documents) answers on the second connection, and how fast
   (20 s at most);
+- every 10 s, when either has changed, the call in progress and the number of calls made and traced, with the time:
+  enough to tell a slow job from a stuck one;
+- when the box was last seen and, when it went, the call in progress then (nothing here closes it); any further box;
 - whether the job returned, after how long, and whether the box was still up when it did; its result and status
   sentence if it did;
+- whether the calls made grew after the box was seen, and after it went;
 - at the end: the call the worker is in, the frame enabled or not, and the boxes still up;
 - what was written: the same raw reads after the press, against before (on the main worker if its job returned, else
-  on the second connection if it answered), and toggle 77 again.
+  on the second connection if it answered), and toggle 77 again;
+- if the job returned with no box up, the reads the other sections make, in the active mode with nothing shown,
+  against the same read before the press: every app body at its frame on record, the user's components' frames
+  (`box`: Sprocket-1 and Housing-1), and each user mate's code, suppression and flags (`box`: UserAxis, UserFront,
+  UserGap). That is what tells whether an Update that ran through the box did its work.
+
+SolidWorks' frame, and any window's owner, are logged by class, and their title only as present or not and as holding
+the document's name or not: a frame's title can hold the licence edition, which this repo keeps out of its logs (S0's
+P0 lists windows by class only for that reason). A box's own title ("What's Wrong") and texts are SolidWorks' words
+and are logged; so is any new #32770's title in the other sections' window lists, while any other new window's title
+is written only as `<titled>`.
 
 A box seen ends the run by design (`BoxSeen`, not a failure): the worker is marked hung so nothing more is asked of
 SolidWorks, and the session is left as it stands for the coordinator to end. W8's own watch keeps its rule (a box
 during a configuration call is its FAIL and STOP); what it logged during the press is recorded beside the facts. If the
-job does not return in 300 s, the worker is left alone and the section says so. With no box, the section ends as any
+job does not return in the wait, the worker is left alone and the section says so. With no box, the section ends as any
 copy section does.
 
 **Command lines, SolidWorks 2024.** Each in a fresh session, as the last thing asked of it; `RUN` holds `snap\` and
@@ -325,12 +341,12 @@ copy section does.
 ```
 rem box: first, alone in a fresh session
 python.exe RUN\snap\probe\w9a_demonstration.py RUN\snap\src RUN\out --pid PID --log RUN\w9a-box-sw2024-1.log ^
-    --sections box ^
+    --sections box --box-wait 1800 ^
     --master C:\Users\M0obo\Documents\GearGeneratorProbe\w9-s0-sw2024-20261116-064725\out\rangebox.master
 
 rem box-k3: in another fresh session, with reducer before it (skipped if RUN\out already holds reducer.master)
 python.exe RUN\snap\probe\w9a_demonstration.py RUN\snap\src RUN\out --pid PID2 --log RUN\w9a-box-sw2024-2.log ^
-    --sections reducer,box-k3
+    --sections reducer,box-k3 --box-wait 1800
 ```
 
 **What each answer would mean for the three options.**
@@ -347,11 +363,14 @@ python.exe RUN\snap\probe\w9a_demonstration.py RUN\snap\src RUN\out --pid PID2 -
   - The box raised at a rebuild call: option 2 is a candidate there. Raised at a read (`GetNextSubFeature`, as on the
     first sighting) after the rebuild had returned: the toggle may still govern it, but that needs the same test.
 - **Option 3, leave the box to the user:**
-  - The job returns with the box up, the frame enabled, and a read answering: the box does not block. Option 3 then
-    needs the result checked as on 2026 (`ok`, puts, sentence).
-  - The job does not return, or the frame is disabled, or the read does not answer: the box blocks. A person must
-    close it during the job, and the app must say so while it waits. Whether the job then completes cleanly is
-    another measurement.
+  - The job returns, with the box up or gone of itself, the frame enabled, a read answering and the calls growing
+    after the box came: the box does not block. Option 3 then needs the after-press reads clean (the app bodies at
+    their frames, the user's components and mates as they were) and the result as on 2026 (`ok`, puts, sentence).
+  - The calls stop growing while the box stands, or the frame is disabled, or the read does not answer: the box
+    blocks. A person must close it during the job, and the app must say so while it waits. Whether the job then
+    completes cleanly is another measurement.
+  - The calls keep growing but the job does not return in the wait: a slow job, not a blocked one; the wait is
+    raised and the section run again.
 - **In every case,** what was written before the box (Sun's Backlash, the save flags) tells whether a refusal after
   the box would leave the user's documents changed but unsaved.
 
