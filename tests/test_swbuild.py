@@ -1131,6 +1131,8 @@ class FakeSolidWorks:
         ``planeN`` a base plane by order, ``origin``, ``face:<id>`` / ``edge:<id>`` / ``vertex:<id>``, else a reference
         feature by name."""
         target = end[1]
+        if end[0] != "asm" and self._state_in(end[0], self.config) == 0 and mate.user:
+            return ("unread", "")       # as SolidWorks read it: an entity on a suppressed component (run 2, :621)
         if mate.kind == "lock" or not target:
             return ("whole", "")
         if target.startswith("plane") and target[5:].isdigit():

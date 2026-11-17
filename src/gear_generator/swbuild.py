@@ -6953,6 +6953,11 @@ class OldEntity:
     # ("candidates" or "seconds"; "" searched or not a face or edge).
     radius_mm: Optional[float] = None
     capped: str = ""
+    # The sixth round, at the end: why it is unread, as structure for B to word (``unread`` keeps its clause):
+    # CAUSE_SUPPRESSED, parts (the component's Name2, the old mode showing); CAUSE_BESIDE_LIGHTWEIGHT, parts (the
+    # lightweight component's Name2); "" any other.
+    cause: str = ""
+    cause_parts: Tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -7002,6 +7007,8 @@ class OldComponent:
     configurations: Optional[Tuple[str, ...]] = None
 
 
+CAUSE_SUPPRESSED = "suppressed"                  # OldEntity.cause: its component suppressed in the mode showing
+CAUSE_BESIDE_LIGHTWEIGHT = "beside lightweight"  # the assembly's own entity, not told beside a lightweight component
 OLD_OPEN = "open"             # OldWork.how: read as it stands in the session
 OLD_READ_ONLY = "read-only"   # opened read-only by this job and closed unsaved after the read
 OLD_UNREAD = "unread"         # not read: OldWork.unread says why
@@ -7509,7 +7516,11 @@ def plan_carry(work: OldWork, carry: Carry, revision: Sequence[int], *,
             continue
         unread = [e for e in mate.entities if e.what == UNREAD_ENTITY or e.kind in (ENTITY_UNREAD, "") or e.unread]
         if not mate.whole or unread or not mate.entities:
-            name_it(WHY_UNREAD, next((e.unread for e in unread if e.unread), ""))
+            why = next((e for e in unread if e.unread), None)
+            # The sixth round: WHY_UNREAD's subjects are (clause,) and, where the cause is known, (clause, cause,
+            # *its parts) — CAUSE_SUPPRESSED (component, mode), CAUSE_BESIDE_LIGHTWEIGHT (component).
+            name_it(WHY_UNREAD, *((why.unread, why.cause) + tuple(why.cause_parts) if why is not None and why.cause
+                                  else (why.unread if why is not None else "",)))
             continue
         if kind not in CARRY_KIND_WORDS:
             name_it(WHY_KIND, kind)
@@ -7879,12 +7890,24 @@ def _read_old_mates(sw: SolidWorks, carry: Carry, work: OldWork, configurations:
                     unread = f"its {e.kind} read as a {kind}"
                 elif why and not reference:
                     unread = why
-            if what == UNREAD_ENTITY and not unread:
-                # Why-fields: say which it is, so the result can say it.
-                unread = ("the assembly's own plane is not told while a component of it is lightweight"
-                          if e.component and lightweight else "SolidWorks would not say what it is on")
+            cause, parts = "", ()
+            state_of = {x.name: x.state for x in comps}
+            if what == UNREAD_ENTITY and e.component and lightweight:
+                cause = CAUSE_BESIDE_LIGHTWEIGHT
+                parts = (next(x.name for x in comps if x.state in _LIGHTWEIGHT_STATES),)
+                unread = unread or "the assembly's own plane is not read while a component of it is lightweight"
+            elif what == USER and state_of.get(who) == COMPONENT_SUPPRESSED and \
+                    (e.kind in (ENTITY_UNREAD, "") or unread):
+                # As SolidWorks read it (run 2, log 2 line 621): an entity on a suppressed component reads unread.
+                cause, parts = CAUSE_SUPPRESSED, (who, work.active)
+                unread = unread or "a component it joins is suppressed in the mode the old assembly showed"
+            elif what == UNREAD_ENTITY and not unread:
+                unread = "SolidWorks would not say what it is on"
+            elif e.kind in (ENTITY_UNREAD, "") and not unread:
+                unread = "SolidWorks would not say what kind of entity it is"
             entities.append(OldEntity(what, who, e.kind if what != UNREAD_ENTITY else ENTITY_UNREAD, e.feature,
-                                      leaf, reference, e.select_type, coaxial, unread, radius, capped))
+                                      leaf, reference, e.select_type, coaxial, unread, radius, capped, cause,
+                                      parts))
         work.mates.append(OldMate(name, definition.type, definition.type_name, definition.alignment,
                                   definition.flipped, definition.values, tuple(entities),
                                   tuple(e.params for e in definition.entities), on, state.code,

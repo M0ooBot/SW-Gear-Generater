@@ -1215,7 +1215,8 @@ def test_a_stop_in_another_mode_shows_the_first_again_and_a_com_failure_stops(mo
     every_gate()
 
     def tweak(fake):
-        fake.states_by.setdefault("2H", {})["Sprocket-1"] = 0                 # made in 4H, not the first mode
+        # Suppressed in N only (in the mode showing its entities would read unread, as SolidWorks reads them).
+        fake.states_by.setdefault("N", {})["Sprocket-1"] = 0
         error = swcom.ComError("AddMate5", Exception(-2147023174, "The RPC server is unavailable.", None, None))
         fake.raises["remake_mate"] = (1, error)
     cr, fake = _tc_again(monkeypatch, ALL_ON, tweak)
@@ -1436,3 +1437,51 @@ def test_a_fault_in_a_features_reference_read_reaches_the_logs_facts(monkeypatch
     assert "fact    reference read fault: AttributeError: no FeatureByName" in cr.log_lines()
     assert {n.item: n.subjects for n in cr.named}["Coincident2"] == (
         "its reference could not be read (a fault in Gear Generator)",)
+
+
+
+# -- the sixth round (W9D-REVIEW-A.md 2ad7ad8) --------------------------------------------------------------------
+
+
+def test_a_mate_on_a_component_suppressed_in_the_mode_showing_hands_its_cause_as_structure(monkeypatch, every_gate):
+    """A1: SolidWorks reads such an entity's kind unread; the cause goes out as (clause, "suppressed", component,
+    mode)."""
+    every_gate()
+    fake = _old_train()
+    _isfile(monkeypatch, fake)
+    fake.user_mate(T_ASM, "UserAxis9", kind="coincident", a=("Sprocket-1", "Sprocket Axis"),
+                   b=("gear1-1", "Gear Axis"))
+    fake.component_states["Sprocket-1"] = 0
+    cr = _build_again(fake).carry
+    named = {n.item: n for n in cr.named}
+    assert named["UserAxis9"].why == swbuild.WHY_UNREAD
+    assert named["UserAxis9"].subjects[1:] == (swbuild.CAUSE_SUPPRESSED, "Sprocket-1", "")
+    entity = next(m for m in cr.work.mates if m.name == "UserAxis9").entities[0]
+    assert (entity.kind, entity.cause, entity.cause_parts) == ("unread", "suppressed", ("Sprocket-1", ""))
+
+
+def test_the_assemblys_plane_beside_a_lightweight_component_hands_its_cause_as_structure(monkeypatch, every_gate):
+    every_gate()
+    fake = _old_train()
+    _isfile(monkeypatch, fake)
+    fake.assembly_entity = "root"                    # 2026: the root names the assembly's own entity
+    fake.user_component(T_ASM, "Housing-1", HOUSING, (I9, (0.0, 0.0, -40.0)), fixed=True)
+    fake.user_mate(T_ASM, "UserAsm6", kind="distance", a=("Housing-1", "plane1"), b=("asm", "plane1"))
+    fake.lightweight.add("Sprocket-1")                       # another component, lightweight
+    cr = _build_again(fake).carry
+    named = {n.item: n for n in cr.named}
+    assert named["UserAsm6"].subjects[1:] == (swbuild.CAUSE_BESIDE_LIGHTWEIGHT, "Sprocket-1")
+
+
+def test_a_same_error_mate_that_ties_no_gear_is_carried(monkeypatch, every_gate):
+    """A2: Lock2 holds Chain-1 to a fixed Housing-1 and read 46 before; made again it reads 46: carried as it was."""
+    every_gate()
+    fake = _old_train()
+    _isfile(monkeypatch, fake)
+    fake.user_component(T_ASM, "Housing-1", HOUSING, (I9, (0.0, 0.0, -40.0)), fixed=True)
+    fake.user_component(T_ASM, "Chain-1", SPROCKET, (I9, (0.0, 0.0, 60.0)))
+    fake.user_lock(T_ASM, "Lock2", "Housing-1", "Chain-1")
+    fake.mate_codes["Lock2"] = (46, True)
+    fake.remake_codes["Lock2"] = (46, True)
+    cr = _build_again(fake).carry
+    assert cr.fixed == [] and cr.same_error == [("Lock2", 46)] and "Lock2" in {r[0] for r in cr.remade}

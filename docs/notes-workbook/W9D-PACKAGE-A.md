@@ -385,3 +385,24 @@ Gear Generator, not in SolidWorks" instead of Python text.
 - **S2's remainder.** `Session.reference_faults` reaches the log's facts ("reference read fault: …") after R's mates,
   then is emptied. Pin: `test_a_fault_in_a_features_reference_read_reaches_the_logs_facts`.
 - `probe/w9d_demonstration.py --self-check` at `a366938`: 0 failed (M2 and M3 change none of its expectations).
+
+## Sixth round (W9D-REVIEW-A.md 2ad7ad8)
+
+- **A1.** The fake reads a user mate's entity on a component suppressed in the mode showing as kind `unread`, as
+  SolidWorks did (run 2, log 2 line 621). R then hands the cause out as structure. `OldEntity` gains, at the end,
+  `cause: str = ""` and `cause_parts: Tuple[str, ...] = ()`, with constants
+  `swbuild.CAUSE_SUPPRESSED = "suppressed"` (parts: the component's Name2, the old mode showing; "" with no modes)
+  and `swbuild.CAUSE_BESIDE_LIGHTWEIGHT = "beside lightweight"` (parts: the lightweight component's Name2).
+  `unread` keeps its clause. A mate named `WHY_UNREAD` carries subjects `(clause,)` as before, or
+  `(clause, cause, *parts)` where the cause is known. Pins:
+  `test_a_mate_on_a_component_suppressed_in_the_mode_showing_hands_its_cause_as_structure` and
+  `test_the_assemblys_plane_beside_a_lightweight_component_hands_its_cause_as_structure`. An entity whose kind reads
+  unread for no known cause says "SolidWorks would not say what kind of entity it is".
+- **A2.** `test_a_same_error_mate_that_ties_no_gear_is_carried`: Lock2 (Chain-1 to a fixed Housing-1, 46 before and
+  after) comes over in `same_error`, not fallen.
+- The item-8 stop test now suppresses Sprocket-1 in N rather than in the mode showing: with the fake reading as
+  SolidWorks does, a lock on a component suppressed in the mode showing is named unread and never remade.
+- The demonstration script's self-check passes (0 failed). Its `expected_outcome` should now expect a mate on a
+  component suppressed in the mode showing (Sprocket-10's) named `WHY_UNREAD` with subjects
+  `(clause, "suppressed", "Sprocket-10", <mode showing>)`. I have not read whether its fake desk reads that entity's
+  kind unread.
