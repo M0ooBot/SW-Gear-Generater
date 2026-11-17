@@ -984,7 +984,9 @@ def refusal_on_record(label, desk, rest, subjects):
     the press's workbook digest and SolidWorks and every problem with its subjects (``subjects``: kind -> the names
     each must carry), and nothing else on the record changed (``rest``: the record without its inventory before)."""
     entry = desk.record.gearbox.user_work
-    kept = {p.kind: list(getattr(p, "subjects", []) or []) for p in (entry.problems if entry is not None else [])}
+    kept = {}          # every problem of one kind adds its subjects: two gates refused in one press are two "unsettled"
+    for p in (entry.problems if entry is not None else []):
+        kept.setdefault(p.kind, []).extend(getattr(p, "subjects", []) or [])
     missing = {k: [n for n in names if n not in kept.get(k, [])] for k, names in subjects.items()}
     missing = {k: v for k, v in missing.items() if v or k not in kept}
     same = without_user_work(record_json(desk)) == rest
