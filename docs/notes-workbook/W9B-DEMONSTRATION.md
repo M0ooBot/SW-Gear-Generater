@@ -98,25 +98,36 @@ document's save flag changes.
 
 ### The volumes (M7's measure of the relief)
 
-**The check (after the first 2026 run, 2ed441b).** The unbanded sleeve is one section along its whole face (Blank,
-Tooth Space, Teeth), so F0 = V(unbanded) / 26. Each band keeps that section. Over the relief the section is the ring
-between the bore and the outside, π(Ro² − r²), with Ro (16.125) and r (12.5) taken from the cylinders the part's faces
-read. So
+**The section from the face (after the closing review, e5cbc98).** The unbanded sleeve is one section along its
+whole face (Blank, Tooth Space, Teeth). F0 is now its front end face's area (`IFace2.GetArea`, read on the unbanded
+and the banded part, and logged). On the final 2026 run it read 440.547728 mm², where the reviewer worked the section
+from the app's geometry to 440.54751. V/26 reads 440.5978, 1.1e-4 high: SolidWorks' volume error. Where GetArea cannot
+be read, F0 falls back to V/26, and the log says so.
+
+**The volumes, a coarse guard.** Each band keeps the section F0. Over the relief the section is the ring between the
+bore and the outside, π(Ro² − r²), with Ro (16.125) and r (12.5) taken from the cylinders the faces read. So
 
   V(banded) = F0 × (start band + end band) + π(Ro² − r²) × (26 − start band − end band),
 
-checked for 5/5 and for 4/5 after the band change, each to 1e-4 of the part's volume.
+checked for 5/5 and for 4/5 to 1e-4 of the part's volume, with the residual and the room left printed. **The room is
+small:** against the face's section the final run's banded parts are 9.0e-5 (5/5) and 8.2e-5 (4/5) over, leaving 10%
+and 18% of the 1e-4. The volume errs high by about 1e-4, as V/26 does. A relief 0.5 mm wider would miss by 3.3e-2, so
+the guard still catches a wrong relief. Before the review the script took F0 = V/26, which carried most of that error
+into the expected volumes and printed 3.8e-5 and 3.5e-5.
 
-- **Why 1e-4.** That is SolidWorks' mass-property volume against an exact form. The first run read residuals of
-  3.8e-5 (5/5: 9622.169 read, 9621.808 expected) and 3.5e-5 (4/5: 9507.530 and 9507.199). A relief 0.5 mm wider
-  would miss by 3.3e-2.
-- **F0 a second way.** The unbanded part's front end face's area (`IFace2.GetArea`) is logged beside V / 26, which
-  shows the size of the mass-property error directly.
+**The step faces.** The two planar faces at the relief's ends must read one area, to 2e-4. That holds a pair of
+GetArea readings of one section: the final run's two end faces agree to 7.3e-5.
+
+Each step face against the same geometry, F0 − π(Ro² − r²) = 114.558 mm², is logged and **not judged**. On the final
+run they read 114.303 and 114.295, 2.2e-3 under it. The same reading's end faces match the worked section to 5e-7,
+and the volumes match the section to 1e-4. A step area of 114.30 would put the 5/5 volume 3.4e-4 off, against 9.0e-5
+with 114.558. So GetArea on the step faces, whose boundary is the bore's circle and the 17 tooth spaces, reads low
+here, and does not settle the relief to better than that. Why it does is open.
 
 **What it replaced.** The first run took the area per mm from the 1 mm difference of two volumes and multiplied it by
 16. That multiplied the mass-property error by 16 and failed (1833.375 against 1834.213). The difference stays, as a
 fact line and in the bounds check: it must lie strictly between π(12.5² − 12.375²) = 9.768 mm² (no tooth at all) and
-π(12.5² − 9.375²) = 214.757 mm² (a full ring of teeth to the tips). The first run read 114.638.
+π(12.5² − 9.375²) = 214.757 mm² (a full ring of teeth to the tips). The runs read 114.638.
 
 All volumes are `Session.volume_mm3` of the part, active.
 
@@ -140,7 +151,10 @@ Either sign does not pass on its own: a frame on the other side fails.
 (`probe/results/w9b-demo-20261117-045137.json` and its log). That run kept no `PlaneParams`, so its thin planar faces
 are given the z their padded boxes centre on. At this commit it passes: the bore and its ends, both volumes, and the
 nine slides, with a wrong relief and a wrong-side frame each failing. From now on each mode's readings go into the
-JSON too (`modes`).
+JSON too (`modes`). It also replays the closing review's points on the final run's readings
+(`probe/results/w9b-demo-20261117-051122.json`, whose faces carry `PlaneParams` and `GetArea`): F0 from the front face,
+both end faces as one, the bore, the volumes against the face's section (9.0e-5 and 8.2e-5), and the two step faces as
+one. The step faces against 114.558 are printed, not judged.
 
 ## STOPs
 
@@ -157,10 +171,20 @@ W9b's own (plan §5):
 - **a mode reading other than §3**: a failed check in `build`'s per-mode lines, read by the coordinator;
 - **a warning on the fixture other than §3's**: a failed check in `build`'s read.
 
+## What rests on the app's own word, not on a SolidWorks measurement
+
+- **The ratios** (1.000 in H, 2.896552 in L, neutral in N) are the app's motion report; nothing turns the gears to
+  measure them.
+- **The warnings** are compared with the app's own read of the fixture (`assess` in this process) and with W9b's
+  three checks run on it, not with an independent list. `build` holds RangeBox_Fixed's four to that read.
+- **`old`** checks its seven warnings by count. Since the closing review it also checks W9b's three by text against
+  §2.2's and §2.3's sentences, word for word without their cells; `--self-check` holds the app's sentences to the same
+  text.
+
 ## What the script does not measure
 
-- **A banded sleeve on a Z− shaft.** The bands then run the other way round in global z, and the relief's planes'
-  flips take the other sign (`helical._flip_for`).
+- **A banded sleeve on a Z− shaft.** The bands then run the other way round in global z; the relief's planes are
+  the same, since they sit in the part's own frame (the part is turned in the assembly, not rebuilt).
 - **Unequal bands built from scratch.** Start 4 / End 5 is reached only by the value change, in `part` and in
   `update`.
 - **SolidWorks 2024.** Plan §5 puts that in W9c's 2024 session, about 50 min.

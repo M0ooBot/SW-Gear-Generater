@@ -82,6 +82,19 @@ SPAN_TOL = 1e-4            # mm: a span measured from a frame and a part's globa
 # room and is far below what a wrong relief would move (one mm of it is 114.6 mm³, 1.2e-2 of the part).
 VOLUME_TOL = 1e-4
 BORE_TOL = 1e-6            # mm: the relief bore's radius and its ends against the planes
+# relative: two GetArea readings of faces of one section. The final 2026 run (w9b-demo-20261117-051122.json) read the
+# sleeve's two end faces 440.547728 and 440.515604 mm², 7.3e-5 apart, and the front one within 5e-7 of the section the
+# reviewer worked from the app's geometry (440.54751); 2e-4 holds two such readings with room.
+AREA_TOL = 2e-4
+# ISSUE-1-PLAN §2.2 and §2.3, word for word without their cells: RangeBox's three W9b warnings.
+PLAN_W9B_WARNINGS = (
+    "Output cannot reach RangeSlv: Input runs through RangeSlv's travel (from Sun at 10.5 to HighDog at −32), so Output "
+    "would have to pass HighDog toward Z− or Sun toward Z+, each on Input.",
+    "nothing keys RangeSlv to Output: its whole bore is teeth and no hub row is under it; add a hub on Output that a band "
+    "of RangeSlv covers in every mode; as laid out none can, since its 10 mm face slides 10 mm (H −5 to L +5) and its "
+    "places share no length.",
+    "in N RangeSlv stands 0 mm from HighDog and 0 mm from LowDog, which it does not engage there: leave at least "
+    "0.625 mm (0.5 × module) each side.")
 TOL = 1e-6                 # mm: a body's frame against its frame on record (W9a's go)
 BAND_EDIT = 4              # Start band 5 -> 4: legal, a value Update (the self-check shows it)
 # The smallest legal edit that takes the bands off: RangeSlv as RangeBox has it, and Hub's row cleared (a 26 mm sleeve
@@ -187,8 +200,9 @@ def relief_bore(faces, z_lo, z_hi, radius):
     steps = [f for f in faces if f.get("z") is not None and f.get("normal") is not None
              and abs(abs(f["normal"][2]) - 1.0) <= 1e-9
              and all(abs(a - b) <= 1e-6 for a, b in zip((f["box"][0], f["box"][1], f["box"][3], f["box"][4]), across))]
-    ends = sorted(f["z"] for f in steps)
-    out.update(ends=ends, box_z=(box[2], box[5]),
+    steps = sorted(steps, key=lambda f: f["z"])
+    ends = [f["z"] for f in steps]
+    out.update(ends=ends, step_areas=[f.get("area") for f in steps], box_z=(box[2], box[5]),
                padding=(round(ends[0] - box[2], 6), round(box[5] - ends[-1], 6)) if len(ends) == 2 else None)
     held = len(ends) == 2 and abs(ends[0] - z_lo) <= BORE_TOL and abs(ends[1] - z_hi) <= BORE_TOL
     return out, held
@@ -201,13 +215,32 @@ def outer_radius(faces, face):
     return max(f["r"] for f in whole) if whole else None
 
 
-def banded_volume(v_unbanded, face, bands, outer, bore):
-    """What a banded sleeve's volume must be, exactly in form: the unbanded sleeve is one section along its whole face
-    (Blank, Tooth Space, Teeth), F0 = V / face; each band keeps it, and over the relief the section is the ring between
-    the bore and the outside, π(Ro² − r²)."""
-    f0 = v_unbanded / face
+def end_areas(faces, face):
+    """The part's two end faces' areas (``IFace2.GetArea``), by their plane's z (0 and ``face``)."""
+    return {round(f["z"], 6): f["area"] for f in faces if f["kind"] == "plane" and f.get("z") is not None
+            and f.get("area") is not None and (abs(f["z"]) <= 1e-6 or abs(f["z"] - face) <= 1e-6)}
+
+
+def section_of(v_unbanded, face, areas):
+    """The unbanded sleeve's section F0 (Blank, Tooth Space, Teeth: one section along its face): its front end face's
+    area where GetArea read it (W9b's closing review: SolidWorks' volume carries 1.1e-4 more than that face's area
+    times the face, which reads the true section), else its volume over its face. ``(F0, how)``."""
+    front = areas.get(0.0)
+    if front:
+        return front, "the front end face's area (IFace2.GetArea)"
+    return v_unbanded / face, f"the unbanded volume over its face, V/{face:g} (no end face's area read)"
+
+
+def banded_volume(f0, face, bands, outer, bore):
+    """What a banded sleeve's volume must be: each band keeps the section F0, and over the relief the section is the
+    ring between the bore and the outside, π(Ro² − r²)."""
     relief = face - bands[0] - bands[1]
-    return f0 * (bands[0] + bands[1]) + math.pi * (outer * outer - bore * bore) * relief, f0
+    return f0 * (bands[0] + bands[1]) + math.pi * (outer * outer - bore * bore) * relief
+
+
+def step_area(f0, outer, bore):
+    """Each step face at a band's end, by the same geometry: the section less the ring over the relief."""
+    return f0 - math.pi * (outer * outer - bore * bore)
 
 
 def slide_agrees(value, recorded, origin_z, tol=TOL):
@@ -275,12 +308,13 @@ def replay_first_run(ok):
     faces = part["banded"]["faces"]
     outer, bore = outer_radius(faces, 26.0), RELIEF_D / 2
     v0, v1, v2 = part["unbanded"]["volume"], part["banded"]["volume"], part["band_changed"]["volume"]
+    f0, how = section_of(v0, 26.0, {})
     for label, volume, bands in (("5/5", v1, (5.0, 5.0)), ("4/5", v2, (4.0, 5.0))):
-        want, f0 = banded_volume(v0, 26.0, bands, outer, bore)
+        want = banded_volume(f0, 26.0, bands, outer, bore)
         ok(abs(volume - want) <= VOLUME_TOL * volume,
-           f"replay volume {label}: {volume:.6f} against {want:.6f} (F0 {f0:.6f}, Ro {outer}), "
+           f"replay volume {label}: {volume:.6f} against {want:.6f} (F0 {f0:.6f} from {how}, Ro {outer}), "
            f"{abs(volume - want) / volume:.1e} of it")
-    wrong, _ = banded_volume(v0, 26.0, (5.0, 5.0), outer, bore + 0.25)
+    wrong = banded_volume(f0, 26.0, (5.0, 5.0), outer, bore + 0.25)
     ok(abs(v1 - wrong) > VOLUME_TOL * v1, f"replay volume: a relief 0.5 mm wider would fail by "
                                           f"{abs(v1 - wrong) / v1:.1e} of the volume ({VOLUME_TOL:g} allowed)")
     pattern = re.compile(r"^FAIL    (build|update|old), ([HNL]) shown: .*RangeSlv along Output (-?[\d.]+) mm as on record "
@@ -299,6 +333,44 @@ def replay_first_run(ok):
        f"replay slides: the nine readings that failed now agree by size and by RangeSlv's Front plane: {agreed}")
     flipped = all(not slide_agrees(v[0], v[1], -origins[k]) for k, v in slides.items())
     ok(flipped, "replay slides: a frame on the other side of the Front plane would still fail them")
+
+
+FINAL_RUN = "probe/results/w9b-demo-20261117-051122.json"
+
+
+def replay_final_run(ok):
+    """The closing review's three points replayed on the final 2026 run's readings (its faces carry PlaneParams and
+    GetArea): the section from the front end face, the volumes as a coarse guard against it, the step faces."""
+    import json
+    path = os.path.join(REPO, FINAL_RUN)
+    if not os.path.isfile(path):
+        print(f"skip    the final run's readings are not here: {FINAL_RUN}")
+        return
+    part = json.load(open(path, encoding="utf-8"))["sections"]["part"]
+    v0, v1, v2 = part["unbanded"]["volume"], part["banded"]["volume"], part["band_changed"]["volume"]
+    areas = end_areas(part["unbanded"]["faces"], 26.0)
+    f0, how = section_of(v0, 26.0, areas)
+    ok(how.startswith("the front end face") and abs(f0 - 440.54751) <= AREA_TOL * f0,
+       f"replay final: F0 from {how} {f0:.6f} mm² (the review's worked section 440.54751); the back face {areas.get(26.0)}, "
+       f"V/26 {v0 / 26:.6f} ({(v0 / 26 - f0) / f0:+.1e} of it)")
+    ok(len(areas) == 2 and abs(areas[0.0] - areas[26.0]) <= AREA_TOL * f0,
+       f"replay final: the two end faces of one section agree to {AREA_TOL:g}: {areas}")
+    faces = part["banded"]["faces"]
+    outer = outer_radius(faces, 26.0)
+    for key, z_lo in (("banded", PLANES[0]), ("band_changed", float(BAND_EDIT))):
+        found, held = relief_bore(part[key]["faces"], z_lo, PLANES[1], RELIEF_D / 2)
+        ok(held, f"replay final {key}: the bore and its ends, read with PlaneParams: {found}")
+    for label, volume, bands in (("5/5", v1, (5.0, 5.0)), ("4/5", v2, (4.0, 5.0))):
+        want = banded_volume(f0, 26.0, bands, outer, RELIEF_D / 2)
+        res = abs(volume - want) / volume
+        ok(res <= VOLUME_TOL, f"replay final volume {label} against the face's section: {volume:.6f} against "
+                              f"{want:.6f}, {res:.1e} of it ({VOLUME_TOL:g} allowed, {1 - res / VOLUME_TOL:.0%} left)")
+    found, _ = relief_bore(faces, PLANES[0], PLANES[1], RELIEF_D / 2)
+    steps, want = found.get("step_areas") or [], step_area(f0, outer, RELIEF_D / 2)
+    ok(len(steps) == 2 and abs(steps[0] - steps[1]) <= AREA_TOL * want,
+       f"replay final: the relief's two step faces read one area to {AREA_TOL:g}: {steps}")
+    print(f"fact    replay final: the step faces {steps} against F0 − π(Ro² − r²) = {want:.6f} mm²: "
+          f"{[f'{(a - want) / want:+.1e}' for a in steps]} (not judged: see the note)")
 
 
 def self_check():
@@ -363,11 +435,15 @@ def self_check():
                                                                             for g in old.gears],
        "that edit's Gears rows are RangeBox's")
     o = assessed(old)
+    ok(sorted(bare(m) for m in w9b_check_warnings(o)) == sorted(PLAN_W9B_WARNINGS),
+       f"RangeBox's three W9b warnings are §2.2's and §2.3's sentences word for word: "
+       f"{sorted(set(bare(m) for m in w9b_check_warnings(o)) ^ set(PLAN_W9B_WARNINGS))}")
     ok(len(warnings_of(o)) == 7 and len(w9b_check_warnings(o)) == 3,
        f"RangeBox: seven warnings, three of them W9b's: {[m[:60] for m in w9b_check_warnings(o)]}")
     speeds = {k: round(float(v), 3) for k, v in o.report.motion.speeds.items()}
     ok(speeds.get("Carrier") == 517.857 and speeds.get("Planet") == -1673.077, f"RangeBox's speeds: {speeds}")
     replay_first_run(ok)
+    replay_final_run(ok)
     print(f"done    {len(bad)} failed")
     return 0 if not bad else 1
 
@@ -527,8 +603,8 @@ def _section_part(out):
     check(not any(c for _, c in got["features"]) and not any(n.startswith("Relief") for n, _ in got["features"]),
           f"part unbanded: no feature in error and no relief feature: {[n for n, _ in got['features']]}")
     v0 = got["volume"]
-    ends = [f for f in got["faces"] if f["kind"] == "plane" and f.get("z") is not None and abs(f["z"]) <= 1e-6]
-    out["end_face_area"] = max((f["area"] for f in ends if f["area"] is not None), default=None)
+    out["end_areas"] = end_areas(got["faces"], plain.face_width_mm())
+    out["end_face_area"] = out["end_areas"].get(0.0)
     close_folder("part unbanded", folder)
 
     folder = os.path.join(root, "banded")
@@ -572,6 +648,7 @@ def _section_part(out):
     else:
         say(f"fact    part banded: {clutch.RELIEF}'s sub-features not read: {subs}")
     outer = outer_radius(got["faces"], derived.face_width)
+    banded_ends = end_areas(got["faces"], derived.face_width)
     v1 = got["volume"]
 
     say(f"-- part  a band changed through the strip's value route: Start Band 5 -> {BAND_EDIT} "
@@ -598,11 +675,18 @@ def _section_part(out):
     area = v1 - v2
     low, high = section_area_bounds(derived, RELIEF_D)
     bore = face["r"][0] if face.get("r") else None
+    length = derived.face_width
+    f0, how = section_of(v0, length, out.get("end_areas") or {})
     out["volumes"] = {"unbanded": v0, "banded": v1, "banded_start_4": v2, "area_per_mm_measured": area,
-                      "bounds_per_mm": [low, high], "outer_radius": outer, "bore_radius": bore,
-                      "end_face_area": out.get("end_face_area")}
+                      "bounds_per_mm": [low, high], "outer_radius": outer, "bore_radius": bore, "section": f0,
+                      "section_from": how, "end_areas": out.get("end_areas"), "banded_end_areas": banded_ends}
     say(f"fact    part: volumes unbanded {v0:.6f}, banded {v1:.6f}, Start Band {BAND_EDIT} {v2:.6f} mm³; one more mm of "
         f"relief removed {area:.6f} mm³ (a difference of two mass-property volumes, a fact only)")
+    say(f"fact    part: the section F0 {f0:.6f} mm² from {how}; the end faces read {out.get('end_areas')} unbanded and "
+        f"{banded_ends} banded; V/{length:g} reads {v0 / length:.6f} ({(v0 / length - f0) / f0:+.1e} of F0)")
+    if not how.startswith("the front end face"):
+        say("fact    part: GetArea gave no end face's area, so F0 is the volume's, which carries SolidWorks' volume "
+            "error into every expected volume below")
     check(low < area < high, f"part: the area one more mm of relief removes, {area:.6f} mm², lies between the ring "
                              f"outside the roots ({low:.3f}) and the ring outside the tips ({high:.3f})")
     if outer is None or bore is None:
@@ -610,17 +694,23 @@ def _section_part(out):
                      "the volumes cannot be judged")
     else:
         for label, volume, bands in (("5/5", v1, (5.0, 5.0)), (f"{BAND_EDIT}/5", v2, (float(BAND_EDIT), 5.0))):
-            want, f0 = banded_volume(v0, derived.face_width, bands, outer, bore)
+            want = banded_volume(f0, length, bands, outer, bore)
+            res = abs(volume - want) / volume
             out["volumes"][f"expected_{label}"] = want
-            check(abs(volume - want) <= VOLUME_TOL * volume,
-                  f"part: the banded part's volume ({label}) is the unbanded section F0 = V/{derived.face_width:g} = "
-                  f"{f0:.6f} mm² over the bands and the ring π(Ro² − r²), Ro {outer} and r {bore} from the faces, over "
-                  f"the relief: {volume:.6f} against {want:.6f} mm³, {abs(volume - want):.6f} apart "
-                  f"({abs(volume - want) / volume:.1e} of it; {VOLUME_TOL:g} allowed)")
-        if out.get("end_face_area"):
-            say(f"fact    part: F0 two ways: the unbanded volume over its face {v0 / derived.face_width:.6f} mm², its "
-                f"front end face's area (IFace2.GetArea) {out['end_face_area']:.6f} mm² "
-                f"({abs(v0 / derived.face_width - out['end_face_area']) / out['end_face_area']:.1e} apart)")
+            check(res <= VOLUME_TOL,
+                  f"part: the banded part's volume ({label}), a coarse guard: the section F0 {f0:.6f} mm² over the bands "
+                  f"and the ring π(Ro² − r²), Ro {outer} and r {bore} from the faces, over the relief: {volume:.6f} "
+                  f"against {want:.6f} mm³, {res:.1e} of it ({VOLUME_TOL:g} allowed, {1 - res / VOLUME_TOL:.0%} of that "
+                  f"left; SolidWorks' volume runs high of the face's section, as V/{length:g} does)")
+        steps, want = face.get("step_areas") or [], step_area(f0, outer, bore)
+        out["volumes"]["step_areas"], out["volumes"]["step_expected"] = steps, want
+        check(len(steps) == 2 and None not in steps and abs(steps[0] - steps[1]) <= AREA_TOL * want,
+              f"part: the relief's two step faces read one area to {AREA_TOL:g} (one section at each end of it): {steps}")
+        if len(steps) == 2 and None not in steps:
+            say(f"fact    part: each step face against F0 − π(Ro² − r²) = {want:.6f} mm²: {steps}, "
+                f"{[f'{(x - want) / want:+.1e}' for x in steps]} (not judged: on 2026 the step faces read 2.2e-3 under "
+                "it, where the end faces read the section to 5e-7 and the volumes agree with the section to 1e-4; "
+                "W9B-DEMONSTRATION.md)")
 
     folder = os.path.join(root, "hub")
     path, _, _ = build_part("part hub", folder, hub)
@@ -958,6 +1048,9 @@ def section_old(out):
         got = warnings_of(a)
         check(len(got) == 7 and not errors_of(a) and len(w9b) == 3 and all(m in got for m in w9b),
               f"old: seven warnings, W9b's three among them (reach, hub, the N clearance): {[m[:70] for m in w9b]}")
+        missing = [m for m in PLAN_W9B_WARNINGS if m not in got]
+        check(not missing, f"old: W9b's three warnings in the read are §2.2's and §2.3's sentences word for word: "
+                           f"missing {missing or 'none'}")
         modes = {m.name: m for m in a.report.modes}
         speeds = {k: round(float(v), 3) for k, v in a.report.motion.speeds.items()}
         check([g for _, g in modes["H"].engaged] == ["HighDog"] and modes["N"].engaged == ()
