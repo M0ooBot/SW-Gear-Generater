@@ -191,6 +191,10 @@ def check(spec: GearboxSpec, skip_gears=()) -> Report:
                               if d not in report.diagnostics)
     report.diagnostics.extend(d for d in modes_mod.hub_errors(spec, placed, report.modes)     # W9b: K8
                               if d not in report.diagnostics)
+    # W9b package A (ISSUE-1-PLAN §2.2, §2.3): the sleeve checks, each a warning at its cell.
+    report.diagnostics.extend(d for d in modes_mod.reach_warnings(spec, placed) + modes_mod.hub_warnings(spec, placed)
+                              + modes_mod.clearance_warnings(spec, placed, report.modes)
+                              if d not in report.diagnostics)
     _check_shafts(report, spec, placed, upset)
     _check_turned_clearances(report, spec, placed, listed)
     _check_motion(report, spec, upset)

@@ -189,10 +189,28 @@ def test_the_torques_per_mode_follow_j17_and_the_answer_key():
     assert e4["4L"].motion.shared == {"Rear": ("FrontDrv",)}
 
 
+# W9b (ISSUE-1-PLAN §3, "W8's fixtures after W9b"): no change to their rows, and three warnings each, the issue's defect
+# as W8 built them: Rear cannot reach RangeSlv, and nothing keys RangeSlv or ModeSlv to Rear, where none can as laid out.
+def w9b_warnings(make):
+    rows = {transfer_case_parallel: (8, 10), e4_transfer_case: (7, 9)}[make]
+    through = {transfer_case_parallel: "Lo runs through RangeSlv's travel (from LoGear at 30 to LoDog at 70), so Rear "
+                                       "would have to pass LoGear toward Z\u2212 or LoDog toward Z+, each on Lo.",
+               e4_transfer_case: "Carrier runs through RangeSlv's travel (from Pl at 20 to LoDog at 70), so Rear would "
+                                 "have to pass Pl toward Z\u2212 or LoDog toward Z+, each on Carrier."}[make]
+    return [f"Gears row {rows[0]}: Rear cannot reach RangeSlv: {through}",
+            f"Gears row {rows[0]}: nothing keys RangeSlv to Rear: its whole bore is teeth and no hub row is under it; "
+            "add a hub on Rear that a band of RangeSlv covers in every mode; as laid out none can, since its 8 mm face "
+            "slides 20 mm (H \u221210 to L +10) and its places share no length.",
+            f"Gears row {rows[1]}: nothing keys ModeSlv to Rear: its whole bore is teeth and no hub row is under it; "
+            "add a hub on Rear that a band of ModeSlv covers in every mode; as laid out none can, since its 8 mm face "
+            "slides 10 mm (2WD 0 to 4WD +10) and its places share no length."]
+
+
 @pytest.mark.parametrize("make", [transfer_case_parallel, e4_transfer_case])
 def test_the_fixtures_check_clean_and_say_their_modes(make):
+    """Clean but for W9b's three warnings (§3), each a warning, word for word."""
     a = assessed(make())
-    assert a.report.diagnostics == []
+    assert [(d.level, d.message) for d in a.report.diagnostics] == [("warning", w) for w in w9b_warnings(make)]
     words = {"TransferCase_Parallel": "Parallel train with modes · 4 meshes",
              "TransferCase_E4": "Planetary and parallel with modes, Ring fixed · 3 planets"}[make().box.name]
     nb = "\u00a0"
@@ -1464,9 +1482,12 @@ def test_a_mode_that_jams_is_one_error_at_its_own_row_whichever_row_it_is(index,
     4 : 1. As the first Modes row or the last, the same single error at its own row; never the whole-box jam, since
     the other modes turn (checks._check_motion is that sentence's one home)."""
     spec = with_mode(JAM, index, positions=(("RangeSlv", "H"), ("ModeSlv", "J")))
-    assert said(spec) == [(True, f"Modes row {row}: in {mode} RangeSlv engages InDog and ModeSlv engages LoDog, which "
-                                 "joins In and Lo through Rear, and the meshes turn them at different speeds: as "
-                                 "written the box is jammed in this mode.")]
+    jam = (True, f"Modes row {row}: in {mode} RangeSlv engages InDog and ModeSlv engages LoDog, which joins In and Lo "
+                 "through Rear, and the meshes turn them at different speeds: as written the box is jammed in this mode.")
+    # W9b's three warnings on the fixture (§3), ModeSlv's J place in its slide: 40 mm from J to 4WD.
+    three = w9b_warnings(transfer_case_parallel)
+    three[2] = three[2].replace("slides 10 mm (2WD 0 to 4WD +10)", "slides 40 mm (J \u221230 to 4WD +10)")
+    assert said(spec) == [jam] + [(False, w) for w in three]
 
 
 def test_the_box_is_said_jammed_only_when_every_mode_jams():
@@ -1484,7 +1505,8 @@ def test_a_sleeve_or_dog_on_meshes_is_one_error_and_no_ring_check_runs(pair, gea
     s = transfer_case_parallel()
     spec = replace(s, meshes=s.meshes + (Mesh(*pair, row=6),))
     assert said(spec) == [(True, f"Meshes row 6: {gear} is a {kind}, which is not listed on Meshes: a sleeve engages "
-                                 "a dog by sliding over it, worked out for each mode.")]
+                                 "a dog by sliding over it, worked out for each mode.")] + \
+        [(False, w) for w in w9b_warnings(transfer_case_parallel)]          # W9b's three on the fixture (§3)
 
 
 @pytest.mark.parametrize("make", [transfer_case_parallel, e4_transfer_case])

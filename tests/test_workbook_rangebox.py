@@ -17,12 +17,17 @@ def assessed():
 
 
 def test_range_box_assesses_with_the_four_warnings_none_about_the_clutch_and_plans_a_build():
+    """Before W9 four warnings, none about the clutch; W9b adds §3's three (``test_workbook_sleeve_checks``), each
+    about RangeSlv, and engagement and speeds are unchanged."""
     a = assessed()
     warnings = [d.message for d in a.diagnostics if d.level == "warning"]
     assert [d.message for d in a.diagnostics if d.level == "error"] == [] and a.lay_out_refusal() == ""
-    assert len(warnings) == 4
-    assert sum("Planet" in w for w in warnings) == 3 and sum("RangeSlv" in w for w in warnings) == 1
-    assert not any("HighDog" in w or "LowDog" in w or "engage" in w or "bridg" in w for w in warnings)
+    assert len(warnings) == 4 + 3
+    w9b = [w for w in warnings if "cannot reach" in w or "nothing keys" in w or "which it does not engage there" in w]
+    before = [w for w in warnings if w not in w9b]
+    assert len(w9b) == 3 and all("RangeSlv" in w for w in w9b)
+    assert sum("Planet" in w for w in before) == 3 and sum("RangeSlv" in w for w in before) == 1
+    assert not any("HighDog" in w or "LowDog" in w or "engage" in w or "bridg" in w for w in before)
     plan = gearbox.plan_gearbox(a, None, exists=lambda p: False, read_sidecar=lambda p: None)
     assert plan.refusal == "" and plan.motion is not None and plan.motion.modes
 

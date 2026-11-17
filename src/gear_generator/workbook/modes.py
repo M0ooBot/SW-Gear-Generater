@@ -510,3 +510,292 @@ def hub_errors(spec: GearboxSpec, placed: Dict[str, Placed], reports) -> List[Di
                         f"hub whole, or the hub the sleeve; move {hub.id}.")
             out.append(Diagnostic(ERROR, f"{cell}: {said}", cell))
     return out
+
+
+# -- W9b package A: the sleeve checks (ISSUE-1-PLAN §2.2, §2.3; K7, K8, K9; W9B-INTERFACES §6) ---------------------
+
+RUNNING_FLOOR = 0.5             # mm: the least running clearance, at any module
+RUNNING_MODULES = 0.5           # × module: the running clearance a side, above the floor
+
+
+def running_clearance(module: float) -> float:
+    """K9: the least axial gap between a sleeve's toothed band and a dog or hub it does not engage, c = max(0.5 mm,
+    0.5 × module): 0.625 mm at module 1.25."""
+    return max(RUNNING_FLOOR, RUNNING_MODULES * module)
+
+
+def _why_clearance(module: float) -> str:
+    return "0.5 × module" if RUNNING_MODULES * module >= RUNNING_FLOOR else "the least at any module"
+
+
+def _signed(value: float) -> str:
+    """``+5``, ``−5`` (U+2212), ``0``: an offset or an At as the sentences write it."""
+    if abs(value) < 1e-12:
+        return "0"
+    return ("+" if value > 0 else "\u2212") + _n(abs(value))
+
+
+def _at_text(gear: Gear) -> str:
+    try:
+        value = float(gear.at or 0)
+    except ValueError:
+        return gear.at
+    return "\u2212" + _n(-value) if value < 0 else _n(value)
+
+
+def _frame_line(spec: GearboxSpec, shaft_id: str) -> Optional[Tuple[float, float]]:
+    """A frame shaft along Z+ or Z-: its (x, y); None for any other (a sleeve's checks look along Z only)."""
+    from .geometry import axis_vector
+    shaft = spec.shaft(shaft_id)
+    if shaft is None or shaft.mount() != "frame":
+        return None
+    try:
+        axis = axis_vector(shaft.axis)
+        point = (float(shaft.x or 0), float(shaft.y or 0))
+    except ValueError:
+        return None
+    if axis not in ((0.0, 0.0, 1.0), (0.0, 0.0, -1.0)):
+        return None
+    return point
+
+
+def _on_line(a: Optional[Tuple[float, float]], b: Optional[Tuple[float, float]]) -> bool:
+    return a is not None and b is not None and abs(a[0] - b[0]) <= AXIS_TOLERANCE and abs(a[1] - b[1]) <= AXIS_TOLERANCE
+
+
+def _sleeve_places(spec: GearboxSpec, gear: Gear) -> List[Placed]:
+    """A sleeve placed at each of its Slides positions in their order (once, where it stands, with no Slides)."""
+    shaft = spec.shaft(gear.shaft)
+    if shaft is None:
+        return []
+    try:
+        offsets = list(gear.positions().values()) or [0.0]
+        at = float(gear.at or 0)
+    except ValueError:
+        return []
+    return [_place(spec, replace(gear, at=repr(at + offset)), shaft) for offset in offsets]
+
+
+def _owners(spec: GearboxSpec, placed: Dict[str, Placed]) -> Dict[str, List[Tuple[Gear, float, float]]]:
+    """Every frame shaft along Z and the gears that make it present (§2.2): its own gears that do not slide, and a
+    carrier's planets as its gears (a copy counted once, under its row); each ``(row, low, high)``, Gears-sheet
+    order."""
+    gears = {g.id: g for g in spec.gears}
+    out: Dict[str, List[Tuple[Gear, float, float]]] = {}
+    seen = set()
+    for g in spec.gears:
+        for p in placed.values():
+            if (p.row or p.gear) != g.id or g.slides.strip():
+                continue
+            owner = p.carrier or p.shaft
+            if (owner, g.id) in seen:
+                continue
+            seen.add((owner, g.id))
+            lo, hi = _span(p)
+            out.setdefault(owner, []).append((gears[g.id], lo, hi))
+    return out
+
+
+def _blocked(present: List[Tuple[Gear, float, float]], point: float, below: bool) -> Optional[Gear]:
+    """§2.2: a shaft present across ``point`` (its gears' hull holds it with more than ``COVER_TOLERANCE`` to spare
+    each side) with a gear reaching past it, below (toward Z−) or above; the gear nearest the point, else None."""
+    lo = min(g[1] for g in present)
+    hi = max(g[2] for g in present)
+    if not (lo < point - COVER_TOLERANCE and hi > point + COVER_TOLERANCE):
+        return None
+    if below:
+        past = [g for g in present if g[1] < point - COVER_TOLERANCE]
+        return max(past, key=lambda g: g[2])[0] if past else None
+    past = [g for g in present if g[2] > point + COVER_TOLERANCE]
+    return min(past, key=lambda g: g[1])[0] if past else None
+
+
+def _hubs_of(spec: GearboxSpec, sleeve: Gear) -> List[Gear]:
+    return [g for g in spec.gears if g.kind_word() == HUB and not g.slides.strip()
+            and hub_sleeve(spec, g) is not None and hub_sleeve(spec, g).id == sleeve.id]
+
+
+def reach_warnings(spec: GearboxSpec, placed: Dict[str, Placed]) -> List[Diagnostic]:
+    """K7 (§2.2): a sleeve S on shaft O whose every way in is blocked, a warning at S's Gears cell. From Z− O must
+    reach p− (the largest start of S's places; the hub's start with a hub), from Z+ p+ (the smallest end; the hub's
+    end); an end is blocked when another shaft on O's line is present across that point and has a gear reaching past
+    it. With bands and no hub each band is tried in place of the whole face, and the warning stands only when every
+    band is blocked both ways."""
+    out: List[Diagnostic] = []
+    owners = _owners(spec, placed)
+    order = [s.id for s in spec.shafts]
+    for sleeve in spec.gears:
+        if sleeve.kind_word() != SLEEVE or sleeve.id not in placed:
+            continue
+        line = _frame_line(spec, sleeve.shaft)
+        others = [sid for sid in order if sid != sleeve.shaft and sid in owners and _on_line(line,
+                                                                                            _frame_line(spec, sid))]
+        if line is None or not others:
+            continue
+        hubs = [h for h in _hubs_of(spec, sleeve) if h.id in placed]
+        if hubs:
+            candidates = [_span(placed[hubs[0].id])]
+        else:
+            places = [band_spans(sleeve, p) for p in _sleeve_places(spec, sleeve)]
+            if not places:
+                continue
+            candidates = [(max(p[i][1] for p in places), min(p[i][2] for p in places)) for i in range(len(places[0]))]
+        found = []
+        for p_minus, p_plus in candidates:
+            minus = [(sid, _blocked(owners[sid], p_minus, True)) for sid in others]
+            plus = [(sid, _blocked(owners[sid], p_plus, False)) for sid in others]
+            minus = [(sid, g) for sid, g in minus if g is not None]
+            plus = [(sid, g) for sid, g in plus if g is not None]
+            if not minus or not plus:
+                found = []
+                break
+            found.append((minus, plus))
+        if not found:
+            continue
+        minus, plus = found[0]
+        both = [sid for sid, _ in minus if sid in {s for s, _ in plus}]
+        cell = spec.cell("Gears", sleeve.row, "id")
+        if both:
+            shaft = both[0]
+            low, high = dict(minus)[shaft], dict(plus)[shaft]
+            rows = {g.id: i for i, g in enumerate(spec.gears)}
+            first, second = sorted({low.id: low, high.id: high}.values(), key=lambda g: rows[g.id]) + \
+                ([] if low.id != high.id else [high])
+            said = (f"{sleeve.shaft} cannot reach {sleeve.id}: {shaft} runs through {sleeve.id}'s travel (from "
+                    f"{first.id} at {_at_text(first)} to {second.id} at {_at_text(second)}), so {sleeve.shaft} would "
+                    f"have to pass {low.id} toward Z\u2212 or {high.id} toward Z+, each on {shaft}.")
+        else:
+            (s_low, low), (s_high, high) = minus[0], plus[0]
+            said = (f"{sleeve.shaft} cannot reach {sleeve.id}: {s_low} and {s_high} run through {sleeve.id}'s travel, "
+                    f"so {sleeve.shaft} would have to pass {low.id} on {s_low} toward Z\u2212 or {high.id} on {s_high} "
+                    "toward Z+.")
+        out.append(Diagnostic(WARNING, f"{cell}: {said}", cell))
+    return out
+
+
+def _free_length(span: Tuple[float, float], taken: List[Tuple[float, float]]) -> float:
+    """The longest stretch of ``span`` that none of ``taken`` overlaps."""
+    lo, hi = span
+    if hi - lo <= COVER_TOLERANCE:
+        return 0.0
+    best, at = 0.0, lo
+    for a, b in sorted(t for t in taken if min(t[1], hi) - max(t[0], lo) > COVER_TOLERANCE):
+        best = max(best, min(a, hi) - at)
+        at = max(at, b)
+    return max(best, hi - at)
+
+
+def hub_warnings(spec: GearboxSpec, placed: Dict[str, Placed]) -> List[Diagnostic]:
+    """K8 (§2.2): a sleeve with no hub row of its own, a warning at its Gears cell; and when, as laid out, no hub could
+    be under a band of it in every mode — none inside what every place of one band shares, clear of the gears of the
+    other shafts on its line, and none covering one band's whole travel clear of them — it says so and why."""
+    out: List[Diagnostic] = []
+    owners = _owners(spec, placed)
+    for sleeve in spec.gears:
+        if sleeve.kind_word() != SLEEVE or sleeve.id not in placed or _hubs_of(spec, sleeve):
+            continue
+        line = _frame_line(spec, sleeve.shaft)
+        taken = [(lo, hi) for sid, present in owners.items() if sid != sleeve.shaft
+                 and _on_line(line, _frame_line(spec, sid)) for _, lo, hi in present]
+        places = [band_spans(sleeve, p) for p in _sleeve_places(spec, sleeve)]
+        banded = bool(places) and bool(places[0][0][0])
+        fits = not places
+        for i in range(len(places[0]) if places else 0):
+            shared = (max(p[i][1] for p in places), min(p[i][2] for p in places))
+            travel = (min(p[i][1] for p in places), max(p[i][2] for p in places))
+            inside = _free_length(shared, taken) > COVER_TOLERANCE
+            around = not any(min(t[1], travel[1]) - max(t[0], travel[0]) > COVER_TOLERANCE for t in taken)
+            fits = fits or inside or around
+        cell = spec.cell("Gears", sleeve.row, "id")
+        if banded:
+            said = (f"nothing keys {sleeve.id} to {sleeve.shaft}: no hub row is under it; add a hub on {sleeve.shaft} "
+                    f"that a band of {sleeve.id} covers in every mode")
+        else:
+            said = (f"nothing keys {sleeve.id} to {sleeve.shaft}: its whole bore is teeth and no hub row is under it; "
+                    f"add a hub on {sleeve.shaft} that a band of {sleeve.id} covers in every mode")
+        if not fits:
+            said += "; as laid out none can, since " + _why_none(sleeve, places, banded)
+        out.append(Diagnostic(WARNING, f"{cell}: {said}.", cell))
+    return out
+
+
+def _why_none(sleeve: Gear, places, banded: bool) -> str:
+    if banded:
+        return ("what every place of each band shares is too short or taken, and each band's travel holds a gear of "
+                "another shaft")
+    try:
+        positions = sleeve.positions()
+        face = float(sleeve.face_width)
+    except ValueError:
+        return "its places share no length clear of the other shafts' gears"
+    if not positions:
+        return "what it stands over is taken by another shaft's gear"
+    low = min(positions, key=lambda p: positions[p])
+    high = max(positions, key=lambda p: positions[p])
+    shared = max(p[0][1] for p in places), min(p[0][2] for p in places)
+    tail = ("its places share no length" if shared[1] - shared[0] <= COVER_TOLERANCE
+            else "the length its places share is taken by another shaft's gear")
+    return (f"its {_n(face)} mm face slides {_n(positions[high] - positions[low])} mm ({low} {_signed(positions[low])} "
+            f"to {high} {_signed(positions[high])}) and {tail}")
+
+
+def clearance_warnings(spec: GearboxSpec, placed: Dict[str, Placed], reports) -> List[Diagnostic]:
+    """K9 (§2.3): in every mode, every dog or hub on another shaft on a sleeve's line that no band of it engages there,
+    standing less than c (:func:`running_clearance`) from a band (0 ≤ gap < c), one warning per mode and sleeve at the
+    mode's Modes cell (the sleeve's Gears cell for the implicit mode); and, once, a hub less than c from a dog on
+    another shaft, at the hub's Gears cell. A gap of exactly c is clean."""
+    out: List[Diagnostic] = []
+    gears = {g.id: g for g in spec.gears}
+    near = [g for g in spec.gears if g.kind_word() in (DOG, HUB) and g.id in placed and not g.slides.strip()]
+    for m in reports or ():
+        for sleeve in spec.gears:
+            if sleeve.kind_word() != SLEEVE or sleeve.id not in placed:
+                continue
+            here = m.placed.get(sleeve.id, placed[sleeve.id])
+            spans = band_spans(sleeve, here)
+            c = running_clearance(here.module)
+            found: List[Tuple[str, str, float]] = []
+            for d in near:
+                p = placed[d.id]
+                if p.shaft == here.shaft or not _coaxial(p, here) or (sleeve.id, d.id) in m.engaged:
+                    continue
+                shares = [_between((lo, hi), _span(p)) for _, lo, hi in spans]
+                if any(share > COVER_TOLERANCE for share in shares):
+                    continue                                    # over it: engaged, or engagement's own error
+                for (word, _, _), share in zip(spans, shares):
+                    gap = max(0.0, -share)
+                    if gap < c - 1e-9:
+                        found.append((word, d.id, gap))
+            if not found:
+                continue
+            cell = spec.cell("Modes", m.row, "name") if m.row else spec.cell("Gears", sleeve.row, "id")
+            label = f"in {m.name} " if m.name else ""
+            pieces = []
+            for word, _lo, _hi in spans:
+                these = [f"{_n(gap)} mm from {d}" for w, d, gap in found if w == word]
+                if not these:
+                    continue
+                what = (f"{_band_owner(sleeve.id, word)} stands" if not pieces else f"its {word} band")
+                pieces.append(f"{what} {' and '.join(these)}")
+            said = (f"{label}{', and '.join(pieces)}, which it does not engage there: leave at least {_n(c)} mm "
+                    f"({_why_clearance(here.module)}) each side.")
+            out.append(Diagnostic(WARNING, f"{cell}: {said}", cell))
+    for hub in spec.gears:
+        if hub.kind_word() != HUB or hub.id not in placed or hub.slides.strip():
+            continue
+        h = placed[hub.id]
+        for d in spec.gears:
+            if d.kind_word() != DOG or d.id not in placed:
+                continue
+            p = placed[d.id]
+            if p.shaft == h.shaft or not _coaxial(p, h):
+                continue
+            gap = -_between(_span(h), _span(p))
+            module = max(h.module, p.module)
+            c = running_clearance(module)
+            if -COVER_TOLERANCE <= gap < c - 1e-9:
+                cell = spec.cell("Gears", gears[hub.id].row, "id")
+                out.append(Diagnostic(WARNING, f"{cell}: {hub.id} stands {_n(max(0.0, gap))} mm from {d.id}, on "
+                                               f"another shaft: leave at least {_n(c)} mm ({_why_clearance(module)}) "
+                                               "between them.", cell))
+    return out
