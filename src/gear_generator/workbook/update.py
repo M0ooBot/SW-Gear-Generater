@@ -2303,15 +2303,19 @@ def changed_documents(result: Any) -> List[str]:
 
 def documents_left_in_error(result: Any) -> List[Any]:
     """The documents (``swbuild.UpdateResult``) an Update changed (:func:`changed_documents`) and left in error: a
-    failure of the job names it, and either its values' rebuild reported an error or the failure names the document
-    as a whole (a sleeve's band step: the app's own feature in error, after its values rebuilt clean). A rebuild in
-    error from the user's features alone is no failure; a single global refused beside a clean rebuild is not this.
-    The parts, the layout and the carriers. One rule for the stop's sentence and the record's mark."""
+    failure of the job names it, and either its values' rebuild reported an error, or the worker lists it changed in
+    SolidWorks (``GearboxUpdate.changed``) and the failure names the document as a whole (a sleeve's band step: the
+    app's own feature in error, after its values rebuilt clean or with none to set). A rebuild in error from the
+    user's features alone is no failure; a single global refused beside a clean rebuild names the global, and is not
+    this. The parts, the layout and the carriers. One rule for the stop's sentence and the record's mark."""
     named = [str(what) for what, _why in getattr(result, "failures", []) or []]
     changed = {document_stem(c) for c in changed_documents(result)}
+    listed = {document_stem(str(p)) for p in getattr(result, "changed", []) or []}
     return [d for d in _value_documents(result) if document_stem(d.document) in changed
             and any(names_document(w, d.document) for w in named)
-            and (not getattr(d, "rebuilt", True) or any(document_stem(w) == document_stem(d.document) for w in named))]
+            and (not getattr(d, "rebuilt", True) or (document_stem(d.document) in listed
+                                                       and any(document_stem(w) == document_stem(d.document)
+                                                               for w in named)))]
 
 
 def _plan_paths(plan: UpdatePlan) -> List[str]:
