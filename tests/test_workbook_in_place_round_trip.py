@@ -521,16 +521,13 @@ def test_a_tooth_change_with_modes_refuses_by_name_while_its_gate_is_unmeasured(
     # No press has read this SolidWorks' version onto the record yet, so the footer names the finding by its year.
     assert "(findings.UPDATE_MAKES_MATES_WITH_MODES_ON_<year>)" in text and not ok
     mark = len(parallel.sw.calls)
-    with pytest.raises(swbuild.BuildError, match=r"\(findings.UPDATE_MAKES_MATES_WITH_MODES_ON_2026 is None\), so "
-                                                 "nothing is changed"):
-        parallel.press(_teeth())
+    # Refused as every other in-place gate is (the worker's 816c261): a UserWorkRefused naming the finding, which the
+    # press records, and no write.
+    press = parallel.press(_teeth())
+    assert [p.subjects for p in press.refused.problems] == [("UPDATE_MAKES_MATES_WITH_MODES_ON_2026",)]
     assert parallel.writes(mark) == []
 
 
-@pytest.mark.xfail(strict=True, reason="A's side (W9C-INTERFACES §11, From B, the second joining round): the gate "
-                   "refusal of a gear mate remade with modes is a BuildError, so the record keeps no refusal of it; "
-                   "B asks the worker to raise it as UserWorkRefused (PROBLEM_UNSETTLED, its finding the subject), "
-                   "as every other in-place gate")
 def test_a_tooth_change_refused_by_its_gate_is_recorded_as_every_other_refusal_before_a_write(parallel, monkeypatch):
     monkeypatch.setattr(findings, "UPDATE_MAKES_MATES_WITH_MODES_ON_2026", None)
     press = parallel.press(_teeth())
