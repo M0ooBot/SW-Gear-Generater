@@ -6013,7 +6013,13 @@ def _in_place_bands(sw: SolidWorks, result: GearboxUpdate, in_place: InPlace, do
     """§4 step 2, after the values: each built sleeve given its bands in its own part (the band globals and the
     relief's ops, run by the build's own runners after the user's features) or relieved of them (the relief's
     features suppressed, ruling C8), then rebuilt and its features read (K3: the user's in error are theirs, said;
-    the app's in error, or one not made, a failure). Nothing is saved. True when one failed (the job stops)."""
+    the app's in error, or one not made, a failure). Nothing is saved. True when one failed (the job stops).
+
+    Each part's step runs inside the build's own bracket, ``begin_build`` / ``end_build`` (the W9c demonstration's
+    second run on 2026, 2966516: the relief's ``AddDimension2`` outside it raised SolidWorks' modal Modify box, as
+    swInputDimValOnCreate was on): a fresh handle registry, the build document set by the open, the dimension
+    dialog turned off and the user's setting put back whatever happens; ``_run`` suppresses rebuilds around the ops
+    and turns them back on; after the rebuild each band global is read back present, as a build reads its own."""
     for index, band in enumerate(in_place.bands):
         file = _file(band.part)
         stage[0] = file
@@ -6021,51 +6027,11 @@ def _in_place_bands(sw: SolidWorks, result: GearboxUpdate, in_place: InPlace, do
         doc = next((d for d in documents if d.path.casefold() == band.part.casefold()), None)
         made = set(band.features) | (set(doc.made) | set(doc.features) if doc is not None else set())
         try:
-            sw.open_document(band.part)
-            if band.back:
-                # Given back: the band globals set (or added, if gone), the relief turned back on; none made again.
-                there = dict((globals_plan or {}).get(doc.path if doc is not None else band.part, {}))
-                trig = sw.detect_trig_units()
-                for op in band.ops:
-                    if isinstance(op, base.AddGlobal) and there.get(op.name) == "set":
-                        sw.set_global_variable(op.name, op.expression_for(trig))
-                    elif isinstance(op, base.AddGlobal) and op.name not in there:
-                        sw.add_global_variable(op.name, op.expression_for(trig))
-                        result.globals_added.append((band.part, op.name))
-                for name in band.features:
-                    sw.suppress_feature(name, False)
-            elif band.add:
-                # F1: a band global a press that stopped left there is taken as done, or set (the check's plan).
-                there = dict((globals_plan or {}).get(doc.path if doc is not None else band.part, {}))
-                trig = sw.detect_trig_units()
-                for op in band.ops:
-                    if isinstance(op, base.AddGlobal) and there.get(op.name) == "set":
-                        sw.set_global_variable(op.name, op.expression_for(trig))
-                run = tuple(op for op in band.ops if not (isinstance(op, base.AddGlobal) and op.name in there))
-                scratch = BuildResult(trig=trig)
-                _run(sw, BuildPlan("part", "", (base.NewPart(""),) + run, band.part), scratch, "part")
-                result.globals_added.extend((band.part, op.name) for op in run if isinstance(op, base.AddGlobal)
-                                            and any(d.startswith(f'global "{op.name}"') for d in scratch.done))
-                if scratch.failures:
-                    what, why = scratch.failures[0]
-                    raise SolidWorksError(f"{what}: {why}")
-            else:
-                for name in band.features:
-                    sw.suppress_feature(name, True)
-            if band.part not in result.changed:
-                result.changed.append(band.part)
-            rebuilt = bool(sw.rebuild())
-            states = list(sw.feature_states())
-            listed = {s.name for s in states}
-            ours = [s.name for s in states if s.name in made and _in_error(s.code)]
-            missing = [n for n in band.features if band.add and not band.back and n not in listed]
-            theirs = [f for f in _user_features(band.part, states, made) if _in_error(f.code)]
-            result.user_features_in_error.extend(theirs)
-            if ours or missing:
-                raise SolidWorksError(f"SolidWorks reported {_and(ours or missing)} "
-                                      f"{'in error' if ours else 'not made'} in {_stem(band.part)}.")
-            if not rebuilt and not (theirs and getattr(findings, "WHATS_WRONG_OPENS_ON_PART_REBUILD", None) is False):
-                raise SolidWorksError(f"SolidWorks reported an error rebuilding {_stem(band.part)}.")
+            sw.begin_build()
+            try:
+                _band_step(sw, result, band, doc, made, globals_plan)
+            finally:
+                sw.end_build()
         except Exception as exc:  # noqa: BLE001 - this part's failure stops the job, what was done said (B1)
             result.failures.append((file, _said(exc)))
             rest = len(in_place.bands) - index - 1
@@ -6074,6 +6040,65 @@ def _in_place_bands(sw: SolidWorks, result: GearboxUpdate, in_place: InPlace, do
             return True
         (result.bands_added if band.add else result.bands_removed).append(band.gear)
     return False
+
+
+def _band_step(sw: SolidWorks, result: GearboxUpdate, band: BandChange, doc: Optional[DocumentValues],
+               made: Collection[str], globals_plan: Optional[Mapping[str, Mapping[str, str]]]) -> None:
+    """One sleeve's bands given, given back or taken away, in the bracket :func:`_in_place_bands` opens; raises on a
+    failure."""
+    sw.open_document(band.part)
+    if band.back:
+        # Given back: the band globals set (or added, if gone), the relief turned back on; none made again.
+        there = dict((globals_plan or {}).get(doc.path if doc is not None else band.part, {}))
+        trig = sw.detect_trig_units()
+        for op in band.ops:
+            if isinstance(op, base.AddGlobal) and there.get(op.name) == "set":
+                sw.set_global_variable(op.name, op.expression_for(trig))
+            elif isinstance(op, base.AddGlobal) and op.name not in there:
+                sw.add_global_variable(op.name, op.expression_for(trig))
+                result.globals_added.append((band.part, op.name))
+        for name in band.features:
+            sw.suppress_feature(name, False)
+    elif band.add:
+        # F1: a band global a press that stopped left there is taken as done, or set (the check's plan).
+        there = dict((globals_plan or {}).get(doc.path if doc is not None else band.part, {}))
+        trig = sw.detect_trig_units()
+        for op in band.ops:
+            if isinstance(op, base.AddGlobal) and there.get(op.name) == "set":
+                sw.set_global_variable(op.name, op.expression_for(trig))
+        run = tuple(op for op in band.ops if not (isinstance(op, base.AddGlobal) and op.name in there))
+        scratch = BuildResult(trig=trig)
+        _run(sw, BuildPlan("part", "", (base.NewPart(""),) + run, band.part), scratch, "part")
+        result.globals_added.extend((band.part, op.name) for op in run if isinstance(op, base.AddGlobal)
+                                    and any(d.startswith(f'global "{op.name}"') for d in scratch.done))
+        if scratch.failures:
+            what, why = scratch.failures[0]
+            raise SolidWorksError(f"{what}: {why}")
+    else:
+        for name in band.features:
+            sw.suppress_feature(name, True)
+    if band.part not in result.changed:
+        result.changed.append(band.part)
+    rebuilt = bool(sw.rebuild())
+    states = list(sw.feature_states())
+    listed = {s.name for s in states}
+    ours = [s.name for s in states if s.name in made and _in_error(s.code)]
+    missing = [n for n in band.features if band.add and not band.back and n not in listed]
+    theirs = [f for f in _user_features(band.part, states, made) if _in_error(f.code)]
+    result.user_features_in_error.extend(theirs)
+    if ours or missing:
+        raise SolidWorksError(f"SolidWorks reported {_and(ours or missing)} "
+                              f"{'in error' if ours else 'not made'} in {_stem(band.part)}.")
+    if not rebuilt and not (theirs and getattr(findings, "WHATS_WRONG_OPENS_ON_PART_REBUILD", None) is False):
+        raise SolidWorksError(f"SolidWorks reported an error rebuilding {_stem(band.part)}.")
+    if band.add:
+        # As a build's postamble reads its globals back (``_verify``; the band globals' maths needs the part's own,
+        # so each is read present rather than recomputed).
+        got = sw.equation_values()
+        absent = [op.name for op in band.ops if isinstance(op, base.AddGlobal) and op.name not in got]
+        if absent:
+            raise SolidWorksError(f"{_and(absent)} {'is' if len(absent) == 1 else 'are'} not in the Equation Manager "
+                                  f"of {_stem(band.part)} after the rebuild.")
 
 
 def _in_place_mate_ref(op: base.Mate, kept: str, gears: Sequence[str], refs: Sequence[MateRef],

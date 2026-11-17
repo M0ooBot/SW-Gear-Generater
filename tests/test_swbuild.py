@@ -350,6 +350,10 @@ class FakeSolidWorks:
         self.memory_configs = {}
         self.suppressed_features = {}
         self.deleted = []
+        # swInputDimValOnCreate (findings.INPUT_DIM_VAL_ON_CREATE): on, as the user's SolidWorks had it in W9c's
+        # demonstration; begin_build turns it off and end_build puts back what it found.
+        self.dim_dialog_on = True
+        self.dim_dialog_kept = None
 
     def _log(self, name, *args):
         self.calls.append((name, args))
@@ -365,10 +369,16 @@ class FakeSolidWorks:
         return self.active
 
     def begin_build(self):
+        """As ``Session.begin_build``: swInputDimValOnCreate read and turned off for the build's dimensions."""
         self._log("begin_build")
+        self.dim_dialog_kept = self.dim_dialog_on
+        self.dim_dialog_on = False
 
     def end_build(self):
+        """As ``Session.end_build``: the user's swInputDimValOnCreate put back."""
         self._log("end_build")
+        if self.dim_dialog_kept is not None:
+            self.dim_dialog_on, self.dim_dialog_kept = self.dim_dialog_kept, None
 
     def _touch(self):
         if self.current:
@@ -606,6 +616,11 @@ class FakeSolidWorks:
 
     def dimension(self, name, refs, at):
         self._log("dimension", name)
+        if self.dim_dialog_on:
+            # The W9c demonstration's second run on 2026 (2966516): AddDimension2 with swInputDimValOnCreate on, as
+            # the user's SolidWorks had it, raised SolidWorks' modal 'Modify' box, a §0.3 STOP.
+            raise AssertionError(f"SolidWorks' Modify box came up while AddDimension2 dimensioned {name}: "
+                                 "swInputDimValOnCreate is on outside begin_build/end_build")
         return self.rename.get(name, name)
 
     def extrude(self, handle, sketch, name, depth, depth_dim):

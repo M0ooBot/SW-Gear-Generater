@@ -683,3 +683,29 @@ leaving its part Gear_m2_N20.SLDPRT on disk*. Before this, `finish_update` looke
    after), so **B sends there only a mode on record or a name `InPlace.left` holds**; anything else present in
    SolidWorks would be the user's and must never be sent. Pinned:
    `test_a_leftover_configuration_no_mode_names_is_taken_away_by_the_mode_removal_route`.
+
+### From A (the demonstration's second run on 2026, 2966516): every in-place step inside the build's bracket
+
+**The bracket** is `Session.begin_build` / `end_build`, as every build runs its ops inside it: a fresh handle
+registry, the mate statuses, the plane objects and the open sketch forgotten; the build document unset until an open
+or a new document sets it; `swInputDimValOnCreate` (`findings.INPUT_DIM_VAL_ON_CREATE`) read and turned off, and the
+user's setting put back by `end_build`. Inside it, `_run` suppresses rebuilds around a run of ops and turns them back
+on. Every in-place step now runs inside it, `end_build` in a `finally`, so the user's setting is back whatever happens:
+- the check phase: its own bracket (reads only), as before;
+- a new part (3.0): the build's own `build()`, its own bracket, as before;
+- the parts' values: `update_variables` sets globals only (no sketch, no dimension), outside a bracket as W4's Update
+  always has, with its own rebuild suppression;
+- **the bands (step 2): each sleeve's step now in a bracket of its own** (`_in_place_bands` → `_band_step`): the
+  relief's planes, sketches, `AddDimension2`s and loft cut ran outside one, and SolidWorks' Modify box came up in the
+  demonstration's second run. After the rebuild each band global is read back present, as a build reads its own;
+- the assembly (3.1 to 3.7): inside the change phase's bracket, as before (the Face Z global, `LinkDimension`, the
+  mates; `AddMate5` asks for no value).
+
+The fake now starts with the dialog setting on, as the user's SolidWorks had it, models the bracket, and fails a test
+on any `dimension` made with it on ("Modify box"); tests read the setting back as the user had it after a band step
+that went through and after one that failed. Nothing else in the build's bracket was missing from the in-place path.
+
+**The unsettled subjects (the run's log line 180):** the worker gives each gate's problem its own finding as its
+subject (pinned: `test_two_gates_unmeasured_refuse_as_two_problems_each_with_its_finding_as_its_subject`), and B
+records each problem with its subjects. The loss is in the demonstration script's check (`refusal_on_record` keys the
+record's problems by kind, so the second `unsettled` overwrites the first's subjects).

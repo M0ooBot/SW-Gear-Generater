@@ -1009,3 +1009,62 @@ def test_a_leftover_configuration_no_mode_names_is_taken_away_by_the_mode_remova
     assert result.ok, (result.failures, result.skipped)
     assert result.modes_removed == ["R"] and "R" not in fake.configs and result.extra_configurations == []
     assert result.flags_lost == []
+
+
+# -- the demonstration's second run on 2026 (2966516): every in-place step inside the build's bracket ----------------
+
+def test_bands_are_given_inside_the_builds_bracket_and_the_users_dimension_setting_reads_as_it_was(measured):
+    """The relief's AddDimension2 ran outside begin_build/end_build and SolidWorks' Modify box came up. The fake now
+    starts with swInputDimValOnCreate on, as the user's had it, and fails a test on a dimension made with it on."""
+    fake = _built_train()
+    assert fake.dim_dialog_on
+    result = _update_train(fake, parts=[_p17(RELIEF_FEATURES)], in_place=InPlace(bands=(_bands_given(),)))
+    assert result.ok, (result.failures, result.skipped)
+    assert fake.dim_dialog_on and fake.dim_dialog_kept is None              # the user's setting put back
+    called = names(fake)
+    first, last = called.index("dimension"), len(called) - 1 - called[::-1].index("dimension")
+    assert called[:first].count("begin_build") == called[:first].count("end_build") + 1
+    assert "end_build" in called[last:]
+
+
+def test_a_band_step_that_fails_still_puts_the_users_dimension_setting_back(measured):
+    fake = _built_train(fail_on={"loft_cut": "SolidWorks would not make the loft cut Relief."})
+    result = _update_train(fake, parts=[_p17(RELIEF_FEATURES)], in_place=InPlace(bands=(_bands_given(),)))
+    assert not result.ok and result.skipped == "the assembly, because Gear_m1.5_N17.SLDPRT failed"
+    assert fake.dim_dialog_on and fake.dim_dialog_kept is None
+
+
+def test_the_fake_raises_the_modify_box_on_a_dimension_made_outside_the_bracket():
+    fake = _built_train()
+    fake.open_document(P17)
+    with pytest.raises(AssertionError, match="Modify box"):
+        fake.dimension("D9", ("a",), (0.0, 0.0))
+    fake.begin_build()
+    fake.dimension("D9", ("a",), (0.0, 0.0))
+    fake.end_build()
+    assert fake.dim_dialog_on
+
+
+def test_a_hub_built_and_inserted_in_place_runs_every_op_inside_a_bracket(tc_built, measured):
+    """The new part goes through the build's own build() (its own bracket), the assembly's ops through the change
+    phase's: no dimension anywhere outside one, and the setting back as it was."""
+    fake, built = tc_built
+    added, placements, changes = _with_hub(built)
+    motion, _ = _tc_motion(built, "2H")
+    result = swbuild.update_gearbox(fake, assembly=TC_ASM, placements=placements,
+                                    motion=replace(motion, layout_component="layout-1", **changes), exists=fake.exists,
+                                    mtime=lambda _p: 0.0, in_place=InPlace(added=(added,)))
+    assert result.ok, (result.failures, result.skipped)
+    assert fake.dim_dialog_on and fake.dim_dialog_kept is None
+
+
+def test_two_gates_unmeasured_refuse_as_two_problems_each_with_its_finding_as_its_subject():
+    """The demonstration's second run (log line 180) saw one subject kept for two problems of one kind: the worker
+    gives each its own; the merging was in the script's check, which keyed the record's problems by kind."""
+    fake = _built_train()
+    with pytest.raises(UserWorkRefused) as raised:
+        _update_train(fake, parts=[_p17(RELIEF_FEATURES)],
+                      in_place=InPlace(added=(ADD_G5,), bands=(_bands_given(),)), **_with_g5())
+    assert [(p.kind, p.subjects) for p in raised.value.problems] == [
+        (PROBLEM_UNSETTLED, ("UPDATE_INSERTS_A_GEAR_ON_2026",)), (PROBLEM_UNSETTLED, ("UPDATE_BANDS_IN_PLACE_ON_2026",))]
+    assert _writes(fake) == []
