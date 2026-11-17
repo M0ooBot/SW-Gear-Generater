@@ -35,6 +35,8 @@ from .gears.equations import DEGREES, RADIANS, EquationError, evaluate, evaluate
 from .gears.landing import line_landings
 from .gears.spur import TEETH as TEETH_GLOBAL
 from .gears.spur import AXIS_NAME, BORE as BORE_GLOBAL
+from .gears.spur import SPACE_SKETCH
+from .gears.bevel import HEEL_SKETCH, TOE_SKETCH
 from .store import CARRIER_ID_SUFFIX, GEARBOX_MOTION, GEARBOX_STATIC, now, same_path
 from .swcom import (ASSEMBLY_PAIR, ASSEMBLY_STATIC, ASSEMBLY_TRAIN, COMPONENT_FIND_ROUTES, CONFIGURATION_FINDINGS,
                     COMPONENT_LIGHTWEIGHT, COMPONENT_SUPPRESSED, DOC_ASSEMBLY, MINIMUM_MAJOR, configuration_finding,
@@ -1469,8 +1471,12 @@ def update_variables(sw: SolidWorks, variables: Sequence[GlobalVariable], expect
 # 55 -> 53 -> 54).
 LANDING_STEPS = (-1, 1, -2, 2, -3, 3, -4, 4)
 # Recipe B's tooth-space sketch links these dimensions by name (spur._space_ops_arcs, internal._space_ops_arcs), and
-# recipe A's none of them: read from the equations update_variables already reads, they tell a part's recipe.
+# recipe A's none of them: read from the equations update_variables already reads, they tell a part's recipe. Only
+# in the app's own tooth-space sketches, a spur's, helical's, ring's or sleeve's and a bevel's heel and toe sections
+# (``spur._framed`` renames them): a user's dimension named Pitch in a sketch of theirs says nothing of the recipe
+# (the second reading of the fixes review, N2).
 ARC_RECIPE_DIMENSIONS = ("HalfSpace", "Flank", "Base", "Pitch")
+ARC_RECIPE_SKETCHES = (SPACE_SKETCH, HEEL_SKETCH, TOE_SKETCH)
 
 
 def _global_values(pairs: Sequence[Tuple[str, str]], trig: str) -> Dict[str, float]:
@@ -1491,6 +1497,14 @@ def _global_values(pairs: Sequence[Tuple[str, str]], trig: str) -> Dict[str, flo
     return scope
 
 
+def _arc_recipe_link(name: str) -> bool:
+    """Whether an equation's name is one recipe B links in the app's tooth-space sketch: ``"Pitch@Tooth Space
+    Sketch"``, never ``"Pitch@Sketch9"`` (SolidWorks' names are matched case aside)."""
+    dimension, at, sketch = name.partition("@")
+    return bool(at) and dimension.strip().casefold() in {d.casefold() for d in ARC_RECIPE_DIMENSIONS} and \
+        sketch.strip().casefold() in {s.casefold() for s in ARC_RECIPE_SKETCHES}
+
+
 def _landing_route(current: Sequence[Tuple[str, float]], variables: Sequence[GlobalVariable],
                    trig: str) -> Tuple[List[Tuple[str, float, float]], Optional[Tuple[str, GlobalVariable]]]:
     """Pure: the landings :func:`gears.landing.line_landings` foresees from what the part holds now (its equations,
@@ -1504,7 +1518,7 @@ def _landing_route(current: Sequence[Tuple[str, float]], variables: Sequence[Glo
             held.append(split_equation(text))
         except (ValueError, EquationError):
             continue
-    if any(name.split("@", 1)[0] in ARC_RECIPE_DIMENSIONS for name, _ in held if "@" in name):
+    if any(_arc_recipe_link(name) for name, _ in held):
         return [], None              # recipe B's sketch (the fixes' review, S5): no line from the involute's start
     before = _global_values(held, trig)
     after = _global_values([(v.name, v.expression_for(trig)) for v in variables], trig)

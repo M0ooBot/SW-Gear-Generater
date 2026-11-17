@@ -213,6 +213,38 @@ def test_a_part_of_recipe_b_is_never_routed():
     assert swbuild._landing_route(_held(fake), _variables(RING, 54), "degrees")[1] is not None   # noqa: SLF001
 
 
+@pytest.mark.parametrize("theirs", ['"Pitch@Sketch9"= 12', '"Base@Sketch9"= 10', '"HalfSpace@Keyway Sketch"= 3'])
+def test_a_users_own_dimension_named_as_recipe_bs_never_hides_a_recipe_a_ring_from_the_route(theirs):
+    """The second reading of the fixes review, N2: only the app's own tooth-space sketches tell recipe B. A recipe A
+    ring whose user named a dimension of theirs Pitch is still routed, and lands clean."""
+    fake = _built(RING, 55, RING_PATH)
+    fake.equations_text.append(theirs)
+    assert swbuild._landing_route(_held(fake), _variables(RING, 54), "degrees")[1] is not None   # noqa: SLF001
+    result = swbuild.update_variables(fake, _variables(RING, 54), RING_PATH)
+    assert result.ok and result.rebuilt and result.by_way_of == (spur.TEETH, "53")
+    assert fake.feature_codes.get((_key(RING_PATH), "Tooth Space")) != 72
+
+
+def test_recipe_b_is_told_by_the_links_in_the_apps_own_tooth_space_sketches_of_every_kind_it_routes():
+    """Every dimension the app's recipe B plans link in a tooth-space sketch (a spur's, a ring's, an external bevel's
+    heel and toe sections) tells recipe B; none a recipe A plan links does."""
+    from gear_generator.gears import KINDS
+    from gear_generator.gears.base import LinkDimension
+    from test_bevel_forms import spec as bevel_spec
+
+    def links(kind, spec, recipe):
+        plan = kind.plan(spec, kind.derive(spec), recipe, "", "C:\\W\\Part.SLDPRT")
+        return [op.dimension for op in plan.ops if isinstance(op, LinkDimension)]
+
+    bevel = KINDS["bevel"]
+    for kind, spec in ((SPUR, _spec(SPUR, 29)), (RING, _spec(RING, 55)), (bevel, bevel_spec("20", "40", "90"))):
+        b = [name for name in links(kind, spec, "B") if swbuild._arc_recipe_link(name)]     # noqa: SLF001
+        assert b, kind
+        assert not [name for name in links(kind, spec, "A") if swbuild._arc_recipe_link(name)], kind  # noqa: SLF001
+        if kind is bevel:
+            assert {name.split("@", 1)[1] for name in b} == {"Heel Section Sketch", "Toe Section Sketch"}
+
+
 def test_an_update_gives_the_route_through_its_part_step_and_says_it(monkeypatch):
     """The value step of an Update (``_update_document``) goes through update_variables: the route is taken there,
     the part reads rebuilt, and the log says the intermediate; nothing else in the step changes."""
