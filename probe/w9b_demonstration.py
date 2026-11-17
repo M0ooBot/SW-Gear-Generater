@@ -305,17 +305,24 @@ def spec_old(folder=""):
 def part_faces(s):
     """Every face of the active part, raw: a cylinder's radius, axis and box; any other surface's identity and box
     (mm, the part's frame; macro database reading/15)."""
+    def got(obj, name):
+        # A member that returns an array comes back from late binding as an uncalled bound method (macro database
+        # GOTCHAS: IBody2.GetEdges, "'method' object is not iterable"; the first W9b run met it here). A value never
+        # looks like a method, so what came back is tested, not the member's name.
+        value = call(obj, name)
+        return swcom._guarded(name, value) if type(value).__name__ == "method" else value  # noqa: SLF001
+
     out = []
     for body in list(call(s._doc(), "GetBodies2", 0, True) or []):  # noqa: SLF001
-        for face in list(call(body, "GetFaces") or []):
-            surface = call(face, "GetSurface")
-            box = [round(float(v) * 1000.0, 6) for v in call(face, "GetBox")]
-            if call(surface, "IsCylinder"):
-                p = [float(v) for v in call(surface, "CylinderParams")]
+        for face in list(got(body, "GetFaces") or []):
+            surface = got(face, "GetSurface")
+            box = [round(float(v) * 1000.0, 6) for v in got(face, "GetBox")]
+            if got(surface, "IsCylinder"):
+                p = [float(v) for v in got(surface, "CylinderParams")]
                 out.append({"kind": "cylinder", "r": round(p[6] * 1000.0, 6),
                             "axis": [round(v, 6) for v in p[3:6]], "box": box})
             else:
-                out.append({"kind": str(call(surface, "Identity")), "box": box})
+                out.append({"kind": str(got(surface, "Identity")), "box": box})
     return out
 
 
@@ -380,6 +387,20 @@ def close_folder(label, folder):
 
 
 def section_part(out):
+    """The section, and whatever it left open under its folder closed if it failed: the first W9b run stopped in the
+    unbanded sleeve's read with the part still open, and its file name then refused the two builds after it."""
+    try:
+        _section_part(out)
+    except BaseException:
+        try:
+            left = run("part: closed after a failure", W.quit_in(os.path.join(W.OUT, "part")))
+            say(f"fact    part: after its failure, closed what it had open; left open under its folder: {left}")
+        except Exception as e:  # noqa: BLE001
+            say(f"fact    part: after its failure, closing what it had open failed too: {type(e).__name__}: {e}")
+        raise
+
+
+def _section_part(out):
     say("== part  the banded RangeSlv of RangeBox_Fixed and the same sleeve unbanded, by the strip's own plan_for and "
         "swbuild.build, read back from SolidWorks; the volumes; a band changed by the strip's value route; the Hub "
         "part")
