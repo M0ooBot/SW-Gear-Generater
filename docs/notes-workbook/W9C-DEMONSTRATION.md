@@ -88,6 +88,7 @@ Times are estimates for SolidWorks 2026, from W9a's and W9b's measured runs. An 
 
 | # | Section | What it does | 2026 |
 |---|---|---|---|
+| 0 | `ring` | The ring's part at 54, 56, 53, 50 and 60 teeth on fresh copies, a 54-tooth ring from scratch, and Sun at 30: a diagnostic, facts only. Details under the fourth run, below. | 4 min |
 | 1 | `fixed` | **The Done-when.** Details below. Kept as `fixed-updated.master`. | 30 min |
 | 2 | `modes` | **M10.** Four edits, three presses and three refusals. Details below. | 30 min |
 | 3 | `remove` | G4 out of the 12 : 1; HighDog out of setup refused, twice. Details below. | 15 min |
@@ -386,6 +387,55 @@ At this commit it passes, 0 failed. `--help` imports nothing of SolidWorks.
   SolidWorks.
 - **On 2024,** the What's Wrong box may come in `fixed` (a user feature rebuilt after the relief), and is handled by
   W9a's rule. Nothing here is version-specific beyond the `_ON_<year>` names.
+
+## The fourth run on 2026 (from cdd3bbb), and what changed
+
+`probe/results/w9c-demo-sw2026-20261117-4-fixed-and-remove-clean.log`. `fixed` passed with 0 failed, proposing both
+its gates True, and `remove` passed with 0 failed. `modes` did not start, and `remake` stopped in the ring's part.
+
+- **`modes`: the master kept unsaved marks (the script's fault).** An Update saves nothing, so `fixed-updated.master`'s
+  record listed the assembly and the sleeve as unsaved. A copy of it then read as not valid: `clear_saved` dropped
+  them, since the saved files were newer. The record on disk loses such a mark only when a later finish writes it,
+  and only for a document that press loaded from its file. The window's read clears it in memory only, never on disk.
+  So `fixed` now does what a person would:
+  1. saves;
+  2. reads the save flags;
+  3. closes everything of the copy;
+  4. presses again, which loads every document from its file and finds it holding what the workbook asks;
+  5. checks that this second press is quiet (W8's `check_quiet_update`), and that the record on disk then holds no
+     unsaved or mismatched document;
+  6. only then keeps the master.
+
+  `bands-off` starts from the same master.
+- **`remake`: "nothing else on it changed (False)" was the script's comparison, by design of the app.** B's
+  `update.refused_update` writes the SolidWorks the press read onto `gearbox.solidworks` (schema 9). setup.master's
+  record is from before that field, so it had none.
+  - In `fixed` the same check passed on a record of the same age because `fixed`'s quiet press, before its gate's
+    refusal, had already written the field.
+  - `refusal_on_record` now allows exactly that change, `gearbox.solidworks` from none to the press's revision, and
+    says so. It names any other difference with its value before and after (`record_changes`, self-checked).
+- **`remake` stopped in the ring's part.** Sun and Planet rebuilt at 30 and 12 teeth; `Ring_m1.25_N55.SLDPRT` set to
+  54 reported a rebuild error, and the Update stopped. It said what it had changed and that nothing was saved, which
+  is right for a failed part. No gear mate was remade. `remake` now ends there, as a FAIL naming the part, rather
+  than judging modes on a half-done change. It stays on 30/12/54 until the cause is known.
+- **A new section `ring`, run first:** a diagnostic, script-side, facts only, proposing nothing. Every step runs on a
+  fresh copy of the part from S0's master, and nothing is saved.
+  - **(a)** No. of Teeth 54, set by the app's own `swbuild.update_variables` and rebuilt.
+  - **(b)** The same at 56, 53, 50 and 60. With Sun 84 − n and Planet n − 42, each keeps the stage's centre distance
+    and three evenly spaced planets, and the self-check reads each fixture legal.
+  - **(c)** A 54-tooth ring built from scratch by the strip's `plan_for` and `swbuild.build`, with the plan's checks
+    and what the strip's read says of the ring.
+  - **(d)** Sun 29 → 30, which rebuilt in `remake`.
+
+  For each step it reads and logs:
+  - every feature's error code (`feature_states`), and for each one in error its `swFeatureError_e` name and what
+    `GetErrorCode2` returns beside it;
+  - each sketch's constrained status, and its relations counted by every `swSketchRelationFilterType_e` filter;
+  - every equation's text, value and `IEquationMgr.Status`;
+  - `GetWhatsWrong` (NEW);
+  - the globals, the bodies and the volume.
+
+  The enumerations are read from the install's `swconst.tlb`, by the probes' own reader. It takes about 4 minutes.
 
 ## The third run on 2026 (from ad2bcd9), and what changed
 

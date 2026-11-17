@@ -19,6 +19,10 @@ from what it read (``propose``); none is set here.
 
 Sections (each can run alone from a kept master; ``fixed`` keeps ``fixed-updated.master`` for the next four):
 
+- ``ring``      a diagnostic, facts only: the ring's part from S0's master set to 54, 56, 53, 50 and 60 teeth by the
+                app's own update_variables, each on a fresh copy, nothing saved; a 54-tooth ring built from scratch;
+                Sun 29 -> 30 for comparison: every feature's error, the sketches, the equations, What's Wrong (remake's
+                ring did not rebuild at 54 on 2026's fourth run).
 - ``fixed``     the plan's Done-when. A copy of ``setup.master`` (RangeBox with the user's work: the sprockets locked to
                 Sun and RangeSlv, the housing, their mates, the keyway in Sun's part), with a user groove cut in
                 RangeSlv's part; a quiet press records it; the workbook edited in Excel to RangeBox_Fixed (the
@@ -46,7 +50,7 @@ Sections (each can run alone from a kept master; ``fixed`` keeps ``fixed-updated
                 and the route proposed from it.
 - ``w9b-part``  W9b's ``part`` section again (88 s on 2026), so its step-face read runs on SolidWorks in this session.
 
-Time on 2026, estimated: fixed 30 min, modes 30, remove 15, remake 15, bands-off 8, m4 5, w9b-part 2: about 1 h 45
+Time on 2026, estimated: ring 4 min, fixed 30 min, modes 30, remove 15, remake 15, bands-off 8, m4 5, w9b-part 2: about 1 h 45
 min (the plan's budget 2 h 20 min); add 5 min if setup.master and 4 if the 12 : 1's master must be built first.
 """
 
@@ -224,6 +228,36 @@ def insert_columns(rows, at, titles):
     """``rows`` (a sheet's, row 1 its headers) with empty columns inserted at ``at`` (1-based), headed ``titles``."""
     return [list(r[:at - 1]) + (list(titles) if i == 0 else [""] * len(titles)) + list(r[at - 1:])
             for i, r in enumerate(rows)]
+
+
+def record_changes(before, after, revision):
+    """What differs between two records (JSON, the inventory left out) across a refused press: ``allowed``, the
+    gearbox's ``solidworks`` written from none to the press's ``revision`` (``update.refused_update`` writes the version
+    it read, by design: a record from before schema 9 has none), and ``other``, every other difference by its path,
+    with its value before and after."""
+    out = []
+
+    def walk(a, b, where):
+        if isinstance(a, dict) and isinstance(b, dict):
+            for k in sorted(set(a) | set(b), key=str):
+                walk(a.get(k), b.get(k), f"{where}.{k}")
+        elif a != b:
+            out.append((where, a, b))
+    walk(before, after, "record")
+    allowed = [(w, a, b) for w, a, b in out if w == "record.gearbox.solidworks" and not a and list(b or []) ==
+               list(revision)]
+    return ([b for _, _, b in allowed][0] if allowed else None), [x for x in out if x not in allowed]
+
+
+RING_COUNTS = (54, 56, 53, 50, 60)    # ring: the failing count first, then up one, down one, down further, up further
+
+
+def ring_partners(ring):
+    """The Sun and Planet that keep RangeBox's planet stage with a ring of ``ring`` teeth: the centre distance
+    m(S + P)/2 = 26.25 (S + P = 42) and S + 2P = ring, so S = 84 − ring and P = ring − 42; three planets evenly spaced
+    need (S + ring)/3 whole, and S + ring = 84 always."""
+    sun, planet = 84 - ring, ring - 42
+    return sun, planet, (sun + ring) % 3 == 0
 
 
 def gap_of(a, b):
@@ -705,6 +739,28 @@ def self_check():
     except ValueError as exc:
         ok(str(exc) == "['Nonesuch']", f"pre-W9b workbook: a missing header other than the bands is named: {exc}")
     replay_first_contact(ok)
+    for n in RING_COUNTS:
+        sun, planet, even = ring_partners(n)
+        spec = with_gear(with_gear(with_gear(rb, "Sun", teeth=str(sun)), "Planet", teeth=str(planet)), "Ring",
+                         teeth=str(n))
+        a = _assessed(spec)
+        errors = [d.message for d in a.diagnostics if d.is_error]
+        ring_said = [d.message for d in a.diagnostics if "Ring" in d.message]
+        print(f"fact    ring {n}: with Sun {sun} and Planet {planet} (three planets evenly spaced: {even}) the fixture "
+              f"reads {'legal' if not errors else 'illegal: ' + str(errors[:2])}; of the ring it says {ring_said}")
+    ok(ring_partners(54) == (30, 12, True), "ring: 54 goes with Sun 30 and Planet 12, as remake's edit")
+    before = {"gearbox": {"solidworks": [], "modes": ["H"]}, "parts": [{"path": "a"}]}
+    allowed, other = record_changes(before, {"gearbox": {"solidworks": [34, 1, 1], "modes": ["H"]},
+                                             "parts": [{"path": "a"}]}, [34, 1, 1])
+    ok(allowed == [34, 1, 1] and not other, "record: a refused press writing the SolidWorks it read onto a record with "
+                                            "none is allowed, and said")
+    allowed, other = record_changes(before, {"gearbox": {"solidworks": [34, 1, 1], "modes": ["H", "L"]},
+                                             "parts": [{"path": "a"}]}, [34, 1, 1])
+    ok(other == [("record.gearbox.modes", ["H"], ["H", "L"])],
+       f"record: any other change across a refused press is named with its value before and after: {other}")
+    allowed, other = record_changes({"gearbox": {"solidworks": [32, 5, 0]}}, {"gearbox": {"solidworks": [34, 1, 1]}},
+                                    [34, 1, 1])
+    ok(allowed is None and other, "record: a version written over another one is not the allowed change")
     replay_third_run(ok, b9)
     gear_of = {"Hub_m1.25_N17-1": "Hub", "Sleeve_m1.25_N17-1": "RangeSlv", "Gear_m1.25_N29-1": "Sun"}
     read = {"H": [(["Sprocket-4", "Hub_m1.25_N17-1"], 1.0), (["Sleeve_m1.25_N17-1", "Gear_m1.25_N29-1"], 0.5)],
@@ -1140,12 +1196,16 @@ def refusal_on_record(label, desk, rest, subjects):
         kept.setdefault(p.kind, []).extend(getattr(p, "subjects", []) or [])
     missing = {k: [n for n in names if n not in kept.get(k, [])] for k, names in subjects.items()}
     missing = {k: v for k, v in missing.items() if v or k not in kept}
-    same = without_user_work(record_json(desk)) == rest
-    check(entry is not None and not missing and same and list(entry.revision) == list(W.TAG["revision"])
+    after = without_user_work(record_json(desk))
+    allowed, other = record_changes(rest, after, list(W.TAG["revision"]))
+    if allowed:
+        say(f"fact    {label}: the refused press wrote the SolidWorks it read onto a record that had none "
+            f"(gearbox.solidworks {allowed}; refused_update does so by design, schema 9): allowed")
+    check(entry is not None and not missing and not other and list(entry.revision) == list(W.TAG["revision"])
           and entry.digest == desk.reading.digest,
           f"{label}: the record keeps the refusal with its subjects {kept}, the press's digest and SolidWorks "
-          f"{list(entry.revision) if entry is not None else None}, and nothing else on it changed ({same}); missing "
-          f"{missing or 'none'}")
+          f"{list(entry.revision) if entry is not None else None}, and nothing else on it changed: "
+          f"{other or 'nothing'}; missing {missing or 'none'}")
 
 
 def refused_without_writing(label, desk, folder, part, judge, users=None):
@@ -1403,9 +1463,18 @@ def section_fixed(out):
             footer_ahead(desk, "fixed, after the press")
             check(not foreseen_names(desk), "fixed: after the press the footer foresees nothing in place")
 
-            say("-- fixed  saved as the user would; a second press is quiet")
+            say("-- fixed  saved and closed as the user would; a second press, which loads every document from its "
+                "file, is quiet and its finish clears the record's unsaved marks, so the master's record holds none")
+            frames_before = W.gear_frames(CTX["worker"], desk)
             A.save_user(folder, "the Update's result")
-            frames_before, flags_before = W.gear_frames(CTX["worker"], desk), W.gearbox_flags(CTX["worker"], desk)
+            flags_before = W.gearbox_flags(CTX["worker"], desk)
+            marks = store.read_link_record(desk.path)
+            say(f"fact    fixed: the record on disk before the second press: unsaved "
+                f"{[os.path.basename(p) for p in marks.unsaved]}, mismatched "
+                f"{[os.path.basename(p) for p in marks.mismatched]}")
+            left_open = run("fixed: closed as the user closes it", W.quit_in(folder))
+            check(not left_open, f"fixed: everything of the copy closed after the save: left {left_open}")
+            desk.plan_solidworks()
             second, _ = A.press(desk, "fixed: a second press")
             clean["quiet"] = check(second is not None and second.placed == [] and not second.changed and second.ok
                                    and not second.inserted and not second.bands_added,
@@ -1413,6 +1482,12 @@ def section_fixed(out):
             if second is not None:
                 W.check_quiet_update(CTX["worker"], desk, second, "fixed: the second press", frames_before,
                                      flags_before)
+            marks = store.read_link_record(desk.path)
+            clean["marks"] = check(not marks.unsaved and not marks.mismatched,
+                                   f"fixed: the record on disk after the second press holds no unsaved or mismatched "
+                                   f"document, so a copy of the master reads valid: unsaved "
+                                   f"{[os.path.basename(p) for p in marks.unsaved]}, mismatched "
+                                   f"{[os.path.basename(p) for p in marks.mismatched]}")
         kept = A.w8_step(W.keep_master, CTX["worker"], folder, "fixed-updated")
         MASTERS["fixed"] = kept
         check(bool(kept), f"fixed: kept as fixed-updated.master: {kept}")
@@ -1420,7 +1495,7 @@ def section_fixed(out):
         if not kept and not W.HUNG["on"]:
             A.w8_step(W.end_copy, CTX["worker"], folder, "fixed-updated")
         out["clean"] = clean
-        insert_ok = bool(clean) and all(clean.get(k) for k in ("insert", "m5", "quiet"))
+        insert_ok = bool(clean) and all(clean.get(k) for k in ("insert", "m5", "quiet", "marks"))
         proposed(finding_name("UPDATE_INSERTS_A_GEAR"), True if insert_ok else None,
                  f"fixed: Hub built, inserted, mated and resolved in every mode, every user item kept, each mode "
                  f"§3's, the second press quiet: {clean}")
@@ -1815,6 +1890,11 @@ def section_remake(out):
                           f"remake: every gear mate {ratios} made again with modes ({sorted(remade)}), each one's sense "
                           f"read (unread {result.senses_unread}), the user's keyway in Sun's part not in error "
                           f"{[f.name for f in result.user_features_in_error]}, nothing left over on the record")
+            if not ok:
+                say(f"fact    remake: the press stopped in a part: {result.failures}; it said what it had changed and that "
+                    f"nothing was saved ({result.skipped!r}); the section `ring` reads that part on its own copies")
+                A.section_stop(f"remake: the Update stopped in a part ({result.failures}), so no gear mate was remade "
+                               "and its modes are not judged on a half-done change")
             after = every_mode("remake, after", desk, users)
             users_unchanged("remake", before, after, users, mates)
             judged_modes("remake", desk, out.setdefault("judged", {}), section3=False, banded=False,
@@ -1827,6 +1907,206 @@ def section_remake(out):
             A.w8_step(W.end_copy, CTX["worker"], folder, "remake")
         proposed(finding_name("UPDATE_MAKES_MATES_WITH_MODES"), True if clean else None,
                  f"remake: gear mates of a gearbox with modes remade, flags and senses read in every mode: {clean}")
+
+
+# -- ring: why the ring's part did not rebuild at 54 teeth (a diagnostic, facts only) ------------------------------------
+
+RING_ENUMS = ("swMateType_e", "swFeatureError_e", "swConstrainedStatus_e", "swSketchRelationFilterType_e")
+
+
+def part_diagnosis(path, variables, enums):
+    """One part, opened from its file: its features and equations before; ``variables`` set by the app's own
+    ``swbuild.update_variables`` (its rebuild), unless None; then every feature's error code (``feature_states``),
+    each one in error with its ``swFeatureError_e`` name and what ``IFeature.GetErrorCode2`` returns beside the code;
+    each sketch's ``GetConstrainedStatus`` and its relations counted by every ``swSketchRelationFilterType_e`` filter;
+    every equation's text, value and ``IEquationMgr.Status`` after reading it; ``IModelDocExtension.GetWhatsWrong``
+    (NEW); the globals; the bodies and the volume where a body exists. Nothing saved. Each read guarded."""
+    import pythoncom
+    from win32com.client import VARIANT
+    words = {v: k for k, v in enums.get("swFeatureError_e", {}).items()}
+    constrained = {v: k for k, v in enums.get("swConstrainedStatus_e", {}).items()}
+    filters = enums.get("swSketchRelationFilterType_e", {})
+
+    def guarded(fn):
+        try:
+            return fn()
+        except Exception as exc:  # noqa: BLE001 - what will not read is said in its place
+            return f"unread: {type(exc).__name__}: {exc}"
+
+    def work(s):
+        s.open_document(path)
+        doc = s._doc()  # noqa: SLF001
+        out = {"before": {"features": [(f.name, f.type_name, f.code) for f in s.feature_states()],
+                          "equations": guarded(s.equations)}}
+        if variables is not None:
+            def setting():
+                done = swbuild.update_variables(s, variables, path)
+                return {"changed": list(done.changed), "rebuilt": done.rebuilt, "failures": list(done.failures)}
+            out["set"] = guarded(setting)
+        states = s.feature_states()
+        out["features"] = [(f.name, f.type_name, f.code, f.warning) for f in states]
+        out["in_error"] = []
+        for f in states:
+            if not f.code:
+                continue
+            feature = call(doc, "FeatureByName", f.name)
+
+            def raw_code(feature=feature):
+                holder = VARIANT(pythoncom.VT_BYREF | pythoncom.VT_BOOL, False)
+                back = call(feature, "GetErrorCode2", holder)
+                return {"returned": plain(back), "is_warning": plain(holder)}
+            out["in_error"].append({"name": f.name, "type": f.type_name, "code": f.code,
+                                    "word": words.get(f.code, "?"), "warning": f.warning,
+                                    "GetErrorCode2": guarded(raw_code) if feature is not None else "no feature"})
+        sketches = {}
+        for f in states:
+            if f.type_name != "ProfileFeature":
+                continue
+            feature = call(doc, "FeatureByName", f.name)
+
+            def sketch_read(feature=feature):
+                sketch = call(feature, "GetSpecificFeature2")
+                status = member(sketch, "GetConstrainedStatus")
+                manager = call(sketch, "RelationManager")
+                counts = {k: guarded(lambda v=v: plain(call(manager, "GetRelationsCount", v)))
+                          for k, v in filters.items()}
+                return {"status": constrained.get(status, status), "relations": counts}
+            sketches[f.name] = guarded(sketch_read)
+        out["sketches"] = sketches
+
+        def equations_read():
+            manager = s._equation_manager()  # noqa: SLF001
+            rows = []
+            for i in range(int(call(manager, "GetCount"))):
+                text = str(call(manager, "Equation", i))
+                value = guarded(lambda i=i: float(call(manager, "Value", i)))
+                rows.append((text, value, guarded(lambda: plain(member(manager, "Status")))))
+            return rows
+        out["equations"] = guarded(equations_read)
+
+        def whats_wrong():
+            holders = outs("vvv")
+            back = call(call(doc, "Extension"), "GetWhatsWrong", *holders)
+            found = getattr(holders[0], "value", None) or []
+            names = [guarded(lambda f=f: str(call(f, "Name"))) for f in list(found)]
+            return {"returned": plain(back), "features": names, "codes": plain(holders[1]),
+                    "warnings": plain(holders[2])}
+        out["whats_wrong"] = guarded(whats_wrong)
+        out["globals"] = guarded(s.equation_values)
+        out["bodies"] = guarded(lambda: len(list(member(doc, "GetBodies2", 0, True) or [])))
+        out["volume"] = guarded(s.volume_mm3) if out["bodies"] else None
+        out["flag"] = bool(call(doc, "GetSaveFlag"))
+        return out
+    return work
+
+
+def diagnosis_said(label, got):
+    say(f"fact    {label}: set {got.get('set', '(nothing set)')}; bodies {got.get('bodies')}, volume {got.get('volume')}; "
+        f"globals {got.get('globals')}")
+    if not got.get("in_error"):
+        say(f"fact    {label}: no feature in error")
+    for e in got.get("in_error", []):
+        say(f"fact    {label}: in error: {e['name']} ({e['type']}) code {e['code']} {e['word']}, warning {e['warning']}; "
+            f"GetErrorCode2 {e['GetErrorCode2']}")
+    odd = {n: v for n, v in (got.get("sketches") or {}).items() if not isinstance(v, dict)
+           or v.get("status") not in ("swFullyConstrained",)}
+    say(f"fact    {label}: sketches not fully defined, or unread: {odd or 'none'}")
+    eq = got.get("equations")
+    bad = [r for r in eq if isinstance(r[1], str) or r[2] == -1] if isinstance(eq, list) else eq
+    say(f"fact    {label}: equations reading in error or unread: {bad or 'none'}; What's Wrong {got.get('whats_wrong')}")
+
+
+def section_ring(out):
+    say("== ring  a diagnostic, script-side and facts only (no proposal): why the ring's part from S0's master did not "
+        "rebuild at 54 teeth in remake. On fresh copies of the part, nothing saved: (a) No. of Teeth 54 by the app's "
+        "update_variables; (b) 56, 53, 50, 60; (c) a 54-tooth ring built from scratch by the strip's plan_for and "
+        "swbuild.build; (d) Sun 29 -> 30 for comparison")
+    import shutil
+    import w9c_probes as P
+    from gear_generator.gears import kind_for, plan_for
+    enums = P.swconst(RING_ENUMS)
+    say("NEW     IModelDocExtension.GetWhatsWrong (three out arrays), ISketch.GetConstrainedStatus, "
+        "ISketch.RelationManager.GetRelationsCount(filter), IEquationMgr.Status, each read only; IFeature.GetErrorCode2 "
+        "as the app reads it, its out value said")
+    rb, _, _ = specs()
+    master = A.rangebox_master()
+    box = rb.box
+    root = W.fresh_folder("ring")
+
+    def gear_spec(spec, gear):
+        return spec.gear(gear).gear_spec(box)
+
+    def copy_of(name, gear, case):
+        source = os.path.join(master, name)
+        folder = os.path.join(root, case)
+        os.makedirs(folder, exist_ok=True)
+        shutil.copy2(source, os.path.join(folder, name))
+        return folder, os.path.join(folder, name)
+
+    def diagnose(case, name, gear, teeth):
+        folder, path = copy_of(name, gear, case)
+        if teeth is None:
+            variables = None
+        else:
+            spec = gear_spec(with_gear_spec(rb, gear, teeth=str(teeth)), gear)
+            kind = kind_for(spec)
+            variables = kind.variables(spec, kind.derive(spec))
+        try:
+            got = run(f"ring {case}", part_diagnosis(path, variables, enums), 600)
+        finally:
+            left = run(f"ring {case}: closed unsaved", W.quit_in(folder))
+            say(f"fact    ring {case}: closed without saving, left {left}")
+        diagnosis_said(f"ring {case}", got)
+        return got
+
+    ring_part = "Ring_m1.25_N55.SLDPRT"           # RangeBox's ring as S0's master holds it
+    out["copies"] = {}
+    for n in RING_COUNTS:
+        sun, planet, even = ring_partners(n)
+        say(f"-- ring  No. of Teeth 55 -> {n} (with Sun {sun} and Planet {planet} the stage would keep its centre "
+            f"distance and, three planets, even spacing {even})")
+        out["copies"][n] = diagnose(f"set-{n}", ring_part, "Ring", n)
+    say("-- ring  a 54-tooth ring built from scratch by the strip's own plan_for and swbuild.build")
+    spec54 = gear_spec(with_gear_spec(rb, "Ring", teeth="54"), "Ring")
+    kind = kind_for(spec54)
+    derived = kind.derive(spec54)
+    folder = os.path.join(root, "build-54")
+    os.makedirs(folder, exist_ok=True)
+    path54 = os.path.join(folder, spec54.stem() + ".SLDPRT")
+    plan = plan_for(spec54, derived, "", path54)
+    say(f"fact    ring build-54: the plan's checks {plan.check()}")
+    legal = with_gear_spec(with_gear_spec(with_gear_spec(rb, "Sun", teeth="30"), "Planet", teeth="12"), "Ring",
+                           teeth="54")
+    from gear_generator.workbook import assess
+    a = assess.assess(dataclasses.replace(legal, source_path="C:\\B\\X.xlsx"), [], "C:\\Out\\")
+    say(f"fact    ring build-54: the strip's read of RangeBox with Sun 30, Planet 12, Ring 54 says of the ring "
+        f"{[d.message for d in a.diagnostics if 'Ring' in d.message] or 'nothing'}")
+    try:
+        built = run("ring build-54", lambda s: swbuild.build(s, plan), 900)
+        out["build_54"] = {"ok": built.ok, "failures": list(built.failures), "saved": built.saved}
+        say(f"fact    ring build-54: built ok {built.ok}, failures {list(built.failures)}")
+        if built.ok:
+            got = run("ring build-54: read", part_diagnosis(path54, None, enums), 600)
+            out["build_54"]["read"] = got
+            diagnosis_said("ring build-54", got)
+    finally:
+        left = run("ring build-54: closed", W.quit_in(folder))
+        say(f"fact    ring build-54: closed, left {left}")
+    say("-- ring  for comparison: Sun 29 -> 30 on a copy of Sun's part (it rebuilt in remake)")
+    out["sun_30"] = diagnose("sun-30", "Gear_m1.25_N29.SLDPRT", "Sun", 30)
+    rebuilt = {n: not got.get("in_error") and isinstance(got.get("set"), dict) and got["set"].get("rebuilt")
+               for n, got in out["copies"].items()}
+    say(f"fact    ring: which counts rebuilt in no error: {rebuilt}; the 54-tooth ring from scratch "
+        f"{(out.get('build_54') or {}).get('ok')}; Sun at 30 {not out['sun_30'].get('in_error')}")
+    fine = [n for n, r in rebuilt.items() if r and ring_partners(n)[2]]
+    if fine:
+        say(f"fact    ring: counts that rebuild and keep the fixture's stage (centre distance, three planets evenly): "
+            f"{[(n, ring_partners(n)[:2]) for n in fine]}; remake stays on 30/12/54 until the cause is known")
+
+
+def with_gear_spec(spec, gid, **changes):
+    return dataclasses.replace(spec, gears=tuple(dataclasses.replace(g, **changes) if g.id == gid else g
+                                                 for g in spec.gears))
 
 
 # -- bands-off: the take-away side ------------------------------------------------------------------------------------
@@ -2102,10 +2382,10 @@ def section_w9b_part(out):
 
 # -- the run -------------------------------------------------------------------------------------------------------------
 
-ORDER = ["fixed", "modes", "remove", "remake", "bands-off", "m4", "w9b-part"]
-SECTIONS = {"fixed": section_fixed, "modes": section_modes, "remove": section_remove, "remake": section_remake,
+ORDER = ["ring", "fixed", "modes", "remove", "remake", "bands-off", "m4", "w9b-part"]
+SECTIONS = {"ring": section_ring, "fixed": section_fixed, "modes": section_modes, "remove": section_remove, "remake": section_remake,
             "bands-off": section_bands_off, "m4": section_m4, "w9b-part": section_w9b_part}
-FOLDERS = {"fixed": ["fixed-updated", "fixed-updated" + W.MASTER_SUFFIX], "modes": ["modes"],
+FOLDERS = {"ring": ["ring"], "fixed": ["fixed-updated", "fixed-updated" + W.MASTER_SUFFIX], "modes": ["modes"],
            "remove": ["remove-reducer", "remove-setup"], "remake": ["remake"], "bands-off": ["bands-off"],
            "m4": ["m4"], "w9b-part": ["part"]}
 
