@@ -22,8 +22,10 @@ Where this note and the plan differ, the plan is the authority and the differenc
   case, a word that does not read, a typed nozzle with them); never raises. A printed spec keeps both as typed.
   `with_values` goes through `to_dict`, so it also turns a bad word into machined.
 - `default_stem` ends a printed spec's stem `_P`, after everything else: `Gear_m1.5_N25_P`,
-  `Gear_m1.5_N15_x0.09_P`, `Pinion_..._P` in a pair. A typed name is kept as typed. `pair_stems`' assembly
-  stem is unchanged (see F1-0.md, point 2).
+  `Gear_m1.5_N15_x0.09_P`, `Pinion_..._P` in a pair. A typed name is kept as typed.
+- `pair_stems` ends a pair's assembly stem `_P` when either gear is printed (`Pair_m1.5_20T_60T_P`), after every
+  other suffix; a typed assembly name is kept, and a machined pair's names are pinned as at the cut (the
+  coordinator's ruling 2, F1-0's follow-up).
 
 ## 2. The printed backlash (in `gears/spur.py`, F1-0's for items 2 and 3 only; A owns the file after)
 
@@ -70,8 +72,21 @@ Each stub's docstring says it is F1-0's stub and package A's to fill. No pair in
 
 ## 5. The workbook's names
 
-- `model.Box.process: str = "machined"` and `model.Box.nozzle: str = ""`, the Box's last two fields (after
-  `format`, so no positional construction moves).
+- `model.Box.process: str = "machined"` and `model.Box.nozzle: str = ""`, after `format`, so no positional
+  construction moves.
+- `model.Box.process_cell: str = ""` (`field(compare=False)`), the Box's last field (F1-0's follow-up, the review's
+  must-fix 1): **where the Process value was read**, `"Box!B9"`, or `""` when the Box sheet has no row labelled
+  Process and for a gearbox built in code. `Box.process` is `""` both for a blank cell and for no row; this field
+  is how they are told apart. **B sets it** in `_read_box` (from its `rows` dict, as `at(key)` does); **C reads
+  it** for the Workbook panel's *(add a row labelled Process)*. It is left out of `==`, as `GearboxSpec.columns`
+  is, and `to_sheets` never writes it.
+- **A typed word or a blank, for C.** `Assessment.read` and `.spec` hold the resolved word, never `""`. Whether
+  the user typed Machined or left the cell blank and it resolved *as built* is in the window's raw read
+  (`reading.spec.box.process`, `""` for a blank), before `assess`.
+- **The rulings B works to** (the coordinator, 2026-11-18): B canonicalises the Box's Process to lower case as it
+  reads it, any case being accepted (ruling 7); and B passes into the gears' specs (`spec_values`) only a Process
+  word and a Nozzle that checked, so that one bad Box cell is said once, at the Box, and not again at every gear row
+  (ruling 3). A bad word or a printed gear's bad Nozzle that does reach a spec is an error at its field.
 - `schema.Setting.words: Tuple[str, ...] = ()`; `schema.PROCESS_WORDS = ("printed", "machined")`.
 - In `schema.BOX_SETTINGS`, after Efficiency and before Units:
   - `Setting("process", "Process", words=PROCESS_WORDS, note="Printed or Machined; blank: Printed for a new gearbox,
@@ -120,7 +135,8 @@ package that writes it. Lines in `ui_text.py` are as found at the cut, not the p
 
 **A (each printed only; `{x}` filled as today's sentences fill theirs, by `_num`):**
 - Tip, spur: *Printed, the tooth tip is {t} mm thick after backlash, under one {n} mm nozzle line, so the slicer
-  will drop or round it; use a larger module or fewer, larger teeth.* Ring: *Printed, the ring's tooth tips are
+  will drop or round it; use a larger module or more teeth.* (Ruling 10: more teeth give a thicker tip.)
+  Ring: *Printed, the ring's tooth tips are
   {t} mm thick after backlash, under one {n} mm nozzle line, …* Bevel: *Printed, the tooth tip at the toe is {t} mm
   thick after backlash, …*
 - Module: *Printed, a module of {m} mm is under 2.5 nozzle widths ({2.5n} mm), below which a {n} mm nozzle rounds
@@ -151,7 +167,12 @@ package that writes it. Lines in `ui_text.py` are as found at the cut, not the p
 - The card's third state: *0.3 mm · printed default* (`ui_text.py:128`, `:167` and `:520-521` at the cut read
   `backlash_typed`; each reads `backlash_printed` beside it).
 - The Workbook panel's Process line, every gearbox: *Printed, {n} mm nozzle*; or *Machined, as built: type Printed
-  beside Process on the Box sheet to print it*, with * (add a row labelled Process)* when the sheet has none.
+  beside Process on the Box sheet to print it*, with * (add a row labelled Process)* when the sheet has none, that is
+  when the raw read's `Box.process_cell` is `""` (§5).
+
+The drafted words above are accepted by the coordinator's ruling 10 (2026-11-18), with the tip sentence's advice
+corrected as shown. **What a machined gear is told by K11 and by the card is pinned** in `test_printed_rule.py`
+(`K11`, `CARD`): B's and C's changes to those functions must leave a machined gear's words as they are.
 
 **Kept for (A) only, not written under (B)** (D11's three additions; drafts, the coordinator's to rule if (A) is ever
 chosen). Each names the Box's Process cell only when the row exists, else says to add the row:
