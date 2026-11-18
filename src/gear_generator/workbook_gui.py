@@ -351,6 +351,7 @@ class WorkbookWindow(tk.Toplevel):
         self.record: Optional[store.LinkRecord] = None
         self.record_problem = ""       # why the record beside the workbook cannot be read ("" when it can)
         self.process_record = ""       # F1: "broken" or "newer" when _blank_process could not read the record
+        self.assessed_record: Optional[store.LinkRecord] = None   # F3: the record _blank_process read, for assess
         self.plan: Optional[wb_gearbox.GearboxPlan] = None      # what the build button would run
         self.update_plan: Optional[wb_update.UpdatePlan] = None    # what Update SolidWorks would do (not Tk's update)
         self.plan_trouble = ""         # planning itself raised: said, and both buttons held
@@ -841,8 +842,12 @@ class WorkbookWindow(tk.Toplevel):
                 chosen=(), provisional: bool = False) -> wb_assess.Assessment:
         """A read worked through by :func:`workbook.assess.assess`, the one pipeline the boards and W4 share.
         ``provisional`` while Excel has yet to recalculate the app's own Export (``recalc``): no fixes then."""
+        # F3 (F3-INTERFACES §14, S3; the coordinator's ruling giving this wiring to package C): the record
+        # _blank_process reads, this workbook's own, goes to assess too, so a row whose part is on record is checked and
+        # planned as built (the printed rim, the bore against the root speak of the hole that part holds).
+        blank = self._blank_process()
         return wb_assess.assess(spec, read_diagnostics, self._folder(spec), self._template(spec), chosen,
-                                provisional=provisional, blank_process=self._blank_process())
+                                provisional=provisional, blank_process=blank, record=self.assessed_record)
 
     def _blank_process(self) -> str:
         """What a blank Process on the Box sheet means here (F1, PLAN-PRINTED §1.3; D11 ruled (B)): as built, by
@@ -863,6 +868,9 @@ class WorkbookWindow(tk.Toplevel):
             record, self.process_record = None, ui_text.PROCESS_RECORD_BROKEN
         if record is not None and store.foreign_workbook(self._settled(record), self.link.path):
             record = None
+        # F3: the record read, this workbook's (None for another's, a broken one or a newer one), which _assess also
+        # hands to assess so rows on record are read as built.
+        self.assessed_record = record
         return wb_assess.blank_process(record)
 
     def _folder(self, spec: wb_model.GearboxSpec) -> str:

@@ -19,8 +19,9 @@ from .gears.base import Diagnostic
 from .gears.equations import literal
 from .gears.span import SpanReading
 from .printout import PrintPlan, PrintResult, Refusal
-from .spec import (MODE_PAIR, NOZZLE_DEFAULT, PRINTED_STEM_MARK, PROCESS_MACHINED, PROCESS_PRINTED, RECIPE_ARCS,
-                   RECIPE_INVOLUTE, GearSpec, InputError, PairSpec, pair_stems)
+from .spec import (BORE_ALLOWANCE_DEFAULT, BORE_ALLOWANCE_GLOBAL, MODE_PAIR, NOZZLE_DEFAULT, PRINTED_STEM_MARK,
+                   PROCESS_MACHINED, PROCESS_PRINTED, RECIPE_ARCS, RECIPE_INVOLUTE, GearSpec, InputError, PairSpec,
+                   pair_stems)
 
 RECIPE_WORDS = {RECIPE_INVOLUTE: "involute curve", RECIPE_ARCS: "arc flanks"}
 RECIPE_LABELS = {RECIPE_INVOLUTE: "Involute", RECIPE_ARCS: "Arcs"}
@@ -138,7 +139,7 @@ def derived_rows(g) -> List[Tuple[str, str]]:
             ("Toe scale", _n(g.toe_scale, 4)),
             ("Tooth at pitch", _n(g.section.s)),
             ("Backlash", _n(g.section.backlash) + _backlash_note(g.section)),
-        ]
+        ] + bore_rows(g)
     ring = []
     if is_ring(g):
         ring = [
@@ -178,7 +179,7 @@ def derived_rows(g) -> List[Tuple[str, str]]:
         ("Tip thickness", _n(g.tip_thickness)),
         ("Backlash", _n(g.backlash) + _backlash_note(g)),
         ("Fillet", _n(g.fillet) + ("" if g.fillet_typed else fillet_note)),
-    ]
+    ] + bore_rows(g)
 
 
 def _backlash_note(section) -> str:
@@ -331,16 +332,17 @@ def link_headline(available: bool, snapshot: Optional[dict]) -> Tuple[str, str]:
     return f"{label} — {title}", "ok"
 
 
-def mode_note(mode: str, stems: Sequence[str], update_count: int = 0, document: str = "") -> str:
-    """What the primary button is about to do, in a sentence."""
+def mode_note(mode: str, stems: Sequence[str], update_count: int = 0, document: str = "", keeps: str = "") -> str:
+    """What the primary button is about to do, in a sentence. ``keeps`` (F3, :func:`build_keeps`): what a single
+    gear's Build keeps of the record the strip holds open, said after the file."""
     if update_count and document:
         noun = "variable" if update_count == 1 else "variables"
         return f"Update values will change {update_count} {noun} in {document}."
     if mode == MODE_PAIR and len(stems) >= 3:
         return f"Build will make {stems[0]}.SLDPRT, {stems[1]}.SLDPRT and {stems[2]}.SLDASM."
     if stems:
-        return f"Build will make {stems[0]}.SLDPRT."
-    return "Build will make a new part."
+        return f"Build will make {stems[0]}.SLDPRT{keeps}."
+    return f"Build will make a new part{keeps}."
 
 
 def manual_steps_line(steps: Iterable[str]) -> str:
@@ -487,6 +489,188 @@ _PRINTED_BACKLASH_COPY = (
     "are measured. A slicer's X-Y compensation does the same job, so use one or the other, not both.")
 
 
+# ------------------------------------------------ F3: the bore as cut (PLAN-PRINTED §4.1, §4.2; F3-INTERFACES §5, §9)
+#
+# A printed bore is cut at Bore + Bore allowance (on the diameter), so Bore stays the shaft's size; Drive flat cuts a D
+# whose Flat is the shaft's size across its flat. The figures said here are the derived gear's (package A's
+# bore_allowance and bore_flat, on the section of a helical or bevel gear), so a placeholder, a row and a worked line say
+# the hole the plan cuts; where the figure came from (typed, as built, the default) is read off the spec as the strip
+# holds it, through spec.as_built while a record is open.
+
+DRIVE_LABELS = {"round": "Round", "flat": "Flat"}
+# The three fields' cards. Kept out of EXPLAINER_FIELDS (as the span's card is): the machined card pin iterates it.
+BORE_EXPLAINERS = ("bore_allowance", "drive", "flat")
+BORE_DIAGRAM = "bore"           # their cards borrow Bore's diagram (widgets has none of their own)
+BORE_ALLOWANCE_HINT = "added to Bore"
+FLAT_HINT = "your shaft across its flat"
+BORE_AS_CUT_LABEL = "Bore as cut"
+FLAT_AS_CUT_LABEL = "Flat as cut"
+
+
+def _bore_of(g) -> Tuple[float, float, Optional[float]]:
+    """``(bore, allowance, flat)`` of a derived gear as its plan cuts it, mm: the shaft's Bore (0 with none, and for a
+    ring, which has no bore), the allowance the hole is cut with, and the shaft's Flat for a D (None round). A helical or
+    bevel gear passes these through to its section."""
+    def number(name: str, default: float) -> float:
+        try:
+            return float(getattr(g, name, default) or 0.0)
+        except (TypeError, ValueError):
+            return default
+    if g is None:
+        return 0.0, 0.0, None
+    flat = getattr(g, "bore_flat", None)
+    return number("bore", 0.0), number("bore_allowance", 0.0), (float(flat) if flat is not None else None)
+
+
+def _signed(a: float) -> str:
+    """``+ 0.2`` or ``− 0.1``: an allowance added to a size."""
+    return f"{'−' if a < 0 else '+'} {_n(abs(a))}"
+
+
+def bore_rows(g) -> List[Tuple[str, str]]:
+    """The Derived panel's rows for the hole as cut (F3, §4.1): *Bore as cut* ``8.2 · 8 + 0.2`` (``8`` with no
+    allowance), and for a D *Flat as cut* ``7.2 · 7 + 0.2``, the hole across its flat. A printed gear with a bore always
+    shows its hole; a machined gear only with an allowance or a D, so a plain machined gear's rows are as before F3 (the
+    card pin, F3-0's decision 12). None with no bore, nor for a ring."""
+    bore, a, flat = _bore_of(g)
+    if bore <= 0 or (not a and flat is None and not getattr(g, "printed", False)):
+        return []
+    rows = [(BORE_AS_CUT_LABEL, _n(bore + a) + (f" · {_n(bore)} {_signed(a)}" if a else ""))]
+    if flat is not None:
+        rows.append((FLAT_AS_CUT_LABEL, _n(flat + a) + (f" · {_n(flat)} {_signed(a)}" if a else "")))
+    return rows
+
+
+def _allowance_source(spec: Optional[GearSpec]) -> str:
+    """Where a gear's allowance comes from: ``typed``, ``built`` (blank, a part on record: spec.as_built set it),
+    ``printed`` (blank, not on record, the printed default) or ``machined`` (blank, 0)."""
+    if spec is None:
+        return "machined"
+    if str(spec.bore_allowance).strip():
+        return "typed"
+    if str(spec.built_allowance).strip():
+        return "built"
+    return "printed" if spec.is_printed() else "machined"
+
+
+def bore_allowance_placeholder(spec: GearSpec, derived=None) -> str:
+    """The Bore allowance field's placeholder, what a blank means for this gear: ``0.2 · printed`` for a printed gear
+    not on record, ``0 · as built`` (or the figure) while the strip holds a record open, ``0`` machined. The figure is
+    the derived gear's when it works out, so it says what the plan cuts."""
+    source = _allowance_source(spec)
+    figure = _n(_bore_of(derived)[1]) if derived is not None else ""
+    if source == "built":
+        return f"{figure or literal(float(spec.built_allowance))} · as built" if _is_number(spec.built_allowance) \
+            else "as built"
+    if source == "printed" or (source == "typed" and spec.is_printed()):
+        return f"{figure or _n(BORE_ALLOWANCE_DEFAULT)} · printed"
+    return "0"
+
+
+def _is_number(text: str) -> bool:
+    try:
+        float(str(text).strip())
+        return True
+    except ValueError:
+        return False
+
+
+def _hole_words(bore: float, a: float, flat: Optional[float]) -> str:
+    """``a hole of 8.2 mm``; a D ``a D 8.2 mm across its round and 7.2 across its flat``."""
+    if flat is None:
+        return f"a hole of {_n(bore + a)} mm"
+    return f"a D {_n(bore + a)} mm across its round and {_n(flat + a)} across its flat"
+
+
+def _flat_from_axis(bore: float, a: float, flat: float) -> float:
+    """h = F − D / 2 + a / 2 (§4.2): the hole's flat's distance from the axis, mm."""
+    return flat - bore / 2.0 + a / 2.0
+
+
+_BORE_COPY: Dict[str, Tuple[str, str, str]] = {
+    "bore_allowance": (
+        "Bore allowance", "a",
+        f"Added to Bore when the hole is cut, on the diameter, so Bore stays your shaft's size and the wall moves by "
+        f"half of it. Blank: {_n(BORE_ALLOWANCE_DEFAULT)} mm for a printed gear not yet built (a starting value until "
+        f"your coupons give your printer's figure), 0 machined, and for a gear already built the allowance it was "
+        f"built with, whatever its Process is now. Clearing a typed allowance keeps the figure as built; to take the "
+        f"default, type it. Bore as cut, under Derived, shows which. Negative for a press fit. A slicer's X-Y hole "
+        f"compensation does the same job, so keep it at 0."),
+    "drive": (
+        "Drive", "",
+        "Round cuts a round hole. Flat cuts a D, for a shaft with a flat: type its size across the flat in Flat. The "
+        "flat is cut on the gear's +X side, square to its X axis and facing the middle of a tooth space, the same in "
+        "every gear. The assembly does not model a shaft's flat: it turns each gear to mesh on its own, so gears that "
+        "share a D-shaft are phased by their flats in your machine and by their meshes in the assembly."),
+    "flat": (
+        "Flat", "F",
+        "Your shaft's size across its flat, from the flat to the opposite round side, as your calipers read it. The "
+        "hole's flat takes the same half allowance as its round. The flat must be at least 0.3 mm deep on the shaft "
+        "(Bore less Flat) and stay well clear of the axis."),
+}
+
+
+def bore_explainer(field: str, spec: Optional[GearSpec], derived) -> Tuple[str, str, str, str]:
+    """``(name, symbol, what it is, the worked line)`` for Bore allowance, Drive or Flat (F3; F3-INTERFACES §9).
+    ``spec`` is the gear as the strip holds it (through spec.as_built while a record is open), which says where a
+    blank allowance comes from; ``derived`` the gear it works out to, whose figures are the hole the plan cuts. Not
+    among :data:`EXPLAINER_FIELDS`, so no machined gear's card moves."""
+    try:
+        name, symbol, what = _BORE_COPY[field]
+    except KeyError:
+        raise ValueError(f"There is no bore explainer for a field called {field!r}; the fields with one are "
+                         f"{', '.join(BORE_EXPLAINERS)}.") from None
+    return name, symbol, what, _bore_worked(field, spec, derived)
+
+
+def _bore_worked(field: str, spec: Optional[GearSpec], g) -> str:
+    if g is None or spec is None:
+        return CHECK_THE_FIELDS
+    if is_ring(g):
+        return "a ring has no bore to give an allowance or a flat"
+    bore, a, flat = _bore_of(g)
+    if bore <= 0:
+        return {"bore_allowance": "no Bore → no hole, so the allowance is not used",
+                "drive": "no Bore → no hole to drive by",
+                "flat": "no Bore → no hole to give a flat"}[field]
+    hole = _hole_words(bore, a, flat)
+    if field == "bore_allowance":
+        source = _allowance_source(spec)
+        lead = {"typed": f"{_n(a)} mm",
+                "built": f"blank → {_n(a)} mm, as built",
+                "printed": f"blank → {_n(a)} mm, the printed default",
+                "machined": f"blank → {_n(a)} mm, machined"}[source]
+        return f"{lead} → {hole}"
+    if field == "drive":
+        if not spec.has_flat():
+            return f"round → {hole}"
+        if flat is None:
+            return "flat → type your shaft's size across its flat in Flat"
+        return f"flat → {hole}, its flat {_n(_flat_from_axis(bore, a, flat))} mm from the axis on +X"
+    if flat is None:
+        if not spec.has_flat():
+            return "Drive is round, so Flat is not used"
+        return "blank → type your shaft's size across its flat"
+    return (f"{_n(flat)} mm → the hole {_n(flat + a)} mm across its flat, {_n(_flat_from_axis(bore, a, flat))} from "
+            f"the axis · {_n(bore - flat)} mm deep on the shaft")
+
+
+def build_keeps(spec: GearSpec, derived, part: str) -> str:
+    """What the mode note adds while the strip holds a record open and Bore allowance is blank (the coordinator's ruling
+    on F3-0's decision 11: a Build then keeps the opened part's as-built allowance, as Build again… does by ruling 1):
+    `` with the bore allowance Coupon_C was built with, 0.2 mm, since Bore allowance is blank``, or `` with no bore
+    allowance, as Gear_m1.5_N25_P was built, since Bore allowance is blank``. ``""`` when nothing is to be said: no
+    record, a typed allowance, no bore, or a machined gear built with none (whose blank means 0 either way)."""
+    if derived is None or _allowance_source(spec) != "built" or is_ring(derived):
+        return ""
+    bore, a, _ = _bore_of(derived)
+    if bore <= 0 or (not a and not spec.is_printed()):
+        return ""
+    if a:
+        return f" with the bore allowance {part} was built with, {_n(a)} mm, since Bore allowance is blank"
+    return f" with no bore allowance, as {part} was built, since Bore allowance is blank"
+
+
 def explainer(field: str, derived, stem: str = "", pair: Optional[PairSpec] = None,
               folder: str = "", printed: Optional[bool] = None) -> Tuple[str, str, str, str]:
     """``(name, symbol, what it is, the worked line)`` for one field of the form.
@@ -554,7 +738,11 @@ def _gear_worked(field: str, g, stem: str, folder: str) -> str:
     if field == "bore":
         if g.bore <= 0:
             return "blank → a solid disc, no bore feature"
-        return f"{_n(g.bore)} mm → rim {_n((g.df - g.bore) / 2)} mm to the root circle"
+        # F3 (§4.1): the rim is to the hole as cut; with no allowance that is the Bore, and the line is as before.
+        cut = _bore_of(g)[0] + _bore_of(g)[1]
+        if abs(cut - g.bore) < 1e-9:
+            return f"{_n(g.bore)} mm → rim {_n((g.df - g.bore) / 2)} mm to the root circle"
+        return f"{_n(g.bore)} mm, cut at {_n(cut)} → rim {_n((g.df - cut) / 2)} mm to the root circle"
     if field == "backlash":
         # The equations thin the tooth by j and widen the space by j on both
         # gears, so what a mesh actually has to play with is 2 j.
@@ -5035,7 +5223,12 @@ def _value_under(update, value) -> Tuple[str, str, str]:
     was, was_blank = _expression_words(value.name, old, value.was)
     now, _ = _expression_words(value.name, new, value.now)
     how = ""
-    if value.cell and (was_blank or value.was):
+    if value.cell and value.name == BORE_ALLOWANCE_GLOBAL and (was_blank or value.was):
+        # F3 (§4.1.1): a blank Bore allowance is the figure the part holds, and after this Update the part holds the
+        # new one, so clearing the cell would keep that, not have the old back; and whether the cell was blank or typed
+        # before is not known here. Typing the figure is the way back either way: never "clear … again", nor "again".
+        how = f"type {was} in {value.cell}"
+    elif value.cell and (was_blank or value.was):
         how = f"clear {value.cell} again" if was_blank else f"type {was} in {value.cell} again"
     return was, now, how
 
@@ -6912,9 +7105,31 @@ def _print_span_line(part) -> str:
     return "No span worked out for this part."
 
 
-def _print_sizes(spec) -> str:
-    bore = f"bore {spec.bore} mm" if str(spec.bore).strip() else "no bore"
-    return (f"Module {spec.module} · {spec.teeth} teeth · face {spec.face_width} mm · {bore} · backlash "
+def _print_bore(part) -> str:
+    """The list's bore (F3, §4.1.1; F3-INTERFACES §7): the hole as built, from package B's printout.bore_figures, so a
+    part with no allowance and a round bore reads as before F3, *bore 10 mm*, Bore as recorded; *bore 8 mm + 0.2 mm
+    allowance (8.2 mm as cut)* for one cut with one; and a D adds *, D-flat 7 mm* (*(7.2 mm as cut)* with an
+    allowance)."""
+    spec = part.spec
+    if not str(spec.bore).strip():
+        return "no bore"
+    text = f"bore {spec.bore} mm"
+    from .printout import bore_figures
+    try:
+        figures = bore_figures(part)
+    except Exception:  # noqa: BLE001 - B's figures should never raise; the line then says the Bore as recorded
+        return text
+    a, flat = figures.allowance, figures.flat
+    if a:
+        text += f" {_signed(a)} mm allowance ({_n(figures.bore + a)} mm as cut)"
+    if flat is not None:
+        text += f", D-flat {_n(flat)} mm" + (f" ({_n(flat + a)} mm as cut)" if a else "")
+    return text
+
+
+def _print_sizes(part) -> str:
+    spec = part.spec
+    return (f"Module {spec.module} · {spec.teeth} teeth · face {spec.face_width} mm · {_print_bore(part)} · backlash "
             f"{_print_backlash(spec)}")
 
 
@@ -7015,7 +7230,7 @@ def print_list_text(plan: "PrintPlan", result: "PrintResult", version: str) -> s
         name = part.stem + STEP_SUFFIX
         lines.append(name)
         lines.append(f"  {'For ' + _and(part.rows) + ' · ' if part.rows else ''}print {part.count}")
-        lines.append(f"  {_print_sizes(part.spec)}")
+        lines.append(f"  {_print_sizes(part)}")
         lines.append(f"  {_print_span_line(part)}")
         features = _print_user_features(part, result, name in written)
         if features:

@@ -4475,3 +4475,246 @@ def test_the_print_list_names_the_users_features_the_job_found_live():
     gone = po.PrintResult(written=((listed.path, "F\\Listed.step"),), folder="F", active_restored=True)
     text = ui_text.print_list_text(po.PrintPlan(None, (listed,), folder="F", name="Box", pressed=PRESSED), gone, "0.9")
     assert "Your features" not in text
+
+
+
+# -- F3, package C (PLAN-PRINTED §4.1, §4.2, §4.6; F3-INTERFACES §5, §7, §9): the bore as cut, in words -------------
+# -- The figures are package A's derived gear (spur.bore_allowance_of, read with the switch of F3-INTERFACES §13 on
+# -- where a test means the printed default); where a blank allowance comes from is read off the spec, through
+# -- spec.as_built for a part on record. A plain machined gear says nothing new (the card pin in test_printed_rule).
+
+from gear_generator.gears import kind_for as _kind_for  # noqa: E402
+from gear_generator.gears import spur as _spur  # noqa: E402
+from gear_generator.spec import as_built as _as_built  # noqa: E402
+
+
+@pytest.fixture
+def default_on(monkeypatch):
+    """A printed gear's blank Bore allowance plans the printed default (F3-INTERFACES §13), as once the switch is on."""
+    monkeypatch.setattr(_spur, "PRINTED_DEFAULT_IN_PLANS", True, raising=False)
+
+
+def _g(**fields):
+    spec = GearSpec(**fields)
+    return _kind_for(spec).derive(spec)
+
+
+def _rows(**fields):
+    return dict(ui_text.derived_rows(_g(**fields)))
+
+
+def test_a_plain_machined_gear_shows_no_bore_as_cut_and_one_with_an_allowance_or_a_d_does(default_on):
+    assert "Bore as cut" not in _rows() and "Flat as cut" not in _rows()
+    assert _rows(bore_allowance="0.3")["Bore as cut"] == "10.3 · 10 + 0.3"
+    assert _rows(bore="8", drive="flat", flat="7")["Flat as cut"] == "7"
+    assert "Bore as cut" not in _rows(bore="", bore_allowance="0.3")
+
+
+def test_a_printed_gear_shows_its_hole_as_cut_whatever_its_allowance(default_on):
+    printed = dict(process="printed", bore="8")
+    assert _rows(**printed)["Bore as cut"] == "8.2 · 8 + 0.2"
+    assert _rows(**printed, bore_allowance="0")["Bore as cut"] == "8"
+    assert _rows(**printed, bore_allowance="-0.1")["Bore as cut"] == "7.9 · 8 − 0.1"
+    rows = _rows(**printed, drive="flat", flat="7")
+    assert (rows["Bore as cut"], rows["Flat as cut"]) == ("8.2 · 8 + 0.2", "7.2 · 7 + 0.2")
+    assert list(rows)[-2:] == ["Bore as cut", "Flat as cut"]               # after Fillet, the last of the rows
+    assert "Bore as cut" not in _rows(process="printed", bore="")
+    assert "Bore as cut" not in _rows(process="printed", teeth="60", teeth_side="internal")   # a ring has no bore
+    helical = _rows(kind="helical", helix_angle="15", **printed)
+    bevel = _rows(kind="bevel", mate_teeth="40", teeth="20", **printed)
+    assert helical["Bore as cut"] == bevel["Bore as cut"] == "8.2 · 8 + 0.2"
+    # Read as built from a record with no global, the hole is the Bore: a part built before F3.
+    on_record = _as_built(GearSpec(**printed), [["Bore Diameter", "8"]])
+    assert dict(ui_text.derived_rows(_kind_for(on_record).derive(on_record)))["Bore as cut"] == "8"
+
+
+BORE_ALLOWANCE_COPY = (
+    "Added to Bore when the hole is cut, on the diameter, so Bore stays your shaft's size and the wall moves by half "
+    "of it. Blank: 0.2 mm for a printed gear not yet built (a starting value until your coupons give your printer's "
+    "figure), 0 machined, and for a gear already built the allowance it was built with, whatever its Process is now. "
+    "Clearing a typed allowance keeps the figure as built; to take the default, type it. Bore as cut, under Derived, "
+    "shows which. Negative for a press fit. A slicer's X-Y hole compensation does the same job, so keep it at 0.")
+DRIVE_COPY = (
+    "Round cuts a round hole. Flat cuts a D, for a shaft with a flat: type its size across the flat in Flat. The flat "
+    "is cut on the gear's +X side, square to its X axis and facing the middle of a tooth space, the same in every "
+    "gear. The assembly does not model a shaft's flat: it turns each gear to mesh on its own, so gears that share a "
+    "D-shaft are phased by their flats in your machine and by their meshes in the assembly.")
+FLAT_COPY = (
+    "Your shaft's size across its flat, from the flat to the opposite round side, as your calipers read it. The hole's "
+    "flat takes the same half allowance as its round. The flat must be at least 0.3 mm deep on the shaft (Bore less "
+    "Flat) and stay well clear of the axis.")
+
+
+def test_the_bore_fields_cards_say_what_each_is():
+    spec = GearSpec(process="printed", bore="8")
+    g = _kind_for(spec).derive(spec)
+    assert ui_text.bore_explainer("bore_allowance", spec, g)[:3] == ("Bore allowance", "a", BORE_ALLOWANCE_COPY)
+    assert ui_text.bore_explainer("drive", spec, g)[:3] == ("Drive", "", DRIVE_COPY)
+    assert ui_text.bore_explainer("flat", spec, g)[:3] == ("Flat", "F", FLAT_COPY)
+    assert not set(ui_text.BORE_EXPLAINERS) & set(ui_text.EXPLAINER_FIELDS)    # no machined card moves
+    with pytest.raises(ValueError, match="no bore explainer for a field called 'bore'"):
+        ui_text.bore_explainer("bore", spec, g)
+
+
+def _worked(field, spec):
+    g = _kind_for(spec).derive(spec)
+    return ui_text.bore_explainer(field, spec, g)[3]
+
+
+def test_the_allowance_card_works_out_where_a_blank_comes_from(default_on):
+    printed = GearSpec(process="printed", bore="8")
+    assert _worked("bore_allowance", printed) == "blank → 0.2 mm, the printed default → a hole of 8.2 mm"
+    assert _worked("bore_allowance", GearSpec(bore="8")) == "blank → 0 mm, machined → a hole of 8 mm"
+    assert _worked("bore_allowance", GearSpec(bore="8", bore_allowance="0.3")) == "0.3 mm → a hole of 8.3 mm"
+    built = _as_built(printed, [["Bore Diameter", "8"]])
+    assert _worked("bore_allowance", built) == "blank → 0 mm, as built → a hole of 8 mm"
+    built = _as_built(printed, [["Bore Diameter", "8"], ["Bore Allowance", "0.25"]])
+    assert _worked("bore_allowance", built) == "blank → 0.25 mm, as built → a hole of 8.25 mm"
+    # The as-built figure holds across a Process change, and a typed figure is what it says.
+    machined_now = _as_built(GearSpec(bore="8"), [["Bore Allowance", "0.25"]])
+    assert _worked("bore_allowance", machined_now) == "blank → 0.25 mm, as built → a hole of 8.25 mm"
+    assert _worked("bore_allowance", GearSpec(bore="", bore_allowance="0.2")) == (
+        "no Bore → no hole, so the allowance is not used")
+    d = GearSpec(process="printed", bore="8", drive="flat", flat="7")
+    assert _worked("bore_allowance", d) == (
+        "blank → 0.2 mm, the printed default → a D 8.2 mm across its round and 7.2 across its flat")
+    assert ui_text.bore_explainer("bore_allowance", printed, None)[3] == "check the fields"
+
+
+def test_the_drive_and_flat_cards_work_out_the_d(default_on):
+    d = GearSpec(process="printed", bore="8", drive="flat", flat="7")
+    assert _worked("drive", d) == (
+        "flat → a D 8.2 mm across its round and 7.2 across its flat, its flat 3.1 mm from the axis on +X")
+    assert _worked("flat", d) == "7 mm → the hole 7.2 mm across its flat, 3.1 from the axis · 1 mm deep on the shaft"
+    assert _worked("drive", GearSpec(process="printed", bore="8")) == "round → a hole of 8.2 mm"
+    assert _worked("drive", GearSpec(bore="")) == "no Bore → no hole to drive by"
+    assert _worked("flat", GearSpec(bore="")) == "no Bore → no hole to give a flat"
+    assert _worked("flat", GearSpec(bore="8")) == "Drive is round, so Flat is not used"
+    ring = GearSpec(process="printed", teeth="60", teeth_side="internal")
+    assert _worked("drive", ring) == "a ring has no bore to give an allowance or a flat"
+
+
+def test_the_bore_card_gives_the_rim_to_the_hole_as_cut(default_on):
+    assert ui_text.explainer("bore", _g())[3] == "10 mm → rim 11.875 mm to the root circle"       # as before F3
+    assert ui_text.explainer("bore", _g(bore_allowance="0.3"))[3] == (
+        "10 mm, cut at 10.3 → rim 11.725 mm to the root circle")
+    assert ui_text.explainer("bore", _g(process="printed"))[3] == (
+        "10 mm, cut at 10.2 → rim 11.775 mm to the root circle")
+
+
+def test_the_allowance_placeholder_says_what_a_blank_means_for_this_gear(default_on):
+    printed = GearSpec(process="printed", bore="8")
+    assert ui_text.bore_allowance_placeholder(printed, _kind_for(printed).derive(printed)) == "0.2 · printed"
+    assert ui_text.bore_allowance_placeholder(GearSpec(), _g()) == "0"
+    for variables, said in (([["Bore Diameter", "8"]], "0 · as built"),
+                            ([["Bore Allowance", "0.25"]], "0.25 · as built")):
+        built = _as_built(printed, variables)
+        assert ui_text.bore_allowance_placeholder(built, _kind_for(built).derive(built)) == said
+        assert ui_text.bore_allowance_placeholder(built, None) == said
+    assert ui_text.bore_allowance_placeholder(GearSpec()) == "0"
+
+
+def test_with_the_switch_off_the_placeholder_says_the_0_the_plan_cuts(monkeypatch):
+    monkeypatch.setattr(_spur, "PRINTED_DEFAULT_IN_PLANS", False, raising=False)
+    printed = GearSpec(process="printed", bore="8")
+    g = _kind_for(printed).derive(printed)
+    assert ui_text.bore_allowance_placeholder(printed, g) == "0 · printed"
+    assert dict(ui_text.derived_rows(g))["Bore as cut"] == "8"
+
+
+def test_a_build_with_a_record_open_says_it_keeps_the_allowance_as_built(default_on):
+    printed = GearSpec(process="printed", bore="8")
+
+    def keeps(spec, part="Coupon_C"):
+        return ui_text.build_keeps(spec, _kind_for(spec).derive(spec), part)
+    none = keeps(_as_built(printed, [["Bore Diameter", "8"]]), "Gear_m1.5_N25_P")
+    assert ui_text.mode_note("single", ["Coupon_F3"], keeps=none) == (
+        "Build will make Coupon_F3.SLDPRT with no bore allowance, as Gear_m1.5_N25_P was built, since Bore allowance "
+        "is blank.")
+    some = keeps(_as_built(printed, [["Bore Allowance", "0.2"]]))
+    assert ui_text.mode_note("single", ["Coupon_F3"], keeps=some) == (
+        "Build will make Coupon_F3.SLDPRT with the bore allowance Coupon_C was built with, 0.2 mm, since Bore "
+        "allowance is blank.")
+    # Nothing to say: not on record, a typed figure, no bore, a machined part built with none (a blank is 0 either way).
+    assert keeps(printed) == keeps(_as_built(dataclasses.replace(printed, bore_allowance="0.3"), [])) == ""
+    assert keeps(_as_built(GearSpec(process="printed", bore=""), [])) == ""
+    assert keeps(_as_built(GearSpec(bore="8"), [["Bore Diameter", "8"]])) == ""
+    assert keeps(_as_built(GearSpec(bore="8"), [["Bore Allowance", "0.1"]])) == (
+        " with the bore allowance Coupon_C was built with, 0.1 mm, since Bore allowance is blank")
+    # Update values, when it has something to change, is what the note says, as before.
+    assert ui_text.mode_note("single", ["X"], 2, "Coupon_C.SLDPRT", keeps=some) == (
+        "Update values will change 2 variables in Coupon_C.SLDPRT.")
+
+
+def _k3(name, was, now, cell, recorded, variables):
+    from types import SimpleNamespace
+    path = "C:\\Parts\\Gear_m1.5_N20_P.SLDPRT"
+    keyway = SimpleNamespace(path=path, name="User Keyway")
+    result = SimpleNamespace(user_features_in_error=[keyway], user_feature_was_in_error=lambda f: False,
+                             values_under=lambda f: [swbuild.ValueSet(path, name, was, now, cell)])
+    update = SimpleNamespace(parts=[SimpleNamespace(path=path, recorded=recorded, variables=variables)], layout=None,
+                             carriers=())
+    return ui_text._user_feature_sentences(result, update)
+
+
+def test_k3_says_the_way_back_to_an_allowance_as_typing_it_never_clearing_the_cell():
+    """§4.4 K3: a keyway of the user's in error after an Update set the part's Bore Allowance. A blank allowance is the
+    figure the part holds, and after this Update the part holds the new one, so clearing the cell would not have the
+    old figure back; typing it would, whether the cell was blank or typed before (which this sentence cannot see)."""
+    said = _k3("Bore Allowance", "0.2", "0.3", "Gears!V2", (("Bore Allowance", "0.2"),),
+               (GlobalVariable("Bore Allowance", "0.3"),))
+    assert said == ["Your User Keyway in Gear_m1.5_N20_P is in error in SolidWorks now, after this Update set Bore "
+                    "Allowance 0.2 to 0.3 (Gears!V2) in that part: change your User Keyway to fit, or type 0.2 in "
+                    "Gears!V2."]
+    assert "clear" not in said[0] and "again" not in said[0]
+    # Every other global's way back is as before F3.
+    said = _k3("Face Width", "10", "12", "Gears!I2", (("Face Width", "10"),), (GlobalVariable("Face Width", "12"),))
+    assert said[0].endswith("change your User Keyway to fit, or type 10 in Gears!I2 again.")
+    said = _k3("Bore Flat", "7", "6.5", "Gears!X2", (("Bore Flat", "7"),), (GlobalVariable("Bore Flat", "6.5"),))
+    assert said[0].endswith("set Bore Flat 7 to 6.5 (Gears!X2) in that part: change your User Keyway to fit, or type 7 "
+                            "in Gears!X2 again.")
+
+
+def test_the_print_list_says_a_bore_as_built(monkeypatch):
+    """F3-INTERFACES §7: the list's bore from package B's printout.bore_figures, the hole as built. A part with no
+    allowance and a round bore reads as before F3; the others say the allowance and the hole as cut."""
+    part = _part(COUPON, "Coupon_A")
+
+    def line(**figures):
+        monkeypatch.setattr(po, "bore_figures", lambda p: po.BoreFigures(**figures))
+        return ui_text._print_sizes(part)
+    lead = "Module 1.5 · 20 teeth · face 8 mm · "
+    assert line(bore=8.0) == lead + "bore 8 mm · backlash 0.3 mm, printed default"
+    assert line(bore=8.0, allowance=0.2) == lead + (
+        "bore 8 mm + 0.2 mm allowance (8.2 mm as cut) · backlash 0.3 mm, printed default")
+    assert line(bore=8.0, allowance=-0.1) == lead + (
+        "bore 8 mm − 0.1 mm allowance (7.9 mm as cut) · backlash 0.3 mm, printed default")
+    assert line(bore=8.0, flat=7.0) == lead + "bore 8 mm, D-flat 7 mm · backlash 0.3 mm, printed default"
+    assert line(bore=8.0, allowance=0.2, flat=7.0) == lead + (
+        "bore 8 mm + 0.2 mm allowance (8.2 mm as cut), D-flat 7 mm (7.2 mm as cut) · backlash 0.3 mm, printed default")
+    monkeypatch.setattr(po, "bore_figures", lambda p: 1 / 0)
+    assert ui_text._print_sizes(part) == lead + "bore 8 mm · backlash 0.3 mm, printed default"
+    nothing = po.PrintPart(path="C:\\Out\\D.SLDPRT", stem="D", spec=dataclasses.replace(COUPON, bore=""))
+    assert ui_text._print_sizes(nothing).startswith(lead + "no bore · ")
+
+
+def test_the_readme_gives_the_coupons_as_the_shaft_in_bore_and_the_offset_in_bore_allowance():
+    """M3 of F3's review, as the coordinator gives it to package C: once F3 is in, the coupon table types the shaft in
+    Bore and 0 to 0.3 in Bore allowance (0 typed, never left blank), and never the shaft plus an offset in Bore."""
+    import pathlib
+    readme = (pathlib.Path(__file__).resolve().parent.parent / "README.md").read_text(encoding="utf-8")
+    section = readme.split("#### Calibrating your printer", 1)[1].split("\n## ", 1)[0]
+    rows = [line for line in section.splitlines() if line.strip().startswith("| Coupon_")]
+    assert rows[:4] == ["   | Coupon_A | shaft | **0** (typed, not left blank) |",
+                        "   | Coupon_B | shaft | 0.1 |",
+                        "   | Coupon_C | shaft | 0.2 |",
+                        "   | Coupon_D | shaft | 0.3 |"]
+    assert "   | Name | Bore | Bore allowance |" in section.splitlines()
+    assert "shaft +" not in section and "shaft −" not in section
+    assert "X-Y hole compensation** 0" in section
+    # What the D-flat is, how to choose it, and what the app does not model (ruling 2).
+    flat = " ".join(readme.split("**D-flat**", 1)[1].split())
+    for words in ("on the gear's +X side, square to its X axis and facing the middle of a tooth space",
+                  "The app's assembly does not model a shaft's flat.",
+                  "phased to each other by their flats in your machine, and by their meshes in the assembly"):
+        assert words in flat, words

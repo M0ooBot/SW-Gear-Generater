@@ -38,9 +38,13 @@ from .spec import (
     PROCESS_PRINTED,
     RECIPE_ARCS,
     RECIPE_INVOLUTE,
+    DRIVE_FLAT,
+    DRIVE_ROUND,
+    DRIVES,
     GearSpec,
     InputError,
     PairSpec,
+    as_built,
     pair_stems,
 )
 
@@ -99,6 +103,14 @@ GEAR_COMPOUND = ("kind", "recipe", "process", "nozzle")
 GEAR_WORKBOOK_ONLY = ("start_band", "end_band")
 # F3 (§4.1.1): GearSpec fields no form or row fills: the allowance a part on record holds, which spec.as_built sets.
 GEAR_RECORD_ONLY = ("built_allowance",)
+
+
+def held_spec(spec: GearSpec, sidecar: Optional[store.Sidecar]) -> GearSpec:
+    """The form's gear as the strip holds it (F3-INTERFACES §5): read through spec.as_built with the globals of the
+    record open, so a blank Bore allowance is the figure the opened part holds (none for a part built before F3), or
+    the spec as it is with no record open. Every derive, Update values, the count of what it would change, and a Build
+    from the form while a record is open (the coordinator's ruling on F3-0's decision 11) go by this spec."""
+    return as_built(spec, sidecar.record.variables) if sidecar is not None else spec
 
 # Every PairSpec field, and the app attribute holding it.
 PAIR_VARS = (
@@ -539,28 +551,52 @@ class GearApp(ttk.Frame):
         fields["bore"].grid(row=0, column=0)
         rows: Dict[str, Tuple[tk.Widget, ...]] = {"bore": (bore_label, cell)}
 
-        self._row_label(body, 5, "Backlash")
+        # F3 (PLAN-PRINTED §4.1, §4.2): the bore as cut, under Bore. Bore allowance is on the diameter; its placeholder
+        # says what a blank means for this gear (ui_text.bore_allowance_placeholder, set on every derive). Drive takes
+        # no caret, so choosing shows its card; Flat shows only while Drive is flat. A ring has none of the three, and
+        # a bevel gear no Drive or Flat (G5).
+        label = self._row_label(body, 5, "Bore allowance")
         cell = self._cell(body, 5)
+        fields["bore_allowance"] = widgets.Field(cell, v["bore_allowance"], width=150, unit="mm",
+                                                 placeholder=ui_text.bore_allowance_placeholder(GearSpec()))
+        fields["bore_allowance"].grid(row=0, column=0)
+        self._hint(cell, ui_text.BORE_ALLOWANCE_HINT).grid(row=0, column=1, padx=(theme.px(8), 0))
+        rows["bore_allowance"] = (label, cell)
+        label = self._row_label(body, 6, "Drive")
+        drive = widgets.Segmented(body, v["drive"], DRIVES, labels=ui_text.DRIVE_LABELS, width=140,
+                                  command=lambda s=side: (self._show_card(s, "drive"), self._show_helix_rows(),
+                                                          self._schedule_derive()))
+        drive.grid(row=6, column=1, sticky="w", pady=(0, theme.px(6)))
+        rows["drive"] = (label, drive)
+        label = self._row_label(body, 7, "Flat")
+        cell = self._cell(body, 7)
+        fields["flat"] = widgets.Field(cell, v["flat"], width=84, unit="mm")
+        fields["flat"].grid(row=0, column=0)
+        self._hint(cell, ui_text.FLAT_HINT).grid(row=0, column=1, padx=(theme.px(8), 0))
+        rows["flat"] = (label, cell)
+
+        self._row_label(body, 8, "Backlash")
+        cell = self._cell(body, 8)
         fields["backlash"] = widgets.Field(cell, v["backlash"], width=150, unit="mm",
                                            placeholder=ui_text.BACKLASH_PLACEHOLDERS[PROCESS_MACHINED])
         fields["backlash"].grid(row=0, column=0)
         self.backlash_hints[side] = self._hint(cell, ui_text.BACKLASH_HINTS[PROCESS_MACHINED])
         self.backlash_hints[side].grid(row=0, column=1, padx=(theme.px(8), 0))
 
-        self._row_label(body, 6, "Fillet")
-        cell = self._cell(body, 6)
+        self._row_label(body, 9, "Fillet")
+        cell = self._cell(body, 9)
         fields["fillet"] = widgets.Field(cell, v["fillet"], width=150, unit="mm", placeholder="0.38 × module")
         fields["fillet"].grid(row=0, column=0)
 
-        label = self._row_label(body, 7, "Profile shift")
-        cell = self._cell(body, 7)
+        label = self._row_label(body, 10, "Profile shift")
+        cell = self._cell(body, 10)
         fields["profile_shift"] = widgets.Field(cell, v["profile_shift"], width=84, unit="× m", placeholder="0")
         fields["profile_shift"].grid(row=0, column=0)
         self._hint(cell, "+ cures undercut").grid(row=0, column=1, padx=(theme.px(8), 0))
         rows["profile_shift"] = (label, cell)
 
-        helix_label = self._row_label(body, 8, "Helix angle")
-        helix_cell = self._cell(body, 8)
+        helix_label = self._row_label(body, 11, "Helix angle")
+        helix_cell = self._cell(body, 11)
         fields["helix_angle"] = widgets.Field(helix_cell, v["helix_angle"], width=84, unit="°")
         fields["helix_angle"].grid(row=0, column=0)
         helix_pick = tk.StringVar(value="")
@@ -568,8 +604,8 @@ class GearApp(ttk.Frame):
         holder.grid(row=0, column=1, padx=(theme.px(8), 0))
         box.bind("<<ComboboxSelected>>", lambda _e, s=side, p=helix_pick: self._pick_value(s, "helix_angle", p))
         self._hint(helix_cell, "normal module, α").grid(row=0, column=2, padx=(theme.px(8), 0))
-        hand_label = self._row_label(body, 9, "Hand")
-        hand_cell = self._cell(body, 9)
+        hand_label = self._row_label(body, 12, "Hand")
+        hand_cell = self._cell(body, 12)
         # In a pair gear B's hand is gear A's, or the other one: it follows, and says so.
         hand = widgets.Segmented(hand_cell, v["hand"], HANDS, labels=ui_text.HAND_LABELS, width=160,
                                  command=lambda s=side: (self._show_card(s, "hand"), self._lock_hands(),
@@ -581,8 +617,8 @@ class GearApp(ttk.Frame):
         self.hand_segs[side], self.hand_hints[side] = hand, hint
         self.helix_rows[side] = (helix_label, helix_cell, hand_label, hand_cell)
 
-        label = self._row_label(body, 10, "Groove")
-        cell = self._cell(body, 10)
+        label = self._row_label(body, 13, "Groove")
+        cell = self._cell(body, 13)
         fields["groove"] = widgets.Field(cell, v["groove"], width=84, unit="mm", placeholder="none")
         fields["groove"].grid(row=0, column=0)
         self._hint(cell, "between the two helices").grid(row=0, column=1, padx=(theme.px(8), 0))
@@ -590,28 +626,28 @@ class GearApp(ttk.Frame):
 
         # Which side of the rim the teeth are on. A segmented row takes no caret,
         # so choosing is what shows its card.
-        label = self._row_label(body, 11, "Teeth side")
+        label = self._row_label(body, 14, "Teeth side")
         seg = widgets.Segmented(body, v["teeth_side"], TEETH_SIDES, labels=ui_text.TEETH_SIDE_LABELS, width=180,
                                 command=lambda s=side: (self._show_card(s, "teeth_side"), self._show_helix_rows(),
                                                         self._schedule_derive()))
-        seg.grid(row=11, column=1, sticky="w", pady=(0, theme.px(6)))
+        seg.grid(row=14, column=1, sticky="w", pady=(0, theme.px(6)))
         rows["teeth_side"] = (label, seg)
 
-        label = self._row_label(body, 12, "Rim")
-        cell = self._cell(body, 12)
+        label = self._row_label(body, 15, "Rim")
+        cell = self._cell(body, 15)
         fields["rim"] = widgets.Field(cell, v["rim"], width=190, unit="mm", placeholder="root + 6 × module")
         fields["rim"].grid(row=0, column=0)
         rows["rim"] = (label, cell)
 
-        label = self._row_label(body, 13, "Shaft angle")
-        cell = self._cell(body, 13)
+        label = self._row_label(body, 16, "Shaft angle")
+        cell = self._cell(body, 16)
         fields["shaft_angle"] = widgets.Field(cell, v["shaft_angle"], width=84, unit="°")
         fields["shaft_angle"].grid(row=0, column=0)
         self._hint(cell, "90 for a right angle").grid(row=0, column=1, padx=(theme.px(8), 0))
         rows["shaft_angle"] = (label, cell)
 
-        label = self._row_label(body, 14, "Mate teeth")
-        cell = self._cell(body, 14)
+        label = self._row_label(body, 17, "Mate teeth")
+        cell = self._cell(body, 17)
         fields["mate_teeth"] = widgets.Field(cell, v["mate_teeth"], width=84)
         fields["mate_teeth"].grid(row=0, column=0)
         self._hint(cell, "the gear it meshes with").grid(row=0, column=1, padx=(theme.px(8), 0))
@@ -619,8 +655,8 @@ class GearApp(ttk.Frame):
         rows["groove"] = groove_row
         self.kind_rows[side] = rows
 
-        self._row_label(body, 15, "Name")
-        cell = self._cell(body, 15, sticky="ew", pady=0)
+        self._row_label(body, 18, "Name")
+        cell = self._cell(body, 18, sticky="ew", pady=0)
         cell.columnconfigure(0, weight=1)
         fields["name"] = widgets.Field(cell, v["name"], grow=True, placeholder="")
         fields["name"].grid(row=0, column=0, sticky="ew")
@@ -629,10 +665,10 @@ class GearApp(ttk.Frame):
         # this panel, so the strip reflows when the caret crosses to the other
         # gear rather than two cards of the same sentences standing open.
         card = widgets.Explainer(body, EXPLAINER_TEXT_WIDTH)
-        card.grid(row=16, column=0, columnspan=2, sticky="ew", pady=(theme.px(8), 0))
+        card.grid(row=19, column=0, columnspan=2, sticky="ew", pady=(theme.px(8), 0))
         self.cards[side] = card
         for name, field in fields.items():
-            if name in ui_text.GEAR_EXPLAINERS:
+            if name in ui_text.GEAR_EXPLAINERS or name in ui_text.BORE_EXPLAINERS:
                 self._explains(field, side, name)
 
         if side == "a":
@@ -670,6 +706,12 @@ class GearApp(ttk.Frame):
         if self._card_field == SPAN_CARD:
             # F2: the Measured entry's card, the span's (ui_text.span_explainer), not one of EXPLAINER_FIELDS.
             card.show(SPAN_DIAGRAM, *ui_text.span_explainer(self._spans.get(side, spans.NONE)))
+            return
+        if self._card_field in ui_text.BORE_EXPLAINERS:
+            # F3: Bore allowance's, Drive's and Flat's cards (ui_text.bore_explainer), not EXPLAINER_FIELDS either; the
+            # spec as the strip holds it says where a blank allowance comes from.
+            card.show(ui_text.BORE_DIAGRAM, *ui_text.bore_explainer(self._card_field, self._held_spec(side),
+                                                                    self._derived[side]))
             return
         pair = self._pair_spec() if self.mode.get() == MODE_PAIR else None
         card.show(self._card_field, *ui_text.explainer(
@@ -1118,6 +1160,10 @@ class GearApp(ttk.Frame):
             show(rows["teeth_side"], not bevel and not pair_mode)
             show(rows["rim"], internal)
             show(rows["bore"], not internal)
+            # F3: the bore's rows go with Bore; a bevel gear's bore takes no flat (G5), so no Drive and no Flat.
+            show(rows["bore_allowance"], not internal)
+            show(rows["drive"], not internal and not bevel)
+            show(rows["flat"], not internal and not bevel and self._drive_flat(side))
             show(rows["shaft_angle"], bevel and not pair_mode)
             show(rows["mate_teeth"], bevel and not pair_mode)
             show(rows["profile_shift"], self._takes_shift(side))
@@ -1236,7 +1282,23 @@ class GearApp(ttk.Frame):
                 values["shaft_angle"] = self.pair_shaft_angle.get()
         elif bevel:
             values["teeth_side"] = TEETH_EXTERNAL
+        # F3: a row hidden goes across blank, as a hidden shift goes as 0: a ring shows none of the bore's rows, a bevel
+        # gear no Drive or Flat, and Flat shows only while Drive is flat. So nothing typed for another kind reaches it.
+        if str(values["teeth_side"]).strip().lower() == TEETH_INTERNAL and not bevel:
+            values.update(bore_allowance="", drive=DRIVE_ROUND, flat="")
+        elif bevel or not self._drive_flat(side):
+            values.update(drive=DRIVE_ROUND, flat="")
         return GearSpec(**values)
+
+    def _drive_flat(self, side: str) -> bool:
+        """Whether this gear's Drive row says flat."""
+        return self.gear_vars[side]["drive"].get().strip().lower() == DRIVE_FLAT
+
+    def _held_spec(self, side: str) -> GearSpec:
+        """The gear as the strip holds it (:func:`held_spec`): gear A through spec.as_built while a record is open in
+        single mode (the record is one gear's, and Update values is single mode's); else the form's spec as it is."""
+        sidecar = self._loaded if side == "a" and self.mode.get() == MODE_SINGLE else None
+        return held_spec(self._gear_spec(side), sidecar)
 
     def _pair_spec(self) -> PairSpec:
         values: Dict[str, Any] = {field: getattr(self, attr).get() for field, attr in PAIR_VARS}
@@ -1263,7 +1325,7 @@ class GearApp(ttk.Frame):
         except InputError:
             stems = {}
         for side in SIDES:
-            spec = self._gear_spec(side)
+            spec = self._held_spec(side)
             self.gear_readouts[side].set(ui_text.gear_readout(spec))
             self._side_stems[side] = stems.get(side) or spec.default_stem()
             self._side_fields(side)["name"].set_placeholder(self._side_stems[side])
@@ -1285,6 +1347,10 @@ class GearApp(ttk.Frame):
             except (GeometryError, InputError, ValueError) as exc:
                 self._diagnostics[side] = [Diagnostic("error", str(exc))]
                 self._derived[side] = None
+        for side in SIDES:
+            # F3: what a blank Bore allowance means for this gear, as derived (as built while a record is open).
+            self._side_fields(side)["bore_allowance"].set_placeholder(
+                ui_text.bore_allowance_placeholder(self._held_spec(side), self._derived[side]))
 
         self._show_derived()
         self._draw_preview()
@@ -1292,7 +1358,8 @@ class GearApp(ttk.Frame):
         self._refresh_card()
         self.output_readout.set(ui_text.output_readout(self.out_folder.get()))
         try:
-            self.mode_note.set(ui_text.mode_note(self.mode.get(), self._stems(), *self._update_target()))
+            self.mode_note.set(ui_text.mode_note(self.mode.get(), self._stems(), *self._update_target(),
+                                                 keeps=self._build_keeps()))
         except InputError:
             self.mode_note.set("Build will make a new part.")
         ready = all(self._derived[side] is not None for side in self._active_sides())
@@ -1734,7 +1801,11 @@ class GearApp(ttk.Frame):
         self._show_process_rows()
         for field, attr in GEAR_VARS:
             self.gear_vars["a"][attr].set(getattr(spec, field))
+        # F3: the Drive row's segments are the words in lower case, and a blank is round.
+        drive = str(spec.drive).strip().lower() or DRIVE_ROUND
+        self.gear_vars["a"]["drive"].set(drive if drive in DRIVES else spec.drive)
         self._loaded, self._loaded_path = sidecar, path
+        self._show_helix_rows()
         self.recent.remember(path)
         store.save_recent(self.recent)
         self.record_hint.configure(text=os.path.basename(path))
@@ -1753,21 +1824,42 @@ class GearApp(ttk.Frame):
 
         Only for the part an opened record describes, while it is the active
         document, and only for a change the equations can carry.
+
+        F3 (F3-INTERFACES §5): the form's spec is taken from ``_gear_spec("a")`` as it is and read here through
+        spec.as_built with the record's globals (:func:`held_spec`), both for the globals counted (of the gear
+        derived again from that spec) and for structural_change, which is given the built part's globals: a blank Bore
+        allowance is what the part holds.
         """
         sidecar, snapshot = self._loaded, self._snapshot
         if sidecar is None or not snapshot or self.mode.get() != MODE_SINGLE:
             return 0, ""
         if not store.same_path(snapshot.get("path", ""), sidecar.part_path) or self._derived["a"] is None:
             return 0, ""
-        spec = self._gear_spec("a")
+        spec = held_spec(self._gear_spec("a"), sidecar)
         kind = kind_for(spec)
-        if kind is None or swbuild.structural_change(sidecar.record.spec, spec.to_dict()):
+        if kind is None or swbuild.structural_change(sidecar.record.spec, spec.to_dict(),
+                                                     built_variables=sidecar.record.variables):
+            return 0, ""
+        try:
+            # The globals counted are the as-built gear's, worked out here from the held spec, never a derive of the
+            # plain form's (whose blank allowance would be the default): F3-0-REVIEW §5.
+            derived = kind.derive(spec)
+        except (GeometryError, InputError, ValueError):
             return 0, ""
         trig = sidecar.record.trig or findings.TRIG_DEFAULT
         held = {name: "".join(expression.split()) for name, expression in sidecar.record.variables}
-        count = sum(1 for v in kind.variables(spec, self._derived["a"])
+        count = sum(1 for v in kind.variables(spec, derived)
                     if held.get(v.name) != "".join(v.expression_for(trig).split()))
         return count, snapshot.get("title", "")
+
+    def _build_keeps(self) -> str:
+        """What a Build from the form keeps of the record open (ui_text.build_keeps): the opened part's as-built
+        allowance while Bore allowance is blank (the ruling on F3-0's decision 11); ``""`` with none open."""
+        sidecar = self._loaded
+        if sidecar is None or self.mode.get() != MODE_SINGLE:
+            return ""
+        part = os.path.splitext(os.path.basename((sidecar.part_path or sidecar.part_title).replace("\\", "/")))[0]
+        return ui_text.build_keeps(self._held_spec("a"), self._derived["a"], part)
 
     def _show_update_button(self) -> None:
         if self._update_target()[0] and self._pending_build is None:
@@ -1828,7 +1920,8 @@ class GearApp(ttk.Frame):
         self._derive_now()
 
     def _plan_single(self, folder: str) -> Dict[str, Any]:
-        spec, derived = self._gear_spec("a"), self._derived["a"]
+        # F3: with a record open, a blank Bore allowance is the opened part's as built (the ruling on decision 11).
+        spec, derived = self._held_spec("a"), self._derived["a"]
         if derived is None:
             raise InputError("The gear on the form does not work out yet, so it cannot be built.")
         path = os.path.join(folder, spec.stem() + ".SLDPRT")
@@ -1869,11 +1962,14 @@ class GearApp(ttk.Frame):
         if sidecar is None:
             self._set_status("Open a gear's .gear.json first, so the tool knows which part to update.", ok=False)
             return
-        spec, derived = self._gear_spec("a"), self._derived["a"]
+        # F3: the spec as built (held_spec), as _update_target counts it: the record written after holds no
+        # built_allowance (to_dict never writes it), and its globals are the as-built ones.
+        spec, derived = held_spec(self._gear_spec("a"), sidecar), self._derived["a"]
         if derived is None:
             self._set_status("The gear on the form does not work out yet, so nothing was updated.", ok=False)
             return
-        reason = swbuild.structural_change(sidecar.record.spec, spec.to_dict())
+        reason = swbuild.structural_change(sidecar.record.spec, spec.to_dict(),
+                                           built_variables=sidecar.record.variables)
         if reason:
             self._set_status(reason, ok=False)
             return
