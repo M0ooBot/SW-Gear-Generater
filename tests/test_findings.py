@@ -2721,15 +2721,17 @@ def test_w9c_gates_on_2024_rest_on_the_confirming_run_on_32_5_0():
                                                                      "What's Wrong is still up after 60 s (1)")
 
 
+W9C_2026_12 = (LATEST.parent / "w9c-demo-20261118-054420.json", LATEST.parent / "w9c-demo-sw2026-20261118-12-remake-m3.log")
 W9C_2024_5 = (W9C_2024 / "w9c-demo-20261118-045156.json",
               W9C_2024 / "w9c-demo-sw2024-20261118-5-remake-m3-second-pass-assembly-flag.log")
 
 
-def test_whats_wrong_stays_without_a_rebuild_rests_on_remake_m3_on_2024_and_run_11_on_2026():
+def test_whats_wrong_stays_without_a_rebuild_rests_on_remake_m3_on_both_versions():
     """findings.WHATS_WRONG_STAYS_WITHOUT_A_REBUILD_ON_<year> (W9C-RUNS-REVIEW.md, the review of 1dc9350, §3): on 2024
     the box raised at the first activation after a stop left a part in error was still up 60 s after the app's press
-    and after the script's read, each closed only by the script's BM_CLICK; on 2026 run 11's read and press after
-    step 1 met no window under the any-dialog STOP. Also the 24-5 lines for M3's steps 2 to 3."""
+    and after the script's read, each closed only by the script's BM_CLICK; on 2026 remake-m3 (26-12) met no window
+    under the any-dialog STOP, the app's press again the first activation since step 1, as run 11's read and second
+    activation did. Also the 24-5 lines for M3's steps 2 to 3."""
     assert findings.WHATS_WRONG_STAYS_WITHOUT_A_REBUILD_ON_2024 is True
     assert findings.WHATS_WRONG_STAYS_WITHOUT_A_REBUILD_ON_2026 is False
     data, s5 = _w9a_run(*W9C_2024_5, "c2d95cc", (32, 5, 0))
@@ -2766,6 +2768,23 @@ def test_whats_wrong_stays_without_a_rebuild_rests_on_remake_m3_on_2024_and_run_
     # The second pass's one FAIL, ruled a fact of SolidWorks 2024 (2026-11-18): the assembly's flag alone.
     assert data["sections"]["remake-m3"]["first_press"]["wrote"] == ["flags [('RangeBox.SLDASM', False, True)]"]
     assert s5[488].startswith("FAIL    remake-m3, the second pass:")
+    # 2026: remake-m3 on 34.1.1 (26-12), the app's press again the first activation since step 1: no box at all.
+    data12, s12 = _w9a_run(*W9C_2026_12, "23107c256aaae301e0e198cc6969f6af6486f676", (34, 1, 1))
+    assert s12[7] == ("rule    What's Wrong: swbuild.whats_wrong_shows_in_update reads False; What's Wrong during a job is "
+                      "a STOP, as any dialog")
+    assert s12[428].startswith("ok      remake-m3, the second pass: pressed again, the first activation since step 1")
+    assert s12[476].startswith("fact    remake-m3, the second pass: in the app's press again, the first activation since "
+                               "step 1, What's Wrong did not come; ")
+    assert not any(line.startswith(("DIALOG", "STOP")) for line in s12[428:479])       # the press again: no window
+    assert not any("What's Wrong" in line and line.startswith(("DIALOG", "NOTE", "STOP")) or "What's Wrong came up" in
+                   line for line in s12[1:])                                           # nowhere in the run
+    assert s12[119].startswith("read    remake, M3: before step 2 (active H; front document RangeBox.SLDASM)")
+    first = data12["sections"]["remake-m3"]["first_press"]
+    assert (first["whats_wrong"]["came"], first["whats_wrong"]["stayed"]) == ([], [])
+    assert "whats_wrong_lifetimes" not in data12 and data12["stops"] == []
+    # The second pass's one FAIL on 2026, ruled the same fact as on 2024 (2026-11-18): the assembly's flag alone.
+    assert first["wrote"] == ["flags [('RangeBox.SLDASM', False, True)]"] and first["changing_calls"] == []
+    assert s12[478].startswith("FAIL    remake-m3, the second pass:") and len(data12["fails"]) == 1
     _, run11 = _w9a_run(W9C_RUN11, W9C_RUN11_LOG, "3a9e592 with probe/w9c_demonstration.py from eabf14e", (34, 0, 0))
     assert run11[7] == "rule    What's Wrong: swbuild.whats_wrong_shows_in_update reads False; What's Wrong during a job is a STOP, as any dialog"
     assert run11[307].startswith("ok      remake, M3: the press set straight stops in Ring_m1.25_N55")

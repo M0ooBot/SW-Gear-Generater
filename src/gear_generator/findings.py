@@ -1844,10 +1844,14 @@ WHATS_WRONG_IN_UPDATE_BLOCKS_ON_2024 = False
 #   the assembly forward by hand) was not run; how long it stays past 60 s, and closing the documents with it up, were
 #   not run; a press stopping before any rebuild with the user's own work in error was not run; "Display What's Wrong
 #   during rebuild" was on, as found.
-# - 2026: False. No box: in run 11's M3 (w9c-demo-sw2026-20261117-11-final-remake-step2-assembly-flag.log, 34.0.0) the
-#   script's read after step 1 and step 2's press ran under the any-dialog STOP (log 11:7) and no window came (log
-#   11:307-361). Caveat: there the press was the second activation since step 1, so this rests on run 11's log alone
-#   until a 2026 run measures the press as the first activation (remake-m3's second pass on 2026).
+# - 2026: False. No box: remake-m3 on 34.1.1 from 23107c2 (26-12: probe/results/w9c-demo-sw2026-20261118-12-remake-m3.log
+#   with w9c-demo-20261118-054420.json), every job under the any-dialog STOP (26-12:7). In its second pass the app's
+#   press again was the first activation since step 1 left the ring in error, and What's Wrong did not come (26-12:476;
+#   no DIALOG line from the press's start to its end, 26-12:428-478; the JSON's first_press.whats_wrong came and stayed
+#   empty, no whats_wrong_lifetimes, no stops); neither did it at the script's own read before step 2 in the first pass,
+#   also a first activation (26-12:119-121), nor in steps 2, 2b and 3. Run 11's M3 on 34.0.0 read the same (log 11:7,
+#   307-361), where the press was the second activation. Caveat: the box itself never came on 2026, so "stays" is said
+#   of a box that does not show; the finding keeps the sentences off there either way.
 WHATS_WRONG_STAYS_WITHOUT_A_REBUILD_ON_2026 = False
 WHATS_WRONG_STAYS_WITHOUT_A_REBUILD_ON_2024 = True
 
