@@ -296,6 +296,14 @@ def printed_mark(module: float, nozzle: float, tips: Tuple[float, ...]) -> Optio
     return ""
 
 
+def bevel_tip_clearance(g1, g2) -> float:
+    """A bevel pair's smaller tip-to-root gap, mm, from the two derived gears (``bevel.BevelDerived``): each gear's
+    dedendum less its mate's addendum, at the heel. Gleason's uniform clearance makes it 0.188 × module along the
+    face for any cone pair (``bevel.WHOLE_DEPTH`` less ``WORKING_DEPTH``). The one figure the form
+    (:func:`mesh_warnings`) and the workbook (``workbook.checks``) judge a printed bevel pair by (F1 review, S4)."""
+    return min(g1.dedendum - g2.addendum, g2.dedendum - g1.addendum)
+
+
 def printed_clearance_sentence(clearance: float, shifted: bool = True) -> Optional[str]:
     """F1 (PLAN-PRINTED §2.2): a printed pair's tip clearance under the 0.3 mm two printed surfaces take, as one
     sentence; None at 0.3 mm or more, less a rounding tolerance (module 0.75's computes as 0.2999999999999998).
@@ -818,12 +826,14 @@ def _finish(found: dict, limit: int, pressure_angle: float, nozzle: Optional[flo
 
 def _printed_row(row: Candidate, pressure_angle: float, nozzle: float,
                  face_width: Optional[float]) -> Optional[Candidate]:
-    """``row`` with its printed mark, or None when a tip of it comes to a point (:func:`printed_mark`)."""
+    """``row`` with its printed mark, or None when a tip of it comes to a point (:func:`printed_mark`), or, for a bevel
+    row, when a gear of it does not derive printed with the form's face width, so its toes cannot be judged (F1
+    review, S7: it was offered unmarked, as if clean)."""
     m, n1, n2 = row.module, row.teeth_driver, row.teeth_driven
     if row.cone:
         tips = _bevel_toe_tips(m, n1, n2, row.shaft_angle, pressure_angle, face_width)
         if tips is None:
-            return row
+            return None                 # a gear of it does not derive printed, so it is not offered (F1 review, S7)
     elif row.mesh == MESH_INTERNAL:
         tips = (printed_tip_thickness(m, n1, pressure_angle, row.helix_angle, 0.0, nozzle),
                 printed_ring_tip_thickness(m, n2, pressure_angle, row.helix_angle))
@@ -1233,8 +1243,7 @@ def _is_ring(g) -> bool:
 def _printed_mesh_warnings(g1, g2) -> List[str]:
     """:func:`mesh_warnings` for a pair either gear of which is printed."""
     if isinstance(g1, bevel.BevelDerived) and isinstance(g2, bevel.BevelDerived):
-        clearance = min(g1.dedendum - g2.addendum, g2.dedendum - g1.addendum)
-        said = printed_clearance_sentence(clearance, shifted=False)
+        said = printed_clearance_sentence(bevel_tip_clearance(g1, g2), shifted=False)
         return [said] if said else []
     beta = getattr(g1, "helix_angle_deg", 0.0)
     normal = getattr(g1, "normal_pressure_angle_deg", g1.pressure_angle_deg)

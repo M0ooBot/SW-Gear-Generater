@@ -208,6 +208,19 @@ def test_a_printed_bevel_pair_warns_under_module_1_6_by_gleasons_clearance(modul
                      "surfaces take; use a larger module."] if warns else [])
 
 
+@pytest.mark.parametrize("shaft, teeth", [(90.0, ("20", "40")), (90.0, ("17", "17")), (60.0, ("18", "30")),
+                                          (120.0, ("20", "25"))])
+def test_a_bevel_pairs_clearance_is_one_figure_gleasons_0_188_module(shaft, teeth):
+    """F1 review, S4: pair.bevel_tip_clearance is the figure the form and the workbook both judge a printed bevel pair
+    by; for a cone pair it is Gleason's uniform clearance, 0.188 × module, whatever the shaft angle."""
+    a = _derive(_printed(kind="bevel", teeth=teeth[0], mate_teeth=teeth[1], module="1.5", shaft_angle=repr(shaft),
+                         face_width="6"))
+    b = _derive(_printed(kind="bevel", teeth=teeth[1], mate_teeth=teeth[0], module="1.5", shaft_angle=repr(shaft),
+                         face_width="6"))
+    assert pair.bevel_tip_clearance(a, b) == pytest.approx(0.188 * 1.5) == pytest.approx(pair.bevel_tip_clearance(b, a))
+    assert pair.mesh_warnings(a, b) == [pair.printed_clearance_sentence(pair.bevel_tip_clearance(a, b), False)]
+
+
 # -- the pair's clearance on the form (§2.2) ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize("module, warns", [("0.5", True), ("0.7", True), ("0.75", False), ("1", False)])
@@ -344,6 +357,42 @@ def test_a_printed_bevel_solve_judges_its_toes_with_the_forms_face_width():
     machined = PairSpec(mode="pair", cone_distance="30", ratio="2", gear_a=_spec(kind="bevel", face_width="9"),
                         gear_b=_spec(kind="bevel", face_width="9"))
     assert repr(pair.solve_spec(machined)) == repr(pair.solve(30, 2, kind="bevel", shaft_angle=90.0))
+
+
+def test_a_printed_bevel_row_whose_gear_does_not_derive_is_not_offered():
+    """F1 review, S7: a printed bevel row is judged at its toes, which needs each gear derived with the form's face
+    width. A row whose gear does not derive (here a face width of 0) was offered unmarked, as if clean; it is now not
+    offered, as a row whose tip comes to a point is not. A machined Solve is as before."""
+    machined = pair.solve(40, 2, kind="bevel", shaft_angle=90.0, face_width=0.0)
+    assert machined and all(r.mark == "" for r in machined)
+    assert all(pair._bevel_toe_tips(r.module, r.teeth_driver, r.teeth_driven, r.shaft_angle, 20.0, 0.0) is None
+               for r in machined)
+    assert pair.solve(40, 2, kind="bevel", shaft_angle=90.0, face_width=0.0, process="printed") == []
+    assert repr(machined) == repr(pair.solve(40, 2, kind="bevel", shaft_angle=90.0, face_width=0.0,
+                                             process="machined"))
+    assert pair.solve(40, 2, kind="bevel", shaft_angle=90.0, face_width=9.0, process="printed")
+
+
+def test_a_printed_crossed_solve_marks_each_row_by_each_gears_own_helix():
+    """F1 review, S6: a crossed pair's two gears have their own helix angles (6 and 9 teeth at 32.15° and 57.85°, ...),
+    and a printed row's tips are each judged at its own gear's helix. Some rows are marked, and for at least one the
+    mark would differ were both gears judged at one helix (the 6-tooth pinion's tip is 0.31 mm at its own 32.15°, thin,
+    and would be 0.96 mm at its mate's 57.85°)."""
+    args = dict(centre=12, ratio=1.5, kind="helical", shafts="crossed", shaft_angle=90.0, min_teeth=6)
+    machined = pair.solve(**args)
+    printed = pair.solve(**args, process="printed")
+    assert printed and any(r.mark for r in printed) and all(r.mark == "" for r in machined)
+    assert {(r.module, r.teeth_driver, r.teeth_driven) for r in printed} <=         {(r.module, r.teeth_driver, r.teeth_driven) for r in machined}
+    one_helix = []
+    for r in printed:
+        assert abs(r.helix_angle - r.helix_angle_b) > 1.0
+        own = (pair.printed_tip_thickness(r.module, r.teeth_driver, 20.0, r.helix_angle),
+               pair.printed_tip_thickness(r.module, r.teeth_driven, 20.0, r.helix_angle_b))
+        assert r.mark == pair.printed_mark(r.module, 0.4, own)
+        at_a = (own[0], pair.printed_tip_thickness(r.module, r.teeth_driven, 20.0, r.helix_angle))
+        at_b = (pair.printed_tip_thickness(r.module, r.teeth_driver, 20.0, r.helix_angle_b), own[1])
+        one_helix.append(any(pair.printed_mark(r.module, 0.4, tips) != r.mark for tips in (at_a, at_b)))
+    assert any(one_helix)
 
 
 def test_solve_spec_takes_the_forms_process_and_nozzle():

@@ -16,7 +16,7 @@ from dataclasses import dataclass, field, replace
 from itertools import combinations
 from typing import Dict, List, Optional, Tuple
 
-from ..gears import bevel as bevel_gears, helical, internal as internal_gears, pair as pairs, spur
+from ..gears import helical, internal as internal_gears, pair as pairs, spur
 from ..gears.base import ERROR, WARNING, Diagnostic
 from . import fixes as fixes_mod, geometry, kinematics, modes as modes_mod, planetary
 from .fixes import Fix
@@ -676,9 +676,8 @@ def _check_turned(report: Report, spec: GearboxSpec, a: Placed, b: Placed, laid:
         return False
     if kind_a == "bevel":
         if _printed(a, b):
-            # Gleason's clearance (bevel.WHOLE_DEPTH less WORKING_DEPTH, 0.188 × module), the same along the face.
-            _printed_clearance_warning(report, where, a, b,
-                                       (bevel_gears.WHOLE_DEPTH - bevel_gears.WORKING_DEPTH) * a.module, False)
+            # Gleason's clearance (0.188 × module, the same along the face), by the form's own figure (F1 review, S4).
+            _printed_clearance_warning(report, where, a, b, pairs.bevel_tip_clearance(a.derived, b.derived), False)
         if laid.placed > CENTRE_TOLERANCE:
             shafts = {x.id: x for x in spec.shafts}
             point = geometry._add(b.centre, b.axis, -float(gb.at or 0))

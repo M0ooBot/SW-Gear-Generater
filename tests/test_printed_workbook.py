@@ -274,6 +274,17 @@ def test_a_printed_bevel_pair_under_module_1_6_is_said_by_gleasons_clearance(mod
     assert clearance_said(bevel_pair(module, process="machined")) == []
 
 
+def test_a_printed_bevel_pairs_meshes_row_says_what_the_form_says_of_the_same_two_gears():
+    """F1 review, S4: the workbook takes a bevel pair's clearance from pair.bevel_tip_clearance, the figure the form's
+    mesh_warnings judges by, so the Meshes row and the strip say one sentence of the same pair."""
+    spec = bevel_pair(1.5)
+    a = assess.assess(replace(spec, source_path=BOOK), [], OUT)
+    placed = a.report.layout.placed
+    form = pairs.mesh_warnings(placed["G1"].derived, placed["G2"].derived)
+    assert clearance_said(spec) == [f"Meshes row 2: G1 and G2: {form[0]}"]
+    assert pairs.bevel_tip_clearance(placed["G1"].derived, placed["G2"].derived) == pytest.approx(0.188 * 1.5)
+
+
 def test_a_printed_crossed_pair_is_checked_as_an_outside_pair():
     """Crossed helical gears are unshifted, so each tip stands the depth less two addenda from the other's root."""
     assert clearance_said(crossed_pair(0.5)) == [
