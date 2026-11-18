@@ -1557,3 +1557,43 @@ gets the same words at head. The evidence stands for head.
    - everything the M9 comment lists as unmeasured.
 7. **Merge `w9d` into `workbook`,** after the whole suite at the merge head. Then W9's closing entry in the handoff and
    `ISSUE-1-PLAN.md`.
+
+**Re-check of `e7a3577`, `d8a12f6` and `06d818f` (2026-11-18, at `06d818f`).** I changed no code and started no
+SolidWorks. The targeted tests ran in a `git archive` scratch copy, which I deleted after.
+
+**Fit to close W9d once the items below are done. No must-fix.**
+
+- **Values.** `findings.py` changes six assignments and no others:
+  - the five writes, each `_ON_2024 = <its _ON_2026 twin>`;
+  - the lightweight fact, likewise;
+  - the six kept None stay None on both versions.
+- **The pins pin.** Each of these flips, made one at a time, fails its test:
+  - `CARRY_INSERTS_ON_2024` None;
+  - the 2024 kinds narrowed to `coincident`;
+  - the 2024 lightweight fact None;
+  - `VIRTUAL_READ_ON_2024` True;
+  - the no-version question's per-version branch turned off;
+  - its *Whichever it runs on:* dropped.
+- **No test asserts less.**
+  - The gate test's 2024 half now checks the full list of 2024 gates and every named reason, where before it checked
+    only that `CARRY_INSERTS` held everything back.
+  - The self-check's last check now requires every 2024 write equal to its 2026 twin and not None.
+- **Tests run.** The carry, update, findings and user-record files: 589 passed. W9d's self-check: 0 failed.
+- **The new sentence forms (`ui_text._on_any_version`) are true in each case:**
+  - *Every version alike:* the question is said as fact, with no *not yet*. All are alike as committed.
+  - *Differing:* each version's own sentences sit behind *If the press runs on SolidWorks …:*, and the shared rest
+    behind *Whichever it runs on:*. Checked each way round.
+  - *`CARRY_INSERTS` differing:* the mixed form, as before.
+  - *Both unset:* *not yet shown … on the SolidWorks it runs on (findings.CARRY_INSERTS_ON_<year>)*, which is true
+    of either version.
+  - `general()` replaces a version's year only in *SolidWorks <year>* and `_ON_<year>`. The question has no other
+    year words.
+- **The documents.** `W9D-INTERFACES.md` §8 and the note say the 2024 values and the prefilter count as reviewed.
+
+**What still stands between this head and closing W9d:**
+1. The handoff's placeholder (`HANDOFF-WORKBOOK.md:397`) is still unfilled, and its known limits need the 2024 time
+   and memory.
+2. The whole suite at the merge head.
+3. The merge of `w9d` into `workbook`.
+
+The edge prefilter's should-fix (`swcom.py:3964`) and the unmeasured paths stay as named caveats, not blockers.
