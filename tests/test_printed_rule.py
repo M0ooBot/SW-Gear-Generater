@@ -19,6 +19,7 @@ ruling (§1.2), and its pins are elsewhere. Pins are by sha256, as BEFORE_W7 and
 import hashlib
 import json
 from dataclasses import replace
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -252,7 +253,10 @@ def test_the_w8_fixtures_and_rangebox_plan_bit_for_bit_as_at_the_cut(monkeypatch
 # -- the record: a machined part's whole .gear.json, and its entry in a link record --------------------------------
 
 RECORDED = ("spur", "spur_shifted", "helical", "herringbone_grooved", "ring", "ring_helical", "bevel", "bevel_crown",
-            "sleeve", "sleeve_banded", "hub")
+            "sleeve", "sleeve_banded", "hub",
+            # F3-0 (PLAN-PRINTED §4.6 item 1): every kind with a bore, which F3's allowance and D-flat reach, recorded;
+            # these two taken at 08db5ba, the commit F3-0 starts from.
+            "herringbone", "dog")
 
 
 def sidecar_text(name: str, **marked: str) -> str:
@@ -286,7 +290,9 @@ def entry_text(name: str, **marked: str) -> str:
 SIDECARS = {
     "bevel": "8ccb02fc9fc94142350e13ca8e2a7e4c4d6baaae9405fdcaa9ade3441742554f",
     "bevel_crown": "20f1699a71df250674e1d536e14ddf85d2d925ffb7564ec3c0c38ec489048bb8",
+    "dog": "f17bf6c35487f864d4ff2a8386bcb7b2ce1d3f3a3dcab3d602c47d0d25d4913c",
     "helical": "c658a3dd6730d8cd84fbfc67c123880ea0ce2d2c19b3cc1a5cfdd9ec4e1379e0",
+    "herringbone": "e8381cdbc1eb9182c655c7e9daa088e224e54a6944f0853e45441ac0e66826aa",
     "herringbone_grooved": "d553001d4046499e47b72dcb24ab741b40a074ef54b3cfd61f9b4d59b49b34ac",
     "hub": "7b90e15ecc47ef5e4a93ec744b1678566400c5ae27e86baa463362ee1e1fa846",
     "ring": "bf8e36c5b3e2acb3505df40227b95a229800c9e3af9fca778041410a6d0f1f3d",
@@ -300,7 +306,9 @@ SIDECARS = {
 ENTRIES = {
     "bevel": "926e716bc3e56a42244e93f33d305ce961b15767f7dd23b9b71423249d91edf8",
     "bevel_crown": "8acf3b2157aa4dacfd17205f5896e6c66a76f26e31f3d43877aa3c490e65ee77",
+    "dog": "66573b8926b09a2831496fba72ece6dd713c3b5c06304d131764c5cd59f57ebf",
     "helical": "0d609801f853893547e0637c38c0014f98c3a302589ce705fd4c362e47709225",
+    "herringbone": "ec349f8f6ce74837c4251298e130e21918912635c3a308288d1c41b3d8905824",
     "herringbone_grooved": "9adf4dafc6458932bcacdf75332b9907d9a9d9701c2ba747b9aa5fd51cea0ab1",
     "hub": "7bf72979a0668f2427f88686097b980f8aa08faa953c775c735bc088a9ed1f75",
     "ring": "eea6014af803541cc4ac933a280b5a08e1c0ebab97cc4e59505d00ca8a534ac4",
@@ -983,3 +991,139 @@ def test_the_workbook_windows_blank_process_on_a_gearbox_built_machined_is_machi
     part = store.PartEntry(path=str(tmp_path / "G.SLDPRT"), gears=["G1"], spec=GearSpec().to_dict())
     store.save_link_record(store.LinkRecord(workbook=str(workbook), parts=[part]))
     assert workbook_gui.WorkbookWindow._blank_process(window) == "machined"
+
+
+# -- F3-0 (PLAN-PRINTED §4.1.1, §4.6 item 1): the printed parts F1 and F2 built read after F3 as they read then ------
+# -- A blank Bore allowance on a part on record is the figure the part holds, and no part built before F3 holds one,
+# -- so each part here must read after F3 exactly as it read at 08db5ba, the commit F3-0 starts from: nothing for
+# -- Update, every part reused by Build again…, nothing for the strip's Update values, Print files not refused and its
+# -- list's part blocks word for word, no Gears column changed, W9d's "bore" the shaft's own size, and nothing written.
+# -- tests/fixtures/printed/F2_built.json was made by running the code at 08db5ba (a git archive in a scratch
+# -- directory, since deleted), as RangeBox_W9_record.json was made at f3c4873: four printed parts built from the
+# -- form (a spur, a helical and a herringbone gear at GearSpec's default Bore 10, and §3.2's Coupon_C with its
+# -- offset in Bore) and three gearboxes built on the fake as test_workbook_in_place_round_trip.Desk builds them (the
+# -- 12 : 1 reducer printed; RangeBox_Fixed printed and machined, its Sun, Planet, dogs and Hub bored), each with what
+# -- the code said of it then.
+
+F2_BUILT = json.loads((Path(__file__).resolve().parent / "fixtures" / "printed" / "F2_built.json").read_text(
+    encoding="utf-8"))
+F2_VERSION = (34, 1, 1)
+F2_BORES = {"Sun": "8", "Planet": "4", "HighDog": "8", "LowDog": "8", "Hub": "8"}
+
+
+def _f2_bored(spec):
+    return replace(spec, gears=tuple(replace(g, bore=F2_BORES.get(g.id, g.bore)) for g in spec.gears))
+
+
+def _f2_boxed(spec, process):
+    return replace(spec, box=replace(spec.box, process=process))
+
+
+def _f2_gearbox(name):
+    """The gearbox each snapshot was built from, made again from the same code (F2_built.json's generator's)."""
+    from test_workbook_model import reducer
+    from workbook_fixtures import range_box_fixed
+    return {"reducer_printed": lambda: _f2_boxed(reducer(), "printed"),
+            "rangebox_fixed_printed": lambda: _f2_boxed(_f2_bored(range_box_fixed()), "printed"),
+            "rangebox_fixed_machined": lambda: _f2_boxed(_f2_bored(range_box_fixed()), "machined")}[name]()
+
+
+class F2Disk:
+    """A snapshot's files, as the window and the strip would find them."""
+
+    def __init__(self, held):
+        self.files = set(held["files"])
+        self.sidecars = dict(held["sidecars"])
+
+    @staticmethod
+    def key(path):
+        return path.replace("/", "\\").lower()
+
+    def exists(self, path):
+        return self.key(path) in self.files
+
+    def read_sidecar(self, path):
+        text = self.sidecars.get(self.key(path))
+        return store.from_json(text) if text is not None and self.exists(path) else None
+
+
+def _f2_part_blocks(text):
+    """A print list's part blocks and its Process line: everything from its third line to the settings."""
+    return text.split("\n", 2)[2].split("Settings for every part above")[0]
+
+
+def _f2_strip_form(sidecar, form):
+    """What the strip holds with the record open and its form as recorded (strip_form, the record's own derive)."""
+    return strip_form(sidecar, form)
+
+
+@pytest.mark.parametrize("name", sorted(F2_BUILT["strip"]))
+def test_a_printed_part_built_from_the_form_before_f3_reads_after_it_as_it_did(name):
+    from gear_generator import printout, swbuild, ui_text
+    held = F2_BUILT["strip"][name]
+    sidecar = store.from_json(held["sidecar"])
+    variables = dict(sidecar.record.variables)
+    assert F2_BUILT["written_at"] == "08db5ba" and sidecar.schema_version == 3 and "Bore Allowance" not in variables
+    form = GearSpec.from_dict(sidecar.record.spec)
+    assert form.is_printed() and form.has_bore() and float(variables["Bore Diameter"]) == form.bore_mm()
+    assert form.to_dict() == sidecar.record.spec and store.to_json(sidecar) == held["sidecar"]
+    assert update._changed_columns(sidecar.record.spec, form.to_dict()) == []
+    assert swbuild.structural_change(sidecar.record.spec, form.to_dict()) == ""
+    assert gui.GearApp._update_target(_f2_strip_form(sidecar, form))[0] == held["update_target"] == 0
+    path = held["path"]
+    plan = printout.form_print(sidecar, path, OUT, F2_VERSION, now=0.0, exists=lambda p: store.same_path(p, path),
+                               isdir=lambda p: True)
+    assert plan.refusal is None
+    said = ui_text.print_list_text(plan, printout.PrintResult(active_restored=True), "F2")
+    assert _f2_part_blocks(said) == _f2_part_blocks(held["print_list"])
+    assert f"bore {form.bore} mm" in _f2_part_blocks(said) and "allowance" not in said
+
+
+def _f2_opened(name):
+    held = F2_BUILT["workbooks"][name]
+    record = store.link_record_from_json(held["record"])
+    disk = F2Disk(held)
+    a = assess.assess(replace(_f2_gearbox(name), source_path=held["workbook"]), [], OUT,
+                      blank_process=assess.blank_process(record))
+    assert [d.message for d in a.diagnostics if d.is_error] == [] and a.lay_out_refusal() == ""
+    up = update.classify(record, a, exists=disk.exists, read_sidecar=disk.read_sidecar)
+    again = gearbox.plan_gearbox(a, record, exists=disk.exists, read_sidecar=disk.read_sidecar)
+    return held, record, disk, a, up, again
+
+
+@pytest.mark.parametrize("name", sorted(F2_BUILT["workbooks"]))
+def test_a_gearbox_built_before_f3_reads_after_it_as_it_did(name):
+    """Update finds nothing (no part changed, nothing structural, the record matching), Build again… reuses every part
+    through _Parts.find, the footer is what F2 said, W9d's columns find nothing changed and its "bore" is the shaft's
+    own size, Print files is not refused and its part blocks are word for word F2's, and nothing is written."""
+    import re
+    from gear_generator import printout, ui_text
+    held, record, disk, a, up, again = _f2_opened(name)
+    assert json.loads(held["record"])["link_schema_version"] == 11
+    parts = record.current_parts()
+    assert all("Bore Allowance" not in dict(p.variables) and "Bore Flat" not in dict(p.variables) for p in parts)
+    assert [up.refusal, [p.changed for p in up.parts], up.record_matches] == held["update"]
+    assert held["update"] == ["", [False] * len(parts), True]
+    assert (up.structural, up.missing, up.replaced, up.moved_shafts, up.needs_new_revision) == ((), (), (), (), False)
+    assert [again.refusal, [j.stem for j in again.build], len(again.reuse)] == held["build_again"]
+    assert held["build_again"] == ["", [], len(parts)]
+    footer = ui_text.workbook_footer(a, record=record, plan=again, update=up, digest=record.digest, folder=OUT)
+    assert [re.sub(r"As read at \d\d:\d\d", "As read at HH:MM", footer.text), footer.ok] == held["footer"]
+    jobs = {g: j for j in gearbox.plan_gearbox(a, None, exists=lambda p: False, read_sidecar=lambda p: None).build
+            for g in j.gear_ids}
+    assert [update._changed_columns(p.spec, jobs[p.gears[0]].spec.to_dict()) for p in parts] == [[]] * len(parts)
+    assert {p.path: update._bore_mm(p) for p in parts} == held["bore_mm"]
+    printed = printout.workbook_print(record, a, up, OUT, F2_VERSION, now=0.0, exists=disk.exists,
+                                      isdir=lambda p: True)
+    assert printed.refusal is None
+    said = ui_text.print_list_text(printed, printout.PrintResult(active_restored=True), "F2")
+    assert _f2_part_blocks(said) == _f2_part_blocks(held["print_list"]) and "allowance" not in said
+    # Nothing written: the record as read is F2's text but for the number a write would move, and the .gear.json files
+    # are as F2 wrote them, each at its sidecar schema then (3 printed; 1 or 2 machined).
+    assert store.link_record_to_json(record).replace(
+        f'"link_schema_version": {store.LINK_SCHEMA_VERSION}', '"link_schema_version": 11') == held["record"]
+    assert disk.sidecars == held["sidecars"]
+    printed_parts = name.endswith("_printed")
+    for text in held["sidecars"].values():
+        car = store.from_json(text)
+        assert car.schema_version == (3 if printed_parts else (2 if car.record.spec.get("start_band") else 1))
