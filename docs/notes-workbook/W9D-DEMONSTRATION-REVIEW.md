@@ -905,3 +905,349 @@ cannot happen in this fixture, because Housing-1 is always fixed in the old asse
 
 **D6.** Log `swConstrainedStatus_e`'s names once, from `swconst.tlb`, with the W9c script's reader.
 - Run 2 and run 3 read 5 on carried user components. Its name is in no committed note (`W9D-REVIEW-A.md`, A7).
+
+## The second run on SolidWorks 2026 (34.1.1), and `41afa37`
+
+*Independent, 2026-11-18, at `c2d95cc`. What I reviewed:*
+- *the commits:* `41afa37` (the script's fix made during the run) and `c2d95cc` (the two logs, their JSON and the
+  note's section "The second run on SolidWorks 2026");
+- *the logs:* `probe/results/w9d-demo-sw2026-20261118-1-whole-closed-read-mode-fault.log` ("log 1", snapshot
+  `f7c2f0d`, `w9d-demo-20261118-031226.json`) and `…-2-carry-closed-clean.log` ("log 2", snapshot `41afa37`,
+  `…-042519.json`), both `(34, 1, 1)` in the JSON;
+- *the code the logs point at:* `swbuild._remake`, `_read_back`, `_judge`, `_fall_back`, `_component_named`,
+  `ui_text.carried_status`, `_fallback_sentence`, `_standing`, and the script's `definitions_in`, `judge_carry`,
+  `trace_problems`.
+
+*How.* No SolidWorks was started; nothing in `src`, the script or the tests was changed. The suite at `c2d95cc`:
+4103 passed, 1 skipped, 1 failed, the known
+`test_workbook_window.py::test_a_second_workbooks_r2_parts_beside_long_ids_are_shortened_to_the_room_left`. In a
+scratch copy (`git archive`, deleted after) I set the five write findings as §4 below allows and ran the suite again,
+and drove `ui_text.carried_status` on the fake for the two sentences of §7.
+
+### Verdict
+
+**The evidence stands, and the 2026 findings may be set** as §4 gives them. No section needs running again on 2026
+for them.
+- Every `ok` I traced is a real reading over the population it names. Three pass on an empty set that is the
+  fixture's truth, not a skipped check (§1). No FAIL was the app's.
+- `41afa37` is right and loosens nothing. `carry` at `f7c2f0d` stands for head: the fix does nothing on its path,
+  and `src` differs from `f7c2f0d` only in `_ON_2024` values of W9c's gates.
+- **Two must-fixes in the app's wording** (§7), both reached only once `CARRY_INSERTS_ON_2026` is True:
+  - the fallback sentence names fallen components by their new Name2 with no *(was …)*, so it can give a name the
+    same result uses for another of the user's components;
+  - the standing clause says *sub-assemblies come over rigid* while a sub-assembly is named as not carried.
+  Neither changes what is measured. Neither needs SolidWorks. Land both before or with the findings commit.
+- The note says nothing the logs contradict. Three small points are said more strongly than the logs bear (§7, N1–N2).
+
+### 1. Section by section, and the Done-when
+
+**Counts.** Recounted from the logs, the note's table is exact:
+- `fixture`: 20 ok, 0 FAIL, 564 s (log 1:92);
+- `carry-gates`: 27 ok, 0 FAIL, 773 s (log 1:731);
+- `carry`: 45 ok, 0 FAIL, 1716 s (log 1:1573);
+- `carry-closed`: run 1 had 45 ok and 1 FAIL (log 1:2345, 2420), run 2 had 46 ok and 0 FAIL (log 2:861).
+- The least free memory in either log is 9.63 GB (log 1:2265).
+- Run 1's and run 2's `carry-closed` check lines differ only in instance names and in the one FAIL, which is now an
+  ok.
+
+**Checks that pass on an empty set.** Each is the fixture's truth, not a check skipped:
+- *"no mate back in an old error []"* (1:1479, 2:779): no user mate was in error before the press.
+- *"interference … unnamed none, unseen none"* (1:1514, 2:817): SolidWorks reported no interference with a carried
+  component (1:1513). So the carry's clash sentence is not shown on SolidWorks.
+- *"nothing moved []"*: the worker's `moved` compares the whole frame, the rotation included
+  (`swbuild.py:8781-8785`). So this is a real reading of every carried component in every mode.
+
+Each remade-mate check names its population and says *"every one reached"* (1:1484, 1486; 2:784, 786). These are the
+fixes the addendum's §3 asked for, and they hold here.
+
+**The plan's Done-when, row by row (`carry`, log 1, unless said).**
+
+| Done-when | Lines | Stands? |
+|---|---|---|
+| After Sun's Flank change and a shaft added, Build again… makes RangeBox_r2 | edit 759-778; classify 792; built 723 s, saved 1398, 1409 | Yes |
+| Both clusters carried | 17 components 1477; anchors 1480; poses, 49 reads, none off, 1505 | Yes |
+| Their mates remade and on in the modes they were | definitions and entities read back equal 1484; flags 1486, 1512; names kept 1499 | Yes |
+| The bore mate on Sun named | UserSunFace *part new* 1471, in the result 1397; UserGearFillet 1474. RangeBox's Sun has no bore: an end face stands for it (§15's departure) | Yes, as §15 words it |
+| The keyway in Sun named in the question and the result | question 799-800; result 1470, 1397 | Yes |
+| Every app gear free to turn in every mode | 1503; W9b's read clean in H, N and L, 1506-1511 | Yes |
+| The carried items unsaved | GetSaveFlag True 1518; record at schema 10, `unsaved_at` the file's time, 1534; the line gone after the user's save 1552 | Yes |
+| The old assembly and every user file unchanged on disk | size, time and hash 1404; save flag, mode, frames, states, mates as before but the ruled set-apart, 1402-1403; no traced write, show, rebuild, save or close, nothing saved after the first save, 1405-1406 | Yes |
+| The closed path | read read-only with L showing, nothing left or marked, closed by the job, 2:771-772; on disk 2:707; traced 2:708-709 (the job's own `OpenDoc6`/`QuitDoc` of the old assembly, allowed by `trace_problems` on that path only) | Yes |
+| Confirmed on 2024; reviewed | — | Not run |
+
+**§15's further items** stand as the note gives them, each at the line it cites:
+- the tie by `FELL_TIE` (1478, 1487-1489, 1500);
+- the states per mode (1481-1482);
+- SprocketConf-1 in Z20 (1515-1516);
+- the names *unread* and *lightweight* (1472-1476);
+- `carry-gates`' refusals (685, 696, 707, 718, 729);
+- in `carry-closed`: R.2's refusals, contradiction 6 and the lost carry (2:75, 77, 818, 841, 845, 847, 859).
+
+**Facts logged for the first time.** These also stand as written:
+- `swConstrainedStatus_e`'s names (1:67);
+- one FixComponent in H holding in every mode (1:1487-1490, 2:787-790);
+- FlipDimension 0 and Flipped False on every distance and angle (1:1491-1496, 2:791-797);
+- the out code of `GetObjectByPersistReference3` (1:825 on);
+- the entity reads taking 2.1 to 2.8 s (1:833-858).
+
+### 2. `41afa37`
+
+**It is right.**
+- *The cause.* The JSON shows it as the note says. Run 1's `carry-closed.definitions` read UserAxis9's entity on
+  the carried Sprocket-9 (then Sprocket-6) with `reference` and `feature` None in H. `carry.old_before.definitions`
+  read the same None on the old Sprocket-9 in H. Run 2's read, in L, gives `Gear Axis`.
+- *The fix.* `judge_carry` calls `definitions_in` after `every_mode` (`w9d_demonstration.py:2170`, then `:2202`).
+  `every_mode` leaves RangeBox_r2 in its first mode. `definitions_in` now shows `old_before["active"]` when it
+  differs, with the same show and rebuild `every_mode` uses, reads, and puts the first mode back.
+  - On the closed path `old_before` is read after the user's save with L showing (`:2679`), so both sides are read in
+    L.
+  - In `carry` both are H, so `mode == first` and nothing is shown. That section's reads at `f7c2f0d` are what
+    head's script would read.
+
+**It loosens nothing.**
+- `definition_problems` and `entity_problems` are unchanged, and so is the population.
+- Reading in a mode where the component is resolved can only expose more of a remade mate, not less.
+- The show and rebuild touch only RangeBox_r2, which is the job's own document and already unsaved and shown by
+  `every_mode`. Later checks read nothing that the extra show could have hidden.
+
+**Head's script and `carry`.** Between `f7c2f0d` and `41afa37` the W9a harness gained the `WW_OUTLIVED` hook.
+`WW_OUTLIVED` is None unless W9c's `main` sets it under its own flag (`w9c_demonstration.py:4093`). W9d imports
+W9c's script for `press`, `specs`, `same_sheets`, `row_edits`, `edit_live`, `interference_judged` and
+`record_on_disk`, and none of these is in the diff. `carry-closed` was rerun at `41afa37` and is clean.
+
+**No section has to run again on 2026 before the findings are set.**
+
+### 3. Head's `src`
+
+`git diff f7c2f0d..HEAD -- src` is `findings.py` alone:
+- W9c's five `UPDATE_*_ON_2024` set True;
+- their comments.
+
+Nothing in the carry reads a W9c gate. The later Update in `carry-closed` runs on 2026 and reads `_ON_2026`. So both
+logs stand for head's `src`, which is `41afa37`'s `src` exactly (`git diff 41afa37..HEAD` touches only the note
+and the logs).
+
+### 4. The findings for 2026
+
+| Finding | Set `_ON_2026` | Rests on |
+|---|---|---|
+| `CARRY_INSERTS` | **True** | log 1:1477-1482, 1489, 1503, 1505, 1512, 1518, 1534, 1404, 1406, proposal 1553 (every condition True); closed path log 2:777-782, 789, 806, 808, 818, 834 |
+| `CARRY_INSERTS_IN_A_CONFIGURATION` | **True** | log 1:859-860 (`add_component_in` … `'Z20'`), 1515, proposal 1554 |
+| `REFERENCED_CONFIGURATION_READ` | **True** | log 1:823, 1438, 1516, proposal 1555; closed, log 2:738 |
+| `CARRY_REMAKE_KINDS` | **`('coincident', 'concentric', 'parallel', 'distance', 'angle', 'limit distance', 'lock', 'gear')`** | log 1:1484, 1486, 1499, the kinds 1556-1563, proposal 1564; log 2:784, 786, 800 |
+| `CARRY_GEAR_MATE_ON_AN_APP_GEAR` | **True** | log 1:1457, 1464 (as read), 1484, proposal 1565; log 2:784 |
+| `CARRY_RESOLVES_A_LIGHTWEIGHT_COMPONENT_IN_THE_OLD_ASSEMBLY` | **True, as a fact** (see below) | log 1:1402, 1408, 1410; the result's sentence 1397 |
+| `CARRY_INSERTS_A_SUBASSEMBLY`, `CARRY_REMAKES_ON_A_LEAF`, `VIRTUAL_READ`, `PATTERN_INSTANCE_READ`, `ORIGIN_ENTITY_READ`, `PERSIST_REFERENCE_ROUTE_FOR_VERTICES` | **stay None** | log 1:1566-1571: none is in the fixture |
+
+**Every name but the fact's** exists in `findings.py` as written (`:2139-2172`), each at None on both versions.
+
+**`CARRY_RESOLVES_A_LIGHTWEIGHT_COMPONENT_IN_THE_OLD_ASSEMBLY` is not in `findings.py`.** `W9D-INTERFACES.md` §17.1
+asked for it as a fact, None until M9. Nothing in `src` reads it: the worker reads `resolved_in_old` itself, and the
+result says it (1:1397). *For a ruling:*
+- either add the pair (`_ON_2026 = True`, `_ON_2024 = None`) as a documented fact;
+- or keep it in the comments only.
+I recommend the pair, so the 2024 run has a name to set.
+
+**Each comment should carry its caveats:**
+- *All:*
+  - measured on 34.1.1 at `f7c2f0d`, whose `src` differs from head only in W9c's 2024 values;
+  - the probes' reads (§8.1) were measured on 34.0.0, and this run reads them clean on 34.1.1 too (log 2:771-772, the
+    read-only open and close);
+  - one fixture of 17 parts on RangeBox;
+  - the old assembly unmarked at the press (1:806) on the open path. An old assembly open with unsaved changes is
+    measured by the probe's state (e) only.
+- **`CARRY_INSERTS`:**
+  - the fallback shown is `FELL_TIE` only, with one FixComponent fixing in every mode;
+  - `FELL_NEW_ERROR`, `FELL_OVER_DEFINED`, the per-mode fix, a refused put, `same_error`, `moved`, a clash
+    sentence, a mode new or gone in the revision, and a stop part way are on the fake only. The stop was met once on
+    SolidWorks, at `90cdf20` (the first run);
+  - instances are renumbered in insertion order (log 2:778);
+  - a user part open in its own window with unsaved edits is not measured;
+  - the fixed state is read in the mode showing only. A component the user fixed in some modes and not others comes
+    over by that one read. This is my inference from `OldComponent.fixed` and the one-FixComponent fact, not
+    measured.
+- **`CARRY_INSERTS_IN_A_CONFIGURATION`:** one part with two configurations, its document's active one Default.
+- **`REFERENCED_CONFIGURATION_READ`:** the same component, read open (1:823) and read-only (2:738). On a lightweight
+  or suppressed component the document's configuration reads '' while the referenced one reads Default (1:821-822).
+- **`CARRY_REMAKE_KINDS`:** what stands for each kind:
+  - coincident: 12 mates, on axes, planes and one face pair;
+  - concentric: one, an axis to a bore face;
+  - parallel: one, on planes;
+  - distance: three, and UserAsm6 to the assembly's plane on the closed path;
+  - angle: two, both 90°;
+  - limit distance: one;
+  - lock: three, one of them between two user parts;
+  - gear: two, both Reverse 1. A gear mate of the other sense is not remade on SolidWorks: UserGearFillet, Reverse 0,
+    was named for its face.
+
+  Every distance and angle read FlipDimension 0 and Flipped False, so which of the two stands for AddMate5's Flip is
+  not told apart.
+
+  Perpendicular, tangent and limit angle are not in the fixture, and with this value they are named.
+- **`CARRY_GEAR_MATE_ON_AN_APP_GEAR`:**
+  - on Sun, a part made new, through its `Gear Axis` and through a root cylinder read coaxial (`COAXIAL_FACE_READ`);
+  - an app gear reused as the same file is not shown;
+  - the remake with the other Flip after a wrong sense is the fake's only;
+  - alignment 2 is not judged.
+
+**The pins.** `tests/test_findings.py` should pin, through `_w9a_run`, log 1 with `…-031226.json` (`(34, 1, 1)`,
+`f7c2f0d`):
+- `data["proposal"]` for the five set and the six None;
+- the `propose` lines 1408 and 1553-1571;
+- 1477, 1478, 1484, 1486, 1503, 1505, 1515, 1516 and 1518.
+
+And log 2 with `…-042519.json` (`41afa37`): 771, 777, 784, 786 and 818.
+
+**Ten tests now lean on these findings being None on 2026.** Setting them in the scratch copy failed:
+- `test_findings.py`: the two W9d tests;
+- `test_swbuild_carry.py`: three every-gate-None tests;
+- `test_workbook_carry.py`: two;
+- `test_workbook_user_record.py`: one;
+- `test_workbook_window.py`: two.
+
+They need a `w9d_unmeasured` fixture, as `74024a1` gave W9c's.
+
+**What the app does for a user while each stays None (2026).**
+- *A sub-assembly:* named with `CARRY_INSERTS_A_SUBASSEMBLY_ON_2026` and left. The sentence is true, but the
+  standing clause beside it is not (§7, must-fix 2).
+- *A mate on a leaf:* named, *"M1 is on a part inside your sub-assembly …"*.
+- *A virtual component:* named by the `^` rule, *"… is a virtual component, with no file of its own"*.
+- *A pattern instance:* carried as a component of its own, which the standing clause says.
+- *An origin or a vertex:* the mate is named with its finding.
+
+Each is a true sentence and nothing is lost. The old assembly keeps all of it.
+
+### 5. What a real user's Build again… can reach that this run did not show
+
+**Every gate open together.** That is what `carry` and `carry-closed` ran: the five write gates were patched True
+together (1:794-798, 2:80-84), and the reads were committed. The one difference once committed is the kinds:
+- the run patched all eleven, and the committed value is eight;
+- so perpendicular, tangent and limit angle are named, by the same path that named UserSunFace, which was shown.
+
+**What every unshown path has in common.** I traced each through `swbuild`. Each acts only after RangeBox_r2 is built
+and saved, and writes only into RangeBox_r2. What the run showed, in `trace_problems` and the disk hashes, also holds
+by construction:
+- nothing is saved after that first save;
+- the old assembly and the user's files are never written;
+- the old assembly is never shown or rebuilt on the open path.
+
+**The unshown paths:**
+- **`FELL_NEW_ERROR` and `FELL_OVER_DEFINED`:**
+  - They differ from the measured `FELL_TIE` only in their trigger: a remade mate's code
+    (`swbuild.py:8548-8559`), and a status equal to 4 (`:8565-8567`).
+  - Their writes are `_fall_back`'s, which `FELL_TIE` measured: delete the job's own mates, put back, one
+    FixComponent.
+  - Safe by construction.
+- **The per-mode fix (`_fixed_in_every_mode` finding a mode not fixed):** a further FixComponent or put on the job's
+  own component in RangeBox_r2. Safe.
+- **A refused put, a refused `AddMate5`, a read-back that differs:**
+  - `_remake` reads each mate back. A gear's sense is tried once more with the other Flip.
+  - Anything still different is deleted again and named (`WHY_DIFFERS`). A refusal is named (`WHY_REFUSED`).
+  - Nothing is kept unread. Safe.
+- **A distance or angle on its other side (FlipDimension 1):**
+  - It is made with that Flip, and its side is judged by `moved`, which compares the whole frame.
+  - At worst the sentence says the component moved: true, and nothing is lost.
+- **A COM failure or `_CarryStop`:**
+  - It stops with the carry unsaved and said, and the build saved as built.
+  - Seen on SolidWorks once, at `90cdf20`.
+- **Kinds of component not in the fixture:** each gated or named (§4).
+
+**I would keep no gate closed for safety.** What is unmeasured can at worst make RangeBox_r2 less faithful, and then
+the app says so. The two places where it would say something untrue are §7's wording must-fixes, not gates.
+
+### 6. Constrained status 5
+
+**Nothing in the app depends on 5.**
+- The carry tests a user component only for `== COMPONENT_OVER_DEFINED` (4), at `swbuild.py:8566`.
+- It tests an app gear only for `!= COMPONENT_UNDER_DEFINED` (2), at `:8307`, `:8607-8608`, `:8757-8765` and
+  `_free_to_turn`.
+- So a 5 on a user component triggers nothing. A 5 on an app gear would read *not free*, which is the conservative way.
+- `_judge` runs in the cluster's own mode, where its components are resolved.
+- The script logs 5 as a fact only (1:1502).
+
+**A pattern the note did not draw** (an inference from five readings, not traced). Each component that read 5 was
+suppressed in that mode with no mate on it in the new assembly:
+- old Sprocket-9 here, carried as Sprocket-11, its UserAxis9 named (1:1502);
+- in the first run, where the carry stopped before any mate, Sprocket-9 as Sprocket-10 in H and Sprocket-7 as
+  Sprocket-8 in L (`w9d-demo-sw2026-20261117-2-carry-app-faults.log:647`).
+
+Each suppressed component with its mate remade read 2 there:
+- Sprocket-7 in L here (1:1502);
+- Sprocket-9 in H on the closed path (2:805).
+
+So *"not tied to suppression alone"* is right. *"Suppressed and unmated"* fits every reading so far.
+
+### 7. Must-fix and should-fix
+
+**Must-fix 1 (app, `ui_text.py:6107`, `_fallback_sentence`; also the clash sentence at `:5954-5957`).** The fallen
+components are named by their new Name2 with no *(was …)*, though the same result says *"Housing-1 (was Housing-2)"*
+for an insert (`:5920`).
+- Log 1:1397 says *"UserAxis9 is on Sprocket-9, which is suppressed in H"* (the old Sprocket-9). Two sentences later
+  it says *"Housing-1 and Sprocket-9 are fixed where they stood in RangeBox_r2"*. That Sprocket-9 is the old
+  Sprocket-8 (1:1478).
+- Log 2:705 says *"Housing-2 and Sprocket-6 are fixed"*. The user's own Housing-2 (cluster two) and Sprocket-6 (the
+  gear mate) are other components. These two are the old Housing-1 and Sprocket-8 (2:778).
+- On the fake at head, `inserted=[("Sprocket-8", "Sprocket-9"), …]` with a fallback on Sprocket-9 gives *"Sprocket-9
+  is fixed where it stood in RangeBox_r2"*.
+- *Fix:* name each as the insert clause does, *"Sprocket-9 (was Sprocket-8)"*, from `done.inserted`.
+
+**Must-fix 2 (app, `ui_text.py:5127-5129` and `_standing` at `:5815-5824`).** The standing clause always says
+*"sub-assemblies come over rigid"*. With `CARRY_INSERTS_A_SUBASSEMBLY_ON_2026` None, on the fake at head, one result
+says:
+- *"… so Drive-1 is not carried …"*;
+- then *"… sub-assemblies come over rigid, pattern instances as components of their own."*
+
+*Fix:* say the sub-assembly clause only where the version's `CARRY_INSERTS_A_SUBASSEMBLY` is True, as the pattern
+clause follows `PATTERN_INSTANCE_READ`; in the question likewise.
+
+**Should-fix, the note (`W9D-DEMONSTRATION.md`, "The second run").**
+- **N1.** Some of the setup is not in the logs:
+  - the md5 of the master folders before and after;
+  - that no other SolidWorks, Excel or Python ran;
+  - that the session exited by its own close.
+
+  Say these as the operator's account. The logs show PID 53472 and *"open before: []"* (1:4-5).
+- **N2.** Two boxes are said as outside a job but need placing more exactly:
+  - The notification box at 1:595-596 came *"while GetTypeName2 was in progress"*: the script's read after the
+    press, outside the job.
+  - SolidWorks' open-progress window (*"Opened 26 Components … Post load updating"*, with a Close button) came inside
+    the job's read-only open (1:1665, 2:104). The job went on, and it closes by itself.
+
+  Say both as they were.
+- **N3.** The 5 pattern of §6, as an inference.
+
+**Privacy.** The two logs hold the Windows profile path in their run lines, as the earlier committed logs do. Neither
+holds a user document title (*"open before: []"*).
+
+### 8. What remains before W9d can close
+
+1. Must-fixes 1 and 2 (package B's wording), with tests on the exact strings. No SolidWorks.
+2. Set the 2026 findings of §4 with their comments and pins, the fact by the ruling, and a `w9d_unmeasured` fixture
+   for the ten tests.
+3. W9d's probes on 2024 (`state`, `faces`, `sub`, about 40 min; `W9D-PROBES.md`'s command line), their review, and
+   the `_ON_2024` reads set from it. None has run.
+4. W9d's demonstration on 2024, from head with 1 and 2 in:
+   - `fixture`, `carry-gates` and `carry` in one fresh session;
+   - `carry-closed` in another, with a 2026-saved file;
+   - about 2 h 15 min.
+
+   Then its review, and the `_ON_2024` writes and the fact set from it. W9c's own 2024 `remake-m3` rerun is
+   separate.
+5. Carried as unmeasured caveats in the comments and the handoff:
+   - the fallbacks other than the tie;
+   - the per-mode fix;
+   - a clash sentence, `same_error` and `moved`;
+   - a mode new or gone;
+   - FlipDimension 1;
+   - a gear mate of the other sense;
+   - perpendicular, tangent and limit angle;
+   - a sub-assembly, a leaf, a virtual component, a pattern, an origin and a vertex;
+   - an old assembly open with unsaved changes, and a user part open with unsaved edits;
+   - a fixed state that differs by mode;
+   - an app gear reused as the same file under a user gear mate.
+6. Documents:
+   - `W9D-INTERFACES.md` §8.1: the M9 rows set for 2026, and 34.1.1 named beside 34.0.0;
+   - `ISSUE-1-PLAN.md`: W9d's Done-when met on 2026;
+   - `W9D-DEMONSTRATION.md`: N1-N3;
+   - `HANDOFF-WORKBOOK.md`: stale after 2026-11-17 midday, so W9d's state, both 2026 runs and the reviews;
+   - `design/UI-DESIGN.md` §9 if must-fix 1 or 2 changes its examples.
