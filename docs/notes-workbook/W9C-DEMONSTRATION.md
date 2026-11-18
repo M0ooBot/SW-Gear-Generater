@@ -285,7 +285,9 @@ than W9c, which `ring` reads on its own; it is not what `remake` is here to show
      - Every document of the copy with the same save flag and file time just before and just after the press. The
        flags and times are read last before the press and first after it. Which documents read modified beyond the
        three parts step 1 changed is a printed fact (`beyond_step_1`), not a check: run 11 on 34.0.0 read RangeBox.SLDASM
-       modified after step 1, SolidWorks marking the open assembly when a part of it is changed and rebuilt.
+       modified after step 1. *Corrected 2026-11-18:* that read is itself the assembly's open-and-activate; on both
+       versions remake-m3 read RangeBox unmarked after step 1 by a read that activates nothing and marked at its first
+       activation since (below), so it is that first activation, not step 1's change, that marks it.
      - The result's `changed`, `mates_made`, `remade_in_modes` and `placed` empty, `skipped` said, and its failures
        naming the ring's file alone.
      - The ring still in error at 54 teeth, with the same features and codes it read just before the press. Since the
@@ -766,6 +768,16 @@ under 9.4 GB.
   - The check is left as it stands, for review: whether a flag SolidWorks sets on an activation the app makes counts
     as a write is a ruling, not a script fix. The status already tells the user to close RangeBox without saving and
     answer No.
+  - **Ruled since (the coordinating session, 2026-11-18, on `W9C-RUNS-REVIEW.md`'s review of this run, `6665b4e`):**
+    this FAIL is a fact of SolidWorks 2024, not a fault of the app, and nothing is run again for it. Since `746595a`
+    the script reads it so (`marked_at_first_activation`): the record's assembly going False to True across the press
+    is said as a fact line, "SolidWorks marked RangeBox.SLDASM at the press's first activation since step 1 …", naming
+    the SolidWorks the run is attached to (`25a0bd3`), when it is the only save flag that changed, no traced call
+    changed or showed anything and no file's time changed; the rest of the check is judged with that flag set aside,
+    and any other difference still fails. The self-check holds this run's own `first_press.flags` to that reading.
+    Since `746595a` the first pass also logs `read_now`'s first save flags before step 2, read straight after its
+    open-and-activate and before any other read ("before step 2, read_now's first save flags …"), so the deduction
+    above from the absence of a STOP becomes a line; this run, from `c2d95cc`, has no such line.
 
 **What's Wrong, box by box.**
 
@@ -868,6 +880,13 @@ Free memory never fell under 8.86 GB (26-12:123). SolidWorks was started at abou
   - The check is left as it stands, as the task required; the review of the 2024 run says how it should read (the
     assembly's mark said as a fact when it is the only flag that changed, no traced call changed anything and no
     file's time changed). Read that way, this run's second pass would pass.
+  - **Ruled since (the coordinating session, 2026-11-18):** the same fact holds on SolidWorks 2026 as on 2024: the
+    assembly is marked at its first activation after step 1, not by step 1 and not by a write; it is not a fault of the
+    app and nothing is run again for it. The script reads it so since `746595a` (this run, from `23107c2`, came
+    before it): `marked_at_first_activation` says the flag as a fact line naming the attached SolidWorks (`25a0bd3`)
+    when it is the only save flag that changed, no traced call changed anything and no file's time changed, which is
+    this run's reading (`changing_calls` empty, every file time equal), and judges the rest with it set aside. The
+    first pass's new line of `read_now`'s first save flags before step 2 is not in this log either.
 
 **What's Wrong.** None came on 2026 in either pass: not at the script's read before step 2, not in steps 2, 2b or 3,
 not in the second pass's step 1, and not in the app's press made as the first activation since step 1. The JSON
@@ -879,11 +898,12 @@ notification box once in 2b (26-12:180), and a balloon tip about the Simplified 
 - Step 2b is measured on 2026 and reads as on 2024.
 - On 2026, as on 2024, the assembly is unmarked after step 1 and marked at its first activation since; the second
   pass's flags leg reads that mark as a FAIL on both versions. Whether it is ruled the same fact on 2026 is the
-  coordinator's.
+  coordinator's. *Ruled so on 2026-11-18* (the FAIL above).
 - On 2026 the first activation with the ring in error raises no What's Wrong box, by the script's read and by the
   app's press alike, where on 2024 both raised one that outlived its job. This is the reading the proposed
   `WHATS_WRONG_STAYS_WITHOUT_A_REBUILD_ON_2026 = False` rested on with run 11's caveat that its press was the second
-  activation; here the app's press was the first. Nothing is set in `findings.py`.
+  activation; here the app's press was the first. Nothing is set in `findings.py` by this run; since `ea4efec` the
+  finding's comment and pin rest on this log.
 
 ## The tenth and eleventh runs on 2026: the final run (2026-11-17, `src` at 3a9e592, SolidWorks 2026 34.0.0)
 
@@ -937,6 +957,11 @@ Its `src` is 3a9e592's, compared file by file; 007b3aa, which changed `update.py
   'Ring_m1.25_N55.SLDPRT']`, as did `read_now`'s own read before the press.
   - No SolidWorks call came between step 1's press and that read. So it is step 1's press (its part value sets and
     rebuilds) that leaves the assembly modified on SolidWorks.
+  - *Corrected 2026-11-18, on both versions:* that read (`read_now`) opens and activates RangeBox before it reads
+    any flag, so it does not show the mark came from step 1. remake-m3's second pass read RangeBox unmarked after
+    step 1 by a read that activates nothing, and marked across the next press's first activation, on 2024 (24-5, the
+    JSON's `first_press.flags`) and on 2026 34.1.1 (26-12, the same): the assembly is marked at its first activation
+    after step 1, not by step 1's press and not by a write (the coordinating session's rulings of 2026-11-18).
   - The check is left as it stands, for review.
 - **Step 3**, after every document was closed unsaved, loaded each from its file, the ring at 55. It went through
   routed by way of 53 (rebuilt twice), and the ring ended at 54 with nothing in error. The mark was gone, the four gear
