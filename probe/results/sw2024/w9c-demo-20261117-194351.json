@@ -1,0 +1,465 @@
+{
+ "sections": {
+  "bands-off": {
+   "suppressed": {
+    "rebuilt": true,
+    "volume": 11375.05521534443,
+    "features": [
+     [
+      "Relief Start Plane",
+      0
+     ],
+     [
+      "Relief End Plane",
+      0
+     ],
+     [
+      "Relief Start Sketch",
+      0
+     ],
+     [
+      "Relief End Sketch",
+      0
+     ],
+     [
+      "Relief",
+      0
+     ]
+    ]
+   },
+   "unsuppressed": {
+    "rebuilt": true,
+    "volume": 9540.863378852191,
+    "features": [
+     [
+      "Relief Start Plane",
+      0
+     ],
+     [
+      "Relief End Plane",
+      0
+     ],
+     [
+      "Relief Start Sketch",
+      0
+     ],
+     [
+      "Relief End Sketch",
+      0
+     ],
+     [
+      "Relief",
+      0
+     ]
+    ]
+   },
+   "clean": true,
+   "seconds": 405,
+   "failed": []
+  },
+  "m4": {
+   "reads": {
+    "Sprocket-1": {
+     "IComponent2.ListExternalFileReferencesCount": {
+      "answer": 0,
+      "marked": []
+     },
+     "IComponent2.ListExternalFileReferences2": {
+      "answer": {
+       "returned": null,
+       "outs": [
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        0,
+        ""
+       ]
+      },
+      "marked": []
+     },
+     "IModelDocExtension.ListExternalFileReferencesCount": {
+      "answer": 0,
+      "marked": []
+     },
+     "IModelDocExtension.ListExternalFileReferences": {
+      "answer": {
+       "returned": null,
+       "outs": [
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        0,
+        ""
+       ]
+      },
+      "marked": []
+     },
+     "ISldWorks.GetDocumentDependencies2": {
+      "answer": null,
+      "marked": []
+     }
+    },
+    "Sprocket-2": {
+     "IComponent2.ListExternalFileReferencesCount": {
+      "answer": 0,
+      "marked": []
+     },
+     "IComponent2.ListExternalFileReferences2": {
+      "answer": {
+       "returned": null,
+       "outs": [
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        0,
+        ""
+       ]
+      },
+      "marked": []
+     },
+     "IModelDocExtension.ListExternalFileReferencesCount": {
+      "answer": 0,
+      "marked": []
+     },
+     "IModelDocExtension.ListExternalFileReferences": {
+      "answer": {
+       "returned": null,
+       "outs": [
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        0,
+        ""
+       ]
+      },
+      "marked": []
+     },
+     "ISldWorks.GetDocumentDependencies2": {
+      "answer": null,
+      "marked": []
+     }
+    },
+    "Sprocket-3": {
+     "IComponent2.ListExternalFileReferencesCount": {
+      "answer": 0,
+      "marked": []
+     },
+     "IComponent2.ListExternalFileReferences2": {
+      "answer": {
+       "returned": null,
+       "outs": [
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        0,
+        ""
+       ]
+      },
+      "marked": []
+     },
+     "IModelDocExtension.ListExternalFileReferencesCount": {
+      "answer": 0,
+      "marked": []
+     },
+     "IModelDocExtension.ListExternalFileReferences": {
+      "answer": {
+       "returned": null,
+       "outs": [
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        0,
+        ""
+       ]
+      },
+      "marked": []
+     },
+     "ISldWorks.GetDocumentDependencies2": {
+      "answer": null,
+      "marked": []
+     }
+    },
+    "Sprocket-4": {
+     "IComponent2.ListExternalFileReferencesCount": {
+      "answer": 0,
+      "marked": []
+     },
+     "IComponent2.ListExternalFileReferences2": {
+      "answer": {
+       "returned": null,
+       "outs": [
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        0,
+        ""
+       ]
+      },
+      "marked": []
+     },
+     "IModelDocExtension.ListExternalFileReferencesCount": {
+      "answer": 0,
+      "marked": []
+     },
+     "IModelDocExtension.ListExternalFileReferences": {
+      "answer": {
+       "returned": null,
+       "outs": [
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        0,
+        ""
+       ]
+      },
+      "marked": []
+     },
+     "ISldWorks.GetDocumentDependencies2": {
+      "answer": null,
+      "marked": []
+     }
+    },
+    "Housing-1": {
+     "IComponent2.ListExternalFileReferencesCount": {
+      "answer": 0,
+      "marked": []
+     },
+     "IComponent2.ListExternalFileReferences2": {
+      "answer": {
+       "returned": null,
+       "outs": [
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        0,
+        ""
+       ]
+      },
+      "marked": []
+     },
+     "IModelDocExtension.ListExternalFileReferencesCount": {
+      "answer": 0,
+      "marked": []
+     },
+     "IModelDocExtension.ListExternalFileReferences": {
+      "answer": {
+       "returned": null,
+       "outs": [
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        0,
+        ""
+       ]
+      },
+      "marked": []
+     },
+     "ISldWorks.GetDocumentDependencies2": {
+      "answer": null,
+      "marked": []
+     }
+    },
+    "Gear_m1.25_N29-1": {
+     "IComponent2.ListExternalFileReferencesCount": {
+      "answer": 0,
+      "marked": []
+     },
+     "IComponent2.ListExternalFileReferences2": {
+      "answer": {
+       "returned": null,
+       "outs": [
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        0,
+        ""
+       ]
+      },
+      "marked": []
+     },
+     "IModelDocExtension.ListExternalFileReferencesCount": {
+      "answer": 0,
+      "marked": []
+     },
+     "IModelDocExtension.ListExternalFileReferences": {
+      "answer": {
+       "returned": null,
+       "outs": [
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        0,
+        ""
+       ]
+      },
+      "marked": []
+     },
+     "ISldWorks.GetDocumentDependencies2": {
+      "answer": null,
+      "marked": []
+     }
+    },
+    "the assembly (control)": {
+     "ISldWorks.GetDocumentDependencies2": {
+      "answer": [
+       "RangeBox_Layout",
+       "C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9c-confirm-sw2024-20261117-171854\\out\\m4\\RangeBox_Layout.SLDPRT",
+       "RangeBox_Carrier_Carrier",
+       "C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9c-confirm-sw2024-20261117-171854\\out\\m4\\RangeBox_Carrier_Carrier.SLDPRT",
+       "Gear_m1.25_N29",
+       "C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9c-confirm-sw2024-20261117-171854\\out\\m4\\Gear_m1.25_N29.SLDPRT",
+       "Gear_m1.25_N13",
+       "C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9c-confirm-sw2024-20261117-171854\\out\\m4\\Gear_m1.25_N13.SLDPRT",
+       "Ring_m1.25_N55",
+       "C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9c-confirm-sw2024-20261117-171854\\out\\m4\\Ring_m1.25_N55.SLDPRT",
+       "Dog_m1.25_N17",
+       "C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9c-confirm-sw2024-20261117-171854\\out\\m4\\Dog_m1.25_N17.SLDPRT",
+       "Sleeve_m1.25_N17",
+       "C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9c-confirm-sw2024-20261117-171854\\out\\m4\\Sleeve_m1.25_N17.SLDPRT",
+       "Sprocket",
+       "C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9c-confirm-sw2024-20261117-171854\\out\\m4\\Sprocket.SLDPRT",
+       "Housing",
+       "C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9c-confirm-sw2024-20261117-171854\\out\\m4\\Housing.SLDPRT"
+      ],
+      "marked": []
+     }
+    }
+   },
+   "answered": [
+    "IComponent2.ListExternalFileReferencesCount",
+    "IComponent2.ListExternalFileReferences2",
+    "IModelDocExtension.ListExternalFileReferencesCount",
+    "IModelDocExtension.ListExternalFileReferences",
+    "ISldWorks.GetDocumentDependencies2"
+   ],
+   "seconds": 35,
+   "failed": []
+  }
+ },
+ "stops": [],
+ "proposal": {
+  "UPDATE_SUPPRESSES_THE_RELIEF_ON_2024_facts": {
+   "suppressed": {
+    "rebuilt": true,
+    "volume": 11375.05521534443,
+    "features": [
+     [
+      "Relief Start Plane",
+      0
+     ],
+     [
+      "Relief End Plane",
+      0
+     ],
+     [
+      "Relief Start Sketch",
+      0
+     ],
+     [
+      "Relief End Sketch",
+      0
+     ],
+     [
+      "Relief",
+      0
+     ]
+    ]
+   },
+   "on_again": {
+    "rebuilt": true,
+    "volume": 9540.863378852191,
+    "features": [
+     [
+      "Relief Start Plane",
+      0
+     ],
+     [
+      "Relief End Plane",
+      0
+     ],
+     [
+      "Relief Start Sketch",
+      0
+     ],
+     [
+      "Relief End Sketch",
+      0
+     ],
+     [
+      "Relief",
+      0
+     ]
+    ]
+   },
+   "clean": true,
+   "route": "Session.suppress_feature('Relief', True/False) on the part, called by the script, not by an Update (no legal edit takes bands off RangeBox_Fixed in place)"
+  },
+  "UPDATE_SUPPRESSES_THE_RELIEF_ON_2024": null,
+  "UPDATE_SUPPRESSES_THE_RELIEF_ON_2024_evidence": "bands-off: not measured through Update (no legal edit reaches it); the call the worker makes, made script-side on the copy's sleeve, read clean True: the relief suppressed and on again, no second relief, RangeSlv's mates in no error in every mode. Its facts are in the JSON under _facts",
+  "EXTERNAL_REFERENCES_READ_ON_2024": null,
+  "EXTERNAL_REFERENCES_READ_ON_2024_evidence": "m4: no positive case could be made by proven calls, so the read is not measured; C4's refusal stands. Answered without error: ['IComponent2.ListExternalFileReferencesCount', 'IComponent2.ListExternalFileReferences2', 'IModelDocExtension.ListExternalFileReferencesCount', 'IModelDocExtension.ListExternalFileReferences', 'ISldWorks.GetDocumentDependencies2']"
+ },
+ "revision": [
+  32,
+  5,
+  0
+ ],
+ "snapshot": "4315774",
+ "whats_wrong_rule": {
+  "helper_present": true,
+  "shows_in_update": true,
+  "allowance_seconds": 60.0
+ },
+ "fails": [],
+ "notes": [
+  "SolidWorks' notification box came up while no SolidWorks call was in progress (exempt by the coordinator's ruling; nothing answers it)"
+ ]
+}

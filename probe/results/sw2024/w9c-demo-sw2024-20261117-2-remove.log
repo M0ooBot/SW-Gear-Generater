@@ -1,0 +1,754 @@
+awake   display and system held awake for the run (previous state -0x80000000)
+run     2026-11-17 19:24:54; W9c demonstration from C:\Users\M0obo\Documents\GearGeneratorProbe\w9c-confirm-sw2024-20261117-171854\snap\src (snapshot: 4315774); sections ['remove']; masters {'rangebox': '', 'setup': '', 'reducer': ''}; redo True
+ok      the app's settings and Recent list go into this run's folder, not the user's: C:\Users\M0obo\Documents\GearGeneratorProbe\w9c-confirm-sw2024-20261117-171854\out\appdata\Gear Generator\recent.json
+attach  SolidWorks 2024 (revision 32.5.0) (revision 32.5.0), PID 64480; SolidWorks 0.50 GB private, 3.30 GB free
+open    before: []
+findings USER_MATE_PUT_ROUTE "put along, the user's locks left on", USER_TIE_RULE 'not COMPONENT_UNDER_DEFINED', WHATS_WRONG_OPENS_ON_PART_REBUILD False, the branches {'USER_MATE_PUT_FIXED_GEAR_ON_2024': None, 'USER_MATE_PUT_FIXED_GEAR_ON_2026': None, 'USER_MATE_PUT_HELD_GEAR_ON_2024': None, 'USER_MATE_PUT_HELD_GEAR_ON_2026': None, 'USER_MATE_PUT_NO_CARRIER_MODES_ON_2024': None, 'USER_MATE_PUT_NO_CARRIER_MODES_ON_2026': None, 'USER_MATE_PUT_NO_CARRIER_ON_2024': True, 'USER_MATE_PUT_NO_CARRIER_ON_2026': True, 'USER_MATE_PUT_SUBASSEMBLY_ON_2024': None, 'USER_MATE_PUT_SUBASSEMBLY_ON_2026': None}
+rule    What's Wrong: swbuild.whats_wrong_shows_in_update reads True; a What's Wrong box owned by SolidWorks' frame during any job the script waits on is logged as a fact (under an app Update or Build, as the app's Update shows it; under the script's own steps and W8's helpers, as SolidWorks shows it when a person does this), the job waited for, and at its end the box must go within 60 s and the frame be enabled (else a STOP)
+excel   started our own Excel, PID 73480, 16.0 build 20430.0
+== remove  a gear that anchors none taken out by Update: G4 from the 12 : 1 where nothing of the user's is; HighDog from RangeBox with the user's work refused before any write (C4), and with a user lock on it, naming the lock
+-- remove  G4 out of a copy of the 12 : 1 (no user component, no modes): P1's route, set on both versions, so no gate to patch
+fresh   no --reducer-master and none in this run: reducer runs first
+== reducer  the 12 : 1 (G1 on S1 drives G2, G3 locked to G2 drives G4 on S3; no carrier) written by the app's write_new and built to turn through the app's own Build; kept as reducer.master
+write   Reducer_12to1.xlsx by the app's own write_new, its Output folder blank (the strip's is C:\Users\M0obo\Documents\GearGeneratorProbe\w9c-confirm-sw2024-20261117-171854\out\reducer)
+DIALOG  SolidWorks shows '': ['Title', 'Description', 'Button1', 'Button2', 'Hyperlink Text 1', 'Hyperlink Text 2']
+NOTE    SolidWorks' notification box came up while no SolidWorks call was in progress (exempt by the coordinator's ruling; nothing answers it)
+ok      Excel opened Reducer_12to1.xlsx with no dialog or repair: []
+excel   saved Reducer_12to1.xlsx
+ok      read Reducer_12to1.xlsx: ok
+        warning Gears!Q3: G2: The involute starts at 99.96 mm, above the form diameter of 99.343 mm, so the bottom of the working flank is a straight line.
+        warning Gears!Q5: G4: The involute starts at 99.28 mm, above the form diameter of 98.614 mm, so the bottom of the working flank is a straight line.
+        3 shafts · 4 gears · 2 meshes; gate ''
+footer  (reducer, read) [green] Ready: Build makes 4 parts, Reducer_12to1_Layout and Reducer_12to1.SLDASM in C:\…\out\reducer. Its gears are mated to their shafts and to each other, so they turn together in SolidWorks.
+        button 'Build' on primary; Update SolidWorks hidden
+plan    revision 0 Reducer_12to1: refusal ''; reason ''; turning True; static reason ''
+        layout C:\Users\M0obo\Documents\GearGeneratorProbe\w9c-confirm-sw2024-20261117-171854\out\reducer\Reducer_12to1_Layout.SLDPRT; assembly C:\Users\M0obo\Documents\GearGeneratorProbe\w9c-confirm-sw2024-20261117-171854\out\reducer\Reducer_12to1.SLDASM
+        build Gear_m1.5_N17 for G1 at C:\Users\M0obo\Documents\GearGeneratorProbe\w9c-confirm-sw2024-20261117-171854\out\reducer\Gear_m1.5_N17.SLDPRT (83 ops)
+        build Gear_m1.5_N68 for G2 at C:\Users\M0obo\Documents\GearGeneratorProbe\w9c-confirm-sw2024-20261117-171854\out\reducer\Gear_m1.5_N68.SLDPRT (83 ops)
+        build Gear_m2_N17 for G3 at C:\Users\M0obo\Documents\GearGeneratorProbe\w9c-confirm-sw2024-20261117-171854\out\reducer\Gear_m2_N17.SLDPRT (83 ops)
+        build OutputGear for G4 at C:\Users\M0obo\Documents\GearGeneratorProbe\w9c-confirm-sw2024-20261117-171854\out\reducer\OutputGear.SLDPRT (83 ops)
+        shaft S1: (0, 0, 0) axis Z+ (0.0, 0.0, 1.0) sigma +1; X base '', Y base '', Z  ''; line ''; S1 Axis
+        shaft S2: (63.75, 0, 0) axis Z+ (0.0, 0.0, 1.0) sigma +1; X plus 'S2 X', Y base '', Z  ''; line ''; S2 Axis
+        shaft S3: (131.75, 0, 0) axis Z+ (0.0, 0.0, 1.0) sigma +1; X plus 'S3 X', Y base '', Z  ''; line ''; S3 Axis
+        frame G1: R [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0] at [0.0, 0.0, 0.0]
+        frame G2: R [0.998932975, -0.046183459, 0.0, 0.046183459, 0.998932975, 0.0, 0.0, 0.0, 1.0] at [63.75, 0.0, 0.0]
+        frame G3: R [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0] at [63.75, 0.0, 17.0]
+        frame G4: R [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0] at [131.75, 0.0, 17.0]
+        motion: trains [('S1', 'S2', 'S3')]; drag ['G1']; fixed []; unmated []
+        mate 'G1 on S1 Axis': axis ['G1'] S1 ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'G1 along S1': along ['G1'] S1 ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'G2 on S2 Axis': axis ['G2'] S2 ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'G2 along S2': along ['G2'] S2 ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'G3 locked to G2': lock ['G2', 'G3']  ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'G4 on S3 Axis': axis ['G4'] S3 ratio [] face '' z_front 0 plane 'front' sense 0
+        mate 'G4 along S3': along ['G4'] S3 ratio [] face 'G4 Face Z' z_front 17 plane 'front' sense 0
+        mate 'G1 meshes G2': mesh ['G1', 'G2']  ratio [17, 68] face '' z_front 0 plane 'front' sense 1
+        mate 'G3 meshes G4': mesh ['G3', 'G4']  ratio [17, 51] face '' z_front 0 plane 'front' sense 1
+        ops of Reducer_12to1_Layout.SLDPRT:
+          new     NewPart from (default template)
+          global  "S2 X"= 63.75
+          global  "S3 X"= 131.75
+          axis    'S1 Axis' through planes 2 and 3
+          plane   'S2 X Plane' 63.75 mm from plane 3 (Offset)
+          link    "Offset@S2 X Plane"= "S2 X"
+          axis    'S2 Axis' through plane 2 and x2
+          plane   'S3 X Plane' 131.75 mm from plane 3 (Offset)
+          link    "Offset@S3 X Plane"= "S3 X"
+          axis    'S3 Axis' through plane 2 and x3
+          rebuild once
+          save    C:\Users\M0obo\Documents\GearGeneratorProbe\w9c-confirm-sw2024-20261117-171854\out\reducer\Reducer_12to1_Layout.SLDPRT
+        ops of Reducer_12to1.SLDASM:
+          new     NewAssembly from (default template)
+          global  "G4 Face Z"= 17
+          insert  layout C:\Users\M0obo\Documents\GearGeneratorProbe\w9c-confirm-sw2024-20261117-171854\out\reducer\Reducer_12to1_Layout.SLDPRT at (0, 0, 0)
+          place   layout at (0, 0, 0) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     layout
+          insert  gear1 C:\Users\M0obo\Documents\GearGeneratorProbe\w9c-confirm-sw2024-20261117-171854\out\reducer\Gear_m1.5_N17.SLDPRT at (0, 0, 0)
+          place   gear1 at (0, 0, 0) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     gear1
+          insert  gear2 C:\Users\M0obo\Documents\GearGeneratorProbe\w9c-confirm-sw2024-20261117-171854\out\reducer\Gear_m1.5_N68.SLDPRT at (63.75, 0, 0)
+          place   gear2 at (63.75, 0, 0) turned (0.998933, -0.046183, 0, 0.046183, 0.998933, 0, 0, 0, 1)
+          fix     gear2
+          insert  gear3 C:\Users\M0obo\Documents\GearGeneratorProbe\w9c-confirm-sw2024-20261117-171854\out\reducer\Gear_m2_N17.SLDPRT at (63.75, 0, 17)
+          place   gear3 at (63.75, 0, 17) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     gear3
+          insert  gear4 C:\Users\M0obo\Documents\GearGeneratorProbe\w9c-confirm-sw2024-20261117-171854\out\reducer\OutputGear.SLDPRT at (131.75, 0, 17)
+          place   gear4 at (131.75, 0, 17) turned (1, 0, 0, 0, 1, 0, 0, 0, 1)
+          fix     gear4
+          unfix   gear1
+          mate    coincident gear1:Gear Axis ~ layout:S1 Axis as 'G1 on S1 Axis'
+          mate    point gear1:origin ~ layout:plane1 as 'G1 along S1'
+          unfix   gear2
+          mate    coincident gear2:Gear Axis ~ layout:S2 Axis as 'G2 on S2 Axis'
+          mate    point gear2:origin ~ layout:plane1 as 'G2 along S2'
+          unfix   gear3
+          mate    lock gear2 ~ gear3 as 'G3 locked to G2'
+          unfix   gear4
+          mate    coincident gear4:Gear Axis ~ layout:S3 Axis as 'G4 on S3 Axis'
+          mate    point distance 17 gear4:origin ~ layout:plane1 as 'G4 along S3'
+          link    "D1@G4 along S3"= "G4 Face Z"
+          mate    gear 17:68 gear1:Gear Axis ~ gear2:Gear Axis as 'G1 meshes G2'
+          mate    gear 17:51 gear3:Gear Axis ~ gear4:Gear Axis as 'G3 meshes G4'
+          rebuild once
+          save    C:\Users\M0obo\Documents\GearGeneratorProbe\w9c-confirm-sw2024-20261117-171854\out\reducer\Reducer_12to1.SLDASM
+ok      reducer: the plan turns (W5): static reason ''
+journal written: 6 paths
+build   Reducer_12to1: SolidWorks 0.70 GB private, 2.86 GB free
+        build   Part1 · spur · recipe A · trig degrees
+        ok      new part Part1
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 17
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Gear_m1.5_N17; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w9c-confirm-sw2024-20261117-171854\out\reducer\Gear_m1.5_N17.SLDPRT
+        build   Part2 · spur · recipe A · trig degrees
+        ok      new part Part2
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 68
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Gear_m1.5_N68; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w9c-confirm-sw2024-20261117-171854\out\reducer\Gear_m1.5_N68.SLDPRT
+        build   Part3 · spur · recipe A · trig degrees
+        ok      new part Part3
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 17
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to Gear_m2_N17; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w9c-confirm-sw2024-20261117-171854\out\reducer\Gear_m2_N17.SLDPRT
+        build   Part4 · spur · recipe A · trig degrees
+        ok      new part Part4
+        ok      trig units measured: degrees
+        ok      global "No. of Teeth"
+        ok      global "Module"
+        ok      global "Bore Diameter"
+        ok      global "Pressure Angle"
+        ok      global "Outer Diameter"
+        ok      global "Pitch Diameter"
+        ok      global "Backlash"
+        ok      global "Arc Length"
+        ok      global "Fillet Radius"
+        ok      global "Tooth Depth"
+        ok      global "Face Width"
+        ok      global "Root Diameter"
+        ok      global "Base Diameter"
+        ok      global "Base Radius"
+        ok      global "Tooth Thickness"
+        ok      global "Half Space Angle"
+        ok      global "Involute Fn"
+        ok      global "Flank Offset"
+        ok      global "Tip Cap Diameter"
+        ok      global "Flank Start Diameter"
+        ok      global "Involute t1"
+        ok      global "Involute t2"
+        ok      global "Flank Arc Radius"
+        ok      global "Flank Centre Angle"
+        ok      axis Gear Axis
+        ok      sketch blank opened on plane 1
+        ok      circle od
+        ok      coincident od.centre origin
+        ok      dimension OD
+        ok      sketch Blank Sketch
+        ok      extrude Blank
+        ok      link "OD@Blank Sketch"
+        ok      link "Width@Blank"
+        ok      sketch space opened on plane 1
+        ok      curve I+
+        ok      curve I-
+        ok      line L+
+        ok      line L-
+        ok      arc F+
+        ok      arc F-
+        ok      arc R
+        ok      line T
+        ok      fixed I+
+        ok      fixed I-
+        ok      coincident R.centre origin
+        ok      coincident L+.start I+.start (already one point)
+        ok      coincident L-.start I-.start (already one point)
+        ok      coincident origin L+
+        ok      coincident origin L-
+        ok      coincident F+.start L+.end (already one point)
+        ok      coincident F-.end L-.end (already one point)
+        ok      coincident F+.end R.end (already one point)
+        ok      coincident F-.start R.start (already one point)
+        ok      tangent F+ L+
+        ok      tangent F- L-
+        ok      tangent F+ R
+        ok      tangent F- R
+        ok      equal F+ F-
+        ok      coincident T.start I+.end (already one point)
+        ok      coincident T.end I-.end (already one point)
+        ok      dimension Root
+        ok      dimension Fillet
+        ok      sketch Tooth Space Sketch
+        ok      link "Root@Tooth Space Sketch"
+        ok      link "Fillet@Tooth Space Sketch"
+        ok      cut Tooth Space
+        ok      pattern Teeth × 51
+        ok      link "Count@Teeth"
+        ok      sketch bore opened on plane 1
+        ok      circle bore_circle
+        ok      coincident bore_circle.centre origin
+        ok      dimension Bore
+        ok      sketch Bore Sketch
+        ok      cut Bore
+        ok      link "Bore@Bore Sketch"
+        ok      property 'Description'
+        ok      property 'Gear Kind'
+        ok      property 'Flank'
+        ok      property 'Generated By'
+        ok      24 globals read back and match the maths
+        ok      Blank Sketch is fully defined
+        ok      Tooth Space Sketch is fully defined
+        ok      Bore Sketch is fully defined
+        ok      rebuilt once
+        MANUAL  1 step(s) to do by hand
+        MANUAL  Assign a material to OutputGear; the build leaves it unset.
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w9c-confirm-sw2024-20261117-171854\out\reducer\OutputGear.SLDPRT
+        build   Part5 · layout · recipe  · trig degrees
+        ok      new part Part5
+        ok      trig units measured: degrees
+        ok      global "S2 X"
+        ok      global "S3 X"
+        ok      axis S1 Axis
+        ok      plane S2 X Plane
+        ok      link "Offset@S2 X Plane"
+        ok      axis S2 Axis
+        ok      plane S3 X Plane
+        ok      link "Offset@S3 X Plane"
+        ok      axis S3 Axis
+        ok      2 globals read back and match the maths
+        ok      rebuilt once
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w9c-confirm-sw2024-20261117-171854\out\reducer\Reducer_12to1_Layout.SLDPRT
+        build   Assem1 · assembly · recipe  · trig degrees
+        ok      new assembly Assem1
+        ok      trig units measured: degrees
+        ok      global "G4 Face Z"
+        ok      component Reducer_12to1_Layout-1
+        ok      placed layout
+        ok      fixed layout
+        ok      component Gear_m1.5_N17-1
+        ok      placed gear1
+        ok      fixed gear1
+        ok      component Gear_m1.5_N68-1
+        ok      placed gear2
+        ok      fixed gear2
+        ok      component Gear_m2_N17-1
+        ok      placed gear3
+        ok      fixed gear3
+        ok      component OutputGear-1
+        ok      placed gear4
+        ok      fixed gear4
+        ok      unfixed gear1
+        ok      mate coincident gear1:Gear Axis ~ layout:S1 Axis as G1 on S1 Axis
+        ok      mate point gear1:origin ~ layout:plane1 as G1 along S1
+        ok      unfixed gear2
+        ok      mate coincident gear2:Gear Axis ~ layout:S2 Axis as G2 on S2 Axis
+        ok      mate point gear2:origin ~ layout:plane1 as G2 along S2
+        ok      unfixed gear3
+        ok      mate lock gear2 ~ gear3 as G3 locked to G2
+        ok      unfixed gear4
+        ok      mate coincident gear4:Gear Axis ~ layout:S3 Axis as G4 on S3 Axis
+        ok      mate point distance gear4:origin ~ layout:plane1 as G4 along S3
+        ok      link "D1@G4 along S3"
+        ok      mate gear gear1:Gear Axis ~ gear2:Gear Axis as G1 meshes G2
+        ok      mate gear gear3:Gear Axis ~ gear4:Gear Axis as G3 meshes G4
+        ok      1 globals read back and match the maths
+        ok      every mate sound, every gear free to turn
+        mate    G1 on S1 Axis
+        mate    G1 along S1
+        mate    G2 on S2 Axis
+        mate    G2 along S2
+        mate    G3 locked to G2
+        mate    G4 on S3 Axis
+        mate    G4 along S3
+        mate    G1 meshes G2
+        mate    G3 meshes G4
+        ok      rebuilt once
+        ok      saved C:\Users\M0obo\Documents\GearGeneratorProbe\w9c-confirm-sw2024-20261117-171854\out\reducer\Reducer_12to1.SLDASM
+        ok      no interference between the gears
+        in 98.7 s; SolidWorks 3.80 GB private, 2.14 GB free; kind 'motion'; turned round (made again with the other Flip) []
+        steps [('part', 'Gear_m1.5_N17', 1, 4), ('part', 'Gear_m1.5_N68', 2, 4), ('part', 'Gear_m2_N17', 3, 4), ('part', 'OutputGear', 4, 4), ('layout', 'Reducer_12to1_Layout', 0, 0), ('assembly', 'Reducer_12to1', 0, 0), ('interference', 'Reducer_12to1', 0, 0)]
+        progress words ['Building in SolidWorks: part 1 of 4, Gear_m1.5_N17…', 'Building in SolidWorks: checking interference…']
+record  4 sidecar(s) written; record written; notes []
+status  [green] Built 4 parts, Reducer_12to1_Layout and Reducer_12to1.SLDASM; no interference between the gears where they stand. Its gears are mated to turn together, and SolidWorks reports no mate in error: drag G1 in SolidWorks and the rest of its train follow. 1 thing to do by hand: Assign a material to each of the 4 parts; the build leaves it unset.
+ok      reducer: 4 part(s), the layout part and the assembly built and saved, turning: ok True, parts built 4, kind 'motion'
+ok      reducer: no interference: []
+ok      reducer: on SolidWorks 2024 every gear mate reads right as first made (probe ring_mate_sense): turned round []
+ok      reducer: the record holds a turning gearbox built from this read
+ok      reducer: the record's mates are the plan's: ['G1 on S1 Axis', 'G1 along S1', 'G2 on S2 Axis', 'G2 along S2', 'G3 locked to G2', 'G4 on S3 Axis', 'G4 along S3', 'G1 meshes G2', 'G3 meshes G4']
+ok      reducer: the build's sentence says how to turn it: 'drag G1 in SolidWorks and the rest of its train follow'
+footer  (reducer, built) [green] Built 4 parts, Reducer_12to1_Layout and Reducer_12to1.SLDASM; no interference between the gears where they stand. Its gears are mated to turn together, and SolidWorks reports no mate in error: drag G1 in SolidWorks and the rest of its train follow. 1 thing to do by hand: Assign a material to each of the 4 parts; the build leaves it unset.
+        button 'Build again…' on; Update SolidWorks shown on primary
+ok      reducer: the footer says how to turn it: 'drag G1 in SolidWorks and the rest of its train follow'
+tag     ' · built from this version'
+ok      reducer: 6 files on disk
+        marked modified in SolidWorks right after the build: {'Gear_m1.5_N17.SLDPRT': False, 'Gear_m1.5_N68.SLDPRT': False, 'Gear_m2_N17.SLDPRT': False, 'OutputGear.SLDPRT': False, 'Reducer_12to1_Layout.SLDPRT': False, 'Reducer_12to1.SLDASM': True}
+ok      reducer: the assembly is marked after the build (a read after its save)
+ok      reducer, right after the build and its saves: SolidWorks marks modified exactly ['Reducer_12to1.SLDASM']
+        reducer, the builder's end: SolidWorks 2024, this run's modified documents saved before the close: ['Reducer_12to1.SLDASM']
+ok      reducer, the builder's end: reducer ends clean: every document of it closed in SolidWorks (left []), Excel's workbook closed (['Reducer_12to1.xlsx']), no open document by a file name it holds ([])
+master  reducer renamed reducer.master: it stays so for the rest of the run
+copy    reducer.master -> remove-reducer: 12 files, mtimes kept
+        Reducer_12to1.xlsx's record: 12 path(s) put onto the copy: ['record.workbook', 'record.parts[0].path', 'record.parts[1].path', 'record.parts[2].path', 'record.parts[3].path', 'record.assembly', 'record.gearbox.layout', 'record.gearbox.assembly', 'record.gearbox.components[0].part', 'record.gearbox.components[1].part', 'record.gearbox.components[2].part', 'record.gearbox.components[3].part']
+        Gear_m1.5_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.5_N68.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m2_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        OutputGear.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+ok      remove-reducer: the copy's record is valid: owner ('ours', ''); left on the master []; missing in the copy []; clear_saved dropped nothing (unsaved, mismatched ([], [])); the read's digest equals the record's
+probe   W6-PLAN §7.1: Reducer_12to1.SLDASM of remove-reducer, whose stored references name a folder that is gone, opened under the dialog watch (120 s at most)
+DIALOG  SolidWorks shows '': ['Close', 'Opened 5\nComponents', 'Updating\nAssembly', 'Update\nGraphics', 'Post load updating', 'Elapsed time: 0s', 'This file was last opened in 2 seconds', 'For more information, view: ']
+fact    remove-reducer: the copy's assembly opened in 3.5 s; marked modified straight after the open: {'Reducer_12to1_Layout.SLDPRT': False, 'Gear_m1.5_N17.SLDPRT': False, 'Gear_m1.5_N68.SLDPRT': False, 'Gear_m2_N17.SLDPRT': False, 'OutputGear.SLDPRT': False, 'Reducer_12to1.SLDASM': False}
+fact    W6-PLAN §7.1: dialogs while the copied assembly opened: none
+ok      remove-reducer: SolidWorks found all 5 components and the layout in the copy, and the copy closed without saving (left []): elsewhere none
+ok      read Reducer_12to1.xlsx: ok
+        warning Gears!Q3: G2: The involute starts at 99.96 mm, above the form diameter of 99.343 mm, so the bottom of the working flank is a straight line.
+        warning Gears!Q5: G4: The involute starts at 99.28 mm, above the form diameter of 98.614 mm, so the bottom of the working flank is a straight line.
+        3 shafts · 4 gears · 2 meshes; gate ''
+ok      remove-reducer: the copy reads as built from this workbook, its assembly in the copy
+ok      Excel opened Reducer_12to1.xlsx with no dialog or repair: []
+ok      remove, the 12 : 1: the copy's workbook holds the fixture's Gears, Meshes and Modes rows (as the app reads them)
+edit    G4's rows cleared: [('Gears', 'A5', None), ('Gears', 'B5', None), ('Gears', 'C5', None), ('Gears', 'D5', None), ('Gears', 'E5', None), ('Gears', 'F5', None), ('Gears', 'G5', None), ('Gears', 'I5', None), ('Gears', 'J5', None), ('Gears', 'V5', None), ('Meshes', 'A3', None), ('Meshes', 'B3', None), ('Meshes', 'D3', None)]
+excel   Gears!A5 := None
+excel   Gears!B5 := None
+excel   Gears!C5 := None
+excel   Gears!D5 := None
+excel   Gears!E5 := None
+excel   Gears!F5 := None
+excel   Gears!G5 := None
+excel   Gears!I5 := None
+excel   Gears!J5 := None
+excel   Gears!V5 := None
+excel   Meshes!A3 := None
+excel   Meshes!B3 := None
+excel   Meshes!D3 := None
+excel   saved Reducer_12to1.xlsx
+poll    a new read 0.0 s after asking; changes:
+          gear G4 removed
+          mesh G3–G4 removed
+ok      read Reducer_12to1.xlsx: ok
+        warning Gears!Q3: G2: The involute starts at 99.96 mm, above the form diameter of 99.343 mm, so the bottom of the working flank is a straight line.
+        warning Shafts!A4: S3 carries no gear.
+        warning Shafts!A4: nothing drives S3: no input reaches it through the meshes.
+        3 shafts · 3 gears · 1 meshes; gate ''
+classify parts changed []; moved []; re-place []; structural []; missing []; unsaved []; refusal ''; turning True; axial []; ratios []
+        layout globals wanted ['S2 X = 63.75', 'S3 X = 131.75']
+summary Update SolidWorks will take G4 out with its 3 mates.
+ok      remove: classify takes G4 out in place: ([], (RemovedGear(gear='G4', component='OutputGear-1', part='C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9c-confirm-sw2024-20261117-171854\\out\\remove-reducer\\OutputGear.SLDPRT', mates=('G4 on S3 Axis', 'G4 along S3', 'G3 meshes G4')),))
+footer  (remove, G4) [green] Update SolidWorks will take G4 out with its 3 mates. It was built with its gears mated to turn: drag G1 in SolidWorks and the rest of its train follow.
+        button 'Build again…' on; Update SolidWorks shown on primary
+line    [green] (nothing of the user’s on record)
+ok      remove: the footer foresees nothing stopping it: []
+DIALOG  SolidWorks shows '': ['Close', 'Opened 5\nComponents', 'Updating\nAssembly', 'Update\nGraphics', 'Post load updating', 'Elapsed time: 0s', 'This file was last opened in 2 seconds', 'For more information, view: ']
+read    remove, before G4 goes (active Default; front document Reducer_12to1.SLDASM): mates in error none; not free none; marked none; rebuild state 0
+ok      remove: G4 taken out: the footer offers Update SolidWorks (shown True, enabled True, Build again… needed False)
+update  SolidWorks 3.71 GB private, 2.35 GB free
+        in 19.2 s; SolidWorks 6.02 GB private, 2.30 GB free; loaded from disk []
+        W9a: carried []; renamed []; user in error []; user features in error []; inventory read yes; failures []
+ok      the Update's check phase found no gear mate turning against its mesh: []
+status  [green] Updated SolidWorks: took G4 (OutputGear-1) out with 3 mates, leaving its part OutputGear.SLDPRT on disk; no interference between the gears where they stand. Save Reducer_12to1 in SolidWorks to keep it.
+fact    remove: G4 taken out: the press took 19.2 s; SolidWorks calls by member {'OpenDoc6': 7, 'IsSuppressed2': 21, 'ForceRebuild3': 1}
+        shows and puts in order: []
+        configuration ''; visited []; put_in []; placed []; unsuppressed_in []; suppressed_in []; slid []; values_restored []; extra configurations []; extra mates []; senses unread []; positions per configuration None; failures []
+fact    remove: G4 taken out: the press took 19 s
+ok      remove: G4 taken out: the press went through, and the footer foresaw no problem it did not meet: none
+        update  Gear_m1.5_N17.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Gear_m1.5_N68.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Gear_m2_N17.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Reducer_12to1_Layout.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        ok      took G4 out (OutputGear-1), with its mates
+        ok      every gear is where the workbook puts it
+        mate    G1 on S1 Axis
+        mate    G1 along S1
+        mate    G2 on S2 Axis
+        mate    G2 along S2
+        mate    G3 locked to G2
+        mate    G1 meshes G2
+        ok      assembly rebuilt once
+        ok      no interference between the gears
+        not saved: Reducer_12to1.SLDASM changed in SolidWorks; save there to keep it
+        W9c: built []; inserted []; deleted [('G4', 'OutputGear-1')]; mates deleted ['G4 on S3 Axis', 'G4 along S3', 'G3 meshes G4']; mates made []; remade in modes []; bands added [], removed []; modes added [], removed []; took the active mode's state []; flags lost []; not resolved []
+read    remove, after G4 went (active Default; front document Reducer_12to1.SLDASM): mates in error none; not free none; marked ['Reducer_12to1.SLDASM']; rebuild state 0
+ok      remove: G4 (OutputGear-1) taken out with its mates ['G3 meshes G4', 'G4 along S3', 'G4 on S3 Axis'] (each read gone by name), every other mate there, nothing else moved (0.0e+00 at -), the record without it, its part's file still on disk (OutputGear.SLDPRT); record parts ['Gear_m1.5_N17.SLDPRT', 'Gear_m1.5_N68.SLDPRT', 'Gear_m2_N17.SLDPRT']
+ok      remove: G4's part entry left the record's parts, no gear using its file now (C6; the file stays on disk): kept none, other gears on it none
+ok      remove: nothing left over on the record (left [])
+        remove-reducer, the copy's end: SolidWorks 2024, this run's modified documents saved before the close: ['Reducer_12to1.SLDASM']
+ok      remove-reducer, the copy's end: remove-reducer ends clean: every document of it closed in SolidWorks (left []), Excel's workbook closed (['Reducer_12to1.xlsx']), no open document by a file name it holds ([])
+-- remove  HighDog out of a copy of setup.master: refused before any write, the user's components there and the external-references read unmeasured (C4, findings.EXTERNAL_REFERENCES_READ_ON_2024 None); then with a user lock on HighDog, refused naming it too
+copy    setup.master -> remove-setup: 17 files, mtimes kept
+        RangeBox.xlsx's record: 21 path(s) put onto the copy: ['record.workbook', 'record.parts[0].path', 'record.parts[1].path', 'record.parts[2].path', 'record.parts[3].path', 'record.parts[4].path', 'record.assembly', 'record.gearbox.layout', 'record.gearbox.assembly', 'record.gearbox.components[0].part', 'record.gearbox.components[1].part', 'record.gearbox.components[2].part', 'record.gearbox.components[3].part', 'record.gearbox.components[4].part', 'record.gearbox.components[5].part', 'record.gearbox.components[6].part', 'record.gearbox.components[7].part', 'record.gearbox.carriers[0].path', 'record.gearbox.user_work.assembly', 'record.gearbox.user_work.features[0].path', 'record.gearbox.user_work.features[1].path']
+        Dog_m1.25_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.25_N13.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.25_N29.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Ring_m1.25_N55.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Sleeve_m1.25_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+ok      remove-setup: the copy's record is valid: owner ('ours', ''); left on the master []; missing in the copy []; clear_saved dropped nothing (unsaved, mismatched ([], [])); the read's digest equals the record's
+fact    remove-setup: the copy's assembly opened in 3.9 s; marked modified straight after the open: {'RangeBox_Layout.SLDPRT': False, 'RangeBox_Carrier_Carrier.SLDPRT': False, 'Gear_m1.25_N29.SLDPRT': False, 'Gear_m1.25_N13.SLDPRT': False, 'Ring_m1.25_N55.SLDPRT': False, 'Dog_m1.25_N17.SLDPRT': False, 'Sleeve_m1.25_N17.SLDPRT': False, 'Sprocket.SLDPRT': False, 'Housing.SLDPRT': False, 'RangeBox.SLDASM': False}
+ok      remove-setup: SolidWorks found all 9 components and the layout in the copy, and the copy closed without saving (left []): elsewhere none
+ok      read RangeBox.xlsx: ok
+        warning Gears!F3: Planet: 13 teeth at 20° is below the undercut limit of 17: a generated gear would lose the bottom of its flanks, which this profile does not show. A profile shift of 0.24 or more would clear it.
+        warning Gears!F3: Planet: The tooth tip is 0.36 mm thick, under 0.3 × module (0.375 mm).
+        warning Gears!F7: RangeSlv: The teeth's tips, at 18.75 mm, are inside the base circle of 19.968 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!A3: Planet (13 teeth) is below the undercut limit, which is not modelled, and meshes Sun (29 teeth): the build checks interference only where the gears stand, so check Planet with Sun turning in SolidWorks.
+        warning Gears!A7: Output cannot reach RangeSlv: Input runs through RangeSlv's travel (from Sun at 10.5 to HighDog at −32), so Output would have to pass HighDog toward Z− or Sun toward Z+, each on Input.
+        warning Gears!A7: nothing keys RangeSlv to Output: its whole bore is teeth and no hub row is under it; add a hub on Output that a band of RangeSlv covers in every mode; as laid out none can, since its 10 mm face slides 10 mm (H −5 to L +5) and its places share no length.
+        warning Modes!A3: in N RangeSlv stands 0 mm from HighDog and 0 mm from LowDog, which it does not engage there: leave at least 0.625 mm (0.5 × module) each side.
+        5 shafts · 6 gears · 2 meshes; gate ''
+ok      remove-setup: the copy reads as built from this workbook, its assembly in the copy
+ok      Excel opened RangeBox.xlsx with no dialog or repair: []
+ok      remove, setup: the copy's workbook holds the fixture's Gears, Meshes and Modes rows (as the app reads them)
+edit    HighDog's row cleared: [('Gears', 'A5', None), ('Gears', 'B5', None), ('Gears', 'C5', None), ('Gears', 'D5', None), ('Gears', 'F5', None), ('Gears', 'G5', None), ('Gears', 'I5', None)]
+excel   Gears!A5 := None
+excel   Gears!B5 := None
+excel   Gears!C5 := None
+excel   Gears!D5 := None
+excel   Gears!F5 := None
+excel   Gears!G5 := None
+excel   Gears!I5 := None
+excel   saved RangeBox.xlsx
+poll    a new read 0.0 s after asking; changes:
+          gear HighDog removed
+ok      read RangeBox.xlsx: ok
+        warning Gears!F3: Planet: 13 teeth at 20° is below the undercut limit of 17: a generated gear would lose the bottom of its flanks, which this profile does not show. A profile shift of 0.24 or more would clear it.
+        warning Gears!F3: Planet: The tooth tip is 0.36 mm thick, under 0.3 × module (0.375 mm).
+        warning Gears!F7: RangeSlv: The teeth's tips, at 18.75 mm, are inside the base circle of 19.968 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!A3: Planet (13 teeth) is below the undercut limit, which is not modelled, and meshes Sun (29 teeth): the build checks interference only where the gears stand, so check Planet with Sun turning in SolidWorks.
+        warning Modes!A3: H and N engage the same: they are one mode twice.
+        warning Gears!A7: nothing keys RangeSlv to Output: its whole bore is teeth and no hub row is under it; add a hub on Output that a band of RangeSlv covers in every mode; as laid out none can, since its 10 mm face slides 10 mm (H −5 to L +5) and its places share no length.
+        warning Modes!A3: in N RangeSlv stands 0 mm from LowDog, which it does not engage there: leave at least 0.625 mm (0.5 × module) each side.
+        5 shafts · 5 gears · 2 meshes; gate ''
+classify parts changed []; moved []; re-place []; structural []; missing []; unsaved []; refusal ''; turning True; axial []; ratios []
+        layout globals wanted []
+summary Update SolidWorks will take HighDog out with its 2 mates.
+ok      remove: classify takes HighDog out in place: ([], (RemovedGear(gear='HighDog', component='Dog_m1.25_N17-1', part='C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9c-confirm-sw2024-20261117-171854\\out\\remove-setup\\Dog_m1.25_N17.SLDPRT', mates=('HighDog locked to Sun', 'RangeSlv engages HighDog')),))
+footer  (remove, HighDog, the user's components there) [red] Update SolidWorks would take HighDog out with its 2 mates. It was built with a configuration per mode (H, N and L), each named as its mode, and saved in H; to switch mode, double-click another mode's configuration in SolidWorks' ConfigurationManager. Drag Sun in SolidWorks and the rest of its train follow. Carrier (the carrier) is axes and planes only, so it has nothing to drag. As read at 17:42, the next press would stop before changing anything: Update SolidWorks would take HighDog out of RangeBox.SLDASM, and whether your Housing-1, Sprocket-2, Sprocket-4, Sprocket-3 and Sprocket-1 hold a reference to its part has not been measured on this SolidWorks (findings.EXTERNAL_REFERENCES_READ_ON_2024 is None), so nothing is changed; keep HighDog in the workbook, or build the gearbox again.
+        button 'Build again…' on; Update SolidWorks shown on primary
+line    (W9a's prediction, not said beside a foreseen stop) As read at 17:42, Update SolidWorks moves your Sprocket-1 and Sprocket-3 with Sun, which your UserLock1 and UserLock3 hold them to, moves your Sprocket-2 with RangeSlv, which your UserLock2 holds it to, asks SolidWorks, when pressed, whether the 8 mates of yours on Sun's train leave it free to turn (if not, it changes nothing and names the mates to suppress), and leaves your Housing-1 and Sprocket-4 as they are, and your User Keyway Sketch and User Keyway in Gear_m1.25_N29 too.
+ok      remove, HighDog, the user's components there: the footer says the foreseen stop, red, in place of W9a's prediction: 'As read at 17:42, the next press would stop before changing anything: Update SolidWorks would take HighDog out of RangeB'…
+        foreseen references ['HighDog', 'Housing-1', 'Sprocket-2', 'Sprocket-4', 'Sprocket-3', 'Sprocket-1'] []: Update SolidWorks would take HighDog out of RangeBox.SLDASM, and whether your Housing-1, Sprocket-2, Sprocket-4, Sprocket-3 and Sprocket-1 hold a reference to its part has not been measured on this SolidWorks (findings.EXTERNAL_REFERENCES_READ_ON_2024 is None), so nothing is changed; keep HighDog in the workbook, or build the gearbox again.
+ok      remove: the footer foresees the references refusal (C4): [('references', ['HighDog', 'Housing-1', 'Sprocket-2', 'Sprocket-4', 'Sprocket-3', 'Sprocket-1'])]
+person  saved in SolidWorks (before HighDog goes): []
+DIALOG  SolidWorks shows '': ['Close', 'Opened 15\nComponents', 'Updating\nAssembly', 'Update\nGraphics', 'Post load updating', 'Elapsed time: 0s', 'This file was last opened in 3 seconds', 'For more information, view: ']
+person  remove HighDog, C4: nothing saved first; the press reads the assembly as it stands in the session
+read    before remove HighDog, C4 (active H; front document RangeBox.SLDASM): mates in error none; not free {'Ring': 3, 'Sprocket-4': 3, 'Housing-1': 3}; marked none; rebuild state 0
+ok      remove HighDog, C4: the footer offers Update SolidWorks (shown True, enabled True, Build again… needed False)
+update  SolidWorks 4.56 GB private, 2.35 GB free
+        raised UserWorkRefused in 152.5 s: Update SolidWorks would take HighDog out of RangeBox.SLDASM, and whether your Sprocket-1, Sprocket-2, Housing-1, Sprocket-3 and Sprocket-4 hold a reference to its part has not been measured on this SolidWorks (findings.EXTERNAL_REFERENCES_READ_ON_2024 is None), so nothing is changed; keep HighDog in the workbook, or build the gearbox again.
+status  [red] Update SolidWorks would take HighDog out of RangeBox.SLDASM, and whether your Sprocket-1, Sprocket-2, Housing-1, Sprocket-3 and Sprocket-4 hold a reference to its part has not been measured on this SolidWorks (findings.EXTERNAL_REFERENCES_READ_ON_2024 is None), so nothing is changed; keep HighDog in the workbook, or build the gearbox again.
+record  the window's _record_refusal ran
+fact    remove HighDog, C4: the press took 152.5 s; SolidWorks calls by member {'OpenDoc6': 8, 'IsSuppressed2': 106, 'GetSystemValue3': 1}
+        shows and puts in order: []
+fact    remove HighDog, C4: the press took 152 s
+fact    remove HighDog, C4: problems [('references', [])]
+        references: Update SolidWorks would take HighDog out of RangeBox.SLDASM, and whether your Sprocket-1, Sprocket-2, Housing-1, Sprocket-3 and Sprocket-4 hold a reference to its part has not been measured on this SolidWorks (findings.EXTERNAL_REFERENCES_READ_ON_2024 is None), so nothing is changed; keep HighDog in the workbook, or build the gearbox again.
+read    after remove HighDog, C4 (active H; front document RangeBox.SLDASM): mates in error none; not free {'Ring': 3, 'Sprocket-4': 3, 'Housing-1': 3}; marked none; rebuild state 0
+ok      remove HighDog, C4: refused before any write as ['references'], naming [] and saying ['EXTERNAL_REFERENCES_READ_ON_2024']: got ['references'], named []
+ok      remove HighDog, C4: the refused press made no call that changes or shows anything (its trace): none
+ok      remove HighDog, C4: nothing written: frames, mates, flags, entities, marks and globals as before
+ok      remove HighDog, C4: the record keeps the refusal with its time 2026-11-18T00:30:06Z: ['references']
+footer  (remove HighDog, C4, after the refusal) [red] Update SolidWorks would take HighDog out of RangeBox.SLDASM, and whether your Sprocket-1, Sprocket-2, Housing-1, Sprocket-3 and Sprocket-4 hold a reference to its part has not been measured on this SolidWorks (findings.EXTERNAL_REFERENCES_READ_ON_2024 is None), so nothing is changed; keep HighDog in the workbook, or build the gearbox again.
+        button 'Build again…' on; Update SolidWorks shown on primary
+line    [red] Update SolidWorks refused at 19:30, before changing anything: Update SolidWorks would take HighDog out of RangeBox.SLDASM, and whether your Sprocket-1, Sprocket-2, Housing-1, Sprocket-3 and Sprocket-4 hold a reference to its part has not been measured on this SolidWorks (findings.EXTERNAL_REFERENCES_READ_ON_2024 is None), so nothing is changed; keep HighDog in the workbook, or build the gearbox again. The next press reads your work in SolidWorks again, and refuses again unless that has been dealt with.
+        predicted: carried []; problems []; refused (recorded) [('references', [])]; changed since False; unread ties []
+ok      remove HighDog, C4: the footer says the refusal as recorded, red, until the workbook changes
+ok      remove HighDog, C4, by file times and save flags: nothing written to SolidWorks: files changed none, documents newly marked none
+-- remove  the user locks a fifth sprocket to HighDog; the press refuses naming that lock
+fact    remove: inserted ['Sprocket-5'] with H active; mates {'UserAxis5': 1, 'UserLock5': 1} (AddMate5 status)
+        UserAxis5: as made {'H': False, 'N': False, 'L': False}; set {'H': False, 'N': False, 'L': False}
+        UserLock5: as made {'H': False, 'N': False, 'L': False}; set {'H': False, 'N': False, 'L': False}
+ok      remove: the components are named ['Sprocket-5']
+ok      remove: every new mate's flag reads back as set in every mode
+ok      remove: every mate on in H reads error code 0 after the user's work: []
+person  saved in SolidWorks (the user's lock on HighDog): ['RangeBox.SLDASM']
+footer  (remove, HighDog, with the user's lock on it) [red] Update SolidWorks would take HighDog out of RangeBox.SLDASM, and whether your Sprocket-1, Sprocket-2, Housing-1, Sprocket-3 and Sprocket-4 hold a reference to its part has not been measured on this SolidWorks (findings.EXTERNAL_REFERENCES_READ_ON_2024 is None), so nothing is changed; keep HighDog in the workbook, or build the gearbox again.
+        button 'Build again…' on; Update SolidWorks shown on primary
+line    [red] Update SolidWorks refused at 19:30, before changing anything: Update SolidWorks would take HighDog out of RangeBox.SLDASM, and whether your Sprocket-1, Sprocket-2, Housing-1, Sprocket-3 and Sprocket-4 hold a reference to its part has not been measured on this SolidWorks (findings.EXTERNAL_REFERENCES_READ_ON_2024 is None), so nothing is changed; keep HighDog in the workbook, or build the gearbox again. The next press reads your work in SolidWorks again, and refuses again unless that has been dealt with.
+        predicted: carried []; problems []; refused (recorded) [('references', [])]; changed since False; unread ties []
+person  remove HighDog, the user's lock on it: nothing saved first; the press reads the assembly as it stands in the session
+read    before remove HighDog, the user's lock on it (active H; front document RangeBox.SLDASM): mates in error none; not free {'Ring': 3, 'Sprocket-4': 3, 'Housing-1': 3}; marked none; rebuild state 0
+ok      remove HighDog, the user's lock on it: the footer offers Update SolidWorks (shown True, enabled True, Build again… needed False)
+update  SolidWorks 8.80 GB private, 2.50 GB free
+        raised UserWorkRefused in 202.2 s: Update SolidWorks would take HighDog out of RangeBox.SLDASM, and your UserLock5 is on it, so nothing is changed; delete or suppress UserLock5 in SolidWorks, or keep HighDog in the workbook, and press Update SolidWorks again. Update SolidWorks would take HighDog out of RangeBox.SLDASM, and whether your Sprocket-1, Sprocket-2, Housing-1, Sprocket-3, Sprocket-4 and Sprocket-5 hold a reference to its part has not been measured on this SolidWorks (findings.EXTERNAL_REFERENCES_READ_ON_2024 is None), so nothing is changed; keep HighDog in the workbook, or build the gearbox again.
+status  [red] Update SolidWorks would take HighDog out of RangeBox.SLDASM, and your UserLock5 is on it, so nothing is changed; delete or suppress UserLock5 in SolidWorks, or keep HighDog in the workbook, and press Update SolidWorks again. Update SolidWorks would take HighDog out of RangeBox.SLDASM, and whether your Sprocket-1, Sprocket-2, Housing-1, Sprocket-3, Sprocket-4 and Sprocket-5 hold a reference to its part has not been measured on this SolidWorks (findings.EXTERNAL_REFERENCES_READ_ON_2024 is None), so nothing is changed; keep HighDog in the workbook, or build the gearbox again.
+record  the window's _record_refusal ran
+fact    remove HighDog, the user's lock on it: the press took 202.2 s; SolidWorks calls by member {'OpenDoc6': 8, 'IsSuppressed2': 114, 'GetSystemValue3': 1}
+        shows and puts in order: []
+fact    remove HighDog, the user's lock on it: the press took 202 s
+fact    remove HighDog, the user's lock on it: problems [('removed', ['UserLock5']), ('references', [])]
+        removed: Update SolidWorks would take HighDog out of RangeBox.SLDASM, and your UserLock5 is on it, so nothing is changed; delete or suppress UserLock5 in SolidWorks, or keep HighDog in the workbook, and press Update SolidWorks again.
+        references: Update SolidWorks would take HighDog out of RangeBox.SLDASM, and whether your Sprocket-1, Sprocket-2, Housing-1, Sprocket-3, Sprocket-4 and Sprocket-5 hold a reference to its part has not been measured on this SolidWorks (findings.EXTERNAL_REFERENCES_READ_ON_2024 is None), so nothing is changed; keep HighDog in the workbook, or build the gearbox again.
+read    after remove HighDog, the user's lock on it (active H; front document RangeBox.SLDASM): mates in error none; not free {'Ring': 3, 'Sprocket-4': 3, 'Housing-1': 3}; marked none; rebuild state 0
+ok      remove HighDog, the user's lock on it: refused before any write as ['references', 'removed'], naming ['UserLock5'] and saying ['EXTERNAL_REFERENCES_READ_ON_2024']: got ['references', 'removed'], named ['UserLock5']
+ok      remove HighDog, the user's lock on it: the refused press made no call that changes or shows anything (its trace): none
+ok      remove HighDog, the user's lock on it: nothing written: frames, mates, flags, entities, marks and globals as before
+ok      remove HighDog, the user's lock on it: the record keeps the refusal with its time 2026-11-18T00:38:43Z: ['removed', 'references']
+footer  (remove HighDog, the user's lock on it, after the refusal) [red] Update SolidWorks would take HighDog out of RangeBox.SLDASM, and your UserLock5 is on it, so nothing is changed; delete or suppress UserLock5 in SolidWorks, or keep HighDog in the workbook, and press Update SolidWorks again. Update SolidWorks would take HighDog out of RangeBox.SLDASM, and whether your Sprocket-1, Sprocket-2, Housing-1, Sprocket-3, Sprocket-4 and Sprocket-5 hold a reference to its part has not been measured on this SolidWorks (findings.EXTERNAL_REFERENCES_READ_ON_2024 is None), so nothing is changed; keep HighDog in the workbook, or build the gearbox again.
+        button 'Build again…' on; Update SolidWorks shown on primary
+line    [red] Update SolidWorks refused at 19:38, before changing anything: Update SolidWorks would take HighDog out of RangeBox.SLDASM, and your UserLock5 is on it, so nothing is changed; delete or suppress UserLock5 in SolidWorks, or keep HighDog in the workbook, and press Update SolidWorks again. Update SolidWorks would take HighDog out of RangeBox.SLDASM, and whether your Sprocket-1, Sprocket-2, Housing-1, Sprocket-3, Sprocket-4 and Sprocket-5 hold a reference to its part has not been measured on this SolidWorks (findings.EXTERNAL_REFERENCES_READ_ON_2024 is None), so nothing is changed; keep HighDog in the workbook, or build the gearbox again. The next press reads your work in SolidWorks again, and refuses again unless that has been dealt with.
+        predicted: carried []; problems []; refused (recorded) [('removed', ['UserLock5']), ('references', [])]; changed since False; unread ties []
+ok      remove HighDog, the user's lock on it: the footer says the refusal as recorded, red, until the workbook changes
+ok      remove HighDog, the user's lock, by file times and save flags: nothing written to SolidWorks: files changed none, documents newly marked none
+        remove-setup, the copy's end: SolidWorks 2024, this run's modified documents saved before the close: []
+ok      remove-setup, the copy's end: remove-setup ends clean: every document of it closed in SolidWorks (left []), Excel's workbook closed (['RangeBox.xlsx']), no open document by a file name it holds ([])
+fact    remove: the removal gates are P1's, set on both versions; EXTERNAL_REFERENCES_READ_ON_2024 stays None: a removal with any user component refuses (C4) until m4's read is measured and set
+time    remove: 1033 s; 0 failed; SolidWorks 3.76 GB private, 2.87 GB free
+excel   quit our own Excel
+close   left of ours []; stray []; lost []; SolidWorks 3.74 GB private, 3.12 GB free
+dialogs progress boxes seen {'Calculating Interference Detection': 0, 'Updating...': 0, 'Opening': 0, 'Loading...': 0}; other windows the watch logged: 1
+awake   display and system released (previous state -0x7ffffffd)
+result  written to C:\Users\M0obo\Documents\GearGeneratorProbe\w9c-confirm-sw2024-20261117-171854\w9c-demo-20261117-192454.json; masters kept {'rangebox': '', 'setup': 'C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9c-confirm-sw2024-20261117-171854\\out\\setup.master', 'reducer': 'C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9c-confirm-sw2024-20261117-171854\\out\\reducer.master'}
+noted   SolidWorks' notification box came up while no SolidWorks call was in progress (exempt by the coordinator's ruling; nothing answers it)
+done    0 failed: []; 1 noted; 0 STOP(s), a hung worker included: []

@@ -1,0 +1,66 @@
+{
+ "sections": {
+  "remove": {
+   "reducer": {
+    "inserted": [],
+    "deleted": [
+     [
+      "G4",
+      "OutputGear-1"
+     ]
+    ],
+    "mates_deleted": [
+     "G4 on S3 Axis",
+     "G4 along S3",
+     "G3 meshes G4"
+    ],
+    "mates_made": [],
+    "remade_in_modes": [],
+    "bands_added": [],
+    "bands_removed": [],
+    "modes_added": [],
+    "modes_removed": [],
+    "took_active_state": [],
+    "flags_lost": [],
+    "not_resolved": [],
+    "ratios": [],
+    "senses_unread": [],
+    "turned_round": [],
+    "failures": [],
+    "skipped": "",
+    "clashes_by_mode": {
+     "": []
+    }
+   },
+   "reducer_clean": true,
+   "references": [
+    "Update SolidWorks would take HighDog out of RangeBox.SLDASM, and whether your Sprocket-1, Sprocket-2, Housing-1, Sprocket-3 and Sprocket-4 hold a reference to its part has not been measured on this SolidWorks (findings.EXTERNAL_REFERENCES_READ_ON_2024 is None), so nothing is changed; keep HighDog in the workbook, or build the gearbox again."
+   ],
+   "removed": [
+    "Update SolidWorks would take HighDog out of RangeBox.SLDASM, and your UserLock5 is on it, so nothing is changed; delete or suppress UserLock5 in SolidWorks, or keep HighDog in the workbook, and press Update SolidWorks again.",
+    "Update SolidWorks would take HighDog out of RangeBox.SLDASM, and whether your Sprocket-1, Sprocket-2, Housing-1, Sprocket-3, Sprocket-4 and Sprocket-5 hold a reference to its part has not been measured on this SolidWorks (findings.EXTERNAL_REFERENCES_READ_ON_2024 is None), so nothing is changed; keep HighDog in the workbook, or build the gearbox again."
+   ],
+   "setup_clean": true,
+   "seconds": 1033,
+   "failed": []
+  },
+  "reducer": {}
+ },
+ "stops": [],
+ "proposal": {},
+ "revision": [
+  32,
+  5,
+  0
+ ],
+ "snapshot": "4315774",
+ "whats_wrong_rule": {
+  "helper_present": true,
+  "shows_in_update": true,
+  "allowance_seconds": 60.0
+ },
+ "fails": [],
+ "notes": [
+  "SolidWorks' notification box came up while no SolidWorks call was in progress (exempt by the coordinator's ruling; nothing answers it)"
+ ]
+}
