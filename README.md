@@ -70,7 +70,7 @@ Editing the globals in SolidWorks' own Equation Manager works just as well.
 ### Printed gears
 
 A gear made to be 3D printed (FDM, PLA) is the same involute gear, built the
-same way, with three differences.
+same way, with these differences.
 
 - **Backlash.** A blank Backlash is the smaller of 0.3 mm and 0.3 × module per
   gear, written into SolidWorks as `IIF ( "Module" <= 1 , 0.3 * "Module" , 0.3 )`:
@@ -87,10 +87,132 @@ same way, with three differences.
 - **The name.** A printed part's file name ends `_P` (`Gear_m1.5_N25_P`), and
   so does a printed pair's assembly, so it never clashes with the machined gear
   of the same sizes.
+- **The span over k teeth.** A printed spur, helical or herringbone gear drawn
+  with Involute shows one more Derived row after *Tooth at pitch*: *Span over 3
+  teeth 11.209*, the distance a pair of flat caliper jaws reads across that many
+  teeth, the gear as drawn with its backlash. Under it, **Measured** takes your
+  calipers' reading of the printed gear, and the line under the rows says what
+  your printer adds to each flank and the backlash that would keep 0.04 mm of
+  play a flank (*Your printer adds 0.041 mm a flank: a backlash of 0.173 mm a
+  gear keeps 0.04 mm of play a flank.*). The entry is not saved. A gear drawn
+  with Arcs shows no figure (*not one figure on arcs; choose Involute to
+  measure*); nor does a ring, a sleeve, a bevel gear or a machined gear.
+- **Print files.** The footer's **Print files**, beside **Build**, writes the
+  part active in SolidWorks (a part Gear Generator built, with its
+  `.gear.json` beside it) to a STEP file for the slicer; the SolidWorks bar
+  names the file it will write. In a Workbook window **Print files** writes
+  every part of the gearbox at once. Each press makes a new folder in the
+  `print` folder of the Output folder, named by the date and time of the press
+  (`print\2026-11-19 10.05.12`), holding the `.step` files and
+  `print list.txt`: each file's sizes, how many to print, its span over k
+  teeth, your own features left in it, and the slicer settings below. A part
+  changed in SolidWorks and not saved, one whose values are not what its record
+  says, one with a feature in error, or a gearbox Update SolidWorks would change
+  is refused by name, and nothing is written. Until Gear Generator has measured
+  writing a STEP file on your SolidWorks version, **Print files** says so and
+  writes nothing.
 
 A machined gear is built, checked and recorded exactly as before. A
 `.gear.json` written before printed gears existed opens as **Machined**, which is
 what was built.
+
+#### Calibrating your printer
+
+This tells the app how much your printer adds to a printed tooth, and which bore
+fits your shaft. Nothing needs a rig, and no gear has to run. Allow about two
+hours of printing (two and a half with the optional fifth gear) and half an hour
+of measuring.
+
+You need your Bambu printer with a 0.4 mm nozzle, PLA and Bambu Studio;
+calipers that read to 0.01 mm; and one length of the shaft you mean to use.
+Measure the shaft at three places and write down the smallest reading, for
+example 8.00.
+
+1. **Make the parts.** On the form choose **Single gear**, **Spur**,
+   **Involute**, Process **Printed** and Nozzle 0.4 (or yours). Type Module
+   **1.5**, Teeth **20**, Face width **8**, Pressure angle 20, Backlash and
+   Fillet blank, Bore your shaft plus 0.0 (8.0 for an 8.00 shaft) and Name
+   **Coupon_A**. Press **Build**. With the part open and active in SolidWorks
+   (the SolidWorks bar names the file **Print files** will write), press
+   **Print files**. Do the same three more times, changing only the Bore and the
+   Name, which has to be typed since a gear's default name does not include its
+   bore:
+
+   | Name | Bore |
+   |---|---|
+   | Coupon_A | shaft + 0.0 |
+   | Coupon_B | shaft + 0.1 |
+   | Coupon_C | shaft + 0.2 |
+   | Coupon_D | shaft + 0.3 |
+
+   Keep the Derived panel's **Span over 3 teeth**: with the printed default it
+   reads 11.209. **If your shaft is over 18 mm**, make all four Module **2**,
+   Teeth **30** instead; the panel then says Span over 4 teeth, 21.223.
+
+   *Optional, recommended:* a fifth gear, **Coupon_E**, with no bore and Face
+   width 8, of the other size: Module **2**, Teeth **30** (span over 4 teeth,
+   21.223) when your four are module 1.5; Module **1.5**, Teeth **20** (span over
+   3 teeth, 11.209) when your shaft is over 18 mm and your four are module 2. One
+   size cannot tell a fixed growth of the flank from PLA's shrink, which grows
+   with the part; two sizes can. It adds about twenty minutes of printing.
+
+   **Where the files are:** each press makes a new folder in the `print` folder
+   of the Output folder, named by the date and time of the press, for example
+   `print\2026-11-19 10.05.12`, holding the `.step` file and `print list.txt`,
+   which repeats these settings and the span.
+2. **Slice them in Bambu Studio.** Open the four (or five) `.step` files. Say
+   if Bambu Studio refuses them: that is a check this step asks of you. If it
+   asks about mesh precision or tolerance on import, keep its default (a coarser
+   mesh makes the gear measure small). Lay each flat on its face, and set, by
+   Bambu Studio's names (if a name differs in your version, the setting
+   described is the one meant):
+   - **Layer height** 0.2 mm;
+   - **Wall loops** 5;
+   - **Sparse infill density** 35 %;
+   - **Elephant foot compensation** 0.15 mm;
+   - **X-Y hole compensation** 0 and **X-Y contour compensation** 0, so that
+     what you measure is the printer and the app, not a correction on top;
+   - **Seam position** Aligned; note which tooth carries the seam (a faint
+     vertical line) and measure away from it;
+   - no brim, no supports, your usual PLA filament profile.
+
+   Print them all on one plate and let them cool on the plate.
+3. **Measure the span** over 3 teeth on each gear (over 4 on a module 2, 30
+   tooth gear). Zero the calipers and close them the same light way each time,
+   with the thumb roller, not by squeezing. Lay the flat outside jaws across the
+   teeth, one jaw on the outer flank of the first tooth and one on the outer
+   flank of the last, touching about halfway up the teeth. Hold the calipers
+   square to the gear's axis, at mid-face, not at the bed face. Rock them gently
+   and take the **smallest steady reading**, at three places about a third of a
+   turn apart, none across the seam's tooth. That is twelve readings for four
+   coupons; take again any more than 0.05 mm off the others. The figure that
+   counts is **the mean of the twelve**.
+4. **Try your shaft in each bore**, from the top face and again from the bed
+   face, and write down for each coupon and face one of: (a) it does not go in;
+   (b) it goes in with a firm push and does not wobble; (c) it slides in by hand
+   with no play you can feel; (d) it is loose. Then measure each bore with the
+   inside jaws at two places a quarter turn apart. If all four are (a), print
+   four more at shaft + 0.4 to + 0.7; if all four are (d), print shaft − 0.1 and
+   below.
+5. *Optionally*, measure each gear's outside diameter at three places (33.0 for
+   module 1.5, 20 teeth) and its face width (8.0).
+6. **Type and send the numbers.** Put Coupon_A back on the form (Open
+   .gear.json, or type it again) and type **the mean of the twelve** into
+   **Measured** under *Span over 3 teeth*. The line under it says what your
+   printer adds to each flank and the backlash that would keep 0.04 mm of play a
+   flank, never less than 0.1 mm. **If that backlash is more than 0.3 ×
+   module**, the line says so, and you decide: either gears under that module
+   keep today's smaller backlash (0.3 × module), or they take the measured one,
+   at the cost of thinner tips that can come to a point on the smallest modules.
+   Then send the session that set this up: the twelve readings (and
+   Coupon_E's three), for each coupon the bore typed, the bore measured and the
+   two fit grades (top and bed face), the optional diameters, and what you
+   printed with: the printer, the filament (brand, colour), Bambu Studio's
+   version, the nozzle and any setting not as listed. The printed backlash and
+   the bore allowance are set from them, on your word.
+7. *Optionally*, print a pair from the app and turn it by hand through whole
+   turns on your own shafts, before and after a short run. It confirms step 3;
+   it does not replace it.
 
 ## The gear in SolidWorks
 
@@ -440,6 +562,18 @@ since formulas may depend on the cells written and hold their old values until
 Excel recalculates; until then Checks are marked provisional and offer no fixes.
 If every cell a fix names holds a formula, nothing is written: change the
 formula, or a cell it reads, in Excel.
+
+**Print files** writes every part of the gearbox as built (its current
+revision: hubs, dogs and sleeves among them, each once however many rows share
+it; never the layout part, the assembly or your own components) to STEP files
+for the slicer, in a new folder of the Output folder's `print` folder, with
+`print list.txt` saying how many of each to print (one per row it serves, times
+a planet's copies) and each part's span over k teeth. It asks nothing and is
+refused, by name and before anything is written, while the record marks a part
+unsaved or no longer as built, while Update SolidWorks would change a part's
+values or make it new (a change to the layout or the assembly alone does not
+count), while a gear has no part yet, while the workbook has an error, or while
+Excel has yet to recalculate an Export; *Printed gears* says the rest.
 
 **Build** makes the whole gearbox in the output folder, named for the Box's
 Name: every gear as a part, exactly as the form builds the same values, each
