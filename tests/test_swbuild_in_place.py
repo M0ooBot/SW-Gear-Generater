@@ -57,6 +57,20 @@ def test_each_step_reads_its_own_gate_while_it_is_none_on_either_version(w9c_unm
     assert all(f.endswith("_ON_?") for _, f in swbuild.in_place_gates(every, ()))
 
 
+def test_the_committed_gates_leave_only_a_new_coupling_unsettled_on_each_version():
+    """The re-check of 74024a1 (W9C-RUNS-REVIEW.md) and the addendum "SolidWorks 2024", §3: with no fixture, the gates
+    as committed in findings.py. On each version every step of W9c's in-place work but a coupling newly made is
+    measured, and the delete route is set, so only UPDATE_MAKES_A_NEW_COUPLING stands in the way."""
+    every = InPlace(added=(swbuild.AddedGear("Hub", "gear9", "C:\\W\\Hub.SLDPRT"),), removed=(REMOVE_G4,),
+                    new_mates=(swbuild.NewMate(base.Mate("m1", "gear", "gear7:Gear Axis", "gear2:Gear Axis"),
+                                               on=("H",)),),
+                    bands=(swbuild.BandChange("RangeSlv", "C:\\W\\Sleeve.SLDPRT", True),),
+                    modes_added=("X",), modes_removed=("L",))
+    for revision, year in ((Y26, 2026), (Y24, 2024)):
+        assert swbuild.in_place_gates(every, revision, modes=True, remakes=True) == [
+            (swbuild.STEP_COUPLING, f"UPDATE_MAKES_A_NEW_COUPLING_ON_{year}")], year
+
+
 def test_a_removal_reads_the_delete_findings_as_measured(monkeypatch):
     monkeypatch.setattr(findings, "COMPONENT_DELETE_ROUTE_ON_2024", None)
     monkeypatch.setattr(findings, "COMPONENT_DELETE_DIALOG_ON_2024", True)
@@ -103,7 +117,7 @@ def test_a_user_mate_on_a_gear_removed_refuses_naming_it_and_the_gear():
         "again.")
 
 
-def test_while_the_references_read_is_unmeasured_any_user_component_refuses_a_removal(monkeypatch):
+def test_while_the_references_read_is_unmeasured_any_user_component_refuses_a_removal(monkeypatch, w9c_unmeasured):
     work = _work(components=[UserComponent("Housing-1", "C:\\U\\Housing.SLDPRT"),
                              UserComponent("Sprocket-1", "C:\\U\\Sprocket.SLDPRT")])
     (problem,) = swbuild.judge_in_place(work, InPlace(removed=(REMOVE_G4,)), file="Reducer_12to1.SLDASM",

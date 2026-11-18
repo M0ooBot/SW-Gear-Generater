@@ -2505,16 +2505,18 @@ W9C_MEASURED = ("UPDATE_INSERTS_A_GEAR", "UPDATE_BANDS_IN_PLACE", "UPDATE_ADDS_A
 W9C_UNMEASURED = ("UPDATE_MAKES_A_NEW_COUPLING", "UPDATE_SUPPRESSES_THE_RELIEF", "EXTERNAL_REFERENCES_READ")
 
 
-def test_w9c_gates_are_set_on_2026_as_the_final_runs_measured_them_and_none_on_2024():
-    """findings.py, W9c's gates (W9C-RUNS-REVIEW.md, the addendum on the final runs, §4): the five measured True on
-    2026, the other three None; every _ON_2024 None until the 2024 run."""
+def test_w9c_gates_are_set_as_the_final_runs_on_2026_and_the_confirming_run_on_2024_measured_them():
+    """findings.py, W9c's gates (W9C-RUNS-REVIEW.md, the addendum on the final runs, §4, and the addendum "SolidWorks
+    2024", §3): the five measured True on both versions, the other three None on both."""
     for name in W9C_MEASURED:
-        assert getattr(findings, f"{name}_ON_2026") is True, name
+        for year in (2026, 2024):
+            assert getattr(findings, f"{name}_ON_{year}") is True, (name, year)
     for name in W9C_UNMEASURED:
-        assert getattr(findings, f"{name}_ON_2026") is None, name
-    for name in W9C_MEASURED + W9C_UNMEASURED:
-        assert hasattr(findings, f"{name}_ON_2024") and getattr(findings, f"{name}_ON_2024") is None, name
-    assert not hasattr(findings, "EXTERNAL_REFERENCES_READ_ROUTE_CANDIDATES_2026")      # facts in the comment only
+        for year in (2026, 2024):
+            assert hasattr(findings, f"{name}_ON_{year}") and getattr(findings, f"{name}_ON_{year}") is None, \
+                (name, year)
+    for year in (2026, 2024):                                                         # facts in the comment only
+        assert not hasattr(findings, f"EXTERNAL_REFERENCES_READ_ROUTE_CANDIDATES_{year}")
 
 
 def test_w9c_gates_on_2026_rest_on_the_final_runs_on_34_0_0():
@@ -2598,6 +2600,115 @@ def test_w9c_gates_on_2026_rest_on_the_morning_runs_on_34_1_1():
     assert run6[280].startswith("propose UPDATE_MAKES_MATES_WITH_MODES_ON_2026 = True  # ")
     assert data6["proposal"]["UPDATE_MAKES_MATES_WITH_MODES_ON_2026"] is True is \
         findings.UPDATE_MAKES_MATES_WITH_MODES_ON_2026
+
+
+W9C_2024 = LATEST.parent / "sw2024"
+W9C_2024_1 = (W9C_2024 / "w9c-demo-20261117-171926.json",
+              W9C_2024 / "w9c-demo-sw2024-20261117-1-landing-fixed-modes-memory-stop.log")
+W9C_2024_2 = (W9C_2024 / "w9c-demo-20261117-192454.json", W9C_2024 / "w9c-demo-sw2024-20261117-2-remove.log")
+W9C_2024_3 = (W9C_2024 / "w9c-demo-20261117-194351.json", W9C_2024 / "w9c-demo-sw2024-20261117-3-bands-off-m4.log")
+W9C_2024_4 = (W9C_2024 / "w9c-demo-20261117-195231.json",
+              W9C_2024 / "w9c-demo-sw2024-20261117-4-remake-whats-wrong-stop.log")
+
+
+def _by_member(line):
+    """A press's 'SolidWorks calls by member {...}' as a dict."""
+    return ast.literal_eval(line.split("SolidWorks calls by member ", 1)[1])
+
+
+def test_w9c_gates_on_2024_rest_on_the_confirming_run_on_32_5_0():
+    """W9c's confirming run on SolidWorks 2024 32.5.0 from 4315774 (W9C-RUNS-REVIEW.md, the addendum "SolidWorks
+    2024", §3): each _ON_2024 value is its session's proposal and the lines its comment cites hold; remake's M3 shown
+    to step 1 only, the What's Wrong at the script's read before step 2 still up at the job's end (a STOP)."""
+    data1, s1 = _w9a_run(*W9C_2024_1, "4315774", (32, 5, 0))
+    for at, name in ((1316, "UPDATE_INSERTS_A_GEAR"), (1317, "UPDATE_BANDS_IN_PLACE"), (1527, "UPDATE_ADDS_A_MODE"),
+                     (1853, "UPDATE_REMOVES_A_MODE")):
+        assert s1[at].startswith(f"propose {name}_ON_2024 = True  # "), (at, s1[at])
+        assert data1["proposal"][f"{name}_ON_2024"] is True is getattr(findings, f"{name}_ON_2024"), name
+    assert s1[909] == ("fact    landing: the fix is shown: every foreseen change routed clean as foreseen True; every "
+                       "unforeseen one set straight clean True; the straight failure's file clean at 55 when reopened "
+                       "True")
+    for at in (807, 814):          # set straight, the ring fails as on 2026, with 51 where 2026 read 72 and 1: a fact
+        assert "rebuilt False, failures []; in error [('Tooth Space', 51), ('Teeth', 51)]; teeth" in s1[at], s1[at]
+    assert s1[1243] == "ok      fixed: the Update ended ok: failures [], skipped ''"
+    assert s1[1245].startswith("ok      fixed: Hub's part built (Hub_m1.25_N17.SLDPRT, in the copy), Hub inserted as "
+                               "'Hub_m1.25_N17-1', its mates ['Hub on Output Axis', 'Hub along Output', 'RangeSlv "
+                               "splined to Hub'] made and read on in every mode ['H', 'N', 'L'] (M6)")
+    assert s1[1246] == "ok      fixed: RangeSlv's bands given in place: ['RangeSlv']"
+    assert s1[1262] == ("ok      fixed: Hub (Hub_m1.25_N17-1) reads resolved in every mode (M5): {'H': {'Hub_m1.25_N17-1'"
+                        ": 2}, 'N': {'Hub_m1.25_N17-1': 2}, 'L': {'Hub_m1.25_N17-1': 2}}")
+    assert s1[1281] == ("fact    fixed: summed volumes differ from the app's by more than 0.001: {'N': {'Hub & "
+                        "Sprocket-4': (1408.381, 1408.381), 'RangeSlv & Sprocket-4': (392.129, 374.463)}}")
+    assert s1[1308] == ("ok      fixed: the second press: every document reads GetSaveFlag False before and after an "
+                        "Update that changed nothing (GEAR_MATE_DEFINITION_READ_MARKS 'nothing'): marked before [], "
+                        "after []")
+    assert s1[1502] == ("ok      modes: the record's inventory names H2 in its modes and in every user mate's on-list "
+                        "where SolidWorks reads it on there, and nowhere it reads suppressed (8 mates): yes")
+    assert s1[1520] == ("fact    modes, H2: summed volumes differ from the app's by more than 0.001: {'H2': {'Hub & "
+                        "Sprocket-4': (1408.381, 1408.381), 'RangeSlv & Sprocket-4': (160.748, 152.629)}}")
+    assert s1[1554] == ("ok      modes: after H2's add, the footer for the next edit names no user mate as suppressed "
+                        "in H2 (the runs review's must-fix 1): none")
+    assert s1[1683].startswith("ok      modes: N deleted (['H', 'L', 'H2']), the record's modes ['H', 'L', 'H2']; the "
+                               "user's flags lost said [('N', 'UserAngle4', 'suppressed')]")
+    assert s1[1719] == ("ok      modes, H2 removed while it shows: refused before any write as the mode showing, naming "
+                        "H2, the user's work unread (C12): [('mode showing', ['H2'])]")
+    assert s1[1836] == ("ok      modes: H deleted (['L', 'H2']); the record's modes ['L', 'H2'], L first; H2 showing "
+                        "before and after")
+    assert data1["stops"] == ["free memory fell under 2 GB on SolidWorks 2024"] and data1["fails"] == [
+        "W9a: Stopped: free memory fell under 2 GB on SolidWorks 2024; the run ends here, nothing more is asked of "
+        "SolidWorks"]                                    # the memory guard, after modes had ended 0 failed (1854)
+    assert s1[1854].startswith("time    modes: 3886 s; 0 failed")
+
+    data2, s2 = _w9a_run(*W9C_2024_2, "4315774", (32, 5, 0))
+    assert s2[625].startswith("ok      remove: G4 (OutputGear-1) taken out with its mates ['G3 meshes G4', 'G4 along "
+                              "S3', 'G4 on S3 Axis'] (each read gone by name), every other mate there")
+    assert data2["stops"] == [] and data2["fails"] == []
+
+    data3, s3 = _w9a_run(*W9C_2024_3, "4315774", (32, 5, 0))
+    for at, name in ((94, "UPDATE_SUPPRESSES_THE_RELIEF"), (154, "EXTERNAL_REFERENCES_READ")):
+        assert s3[at].startswith(f"propose {name}_ON_2024 = None  # "), (at, s3[at])
+        assert name + "_ON_2024" in data3["proposal"] and data3["proposal"][f"{name}_ON_2024"] is None
+        assert getattr(findings, f"{name}_ON_2024") is None, name
+    assert s3[153].startswith("propose EXTERNAL_REFERENCES_READ_ROUTE_CANDIDATES_2024 = ['IComponent2.ListExternal"
+                              "FileReferencesCount', 'IComponent2.ListExternalFileReferences2', 'IModelDocExtension"
+                              ".ListExternalFileReferencesCount', 'IModelDocExtension.ListExternalFileReferences', "
+                              "'ISldWorks.GetDocumentDependencies2']")
+    for data in (data1, data2, data3):                    # no legal edit reaches it, so none proposed it on 2024
+        assert "UPDATE_MAKES_A_NEW_COUPLING_ON_2024" not in data["proposal"]
+
+    data4, s4 = _w9a_run(*W9C_2024_4, "4315774", (32, 5, 0))
+    assert data4["proposal"]["UPDATE_MAKES_MATES_WITH_MODES_ON_2024"] is True is \
+        findings.UPDATE_MAKES_MATES_WITH_MODES_ON_2024
+    assert s4[203].startswith("propose UPDATE_MAKES_MATES_WITH_MODES_ON_2024 = True  # remake: gear mates of a "
+                              "gearbox with modes remade")
+    _, run11 = _w9a_run(W9C_RUN11, W9C_RUN11_LOG, "3a9e592 with probe/w9c_demonstration.py from eabf14e", (34, 0, 0))
+    assert _by_member(s4[103]) == _by_member(run11[103]) == {           # the change press: run 11's calls exactly
+        "OpenDoc6": 13, "IsSuppressed2": 286, "GetSystemValue3": 4, "ForceRebuild3": 57, "AddMate5": 4,
+        "ShowConfiguration2": 3, "SetSuppression2": 40, "put": 37}
+    assert s4[180].startswith("ok      remake: every gear mate ['Sun meshes Planet copy 1', 'Sun meshes Planet copy 2', "
+                              "'Sun meshes Planet copy 3', 'Planet copy 1 meshes Ring'] made again with modes")
+    assert s4[181].startswith("ok      remake: every user component where it was")
+    assert s4[190] == ("ok      remake: every mate's flag in every mode as on record, the couplings on only in their "
+                       "modes: wrong none")
+    assert s4[199] == "ok      remake: the app's read gives L 3.0 (1 + 56/28 = 3.0)"
+    # M3, step 1 only: the set-straight press stops in the ring and names RangeBox.
+    assert s4[255].startswith("status  [red] Update SolidWorks stopped. Ring_m1.25_N55.SLDPRT: SolidWorks reported an "
+                              "error rebuilding Ring_m1.25_N55.") and "close them all and RangeBox in SolidWorks" in s4[255]
+    assert _by_member(s4[256]) == {"OpenDoc6": 11, "IsSuppressed2": 112, "GetSystemValue3": 1, "ForceRebuild3": 3}
+    assert s4[308].startswith("ok      remake, M3: the press set straight stops in Ring_m1.25_N55, the status says it is "
+                              "left in error and to close without saving, the record marks it (")
+    assert s4[309].startswith("ok      remake, M3: the first press's stop names RangeBox beside the parts")
+    # The What's Wrong at the script's read before step 2: still up at the job's end, never seen to go (a STOP).
+    assert s4[310].startswith("fact    read remake, M3: before step 2: What's Wrong came up 0.47 s into the job, the "
+                              "worker in ActivateDoc3, owned by SolidWorks' frame")
+    assert s4[313] == ("fact    read remake, M3: before step 2: What's Wrong showed during the job, as SolidWorks shows "
+                       "it when a person does this: came at [0.47] s, stayed [] s; after the job it took 60.11 s to go "
+                       "(allowed 60); 1 up at the end, SolidWorks' frame enabled True")
+    assert data4["whats_wrong_lifetimes"] == [{"job": "read remake, M3: before step 2", "kind": "script",
+                                               "came": [0.47], "stayed": [], "still_up": 1}]
+    assert s4[314].startswith("FAIL    read remake, M3: before step 2: at the job's end What's Wrong is still up")
+    assert len(data4["stops"]) == 1 and data4["stops"][0].startswith("read remake, M3: before step 2: at the job's end "
+                                                                     "What's Wrong is still up after 60 s (1)")
 
 
 W9D_FINDINGS = ("OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN", "OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS", "FILE_VERSION_READ",

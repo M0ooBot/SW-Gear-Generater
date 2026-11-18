@@ -1963,7 +1963,7 @@ SUBASSEMBLY_MISSING_PART_READS_ON_2024 = SUBASSEMBLY_MISSING_PART_READS_ON_2026
 # W9c's gates (W9C-INTERFACES.md §8, the coordinator's ruling C7, 2026-11-17): each new kind of write Update makes in
 # place is gated by its own per-version finding, None until W9c's full build (the plan's demonstration, RangeBox to
 # RangeBox_Fixed, then a mode added and one removed) reads it clean on that version, patched True in that run's
-# process for the measurement only, as W9a's nocarrier was. Nothing measured them; no run is cited. A step whose
+# process for the measurement only, as W9a's nocarrier was; the runs that set them are cited below. A step whose
 # finding is not True refuses before any write, naming it.
 # - EXTERNAL_REFERENCES_READ (M4): an external-references read of the user's parts, so a removal can tell whether a
 #   user part holds an in-context reference to the gear removed. While None, a removal refuses whenever any component
@@ -1986,7 +1986,6 @@ SUBASSEMBLY_MISSING_PART_READS_ON_2024 = SUBASSEMBLY_MISSING_PART_READS_ON_2026
 # snapshot 30bf0e9), and 34.0.0 in the final runs 10 and 11 (app code 3a9e592, the same in every gated write as at
 # head; …-10-final-whole-remake-script-fault.log with w9c-demo-20261117-143454.json, …-11-final-remake-step2-assembly-
 # flag.log with w9c-demo-20261117-153629.json; run 8, …-8-whole-remake-m3-again-fails.log at 64bec58, read the same).
-# Each _ON_2024 stays None until the 2024 run.
 # - UPDATE_INSERTS_A_GEAR_ON_2026 True. fixed: Hub built, inserted, mated and resolved in every mode, every user item
 #   kept, each mode §3's, the second press quiet with every save flag False (log 5:344; log 10:382, 384, 401, 446,
 #   453; log 8:1311). Caveats: measured on a hub (a spline to its sleeve); a plain gear added, with a lock or a new
@@ -2012,18 +2011,54 @@ SUBASSEMBLY_MISSING_PART_READS_ON_2024 = SUBASSEMBLY_MISSING_PART_READS_ON_2026
 #   IComponent2.ListExternalFileReferencesCount, IComponent2.ListExternalFileReferences2,
 #   IModelDocExtension.ListExternalFileReferencesCount, IModelDocExtension.ListExternalFileReferences and
 #   ISldWorks.GetDocumentDependencies2; none was held to a part with a reference.
+#
+# Measured on SolidWorks 2024 32.5.0 (W9C-RUNS-REVIEW.md, its addendum "SolidWorks 2024", 78fdcb6): W9c's confirming
+# run from snapshot 4315774 (app code 4315774; every gated write and refusal the same at head, the review's §2), in
+# four sessions, its masters built in the run (probe/results/sw2024/: 24-1 w9c-demo-sw2024-20261117-1-landing-fixed-
+# modes-memory-stop.log with w9c-demo-20261117-171926.json; 24-2 …-2-remove.log with …-192454.json; 24-3 …-3-bands-off-
+# m4.log with …-194351.json; 24-4 …-4-remake-whats-wrong-stop.log with …-195231.json). Every check line run 10 printed
+# on 2026 is printed there too, and every traced press made the same calls by member. Caveats for all five on 2024,
+# beside each one's 2026 caveats above, which hold here too: measured at 4315774; head's Update also reads each user
+# mate entity's kind (W9d's D5), which has not run inside an Update on 2024 and judges nothing; and SolidWorks 2024's
+# first press on a freshly opened RangeBox grew it by 3.3 to 4 GB private, a refused press included, held until the
+# assembly was closed (24-1:990-991, 1372, 1400; 24-4:70, 97).
+# - UPDATE_INSERTS_A_GEAR_ON_2024 True. fixed: the Update ended ok, Hub built, inserted, mated and read on in every
+#   mode and resolved there, the second press quiet with every save flag False (24-1:1243, 1245, 1262, 1308, 1316).
+#   Caveats: a hub only; the interference is said after the press; in one mode of the press one pair's volume read by
+#   the app came 4.5 % under SolidWorks' own sum (RangeSlv and Sprocket-4 in N, 374.463 against 392.129, 24-1:1281),
+#   the pairs named right in every mode (24-1:1282).
+# - UPDATE_BANDS_IN_PLACE_ON_2024 True. fixed: RangeSlv's bands given in place (24-1:1246, 1317), the step faces
+#   landing to 1e-4 as on 2026, GetArea's own 114.303 kept as a fact (24-1:1255, 1259). Caveat: giving only.
+# - UPDATE_ADDS_A_MODE_ON_2024 True. modes: H2 added, every flag as on record, the inventory naming H2 where SolidWorks
+#   reads each user mate on, and the footer after it naming no user mate suppressed in H2 (24-1:1502, 1503, 1515,
+#   1527, 1554). Caveat: H2's RangeSlv and Sprocket-4 volume read by the app came 5.1 % under SolidWorks' sum (152.629
+#   against 160.748, 24-1:1520), the pairs right (24-1:1521).
+# - UPDATE_REMOVES_A_MODE_ON_2024 True. modes: N deleted unshown with the user's lost flag said, the mode showing
+#   refused by name with the inventory kept, the first mode H deleted and L made the record's first (24-1:1683, 1719,
+#   1725, 1836, 1853). Caveats: the first mode included; H's removal ran with SolidWorks at 14.7 GB private and under
+#   2 GB free, ending at 0.94 GB free (24-1:1755, 1758), and passed.
+# - UPDATE_MAKES_MATES_WITH_MODES_ON_2024 True. remake: the four gear mates of 28/14/56 remade with modes, the user's
+#   items kept, every flag as on record, L reading 3.0, the change press making run 11's calls by member (24-4:103,
+#   180, 181, 190, 199, 203). Caveats: measured on 28/14/56. M3 is shown on 2024 to step 1 only: the set-straight press
+#   stops in the ring and names RangeBox (24-4:255, 308, 309). The press made again without closing is not measured on
+#   2024: What's Wrong came at the script's own activation of the assembly with the ring in error, before that press,
+#   and outlived its job (24-4:310-314), a STOP. M3 is not this gate's evidence (step 1 makes no mate, step 2 is the
+#   check phase's version-free stop, step 3's remake is the first part's write), so the gate rests on the first part.
+#   A removal through Update on a gearbox with modes is measured end to end on the fake only.
+# - EXTERNAL_REFERENCES_READ_ON_2024 stays None, as on 2026: m4 made no positive case (24-3:154). As facts, not a route:
+#   the same five calls answered on every user part and Sun without an error and marked nothing (24-3:153).
 EXTERNAL_REFERENCES_READ_ON_2026 = None
 EXTERNAL_REFERENCES_READ_ON_2024 = None
 UPDATE_INSERTS_A_GEAR_ON_2026 = True
-UPDATE_INSERTS_A_GEAR_ON_2024 = None
+UPDATE_INSERTS_A_GEAR_ON_2024 = True
 UPDATE_MAKES_MATES_WITH_MODES_ON_2026 = True
-UPDATE_MAKES_MATES_WITH_MODES_ON_2024 = None
+UPDATE_MAKES_MATES_WITH_MODES_ON_2024 = True
 UPDATE_BANDS_IN_PLACE_ON_2026 = True
-UPDATE_BANDS_IN_PLACE_ON_2024 = None
+UPDATE_BANDS_IN_PLACE_ON_2024 = True
 UPDATE_ADDS_A_MODE_ON_2026 = True
-UPDATE_ADDS_A_MODE_ON_2024 = None
+UPDATE_ADDS_A_MODE_ON_2024 = True
 UPDATE_REMOVES_A_MODE_ON_2026 = True
-UPDATE_REMOVES_A_MODE_ON_2024 = None
+UPDATE_REMOVES_A_MODE_ON_2024 = True
 #
 # Split from the two above at the demonstration's ruling (2026-11-17: a finding gates only what was measured, and no
 # legal edit of the demonstration's fixtures reaches these):
@@ -2038,7 +2073,9 @@ UPDATE_REMOVES_A_MODE_ON_2024 = None
 # On 2026 both stay None (W9C-RUNS-REVIEW.md, the addendum's §4): no legal edit of the demonstration's fixtures reaches
 # UPDATE_MAKES_A_NEW_COUPLING, so nothing was measured; UPDATE_SUPPRESSES_THE_RELIEF's call was made script-side only,
 # on the copy's sleeve, and read clean (the relief suppressed and on again, no second relief, its facts in the JSON's
-# proposal under _facts), but no Update made it (log 5:1081, log 10:1572).
+# proposal under _facts), but no Update made it (log 5:1081, log 10:1572). On 2024 both stay None likewise (the
+# addendum "SolidWorks 2024", §3): nothing reached UPDATE_MAKES_A_NEW_COUPLING, and the relief's call was made
+# script-side only and read clean, no Update making it (24-3:94, its facts in the JSON's proposal under _facts).
 UPDATE_MAKES_A_NEW_COUPLING_ON_2026 = None
 UPDATE_MAKES_A_NEW_COUPLING_ON_2024 = None
 UPDATE_SUPPRESSES_THE_RELIEF_ON_2026 = None

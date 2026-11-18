@@ -943,15 +943,18 @@ def self_check():
     print(f"fact    five first Builds on the fake in {_time.monotonic() - started:.0f} s")
     year_ = 2026
     rev = (34, 1, 1)
-    # W9c's gates are set True on 2026 since 74024a1; the 2024 run meets them None, as every _ON_2024 is. The plan's
-    # gate judgements are checked as a version with them unmeasured sees them: 2026's patched to None in this process.
+    # W9c's gates are set True on 2026 since 74024a1 and on 2024 since the 2024 addendum of W9C-RUNS-REVIEW.md (five
+    # of them on each). The plan's gate judgements are checked as a version with them unmeasured sees them: every one
+    # patched to None on both versions in this process, as the suite's w9c_unmeasured fixture does.
     gates_2026 = ("UPDATE_INSERTS_A_GEAR", "UPDATE_MAKES_MATES_WITH_MODES", "UPDATE_BANDS_IN_PLACE",
                   "UPDATE_ADDS_A_MODE", "UPDATE_REMOVES_A_MODE", "UPDATE_MAKES_A_NEW_COUPLING",
                   "UPDATE_SUPPRESSES_THE_RELIEF")
     from gear_generator import findings as _findings
     for name in gates_2026:
-        setattr(_findings, f"{name}_ON_2026", None)
-    print("fact    W9c's gates on 2026 patched to None in this process, as the 2024 run meets its own")
+        for _year in (2026, 2024):
+            setattr(_findings, f"{name}_ON_{_year}", None)
+    print("fact    W9c's gates on 2026 and 2024 patched to None in this process, as a version that has not measured "
+          "them meets them")
 
     def gates(ip, modes=False, remakes=False):
         return sorted(f for _, f in swbuild.in_place_gates(ip, rev, modes=modes, remakes=remakes))
