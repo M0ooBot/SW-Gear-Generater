@@ -838,3 +838,107 @@ Lines `:2286` (*Keyway*, *As read at*, *Flank*) and `:2216` (the finding and *Ke
   worker will name it `differs` (A's N1). Do not change the script for it; fix A.
 
 **No must-fix for the script.**
+
+---
+
+## Re-check of package B's `e736428` and `11a63ab`, against package A's worker at head
+
+*Independent, 2026-11-17, at `97628ef`.* I judged B's sentences against what A's worker now hands back: the seventh
+round, the audit of the fake, and `7e3ad9a`. I did not review A. The strings below are from A's worker on the fake,
+and from hand-made results where the fake makes no such case.
+
+**Suite: 2 failed (tkinter), 3958 passed, 10 skipped.**
+
+### Verdict
+
+**Package B is fit for the run.** Every new or changed sentence is true in the states that make it. Each item is said
+once, by the name it has where the user will look for it. No fragment the demonstration matches has moved.
+
+One should-fix is left for after the run, since the run patches every kind word: the question cannot tell a limit
+distance or angle from a plain one in the record.
+
+### The new sentences
+
+**The tense beside D10.**
+- Where the carry left the component resolved in the old assembly (`resolved_in_old`), the plane's reason is past:
+  *"…which Gear Generator did not read while Sprocket-1 was lightweight in it…"*.
+- Where it is still lightweight, the reason stays in the present.
+- The record's per-item sentence follows the same field.
+- Either way it now agrees with D10's *"…is resolved there now"*.
+
+**The no-cause and type-not-taken sentences.**
+- *"SolidWorks would not say what kind of entity Coincident8 is on, so it is not made again."* This is said only for
+  the worker's own clause for an unanswered `ReferenceType2`, so SolidWorks is named once and truly.
+- *"Coincident8 is on a kind of entity Gear Generator does not make mates on again, so it is not made again."* This
+  is said for A's `CAUSE_TYPE_NOT_TAKEN`. SolidWorks answered here, and the sentence says it is the app that does not
+  take the type. The type's number stays in the record.
+- Any other clause with no cause: *"M1 could not be read wholly (…)"*.
+- The question's inventory keeps the kind, not the type, so it says the last form. That is true.
+
+**B1's check.** `_each_mate_once` now runs on four shapes: the demonstration's, suppressed, beside-lightweight, and
+both together. A mate may go unnamed only when the lead says *"makes your N mates again"* with N the plan's own
+count. That is general enough.
+
+**A mate kept under SolidWorks' name (`11a63ab`).** Each sentence names it by where the user will find it. A
+hand-made result with two remade mates both renamed, one kept beside a fallback and in its old error, one deleted by
+the fallback, and one left after a failed delete:
+
+> *Carried into RangeBox_r2, unsaved: your Sprocket-1, Sprocket-8 and Housing-1, each where it stood, and 2 of your 3
+> mates, Mate12 (was Lock1) and Mate14 (was Dist9) among them, each on in the modes it was on in. Lock3 made again read
+> otherwise than it was and could not be taken out again: it is left in RangeBox_r2 as Mate20; delete it there in
+> SolidWorks. Sprocket-8 is fixed where it stood in RangeBox_r2: with your Lock8 made again SolidWorks reads Sun unable
+> to turn, so it was not kept; Mate14 (was Dist9) beside it was. Your Mate14 (was Dist9) was in error in
+> RangeBox.SLDASM and is in RangeBox_r2 too, as it was.*
+
+- The deleted Lock8 keeps its old name.
+- The left Lock3 is named as Mate20, where it stands.
+- `kept_of` comes from `remade`, which A keeps for a fallback's user-to-user mates and clears of the deleted ones.
+- `same_error` and `fallback.kept` hold old names, as `_kept_as` expects.
+- A note, not a fault: *"Your Mate14 (was Dist9) was in error in RangeBox.SLDASM"* gives the old assembly's mate its
+  new name first. *"Your Dist9 was in error in RangeBox.SLDASM and is in RangeBox_r2 too, as Mate14"* would keep each
+  name with its assembly. Both are true, and the user can find both.
+
+### Plain and limit kinds (A's `carry_kind` fix)
+
+**The result.**
+- B prints the kind word A puts in the subjects. A plain distance or angle is now said *"distance mates"* /
+  *"angle mates"*, and a limit one *"limit distance mates"*.
+- No sentence of B's names a limit mate by itself. `CARRY_KIND_WORDS` still lists both kinds, as the contract does.
+- The `CARRY_REMAKE_KINDS` gate sentence names the kind that is held back.
+
+**Should-fix, after the run: the question can foresee a limit mate as a plain one.**
+- The record's inventory keeps a mate's `swMateType_e` (5 or 6) but not its type name.
+- So `recorded_old_work` builds an `OldMate` with no type name and no values, and `_is_limit` reads it as plain.
+- With `CARRY_REMAKE_KINDS` holding `distance` but not `limit distance`, a recorded UserLimit10 is foreseen as made
+  again: *"…makes your 2 mates again…"*. A's worker then reads `MateLimitDistanceDim` and names it unmeasured
+  (`carry_kind` gives `limit distance`).
+- The run patches every kind word, so it will not meet this. A user will, once M9 sets the tuple to the kinds remade
+  clean, if a limit kind is not among them.
+- Fix, either of:
+  - say a recorded distance or angle mate as *may* while the plain and limit kinds' gates differ (*"…is made again if
+    it is a plain distance"*);
+  - have the inventory keep the limit flag. That is a schema change, so it goes through the coordinator.
+
+### A's new facts in `CarryResult.facts`
+
+None of them changes what a sentence already claims, so keeping them in the log is right:
+- **"…is carried as Mate12: SolidWorks kept the name it gave it".** Shown, by B's *"Mate12 (was Lock1)"*.
+- **The FlipDimension fact.** The side is judged by the pose check, so a wrong side is said as `moved`. *"each on in
+  the modes it was on in"* claims nothing about the side.
+- **"…had to be fixed in N, L…".**
+  - The component is put at its frame and fixed in each mode where one FixComponent had left it not fixed.
+  - *"each where it stood"* and *"fixed where it stood in RangeBox_r2"* describe the end state, which that makes true.
+  - The distance it had drifted before the fix is the run's to read.
+- **The flag where its component is suppressed.**
+  - `remade`'s `on` is what SolidWorks reads, so in such a mode *"on in the modes it was on in"* could differ from
+    the old mate's flag.
+  - The component is suppressed there, so the mate has no effect in that mode.
+  - Leave it as a fact.
+- **"after … fell back, … still reads unable to turn".** The post-check's stop says it to the user if nothing
+  explains it. A fact otherwise.
+
+### The printed states
+
+I regenerated states 2, 3 and 7 with my own script on A's worker. The question and the result, times aside, appear
+word for word in `W9D-PACKAGE-B.md`, so *"the seven printed states are unchanged"* holds for those I could rebuild.
+States 4–6 are hand-made on the real carry, and their sentence forms are unchanged by these two commits.
