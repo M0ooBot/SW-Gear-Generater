@@ -463,7 +463,7 @@ def test_measured_at_the_span_is_held_at_the_floor():
     assert line.flank_mm == 0.0
     # 2 × 0.04 / cos 20° = 0.085, under the floor
     assert 2.0 * 0.04 / math.cos(math.radians(20.0)) < BACKLASH_FLOOR_MM
-    assert line == Measured(flank_mm=0.0, backlash_mm=0.1, floored=True, over_default=False)
+    assert line == Measured(flank_mm=0.0, backlash_mm=0.1, floored=True, over_default=False, default_mm=0.3)
 
 
 def test_measured_below_the_span_is_held_at_the_floor():
@@ -495,18 +495,52 @@ def test_measured_uses_the_gears_own_normal_pressure_angle():
     assert line.backlash_mm == pytest.approx(2.0 * 0.14 / math.cos(math.radians(20.0)), abs=1e-12)
 
 
-def test_measured_past_three_tenths_of_the_module_is_said():
-    """A printer adding 0.12 mm a flank gives 0.34 mm: over 0.3 × module on a module 1 gear (U4), not on 1.5."""
-    for spec, module, over in ((SPUR_ROWS[1][1], 1.0, True), (SPUR_20, 1.5, False)):
+def test_measured_past_the_printed_default_is_said():
+    """F2-REVIEW M2, ruled: the flag is against D3's printed default, the smaller of 0.3 mm and 0.3 × module (§3.2,
+    U4), not 0.3 × module alone. A printer adding 0.12 mm a flank proposes 0.34 mm: flagged on a module 1 gear and,
+    as the README says, on the module 1.5 coupon (0.3 × module there is 0.45, which alone would not flag it)."""
+    for spec, module in ((SPUR_ROWS[1][1], 1.0), (SPUR_20, 1.5)):
         reading = _span(spec)
         line = measured(reading, reading.w_mm + 0.24, 20.0, module)
         assert line.backlash_mm == pytest.approx(2.0 * 0.16 / math.cos(math.radians(20.0)), abs=1e-12)
         assert line.backlash_mm == pytest.approx(0.3405, abs=5e-4)
-        assert line.over_default is over
-    # at exactly 0.3 × module it does not pass it
-    reading = _span(SPUR_ROWS[1][1])
-    e = 0.15 * math.cos(math.radians(20.0)) - 0.04
-    assert measured(reading, reading.w_mm + 2.0 * e, 20.0, 1.0).over_default is False
+        assert line.over_default is True
+        assert line.default_mm == pytest.approx(0.3, abs=1e-12)
+
+
+# (spec, module, D3's printed default): a module under 1, at 1 and above it
+THRESHOLDS = [
+    (_printed(module="0.8", teeth="30"), 0.8, 0.24),
+    (_printed(module="1", teeth="12"), 1.0, 0.3),
+    (_printed(module="1.5", teeth="20"), 1.5, 0.3),
+]
+
+
+@pytest.mark.parametrize("spec, module, default", THRESHOLDS, ids=["module 0.8", "module 1", "module 1.5"])
+def test_the_flag_is_at_the_printed_default_each_side(spec, module, default):
+    """j = 2 (e + 0.04) / cos 20° equal to the default at e = default cos 20° / 2 − 0.04; a micron of flank either
+    side of it is one side of the flag or the other, and on it is not over."""
+    reading = _span(spec)
+    assert reading.kind == KIND_SPAN
+    assert spur.printed_backlash(module) == pytest.approx(default, abs=1e-12)
+    e = default * math.cos(math.radians(20.0)) / 2.0 - 0.04
+    for step, over in ((-1e-3, False), (-1e-6, False), (0.0, False), (1e-6, True), (1e-3, True)):
+        line = measured(reading, reading.w_mm + 2.0 * (e + step), 20.0, module)
+        assert not line.floored
+        assert line.default_mm == pytest.approx(default, abs=1e-12)
+        assert line.over_default is over, (module, step)
+    if module < 1.0:
+        # under module 1 the default is 0.3 × module, so 0.3 mm itself is past it
+        assert measured(reading, reading.w_mm + 2.0 * (0.15 * math.cos(math.radians(20.0)) - 0.04), 20.0,
+                        module).over_default is True
+
+
+def test_the_floor_is_flagged_where_it_passes_the_default():
+    """At module 0.3 the default is 0.09, under the floor of 0.1: the floored proposal is itself past it, and said."""
+    reading = _span(SPUR_20)
+    line = measured(reading, reading.w_mm, 20.0, 0.3)
+    assert line.floored and line.backlash_mm == 0.1 and line.default_mm == pytest.approx(0.09, abs=1e-12)
+    assert line.over_default is True
 
 
 def test_measured_is_none_with_no_reading_typed_or_no_figure():

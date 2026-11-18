@@ -42,7 +42,7 @@ from typing import Any, List, Optional, Tuple
 
 from ..spec import KIND_HERRINGBONE, RECIPE_ARCS, RECIPE_INVOLUTE
 from .helical import HelicalDerived
-from .spur import BACKLASH_FACTOR, SpurDerived
+from .spur import SpurDerived, printed_backlash
 
 # What a reading is (SpanReading.kind). Each figure of a reading is 0 unless its kind is KIND_SPAN; needed_face_mm is set
 # for KIND_NARROW_FACE alone.
@@ -216,14 +216,18 @@ class Measured:
     - ``backlash_mm``: the backlash per gear that keeps :data:`KEPT_PLAY_MM` a flank, j = 2 (e + 0.04) / cos α_n with
       the gear's own normal pressure angle, never under :data:`BACKLASH_FLOOR_MM`.
     - ``floored``: True when the formula gave less than the floor and the floor is proposed instead.
-    - ``over_default``: True when the proposed backlash exceeds 0.3 × module for this gear, the case of D3's "never
-      more than today's" that is the user's to decide (U4, §3.2).
+    - ``over_default``: True when the proposed backlash exceeds this gear's printed default, D3's smaller of 0.3 mm
+      and 0.3 × module (``spur.printed_backlash``): the case §3.2 and U4 make the user's to decide, since above 0.3 mm
+      every gear under module j / 0.3 would take more than today's 0.3 × module (F2-REVIEW M2, ruled; §3.0's "0.3 ×
+      module" alone missed a module 1.5 coupon proposing 0.34 mm).
+    - ``default_mm``: that printed default for this module, the figure the flag is against, for C to name.
     """
 
     flank_mm: float
     backlash_mm: float
     floored: bool
     over_default: bool
+    default_mm: float = 0.0
 
 
 def measured(reading: SpanReading, measured_mm: Optional[float], alpha_n_deg: float, module: float) -> Optional[Measured]:
@@ -231,8 +235,8 @@ def measured(reading: SpanReading, measured_mm: Optional[float], alpha_n_deg: fl
     is nothing to work out (no reading typed, or no span figure to measure against).
 
     ``alpha_n_deg`` is the gear's normal pressure angle in degrees (a spur gear's own), ``module`` its (normal)
-    module in mm. §3.0: ``e = (reading − W) / 2``, ``j = 2 (e + 0.04) / cos α_n``, never under 0.1 mm, said when it
-    passes ``0.3 × module``.
+    module in mm. §3.0: ``e = (reading − W) / 2``, ``j = 2 (e + 0.04) / cos α_n``, never under 0.1 mm; flagged
+    when it passes the printed default, the smaller of 0.3 mm and ``0.3 × module`` (§3.2, F2-REVIEW M2).
     """
     if measured_mm is None or reading.kind != KIND_SPAN:
         return None
@@ -240,5 +244,6 @@ def measured(reading: SpanReading, measured_mm: Optional[float], alpha_n_deg: fl
     raw = 2.0 * (flank + KEPT_PLAY_MM) / math.cos(math.radians(alpha_n_deg))
     floored = raw < BACKLASH_FLOOR_MM - _EPS
     backlash = BACKLASH_FLOOR_MM if floored else raw
+    default = printed_backlash(module)
     return Measured(flank_mm=flank, backlash_mm=backlash, floored=floored,
-                    over_default=backlash > BACKLASH_FACTOR * module + _EPS)
+                    over_default=backlash > default + _EPS, default_mm=default)

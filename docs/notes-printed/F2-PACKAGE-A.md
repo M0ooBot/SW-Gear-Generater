@@ -6,7 +6,8 @@ Pure code; no SolidWorks call is added or changed, and no file but package A's o
 ## Commits
 
 1. `b09a036`: `src/gear_generator/gears/span.py` filled (F2-0's stub), and `tests/test_span.py` (new, 76 tests).
-2. This note.
+2. `1a1d265`: this note.
+3. F2-REVIEW's must-fix M2 and the rulings below, in one commit (see *After F2's review*).
 
 No existing test was changed. Suite at `b09a036` (`PYTHONPATH=src`, the import path checked against this worktree):
 4824 passed, 1 skipped, 1 failed, the known Tk font test
@@ -129,3 +130,23 @@ section, then × cos β_b), and to 1e-9 for k 1 to 5 on the m 1.5, z 20 gear.
 - The span on the form, the Measured entry and its line, the print list's span lines and the explainer are C's.
 - `PrintPart.span` is B's, from `span(kind.derive(spec), kind.recipe_for(spec))` per part.
 - Nothing here waits on the probe or any finding: the span is pure maths and shows whatever the findings are.
+
+## After F2's review
+
+F2's review (`docs/notes-printed/F2-REVIEW.md`, `40c1697`) and **the coordinator's rulings, 2026-11-18, each the user's to
+overrule**: every choice above is **accepted** as the review recommends (§7, package A, 1 to 6): the Measured arithmetic
+in `span.measured`, worded by C with no sums of its own (F2-INTERFACES §6 to be amended); k = 1 allowed; the nearest k
+inside the bounds, a tie to the smaller; the order none, arcs, no_contact, narrow_face, span; an unknown recipe reading
+none; the names beyond the interface.
+
+**M2, ruled and fixed.** `Measured.over_default` was `j > 0.3 × module`, §3.0's words, so on the module 1.5 coupon a
+printer adding 0.12 mm a flank proposed 0.34 mm and nothing was flagged, where §3.2 (U4) and the README put the user's
+decision. It is now `j >` the gear's printed default of D3, the smaller of 0.3 mm and 0.3 × module
+(`spur.printed_backlash(module)`), and `Measured` gains `default_mm`, that figure, so that C names the threshold the
+flag is against rather than working it out. Tests changed, for this reason: `test_measured_past_three_tenths_of_the_module_is_said`
+became `test_measured_past_the_printed_default_is_said` (0.34 mm is now flagged on module 1.5 as well as 1), and
+`test_measured_at_the_span_is_held_at_the_floor`'s equality gains `default_mm=0.3`; added: the flag each side of the
+default (±1 µm and ±1 mm/1000 of flank, and on it) at module 0.8, 1 and 1.5, 0.3 mm flagged under module 1, and the floor
+flagged where it passes a default under 0.1 (module 0.3). **Package C must read `over_default` as "past the printed
+default `default_mm`"**: its sentence's *more than 0.3 × module (…)* is untrue for module 1 and up, and its figure should be
+`default_mm`.
