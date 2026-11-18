@@ -33,10 +33,13 @@ the window still works out, checks and draws gears and solves pairs; only
 
 1. Choose **Single gear** or **Gear pair**, and the flank: **Involute** (a true
    involute, as an equation-driven curve — the default) or **Arcs** (circular
-   arcs approximating it).
+   arcs approximating it). **Process** says how the gear will be made:
+   **Printed** (the default, with the printer's **Nozzle** under it, blank
+   0.4 mm) or **Machined**; see *Printed gears* below.
 2. Type the gear: module, number of teeth, pressure angle, face width, and bore
-   (blank for none). Backlash and fillet radius default to 0.3 × and 0.38 ×
-   module; type a value to override either.
+   (blank for none). Backlash defaults to 0.3 × module on a machined gear and to
+   0.3 mm (0.3 × module below module 1) on a printed one, and fillet radius to
+   0.38 × module; type a value to override either.
 3. A card at the foot of the panel says what the field you are typing in means
    and what your value comes to: *Module · m … here m 1.5 × z 20 = PD 30 mm ·
    tooth depth 3.375*. It follows the caret.
@@ -63,6 +66,31 @@ or shifting an unshifted gear — is refused with a sentence saying to build a n
 part instead.
 
 Editing the globals in SolidWorks' own Equation Manager works just as well.
+
+### Printed gears
+
+A gear made to be 3D printed (FDM, PLA) is the same involute gear, built the
+same way, with three differences.
+
+- **Backlash.** A blank Backlash is the smaller of 0.3 mm and 0.3 × module per
+  gear, written into SolidWorks as `IIF ( "Module" <= 1 , 0.3 * "Module" , 0.3 )`:
+  room for walls printed a little fat. It is a starting value until your own
+  prints are measured, and it does the job a slicer's X-Y compensation does, so
+  use one or the other. The card and the Derived panel say *printed default*
+  beside it.
+- **Checks for printing.** The Derived panel also warns of a tooth tip thinner
+  than one nozzle line after backlash (at the toe on a bevel gear), a module
+  under 2.5 nozzle widths, a rim under three, a helix over 45°, a tip clearance
+  under 0.3 mm in a pair, and a ring's small default fillet. A printed gear
+  under its undercut limit is made as drawn, so the warning says to turn the
+  pair in SolidWorks. Solve marks the rows that are thin for the nozzle.
+- **The name.** A printed part's file name ends `_P` (`Gear_m1.5_N25_P`), and
+  so does a printed pair's assembly, so it never clashes with the machined gear
+  of the same sizes.
+
+A machined gear is built, checked and recorded exactly as before. A
+`.gear.json` written before printed gears existed opens as **Machined**, which is
+what was built.
 
 ## The gear in SolidWorks
 
@@ -289,12 +317,18 @@ last few workbooks you opened.
 
 | Sheet | Holds |
 |---|---|
-| Box | the gearbox's Name, its Output folder (blank: the form's Folder), part and assembly templates, and the pressure angle and efficiency per mesh that blank cells elsewhere take |
+| Box | the gearbox's Name, its Output folder (blank: the form's Folder), part and assembly templates, the pressure angle and efficiency per mesh that blank cells elsewhere take, and its Process (`Printed` or `Machined`) and Nozzle (mm, blank 0.4) for every gear in it |
 | Shafts | one row per shaft: X, Y and Z of a point on its axis, from the origin; its Axis (`Z+`, `Z-`, `X+`, `Y-` …, or a direction `dx, dy, dz`); its Role (`input`, `output`, `fixed`); on an input, its speed in rpm and torque in N·m; and on a planet shaft, the carrier it is Mounted on and its Copies |
 | Gears | one row per gear: the shaft it is on, how far along the axis its face's middle is (At; a bevel gear's pitch apex), and the values the form takes — Kind, Teeth, Module, Face width, Bore, Helix angle, Hand, Profile shift … — a blank cell taking the form's default; and a Part name if you want one |
 | Meshes | one row per pair of gears in mesh, and its efficiency |
 | Modes | the positions of sliding gears, one row per mode |
 | Results | written by the app on Export, and never read |
+
+A blank Process means Printed for a new gearbox and *as built* for one already
+built: a gearbox built before printed gears existed, whose workbook has no
+Process row, opens Machined and unchanged, with nothing written, until you type
+Printed beside Process on its Box sheet (adding the row). The Workbook window's
+**Process** line says which, and how to change it.
 
 Headers are found by name, so columns may be in any order; a column the app
 does not know, and a row starting `#`, are left alone. Units are mm, degrees,
@@ -604,6 +638,8 @@ The tests need no SolidWorks and no display. The build runs against a fake
 SolidWorks in `tests/test_swbuild.py`.
 
 `python -m gear_generator.gears --spec m=1.5,z=25 --recipe A` prints the build
-plan for a gear — every global and every step — without SolidWorks.
+plan for a gear — every global and every step — without SolidWorks. Add
+`process=printed` (and `nozzle=0.4`) to the spec for a printed gear; left out, it
+is machined, as any spec built in code is.
 
 `docs/PLAN.md` is the design the app was built to.

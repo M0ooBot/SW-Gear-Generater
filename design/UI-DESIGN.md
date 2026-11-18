@@ -39,13 +39,29 @@ solve, and a greyed panel is only clutter.
 
 ### Gear — readout `Spur · involute curve`
 
-Three segmented rows: **Kind** (`Spur` · `Helical` · `Double` · `Bevel`),
-**Flank** (`Involute` · `Arcs`), and **Make** (`Single gear` · `Gear pair`).
+Four segmented rows: **Kind** (`Spur` · `Helical` · `Double` · `Bevel`),
+**Flank** (`Involute` · `Arcs`), **Make** (`Single gear` · `Gear pair`), and
+**Process** (`Printed` · `Machined`, F1), with **Nozzle** under it (mm,
+placeholder *0.4*, hint *the printer's line width*) shown only while Process is
+Printed.
 `Double` is the herringbone: the whole word does not fit its share of the row,
 so the readout says it (`Herringbone · involute curve`). Internal is not a kind:
 it is the gear panel's **Teeth side**. Choosing a kind shows or hides the rows
 below that only some kinds have — `_show_helix_rows` decides all of them (§2,
 *Rows by kind*).
+
+**Process** is the pair's, as Kind and Flank are: `_gear_spec` puts it and the
+Nozzle into both gears, so Solve, which reads the pair's gears, and a candidate
+applied keep it. It starts at **Printed** on every launch (PLAN-PRINTED §1.3: the
+user's default), not at `GearSpec()`'s machined, which is what a spec built in
+code without saying means. A Machined gear's Nozzle goes across blank, as a
+hidden Profile shift goes across as 0, so a nozzle left typed never reaches a
+machined part. **Open .gear.json** sets the row from the record: a record written
+before F1 has no process and opens **Machined**, which is what was built, and a
+part built from that form afterwards is machined too unless the row is changed.
+`_show_process_rows` shows or hides Nozzle and sets each gear's Backlash
+placeholder and hint for the row (below). A printed part's name ends `_P`
+(`Gear_m1.5_N25_P`), and a printed pair's assembly too.
 
 ### Rows by kind
 
@@ -93,7 +109,9 @@ gear closes the flyout, since the button that would hide it goes with the panel.
 
 Module (every ISO 54 module in a dropdown beside it, hint *ISO 54*), Teeth,
 Pressure angle (14.5, 20 and 25 in a dropdown), Face width, Bore (placeholder
-*none*), Backlash (placeholder *0.3 × module*, hint *ISO: 0.02–0.05 × m*), Fillet
+*none*), Backlash (placeholder *0.3 × module*, hint *ISO: 0.02–0.05 × m*; while
+Process is Printed, placeholder *0.3 · printed*, hint *0.3 × m below m1*, since a
+printed gear's blank is the smaller of 0.3 mm and 0.3 × module), Fillet
 (placeholder *0.38 × module*), for a helical kind Helix angle (10–30 in a
 dropdown, hint *normal module, α*) and Hand (`Right` · `Left`), and Name
 (placeholder: the stem the part will be saved as, `Gear_m1.5_N25`, or
@@ -123,8 +141,18 @@ left and three lines at the right:
 3. the worked line: `here` in 11.5 px `#8f8f8f`, then what the typed value comes
    to in mono 11.5 px ink. A blank field says what blank means.
 
-The words are `ui_text.explainer(field, derived, stem, pair, folder) -> (name,
-symbol, what, worked)`, tested for every field in `tests/test_ui_text.py`. The worked line is derived text like every readout: it
+The words are `ui_text.explainer(field, derived, stem, pair, folder, printed) -> (name,
+symbol, what, worked)`, tested for every field in `tests/test_ui_text.py`.
+**Backlash on a printed gear** (F1) says, in place of the machined copy's last
+sentence: *Printed, blank uses 0.3 mm, or 0.3 × module below module 1: room for
+walls printed a little fat, and a starting value until your own prints are
+measured. A slicer's X-Y compensation does the same job, so use one or the
+other, not both.* Its worked line reads *blank → 0.3 mm · printed default · tooth
+2.056 · space 2.656 · play in the mesh 0.6*, and a printed bevel gear's adds the
+toe's figure, which governs (*0.3 mm · printed default, 0.211 at the toe*). The
+strip passes the form's Process as `printed`, so the copy is right while the
+gear does not work out; every other card is the same printed or machined, and a
+machined gear's card is pinned in `tests/test_printed_rule.py` (`CARD`). The worked line is derived text like every readout: it
 is filled in again on every `_derive_now`, not only when the caret moves, and a
 gear that does not work out says *check the fields*, as the gear readout does.
 The diagrams are `widgets.draw_diagram`, stroke drawings on a 56 px grid the way
@@ -162,7 +190,8 @@ helical pair), all from `pairs.describe`, and for a shifted pair a fourth,
 Working α `21.252°` —
 then a 1 px rule, then the table: captions `A · mm` and `B · mm`, the label
 column 104 px, value columns 96 px. Values carry no unit; one `mm` caption heads
-each column. Where a value came from a default it says so (`0.45 · 0.3m`). A
+each column. Where a value came from a default it says so (`0.45 · 0.3m`; a
+printed gear's blank Backlash `0.3 · printed default`, the third state). A
 helical gear's column starts with six more: Helix `15° · right`, Transverse m,
 Transverse α, Lead, Twist on face (face to apex for a herringbone), and
 Overlap εβ. A shifted gear's starts with Profile shift `+0.3 · 0.6`, the
@@ -445,7 +474,10 @@ E4, 1570 px inside at 150 %: 1047 px as drawn).
   them only while the file has gone.
 - **Workbook** (readout `3 shafts · 4 gears · 2 meshes · no modes`): File, Name,
   Output folder with where it came from (*from the Box sheet*, *the strip's
-  Output*, or *set one on the Box sheet*), and **Worked out as**, what the rows
+  Output*, or *set one on the Box sheet*), **Process** (F1, every gearbox,
+  machined ones too: *Printed, 0.4 mm nozzle*, or *Machined, as built: type
+  Printed beside Process on the Box sheet to print it*; see *Printed and
+  Machined* below), and **Worked out as**, what the rows
   add up to: *Parallel train · 2 meshes · 12.000 : 1 · output turns the same
   way*, or for a layout this phase does not do, *Not laid out yet: P1 is mounted
   on C*. When the meshes give no ratio it says why rather than leaving it out:
@@ -1597,6 +1629,45 @@ left in error, above), that advice wins and says the cost in its parenthesis,
 including what Build again… carried into it, which RangeBox.SLDASM held when it
 was carried*, and the carry's save line
 is not said beside it.
+
+### Printed and Machined (F1)
+
+PLAN-PRINTED §1.3 and §6; D11 ruled (B) by the coordinating session, the user's
+to overrule. A gearbox's Process is the Box sheet's **Process** setting
+(`Printed` or `Machined`, any case) with **Nozzle** under it (mm, blank 0.4),
+one for every gear in it.
+
+**What a blank means.** A blank Process cell, or no Process row at all (every
+workbook written before F1), means *as built*: `WorkbookWindow._assess` reads the
+record beside the workbook, as `_plan_solidworks_pass` does and without moving
+anything, and passes `workbook.assess.blank_process(record)`: Machined while the
+record's current parts were all built machined, Printed with no record, no
+parts, or any part built printed. So both of `_assess`'s callers, `_plan` and
+the raw read a save's consequence is worked out from, resolve a blank alike.
+When the record is another workbook's (a copy, or one not yet said:
+`store.foreign_workbook`), it passes none, so a copied workbook reads a blank as
+a new gearbox does, Printed, and not Machined from its original's parts. A
+gearbox built before F1 therefore opens exactly as it did: every gear *built*,
+nothing for Update SolidWorks, the footer as it was, and nothing written.
+
+**The Process line** in the Workbook panel (`ui_text.workbook_process_line`,
+given the Box as read and the Box as assessed):
+
+| The Box | The line |
+|---|---|
+| Printed, typed or a blank read so | *Printed, 0.4 mm nozzle* (the Box's Nozzle) |
+| blank, read as built, with a Process row | *Machined, as built: type Printed beside Process on the Box sheet to print it* |
+| blank, read as built, with no Process row (`Box.process_cell` is `""`) | the same, then * (add a row labelled Process)* |
+| Machined typed | *Machined, as the Box sheet says: type Printed beside Process to print it* |
+| a word that is neither (an error at its cell) | *Process does not read: the Checks panel says why* |
+| Printed, its Nozzle not a number above zero | *Printed; its Nozzle does not read: the Checks panel says why* |
+
+It wraps in its cell as *Worked out as* does. Typing Printed on a gearbox built
+Machined changes each part's Backlash global, so every gear reads *changes on
+Update* and Update SolidWorks carries it in place (W9a's rules); *Build again…*
+makes every gear new, and W9d names the reason *its Process changed*. Under (B)
+the footer says nothing new and no way back is offered: the user asked for it by
+typing Printed.
 
 ### Planetary stages (W7)
 
