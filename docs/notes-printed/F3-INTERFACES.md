@@ -35,8 +35,9 @@ entry in hand.
   `as_built` with its own recorded globals plans, says and records as at the cut
   (`test_a_machined_gear_read_as_built_from_its_record_plans_says_and_names_as_at_the_cut`).
 - *Printed parts on record* (pins commit). `tests/fixtures/printed/F2_built.json`, made by running the code at `08db5ba`
-  in a scratch archive, holds four parts built from the form (a printed spur, helical and herringbone gear at
-  GearSpec's default Bore 10, and §3.2's Coupon_C with its offset typed in Bore, 8.2) and three gearboxes built on the
+  in a scratch archive, holds six parts built from the form (a printed spur, helical and herringbone gear at
+  GearSpec's default Bore 10, §3.2's Coupon_C with its offset typed in Bore, 8.2, and, added at `21cac8b` by
+  F3-0-REVIEW's S1 from the same code, a printed bevel gear and crown gear at Bore 8) and three gearboxes built on the
   fake as `test_workbook_in_place_round_trip.Desk` builds them (the 12 : 1 reducer printed; RangeBox_Fixed printed and
   machined, its Sun 8, Planet 4, dogs 8 and Hub 8 bored, since the fixture's rows have none), each with what the code
   said of it then. Two tests read them as F3 must:
@@ -77,7 +78,7 @@ them is to be changed by any package**:
   (`NotAsBuilt` on "Bore Allowance": B's planning of the job through `as_built_job`).
 
 Nothing else in the suite moved under that run: no pinned printed new-build line outside §12's table moves when A's
-default lands. So the suite is whole again only once A, B and C are all in (F3-0.md, decision 2).
+default lands. How the default lands without a red commit is §13.
 
 ## 2. `spec.py`, whole (F3-0's; nobody else edits it)
 
@@ -306,8 +307,80 @@ each asserting the same thing of the same column:
 
 **Added, not moved:** `RECORDED` gains the ungrooved herringbone and the dog with their hashes, taken at `08db5ba`.
 
+**One of F3-0's own pins changed after it was taken** (F3-0-REVIEW S4): `_f2_strip_form` was `strip_form(sidecar, form)`
+at `062a38e` and is at `124a7f9` a stand-in whose `_derived["a"]` is derived through `as_built` with the record's globals,
+encoding §5's contract that the strip derives through `as_built` while a record is open. It is not a loosening:
+`_update_target` is handed the plain form's spec and must apply `as_built` itself to the spec whose globals it counts,
+and the four strip pins fail without that (§1). What it costs: the strip's own derive (`_load_record`, the Derived
+panel, the `derived` Update values writes) is guarded by no pin, which C's `tests/test_bore_form.py` owes (§14).
+
 **A probe script's literal** (as F1 treated W9d's in `e0a8d62`): `probe/f1_demonstration.py`'s `LINK_SCHEMA = 11` held two
 meanings. *A master built before F1 is below F1's 11* stays a literal, `F1_LINK_SCHEMA`, and its self-check holds it to
 `store._F1_LINK_SCHEMA`; *the record a run writes* is held to `store.LINK_SCHEMA_VERSION`, in the run's check and the
 self-check's alike, with a comment. Self-check 0 failed. Its printed sidecar judgement (3) is left: a rerun on
 SolidWorks after A would meet 4 for a printed part with a bore (F3-0.md, decision 13).
+
+
+## 13. The landing order and the switch (the coordinator's ruling on F3-0's decision 2, 2026-11-18)
+
+**The switch is `spur.PRINTED_DEFAULT_IN_PLANS`, package A's, `False` as committed.** While it is False, a blank Bore
+allowance on a printed gear **not on record** (`built_allowance` `""`) plans 0; a typed figure and an as-built figure
+plan what they say. Every kind reads it from the `spur` module at call time (`spur.PRINTED_DEFAULT_IN_PLANS`, never by
+`from … import`), through one helper every kind calls for the allowance a plan is cut with, so one assignment turns it on
+everywhere. `spec.bore_allowance_mm()` (F3-0's) is not changed: the switch is in the plans.
+
+**The order:**
+1. **A** lands with the switch off and the whole suite green. A's own tests of the default set it True (monkeypatch).
+2. **B** and **C**, in either order, each land with the switch off and the suite green. Before committing, each runs
+   **the guard tests below with the switch turned on in its own process**, and says the result in its note, for
+   example:
+   `PYTHONPATH=src python -c "import sys, pytest; import gear_generator.gears.spur as s; s.PRINTED_DEFAULT_IN_PLANS = True; sys.exit(pytest.main(['-q', 'tests/test_printed_rule.py', 'tests/test_printed_window.py', 'tests/test_swbuild_user_work.py']))"`.
+   Each one's own new tests set the switch True where they test the default.
+3. **The coordinator** turns the switch on in a last one-line commit, with the whole suite run there.
+
+**No pin is ever edited, and no commit leaves the suite red.** If a guard is red with the switch on, the fault is in the
+threading of the package that owns that guard, never in the guard.
+
+**The guard tests, by name and owner.** With A's default in and no threading, these fail (§1; confirmed by
+F3-0-REVIEW §4's own run):
+
+| # | Guard | Turned green by |
+|---|---|---|
+| 1 | `tests/test_printed_rule.py::test_a_gearbox_built_before_f3_reads_after_it_as_it_did[reducer_printed]` | B |
+| 2 | `tests/test_printed_rule.py::test_a_gearbox_built_before_f3_reads_after_it_as_it_did[rangebox_fixed_printed]` | B |
+| 3 | `tests/test_printed_window.py::test_a_gearbox_built_before_f1_opens_machined_as_built_and_unchanged` | B |
+| 4 | `tests/test_printed_window.py::test_printed_typed_on_a_built_gearbox_says_the_names_kept_once_and_not_on_the_next_update` | B |
+| 5 | `tests/test_swbuild_user_work.py::test_a_printed_gears_blank_backlash_is_said_as_the_printed_default_and_set_back_as_its_exact_iif` | B |
+| 6 | `tests/test_printed_rule.py::test_a_printed_part_built_from_the_form_before_f3_reads_after_it_as_it_did[spur]` | C |
+| 7 | the same, `[helical]` | C |
+| 8 | the same, `[herringbone]` | C |
+| 9 | the same, `[coupon]` | C |
+| 10 | `tests/test_printed_window.py::test_an_old_records_form_changed_to_printed_is_one_global_for_update_values` | C |
+
+The two strip pins added at `21cac8b`, `[bevel]` and `[bevel_crown]`, are C's guards too once A's bevel reads the
+default (they were not in F3-0's run, which put the global in the spur's and the helical's globals only). The machined
+gearbox pin, `[rangebox_fixed_machined]`, and every other pin of `test_printed_rule.py` must hold whatever the switch.
+
+## 14. F3-0-REVIEW's notes for the packages
+
+- **B, B1 (blocks B's done):** `gearbox.journal` writes each job's `variables` and `trig` into its `PartEntry`, and the
+  journaled match (`gearbox.py:606`, today `_matches(entry.spec, (), "", job)`) passes the entry's own `variables` and
+  `trig`, so a part cut at one allowance and left journaled is never reused as one cut at another. An old journal, with
+  none, still reads "0", rightly (ruling on decision 3).
+- **B, S5:** `as_built_job` replans the job's `derived` and `plan` as well as its `spec`, since `_variables_of(job)` reads
+  `job.derived`.
+- **B, S3, a tenth caller:** the Workbook window's checks. `workbook/assess.py` (and `build.plan_parts`, which it calls)
+  validates each row with no record, so for a printed gearbox built before F3 its warnings (the printed rim, the bore
+  against the root) would speak of a hole cut at Bore + 0.2 that was never cut. **They read as built, and
+  `workbook/assess.py`, which no package owned, is now B's**, with `build.py` if B needs it there, said in B's note.
+- **B and C, S2, owed tests (block their done):** the writes F3 makes to a part built before F3.
+  - B: a value Update (say a Teeth change) on a printed part built before F3 leaves it with no `"Bore Allowance"`, its
+    `.gear.json` at sidecar 3 and its derived with no `bore_allowance`; Build again… of a row made new by another change
+    keeps its as-built figure (ruling 1).
+  - C: the strip's Update values on such a record likewise; and **a Build from the strip with a record open keeps the
+    opened part's as-built allowance** (the ruling on decision 11), so a part built so from a pre-F3 record holds none.
+- **C, S4 (blocks C's done):** `tests/test_bore_form.py` holds the strip's **real** path on an opened printed record built
+  before F3, not `test_printed_rule.py`'s stand-in (§12): *Bore as cut* says the Bore; `_derived["a"].bore_allowance` is
+  0; Update values after a Teeth change writes no `"Bore Allowance"` and no derived `bore_allowance`.
+- **A, the ruling on decision 15:** a Bore allowance typed on a gear with no Bore is **a warning at its cell**, not an
+  error: *there is no Bore, so the allowance is not used*.
