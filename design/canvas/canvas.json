@@ -15,233 +15,254 @@
       "w": 484
     },
     {
+      "file": "PrintedGear.dc.html",
+      "title": "Single gear · printed, a thin tip",
+      "x": 1128,
+      "y": 0,
+      "w": 484
+    },
+    {
       "file": "ShiftedPair.dc.html",
       "title": "Gear pair · profile shift",
-      "x": 1128,
+      "x": 1692,
       "y": 0,
       "w": 484
     },
     {
       "file": "HelicalPair.dc.html",
       "title": "Gear pair · helical",
-      "x": 1692,
+      "x": 2256,
       "y": 0,
       "w": 484
     },
     {
       "file": "Herringbone.dc.html",
       "title": "Single gear · herringbone, grooved",
-      "x": 2256,
+      "x": 2820,
       "y": 0,
       "w": 484
     },
     {
       "file": "RingPair.dc.html",
       "title": "Gear pair · internal",
-      "x": 2820,
+      "x": 3384,
       "y": 0,
       "w": 484
     },
     {
       "file": "CrossedPair.dc.html",
       "title": "Gear pair · crossed, opposite hands",
-      "x": 3384,
+      "x": 3948,
       "y": 0,
       "w": 484
     },
     {
       "file": "BevelPair.dc.html",
       "title": "Gear pair · bevel",
-      "x": 3948,
+      "x": 4512,
       "y": 0,
       "w": 484
     },
     {
       "file": "FieldGuide.dc.html",
       "title": "Field explainers · every card",
-      "x": 4512,
+      "x": 5076,
       "y": 0,
       "w": 484
     },
     {
       "file": "WorkbookReady.dc.html",
       "title": "Workbook · linked, after a save",
-      "x": 5076,
+      "x": 5640,
       "y": 0,
       "w": 1080
     },
     {
       "file": "WorkbookError.dc.html",
       "title": "Workbook · a save with an error",
-      "x": 6236,
+      "x": 6800,
       "y": 0,
       "w": 1080
     },
     {
       "file": "WorkbookFix.dc.html",
       "title": "Workbook · a mesh off its centres, two fixes offered",
-      "x": 7396,
+      "x": 7960,
       "y": 0,
       "w": 1080
     },
     {
       "file": "WorkbookChosen.dc.html",
       "title": "Workbook · the move chosen, waiting for Export",
-      "x": 8556,
+      "x": 9120,
       "y": 0,
       "w": 1080
     },
     {
       "file": "WorkbookBuilt.dc.html",
       "title": "Workbook · built: the parts, the layout part and the assembly",
-      "x": 9716,
+      "x": 10280,
       "y": 0,
       "w": 1080
     },
     {
       "file": "WorkbookUpdate.dc.html",
       "title": "Workbook · an edit Update SolidWorks carries",
-      "x": 10876,
+      "x": 11440,
       "y": 0,
       "w": 1080
     },
     {
       "file": "WorkbookUpdated.dc.html",
       "title": "Workbook · after Update SolidWorks, not yet saved",
-      "x": 12036,
+      "x": 12600,
       "y": 0,
       "w": 1080
     },
     {
       "file": "WorkbookAgain.dc.html",
       "title": "Workbook · a change that needs a new part, and Build again?",
-      "x": 13196,
+      "x": 13760,
       "y": 0,
       "w": 1080
     },
     {
       "file": "WorkbookUnsaved.dc.html",
       "title": "Workbook · after Update, not yet saved, a change that needs a new part",
-      "x": 14356,
+      "x": 14920,
       "y": 0,
       "w": 1080
     },
     {
       "file": "WorkbookCopy.dc.html",
       "title": "Workbook · a copied workbook, the original still there",
-      "x": 15516,
+      "x": 16080,
       "y": 0,
       "w": 1080
     },
     {
       "file": "WorkbookMoved.dc.html",
       "title": "Workbook · its record's workbook gone: moved, or a copy?",
-      "x": 16676,
+      "x": 17240,
       "y": 0,
       "w": 1080
     },
     {
       "file": "WorkbookCloseAnyway.dc.html",
       "title": "Workbook · closed twice while SolidWorks does not answer",
-      "x": 17836,
+      "x": 18400,
       "y": 0,
       "w": 1080
     },
     {
       "file": "WorkbookRefused.dc.html",
       "title": "Workbook · SolidWorks refused a mate: no assembly, Build waits for a change",
-      "x": 18996,
+      "x": 19560,
       "y": 0,
       "w": 1080
     },
     {
       "file": "WorkbookTurned.dc.html",
       "title": "Workbook · turned in SolidWorks, then an Update that puts the train back",
-      "x": 20156,
+      "x": 20720,
       "y": 0,
       "w": 1080
     },
     {
       "file": "WorkbookStatic.dc.html",
       "title": "Workbook · a gearbox W4 built static, offered a turning revision",
-      "x": 21316,
+      "x": 21880,
       "y": 0,
       "w": 1080
     },
     {
       "file": "WorkbookRightAngle.dc.html",
       "title": "Workbook · a right-angle gearbox built: a bevel stage into a parallel stage",
-      "x": 22476,
+      "x": 23040,
       "y": 0,
       "w": 1080
     },
     {
       "file": "WorkbookCrossed.dc.html",
       "title": "Workbook · a crossed stage and a bevel stage onto a slanted shaft, read",
-      "x": 23636,
+      "x": 24200,
       "y": 0,
       "w": 1080
     },
     {
       "file": "WorkbookPlanetary.dc.html",
       "title": "Workbook · a 4 : 1 planetary built: the ring held, three planets on a carrier",
-      "x": 24796,
+      "x": 25360,
       "y": 0,
       "w": 1080
     },
     {
       "file": "WorkbookPlanetaryCopies.dc.html",
       "title": "Workbook · five planets that cannot all mesh: the assembly condition",
-      "x": 25956,
+      "x": 26520,
       "y": 0,
       "w": 1080
     },
     {
       "file": "WorkbookModes.dc.html",
       "title": "Workbook · the E4 transfer case read: four modes, the Speeds panel on 4L",
-      "x": 27116,
+      "x": 27680,
       "y": 0,
       "w": 1080
     },
     {
       "file": "WorkbookModesBuilt.dc.html",
       "title": "Workbook · TransferCase_Parallel built: one configuration per mode",
-      "x": 28276,
+      "x": 28840,
       "y": 0,
       "w": 1080
     },
     {
       "file": "WorkbookModesUpdated.dc.html",
       "title": "Workbook · TransferCase_Parallel after a quiet Update: the mode it worked in",
-      "x": 29436,
+      "x": 30000,
       "y": 0,
       "w": 1080
     },
     {
       "file": "WorkbookShortScreen.dc.html",
       "title": "Workbook · the E4 built on a short screen: the columns scroll, the footer whole",
-      "x": 30596,
+      "x": 31160,
       "y": 0,
       "w": 1080
     },
     {
       "file": "WorkbookUserWork.dc.html",
       "title": "Workbook · your work in the assembly, said before Update SolidWorks",
-      "x": 31756,
+      "x": 32320,
       "y": 0,
       "w": 1080
     },
     {
       "file": "WorkbookBands.dc.html",
       "title": "Workbook · RangeBox_Fixed read: a banded sleeve on its hub, on L",
-      "x": 32916,
+      "x": 33480,
       "y": 0,
       "w": 1080
     },
     {
       "file": "WorkbookInPlace.dc.html",
       "title": "Workbook · RangeBox edited to RangeBox_Fixed: one Update, said before the press",
-      "x": 34076,
+      "x": 34640,
+      "y": 0,
+      "w": 1080
+    },
+    {
+      "file": "WorkbookBeforeF1.dc.html",
+      "title": "Workbook · built before printed gears, opened: Machined, as built",
+      "x": 35800,
+      "y": 0,
+      "w": 1080
+    },
+    {
+      "file": "WorkbookPrinted.dc.html",
+      "title": "Workbook · the same gearbox with Printed typed beside Process",
+      "x": 36960,
       "y": 0,
       "w": 1080
     }

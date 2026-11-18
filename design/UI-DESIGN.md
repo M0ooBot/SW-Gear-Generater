@@ -285,7 +285,7 @@ All in `ui_text.py`, tested without a window:
 | `widgets.py` | Airfoil Converter's, plus `Explainer` and `draw_diagram` |
 | `swbuild.py` | the build, run against the `SolidWorks` protocol |
 | `store.py` | `.gear.json` records and `recent.json` |
-| `design/canvas/` | the artboards, one strip each: `Main` (a spur pair), `SingleGear`, `ShiftedPair` (a solved row with profile shift), `HelicalPair` (gear B's hand following A's), `Herringbone` (grooved), `RingPair`, `CrossedPair` (opposite hands), `BevelPair`, and `FieldGuide` (every explainer card, each worked for a gear that has the field); and the Workbook window, 1080 px wide, as `WorkbookReady`, `WorkbookError`, `WorkbookFix`, `WorkbookChosen`, `WorkbookBuilt`, `WorkbookUpdate`, `WorkbookUpdated`, `WorkbookAgain`, `WorkbookUnsaved`, `WorkbookCopy`, `WorkbookMoved` and `WorkbookCloseAnyway` (§9); the built ones run the worker against `tests/test_swbuild.py`'s fake SolidWorks, so `gen.py` needs the tests folder beside it. `gen.py` writes them — `.venv/bin/python design/canvas/gen.py` — taking every word from `ui_text`, every picture from `preview.layout` and which field borrows which diagram from `widgets.py`, so they cannot drift from the window; only the HTML and the SVG diagrams are its own. `ui.py` is Airfoil Converter's builders, unchanged. The first three once lived at <https://claude.ai/artifact/NZXpsX26vgcabs9fFryF7G>, which has not been republished since |
+| `design/canvas/` | the artboards, one strip each: `Main` (a spur pair), `SingleGear`, `ShiftedPair` (a solved row with profile shift), `HelicalPair` (gear B's hand following A's), `Herringbone` (grooved), `RingPair`, `CrossedPair` (opposite hands), `BevelPair`, `PrintedGear` (F1: Process Printed with Nozzle, the Backlash card's printed default and a thin tip's printed warning; the other strip boards draw specs built in code, so their Process row says Machined), and `FieldGuide` (every explainer card, each worked for a gear that has the field); and the Workbook window, 1080 px wide, as `WorkbookReady`, `WorkbookError`, `WorkbookFix`, `WorkbookChosen`, `WorkbookBuilt`, `WorkbookUpdate`, `WorkbookUpdated`, `WorkbookAgain`, `WorkbookUnsaved`, `WorkbookCopy`, `WorkbookMoved` and `WorkbookCloseAnyway` (§9); the built ones run the worker against `tests/test_swbuild.py`'s fake SolidWorks, so `gen.py` needs the tests folder beside it. `gen.py` writes them — `.venv/bin/python design/canvas/gen.py` — taking every word from `ui_text`, every picture from `preview.layout` and which field borrows which diagram from `widgets.py`, so they cannot drift from the window; only the HTML and the SVG diagrams are its own. `ui.py` is Airfoil Converter's builders, unchanged. The first three once lived at <https://claude.ai/artifact/NZXpsX26vgcabs9fFryF7G>, which has not been republished since |
 | `design/renders/` | each artboard as a PNG at 2×, `<Board>.png`, made by `.venv/bin/python design/canvas/render.py` with headless Chrome (no window opens; a throwaway profile) and trimmed of the empty window ground. Its `CHROME` is the Mac's path; on Windows or WSL point it at `chrome.exe` and add `--disable-lcd-text`, or the text comes out with colour fringes |
 
 ## 7. Where it differs from the plan
@@ -1668,6 +1668,14 @@ Update* and Update SolidWorks carries it in place (W9a's rules); *Build again…
 makes every gear new, and W9d names the reason *its Process changed*. Under (B)
 the footer says nothing new and no way back is offered: the user asked for it by
 typing Printed.
+
+Boards: `WorkbookBeforeF1` (the reducer as an app before F1 built it, its
+workbook with no Process row, opened Machined, as built, nothing changed) and
+`WorkbookPrinted` (the same with Printed typed: *Printed, 0.4 mm nozzle*, every
+gear *changes on Update*). `gen.py` writes a spec whose Box's Process is blank
+with no Process or Nozzle row, as a workbook before F1 has. Their renders, like
+every board's since F1 added the Process row, wait for `render.py` on a machine
+with its Chrome.
 
 ### Planetary stages (W7)
 

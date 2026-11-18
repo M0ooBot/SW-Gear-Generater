@@ -290,12 +290,21 @@ def explainer(key, d, side_stem, pair=None):
 KIND_SEG = {"spur": "Spur", "helical": "Helical", "herringbone": "Double", "bevel": "Bevel"}
 
 
-def gear_kind_panel(kind, mode):
-    return panel("Gear", ui_text.kind_readout(kind, "A"), [
+def gear_kind_panel(kind, mode, spec=None):
+    """F1: Process says what ``spec`` is (a spec built here without saying is machined, as in code; the window's row
+    starts at Printed), and Nozzle shows under it while Printed."""
+    spec = spec or GearSpec()
+    printed = spec.is_printed()
+    rows = [
         row(label("Kind"), seg(["Spur", "Helical", "Double", "Bevel"], KIND_SEG[kind])),
         row(label("Flank"), seg(["Involute", "Arcs"], "Involute", w="200px")),
         row(label("Make"), seg(["Single gear", "Gear pair"], mode, w="200px")),
-    ])
+        row(label("Process"), seg(["Printed", "Machined"], "Printed" if printed else "Machined", w="200px")),
+    ]
+    if printed:
+        rows.append(row(label("Nozzle"), gfield(spec.nozzle or ui_text.NOZZLE_PLACEHOLDER, unit="mm",
+                                                placeholder=not spec.nozzle), hint(ui_text.NOZZLE_HINT)))
+    return panel("Gear", ui_text.kind_readout(kind, "A"), rows)
 
 
 def pair_panel(pair, summary, readout, focused="", card=None, d=None):
@@ -363,6 +372,7 @@ def side_panel(title, spec, d, stem, focused="", card=None, pair=None, side="a")
         pair.mesh_value() != "internal"
     ring_pair = pair_mode and pair.mesh_value() == "internal" and not bevel
     takes_shift = not bevel and not ring and not (pair_mode and (ring_pair or crossed))
+    process = "printed" if spec.is_printed() else "machined"
     rows = [
         row(label("Module"), f("module", spec.module, unit="mm"), dropdown("", "72px"), hint("ISO 54")),
         row(label("Teeth"), f("teeth", spec.teeth)),
@@ -372,8 +382,8 @@ def side_panel(title, spec, d, stem, focused="", card=None, pair=None, side="a")
     if not ring:
         rows.append(row(label("Bore"), f("bore", spec.bore or "none", unit="mm", placeholder=not spec.bore)))
     rows += [
-        row(label("Backlash"), f("backlash", spec.backlash or "0.3 × module", unit="mm", w="150px",
-                                 placeholder=not spec.backlash), hint("ISO: 0.02–0.05 × m")),
+        row(label("Backlash"), f("backlash", spec.backlash or ui_text.BACKLASH_PLACEHOLDERS[process], unit="mm",
+                                 w="150px", placeholder=not spec.backlash), hint(ui_text.BACKLASH_HINTS[process])),
         row(label("Fillet"), f("fillet", spec.fillet or ("0.15 × module" if ring else "0.38 × module"), unit="mm",
                                w="150px", placeholder=not spec.fillet)),
     ]
@@ -517,7 +527,7 @@ def pair_board(title_kind, pair, chosen=None, focus=("a", "module"), card=None, 
     rows = ui_text.pair_derived_rows(centre, ratio, eps, d_a.teeth, d_b.teeth,
                                      "Cone distance" if bevel else "Centre distance", working_angle=working)
     diagnostics = diagnostics_of([("A", diag_a), ("B", diag_b)])
-    if not bevel and not crossed and not ring:
+    if not crossed and ((not bevel and not ring) or d_a.printed or d_b.printed):     # GearApp._show_derived
         diagnostics += [(message, "cannot be built" in message) for message in pairs.mesh_warnings(d_a, d_b)]
     panel_card = {"a": card if focus[0] == "a" else None, "b": card if focus[0] == "b" else None,
                   "pair": card if focus[0] == "pair" else None}
@@ -526,7 +536,7 @@ def pair_board(title_kind, pair, chosen=None, focus=("a", "module"), card=None, 
     manual = ui_text.manual_steps_line([f"Assign a material to {stem_a}; the build leaves it unset.",
                                         f"Assign a material to {stem_b}; the build leaves it unset."])
     return page("\n".join([
-        gear_kind_panel(title_kind, "Gear pair"),
+        gear_kind_panel(title_kind, "Gear pair", pair.gear_a),
         pair_panel(pair, summary, readout, focused=focus[1] if focus[0] == "pair" else "", card=panel_card["pair"], d=d_a),
         side_panel("Gear A", spec_a, d_a, stem_a, focused=focus[1] if focus[0] == "a" else "", card=panel_card["a"],
                    pair=pair, side="a"),
@@ -544,7 +554,7 @@ def single_board(spec, focus="module", status="Type a gear, or switch to Gear pa
     spec, d, o, diagnostics = worked(spec)
     stem = spec.default_stem()
     return page("\n".join([
-        gear_kind_panel(spec.kind, "Single gear"),
+        gear_kind_panel(spec.kind, "Single gear", spec),
         side_panel("Gear", spec, d, stem, focused=focus, card=focus),
         derived_panel([(d, o)], ("",), diagnostics_of([("", diagnostics)]), ui_text.derived_line(d)),
         output_panel(False),
@@ -600,7 +610,8 @@ _reads = {}
 def read_workbook(spec, copy=False):
     """``spec`` through a real file, written once and read by the window's own link: (path, spec, diagnostics,
     digest). The same spec is the same file, so a record's digest matches a later board's read of it; ``copy``
-    reads the same file copied to a folder of its own (a copied workbook)."""
+    reads the same file copied to a folder of its own (a copied workbook). F1: a spec whose Box's Process is blank is
+    written as a workbook written before F1 is, with no Process or Nozzle row on its Box sheet."""
     key = (repr(spec), copy)
     if key not in _reads:
         folder = tempfile.mkdtemp(prefix="gen-workbook-")
@@ -608,7 +619,11 @@ def read_workbook(spec, copy=False):
         if copy:
             shutil.copy(read_workbook(spec)[0], path)
         else:
-            wb_xlsx.write_new(path, wb_model.to_sheets(spec))
+            sheets = wb_model.to_sheets(spec)
+            if not spec.box.process.strip():
+                sheets = [dataclasses.replace(s, rows=[r for r in s.rows if not (r and r[0] in ("Process", "Nozzle"))])
+                          if s.name == "Box" else s for s in sheets]
+            wb_xlsx.write_new(path, sheets)
         reading = wb_link.Link(path).read()
         _reads[key] = (path, reading.spec, reading.diagnostics, reading.digest)
     return _reads[key]
@@ -680,8 +695,17 @@ class Desk:
             self.sw.turn(next(c.name for c in self.record.gearbox.components if c.gear == gear), degrees * k)
 
 
-def assessed(spec, diagnostics, chosen=()):                            # WorkbookWindow._assess
-    return wb_assess.assess(spec, diagnostics, spec.box.output_folder, "", chosen)
+def assessed(spec, diagnostics, chosen=(), blank="printed"):           # WorkbookWindow._assess
+    return wb_assess.assess(spec, diagnostics, spec.box.output_folder, "", chosen, blank_process=blank)
+
+
+def blank_for(record, here, disk):                                      # WorkbookWindow._blank_process
+    """What a blank Process means beside ``record`` (D11, ruled (B)): as built, by the record when it is this
+    workbook's, as :func:`planned` takes it (the boards' one workbook saved again is its own), else as a new gearbox."""
+    if (record is not None and store.record_owner(record, here, disk.exists)[0] == store.UNSURE
+            and any(store.same_path(record.workbook, read[0]) for read in _reads.values())):
+        return wb_assess.blank_process(record)
+    return wb_assess.blank_process(None if store.foreign_workbook(record, here, disk.exists) else record)
 
 
 def planned(a, record, disk):                                           # WorkbookWindow._plan_solidworks
@@ -710,10 +734,13 @@ def planned(a, record, disk):                                           # Workbo
     return plan, update, ours
 
 
-def press_build(desk, spec):
-    """Build pressed on ``spec``: the plan run by swbuild.build_gearbox, finished into the record; the note."""
+def press_build(desk, spec, blank=None):
+    """Build pressed on ``spec``: the plan run by swbuild.build_gearbox, finished into the record; the note.
+    ``blank`` is what a blank Process is built as, the window's by default (``machined`` for a gearbox an app
+    before F1 built)."""
     path, read_spec, diagnostics, digest = read_workbook(spec)
-    plan, _, _ = planned(assessed(read_spec, diagnostics), desk.record, desk.disk)
+    blank = blank or blank_for(desk.record, path, desk.disk)
+    plan, _, _ = planned(assessed(read_spec, diagnostics, blank=blank), desk.record, desk.disk)
     result = swbuild.build_gearbox(desk.sw, **plan.build_kwargs(), exists=desk.disk.exists)
     desk.positions = getattr(result, "positions_per_configuration", None)     # as WorkbookWindow._collect_job keeps it
     again = desk.record is not None and desk.record.gearbox is not None and bool(desk.record.gearbox.assembly)
@@ -729,7 +756,8 @@ def press_build(desk, spec):
 def press_update(desk, spec):
     """Update SolidWorks pressed on ``spec``: swbuild.update_gearbox, finished into the record; the note."""
     path, read_spec, diagnostics, digest = read_workbook(spec)
-    _, update, _ = planned(assessed(read_spec, diagnostics), desk.record, desk.disk)
+    blank = blank_for(desk.record, path, desk.disk)
+    _, update, _ = planned(assessed(read_spec, diagnostics, blank=blank), desk.record, desk.disk)
     result = swbuild.update_gearbox(desk.sw, **update.update_kwargs(), exists=desk.disk.exists)
     if result.user_work is not None:
         result.user_work.read_at = READ_STAMP          # the read's time, fixed for the boards (above)
@@ -905,9 +933,10 @@ def workbook_board(spec, *, clock="14:02:31", open_in_excel=True, before=None, c
     path, read_spec, read_diagnostics, digest = read_workbook(spec, copy)
     folder = read_spec.box.output_folder
     desk = desk or Desk()
+    blank = blank_for(desk.record, path, desk.disk)
 
     def plan(chosen, read=(read_spec, read_diagnostics)):              # WorkbookWindow._plan and _assess
-        state = assessed(read[0], read[1], chosen)
+        state = assessed(read[0], read[1], chosen, blank=blank)
         return state, state.spec, state.parts, state.report, state.diagnostics
 
     chosen = []
@@ -944,6 +973,8 @@ def workbook_board(spec, *, clock="14:02:31", open_in_excel=True, before=None, c
         row(label("Name"), f'<span style="{mono}">{effective.box.name}</span>'),
         row(label("Output folder"), f'<span style="{mono}">{ui_text.short_path(folder, wb_gui.PATH_CHARS - 20)}</span>',
             hint("from the Box sheet")),
+        row(label("Process"), f'<span style="font-size: 12.5px; color: {INK};">'
+                              f'{ui_text.workbook_process_line(read_spec.box, effective.box)}</span>'),
         row(label("Worked out as"), f'<span style="font-size: 12.5px; color: {INK};">{report.worked_out_as or "—"}</span>'),
     ], gap=2)
     gears = panel("Gears", ui_text.workbook_parts_readout(parts, record=record),
@@ -1039,6 +1070,10 @@ boards["Main"] = ("Gear pair · spur", pair_board("spur", spur_pair, chosen, ("a
                                                   status="Both gears now carry module 1.5: 20 and 60 teeth."))
 
 boards["SingleGear"] = ("Single gear · spur", single_board(GearSpec(), "pressure_angle"))
+# F1 (PLAN-PRINTED §1.3, §2.1, §2.2): the strip as it opens, Process Printed, with Nozzle under it, a module 1 gear of
+# 20 teeth, the card on Backlash with its printed default, and the printed warning its thin tip gives.
+boards["PrintedGear"] = ("Single gear · printed, a thin tip", single_board(
+    GearSpec(module="1", teeth="20", bore="6", process="printed"), "backlash"))
 
 # A pair that needs profile shift: C 47.5 at 32 : 15 on module 2.
 shift_base = PairSpec(mode="pair", centre_distance="47.5", ratio="32:15", module="2",
@@ -1332,6 +1367,23 @@ fixed_in_place = wb_model.replace(fixed_box, box=wb_model.replace(fixed_box.box,
 boards["WorkbookInPlace"] = ("Workbook · RangeBox edited to RangeBox_Fixed: one Update, said before the press",
                              workbook_board(fixed_in_place, before=rangebox, desk=user_desk,
                                             positions_per_configuration=user_desk.positions), WINDOW_WIDTH)
+
+# F1 (PLAN-PRINTED §1.3, §6; D11 ruled (B)). The reducer as an app before F1 built it: its workbook has no Process row
+# and every part was built machined. Opened after F1 it is Machined, as built, and nothing has changed: the Process line
+# says so and how to print it. Then Printed typed beside a Process row added on its Box sheet: every gear changes on
+# Update, its Backlash written in place.
+def _with_process(spec, process):
+    return wb_model.replace(spec, box=wb_model.replace(spec.box, process=process))
+
+
+before_f1 = _with_process(reducer, "")
+f1_desk = Desk()
+press_build(f1_desk, before_f1, blank="machined")
+boards["WorkbookBeforeF1"] = ("Workbook · built before printed gears, opened: Machined, as built",
+                              workbook_board(before_f1, desk=f1_desk), WINDOW_WIDTH)
+boards["WorkbookPrinted"] = ("Workbook · the same gearbox with Printed typed beside Process",
+                             workbook_board(_with_process(reducer, "printed"), before=before_f1, desk=f1_desk),
+                             WINDOW_WIDTH)
 
 layout = []
 x = 0
