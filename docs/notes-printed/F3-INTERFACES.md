@@ -120,7 +120,8 @@ default lands. How the default lands without a red commit is §13.
 - **Not yet set by any derive**: A sets them from `spec.bore_allowance_mm()` and `spec.flat_mm()` when the gear has a
   bore. A's globals: `"Bore Allowance"` only when the allowance is not 0 (as `"Profile Shift"`), `"Bore Flat"` only with
   a D; the link and the D's sketch exactly as §4.2 states them (the major arc from the chord's +Y end, direction +1;
-  the chord's link `2 * ( abs ( R * R - h * h ) ) ^ 0.5`, never `sqr`).
+  the chord's link `2 * ( ( abs ( R * R - h * h ) ) ^ 0.5 )`, the power bracketed by the coordinator's ruling after
+  package A, never `sqr`).
 - **Where the flat sits** (ruling 2, and the re-check's point 1): on +X, square to the X axis, facing a tooth space's
   middle. In a spur gear, a dog and a hub a space is centred on +X on the Front plane; **in a helical gear it is so at
   its section plane, one overrun behind the Front plane** (`helical.py:206-232`, `:558-564`), so the Front-plane face is

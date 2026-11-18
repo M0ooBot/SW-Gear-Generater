@@ -255,8 +255,8 @@ def test_the_chords_link_is_abs_to_the_half_power_and_never_sqr():
     text = link(plan, "Flat@Bore Sketch").expression
     r = '( "Bore Diameter" + "Bore Allowance" ) / 2'
     h = '"Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" / 2'
-    assert text == f"2 * ( abs ( ( {r} ) * ( {r} ) - ( {h} ) * ( {h} ) ) ) ^ 0.5"
-    assert text.startswith("2 * ( abs ( ") and text.endswith(" ) ) ^ 0.5") and "sqr" not in text
+    assert text == f"2 * ( ( abs ( ( {r} ) * ( {r} ) - ( {h} ) * ( {h} ) ) ) ^ 0.5 )"
+    assert text.startswith("2 * ( ( abs ( ") and text.endswith(" ) ) ^ 0.5 )") and "sqr" not in text
     for every in plan.ops:
         assert "sqr" not in getattr(every, "expression", "") and "sqr" not in getattr(every, "radian_expression", "")
 
@@ -266,8 +266,8 @@ def test_a_d_with_no_allowance_has_no_allowance_global_and_links_the_bore_alone(
     assert "Bore Allowance" not in globals_of(plan) and globals_of(plan)["Bore Flat"] == "7"
     assert link(plan, "Bore@Bore Sketch").expression == '"Bore Diameter" / 2'
     text = link(plan, "Flat@Bore Sketch").expression
-    assert text == ('2 * ( abs ( ( "Bore Diameter" / 2 ) * ( "Bore Diameter" / 2 ) - ( "Bore Flat" - "Bore Diameter" / 2 )'
-                    ' * ( "Bore Flat" - "Bore Diameter" / 2 ) ) ) ^ 0.5')
+    assert text == ('2 * ( ( abs ( ( "Bore Diameter" / 2 ) * ( "Bore Diameter" / 2 ) - ( "Bore Flat" - "Bore Diameter" / 2 )'
+                    ' * ( "Bore Flat" - "Bore Diameter" / 2 ) ) ) ^ 0.5 )')
     assert equations.evaluate(text, plan.values()) == pytest.approx(geometry(8.0, 7.0, 0.0)[2])
 
 

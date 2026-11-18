@@ -1691,9 +1691,11 @@ def bore_expressions(g: Any) -> Tuple[str, str, str]:
 
 
 def chord_expression(radius: str, h: str) -> str:
-    """The D's chord, ``2 * ( abs ( R * R - h * h ) ) ^ 0.5`` with R and h written out: the app's square root, never
+    """The D's chord, ``2 * ( ( abs ( R * R - h * h ) ) ^ 0.5 )`` with R and h written out: the app's square root, never
     ``sqr``, which SolidWorks 2026 refuses at 0 (GOTCHAS §27; :func:`profile_variables`' comment)."""
-    return f"2 * ( abs ( ( {radius} ) * ( {radius} ) - ( {h} ) * ( {h} ) ) ) ^ 0.5"
+    # The power in its own brackets (the coordinator's ruling, 2026-11-18): the link does not depend on SolidWorks
+    # taking ^ before *, which P1 probed only against a unary minus (GOTCHAS: -2 ^ 2 is -4).
+    return f"2 * ( ( abs ( ( {radius} ) * ( {radius} ) - ( {h} ) * ( {h} ) ) ) ^ 0.5 )"
 
 
 def _bore_ops(g: SpurDerived) -> List[Op]:

@@ -10,6 +10,8 @@ as the app makes them), and no file but package A's is touched.
 1. `e855b36`: `gears/spur.py`, `helical.py`, `bevel.py`, `internal.py`, `clutch.py` and `tests/test_bore.py` (new). Its
    message says 145 tests; there are **139** (the message's count is wrong, the commit is not).
 2. This note.
+3. The coordinator's two rulings on this note: the chord's link with its power bracketed (code, tests, PLAN-PRINTED
+   §4.2, F3-INTERFACES §3), and the switch's commit written down below.
 
 No existing test was changed; F3-0's printed-bevel fixture commit (`21cac8b`) was in the log before `e855b36`.
 
@@ -54,7 +56,7 @@ archive 7c9b473` with package A's six files over it; deleted afterwards), `PYTHO
   `Arc("bore_arc", (0, 0), (h, +c/2), (h, −c/2), +1)`, `Line("bore_flat", (h, −c/2), (h, +c/2))`, coincident centre on
   the origin, the line's start on the arc's end and its end on the arc's start, `vertical` on the line; `Dimension("Bore",
   ("bore_arc",))` (a radius) linked to `( "Bore Diameter" + "Bore Allowance" ) / 2` and `Dimension("Flat",
-  ("bore_flat",))` linked to `spur.chord_expression`, `2 * ( abs ( ( R ) * ( R ) - ( h ) * ( h ) ) ) ^ 0.5` with
+  ("bore_flat",))` linked to `spur.chord_expression`, `2 * ( ( abs ( ( R ) * ( R ) - ( h ) * ( h ) ) ) ^ 0.5 )` (the power bracketed by the coordinator's ruling; see 9) with
   `R = ( "Bore Diameter" + "Bore Allowance" ) / 2` and `h = "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" / 2`;
   with no allowance the same with the allowance's terms left out. The helical's and the herringbone's bore ops are the
   spur's (they call `spur._bore_ops`); the flat on +X faces the space centred there at their section plane, as
@@ -106,10 +108,11 @@ archive 7c9b473` with package A's six files over it; deleted afterwards), `PYTHO
    then said. Not worth a third sentence, in my judgement.
 8. **Not done**: the allowance and the flat in the part's custom properties (`property_ops`' sizes). The plan is
    silent; the properties stay what they were.
-9. **The chord's link relies on `^` binding tighter than `*` in SolidWorks**: `2 * ( abs ( … ) ) ^ 0.5` is the plan's text,
-   and the app's evaluator reads it so, but the app has never written a product with a `^` in it, and P1 probed only
-   unary minus against `^` (GOTCHAS: `-2 ^ 2` is −4). If `dshape`'s first build reads half a chord or its square, the
-   fix is `2 * ( ( abs ( … ) ) ^ 0.5 )` in `spur.chord_expression` alone.
+9. **The chord's link and SolidWorks' precedence: ruled.** As committed in `e855b36` the link was the plan's
+   `2 * ( abs ( … ) ) ^ 0.5`, which leans on SolidWorks taking `^` before `*` (P1 probed only a unary minus against
+   `^`). The coordinator ruled it written with the power in its own brackets, `2 * ( ( abs ( R * R - h * h ) ) ^ 0.5 )`:
+   done in `spur.chord_expression`, `test_bore.py`, PLAN-PRINTED §4.2 and its change record, and F3-INTERFACES §3, in
+   one commit after this note's first.
 
 ## The interface: what I found wrong or short
 
@@ -124,13 +127,57 @@ archive 7c9b473` with package A's six files over it; deleted afterwards), `PYTHO
    by themselves prove that C's `_update_target` applies `as_built`; F3-0-REVIEW's S4, C's real-path
    `tests/test_bore_form.py`, is what does, and #10 still guards the strip's count.
 3. **One test outside the guards moves when the switch is turned on:**
-   `tests/test_printed_gears.py::test_the_printed_rim_is_three_nozzle_widths_where_that_is_more_than_a_module` pins F1's
-   printed rim sentences for gears built new with a blank allowance (lines 99, 104 and 106-107). With the default in,
-   the rim is measured on the hole as cut (§4.1: F1's printed rim among the checks), so 0.88 becomes 0.78, 0.38 becomes
-   0.28, and at module 2, Bore 33, the printed gear's rim (0.9 mm on 33.2) no longer equals the machined one's. F3-0's
-   run missed it because its stand-in did not move the rim. It is in no package's file list; the switch's commit
-   cannot be one line unless the coordinator rules who changes it and how (for instance a typed `bore_allowance="0"`
-   in its printed specs, which keeps the test about F1's floor, or the figures moved). I have not touched it.
+   `tests/test_printed_gears.py::test_the_printed_rim_is_three_nozzle_widths_where_that_is_more_than_a_module`. The
+   coordinator ruled it moves in the switch's commit, package A's to make when B and C are in and the coordinator says
+   so; the change is written down below (*The switch's commit*). Not touched until then.
+
+## The switch's commit, written down (package A's, on the coordinator's word)
+
+Two changes, one commit, with the whole suite run there:
+
+1. `src/gear_generator/gears/spur.py`: `PRINTED_DEFAULT_IN_PLANS = False` becomes `True`.
+2. `tests/test_printed_gears.py` lines 97 to 107, `test_the_printed_rim_is_three_nozzle_widths_where_that_is_more_than_a_module`.
+   Each rim sentence of a printed gear built new there has a blank allowance, so once the default is in its rim is
+   measured on the hole as cut, Bore + 0.2 (PLAN-PRINTED §4.1: F1's printed rim is among the checks on the hole as cut).
+   The figures, with the root `d_f = d_a − 2 h`:
+   - module 0.8, 30 teeth: `d_a = 0.8 × 32 = 25.6`, `h = 2.4 × 0.8 = 1.92` (module up to 1.25), `d_f = 21.76`.
+     - line 99, Bore 20: F1 `(21.76 − 20) / 2 = 0.88`; as cut `(21.76 − 20.2) / 2 = 0.78`. Three nozzle widths,
+       `3 × 0.4 = 1.2` mm, are more than the module, so the printed floor is the sentence.
+     - lines 106-107, Bore 21: F1 `(21.76 − 21) / 2 = 0.38`; as cut `(21.76 − 21.2) / 2 = 0.28`.
+   - module 2, 20 teeth: `d_a = 44`, `h = 2.25 × 2 = 4.5`, `d_f = 35`. Line 104, Bore 33: the machined gear's rim
+     `(35 − 33) / 2 = 1` (line 103, unchanged); the printed gear's as cut `(35 − 33.2) / 2 = 0.9`, so it no longer equals
+     the machined one's. Above module 1.2 the one-module sentence is the printed gear's too.
+   - Line 100 (machined, module 0.8, no rim sentence) does not move.
+
+   The test becomes two cases, F1's figures kept at an allowance typed 0 and F3's at the default; nothing it asserted
+   is dropped (the machined lines stay as they are, and at 0 the printed module-2 sentence still equals the machined
+   one). Checked in a scratch file against the code at `e855b36`: both cases pass with the switch on; with it off the
+   default case fails, as it should until the switch's commit.
+
+   ```python
+   @pytest.mark.parametrize("allowance, at_20, at_21, at_33", [
+       # F1's figures: the hole cut at its Bore, an allowance typed 0.
+       ("0", "0.88", "0.38", "1"),
+       # F3's printed default on a gear built new (0.2 mm on the diameter, spur.BORE_ALLOWANCE_DEFAULT): the rim is
+       # measured on the hole as cut, Bore + 0.2, so each is 0.1 mm thinner (PLAN-PRINTED §4.1).
+       ("", "0.78", "0.28", "0.9"),
+   ])
+   def test_the_printed_rim_is_three_nozzle_widths_where_that_is_more_than_a_module(allowance, at_20, at_21, at_33):
+       said = _said(_printed(module="0.8", teeth="30", bore="20", bore_allowance=allowance))
+       assert f"Printed, the bore leaves {at_20} mm of rim under the teeth, under three nozzle widths (1.2 mm)." in said
+       assert not [m for m in _said(_spec(module="0.8", teeth="30", bore="20")) if "rim" in m]
+       # Above module 1.2 today's one-module warning is the stricter, and a printed gear is told it as a machined one is.
+       machined = [m for m in _said(_spec(module="2", teeth="20", bore="33")) if "rim" in m]
+       assert machined == ["The bore leaves 1 mm of rim under the teeth, thinner than one module (2 mm)."]
+       assert [m for m in _said(_printed(module="2", teeth="20", bore="33", bore_allowance=allowance)) if "rim" in m] == [
+           f"The bore leaves {at_33} mm of rim under the teeth, thinner than one module (2 mm)."]
+       # Under a module but over three nozzle widths does not happen above 1.2; at 0.8 the printed floor replaces it.
+       assert [m for m in _said(_printed(module="0.8", teeth="30", bore="21", bore_allowance=allowance))
+               if "rim" in m] == [
+           f"Printed, the bore leaves {at_21} mm of rim under the teeth, under three nozzle widths (1.2 mm)."]
+   ```
+
+   The block replaces lines 97 to 107 whole.
 
 ## What needs the other packages before it can be shown working
 

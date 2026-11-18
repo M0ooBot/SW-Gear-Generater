@@ -1703,7 +1703,9 @@ x = h:
   - `Dimension("Bore", ("bore_arc",))`: an arc's, a radius (`findings.ARC_DIMENSION = "radius"`,
     `findings.py:85-88`), linked to `( "Bore Diameter" + "Bore Allowance" ) / 2`;
   - `Dimension("Flat", ("bore_flat",))`: the chord's length, linked to
-    `2 * ( abs ( R * R - h * h ) ) ^ 0.5`, with R and h written out in the globals:
+    `2 * ( ( abs ( R * R - h * h ) ) ^ 0.5 )`, the power in its own brackets so the link does not depend on SolidWorks
+    taking `^` before `*` (the coordinating session's ruling, 2026-11-18, after package A), with R and h written out in
+    the globals:
     `R = ( "Bore Diameter" + "Bore Allowance" ) / 2`, `h = "Bore Flat" - "Bore Diameter" / 2 + "Bore Allowance" /
     2`.
   - **Never `sqr`.** The first revision cited `spur.py:1158` as "the app's guarded sqr". That comment says the
@@ -2682,7 +2684,8 @@ session's two rulings on it. Each change is by section, with why.
   - The arc starts at the chord's end that its counter-clockwise sweep leaves first, direction +1, a major arc over
     180°. With the flat on +X (ruling 2) that is the chord's +Y end; the review's *−X end* was the same branch for a
     flat on +Y.
-  - The chord's link is `2 * ( abs ( R * R - h * h ) ) ^ 0.5`, never `sqr`. The first revision's citation of
+  - The chord's link is `2 * ( abs ( R * R - h * h ) ) ^ 0.5`, never `sqr` (since package A, by the coordinating
+    session's ruling, `2 * ( ( abs ( R * R - h * h ) ) ^ 0.5 )`). The first revision's citation of
     `spur.py:1158` said the opposite of that comment.
   - The checks are on the hole as cut: `h ≥ 0.25 R`, which settles that a negative allowance is allowed, and a
     flat depth of at least 0.3 mm, which keeps the chord at least 3.08 mm at R 4.1, against W9c's near-zero line.
