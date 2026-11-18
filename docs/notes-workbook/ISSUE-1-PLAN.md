@@ -1173,8 +1173,7 @@ Ruled by the coordinating session on 2026-11-17, each the user's to overrule. Th
 ## W9 closed (2026-11-18)
 
 W9 is closed on SolidWorks 2026 and 2024: each of its four stages has met §5's *Done when* on 2026, been confirmed on
-2024 and been reviewed. The coordinating session merges branch `w9d`, where W9b's end, W9c and W9d were done, into
-`workbook` after this entry; the whole suite at the merge head is in the merge commit's message. The account of how
+2024 and been reviewed. The coordinating session merges branch `w9d`, which holds all of W9, into `workbook` after this entry; the whole suite at the merge head is in the merge commit's message. The account of how
 each stage went is `docs/HANDOFF-WORKBOOK.md`, *Where W9 stands*, items 1 to 11.
 
 - **W9a** (the user's work is theirs) closed on 2026-11-17. *Done when* met on 2026 by the closing run (`19651ee`,
