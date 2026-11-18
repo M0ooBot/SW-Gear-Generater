@@ -39,30 +39,31 @@ revision proposes.
 | | 3 | the file read as text, never opened in SolidWorks (GOTCHAS §20): the frame; the FILE_SCHEMA and its AP **by its name's prefix**; `MANIFOLD_SOLID_BREP`, `CLOSED_SHELL`, `OPEN_SHELL`, `SHELL_BASED_SURFACE_MODEL` counted as instances; the length unit; from the `VERTEX_POINT`s the largest radius from Z and the axial extent against the app's d_a / 2 and face width, to 0.01 mm. Facts: nothing here is pinned per version (M2) | (evidence for §3.1.4's extent check) |
 | | 4 | the helical part, as 2 and 3 | with 2: `STEP_EXPORT` |
 | | 5 | the spur exported again onto (2)'s file: overwritten or not (a fact; the app never asks it to), and its text against (2)'s, **the determinism control**: two exports of one document the same but for `FILE_NAME` | (the control for 6) |
-| | 6 | the helical activated; the spur, open in its own window but not active, made the build document by `use_open_document` (the app's route, no activation) and exported by its own object; **the file is right** when its text is (2)'s but for `FILE_NAME` and not (4)'s; the active document, its title and every flag held | `STEP_EXPORT_NEEDS_ACTIVE` |
+| | 6 | the helical activated; the spur, open in its own window but not active, made the build document by `use_open_document` (the app's route, no activation) and exported by its own object; **the file is right** when its text is (2)'s but for `FILE_NAME` and not (4)'s; the active document, its title and every flag held. Before the export, the spur's window is read while the helical is active (a part in its own window, not active: M1) | `STEP_EXPORT_NEEDS_ACTIVE`; the window read into `PART_WINDOW_READ` |
 | | 8 | the spur's Face Width set to 9 (`set_global_variable`) and rebuilt, not saved; activated and exported: whether its flag stays on, its path unchanged, and the file holds the changed solid (its text not (2)'s, its axial extent 9). Facts: the app refuses an unsaved part by ruling (open point 6) whatever this shows | |
 | | 9 | everything of `f2-export` closed unsaved under the watch; the user's documents as at the start | |
 | `component` | built | a printed pair, 25 / 50 at module 1.5, fixed (`Pinion_m1.5_N25_P`, `Gear_m1.5_N50_P`, `Pair_m1.5_25T_50T_P`), built in `f2-component` and closed (saved by the build) | |
 | | loaded | the assembly opened alone by `Session.open_document`, so both parts are loaded only as its components: the assembly read unmarked; the components' states; **whether the document walk** (`GetFirstDocument` / `GetNext`, what `use_open_document` walks) **reaches a component-only document**; the window reads (`IModelDoc2.Visible`, `ActiveView`) of the assembly and both parts; `ISldWorks.GetOpenDocumentByName` by full path for the gear, the pinion and a file that does not exist, and by file name only for the gear | |
 | | 7a | the gear reached by `GetOpenDocumentByName(<path>)` and exported by that object, nothing activated: the assembly's path, title and flag, the active document, the gear component's state, the gear's own document and every flag before and after | with 7c, 7d: `STEP_EXPORT_FROM_COMPONENT` |
 | | 7b | **the fallback**: the gear opened in its own window by `Session.open_document` (OpenDoc6, warning 128, then ActivateDoc3); the window reads with it open (the gear active, the assembly not); exported; closed by `CloseDoc` on its title; then whether the assembly is still open, its flag as it was, the component's state as it was, the gear still loaded (walk, window read, `GetOpenDocumentByName`), which document is active; then the assembly activated again, as the job puts the user's document back | with 7c, 7d: `OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN` |
-| | 7c | **lightweight** (the re-check's should-fix): the gear's component set lightweight by `SetSuppression2` (as W9a's `lightweight` did; it marks the assembly, a fact); whether the walk and `GetOpenDocumentByName` still reach a document; if one, exported by it; then the not-open path as the job takes it (opened beside, exported, closed), the assembly open after, the component's state after; then set resolved again | (into 7a's and 7b's proposals) |
-| | 7d | everything closed; the gear opened alone and exported **twice** (the reference and its determinism control) and the pinion once (the file that must differ); `GetOpenDocumentByName` on the gear open alone (it must answer, the part's own path) and closed (it must answer None): the read's two controls | `PART_WINDOW_READ` (from every window read) |
+| | 7d | everything closed; the gear opened alone and exported **twice** (the reference and its determinism control), then the pinion opened and exported once (the file that must differ); **the gear's window read while it is open in its own window and the pinion is active** (M1); `GetOpenDocumentByName` on the gear open alone (it must answer, the part's own path) and closed (it must answer None): the read's two controls. 7a's and 7b's files are then judged against the reference and said, and `PART_WINDOW_READ` proposed, all before 7c, so a hang in 7c cannot void them (S2) | `PART_WINDOW_READ` (from every window read) |
+| | 7c | **lightweight**, last (the re-check's should-fix; run after 7d by F2-0-REVIEW's S2): the assembly opened again (`open_document`); the gear's component set lightweight by `SetSuppression2` (as W9a's `lightweight` did; it marks the assembly, a fact); whether the walk and `GetOpenDocumentByName` still reach a document; if one, exported by it; then the not-open path as the job takes it (opened beside, exported, closed), the assembly open after, the component's state after; then set resolved again | (into 7a's and 7b's proposals) |
 | | 9 | everything of `f2-component` closed unsaved; the user's documents as at the start | |
 
 ## Which answer proposes which finding
 
-Each judgement is a pure function, held by `--self-check` on made-up readings, every failing way shown (103 checks,
-0 failed at F2-0's commit).
+Each judgement is a pure function, held by `--self-check` on made-up readings, every failing way shown (109 checks,
+0 failed, after F2-0-REVIEW's M1, S1 and S2).
 
 - **`SAVE_AS_COPY`** (`save_as_copy_proposal`): `swSaveAsOptions_Copy`'s value, proposed only when `swSaveAsOptions_Silent`
   reads 1, the `SAVE_AS_SILENT` the app holds (the positive control); else None, and the section exports nothing.
 - **`STEP_EXPORT_ON_<year>`** (`step_export_proposal`): True when the spur's and the helical's exports were both clean,
   every one of these holding: SaveAs answered True, errors 0 and warnings 0, the file on disk and not empty, no window
   came, the document's path, title and save flag unchanged from an unmarked start, the active document unchanged, no
-  folder or user document's flag turned on or closed; and both files pass §3.1.4's frame check (the frame, an accepted
-  AP, exactly one solid and a closed shell, no open shell, no surface model, a readable unit). Else None, with each
-  reason.
+  folder or user document's flag turned on or closed; both files pass §3.1.4's frame check (the frame, an accepted
+  AP, exactly one solid and a closed shell, no open shell, no surface model, a readable unit); **and the spur's file is
+  the spur's size**, its largest radius from Z d_a / 2 (16.5 mm) and its axial extent the face (8 mm), each to 0.01 mm
+  (F2-0-REVIEW's S1; the helical's extent stays a fact). Else None, with each reason.
 - **`STEP_EXPORT_NEEDS_ACTIVE_ON_<year>`** (`needs_active_proposal`, `rightness`): False when step 6's file is right and
   its export clean, the active document (the helical) unchanged; True when it ran and the file was wrong (the
   helical's, or another geometry) or something changed; None when the run cannot tell: a window, a start already
@@ -81,9 +82,11 @@ Each judgement is a pure function, held by `--self-check` on made-up readings, e
   the gear's own file. False when one was measured wrong, None when the run cannot tell.
 - **`PART_WINDOW_READ_ON_<year>`** (`window_proposal`; F2-0's addition, the coordinator's to rule): the first of
   `Visible` and `ActiveView` that reads True on every document seen in its own window (the assembly active, the gear
-  opened beside and active, the assembly not active beside it, the gear open alone) and False on every one seen loaded
-  only as a component (both parts when the assembly is opened alone, the gear after its window closed); None when
-  neither tells them apart.
+  opened beside and active, the assembly not active beside it, the gear open alone) **and on every part seen in its own
+  window but not active** (the spur in step 6 with the helical active, the gear in 7d with the pinion active: the case
+  the job reads it on, F2-0-REVIEW's M1), and False on every one seen loaded only as a component (both parts when the
+  assembly is opened alone, the gear after its window closed); None when neither tells them apart, or when no part was
+  read in its own window but not active.
 
 **Facts, proposing nothing**: the file's schema, unit and extents, and whether the extent check holds on the spur, the
 helical and the 50-tooth gear (the evidence §3.1.4's should-fix waits on); the overwrite (5); the modified part (8);
@@ -154,3 +157,17 @@ use, unverified here:
 | re-check: `GetOpenDocumentByName` unverified and new | measured in "loaded", 7a, 7b, 7c, 7d, with two controls, beside the walk |
 | re-check: lightweight components | 7c, in both component proposals |
 | re-check: the extent check beside the user's features | a fact here; the rule is `F2-INTERFACES.md` §2.4 |
+
+## After F2-0's review (`0c4b7c3`)
+
+- **M1**: `PART_WINDOW_READ` is proposed only with readings of a part open in its own window but not active (step 6, the
+  spur; step 7d, the gear with the pinion active), held by `window_proposal`'s third list; the self-check shows it None
+  with no such reading and a background window reading `Visible` False ruling `Visible` out.
+- **S1**: `STEP_EXPORT` needs the spur's size check to hold; the self-check shows a wrong size and an unread one each
+  None, and the helical's extent as a fact only.
+- **S2**: 7c runs last, after 7d, opening the assembly itself; 7a's and 7b's files are judged and `PART_WINDOW_READ`
+  proposed before it. `STEP_EXPORT_FROM_COMPONENT` and `OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN` still wait on 7c, as their rule
+  is.
+- **S3** (an inch file's two length units) is not changed here: the app writes millimetres, so the probe will not meet
+  it; the coordinator's list for F2-0 did not include it, and the point stands for B's `check_step`.
+- The command lines and times are unchanged.

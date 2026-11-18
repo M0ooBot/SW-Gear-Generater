@@ -41,13 +41,16 @@ Sections, in this order (each runs alone and builds what it needs; "component" i
                flag read before and after. (7b) The fallback: the same part opened in its own window by
                ``Session.open_document`` (which activates), exported, closed by ``CloseDoc`` on its title; whether the
                assembly is still open and unmarked, its component loaded and resolved, which document is active, and any
-               window; then the assembly activated again, as the job puts the user's document back. (7c) The gear's
-               component set lightweight (a fact: that marks the assembly): whether the walk and
-               ``GetOpenDocumentByName`` still reach a document; if one, its export; then the not-open path (opened beside,
-               exported, closed) and the component's state after; then resolved again. (7d) Everything closed; the gear
-               opened alone and exported twice (the reference and its determinism control), the pinion once (the file
-               that must differ); ``GetOpenDocumentByName`` on the gear open alone (it must answer) and closed (it must
-               not). Then every file of (7a)-(7c) held to the reference.
+               window; then the assembly activated again, as the job puts the user's document back. (7d) Everything
+               closed; the gear opened alone and exported twice (the reference and its determinism control), then the
+               pinion opened and exported once (the file that must differ), the gear's window read while it is open
+               but not active (F2-0-REVIEW's M1: the case PART_WINDOW_READ is for; step 6 reads the spur the same way);
+               ``GetOpenDocumentByName`` on the gear open alone (it must answer) and closed (it must not). The files of
+               (7a) and (7b) are held to the reference and PART_WINDOW_READ is proposed here, before (7c), so a hang
+               there cannot void them (S2). (7c), last: the assembly opened again, the gear's component set
+               lightweight (a fact: that marks the assembly); whether the walk and ``GetOpenDocumentByName`` still
+               reach a document; if one, its export; then the not-open path (opened beside, exported, closed) and the
+               component's state after; then resolved again; its files held to the reference.
 
 **A dialog is a finding, not a failure.** Every call that may raise one runs under W9c's watch (``w9c_probes.watched``:
 logs class, caption, buttons and texts, never SolidWorks' frame title, never answers). A dialog that came and went ends
@@ -416,8 +419,10 @@ def save_as_copy_proposal(enum, silent):
 
 
 def step_export_proposal(spur, helical):
-    """STEP_EXPORT_ON_<year>: True when both exports (steps 2 and 4) were clean and both files pass §3.1.4's frame
-    check; None otherwise (a rename, a marked flag, a window, a code, no file, a file that fails), with why."""
+    """STEP_EXPORT_ON_<year>: True when both exports (steps 2 and 4) were clean, both files pass §3.1.4's frame check,
+    and the spur's file is the spur's size (its largest radius d_a / 2 and its axial extent the face width, each to
+    0.01 mm: F2-0-REVIEW's S1; the helical's extent stays a fact); None otherwise (a rename, a marked flag, a window, a
+    code, no file, a file that fails, a spur of the wrong size), with why."""
     why = []
     for label, d in (("spur", spur), ("helical", helical)):
         if not d or d.get("stop"):
@@ -425,6 +430,8 @@ def step_export_proposal(spur, helical):
             continue
         why += [f"{label}: {r}" for r in export_reasons(d)]
         why += [f"{label}: the file fails {r}" for r in file_reasons(d.get("facts") or {})]
+        if label == "spur" and d.get("extent_holds") is not True:
+            why.append(f"spur: its file's size is not the spur's (the extent check read {d.get('extent_holds')!r})")
     return (True if not why else None), why
 
 
@@ -526,14 +533,16 @@ def open_beside_proposal(d):
     return True, f"{said}; lightweight: {(light.get('beside_right') or (None, ''))[1]}"
 
 
-def window_proposal(own, component_only):
+def window_proposal(own, component_only, background):
     """PART_WINDOW_READ_ON_<year>: the first of WINDOW_READS that reads True on every document open in its own window
-    and False on every one loaded only as a component (each a {read: value} dict); None when neither does, or when
-    either list is empty."""
-    if not own or not component_only:
+    (``own``, the active ones among them) and on every **part open in its own window but not active** (``background``,
+    the one case the job reads it on: F2-0-REVIEW's M1), and False on every one loaded only as a component (each a
+    {read: value} dict); None when neither does, or when any of the three lists is empty."""
+    if not own or not component_only or not background:
         return None
     for read in WINDOW_READS:
-        if all(r.get(read) is True for r in own) and all(r.get(read) is False for r in component_only):
+        if (all(r.get(read) is True for r in list(own) + list(background))
+                and all(r.get(read) is False for r in component_only)):
             return read
     return None
 
@@ -702,11 +711,17 @@ def self_check():
        "Silent not the app's 1: the control fails, nothing proposed")
     ok(save_as_copy_proposal({"swSaveAsOptions_Silent": 1}, 1) is None and save_as_copy_proposal({}, 1) is None,
        "no Copy member, or no enumeration: None")
-    ok(step_export_proposal(clean, clean)[0] is True, "STEP_EXPORT: both clean")
-    ok(step_export_proposal(clean, with_(("read", "errors"), 1))[0] is None, "STEP_EXPORT: a code on the helical: None")
-    ok(step_export_proposal(clean, dict(clean, facts=step_facts(_step(solids=2))))[0] is None,
+    spur_ok = dict(clean, extent_holds=True)
+    ok(step_export_proposal(spur_ok, clean)[0] is True, "STEP_EXPORT: both clean, the spur's size holding")
+    ok(step_export_proposal(spur_ok, dict(clean, extent_holds=False))[0] is True,
+       "STEP_EXPORT: the helical's extent is a fact, not a condition")
+    ok(step_export_proposal(dict(clean, extent_holds=False), clean)[0] is None,
+       "S1: the spur's file of the wrong size: None")
+    ok(step_export_proposal(clean, clean)[0] is None, "S1: the spur's size not read: None")
+    ok(step_export_proposal(spur_ok, with_(("read", "errors"), 1))[0] is None, "STEP_EXPORT: a code on the helical: None")
+    ok(step_export_proposal(spur_ok, dict(clean, facts=step_facts(_step(solids=2))))[0] is None,
        "STEP_EXPORT: a file of two solids: None")
-    ok(step_export_proposal(clean, {"stop": "a dialog"})[0] is None and step_export_proposal(None, clean)[0] is None,
+    ok(step_export_proposal(spur_ok, {"stop": "a dialog"})[0] is None and step_export_proposal(None, clean)[0] is None,
        "STEP_EXPORT: a STOP or a step not run: None")
     right = (True, "right")
     ok(needs_active_proposal(dict(clean, right=right)) == (False, "right"), "NEEDS_ACTIVE: right and clean: False")
@@ -775,13 +790,21 @@ def self_check():
         ok(got[0] is want, f"OPEN_BESIDE: {said}: {want} ({got[0]})")
     own = [{"Visible": True, "ActiveView": True}, {"Visible": True, "ActiveView": True}]
     comp_only = [{"Visible": False, "ActiveView": False}]
-    ok(window_proposal(own, comp_only) == "Visible", "the window read: Visible first")
-    ok(window_proposal(own, [{"Visible": True, "ActiveView": False}]) == "ActiveView",
+    back = [{"Visible": True, "ActiveView": True}]
+    ok(window_proposal(own, comp_only, back) == "Visible", "the window read: Visible first")
+    ok(window_proposal(own, [{"Visible": True, "ActiveView": False}], back) == "ActiveView",
        "the window read: ActiveView when Visible reads True on a component")
-    ok(window_proposal(own, [{"Visible": True, "ActiveView": True}]) is None, "neither tells them apart: None")
-    ok(window_proposal(own + [{"Visible": None, "ActiveView": True}], comp_only) == "ActiveView",
+    ok(window_proposal(own, [{"Visible": True, "ActiveView": True}], back) is None, "neither tells them apart: None")
+    ok(window_proposal(own + [{"Visible": None, "ActiveView": True}], comp_only, back) == "ActiveView",
        "an unread Visible is not True")
-    ok(window_proposal([], comp_only) is None and window_proposal(own, []) is None, "a list not read: None")
+    ok(window_proposal([], comp_only, back) is None and window_proposal(own, [], back) is None,
+       "a list not read: None")
+    ok(window_proposal(own, comp_only, []) is None,
+       "M1: no part read in its own window but not active: None, whatever the active ones read")
+    ok(window_proposal(own, comp_only, [{"Visible": False, "ActiveView": True}]) == "ActiveView",
+       "M1: a background part window reading Visible False rules Visible out")
+    ok(window_proposal(own, comp_only, [{"Visible": False, "ActiveView": False}]) is None,
+       "M1: a background part window read as a component by both: None")
     ok(users_changed({"<user document 1>": False}, {"<user document 1>": False}) == [], "the user's documents as they were")
     ok(users_changed({"<user document 1>": False}, {"<user document 1>": True}) != []
        and users_changed({"<user document 1>": False}, {}) != []
@@ -831,6 +854,7 @@ HELICAL = GearSpec(kind="helical", module="2", teeth="20", helix_angle="15", fac
 PINION = GearSpec(kind="spur", module="1.5", teeth="25", face_width="8", bore="", process="printed")
 WHEEL = GearSpec(kind="spur", module="1.5", teeth="50", face_width="8", bore="", process="printed")
 ENUMS_F2 = {}
+BACKGROUND = []            # window reads of a part open in its own window but not active (steps 6 and 7d; M1)
 
 
 def year():
@@ -1156,6 +1180,10 @@ def section_export(out):
         def inactive():
             run("export (6): the helical made active", lambda s: s.activate(str(call(doc_at(s, paths["helical"]),
                                                                                       "GetTitle"))))
+            seen = run("export (6): the spur's window read, the helical active",
+                       lambda s: (window_read(doc_at(s, paths["spur"])), label_of(call(s._app, "ActiveDoc"))))  # noqa: SLF001
+            BACKGROUND.append(dict(seen[0] or {}, what=f"the spur in its own window, {seen[1]} active"))
+            say(f"fact    export (6): the spur's window read with {seen[1]} active: {seen[0]} (M1)")
             d = exported("export (6) the spur by its own object, the helical active",
                          export_case(folder, paths["spur"], files["inactive"], "object"))
             if d.get("stop"):
@@ -1359,16 +1387,82 @@ def section_component(out):
             return d
         step7b = part(out, "beside", "component (7b)", beside, needs=("loaded",))
 
+        def alone():
+            left, _ = C.watched("component (7d) everything closed", W.quit_in(folder))
+            check(not left, f"component (7d): the assembly and its parts closed unsaved: left {left}")
+
+            def work(s):
+                s.open_document(gear_path)
+                doc = s._doc()  # noqa: SLF001
+                out_ = {"own": window_read(doc), "by_path_open_alone": reached(s, gear_path),
+                        "reads": [save_as_step(doc, files["alone"]), save_as_step(doc, files["alone again"])]}
+                s.open_document(pin_path)
+                # M1 (F2-0-REVIEW): the gear now open in its own window and not active, the case PART_WINDOW_READ is for
+                out_["background"] = window_read(doc_at(s, gear_path))
+                out_["active_now"] = label_of(call(s._app, "ActiveDoc"))  # noqa: SLF001
+                out_["reads"].append(save_as_step(s._doc(), files["pinion"]))  # noqa: SLF001
+                return out_
+            d, dialogs = C.watched("component (7d) the gear alone, twice, and the pinion", C.in_build(work))
+            left, _ = C.watched("component (7d) closed again", W.quit_in(folder))
+            d["by_path_closed"] = run("component (7d) GetOpenDocumentByName on the gear closed",
+                                      lambda s: reached(s, gear_path))
+            windows["own"].append(dict(d["own"] or {}, what="the gear open alone, active"))
+            BACKGROUND.append(dict(d["background"] or {}, what=f"the gear in its own window, {d['active_now']} active"))
+            for key in ("alone", "alone again", "pinion", "component", "beside"):
+                texts[key] = read_text(files[key]) if os.path.isfile(files[key]) else None
+            d["control"] = bool(texts["alone"] and texts["alone again"]) and same_file(texts["alone"],
+                                                                                      texts["alone again"])
+            facts = step_facts(texts["alone"]) if texts["alone"] else {}
+            say_facts("component (7d) the gear alone, the file", facts, float(kind_for(WHEEL).derive(WHEEL).da) / 2.0,
+                      float(WHEEL.face_width))
+            say(f"fact    component (7d): the gear alone exported twice, the same but for FILE_NAME {d['control']}; "
+                f"the pinion's file differs {texts['pinion'] is not None and not same_file(texts['pinion'], texts['alone'] or '')}; "
+                f"GetOpenDocumentByName on the gear open alone {d['by_path_open_alone']}, closed {d['by_path_closed']}; "
+                f"windows {len(dialogs)}; left {left}")
+            return d
+        ref = part(out, "alone", "component (7d) the reference files", alone, needs=("built",))
+        control = (ref or {}).get("control", False)
+
+        def judged(key):
+            return rightness(texts.get(key), texts.get("alone"), texts.get("pinion"), control)
+        # 7a's and 7b's own files judged and said before 7c, so a hang there cannot void them (F2-0-REVIEW's S2)
+        if step7a and not step7a.get("stop"):
+            step7a["right"] = judged("component")
+            by = (load or {}).get("by_path") or {}
+            step7a["controls"] = {"no such file": by.get("no such file"),
+                                  "open alone": (ref or {}).get("by_path_open_alone"),
+                                  "closed": (ref or {}).get("by_path_closed")}
+            alone_doc = (ref or {}).get("by_path_open_alone") or {}
+            step7a["controls_ok"] = (by.get("no such file") is None and (ref or {}).get("by_path_closed") is None
+                                     and bool(ref) and alone_doc.get("path") == rel(gear_path))
+            say(f"fact    component (7a): the file is the gear's own {step7a['right']}; GetOpenDocumentByName's controls "
+                f"{step7a['controls_ok']} {step7a['controls']}; its export {export_reasons(step7a) or 'clean'}")
+        if step7b and not step7b.get("stop"):
+            step7b["right"] = judged("beside")
+            say(f"fact    component (7b): the file is the gear's own {step7b['right']}")
+        strip = [{k: v for k, v in w.items() if k != "what"} for w in windows["own"]]
+        read = window_proposal(strip, [{k: v for k, v in w.items() if k != "what"} for w in windows["component_only"]],
+                               [{k: v for k, v in w.items() if k != "what"} for w in BACKGROUND])
+        say(f"fact    component: the window reads, own window {windows['own']}; a part in its own window, not active "
+            f"{BACKGROUND}; a component only {windows['component_only']}")
+        suggest("PART_WINDOW_READ", WINDOW_ROUTES.get(read), f"steps 6 and 7: {len(windows['own'])} documents in their "
+                f"own window, {len(BACKGROUND)} parts in their own window not active, {len(windows['component_only'])} "
+                "loaded only as a component; " + (f"{read} tells them apart" if read else
+                                                  "neither read tells them apart on every one"))
+        out["windows"] = dict(windows, background=list(BACKGROUND))
+
         def lightweight():
             def work(s):
-                s.use_open_document(asm_path)
+                s.open_document(asm_path)          # opened again after 7d closed everything (F2-0-REVIEW's S2)
+                opened_as = doc_read(doc_at(s, asm_path))
                 states = C.swconst(C.ENUM_NAMES)["swComponentSuppressionState_e"]
                 light = next(v for k, v in states.items() if k.endswith("Lightweight") and "Fully" not in k)
                 resolved = next(v for k, v in states.items() if k.endswith("FullyResolved"))
                 name = component_name(s, gear_path)
                 comp = swcom.Session._component_by(findings.COMPONENT_FIND_ROUTE, s._doc(), name)  # noqa: SLF001
                 call(comp, "SetSuppression2", light)
-                out_ = {"component": name, "state_set": components_by_file(s).get(os.path.basename(gear_path)),
+                out_ = {"opened_as": opened_as, "component": name,
+                        "state_set": components_by_file(s).get(os.path.basename(gear_path)),
                         "assembly": doc_read(doc_at(s, asm_path)), "walk": doc_at(s, gear_path) is not None,
                         "by_path": reached(s, gear_path)}
                 doc = call(s._app, "GetOpenDocumentByName", gear_path)  # noqa: SLF001
@@ -1395,83 +1489,31 @@ def section_component(out):
             except C.CaseStop as exc:
                 return stopped("component (7c)", exc)
             d["dialogs"] = dialogs
-            say(f"fact    component (7c): {d['component']} set lightweight reads {d['state_set']}; the assembly then "
+            say(f"fact    component (7c): the assembly opened again {d['opened_as']}; {d['component']} set lightweight "
+                f"reads {d['state_set']}; the assembly then "
                 f"{d['assembly']} (marked by the set itself, a fact); the walk reaches it {d['walk']}; "
                 f"GetOpenDocumentByName {d['by_path']}; exported by that object {d.get('object_read', 'not reached')}; "
                 f"the not-open path: opened {d['opened']}, exported {d['beside_read']}, the assembly open after the "
                 f"close {d['assembly_open_after']}, the component's state after {d.get('state_after_close')}, resolved "
                 f"again {d.get('state_resolved_again')}; windows {len(dialogs)}")
             return d
-        step7c = part(out, "lightweight", "component (7c)", lightweight, needs=("loaded",))
+        step7c = part(out, "lightweight", "component (7c), last", lightweight, needs=("loaded",))
 
-        def alone():
-            left, _ = C.watched("component (7d) everything closed", W.quit_in(folder))
-            check(not left, f"component (7d): the assembly and its parts closed unsaved: left {left}")
-
-            def work(s):
-                s.open_document(gear_path)
-                doc = s._doc()  # noqa: SLF001
-                out_ = {"own": window_read(doc), "by_path_open_alone": reached(s, gear_path),
-                        "reads": [save_as_step(doc, files["alone"]), save_as_step(doc, files["alone again"])]}
-                s.open_document(pin_path)
-                out_["reads"].append(save_as_step(s._doc(), files["pinion"]))  # noqa: SLF001
-                return out_
-            d, dialogs = C.watched("component (7d) the gear alone, twice, and the pinion", C.in_build(work))
-            left, _ = C.watched("component (7d) closed again", W.quit_in(folder))
-            d["by_path_closed"] = run("component (7d) GetOpenDocumentByName on the gear closed",
-                                      lambda s: reached(s, gear_path))
-            windows["own"].append(dict(d["own"] or {}, what="the gear open alone, active"))
-            for key in ("alone", "alone again", "pinion", "component", "beside", "light object", "light beside"):
-                texts[key] = read_text(files[key]) if os.path.isfile(files[key]) else None
-            d["control"] = bool(texts["alone"] and texts["alone again"]) and same_file(texts["alone"],
-                                                                                      texts["alone again"])
-            facts = step_facts(texts["alone"]) if texts["alone"] else {}
-            say_facts("component (7d) the gear alone, the file", facts, float(kind_for(WHEEL).derive(WHEEL).da) / 2.0,
-                      float(WHEEL.face_width))
-            say(f"fact    component (7d): the gear alone exported twice, the same but for FILE_NAME {d['control']}; "
-                f"the pinion's file differs {texts['pinion'] is not None and not same_file(texts['pinion'], texts['alone'] or '')}; "
-                f"GetOpenDocumentByName on the gear open alone {d['by_path_open_alone']}, closed {d['by_path_closed']}; "
-                f"windows {len(dialogs)}; left {left}")
-            return d
-        ref = part(out, "alone", "component (7d) the reference files", alone, needs=("built",))
-        control = (ref or {}).get("control", False)
-
-        def judged(key):
-            return rightness(texts.get(key), texts.get("alone"), texts.get("pinion"), control)
+        for key in ("light object", "light beside"):
+            texts[key] = read_text(files[key]) if os.path.isfile(files[key]) else None
+        light = step7c or {}
         if step7a and not step7a.get("stop"):
-            step7a["right"] = judged("component")
-            by = (load or {}).get("by_path") or {}
-            step7a["controls"] = {"no such file": by.get("no such file"),
-                                  "open alone": (ref or {}).get("by_path_open_alone"),
-                                  "closed": (ref or {}).get("by_path_closed")}
-            alone_doc = (ref or {}).get("by_path_open_alone") or {}
-            step7a["controls_ok"] = (by.get("no such file") is None and (ref or {}).get("by_path_closed") is None
-                                     and bool(ref) and alone_doc.get("path") == rel(gear_path))
-            light = step7c or {}
             step7a["light"] = ({"stop": light["stop"]} if light.get("stop") else
                                {"found": light.get("found"), "right": judged("light object")} if light else {})
-            say(f"fact    component (7a): the file is the gear's own {step7a['right']}; GetOpenDocumentByName's controls "
-                f"{step7a['controls_ok']} {step7a['controls']}")
         value, why = from_component_proposal(step7a)
         suggest("STEP_EXPORT_FROM_COMPONENT", value, f"step 7 (a), (c): {why}")
         if step7b and not step7b.get("stop"):
-            step7b["right"] = judged("beside")
-            light = step7c or {}
             step7b["light"] = ({"stop": light["stop"]} if light.get("stop") else
                                {"assembly_open_after": light.get("assembly_open_after"), "dialogs": light.get("dialogs"),
                                 "beside_right": judged("light beside")} if light else {})
-            say(f"fact    component (7b): the file is the gear's own {step7b['right']}; (7c) beside "
-                f"{step7b['light'].get('beside_right')}")
+            say(f"fact    component (7c): beside, the file is the gear's own {step7b['light'].get('beside_right')}")
         value, why = open_beside_proposal(step7b)
         suggest("OPEN_BESIDE_ASSEMBLY_CLOSES_CLEAN", value, f"step 7 (b), (c): {why}")
-        read = window_proposal([{k: v for k, v in w.items() if k != "what"} for w in windows["own"]],
-                               [{k: v for k, v in w.items() if k != "what"} for w in windows["component_only"]])
-        say(f"fact    component: the window reads, own window {windows['own']}; a component only "
-            f"{windows['component_only']}")
-        suggest("PART_WINDOW_READ", WINDOW_ROUTES.get(read), f"step 7: {len(windows['own'])} documents in their own "
-                f"window, {len(windows['component_only'])} loaded only as a component; "
-                + (f"{read} tells them apart" if read else "neither read tells them apart on every one"))
-        out["windows"] = windows
     finally:
         closing(out, "component", folder, users_start)
 
