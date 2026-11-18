@@ -1591,3 +1591,28 @@ def test_the_e4_record_round_trips_byte_for_byte(tmp_path):
     assert store.link_record_to_json(store.link_record_from_json(text)) == text
     lock = _mate(json.loads(text), "LoDog locked to Carrier carrier")
     assert lock["gears"] == ["Carrier carrier", "LoDog"] and lock["modes"] == [] and lock["values"] == {}
+
+
+def test_a_reader_of_sidecar_2_refuses_a_printed_gear_json_and_leaves_it_as_it_is(tmp_path, monkeypatch):
+    """F1 (PLAN-PRINTED §1.2; F1-0's review, should-fix 4): a printed part's .gear.json is written at 3, and a W9-era
+    reader (sidecar 2) refuses it, by load and by the planning read, and leaves the file byte for byte as it was."""
+    from gear_generator.gears import kind_for
+    from gear_generator.spec import GearSpec
+    spec = GearSpec(process="printed", nozzle="0.6")
+    kind = kind_for(spec)
+    derived = kind.derive(spec)
+    part = str(tmp_path / "Gear_m1.5_N25_P.SLDPRT")
+    sidecar = store.built_sidecar(part, "Gear_m1.5_N25_P.SLDPRT", kind=spec.kind, recipe="A", spec=spec.to_dict(),
+                                  derived=derived.to_dict(),
+                                  variables=[[v.name, v.expression] for v in kind.variables(spec, derived)],
+                                  features=[], dimensions=[], manual_steps=[], template="", trig="degrees",
+                                  written_by="test")
+    assert sidecar.schema_version == store.PRINTED_SCHEMA == 3
+    target = tmp_path / "Gear_m1.5_N25_P.gear.json"
+    store.save(str(target), sidecar)
+    before = target.read_bytes()
+    monkeypatch.setattr(store, "SCHEMA_VERSION", store.BANDED_SCHEMA)          # a W9-era reader
+    with pytest.raises(UnknownSchema, match=r"schema 3, this one reads 2"):
+        store.load(str(target))
+    assert store.read_sidecar(part) is None and store.read_sidecar(str(target)) is None
+    assert target.read_bytes() == before and sorted(p.name for p in tmp_path.iterdir()) == [target.name]

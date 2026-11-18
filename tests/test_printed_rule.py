@@ -745,3 +745,241 @@ def test_the_box_says_where_its_process_was_read_and_it_is_not_what_the_gearbox_
     assert model.Box(process="", process_cell="Box!B9") == model.Box(process="")
     rows = [row[0] for row in model.to_sheets(replace(model.template(), box=model.Box(process_cell="Box!B9")))[0].rows]
     assert "process_cell" not in " ".join(map(str, rows))
+
+
+# -- what only the packages' own tests held of a machined gear or gearbox (F1-REVIEW.md S1; the coordinator's ruling 4,
+# -- 2026-11-18). Seven ways of telling a machined gear or gearbox something new, each now pinned here, so F2 to F4
+# -- cannot move them unseen: M1 a machined gearbox judged as printed at its Meshes rows, M2 a machined pair judged as
+# -- printed on the form, M4 the printed helix check on a machined gear, M7 the Workbook window's blank Process on a
+# -- gearbox built machined, M10 a missing process read as printed by W9d's columns, M11 a machined shift fix tested
+# -- as printed, M24 Gleason's clearance said for a machined bevel pair. Each value was taken at f3c4873, before F1,
+# -- where the code existed then (M7's window resolution did not: it is held to D11's answer).
+
+def _machined_box(spec, marked):
+    return replace(spec, box=replace(spec.box, **marked))
+
+
+def outside_gearbox(module, teeth=(20, 40), shifts=("", ""), centre=None):
+    """Two spur gears on frame shafts at their working centre distance, or at `centre`."""
+    from gear_generator.workbook.model import Box, Gear, GearboxSpec, Mesh, Shaft
+    if centre is None:
+        centre = pair.describe(module, teeth[0], teeth[1], 20.0, 0.0, shift_1=float(shifts[0] or 0),
+                               shift_2=float(shifts[1] or 0))[0]
+    return GearboxSpec(
+        box=Box(name="Pair", pressure_angle="20", efficiency="98"),
+        shafts=(Shaft("S1", "frame", "0", "0", "0", "Z+", "input", "", "1000", "1", row=2),
+                Shaft("S2", "frame", f"{centre:.6f}", "0", "0", "Z+", "output", row=3)),
+        gears=(Gear("G1", "S1", "0", "spur", "external", str(teeth[0]), str(module), "", "5", "",
+                    profile_shift=shifts[0], row=2),
+               Gear("G2", "S2", "0", "spur", "external", str(teeth[1]), str(module), "", "5", "",
+                    profile_shift=shifts[1], row=3)),
+        meshes=(Mesh("G1", "G2", row=2),))
+
+
+def ring_gearbox(module, teeth=(20, 60)):
+    from gear_generator.workbook.model import Box, Gear, GearboxSpec, Mesh, Shaft
+    centre = module * (teeth[1] - teeth[0]) / 2.0
+    return GearboxSpec(
+        box=Box(name="RingPair", pressure_angle="20", efficiency="98"),
+        shafts=(Shaft("P", "frame", f"{centre:.6f}", "0", "0", "Z+", "input", "", "1000", "1", row=2),
+                Shaft("R", "frame", "0", "0", "0", "Z+", "output", row=3)),
+        gears=(Gear("Pin", "P", "0", "spur", "external", str(teeth[0]), str(module), "", "5", "", row=2),
+               Gear("Ring", "R", "0", "spur", "internal", str(teeth[1]), str(module), "", "5", "", row=3)),
+        meshes=(Mesh("Pin", "Ring", row=2),))
+
+
+def bevel_gearbox(module):
+    """W6's fixture A with its bevel stage at the module given."""
+    from test_workbook_turned import bevel_reducer
+    spec = bevel_reducer()
+    gears = tuple(replace(g, module=str(module), face_width="8") if g.kind == "bevel" else g for g in spec.gears)
+    return replace(spec, gears=gears, meshes=tuple(replace(m, row=row) for row, m in enumerate(spec.meshes, start=2)))
+
+
+def crossed_gearbox(module):
+    from gear_generator.workbook.model import Box, Gear, GearboxSpec, Mesh, Shaft
+    centre = module * (20 + 40) / 2.0 / 0.7071067811865476
+    helix = dict(helix_angle="45", hand="right")
+    return GearboxSpec(
+        box=Box(name="Crossed", pressure_angle="20", efficiency="98"),
+        shafts=(Shaft("S1", "frame", "0", "0", "0", "Z+", "input", "", "1000", "1", row=2),
+                Shaft("S2", "frame", "0", f"{centre:.6f}", "8", "X+", "output", row=3)),
+        gears=(Gear("G1", "S1", "8", "helical", "external", "20", str(module), "", "6", "", row=2, **helix),
+               Gear("G2", "S2", "0", "helical", "external", "40", str(module), "", "6", "", row=3, **helix)),
+        meshes=(Mesh("G1", "G2", row=2),))
+
+
+GEARBOXES = {
+    "outside_m0.5": lambda: outside_gearbox(0.5),
+    "outside_m0.5_shifted": lambda: outside_gearbox(0.5, (15, 30), ("0.5", "0.4")),
+    "ring_m0.5": lambda: ring_gearbox(0.5),
+    "bevel_m1.5": lambda: bevel_gearbox(1.5),          # Gleason's clearance 0.282 mm, which a printed pair is told
+    "crossed_m0.5": lambda: crossed_gearbox(0.5),
+    "shift_fix_m1": lambda: outside_gearbox(1, centre=30.2),        # 20 / 40 at 30.2 mm: the printed test refuses it
+}
+
+
+def gearbox_told(name, **marked):
+    """Everything the gearbox is told (every diagnostic, in order) and the fixes it is offered, as text."""
+    spec = _machined_box(replace(GEARBOXES[name](), source_path="C:\\B\\W.xlsx"), marked)
+    a = assess.assess(spec, [], OUT)
+    fixes = {where: [(f.kind, f.title, f.changes) if hasattr(f, "changes") else repr(f) for f in found]
+             for where, found in sorted(a.report.fixes.items())}
+    return [d.message for d in a.diagnostics], repr(fixes)
+
+
+FORM_PAIRS = {
+    "outside_m0.5": (dict(module="0.5", teeth="20"), dict(module="0.5", teeth="40")),
+    "outside_m0.5_shifted": (dict(module="0.5", teeth="15", profile_shift="0.5"),
+                             dict(module="0.5", teeth="30", profile_shift="0.4")),
+    "ring_m0.5": (dict(module="0.5", teeth="20"), dict(module="0.5", teeth="60", teeth_side="internal", bore="")),
+    "bevel_m0.5": (dict(kind="bevel", module="0.5", teeth="20", mate_teeth="40", bore="3"),
+                   dict(kind="bevel", module="0.5", teeth="40", mate_teeth="20", bore="3")),
+    "helical_m0.5": (dict(kind="helical", helix_angle="20", module="0.5", teeth="20", bore="3"),
+                     dict(kind="helical", helix_angle="20", hand="left", module="0.5", teeth="40", bore="3")),
+}
+
+
+def form_told(name, **marked):
+    """What the form says of the pair (`pair.mesh_warnings`)."""
+    g1, g2 = (kind_for(s).derive(s) for s in (GearSpec(**{**x, **marked}) for x in FORM_PAIRS[name]))
+    return pair.mesh_warnings(g1, g2)
+
+
+STEEP = {"helical_50": dict(kind="helical", helix_angle="50"), "herringbone_50": dict(kind="herringbone",
+                                                                                      helix_angle="50")}
+
+
+def steep_told(name, **marked):
+    spec = GearSpec(**{**STEEP[name], **marked})
+    kind = kind_for(spec)
+    return [(d.level, d.message, d.field) for d in kind.validate(spec, kind.derive(spec))]
+
+
+GEARBOX_TOLD = {
+        "outside_m0.5": [
+            [],
+            "{}"
+        ],
+        "outside_m0.5_shifted": [
+            [
+                "Gears row 2: G1: The tooth tip is 0.008 mm thick, under 0.3 × module (0.15 mm).",
+                "Gears row 2: G1: The involute starts at 7.17 mm, above the form diameter of 7.134 mm, so the bottom of the working flank is a straight line.",
+                "Gears row 3: G2: The tooth tip is 0.144 mm thick, under 0.3 × module (0.15 mm).",
+                "Gears row 3: G2: The involute starts at 14.57 mm, above the form diameter of 14.494 mm, so the bottom of the working flank is a straight line."
+            ],
+            "{}"
+        ],
+        "ring_m0.5": [
+            [],
+            "{}"
+        ],
+        "bevel_m1.5": [
+            [
+                "Gears row 0: G1: The tooth tip is 0.361 mm thick, under 0.3 × module (0.45 mm).",
+                "Gears row 0: G1: The involute starts at 32.722 mm, above the form diameter of 31.634 mm, so the bottom of the working flank is a straight line.",
+                "Gears row 0: G4: The involute starts at 99.28 mm, above the form diameter of 98.614 mm, so the bottom of the working flank is a straight line."
+            ],
+            "{}"
+        ],
+        "crossed_m0.5": [
+            [
+                "Gears row 2: G1: The involute starts at 13.312 mm, above the form diameter of 13.285 mm, so the bottom of the working flank is a straight line.",
+                "Gears row 2: G1: A helix angle of 45° is outside the usual 8–30° for a helical gear.",
+                "Gears row 3: G2: The involute starts at 27.454 mm, above the form diameter of 27.353 mm, so the bottom of the working flank is a straight line.",
+                "Gears row 3: G2: A helix angle of 45° is outside the usual 8–30° for a helical gear."
+            ],
+            "{}"
+        ],
+        "shift_fix_m1": [
+            [
+                "Meshes row 2: G1 and G2 are 30.2 apart; their teeth make 30 (+0.2 mm). Check the X and Y of S1 and S2 (Shafts rows 2 and 3); a shaft at an angle is best placed by formula."
+            ],
+            "{'Meshes row 2': [\"Fix(title='Move S2 by -0.2 mm', detail='S2 X 30.2 → 30', edits=(Edit(sheet='Shafts', item='S2', key='x', value='30'),))\", \"Fix(title='Keep your positions: profile-shift G1 and G2', detail='x +0.102459 / +0.102459 → 30.200 exact · working angle 21.02° · ε 1.58', edits=(Edit(sheet='Gears', item='G1', key='profile_shift', value='0.102459'), Edit(sheet='Gears', item='G2', key='profile_shift', value='0.102459')))\"]}"
+        ]
+    }
+
+FORM_TOLD = {
+        "outside_m0.5": [],
+        "outside_m0.5_shifted": [],
+        "ring_m0.5": [],
+        "bevel_m0.5": [],
+        "helical_m0.5": []
+    }
+
+STEEP_TOLD = {
+        "helical_50": [
+            [
+                "warning",
+                "The involute starts at 56.3 mm, above the form diameter of 55.593 mm, so the bottom of the working flank is a straight line.",
+                "fillet"
+            ],
+            [
+                "warning",
+                "A helix angle of 50° is outside the usual 8–30° for a helical gear.",
+                "helix_angle"
+            ]
+        ],
+        "herringbone_50": [
+            [
+                "warning",
+                "The involute starts at 56.3 mm, above the form diameter of 55.593 mm, so the bottom of the working flank is a straight line.",
+                "fillet"
+            ],
+            [
+                "warning",
+                "A helix angle of 50° is outside the usual 20–45° for a herringbone gear.",
+                "helix_angle"
+            ]
+        ]
+    }
+
+
+@pytest.mark.parametrize("marked", [{}, dict(process="machined")], ids=repr)
+@pytest.mark.parametrize("name", sorted(GEARBOXES))
+def test_a_machined_gearbox_is_told_and_offered_at_its_meshes_rows_what_it_was_at_the_cut(name, marked, monkeypatch):
+    """M1, M24 and M11: machined pairs whose printed twins are told their clearance (outside, shifted, ring and
+    crossed at module 0.5, bevel at 1.5), and a machined shift fix the printed test refuses (20 / 40 at module 1,
+    30.2 mm)."""
+    monkeypatch.setattr(findings, "TURNED_GEAR_MATE_SENSE_READ_BACK", "entity senses", raising=False)
+    said, fixes = gearbox_told(name, **marked)
+    assert [said, fixes] == GEARBOX_TOLD[name]
+
+
+@pytest.mark.parametrize("marked", ({},) + MACHINED, ids=repr)
+@pytest.mark.parametrize("name", sorted(FORM_PAIRS))
+def test_a_machined_pair_on_the_form_is_told_what_it_was_at_the_cut(name, marked):
+    """M2: `pair.mesh_warnings` on machined pairs at module 0.5, where a printed pair is told its clearance."""
+    assert form_told(name, **marked) == FORM_TOLD[name]
+
+
+@pytest.mark.parametrize("marked", ({},) + MACHINED, ids=repr)
+@pytest.mark.parametrize("name", sorted(STEEP))
+def test_a_machined_gear_over_45_degrees_of_helix_is_told_what_it_was_at_the_cut(name, marked):
+    """M4: a machined helical and herringbone gear at 50°, where a printed one is told its flanks overhang."""
+    assert [list(x) for x in steep_told(name, **marked)] == STEEP_TOLD[name]
+
+
+def test_w9ds_columns_read_a_missing_process_as_machined():
+    """M10: a part recorded with no process (before F1, or machined after it) against a machined spec has no column
+    changed, and against a printed one its Process alone, either way round."""
+    built = GearSpec().to_dict()
+    assert "process" not in built
+    for marked in ({},) + MACHINED:
+        assert update._changed_columns(built, GearSpec(**marked).to_dict()) == []
+        assert update._changed_columns(GearSpec(**marked).to_dict(), built) == []
+    printed = GearSpec(process="printed").to_dict()
+    assert update._changed_columns(built, printed) == update._changed_columns(printed, built) == ["Process"]
+
+
+def test_the_workbook_windows_blank_process_on_a_gearbox_built_machined_is_machined(tmp_path):
+    """M7: the window resolves a blank Process by the record beside the workbook (D11, ruled (B)): a record whose
+    parts were all built machined gives machined, and no record gives printed."""
+    from gear_generator import workbook_gui
+    workbook = tmp_path / "R.xlsx"
+    workbook.write_bytes(b"")
+    window = SimpleNamespace(link=SimpleNamespace(path=str(workbook)), _settled=lambda record: record)
+    assert workbook_gui.WorkbookWindow._blank_process(window) == "printed"           # nothing built yet
+    part = store.PartEntry(path=str(tmp_path / "G.SLDPRT"), gears=["G1"], spec=GearSpec().to_dict())
+    store.save_link_record(store.LinkRecord(workbook=str(workbook), parts=[part]))
+    assert workbook_gui.WorkbookWindow._blank_process(window) == "machined"
