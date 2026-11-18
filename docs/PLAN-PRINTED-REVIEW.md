@@ -1706,3 +1706,129 @@ what they pin, and by a run of the suite at its interface commit.
 probe: by the house rule none is needed before the full build, provided M4 fixes the arc's order and S6 puts the D's
 value changes first in the demonstration, where a far-side solve would show in the first minutes and get its one
 follow-up round.
+
+
+---
+
+# Re-check of the revision to F3's review (2026-11-18)
+
+**Read at `6f0a462`** (`docs/PLAN-PRINTED.md` §3.2, §4 and *Changes after F3's review*), against the code at
+`f28cb75`. These are small scratch computations only; nothing was run on SolidWorks, Excel or the suite. The two
+rulings (a part made new keeps its as-built allowance; the flat on +X, facing a tooth space's middle) are taken as
+given.
+
+## 1. The four must-fixes
+
+**M1, the as-built rule, is fixed at its cause.**
+- It has one home, `spec.as_built(spec, variables)`, written whole in F3-0.
+- It sets `built_allowance`, which `to_dict` never writes, and `bore_allowance_mm()` reads it after a typed figure
+  and before the default. So every `derive` sees the as-built figure without a record entry in hand.
+- All nine callers are named with their owners: reuse per candidate entry, `update._part`,
+  `structural_change`'s `built_variables`, Build again…'s made-new rows, Print files, W9d, K11, K3 and the strip.
+  They cover every place I found, and the three I could not check (`occupant`, `free_name`, `carry_for`) are now
+  tests in B.
+- The pin of printed parts on record, written at F3-0's base, is the right guard.
+
+Two small points for F3-0's note:
+- `from_dict` keeps every known field (`spec.py:169-172`), and `built_allowance` will be one. So "never read by
+  `from_dict`" needs an explicit exclusion.
+- Say what `as_built` does with an **empty** `variables`: a journaled entry is matched with `()` (`gearbox.py:595`),
+  and a v1 record has none. Treated as "on record, 0", a part built at 0.2 would be made new; that is the safe side,
+  but say it.
+
+**M2, the sidecar's schema, is fixed.**
+- `sidecar_schema(spec, variables)` decides from the globals, and both writers pass them.
+- Give `variables` a default of None ("as today"). Then the one-argument calls at `test_printed_rule.py:459-461` keep
+  their meaning.
+- `test_printed_workbook.py:530` (printed typed on a machined gearbox built before F3, parts at sidecar 3) is a useful
+  extra check that M1 works: those parts have no global and must stay at 3.
+
+**M3, the coupons, is fixed.**
+- §3.2 now gives both tables, keyed on whether the form shows a **Bore allowance** row.
+- After F3, the shaft goes in Bore and 0 (typed), 0.1, 0.2 and 0.3 go in the allowance, never both.
+- The fit is read as the allowance itself, and coupons built before F3 stay valid.
+- Package C carries the change into the README, and a test reads the README's table.
+
+**M4, the D sketch, is fixed.** By my own calculation (R 4.1, h 3.1, chord 5.3666):
+
+| Arc as drawn, direction +1 | Sweep | What it cuts |
+|---|---|---|
+| Start (h, +c/2), end (h, −c/2): the plan's | **278.24°** | the D, through +Y, −X and −Y |
+| The chord reflected to x = −h, same ends | 81.76° | the sliver |
+| The ends swapped | 81.76° | the sliver |
+| Reflected and swapped | 278.24° | a D with its flat on −X |
+
+So the stated start and direction cut the D at build, and A's sweep test forbids the sliver.
+- The line, drawn from the arc's end to its start, shares the first point (GOTCHAS §35). `Session.relation` adds the
+  second coincident.
+- `vertical` is a verified relation (`findings.py:82`).
+- The link is in the house form `( abs ( … ) ) ^ 0.5`.
+
+## 2. "A tooth space centred on +X"
+
+- **True as drawn for spur gears, dogs and hubs** (`spur.py:4`, `:1394`; dogs and hubs through `_as_spur`), and for
+  rings (`internal.py:4`, `:828-841`), which have no bore.
+- A bevel gear takes no D (G5), so its frame does not matter.
+- **Helical and herringbone gears: not at the Front plane, as §4.2 says.**
+  - A helical gear's section is drawn on a plane one overrun *behind* the Front plane (`helical.py:206-232`,
+    `:558-564`), so the Front-plane face is already turned `hand · 360 · overrun / L` (`:226-229`).
+  - A herringbone's section is on its mid-plane (`:553-556`), so it is the apex that has a space centred on +X.
+  - Should-fix (wording): "on the section plane: for a helical gear one overrun behind the Front plane, for a
+    herringbone its mid-plane".
+- **One more caveat, unverified:** that a sketch on those offset reference planes keeps the model's +X. If it were
+  mirrored, the space would be centred on −X, which is the same thing only when the tooth count is even. Nothing the
+  app reads (volumes, size checks) would tell. The `kinds` section could read it from the STEP file: the flat's corners
+  against a space's vertices. It is optional, since the assembly does not model the flat (ruling 2).
+
+## 3. The bounds
+
+- **The depth bound is about the shaft.** `R − h` equals `D − F` exactly, whatever the allowance, so "a flat at least
+  0.3 mm deep" is a bound on the shaft's own flat depth.
+- **`h ≥ 0.25 R`** depends on the allowance and is the guard against the reflected branch: the reflected solution is
+  then at least 0.5 R away.
+- For D 8 and a 0.2, Flat may be from **4.925 to 7.7**.
+  - Refused: 7.71 (depth 0.29) and 7.8 (0.2); 4.9 (h/R 0.244); and 4.925 at a −0.2 (h/R 0.212). The negative allowance
+    is handled.
+  - Common shafts pass: 2/1.5, 3/2.5, 5/4.5 and 8/7.5, every one 0.5 deep.
+  - The least chord at the depth bound is `2 √(0.6 R − 0.09)`: 3.08 mm at R 4.1, 1.84 at R 1.1.
+- **One should-fix for the sentence.** A real shaft whose flat is under 0.3 mm deep cannot be typed as it is. The
+  error should say to type a Flat at most D − 0.3, which leaves the flat a little rotational play, or to use a round
+  bore.
+- `dshape`'s values all lie inside the bounds:
+  - 7 → 5 lands at h/R 0.268, near the edge, as intended;
+  - 7.6 is 0.4 deep;
+  - Bore 10 with Flat 9 gives h/R 0.80;
+  - an allowance of 0.4 gives h 3.2.
+
+## 4. The pinned lines
+
+**The table in §4.3 is now complete**, as far as a search by meaning finds: `sidecar_schema(`, the schema constants,
+`schema_version == n`, `reads n` and raw `link_schema_version` writes across `tests/`, fixtures excluded. Two
+additions:
+- `test_printed_workbook.py:385`, a printed RangeBox's dogs and hub built new with a bore, will move to 4. The plan
+  leaves it to the suite run, which is enough.
+- `:530` must not move (§1 above).
+
+**Moving `test_printed_rule.py` 456 to 458 and 550 is not a loosening.**
+
+| Line | Becomes | Why it is not weaker |
+|---|---|---|
+| 456 | `(12, 11)` against `_F1_LINK_SCHEMA` | It pins the current schema and its predecessor's constant, as before. |
+| 457 | `(4, 3, 2, 1)` with `BORE_SCHEMA` | It keeps the three old numbers and adds one. |
+| 458 | two cases: 3 with no global, 4 with `"Bore Allowance"` | It asserts strictly more. |
+| 550 | 12 | A record is still read forward and written at the current schema, with `blank_process`'s answer unchanged. |
+
+The test's name, `…_link_schema_11_and_…_sidecar_schema_3`, should be renamed with it.
+
+## 5. Readiness
+
+**F3-0 may start.** M1 to M4 are fixed at their causes, and the rulings are written in. What is left fits in F3-0's
+note or the packages, without changing the plan:
+- `from_dict` excluding `built_allowance`;
+- `as_built` on an empty `variables`;
+- `sidecar_schema`'s `variables` defaulting to None;
+- the helical and herringbone wording of where a space is centred, and the unverified sketch-frame caveat;
+- the depth bound's sentence naming the shaft.
+
+The restated cost (seventeen to twenty-one agent runs, about 85 SolidWorks minutes) is consistent with F2's measured
+runs.
