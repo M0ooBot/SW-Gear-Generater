@@ -507,13 +507,6 @@ def test_a_printed_specs_unreadable_nozzle_or_process_word_is_an_error_at_its_fi
     assert kind.validate(GearSpec(nozzle="x")) == kind.validate(GearSpec())         # a machined gear's is not read
 
 
-def test_the_pair_stubs_answer_as_the_machined_maths_until_package_a_fills_them():
-    assert pair.ring_tip_clearance(1.5, 20, 60) == pair.tip_clearance(1.5, 20, 60)
-    assert pair.printed_tip_thickness(1, 20, 20.0, 0.0, 0.0, 0.4) == pair.tip_thickness(1, 20, 20.0, 0.0, 0.0)
-    assert pair.solve(60, 3, process="printed", nozzle=0.6) == pair.solve(60, 3)
-    assert pair.shift_for_centre(2, 15, 30, 46, printed=True) == pair.shift_for_centre(2, 15, 30, 46)
-
-
 def test_the_box_says_process_and_nozzle_and_a_gearbox_built_in_code_is_written_machined():
     from gear_generator.workbook import model, schema
     from test_workbook_model import reducer
