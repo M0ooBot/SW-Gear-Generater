@@ -37,6 +37,11 @@ class Box:
     # user's blank is "" as read, resolved by assess.assess (assess.blank_process, D11) before any gear's spec.
     process: str = PROCESS_MACHINED
     nozzle: str = ""
+    # F1 (F1-0's follow-up, the review's must-fix 1): where the Process value was read, ``Box!B9``, or "" when the
+    # Box sheet has no row labelled Process (and for a gearbox built in code). Package B's _read_box sets it; C's
+    # Workbook panel says "(add a row labelled Process)" when it is "", since process is "" both for a blank cell and
+    # for no row. Where it was read is not what the gearbox is, so it is left out of ==, as GearboxSpec.columns is.
+    process_cell: str = field(default="", compare=False)
 
     def pressure_angle_text(self) -> str:
         return self.pressure_angle.strip() or "20"

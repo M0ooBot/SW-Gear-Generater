@@ -501,7 +501,9 @@ def pair_stems(pair: PairSpec) -> Tuple[str, str, str]:
     so the two files never share a name. A ring is always ``Ring_``, with its
     pinion ``Pinion_``, and the pair ends ``_INT``; a crossed pair ends with its
     shaft angle, ``_X90`` (``_XO30`` of opposite hands), and a bevel pair ``_B90``. A shifted pair ends with
-    both shifts, ``_x0.09_-0.09``.
+    both shifts, ``_x0.09_-0.09``. A printed pair ends ``_P`` after all of it, as its parts do (F1, D10; the
+    coordinator's ruling of 2026-11-18): ``Pair_m1.5_20T_60T_P``. A machined pair's name is as it was, and a typed
+    assembly name is kept as typed.
     """
     a, b = pair.gear_a, pair.gear_b
     internal = b.is_internal() and b.kind != KIND_BEVEL
@@ -527,6 +529,8 @@ def pair_stems(pair: PairSpec) -> Tuple[str, str, str]:
                 f"_{mark}{_angle_text(a.helix_angle)}" if a.kind in HELICAL_KINDS and a.helix_angle.strip() else "")
             if _shifted(a.profile_shift) or _shifted(b.profile_shift):
                 suffix += f"_x{_shift_name(a.profile_shift)}_{_shift_name(b.profile_shift)}"
+        if a.is_printed() or b.is_printed():
+            suffix += PRINTED_STEM_MARK
         stem_pair = sanitize_stem(
             f"Pair_m{_number_text(a.module)}_{_number_text(a.teeth)}T_{_number_text(b.teeth)}T{suffix}"
         )

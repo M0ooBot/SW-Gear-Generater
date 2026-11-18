@@ -570,3 +570,185 @@ def test_assess_resolves_a_blank_process_in_the_read_and_the_spec_and_leaves_a_w
 
 def test_the_form_shares_process_and_nozzle_between_a_pairs_gears():
     assert gui.GEAR_COMPOUND == ("kind", "recipe", "process", "nozzle")
+
+# The sentences a machined gear is told by K11 (an app-owned value changed in SolidWorks) and by the card. The
+# functions saying them are B's (swbuild's K11 words) and C's (ui_text) to change for printed gears, so what they say
+# of a machined gear is held here, outside their own test files (F1-0-REVIEW §7, must-fix 3).
+
+TOLD = ("spur", "spur_m0.5_z30", "spur_shifted", "spur_typed", "helical", "herringbone_grooved", "ring", "ring_rim",
+        "ring_helical", "bevel", "bevel_crown", "bevel_internal", "sleeve_banded", "dog", "hub")
+K11_GLOBALS = ("Backlash", "Fillet Radius", "Bore Diameter")
+
+
+def k11_sentences(name: str) -> list:
+    """K11's sentence for each of the gear's Backlash, Fillet and Bore found changed in SolidWorks to 0.123: with its
+    cell, with no cell, and on a document left unsaved (`swbuild._value_sentence`, through `_blank_meaning`,
+    `_wanted_words` and `_back_words`)."""
+    from gear_generator import swbuild
+    spec = _spec(name)
+    kind = kind_for(spec)
+    g = kind.derive(spec)
+    plan = kind.plan(spec, g, kind.recipe_for(spec), TEMPLATE, OUT + spec.stem() + ".SLDPRT")
+    values = plan.values(DEGREES)
+    out = []
+    for v in kind.variables(spec, g):
+        if v.name not in K11_GLOBALS:
+            continue
+        wanted = f"{values[v.name]:g}"
+        for cell, unsaved in (("Gears!P2", False), ("", False), ("Gears!P2", True)):
+            edit = swbuild.ValueEdit(spec.stem() + ".SLDPRT", v.name, "0.123", wanted, wanted, cell=cell,
+                                     unsaved=unsaved, blank=swbuild._blank_meaning(v))
+            out.append(swbuild._value_sentence(edit))
+    return out
+
+
+def card_text(name: str) -> str:
+    """The card a machined gear shows: its Derived rows and line, and the explainer of every field the card has."""
+    from gear_generator import ui_text
+    spec = _spec(name)
+    g = kind_for(spec).derive(spec)
+    out = [repr(ui_text.derived_rows(g)), ui_text.derived_line(g)]
+    for field in ui_text.EXPLAINER_FIELDS:
+        if field not in ui_text.PAIR_EXPLAINERS:
+            try:
+                out.append(repr(ui_text.explainer(field, g, spec.stem(), folder="C:\\Out")))
+            except Exception as exc:        # noqa: BLE001 -- a field the card cannot work out for this kind, as it is
+                out.append(f"{field}: {type(exc).__name__}")
+    return "\n".join(out)
+
+
+K11 = {
+    "bevel": "64d22adad95289e2684498d2c3370d6b3248de58105438a74be26e089284b18e",
+    "bevel_crown": "cdcb2e5273bb1da3b8ff9d821cfd5b37b46fe9ab7493e66d4a4c2e1b6c32a33a",
+    "bevel_internal": "96d4f500dfbe65dd56271bd242ddd7101ddda64e25498374d7d3a489aee238c6",
+    "dog": "036ca9077d7aba48ef8c1b531ce20351430b56264f38c6cd10530f4b63159f66",
+    "helical": "0d66bff68b845356dabadb73af89c5482e43c6f8fa3049f9f2fff7f66afaeb03",
+    "herringbone_grooved": "89f7b8bac8e8b4f8323fdc1104cba784bd8dfca81c0f76d4c3dafc383730c2a6",
+    "hub": "7973a5ebaa7628793a19223e5f0bf4284301d1649cfeb6ffd17cc412914c191b",
+    "ring": "d495bf4858cdb31c3c1eb2e9140031b97ac73d7b43949565ad5b84bc8cd53b38",
+    "ring_helical": "cebab19f67a7762042cef03ee2710a95830073a9008a15d0fe21b86c20322e19",
+    "ring_rim": "2b81898edce72dcd37c005d1cfcab153115e0ffab7749edfb0fb74c0b2de0856",
+    "sleeve_banded": "c414a3bf6d33d82f21441056cd49e18015ae461fab1803840439fcfba3759dcc",
+    "spur": "634f17fe1a470bd72c68acc548ef9cf686a6e6ecf70a11e1308d96d4fbcc5144",
+    "spur_m0.5_z30": "7e205f851d453b09f300b460904dd9ec983cbf1188b1cedbad41987088c85927",
+    "spur_shifted": "eb2cf7ede948f303001d6b5596e8b195f23e0b89c4720308ae14aa21a2634f73",
+    "spur_typed": "61d179dfd30887a3db9a84a1355a95b43b1c02ec3b51c16dda2b21d5103a85c0",
+}
+
+CARD = {
+    "bevel": "36a5c1b95918e0c0220b41a811bd04694238728efebbc0813c995b0db72cb9f9",
+    "bevel_crown": "2d268d847f83fda5403fd411a02ec3fdad20a0ddeb83bccbcbb192bd5cdbe90c",
+    "bevel_internal": "030f48fb461013d180a073b8aeef489eba73b137d01e0142ff9dfda5a11e58b6",
+    "dog": "bcb1146fa852c0da7b7d65d3543c123ac28be27d2511fb92234f129bd471c7cd",
+    "helical": "07a5f9523fd3bd1e533f816378d95b55b0d0a5d497521e3eaddaf584a19e4d2b",
+    "herringbone_grooved": "7984b6a2be08bbb52a11171f74743d8629cadaea4e473d319a0d92627a083f37",
+    "hub": "c835d9b888e7157f7dd57755f9fb83822fecd3ead1a9715bb935e8cde6a25100",
+    "ring": "cbdf1a639b3a4bbea88f671cea6c354e8f1e1d268b7bb22f6a7c5a0220059dda",
+    "ring_helical": "bc98bfdbf768c1244542fac865262dec980693f3ceb648a06988be32894589a1",
+    "ring_rim": "6beabbafe2e88b215354c34014c9f927b114404bca1bcf208aa587cd7915ae51",
+    "sleeve_banded": "15a77567b77e73f9493f1f06fddcf108f0948bd2598b38b95d7660443ed1f3f7",
+    "spur": "dd4ae6bd8a4861d269b3f8adf0a06edd11803a479455b4ec9dc97f60f5cf74bc",
+    "spur_m0.5_z30": "33321deb1b3d701ab6f92a7b7f8de2af692431b73e790fb91a7e10f45aa64389",
+    "spur_shifted": "cc40ab41f8e2d93c065b1673c8f2852f086382d1dd08a4805aaece5c083fc9fa",
+    "spur_typed": "2be86bb010539576b54ed461348ca40faa413f1431745bf29ce1df263e1ff37d",
+}
+
+
+@pytest.mark.parametrize("name", TOLD)
+def test_what_k11_tells_of_a_machined_gear_is_as_at_the_cut(name):
+    assert _sha("\n".join(k11_sentences(name))) == K11[name]
+
+
+def test_k11_says_a_machined_blank_backlash_and_fillet_as_their_equations():
+    said = k11_sentences("spur")
+    assert ("Backlash in Gear_m1.5_N25 is 0.123 in SolidWorks and 0.45 (from its blank cell, 0.3 × Module) in the "
+            "workbook: type 0.123 in Gears!P2, or set it back to the equation 0.3 × Module in SolidWorks, and press "
+            "Update SolidWorks again.") in said
+    assert ("Fillet Radius in Gear_m1.5_N25 is 0.123 in SolidWorks and 0.57 (from its blank cell, 0.38 × Module) in "
+            "the workbook: type 0.123 in Gears!P2, or set it back to the equation 0.38 × Module in SolidWorks, and "
+            "press Update SolidWorks again.") in said
+
+
+@pytest.mark.parametrize("name", TOLD)
+def test_the_card_of_a_machined_gear_is_as_at_the_cut(name):
+    assert _sha(card_text(name)) == CARD[name]
+
+
+def test_the_card_says_a_machined_blank_backlash_is_0_3_module():
+    from gear_generator import ui_text
+    g = kind_for(GearSpec()).derive(GearSpec())
+    assert dict(ui_text.derived_rows(g))["Backlash"] == "0.45 · 0.3m"
+    assert ui_text.explainer("backlash", g, "Gear_m1.5_N25")[3].startswith("blank → 0.45 mm (0.3 m) · tooth ")
+
+
+# -- a pair's names (the coordinator's ruling 2 on F1-0's decision 2, 2026-11-18) ----------------------------------
+
+G = GearSpec
+PAIRS = {
+    "spur": (PairSpec(gear_a=G(teeth="20"), gear_b=G(teeth="60")),
+             ("Pinion_m1.5_N20", "Gear_m1.5_N60", "Pair_m1.5_20T_60T")),
+    "spur_reversed": (PairSpec(gear_a=G(teeth="60"), gear_b=G(teeth="20")),
+                      ("Gear_m1.5_N60", "Pinion_m1.5_N20", "Pair_m1.5_60T_20T")),
+    "shifted": (PairSpec(gear_a=G(teeth="15", profile_shift="0.09"), gear_b=G(teeth="30", profile_shift="-0.09")),
+                ("Pinion_m1.5_N15_x0.09", "Gear_m1.5_N30_x-0.09", "Pair_m1.5_15T_30T_x0.09_-0.09")),
+    "ring": (PairSpec(mesh="internal", gear_a=G(teeth="20"), gear_b=G(teeth="60", teeth_side="internal")),
+             ("Pinion_m1.5_N20", "Ring_m1.5_N60", "Pair_m1.5_20T_60T_INT")),
+    "helical": (PairSpec(gear_a=G(kind="helical", helix_angle="20", teeth="20"),
+                         gear_b=G(kind="helical", helix_angle="20", hand="left", teeth="40")),
+                ("Pinion_m1.5_N20_20R", "Gear_m1.5_N40_20L", "Pair_m1.5_20T_40T_H20")),
+    "herringbone": (PairSpec(gear_a=G(kind="herringbone", helix_angle="30", teeth="20"),
+                             gear_b=G(kind="herringbone", helix_angle="30", hand="left", teeth="40")),
+                    ("Pinion_m1.5_N20_HB30R", "Gear_m1.5_N40_HB30L", "Pair_m1.5_20T_40T_HB30")),
+    "ring_helical": (PairSpec(mesh="internal", gear_a=G(kind="helical", helix_angle="15", teeth="20"),
+                              gear_b=G(kind="helical", helix_angle="15", teeth="60", teeth_side="internal")),
+                     ("Pinion_m1.5_N20_15R", "Ring_m1.5_N60_15R", "Pair_m1.5_20T_60T_INT_H15")),
+    "crossed": (PairSpec(shafts="crossed", shaft_angle="90", gear_a=G(kind="helical", helix_angle="45", teeth="20"),
+                         gear_b=G(kind="helical", helix_angle="45", teeth="30")),
+                ("Pinion_m1.5_N20_45R", "Gear_m1.5_N30_45R", "Pair_m1.5_20T_30T_X90")),
+    "crossed_opposite": (PairSpec(shafts="crossed", shaft_angle="30", hands="opposite",
+                                  gear_a=G(kind="helical", helix_angle="45", teeth="20"),
+                                  gear_b=G(kind="helical", helix_angle="15", hand="left", teeth="30")),
+                         ("Pinion_m1.5_N20_45R", "Gear_m1.5_N30_15L", "Pair_m1.5_20T_30T_XO30")),
+    "bevel": (PairSpec(gear_a=G(kind="bevel", teeth="20", mate_teeth="40"),
+                       gear_b=G(kind="bevel", teeth="40", mate_teeth="20")),
+              ("Pinion_m1.5_N20_M40", "Gear_m1.5_N40_M20", "Pair_m1.5_20T_40T_B90")),
+    "bevel_s80": (PairSpec(shaft_angle="80", gear_a=G(kind="bevel", teeth="20", mate_teeth="30", shaft_angle="80"),
+                           gear_b=G(kind="bevel", teeth="30", mate_teeth="20", shaft_angle="80")),
+                  ("Pinion_m1.5_N20_M30_S80", "Gear_m1.5_N30_M20_S80", "Pair_m1.5_20T_30T_B80")),
+    "named": (PairSpec(assembly_name="MyPair", gear_a=G(teeth="20", name="A1"), gear_b=G(teeth="60")),
+              ("A1", "Gear_m1.5_N60", "MyPair")),
+}
+
+
+def _pair_marked(pair, **marked):
+    return replace(pair, gear_a=replace(pair.gear_a, **marked), gear_b=replace(pair.gear_b, **marked))
+
+
+@pytest.mark.parametrize("marked", ({},) + MACHINED, ids=repr)
+@pytest.mark.parametrize("name", sorted(PAIRS))
+def test_a_machined_pairs_names_are_as_at_the_cut(name, marked):
+    """Each value as pair_stems gave it at f3c4873, for every shape of pair (checked there by running this table)."""
+    from gear_generator.spec import pair_stems
+    pair, stems = PAIRS[name]
+    assert pair_stems(_pair_marked(pair, **marked)) == stems
+
+
+@pytest.mark.parametrize("name", sorted(PAIRS))
+def test_a_printed_pair_and_its_assembly_end_p_and_a_typed_name_is_kept(name):
+    from gear_generator.spec import pair_stems
+    pair, (a, b, assembly) = PAIRS[name]
+    got = pair_stems(_pair_marked(pair, process="printed"))
+    typed = (pair.gear_a.name, pair.gear_b.name, pair.assembly_name)
+    assert got == tuple(s if t else s + "_P" for s, t in zip((a, b, assembly), typed))
+    one = pair_stems(replace(pair, gear_b=replace(pair.gear_b, process="Printed")))
+    assert one[2] == (assembly if pair.assembly_name else assembly + "_P")          # either gear printed marks it
+
+
+# -- where the Box's Process was read (the review's must-fix 1) ---------------------------------------------------
+
+def test_the_box_says_where_its_process_was_read_and_it_is_not_what_the_gearbox_is():
+    from gear_generator.workbook import model
+    assert model.Box().process_cell == ""
+    assert model.Box(process="", process_cell="Box!B9") == model.Box(process="")
+    rows = [row[0] for row in model.to_sheets(replace(model.template(), box=model.Box(process_cell="Box!B9")))[0].rows]
+    assert "process_cell" not in " ".join(map(str, rows))
