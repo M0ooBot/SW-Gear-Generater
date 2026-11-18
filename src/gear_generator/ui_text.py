@@ -2695,7 +2695,8 @@ def _unsaved_line(paths: Sequence[str], update_puts_back: bool = False, in_error
 def workbook_footer(assessment, *, record=None, record_problem: str = "", plan=None, update=None,
                     error: str = "", folder: str = "", folder_exists: bool = True, building: bool = False,
                     updating: bool = False, progress=None, note=None, results_due: bool = False,
-                    digest: str = "", positions_per_configuration: Optional[bool] = None) -> Footer:
+                    digest: str = "", positions_per_configuration: Optional[bool] = None,
+                    printing: bool = False) -> Footer:
     """The footer for every state of the window (design/UI-DESIGN.md §9's table): its sentence, colour, buttons.
 
     ``assessment`` is the last good read's ``workbook.assess.Assessment``
@@ -2742,6 +2743,8 @@ def workbook_footer(assessment, *, record=None, record_problem: str = "", plan=N
     the footer never invites a retry of an unchanged workbook). ``""``, as
     every W4 caller passes, never matches.
 
+    F2 (PLAN-PRINTED §3.1.3): ``printing`` while a Print files job runs: :data:`PRINTING`, both buttons held.
+
     W8 (W8-INTERFACES §9.12): ``positions_per_configuration`` is the running SolidWorks' answer as the last job's
     result carried it (None after a restart: neither claim is made), for the record line of a gearbox with modes,
     which also reads the workbook's Modes rows now (``assessment.spec.modes``) to say a reorder.
@@ -2771,6 +2774,8 @@ def workbook_footer(assessment, *, record=None, record_problem: str = "", plan=N
         return Footer(text, ok, action, BUILD_LABELS[action], build, action != BUILD_AGAIN, on_record,
                       update_on and on_record, has_assembly)
 
+    if printing:                                  # F2: Print files' job, which holds both buttons as a build does
+        return footer(PRINTING, True)
     if building or updating:
         return footer(progress_text(progress, updating=updating), True)
     if error:
@@ -6462,47 +6467,548 @@ def carry_unsaid(again, result, exc: BaseException) -> str:
 
 
 # -------------------------------------------------- F2: the span over k teeth and Print files (PLAN-PRINTED §3.0, §3.1)
-# F2-0's stubs (docs/notes-printed/F2-INTERFACES.md §6). Package C owns every sentence below and fills these; the
-# interface note gives each refusal code's sentence once, so package B's tests read codes, never words. Until C fills
-# them each answers nothing to say.
+# Package C's words (docs/notes-printed/F2-INTERFACES.md §6): every sentence a user reads of the span over k teeth and of
+# Print files. Package A's gears.span hands over a SpanReading and package B's printout a Refusal (a code and its
+# detail), a PrintPlan and a PrintResult; nothing here decides what is refused or measured, only how it is said.
+
+SPAN_LABEL_ANY = "Span over k teeth"
+MEASURED_LABEL = "Measured"
+# The Measured line says when the backlash package A proposes (gears.span.measured, which does the arithmetic) passes
+# PRINTED_CAP × module, and names that figure.
+PRINTED_CAP = 0.3
+SPAN_WITHHELD = {
+    "arcs": "not one figure on arcs; choose Involute to measure",
+    "no_contact": "no span: no k has both jaws on the involute",
+}
+MEASURED_NOT_A_NUMBER = "Measured: type the calipers' reading in mm, a number such as 11.25."
+
+
+def span_label(reading: "SpanReading") -> str:
+    """*Span over 3 teeth* for a figure, *Span over k teeth* where none is given."""
+    return f"Span over {reading.k} teeth" if reading.kind == "span" and reading.k else SPAN_LABEL_ANY
+
+
+def span_withheld(reading: "SpanReading") -> str:
+    """Why a reading gives no figure, in the row's words; "" for a figure or for no row at all ("none")."""
+    if reading.kind == "narrow_face":
+        return f"face too narrow to measure: it needs {reading.needed_face_mm:.1f} mm"
+    return SPAN_WITHHELD.get(reading.kind, "")
+
+
+def measured_line(reading: "SpanReading", measured: float, alpha_n: float, module: float) -> str:
+    """What a calipers' reading of the span tells the user (§3.0), worded from package A's ``gears.span.measured`` (the
+    coordinator's ruling: the arithmetic is written once, there; this does no sums of its own): what the printer adds
+    to each flank, square to it; the backlash a gear that keeps 0.04 mm of play a flank, with the gear's own normal
+    pressure angle (degrees), and that it is the least proposed when A holds it at its floor; and, when it passes
+    0.3 × module, that this is more than a gear of this module is given today, which is the user's to decide (U4).
+    "" when there is nothing to work out (no figure to measure against)."""
+    from .gears.span import BACKLASH_FLOOR_MM, KEPT_PLAY_MM, measured as worked_out
+    told = worked_out(reading, measured, alpha_n, module)
+    if told is None:
+        return ""
+    e = told.flank_mm
+    if round(e, 3) == 0:
+        lead = "Your printer adds nothing to a flank"
+    elif e > 0:
+        lead = f"Your printer adds {_n(e)} mm a flank"
+    else:
+        lead = f"Your printer takes {_n(-e)} mm off a flank"
+    play = _n(KEPT_PLAY_MM)
+    if told.floored:
+        said = (f"{lead}: a backlash of {_n(BACKLASH_FLOOR_MM)} mm a gear, the least proposed ({play} mm of play a "
+                "flank alone would ask less).")
+    else:
+        said = f"{lead}: a backlash of {_n(told.backlash_mm)} mm a gear keeps {play} mm of play a flank."
+    if told.over_default:
+        said += (f" That is more than 0.3 × module ({_n(PRINTED_CAP * float(module))} mm), the most a gear of this "
+                 "module is given today: whether it should take more is yours to decide (README: Calibrating your "
+                 "printer, step 6).")
+    return said
 
 
 def span_rows(reading: "SpanReading", measured: Optional[float], alpha_n: float,
               module: float) -> List[Tuple[str, str]]:
-    """The Derived panel's span row and, under it, the Measured entry's line: ``[(label, value), ...]`` for a
-    :class:`gears.span.SpanReading` (A's), the calipers' reading typed in Measured (None when blank), the gear's normal
-    pressure angle in degrees and its module (for the line past 0.3 × module). Empty for a reading of kind "none".
+    """The Derived panel's span row and, under it, the Measured entry's line (§3.0): ``[(label, value), ...]``.
 
-    F2-0's stub: answers []."""
-    return []
+    - ``"span"``: ``("Span over 3 teeth", "11.209")``, the figure the calipers read square to the teeth (W_n on a
+      helical gear), then, when a reading is typed (``measured``), ``("Measured", <the line>)``.
+    - ``"arcs"``, ``"narrow_face"``, ``"no_contact"``: ``("Span over k teeth", <why no figure>)``; a reading typed
+      says nothing then.
+    - ``"none"`` (a machined gear, a ring, a sleeve, a bevel gear): ``[]``, no row at all.
+    """
+    if reading.kind == "span":
+        rows = [(span_label(reading), _n(reading.w_mm))]
+        if measured is not None:
+            rows.append((MEASURED_LABEL, measured_line(reading, measured, alpha_n, module)))
+        return rows
+    withheld = span_withheld(reading)
+    return [(SPAN_LABEL_ANY, withheld)] if withheld else []
+
+
+# The span's card: the Measured entry's (the strip's Derived panel), kept out of EXPLAINER_FIELDS so that no machined
+# gear's card moves (tests/test_printed_rule.py's CARD pins every field of that list).
+SPAN_CARD_TITLE = "Span over k teeth"
+SPAN_CARD_SYMBOL = "W"
+SPAN_CARD_COPY = (
+    "The distance across k teeth between two flat caliper jaws, each on the outside flank of an end tooth. On an "
+    "involute gear it reads the same wherever the jaws touch the flanks, so it is the one tooth size calipers measure "
+    "well. Hold the jaws square to the axis on a spur gear and tilted with the teeth on a helical one, at mid-face, "
+    "and take the smallest steady reading. The figure is the gear as drawn, backlash included: type your reading in "
+    "Measured to see what your printer adds to each flank.")
+
+
+def span_explainer(reading: "SpanReading") -> Tuple[str, str, str, str]:
+    """``(name, symbol, what it is, the worked line)`` of the span's card, as :func:`explainer` gives a field's: the
+    worked line *k 3 · W 11.209 mm · jaws touch at Ø 30.338 mm*, a helical gear's *W 15.844 mm across the teeth
+    (16.732 round the gear)*, or why there is no figure."""
+    if reading.kind == "span":
+        helical = abs(reading.w_t_mm - reading.w_mm) > 1e-9
+        across = f" across the teeth ({_n(reading.w_t_mm)} round the gear)" if helical else ""
+        worked = f"k {reading.k} · W {_n(reading.w_mm)} mm{across} · jaws touch at Ø {_n(reading.contact_d)} mm"
+    else:
+        worked = span_withheld(reading) or "no span on this gear"
+    return SPAN_CARD_TITLE, SPAN_CARD_SYMBOL, SPAN_CARD_COPY, worked
+
+
+# -- Print files: the sentences for B's codes (F2-INTERFACES §2.3) ----------------------------------------------------
+
+PRINT_REASONS = {
+    "FRAME": "the file is cut short or is not a STEP file",
+    "SCHEMA": "it is written in a STEP schema other than AP203, AP214 or AP242 (Tools > Options > Export sets it)",
+    "SOLIDS": "it does not hold exactly one solid",
+    "OPEN_SHELL": "it holds an open surface",
+    "SURFACE_MODEL": "it holds surfaces, not a solid",
+    "UNIT": "its length unit cannot be read",
+    "EXTENT": "its outer diameter or face width is not the gear's (by more than 0.01 mm)",
+}
+PRINTING = "Print files is writing STEP files from SolidWorks…"
+PRINT_WAITS_FOR_STRIP = "The strip is busy in SolidWorks; press Print files when it has finished."
+PRINT_WAITS_FOR_WORKBOOK = "A Workbook window is busy in SolidWorks; press Print files when it has finished."
+EXPORT_WAITS_FOR_PRINT = "Print files is running in SolidWorks; export when it has finished."
+PRINT_WAITS_FOR_UNOWNED = ("A job from a Workbook window that was closed while SolidWorks had not answered is still "
+                           "running in SolidWorks; press Print files when it has finished.")
+PRINT_WAITS_FOR_RECALC = ("Print files wrote nothing: Export wrote cells that formulas in the workbook may depend on; "
+                          "open and save it in Excel first, so what is built can be compared with what it says.")
+PRINT_WAITS_FOR_READ = "Print files wrote nothing: the workbook does not read as it is now; the footer says why."
+PRINT_FORM_NEEDS_FOLDER = ("Print files wrote nothing: choose an output folder that exists; it writes into a print "
+                           "folder there.")
+PRINT_CLOSES_WHEN_DONE = ("This window closes once Print files has finished and its print list is written; it stays "
+                          "open if something needs saying.")
+PRINT_CLOSE_ANYWAY = ("SolidWorks has not answered yet: Print files is still running there, perhaps held up by a "
+                      "dialog open in SolidWorks. Close this window anyway? Its print list will not be written, so do "
+                      "not print what it leaves in its folder; nothing will be overwritten.")
+
+
+def _pr_verb(items: Sequence[str], one: str, many: str) -> str:
+    return one if len(items) == 1 else many
+
+
+def _pr_them(items: Sequence[str]) -> str:
+    return "it" if len(items) == 1 else "them"
+
+
+def _year_and_revision(year: str, revision: str) -> str:
+    year, revision = str(year or "").strip(), str(revision or "").strip()
+    if year and revision:
+        return f"{year} ({revision})"
+    return year or revision
+
+
+def _print_file(refusal: "Refusal") -> str:
+    from .printout import STEP_SUFFIX
+    detail = refusal.detail or {}
+    if detail.get("file"):
+        return _file(str(detail["file"]))
+    return (refusal.parts[0] + STEP_SUFFIX) if refusal.parts else "a file"
 
 
 def print_refusal(refusal: "Refusal") -> str:
-    """The sentence for a :class:`printout.Refusal` (B's code and detail), as F2-INTERFACES.md §2.3 drafts it.
-
-    F2-0's stub: answers ""."""
-    return ""
+    """The sentence for a :class:`printout.Refusal`, B's code and detail (F2-INTERFACES §2.3), one per code. The
+    planning refusals and the job's refusals before any file say *Print files wrote nothing*; the gate says what it
+    waits for; SOLIDWORKS_REFUSED and FILE_CHECK, which come after files are written, say *Print files stopped* (what
+    was written and its list are :func:`print_result`'s to say). Parts are the stems as B gives them, joined as
+    names are everywhere here."""
+    from . import printout as po
+    code, parts, detail = refusal.code, list(refusal.parts), dict(refusal.detail or {})
+    named = _and(parts)
+    if code == po.GATE_COPY:
+        return "Print files waits until writing a STEP file is measured on this SolidWorks; nothing was written."
+    if code == po.GATE:
+        if detail.get("planned_year") or detail.get("planned_revision"):
+            then = _year_and_revision(detail.get("planned_year", ""), detail.get("planned_revision", ""))
+            now = _year_and_revision(detail.get("year", ""), detail.get("revision", "")) or "none connected"
+            return (f"SolidWorks changed since Print files was pressed ({then} then, {now} now): press it again. "
+                    "Nothing was written.")
+        if not (detail.get("year") or detail.get("revision")):
+            return "Print files needs SolidWorks running and connected; nothing was written."
+        on = _year_and_revision(detail.get("year", ""), detail.get("revision", ""))
+        return f"Print files waits until writing a STEP file is measured on SolidWorks {on}; nothing was written."
+    if code == po.UNSAVED_MARK:
+        return (f"Print files wrote nothing: {named} {_pr_verb(parts, 'has', 'have')} changes from Update SolidWorks "
+                f"that are not saved; save {_pr_them(parts)} in SolidWorks, then print.")
+    if code == po.MISMATCHED_MARK:
+        return (f"Print files wrote nothing: {named} no longer {_pr_verb(parts, 'holds', 'hold')} what the record says; "
+                "press Update SolidWorks, then print.")
+    if code == po.CHANGES_ON_UPDATE:
+        new = [p for p in parts if detail.get(p) == "new part"]
+        values = [p for p in parts if p not in new]
+        if values and new:
+            what = f"change the values in {_and(values)} (and make {_and(new)} new)"
+        elif new:
+            what = f"make {_and(new)} new"
+        else:
+            what = f"change the values in {_and(values)}"
+        then = "press Update SolidWorks and save, then print" if values else "press Update SolidWorks, then print"
+        return f"Print files wrote nothing: Update SolidWorks would {what}; {then}."
+    if code == po.NO_PART:
+        gone = [p for p in parts if detail.get(p) == "not on disk"]
+        none = [p for p in parts if p not in gone]
+        said = []
+        if none:
+            said.append(f"{_and(none)} {_pr_verb(none, 'has', 'have')} no part yet")
+        if gone:
+            said.append(f"{_and(gone)} {_pr_verb(gone, 'is', 'are')} not on disk")
+        return f"Print files wrote nothing: {', and '.join(said)}; build {_pr_them(parts)} first, then print."
+    if code == po.WORKBOOK_ERROR:
+        # B's WORKBOOK_ERROR covers an error, a provisional read, fixes chosen and not exported, and an Update that
+        # cannot say what it would change: each is said in the footer, so the sentence points there.
+        return ("Print files wrote nothing: the workbook as it stands cannot be compared with what is built; the footer "
+                "says why.")
+    if code == po.FOREIGN_RECORD:
+        return ("Print files wrote nothing: the record beside this workbook is another workbook's, so nothing built "
+                "is this workbook's to print yet; Build makes its own.")
+    if code == po.NO_RECORD:
+        what = f"{_file(parts[0])} has" if parts else "the active part has"
+        return f"Print files prints a part Gear Generator built: {what} no .gear.json beside it, so nothing was written."
+    if code == po.NOT_A_PART:
+        what = f", and {_file(parts[0])} is not a part" if parts else ""
+        return (f"Print files prints the part active in SolidWorks{what}: make a gear part active there; nothing was "
+                "written.")
+    if code == po.MODIFIED:
+        return (f"Print files wrote nothing: {named} {_pr_verb(parts, 'is', 'are')} changed in SolidWorks and not saved; "
+                f"save {_pr_them(parts)}, or close {_pr_them(parts)} without saving, then print.")
+    if code == po.GLOBALS_DIFFER:
+        stem = parts[0] if parts else "the part"
+        return (f'Print files wrote nothing: in {stem}, "{detail.get("name", "")}" is {detail.get("live", "")} where '
+                f'its record says {detail.get("recorded", "")}; press Update values (Update SolidWorks in the Workbook '
+                "window), or put it back, then print.")
+    if code == po.FEATURE_IN_ERROR:
+        said, every = [], []
+        for stem in parts:
+            features = [f for f in str(detail.get(stem, "")).split(", ") if f]
+            every += features or ["a feature"]
+            said.append(f"in {stem}, {_and(features) or 'a feature'} {_pr_verb(features or ['x'], 'is', 'are')} in "
+                        "error in SolidWorks")
+        return f"Print files wrote nothing: {'; '.join(said)}; fix {_pr_them(every)} there, then print."
+    if code == po.COMPONENT_ONLY:
+        inside: Dict[str, List[str]] = {}
+        for stem in parts:
+            inside.setdefault(_stem(str(detail.get(stem, ""))), []).append(stem)
+        said, ways = [], []
+        for assembly, stems in inside.items():
+            if assembly:
+                said.append(f"{_and(stems)} {_pr_verb(stems, 'is', 'are')} open only inside {assembly}")
+                ways.append("close the assembly or open the part")
+            else:
+                said.append(f"{_and(stems)} {_pr_verb(stems, 'is', 'are')} open in SolidWorks but not as the active "
+                            "document")
+                # Only one document is active at a time, so several such parts can only be closed.
+                ways.append("make it active, or close it" if len(stems) == 1 else "close them")
+        return f"Print files wrote nothing: {'; '.join(said)}; {' or '.join(dict.fromkeys(ways))}, then print."
+    if code == getattr(po, "LIGHTWEIGHT", "LIGHTWEIGHT"):
+        # B's job cannot tell a lightweight component from a part not loaded while an assembly is open, so the
+        # sentence is true of both: it "may be" lightweight, and opening the part itself clears either.
+        inside = {}
+        for stem in parts:
+            inside.setdefault(_stem(str(detail.get(stem, ""))), []).append(stem)
+        said = []
+        for assembly, stems in inside.items():
+            opened = f"with {assembly} open" if assembly else "with an assembly open"
+            what = "a lightweight component" if len(stems) == 1 else "lightweight components"
+            said.append(f"{opened}, {_and(stems)} may be {what} of it")
+        every = [s for stems in inside.values() for s in stems]
+        itself = "the part itself" if len(every) == 1 else "the parts themselves"
+        return (f"Print files wrote nothing: {'; '.join(said)}; resolve {_pr_them(every)} there, or open {itself}, "
+                "then print again.")
+    if code == po.SOLIDWORKS_REFUSED:
+        name = _print_file(refusal)
+        if detail.get("said"):
+            return f"Print files stopped: SolidWorks would not write {name}: {_sentence(str(detail['said']))}"
+        return (f"Print files stopped: SolidWorks would not write {name} (errors {detail.get('errors', '?')}, "
+                f"warnings {detail.get('warnings', '?')}).")
+    if code == po.FILE_CHECK:
+        reason = PRINT_REASONS.get(str(detail.get("reason", "")), "it did not pass the app's check")
+        return f"Print files stopped: {_print_file(refusal)} is not fit to print: {reason}."
+    return f"Print files wrote nothing ({code})."
 
 
 def print_result(result: "PrintResult") -> str:
-    """The status line after a press's job (B's :class:`printout.PrintResult`): what was written and where, or why not.
+    """The status after a press's job: the files written and the folder, or the refusal; then a feature SolidWorks
+    warns about (written as built), a document the job left marked changed in SolidWorks, and the active document
+    not put back, each said. After a stop that left files (``result.folder`` not "") it says where they are and that
+    their list says not to print them; the list itself is the caller's to write (``printout.write_list``), and
+    :func:`print_list_unwritten` says when it could not be."""
+    said: List[str] = []
+    if result.refusal is not None or result.failed:
+        refusal = result.refusal
+        if refusal is None:                       # a failed file B gave no refusal for: said as its check
+            from .printout import FILE_CHECK, Refusal
+            file_, reason = result.failed[0]
+            refusal = Refusal(FILE_CHECK, (_stem_of_print(file_),), {"file": file_, "reason": reason})
+        said.append(print_refusal(refusal))
+        if result.folder:
+            said.append(f"What was written is in {short_path(result.folder, 64)}, and its print list says not to "
+                        "print this set.")
+    else:
+        files = [f for _, f in result.written]
+        where = short_path(result.folder, 64) if result.folder else "the print folder"
+        if len(files) == 1:
+            said.append(f"Print files wrote {_file(files[0])} and its print list in {where}.")
+        else:
+            said.append(f"Print files wrote {len(files)} STEP files and their print list in {where}.")
+    for path, features in result.warnings:
+        names = list(features)
+        said.append(f"SolidWorks warns about {_and(names)} in {_stem(path)}; "
+                    f"{'it was' if len(names) == 1 else 'they were'} written as SolidWorks built "
+                    f"{'it' if len(names) == 1 else 'them'}.")
+    if result.flags_turned_on:
+        names = [_file(p) for p in result.flags_turned_on]
+        said.append(f"SolidWorks now marks {_and(names)} as changed since Print files ran, and nothing was saved: "
+                    f"close {_pr_them(names)} without saving to leave {'its file' if len(names) == 1 else 'their files'} "
+                    "as before.")
+    if not result.active_restored:
+        said.append("The document you had active could not be made active again.")
+    # Package B's facts beyond the interface's (printout.FACT_CLOSE, FACT_FLAGS; the coordinator's to rule): a window
+    # the job opened and could not close, and save flags it could not read again at the end.
+    for key, value in (result.facts or {}).items():
+        name, _, what = str(key).rpartition("|")
+        if what == "close" and str(value).startswith("failed"):
+            said.append(f"Print files opened {_file(name)} and could not close it: close it in SolidWorks without "
+                        "saving.")
+        elif what == "flags" and str(value).startswith("unread"):
+            said.append("Whether Print files left any document marked as changed in SolidWorks could not be read; "
+                        "nothing was saved.")
+    return " ".join(said)
 
-    F2-0's stub: answers ""."""
-    return ""
+
+def _stem_of_print(name: str) -> str:
+    from .printout import STEP_SUFFIX
+    base = _file(name)
+    return base[:-len(STEP_SUFFIX)] if base.lower().endswith(STEP_SUFFIX) else base
 
 
-def print_list_text(plan: "PrintPlan", result: "PrintResult", version: str) -> str:
-    """The whole text of ``print list.txt`` (§3.1.3): its head (``plan.name``, ``plan.pressed``, the app's ``version``, the
-    process and the nozzle), one block per part, and the settings said once; headed *DO NOT PRINT THIS SET:* when
-    ``result`` refused or failed a file.
+def print_list_unwritten(error: BaseException) -> str:
+    """``write_list`` raised: the folder stands without its list, which is said, with what to do."""
+    return (f"Its print list could not be written ({type(error).__name__}: {error}), so nothing in that folder says "
+            "what each file is or whether to print it: press Print files again for a set with its list.")
 
-    F2-0's stub: answers ""."""
-    return ""
+
+def print_job_failed(error: BaseException) -> str:
+    """The job raised (``print_parts`` turns what it can into a result, so this is the connection failing, or worse)."""
+    from .swcom import SolidWorksError
+    if isinstance(error, SolidWorksError):
+        return f"Print files stopped: {_sentence(str(error))}"
+    return f"Print files stopped — {type(error).__name__}: {error}"
+
+
+def print_collect_failed(error: BaseException) -> str:
+    """The job answered, but what it did could not be said (or its list written)."""
+    return f"What Print files did could not be said — {type(error).__name__}: {error}"
+
+
+def print_unreachable(reason: str) -> str:
+    """No SolidWorks worker: nothing was asked of SolidWorks."""
+    return f"SolidWorks cannot be reached from here, so Print files wrote nothing. {reason}".strip()
+
+
+def print_folder_missing(folder: str) -> str:
+    """The Workbook window: the Box's (or the strip's) Output folder is not on disk."""
+    return (f"Print files wrote nothing: the output folder {short_path(folder, 48)} does not exist; make it, or "
+            "change it on the Box sheet.")
 
 
 def print_bar_line(plan: "Optional[PrintPlan]") -> str:
-    """The form's SolidWorks bar line for Print files, from the form's own planning read (``printout.form_print``): *Print
-    files will write Gear_m1.5_N20_P.step from the active part.* when the plan has one part and no refusal.
+    """The form's SolidWorks bar line for Print files, from the form's own planning read (``printout.form_print``):
+    *Print files will write Gear_m1.5_N20_P.step from the active part.* when the plan has one part and no refusal;
+    "" otherwise (a refusal is said when the button is pressed)."""
+    from .printout import STEP_SUFFIX
+    if plan is None or plan.refusal is not None or len(plan.parts) != 1:
+        return ""
+    return f"Print files will write {plan.parts[0].stem}{STEP_SUFFIX} from the active part."
 
-    F2-0's stub: answers ""."""
-    return ""
+
+# -- the print list (§3.1.3) ------------------------------------------------------------------------------------------
+
+PRINT_SETTINGS = (
+    "Settings for every part above (Bambu Studio's names, not checked against your version: if a name differs, the "
+    "setting described is the one meant):",
+    "- Lay each part flat on the bed, on the face it was built from.",
+    "- Layer height 0.2 mm; Wall loops 5; Sparse infill density 35 % or more.",
+    "- Elephant foot compensation 0.15 mm, so the first layer's squish is taken off.",
+    "- X-Y hole compensation 0 and X-Y contour compensation 0: a printed part's backlash already allows for walls "
+    "printed a little fat.",
+    "- Seam position Aligned; measure each print away from the tooth the seam is on.",
+    "- On import, keep Bambu Studio's mesh precision at its default: a coarser mesh makes a gear measure small.",
+    "- No brim, no supports; your usual PLA filament profile.",
+    "- Grease the running teeth.",
+    "",
+    "To measure a span: zero the calipers, lay the flat outside jaws across the teeth it names at mid-face, close "
+    "them with the thumb roller, and take the smallest steady reading at three places round the gear.",
+)
+
+
+def _print_backlash(spec) -> str:
+    """The part's backlash as the list gives it: *0.3 mm, printed default*, *0.45 mm (0.3 × module)*, or a typed
+    value alone."""
+    from .gears import kind_for
+    try:
+        g = kind_for(spec).derive(spec)
+        section = g.section if is_bevel(g) else g
+        value = _n(section.backlash)
+        typed, printed = section.backlash_typed, getattr(section, "backlash_printed", False)
+    except Exception:  # noqa: BLE001 - a part on record that no longer derives: its typed value, or blank
+        return f"{spec.backlash} mm" if str(spec.backlash).strip() else "blank"
+    if typed:
+        return f"{value} mm"
+    if printed:
+        return f"{value} mm, printed default"
+    return f"{value} mm (0.3 × module)"
+
+
+def _print_span_line(part) -> str:
+    """A part's span line in the list (§3.0, E1, E4)."""
+    from .spec import KIND_BEVEL, TEETH_INTERNAL
+    spec, reading = part.spec, part.span
+    if not spec.is_printed():
+        return "Machined: its backlash is a cutter's, not a printer's; no span."
+    if reading.kind == "span":
+        if abs(reading.w_t_mm - reading.w_mm) > 1e-9:
+            return (f"Span over {reading.k} teeth: {_n(reading.w_mm)} mm across the teeth (the calipers tilted with "
+                    "them, at mid-face).")
+        return f"Span over {reading.k} teeth: {_n(reading.w_mm)} mm (the calipers square to the axis, at mid-face)."
+    if reading.kind == "arcs":
+        return "Span: not one figure, since it is drawn with arcs; choose Involute to measure."
+    if reading.kind == "narrow_face":
+        return f"Span: the face is too narrow to measure; it needs {reading.needed_face_mm:.1f} mm."
+    if reading.kind == "no_contact":
+        return "No span: no k has both jaws on the involute."
+    if spec.kind == KIND_BEVEL:
+        return "No span: a bevel tooth is not one size along its face."
+    if spec.kind == "sleeve" or spec.teeth_side == TEETH_INTERNAL:
+        return "No span: internal teeth are measured over pins, not jaws."
+    return "No span worked out for this part."
+
+
+def _print_sizes(spec) -> str:
+    bore = f"bore {spec.bore} mm" if str(spec.bore).strip() else "no bore"
+    return (f"Module {spec.module} · {spec.teeth} teeth · face {spec.face_width} mm · {bore} · backlash "
+            f"{_print_backlash(spec)}")
+
+
+def _print_process(parts) -> str:
+    printed = [p.spec for p in parts if p.spec.is_printed()]
+    if not printed:
+        return "Process: Machined"
+    nozzles = {_n(s.nozzle_mm()) for s in printed}
+    nozzle = f", {nozzles.pop()} mm nozzle" if len(nozzles) == 1 else ", nozzles as each part says"
+    if len(printed) == len(parts):
+        return f"Process: Printed{nozzle}"
+    return f"Process: Printed{nozzle} (the parts marked Machined below are machined)"
+
+
+PRINT_UNITS = {"MILLI.METRE": "millimetres", "METRE": "metres", "CENTI.METRE": "centimetres", "INCH": "inches",
+               "FOOT": "feet"}
+
+
+# Why B's size check was skipped (printout.EXTENT_SKIPPED), in the list's words.
+PRINT_SIZE_SKIPPED = {"bevel": "a bevel gear", "ring": "a ring", "sleeve": "a sleeve", "dog": "a dog", "hub": "a hub",
+                      "user features": "your features in it", "not measured": "not yet shown on SolidWorks"}
+
+
+def _print_schema(name: str) -> str:
+    """*AP214 (AUTOMOTIVE_DESIGN)*: the schema a file declares, by printout.STEP_SCHEMAS' prefixes."""
+    from .printout import STEP_SCHEMAS
+    if not name:
+        return ""
+    for ap, prefixes in STEP_SCHEMAS:
+        if any(name.upper().startswith(p) for p in prefixes):
+            return f"{ap} ({name})"
+    return name
+
+
+def _print_checked(result: "PrintResult", name: str) -> str:
+    facts = {}
+    for key in result.facts:
+        file_, _, what = str(key).rpartition("|")
+        if _file(file_) == name:
+            facts[what] = str(result.facts[key])
+    read = ", ".join(x for x in (_print_schema(facts.get("schema", "")), PRINT_UNITS.get(facts.get("unit", ""),
+                                                                                       facts.get("unit", ""))) if x)
+    extent = facts.get("extent", "")
+    why = extent.split(": ", 1)[-1]
+    size = ("outer diameter and face width match the gear" if extent == "checked"
+            else f"size not checked ({PRINT_SIZE_SKIPPED.get(why, why)})" if extent else "")
+    return "; ".join(x for x in (f"one closed solid{', ' + read if read else ''}", size) if x)
+
+
+def print_list_text(plan: "PrintPlan", result: "PrintResult", version: str) -> str:
+    """The whole text of ``print list.txt`` (§3.1.3), plain lines for UTF-8: headed *DO NOT PRINT THIS SET:* with the
+    file and the reason when the job stopped (a file SolidWorks would not write, or one that failed its check); then
+    the gearbox's name (the part's stem on the form), the press's time, the app's ``version`` and the SolidWorks it
+    ran on, the process and nozzle; one block per part, its file, the rows it serves and how many to print, its sizes
+    and backlash, its span over k teeth (or why none; *Machined* for a machined part), the user's features left in
+    it, the features SolidWorks warns about, and what the check read of its file; and the settings, said once."""
+    import time as _time
+    from .printout import FILE_CHECK, SOLIDWORKS_REFUSED, STEP_SUFFIX
+    lines: List[str] = []
+    failed = {_file(f): reason for f, reason in result.failed}
+    stop = [f"{name} is not fit to print: {PRINT_REASONS.get(reason, reason)}." for name, reason in failed.items()]
+    refusal = result.refusal
+    if refusal is not None and refusal.code == SOLIDWORKS_REFUSED:
+        stop.append(print_refusal(refusal).replace("Print files stopped: ", "", 1).rstrip(".")
+                    + ", so this set is not whole.")
+    elif refusal is not None and refusal.code == FILE_CHECK and not stop:
+        stop.append(print_refusal(refusal).replace("Print files stopped: ", "", 1))
+    elif refusal is not None and not stop:
+        stop.append(print_refusal(refusal))
+    if stop:
+        lines += ["DO NOT PRINT THIS SET: " + " ".join(stop), ""]
+    lines.append(f"Print list: {plan.name or 'Gear Generator'}")
+    head = []
+    if plan.pressed:
+        head.append("Pressed " + _time.strftime("%Y-%m-%d %H:%M:%S", _time.localtime(plan.pressed)))
+    on = ""
+    if plan.revision:
+        from .swcom import release_year
+        on = f", on SolidWorks {release_year(plan.revision[0])} ({'.'.join(str(n) for n in plan.revision)})"
+    head.append(f"Gear Generator {version}{on}")
+    lines.append(" · ".join(head))
+    lines.append(_print_process(plan.parts))
+    lines.append("")
+    written = {_file(f) for _, f in result.written}
+    for part in plan.parts:
+        name = part.stem + STEP_SUFFIX
+        lines.append(name)
+        lines.append(f"  {'For ' + _and(part.rows) + ' · ' if part.rows else ''}print {part.count}")
+        lines.append(f"  {_print_sizes(part.spec)}")
+        lines.append(f"  {_print_span_line(part)}")
+        if part.user_features:
+            lines.append(f"  Your features left in it: {_and(part.user_features)}.")
+        for path, features in result.warnings:
+            if _same_path(path, part.path):
+                lines.append(f"  SolidWorks warns about {_and(features)}; written as SolidWorks built it.")
+        if name in failed:
+            lines.append(f"  NOT FIT TO PRINT: {PRINT_REASONS.get(failed[name], failed[name])}.")
+        elif name not in written:
+            lines.append("  Not written.")
+        else:
+            lines.append(f"  Checked: {_print_checked(result, name)}.")
+        lines.append("")
+    lines.extend(PRINT_SETTINGS)
+    return "\n".join(lines) + "\n"
+
+
+def _same_path(a: str, b: str) -> bool:
+    """Two paths compared as Windows compares them (``store.same_path``), imported late as ``ui_text`` keeps ``store``."""
+    from .store import same_path
+    return same_path(a, b)
