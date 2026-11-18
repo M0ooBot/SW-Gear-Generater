@@ -1323,3 +1323,57 @@ coordinator's extension). Use `W9D-DEMONSTRATION.md`'s 2024 command lines, which
 
 **Still open, not before the run:** the edge prefilter's should-fix in `swcom.entity_references` (`:3964`). M9's
 fixture has no edge mate.
+
+## A planet copy made new: `carry_for`'s names and why (assessed 2026-11-18, at `34e39ac`)
+
+*Read-only. No SolidWorks was run, and no code was changed. I reproduced and fixed the fault only in a `git archive`
+scratch copy, deleted after.*
+
+**What happens.** In `update.carry_for` (`src/gear_generator/workbook/update.py:3306`), a body whose part is made
+new looks up its build job by `c.gear in j.gear_ids`. `_why_part_new` (`:3226-3231`) looks up `made_new` and the
+job the same way. A planet copy's id (*Planet copy 1*) is never in `gear_ids`, which hold the Gears row (*Planet*).
+Reproduced on the fake: RangeBox with Planet's Face width changed gives each copy `names == ()` and
+`why_new == "its values changed"`. Every other new body gets 6 names, and `old_names` is right for the copies too (6).
+
+**What a carrying Build again… then does.** `names` is read only at `swbuild.py:7484` and `:7488`.
+`old_names`, which is right, decides what is the app's.
+- **A mate of the user's on a planet copy's own feature** (its Gear Axis, or any app feature named in its sidecar):
+  - A gear mate on its Gear Axis or a coaxial face is not made. It is named `WHY_GONE`: *"UserGearP was on Planet
+    copy 1's Gear Axis, which Planet copy 1's new part does not have"*.
+  - A mate on any other app feature of the planet gets the same sentence.
+  - The mate is left behind in the old assembly. Nothing is made on the wrong thing. **But the sentence is untrue:**
+    the new part has that feature, and the mate should have been made on it.
+  - Base planes (`plane1`-`plane3`) are not affected.
+- **A feature of the user's in a planet's part, and a mate on it:**
+  - The feature is still told from the app's by `old_names`, which is correct, so no app feature is called the user's.
+  - A mate on it is named `WHY_PART_NEW` and the feature is named as staying behind, both true.
+  - But the reason is only *"its values changed"*: *"its Face width changed"* is lost. Where the planet's part is new
+    because Update left it unsaved (`UNSAVED`), *"its values changed"* is **untrue**, and `MISMATCHED`'s
+    *how to keep it* sentence is lost. I reasoned this from the code and did not run it.
+- **Nothing else reads these names.** Nothing is lost silently, and nothing is written outside the unsaved new
+  assembly.
+
+**So the effect is conservative but the words are wrong.** Each item affected is left behind, and none is made
+wrongly. But two sentences can be untrue: *"… new part does not have"*, and *"its values changed"* where the cause was
+unsaved or mismatched.
+
+**Recommendation: fix now.** It is small and does not touch the SolidWorks evidence.
+- *The change* (`update.py`):
+  - `:3306`: `job = next((j for j in again.build if planetary.copy_of(c.gear)[0] in j.gear_ids), None)`;
+  - in `_why_part_new`: `row = planetary.copy_of(gear)[0]`, and `row` in place of `gear` in its three
+    `gear_ids` tests (`:3227`, `:3229`, `:3231`).
+- *Checked in the scratch copy:* each copy gets 6 names and *"its Face width changed"*.
+  `test_workbook_carry.py`, `test_swbuild_carry.py`, `test_workbook_update.py` and `test_workbook_user_record.py`:
+  419 passed.
+- *Tests it owes, on the fake:*
+  - `carry_for` after Planet's Face width changes: each copy's `names` equal its job's `plan_features`, and its
+    `why_new` is *"its Face width changed"*;
+  - `_why_part_new` for a copy whose row is in `made_new` as `UNSAVED`, and as `MISMATCHED`, gives those phrases;
+  - a carry end to end (gates set on 2026) with a user coincident on *Planet copy 2*'s Gear Axis and a user gear mate
+    on a planet's Gear Axis, each made again on that copy's new Gear Axis, and the result naming neither as gone.
+- *The evidence still stands for the fixed code.* `copy_of` returns any id without the copy word unchanged, and the
+  changed lines run only for a part made new. In M9's fixture, on 2026 tonight and on 2024 now, the only parts made
+  new are Sun and Aux, and the planets are reused, so every body those runs met takes exactly the same path.
+- *Remaking by name on a gear part made new is measured on SolidWorks:* UserGear6 on Sun's Gear Axis was made again
+  (log 1:1484, 1565). A copy takes that path with its own handle.
+- No rerun is needed.
