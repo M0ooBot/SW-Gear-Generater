@@ -1891,6 +1891,12 @@ def gearbox_update_status(update, result, dragged: Sequence[str] = (), **kwargs)
     said = still_in_error_sentence(still, assembly_holding(update, still),
                                    record=_record_of(finished, kwargs.get("record")),
                                    own=getattr(update, "assembly", "") or "")
+    if whats_wrong_stays(kwargs.get("revision") or ()):
+        # The review of 1dc9350 (§3): this press brings the assembly forward with the part in error, and the box it
+        # raises does not go by itself; said once, after the sentence, and NEXT not beside it.
+        said += " " + whats_wrong_stays_sentence(len(still))
+        for sentence in (whats_wrong_next_sentence(1), whats_wrong_next_sentence(2)):
+            text = text.replace(" " + sentence, "")
     if result.failures:
         from .workbook.update import document_stem
         stems = {document_stem(p) for p in still}
@@ -2019,6 +2025,7 @@ def _gearbox_update_status(update, result, dragged: Sequence[str] = (), *, meshe
         if motion and result.skipped and getattr(update, "in_place", None):
             text += f" It did not get to {str(result.skipped).rstrip('.')}."
         in_error = _parts_left_in_error(result)
+        next_said = False
         # The review of the M3 fix, (iii): a part an earlier stop left in error, still open so (Finished
         # .still_in_error), is closed without saving as well, so the stop never offers to save beside it.
         for path in getattr(finished, "still_in_error", ()) or () if finished is not None else ():
@@ -2036,6 +2043,10 @@ def _gearbox_update_status(update, result, dragged: Sequence[str] = (), *, meshe
                      + _close_unsaved(changed_docs + in_error, 'it' if one else 'them all',
                                       assembly_holding(update, in_error), "this",
                                       own=getattr(update, "assembly", "") or "", record=_record_of(finished, record)))
+            if whats_wrong_stays(revision):
+                # The review of 1dc9350 (§3): the box raised when the assembly is next brought forward stays.
+                text += " " + whats_wrong_next_sentence(len(in_error))
+                next_said = True
         elif changed_docs:
             one = len(changed_docs) == 1
             text += (f" It had already changed {_and(changed_docs)}, not saved: press Update SolidWorks again once "
@@ -2050,7 +2061,8 @@ def _gearbox_update_status(update, result, dragged: Sequence[str] = (), *, meshe
                     sentence.split(" in ", 1)[0].replace("Your ", "", 1) in text:
                 continue
             text += " " + sentence
-        if (changed_docs or result.placed) and _users_in_error(result) and whats_wrong_shows(revision):
+        if (changed_docs or result.placed) and _users_in_error(result) and whats_wrong_shows(revision) \
+                and not next_said:
             text += " " + WHATS_WRONG_AFTER         # W9a: SolidWorks 2024's box, once, after a stop that wrote
         return text, False
 
@@ -4506,15 +4518,49 @@ def _clauses(clauses: Sequence[str]) -> str:
 
 
 # SolidWorks 2024's What's Wrong box in the app's Update (measured, d7cbcda): with something of the user's in error it
-# shows for some seconds, blocks nothing and goes by itself, and the Update completes; 2026 shows none. The app leaves
-# it alone and changes no setting (the coordinator's ruling); these say so, once, where the version is measured to
-# show it (``swbuild.whats_wrong_shows_in_update``), so the user is not surprised.
-WHATS_WRONG_AHEAD = ("SolidWorks may show its What's Wrong box for up to half a minute during the Update: leave it "
-                     "alone, it closes by itself, and the Update carries on.")
+# shows for some seconds, blocks nothing and goes while SolidWorks rebuilds, and the Update completes; 2026 shows none.
+# Since remake-m3 on 2024 (W9C-RUNS-REVIEW.md, the review of 1dc9350, §3): the box raised at the first activation after
+# a stop left a part in error stays when nothing rebuilds after it, until its Close button is pressed
+# (findings.WHATS_WRONG_STAYS_WITHOUT_A_REBUILD). The app leaves it alone and changes no setting (the coordinator's
+# rulings of 2026-11-17 and 2026-11-18); these tell the user truly what it does, once, where the version is measured
+# to show it and to leave it up so (``swbuild.whats_wrong_shows_in_update`` and ``swbuild.whats_wrong_stays``).
+WHATS_WRONG_AHEAD = ("SolidWorks may show its What's Wrong box during the Update: leave it alone while the Update runs. "
+                     "It closes by itself once SolidWorks rebuilds; if the Update stops before that, it stays until you "
+                     "close it with its Close button.")
 WHATS_WRONG_AFTER = ("SolidWorks may have shown its What's Wrong box for up to half a minute during the Update; nothing "
                      "in it needed answering.")
-# Measured on 2024: 22 to 23 s on a gearbox with modes, 3 to 5 s on a plain one (W9A-CLOSE-2024-REVIEW.md); what a
-# person pressing its buttons mid-Update does was not measured, so the sentence asks them to leave it.
+# Measured on 2024: 22 to 23 s on a gearbox with modes, 3 to 5 s on a plain one (W9A-CLOSE-2024-REVIEW.md), in Updates
+# that rebuilt; what a person pressing its buttons mid-Update does was not measured, so AHEAD asks them to leave it
+# while the Update runs. AFTER is said only after an Update that changed or put something and left no part in error.
+WHATS_WRONG_STAYS = ("SolidWorks may show its What's Wrong box for that part when this press brings the assembly "
+                     "forward; it does not close by itself: close it with its Close button, then close the documents as "
+                     "above.")
+WHATS_WRONG_NEXT = ("SolidWorks may show its What's Wrong box for the part left in error when the assembly is next "
+                    "brought forward; it does not close by itself: close it with its Close button.")
+# STAYS: once after the still-in-error sentence (gearbox_update_status); NEXT: once in a stop that leaves a part in
+# error, in place of AFTER there. Both rest on two programmatic activations (the script's read and the app's press);
+# a person's own is an inference, hence "may". With several parts the words name them as several.
+
+
+def whats_wrong_stays_sentence(count: int = 1) -> str:
+    """:data:`WHATS_WRONG_STAYS`, for ``count`` parts still in error (*for those parts* where several)."""
+    return WHATS_WRONG_STAYS if count <= 1 else WHATS_WRONG_STAYS.replace("for that part", "for those parts")
+
+
+def whats_wrong_next_sentence(count: int = 1) -> str:
+    """:data:`WHATS_WRONG_NEXT`, for ``count`` parts left in error (*for the parts left in error* where several)."""
+    return WHATS_WRONG_NEXT if count <= 1 else WHATS_WRONG_NEXT.replace("for the part left", "for the parts left")
+
+
+def whats_wrong_stays(revision: Sequence[int]) -> bool:
+    """Whether the SolidWorks of ``revision`` is measured to show What's Wrong with work in error AND to leave the box
+    raised at the first activation after a stop up until it is closed (``swbuild.whats_wrong_shows_in_update`` and
+    ``swbuild.whats_wrong_stays`` both True; 2024); False elsewhere, unmeasured, or the revision unknown."""
+    from . import swbuild
+    stays = getattr(swbuild, "whats_wrong_stays", None)
+    if stays is None or not revision:
+        return False
+    return whats_wrong_shows(revision) and stays(tuple(int(n) for n in revision)) is True
 
 
 def whats_wrong_shows(revision: Sequence[int]) -> bool:
@@ -4597,7 +4643,7 @@ def _prediction(ahead, at: str, known: Sequence[str] = ()) -> Tuple[str, bool]:
         one = len(work_errors) == 1
         text = _joined(text, f"Your {_and(work_errors)} {'was' if one else 'were'} already in error in SolidWorks "
                              "then.")
-        if whats_wrong_shows(entry.revision):
+        if whats_wrong_stays(entry.revision):
             text = _joined(text, WHATS_WRONG_AHEAD)
     return text, True
 

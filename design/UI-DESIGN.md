@@ -1266,19 +1266,24 @@ sees is words, each from `ui_text`, each with the time the work was read:
   was blank is to be *cleared again*, not retyped (package A's
   `ValueEdit.blank` wording). **SolidWorks 2024's What's Wrong box**: measured
   there to show for some seconds during an Update when something of the user's
-  is in error, blocking nothing and going by itself (2026 shows none; the app
-  leaves it alone and changes no setting). Where the version is measured to
-  show it (`swbuild.whats_wrong_shows_in_update`), the footer's line on the
-  user's work, after the items already in error, adds *SolidWorks may show its
-  What's Wrong box for up to half a minute during the Update: leave it alone, it
-  closes by itself, and the Update carries on.* (measured 22 to 23 s on a
-  gearbox with modes, 3 to 5 s on a plain one; pressing its buttons mid-Update
-  was not measured), and the status of an Update that changed or put something,
+  is in error, blocking nothing and going while SolidWorks rebuilds; and, raised
+  at the first activation after a stop left a part in error, to stay when
+  nothing rebuilds after it, until its Close button is pressed
+  (`findings.WHATS_WRONG_STAYS_WITHOUT_A_REBUILD`, remake-m3 on 2024). 2026
+  shows none; the app never closes it and changes no setting, and tells the user
+  truly what it does. Where the version is measured to show it and to leave it
+  up so (`ui_text.whats_wrong_stays`), the footer's line on the user's work,
+  after the items already in error, adds *SolidWorks may show its What's Wrong
+  box during the Update: leave it alone while the Update runs. It closes by
+  itself once SolidWorks rebuilds; if the Update stops before that, it stays
+  until you close it with its Close button.* (measured 22 to 23 s on a gearbox
+  with modes, 3 to 5 s on a plain one, in Updates that rebuilt; pressing its
+  buttons mid-Update was not measured), and the status of an Update that changed or put something,
   or stopped after writing, with the user's work in error adds, once, *SolidWorks
   may have shown its What's Wrong box for up to half a minute during the Update;
   nothing in it needed answering.* — never after a press that found nothing to
-  do, and never beside the footer's *may show*, which the job's sentence
-  replaces until it has gone.
+  do, never after a stop that left a part in error (below), and never beside the
+  footer's *may show*, which the job's sentence replaces until it has gone.
   Then *Your Lock3 in L
   is in error in SolidWorks now.* — or,
   for one already in error before it changed anything, *Your Lock7 was in error
@@ -1413,9 +1418,18 @@ Gear_m1.25_N29 is left in error: close it and RangeBox in SolidWorks without sav
 answering No when SolidWorks asks to save them (the files on disk are as before this
 Update), then press Update SolidWorks again.*; with several changed, *close them all
 and RangeBox*, since the good ones saved beside the failed one closed would leave
-gears at new values against it as it was). The assembly is named whenever it holds
+gears at new values against it as it was). On a SolidWorks measured to leave its
+What's Wrong box up (2024), such a stop adds once, in place of *may have shown*:
+*SolidWorks may show its What's Wrong box for the part left in error when the
+assembly is next brought forward; it does not close by itself: close it with its
+Close button.* (*the parts* where several); and the still-in-error sentence of a
+later press adds once after it: *SolidWorks may show its What's Wrong box for that
+part when this press brings the assembly forward; it does not close by itself:
+close it with its Close button, then close the documents as above.* (*those
+parts* where several); the two are never said together. The assembly is named whenever it holds
 the part (a gear's part, the layout or a carrier): SolidWorks marks the open assembly
-modified when a part of it is changed, so closing it asks to save, and a part whose
+modified once a part of it is changed (on 2026 seen after the part's change, run 11;
+on 2024 at the assembly's first open-and-activate after it, remake-m3), so closing it asks to save, and a part whose
 window is closed while its assembly stays open stays loaded with its changes (measured
 on 2026, run 11). Wherever the assembly is closed so, the parenthesis adds *; closing
 RangeBox so also discards whatever else is unsaved in it*: no press reads the save flag of an

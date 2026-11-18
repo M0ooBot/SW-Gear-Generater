@@ -1274,6 +1274,28 @@ def test_pressed_again_with_the_ring_still_open_in_error_the_press_writes_nothin
     assert d.record.unsaved_in_error == []
 
 
+def test_on_2024_the_m3_stops_say_the_box_stays_once_each_and_the_footer_never_says_next_and_stays_together(measured):
+    """W9C-RUNS-REVIEW.md, the review of 1dc9350, §3, on the fake as SolidWorks 2024: step 1's stop says
+    WHATS_WRONG_NEXT once (and not WHATS_WRONG_AFTER), the press again says WHATS_WRONG_STAYS once after the
+    still-in-error sentence, and no footer after either press holds both."""
+    d = Desk()
+    d.sw.revision = (32, 5, 0)
+    d.build(range_box())
+    steps, swbuild.LANDING_STEPS = swbuild.LANDING_STEPS, ()
+    try:
+        first = d.press(_m3_stage())
+    finally:
+        swbuild.LANDING_STEPS = steps
+    assert "Ring_m1.25_N55 is left in error" in first.after
+    assert first.after.count(ui_text.WHATS_WRONG_NEXT) == 1 and ui_text.WHATS_WRONG_AFTER not in first.after
+    assert ui_text.WHATS_WRONG_STAYS not in first.after
+    again = d.press(_m3_stage())
+    assert again.after.endswith(ui_text.WHATS_WRONG_STAYS) and again.after.count("What's Wrong") == 1, again.after
+    text, _ = d.footer(_m3_stage())
+    assert not (ui_text.WHATS_WRONG_NEXT in text and ui_text.WHATS_WRONG_STAYS in text), text
+    assert text.count(ui_text.WHATS_WRONG_STAYS) <= 1 and text.count(ui_text.WHATS_WRONG_NEXT) <= 1, text
+
+
 def test_only_a_part_marked_left_in_error_holding_its_values_with_the_apps_own_feature_in_error_stops_a_press():
     """swbuild._held_in_error, the rule alone: the mark, the values held (this press would set nothing there) and a
     feature the app made read in error, all three. The user's own features in error, and a code SolidWorks would not

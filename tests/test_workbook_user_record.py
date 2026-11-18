@@ -683,13 +683,39 @@ def test_after_an_update_with_nothing_of_the_users_in_error_whats_wrong_is_not_s
     assert ok and "What's Wrong" not in text
 
 
-def test_the_whats_wrong_sentences_say_a_true_length_and_to_leave_the_box_alone():
-    """The close review on 2024: the box stayed 22 to 23 s on a gearbox with modes and 3 to 5 s on a plain one, and
-    what pressing its buttons mid-Update does was not measured."""
-    assert ui_text.WHATS_WRONG_AHEAD == ("SolidWorks may show its What's Wrong box for up to half a minute during the "
-                                         "Update: leave it alone, it closes by itself, and the Update carries on.")
+def test_the_whats_wrong_sentences_say_what_the_box_does_and_to_close_it_where_it_stays():
+    """The close review on 2024 (the box stayed 22 to 23 s on a gearbox with modes, 3 to 5 s on a plain one, in
+    Updates that rebuilt; pressing its buttons mid-Update not measured), and W9C-RUNS-REVIEW.md's review of 1dc9350, §3
+    (the box raised at the first activation after a stop left a part in error stayed until its Close was pressed): the
+    exact words, as the review gives them."""
+    assert ui_text.WHATS_WRONG_AHEAD == (
+        "SolidWorks may show its What's Wrong box during the Update: leave it alone while the Update runs. It closes by "
+        "itself once SolidWorks rebuilds; if the Update stops before that, it stays until you close it with its Close "
+        "button.")
     assert ui_text.WHATS_WRONG_AFTER == ("SolidWorks may have shown its What's Wrong box for up to half a minute "
                                          "during the Update; nothing in it needed answering.")
+    assert ui_text.WHATS_WRONG_STAYS == (
+        "SolidWorks may show its What's Wrong box for that part when this press brings the assembly forward; it does "
+        "not close by itself: close it with its Close button, then close the documents as above.")
+    assert ui_text.WHATS_WRONG_NEXT == (
+        "SolidWorks may show its What's Wrong box for the part left in error when the assembly is next brought "
+        "forward; it does not close by itself: close it with its Close button.")
+    assert ui_text.whats_wrong_stays_sentence(2).startswith("SolidWorks may show its What's Wrong box for those parts ")
+    assert ui_text.whats_wrong_next_sentence(3).startswith("SolidWorks may show its What's Wrong box for the parts "
+                                                           "left in error ")
+    assert [ui_text.whats_wrong_stays(r) for r in ((32, 5, 0), (34, 1, 1), (34, 0, 0), (30, 0, 0), ())] == [
+        True, False, False, False, False]
+
+
+def test_the_footer_says_whats_wrong_ahead_only_where_the_box_is_measured_to_stay(monkeypatch):
+    """WHATS_WRONG_AHEAD now says the box stays if the Update stops before a rebuild, so it is said only where the
+    finding says so (findings.WHATS_WRONG_STAYS_WITHOUT_A_REBUILD_ON_2024 True); with it unmeasured, nothing."""
+    _box(monkeypatch)
+    broken = [store.UserMateEntry("Lock3", "lock", 16, [["app", "G1"], ["user", "Sprocket-1"]], [""], 46, False)]
+    entry = _entry(problems=[], revision=[32, 5, 0], mates=broken)
+    assert ui_text.WHATS_WRONG_AHEAD in ui_text.user_work_line(update.UserWorkAhead(entry))[0]
+    monkeypatch.setattr(findings, "WHATS_WRONG_STAYS_WITHOUT_A_REBUILD_ON_2024", None)
+    assert "What's Wrong" not in ui_text.user_work_line(update.UserWorkAhead(entry))[0]
 
 
 def test_a_quiet_press_or_a_stop_before_writing_never_says_the_box_may_have_shown(on_fake, monkeypatch):
@@ -730,3 +756,11 @@ def test_the_footer_after_a_press_never_says_both_box_sentences(on_fake, monkeyp
     footer = ui_text.workbook_footer(assessed(moved), record=after, update=upd, folder=FOLDER, digest="d3")
     assert footer.text.count(ui_text.WHATS_WRONG_AHEAD) == 1 and ui_text.WHATS_WRONG_AFTER not in footer.text, \
         footer.text
+    # The review of 1dc9350, §3: a stop that left a part in error says WHATS_WRONG_NEXT; the footer carrying it never
+    # says the prediction's AHEAD (nor STAYS) beside it.
+    stop = ("Update SolidWorks stopped. Gear_m1.5_N68.SLDPRT: SolidWorks reported an error rebuilding Gear_m1.5_N68. "
+            + ui_text.WHATS_WRONG_NEXT)
+    footer = ui_text.workbook_footer(assessed(moved), record=after, update=upd, folder=FOLDER, digest="d3",
+                                     note=ui_text.Note(stop, False))
+    assert footer.text.count(ui_text.WHATS_WRONG_NEXT) == 1, footer.text
+    assert ui_text.WHATS_WRONG_AHEAD not in footer.text and ui_text.WHATS_WRONG_STAYS not in footer.text, footer.text

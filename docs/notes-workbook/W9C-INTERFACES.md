@@ -760,6 +760,13 @@ record's problems by kind, so the second `unsettled` overwrites the first's subj
   (`swbuild._held_in_error`): a failure naming the file as a whole, `skipped` naming what was not done. The user's own
   features in error never stop it. `Finished.still_in_error` is now given whether or not the press failed, and a
   stop on such a part alone is said by the still-in-error sentence and nothing else.
+- **On a SolidWorks measured to leave What's Wrong up (2024; W9C-RUNS-REVIEW.md, the review of 1dc9350, §3).** The
+  stop in a part left in error adds once, after its advice and in place of `WHATS_WRONG_AFTER`: *SolidWorks may show
+  its What's Wrong box for the part left in error when the assembly is next brought forward; it does not close by
+  itself: close it with its Close button.* The still-in-error sentence adds once after it, in each of its forms:
+  *SolidWorks may show its What's Wrong box for that part when this press brings the assembly forward; it does not
+  close by itself: close it with its Close button, then close the documents as above.* Never the two together, and
+  on 2026 neither (`ui_text.whats_wrong_stays`, `findings.WHATS_WRONG_STAYS_WITHOUT_A_REBUILD`). Tk-side only.
 - **The review of the M3 fix, (ii) and (iii).** A marked document whose check-phase read was made and found nothing
   of the app's in error and nothing unread (repaired in SolidWorks, say) is returned in `GearboxUpdate.read_clean`, and
   `finish_update` drops its mark, so it is never called still in error; an empty or unread read keeps the mark. A stop
