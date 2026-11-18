@@ -46,6 +46,9 @@ class FakeMate:
     # W9a: a mate the user made in SolidWorks (``FakeSolidWorks.user_mate`` / ``user_lock``): the fake fails a test on
     # any write to it (W9a's §0.3 STOP: nothing not on record is written but route (c1)'s puts)
     user: bool = False
+    # W9d: IMate2.Alignment as made, and a limit mate's range (MaximumDistance … as the definition reads them)
+    alignment: int = 0
+    limits: tuple = ()
 
     @property
     def axis(self):
@@ -341,8 +344,11 @@ class FakeSolidWorks:
         # component, "" (SolidWorks 2024, the macro database); "root": the active configuration's root component,
         # named as the assembly (2026, findings.ASSEMBLY_ENTITY_COMPONENT_IS_ROOT_ON_2026). ``root_unread``: the
         # session's root read (root_component) answers nothing.
-        self.assembly_entity = "none"
+        self.assembly_entity = "root"      # as 2026 and 2024 measured (ASSEMBLY_ENTITY_COMPONENT_IS_ROOT); "none" only where a test asks
         self.root_unread = False
+        # W9d (D5): mate_info gives each entity's kind and feature (Session.mate_info reads ReferenceType2); False, the
+        # read before W9d (no kinds), which the suites before W9d were written against.
+        self.read_entity_kinds = False
         # W9c (W9C-INTERFACES §4): each open document keeps its own configurations, as SolidWorks does, so a part built
         # or opened in the middle of an Update leaves the assembly's as they were (``memory_configs``, lower-cased
         # path -> (configs, active, template's, frames_by)). ``suppressed_features``: (lower-cased path, feature) ->
@@ -377,17 +383,24 @@ class FakeSolidWorks:
     def begin_build(self):
         """As ``Session.begin_build``: swInputDimValOnCreate read and turned off for the build's dimensions."""
         self._log("begin_build")
+        if getattr(self, "begin_drops_document", False):
+            self.current = ""                  # W9d (S4): as the Session's, the build document falls back to none
         self.dim_dialog_kept = self.dim_dialog_on
         self.dim_dialog_on = False
 
     def end_build(self):
         """As ``Session.end_build``: the user's swInputDimValOnCreate put back."""
         self._log("end_build")
+        self.kept_handles = set()          # W9d, fourth round: as Session.end_build, every handle forgotten
         if self.dim_dialog_kept is not None:
             self.dim_dialog_on, self.dim_dialog_kept = self.dim_dialog_kept, None
 
     def _touch(self):
         if self.current:
+            if _key(self.current) in getattr(self, "protected", ()) and \
+                    _key(self.current) not in getattr(self, "read_only_opened", ()):
+                raise AssertionError(f"the app wrote to {self.current}, the old assembly or a file of the user's "
+                                     "(W9D §3: never written)")
             self.touched.add(_key(self.current))
 
     def _fresh_configurations(self):
@@ -505,6 +518,12 @@ class FakeSolidWorks:
 
     def save_as(self, path):
         self._log("save_as", path)
+        if getattr(self, "saved_after", False):
+            raise AssertionError(f"the app saved {path} after the new assembly's first save (W9D §3: never)")
+        if _key(path) in getattr(self, "protected", ()):
+            raise AssertionError(f"the app saved {path}, the old assembly or a file of the user's (W9D §3)")
+        if getattr(self, "no_save_after", "") and _key(path) == self.no_save_after:
+            self.saved_after = True
         self.saved[_key(path)] = (list(self.equations_text), list(self.made))
         self.memory[_key(path)] = (self.equations_text, self.made)
         self.saved_mates[_key(path)] = copy.deepcopy(self.mates)
@@ -706,8 +725,19 @@ class FakeSolidWorks:
         self._log("loft_cut", name, *profiles)
         return self._made(name)
 
+    def _strict(self, handle):
+        """W9d, fourth round (``strict_handles``): as the Session, a handle not found or added since the last
+        end_build is not kept (the first M9 run: the build's gear7, never found again by the carry). The audit: a Name2
+        is no handle either (Session._component knows only what it kept), so a Name2 passed for one is refused too.
+        Off by default only for the tests' own looks at the fake after a job (with it on by default, every failing test
+        in the suite failed in such a look, none in the app's code)."""
+        if getattr(self, "strict_handles", False) and handle not in getattr(self, "kept_handles", set()):
+            raise SolidWorksError(f"No component is kept as {handle!r}, so it cannot be read or changed; that is a "
+                                  "fault in Gear Generator, not in SolidWorks.")
+
     def add_component(self, handle, path, at):
         self._log("add_component", handle, path)
+        self.kept_handles = getattr(self, "kept_handles", set()) | {handle}
         self.adding.append(path)
         self.adding_names.append(f"{handle}-1")
         if self.current and _key(self.current) in self.assembly_names:      # W9c: inserted into a saved assembly
@@ -719,13 +749,35 @@ class FakeSolidWorks:
 
     def fix_component(self, handle):
         self._log("fix_component", handle)
-        self._not_users(self._name2(handle), "fixed")
-        self.fixed.add(self._name2(handle))
+        self._strict(handle)
+        name = self._name2(handle)
+        self._not_users(name, "fixed")
+        self.fixed.add(name)
+        if getattr(self, "fix_per_configuration", True) and len(self.configs) > 1:
+            # W9d audit: whether one FixComponent fixes a component in every configuration is not measured; by
+            # default the less kind answer, in the configuration shown only. ``fix_per_configuration`` False: in every
+            # one. Only a fix made while the assembly has several (a configuration added later copies the fixed
+            # state, FIXED_KEPT_IN_NEW_CONFIGURATION).
+            self.fixed_in = getattr(self, "fixed_in", {})
+            self.fixed_in.setdefault(name, set()).add(self.config)
+        elif name in getattr(self, "fixed_in", {}):
+            del self.fixed_in[name]
 
     def unfix_component(self, handle):
         self._log("unfix_component", handle)
-        self._not_users(self._name2(handle), "unfixed")
-        self.fixed.discard(self._name2(handle))
+        self._strict(handle)
+        name = self._name2(handle)
+        self._not_users(name, "unfixed")
+        if name in getattr(self, "fixed_in", {}) and getattr(self, "fix_per_configuration", True):
+            self.fixed_in[name].discard(self.config)
+            if self.fixed_in[name]:
+                return
+            del self.fixed_in[name]
+        self.fixed.discard(name)
+
+    def _fixed_here(self, name):
+        """Fixed in the configuration shown (``fixed``, narrowed by ``fixed_in`` for a fix made per configuration)."""
+        return name in self.fixed and (name not in getattr(self, "fixed_in", {}) or self.config in self.fixed_in[name])
 
     def add_mate(self, handle, kind, a, b, value=0.0, name="", ratio=(1.0, 1.0), flip=False):
         self._log("add_mate", kind, a, b, *((ratio, flip) if kind == "gear" else ()))
@@ -735,6 +787,7 @@ class FakeSolidWorks:
 
     def place_component(self, handle, rotation, at, kind=None):
         self._log("place_component", handle)
+        self._strict(handle)
         if getattr(findings, "PUT_MARKS_ASSEMBLY_MODIFIED", False):
             self._touch()
         put = asked = (tuple(rotation), tuple(at))
@@ -762,6 +815,19 @@ class FakeSolidWorks:
         self.frames[name] = put
         if handle in self.found:
             self.frames[self.found[handle]] = put
+        for frames in self.frames_by.values():         # W9d: a component new to the assembly stands in every
+            frames.setdefault(name, put)               # configuration where it was put, until put there itself
+        if getattr(self, "kept_mates_pull", False):
+            # The review's A8 (a test's knob; never measured): a mate the carry made, not a lock (a put against a lock
+            # holds, W5-DECISIONS), pulls the component just put back to where it stood against a partner not fixed
+            # here, so the read-back below finds it off its frame.
+            for mate in self.mates:
+                rel = getattr(mate, "rel", None)
+                if rel is None or mate.suppressed or mate.kind == "lock" or name not in (mate.a[0], mate.b[0]):
+                    continue
+                other = mate.b[0] if name == mate.a[0] else mate.a[0]
+                if other in self.frames and not self._fixed_here(other):
+                    self.frames[name] = _compose(self.frames[other], rel if name == mate.b[0] else _inverse(rel))
         self._rebuilt(kind)            # Session.place_component's rebuild of its own, after the put
         if self.mates:
             # Session.place_component reads the frame back after that rebuild.
@@ -805,6 +871,14 @@ class FakeSolidWorks:
 
     def open_document(self, path):
         self._log("open_document", path)
+        if getattr(self, "open_resolves_lightweight", True):
+            # W9d (D10): lightweight is per file in the session, so opening a part resolves its instances, as the first
+            # M9 run read it on 2026 (SprocketLight-1 read 1 before the press and 2 after, its part opened to insert it:
+            # w9d-demo-sw2026-…-2 :566, :570). False only where a test asks.
+            for name in [n for n in self.lightweight if _key(self.component_paths.get(n, "")) == _key(path)]:
+                self.lightweight.discard(name)
+                if self.component_states.get(name) in (1, 4):
+                    self.component_states[name] = 2
         self._stash()
         self.step_puts = set()
         doc_type = 2 if path.lower().endswith(".sldasm") else 1
@@ -839,6 +913,10 @@ class FakeSolidWorks:
         info = next((d for d in self.open_docs if _key(d.path) == _key(path)), None)
         if info is None or _key(path) not in self.memory:
             return None
+        if _key(path) in self.memory_configs and _key(path) != _key(self.current or ""):
+            # W9d: the document's own configurations, as SolidWorks keeps them per document (W9c's memory_configs).
+            self._stash()
+            self.configs, self.config, self.template_config, self.frames_by = self.memory_configs[_key(path)]
         self.equations_text, self.made = self.memory[_key(path)]
         self.mates = self.memory_mates.setdefault(_key(path), copy.deepcopy(self.saved_mates.get(_key(path), [])))
         self.axis_defs = self.memory_axes.setdefault(_key(path), dict(self.saved_axes.get(_key(path), {})))
@@ -853,12 +931,16 @@ class FakeSolidWorks:
         key = _key(self.current)
         return key in self.touched or self.memory.get(key) != self.saved.get(key)
 
-    def find_component(self, handle, name, lightweight_ok=False):
+    def find_component(self, handle, name, lightweight_ok=False, suppressed_ok=False):
         self._log("find_component", handle, name)
+        self.kept_handles = getattr(self, "kept_handles", set()) | {handle}
         title = self.active.title if self.active else "the assembly"
         if name in self.missing_components:
             raise ComponentGone(f"{name} is not in {title} any more: it was renamed or deleted in SolidWorks.")
-        if name in self.lightweight and not lightweight_ok:          # as swcom.Session.find_component refuses it
+        if not suppressed_ok and self._state_in(name, self.config) == 0:   # as swcom.Session.find_component
+            raise SolidWorksError(f"{name} is suppressed in {title}, so it cannot be placed; unsuppress it in "
+                                  "SolidWorks and try again.")
+        if self._light(name) and not lightweight_ok:                 # as swcom.Session.find_component refuses it
             raise SolidWorksError(f"{name} is loaded lightweight in {title}, and resolving a component is not "
                                   "settled here; set it to Resolved in SolidWorks and try again.")
         self.found[handle] = name
@@ -870,12 +952,14 @@ class FakeSolidWorks:
         fixed, every other gear not). The W8 spike kept a fixed component fixed in every configuration made after it
         was fixed (``FIXED_KEPT_IN_NEW_CONFIGURATION``), so one set serves every configuration."""
         self._log("is_fixed", handle)
-        return self._name2(handle) in self.fixed
+        self._strict(handle)
+        return self._fixed_here(self._name2(handle))
 
     def component_path(self, handle):
         """``Session.component_path``: the file the component was inserted from; in an assembly opened from a
         copied folder whose stored folder is gone, the same file beside the assembly, as SolidWorks resolves it."""
         self._log("component_path", handle)
+        self._strict(handle)
         name = self._name2(handle)
         stored = self.component_paths.get(name)
         if stored is None:
@@ -895,8 +979,13 @@ class FakeSolidWorks:
 
     def component_frame(self, handle):
         self._log("component_frame", handle)
+        self._strict(handle)
         identity = ((1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0), (0.0, 0.0, 0.0))
         name = self.found.get(handle) or self.component_names.get(handle)
+        drift = getattr(self, "drift_in", {}).get(self.config, {}).get(name)
+        if drift is not None and name in self.frames:   # W9d: SolidWorks moved it in this configuration (made up)
+            rotation, at = self.frames[name]
+            return rotation, tuple(a + d for a, d in zip(at, drift))
         if name in self.frames:                    # a component's frame by its Name2 first: the solve moves those
             return self.frames[name]
         return self.frames.get(handle, identity)
@@ -1051,16 +1140,25 @@ class FakeSolidWorks:
         user's, each with its file, fixed state, ``GetSuppression2`` and error code."""
         self._log("components")
         names = self._assembly_names(self.current) if self.current else list(self.adding_names)
+        # W9d audit: GetComponents(True) does not list in tree order on SolidWorks (the first M9 run's R listed Chain-2
+        # before Chain-1 and Sprocket-6 before Sprocket-2; the probe's state (f) the user's parts before the app's).
+        # Which order it gives was not measured, so the fake lists in tree order unless ``listing_order`` (Name2s)
+        # says otherwise: those first, in that order.
+        listed = [n for n in getattr(self, "listing_order", ()) if n in names]
+        names = listed + [n for n in names if n not in listed]
         # W9a, M3: a component whose part has a feature in error reads in error (code 1, as m3's Sprocket-1 read on
         # 2026), where the finding says such a part fails the assembly's rebuild; ``component_codes`` overrides.
         derived = self._feature_rule() is False
+        by = getattr(self, "states_by", {}).get(self.config, {})          # W9d: a state set per configuration
         return [swcom.ComponentInfo(n, self.component_paths.get(n, ""), n in self.fixed,
-                                    self.component_states.get(n, 1 if n in self.lightweight else 2),
+                                    by.get(n, self.component_states.get(n, 1 if self._light(n) else 2)),
                                     self.component_codes.get(n, 1 if derived and self._part_in_error(
                                         self.component_paths.get(n, "")) else 0)) for n in names]
 
+    # swMateType_e as IMate2.Type reads it. A limit mate reads its plain kind's type, 5 or 6 (W9c's m1,
+    # findings.M1_READS_LIMIT_DISTANCE / _LIMIT_ANGLE: MateLimitDistanceDim type 5, MateLimitPlanarAngleDim type 6).
     MATE_TYPES = {"coincident": 0, "point": 0, "distance": 5, "point distance": 5, "angle": 6, "axis angle": 6,
-                  "gear": 10, "lock": 16, "rack and pinion": 13, "screw": 17}
+                  "gear": 10, "lock": 16, "rack and pinion": 13, "screw": 17, "limit distance": 5, "limit angle": 6}
 
     def mate_info(self, handle):
         """``Session.mate_info``: the mate's swMateType_e and the Name2 its entities are on ("" for the assembly's)."""
@@ -1068,13 +1166,66 @@ class FakeSolidWorks:
         mate = self.mate(self.mate_handles[handle])
         unread = self.unread_mates.get(mate.name)
         if unread == "count":
-            return swcom.MateInfo(mate.name, self.MATE_TYPES.get(mate.kind, 7), (), counted=False)
+            return swcom.MateInfo(mate.name, self.DEF_TYPES.get(mate.kind, 7), (), counted=False)
         own = self._root_name() if self.assembly_entity == "root" else ""
-        ends = tuple(own if end[0] == "asm" else end[0] for end in (mate.a, mate.b))
+        ends = tuple(own if end[0] == "asm" else end[0] for end in self._read_ends(mate))
         if unread == "entity":
             ends = (ends[0], None)
-        kind = swcom.UNREAD if unread == "type" else self.MATE_TYPES.get(mate.kind, 7)
-        return swcom.MateInfo(mate.name, kind, ends)
+        # IMate2.Type as SolidWorks reads it, the same member mate_definition reads (W9c's m1: a concentric 1, a limit
+        # distance 5, a limit angle 6, a width 11; S5 (a) and the W9d probe a parallel 3); 7 for a kind not modelled.
+        kind = swcom.UNREAD if unread == "type" else self.DEF_TYPES.get(mate.kind, 7)
+        kinds = tuple(self._entity_kind(mate, end) for end in self._read_ends(mate))
+        return swcom.MateInfo(mate.name, kind, ends, entities=kinds if self.read_entity_kinds else ())
+
+    ORDERLESS_KINDS = ("coincident", "concentric", "parallel")
+
+    def _read_ends(self, mate):
+        """A mate's entities in ``MateEntity(i)`` order. For a coincident, concentric or parallel mate the fake gives
+        them in its components' tree order (insertion order here), whatever order they were selected in. What was
+        measured (the review of the audit, W9D-REVIEW-A.md): two face-face coincidents tell the readings apart, the
+        probe's UserFaceCoin (Sprocket-5's face selected first, read first) and the M9 fixture's (Chain-2's face
+        selected first, Chain-1 read first), each reading the earlier-inserted component first; that rules out the
+        selection order and the ledger's second-selection-first for a face-face coincident. Every other coincident,
+        concentric and parallel in the logs was selected later component first and read it second, so for concentric
+        and parallel tree order is not told from the ledger's rule; the fake's choice there is a reading, not a
+        measurement. A distance, angle or gear reads in its selection order (UserChainDist read Chain-1 before the
+        earlier Sprocket-1, UserGear6 its Sprocket before Sun); a limit or a lock was never told apart (each selected
+        earlier component first). Kept to the user's mates and those the carry made again (``remade``), read by W9d's
+        Session (``read_entity_kinds``); the app's own, and the suites before W9d, read them as selected (as they were
+        written). ``tree_order_entities`` False: as selected."""
+        ends = (mate.a, mate.b)
+        if not (getattr(self, "tree_order_entities", True) and self.read_entity_kinds) or \
+                mate.kind not in self.ORDERLESS_KINDS or not (mate.user or getattr(mate, "remade", False)):
+            return ends
+        order = self._assembly_names(self.current) if self.current else list(self.adding_names)
+
+        def at(end):
+            top = end[0].split("/")[0]
+            return -1 if end[0] == "asm" else order.index(top) if top in order else len(order)
+        return (ends[1], ends[0]) if at(ends[1]) < at(ends[0]) else ends
+
+    def _entity_kind(self, mate, end):
+        """W9d: an entity's (kind, feature) as ``Session.mate_info`` reads it from ReferenceType2: a lock's end whole,
+        ``planeN`` a base plane by order, ``origin``, ``face:<id>`` / ``edge:<id>`` / ``vertex:<id>``, else a reference
+        feature by name."""
+        target = end[1]
+        if end[0] != "asm" and self._state_in(end[0], self.config) == 0 and mate.user:
+            return ("unread", "")       # as SolidWorks read it: an entity on a suppressed component (run 2, :621)
+        if mate.kind == "lock" or not target:
+            return ("whole", "")
+        if target.startswith("plane") and target[5:].isdigit():
+            if end[0] != "asm" and self._light(end[0]):
+                # As Session.mate_info reads it: ReferenceType2 answers a plane, but its tree order needs the part's
+                # document, which a lightweight component has not (W9c probes: GetModelDoc2 None), so unread. A
+                # feature's own name still reads (the first M9 run, :627: SprocketLight-1's Gear Axis).
+                return ("unread", "")
+            return ("plane", target)
+        if target == "origin":
+            return ("origin", "origin")
+        kind, _, _ = target.partition(":")
+        if kind in ("face", "edge", "vertex"):
+            return (kind, "")
+        return ("feature", target)
 
     def _root_name(self):
         """The root component's Name2 as SolidWorks gives it: the open assembly's title, without its extension."""
@@ -1089,11 +1240,14 @@ class FakeSolidWorks:
         self._log("root_component", resolve)
         if resolve:
             names = self._assembly_names(self.current) if self.current else list(self.adding_names)
-            heavy = [n for n in names if n in self.lightweight or self.component_states.get(n) in (1, 4)]
+            heavy = [n for n in names if self._light(n) or self.component_states.get(n) in (1, 4)]
             if heavy:
+                files = {_key(self.component_paths.get(n, "")) for n in heavy}
                 for name in heavy:
                     self.lightweight.discard(name)
                     self.component_states[name] = 2
+                for name in [n for n in self.lightweight if _key(self.component_paths.get(n, "")) in files - {""}]:
+                    self.lightweight.discard(name)
                 self._touch()
         return None if self.root_unread else self._root_name()
 
@@ -1103,6 +1257,7 @@ class FakeSolidWorks:
         ``findings.COMPONENT_DELETE_ROUTE_ON_<year>`` is not the route. A component of the user's, or one a user mate
         touches, fails the test (W9a §0.3: that would write the user's work)."""
         self._log("delete_component", handle)
+        self._strict(handle)
         year = swcom.release_year(self.revision[0])
         if getattr(findings, f"COMPONENT_DELETE_ROUTE_ON_{year}", None) != "select4-editdelete":
             raise SolidWorksError("Deleting a component has not been settled on this SolidWorks.")
@@ -1264,7 +1419,10 @@ class FakeSolidWorks:
 
     def constrained_status(self, handle):
         self._log("constrained_status", handle)
+        self._strict(handle)
         name = self._name2(handle)
+        if getattr(self, "saved_after", False) and name in getattr(self, "held_after_save", ()):
+            return findings.COMPONENT_FULLY_DEFINED      # W9d: held once the new assembly is saved (a held gear)
         for key in (name, handle):
             if key in self.constrained:
                 return self.constrained[key]
@@ -1272,7 +1430,7 @@ class FakeSolidWorks:
             return findings.COMPONENT_OVER_DEFINED
         if any(not m.suppressed and {name, handle} & set(self.locks.get(m.name, ())) for m in self.mates):
             return findings.COMPONENT_FULLY_DEFINED
-        return findings.COMPONENT_FULLY_DEFINED if name in self.fixed else findings.COMPONENT_UNDER_DEFINED
+        return findings.COMPONENT_FULLY_DEFINED if self._fixed_here(name) else findings.COMPONENT_UNDER_DEFINED
 
     def find_mate(self, handle, name):
         self._log("find_mate", handle, name)
@@ -1307,10 +1465,20 @@ class FakeSolidWorks:
         first, second = self.mate(name, path).ratio
         return float(second), float(first)
 
+    def _light(self, name):
+        """Whether a component reads lightweight. Lightweight is per file in a session: one Sprocket set lightweight
+        read every Sprocket.SLDPRT instance lightweight (W9d probe state (f), w9d-probes-sw2026-…-1 :121), so a
+        component does when it, or another instance of its file, is in ``lightweight``."""
+        if name in self.lightweight:
+            return True
+        path = self.component_paths.get(name)
+        return bool(path) and any(_key(self.component_paths.get(n, "")) == _key(path) for n in self.lightweight)
+
     def component_resolved(self, handle):
         """As swcom.Session.component_resolved: False for a component loaded lightweight (``lightweight``)."""
         self._log("component_resolved", handle)
-        return self._name2(handle) not in self.lightweight
+        self._strict(handle)
+        return not self._light(self._name2(handle))
 
     def gear_mate_ratio(self, handle):
         """As swcom.Session.gear_mate_ratio: the definition read, and turned back into the mate's own order by the
@@ -1537,6 +1705,9 @@ class FakeSolidWorks:
         self._configuration_gate("CONFIGURATION_ADD_ROUTE")
         self._leave()
         self.configs.append(str(name))
+        for configs in getattr(self, "fixed_in", {}).values():
+            if self.config in configs:
+                configs.add(str(name))                 # FIXED_KEPT_IN_NEW_CONFIGURATION
         for mate in self.mates:
             mate.flags[str(name)] = mate.suppressed
         frames = dict(self.frames)
@@ -1550,6 +1721,10 @@ class FakeSolidWorks:
         handle from before goes stale either way, as the Session raises its epoch."""
         self._log("show_configuration", name)
         self._configuration_gate("CONFIGURATION_SHOW_ROUTE")
+        if self.current and _key(self.current) in getattr(self, "protected", ()) and \
+                _key(self.current) not in getattr(self, "read_only_opened", ()):
+            raise AssertionError(f"the app showed {name} in {self.current}, the old assembly open in the user's session "
+                                 "(W9D D2: never shown)")
         found = self._named(name)
         self.step_puts = set()
         if found is None:
@@ -1778,6 +1953,434 @@ class FakeSolidWorks:
                 new[body] = (_mul(rotation, _rot_z(turn)), at)
         self._moved_by_hand(new)
         return turns
+
+    # -- W9d: Build again… carries the user's work (W9D-INTERFACES §10, §14.1's "what the fake gains")
+    #
+    # Knobs: ``protected`` (lower-cased paths: the old assembly and the user's files) — any write while one is the
+    # current document fails the test, and so does a show of one the job did not open read-only; ``no_save_after``
+    # (a lower-cased path): once it is saved, any later save fails the test; ``component_configs`` (Name2 -> (referenced,
+    # its document's active, its file's configurations)); ``states_by`` (configuration -> {Name2: GetSuppression2});
+    # ``states_mark`` (the unshown state read marks the assembly) and ``states_read_unsaved``; ``file_versions`` (lower-
+    # cased path -> the version that last saved it; else the running one) and ``dependencies_of``; ``read_only_left``
+    # (a read-only close leaves the document open); ``read_marks`` (lower-cased paths a definition read marks);
+    # ``reload_ok`` (a reference read in a read-only load resolves after it was closed; None, as the finding says);
+    # ``coaxial`` ((path, target) ->
+    # bool, read once findings.COAXIAL_FACE_READ is set); ``remake_status`` / ``remake_codes`` (old mate name -> AddMate5's
+    # status / (code, warning) after the remake); ``insert_config_kept`` False: an insert in a configuration reads back
+    # the document's active one; ``kind_swap`` (old mate names a remake reads back with its entities the other way).
+    #
+    # The audit of 2026-11-17 (W9D-PACKAGE-A.md): every default above and below answers as SolidWorks 2026 measured,
+    # or is listed there as unmeasured. Its knobs: ``listing_order`` (Name2s components() lists first: GetComponents is
+    # not in tree order on SolidWorks); ``entity_axes`` (target -> its own direction in its component, for
+    # EntityParams); ``tree_order_entities`` False (a coincident, concentric or parallel read as selected, not in tree
+    # order); ``open_resolves_lightweight`` False; ``reload_ok`` True or False (else as the finding says).
+
+    DEF_TYPES = dict(MATE_TYPES, concentric=1, perpendicular=2, parallel=3, tangent=4, width=11, slot=21)
+    _TYPE_WORDS = {0: "coincident", 1: "concentric", 2: "perpendicular", 3: "parallel", 4: "tangent", 5: "distance",
+                   6: "angle", 10: "gear", 16: "lock"}
+    # GetTypeName2 as SolidWorks 2026 read each (the first M9 run, w9d-demo-sw2026-…-2 :597-628; W9c's m1 for the limit
+    # angle). A kind no run read keeps its word (perpendicular, tangent: unmeasured).
+    TYPE_NAMES = {"coincident": "MateCoincident", "concentric": "MateConcentric", "parallel": "MateParallel",
+                  "distance": "MateDistanceDim", "angle": "MatePlanarAngleDim", "limit distance": "MateLimitDistanceDim",
+                  "limit angle": "MateLimitPlanarAngleDim", "gear": "MateGearDim", "lock": "MateLock"}
+    _BASE_PLANE_NORMALS = {"plane1": (0.0, 0.0, 1.0), "plane2": (0.0, 1.0, 0.0), "plane3": (1.0, 0.0, 0.0)}
+
+    def _w9d(self):
+        for name, value in (("protected", set()), ("no_save_after", ""), ("component_configs", {}), ("states_by", {}),
+                            ("states_mark", False), ("states_read_unsaved", True), ("file_versions", {}),
+                            ("dependencies_of", {}), ("read_only_opened", set()), ("read_only_left", False),
+                            ("read_marks", set()), ("reload_ok", None), ("coaxial", {}), ("remake_status", {}),
+                            ("remake_codes", {}), ("insert_config_kept", True), ("kind_swap", set()),
+                            ("refs_read_only", set()), ("saved_after", False)):
+            if not hasattr(self, name):
+                setattr(self, name, value)
+        return self
+
+    def _finding(self, name):
+        return getattr(findings, f"{name}_ON_{swcom.release_year(self.revision[0])}", None)
+
+    def _gate(self, name, what, wanted=None):
+        value = self._finding(name)
+        if value is None or (wanted is not None and value != wanted):
+            raise SolidWorksError(f"{what} has not been measured on this SolidWorks.")
+
+    def save_flags(self):
+        self._log("save_flags")
+        return {d.path: (_key(d.path) in self.touched or self.memory.get(_key(d.path)) != self.saved.get(_key(d.path)))
+                for d in self.open_docs}
+
+    def file_version(self, path):
+        self._log("file_version", path)
+        self._gate("FILE_VERSION_READ", "Reading a file's version")
+        return self._w9d().file_versions.get(_key(path), self.revision[0])
+
+    def running_file_version(self):
+        return self.revision[0]
+
+    def dependencies(self, path):
+        self._log("dependencies", path)
+        self._gate("DEPENDENCIES_READ", "Reading a file's dependencies")
+        if _key(path) in self._w9d().dependencies_of:
+            return list(self.dependencies_of[_key(path)])
+        # As SolidWorks read a closed assembly's (DEPENDENCIES_READ, w9d-probes-sw2026-…-1 :124: every part it holds,
+        # top level): each file inserted into it, the app's and the user's, once, in insertion order.
+        files = list(self.assembly_components.get(_key(path), [])) + \
+            [self.component_paths[n] for n in self.user_parts.get(_key(path), []) if n in self.component_paths]
+        out = []
+        for f in files:
+            if not any(_key(f) == _key(o) for o in out):
+                out.append(f)
+        return out
+
+    def open_read_only(self, path):
+        self._log("open_read_only", path)
+        self._gate("OPEN_READ_ONLY_ROUTE_WHEN_NOT_OPEN", "Opening read-only")
+        self._w9d()
+        if any(_key(d.path) == _key(path) for d in self.open_docs):
+            raise AssertionError(f"the job opened {path} read-only while it was open (W9D §3 R.2)")
+        self._stash()
+        info = DocInfo(title=path.replace("/", "\\").rsplit("\\", 1)[-1], path=path, doc_type=2)
+        self.memory[_key(path)] = copy.deepcopy(self.saved.get(_key(path), ([], [])))
+        self.equations_text, self.made = self.memory[_key(path)]
+        self.memory_mates[_key(path)] = copy.deepcopy(self.saved_mates.get(_key(path), []))
+        self.mates = self.memory_mates[_key(path)]
+        configs, config, frames_by = self.saved_configs.get(_key(path), (["Default"], "Default", {}))
+        self.configs, self.config, self.frames_by = list(configs), config, copy.deepcopy(frames_by)
+        self.current = path
+        self.open_docs.append(info)
+        self.read_only_opened.add(_key(path))
+        if getattr(self, "read_only_needs_regen", False):
+            self.touched.add(_key(path))          # as 2026 read it: modified straight after the open (NeedsRegen)
+        self.epoch += 1
+        return info
+
+    def close_unsaved(self, path):
+        self._log("close_unsaved", path)
+        if _key(path) not in self._w9d().read_only_opened:
+            raise AssertionError(f"the job closed {path}, which it did not open (W9D §10)")
+        self.read_only_opened.discard(_key(path))
+        if not self.read_only_left:
+            self.open_docs = [d for d in self.open_docs if _key(d.path) != _key(path)]
+            for kept in (self.memory, self.memory_mates, self.memory_configs):
+                kept.pop(_key(path), None)
+            self.touched.discard(_key(path))
+        self.current = ""
+        self.epoch += 1
+
+    def component_configurations(self, handle):
+        self._log("component_configurations", handle)
+        self._strict(handle)
+        name = self._name2(handle)
+        referenced, active, names = self._w9d().component_configs.get(name, ("Default", "Default", ("Default",)))
+        if self._light(name) or self._state_in(name, self.config) in (0, 1, 4):
+            # As the Session: no document (GetModelDoc2 None), so the file's names read closed, no active one.
+            self._log("file_configurations", self.component_paths.get(name, ""))
+            active = ""
+        return (referenced if self._finding("REFERENCED_CONFIGURATION_READ") is True else ""), active, tuple(names)
+
+    def component_states_in(self, names, configurations):
+        self._log("component_states_in", tuple(names), tuple(configurations))
+        self._gate("COMPONENT_STATE_PER_CONFIGURATION_ROUTE", "Reading states per mode")
+        if self._w9d().states_mark:
+            self._touch()
+        out = {}
+        for name in names:
+            out[name] = {c: self._state_in(name, self._named(c) or c) == 0 for c in configurations}
+        return out
+
+    def _state_in(self, name, config):
+        return self._w9d().states_by.get(config, {}).get(name, self.component_states.get(name, 2))
+
+    def set_component_suppressed(self, handle, suppressed):
+        self._log("set_component_suppressed", handle, suppressed)
+        self._strict(handle)
+        self._gate("CARRY_INSERTS", "Setting a carried component's state")
+        name = self._name2(handle)
+        self._not_users(name, "suppressed or resolved")
+        self._touch()
+        self._w9d().states_by.setdefault(self.config, {})[name] = 0 if suppressed else 2
+
+    def add_component_in(self, handle, path, at, configuration):
+        self._log("add_component_in", handle, path, configuration)
+        self._gate("CARRY_INSERTS_IN_A_CONFIGURATION", "Inserting in a configuration", True)
+        name = self.add_component(handle, path, at)
+        source = next((v for k, v in self._w9d().component_configs.items() if self.component_paths.get(k) == path),
+                      ("Default", "Default", ("Default",)))
+        kept = configuration if self.insert_config_kept else source[1]
+        self.component_configs[name] = (kept, source[1], tuple(source[2]))
+        return name
+
+    def _entity_target(self, end):
+        return end[1]
+
+    def mate_definition(self, handle):
+        self._log("mate_definition", handle)
+        self._w9d()
+        if self.current and _key(self.current) in self.read_marks:
+            self.touched.add(_key(self.current))            # a read that marks (doctored)
+        mate = self.mate(self.mate_handles[handle])
+        info = self.mate_info(handle)
+        kinds = info.entities or tuple(self._entity_kind(mate, e) for e in self._read_ends(mate))
+        values = []
+        if mate.kind in ("distance", "point distance", "limit distance"):
+            values.append(("Distance", abs(mate.value) / 1000.0))
+        if mate.kind in ("angle", "axis angle", "limit angle"):
+            values.append(("Angle", math.radians(mate.value)))
+        if mate.kind in ("limit distance", "limit angle"):
+            values += list(getattr(mate, "limits", ()))
+        elif mate.kind in ("distance", "point distance", "angle", "axis angle"):
+            # As SolidWorks reads a plain distance or angle: its range too, each end its value (W9c S5 (a); the first
+            # M9 run, w9d-demo-sw2026-…-2 :604-605: MateDistanceDim 0.09, MaximumDistance 0.09, MinimumDistance 0.09).
+            word = "Distance" if "distance" in mate.kind else "Angle"
+            values += [(f"Maximum{word}", values[0][1]), (f"Minimum{word}", values[0][1])]
+        if values:
+            # The side a distance or angle stands on, as the Flip it was made with (every one the M9 run read, 0).
+            values.append(("FlipDimension", 1.0 if mate.flip else 0.0))
+        if mate.kind == "gear":
+            values += [("GearRatioNumerator", float(mate.ratio[1])), ("GearRatioDenominator", float(mate.ratio[0])),
+                       ("Reverse", 1.0 if mate.flip else 0.0)]
+        entities = tuple(swcom.MateEntityRead(c, self._entity_select(mate, end), k, f, self._entity_params(mate, end))
+                         for c, (k, f), end in zip(info.components, kinds, self._read_ends(mate)))
+        alignment = mate.alignment if mate.user else getattr(self, "readback_alignment", {}).get(mate.name,
+                                                                                                  mate.alignment)
+        if not mate.user and mate.name in getattr(self, "readback_reverse", {}):
+            # A remade gear mate's Reverse read otherwise, whatever Flip it was made with (a test's knob).
+            values = [(k, float(self.readback_reverse[mate.name])) if k == "Reverse" else (k, v) for k, v in values]
+        return swcom.MateDefinition(mate.name, self.DEF_TYPES.get(mate.kind, info.type),
+                                    self.TYPE_NAMES.get(mate.kind, mate.kind), alignment,
+                                    bool(mate.flip and mate.kind != "gear"), tuple(values), entities, info.whole)
+
+    def _entity_select(self, mate, end):
+        """What ``IMateEntity2.ReferenceType2`` answers for an entity (swSelectType_e): nothing through a component
+        suppressed in the configuration shown (the first M9 run, :621), else by what it is — a plane 4 even where its
+        tree order cannot be read (a lightweight component's: ReferenceType2 answers, its document does not)."""
+        target = end[1]
+        if end[0] != "asm" and self._state_in(end[0], self.config) == 0 and mate.user:
+            return swcom.UNREAD
+        if mate.kind == "lock" or not target:
+            return 20
+        if target == "origin":
+            return 6
+        kind = target.partition(":")[0]
+        if kind in ("face", "edge", "vertex"):
+            return {"face": 2, "edge": 1, "vertex": 3}[kind]
+        return 5 if target.endswith("Axis") else 4
+
+    def _entity_params(self, mate, end):
+        """``IMateEntity2.EntityParams`` as SolidWorks lays them out (a point in metres, then a direction: an axis's,
+        a cylinder's or circle's axis, a plane's normal; W5's ring_mate_sense and W6's tier 9 read them so), in the
+        assembly: the direction is the entity's own in its component's frame turned by that frame. A base plane's own
+        is its normal (Front Z, Top Y, Right X); anything else's own is +Z, or ``entity_axes[target]`` where a test
+        says otherwise (a cylindrical face whose axis SolidWorks gives against its part's Z, say)."""
+        target = end[1]
+        own = getattr(self, "entity_axes", {}).get(target) or self._BASE_PLANE_NORMALS.get(target, (0.0, 0.0, 1.0))
+        rotation, at = (IDENTITY9, (0.0, 0.0, 0.0)) if end[0] == "asm" else \
+            self.frames.get(end[0], (IDENTITY9, (0.0, 0.0, 0.0)))
+        direction = _apply(rotation, own)
+        return tuple(v / 1000.0 for v in at) + tuple(direction)
+
+    def entity_reference(self, mate_handle, index):
+        self._log("entity_reference", mate_handle, index)
+        mate = self.mate(self.mate_handles[mate_handle])
+        end = self._read_ends(mate)[index]
+        kind, _ = self._entity_kind(mate, end)
+        finding = {"feature": "PERSIST_REFERENCE_ROUTE_FOR_REFERENCE_FEATURES",
+                   "plane": "PERSIST_REFERENCE_ROUTE_FOR_REFERENCE_FEATURES", "face": "PERSIST_REFERENCE_ROUTE_FOR_FACES",
+                   "edge": "PERSIST_REFERENCE_ROUTE_FOR_EDGES", "vertex": "PERSIST_REFERENCE_ROUTE_FOR_VERTICES"}
+        coaxial = None
+        if kind == "face" and self._finding("COAXIAL_FACE_READ") is True:
+            coaxial = self._w9d().coaxial.get((_key(self.component_paths.get(end[0], "")), end[1]))
+        if kind not in ("feature", "plane") or self._finding(finding[kind]) is None:
+            return kind, "", coaxial, "no measured route"           # a face or an edge is entity_references'
+        if self._light(end[0]) or self._state_in(end[0], self.config) in (0, 1, 4):
+            return kind, "", None, "its part is not loaded in SolidWorks (lightweight or suppressed)"   # as the Session
+
+        part = self.component_paths.get(end[0], "")
+        hexed = f"{_key(part)}|{end[1]}".encode().hex()
+        if self.current and _key(self.current) in self._w9d().read_only_opened:
+            self.refs_read_only.add(hexed)
+        return kind, hexed, coaxial, ""
+
+    def entity_references(self, component, items, candidates=200, seconds=20.0):
+        """§10's walk, as Session.entity_references: the finding must be swcom.PERSIST_ROUTE_R3 exactly. Knobs (by
+        (lower-cased part path, target)): ``r3_filtered`` the candidates left by the prefilter (default 2: a sprocket's
+        equal end faces), ``r3_matches`` how many of them read IsSame (default 1), ``r3_resolve`` the resolve's code
+        (default 0, Ok), ``r3_seconds`` the seconds each candidate takes (default 0), ``radius`` a cylinder's or
+        circle's radius in mm; ``coaxial`` as before. ``walks`` logs (component, items) per call."""
+        self._log("entity_references", component, tuple(items))
+        self._strict(component)
+        self._w9d()
+        for name in ("r3_filtered", "r3_matches", "r3_resolve", "r3_seconds", "radius", "walks"):
+            if not hasattr(self, name):
+                setattr(self, name, [] if name == "walks" else {})
+        self.walks.append((component, tuple(items)))
+        out, carried, clock, capped = [], set(), 0.0, ""
+        name = self._name2(component)
+        stats = []
+        self.last_walk = {"component": name, "items": stats}
+        part = _key(self.component_paths.get(name, ""))
+        for mate_handle, index, kind in items:
+            finding = "PERSIST_REFERENCE_ROUTE_FOR_FACES" if kind == "face" else "PERSIST_REFERENCE_ROUTE_FOR_EDGES"
+            if self._finding(finding) != swcom.PERSIST_ROUTE_R3:
+                out.append((kind, "", None, None, "", f"no measured route for a {kind} here"))
+                continue
+            mate = self.mate(self.mate_handles[mate_handle])
+            end = self._read_ends(mate)[index]
+            key = (part, end[1])
+            filtered = [(key, i) for i in range(self.r3_filtered.get(key, 2))]
+            stats.append((kind, len(filtered), len(filtered), ("area", None), self.r3_matches.get(key, 1)))
+            fresh = [f for f in filtered if f not in carried]
+            if not capped and len(carried) + len(fresh) > candidates:
+                capped = "candidates"
+            if not capped and clock > seconds:
+                capped = "seconds"
+            if not capped:
+                for f in fresh:
+                    clock += self.r3_seconds.get(key, 0.0)
+                    if clock > seconds:
+                        capped = "seconds"
+                        break
+                    carried.add(f)
+            if capped:
+                out.append((kind, "", None, None, capped, ""))
+                continue
+            if self.r3_matches.get(key, 1) != 1:
+                out.append((kind, "", None, None, "", f"SolidWorks did not say which one {kind} of {name} it is on"))
+                continue
+            if self.r3_resolve.get(key, 0) != 0:
+                out.append((kind, "", None, None, "", f"its reference resolved {self.r3_resolve[key]}, not Ok"))
+                continue
+            coaxial = radius = None
+            if self._finding("COAXIAL_FACE_READ") is True:
+                coaxial, radius = self.coaxial.get(key), self.radius.get(key)
+            out.append((kind, f"{part}|{end[1]}".encode().hex(), coaxial, radius, "", ""))
+            if self.current and _key(self.current) in self.read_only_opened:
+                self.refs_read_only.add(out[-1][1])
+        self.last_walk.update(carried=len(carried), seconds=clock, capped=capped)
+        return out
+
+    def _resolve(self, target):
+        if target.startswith("ref:"):
+            _, handle, kind, hexed = target.split(":", 3)
+            part, _, entity = bytes.fromhex(hexed).decode().partition("|")
+            self._strict(handle)                    # select_by_reference's handle
+            name = self._name2(handle)
+            if _key(self.component_paths.get(name, "")) != part:
+                raise SolidWorksError(f"The {kind} could not be found again in {name}.")
+            # As SolidWorks 2026 measured (PERSIST_REFERENCE_SURVIVES_RELOAD: every reference resolved Ok in its part
+            # reopened alone), by the finding the test patches; ``reload_ok`` True or False where a test asks.
+            survives = self.reload_ok if self.reload_ok is not None else \
+                self._finding("PERSIST_REFERENCE_SURVIVES_RELOAD") is True
+            if hexed in self._w9d().refs_read_only and not survives:
+                raise SolidWorksError(f"The {kind} could not be found again in {name} after its part was reloaded.")
+            if entity in getattr(self, "resolve_other_kind", set()):        # S8: resolved to another kind
+                raise swcom.ReferenceKindError(f"The {kind} of {name} found again is a face, which Gear Generator "
+                                               "never takes for it.")
+            return name, entity
+        if ":" in target:
+            handle, _, feature = target.partition(":")
+            if handle != "asm":
+                self._strict(handle)                # a mate's target, as Session._component refuses it
+            return ("asm" if handle == "asm" else self._name2(handle)), feature
+        self._strict(target)
+        return self._name2(target), ""
+
+    def remake_mate(self, handle, definition, targets, name, ratio=(1.0, 1.0), flip=None):
+        self._log("remake_mate", handle, tuple(targets), name, flip)
+        if not self._finding("CARRY_REMAKE_KINDS"):
+            raise SolidWorksError("Making a mate again has not been measured on this SolidWorks.")
+        self._w9d()
+        ends = [self._resolve(t) for t in targets]
+        for end, target in zip(ends, targets):
+            if end[0] != "asm" and self._state_in(end[0], self.config) == 0:
+                # Inferred (W9c's probes: a suppressed component has no document): nothing of it can be selected.
+                raise SolidWorksError(f"{target} could not be selected for a mate: {end[0]} is suppressed in "
+                                      f"{self.config}.")
+        word = self._TYPE_WORDS.get(definition.type, "other")
+        values = dict(definition.values)
+        if word in ("distance", "angle"):
+            # AddMate5 makes a limit mate only of a range that is one (W9c m1: MateLimit… from unequal ends); with each
+            # end the value it makes the plain kind (the app's add_mate, and S5 (c)'s remakes from equal ends).
+            base = values.get("Distance" if word == "distance" else "Angle")
+            range_ends = [v for k, v in values.items() if k.startswith(("Maximum", "Minimum"))]
+            if range_ends and (base is None or any(abs(v - base) > 1e-12 for v in range_ends)):
+                word = f"limit {word}"
+        # The ledger (API-LEDGER.md:612): MateEntity(0) is the SECOND selection for an axis–axis coincident, a
+        # face–axis concentric and a point–plane coincident; the first otherwise. Kept here as MateEntity order.
+        kinds = [self._entity_kind(FakeMate("", word, e, e), e) for e in ends]
+        axis = [k == ("feature", f) and f.endswith("Axis") for k, (_, f) in zip(kinds, ends)]
+        point = [k[0] in ("origin", "vertex") for k in kinds]
+        plane = [k[0] == "plane" or (k[0] == "feature" and k[1].endswith("Plane")) for k in kinds]
+        face = [k[0] == "face" for k in kinds]
+        second_first = (word == "coincident" and all(axis)) or (word == "concentric" and any(face) and any(axis)) or \
+            (word == "coincident" and any(point) and any(plane))
+        if second_first:
+            ends.reverse()
+        swapped = definition.name in self.kind_swap
+        if swapped:
+            ends.reverse()
+        if word == "gear":
+            value = 0.0
+        elif "Distance" in values:
+            value = values["Distance"] * 1000.0
+        else:
+            value = math.degrees(values.get("Angle", 0.0))
+        taken = {m.name for m in self.mates}
+        # ``rename_refused`` (old names): SolidWorks would not take the old name, so the mate keeps the one it gave.
+        kept = name if name not in taken and name not in getattr(self, "rename_refused", ()) else f"Mate{len(self.calls)}"
+        flipped = bool(definition.flipped) if flip is None else bool(flip)
+        self._keep_mate(handle, kept, word, "x", "x", value, tuple(ratio), flipped)
+        mate = self.mates[-1]
+        mate.a, mate.b = ends[0], ends[1]
+        mate.remade = True
+        if ends[0][0] in self.frames and ends[1][0] in self.frames:
+            mate.rel = _compose(_inverse(self.frames[ends[0][0]]), self.frames[ends[1][0]])   # b in a's frame, as made
+        mate.alignment = definition.alignment
+        if word.startswith("limit"):
+            mate.limits = tuple((k, v) for k, v in values.items() if k.startswith(("Maximum", "Minimum")))
+        if word in ("distance", "angle", "limit distance", "limit angle") and \
+                flipped != bool(round(values.get("FlipDimension", 0.0))):
+            # Made with the other Flip than the side it was read on, a distance or angle puts its component on the
+            # other side (the W9d audit's follow-up: a stand-in, 2 x its value along Z for a distance, 10 mm for an
+            # angle, on the carried component it joins); it reads back that Flip as its FlipDimension.
+            carried = {n for h, n in self.component_names.items() if str(h).startswith("carried")}
+            other = next((e[0] for e in ends if e[0] in carried), None)
+            if other is not None:
+                shift = 2.0 * abs(value) if "distance" in word else 10.0
+                for frames in [self.frames] + list(self.frames_by.values()):
+                    if other in frames:
+                        rotation, at = frames[other]
+                        frames[other] = (rotation, (at[0], at[1], at[2] + shift))
+        if swapped:
+            # The counts are the mate's own entities' (unmeasured: every gear mate measured kept the first selection as
+            # MateEntity(0), API-LEDGER.md:612): a mate read with its entities the other way reads its counts so too.
+            mate.ratio = tuple(mate.ratio)[::-1]
+        if word == "gear":
+            # The Reverse SolidWorks reads follows the Flip given, the other way for a mate in ``flip_inverts``: a
+            # remake with the old Flip may read the wrong sense, and the other Flip the right one (§10, W5's remake).
+            mate.flip = flipped != (definition.name in getattr(self, "flip_inverts", set()))
+        mate.status = self.remake_status.get(definition.name, 1)
+        if definition.name in self.remake_codes:
+            mate.code, mate.warning = self.remake_codes[definition.name]
+        for config, code in getattr(self, "remake_codes_in", {}).get(definition.name, {}).items():
+            self.mate_codes_in.setdefault(config, {})[kept] = code          # a code in one configuration only
+        if word == "lock" and ends[0][0] != "asm":
+            # A lock carries its follower with its anchor in every configuration (the fake solves nothing on a show).
+            anchor, follower = ends[0][0], ends[1][0]
+            if anchor in self.frames and follower in self.frames:
+                rel = _compose(_inverse(self.frames[anchor]), self.frames[follower])
+                for frames in self.frames_by.values():
+                    if anchor in frames:
+                        frames[follower] = _compose(frames[anchor], rel)
+        self._touch()
+        return kept, mate.status
+
+    def delete_mate(self, handle):
+        self._log("delete_mate", handle)
+        name = self.mate_handles[handle]
+        self._not_users_mate(name, "deleted")
+        self.mates[:] = [m for m in self.mates if m.name != name]
+        self._touch()
 
 
 @pytest.fixture(autouse=True)
@@ -4694,12 +5297,14 @@ def resolved_read(monkeypatch):
 
 def test_a_lightweight_gear_refuses_a_turning_update_before_anything_changes(resolved_read):
     fake = _built_train()
-    fake.lightweight = {"gear3-1"}
+    # G4 alone in its file: lightweight is per file in a session (W9d probe state (f)), so G3, whose part G1 shares,
+    # would read G1 lightweight too (the fake's default since the W9d audit).
+    fake.lightweight = {"gear4-1"}
     fake.turn("gear4-1", 3.0)
     with pytest.raises(swbuild.BuildError) as raised:
         _update_train(fake)
     assert not isinstance(raised.value, swbuild.NotAsBuilt)
-    assert str(raised.value) == ("G3 (gear3-1) is not fully resolved in T.SLDASM: SolidWorks loaded it lightweight, and "
+    assert str(raised.value) == ("G4 (gear4-1) is not fully resolved in T.SLDASM: SolidWorks loaded it lightweight, and "
                                  "a train with a lightweight gear does not turn as it was built, so nothing is changed; "
                                  "in SolidWorks, right-click T.SLDASM and choose Set Lightweight to Resolved, then press "
                                  "Update SolidWorks again.")
@@ -4719,8 +5324,8 @@ def test_without_the_resolved_read_the_update_reads_nothing_new_and_goes_on_as_t
     fake = _built_train()
     fake.turn("gear4-1", 3.0)
     assert _update_train(fake).ok and "component_resolved" not in names(fake)
-    fake.lightweight = {"gear3-1"}                        # find_component's own check, as today
-    with pytest.raises(swbuild.BuildError, match="^gear3-1 is loaded lightweight in T.SLDASM"):
+    fake.lightweight = {"gear4-1"}        # find_component's own check, as today (G4 alone in its file: see above)
+    with pytest.raises(swbuild.BuildError, match="^gear4-1 is loaded lightweight in T.SLDASM"):
         _update_train(fake)
 
 

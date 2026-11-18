@@ -1,0 +1,503 @@
+awake   display and system held awake for the run (previous state -0x80000000)
+run     2026-11-18 04:51:56; W9c demonstration from snap\src (snapshot: c2d95cc); sections ['remake-m3']; masters {'rangebox': '', 'setup': 'C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9a-confirm-sw2024-20261117-002313\\out\\setup.master', 'reducer': ''}; redo False
+ok      the app's settings and Recent list go into this run's folder, not the user's: C:\Users\M0obo\Documents\GearGeneratorProbe\w9c-remake-m3-sw2024-20261118-045041\out\appdata\Gear Generator\recent.json
+attach  SolidWorks 2024 (revision 32.5.0) (revision 32.5.0), PID 52980; SolidWorks 0.66 GB private, 10.73 GB free
+open    before: []
+findings USER_MATE_PUT_ROUTE "put along, the user's locks left on", USER_TIE_RULE 'not COMPONENT_UNDER_DEFINED', WHATS_WRONG_OPENS_ON_PART_REBUILD False, the branches {'USER_MATE_PUT_FIXED_GEAR_ON_2024': None, 'USER_MATE_PUT_FIXED_GEAR_ON_2026': None, 'USER_MATE_PUT_HELD_GEAR_ON_2024': None, 'USER_MATE_PUT_HELD_GEAR_ON_2026': None, 'USER_MATE_PUT_NO_CARRIER_MODES_ON_2024': None, 'USER_MATE_PUT_NO_CARRIER_MODES_ON_2026': None, 'USER_MATE_PUT_NO_CARRIER_ON_2024': True, 'USER_MATE_PUT_NO_CARRIER_ON_2026': True, 'USER_MATE_PUT_SUBASSEMBLY_ON_2024': None, 'USER_MATE_PUT_SUBASSEMBLY_ON_2026': None}
+rule    What's Wrong: swbuild.whats_wrong_shows_in_update reads True; a What's Wrong box owned by SolidWorks' frame during any job the script waits on is logged as a fact (under an app Update or Build, as the app's Update shows it; under the script's own steps and W8's helpers, as SolidWorks shows it when a person does this), the job waited for, and at its end the box must go within 60 s and the frame be enabled (else a STOP)
+rule    --close-outlived-whats-wrong: a What's Wrong owned by SolidWorks' frame, the frame enabled, still up 60 s after a job is said to have outlived it and closed with its own Close button, to be gone within 10 s; anything else stays the STOP (the coordinator's ruling of 2026-11-18, SolidWorks 2024 only): in force here
+excel   started our own Excel, PID 24892, 16.0 build 20527.0
+-- remake  the fixes review's M3: a press stopped in the ring, pressed again without closing, then after closing without saving (Sun 30, Planet 12, Ring 55 -> 54 on its own copy of setup.master)
+copy    setup.master -> remake-again: 17 files, mtimes kept
+        RangeBox.xlsx's record: 21 path(s) put onto the copy: ['record.workbook', 'record.parts[0].path', 'record.parts[1].path', 'record.parts[2].path', 'record.parts[3].path', 'record.parts[4].path', 'record.assembly', 'record.gearbox.layout', 'record.gearbox.assembly', 'record.gearbox.components[0].part', 'record.gearbox.components[1].part', 'record.gearbox.components[2].part', 'record.gearbox.components[3].part', 'record.gearbox.components[4].part', 'record.gearbox.components[5].part', 'record.gearbox.components[6].part', 'record.gearbox.components[7].part', 'record.gearbox.carriers[0].path', 'record.gearbox.user_work.assembly', 'record.gearbox.user_work.features[0].path', 'record.gearbox.user_work.features[1].path']
+        Dog_m1.25_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.25_N13.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.25_N29.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Ring_m1.25_N55.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Sleeve_m1.25_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+ok      remake-again: the copy's record is valid: owner ('ours', ''); left on the master []; missing in the copy []; clear_saved dropped nothing (unsaved, mismatched ([], [])); the read's digest equals the record's
+probe   W6-PLAN §7.1: RangeBox.SLDASM of remake-again, whose stored references name a folder that is gone, opened under the dialog watch (120 s at most)
+DIALOG  SolidWorks shows '': ['Close', 'Open\nComponents', 'Update\nAssembly', 'Update\nGraphics', ' ', 'Elapsed time: 0s', 'This file was last opened in 2 seconds', 'For more information, view: ']
+fact    remake-again: the copy's assembly opened in 5.9 s; marked modified straight after the open: {'RangeBox_Layout.SLDPRT': False, 'RangeBox_Carrier_Carrier.SLDPRT': False, 'Gear_m1.25_N29.SLDPRT': False, 'Gear_m1.25_N13.SLDPRT': False, 'Ring_m1.25_N55.SLDPRT': False, 'Dog_m1.25_N17.SLDPRT': False, 'Sleeve_m1.25_N17.SLDPRT': False, 'Sprocket.SLDPRT': False, 'Housing.SLDPRT': False, 'RangeBox.SLDASM': False}
+fact    W6-PLAN §7.1: dialogs while the copied assembly opened: none
+ok      remake-again: SolidWorks found all 9 components and the layout in the copy, and the copy closed without saving (left []): elsewhere none
+ok      read RangeBox.xlsx: ok
+        warning Gears!F3: Planet: 13 teeth at 20° is below the undercut limit of 17: a generated gear would lose the bottom of its flanks, which this profile does not show. A profile shift of 0.24 or more would clear it.
+        warning Gears!F3: Planet: The tooth tip is 0.36 mm thick, under 0.3 × module (0.375 mm).
+        warning Gears!F7: RangeSlv: The teeth's tips, at 18.75 mm, are inside the base circle of 19.968 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!A3: Planet (13 teeth) is below the undercut limit, which is not modelled, and meshes Sun (29 teeth): the build checks interference only where the gears stand, so check Planet with Sun turning in SolidWorks.
+        warning Gears!A7: Output cannot reach RangeSlv: Input runs through RangeSlv's travel (from Sun at 10.5 to HighDog at −32), so Output would have to pass HighDog toward Z− or Sun toward Z+, each on Input.
+        warning Gears!A7: nothing keys RangeSlv to Output: its whole bore is teeth and no hub row is under it; add a hub on Output that a band of RangeSlv covers in every mode; as laid out none can, since its 10 mm face slides 10 mm (H −5 to L +5) and its places share no length.
+        warning Modes!A3: in N RangeSlv stands 0 mm from HighDog and 0 mm from LowDog, which it does not engage there: leave at least 0.625 mm (0.5 × module) each side. This workbook's Gears sheet has no Start band (mm) and End band (mm) columns, which give a sleeve toothed bands with a relief between them: type both headers on row 1 of the Gears sheet (after Slides, as a new workbook has them) and save.
+        5 shafts · 6 gears · 2 meshes; gate ''
+ok      remake-again: the copy reads as built from this workbook, its assembly in the copy
+ok      Excel opened RangeBox.xlsx with no dialog or repair: []
+ok      remake, M3: the copy's workbook holds the fixture's Gears, Meshes and Modes rows (as the app reads them)
+edit    Sun 30, Planet 12, Ring 54: [('Gears', 'F2', 30), ('Gears', 'F3', 12), ('Gears', 'F4', 54)]
+excel   Gears!F2 := 30
+excel   Gears!F3 := 12
+excel   Gears!F4 := 54
+excel   saved RangeBox.xlsx
+poll    a new read 0.0 s after asking; changes:
+          Gears!F2 Sun Teeth 29 → 30
+          Gears!F3 Planet Teeth 13 → 12
+          Gears!F4 Ring Teeth 55 → 54
+ok      read RangeBox.xlsx: ok
+        warning Gears!F3: Planet: 12 teeth at 20° is below the undercut limit of 17: a generated gear would lose the bottom of its flanks, which this profile does not show. A profile shift of 0.3 or more would clear it.
+        warning Gears!F3: Planet: The tooth tip is 0.339 mm thick, under 0.3 × module (0.375 mm).
+        warning Gears!F7: RangeSlv: The teeth's tips, at 18.75 mm, are inside the base circle of 19.968 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!A3: Planet (12 teeth) is below the undercut limit, which is not modelled, and meshes Sun (30 teeth): the build checks interference only where the gears stand, so check Planet with Sun turning in SolidWorks.
+        warning Gears!A7: Output cannot reach RangeSlv: Input runs through RangeSlv's travel (from Sun at 10.5 to HighDog at −32), so Output would have to pass HighDog toward Z− or Sun toward Z+, each on Input.
+        warning Gears!A7: nothing keys RangeSlv to Output: its whole bore is teeth and no hub row is under it; add a hub on Output that a band of RangeSlv covers in every mode; as laid out none can, since its 10 mm face slides 10 mm (H −5 to L +5) and its places share no length.
+        warning Modes!A3: in N RangeSlv stands 0 mm from HighDog and 0 mm from LowDog, which it does not engage there: leave at least 0.625 mm (0.5 × module) each side. This workbook's Gears sheet has no Start band (mm) and End band (mm) columns, which give a sleeve toothed bands with a relief between them: type both headers on row 1 of the Gears sheet (after Slides, as a new workbook has them) and save.
+        5 shafts · 6 gears · 2 meshes; gate ''
+classify parts changed ['Gear_m1.25_N29.SLDPRT', 'Gear_m1.25_N13.SLDPRT', 'Ring_m1.25_N55.SLDPRT']; moved []; re-place ['Planet copy 1', 'Planet copy 2', 'Planet copy 3', 'Ring']; structural []; missing []; unsaved []; refusal ''; turning True; axial []; ratios ['Sun meshes Planet copy 1', 'Sun meshes Planet copy 2', 'Sun meshes Planet copy 3', 'Planet copy 1 meshes Ring']
+        layout globals wanted []
+summary Update SolidWorks will change the values in Gear_m1.25_N29 (Sun), Gear_m1.25_N13 (Planet) and Ring_m1.25_N55 (Ring), set the gear mates Sun meshes Planet copy 1 to 30 : 12, Sun meshes Planet copy 2 to 30 : 12, Sun meshes Planet copy 3 to 30 : 12 and Planet copy 1 meshes Ring to 12 : 54 (made again, with their flags set in every mode), and re-place Ring, Carrier (the carrier), Sun, Planet (3 copies), HighDog, LowDog and RangeSlv.
+PATCH   findings.UPDATE_MAKES_MATES_WITH_MODES_ON_2024 = True in this process, for this measurement only (was True)
+PATCH   swbuild.LANDING_STEPS = () in this process, for the first press only (was (-1, 1, -2, 2, -3, 3, -4, 4)): the ring's change set straight, as before 63bbc33
+ok      remake, M3: the first press, set straight: the footer offers Update SolidWorks (shown True, enabled True, Build again… needed False)
+update  SolidWorks 0.88 GB private, 10.38 GB free
+        in 125.5 s; SolidWorks 5.89 GB private, 9.98 GB free; loaded from disk ['Gear_m1.25_N29.SLDPRT', 'Gear_m1.25_N13.SLDPRT', 'Ring_m1.25_N55.SLDPRT', 'Dog_m1.25_N17.SLDPRT', 'Sleeve_m1.25_N17.SLDPRT', 'RangeBox_Layout.SLDPRT', 'RangeBox_Carrier_Carrier.SLDPRT', 'RangeBox.SLDASM']
+        W9a: carried []; renamed []; user in error []; user features in error []; inventory read yes; failures [('Ring_m1.25_N55.SLDPRT', 'SolidWorks reported an error rebuilding Ring_m1.25_N55.')]
+ok      the Update's check phase found no gear mate turning against its mesh: []
+status  [red] Update SolidWorks stopped. Ring_m1.25_N55.SLDPRT: SolidWorks reported an error rebuilding Ring_m1.25_N55. It had already changed Gear_m1.25_N29, Gear_m1.25_N13 and Ring_m1.25_N55, not saved, and Ring_m1.25_N55 is left in error: close them all and RangeBox in SolidWorks without saving, answering No when SolidWorks asks to save them (the files on disk are as before this Update; closing RangeBox so also discards whatever else is unsaved in it), then press Update SolidWorks again.
+fact    remake, M3: the first press, set straight: the press took 125.6 s; SolidWorks calls by member {'OpenDoc6': 11, 'IsSuppressed2': 112, 'GetSystemValue3': 1, 'ForceRebuild3': 3}
+        shows and puts in order: []
+        configuration 'H'; visited []; put_in []; placed []; unsuppressed_in []; suppressed_in []; slid []; values_restored []; extra configurations []; extra mates []; senses unread []; positions per configuration False; failures [('Ring_m1.25_N55.SLDPRT', 'SolidWorks reported an error rebuilding Ring_m1.25_N55.')]
+fact    remake, M3: the first press, set straight: the press took 126 s
+ok      remake, M3: the first press, set straight: the press went through, and the footer foresaw no problem it did not meet: none
+        update  Gear_m1.25_N29.SLDPRT · trig degrees
+        ok      set "No. of Teeth"
+        ok      rebuilt once
+        update  Gear_m1.25_N13.SLDPRT · trig degrees
+        ok      set "No. of Teeth"
+        ok      rebuilt once
+        update  Ring_m1.25_N55.SLDPRT · trig degrees
+        ok      set "No. of Teeth"
+        CHECK   a sketch line lands on itself with this change, and no safe intermediate was found: Li+
+        FAIL    the rebuild reported an error
+        ok      every gear is where the workbook puts it
+        ok      worked in H, the configuration that was active; did not show the other modes
+        CHECK   your components, left as they are but where put with a gear: Sprocket-4, Sprocket-1, Sprocket-3, Sprocket-2, Housing-1
+        CHECK   your mates, left on as they are: UserAxis1, UserAxis2, UserLock1, UserLock2, UserLock3, UserAxis4, UserDist4, UserAngle4
+        CHECK   your features in Gear_m1.25_N29.SLDPRT, kept: User Keyway Sketch, User Keyway
+        mate    Sun on Input Axis
+        mate    Sun along Input
+        mate    HighDog locked to Sun
+        mate    Carrier carrier on Carrier Axis
+        mate    Carrier carrier along Carrier
+        mate    LowDog locked to Carrier carrier
+        mate    Planet copy 1 on Planet copy 1 Axis
+        mate    Planet copy 1 along Planet copy 1
+        mate    Planet copy 2 on Planet copy 2 Axis
+        mate    Planet copy 2 along Planet copy 2
+        mate    Planet copy 3 on Planet copy 3 Axis
+        mate    Planet copy 3 along Planet copy 3
+        mate    RangeSlv on Output Axis
+        mate    RangeSlv along Output
+        mate    Sun meshes Planet copy 1
+        mate    Sun meshes Planet copy 2
+        mate    Sun meshes Planet copy 3
+        mate    Planet copy 1 meshes Ring
+        mate    RangeSlv engages HighDog
+        mate    RangeSlv engages LowDog · suppressed
+        mate    UserAxis1
+        mate    UserAxis2
+        mate    UserLock1
+        mate    UserLock2
+        mate    UserLock3
+        mate    UserAxis4
+        mate    UserDist4
+        mate    UserAngle4
+        FAIL    Ring_m1.25_N55.SLDPRT: SolidWorks reported an error rebuilding Ring_m1.25_N55.
+        not saved: Gear_m1.25_N29.SLDPRT, Gear_m1.25_N13.SLDPRT, Ring_m1.25_N55.SLDPRT changed in SolidWorks; save there to keep it
+        SKIPPED 2 more parts, the layout part, the carrier part and the assembly, because Ring_m1.25_N55.SLDPRT failed
+        W9c: built []; inserted []; deleted []; mates deleted []; mates made []; remade in modes []; bands added [], removed []; modes added [], removed []; took the active mode's state []; flags lost []; not resolved []
+ok      remake, M3: the press set straight stops in Ring_m1.25_N55, the status says it is left in error and to close without saving, the record marks it (['C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9c-remake-m3-sw2024-20261118-045041\\out\\remake-again\\Ring_m1.25_N55.SLDPRT']); the patch restored
+ok      remake, M3: the first press's stop names RangeBox beside the parts and says to answer No when SolidWorks asks to save (should-fix A)
+fact    read remake, M3: before step 2: What's Wrong came up 0.41 s into the job, the worker in ActivateDoc3, owned by SolidWorks' frame: as SolidWorks shows it when a person does this (the ruling: a fact, not a STOP)
+DIALOG  SolidWorks shows "What's Wrong": ['Show &errors', 'Show &warnings', "&Display What's Wrong during rebuild", '&FeatureXpert', '&Close', '&Help', 'Custom1', '* Select FeatureXpert to attempt repair of the highlighted error(s).    ']
+NOTE    a SolidWorks window "What's Wrong" ['Show &errors', 'Show &warnings', "&Display What's Wrong during rebuild", '&FeatureXpert', '&Close', '&Help', 'Custom1', '* Select FeatureXpert to attempt repair of the highlighted error(s).    '] came up while GetNextFeature was in progress, before this run made any configuration
+fact    read remake, M3: before step 2: What's Wrong outlived its job: 1 still up 60.18 s after it, owned by SolidWorks' frame [True], the frame enabled True (the coordinator's ruling of 2026-11-18)
+fact    read remake, M3: before step 2: What's Wrong showed during the job, as SolidWorks shows it when a person does this: came at [0.41] s, stayed [] s; after the job it was still up after 60.18 s (allowed 60); the script pressed its own Close ('&Close', a Button) by BM_CLICK, as a person would, and it was gone 0.25 s after the BM_CLICK (allowed 10), SolidWorks' frame enabled True: closed by the BM_CLICK; 0 up at the end, SolidWorks' frame enabled True
+read    remake, M3: before step 2 (active H; front document RangeBox.SLDASM): mates in error none; not free {'Ring': 3, 'Sprocket-4': 3, 'Housing-1': 3}; marked ['Gear_m1.25_N13.SLDPRT', 'Gear_m1.25_N29.SLDPRT', 'RangeBox.SLDASM', 'Ring_m1.25_N55.SLDPRT']; rebuild state 0
+fact    remake, M3: before step 2, modified ['Gear_m1.25_N13.SLDPRT', 'Gear_m1.25_N29.SLDPRT', 'RangeBox.SLDASM', 'Ring_m1.25_N55.SLDPRT'] (step 1 changed ['Gear_m1.25_N13.SLDPRT', 'Gear_m1.25_N29.SLDPRT', 'Ring_m1.25_N55.SLDPRT']); the ring {'in_error': [('Tooth Space', 51), ('Teeth', 51)], 'teeth': 54.0, 'module': 1.25, 'volume': 15215.125920417064}; ratios {'Sun meshes Planet copy 1': (29.0, 13.0), 'Sun meshes Planet copy 2': (29.0, 13.0), 'Sun meshes Planet copy 3': (29.0, 13.0), 'Planet copy 1 meshes Ring': (13.0, 55.0)}
+fact    remake, M3: before step 2, modified beyond step 1's parts ['RangeBox.SLDASM'] (run 11 on 34.0.0: RangeBox.SLDASM, marked by SolidWorks when a part of it was changed and rebuilt; not a check)
+ok      remake, M3: pressed again without closing: the footer offers Update SolidWorks (shown True, enabled True, Build again… needed False)
+update  SolidWorks 6.10 GB private, 9.83 GB free
+        in 127.1 s; SolidWorks 5.93 GB private, 9.87 GB free; loaded from disk []
+        W9a: carried []; renamed []; user in error []; user features in error []; inventory read yes; failures [('Ring_m1.25_N55.SLDPRT', "SolidWorks reads Tooth Space and Teeth, which Gear Generator made, in error in Ring_m1.25_N55, which already holds the workbook's values, so this press could set nothing there to put it right.")]
+ok      the Update's check phase found no gear mate turning against its mesh: []
+status  [red] Ring_m1.25_N55 is still open in SolidWorks as an earlier Update SolidWorks left it, in error and holding the new values, so this press set nothing in it: close it and RangeBox in SolidWorks without saving, answering No when SolidWorks asks to save them (the files on disk are as before that Update; closing RangeBox so also discards whatever else is unsaved in it), then press Update SolidWorks again.
+fact    remake, M3: pressed again without closing: the press took 127.1 s; SolidWorks calls by member {'OpenDoc6': 8, 'IsSuppressed2': 112, 'GetSystemValue3': 1}
+        shows and puts in order: []
+        configuration 'H'; visited []; put_in []; placed []; unsuppressed_in []; suppressed_in []; slid []; values_restored []; extra configurations []; extra mates []; senses unread []; positions per configuration False; failures [('Ring_m1.25_N55.SLDPRT', "SolidWorks reads Tooth Space and Teeth, which Gear Generator made, in error in Ring_m1.25_N55, which already holds the workbook's values, so this press could set nothing there to put it right.")]
+fact    remake, M3: pressed again without closing: the press took 127 s
+ok      remake, M3: pressed again without closing: the press went through, and the footer foresaw no problem it did not meet: none
+        ok      every gear is where the workbook puts it
+        ok      worked in H, the configuration that was active; did not show the other modes
+        CHECK   your components, left as they are but where put with a gear: Sprocket-4, Sprocket-1, Sprocket-3, Sprocket-2, Housing-1
+        CHECK   your mates, left on as they are: UserAxis1, UserAxis2, UserLock1, UserLock2, UserLock3, UserAxis4, UserDist4, UserAngle4
+        CHECK   your features in Gear_m1.25_N29.SLDPRT, kept: User Keyway Sketch, User Keyway
+        mate    Sun on Input Axis
+        mate    Sun along Input
+        mate    HighDog locked to Sun
+        mate    Carrier carrier on Carrier Axis
+        mate    Carrier carrier along Carrier
+        mate    LowDog locked to Carrier carrier
+        mate    Planet copy 1 on Planet copy 1 Axis
+        mate    Planet copy 1 along Planet copy 1
+        mate    Planet copy 2 on Planet copy 2 Axis
+        mate    Planet copy 2 along Planet copy 2
+        mate    Planet copy 3 on Planet copy 3 Axis
+        mate    Planet copy 3 along Planet copy 3
+        mate    RangeSlv on Output Axis
+        mate    RangeSlv along Output
+        mate    Sun meshes Planet copy 1
+        mate    Sun meshes Planet copy 2
+        mate    Sun meshes Planet copy 3
+        mate    Planet copy 1 meshes Ring
+        mate    RangeSlv engages HighDog
+        mate    RangeSlv engages LowDog · suppressed
+        mate    UserAxis1
+        mate    UserAxis2
+        mate    UserLock1
+        mate    UserLock2
+        mate    UserLock3
+        mate    UserAxis4
+        mate    UserDist4
+        mate    UserAngle4
+        FAIL    Ring_m1.25_N55.SLDPRT: SolidWorks reads Tooth Space and Teeth, which Gear Generator made, in error in Ring_m1.25_N55, which already holds the workbook's values, so this press could set nothing there to put it right.
+        nothing changed in SolidWorks
+        SKIPPED the assembly, because Ring_m1.25_N55.SLDPRT is in error
+        W9c: built []; inserted []; deleted []; mates deleted []; mates made []; remade in modes []; bands added [], removed []; modes added [], removed []; took the active mode's state []; flags lost []; not resolved []
+read    remake, M3: after step 2 (active H; front document RangeBox.SLDASM): mates in error none; not free {'Ring': 3, 'Sprocket-4': 3, 'Housing-1': 3}; marked ['Gear_m1.25_N13.SLDPRT', 'Gear_m1.25_N29.SLDPRT', 'RangeBox.SLDASM', 'Ring_m1.25_N55.SLDPRT']; rebuild state 0
+fact    remake, M3: pressed again without closing: status 'Ring_m1.25_N55 is still open in SolidWorks as an earlier Update SolidWorks left it, in error and holding the new values, so this press set nothing in it: close it and RangeBox in SolidWorks without saving, answering No when SolidWorks asks to save them (the files on disk are as before that Update; closing RangeBox so also discards whatever else is unsaved in it), then press Update SolidWorks again.'; parts set []; result {'changed': [], 'mates_made': [], 'remade_in_modes': [], 'placed': [], 'failures': [('Ring_m1.25_N55.SLDPRT', "SolidWorks reads Tooth Space and Teeth, which Gear Generator made, in error in Ring_m1.25_N55, which already holds the workbook's values, so this press could set nothing there to put it right.")], 'skipped': 'the assembly, because Ring_m1.25_N55.SLDPRT is in error'}; calls that change or show none; the ring after {'in_error': [('Tooth Space', 51), ('Teeth', 51)], 'teeth': 54.0, 'module': 1.25, 'volume': 15215.125920417064}
+ok      remake, M3: pressed again without closing, the status says Ring_m1.25_N55 is still open in error and to close it and RangeBox without saving, answering No when SolidWorks asks to save, alone (never that SolidWorks already matches, no offer to save), the record keeps its mark, nothing set in a part
+ok      remake, M3: step 2 stopped before any write: no call that changes or shows anything, every part's and the assembly's globals, every document's save flag and file time as before, nothing changed, made, remade or placed, its stop said skipped and named Ring_m1.25_N55.SLDPRT alone, the ring still in error at 54 teeth with the codes it read before the press ([('Tooth Space', 51), ('Teeth', 51)]), the assembly's frames, mates and flags and the gear mates' ratios as before: nothing written
+footer  (remake, M3: the footer after the second press) [red] Ring_m1.25_N55 is still open in SolidWorks as an earlier Update SolidWorks left it, in error and holding the new values, so this press set nothing in it: close it and RangeBox in SolidWorks without saving, answering No when SolidWorks asks to save them (the files on disk are as before that Update; closing RangeBox so also discards whatever else is unsaved in it), then press Update SolidWorks again.
+        button 'Build again…' on; Update SolidWorks shown on primary
+ok      remake, M3: the footer says Ring_m1.25_N55 is to be closed with RangeBox without saving, answering No (left in error when it stopped, or still open in SolidWorks), and offers to keep nothing
+fact    remake, M3: closed ['Gear_m1.25_N13.SLDPRT', 'Gear_m1.25_N29.SLDPRT', 'Ring_m1.25_N55.SLDPRT'] with RangeBox.SLDASM left open; SolidWorks holds ['Dog_m1.25_N17.SLDPRT', 'Gear_m1.25_N13.SLDPRT', 'Gear_m1.25_N29.SLDPRT', 'Housing.SLDPRT', 'RangeBox.SLDASM', 'RangeBox_Carrier_Carrier.SLDPRT', 'RangeBox_Layout.SLDPRT', 'Ring_m1.25_N55.SLDPRT', 'Sleeve_m1.25_N17.SLDPRT', 'Sprocket.SLDPRT']; modified ['RangeBox.SLDASM']; the ring {'in_error': [('Tooth Space', 51), ('Teeth', 51)], 'teeth': 54.0, 'module': 1.25, 'volume': 15215.125920417064}
+ok      remake, M3: pressed again with only the parts' windows closed: the footer offers Update SolidWorks (shown True, enabled True, Build again… needed False)
+update  SolidWorks 5.12 GB private, 9.83 GB free
+DIALOG  SolidWorks shows '': ['Title', 'Description', 'Button1', 'Button2', 'Hyperlink Text 1', 'Hyperlink Text 2']
+NOTE    SolidWorks' notification box came up while GetNextSubFeature was in progress (exempt by the coordinator's ruling; nothing answers it)
+        in 134.0 s; SolidWorks 5.97 GB private, 10.06 GB free; loaded from disk []
+        W9a: carried []; renamed []; user in error []; user features in error []; inventory read yes; failures [('Ring_m1.25_N55.SLDPRT', "SolidWorks reads Tooth Space and Teeth, which Gear Generator made, in error in Ring_m1.25_N55, which already holds the workbook's values, so this press could set nothing there to put it right.")]
+ok      the Update's check phase found no gear mate turning against its mesh: []
+status  [red] Ring_m1.25_N55 is still open in SolidWorks as an earlier Update SolidWorks left it, in error and holding the new values, so this press set nothing in it: close it and RangeBox in SolidWorks without saving, answering No when SolidWorks asks to save them (the files on disk are as before that Update; closing RangeBox so also discards whatever else is unsaved in it), then press Update SolidWorks again.
+fact    remake, M3: pressed again with only the parts' windows closed: the press took 134.1 s; SolidWorks calls by member {'OpenDoc6': 8, 'IsSuppressed2': 112, 'GetSystemValue3': 1}
+        shows and puts in order: []
+        configuration 'H'; visited []; put_in []; placed []; unsuppressed_in []; suppressed_in []; slid []; values_restored []; extra configurations []; extra mates []; senses unread []; positions per configuration False; failures [('Ring_m1.25_N55.SLDPRT', "SolidWorks reads Tooth Space and Teeth, which Gear Generator made, in error in Ring_m1.25_N55, which already holds the workbook's values, so this press could set nothing there to put it right.")]
+fact    remake, M3: pressed again with only the parts' windows closed: the press took 134 s
+ok      remake, M3: pressed again with only the parts' windows closed: the press went through, and the footer foresaw no problem it did not meet: none
+        ok      every gear is where the workbook puts it
+        ok      worked in H, the configuration that was active; did not show the other modes
+        CHECK   your components, left as they are but where put with a gear: Sprocket-4, Sprocket-1, Sprocket-3, Sprocket-2, Housing-1
+        CHECK   your mates, left on as they are: UserAxis1, UserAxis2, UserLock1, UserLock2, UserLock3, UserAxis4, UserDist4, UserAngle4
+        CHECK   your features in Gear_m1.25_N29.SLDPRT, kept: User Keyway Sketch, User Keyway
+        mate    Sun on Input Axis
+        mate    Sun along Input
+        mate    HighDog locked to Sun
+        mate    Carrier carrier on Carrier Axis
+        mate    Carrier carrier along Carrier
+        mate    LowDog locked to Carrier carrier
+        mate    Planet copy 1 on Planet copy 1 Axis
+        mate    Planet copy 1 along Planet copy 1
+        mate    Planet copy 2 on Planet copy 2 Axis
+        mate    Planet copy 2 along Planet copy 2
+        mate    Planet copy 3 on Planet copy 3 Axis
+        mate    Planet copy 3 along Planet copy 3
+        mate    RangeSlv on Output Axis
+        mate    RangeSlv along Output
+        mate    Sun meshes Planet copy 1
+        mate    Sun meshes Planet copy 2
+        mate    Sun meshes Planet copy 3
+        mate    Planet copy 1 meshes Ring
+        mate    RangeSlv engages HighDog
+        mate    RangeSlv engages LowDog · suppressed
+        mate    UserAxis1
+        mate    UserAxis2
+        mate    UserLock1
+        mate    UserLock2
+        mate    UserLock3
+        mate    UserAxis4
+        mate    UserDist4
+        mate    UserAngle4
+        FAIL    Ring_m1.25_N55.SLDPRT: SolidWorks reads Tooth Space and Teeth, which Gear Generator made, in error in Ring_m1.25_N55, which already holds the workbook's values, so this press could set nothing there to put it right.
+        nothing changed in SolidWorks
+        SKIPPED the assembly, because Ring_m1.25_N55.SLDPRT is in error
+        W9c: built []; inserted []; deleted []; mates deleted []; mates made []; remade in modes []; bands added [], removed []; modes added [], removed []; took the active mode's state []; flags lost []; not resolved []
+fact    remake, M3: with only the parts' windows closed, the press stopped again on Ring_m1.25_N55.SLDPRT: status 'Ring_m1.25_N55 is still open in SolidWorks as an earlier Update SolidWorks left it, in error and holding the new values, so this press set nothing in it: close it and RangeBox in SolidWorks without saving, answering No when SolidWorks asks to save them (the files on disk are as before that Update; closing RangeBox so also discards whatever else is unsaved in it), then press Update SolidWorks again.'; result {'changed': [], 'mates_made': [], 'remade_in_modes': [], 'placed': [], 'failures': [('Ring_m1.25_N55.SLDPRT', "SolidWorks reads Tooth Space and Teeth, which Gear Generator made, in error in Ring_m1.25_N55, which already holds the workbook's values, so this press could set nothing there to put it right.")], 'skipped': 'the assembly, because Ring_m1.25_N55.SLDPRT is in error'}; calls that change or show none
+ok      remake, M3: stopped again on Ring_m1.25_N55.SLDPRT with only the parts' windows closed, it wrote nothing and said to close Ring_m1.25_N55 and RangeBox without saving, answering No: nothing written
+person  remake, M3: closed every document of the copy without saving, as the sentences say; left []
+ok      remake, M3: pressed again after closing, the patch restored: the footer offers Update SolidWorks (shown True, enabled True, Build again… needed False)
+update  SolidWorks 1.82 GB private, 10.29 GB free
+DIALOG  SolidWorks shows '': ['Close', 'Opened 15\nComponents', 'Updating\nAssembly', 'Update\nGraphics', 'Post load updating', 'Elapsed time: 0s', 'This file was last opened in 2 seconds', 'For more information, view: ']
+        in 332.3 s; SolidWorks 6.61 GB private, 9.88 GB free; loaded from disk ['Gear_m1.25_N29.SLDPRT', 'Gear_m1.25_N13.SLDPRT', 'Ring_m1.25_N55.SLDPRT', 'Dog_m1.25_N17.SLDPRT', 'Sleeve_m1.25_N17.SLDPRT', 'RangeBox_Layout.SLDPRT', 'RangeBox_Carrier_Carrier.SLDPRT', 'RangeBox.SLDASM']
+        W9a: carried [('Sprocket-1', 'Sun', 'N'), ('Sprocket-3', 'Sun', 'N'), ('Sprocket-2', 'RangeSlv', 'N'), ('Sprocket-1', 'Sun', 'L'), ('Sprocket-3', 'Sun', 'L'), ('Sprocket-2', 'RangeSlv', 'L'), ('Sprocket-1', 'Sun', 'H'), ('Sprocket-3', 'Sun', 'H'), ('Sprocket-2', 'RangeSlv', 'H')]; renamed []; user in error []; user features in error []; inventory read yes; failures []
+ok      the Update's check phase found no gear mate turning against its mesh: []
+status  [green] Updated SolidWorks: made Sun meshes Planet copy 1, Sun meshes Planet copy 2, Sun meshes Planet copy 3 and Planet copy 1 meshes Ring again, with their flags set in every mode, changed 1 variable in Gear_m1.25_N29 (it now has 30 teeth; its file keeps its name), changed 1 variable in Gear_m1.25_N13 (it now has 12 teeth; its file keeps its name), changed 1 variable in Ring_m1.25_N55 (it now has 54 teeth; its file keeps its name), set the gear mates Sun meshes Planet copy 1 to 30 : 12, Sun meshes Planet copy 2 to 30 : 12, Sun meshes Planet copy 3 to 30 : 12 and Planet copy 1 meshes Ring to 12 : 54, re-placed Ring, Carrier (the carrier), Sun, Planet (3 copies), HighDog, LowDog and RangeSlv in every mode; no interference between the gears in any mode, where they stand. It worked in H, the configuration that was active, then showed and checked N and L and left the assembly in H. Your Sprocket-1 went with Sun in every mode, which your locks hold it to. Your Sprocket-3 went with Sun in every mode, which your locks hold it to. Your Sprocket-2 went with RangeSlv in every mode, which your locks hold it to. Save Gear_m1.25_N29, Gear_m1.25_N13, Ring_m1.25_N55 and RangeBox in SolidWorks to keep them.
+fact    remake, M3: pressed again after closing, the patch restored: the press took 332.3 s; SolidWorks calls by member {'OpenDoc6': 13, 'IsSuppressed2': 286, 'GetSystemValue3': 4, 'ForceRebuild3': 58, 'AddMate5': 4, 'ShowConfiguration2': 3, 'SetSuppression2': 40, 'put': 37}
+        shows and puts in order: [('ShowConfiguration2', 'N'), ('put', 'Ring_m1.25_N55-1'), ('put', 'RangeBox_Carrier_Carrier-1'), ('put', 'Gear_m1.25_N29-1'), ('put', 'Gear_m1.25_N13-1'), ('put', 'Gear_m1.25_N13-2'), ('put', 'Gear_m1.25_N13-3'), ('put', 'Dog_m1.25_N17-1'), ('put', 'Dog_m1.25_N17-2'), ('put', 'Sleeve_m1.25_N17-1'), ('put', 'Sprocket-1'), ('put', 'Sprocket-3'), ('put', 'Sprocket-2'), ('put', 'Ring_m1.25_N55-1'), ('ShowConfiguration2', 'L'), ('put', 'RangeBox_Carrier_Carrier-1'), ('put', 'Gear_m1.25_N29-1'), ('put', 'Gear_m1.25_N13-1'), ('put', 'Gear_m1.25_N13-2'), ('put', 'Gear_m1.25_N13-3'), ('put', 'Dog_m1.25_N17-1'), ('put', 'Dog_m1.25_N17-2'), ('put', 'Sleeve_m1.25_N17-1'), ('put', 'Sprocket-1'), ('put', 'Sprocket-3'), ('put', 'Sprocket-2'), ('ShowConfiguration2', 'H'), ('put', 'Ring_m1.25_N55-1'), ('put', 'RangeBox_Carrier_Carrier-1'), ('put', 'Gear_m1.25_N29-1'), ('put', 'Gear_m1.25_N13-1'), ('put', 'Gear_m1.25_N13-2'), ('put', 'Gear_m1.25_N13-3'), ('put', 'Dog_m1.25_N17-1'), ('put', 'Dog_m1.25_N17-2'), ('put', 'Sleeve_m1.25_N17-1'), ('put', 'Sprocket-1'), ('put', 'Sprocket-3'), ('put', 'Sprocket-2'), ('put', 'Ring_m1.25_N55-1')]
+        configuration 'H'; visited ['N', 'L']; put_in ['N', 'L', 'H']; placed ['Ring', 'Carrier carrier', 'Sun', 'Planet copy 1', 'Planet copy 2', 'Planet copy 3', 'HighDog', 'LowDog', 'RangeSlv']; unsuppressed_in []; suppressed_in []; slid []; values_restored []; extra configurations []; extra mates []; senses unread []; positions per configuration False; failures []
+        post-check of N: turned False; out of step [('Sun', 'Planet copy 1'), ('Sun', 'Planet copy 2'), ('Sun', 'Planet copy 3')]; off axis ['Ring']; clashes []; interference error ''
+        post-check of L: turned False; out of step []; off axis []; clashes []; interference error ''
+        post-check of H: turned False; out of step [('Sun', 'Planet copy 1'), ('Sun', 'Planet copy 2'), ('Sun', 'Planet copy 3')]; off axis ['Ring']; clashes []; interference error ''
+fact    remake, M3: pressed again after closing, the patch restored: the press took 332 s
+ok      remake, M3: pressed again after closing, the patch restored: the press went through, and the footer foresaw no problem it did not meet: none
+        update  Gear_m1.25_N29.SLDPRT · trig degrees
+        ok      set "No. of Teeth"
+        ok      rebuilt once
+        update  Gear_m1.25_N13.SLDPRT · trig degrees
+        ok      set "No. of Teeth"
+        ok      rebuilt once
+        update  Ring_m1.25_N55.SLDPRT · trig degrees
+        ok      set "No. of Teeth"
+        ok      set "No. of Teeth" by way of 53 first, rebuilt there, then the workbook's value (a sketch line would have landed on itself)
+        ok      rebuilt twice
+        update  Dog_m1.25_N17.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  Sleeve_m1.25_N17.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  RangeBox_Layout.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        update  RangeBox_Carrier_Carrier.SLDPRT · trig degrees
+        ok      already holds the workbook's values
+        ok      made again in a mode, its flags set in every mode: Sun meshes Planet copy 1, Sun meshes Planet copy 2, Sun meshes Planet copy 3, Planet copy 1 meshes Ring
+        ok      re-placed Ring, Carrier carrier, Sun, Planet copy 1, Planet copy 2, Planet copy 3, HighDog, LowDog, RangeSlv
+        ok      given their new ratio: Sun meshes Planet copy 1, Sun meshes Planet copy 2, Sun meshes Planet copy 3, Planet copy 1 meshes Ring
+        ok      worked in H, the configuration that was active, and showed N, L too
+        ok      gears put in N, L, H
+        ok      found in mode N: Ring off its axis, Sun with Planet copy 1 out of step, Sun with Planet copy 2 out of step, Sun with Planet copy 3 out of step
+        ok      found in mode H: Ring off its axis, Sun with Planet copy 1 out of step, Sun with Planet copy 2 out of step, Sun with Planet copy 3 out of step
+        CHECK   your components, left as they are but where put with a gear: Sprocket-4, Housing-1, Sprocket-2, Sprocket-1, Sprocket-3
+        CHECK   your mates, left on as they are: UserAxis1, UserAxis2, UserLock1, UserLock2, UserLock3, UserAxis4, UserDist4, UserAngle4
+        CHECK   your features in Gear_m1.25_N29.SLDPRT, kept: User Keyway Sketch, User Keyway
+        ok      put Sprocket-1 with Sun in N
+        ok      put Sprocket-3 with Sun in N
+        ok      put Sprocket-2 with RangeSlv in N
+        ok      put Sprocket-1 with Sun in L
+        ok      put Sprocket-3 with Sun in L
+        ok      put Sprocket-2 with RangeSlv in L
+        ok      put Sprocket-1 with Sun in H
+        ok      put Sprocket-3 with Sun in H
+        ok      put Sprocket-2 with RangeSlv in H
+        mate    Sun on Input Axis
+        mate    Sun along Input
+        mate    HighDog locked to Sun
+        mate    Carrier carrier on Carrier Axis
+        mate    Carrier carrier along Carrier
+        mate    LowDog locked to Carrier carrier
+        mate    Planet copy 1 on Planet copy 1 Axis
+        mate    Planet copy 1 along Planet copy 1
+        mate    Planet copy 2 on Planet copy 2 Axis
+        mate    Planet copy 2 along Planet copy 2
+        mate    Planet copy 3 on Planet copy 3 Axis
+        mate    Planet copy 3 along Planet copy 3
+        mate    RangeSlv on Output Axis
+        mate    RangeSlv along Output
+        mate    Sun meshes Planet copy 1
+        mate    Sun meshes Planet copy 2
+        mate    Sun meshes Planet copy 3
+        mate    Planet copy 1 meshes Ring
+        mate    RangeSlv engages HighDog
+        mate    RangeSlv engages LowDog · suppressed
+        mate    UserAxis1
+        mate    UserAxis2
+        mate    UserLock1
+        mate    UserLock2
+        mate    UserLock3
+        mate    UserAxis4
+        mate    UserDist4
+        mate    UserAngle4
+        ok      assembly rebuilt once
+        ok      no interference between the gears
+        not saved: Gear_m1.25_N29.SLDPRT, Gear_m1.25_N13.SLDPRT, Ring_m1.25_N55.SLDPRT, RangeBox.SLDASM changed in SolidWorks; save there to keep it
+        W9c: built []; inserted []; deleted []; mates deleted []; mates made []; remade in modes ['Sun meshes Planet copy 1', 'Sun meshes Planet copy 2', 'Sun meshes Planet copy 3', 'Planet copy 1 meshes Ring']; bands added [], removed []; modes added [], removed []; took the active mode's state []; flags lost []; not resolved []
+footer  (remake, M3: the footer after the third press) [green] Updated SolidWorks: made Sun meshes Planet copy 1, Sun meshes Planet copy 2, Sun meshes Planet copy 3 and Planet copy 1 meshes Ring again, with their flags set in every mode, changed 1 variable in Gear_m1.25_N29 (it now has 30 teeth; its file keeps its name), changed 1 variable in Gear_m1.25_N13 (it now has 12 teeth; its file keeps its name), changed 1 variable in Ring_m1.25_N55 (it now has 54 teeth; its file keeps its name), set the gear mates Sun meshes Planet copy 1 to 30 : 12, Sun meshes Planet copy 2 to 30 : 12, Sun meshes Planet copy 3 to 30 : 12 and Planet copy 1 meshes Ring to 12 : 54, re-placed Ring, Carrier (the carrier), Sun, Planet (3 copies), HighDog, LowDog and RangeSlv in every mode; no interference between the gears in any mode, where they stand. It worked in H, the configuration that was active, then showed and checked N and L and left the assembly in H. Your Sprocket-1 went with Sun in every mode, which your locks hold it to. Your Sprocket-3 went with Sun in every mode, which your locks hold it to. Your Sprocket-2 went with RangeSlv in every mode, which your locks hold it to. Save Gear_m1.25_N29, Gear_m1.25_N13, Ring_m1.25_N55 and RangeBox in SolidWorks to keep them.
+        button 'Build again…' on; Update SolidWorks shown on primary
+ok      remake, M3: after closing without saving, the press goes through routed by way of 53 (('No. of Teeth', '53')), the ring at 54 with nothing in error ([]), the mark gone ([]), the stage's gear mates ['Sun meshes Planet copy 1', 'Sun meshes Planet copy 2', 'Sun meshes Planet copy 3', 'Planet copy 1 meshes Ring'] remade (['Planet copy 1 meshes Ring', 'Sun meshes Planet copy 1', 'Sun meshes Planet copy 2', 'Sun meshes Planet copy 3']), the footer quiet (True)
+PATCH   findings.UPDATE_MAKES_MATES_WITH_MODES_ON_2024 back to True
+        remake-again, the copy's end: SolidWorks 2024, this run's modified documents saved before the close: ['Gear_m1.25_N29.SLDPRT', 'Gear_m1.25_N13.SLDPRT', 'Ring_m1.25_N55.SLDPRT', 'RangeBox.SLDASM']
+ok      remake-again, the copy's end: remake-again ends clean: every document of it closed in SolidWorks (left []), Excel's workbook closed (['RangeBox.xlsx']), no open document by a file name it holds ([])
+-- remake-m3  the second pass: step 1, then the app's press again as the first thing to activate a document after it (no read of the script's between them opens or activates one), on its own copy of setup.master
+copy    setup.master -> remake-first: 17 files, mtimes kept
+        RangeBox.xlsx's record: 21 path(s) put onto the copy: ['record.workbook', 'record.parts[0].path', 'record.parts[1].path', 'record.parts[2].path', 'record.parts[3].path', 'record.parts[4].path', 'record.assembly', 'record.gearbox.layout', 'record.gearbox.assembly', 'record.gearbox.components[0].part', 'record.gearbox.components[1].part', 'record.gearbox.components[2].part', 'record.gearbox.components[3].part', 'record.gearbox.components[4].part', 'record.gearbox.components[5].part', 'record.gearbox.components[6].part', 'record.gearbox.components[7].part', 'record.gearbox.carriers[0].path', 'record.gearbox.user_work.assembly', 'record.gearbox.user_work.features[0].path', 'record.gearbox.user_work.features[1].path']
+        Dog_m1.25_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.25_N13.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Gear_m1.25_N29.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Ring_m1.25_N55.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+        Sleeve_m1.25_N17.gear.json: 2 path(s) put onto the copy: ['sidecar.part_path', 'sidecar.record.workbook']
+ok      remake-first: the copy's record is valid: owner ('ours', ''); left on the master []; missing in the copy []; clear_saved dropped nothing (unsaved, mismatched ([], [])); the read's digest equals the record's
+fact    remake-first: the copy's assembly opened in 3.3 s; marked modified straight after the open: {'RangeBox_Layout.SLDPRT': False, 'RangeBox_Carrier_Carrier.SLDPRT': False, 'Gear_m1.25_N29.SLDPRT': False, 'Gear_m1.25_N13.SLDPRT': False, 'Ring_m1.25_N55.SLDPRT': False, 'Dog_m1.25_N17.SLDPRT': False, 'Sleeve_m1.25_N17.SLDPRT': False, 'Sprocket.SLDPRT': False, 'Housing.SLDPRT': False, 'RangeBox.SLDASM': False}
+ok      remake-first: SolidWorks found all 9 components and the layout in the copy, and the copy closed without saving (left []): elsewhere none
+ok      read RangeBox.xlsx: ok
+        warning Gears!F3: Planet: 13 teeth at 20° is below the undercut limit of 17: a generated gear would lose the bottom of its flanks, which this profile does not show. A profile shift of 0.24 or more would clear it.
+        warning Gears!F3: Planet: The tooth tip is 0.36 mm thick, under 0.3 × module (0.375 mm).
+        warning Gears!F7: RangeSlv: The teeth's tips, at 18.75 mm, are inside the base circle of 19.968 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!A3: Planet (13 teeth) is below the undercut limit, which is not modelled, and meshes Sun (29 teeth): the build checks interference only where the gears stand, so check Planet with Sun turning in SolidWorks.
+        warning Gears!A7: Output cannot reach RangeSlv: Input runs through RangeSlv's travel (from Sun at 10.5 to HighDog at −32), so Output would have to pass HighDog toward Z− or Sun toward Z+, each on Input.
+        warning Gears!A7: nothing keys RangeSlv to Output: its whole bore is teeth and no hub row is under it; add a hub on Output that a band of RangeSlv covers in every mode; as laid out none can, since its 10 mm face slides 10 mm (H −5 to L +5) and its places share no length.
+        warning Modes!A3: in N RangeSlv stands 0 mm from HighDog and 0 mm from LowDog, which it does not engage there: leave at least 0.625 mm (0.5 × module) each side. This workbook's Gears sheet has no Start band (mm) and End band (mm) columns, which give a sleeve toothed bands with a relief between them: type both headers on row 1 of the Gears sheet (after Slides, as a new workbook has them) and save.
+        5 shafts · 6 gears · 2 meshes; gate ''
+ok      remake-first: the copy reads as built from this workbook, its assembly in the copy
+ok      Excel opened RangeBox.xlsx with no dialog or repair: []
+edit    Sun 30, Planet 12, Ring 54: [('Gears', 'F2', 30), ('Gears', 'F3', 12), ('Gears', 'F4', 54)]
+excel   Gears!F2 := 30
+excel   Gears!F3 := 12
+excel   Gears!F4 := 54
+excel   saved RangeBox.xlsx
+poll    a new read 0.0 s after asking; changes:
+          Gears!F2 Sun Teeth 29 → 30
+          Gears!F3 Planet Teeth 13 → 12
+          Gears!F4 Ring Teeth 55 → 54
+ok      read RangeBox.xlsx: ok
+        warning Gears!F3: Planet: 12 teeth at 20° is below the undercut limit of 17: a generated gear would lose the bottom of its flanks, which this profile does not show. A profile shift of 0.3 or more would clear it.
+        warning Gears!F3: Planet: The tooth tip is 0.339 mm thick, under 0.3 × module (0.375 mm).
+        warning Gears!F7: RangeSlv: The teeth's tips, at 18.75 mm, are inside the base circle of 19.968 mm, so the last of each tooth is a straight radial line, not an involute; above 34 teeth it would not be.
+        warning Gears!A3: Planet (12 teeth) is below the undercut limit, which is not modelled, and meshes Sun (30 teeth): the build checks interference only where the gears stand, so check Planet with Sun turning in SolidWorks.
+        warning Gears!A7: Output cannot reach RangeSlv: Input runs through RangeSlv's travel (from Sun at 10.5 to HighDog at −32), so Output would have to pass HighDog toward Z− or Sun toward Z+, each on Input.
+        warning Gears!A7: nothing keys RangeSlv to Output: its whole bore is teeth and no hub row is under it; add a hub on Output that a band of RangeSlv covers in every mode; as laid out none can, since its 10 mm face slides 10 mm (H −5 to L +5) and its places share no length.
+        warning Modes!A3: in N RangeSlv stands 0 mm from HighDog and 0 mm from LowDog, which it does not engage there: leave at least 0.625 mm (0.5 × module) each side. This workbook's Gears sheet has no Start band (mm) and End band (mm) columns, which give a sleeve toothed bands with a relief between them: type both headers on row 1 of the Gears sheet (after Slides, as a new workbook has them) and save.
+        5 shafts · 6 gears · 2 meshes; gate ''
+classify parts changed ['Gear_m1.25_N29.SLDPRT', 'Gear_m1.25_N13.SLDPRT', 'Ring_m1.25_N55.SLDPRT']; moved []; re-place ['Planet copy 1', 'Planet copy 2', 'Planet copy 3', 'Ring']; structural []; missing []; unsaved []; refusal ''; turning True; axial []; ratios ['Sun meshes Planet copy 1', 'Sun meshes Planet copy 2', 'Sun meshes Planet copy 3', 'Planet copy 1 meshes Ring']
+        layout globals wanted []
+summary Update SolidWorks will change the values in Gear_m1.25_N29 (Sun), Gear_m1.25_N13 (Planet) and Ring_m1.25_N55 (Ring), set the gear mates Sun meshes Planet copy 1 to 30 : 12, Sun meshes Planet copy 2 to 30 : 12, Sun meshes Planet copy 3 to 30 : 12 and Planet copy 1 meshes Ring to 12 : 54 (made again, with their flags set in every mode), and re-place Ring, Carrier (the carrier), Sun, Planet (3 copies), HighDog, LowDog and RangeSlv.
+PATCH   findings.UPDATE_MAKES_MATES_WITH_MODES_ON_2024 = True in this process, for this measurement only (was True)
+PATCH   swbuild.LANDING_STEPS = () in this process, for the first press only (was (-1, 1, -2, 2, -3, 3, -4, 4))
+ok      remake-m3, the second pass: the first press, set straight: the footer offers Update SolidWorks (shown True, enabled True, Build again… needed False)
+update  SolidWorks 1.97 GB private, 10.07 GB free
+DIALOG  SolidWorks shows '': ['Close', 'Opened 15\nComponents', 'Updating\nAssembly', 'Update\nGraphics', 'Post load updating', 'Elapsed time: 0s', 'This file was last opened in 2 seconds', 'For more information, view: ']
+        in 130.6 s; SolidWorks 6.84 GB private, 9.48 GB free; loaded from disk ['Gear_m1.25_N29.SLDPRT', 'Gear_m1.25_N13.SLDPRT', 'Ring_m1.25_N55.SLDPRT', 'Dog_m1.25_N17.SLDPRT', 'Sleeve_m1.25_N17.SLDPRT', 'RangeBox_Layout.SLDPRT', 'RangeBox_Carrier_Carrier.SLDPRT', 'RangeBox.SLDASM']
+        W9a: carried []; renamed []; user in error []; user features in error []; inventory read yes; failures [('Ring_m1.25_N55.SLDPRT', 'SolidWorks reported an error rebuilding Ring_m1.25_N55.')]
+ok      the Update's check phase found no gear mate turning against its mesh: []
+status  [red] Update SolidWorks stopped. Ring_m1.25_N55.SLDPRT: SolidWorks reported an error rebuilding Ring_m1.25_N55. It had already changed Gear_m1.25_N29, Gear_m1.25_N13 and Ring_m1.25_N55, not saved, and Ring_m1.25_N55 is left in error: close them all and RangeBox in SolidWorks without saving, answering No when SolidWorks asks to save them (the files on disk are as before this Update; closing RangeBox so also discards whatever else is unsaved in it), then press Update SolidWorks again.
+fact    remake-m3, the second pass: the first press, set straight: the press took 130.6 s; SolidWorks calls by member {'OpenDoc6': 11, 'IsSuppressed2': 112, 'GetSystemValue3': 1, 'ForceRebuild3': 3}
+        shows and puts in order: []
+        configuration 'H'; visited []; put_in []; placed []; unsuppressed_in []; suppressed_in []; slid []; values_restored []; extra configurations []; extra mates []; senses unread []; positions per configuration False; failures [('Ring_m1.25_N55.SLDPRT', 'SolidWorks reported an error rebuilding Ring_m1.25_N55.')]
+fact    remake-m3, the second pass: the first press, set straight: the press took 131 s
+ok      remake-m3, the second pass: the first press, set straight: the press went through, and the footer foresaw no problem it did not meet: none
+        update  Gear_m1.25_N29.SLDPRT · trig degrees
+        ok      set "No. of Teeth"
+        ok      rebuilt once
+        update  Gear_m1.25_N13.SLDPRT · trig degrees
+        ok      set "No. of Teeth"
+        ok      rebuilt once
+        update  Ring_m1.25_N55.SLDPRT · trig degrees
+        ok      set "No. of Teeth"
+        CHECK   a sketch line lands on itself with this change, and no safe intermediate was found: Li+
+        FAIL    the rebuild reported an error
+        ok      every gear is where the workbook puts it
+        ok      worked in H, the configuration that was active; did not show the other modes
+        CHECK   your components, left as they are but where put with a gear: Sprocket-1, Sprocket-4, Sprocket-2, Sprocket-3, Housing-1
+        CHECK   your mates, left on as they are: UserAxis1, UserAxis2, UserLock1, UserLock2, UserLock3, UserAxis4, UserDist4, UserAngle4
+        CHECK   your features in Gear_m1.25_N29.SLDPRT, kept: User Keyway Sketch, User Keyway
+        mate    Sun on Input Axis
+        mate    Sun along Input
+        mate    HighDog locked to Sun
+        mate    Carrier carrier on Carrier Axis
+        mate    Carrier carrier along Carrier
+        mate    LowDog locked to Carrier carrier
+        mate    Planet copy 1 on Planet copy 1 Axis
+        mate    Planet copy 1 along Planet copy 1
+        mate    Planet copy 2 on Planet copy 2 Axis
+        mate    Planet copy 2 along Planet copy 2
+        mate    Planet copy 3 on Planet copy 3 Axis
+        mate    Planet copy 3 along Planet copy 3
+        mate    RangeSlv on Output Axis
+        mate    RangeSlv along Output
+        mate    Sun meshes Planet copy 1
+        mate    Sun meshes Planet copy 2
+        mate    Sun meshes Planet copy 3
+        mate    Planet copy 1 meshes Ring
+        mate    RangeSlv engages HighDog
+        mate    RangeSlv engages LowDog · suppressed
+        mate    UserAxis1
+        mate    UserAxis2
+        mate    UserLock1
+        mate    UserLock2
+        mate    UserLock3
+        mate    UserAxis4
+        mate    UserDist4
+        mate    UserAngle4
+        FAIL    Ring_m1.25_N55.SLDPRT: SolidWorks reported an error rebuilding Ring_m1.25_N55.
+        not saved: Gear_m1.25_N29.SLDPRT, Gear_m1.25_N13.SLDPRT, Ring_m1.25_N55.SLDPRT changed in SolidWorks; save there to keep it
+        SKIPPED 2 more parts, the layout part, the carrier part and the assembly, because Ring_m1.25_N55.SLDPRT failed
+        W9c: built []; inserted []; deleted []; mates deleted []; mates made []; remade in modes []; bands added [], removed []; modes added [], removed []; took the active mode's state []; flags lost []; not resolved []
+ok      remake-m3, the second pass: the press set straight stops in Ring_m1.25_N55 and the record marks it (['C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9c-remake-m3-sw2024-20261118-045041\\out\\remake-first\\Ring_m1.25_N55.SLDPRT']); the patch restored
+ok      remake-m3, the second pass: pressed again, the first activation since step 1: the footer offers Update SolidWorks (shown True, enabled True, Build again… needed False)
+update  SolidWorks 6.84 GB private, 9.48 GB free
+fact    Update SolidWorks: What's Wrong came up 5.56 s into the job, the worker in ActivateDoc3, owned by SolidWorks' frame: as the app's Update shows it (the ruling: a fact, not a STOP)
+DIALOG  SolidWorks shows "What's Wrong": ['Show &errors', 'Show &warnings', "&Display What's Wrong during rebuild", '&FeatureXpert', '&Close', '&Help', 'Custom1', '* Select FeatureXpert to attempt repair of the highlighted error(s).    ']
+NOTE    a SolidWorks window "What's Wrong" ['Show &errors', 'Show &warnings', "&Display What's Wrong during rebuild", '&FeatureXpert', '&Close', '&Help', 'Custom1', '* Select FeatureXpert to attempt repair of the highlighted error(s).    '] came up while GetComponentByName was in progress, before this run made any configuration
+DIALOG  SolidWorks shows '': ['Title', 'Description', 'Button1', 'Button2', 'Hyperlink Text 1', 'Hyperlink Text 2']
+NOTE    SolidWorks' notification box came up while GetNextSubFeature was in progress (exempt by the coordinator's ruling; nothing answers it)
+fact    Update SolidWorks: What's Wrong outlived its job: 1 still up 60.24 s after it, owned by SolidWorks' frame [True], the frame enabled True (the coordinator's ruling of 2026-11-18)
+fact    Update SolidWorks: What's Wrong showed during the job, as the app's Update shows it: came at [5.56] s, stayed [] s; after the job it was still up after 60.24 s (allowed 60); the script pressed its own Close ('&Close', a Button) by BM_CLICK, as a person would, and it was gone 0.25 s after the BM_CLICK (allowed 10), SolidWorks' frame enabled True: closed by the BM_CLICK; 0 up at the end, SolidWorks' frame enabled True
+        in 191.6 s; SolidWorks 6.86 GB private, 9.70 GB free; loaded from disk []
+        W9a: carried []; renamed []; user in error []; user features in error []; inventory read yes; failures [('Ring_m1.25_N55.SLDPRT', "SolidWorks reads Tooth Space and Teeth, which Gear Generator made, in error in Ring_m1.25_N55, which already holds the workbook's values, so this press could set nothing there to put it right.")]
+ok      the Update's check phase found no gear mate turning against its mesh: []
+status  [red] Ring_m1.25_N55 is still open in SolidWorks as an earlier Update SolidWorks left it, in error and holding the new values, so this press set nothing in it: close it and RangeBox in SolidWorks without saving, answering No when SolidWorks asks to save them (the files on disk are as before that Update; closing RangeBox so also discards whatever else is unsaved in it), then press Update SolidWorks again.
+fact    remake-m3, the second pass: pressed again, the first activation since step 1: the press took 191.7 s; SolidWorks calls by member {'OpenDoc6': 8, 'IsSuppressed2': 112, 'GetSystemValue3': 1}
+        shows and puts in order: []
+        configuration 'H'; visited []; put_in []; placed []; unsuppressed_in []; suppressed_in []; slid []; values_restored []; extra configurations []; extra mates []; senses unread []; positions per configuration False; failures [('Ring_m1.25_N55.SLDPRT', "SolidWorks reads Tooth Space and Teeth, which Gear Generator made, in error in Ring_m1.25_N55, which already holds the workbook's values, so this press could set nothing there to put it right.")]
+fact    remake-m3, the second pass: pressed again, the first activation since step 1: the press took 192 s
+ok      remake-m3, the second pass: pressed again, the first activation since step 1: the press went through, and the footer foresaw no problem it did not meet: none
+        ok      every gear is where the workbook puts it
+        ok      worked in H, the configuration that was active; did not show the other modes
+        CHECK   your components, left as they are but where put with a gear: Sprocket-1, Sprocket-4, Sprocket-2, Sprocket-3, Housing-1
+        CHECK   your mates, left on as they are: UserAxis1, UserAxis2, UserLock1, UserLock2, UserLock3, UserAxis4, UserDist4, UserAngle4
+        CHECK   your features in Gear_m1.25_N29.SLDPRT, kept: User Keyway Sketch, User Keyway
+        mate    Sun on Input Axis
+        mate    Sun along Input
+        mate    HighDog locked to Sun
+        mate    Carrier carrier on Carrier Axis
+        mate    Carrier carrier along Carrier
+        mate    LowDog locked to Carrier carrier
+        mate    Planet copy 1 on Planet copy 1 Axis
+        mate    Planet copy 1 along Planet copy 1
+        mate    Planet copy 2 on Planet copy 2 Axis
+        mate    Planet copy 2 along Planet copy 2
+        mate    Planet copy 3 on Planet copy 3 Axis
+        mate    Planet copy 3 along Planet copy 3
+        mate    RangeSlv on Output Axis
+        mate    RangeSlv along Output
+        mate    Sun meshes Planet copy 1
+        mate    Sun meshes Planet copy 2
+        mate    Sun meshes Planet copy 3
+        mate    Planet copy 1 meshes Ring
+        mate    RangeSlv engages HighDog
+        mate    RangeSlv engages LowDog · suppressed
+        mate    UserAxis1
+        mate    UserAxis2
+        mate    UserLock1
+        mate    UserLock2
+        mate    UserLock3
+        mate    UserAxis4
+        mate    UserDist4
+        mate    UserAngle4
+        FAIL    Ring_m1.25_N55.SLDPRT: SolidWorks reads Tooth Space and Teeth, which Gear Generator made, in error in Ring_m1.25_N55, which already holds the workbook's values, so this press could set nothing there to put it right.
+        nothing changed in SolidWorks
+        SKIPPED the assembly, because Ring_m1.25_N55.SLDPRT is in error
+        W9c: built []; inserted []; deleted []; mates deleted []; mates made []; remade in modes []; bands added [], removed []; modes added [], removed []; took the active mode's state []; flags lost []; not resolved []
+fact    remake-m3, the second pass: in the app's press again, the first activation since step 1, What's Wrong came [(5.56, 'ActivateDoc3')] (s into the job, the call in progress); outlived the press: the script pressed its own Close ('&Close', a Button) by BM_CLICK, as a person would, and it was gone 0.25 s after the BM_CLICK (allowed 10), SolidWorks' frame enabled True: closed by the BM_CLICK; status 'Ring_m1.25_N55 is still open in SolidWorks as an earlier Update SolidWorks left it, in error and holding the new values, so this press set nothing in it: close it and RangeBox in SolidWorks without saving, answering No when SolidWorks asks to save them (the files on disk are as before that Update; closing RangeBox so also discards whatever else is unsaved in it), then press Update SolidWorks again.'; result {'changed': [], 'mates_made': [], 'remade_in_modes': [], 'placed': [], 'failures': [('Ring_m1.25_N55.SLDPRT', "SolidWorks reads Tooth Space and Teeth, which Gear Generator made, in error in Ring_m1.25_N55, which already holds the workbook's values, so this press could set nothing there to put it right.")], 'skipped': 'the assembly, because Ring_m1.25_N55.SLDPRT is in error'}; calls that change or show none
+fact    remake-m3, the second pass: not read in this pass, since each read opens and activates a document: the parts' and the assembly's globals, the assembly's frames, mates and flags, the gear mates' ratios, the ring's codes; the strict wrote-nothing check is the first pass's step 2
+FAIL    remake-m3, the second pass: pressed again straight after step 1, it stopped again on Ring_m1.25_N55.SLDPRT alone and wrote nothing by its traced calls, every save flag and file time, and its result, said to close Ring_m1.25_N55 and RangeBox without saving, answering No, and the record keeps its mark: ["flags [('RangeBox.SLDASM', False, True)]"]
+person  remake-m3, the second pass: closed every document of the copy without saving; left []
+PATCH   findings.UPDATE_MAKES_MATES_WITH_MODES_ON_2024 back to True
+        remake-first, the copy's end: SolidWorks 2024, this run's modified documents saved before the close: []
+ok      remake-first, the copy's end: remake-first ends clean: every document of it closed in SolidWorks (left []), Excel's workbook closed (['RangeBox.xlsx']), no open document by a file name it holds ([])
+time    remake-m3: 1287 s; 1 failed; SolidWorks 2.63 GB private, 9.93 GB free
+excel   quit our own Excel
+close   left of ours []; stray []; lost []; SolidWorks 2.40 GB private, 10.19 GB free
+dialogs progress boxes seen {'Calculating Interference Detection': 0, 'Updating...': 0, 'Opening': 0, 'Loading...': 0}; other windows the watch logged: 4
+awake   display and system released (previous state -0x7ffffffd)
+result  written to C:\Users\M0obo\Documents\GearGeneratorProbe\w9c-remake-m3-sw2024-20261118-045041\w9c-demo-20261118-045156.json; masters kept {'rangebox': '', 'setup': 'C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9a-confirm-sw2024-20261117-002313\\out\\setup.master', 'reducer': ''}
+noted   a SolidWorks window "What's Wrong" ['Show &errors', 'Show &warnings', "&Display What's Wrong during rebuild", '&FeatureXpert', '&Close', '&Help', 'Custom1', '* Select FeatureXpert to attempt repair of the highlighted error(s).    '] came up while GetNextFeature was in progress, before this run made any configuration
+noted   SolidWorks' notification box came up while GetNextSubFeature was in progress (exempt by the coordinator's ruling; nothing answers it)
+noted   a SolidWorks window "What's Wrong" ['Show &errors', 'Show &warnings', "&Display What's Wrong during rebuild", '&FeatureXpert', '&Close', '&Help', 'Custom1', '* Select FeatureXpert to attempt repair of the highlighted error(s).    '] came up while GetComponentByName was in progress, before this run made any configuration
+noted   SolidWorks' notification box came up while GetNextSubFeature was in progress (exempt by the coordinator's ruling; nothing answers it)
+done    1 failed: ['remake-m3, the second pass: pressed again straight after step 1, it stopped again on Ring_m1.25_N55.SLDPRT alone and wrote nothing by its traced calls, every save flag and file time, and its result, said to close Ring_m1.25_N55 and RangeBox without saving, answering No, and the record keeps its mark: ["flags [(\'RangeBox.SLDASM\', False, True)]"]']; 4 noted; 0 STOP(s), a hung worker included: []

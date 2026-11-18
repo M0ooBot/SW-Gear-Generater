@@ -307,6 +307,7 @@ class Job:
     # inventory of the user's work), and, for a Build again…, the assembly it leaves behind, read first.
     revision: Tuple[int, ...] = ()
     before: Optional[swbuild.OldAssembly] = None
+    carry: Optional[swbuild.Carry] = None    # W9d: what a carrying Build again… was given (W9D-INTERFACES §2.1)
 
     @property
     def updating(self) -> bool:
@@ -619,12 +620,18 @@ class WorkbookWindow(tk.Toplevel):
             return True
 
     def _saved_since(self) -> bool:
-        """Whether a document the record says Update left unsaved is newer on disk now (saved in SolidWorks):
+        """Whether a document the record says Update left unsaved, or the assembly a Build again… carried into unsaved
+        (W9d), is newer on disk now (saved in SolidWorks):
         a cheap look at those files' times only, so the footer stops asking for the save without a re-read."""
-        if self.record is None or not (self.record.unsaved or self.record.mismatched) or self._pending is not None:
+        carried = store.carry_unsaved(self.record)          # W9d (§9.4): the carry's own mark, by its own rule
+        if self.record is None or not (self.record.unsaved or self.record.mismatched or carried) \
+                or self._pending is not None:
             return False
-        return store.clear_saved(store.LinkRecord(unsaved=dict(self.record.unsaved),
-                                                  mismatched=dict(self.record.mismatched)))
+        look = store.LinkRecord(unsaved=dict(self.record.unsaved), mismatched=dict(self.record.mismatched))
+        if carried is not None:
+            look.gearbox = store.GearboxRecord(assembly=self.record.gearbox.assembly,
+                                               carry=store.CarryEntry(unsaved_at=carried.unsaved_at))
+        return store.clear_saved(look)
 
     def _refresh_read_line(self) -> None:
         if not self.read_at:
@@ -1392,6 +1399,14 @@ class WorkbookWindow(tk.Toplevel):
         job.before = wb_update.old_assembly(self.record, plan)
         if job.before is not None:
             kwargs["before"] = job.before
+            # W9d (W9D-INTERFACES §2.1): and carries the user's work into the new revision, from the very old assembly
+            # it reads first. A carry that cannot be worked out leaves W9a's read as it was.
+            try:
+                job.carry = wb_update.carry_for(self.record, plan, job.before)
+            except Exception:  # noqa: BLE001 - the build goes ahead as W9a's
+                job.carry = None
+            if job.carry is not None:
+                kwargs["carry"] = job.carry
         job.journaled = self._write_journal(plan)
 
         def work(session: Any) -> Any:
@@ -1544,10 +1559,21 @@ class WorkbookWindow(tk.Toplevel):
         try:
             text, ok = ui_text.gearbox_status(job.plan, result, again=_had_assembly(job.record))
             if job.before is not None and getattr(getattr(result, "assembly", None), "saved", ""):
-                # W9a: what of the user's stayed in the old assembly, as the job read it first (or the record held),
-                # once the new revision's assembly is saved (a build that made nothing leaves nothing behind).
-                behind = ui_text.stayed_behind_status(wb_update.stays_behind(job.record, job.plan), result, job.plan,
-                                                      job.before.path)
+                if getattr(result, "carry", None) is not None:
+                    # W9d (§9.2): what was carried into the new revision, made again and named, after the build's own;
+                    # a fault in these words never takes the build's own sentence with it (the review's note).
+                    try:
+                        anchors = wb_gearbox.carry_anchors(job.carry, result.carry, job.revision)
+                        behind = ui_text.carried_status(result, job.plan, job.before.path, anchors, job.revision,
+                                                        carry=job.carry,
+                                                        stays=wb_update.stays_behind(job.record, job.plan))
+                    except Exception as exc:  # noqa: BLE001
+                        behind = ui_text.carry_unsaid(job.plan, result, exc)
+                else:
+                    # W9a: what of the user's stayed in the old assembly, as the job read it first (or the record
+                    # held), once the new revision's assembly is saved (a build that made nothing leaves nothing).
+                    behind = ui_text.stayed_behind_status(wb_update.stays_behind(job.record, job.plan), result,
+                                                          job.plan, job.before.path)
                 if behind:
                     text = f"{text} {behind}"
         except Exception as exc:  # noqa: BLE001
@@ -1556,7 +1582,7 @@ class WorkbookWindow(tk.Toplevel):
             record, may_write, notes = self._open_record()
             finished = wb_gearbox.finish_build(job.plan, result, record, workbook=self.link.path,
                                                digest=job.digest, written_by=f"gear-generator {__version__}",
-                                               revision=job.revision)
+                                               revision=job.revision, carry=job.carry)
             if record is None and finished.record is not None:
                 # A fresh record: keep what this session knows of its own last Export.
                 finished.record.own_digest, finished.record.recalc = self.link.own_digest, self.recalc
@@ -1595,7 +1621,7 @@ class WorkbookWindow(tk.Toplevel):
             # lays to the user what that Update left (Finished.earlier_update; None when the finish raised).
             text, ok = ui_text.gearbox_update_status(job.update, result, dragged, revision=job.revision,
                                                      meshes=gearbox.meshes if gearbox is not None else None,
-                                                     finished=finished)
+                                                     finished=finished, record=job.record)
         except Exception as exc:  # noqa: BLE001
             text, ok = ui_text.collect_failed(exc, updating=True), False
         return ui_text.Note(" ".join([text] + notes + faults), ok and not faults)

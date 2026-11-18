@@ -1888,7 +1888,17 @@ def gearbox_update_status(update, result, dragged: Sequence[str] = (), **kwargs)
     if not still:
         return text, ok
     from .workbook.update import assembly_holding
-    said = still_in_error_sentence(still, assembly_holding(update, still))
+    said = still_in_error_sentence(still, assembly_holding(update, still),
+                                   record=_record_of(finished, kwargs.get("record")),
+                                   own=getattr(update, "assembly", "") or "")
+    if whats_wrong_stays(kwargs.get("revision") or ()) and _stopped_before_the_assembly(result):
+        # The review of 1dc9350 (§3): this press brings the assembly forward with the part in error, and the box it
+        # raises does not go by itself when nothing rebuilds after it; said once, after the sentence, and NEXT not
+        # beside it. Only for a press that stopped before rebuilding the assembly (the re-check of 7d96316, 1f8540f):
+        # every box measured in a press that went on and rebuilt went by itself.
+        said += " " + whats_wrong_stays_sentence(len(still))
+        for sentence in (whats_wrong_next_sentence(1), whats_wrong_next_sentence(2)):
+            text = text.replace(" " + sentence, "")
     if result.failures:
         from .workbook.update import document_stem
         stems = {document_stem(p) for p in still}
@@ -1904,24 +1914,67 @@ def gearbox_update_status(update, result, dragged: Sequence[str] = (), **kwargs)
     return f"{text} {said}", False
 
 
-def _close_unsaved(named: Sequence[str], whom: str, assembly: str, which: str) -> str:
+def _stopped_before_the_assembly(result) -> bool:
+    """Whether a press stopped before it rebuilt the assembly: a failure, and the assembly among what its result says
+    it did not get to (``skipped``, as every Update stop that leaves the assembly undone words it)."""
+    return bool(getattr(result, "failures", None)) and "the assembly" in str(getattr(result, "skipped", "") or "")
+
+
+def _record_of(finished, record=None):
+    """The record a job's sentence judges the carry by: the finish's (``Finished.record``, what it wrote), else the
+    one the window passes (the job's, as planned)."""
+    return getattr(finished, "record", None) or record
+
+
+def _close_unsaved(named: Sequence[str], whom: str, assembly: str, which: str, *, own: str = "",
+                   record=None) -> str:
     """*close it in SolidWorks without saving (the file on disk is as before that Update), then press Update
     SolidWorks again.* ``whom`` is *it*, *them* or *them all* for the documents ``named`` (stems). With ``assembly``
     (a path, :func:`workbook.update.assembly_holding`): *close it and RangeBox in SolidWorks without saving,
     answering No when SolidWorks asks to save them (the files on disk are as before that Update), then press Update
-    SolidWorks again.*, the assembly not named twice when it is among them (should-fix A: SolidWorks marks the open assembly modified when a part of it is changed,
-    and keeps a part loaded with its changes while the assembly stays open). ``which``: *this* or *that* Update."""
+    SolidWorks again.*, the assembly not named twice when it is among them (should-fix A: SolidWorks marks the open assembly modified once a
+    part of it has been changed (seen after the part's change on 2026, run 11; at the assembly's first open-and-activate
+    after it on 2024, remake-m3, W9C-RUNS-REVIEW.md's review of 1dc9350, §2), and keeps a part loaded with its changes
+    while the assembly stays open, its save flag no longer saying so once its own window is closed (2024, step 2b)). ``which``: *this* or *that* Update.
+
+    W9d, the merge's ruling: where the assembly closed is the record's (``assembly``, or ``own`` among ``named``), the
+    advice says what closing it unsaved costs (:func:`_close_costs`): whatever else is unsaved in it, including,
+    while it holds what Build again… carried unsaved (``record``'s ``CarryEntry``), that, with where it came from."""
     asm = _stem(assembly) if assembly else ""
+    costs = _close_costs(named, asm, own, record)
     if asm:
         also = f" and {asm}" if asm.casefold() not in {n.casefold() for n in named} else ""
         return (f"close {whom}{also} in SolidWorks without saving, answering No when SolidWorks asks to save "
-                f"them (the files on disk are as before {which} Update), then press Update SolidWorks again.")
+                f"them (the files on disk are as before {which} Update{costs}), then press Update SolidWorks again.")
     one = whom == "it"
     return (f"close {whom} in SolidWorks without saving (the {'file' if one else 'files'} on disk "
-            f"{'is' if one else 'are'} as before {which} Update), then press Update SolidWorks again.")
+            f"{'is' if one else 'are'} as before {which} Update{costs}), then press Update SolidWorks again.")
 
 
-def still_in_error_sentence(paths: Sequence[str], assembly: str = "") -> str:
+CLOSE_LOSES_CARRY = "including what Build again… carried into it"    # the cost clause's mark (the footer's rule)
+
+
+def _close_costs(named: Sequence[str], asm: str, own: str, record) -> str:
+    """What closing the record's assembly without saving costs besides the Update's own changes, said inside the
+    advice (the merge's ruling, and W9C-RUNS-REVIEW's low should-fix, in the words of the review of 9cbfc08):
+    *; closing RangeBox so also discards whatever else is unsaved in it*, and while it holds a carry unsaved
+    (``store.carry_unsaved``) *…, including what Build again… carried into it, which RangeBox.SLDASM held when it was
+    carried* (the app cannot see whether the old assembly changed since). The app reads no save flag of an assembly
+    open before the press, so the first is said whenever the assembly is closed, never as a fact about it. ``""``
+    when the assembly is not among what is closed."""
+    closes = asm or next((n for n in named if own and n.casefold() == _stem(own).casefold()), "")
+    if not closes:
+        return ""
+    out = f"; closing {closes} so also discards whatever else is unsaved in it"
+    from . import store
+    carry = store.carry_unsaved(record)
+    box = getattr(record, "gearbox", None)
+    if carry is not None and box is not None and _stem(box.assembly).casefold() == closes.casefold():
+        out += f", {CLOSE_LOSES_CARRY}, which {_file(carry.assembly) or 'the old assembly'} held when it was carried"
+    return out
+
+
+def still_in_error_sentence(paths: Sequence[str], assembly: str = "", *, record=None, own: str = "") -> str:
     """*Gear_m1.25_N29 is still open in SolidWorks as an earlier Update SolidWorks left it, in error and holding the
     new values, so this press set nothing in it: close it in SolidWorks without saving (the file on disk is as before
     that Update), then press Update SolidWorks again.* With ``assembly`` (the record's, holding the part): *… close it
@@ -1931,11 +1984,12 @@ def still_in_error_sentence(paths: Sequence[str], assembly: str = "") -> str:
     stems = [_stem(p) for p in paths]
     return (f"{_and(stems)} {'is' if one else 'are'} still open in SolidWorks as an earlier Update "
             f"SolidWorks left {'it' if one else 'them'}, in error and holding the new values, so this press set "
-            f"nothing in {'it' if one else 'them'}: " + _close_unsaved(stems, 'it' if one else 'them', assembly, "that"))
+            f"nothing in {'it' if one else 'them'}: " + _close_unsaved(stems, 'it' if one else 'them', assembly, "that",
+                                                                        own=own, record=record))
 
 
 def _gearbox_update_status(update, result, dragged: Sequence[str] = (), *, meshes=None,
-                          finished=None, revision: Sequence[int] = ()) -> Tuple[str, bool]:
+                          finished=None, revision: Sequence[int] = (), record=None) -> Tuple[str, bool]:
     """A finished update's sentence (``UpdatePlan``, ``swbuild.GearboxUpdate``, ``Finished.dragged``), ending
     with :func:`save_to_keep` naming the documents whenever ``result.changed`` is not empty; *SolidWorks already
     matches the workbook: nothing was changed.* when nothing was. ``meshes``: the record's listed meshes (pairs of
@@ -1981,6 +2035,7 @@ def _gearbox_update_status(update, result, dragged: Sequence[str] = (), *, meshe
         if motion and result.skipped and getattr(update, "in_place", None):
             text += f" It did not get to {str(result.skipped).rstrip('.')}."
         in_error = _parts_left_in_error(result)
+        next_said = False
         # The review of the M3 fix, (iii): a part an earlier stop left in error, still open so (Finished
         # .still_in_error), is closed without saving as well, so the stop never offers to save beside it.
         for path in getattr(finished, "still_in_error", ()) or () if finished is not None else ():
@@ -1996,7 +2051,12 @@ def _gearbox_update_status(update, result, dragged: Sequence[str] = (), *, meshe
             text += (f" It had already changed {_and(changed_docs)}, not saved, and {_and(in_error)} "
                      f"{'is' if len(in_error) == 1 else 'are'} left in error: "
                      + _close_unsaved(changed_docs + in_error, 'it' if one else 'them all',
-                                      assembly_holding(update, in_error), "this"))
+                                      assembly_holding(update, in_error), "this",
+                                      own=getattr(update, "assembly", "") or "", record=_record_of(finished, record)))
+            if whats_wrong_stays(revision):
+                # The review of 1dc9350 (§3): the box raised when the assembly is next brought forward stays.
+                text += " " + whats_wrong_next_sentence(len(in_error))
+                next_said = True
         elif changed_docs:
             one = len(changed_docs) == 1
             text += (f" It had already changed {_and(changed_docs)}, not saved: press Update SolidWorks again once "
@@ -2011,7 +2071,8 @@ def _gearbox_update_status(update, result, dragged: Sequence[str] = (), *, meshe
                     sentence.split(" in ", 1)[0].replace("Your ", "", 1) in text:
                 continue
             text += " " + sentence
-        if (changed_docs or result.placed) and _users_in_error(result) and whats_wrong_shows(revision):
+        if (changed_docs or result.placed) and _users_in_error(result) and whats_wrong_shows(revision) \
+                and not next_said:
             text += " " + WHATS_WRONG_AFTER         # W9a: SolidWorks 2024's box, once, after a stop that wrote
         return text, False
 
@@ -2236,7 +2297,7 @@ def _copy_sentence(plan) -> str:
             "beside them, sharing and overwriting nothing.")
 
 
-def build_again_question(update, again, *, record=None) -> str:
+def build_again_question(update, again, *, record=None, foresight=None) -> str:
     """The *Build again?* question (``UpdatePlan``, and the ``GearboxPlan`` it would run): why Update cannot carry
     the change, what the new revision makes and reuses — and why a part is made new although one was built — and,
     decision 8, that the reused parts are shared, so a later Update changes the earlier revision's assembly too.
@@ -2249,7 +2310,10 @@ def build_again_question(update, again, *, record=None) -> str:
     revision's gears are mated to turn.* — in place of *Nothing on record
     needs a new revision.*, or after the reasons. Without ``record`` nothing
     is said about it: ``update.motion`` alone cannot tell a static gearbox
-    from a turning one whose change needs a new revision."""
+    from a turning one whose change needs a new revision.
+
+    W9d: what of the user's work the new revision takes (:func:`carry_sentence`), from ``foresight``
+    (``workbook.update.CarryForesight``; None: worked here from ``record``)."""
     from .store import GEARBOX_STATIC
     from .workbook.gearbox import MISMATCHED, UNSAVED
     reasons = []
@@ -2322,9 +2386,12 @@ def build_again_question(update, again, *, record=None) -> str:
                  f"{'it' if one else 'one of them'} changes {old} too.")
     else:
         text += f" Nothing is overwritten, and {old} and its files are left as they are."
-    # W9a (K5 until W9d): what of the user's stays behind, from the record's inventory with its time.
-    from .workbook.update import stays_behind
-    behind = stays_behind_sentence(stays_behind(record, again), again)
+    # W9d (W9D-INTERFACES §9.1): what of the user's the new revision takes, from the record's inventory with its time
+    # through plan_carry's foresight (W9a's stays-behind clause, led by its finding, while CARRY_INSERTS is unset).
+    if foresight is None:
+        from .workbook.update import carry_foresight
+        foresight = carry_foresight(record, again)
+    behind = carry_sentence(foresight, again)
     if behind:
         text += " " + behind
     return text
@@ -2422,7 +2489,7 @@ def _ready_parts(assessment, plan, folder: str, superseded: Sequence[str] = (), 
 
 
 def _unsaved_line(paths: Sequence[str], update_puts_back: bool = False, in_error: Sequence[str] = (),
-                  assembly: str = "") -> str:
+                  assembly: str = "", record=None) -> str:
     """The save asked for once, naming every document of the current revision Update changed and that is not
     saved: parts first, the assembly last, as Update changed them. Nothing here can know whether SolidWorks has
     them open still, so the sentence is true either way (second review N2): if SolidWorks closed them without
@@ -2439,7 +2506,9 @@ def _unsaved_line(paths: Sequence[str], update_puts_back: bool = False, in_error
         return (f"{_and(_stem(p) for p in paths)} {'has' if one else 'have'} changes from Update SolidWorks that are "
                 f"not saved, and {_and(_stem(p) for p in failed)} {'was' if len(failed) == 1 else 'were'} left in "
                 "error when it stopped: " + _close_unsaved([_stem(p) for p in paths], 'it' if one else 'them all',
-                                                          assembly, "that"))
+                                                          assembly, "that", record=record,
+                                                          own=getattr(getattr(record, "gearbox", None), "assembly",
+                                                                      "") or ""))
     then = (" press Update SolidWorks to make them again." if update_puts_back else " those changes are gone.")
     return (f"{_and(_stem(p) for p in paths)} {'has' if one else 'have'} changes from Update SolidWorks that are not "
             f"saved: save {them} in SolidWorks to keep {them}. If SolidWorks closed {them} without saving,{then}")
@@ -2659,13 +2728,26 @@ def workbook_footer(assessment, *, record=None, record_problem: str = "", plan=N
         if unsaved:
             in_error = getattr(record, "unsaved_in_error", ()) or ()
             from .workbook.update import assembly_holding
-            text += " " + _unsaved_line(unsaved, puts_back, in_error, assembly_holding(record, in_error) if in_error
-                                        else "")
+            said = _unsaved_line(unsaved, puts_back, in_error, assembly_holding(record, in_error) if in_error
+                                 else "", record=record)
+            text += " " + said
+        else:
+            said = ""
+        carried = carry_footer_line(record)       # W9d (§9.4): the carry a Build again… left unsaved, until saved
+        if carried and CLOSE_LOSES_CARRY not in said:
+            # The merge's ruling: beside advice to close the assembly without saving, that advice says what it costs,
+            # and the save is never asked.
+            text += " " + carried
         if subject and plan is not None and not plan.refusal:
             back = _held_back(plan, subject, after_unsaved_line=bool(unsaved))
             if back:
                 text += " " + back
     if note is not None:
+        carried = carry_footer_line(record)
+        if carried and note.kind == NOTE_JOB and (_asks_carry_save(note.text, record)
+                                                  or CLOSE_LOSES_CARRY in note.text):
+            carried = ""                       # the build's own sentence asks the save already (W9a's rule 3), or
+            #                                    says to close the assembly without saving and what that costs
         if refused_shown and note.kind == NOTE_JOB:
             text, ok = note.text, note.ok      # the refusing build's own sentence already says all of it
         elif note.kind == NOTE_ANSWER:
@@ -2674,9 +2756,20 @@ def workbook_footer(assessment, *, record=None, record_problem: str = "", plan=N
             text, ok = note.text + _left_for_later(a.parts), note.ok
         else:
             text = _after_note(note, text)
+        if carried and note.kind == NOTE_JOB:
+            # §9.4 (the demonstration's record check): while the carry stands unsaved the footer says so after a job's
+            # own sentence too, unless that sentence asks the save itself.
+            text += " " + carried
     if held:
         text += " " + held
     return footer(text + due, ok, build_on, update_on)
+
+
+def _asks_carry_save(text: str, record) -> bool:
+    """Whether a job's sentence already asks the carry's save (``carried_status``' last sentence)."""
+    box = getattr(record, "gearbox", None)
+    name = _stem(box.assembly) if box is not None and box.assembly else ""
+    return bool(name) and f"Save {name} in SolidWorks to keep what was carried." in text
 
 
 # -- W4: what the Workbook window itself says around a job (the window wiring) ----------------------------------
@@ -4435,15 +4528,49 @@ def _clauses(clauses: Sequence[str]) -> str:
 
 
 # SolidWorks 2024's What's Wrong box in the app's Update (measured, d7cbcda): with something of the user's in error it
-# shows for some seconds, blocks nothing and goes by itself, and the Update completes; 2026 shows none. The app leaves
-# it alone and changes no setting (the coordinator's ruling); these say so, once, where the version is measured to
-# show it (``swbuild.whats_wrong_shows_in_update``), so the user is not surprised.
-WHATS_WRONG_AHEAD = ("SolidWorks may show its What's Wrong box for up to half a minute during the Update: leave it "
-                     "alone, it closes by itself, and the Update carries on.")
+# shows for some seconds, blocks nothing and goes while SolidWorks rebuilds, and the Update completes; 2026 shows none.
+# Since remake-m3 on 2024 (W9C-RUNS-REVIEW.md, the review of 1dc9350, §3): the box raised at the first activation after
+# a stop left a part in error stays when nothing rebuilds after it, until its Close button is pressed
+# (findings.WHATS_WRONG_STAYS_WITHOUT_A_REBUILD). The app leaves it alone and changes no setting (the coordinator's
+# rulings of 2026-11-17 and 2026-11-18); these tell the user truly what it does, once, where the version is measured
+# to show it and to leave it up so (``swbuild.whats_wrong_shows_in_update`` and ``swbuild.whats_wrong_stays``).
+WHATS_WRONG_AHEAD = ("SolidWorks may show its What's Wrong box during the Update: leave it alone while the Update runs. "
+                     "It closes by itself once SolidWorks rebuilds; if the Update stops before that, it stays until you "
+                     "close it with its Close button.")
 WHATS_WRONG_AFTER = ("SolidWorks may have shown its What's Wrong box for up to half a minute during the Update; nothing "
                      "in it needed answering.")
-# Measured on 2024: 22 to 23 s on a gearbox with modes, 3 to 5 s on a plain one (W9A-CLOSE-2024-REVIEW.md); what a
-# person pressing its buttons mid-Update does was not measured, so the sentence asks them to leave it.
+# Measured on 2024: 22 to 23 s on a gearbox with modes, 3 to 5 s on a plain one (W9A-CLOSE-2024-REVIEW.md), in Updates
+# that rebuilt; what a person pressing its buttons mid-Update does was not measured, so AHEAD asks them to leave it
+# while the Update runs. AFTER is said only after an Update that changed or put something and left no part in error.
+WHATS_WRONG_STAYS = ("SolidWorks may show its What's Wrong box for that part when this press brings the assembly "
+                     "forward; it does not close by itself: close it with its Close button, then close the documents as "
+                     "above.")
+WHATS_WRONG_NEXT = ("SolidWorks may show its What's Wrong box for the part left in error when the assembly is next "
+                    "brought forward; it does not close by itself: close it with its Close button.")
+# STAYS: once after the still-in-error sentence (gearbox_update_status); NEXT: once in a stop that leaves a part in
+# error, in place of AFTER there. Both rest on two programmatic activations (the script's read and the app's press);
+# a person's own is an inference, hence "may". With several parts the words name them as several.
+
+
+def whats_wrong_stays_sentence(count: int = 1) -> str:
+    """:data:`WHATS_WRONG_STAYS`, for ``count`` parts still in error (*for those parts* where several)."""
+    return WHATS_WRONG_STAYS if count <= 1 else WHATS_WRONG_STAYS.replace("for that part", "for those parts")
+
+
+def whats_wrong_next_sentence(count: int = 1) -> str:
+    """:data:`WHATS_WRONG_NEXT`, for ``count`` parts left in error (*for the parts left in error* where several)."""
+    return WHATS_WRONG_NEXT if count <= 1 else WHATS_WRONG_NEXT.replace("for the part left", "for the parts left")
+
+
+def whats_wrong_stays(revision: Sequence[int]) -> bool:
+    """Whether the SolidWorks of ``revision`` is measured to show What's Wrong with work in error AND to leave the box
+    raised at the first activation after a stop up until it is closed (``swbuild.whats_wrong_shows_in_update`` and
+    ``swbuild.whats_wrong_stays`` both True; 2024); False elsewhere, unmeasured, or the revision unknown."""
+    from . import swbuild
+    stays = getattr(swbuild, "whats_wrong_stays", None)
+    if stays is None or not revision:
+        return False
+    return whats_wrong_shows(revision) and stays(tuple(int(n) for n in revision)) is True
 
 
 def whats_wrong_shows(revision: Sequence[int]) -> bool:
@@ -4526,7 +4653,7 @@ def _prediction(ahead, at: str, known: Sequence[str] = ()) -> Tuple[str, bool]:
         one = len(work_errors) == 1
         text = _joined(text, f"Your {_and(work_errors)} {'was' if one else 'were'} already in error in SolidWorks "
                              "then.")
-        if whats_wrong_shows(entry.revision):
+        if whats_wrong_stays(entry.revision):
             text = _joined(text, WHATS_WRONG_AHEAD)
     return text, True
 
@@ -5046,3 +5173,1111 @@ def in_place_after(update, result) -> List[str]:
     if ip and ip.first_mode and removed:
         out.append(f"{removed[0]} was the first mode on record; {ip.first_mode} is now.")
     return out
+
+
+# -- W9d: Build again… carries the user's work (ISSUE-1-PLAN §2.5; W9D-INTERFACES §9) ----------------------------
+
+# The kinds of mate a carry makes again (§2.5), as the sentences and CARRY_REMAKE_KINDS word them.
+CARRY_KIND_WORDS = ("coincident", "concentric", "parallel", "perpendicular", "tangent", "distance", "angle",
+                    "limit distance", "limit angle", "lock", "gear")
+# The standing list (§9.1, §9.2). The sub-assembly clause only where the SolidWorks known has
+# CARRY_INSERTS_A_SUBASSEMBLY True and no sub-assembly is named as not carried (the review of the second 2026 run,
+# must-fix 2): while that finding is unset a sub-assembly of yours is named and left, so it comes over no way at all.
+_CARRY_BEHIND = "Assembly features, display states and appearances stay behind"
+CARRY_STANDING = f"{_CARRY_BEHIND}; pattern instances come over as components of their own."
+CARRY_STANDING_NO_PATTERN = f"{_CARRY_BEHIND}."
+CARRY_STANDING_RIGID = (f"{_CARRY_BEHIND}; sub-assemblies come over rigid, pattern instances as components of their "
+                        "own.")
+CARRY_STANDING_RIGID_NO_PATTERN = f"{_CARRY_BEHIND}; sub-assemblies come over rigid."
+CARRY_IN_CONTEXT = "If a part of yours was made in context of {old}, it still refers to that assembly's parts."
+_ENTITY_WORDS = {"face": "a face", "edge": "an edge", "vertex": "a vertex", "origin": "an origin",
+                 "feature": "a feature", "plane": "a base plane", "whole": "the whole", "unread": "an entity"}
+_ENTITY_PLURALS = {"face": "faces", "edge": "edges", "vertex": "vertices"}
+
+import re as _re  # noqa: E402 - W9d's path reduction only
+
+# A drive or share, then folders: a folder's name may hold spaces, but not a file's extension before a space or a
+# punctuation mark, nor ". " or ", " (so a path is never run on into the words after a file); then a word ending in a
+# backslash before a file's name (what is left of a folder the first pass stopped in; "A\B" with no file is left).
+_FOLDERS = _re.compile(r"(?:[A-Za-z]:|\\\\[^\\/\s]+)[\\/]+"
+                       r"(?:(?:(?!\.[A-Za-z][A-Za-z0-9]{1,5}(?:[\s.,;:)\]]|$)|[.,;] )[^\\/:*?\"<>|\r\n])+[\\/]+)*")
+_LEFT = _re.compile(r"[^\s\\/:*?\"<>|()]+\\+(?=[^\s\\/:*?\"<>|()]+\.[A-Za-z][A-Za-z0-9]{1,5}\b)")
+
+
+def bare_files(text: str) -> str:
+    """``text`` with every Windows path reduced to its file's name (the coordinator's privacy ruling: a folder never
+    goes into the record or a sentence from what the worker says, which may hold an exception's text)."""
+    return _LEFT.sub("", _FOLDERS.sub("", str(text or "")))
+
+
+def _a(word: str) -> str:
+    return f"{'an' if word[:1].lower() in 'aeiou' else 'a'} {word}"
+
+
+def _on_version(version: str) -> str:
+    return f"SolidWorks {version}" if str(version).isdigit() else "the SolidWorks it runs on"
+
+
+def _finding_ref(finding: str) -> str:
+    return "findings." + str(finding).replace("_ON_?", "_ON_<year>")
+
+
+def _unmeasured_verb(what: str, finding: str, owner: str = "") -> str:
+    """What a finding not yet set would show Gear Generator doing, by §2.3's ``unmeasured`` first slot."""
+    if what in CARRY_KIND_WORDS:
+        return f"make {what} mates again in a new revision"
+    if what in ("face", "edge", "vertex"):
+        whose = f" of {owner}" if owner else ""
+        after = " after its part is closed and opened again" if "SURVIVES_RELOAD" in finding else \
+            " in a new revision"
+        return f"find a mate's {what}{whose} again{after}"
+    return {"origin": "read an origin as a mate's entity",
+            "insert": "carry your work into a new revision",
+            "sub-assembly": "insert a sub-assembly of yours into a new revision",
+            "configuration": "insert a component in one of its file's several configurations",
+            "gear mate on an app gear": "make a gear mate on an app gear again in a new revision",
+            "leaf": "make a mate on a part inside a sub-assembly of yours again"}.get(
+        what, f"carry what {what} needs into a new revision")
+
+
+def _marks_sub(finding: str) -> bool:
+    """Whether a sub-assembly finding reads that opening it marks it (settled the wrong way, not unset)."""
+    from . import findings
+    return finding.startswith("SUBASSEMBLY_OPEN_MARKS") and getattr(findings, finding, None) is True
+
+
+def _subjects(named, n: int = 5) -> List[str]:
+    return [bare_files(str(x)) for x in named.subjects] + [""] * n
+
+
+def carry_named_clause(named, *, name: str = "the new revision", old: str = "the old assembly",
+                       resolved: Sequence[str] = ()) -> str:
+    """One item not carried, in §9.3's words, from its ``why`` and §2.3's subjects (``swbuild.CarryNamed``):
+    *Concentric5 was on Sun's bore, and Sun's part is new because its Flank changed*. ``name`` the new revision,
+    ``old`` the old assembly's file name; ``resolved`` the components the carry left resolved in it
+    (``CarryResult.resolved_in_old``), whose lightweight state is then said in the past. No full stop: the caller ends
+    it (:func:`_with_verdict`)."""
+    from . import swbuild as sb
+    item, why = named.item, named.why
+    s = _subjects(named)
+    if why == sb.WHY_KIND:
+        return f"{item} is {_a(s[0] or 'kind of')} mate, which Gear Generator does not make again"
+    if why == sb.WHY_UNMEASURED:
+        what, finding, version, owner = s[0], s[1], s[2], s[3]
+        if what == "sub-assembly" and _marks_sub(finding):
+            return (f"your sub-assembly {item} is not carried: opening it to insert it marks it as changed in "
+                    "SolidWorks, and Gear Generator never changes a file of yours")
+        head = f"{item} is not carried" if named.what == "component" else f"{item} is not made again"
+        return (f"{head}: Gear Generator has not yet been shown to {_unmeasured_verb(what, finding, owner)} on "
+                f"{_on_version(version)} ({_finding_ref(finding)})")
+    if why == sb.WHY_PART_NEW:
+        gear, because, kind, where = s[0], s[1], s[2], s[3]
+        if where == "bore":
+            on = f"{gear}'s bore"
+        elif where == "axis":
+            on = f"a face of {gear} on its axis"
+        else:
+            on = f"{_ENTITY_WORDS.get(kind, 'an entity')} of {gear}"
+        return f"{item} was on {on}, and {gear}'s part is new because {because or 'it changed'}"
+    if why == sb.WHY_GONE:
+        what, gone, owner = s[0], s[1], s[2]
+        if what == "gear":
+            return f"{item} was on {gone}, which {name} does not have"
+        if what == "shaft":
+            return f"{item} was on the layout's {gone} Axis, and {name} has no shaft {gone}"
+        if owner:
+            return f"{item} was on {owner}'s {gone}, which {owner}'s new part does not have"
+        return f"{item} was on {gone} in an app part, which that part in {name} does not have"
+    if why == sb.WHY_ASSEMBLY_FEATURE:
+        return f"{item} is on {s[0]}, a feature you made in {old}, which is not carried"
+    if why == sb.WHY_NOT_CARRIED:
+        return f"{item} joins {s[0]}, which is not carried"
+    if why == sb.WHY_UNREAD:
+        cause = s[1]
+        if cause == sb.CAUSE_SUPPRESSED:
+            return f"{item} is on {_suppressed_where(s[2], s[3], old)}, so it could not be read and is not made again"
+        if cause == sb.CAUSE_BESIDE_LIGHTWEIGHT:
+            return f"{item} is on a plane of {old} itself, {_beside_light(s[2], resolved)}, so it is not made again"
+        if cause == sb.CAUSE_TYPE_NOT_TAKEN:
+            # The re-check of b67cdc5, item 2: SolidWorks answered; it is Gear Generator that does not take the type.
+            # The type's number stays in the record, unshown: the contract names only the types the app takes.
+            return f"{item} is on a kind of entity Gear Generator does not make mates on again"
+        if s[0] == KIND_UNANSWERED:
+            return f"SolidWorks would not say what kind of entity {item} is on"
+        # SolidWorks the subject once, and only in the worker's clause where it is the one not answering.
+        return f"{item} could not be read wholly" + (f" ({s[0]})" if s[0] else "")
+    if why == sb.WHY_LIGHTWEIGHT:
+        return f"{item} is on {s[0]}, which was lightweight in {old}, so what it joins could not be read"
+    if why == sb.WHY_NO_FILE:
+        if s[1] == "virtual":
+            return f"{item} is a virtual component, with no file of its own, so it is not carried"
+        if not s[0]:
+            return f"{item} has no file SolidWorks would name, so it is not carried"
+        return f"{item}'s file {s[0]} is not on disk, so it is not carried"
+    if why == sb.WHY_LEAF:
+        return f"{item} is on a part inside your sub-assembly {s[0]}, which Gear Generator does not make again"
+    if why == sb.WHY_NOT_FOUND:
+        return f"{item}'s {s[0] or 'entity'} of {s[1]} could not be found again in {s[2] or 'its file'}"
+    if why == getattr(sb, "WHY_TOO_LONG", "too long"):
+        kind, owner, file = s[0] or "face", s[1], s[2]
+        many = _ENTITY_PLURALS.get(kind, "entities")
+        among = f" among {file}'s {many}" if file else ""
+        return (f"{item} is on {_ENTITY_WORDS.get(kind, 'an entity')} of {owner or 'a component'} that Gear Generator "
+                f"did not look for, since finding it{among} would have taken too long")
+    if why == sb.WHY_CONFIGURATION:
+        component, used, opens = s[0] or item, s[1], s[2]
+        if not used:
+            return f"{component}'s configuration could not be read, so it is not carried"
+        besides = f", not {opens} which its file opens in," if opens and opens != used else ""
+        return (f"{component} uses its configuration {used}{besides} and Gear Generator cannot carry it in {used} "
+                "here, so it is not carried")
+    if why == sb.WHY_NO_FRAME:
+        mode = f"in {s[1]}, the mode {old} showed" if s[1] else f"in the mode {old} showed"
+        return (f"{s[0] or item} is suppressed {mode}, and SolidWorks would not say where it stands, so it is not "
+                "carried")
+    if why == getattr(sb, "WHY_REFUSED", "refused"):
+        said = s[0].rstrip(".")
+        return f"{item} is not made again: SolidWorks refused it" + (f", saying {said}" if said else "")
+    if why == sb.WHY_DIFFERS:
+        if s[0] == "left":
+            return (f"{item} made again read otherwise than it was and could not be taken out again: it is left in "
+                    f"{name} as {s[1] or item}; delete it there in SolidWorks")
+        return f"{item} made again read otherwise than it was (its {s[0] or 'definition'}), so it was taken out again"
+    if why == sb.WHY_OLD_UNREAD:
+        return f"{old} was not read" + (f": {s[0]}" if s[0] else "")
+    return f"{item} is not carried ({why})"
+
+
+_MATE_VERDICTS = ("not made again", "not make again", "taken out again", "would have taken too long")
+_COMPONENT_VERDICTS = ("not carried",)
+
+
+def _with_verdict(clause: str, what: str) -> str:
+    """A §9.3 clause as a sentence, with the item's own verdict where the clause does not say it: a mate's is *made
+    again* (a clause ending *which is not carried* speaks of its component), a component's *carried*."""
+    verdicts = _COMPONENT_VERDICTS if what == "component" else _MATE_VERDICTS
+    if not any(v in clause for v in verdicts):
+        clause += (", and it is" if ", so " in clause else ", so it is") + \
+            (" not carried" if what == "component" else " not made again")
+    return _sentence(clause[:1].upper() + clause[1:])
+
+
+def _named_sentences(named, *, name: str, old: str, refs: Optional[List[str]] = None,
+                     resolved: Sequence[str] = ()) -> List[str]:
+    """Every item not carried as sentences, one per kind of reason: those a finding not yet set holds back grouped by
+    what and finding (*Gear Generator has not yet been shown to make concentric mates again in a new revision on
+    SolidWorks 2024 (findings.CARRY_REMAKE_KINDS_ON_2024), so Concentric5 and Concentric8 are not made again.*), the
+    mates of a component not carried grouped by it, then each other one by its clause and verdict. ``refs``: when a
+    list, the findings are not named in the sentences but added to it, for one sentence at the end (the question)."""
+    from . import swbuild as sb
+    groups: Dict[Tuple[str, str, str, str], List] = {}
+    joins: Dict[str, List[str]] = {}
+    causes: Dict[Tuple[str, str, str], List[str]] = {}       # A's sixth round: (cause, component, mode) -> mates
+    out: List[str] = []
+    for n in named:
+        s = _subjects(n)
+        if n.why == sb.WHY_UNMEASURED and not (s[0] == "sub-assembly" and _marks_sub(s[1])):
+            groups.setdefault((s[0], s[1], s[2], s[3] if s[0] in ("face", "edge", "vertex") else ""), []).append(n)
+        elif n.why == sb.WHY_NOT_CARRIED and n.what == "mate":
+            joins.setdefault(s[0], []).append(n.item)
+        elif n.why == sb.WHY_UNREAD and s[1] in (sb.CAUSE_SUPPRESSED,
+                                                 sb.CAUSE_BESIDE_LIGHTWEIGHT):
+            causes.setdefault((s[1], s[2], s[3]), []).append(n.item)
+        elif n.why != sb.WHY_OLD_UNREAD:                     # said once, by the sentence for nothing read
+            out.append(_with_verdict(carry_named_clause(n, name=name, old=old, resolved=resolved), n.what))
+    lead: List[str] = []
+    for (what, finding, version, owner), items in groups.items():
+        names = [n.item for n in items]
+        verdict = "carried" if all(n.what == "component" for n in items) else "made again"
+        if refs is None:
+            ref = f" ({_finding_ref(finding)})"
+        else:
+            ref = ""
+            if _finding_ref(finding) not in refs:
+                refs.append(_finding_ref(finding))
+        lead.append(f"Gear Generator has not yet been shown to {_unmeasured_verb(what, finding, owner)} on "
+                    f"{_on_version(version)}{ref}, so {_and(names)} {'is' if len(names) == 1 else 'are'} not "
+                    f"{verdict}.")
+    for component, mates in joins.items():
+        one = len(mates) == 1
+        lead.append(f"{_and(mates)} {'joins' if one else 'join'} {component}, which is not carried, so "
+                    f"{'it is' if one else 'they are'} not made again.")
+    for (cause, component, mode), mates in causes.items():
+        one = len(mates) == 1
+        if cause == sb.CAUSE_SUPPRESSED:
+            lead.append(f"{_and(mates)} {'is' if one else 'are'} on {_suppressed_where(component, mode, old)}, so "
+                        f"{'it' if one else 'they'} could not be read and {'is' if one else 'are'} not made again.")
+        else:
+            lead.append(f"{_and(mates)} {'is' if one else 'are'} on a plane of {old} itself, "
+                        f"{_beside_light(component, resolved)}, so {'it is' if one else 'they are'} not made "
+                        "again.")
+    return lead + out
+
+
+KIND_UNANSWERED = "SolidWorks would not say what kind of entity it is"     # the worker's clause, no cause
+
+
+def _beside_light(component: str, resolved: Sequence[str] = ()) -> str:
+    """*which Gear Generator does not read while Sprocket-1 is lightweight in it*; in the past where the carry left it
+    resolved there (the re-check of b67cdc5, item 1: beside D10's *… is resolved there now*)."""
+    if component in set(resolved or ()):
+        return f"which Gear Generator did not read while {component} was lightweight in it"
+    return f"which Gear Generator does not read while {component} is lightweight in it"
+
+
+def _suppressed_where(component: str, mode: str, old: str) -> str:
+    """*Sprocket-9, which is suppressed in H, the mode RangeBox.SLDASM showed* (with no modes, *… suppressed in
+    RangeBox.SLDASM*)."""
+    return (f"{component}, which is suppressed in {mode}, the mode {old} showed" if mode
+            else f"{component}, which is suppressed in {old}")
+
+
+def _parts_left(stays, name: str, why_new: Mapping[str, str]) -> Tuple[List[str], List[Tuple[str, str]]]:
+    """W9a's features in parts made new, each part once, with the gears whose new part replaces it and why: *your
+    Keyway stays in Gear_m1.25_N29, which Sun's new part replaces because its Flank changed*; and ``(feature names,
+    part path)`` per part, for the advice that follows."""
+    if stays is None or stays.entry is None:
+        return [], []
+    by_part: Dict[str, Tuple[List[str], Tuple[str, ...]]] = {}
+    for feature, path, gears in stays.left:
+        by_part.setdefault(path, ([], gears))[0].append(feature)
+    out, parts = [], []
+    for path, (features, gears) in by_part.items():
+        replacing = [g for g in gears if g in why_new]
+        if replacing:
+            whose = f"which {_and(replacing)}'s new part replaces because {why_new[replacing[0]]}"
+        else:
+            whose = f"which {name} does not use"
+        out.append(f"your {_and(features)} {'stays' if len(features) == 1 else 'stay'} in {_stem(path)}, {whose}")
+        parts.append((_and(features), path))
+    return out, parts
+
+
+def _features_left_sentence(stays, name: str, old: str, why_new: Mapping[str, str], past: bool = False) -> str:
+    """The features left in parts made new, one sentence (§9.1, §9.2): *Your Keyway stays in Gear_m1.25_N29, which
+    Sun's new part replaces because its Flank changed; RangeBox.SLDASM and that file keep it.* (the result's with the
+    keepers in brackets)."""
+    left, parts = _parts_left(stays, name, why_new)
+    if not left:
+        return ""
+    files = "that file keeps" if len(parts) == 1 else "those files keep"
+    files = files.replace("keeps", "keep")
+    them = "it" if len(left) == 1 and " and " not in parts[0][0] else "them"
+    keep = f"{old} and {files} {them}"
+    body = f"{left[0][:1].upper()}{left[0][1:]}" + "".join(f"; {x}" for x in left[1:])
+    return _sentence(f"{body} ({keep})" if past else f"{body}; {keep}")
+
+
+def _features_question(stays, name: str, why_new: Mapping[str, str]) -> str:
+    """The question's one sentence on the user's features (§9.1, kept short, S3): those left in parts made new, with
+    why, and those that come with a part the new revision reuses: *Your Keyway stays in Gear_m1.25_N29, which Sun's new
+    part replaces (its Flank changed); your Groove comes with Sleeve_m1.25_N17.*"""
+    pieces = []
+    by_part: Dict[str, Tuple[List[str], Tuple[str, ...]]] = {}
+    for feature, path, gears in (stays.left if stays is not None and stays.entry is not None else ()):
+        by_part.setdefault(path, ([], gears))[0].append(feature)
+    for path, (features, gears) in by_part.items():
+        replacing = [g for g in gears if g in why_new]
+        whose = (f"which {_and(replacing)}'s new part replaces ({why_new[replacing[0]]})" if replacing
+                 else f"which {name} does not use")
+        pieces.append(f"your {_and(features)} {'stays' if len(features) == 1 else 'stay'} in {_stem(path)}, {whose}")
+    kept: Dict[str, List[str]] = {}
+    for feature, path in (stays.kept if stays is not None else ()):
+        kept.setdefault(path, []).append(feature)
+    for path, features in kept.items():
+        pieces.append(f"your {_and(features)} {'comes' if len(features) == 1 else 'come'} with {_stem(path)}")
+    if not pieces:
+        return ""
+    return _sentence("; ".join(pieces)[:1].upper() + "; ".join(pieces)[1:])
+
+
+def _features_kept(stays, name: str) -> List[str]:
+    kept: Dict[str, List[str]] = {}
+    for feature, path in (stays.kept if stays is not None else ()):
+        kept.setdefault(path, []).append(feature)
+    return [f"Your {_and(f)} in {_stem(p)} {'comes' if len(f) == 1 else 'come'} with that part, which {name} reuses."
+            for p, f in kept.items()]
+
+
+def _reuse_advice(fore, parts: Sequence[Tuple[str, str]], again) -> List[str]:
+    """The way back to reusing a part made new only because of the user (D17): MISMATCHED with the value and cell the
+    record's K11 entry holds, or without one; UNSAVED: save it first."""
+    from .workbook.gearbox import MISMATCHED, UNSAVED
+    out = []
+    for features, path in parts:
+        made = [m for m in getattr(again, "made_new", ()) or () if _file(m.old).lower() == _file(path).lower()]
+        if not made:
+            continue
+        why = made[0].why
+        if why == MISMATCHED:
+            value = fore.values.get(_file(path).lower()) if fore is not None else None
+            if value is not None and value.live and value.cell:
+                out.append(f"{_stem(path)} is new only because it holds {value.name} {value.live} where the workbook "
+                           f"asks {value.wanted}: answer No, type {value.live} in {value.cell}, and Build again… "
+                           f"reuses that part with your {features}.")
+            else:
+                out.append(f"{_stem(path)} is new only because it does not hold what the record says: answer No, "
+                           "make the workbook ask what that part holds in SolidWorks, and Build again… reuses it "
+                           f"with your {features}.")
+        elif why == UNSAVED:
+            out.append(f"{_stem(path)} is new only because Update SolidWorks left it unsaved: answer No and save it "
+                       f"in SolidWorks first, and Build again… reuses it with your {features}.")
+    return out
+
+
+def _not_open_clause(fore, old: str, refs: List[str]) -> str:
+    """§9.1's clause for an old assembly closed when the press is made (the window cannot know whether it will be, so
+    it is said as *if*). A closed file's versions are read without opening it; while a finding the open rests on is
+    unset it is not opened at all (the re-check's R1), else only under R.2's conditions. The findings go to ``refs``,
+    named once at the end."""
+    if fore.not_open:
+        refs.extend(_finding_ref(f) for f in fore.not_open if _finding_ref(f) not in refs)
+        return f"If {old} is closed when you press, nothing is carried: open it in SolidWorks first."
+    if fore.keeps_open:
+        if _finding_ref(fore.keeps_open) not in refs:
+            refs.append(_finding_ref(fore.keeps_open))
+        others = "nothing else is open"
+    else:
+        others = "nothing of yours is open"
+    return (f"If {old} is closed, open it first unless this SolidWorks last saved it and its files, those files are "
+            f"where it says, and {others}.")
+
+
+def _placement_words(anchors: Sequence[str], past: bool = False) -> str:
+    """Where carried components stand: against their gear (or carrier) when each has one, else where they stand."""
+    stands = "stood" if past else "stands"
+    each = "each " if len(anchors) != 1 else ""
+    bodies = [a for a in anchors if a and a != "layout"]
+    if anchors and len(bodies) == len(anchors):
+        what = "gear or carrier" if any(a.endswith(" carrier") for a in bodies) else "gear"
+        return f"{each}where it {stands} against its {what}"
+    return f"{each}where it {stands}"
+
+
+def _components_named(names: Sequence[str]) -> List[str]:
+    """Up to four components by name, else three and the rest counted (W9a's cap, with the fourth named when it is
+    the last)."""
+    names = list(dict.fromkeys(n for n in names if n))
+    return names if len(names) <= USER_NAMED + 1 else _yours(names)
+
+
+def carry_sentence(fore, again) -> str:
+    """The Build again? question's clauses on the user's work (W9D-INTERFACES §9.1; replaces W9a's
+    :func:`stays_behind_sentence`), from ``workbook.update.CarryForesight``: with ``CARRY_INSERTS`` set on the
+    SolidWorks the record last saw, what is carried and what is not, with the time it was read, one sentence per kind
+    of thing, the findings named once at the end; not set, W9a's sentence led by the finding; with no version on
+    record, what holds whichever version the press meets (:func:`_on_any_version`), or W9c's mixed form where
+    ``CARRY_INSERTS`` itself differs. ``""`` with no assembly on record."""
+    if fore is not None and fore.year == "?" and getattr(fore, "per_year", ()):
+        return " ".join(_on_any_version(fore.per_year, again))
+    return " ".join(_carry_texts(fore, again))
+
+
+def _on_any_version(per_year, again) -> List[str]:
+    """The question with no version on record and ``CARRY_INSERTS`` alike on every version known (the coordinator's
+    ruling, 2026-11-18): it is foreseen as on each version (``CarryForesight.per_year``); a sentence every version
+    says is said as fact, its version words made general (*on the SolidWorks it runs on*, *findings.…_ON_<year>*),
+    and only what differs is said as may, first, each version's own sentences behind *If the press runs on SolidWorks
+    2024:*, the rest then behind *Whichever it runs on:*. Never *not yet shown on the SolidWorks it runs on* for what
+    every version has shown."""
+    def general(text: str, year: str) -> str:
+        return text.replace(f"SolidWorks {year}", "the SolidWorks it runs on").replace(f"_ON_{year}", "_ON_<year>")
+    said = [(year, [t for t in _carry_texts(fore, again) if t]) for year, fore in per_year]
+    common = set.intersection(*[{general(t, year) for t in texts} for year, texts in said])
+    first_year, first = said[0]
+    alike = [general(t, first_year) for t in first if general(t, first_year) in common]
+    differing = [f"If the press runs on SolidWorks {year}: " + " ".join(own) for year, texts in said
+                 for own in [[t for t in texts if general(t, year) not in common]] if own]
+    if differing and alike:
+        alike[0] = f"Whichever it runs on: {alike[0]}"
+    return differing + alike
+
+
+def _carry_texts(fore, again) -> List[str]:
+    """The clauses of :func:`carry_sentence` as a list of sentences, for one version (or none known)."""
+    if fore is None:
+        return []
+    name = getattr(again, "name", "") or fore.name or "the new revision"
+    old = _file(fore.assembly) if fore.assembly else "the old assembly"
+    stays = fore.stays
+    if stays is None:
+        from .workbook.update import StaysBehind
+        stays = StaysBehind(None, fore.assembly)
+    if fore.inserts is None:
+        found = [f"CARRY_INSERTS_ON_{y}" for y in fore.unshown]
+        return [_joined(f"Whether {name} takes your work depends on the SolidWorks in use: Gear Generator has been "
+                       f"shown to do so on {_and('SolidWorks ' + y for y in fore.shown)}, not yet on "
+                       f"{_and('SolidWorks ' + y for y in fore.unshown)} ({_and(_finding_ref(f) for f in found)}), "
+                       "and the press reads which it runs on.",
+                       f"The press reads {old} again first, and says whatever it cannot carry.")]
+    if not fore.inserts:
+        lead = (f"Gear Generator has not yet been shown to carry your work into a new revision on "
+                f"{_on_version(fore.year)} ({_finding_ref('CARRY_INSERTS_ON_' + fore.year)}), so ")
+        return [lead + _stays_text(stays, again, "as read at")]
+    refs: List[str] = []
+    entry = fore.entry
+    texts: List[str] = []
+    if entry is None:
+        texts.append(f"Anything you added to {old} in SolidWorks the press reads first and carries into {name} "
+                     "where it can, saying whatever it cannot.")
+        texts.append(_not_open_clause(fore, old, refs))
+        return texts + _findings_sentence(refs, fore.year)
+    at = read_time(entry.read_at)
+    plan = fore.plan
+    carries = plan is None or bool(plan.components or plan.mates)
+    on_suppressed: Dict[str, List[str]] = {}         # B3: component -> its mates unread for it, said with it
+    beside_light: Dict[str, List[str]] = {}          # B3: lightweight component -> the assembly's own planes' mates
+    if plan is None:
+        items = _yours([c.name for c in entry.components], 0, _mate_words([m.name for m in entry.mates]))
+        texts.append(f"As read at {at}, {old} held your {_and(items)}: the press reads it again first and carries "
+                     f"into {name} what it can, saying whatever it cannot." if items else
+                     f"As read at {at}, {old} held features of yours in the app's parts, said below.")
+    else:
+        from . import swbuild as sb
+        unknown = {n.item for n in plan.named if n.why == sb.WHY_UNREAD and n.subjects
+                   and str(n.subjects[0]) == _unknown_entity()}
+        light = {c.name for c in entry.components if c.state in (1, 4)}
+        comps = [i.component.name for i in plan.components]
+        # The re-check of 11a63ab, item 1: a recorded distance or angle mate is said as *may* while the gate answers
+        # its plain and its limit kind differently, since the record keeps its type, never its type name or range.
+        limit_may = _limit_may(fore, entry, plan)
+        may_items = {m for ms in limit_may.values() for m in ms}
+        carries = carries or bool(may_items)
+        mates = [m.mate.name for m in plan.mates if m.mate.name not in may_items]
+        clauses = []
+        if comps:
+            clauses.append(f"takes your {_and(_components_named(comps))}")
+        bad = {m.name for m in entry.mates if m.code and m.code != -1}
+        if mates:
+            one = len(mates) == 1
+            clauses.append(f"makes {'your ' + mates[0] if one else f'your {len(mates)} mates'} again in the modes "
+                           f"{'it was' if one else 'each was'} on in")
+            if one and mates[0] in bad:
+                # B1's rule, each mate in one sentence: the one mate named is said in error here, not again below.
+                clauses[-1] += (f"; it was in error in {old} as read, and made again it is carried if it reads no "
+                                "error or the one it had, and not if it keeps a gear from turning")
+        may_said = _limit_may_sentences(limit_may)
+        if clauses:
+            texts.append(f"As read at {at}, {name} {' and '.join(clauses)}.")
+        elif may_said:
+            may_said[0] = f"As read at {at}, {may_said[0][:1].lower()}{may_said[0][1:]}"
+        else:
+            texts.append(f"As read at {at}, nothing of yours in {old} would be carried into {name}.")
+        # M5: a lightweight component's mates are said once, by its own sentence below, as the condition they are.
+        # The demonstration's review (item 1): what only the inventory's silence names is said as *may*, never as fact.
+        silent_ratio, silent_axis = _foresight_silences(fore, entry, plan)
+        axis_items = {m for ms in silent_axis.values() for m in ms}          # B1: by mate, not by gear
+        # B3: a mate unread for its component suppressed as read is said with that component's own sentence, as one
+        # thought; one on the assembly's own plane beside a lightweight component, with what lets it be read.
+        for n in plan.named:
+            cause = (n.subjects[1] if n.why == sb.WHY_UNREAD and len(n.subjects) > 2 else "")
+            if cause == sb.CAUSE_SUPPRESSED and any(c.name == n.subjects[2] and c.state == 0
+                                                    for c in entry.components):
+                on_suppressed.setdefault(str(n.subjects[2]), []).append(n.item)
+            elif cause == sb.CAUSE_BESIDE_LIGHTWEIGHT:
+                beside_light.setdefault(str(n.subjects[2]), []).append(n.item)
+        caused = {m for ms in list(on_suppressed.values()) + list(beside_light.values()) for m in ms}
+        named = [n for n in plan.named if n.item not in unknown and n.item not in silent_ratio
+                 and n.item not in axis_items and n.item not in caused and n.item not in may_items
+                 and not (n.why == sb.WHY_LIGHTWEIGHT and n.subjects and str(n.subjects[0]) in light)]
+        texts += _named_sentences(named, name=name, old=old, refs=refs)
+        texts += _unknown_entities(fore, entry, unknown)
+        texts += _may_sentences(silent_ratio, silent_axis)
+        texts += may_said
+        texts += _in_error_before(entry, plan, old, mates)
+        if fore.assumed and fore.configuration:
+            one = len(fore.assumed) == 1
+            refs.extend(_finding_ref(f) for f in fore.configuration if _finding_ref(f) not in refs)
+            texts.append(f"{_and(fore.assumed)} {'is' if one else 'are'} carried only if "
+                         f"{'its file has' if one else 'each file has'} one configuration.")
+    texts += _component_states(entry, old, on_suppressed)
+    for light, mates in beside_light.items():
+        one = len(mates) == 1
+        texts.append(f"{_and(mates)} {'is' if one else 'are'} on a plane of {old} itself, which Gear Generator does "
+                     f"not read while {light} is lightweight in it: {'it is' if one else 'they are'} made again only "
+                     f"if you set {light} resolved in SolidWorks before you press.")
+    left, parts = _parts_left(stays, name, fore.why_new)
+    texts.append(_features_question(stays, name, fore.why_new))
+    texts += _reuse_advice(fore, parts, again)
+    if carries:
+        texts.append(f"{name} holds what it carries unsaved.")
+        texts.append(_not_open_clause(fore, old, refs))
+        if (plan.components if plan is not None else entry.components) and fore.first and not fore.states_read:
+            texts.append(f"Each component takes, in every mode of {name}, its state in the mode {old} shows; its other "
+                         "states cannot be read without changing it.")
+        texts += _modes_said(fore, name, old)
+        # Must-fix 2: a sub-assembly the question names as not carried keeps the rigid clause out.
+        subs_left = plan is not None and any(c.kind == "assembly" and c.name not in comps for c in entry.components)
+        texts.append(_standing(fore.year, subassembly_left=subs_left))
+    return [t for t in texts if t] + _findings_sentence(refs, fore.year)
+
+
+def _foresight_silences(fore, entry, plan) -> Tuple[List[str], Dict[str, List[str]]]:
+    """What the question's foresight names only because the record's inventory is silent (the demonstration's review,
+    item 1): ``(gear mates named unread though the inventory holds them whole, with every entity's kind known — their
+    ratio and sense, never kept, are what plan_carry missed; gear id -> gear mates on a face of a gear whose part is
+    new while the coaxial read is shown: whether the face is on its axis, never kept)``."""
+    from . import swbuild as sb
+    by = {m.name: m for m in entry.mates}
+    ratio: List[str] = []
+    axis: Dict[str, List[str]] = {}
+    # B2: the axis is all that could stand in the way only while the coaxial read is shown and both gates a gear mate
+    # on an app gear passes would let it be made.
+    kinds = _finding_value("CARRY_REMAKE_KINDS", fore.year) if fore.year != "?" else None
+    coaxial = (fore.year != "?" and _finding_value("COAXIAL_FACE_READ", fore.year) is True
+               and _finding_value("CARRY_GEAR_MATE_ON_AN_APP_GEAR", fore.year) is True
+               and isinstance(kinds, (tuple, list)) and "gear" in kinds)
+    for n in plan.named:
+        m = by.get(n.item)
+        if m is None or m.kind != "gear":
+            continue
+        known = bool(m.entities) and m.whole and all(len(e) == 4 and e[2] not in ("unread", "") for e in m.entities)
+        s = [str(x) for x in n.subjects] + ["", "", "", ""]
+        if n.why == sb.WHY_UNREAD and known:
+            ratio.append(n.item)
+        elif n.why == sb.WHY_PART_NEW and s[2] == "face" and coaxial:
+            axis.setdefault(s[0], []).append(n.item)
+    return ratio, axis
+
+
+def _finding_value(name: str, year: str):
+    from . import findings
+    return getattr(findings, f"{name}_ON_{year}", None)
+
+
+def _may_sentences(ratio: Sequence[str], axis: Mapping[str, Sequence[str]]) -> List[str]:
+    """The *may* for what the inventory cannot know: a gear mate's ratio and sense (*Your UserGear6 is made again if
+    the press reads its gear ratio and which way it turns.*), and whether a gear mate's face of a gear made new is on
+    its axis (*Your UserGearRoot is made again only if the face of Sun it is on proves to be on Sun's axis, since
+    Sun's part is new.*)."""
+    out = []
+    if ratio:
+        one = len(ratio) == 1
+        out.append(f"Your {_and(ratio)} {'is' if one else 'are'} made again if the press reads "
+                   f"{'its gear ratio and which way it turns' if one else 'their gear ratios and which way they turn'}.")
+    for gear, mates in axis.items():
+        one = len(mates) == 1
+        out.append(f"Your {_and(mates)} {'is' if one else 'are'} made again only if the face of {gear} "
+                   f"{'it is' if one else 'each is'} on proves to be on {gear}'s axis, since {gear}'s part is new.")
+    return out
+
+
+def _limit_may(fore, entry, plan) -> Dict[Tuple[str, bool], List[str]]:
+    """``(kind word, plain allowed) -> mates``: the recorded distance and angle mates whose kind the record cannot
+    tell (``UserMateEntry`` keeps the type, 5 or 6, the same for a plain and a limit mate) while
+    ``CARRY_REMAKE_KINDS`` on the SolidWorks the record last saw allows one of the two kinds and not the other: made
+    again by the plan as plain (plain allowed), or named unmeasured for the plain kind (the limit kind allowed)."""
+    from . import swbuild as sb
+    kinds = _finding_value("CARRY_REMAKE_KINDS", fore.year) if fore.year != "?" else None
+    if not isinstance(kinds, (tuple, list)):
+        return {}
+    split = {w: w in kinds for w in ("distance", "angle") if (w in kinds) != (f"limit {w}" in kinds)}
+    if not split:
+        return {}
+    word_of = {5: "distance", 6: "angle"}
+    recorded = {m.name: word_of.get(m.type) for m in entry.mates}
+    out: Dict[Tuple[str, bool], List[str]] = {}
+    for item in plan.mates:
+        word = recorded.get(item.mate.name)
+        if word in split and split[word]:
+            out.setdefault((word, True), []).append(item.mate.name)
+    for n in plan.named:
+        word = recorded.get(n.item)
+        if (word in split and not split[word] and n.why == sb.WHY_UNMEASURED and n.subjects
+                and str(n.subjects[0]) == word):
+            out.setdefault((word, False), []).append(n.item)
+    return out
+
+
+def _limit_may_sentences(may: Mapping[Tuple[str, bool], Sequence[str]]) -> List[str]:
+    """*Your UserLimit10 is made again if the press reads it as a plain distance mate; a limit distance mate is not
+    made again.*, or, the limit kind the one allowed, *… only if the press reads it as a limit distance mate; a plain
+    distance mate is not made again.*"""
+    out = []
+    for (word, plain), mates in may.items():
+        one = len(mates) == 1
+        said, other = ("plain", "limit") if plain else ("limit", "plain")
+        out.append(f"Your {_and(mates)} {'is' if one else 'are'} made again {'if' if plain else 'only if'} the press "
+                   f"reads {'it as a' if one else 'them as'} {said} {word} {'mate' if one else 'mates'}; "
+                   f"{'a ' if one else ''}{other} {word} {'mate is' if one else 'mates are'} not made again.")
+    return out
+
+
+def _in_error_before(entry, plan, old: str, lead: Optional[Sequence[str]] = None) -> List[str]:
+    """The demonstration's review (§6): a mate of the user's the inventory holds in error, which the plan makes again:
+    *UserLock8a was in error in RangeBox.SLDASM as read; made again, it is carried if it reads no error or the one it
+    had, and not if it keeps a gear from turning.*"""
+    made = set(lead) if lead is not None else {m.mate.name for m in plan.mates}
+    if len(made) == 1:
+        return []                              # the one mate made again is named, and said in error, in the lead
+    bad = [m.name for m in entry.mates if m.name in made and m.code and m.code != -1]
+    if not bad:
+        return []
+    one = len(bad) == 1
+    return [f"{_and(bad)} {'was' if one else 'were'} in error in {old} as read; made again, "
+            f"{'it is' if one else 'each is'} carried if it reads no error or the one it had, and not if it keeps a "
+            "gear from turning."]
+
+
+def _findings_sentence(refs: Sequence[str], year: str) -> List[str]:
+    """The findings the question's clauses rest on, named once at the end (S3)."""
+    if not refs:
+        return []
+    return [f"(Not yet shown on {_on_version(year)}: {_and(refs)}.)"]
+
+
+def _unknown_entity() -> str:
+    from .workbook.update import UNKNOWN_ENTITY
+    return UNKNOWN_ENTITY
+
+
+def _unknown_entities(fore, entry, unknown: Set[str]) -> List[str]:
+    """A schema 9 inventory's mates, whose entity kinds were never kept (*may*): those on an app gear whose part is
+    new, *your Lock3 and UserAxis4 join Sun, whose part is new: a mate on one of its faces or edges is not made again,
+    and the press reads which they are.*; any other, that the press reads what it is on and makes it again where it
+    can."""
+    if not unknown:
+        return []
+    out = []
+    on_new: Dict[str, List[str]] = {}
+    rest = []
+    for m in entry.mates:
+        if m.name not in unknown:
+            continue
+        gears = [n for w, n in m.touches if w == "app" and n in fore.why_new]
+        if gears:
+            on_new.setdefault(gears[0], []).append(m.name)
+        else:
+            rest.append(m.name)
+    for gear, names in on_new.items():
+        one = len(names) == 1
+        out.append(f"Your {_and(names)} {'joins' if one else 'join'} {gear}, whose part is new: a mate on one of its "
+                   f"faces or edges is not made again, and the press reads which {'it is' if one else 'they are'}.")
+    if rest:
+        one = len(rest) == 1
+        out.append(f"The record does not say what your {_and(rest)} {'is' if one else 'are'} on, so the press reads "
+                   f"{'it' if one else 'them'} and makes {'it' if one else 'each'} again where it can.")
+    return out
+
+
+def _component_states(entry, old: str, unread: Optional[Mapping[str, Sequence[str]]] = None) -> List[str]:
+    """§9.1's lightweight and suppressed components, as read (``UserComponentEntry.state``: 0 suppressed, 1 and 4
+    lightweight), each said once as the condition it is (M5); a suppressed one with the mates ``unread`` for it (B3:
+    ``CAUSE_SUPPRESSED``) in the same sentence."""
+    out = []
+    unread = unread or {}
+    for c in entry.components:
+        mates = [m.name for m in entry.mates if any(w == "user" and n == c.name for w, n in m.touches)]
+        if c.state in (1, 4):
+            # A's third round (D10's fact, ruled): loading its part to carry it resolves it in the old assembly too.
+            too = f"carrying it resolves it in {old} too, if that is open"
+            if mates:
+                one = len(mates) == 1
+                its = f"its {mates[0]}" if one else f"its {len(mates)} mates"
+                out.append(f"{c.name} was lightweight as read: {too}, and {its} {'is' if one else 'are'} made again "
+                           "only if you set it resolved in SolidWorks before you press.")
+            else:
+                out.append(f"{c.name} was lightweight as read: it is carried resolved, and {too}.")
+        elif c.state == 0 and unread.get(c.name):
+            ms = list(unread[c.name])
+            one = len(ms) == 1
+            out.append(f"{c.name} was suppressed in the mode {old} showed, as read, so {_and(ms)} on it could not be "
+                       f"read: show a mode where {c.name} is resolved before you press, or {c.name} may not be carried "
+                       f"and {ms[0] + ' is' if one else 'they are'} not made again.")
+        elif c.state == 0:
+            out.append(f"{c.name} was suppressed in the mode {old} showed, as read: show a mode where it is resolved "
+                       "before you press, or it may not be carried.")
+    return out
+
+
+def _modes_said(fore, name: str, old: str) -> List[str]:
+    return _modes_words(fore.modes_gone, fore.modes_new, fore.first, name, old)
+
+
+def _modes_words(gone: Sequence[str], added: Sequence[str], first: str, name: str, old: str) -> List[str]:
+    """D14 (§9.1, §9.2): an old mode the revision has not, and what a new mode takes."""
+    out = [f"{name} has no mode {mode}: what your items were in {mode} stays in {old}." for mode in gone]
+    if added and first:
+        one = len(added) == 1
+        out.append(f"Its new {'mode' if one else 'modes'} {_and(added)} {'takes' if one else 'take'} what they were "
+                   f"in {first}.")
+    return out
+
+
+def _standing(year: Optional[str] = None, pattern: bool = True, subassembly_left: bool = False) -> str:
+    """The standing list of what is not carried as it was, on the SolidWorks ``year`` (None or ``"?"``: not known).
+    ``pattern`` False drops the pattern clause: the result does once ``PATTERN_INSTANCE_READ`` is set on the SolidWorks
+    the job ran on, and the per-instance sentence says it (D12); the question cannot know which component is an
+    instance, so it keeps the clause. *Sub-assemblies come over rigid* is said only where that SolidWorks has
+    ``CARRY_INSERTS_A_SUBASSEMBLY`` True and no sub-assembly is named as not carried (``subassembly_left``): the review
+    of the second 2026 run, must-fix 2, found it said beside *Drive-1 is not carried*."""
+    from . import findings
+    rigid = (year not in (None, "", "?") and not subassembly_left
+             and getattr(findings, f"CARRY_INSERTS_A_SUBASSEMBLY_ON_{year}", None) is True)
+    if rigid:
+        return CARRY_STANDING_RIGID if pattern else CARRY_STANDING_RIGID_NO_PATTERN
+    return CARRY_STANDING if pattern else CARRY_STANDING_NO_PATTERN
+
+
+def _pattern_read(year: Optional[str]) -> bool:
+    """``PATTERN_INSTANCE_READ`` set True on the SolidWorks ``year`` (the result's per-instance sentence, D12)."""
+    from . import findings
+    return year is not None and getattr(findings, f"PATTERN_INSTANCE_READ_ON_{year}", None) is True
+
+
+def _carried_as(new: str, old_of: Mapping[str, str]) -> str:
+    """A carried component by its name in the new revision, its old name beside it where SolidWorks renumbered it
+    (*Sprocket-9 (was Sprocket-8)*), as the insert clause names it: the review of the second 2026 run, must-fix 1,
+    found one result calling the old Sprocket-9 and the new Sprocket-9 (the old Sprocket-8) by one name."""
+    old = old_of.get(new, new) or new
+    return new if old == new else f"{new} (was {old})"
+
+
+def _split_stop(done) -> Tuple[str, str]:
+    """``(the stop, the files found changed after the carry)`` (the re-check's N2): the files from the worker's own
+    field, ``CarryResult.changed_files`` (base names), said in B's words; the worker's sentence for them, which it
+    still appends to ``stopped``, cut off at the last place that field's names begin it, so the stop is the stop only.
+    Nothing else of the worker's words is matched."""
+    text = bare_files(getattr(done, "stopped", "") or "").strip()
+    files = [bare_files(str(f)) for f in getattr(done, "changed_files", ()) or () if f]
+    if not files:
+        return text, ""
+    at = text.rfind(_and(files))
+    if at >= 0:
+        text = text[:at].strip()
+    one = len(files) == 1
+    return text, (f"{_and(files)} changed on disk while Build again… carried your work, which Gear Generator never "
+                  f"does; look at {'it' if one else 'them'} in SolidWorks.")
+
+
+def _stop_tail(stop: str, skipped: str) -> str:
+    """*It did not get to …*, without the step the stop already names (the re-check's note: *… stopped the carry while
+    reading the new revision: … It did not get to reading the new revision.*)."""
+    skipped = skipped.rstrip(".").strip()
+    if not skipped or not stop:
+        return ""
+    for sep in (", ", " and "):
+        head, _, rest = skipped.partition(sep)
+        if rest and f"while {head}" in stop:
+            return f" It did not get to {rest}."
+    if f"while {skipped}" in stop:
+        return ""
+    return f" It did not get to {skipped}."
+
+
+def _inserts_held(done) -> str:
+    """The ``CARRY_INSERTS`` finding when it held everything back (a gate the worker kept), else ``""``."""
+    return next((f for _, f in getattr(done, "gates", ()) or () if str(f).startswith("CARRY_INSERTS_ON_")), "")
+
+
+def carried_status(result, again, old_path: str = "", anchors: Optional[Mapping[str, str]] = None,
+                   revision: Sequence[int] = (), *, carry=None, stays=None) -> str:
+    """After a carrying Build again…, what was carried, after ``gearbox_status`` (W9D-INTERFACES §9.2; replaces W9a's
+    :func:`stayed_behind_status`), from ``result.carry`` (``swbuild.CarryResult``): *Carried into RangeBox_r2,
+    unsaved: your Sprocket-1, Sprocket-2, Chain-1 and Housing-1, each where it stood against its gear, and 7 of your 8
+    mates, each on in the modes it was on in.*, each item not carried, the features left in parts made new, each
+    fallback, mate in the error it had, component moved, clash, the placement and the states, the modes, a sub-assembly
+    made rigid, the marks fact, a stop, the standing list. With nothing carried, the reason as a lead and W9a's sentence
+    of what stays (M1); an old assembly not read, its reason and the record's (M3). ``anchors`` each carried
+    component's anchor by its old Name2; ``revision`` the SolidWorks the job ran on; ``carry`` the ``swbuild.Carry``
+    the job was given (why each part is new, the new modes); ``stays`` W9a's ``workbook.update.StaysBehind``. ``""``
+    without a carry. Every path the worker's words hold is said by its file's name only."""
+    from . import swbuild as sb
+    done = getattr(result, "carry", None)
+    if done is None:
+        return ""
+    name = getattr(again, "name", "") or "the new revision"
+    work = done.work
+    path = (work.assembly if work is not None and work.assembly else "") or old_path
+    old = _file(path) if path else "the old assembly"
+    from .workbook.update import StaysBehind, why_new_of
+    if stays is None:
+        stays = StaysBehind(None, path)
+    why_new = why_new_of(getattr(carry, "bodies", ()) or ())
+    stop, after = _split_stop(done)
+    if work is None:
+        reason = stop.rstrip(".") or f"SolidWorks did not answer the read of {old}"
+        return _joined(f"{reason}, so nothing of yours was carried; {old} and your files are as they were on disk.",
+                       _stays_text(stays, again))
+    held = _inserts_held(done)
+    if work.how == sb.OLD_UNREAD and held:
+        # Nothing could be carried at all: W9a's own sentence for an old assembly not open, behind the one lead.
+        year = held.rsplit("_ON_", 1)[-1]
+        return _joined(f"Gear Generator has not yet been shown to carry your work into a new revision on "
+                       f"{_on_version(year)} ({_finding_ref(held)}).",
+                       stayed_behind_status(stays, result, again, path))
+    if work.how == sb.OLD_UNREAD:
+        reason = "; ".join(bare_files(u).rstrip(".") for u in work.unread) or f"{old} was not read"
+        return f"{reason}, so nothing of yours was carried; {_stays_text(stays, again, 'as read at')}"
+    if work.marked:
+        return (f"Reading {old} marked {_and(_file(p) for p in work.marked)} as changed in SolidWorks, which Gear "
+                f"Generator never does on purpose, so nothing of yours was carried; nothing in "
+                f"{'it' if len(work.marked) == 1 else 'them'} changed, and {old} and your files are as they were on "
+                "disk.")
+    if work.left:
+        one = len(work.left) == 1
+        return (f"Reading {old} left {_and(_file(p) for p in work.left)} open in SolidWorks, so nothing of yours was "
+                f"carried; close {'it' if one else 'them'} without saving.")
+    skipped = _stop_tail(stop, done.skipped)
+    if not done.inserted and not done.remade:
+        return " ".join(t for t in _nothing_carried(done, result, again, path, stays, name, old, stop, skipped)
+                        + [after, _resolved_in_old(done, old), _after_unread(done)] if t)
+    texts: List[str] = []
+    new_of = dict(done.inserted)
+    old_of = {n: o for o, n in done.inserted}
+    anchors = dict(anchors or {})
+    comps = [n if n == o else f"{n} (was {o})" for o, n in done.inserted]
+    total = len(work.mates)
+    clauses = []
+    if comps:
+        clauses.append(f"your {_and(_components_named(comps))}, "
+                       f"{_placement_words([anchors.get(o, '') for o, _ in done.inserted], past=True)}")
+    kept_of = {o: k for o, k, _ in done.remade}
+    if done.remade:
+        made = len(done.remade)
+        # A's 7e3ad9a: a mate kept under SolidWorks' name, said as a renamed component is (*Mate12 (was Lock1)*).
+        renamed = [_kept_as(o, kept_of) for o, k, _ in done.remade if k and k != o]
+        among = f", {_and(renamed)} among them" if renamed else ""
+        if made == total == 1:
+            clauses.append(f"your {_kept_as(done.remade[0][0], kept_of)}, on in the modes it was on in")
+        elif made == total:
+            clauses.append(f"your {_plural(total, 'mate')}{among}, each on in the modes it was on in")
+        elif made == 1 and renamed:
+            clauses.append(f"1 of your {_plural(total, 'mate')}, {renamed[0]}, on in the modes it was on in")
+        else:
+            clauses.append(f"{made} of your {_plural(total, 'mate')}{among}, each on in the modes it was on in")
+    texts.append(f"Carried into {name}, unsaved: {', and '.join(clauses)}.")
+    texts += _named_sentences(done.named, name=name, old=old, resolved=getattr(done, "resolved_in_old", ()) or ())
+    texts.append(_features_left_sentence(stays, name, old, why_new, past=True))
+    for fallback in done.fixed:
+        texts.append(_fallback_sentence(fallback, name, old, work.active, getattr(again, "modes_plan", None),
+                                        kept_of, old_of))
+    for mate, code in done.same_error:
+        # The re-check of 11a63ab, item 2: each name beside the assembly it is in.
+        kept = kept_of.get(mate, mate) or mate
+        texts.append(f"Your {mate} was in error in {old} and is in {name} too, as it was." if kept == mate else
+                     f"Your {mate} was in error in {old} and, as {kept}, is in {name} too, as it was.")
+    texts += _moved_sentences(done.moved, old_of, anchors)
+    for mode, clash in done.clashes:
+        names = list(getattr(clash, "gears", ()) or getattr(clash, "components", ()))
+        carried = [n for n in names if n in new_of.values()]
+        others = [n for n in names if n not in carried]
+        if carried:
+            said = _and(_carried_as(n, old_of) for n in carried)
+            texts.append(f"{'In mode ' + mode + ', y' if mode else 'Y'}our {said} "
+                         f"{'interferes' if len(carried) == 1 else 'interfere'} with {_and(others) or 'each other'} "
+                         f"({clash.volume:.1f} mm³).")
+    modes = [s.name for s in again.modes_plan.steps] if getattr(again, "modes_plan", None) is not None else []
+    if modes and done.inserted and work.active:
+        # N1: where they were placed; the every-mode claim only of one no carried mate holds (a component locked to a
+        # sliding gear follows it).
+        remade = {o for o, _, _ in done.remade}
+        held_by = {e.owner for m in work.mates if m.name in remade for e in m.entities if e.what == sb.USER}
+        fallen = {n for f in done.fixed for n in f.components}
+        free = [c for c in work.components if c.name in new_of and not c.fixed and c.name not in held_by
+                and new_of[c.name] not in fallen]
+        texts.append(f"Your components were placed where they stood in {work.active}, the mode {old} showed"
+                     + ("; one no mate holds stands there in every mode." if free else "."))
+    if modes and done.inserted and not work.states_route and work.active:
+        others = [m for m in work.modes if m.casefold() != work.active.casefold()]
+        texts.append(f"Your components take in every mode the state they had in {work.active}, the mode {old} showed"
+                     + (f": their states in {_and(others)} could not be read without changing it." if others
+                        else "."))
+    new_modes = list(getattr(carry, "modes", ()) or ()) or modes
+    if carry is not None and new_modes:
+        gone = [m for m in work.modes if not any(m.casefold() == n.casefold() for n in new_modes)]
+        added = [m for m in new_modes if not any(m.casefold() == o.casefold() for o in work.modes)]
+        texts += _modes_words(gone, added if work.modes else [], getattr(carry, "first", "") or "", name, old)
+    for o, n in done.inserted:
+        component = next((c for c in work.components if c.name == o), None)
+        if component is not None and component.kind == "assembly":
+            texts.append(f"Your sub-assembly {_carried_as(n, old_of)} comes over rigid: set it flexible in SolidWorks "
+                         "again if it was.")
+    if done.marked_user:
+        # The fact CARRY_INSERT_MARKS_USER_DOCUMENTS (§8): True, the insert alone marks them, so nothing in them is
+        # said to have changed; otherwise only what SolidWorks reads is said.
+        from . import findings, swcom
+        files = _and(_file(p) for p in done.marked_user)
+        one = len(done.marked_user) == 1
+        year = swcom.release_year(int(revision[0])) if revision else None
+        fact = year is not None and getattr(findings, f"CARRY_INSERT_MARKS_USER_DOCUMENTS_ON_{year}", None) is True
+        though = f", though nothing in {'it' if one else 'them'} changed" if fact else ""
+        texts.append(f"SolidWorks reads {files} as changed since {'it was' if one else 'they were'} inserted into "
+                     f"{name}{though}: saving {name} with its parts saves {'that file' if one else 'those files'} "
+                     "again too.")
+    if stop:
+        texts.append(_sentence(stop) + skipped + (f" What was carried before it is in {name}, unsaved, and {name} as "
+                                                  "built is saved." if done.unsaved else
+                                                  f" Nothing of yours was carried, and {name} as built is saved."))
+    from . import swcom
+    year = str(swcom.release_year(int(revision[0]))) if revision else None
+    pattern = not _pattern_read(year)
+    subs_left = any(c.kind == "assembly" and c.name not in new_of for c in work.components)
+    texts.append(_standing(year, pattern=pattern, subassembly_left=subs_left))
+    if not pattern:
+        instances = [_carried_as(new_of[c.name], old_of) for c in work.components
+                     if c.name in new_of and c.pattern_instance]
+        if instances:
+            one = len(instances) == 1
+            own = "a component of its own" if one else "components of their own"
+            texts.append(f"Your {_and(instances)} {'was an instance' if one else 'were instances'} of a pattern of "
+                         f"yours, and {'comes' if one else 'come'} over as {own}.")
+    if any(c.kind == "part" for c in work.components if c.name in new_of):
+        texts.append(CARRY_IN_CONTEXT.format(old=old))
+    texts.append(after)
+    texts.append(_resolved_in_old(done, old))
+    texts.append(_after_unread(done))
+    if done.unsaved and not stop:
+        texts.append(f"Save {name} in SolidWorks to keep what was carried.")
+    return " ".join(t for t in texts if t)
+
+
+def _resolved_in_old(done, old: str) -> str:
+    """A's third round (D10's fact, ruled: not a stop, not undone, said): *Sprocket-9 was lightweight in RangeBox.SLDASM
+    and is resolved there now: SolidWorks loaded its part to carry it.*"""
+    names = [str(n) for n in getattr(done, "resolved_in_old", ()) or () if n]
+    if not names:
+        return ""
+    one = len(names) == 1
+    return (f"{_and(names)} {'was' if one else 'were'} lightweight in {old} and {'is' if one else 'are'} resolved "
+            f"there now: SolidWorks loaded {'its part' if one else 'their parts'} to carry {'it' if one else 'them'}.")
+
+
+def _after_unread(done) -> str:
+    """A's third round: why the user's files' times and flags could not be read after the carry
+    (``CarryResult.after_unread``), the fact it is, through :func:`bare_files`; never a stop."""
+    return _sentence(bare_files(getattr(done, "after_unread", "") or "").strip())
+
+
+def _nothing_carried(done, result, again, path: str, stays, name: str, old: str, stop: str,
+                     skipped: str) -> List[str]:
+    """M1: the old assembly read and nothing of the user's carried. A stop is said as the worker says it, with what it
+    did not get to; else the findings that held everything back lead W9a's sentence of what stays (*Gear Generator
+    has not yet been shown to carry your work into a new revision on SolidWorks 2026 (findings.CARRY_INSERTS_ON_2026),
+    so your Sprocket-1, Housing-1 and Lock3 stay in RangeBox.SLDASM, as read when this build began; …*); any other
+    reason an item was not carried follows."""
+    from . import swbuild as sb
+    behind = stayed_behind_status(stays, result, again, path)
+    texts: List[str] = []
+    if stop:
+        texts.append(_sentence(stop) + skipped + f" Nothing of yours was carried, and {name} as built is saved.")
+        texts.append(behind)
+        return texts
+    held = [n for n in done.named if n.why == sb.WHY_UNMEASURED]
+    groups: Dict[Tuple[str, str, str], None] = {}
+    for n in held:
+        s = _subjects(n)
+        groups.setdefault((s[0], s[1], s[2]), None)
+    if groups and behind:
+        verbs = list(dict.fromkeys(_unmeasured_verb(w, f) for w, f, _ in groups))
+        found = list(dict.fromkeys(_finding_ref(f) for _, f, _ in groups))
+        version = next(iter(groups))[2]
+        texts.append(f"Gear Generator has not yet been shown to {_and(verbs)} on {_on_version(version)} "
+                     f"({_and(found)}), so {behind[:1].lower()}{behind[1:]}")
+    else:
+        texts.append(behind)
+    others = [n for n in done.named if n.why not in (sb.WHY_UNMEASURED, sb.WHY_NOT_CARRIED, sb.WHY_OLD_UNREAD)]
+    texts += _named_sentences(others, name=name, old=old, resolved=getattr(done, "resolved_in_old", ()) or ())
+    return texts
+
+
+def _moved_sentences(moved, old_of: Mapping[str, str], anchors: Mapping[str, str]) -> List[str]:
+    """§9.2's *moved*, one sentence per component, its modes grouped: *SolidWorks moved Sprocket-4 off where it stood
+    against Sun when your mates were made again: 2.0 mm in L.*"""
+    by: Dict[str, List[Tuple[str, float]]] = {}
+    for component, mode, mm in moved:
+        by.setdefault(component, []).append((mode, mm))
+    out = []
+    for component, items in by.items():
+        anchor = anchors.get(old_of.get(component, component), "")
+        against = f" against {anchor}" if anchor and anchor != "layout" else ""
+        sizes = {f"{mm:.1f}" for _, mm in items}
+        modes = [m for m, _ in items if m]
+        if len(sizes) == 1:
+            where = f"{next(iter(sizes))} mm" + (f" in {_and(modes)}" if modes else "")
+        else:
+            where = _and(f"{mm:.1f} mm in {m}" if m else f"{mm:.1f} mm" for m, mm in items)
+        out.append(f"SolidWorks moved {_carried_as(component, old_of)} off where it stood{against} when your mates "
+                   "were made again: "
+                   f"{where}.")
+    return out
+
+
+def _kept_as(old_name: str, kept_of: Mapping[str, str]) -> str:
+    """A mate made again by the name it has in the new revision: *Mate12 (was Lock1)* where SolidWorks kept its own
+    name (A's 7e3ad9a), else its old name, as :func:`carried_status` names a renamed component."""
+    kept = kept_of.get(old_name, old_name) or old_name
+    return old_name if kept == old_name else f"{kept} (was {old_name})"
+
+
+def _fallback_sentence(fallback, name: str, old: str, active: str, modes_plan=None,
+                       kept_of: Optional[Mapping[str, str]] = None, old_of: Optional[Mapping[str, str]] = None) -> str:
+    """A cluster that fell back (§6, §9.2): *Sprocket-8 is fixed where it stood in RangeBox_r2: with your Lock8 and
+    Lock9 made again SolidWorks reads Sun unable to turn, so those two were not kept; Coincident7 beside them was.*
+    A mate kept is named as it is in the new revision (``kept_of``, old -> kept); one deleted by its old name. Each
+    component fixed is named by its new name with its old beside it where they differ (``old_of``, new -> old;
+    must-fix 1 of the review of the second 2026 run): *Sprocket-9 (was Sprocket-8) is fixed where it stood …*."""
+    from . import swbuild as sb
+    kept_of = kept_of or {}
+    comps = [_carried_as(c, old_of or {}) for c in fallback.components]
+    deleted = list(fallback.deleted)
+    s = [str(x) for x in fallback.subjects] + ["", "", "", ""]
+    one = len(comps) == 1
+    head = f"{_and(comps)} {'is' if one else 'are'} fixed where {'it' if one else 'they'} stood in {name}"
+    first = modes_plan.steps[0].name if modes_plan is not None and modes_plan.steps else ""
+    if fallback.why == sb.FELL_TIE:
+        mode = f" in {s[1]}" if s[1] and s[1] != first else ""
+        reason = f"with your {_and(deleted)} made again SolidWorks reads {s[0]} unable to turn{mode}"
+    elif fallback.why == sb.FELL_NEW_ERROR:
+        mate, now, before, mode = s[0], s[1], s[2], s[3]
+        was = (f", which it did not in {active}, the mode {old} showed" if before in ("", "0") else
+               f", where it read error {before} in {active}, the mode {old} showed")
+        if mate in deleted or mate in fallback.kept or not mate:
+            said = _kept_as(mate, kept_of) if mate in fallback.kept else mate
+            reason = f"with your {said} made again it reads error {now}" + (f" in {mode}" if mode else "") + was
+        else:                                  # one of the app's own mates, put in error by the cluster (A's M3)
+            was = was.replace("which it did not", "which it did not before your mates were made again").replace(
+                ", where it read", ", where it read before")
+            reason = (f"with your {_and(deleted) or 'mates'} made again the app's {mate} reads error {now}"
+                      + (f" in {mode}" if mode else "") + was)
+    else:
+        reason = (f"your {s[0]} made again over-defines {'it' if one else 'them'}" if s[0]
+                  else f"with your mates made again SolidWorks reads {'it' if one else 'one of them'} over-defined")
+    n = len(deleted)
+    gone = ("so it was not kept" if n == 1 else "so those two were not kept" if n == 2 else
+            f"so those {n} were not kept") if n else ""
+    kept = [_kept_as(k, kept_of) for k in fallback.kept]
+    tail = (f"; {_and(kept)} beside {'it' if n == 1 else 'them'} {'was' if len(kept) == 1 else 'were'}" if kept
+            else "")
+    return f"{head}: {reason}" + (f", {gone}" if gone else "") + tail + "."
+
+
+def carry_footer_line(record) -> str:
+    """§9.4: while the current revision holds what Build again… carried unsaved (``CarryEntry.unsaved_at``), *RangeBox_r2
+    holds what Build again… carried of yours, not saved: save it in SolidWorks to keep it.*; ``""`` otherwise."""
+    from . import store
+    carry = store.carry_unsaved(record)
+    if carry is None:
+        return ""
+    return (f"{_stem(record.gearbox.assembly)} holds what Build again… carried of yours, not saved: save it in "
+            "SolidWorks to keep it.")
+
+
+def carry_lost_line(assembly: str, old: str) -> str:
+    """§9.4: found closed unsaved by a later job, *RangeBox_r2 was closed without saving after Build again… carried
+    your work into it, so it does not hold it; RangeBox.SLDASM held it when it was carried.* (the review of 9cbfc08:
+    the app cannot see whether the old assembly changed since, so never the present)."""
+    return (f"{_stem(assembly)} was closed without saving after Build again… carried your work into it, so it does "
+            f"not hold it; {_file(old) if old else 'the old assembly'} held it when it was carried.")
+
+
+def carry_unsaid(again, result, exc: BaseException) -> str:
+    """The re-check's N3: what the window says when the carry's own sentence raised, after the build's own (never as
+    the build failing): *What was carried into RangeBox_r2 could not be said (KeyError: …); it holds it unsaved: save
+    it in SolidWorks to keep it.*, the last clause only when something was written into it; the exception through
+    :func:`bare_files`."""
+    name = getattr(again, "name", "") or "the new revision"
+    said = bare_files(f"{type(exc).__name__}: {exc}").strip()
+    unsaved = bool(getattr(getattr(result, "carry", None), "unsaved", False))
+    return (f"What was carried into {name} could not be said ({said})"
+            + ("; it holds it unsaved: save it in SolidWorks to keep it." if unsaved else "."))

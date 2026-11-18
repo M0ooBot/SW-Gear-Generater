@@ -309,7 +309,7 @@ def test_build_makes_the_parts_the_layout_and_the_assembly_and_records_them(desk
         sidecar = store.read_sidecar(desk.part(stem))
         assert sidecar is not None and store.same_path(sidecar.record.workbook, window.link.path)
     raw = json.loads(record_bytes(window))
-    assert raw["link_schema_version"] == store.LINK_SCHEMA_VERSION == 9
+    assert raw["link_schema_version"] == store.LINK_SCHEMA_VERSION == 10
     record = record_of(window)
     assert record.gearbox.revision == 0 and store.same_path(record.gearbox.assembly, desk.part(NAME, ".SLDASM"))
     assert store.same_path(record.assembly, record.gearbox.assembly)
@@ -729,9 +729,18 @@ LONG = ("Updated SolidWorks: changed 1 variable in Gear_m1.5_N68 (it now has 69 
 
 
 # W9a (the coordinator's ruling 4 on package B's review): the Build again? question's clause on the user's work when
-# the record holds no inventory of the assembly it leaves behind (ui_text.stays_behind_sentence).
-TIMELESS = (f"Anything you added to {NAME}.SLDASM in SolidWorks (components, mates, and features in parts this "
-            f"revision makes new) stays there, and {NAME}_r2 has none of it.")
+# the record holds no inventory of the assembly it leaves behind (ui_text.stays_behind_sentence); W9d (W9D-INTERFACES
+# §9.1): led, while CARRY_INSERTS is unset, by that finding on the SolidWorks the record last saw (the fake's 2026, or
+# not known on a record no job of this app wrote).
+def timeless(year="2026"):
+    on = (f"SolidWorks {year} (findings.CARRY_INSERTS_ON_{year})" if year != "?"
+          else "the SolidWorks it runs on (findings.CARRY_INSERTS_ON_<year>)")
+    return (f"Gear Generator has not yet been shown to carry your work into a new revision on {on}, so anything you "
+            f"added to {NAME}.SLDASM in SolidWorks (components, mates, and features in parts this revision makes new) "
+            f"stays there, and {NAME}_r2 has none of it.")
+
+
+TIMELESS = timeless()
 
 
 def width_and_height(window):
@@ -1737,7 +1746,7 @@ def test_a_tooth_change_is_an_update_that_sets_the_gear_mate_once_its_ratio_can_
     assert {m.name: m.ratio for m in record_of(window).gearbox.mates}["G1 meshes G2"] == [17, 69]
 
 
-def test_a_gearbox_w4_built_stays_static_and_is_offered_a_turning_revision(desk, monkeypatch):
+def test_a_gearbox_w4_built_stays_static_and_is_offered_a_turning_revision(desk, monkeypatch, w9d_unmeasured):
     """D5: a W4 static record is never changed into a turning one by Update; the footer and the Build again?
     question say the new revision's gears turn."""
     from gear_generator import workbook_gui
@@ -1761,7 +1770,7 @@ def test_a_gearbox_w4_built_stays_static_and_is_offered_a_turning_revision(desk,
     assert window.status.get() == "SolidWorks already matches the workbook: nothing was changed."
 
 
-def test_a_recorded_mate_update_cannot_read_still_offers_build_again(desk, monkeypatch):
+def test_a_recorded_mate_update_cannot_read_still_offers_build_again(desk, monkeypatch, w9d_unmeasured):
     """The refusal names Build again…, so the window keeps that button on and its press asks: the person is never
     left with nothing to press."""
     from gear_generator import workbook_gui
@@ -2981,3 +2990,100 @@ def test_an_update_refused_over_the_users_work_is_recorded_and_the_footer_says_i
     assert (f"Update SolidWorks refused at {ui_text.read_time(entry.read_at)}, before changing anything: "
             f"{entry.problems[0].sentence}") in window.status.get()
     assert window.footer().update_enabled
+
+
+# -- W9d: Build again… carries the user's work (W9D-INTERFACES §2.1, §7, §9.2, §9.4; package B) ----------------------
+
+
+def _users_sprocket(desk, window):
+    """A sprocket of the user's locked to G1 in the built assembly, its file on disk (the worker reads it there)."""
+    from test_swbuild import IDENTITY9
+    record = record_of(window)
+    part = desk.tmp / "Sprocket.SLDPRT"
+    part.write_bytes(b"the user's part")
+    desk.sw.user_component(record.gearbox.assembly, "Sprocket-1", str(part), (IDENTITY9, (0.0, 0.0, 40.0)))
+    desk.sw.user_lock(record.gearbox.assembly, "Lock3", name2(window, "G1"), "Sprocket-1")
+    return part
+
+
+def _carrying_findings(monkeypatch, carry=True):
+    """Every W9d finding None on the fake's 2026 (today's state), or the write gates a plain carry needs patched in."""
+    names = [n for n in dir(findings) if n.endswith("_ON_2026") and any(n.startswith(p) for p in (
+        "CARRY_", "REFERENCED_CONFIGURATION_READ", "FILE_VERSION_READ", "DEPENDENCIES_READ", "OPEN_READ_ONLY_SHOWN",
+        "OPEN_READ_ONLY_KEEPS", "COMPONENT_STATE_PER_CONFIGURATION"))]
+    for name in names:
+        monkeypatch.setattr(findings, name, None)
+    if carry:
+        for name, value in (("CARRY_INSERTS", True), ("CARRY_REMAKE_KINDS", ("lock",)),
+                            ("REFERENCED_CONFIGURATION_READ", True), ("CARRY_INSERTS_IN_A_CONFIGURATION", True)):
+            monkeypatch.setattr(findings, f"{name}_ON_2026", value)
+
+
+def test_a_build_again_hands_the_worker_its_carry_says_what_was_carried_and_the_footer_asks_for_the_save(desk,
+                                                                                                        monkeypatch):
+    """The window's path for a carrying Build again…, on A's worker on the fake: ``_start_build`` passes ``carry``
+    (from the very old assembly it passes as ``before``), ``_finish_build`` says ``carried_status`` after the build's
+    own sentence and records the carry, and the footer says the new assembly holds it unsaved until its file is
+    newer."""
+    from gear_generator import workbook_gui
+    _carrying_findings(monkeypatch)
+    window = built(desk)
+    _users_sprocket(desk, window)
+    save_in_excel(window, {"Gears": {"K2": "arcs"}})
+    monkeypatch.setattr(workbook_gui, "ask_yes_no", lambda parent, title, text: True)
+    given = {}
+    real = swbuild.build_gearbox
+
+    def build(session, **kwargs):
+        given.update(kwargs)
+        return real(session, **kwargs)
+    monkeypatch.setattr(workbook_gui.swbuild, "build_gearbox", build)
+    window.press_update()
+    desk.finish(window)
+    carry = given.get("carry")
+    assert carry is not None and carry.old is given["before"]
+    assert [b.old for b in carry.bodies][:1] == ["layout"] and "G1" in [b.old for b in carry.bodies]
+    status = window.status.get()
+    assert status.startswith(f"Built 1 part, {NAME}_r2_Layout and {NAME}_r2.SLDASM"), status
+    assert f"Carried into {NAME}_r2, unsaved: your " in status and "and your Lock3, on in the modes it was on in." \
+        in status, status
+    assert status.endswith(f"Save {NAME}_r2 in SolidWorks to keep what was carried."), status
+    record = record_of(window)
+    assert record.gearbox.name == f"{NAME}_r2" and record.unsaved == {}
+    assert record.gearbox.carry.unsaved_at == os.path.getmtime(record.gearbox.assembly)
+    assert [c.was for c in record.gearbox.carry.components] == ["Sprocket-1"]
+    kept = dict(json.loads(record_bytes(window))["gearbox"]["carry"])
+    assert store.same_path(kept.pop("assembly"), desk.part(NAME, ".SLDASM"))   # the app's own file, as gearbox's
+    assert str(desk.tmp) not in json.dumps(kept) and "Sprocket.SLDPRT" not in json.dumps(kept)   # no user path
+    line = f"{NAME}_r2 holds what Build again… carried of yours, not saved: save it in SolidWorks to keep it."
+    # Straight after the build the footer is the build's own sentence, which asks the save itself; §9.4's line follows
+    # it only when that sentence does not (a stop), and stands alone once the sentence is gone (the workbook's next
+    # save, here set aside by hand) — the demonstration's record check reads one or the other.
+    after = window.footer().text
+    assert after.count(f"Save {NAME}_r2 in SolidWorks to keep what was carried.") == 1 and line not in after, after
+    window.note = None
+    window._plan()
+    assert line in window.footer().text, window.footer().text
+    touch_later(record.gearbox.assembly)                       # saved in SolidWorks
+    window._tick()
+    assert line not in window.footer().text
+
+
+def test_a_build_again_today_says_what_stays_led_by_the_finding_as_the_question_does(desk, monkeypatch):
+    """M1 through the window, on A's worker: with every W9d finding None the result is W9a's sentence of what stays in
+    the old assembly, led by the finding that holds the carry back; nothing is recorded unsaved, and no footer line."""
+    from gear_generator import workbook_gui
+    _carrying_findings(monkeypatch, carry=False)
+    window = built(desk)
+    _users_sprocket(desk, window)
+    save_in_excel(window, {"Gears": {"K2": "arcs"}})
+    monkeypatch.setattr(workbook_gui, "ask_yes_no", lambda parent, title, text: True)
+    window.press_update()
+    desk.finish(window)
+    status = window.status.get()
+    assert ("Gear Generator has not yet been shown to carry your work into a new revision on SolidWorks 2026 "
+            f"(findings.CARRY_INSERTS_ON_2026), so your Sprocket-1 and Lock3 stay in {NAME}.SLDASM, as read when this "
+            f"build began; {NAME}_r2 has none of them.") in status, status
+    record = record_of(window)
+    assert record.gearbox.carry is not None and record.gearbox.carry.unsaved_at == 0.0
+    assert record.gearbox.user_work is None and "holds what Build again… carried" not in window.footer().text

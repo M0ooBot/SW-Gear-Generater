@@ -7,6 +7,7 @@ precisely so they can be tested here, on a machine with no CAD package at all.
 import math
 import threading
 import time
+import types
 
 import pytest
 
@@ -1680,9 +1681,19 @@ def test_mate_info_reads_the_type_and_each_entitys_component_the_assemblys_own_a
     doc.mates = [mate, plane]
     session.find_mate("other1", "Lock3")
     session.find_mate("other2", "Coincident7")
+    # W9d (D5): each entity's kind by ReferenceType2; one that will not say is unread, never guessed.
+    unread = (("unread", ""), ("unread", ""))
     assert session.mate_info("other1") == swcom.MateInfo("Lock3", findings.MATE_LOCK,
-                                                         ("Gear_m1.5_N17-1", "Sub-1/Sprocket-1"))
-    assert session.mate_info("other2") == swcom.MateInfo("Coincident7", 0, ("Housing-1", ""))
+                                                         ("Gear_m1.5_N17-1", "Sub-1/Sprocket-1"), entities=unread)
+    assert session.mate_info("other2") == swcom.MateInfo("Coincident7", 0, ("Housing-1", ""), entities=unread)
+    for entity, select_type in zip(mate.GetSpecificFeature2.entities, (20, 2)):
+        entity.ReferenceType2 = select_type
+    plane.GetSpecificFeature2.entities[0].ReferenceType2 = 6
+    plane.GetSpecificFeature2.entities[1].ReferenceType2 = 99
+    assert session.mate_info("other1").entities == (("whole", ""), ("face", ""))
+    assert session.mate_info("other2").entities == (("origin", "origin"), ("unread", ""))
+    assert [swcom.entity_kind(v) for v in (1, 3, 4, 5, 0, True, None)] == [
+        "edge", "vertex", "feature", "feature", "whole", "unread", "unread"]
     assert not any(e[0] in ("SetSuppression2", "Select2", "AddMate5") for e in doc.log)
 
 
@@ -3300,3 +3311,345 @@ def test_suppress_feature_sets_the_parts_feature_this_configuration_and_reads_it
     doc.suppression_takes = False
     with pytest.raises(swcom.SolidWorksError, match="would not turn back on Relief"):
         session.suppress_feature("Relief", False)
+
+
+def test_a_status_out_parameter_not_written_reads_as_no_status():
+    """W9d (the re-check, item 8): the resolve's code starts at -1, no swPersistReferencedObjectStates_e value, so a code
+    SolidWorks does not write is never read as Ok (0)."""
+    class Holder:
+        def __init__(self, value):
+            self.value = value
+    assert swcom._by_ref_status(Holder(-1)) == -1 and swcom._by_ref_status(Holder(0)) == 0
+    assert swcom._by_ref_status(None) == -1 and swcom._by_ref_status(Holder("x")) == -1 and swcom._by_ref_status(2) == 2
+
+
+def test_the_r3_walk_calls_the_members_late_binding_hands_back_uncalled(monkeypatch):
+    """W9d, the fourth round (the first M9 run on 2026: every face read "'method' object is not iterable"): through
+    late binding IBody2.GetFaces, IFace2.GetArea, GetSurface and GetType come back as bound methods, uncalled; the walk
+    calls them, as the probe's raw() did, and finds the one face."""
+    monkeypatch.setattr(findings, "PERSIST_REFERENCE_ROUTE_FOR_FACES_ON_2026", swcom.PERSIST_ROUTE_R3)
+    monkeypatch.setattr(findings, "COAXIAL_FACE_READ_ON_2026", True)
+    monkeypatch.setattr(swcom, "_out_unwritten", lambda: None)          # no pythoncom here; the code comes back
+
+    class Surface:
+        def IsCylinder(self):
+            return False
+
+    class Face:
+        def __init__(self, area):
+            self.area = area
+
+        def GetArea(self):
+            return self.area
+
+        def GetSurface(self):
+            return Surface()
+
+        def GetType(self):
+            return 2
+
+    wanted, other = Face(100.0), Face(100.0)
+    in_assembly = {id(wanted): object(), id(other): object()}
+
+    class Body:
+        def GetFaces(self):
+            return [other, wanted]
+
+    class PartExtension:
+        def GetPersistReference3(self, entity):
+            assert entity is wanted
+            return [1, 2]
+
+        def GetObjectByPersistReference3(self, raw, code):
+            return wanted, 0
+
+    extension = PartExtension()
+
+    class Part:
+        Extension = extension
+
+        def GetBodies2(self, kind, visible):
+            return [Body()]
+
+    class Component:
+        GetModelDoc2 = Part()            # S3: a property get through late binding, as on SolidWorks (only GetFaces
+                                         # and the face members come back uncalled)
+
+        def GetCorresponding(self, face):
+            return in_assembly[id(face)]
+
+    mate_entity = in_assembly[id(wanted)]
+
+    class AssemblyFace:
+        def GetArea(self):
+            return 100.0
+
+    class App:
+        def IsSame(self, a, b):
+            return 1 if (a is b or (a is mate_entity and isinstance(b, AssemblyFace)) or
+                         (b is mate_entity and isinstance(a, AssemblyFace))) else 0
+
+    reference = AssemblyFace()
+    mate_entity = reference
+    in_assembly[id(wanted)] = reference
+
+    class Entity:
+        Reference = reference
+
+    class Mate:
+        def MateEntity(self, index):
+            return Entity()
+
+    class Feature:
+        def GetSpecificFeature2(self):
+            return Mate()
+
+    session = swcom.Session.__new__(swcom.Session)
+    session.revision, session._app = (34, 0, 0), App()
+    monkeypatch.setattr(session, "_component", lambda handle: Component(), raising=False)
+    monkeypatch.setattr(session, "_kept_mate", lambda handle: ("UserFaceConc", Feature()), raising=False)
+    monkeypatch.setattr(session, "_component_name", lambda handle: "Sprocket-1", raising=False)
+    (answer,) = session.entity_references("old1", [("oldmate1", 0, "face")])
+    assert answer[1] == "0102" and answer[4] == "" and answer[2] is False, answer
+    assert session.last_walk["items"] == [("face", 2, 2, ("area", 100.0), 1)]
+
+
+def test_a_member_handed_back_uncalled_is_called_under_the_com_error_guard(monkeypatch):
+    """W9d M1 (fifth round): _read calls the method late binding hands back inside _guarded, so a COM error there is
+    SolidWorks' sentence (a ComError), not a fault of Gear Generator's."""
+    class Boom(Exception):
+        pass
+
+    def failing():
+        raise Boom(-2147023174, "The RPC server is unavailable.", None, None)
+
+    class Body:
+        GetFaces = staticmethod(failing)
+    monkeypatch.setattr(swcom, "_COM_ERRORS", (Boom,))                 # no pywin32 here: the guard catches Boom
+    try:
+        swcom._read(Body(), "GetFaces")
+    except swcom.ComError as exc:
+        assert "GetFaces" in str(exc)
+    else:
+        raise AssertionError("no ComError")
+
+
+
+def test_with_no_part_document_both_reference_reads_say_the_part_is_not_loaded(monkeypatch):
+    """S3 / S4: a lightweight or suppressed component (GetModelDoc2 None): entity_references and entity_reference each
+    say its part is not loaded, and read nothing else."""
+    monkeypatch.setattr(findings, "PERSIST_REFERENCE_ROUTE_FOR_FACES_ON_2026", swcom.PERSIST_ROUTE_R3)
+
+    class Component:
+        GetModelDoc2 = None
+
+    class Entity:
+        Reference = object()
+        ReferenceComponent = Component()
+
+    class Mate:
+        def MateEntity(self, index):
+            return Entity()
+
+    class Feature:
+        GetSpecificFeature2 = Mate()
+
+    session = swcom.Session.__new__(swcom.Session)
+    session.revision = (34, 0, 0)
+    monkeypatch.setattr(session, "_component", lambda handle: Component(), raising=False)
+    monkeypatch.setattr(session, "_kept_mate", lambda handle: ("M", Feature()), raising=False)
+    monkeypatch.setattr(session, "_component_name", lambda handle: "SprocketLight-1", raising=False)
+    monkeypatch.setattr(session, "mate_definition", lambda handle: swcom.MateDefinition(
+        "M", 0, "", 0, False, (), (swcom.MateEntityRead("SprocketLight-1", 5, "feature", "Sprocket Axis"),)),
+        raising=False)
+    said = "its part is not loaded in SolidWorks (lightweight or suppressed)"
+    assert session.entity_references("old1", [("oldmate1", 0, "face")]) == [("face", "", None, None, "", said)]
+    assert session.entity_reference("oldmate1", 0) == ("feature", "", None, said)
+
+
+@pytest.mark.parametrize("answers, counts, selected", [
+    ((None,), (0, 1), True),                  # Select4's return not a Boolean, the face selected: taken by the count
+    ((False, True), (0, 0, 1), True),        # False with nothing selected, then it took (_retry_select's reading)
+    ((True,) * 4, (0,) * 5, False),          # True with nothing selected, every time: not selected
+])
+def test_a_carry_selection_is_judged_by_the_selection_count_as_the_probes_judged_it(monkeypatch, answers, counts,
+                                                                                   selected):
+    """The audit (W9d): W9c S5 (c) and W9d faces (c) selected a resolved reference's entity by GetCorresponding and
+    Select4 and judged by the selection count, never Select4's return; and Select4 has answered False with nothing
+    selected just after a document was made, then worked. select_by_reference judges so, retried briefly."""
+    monkeypatch.setattr(swcom.time, "sleep", lambda _seconds: None)
+    monkeypatch.setattr(swcom, "_out_unwritten", lambda: None)
+    answer, count = iter(answers), iter(counts)
+
+    class Data:
+        Mark = 0
+
+    class Manager:
+        CreateSelectData = property(lambda self: Data())     # a zero-argument member: late binding hands its value
+
+        def GetSelectedObjectCount2(self, mark):
+            return next(count)
+
+    class Doc:
+        SelectionManager = Manager()
+
+    class Entity:
+        def GetType(self):
+            return 2
+
+        def Select4(self, append, data):
+            return next(answer)
+
+    class ByReference:
+        def GetObjectByPersistReference3(self, raw, code):
+            return Entity(), 0
+
+    class Part:
+        Extension = ByReference()
+
+    class Component:
+        GetModelDoc2 = Part()
+
+        def GetCorresponding(self, entity):
+            return Entity()
+
+    session = swcom.Session.__new__(swcom.Session)
+    session.revision = (34, 0, 0)
+    monkeypatch.setattr(session, "_component", lambda handle: Component(), raising=False)
+    monkeypatch.setattr(session, "_component_name", lambda handle: "Sprocket-5", raising=False)
+    monkeypatch.setattr(session, "_doc", lambda: Doc(), raising=False)
+    if selected:
+        session.select_by_reference("carried1", "face", "0102", False)
+    else:
+        with pytest.raises(SolidWorksError, match="could not be selected"):
+            session.select_by_reference("carried1", "face", "0102", False)
+
+
+def test_a_closed_files_version_and_dependencies_read_as_solidworks_2026_answered_them(monkeypatch):
+    """The audit (W9d): the closed-file reads on the shapes W9d's probe state (v) read on 2026 (w9d-probes-sw2026-…-1
+    :122-125): VersionHistory a list whose last entry is the last save ('19000[2025/260]', a 2026 file's history
+    beginning with its template's 17000), GetLatestSupportedFileVersion 19000, GetDocumentDependencies2 a flat
+    name-then-path list."""
+    monkeypatch.setattr(findings, "FILE_VERSION_READ_ON_2026", "route")
+    monkeypatch.setattr(findings, "DEPENDENCIES_READ_ON_2026", "route")
+    histories = {r"C:\U\RangeBox.SLDASM": ("17000[2024/282]", "19000[2025/260]"),
+                 r"C:\U\Reducer_12to1.SLDASM": ("17000[2024/282]",)}
+
+    class App:
+        def VersionHistory(self, path):
+            return histories[path]
+
+        GetLatestSupportedFileVersion = 19000
+
+        def GetDocumentDependencies2(self, path, traverse, search, add_read_only):
+            assert (traverse, search, add_read_only) == (False, False, False)
+            return ("Sprocket.SLDPRT", r"C:\U\Sprocket.SLDPRT", "RangeBox_Layout.SLDPRT", r"C:\U\RangeBox_Layout.SLDPRT")
+
+    session = swcom.Session.__new__(swcom.Session)
+    session.revision, session._app = (34, 0, 0), App()
+    assert session.running_file_version() == 19000
+    assert session.file_version(r"C:\U\RangeBox.SLDASM") == 19000           # the last entry, not the template's
+    assert session.file_version(r"C:\U\Reducer_12to1.SLDASM") == 17000      # a 2024 file: not the running version
+    assert session.dependencies(r"C:\U\RangeBox.SLDASM") == [r"C:\U\Sprocket.SLDPRT", r"C:\U\RangeBox_Layout.SLDPRT"]
+
+
+def test_states_per_mode_read_unshown_by_the_route_2026_measured(monkeypatch):
+    """The audit (W9d): COMPONENT_STATE_PER_CONFIGURATION_ROUTE_ON_2026, as probe state (b) read it: each mode's
+    IConfiguration by GetConfigurationByName, GetComponentSuppressionState(top-level Name2) a Boolean, True
+    suppressed; a lightweight component reads False (w9d-probes-sw2026-…-1 :114-121)."""
+    monkeypatch.setattr(findings, "COMPONENT_STATE_PER_CONFIGURATION_ROUTE_ON_2026",
+                        "IConfiguration.GetComponentSuppressionState(Name2)")
+    truth = {"H": {"Housing-1": True}, "N": {}, "L": {"Sprocket-4": True}}
+
+    class Configuration:
+        def __init__(self, mode):
+            self.mode = mode
+
+        def GetComponentSuppressionState(self, name):
+            return truth[self.mode].get(name, False)
+
+    class Doc:
+        def GetConfigurationByName(self, mode):
+            return Configuration(mode)
+
+    session = swcom.Session.__new__(swcom.Session)
+    session.revision = (34, 0, 0)
+    monkeypatch.setattr(session, "_doc", lambda: Doc(), raising=False)
+    read = session.component_states_in(["Housing-1", "Sprocket-4", "Sprocket-1"], ["H", "N", "L"])
+    assert read == {"Housing-1": {"H": True, "N": False, "L": False}, "Sprocket-4": {"H": False, "N": False, "L": True},
+                    "Sprocket-1": {"H": False, "N": False, "L": False}}
+
+
+@pytest.mark.parametrize("hresult, stops", [(-2147352567, False), (-2147023170, True)])
+def test_a_name_solidworks_refuses_for_a_remade_mate_keeps_its_own_but_a_lost_session_stops(monkeypatch, hresult,
+                                                                                         stops):
+    """Ruled (the audit's follow-up): a remade mate whose old name SolidWorks will not take keeps the name it gave and
+    is returned under it; a ComError that says the session has gone (the RPC server unavailable) still raises."""
+    monkeypatch.setattr(findings, "CARRY_REMAKE_KINDS_ON_2026", ("coincident",))
+
+    class Refused(Exception):
+        pass
+
+    def rename(feature, name):
+        raise swcom.ComError("setting Name", Refused(hresult, "Exception occurred.", None, None))
+
+    class Doc:
+        def ClearSelection2(self, all_):
+            return True
+
+    names = iter([[], ["Coincident12"]])
+    session = swcom.Session.__new__(swcom.Session)
+    session.revision, session._handles, session._mate_statuses = (34, 0, 0), {}, {}
+    monkeypatch.setattr(session, "_doc", lambda: Doc(), raising=False)
+    monkeypatch.setattr(session, "_mate_names", lambda: next(names), raising=False)
+    monkeypatch.setattr(session, "_select_target", lambda target, append: None, raising=False)
+    monkeypatch.setattr(session, "_add_mate5", lambda *args: (object(), 1), raising=False)
+    monkeypatch.setattr(session, "_mate_feature", lambda name: object(), raising=False)
+    monkeypatch.setattr(swcom.Session, "_rename", staticmethod(rename))
+    definition = types.SimpleNamespace(type=0, alignment=0, flipped=False, values=())
+    if stops:
+        with pytest.raises(swcom.ComError):
+            session.remake_mate("carrymate1", definition, ["a", "b"], "UserFaceCoin")
+    else:
+        assert session.remake_mate("carrymate1", definition, ["a", "b"], "UserFaceCoin") == ("Coincident12", 1)
+        assert session._handles["carrymate1"] == {"mate": "Coincident12"}
+
+
+@pytest.mark.parametrize("answers, counts, selected", [
+    ((None,), (0, 1), True),                  # Select4's return not a Boolean, the component selected: by the count
+    ((False, True), (0, 0, 1), True),        # False with nothing selected, then it took
+    ((True,) * 4, (0,) * 5, False),          # True with nothing selected, every time
+])
+def test_a_whole_component_for_a_remade_lock_is_selected_by_the_count(monkeypatch, answers, counts, selected):
+    """The review's A6: fix 5's other path, a whole component (a lock's target) in _select_target, judged by the
+    selection count and retried, as select_by_reference is."""
+    monkeypatch.setattr(swcom.time, "sleep", lambda _seconds: None)
+    answer, count = iter(answers), iter(counts)
+
+    class Data:
+        Mark = 0
+
+    class Manager:
+        CreateSelectData = property(lambda self: Data())
+
+        def GetSelectedObjectCount2(self, mark):
+            return next(count)
+
+    class Doc:
+        SelectionManager = Manager()
+
+    class Component:
+        def Select4(self, append, data, popup):
+            assert data.Mark == 1 and popup is False
+            return next(answer)
+
+    session = swcom.Session.__new__(swcom.Session)
+    session.revision = (34, 0, 0)
+    monkeypatch.setattr(session, "_component", lambda handle: Component(), raising=False)
+    monkeypatch.setattr(session, "_component_name", lambda handle: "Sprocket-1", raising=False)
+    monkeypatch.setattr(session, "_doc", lambda: Doc(), raising=False)
+    if selected:
+        session._select_target("carried1", True)
+    else:
+        with pytest.raises(SolidWorksError, match="Sprocket-1 could not be selected for a mate"):
+            session._select_target("carried1", True)

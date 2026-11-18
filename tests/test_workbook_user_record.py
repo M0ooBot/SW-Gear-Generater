@@ -52,8 +52,8 @@ def test_schema_7_keeps_the_users_work_and_round_trips_byte_for_byte(tmp_path):
     record = _record(_entry())
     text = store.link_record_to_json(record)
     raw = json.loads(text)
-    assert store._W9A_LINK_SCHEMA == 7                 # schema 7's shape; W9b's 8 and W9c's 9 write it unchanged
-    assert raw["link_schema_version"] == store.LINK_SCHEMA_VERSION == 9 and raw["schema_version"] == 1
+    assert store._W9A_LINK_SCHEMA == 7                 # schema 7's shape; W9b's 8, W9c's 9 and W9d's 10 write it
+    assert raw["link_schema_version"] == store.LINK_SCHEMA_VERSION == 10 and raw["schema_version"] == 1
     assert raw["gearbox"]["user_work"]["mates"][0]["touches"] == [["app", "G1"], ["user", "Sprocket-1"]]
     back = store.link_record_from_json(text)
     again = store.link_record_to_json(back)
@@ -81,13 +81,14 @@ def test_a_record_written_before_schema_7_reads_with_nothing_of_the_users_read(t
 
 
 def test_a_record_newer_than_this_apps_schema_is_refused_and_left_alone(tmp_path):
-    """W9a's reader refused 8 (W9b's; ``test_workbook_bands``); this one, reading 9 (W9c's), refuses 10."""
+    """W9a's reader refused 8 (W9b's; ``test_workbook_bands``); this one, reading 10 (W9d's), refuses 11 (W9c's
+    refusal of 10 is ``test_workbook_carry``'s)."""
     raw = json.loads(store.link_record_to_json(_record(_entry())))
-    raw["link_schema_version"] = 10
+    raw["link_schema_version"] = 11
     target = tmp_path / "R.workbook.json"
     target.write_text(json.dumps(raw))
     before = target.read_bytes()
-    with pytest.raises(store.UnknownSchema, match=r"schema 10, this one reads 9"):
+    with pytest.raises(store.UnknownSchema, match=r"schema 11, this one reads 10"):
         store.read_link_record(str(tmp_path / "R.xlsx"))
     assert target.read_bytes() == before
 
@@ -236,7 +237,7 @@ def _again(record, spec, exists):
     return upd, again
 
 
-def test_the_build_again_question_names_what_stays_behind_with_its_time(on_fake):
+def test_the_build_again_question_names_what_stays_behind_with_its_time(on_fake, w9d_unmeasured):
     sw, record = on_fake
     _sprocket(sw, record)
     sw.user_feature(next(p.path for p in record.current_parts() if "G4" in p.gears), "Groove")
@@ -246,18 +247,22 @@ def test_the_build_again_question_names_what_stays_behind_with_its_time(on_fake)
     upd, again = _again(record, gears(reducer(), G1=dict(flank="arcs")), sw.exists)
     assert upd.needs_new_revision and again.refusal == ""
     question = ui_text.build_again_question(upd, again, record=record)
+    # W9d (W9D-INTERFACES §9.1): while CARRY_INSERTS is unset (every version here: no version on record), W9a's clause
+    # is said led by the finding that holds the carry back.
+    lead = (" Gear Generator has not yet been shown to carry your work into a new revision on the SolidWorks it runs "
+            "on (findings.CARRY_INSERTS_ON_<year>), so")
     assert question.endswith(
-        f" As read at {at}, your Sprocket-1 and Lock3 stay in Reducer_12to1.SLDASM, and your Keyway stays in "
+        f"{lead} as read at {at}, your Sprocket-1 and Lock3 stay in Reducer_12to1.SLDASM, and your Keyway stays in "
         f"Gear_m1.5_N17, which G1's new part replaces; {again.name} has none of them, nor anything added since. Your "
         f"Groove in OutputGear comes with that part, which {again.name} reuses."), question
     # With nothing on record (or nothing of the user's read), a clause with no time (the coordinator's ruling 4).
-    timeless = (" Anything you added to Reducer_12to1.SLDASM in SolidWorks (components, mates, and features in parts "
-                f"this revision makes new) stays there, and {again.name} has none of it.")
+    timeless = (f"{lead} anything you added to Reducer_12to1.SLDASM in SolidWorks (components, mates, and features in "
+                f"parts this revision makes new) stays there, and {again.name} has none of it.")
     for empty in (None, store.UserWorkEntry(read_at="2026-11-16T14:02:00Z", assembly=record.gearbox.assembly)):
         bare = copy.deepcopy(record)
         bare.gearbox.user_work = empty
         assert ui_text.build_again_question(upd, again, record=bare) == \
-            question[:question.index(" As read at")] + timeless
+            question[:question.index(lead)] + timeless
 
 
 def _calls_from(sw, start):
@@ -678,13 +683,39 @@ def test_after_an_update_with_nothing_of_the_users_in_error_whats_wrong_is_not_s
     assert ok and "What's Wrong" not in text
 
 
-def test_the_whats_wrong_sentences_say_a_true_length_and_to_leave_the_box_alone():
-    """The close review on 2024: the box stayed 22 to 23 s on a gearbox with modes and 3 to 5 s on a plain one, and
-    what pressing its buttons mid-Update does was not measured."""
-    assert ui_text.WHATS_WRONG_AHEAD == ("SolidWorks may show its What's Wrong box for up to half a minute during the "
-                                         "Update: leave it alone, it closes by itself, and the Update carries on.")
+def test_the_whats_wrong_sentences_say_what_the_box_does_and_to_close_it_where_it_stays():
+    """The close review on 2024 (the box stayed 22 to 23 s on a gearbox with modes, 3 to 5 s on a plain one, in
+    Updates that rebuilt; pressing its buttons mid-Update not measured), and W9C-RUNS-REVIEW.md's review of 1dc9350, §3
+    (the box raised at the first activation after a stop left a part in error stayed until its Close was pressed): the
+    exact words, as the review gives them."""
+    assert ui_text.WHATS_WRONG_AHEAD == (
+        "SolidWorks may show its What's Wrong box during the Update: leave it alone while the Update runs. It closes by "
+        "itself once SolidWorks rebuilds; if the Update stops before that, it stays until you close it with its Close "
+        "button.")
     assert ui_text.WHATS_WRONG_AFTER == ("SolidWorks may have shown its What's Wrong box for up to half a minute "
                                          "during the Update; nothing in it needed answering.")
+    assert ui_text.WHATS_WRONG_STAYS == (
+        "SolidWorks may show its What's Wrong box for that part when this press brings the assembly forward; it does "
+        "not close by itself: close it with its Close button, then close the documents as above.")
+    assert ui_text.WHATS_WRONG_NEXT == (
+        "SolidWorks may show its What's Wrong box for the part left in error when the assembly is next brought "
+        "forward; it does not close by itself: close it with its Close button.")
+    assert ui_text.whats_wrong_stays_sentence(2).startswith("SolidWorks may show its What's Wrong box for those parts ")
+    assert ui_text.whats_wrong_next_sentence(3).startswith("SolidWorks may show its What's Wrong box for the parts "
+                                                           "left in error ")
+    assert [ui_text.whats_wrong_stays(r) for r in ((32, 5, 0), (34, 1, 1), (34, 0, 0), (30, 0, 0), ())] == [
+        True, False, False, False, False]
+
+
+def test_the_footer_says_whats_wrong_ahead_only_where_the_box_is_measured_to_stay(monkeypatch):
+    """WHATS_WRONG_AHEAD now says the box stays if the Update stops before a rebuild, so it is said only where the
+    finding says so (findings.WHATS_WRONG_STAYS_WITHOUT_A_REBUILD_ON_2024 True); with it unmeasured, nothing."""
+    _box(monkeypatch)
+    broken = [store.UserMateEntry("Lock3", "lock", 16, [["app", "G1"], ["user", "Sprocket-1"]], [""], 46, False)]
+    entry = _entry(problems=[], revision=[32, 5, 0], mates=broken)
+    assert ui_text.WHATS_WRONG_AHEAD in ui_text.user_work_line(update.UserWorkAhead(entry))[0]
+    monkeypatch.setattr(findings, "WHATS_WRONG_STAYS_WITHOUT_A_REBUILD_ON_2024", None)
+    assert "What's Wrong" not in ui_text.user_work_line(update.UserWorkAhead(entry))[0]
 
 
 def test_a_quiet_press_or_a_stop_before_writing_never_says_the_box_may_have_shown(on_fake, monkeypatch):
@@ -725,3 +756,11 @@ def test_the_footer_after_a_press_never_says_both_box_sentences(on_fake, monkeyp
     footer = ui_text.workbook_footer(assessed(moved), record=after, update=upd, folder=FOLDER, digest="d3")
     assert footer.text.count(ui_text.WHATS_WRONG_AHEAD) == 1 and ui_text.WHATS_WRONG_AFTER not in footer.text, \
         footer.text
+    # The review of 1dc9350, §3: a stop that left a part in error says WHATS_WRONG_NEXT; the footer carrying it never
+    # says the prediction's AHEAD (nor STAYS) beside it.
+    stop = ("Update SolidWorks stopped. Gear_m1.5_N68.SLDPRT: SolidWorks reported an error rebuilding Gear_m1.5_N68. "
+            + ui_text.WHATS_WRONG_NEXT)
+    footer = ui_text.workbook_footer(assessed(moved), record=after, update=upd, folder=FOLDER, digest="d3",
+                                     note=ui_text.Note(stop, False))
+    assert footer.text.count(ui_text.WHATS_WRONG_NEXT) == 1, footer.text
+    assert ui_text.WHATS_WRONG_AHEAD not in footer.text and ui_text.WHATS_WRONG_STAYS not in footer.text, footer.text

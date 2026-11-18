@@ -3765,3 +3765,113 @@ def test_every_state_fits_its_column_and_a_long_gear_name_is_shortened_as_a_part
     rows = {r[0]: r[8] for r in ui_text.workbook_gear_rows(spec2, plan, [])}
     assert rows[f"{long_a}b"] != rows["Other"] and rows["Other"].startswith("same as Gear…")
     assert ui_text._mode_line(SimpleNamespace(shafts=()), checks.ModeReport("", ratio_why="neutral")) == "Neutral."
+
+
+from gear_generator import findings  # noqa: E402
+
+# -- What's Wrong where it stays (W9C-RUNS-REVIEW.md, the review of 1dc9350, §3; findings.WHATS_WRONG_STAYS_WITHOUT_A_
+# REBUILD): said only on a SolidWorks measured to leave the box up, once, after the sentence it belongs to ------------
+
+Y24, Y26 = (32, 5, 0), (34, 1, 1)
+
+
+def _left_in_error(**values):
+    """A press that changed G2's part, whose rebuild reported an error, and stopped there: the part left in error."""
+    fields = dict(parts=[swbuild.UpdateResult(document="Gear_m1.5_N68.SLDPRT", changed=["No. of Teeth"],
+                                              rebuilt=False)],
+                  layout=None, placed=[], rebuilt=False, changed=[_path("Gear_m1.5_N68")],
+                  failures=[("Gear_m1.5_N68.SLDPRT", "SolidWorks reported an error rebuilding Gear_m1.5_N68.")],
+                  skipped="the layout part and the assembly, because Gear_m1.5_N68.SLDPRT failed")
+    fields.update(values)
+    return swbuild.GearboxUpdate(**fields)
+
+
+def _held(**values):
+    """The press again on a part still open in error: it stops before any write on that part alone."""
+    fields = dict(parts=[], layout=None, placed=[], rebuilt=False, changed=[],
+                  failures=[("Gear_m1.5_N68.SLDPRT", "SolidWorks reads Teeth in error in Gear_m1.5_N68.")],
+                  skipped="the assembly, because Gear_m1.5_N68.SLDPRT is in error")
+    fields.update(values)
+    return swbuild.GearboxUpdate(**fields)
+
+
+def _still():
+    from types import SimpleNamespace
+    return SimpleNamespace(still_in_error=[_path("Gear_m1.5_N68")])
+
+
+def _three_forms(revision):
+    """The three forms of gearbox_update_status that say the still-in-error sentence: the held stop alone, beside
+    another failure, and in place of 'already matches'."""
+    nothing = _updated(parts=[swbuild.UpdateResult(document="Gear_m1.5_N68.SLDPRT", unchanged=["No. of Teeth"],
+                                                   rebuilt=True)], layout=None, placed=[], changed=[])
+    beside = _held(failures=[("Gear_m1.5_N68.SLDPRT", "SolidWorks reads Teeth in error in Gear_m1.5_N68."),
+                             ("Reducer_12to1.SLDASM", "SolidWorks did not answer.")])
+    return [ui_text.gearbox_update_status(_update(), r, finished=_still(), revision=revision)[0]
+            for r in (_held(), beside, nothing)]
+
+
+def test_whats_wrong_stays_is_said_once_after_the_still_in_error_sentence_where_the_press_stopped_on_2024():
+    """The re-check of 7d96316 (1f8540f, should-fix 1): said only for a press that stopped before rebuilding the
+    assembly, the held stop alone or beside another failure; never in place of 'already matches' or after a press
+    that went on, where every box measured went while SolidWorks rebuilt."""
+    said = ui_text.still_in_error_sentence(_still().still_in_error, ASM)
+    alone, beside, quiet = _three_forms(Y24)
+    assert alone == said + " " + ui_text.WHATS_WRONG_STAYS
+    assert beside.endswith(said + " " + ui_text.WHATS_WRONG_STAYS) and beside.startswith("Update SolidWorks stopped.")
+    for text in (alone, beside):
+        assert text.count("What's Wrong") == 1 and ui_text.WHATS_WRONG_NEXT not in text, text
+    assert quiet.startswith(said) and "What's Wrong" not in quiet, quiet
+
+
+def test_whats_wrong_stays_is_not_said_after_a_press_that_went_on_into_the_assembly_on_2024():
+    went_on = _updated()                                       # changed, rebuilt, no failure
+    text, _ = ui_text.gearbox_update_status(_update(), went_on, finished=_still(), revision=Y24)
+    assert ui_text.still_in_error_sentence(_still().still_in_error, ASM) in text and "What's Wrong" not in text, text
+    late = _updated(failures=[("Reducer_12to1.SLDASM", "SolidWorks did not answer.")], skipped="")   # after the
+    text, _ = ui_text.gearbox_update_status(_update(), late, finished=_still(), revision=Y24)       # assembly
+    assert ui_text.WHATS_WRONG_STAYS not in text, text
+
+
+@pytest.mark.parametrize("revision", [Y26, (34, 0, 0), ()])
+def test_whats_wrong_stays_is_not_said_where_the_box_is_not_measured_to_stay(revision):
+    assert all("What's Wrong" not in text for text in _three_forms(revision))
+
+
+def test_whats_wrong_stays_is_not_said_on_2024_with_its_finding_unmeasured(monkeypatch):
+    monkeypatch.setattr(findings, "WHATS_WRONG_STAYS_WITHOUT_A_REBUILD_ON_2024", None)
+    assert all("What's Wrong" not in text for text in _three_forms(Y24))
+
+
+def test_whats_wrong_next_is_said_once_in_a_stop_that_leaves_a_part_in_error_on_2024_in_place_of_after(monkeypatch):
+    work = SimpleNamespace(in_error=["Sprocket-1"])                  # the user's work in error too: AFTER would come
+    stopped = _left_in_error(user_work=work)
+    text, ok = ui_text.gearbox_update_status(_update(), stopped, revision=Y24)
+    assert not ok and "Gear_m1.5_N68 is left in error" in text, text
+    assert text.count(ui_text.WHATS_WRONG_NEXT) == 1 and ui_text.WHATS_WRONG_AFTER not in text, text
+    assert text.index("then press Update SolidWorks again.") < text.index(ui_text.WHATS_WRONG_NEXT)
+    for revision in (Y26, ()):
+        assert "What's Wrong" not in ui_text.gearbox_update_status(_update(), stopped, revision=revision)[0]
+    monkeypatch.setattr(findings, "WHATS_WRONG_STAYS_WITHOUT_A_REBUILD_ON_2024", None)
+    text, _ = ui_text.gearbox_update_status(_update(), stopped, revision=Y24)
+    assert ui_text.WHATS_WRONG_NEXT not in text and text.count(ui_text.WHATS_WRONG_AFTER) == 1, text
+
+
+def test_after_a_stop_with_the_users_work_in_error_and_no_part_left_in_error_after_is_still_said_once():
+    work = SimpleNamespace(in_error=["Sprocket-1"])
+    stopped = _updated(failures=[("Reducer_12to1.SLDASM", "SolidWorks did not answer.")], user_work=work,
+                       skipped="the rest")
+    text, ok = ui_text.gearbox_update_status(_update(), stopped, revision=Y24)
+    assert not ok and text.count(ui_text.WHATS_WRONG_AFTER) == 1 and ui_text.WHATS_WRONG_NEXT not in text, text
+
+
+def test_a_part_left_in_error_and_one_still_in_error_say_stays_alone_never_next_beside_it():
+    from types import SimpleNamespace as NS
+    stopped = _left_in_error()
+    finished = NS(still_in_error=[_path("Gear_m1.5_N17")])
+    text, _ = ui_text.gearbox_update_status(_update(), stopped, finished=finished, revision=Y24)
+    assert text.count(ui_text.WHATS_WRONG_STAYS) == 1 and text.count("What's Wrong") == 1, text
+    # The stop names two parts left in error (the new one and the still one), so the NEXT it would say is the plural:
+    # neither number may stand beside STAYS (the re-check of 7d96316, should-fix 2).
+    assert ui_text.whats_wrong_next_sentence(1) not in text and ui_text.whats_wrong_next_sentence(2) not in text, text
+    assert "What's Wrong" not in ui_text.gearbox_update_status(_update(), stopped, finished=finished, revision=Y26)[0]

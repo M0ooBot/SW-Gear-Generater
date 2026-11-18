@@ -1063,6 +1063,81 @@ that says the Update stops there as before.
 - **Route (c1) on a train with no carrier is measured on 2024 too** (`USER_MATE_PUT_NO_CARRIER_ON_2024` True, the
   12 : 1 without modes).
 
+**2026-11-18: a What's Wrong that outlives its job.** W9c's confirming run on SolidWorks 2024 (`06d5141`; reviewed in
+`W9C-RUNS-REVIEW.md`'s addendum "SolidWorks 2024", `78fdcb6`) showed the first box to outlive its job, so "a box that
+outlives its job (never seen)" above is no longer never seen. It came at the demonstration script's own activation of
+RangeBox with the ring held in error, before remake M3's step 2, owned by SolidWorks' frame with the frame enabled, and
+was still up when the harness had waited 60 s after the job; nothing logged says it went (`W9C-DEMONSTRATION.md`, the
+2024 section). It was not in an app Update; no box in an app Update has been seen to outlive its job. The
+coordinating session's ruling, the user's to overrule: on SolidWorks 2024, in a demonstration run only, a What's Wrong
+box owned by SolidWorks' own frame, with the frame enabled, that is still up 60 s after a job is logged as having
+outlived its job; the script then closes it with the box's own Close button and requires it gone within 10 s, and goes
+on. Anything else (another dialog, another owner, a disabled frame, a box that will not close) stays the STOP it is.
+The app itself is unchanged by this: it still leaves the box alone and changes no SolidWorks setting. The close path
+is off unless the run asks for it by a flag (`probe/w9c_demonstration.py --close-outlived-whats-wrong`), so every
+other run behaves as before. Ruled further the same day, on the re-check of the script (`W9C-RUNS-REVIEW.md`,
+`b725b32`): before either press the control must be checked to be a visible, enabled Button of that box, else the
+STOP; if a `BM_CLICK` on it leaves the box up, the script may post the box its own Close control's `WM_COMMAND`
+(that control's id, to that box) as a second try, still a press of its own Close button; the box must be gone within
+10 s of the last try, else the STOP; the log says which press closed it. Whether the app's own press, made with a part
+held in error, can leave such a box standing after it is not measured (the review's inference from
+`Session.open_document`'s `ActivateDoc3`); `remake-m3`'s second pass measures the app's press as the first
+activation after the stop. If a run shows it, this section and W9a's sentences take it.
+
+**2026-11-18, after the 2024 rerun of remake's M3 (`1dc9350`; reviewed in `W9C-RUNS-REVIEW.md`, `6665b4e`).** What it
+measured, on SolidWorks 2024 32.5.0 from `c2d95cc`, the close path asked for:
+- *The box at the first activation after a stop.* Both times something brought RangeBox forward first after step 1
+  left the ring (an app part) in error, What's Wrong came at `ActivateDoc3` and did not go: at the script's own read
+  (up at 0.41 s, still up 60.18 s after the job) and, in the second pass, in the app's own press again, as the first
+  activation since step 1 (up at 5.56 s, still up 60.24 s after the press). Each was owned by the frame with the frame
+  enabled, and each went 0.25 s after the script's `BM_CLICK` on its own Close. The app's press returned its
+  still-in-error stop with the box up, so it blocked nothing. No box came at a second activation or in a press that
+  rebuilt. *Inference:* the box comes at the first activation with a feature in error and goes only when SolidWorks
+  rebuilds after it (`findings.WHATS_WRONG_STAYS_WITHOUT_A_REBUILD_ON_2024` True; on 2026 False, no box at all,
+  measured by remake-m3 on 2026 below).
+- *The assembly's save flag.* SolidWorks 2024 marked RangeBox at its first open-and-activate after step 1, whoever
+  made it, not at step 1; the app wrote nothing and saved nothing.
+
+The coordinating session's rulings, the user's to overrule:
+- **The second pass's one FAIL is a fact of SolidWorks 2024, not a fault of the app**, and nothing is run again for
+  it. The script now states the assembly's save flag going False to True as that fact when it is the only flag that
+  changed, no changing call was traced and no file was written; any other difference still fails.
+- **The app still never closes the What's Wrong box; it tells the user truly what the box does.** On a SolidWorks
+  whose findings say the box shows and stays (2024): before the press, *SolidWorks may show its What's Wrong box during
+  the Update: leave it alone while the Update runs. It closes by itself once SolidWorks rebuilds; if the Update stops
+  before that, it stays until you close it with its Close button.*; after a stop that leaves a part in error, in place
+  of *may have shown*, *SolidWorks may show its What's Wrong box for the part left in error when the assembly is next
+  brought forward; it does not close by itself: close it with its Close button.*; and after the still-in-error
+  sentence, *SolidWorks may show its What's Wrong box for that part when this press brings the assembly forward; it
+  does not close by itself: close it with its Close button, then close the documents as above.*
+
+**Not measured on 2024, as it now stands** (in place of the list above where they differ): a person bringing the
+assembly forward by hand after a stop, and closing the documents with the box up; how long a box that outlives its
+job stays past 60 s; a press that stops before any rebuild with the user's own work in error (AHEAD is said there and
+not shown); which document's `ActivateDoc3` raised the box in the app's press; a person pressing FeatureXpert or the
+box's own checkbox while an Update runs; a Build with the user's work in error; the mate case on a gearbox without
+modes; other kinds of mate error; a box longer than 23 s in an Update that rebuilt; "show errors every rebuild" off.
+*Measured since the list above:* a box that outlives its job (twice, each closed by the script's press of its Close).
+
+**2026-11-18, remake-m3 on SolidWorks 2026 34.1.1** (`5aca9c1`, from `23107c2`, the any-dialog STOP in force, the
+close path not asked). Step 2b read as on 2024. No What's Wrong came anywhere: not at the script's own first activation
+after step 1, and not in the second pass's app press again, the first activation since step 1, which run 11 never
+showed; so `WHATS_WRONG_STAYS_WITHOUT_A_REBUILD_ON_2026` False now rests on this run (`ea4efec`), and none of the
+three 2024 sentences is said on 2026. The second pass's one FAIL is the same single change as on 2024, RangeBox.SLDASM
+False to True with no changing call traced and no file written. The coordinating session's ruling, the user's to
+overrule: **the same fact holds on SolidWorks 2026 as on 2024: the assembly is marked at its first activation after
+step 1, not by step 1 and not by a write; it is not a fault of the app and nothing is run again for it.** Run 11's
+reading, that step 1's press leaves the assembly modified, is on both versions the first activation after step 1 (its
+read activated RangeBox before reading the flag). *Not measured on 2026*, beside the 2024 list where it applies: a person's
+own activation of the assembly after a stop, a press stopping before any rebuild with the user's own work in error, and
+"show errors every rebuild" off.
+
+**2026-11-18, the close path extended.** The coordinating session's ruling, the user's to overrule: the closing of a
+What's Wrong that outlives its job, as ruled above, applies to every demonstration run on SolidWorks 2024 that asks for
+it by the flag, not W9c's alone, since one such box would end an unattended run. `probe/w9d_demonstration.py` takes
+`--close-outlived-whats-wrong` and puts W9c's close path into W9a's harness as W9c's own flag does; off without it,
+and every other rule as above.
+
 
 ## Changes after W9b, W9c's probes and the review of W9c's packages
 
@@ -1094,3 +1169,38 @@ Ruled by the coordinating session on 2026-11-17, each the user's to overrule. Th
   it. The mate kinds remade from their definitions are coincident, lock, distance and angle on axes, planes and
   whole components; concentric, limit, width, gear, faces and edges, flipped mates and a sub-assembly's leaf are
   not.
+
+## W9 closed (2026-11-18)
+
+W9 is closed on SolidWorks 2026 and 2024: each of its four stages has met §5's *Done when* on 2026, been confirmed on
+2024 and been reviewed. The coordinating session merges branch `w9d`, which holds all of W9, into `workbook` after this entry; the whole suite at the merge head is in the merge commit's message. The account of how
+each stage went is `docs/HANDOFF-WORKBOOK.md`, *Where W9 stands*, items 1 to 11.
+
+- **W9a** (the user's work is theirs) closed on 2026-11-17. *Done when* met on 2026 by the closing run (`19651ee`,
+  reviewed in `W9A-CLOSE-2026-REVIEW.md`) and the final full run, every section 0 failed with the window check's W8
+  stage and K12 (`f0c5ff7`, `probe/results/w9a-final-sw2026-20261117.log`; reviewed in `W9A-CLOSE-2024-REVIEW.md`'s
+  addendum, `bf2960d`). Confirmed on 2024 by the confirming set, 0 failed, under the ruling that the app leaves
+  SolidWorks' What's Wrong box alone (reviewed `8e984e2`).
+- **W9b** (sleeve checks, bands with a relief, the hub) closed on 2026-11-17. *Done when* met on 2026 by
+  `probe/w9b_demonstration.py`'s run from `b15450f`, 0 failed, `RangeBox_Fixed` built from scratch with every mode as
+  §3 (`de0a470`). Confirmed on 2024 from `529f939` (`9e77303`): build, update and old 0
+  failed, the coarse volume guard's failure laid to SolidWorks 2024's mass properties and its allowance ruled from a
+  control in the same session (`W9B-REVIEW.md`'s 2024 addendum, `9b85411`; replayed clean, `6bdf802`).
+- **W9c** (Update adds, removes and re-mates, and adds and removes modes) closed on 2026-11-18. *Done when* met on
+  2026 by runs 10 and 11 on 34.0.0 (`d878105`; reviewed in `W9C-RUNS-REVIEW.md`, `dbf9870`): RangeBox with the user's
+  work edited to `RangeBox_Fixed`, one Update adding Hub and giving RangeSlv its bands in place with every user item
+  kept, then a mode added and one removed. Confirmed on 2024 by the confirming run (`06d5141`, reviewed `78fdcb6`) and
+  remake's M3 rerun there (`1dc9350`, reviewed `6665b4e`), with M3 also run on 2026 34.1.1 (`5aca9c1`). Its five gates
+  are True on both versions (`74024a1`, `d0e32bb`); the What's Wrong sentences and rulings are in the sections above.
+- **W9d** (Build again… carries the user's work) closed on 2026-11-18. *Done when* met on 2026 by M9's second run on
+  34.1.1 (`c2d95cc`, reviewed in `W9D-DEMONSTRATION-REVIEW.md`, `7996089`), every row as §5 words it. Confirmed on
+  2024 by M9 from `5aca9c1`, 0 FAIL, no STOP, no What's Wrong box (`69b6354`, reviewed `e51de95`); its findings are
+  set alike on both versions (`225e3d7`, `e7a3577`) and re-checked (`235f658`).
+
+**What W9 leaves open** is listed in `docs/HANDOFF-WORKBOOK.md`'s read-this-first paragraph of 2026-11-18 (morning)
+and its items 8, 10 and 11, and not repeated here: the gates still None and what the app says for each, what only the
+fake has shown, the known limits measured on SolidWorks 2024 (memory in a carrying build and in W9c's modes, the
+What's Wrong box that stays without a rebuild, the face cap coming sooner), and the coordinating session's rulings,
+each the user's to overrule, under its *Questions waiting for the user*.
+
+**GitHub issue #1 is left open for the user to close.**

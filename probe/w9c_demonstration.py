@@ -5,8 +5,18 @@ SolidWorks, through the Workbook window's own path (W9a's Desk9: the window's pl
     python w9c_demonstration.py <src> <out> --pid PID [--log FILE] [--sections fixed,modes,...] [--redo]
         [--master <S0's rangebox.master>] [--user-master <W9a's setup.master>]
         [--reducer-master <W9a's reducer.master>] [--fixed-master <this script's fixed-updated.master>]
-        [--m4-part <a part with an in-context reference, made by hand>]
+        [--m4-part <a part with an in-context reference, made by hand>] [--close-outlived-whats-wrong]
     python w9c_demonstration.py --self-check      (no SolidWorks, no Excel)
+
+``--close-outlived-whats-wrong`` (the coordinator's ruling of 2026-11-18, ISSUE-1-PLAN.md; off unless given, so every
+other run is as before): on SolidWorks 2024 only, a What's Wrong owned by SolidWorks' frame, the frame enabled, that is
+still up 60 s after a job (W9a's allowance) is said to have outlived its job, and the script then closes it with the
+box's own Close button and requires it gone within 10 s with the frame enabled, and goes on: the control checked to be a
+visible, enabled Button of that box before each press, a BM_CLICK first and, if the box is still up 10 s later, the
+control's own WM_COMMAND posted to the box as a second try (the ruling on the re-check, b725b32), the press that closed
+it said. Anything else (another
+window, another owner, a disabled frame, a box that will not close, another version) stays the STOP. The app is not
+changed by it: it still leaves the box alone and changes no SolidWorks setting.
 
 Every new kind of write is behind a per-version finding that is None (``UPDATE_INSERTS_A_GEAR``,
 ``UPDATE_MAKES_MATES_WITH_MODES``, ``UPDATE_BANDS_IN_PLACE``, ``UPDATE_ADDS_A_MODE``, ``UPDATE_REMOVES_A_MODE``,
@@ -63,6 +73,11 @@ Sections (each can run alone from a kept master; ``fixed`` keeps ``fixed-updated
                 user made by hand with an in-context reference to an app gear (W9C-DEMONSTRATION.md, m4), read-only,
                 and the route proposed from it.
 - ``w9b-part``  W9b's ``part`` section again (88 s on 2026), so its step-face read runs on SolidWorks in this session.
+- ``remake-m3`` (by name only) remake's M3 alone, without its first part: its own copy of setup.master (from
+                ``--user-master``, or this <out>'s; without either, W9a's ``setup`` runs first, building RangeBox too unless
+                ``--master`` gives it). Its folder is ``remake-again``, as in ``remake``. Then a second pass on its own
+                copy (``remake-first``): step 1, and the app's press again as the first thing to activate a document
+                after it, read around only by what activates nothing (W9C-DEMONSTRATION.md says what each pass shows).
 
 Time on 2026 (fixed and modes as run 5 measured): fixed 20 min, modes 48, remove 15, remake 30, bands-off 8, m4 5, w9b-part 2: about 2 h 10
 min (the plan's budget 2 h 20 min); add 5 min if setup.master and 4 if the 12 : 1's master must be built first.
@@ -689,8 +704,10 @@ def status_alone(text):
 def beyond_step_1(states, step_1_files):
     """The documents reading modified that step 1 did not change. A fact since run 11 on 34.0.0 (W9C-RUNS-REVIEW.md's
     addendum on the final runs, §2): SolidWorks marks the open assembly modified when a part of it is changed and
-    rebuilt in its own window, so RangeBox.SLDASM reads modified after step 1 though nothing wrote to it. The strict
-    check is the before/after comparison across the press (:func:`wrote_in_press`)."""
+    rebuilt in its own window, so RangeBox.SLDASM reads modified after step 1 though nothing wrote to it. That premise
+    is run 11's: there every read of the flag came after an activation; on 2024 remake-m3's second pass read RangeBox
+    unmarked after step 1 and marked at its first open-and-activate since (W9C-RUNS-REVIEW.md, the review of 1dc9350,
+    §2). The strict check is the before/after comparison across the press (:func:`wrote_in_press`)."""
     return sorted(n for n, f in (states.get("flags") or {}).items() if f and n not in step_1_files)
 
 
@@ -714,6 +731,18 @@ def wrote_in_press(changing, globals_before, globals_after, states_before, state
     return out
 
 
+def marked_at_first_activation(changing, states_before, states_after, assembly_file):
+    """The coordinator's ruling of 2026-11-18 on remake-m3's second pass (W9C-RUNS-REVIEW.md, the review of 1dc9350, §2):
+    SolidWorks 2024 marks the open assembly at its first open-and-activate after a press changed its parts and stopped
+    before reaching it, and the app's press again is that activation. True (a fact, not a write) only when the record's
+    assembly (``assembly_file``) read False before and True after, it is the only save flag that changed, no traced
+    call changed or showed anything (``changing``) and no file time changed; any other difference is not this."""
+    fb, fa = states_before.get("flags") or {}, states_after.get("flags") or {}
+    newly = sorted(n for n in set(fb) | set(fa) if fb.get(n) != fa.get(n))
+    return (not changing and newly == [assembly_file] and fb.get(assembly_file) is False
+            and fa.get(assembly_file) is True and (states_before.get("times") or {}) == (states_after.get("times") or {}))
+
+
 def stopped_again(result, ring_file):
     """Whether a press stopped before any write on the ring held in error, as step 2 did: its failures name the ring's
     file alone and it said what it skipped."""
@@ -721,27 +750,171 @@ def stopped_again(result, ring_file):
 
 
 def wrote_nothing(changing, globals_before, globals_after, states_before, states_after, result, ring_file, ring,
-                  mates_written, ratios_before, ratios_after):
+                  mates_written, ratios_before, ratios_after, ring_before=None):
     """§6.2: what step 2 wrote, as sentences (empty: nothing). ``changing``: its traced calls that change or show
     anything (``nothing_changed_calls``, ``AddComponent5``, ``SaveAs3``); the globals before and after, every part's
     and the assembly's own (equation writes are not traced); ``states_*``: ``{"flags": {file: GetSaveFlag}, "times":
     {file: mtime}}`` of every document of the copy just before and after; ``result``: the GearboxUpdate's ``changed``,
-    ``mates_made``, ``remade_in_modes``, ``placed``, ``skipped`` and ``failures``; ``ring``: the ring's
-    ``landing_state`` after; ``mates_written``: W9a's ``written`` of ``read_now`` before and after; each gear mate's
-    ratio before and after. Which documents read modified before is a fact (:func:`beyond_step_1`), not a check."""
+    ``mates_made``, ``remade_in_modes``, ``placed``, ``skipped`` and ``failures``; ``ring`` and ``ring_before``: the
+    ring's ``landing_state`` after and before; ``mates_written``: W9a's ``written`` of ``read_now`` before and after;
+    each gear mate's ratio before and after. Which documents read modified before is a fact (:func:`beyond_step_1`),
+    not a check. The ring is held to itself across the press (W9C-RUNS-REVIEW.md's 2024 addendum, §4): in error before
+    it, at 54 teeth, and after it in error with the same features and codes at 54 teeth, whatever the codes are (2026
+    reads Tooth Space 72 and Teeth 1; 2024 reads 51 and 51), the codes said as facts where read."""
     out = wrote_in_press(changing, globals_before, globals_after, states_before, states_after, result)
     if not result.get("skipped"):
         out.append("nothing said skipped")
     if [w for w, _ in result.get("failures") or []] != [ring_file]:
         out.append(f"failures name {[w for w, _ in result.get('failures') or []]}, not the ring's file alone")
-    codes = dict((ring or {}).get("in_error") or [])
-    if codes.get("Tooth Space") != 72 or (ring or {}).get("teeth") != 54.0:
-        out.append(f"the ring reads {ring}, not Tooth Space at 72 and 54 teeth")
+    held = [tuple(e) for e in (ring_before or {}).get("in_error") or []]
+    now = [tuple(e) for e in (ring or {}).get("in_error") or []]
+    if not held or (ring_before or {}).get("teeth") != 54.0:
+        out.append(f"the ring before the press reads {ring_before}, not in error at 54 teeth")
+    if now != held or (ring or {}).get("teeth") != 54.0:
+        out.append(f"the ring reads {now} at {(ring or {}).get('teeth')} teeth after the press, against {held} at "
+                   f"{(ring_before or {}).get('teeth')} before: not the same codes at 54 teeth")
     if mates_written:
         out.append(f"the assembly's read {mates_written}")
     if ratios_before != ratios_after:
         out.append(f"ratios {ratios_before} -> {ratios_after}")
     return out
+
+
+# -- What's Wrong outliving its job: the coordinator's ruling of 2026-11-18 (ISSUE-1-PLAN.md, the section on SolidWorks
+# 2024's confirming runs), on SolidWorks 2024, in a run that asks for it (WW_CLOSE_FLAG) ------------------------------
+
+WW_CLOSE_FLAG = "--close-outlived-whats-wrong"
+WW_CLOSE_YEAR = 2024
+WW_CLOSE_WITHIN = 10.0                   # s: a box the script closed with its own Close button must be gone by then
+WW_CLOSE_BUTTONS = ("&Close", "Close")   # the box's Close, as W8's watch listed its controls on 2024 (24-4:311)
+
+
+def outlived_close_refused(year, boxes, seen, enabled, unowned, blocking, others):
+    """Why a What's Wrong still up WW_ALLOWANCE s after its job may not be closed by the script (empty: it may). The
+    ruling allows it only on SolidWorks 2024 (``year``), only for boxes this job's watch read as owned by SolidWorks'
+    frame (``boxes``: [(hwnd, owned)] up now; ``seen``: the hwnds the watch read so), with none not owned by the frame
+    in the job (``unowned``), the frame read enabled (True, not unread), no blocking box named (``blocking``), and no
+    other window W8's watch logged and nothing judged (``others``). Anything else stays the STOP."""
+    why = []
+    if year != WW_CLOSE_YEAR:
+        why.append(f"SolidWorks {year}: the ruling is for {WW_CLOSE_YEAR} only")
+    if not boxes:
+        why.append("no What's Wrong is up")
+    strange = [h for h, owned in boxes if not owned or h not in seen]
+    if strange:
+        why.append(f"{len(strange)} What's Wrong up that this job's watch did not read as owned by SolidWorks' frame")
+    if unowned:
+        why.append(f"{len(unowned)} What's Wrong not owned by SolidWorks' frame came up in the job")
+    if enabled is not True:
+        why.append(f"SolidWorks' frame enabled reads {enabled}")
+    if blocking:
+        why.append(f"a blocking box was named ({blocking})")
+    if others:
+        why.append(f"another window is up: {others}")
+    return why
+
+
+def close_control(children, buttons=WW_CLOSE_BUTTONS):
+    """The box's own Close control among ``children`` (its child windows, each {"hwnd", "text", "class", "visible",
+    "enabled", "id"}) and why it may not be pressed (empty: it may). The coordinator's ruling of 2026-11-18 (b725b32's
+    should-fix 2): one control of that box named Close, a visible, enabled Button; anything else is the STOP."""
+    found = [c for c in children if c.get("text") in buttons]
+    if not found:
+        return None, [f"no control named {list(buttons)} in the box"]
+    control, why = found[0], []
+    if len(found) > 1:
+        why.append(f"{len(found)} controls named Close in the box")
+    if control.get("class") != "Button":
+        why.append(f"its Close is a {control.get('class')!r}, not a Button")
+    if control.get("visible") is not True:
+        why.append(f"its Close reads visible {control.get('visible')}")
+    if control.get("enabled") is not True:
+        why.append(f"its Close reads enabled {control.get('enabled')}")
+    return control, why
+
+
+def outlived_close_failed(left, enabled, seconds, within=WW_CLOSE_WITHIN):
+    """Why the script's close failed the ruling (empty: every box went in time, the frame enabled): ``left``, the What's
+    Wrong boxes still up after the last try's wait; ``enabled``: SolidWorks' frame after; ``seconds``: how long after
+    the last try the boxes were read gone (or the wait ended)."""
+    why = []
+    if left:
+        why.append(f"{len(left)} still up {seconds:.2f} s after the last press of its Close (allowed {within:g})")
+    elif seconds > within:
+        why.append(f"gone only {seconds:.2f} s after the last press of its Close (allowed {within:g})")
+    if enabled is not True:
+        why.append(f"SolidWorks' frame enabled reads {enabled} after the close")
+    return why
+
+
+CLOSE_PRESSES = ("BM_CLICK", "WM_COMMAND")   # the ruling's two tries at the box's own Close control, in this order
+
+
+def close_outlived_with(record, waited, year, io, within=WW_CLOSE_WITHIN):
+    """The close path (``A.WW_OUTLIVED`` under WW_CLOSE_FLAG), its windows reached only through ``io``, so the
+    self-check drives it as the run does: ``io.boxes()`` [(hwnd, owned)] of What's Wrong up, ``io.enabled()`` the
+    frame, ``io.others()`` other windows W8's watch logged, ``io.children(hwnd)``, ``io.click(control)`` (BM_CLICK to
+    the control), ``io.command(hwnd, control)`` (the control's WM_COMMAND, BN_CLICKED with its id, posted to its box),
+    ``io.clock()``, ``io.sleep(s)``, ``io.say(line)``. Said as having outlived its job; refused as
+    :func:`outlived_close_refused` says; each box's Close checked (:func:`close_control`) before each press; BM_CLICK
+    first, and only if a box is still up ``within`` s after it, the WM_COMMAND as the second try (the ruling of the
+    re-check, 2026-11-18); every box gone within ``within`` s of the last try with the frame enabled
+    (:func:`outlived_close_failed`), the press that closed it said. Sets ``record["outlived"]``: W9a's
+    ``whats_wrong_end`` says its ``said`` and stops on its ``stop``. Nothing here raises."""
+    what = record["what"]
+    out = {"outlived": True, "waited": waited, "closed_by_script": False, "closed_by": "", "presses": [],
+           "controls": [], "close_seconds": None, "stop": "", "said": ""}
+    record["outlived"] = out
+
+    def refuse(prefix, why):
+        out.update(stop=f"{prefix}: " + "; ".join(why), said=f"{prefix}: " + "; ".join(why))
+    try:
+        boxes = io.boxes()
+        enabled = io.enabled()
+        io.say(f"fact    {what}: What's Wrong outlived its job: {len(boxes)} still up {waited:.2f} s after it, owned by "
+               f"SolidWorks' frame {[owned for _, owned in boxes]}, the frame enabled {enabled} (the coordinator's "
+               "ruling of 2026-11-18)")
+        why = outlived_close_refused(year, boxes, [e["hwnd"] for e in record["seen"]], enabled, record["unowned"],
+                                     record.get("blocking"), io.others())
+        if why:
+            return refuse("not closed by the script", why)
+        pressed = [h for h, _ in boxes]
+        left, seconds = pressed, 0.0
+        for via in CLOSE_PRESSES:
+            stray = [h for h in left if h not in pressed]
+            if stray:
+                return refuse(f"not pressed by {via}", [f"{len(stray)} What's Wrong up that was not the one judged"])
+            for h in left:
+                control, why = close_control(io.children(h))
+                out["controls"].append({"press": via, **{k: (control or {}).get(k) for k in
+                                                         ("text", "class", "visible", "enabled", "id")}})
+                if why:
+                    return refuse(f"not pressed by {via}", why)
+                if via == "BM_CLICK":
+                    io.click(control)
+                else:
+                    io.command(h, control)
+            out["presses"].append(via)
+            began = io.clock()
+            left = [h for h, _ in io.boxes()]
+            while left and io.clock() - began < within:
+                io.sleep(0.25)
+                left = [h for h, _ in io.boxes()]
+            seconds = round(io.clock() - began, 2)
+            if not left:
+                break
+        after = io.enabled()
+        failed = outlived_close_failed(left, after, seconds, within=within)
+        out.update(closed_by_script=not left, closed_by=out["presses"][-1] if not left else "", close_seconds=seconds,
+                   frame_enabled_after=after)
+        tried = " then ".join(out["presses"])
+        if failed:
+            return refuse(f"its own Close pressed by {tried}", failed)
+        out["said"] = (f"the script pressed its own Close ({out['controls'][-1]['text']!r}, a {out['controls'][-1]['class']}"
+                       f") by {tried}, as a person would, and it was gone {seconds:.2f} s after the {out['closed_by']} "
+                       f"(allowed {within:g}), SolidWorks' frame enabled {after}: closed by the {out['closed_by']}")
+    except Exception as exc:  # noqa: BLE001 - said, and the STOP stands
+        refuse("the close path raised", [f"{type(exc).__name__}: {exc}"])
 
 
 # -- --self-check: the edits through the app's own read and classify, on the fake ------------------------------------------
@@ -943,15 +1116,18 @@ def self_check():
     print(f"fact    five first Builds on the fake in {_time.monotonic() - started:.0f} s")
     year_ = 2026
     rev = (34, 1, 1)
-    # W9c's gates are set True on 2026 since 74024a1; the 2024 run meets them None, as every _ON_2024 is. The plan's
-    # gate judgements are checked as a version with them unmeasured sees them: 2026's patched to None in this process.
+    # W9c's gates are set True on 2026 since 74024a1 and on 2024 since the 2024 addendum of W9C-RUNS-REVIEW.md (five
+    # of them on each). The plan's gate judgements are checked as a version with them unmeasured sees them: every one
+    # patched to None on both versions in this process, as the suite's w9c_unmeasured fixture does.
     gates_2026 = ("UPDATE_INSERTS_A_GEAR", "UPDATE_MAKES_MATES_WITH_MODES", "UPDATE_BANDS_IN_PLACE",
                   "UPDATE_ADDS_A_MODE", "UPDATE_REMOVES_A_MODE", "UPDATE_MAKES_A_NEW_COUPLING",
                   "UPDATE_SUPPRESSES_THE_RELIEF")
     from gear_generator import findings as _findings
     for name in gates_2026:
-        setattr(_findings, f"{name}_ON_2026", None)
-    print("fact    W9c's gates on 2026 patched to None in this process, as the 2024 run meets its own")
+        for _year in (2026, 2024):
+            setattr(_findings, f"{name}_ON_{_year}", None)
+    print("fact    W9c's gates on 2026 and 2024 patched to None in this process, as a version that has not measured "
+          "them meets them")
 
     def gates(ip, modes=False, remakes=False):
         return sorted(f for _, f in swbuild.in_place_gates(ip, rev, modes=modes, remakes=remakes))
@@ -1222,10 +1398,11 @@ def self_check():
     ok(groove_kept(was, late) != [] and groove_kept(was, dict(now, faces=faces[2:])) != [],
        "groove: one after the relief, or its faces gone, is said")
     ok(propose("X", True, "e") == "propose X = True  # e", "propose's form")
+    # The app's own sentence as head words it (0b7582f: the parenthesis says what closing RangeBox costs).
     still = ("Ring_m1.25_N55 is still open in SolidWorks as an earlier Update SolidWorks left it, in error and holding "
              "the new values, so this press set nothing in it: close it and RangeBox in SolidWorks without saving, "
-             "answering No when SolidWorks asks to save them (the files on disk are as before that Update), then press "
-             "Update SolidWorks again.")
+             "answering No when SolidWorks asks to save them (the files on disk are as before that Update; closing "
+             "RangeBox so also discards whatever else is unsaved in it), then press Update SolidWorks again.")
     run11 = ("Ring_m1.25_N55 is still open in SolidWorks as an earlier Update SolidWorks left it, in error and holding "
              "the new values, so this press set nothing in it: close it in SolidWorks without saving (the file on disk "
              "is as before that Update), then press Update SolidWorks again.")
@@ -1271,7 +1448,7 @@ def self_check():
     def wrote(**kw):
         args = dict(changing=[], globals_before=glb, globals_after=glb, states_before=states, states_after=states,
                     result=result, ring_file=ring_file, ring=ring, mates_written=[], ratios_before=ratios,
-                    ratios_after=ratios)
+                    ratios_after=ratios, ring_before=ring)
         args.update(kw)
         return wrote_nothing(**args)
     ok(wrote() == [], "M3 step 2: a press that stopped before any write wrote nothing, RangeBox modified since step 1 "
@@ -1302,8 +1479,174 @@ def self_check():
        "M3 step 2: nothing skipped, or a failure not the ring's alone, is said")
     ok(wrote(ring={"in_error": [], "teeth": 54.0}) != [] and wrote(ring=dict(ring, teeth=53.0)) != [],
        "M3 step 2: the ring mended or moved is said")
+    # The 2024 addendum's §4: the ring held to itself across the press, not to 2026's codes.
+    ring51 = {"in_error": [("Tooth Space", 51), ("Teeth", 51)], "teeth": 54.0}
+    ok(wrote(ring=ring51, ring_before=ring51) == [] and wrote(ring=dict(ring51, volume=None), ring_before=ring51) == [],
+       "M3 step 2: 2024's ring, Tooth Space and Teeth at 51 before and after at 54 teeth, wrote nothing")
+    ok(wrote(ring=ring51, ring_before=ring) != [] and wrote(ring=ring, ring_before=ring51) != []
+       and wrote(ring={"in_error": [("Tooth Space", 51)], "teeth": 54.0}, ring_before=ring51) != [],
+       "M3 step 2: the ring's codes or features changed across the press are said")
+    ok(wrote(ring={"in_error": [], "teeth": 54.0}, ring_before={"in_error": [], "teeth": 54.0}) != []
+       and wrote(ring_before=None) != [] and wrote(ring=dict(ring51, teeth=55.0), ring_before=dict(ring51, teeth=55.0))
+       != [],
+       "M3 step 2: a ring not in error before the press, not read, or not at 54 teeth is said")
+    # The coordinator's ruling of 2026-11-18: a What's Wrong that outlived its job, closed by its Close button only
+    # where everything else is as ruled; each other way is the STOP.
+    ok(outlived_close_refused(2024, [(7, True)], [7], True, [], None, []) == [],
+       "What's Wrong outlived its job: on 2024, the frame's own box seen by the watch, the frame enabled, nothing "
+       "else up: the script may close it")
+    refused = {"on 2026": (2026, [(7, True)], [7], True, [], None, []),
+               "nothing up": (2024, [], [7], True, [], None, []),
+               "not owned by the frame": (2024, [(7, False)], [7], True, [], None, []),
+               "never read by the watch": (2024, [(8, True)], [7], True, [], None, []),
+               "an unowned one in the job": (2024, [(7, True)], [7], True, [9], None, []),
+               "the frame disabled": (2024, [(7, True)], [7], False, [], None, []),
+               "the frame unread": (2024, [(7, True)], [7], None, [], None, []),
+               "a blocking box named": (2024, [(7, True)], [7], True, [], "stood 130 s", []),
+               "another window": (2024, [(7, True)], [7], True, [], None,
+                                  ["a SolidWorks window 'SOLIDWORKS' ['&Yes', '&No']"])}
+    ok(all(outlived_close_refused(*args) != [] for args in refused.values()),
+       f"What's Wrong outlived its job: not closed, the STOP, where {list(refused)}: "
+       f"{[k for k, a in refused.items() if outlived_close_refused(*a) == []] or 'each refused'}")
+    ok(outlived_close_failed([], True, 1.25) == [],
+       "What's Wrong closed by its own Close: gone in 1.25 s, the frame enabled, the run goes on")
+    failed = {"still up after 10 s": ([7], True, 10.1), "gone late": ([], True, 10.6),
+              "the frame disabled after": ([], False, 1.0), "the frame unread after": ([], None, 1.0)}
+    ok(all(outlived_close_failed(*args) != [] for args in failed.values()),
+       f"What's Wrong closed by its own Close: the STOP where {list(failed)}: "
+       f"{[k for k, a in failed.items() if outlived_close_failed(*a) == []] or 'each failed'}")
+    # The re-check's should-fix 2: only the box's own Close, a visible, enabled Button, is pressed.
+    close_btn = {"hwnd": 70, "text": "&Close", "class": "Button", "visible": True, "enabled": True, "id": 2}
+    others_ = [{"hwnd": 71, "text": "&FeatureXpert", "class": "Button", "visible": True, "enabled": True, "id": 3},
+               {"hwnd": 72, "text": "&Display What's Wrong during rebuild", "class": "Button", "visible": True,
+                "enabled": True, "id": 4}]
+    ok(close_control(others_ + [close_btn]) == (close_btn, []),
+       "the Close control: the box's own &Close, a visible, enabled Button, never FeatureXpert or the check box")
+    bad_controls = {"none": others_, "a Static": others_ + [dict(close_btn, **{"class": "Static"})],
+                    "hidden": [dict(close_btn, visible=False)], "disabled": [dict(close_btn, enabled=False)],
+                    "two": [close_btn, dict(close_btn, hwnd=73)]}
+    ok(all(close_control(c)[1] != [] for c in bad_controls.values()),
+       f"the Close control: not pressed, the STOP, where {list(bad_controls)}: "
+       f"{[k for k, c in bad_controls.items() if close_control(c)[1] == []] or 'each refused'}")
+
+    # The glue (the re-check's should-fix 5), driven as the run drives it, its windows stood in for.
+    class Io:
+        def __init__(self, closes_on=("BM_CLICK",), controls=None, enabled_after=True, year_=2024, others=(),
+                     stray=False, raises=False, disable_on_second=False):
+            self.up, self.t, self.lines, self.pressed = [(7, True)], 0.0, [], []
+            self.closes_on, self.enabled_after, self.year, self.stray = closes_on, enabled_after, year_, stray
+            self.controls = [close_btn] + others_ if controls is None else controls
+            self.others_, self.raises, self.disable_on_second = list(others), raises, disable_on_second
+
+        def boxes(self):
+            if self.raises:
+                raise OSError("EnumWindows failed")
+            return list(self.up)
+
+        def enabled(self):
+            return True if not self.pressed else self.enabled_after
+
+        def others(self):
+            return self.others_
+
+        def children(self, h):
+            if self.disable_on_second and self.pressed:
+                return [dict(close_btn, enabled=False)]
+            return list(self.controls)
+
+        def _press(self, via):
+            self.pressed.append(via)
+            if via in self.closes_on:
+                self.up = []
+            elif self.stray:
+                self.up = [(7, True), (8, True)]
+
+        def click(self, c):
+            self._press("BM_CLICK")
+
+        def command(self, h, c):
+            self._press("WM_COMMAND")
+
+        def clock(self):
+            return self.t
+
+        def sleep(self, s):
+            self.t += s
+
+        def say(self, line):
+            self.lines.append(line)
+
+    def glue(io, seen=(7,), unowned=()):
+        rec = {"what": "read remake, M3: before step 2", "seen": [{"hwnd": h} for h in seen],
+               "unowned": list(unowned)}
+        close_outlived_with(rec, 60.11, io.year, io)
+        return rec["outlived"], io
+
+    got, io = glue(Io())
+    ok(not got["stop"] and got["closed_by"] == "BM_CLICK" and io.pressed == ["BM_CLICK"] and "closed by the BM_CLICK"
+       in got["said"] and io.lines and "outlived its job" in io.lines[0],
+       f"the close path: closed by its BM_CLICK, said, the run goes on: {got['said']!r}")
+    got, io = glue(Io(closes_on=("WM_COMMAND",)))
+    ok(not got["stop"] and got["closed_by"] == "WM_COMMAND" and io.pressed == ["BM_CLICK", "WM_COMMAND"]
+       and [c["press"] for c in got["controls"]] == ["BM_CLICK", "WM_COMMAND"],
+       "the close path: the BM_CLICK left it up, the Close control checked again and its WM_COMMAND closed it, said")
+    stops = {"neither press closes it": (Io(closes_on=()), ["BM_CLICK", "WM_COMMAND"]),
+             "the frame disabled after": (Io(enabled_after=False), ["BM_CLICK"]),     # gone, yet the STOP
+             "on 2026": (Io(year_=2026), []), "another window logged": (Io(others=["a SolidWorks window 'X'"]), []),
+             "no Close control": (Io(controls=others_), []),
+             "its Close not a Button": (Io(controls=[dict(close_btn, **{"class": "Static"})]), []),
+             "its Close hidden": (Io(controls=[dict(close_btn, visible=False)]), []),
+             "its Close disabled before the second try": (Io(closes_on=(), disable_on_second=True), ["BM_CLICK"]),
+             "a second box after the first press": (Io(closes_on=(), stray=True), ["BM_CLICK"]),
+             "a window read failing": (Io(raises=True), [])}
+    wrong = []
+    for name, (io_, presses) in stops.items():
+        got, io_ = glue(io_)
+        if not got["stop"] or io_.pressed != presses or (got["closed_by"] and name != "the frame disabled after"):
+            wrong.append((name, got["stop"], io_.pressed))
+    got, io_ = glue(Io(), seen=(9,))
+    if not got["stop"] or io_.pressed:
+        wrong.append(("a box the watch never read", got["stop"], io_.pressed))
+    got, io_ = glue(Io(), unowned=(5,))
+    if not got["stop"] or io_.pressed:
+        wrong.append(("an unowned box in the job", got["stop"], io_.pressed))
+    ok(not wrong, f"the close path: the STOP, and no press past the failing check, where {list(stops)}, a box the "
+                  f"watch never read and an unowned one: {wrong or 'each'}")
     ok(wrote(mates_written=["flags [...]"]) != [] and wrote(ratios_after={"Sun meshes Planet copy 1": (29, 13)}) != [],
        "M3 step 2: a mate or a gear mate's ratio changed is said")
+    # The second pass, as ruled on 2026-11-18: the assembly's flag going False to True alone is SolidWorks 2024's mark at
+    # the press's first activation (24-5's JSON first_press.flags), a fact; any other difference is still said.
+    asm_file = "RangeBox.SLDASM"
+    s24_before = {"flags": dict(flags, **{asm_file: False}), "times": dict(states["times"])}
+    s24_after = {"flags": dict(flags, **{asm_file: True}), "times": dict(states["times"])}
+    ok(marked_at_first_activation([], s24_before, s24_after, asm_file),
+       "the second pass: RangeBox False before and True after, alone, no changing call, no file written: the mark, a fact")
+    not_mark = {"another flag too": ([], s24_before, dict(s24_after, flags=dict(s24_after["flags"],
+                                                                                **{"Dog_m1.25_N17.SLDPRT": True}))),
+                "a changing call": ([("ForceRebuild3",)], s24_before, s24_after),
+                "a file written": ([], s24_before, dict(s24_after, times=dict(s24_after["times"], **{asm_file: 9.0}))),
+                "True to False": ([], s24_after, s24_before),
+                "another document alone": ([], dict(s24_before, flags=dict(flags, **{asm_file: False,
+                                                                                    "Dog_m1.25_N17.SLDPRT": False})),
+                                           dict(s24_before, flags=dict(flags, **{asm_file: False,
+                                                                                "Dog_m1.25_N17.SLDPRT": True}))),
+                "no flag changed": ([], s24_after, s24_after)}
+    ok(all(not marked_at_first_activation(c, b, a, asm_file) for c, b, a in not_mark.values()),
+       f"the second pass: not the mark, so still judged a write, where {list(not_mark)}: "
+       f"{[k for k, (c, b, a) in not_mark.items() if marked_at_first_activation(c, b, a, asm_file)] or 'each'}")
+    import json as _json
+    run24 = os.path.join(REPO, "probe", "results", "sw2024", "w9c-demo-20261118-045156.json")
+    with open(run24, encoding="utf-8") as handle:
+        first_press = _json.load(handle)["sections"]["remake-m3"]["first_press"]
+    ok(marked_at_first_activation([tuple(c) for c in first_press["changing_calls"]],
+                                  {"flags": first_press["flags"][0]}, {"flags": first_press["flags"][1]}, asm_file),
+       "the second pass: the 2024 run's own flags (24-5's JSON, first_press) read as the mark under the ruling")
+    neutral = dict(s24_after, flags=dict(s24_after["flags"], **{asm_file: False}))
+    ok(wrote_in_press([], {}, {}, s24_before, neutral, result) == []
+       and wrote_in_press([], {}, {}, s24_before, neutral, dict(result, placed=["Sun"])) != []
+       and wrote_in_press([], {}, {}, s24_before, s24_after, result) != [],
+       "the second pass: with the mark set aside nothing else is a write, a gear placed still is, and unset aside the "
+       "flag is said, as 24-5:488 said it")
     # Step 2b: the parts' windows closed, RangeBox open, pressed once more.
     ok(stopped_again(result, ring_file) and not stopped_again(dict(result, skipped=""), ring_file)
        and not stopped_again(dict(result, failures=[]), ring_file)
@@ -1335,6 +1678,8 @@ from gear_generator.swcom import call  # noqa: E402
 from gear_generator.workbook import schema as wb_schema  # noqa: E402
 from gear_generator.workbook import update as wb_update  # noqa: E402
 from gear_generator.workbook.model import Mode  # noqa: E402
+import ctypes  # noqa: E402
+import time  # noqa: E402
 
 say, check = W.say, W.check
 OUT = W.OUT
@@ -2588,6 +2933,10 @@ def remake_again(out):
                     states = B.documents_state(f"remake, M3: {when} step 2", desk, folder)
                 return states, now, globals_, ratios_, ring
             s_before, now_before, globals_before, ratios_before, ring_before = read_all("before")
+            say(f"fact    remake, M3: before step 2, read_now's first save flags, read straight after its open and "
+                f"activation of {os.path.basename(box.assembly)} and before any other read: "
+                f"{sorted(n for n, f in (now_before or {}).get('flags_before', {}).items() if f)} modified "
+                "(W9C-RUNS-REVIEW.md, the review of 1dc9350, §2)")
             say(f"fact    remake, M3: before step 2, modified {sorted(n for n, f in s_before['flags'].items() if f)} "
                 f"(step 1 changed {list(step_1_files)}); the ring {ring_before}; ratios {ratios_before}")
             say(f"fact    remake, M3: before step 2, modified beyond step 1's parts "
@@ -2606,7 +2955,7 @@ def remake_again(out):
             summary["skipped"] = getattr(second, "skipped", "") if second else ""
             wrote = wrote_nothing(changing, globals_before, globals_after, s_before, s_after, summary, ring_file,
                                   ring_after, A.written(now_before, now_after), ratios_before,
-                                  ratios_after) if second is not None else ["no result"]
+                                  ratios_after, ring_before=ring_before) if second is not None else ["no result"]
             out["second"] = {"status": text, "set_in_parts": set_in, "marked": list(desk.record.unsaved_in_error),
                              "remade_in_modes": summary["remade_in_modes"], "result": summary,
                              "changing_calls": [list(c) for c in changing], "ring_before": ring_before,
@@ -2624,9 +2973,10 @@ def remake_again(out):
             check(not wrote,
                   f"remake, M3: step 2 stopped before any write: no call that changes or shows anything, every part's "
                   f"and the assembly's globals, every document's save flag and file time as before, nothing changed, "
-                  f"made, remade or placed, its stop said skipped and named {ring_file} alone, the ring still at Tooth "
-                  f"Space 72 and 54 teeth, the assembly's frames, mates and flags and the gear mates' ratios as "
-                  f"before: {wrote or 'nothing written'}")
+                  f"made, remade or placed, its stop said skipped and named {ring_file} alone, the ring still in error "
+                  f"at 54 teeth with the codes it read before the press ({(ring_before or {}).get('in_error')}), the "
+                  f"assembly's frames, mates and flags and the gear mates' ratios as before: "
+                  f"{wrote or 'nothing written'}")
             f = desk.say_footer("remake, M3: the footer after the second press")
             check(footer_says_close(f.text, stem, asm_stem),
                   f"remake, M3: the footer says {stem} is to be closed with {asm_stem} without saving, answering No "
@@ -3640,14 +3990,197 @@ def section_w9b_part(out):
     B.section_part(out)
 
 
+def section_remake_m3(out):
+    """``remake-m3`` (by name only; W9C-RUNS-REVIEW.md's 2024 addendum, §5 item 4): remake's M3 alone, ``remake_again``
+    on its own copy of setup.master, without remake's first part (its gate is measured on both versions); every press
+    reads the inventory, so head's entity reads run inside an Update there too. Then, on another copy, its second pass
+    (:func:`remake_first_press`), in which the app's press again is the first thing to activate a document after step
+    1 (the coordinator's ruling 5 on b725b32)."""
+    remake_again(out.setdefault("again", {}))
+    remake_first_press(out.setdefault("first_press", {}))
+
+
+def remake_first_press(out):
+    """remake-m3's second pass: step 1 as in :func:`remake_again` (Sun 30, Planet 12, Ring 55 -> 54 set straight, so
+    the press stops in the ring and marks it), then the press again at once, with no read of the script's between them
+    that opens or activates a document. In the first pass the script's own read before step 2 activates RangeBox
+    first (06d5141's box came there), so a box in step 2's press, or none, says nothing of a user's press made straight
+    after the stop; here the app's press is the first activation since step 1. Read around it only what activates
+    nothing: every open document's save flag of the copy (``folder_flags`` in a job that opens nothing) and every
+    file's time; the press's traced calls and result. What this pass can show: whether What's Wrong comes in the app's
+    press as the first activation, when, at which call, and whether it goes by itself, outlives the press, or is
+    closed by the run's close path (W9a's What's Wrong record of that job, of kind app); that the press stops again on
+    the ring and says to close it and RangeBox without saving; and that by its traced calls, flags, file times and
+    result it wrote nothing, the record's assembly going False to True alone being SolidWorks 2024's mark at that
+    activation, a fact (:func:`marked_at_first_activation`, the coordinator's ruling of 2026-11-18). What it cannot: the parts' and the assembly's globals, the assembly's frames, mates and
+    flags, the gear mates' ratios and the ring's codes are not read in it (each read opens the assembly or a part,
+    and activates it), so the strict wrote-nothing check of step 2 is not made here; the first pass makes it. Steps
+    2b and 3 are not repeated. Every document of the copy is then closed without saving."""
+    stems = GATES["remake"]
+    say("-- remake-m3  the second pass: step 1, then the app's press again as the first thing to activate a document "
+        "after it (no read of the script's between them opens or activates one), on its own copy of setup.master")
+    rb, _, _ = specs()
+    stage = dataclasses.replace(rb, gears=tuple(dataclasses.replace(g, teeth=M3_STAGE[g.id]) if g.id in M3_STAGE else g
+                                                for g in rb.gears))
+    folder, path, book, desk = A.copy_desk(A.user_master(), "remake-first", "RangeBox.xlsx")
+    try:
+        box = desk.record.gearbox
+        ring_part = gear_entry(box, "Ring").part
+        stem = os.path.splitext(os.path.basename(ring_part))[0]
+        ring_file = os.path.basename(ring_part)
+        asm_stem = os.path.splitext(os.path.basename(box.assembly))[0]
+        edit_live(desk, book, row_edits(rb, stage), "Sun 30, Planet 12, Ring 54")
+
+        def marked():
+            return any(store.same_path(p, ring_part) for p in desk.record.unsaved_in_error)
+
+        def note():
+            return desk.note[0] if getattr(desk, "note", None) else ""
+
+        def unactivated_state(when):
+            """Save flags of the copy's open documents, read in a job that opens and activates nothing; file times."""
+            flags = run(f"remake-m3, the second pass: save flags {when}", lambda s: W.folder_flags(s, folder), 300)
+            times = {n: os.path.getmtime(os.path.join(folder, n)) for n in os.listdir(folder)
+                     if n.lower().endswith((".sldprt", ".sldasm"))}
+            return {"flags": flags, "times": times}
+        with patched(stems):
+            desk.plan_solidworks()
+            steps = swbuild.LANDING_STEPS
+            swbuild.LANDING_STEPS = ()
+            say(f"PATCH   swbuild.LANDING_STEPS = () in this process, for the first press only (was {steps})")
+            try:
+                first, _ = press(desk, "remake-m3, the second pass: the first press, set straight")
+            finally:
+                swbuild.LANDING_STEPS = steps
+            done_said(first, "remake-m3, the second pass, first")
+            stopped_in_ring = first is not None and bool(first.failures) and marked() and swbuild.LANDING_STEPS == steps
+            check(stopped_in_ring, f"remake-m3, the second pass: the press set straight stops in {stem} and the record "
+                                   f"marks it ({list(desk.record.unsaved_in_error)}); the patch restored")
+            if not stopped_in_ring:
+                A.section_stop("remake-m3, the second pass: step 1 did not stop in the ring, so the press again is not "
+                               "the case this pass measures")
+            s_before = unactivated_state("before the press again")
+            desk.plan_solidworks()
+            A.WW["last"] = None          # only this press's What's Wrong record is read below (None where none is ruled)
+            second, calls = press(desk, "remake-m3, the second pass: pressed again, the first activation since step 1")
+            done_said(second, "remake-m3, the second pass, pressed again")
+            ww = A.WW.get("last") or {}
+            s_after = unactivated_state("after the press again")
+            text = note()
+            changing = W.nothing_changed_calls(calls) + [c for c in calls if c[0] in ("AddComponent5", "SaveAs3")]
+            summary = {k: list(getattr(second, k, []) or []) for k in ("changed", "mates_made", "remade_in_modes",
+                                                                        "placed", "failures")}
+            summary["skipped"] = getattr(second, "skipped", "") if second else ""
+            stopped = second is not None and stopped_again(summary, ring_file)
+            asm_file = os.path.basename(box.assembly)
+            marked_first = marked_at_first_activation(changing, s_before, s_after, asm_file)
+            judged_after = (dict(s_after, flags=dict(s_after["flags"], **{asm_file: s_before["flags"][asm_file]}))
+                            if marked_first else s_after)
+            wrote = (wrote_in_press(changing, {}, {}, s_before, judged_after, summary) if stopped
+                     else ["did not stop again"])
+            if marked_first:
+                say(f"fact    remake-m3, the second pass: SolidWorks marked {asm_file} at the press's first activation "
+                    f"since step 1 (False before, True after, the only save flag that changed, no changing call "
+                    f"traced, no file written; the coordinator's ruling of 2026-11-18: a fact of SolidWorks {year()} "
+                    f"({W.TAG.get('version')}), not a write)")
+            came = [(e.get("seconds"), e.get("call_in_progress")) for e in ww.get("seen", [])]
+            gone = [g.get("stayed") for g in ww.get("gone", [])]
+            out.update(status=text, result=summary, stopped_again=stopped, wrote=wrote,
+                       changing_calls=[list(c) for c in changing], flags=[s_before["flags"], s_after["flags"]],
+                       assembly_marked_at_first_activation=marked_first,
+                       whats_wrong={"job": ww.get("what"), "kind": ww.get("kind"), "came": came, "stayed": gone,
+                                    "up_at_the_end": ww.get("up_at_the_end"), "outlived": ww.get("outlived")})
+            say(f"fact    remake-m3, the second pass: in the app's press again, the first activation since step 1, "
+                f"What's Wrong {'came ' + str(came) + ' (s into the job, the call in progress)' if came else 'did not come'}"
+                + (f"; went by itself after {gone} s" if gone else "")
+                + (f"; outlived the press: {ww['outlived'].get('said')}" if ww.get("outlived") else "")
+                + f"; status {text!r}; result {summary}; calls that change or show {changing or 'none'}")
+            say("fact    remake-m3, the second pass: not read in this pass, since each read opens and activates a "
+                "document: the parts' and the assembly's globals, the assembly's frames, mates and flags, the gear "
+                "mates' ratios, the ring's codes; the strict wrote-nothing check is the first pass's step 2")
+            check(stopped and not wrote and "still open in SolidWorks" in text and "set nothing" in text
+                  and says_close_with_assembly(text, stem, asm_stem) and status_alone(text) and marked(),
+                  f"remake-m3, the second pass: pressed again straight after step 1, it stopped again on {ring_file} "
+                  f"alone and wrote nothing by its traced calls, every save flag and file time, and its result, said "
+                  f"to close {stem} and {asm_stem} without saving, answering No, and the record keeps its mark: "
+                  f"{wrote or 'nothing written'}")
+            left = run("remake-m3, the second pass: every document of the copy closed without saving", W.quit_in(folder))
+            say(f"person  remake-m3, the second pass: closed every document of the copy without saving; left {left}")
+    finally:
+        if not W.HUNG["on"]:
+            A.w8_step(W.end_copy, CTX["worker"], folder, "remake-first")
+
+
+# -- What's Wrong outliving its job, closed where the run asks (the coordinator's ruling of 2026-11-18) ------------------
+
+
+def close_outlived(record, frame, waited):
+    """``A.WW_OUTLIVED`` under WW_CLOSE_FLAG: :func:`close_outlived_with` on this SolidWorks' windows. A box's child
+    windows read with their class, visibility, enabled state and id; BM_CLICK posted to its Close control; the second
+    try posts the box the WM_COMMAND (BN_CLICKED, the control's id) its Close control itself sends when clicked."""
+    win32con, win32gui, _ = A._win32()  # noqa: SLF001
+
+    def control_id(h):
+        getter = getattr(win32gui, "GetDlgCtrlID", None)
+        return int(getter(h)) if getter is not None else int(ctypes.windll.user32.GetDlgCtrlID(h))
+
+    def children(box):
+        found = []
+
+        def each(h, _):
+            try:
+                found.append({"hwnd": h, "text": win32gui.GetWindowText(h), "class": win32gui.GetClassName(h),
+                              "visible": bool(win32gui.IsWindowVisible(h)), "enabled": bool(win32gui.IsWindowEnabled(h)),
+                              "id": control_id(h)})
+            except Exception:  # noqa: BLE001 - a child that went away while listed
+                pass
+            return True
+        win32gui.EnumChildWindows(box, each, None)
+        return found
+
+    io = types.SimpleNamespace(
+        boxes=lambda: A.whats_wrong_boxes(frame), enabled=lambda: A.frame_enabled(frame),
+        others=lambda: [n for n in W.NOTES[A.SEEN["notes"]:] if n.startswith("a SolidWorks window")
+                        and not n.startswith(f"a SolidWorks window {A.WHATS_WRONG!r}")],
+        children=children,
+        click=lambda c: win32gui.PostMessage(c["hwnd"], win32con.BM_CLICK, 0, 0),
+        command=lambda box, c: win32gui.PostMessage(box, win32con.WM_COMMAND,
+                                                    (win32con.BN_CLICKED << 16) | (c["id"] & 0xFFFF), c["hwnd"]),
+        clock=time.monotonic, sleep=time.sleep, say=say)
+    close_outlived_with(record, waited, year(), io)
+
+
+def close_outlived_on():
+    """WW_CLOSE_FLAG given: the close path put in W9a's harness for this run, and said once beside the What's Wrong
+    rule's own line (W9a's ``whats_wrong_rule`` wrapped, so the log's head keeps its lines)."""
+    A.WW_OUTLIVED = close_outlived
+    rule = A.whats_wrong_rule
+
+    def whats_wrong_rule():
+        first = not A.WW["read"]
+        answer = rule()
+        if first:
+            on = answer is True and year() == WW_CLOSE_YEAR
+            say(f"rule    {WW_CLOSE_FLAG}: a What's Wrong owned by SolidWorks' frame, the frame enabled, still up "
+                f"{A.WW_ALLOWANCE:g} s after a job is said to have outlived it and closed with its own Close button, "
+                f"to be gone within {WW_CLOSE_WITHIN:g} s; anything else stays the STOP (the coordinator's ruling of "
+                f"2026-11-18, SolidWorks {WW_CLOSE_YEAR} only): "
+                + ("in force here" if on else f"not in force here (SolidWorks {year()}, the rule {answer!r})"))
+            RESULT.setdefault("whats_wrong_rule", {})["close_outlived"] = {
+                "asked": True, "in_force": on, "within_seconds": WW_CLOSE_WITHIN, "buttons": list(WW_CLOSE_BUTTONS)}
+        return answer
+    A.whats_wrong_rule = whats_wrong_rule
+
+
 # -- the run -------------------------------------------------------------------------------------------------------------
 
 ORDER = ["fixed", "modes", "remove", "remake", "bands-off", "m4", "w9b-part"]   # ring and landing: by name only
 SECTIONS = {"ring": section_ring, "landing": section_landing, "fixed": section_fixed, "modes": section_modes, "remove": section_remove, "remake": section_remake,
-            "bands-off": section_bands_off, "m4": section_m4, "w9b-part": section_w9b_part}
+            "bands-off": section_bands_off, "m4": section_m4, "w9b-part": section_w9b_part,
+            "remake-m3": section_remake_m3}       # remake-m3: by name only
 FOLDERS = {"ring": ["ring"], "landing": ["landing"], "fixed": ["fixed-updated", "fixed-updated" + W.MASTER_SUFFIX], "modes": ["modes"],
            "remove": ["remove-reducer", "remove-setup"], "remake": ["remake", "remake-again"], "bands-off": ["bands-off"],
-           "m4": ["m4"], "w9b-part": ["part"]}
+           "m4": ["m4"], "w9b-part": ["part"], "remake-m3": ["remake-again", "remake-first"]}
 
 
 def done_here(name):
@@ -3662,6 +4195,8 @@ def main():
         A.CHOSEN = list(ORDER)
     A.done_here = done_here
     A.RUN_TITLE, A.JSON_STEM = "W9c demonstration", "w9c-demo"
+    if WW_CLOSE_FLAG in A.ARGS:              # off unless the run asks: every other run as before
+        close_outlived_on()
     return A.main()
 
 

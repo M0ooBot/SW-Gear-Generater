@@ -1,0 +1,2159 @@
+{
+ "sections": {
+  "faces": {
+   "made": {
+    "tries": {
+     "UserFaceConc": "made",
+     "UserFaceCoin": "made",
+     "UserEdgeConc": "made",
+     "UserSunPar": "made"
+    },
+    "flags": {
+     "UserFaceConc": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "UserFaceCoin": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "UserEdgeConc": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "UserSunPar": {
+      "H": false,
+      "N": false,
+      "L": false
+     }
+    },
+    "states": {
+     "UserFaceConc": [
+      0,
+      false
+     ],
+     "UserFaceCoin": [
+      0,
+      false
+     ],
+     "UserEdgeConc": [
+      0,
+      false
+     ],
+     "UserSunPar": [
+      0,
+      false
+     ]
+    },
+    "after_save": {
+     "RangeBox_Layout.SLDPRT": false,
+     "RangeBox_Carrier_Carrier.SLDPRT": false,
+     "Gear_m1.25_N29.SLDPRT": false,
+     "Gear_m1.25_N13.SLDPRT": false,
+     "Ring_m1.25_N55.SLDPRT": false,
+     "Dog_m1.25_N17.SLDPRT": false,
+     "Sleeve_m1.25_N17.SLDPRT": false,
+     "Sprocket.SLDPRT": false,
+     "Housing.SLDPRT": false,
+     "RangeBox.SLDASM": false
+    }
+   },
+   "read": {
+    "mates": {
+     "UserFaceConc": {
+      "type_name": "MateConcentric",
+      "suppressed": false,
+      "type": 1,
+      "alignment": 0,
+      "flipped": false,
+      "variation": [
+       0.0,
+       0.0
+      ],
+      "entities": [
+       {
+        "component": "RangeBox_Layout-1",
+        "reference_type": 5,
+        "params": [
+         0.0,
+         0.0,
+         -0.08899,
+         0.0,
+         0.0,
+         1.0,
+         0.0,
+         0.0
+        ],
+        "reference": "feature",
+        "feature": "Input Axis",
+        "select_kind": "feature"
+       },
+       {
+        "component": "Sprocket-5",
+        "reference_type": 2,
+        "params": [
+         0.0,
+         0.0,
+         0.19993641526092376,
+         -0.0,
+         -0.0,
+         1.0,
+         0.005,
+         0.0
+        ],
+        "reference": "geometry",
+        "feature": null,
+        "select_kind": "face",
+        "kind": "face",
+        "mate": "UserFaceConc",
+        "index": 1,
+        "entity_component": "Sprocket-5",
+        "area": 0.0001884955592153876,
+        "routes": {
+         "r1": {
+          "kind": "face",
+          "same_value": 1,
+          "read": false,
+          "error": "ComError: SolidWorks did not complete GetPersistReference3: Type mismatch (DISP_E_TYPEMISMATCH)."
+         },
+         "r2": {
+          "kind": "face",
+          "same_value": 1,
+          "read": true,
+          "length": 70,
+          "reference": "384a000000000000fffeff135300700072006f0063006b00650074002d0035004000520061006e006700650042006f007800040000001000000001000000010000005a000000",
+          "resolve_code": 1,
+          "resolved_kind": "unread",
+          "where": null,
+          "coaxial": null,
+          "error": "resolving: ComError: SolidWorks did not complete GetCorresponding: Type mismatch (DISP_E_TYPEMISMATCH)."
+         }
+        },
+        "where": null,
+        "coaxial": null,
+        "assembly_context_length": 637,
+        "reload": {
+         "error": "resolved to nothing",
+         "marked": [],
+         "marked_before": []
+        }
+       }
+      ],
+      "values": {
+       "MateAlignment": 0
+      },
+      "dimensions": []
+     },
+     "UserFaceCoin": {
+      "type_name": "MateCoincident",
+      "suppressed": false,
+      "type": 0,
+      "alignment": 1,
+      "flipped": false,
+      "variation": [
+       0.0,
+       0.0
+      ],
+      "entities": [
+       {
+        "component": "Sprocket-5",
+        "reference_type": 2,
+        "params": [
+         0.0,
+         0.0,
+         0.20600000000000002,
+         0.0,
+         0.0,
+         1.0,
+         0.0,
+         0.0
+        ],
+        "reference": "geometry",
+        "feature": null,
+        "select_kind": "face",
+        "kind": "face",
+        "mate": "UserFaceCoin",
+        "index": 0,
+        "entity_component": "Sprocket-5",
+        "area": 0.00037517183936384974,
+        "routes": {
+         "r1": {
+          "kind": "face",
+          "same_value": 1,
+          "read": false,
+          "error": "ComError: SolidWorks did not complete GetPersistReference3: Type mismatch (DISP_E_TYPEMISMATCH)."
+         },
+         "r2": {
+          "kind": "face",
+          "same_value": 1,
+          "read": true,
+          "length": 70,
+          "reference": "384a000000000000fffeff135300700072006f0063006b00650074002d0035004000520061006e006700650042006f007800040000001000000001000000010000005a000000",
+          "resolve_code": 1,
+          "resolved_kind": "unread",
+          "where": null,
+          "coaxial": null,
+          "error": "resolving: ComError: SolidWorks did not complete GetCorresponding: Type mismatch (DISP_E_TYPEMISMATCH)."
+         }
+        },
+        "where": null,
+        "coaxial": null,
+        "assembly_context_length": 8150,
+        "reload": {
+         "error": "resolved to nothing",
+         "marked": [],
+         "marked_before": []
+        }
+       },
+       {
+        "component": "Sprocket-6",
+        "reference_type": 2,
+        "params": [
+         0.0,
+         0.0,
+         0.206,
+         -0.0,
+         -0.0,
+         -1.0,
+         0.0,
+         0.0
+        ],
+        "reference": "geometry",
+        "feature": null,
+        "select_kind": "face",
+        "kind": "face",
+        "mate": "UserFaceCoin",
+        "index": 1,
+        "entity_component": "Sprocket-6",
+        "area": 0.00037499298827511874,
+        "routes": {
+         "r1": {
+          "kind": "face",
+          "same_value": 1,
+          "read": false,
+          "error": "ComError: SolidWorks did not complete GetPersistReference3: Type mismatch (DISP_E_TYPEMISMATCH)."
+         },
+         "r2": {
+          "kind": "face",
+          "same_value": 1,
+          "read": true,
+          "length": 70,
+          "reference": "384a000000000000fffeff135300700072006f0063006b00650074002d0036004000520061006e006700650042006f007800040000001000000001000000010000005b000000",
+          "resolve_code": 1,
+          "resolved_kind": "unread",
+          "where": null,
+          "coaxial": null,
+          "error": "resolving: ComError: SolidWorks did not complete GetCorresponding: Type mismatch (DISP_E_TYPEMISMATCH)."
+         }
+        },
+        "where": null,
+        "coaxial": null,
+        "assembly_context_length": 8150,
+        "reload": {
+         "error": "resolved to nothing",
+         "marked": [],
+         "marked_before": []
+        }
+       }
+      ],
+      "values": {
+       "MateAlignment": 1
+      },
+      "dimensions": []
+     },
+     "UserEdgeConc": {
+      "type_name": "MateConcentric",
+      "suppressed": false,
+      "type": 1,
+      "alignment": 0,
+      "flipped": false,
+      "variation": [
+       0.0,
+       0.0
+      ],
+      "entities": [
+       {
+        "component": "RangeBox_Layout-1",
+        "reference_type": 5,
+        "params": [
+         0.0,
+         0.0,
+         -0.08899,
+         0.0,
+         0.0,
+         1.0,
+         0.0,
+         0.0
+        ],
+        "reference": "feature",
+        "feature": "Input Axis",
+        "select_kind": "feature"
+       },
+       {
+        "component": "Sprocket-6",
+        "reference_type": 1,
+        "params": [
+         0.0,
+         0.0,
+         0.212,
+         0.0,
+         0.0,
+         1.0,
+         0.005,
+         0.0
+        ],
+        "reference": "geometry",
+        "feature": null,
+        "select_kind": "edge",
+        "kind": "edge",
+        "mate": "UserEdgeConc",
+        "index": 1,
+        "entity_component": "Sprocket-6",
+        "area": null,
+        "routes": {
+         "r1": {
+          "kind": "edge",
+          "same_value": 1,
+          "read": false,
+          "error": "ComError: SolidWorks did not complete GetPersistReference3: Type mismatch (DISP_E_TYPEMISMATCH)."
+         },
+         "r2": {
+          "kind": "edge",
+          "same_value": 1,
+          "read": true,
+          "length": 70,
+          "reference": "384a000000000000fffeff135300700072006f0063006b00650074002d0036004000520061006e006700650042006f007800040000001000000001000000010000005b000000",
+          "resolve_code": 1,
+          "resolved_kind": "unread",
+          "where": null,
+          "coaxial": null,
+          "error": "resolving: ComError: SolidWorks did not complete GetCorresponding: Type mismatch (DISP_E_TYPEMISMATCH)."
+         }
+        },
+        "where": null,
+        "coaxial": null,
+        "assembly_context_length": 653,
+        "reload": {
+         "error": "resolved to nothing",
+         "marked": [],
+         "marked_before": []
+        }
+       }
+      ],
+      "values": {
+       "MateAlignment": 0
+      },
+      "dimensions": []
+     },
+     "UserSunPar": {
+      "type_name": "MateParallel",
+      "suppressed": false,
+      "type": 3,
+      "alignment": 0,
+      "flipped": false,
+      "variation": [
+       0.0,
+       0.0
+      ],
+      "entities": [
+       {
+        "component": "Gear_m1.25_N29-1",
+        "reference_type": 2,
+        "params": [
+         0.0,
+         0.0,
+         0.0155,
+         0.0,
+         0.0,
+         1.0,
+         0.0,
+         0.0
+        ],
+        "reference": "geometry",
+        "feature": null,
+        "select_kind": "face",
+        "kind": "face",
+        "mate": "UserSunPar",
+        "index": 0,
+        "entity_component": "Gear_m1.25_N29-1",
+        "area": 0.0009737549015647368,
+        "routes": {
+         "r1": {
+          "kind": "face",
+          "same_value": 1,
+          "read": false,
+          "error": "ComError: SolidWorks did not complete GetPersistReference3: Type mismatch (DISP_E_TYPEMISMATCH)."
+         },
+         "r2": {
+          "kind": "face",
+          "same_value": 1,
+          "read": true,
+          "length": 82,
+          "reference": "384a000000000000fffeff1947006500610072005f006d0031002e00320035005f004e00320039002d0031004000520061006e006700650042006f007800040000001000000001000000010000001a000000",
+          "resolve_code": 1,
+          "resolved_kind": "unread",
+          "where": null,
+          "coaxial": null,
+          "error": "resolving: ComError: SolidWorks did not complete GetCorresponding: Type mismatch (DISP_E_TYPEMISMATCH)."
+         }
+        },
+        "where": null,
+        "coaxial": null,
+        "assembly_context_length": 11642,
+        "reload": {
+         "error": "resolved to nothing",
+         "marked": [],
+         "marked_before": []
+        }
+       },
+       {
+        "component": "Sprocket-7",
+        "reference_type": 2,
+        "params": [
+         0.0,
+         0.0,
+         0.23600000000000002,
+         0.0,
+         0.0,
+         1.0,
+         0.0,
+         0.0
+        ],
+        "reference": "geometry",
+        "feature": null,
+        "select_kind": "face",
+        "kind": "face",
+        "mate": "UserSunPar",
+        "index": 1,
+        "entity_component": "Sprocket-7",
+        "area": 0.00037517183936384974,
+        "routes": {
+         "r1": {
+          "kind": "face",
+          "same_value": 1,
+          "read": false,
+          "error": "ComError: SolidWorks did not complete GetPersistReference3: Type mismatch (DISP_E_TYPEMISMATCH)."
+         },
+         "r2": {
+          "kind": "face",
+          "same_value": 1,
+          "read": true,
+          "length": 70,
+          "reference": "384a000000000000fffeff135300700072006f0063006b00650074002d0037004000520061006e006700650042006f007800040000001000000001000000010000005c000000",
+          "resolve_code": 1,
+          "resolved_kind": "unread",
+          "where": null,
+          "coaxial": null,
+          "error": "resolving: ComError: SolidWorks did not complete GetCorresponding: Type mismatch (DISP_E_TYPEMISMATCH)."
+         }
+        },
+        "where": null,
+        "coaxial": null,
+        "assembly_context_length": 8150,
+        "reload": {
+         "error": "resolved to nothing",
+         "marked": [],
+         "marked_before": []
+        }
+       }
+      ],
+      "values": {
+       "MateAlignment": 0
+      },
+      "dimensions": []
+     }
+    },
+    "components": {
+     "Sprocket-1": {
+      "referenced": "Default",
+      "active": "Default",
+      "configurations": [
+       "Default"
+      ],
+      "virtual": false,
+      "pattern": false,
+      "path": "Sprocket.SLDPRT"
+     },
+     "Sprocket-2": {
+      "referenced": "Default",
+      "active": "Default",
+      "configurations": [
+       "Default"
+      ],
+      "virtual": false,
+      "pattern": false,
+      "path": "Sprocket.SLDPRT"
+     },
+     "Sprocket-3": {
+      "referenced": "Default",
+      "active": "Default",
+      "configurations": [
+       "Default"
+      ],
+      "virtual": false,
+      "pattern": false,
+      "path": "Sprocket.SLDPRT"
+     },
+     "Sprocket-4": {
+      "referenced": "Default",
+      "active": "Default",
+      "configurations": [
+       "Default"
+      ],
+      "virtual": false,
+      "pattern": false,
+      "path": "Sprocket.SLDPRT"
+     },
+     "Housing-1": {
+      "referenced": "Default",
+      "active": "Default",
+      "configurations": [
+       "Default"
+      ],
+      "virtual": false,
+      "pattern": false,
+      "path": "Housing.SLDPRT"
+     },
+     "Sprocket-5": {
+      "referenced": "Default",
+      "active": "Default",
+      "configurations": [
+       "Default"
+      ],
+      "virtual": false,
+      "pattern": false,
+      "path": "Sprocket.SLDPRT"
+     },
+     "Sprocket-6": {
+      "referenced": "Default",
+      "active": "Default",
+      "configurations": [
+       "Default"
+      ],
+      "virtual": false,
+      "pattern": false,
+      "path": "Sprocket.SLDPRT"
+     },
+     "Sprocket-7": {
+      "referenced": "Default",
+      "active": "Default",
+      "configurations": [
+       "Default"
+      ],
+      "virtual": false,
+      "pattern": false,
+      "path": "Sprocket.SLDPRT"
+     }
+    },
+    "frames": {
+     "RangeBox_Layout-1": [
+      [
+       1.0,
+       0.0,
+       0.0,
+       0.0,
+       1.0,
+       0.0,
+       0.0,
+       0.0,
+       1.0
+      ],
+      [
+       0.0,
+       0.0,
+       0.0
+      ]
+     ],
+     "Gear_m1.25_N29-1": [
+      [
+       1.0,
+       0.0,
+       0.0,
+       0.0,
+       1.0,
+       0.0,
+       0.0,
+       0.0,
+       1.0
+      ],
+      [
+       0.0,
+       0.0,
+       5.5
+      ]
+     ],
+     "Sprocket-5": [
+      [
+       1.0,
+       0.0,
+       0.0,
+       0.0,
+       1.0,
+       0.0,
+       0.0,
+       0.0,
+       1.0
+      ],
+      [
+       0.0,
+       0.0,
+       200.0
+      ]
+     ],
+     "Sprocket-6": [
+      [
+       1.0,
+       0.0,
+       0.0,
+       0.0,
+       1.0,
+       0.0,
+       0.0,
+       0.0,
+       1.0
+      ],
+      [
+       0.0,
+       0.0,
+       206.0
+      ]
+     ],
+     "Sprocket-7": [
+      [
+       1.0,
+       0.0,
+       0.0,
+       0.0,
+       1.0,
+       0.0,
+       0.0,
+       0.0,
+       1.0
+      ],
+      [
+       0.0,
+       0.0,
+       230.0
+      ]
+     ]
+    },
+    "paths": {
+     "RangeBox_Layout-1": "C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9d-probes-sw2026-20261117-140201\\out\\d-faces\\RangeBox_Layout.SLDPRT",
+     "Gear_m1.25_N29-1": "C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9d-probes-sw2026-20261117-140201\\out\\d-faces\\Gear_m1.25_N29.SLDPRT",
+     "Sprocket-5": "C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9d-probes-sw2026-20261117-140201\\out\\d-faces\\Sprocket.SLDPRT",
+     "Sprocket-6": "C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9d-probes-sw2026-20261117-140201\\out\\d-faces\\Sprocket.SLDPRT",
+     "Sprocket-7": "C:\\Users\\M0obo\\Documents\\GearGeneratorProbe\\w9d-probes-sw2026-20261117-140201\\out\\d-faces\\Sprocket.SLDPRT"
+    },
+    "flags_before": {
+     "RangeBox_Layout.SLDPRT": false,
+     "RangeBox_Carrier_Carrier.SLDPRT": false,
+     "Gear_m1.25_N29.SLDPRT": false,
+     "Gear_m1.25_N13.SLDPRT": false,
+     "Ring_m1.25_N55.SLDPRT": false,
+     "Dog_m1.25_N17.SLDPRT": false,
+     "Sleeve_m1.25_N17.SLDPRT": false,
+     "Sprocket.SLDPRT": false,
+     "Housing.SLDPRT": false,
+     "RangeBox.SLDASM": false
+    },
+    "sun_cylinders": [
+     [
+      19.375,
+      true
+     ],
+     [
+      19.375,
+      true
+     ],
+     [
+      19.375,
+      true
+     ],
+     [
+      19.375,
+      true
+     ],
+     [
+      19.375,
+      true
+     ],
+     [
+      19.375,
+      true
+     ],
+     [
+      19.375,
+      true
+     ],
+     [
+      19.375,
+      true
+     ],
+     [
+      19.375,
+      true
+     ],
+     [
+      19.375,
+      true
+     ],
+     [
+      19.375,
+      true
+     ],
+     [
+      19.375,
+      true
+     ],
+     [
+      19.375,
+      true
+     ],
+     [
+      19.375,
+      true
+     ],
+     [
+      19.375,
+      true
+     ],
+     [
+      19.375,
+      true
+     ],
+     [
+      19.375,
+      true
+     ],
+     [
+      19.375,
+      true
+     ],
+     [
+      19.375,
+      true
+     ],
+     [
+      19.375,
+      true
+     ],
+     [
+      19.375,
+      true
+     ],
+     [
+      19.375,
+      true
+     ],
+     [
+      19.375,
+      true
+     ],
+     [
+      19.375,
+      true
+     ],
+     [
+      19.375,
+      true
+     ],
+     [
+      19.375,
+      true
+     ],
+     [
+      19.375,
+      true
+     ],
+     [
+      19.375,
+      true
+     ],
+     [
+      19.375,
+      true
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      16.375,
+      true
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      16.375,
+      true
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      16.375,
+      true
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      16.375,
+      true
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      16.375,
+      true
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      16.375,
+      true
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      16.375,
+      true
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      16.375,
+      true
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      16.375,
+      true
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      16.375,
+      true
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      16.375,
+      true
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      16.375,
+      true
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      16.375,
+      true
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      16.375,
+      true
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      16.375,
+      true
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      16.375,
+      true
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      16.375,
+      true
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      16.375,
+      true
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      16.375,
+      true
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      16.375,
+      true
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      16.375,
+      true
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      16.375,
+      true
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      16.375,
+      true
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      16.375,
+      true
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      16.375,
+      true
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      16.375,
+      true
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      16.375,
+      true
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      16.375,
+      true
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      16.375,
+      true
+     ],
+     [
+      0.475,
+      false
+     ],
+     [
+      1.5,
+      false
+     ]
+    ],
+    "flags_after": {
+     "RangeBox_Layout.SLDPRT": false,
+     "RangeBox_Carrier_Carrier.SLDPRT": false,
+     "Gear_m1.25_N29.SLDPRT": false,
+     "Gear_m1.25_N13.SLDPRT": false,
+     "Ring_m1.25_N55.SLDPRT": false,
+     "Dog_m1.25_N17.SLDPRT": false,
+     "Sleeve_m1.25_N17.SLDPRT": false,
+     "Sprocket.SLDPRT": false,
+     "Housing.SLDPRT": false,
+     "RangeBox.SLDASM": false
+    },
+    "entities": [
+     {
+      "component": "Sprocket-5",
+      "reference_type": 2,
+      "params": [
+       0.0,
+       0.0,
+       0.19993641526092376,
+       -0.0,
+       -0.0,
+       1.0,
+       0.005,
+       0.0
+      ],
+      "reference": "geometry",
+      "feature": null,
+      "select_kind": "face",
+      "kind": "face",
+      "mate": "UserFaceConc",
+      "index": 1,
+      "entity_component": "Sprocket-5",
+      "area": 0.0001884955592153876,
+      "routes": {
+       "r1": {
+        "kind": "face",
+        "same_value": 1,
+        "read": false,
+        "error": "ComError: SolidWorks did not complete GetPersistReference3: Type mismatch (DISP_E_TYPEMISMATCH)."
+       },
+       "r2": {
+        "kind": "face",
+        "same_value": 1,
+        "read": true,
+        "length": 70,
+        "reference": "384a000000000000fffeff135300700072006f0063006b00650074002d0035004000520061006e006700650042006f007800040000001000000001000000010000005a000000",
+        "resolve_code": 1,
+        "resolved_kind": "unread",
+        "where": null,
+        "coaxial": null,
+        "error": "resolving: ComError: SolidWorks did not complete GetCorresponding: Type mismatch (DISP_E_TYPEMISMATCH)."
+       }
+      },
+      "where": null,
+      "coaxial": null,
+      "assembly_context_length": 637,
+      "reload": {
+       "error": "resolved to nothing",
+       "marked": [],
+       "marked_before": []
+      }
+     },
+     {
+      "component": "Sprocket-5",
+      "reference_type": 2,
+      "params": [
+       0.0,
+       0.0,
+       0.20600000000000002,
+       0.0,
+       0.0,
+       1.0,
+       0.0,
+       0.0
+      ],
+      "reference": "geometry",
+      "feature": null,
+      "select_kind": "face",
+      "kind": "face",
+      "mate": "UserFaceCoin",
+      "index": 0,
+      "entity_component": "Sprocket-5",
+      "area": 0.00037517183936384974,
+      "routes": {
+       "r1": {
+        "kind": "face",
+        "same_value": 1,
+        "read": false,
+        "error": "ComError: SolidWorks did not complete GetPersistReference3: Type mismatch (DISP_E_TYPEMISMATCH)."
+       },
+       "r2": {
+        "kind": "face",
+        "same_value": 1,
+        "read": true,
+        "length": 70,
+        "reference": "384a000000000000fffeff135300700072006f0063006b00650074002d0035004000520061006e006700650042006f007800040000001000000001000000010000005a000000",
+        "resolve_code": 1,
+        "resolved_kind": "unread",
+        "where": null,
+        "coaxial": null,
+        "error": "resolving: ComError: SolidWorks did not complete GetCorresponding: Type mismatch (DISP_E_TYPEMISMATCH)."
+       }
+      },
+      "where": null,
+      "coaxial": null,
+      "assembly_context_length": 8150,
+      "reload": {
+       "error": "resolved to nothing",
+       "marked": [],
+       "marked_before": []
+      }
+     },
+     {
+      "component": "Sprocket-6",
+      "reference_type": 2,
+      "params": [
+       0.0,
+       0.0,
+       0.206,
+       -0.0,
+       -0.0,
+       -1.0,
+       0.0,
+       0.0
+      ],
+      "reference": "geometry",
+      "feature": null,
+      "select_kind": "face",
+      "kind": "face",
+      "mate": "UserFaceCoin",
+      "index": 1,
+      "entity_component": "Sprocket-6",
+      "area": 0.00037499298827511874,
+      "routes": {
+       "r1": {
+        "kind": "face",
+        "same_value": 1,
+        "read": false,
+        "error": "ComError: SolidWorks did not complete GetPersistReference3: Type mismatch (DISP_E_TYPEMISMATCH)."
+       },
+       "r2": {
+        "kind": "face",
+        "same_value": 1,
+        "read": true,
+        "length": 70,
+        "reference": "384a000000000000fffeff135300700072006f0063006b00650074002d0036004000520061006e006700650042006f007800040000001000000001000000010000005b000000",
+        "resolve_code": 1,
+        "resolved_kind": "unread",
+        "where": null,
+        "coaxial": null,
+        "error": "resolving: ComError: SolidWorks did not complete GetCorresponding: Type mismatch (DISP_E_TYPEMISMATCH)."
+       }
+      },
+      "where": null,
+      "coaxial": null,
+      "assembly_context_length": 8150,
+      "reload": {
+       "error": "resolved to nothing",
+       "marked": [],
+       "marked_before": []
+      }
+     },
+     {
+      "component": "Sprocket-6",
+      "reference_type": 1,
+      "params": [
+       0.0,
+       0.0,
+       0.212,
+       0.0,
+       0.0,
+       1.0,
+       0.005,
+       0.0
+      ],
+      "reference": "geometry",
+      "feature": null,
+      "select_kind": "edge",
+      "kind": "edge",
+      "mate": "UserEdgeConc",
+      "index": 1,
+      "entity_component": "Sprocket-6",
+      "area": null,
+      "routes": {
+       "r1": {
+        "kind": "edge",
+        "same_value": 1,
+        "read": false,
+        "error": "ComError: SolidWorks did not complete GetPersistReference3: Type mismatch (DISP_E_TYPEMISMATCH)."
+       },
+       "r2": {
+        "kind": "edge",
+        "same_value": 1,
+        "read": true,
+        "length": 70,
+        "reference": "384a000000000000fffeff135300700072006f0063006b00650074002d0036004000520061006e006700650042006f007800040000001000000001000000010000005b000000",
+        "resolve_code": 1,
+        "resolved_kind": "unread",
+        "where": null,
+        "coaxial": null,
+        "error": "resolving: ComError: SolidWorks did not complete GetCorresponding: Type mismatch (DISP_E_TYPEMISMATCH)."
+       }
+      },
+      "where": null,
+      "coaxial": null,
+      "assembly_context_length": 653,
+      "reload": {
+       "error": "resolved to nothing",
+       "marked": [],
+       "marked_before": []
+      }
+     },
+     {
+      "component": "Gear_m1.25_N29-1",
+      "reference_type": 2,
+      "params": [
+       0.0,
+       0.0,
+       0.0155,
+       0.0,
+       0.0,
+       1.0,
+       0.0,
+       0.0
+      ],
+      "reference": "geometry",
+      "feature": null,
+      "select_kind": "face",
+      "kind": "face",
+      "mate": "UserSunPar",
+      "index": 0,
+      "entity_component": "Gear_m1.25_N29-1",
+      "area": 0.0009737549015647368,
+      "routes": {
+       "r1": {
+        "kind": "face",
+        "same_value": 1,
+        "read": false,
+        "error": "ComError: SolidWorks did not complete GetPersistReference3: Type mismatch (DISP_E_TYPEMISMATCH)."
+       },
+       "r2": {
+        "kind": "face",
+        "same_value": 1,
+        "read": true,
+        "length": 82,
+        "reference": "384a000000000000fffeff1947006500610072005f006d0031002e00320035005f004e00320039002d0031004000520061006e006700650042006f007800040000001000000001000000010000001a000000",
+        "resolve_code": 1,
+        "resolved_kind": "unread",
+        "where": null,
+        "coaxial": null,
+        "error": "resolving: ComError: SolidWorks did not complete GetCorresponding: Type mismatch (DISP_E_TYPEMISMATCH)."
+       }
+      },
+      "where": null,
+      "coaxial": null,
+      "assembly_context_length": 11642,
+      "reload": {
+       "error": "resolved to nothing",
+       "marked": [],
+       "marked_before": []
+      }
+     },
+     {
+      "component": "Sprocket-7",
+      "reference_type": 2,
+      "params": [
+       0.0,
+       0.0,
+       0.23600000000000002,
+       0.0,
+       0.0,
+       1.0,
+       0.0,
+       0.0
+      ],
+      "reference": "geometry",
+      "feature": null,
+      "select_kind": "face",
+      "kind": "face",
+      "mate": "UserSunPar",
+      "index": 1,
+      "entity_component": "Sprocket-7",
+      "area": 0.00037517183936384974,
+      "routes": {
+       "r1": {
+        "kind": "face",
+        "same_value": 1,
+        "read": false,
+        "error": "ComError: SolidWorks did not complete GetPersistReference3: Type mismatch (DISP_E_TYPEMISMATCH)."
+       },
+       "r2": {
+        "kind": "face",
+        "same_value": 1,
+        "read": true,
+        "length": 70,
+        "reference": "384a000000000000fffeff135300700072006f0063006b00650074002d0037004000520061006e006700650042006f007800040000001000000001000000010000005c000000",
+        "resolve_code": 1,
+        "resolved_kind": "unread",
+        "where": null,
+        "coaxial": null,
+        "error": "resolving: ComError: SolidWorks did not complete GetCorresponding: Type mismatch (DISP_E_TYPEMISMATCH)."
+       }
+      },
+      "where": null,
+      "coaxial": null,
+      "assembly_context_length": 8150,
+      "reload": {
+       "error": "resolved to nothing",
+       "marked": [],
+       "marked_before": []
+      }
+     }
+    ],
+    "start_marked": []
+   },
+   "part_failures": {
+    "remade": "AssertionError: no route read any face or edge clean, so nothing is made again"
+   },
+   "reload": {
+    "UserFaceConc:1": {
+     "error": "resolved to nothing",
+     "marked": [],
+     "marked_before": []
+    },
+    "UserFaceCoin:0": {
+     "error": "resolved to nothing",
+     "marked": [],
+     "marked_before": []
+    },
+    "UserFaceCoin:1": {
+     "error": "resolved to nothing",
+     "marked": [],
+     "marked_before": []
+    },
+    "UserEdgeConc:1": {
+     "error": "resolved to nothing",
+     "marked": [],
+     "marked_before": []
+    },
+    "UserSunPar:0": {
+     "error": "resolved to nothing",
+     "marked": [],
+     "marked_before": []
+    },
+    "UserSunPar:1": {
+     "error": "resolved to nothing",
+     "marked": [],
+     "marked_before": []
+    }
+   },
+   "seconds": 79,
+   "failed": [
+    "faces (c) made again: AssertionError: no route read any face or edge clean, so nothing is made again"
+   ]
+  },
+  "state": {
+   "prepared": {
+    "first": "H",
+    "mates_of_sprocket4": {
+     "UserAxis4": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "UserDist4": {
+      "H": false,
+      "N": false,
+      "L": false
+     },
+     "UserAngle4": {
+      "H": false,
+      "N": false,
+      "L": false
+     }
+    },
+    "flags_after_save": {
+     "RangeBox_Layout.SLDPRT": false,
+     "RangeBox_Carrier_Carrier.SLDPRT": false,
+     "Gear_m1.25_N29.SLDPRT": false,
+     "Gear_m1.25_N13.SLDPRT": false,
+     "Ring_m1.25_N55.SLDPRT": false,
+     "Dog_m1.25_N17.SLDPRT": false,
+     "Sleeve_m1.25_N17.SLDPRT": false,
+     "Sprocket.SLDPRT": false,
+     "Housing.SLDPRT": false,
+     "RangeBox.SLDASM": false
+    }
+   },
+   "candidates": {
+    "candidates": {
+     "GetComponentSuppressionState": {
+      "Housing-1": {
+       "H": true,
+       "N": false,
+       "L": false
+      },
+      "Sprocket-4": {
+       "H": false,
+       "N": false,
+       "L": true
+      },
+      "Sprocket-2": {
+       "H": false,
+       "N": false,
+       "L": false
+      }
+     },
+     "GetRootComponent3(False)": [
+      {
+       "Housing-1": {
+        "H": true,
+        "N": "no root",
+        "L": false
+       },
+       "Sprocket-4": {
+        "H": false,
+        "N": "no root",
+        "L": true
+       },
+       "Sprocket-2": {
+        "H": false,
+        "N": "no root",
+        "L": false
+       }
+      },
+      {
+       "H": "RangeBox",
+       "N": null,
+       "L": "RangeBox"
+      }
+     ]
+    },
+    "marks": {
+     "GetComponentSuppressionState": [],
+     "GetRootComponent3(False)": []
+    },
+    "steps": [
+     [
+      "N: GetConfigurationByName",
+      []
+     ],
+     [
+      "N: GetRootComponent3(True)",
+      []
+     ],
+     [
+      "N: GetChildren",
+      []
+     ],
+     [
+      "N: Name2",
+      []
+     ],
+     [
+      "N: GetSuppression2",
+      []
+     ],
+     [
+      "L: GetConfigurationByName",
+      []
+     ],
+     [
+      "L: GetRootComponent3(True)",
+      []
+     ],
+     [
+      "L: GetChildren",
+      []
+     ],
+     [
+      "L: Name2",
+      []
+     ],
+     [
+      "L: GetSuppression2",
+      []
+     ]
+    ],
+    "first_marking": null,
+    "start": {
+     "RangeBox_Layout.SLDPRT": false,
+     "RangeBox_Carrier_Carrier.SLDPRT": false,
+     "Gear_m1.25_N29.SLDPRT": false,
+     "Gear_m1.25_N13.SLDPRT": false,
+     "Ring_m1.25_N55.SLDPRT": false,
+     "Dog_m1.25_N17.SLDPRT": false,
+     "Sleeve_m1.25_N17.SLDPRT": false,
+     "Sprocket.SLDPRT": false,
+     "Housing.SLDPRT": false,
+     "RangeBox.SLDASM": false
+    },
+    "truth": {
+     "Housing-1": {
+      "H": true,
+      "N": false,
+      "L": false
+     },
+     "Sprocket-4": {
+      "H": false,
+      "N": false,
+      "L": true
+     },
+     "Sprocket-2": {
+      "H": false,
+      "N": false,
+      "L": false
+     }
+    },
+    "chosen": "GetComponentSuppressionState"
+   },
+   "unsaved": {
+    "mode": "N",
+    "read": {
+     "Sprocket-2": {
+      "H": false,
+      "N": true,
+      "L": false
+     }
+    },
+    "truth": {
+     "Sprocket-2": {
+      "H": false,
+      "N": true,
+      "L": false
+     }
+    }
+   },
+   "lightweight": {
+    "set": {
+     "Sprocket-3": 1,
+     "Sprocket-1": 1,
+     "Sprocket-2": 1,
+     "Sprocket-4": 1,
+     "Housing-1": 0,
+     "Gear_m1.25_N13-1": 2,
+     "Gear_m1.25_N13-3": 2,
+     "Gear_m1.25_N29-1": 2,
+     "RangeBox_Layout-1": 2,
+     "RangeBox_Carrier_Carrier-1": 2,
+     "Gear_m1.25_N13-2": 2,
+     "Dog_m1.25_N17-1": 2,
+     "Dog_m1.25_N17-2": 2,
+     "Ring_m1.25_N55-1": 2,
+     "Sleeve_m1.25_N17-1": 2
+    },
+    "candidate_1": {
+     "Sprocket-1": {
+      "H": false
+     }
+    },
+    "after_candidate_1": {
+     "Sprocket-3": 1,
+     "Sprocket-1": 1,
+     "Sprocket-2": 1,
+     "Sprocket-4": 1,
+     "Housing-1": 0,
+     "Gear_m1.25_N13-1": 2,
+     "Gear_m1.25_N13-3": 2,
+     "Gear_m1.25_N29-1": 2,
+     "RangeBox_Layout-1": 2,
+     "RangeBox_Carrier_Carrier-1": 2,
+     "Gear_m1.25_N13-2": 2,
+     "Dog_m1.25_N17-1": 2,
+     "Dog_m1.25_N17-2": 2,
+     "Ring_m1.25_N55-1": 2,
+     "Sleeve_m1.25_N17-1": 2
+    },
+    "root(False)": "RangeBox",
+    "after_root(False)": {
+     "Sprocket-3": 1,
+     "Sprocket-1": 1,
+     "Sprocket-2": 1,
+     "Sprocket-4": 1,
+     "Housing-1": 0,
+     "Gear_m1.25_N13-1": 2,
+     "Gear_m1.25_N13-3": 2,
+     "Gear_m1.25_N29-1": 2,
+     "RangeBox_Layout-1": 2,
+     "RangeBox_Carrier_Carrier-1": 2,
+     "Gear_m1.25_N13-2": 2,
+     "Dog_m1.25_N17-1": 2,
+     "Dog_m1.25_N17-2": 2,
+     "Ring_m1.25_N55-1": 2,
+     "Sleeve_m1.25_N17-1": 2
+    },
+    "root(True)": "RangeBox",
+    "after_root(True)": {
+     "Sprocket-3": 1,
+     "Sprocket-1": 1,
+     "Sprocket-2": 1,
+     "Sprocket-4": 1,
+     "Housing-1": 0,
+     "Gear_m1.25_N13-1": 2,
+     "Gear_m1.25_N13-3": 2,
+     "Gear_m1.25_N29-1": 2,
+     "RangeBox_Layout-1": 2,
+     "RangeBox_Carrier_Carrier-1": 2,
+     "Gear_m1.25_N13-2": 2,
+     "Dog_m1.25_N17-1": 2,
+     "Dog_m1.25_N17-2": 2,
+     "Ring_m1.25_N55-1": 2,
+     "Sleeve_m1.25_N17-1": 2
+    },
+    "resolved_again": {
+     "Sprocket-3": 2,
+     "Sprocket-1": 2,
+     "Sprocket-2": 2,
+     "Sprocket-4": 2,
+     "Housing-1": 0,
+     "Gear_m1.25_N13-1": 2,
+     "Gear_m1.25_N13-3": 2,
+     "Gear_m1.25_N29-1": 2,
+     "RangeBox_Layout-1": 2,
+     "RangeBox_Carrier_Carrier-1": 2,
+     "Gear_m1.25_N13-2": 2,
+     "Dog_m1.25_N17-1": 2,
+     "Dog_m1.25_N17-2": 2,
+     "Ring_m1.25_N55-1": 2,
+     "Sleeve_m1.25_N17-1": 2
+    }
+   },
+   "closed": {
+    "left": []
+   },
+   "version": {
+    "history": [
+     "17000[2024/282]",
+     "19000[2025/260]"
+    ],
+    "latest": 19000,
+    "revision": [
+     34,
+     0,
+     0
+    ],
+    "other": [
+     "17000[2024/282]"
+    ],
+    "dependencies": {
+     "RangeBox_Layout.SLDPRT": [
+      "17000[2024/282]",
+      "19000[2025/260]"
+     ],
+     "RangeBox_Carrier_Carrier.SLDPRT": [
+      "17000[2024/282]",
+      "19000[2025/260]"
+     ],
+     "Gear_m1.25_N29.SLDPRT": [
+      "17000[2024/282]",
+      "19000[2025/260]"
+     ],
+     "Gear_m1.25_N13.SLDPRT": [
+      "17000[2024/282]",
+      "19000[2025/260]"
+     ],
+     "Ring_m1.25_N55.SLDPRT": [
+      "17000[2024/282]",
+      "19000[2025/260]"
+     ],
+     "Dog_m1.25_N17.SLDPRT": [
+      "17000[2024/282]",
+      "19000[2025/260]"
+     ],
+     "Sleeve_m1.25_N17.SLDPRT": [
+      "17000[2024/282]",
+      "19000[2025/260]"
+     ],
+     "Sprocket.SLDPRT": [
+      "17000[2024/282]",
+      "19000[2025/260]"
+     ],
+     "Housing.SLDPRT": [
+      "17000[2024/282]",
+      "19000[2025/260]"
+     ]
+    }
+   },
+   "read_only": {
+    "times_before": {
+     "Dog_m1.25_N17.SLDPRT": 1794937119.585627,
+     "Gear_m1.25_N13.SLDPRT": 1794937084.1000032,
+     "Gear_m1.25_N29.SLDPRT": 1794937848.3729076,
+     "Housing.SLDPRT": 1794937766.3114767,
+     "RangeBox.SLDASM": 1794942247.5360444,
+     "RangeBox_Carrier_Carrier.SLDPRT": 1794937154.3188345,
+     "RangeBox_Layout.SLDPRT": 1794937145.5354724,
+     "Ring_m1.25_N55.SLDPRT": 1794937102.6929147,
+     "Sleeve_m1.25_N17.SLDPRT": 1794937140.4778042,
+     "Sprocket.SLDPRT": 1794937748.7350867
+    },
+    "before_open": {
+     "Housing.SLDPRT": {
+      "open": true,
+      "flag": false,
+      "read_only": false
+     },
+     "Sprocket.SLDPRT": {
+      "open": true,
+      "flag": true,
+      "read_only": false
+     }
+    },
+    "opened": {
+     "returned": "a document",
+     "errors": 0,
+     "warnings": 32,
+     "extra": null
+    },
+    "after_open": {
+     "Housing.SLDPRT": {
+      "open": true,
+      "flag": false,
+      "read_only": false
+     },
+     "Sprocket.SLDPRT": {
+      "open": true,
+      "flag": true,
+      "read_only": false
+     },
+     "RangeBox_Layout.SLDPRT": {
+      "open": true,
+      "flag": false,
+      "read_only": false
+     },
+     "RangeBox_Carrier_Carrier.SLDPRT": {
+      "open": true,
+      "flag": false,
+      "read_only": false
+     },
+     "Gear_m1.25_N29.SLDPRT": {
+      "open": true,
+      "flag": false,
+      "read_only": false
+     },
+     "Gear_m1.25_N13.SLDPRT": {
+      "open": true,
+      "flag": false,
+      "read_only": false
+     },
+     "Ring_m1.25_N55.SLDPRT": {
+      "open": true,
+      "flag": false,
+      "read_only": false
+     },
+     "Dog_m1.25_N17.SLDPRT": {
+      "open": true,
+      "flag": false,
+      "read_only": false
+     },
+     "Sleeve_m1.25_N17.SLDPRT": {
+      "open": true,
+      "flag": false,
+      "read_only": false
+     },
+     "RangeBox.SLDASM": {
+      "open": true,
+      "flag": true,
+      "read_only": true
+     }
+    },
+    "global_kept": true,
+    "candidate_1": {
+     "Housing-1": {
+      "H": true,
+      "N": false,
+      "L": false
+     },
+     "Sprocket-4": {
+      "H": false,
+      "N": false,
+      "L": true
+     },
+     "Sprocket-2": {
+      "H": false,
+      "N": false,
+      "L": false
+     }
+    },
+    "candidate_1_marked": [],
+    "truth": {
+     "Housing-1": {
+      "H": true,
+      "N": false,
+      "L": false
+     },
+     "Sprocket-4": {
+      "H": false,
+      "N": false,
+      "L": true
+     },
+     "Sprocket-2": {
+      "H": false,
+      "N": false,
+      "L": false
+     }
+    },
+    "after_shows": {
+     "Housing.SLDPRT": {
+      "open": true,
+      "flag": false,
+      "read_only": false
+     },
+     "Sprocket.SLDPRT": {
+      "open": true,
+      "flag": true,
+      "read_only": false
+     },
+     "RangeBox_Layout.SLDPRT": {
+      "open": true,
+      "flag": false,
+      "read_only": false
+     },
+     "RangeBox_Carrier_Carrier.SLDPRT": {
+      "open": true,
+      "flag": false,
+      "read_only": false
+     },
+     "Gear_m1.25_N29.SLDPRT": {
+      "open": true,
+      "flag": false,
+      "read_only": false
+     },
+     "Gear_m1.25_N13.SLDPRT": {
+      "open": true,
+      "flag": false,
+      "read_only": false
+     },
+     "Ring_m1.25_N55.SLDPRT": {
+      "open": true,
+      "flag": false,
+      "read_only": false
+     },
+     "Dog_m1.25_N17.SLDPRT": {
+      "open": true,
+      "flag": false,
+      "read_only": false
+     },
+     "Sleeve_m1.25_N17.SLDPRT": {
+      "open": true,
+      "flag": false,
+      "read_only": false
+     },
+     "RangeBox.SLDASM": {
+      "open": true,
+      "flag": true,
+      "read_only": true
+     }
+    }
+   },
+   "read_only_closed": {
+    "closed": true,
+    "after": {
+     "Housing.SLDPRT": {
+      "open": true,
+      "flag": false,
+      "read_only": false
+     },
+     "Sprocket.SLDPRT": {
+      "open": true,
+      "flag": true,
+      "read_only": false
+     }
+    }
+   },
+   "chosen": "GetComponentSuppressionState",
+   "seconds": 40,
+   "failed": []
+  },
+  "sub": {
+   "not_loaded": {
+    "returned": "a document",
+    "errors": 0,
+    "warnings": 0,
+    "extra": null,
+    "after": {
+     "DSubPart.SLDPRT": {
+      "open": true,
+      "flag": false,
+      "read_only": false
+     },
+     "DSub.SLDASM": {
+      "open": true,
+      "flag": false,
+      "read_only": false
+     }
+    },
+    "settled": {
+     "DSubPart.SLDPRT": {
+      "open": true,
+      "flag": false,
+      "read_only": false
+     },
+     "DSub.SLDASM": {
+      "open": true,
+      "flag": false,
+      "read_only": false
+     }
+    }
+   },
+   "read_only": {
+    "returned": "a document",
+    "errors": 0,
+    "warnings": 0,
+    "extra": null,
+    "after_open": {
+     "DSubPart.SLDPRT": {
+      "open": true,
+      "flag": false,
+      "read_only": false
+     },
+     "DSub.SLDASM": {
+      "open": true,
+      "flag": false,
+      "read_only": true
+     }
+    },
+    "inserted": "DSub-1",
+    "children": [
+     "DSub-1/DSubPart-1"
+    ],
+    "after_insert": {
+     "DSubPart.SLDPRT": {
+      "open": true,
+      "flag": false,
+      "read_only": false
+     },
+     "DSub.SLDASM": {
+      "open": true,
+      "flag": false,
+      "read_only": true
+     },
+     "DSubHost1.SLDASM": {
+      "open": true,
+      "flag": true,
+      "read_only": false
+     }
+    }
+   },
+   "when_loaded": {
+    "host_open": {
+     "DSubPart.SLDPRT": {
+      "open": true,
+      "flag": false,
+      "read_only": false
+     },
+     "DSubHost2.SLDASM": {
+      "open": true,
+      "flag": false,
+      "read_only": false
+     },
+     "DSub.SLDASM": {
+      "open": true,
+      "flag": false,
+      "read_only": false
+     }
+    },
+    "opened": {
+     "returned": "a document",
+     "errors": 0,
+     "warnings": 128,
+     "extra": null
+    },
+    "after_open": {
+     "DSubPart.SLDPRT": {
+      "open": true,
+      "flag": false,
+      "read_only": false
+     },
+     "DSubHost2.SLDASM": {
+      "open": true,
+      "flag": false,
+      "read_only": false
+     },
+     "DSub.SLDASM": {
+      "open": true,
+      "flag": false,
+      "read_only": false
+     }
+    },
+    "inserted": "DSub-1",
+    "after_insert": {
+     "DSubPart.SLDPRT": {
+      "open": true,
+      "flag": false,
+      "read_only": false
+     },
+     "DSubHost2.SLDASM": {
+      "open": true,
+      "flag": false,
+      "read_only": false
+     },
+     "DSub.SLDASM": {
+      "open": true,
+      "flag": false,
+      "read_only": false
+     },
+     "DSubHost3.SLDASM": {
+      "open": true,
+      "flag": true,
+      "read_only": false
+     }
+    }
+   },
+   "seconds": 39,
+   "failed": []
+  }
+ },
+ "stops": [],
+ "proposal": {},
+ "revision": [
+  34,
+  0,
+  0
+ ],
+ "snapshot": "23ed8c5",
+ "whats_wrong_rule": {
+  "helper_present": true,
+  "shows_in_update": false,
+  "allowance_seconds": 60.0
+ },
+ "fails": [
+  "faces (c) made again: AssertionError: no route read any face or edge clean, so nothing is made again"
+ ],
+ "notes": [
+  "SolidWorks' notification box came up while no SolidWorks call was in progress (exempt by the coordinator's ruling; nothing answers it)"
+ ]
+}

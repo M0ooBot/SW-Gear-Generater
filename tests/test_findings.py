@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from gear_generator import findings
+from gear_generator import findings, swcom
 from gear_generator.probe import decide
 from gear_generator.probe import p8_motion as p8
 
@@ -2416,7 +2416,8 @@ def test_w9c_s5_and_p2_readings_for_w9d_set_as_narrow_as_shown_on_2026():
     assert w9c[328].startswith("propose SUBASSEMBLY_MISSING_REFERENCE_DIALOG = False")
     assert findings.PERSIST_REFERENCE_ROUTE_FOR_REFERENCE_FEATURES_ON_2026.startswith("GetPersistReference3")
     assert findings.MATE_REMAKE_ON_AXES_PLANES_AND_LOCKS_ROUTE_ON_2026.startswith("AddMate5")
-    assert findings.COMPONENT_STATE_PER_CONFIGURATION_ROUTE_ON_2026 is None
+    # Set since from W9d's probes on 34.0.0 (test_w9d_2026_findings_rest_on_the_probes_two_runs).
+    assert findings.COMPONENT_STATE_PER_CONFIGURATION_ROUTE_ON_2026 == "IConfiguration.GetComponentSuppressionState(Name2)"
     assert findings.OPEN_READ_ONLY_ROUTE_WHEN_NOT_OPEN_ON_2026 == "OpenDoc6(path, assembly, Silent | ReadOnly)"
     assert findings.OPEN_READ_ONLY_DIALOG_ON_2026 is False
     assert findings.SUBASSEMBLY_INSERT_ROUTE_ON_2026 == "OpenDoc6 the sub-assembly, then AddComponent5"
@@ -2429,19 +2430,21 @@ def test_w9c_s5_and_p2_readings_for_w9d_set_as_narrow_as_shown_on_2026():
 W9C_PROBES_2024 = LATEST.parent / "sw2024" / "w9c-probes-20261117-062201.json"
 W9C_PROBES_2024_LOG = LATEST.parent / "sw2024" / "w9c-probes-sw2024-20261117.log"
 
-# Every W9c probe finding the 2024 run sets as its 2026 twin (the review's addendum, 9b85411).
+# Every W9c probe finding the 2024 run sets as its 2026 twin (the review's addendum, 9b85411). The per-mode state
+# route, None on both after W9c, is since set on 2026 alone by W9d's probes (34.0.0); 2024 waits for its run.
 W9C_TWINS = ("COMPONENT_DELETE_ROUTE", "COMPONENT_DELETE_ROUTE_IN_EVERY_CONFIGURATION",
              "COMPONENT_DELETE_TAKES_ITS_MATES", "COMPONENT_DELETE_KEEPS_OTHER_HANDLES", "COMPONENT_DELETE_DIALOG",
              "M1_READS_CONCENTRIC", "M1_READS_LIMIT_DISTANCE", "M1_READS_LIMIT_ANGLE", "M1_READS_WIDTH",
              "M1_READS_GEAR_ON_AN_APP_GEAR", "M1_READS_SUBASSEMBLY_LEAF", "ASSEMBLY_ENTITY_COMPONENT_IS_ROOT",
              "PERSIST_REFERENCE_ROUTE_FOR_REFERENCE_FEATURES", "MATE_REMAKE_ON_AXES_PLANES_AND_LOCKS_ROUTE",
-             "COMPONENT_STATE_PER_CONFIGURATION_ROUTE", "OPEN_READ_ONLY_ROUTE_WHEN_NOT_OPEN", "OPEN_READ_ONLY_DIALOG",
+             "OPEN_READ_ONLY_ROUTE_WHEN_NOT_OPEN", "OPEN_READ_ONLY_DIALOG",
              "SUBASSEMBLY_INSERT_ROUTE", "SUBASSEMBLY_MISSING_REFERENCE_DIALOG", "SUBASSEMBLY_MISSING_PART_READS")
 
 
 def test_w9c_probes_on_2024_read_as_on_2026_and_set_every_twin():
     """findings.py, every W9c _ON_2024 (the probes' review addendum): the 2024 run reads as 2026's, so each is set as
-    its _ON_2026 twin at the same scope, COMPONENT_STATE_PER_CONFIGURATION_ROUTE None on both."""
+    its _ON_2026 twin at the same scope; COMPONENT_STATE_PER_CONFIGURATION_ROUTE, which this run proposed None, was set
+    since on both versions from W9d's probes, as 2026's."""
     data, w9c24 = _w9a_run(W9C_PROBES_2024, W9C_PROBES_2024_LOG, "529f939", (32, 5, 0))
     assert data["stops"] == [] and data["fails"] == ["s5 (f): the unshown state reads marked no document: "
                                                      "['RangeBox.SLDASM']"]
@@ -2486,7 +2489,10 @@ def test_w9c_probes_on_2024_read_as_on_2026_and_set_every_twin():
     assert not [line for line in w9c24 if "What's Wrong" in line and line.startswith(("fact", "DIALOG"))]
     for name in W9C_TWINS:
         assert getattr(findings, f"{name}_ON_2024") == getattr(findings, f"{name}_ON_2026"), name
-    assert findings.COMPONENT_STATE_PER_CONFIGURATION_ROUTE_ON_2024 is None
+    # W9c's candidate (GetRootComponent3(True)) marked on 2024, so this run proposed None (285); W9d's 2024 probe set
+    # the route since, from another candidate that marked nothing (test_w9d_2024_findings_rest_on_the_probes_2024_run).
+    assert findings.COMPONENT_STATE_PER_CONFIGURATION_ROUTE_ON_2024 == \
+        "IConfiguration.GetComponentSuppressionState(Name2)" == findings.COMPONENT_STATE_PER_CONFIGURATION_ROUTE_ON_2026
     assert findings.ASSEMBLY_ENTITY_COMPONENT_IS_ROOT_ON_2024 is True
 
 
@@ -2503,16 +2509,18 @@ W9C_MEASURED = ("UPDATE_INSERTS_A_GEAR", "UPDATE_BANDS_IN_PLACE", "UPDATE_ADDS_A
 W9C_UNMEASURED = ("UPDATE_MAKES_A_NEW_COUPLING", "UPDATE_SUPPRESSES_THE_RELIEF", "EXTERNAL_REFERENCES_READ")
 
 
-def test_w9c_gates_are_set_on_2026_as_the_final_runs_measured_them_and_none_on_2024():
-    """findings.py, W9c's gates (W9C-RUNS-REVIEW.md, the addendum on the final runs, §4): the five measured True on
-    2026, the other three None; every _ON_2024 None until the 2024 run."""
+def test_w9c_gates_are_set_as_the_final_runs_on_2026_and_the_confirming_run_on_2024_measured_them():
+    """findings.py, W9c's gates (W9C-RUNS-REVIEW.md, the addendum on the final runs, §4, and the addendum "SolidWorks
+    2024", §3): the five measured True on both versions, the other three None on both."""
     for name in W9C_MEASURED:
-        assert getattr(findings, f"{name}_ON_2026") is True, name
+        for year in (2026, 2024):
+            assert getattr(findings, f"{name}_ON_{year}") is True, (name, year)
     for name in W9C_UNMEASURED:
-        assert getattr(findings, f"{name}_ON_2026") is None, name
-    for name in W9C_MEASURED + W9C_UNMEASURED:
-        assert hasattr(findings, f"{name}_ON_2024") and getattr(findings, f"{name}_ON_2024") is None, name
-    assert not hasattr(findings, "EXTERNAL_REFERENCES_READ_ROUTE_CANDIDATES_2026")      # facts in the comment only
+        for year in (2026, 2024):
+            assert hasattr(findings, f"{name}_ON_{year}") and getattr(findings, f"{name}_ON_{year}") is None, \
+                (name, year)
+    for year in (2026, 2024):                                                         # facts in the comment only
+        assert not hasattr(findings, f"EXTERNAL_REFERENCES_READ_ROUTE_CANDIDATES_{year}")
 
 
 def test_w9c_gates_on_2026_rest_on_the_final_runs_on_34_0_0():
@@ -2596,3 +2604,542 @@ def test_w9c_gates_on_2026_rest_on_the_morning_runs_on_34_1_1():
     assert run6[280].startswith("propose UPDATE_MAKES_MATES_WITH_MODES_ON_2026 = True  # ")
     assert data6["proposal"]["UPDATE_MAKES_MATES_WITH_MODES_ON_2026"] is True is \
         findings.UPDATE_MAKES_MATES_WITH_MODES_ON_2026
+
+
+W9C_2024 = LATEST.parent / "sw2024"
+W9C_2024_1 = (W9C_2024 / "w9c-demo-20261117-171926.json",
+              W9C_2024 / "w9c-demo-sw2024-20261117-1-landing-fixed-modes-memory-stop.log")
+W9C_2024_2 = (W9C_2024 / "w9c-demo-20261117-192454.json", W9C_2024 / "w9c-demo-sw2024-20261117-2-remove.log")
+W9C_2024_3 = (W9C_2024 / "w9c-demo-20261117-194351.json", W9C_2024 / "w9c-demo-sw2024-20261117-3-bands-off-m4.log")
+W9C_2024_4 = (W9C_2024 / "w9c-demo-20261117-195231.json",
+              W9C_2024 / "w9c-demo-sw2024-20261117-4-remake-whats-wrong-stop.log")
+
+
+def _by_member(line):
+    """A press's 'SolidWorks calls by member {...}' as a dict."""
+    return ast.literal_eval(line.split("SolidWorks calls by member ", 1)[1])
+
+
+def test_w9c_gates_on_2024_rest_on_the_confirming_run_on_32_5_0():
+    """W9c's confirming run on SolidWorks 2024 32.5.0 from 4315774 (W9C-RUNS-REVIEW.md, the addendum "SolidWorks
+    2024", §3): each _ON_2024 value is its session's proposal and the lines its comment cites hold; remake's M3 shown
+    to step 1 only, the What's Wrong at the script's read before step 2 still up at the job's end (a STOP)."""
+    data1, s1 = _w9a_run(*W9C_2024_1, "4315774", (32, 5, 0))
+    for at, name in ((1316, "UPDATE_INSERTS_A_GEAR"), (1317, "UPDATE_BANDS_IN_PLACE"), (1527, "UPDATE_ADDS_A_MODE"),
+                     (1853, "UPDATE_REMOVES_A_MODE")):
+        assert s1[at].startswith(f"propose {name}_ON_2024 = True  # "), (at, s1[at])
+        assert data1["proposal"][f"{name}_ON_2024"] is True is getattr(findings, f"{name}_ON_2024"), name
+    assert s1[909] == ("fact    landing: the fix is shown: every foreseen change routed clean as foreseen True; every "
+                       "unforeseen one set straight clean True; the straight failure's file clean at 55 when reopened "
+                       "True")
+    for at in (807, 814):          # set straight, the ring fails as on 2026, with 51 where 2026 read 72 and 1: a fact
+        assert "rebuilt False, failures []; in error [('Tooth Space', 51), ('Teeth', 51)]; teeth" in s1[at], s1[at]
+    assert s1[1243] == "ok      fixed: the Update ended ok: failures [], skipped ''"
+    assert s1[1245].startswith("ok      fixed: Hub's part built (Hub_m1.25_N17.SLDPRT, in the copy), Hub inserted as "
+                               "'Hub_m1.25_N17-1', its mates ['Hub on Output Axis', 'Hub along Output', 'RangeSlv "
+                               "splined to Hub'] made and read on in every mode ['H', 'N', 'L'] (M6)")
+    assert s1[1246] == "ok      fixed: RangeSlv's bands given in place: ['RangeSlv']"
+    assert s1[1262] == ("ok      fixed: Hub (Hub_m1.25_N17-1) reads resolved in every mode (M5): {'H': {'Hub_m1.25_N17-1'"
+                        ": 2}, 'N': {'Hub_m1.25_N17-1': 2}, 'L': {'Hub_m1.25_N17-1': 2}}")
+    assert s1[1281] == ("fact    fixed: summed volumes differ from the app's by more than 0.001: {'N': {'Hub & "
+                        "Sprocket-4': (1408.381, 1408.381), 'RangeSlv & Sprocket-4': (392.129, 374.463)}}")
+    assert s1[1308] == ("ok      fixed: the second press: every document reads GetSaveFlag False before and after an "
+                        "Update that changed nothing (GEAR_MATE_DEFINITION_READ_MARKS 'nothing'): marked before [], "
+                        "after []")
+    assert s1[1502] == ("ok      modes: the record's inventory names H2 in its modes and in every user mate's on-list "
+                        "where SolidWorks reads it on there, and nowhere it reads suppressed (8 mates): yes")
+    assert s1[1503] == ("ok      modes: H2 made (['H', 'N', 'L', 'H2']), the record's modes ['H', 'N', 'L', 'H2'], H "
+                        "showing before and after (H); each user item said as read there: yes")
+    assert s1[1515] == ("ok      modes, H2: every mate's flag in every mode as on record, the couplings on only in "
+                        "their modes: wrong none")
+    assert s1[1725].startswith("ok      modes: the record keeps the inventory as it was (True) and the refusal, one "
+                               "problem [('mode showing', ['H2'])], read at ")
+    assert s1[1520] == ("fact    modes, H2: summed volumes differ from the app's by more than 0.001: {'H2': {'Hub & "
+                        "Sprocket-4': (1408.381, 1408.381), 'RangeSlv & Sprocket-4': (160.748, 152.629)}}")
+    assert s1[1554] == ("ok      modes: after H2's add, the footer for the next edit names no user mate as suppressed "
+                        "in H2 (the runs review's must-fix 1): none")
+    assert s1[1683].startswith("ok      modes: N deleted (['H', 'L', 'H2']), the record's modes ['H', 'L', 'H2']; the "
+                               "user's flags lost said [('N', 'UserAngle4', 'suppressed')]")
+    assert s1[1719] == ("ok      modes, H2 removed while it shows: refused before any write as the mode showing, naming "
+                        "H2, the user's work unread (C12): [('mode showing', ['H2'])]")
+    assert s1[1836] == ("ok      modes: H deleted (['L', 'H2']); the record's modes ['L', 'H2'], L first; H2 showing "
+                        "before and after")
+    assert data1["stops"] == ["free memory fell under 2 GB on SolidWorks 2024"] and data1["fails"] == [
+        "W9a: Stopped: free memory fell under 2 GB on SolidWorks 2024; the run ends here, nothing more is asked of "
+        "SolidWorks"]                                    # the memory guard, after modes had ended 0 failed (1854)
+    assert s1[1854].startswith("time    modes: 3886 s; 0 failed")
+
+    data2, s2 = _w9a_run(*W9C_2024_2, "4315774", (32, 5, 0))
+    assert s2[625].startswith("ok      remove: G4 (OutputGear-1) taken out with its mates ['G3 meshes G4', 'G4 along "
+                              "S3', 'G4 on S3 Axis'] (each read gone by name), every other mate there")
+    assert data2["stops"] == [] and data2["fails"] == []
+
+    data3, s3 = _w9a_run(*W9C_2024_3, "4315774", (32, 5, 0))
+    for at, name in ((94, "UPDATE_SUPPRESSES_THE_RELIEF"), (154, "EXTERNAL_REFERENCES_READ")):
+        assert s3[at].startswith(f"propose {name}_ON_2024 = None  # "), (at, s3[at])
+        assert name + "_ON_2024" in data3["proposal"] and data3["proposal"][f"{name}_ON_2024"] is None
+        assert getattr(findings, f"{name}_ON_2024") is None, name
+    assert s3[153].startswith("propose EXTERNAL_REFERENCES_READ_ROUTE_CANDIDATES_2024 = ['IComponent2.ListExternal"
+                              "FileReferencesCount', 'IComponent2.ListExternalFileReferences2', 'IModelDocExtension"
+                              ".ListExternalFileReferencesCount', 'IModelDocExtension.ListExternalFileReferences', "
+                              "'ISldWorks.GetDocumentDependencies2']")
+    for data in (data1, data2, data3):                    # no legal edit reaches it, so none proposed it on 2024
+        assert "UPDATE_MAKES_A_NEW_COUPLING_ON_2024" not in data["proposal"]
+
+    data4, s4 = _w9a_run(*W9C_2024_4, "4315774", (32, 5, 0))
+    assert data4["proposal"]["UPDATE_MAKES_MATES_WITH_MODES_ON_2024"] is True is \
+        findings.UPDATE_MAKES_MATES_WITH_MODES_ON_2024
+    assert s4[203].startswith("propose UPDATE_MAKES_MATES_WITH_MODES_ON_2024 = True  # remake: gear mates of a "
+                              "gearbox with modes remade")
+    _, run11 = _w9a_run(W9C_RUN11, W9C_RUN11_LOG, "3a9e592 with probe/w9c_demonstration.py from eabf14e", (34, 0, 0))
+    assert _by_member(s4[103]) == _by_member(run11[103]) == {           # the change press: run 11's calls exactly
+        "OpenDoc6": 13, "IsSuppressed2": 286, "GetSystemValue3": 4, "ForceRebuild3": 57, "AddMate5": 4,
+        "ShowConfiguration2": 3, "SetSuppression2": 40, "put": 37}
+    assert s4[180].startswith("ok      remake: every gear mate ['Sun meshes Planet copy 1', 'Sun meshes Planet copy 2', "
+                              "'Sun meshes Planet copy 3', 'Planet copy 1 meshes Ring'] made again with modes")
+    assert s4[181].startswith("ok      remake: every user component where it was")
+    assert s4[190] == ("ok      remake: every mate's flag in every mode as on record, the couplings on only in their "
+                       "modes: wrong none")
+    assert s4[199] == "ok      remake: the app's read gives L 3.0 (1 + 56/28 = 3.0)"
+    # M3, step 1 only: the set-straight press stops in the ring and names RangeBox.
+    assert s4[255].startswith("status  [red] Update SolidWorks stopped. Ring_m1.25_N55.SLDPRT: SolidWorks reported an "
+                              "error rebuilding Ring_m1.25_N55.") and "close them all and RangeBox in SolidWorks" in s4[255]
+    assert _by_member(s4[256]) == {"OpenDoc6": 11, "IsSuppressed2": 112, "GetSystemValue3": 1, "ForceRebuild3": 3}
+    assert s4[308].startswith("ok      remake, M3: the press set straight stops in Ring_m1.25_N55, the status says it is "
+                              "left in error and to close without saving, the record marks it (")
+    assert s4[309].startswith("ok      remake, M3: the first press's stop names RangeBox beside the parts")
+    # The What's Wrong at the script's read before step 2: still up at the job's end, never seen to go (a STOP).
+    assert s4[310].startswith("fact    read remake, M3: before step 2: What's Wrong came up 0.47 s into the job, the "
+                              "worker in ActivateDoc3, owned by SolidWorks' frame")
+    assert s4[313] == ("fact    read remake, M3: before step 2: What's Wrong showed during the job, as SolidWorks shows "
+                       "it when a person does this: came at [0.47] s, stayed [] s; after the job it took 60.11 s to go "
+                       "(allowed 60); 1 up at the end, SolidWorks' frame enabled True")
+    assert data4["whats_wrong_lifetimes"] == [{"job": "read remake, M3: before step 2", "kind": "script",
+                                               "came": [0.47], "stayed": [], "still_up": 1}]
+    assert s4[314].startswith("FAIL    read remake, M3: before step 2: at the job's end What's Wrong is still up")
+    assert len(data4["stops"]) == 1 and data4["stops"][0].startswith("read remake, M3: before step 2: at the job's end "
+                                                                     "What's Wrong is still up after 60 s (1)")
+
+
+W9C_2026_12 = (LATEST.parent / "w9c-demo-20261118-054420.json", LATEST.parent / "w9c-demo-sw2026-20261118-12-remake-m3.log")
+W9C_2024_5 = (W9C_2024 / "w9c-demo-20261118-045156.json",
+              W9C_2024 / "w9c-demo-sw2024-20261118-5-remake-m3-second-pass-assembly-flag.log")
+
+
+def test_whats_wrong_stays_without_a_rebuild_rests_on_remake_m3_on_both_versions():
+    """findings.WHATS_WRONG_STAYS_WITHOUT_A_REBUILD_ON_<year> (W9C-RUNS-REVIEW.md, the review of 1dc9350, §3): on 2024
+    the box raised at the first activation after a stop left a part in error was still up 60 s after the app's press
+    and after the script's read, each closed only by the script's BM_CLICK; on 2026 remake-m3 (26-12) met no window
+    under the any-dialog STOP, the app's press again the first activation since step 1, as run 11's read and second
+    activation did. Also the 24-5 lines for M3's steps 2 to 3."""
+    assert findings.WHATS_WRONG_STAYS_WITHOUT_A_REBUILD_ON_2024 is True
+    assert findings.WHATS_WRONG_STAYS_WITHOUT_A_REBUILD_ON_2026 is False
+    data, s5 = _w9a_run(*W9C_2024_5, "c2d95cc", (32, 5, 0))
+    assert s5[8].startswith("rule    --close-outlived-whats-wrong: ") and s5[8].endswith("in force here")
+    assert s5[433] == ("fact    Update SolidWorks: What's Wrong came up 5.56 s into the job, the worker in ActivateDoc3, "
+                       "owned by SolidWorks' frame: as the app's Update shows it (the ruling: a fact, not a STOP)")
+    assert s5[438] == ("fact    Update SolidWorks: What's Wrong outlived its job: 1 still up 60.24 s after it, owned by "
+                       "SolidWorks' frame [True], the frame enabled True (the coordinator's ruling of 2026-11-18)")
+    assert s5[439].startswith("fact    Update SolidWorks: What's Wrong showed during the job, as the app's Update shows "
+                              "it: came at [5.56] s, stayed [] s; after the job it was still up after 60.24 s (allowed "
+                              "60); the script pressed its own Close ('&Close', a Button) by BM_CLICK")
+    assert s5[440].startswith("        in 191.6 s;")
+    assert s5[443].startswith("status  [red] Ring_m1.25_N55 is still open in SolidWorks as an earlier Update")
+    assert s5[119].startswith("fact    read remake, M3: before step 2: What's Wrong came up 0.41 s into the job, the "
+                              "worker in ActivateDoc3, owned by SolidWorks' frame")
+    assert s5[122].startswith("fact    read remake, M3: before step 2: What's Wrong outlived its job: 1 still up "
+                              "60.18 s after it")
+    assert "closed by the BM_CLICK" in s5[123]
+    lifetimes = data["whats_wrong_lifetimes"]
+    assert [(w["job"], w["kind"], w["came"], w["stayed"], w["still_up"]) for w in lifetimes] == [
+        ("read remake, M3: before step 2", "script", [0.41], [], 0), ("Update SolidWorks", "app", [5.56], [], 0)]
+    assert [(w["outlived"]["waited"], w["outlived"]["closed_by"], w["outlived"]["presses"]) for w in lifetimes] == [
+        (60.18, "BM_CLICK", ["BM_CLICK"]), (60.24, "BM_CLICK", ["BM_CLICK"])]
+    # No box at the second activation (step 2's press) or in the press that rebuilt (step 3).
+    assert not any("What's Wrong" in line for line in s5[127:179] + s5[236:323])
+    # M3 on 2024, steps 2 to 3 (the comment on UPDATE_MAKES_MATES_WITH_MODES_ON_2024).
+    assert s5[178].startswith("ok      remake, M3: step 2 stopped before any write")
+    assert s5[182].startswith("fact    remake, M3: closed ['Gear_m1.25_N13.SLDPRT', 'Gear_m1.25_N29.SLDPRT', "
+                              "'Ring_m1.25_N55.SLDPRT'] with RangeBox.SLDASM left open")
+    assert s5[234].startswith("ok      remake, M3: stopped again on Ring_m1.25_N55.SLDPRT with only the parts' windows "
+                              "closed")
+    assert s5[322].startswith("ok      remake, M3: after closing without saving, the press goes through routed by way "
+                              "of 53")
+    # The second pass's one FAIL, ruled a fact of SolidWorks 2024 (2026-11-18): the assembly's flag alone.
+    assert data["sections"]["remake-m3"]["first_press"]["wrote"] == ["flags [('RangeBox.SLDASM', False, True)]"]
+    assert s5[488].startswith("FAIL    remake-m3, the second pass:")
+    # 2026: remake-m3 on 34.1.1 (26-12), the app's press again the first activation since step 1: no box at all.
+    data12, s12 = _w9a_run(*W9C_2026_12, "23107c256aaae301e0e198cc6969f6af6486f676", (34, 1, 1))
+    assert s12[7] == ("rule    What's Wrong: swbuild.whats_wrong_shows_in_update reads False; What's Wrong during a job is "
+                      "a STOP, as any dialog")
+    assert s12[428].startswith("ok      remake-m3, the second pass: pressed again, the first activation since step 1")
+    assert s12[476].startswith("fact    remake-m3, the second pass: in the app's press again, the first activation since "
+                               "step 1, What's Wrong did not come; ")
+    assert not any(line.startswith(("DIALOG", "STOP")) for line in s12[428:479])       # the press again: no window
+    assert not any("What's Wrong" in line and line.startswith(("DIALOG", "NOTE", "STOP")) or "What's Wrong came up" in
+                   line for line in s12[1:])                                           # nowhere in the run
+    assert s12[119].startswith("read    remake, M3: before step 2 (active H; front document RangeBox.SLDASM)")
+    first = data12["sections"]["remake-m3"]["first_press"]
+    assert (first["whats_wrong"]["came"], first["whats_wrong"]["stayed"]) == ([], [])
+    assert "whats_wrong_lifetimes" not in data12 and data12["stops"] == []
+    # The second pass's one FAIL on 2026, ruled the same fact as on 2024 (2026-11-18): the assembly's flag alone.
+    assert first["wrote"] == ["flags [('RangeBox.SLDASM', False, True)]"] and first["changing_calls"] == []
+    assert s12[478].startswith("FAIL    remake-m3, the second pass:") and len(data12["fails"]) == 1
+    _, run11 = _w9a_run(W9C_RUN11, W9C_RUN11_LOG, "3a9e592 with probe/w9c_demonstration.py from eabf14e", (34, 0, 0))
+    assert run11[7] == "rule    What's Wrong: swbuild.whats_wrong_shows_in_update reads False; What's Wrong during a job is a STOP, as any dialog"
+    assert run11[307].startswith("ok      remake, M3: the press set straight stops in Ring_m1.25_N55")
+    assert not any("What's Wrong" in line or line.startswith(("DIALOG", "STOP")) for line in run11[307:362])
+
+
+W9D_FINDINGS = ("OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN", "OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS", "FILE_VERSION_READ",
+                "DEPENDENCIES_READ",
+                "COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED", "PERSIST_REFERENCE_ROUTE_FOR_FACES",
+                "PERSIST_REFERENCE_ROUTE_FOR_EDGES", "PERSIST_REFERENCE_ROUTE_FOR_VERTICES",
+                "PERSIST_REFERENCE_SURVIVES_RELOAD", "COAXIAL_FACE_READ", "REFERENCED_CONFIGURATION_READ",
+                "VIRTUAL_READ", "PATTERN_INSTANCE_READ", "ORIGIN_ENTITY_READ", "SUBASSEMBLY_OPEN_MARKS",
+                "SUBASSEMBLY_OPEN_MARKS_WHEN_LOADED", "SUBASSEMBLY_READ_ONLY_INSERT",
+                "CARRY_INSERT_MARKS_USER_DOCUMENTS", "CARRY_INSERTS", "CARRY_INSERTS_IN_A_CONFIGURATION",
+                "CARRY_INSERTS_A_SUBASSEMBLY", "CARRY_REMAKE_KINDS", "CARRY_GEAR_MATE_ON_AN_APP_GEAR",
+                "CARRY_REMAKES_ON_A_LEAF")
+
+
+W9D_SET_ON_2026 = ("COMPONENT_STATE_PER_CONFIGURATION_ROUTE", "COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED",
+                   "FILE_VERSION_READ", "DEPENDENCIES_READ", "OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS",
+                   "OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN", "SUBASSEMBLY_OPEN_MARKS", "SUBASSEMBLY_READ_ONLY_INSERT",
+                   "SUBASSEMBLY_OPEN_MARKS_WHEN_LOADED", "PERSIST_REFERENCE_ROUTE_FOR_FACES",
+                   "PERSIST_REFERENCE_ROUTE_FOR_EDGES", "PERSIST_REFERENCE_SURVIVES_RELOAD", "COAXIAL_FACE_READ",
+                   "CARRY_INSERT_MARKS_USER_DOCUMENTS")
+
+
+W9D_SET_BY_M9_ON_2026 = ("CARRY_INSERTS", "CARRY_INSERTS_IN_A_CONFIGURATION", "REFERENCED_CONFIGURATION_READ",
+                         "CARRY_REMAKE_KINDS", "CARRY_GEAR_MATE_ON_AN_APP_GEAR")
+W9D_KEPT_NONE_BY_M9 = ("CARRY_INSERTS_A_SUBASSEMBLY", "CARRY_REMAKES_ON_A_LEAF", "VIRTUAL_READ",
+                       "PATTERN_INSTANCE_READ", "ORIGIN_ENTITY_READ", "PERSIST_REFERENCE_ROUTE_FOR_VERTICES")
+W9D_LIGHTWEIGHT_FACT = "CARRY_RESOLVES_A_LIGHTWEIGHT_COMPONENT_IN_THE_OLD_ASSEMBLY"
+
+
+def test_w9d_findings_are_not_measured_until_a_reviewed_log_sets_them():
+    """W9D-INTERFACES.md §8: every name W9d reads is in findings.py, None on both versions until a reviewed run sets
+    it: on 2026 the probes' two runs set §8.1's and M9's second run the five of W9D-DEMONSTRATION-REVIEW.md's last
+    section, §4; on 2024 the probes' run set the same fourteen reads, each to its 2026 twin (W9D-PROBES-REVIEW.md's
+    last section, 23107c2) and M9's confirming run the same five as 2026, each to its 2026 twin
+    (W9D-DEMONSTRATION-REVIEW.md, the 2024 run, §2, e51de95; each pinned below). Every other one stays None on both
+    versions: the six M9's fixture does not reach."""
+    for name in W9D_FINDINGS + ("COMPONENT_STATE_PER_CONFIGURATION_ROUTE",):
+        for year in (2026, 2024):
+            if year == 2026 and name in W9D_SET_ON_2026 + W9D_SET_BY_M9_ON_2026:
+                continue
+            if year == 2024 and name in W9D_SET_ON_2026 + W9D_SET_BY_M9_ON_2026:
+                assert getattr(findings, f"{name}_ON_2024") == getattr(findings, f"{name}_ON_2026"), name
+                assert getattr(findings, f"{name}_ON_2024") is not None, name
+                continue
+            assert hasattr(findings, f"{name}_ON_{year}") and getattr(findings, f"{name}_ON_{year}") is None, name
+
+
+W9D_RUN1 = LATEST.parent / "w9d-probes-20261117-140231.json"
+W9D_RUN1_LOG = LATEST.parent / "w9d-probes-sw2026-20261117-1-face-routes-none.log"
+W9D_RUN2 = LATEST.parent / "w9d-probes-20261117-141450.json"
+W9D_RUN2_LOG = LATEST.parent / "w9d-probes-sw2026-20261117-2-faces-r3-clean.log"
+
+
+def test_w9d_2026_findings_rest_on_the_probes_two_runs():
+    """W9D-INTERFACES §8.1 (W9D-PROBES-REVIEW.md, 94fbebf): each _ON_2026 value is its run's proposal on 34.0.0."""
+    _, one = _w9a_run(W9D_RUN1, W9D_RUN1_LOG, "23ed8c5", (34, 0, 0))
+    _, two = _w9a_run(W9D_RUN2, W9D_RUN2_LOG, "c86ad54", (34, 0, 0))
+
+    def proposed(lines, number, name):
+        line = lines[number]
+        assert line.startswith(f"propose {name} = "), line
+        return line[len(f"propose {name} = "):].split("  #")[0]
+    assert proposed(one, 118, "COMPONENT_STATE_PER_CONFIGURATION_ROUTE") == \
+        repr(findings.COMPONENT_STATE_PER_CONFIGURATION_ROUTE_ON_2026)
+    assert proposed(one, 120, "COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED") == repr(findings.COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED_ON_2026)
+    assert proposed(one, 123, "FILE_VERSION_READ") == repr(findings.FILE_VERSION_READ_ON_2026)
+    assert "'17000[2024/282]', '19000[2025/260]'" in one[122] and "GetLatestSupportedFileVersion 19000" in one[122]
+    assert proposed(one, 125, "DEPENDENCIES_READ") == f'"{findings.DEPENDENCIES_READ_ON_2026}"'
+    assert proposed(one, 127, "OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS") == repr(findings.OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS_ON_2026)
+    assert proposed(one, 129, "OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN") == repr(findings.OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN_ON_2026)
+    assert proposed(one, 136, "SUBASSEMBLY_OPEN_MARKS") == repr(findings.SUBASSEMBLY_OPEN_MARKS_ON_2026)
+    assert proposed(one, 139, "SUBASSEMBLY_READ_ONLY_INSERT") == repr(findings.SUBASSEMBLY_READ_ONLY_INSERT_ON_2026)
+    assert proposed(one, 142, "SUBASSEMBLY_OPEN_MARKS_WHEN_LOADED") == repr(findings.SUBASSEMBLY_OPEN_MARKS_WHEN_LOADED_ON_2026)
+    assert proposed(two, 89, "PERSIST_REFERENCE_ROUTE_FOR_FACES") == f'"{findings.PERSIST_REFERENCE_ROUTE_FOR_FACES_ON_2026}"'
+    assert proposed(two, 90, "PERSIST_REFERENCE_ROUTE_FOR_EDGES") == f'"{findings.PERSIST_REFERENCE_ROUTE_FOR_EDGES_ON_2026}"'
+    assert findings.PERSIST_REFERENCE_ROUTE_FOR_FACES_ON_2026 == swcom.PERSIST_ROUTE_R3      # the route the app takes
+    assert proposed(two, 93, "COAXIAL_FACE_READ") == repr(findings.COAXIAL_FACE_READ_ON_2026)
+    assert "(0.475, False): 58" in two[92] and "(19.375, True): 29" in two[92]   # the fillets off-axis, tips coaxial
+    assert proposed(two, 102, "CARRY_INSERT_MARKS_USER_DOCUMENTS") == repr(findings.CARRY_INSERT_MARKS_USER_DOCUMENTS_ON_2026)
+    assert proposed(two, 104, "PERSIST_REFERENCE_SURVIVES_RELOAD") == repr(findings.PERSIST_REFERENCE_SURVIVES_RELOAD_ON_2026)
+    for name in W9D_SET_ON_2026:                       # each 2024 twin set from the 2024 run, pinned below
+        assert getattr(findings, f"{name}_ON_2024") == getattr(findings, f"{name}_ON_2026") is not None, name
+    for name in W9D_KEPT_NONE_BY_M9:                   # what M9 sets is pinned to its own runs below
+        assert getattr(findings, f"{name}_ON_2026") is None, name
+
+
+
+W9D_PROBES_2024 = (LATEST.parent / "sw2024" / "w9d-probes-20261118-051605.json",
+                   LATEST.parent / "sw2024" / "w9d-probes-sw2024-20261118.log")
+
+
+def test_w9d_2024_findings_rest_on_the_probes_2024_run():
+    """W9D-PROBES-REVIEW.md's last section (23107c2): W9d's probes on 32.5.0 from 891a707 propose each of the fourteen
+    as its 2026 twin, and the lines the 2024 comments cite hold, the measured differences from 2026 among them."""
+    data, p24 = _w9a_run(*W9D_PROBES_2024, "891a707", (32, 5, 0))
+    assert data["stops"] == [] and data["fails"] == [] and data["proposal"] == {}
+    assert p24[172] == "done    0 failed: []; 0 noted; 0 STOP(s), a hung worker included: []"
+
+    def proposed(number, name):
+        line = p24[number]
+        assert line.startswith(f"propose {name} = "), (number, line)
+        return ast.literal_eval(line[len(f"propose {name} = "):].split("  #")[0])
+    fourteen = ((86, "PERSIST_REFERENCE_ROUTE_FOR_FACES"), (87, "PERSIST_REFERENCE_ROUTE_FOR_EDGES"),
+                         (90, "COAXIAL_FACE_READ"), (104, "CARRY_INSERT_MARKS_USER_DOCUMENTS"),
+                         (106, "PERSIST_REFERENCE_SURVIVES_RELOAD"), (137, "COMPONENT_STATE_PER_CONFIGURATION_ROUTE"),
+                         (139, "COMPONENT_STATE_PER_CONFIGURATION_READS_UNSAVED"), (144, "FILE_VERSION_READ"),
+                         (147, "DEPENDENCIES_READ"), (149, "OPEN_READ_ONLY_KEEPS_OPEN_DOCUMENTS"),
+                         (151, "OPEN_READ_ONLY_SHOWN_CLOSES_CLEAN"), (159, "SUBASSEMBLY_OPEN_MARKS"),
+                         (161, "SUBASSEMBLY_READ_ONLY_INSERT"), (164, "SUBASSEMBLY_OPEN_MARKS_WHEN_LOADED"))
+    assert {name for _, name in fourteen} == set(W9D_SET_ON_2026) and len(fourteen) == 14
+    for number, name in fourteen:
+        value = getattr(findings, f"{name}_ON_2024")
+        assert proposed(number, name) == value == getattr(findings, f"{name}_ON_2026"), name
+        assert type(value) is type(getattr(findings, f"{name}_ON_2026")), name
+    assert findings.PERSIST_REFERENCE_ROUTE_FOR_FACES_ON_2024 == findings.PERSIST_REFERENCE_ROUTE_FOR_EDGES_ON_2024 \
+        == swcom.PERSIST_ROUTE_R3                                           # entity_references compares them
+    # r3 on every entity, r1 and r2 dead; the walks did not grow on 2024 (each 163-face walk under 2.4 s).
+    for number in (53, 58, 62, 68, 73, 77):
+        assert p24[number].strip().startswith("r3: True (IsSame 1 both ways): ") and "'matches': 1" in p24[number]
+        assert p24[number - 2].strip().startswith("r1: False") and p24[number - 1].strip().startswith("r2: False")
+    walks = {n: float(p24[n].split("found in ", 1)[1].split(" s", 1)[0]) for n in range(80, 86)}
+    assert all(f"walked 163 faces, matched 1, found in {walks[n]} s" in p24[n] for n in (80, 81, 82, 85))
+    assert all(2.2 < walks[n] < 2.4 for n in (80, 81, 82, 85)), walks
+    assert "walked 482 edges, matched 1, found in 6.75 s" in p24[83]
+    assert "resolved swPersistReferencedObject_Ok to a edge" in p24[83]
+    assert p24[93].startswith("fact    faces (b) growth face UserFaceCoin:0 on 'Sprocket-5': walked 163; full walks "
+                              "[1.685, 1.676, 1.692, 1.692, 2.067] s")
+    assert p24[94] == ("fact    faces (b) growth edge UserEdgeConc:1 on 'Sprocket-6': walked 482; full walks "
+                       "[5.071] s, matches [1]; prefilter ('circle', 0.005) kept 82 in 8.054 s, its walk 0.831 s, "
+                       "matches 1, IsSame the full walk's match True")      # the edge prefilter slower than the walk
+    assert p24[95].startswith("fact    faces (b) growth: component_frame x100 1.195 s before the walks, 1.334 s after; "
+                              "SolidWorks 3.064 GB private before, 3.064 GB after")
+    assert p24[97].startswith("ok      faces (b) growth: the prefiltered walk found the full walk's one match")
+    assert p24[89] == ("fact    faces (b): Sun's cylindrical faces, (radius mm, coaxial): count {(19.375, True): 29, "
+                       "(0.475, False): 58, (16.375, True): 29, (1.5, False): 1}")
+    assert p24[102] == ("fact    faces (c): each component against where it stood: {'RangeBox_Layout-1': 0.0, "
+                        "'Gear_m1.25_N29-1': 0.0, 'Sprocket-5': 0.0, 'Sprocket-6': 0.0, 'Sprocket-7': 0.0}")
+    assert p24[106] == ("propose PERSIST_REFERENCE_SURVIVES_RELOAD = True  # faces (d): 6 face and edge references; "
+                        "not resolved none")
+    state = data["sections"]["state"]
+    assert state["chosen"] == "GetComponentSuppressionState"
+    assert "against the truth {'agrees': True, 'differ': {}}" in p24[134]
+    assert p24[143] == ("fact    state (v): VersionHistory ['17000[2024/282]'], last (17000, 2024); "
+                        "GetLatestSupportedFileVersion 17000; the other version's file (RangeBox_r2.SLDASM) "
+                        "['19000[2026/13]'], last (19000, 2026)")
+    assert (state["version"]["history"], state["version"]["latest"], state["version"]["other"]) == (
+        ["17000[2024/282]"], 17000, ["19000[2026/13]"])
+    deps = state["version"]["dependencies"]
+    assert len(deps) == 9 and all(d["under_copy"] and d["on_disk"] and d["history"] == ["17000[2024/282]"]
+                                  for d in deps.values())
+    moved = state["version"]["searched"]["moved"]["False"]
+    assert len(moved["refused"]) == 9 and not any(moved["paths"].values())   # a plain copy: every one refused
+    assert state["read_only"]["opened"]["warnings"] == 32
+    assert state["read_only"]["after_open"]["RangeBox.SLDASM"] == {"open": True, "flag": True, "read_only": True}
+    assert state["read_only"]["global_kept"] is True
+    assert p24[169] == ("dialogs progress boxes seen {'Calculating Interference Detection': 0, 'Updating...': 0, "
+                        "'Opening': 3, 'Loading...': 0}; other windows the watch logged: 0")   # 2026's file, no dialog
+    # Not set from this run: one configuration each, IsVirtual and IsPatternInstance negative only, nothing for the
+    # rest. REFERENCED_CONFIGURATION_READ and M9's writes were set since from the 2024 demonstration (pinned below).
+    assert "'Sprocket-1': ('Default', 'Default', ['Default'])" in p24[91]
+    assert "'Sprocket-1': (False, False)" in p24[92]
+    assert not [line for line in p24 if line.startswith("propose REFERENCED_CONFIGURATION_READ")]
+    for name in W9D_KEPT_NONE_BY_M9:
+        assert getattr(findings, f"{name}_ON_2024") is None, name
+
+
+W9D_DEMO_1 = (LATEST.parent / "w9d-demo-20261118-031226.json",
+              LATEST.parent / "w9d-demo-sw2026-20261118-1-whole-closed-read-mode-fault.log")
+W9D_DEMO_2 = (LATEST.parent / "w9d-demo-20261118-042519.json",
+              LATEST.parent / "w9d-demo-sw2026-20261118-2-carry-closed-clean.log")
+W9D_KINDS = ("coincident", "concentric", "parallel", "distance", "angle", "limit distance", "lock", "gear")
+
+
+def test_w9d_demonstration_findings_are_set_on_2026_as_its_review_allows_and_on_2024_as_their_twins():
+    """findings.py, M9's blocks (W9D-DEMONSTRATION-REVIEW.md, the second run on 2026, §4, 7996089, and the 2024 run,
+    §2, e51de95): five set on 2026 and the same five on 2024 as their twins, six kept None on both; the lightweight
+    fact a pair (the coordinator's ruling), True on both."""
+    assert findings.CARRY_INSERTS_ON_2026 is True
+    assert findings.CARRY_INSERTS_IN_A_CONFIGURATION_ON_2026 is True
+    assert findings.REFERENCED_CONFIGURATION_READ_ON_2026 is True
+    assert findings.CARRY_GEAR_MATE_ON_AN_APP_GEAR_ON_2026 is True
+    assert findings.CARRY_REMAKE_KINDS_ON_2026 == W9D_KINDS
+    assert isinstance(findings.CARRY_REMAKE_KINDS_ON_2026, tuple)
+    assert not {"perpendicular", "tangent", "limit angle"} & set(findings.CARRY_REMAKE_KINDS_ON_2026)
+    for name in W9D_KEPT_NONE_BY_M9:
+        assert getattr(findings, f"{name}_ON_2026") is None, name
+    for name in W9D_KEPT_NONE_BY_M9:
+        assert hasattr(findings, f"{name}_ON_2024") and getattr(findings, f"{name}_ON_2024") is None, name
+    for name in W9D_SET_BY_M9_ON_2026 + (W9D_LIGHTWEIGHT_FACT,):
+        assert getattr(findings, f"{name}_ON_2024") == getattr(findings, f"{name}_ON_2026") is not None, name
+        assert type(getattr(findings, f"{name}_ON_2024")) is type(getattr(findings, f"{name}_ON_2026")), name
+    assert findings.CARRY_REMAKE_KINDS_ON_2024 == W9D_KINDS
+    assert getattr(findings, f"{W9D_LIGHTWEIGHT_FACT}_ON_2026") is True is getattr(findings,
+                                                                                  f"{W9D_LIGHTWEIGHT_FACT}_ON_2024")
+
+
+def test_w9d_demonstration_findings_on_2026_rest_on_the_second_runs_two_logs():
+    """Log 1 (fixture, carry-gates, carry and carry-closed at f7c2f0d on 34.1.1) proposes each value as set, and the
+    lines the comments cite hold; log 2 (carry-closed alone at 41afa37) shows the closed path clean."""
+    data, one = _w9a_run(*W9D_DEMO_1, "f7c2f0d", (34, 1, 1))
+    proposal = data["proposal"]
+
+    def proposed(number, name):
+        line = one[number]
+        assert line.startswith(f"propose {name}_ON_2026 = "), (number, line)
+        return line[len(f"propose {name}_ON_2026 = "):].split("  #")[0]
+    for number, name in ((1553, "CARRY_INSERTS"), (1554, "CARRY_INSERTS_IN_A_CONFIGURATION"),
+                         (1555, "REFERENCED_CONFIGURATION_READ"), (1564, "CARRY_REMAKE_KINDS"),
+                         (1565, "CARRY_GEAR_MATE_ON_AN_APP_GEAR"), (1408, W9D_LIGHTWEIGHT_FACT)):
+        value = getattr(findings, f"{name}_ON_2026")
+        assert proposed(number, name) == repr(value), name
+        got = proposal[f"{name}_ON_2026"]
+        assert (tuple(got) if isinstance(got, list) else got) == value, name
+    for number, name in zip(range(1566, 1572), ("CARRY_INSERTS_A_SUBASSEMBLY", "CARRY_REMAKES_ON_A_LEAF",
+                                                "VIRTUAL_READ", "PATTERN_INSTANCE_READ", "ORIGIN_ENTITY_READ",
+                                                "PERSIST_REFERENCE_ROUTE_FOR_VERTICES")):
+        assert proposed(number, name) == "None" and f"{name}_ON_2026" in proposal, name
+        assert proposal[f"{name}_ON_2026"] is None is getattr(findings, f"{name}_ON_2026"), name
+    assert one[1553].endswith("every condition: {'outcome': True, 'components': True, 'fallback': True, "
+                              "'fallback_fixed': True, 'same_error': True, 'anchors': True, 'states': True, "
+                              "'definitions': True, 'flags': True, 'fixed_every_mode': True, 'free': True, 'poses': "
+                              "True, 'interference': True, 'configuration': True, 'referenced_read': True, 'unsaved': "
+                              "True}")
+    kinds = {"coincident": 12, "concentric": 1, "parallel": 1, "distance": 3, "angle": 2, "limit distance": 1,
+             "lock": 3, "gear": 2}
+    for number, kind in zip(range(1556, 1564), W9D_KINDS):
+        assert one[number].startswith(f"fact    carry: the kind '{kind}' stood on ["), one[number]
+        assert len(ast.literal_eval(one[number].split(" stood on ", 1)[1])) == kinds[kind], kind
+    assert one[1477] == ("ok      carry: every component carried (17), or named only as a component suppressed in the "
+                         "mode showing may be: none; wrongly none")
+    assert one[1478].startswith("ok      carry: the tied cluster alone fell back, UserLock8a deleted, UserAngle8b "
+                                "kept, ['Housing-1', 'Sprocket-8 as Sprocket-9'] fixed: [CarryFallback(components=("
+                                "'Housing-1', 'Sprocket-9'), deleted=('UserLock8a',), kept=('UserAngle8b',), "
+                                "why='tie', subjects=('Sun', 'H'))]")
+    assert one[1484] == ("ok      carry: every mate expected to be made again was, its definition and entities in "
+                         "RangeBox_r2 as the old one's, by the script's own reads: all; every one reached")
+    assert one[1486] == ("ok      carry: every mate expected to be made again on in the modes it was on in, read "
+                         "again: all; every one reached")
+    assert one[1503] == "ok      carry: every app gear free to turn in every mode with the carried mates on: all"
+    assert one[1505] == ("ok      carry: each carried component at its pose against its anchor, as it stood in H of "
+                         "the old assembly, in every mode of RangeBox_r2 where it is resolved (49 reads): off none; "
+                         "not read none")
+    assert one[1515] == ("ok      carry: SprocketConf-1 inserted in Z20, read back in every mode: {'H': 'Z20', 'N': "
+                         "'Z20', 'L': 'Z20'}")
+    assert one[1516] == ("ok      carry: R read SprocketConf-1's referenced configuration 'Z20' beside its document's "
+                         "'Default' (REFERENCED_CONFIGURATION_READ)")
+    assert one[1518] == "ok      carry: RangeBox_r2 holds the carried items unsaved (GetSaveFlag True)"
+    assert one[1404].startswith("ok      carry: the old assembly and every user file unchanged on disk (size, time, "
+                                "hash): ")
+    assert one[1406] == ("ok      carry: no write, show, rebuild, save or close of the old assembly or a user document "
+                         "in the traced calls, and nothing saved after RangeBox_r2.SLDASM's first save")
+    assert one[1573].startswith("time    carry: 1716 s; 0 failed")
+
+    data2, two = _w9a_run(*W9D_DEMO_2, "41afa37", (34, 1, 1))
+    assert data2["stops"] == [] and data2["fails"] == []
+    assert two[771] == ("ok      carry-closed: read read-only (read-only), L showing as saved, nothing left open [] or "
+                        "marked []; unread []")
+    assert two[777] == ("ok      carry-closed: every component carried (17), or named only as a component suppressed "
+                        "in the mode showing may be: none; wrongly none")
+    assert two[784] == ("ok      carry-closed: every mate expected to be made again was, its definition and entities "
+                        "in RangeBox_r2 as the old one's, by the script's own reads: all; every one reached")
+    assert two[786] == ("ok      carry-closed: every mate expected to be made again on in the modes it was on in, read "
+                        "again: all; every one reached")
+    assert two[818].startswith("ok      carry-closed: Sprocket-2 as Sprocket-2 placed against RangeSlv, read in L "
+                               "and placed in H, and at its pose against RangeSlv in every mode, N and L with "
+                               "RangeSlv slid (contradiction 6): ")
+    assert two[861].startswith("time    carry-closed: 1208 s; 0 failed")
+
+
+W9D_DEMO_24_1 = (LATEST.parent / "sw2024" / "w9d-demo-20261118-060738.json",
+                 LATEST.parent / "sw2024" / "w9d-demo-sw2024-20261118-1-fixture-gates-carry-clean.log")
+W9D_DEMO_24_2 = (LATEST.parent / "sw2024" / "w9d-demo-20261118-073438.json",
+                 LATEST.parent / "sw2024" / "w9d-demo-sw2024-20261118-2-carry-closed-clean.log")
+
+
+def test_w9d_demonstration_findings_on_2024_rest_on_the_confirming_runs_two_logs():
+    """24-1 (fixture, carry-gates and carry at 5aca9c1 on 32.5.0) proposes each 2024 value as set, and the lines the
+    2024 comment cites hold, the memory, the time and the face prefilter's narrowing among them; 24-2 (carry-closed
+    alone) shows the closed path clean."""
+    data, one = _w9a_run(*W9D_DEMO_24_1, "5aca9c1", (32, 5, 0))
+    assert data["stops"] == [] and data["fails"] == []
+    assert one[1586] == "done    0 failed: []; 4 noted; 0 STOP(s), a hung worker included: []"
+    proposal = data["proposal"]
+
+    def proposed(number, name):
+        line = one[number]
+        assert line.startswith(f"propose {name}_ON_2024 = "), (number, line)
+        return line[len(f"propose {name}_ON_2024 = "):].split("  #")[0]
+    for number, name in ((1556, "CARRY_INSERTS"), (1557, "CARRY_INSERTS_IN_A_CONFIGURATION"),
+                         (1558, "REFERENCED_CONFIGURATION_READ"), (1567, "CARRY_REMAKE_KINDS"),
+                         (1568, "CARRY_GEAR_MATE_ON_AN_APP_GEAR"), (1409, W9D_LIGHTWEIGHT_FACT)):
+        value = getattr(findings, f"{name}_ON_2024")
+        assert proposed(number, name) == repr(value), name
+        got = proposal[f"{name}_ON_2024"]
+        assert (tuple(got) if isinstance(got, list) else got) == value == getattr(findings, f"{name}_ON_2026"), name
+    for number, name in zip(range(1569, 1575), ("CARRY_INSERTS_A_SUBASSEMBLY", "CARRY_REMAKES_ON_A_LEAF",
+                                                "VIRTUAL_READ", "PATTERN_INSTANCE_READ", "ORIGIN_ENTITY_READ",
+                                                "PERSIST_REFERENCE_ROUTE_FOR_VERTICES")):
+        assert proposed(number, name) == "None" and f"{name}_ON_2024" in proposal, name
+        assert proposal[f"{name}_ON_2024"] is None is getattr(findings, f"{name}_ON_2024"), name
+    assert one[1556].endswith("every condition: {'outcome': True, 'components': True, 'fallback': True, "
+                              "'fallback_fixed': True, 'same_error': True, 'anchors': True, 'states': True, "
+                              "'definitions': True, 'flags': True, 'fixed_every_mode': True, 'free': True, 'poses': "
+                              "True, 'interference': True, 'configuration': True, 'referenced_read': True, 'unsaved': "
+                              "True}")
+    kinds = {"coincident": 12, "concentric": 1, "parallel": 1, "distance": 3, "angle": 2, "limit distance": 1,
+             "lock": 3, "gear": 2}
+    for number, kind in zip(range(1559, 1567), W9D_KINDS):
+        assert one[number].startswith(f"fact    carry: the kind '{kind}' stood on ["), one[number]
+        assert len(ast.literal_eval(one[number].split(" stood on ", 1)[1])) == kinds[kind], kind
+    assert one[1478] == ("ok      carry: every component carried (17), or named only as a component suppressed in the "
+                         "mode showing may be: none; wrongly none")
+    assert one[1487] == ("ok      carry: every mate expected to be made again was, its definition and entities in "
+                         "RangeBox_r2 as the old one's, by the script's own reads: all; every one reached")
+    assert one[1489] == ("ok      carry: every mate expected to be made again on in the modes it was on in, read "
+                         "again: all; every one reached")
+    assert one[1506] == "ok      carry: every app gear free to turn in every mode with the carried mates on: all"
+    assert one[1508] == ("ok      carry: each carried component at its pose against its anchor, as it stood in H of "
+                         "the old assembly, in every mode of RangeBox_r2 where it is resolved (49 reads): off none; "
+                         "not read none")
+    assert one[1518] == ("ok      carry: SprocketConf-1 inserted in Z20, read back in every mode: {'H': 'Z20', 'N': "
+                         "'Z20', 'L': 'Z20'}")
+    assert one[1519] == ("ok      carry: R read SprocketConf-1's referenced configuration 'Z20' beside its document's "
+                         "'Default' (REFERENCED_CONFIGURATION_READ)")
+    assert one[1521] == "ok      carry: RangeBox_r2 holds the carried items unsaved (GetSaveFlag True)"
+    assert one[1403].startswith("fact    carry: SprocketLight-1 in the old assembly, lightweight as the user set it, "
+                                "read 1 before the press and 2 after")
+    assert one[1405].startswith("ok      carry: the old assembly and every user file unchanged on disk (size, time, "
+                                "hash): ")
+    assert one[1407] == ("ok      carry: no write, show, rebuild, save or close of the old assembly or a user document "
+                         "in the traced calls, and nothing saved after RangeBox_r2.SLDASM's first save")
+    # The caveats: memory, time, the face prefilter, no constrained status 5.
+    assert one[1397].startswith("        in 1388.6 s; SolidWorks 11.03 GB private, 8.62 GB free")
+    assert one[592].startswith("        in 429.2 s; SolidWorks 6.34 GB private")
+    assert one[1576].startswith("time    carry: 2990 s; 0 failed; SolidWorks 5.57 GB private")
+    assert "87 carried" in one[829] and "('face', 235, 29, " in one[829] and "('face', 235, 58, " in one[829]
+    assert "'Sprocket-9 as Sprocket-3': '2 (swUnderConstrained)'" in one[1505] and "'5 (" not in one[1505]
+
+    data2, two = _w9a_run(*W9D_DEMO_24_2, "5aca9c1", (32, 5, 0))
+    assert data2["stops"] == [] and data2["fails"] == [] and data2["proposal"] == {}
+    assert two[773] == ("ok      carry-closed: read read-only (read-only), L showing as saved, nothing left open [] or "
+                        "marked []; unread []")
+    assert two[779] == ("ok      carry-closed: every component carried (17), or named only as a component suppressed "
+                        "in the mode showing may be: none; wrongly none")
+    assert two[786] == ("ok      carry-closed: every mate expected to be made again was, its definition and entities "
+                        "in RangeBox_r2 as the old one's, by the script's own reads: all; every one reached")
+    assert two[788] == ("ok      carry-closed: every mate expected to be made again on in the modes it was on in, read "
+                        "again: all; every one reached")
+    assert two[820].startswith("ok      carry-closed: Sprocket-2 as Sprocket-1 placed against RangeSlv, read in L "
+                               "and placed in H, and at its pose against RangeSlv in every mode, N and L with "
+                               "RangeSlv slid (contradiction 6): ")
+    assert two[706].startswith("        in 1160.6 s; SolidWorks 9.12 GB private")
+    assert "87 carried" in two[132]
+    assert two[870] == "done    0 failed: []; 1 noted; 0 STOP(s), a hung worker included: []"
